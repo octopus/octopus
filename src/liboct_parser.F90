@@ -15,6 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "global.h"
+
 module lib_oct_parser
   implicit none
 
@@ -23,7 +25,7 @@ module lib_oct_parser
   public :: loct_parse_init, loct_parse_putsym, loct_parse_input, loct_parse_end
   public :: loct_parse_isdef, loct_parse_int, loct_parse_float, loct_parse_cmplx, &
       loct_parse_string, loct_parse_logical
-  public :: loct_parse_block_n, loct_parse_block_cols
+  public :: loct_parse_block, loct_parse_block_end, loct_parse_block_n, loct_parse_block_cols
   public :: loct_parse_block_int, loct_parse_block_float, loct_parse_block_cmplx, &
       loct_parse_block_string, loct_parse_block_logical
   public :: loct_parse_potential
@@ -96,30 +98,43 @@ module lib_oct_parser
     end subroutine oct_parse_string
   end interface
 
-  interface loct_parse_block_n
-    integer function oct_parse_block_n(name)
+  interface loct_parse_block
+    integer function oct_parse_block(name, blk)
       character(len=*), intent(in) :: name
+      integer(POINTER_SIZE), intent(out) :: blk
+    end function oct_parse_block
+  end interface
+
+  interface loct_parse_block_end
+    subroutine oct_parse_block_end(blk)
+      integer(POINTER_SIZE), intent(in) :: blk
+    end subroutine oct_parse_block_end
+  end interface
+
+  interface loct_parse_block_n
+    integer function oct_parse_block_n(blk)
+      integer(POINTER_SIZE), intent(in) :: blk
     end function oct_parse_block_n
   end interface
 
   interface loct_parse_block_cols
     integer function oct_parse_block_cols(name, line)
-      character(len=*), intent(in) :: name
+      integer(POINTER_SIZE), intent(in) :: blk
       integer, intent(in) :: line
     end function oct_parse_block_cols
   end interface
 
   interface loct_parse_block_int
-    subroutine oct_parse_block_int(name, l, c, res)
-      character(len=*), intent(in) :: name
+    subroutine oct_parse_block_int(blk, l, c, res)
+      integer(POINTER_SIZE), intent(in) :: blk
       integer, intent(in)          :: l, c
       integer, intent(out)         :: res
     end subroutine oct_parse_block_int
   end interface
 
   interface loct_parse_block_float
-    subroutine oct_parse_block_double(name, l, c, res)
-      character(len=*), intent(in) :: name
+    subroutine oct_parse_block_double(blk, l, c, res)
+      integer(POINTER_SIZE), intent(in) :: blk
       integer, intent(in)          :: l, c
       real(8), intent(out)         :: res
     end subroutine oct_parse_block_double
@@ -127,8 +142,8 @@ module lib_oct_parser
   end interface
 
   interface loct_parse_block_cmplx
-    subroutine oct_parse_block_complex(name, l, c, res)
-      character(len=*), intent(in) :: name
+    subroutine oct_parse_block_complex(blk, l, c, res)
+      integer(POINTER_SIZE), intent(in) :: blk
       integer, intent(in)          :: l, c
       complex(8), intent(out)      :: res
     end subroutine oct_parse_block_complex
@@ -136,8 +151,8 @@ module lib_oct_parser
   end interface
 
   interface loct_parse_block_string
-    subroutine oct_parse_block_string(name, l, c, res)
-      character(len=*), intent(in) :: name
+    subroutine oct_parse_block_string(blk, l, c, res)
+      integer(POINTER_SIZE), intent(in) :: blk
       integer, intent(in)          :: l, c
       character(len=*), intent(out):: res
     end subroutine oct_parse_block_string
@@ -170,14 +185,14 @@ contains
     
   end subroutine loct_parse_logical
   
-  subroutine loct_parse_block_logical(name, l, c, res)
-    character(len=*), intent(IN) :: name
+  subroutine loct_parse_block_logical(blk, l, c, res)
+    integer(POINTER_SIZE), intent(in) :: blk
     integer, intent(in)          :: l, c
     logical, intent(out)         :: res
     
     integer :: ires
     
-    call oct_parse_block_int(name, l, c, ires)
+    call oct_parse_block_int(blk, l, c, ires)
     res = (ires .ne. 0)
     
   end subroutine loct_parse_block_logical
@@ -213,23 +228,23 @@ contains
     res4 = real(res8, kind=4)
   end subroutine oct_parse_complex4
  
-  subroutine oct_parse_block_double4(name, l, c, res4)
-    character(len=*), intent(in) :: name
+  subroutine oct_parse_block_double4(blk, l, c, res4)
+    integer(POINTER_SIZE), intent(in) :: blk
     integer, intent(in)          :: l, c
     real(4), intent(out)         :: res4
 
     real(8) :: res8
-    call oct_parse_block_double(name, l, c, res8)
+    call oct_parse_block_double(blk, l, c, res8)
     res4 = real(res8, kind=4)
   end subroutine oct_parse_block_double4
 
-  subroutine oct_parse_block_complex4(name, l, c, res4)
-    character(len=*), intent(in) :: name
+  subroutine oct_parse_block_complex4(blk, l, c, res4)
+    integer(POINTER_SIZE), intent(in) :: blk
     integer, intent(in)          :: l, c
     complex(4), intent(out)      :: res4
 
     complex(8) :: res8
-    call oct_parse_block_complex(name, l, c, res8)
+    call oct_parse_block_complex(blk, l, c, res8)
     res4 = cmplx(res8, kind=4)
   end subroutine oct_parse_block_complex4
 

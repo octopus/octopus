@@ -109,7 +109,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
 
   FLOAT :: excess_charge, r
   integer :: nempty, i, j
-  character(len=80) :: str
+  integer(POINTER_SIZE) :: blk
 
   call push_sub('states_init')
 
@@ -194,16 +194,16 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
     if(nlcc) allocate(st%rho_core(m%np))
   end if
 
-  str = "Occupations"
-  occ_fix: if(loct_parse_isdef(str) .ne. 0) then
+  occ_fix: if(loct_parse_block("Occupations", blk)==0) then
     ! read in occupations
     st%fixed_occ = .true.
 
     do i = 1, st%d%nik
       do j = 1, st%nst
-        call loct_parse_block_float(str, i-1, j-1, st%occ(j, i))
+        call loct_parse_block_float(blk, i-1, j-1, st%occ(j, i))
       end do
     end do
+    call loct_parse_block_end(blk)
   else
     st%fixed_occ = .false.
 

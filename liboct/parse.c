@@ -22,9 +22,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <assert.h>
 
 #include "liboct_parser.h"
-#include "symbols.h"
 
 static FILE *fout;
 
@@ -238,99 +238,106 @@ char *parse_string(char *name, char *def)
 	return ret;
 }
 
-int parse_block_n(char *name)
+int parse_block (char *name, sym_block **blk)
 {
 	symrec *ptr;
 
 	ptr = getsym(name);
 	if(ptr && ptr->type == S_BLOCK){
-		return ptr->value.block->n;
-	}else
+		*blk = ptr->value.block;
+		fprintf(fout, "Opened block '%s'\n", name);
 		return 0;
-}
-
-int parse_block_cols(char *name, int l)
-{
-	symrec *ptr;
-
-	ptr = getsym(name);
-	if(ptr && ptr->type == S_BLOCK && l<ptr->value.block->n){
-		return ptr->value.block->lines[l].n;
-	}else
-		return 0;
-}
-
-static int parse_block_work(char *name, int l, int col, parse_result *r)
-{
-	symrec *ptr;
-
-	ptr = getsym(name);
-	if(ptr && ptr->type == S_BLOCK){
-		if(l < 0 || l >= ptr->value.block->n)
-			return -2; /* dimension error */
-		if(col < 0 || col >= ptr->value.block->lines[l].n)
-			return -2;
-
-		return parse_exp(ptr->value.block->lines[l].fields[col], r);
-	}else
+	}else{
+		*blk = NULL;
 		return -1;
+	}
 }
 
-int parse_block_int(char *name, int l, int col, int *r)
+int parse_block_end (sym_block **blk)
+{
+	*blk = NULL;
+	fprintf(fout, "Closed block\n");
+}
+
+int parse_block_n(sym_block *blk)
+{
+	assert(blk != NULL);
+
+	return blk->n;
+}
+
+int parse_block_cols(sym_block *blk, int l)
+{
+	assert(blk!=NULL);
+	assert(l>=0 && l<blk->n);
+
+	return blk->lines[l].n;
+}
+
+static int parse_block_work(sym_block *blk, int l, int col, parse_result *r)
+{
+	assert(blk!=NULL);
+	assert(l>=0 && l<blk->n);
+	assert(col>=0 && col<blk->lines[l].n);
+
+	return parse_exp(blk->lines[l].fields[col], r);
+}
+
+int parse_block_int(sym_block *blk, int l, int col, int *r)
 {
 	int o;
 	parse_result pr;
 
-	o = parse_block_work(name, l, col, &pr);
+	o = parse_block_work(blk, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_CMPLX){
 		*r = ROUND(GSL_REAL(pr.value.c));
-		fprintf(fout, "%s(%d, %d) = %d\n", name, l, col, *r);
+		fprintf(fout, "  (%d, %d) = %d\n", l, col, *r);
 		return 0;
 	}else
 		return o;
 }
 
-int parse_block_double(char *name, int l, int col, double *r)
+int parse_block_double(sym_block *blk, int l, int col, double *r)
 {
 	int o;
 	parse_result pr;
 
-	o = parse_block_work(name, l, col, &pr);
+	o = parse_block_work(blk, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_CMPLX){
 		*r = GSL_REAL(pr.value.c);
-		fprintf(fout, "%s(%d, %d) = %g\n", name, l, col, *r);
+		fprintf(fout, "  (%d, %d) = %g\n", l, col, *r);
 		return 0;
 	}else
 		return o;
 }
 
-int parse_block_complex(char *name, int l, int col, gsl_complex *r)
+int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r)
 {
 	int o;
 	parse_result pr;
 
-	o = parse_block_work(name, l, col, &pr);
+	o = parse_block_work(blk, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_CMPLX){
 		*r = pr.value.c;
-		fprintf(fout, "%s(%d, %d) = (%g,%g)\n", name, l, col, GSL_REAL(*r), GSL_IMAG(*r));
+		fprintf(fout, "  (%d, %d) = (%g,%g)\n", l, col, GSL_REAL(*r), GSL_IMAG(*r));
 		return 0;
 	}else
 		return o;
 }
 
-int parse_block_string(char *name, int l, int col, char **r)
+int parse_block_string(sym_block *blk, int l, int col, char **r)
 {
 	int o;
 	parse_result pr;
 
-	o = parse_block_work(name, l, col, &pr);
+	o = parse_block_work(blk, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_STR){
 		*r = pr.value.s;
-		fprintf(fout, "%s(%d, %d) = \"%s\"\n", name, l, col, *r);
+		fprintf(fout, "  (%d, %d) = \"%s\"\n", l, col, *r);
 		return 0;
 	}else
 		return o;

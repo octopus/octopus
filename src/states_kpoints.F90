@@ -21,9 +21,10 @@ subroutine states_choose_kpoints(d, m, geo)
   type(geometry_type),   intent(IN)  :: geo
 
   integer  :: coi, i, ik, jk, kk, j, k, nkmax, skip
+  integer(POINTER_SIZE) :: blk
   FLOAT :: total_weight, kmax
   
-! local variables for the crystal_init call
+  ! local variables for the crystal_init call
   integer :: is, nk
   integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of specie i
   FLOAT :: kshifts(3)   
@@ -49,15 +50,16 @@ subroutine states_choose_kpoints(d, m, geo)
     return
   end if
 
-  if(loct_parse_block_n('NumberKPoints') < 1) then
+  if(loct_parse_block('NumberKPoints', blk) < 0) then
     message(1) = 'Block "NumberKPoints" not found in input file.'
     call write_fatal(1)
   end if
 
   d%nik_axis = 1
   do i = 1, conf%periodic_dim
-    call loct_parse_block_int('NumberKPoints', 0, i-1, d%nik_axis(i))
+    call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))
   end do
+  call loct_parse_block_end(blk)
   if (any(d%nik_axis < 1)) then
     message(1) = 'Input: NumberKPoints is not valid'
     message(2) = '(NumberKPoints >= 1)'
@@ -65,13 +67,14 @@ subroutine states_choose_kpoints(d, m, geo)
   end if
   nkmax = PRODUCT(d%nik_axis)
 
-  if(loct_parse_block_n('ShiftKPoints') < 1) then
+  if(loct_parse_block('ShiftKPoints', blk) < 0) then
     kshifts = M_ZERO
   else
     do i = 1, conf%periodic_dim
-      call loct_parse_block_float('ShiftKPoints', 0, i-1, kshifts(i))
+      call loct_parse_block_float(blk, 0, i-1, kshifts(i))
     end do
   end if
+  call loct_parse_block_end(blk)
 
   if (conf%periodic_dim == 1) then
     call loct_parse_int('CenterOfInversion', 0, coi)

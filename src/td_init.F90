@@ -23,6 +23,7 @@ subroutine td_init(td, m, st, h, outp)
   type(output_type), intent(in) :: outp
 
   integer :: i, dummy
+  integer(POINTER_SIZE) :: blk
 
   call push_sub('td_init')
 
@@ -52,10 +53,11 @@ subroutine td_init(td, m, st, h, outp)
 
   !!! read in the default direction for the polarization
   td%pol(:) = M_ZERO
-  if(loct_parse_isdef('TDPolarization') .ne. 0) then
+  if(loct_parse_block('TDPolarization', blk)==0) then
     do i = 1, conf%dim
-      call loct_parse_block_float('TDPolarization', 0, i-1, td%pol(i))
+      call loct_parse_block_float(blk, 0, i-1, td%pol(i))
     end do
+    call loct_parse_block_end(blk)
   else  !default along the x-direction
     td%pol(1) = M_ONE
   endif

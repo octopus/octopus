@@ -195,6 +195,7 @@ contains
     
     integer :: ia, is, gd_spin, i
     integer, save :: iseed = 321
+    integer(POINTER_SIZE) :: blk
     FLOAT :: r, rnd, phi, theta, mag(3)
     FLOAT, allocatable :: atom_rho(:,:)
 
@@ -263,10 +264,14 @@ contains
 
     case (4) ! User-defined
 
-      if (loct_parse_block_n("GuessDensityAtomsMagnet") /= geo%natoms) then
+      if(loct_parse_block("GuessDensityAtomsMagnet", blk) < 0) then
         message(1) = "GuessDensityAtomsMagnet block is not defined "
-        message(2) = "or it has the wrong number of rows"
-        call write_fatal(2)
+        call write_fatal(1)
+      end if
+
+      if (loct_parse_block_n(blk) /= geo%natoms) then
+        message(1) = "GuessDensityAtomsMagnet block has the wrong number of rows"
+        call write_fatal(1)
       end if
 
       allocate(atom_rho(m%np, 2))
@@ -277,7 +282,7 @@ contains
 
         elseif (nspin == 4) then
           do i = 1, 3
-            call loct_parse_block_float("GuessDensityAtomsMagnet", ia-1, i-1, mag(i))
+            call loct_parse_block_float(blk, ia-1, i-1, mag(i))
             if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
           end do
 
@@ -307,7 +312,9 @@ contains
           rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
                                             (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
         end if
-      end do    
+      end do
+
+      call loct_parse_block_end(blk)
 
     end select
 

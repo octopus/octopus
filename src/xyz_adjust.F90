@@ -36,18 +36,18 @@ contains
          LARGE   = 3
 
     FLOAT :: center(3), x1(3), x2(3), to(3)
-    character(len=80) :: str
     integer :: axis_type
+    integer(POINTER_SIZE) :: blk
 
     ! is there something to do
     if(geo%natoms <= 1) return
   
     ! get to axis
-    str = "MainAxis"
-    if(loct_parse_isdef(str) .ne. 0) then
-      call loct_parse_block_float(str, 0, 0, to(1))
-      call loct_parse_block_float(str, 0, 1, to(2))
-      call loct_parse_block_float(str, 0, 2, to(3))
+    if(loct_parse_block("MainAxis", blk)==0) then
+      call loct_parse_block_float(blk, 0, 0, to(1))
+      call loct_parse_block_float(blk, 0, 1, to(2))
+      call loct_parse_block_float(blk, 0, 2, to(3))
+      call loct_parse_block_end(blk)
     else
       to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
     end if

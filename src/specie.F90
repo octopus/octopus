@@ -63,9 +63,11 @@ end type specie_type
 
 contains
 
-  subroutine specie_init(s, location, line, ispin)
-    type(specie_type), intent(inout) :: s
-    integer,           intent(in)    :: location, line, ispin
+  ! ---------------------------------------------------------
+  subroutine specie_init(s, location, blk, line, ispin)
+    type(specie_type),     intent(inout) :: s
+    integer,               intent(in)    :: location, line, ispin
+    integer(POINTER_SIZE), intent(in)    :: blk
 
     integer :: lmax, lloc
 
@@ -109,49 +111,49 @@ contains
     
     subroutine from_block()
       integer :: j, n
-      
-      call loct_parse_block_float ("Species", line-1, 1, s%weight)
-      call loct_parse_block_int   ("Species", line-1, 2, s%type)
+
+      call loct_parse_block_float (blk, line-1, 1, s%weight)
+      call loct_parse_block_int   (blk, line-1, 2, s%type)
       
       select case(s%type)
       case(SPEC_USDEF) ! user defined
-        call loct_parse_block_float ("Species", line-1, 3, s%Z_val)
-        call loct_parse_block_string("Species", line-1, 4, s%user_def)
+        call loct_parse_block_float (blk, line-1, 3, s%Z_val)
+        call loct_parse_block_string(blk, line-1, 4, s%user_def)
         
         ! convert to C string
         j = len(trim(s%user_def))
         s%user_def(j+1:j+1) = achar(0) 
 
       case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
-        call loct_parse_block_float("Species", line-1, 3, s%Z)
+        call loct_parse_block_float(blk, line-1, 3, s%Z)
         s%jradius = M_HALF
         s%Z_val = 0 
         
       case(SPEC_JELLI)
-        call loct_parse_block_float("Species", line-1, 3, s%Z)      ! charge of the jellium sphere
-        call loct_parse_block_float("Species", line-1, 4, s%jradius)! radius of the jellium sphere
+        call loct_parse_block_float(blk, line-1, 3, s%Z)      ! charge of the jellium sphere
+        call loct_parse_block_float(blk, line-1, 4, s%jradius)! radius of the jellium sphere
         s%jradius = units_inp%length%factor * s%jradius ! units conversion
         s%Z_val = s%Z
       
       case(SPEC_PS_TM2,SPEC_PS_HGH) ! a pseudopotential file
         s%local = .false.
-        n = loct_parse_block_cols("Species", line-1)
+        n = loct_parse_block_cols(blk, line-1)
         
-        call loct_parse_block_float ("Species", line-1, 3, s%Z)
+        call loct_parse_block_float (blk, line-1, 3, s%Z)
         
         lmax = 2 ! default
-        if(n>4) call loct_parse_block_int   ("Species", line-1, 4, lmax)
+        if(n>4) call loct_parse_block_int (blk, line-1, 4, lmax)
         
         lloc = 0 ! default
-        if(n>5) call loct_parse_block_int   ("Species", line-1, 5, lloc)
+        if(n>5) call loct_parse_block_int (blk, line-1, 5, lloc)
         
         if(n>6) then
-          call loct_parse_block_float ("Species", line-1, 6, s%def_h)
+          call loct_parse_block_float (blk, line-1, 6, s%def_h)
           s%def_h = s%def_h * units_inp%length%factor
         end if
         
         if(n>7) then
-          call loct_parse_block_float ("Species", line-1, 7, s%def_rsize)
+          call loct_parse_block_float (blk, line-1, 7, s%def_rsize)
           s%def_rsize = s%def_rsize * units_inp%length%factor
         end if
 
@@ -193,6 +195,7 @@ contains
   end subroutine specie_init
 
 
+  ! ---------------------------------------------------------
   subroutine specie_end(ns, s)
     integer,           intent(in) :: ns
     type(specie_type), pointer    :: s(:)
@@ -252,7 +255,9 @@ contains
   end function specie_get_local
 
 
+  ! ---------------------------------------------------------
   ! returns the gradient of the external potential
+  ! ---------------------------------------------------------
   subroutine specie_get_glocal(s, x, gv)
     type(specie_type), intent(IN) :: s
     FLOAT, intent(in) :: x(conf%dim)
@@ -298,7 +303,10 @@ contains
 
   end subroutine specie_get_glocal
 
+
+  ! ---------------------------------------------------------
   ! returns the localized part of the potential in Fourier space
+  ! ---------------------------------------------------------
   FLOAT function specie_get_local_fourier(s, x) result(l)
     type(specie_type), intent(IN) :: s
     FLOAT, intent(in) :: x(3)
@@ -319,6 +327,7 @@ contains
   end function specie_get_local_fourier
   
 
+  ! ---------------------------------------------------------
   FLOAT function specie_get_nlcc(s, x) result(l)
     type(specie_type), intent(IN) :: s
     FLOAT, intent(in) :: x(3)
@@ -331,6 +340,7 @@ contains
   end function specie_get_nlcc
 
 
+  ! ---------------------------------------------------------
   subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
     type(specie_type), intent(IN)  :: s
     FLOAT,             intent(in)  :: x(:)        ! (3)

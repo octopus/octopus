@@ -29,8 +29,8 @@ program make_st
   implicit none
 
   type(system_type) :: sys
-  character(len=100) :: str
   integer :: i, n, ik, ist, idim, type, ierr
+  integer(POINTER_SIZE) :: blk
 
   ! Initialize stuff
   call global_init()
@@ -50,18 +50,23 @@ program make_st
     call write_fatal(1)
   endif
 
-  str = "MakeStates"
-  n = loct_parse_block_n(str)
+  if(loct_parse_block("MakeStates", blk).ne.0) then
+    message(1) = "Block '%MakeStates' must be defined"
+    call write_fatal(1)
+  end if
+
+  n = loct_parse_block_n(blk)
   do i = 1, n
-    call loct_parse_block_int(str, i-1, 0, ik)
-    call loct_parse_block_int(str, i-1, 1, ist)
-    call loct_parse_block_int(str, i-1, 2, idim)
-    call loct_parse_block_int(str, i-1, 3, type)
+    call loct_parse_block_int(blk, i-1, 0, ik)
+    call loct_parse_block_int(blk, i-1, 1, ist)
+    call loct_parse_block_int(blk, i-1, 2, idim)
+    call loct_parse_block_int(blk, i-1, 3, type)
     select case(type)
     case(1)
       call wf_gaussian(i-1)
     end select
   end do
+  call loct_parse_block_end(blk)
 
   ! renormalize functions
   call wf_renormalize()
@@ -82,18 +87,18 @@ contains
     
     ! read gaussian parameters
     x1 = M_ZERO; k = M_ZERO
-    call loct_parse_block_float(str, line, 4,  s)
+    call loct_parse_block_float(blk, line, 4,  s)
     s = s * units_inp%length%factor
 
     j = 5
     do i = 1, conf%dim
-      call loct_parse_block_float(str, line, j,  x1(i))
+      call loct_parse_block_float(blk, line, j,  x1(i))
       x1(i) = x1(i) * units_inp%length%factor
       j = j + 1
     end do
 
     do i = 1, conf%dim
-      call loct_parse_block_float(str, line, j,  k(i))
+      call loct_parse_block_float(blk, line, j,  k(i))
       k(i) = k(i) / units_inp%length%factor
       j = j + 1
     end do

@@ -73,7 +73,7 @@ subroutine geometry_init_xyz(geo)
   FLOAT :: temperature, sigma, x(3), kin1, kin2
   type(xyz_file_info) :: xyz
 
-  call push_sub('geometry_init')
+  call push_sub('geometry_init_xyz')
 
   ! get the name of the system
   call loct_parse_string('SystemName', 'system', geo%sysname)
@@ -191,6 +191,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   FLOAT :: val_charge, def_h, def_rsize
   type(specie_list_type), allocatable :: spec_list(:)
   integer :: i, j, n_spec, ispin
+  integer(POINTER_SIZE) :: blk
   logical :: ok
 
   call push_sub('geometry_init_species')
@@ -242,11 +243,13 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
     j = j + 1
     geo%specie(j)%label = spec_list(i)%label
     geo%specie(j)%index = j
-    call specie_init(geo%specie(j), spec_list(i)%location, spec_list(i)%line, ispin)
+    call specie_init(geo%specie(j), spec_list(i)%location, blk, spec_list(i)%line, ispin)
 
     def_h     = min(def_h,     geo%specie(j)%def_h)
     def_rsize = max(def_rsize, geo%specie(j)%def_rsize)
   end do
+
+  if(blk.ne.int(0, POINTER_SIZE)) call loct_parse_block_end(blk)
 
   !  assign species and find total charge of the system
   val_charge = M_ZERO
@@ -290,8 +293,12 @@ contains
     if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
 
     ! is the block Species defined
-    n_spec_block = loct_parse_block_n("Species")
-    
+    n_spec_block = 0
+    blk = int(0, POINTER_SIZE)
+    if(loct_parse_block("Species", blk) == 0) then
+      n_spec_block = loct_parse_block_n(blk)
+    end if
+
     ! total number of species that we have available
     n_spec = n_spec_def + n_spec_block
     if(n_spec < 0) then
@@ -302,7 +309,7 @@ contains
     ! now we load the species
     allocate(spec_list(n_spec))
     do i = 1, n_spec_block
-      call loct_parse_block_string("Species", i-1, 0, spec_list(i)%label)
+      call loct_parse_block_string(blk, i-1, 0, spec_list(i)%label)
       spec_list(i)%location = 1
       spec_list(i)%line = i
       spec_list(i)%used = .false.

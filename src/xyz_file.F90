@@ -54,6 +54,7 @@ module xyz_file
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine xyz_file_init(gf)
     type(xyz_file_info), intent(out) :: gf
 
@@ -63,6 +64,8 @@ contains
     nullify(gf%atom)
   end subroutine xyz_file_init
   
+
+  ! ---------------------------------------------------------
   subroutine xyz_file_end(gf)
     type(xyz_file_info), intent(inout) :: gf
 
@@ -72,12 +75,17 @@ contains
     call xyz_file_init(gf)
   end subroutine xyz_file_end
 
+
+  ! ---------------------------------------------------------
   subroutine xyz_file_read(what, gf)
     character(len=*),    intent(in)    :: what
     type(xyz_file_info), intent(inout) :: gf
     
     integer :: i, j, iunit
+    integer(POINTER_SIZE) :: blk
     character(len=80) :: str
+
+    call push_sub('xyz_file_read')
 
     if(loct_parse_isdef('PDB'//trim(what)).ne.0) then
       gf%file_type = XYZ_FILE_PDB
@@ -107,9 +115,9 @@ contains
       end do
 
       call io_close(iunit)
-    else
-      gf%n = loct_parse_block_n(trim(what))
-      if(gf%n <= 0) return ! not found
+
+    else if(loct_parse_block(trim(what), blk) == 0) then
+      gf%n = loct_parse_block_n(blk)
 
       gf%file_type = XYZ_FILE_INP
       gf%flags = ior(gf%flags, XYZ_FLAGS_MOVE)
@@ -117,21 +125,23 @@ contains
       allocate(gf%atom(gf%n))
 
       do i = 1, gf%n
-        j = loct_parse_block_cols(trim(what), i-1)
+        j = loct_parse_block_cols(blk, i-1)
         if((j.ne.4).and.(j.ne.5)) then
           write(message(1), '(3a,i2)') 'Error in block ', what, ' line #', i
           call write_fatal(1)
         end if
-        call loct_parse_block_string (trim(what), i-1, 0, gf%atom(i)%label)
-        call loct_parse_block_float  (trim(what), i-1, 1, gf%atom(i)%x(1))
-        call loct_parse_block_float  (trim(what), i-1, 2, gf%atom(i)%x(2))
-        call loct_parse_block_float  (trim(what), i-1, 3, gf%atom(i)%x(3))
+        call loct_parse_block_string (blk, i-1, 0, gf%atom(i)%label)
+        call loct_parse_block_float  (blk, i-1, 1, gf%atom(i)%x(1))
+        call loct_parse_block_float  (blk, i-1, 2, gf%atom(i)%x(2))
+        call loct_parse_block_float  (blk, i-1, 3, gf%atom(i)%x(3))
         if(j == 5) then
-          call loct_parse_block_logical(trim(what), i-1, 4, gf%atom(i)%move)
+          call loct_parse_block_logical(blk, i-1, 4, gf%atom(i)%move)
         else
           gf%atom(i)%move = .true.
         end if
       end do
+      call loct_parse_block_end(blk)
+
     end if
 
     ! adjust units
@@ -139,8 +149,11 @@ contains
       gf%atom(i)%x = gf%atom(i)%x * units_inp%length%factor
     end do
 
+    call pop_sub()
   end subroutine xyz_file_read
 
+
+  ! ---------------------------------------------------------
   subroutine xyz_file_read_PDB(iunit, gf)
     integer,             intent(in)    :: iunit
     type(xyz_file_info), intent(inout) :: gf

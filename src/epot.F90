@@ -73,7 +73,9 @@ contains
     type(epot_type),     intent(out) :: ep
     type(mesh_type),     intent(IN)  :: m
     type(geometry_type), intent(IN)  :: geo
+
     integer :: i
+    integer(POINTER_SIZE) :: blk
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ep%vpsl_space = REAL_SPACE
@@ -124,13 +126,16 @@ contains
 
     ! static magnetic field
     nullify(ep%b)
-    select case(loct_parse_block_n("StaticMagneticField"))
-    case (1)
-      allocate(ep%b(conf%dim))
-      do i = 1, conf%dim
-        call loct_parse_block_float("StaticMagneticField", 0, i-1, ep%b(i))
-      end do
-    end select
+    if(loct_parse_block("StaticMagneticField", blk)==0) then
+      select case(loct_parse_block_n(blk))
+      case (1)
+        allocate(ep%b(conf%dim))
+        do i = 1, conf%dim
+          call loct_parse_block_float(blk, 0, i-1, ep%b(i))
+        end do
+      end select
+      call loct_parse_block_end(blk)
+    end if
 
     ! Non local operators
     ep%nvnl = geometry_nvnl(geo)

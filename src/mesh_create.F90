@@ -65,6 +65,8 @@ contains
   end subroutine read_misc
 
   subroutine read_box()
+    integer(POINTER_SIZE) :: blk
+
     ! Read box shape.
     call loct_parse_int('BoxShape', MINIMUM, m%box_shape)
     if(m%box_shape<1 .or. m%box_shape>4) then
@@ -116,15 +118,18 @@ contains
 
     m%lsize = -M_ONE
     if(m%box_shape == PARALLELEPIPED) then
-      if(loct_parse_block_n('lsize') < 1) then
+      if(loct_parse_block('lsize', blk) < 1) then
         message(1) = 'Block "lsize" not found in input file.'
         call write_fatal(1)
       endif
+      
       do i = 1, conf%dim
-        call loct_parse_block_float('lsize', 0, i-1, m%lsize(i))
+        call loct_parse_block_float(blk, 0, i-1, m%lsize(i))
         if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'lsize')
       end do
       m%lsize = m%lsize*units_inp%length%factor
+
+      call loct_parse_block_end(blk)
     end if
     
     ! fill in lsize structure
@@ -144,6 +149,7 @@ contains
 
   subroutine read_spacing()
     integer :: i
+    integer(POINTER_SIZE) :: blk
 
     m%h = -M_ONE
     select case(m%box_shape)
@@ -151,10 +157,11 @@ contains
       call loct_parse_float('spacing', m%h(1), m%h(1))
       m%h(1:conf%dim) = m%h(1)
     case(PARALLELEPIPED)
-      if(loct_parse_block_n('spacing') >= 1) then
+      if(loct_parse_block('spacing', blk) == 0) then
         do i = 1, conf%dim
-          call loct_parse_block_float('spacing', 0, i-1, m%h(i))
+          call loct_parse_block_float(blk, 0, i-1, m%h(i))
         end do
+        call loct_parse_block_end(blk)
       endif
     end select
 

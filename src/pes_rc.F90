@@ -21,16 +21,14 @@ subroutine PES_rc_init(v, m, st, save_iter)
   integer,           intent(in) :: save_iter
   type(PES_rc_type), intent(out) :: v
 
-  character(len=80) :: str
+  integer(POINTER_SIZE) :: blk
   integer  :: i
   FLOAT ::  x(3)
 
   message(1) = 'Info: Calculating PES using rc technique'
   call write_info(1)
 
-  str = "PES_rc_points"
-  v%npoints = loct_parse_block_n(str)
-  if (v%npoints < 1) then
+  if (loct_parse_block("PES_rc_points", blk) < 0) then
     message(1) = "Input: PES_rc_points block not specified"
     message(2) = '%PES_rc_points'
     message(3) = '   x | y | z'
@@ -38,14 +36,16 @@ subroutine PES_rc_init(v, m, st, save_iter)
     call write_fatal(4)    
   end if
 
+  v%npoints = loct_parse_block_n(blk)
+
   ! setup filenames and read points
   allocate(v%filenames(v%npoints), v%points(v%npoints))
   do i = 1, v%npoints
     write(v%filenames(i), '(a,i2.2,a)') 'PES_rc.', i, '.out'
 
-    call loct_parse_block_float(str, i-1, 0, x(1))
-    call loct_parse_block_float(str, i-1, 1, x(2))
-    call loct_parse_block_float(str, i-1, 2, x(3))
+    call loct_parse_block_float(blk, i-1, 0, x(1))
+    call loct_parse_block_float(blk, i-1, 1, x(2))
+    call loct_parse_block_float(blk, i-1, 2, x(3))
 
     ! adjust units
     x = x*units_inp%length%factor
@@ -53,6 +53,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
     v%points(i) = m%Lxyz_inv(int(x(1)/m%h(1)), int(x(2)/m%h(2)), int(x(3)/m%h(3)))
   end do
 
+  call loct_parse_block_end(blk)
   allocate(v%wf(v%npoints, st%dim, st%st_start:st%st_end, st%nik, save_iter))
 end subroutine PES_rc_init
 

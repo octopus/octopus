@@ -32,6 +32,7 @@ program rotational_strength
   type(spec_rsf) :: rsf
 
   integer :: i
+  integer(POINTER_SIZE) :: blk
 
   ! Initialize stuff
   call global_init()
@@ -58,10 +59,11 @@ program rotational_strength
   call loct_parse_float("TDDeltaStrength", CNST(0.05), rsf%delta_strength)
   !!! read in the default direction for the polarization
   rsf%pol(:) = M_ZERO
-  if(loct_parse_isdef('TDPolarization') .ne. 0) then
+  if(loct_parse_block('TDPolarization', blk)==0) then
     do i = 1, conf%dim
-      call loct_parse_block_float('TDPolarization', 0, i-1, rsf%pol(i))
+      call loct_parse_block_float(blk, 0, i-1, rsf%pol(i))
     end do
+    call loct_parse_block_end(blk)
   else  !default along the x-direction
     rsf%pol(1) = M_ONE
   endif

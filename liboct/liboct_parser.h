@@ -21,6 +21,7 @@
 #define _LIB_OCT_H
 
 #include <gsl/gsl_complex.h>
+#include "symbols.h"
 
 int parse_init(char *file_out);
 int parse_input(char *file_in);
@@ -33,20 +34,22 @@ double parse_double(char *name, double def);
 gsl_complex parse_complex(char *name, gsl_complex def);
 char *parse_string(char *name, char *def);
 
-int parse_block_n(char *name);
-int parse_block_cols(char *name, int l);
-int parse_block_int(char *name, int l, int col, int *r);
-int parse_block_double(char *name, int l, int col, double *r);
-int parse_block_complex(char *name, int l, int col, gsl_complex *r);
-int parse_block_string(char *name, int l, int col, char **r);
+int parse_block        (char *name, sym_block **blk);
+int parse_block_end    (sym_block **blk);
+int parse_block_n      (sym_block *blk);
+int parse_block_cols   (sym_block *blk, int l);
+int parse_block_int    (sym_block *blk, int l, int col, int *r);
+int parse_block_double (sym_block *blk, int l, int col, double *r);
+int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r);
+int parse_block_string (sym_block *blk, int l, int col, char **r);
 
 /* from parse_exp.c */
 typedef struct parse_result{
   union {
-	  gsl_complex c;
-		char *s;
-	} value;
-	enum {PR_CMPLX, PR_STR} type;
+    gsl_complex c;
+    char *s;
+  } value;
+  enum {PR_CMPLX, PR_STR} type;
 } parse_result;
 
 int parse_exp(char *exp, parse_result *t);
