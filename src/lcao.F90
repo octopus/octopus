@@ -207,15 +207,6 @@ subroutine lcao_init(sys, h)
   write(message(2), '(a)')    '      (not cosidering spin or k-points)'
   call write_info(2)
 
-!!$  ! Gets the mode
-!!$  call oct_parse_int(C_string("LCAOMode"), MEM_INTENSIVE, lcao_data%mode)
-!!$  if(lcao_data%mode < MEM_INTENSIVE .or. lcao_data%mode > CPU_INTENSIVE) then
-!!$    message(1) = "LCAOMode not valid"
-!!$    message(2) = "LCAOMode = 0 (memory intensive) | 1 (cpu intensive)"
-!!$  end if
-
-!!$  ! Gets the wave-functions
-!!$  if(lcao_data%mode == MEM_INTENSIVE) then
   allocate(lcao_data%psis(0:sys%m%np, sys%st%dim, norbs, sys%st%nik))
   lcao_data%psis = 0._r8
   do ik = 1, sys%st%nik
