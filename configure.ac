@@ -185,7 +185,7 @@ fi
 # how to do it right
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
-AC_SUBST(LDF90FLAGS)
+AC_SUBST(LDFCFLAGS)
 
 AC_CONFIG_FILES([Makefile 
 	liboct/Makefile src/Makefile doc/Makefile
