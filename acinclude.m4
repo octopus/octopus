@@ -153,7 +153,7 @@ AC_MSG_RESULT($ac_f90_mangle_underscore)
 m4_define([AC_LANG(Fortran 90)],
 [ac_ext=f90
 ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&AS_MESSAGE_LOG_FD'
-ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&AS_MESSAGE_LOG_FD'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS $F90LIBS>&AS_MESSAGE_LOG_FD'
 ac_compiler_gnu=$ac_cv_f90_compiler_gnu
 ])
 

@@ -39,7 +39,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   type(specie_type), pointer :: s(:)
 
   integer :: iunit, i
-  character(len=40) :: str, label
+  character(len=80) :: str, label
   logical :: l
 
   sub_name = 'atom_init'; call push_sub()
@@ -257,7 +257,7 @@ subroutine atom_adjust(natoms, a, ncatoms, ca)
   type(atom_classical_type), pointer :: ca(:)
 
   real(r8) :: center(3), from(3), from2(3), to(3)
-  character(len=20) :: str
+  character(len=80) :: str
 
   ! is there something to do
   if(natoms <= 1) return

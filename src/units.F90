@@ -26,7 +26,7 @@ implicit none
 type unit_type
   real(r8) :: factor
   character(len=10) :: abbrev ! common abbreviation of the unit name
-  character(len=30) :: name   ! common name
+  character(len=50) :: name   ! common name
 end type unit_type
 
 type unit_system_type

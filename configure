@@ -8928,7 +8928,7 @@ echo "${ECHO_T}$ac_f90_mangle_underscore" >&6
 
 ac_ext=f90
 ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
-ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS $F90LIBS>&5'
 ac_compiler_gnu=$ac_cv_f90_compiler_gnu
 
 
@@ -9571,7 +9571,7 @@ echo "$as_me: error: couldn't find gsl library" >&2;}
 
 	ac_ext=f90
 ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
-ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS $F90LIBS>&5'
 ac_compiler_gnu=$ac_cv_f90_compiler_gnu
 
 fi
@@ -9615,7 +9615,8 @@ fi
 
 # This is certainly wrong, but I don't know
 # how to do it right
-LINK="$F90 $F90FLAGS -o $PROGNAME"
+LIBS="$LIBS $F90LIBS"
+LINK="$F90 $F90FLAGS $LDFLAGS -o $PROGNAME"
 
 
 if test -z "$F90CPP"; then

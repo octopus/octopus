@@ -367,7 +367,7 @@ contains
 
     integer :: i
     real(r8) :: l_field(1:3), l_vector_field(1:3)
-    character(len=20) :: aux
+    character(len=80) :: aux
 
     ! TODO -> confirm these stupid units, especially for the vector field
     if(header) then

@@ -43,41 +43,6 @@ octopus
 * A word about units::
 * Options Index::
 
- --- The Detailed Node Listing ---
-
-Introduction
-
-* Description of Octopus::
-* Time dependent density functional theory::
-
-Description of input options
-
-* The parser::
-* Input file options::
-* Examples::
-
-Input file options
-
-* Generalities::
-* Species::
-* Coordinates::
-* Velocities::
-* Mesh::
-* States::
-* Hamiltonian::
-* Exchange and correlation::
-* SCF::
-* Unoccupied States::
-* Time Dependent::
-* Photo-electron spectrum::
-* Born-Oppenheimer Dynamics::
-* Varia::
-
-Examples
-
-* Hello world::
-* Benzene::
-
 
 File: octopus.info,  Node: Copying,  Next: Authors,  Prev: Top,  Up: Top
 
@@ -122,47 +87,48 @@ Physics Center and Department of Materials Science UPV/EHU (San
 Sebastian, Espan~a), and Alberto Castro, who works at the University of
 Valladolid, Departamento de Fisica Teorica (Valladolid, Espan~a).
 
-   `Octopus' is based on a nuclear-physics code written by George F.
+   `octopus' is based on a nuclear-physics code written by George F.
 Bertsch, K. Yabana to perform real-time dynamics in clusters (Phys Rev
 B *54*, 4484 (1996)) and on a condensed matter real-space plane-wave
 based code written by A. Rubio, X. Blase and S.G. Louie (Phys. Rev.
-Lett. *77*, 247 (1996)).  The code was atfterwards extended to handled
+Lett. *77*, 247 (1996)).  The code was afterwards extended to handled
 periodic systems by G.F. Bertsch, J.I. Iwata, A. Rubio, and K. Yabana
-(Phys. Rev. B, *62*, 7998 (2000)). Contemporanely there was a major
+(Phys. Rev. B, *62*, 7998 (2000)). Contemporaneously there was a major
 rewrite of the original cluster code to handle a vast majority of
 finite systems. At this point the cluster code was named tddft.x.
 
-   This version was consequently enhaced and beautified by A. Castro
-(at the time Ph.D. student of A. Rubio), originating a fairly imponent
-15,000 lines of FORTRAN 90/77. In the year 2000, M. Marques (aka
-Hyllios, aka António de Faria, corsário português), joins the A. Rubio
-group in Valladolid as a postdoc. Having to use TDDFT for his work, and
-being petulant enough to think he could structure the code better than
-his predecessors, starts a major rewrite of the code together with A.
-Castro, finishing version 0.2 of TDDFT. But things were still not
-perfect: due to their limited experience in FORTRAN 90, and due to the
-inadequacity of this language for anything beyond a HELLO WORLD
-program, several parts of the code were still clumsy. Also the idea of
-GPLing the almost 20,000 lines arose during an alcoholic evening. So
-after several weeks of frantic coding and after getting rid of the
-Numerical Recipes code that still lingered around, `Octopus' was born.
+   This version was consequently enhanced and beautified by A. Castro
+(at the time Ph.D. student of A. Rubio), originating a fairly verbose
+15,000 lines of Fortran 90/77. In the year 2000, M. Marques (aka
+Hyllios, aka Anto'nio de Faria, corsa'rio portugue^s), joins the A.
+Rubio group in Valladolid as a postdoc. Having to use TDDFT for his
+work, and being petulant enough to think he could structure the code
+better than his predecessors, starts a major rewrite of the code
+together with A. Castro, finishing version 0.2 of TDDFT. But things
+were still not perfect: due to their limited experience in Fortran 90,
+and due to the inadequacy of this language for anything beyond a HELLO
+WORLD program, several parts of the code were still clumsy. Also the
+idea of GPLing the almost 20,000 lines arose during an alcoholic
+evening. So after several weeks of frantic coding and after getting rid
+of the Numerical Recipes code that still lingered around, `octopus' was
+born.
 
    The present released version has been completely rewritten and keeps
 very little relation to the old version (even input and output files)
-and has been enhaced with major new flags to perform various
-excited-state dynamics in finite and extended sytems (one-dimensional
+and has been enhanced with major new flags to perform various
+excited-state dynamics in finite and extended systems (one-dimensional
 periodic chains). The code will be updated frequently and new versions
 can be found here (http://www.tddft.org/programs/octopus).
 
    The main features of the present version are described in detail in
-the following article M.L. Marques, A. Castro, A. Rubio .....  Computer
-Physics Communications  (2002).  Updated references as well as results
-obtained with octpus will be posted regularly in the octopus web page.
-If you find the code useful for you research we would appreciete if you
-give reference to this work and previous ones.
+an article to be submitted to Computer Physics Communications.  Updated
+references as well as results obtained with octopus will be posted
+regularly to the `octopus' web page. If you find the code useful for
+you research we would appreciate if you give reference to this work and
+previous ones.
 
    If you have some free time, and if you feel like taking a joy ride
-with FORTRAN 90, just drop us an email <octopus@tddft.org>. You can
+with Fortran 90, just drop us an email <octopus@tddft.org>. You can
 also send us patches, comments, ideas, wishes, etc. They will be
 included in new releases of octopus.
 
@@ -174,17 +140,17 @@ Introduction
 
 * Menu:
 
-* Description of Octopus::
+* Description of octopus::
 * Time dependent density functional theory::
 
 
-File: octopus.info,  Node: Description of Octopus,  Next: Time dependent density functional theory,  Prev: Introduction,  Up: Introduction
+File: octopus.info,  Node: Description of octopus,  Next: Time dependent density functional theory,  Prev: Introduction,  Up: Introduction
 
 Description of `octopus'
 ========================
 
    `octopus' (1) is a program aimed at the ab initio virtual
-experimentation on electron/ion dynamics in external electromagnetid
+experimentation on electron/ion dynamics in external electromagnetic
 fields of arbitrary intensity, shape and frequency in a hopefully ever
 increasing range of systems types. Its main characteristics are:
 
@@ -194,39 +160,39 @@ increasing range of systems types. Its main characteristics are:
      by performing simulations in time.
 
    * The electron-nucleus interaction is described within the
-     Pseudopotential approximation. Nuclei are described classically
+     pseudo-potential approximation. Nuclei are described classically
      as point particles.
 
-   * Wavefunctions are expanded in a real-space grid. The kinetic
+   * Wave-functions are expanded in a real-space grid. The kinetic
      energy operator is computed with a high-order finite difference
-     method.  FFTs are used in part of the calculations. (Scaling N$^2$
-     in the dynamical part). Time and grid spacing are related by
-     imposing stable time-evolution.
+     method.  FFTs are used in part of the calculations. (Scaling Nin
+     the dynamical part). Time and grid spacing are related by imposing
+     a stable time-evolution.
 
    * Forces on the ions are computed through the Ehrenfest theorem.
      Extension to quantum mechanical nuclear dynamics is in progress.
 
-   * Allows for spin-polarized calculations as well as non-collinear
+   * Allows for spin-polarised calculations as well as non-collinear
      magnetism and spin-orbit effects (Pauli-Dirac equation).
 
-   * Computes photoelectron (energy and angle resolved) and
-     photabsorption spectra for different polarized external
+   * Computes photo-electron (energy and angle resolved) and
+     photo-absorption spectra for different polarised external
      electromagnetic fields. Linear response calculations are a simple
      case of this general time-evolution procedure (see below).
 
    * Includes non-linear electronic effects: high-harmonic generation,
      interaction with a laser pulse of arbitrary intensity. For the
-     time being only time- and spatialy-dependent electric fields are
+     time being only time- and spatially-dependent electric fields are
      included, in the future magnetic fields will be incorporated.
 
    * Reads different geometry files including protein-data-base (PDB)
-     for biological calcalations (interaction of biomolecules with
+     for biological calculations (interaction of biomolecules with
      electromagnetic fields).
 
    * It allows the calculation of one-dimensional potentials, using for
      example the soft-coulomb potential or any other given as input.
 
-   * Laser-pulse optimization using genetic algorithms (to be done).
+   * Laser-pulse optimisation using genetic algorithms (to be done).
 
    * Utilities to analyse the computed spectra.
 
@@ -242,7 +208,7 @@ resembles an octopus especially in having many centrally directed
 branches.  (taken from the Merryam-Webster's dictionary.)
 
 
-File: octopus.info,  Node: Time dependent density functional theory,  Prev: Description of Octopus,  Up: Introduction
+File: octopus.info,  Node: Time dependent density functional theory,  Prev: Description of octopus,  Up: Introduction
 
 Time dependent density functional theory
 ========================================
@@ -253,13 +219,13 @@ al. (1), Casida (2), Dobson et al, (3) , and Burke et al (4).
 
    The Hohenberg-Kohn-Sham theory as described is a ground state
 theory, and it is hence not meant for the calculation of electronic
-excitations.  However, one can extend the idea of static DFT. When one
+excitations.  However, one can extend the ideas of static DFT. When one
 asks for the evolution of the system under the influence of a
 time-dependent external potential, one should search the extrema of the
 quantum mechanical action Theorems have now been established for
 time-dependent DFT(5) which are parallel to those of static DFT.  The
 first theorem proves a one-to-one mapping between time-dependent
-potentials and time-dependent densities; the second one proves the
+potentials and time-dependent densities; the second proves the
 stationary-action principle.
 
    The proof of the first theorem is based directly on the evolution of
@@ -303,8 +269,20 @@ File: octopus.info,  Node: Installation,  Next: The input file,  Prev: Introduct
 Installation
 ************
 
-   For the impatients, here goes the quickstart:
-     tar -cd octopus<-version>.tar.gz
+* Menu:
+
+* Quick instructions::
+* Long instructions::
+* Troubleshooting::
+
+
+File: octopus.info,  Node: Quick instructions,  Next: Long instructions,  Prev: Installation,  Up: Installation
+
+Quick instructions
+==================
+
+   For the inpatients, here goes the quick-start:
+     gzip -cd octopus<-version>.tar.gz | tar xvf -
      cd octopus-<version>
      ./configure
      make
@@ -312,6 +290,12 @@ Installation
 
    This will probably *not* work, so before giving up, just read the
 following paragraphs.
+
+
+File: octopus.info,  Node: Long instructions,  Next: Troubleshooting,  Prev: Quick instructions,  Up: Installation
+
+Long instructions
+=================
 
    The code is written in standard Fortran 90, with a couple of routines
 in C (and in bison, if we count the input parser). To build it you will
@@ -329,22 +313,22 @@ to chew the `octopus', you will have either to help the g95
      (preserve comments) should work just as well.
 
   3. FFTW : In principle `octopus' can live without FFTW, but he will
-     feel somehow weaker. Just grab this great library from
-     `http://www.fftw.org/'
+     feel somehow weaker. Just grab this great library from here
+     (http://www.fftw.org/)
 
   4. LAPACK/BLAS : Not heavily used, but required. If you are running
      Linux, there is a fair chance they are already installed in your
      system. The same goes to the more heavyweight machines (alphas,
-     IBMs, SGIs, etc). Otherwise, just grab the source from
-     `http://www.netlib.org'.
+     IBMs, SGIs, etc). Otherwise, just grab the source from here
+     (http://www.netlib.org).
 
   5. GSL : Finally that someone had the nice idea of making a public
      scientific   library! GSL still needs to grow, but it is already
      quite useful and impressive.    `octopus' uses splines, complex
      numbers, special functions, etc. from GSL,   so it is a must! If
      you don't have it already installed in your system, you can
-     obtain FFTW from `http://sources.redhat.com/gsl/'. You will need
-     version 1.0   or higher.
+     obtain GSL from here (http://sources.redhat.com/gsl/). You will
+     need version 1.0   or higher.
 
   6. MPI : If you want to run `octopus' in multi-tentacle (parallel)
      mode,   you will need an implementation of MPI.    `mpich'
@@ -354,7 +338,7 @@ to chew the `octopus', you will have either to help the g95
    First you should obtain the code gzipped-tarred file
 `octopus<-version>.tar.gz' (this you probably have already done). The
 code is freely available, and can be downloaded from
-`http://www.tddft.org/programs/octopus'. There exits a `cvs' server,
+`http://www.tddft.org/programs/octopus'. There exists a `cvs' server,
 but it currently does not have anonymous access. You can nevertheless
 browse the repository in
 `http://nautilus.fis.uc.pt/cgi-bin/cvsweb.cgi/marques/octopus/'.
@@ -378,29 +362,25 @@ octopus, created by the `tar' command.
    Before configuring you can (should) setup a couple of options.
 Although the configure script tries to guess your system settings for
 you, we recommend that you set explicitly the default Fortran 90
-compiler and the compiler options. In `bash' you would tipically do:
+compiler and the compiler options. In `bash' you would typically do:
      export F90=abf90
-     export F90FLAGS="-YEXT_NAMES=LCS -YEXT_SFX=_"
-   If you are compiling in an alpha, or in some other system with
-proprietary LAPACK/BLAS support, you should also set the `LIB_LAPACK'
-variable:
-     export LIB_LAPACK="-lcxml"
+     export F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
 
-   You can now run the configure sript (`./configure'). You can use a
+   You can now run the configure script (`./configure'). You can use a
 fair amount of options to spice (`octopus') to your own taste.  To
 obtain a full list just type `./configure --help'. Some commonly used
 options include:
-   * `--prefix=PREFIX' : Change the base instalation dir of `octopus'
+   * `--prefix=PREFIX' : Change the base installation dir of `octopus'
      to `PREFIX'. The executable will be installed in `PREFIX/bin',
      the libraries in `PREFIX/lib' and the documentation in
      `PREFIX/info'.
 
-   * `--with-fftw=DIR' : Instalation directory of the FFTW library.
+   * `--with-fftw=DIR' : Installation directory of the FFTW library.
 
-   * `--with-lapack=DIR' : Instalation directory of the LAPACK and
+   * `--with-lapack=DIR' : Installation directory of the LAPACK and
      BLAS libraries.
 
-   * `--with-gsl=DIR' : Instalation directory of the GSL library. The
+   * `--with-gsl=DIR' : Installation directory of the GSL library. The
      libraries are expected to be in `DIR/lib' and the include   files
      in `DIR/include'
 
@@ -414,10 +394,13 @@ options include:
 should now be able to taste `octopus'.
 
    The program has been tested in the following platforms:
-   * `i686*-linux-gnu' : With the Absoft (http://www.absoft.com)
+   * `i686*-linux-gnu' : with the Absoft (http://www.absoft.com),   and
+     the Intel (http://www.intel.com/software/products/compilers/)
      compiler.
 
-   * `alphae*-linux-gnu' : With Compac's `fort' compiler.
+   * `alphae*' : both in Linux and in OSF with Compac's `fort' compiler.
+
+   * `powerpc-ibm-aix4.3.3.0': with native `xlf90' compiler.
    If you manage to compile/run `octopus' in a different platform or
 with a different compiler, please let us know so we can update the
 list. Patches to solve compiler issues are also welcomed.
@@ -429,6 +412,67 @@ reading this, you already have it in some format. Due to the power of
 `make <format>'. The `info' file may be read by the `info' program by
 typing `info -f octopus.info', or alternatively may be installed in
 your general `info' structure by typing `make install'.
+
+
+File: octopus.info,  Node: Troubleshooting,  Prev: Long instructions,  Up: Installation
+
+Troubleshooting
+===============
+
+   If you are reading this it is because something went wrong. Let us
+see if we can fix it ;)
+
+   *Could not find library...*: This is probably the most common error
+you can get. `octopus' uses three different libraries, `GSL', `FFTW',
+and `BLAS'/`LAPACK'. We assume that you have already installed these
+libraries but, for some reason, you were not able to compile the code.
+So, what went wrong?
+   * Did you pass the correct `--with-XXXX' (where XXXX is gsl, fftw or
+      lapack in lowercase) to the configure script? If your libraries
+     are   installed in an non-standard directory (like `/opt/lapack'),
+     you will   have to pass the script the location of the library (in
+     this example,   you could try `./configure
+     --with-lapack=/opt/lapack'.
+
+   * If you are working in an alpha station, do not forget that the
+     `CXML'   library includes `BLAS' and `LAPACK', so it can be used by
+      `octopus'. If needed, just set the correct path with
+     `--with-lapack'.
+
+   * If the configuration script can not find `FFTW', it is probable
+     that   you did not compile `FFTW' with the same Fortran compiler
+     or with the   same compiler options. The basic problem is that
+     Fortran some times converts   the function names to uppercase,
+     other times to lowercase, and it can   add an "_" to them, or even
+     two. Obviously all libraries and the program have   to use the
+     same convention, so the best is to compile everything with   the
+     same Fortran compiler/options. If you are a power user, you can
+     check the   convention used by your compiler using the command `nm
+     <library>'.
+
+   * If the configuration script can not find `BLAS'/`LAPACK',   first
+     read the preceding point, for the same considerations apply to
+     `LAPACK'. If you are a Linux user and feel a bit frightened to
+     compile `LAPACK' in your box (after all, it does not use the nice
+     configure/make/make install paradigm), you can use the RPMs that
+     come   with the RedHat distribution. They will work for the Absoft
+     `abf90'   compiler, but they will *not* work for the Intel `ifc'
+     compiler. There is nevertheless a small hack that can circumvent
+     this   annoyance. Let us assume that you have installed
+     `BLAS'/`LAPACK'   from the RPMs. Just execute (you may want to
+     change the directories):
+          mkdir ~/lib/g77
+          cd ~/lib/g77
+          cp /usr/lib/libf2c.a libf2c_ifc.a
+          ar d libf2c_ifc.a main.o
+          ar d libf2c_ifc.a s_stop.o
+          cd OCTOPUS-HOME
+          export F90LIBS="-L$HOME/lib/g77 -lf2c_ifc"
+          ./configure <options>
+          make
+          make install
+       This should work (it worked for me, at least ;))
+
 
 
 File: octopus.info,  Node: The input file,  Next: A word about units,  Prev: Installation,  Up: Top
@@ -452,40 +496,41 @@ The parser
 directory `octopus' is run from. For a fairly comprehensive example,
 just look at the file `OCTOPUS_HOME/samples/inp'
 
-   At the begining of the program `liboct' reads the `inp' file, parses
-it, and generates a list of variables that will be read by `octopus'
-(note that the input is case independent).  There are two kind of
-variables, scalar values (strings or numbers), and blocks (that you may
-view as matrices). A scalar variable `var' can be defined by:
+   At the beginning of the program `liboct' reads the `inp' file,
+parses it, and generates a list of variables that will be read by
+`octopus' (note that the input is case independent).  There are two
+kind of variables, scalar values (strings or numbers), and blocks (that
+you may view as matrices). A scalar variable `var' can be defined by:
      var = exp
    `var' can contain any alphanumeric character plus "_", and `exp' can
 be a quote delimited string, a number (integer, real, or complex), a
 variable name, or a mathematical expression.  In the expressions all
 arithmetic operators are supported ("a+b", "a-b", "a*b", "a/b"; for
-exponenciation the C syntax "a^b" is used), and the following functions
+exponentiation the C syntax "a^b" is used), and the following functions
 can be use:
    * `sqrt(x)' : The square root of `x'.
 
    * `exp(x)' : The exponential of `x'.
 
-   * `log(x)' or `ln(x)': The natural logarith of `x'.
+   * `log(x)' or `ln(x)': The natural logarithm of `x'.
 
-   * `log10(x)' : Base 10 logarith of `x'.
+   * `log10(x)' : Base 10 logarithm of `x'.
 
    * `sin(x)', `cos(x)', `tan(x)', `cot(x)',   `sec(x)', `csc(x)': The
-     sinus, cosinus, tangent, cotangent,   secant and cosecant of `x'.
+     sinus, co-sinus, tangent, co-tangent,   secant and co-secant of
+     `x'.
 
    * `asin(x)', `acos(x)', `atan(x)', `acot(x)',   `asec(x)',
-     `acsc(x)': The inverse (arc-) sinus, cosinus, tangent, cotangent,
-     secant and cosecant of `x'.
+     `acsc(x)': The inverse (arc-) sinus, co-sinus, tangent, co-tangent,
+      secant and co-secant of `x'.
 
    * `sinh(x)', `cosh(x)', `tanh(x)', `coth(x)',   `sech(x)',
-     `csch(x)': The hyperbolic sinus, cosinus, tangent, cotangent,
-     secant and cosecant of `x'.
+     `csch(x)': The hyperbolic sinus, co-sinus, tangent, co-tangent,
+     secant and co-secant of `x'.
 
    * `asinh(x)', `acosh(x)', `atanh(x)', `acoth(x)',   `asech(x)',
-     `acsch(x)': The inverse hyperbolic sinus, cosinus, tangent,
-     cotangent,   secant and cosecant of `x'.
+     `acsch(x)': The inverse hyperbolic sinus, co-sinus, tangent,
+     co-tangent,   secant and co-secant of `x'.
    You can also use any of the predefined variables:
    * `pi' : 3.141592653589793, what else is there to say?
 
@@ -494,10 +539,10 @@ can be use:
    * `false' or `f' or `no' : False in all its flavors. For the
      curious, `false' is defined as 0.
 
-   * `true' or `t' or `yes' : The truthful companian of `false'. For the
+   * `true' or `t' or `yes' : The truthful companion of `false'. For the
       curious, `true' is defined as 1.
 
-   Blocks are defined as a collection of values, organized in row and
+   Blocks are defined as a collection of values, organised in row and
 column format.  The syntax is the following:
      %var
        exp | exp | exp | ...
@@ -524,7 +569,7 @@ Input file options
 
    `octopus' has quite a few options, that we will subdivide in
 different groups.  After the name of the option, its type and default
-value (when appliable) are given in parentesis.
+value (when applicable) are given in parenthesis.
 
 * Menu:
 
@@ -557,8 +602,8 @@ Generalities
 
         - `verbose >  20' : Normal program info.
 
-        - `verbose > 999' : Debug mode. Issues a message everytime the
-              program enters a (important) subroutine, and prints the
+        - `verbose > 999' : Debug mode. Issues a message every time the
+               program enters a (important) subroutine, and prints the
           time it spend upon return.
 
    *   `SystemName' (string, 'system') :   A string that identifies the
@@ -572,9 +617,9 @@ Generalities
 
         - `2' : Resume static calculation.
 
-        - `3' : Calculate unocuppied states.
+        - `3' : Calculate unoccuppied states.
 
-        - `4' : Resume calculation of unocuppied states.
+        - `4' : Resume calculation of unoccupied states.
 
         - `5' : Start time-dependent propagation.
 
@@ -612,7 +657,7 @@ Species
 -------
 
    * `Species' (block data) :   A specie is by definition an ion
-     (nucleus + core electrons) described   through a pseudopotential,
+     (nucleus + core electrons) described   through a pseudo-potential,
      or an external potential (until now,   only jellium spheres and
      point charges are implemented).    The format of this block is
      different for 1 or 3 dimensions, and   can be best understood
@@ -620,7 +665,7 @@ Species
               %Species
                 'H'       |  1.0079 | 2.0 |  1.0
               %
-       This defines a species labeled '`H'' of weight `1.0079',
+       This defines a species labelled '`H'' of weight `1.0079',
      nuclear charge `2.0', and valence charge `1.0'. The potential
      used in 1D calculations is the soft-Coulomb potential Z/sqrt(x*x +
      1).    In 3D, e.g.
@@ -631,10 +676,10 @@ Species
                 'point01' | 32.3    | 2.0
               %
        In this case, we have 4 "species" present:
-        - Oxygen labeled '`O'', to be read from a pseudopotential file
-            name `O.vps'. Numbers following the label describe
-          succesively the weight, the nuclear charge, the maximum
-          _l_-component of the pseudopotential to consider in the
+        - Oxygen labelled '`O'', to be read from a pseudo-potential file
+             name `O.vps'. Numbers following the label describe
+          successively the weight, the nuclear charge, the maximum
+          _l_-component of the pseudo-potential to consider in the
           calculation, and the _l_-component to consider as local.
 
         - Hydrogen defined in the same way as Oxygen.
@@ -676,7 +721,7 @@ Coordinates
           treated as an external classical     point charge. Its charge
           will be given by columns 61-65.
 
-        - columns 31-54 : The cartesian coordinates. The Fortran format
+        - columns 31-54 : The Cartesian coordinates. The Fortran format
           is     `'(3f8.3)''.
 
         - columns 61-65 : Classical charge of the atom. The Fortran
@@ -693,7 +738,7 @@ Coordinates
        The first line of the file has an integer indicating the number
      of   atoms. The second can contain comments that are simply
      ignored by   `octopus'. Then there follows one line per each atom,
-     containing   the chemical species and the cartesian coordinates of
+     containing   the chemical species and the Cartesian coordinates of
      the atom.
 
    * `Coordinates' (block data) :   If neither a `XYZCoordinates' or a
@@ -711,7 +756,7 @@ Coordinates
      are AA.
 
    * `AdjustCoordinates' (logical, false) :   If true, translates the
-     atom coordinates so that the   geometrical center of the molecule
+     atom coordinates so that the   geometrical centre of the molecule
      coincides with the zero of   the mesh, and rotates them, fixing
      the largest dimension   of the molecule to the axis defined
      through `MainAxis'.    Very useful when handling large and
@@ -756,34 +801,34 @@ Mesh
 
    `octopus' uses a grid in real space to solve the Kohn-Sham equations.
  The grid is equally-spaced, but the spacings can be different for each
- cartesian direction. The shape of the simulation region may also   be
+ Cartesian direction. The shape of the simulation region may also   be
 tuned to suit the geometric configuration of the system.
 
    * `BoxShape' (integer, sphere) :   In a 3D calculation, it is the
      shape of the simulation box. The allowed   values are:
         - `sphere' or `1': A sphere
 
-        - `cilinder' or `2': A cilinder. The cilinder axis will be
+        - `cylinder' or `2': A cylinder. The cylinder axis will be
           in the z direction
 
         - `minimum' or `3': Sum of spheres around each atom.
 
-        - `parallelpiped' or `4': As the name indicates.
+        - `parallelepiped' or `4': As the name indicates.
 
    * `Radius' (double, 20.0 a.u.) or (block data) :   If `BoxShape !=
-     parallelpiped' defines the radius of the   spheres or of the
-     cilinder. Otherwise, `Radius' is assumed to   be a block of the
+     parallelepiped' defines the radius of the   spheres or of the
+     cylinder. Otherwise, `Radius' is assumed to   be a block of the
      form:
               %Radius
                 sizex | sizey | sizez
               %
        where `size' is half an edge of the box.
 
-   * `ZLength' (double, 1.0 a.u.) :   If `BoxShape == cilinder' is half
-     the total length of the cilinder.
+   * `ZLength' (double, 1.0 a.u.) :   If `BoxShape == cylinder' is half
+     the total length of the cylinder.
 
    * `Spacing' (double, 0.6 a.u.) or (block data) :   If the code is
-     compiled in 1D mode or if `BoxShape != parallelpiped'   defines
+     compiled in 1D mode or if `BoxShape != parallelepiped'   defines
      the (constant) spacing between points in the grid. Otherwise, it
      is assumed to be a block of the form:
               %Spacing
@@ -801,7 +846,7 @@ tuned to suit the geometric configuration of the system.
           conditions,       so be careful.
 
    * `OrderDerivatives' (integer, 4) :   If `DerivativesSpace ==
-     real_space' use a finite difference discretization   for the
+     real_space' use a finite difference discretisation   for the
      derivatives of order `OrderDerivatives*2 + 1'.
 
 
@@ -813,15 +858,15 @@ States
 
    * `SpinComponents' (integer, 1) :   Defines the spin mode `octopus'
      will run in. Valid modes are:
-        - `1' : Spin-unpolarized calculation.
+        - `1' : Spin-unpolarised calculation.
 
-        - `2' : Spin-polarized calculation (collinear spin). This mode
-              will double the number of wavefunctions necessary for a
-          spin-unpolarized       calculation.
+        - `2' : Spin-polarised calculation (collinear spin). This mode
+              will double the number of wave-functions necessary for a
+          spin-unpolarised       calculation.
 
         - `4': Non-collinear spin. This mode will double the number
-           of wavefunctions necessary for a spin-unpolarized
-          calculation, and each of       the wavefunctions will be a
+           of wave-functions necessary for a spin-unpolarised
+          calculation, and each of       the wave-functions will be a
           2-spinor.
 
    * `NumberKPoints' (integer, 1) :   If `octopus' was compiled for
@@ -866,18 +911,18 @@ Hamiltonian
      the electrons as non-interacting, i.e. neglect both   Hartree and
      exchange-correlation contributions to the Kohn-Sham potential.
 
-   * `ClassicPotential' (logical, false) :   If `truee', add to the
+   * `ClassicPotential' (logical, false) :   If `true', add to the
      external potential the potential generated by   the point charges
      read from the PDB input (see `PBDCoordinates').
 
    * `LocalPotentialSpace' (integer, fourier_space) :   If
-     `fourier_space', generate the local part of the pseudopotential
+     `fourier_space', generate the local part of the pseudo-potential
      in Fourier space; Otherwise do it directly in real space.
      _Generating   the potential in Fourier space seems to reduce the
      egg-box effect but this   option has not been extensively tested._
 
    * `NonLocalPotentialSpace' (integer, real_space) :   If
-     `fourier_space' generate the non-local part of the pseudopotential
+     `fourier_space' generate the non-local part of the pseudo-potential
       in Fourier space; Otherwise do it directly in real space.
      _Generating   the potential in Fourier space seems to reduce the
      egg-box effect but this   option has not been extensively tested._
@@ -885,7 +930,7 @@ Hamiltonian
    * `GridRefinement' (integer, 3) :   If `NonLocalPotentialSpace ==
      fourier_space' defines the number of   points to use in the
      interpolation method for the non-local part of the
-     pseudopotential. _This seems to reduce the egg-box effect but this
+     pseudo-potential. _This seems to reduce the egg-box effect but this
       option has not been extensively tested._
 
 
@@ -895,10 +940,11 @@ File: octopus.info,  Node: Exchange and correlation,  Next: SCF,  Prev: Hamilton
 Exchange and correlation
 ------------------------
 
-   The exchange-correlation functional is controled by the 4 parameters
-`XFamily', `XFunctional', `CFamily' and `CFunctional'. Obviously, the
-`X' parameters control the exchange part of the functional, while the
-`C' parameters control the correlation. The possible values are:
+   The exchange-correlation functional is controlled by the 4
+parameters `XFamily', `XFunctional', `CFamily' and `CFunctional'.
+Obviously, the `X' parameters control the exchange part of the
+functional, while the `C' parameters control the correlation. The
+possible values are:
 
    * `XFamily == 'ZER'' : No exchange.
 
@@ -907,7 +953,7 @@ Exchange and correlation
 
         - `XFunctional ==  'REL'' : Relativistic exchange.
 
-   * `XFamily == 'GGA'' : Generalized gradient approximations.
+   * `XFamily == 'GGA'' : Generalised gradient approximations.
         - `XFunctional ==  'PBE'' :  J.P.Perdew, K.Burke and
           M.Ernzerhof,     	PRL *77*, 3865 (1996)
 
@@ -916,7 +962,7 @@ Exchange and correlation
 
         - `XFunctional == 'LB94'' : van Leeuwen and Baerends functional.
 
-   * `XFamily == 'KLI'' : Optimized effective potential method within
+   * `XFamily == 'KLI'' : Optimised effective potential method within
      the Krieger, Lee and Iafrate approximation.
         - `XFunctional ==   'X'' : Exact exchange functional.
 
@@ -933,11 +979,11 @@ Exchange and correlation
         - `CFunctional == 'PW92'' : J.P.Perdew and Y.Wang,       PRB
           *45*, 13244 (1992)
 
-   * `CFamily == 'GGA'' : Generalized gradient approximations.
+   * `CFamily == 'GGA'' : Generalised gradient approximations.
         - `CFunctional == 'PBE'' : J.P.Perdew, K.Burke and M.Ernzerhof,
              	PRL *77*, 3865 (1996)
 
-   * `CFamily == 'KLI'': Optimized effective potential method within
+   * `CFamily == 'KLI'': Optimised effective potential method within
      the Krieger, Lee and Iafrate approximation.
         - `CFunctional == 'SIC'': Self interaction corrected LDA.
 
@@ -953,33 +999,33 @@ convergence criteria is fulfilled.
      `0' means unlimited.
 
    * `ConvAbsDens' (double, 1e-5) :   Absolute convergence of the
-     density. `0' means do   not use this criterium.
+     density. `0' means do   not use this criterion.
 
    * `ConvRelDens' (double, 0.0) :   Relative convergence of the
-     density. `0' means do   not use this criterium.
+     density. `0' means do   not use this criterion.
 
    * `ConvAbsEnergy' (double, 0.0) :   Absolute convergence of the
-     total energy. `0' means do   not use this criterium.
+     total energy. `0' means do   not use this criterion.
 
    * `ConvRelEnergy' (double, 0.0) :   Relative convergence of the
-     total energy. `0' means do   not use this criterium.
+     total energy. `0' means do   not use this criterion.
 
    There are some more variables controlling the SCF cycle:
    * `LCAOStart' (logical, true) :   Before starting a SCF calculation
-     (`CalculationMode == 1'), perform   a LCAO calulation. these
+     (`CalculationMode == 1'), perform   a LCAO calculation. these
      should provide `octopus' with a good set   of initial
-     wavefunctions, and help the convergence of the SCF cycle.
+     wave-functions, and help the convergence of the SCF cycle.
 
    * `LCAOMode' (integer, 0) :   How to perform the LCAO calculation.
      Allowed values are:
-        - `0' : Memory intensive. Store all LCAO wavefunctions in
+        - `0' : Memory intensive. Store all LCAO wave-functions in
           memory.
 
-        - `1' : CPU intensive. Recalculate the LCAO wavefunctions
-          everytime they are needed.
+        - `1' : CPU intensive. Recalculate the LCAO wave-functions
+          every time they are needed.
 
    * `EigenSolver' (integer, 0) :   Which eigensolver to use to
-     diagonalize the Kohn-Sham Hamiltonian.    Possible values are:
+     diagonalise the Kohn-Sham Hamiltonian.    Possible values are:
         - `0' : Conjugated Gradients method I.
 
         - `1' : Conjugated Gradients method II.
@@ -1028,7 +1074,7 @@ and 6 if `TDOccupationalAnalysis == 1'.)
 
    * `UnoccMaximumIter' (integer, 200) :   Maximum number of iterations
      while calculating the unoccupied states.    Note that this are
-     _not_ SCF iterations, for the density and the   hamiltonian are
+     _not_ SCF iterations, for the density and the   Hamiltonian are
      not updated!
 
    * `UnoccConv' (double, 1e-4) :   Absolute convergence in the
@@ -1046,13 +1092,13 @@ Time Dependent
      steps.
 
    * `TDEvolutionMethod' (integer, 2) :   Method used to perform the
-     time propagation. Authorized values are:
+     time propagation. Authorised values are:
         - `1' : Quick and dirty method. One should check carefully
           the time-step, and it only works with density based
           functionals.
 
         - `2' : Modified Krank-Nicholson method. Very stable method,
-            but significatively slower than method `1'.
+            but significantly slower than method `1'.
 
    * `TDTimeStep' (double, 0.07 a.u.) :   Time step for the propagation.
 
@@ -1061,7 +1107,7 @@ Time Dependent
               %Lasers
                 polx | poly | polz | A0 | envelope | tau0 | t0 | omega0
               %
-       where `pol' is the (complex) polarization of the laser field,
+       where `pol' is the (complex) polarisation of the laser field,
      `A0'   the amplitude, `envelope' the envelope function, `t0' the
      middle (maximum) of the pulse and `omega0' the frequency of   the
      pulse. The meaning of `tau0' depends on the envelope function.
@@ -1086,10 +1132,10 @@ Time Dependent
      the laser field to the file '`laser.out''.
 
    * `TDDeltaStrength' (double, 0.0 a.u.)    When no laser is applied,
-     a delta (in time) electric field with   stength `TDDeltaStrength'
+     a delta (in time) electric field with   strength `TDDeltaStrength'
      is applied. This is used to calculate   the linear optical spectra.
 
-   * `TDPolarization' (block data)   The (real) polarization of the
+   * `TDPolarization' (block data)   The (real) polarisation of the
      delta electric field. The format of the   block is:
               %TDPolarization
                 polx | poly | polz
@@ -1103,7 +1149,7 @@ Time Dependent
 
         - `1' : A sin^2 imaginary potential is added at the boundaries.
 
-        - `2' : A mask is applied to the wavefunctions at the
+        - `2' : A mask is applied to the wave-functions at the
           boundaries.
 
    * `TDABWidth' (real, 0.4 a.u.) :   Width of the region used to apply
@@ -1112,13 +1158,13 @@ Time Dependent
    * `TDABWidth' (real, -0.2 a.u.) :   When `TDAbsorbingBoundaries ==
      1', is the height of the imaginary   potential.
 
-   * `TDDipoleLmax' (integer , 1) :   Maximum multipole of the density
+   * `TDDipoleLmax' (integer , 1) :   Maximum multi-pole of the density
      output to the file '`Sysname'.mult'   during a time-dependent
      simulation.
 
    * `TDOccupationalAnalysis' (logical, false) :   If true, outputs the
-     projections of the time-dependent Kohn-Sham   wavefunctions onto
-     the static (zero time) wavefunctions to the   file
+     projections of the time-dependent Kohn-Sham   wave-functions onto
+     the static (zero time) wave-functions to the   file
      '`Sysname'.proj'.
 
    * `MoveIons' (integer, 0) :   See `MoveIons' in the Born-Oppenheimer
@@ -1147,7 +1193,7 @@ Photo-electron spectrum
 
    * `TDCalcPES_mask' (logical, false)   If `true', calculate the
      photo-electron spectrum using the mask method   (M. Marques, D.
-     Varsano, H. Appel, E.K.U. Gross and A. Rubio to be submited).
+     Varsano, H. Appel, E.K.U. Gross and A. Rubio to be submitted).
      In order for this to work, masking boundaries are necessary
      (`TDAbsorbingBoundaries == 2').
 
@@ -1164,13 +1210,13 @@ Born-Oppenheimer Dynamics
 
         - `1' : Steepest descents.
 
-        - `2' : Damped newtonian dymamics using Verlet.
+        - `2' : Damped Newtonian dynamics using Verlet.
 
         - `3' : Newtonian dynamics using Verlet.
 
         - `4' : Newtonian dynamics using velocity Verlet.
 
-        - `5' : Minimization using conjugated gradients.
+        - `5' : Minimisation using conjugated gradients.
 
    * `BOnSteps' (integer, 1000) :   Number of time-steps to perform
      during the Born-Oppenheimer simulation.
@@ -1181,7 +1227,7 @@ Born-Oppenheimer Dynamics
      (`MoveIons == 1').
 
    * `Gamma' (double, 0.4) :   Value for the drag term when performing
-     damped   newtonian dynamics (`MoveIons == 2').
+     damped   Newtonian dynamics (`MoveIons == 2').
 
 
 File: octopus.info,  Node: Varia,  Prev: Born-Oppenheimer Dynamics,  Up: Input file options
@@ -1201,7 +1247,7 @@ Varia
      between neighbouring boxes when the system is charged.    Ideally,
      this parameter should be `2.0', but it can be safely   decreased
      in order to improve the efficiency of `octopus' for   neutral
-     systems and if there is little ionization.
+     systems and if there is little ionisation.
 
    * `POLStaticField' (double, 0.001 a.u.) :   Magnitude of the static
      field used to calculate the static polarizability   in
@@ -1229,10 +1275,10 @@ File: octopus.info,  Node: Hello world,  Next: Benzene,  Prev: Examples,  Up: Ex
 Hello world
 -----------
 
-   As a first example, we will take a sodium atom. The pseudopotential
+   As a first example, we will take a sodium atom. The pseudo-potential
 for sodium can be found in `pseudo/vps/i686/Na.vps'.  Start by creating
-a working directory, in which you should place the pseudopotential
-file. Then, with your favorite text editor, create the following input
+a working directory, in which you should place the pseudo-potential
+file. Then, with your favourite text editor, create the following input
 file (let's call it `inp' ;)
        SystemName = 'Na_atom'
        CalculationMode = 2
@@ -1250,7 +1296,7 @@ file (let's call it `inp' ;)
      
        TypeOfMixing = 2
 
-   This input file should be essencially self-explanatory.  Then run
+   This input file should be essentially self-explanatory.  Then run
 the `octopus' program. Take now a look at the working directory. It
 should include the following files:
      -rw-r--r--    1 user  group           565 Jul 25 22:47 inp
@@ -1260,14 +1306,14 @@ should include the following files:
      -rw-r--r--    1 user  group          2506 Jul 25 22:51 out.oct
 
    Besides the two initial files (`inp' and `Na.vps'), three other were
-created. `Na_atom.restart' contains essentially the wavefunctions in
+created. `Na_atom.restart' contains essentially the wave-functions in
 binary, and will be used in subsequent runs. `Na_atom.static' contains
 a summary of the ground-state properties, the most important of each
 are the eigenspectrum of the system, and the total energy.  Finally,
 you can safely ignore `out.oct': it is an output from the liboct
 library, irrelevant in what concerns physics ;).
 
-   *Exercices* :
+   *Exercises* :
    * Study how the total energy and eigenvalue of the sodium atom
      improve   with the mesh spacing.
 
@@ -1283,15 +1329,15 @@ library, irrelevant in what concerns physics ;).
      eigenspectrum   will be in the file `Na_atom.occ'. Why don't we
      find a Rydberg series in the   eigenspectrum?
 
-   * Repeat the previous calculation with PBE, LB94, and exact echange.
-     Comment the results   you obtained. Don't forget to *move* the
-     file `Na_atom.restart' when switching   between
+   * Repeat the previous calculation with PBE, LB94, and exact
+     exchange. Comment the results   you obtained. Don't forget to
+     *move* the file `Na_atom.restart' when switching   between
      exchange-correlation functionals.
 
    * Perform a time-dependent evolution (`CalculationMode = 5'), to
      calculate   the optical spectrum of the Na atom. Use a
-     `TDDeltaStrength = 0.05', polarized   in the `x' direction. The
-     multipole moments of the density are output to   the file
+     `TDDeltaStrength = 0.05', polarised   in the `x' direction. The
+     multi pole moments of the density are output to   the file
      `Na_atom.mult'. You can process this file with the utility
      `spectrum.x' to obtain the optical spectrum.    If you have
      computer time to waste, re-run the time-dependent simulation for
@@ -1346,7 +1392,7 @@ play. Here they are:
       H -2.147  1.240  0.000
 
    Follow now the steps of the previous example. Carbon and Hydrogen
-have a much harder pseudopotential than Sodium, so you will probably
+have a much harder pseudo-potential than Sodium, so you will probably
 have to use a tighter mesh. It also takes much more time...
 
 
@@ -1447,39 +1493,42 @@ Options Index
 
 Tag Table:
 Node: Top1124
-Node: Copying1852
-Node: Authors3254
-Node: Introduction6409
-Node: Description of Octopus6608
-Ref: Description of Octopus-Footnote-19120
-Node: Time dependent density functional theory9513
-Ref: Time dependent density functional theory-Footnote-111148
-Ref: Time dependent density functional theory-Footnote-211380
-Ref: Time dependent density functional theory-Footnote-311682
-Ref: Time dependent density functional theory-Footnote-411838
-Ref: Time dependent density functional theory-Footnote-512022
-Node: Installation12098
-Node: The input file17953
-Node: The parser18176
-Node: Input file options21214
-Node: Generalities21794
-Node: Species24052
-Node: Coordinates26007
-Node: Velocities29833
-Node: Mesh30659
-Node: States32915
-Node: Hamiltonian35096
-Node: Exchange and correlation36621
-Node: SCF38559
-Node: Unoccupied States41460
-Node: Time Dependent42116
-Node: Photo-electron spectrum45767
-Node: Born-Oppenheimer Dynamics46767
-Node: Varia47812
-Node: Examples48952
-Node: Hello world49096
-Node: Benzene52242
-Node: A word about units53779
-Node: Options Index53922
+Node: Copying1345
+Node: Authors2747
+Node: Introduction5869
+Node: Description of octopus6068
+Ref: Description of octopus-Footnote-18583
+Node: Time dependent density functional theory8976
+Ref: Time dependent density functional theory-Footnote-110608
+Ref: Time dependent density functional theory-Footnote-210840
+Ref: Time dependent density functional theory-Footnote-311142
+Ref: Time dependent density functional theory-Footnote-411298
+Ref: Time dependent density functional theory-Footnote-511482
+Node: Installation11558
+Node: Quick instructions11757
+Node: Long instructions12176
+Node: Troubleshooting17807
+Node: The input file20654
+Node: The parser20877
+Node: Input file options23936
+Node: Generalities24518
+Node: Species26779
+Node: Coordinates28741
+Node: Velocities32567
+Node: Mesh33393
+Node: States35652
+Node: Hamiltonian37836
+Node: Exchange and correlation39363
+Node: SCF41302
+Node: Unoccupied States44208
+Node: Time Dependent44864
+Node: Photo-electron spectrum48518
+Node: Born-Oppenheimer Dynamics49519
+Node: Varia50564
+Node: Examples51704
+Node: Hello world51848
+Node: Benzene55000
+Node: A word about units56538
+Node: Options Index56681
 
 End Tag Table

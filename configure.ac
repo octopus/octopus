@@ -205,7 +205,8 @@ AC_SUBST(PROGNAME)
 
 # This is certainly wrong, but I don't know
 # how to do it right
-LINK="$F90 $F90FLAGS -o $PROGNAME"
+LIBS="$LIBS $F90LIBS"
+LINK="$F90 $F90FLAGS $LDFLAGS -o $PROGNAME"
 AC_SUBST(LINK)
 
 if test -z "$F90CPP"; then
