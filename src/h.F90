@@ -99,8 +99,8 @@ subroutine hamiltonian_init(h, sys)
   type(hamiltonian_type), intent(out) :: h
   type(system_type), intent(inout) :: sys
 
-  integer :: i, j, db(3)
-  real(r8) :: d, r, x(3)
+  integer :: i, j, db(3), n
+  real(r8) :: d(3), r, x(3)
 
   call push_sub('hamiltonian_init')
 
@@ -222,48 +222,22 @@ subroutine hamiltonian_init(h, sys)
       call oct_parse_double("ABHeight", -0.2_r8/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
-      h%ab_height = 1._r8
+      h%ab_height = M_ONE
     end if
     
     ! generate boundary potential...
     allocate(h%ab_pot(sys%m%np))
-    h%ab_pot = 0._r8
-    pot: do i = 1, sys%m%np
-      call mesh_r(sys%m, i, r, x=x)
-    
-      select case(sys%m%box_shape)
-      case(SPHERE)
-        d = r - (sys%m%rsize - h%ab_width)
-        if(d.gt.0._r8) then
-          h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-        end if
-        
-      case(CYLINDER)
-        d = sqrt(x(2)**2 + x(3)**2) - (sys%m%rsize - h%ab_width)
-        if(d.gt.0._r8)  &
-             h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-        d = abs(x(1)) - (sys%m%xsize - h%ab_width)
-        if(d.gt.0._r8)  &
-             h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-        
-      case(PARALLELEPIPED)
-        do j = 1, conf%dim
-          d = abs(x(j)) - (sys%m%lsize(j)/2._r8 - h%ab_width)
-          if(d.gt.0._r8) then
-            h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-          end if
-        end do
-        
-      case default
-        message(1) = "Absorbing boundaries are not implemented for"
-        message(2) = "Box_shape = 3"
-        call write_warning(2)
-        exit pot
-      end select
-      
-      if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
-    end do pot
-    
+    h%ab_pot = M_ZERO
+    do i = 1, sys%m%np
+         call mesh_inborder(sys%m, i, n, d, h%ab_width)
+         if(n>0) then
+           do j = 1, n
+              h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
+           enddo
+         endif
+         if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
+    enddo
+
   end if absorbing_boundaries
   
   ! Cutoff applied to the kinetic term. If derivatives are calculated in real space, this

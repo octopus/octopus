@@ -263,6 +263,59 @@ subroutine mesh_r(m, i, r, a, x)
   if(present(x)) x = xx
 end subroutine mesh_r
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! /* Finds out if a given point of a mesh belongs to the "border" of the mesh.
+! A point belongs to the border of the mesh if it is too close to any of the
+! walls of the mesh. The criterium is set by input parameter "width".
+!
+! m     : the mesh.
+! i     : the point in the mesh.
+! n     : on output, the number (0<=n<=3) of "walls" of the mesh that the point is
+!         too close to, in order to consider it belonging to a mesh.
+! d     : the distances of the point to the walls, for each of the walls that the
+!         point is too close to.
+! width : the width of the border.
+!
+! So, if n>0, the point is in the border.  */
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine mesh_inborder(m, i, n, d, width)
+  type(mesh_type), intent(in) :: m
+  integer, intent(in)   :: i
+  real(r8), intent(in)  :: width
+  integer, intent(out)  :: n
+  real(r8), intent(out) :: d(3)
+
+  integer :: j
+  real(r8) :: x(3), r, dd
+
+  call mesh_r(m, i, r, x=x)
+  n = 0
+  select case(m%box_shape)
+    case(SPHERE)
+      dd = r - (m%rsize - width)
+      if(dd.gt.M_ZERO) then
+        n = 1; d(1) = dd
+      end if
+    case(CYLINDER)
+      dd = sqrt(x(2)**2 + x(3)**2) - (m%rsize - width)
+      if(dd.gt.M_ZERO) then
+        n = 1; d(1) = dd
+      endif
+      dd = abs(x(1)) - (m%xsize - width)
+      if(dd.gt.M_ZERO) then
+        n = n + 1; d(n) = dd
+      endif
+    case(PARALLELEPIPED)
+      do j = 1, conf%dim
+         dd = abs(x(j)) - (m%lsize(j) - width)
+         if(dd.gt.M_ZERO) then
+           n = n + 1; d(n) = dd
+         end if
+      end do
+  end select
+
+end subroutine mesh_inborder
+
 subroutine mesh_init_derivatives_coeff(d)
   use math, only: weights
   type(mesh_derivatives_type), intent(inout) :: d
