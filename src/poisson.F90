@@ -108,6 +108,8 @@ subroutine poisson_end()
     call dcf_free(fft_cf)
     deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
 #endif
+  case(CG_CORRECTED)
+    call poisson_cg2_end()
   end select
 
   call pop_sub()

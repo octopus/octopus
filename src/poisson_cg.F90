@@ -23,20 +23,53 @@ module poisson_cg
 
   implicit none
 
-  public :: poisson_cg1, &
-            poisson_cg2
+  public :: poisson_cg1_init, &
+            poisson_cg1,      &
+            poisson_cg1_end,  &
+            poisson_cg2_init, &
+            poisson_cg2,      &
+            poisson_cg2_end
 
   type(der_discr_type), pointer :: der_pointer
   type(mesh_type),      pointer :: mesh_pointer
 
+  integer :: maxl
+  FLOAT :: threshold
+  FLOAT, allocatable :: phi(:, :)
+  FLOAT, allocatable :: aux(:, :)
+
 contains
 
-  subroutine op(x, y)
-    FLOAT, intent(in)  :: x(:)
-    FLOAT, intent(out) :: y(:)
-    integer :: i
-    call dderivatives_lapl(der_pointer, x, y)
-  end subroutine op  
+  subroutine poisson_cg1_init(m, ml, thr)
+    type(mesh_type), intent(in) :: m
+    integer, intent(in) :: ml
+    FLOAT, intent(in)   :: thr
+    call push_sub('poisson_cg1_init')
+    maxl = ml
+    threshold = thr
+    call build_aux(m)
+    call pop_sub()
+  end subroutine poisson_cg1_init
+
+  subroutine poisson_cg1_end
+    deallocate(aux)
+  end subroutine poisson_cg1_end
+
+  subroutine poisson_cg2_init(m, ml, thr)
+    type(mesh_type), intent(in) :: m
+    integer, intent(in) :: ml
+    FLOAT, intent(in) :: thr
+    call push_sub('poisson_cg2_init')
+    maxl = ml
+    threshold = thr
+    call build_aux(m)
+    call build_phi(m)
+    call pop_sub()
+  end subroutine poisson_cg2_init
+
+  subroutine poisson_cg2_end
+    deallocate(aux, phi)
+  end subroutine poisson_cg2_end
 
   subroutine poisson_cg1(m, der, pot, rho)
     type(mesh_type), target, intent(in)         :: m
@@ -44,7 +77,6 @@ contains
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
   
-    integer, parameter :: ml = 4 ! maximum multipole moment to include
     integer :: iter
     FLOAT :: res
     FLOAT, allocatable :: wk(:), lwk(:), zk(:), pk(:)
@@ -55,7 +87,7 @@ contains
     
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
-    call boundary_conditions(m, rho, ml, wk)
+    call boundary_conditions(m, rho, maxl, wk)
     call dderivatives_lapl(der, wk, lwk, .true.)
     
     zk(1:m%np) = -M_FOUR*M_PI*rho(1:m%np) - lwk(1:m%np)
@@ -65,8 +97,8 @@ contains
     mesh_pointer => m
     pk = zk
     iter = 400
-    call conjugate_gradients(m%np, pk, zk, op, iter = iter, residue = res, threshold = CNST(1.0e-5))
-    if(res >= CNST(1.0e-5)) then
+    call conjugate_gradients(m%np, pk, zk, op, iter = iter, residue = res, threshold = threshold)
+    if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
        write(message(3), '(a,e14.6)') '  Res = ', res
@@ -87,7 +119,6 @@ contains
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
 
     integer :: unit, i, iter
-    integer, parameter :: ml = 3 ! maximum multipole moment to include
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT :: res
 
@@ -97,7 +128,7 @@ contains
     mesh_pointer => m
 
     allocate(rho_corrected(m%np), vh_correction(m%np))
-    call correct_rho(m, ml, rho, rho_corrected, vh_correction)
+    call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
 !!$ ! This is the change of base, which for the moment is not done.
@@ -106,8 +137,8 @@ contains
 !!$       rho_corrected(i) = rho_corrected(i)/sqrt(m%vol_pp(i))
 !!$    enddo
     iter = 400
-    call conjugate_gradients(m%np, pot, rho_corrected, op, iter = iter, residue = res, threshold = CNST(1.0e-5))
-    if(res >= CNST(1.0e-5)) then
+    call conjugate_gradients(m%np, pot, rho_corrected, op, iter = iter, residue = res, threshold = threshold)
+    if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
        write(message(3), '(a,e14.6)') '  Res = ', res
@@ -132,27 +163,20 @@ contains
     FLOAT,           intent(out) :: mult((ml+1)**2)
 
     integer :: i, add_lm, l, mm
-    FLOAT   :: x(3), r, s1, sa, rr
 
     mult(:) = M_ZERO
     do i = 1, m%np
-      call mesh_r(m, i, r, x=x)
       add_lm = 1
-      rr = M_ONE
       do l = 0, ml
-         s1 = rho(i)*rr
          do mm = -l, l
-            sa = loct_ylm(x(1), x(2), x(3), l, mm)
-            mult(add_lm) = mult(add_lm) + s1*sa*m%vol_pp(i)
+            mult(add_lm) = mult(add_lm) + rho(i)*aux(add_lm, i)*m%vol_pp(i)
             add_lm = add_lm + 1
          enddo
-         rr = rr*r
       enddo
     enddo
 
   end subroutine get_multipoles
 
-  ! calculate multipole moments until ml
   subroutine boundary_conditions(m, rho, ml, pot)
     implicit none
     type(mesh_type), intent(in)  :: m
@@ -191,7 +215,7 @@ contains
     FLOAT,           intent(out) :: vh_correction(:)
 
     integer :: i, add_lm, l, mm, lldfac, j
-    FLOAT   :: x(3), r, s1, sa, ylm, alpha, beta, gamma
+    FLOAT   :: x(3), r, s1, sa, ylm, alpha, beta
     FLOAT, allocatable :: mult(:)
 
     allocate(mult((ml+1)**2))
@@ -206,14 +230,44 @@ contains
        do l = 0, ml
           lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; enddo
           beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
+          do mm = -l, l
+             rho_corrected(i) = rho_corrected(i) - mult(add_lm) * beta * aux(add_lm, i) * exp(-(r/alpha)**2)
+             vh_correction(i) = vh_correction(i) + mult(add_lm)*phi(add_lm, i)   
+             add_lm = add_lm + 1
+          enddo
+       enddo
+    enddo
+
+  end subroutine correct_rho
+
+  subroutine op(x, y)
+    FLOAT, intent(in)  :: x(:)
+    FLOAT, intent(out) :: y(:)
+    integer :: i
+    call dderivatives_lapl(der_pointer, x, y)
+  end subroutine op
+
+  subroutine build_phi(m)
+    type(mesh_type), intent(in) :: m
+
+    FLOAT :: alpha, beta, gamma, ylm, r, x(3)
+    integer :: i, l, add_lm, lldfac, j, mm
+
+    allocate(phi((maxl+1)**2, m%np))
+    alpha = M_TWO
+    do i = 1, m%np
+       call mesh_r(m, i, r, x = x)
+       add_lm = 1
+       do l = 0, maxl
+          lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; enddo
+          beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
           gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
           do mm = -l, l
              ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
-             rho_corrected(i) = rho_corrected(i) - mult(add_lm)*beta * r**l * exp(-(r/alpha)**2)*ylm
              if(r .ne. M_ZERO) then
-                vh_correction(i) = vh_correction(i) + mult(add_lm)*gamma * isubl( l, r/alpha) * ylm / r**(l+1)
+                phi(add_lm, i) = gamma * isubl( l, r/alpha) * ylm / r**(l+1)
              else
-                vh_correction(i) = vh_correction(i) + mult(add_lm)*gamma * ylm / alpha
+                phi(add_lm, i) = gamma * ylm / alpha
              endif
              add_lm = add_lm + 1
           enddo
@@ -228,7 +282,39 @@ contains
        isubl = M_HALF*loct_gamma(l + M_HALF)*(M_ONE - loct_incomplete_gamma(l+M_HALF, x**2) )
      end function isubl
 
-  end subroutine correct_rho
+  end subroutine build_phi
 
+  subroutine build_aux(m)
+    type(mesh_type), intent(in) :: m
+
+    FLOAT :: alpha, beta, gamma, ylm, r, x(3)
+    integer :: i, l, add_lm, lldfac, j, mm
+
+    allocate(aux((maxl+1)**2, m%np))
+    alpha = M_TWO
+    do i = 1, m%np
+       call mesh_r(m, i, r, x = x)
+       add_lm = 1
+       do l = 0, maxl
+          lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; enddo
+          beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
+          gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
+          do mm = -l, l
+             ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
+             if(r .ne. M_ZERO) then
+                aux(add_lm, i) = r**l*ylm
+             else
+                if(l==0) then
+                   aux(add_lm, i) = ylm
+                else
+                   aux(add_lm, i) = M_ZERO
+                endif
+             endif
+             add_lm = add_lm + 1
+          enddo
+       enddo
+    enddo
+
+  end subroutine build_aux
 
 end module poisson_cg

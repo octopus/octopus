@@ -17,8 +17,9 @@
 
 subroutine poisson3D_init(m)
   type(mesh_type),     intent(inout) :: m
-
-  ASSERT(poisson_solver >= 0 .or. poisson_solver <= 4)
+  integer :: maxl
+  FLOAT   :: threshold
+  ASSERT(poisson_solver >= FFT_SPHERE .or. poisson_solver <= CG_CORRECTED)
 
   select case(poisson_solver)
 #ifdef HAVE_FFT
@@ -33,8 +34,14 @@ subroutine poisson3D_init(m)
 #endif
     case(CG)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
+      call loct_parse_int('PoissonSolverCGMaxMultipole', 4, maxl)
+      call loct_parse_float('PoissonSolverCGThreshold', CNST(1.0e-5), threshold)
+      call poisson_cg1_init(m, maxl, threshold)
     case(CG_CORRECTED)
+      call loct_parse_int('PoissonSolverCGMaxMultipole', 4, maxl)
+      call loct_parse_float('PoissonSolverCGThreshold', CNST(1.0e-5), threshold)
       message(1) = 'Info: Using corrected conjugated gradients method to solve poisson equation.'
+      call poisson_cg2_init(m, maxl, threshold)
   end select
   call write_info(1)
 
