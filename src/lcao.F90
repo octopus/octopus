@@ -146,7 +146,7 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
       end select
  
       do n2 = n1, lcao_data%dim
-        lcao_data%k(n1, n2, ik) = X(states_dotp)(m, st%dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%k(n1, n2, ik) = X(states_dotp)(m, st%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
         lcao_data%s(n1, n2, ik) = X(states_dotp)(m, st%dim, lcao_data%psis(:, :, n1, ik), &
                                                  lcao_data%psis(:, : ,n2, ik))
       end do
