@@ -35,7 +35,8 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0,z=0", status='unknown')
     do ix = 1, m%fft_n(1)
        x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
-       write(iunit, *) x, c(ix, m%fft_n(2)/2 + 1, m%fft_n(3)/2 + 1)/u
+       write(iunit, *) x, R_REAL(c(ix, m%fft_n(2)/2 + 1, m%fft_n(3)/2 + 1))/u, &
+            R_AIMAG(c(ix, m%fft_n(2)/2 + 1, m%fft_n(3)/2 + 1))/u
     enddo
     call io_close(iunit)
   end subroutine axis_x
@@ -48,7 +49,8 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,z=0", status='unknown')
     do iy = 1, m%fft_n(2)
        y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
-       write(iunit, *) y, c(m%fft_n(1)/2 + 1, iy, m%fft_n(3)/2 + 1)/u
+       write(iunit, *) y, R_REAL(c(m%fft_n(1)/2 + 1, iy, m%fft_n(3)/2 + 1))/u, &
+            R_AIMAG(c(m%fft_n(1)/2 + 1, iy, m%fft_n(3)/2 + 1))/u
     enddo
     call io_close(iunit)
   end subroutine axis_y
@@ -61,7 +63,8 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,y=0", status='unknown')
     do iz = 1, m%fft_n(3)
        z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
-       write(iunit, *) z, c(m%fft_n(1)/2 + 1, m%fft_n(2)/2 + 1, iz)/u
+       write(iunit, *) z, R_REAL(c(m%fft_n(1)/2 + 1, m%fft_n(2)/2 + 1, iz))/u, &
+            R_AIMAG(c(m%fft_n(1)/2 + 1, m%fft_n(2)/2 + 1, iz))/u
     enddo
     call io_close(iunit)
   end subroutine axis_z
@@ -76,7 +79,8 @@ contains
       y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
       do iz = 1, m%fft_n(3)
         z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, *) y, z, c(m%fft_n(1)/2 + 1, iy, iz)/u
+        write(iunit, *) y, z, R_REAL(c(m%fft_n(1)/2 + 1, iy, iz))/u, &
+             R_AIMAG(c(m%fft_n(1)/2 + 1, iy, iz))/u
       end do
       write(iunit, '(1x)')
     end do
@@ -93,7 +97,8 @@ contains
       x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
       do iz = 1, m%fft_n(3)
         z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, *) x, z, c(ix, m%fft_n(2)/2 + 1, iz)/u
+        write(iunit, *) x, z, R_REAL(c(ix, m%fft_n(2)/2 + 1, iz))/u, &
+             R_AIMAG(c(ix, m%fft_n(2)/2 + 1, iz))/u
       end do
       write(iunit, '(1x)')
     end do
@@ -110,7 +115,8 @@ contains
       x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
       do iy = 1, m%fft_n(2)
         y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
-        write(iunit, *) x, y, c(ix, iy, m%fft_n(3)/2 + 1)/u
+        write(iunit, *) x, y, R_REAL(c(ix, iy, m%fft_n(3)/2 + 1))/u, &
+             R_AIMAG(c(ix, iy, m%fft_n(3)/2 + 1))/u
       end do
       write(iunit, '(1x)')
     end do

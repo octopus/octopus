@@ -71,6 +71,9 @@ program choose_st
   call oct_parse_str("ChooseStates", "1-1024", ch)
   call oct_wfs_list(C_string(ch), flags)
 
+  ! create directory if it does not exist
+  call oct_mkdir('opt-control')
+
   n_st = 0
   do i = 1, sys%st%nst
     if(iand(flags((i-1)/32 + 1), 2**(modulo(i-1, 32))).ne.0) n_st = n_st + 1
@@ -86,9 +89,8 @@ program choose_st
       write(stdout, '(a,i4,a,i4)') "Including state ", i, " => ", n_st
       st1%R_FUNC(psi) (0:sys%m%np, 1:st1%dim, n_st, 1:st1%nik) = &
            sys%st%R_FUNC(psi) (0:sys%m%np, 1:st1%dim, i, 1:st1%nik)
+      st1%eigenval(n_st, 1:st1%nik) = sys%st%eigenval(i, 1:st1%nik)      
       n_st = n_st + 1
-      st1%eigenval(n_st, 1:st1%nik) = sys%st%eigenval(i, 1:st1%nik)
-      
     end if
   end do
 

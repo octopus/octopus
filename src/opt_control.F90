@@ -41,32 +41,35 @@ subroutine opt_control_run(td, sys, h)
   real(r8), pointer :: v_old_i(:,:,:), v_old_f(:,:,:)
   real(r8), pointer :: laser_i(:,:), laser_f(:,:)
 
-  integer :: i, iunit
-  real(r8) :: alpha, functional
+  integer :: i, iunit, ctr_iter, ctr_iter_max
+  real(r8) :: eps, alpha, overlap, functional, old_functional
 
   call init()
 
   ! first propagate psi_f to ti
   call prop_psi_f()
 
-  ! we now setup v_old arrays
-  do i = 1, 3
-    v_old_f(:,:,i) = td%v_old(:,:,1) ! this one comes from prop_psi_f
-  end do
-
-  call zcalcdens(psi_i, sys%m%np, psi_i%rho, reduce=.true.)
-  call zhamiltonian_setup(h, sys%m, psi_i, sys)
-  do i = 1, sys%st%nspin
-    v_old_i(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
-  end do
-  v_old_i(:, :, 3) = v_old_i(:, :, 2)
-
-  do
+  old_functional = -1e10_r8
+  ctr_iter = 1
+  ctr_loop: do
     ! first propagate both states forward
-    message(1) = "Info: Propagating forward"
-    call write_info(1)
+    write(message(1), '(a,i3)') 'Info: Optimum control iteration #', ctr_iter
+    message(2) = "Info: Propagating forward"
+    call write_info(2)
 
+    ! setup forward propagation
     call read_state(psi_i, "wf.initial")
+    call zcalcdens(psi_i, sys%m%np, psi_i%rho, reduce=.true.)
+    call zhamiltonian_setup(h, sys%m, psi_i, sys)
+    do i = 1, sys%st%nspin
+      v_old_i(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
+    end do
+    v_old_i(:, :, 3) = v_old_i(:, :, 2)
+    
+    do i = 2, 3
+      v_old_f(:,:,i) = v_old_f(:,:,1) ! this one comes from the previous propagation
+    end do
+
     call oct_progress_bar(-1, td%max_iter-1)
     h%lasers(1)%dt = td%dt
     functional = M_ZERO
@@ -76,35 +79,50 @@ subroutine opt_control_run(td, sys, h)
     end do
     write(stdout, '(1x)')
 
-    ! calculate overlap
-    call overlap()
+    ! write new field to file
+    call write_field('opt-control/laser_f', laser_i)
 
+    ! setup backward propagation
+    call read_state(psi_f, "wf.final")
+    call zcalcdens(psi_f, sys%m%np, psi_f%rho, reduce=.true.)
+    call zhamiltonian_setup(h, sys%m, psi_f, sys)
+    do i = 1, sys%st%nspin
+      v_old_f(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
+    end do
+    v_old_f(:, :, 3) = v_old_f(:, :, 2)
+    
+    do i = 2, 3
+      v_old_i(:,:,i) = v_old_i(:,:,1) ! this one comes the previous propagation
+    end do
+
+    ! calculate overlap
+    call calc_overlap()
+    if((ctr_iter==ctr_iter_max).or.(eps>M_ZERO.and.abs(functional-old_functional) < eps)) &
+         exit ctr_loop
+    ctr_iter = ctr_iter + 1
+    old_functional = functional
+    
     ! and now backward
     message(1) = "Info: Propagating backward"
     call write_info(1)
 
-    call read_state(psi_f, "wf.final")
     call oct_progress_bar(-1, td%max_iter-1)
-    td%dt = - td%dt
+    td%dt = -td%dt
     h%lasers(1)%dt = td%dt
     functional = M_ZERO
     do i = td%max_iter-1, 0, -1
       call prop_iter2(i)
       call oct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
-    td%dt = - td%dt
+    td%dt = -td%dt
     write(stdout, '(1x)')
 
-    ! write new field to file
-    call io_assign(iunit)
-    open(iunit, file='opt-control/laser', status='unknown')
-    do i = 0, 2*td%max_iter
-      write(iunit, '(4es20.12)') i*td%dt/M_TWO, laser_f(:, i)
-    end do
-    call io_close(iunit)
+    call write_field('opt-control/laser_b', laser_f)
+  end do ctr_loop
 
-  end do
-    
+  ! output some useful information
+  call output()
+
   ! clean up
   td%v_old => v_old_i
   nullify(h%lasers(1)%numerical)
@@ -112,32 +130,11 @@ subroutine opt_control_run(td, sys, h)
   call states_end(psi_f)
 
 contains
-  subroutine overlap()
-    integer :: ik, p, dim, i
-    real(r8) :: d1, j
-
-    message(1) = "Overlap between wavefunctions"
-    call write_info(1)
-    do ik = 1, psi_i%nik
-      do p  = psi_i%st_start, psi_i%st_end
-        d1 = M_z0
-        do dim = 1, psi_i%nik
-          do i = 1, sys%m%np
-            d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik)
-          end do
-        end do
-        d1 = d1*sys%m%vol_pp
-        write(message(1), '(6x,i3,x,i3,a,2f16.10)') ik, p, " => ", abs(d1)**2, abs(d1)**2-alpha*functional
-        call write_info(1)
-      end do
-    end do
-  end subroutine overlap
-
   subroutine prop_iter1(iter)
     integer, intent(in) :: iter
 
     ! new electric field
-    if(iter < td%max_iter) call update_field(iter, laser_i)
+    call update_field(iter-1, laser_i)
 
     ! psi_f
     td%v_old => v_old_f
@@ -159,7 +156,7 @@ contains
     integer, intent(in) :: iter
 
     ! new electric field
-    if(iter > 0) call update_field(iter, laser_f)
+    call update_field(iter+1, laser_f)
 
     ! psi_i
     td%v_old => v_old_i
@@ -179,28 +176,21 @@ contains
 
   subroutine update_field(iter, l)
     integer, intent(in) :: iter
-    real(r8), intent(inout) :: l(0:td%max_iter, conf%dim)
+    real(r8), intent(inout) :: l(0:2*td%max_iter, conf%dim)
 
     complex(r8), allocatable :: grad(:,:)
-    complex(r8) :: d1, d2(conf%dim), d3(conf%dim)
+    complex(r8) :: d1, d2(conf%dim)
     integer :: ik, p, dim, i, j
 
-    d1 = M_z0; d2 = M_z0; d3 = M_z0
+    d1 = M_z0; d2 = M_z0
     allocate(grad(3, sys%m%np))
     do ik = 1, psi_i%nik
       do p  = psi_i%st_start, psi_i%st_end
-        do dim = 1, psi_i%nik
-          call zmesh_derivatives(sys%m, psi_i%zpsi(:, dim, p, ik), grad=grad)
-!          do i = 1, sys%m%np
-!            write(70,*) sys%m%Lxyz(1, i)*sys%m%h(1), real(psi_i%zpsi(i, dim, p, ik)), real(grad(1, i))
-!          end do
-!          stop
+        do dim = 1, psi_i%dim
           do i = 1, sys%m%np
             d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik)
             d2(1:conf%dim) = d2(1:conf%dim) + &
                  conjg(psi_f%zpsi(i, dim, p, ik))*sys%m%Lxyz(1:conf%dim, i)*psi_i%zpsi(i, dim, p, ik)
-            d3(1:conf%dim) = d3(1:conf%dim) + &
-                 conjg(psi_f%zpsi(i, dim, p, ik))*grad(1:conf%dim, i)
           end do
         end do
       end do
@@ -208,23 +198,19 @@ contains
 
     d1 = d1*sys%m%vol_pp
     d2(1:conf%dim) = -d2(1:conf%dim)*sys%m%h(1:conf%dim)*sys%m%vol_pp
-    d3 = -d3*sys%m%vol_pp * M_zI*td%dt/M_TWO
 
     l(2*iter, 1:conf%dim) = -aimag(d1*d2(1:conf%dim))/alpha
-    functional = functional + sum(l(iter, 1:conf%dim)**2)*abs(td%dt)
+    functional = functional + sum(l(2*iter, 1:conf%dim)**2)*abs(td%dt)
 
     ! extrapolate to t+-dt/2
     i = int(sign(M_ONE, td%dt))
-    l(  i, 1:conf%dim) = l(0, 1:conf%dim)
-    l(2*i, 1:conf%dim) = l(0, 1:conf%dim)
-    
-    l(2*iter+  i, 1:conf%dim) = M_HALF*(M_THREE*l(2*iter, 1:conf%dim) -       l(2*iter-2*i, 1:conf%dim))
-    l(2*iter+2*i, 1:conf%dim) = M_HALF*( M_FOUR*l(2*iter, 1:conf%dim) - M_TWO*l(2*iter-2*i, 1:conf%dim))
-
-    !print *, iter, l(2*iter, 1:conf%dim), l(2*iter+1, 1:conf%dim)
-
-    !l(2*iter+i, 1:conf%dim)   = l(2*iter, 1:conf%dim) - aimag(d1*d3(1:conf%dim))/alpha
-    !l(2*iter+2*i, 1:conf%dim) = l(2*iter, 1:conf%dim) - M_TWO*aimag(d1*d3(1:conf%dim))/alpha
+    if(iter==0.or.iter==td%max_iter) then
+      l(2*iter+  i, 1:conf%dim) = l(2*iter, 1:conf%dim)
+      l(2*iter+2*i, 1:conf%dim) = l(2*iter, 1:conf%dim)
+    else
+      l(2*iter+  i, 1:conf%dim) = M_HALF*(M_THREE*l(2*iter, 1:conf%dim) -       l(2*iter-2*i, 1:conf%dim))
+      l(2*iter+2*i, 1:conf%dim) = M_HALF*( M_FOUR*l(2*iter, 1:conf%dim) - M_TWO*l(2*iter-2*i, 1:conf%dim))
+    end if
 
   end subroutine update_field
 
@@ -241,14 +227,15 @@ contains
     
     ! setup start of the propagation
     do i = 1, sys%st%nspin
-      td%v_old(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
+      v_old_f(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
     end do
-    td%v_old(:, :, 3) = td%v_old(:, :, 2)
+    v_old_f(:, :, 3) = v_old_f(:, :, 2)
+    
+    h%lasers(1)%numerical => laser_f
+    td%v_old => v_old_f
 
-    !do i = 1, sys%m%np
-    !  write(70,*) sys%m%Lxyz(1,i)*sys%m%h(1), real(psi_f%zpsi(i,1,1,1)), aimag(psi_f%zpsi(i,1,1,1))
-    !end do
     td%dt = -td%dt
+    h%lasers(1)%dt = td%dt
     call oct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
@@ -261,10 +248,23 @@ contains
     end do
     td%dt = -td%dt
     message(1) = ""; call write_info(1)
-    !do i = 1, sys%m%np
-    !  write(71,*) sys%m%Lxyz(1,i)*sys%m%h(1), real(psi_f%zpsi(i,1,1,1)), aimag(psi_f%zpsi(i,1,1,1))
-    !end do
   end subroutine prop_psi_f
+
+  subroutine calc_overlap()
+    integer :: ik, p
+
+    message(1) = "Overlap between wavefunctions"
+    call write_info(1)
+    do ik = 1, psi_i%nik
+      do p  = psi_i%st_start, psi_i%st_end
+        ! WARNING gives garbage when calculated through zstates_dotp
+        overlap = abs(sum(conjg(psi_i%zpsi(1:,:, p, ik))*psi_f%zpsi(1:,:, p, ik))*sys%m%vol_pp)**2
+        functional = overlap - alpha*functional
+        write(message(1), '(6x,i3,x,i3,a,2f16.10)') ik, p, " => ", overlap, functional
+        call write_info(1)
+      end do
+    end do
+  end subroutine calc_overlap
 
   subroutine read_state(st, filename)
     type(states_type), intent(out) :: st
@@ -276,12 +276,41 @@ contains
     end if
   end subroutine read_state
 
+  subroutine write_field(filename, las)
+    character(len=*), intent(in) :: filename
+    real(r8), intent(in) :: las(1:conf%dim,0:2*td%max_iter)
+
+    integer :: i, iunit
+
+    call io_assign(iunit)
+    open(iunit, file=trim(filename), status='unknown')
+    do i = 0, 2*td%max_iter
+      write(iunit, '(4es20.12)') i*td%dt/M_TWO, las(:, i)
+    end do
+    call io_close(iunit)
+  
+  end subroutine write_field
+
+  subroutine output()
+    integer :: iunit
+
+    call io_assign(iunit)
+    open(iunit, file='opt-control/info', status='unknown')
+    write(iunit, '(a,i4)')     'Iterations = ', ctr_iter
+    write(iunit, '(a,f14.8)') 'Overlap    = ', overlap
+    write(iunit, '(a,f14.8)') 'Functional = ', functional
+    call io_close(iunit)
+
+    ! should output wavefunctions ;)
+    call zstates_output(psi_i, sys%m, "opt-control", sys%outp)
+  end subroutine output
+
   subroutine init()
     integer :: t
 
     ! psi_i is initialized in system_init
     psi_i => sys%st
-    v_old_i => td%v_old;
+    v_old_i => td%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
     call states_init(psi_f, sys%m, sys%val_charge)
@@ -304,13 +333,19 @@ contains
     h%lasers(1)%envelope = 99 ! internal type
     h%lasers(1)%dt = td%dt
     allocate(laser_i(conf%dim, 0:2*td%max_iter), laser_f(conf%dim, 0:2*td%max_iter))
-    laser_i = M_ZERO; 
-    !laser_f = M_ZERO;
-    laser_f = 1e-4_r8*exp(-((real(i)-real(td%max_iter)/M_THREE)*8._r8/real(td%max_iter))**2)
-    h%lasers(1)%numerical => laser_f
+    laser_i = M_ZERO
+    laser_f = M_ZERO
 
-    ! read alpha from input
+    ! read parameters from input
     call oct_parse_double(C_string("OptControlAlpha"), M_ONE, alpha)
+    call oct_parse_double(C_string("OptControlEps"), 1e-3_r8, eps)
+    call oct_parse_int(C_string("OptControlMaxIter"), 10, ctr_iter_max)
+    if(ctr_iter_max < 0.and.eps<M_ZERO) then
+      message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
+      call write_fatal(1)
+    end if
+
+    if(ctr_iter_max < 0) ctr_iter_max = huge(ctr_iter_max)
 
   end subroutine init
 

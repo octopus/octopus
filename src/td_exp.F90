@@ -343,7 +343,7 @@ contains
     sub_name = 'local_part'; call push_sub()
 
     if(h%no_lasers > 0 .and. h%gauge == 1) then
-      call laser_field(h%no_lasers, h%lasers, t + dt/M_TWO, las)
+      call laser_field(h%no_lasers, h%lasers, t, las)
     end if
 
     ! Propagation of the local part and external field

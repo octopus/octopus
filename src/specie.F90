@@ -156,17 +156,17 @@ end subroutine specie_end
 
 real(r8) function specie_get_local(s, x) result(l)
   type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(conf%dim)
+  real(r8), intent(in) :: x(3)
 
   real(r8) :: a1, a2, Rb2 ! for jellium
   real(r8) :: xx(3), r
 
-  xx = 0._r8
+  xx = M_ZERO
   xx(1:conf%dim) = x(:)
   r = sqrt(sum(xx(:)**2))
 
   if(conf%dim.ne.3 .or. s%label(1:5)=='usdef') then
-    l = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
+    l = oct_parse_potential(xx(1), xx(2), xx(3), r, s%user_def)
 
   else
     select case(s%label(1:5))

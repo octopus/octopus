@@ -100,7 +100,7 @@ subroutine mesh_create(m, natoms, atom)
     end do
     m%lsize = m%lsize*units_inp%length%factor
   end if
-  
+
   ! set nr and nx
   m%nr = 0; m%nx = 0
   select case(m%box_shape)
@@ -119,9 +119,11 @@ subroutine mesh_create(m, natoms, atom)
   ! allocate the xyz arrays
   allocate(m%Lxyz_inv(-m%nx(1):m%nx(1),-m%nx(2):m%nx(2),-m%nx(3):m%nx(3)))
   allocate(Lxyz_tmp(-m%nx(1):m%nx(1),-m%nx(2):m%nx(2),-m%nx(3):m%nx(3)))
-  m%Lxyz_inv = 0
-  Lxyz_tmp = 0
-  
+
+  ! initialize to zero
+  m%Lxyz_inv(-m%nx(1):m%nx(1),-m%nx(2):m%nx(2),-m%nx(3):m%nx(3)) = 0
+  Lxyz_tmp(-m%nx(1):m%nx(1),-m%nx(2):m%nx(2),-m%nx(3):m%nx(3)) = 0
+
   ! We label 1 the points inside the inner mesh and 2 for the points in the outer mesh
   do ix = -m%nr(1), m%nr(1)
     do iy = -m%nr(2), m%nr(2)

@@ -5,9 +5,10 @@ subroutine specie1D_init(nspecies, str, s)
 
   integer :: i, j
 
-  s(i)%local = .true.
-  s(i)%nlcc  = .false.
   do i = 1, nspecies
+    s(i)%local = .true.
+    s(i)%nlcc  = .false.
+
     call oct_parse_block_str(str, i-1, 0, s(i)%label)
     call oct_parse_block_double(str, i-1, 1, s(i)%weight)
     s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion

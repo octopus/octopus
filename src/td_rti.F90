@@ -71,7 +71,7 @@ contains
 
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt/M_TWO)
       end do
     end do
   end subroutine td_rti0

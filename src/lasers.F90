@@ -203,6 +203,8 @@ subroutine laser_write_info(no_l, l, iunit)
          '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
          '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
     write(iunit,'(3x,a,i2)')    'Envelope:     ', l(i)%envelope
+    write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', l(i)%omega0/units_inp%energy%factor, &
+         ' [', trim(units_inp%energy%abbrev), ']'
     write(iunit,'(3x,a,f10.4,5a)') 'Amplitude: ', &
          l(i)%A0/units_inp%energy%factor*units_inp%length%factor, &
          ' [', trim(units_inp%energy%abbrev), '/', trim(units_inp%length%abbrev), ']'
@@ -210,14 +212,16 @@ subroutine laser_write_info(no_l, l, iunit)
          (l(i)%A0*5.14225e9_r8)**2*1.3272e-3_r8, " [W/cm^2]"
     write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', l(i)%tau0/units_inp%time%factor, &
          ' [', trim(units_inp%time%abbrev), ']'
-    write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', l(i)%t0/units_inp%time%factor, &
-         ' [', trim(units_inp%time%abbrev), ']'
+    if(l(i)%envelope > 0.and.l(i)%envelope < 4) then
+      write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', l(i)%t0/units_inp%time%factor, &
+           ' [', trim(units_inp%time%abbrev), ']'
+    else
+      write(iunit, '(3x,a)') 'Amplitude and phase information read from file'
+    end if
     if(l(i)%envelope == 3) then
       write(iunit,'(3x,a,f10.4,3a)') 'Ramp time: ', l(i)%tau1/units_inp%time%factor, &
          ' [', trim(units_inp%time%abbrev), ']'
     end if
-    write(iunit,'(3x,a,f10.4,3a)') 'Frequency: ', l(i)%omega0/units_inp%energy%factor, &
-         ' [', trim(units_inp%energy%abbrev), ']'
   end do
 
 end subroutine laser_write_info
@@ -232,7 +236,7 @@ subroutine laser_field(no_l, l, t, field)
   integer :: i
 
   if(no_l .eq. 0) then
-    field = 0._r8
+    field(1:conf%dim) = M_ZERO
     return
   end if
 
@@ -244,7 +248,7 @@ subroutine laser_field(no_l, l, t, field)
     call laser_amplitude(no_l, l, t, amp)
     field = 0._r8
     do i = 1, no_l
-      field(1:3) = field(1:3) + real(amp(i)*l(i)%pol(1:3))
+      field(1:conf%dim) = field(1:conf%dim) + real(amp(i)*l(i)%pol(1:conf%dim))
     end do
     deallocate(amp)
   end if
