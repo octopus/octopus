@@ -51,6 +51,12 @@ double FC_FUNC_(oct_gamma, OCT_GAMMA)
   return gsl_sf_gamma(*x);
 }
 
+double FC_FUNC_(oct_sph_bessel, OCT_SPH_BESSEL)
+     (int *l, double*x)
+{
+  return gsl_sf_bessel_jl(*l, *x);
+}
+
 double FC_FUNC_(oct_bessel, OCT_BESSEL)
      (int *n, double *x)
 {

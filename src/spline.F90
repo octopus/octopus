@@ -172,7 +172,10 @@
 !       real(8), intent(in), optional :: gmax
 !     end subroutine loct_spline_3dft
 !
-! [10] CUTTING A FUNCTION:
+! [10] BESSEL TRANSFORM:
+!
+!
+! [11] CUTTING A FUNCTION:
 !     loct_spline_cut multiplies a given function by a cutoff-function, which
 !     is defined to be one in [0, cutoff], and \exp\{-beta*(x/cutoff-1)^2\}
 !
@@ -182,7 +185,7 @@
 !       real(8), intent(in) :: cutoff, beta
 !     end subroutine loct_spline_cut
 !
-! [11] FILTERING A FUNCTION, BOTH IN REAL AND FOURIER SPACE:
+! [12] FILTERING A FUNCTION, BOTH IN REAL AND FOURIER SPACE:
 !     The function loct_spline_filter permits to filter out high-values
 !     of a given spline function, either in real or in Fourier space.
 !     If the optional argument fs is supplied, a filter in Fourier space
@@ -199,7 +202,7 @@
 !       real(8), intent(in), optional :: rs(2)
 !     end subroutine loct_spline_filter
 !
-! [11] PRINTING A FUNCTION:
+! [13] PRINTING A FUNCTION:
 !     It prints to a file the (x,y) values that were used to define a function.
 !     The file is pointed by its Fortran unit given by argument iunit.
 !
@@ -210,7 +213,7 @@
 !     end subroutine loct_spline_print
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
 module lib_oct_gsl_spline
-
+  use lib_oct
   implicit none
 
   ! Define the which routines can be seen from the outside
@@ -225,9 +228,10 @@ module lib_oct_gsl_spline
             loct_spline_integral, & ! [7]
             loct_spline_dotp,     & ! [8]
             loct_spline_3dft,     & ! [9]
-            loct_spline_cut,      & ! [10]
-            loct_spline_filter,   & ! [11]
-            loct_spline_print       ! [12]
+            loct_spline_besselft, & ! [10]
+            loct_spline_cut,      & ! [11]
+            loct_spline_filter,   & ! [12]
+            loct_spline_print       ! [13]
 
   ! the basic spline datatype
   type loct_spline_type
@@ -532,6 +536,56 @@ contains
 
     deallocate(x, y, y2, xw, yw)
   end subroutine loct_spline_3dft
+
+  subroutine loct_spline_besselft(spl, splw, l, gmax)
+    type(loct_spline_type), intent(in)    :: spl
+    type(loct_spline_type), intent(inout) :: splw
+    integer, intent(in) :: l
+    real(8), intent(in), optional :: gmax
+    
+    type(loct_spline_type) :: aux
+    real(8) :: g, dg
+    integer :: np
+    integer :: npoints, i, j
+    real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
+
+    npoints = oct_spline_npoints(spl%spl)    
+    allocate(x(npoints), y(npoints),y2(npoints))
+    call oct_spline_x(spl%spl, x(1))
+    call oct_spline_y(spl%spl, y(1))
+
+    ! Check wether splw comes with a defined grid, or else build it.
+    if(splw%spl.ne.0) then
+      np = oct_spline_npoints(splw%spl)
+      allocate(xw(np), yw(np))
+      call oct_spline_x(splw%spl, xw(1))
+      ! But now we need to kill the input:
+      call loct_spline_end(splw)
+    else
+      np = 1000 ! hard coded value
+      dg = gmax/(np-1)
+      allocate(xw(np), yw(np))     
+      do i = 1, np
+         g = (i-1)*dg
+         xw(i) = g
+      enddo
+    endif
+
+    do i = 1, np
+        do j = 1, npoints
+           y2(j) = y(j)*x(j)**2*loct_sph_bessel(l, x(j)*xw(i))
+        enddo
+        call loct_spline_init(aux)
+        call oct_spline_fit(npoints, x(1), y2(1), aux%spl, aux%acc)
+        yw(i) = sqrt(CNST(2.0)/M_PI)*oct_spline_eval_integ(aux%spl, x(1), x(npoints), aux%acc)
+        call loct_spline_end(aux)
+    enddo
+
+    call loct_spline_init(splw)
+    call oct_spline_fit(np, xw(1), yw(1), splw%spl, splw%acc)
+
+    deallocate(x, y, y2, xw, yw)
+  end subroutine loct_spline_besselft
 
   subroutine loct_spline_cut(spl, cutoff, beta)
     type(loct_spline_type), intent(inout) :: spl

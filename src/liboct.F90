@@ -22,7 +22,7 @@ module lib_oct
 
   ! Define the which routines can be seen from the outside
   private
-  public :: loct_gamma, loct_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
+  public :: loct_gamma, loct_bessel, loct_sph_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
   public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
   public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
@@ -111,6 +111,15 @@ module lib_oct
       real(8), intent(in)  :: x
     end function oct_bessel
     module procedure oct_bessel4
+  end interface
+
+  interface loct_sph_bessel
+    function oct_sph_bessel(l, x)
+      real(8) :: oct_bessel
+      integer, intent(in) :: l
+      real(8), intent(in)  :: x
+    end function oct_sph_bessel
+    module procedure oct_sph_bessel4
   end interface
 
   interface loct_bessel_j0
@@ -289,6 +298,13 @@ contains
     
     oct_bessel4 = real(oct_bessel(n, real(x, kind=8)), kind=4)
   end function oct_bessel4
+
+  real(4) function oct_sph_bessel4(l, x)
+    integer, intent(in) :: l
+    real(4), intent(in)  :: x
+    
+    oct_sph_bessel4 = real(oct_sph_bessel(l, real(x, kind=8)), kind=4)
+  end function oct_sph_bessel4
 
   real(4) function oct_bessel_j04(x)
     real(4), intent(in)  :: x
