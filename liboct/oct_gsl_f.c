@@ -57,6 +57,30 @@ double F90_FUNC_(oct_bessel, OCT_BESSEL)
   return gsl_sf_bessel_Jn(*n, *x);
 }
 
+double F90_FUNC_(oct_bessel_j0, OCT_BESSEL_J0)
+     (double *x)
+{
+  return gsl_sf_bessel_J0(*x);
+}
+
+double F90_FUNC_(oct_bessel_j1, OCT_BESSEL_J1)
+     (double *x)
+{
+  return gsl_sf_bessel_J1(*x);
+}
+
+double F90_FUNC_(oct_bessel_k0, OCT_BESSEL_K0)
+     (double *x)
+{
+  return gsl_sf_bessel_K0(*x);
+}
+
+double F90_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
+     (double *x)
+{
+  return gsl_sf_bessel_K1(*x);
+}
+
 double F90_FUNC_(oct_erfc, OCT_ERFC)
 		 (double *x)
 {
