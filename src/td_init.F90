@@ -113,6 +113,9 @@ subroutine td_init(td, m, st, geo, h, outp)
   call loct_parse_float("LocalMagneticMomentsSphereRadius", rmin*M_HALF/units_inp%length%factor, td%lmm_r)
   td%lmm_r = td%lmm_r * units_inp%length%factor
 
+  call loct_parse_int("TDFastEpotGeneration", 1, td%epot_regenerate)
+  if(td%epot_regenerate < 1) td%epot_regenerate = 1
+
   call td_rti_init(m, st, td%tr)
 
   call pop_sub()

@@ -371,19 +371,24 @@ contains
   end subroutine epot_local_fourier_init
 #endif
 
-  subroutine epot_generate(ep, m, st, geo, reltype)
+  subroutine epot_generate(ep, m, st, geo, reltype, fast_generation)
     type(epot_type),     intent(inout) :: ep
     type(mesh_type),     intent(IN)    :: m
     type(states_type),   intent(inout) :: st
     type(geometry_type), intent(inout) :: geo
     integer,             intent(in)    :: reltype
+    logical, optional, intent(in)      :: fast_generation
 
+    logical :: fast_generation_
     integer :: ia, i, l, lm, add_lm, k, ierr, p
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
     
     call push_sub('epot_generate')
+
+    fast_generation_ = .false.
+    if (present(fast_generation)) fast_generation_ = fast_generation
     
     ! first we assume that we need to recalculate the ion_ion energy
     geo%eii = ion_ion_energy(geo)
@@ -424,22 +429,22 @@ contains
             cycle
          endif
          do lm = -l, l
-            call nonlocal_op_kill(ep%vnl(i))
-            ! This if is a performance hack, necessary for when the ions move.
-            ! For each atom, the sphere is the same, so we just calculate it once.
-            ! This if is a performance hack, necessary for when the ions move.
-            ! For each atom, the sphere is the same, so we just calculate it once.
-            if(p == 1) then
-              k = i
-              p = 2
-              deallocate(ep%vnl(i)%jxyz, stat = ierr)
-              call build_kb_sphere(i)
-            else
-              ep%vnl(i)%n = ep%vnl(k)%n
-              ep%vnl(i)%c = ep%vnl(k)%c
-              ep%vnl(i)%jxyz => ep%vnl(k)%jxyz
+            if(.not.fast_generation_) then
+               call nonlocal_op_kill(ep%vnl(i))
+               ! This if is a performance hack, necessary for when the ions move.
+               ! For each atom, the sphere is the same, so we just calculate it once.
+               if(p == 1) then
+                 k = i
+                 p = 2
+                 deallocate(ep%vnl(i)%jxyz, stat = ierr)
+                 call build_kb_sphere(i)
+               else
+                 ep%vnl(i)%n = ep%vnl(k)%n
+                 ep%vnl(i)%c = ep%vnl(k)%c
+                 ep%vnl(i)%jxyz => ep%vnl(k)%jxyz
+               endif
+               call allocate_nl_part(i)
             endif
-            call allocate_nl_part(i)
             call build_nl_part(i, l, lm, add_lm)
             add_lm = add_lm + 1
             i = i + 1

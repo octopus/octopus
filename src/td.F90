@@ -47,9 +47,11 @@ public :: td_type, &
 
 type td_type
   type(td_rti_type) :: tr             ! contains the details of the time evolution
-  FLOAT          :: dt             ! time step
+  FLOAT             :: dt             ! time step
   integer           :: max_iter       ! maximum number of iterations to perform
   integer           :: iter           ! the actual iteration
+  integer           :: epot_regenerate! Every epot_regenerate, the external potential
+                                      ! regenerated *exactly*.
 
   integer           :: move_ions      ! how do we move the ions?
 
@@ -168,7 +170,11 @@ integer function td_run(sys, h, fromScratch) result(ierr)
           enddo
       end select
 
-      call epot_generate(h%ep, m, st, geo, h%reltype)
+      if(mod(i, td%epot_regenerate) == 0) then
+          call epot_generate(h%ep, m, st, geo, h%reltype)
+      else
+          call epot_generate(h%ep, m, st, geo, h%reltype, fast_generation = .true.)
+      endif
       geo%eii = ion_ion_energy(geo)
       h%eii = geo%eii
     endif
