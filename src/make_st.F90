@@ -70,21 +70,31 @@ contains
     integer, intent(in) :: line
     
     real(r8) :: x1(3), x(3), s, k(3)
-    integer :: i
+    integer :: i, j
     
     ! read gaussian parameters
-    call oct_parse_block_double(str, line, 4,  x1(1))
-    call oct_parse_block_double(str, line, 5,  x1(2))
-    call oct_parse_block_double(str, line, 6,  x1(3))
-    call oct_parse_block_double(str, line, 7,  s)
-    call oct_parse_block_double(str, line, 8,  k(1))
-    call oct_parse_block_double(str, line, 9,  k(2))
-    call oct_parse_block_double(str, line, 10, k(3))
+    x1 = M_ZERO; k = M_ZERO
+    call oct_parse_block_double(str, line, 4,  s)
+    s = s * units_inp%length%factor
+
+    j = 5
+    do i = 1, conf%dim
+      call oct_parse_block_double(str, line, j,  x1(i))
+      x1(i) = x1(i) * units_inp%length%factor
+      j = j + 1
+    end do
+
+    do i = 1, conf%dim
+      call oct_parse_block_double(str, line, j,  k(i))
+      k(i) = k(i) / units_inp%length%factor
+      j = j + 1
+    end do
     
     ! build a gaussian
     do i = 1, sys%m%np
-      call mesh_xyz(sys%m, i, x)
-      sys%st%zpsi(i, idim, ist, ik) = exp(-sum((x(:)-x1(:))**2)/(2*s*s) - M_zI*sum(k*x))
+      call mesh_xyz(sys%m, i, x(1:conf%dim))
+      sys%st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:conf%dim)-x1(1:conf%dim))**2)/(2*s*s) + &
+           M_zI*sum(k(1:conf%dim)*(x(1:conf%dim)-x1(1:conf%dim))))
     end do
     
   end subroutine wf_gaussian
@@ -95,7 +105,7 @@ contains
     
     do ik = 1, sys%st%nik
       do ist = 1, sys%st%nst
-        nrm2 = sum(abs(sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik)**2))*sys%m%vol_pp
+        nrm2 = sum(abs(sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik))**2)*sys%m%vol_pp
         sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik) = sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik)/ sqrt(nrm2)
       end do
     end do
