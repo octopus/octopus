@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,14 +6,26 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
+This manual is for octopus 1.1, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
 
 Indirect:
-octopus.info-1: 207
-octopus.info-2: 48491
+octopus.info-1: 655
+octopus.info-2: 47867
 
 Tag Table:
 (Indirect)
-Node: Top207
+Node: Top655
 Node: Copying2122
 Node: Authors3523
 Node: Introduction6702
@@ -41,28 +53,28 @@ Node: Mesh39926
 Node: States42931
 Node: Hamiltonian45413
 Node: Exchange and correlation46563
-Node: SCF48491
-Node: Unoccupied States52386
-Node: Time Dependent53107
-Node: Photo-electron spectrum63280
-Node: Geometry optimization64262
-Node: Function output for visualization65017
-Node: Spectrum calculations69279
-Node: Varia71413
-Node: External utilities72224
-Node: strength-function72773
-Node: hs-from-mult73582
-Node: hs-from-acc73800
-Node: nbo2xyz74008
-Node: excitations74221
-Node: broad74758
-Node: make_st75089
-Node: choose_st76342
-Node: wf.net77073
-Node: Examples78442
-Node: Hello world78597
-Ref: Hello world-Footnote-185241
-Node: Benzene85325
-Node: Options Index86133
+Node: SCF47867
+Node: Unoccupied States51762
+Node: Time Dependent52483
+Node: Photo-electron spectrum62656
+Node: Geometry optimization63638
+Node: Function output for visualization64393
+Node: Spectrum calculations68655
+Node: Varia70789
+Node: External utilities71600
+Node: strength-function72149
+Node: hs-from-mult72958
+Node: hs-from-acc73176
+Node: nbo2xyz73384
+Node: excitations73597
+Node: broad74134
+Node: make_st74465
+Node: choose_st75718
+Node: wf.net76449
+Node: Examples77818
+Node: Hello world77973
+Ref: Hello world-Footnote-184617
+Node: Benzene84701
+Node: Options Index85509
 
 End Tag Table

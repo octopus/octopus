@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,6 +6,18 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
+This manual is for octopus 1.1, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
 
 File: octopus.info,  Node: SCF,  Next: Unoccupied States,  Prev: Exchange and correlation,  Up: Input file options
 
@@ -951,7 +963,6 @@ Options Index
 * CalcPES_mask:                          Photo-electron spectrum.
 * CalcPES_rc:                            Photo-electron spectrum.
 * CalculationMode:                       Generalities.
-* CFamily:                               Exchange and correlation.
 * CFunctional:                           Exchange and correlation.
 * ChooseStates:                          choose_st.
 * ChooseStatesFilename:                  choose_st.
@@ -1056,7 +1067,6 @@ Options Index
 * Velocities:                            Velocities.
 * Verbose:                               Generalities.
 * What2Mix:                              SCF.
-* XFamily:                               Exchange and correlation.
 * XFunctional:                           Exchange and correlation.
 * XLength:                               Mesh.
 * XYZCoordinates:                        Coordinates.

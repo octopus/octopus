@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -1135,50 +1135,41 @@ File: octopus.info,  Node: Exchange and correlation,  Next: SCF,  Prev: Hamilton
 Exchange and correlation
 ------------------------
 
-   The exchange-correlation functional is controlled by the 4
-parameters `XFamily', `XFunctional', `CFamily' and `CFunctional'.
-Obviously, the `X' parameters control the exchange part of the
-functional, while the `C' parameters control the correlation. The
-possible values are:
+   The exchange-correlation functional is controlled by the parameters
+`XFunctional', and `CFunctional'.  The possible values are:
 
-   * `XFamily == 'ZER'': No exchange.
+   * `XFunctional == 'ZER'': No exchange.
 
-   * `XFamily == 'LDA'': Local density approximation.
-        - `XFunctional == 'NREL'': Non-relativistic exchange.
+   * `XFunctional == 'LDA'': Local density approximation.
 
-        - `XFunctional ==  'REL'': Relativistic exchange.
+   * `XFunctional == 'RLDA'': Relativistic LDA.
 
-   * `XFamily == 'GGA'': Generalised gradient approximations.
-        - `XFunctional ==  'PBE'':  J.P.Perdew, K.Burke and M.Ernzerhof,
-             	PRL *77*, 3865 (1996).
+   * `XFunctional == 'PBE'':  J.P.Perdew, K.Burke and M.Ernzerhof,
+     PRL *77*, 3865 (1996).
 
-        - `XFunctional == 'PBER'': PBE with some relativistic
-          corrections.
+   * `XFunctional == 'RPBE'': PBE with some relativistic corrections.
 
-        - `XFunctional == 'LB94'': van Leeuwen and Baerends functional.
+   * `XFunctional == 'LB94'': van Leeuwen and Baerends functional.
 
-   * `XFamily == 'KLI'': Optimised effective potential method within
-     the Krieger, Lee and Iafrate approximation.
-        - `XFunctional ==   'X'': Exact exchange functional.
+   * `XFunctional == 'EXX'': Exact exchange functional in the KLI
+     approximation.
 
-        - `XFunctional == 'SIC'': Self interaction corrected LDA.
+   * `XFunctional == 'SIC'': Self interaction corrected LDA in the KLI
+     approximation.
 
-   And now comes the correlation variables:
+   And now comes the correlation:
 
-   * `CFamily == 'ZER'': No correlation.
+   * `CFunctional == 'ZER'': No correlation.
 
-   * `CFamily == 'LDA'': Local density approximation.
-        - `CFunctional ==   'PZ81'':  Perdew and Zunger,       PRB
-          *23*, 5075 (1981).
+   * `CFunctional ==   'PZ81'':  Perdew and Zunger,       PRB *23*,
+     5075 (1981).
 
-        - `CFunctional == 'PW92'': J.P.Perdew and Y.Wang,       PRB
-          *45*, 13244 (1992).
+   * `CFunctional == 'PW92'': J.P.Perdew and Y.Wang,       PRB *45*,
+     13244 (1992).
 
-   * `CFamily == 'GGA'': Generalised gradient approximations.
-        - `CFunctional == 'PBE'': J.P.Perdew, K.Burke and M.Ernzerhof,
-            	PRL *77*, 3865 (1996).
+   * `CFunctional == 'PBE'': J.P.Perdew, K.Burke and M.Ernzerhof,
+     PRL *77*, 3865 (1996).
 
-   * `CFamily == 'KLI'': Optimised effective potential method within
-     the Krieger, Lee and Iafrate approximation.
-        - `CFunctional == 'SIC'': Self interaction corrected LDA.
+   * `CFunctional == 'SIC'': Self interaction corrected LDA in the KLI
+     approximation.
 

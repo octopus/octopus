@@ -1262,59 +1262,35 @@ the @code{DoubleFFTParameter} is used for this purpose.
 @subsection Exchange and correlation
 
 The exchange-correlation functional is controlled by the
-4 parameters @code{XFamily}, @code{XFunctional},
-@code{CFamily} and @code{CFunctional}. Obviously, the @code{X}
-parameters control the exchange part of the functional, while the
-@code{C} parameters control the correlation. The possible values are:
+parameters @code{XFunctional}, and @code{CFunctional}. 
+The possible values are:
 
-@vindex @code{XFamily}
 @vindex @code{XFunctional}
 
 @itemize @bullet
-@item @code{XFamily == 'ZER'}: No exchange.
-@item @code{XFamily == 'LDA'}: Local density approximation.
-  @itemize @minus
-    @item @code{XFunctional == 'NREL'}: Non-relativistic exchange.
-    @item @code{XFunctional ==  'REL'}: Relativistic exchange.
-  @end itemize
-@item @code{XFamily == 'GGA'}: Generalised gradient approximations.
-  @itemize @minus
-    @item @code{XFunctional ==  'PBE'}:  J.P.Perdew, K.Burke and M.Ernzerhof, 
+@item @code{XFunctional == 'ZER'}: No exchange.
+@item @code{XFunctional == 'LDA'}: Local density approximation.
+@item @code{XFunctional == 'RLDA'}: Relativistic LDA.
+@item @code{XFunctional == 'PBE'}:  J.P.Perdew, K.Burke and M.Ernzerhof, 
     	PRL @strong{77}, 3865 (1996).
-    @item @code{XFunctional == 'PBER'}: PBE with some relativistic corrections.
-    @item @code{XFunctional == 'LB94'}: van Leeuwen and Baerends functional.
-  @end itemize
-@item @code{XFamily == 'KLI'}: Optimised effective potential method within
-  the Krieger, Lee and Iafrate approximation.
-  @itemize @minus
-    @item @code{XFunctional ==   'X'}: Exact exchange functional.
-    @item @code{XFunctional == 'SIC'}: Self interaction corrected LDA.
-  @end itemize
+@item @code{XFunctional == 'RPBE'}: PBE with some relativistic corrections.
+@item @code{XFunctional == 'LB94'}: van Leeuwen and Baerends functional.
+@item @code{XFunctional == 'EXX'}: Exact exchange functional in the KLI approximation.
+@item @code{XFunctional == 'SIC'}: Self interaction corrected LDA in the KLI approximation.
 @end itemize
 
-And now comes the correlation variables:
-@vindex @code{CFamily}
+And now comes the correlation:
 @vindex @code{CFunctional}
 
 @itemize @bullet
-@item @code{CFamily == 'ZER'}: No correlation.
-@item @code{CFamily == 'LDA'}: Local density approximation.
-  @itemize @minus
-    @item @code{CFunctional ==   'PZ81'}:  Perdew and Zunger, 
+@item @code{CFunctional == 'ZER'}: No correlation.
+@item @code{CFunctional ==   'PZ81'}:  Perdew and Zunger, 
       PRB @strong{23}, 5075 (1981).
-    @item @code{CFunctional == 'PW92'}: J.P.Perdew and Y.Wang, 
+@item @code{CFunctional == 'PW92'}: J.P.Perdew and Y.Wang, 
       PRB @strong{45}, 13244 (1992).
-  @end itemize
-@item @code{CFamily == 'GGA'}: Generalised gradient approximations. 
-  @itemize @minus
-    @item @code{CFunctional == 'PBE'}: J.P.Perdew, K.Burke and M.Ernzerhof, 
+@item @code{CFunctional == 'PBE'}: J.P.Perdew, K.Burke and M.Ernzerhof, 
     	PRL @strong{77}, 3865 (1996).
-  @end itemize
-@item @code{CFamily == 'KLI'}: Optimised effective potential method within
-  the Krieger, Lee and Iafrate approximation.
-  @itemize @minus
-    @item @code{CFunctional == 'SIC'}: Self interaction corrected LDA.
-  @end itemize
+@item @code{CFunctional == 'SIC'}: Self interaction corrected LDA in the KLI approximation.
 @end itemize
 
 @c **********************************************************************
