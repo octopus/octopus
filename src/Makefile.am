@@ -89,9 +89,12 @@ oct_test_LDADD = $(octopus_LDADD)
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
 DISTCLEANFILES = Makefile.in dirs.h
 
+# ctags
+CTAGS=ctags-exuberant
+
 # how to compile a F90 file :)
 .F90.o:
-	@FCCPP@ $< > $*_oct.f90
+	@FCCPP@ @CPPFLAGS@ $< > $*_oct.f90
 	@if [ "x@DEBUG@" = "x" ]; then \
 		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
 		mv -f $*_oct.f91 $*_oct.f90; \
@@ -102,7 +105,7 @@ DISTCLEANFILES = Makefile.in dirs.h
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)
 global.o: global.F90
-	@FCCPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
+	@FCCPP@ @CPPFLAGS@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' $< > $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
