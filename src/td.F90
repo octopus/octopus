@@ -554,13 +554,13 @@ contains
     
   end subroutine td_write_nbo
 
-  subroutine td_read_nbo() ! reads the pos and vel from .nbo file
+  subroutine td_read_nbo() ! reads the pos and vel from coordinates file
     logical :: found
     integer :: i, iunit
 
     inquire(file='td.general/coordinates', exist=found)
     if(.not.found) then
-      message(1) = "Could not open file '"//trim(sys%sysname)//".nbo'"
+      message(1) = "Could not open file 'td.general/coordinates'"
       message(2) = "Starting simulation from initial geometry"
       call write_warning(2)
       return
