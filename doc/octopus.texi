@@ -241,7 +241,9 @@ Miguel A. L. Marques and Angel Rubio, working at the Donostia
 International Physics Center and Department of Materials Science
 UPV/EHU (San Sebastian, Espa@~na), and Alberto
 Castro, who works at the University of Valladolid, Departamento de
-Fisica Teorica (Valladolid, Espa@~na).
+@tex F\'{\i}sica Te\'{o}rica
+@end tex  
+(Valladolid, Espa@~na).
 
 @code{octopus} is based on a fixed-nucleus code written by
 George F. Bertsch, K. Yabana to perform real-time dynamics in
@@ -1581,12 +1583,14 @@ if @code{TDOccupationalAnalysis == 1}.)
 @itemize @bullet
 
 @item @vindex @code{CalcPES_rc}
-@code{TDCalcPES_rc} (logical, false) :
-  If @code{true}, store the wave functions in specific points in order to calculate the photo-electron spectrum in a point far in the box as proposed in A. Pohl, P.-G. Reinhard, and E. Suraud Phys. Rev. Lett. @strong{84}, 5090 (2000).
+@code{CalcPES_rc} (logical, false) :
+  If @code{true}, store the wave functions in specific points in order to 
+calculate the photo-electron spectrum in a point far in the box as proposed in 
+A. Pohl, P.-G. Reinhard, and E. Suraud Phys. Rev. Lett. @strong{84}, 5090 (2000).
 
 
 @item @vindex @code{PES_rc_points}
-@code{TDPES_rc_points} (block data) :
+@code{PES_rc_points} (block data) :
   List of points where to calculate the photo-electron spectrum a la Suraud.
   The exact syntax is:
   @example
@@ -1596,7 +1600,7 @@ if @code{TDOccupationalAnalysis == 1}.)
   @end example
 
 @item @vindex @code{CalcPES_mask}
-@code{TDCalcPES_mask} (logical, false)
+@code{CalcPES_mask} (logical, false)
   If @code{true}, calculate the photo-electron spectrum using the mask method
   (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio to be submitted). 
   In order for this to work, masking boundaries are necessary 
@@ -1620,12 +1624,12 @@ if @code{TDOccupationalAnalysis == 1}.)
 
 @item @vindex @code{GOTolerance}
 @code{GOTolerance} (real, 0.0001)
-  Convergence criterium to stop the minimzation. In units of force; minimization
+  Convergence criterium to stop the minimization. In units of force; minimization
   is stopped when all forces on ions are smaller.
 
 @item @vindex @code{GOMaxIter}
 @code{GOMaxIter} (integer, 200)
-  Even if previous convergence criterium is nos satisfied, minimization will stop
+  Even if previous convergence criterium is not satisfied, minimization will stop
   after this number of iterations.
 
 @end itemize
@@ -1667,7 +1671,7 @@ where ``x'' stands for the iteration number at which each write is done.
 
 @item @vindex @code{OutputELF}
 @code{OutputELF} (logical, false)
- Prints out the electron localizatio function, ELF. Filename would be ``elf-i'', where
+ Prints out the electron localization function, ELF. Filename would be ``elf-i'', where
  i stands for the spin channel.
 
 @end itemize
@@ -1728,6 +1732,7 @@ are described in section ``External utilities.'' Common options read by these ut
   transform. This function may be an exponential or a polynomial: 'exp' or 'pol'. If
   this variable is not present or has any other value, no damping function is applied.
 
+@item @vindex @code{SpecDampFactor}
 @code{SpecDampFactor} (real, 0.0)
   If @code{SpecDampMode} is set to `exp', the damping parameter of the exponential
   is fixed through this variable.
