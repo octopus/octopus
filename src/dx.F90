@@ -32,9 +32,11 @@ subroutine create_dx_file(data_unit, datafile, dxheader_unit, m, f)
   real(r8), intent(in)         :: f(1:m%np)
   character(len=*), intent(in) :: datafile
 
-  character(len=80) :: pwd, line
+  character(len=12) :: posxc, posyc, poszc, h1c, h2c, h3c
+  character(len=200) :: pwd, line
   real(r8), allocatable :: fcube(:, :, :)
   integer :: ix, iy, iz
+  real(r8) :: pos
 
   call clear_str(pwd)
   call oct_getcwd(pwd)
@@ -66,7 +68,20 @@ subroutine create_dx_file(data_unit, datafile, dxheader_unit, m, f)
      write(dxheader_unit,'(a)') trim(line)
   write(line,'(a)')              'dependency = positions'
      write(dxheader_unit,'(a)') trim(line)
-  write(line,'(a)')              'positions = regular, regular, regular, 0, 1, 0, 1, 0, 1'
+
+    pos = -(m%fft_n(1) - 1)/2 * m%h(1); write(posxc,'(f12.6)') pos / units_out%length%factor
+    pos = -(m%fft_n(1) - 1)/2 * m%h(2); write(posyc,'(f12.6)') pos / units_out%length%factor
+    pos = -(m%fft_n(1) - 1)/2 * m%h(3); write(poszc,'(f12.6)') pos / units_out%length%factor
+    write(h1c,'(f12.6)') m%h(1) / units_out%length%factor
+    write(h2c,'(f12.6)') m%h(2) / units_out%length%factor
+    write(h3c,'(f12.6)') m%h(3) / units_out%length%factor
+  write(line,'(a)')              'positions = regular, regular, regular, '// &
+                                 posxc // ', ' // &
+                                 h1c   // ', ' // &
+                                 posyc // ', ' // &
+                                 h2c   // ', ' // &
+                                 poszc // ', ' // &
+                                 h3c
      write(dxheader_unit,'(a)') trim(line)
 
 end subroutine create_dx_file
