@@ -2,7 +2,7 @@
 
 SUBDIRS = liboct src doc
 
-EXTRA_DIST = TODO autogen.sh fortran90.m4 samples/inp
+EXTRA_DIST = TODO autogen.sh build samples/inp
 
 CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = Makefile.in

@@ -19,6 +19,7 @@
 #undef THREE_D
 
 #undef HAVE_MPI
+#undef MPI_TD
 #undef MPI_MOD
 #undef MPI_H
 

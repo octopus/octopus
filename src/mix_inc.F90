@@ -58,9 +58,9 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
     ! update also off diagonal...
     if(st%ispin == 3) then
       allocate(reduce_rho_off(1:np))
-      call MPI_ALLREDUCE(rho_off(1), reduce_rho_off(1), np, &
+      call MPI_ALLREDUCE(st%R_FUNC(rho_off) (1), reduce_rho_off(1), np, &
            R_MPITYPE, MPI_SUM, MPI_COMM_WORLD, ierr)
-      rho_off = reduce_rho_off
+      st%R_FUNC(rho_off) = reduce_rho_off
       deallocate(reduce_rho_off)
     end if
   end if

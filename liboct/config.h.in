@@ -35,9 +35,6 @@
 /* FFTW library (www.fftw.org) */
 #undef HAVE_FFTW
 
-/* Gnu Scientific Library (http://sources.redhat.com/gsl/) */
-#undef HAVE_GSL
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -94,6 +91,9 @@
 
 /* have mpi module */
 #undef MPI_MOD
+
+/* soon */
+#undef MPI_TD
 
 /* Code compiled for 1D systems */
 #undef ONE_D

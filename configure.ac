@@ -56,7 +56,7 @@ AC_PROG_LIBTOOL
 
 # unfortunately we are Fortran 90 guys
 if test x"$MPIDIR" != x"no"; then
-	AC_CHECK_TOOLS(F90, [mpif90])
+  AC_PROG_F90([],[MPI])
 else
 	AC_PROG_F90
 fi
@@ -90,7 +90,8 @@ if test -z "${LIB_FFTW}"; then
 		AS_IF([test -z "${LIB_RFFTW}"], AC_MSG_ERROR([couldn't find rfftw library]))
 	
   	LDFLAGS="$save_ldflags"
-		AS_IF([test "$FFTWDIR"], [LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"])
+		LIB_FFTW="${LIB_FFTW} ${LIB_RFFTW}"
+		AS_IF([test "$FFTWDIR"], [LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW}"])
 	fi
 fi
 
@@ -116,8 +117,8 @@ if test -z "${LIB_BLAS}"; then
 		ACX_CHECK_FUNC([LIB_BLAS], [ddot])
 		ACX_CHECK_LIB([LIB_BLAS], [f77blas], [ddot], [-lf77blas -latlas], [], [-latlas])
 		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
-		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [])
-		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [])
+		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
+		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [-lcxml])
 		AS_IF([test -z "${LIB_BLAS}"], AC_MSG_ERROR([couldn't find blas library]))
 
   	LDFLAGS="$save_ldflags"
@@ -147,8 +148,8 @@ if test -z "${LIB_LAPACK}"; then
 
 		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-llapack], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-llapack], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
 		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
 
   	LDFLAGS="$save_ldflags"
@@ -162,40 +163,12 @@ if test "$lib_ok" = "ok"; then
 	AC_SUBST(LIB_LAPACK)
 fi
 
+dnl check for GSL
+AC_LANG_PUSH(C)
+AM_PATH_GSL([1.0])
+AC_LANG_POP(C)
 
-dnl now we check for gsl
-lib_ok="ok"
-if test -z "${LIB_GSL}"; then
-	AC_LANG_PUSH(C) 	dnl gsl is to be used from C
-
-	AC_ARG_WITH(gsl,
-		AC_HELP_STRING([--with-gsl=DIR], [get it! (http://sources.redhat.com/gsl/)]),
-			[GSLDIR=$withval], [GSLDIR=""])
-
-	if test "$GSLDIR" = "no"; then
-		lib_ok="no"
-	else
-	  save_ldflags="$LDFLAGS"
-		AS_IF([test "$GSLDIR"], [
-    	LDFLAGS="${LDFLAGS} -L${GSLDIR}/lib"
-			CPPFLAGS="${CPPFLAGS} -I${GSLDIR}/include"
-		])
-
-		ACX_CHECK_FUNC([LIB_GSL], [gsl_complex_sqrt], [-lm], [], [-lm])
-	 	ACX_CHECK_LIB([LIB_GSL], [gsl], [gsl_complex_sqrt], [-lgsl -lgslcblas -lm], [], [-lgslcblas -lm])
-  	AS_IF([test -z "${LIB_GSL}"], [AC_MSG_ERROR([couldn't find gsl library])])
-
-  	LDFLAGS="$save_ldflags"
-	  AS_IF([test "$GSLDIR"], [LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"])
-	fi
-
-	AC_LANG_POP(C)
-fi
-
-if test "$lib_ok" = "ok"; then
- 	AC_DEFINE(HAVE_GSL, 1, [Gnu Scientific Library (http://sources.redhat.com/gsl/)])
-	AC_SUBST(LIB_GSL)
-fi
+CFLAGS="$CFLAGS $GSL_CFLAGS"
 
 if test x"$MPIDIR" != x"no"; then
 	if test -z "${LIB_MPI}"; then
@@ -228,6 +201,7 @@ call MPI_Init(ierr)
 
 	LDFLAGS="$save_ldflags"
 	AC_DEFINE(HAVE_MPI, 1, [MPI library (www.mpich.org)])
+  AC_DEFINE(MPI_TD, 1, [soon])
 	AC_SUBST(LIB_MPI)
 fi
 

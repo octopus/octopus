@@ -53,7 +53,7 @@ static char *en[]={
 #define NO_LANGS 2
 static char **rec[] = {disc,en,es};
 
-void F90_FUNC(oct_printrecipe, OCT_PRINTRECIPE)
+void F90_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 		 (int *lang)
 {
 	int i, j, n;

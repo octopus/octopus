@@ -8,7 +8,7 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
 
   integer :: i, j, l, m, add_lm, idim, ist, ik
   real(r8) :: d, r, x(3), zi, zj, vl, dvl
-  R_TYPE :: uVpsi
+  R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
 #if defined(THREE_D)
   complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
@@ -49,9 +49,8 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
                    sys%m%vol_pp**2 * atm%uVu(add_lm)
             
               do j = 1, 3
-                atm%f(j) = atm%f(j) + 2._r8 * & ! ampersand should *not* be used in the next line
-                     R_REAL(uVpsi * sum(atm%duV(j, :, add_lm) *
-                     R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik))))
+                p = sum(atm%duV(j, :, add_lm) * R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik)))
+                atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
               end do
 
               add_lm = add_lm + 1

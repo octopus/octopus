@@ -36,7 +36,8 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   type(PES_mask_type), intent(inout) :: v
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(IN) :: dt, mask(m%np)
+  real(r8), intent(IN) :: dt
+  real(r8), pointer :: mask(:)
 
   integer :: j, idim, ist, ik, ix, iy, iz, ixx(3)
   complex(r8), allocatable :: wf1(:,:,:), wf2(:,:,:)

@@ -133,8 +133,8 @@ m4_define([AC_LANG_CALL(Fortran 90)],
 AC_DEFUN([AC_LANG_PREPROC(Fortran 90)],
 [
   # this should not be hardwired
-  CPP="/lib/cpp -C"
-	AC_REQUIRE([AC_PROG_CPP])
+  if test -z "$F90CPP"; then F90CPP="/lib/cpp -C"; fi
+	AC_SUBST(F90CPP)
 ])
 
 
@@ -166,9 +166,14 @@ AC_DEFUN([AC_PROG_F90],
 AC_ARG_VAR([F90],    [Fortran 90 compiler command])dnl
 AC_ARG_VAR([F90FLAGS], [Fortran 90 compiler flags])dnl
 _AC_ARG_VAR_LDFLAGS()dnl
-AC_CHECK_TOOLS(F90,
-      [m4_default([$1],
-                  [f90 ifc ab90 xlf90 pgf90 epcf90 f95 fort xlf95 lf95 g95])])
+
+if test x"$2" = x"MPI" ; then
+	AC_CHECK_TOOLS(F90, [m4_default([$1],
+                  [mpif90 mpxlf90])])
+else
+	AC_CHECK_TOOLS(F90, [m4_default([$1],
+                  [f90 abf90 ifc xlf90 pgf90 epcf90 f95 fort xlf95 lf95 g95])])
+fi
 
 # Provide some information about the compiler.
 echo "$as_me:__oline__:" \
@@ -203,7 +208,7 @@ if test -z "${F90FLAGS}"; then
 			F90FLAGS="$F90FLAGS -O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		ifc*)
-			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp7 -O3 -rcd -xW"
+			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW"
 		;;
 		*)
 			F90FLAGS="$F90FLAGS -O"
@@ -215,6 +220,9 @@ if test -z "${F90FLAGS}"; then
 	powerpc-ibm*)
 		F90FLAGS="$F90FLAGS -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
 	  ;;
+	mips-sgi-irix*)
+		F90FLAGS="$F90FLAGS -O3 -INLINE -n32 -LANG:recursive=on"
+		;;
 	*)
 		F90FLAGS="$F90FLAGS -O"
 	esac
@@ -461,6 +469,8 @@ while test $[@%:@] != 1; do
 					ac_cv_f90libs="$ac_cv_f90libs $ac_arg"
 					;;
 				-lowercase) # necessary for the ifc compiler
+					;;
+				-link) # necessary for xlf90
 					;;
         -[[lLR]]*)
           _AC_LIST_MEMBER_IF($ac_arg, $ac_cv_f90libs, ,

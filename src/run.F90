@@ -230,7 +230,7 @@ subroutine run()
         end if
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zhamiltonian_setup(h, sys)
-        call zhamiltonian_eigenval (h, sys, 1, sys%st%nst)
+        call zhamiltonian_eigenval (h, sys, sys%st%st_start, sys%st%st_end)
         call hamiltonian_energy(h, sys, -1, reduce=.true.)        
       else
         i_stack(instr) = I_INIT_ZPSI

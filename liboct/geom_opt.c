@@ -28,9 +28,6 @@ static void my_work_fdf(const gsl_vector *x, geom_oct_type *p)
 			p->x[i] = gsl_vector_get(x, i);
  
 		(*(p->func))(p->x, &(p->f), p->df);
-
-		printf("Info: Energy = %14.10lf [H]\n", p->f);
-		fflush(stdout);
 	}
 }
 
@@ -70,25 +67,18 @@ int F90_FUNC_(oct_geom_opt, OCT_GEOM_OPT)
 	geom_oct_type c_geom_oct;
 	size_t iter = 0;
   int i, status;
-  const gsl_multimin_fdfminimizer_type *T;
+	double norm;
   gsl_multimin_fdfminimizer *s;
 	gsl_multimin_function_fdf my_func;
   gsl_vector *vx;
 	
-	const gsl_multimin_fdfminimizer_type *min_type[] = {
-		gsl_multimin_fdfminimizer_steepest_descent,
-		gsl_multimin_fdfminimizer_conjugate_pr,
-		gsl_multimin_fdfminimizer_conjugate_fr,
-		gsl_multimin_fdfminimizer_vector_bfgs
-	};
-
 	c_geom_oct.size = *size;
 	c_geom_oct.x  = (double *) malloc((*size)*sizeof(double));
 	c_geom_oct.df = (double *) malloc((*size)*sizeof(double));
 	c_geom_oct.func = *cp;
 
 	/* setup starting point */
-  vx    = gsl_vector_alloc (c_geom_oct.size);
+  vx = gsl_vector_calloc(c_geom_oct.size);
 	for(i = 0; i<c_geom_oct.size; i++){
 		c_geom_oct.x[i] = 0.0;
 		gsl_vector_set(vx, i, x[i]);
@@ -101,19 +91,43 @@ int F90_FUNC_(oct_geom_opt, OCT_GEOM_OPT)
   my_func.n      = c_geom_oct.size;
   my_func.params = (void *)(&c_geom_oct);
 	
-	T = min_type[*method - 1];
-  s = gsl_multimin_fdfminimizer_alloc (T, c_geom_oct.size);
+	switch(*method){
+	case 1:
+		s = gsl_multimin_fdfminimizer_alloc(gsl_multimin_fdfminimizer_steepest_descent, c_geom_oct.size);
+		break;
+	case 2:
+		s = gsl_multimin_fdfminimizer_alloc(gsl_multimin_fdfminimizer_conjugate_pr, c_geom_oct.size);
+		break;
+	case 3:
+		s = gsl_multimin_fdfminimizer_alloc(gsl_multimin_fdfminimizer_conjugate_fr, c_geom_oct.size);
+		break;
+	case 4:
+		s = gsl_multimin_fdfminimizer_alloc(gsl_multimin_fdfminimizer_vector_bfgs, c_geom_oct.size);
+		break;
+	}
+		
   gsl_multimin_fdfminimizer_set (s, &my_func, vx, 0.01, *tol);
 
 	printf("Info: Using %s minimiser\n", gsl_multimin_fdfminimizer_name(s));
+	fflush(stdout);
 
   do{
 		iter++;
-		status = gsl_multimin_fdfminimizer_iterate (s);
+		status = gsl_multimin_fdfminimizer_iterate(s);
 
 		if (status)
 			break;
-		status = gsl_multimin_test_gradient (s->gradient, *tol);
+
+		//norm = (double)gsl_blas_dnrm2(s->gradient);
+		norm = 0.;
+		for(i=0; i<s->gradient->size; i++)
+			norm += s->gradient->data[i] * s->gradient->data[i];
+		norm = sqrt(norm);
+
+		status = (norm < *tol) ? GSL_SUCCESS : GSL_CONTINUE;
+
+		printf("Info: geom_opt norm = %lf, tol = %lf\n", norm, *tol);
+		fflush(stdout);
 
 	}while (status == GSL_CONTINUE && iter < *max_iter);
 
@@ -128,5 +142,5 @@ int F90_FUNC_(oct_geom_opt, OCT_GEOM_OPT)
 	free(c_geom_oct.x);
 	free(c_geom_oct.df);
 	
-	return (status == GSL_SUCCESS);
+	return (status == GSL_SUCCESS) ? 1 : 0;
 }

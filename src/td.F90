@@ -166,7 +166,7 @@ subroutine td_run(td, u_st, sys, h)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
     call zhamiltonian_setup(h, sys)
-    call zhamiltonian_eigenval (h, sys, 1, sys%st%nst) ! eigenvalues
+    call zhamiltonian_eigenval (h, sys, sys%st%st_start, sys%st%st_end) ! eigenvalues
     call hamiltonian_energy(h, sys, -1, reduce=.true.)
 
     ! Recalculate forces, update velocities...

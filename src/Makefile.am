@@ -20,7 +20,7 @@ noinst_HEADERS = \
 	td_init.F90 td_rti.F90 \
 	mix_inc.F90
 
-octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_GSL@
+octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 
 octopus_1d_SOURCES     = $(octopus_SOURCES)
 octopus_1d_LDADD       = $(octopus_LDADD)
@@ -30,15 +30,16 @@ octopus_mpi_1d_SOURCES = $(octopus_SOURCES)
 octopus_mpi_1d_LDADD   = $(octopus_LDADD) @LIB_MPI@
 
 strength_function_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
-strength_function_LDADD   = ../liboct/liboct.a @LIB_GSL@
+strength_function_LDADD   = ../liboct/liboct.a @GSL_LIBS@
 hs_from_mult_SOURCES      = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
-hs_from_mult_LDADD        = ../liboct/liboct.a @LIB_GSL@
+hs_from_mult_LDADD        = ../liboct/liboct.a @GSL_LIBS@
 
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
 DISTCLEANFILES = Makefile.in
 
 .F90.o:
-	@CPP@ $< > $*.f90
+	@F90CPP@ $< > $*.f90
+	sed 's/^#/!/' $*.f90 >lixo; mv -f lixo $*.f90
 	@F90@ @F90FLAGS@ -c -o $@ $*.f90
 	@rm -f $*.f90
 

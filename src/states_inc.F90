@@ -2,7 +2,7 @@
 subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(inout) :: psi(0:m%np, dim, nst) 
+  R_TYPE, intent(inout) :: psi(:,:,:) 
   integer, intent(in), optional :: start
 
   integer :: p, q, id, stst
@@ -112,7 +112,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   real(r8), allocatable :: dpsi(:)
   complex(r8), allocatable :: zpsi(:)
 
-  sub_name = 'systm_load_psi'; call push_sub()
+  sub_name = 'states_load_restart'; call push_sub()
   ok = .true.
 
   if(conf%verbose > 20) then
@@ -165,8 +165,6 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
 #             else
                 st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), 0._r8, r8)
 #             endif
-            else
-              st%R_FUNC(psi) (1:m%np, id, ist, ik) = R_TOTYPE(1._r8) ! stupid
             end if
           else
             read(iunit, err=999) zpsi(:)
@@ -176,8 +174,6 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
 #             else
                 st%zpsi(1:m%np, id, ist, ik) = zpsi(:)
 #             endif
-            else
-              st%R_FUNC(psi) (1:m%np, id, ist, ik) = R_TOTYPE(1._r8) ! stupid
             end if
           end if imode
 

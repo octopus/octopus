@@ -67,7 +67,8 @@ subroutine PES_doit(p, m, st, ii, dt, mask)
   type(PES_type), intent(inout) :: p
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(in) :: dt, mask(m%np)
+  real(r8), intent(in) :: dt
+  real(r8), pointer :: mask(:)
   integer, intent(in) :: ii
 
   if(p%calc_rc)   call PES_rc_doit  (p%rc, st, ii)
