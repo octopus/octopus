@@ -38,7 +38,7 @@ program broad
   call units_init()
 
   ! broadening to use
-  call loct_parse_float("LinBroadnening", CNST(0.02)/units_inp%energy%factor, b%b)
+  call loct_parse_float("LinBroadening", CNST(0.02)/units_inp%energy%factor, b%b)
   call loct_parse_float("LinEnergyStep",  CNST(0.01)/units_inp%energy%factor, b%energy_step)
   call loct_parse_float("LinMinEnergy",   M_ZERO, b%min_energy)
   call loct_parse_float("LinMaxEnergy",   M_ONE/units_inp%energy%factor, b%max_energy)
