@@ -95,16 +95,22 @@ install_sh = @install_sh@
 
 SUBDIRS = liboct src doc
 
-EXTRA_DIST = TODO autogen.sh build samples/inp
+EXTRA_DIST = TODO autogen.sh build/*.m4 build/*.in samples/inp
 
 CLEANFILES = *~ *.bak *.pc*
-DISTCLEANFILES = Makefile.in
+DISTCLEANFILES = Makefile.in build/octopus.spec
+
+RPM_SRCDIR = `rpm --showrc |grep "^sourcedir" | sed 's/^.*: *//'`
+RPM_ARCH = `rpm --showrc |grep "^build arch" | sed 's/^.*: *//'`
+RPM_RPMS = `rpm --showrc |grep "^rpmdir" | sed 's/^.*: *//'`
+RPM_SRPMS = `rpm --showrc |grep "^srcrpmdir" | sed 's/^.*: *//'`
+RPM_TOPDIR = `rpm --showrc |grep "^TOPDIRdir" | sed 's/^.*: *//'`
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/liboct/config.h \
 	$(top_builddir)/src/config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = build/octopus.spec
 DIST_SOURCES =
 
 RECURSIVE_TARGETS = info-recursive dvi-recursive install-info-recursive \
@@ -141,6 +147,8 @@ $(srcdir)/configure:  $(srcdir)/configure.ac $(ACLOCAL_M4) $(CONFIGURE_DEPENDENC
 
 $(ACLOCAL_M4):  configure.ac acinclude.m4
 	cd $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
+build/octopus.spec: $(top_builddir)/config.status $(top_srcdir)/build/octopus.spec.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 uninstall-info-am:
 
 # This directory's subdirectories are mostly independent; you can cd
@@ -254,7 +262,7 @@ distcleancheck_listfiles = find . -type f -print
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkinstalldirs) $(distdir)/samples
+	$(mkinstalldirs) $(distdir)/build $(distdir)/samples
 	@for file in $(DISTFILES); do \
 	  if test -f $$file || test -d $$file; then d=.; else d=$(srcdir); fi; \
 	  dir=`echo "$$file" | sed -e 's,/[^/]*$$,,'`; \
@@ -425,6 +433,18 @@ uninstall-info: uninstall-info-recursive
 	tags tags-recursive uninstall uninstall-am uninstall-info-am \
 	uninstall-info-recursive uninstall-recursive
 
+
+rpm: dist
+	cp -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_SRCDIR)/$(PACKAGE)-$(VERSION).tar.gz
+#	rm -f $(RPM_SRCDIR)/$(PACKAGE)-logo-thumb.gif
+#	lynx -source -dump http://www.fftw.org/fftw-logo-thumb.gif > $(RPM_SRCDIR)/fftw-logo-thumb.gif
+	rpm --clean -ba build/$(PACKAGE).spec
+	rpm -U $(RPM_RPMS)/$(RPM_ARCH)/$(PACKAGE)-$(VERSION)-1.$(RPM_ARCH).rpm
+	@echo "-------------------------------------------------------------"
+	@echo "  RPMs are built and installed, and are located under:       "
+	@echo "       $(RPM_RPMS)/$(RPM_ARCH)"
+	@echo "       $(RPM_SRPMS)"
+	@echo "-------------------------------------------------------------"
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

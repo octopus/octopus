@@ -12,14 +12,18 @@ subroutine mesh_init(m, natoms, atom)
   call mesh3D_create(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
-  ! once again the overhead is small
-  do i = 1, 3
-     m%fft_n(i)  = 2*m%nr(i) + 1
-     call oct_fft_optimize(m%fft_n(i), 7, 1) ! always ask for an odd number
-  enddo
+#ifdef POLYMERS
+  j = 2
+#else
+  j = 3
+#endif
+  m%fft_n(:)  = 2*m%nr(:) + 1
+  do i = 1, j
+    call oct_fft_optimize(m%fft_n(i), 7, 1) ! always ask for an odd number
+  end do
   m%hfft_n = m%fft_n(1)/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
-
+  
   call oct_parse_double(C_string('DoubleFFTParameter'), 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
@@ -28,14 +32,14 @@ subroutine mesh_init(m, natoms, atom)
     call write_fatal(2)
   end if
 
-  do i=1, 3
-     m%fft_n2(i)  = 2*nint(m%fft_alpha*m%nr(i)) + 1
-     call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
-  enddo
-  ! I think this should be:
-  !do i=1, 3
-  !   m%fft_n2(i)  = 2*nint(m%fft_alpha*maxval(m%nr)) + 2
-  !enddo
+  do i = 1, j
+    m%fft_n2(i) = 2*nint(m%fft_alpha*m%nr(i)) + 1
+    call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
+  end do
+  do i = j+1, 3 ! for periodic systems
+    m%fft_n2(i) = m%fft_n(i)
+  end do
+  
   ! But I will leave if for the moment.
   m%hfft_n2 = m%fft_n2(1)/2 + 1
   m%dplanf2 = int(-1, POINTER_SIZE)

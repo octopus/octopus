@@ -134,7 +134,7 @@ contains
       den1 = f(k)
       den2 = f(k)
       if(present(lapl)) then
-        lapl(k) = (m%d%dlidfj(0)*f(k))*(1/m%h(1)**2+1/m%h(2)**2+1/m%h(3)**2)
+        lapl(k) = (m%d%dlidfj(0)*f(k))*sum(1/m%h(:)**2)
       end if
       if(present(grad)) then
         grad(:, k) = m%d%dgidfj(0)*f(k)
@@ -149,6 +149,16 @@ contains
         ind2(1) = m%Lxyz_inv(ix+in, iy, iz)
         ind2(2) = m%Lxyz_inv(ix, iy+in, iz)
         ind2(3) = m%Lxyz_inv(ix, iy, iz+in)
+
+#ifdef POLYMERS
+        ! cyclic boundary conditions in the z direction
+        if(ind1(3) == 0) then
+          ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in)
+        end if
+        if(ind2(3) == 0) then
+          ind1(3) = m%Lxyz_inv(ix, iy, iz + in - 2*m%nr(3))
+        end if
+#endif
 
         ! If you prefer 0 wave functions at the boundary, uncomment the following
         ! Just be careful with the LB94 xc potential, for it will probably not work!
@@ -184,7 +194,7 @@ contains
     end do
 
     if(present(grad)) then
-      do i=1, 3
+      do i = 1, 3
          grad(i,:) = grad(i,:) / m%h(i)
       enddo
     end if

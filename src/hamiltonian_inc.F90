@@ -41,14 +41,9 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
   np = sys%m%np
   dim = sys%st%dim
 
-  ! Kinetic part -\nabla^2/2
-  do idim = 1, dim
-    call R_FUNC(mesh_derivatives) (sys%m, psi(:, idim), lapl=Hpsi(:, idim))
-  end do
-  Hpsi = - Hpsi/2.0_r8
+  call kinetic_energy(sys%m)
 
   ! Local potential
-  ! TODO: one has to implement the k vectors here
   do idim = 1, dim
     Hpsi(:, idim) = Hpsi(:, idim) + (h%Vpsl + h%Vhartree)*psi(1:,idim)
   end do
@@ -76,12 +71,44 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
 #if defined(COMPLEX_WFNS)
   if(h%soc) then
     allocate(Vtot(sys%m%np), dVtot(3, sys%m%np))
-    do 
     deallocate(Vtot, dVtot)
   end if
 #endif
 
   !call pop_sub()
+
+contains
+
+  subroutine kinetic_energy(m)
+    type(mesh_type), intent(IN) :: m
+
+    integer :: idim, i
+
+# if defined(POLYMERS)
+    R_TYPE, allocatable :: grad(:,:)
+    real(r8) :: k2
+
+    allocate(grad(3,m%np))
+    k2 = sum(sys%st%kpoints(:, ik)**2)/2._r8
+    do idim = 1, dim
+      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), grad=grad(:,:))
+
+      do i = 1, m%np
+        Hpsi(i, idim) = Hpsi(i, idim) &
+             + 2._r8*M_zI*sum(sys%st%kpoints(:, ik)*grad(:, i)) &
+             - k2*psi(i, idim)
+      end do
+    end do
+    deallocate(grad)
+# else
+    do idim = 1, dim
+      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim))
+    end do
+#endif
+
+    Hpsi = - Hpsi/2.0_r8
+  end subroutine kinetic_energy
+
 end subroutine R_FUNC(Hpsi)
 
 subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)

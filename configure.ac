@@ -7,24 +7,38 @@ AM_CONFIG_HEADER([liboct/config.h src/config.h])
 # Installation prefix by default
 AC_PREFIX_DEFAULT($HOME)
 
-# who am i
-AC_CANONICAL_HOST
-
+# what should I build?
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), 
 	MPIDIR=$enableval, MPIDIR=no)
 AC_ARG_ENABLE(1d, AC_HELP_STRING([--enable-1d], [Let us work in 1D]), ONE_D=1)
 AC_ARG_ENABLE(3d, AC_HELP_STRING([--enable-3d], [or, if you prefer, in 3D]), [THREE_D=1])
+AC_ARG_ENABLE(pol, AC_HELP_STRING([--enable-pol], [Polymers anyone?]), [POLYMERS=1])
 
 # set program name
 PROGNAME="octopus"
-AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
 if test "${ONE_D}"; then
-	AC_DEFINE(ONE_D,   1, [Code compiled for 1D systems])
-	PROGNAME="$PROGNAME-1d"
+	AC_DEFINE(ONE_D, 1, [Code compiled for 1D systems])
+	PROGNAME="$PROGNAME-1d";
+	msg="finite 1D systems!"
+elif test "${POLYMERS}"; then
+	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systems])
+	AC_DEFINE(POLYMERS, 1, [Code compiled for polymers])
+	PROGNAME="$PROGNAME-pol"
+	msg="polymers"
 else
-	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systmes])
+	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systems])
+	msg="finite 3D systems"
 fi
+AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
 AC_SUBST(PROGNAME)
+
+echo "**********************************************"
+echo "***   $PROGNAME will be generated"
+echo "***       (for $msg)"
+echo "**********************************************"
+
+# who am i
+AC_CANONICAL_HOST
 
 # Checks for programs.
 AC_PROG_CC
@@ -210,6 +224,6 @@ fi
 LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 
-AC_CONFIG_FILES([Makefile liboct/Makefile src/Makefile doc/Makefile])
+AC_CONFIG_FILES([Makefile liboct/Makefile src/Makefile doc/Makefile build/octopus.spec])
 
 AC_OUTPUT

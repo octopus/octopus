@@ -30,16 +30,16 @@ subroutine hartree_init(h, m)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(inout) :: m
 
-  integer :: ix, iy, iz, ixx, iyy, izz
-  real(r8) :: l, r_0, temp, vec
+  integer :: ix, iy, iz, ixx(3)
+  real(r8) :: l, r_0, temp(3), vec
 
   sub_name = 'hartree_init'; call push_sub()
 
   call oct_parse_int(C_string('PoissonSolver'), 3, h%solver)
-  if(h%solver.ne.1 .and. h%solver.ne.3 ) then
+  if(h%solver<1 .or. h%solver>3 ) then
     write(message(1), '(a,i2,a)') "Input: '", h%solver, &
          "' is not a valid PoissonSolver"
-    message(2) = 'PoissonSolver = 1(cg) | 3(fft)'
+    message(2) = 'PoissonSolver = 1(cg) | 2(fft) | 3(fft spherical cutoff)'
     call write_fatal(2)
   end if
   if(h%solver.eq.3 .and. m%box_shape.eq.4 ) then
@@ -48,15 +48,48 @@ subroutine hartree_init(h, m)
     message(3) = 'PoissonSolver = 1(cg)'
     call write_fatal(3)
   end if
+#ifdef POLYMERS
+  if(h%solver.ne.2) then
+    message(1) = "Sorry, but for polymers only the fft method (method 2)"
+    message(2) = "is available for solving the poisson equation"
+    call write_fatal(2)
+  end if
+#endif
+
 
   select case(h%solver)
   case(1)
-    message(1) = 'Info: Using conjugated gradients method to solve poisson equation'
+    message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
     call write_info(1)
     
 #ifdef HAVE_FFTW
+  case(2)
+    message(1) = 'Info: Using FFTs to solve poisson equation.'
+    call write_info(1)
+    allocate(h%ff(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+
+    temp(:) = 2.0_r8*M_PI/(m%fft_n2(:)*m%h(:))
+      
+    do ix = 1, m%hfft_n2
+      ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
+      do iy = 1, m%fft_n2(2)
+        ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
+        do iz = 1, m%fft_n2(3)
+          ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+          vec = sum((temp(:)*ixx(:))**2)
+
+          if(vec.ne.0.0_r8) then
+            h%ff(ix, iy, iz) = 4.0_r8*M_PI / vec
+          else
+            h%ff(ix, iy, iz) = 0._r8 
+          end if          
+        end do
+      end do
+    end do
+
+    call mesh_alloc_ffts(m, 2)    
   case(3) ! setup spherical ffts
-    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff'
+    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
     call write_info(1)
 
     allocate(h%ff(m%hfft_n2, m%fft_n2(1), m%fft_n2(1)))
@@ -64,16 +97,16 @@ subroutine hartree_init(h, m)
 
     l = m%fft_n2(1)*m%h(1)
     r_0 = l/2.0_r8
-    temp = 2.0_r8*M_PI/l
+    temp(1) = (2.0_r8*M_PI/l)**2
       
     do ix = 1, m%hfft_n2
+      ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
       do iy = 1, m%fft_n2(1)
+        ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
         do iz = 1, m%fft_n2(1)
-          ixx = pad_feq(ix, m%fft_n2(1), .true.)
-          iyy = pad_feq(iy, m%fft_n2(1), .true.)
-          izz = pad_feq(iz, m%fft_n2(1), .true.)
-          vec = temp*sqrt(real(ixx**2 + iyy**2 + izz**2, r8))
-
+          ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+          vec = temp(1)*sum(real(ixx(:)**2, r8))
+          
           if(vec.ne.0.0_r8) then
             h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
           else
@@ -99,7 +132,7 @@ subroutine hartree_end(h)
   select case(h%solver)
   case(1)
 #ifdef HAVE_FFTW
-  case(3)
+  case(2,3)
     if(associated(h%ff)) then ! has been allocated => destroy
       deallocate(h%ff); nullify(h%ff)
     end if
@@ -123,8 +156,8 @@ subroutine hartree_solve(h, m, pot, dist)
     call hartree_cg(h, m, pot, dist)
 
 #ifdef HAVE_FFTW
-  case(3)
-    call hartree_cut_sp(h, m, pot, dist)
+  case(2,3)
+    call hartree_fft(h, m, pot, dist)
 #endif
 
   case default
@@ -265,45 +298,52 @@ subroutine hartree_cg(h, m, pot, dist)
 end subroutine hartree_cg
 
 #ifdef HAVE_FFTW
-subroutine hartree_cut_sp(h, m, pot, dist)
+subroutine hartree_fft(h, m, pot, dist)
   type(hartree_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(out) :: pot
   real(r8), dimension(:,:), intent(IN) :: dist
 
-  integer i, ix, iy, iz
+  integer :: i, ix, iy, iz, s(3), c(3)
   real(r8), allocatable :: f(:,:,:)
   complex(r8), allocatable :: gg(:,:,:)
 
-  sub_name = 'hartree_cut_sp'; call push_sub()
+  sub_name = 'hartree_fft'; call push_sub()
 
-  allocate(f(m%fft_n2(1), m%fft_n2(1), m%fft_n2(1)), gg(m%hfft_n2, m%fft_n2(1), m%fft_n2(1)))
+  if(h%solver == 3) then
+    s(:) = m%hfft_n2
+  else
+    s(:) = m%fft_n2(:)
+  end if
+  c(:) = s(:)/2 + 1
+  
+  allocate(f(s(1), s(2), s(3)), gg(s(1)/2+1, s(2), s(3)))
   f = 0.0_8
-
+  
   do i = 1, m%np
-     ix = m%Lx(i) + m%hfft_n2
-     iy = m%Ly(i) + m%hfft_n2
-     iz = m%Lz(i) + m%hfft_n2
-     f(ix, iy, iz) = sum(dist(i,:))
-  enddo
-
-! Fourier transform the charge density
-  call rfft3d(f, gg, m%fft_n2(1), m%fft_n2(1), m%fft_n2(1), m%dplanf2, fftw_forward)
+    ix = m%Lx(i) + c(1)
+    iy = m%Ly(i) + c(2)
+    iz = m%Lz(i) + c(3)
+    f(ix, iy, iz) = sum(dist(i,:))
+  end do
+  
+  ! Fourier transform the charge density
+  call rfft3d(f, gg, s(1), s(2), s(3), m%dplanf2, fftw_forward)
   gg = gg*h%ff
-  call rfft3d(f, gg, m%fft_n2(1), m%fft_n2(1), m%fft_n2(1), m%dplanb2, fftw_backward)
-
+  call rfft3d(f, gg, s(1), s(2), s(3), m%dplanb2, fftw_backward)
+  
   do i = 1, m%np
-     ix = m%Lx(i) + m%hfft_n2
-     iy = m%Ly(i) + m%hfft_n2
-     iz = m%Lz(i) + m%hfft_n2
-     pot(i) = f(ix, iy, iz)
-  enddo
+    ix = m%Lx(i) + c(1)
+    iy = m%Ly(i) + c(2)
+    iz = m%Lz(i) + c(3)
+    pot(i) = f(ix, iy, iz)
+  end do
 
   deallocate(f, gg)
 
   call pop_sub()
   return
-end subroutine hartree_cut_sp
+end subroutine hartree_fft
 #endif
 
 end module hartree

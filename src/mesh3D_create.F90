@@ -29,6 +29,13 @@ subroutine mesh3D_create(m, natoms, atom)
     message(1) = "Internal Error"
     call write_fatal(1)
   endif
+#ifdef POLYMERS
+  if((m%box_shape.ne.CYLINDER).or.(m%box_shape.ne.PARALLELEPIPED)) then
+    message(1) = "When running polymer calculations, you have to use"
+    message(2) = "BoxShape = cylinder | parallelepiped"
+    call write_fatal(2)
+  end if
+#endif
 
   ! Read the grid spacing.
   select case(m%box_shape)
@@ -70,9 +77,7 @@ subroutine mesh3D_create(m, natoms, atom)
     message(1) = 'MINIMUM cage not correctly implemented. Sorry.'
     call write_fatal(1)
   case(PARALLELEPIPED)
-    do ix=1, 3
-       m%nr(ix) = int((m%lsize(ix)/2.0_r8)/m%h(ix))
-    enddo
+    m%nr(:) = int((m%lsize(:)/2.0_r8)/m%h(:))
   end select
   m%nx(1:3) = m%nr(1:3) + m%d%norder
 

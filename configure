@@ -1006,6 +1006,7 @@ Optional Features:
   --enable-mpi(=PATH)     compile paralel version
   --enable-1d             Let us work in 1D
   --enable-3d             or, if you prefer, in 3D
+  --enable-pol            Polymers anyone?
   --disable-dependency-tracking Speeds up one-time builds
   --enable-dependency-tracking  Do not reject slow dependency extractors
   --enable-shared=PKGS  build shared libraries default=no
@@ -1791,6 +1792,72 @@ ac_config_headers="$ac_config_headers src/config.h"
 # Installation prefix by default
 
 
+# what should I build?
+# Check whether --enable-mpi or --disable-mpi was given.
+if test "${enable_mpi+set}" = set; then
+  enableval="$enable_mpi"
+  MPIDIR=$enableval
+else
+  MPIDIR=no
+fi;
+# Check whether --enable-1d or --disable-1d was given.
+if test "${enable_1d+set}" = set; then
+  enableval="$enable_1d"
+  ONE_D=1
+fi;
+# Check whether --enable-3d or --disable-3d was given.
+if test "${enable_3d+set}" = set; then
+  enableval="$enable_3d"
+  THREE_D=1
+fi;
+# Check whether --enable-pol or --disable-pol was given.
+if test "${enable_pol+set}" = set; then
+  enableval="$enable_pol"
+  POLYMERS=1
+fi;
+
+# set program name
+PROGNAME="octopus"
+if test "${ONE_D}"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define ONE_D 1
+_ACEOF
+
+	PROGNAME="$PROGNAME-1d";
+	msg="finite 1D systems!"
+elif test "${POLYMERS}"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define THREE_D 1
+_ACEOF
+
+
+cat >>confdefs.h <<\_ACEOF
+#define POLYMERS 1
+_ACEOF
+
+	PROGNAME="$PROGNAME-pol"
+	msg="polymers"
+else
+
+cat >>confdefs.h <<\_ACEOF
+#define THREE_D 1
+_ACEOF
+
+	msg="finite 3D systems"
+fi
+if test x"$MPIDIR" != x"no"; then
+  PROGNAME="$PROGNAME-mpi"
+fi
+
+
+
+echo "**********************************************"
+echo "***   $PROGNAME will be generated"
+echo "***       (for $msg)"
+echo "**********************************************"
+
 # who am i
 # Make sure we can run config.sub.
 $ac_config_sub sun4 >/dev/null 2>&1 ||
@@ -1845,46 +1912,6 @@ host_cpu=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
 host_vendor=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 host_os=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
 
-
-
-# Check whether --enable-mpi or --disable-mpi was given.
-if test "${enable_mpi+set}" = set; then
-  enableval="$enable_mpi"
-  MPIDIR=$enableval
-else
-  MPIDIR=no
-fi;
-# Check whether --enable-1d or --disable-1d was given.
-if test "${enable_1d+set}" = set; then
-  enableval="$enable_1d"
-  ONE_D=1
-fi;
-# Check whether --enable-3d or --disable-3d was given.
-if test "${enable_3d+set}" = set; then
-  enableval="$enable_3d"
-  THREE_D=1
-fi;
-
-# set program name
-PROGNAME="octopus"
-if test x"$MPIDIR" != x"no"; then
-  PROGNAME="$PROGNAME-mpi"
-fi
-
-if test "${ONE_D}"; then
-
-cat >>confdefs.h <<\_ACEOF
-#define ONE_D 1
-_ACEOF
-
-	PROGNAME="$PROGNAME-1d"
-else
-
-cat >>confdefs.h <<\_ACEOF
-#define THREE_D 1
-_ACEOF
-
-fi
 
 
 # Checks for programs.
@@ -5452,7 +5479,7 @@ test "x$enable_libtool_lock" != xno && enable_libtool_lock=yes
 case $host in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5455 "configure"' > conftest.$ac_ext
+  echo '#line 5482 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -5988,7 +6015,7 @@ chmod -w .
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -o out/conftest2.$ac_objext"
 compiler_c_o=no
-if { (eval echo configure:5991: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
+if { (eval echo configure:6018: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
   # The compiler can only warn and ignore the option if not recognized
   # So say no if there are warnings
   if test -s out/conftest.err; then
@@ -7781,7 +7808,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7784 "configure"
+#line 7811 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -7879,7 +7906,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7882 "configure"
+#line 7909 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -8788,7 +8815,7 @@ fi
 fi
 
 # Provide some information about the compiler.
-echo "$as_me:8791:" \
+echo "$as_me:8818:" \
      "checking for Fortran 90 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -9073,7 +9100,7 @@ fi
 fi
 
 # Provide some information about the compiler.
-echo "$as_me:9076:" \
+echo "$as_me:9103:" \
      "checking for Fortran 90 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -9235,7 +9262,7 @@ _ACEOF
 # flags.
 ac_save_F90FLAGS=$F90FLAGS
 F90FLAGS="$F90FLAGS $ac_verb"
-(eval echo $as_me:9238: \"$ac_link\") >&5
+(eval echo $as_me:9265: \"$ac_link\") >&5
 ac_f90_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f90_v_output" >&5
 F90FLAGS=$ac_save_F90FLAGS
@@ -9314,7 +9341,7 @@ _ACEOF
 # flags.
 ac_save_F90FLAGS=$F90FLAGS
 F90FLAGS="$F90FLAGS $ac_cv_prog_f90_v"
-(eval echo $as_me:9317: \"$ac_link\") >&5
+(eval echo $as_me:9344: \"$ac_link\") >&5
 ac_f90_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f90_v_output" >&5
 F90FLAGS=$ac_save_F90FLAGS
@@ -11240,7 +11267,7 @@ fi
 LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 
 
-ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile"
+ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile build/octopus.spec"
 
 
 cat >confcache <<\_ACEOF
@@ -11735,6 +11762,7 @@ do
   "liboct/Makefile" ) CONFIG_FILES="$CONFIG_FILES liboct/Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
+  "build/octopus.spec" ) CONFIG_FILES="$CONFIG_FILES build/octopus.spec" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
   "liboct/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS liboct/config.h" ;;
   "src/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS src/config.h" ;;
@@ -11837,6 +11865,7 @@ s,@ac_ct_STRIP@,$ac_ct_STRIP,;t t
 s,@INSTALL_STRIP_PROGRAM@,$INSTALL_STRIP_PROGRAM,;t t
 s,@AWK@,$AWK,;t t
 s,@SET_MAKE@,$SET_MAKE,;t t
+s,@PROGNAME@,$PROGNAME,;t t
 s,@build@,$build,;t t
 s,@build_cpu@,$build_cpu,;t t
 s,@build_vendor@,$build_vendor,;t t
@@ -11845,7 +11874,6 @@ s,@host@,$host,;t t
 s,@host_cpu@,$host_cpu,;t t
 s,@host_vendor@,$host_vendor,;t t
 s,@host_os@,$host_os,;t t
-s,@PROGNAME@,$PROGNAME,;t t
 s,@CC@,$CC,;t t
 s,@CFLAGS@,$CFLAGS,;t t
 s,@LDFLAGS@,$LDFLAGS,;t t
@@ -12472,3 +12500,4 @@ if test "$no_create" != yes; then
   # would make configure fail if this is the last instruction.
   $ac_cs_success || { (exit 1); exit 1; }
 fi
+

@@ -38,6 +38,9 @@ type states_type
   real(r8) :: ef      ! the fermi energy
 
   integer :: st_start, st_end ! needed for some parallel parts
+
+  real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
+  real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
 end type states_type
 
 contains
@@ -60,7 +63,7 @@ subroutine states_init(st, m, val_charge)
     call write_fatal(2)
   end if
 
-#ifdef PERIODIC_1D
+#ifdef POLYMERS
   call oct_parse_int(C_string('NumberKPoints'), 1, st%nik)
   if (st%nik < 1) then
     write(message(1),'(a,i4,a)') "Input: '", st%nik,"' is not a valid NumberKPoints"
@@ -73,7 +76,12 @@ subroutine states_init(st, m, val_charge)
   
   call oct_parse_double(C_string('ExcessCharge'), 0.0_r8, excess_charge)
 
-  call oct_parse_int(C_string('ExtraStates'), 0, nempty)
+#ifdef POLYMERS
+  i = 2 ! we take two extra states, just in case we have a metal
+#else
+  i = 0 ! no extra states
+#endif
+  call oct_parse_int(C_string('ExtraStates'), i, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
     message(2) = '(0 <= ExtraStates)'
@@ -96,6 +104,9 @@ subroutine states_init(st, m, val_charge)
     st%dim = 2
     st%nst = st%nst*2
   end select
+
+  ! For non-periodic systems this should just return the Gamma point
+  call states_choose_kpoints(st, m)
 
   ! we now allocate some arrays
   st%nspin = min(2, st%ispin)
@@ -120,7 +131,6 @@ subroutine states_init(st, m, val_charge)
     st%fixed_occ = .false.
 
     ! first guest for occupation...paramagnetic configuration
-    ! TODO: for polimers this has to be changed
     r = 2.0_r8 / st%nspin
     st%occ  = 0.0_r8
     st%qtot = 0.0_r8
@@ -164,6 +174,11 @@ subroutine states_end(st)
 
   if(associated(st%zpsi)) then
     deallocate(st%zpsi); nullify(st%zpsi)
+  end if
+
+  if(associated(st%kpoints)) then
+    deallocate(st%kpoints, st%kweights)
+    nullify(st%kpoints, st%kweights)
   end if
 
   call pop_sub()
@@ -260,7 +275,6 @@ subroutine states_fermi(st)
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
      st%occ = 2.0_r8/st%nspin
-
      call pop_sub()
      return
   endif
@@ -283,7 +297,8 @@ subroutine states_fermi(st)
 
     do ik = 1, st%nik
       do ie =1, st%nst
-        sumq = sumq + stepf((st%eigenval(ie, ik) - st%ef)/t)/st%nspin
+        sumq = sumq + st%kweights(ik)/st%nspin * &
+             stepf((st%eigenval(ie, ik) - st%ef)/t)
       end do
     end do
 
@@ -398,6 +413,10 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 #endif
   
 end subroutine states_write_eigenvalues
+
+#ifdef POLYMERS
+#include "states_kpoints.F90"
+#endif
 
 #include "undef.F90"
 #include "real.F90"
