@@ -5,6 +5,8 @@ EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 
 bin_PROGRAMS = octopus oct-excite @UTILITY_PROGRAMS@
 
+check_PROGRAMS = oct-test
+
 core_SRCS = liboct_parser.F90 io.F90 liboct.F90 global.F90 units.F90 \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
@@ -79,6 +81,9 @@ oct_center_geom_LDADD = $(octopus_LDADD)
 
 oct_atoms_magnet_SOURCES = $(core_SRCS) atoms_magnet.F90
 oct_atoms_magnet_LDADD = $(octopus_LDADD)
+
+oct_test_SOURCES = $(core_SRCS) oct_test.F90
+oct_test_LDADD = $(octopus_LDADD)
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h

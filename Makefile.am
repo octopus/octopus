@@ -18,7 +18,7 @@
 ## 02111-1307, USA.
 ##
 
-SUBDIRS = liboct_parser liboct libxc src doc share
+SUBDIRS = liboct_parser liboct libxc src doc share tests
 
 EXTRA_DIST = TODO build/*.m4 build/*.in debian/* \
   samples/Na2 samples/bench-gs
