@@ -99,7 +99,7 @@ subroutine X(states_random)(m, f)
   end do
 
   r = X(mf_nrm2)(m, f)
-  call X(scal)(m%np, R_TOTYPE(M_ONE/r), f, 1) 
+  call X(scal)(m%np, R_TOTYPE(M_ONE/r), f(1), 1) 
 
   call pop_sub()
 end subroutine X(states_random)
@@ -126,13 +126,13 @@ subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
     do q = 1, p - 1
       ss = R_FUNC(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
       do id = 1, dim
-        call R_FUNC(axpy) (m%np, -ss, psi(1:m%np, id, q), 1, psi(1:m%np, id, p), 1)
+        call R_FUNC(axpy) (m%np, -ss, psi(1, id, q), 1, psi(1, id, p), 1)
       end do
     enddo
     nrm2 = R_FUNC(states_nrm2)(m, dim, psi(1:m%np, :, p))
     ss = R_TOTYPE(1.0_r8/nrm2)
     do id = 1, dim
-      call R_FUNC(scal) (m%np, ss, psi(1:m%np, id, p), 1)
+      call R_FUNC(scal) (m%np, ss, psi(1, id, p), 1)
     end do
   end do
 
@@ -144,18 +144,18 @@ R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f1, f2
   R_TYPE :: R_FUNC(states_ddot)
-  R_TYPE, external :: R_DOT
 
-  dotp = R_DOT(m%np*dim, f1, 1, f2, 1)*m%vol_pp
+  dotp = R_DOT(m%np*dim, f1(1), 1, f2(1), 1)*m%vol_pp
+
 end function R_FUNC(states_dotp)
 
 real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f
-  real(r8), external :: R_NRM2
 
-  nrm2 = R_NRM2(m%np*dim, f, 1)*sqrt(m%vol_pp)
+  nrm2 = R_NRM2(m%np*dim, f(1), 1)*sqrt(m%vol_pp)
+
 end function R_FUNC(states_nrm2)
 
 real(r8) function R_FUNC(states_residue)(m, dim, hf, e, f, res) result(r)
@@ -644,7 +644,7 @@ subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
      lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
   enddo
 #if defined(R_TCOMPLEX)
-  call zscal(3*m%np, -M_zI, lf, 1)
+  call zscal(3*m%np, -M_zI, lf(1, 1), 1)
 #endif
   deallocate(gf)
 end subroutine R_FUNC(mesh_angular_momentum)

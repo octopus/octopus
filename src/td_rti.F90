@@ -310,10 +310,10 @@ contains
     
       !pot = pot0 + t/dt       * (3._r8/2._r8*pot0 + 1._r8/2._r8*pot2 - 2.0_r8*pot1) + &
       !             t**2/dt**2 * (1._r8/2._r8*pot0 + 1._r8/2._r8*pot2 -        pot1)
-      call dcopy(np*dim,                                                    pot0, 1, pot, 1)
-      call daxpy(np*dim, (t/dt)*(3._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot0, 1, pot, 1)
-      call daxpy(np*dim, (t/dt)*(-2._r8)      + (t**2/dt**2)*(-1._r8),      pot1, 1, pot, 1)
-      call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2, 1, pot, 1)
+      call dcopy(np*dim,                                                    pot0(1, 1), 1, pot(1, 1), 1)
+      call daxpy(np*dim, (t/dt)*(3._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot0(1, 1), 1, pot(1, 1), 1)
+      call daxpy(np*dim, (t/dt)*(-2._r8)      + (t**2/dt**2)*(-1._r8),      pot1(1, 1), 1, pot(1, 1), 1)
+      call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2(1, 1), 1, pot(1, 1), 1)
       
     end subroutine xpolate_pot
     

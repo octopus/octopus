@@ -152,10 +152,10 @@ contains
 #if defined(HAVE_LAPACK)
     lwork = 3*ph%dim - 1
     allocate(work(lwork))
-    call dsyev('v', 'u', ph%dim, ph%DM, ph%dim, ph%freq, work, lwork, info)
+    call dsyev('v', 'u', ph%dim, ph%DM(1, 1), ph%dim, ph%freq(1), work(1), lwork, info)
 
     if(info.ne.0) then
-      write(message(1),'(a,i5)') 'LAPACK "zhegv/dsygv" returned error code ', info
+      write(message(1),'(a,i5)') 'LAPACK "dsygv" returned error code ', info
       call write_fatal(1)
     endif
     deallocate(work)

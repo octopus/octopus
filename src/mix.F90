@@ -20,6 +20,7 @@
 module mix
 use global
 use oct_parser
+use math
 
 implicit none
 
@@ -151,9 +152,10 @@ subroutine mix_linear(smix, np, nspin, vin, vout, vnew)
   real(r8), dimension(np, nspin),  intent(in) :: vin, vout
   real(r8), dimension(np, nspin), intent(out) :: vnew
 
-  vnew = vin
-  call dscal(np*nspin, 1.0_r8 - smix%alpha, vnew, 1)
-  call daxpy(np*nspin, smix%alpha, vout, 1, vnew, 1)
+!  vnew = vin
+  call dcopy(np*nspin, vin(1, 1), 1, vnew(1, 1), 1)
+  call dscal(np*nspin, 1.0_r8 - smix%alpha, vnew(1, 1), 1)
+  call daxpy(np*nspin, smix%alpha, vout(1, 1), 1, vnew(1, 1), 1)
 
   return
 end subroutine mix_linear
@@ -225,13 +227,13 @@ subroutine mix_broyden(smix, np, nspin, vin, vout, vnew, iter, errorflag)
     end do
 
     ! invert matrix beta
-    call dsytrf('u', iter_used, beta, maxter, iwork, work, maxter, info)
+    call dsytrf('u', iter_used, beta(1, 1), maxter, iwork(1), work(1), maxter, info)
     if(info .ne. 0) then
       write(message(1), '(a, i3)') 'mix_broyden: dsytrf returned info = ', info
       call write_fatal(1)
     end if
 
-    call dsytri('u', iter_used, beta, maxter, iwork, work, info)
+    call dsytri('u', iter_used, beta(1, 1), maxter, iwork(1), work(1), info)
     if(info .ne. 0) then
       write(message(1), '(a, i3)') 'mix_broyden: dsytri returned info = ', info
       call write_fatal(1)

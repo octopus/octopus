@@ -323,12 +323,12 @@ subroutine lcao_wf(sys, h)
   do ik = 1, sys%st%nik
 
     lwork = 5*norbs
-    allocate(work(lwork), w(norbs), rwork(lwork), s(norbs, norbs))
+    allocate(work(lwork), w(norbs), rwork(max(1,3*norbs-2)), s(norbs, norbs))
     s(1:norbs, 1:norbs) = lcao_data%s(1:norbs, 1:norbs, ik)
 #ifdef COMPLEX_WFNS
-    call zhegv (1, 'v', 'u', norbs, lcao_data%hamilt(:, :, ik), norbs, s, norbs, w, work, lwork, rwork, info)
+    call zhegv (1, 'v', 'u', norbs, lcao_data%hamilt(1, 1, ik), norbs, s(1, 1), norbs, w(1), work(1), lwork, rwork(1), info)
 #else
-    call dsygv (1, 'v', 'u', norbs, lcao_data%hamilt(:, :, ik), norbs, s, norbs, w, work, lwork, info)
+    call dsygv (1, 'v', 'u', norbs, lcao_data%hamilt(1, 1, ik), norbs, s(1, 1), norbs, w(1), work(1), lwork, info)
 #endif
     if(info.ne.0) then
       write(message(1),'(a,i5)') 'LAPACK "zhegv/dsygv" returned error code ', info

@@ -18,6 +18,7 @@
 #include "global.h"
 
 module td_exp
+  use math
   use td_exp_split
   
   implicit none
@@ -139,12 +140,12 @@ contains
       
       allocate(zpsi1(sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
       zfact = M_z1
-      call zcopy(sys%m%np*sys%st%dim, zpsi, 1, zpsi1, 1)
+      call zcopy(sys%m%np*sys%st%dim, zpsi(1, 1), 1, zpsi1(1, 1), 1)
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
-        call zaxpy(sys%m%np*sys%st%dim, zfact, hzpsi1, 1, zpsi, 1)
-        if(i .ne. te%exp_order) call zcopy(sys%m%np*sys%st%dim, hzpsi1, 1, zpsi1, 1)
+        call zaxpy(sys%m%np*sys%st%dim, zfact, hzpsi1(1, 1), 1, zpsi(1, 1), 1)
+        if(i .ne. te%exp_order) call zcopy(sys%m%np*sys%st%dim, hzpsi1(1, 1), 1, zpsi1(1, 1), 1)
       end do
       deallocate(zpsi1, hzpsi1)
       
@@ -188,7 +189,7 @@ contains
         call zaxpy(n, cmplx(-1._r8,0._r8,r8), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
       end do
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      call zscal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi, 1)
+      call zscal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(1, 1), 1)
       deallocate(zpsi1)
       
       if(present(order)) order = te%exp_order
@@ -216,7 +217,7 @@ contains
       ! Operate on v(:, :, 1) and place it onto w.
       call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, 1), zpsi, t)
       alpha = zstates_dotp(sys%m, sys%st%dim, v(:, :, 1), zpsi)
-      call zaxpy(np, -M_z1*alpha, v, 1, zpsi, 1)
+      call zaxpy(np, -M_z1*alpha, v(1, 1, 1), 1, zpsi(1, 1), 1)
       
       hm = M_z0; hm(1, 1) = alpha
       beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)

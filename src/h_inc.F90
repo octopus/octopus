@@ -116,7 +116,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
     do idim = 1, dim
       call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
-    call R_FUNC(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi, 1)
+    call R_FUNC(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi(1, 1), 1)
   end if
 
 
@@ -138,8 +138,9 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   R_TYPE, allocatable :: lpsi(:), lHpsi(:)
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
-  R_TYPE, external :: R_DOT
-  
+#ifdef R_TCOMPLEX
+  complex(r8), allocatable :: conj(:)
+#endif
 
   call push_sub('vnlpsi')
 
@@ -163,6 +164,10 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
       end do
     end if
 
+#   ifdef R_TCOMPLEX
+      allocate(conj(atm%mps))
+#   endif
+
     do_dim: do idim = 1, st%dim
       allocate(lpsi(atm%mps), lHpsi(atm%mps))
       if (conf%periodic_dim==0) then
@@ -181,14 +186,19 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-              uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(:, add_lm, ikbc), 1, lpsi(:), 1) * &
+              uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(1, add_lm, ikbc), 1, lpsi(1), 1) * &
                    m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
               if (conf%periodic_dim==0) then
-                call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
+                call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(1, add_lm, jkbc), 1, lHpsi(1), 1)
               else
-#if defined(COMPLEX_WFNS)
-                call R_FUNC(axpy) (atm%mps, uvpsi, R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
-#endif
+#               ifdef R_TCOMPLEX
+                 conj = R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc)
+                  call R_FUNC(axpy) (atm%mps, uvpsi, conj(1), 1, lHpsi(1), 1)
+#               else
+                  message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
+                  message(2) = "Reconfigure with --enable-complex, and remake"
+                  call write_fatal(2)
+#               endif
               end if
             end do
           end do
@@ -199,6 +209,10 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
       Hpsi(atm%jxyz(:), idim) = Hpsi(atm%jxyz(:), idim) + lHpsi(:)
       deallocate(lpsi, lHpsi)
     end do do_dim
+
+#   ifdef R_TCOMPLEX
+      deallocate(conj)
+#   endif
   end do do_atm
 
   call pop_sub()

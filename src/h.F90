@@ -20,6 +20,7 @@
 module hamiltonian
 use global
 use oct_parser
+use math
 use spline
 #ifdef HAVE_FFT
 use fft

@@ -19,6 +19,7 @@
 
 module mesh_function
   use global
+  use math
   use mesh
   use cube_function
 #ifdef HAVE_FFT

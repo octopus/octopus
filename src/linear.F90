@@ -18,6 +18,8 @@
 #include "config_F90.h"
 
 module linear
+  use global
+  use math
   use poisson
   use states
 
@@ -121,9 +123,9 @@ contains
       ! now we diagonalise the matrix using LAPACK
       lwork = 3*n_pairs - 1
       allocate(work(lwork), w(n_pairs))
-      call dsyev ('v', 'u', n_pairs, mat, n_pairs, w, work, lwork, info)
+      call dsyev ('v', 'u', n_pairs, mat(1, 1), n_pairs, w(1), work(1), lwork, info)
       if(info.ne.0) then
-        write(message(1),'(a,i5)') 'LAPACK "zheev/dsyev" returned error code ', info
+        write(message(1),'(a,i5)') 'LAPACK "dsyev" returned error code ', info
         call write_fatal(1)
       endif
 
