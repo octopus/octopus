@@ -536,9 +536,9 @@ logical function in_mesh(m, x)
     in_mesh = in_minimum()
   case(PARALLELEPIPED)
     in_mesh =  &
-       (x(1) >= m%nr(1,1)*m%h(1).and.x(1) <= m%nr(2,1)*m%h(1)).and. &
-       (x(2) >= m%nr(1,2)*m%h(2).and.x(2) <= m%nr(2,2)*m%h(2)).and. &
-       (x(3) >= m%nr(1,3)*m%h(3).and.x(3) <= m%nr(2,3)*m%h(3))
+       (x(1) >= m%nr(1,1)*m%h(1)+m%box_offset(1).and.x(1) <= m%nr(2,1)*m%h(1)+m%box_offset(1)).and. &
+       (x(2) >= m%nr(1,2)*m%h(2)+m%box_offset(2).and.x(2) <= m%nr(2,2)*m%h(2)+m%box_offset(2)).and. &
+       (x(3) >= m%nr(1,3)*m%h(3)+m%box_offset(3).and.x(3) <= m%nr(2,3)*m%h(3)+m%box_offset(3))
   end select
 
 contains
