@@ -29,6 +29,8 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
   FLOAT :: ex2, ec2, edummy
   FLOAT, allocatable :: vxc2(:, :)
   FLOAT, pointer :: rho(:,:), rho_save(:,:)
+
+  call push_sub('oep_sic')
   
   allocate(rho(m%np, 2), Vxc2(m%np, 2))
   rho(:, 2) = M_ZERO
@@ -49,8 +51,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(xcs%sic_aux, xcs, m, f_der, st, vxc2, ex2, &
-         ec2, edummy, edummy)
+      call xc_get_vxc(xcs, m, f_der, st, vxc2, ex2, ec2, edummy, edummy, aux = .true.) 
       
       ex = ex - oep%sfact*ex2
       ec = ec - oep%sfact*ec2
@@ -73,4 +74,5 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
   st%rho => rho_save
   deallocate(rho, Vxc2)
 
+  call pop_sub()
 end subroutine X(oep_sic)

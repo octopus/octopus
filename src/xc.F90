@@ -44,6 +44,14 @@ public :: xc_type, &
           doep_x, zoep_x, &
           doep_sic, zoep_sic
 
+! the OEP levels
+integer, public, parameter :: &
+         XC_OEP_NONE   = 0, &
+         XC_OEP_SLATER = 1, &
+         XC_OEP_KLI    = 2, &
+         XC_OEP_CEDA   = 3, & ! not yet implemented
+         XC_OEP_FULL   = 4    ! half implemented
+
 type xc_type
   logical :: nlcc                   ! repeated from system
 
@@ -112,10 +120,9 @@ contains
 #endif
   end subroutine xc_write_info
 
-  subroutine xc_init(xcs, nlcc, ispin, spin_channels)
+  subroutine xc_init(xcs, nlcc, spin_channels)
     type(xc_type), intent(out) :: xcs
     logical,       intent(in)  :: nlcc
-    integer,       intent(in)  :: ispin
     integer,       intent(in)  :: spin_channels
     
     integer :: func, i, j, rel
@@ -144,7 +151,7 @@ contains
     if(any(xcs%functl(:)%family==XC_FAMILY_LDA) .or. &
        any(xcs%functl(:)%family==XC_FAMILY_GGA)) then
 
-      call loct_parse_int("SICorrection", 0, xcs%sic_correction)
+      call loct_parse_int("SICCorrection", 0, xcs%sic_correction)
 
       ! we need some auxiliary functionals for the SIC
       if(xcs%sic_correction.ne.0) then

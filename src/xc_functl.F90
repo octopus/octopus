@@ -25,7 +25,6 @@ module xc_functl
 
   private
   public :: xc_functl_type,             &
-            xc_functl_init,             &
             xc_functl_init_exchange,    &
             xc_functl_init_correlation, &
             xc_functl_end,              &
@@ -38,15 +37,8 @@ module xc_functl
      XC_FAMILY_MGGA = 3,    &
      XC_FAMILY_OEP  = 4
 
-  ! the OEP levels
-  integer, public, parameter :: &
-     XC_OEP_NONE   = 0, &
-     XC_OEP_SLATER = 1, &
-     XC_OEP_KLI    = 2, &
-     XC_OEP_CEDA   = 3, & ! not yet implemented
-     XC_OEP_FULL   = 4    ! half implemented
-
-  ! the OEP
+  ! This adds to the constants defined in lib_xc. But since in that module
+  ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
      XC_OEP_X             = 301     ! Exact exchange
 

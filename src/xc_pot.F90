@@ -15,14 +15,14 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
-  type(xc_functl_type), intent(in)    :: functl(:) ! functl(2)
-  type(xc_type),        intent(in)    :: xcs
+subroutine xc_get_vxc(xcs, m, f_der, st, vxc, ex, ec, ip, qtot, aux)
+  type(xc_type),        intent(in), target    :: xcs
   type(mesh_type),      intent(in)    :: m
   type(f_der_type),     intent(inout) :: f_der
   type(states_type),    intent(in)    :: st
   FLOAT,                intent(inout) :: vxc(:,:), ex, ec
   FLOAT,                intent(in)    :: ip, qtot
+  logical, optional,    intent(in)    :: aux
   
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
@@ -32,6 +32,14 @@ subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   FLOAT   :: e, dpol, dtot, vpol, r
   logical :: gga, mgga
 
+  type(xc_functl_type), pointer :: functl(:)
+
+  if(present(aux) .and. aux) then
+   functl => xcs%sic_aux
+  else
+   functl => xcs%functl
+  endif
+
   ! is there anything to do ?
   if(.not.( &
      any(functl(:)%family==XC_FAMILY_LDA).or. &
@@ -39,14 +47,14 @@ subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
      any(functl(:)%family==XC_FAMILY_MGGA) )) return
   
   ! really start
-  call push_sub('xc_gga')
+  call push_sub('xc_get_vxc')
 
   ! initialize a couple of handy variables
   gga           = any(functl(:)%family == XC_FAMILY_GGA)
   mgga          = any(functl(:)%family == XC_FAMILY_MGGA)
   spin_channels = st%d%spin_channels
   ispin         = st%d%ispin
-  
+
                   call  lda_init()
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
@@ -112,6 +120,7 @@ subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   if(       mgga) call mgga_process()
   if(gga.or.mgga) call  gga_process()
                   call  lda_process()
+
 
   ! clean up allocated memory
                   call  lda_end()
