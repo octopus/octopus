@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.5 from
+This is octopus.info, produced by makeinfo version 4.3 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -659,6 +659,38 @@ typically do:
 Also, if you have some of the required libraries in some unusual
 directories, these directories may be placed in the variable `LDFLAGS'
 (e.g., `export LDFLAGS=$LDFLAGS:/opt/lib/').
+
+   The configuration script will try to find out which compiler you are
+using.  Unfortunately, and due to the nature of the primitive language
+that `octopus' is programmed in, the automatic test fails very often.
+Often it is better to set the variable `F90FLAGS' by hand. These are
+some of the options reported to work:
+`intel ifc (PIV)'
+     `-u -zero -fpp1 -nbs -i_dynamic -pc80 -pad -align  -unroll -O3 -r8
+     -ip -tpp7 -xW'
+
+`absoft (i386)'
+     `-O3 -YEXT_NAMES=LCS -YEXT_SFX=_'
+
+`absoft (opteron)'
+     `-O3 -mcmodel=medium -m64 -cpu:host -YEXT_NAMES=LCS -YEXT_SFX=_'
+
+`NAG (opteron)'
+     `-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4
+     -Ounroll=4'
+
+`pgi (opteron)'
+     `-fast -mcmodel=medium -O4'
+
+`alpha'
+     `-align dcommons -fast -tune host -arch host -noautomatic'
+
+`xlf (IBM)'
+     `-bmaxdata:0x80000000 -qmaxmem=-1 -qsuffix=f=f90 -Q -O5 -qstrict
+     -qtune=auto -qarch=auto -qhot -qipa'
+
+`sgi'
+     `-O3 -INLINE -n32 -LANG:recursive=on'
 
    You can now run the configure script (`./configure').  (1) You can
 use a fair amount of options to spice `octopus' to your own taste.  To
@@ -1364,52 +1396,4 @@ States
 * ExtraStates::
 * Occupations::
 * ElectronicTemperature::
-
-
-File: octopus.info,  Node: SpinComponents,  Next: NumberKPoints,  Prev: States,  Up: States
-
-`SpinComponents' (integer, 1)
------------------------------
-
-   Defines the spin mode `octopus' will run in. Valid modes are:
-   - `unpolarized' or `1': Spin-unpolarised calculation.
-
-   - `polarized' or `2': Spin-polarised calculation (collinear spin).
-     This mode will double the number of wave-functions necessary for a
-     spin-unpolarised calculation.
-
-   - `non_collinear' or `3': Non-collinear spin. This mode will double
-     the number of wave-functions necessary for a spin-unpolarised
-     calculation, and each of the wave-functions will be a 2-spinor.
-
-
-File: octopus.info,  Node: NumberKPoints,  Next: ExcessCharge,  Prev: SpinComponents,  Up: States
-
-`NumberKPoints' (integer, 1)
-----------------------------
-
-   If `octopus' was compiled for periodic systems, the number of _k_
-points to use in the calculation. If `NumberKPoints == 1', use only the
-Gamma point. (Note: current version in fact does not implement this
-possibility. Setting this variable to more that 1 may lead to erroneous
-results.)
-
-
-File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: NumberKPoints,  Up: States
-
-`ExcessCharge' (double, 1)
---------------------------
-
-   The net charge of the system. A negative value means that we are
-adding electrons, while a positive value means we are taking electrons
-from the system.
-
-
-File: octopus.info,  Node: ExtraStates,  Next: Occupations,  Prev: ExcessCharge,  Up: States
-
-`ExtraStates' (integer, 1)
---------------------------
-
-   How many unoccupied states to use in the ground-state calculation.
-Note that this number is unrelated to `CalculationMode == 4'.
 

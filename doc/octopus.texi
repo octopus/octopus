@@ -769,6 +769,29 @@ Also, if you have some of the required libraries in some unusual directories,
 these directories may be placed in the variable @code{LDFLAGS} (e.g.,
 @code{export LDFLAGS=$LDFLAGS:/opt/lib/}).
 
+The configuration script will try to find out which compiler you are using.
+Unfortunately, and due to the nature of the primitive language that @code{octopus}
+is programmed in, the automatic test fails very often. Often it is better to set
+the variable @code{F90FLAGS} by hand. These are some of the options reported to work:
+@table @samp
+  @item intel ifc (PIV)
+  @code{-u -zero -fpp1 -nbs -i_dynamic -pc80 -pad -align  -unroll -O3 -r8 -ip -tpp7 -xW}
+  @item absoft (i386)
+  @code{-O3 -YEXT_NAMES=LCS -YEXT_SFX=_}
+  @item absoft (opteron)
+  @code{-O3 -mcmodel=medium -m64 -cpu:host -YEXT_NAMES=LCS -YEXT_SFX=_}
+  @item NAG (opteron)
+  @code{-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4}
+  @item pgi (opteron)
+  @code{-fast -mcmodel=medium -O4}
+  @item alpha
+  @code{-align dcommons -fast -tune host -arch host -noautomatic}
+  @item xlf (IBM)
+  @code{-bmaxdata:0x80000000 -qmaxmem=-1 -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa}
+  @item sgi
+  @code{-O3 -INLINE -n32 -LANG:recursive=on}
+@end table
+
 You can now run the configure script (@code{./configure}). 
 @footnote{
 If you downloaded the cvs version, you will not find the @code{configure} script. 

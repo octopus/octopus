@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.5 from
+This is octopus.info, produced by makeinfo version 4.3 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,18 +6,54 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
-This manual is for octopus 1.3, a first principles, electronic
-structure, excited states, time-dependent density functional theory
-program.
+
+File: octopus.info,  Node: SpinComponents,  Next: NumberKPoints,  Prev: States,  Up: States
 
-   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
-Angel Rubio
+`SpinComponents' (integer, 1)
+-----------------------------
 
-     Permission is granted to copy, distribute and/or modify this
-     document under the terms of the GNU Free Documentation License,
-     Version 1.1 or any later version published by the Free Software
-     Foundation.
-   
+   Defines the spin mode `octopus' will run in. Valid modes are:
+   - `unpolarized' or `1': Spin-unpolarised calculation.
+
+   - `polarized' or `2': Spin-polarised calculation (collinear spin).
+     This mode will double the number of wave-functions necessary for a
+     spin-unpolarised calculation.
+
+   - `non_collinear' or `3': Non-collinear spin. This mode will double
+     the number of wave-functions necessary for a spin-unpolarised
+     calculation, and each of the wave-functions will be a 2-spinor.
+
+
+File: octopus.info,  Node: NumberKPoints,  Next: ExcessCharge,  Prev: SpinComponents,  Up: States
+
+`NumberKPoints' (integer, 1)
+----------------------------
+
+   If `octopus' was compiled for periodic systems, the number of _k_
+points to use in the calculation. If `NumberKPoints == 1', use only the
+Gamma point. (Note: current version in fact does not implement this
+possibility. Setting this variable to more that 1 may lead to erroneous
+results.)
+
+
+File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: NumberKPoints,  Up: States
+
+`ExcessCharge' (double, 1)
+--------------------------
+
+   The net charge of the system. A negative value means that we are
+adding electrons, while a positive value means we are taking electrons
+from the system.
+
+
+File: octopus.info,  Node: ExtraStates,  Next: Occupations,  Prev: ExcessCharge,  Up: States
+
+`ExtraStates' (integer, 1)
+--------------------------
+
+   How many unoccupied states to use in the ground-state calculation.
+Note that this number is unrelated to `CalculationMode == 4'.
+
 
 File: octopus.info,  Node: Occupations,  Next: ElectronicTemperature,  Prev: ExtraStates,  Up: States
 
@@ -1368,48 +1404,4 @@ equation.  Allowed values are:
    - `fft' or `3': FFTs with spherical cutoff.
    The value of variable `DoubleFFTParameter' is used in case `3'
 method is used.
-
-
-File: octopus.info,  Node: POLStaticField,  Next: Displacement,  Prev: PoissonSolver,  Up: Varia
-
-`POLStaticField' (double, 0.001 a.u.)
--------------------------------------
-
-   Magnitude of the static field used to calculate the static
-polarizability in `CalculationMode = 7, 8'.
-
-
-File: octopus.info,  Node: Displacement,  Prev: POLStaticField,  Up: Varia
-
-`Displacement' (double, 0.01 a.u.)
-----------------------------------
-
-   When calculating phonon properties (`CalculationMode = 11')
-`Displacement' controls how much the atoms are to be moved in order to
-calculate the dynamical matrix.
-
-
-File: octopus.info,  Node: External utilities,  Next: Examples,  Prev: Input file options,  Up: Top
-
-External utilities
-******************
-
-   A few small programs are generated along with `octopus', for the
-purpose of post-processing the generated information. These utilities
-should all be run from the directory where `octopus' was run, so that
-it may see the `inp' file, and the directories created by it.
-
-* Menu:
-
-* oct-sf::
-* oct-rsf::
-* oct-hs-mult::
-* oct-hs-acc::
-* oct-xyz-anim::
-* oct-excite::
-* oct-broad::
-* oct-make-st::
-* oct-choose-st::
-* oct-center-geom::
-* wf.net::
 
