@@ -22,6 +22,7 @@
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <termios.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "config.h"
@@ -54,7 +55,7 @@ void fft_optimize(int *n, int p, int par)
 	 copied from openssh scp source */
 static int foreground_proc(void)
 {
-	static __pid_t pgrp = -1; /* WARNING should be __pid_t */
+	static pid_t pgrp = -1;
 	int ctty_pgrp;
 	
 	if (pgrp == -1)
