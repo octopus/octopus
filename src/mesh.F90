@@ -51,13 +51,14 @@ integer, parameter :: &
      PARALLELEPIPED = 4
 
 type mesh_type
-  integer  :: box_shape ! 1->sphere, 2->cylinder, 3->sphere around each atom,
-                        ! 4->parallelpiped (orthonormal, up to now).
-  FLOAT :: h(3)      ! the (constant) spacing between the points
+  integer  :: box_shape   ! 1->sphere, 2->cylinder, 3->sphere around each atom,
+                          ! 4->parallelpiped (orthonormal, up to now).
+  FLOAT :: h(3)           ! the (constant) spacing between the points
+  FLOAT :: box_offset(3)  ! shifts of the origin in the respective direction
   
-  FLOAT :: rsize     ! the radius of the sphere or of the cylinder
-  FLOAT :: xsize     ! the length of the cylinder in the x direction
-  FLOAT :: lsize(3)  ! half of the length of the parallelepiped in each direction.
+  FLOAT :: rsize       ! the radius of the sphere or of the cylinder
+  FLOAT :: xsize       ! the length of the cylinder in the x direction
+  FLOAT :: lsize(3)    ! half of the length of the parallelepiped in each direction.
   FLOAT :: rlat(3,3)   ! lattice primitive vectors
   FLOAT :: klat(3,3)   ! reciprocal lattice primitive vectors
   FLOAT :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
