@@ -30,10 +30,14 @@ program hs_from_acc
   ! init liboct
   ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
   if(ierr .ne. 0) then
-    message(1) = "Error initializing liboct"
-    call write_fatal(1)
+    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
+    if(ierr .ne. 0) then
+      message(1) = "Error initializing liboct"
+      call write_fatal(1)
+    end if
   end if
-  conf%verbose = 30
+
+  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
   call units_init()
 
   call oct_parse_double(C_string("SpecStartTime"), 0._r8, s%start_time)
@@ -58,8 +62,7 @@ program hs_from_acc
     call write_fatal(2)
   end if
 
-  call oct_parse_str('SystemName', 'system', txt)
-  call spectrum_hs_from_acc(trim(txt), trim(txt)//'.acc-hs', s, sh, .true.)
+  call spectrum_hs_from_acc('hs-acc', s, sh, .true.)
 
   deallocate(sh%sp)
   stop  

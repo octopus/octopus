@@ -39,8 +39,11 @@ program octopus
   ! init some of the stuff
   ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
   if(ierr .ne. 0) then
-    message(1) = "Error initializing liboct"
-    call write_fatal(1)
+    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
+    if(ierr .ne. 0) then
+      message(1) = "Error initializing liboct"
+      call write_fatal(1)
+    end if
   end if
   
   call oct_parse_int(C_string('verbose'), 30, conf%verbose)

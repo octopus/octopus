@@ -29,10 +29,14 @@ program strength_function
 
   ! init liboct
   ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    message(1) = "Error initializing liboct"
-    call write_fatal(1)
+  if(ierr .ne. 0) then ! try stdin
+    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
+    if(ierr .ne. 0) then
+      message(1) = "Error initializing liboct"
+      call write_fatal(1)
+    end if
   end if
+
   call oct_parse_int(C_string("verbose"), 30, conf%verbose)
   call units_init()
 
@@ -73,8 +77,7 @@ program strength_function
   s%max_energy      = s%max_energy      * units_inp%energy%factor
   sf%delta_strength = sf%delta_strength / units_inp%length%factor
 
-  call oct_parse_str('SystemName', 'system', txt)
-  call spectrum_strength_function(trim(txt), trim(txt)//'.spectrum', s, sf, .true.)
+  call spectrum_strength_function('spectrum', s, sf, .true.)
 
   deallocate(sf%sp)
   stop  

@@ -59,8 +59,8 @@ end type spec_sh
 
 contains
 
-subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
-  character(len=*), intent(in) :: sysname, out_file
+subroutine spectrum_strength_function(out_file, s, sf, print_info)
+  character(len=*), intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_sf), intent(inout) :: sf
   logical, intent(in) :: print_info
@@ -71,7 +71,7 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
   real(r8), allocatable :: dumpa(:)
   real(r8), allocatable :: dipole(:,:)
 
-  call spectrum_mult_info(sysname, iunit, sf%nspin, time_steps, dt)
+  call spectrum_mult_info(iunit, sf%nspin, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
@@ -181,8 +181,8 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
   return
 end subroutine spectrum_strength_function
 
-subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
-  character(len=*), intent(in) :: sysname, out_file
+subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
+  character(len=*), intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_sh), intent(inout) :: sh
   logical, intent(in) :: print_info
@@ -193,7 +193,7 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
   complex(r8) :: c
   complex(r8), allocatable :: dipole(:), ddipole(:)
 
-  call spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
+  call spectrum_mult_info(iunit, nspin, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
   
   ! load dipole from file
@@ -261,8 +261,8 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
 
 end subroutine spectrum_hs_from_mult
 
-subroutine spectrum_hs_from_acc(sysname, out_file, s, sh, print_info)
-  character(len=*), intent(in) :: sysname, out_file
+subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
+  character(len=*), intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_sh), intent(inout) :: sh
   logical, intent(in) :: print_info
@@ -272,7 +272,7 @@ subroutine spectrum_hs_from_acc(sysname, out_file, s, sh, print_info)
   complex(r8), allocatable :: acc(:)
   complex(r8) :: c
   
-  call spectrum_acc_info(sysname, iunit, time_steps, dt)
+  call spectrum_acc_info(iunit, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
   
   ! load dipole from file
@@ -323,8 +323,7 @@ subroutine spectrum_hs_from_acc(sysname, out_file, s, sh, print_info)
 
 end subroutine spectrum_hs_from_acc
 
-subroutine spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
-  character(len=*), intent(IN) :: sysname
+subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
   integer, intent(out) :: iunit, nspin, time_steps
   real(r8), intent(out) :: dt
 
@@ -335,8 +334,11 @@ subroutine spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
   call io_assign(iunit)
   open(iunit, file='td.general/multipoles', status='old', iostat=i)
   if(i.ne.0) then
-    write(message(1),'(3a)') "Could not open file td.general/multipoles"
-    call write_fatal(1)
+    open(iunit, file='multipoles', status='old', iostat=i)
+    if(i.ne.0) then
+      write(message(1),'(3a)') "Could not open multipoles file!"
+      call write_fatal(1)
+    end if
   endif
   
   ! read in dipole
@@ -365,8 +367,7 @@ subroutine spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
 
 end subroutine spectrum_mult_info
 
-subroutine spectrum_acc_info(sysname, iunit, time_steps, dt)
-  character(len=*), intent(IN) :: sysname
+subroutine spectrum_acc_info(iunit, time_steps, dt)
   integer, intent(out) :: iunit, time_steps
   real(r8), intent(out) :: dt
 
@@ -377,8 +378,11 @@ subroutine spectrum_acc_info(sysname, iunit, time_steps, dt)
   call io_assign(iunit)
   open(iunit, file='td.general/acceleration', status='old', iostat=i)
   if(i.ne.0) then
-    write(message(1),'(3a)') "Could not open file td.general/acceleration"
-    call write_fatal(1)
+    open(iunit, file='acceleration', status='old', iostat=i)
+    if(i.ne.0) then
+      write(message(1),'(3a)') "Could not open acceleration file!"
+      call write_fatal(1)
+    end if
   endif
   
   ! read in dipole
