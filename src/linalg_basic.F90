@@ -25,9 +25,9 @@ module lib_basic_alg
 contains
 
 #ifdef HAVE_BLAS
-#include "basic_linalg_blas.F90"
+#include "linalg_basic_blas.F90"
 #else
-#include "basic_linalg_int.F90"
+#include "linalg_basic_int.F90"
 #endif
 
 end module lib_basic_alg

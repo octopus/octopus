@@ -48,7 +48,7 @@ module lib_adv_alg
 contains
 
 #ifdef HAVE_LAPACK
-#include "adv_linalg_lapack.F90"
+#include "linalg_adv_lapack.F90"
 #endif
 
 end module lib_adv_alg
