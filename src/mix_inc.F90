@@ -28,18 +28,21 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
     do p  = st%st_start, st%st_end
       do i = 1, np
         ! spin-up density
-        rho(i, 1) = rho(i, 1) + st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
+        rho(i, 1) = rho(i, 1) + st%kweights(ik)*st%occ(p, ik)&
+             * R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
 
         ! spin-down density
         if(st%ispin == 2) then
-          rho(i, 2) = rho(i, 2) + st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
+          rho(i, 2) = rho(i, 2) + st%kweights(ik+1)*st%occ(p, ik+1) &
+               * R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
         end if
 
         ! off-diagonal densities
         if(st%ispin == 3) then
-          rho(i, 2) = rho(i, 2) + st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
-          st%R_FUNC(rho_off)(i) = st%R_FUNC(rho_off)(i) + st%occ(p, ik)*&
-               st%R_FUNC(psi)(i, 1, p, ik)*R_CONJ(st%R_FUNC(psi)(i, 2, p, ik))
+          rho(i, 2) = rho(i, 2) + st%kweights(ik)*st%occ(p, ik) &
+               * R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
+          st%R_FUNC(rho_off)(i) = st%R_FUNC(rho_off)(i) + st%kweights(ik)*st%occ(p, ik) &
+               * st%R_FUNC(psi)(i, 1, p, ik)*R_CONJ(st%R_FUNC(psi)(i, 2, p, ik))
         end if
 
       end do

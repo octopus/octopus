@@ -112,9 +112,17 @@ subroutine mesh3D_create(m, natoms, atom)
     enddo
   enddo
 
+#ifdef POLYMERS
+  ! in this case the leftmost point is equivalent to the rightmost
+  ! so we take it out
+  il = m%nr(3) - 1
+#else
+  il = m%nr(3)
+#endif
+
   do ix = -m%nr(1), m%nr(1)
     do iy = -m%nr(2), m%nr(2)
-      do iz = -m%nr(3), m%nr(3)
+      do iz = -m%nr(3), il
         select case(m%box_shape)
         case(SPHERE)
           b = in_sphere(m, ix, iy, iz)

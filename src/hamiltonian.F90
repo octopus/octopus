@@ -179,8 +179,11 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
 
   sub_name = 'hamiltonian_energy'; call push_sub()
 
-  e = sum(sys%st%occ(sys%st%st_start:sys%st%st_end, :)*&
-       sys%st%eigenval(sys%st%st_start:sys%st%st_end, :))
+  e = 0
+  do ik = 1, sys%st%nik
+    e = e + sys%st%kweights(ik) * sum(sys%st%occ(sys%st%st_start:sys%st%st_end, ik)* &
+         sys%st%eigenval(sys%st%st_start:sys%st%st_end, ik))
+  end do
 #ifdef HAVE_MPI
   if(present(reduce) .and. reduce) then
     call MPI_ALLREDUCE(e, s, 1, &

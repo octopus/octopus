@@ -92,7 +92,7 @@ YACC = @YACC@
 am__include = @am__include@
 am__quote = @am__quote@
 install_sh = @install_sh@
-bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult
+bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
 octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
@@ -135,6 +135,8 @@ strength_function_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 
 strength_function_LDADD = ../liboct/liboct.a @GSL_LIBS@
 hs_from_mult_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
 hs_from_mult_LDADD = ../liboct/liboct.a @GSL_LIBS@
+hs_from_acc_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
+hs_from_acc_LDADD = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
@@ -147,9 +149,14 @@ EXTRA_PROGRAMS = octopus$(EXEEXT) octopus-mpi$(EXEEXT) \
 	octopus-1d$(EXEEXT) octopus-1d-mpi$(EXEEXT) \
 	octopus-pol$(EXEEXT) octopus-pol-mpi$(EXEEXT)
 bin_PROGRAMS = @PROGNAME@ strength-function$(EXEEXT) \
-	hs-from-mult$(EXEEXT)
+	hs-from-mult$(EXEEXT) hs-from-acc$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
+am_hs_from_acc_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) liboct.$(OBJEXT) \
+	units.$(OBJEXT) spectrum.$(OBJEXT) hs_from_acc.$(OBJEXT)
+hs_from_acc_OBJECTS = $(am_hs_from_acc_OBJECTS)
+hs_from_acc_DEPENDENCIES = ../liboct/liboct.a
+hs_from_acc_LDFLAGS =
 am_hs_from_mult_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) liboct.$(OBJEXT) \
 	units.$(OBJEXT) spectrum.$(OBJEXT) hs_from_mult.$(OBJEXT)
 hs_from_mult_OBJECTS = $(am_hs_from_mult_OBJECTS)
@@ -208,14 +215,15 @@ DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/liboct -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-DIST_SOURCES = $(hs_from_mult_SOURCES) $(octopus_SOURCES) \
-	$(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) \
-	$(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) \
-	$(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
+DIST_SOURCES = $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) \
+	$(octopus_SOURCES) $(octopus_1d_SOURCES) \
+	$(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) \
+	$(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) \
+	$(strength_function_SOURCES)
 HEADERS = $(noinst_HEADERS)
 
 DIST_COMMON = $(noinst_HEADERS) Makefile.am Makefile.in config.h.in
-SOURCES = $(hs_from_mult_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
+SOURCES = $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -280,6 +288,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+hs-from-acc$(EXEEXT): $(hs_from_acc_OBJECTS) $(hs_from_acc_DEPENDENCIES) 
+	@rm -f hs-from-acc$(EXEEXT)
+	$(LINK) $(hs_from_acc_LDFLAGS) $(hs_from_acc_OBJECTS) $(hs_from_acc_LDADD) $(LIBS)
 hs-from-mult$(EXEEXT): $(hs_from_mult_OBJECTS) $(hs_from_mult_DEPENDENCIES) 
 	@rm -f hs-from-mult$(EXEEXT)
 	$(LINK) $(hs_from_mult_LDFLAGS) $(hs_from_mult_OBJECTS) $(hs_from_mult_LDADD) $(LIBS)

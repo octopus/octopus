@@ -5,6 +5,7 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, sys, st_start, st_end)
   integer, intent(in) :: st_start, st_end
 
   R_TYPE, allocatable :: Hpsi(:,:)
+  R_TYPE :: e
   integer :: ik, ist
 
   sub_name = 'hamiltonian_eigenval'; call push_sub()
@@ -13,7 +14,8 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, sys, st_start, st_end)
   do ik = 1, sys%st%nik
     do ist = st_start, st_end
       call R_FUNC(Hpsi) (h, sys, ik, sys%st%R_FUNC(psi)(:, :, ist, ik), Hpsi)
-      sys%st%eigenval(ist, ik) = R_REAL(R_FUNC(states_dotp)(sys%m, sys%st%dim, sys%st%R_FUNC(psi)(1:, :, ist, ik), Hpsi))
+      e = R_FUNC(states_dotp)(sys%m, sys%st%dim, sys%st%R_FUNC(psi)(1:, :, ist, ik), Hpsi)
+      sys%st%eigenval(ist, ik) = R_REAL(e)
     end do
   end do
 

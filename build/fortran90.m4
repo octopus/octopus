@@ -218,7 +218,7 @@ if test -z "${F90FLAGS}"; then
 		F90FLAGS="$F90FLAGS -align dcommons -fast -tune host -arch host -noautomatic"
 		;;
 	powerpc-ibm*)
-		F90FLAGS="$F90FLAGS -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
+		F90FLAGS="$F90FLAGS -bmaxdata:0x80000000 -qmaxmem=-1 -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
 	  ;;
 	mips-sgi-irix*)
 		F90FLAGS="$F90FLAGS -O3 -INLINE -n32 -LANG:recursive=on"

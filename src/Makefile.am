@@ -1,4 +1,4 @@
-bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult
+bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
 octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
@@ -39,6 +39,8 @@ strength_function_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 
 strength_function_LDADD   = ../liboct/liboct.a @GSL_LIBS@
 hs_from_mult_SOURCES      = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
 hs_from_mult_LDADD        = ../liboct/liboct.a @GSL_LIBS@
+hs_from_acc_SOURCES       = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
+hs_from_acc_LDADD         = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h

@@ -178,15 +178,15 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
     read(iunit, *) j, dump, dump, dump, d
     select case(sh%pol)
     case('x')
-      dipole(i) = sum(d(3, :))
+      dipole(i) = -sum(d(3, :))
     case('y')
-      dipole(i) = sum(d(1, :))
+      dipole(i) = -sum(d(1, :))
     case('z')
       dipole(i) = sum(d(2, :))
     case('+')
-      dipole(i) = sum(d(3, :) + M_zI*d(1, :)) / sqrt(2._r8)
+      dipole(i) = -sum(d(3, :) + M_zI*d(1, :)) / sqrt(2._r8)
     case('-')
-      dipole(i) = sum(d(3, :) - M_zI*d(1, :)) / sqrt(2._r8)
+      dipole(i) = -sum(d(3, :) - M_zI*d(1, :)) / sqrt(2._r8)
     end select
     dipole(i) = dipole(i) * units_out%length%factor * sqrt(4*M_PI/3)
   end do
@@ -225,7 +225,7 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
   ! output
   if(trim(out_file) .ne. '-') then
     call io_assign(iunit)
-    open(iunit, file=out_file, status='unknown')
+    open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
       write(iunit,*) i*s%energy_step / units_out%energy%factor, &
@@ -235,6 +235,68 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
   end if
 
 end subroutine spectrum_hs_from_mult
+
+subroutine spectrum_hs_from_acc(sysname, out_file, s, sh, print_info)
+  character(len=*), intent(in) :: sysname, out_file
+  type(spec_type), intent(inout) :: s
+  type(spec_sh), intent(inout) :: sh
+  logical, intent(in) :: print_info
+
+  integer :: i, j, iunit, time_steps, is, ie, ntiter
+  real(r8) :: dt, dummy, a(3)
+  complex(r8), allocatable :: acc(:)
+  complex(r8) :: c
+  
+  call spectrum_acc_info(sysname, iunit, time_steps, dt)
+  call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
+  
+  ! load dipole from file
+  allocate(acc(0:time_steps))
+  acc = 0._r8
+  do i = 1, time_steps
+    read(iunit, *) j, dummy, a
+    select case(sh%pol)
+    case('x')
+      acc(i) = a(1)
+    case('y')
+      acc(i) = a(2)
+    case('z')
+      acc(i) = a(3)
+    case('+')
+      acc(i) = (a(1) + M_zI*a(2)) / sqrt(2._r8)
+    case('-')
+      acc(i) = (a(1) - M_zI*a(2)) / sqrt(2._r8)
+    end select
+    acc(i) = acc(i) * units_out%acceleration%factor
+  end do
+
+  ! now we Fourier transform
+  sh%no_e = s%max_energy / s%energy_step
+  allocate(sh%sp(0:sh%no_e))
+  sh%sp = 0._r8
+  
+  do i = 0, sh%no_e
+    c = M_z0
+    do j = is, ie
+      c = c + exp(M_zI*i*s%energy_step*j*dt)*acc(j)
+    end do
+    sh%sp(i) = abs(c)**2
+  end do
+  deallocate(acc)
+
+  ! output
+  if(trim(out_file) .ne. '-') then
+    call io_assign(iunit)
+    open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
+    ! should output units, etc...
+    do i = 0, sh%no_e
+      write(iunit,*) i*s%energy_step / units_out%energy%factor, &
+           sh%sp(i) * units_out%energy%factor
+    end do
+    call io_close(iunit)
+  end if
+
+end subroutine spectrum_hs_from_acc
 
 subroutine spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
   character(len=*), intent(IN) :: sysname
@@ -277,6 +339,47 @@ subroutine spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
   read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
 
 end subroutine spectrum_mult_info
+
+subroutine spectrum_acc_info(sysname, iunit, time_steps, dt)
+  character(len=*), intent(IN) :: sysname
+  integer, intent(out) :: iunit, time_steps
+  real(r8), intent(out) :: dt
+
+  integer :: i, j
+  real(r8) :: t1, t2, dummy
+
+  ! open files
+  call io_assign(iunit)
+  open(iunit, file=trim(sysname)//'.acc', status='old', iostat=i)
+  if(i.ne.0) then
+    write(message(1),'(3a)') "Could not open file '", trim(sysname), ".acc'"
+    call write_fatal(1)
+  endif
+  
+  ! read in dipole
+  read(iunit, *); read(iunit, *) ! skip header
+
+  ! count number of time_steps
+  time_steps = 0
+  do
+    read(iunit, *, end=100) j, dummy
+    time_steps = time_steps + 1
+    if(time_steps == 1) t1 = dummy
+    if(time_steps == 2) t2 = dummy
+  end do
+100 continue
+  dt = (t2 - t1) * units_out%time%factor ! units_out is OK
+  time_steps = time_steps - 1
+  
+  if(time_steps < 3) then
+    message(1) = "Empty multipole file?"
+    call write_fatal(1)
+  end if
+
+  rewind(iunit)
+  read(iunit, *); read(iunit, *) ! skip header
+
+end subroutine spectrum_acc_info
 
 subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, is, ie, ntiter)
   integer, intent(in) :: time_steps

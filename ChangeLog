@@ -1,3 +1,8 @@
+20/4/02 (marques)
+  - Changed AIX compiler options in fortran.m4
+  - Bug fix related to the reading of OutputPotential...
+  - Added utility to calculate harmonic spectrum from accelaration file
+    (currently only works for local potentials)
 16/4/02 (marques)
   - MPI bug fixes
   - build bug fixes + configure.ac now uses GSL native configuration 

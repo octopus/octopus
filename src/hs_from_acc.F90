@@ -1,6 +1,6 @@
 #include "config_F90.h"
 
-program hs_from_mult
+program hs_from_acc
   use global
   use spectrum
   use liboct
@@ -40,8 +40,8 @@ program hs_from_mult
   end if
 
   call oct_parse_str('SystemName', 'system', txt)
-  call spectrum_hs_from_mult(trim(txt), trim(txt)//'.mult-hs', s, sh, .true.)
+  call spectrum_hs_from_acc(trim(txt), trim(txt)//'.acc-hs', s, sh, .true.)
 
   deallocate(sh%sp)
   stop  
-end program hs_from_mult
+end program hs_from_acc
