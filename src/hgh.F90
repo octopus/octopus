@@ -46,7 +46,7 @@ type hgh_type
 
   integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
   integer          :: l_max_occ ! Maximum l-value of the occupied wavefunctions
-  real(r8), pointer :: occ(:)   ! Occupations of the pseudo-wavefunctions
+  real(r8)         :: occ(0:3)  ! Occupations of the pseudo-wavefunctions
 
   ! Logarithmic grid parameters
   type(logrid_type) :: g
@@ -123,17 +123,13 @@ subroutine hgh_init(psp, filename, ispin)
 
   ! Allocation of stuff.
   allocate(psp%vlocal(1:psp%g%nrval), &
-           psp%kbr(0:psp%l_max+1),    &
-           psp%occ(0:psp%l_max_occ))
+           psp%kbr(0:psp%l_max+1))
   if(psp%l_max >= 0) then
     allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))
+    psp%kb = 0.0_r8;
   endif
   allocate(psp%rphi(psp%g%nrval, 0:psp%l_max_occ), psp%eigen(0:psp%l_max_occ))
-  psp%vlocal = 0.0_r8; psp%kb = 0.0_r8; psp%rphi = 0.0_r8
-
-
-  ! Fixes the occupations.
-  psp%occ = hgh_occs(psp%atom_name, psp%l_max_occ)
+  psp%vlocal = 0.0_r8; psp%rphi = 0.0_r8
 
   call pop_sub(); return
 end subroutine hgh_init
@@ -143,7 +139,7 @@ subroutine hgh_end(psp)
 
   sub_name = 'hgh_end'; call push_sub()
 
-  deallocate(psp%kbr, psp%occ, psp%vlocal, psp%rphi, psp%eigen)
+  deallocate(psp%kbr, psp%vlocal, psp%rphi, psp%eigen)
   if(associated(psp%kb)) deallocate(psp%kb)
   call kill_logrid(psp%g)
 
@@ -188,11 +184,14 @@ function load_params(unit, params)
 
   sub_name = 'load_params'; call push_sub()
 
-! Set initially everything to zero.
+  ! Set initially everything to zero.
   params%c(1:4) = 0.0_r8; params%rlocal = 0.0_r8;
   params%rc = 0.0_r8; params%h = 0.0_r8; params%k = 0.0_r8
 
-! Reads the file in a hopefully smart way
+  ! reads occupations from file
+  read(unit, *) params%occ(0:3)
+
+  ! Reads the file in a hopefully smart way
   iostat = 1; j = 5
   read(unit,'(a)') line
   do while((iostat .ne. 0) .and. (j > 0))
