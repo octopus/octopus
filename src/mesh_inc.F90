@@ -191,6 +191,34 @@ subroutine R_FUNC(mesh_fs2rs)(m, g, f, factor)
   call pop_sub(); return
 end subroutine R_FUNC(mesh_fs2rs)
 
+subroutine R_FUNC(mesh_random)(m, f)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(out), dimension(*) :: f
+
+  integer, save :: iseed = 123
+  integer :: i
+  real(r8) :: a(3), rnd, r
+
+  sub_name = 'mesh_random'; call push_sub()
+
+  call quickrnd(iseed, rnd)
+  a(1) = 2.0_r8*(2*rnd - 1)
+  call quickrnd(iseed, rnd)
+  a(2) = 2.0_r8*(2*rnd - 1)
+  call quickrnd(iseed, rnd)
+  a(3) = 2.0_r8*(2*rnd - 1)
+
+  do i = 1, m%np
+     call mesh_r(m, i, r, a=a)
+     f(i) = exp(-M_HALF*r*r)
+  end do
+
+  r = R_FUNC(mesh_nrm2)(m, f)
+  call R_FUNC(scal)(m%np, R_TOTYPE(M_ONE/r), f, 1) 
+
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_random)
+
 ! calculates the laplacian and the gradient of a function on the mesh
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   type(mesh_type), intent(IN) :: m
@@ -364,3 +392,28 @@ contains
   end subroutine rs_derivative
 
 end subroutine R_FUNC(mesh_derivatives)
+
+
+! calculates the laplacian and the gradient of a function on the mesh
+subroutine R_FUNC(low_frequency) (m, f, lapl)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN) :: f(0:m%np)
+  R_TYPE, intent(out), optional:: lapl(1:m%np)
+
+  integer :: k, in, ix, iy, iz, i, ind(6)
+
+  sub_name = 'low_frequency'; call push_sub()
+
+    do k = 1, m%np
+      ix = m%Lxyz(1, k); iy = m%Lxyz(2, k); iz = m%Lxyz(3, k)
+      ind(1) = m%lxyz_inv(ix-1, iy, iz)
+      ind(2) = m%lxyz_inv(ix+1, iy, iz)
+      ind(3) = m%lxyz_inv(ix, iy-1, iz)
+      ind(4) = m%lxyz_inv(ix, iy+1, iz)
+      ind(5) = m%lxyz_inv(ix, iy, iz-1)
+      ind(6) = m%lxyz_inv(ix, iy, iz+1)
+      lapl(k) = sum(f(ind(:)))/12.0_r8 + f(k)/M_TWO
+    end do
+    
+  call pop_sub(); return
+end subroutine R_FUNC(low_frequency)

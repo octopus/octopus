@@ -39,6 +39,7 @@ integer, parameter :: RS_CG      = 0
 #ifdef HAVE_TRLAN
 integer, parameter :: RS_LANCZOS = 1
 #endif
+integer, parameter :: RS_PLAN    = 2
 
   ! For the TRLan package
 #ifdef HAVE_TRLAN
@@ -64,6 +65,8 @@ subroutine eigen_solver_init(eigens)
   case(RS_LANCZOS)
     message(1) = 'Info: Eigensolver type: Lanczos algorithm (TRLan package)'
 #endif
+  case(RS_PLAN)
+    message(1) = 'Info: Eigensolver type: Preconditioned Lanczos'
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -122,13 +125,11 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
 
   sub_name = 'eigen_solver_run'; call push_sub()
 
-  if(eigens%es_type .eq. RS_CG) then
-    if(iter < eigens%final_tol_iter) then
+  if(iter < eigens%final_tol_iter) then
       tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
            eigens%init_tol
-    else
+  else
       tol = eigens%final_tol
-    end if
   end if
 
   if(present(conv)) conv = .false.
@@ -145,11 +146,13 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
     call eigen_solver_cg3(st, sys, h, &
          tol, maxiter, converged, errorflag, diff)
 #endif
+  case(RS_PLAN)
+    call eigen_solver_plan(st, sys, h, tol, maxiter, converged, diff)
   end select
   write(message(1),'(a,i5)') 'Info: Converged = ',converged
   write(message(2),'(a,i8)') 'Info: Matrix-Vector multiplications = ', maxiter
   call write_info(2)
-  if(present(conv).and. converged == st%nst) conv = .true.
+  if(present(conv).and. converged == st%nst*st%nik) conv = .true.
 
   call pop_sub(); return
 end subroutine eigen_solver_run
@@ -158,5 +161,6 @@ end subroutine eigen_solver_run
 #ifdef HAVE_TRLAN
 #include "eigen_cg3.F90"
 #endif
+#include "eigen_plan.F90"
 
 end module eigen_solver

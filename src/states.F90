@@ -260,28 +260,18 @@ subroutine states_generate_random(st, m, ist_start)
   ist_s = 1
   if(present(ist_start)) ist_s = ist_start
 
-  st%R_FUNC(psi) (0, :, :, :) = 0.0_r8
+  st%R_FUNC(psi) (0, :, :, :) = M_ZERO
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
-        call quickrnd(iseed, rnd)
-        a(1) = 2.0_r8*(2*rnd - 1)
-        call quickrnd(iseed, rnd)
-        a(2) = 2.0_r8*(2*rnd - 1)
-        call quickrnd(iseed, rnd)
-        a(3) = 2.0_r8*(2*rnd - 1)
-
-        do i = 1, m%np
-          call mesh_r(m, i, r, a=a)
-          st%R_FUNC(psi)(i, id, ist, ik) = exp(-0.5_r8*r*r)
-        end do
+         call R_FUNC(mesh_random)(m, st%R_FUNC(psi)(1:m%np, id, ist, ik))
       end do
     end do
     call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(:,:,:,ik))
   end do
-  st%eigenval = 0._r8
+  st%eigenval = M_ZERO
 
-  call pop_sub()
+  call pop_sub(); return
 end subroutine states_generate_random
 
 subroutine states_fermi(st, m)

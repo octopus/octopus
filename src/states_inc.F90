@@ -109,7 +109,7 @@ end subroutine R_FUNC(states_fs2rs)
 R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
-  R_TYPE, intent(IN) :: f1(1:m%np, dim), f2(1:m%np, dim)
+  R_TYPE, intent(IN), dimension(*) :: f1, f2
   R_TYPE :: R_FUNC(states_ddot)
   R_TYPE, external :: R_DOT
 
@@ -134,7 +134,7 @@ end function R_FUNC(states_dotpq)
 real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
-  R_TYPE, intent(IN) :: f(1:m%np, dim)
+  R_TYPE, intent(IN), dimension(*) :: f
   real(r8), external :: R_NRM2
 
   nrm2 = R_NRM2(m%np*dim, f, 1)*sqrt(m%vol_pp)
