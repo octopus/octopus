@@ -35,8 +35,7 @@ subroutine poisson3D_init(m, geo)
 #endif
     case(CG)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-      call write_info(1)
-      call pop_sub(); return
+      call init_real()
   end select
   call write_info(1)
 

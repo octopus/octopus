@@ -44,7 +44,7 @@ module poisson
                         FFT_CYL       = 1, &
                         FFT_PLA       = 2, &
                         FFT_NOCUT     = 3
- #endif
+#endif
 
   integer, parameter :: CG            = 4
 
