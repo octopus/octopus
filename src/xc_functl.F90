@@ -31,6 +31,25 @@ module xc_functl
             xc_functl_end,              &
             xc_functl_write_info
 
+  ! Families of xc functionals
+  integer, public, parameter ::     &
+     XC_FAMILY_LDA  = 1,    &
+     XC_FAMILY_GGA  = 2,    &
+     XC_FAMILY_MGGA = 3,    &
+     XC_FAMILY_OEP  = 4
+
+  ! the OEP levels
+  integer, public, parameter :: &
+     XC_OEP_NONE   = 0, &
+     XC_OEP_SLATER = 1, &
+     XC_OEP_KLI    = 2, &
+     XC_OEP_CEDA   = 3, & ! not yet implemented
+     XC_OEP_FULL   = 4    ! half implemented
+
+  ! the OEP
+  integer, public, parameter :: &
+     XC_OEP_X             = 301     ! Exact exchange
+
   type xc_functl_type
     integer :: family              ! LDA, GGA, etc.
     integer :: id                  ! identifier
@@ -81,7 +100,7 @@ contains
     case(XC_LDA_X)
       functl%family = XC_FAMILY_LDA
       call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
-      call xc_lda_x_init(functl%conf, functl%info, &
+      call xc_lda_init(functl%conf, functl%info, XC_LDA_X, &
          spin_channels, conf%dim, rel)
       
     case(XC_GGA_X_PBE, XC_GGA_XC_LB)
@@ -90,7 +109,7 @@ contains
       if(functl%id == XC_GGA_XC_LB) then
         call loct_parse_int  ("LB94_modified", 0, j)
         call loct_parse_float("LB94_threshold", CNST(1.0e-6), alpha)
-        call xc_gga_lb_init(functl%conf, functl%info, &
+        call xc_gga_init(functl%conf, functl%info, functl%id, &
            spin_channels, j, alpha)
       else
         call xc_gga_init(functl%conf, functl%info, functl%id, spin_channels)
@@ -149,7 +168,7 @@ contains
         call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
         ! WARNING: check what is the most convenient default for alpha
         call loct_parse_float('Xalpha', -M_ONE/M_THREE, alpha) 
-        call xc_lda_c_xalpha_init(functl%conf, functl%info, &
+        call xc_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
            spin_channels, conf%dim, rel, alpha)
       end if
       

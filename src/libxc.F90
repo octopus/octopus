@@ -20,29 +20,39 @@
 module lib_xc
   implicit none
 
-  integer, parameter :: &
+  private
+  public :: xc_info_number, &
+            xc_info_kind, &
+            xc_info_name, &
+            xc_info_family, &
+            xc_info_refs, &
+            xc_lda_init, &
+            xc_lda, &
+            xc_lda_end, &
+            xc_gga_init, &
+            xc_gga, &
+            xc_gga_end, &
+            xc_gga_lb, &
+            xc_mgga_init, &
+            xc_mgga, &
+            xc_mgga_end
+
+  integer, public, parameter :: &
      XC_UNPOLARIZED       =  1, &  ! Spin unpolarized
      XC_POLARIZED         =  2     ! Spin polarized
   
-  integer, parameter :: &
+  integer, public, parameter :: &
      XC_NON_RELATIVISTIC  =  0, &  ! Functional includes or not realtivistic
      XC_RELATIVISTIC      =  1     ! corrections. Only available in some functionals.
   
   ! Kinds
-  integer, parameter :: &
+  integer, public, parameter :: &
      XC_EXCHANGE             = 0,  &
      XC_CORRELATION          = 1,  &
      XC_EXCHANGE_CORRELATION = 2 
 
-  ! Families of xc functionals
-  integer, parameter ::     &
-     XC_FAMILY_LDA  = 1,    &
-     XC_FAMILY_GGA  = 2,    &
-     XC_FAMILY_MGGA = 3,    &
-     XC_FAMILY_OEP  = 4
-
   ! the LDAs
-  integer, parameter :: &
+  integer, public, parameter :: &
      XC_LDA_X             =  1,  &  ! Exchange                  
      XC_LDA_C_WIGNER      =  2,  &  ! Wigner parametrization    
      XC_LDA_C_RPA         =  3,  &  ! Random Phase Approximation
@@ -58,27 +68,15 @@ module lib_xc
      XC_LDA_C_AMGB        = 13      ! Attacalite et al
 
   ! the GGAs
-  integer, parameter :: &
+  integer, public, parameter :: &
      XC_GGA_X_PBE         = 101, &  ! Perdew, Burke & Ernzerhof exchange
      XC_GGA_C_PBE         = 102, &  ! Perdew, Burke & Ernzerhof correlation
      XC_GGA_XC_LB         = 103     ! van Leeuwen & Baerends
 
   ! the meta-GGAs
-  integer, parameter :: &
+  integer, public, parameter :: &
      XC_MGGA_X_TPSS       = 201, &  ! Perdew, Tao, Staroverov & Scuseria exchange
      XC_MGGA_C_TPSS       = 202     ! Perdew, Tao, Staroverov & Scuseria correlation
-
-  ! the OEP
-  integer, parameter :: &
-     XC_OEP_X             = 301     ! Exact exchange
-
-  ! the OEP levels
-  integer, parameter :: &
-     XC_OEP_NONE   = 0, &
-     XC_OEP_SLATER = 1, &
-     XC_OEP_KLI    = 2, &
-     XC_OEP_CEDA   = 3, & ! not yet implemented
-     XC_OEP_FULL   = 4    ! half implemented
 
   ! info
   interface
@@ -108,15 +106,35 @@ module lib_xc
   end interface
 
 
-  ! the LDAs
-  interface
-    subroutine xc_lda_init(p, info, functional, nspin)
+  ! We will use the same public interface (xc_lda_init) for the three C procedures
+  interface xc_lda_init
+    subroutine xc_lda_init_(p, info, functional, nspin)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
-    end subroutine xc_lda_init
+    end subroutine xc_lda_init_
+    subroutine xc_lda_x_init(p, info, functional, nspin, dim, rel)
+      integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
+      integer,               intent(in)  :: functional
+      integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
+      integer,               intent(in)  :: dim    ! 2 or 3 dimensions
+      integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
+    end subroutine xc_lda_x_init
+    
+    subroutine xc_lda_c_xalpha_init(p, info, functional, nspin, dim, rel, alpha)
+      integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
+      integer,               intent(in)  :: functional
+      integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
+      integer,               intent(in)  :: dim    ! 2 or 3 dimensions
+      integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
+      FLOAT,                 intent(in)  :: alpha  ! Ec = alpha Ex
+    end subroutine xc_lda_c_xalpha_init
+  end interface
 
+  interface
     subroutine xc_lda_end(p)
       integer(POINTER_SIZE), intent(inout) :: p
     end subroutine xc_lda_end
@@ -127,38 +145,31 @@ module lib_xc
       FLOAT,                 intent(out) :: e     ! the energy per unit particle
       FLOAT,                 intent(out) :: v     ! v(nspin) the potential
     end subroutine xc_lda
-
-    subroutine xc_lda_x_init(p, info, nspin, dim, rel)
-      integer(POINTER_SIZE), intent(out) :: p
-      integer(POINTER_SIZE), intent(out) :: info
-      integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
-      integer,               intent(in)  :: dim    ! 2 or 3 dimensions
-      integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
-    end subroutine xc_lda_x_init
-    
-    subroutine xc_lda_c_xalpha_init(p, info, nspin, dim, rel, alpha)
-      integer(POINTER_SIZE), intent(out) :: p
-      integer(POINTER_SIZE), intent(out) :: info
-      integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
-      integer,               intent(in)  :: dim    ! 2 or 3 dimensions
-      integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
-      FLOAT,                 intent(in)  :: alpha  ! Ec = alpha Ex
-    end subroutine xc_lda_c_xalpha_init
   end interface
 
 
-  ! the GGAs
-  interface
-    subroutine xc_gga_init(p, info, functional, nspin)
+  ! We will use the same public procedure for the two C procedures.
+  interface xc_gga_init
+    subroutine xc_gga_init_(p, info, functional, nspin)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
-    end subroutine xc_gga_init
+    end subroutine xc_gga_init_
+    subroutine xc_gga_lb_init(p, info, functional, nspin, modified, threshold)
+      integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
+      integer,               intent(in)  :: functional
+      integer,               intent(in)  :: nspin
+      integer,               intent(in)  :: modified
+      FLOAT,                 intent(in)  :: threshold
+    end subroutine xc_gga_lb_init
+  end interface
 
+  interface
     subroutine xc_gga_end(p)
       integer(POINTER_SIZE), intent(inout) :: p
-    end subroutine xc_gga_end 
+    end subroutine xc_gga_end
 
     subroutine xc_gga(p, rho, grho, e, dedd, dedgd)
       integer(POINTER_SIZE), intent(in)  :: p
@@ -169,14 +180,6 @@ module lib_xc
                                                   ! in terms of the density
       FLOAT,                 intent(out) :: dedgd ! and in terms of the gradient of the density
     end subroutine xc_gga
-
-    subroutine xc_gga_lb_init(p, info, nspin, modified, threshold)
-      integer(POINTER_SIZE), intent(out) :: p
-      integer(POINTER_SIZE), intent(out) :: info
-      integer,               intent(in)  :: nspin
-      integer,               intent(in)  :: modified
-      FLOAT,                 intent(in)  :: threshold
-    end subroutine xc_gga_lb_init
 
     subroutine xc_gga_lb(p, rho, grho, r, ip, qtot, dedd)
       integer(POINTER_SIZE), intent(in)  :: p

@@ -19,8 +19,12 @@
 !!! as described in S. Kuemmel and J. Perdew, PRL 90, 043004 (2003)
 
 !!! This file has to be outside the module xc, for it requires the Hpsi
+!!! This is why it needs the xc_functl module. I prefer to put it here since
+!!! the rest of the hamiltonian module does not know about the gory details
+!!! of how xc is defined and calculated.
 
 subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
+  use xc_functl
   type(xc_type),          intent(IN)    :: xcs
   type(mesh_type),        intent(IN)    :: m
   type(f_der_type),       intent(inout) :: f_der
@@ -32,6 +36,8 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
   type(xc_oep_type) :: oep
   FLOAT :: e
   integer :: is, ist, ixc, ifunc
+
+  if(xcs%oep_level.eq.XC_OEP_NONE) return
 
   call push_sub('h_xc_oep')
 

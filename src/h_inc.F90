@@ -567,9 +567,7 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
      -minval(st%eigenval(st%nst, :)), st%qtot)
 
   ! The OEP family has to handle specially
-  if(h%xc%oep_level.ne.XC_OEP_NONE) then
-    call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)
-  end if
+  call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)
   
   ! next 5 lines are for an RPA calculation
   !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential

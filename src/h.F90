@@ -30,7 +30,6 @@ use specie
 use states
 use external_pot
 use poisson
-use lib_xc
 use xc
 use output
 

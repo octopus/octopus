@@ -1,0 +1,495 @@
+\input texinfo @c -*-texinfo-*- 
+@c %**start of header
+@setfilename octopus-devel.info 
+@include version.texi
+@settitle the @code{octopus} @value{VERSION} developers' guide
+@c %**end of header
+
+
+@macro octopus
+@code{octopus}@w{ }
+@end macro
+
+
+
+@copying
+This manual is for octopus @value{VERSION}, a first principles, electronic
+structure, excited states, time-dependent density functional
+theory program.
+
+Copyright @copyright{} 2002, 2003, 2004
+Miguel A. L. Marques, Alberto Castro and Angel Rubio
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.1 or
+any later version published by the Free Software Foundation.
+@end quotation
+@end copying
+
+@c This is to install octopus into the info main tree.
+@dircategory Individual utilities
+@direntry
+* octopus: (octopus).           The octopus program.
+@end direntry
+
+
+
+
+
+
+@titlepage
+
+@title the @code{octopus} developer's guide
+@subtitle Version @value{VERSION}
+@sp 1
+@subtitle Electronic Structure
+@subtitle Molecular Dynamics
+@subtitle Excited-State Dynamics
+@subtitle Recipes-Generator
+@subtitle @value{UPDATED-MONTH}
+@sp 4
+@c @image{octosex,8cm,}
+@c @center Male Hapalochlaena lunulata (top),
+@c @center and female Hapalochlaena lunulata (bottom).
+@c @center Photograph by Roy Caldwell.
+
+@sp 1
+@c @author Miguel A. L. Marques
+@c @author Alberto Castro
+@c @author Angel Rubio.
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c @summarycontents
+@contents
+
+
+
+
+@iftex
+@headings off
+@c @evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
+@c @oddheading  @image{octosex,1.75cm} @| @thischapter  @| @thispage{} 
+@evenheading @thispage{}            @| @thistitle @|
+@oddheading  @| @thischapter  @| @thispage{} 
+@end iftex
+
+
+
+@ifnottex
+@node Top, Authors, (dir), (dir)
+@top octopus
+@insertcopying
+@end ifnottex
+
+@ifhtml
+@c @image{octosex,8cm}
+@c @center Male Hapalochlaena lunulata (top),
+@c @center and female Hapalochlaena lunulata (bottom).
+@c @center Photograph by Roy Caldwell.
+@end ifhtml
+
+@menu
+* Authors::                     
+* Copying::                     
+* Introduction::                
+* lib_xc::                      
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+@code{lib_xc}
+
+* subroutine xc_lda_init::      
+* subroutine xc_lda::           
+* subroutine xc_lda_end::       
+* subroutine xc_gga_init::      
+* subroutine xc_gga::           
+* subroutine xc_gga_lb::        
+* subroutine xc_mgga_init::     
+* subroutine xc_mgga::          
+* subroutine xc_mgga_end::      
+* LDA functionals::             
+* GGA functionals::             
+* MGGA functionals::            
+
+@end detailmenu
+@end menu
+
+@node Authors, Copying, Top, Top
+@cartouche
+@unnumbered Authors and collaborators
+
+The main developing team of this program is composed of:
+         
+@itemize @bullet
+@item Miguel A. L. Marques 
+(Donostia International Physics Center, San Sebasti@'{a}n, Espa@~na)
+@item Angel Rubio, 
+(Donostia International Physics Center and Department of Materials Science
+UPV/EHU, San Sebasti@'{a}n, Espa@~na), and 
+@item Alberto Castro, 
+(alberto.castro@@tddft.org, Theoretische Physik, Freie Universit@"at Berlin,
+Berlin 14195, Deutschland).
+@end itemize
+
+Other contributors are:
+@itemize @bullet
+@item Micael Oliveira: mixing, and a lot of stuff.
+@item Carlo Andrea Rozzi - infinite systems (almost done!)
+@item Sebastien Hamel    - paralel version of oct-excite.
+@end itemize
+
+
+@end cartouche
+
+
+
+@node Copying, Introduction, Authors, Top
+@cartouche
+@unnumbered The @octopus{} Copying Conditions
+
+This program is ``free''; this means that everyone is free to use it and free to
+redistribute it on a free basis.
+What is not allowed is to try to prevent others from further sharing
+any version of this program that they might get from you.
+
+Specifically, we want to make sure that you have the right to give
+away copies of the program, that you receive
+source code or else can get it if you want it, that you can change this
+program or use pieces of them in new free programs, and that you know
+you can do these things.
+
+To make sure that everyone has such rights, we have to forbid you to
+deprive anyone else of these rights.  For example, if you distribute
+copies of the program, you must give the recipients all
+the rights that you have.  You must make sure that they, too, receive or
+can get the source code.  And you must tell them their rights.
+
+Also, for our own protection, we must make certain that everyone finds
+out that there is no warranty for this program.
+If these programs are modified by someone else and passed on, we want
+their recipients to know that what they have is not what we distributed,
+so that any problems introduced by others will not reflect on our
+reputation.
+
+The precise conditions of the license 
+are found in the General Public
+Licenses that accompany it.
+@end cartouche
+
+
+@c ********************* INTRODUCTION ***********************************
+@node Introduction, lib_xc, Copying, Top
+@chapter Introduction
+
+
+@ifinfo
+[Note to info readers:
+The preferred way to read this manual is in its pdf or dvi versions,
+since there are quite a few equations that will not print out well
+in info format. However, we have tried to make the info format
+readable. For this purpose, we have chosen the following convention:
+instead of removing the equations in the info files, 
+they will show up as the TeX commands that produce them in the printed
+documentation]
+@end ifinfo
+
+
+
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@node lib_xc,  , Introduction, Top
+@chapter @code{lib_xc}
+
+This module is in charge of providing the @emph{simple} functionals, i.e. the 
+LDA, GGA and mGGA functionals. It is in fact nothing else than an interface
+to the @code{libxc.a} C library.
+
+The LDA, GGA and mGGA functionals defined here are @code{local} (yes, the GGA and
+MGGA are also local), in the sense that the value of the potential at a given point
+depends only on the values of the density -- and the gradient of the density and the
+kinetic energy density, for the GGA and mGGA cases -- at a given point:
+
+@ifnottex
+@verbatim
+v^{\rm LDA}_{\rm xc}(\vec{r}) = v^{\rm LDA}_{\rm xc}[n(\vec{r})]\,,
+@end verbatim
+@end ifnottex
+@tex
+$$
+v^{\rm LDA}_{\rm xc}(\vec{r}) = v^{\rm LDA}_{\rm xc}[n(\vec{r})]\,,
+$$
+@end tex
+@ifnottex
+@verbatim
+v^{\rm GGA}_{\rm xc}(\vec{r}) = v^{\rm GGA}_{\rm xc}[n(\vec{r}), \vec{\nabla}n(\vec{r})]\,,
+@end verbatim
+@end ifnottex
+@tex
+$$
+v^{\rm GGA}_{\rm xc}(\vec{r}) = v^{\rm GGA}_{\rm xc}[n(\vec{r}), \vec{\nabla}n(\vec{r})]\,,
+$$
+@end tex
+@ifnottex
+@verbatim
+v^{\rm mGGA}_{\rm xc}(\vec{r}) = v^{\rm mGGA}_{\rm xc}[n(\vec{r}), \vec{\nabla}n(\vec{r}), \tau(\vec{r})]\,.
+@end verbatim
+@end ifnottex
+@tex
+$$
+v^{\rm mGGA}_{\rm xc}(\vec{r}) = v^{\rm mGGA}_{\rm xc}[n(\vec{r}), \vec{\nabla}n(\vec{r}), \tau(\vec{r})]\,.
+$$
+@end tex
+
+Note that these functionals are not the only ones used by the @octopus code -- there is also the
+possibility of employing self-interaction corrections, optimized effective potential methods, etc.
+To make use of them, the @code{hamiltonian} module makes also use of 
+the @code{xc_functl} and @code{xc} modules.
+
+The usage of this module is as follows: first, one must initialize a @code{POINTER_SIZE} integer
+trough either the @code{xc_lda_init}, @code{xc_gga_init} or the @code{xc_mgga_init} subroutines
+(see below). This is a pointer to the a correspondig C data structure. 
+Once initialized, one may retrieve the values of the functional through
+the @code{xc_lda}, @code{xc_gga} or the @code{xc_mgga} subroutines. Cleaning up is
+finally done through the @code{xc_lda_end}, @code{xc_gga_end} and @code{xc_mgga} end subroutines.
+
+One may also retrieve information about each functional with the the set of @code{xc_info} subroutines.
+
+@menu
+* subroutine xc_lda_init::      
+* subroutine xc_lda::           
+* subroutine xc_lda_end::       
+* subroutine xc_gga_init::      
+* subroutine xc_gga::           
+* subroutine xc_gga_lb::        
+* subroutine xc_mgga_init::     
+* subroutine xc_mgga::          
+* subroutine xc_mgga_end::      
+* LDA functionals::             
+* GGA functionals::             
+* MGGA functionals::            
+@end menu
+
+
+
+
+
+@node subroutine xc_lda_init, subroutine xc_lda, lib_xc, lib_xc
+@section @code{subroutine xc_lda_init}
+
+@verbatim
+integer(POINTER_SIZE), intent(out) :: p
+integer(POINTER_SIZE), intent(out) :: info
+integer,               intent(in)  :: functional
+integer,               intent(in)  :: nspin
+[integer,               intent(in)  :: dim]
+[integer,               intent(in)  :: rel]
+[FLOAT,                 intent(in)  :: alpha]
+@end verbatim
+
+It initializes the @code{p} handler to hold the LDA functional
+determined by @code{functional}, which may be one of the 
+LDA constants (see @ref{LDA functionals}).
+The @code{info} pointer may then be used to retrieve
+infomation about the functional. @samp{nspin} may be one or two, depending
+on wether we want spin-unpolarized or spin-polarized results, respectively.
+
+In the case of the exchange functional (@code{p = XC_LDA_X}), one must supply the
+argument @code{dim}, specifying the dimensionality of the
+problem (two or three), and also the @code{rel} flag, which
+may be @code{XC_NON_RELATIVISTIC = 0} or @code{XC_RELATIVISTIC =  1}.
+
+In the case of the X@math{\alpha} functional (p = @code{XC_LDA_C_XALPHA)}),
+one must supply @code{dim}, @code{rel} and the
+defining constant @code{alpha}.
+
+
+
+
+
+
+
+@node subroutine xc_lda, subroutine xc_lda_end, subroutine xc_lda_init, lib_xc
+@section @code{subroutine xc_lda}
+
+@verbatim
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(out) :: e
+FLOAT,                 intent(out) :: v
+@end verbatim
+
+It retrieves the LDA exchange or correlation energy and potential.
+The specific functional is determined by the handler @code{p}, which
+should have been initialized before. The energy and potential
+are placed into @code{e} and @code{v}, respectively, whereas @code{rho}
+is the input density. Both @code{rho} and @code{v} may be the first
+element of two-sized arrays, if the functional has been defined to be spin-polarized.
+
+
+
+
+
+@node subroutine xc_lda_end, subroutine xc_gga_init, subroutine xc_lda, lib_xc
+@section subroutine @code{xc_lda_end}
+
+@verbatim
+integer(POINTER_SIZE), intent(inout) :: p
+@end verbatim
+
+It finalizes the LDA handler @code{p}.
+
+@node subroutine xc_gga_init, subroutine xc_gga, subroutine xc_lda_end, lib_xc
+@section @code{subroutine xc_gga_init}
+
+@verbatim
+integer(POINTER_SIZE), intent(out) :: p
+integer(POINTER_SIZE), intent(out) :: info
+integer,               intent(in)  :: functional
+integer,               intent(in)  :: nspin
+[integer,               intent(in)  :: modified]
+[FLOAT,                 intent(in)  :: threshold]
+@end verbatim
+
+
+@node subroutine xc_gga, subroutine xc_gga_lb, subroutine xc_gga_init, lib_xc
+@section @code{subroutine xc_gga}
+
+@verbatim
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(in)  :: grho
+FLOAT,                 intent(out) :: e
+FLOAT,                 intent(out) :: dedd
+FLOAT,                 intent(out) :: dedgd
+@end verbatim
+
+
+@node subroutine xc_gga_lb, subroutine xc_mgga_init, subroutine xc_gga, lib_xc
+@section @code{subroutine xc_gga_lb}
+
+@verbatim
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(in)  :: grho
+FLOAT,                 intent(in)  :: r
+FLOAT,                 intent(in)  :: ip
+FLOAT,                 intent(in)  :: qtot
+FLOAT,                 intent(out) :: dedd
+@end verbatim
+
+@node subroutine xc_mgga_init, subroutine xc_mgga, subroutine xc_gga_lb, lib_xc
+@section @code{subroutine xc_mgga_init}
+
+@verbatim
+integer(POINTER_SIZE), intent(out) :: p
+integer(POINTER_SIZE), intent(out) :: info
+integer,               intent(in)  :: functional
+integer,               intent(in)  :: nspin
+@end verbatim
+
+It initializes the @code{p} handler to hold one of the MGGA functionals, which are:
+@itemize
+@item @verb{|XC_MGGA_X_TPSS = 201|} => Perdew, Tao, Staroverov & Scuseria exchange
+@item @verb{|XC_MGGA_C_TPSS = 202|} => Perdew, Tao, Staroverov & Scuseria correlation
+@end itemize
+One of these constants, depending on wether we need the exchange or the correlation,
+has to be passed in @code{functional} variable.
+The @code{info} pointer may then be used to retrieve
+infomation about the functional.
+@samp{nspin} may be one or two, depending
+on wether we want spin-unpolarized or spin-polarized results, respectively.
+
+
+@node subroutine xc_mgga, subroutine xc_mgga_end, subroutine xc_mgga_init, lib_xc
+@section @code{subroutine xc_mgga}
+
+@verbatim
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(in)  :: grho
+FLOAT,                 intent(in)  :: tau
+FLOAT,                 intent(out) :: e
+FLOAT,                 intent(out) :: dedd
+FLOAT,                 intent(out) :: dedgd
+FLOAT,                 intent(out) :: dedtau
+@end verbatim
+
+@node subroutine xc_mgga_end, LDA functionals, subroutine xc_mgga, lib_xc
+@section @code{subroutine xc_mgga_end}
+
+@verbatim
+integer(POINTER_SIZE), intent(inout) :: p
+@end verbatim
+
+
+@node LDA functionals, GGA functionals, subroutine xc_mgga_end, lib_xc
+@section LDA functionals
+
+@noindent Exchange:
+@itemize
+@item @verb{|XC_LDA_X =  1|} => LDA exchange.
+@end itemize
+
+@noindent Correlation:
+@itemize
+@item @verb{|XC_LDA_C_WIGNER =  2|} => Wigner parametrization
+@item @verb{|XC_LDA_C_RPA    =  3|} => Random Phase Approximation
+@item @verb{|XC_LDA_C_HL     =  4|} => Hedin & Lundqvist
+@item @verb{|XC_LDA_C_GL     =  5|} => Gunnarson & Lundqvist
+@item @verb{|XC_LDA_C_XALPHA =  6|} => Slaters Xalpha
+@item @verb{|XC_LDA_C_VWN    =  7|} => Vosko, Wilk, & Nussair
+@item @verb{|XC_LDA_C_PZ     =  8|} => Perdew & Zunger
+@item @verb{|XC_LDA_C_OB_PZ  =  9|} => Ortiz & Ballone (PZ)
+@item @verb{|XC_LDA_C_PW     = 10|} => Perdew & Wang
+@item @verb{|XC_LDA_C_OB_PW  = 11|} => Ortiz & Ballone (PW)
+@item @verb{|XC_LDA_C_LYP    = 12|} => Lee, Yang, & Parr LDA
+@item @verb{|XC_LDA_C_AMGB   = 13|} => Attacalite et al
+@end itemize
+
+@node GGA functionals, MGGA functionals, LDA functionals, lib_xc
+@section GGA functionals
+
+@noindent Exchange:
+@itemize
+@item @verb{|XC_GGA_X_PBE = 101|} => Perdew, Burke & Ernzerhof exchange
+@item @verb{|XC_GGA_XC_LB = 103|} => van Leeuwen & Baerends
+@end itemize
+
+@noindent Correlation:
+@itemize
+@item @verb{|XC_GGA_C_PBE = 102|} => Perdew, Burke & Ernzerhof correlation
+@end itemize
+
+@node MGGA functionals,  , GGA functionals, lib_xc
+@section MGGA functionals
+
+@noindent Exchange:
+@itemize
+@item @verb{|XC_MGGA_X_TPSS = 201|} => Perdew, Tao, Staroverov & Scuseria exchange
+@end itemize
+
+@noindent Correlation:
+@itemize
+@item @verb{|XC_MGGA_C_TPSS = 202|} => Perdew, Tao, Staroverov & Scuseria correlation
+@end itemize
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+
+
+
+
+
+@bye
+@c **********************************************************************

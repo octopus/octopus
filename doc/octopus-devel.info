@@ -1,0 +1,405 @@
+This is octopus-devel.info, produced by makeinfo version 4.7 from
+octopus-devel.texi.
+
+   This manual is for octopus 1.99devel, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003, 2004 Miguel A. L. Marques, Alberto Castro
+and Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+
+INFO-DIR-SECTION Individual utilities
+START-INFO-DIR-ENTRY
+* octopus: (octopus).           The octopus program.
+END-INFO-DIR-ENTRY
+
+
+File: octopus-devel.info,  Node: Top,  Next: Authors,  Prev: (dir),  Up: (dir)
+
+octopus
+*******
+
+This manual is for octopus 1.99devel, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003, 2004 Miguel A. L. Marques, Alberto Castro
+and Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+
+* Menu:
+
+* Authors::
+* Copying::
+* Introduction::
+* lib_xc::
+
+ --- The Detailed Node Listing ---
+
+`lib_xc'
+
+* subroutine xc_lda_init::
+* subroutine xc_lda::
+* subroutine xc_lda_end::
+* subroutine xc_gga_init::
+* subroutine xc_gga::
+* subroutine xc_gga_lb::
+* subroutine xc_mgga_init::
+* subroutine xc_mgga::
+* subroutine xc_mgga_end::
+* LDA functionals::
+* GGA functionals::
+* MGGA functionals::
+
+
+File: octopus-devel.info,  Node: Authors,  Next: Copying,  Prev: Top,  Up: Top
+
+Authors and collaborators
+*************************
+
+The main developing team of this program is composed of:
+
+   * Miguel A. L. Marques (Donostia International Physics Center, San
+     Sebastia'n, Espan~a)
+
+   * Angel Rubio, (Donostia International Physics Center and Department
+     of Materials Science UPV/EHU, San Sebastia'n, Espan~a), and
+
+   * Alberto Castro, (alberto.castro@tddft.org, Theoretische Physik,
+     Freie Universita"t Berlin, Berlin 14195, Deutschland).
+
+   Other contributors are:
+   * Micael Oliveira: mixing, and a lot of stuff.
+
+   * Carlo Andrea Rozzi - infinite systems (almost done!)
+
+   * Sebastien Hamel    - paralel version of oct-excite.
+
+
+
+File: octopus-devel.info,  Node: Copying,  Next: Introduction,  Prev: Authors,  Up: Top
+
+The `octopus'  Copying Conditions
+*********************************
+
+This program is "free"; this means that everyone is free to use it and
+free to redistribute it on a free basis.  What is not allowed is to try
+to prevent others from further sharing any version of this program that
+they might get from you.
+
+   Specifically, we want to make sure that you have the right to give
+away copies of the program, that you receive source code or else can
+get it if you want it, that you can change this program or use pieces
+of them in new free programs, and that you know you can do these things.
+
+   To make sure that everyone has such rights, we have to forbid you to
+deprive anyone else of these rights.  For example, if you distribute
+copies of the program, you must give the recipients all the rights that
+you have.  You must make sure that they, too, receive or can get the
+source code.  And you must tell them their rights.
+
+   Also, for our own protection, we must make certain that everyone
+finds out that there is no warranty for this program.  If these
+programs are modified by someone else and passed on, we want their
+recipients to know that what they have is not what we distributed, so
+that any problems introduced by others will not reflect on our
+reputation.
+
+   The precise conditions of the license are found in the General Public
+Licenses that accompany it.
+
+
+File: octopus-devel.info,  Node: Introduction,  Next: lib_xc,  Prev: Copying,  Up: Top
+
+1 Introduction
+**************
+
+[Note to info readers: The preferred way to read this manual is in its
+pdf or dvi versions, since there are quite a few equations that will
+not print out well in info format. However, we have tried to make the
+info format readable. For this purpose, we have chosen the following
+convention: instead of removing the equations in the info files, they
+will show up as the TeX commands that produce them in the printed
+documentation]
+
+
+File: octopus-devel.info,  Node: lib_xc,  Prev: Introduction,  Up: Top
+
+2 `lib_xc'
+**********
+
+This module is in charge of providing the _simple_ functionals, i.e. the
+LDA, GGA and mGGA functionals. It is in fact nothing else than an
+interface to the `libxc.a' C library.
+
+   The LDA, GGA and mGGA functionals defined here are `local' (yes, the
+GGA and MGGA are also local), in the sense that the value of the
+potential at a given point depends only on the values of the density -
+and the gradient of the density and the kinetic energy density, for the
+GGA and mGGA cases - at a given point:
+
+   Note that these functionals are not the only ones used by the
+`octopus'  code - there is also the possibility of employing
+self-interaction corrections, optimized effective potential methods,
+etc.  To make use of them, the `hamiltonian' module makes also use of
+the `xc_functl' and `xc' modules.
+
+* Menu:
+
+* subroutine xc_lda_init::
+* subroutine xc_lda::
+* subroutine xc_lda_end::
+* subroutine xc_gga_init::
+* subroutine xc_gga::
+* subroutine xc_gga_lb::
+* subroutine xc_mgga_init::
+* subroutine xc_mgga::
+* subroutine xc_mgga_end::
+* LDA functionals::
+* GGA functionals::
+* MGGA functionals::
+
+
+File: octopus-devel.info,  Node: subroutine xc_lda_init,  Next: subroutine xc_lda,  Prev: lib_xc,  Up: lib_xc
+
+2.1 `subroutine xc_lda_init'
+============================
+
+
+integer(POINTER_SIZE), intent(out) :: p
+integer(POINTER_SIZE), intent(out) :: info
+integer,               intent(in)  :: functional
+integer,               intent(in)  :: nspin
+[integer,               intent(in)  :: dim]
+[integer,               intent(in)  :: rel]
+[FLOAT,                 intent(in)  :: alpha]
+
+It initializes the `p' handler to hold the LDA functional determined by
+`functional', which may be one of the LDA constants (see *Note LDA
+functionals::).  The `info' pointer may then be used to retrieve
+infomation about the functional. `nspin' may be one or two, depending
+on wether we want spin-unpolarized or spin-polarized results,
+respectively.
+
+   In the case of the exchange functional (`p = XC_LDA_X'), one must
+supply the argument `dim', specifying the dimensionality of the problem
+(two or three), and also the `rel' flag, which may be
+`XC_NON_RELATIVISTIC = 0' or `XC_RELATIVISTIC =  1'.
+
+   In the case of the X\alpha functional (p = `XC_LDA_C_XALPHA)'), one
+must supply `dim', `rel' and the defining constant `alpha'.
+
+
+File: octopus-devel.info,  Node: subroutine xc_lda,  Next: subroutine xc_lda_end,  Prev: subroutine xc_lda_init,  Up: lib_xc
+
+2.2 `subroutine xc_lda'
+=======================
+
+
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(out) :: e
+FLOAT,                 intent(out) :: v
+
+It retrieves the LDA exchange or correlation energy and potential.  The
+specific functional is determined by the handler `p', which should have
+been initialized before. The energy and potential are placed into `e'
+and `v', respectively, whereas `rho' is the input density. Both `rho'
+and `v' may be the first element of two-sized arrays, if the functional
+has been defined to be spin-polarized.
+
+
+File: octopus-devel.info,  Node: subroutine xc_lda_end,  Next: subroutine xc_gga_init,  Prev: subroutine xc_lda,  Up: lib_xc
+
+2.3 subroutine `xc_lda_end'
+===========================
+
+
+integer(POINTER_SIZE), intent(inout) :: p
+
+It finalizes the LDA handler `p'.
+
+
+File: octopus-devel.info,  Node: subroutine xc_gga_init,  Next: subroutine xc_gga,  Prev: subroutine xc_lda_end,  Up: lib_xc
+
+2.4 `subroutine xc_gga_init'
+============================
+
+
+integer(POINTER_SIZE), intent(out) :: p
+integer(POINTER_SIZE), intent(out) :: info
+integer,               intent(in)  :: functional
+integer,               intent(in)  :: nspin
+[integer,               intent(in)  :: modified]
+[FLOAT,                 intent(in)  :: threshold]
+
+
+File: octopus-devel.info,  Node: subroutine xc_gga,  Next: subroutine xc_gga_lb,  Prev: subroutine xc_gga_init,  Up: lib_xc
+
+2.5 `subroutine xc_gga'
+=======================
+
+
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(in)  :: grho
+FLOAT,                 intent(out) :: e
+FLOAT,                 intent(out) :: dedd
+FLOAT,                 intent(out) :: dedgd
+
+
+File: octopus-devel.info,  Node: subroutine xc_gga_lb,  Next: subroutine xc_mgga_init,  Prev: subroutine xc_gga,  Up: lib_xc
+
+2.6 `subroutine xc_gga_lb'
+==========================
+
+
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(in)  :: grho
+FLOAT,                 intent(in)  :: r
+FLOAT,                 intent(in)  :: ip
+FLOAT,                 intent(in)  :: qtot
+FLOAT,                 intent(out) :: dedd
+
+
+File: octopus-devel.info,  Node: subroutine xc_mgga_init,  Next: subroutine xc_mgga,  Prev: subroutine xc_gga_lb,  Up: lib_xc
+
+2.7 `subroutine xc_mgga_init'
+=============================
+
+
+integer(POINTER_SIZE), intent(out) :: p
+integer(POINTER_SIZE), intent(out) :: info
+integer,               intent(in)  :: functional
+integer,               intent(in)  :: nspin
+
+It initializes the `p' handler to hold one of the MGGA functionals,
+which are:
+   * XC_MGGA_X_TPSS = 201 => Perdew, Tao, Staroverov & Scuseria exchange
+
+   * XC_MGGA_C_TPSS = 202 => Perdew, Tao, Staroverov & Scuseria
+     correlation
+   One of these constants, depending on wether we need the exchange or
+the correlation, has to be passed in `functional' variable.  The `info'
+pointer may then be used to retrieve infomation about the functional.
+`nspin' may be one or two, depending on wether we want spin-unpolarized
+or spin-polarized results, respectively.
+
+
+File: octopus-devel.info,  Node: subroutine xc_mgga,  Next: subroutine xc_mgga_end,  Prev: subroutine xc_mgga_init,  Up: lib_xc
+
+2.8 `subroutine xc_mgga'
+========================
+
+
+integer(POINTER_SIZE), intent(in)  :: p
+FLOAT,                 intent(in)  :: rho
+FLOAT,                 intent(in)  :: grho
+FLOAT,                 intent(in)  :: tau
+FLOAT,                 intent(out) :: e
+FLOAT,                 intent(out) :: dedd
+FLOAT,                 intent(out) :: dedgd
+FLOAT,                 intent(out) :: dedtau
+
+
+File: octopus-devel.info,  Node: subroutine xc_mgga_end,  Next: LDA functionals,  Prev: subroutine xc_mgga,  Up: lib_xc
+
+2.9 `subroutine xc_mgga_end'
+============================
+
+
+integer(POINTER_SIZE), intent(inout) :: p
+
+
+File: octopus-devel.info,  Node: LDA functionals,  Next: GGA functionals,  Prev: subroutine xc_mgga_end,  Up: lib_xc
+
+2.10 LDA functionals
+====================
+
+Exchange:
+   * XC_LDA_X =  1 => LDA exchange.
+
+Correlation:
+   * XC_LDA_C_WIGNER =  2 => Wigner parametrization
+
+   * XC_LDA_C_RPA    =  3 => Random Phase Approximation
+
+   * XC_LDA_C_HL     =  4 => Hedin & Lundqvist
+
+   * XC_LDA_C_GL     =  5 => Gunnarson & Lundqvist
+
+   * XC_LDA_C_XALPHA =  6 => Slaters Xalpha
+
+   * XC_LDA_C_VWN    =  7 => Vosko, Wilk, & Nussair
+
+   * XC_LDA_C_PZ     =  8 => Perdew & Zunger
+
+   * XC_LDA_C_OB_PZ  =  9 => Ortiz & Ballone (PZ)
+
+   * XC_LDA_C_PW     = 10 => Perdew & Wang
+
+   * XC_LDA_C_OB_PW  = 11 => Ortiz & Ballone (PW)
+
+   * XC_LDA_C_LYP    = 12 => Lee, Yang, & Parr LDA
+
+   * XC_LDA_C_AMGB   = 13 => Attacalite et al
+
+
+File: octopus-devel.info,  Node: GGA functionals,  Next: MGGA functionals,  Prev: LDA functionals,  Up: lib_xc
+
+2.11 GGA functionals
+====================
+
+Exchange:
+   * XC_GGA_X_PBE = 101 => Perdew, Burke & Ernzerhof exchange
+
+   * XC_GGA_XC_LB = 103 => van Leeuwen & Baerends
+
+Correlation:
+   * XC_GGA_C_PBE = 102 => Perdew, Burke & Ernzerhof correlation
+
+
+File: octopus-devel.info,  Node: MGGA functionals,  Prev: GGA functionals,  Up: lib_xc
+
+2.12 MGGA functionals
+=====================
+
+Exchange:
+   * XC_MGGA_X_TPSS = 201 => Perdew, Tao, Staroverov & Scuseria exchange
+
+Correlation:
+   * XC_MGGA_C_TPSS = 202 => Perdew, Tao, Staroverov & Scuseria
+     correlation
+
+
+
+Tag Table:
+Node: Top679
+Node: Authors1632
+Node: Copying2386
+Node: Introduction3851
+Node: lib_xc4403
+Node: subroutine xc_lda_init5596
+Node: subroutine xc_lda6812
+Node: subroutine xc_lda_end7549
+Node: subroutine xc_gga_init7813
+Node: subroutine xc_gga8277
+Node: subroutine xc_gga_lb8707
+Node: subroutine xc_mgga_init9184
+Node: subroutine xc_mgga10113
+Node: subroutine xc_mgga_end10636
+Node: LDA functionals10862
+Node: GGA functionals11684
+Node: MGGA functionals12044
+
+End Tag Table
