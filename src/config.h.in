@@ -38,3 +38,6 @@
 #undef MPI_TD
 #undef MPI_MOD
 #undef MPI_H
+
+/* Define to 1 if you have the `flush' function. */
+#undef HAVE_FLUSH

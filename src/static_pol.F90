@@ -51,7 +51,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   integer :: iunit, ios, i_start, i, j, is, k, err
   FLOAT :: e_field
   FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
-  logical :: resume, out_pol
+  logical :: out_pol
  
   ierr = 0
   call init_()
@@ -77,12 +77,9 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   dipole = M_ZERO
 
   if(.not.fromScratch) then
-    ! Finds out wether there is an existent restart.pol file.
-    inquire(file='tmp/restart.pol', exist=resume)
-
-    if(resume) then
+    iunit = io_open('tmp/restart.pol', status='old', action='read', die=.false.)
+    if(iunit > 0) then
       ! Finds out how many dipoles have already been written.
-      iunit = io_open('tmp/restart.pol', status='old', action='read')
       rewind(iunit)
       i_start = 1
       do i = 1, 3
@@ -143,9 +140,6 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
     end if
   end do
   call scf_end(scfv)
-
-  ! Closes the restart file
-  call io_close(iunit)
 
   if(out_pol) then ! output pol file
     call io_mkdir('linear')

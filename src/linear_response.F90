@@ -24,6 +24,7 @@ module linear_response
   use mix
   use system
   use hamiltonian
+  use xc
 
   implicit none
 
@@ -121,6 +122,33 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine lr_build_fxc(m, st, xcs, fxc)
+    type(mesh_type),   intent(in)  :: m
+    type(states_type), intent(in)  :: st
+    type(xc_type),     intent(in)  :: xcs
+    FLOAT,             intent(out) :: fxc(:,:,:)
+
+    FLOAT, allocatable :: rho(:, :)
+    integer :: is
+
+    call push_sub('lr_build_fxc')
+
+    allocate(rho(m%np, st%d%nspin))
+    if(associated(st%rho_core)) then
+      do is = 1, st%d%spin_channels
+        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+      enddo
+    else
+      rho = st%rho
+    endif
+    fxc = M_ZERO
+    call xc_get_fxc(xcs, m, rho, st%d%ispin, fxc)
+
+    call pop_sub()
+  end subroutine lr_build_fxc
+
+
+  ! ---------------------------------------------------------
   subroutine lr_solve_AXeY(sys, h, lr, ist, ik, Y, MAXITER, tol)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -135,7 +163,6 @@ contains
     FLOAT  :: sm1, sm2, sm3, alpha, beta
 
     call push_sub('lr_solve_AXeY')
-
     
     allocate(z(sys%m%np, sys%st%d%dim), g(sys%m%np, sys%st%d%dim), pp(sys%m%np,sys%st%d%dim), t(sys%m%np,sys%st%d%dim))
 

@@ -25,7 +25,6 @@ module static_pol_lr
   use system
   use restart
   use hamiltonian 
-  use fxc
   use mix
   use poisson
   use linear_response
@@ -71,7 +70,7 @@ contains
     fromScratch = .true.
 
     call lr_init(sys%st, sys%m, lr)
-    call build_fxc_kernel(sys%st%d, sys%m, sys%st%rho, lr%dl_Vxc)
+    call lr_build_fxc(sys%m, sys%st, h%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
     call lr_end(lr)
