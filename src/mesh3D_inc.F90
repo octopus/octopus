@@ -43,7 +43,7 @@ end subroutine R_FUNC(mesh_to_cube)
 
 subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)    :: f_cube(m%fft_n, m%fft_n, m%fft_n)
+  R_TYPE, intent(IN)    :: f_cube(:,:,:)
   R_TYPE, intent(inout) :: f_mesh(m%np)
   integer, intent(in), optional :: t
   

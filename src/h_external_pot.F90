@@ -33,21 +33,23 @@ subroutine specie_fourier_init(ns, s, m)
         end do
       end do
     end do
-    call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, s(i)%local_fw)
+    call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
     call zscal(m%fft_n2**2*m%hfft_n2, cmplx(1.0_r8/m%fft_n2**3, 0.0_r8, r8), s(i)%local_fw, 1)
 
     if(s(i)%ps%icore /= 'nc  ') then
-      fr = 0._r8
-      do j = 1, m%np
-        call mesh_r(m, j, r)
-        ix = m%lx(j) + m%fft_n/2 + 1;
-        iy = m%ly(j) + m%fft_n/2 + 1;
-        iz = m%lz(j) + m%fft_n/2 + 1;
-        vl  = splint(s(i)%ps%core, r)
-        fr(ix, iy, iz) = vl
-      enddo
-      call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, s(i)%rhocore_fw)
-      call zscal(m%fft_n**2*m%hfft_n, cmplx(1.0_r8/m%fft_n**3, 0.0_r8, r8), s(i)%rhocore_fw, 1)
+      fr = 0.0_r8
+      do ix = 1, m%fft_n2
+        do iy = 1, m%fft_n2
+          do iz = 1, m%fft_n2
+            r = m%h * sqrt(real((ix - m%hfft_n2)**2 + &
+                 (iy - m%hfft_n2)**2 + (iz - m%hfft_n2)**2, r8))
+            vl  = splint(s(i)%ps%core, r)
+            fr(ix, iy, iz) = vl
+          end do
+        end do
+      end do
+      call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%rhocore_fw)
+      call zscal(m%fft_n2**2*m%hfft_n2, cmplx(1.0_r8/m%fft_n2**3, 0.0_r8, r8), s(i)%rhocore_fw, 1)
     end if
   end do
   
@@ -106,6 +108,8 @@ subroutine generate_external_pot(h, sys)
   integer :: i, j
   real(r8), allocatable :: f(:,:,:)
 
+  integer n, ix, iy, iz
+
   sub_name = 'generate_external_pot'; call push_sub()
 
   ! first we assume that we need to recalculate the ion_ion energy
@@ -132,9 +136,9 @@ subroutine generate_external_pot(h, sys)
   
   if(h%vpsl_space == 1) then
     allocate(fr(sys%m%fft_n2, sys%m%fft_n2, sys%m%fft_n2))
-    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb, fw, fr)
-    call dcube_to_mesh(sys%m, fr, h%vpsl, 2)
-    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb, fwc, fr)
+    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
+    call dcube_to_mesh(sys%m, fr, h%vpsl, t=2)
+    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
     call dcube_to_mesh(sys%m, fr, h%rho_core, 2)
 
     deallocate(fw, fwc, fr)
@@ -145,15 +149,16 @@ subroutine generate_external_pot(h, sys)
   end if
 
   ! WARNING DEBUG
-  allocate(f(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
-  call dmesh_to_cube(sys%m, h%Vpsl, f)
-  do i = 1, sys%m%fft_n
-    do j = 1, sys%m%fft_n
-      print *, i, j, f(i, j, sys%m%fft_n/2 + 1)
-    end do
-    print *
-  end do
-  stop
+!!$  allocate(f(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
+!!$  f = 0._r8
+!!$  call dmesh_to_cube(sys%m, h%Vpsl, f)
+!!$  do i = 1, sys%m%fft_n
+!!$    do j = 1, sys%m%fft_n
+!!$      print *, i, j, f(i, j, sys%m%hfft_n)
+!!$    end do
+!!$    print *
+!!$  end do
+!!$  stop
   
   call pop_sub()
 contains
@@ -197,19 +202,19 @@ contains
     implicit none
     type(mesh_type), intent(IN) :: m
     real(r8), intent(IN)        :: vec(3)
-    complex(r8), intent(IN)     :: inp(m%hfft_n, m%fft_n, m%fft_n)
-    complex(r8), intent(inout)  :: outp(m%hfft_n, m%fft_n, m%fft_n)
+    complex(r8), intent(IN)     :: inp(m%hfft_n2, m%fft_n2, m%fft_n2)
+    complex(r8), intent(inout)  :: outp(m%hfft_n2, m%fft_n2, m%fft_n2)
     
     complex(r8) :: k
     integer     :: ix, iy, iz, ixx, iyy, izz
     
-    k = M_zI * ((2.0_r8*M_Pi)/(m%fft_n*m%h))
-    do iz = 1, m%fft_n
-      izz = pad_feq(iz, m%fft_n, .true.)
-      do iy = 1, m%fft_n
-        iyy = pad_feq(iy, m%fft_n, .true.)
-        do ix = 1, m%hfft_n
-          ixx = pad_feq(ix, m%fft_n, .true.)
+    k = M_zI * ((2.0_r8*M_Pi)/(m%fft_n2*m%h))
+    do iz = 1, m%fft_n2
+      izz = pad_feq(iz, m%fft_n2, .true.)
+      do iy = 1, m%fft_n2
+        iyy = pad_feq(iy, m%fft_n2, .true.)
+        do ix = 1, m%hfft_n2
+          ixx = pad_feq(ix, m%fft_n2, .true.)
           outp(ix, iy, iz) = outp(ix, iy, iz) + &
                exp( k * (vec(1)*ixx + vec(2)*iyy + vec(3)*izz) ) * inp(ix, iy, iz)
         end do
