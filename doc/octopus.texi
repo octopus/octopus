@@ -138,8 +138,9 @@ External utilities
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
-* make_st::                       
-* choose_st
+* make_st::                     
+* choose_st::                   
+* wf.net::                      
 
 Examples
 
@@ -2104,8 +2105,9 @@ it may see the @code{inp} file, and the directories created by it.
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
-* make_st::                       
-* choose_st::                       
+* make_st::                     
+* choose_st::                   
+* wf.net::                      
 @end menu
 
 @node strength-function, hs-from-mult, External utilities, External utilities
@@ -2149,7 +2151,7 @@ M. Casida (@code{LinCasida}). This utility requires that a calculation
 of unoccupied states (@code{CalculationMode} = 3, 4) has been done before,
 and it outputs the results to the sub-directory "linear".
 
-@node  broad,  make_st, excitations, External utilities
+@node  broad, make_st, excitations, External utilities
 @section @code{broad}
 
 Generates a spectrum by broadening the excitations obtained by the @code{excitations} 
@@ -2199,7 +2201,7 @@ they are:
 @end itemize
 
 
-@node  choose_st, , make_st, External utilities
+@node  choose_st, wf.net, make_st, External utilities
 @section @code{choose_st}
 
 @code{choose_st} is used to choose the states used for optimum control (@code{CalculationMode=12}). You probably want to calculate unoccuppied states (@code{CalculationMode=12}) first since @code{choose_st} reads @code{tmp/restart.static} and writes the choosen states to the @code{opt-control} sub-directory. The following parameters are read from the @code{inp}ut file:
@@ -2216,6 +2218,35 @@ they are:
   For optimum control you only need 'wf.initial' and 'wf.final'.
 @end itemize
 
+
+@node wf.net,  , choose_st, External utilities
+@section @code{wf.net}
+
+This is an OpenDX network, aimed at the visualization of wave-functions.
+To be able to use it, you need to have properly installed the OpenDX
+program (get it at opendx.org), as well as the Chemistry extensions
+obtainable at the Cornell Theory Center
+(http://www.tc.cornell.edu/Services/Vis/dx/index.asp).
+Once these are working, you may follow a small tutorial on @code{wf.net}
+by following next steps:
+
+@itemize o
+
+@item Place in a directory the program wf.net, the (needed) auxiliary file
+wf.cfg, and the sample inp file that can all be found in @code{OCTOPUS-HOME}/util.
+
+@item Run @code{octopus}. The inp file used prescribes the calculation of the
+C atom in its ground state, in spin-polarized mode. It also prescribes that the
+wave-functions should be written in ``dx'' format. At the end, these should be written
+in subdirectory ``static'': wf-00x-00y-1.dx, where x runs from 1 to 2 (spin
+quantum number) and y runs from 1 to 4 (wave-function index).
+
+@item Run the OpenDX program. Click on ``Run Visual Programs'' on the DX main menu,
+and select the program @code{wf.net}. The program will be executed, and several windows
+should open. One of them should be called ``Application Comment''. It contains
+a small tutorial. Follow it from now on.
+
+@end itemize
 
 @c **********************************************************************
 @node Examples, Options Index, External utilities, Top
