@@ -253,7 +253,7 @@ subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
 
   vex(:,:) = R_TOTYPE(M_ZERO)
   do j = 0, order
-    call lalg_axpy(n1, n2, c(j), v(:,:, j), vex(:,:))
+    call lalg_axpy(n1, n2, c(j), v(:,:, j+1), vex(:,:))
   enddo
 
   deallocate(c)
