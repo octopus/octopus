@@ -133,6 +133,7 @@ Description of input options
 * Mesh parameters::             
 * Self-consistent cycle::       
 * Time evolution::              
+* Varia::                       
 
 @end detailmenu
 @end menu
@@ -221,6 +222,7 @@ is to follow the @code{inp} example in @code{OCTOPUS_HOME/samples}
 * Mesh parameters::             
 * Self-consistent cycle::       
 * Time evolution::              
+* Varia::                       
 @end menu
 
 @node Generalities, Describing the species, Description of input options, Description of input options
@@ -278,7 +280,7 @@ for this descriptor are:
 @end itemize
 @emph{Default: a.u}
 
-@xref{Units} for detailed information about units. Two other 
+@xref{Units}, for detailed information about units. Two other 
 input descriptors are possible: @code{UnitsInput}, and @code{UnitsOutput},
 if different system units are desired in input or output.
 @cindex @code{UnitsInput}
@@ -361,11 +363,11 @@ be tuned to suit the geometric configuration of the system.
 @section Self-consistent cycle
 
 
-@node Time evolution,  , Self-consistent cycle, Description of input options
+@node Time evolution, Varia, Self-consistent cycle, Description of input options
 @section Time evolution
 
-@node Varia, Units, Description of input options, Top
-
+@node Varia,  , Time evolution, Description of input options
+@section Varia
 
 @node Units, Concept Index, Description of input options, Top
 @appendix Units
