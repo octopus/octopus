@@ -130,7 +130,10 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
            ps%dknrm   (0:ps%L_max),                 &
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))!, &
-           ps%dknrm = M_ZERO; ps%h = M_ZERO; ps%k = M_ZERO!; ps%occ = M_ZERO
+           !ps%dknrm = M_ZERO; ps%h = M_ZERO; ps%k = M_ZERO!; ps%occ = M_ZERO
+           ps%dknrm   (0:ps%L_max) = M_ZERO
+           ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
+           ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
   if(ps%so_l_max >= 0) then
     allocate(ps%so_kb (0:ps%l_max, ps%kbc), &
              ps%so_dkb(0:ps%l_max, ps%kbc), &
