@@ -27,7 +27,7 @@ module output
 implicit none
 
 type output_type
-  logical :: what(6)
+  logical :: what(7)
   integer :: how    ! how to output
 
   integer :: iter   ! output every iter
@@ -41,7 +41,8 @@ integer, parameter :: &
      output_wfs       = 3, &
      output_ELF       = 4, &
      output_geometry  = 5, &
-     output_something = 6   ! this one should be the last
+     output_wfs_sqmod = 6, &   
+     output_something = 7   ! this one should be the last
 
 integer, parameter ::      &
      output_axis_x  =   1, &
@@ -67,7 +68,8 @@ subroutine output_init(outp)
   call oct_parse_logical("OutputWfs",         .false., outp%what(output_wfs))
   call oct_parse_logical("OutputELF",         .false., outp%what(output_elf))
   call oct_parse_logical("OutputGeometry",    .false., outp%what(output_geometry))
-  
+  call oct_parse_logical("OutputWfsSqMod",    .false., outp%what(output_wfs_sqmod))
+ 
   outp%what(output_something) = .false.
   do i = 1, output_something - 1
     outp%what(output_something) = outp%what(output_something).or.outp%what(i)
