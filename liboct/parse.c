@@ -1,3 +1,22 @@
+/*
+ Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2, or (at your option)
+ any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+ 02111-1307, USA.
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -153,11 +172,7 @@ int parse_int(char *name, int def)
 
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_CMPLX){
-		if(GSL_REAL(ptr->value.c) > 0)
-			ret = (int)(GSL_REAL(ptr->value.c) + 0.5);
-		else
-			ret = -(int)(-GSL_REAL(ptr->value.c) + 0.5);
-
+		ret = (int)(GSL_REAL(ptr->value.c) + 0.5);
 		fprintf(fout, "%s = %d\n", name, ret);
 	}else{
 		ret = def;
@@ -249,12 +264,9 @@ int parse_block_int(char *name, int l, int col, int *r)
 	o = parse_block_work(name, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_CMPLX){
-	  if(GSL_REAL(pr.value.c) > 0)
-	    *r = (int)(GSL_REAL(pr.value.c) + 0.5);
-	  else
-	    *r = -(int)(-GSL_REAL(pr.value.c) + 0.5);
-	  fprintf(fout, "%s(%d, %d) = %d\n", name, l, col, *r);
-	  return 0;
+		*r = (int)(GSL_REAL(pr.value.c) + 0.5);
+		fprintf(fout, "%s(%d, %d) = %d\n", name, l, col, *r);
+		return 0;
 	}else
 		return o;
 }

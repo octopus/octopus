@@ -1,3 +1,20 @@
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
 ! This subroutine should be in specie.F90, but due to the limitations
 ! of f90 to handle circular dependences it had to come here!
 
@@ -458,16 +475,18 @@ contains
                    splint(s%ps%Ur(l), r) * ylm * (r**l)
             end if
           end do
-          a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
-          if(abs((a%uVu(add_lm) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.01_r8) then
+          ! uVu can be calculated exactly, or numerically
+          a%uVu(add_lm) = s%ps%dkbcos(l)
+          !a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
+          if(abs(a%uVu(add_lm) - s%ps%dkbcos(l))/s%ps%dkbcos(l) > 0.25_r8) then
             write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                  add_lm
             write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm)
             message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
             call write_warning(3)
+
+            a%uVu(add_lm) = s%ps%dkbcos(l)
           end if
-          ! uVu can be calculated exactly, or numerically
-          a%uVu(add_lm) = s%ps%dkbcos(l)
         end if
           
         add_lm = add_lm + 1

@@ -8891,7 +8891,7 @@ if test -z "${F90FLAGS}"; then
 			F90FLAGS="$F90FLAGS -O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		ifc*)
-			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW"
+			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW -mp1"
 		;;
 		*)
 			F90FLAGS="$F90FLAGS -O"
@@ -9176,7 +9176,7 @@ if test -z "${F90FLAGS}"; then
 			F90FLAGS="$F90FLAGS -O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		ifc*)
-			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW"
+			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW -mp1"
 		;;
 		*)
 			F90FLAGS="$F90FLAGS -O"
@@ -11267,7 +11267,7 @@ fi
 LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 
 
-ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile build/octopus.spec"
+ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile build/octopus.spec"
 
 
 cat >confcache <<\_ACEOF
@@ -11762,6 +11762,9 @@ do
   "liboct/Makefile" ) CONFIG_FILES="$CONFIG_FILES liboct/Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
+  "share/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/Makefile" ;;
+  "share/PP/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/PP/Makefile" ;;
+  "share/PP/TM2/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/PP/TM2/Makefile" ;;
   "build/octopus.spec" ) CONFIG_FILES="$CONFIG_FILES build/octopus.spec" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
   "liboct/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS liboct/config.h" ;;

@@ -8,7 +8,6 @@ octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	geom_opt.F90 pes.F90 td.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	config_F90.h \
 	real.F90 complex.F90 undef.F90 mesh.F90 mesh_inc.F90\
 	mesh1D.F90 mesh1D_create.F90 mesh1D_inc.F90 ps1D.F90 hartree1D.F90 \
 	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90 ps3D.F90 hartree3D.F90 \
@@ -44,11 +43,11 @@ hs_from_acc_LDADD         = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
-DISTCLEANFILES = Makefile.in
+DISTCLEANFILES = Makefile.in dirs.h
 
 # how to compile a F90 file :)
 .F90.o:
-	@F90CPP@ $< > $*.f90
+	@F90CPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' $< > $*.f90
 #	sed 's/^#/!/' $*.f90 >lixo; mv -f lixo $*.f90
 	@F90@ @F90FLAGS@ -c -o $@ $*.f90
 	@rm -f $*.f90

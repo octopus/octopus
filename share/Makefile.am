@@ -1,0 +1,3 @@
+SUBDIRS = PP
+
+DISTCLEANFILES = Makefile.in

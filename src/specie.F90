@@ -1,3 +1,20 @@
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
 #include "config_F90.h"
 
 module specie
@@ -246,13 +263,39 @@ subroutine specie_get_nl_part(s, x, l, lm, uV, duV)
   r = sqrt(sum(x**2))
   uVr0  = splint(s%ps%kb(l), r)
   duvr0 = splint(s%ps%dkb(l), r)
+  
   call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-  uv = uvr0*ylm
-  if(r >= r_small) then
-    duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
-  else
-    duv(:) = 0.0_r8
-  endif
+
+  select case(l)
+  case(0)
+    if(r >= r_small) then
+      f = ylm*duvr0/r
+    else
+      f = 0.0_r8
+    end if
+    Uv = uvr0*ylm
+    dUv(:) = f*x(:)
+  case(1)
+    Uv = uvr0 * ylm * r
+    dUv(:) = duvr0*x(:)*ylm
+    select case(lm)
+    case(1)
+      dUv(2) = dUv(2) - 0.488602511903_r8*uvr0
+    case(2)
+      dUv(3) = dUv(3) + 0.488602511903_r8*uvr0
+    case(3)
+      dUv(1) = dUv(1) - 0.488602511903_r8*uvr0
+    end select
+  case default
+    if(r >= r_small) then
+      f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
+    else
+      f = 0._r8
+    end if
+    
+    uV = uVr0 * Ylm * (r**l)
+    duV(:) = f*x(:) + uVr0*gYlm(:)*(r**l)
+  end select
 
 end subroutine specie_get_nl_part
 

@@ -1,3 +1,20 @@
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
 use io
 use units
 use spline
@@ -112,6 +129,7 @@ subroutine ps_load(ps, filename, z, zval)
 
   logical :: found
   integer :: i, iunit
+  character(len=256) :: filename2
   real(r8), allocatable :: rphi(:,:), eigen(:), rc(:)
   type(ps_file) :: psf
 
@@ -120,20 +138,31 @@ subroutine ps_load(ps, filename, z, zval)
     call io_assign(iunit)
     open(iunit, file=filename//'.vps', form='unformatted', status='unknown')
 
+    message(1) = "Reading file '"//filename//'.vps'//"'"
+    call write_info(1)
     call read_file_data_bin(iunit, psf, ps)
     call io_close(iunit)
   else
-    inquire(file=filename//'.ascii', exist=found)
-    if(found) then
-      call io_assign(iunit)
-      open(iunit, file=filename//'.ascii', form='formatted', status='unknown')
+    filename2 = filename//'.ascii'
+    inquire(file=filename2, exist=found)
+    if(.not.found) then
+      filename2 = SHARE_OCTOPUS//"/PP/TM2/"//filename//'.ascii'
+      print *, "file = ", filename2
+      inquire(file=filename2, exist=found)
+      if(.not.found) then
+        message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
+        call write_fatal(1)
+      end if
+    end if
 
-      call read_file_data_ascii(iunit, psf, ps)
-      call io_close(iunit)
-    else
-      message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
-      call write_fatal(1)
-    endif
+    call io_assign(iunit)
+    open(iunit, file=filename2, form='formatted', status='unknown')
+
+    message(1) = "Reading file '"//filename2//"'"
+    call write_info(1)
+
+    call read_file_data_ascii(iunit, psf, ps)
+    call io_close(iunit)
   end if
   
   zval = psf%zval
@@ -633,7 +662,7 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato = 0.0d0
     nrc = nint(log(rc(l)/psf%b + 1.0_r8)/psf%a) + 1
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vps(2:nrc, ps%L_loc))*rphi(2:nrc, l) &
-         *ps%dknrm(l)/psf%rofi(2:nrc)
+         *ps%dknrm(l)/psf%rofi(2:nrc)**(l+1)
     hato(1) = hato(2)    
     call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l))
 

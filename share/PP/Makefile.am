@@ -1,0 +1,3 @@
+SUBDIRS = TM2
+
+DISTCLEANFILES = Makefile.in

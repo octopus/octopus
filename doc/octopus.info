@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.0b from
+This is octopus.info, produced by makeinfo version 4.1 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -1492,43 +1492,43 @@ Options Index
 
 
 Tag Table:
-Node: Top1124
-Node: Copying1345
-Node: Authors2747
-Node: Introduction5869
-Node: Description of octopus6068
-Ref: Description of octopus-Footnote-18583
-Node: Time dependent density functional theory8976
-Ref: Time dependent density functional theory-Footnote-110608
-Ref: Time dependent density functional theory-Footnote-210840
-Ref: Time dependent density functional theory-Footnote-311142
-Ref: Time dependent density functional theory-Footnote-411298
-Ref: Time dependent density functional theory-Footnote-511482
-Node: Installation11558
-Node: Quick instructions11757
-Node: Long instructions12176
-Node: Troubleshooting17807
-Node: The input file20654
-Node: The parser20877
-Node: Input file options23936
-Node: Generalities24518
-Node: Species26779
-Node: Coordinates28741
-Node: Velocities32567
-Node: Mesh33393
-Node: States35652
-Node: Hamiltonian37836
-Node: Exchange and correlation39363
-Node: SCF41302
-Node: Unoccupied States44208
-Node: Time Dependent44864
-Node: Photo-electron spectrum48518
-Node: Born-Oppenheimer Dynamics49519
-Node: Varia50564
-Node: Examples51704
-Node: Hello world51848
-Node: Benzene55000
-Node: A word about units56538
-Node: Options Index56681
+Node: Top1123
+Node: Copying1344
+Node: Authors2746
+Node: Introduction5868
+Node: Description of octopus6067
+Ref: Description of octopus-Footnote-18582
+Node: Time dependent density functional theory8975
+Ref: Time dependent density functional theory-Footnote-110607
+Ref: Time dependent density functional theory-Footnote-210839
+Ref: Time dependent density functional theory-Footnote-311141
+Ref: Time dependent density functional theory-Footnote-411297
+Ref: Time dependent density functional theory-Footnote-511481
+Node: Installation11557
+Node: Quick instructions11756
+Node: Long instructions12175
+Node: Troubleshooting17806
+Node: The input file20653
+Node: The parser20876
+Node: Input file options23935
+Node: Generalities24517
+Node: Species26778
+Node: Coordinates28740
+Node: Velocities32566
+Node: Mesh33392
+Node: States35651
+Node: Hamiltonian37835
+Node: Exchange and correlation39362
+Node: SCF41301
+Node: Unoccupied States44207
+Node: Time Dependent44863
+Node: Photo-electron spectrum48517
+Node: Born-Oppenheimer Dynamics49518
+Node: Varia50563
+Node: Examples51703
+Node: Hello world51847
+Node: Benzene54999
+Node: A word about units56537
+Node: Options Index56680
 
 End Tag Table
