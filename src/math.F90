@@ -37,7 +37,7 @@ module math
             cutoff1, &
             cutoff2, &
             dextrapolate, zextrapolate, &
-            zgexpv, zhexpv, zgpadm
+            zgexpv, zgpadm
 
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface conjugate_gradients
