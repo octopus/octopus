@@ -25,6 +25,7 @@ module xc_functl
 
   private
   public :: xc_functl_type,             &
+            xc_j_functl_init,           &
             xc_functl_init_exchange,    &
             xc_functl_init_correlation, &
             xc_functl_end,              &
@@ -35,12 +36,13 @@ module xc_functl
      XC_FAMILY_LDA  = 1,    &
      XC_FAMILY_GGA  = 2,    &
      XC_FAMILY_MGGA = 3,    &
-     XC_FAMILY_OEP  = 4
+     XC_FAMILY_LCA  = 4,    &
+     XC_FAMILY_OEP  = 5
 
   ! This adds to the constants defined in lib_xc. But since in that module
   ! the OEP functionals are not included, it is better to put it here.
   integer, public, parameter :: &
-     XC_OEP_X             = 301     ! Exact exchange
+     XC_OEP_X             = 401     ! Exact exchange
 
   type xc_functl_type
     integer :: family              ! LDA, GGA, etc.
@@ -65,6 +67,37 @@ contains
  
   end subroutine xc_functl_init
 
+  ! -----------------------------------------------------------
+  subroutine xc_j_functl_init(functl, cdft, spin_channels)
+    type(xc_functl_type), intent(out) :: functl
+    logical,              intent(in)  :: cdft
+    integer,              intent(in)  :: spin_channels
+      
+    ! initialize structure
+    call xc_functl_init(functl, spin_channels)
+
+    if (.not.cdft) return
+
+    ! read input
+    call loct_parse_int('JFunctional', XC_LCA_OMC, functl%id)
+
+    ! initialize
+    select case(functl%id)
+    case(0)
+        
+    case(XC_LCA_OMC, XC_LCA_LCH)
+      functl%family = XC_FAMILY_LCA
+      call xc_lca_init(functl%conf, functl%info, functl%id, &
+         spin_channels)
+
+    case default
+      write(message(1), '(a,i3,a)') "'", functl%id, &
+         "' is not a known current functional!"
+      message(2) = "Please check the manual for a list of possible values."
+      call write_fatal(2)
+    end select
+      
+  end subroutine xc_j_functl_init
 
   ! -----------------------------------------------------------
   subroutine xc_functl_init_exchange(functl, spin_channels)
@@ -180,6 +213,7 @@ contains
     case(XC_FAMILY_LDA);  call xc_lda_end (functl%conf)
     case(XC_FAMILY_GGA);  call xc_gga_end (functl%conf)
     case(XC_FAMILY_MGGA); call xc_mgga_end(functl%conf)
+    case(XC_FAMILY_LCA);  call xc_lca_end (functl%conf)
     end select
 
   end subroutine xc_functl_end
@@ -193,8 +227,8 @@ contains
     character(len=120) :: s1, s2
     integer(POINTER_SIZE) :: i, j
     
-    if(functl%family==XC_FAMILY_LDA.or.functl%family==XC_FAMILY_GGA.or. &
-       functl%family==XC_FAMILY_MGGA) then
+    select case (functl%family)
+    case (XC_FAMILY_LDA, XC_FAMILY_GGA, XC_FAMILY_MGGA, XC_FAMILY_LCA)
       ! we hapilly call the xc library
 
       i = xc_info_kind(functl%info)
@@ -219,7 +253,7 @@ contains
         j = j + 1
       end do
       
-    else if(functl%family==XC_FAMILY_OEP) then 
+    case (XC_FAMILY_OEP)
       ! this is handled separately
 
       select case(functl%id)
@@ -232,7 +266,7 @@ contains
         s1 = 'Exact exchange'
       end select
       write(iunit, '(4x,2a)') trim(s1), ' (OEP)'
-    end if
+    end select
       
   end subroutine xc_functl_write_info
 

@@ -563,10 +563,9 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
     ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
     ! this yields the correct formula epot = - int j.(axc + aH/2)
     ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c. 
-    ! WARNING 2: axc is not yet implemented, so we will just add -1/2 int j.aH
     do is = 1, h%d%spin_channels
       do idim = 1, conf%dim
-        h%epot = h%epot - M_HALF*P_c*dmf_dotp(m, st%j(idim, :, is), ahartree(:, idim))
+        h%epot = h%epot + M_HALF*P_c*dmf_dotp(m, st%j(idim, :, is), ahartree(:, idim))
       end do
     end do
     
@@ -581,6 +580,7 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   ! now we calculate the xc terms
   h%ex = M_ZERO
   h%ec = M_ZERO
+  h%exc_j = M_ZERO
   allocate(rho(m%np, st%d%nspin))
   if(associated(st%rho_core)) then
      do is = 1, st%d%spin_channels
@@ -589,7 +589,11 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   else
      rho = st%rho
   endif
-  call xc_get_vxc(h%xc, m, f_der, rho, st%d%ispin, h%vhxc, h%ex, h%ec, -minval(st%eigenval(st%nst, :)), st%qtot)
+  if (h%d%cdft) then
+    call xc_get_vxc_and_axc(h%xc, m, f_der, rho, st%j, st%d%ispin, h%vhxc, h%ahxc, h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
+  else
+    call xc_get_vxc(h%xc, m, f_der, rho, st%d%ispin, h%vhxc, h%ex, h%ec, -minval(st%eigenval(st%nst, :)), st%qtot)
+  end if
   deallocate(rho)
 
   ! The OEP family has to handle specially

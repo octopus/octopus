@@ -65,7 +65,7 @@ type hamiltonian_type
   FLOAT, pointer :: ahxc(:,:,:) ! xc vector-potential + hartree vector-potential divided by c
 
   ! the energies (total, ion-ion, exchange, correlation)
-  FLOAT :: etot, eii, ex, ec, epot
+  FLOAT :: etot, eii, ex, ec, exc_j, epot
 
   ! System under the independent particle approximation, or not.
   logical :: ip_app
@@ -186,7 +186,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     call write_info(1)
     call poisson_init(m)
 
-    call xc_init(h%xc, geo%nlcc, states_dim%spin_channels)
+    call xc_init(h%xc, geo%nlcc, states_dim%spin_channels, h%d%cdft)
     if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(h%xc, stdout)
   end if
 

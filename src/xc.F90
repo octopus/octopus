@@ -40,6 +40,7 @@ public :: xc_type, &
           xc_oep_SpinFactor, &
           xc_oep_AnalizeEigen, &
           xc_get_vxc, &
+          xc_get_vxc_and_axc, &
           xc_get_fxc, &
           dxc_KLI_solve, zxc_KLI_solve, &
           doep_x, zoep_x, &
@@ -57,9 +58,11 @@ integer, public, parameter :: &
 
 type xc_type
   logical :: nlcc                   ! repeated from system
+  logical :: cdft
 
   type(xc_functl_type) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
                                       ! (:,1) => unpolarized, (:,2) => polarized
+  type(xc_functl_type) :: j_functl    ! current-depent part of the functional
 
   ! do we want to use a SIC corrected functional
   integer :: sic_correction
@@ -98,35 +101,48 @@ contains
     if(mpiv%node == 0) then
 #endif
       write(iunit,'(/,a)') stars
-      write(iunit,'(a)') " Exchange and correlation:"
-      do i = 1, 2
-        call xc_functl_write_info(xcs%functl(i, 1), iunit)
-      end do
+      if (xcs%cdft) then
+        write(iunit,'(a)') " Current-dependent exchange and correlation:"
+        call xc_functl_write_info(xcs%j_functl, iunit)
+        if (xcs%j_functl%family == XC_FAMILY_LCA) then
+          message(1) = " Auxiliary exchange and correlation functionals:"
+          call write_info(1)
+          do i = 1, 2
+            call xc_functl_write_info(xcs%functl(i, 1), iunit)
+          end do
+        end if
+      else
+        write(iunit,'(a)') " Exchange and correlation:"
+        do i = 1, 2
+          call xc_functl_write_info(xcs%functl(i, 1), iunit)
+        end do
       
-      if(xcs%sic_correction.ne.0) then
-        write(iunit, '(2x,a)') 'Self-interaction corrections according to Perdew-Zunger'
-      end if
+        if(xcs%sic_correction.ne.0) then
+          write(iunit, '(2x,a)') 'Self-interaction corrections according to Perdew-Zunger'
+        end if
         
-      if(xcs%oep_level.ne.XC_OEP_NONE) then
-        write(iunit, '(a)') 'The OEP equation will be handled at the level of:'
-        select case(xcs%oep_level)
-        case (XC_OEP_SLATER); write(iunit, '(a)') '    Slater approximation'
-        case (XC_OEP_KLI);    write(iunit, '(a)') '    KLI approximation'
-        case (XC_OEP_CEDA);   write(iunit, '(a)') '    CEDA approximation'
-        case (XC_OEP_FULL);   write(iunit, '(a)') '    Full OEP'
-        end select
+        if(xcs%oep_level.ne.XC_OEP_NONE) then
+          write(iunit, '(a)') 'The OEP equation will be handled at the level of:'
+          select case(xcs%oep_level)
+          case (XC_OEP_SLATER); write(iunit, '(a)') '    Slater approximation'
+          case (XC_OEP_KLI);    write(iunit, '(a)') '    KLI approximation'
+          case (XC_OEP_CEDA);   write(iunit, '(a)') '    CEDA approximation'
+          case (XC_OEP_FULL);   write(iunit, '(a)') '    Full OEP'
+          end select
+        end if
       end if
       write(iunit,'(a,/)') stars
-      
+
 #ifdef HAVE_MPI
     end if
 #endif
   end subroutine xc_write_info
 
-  subroutine xc_init(xcs, nlcc, spin_channels)
+  subroutine xc_init(xcs, nlcc, spin_channels, cdft)
     type(xc_type), intent(out) :: xcs
     logical,       intent(in)  :: nlcc
     integer,       intent(in)  :: spin_channels
+    logical,       intent(in)  :: cdft
     
     integer :: func, i, j, rel
     integer(POINTER_SIZE) :: info_dummy
@@ -135,54 +151,70 @@ contains
     call push_sub('xc_init')
     
     xcs%nlcc   = nlcc  ! make a copy of flag indicating non-local core corrections
-    
-    ! we get both spin polarized and unpolarized
-    do i = 1, 2
-      call xc_functl_init_exchange   (xcs%functl(1,i), i)
-      call xc_functl_init_correlation(xcs%functl(2,i), i)
-    end do
-    
-    if(any(xcs%functl(:,1)%family==XC_FAMILY_MGGA)) then
-      call loct_parse_int("MGGAimplementation", 1, xcs%mGGA_implementation)
-      if(xcs%mGGA_implementation.ne.1.and.xcs%mGGA_implementation.ne.2) then
-        message(1) = 'MGGAimplementation can only assume the values:'
-        message(2) = '  1 : GEA implementation'
-        message(3) = '  2 : OEP implementation'
-        call write_fatal(3)
-      end if
-    end if
+    xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft
 
-    ! check for SIC
-    xcs%sic_correction = 0
-    if(any(xcs%functl(:,1)%family==XC_FAMILY_LDA) .or. &
-       any(xcs%functl(:,1)%family==XC_FAMILY_GGA)) then
+    ! get current-dependent functional
+    call xc_j_functl_init (xcs%j_functl, cdft, spin_channels)
 
-      call loct_parse_int("SICCorrection", 0, xcs%sic_correction)
-    end if
+    if (xcs%j_functl%family == XC_FAMILY_LCA .or. xcs%j_functl%family == 0) then
+      !we also need xc functionals that do not depend on the current
+      !get both spin polarized and unpolarized
+      do i = 1, 2
+        call xc_functl_init_exchange   (xcs%functl(1,i), i)
+        call xc_functl_init_correlation(xcs%functl(2,i), i)
+      end do
 
-    ! if OEP we need some extra variables
-    if((xcs%sic_correction.ne.0).or.(any(xcs%functl(:,1)%family==XC_FAMILY_OEP))) then
-#if defined(HAVE_MPI)
-      if(xcs%oep_level == XC_OEP_FULL) then
-        message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
+      !
+      if (xcs%j_functl%family == XC_FAMILY_LCA .and. &
+           (any(xcs%functl%family==XC_FAMILY_MGGA) .or. &
+            any(xcs%functl%family==XC_FAMILY_OEP))) then
+        message(1) = "LCA functional can only be used along with LDA or GGA functionals"
         call write_fatal(1)
-      endif
+      end if
+
+      if(any(xcs%functl(:,1)%family==XC_FAMILY_MGGA)) then
+        call loct_parse_int("MGGAimplementation", 1, xcs%mGGA_implementation)
+        if(xcs%mGGA_implementation.ne.1.and.xcs%mGGA_implementation.ne.2) then
+          message(1) = 'MGGAimplementation can only assume the values:'
+          message(2) = '  1 : GEA implementation'
+          message(3) = '  2 : OEP implementation'
+          call write_fatal(3)
+        end if
+      end if
+
+      ! check for SIC
+      xcs%sic_correction = 0
+      if(any(xcs%functl(:,1)%family==XC_FAMILY_LDA) .or. &
+           any(xcs%functl(:,1)%family==XC_FAMILY_GGA)) then
+
+        call loct_parse_int("SICCorrection", 0, xcs%sic_correction)
+      end if
+
+      ! if OEP we need some extra variables
+      if((xcs%sic_correction.ne.0).or.(any(xcs%functl(:,1)%family==XC_FAMILY_OEP))) then
+#if defined(HAVE_MPI)
+        if(xcs%oep_level == XC_OEP_FULL) then
+          message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
+          call write_fatal(1)
+        endif
 #endif
 
-      call loct_parse_int("OEP_level", XC_OEP_KLI, xcs%oep_level)
-      if(xcs%oep_level<0.or.xcs%oep_level>XC_OEP_FULL) then
-        message(1) = "OEP_level can only take the values:"
-        message(2) = "1 (Slater), 2 (KLI), 3 (CEDA), or 4 (full OEP)"
-        call write_fatal(2)
+        call loct_parse_int("OEP_level", XC_OEP_KLI, xcs%oep_level)
+        if(xcs%oep_level<0.or.xcs%oep_level>XC_OEP_FULL) then
+          message(1) = "OEP_level can only take the values:"
+          message(2) = "1 (Slater), 2 (KLI), 3 (CEDA), or 4 (full OEP)"
+          call write_fatal(2)
+        end if
+        if(xcs%oep_level == XC_OEP_FULL) then
+          call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
+        end if
+        
+      else
+        xcs%oep_level = XC_OEP_NONE
       end if
-      if(xcs%oep_level == XC_OEP_FULL) then
-        call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
-      end if
-      
-    else
-      xcs%oep_level = XC_OEP_NONE
-    end if
     
+    end if
+
     call pop_sub()
 
   end subroutine xc_init
@@ -194,6 +226,9 @@ contains
 
     integer :: i
 
+    if (xcs%cdft) then
+      call xc_functl_end(xcs%j_functl)
+    end if
     do i = 1, 2
       call xc_functl_end(xcs%functl(1,i))
       call xc_functl_end(xcs%functl(2,i))

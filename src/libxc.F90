@@ -78,6 +78,11 @@ module lib_xc
      XC_MGGA_X_TPSS       = 201, &  ! Perdew, Tao, Staroverov & Scuseria exchange
      XC_MGGA_C_TPSS       = 202     ! Perdew, Tao, Staroverov & Scuseria correlation
 
+  ! the LCAs
+  integer, public, parameter :: &
+     XC_LCA_OMC           = 301, & ! Orestes, Marcasso & Capelle
+     XC_LCA_LCH           = 302    ! Lee, Colwell & Handy
+
   ! info
   interface
     integer function xc_info_number(info)
@@ -221,6 +226,26 @@ module lib_xc
       FLOAT,                 intent(out) :: dedgd ! in terms of the gradient of the density
       FLOAT,                 intent(out) :: dedtau! and in terms of tau
     end subroutine xc_mgga
+  end interface
+
+  ! the LCAs
+  interface
+    subroutine xc_lca_init(p, info, functional, nspin)
+      integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
+      integer,               intent(in)  :: functional
+      integer,               intent(in)  :: nspin
+    end subroutine xc_lca_init
+
+    subroutine xc_lca(p, rho, v, e, dedd, dedv)
+      integer(POINTER_SIZE), intent(in)  :: p
+      FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
+      FLOAT,                 intent(in)  :: v     ! v(3,nspin) the voticity
+      FLOAT,                 intent(out) :: e     ! the energy per unit particle
+      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy 
+                                                  ! in terms of the density
+      FLOAT,                 intent(out) :: dedv  ! in terms of the vorticity
+    end subroutine xc_lca
   end interface
 
 end module lib_xc

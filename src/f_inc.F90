@@ -270,7 +270,7 @@ subroutine X(f_curl) (f_der, f, curlf)
   integer :: i
   R_TYPE, allocatable :: aux(:)
 
-  call push_sub("f_divergence")
+  call push_sub("f_curl")
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
