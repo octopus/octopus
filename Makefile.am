@@ -18,7 +18,7 @@
 ## 02111-1307, USA.
 ##
 
-SUBDIRS = liboct src doc share
+SUBDIRS = liboct src doc faq share
 
 EXTRA_DIST = TODO autogen.sh build/*.m4 build/*.in samples/inp
 
