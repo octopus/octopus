@@ -18,7 +18,10 @@
 #include "global.h"
 
 module static_pol_lr
+  use global
+  use units
   use mesh
+  use mesh_function
   use system
   use restart
   use hamiltonian 

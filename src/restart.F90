@@ -27,6 +27,12 @@ use output
 
 implicit none
 
+private
+public :: restart_init, &
+          drestart_write, zrestart_write, &
+          drestart_read, zrestart_read, &
+          restart_format
+
 integer, parameter :: RESTART_PLAIN  = 1, &
                       RESTART_NETCDF = 2
 integer :: restart_format

@@ -19,14 +19,20 @@
 
 module phonons
   use global
+  use units
   use lib_oct
   use lib_oct_parser
   use io
   use lib_adv_alg
+  use mesh
+  use functions
+  use output
   use external_pot
   use geometry
   use hamiltonian
   use states
+  use system
+  use restart
   use scf
 
   implicit none

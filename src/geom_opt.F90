@@ -19,11 +19,15 @@
 
 module geom_opt
   use global
+  use units
   use mesh
+  use external_pot
   use hamiltonian
   use geometry
   use states
+  use system
   use scf
+  use restart
   
   implicit none
 

@@ -154,6 +154,7 @@ contains
     call ncdf_error(#x, status, filename, ierr); \
   end if
 
+
   ! ---------------------------------------------------------
   subroutine dx_cdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
@@ -168,19 +169,43 @@ contains
     end if
 
     !Inquire about dimensions
-    NCDFCALL(nf90_inq_dimid, (ncid, "dim_1", dim_data_id(1)))
-    NCDFCALL(nf90_inq_dimid, (ncid, "dim_2", dim_data_id(2)))
-    NCDFCALL(nf90_inq_dimid, (ncid, "dim_3", dim_data_id(3)))
-    NCDFCALL(nf90_inquire_dimension, (ncid, dim_data_id(1), len = ndim(1)))
-    NCDFCALL(nf90_inquire_dimension, (ncid, dim_data_id(2), len = ndim(2)))
-    NCDFCALL(nf90_inquire_dimension, (ncid, dim_data_id(3), len = ndim(3)))
+    if(status == NF90_NOERR) then
+      status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
+      call ncdf_error('nf90_inq_dimid', status, filename, ierr)
+    endif
+
+    if(status == NF90_NOERR) then
+      status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
+      call ncdf_error('nf90_inq_dimid', status, filename, ierr)
+    endif
+
+    if(status == NF90_NOERR) then
+      status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
+      call ncdf_error('nf90_inq_dimid', status, filename, ierr)
+    endif
+
+    if(status == NF90_NOERR) then
+      status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(1))
+      call ncdf_error('nf90_inquire_dimension', status, filename, ierr)
+    endif
+    if(status == NF90_NOERR) then
+      status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
+      call ncdf_error('nf90_inquire_dimension', status, filename, ierr)
+    endif
+    if(status == NF90_NOERR) then
+      status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(3))
+      call ncdf_error('nf90_inquire_dimension', status, filename, ierr)
+    endif
     if((ndim(1) .ne. c%n(1)) .or. &
        (ndim(2) .ne. c%n(2)) .or. &
        (ndim(3) .ne. c%n(3))) then
       ierr = 12; return
     endif
 
-    NCDFCALL(nf90_inq_varid, (ncid, "rdata", data_id))
+    if(status == NF90_NOERR) then
+      status = nf90_inq_varid (ncid, "rdata", data_id)
+      call ncdf_error('nf90_inq_varid', status, filename, ierr)
+    endif
     status = nf90_inq_varid(ncid, "idata", data_im_id)
     if(status == 0) then
        file_kind = -1
@@ -189,7 +214,10 @@ contains
     endif
     status = 0
        
-    NCDFCALL(nf90_inquire_variable, (ncid, data_id, xtype = xtype))
+    if(status == NF90_NOERR) then
+      status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
+      call ncdf_error('nf90_inquire_variable', status, filename, ierr)
+    endif
 
     if(xtype == NF90_FLOAT) then
       file_kind = file_kind*4
@@ -206,12 +234,21 @@ contains
     endif
 
 #if defined(R_TCOMPLEX)
-    NCDFCALL(nf90_get_var, (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
+    if(status == NF90_NOERR) then
+      status = nf90_get_var (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      call ncdf_error('nf90_get_var', status, filename, ierr)
+    endif
     if(file_kind<0) then
-       NCDFCALL(nf90_get_var, (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
+      if(status == NF90_NOERR) then
+        status = nf90_get_var (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+        call ncdf_error('nf90_get_var', status, filename, ierr)
+      endif
     endif
 #else
-    NCDFCALL(nf90_get_var, (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
+    if(status == NF90_NOERR) then
+      status = nf90_get_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      call ncdf_error('nf90_get_var', status, filename, ierr)
+    endif
 #endif
 
     status = nf90_close(ncid)
@@ -484,49 +521,107 @@ contains
     end if
 
     ! dimensions
-    NCDFCALL(nf90_def_dim, (ncid, "dim_1", c%n(1), dim_data_id(1)))
-    NCDFCALL(nf90_def_dim, (ncid, "dim_2", c%n(2), dim_data_id(2)))
-    NCDFCALL(nf90_def_dim, (ncid, "dim_3", c%n(3), dim_data_id(3)))
+    if(status == NF90_NOERR) then
+      status = nf90_def_dim (ncid, "dim_1", c%n(1), dim_data_id(1))
+      call ncdf_error('nf90_def_dim', status, filename, ierr)
+    endif
 
-    NCDFCALL(nf90_def_dim, (ncid, "pos_1", 2, dim_pos_id(1)))
-    NCDFCALL(nf90_def_dim, (ncid, "pos_2", 3, dim_pos_id(2)))
+    if(status == NF90_NOERR) then
+      status = nf90_def_dim (ncid, "dim_2", c%n(2), dim_data_id(2))
+      call ncdf_error('nf90_def_dim', status, filename, ierr)
+    endif
+
+    if(status == NF90_NOERR) then
+      status = nf90_def_dim (ncid, "dim_3", c%n(3), dim_data_id(3))
+      call ncdf_error('nf90_der_dim', status, filename, ierr)
+    endif
+
+    if(status == NF90_NOERR) then
+      status = nf90_def_dim (ncid, "pos_1", 2, dim_pos_id(1))
+      call ncdf_error('nf90_def_dim', status, filename, ierr)
+    endif
+
+    if(status == NF90_NOERR) then
+      status = nf90_def_dim (ncid, "pos_2", 3, dim_pos_id(2))
+      call ncdf_error('nf90_def_dim', status, filename, ierr)
+    endif
 
 #if defined(SINGLE_PRECISION)
-    NCDFCALL(nf90_def_var, (ncid, "rdata", NF90_FLOAT, dim_data_id, data_id))
+    if(status == NF90_NOERR) then
+      status = nf90_def_var (ncid, "rdata", NF90_FLOAT, dim_data_id, data_id)
+      call ncdf_error('nf90_def_var', status, filename, ierr)
+    endif
 #else
-    NCDFCALL(nf90_def_var, (ncid, "rdata", NF90_DOUBLE, dim_data_id, data_id))
+    if(status == NF90_NOERR) then
+      status = nf90_def_var (ncid, "rdata", NF90_DOUBLE, dim_data_id, data_id)
+      call ncdf_error('nf90_def_var', status, filename, ierr)
+    endif
 #endif
 #if defined(R_TCOMPLEX)
 #if defined(SINGLE_PRECISION)
-    NCDFCALL(nf90_def_var, (ncid, "idata", NF90_FLOAT, dim_data_id, data_im_id))
+    if(status == NF90_NOERR) then
+      status = nf90_def_var (ncid, "idata", NF90_FLOAT, dim_data_id, data_im_id)
+      call ncdf_error('nf90_def_var', status, filename, ierr)
+    endif
+
 #else
-    NCDFCALL(nf90_def_var, (ncid, "idata", NF90_DOUBLE, dim_data_id, data_im_id))
+    if(status == NF90_NOERR) then
+      status = nf90_def_var (ncid, "idata", NF90_DOUBLE, dim_data_id, data_im_id)
+      call ncdf_error('nf90_def_var', status, filename, ierr)
+    endif
 #endif
 #endif
-    NCDFCALL(nf90_def_var, (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id))
+    if(status == NF90_NOERR) then
+      status = nf90_def_var (ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
+      call ncdf_error('nf90_def_var', status, filename, ierr)
+    endif
 
     ! attributes
-    NCDFCALL(nf90_put_att, (ncid, data_id, "field", "rdata, scalar"))
-    NCDFCALL(nf90_put_att, (ncid, data_id, "positions", "pos, regular"))
+    if(status == NF90_NOERR) then
+      status = nf90_put_att (ncid, data_id, "field", "rdata, scalar")
+      call ncdf_error('nf90_put_att', status, filename, ierr)
+    endif
+    if(status == NF90_NOERR) then
+      status = nf90_put_att (ncid, data_id, "positions", "pos, regular")
+      call ncdf_error('nf90_put_att', status, filename, ierr)
+    endif
 #if defined(R_TCOMPLEX)
-    NCDFCALL(nf90_put_att, (ncid, data_im_id, "field", "idata, scalar"))
-    NCDFCALL(nf90_put_att, (ncid, data_im_id, "positions", "pos, regular"))
+    if(status == NF90_NOERR) then
+      status = nf90_put_att (ncid, data_im_id, "field", "idata, scalar")
+      call ncdf_error('nf90_put_att', status, filename, ierr)
+    endif
+    if(status == NF90_NOERR) then
+      status = nf90_put_att (ncid, data_im_id, "positions", "pos, regular")
+      call ncdf_error('nf90_put_att', status, filename, ierr)
+    endif
 #endif
 
     ! end definitions
-    NCDFCALL(nf90_enddef, (ncid))
+    status = nf90_enddef (ncid)
 
     ! data
     pos(1,:) = real(-(c%n(:) - 1)/2 * m%h(:) / units_out%length%factor, 4)
     pos(2,:) = real(m%h(:) / units_out%length%factor, 4)
 
-    NCDFCALL(nf90_put_var, (ncid, pos_id, pos(:,:)))
+    if(status == NF90_NOERR) then
+      status = nf90_put_var (ncid, pos_id, pos(:,:))
+      call ncdf_error('nf90_put_var', status, filename, ierr)
+    endif
 
 #if defined(R_TCOMPLEX)
-    NCDFCALL(nf90_put_var, (ncid, data_id, real(c%RS, PRECISION), map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
-    NCDFCALL(nf90_put_var, (ncid, data_im_id, aimag(c%RS), map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
+    if(status == NF90_NOERR) then
+      status = nf90_put_var (ncid, data_id, real(c%RS, PRECISION), map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      call ncdf_error('nf90_put_var', status, filename, ierr)
+    endif
+    if(status == NF90_NOERR) then
+      status = nf90_put_var (ncid, data_im_id, aimag(c%RS), map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      call ncdf_error('nf90_put_var', status, filename, ierr)
+    endif
 #else
-    NCDFCALL(nf90_put_var, (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
+    if(status == NF90_NOERR) then
+      status = nf90_put_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+      call ncdf_error('nf90_put_var', status, filename, ierr)
+    endif
 #endif
 
     ! close

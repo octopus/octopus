@@ -30,6 +30,14 @@ module output
 #endif
 implicit none
 
+  private
+  public :: output_type, &
+            output_init, &
+            output_fill_how, &
+            dinput_function, zinput_function, &
+            doutput_function, zoutput_function
+            
+
 type output_type
   logical :: what(8)
   integer :: how    ! how to output
@@ -40,7 +48,7 @@ type output_type
   integer :: wfs(32) ! which wfs to output
 end type output_type
 
-integer, parameter :: &
+integer, public, parameter :: &
      output_potential = 1, &
      output_density   = 2, &
      output_wfs       = 3, &

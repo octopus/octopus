@@ -23,7 +23,9 @@ use lib_oct
 use lib_oct_parser
 use geometry
 use mesh
+use functions
 use states
+use output
 use restart
 use lasers
 use hamiltonian

@@ -22,6 +22,7 @@ module ground_state
   use system
   use hamiltonian
   use lcao
+  use restart
   use scf
 
   implicit none

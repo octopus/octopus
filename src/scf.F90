@@ -23,6 +23,7 @@ module scf
   use units
   use geometry
   use states
+  use output
   use restart
   use hamiltonian
   use external_pot 
@@ -32,6 +33,12 @@ module scf
   use lcao
 
   implicit none
+
+  private
+  public :: scf_type, &
+            scf_init, &
+            scf_run,  &
+            scf_end
 
   integer, parameter :: MIXDENS = 0, &
                         MIXPOT  = 1
