@@ -214,7 +214,7 @@ contains
 
       lr%abs_dens = M_ZERO
       do ik = 1, st%d%nspin
-        tmp(:) = (dl_rhoin(1,:,ik)-lr%dl_rho(:,ik))**2
+        tmp(:) = (dl_rhoin(1,:,ik) - lr%dl_rho(:,ik))**2
         lr%abs_dens = lr%abs_dens + dmf_integrate(m, tmp)
       end do
       lr%abs_dens = sqrt(lr%abs_dens)
@@ -227,7 +227,6 @@ contains
         call write_info(1)
         exit
       else  
-        ! without mixing it seems to go faster!!!!
         lr%dl_rho(:,:) = dl_rhonew(1,:,:)
       end if
 

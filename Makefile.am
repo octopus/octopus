@@ -20,23 +20,22 @@
 
 SUBDIRS = liboct_parser liboct libxc src doc share tests
 
-EXTRA_DIST = TODO build/*.m4 build/*.in debian/* \
-  samples/Na2 samples/bench-gs
+EXTRA_DIST = TODO build/*.m4 build/*.in debian/*
 
 CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec
 
-RPM_DIR = /usr/src/redhat
+RPM_DIR = $(HOME)/software/rpm
 DEB_DIR = deb-work
 
 rpm: dist
 	mv -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
 	rpmbuild --clean -ba build/$(PACKAGE).spec
-	scp $(RPM_DIR)/RPMS/i386/octopus*.rpm $(RPM_DIR)/SRPMS/octopus*.rpm \
+#	scp $(RPM_DIR)/RPMS/*/octopus*.rpm \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
 	@echo "-------------------------------------------------------------"
 	@echo "  RPMs are built, and are located under:"
-	@echo "       $(RPM_DIR)/RPMS/i386"
+	@echo "       $(RPM_DIR)/RPMS/<arch>"
 	@echo "       $(RPM_DIR)/SRPMS"
 	@echo "-------------------------------------------------------------"
 
