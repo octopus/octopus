@@ -947,6 +947,9 @@ Finally, the potential itself is defined by the fourth argument.
 Use any of the @code{x}, @code{y}, @code{z} or @code{r} variables
 to define the potential.
 
+Note that further pseudopotentials can be downloaded from the
+@uref{http://www.tddft.org/programs/octopus/pseudo.php, @code{octopus} homepage}.
+
 @end itemize
 @end itemize
 @end itemize
@@ -1107,8 +1110,8 @@ is assumed to be a block of the form:
   @end example
 where the @code{size*} are half of the lengths of the box in each direction.
 
-@item @vindex @code{ZLength}
-@code{ZLength} (double, 1.0 a.u.):
+@item @vindex @code{XLength}
+@code{XLength} (double, 1.0 a.u.):
 If @code{BoxShape == cylinder} is half the total length of the cylinder.
 
 @item @vindex @code{Spacing}
@@ -1869,7 +1872,11 @@ where ``x'' stands for the iteration number at which each write is done.
 Note that if you wish to plot any function (@code{OutputKSPotential = yes}, etc.),
 at least one of the output formats should be enabled (@code{OutputPlaneX = yes},
 @code{OutputDX = yes}, @code{OutputNETCDF = yes}, etc.). [This is not necessary
-if you wish to plot the geometry (@code{OutputGeometry = yes})].
+if you wish to plot the geometry (@code{OutputGeometry = yes})]. Note further
+that the data written by @code{OutputAxisX}, @code{OutputPlaneX} etc. has
+always the (side) length of the longest axis; this is independent from the
+chosen geometry. Data points which are inexistent in the actual geometry
+have the value zero in those files.
 
 @itemize @bullet
 

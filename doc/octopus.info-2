@@ -389,7 +389,11 @@ iteration number at which each write is done.  Note that if you wish to
 plot any function (`OutputKSPotential = yes', etc.), at least one of
 the output formats should be enabled (`OutputPlaneX = yes', `OutputDX =
 yes', `OutputNETCDF = yes', etc.). [This is not necessary if you wish
-to plot the geometry (`OutputGeometry = yes')].
+to plot the geometry (`OutputGeometry = yes')]. Note further that the
+data written by `OutputAxisX', `OutputPlaneX' etc. has always the
+(side) length of the longest axis; this is independent from the chosen
+geometry. Data points which are inexistent in the actual geometry have
+the value zero in those files.
 
    * `OutputKSPotential' (logical, false)  Prints out Kohn-Sham
      potential, separated by parts. File names would be "v0" for  the
@@ -1039,8 +1043,8 @@ Options Index
 * Verbose:                               Generalities.
 * XFamily:                               Exchange and correlation.
 * XFunctional:                           Exchange and correlation.
+* XLength:                               Mesh.
 * XYZCoordinates:                        Coordinates.
 * XYZVelocities::                        Velocities.
-* ZLength:                               Mesh.
 
 

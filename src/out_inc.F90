@@ -28,7 +28,8 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   deallocate(c)
 
 contains
-#define MFORMAT '(4f12.6)'
+#define MFORMAT    '(4f12.6)'
+#define MFMTHEADER '(a,a3,a12,a12,a12)'
 
   subroutine axis_x()
     integer  :: ix
@@ -78,6 +79,7 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0", status='unknown')
+    write(iunit, MFMTHEADER) '#', 'y', 'z', 'Re', 'Im'
     do iy = 1, m%fft_n(2)
       y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
       do iz = 1, m%fft_n(3)
@@ -96,6 +98,7 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0", status='unknown')
+    write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
     do ix = 1, m%fft_n(1)
       x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
       do iz = 1, m%fft_n(3)
@@ -114,6 +117,7 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".z=0", status='unknown')
+    write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
     do ix = 1, m%fft_n(1)
       x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
       do iy = 1, m%fft_n(2)

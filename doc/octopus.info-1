@@ -860,6 +860,10 @@ Species
                any of the `x', `y', `z' or `r' variables to define the
                potential.
 
+               Note that further pseudopotentials can be downloaded
+               from the `octopus' homepage
+               (http://www.tddft.org/programs/octopus/pseudo.php).
+
 
 
 File: octopus.info,  Node: Coordinates,  Next: Velocities,  Prev: Species,  Up: Input file options
@@ -1002,7 +1006,7 @@ tuned to suit the geometric configuration of the system.
      where the `size*' are half of the lengths of the box in each
      direction.
 
-   * `ZLength' (double, 1.0 a.u.): If `BoxShape == cylinder' is half
+   * `XLength' (double, 1.0 a.u.): If `BoxShape == cylinder' is half
      the total length of the cylinder.
 
    * `Spacing' (double, 0.6 a.u.) or (block data): If the code is

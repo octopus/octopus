@@ -21,7 +21,7 @@ Angel Rubio
 
 Indirect:
 octopus.info-1: 655
-octopus.info-2: 49073
+octopus.info-2: 49252
 
 Tag Table:
 (Indirect)
@@ -47,34 +47,34 @@ Node: The parser24841
 Node: Input file options27988
 Node: Generalities28613
 Node: Species31260
-Node: Coordinates34691
-Node: Velocities38561
-Node: Mesh39744
-Node: States42749
-Node: Hamiltonian45231
-Node: Exchange and correlation47145
-Node: SCF49073
-Node: Unoccupied States52802
-Node: Time Dependent53523
-Node: Photo-electron spectrum62634
-Node: Geometry optimization63616
-Node: Function output for visualization64371
-Node: Spectrum calculations68580
-Node: Varia70714
-Node: External utilities71525
-Node: strength-function72074
-Node: hs-from-mult72883
-Node: hs-from-acc73101
-Node: nbo2xyz73309
-Node: excitations73522
-Node: broad74059
-Node: make_st74390
-Node: choose_st75643
-Node: wf.net76374
-Node: Examples77743
-Node: Hello world77898
-Ref: Hello world-Footnote-184542
-Node: Benzene84626
-Node: Options Index85434
+Node: Coordinates34870
+Node: Velocities38740
+Node: Mesh39923
+Node: States42928
+Node: Hamiltonian45410
+Node: Exchange and correlation47324
+Node: SCF49252
+Node: Unoccupied States52981
+Node: Time Dependent53702
+Node: Photo-electron spectrum62813
+Node: Geometry optimization63795
+Node: Function output for visualization64550
+Node: Spectrum calculations69020
+Node: Varia71154
+Node: External utilities71965
+Node: strength-function72514
+Node: hs-from-mult73323
+Node: hs-from-acc73541
+Node: nbo2xyz73749
+Node: excitations73962
+Node: broad74499
+Node: make_st74830
+Node: choose_st76083
+Node: wf.net76814
+Node: Examples78183
+Node: Hello world78338
+Ref: Hello world-Footnote-184982
+Node: Benzene85066
+Node: Options Index85874
 
 End Tag Table
