@@ -7,4 +7,4 @@
 #define R_AIMAG(x) (0._r8)
 #define R_DOT ddot
 #define R_NRM2 dnrm2
-#define REALORCOMPLEX(x) real(x, r8)
+#define R_TOTYPE(x) real(x, r8)

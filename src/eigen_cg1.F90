@@ -7,6 +7,7 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
   real(r8), intent(out), optional :: diff(st%nst, st%nik)
 
   integer :: ik, iter, p, q, i, np, idim
+  real(r8) :: r
   R_TYPE :: xkHxk, xkxk, Rk, pkpk, pkHxk, pkHpki,     &
        uk, alpha, Ak, Bk, Ck, pkHpk, s, xkpk, gkgk
   R_TYPE, allocatable :: xk(:,:), hxk(:,:), gk(:,:), pk(:,:), tmp_wf(:,:)
@@ -40,33 +41,33 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
       xk(1:np,:) = psi(1:np,:, p, ik)
       call R_FUNC(Hpsi) (h, sys, ik, xk, hxk)
 
-      xkHxk      = R_FUNC(states_ddot) (sys%m, st%dim, xk(1:np,:), hxk)
+      xkHxk      = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, xk(1:np,:), hxk))
       xkxk       = 1._r8
       Rk         = xkHxk
       do iter = 1, ncg
         gk = 2._r8*(hxk - Rk*xk(1:np,:))/xkxk
         do q = 1, p - 1
-          s = R_FUNC(states_ddot) (sys%m, st%dim, psi(1:np,:, q, ik), gk)
+          s = R_FUNC(states_dotp) (sys%m, st%dim, psi(1:np,:, q, ik), gk)
           do idim = 1, st%dim
             call R_FUNC(axpy) (np, -s, psi(1:np, idim, q, ik), 1, gk(1:np, idim), 1)
           end do
         end do
-        s = R_FUNC(states_ddot) (sys%m, st%dim, gk, gk)
+        r = R_FUNC(states_nrm2) (sys%m, st%dim, gk)**2
         
         select case (iter)
         case(1)
           pk(1:np,:) = -gk
         case default
-          uk = s/gkgk
+          uk = r/gkgk
           pk(1:np,:) = -gk + uk*pk(1:np,:)
         end select
         
-        gkgk = s
-        xkpk = R_FUNC(states_ddot) (sys%m, st%dim, xk(1:np,:), pk(1:np,:))
-        pkpk = R_FUNC(states_ddot) (sys%m, st%dim, pk(1:np,:), pk(1:np,:))
-        pkHxk= R_FUNC(states_ddot) (sys%m, st%dim, pk(1:np,:), hxk)
+        gkgk = r
+        xkpk = R_FUNC(states_dotp) (sys%m, st%dim, xk(1:np,:), pk(1:np,:))
+        pkpk = R_FUNC(states_nrm2) (sys%m, st%dim, pk(1:np,:))**2
+        pkHxk= R_FUNC(states_dotp) (sys%m, st%dim, pk(1:np,:), hxk)
         call R_FUNC(Hpsi) (h, sys, ik, pk, gk)
-        pkHpk = R_FUNC(states_ddot) (sys%m, st%dim, pk(1:np,:), gk)
+        pkHpk = R_FUNC(states_dotp) (sys%m, st%dim, pk(1:np,:), gk)
 
         Ak = pkHpk*xkpk - pkHxk*pkpk
         Bk = pkHpk*xkxk - xkHxk*pkpk
@@ -75,8 +76,8 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
 
         xk = xk + alpha*pk
         hxk = hxk + alpha*gk
-        xkxk = R_FUNC(states_ddot) (sys%m, st%dim, xk(1:np,:), xk(1:np,:))
-        xkHxk= R_FUNC(states_ddot) (sys%m, st%dim, xk(1:np,:), hxk)
+        xkxk = R_FUNC(states_nrm2) (sys%m, st%dim, xk(1:np,:))**2
+        xkHxk= R_FUNC(states_dotp) (sys%m, st%dim, xk(1:np,:), hxk)
         Rk = xkHxk/xkxk
         
         s = sqrt(xkxk)
@@ -86,7 +87,7 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
 
       if(present(diff)) then
         tmp_wf = psi(1:np,:, p, ik) - tmp_wf
-        diff(p, ik) = R_FUNC(mesh_dp) (sys%m, tmp_wf, tmp_wf)
+        diff(p, ik) = R_FUNC(mesh_nrm2) (sys%m, tmp_wf)
         deallocate(tmp_wf)
       end if
     enddo
@@ -98,5 +99,3 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
   call pop_sub()
   return
 end subroutine eigen_solver_cg1
-
-#include "undef.F90"

@@ -207,7 +207,6 @@ end subroutine states_generate_random
 
 #endif
 
-
 subroutine states_fermi(st)
   type(states_type), intent(inout) :: st
 
@@ -284,7 +283,6 @@ subroutine states_fermi(st)
   return
 end subroutine states_fermi
 
-
 #ifndef ONE_D
 
 subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
@@ -347,8 +345,6 @@ subroutine states_calculate_multipoles(m, st, lmax, dipole, multipole)
     end do
     dipole(is) = dipole(is) * m%vol_pp
 
-
-
     do l = 0, lmax
         mult = 0._r8
 
@@ -364,7 +360,6 @@ subroutine states_calculate_multipoles(m, st, lmax, dipole, multipole)
 end subroutine states_calculate_multipoles
 
 #endif
-
 
 subroutine states_write_eigenvalues(iunit, nst, st, error)
   integer, intent(in) :: iunit, nst

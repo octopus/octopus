@@ -25,6 +25,8 @@ contains
 subroutine eigen_solver_init(eigens)
   type(eigen_solver_type), intent(out) :: eigens
   
+  sub_name = 'eigen_solver_init'; call push_sub()
+
   eigens%es_type = fdf_integer("EigenSolver", 0)
   if(eigens%es_type < 0 .or. eigens%es_type > 1) then
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
@@ -79,6 +81,7 @@ subroutine eigen_solver_init(eigens)
 
   end select
   
+  call pop_sub()
 end subroutine eigen_solver_init
 
 subroutine eigen_solver_run(eigens, sys, h, iter, diff)
@@ -88,40 +91,39 @@ subroutine eigen_solver_run(eigens, sys, h, iter, diff)
   integer, intent(in) :: iter
   real(r8), intent(out) :: diff(sys%st%nst, sys%st%nik)
 
-  integer :: is, maxiter, converged, errorflag
+  integer :: ik, maxiter, converged, errorflag
   real(r8) :: tol
+
+  sub_name = 'eigen_solver_run'; call push_sub()
+
+  if(eigens%es_type .ne. 0) then
+    if(iter < eigens%final_tol_iter) then
+      tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
+           eigens%init_tol
+    else
+      tol = eigens%final_tol
+    end if
+  end if
 
   select case(eigens%es_type)
   case(0)
-!!$    if(iter < eigens%final_tol_iter) then
-!!$      tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
-!!$             eigens%init_tol
-!!$    else
-!!$      tol = eigens%final_tol
-!!$    end if
-!!$
-!!$    internal_sys => sys
-!!$    do is = 1, nspin
-!!$      internal_is = is
-!!$      maxiter = eigens%es_maxiter
-!!$      converged = 0;
-!!$
-!!$      call eig_cg(speig_op, speig_dotp, rpsi(:, :, is), sys%eigenval(:, is),  &
-!!$           tol, maxiter, converged, errorflag, diff(:, is))
-!!$    end do
-!!$    if(present(diff)) then
-!!$      diff = diff*sys%m%vol_pp
-!!$    end if
+    maxiter = eigens%es_maxiter
+    converged = 0
 
+    call eigen_solver_cg2(sys, h, sys%st, &
+         tol, maxiter, converged, errorflag, diff)
   case(1)
     call eigen_solver_cg1(eigens%no_cg, sys, h, sys%st, diff)
-!    do is = 1, nspin
-!      call gram_schmidt(nst, sys%m, rpsi(:, :, is))
-!    end do
+    do ik = 1, sys%st%nik
+      call R_FUNC(states_gram_schmidt) (sys%st%nst, sys%m, sys%st%dim, &
+           sys%st%R_FUNC(psi)(:,:,:, ik))
+    end do
   end select
 
+  call pop_sub()
 end subroutine eigen_solver_run
 
 #include "eigen_cg1.F90"
+#include "eigen_cg2.F90"
 
 end module eigen_solver

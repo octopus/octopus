@@ -1,13 +1,22 @@
 ! this functions returns the dot product between two vectors
 ! it uses BLAS
-function R_FUNC(mesh_dp)(m, f1, f2)
+R_TYPE function R_FUNC(mesh_dotp)(m, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f1(1:m%np), f2(1:m%np)
-  R_TYPE :: R_FUNC(mesh_dp)
   R_TYPE, external :: R_DOT
   
-  R_FUNC(mesh_dp) = R_DOT(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
-end function R_FUNC(mesh_dp)
+  dotp = R_DOT(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
+end function R_FUNC(mesh_dotp)
+
+! this functions returns the norm of a vector
+! it uses BLAS
+real(r8) function R_FUNC(mesh_nrm2)(m, f) result(nrm2)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN) :: f(1:m%np)
+  real(r8), external :: R_NRM2
+
+  nrm2 = R_NRM2(m%np, f, 1)*sqrt(m%vol_pp)
+end function R_FUNC(mesh_nrm2)
 
 ! Conversion subroutines
 ! they actually add, do not forget it
@@ -83,7 +92,7 @@ contains
 #endif
 
     allocate(fr(n, n, n), fw1(nx, n, n))
-    fr = 0.0_r8; fw1 = REALORCOMPLEX(0._r8)
+    fr = 0.0_r8; fw1 = R_TOTYPE(0._r8)
     call R_FUNC(mesh_to_cube) (m, f(1:), fr)
     
 #ifdef R_TREAL
@@ -116,8 +125,8 @@ contains
 #else
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
-        call R_FUNC(scal)(n**3, REALORCOMPLEX(1.0_r8/real(n, r8)**3), fr, 1)
-        grad(:, j) = REALORCOMPLEX(0._r8)
+        call R_FUNC(scal)(n**3, R_TOTYPE(1.0_r8/real(n, r8)**3), fr, 1)
+        grad(:, j) = R_TOTYPE(0._r8)
         call R_FUNC(cube_to_mesh) (m, fr, grad(:, j))
       end do
       
@@ -143,9 +152,9 @@ contains
 #else
       call fftwnd_f77_one(m%zplanb, fw1, fr)
 #endif
-      call R_FUNC(scal)(n**3, REALORCOMPLEX(1.0_r8/real(n, r8)**3), fr, 1)
+      call R_FUNC(scal)(n**3, R_TOTYPE(1.0_r8/real(n, r8)**3), fr, 1)
 
-      lapl = REALORCOMPLEX(0._r8)
+      lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
     end if
     

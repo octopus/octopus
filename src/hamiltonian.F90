@@ -29,6 +29,10 @@ type hamiltonian_type
   ! System under the independent particle approximation, or not.
   logical :: ip_app
 
+  ! should we include the classical point charges
+  logical :: classic_pot
+  real(r8), pointer :: Vclassic(:)! potential created by classic point charges
+
   ! hartree potential structure
   type(hartree_type) :: hart
   type(xc_type) :: xc
@@ -51,6 +55,11 @@ subroutine hamiltonian_init(h, sys)
   allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, h%ispin), h%rho_core(h%np))
   h%Vhartree = 0._r8
   h%Vxc = 0._r8
+
+  if(sys%ncatoms > 0) then
+    h%classic_pot = fdf_boolean("ClassicPotential", .false.)
+    if(h%classic_pot) allocate(h%Vclassic(h%np))
+  end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
   h%vpsl_space = fdf_integer('LocalPotentialSpace', 0)
@@ -89,6 +98,10 @@ subroutine hamiltonian_end(h)
     nullify(h%Vpsl, h%Vhartree, h%Vxc)
   end if
 
+  if(h%classic_pot .and. associated(h%Vclassic)) then
+    deallocate(h%Vclassic); nullify(h%Vclassic)
+  end if
+
   if(.not.h%ip_app) then
     call hartree_end(h%hart)
     call xc_end(h%xc)
@@ -109,7 +122,7 @@ subroutine hamiltonian_setup(h, sys)
   if(.not.h%ip_app) then
     call hartree_solve(h%hart, sys%m, h%Vhartree, sys%st%rho)
     do i = 1, sys%st%nspin
-      h%epot = h%epot - 0.5_r8*dmesh_dp(sys%m, sys%st%rho(:, i), h%Vhartree)
+      h%epot = h%epot - 0.5_r8*dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vhartree)
     end do
     
     allocate(v_aux(h%np, sys%st%nspin))
@@ -117,7 +130,7 @@ subroutine hamiltonian_setup(h, sys)
          h%Vxc, v_aux, h%ex, h%ec)
     h%Vxc = h%Vxc + v_aux
     do i = 1, sys%st%nspin
-      h%epot = h%epot - dmesh_dp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
+      h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
     end do
     deallocate(v_aux)
     

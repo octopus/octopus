@@ -2,6 +2,7 @@
 
 module run_prog
 use global
+use fdf
 use units
 use states
 use system
@@ -94,8 +95,7 @@ subroutine run()
 
       ! wave functions are simply random gaussians
       call states_generate_random(sys%st, sys%m)
-      ! we will need some starting density in order to have the hamiltonian
-      ! well defined
+      ! we will need some starting density in order to define the hamiltonian
       call lcao_dens(sys, sys%st%nspin, sys%st%rho)
 
       ! TODO: non-collinear spin
@@ -103,6 +103,13 @@ subroutine run()
       !if(sys%st%ispin > 2) then
       !  sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
       !end if
+
+    case(I_LCAO)
+      if(fdf_boolean("LCAOStart", .true.)) then
+        message(1) = 'Info: Performing LCAO calculation.'
+        call write_info(1)
+        call lcao_wf(sys, h)
+      end if
 
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'
@@ -245,6 +252,7 @@ subroutine run_init()
     call units_init()
     call system_init(sys)
     call hamiltonian_init(h, sys)
+    if(h%classic_pot) call generate_classic_pot(h, sys)
     call generate_external_pot(h, sys)
   endif
   

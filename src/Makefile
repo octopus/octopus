@@ -3,47 +3,31 @@
 #                         Makefile for TDDFT                                  #
 #                                                                             #
 ###############################################################################
-ifeq ($(MAKECMDGOALS),1d)
-PROG_NAME = 1doctopus.x
-else
-PROG_NAME = octopus.x
-endif
+PROG_NAME_3D = octopus.x
+PROG_NAME_1D = octopus_1d.x
 
 #############################################################################
 # modules                                                                   # 
 #############################################################################
+SRC_ALL = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 fft.F90
 
-ifeq ($(MAKECMDGOALS),1d)
-F90MOD_SRC = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 \
-        fft.F90 ps_kb.F90 ps1D.F90 specie.F90 atom.F90 mesh1D.F90 \
+SRC_1D = ps_xc.F90 ps_kb.F90 ps1D.F90 specie.F90 atom.F90 mesh1D.F90 \
 	hartree1D.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
-	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90
-else
-F90MOD_SRC = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 \
-        fft.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 mesh3D.F90 \
+	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90 main.F90
+
+SRC_3D = ps_xc.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 mesh3D.F90 \
 	hartree.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
-	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90
-endif
+	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90 main.F90
 
-F90MOD_OBJ= $(F90MOD_SRC:.F90=.o)
-
-SRCS_90 = ps_xc.F90 main.F90
-OBJS_90=$(SRCS_90:.F90=.o)
+OBJS_1D = $(SRC_ALL:.F90=.o) $(SRC_1D:.F90=.o) 
+OBJS_3D = $(SRC_ALL:.F90=.o) $(SRC_3D:.F90=.o) 
 
 SPECTRUM_SRC = global.F90 fdf.F90 spectrum.F90 calc_spectrum.F90
 SPECTRUM_OBJ = $(SPECTRUM_SRC:.F90=.o)
 
 PLAN_SRC = global.F90 fdf.F90 psm_consts.F90 geom.F90 mesh.F90 \
-	math.F90 fermi.F90 \
-	charge_plane.F90
+	math.F90 fermi.F90 charge_plane.F90
 PLAN_OBJ = $(PLAN_SRC:.F90=.o)
-
-###############################################################################
-# FORTRAN 77/Fortran 90 files                                                 #
-###############################################################################
-
-ALL_SRCS=$(F90MOD_SRC) $(SRCS_90)
-ALL_OBJS=$(F90MOD_OBJ) $(OBJS_90)
 
 ###############################################################################
 # Rules
@@ -56,25 +40,18 @@ ALL_OBJS=$(F90MOD_OBJ) $(OBJS_90)
 ###############################################################################
 # Makefile options........                                                    #
 ###############################################################################
-all: what tddft
+all: what $(OBJS_3D)
+	$(FC) $(LDFLAGS) $(OBJS_3D) \
+	  $(TDDFTLIBS) -o $(EXEC_DIR)/$(PROG_NAME_3D)
 
-prep:
-	for i in $(ALL_SRCS) $(SPECTRUM_SRC); do \
-	  $(CPP) $(CPPFLAGS) $$i >tmp; \
-	  mv -f tmp ../src.$(DEST_ARCH)/`echo $$i | sed 's/F90/f90/'` ; \
-	done
+1d: what  $(OBJS_1D)
+	$(FC) $(LDFLAGS) $(OBJS_1D) \
+	  $(TDDFTLIBS) -o $(EXEC_DIR)/$(PROG_NAME_1D)
 
 what:
 	@echo
 	@echo " TDDFT compilation for $(ARCH) architecture......"
 	@echo
-
-
-tddft: $(ALL_OBJS)
-	$(FC) $(LDFLAGS) $(ALL_OBJS) \
-	  $(TDDFTLIBS) -o $(EXEC_DIR)/$(PROG_NAME) 
-
-1d: tddft 
 
 spectrum: $(SPECTRUM_OBJ)
 	$(FC) $(LDFLAGS) $(SPECTRUM_OBJ) \
@@ -88,7 +65,6 @@ plan: $(PLAN_OBJ)
 ###############################################################################
 # Cleaning, taring, etc                                                       #
 ###############################################################################
-
 touchfast:
 	touch $(ALL_SRCS)
 
@@ -103,7 +79,7 @@ clean:
 mesh3D.o: mesh3D_create.F90 mesh3D_inc.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90
 hamiltonian.o: hamiltonian_inc.F90 h_external_pot.F90
-eigen.o: eigen_cg1.F90
+eigen.o: eigen_cg1.F90 eigen_cg2.F90
 states.o: states_inc.F90
 td.o: td_init.F90 td_rti.F90
 mix.o: mix_inc.F90

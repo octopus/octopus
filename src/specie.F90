@@ -26,7 +26,6 @@ type specie_type
   complex(r8), pointer :: local_fw(:)
   complex(r8), pointer :: rhocore_fw(:)
 #endif
-
 end type specie_type
 
 contains
@@ -48,7 +47,6 @@ function specie_init(s)
     call write_fatal(2)
   end if
   allocate(s(nspecies))
-
 
   if(fdf_block('Species', iunit) ) then
     do i = 1, nspecies

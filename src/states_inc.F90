@@ -17,13 +17,13 @@ subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
 
   do p = stst, nst
     do q = 1, p - 1
-      ss = R_FUNC(states_ddot)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
+      ss = R_FUNC(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
       do id = 1, dim
         call R_FUNC(axpy) (m%np, -ss, psi(1:m%np, id, q), 1, psi(1:m%np, id, p), 1)
       end do
     enddo
-    nrm2 = R_FUNC(states_ddot)(m, dim, psi(1:m%np, :, p), psi(1:m%np, :, p))
-    ss = REALORCOMPLEX(1.0_r8/sqrt(nrm2))
+    nrm2 = R_FUNC(states_nrm2)(m, dim, psi(1:m%np, :, p))
+    ss = R_TOTYPE(1.0_r8/sqrt(nrm2))
     do id = 1, dim
       call R_FUNC(scal) (m%np, ss, psi(1:m%np, id, p), 1)
     end do
@@ -32,22 +32,35 @@ subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   return
 end subroutine R_FUNC(states_gram_schmidt)
 
-function R_FUNC(states_ddot)(m, dim, f1, f2)
+R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN) :: f1(1:m%np, dim), f2(1:m%np, dim)
-  real(r8) :: R_FUNC(states_ddot)
+  R_TYPE :: R_FUNC(states_ddot)
 
-  integer i
-  real(r8) :: d
+  integer :: i
 
-  d = 0._r8
+  dotp = R_TOTYPE(0._r8)
   do i = 1, dim
-    d = d + R_FUNC(mesh_dp)(m, f1, f2)
+    dotp = dotp + R_FUNC(mesh_dotp)(m, f1, f2)
   end do
 
-  R_FUNC(states_ddot) = d
-end function R_FUNC(states_ddot)
+end function R_FUNC(states_dotp)
+
+real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: dim
+  R_TYPE, intent(IN) :: f(1:m%np, dim)
+
+  integer :: i
+
+  nrm2 = 0._r8
+  do i = 1, dim
+    nrm2 = nrm2 + R_FUNC(mesh_nrm2)(m, f)**2
+  end do
+
+  nrm2 = sqrt(nrm2)
+end function R_FUNC(states_nrm2)
 
 ! TODO use netcdf
 subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
@@ -110,7 +123,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
     call write_warning(6)
     go to 999 ! one go to does not harm :)
   else
-    st%R_FUNC(psi) = REALORCOMPLEX(0._r8)
+    st%R_FUNC(psi) = R_TOTYPE(0._r8)
     read(iunit, err=999) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
     read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%nik)
 

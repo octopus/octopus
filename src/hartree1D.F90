@@ -233,7 +233,7 @@ subroutine hartree_cg(h, m, pot, dist)
 
   wk = 0.d0
   pk = zk
-  s1 = dmesh_dp(m, zk, zk)
+  s1 = dmesh_dotp(m, zk, zk)
 
   iter = 0
   do 
@@ -253,11 +253,11 @@ subroutine hartree_cg(h, m, pot, dist)
       tk(i) = tk(i) /m%h**2
     enddo
 
-    s2 = dmesh_dp(m, zk, tk)
+    s2 = dmesh_dotp(m, zk, tk)
     ak = s1/s2
     pot = pot + ak*pk
     zk = zk - ak*tk
-    s3 = dmesh_dp(m, zk, zk)
+    s3 = dmesh_dotp(m, zk, zk)
 
     if(iter >= 400 .or. abs(s3) < 1.0E-5_r8) exit
 

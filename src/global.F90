@@ -17,7 +17,6 @@ type conf_type
                      ! > 0   -> warning only
                      ! > 20  -> normal program info
                      ! >= 999 -> debug
-  integer :: dim
 end type conf_type
 
 type mpi_type
@@ -276,6 +275,26 @@ SUBROUTINE compact(str)
   ENDDO
   
 END SUBROUTINE compact
+
+subroutine str_trim(str)
+  character (len=*), intent(inout) :: str
+  integer :: i, j, k, l
+  
+  l = len(str)
+  do i = 1, l
+    if(str(i:i) .ne. ' ') exit
+  end do
+
+  do j = 1, l - i + 1
+    str(j:j) = str(i:i)
+    i = i + 1
+  end do
+
+  do i = j, l
+    str(j:j) = ' '
+  end do
+
+end subroutine str_trim
 
 ! puts space around string, so that it is centered
 character(len=100) function str_center(s_in, l) result(s_out)

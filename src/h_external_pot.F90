@@ -138,12 +138,16 @@ subroutine generate_external_pot(h, sys)
     deallocate(fw, fwc, fr)
   end if
 
-  ! WARNING DEBUG
+  if (h%classic_pot) then
+    h%Vpsl = h%Vpsl + h%Vclassic
+  end if
+
+!!$  ! WARNING DEBUG
 !!$  allocate(f(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
-!!$  call dmesh_to_cube(sys%m, h%Vpsl, f)
+!!$  call dmesh_to_cube(sys%m, h%Vclassic, f)
 !!$  do i = 1, sys%m%fft_n
 !!$    do j = 1, sys%m%fft_n
-!!$      print *, i, j, f(i, j, sys%m%fft_n/2 + 1)
+!!$      print *, i, j, f(i, j, 3)!sys%m%fft_n/2 + 1)
 !!$    end do
 !!$    print *
 !!$  end do
@@ -332,7 +336,6 @@ contains
     end do j_loop
 
     ! now we finish calculating the uVus
-    
     k = 1
     do l = 0 , s%ps%L_max
       do lm = -l , l
@@ -347,3 +350,24 @@ contains
   end subroutine build_nl_part
   
 end subroutine generate_external_pot
+
+subroutine generate_classic_pot(h, sys)
+  type(hamiltonian_type), intent(inout) :: h
+  type(system_type), intent(IN) :: sys
+
+  integer i, ia
+  real(r8) :: r
+
+  sub_name = 'generate_classic_pot'; call push_sub()
+
+  h%Vclassic = 0._r8
+  do ia = 1, sys%ncatoms
+    do i = 1, sys%m%np
+      call mesh_r(sys%m, i, r, a=sys%catom(ia)%x)
+      if(r < r_small) r = r_small
+      h%Vclassic(i) = h%Vclassic(i) - sys%catom(ia)%charge/r
+    end do
+  end do
+
+  call pop_sub()
+end subroutine generate_classic_pot
