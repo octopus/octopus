@@ -17,7 +17,7 @@
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! creates the mesh
-! assumes that the box_shape, h, rsize/zsize of m are filled
+! assumes that the box_shape, h, rsize/xsize of m are filled
 ! if norder is present, then set nk, Kx, Ky and Kz
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine mesh_create(m, natoms, atom)
@@ -27,6 +27,7 @@ subroutine mesh_create(m, natoms, atom)
   
   ! some local stuff
   integer :: i, il, ik, ix, iy, iz
+  integer :: nr_tmp(3)
   integer, pointer :: Lxyz_tmp(:,:,:)
   logical :: b
   
@@ -43,13 +44,34 @@ subroutine mesh_create(m, natoms, atom)
     message(1) = "Internal Error"
     call write_fatal(1)
   endif
-#ifdef POLYMERS
-  if((m%box_shape.ne.CYLINDER).or.(m%box_shape.ne.PARALLELEPIPED)) then
-    message(1) = "When running polymer calculations, you have to use"
-    message(2) = "BoxShape = cylinder | parallelepiped"
-    call write_fatal(2)
-  end if
-#endif
+  
+  select case(m%box_shape)
+  case(SPHERE)
+    if(conf%dim>1 .and. conf%periodic_dim>0) then
+      message(1) = 'Spherical mesh is not allowed for periodic systems'
+      call write_fatal(1)
+    end if
+  case(CYLINDER)
+    if (conf%dim>1 .and. &
+    (conf%dim-conf%periodic_dim == 0) .or. (conf%dim-conf%periodic_dim == 1)) then
+        message(1) = 'Cylindrical mesh is not allowed for systems that are'
+        message(2) = 'periodic in more than 1 dimension.'
+        message(3) = 'A parallelepiped will be used'
+        call write_warning(3)
+        m%box_shape=PARALLELEPIPED
+    end if
+  case(MINIMUM)
+    select case(conf%dim)
+    case(1)
+      message(1) = 'Minimum mesh cannot be used, switching to spherical'
+      call write_warning(1)
+    case default
+      if (conf%periodic_dim>0) then
+        message(1)= 'Minimum mesh is not allowed for periodic systems'
+       call write_fatal(1)
+      end if
+    end select
+  end select
 
   ! ignore box_shape in 1D
   if(conf%dim==1) m%box_shape=SPHERE
@@ -87,8 +109,8 @@ subroutine mesh_create(m, natoms, atom)
     m%rsize = m%rsize * units_inp%length%factor
   end if
   if(m%box_shape == CYLINDER) then
-    call oct_parse_double(C_string('zlength'), 1.0_r8/units_inp%length%factor, m%zsize)
-    m%zsize = m%zsize * units_inp%length%factor
+    call oct_parse_double(C_string('xlength'), 1.0_r8/units_inp%length%factor, m%xsize)
+    m%xsize = m%xsize * units_inp%length%factor
   end if
   if(m%box_shape == PARALLELEPIPED) then
     if(oct_parse_block_n(C_string('lsize'))<1) then
@@ -107,7 +129,7 @@ subroutine mesh_create(m, natoms, atom)
   case(SPHERE)
     m%nr(1:conf%dim) = int(m%rsize/m%h(1))
   case(CYLINDER)
-    m%nr(1:conf%dim) = max(int(m%rsize/m%h(1)), int(m%zsize/m%h(1)))
+    m%nr(1:conf%dim) = max(int(m%rsize/m%h(1)), int(m%xsize/m%h(1)))
   case(MINIMUM)
     message(1) = 'MINIMUM cage not correctly implemented. Sorry.'
     call write_fatal(1)
@@ -148,17 +170,15 @@ subroutine mesh_create(m, natoms, atom)
     enddo
   enddo
 
-#ifdef POLYMERS
-  ! in this case the leftmost point is equivalent to the rightmost
-  ! so we take it out
-  il = m%nr(3) - 1
-#else
-  il = m%nr(3)
-#endif
+  ! the last point is equivalent to the first one in periodic directions
+  nr_tmp=m%nr
+  do i = 1, conf%periodic_dim
+    nr_tmp(i)=nr_tmp(i)-1
+  end do
 
-  do ix = -m%nr(1), m%nr(1)
-    do iy = -m%nr(2), m%nr(2)
-      do iz = -m%nr(3), il
+  do ix = -m%nr(1), nr_tmp(1)
+    do iy = -m%nr(2), nr_tmp(2)
+      do iz = -m%nr(3), nr_tmp(3)
         select case(m%box_shape)
         case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
@@ -233,6 +253,7 @@ subroutine mesh_create(m, natoms, atom)
     end do
   end do
 
+
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
 
   call mesh_write_info(m, stdout)
@@ -257,11 +278,11 @@ contains
     type(mesh_type), intent(IN) :: m
     integer, intent(in) :: ix, iy, iz
     
-    real(r8) r, z
-    r = sqrt(real(ix**2+iy**2, r8))*m%h(1)
-    z = iz*m%H(3)
+    real(r8) r, x
+    r = sqrt(real(iy**2+iz**2, r8))*m%h(1)
+    x = ix*m%H(1)
     
-    in_cylinder = (r<=m%rsize .and. abs(z)<=m%zsize)
+    in_cylinder = (r<=m%rsize .and. abs(x)<=m%xsize)
     return
   end function in_cylinder
   
