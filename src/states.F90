@@ -511,6 +511,15 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   end do
 end subroutine states_calculate_multipoles
 
+! function to calculate the eigenvalues sum using occupations as weights
+function states_eigenvalues_sum(st)
+  real(r8) :: states_eigenvalues_sum
+  type(states_type), intent(in) :: st
+
+  states_eigenvalues_sum = sum(st%eigenval * st%occ)
+
+end function states_eigenvalues_sum
+
 subroutine states_write_eigenvalues(iunit, nst, st, error)
   integer, intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st

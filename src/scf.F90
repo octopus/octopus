@@ -31,46 +31,71 @@ use lcao
 
 implicit none
 
+integer, parameter :: MIXDENS = 0, &
+                      MIXPOT  = 1
+
 type scf_type  ! some variables used for the scf cycle
   integer :: max_iter ! maximum number of scf iterations
   real(r8) :: conv_abs_dens, conv_rel_dens, &
-       conv_abs_ener, conv_rel_ener ! several convergence criteria
+       conv_abs_ev, conv_rel_ev ! several convergence criteria
   
-  real(r8) :: abs_dens, rel_dens, abs_ener, rel_ener
+  real(r8) :: abs_dens, rel_dens, abs_ev, rel_ev
+
+  integer :: what2mix
 
   logical :: lcao_restricted
 
   type(mix_type) :: smix
   type(eigen_solver_type) :: eigens
 end type scf_type
-  
+
 contains
 
-subroutine scf_init(scf, sys)
+subroutine scf_init(scf, sys, h)
   type(scf_type), intent(inout) :: scf
   type(system_type), intent(IN) :: sys
+  type(hamiltonian_type), intent(in) :: h
 
   call push_sub('systm_scf_init')
 
   call oct_parse_int("MaximumIter", 200, scf%max_iter)
   call oct_parse_double("ConvAbsDens", 1e-5_r8, scf%conv_abs_dens)
   call oct_parse_double("ConvRelDens",   0._r8, scf%conv_rel_dens)
-  call oct_parse_double("ConvAbsEnergy", 0._r8, scf%conv_abs_ener)
-  call oct_parse_double("ConvRelEnergy", 0._r8, scf%conv_rel_ener)
+  call oct_parse_double("ConvAbsEvsum", 0._r8, scf%conv_abs_ev)
+  call oct_parse_double("ConvRelEvsum", 0._r8, scf%conv_rel_ev)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= 0.0_r8 .and. scf%conv_rel_dens <= 0.0_r8 .and. &
-      scf%conv_abs_ener <= 0.0_r8 .and. scf%conv_rel_ener <= 0.0_r8) then
+      scf%conv_abs_ev <= 0.0_r8 .and. scf%conv_rel_ev <= 0.0_r8) then
     message(1) = "Input: Not all convergence criteria can be <= 0"
     message(2) = "Please set one of the following:"
-    message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEnergy | ConvRelEnergy"
+    message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv"
     call write_fatal(3)
   end if
 
   if(scf%max_iter <= 0) scf%max_iter = huge(scf%max_iter)
 
+  call oct_parse_int("What2Mix", 0_i4, scf%what2mix)
+  select case (scf%what2mix)
+  case (MIXDENS)
+     message(1) = 'Info: SCF mixing the density.'
+  case (MIXPOT)
+     if (h%ip_app) then
+        message(1) = "Input: Cannot mix the potential whit non-interacting electrons."
+        call write_fatal(1)
+     else
+        message(1) = 'Info: SCF mixing the potential.'
+     end if
+  case default
+      write(message(1), '(a,i5,a)') "Input: '", scf%what2mix, &
+           "' is not a valid option for What2Mix"
+      message(2) = '(What2Mix = 0 | 1)'
+      call write_fatal(2)
+   end select
+   call write_info(1)
+
   ! Handle mixing now...
-  call mix_init(scf%smix, sys%m, sys%st)
+  call mix_init(scf%smix, sys%m%np, sys%st%nspin)
 
   ! now the eigen solver stuff
   call eigen_solver_init(scf%eigens, sys%st, sys%m)
@@ -99,14 +124,23 @@ subroutine scf_run(scf, sys, h)
   type(hamiltonian_type), intent(inout) :: h
   type(scf_type), intent(inout) :: scf
 
-  integer :: iter, iunit, ik, ist, id
-  real(r8) :: old_etot
+  integer :: iter, iunit, ik, ist, id, is
+  real(r8) :: evsum_out, evsum_in
+  real(r8), dimension(sys%m%np, sys%st%nspin) :: rhoout, rhoin
+  real(r8), dimension(:,:), allocatable :: vout, vin
   logical :: finish
 
   call push_sub('scf_run')
 
   if(scf%lcao_restricted) call lcao_init(sys, h)
+  rhoin = sys%st%rho
+  if (scf%what2mix == MIXPOT) then
+     allocate(vout(sys%m%np, sys%st%nspin), vin(sys%m%np, sys%st%nspin))
+     vin = h%vhxc; vout = 0._r8
+  end if
+  evsum_in = states_eigenvalues_sum(sys%st)
 
+  ! SCF cycle
   do iter = 1, scf%max_iter
     if(scf%lcao_restricted) then
       call lcao_wf(sys, h)
@@ -117,27 +151,42 @@ subroutine scf_run(scf, sys, h)
     ! occupations
     call states_fermi(sys%st, sys%m)
 
-    ! compute new density
-    call mix_dens(scf%smix, iter, sys%st, sys%m, scf%abs_dens)
+    ! compute output density, potential (if needed) and eigenvalues sum
+    call R_FUNC(calcdens)(sys%st, sys%m%np, rhoout)
+    if (scf%what2mix == MIXPOT) then
+       sys%st%rho = rhoout
+       call R_FUNC(calcvhxc) (h, sys%m, sys%st, vout)!, sys)
+    end if
+    evsum_out = states_eigenvalues_sum(sys%st)
+
+    ! compute convergence criteria
+    scf%abs_dens = 0._r8
+    do is = 1, sys%st%nspin
+       scf%abs_dens = scf%abs_dens + dmf_integrate(sys%m, (rhoin(:,is) - rhoout(:,is))**2)
+    end do
+    scf%abs_dens = sqrt(scf%abs_dens)
     scf%rel_dens = scf%abs_dens / sys%st%qtot
-
-    ! compute new potentials
-    call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
-
-    ! now compute total energy
-    old_etot = h%etot
-    call hamiltonian_energy(h, sys%st, sys%eii, -1)
-    scf%abs_ener = abs(old_etot - h%etot)
-    scf%rel_ener = scf%abs_ener / abs(h%etot)
+    scf%abs_ev = abs(evsum_out - evsum_in)
+    scf%rel_ev = scf%abs_ev / abs(evsum_out)
 
     ! are we finished?
     finish = &
         (scf%conv_abs_dens > M_ZERO .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
         (scf%conv_rel_dens > M_ZERO .and. scf%rel_dens <= scf%conv_rel_dens) .or. &
-        (scf%conv_abs_ener > M_ZERO .and. scf%abs_ener <= scf%conv_abs_ener) .or. &
-        (scf%conv_rel_ener > M_ZERO .and. scf%rel_ener <= scf%conv_rel_ener)
+        (scf%conv_abs_ev > M_ZERO .and. scf%abs_ev <= scf%conv_abs_ev) .or. &
+        (scf%conv_rel_ev > M_ZERO .and. scf%rel_ev <= scf%conv_rel_ev)
 
     call scf_write_iter
+
+    select case (scf%what2mix)
+    case (MIXDENS)
+       ! mix input and output densities and compute new potential
+       call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, rhoin, rhoout, sys%st%rho)
+       call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
+    case (MIXPOT)
+       ! mix input and output potentials
+       call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, vin, vout, h%vhxc)
+    end select
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.clean_stop()) &
@@ -155,8 +204,18 @@ subroutine scf_run(scf, sys, h)
       call hamiltonian_output(h, sys%m, "static", sys%outp)
     endif
 
+    ! save information for the next iteration
+    rhoin = sys%st%rho
+    if (scf%what2mix == MIXPOT) vin = h%vhxc
+    evsum_in = evsum_out
+
     if(clean_stop()) exit
   end do
+
+  if (scf%what2mix == MIXPOT) then
+     call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
+     deallocate(vout, vin)
+  end if
 
   if(.not.finish) then
     message(1) = 'SCF *not* converged!'
@@ -187,9 +246,9 @@ subroutine scf_write_iter
   write(message(1),'(a)') '************'
   write(message(2),'(a,i5)') 'SCF CYCLE ITER #',iter
   write(message(3),'(2(a,es9.2))') &
-         ' abs_dens = ', scf%abs_dens, ' abs_ener = ', scf%abs_ener
+         ' abs_dens = ', scf%abs_dens, ' abs_ev = ', scf%abs_ev
   write(message(4),'(2(a,es9.2))') &
-         ' rel_dens = ', scf%rel_dens, ' rel_ener = ', scf%rel_ener
+         ' rel_dens = ', scf%rel_dens, ' rel_ev = ', scf%rel_ev
   call write_info(4)
   if(.not.scf%lcao_restricted) then
     write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
@@ -268,11 +327,11 @@ subroutine scf_write_static(dir, fname)
       ' (', scf%conv_abs_dens, ')'
   write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
       ' (', scf%conv_rel_dens, ')'
-  write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ener = ', scf%abs_ener, &
-      ' (', scf%conv_abs_ener / units_out%energy%factor, ')', &
+  write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ev = ', scf%abs_ev, &
+      ' (', scf%conv_abs_ev / units_out%energy%factor, ')', &
       ' [',  trim(units_out%energy%abbrev), ']'
-  write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ener = ', scf%rel_ener, &
-      ' (', scf%conv_rel_ener, ')'
+  write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
+      ' (', scf%conv_rel_ev, ')'
   write(iunit,'(1x)') 
 
   write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"

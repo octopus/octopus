@@ -161,7 +161,7 @@ subroutine run()
       message(1) = 'Info: SCF using real wavefunctions.'
 #endif
       call write_info(1)
-      call scf_init(scfv, sys)
+      call scf_init(scfv, sys, h)
       call scf_run(scfv, sys, h)
       call scf_end(scfv)
 
@@ -321,7 +321,7 @@ subroutine run()
       message(1) = 'Info: Calculating static polarizability'
       call write_info(1)
 
-      call scf_init(scfv, sys)
+      call scf_init(scfv, sys, h)
       call static_pol_run(scfv, sys, h)
       call scf_end(scfv)
 
@@ -329,7 +329,7 @@ subroutine run()
       message(1) = 'Info: Performing geometry optimization'
       call write_info(1)
 
-      call scf_init(scfv, sys)
+      call scf_init(scfv, sys, h)
       call geom_opt_run(scfv, sys, h)
       call scf_end(scfv)
 
@@ -337,7 +337,7 @@ subroutine run()
       message(1) = 'Info: Calculating phonon frequencies'
       call write_info(1)
 
-      call scf_init(scfv, sys)
+      call scf_init(scfv, sys, h)
       call phonons_run(scfv, sys, h)
       call scf_end(scfv)
 

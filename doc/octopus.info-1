@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.5 from
+This is octopus.info, produced by makeinfo version 4.2 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -860,7 +860,7 @@ Species
                any of the `x', `y', `z' or `r' variables to define the
                potential.
 
-               Note that further pseudopotentials can be downloaded
+               Note that additional pseudopotentials can be downloaded
                from the `octopus' homepage
                (http://www.tddft.org/programs/octopus/pseudo.php).
 
@@ -1016,24 +1016,6 @@ tuned to suit the geometric configuration of the system.
               %Spacing
                 spacingx | spacingy | spacingz
               %
-     In plane-wave codes, the quality of the calculations is determined
-     by the "cutoff" energy: the larger the cutoff, the better the
-     calculation. This cutoff is defined as the kinetic energy of the
-     higuest-frequency plane wave used in the calculation. The spacing
-     is the equivalent parameter for real-space calculations. We may
-     establish a correspondance between the two magnitudes, that is, a
-     real-space mesh has a "Grid Cutoff" (this value is given on output)
-     which is the cutoff of the corresponding FFT grid. On 1D
-     calculations, the plane-wave \rm G vectors have the values:
-
-     \rm G = 2\pi \over Nhj, j = -N/2, \dots N/2,
-
-     where h is the grid spacing.  The cutoff is then G_max^2/2 = \pi^2
-     \over 2h^2.  For higuer dimensionality, one has to put the
-     coarsest h. Note that in this case this value does not correspond
-     to the highest possible kinetic energy of the plane-waves, but to
-     the the higuest kinetic energy of the plane waves of pure x, y or
-     z directions.
 
    * `DerivativesSpace' (integer, real_space) Defines in which space
      gradients and the Laplacian are calculated. Allowed values are:
@@ -1140,20 +1122,6 @@ Hamiltonian
      in Fourier space; Otherwise do it directly in real space. The
      auxiliary box defined via the `DoubleFFTParameter' is used for
      this purpose.
-
-   * `NonLocalPotentialSpace' (integer, real_space): If `fourier_space'
-     generate the non-local part of the pseudo-potential in Fourier
-     space; Otherwise do it directly in real space. _Generating the
-     potential in Fourier space seems to reduce the egg-box effect but
-     this option has not been extensively tested._
-
-   * `GridRefinement' (integer, 3): If `NonLocalPotentialSpace ==
-     fourier_space', a grid refinement technique is applied to reduce
-     the error in the calculation of the non-local projectors. This
-     variable defines the number of points to interpolate between the
-     normal mesh points, in order to apply this  method. _This seems to
-     reduce the egg-box effect but this option has not been extensively
-     tested._
 
    * `RelativisticCorrection' (integer, 0):   The default value means
      that _no_ relativistic correction is used. To   include spin-orbit

@@ -25,7 +25,6 @@ module lcao
   use system
   use hamiltonian
   use states
-  use mix
 
   implicit none
 

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.5 from
+This is octopus.info, produced by makeinfo version 4.2 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,26 +6,14 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
-This manual is for octopus 1.1, a first principles, electronic
-structure, excited states, time-dependent density functional theory
-program.
-
-   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
-Angel Rubio
-
-     Permission is granted to copy, distribute and/or modify this
-     document under the terms of the GNU Free Documentation License,
-     Version 1.1 or any later version published by the Free Software
-     Foundation.
-   
 
 Indirect:
-octopus.info-1: 655
-octopus.info-2: 50292
+octopus.info-1: 207
+octopus.info-2: 48491
 
 Tag Table:
 (Indirect)
-Node: Top655
+Node: Top207
 Node: Copying2122
 Node: Authors3523
 Node: Introduction6702
@@ -47,34 +35,34 @@ Node: The parser24841
 Node: Input file options27988
 Node: Generalities28613
 Node: Species31260
-Node: Coordinates34870
-Node: Velocities38740
-Node: Mesh39923
-Node: States43968
-Node: Hamiltonian46450
-Node: Exchange and correlation48364
-Node: SCF50292
-Node: Unoccupied States54021
-Node: Time Dependent54742
-Node: Photo-electron spectrum63853
-Node: Geometry optimization64835
-Node: Function output for visualization65590
-Node: Spectrum calculations70060
-Node: Varia72194
-Node: External utilities73005
-Node: strength-function73554
-Node: hs-from-mult74363
-Node: hs-from-acc74581
-Node: nbo2xyz74789
-Node: excitations75002
-Node: broad75539
-Node: make_st75870
-Node: choose_st77123
-Node: wf.net77854
-Node: Examples79223
-Node: Hello world79378
-Ref: Hello world-Footnote-186022
-Node: Benzene86106
-Node: Options Index86914
+Node: Coordinates34873
+Node: Velocities38743
+Node: Mesh39926
+Node: States42931
+Node: Hamiltonian45413
+Node: Exchange and correlation46563
+Node: SCF48491
+Node: Unoccupied States52386
+Node: Time Dependent53107
+Node: Photo-electron spectrum63280
+Node: Geometry optimization64262
+Node: Function output for visualization65017
+Node: Spectrum calculations69279
+Node: Varia71413
+Node: External utilities72224
+Node: strength-function72773
+Node: hs-from-mult73582
+Node: hs-from-acc73800
+Node: nbo2xyz74008
+Node: excitations74221
+Node: broad74758
+Node: make_st75089
+Node: choose_st76342
+Node: wf.net77073
+Node: Examples78442
+Node: Hello world78597
+Ref: Hello world-Footnote-185241
+Node: Benzene85325
+Node: Options Index86133
 
 End Tag Table

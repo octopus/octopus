@@ -20,22 +20,21 @@
 module mix
 use global
 use oct_parser
-use mesh
-use states
 
 implicit none
 
 private
-public :: mix_type, mix_init, mix_end, mix_dens, dcalcdens, zcalcdens
+public :: mix_type, mix_init, mix_end, mixing
 
-integer, parameter :: LINEAR   = 0, &
-                      ANDERSON = 1, &
-                      BROYDEN  = 2
+integer, parameter :: LINEAR    = 0, &
+                      ANDERSON  = 1, &
+                      BROYDEN   = 2
 
 ! Anderson Mixing
 !!$ integer, parameter :: A_IN = 1, A_OUT = 2
 
 type mix_type
+  private
   integer  :: type_of_mixing                
   integer  :: norbitals               !  Number of orbitals
   real(r8) :: weight                  !  Weight of each component to perform 
@@ -56,10 +55,10 @@ end type mix_type
 contains
 
 ! Initialization...
-subroutine mix_init(smix, m, st)
+subroutine mix_init(smix, np, nspin)
   type(mix_type), intent(out) :: smix
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
+  integer, intent(in) :: np
+  integer, intent(in) :: nspin
 
   call push_sub('mix_init')
   
@@ -90,8 +89,8 @@ subroutine mix_init(smix, m, st)
       message(2) = '(1 < BroydenNumber <= 5)'
       call write_fatal(2)
     end if
-    allocate(smix%df(m%np, st%nspin, smix%broyden_number + 1))
-    allocate(smix%dv(m%np, st%nspin, smix%broyden_number + 1))
+    allocate(smix%df(np, nspin, smix%broyden_number + 1))
+    allocate(smix%dv(np, nspin, smix%broyden_number + 1))
     smix%df = 0._r8
     smix%dv = 0._r8
     write(message(1), '(a)') 'Info: Broyden mixing used. It can (i) boost your convergence, '
@@ -119,74 +118,59 @@ subroutine mix_end(smix)
   call pop_sub()
 end subroutine mix_end
 
-subroutine mix_dens(smix, iter, st, m, dist)
+subroutine mixing(smix, iter, np, nspin, vin, vout, vnew)
   type(mix_type), intent(inout) :: smix
-  integer, intent(in)      :: iter
-  type(states_type), intent(inout) :: st
-  type(mesh_type), intent(IN) :: m
-  real(r8), intent(out)    :: dist
-  
-  real(r8), allocatable :: rhoout(:,:), dummy(:)
+  integer, intent(in)      :: iter, np, nspin
+  real(r8), dimension(np, nspin), intent(in) :: vin, vout
+  real(r8), dimension(np, nspin), intent(out) :: vnew
+
   integer :: is, errorflag
     
-  call push_sub('mix_dens')
+  call push_sub('mixing')
 
-  allocate(rhoout(m%np, st%nspin))
-  call R_FUNC(calcdens)(st, m%np, rhoout)
-
-  dist = 0._r8
-  allocate(dummy(m%np))
-  do is = 1, st%nspin
-    dummy = (st%rho(:,is) - rhoout(:,is))**2
-    dist = dist + dmf_integrate(m, dummy)
-  end do
-  dist = sqrt(dist)
-  deallocate(dummy)
-    
   select case(smix%type_of_mixing)
   case(LINEAR)
-    call mix_linear(smix, m%np, st%nspin, st%rho, rhoout)
+    call mix_linear(smix, np, nspin, vin, vout, vnew)
 !!$  case(ANDERSON)
 !!$      call anderson_mix(rho,rhoout, iter, errorflag)
   case(BROYDEN)
-    call mix_broyden(st%nspin, m%np, smix, st%rho, rhoout, iter, errorflag)
+    call mix_broyden(smix, np, nspin, vin, vout, vnew, iter, errorflag)
     if(errorflag .ne. 0) then
       write(message(1), '(a,i3)') 'mix_broyden returned error ', errorflag
       call write_fatal(1)
     endif
   end select
-    
-  deallocate(rhoout)
 
   call pop_sub()
-end subroutine mix_dens
+end subroutine mixing
 
 ! Performs the linear mixing...
-subroutine mix_linear(smix, np, nspin, rho, rhoout)
+subroutine mix_linear(smix, np, nspin, vin, vout, vnew)
   type(mix_type), intent(IN) :: smix
   integer, intent(in) :: np, nspin
-  real(r8), intent(inout) :: rho(np, nspin)
-  real(r8), intent(IN) :: rhoout(np, nspin)
+  real(r8), dimension(np, nspin),  intent(in) :: vin, vout
+  real(r8), dimension(np, nspin), intent(out) :: vnew
 
-  call dscal(np*nspin, 1.0_r8 - smix%alpha, rho, 1)
-  call daxpy(np*nspin, smix%alpha, rhoout, 1, rho, 1)
+  vnew = vin
+  call dscal(np*nspin, 1.0_r8 - smix%alpha, vnew, 1)
+  call daxpy(np*nspin, smix%alpha, vnew, 1, vnew, 1)
 
   return
 end subroutine mix_linear
 
 ! Broyden mixing...
-subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
-  integer, intent(in) :: nspin
+subroutine mix_broyden(smix, np, nspin, vin, vout, vnew, iter, errorflag)
   type(mix_type), intent(inout) :: smix
-  integer, intent(in)     :: iter, np
+  integer, intent(in)     :: nspin, np
+  integer, intent(in)     :: iter
   integer, intent(out)    :: errorflag
-  real(r8), intent(inout) :: vout(np, nspin), & ! the new density; 
-       vin(np, nspin)     ! the old H+xc density
+  real(r8), dimension(np, nspin), intent(in)  :: vin, vout 
+  real(r8), dimension(np, nspin), intent(out) ::vnew
 
   integer, parameter :: maxter = 5
 
   integer  :: is, i, j, iwork(maxter), info, iter_used, ipos
-  real(r8) :: beta(maxter, maxter), gamma, work(maxter), w(maxter), w0  
+  real(r8) :: beta(maxter, maxter), gamma, work(maxter), w(maxter), w0, r(np, nspin)
   real(r8), external :: ddot, dnrm2 ! BLAS routines
 
   if (iter.lt.1) then
@@ -201,7 +185,7 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
   w0 = 0.01_r8
   w  = maxter*1.0_r8
 
-  vout = vout - vin
+  r = vout - vin
   iter_used = min(iter - 1, smix%broyden_number)
   
   ! ipos is the position in which results from the present iteraction 
@@ -209,7 +193,7 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
   ipos = mod(iter - 2, smix%broyden_number) + 1
   
   if(iter.gt.1) then
-    smix%df(:,:, ipos) = vout - smix%df(:,:, ipos)
+    smix%df(:,:, ipos) = r - smix%df(:,:, ipos)
     smix%dv(:,:, ipos) = vin  - smix%dv(:,:, ipos)
 
     do is = 1, nspin
@@ -227,7 +211,7 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     
   ! save values for next iteration
   i = mod(iter - 1, smix%broyden_number) + 1
-  smix%df(:,:, smix%broyden_number + 1) = vout
+  smix%df(:,:, smix%broyden_number + 1) = r
   smix%dv(:,:, smix%broyden_number + 1) = vin
 
   is_loop: do is = 1, nspin
@@ -261,17 +245,17 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     end do
   
     do i = 1, iter_used
-      work(i) = ddot(np, smix%df(1, is, i), 1, vout(1, is), 1)
+      work(i) = ddot(np, smix%df(1, is, i), 1, r(1, is), 1)
     end do
-  
-    call daxpy(np, smix%alpha, vout(1, is), 1, vin(1, is), 1)
+
+    call daxpy(np, smix%alpha, r(1, is), 1, vnew(1, is), 1)
   
     do i = 1, iter_used
       gamma = M_ZERO
       do j = 1, iter_used
         gamma = gamma + beta(j, i)*w(j)*work(j)
       end do
-      vin(:, is) = vin(:, is) - w(i)*gamma*(smix%alpha*smix%df(:, is, i) + smix%dv(:, is, i))
+      vnew(:, is) = vnew(:, is) - w(i)*gamma*(smix%alpha*smix%df(:, is, i) + smix%dv(:, is, i))
     end do
   
   end do is_loop
@@ -283,14 +267,5 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
 
   errorflag = 0; return
 end subroutine mix_broyden
-  
-#include "undef.F90"
-#include "real.F90"
-#include "mix_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "mix_inc.F90"
-#include "undef.F90"
 
 end module mix

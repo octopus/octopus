@@ -218,23 +218,23 @@ subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
   dim = st%dim
 
     do idim = 1, dim
-      Hpsi(:, idim) = Hpsi(:, idim) + (h%Vpsl + h%Vhartree)*psi(1:,idim)
+      Hpsi(:, idim) = Hpsi(:, idim) + h%Vpsl*psi(1:,idim)
     end do
 
     select case(st%ispin)
     case(UNPOLARIZED)
-      hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 1)*psi(1:, 1)
+      hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 1)*psi(1:, 1)
+        hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1)
       else
-        hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 2)*psi(1:, 1)
+        hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 2)*psi(1:, 1)
       end if
     case(SPINORS)
-      hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 1)*psi(1:, 1) + &
-                   (h%vxc(:, 3) - M_zI*h%vxc(:, 4))*psi(1:, 2)
-      hpsi(:, 2) = hpsi(:, 2) + h%vxc(:, 2)*psi(1:, 2) + &
-                   (h%vxc(:, 3) + M_zI*h%vxc(:, 4))*psi(1:, 1)
+      hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1) + &
+                   (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(1:, 2)
+      hpsi(:, 2) = hpsi(:, 2) + h%vhxc(:, 2)*psi(1:, 2) + &
+                   (h%vhxc(:, 3) + M_zI*h%vhxc(:, 4))*psi(1:, 1)
     end select
 
   call pop_sub()
@@ -330,6 +330,16 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
        h%epot = h%epot - M_HALF*dmf_dotp(m, st%rho(:, is), h%vhartree)
     enddo
 
+    select case (h%ispin)
+    case(UNPOLARIZED)
+       h%vhxc(:,1) = h%vhartree
+    case (SPIN_POLARIZED)
+       h%vhxc = reshape(h%vhartree, (/m%np, 2/), h%vhartree)
+    case (SPINORS)
+       h%vhxc(:, 1:2) = reshape(h%vhartree, (/m%np, 2/), h%vhartree)
+       h%vhxc(:, 3:4) = M_ZERO
+    end select
+
     call R_FUNC(xc_pot)(h%xc, m, st, h%vxc, h%ex, h%ec, &
                         -minval(st%eigenval(st%nst, :)), st%qtot)
 
@@ -345,6 +355,8 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
         h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
                                              h%vxc(:, 3) - M_zI* h%vxc(:, 4))
     end select
+
+    h%vhxc = h%vhxc + h%vxc
   endif
 
   ! this, I think, belongs here
@@ -352,3 +364,55 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
 
   call pop_sub()
 end subroutine R_FUNC(hamiltonian_setup)
+
+subroutine R_FUNC(calcvhxc)(h, m, st, vhxc)
+  type(hamiltonian_type), intent(in) :: h
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(inout) :: st
+  real(r8), intent(out) :: vhxc(m%np, st%nspin)
+
+  integer :: is
+  real(r8) :: exdum, ecdum
+  real(r8), allocatable :: rho_aux(:), vxc(:,:), vhartree(:)
+  type(xc_type) :: xcdum
+
+  call push_sub('calcvhxc')
+
+  if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
+    allocate(vhartree(m%np))
+    vhartree = h%vhartree
+    if(st%spin_channels == 1) then
+      call poisson_solve(m, vhartree, st%rho(:, 1))
+    else
+      allocate(rho_aux(m%np))                    ! need an auxiliary array to
+      rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
+      do is = 2, st%spin_channels
+        rho_aux(:) = rho_aux(:) + st%rho(:, is)
+      end do
+      call poisson_solve(m, vhartree, rho_aux) ! solve the poisson equation
+      deallocate(rho_aux)
+    end if
+
+
+    select case (h%ispin)
+    case(UNPOLARIZED)
+       vhxc(:,1) = vhartree
+    case (SPIN_POLARIZED)
+       vhxc = reshape(vhartree, (/m%np, 2/), vhartree)
+    case (SPINORS)
+       vhxc(:, 1:2) = reshape(vhartree, (/m%np, 2/), vhartree)
+       vhxc(:, 3:4) = M_ZERO
+    end select
+    deallocate(vhartree)
+
+    allocate(vxc(m%np, h%nspin)) ; vxc = M_ZERO
+    xcdum = h%xc
+    call R_FUNC(xc_pot)(xcdum, m, st, vxc, exdum, ecdum, &
+                        -minval(st%eigenval(st%nst, :)), st%qtot)
+
+    vhxc = vhxc + vxc
+    deallocate(vxc)
+  endif
+
+  call pop_sub()
+end subroutine R_FUNC(calcvhxc)
