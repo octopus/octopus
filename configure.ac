@@ -16,7 +16,7 @@
 ## 02111-1307, USA.
 ##
 
-AC_INIT(Octopus, 0.9, marques@nautilus.fis.uc.pt, octopus)
+AC_INIT(Octopus, 1.0, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 
