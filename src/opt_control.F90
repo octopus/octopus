@@ -260,7 +260,7 @@ contains
         ! WARNING gives garbage when calculated through zstates_dotp
         overlap = abs(sum(conjg(psi_i%zpsi(1:,:, p, ik))*psi_f%zpsi(1:,:, p, ik))*sys%m%vol_pp)**2
         functional = overlap - alpha*functional
-        write(message(1), '(6x,i3,x,i3,a,f16.10,a,f16.10)') ik, p, " => overlap:", overlap, "  functional: " , functional
+        write(message(1), '(6x,i3,1x,i3,a,f16.10,a,f16.10)') ik, p, " => overlap:", overlap, "  functional: " , functional
         call write_info(1)
       end do
     end do

@@ -25,7 +25,7 @@ module io
   integer, private, parameter :: nunits=max_lun-min_lun+1
   integer, private   :: i, unit, lun, iostat
   
-  logical, private, save  :: lun_is_free(min_lun:max_lun)=.true.
+  logical, private   :: lun_is_free(min_lun:max_lun)=.true.
   logical, private   :: used, named, opened
   
   character(len=50), private :: filename
