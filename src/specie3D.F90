@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine specie_init_dim(nspecies, str, s)
+subroutine specie3D_init(nspecies, str, s)
   integer, intent(in) :: nspecies
   character(len=*), intent(in) :: str
   type(specie_type), pointer :: s(:)
@@ -82,79 +82,7 @@ subroutine specie_init_dim(nspecies, str, s)
 
     end select
   end do
-end subroutine specie_init_dim
-
-subroutine specie_end(ns, s)
-  integer, intent(in) :: ns
-  type(specie_type), pointer :: s(:)
-
-  integer :: i
-
-  sub_name = 'specie_end'; call push_sub()
-
-  do i = 1, ns
-    if(s(i)%local) cycle
-
-    if(associated(s(i)%ps)) then
-      if(s(i)%nlcc.and.associated(s(i)%rhocore_fw)) then
-        deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
-      end if
-      call ps_end(s(i)%ps)
-    end if
-
-    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
-      call fftw_f77_destroy_plan(s(i)%nl_planb)
-      deallocate(s(i)%nl_fw, s(i)%nl_dfw)
-      nullify(s(i)%nl_fw, s(i)%nl_dfw)
-    end if
-
-    if(associated(s(i)%local_fw)) then
-      deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
-    end if
-    
-  end do
-  
-  if(associated(s)) then ! sanity check
-    deallocate(s); nullify(s)
-  end if
-
-  call pop_sub()
-  return
-end subroutine specie_end
-
-real(r8) function specie_get_local(s, x) result(l)
-  type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(conf%dim)
-
-  real(r8) :: a1, a2, Rb2 ! for jellium
-  real(r8) :: r
-
-  r = sqrt(sum(x**2))
-
-  select case(s%label(1:5))
-  case('jelli', 'point')
-    a1 = s%Z/(2._r8*s%jradius**3)
-    a2 = s%Z/s%jradius
-    Rb2= s%jradius**2
-    
-    if(r <= s%jradius) then
-      l = (a1*(r*r - Rb2) - a2)
-    else
-      l = - s%Z/r
-    end if
-
-  case('usdef')
-    l = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
-
-  case default
-    if(r >= r_small) then
-      l = (splint(s%ps%vlocal,  r) - s%Z_val)/r
-    else
-      l = s%ps%Vlocal_origin
-    end if
-  end select
-
-end function specie_get_local
+end subroutine specie3D_init
 
 real(r8) function specie_get_nlcc(s, x) result(l)
   type(specie_type), intent(IN) :: s

@@ -42,7 +42,6 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 
   ! And now the non-local part...
   ! this comes first to do the reduce...
-#if defined(THREE_D)
   atm_loop: do i = 1, sys%natoms
     atm => sys%atom(i)
     if(atm%spec%local) cycle
@@ -90,7 +89,6 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 #endif
 
   end do atm_loop
-#endif
   
   if(h%no_lasers>0) then
     call laser_field(h%no_lasers, h%lasers, t, x)
@@ -125,14 +123,14 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
         if(r < r_small) cycle
 
         ! WARNING have to fix this
-#if defined(THREE_D)
-        vl  = splint(atm%spec%ps%vlocal, r)
-        dvl = splint(atm%spec%ps%dvlocal, r)
+        if(conf%dim == 3) then
+          vl  = splint(atm%spec%ps%vlocal, r)
+          dvl = splint(atm%spec%ps%dvlocal, r)
         
-        d = sum(sys%st%rho(j, :)) * sys%m%vol_pp* &
-             (dvl - (vl - atm%spec%Z_val)/r)/r**2
-        atm%f(:) = atm%f(:) + d * x(:)
-#endif
+          d = sum(sys%st%rho(j, :)) * sys%m%vol_pp* &
+               (dvl - (vl - atm%spec%Z_val)/r)/r**2
+          atm%f(:) = atm%f(:) + d * x(:)
+        end if
       end do
     end do
   else ! Fourier space

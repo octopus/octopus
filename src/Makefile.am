@@ -1,12 +1,8 @@
 bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
 	excitations broad function-to-dx phonon-spectrum nbo2xyz
 EXTRA_PROGRAMS = octopus octopus-mpi \
-	octopus-1d octopus-1d-mpi \
-	octopus-2d octopus-2d-mpi\
 	octopus-pol octopus-pol-mpi \
 	zoctopus zoctopus-mpi \
-	zoctopus-1d zoctopus-1d-mpi \
-	zoctopus-2d zoctopus-2d-mpi \
 	zoctopus-pol zoctopus-pol-mpi
 
 octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
@@ -19,7 +15,7 @@ octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 
 noinst_HEADERS = \
 	real.F90 complex.F90 undef.F90 mesh.F90 mesh_inc.F90 mesh_create.F90\
-	hartree1D.F90 hartree2D.F90 hartree3D.F90 ps3D.F90 \
+	hartree1D.F90 hartree2D.F90 hartree3D.F90 \
 	specie1D.F90 specie3D.F90\
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 \
 	xc_KLI_SIC.F90 xc_HJU.F90 \
@@ -35,14 +31,6 @@ octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 # this has to be repeated...
 octopus_mpi_SOURCES     = $(octopus_SOURCES)
 octopus_mpi_LDADD       = $(octopus_LDADD) @LIB_MPI@
-octopus_1d_SOURCES      = $(octopus_SOURCES)
-octopus_1d_LDADD        = $(octopus_LDADD)
-octopus_1d_mpi_SOURCES  = $(octopus_SOURCES)
-octopus_1d_mpi_LDADD    = $(octopus_mpi_LDADD)
-octopus_2d_SOURCES      = $(octopus_SOURCES)
-octopus_2d_LDADD        = $(octopus_LDADD)
-octopus_2d_mpi_SOURCES  = $(octopus_SOURCES)
-octopus_2d_mpi_LDADD    = $(octopus_mpi_LDADD)
 octopus_pol_SOURCES     = $(octopus_SOURCES)
 octopus_pol_LDADD       = $(octopus_LDADD)
 octopus_pol_mpi_SOURCES = $(octopus_SOURCES)
@@ -51,14 +39,6 @@ zoctopus_SOURCES        = $(octopus_SOURCES)
 zoctopus_LDADD          = $(octopus_LDADD)
 zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
 zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
-zoctopus_1d_SOURCES      = $(octopus_SOURCES)
-zoctopus_1d_LDADD        = $(octopus_LDADD)
-zoctopus_1d_mpi_SOURCES  = $(octopus_SOURCES)
-zoctopus_1d_mpi_LDADD    = $(octopus_mpi_LDADD)
-zoctopus_2d_SOURCES      = $(octopus_SOURCES)
-zoctopus_2d_LDADD        = $(octopus_LDADD)
-zoctopus_2d_mpi_SOURCES  = $(octopus_SOURCES)
-zoctopus_2d_mpi_LDADD    = $(octopus_mpi_LDADD)
 zoctopus_pol_SOURCES     = $(octopus_SOURCES)
 zoctopus_pol_LDADD       = $(octopus_LDADD)
 zoctopus_pol_mpi_SOURCES = $(octopus_SOURCES)
@@ -110,7 +90,6 @@ config_F90.h: config.h
 # dependencies. Please update consistently
 mesh.o: mesh_inc.F90 mesh_create.F90
 specie.o: specie1D.F90 specie3D.F90
-ps.o: ps3D.F90
 hartree.o: hartree1D.F90 hartree2D.F90 hartree3D.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90
 xc.o: xc_KLI_SIC.F90 xc_HJU.F90

@@ -17,10 +17,11 @@
 
 ! Please use this functional only in spin polarized calculations
 ! and for finite systems
-subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
+subroutine R_FUNC(kli_hju) (m, st, hartr, nlcc, type, Vx, ex)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   type(hartree_type), intent(inout) :: hartr
+  logical, intent(in) :: nlcc
   integer, intent(in) :: type
   real(r8), intent(out) :: Vx(m%np, st%nspin), ex
 
@@ -35,7 +36,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
   rho = st%rho
 
   ex = 0._r8
-  call R_FUNC(xc_lda) (type, m, st, Vx, ex)
+  call R_FUNC(xc_lda) (type, nlcc, m, st, Vx, ex)
 
   st%rho(:, 2) = 0._r8
   do is = 1, st%nspin
@@ -52,7 +53,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
 
       ! first the lda term
       Vx2 = 0.0_r8; Ex2 = 0.0_r8
-      call R_FUNC(xc_lda) (type, m, st, Vx2, Ex2)
+      call R_FUNC(xc_lda) (type, nlcc, m, st, Vx2, Ex2)
       
       ! The LDA is local, so we can just add the whole array
       Vx(1:m%np, is) = Vx(1:m%np, is) - N_alpha*Vx2(1:m%np, 1)

@@ -34,10 +34,11 @@ end type unocc_type
 
 contains
 
-subroutine unocc_init(u, m, st)
+subroutine unocc_init(u, m, st, sys)
   type(unocc_type), intent(out) :: u
   type(mesh_type), intent(IN)   :: m
   type(states_type), intent(IN) :: st
+  type(system_type), intent(IN) :: sys
 
   sub_name = 'unocc_init'; call push_sub()
 
@@ -53,7 +54,7 @@ subroutine unocc_init(u, m, st)
 
   ! allocate states structure
   allocate(u%st)
-  call states_dup(st, u%st)
+  call states_init(u%st, m, sys%val_charge)
 
   call oct_parse_int(C_string("UnoccNumberStates"), 5, u%st%nst)
   if(u%st%nst <= 0) then
@@ -64,7 +65,6 @@ subroutine unocc_init(u, m, st)
   ! setup variables
   u%st%nst = u%st%nst + st%nst
   u%st%st_end = u%st%nst
-  nullify(u%st%R_FUNC(psi), u%st%eigenval, u%st%occ)
   allocate(u%st%R_FUNC(psi) (0:m%np, st%dim, u%st%nst, st%nik))
   allocate(u%st%eigenval(u%st%nst, st%nik), u%st%occ(u%st%nst, st%nik))
   u%st%eigenval = 0._r8
@@ -77,10 +77,7 @@ subroutine unocc_end(u)
   type(unocc_type), intent(out) :: u
   
   if(associated(u%st)) then
-    if(associated(u%st%R_FUNC(psi))) then
-      deallocate(u%st%R_FUNC(psi), u%st%eigenval, u%st%occ)
-      nullify   (u%st%R_FUNC(psi), u%st%eigenval, u%st%occ)
-    end if
+    call states_end(u%st)
     deallocate(u%st)
     nullify   (u%st)
   end if
@@ -102,7 +99,7 @@ subroutine unocc_run(u, scf, sys, h)
   iter_loop: do iter = 1, u%max_iter
     if(clean_stop()) exit
 
-    call eigen_solver_run(scf%eigens, sys, h, iter, diff)
+    call eigen_solver_run(scf%eigens, u%st, sys, h, iter, diff)
     tol = maxval(diff)
 
     ! compute eigenvalues
@@ -110,7 +107,7 @@ subroutine unocc_run(u, scf, sys, h)
 
     write(message(1), '(a,i5,a,f12.6)') 'Info: iter = ', iter, ' tol = ', tol
     call write_info(1)
-    !call states_write_eigenvalues(stdout, u%nst, u%st, diff)
+    call states_write_eigenvalues(stdout, u%st%nst, u%st, diff)
     
     ! save restart information
     call R_FUNC(states_write_restart)("restart.occ", sys%m, u%st)

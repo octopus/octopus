@@ -15,8 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_gga(func, m, st, pot, energy)
+subroutine xc_gga(func, nlcc, m, st, pot, energy)
   integer, intent(in) :: func
+  logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
@@ -32,7 +33,7 @@ subroutine xc_gga(func, m, st, pot, energy)
 !!$    d(0, is) = 0._r8
 !!$    d(1:m%np, is) = abs(st%rho(1:m%np, is))
 !!$
-!!$    if(st%nlcc) then ! non-linear core corrections
+!!$    if(nlcc) then ! non-linear core corrections
 !!$      d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%nspin
 !!$    end if
 !!$
@@ -48,7 +49,7 @@ subroutine xc_gga(func, m, st, pot, energy)
     d(1:m%np, 2) = abs(M_HALF*(st%rho(1:m%np, 1)-st%rho(1:m%np, 2)))
   end select
   do is = 1, st%nspin
-    if(st%nlcc) then ! non-linear core corrections
+    if(nlcc) then ! non-linear core corrections
       d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%spin_channels
     end if
     call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))

@@ -43,13 +43,14 @@ type specie_type
   logical           :: local      ! true if the potential is local, which in this case means
                                   ! it is *not* a pseudopotential.
 
+  ! The rest of the stuff is only used in 3D calculations
+
   ! for the user defined potential
   character(len=1024) :: user_def
 
   ! For the local pseudopotential in Fourier space...
   complex(r8), pointer :: local_fw(:,:,:)
 
-#if defined(THREE_D)
   ! jellium stuff
   real(r8) :: jradius
 
@@ -65,7 +66,6 @@ type specie_type
   integer(POINTER_SIZE) :: nl_planb
   integer :: nl_fft_n(3), nl_hfft_n
   complex(r8), pointer :: nl_fw(:,:,:,:,:), nl_dfw(:,:,:,:,:,:)
-#endif
 
 end type specie_type
 
@@ -105,17 +105,94 @@ function specie_init(s)
   ispin = min(2, ispin)
 
   ! call dimension specific routines
-  call specie_init_dim(nspecies, str, s)
+  if(conf%dim==1.or.conf%dim==2) then
+    call specie1D_init(nspecies, str, s)
+  else
+    call specie3D_init(nspecies, str, s)
+  end if
 
   specie_init = nspecies
 
   call pop_sub(); return
 end function specie_init
 
-#if defined(ONE_D) || defined(TWO_D)
-#  include "specie1D.F90"
-#elif defined(THREE_D)
-#  include "specie3D.F90"
-#endif
+subroutine specie_end(ns, s)
+  integer, intent(in) :: ns
+  type(specie_type), pointer :: s(:)
+
+  integer :: i
+
+  sub_name = 'specie_end'; call push_sub()
+
+  do i = 1, ns
+    if(s(i)%local) cycle
+
+    if(associated(s(i)%ps)) then
+      if(s(i)%nlcc.and.associated(s(i)%rhocore_fw)) then
+        deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
+      end if
+      call ps_end(s(i)%ps)
+    end if
+
+    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
+      call fftw_f77_destroy_plan(s(i)%nl_planb)
+      deallocate(s(i)%nl_fw, s(i)%nl_dfw)
+      nullify(s(i)%nl_fw, s(i)%nl_dfw)
+    end if
+
+    if(associated(s(i)%local_fw)) then
+      deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
+    end if
+    
+  end do
+  
+  if(associated(s)) then ! sanity check
+    deallocate(s); nullify(s)
+  end if
+
+  call pop_sub()
+  return
+end subroutine specie_end
+
+real(r8) function specie_get_local(s, x) result(l)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(conf%dim)
+
+  real(r8) :: a1, a2, Rb2 ! for jellium
+  real(r8) :: xx(3), r
+
+  xx = 0._r8
+  xx(1:conf%dim) = x(:)
+  r = sqrt(sum(xx(:)**2))
+
+  if(conf%dim.ne.3 .or. s%label(1:5)=='usdef') then
+    l = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
+
+  else
+    select case(s%label(1:5))
+    case('jelli', 'point')
+      a1 = s%Z/(2._r8*s%jradius**3)
+      a2 = s%Z/s%jradius
+      Rb2= s%jradius**2
+      
+      if(r <= s%jradius) then
+        l = (a1*(r*r - Rb2) - a2)
+      else
+        l = - s%Z/r
+      end if
+
+    case default
+      if(r >= r_small) then
+        l = (splint(s%ps%vlocal,  r) - s%Z_val)/r
+      else
+        l = s%ps%Vlocal_origin
+      end if
+    end select
+  end if
+
+end function specie_get_local
+
+#include "specie1D.F90"
+#include "specie3D.F90"
 
 end module specie

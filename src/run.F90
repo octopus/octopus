@@ -184,7 +184,7 @@ subroutine run()
       message(1) = 'Info: Initializing unoccupied states.'
       call write_info(1)
 
-      call unocc_init(unoccv, sys%m, sys%st)
+      call unocc_init(unoccv, sys%m, sys%st, sys)
       
     case(I_END_UNOCC)
       message(1) = 'Info: Finalizing unoccupied states.'
@@ -199,6 +199,7 @@ subroutine run()
       ! first copy the occupied states
       unoccv%st%R_FUNC(psi)(:,:,1:sys%st%nst,:) = sys%st%R_FUNC(psi)(:,:,1:sys%st%nst,:)
       unoccv%st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
+      call states_end(sys%st) ! to save memory
 
       call states_generate_random(unoccv%st, sys%m, sys%st%nst+1)
 
@@ -316,7 +317,8 @@ subroutine run()
       call write_info(1)
 
       call io_assign(iunit)
-      open(iunit, file='restart.pol', status='unknown')
+      call oct_mkdir(C_string("tmp"))
+      open(iunit, file='tmp/restart.pol', status='unknown')
       write(iunit, '(a)') ' '
       call io_close(iunit)
         

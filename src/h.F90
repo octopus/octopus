@@ -94,7 +94,7 @@ subroutine hamiltonian_init(h, sys)
   type(hamiltonian_type), intent(out) :: h
   type(system_type), intent(inout) :: sys
 
-  integer :: i, j, dummy
+  integer :: i, j
   real(r8) :: d, r, x(3)
 
   sub_name = 'hamiltonian_init'; call push_sub()
@@ -135,30 +135,30 @@ subroutine hamiltonian_init(h, sys)
 
   if(h%vpsl_space == RECIPROCAL_SPACE) then
     call mesh_alloc_ffts(sys%m, 2)
-    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%st%nlcc)
+    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%nlcc)
   end if
 
-#if defined(THREE_D)
-  call oct_parse_int(C_string('NonLocalPotentialSpace'), REAL_SPACE, h%vnl_space)
-  if(h%vnl_space < 0 .or. h%vnl_space > 1) then
-    write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
-         "' is not a valid NonLocalPotentialSpace"
-    message(2) = '(NonLocalPotentialSpace = 0 | 1)'
-    call write_fatal(2)
-  end if
-
-  if(h%vnl_space == RECIPROCAL_SPACE) then
-    call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
-    if(h%nextra < 0) then
-      write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
-           "' is not a valid GridRefinement"
-      message(2) = '(GridRefinement >= 0)'
+  if(conf%dim == 3) then ! non-local potentials only in 3D
+    call oct_parse_int(C_string('NonLocalPotentialSpace'), REAL_SPACE, h%vnl_space)
+    if(h%vnl_space < 0 .or. h%vnl_space > 1) then
+      write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
+           "' is not a valid NonLocalPotentialSpace"
+      message(2) = '(NonLocalPotentialSpace = 0 | 1)'
       call write_fatal(2)
     end if
-
-    call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
+    
+    if(h%vnl_space == RECIPROCAL_SPACE) then
+      call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
+      if(h%nextra < 0) then
+        write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
+             "' is not a valid GridRefinement"
+        message(2) = '(GridRefinement >= 0)'
+        call write_fatal(2)
+      end if
+      
+      call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
+    end if
   end if
-#endif
 
   call oct_parse_int(C_string("RelativisticCorrection"), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -196,7 +196,7 @@ subroutine hamiltonian_init(h, sys)
   else
     ! initilize hartree and xc modules
     call hartree_init(h%hart, sys%m)
-    call xc_init(h%xc)
+    call xc_init(h%xc, sys%nlcc)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
@@ -230,64 +230,60 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! absorbing boundaries
-  call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
+  call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, h%ab)
   nullify(h%ab_pot)
 
-  absorbing_boundaries: if(dummy .eq. 1 .or. dummy .eq. 2) then
-
-  h%ab = dummy
-  call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, h%ab_width)
-  h%ab_width  = h%ab_width * units_inp%length%factor
-  if(h%ab == 1) then
-    call oct_parse_double(C_string("TDABHeight"), -0.2_r8/units_inp%energy%factor, h%ab_height)
-    h%ab_height = h%ab_height * units_inp%energy%factor
-  else
-    h%ab_height = 1._r8
-  end if
-
- ! generate boundary potential...
-  allocate(h%ab_pot(sys%m%np))
-  h%ab_pot = 0._r8
-  pot: do i = 1, sys%m%np
-     call mesh_r(sys%m, i, r, x=x)
-
-     select case(sys%m%box_shape)
-     case(SPHERE)
-          d = r - (sys%m%rsize - h%ab_width)
+  absorbing_boundaries: if(h%ab.eq. 1 .or. h%ab.eq.2) then
+    call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, h%ab_width)
+    h%ab_width  = h%ab_width * units_inp%length%factor
+    if(h%ab == 1) then
+      call oct_parse_double(C_string("TDABHeight"), -0.2_r8/units_inp%energy%factor, h%ab_height)
+      h%ab_height = h%ab_height * units_inp%energy%factor
+    else
+      h%ab_height = 1._r8
+    end if
+    
+    ! generate boundary potential...
+    allocate(h%ab_pot(sys%m%np))
+    h%ab_pot = 0._r8
+    pot: do i = 1, sys%m%np
+      call mesh_r(sys%m, i, r, x=x)
+    
+      select case(sys%m%box_shape)
+      case(SPHERE)
+        d = r - (sys%m%rsize - h%ab_width)
+        if(d.gt.0._r8) then
+          h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+        end if
+        
+      case(CYLINDER)
+        d = sqrt(x(1)**2 + x(2)**2) - (sys%m%rsize - h%ab_width)
+        if(d.gt.0._r8)  &
+             h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+        d = abs(x(3)) - (sys%m%zsize - h%ab_width)
+        if(d.gt.0._r8)  &
+             h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+        
+      case(PARALLELEPIPED)
+        do j = 1, conf%dim
+          d = x(j) - (sys%m%lsize(j)/2._r8 - h%ab_width)
           if(d.gt.0._r8) then
-            h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+            h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
           end if
-
-#if defined(THREE_D)
-     case(CYLINDER)
-          d = sqrt(x(1)**2 + x(2)**2) - (sys%m%rsize - h%ab_width)
-          if(d.gt.0._r8)  &
-               h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-          d = abs(x(3)) - (sys%m%zsize - h%ab_width)
-          if(d.gt.0._r8)  &
-               h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-
-     case(PARALLELEPIPED)
-          do j = 1, 3
-            d = x(j) - (sys%m%lsize(j)/2._r8 - h%ab_width)
-            if(d.gt.0._r8) then
-              h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-            end if
-          end do
-#endif
-
-     case default
-          message(1) = "Absorbing boundaries are not implemented for"
-          message(2) = "Box_shape = 3"
-          call write_warning(2)
-          exit pot
-     end select
-
-     if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
-  end do pot
-
+        end do
+        
+      case default
+        message(1) = "Absorbing boundaries are not implemented for"
+        message(2) = "Box_shape = 3"
+        call write_warning(2)
+        exit pot
+      end select
+      
+      if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
+    end do pot
+    
   end if absorbing_boundaries
-
+  
   call pop_sub(); return
 end subroutine hamiltonian_init
 

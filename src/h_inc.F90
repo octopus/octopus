@@ -55,9 +55,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
 
   call R_FUNC(kinetic) (m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
-#if defined(THREE_D)
-  call R_FUNC(vnlpsi)  (m, st, sys, psi, Hpsi)
-#endif
+  if(sys%nlpp) call R_FUNC(vnlpsi)  (m, st, sys, psi, Hpsi)
   if(present(t)) then
     call R_FUNC(vlasers)  (h, m, st, psi, Hpsi, t)
     call R_FUNC(vborders) (h, m, st, psi, Hpsi)
@@ -117,7 +115,6 @@ subroutine R_FUNC(kinetic) (m, st, psi, Hpsi)
   call pop_sub(); return
 end subroutine R_FUNC(kinetic)
 
-#if defined(THREE_D)
 subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -171,7 +168,6 @@ subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
 
   call pop_sub(); return
 end subroutine R_FUNC(vnlpsi)
-#endif
 
 subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h

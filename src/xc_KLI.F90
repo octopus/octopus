@@ -16,8 +16,9 @@
 !! 02111-1307, USA.
 
 #ifdef HAVE_LAPACK
-subroutine R_FUNC(xc_kli)(func, m, st, hartr, pot, energy)
+subroutine R_FUNC(xc_kli)(func, nlcc, m, st, hartr, pot, energy)
   integer, intent(in) :: func
+  logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   type(hartree_type), intent(inout) :: hartr
@@ -37,16 +38,16 @@ subroutine R_FUNC(xc_kli)(func, m, st, hartr, pot, energy)
            st%R_FUNC(psi) (0:,1,:,:), hartr, pot, energy, st%rho)
 
     case(X_FUNC_KLI_SIC)
-      call R_FUNC(kli_x_sic) (m, st, st%R_FUNC(psi) (0:,1,:,:), &
+      call R_FUNC(kli_x_sic) (nlcc, m, st, st%R_FUNC(psi) (0:,1,:,:), &
            hartr, pot, energy)
     case(C_FUNC_KLI_SIC)
-      call R_FUNC(kli_c_sic) (m, st, st%R_FUNC(psi) (0:,1,:,:), &
+      call R_FUNC(kli_c_sic) (nlcc, m, st, st%R_FUNC(psi) (0:,1,:,:), &
            hartr, pot, energy)
 
     case(X_FUNC_KLI_HJU)
-      call dkli_hju(m, st, hartr, X_FUNC_LDA_NREL, pot, energy)
+      call dkli_hju(m, st, hartr, nlcc, X_FUNC_LDA_NREL, pot, energy)
     case(C_FUNC_KLI_HJU)
-      call dkli_hju(m, st, hartr, C_FUNC_LDA_PZ,   pot, energy)
+      call dkli_hju(m, st, hartr, nlcc, C_FUNC_LDA_PZ,   pot, energy)
   end select
 
   call pop_sub()

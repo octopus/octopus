@@ -28,30 +28,17 @@ AC_PREFIX_DEFAULT($HOME)
 # what should I build?
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), 
 	MPIDIR=$enableval, MPIDIR=no)
-AC_ARG_ENABLE(1d, AC_HELP_STRING([--enable-1d], [Let us work in 1D]),        [ONE_D=1])
-AC_ARG_ENABLE(2d, AC_HELP_STRING([--enable-1d], [or in 2D 2D]),              [TWO_D=1])
-AC_ARG_ENABLE(3d, AC_HELP_STRING([--enable-3d], [or, if you prefer, in 3D]), [THREE_D=1])
 AC_ARG_ENABLE(pol, AC_HELP_STRING([--enable-pol], [Polymers anyone?]), [POLYMERS=1])
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 
 # set program name
 PROGNAME="octopus"
-if test "${ONE_D}"; then
-	AC_DEFINE(ONE_D, 1, [Code compiled for 1D systems])
-	PROGNAME="$PROGNAME-1d";
-	msg="finite 1D systems!"
-elif test "${TWO_D}"; then
-	AC_DEFINE(TWO_D, 1, [Code compiled for 2D systems])
-	PROGNAME="$PROGNAME-2d";
-	msg="finite 2D systems!"
-elif test "${POLYMERS}"; then
-	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systems])
+if test "${POLYMERS}"; then
 	AC_DEFINE(POLYMERS, 1, [Code compiled for polymers])
 	PROGNAME="$PROGNAME-pol"
 	msg="polymers"
 else
-	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systems])
-	msg="finite 3D systems"
+	msg="finite systems"
 fi
 AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
 AC_SUBST(PROGNAME)

@@ -39,6 +39,11 @@ type system_type
 
   integer :: nspecies
   type(specie_type), pointer :: specie(:)
+  logical :: nlpp    ! is any species having non-local pp
+  logical :: nlcc    ! is any species having non-local core corrections?
+
+  ! the charge of the valence electrons (necessary to initialize states)
+  real(r8) :: val_charge 
 
   type(mesh_type) :: m
   type(states_type), pointer :: st
@@ -52,7 +57,6 @@ subroutine system_init(s)
   type(system_type), intent(out) :: s
 
   integer :: i
-  real(r8) :: val_charge
 
   sub_name = 'system_init'; call push_sub()
 
@@ -66,22 +70,22 @@ subroutine system_init(s)
   call mesh_init(s%m, s%natoms, s%atom)
 
   !  find total charge of the system
-  val_charge = 0
+  s%val_charge = 0
   do i = 1, s%natoms
-    val_charge = val_charge - s%atom(i)%spec%Z_val
+    s%val_charge = s%val_charge - s%atom(i)%spec%Z_val
   enddo
 
   allocate(s%st)
-  call states_init(s%st, s%m, val_charge)
+  call states_init(s%st, s%m, s%val_charge)
 
-#if defined(THREE_D)
   ! find out if we need non-local core corrections
-  s%st%nlcc = .false.
+  s%nlcc = .false.
+  s%nlpp = .false.
   do i = 1, s%nspecies
-    s%st%nlcc = (s%st%nlcc.or.s%specie(i)%nlcc)
+    s%nlcc = (s%nlcc.or.s%specie(i)%nlcc)
+    s%nlpp = (s%nlcc.or.(.not.s%specie(i)%local))
   end do
-  if(s%st%nlcc) allocate(s%st%rho_core(s%m%np))
-#endif
+  if(s%nlcc) allocate(s%st%rho_core(s%m%np))
 
   call pop_sub()
 end subroutine system_init

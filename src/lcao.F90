@@ -67,18 +67,18 @@ subroutine lcao_dens(sys, nspin, rho)
     a => sys%atom(ia) ! shortcuts
     s => a%spec
 
-#if defined(ONE_D) || defined(TWO_D)
-    call from_userdef(sys%m, rho(:, 1))    
-#elif defined(THREE_D)
-    select case(s%label(1:5))
-    case('usdef')
+    if(conf%dim==1.or.conf%dim==2) then
       call from_userdef(sys%m, rho(:, 1))
-    case('jelli', 'point')
-      call from_jellium(sys%m, rho(:, 1))
-    case default
-      call from_pseudopotential(sys%m)
-    end select
-#endif
+    else
+      select case(s%label(1:5))
+      case('usdef')
+        call from_userdef(sys%m, rho(:, 1))
+      case('jelli', 'point')
+        call from_jellium(sys%m, rho(:, 1))
+      case default
+        call from_pseudopotential(sys%m)
+      end select
+    end if
   end do
 
   ! we now renormalize the density (necessary if we have a charged system)
@@ -107,7 +107,6 @@ contains
     end do
   end subroutine from_userdef
 
-#if defined(THREE_D)
   subroutine from_jellium(m, rho)
     type(mesh_type), intent(in) :: m
     real(r8), intent(inout) :: rho(m%np)
@@ -161,14 +160,12 @@ contains
     end do
     
   end subroutine from_pseudopotential
-#endif
 end subroutine lcao_dens
 
 subroutine lcao_init(sys, h)
   type(system_type), intent(IN)      :: sys
   type(hamiltonian_type), intent(IN) :: h
 
-#if defined(THREE_D)
   integer :: norbs, i, ispin, a, ik, n1, i1, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
   integer, parameter :: orbs_local = 2
 
@@ -176,6 +173,8 @@ subroutine lcao_init(sys, h)
   real(r8) :: s
 
   real(r8) :: uVpsi
+
+  if(conf%dim.ne.3) return
 
   sub_name = 'lcao_init'; call push_sub
 
@@ -233,16 +232,15 @@ subroutine lcao_init(sys, h)
            lcao_data%k_plus_psv(sys%st%nik, norbs, norbs))
 
   call pop_sub()
-#endif
 end subroutine lcao_init
 
 subroutine lcao_end
   sub_name = 'lcao_end'; call push_sub()
 
-#if defined(THREE_D)
-  if(lcao_data%mode == MEM_INTENSIVE) deallocate(lcao_data%psis)
-  deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
-#endif
+  if(conf%dim==3) then
+    if(lcao_data%mode==MEM_INTENSIVE) deallocate(lcao_data%psis)
+    deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
+  end if
 
   call pop_sub()
 end subroutine lcao_end
@@ -251,7 +249,6 @@ subroutine lcao_wf(sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(in) :: h
   
-#if defined(THREE_D)
   integer, parameter :: orbs_local = 2
 
   integer :: a, idim, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
@@ -265,6 +262,7 @@ subroutine lcao_wf(sys, h)
   R_TYPE, allocatable :: work(:)
   real(r8), allocatable :: rwork(:), w(:)
 
+  if(conf%dim.ne.3) return
   sub_name = 'lcao_wf'; call push_sub()
 
   norbs = lcao_data%dim
@@ -313,10 +311,8 @@ subroutine lcao_wf(sys, h)
 
   deallocate(hpsi)
   call pop_sub(); return
-#endif
 end subroutine lcao_wf
 
-#if defined(THREE_D)
 subroutine get_wf(sys, i, l, lm, ispin, psi)
   type(system_type), intent(IN) :: sys
   integer, intent(in)   :: i, l, lm, ispin
@@ -346,5 +342,5 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
 
   call pop_sub(); return    
 end subroutine get_wf
-#endif
+
 end module lcao

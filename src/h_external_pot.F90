@@ -55,7 +55,6 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
     c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), 0.0_r8, r8)
     call zscal(n, c, s(i)%local_fw,  1)
     
-#if defined(THREE_D)
     ! now we built the non-local core corrections in momentum space
     if(nlcc) then
       allocate(s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
@@ -77,7 +76,6 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
       call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%rhocore_fw)
       call zscal(n, c, s(i)%rhocore_fw, 1)
     end if
-#endif
 
   end do
   
@@ -85,7 +83,6 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
   call pop_sub()
 end subroutine specie_local_fourier_init
 
-#if defined(THREE_D)
 subroutine specie_nl_fourier_init(ns, s, m, nextra)
   integer, intent(in) :: ns, nextra
   type(specie_type), pointer :: s(:)
@@ -185,8 +182,6 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   call pop_sub()
 end subroutine specie_nl_fourier_init
 
-#endif
-
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(inout) :: sys
@@ -196,9 +191,7 @@ subroutine generate_external_pot(h, sys)
   type(atom_type),   pointer :: a
   real(r8), allocatable :: fr(:,:,:)
   complex(r8), allocatable :: fw(:,:,:)
-#if defined(THREE_D)
   complex(r8), allocatable :: fwc(:,:,:) ! for the nl core corrections
-#endif
   sub_name = 'generate_external_pot'; call push_sub()
 
   ! first we assume that we need to recalculate the ion_ion energy
@@ -210,13 +203,11 @@ subroutine generate_external_pot(h, sys)
   end if
   h%Vpsl  = 0._r8
 
-#if defined(THREE_D)
-  if(sys%st%nlcc) then
+  if(sys%nlcc) then
     sys%st%rho_core = 0._r8
     allocate(fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
     fwc = M_z0
   end if
-#endif
 
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
@@ -224,12 +215,10 @@ subroutine generate_external_pot(h, sys)
     
     call build_local_part(sys%m)
 
-#if defined(THREE_D)
     if(.not.s%local) then
       call build_kb_sphere(sys%m)
       call build_nl_part(sys%m)
     end if
-#endif
 
   end do
 
@@ -240,14 +229,12 @@ subroutine generate_external_pot(h, sys)
     call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
     call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
 
-#if defined(THREE_D)
     ! and the non-local core corrections
-    if(sys%st%nlcc) then
+    if(sys%nlcc) then
       call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
       call dcube_to_mesh(sys%m, fr, sys%st%rho_core, 2)
       deallocate(fwc)
     end if
-#endif
     
     deallocate(fw, fr)
   end if
@@ -272,26 +259,21 @@ contains
         x = x - a%x
         h%Vpsl(i) = h%Vpsl(i) + specie_get_local(s, x)
         
-#if defined(THREE_D)
         if(s%nlcc) then
           sys%st%rho_core(i) = sys%st%rho_core(i) + specie_get_nlcc(s, x)
         end if
-#endif
       end do
 
     else ! momentum space
       call phase_factor(m, m%fft_n2, a%x, s%local_fw, fw)
-#if defined(THREE_D)
       if(s%nlcc) then
         call phase_factor(m, m%fft_n2(1:3), a%x, s%rhocore_fw, fwc)
       end if
-#endif
     end if
 
     call pop_sub(); return
   end subroutine build_local_part
 
-#if defined(THREE_D)
   subroutine build_kb_sphere(m)
     type(mesh_type), intent(in) :: m
     
@@ -482,7 +464,6 @@ contains
 
     call pop_sub(); return
   end subroutine build_nl_part
-#endif
 
 end subroutine generate_external_pot
 

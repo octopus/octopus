@@ -73,83 +73,80 @@
       acc(1:3) = acc(1:3) - sys%st%qtot*field(1:3)
     end if
     
+    if(.not.sys%nlpp) then
+      call pop_sub()
+      return
+    end if
+
     ! And now, i<[H,[V_nl,x]]>
     x = 0.0_r8
     allocate(hzpsi(sys%m%np, sys%st%dim), hhzpsi(3, sys%m%np))
 
-#if defined(THREE_D)
-    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
-#endif
-
     do ik = 1, sys%st%nik
-       do ist = sys%st%st_start, sys%st%st_end
+      do ist = sys%st%st_start, sys%st%st_end
+        
+        call zhpsi(h, sys%m, sys%st, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:))
+        call laser_field(h%no_lasers, h%lasers, t, field)
+        do k = 1, sys%m%np
+          call mesh_xyz(sys%m, k, mesh_x)
+          hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)
+        end do
+        
+        allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
+        xzpsi = M_z0
+        do k = 1, sys%m%np
+          do j = 1, conf%dim
+            xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
+          end do
+        end do
          
-         call zhpsi(h, sys%m, sys%st, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:))
-         call laser_field(h%no_lasers, h%lasers, t, field)
-         do k = 1, sys%m%np
-           call mesh_xyz(sys%m, k, mesh_x)
-           hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)
-         end do
-         
-#if defined(THREE_D)
-         xzpsi = M_z0
-         do k = 1, sys%m%np
-           do j = 1, conf%dim
-             xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
-           end do
-         enddo
-
-         do j = 1, conf%dim
-           vnl_xzpsi = M_z0
-           call zvnlpsi(sys%m, sys%st, sys, &
-                xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
-           do idim = 1, sys%st%dim
-             x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
-                  vnl_xzpsi(1:sys%m%np, idim) )
-           enddo
-         enddo
-
-         xzpsi = M_z0
-         do k = 1, sys%m%np
-           do j = 1, conf%dim
-             xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * hzpsi(k, 1:sys%st%dim)
-           end do
-         enddo
-
-         do j = 1, conf%dim
-           vnl_xzpsi = M_z0
-           call zvnlpsi(sys%m, sys%st, sys, &
-                xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
-           do idim = 1, sys%st%dim
-             x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
+        do j = 1, conf%dim
+          vnl_xzpsi = M_z0
+          call zvnlpsi(sys%m, sys%st, sys, &
+               xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+          do idim = 1, sys%st%dim
+            x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
+                 vnl_xzpsi(1:sys%m%np, idim) )
+          end do
+        end do
+           
+        xzpsi = M_z0
+        do k = 1, sys%m%np
+          do j = 1, conf%dim
+            xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * hzpsi(k, 1:sys%st%dim)
+          end do
+        end do
+        
+        do j = 1, conf%dim
+          vnl_xzpsi = M_z0
+          call zvnlpsi(sys%m, sys%st, sys, &
+               xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+          do idim = 1, sys%st%dim
+            x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
                   zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
                   vnl_xzpsi(1:sys%m%np, idim) )
-           end do
-         end do
-#endif
-         
-       end do
+          end do
+        end do
+        deallocate(xzpsi, vnl_xzpsi)
+       
      end do
-    deallocate(hzpsi, hhzpsi)
-
-#if defined(THREE_D)
-    deallocate(xzpsi, vnl_xzpsi)
-#endif
+   end do
+   deallocate(hzpsi, hhzpsi)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-    if(present(reduce)) then
-      if(reduce) then
-        call MPI_ALLREDUCE(x(1), y(1), conf%dim, &
-             MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-        x = y
-      end if
-    end if
+   if(present(reduce)) then
+     if(reduce) then
+       call MPI_ALLREDUCE(x(1), y(1), conf%dim, &
+            MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+       x = y
+     end if
+   end if
 #endif
-    acc = acc + x
-
-    call pop_sub(); return 
-  end subroutine td_calc_tacc
-
+   acc = acc + x
+   
+   call pop_sub(); return 
+ end subroutine td_calc_tacc
+ 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! APPENDIX.
 !

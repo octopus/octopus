@@ -37,7 +37,7 @@ subroutine static_pol_run(scf, sys, h)
   integer :: iunit, ios, i_start, i, j, is
   real(r8) :: e_field
   real(r8), allocatable :: Vpsl_save(:)
-  real(r8) :: dipole(0:3, 3, sys%st%nspin)
+  real(r8) :: dipole(0:conf%dim, conf%dim, sys%st%nspin)
   logical :: out_pol
 
   sub_name = 'static_pol_run'; call push_sub()
@@ -54,9 +54,9 @@ subroutine static_pol_run(scf, sys, h)
 
   ! open restart file
   call io_assign(iunit)
-  open(iunit, file='restart.pol', status='unknown')
-  do i_start = 0, 3
-    read(iunit, fmt=*, iostat=ios) dipole(i_start, :, :)
+  open(iunit, file='tmp/restart.pol', status='unknown')
+  do i_start = 0, conf%dim
+    read(iunit, fmt=*, iostat=ios) dipole(i_start, 1:conf%dim, :)
     if(ios.ne.0) exit
   end do
   if(ios.eq.0) then ! all information is already calculated
@@ -71,7 +71,7 @@ subroutine static_pol_run(scf, sys, h)
   allocate(Vpsl_save(sys%m%np))
   Vpsl_save = h%Vpsl
 
-  do i = i_start, 3
+  do i = i_start, conf%dim
     if(clean_stop()) exit
 
     write(message(1), '(a, i2)')'Info: Calculating dipole moment for field ', i
@@ -84,20 +84,20 @@ subroutine static_pol_run(scf, sys, h)
     
     ! calculate dipole
     do is = 1, sys%st%nspin
-      do j = 1, 3
+      do j = 1, conf%dim
         dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lxyz(j,:))*sys%m%h(j)*sys%m%vol_pp
       end do
     end do
 
     ! output dipole
     call io_assign(iunit)
-    open(iunit, file='restart.pol', status='unknown')
+    open(iunit, file='tmp/restart.pol', status='unknown')
     do j = 0, i
-      write(iunit, fmt=*) dipole(j, :, :)
+      write(iunit, fmt=*) dipole(j, 1:conf%dim, :)
     end do
     call io_close(iunit)
 
-    if(i == 3) then 
+    if(i == conf%dim) then 
       out_pol = .true.
     end if
   end do
@@ -105,15 +105,18 @@ subroutine static_pol_run(scf, sys, h)
   deallocate(Vpsl_save)
 
   if(out_pol) then ! output pol file
+    call oct_mkdir(C_string("linear"))
     call io_assign(iunit)
-    open(iunit, file=trim(sys%sysname)//'.pol', status='unknown')
-    write(iunit, '(3a)') '# Static polarizability tensor [', &
-         trim(units_out%length%abbrev), '^3]'
+    open(iunit, file='linear/polarizability', status='unknown')
+    write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
+         trim(units_out%length%abbrev)
+    if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim
+    write(iunit, '(a)') ']'
          
     do is = 1, sys%st%nspin
-      do j = 1, 3
-        write(iunit, '(3f12.6)') (dipole(j, :, is) - dipole(0, :, is))/e_field &
-             / units_out%length%factor**3
+      do j = 1, conf%dim
+        write(iunit, '(3f12.6)') (dipole(j, 1:conf%dim, is) - dipole(0, 1:conf%dim, is))/e_field &
+             / units_out%length%factor**conf%dim
       end do
     end do
     call io_close(iunit)

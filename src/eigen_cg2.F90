@@ -22,10 +22,10 @@
 ! logical, intent(in), optional :: reorder
 !       This flag decides wether the eigenvectors/values are ordered before
 !       output. By default, they are.
-subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, reorder)
+subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, reorder)
+  type(states_type), intent(inout)   :: st
   type(system_type), intent(IN)      :: sys
   type(hamiltonian_type), intent(IN) :: h
-  type(states_type), intent(inout)   :: st
   real(r8), intent(in)               :: tol
   integer, intent(inout)             :: niter
   integer, intent(out)               :: errorflag, converged
@@ -67,7 +67,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
            st%R_FUNC(psi)(:,:, 1:p, ik), start=p)
       
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call R_FUNC(Hpsi)(h, sys%m, sys%st, sys, ik, st%R_FUNC(psi)(:,:, p, ik) , h_psi)
+      call R_FUNC(Hpsi)(h, sys%m, st, sys, ik, st%R_FUNC(psi)(:,:, p, ik) , h_psi)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
       st%eigenval(p, ik) = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), h_psi))
@@ -116,7 +116,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
         
         ! cg contains now the conjugate gradient
         cg0 = R_FUNC(states_nrm2) (sys%m, st%dim, cg(1:,:))
-        call R_FUNC(Hpsi) (h, sys%m, sys%st, sys, ik, cg, ppsi)
+        call R_FUNC(Hpsi) (h, sys%m, st, sys, ik, cg, ppsi)
         
         ! Minimization.
         a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), ppsi)

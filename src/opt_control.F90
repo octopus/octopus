@@ -157,20 +157,16 @@ contains
   end subroutine update_field
 
   subroutine init()
-    real(r8) :: d
-
     ! psi_i is initialized in system_init
     psi_i => sys%st
     v_old_i => td%v_old;
     
     ! now we initialize psi_f. This will repeat some stuff
-    d = 0._r8
-    do i = 1, sys%natoms
-      d = d - sys%atom(i)%spec%Z_val
-    enddo
-    call states_init(psi_f, sys%m, d)
-    psi_f%nlcc = psi_i%nlcc
-    if(psi_f%nlcc) allocate(psi_f%rho_core(sys%m%np))
+    call states_init(psi_f, sys%m, sys%val_charge)
+    if(sys%nlcc) then
+      allocate(psi_f%rho_core(sys%m%np))
+      psi_f%rho_core(sys%m%np) = psi_i%rho_core(sys%m%np)
+    end if
     psi_f%st_start = psi_i%st_start
     psi_f%st_end = psi_i%st_end
     allocate(psi_f%zpsi(0:sys%m%np, psi_f%dim, psi_f%st_start:psi_f%st_end, psi_f%nik))

@@ -103,12 +103,13 @@ subroutine eigen_solver_init(eigens)
   call pop_sub()
 end subroutine eigen_solver_init
 
-subroutine eigen_solver_run(eigens, sys, h, iter, diff)
+subroutine eigen_solver_run(eigens, st, sys, h, iter, diff)
   type(eigen_solver_type), intent(IN) :: eigens
+  type(states_type), intent(inout) :: st
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(IN) :: h
   integer, intent(in) :: iter
-  real(r8), intent(out) :: diff(sys%st%nst, sys%st%nik)
+  real(r8), intent(out) :: diff(st%nst, st%nik)
 
   integer :: ik, maxiter, converged, errorflag
   real(r8) :: tol
@@ -129,15 +130,15 @@ subroutine eigen_solver_run(eigens, sys, h, iter, diff)
     maxiter = eigens%es_maxiter
     converged = 0
 
-    call eigen_solver_cg2(sys, h, sys%st, &
+    call eigen_solver_cg2(st, sys, h, &
          tol, maxiter, converged, errorflag, diff)
     write(message(1),'(a,i5)') 'Info: Converged = ',converged
     call write_info(1)
   case(ES_OLD_CG)
-    call eigen_solver_cg1(eigens%no_cg, sys, h, sys%st, diff)
-    do ik = 1, sys%st%nik
-      call R_FUNC(states_gram_schmidt) (sys%st%nst, sys%m, sys%st%dim, &
-           sys%st%R_FUNC(psi)(:,:,:, ik))
+    call eigen_solver_cg1(eigens%no_cg, st, sys, h, diff)
+    do ik = 1, st%nik
+      call R_FUNC(states_gram_schmidt) (st%nst, sys%m, st%dim, &
+           st%R_FUNC(psi)(:,:,:, ik))
     end do
   end select
 

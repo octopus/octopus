@@ -113,7 +113,7 @@ subroutine scf_run(scf, sys, h)
     if(scf%lcao_restricted) then
       call lcao_wf(sys, h)
     else
-      call eigen_solver_run(scf%eigens, sys, h, iter, diff)
+      call eigen_solver_run(scf%eigens, sys%st, sys, h, iter, diff)
     endif
 
     ! compute new density

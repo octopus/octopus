@@ -15,38 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-module hartree
-use global
-use liboct
-use mesh
-
-implicit none
-
-private
-
-type hartree_type
-  integer :: solver
-end type hartree_type
-
-public :: hartree_type, hartree_init, hartree_solve, hartree_end
-
-contains
-
-subroutine hartree_init(h, m)
-  type(hartree_type), intent(inout) :: h
-  type(mesh_type), intent(inout) :: m
-
-  message(1) = 'Info: Using direct integration method to solve poisson equation'
-  call write_info(1)
-    
-  return
-end subroutine hartree_init
-
-subroutine hartree_end(h)
-  type(hartree_type), intent(inout) :: h
-end subroutine hartree_end
-
-subroutine hartree_solve(h, m, pot, dist)
+subroutine hartree1D_solve(h, m, pot, dist)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(inout) :: pot
@@ -55,7 +24,7 @@ subroutine hartree_solve(h, m, pot, dist)
   integer  :: i, j
   real(r8) :: x, y
 
-  sub_name = 'hartree_solve'; call push_sub()
+  sub_name = 'hartree1D_solve'; call push_sub()
 
   do i=1, m%np
      pot(i) = 0.0_r8
@@ -68,6 +37,4 @@ subroutine hartree_solve(h, m, pot, dist)
   enddo
 
   call pop_sub(); return
-end subroutine hartree_solve
-
-end module hartree
+end subroutine hartree1D_solve

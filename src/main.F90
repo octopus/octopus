@@ -47,26 +47,14 @@ program octopus
   end if
   
   call oct_parse_int(C_string('verbose'), 30, conf%verbose)
-  
   if(conf%verbose > 999 .and. mpiv%node == 0) then
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
   end if
   
-  ! Sets the dimensionaliy of the problem.
-#if defined(ONE_D)
-  conf%dim = 1
-#elif defined(TWO_D)
-  conf%dim = 2
-#elif defined(THREE_D)
-  conf%dim = 3
-#else
-#error "Dimension not set!"
-#endif
-
   ! Let us print our logo
   if(conf%verbose > 20 .and. mpiv%node == 0) &
-     ierr = print_file(C_string(SHARE_OCTOPUS//'/logo'))
+       ierr = print_file(C_string(SHARE_OCTOPUS//'/logo'))
 
   ! print date
   call date_and_time(values=val)
@@ -75,6 +63,15 @@ program octopus
        " at ", val(5), ":", val(6), ":", val(7)
   call write_info(1)
 
+  ! Sets the dimensionaliy of the problem.
+  call oct_parse_int(C_string('Dimensions'), 3, conf%dim)
+  if(conf%dim<1 .or. conf%dim>3) then
+    message(1) = 'Dimensions must be either 1, 2, or 3'
+    call write_fatal(1)
+  end if
+  write(message(1), '(a,i1,a)') 'Octupus will run in ', conf%dim, ' dimension(s)'
+
+  
   ! now we really start
   call run()
 

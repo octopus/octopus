@@ -91,6 +91,7 @@ character(len=14), parameter :: name_c(C_FUNC_END-C_FUNC_START+1) = (/ &
 
 type xc_type
   integer :: x_family, x_func, c_family, c_func
+  logical :: nlcc ! repeated from system
 end type xc_type
 
 real(r8), parameter :: small = 1e-5_r8
@@ -121,12 +122,15 @@ subroutine xc_write_info(xcs, iunit)
   return
 end subroutine xc_write_info
 
-subroutine xc_init(xcs)
+subroutine xc_init(xcs, nlcc)
   type(xc_type), intent(out) :: xcs
+  logical, intent(in) :: nlcc
 
   character(len=50) :: xfam, cfam, xfunc, cfunc
 
   sub_name = 'xc_init'; call push_sub()
+
+  xcs%nlcc = nlcc
 
   call oct_parse_str('XFamily',     'LDA',  xfam)
   call oct_parse_str('XFunctional', 'NREL', xfunc)

@@ -38,27 +38,27 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
   select case(xcs%x_family)
   case(XC_FAMILY_ZER)
   case(XC_FAMILY_LDA)
-    call R_FUNC(xc_lda) (xcs%x_func, m, st, vxc, ex)
+    call R_FUNC(xc_lda) (xcs%x_func, xcs%nlcc, m, st, vxc, ex)
   case(XC_FAMILY_GGA)
-    call xc_gga(xcs%x_func, m, st, vxc, ex)
+    call xc_gga(xcs%x_func, xcs%nlcc, m, st, vxc, ex)
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vx, ex)
   case(XC_FAMILY_KLI)
-    call R_FUNC(xc_kli) (xcs%x_func, m, st, hartr, vxc, ex)
+    call R_FUNC(xc_kli) (xcs%x_func, xcs%nlcc, m, st, hartr, vxc, ex)
   end select
 
   select case(xcs%c_family)
   case(XC_FAMILY_ZER)
   case(XC_FAMILY_LDA)
-    call R_FUNC(xc_lda) (xcs%c_func, m, st, vaux, ec)
+    call R_FUNC(xc_lda) (xcs%c_func, xcs%nlcc, m, st, vaux, ec)
   case(XC_FAMILY_GGA)
-    call xc_gga(xcs%c_func, m, st, vaux, ec)
+    call xc_gga(xcs%c_func, xcs%nlcc, m, st, vaux, ec)
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vc, ec)
   case(XC_FAMILY_KLI)
-    call R_FUNC(xc_kli) (xcs%c_func, m, st, hartr, vaux, ec)
+    call R_FUNC(xc_kli) (xcs%c_func, xcs%nlcc, m, st, hartr, vaux, ec)
   end select
 
   vxc = vxc + vaux
@@ -86,8 +86,9 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
   call pop_sub(); return
 end subroutine R_FUNC(xc_pot)
 
-subroutine R_FUNC(xc_lda) (func, m, st, pot, energy)
+subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
   integer, intent(in) :: func
+  logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: energy, pot(m%np, st%nspin)
@@ -102,7 +103,7 @@ subroutine R_FUNC(xc_lda) (func, m, st, pot, energy)
     d(:) = st%rho(i, :)
 
     ! WARNING: is this OK?
-    if(st%nlcc) then    
+    if(nlcc) then    
       d(1) = d(1) + st%rho_core(i)/st%spin_channels
     end if
 

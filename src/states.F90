@@ -44,7 +44,6 @@ type states_type
   ! the densities (after all we are doing DFT :)
   real(r8), pointer :: rho(:,:)
 
-  logical :: nlcc  ! is any species having non-local core corrections?
   real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
   real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
@@ -219,7 +218,7 @@ subroutine states_end(st)
     nullify   (st%rho, st%occ, st%eigenval)
   end if
 
-  if(st%nlcc.and.associated(st%rho_core)) then
+  if(associated(st%rho_core)) then
     deallocate(st%rho_core)
     nullify(st%rho_core)
   end if

@@ -15,7 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(kli_x_sic) (m, st, psi, hartr, Vx, ex)
+subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, hartr, Vx, ex)
+  logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   R_TYPE, intent(IN) :: psi(0:m%np, st%nst, st%nspin)
@@ -41,7 +42,7 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, hartr, Vx, ex)
      end do
   end do
 
-  call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, m, st, Vx, ex)
+  call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, nlcc, m, st, Vx, ex)
 
 ! calculate the u_sij using poissons equation
   rho(1:m%np, 2) = 0.0_r8
@@ -56,7 +57,7 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, hartr, Vx, ex)
 
            i1 = st%ispin; st%ispin = 2
            i2 = st%nspin; st%nspin = 2
-           call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, m, st, Vx2, ex2)
+           call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, nlcc, m, st, Vx2, ex2)
            st%ispin = i1; st%nspin = i2;
 
            u_xc(1:m%np, i) = - Vx2(1:m%np, 1)
@@ -86,7 +87,8 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, hartr, Vx, ex)
   return
 end subroutine R_FUNC(kli_x_sic)
 
-subroutine R_FUNC(kli_c_sic) (m, st, psi, hartr, Vc, ec)
+subroutine R_FUNC(kli_c_sic) (nlcc, m, st, psi, hartr, Vc, ec)
+  logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   R_TYPE, intent(IN) :: psi(0:m%np, st%nst, st%nspin)
@@ -112,7 +114,7 @@ subroutine R_FUNC(kli_c_sic) (m, st, psi, hartr, Vc, ec)
      end do
   end do
 
-  call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, m, st, Vc, ec)
+  call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, nlcc, m, st, Vc, ec)
 
 ! calculate the u_sij using poissons equation
   rho(1:m%np, 2) = 0.0_r8
@@ -127,7 +129,7 @@ subroutine R_FUNC(kli_c_sic) (m, st, psi, hartr, Vc, ec)
 
            i1 = st%ispin; st%ispin = 2
            i2 = st%nspin; st%nspin = 2
-           call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, m, st, Vc2, ec2)
+           call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, nlcc, m, st, Vc2, ec2)
            st%ispin = i1; st%nspin = i2;
 
            u_xc(1:m%np, i) = - Vc2(1:m%np, 1)

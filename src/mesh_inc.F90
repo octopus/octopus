@@ -219,17 +219,17 @@ contains
       do in = 1, m%d%norder
         ind1(1) = m%Lxyz_inv(ix-in, iy, iz)
         ind2(1) = m%Lxyz_inv(ix+in, iy, iz)
-#if defined(TWO_D) || defined(THREE_D)
-        ind1(2) = m%Lxyz_inv(ix, iy-in, iz)
-        ind2(2) = m%Lxyz_inv(ix, iy+in, iz)
-#endif
-#if defined(THREE_D)
-        ind1(3) = m%Lxyz_inv(ix, iy, iz-in)
-        ind2(3) = m%Lxyz_inv(ix, iy, iz+in)
-#endif
+        if(conf%dim > 1) then
+          ind1(2) = m%Lxyz_inv(ix, iy-in, iz)
+          ind2(2) = m%Lxyz_inv(ix, iy+in, iz)
+          if(conf%dim > 2) then
+            ind1(3) = m%Lxyz_inv(ix, iy, iz-in)
+            ind2(3) = m%Lxyz_inv(ix, iy, iz+in)
+          end if
+        end if
         
         ! WARNING: change polymers to x direction
-#if defined(THREE_D) && defined(POLYMERS)
+#if defined(POLYMERS)
         ! cyclic boundary conditions in the z direction
         if(ind1(3) == 0) then
           ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in)

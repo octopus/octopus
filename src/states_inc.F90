@@ -282,11 +282,9 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
     end do
   end if
 
-#if defined(THREE_D)
-  if(outp%what(output_elf)) then
+  if(conf%dim==3.and.outp%what(output_elf)) then
     call elf()
   end if
-#endif
 
 contains
   ! WARNING some constants are probably wrong for 1 and 2D

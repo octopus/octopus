@@ -208,16 +208,18 @@ subroutine mesh_create(m, natoms, atom)
   do il = 1, m%np
     ix = m%Lxyz(1, il); iy = m%Lxyz(2, il); iz = m%Lxyz(3, il)
     do ik = 1, m%d%norder
+
       m%ind(1, ik, il) = m%Lxyz_inv(ix-ik, iy, iz)
       m%ind(2, ik, il) = m%Lxyz_inv(ix+ik, iy, iz)
-#if defined(TWO_D) || defined(THREE_D)
-      if(conf%dim > 1) m%ind(3, ik, il) = m%Lxyz_inv(ix, iy-ik, iz)
-      if(conf%dim > 1) m%ind(4, ik, il) = m%Lxyz_inv(ix, iy+ik, iz)
-#endif
-#if defined(THREE_D)
-      if(conf%dim > 2) m%ind(5, ik, il) = m%Lxyz_inv(ix, iy, iz-ik)
-      if(conf%dim > 2) m%ind(6, ik, il) = m%Lxyz_inv(ix, iy, iz+ik)
-#endif
+      if(conf%dim > 1) then
+        m%ind(3, ik, il) = m%Lxyz_inv(ix, iy-ik, iz)
+        m%ind(4, ik, il) = m%Lxyz_inv(ix, iy+ik, iz)
+        if(conf%dim > 2) then
+          if(conf%dim > 2) m%ind(5, ik, il) = m%Lxyz_inv(ix, iy, iz-ik)
+          if(conf%dim > 2) m%ind(6, ik, il) = m%Lxyz_inv(ix, iy, iz+ik)
+        end if
+      end if
+
     end do
   end do
 
