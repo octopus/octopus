@@ -38,23 +38,16 @@ type tm_type
   integer :: npotd, npotu, nr
   FLOAT :: b, a
   FLOAT :: zval
-  FLOAT, pointer :: rofi(:),      &
-                       vps(:, :),    &
-                       vso(:, :),    &
-                       vlocal(:),    &
-                       rphi(:, :,:), &
-                       eigen(:, :),  &
-                       chcore(:),    &
-                       rho_val(:),   &
-                       kbr(:)
+
+  FLOAT, pointer :: rofi(:), vps(:, :), vso(:, :), vlocal(:), rphi(:, :,:)
+  FLOAT, pointer :: eigen(:, :), chcore(:), rho_val(:), kbr(:)
 
   type(valconf) :: conf
 
   ! Other stuff
   integer :: nrval
   type(logrid_type) :: g
-  FLOAT, pointer :: dkbcos(:), dknrm(:), &
-                       so_dkbcos(:), so_dknrm(:)
+  FLOAT, pointer :: dkbcos(:), dknrm(:), so_dkbcos(:), so_dknrm(:)
 
   integer :: ispin
 end type tm_type

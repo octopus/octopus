@@ -44,10 +44,7 @@ type lcao_type
   ! s is the overlap matrix;
   ! k is the kinetic + spin orbit operator matrix;
   ! v is the potential.
-  R_TYPE , pointer  :: hamilt    (:, :, :), &
-                       s         (:, :, :), &
-                       k         (:, :, :), &
-                       v         (:, :, :)
+  R_TYPE , pointer  :: hamilt(:, :, :), s(:, :, :), k(:, :, :), v(:, :, :)
   logical, pointer  :: atoml(:,:)
 end type
 

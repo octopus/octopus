@@ -36,8 +36,9 @@ module scf
   type scf_type  ! some variables used for the scf cycle
     integer :: max_iter ! maximum number of scf iterations
 
-    FLOAT :: conv_abs_dens, conv_rel_dens, &
-             conv_abs_ev, conv_rel_ev         ! several convergence criteria
+    ! several convergence criteria
+    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev         
+
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
 
     integer :: what2mix
