@@ -76,6 +76,26 @@ subroutine mesh_create(m, natoms, atom)
   ! ignore box_shape in 1D
   if(conf%dim==1) m%box_shape=SPHERE
 
+  ! Read the box size.
+  if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER .or. m%box_shape == MINIMUM) then
+    call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
+    m%rsize = m%rsize * units_inp%length%factor
+  end if
+  if(m%box_shape == CYLINDER) then
+    call oct_parse_double(C_string('xlength'), 1.0_r8/units_inp%length%factor, m%xsize)
+    m%xsize = m%xsize * units_inp%length%factor
+  end if
+  if(m%box_shape == PARALLELEPIPED) then
+    if(oct_parse_block_n(C_string('lsize'))<1) then
+      message(1) = 'Block "lsize" not found in input file.'
+      call write_fatal(1)
+    endif
+    do i = 1, conf%dim
+      call oct_parse_block_double(C_string('lsize'), 0, i-1, m%lsize(i))
+    end do
+    m%lsize = m%lsize*units_inp%length%factor
+  end if
+
   ! Read the grid spacing.
   m%h = M_ZERO
   select case(m%box_shape)
@@ -98,32 +118,9 @@ subroutine mesh_create(m, natoms, atom)
   end select
   m%h(1:conf%dim) = m%h(1:conf%dim)*units_inp%length%factor
   
-  m%vol_pp = M_ONE
-  do i = 1, conf%dim
-    m%vol_pp = m%vol_pp*m%h(i)
-  end do
-
-  ! Read the box size.
-  if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER .or. m%box_shape == MINIMUM) then
-    call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
-    m%rsize = m%rsize * units_inp%length%factor
-  end if
-  if(m%box_shape == CYLINDER) then
-    call oct_parse_double(C_string('xlength'), 1.0_r8/units_inp%length%factor, m%xsize)
-    m%xsize = m%xsize * units_inp%length%factor
-  end if
-  if(m%box_shape == PARALLELEPIPED) then
-    if(oct_parse_block_n(C_string('lsize'))<1) then
-      message(1) = 'Block "lsize" not found in input file.'
-      call write_fatal(1)
-    endif
-    do i = 1, conf%dim
-      call oct_parse_block_double(C_string('lsize'), 0, i-1, m%lsize(i))
-    end do
-    m%lsize = m%lsize*units_inp%length%factor
-  end if
-
-  ! set nr and nx
+  ! set nr and nx, and adjust the mesh so that:
+  ! 1) the new grid exactly fills the box;
+  ! 2) the new mesh is not larger than the user defined mesh.
   m%nr = 0; m%nx = 0
   select case(m%box_shape)
   case(SPHERE)
@@ -135,8 +132,19 @@ subroutine mesh_create(m, natoms, atom)
     call write_fatal(1)
   case(PARALLELEPIPED)
     m%nr(1:conf%dim) = int(m%lsize(1:conf%dim)/m%h(1:conf%dim))
+    do i = 1, conf%dim
+      if (mod(m%lsize(i),m%h(i)) /= M_ZERO) then
+        m%nr(i) = m%nr(i) + 1
+        m%h(i) = m%lsize(i)/real(m%nr(i))
+      end if
+    end do 
   end select
   m%nx(1:conf%dim) = m%nr(1:conf%dim) + m%d%norder
+
+  m%vol_pp = M_ONE
+  do i = 1, conf%dim
+    m%vol_pp = m%vol_pp*m%h(i)
+  end do
 
   ! allocate the xyz arrays
   allocate(m%Lxyz_inv(-m%nx(1):m%nx(1),-m%nx(2):m%nx(2),-m%nx(3):m%nx(3)))
