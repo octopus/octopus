@@ -171,7 +171,10 @@ contains
       if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
         read(record, '(12x,a4,1x,a3)') gf%atom(na)%label, gf%atom(na)%residue
         call str_trim(gf%atom(na)%label)
+        gf%atom(na)%label = gf%atom(na)%label(1:1)
         call str_trim(gf%atom(na)%residue)
+
+        read(record, '(30x,3f8.3)') gf%atom(na)%x
         na = na + 1
       end if
     end do
