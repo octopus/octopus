@@ -30,7 +30,7 @@ subroutine xc_gga(func, m, st, pot, energy)
   allocate(d(0:m%np, st%nspin), gd(3, m%np, st%nspin))
   do is = 1, st%nspin
     d(0, is) = 0._r8
-    d(1:m%np, is) = st%rho(1:m%np, is)
+    d(1:m%np, is) = abs(st%rho(1:m%np, is))
 
     if(st%nlcc) then ! non-linear core corrections
       d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%nspin

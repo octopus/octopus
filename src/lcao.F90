@@ -129,19 +129,16 @@ contains
     real(r8), intent(inout) :: rho(m%np)
 
     integer :: i, l
-    real(r8) :: r, zel, zval
+    real(r8) :: r
     R_TYPE :: psi
 
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
-      zval = s%Z_val
 #if defined(THREE_D)
       do l = 0 , s%ps%L_max_occ
         if(r >= r_small) then
           psi = splint(s%ps%Ur(l), r)
-          zel = min(zval, 2.0_r8*(2*l+1))
-          zval = max(0._r8, zval - zel)
-          rho(i) = rho(i) + zel*psi*psi*(r**(2*l))/(4*M_PI)
+          rho(i) = rho(i) + s%ps%occ(l)*psi*psi*(r**(2*l))/(4*M_PI)
         end if
       end do
 #elif defined(ONE_D)
@@ -390,8 +387,7 @@ subroutine lcao_wf(sys, h)
     jobz = 'v'
     uplo = 'u'
     lwork = 3*norbs - 1
-    allocate(work(lwork), w(norbs))
-    allocate(s(norbs, norbs))
+    allocate(work(lwork), w(norbs), s(norbs, norbs))
     s(1:norbs, 1:norbs) = lcao_data%s(ik, 1:norbs, 1:norbs)
 
     call dsygv(1, jobz, uplo, norbs, lcao_data%hamilt, norbs, s, norbs, w, work, lwork, info)
@@ -399,7 +395,7 @@ subroutine lcao_wf(sys, h)
       write(message(1),'(a,i5)') 'LAPACK "dsygv" returned error code ', info
       call write_fatal(1)
     endif
-    deallocate(work, w)
+    deallocate(work, w, s)
 
     sys%st%R_FUNC(psi)(:,:,:, ik) = 0.0_r8
 

@@ -39,6 +39,8 @@ type ps_type
   integer :: l_max ! maximum value of l to take
   integer :: l_loc ! which component to take as local
   integer :: l_max_occ ! maximum l-component which has non-null atomic occupation numbers
+  real(r8), pointer :: occ(:)
+
   character(len=4) :: icore
   real(r8) :: rc_max
   real(r8) :: vlocal_origin ! local pseudopotential at the orginin
@@ -96,7 +98,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
 
 ! We allocate all the stuff
   allocate(ps%kb(0:ps%l_max, ps%kbc), ps%dkb(0:ps%l_max, ps%kbc), ps%Ur(0:ps%L_max_occ))
-  allocate(ps%dknrm(0:ps%L_max), ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
+  allocate(ps%dknrm(0:ps%L_max), ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc), ps%occ(0:ps%l_max_occ))
   do i = 0, ps%L_max
      do j = 1, ps%kbc
         call spline_init(ps%kb(i, j))
@@ -217,7 +219,7 @@ subroutine ps_end(ps)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
 
-  deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h)
+  deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%occ)
 
   call pop_sub()
 end subroutine ps_end
@@ -228,13 +230,16 @@ subroutine hgh_load(ps, psp)
 
   sub_name = 'hgh_load'; call push_sub()
 
-! Fixes some components of ps, read in psf
+  ! Fixes some components of ps, read in psf
   ps%z_val = psp%z_val
   ps%icore = 'nc'
   ps%rc_max = 1.1_r8 * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
   ps%h = psp%h
 
-! now we fit the splines
+  ! Fixes the occupations
+  ps%occ(0:ps%l_max_occ) = psp%occ(0:ps%l_max_occ)
+
+  ! now we fit the splines
   call get_splines_hgh(psp, ps)
 
   call pop_sub(); return
@@ -243,6 +248,8 @@ end subroutine hgh_load
 subroutine tm_load(ps, pstm)
   type(ps_type), intent(inout) :: ps
   type(tm_type), intent(inout) :: pstm
+
+  integer :: l
 
   sub_name = 'tm_load'; call push_sub()
 
@@ -253,6 +260,11 @@ subroutine tm_load(ps, pstm)
   ps%dknrm (0:ps%l_max) = pstm%dknrm (0:ps%l_max)
   ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * 1.1_r8
     ! Increasing radius a little, just in case.
+
+  ! Fixes the occupations
+  do l = 0, ps%l_max
+     read(pstm%title(l*17+3:l*17+7),'(f5.3)') ps%occ(l)
+  enddo
 
   ! now we fit the splines
   call get_splines_tm(pstm, ps)

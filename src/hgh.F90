@@ -46,6 +46,7 @@ type hgh_type
 
   integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
   integer          :: l_max_occ ! Maximum l-value of the occupied wavefunctions
+  real(r8), pointer :: occ(:)   ! Occupations of the pseudo-wavefunctions
 
   ! Logarithmic grid parameters
   type(logrid_type) :: g
@@ -119,7 +120,7 @@ subroutine hgh_init(psp, filename)
 
   ! Allocation of stuff.
   allocate(psp%vlocal(1:psp%g%nrval))
-  allocate(psp%kbr(0:psp%l_max+1))
+  allocate(psp%kbr(0:psp%l_max+1), psp%occ(0:psp%l_max_occ))
   if(psp%l_max >= 0) then
     allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))    
   endif
@@ -134,7 +135,7 @@ subroutine hgh_end(psp)
 
   sub_name = 'hgh_end'; call push_sub()
 
-  deallocate(psp%kbr, psp%vlocal, psp%rphi, psp%eigen)
+  deallocate(psp%kbr, psp%occ, psp%vlocal, psp%rphi, psp%eigen)
   if(associated(psp%kb)) deallocate(psp%kb)
   call kill_logrid(psp%g)
 
@@ -438,26 +439,32 @@ subroutine solve_schroedinger(psp)
   
   integer :: iter, ir, l, nnode, nprin, i, j, irr
   real(r8) :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
-  real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:), rho(:), ve(:), occs(:)
+  real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:), rho(:), ve(:)
   real(r8), parameter :: tol = 1.0e-4_r8
 
   sub_name = 'solve_schroedinger'; call push_sub()
 
   ! Allocations...
   allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval), &
-           rho(psp%g%nrval), ve(psp%g%nrval), occs(0:psp%l_max_occ))
+           rho(psp%g%nrval), ve(psp%g%nrval))
   hato = 0.0_r8; g = 0.0_r8;  y = 0.0_r8; rho = 0.0_r8; ve = 0.0_r8
 
-  ! Calculation of the pseudo-wave functions.
+  ! These numerical parameters have to be fixed for egofv to work.
   s(2:psp%g%nrval) = psp%g%drdi(2:psp%g%nrval)*psp%g%drdi(2:psp%g%nrval)
   s(1) = s(2)
   a2b4 = 0.25_r8*psp%g%a**2
 
+  ! Let us be a bit informative.
   if(conf%verbose > 20 .and. mpiv%node == 0) then
     message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '//psp%atom_name//'....'
     call write_info(1)
   endif
-  
+
+  ! Fixes the occupations.
+  psp%occ = hgh_occs(psp%atom_name(1:2), psp%l_max_occ)
+ 
+  ! "Double" self consistent loop: nonlocal and xc parts have to be calculated
+  ! self-consistently.
   diff = 1e5_r8
   iter = 0
   self_consistent: do while( diff > tol )
@@ -495,10 +502,9 @@ subroutine solve_schroedinger(psp)
       psp%rphi(2:psp%g%nrval, l) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
       psp%rphi(1, l) = psp%rphi(2, l)
     end do
-    occs = hgh_occs(psp%atom_name(1:2), psp%l_max_occ)
     rho = 0.0_r8
     do l = 0, psp%l_max_occ
-       rho = rho + occs(l)*psp%rphi(1:psp%g%nrval, l)**2
+       rho = rho + psp%occ(l)*psp%rphi(1:psp%g%nrval, l)**2
     enddo
     !if(iter>0) rho = 0.5*rho + 0.5*prev
     diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval)-prev(2:psp%g%nrval))**2))
@@ -608,6 +614,7 @@ function hgh_occs(label, lmax)
     case('Ca'); hgh_occs(0:2) = (/ 2, 0, 0 /)
     case('Sc'); hgh_occs(0:2) = (/ 2, 0, 1 /)
     case('Ti'); hgh_occs(0:2) = (/ 2, 0, 2 /)
+    case('Au'); hgh_occs(0:2) = (/ 1, 0, 10 /)
     case default
     if(mpiv%node == 0) then
       message(1) = 'Specie '//trim(label)//' not included in occupation-numbers data base.'
