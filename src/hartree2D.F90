@@ -19,7 +19,7 @@ subroutine hartree2D_solve(h, m, pot, dist)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:), intent(IN) :: dist
+  real(r8), dimension(:, :), intent(IN) :: dist
 
   integer  :: i, ip, j, jp
   real(r8) :: x(2), y(2)
@@ -31,10 +31,10 @@ subroutine hartree2D_solve(h, m, pot, dist)
     call mesh_xyz(m, i, x)
     do j = 1, m%np
       if(i == j) then
-        pot(i) = pot(i) + M_TWO*sqrt(M_PI)*dist(i)/m%h(1)
+        pot(i) = pot(i) + M_TWO*sqrt(M_PI)*sum(dist(i, :))/m%h(1)
       else
         call mesh_xyz(m, j, y)
-        pot(i) = pot(i) + dist(j)/sqrt(sum((x-y)**2))
+        pot(i) = pot(i) + sum(dist(j, :))/sqrt(sum((x-y)**2))
       end if
     end do
     pot(i) = pot(i)*m%vol_pp

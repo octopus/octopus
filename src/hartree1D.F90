@@ -19,7 +19,7 @@ subroutine hartree1D_solve(h, m, pot, dist)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:), intent(IN) :: dist
+  real(r8), dimension(:, :), intent(IN) :: dist
 
   integer  :: i, j
   real(r8) :: x, y
@@ -31,7 +31,7 @@ subroutine hartree1D_solve(h, m, pot, dist)
      call mesh_x(m, i, x)
      do j=1, m%np
         call mesh_x(m, j, y)
-        pot(i) = pot(i) + dist(j)/sqrt(1.0_r8 + (x-y)**2)
+        pot(i) = pot(i) + sum(dist(j, :))/sqrt(1.0_r8 + (x-y)**2)
      enddo
      pot(i) = pot(i)*m%vol_pp
   enddo

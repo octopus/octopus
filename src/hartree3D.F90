@@ -92,7 +92,7 @@ subroutine hartree_cg(h, m, pot, dist)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:), intent(IN) :: dist
+  real(r8), dimension(:, :), intent(IN) :: dist
   
   integer :: i, ix, iy, iz, iter, a, j, imax, add_lm, l, mm, ml
   real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, xx, yy, zz, temp
@@ -109,7 +109,7 @@ subroutine hartree_cg(h, m, pot, dist)
   do i = 1, m%np
     call mesh_r(m, i, r, x=x)
 
-    temp   = dist(i)
+    temp   = sum(dist(i, :))
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
@@ -146,7 +146,7 @@ subroutine hartree_cg(h, m, pot, dist)
   enddo
 
   do i = 1, m%np
-    zk(i) = -4.0d0*M_Pi*dist(i)
+    zk(i) = -4.0d0*M_Pi*sum(dist(i, :))
     wk(m%Lxyz(1, i), m%Lxyz(2, i), m%Lxyz(3, i)) = pot(i)
   enddo 
 
@@ -218,7 +218,7 @@ subroutine hartree_fft(h, m, pot, dist)
   type(hartree_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(out) :: pot
-  real(r8), dimension(:), intent(IN) :: dist
+  real(r8), dimension(:, :), intent(IN) :: dist
 
   integer :: i, s(3), c(3)
   real(r8), allocatable :: f(:,:,:)
@@ -237,7 +237,7 @@ subroutine hartree_fft(h, m, pot, dist)
   f = 0.0_8
   
   do i = 1, m%np
-    f(m%Lxyz(1, i)+c(1), m%Lxyz(2, i)+c(2), m%Lxyz(3, i)+c(3)) = dist(i)
+    f(m%Lxyz(1, i)+c(1), m%Lxyz(2, i)+c(2), m%Lxyz(3, i)+c(3)) = sum(dist(i, :))
   end do
   
   ! Fourier transform the charge density

@@ -2,6 +2,7 @@
 
 module vxc
 
+  use global
 
   contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -21,13 +22,12 @@ module vxc
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine exchng( IREL, NSP, DS, EX, VX )
 
-  use global
-
   implicit real(r8) (A-H,O-Z)
   implicit integer (I-N)
 
   PARAMETER (PFIVE=.5_r8,OPF=1.5_r8,C014=0.014_r8)
   DIMENSION DS(NSP), VX(NSP)
+
 
   TRD = M_ONE/M_THREE
   FTRD = M_FOUR*TRD
@@ -69,7 +69,7 @@ module vxc
      SB = SQRT(1+BETA*BETA)
      ALB = LOG(BETA+SB)
      VXP = VXP * (-PFIVE + OPF * ALB / (BETA*SB))
-     EXP = EXP * (ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
+     EXP = EXP * (M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
   ENDIF
   VXF = 2**TRD*VXP
   EXF = 2**TRD*EXP
@@ -582,26 +582,12 @@ module vxc
   PARAMETER (C0622=0.06220_r8,C004=0.0040_r8,C0232=0.02320_r8)
   PARAMETER (C1686=0.16860_r8,C1P398=1.39810_r8,C2611=0.26110_r8)
   PARAMETER (C2846=0.28460_r8,C1P053=1.05290_r8,C3334=0.33340_r8)
-!Cray       PARAMETER (ZERO=0.0,ONE=1.0,PFIVE=0.5,OPF=1.5,PNN=0.99)
-!Cray       PARAMETER (PTHREE=0.3,PSEVF=0.75,C0504=0.0504) 
-!Cray       PARAMETER (C0254=0.0254,C014=0.014,C0406=0.0406)
-!Cray       PARAMETER (C15P9=15.9,C0666=0.0666,C11P4=11.4)
-!Cray       PARAMETER (C045=0.045,C7P8=7.8,C88=0.88,C20P59=20.592)
-!Cray       PARAMETER (C3P52=3.52,C0311=0.0311,C0014=0.0014)
-!Cray       PARAMETER (C0538=0.0538,C0096=0.0096,C096=0.096)
-!Cray       PARAMETER (C0622=0.0622,C004=0.004,C0232=0.0232)
-!Cray       PARAMETER (C1686=0.1686,C1P398=1.3981,C2611=0.2611)
-!Cray       PARAMETER (C2846=0.2846,C1P053=1.0529,C3334=0.3334)
 
-!    Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
+  ! Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
   PARAMETER (CON1=1.0_r8/6, CON2=0.0080_r8/3, CON3=0.35020_r8/3) 
   PARAMETER (CON4=0.05040_r8/3, CON5=0.00280_r8/3, CON6=0.19250_r8/3)
   PARAMETER (CON7=0.02060_r8/3, CON8=9.78670_r8/6, CON9=1.0444_r8/3)
   PARAMETER (CON10=7.37030_r8/6, CON11=1.33360_r8/3)
-!Cray       PARAMETER (CON1=1.0/6, CON2=0.008/3, CON3=0.3502/3) 
-!Cray       PARAMETER (CON4=0.0504/3, CON5=0.0028/3, CON6=0.1925/3)
-!Cray       PARAMETER (CON7=0.0206/3, CON8=9.7867/6, CON9=1.0444/3)
-!Cray       PARAMETER (CON10=7.3703/6, CON11=1.3336/3) 
 
 !      X-alpha parameter:
   PARAMETER ( ALP = 2.0_r8 / 3.0_r8 )

@@ -32,8 +32,8 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
   sub_name = 'xc_pot'; call push_sub()
 
   allocate(vaux(m%np, st%nspin))
-  vxc = 0.0_r8; vaux = 0.0_r8
-  ex  = 0.0_r8; ec = 0.0_r8
+  vxc = M_ZERO; vaux = M_ZERO
+  ex  = M_ZERO; ec = M_ZERO
 
   select case(xcs%x_family)
   case(XC_FAMILY_ZER)
@@ -85,43 +85,3 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
   deallocate(vaux)
   call pop_sub(); return
 end subroutine R_FUNC(xc_pot)
-
-subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
-  integer, intent(in) :: func
-  logical, intent(in) :: nlcc
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  real(r8), intent(out) :: energy, pot(m%np, st%nspin)
-
-  real(r8) :: d(st%nspin), p(st%nspin), d1, d2, e
-  integer  :: i
-
-  sub_name = 'xc_lda'; call push_sub()
-
-  energy = 0._r8
-  do i = 1, m%np
-    d(:) = st%rho(i, :)
-
-    ! WARNING: is this OK?
-    if(nlcc) then    
-      d(1) = d(1) + st%rho_core(i)/st%spin_channels
-    end if
-
-    select case(func)
-    case(X_FUNC_LDA_NREL)
-      call xc_x_lda(.false., st%nspin, d, p, e) 
-    case(X_FUNC_LDA_REL)
-      call xc_x_lda(.true.,  st%nspin, d, p, e) 
-    case(C_FUNC_LDA_PZ)
-      call xc_c_pz(st%nspin, d, p, e)
-    case(C_FUNC_LDA_PW92)
-      call xc_c_pw92(st%nspin, d, p, e)
-    end select
-
-    ! WARNING: this is probably not OK.
-    energy = energy + d(1) * e * m%vol_pp
-    pot(i, :) = p(:)
-  end do
-
-  call pop_sub(); return
-end subroutine R_FUNC(xc_lda)

@@ -37,32 +37,20 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
     sp = 1
   end if
 
-  rho = 0._r8
+  rho = M_ZERO
   do ik = 1, st%nik, sp
     do p  = st%st_start, st%st_end
       do i = 1, np
+           rho(i, 1) = rho(i, 1) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
          select case(st%ispin)
-         case(UNPOLARIZED)
-           rho(i, 1) = rho(i, 1) + st%kweights(ik)*st%occ(p, ik)&
-                       * R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2        
          case(SPIN_POLARIZED)
-           rho(i, 1) = rho(i, 1) + &
-                       ( st%kweights(ik)*st%occ(p, ik)    *R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2   +   & 
-                         st%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2 )
-           rho(i, 2) = rho(i, 2) + &
-                       ( st%kweights(ik)*st%occ(p, ik)    *R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2   -   & 
-                         st%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2 )
-         case(SPINORS) 
-           rho(i, 1) = rho(i, 1) + st%kweights(ik)*st%occ(p, ik)  * &
-                       ( R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2  +   & 
-                         R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2 )
-           rho(i, 2) = rho(i, 2) + st%kweights(ik)*st%occ(p, ik)  * &
-                       2._r8 * R_REAL (R_CONJ(st%R_FUNC(psi)(i, 1, p, ik)) * st%R_FUNC(psi)(i, 2, p, ik))
+           rho(i, 2) = rho(i, 2) + st%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
+         case(SPINORS)
+           rho(i, 2) = rho(i, 2) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
            rho(i, 3) = rho(i, 3) + st%kweights(ik)*st%occ(p, ik)  * &
-                       2._r8 * R_AIMAG(R_CONJ(st%R_FUNC(psi)(i, 1, p, ik)) * st%R_FUNC(psi)(i, 2, p, ik))
+                       R_REAL (st%R_FUNC(psi)(i, 1, p, ik) * R_CONJ(st%R_FUNC(psi)(i, 2, p, ik)))
            rho(i, 4) = rho(i, 4) + st%kweights(ik)*st%occ(p, ik)  * &
-                       ( R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2  -   & 
-                         R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2 )
+                       R_AIMAG(st%R_FUNC(psi)(i, 1, p, ik) * R_CONJ(st%R_FUNC(psi)(i, 2, p, ik)))
 
          end select
       end do

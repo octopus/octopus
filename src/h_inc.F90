@@ -280,7 +280,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
 
   sub_name = 'hamiltonian_setup'; call push_sub()
 
-  call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1))
+  call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
   h%epot = - M_HALF*dmesh_dotp(m, st%rho(:, 1), h%vhartree)
 
   call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
@@ -288,17 +288,13 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
     case(UNPOLARIZED)
       h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
     case(SPIN_POLARIZED)
-      h%epot = h%epot + dmesh_dotp(m, M_HALF*(st%rho(:, 1)+st%rho(:, 2)), &
-                                          h%vxc(:, 1)) +                            &
-                        dmesh_dotp(m, M_HALF*(st%rho(:, 1)-st%rho(:, 2)), &
-                                          h%vxc(:, 2))
+      h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) + &
+                        dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
     case(SPINORS)
-      h%epot = h%epot + dmesh_dotp(m, M_HALF*(st%rho(:, 1)+st%rho(:, 4)), &
-                                          h%vxc(:, 1))
-      h%epot = h%epot + dmesh_dotp(m, M_HALF*(st%rho(:, 1)-st%rho(:, 4)), &
-                                          h%vxc(:, 2))
-      h%epot = h%epot + M_TWO*zmesh_dotp(m, M_HALF*(st%rho(:, 2) + M_zI*st%rho(:, 3)), &
-                                                    h%vxc(:, 3) - M_zI*h%vxc(:, 4))
+      h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) + &
+                        dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
+      !h%epot = h%epot + M_TWO*zmesh_dotp(m, M_HALF*(st%rho(:, 2) + M_zI*st%rho(:, 3)), &
+      !                                              h%vxc(:, 3) - M_zI*h%vxc(:, 4))
 
   end select
 

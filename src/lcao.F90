@@ -37,7 +37,6 @@ type lcao_type
   integer           :: dim
   R_TYPE , pointer  :: psis(:, :, :, :)
   R_TYPE , pointer  :: hamilt    (:, :, :), &
-                       k_plus_psv(:, :, :), &
                        s         (:, :, :)
   logical, pointer  :: atoml(:,:)
 end type
@@ -82,14 +81,18 @@ subroutine lcao_dens(sys, nspin, rho)
   end do
 
   ! we now renormalize the density (necessary if we have a charged system)
-  r = dmesh_integrate(sys%m, rho(:, 1))
+  r = M_ZERO
+  do is = 1, sys%st%spin_channels
+     r = r + dmesh_integrate(sys%m, rho(:, is))
+  end do
   write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
   call write_info(1)
   r = sys%st%qtot/r
-  do is = 1, nspin
-    rho(:, is) = r*rho(:, is)
+  rho = r*rho
+  r = M_ZERO
+  do is = 1, sys%st%spin_channels
+     r = r + dmesh_integrate(sys%m, rho(:, is))
   end do
-  r = dmesh_integrate(sys%m, rho(:, 1))
   write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
   call write_info(1)
 
@@ -145,15 +148,12 @@ contains
           select case(sys%st%spin_channels)
           case(1)
             psi1 = splint(s%ps%Ur(l, 1), r)
-            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1*(r**(2*l))/(4*M_PI)
+            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1*(r**(2*l))/(4*M_PI)  
           case(2)
             psi1 = splint(s%ps%ur(l, 1), r)
             psi2 = splint(s%ps%ur(l, 2), r)
-            rho(i, 1) = rho(i, 1) + (s%ps%occ(l, 1)*psi1*psi1 + s%ps%occ(l, 2)*psi2*psi2) * &
-                 (r**(2*l))/(4*M_PI)
-            rho(i, sys%st%nspin) = rho(i, sys%st%nspin) + &
-                 (s%ps%occ(l, 1)*psi1*psi1 - s%ps%occ(l, 2)*psi2*psi2) * &
-                 (r**(2*l))/(4*M_PI)
+            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1) * psi1*psi1 * r**(2*l)/(4*M_PI)
+            rho(i, 2) = rho(i, 2) + s%ps%occ(l, 2) * psi2*psi2 * r**(2*l)/(4*M_PI)
           end select
         end if
       end do
@@ -228,8 +228,7 @@ subroutine lcao_init(sys, h)
 
   ! Allocation of variables
   allocate(lcao_data%hamilt    (sys%st%nik, norbs, norbs), &
-           lcao_data%s         (sys%st%nik, norbs, norbs), &
-           lcao_data%k_plus_psv(sys%st%nik, norbs, norbs))
+           lcao_data%s         (sys%st%nik, norbs, norbs))
 
   call pop_sub()
 end subroutine lcao_init

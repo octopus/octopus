@@ -104,7 +104,7 @@ subroutine hartree_solve(h, m, pot, dist)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(IN) :: m
   real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:), intent(IN) :: dist
+  real(r8), dimension(:, :), intent(IN) :: dist
 
   sub_name = 'hartree_solve'; call push_sub()
 

@@ -24,6 +24,7 @@ use mesh
 use fft
 use hartree
 use states
+use vxc
 
 implicit none
 
@@ -311,115 +312,15 @@ function my_sign(a)
   return
 end function my_sign
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Given nspin and rho(1:nspin), this function returns:
-!  d    = rho(1)
-!  z    = mabs/d, where:
-!       mabs = |\vec{m}| = sqrt(rho(2)**2 + rho(3)**2 + rho(4)**2) if we have spinors,
-!              rho(2) if we have only two componets
-!  fz   = ((1+z)**(4/3)+(1-z)**(4/3)-2)/(2**(4/3)-2)
-!  fzp  = dfz/dz
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-function fzeta(nspin, rho, d, z, fz, fzp)
-  integer, intent(in)   :: nspin
-  real(r8), intent(in)  :: rho(nspin)
-  real(r8), intent(out) :: d, z, fz, fzp
-  logical fzeta
-
-  real(r8) :: mabs, TFTM, FTRD
-
-  FTRD= M_FOUR*M_THIRD
-  TFTM = M_TWO**(M_FOUR/M_THREE) - M_TWO
-
-  d = rho(1)
-  if (d .le. M_ZERO) then
-    fzeta = .false.
-    return
-  end if
-
-  select case(nspin)
-  case(1)
-    z   = M_ZERO
-    fz  = M_ZERO
-    fzp = M_ZERO
-  case(2)
-    mabs = rho(2)
-    z = mabs/d
-    if (abs(z) > M_ONE) then
-      fzeta = .false.; return
-    endif
-    fz = ((1+z)**FTRD+(1-z)**FTRD-2)/TFTM
-    fzp = FTRD*((1+z)**M_THIRD-(1-z)**M_THIRD)/TFTM 
-  case(4)
-    mabs = sqrt(rho(2)**2+rho(3)**2+rho(4)**2)
-    z = mabs/d
-    if (z > M_ONE) then
-      fzeta = .false.; return
-    endif
-    fz = ((1+z)**FTRD+(1-z)**FTRD-2)/TFTM
-    fzp = FTRD*((1+z)**M_THIRD-(1-z)**M_THIRD)/TFTM 
-  end select
-
-  fzeta = .true.
-  return
-end function fzeta
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Builds up the v{x|c} "matrix" (if it is a matrix)
-! vin = delta E_xc / delta n
-! bin = delta E_xc / delta |m|
-! m is the polarization vector.
-! On output:
-!       (i)     If nspin = 1, v(1) = vin
-!       (ii)    If nspin = 2, v(1) = vin + bin, v(2) = vin - bin
-!       (iii)   If nspin = 4, the potential matrix should be:
-!
-!                 | vin + bin*m(3)/m            bin*m(1)/m - i*bin*m(2)/m |
-!             V = |                                                       |
-!                 ! bin*m(1)/m + i*bin*m(3)/m   vin - bin*m(3)/m          |
-!
-!               All information about it is passed through v, as follows:
-!               v(1) = vin + bin*m(3)/m; v(2) = bin - bin*m(3)/m;
-!               v(3) = bin*m(1)/m; v(4) = bin*m(2)/m
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine xc_matrix(nspin, vin, bin, m, v)
-  integer, intent(in)   :: nspin
-  real(r8), intent(in)  :: vin, bin
-  real(r8), intent(in)  :: m(3)
-  real(r8), intent(out) :: v(nspin)
-
-  real(r8) :: mabs
-
-  select case(nspin)
-  case(1)
-    v(1) = vin
-  case(2)
-    v(1) = vin + bin
-    v(2) = vin - bin
-  case(4)
-    v(1:2) = vin
-    mabs = sqrt(m(1)**2+m(2)**2+m(3)**2)
-    if(mabs > 1e-8_r8) then
-      v(1) = v(1) + bin*m(3)/mabs
-      v(2) = v(2) - bin*m(3)/mabs
-      v(3) =        bin*m(1)/mabs
-      v(4) =        bin*m(2)/mabs
-    else
-      v(3:4) = M_ZERO
-    endif
-  end select
-  return
-end subroutine xc_matrix
-
 ! include the xc potentials
 
-#include "xc_LDA.F90"
 #include "xc_GGA.F90"
 !#include "xc_MGGA.F90"
 
 #include "undef.F90"
 #include "real.F90"
 #include "xc_pot.F90"
+#include "xc_LDA.F90"
 #include "xc_KLI.F90"
 #include "xc_KLI_x.F90"
 #include "xc_KLI_SIC.F90"
@@ -429,6 +330,7 @@ end subroutine xc_matrix
 
 #include "complex.F90"
 #include "xc_pot.F90"
+#include "xc_LDA.F90"
 #include "xc_KLI.F90"
 #include "xc_KLI_x.F90"
 #include "xc_KLI_SIC.F90"
