@@ -81,17 +81,22 @@ program excitations
   call oct_parse_str("ExciteStates", "1-1024", ch)
   call oct_wfs_list(C_string(ch), flags)
 
-  ! calculate matrix elements
-  message(1) = "Info: Calculating matrix elements"
-  call write_info(1)
-  call calc_matrix_elem(sys%st, sys%m, n_occ, n_unocc, flags, 'linear', 'matrix_elems')
-
-  ! calculate resonances
-  message(1) = "Info: Calculating resonance energies a la Petersilka"
-  call write_info(1)
   ! initialize Hartree potential
   call hartree_init(hart, sys%m)
-  call calc_petersilka(sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
+
+  ! calculate resonances
+  message(1) = "Info: Eigenvalue differences"
+  call write_info(1)
+  call calc_petersilka(0, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'eps-diff')
+
+  message(1) = "Info: Calculating resonance energies a la Petersilka"
+  call write_info(1)
+  call calc_petersilka(1, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
+
+  message(1) = "Info: Calculating resonance energies a la matrix"
+  call write_info(1)
+  call calc_petersilka(2, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'full')
+
   call hartree_end(hart)
 
 end program excitations

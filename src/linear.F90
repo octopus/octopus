@@ -27,133 +27,248 @@ module linear
   implicit none
 
 contains
-  subroutine calc_matrix_elem(st, m, n_occ, n_unocc, flags, dir, fname)
-    type(states_type), intent(IN) :: st
-    type(mesh_type), intent(IN) :: m
-    integer, intent(IN) :: n_occ, n_unocc, flags(32)
-    character(len=*), intent(IN) :: dir, fname
-
-    integer :: iunit(3), nst, i, is, j, js, k, file
-    real(r8) :: a, s(3), x(3)
-    character(len=1) :: name(3)
-
-    ! do not bother with errors
-    call oct_mkdir(C_string(trim(dir)))
-
-    name(1) = 'x'; name(2) = 'y'; name(3) = 'z';
-    do file = 1, 3
-      call io_assign(iunit(file))
-      open(iunit(file), file=trim(dir)+"/"+trim(fname)+"."+name(file), status='unknown')
-
-      write(iunit(file), '(a10,1x)', advance='no') 'occ/unocc'
-      do i = 1, n_occ
-        is = flags((i-1)/32 + 1)
-        if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-          write(iunit(file), '(i17,1x)', advance='no') i
-        end if
-      end do
-      write(iunit(file), '(1x)')
-    end do
-
-    do j = n_occ+1, n_occ + n_unocc
-      js = flags((j-1)/32 + 1)
-      if(iand(js, 2**(modulo(j-1, 32))).ne.0) then
-        do file = 1, 3
-          write(iunit(file), '(i10,1x)', advance='no') j
-        end do
-
-        do i = 1, n_occ
-          is = flags((i-1)/32 + 1)
-          if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-
-            s = R_TOTYPE(0._r8)
-            do k = 1, m%np
-              call mesh_xyz(m, k, x)
-              s = s + x * R_CONJ(st%R_FUNC(psi) (k, 1, i, 1)) * st%R_FUNC(psi) (k, 1, j, 1)
-            end do
-
-            do file = 1, 3
-              write(iunit(file), '(e17.10,1x)', advance='no') R_ABS(s(file))**2*m%vol_pp
-            end do
-          end if
-        end do
-
-        do file = 1, 3
-          write(iunit(file), '(1x)')
-        end do
-
-      end if
-    end do
-
-    do file = 1, 3
-      close(iunit(file))
-    end do
-
-  end subroutine calc_matrix_elem
-
-  subroutine calc_petersilka(st, m, hart, n_occ, n_unocc, flags, dir, fname)
+  subroutine calc_petersilka(type, st, m, hart, n_occ, n_unocc, flags, dir, fname)
     type(states_type), intent(IN) :: st
     type(mesh_type), intent(inout) :: m
     type(hartree_type), intent(inout) :: hart
-    integer, intent(IN) :: n_occ, n_unocc, flags(32)
+    integer, intent(IN) :: type, n_occ, n_unocc, flags(32)
     character(len=*), intent(IN) :: dir, fname
 
-    integer :: iunit, i, is, j, js, ik
-    real(r8) :: k, fxc
-    real(r8), allocatable :: rho(:,:), pot(:)
+    integer, allocatable :: pair_i(:), pair_a(:)
+    real(r8), allocatable :: energies(:,:)
+    integer :: iunit, n_pairs, i, a, ia
 
-    allocate(rho(m%np, 1), pot(m%np))
+    ! get occupied/unoccupied pairs
+    call fix_pairs()
+    
+    if(type == 0.or.type == 1) then ! eigenvalues or petersilka formula
+      call oct_progress_bar(-1, n_pairs) ! initialize bar
 
-    ! do not bother with errors
+      do ia = 1, n_pairs
+        a = pair_a(ia)
+        i = pair_i(ia)
+        energies(ia, 1) = st%eigenval(a, 1) - st%eigenval(i, 1)
+        if(type == 1) then 
+          energies(ia, 1) = energies(ia, 1) + 2._r8*K_term(i, a, i, a)
+        end if
+
+        ! oscilator strengths?
+        call matrix_elem(i, a, energies(ia, 2:4))
+        energies(ia, 2:4) = 2._r8 * (energies(ia, 2:4))**2 * &
+             (st%eigenval(a, 1) - st%eigenval(i, 1))
+
+        call oct_progress_bar(ia-1, n_pairs-1)
+      end do
+
+    else if(type == 2) then ! solve full matrix
+      call solve_matrix()
+    end if
+    write(*, "(1x)")
+
+    ! sort energies
+    call sort_energies()
+
+    ! output
     call oct_mkdir(C_string(trim(dir)))
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname), status='unknown')
 
-    write(iunit, '(a10,1x)', advance='no') 'occ/unocc'
-    do i = 1, n_occ
-      is = flags((i-1)/32 + 1)
-      if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-        write(iunit, '(i17,1x)', advance='no') i
+    if(type == 0) write(iunit, '(2a4)', advance='no') 'From', ' To '
+    write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
+    do ia = 1, n_pairs
+      if(type == 0.or.type == 1) then
+        write(iunit, '(2i4)', advance='no') pair_i(ia), pair_a(ia)
       end if
+      write(iunit, '(5(e15.8,1x))') energies(ia,1) / units_out%energy%factor, &
+           energies(ia, 2:4), 2._r8/3._r8*sum(energies(ia, 2:4))
     end do
-    write(iunit, '(1x)')
+    call io_close(iunit)
 
-    do j = n_occ+1, n_occ + n_unocc
-      js = flags((j-1)/32 + 1)
-      if(iand(js, 2**(modulo(j-1, 32))).ne.0) then
-        write(iunit, '(i10,1x)', advance='no') j
+    ! clean up
+    deallocate(pair_i, pair_a, energies)
 
-        do i = 1, n_occ
-          is = flags((i-1)/32 + 1)
-          if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-            k = st%eigenval(j, 1) - st%eigenval(i, 1) 
+  contains
+    
+    subroutine solve_matrix()
+      real(r8), allocatable :: mat(:,:), w(:), work(:), os(:,:)
+      real(r8) :: temp
+      integer :: ia, jb, i, j, a, b, lwork, info
+      integer :: max, actual
 
-            rho(:, 1) =  R_CONJ(st%R_FUNC(psi) (1:m%np, 1, i, 1)) * st%R_FUNC(psi) (1:m%np, 1, j, 1)
-            print *, i, j, sum(rho)*m%vol_pp
+      allocate(mat(n_pairs, n_pairs))
+      mat = 0._r8
 
-            ! first the Hartree part (only works for real wfs...)
-            pot = 0._r8
-            call hartree_solve(hart, m, pot, rho)
-            k = k + 2._r8*sum(rho(:,1)*pot(:))*m%vol_pp
+      max = n_pairs*(1 + n_pairs)/2 - 1
+      actual = 0
+      call oct_progress_bar(-1, max)
+      do ia = 1, n_pairs
+        i = pair_i(ia)
+        a = pair_a(ia)
+        do jb = ia, n_pairs
+          j = pair_i(jb)
+          b = pair_a(jb)
+          mat(ia, jb) = 4._r8 * K_term(i, a, j, b) &
+                        * sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
 
-            ! now we have fxc
-            do ik = 1, m%np
-              call fxc_LDA(st%rho(ik, 1), fxc)
-              k = k + 2._r8*rho(ik, 1)**2 * fxc * m%vol_pp
-            end do
-            
-            write(iunit, '(e17.10,1x)', advance='no') k / units_out%energy%factor
-          end if
+          if(jb /= ia) mat(jb, ia) = mat(ia, jb) ! the matrix is symmetric
+
+          actual = actual + 1
+          call oct_progress_bar(actual, max)
         end do
 
-        write(iunit, '(1x)')
-      end if
-    end do
+        temp = st%eigenval(a, 1) - st%eigenval(i, 1)
+        mat(ia, :)  = sqrt(temp)*mat(ia, :)
+        mat(ia, ia) = temp**2 + mat(ia, ia)
+      end do
+      write(stdout, '(1x)')
 
-    deallocate(rho, pot)
+      ! now we diagonalise the matrix using LAPACK
+      lwork = 3*n_pairs - 1
+      allocate(work(lwork), w(n_pairs))
+      call dsyev ('v', 'u', n_pairs, mat, n_pairs, w, work, lwork, info)
+      if(info.ne.0) then
+        write(message(1),'(a,i5)') 'LAPACK "zheev/dsyev" returned error code ', info
+        call write_fatal(1)
+      endif
+
+      energies(:, 1) = sqrt(w(:))
+      deallocate(work, w)
+
+      ! let us get now the oscillator strengths
+      allocate(os(n_pairs, 3))
+      do ia = 1, n_pairs
+        i = pair_i(ia)
+        a = pair_a(ia)
+        call matrix_elem(i, a, os(ia,:))
+      end do
+
+      do ia = 1, n_pairs
+       do j = 1, 3
+         energies(ia, 1+j) = 2._r8 * (sum(os(:,j)*mat(:,ia)        &
+              *sqrt(st%eigenval(pair_a(:), 1) - st%eigenval(pair_i(:), 1)) ))**2 
+       end do
+      end do
+
+      deallocate(mat)
+    end subroutine solve_matrix
+
+    function K_term(i, a, j, b)
+      real(r8) :: K_term
+      integer, intent(in) :: i, j, a, b
+    
+      integer :: ik
+      real(r8) :: fxc
+      real(r8), allocatable :: rho_i(:,:), rho_j(:,:), pot(:)
+      allocate(rho_i(m%np, 1), rho_j(m%np, 1), pot(m%np))
+    
+      rho_i(:, 1) =  st%R_FUNC(psi) (1:m%np, 1, i, 1) * st%R_FUNC(psi) (1:m%np, 1, a, 1)
+      rho_j(:, 1) =  st%R_FUNC(psi) (1:m%np, 1, j, 1) * st%R_FUNC(psi) (1:m%np, 1, b, 1)
+    
+     !  first the Hartree part (only works for real wfs...)
+      pot = 0._r8
+      call hartree_solve(hart, m, pot, rho_j)
+      K_term = sum(rho_i(:,1)*pot(:))*m%vol_pp
+      
+      ! now we have fxc
+      do ik = 1, m%np
+        call fxc_LDA(st%rho(ik, 1), fxc)
+        K_term = K_term + rho_i(ik, 1)*rho_j(ik, 1)*fxc*m%vol_pp
+      end do
+      
+      deallocate(rho_i, rho_j, pot)
+    end function K_term
+
+    subroutine fix_pairs()
+      integer :: i, is, a, as, j
+
+      ! count pairs
+      n_pairs = 0
+      do a = n_occ+1, n_occ + n_unocc
+        as = flags((a-1)/32 + 1)
+        if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+          do i = 1, n_occ
+            is = flags((i-1)/32 + 1)
+            if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+              n_pairs = n_pairs + 1
+            end if
+          end do
+        end if
+      end do
+
+      if(n_pairs < 1) then
+        message(1) = "Error: Maybe there are no unoccupied states?"
+        call write_fatal(1)
+      end if
+      
+      ! allocate stuff
+      allocate(pair_i(n_pairs), pair_a(n_pairs))
+      allocate(energies(n_pairs, 4)) ! excitations + intensities
+      energies = 0._r8
+      
+      ! create pairs
+      j = 1
+      do a = n_occ+1, n_occ + n_unocc
+        as = flags((a-1)/32 + 1)
+        if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+          do i = 1, n_occ
+            is = flags((i-1)/32 + 1)
+            if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+              pair_i(j) = i
+              pair_a(j) = a
+              j = j + 1
+            end if
+          end do
+        end if
+      end do
+
+    end subroutine fix_pairs
+
+    subroutine sort_energies
+      real(r8) :: tmp(4), emin
+      integer ia, jb, min, itmp
+
+      ! stupid algorith, but who cares
+      do ia = 1, n_pairs
+        min = ia
+        emin = energies(ia, 1)
+        do jb = ia + 1, n_pairs
+          if(energies(jb, 1) < emin) then
+            emin = energies(jb, 1)
+            min = jb
+          end if
+        end do
+        if(min .ne. ia) then
+          tmp = energies(ia, :)
+          energies(ia, :) = energies(min, :)
+          energies(min, :) = tmp
+          
+          itmp = pair_i(ia); pair_i(ia) = pair_i(min); pair_i(min) = itmp
+          itmp = pair_a(ia); pair_a(ia) = pair_a(min); pair_a(min) = itmp
+          
+        end if
+      end do
+    end subroutine sort_energies
+
+    subroutine matrix_elem(i, j, s)
+      integer, intent(in) :: i, j
+      R_TYPE, intent(out) :: s(3)
+
+      real(r8) :: x(3)
+      integer :: k
+
+      s = R_TOTYPE(0._r8)
+      do k = 1, m%np
+        call mesh_xyz(m, k, x)
+        s = s + x * R_CONJ(st%R_FUNC(psi) (k, 1, i, 1)) * st%R_FUNC(psi) (k, 1, j, 1)
+      end do
+
+      s = s*m%vol_pp
+      
+    end subroutine matrix_elem
 
   end subroutine calc_petersilka
+
 
   ! WARNING This should be very improved...
   subroutine fxc_LDA(n, fxc)
@@ -181,12 +296,12 @@ contains
          CON7=0.02060_r8/3, CON8=9.78670_r8/6, CON9=1.0444_r8/3, &
          CON10=7.37030_r8/6, CON11=1.33360_r8/3
 
-    real(r8) :: rs, sqrs, rslog, te, be, dte, dbe, exp, vcp, ecp
+    real(r8) :: rs, sqrs, rslog, te, be, dte, dbe, exp, ecp
 
     fxc = 0._r8
 
     ! calculate rs
-    if(n < 1e-20_r8) then
+    if(n < 1e-30_r8) then
       fxc = 0._r8
       return
     end if
@@ -199,19 +314,18 @@ contains
     if (rs .gt. ONE) then
       sqrs = sqrt(rs)
       te   = ONE + CON10*sqrs  + CON11*rs
+      dte  = CON10/(2._r8*sqrs)  + CON11
       be   = ONE + C1P053*sqrs + C3334*rs
-      dte  = CON10 /(2._r8*sqrs) + CON11
       dbe  = C1P053/(2._r8*sqrs) + C3334
       ecp  = -(C2846/be)
-      vcp  = ecp*te/be
-      fxc  = fxc + ecp/be*(dbe + (dte*be - dbe*te)/be)
+      fxc  = fxc + ecp/be**2 * (dte*be - 2._r8*dbe*te)
     else
       rslog = log(rs)
-      fxc  = fxc + C0622/rs + CON2*(1 + rslog) - CON4
+      fxc  = fxc + C0622/rs + CON2*(1._r8 + rslog) - CON4
     end if
 
-    fxc = - fxc*n*rs/3._r8 ! missing factor d rs/d n
-    fxc =   fxc / 2._r8    ! Rydbergs -> Hartree
+    fxc = - fxc*rs/(n*3._r8) ! missing factor d rs/d n
+    fxc =   fxc / 2._r8      ! Rydbergs -> Hartree
 
   end subroutine fxc_LDA
 end module linear
