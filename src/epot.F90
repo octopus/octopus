@@ -270,6 +270,7 @@ contains
     end if
 #endif
 
+    vpsl = M_ZERO
     do ia = 1, sys%natoms
       a => sys%atom(ia) ! shortcuts
       s => a%spec
