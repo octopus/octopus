@@ -68,6 +68,7 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
   integer :: iunit, i, is, ie, &
       ntiter, j, jj, k, isp, time_steps
   real(r8) :: dump, dt, x
+  real(r8), allocatable :: dumpa(:)
   real(r8), allocatable :: dipole(:,:)
 
   call spectrum_mult_info(sysname, iunit, sf%nspin, time_steps, dt)
@@ -91,19 +92,25 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
   sf%sp = 0._r8
   sf%alpha = 0._r8; sf%alpha2 = 0._r8; sf%ewsum = 0._r8
 
+  ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
+  allocate(dumpa(is:ie))
+  do j = is, ie
+     jj = j - is
+      select case(sf%damp)
+      case(0)
+        dumpa(j) = 1._r8
+      case(1)
+        dumpa(j)= exp(-jj*dt*sf%damp_factor)
+      case(2)
+        dumpa(j) = 1.0 - 3.0*(real(jj)/ntiter)**2                          &
+            + 2.0*(real(jj)/ntiter)**3
+      end select
+  enddo
+
   do k = 0, sf%no_e
     do j = is, ie
       
       jj = j - is
-      select case(sf%damp)
-      case(0)
-        dump = 1._r8
-      case(1)
-        dump = exp(-jj*dt*sf%damp_factor)
-      case(2)
-        dump = 1.0 - 3.0*(real(jj)/ntiter)**2                          &
-            + 2.0*(real(jj)/ntiter)**3
-      end select
       
       select case(sf%transform)
       case(1)
@@ -113,11 +120,11 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
       end select
 
       do isp = 1, sf%nspin
-        sf%sp(k, isp) = sf%sp(k, isp) + x*dump*dipole(j, isp)
+        sf%sp(k, isp) = sf%sp(k, isp) + x*dumpa(j)*dipole(j, isp)
 
         ! polarizability sum rule
         if(k == 0) then
-          sf%alpha2 = sf%alpha2 + dump*dipole(j, isp)
+          sf%alpha2 = sf%alpha2 + dumpa(j)*dipole(j, isp)
         end if
       end do
 
@@ -136,7 +143,7 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
   end do
 
   sf%alpha2 = sf%alpha2 * dt / sf%delta_strength
-  deallocate(dipole)
+  deallocate(dipole, dumpa)
 
   ! output
   if(trim(out_file) .ne. '-') then
