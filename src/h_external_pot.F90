@@ -25,7 +25,7 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
   logical, intent(in) :: nlcc
 
   integer :: i, j, ix, iy, iz, n, ixx(3)
-  real(r8) :: x(3), g(3), g2, modklat
+  real(r8) :: x(3), g(3), modg, temp(3)
   real(r8), allocatable :: fr(:,:,:), v(:)
   complex(r8) :: c
 
@@ -55,15 +55,24 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
       call zscal(n, c, s(i)%local_fw,  1)
     else
        allocate(v(2:s(i)%ps%g%nrval))
-       do ix = 1, m%fft_n2(1)
+       temp(:) = M_TWO*M_PI/(m%fft_n2(:)*m%h(:))
+       do ix = 1, m%hfft_n2
+         ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
 	 do iy = 1, m%fft_n2(2)
+           ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
            do iz = 1, m%fft_n2(3)
-	     modklat = sqrt(ix*m%klat(1,1)+iy*m%klat(2,2)+iz*m%klat(3,3))
-	     do j = 2, s(i)%ps%g%nrval
-	        v(j) = (sin(modklat*s(i)%ps%g%rofi(j))/(modklat*s(i)%ps%g%rofi(j)))*     &
-		        s(i)%ps%g%rofi(j)**2*(splint(s(i)%ps%vlocal,s(i)%ps%g%rofi(j)))
+             ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+             modg = sqrt(sum((temp(:)*ixx(:))**2))
+             if(modg.ne.M_ZERO) then
+	       do j = 2, s(i)%ps%g%nrval
+	          v(j) = (sin(modg*s(i)%ps%g%rofi(j))/(modg*s(i)%ps%g%rofi(j)))*     &
+		          s(i)%ps%g%rofi(j)**2*(splint(s(i)%ps%vlocal,s(i)%ps%g%rofi(j)))
 	     enddo
-	     s(i)%local_fw(ix, iy, iz) = sqrt(M_TWO/M_PI)*(sum(s(i)%ps%g%drdi(:)*v(:))-s(i)%ps%z/modklat)
+	       s(i)%local_fw(ix, iy, iz) = M_FOUR*M_PI*    &
+	       (sum(s(i)%ps%g%drdi(2:s(i)%ps%g%nrval)*v(2:s(i)%ps%g%nrval))-s(i)%ps%z_val/modg)
+	     else
+	       s(i)%local_fw(ix, iy, iz) = M_ZERO
+	     end if
            end do
 	 end do
        end do
@@ -243,7 +252,7 @@ subroutine generate_external_pot(h, sys)
     ! first the potential
     call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
     call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
-
+      
     ! and the non-local core corrections
     if(sys%nlcc) then
       call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
@@ -303,7 +312,6 @@ contains
                                               a%so_uv, a%so_duv, a%so_uvu, &
 					      a%so_luv)
     if(conf%periodic_dim/=0 .and. associated(a%phases)) deallocate(a%phases)
-    
     if (any(s%ps%rc_max + m%h(1)>=m%lsize(1:conf%periodic_dim))) then
       message(1)='KB sphere is larger than the box size'
       write(message(2),'(a,f12.6,a)')'  rc_max+h = ',s%ps%rc_max + m%h(1),' [b]'
@@ -311,7 +319,6 @@ contains
       message(4)='Please change pseudopotential'
       call write_fatal(4)
     end if
-    
     j = 0
     do k = 1, h%np
       do i=1,3**conf%periodic_dim
@@ -322,7 +329,6 @@ contains
       end do
     end do
     a%Mps = j
-    
     allocate(a%Jxyz(j), a%duV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
          a%dduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%duVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
     allocate(a%zuV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
