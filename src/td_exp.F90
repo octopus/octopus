@@ -146,9 +146,9 @@ contains
           hm(nn, n + 1) = hh(nn)
        enddo
        if(h%ab .ne. 1) then
-         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, 'hermitian')
+         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
        else
-         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, 'general')
+         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 1)
        endif
        res = abs(beta*abs(expo(1, n+1)))
        beta = zstates_nrm2(sys%m, sys%st%dim, f)
