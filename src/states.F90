@@ -346,7 +346,6 @@ subroutine states_generate_random(st, m, ist_start)
   ist_s = 1
   if(present(ist_start)) ist_s = ist_start
 
-  st%R_FUNC(psi) (0, :, :, :) = M_ZERO
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
