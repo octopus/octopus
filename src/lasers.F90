@@ -211,7 +211,7 @@ subroutine laser_write_info(no_l, l, iunit)
     if(l(i)%envelope > 0.and.l(i)%envelope < 4) then
       write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', l(i)%t0/units_inp%time%factor, &
            ' [', trim(units_inp%time%abbrev), ']'
-    else
+    else if(l(i)%envelope == 10) then
       write(iunit, '(3x,a)') 'Amplitude and phase information read from file'
     end if
     if(l(i)%envelope == 3) then
@@ -309,7 +309,7 @@ subroutine laser_amplitude(no_l, l, t, amp)
       ph = splint(l(i)%phase, t)
     end select
 
-    amp(i) = l(i)%A0 * r * exp(M_zI * l(i)%omega0*t + ph)
+    amp(i) = l(i)%A0 * r * exp(M_zI * (l(i)%omega0*t + ph))
   end do
 
   return

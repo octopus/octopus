@@ -48,10 +48,10 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   call trl_set_iguess(info, nec = 0, iguess = 1)
   do ik_trlan = 1, st%nik
-     st%R_FUNC(psi)(:, :, ik_trlan, 1) = R_TOTYPE(M_ZERO)
+     st%X(psi)(:, :, ik_trlan, 1) = R_TOTYPE(M_ZERO)
      do i = 1, st%nst
-        st%R_FUNC(psi)(:, :, 1, ik_trlan) = st%R_FUNC(psi)(:, :, 1, ik_trlan) + &
-                                            st%R_FUNC(psi)(:, :, i, ik_trlan)/st%nst
+        st%X(psi)(:, :, 1, ik_trlan) = st%X(psi)(:, :, 1, ik_trlan) + &
+                                       st%X(psi)(:, :, i, ik_trlan)/st%nst
      enddo
   enddo
 
@@ -63,10 +63,10 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   do ik_trlan = 1, st%nik
 !!$     do i = 1, st%nst
-!!$        evec(:, :, i) = st%R_FUNC(psi)(:, :, i, ik_trlan)
+!!$        evec(:, :, i) = st%X(psi)(:, :, i, ik_trlan)
 !!$     enddo
      call trlan(op, info, nrow, mev, &
-                st%eigenval(:, ik_trlan), st%R_FUNC(psi)(:, :, :, ik_trlan), nrow)
+                st%eigenval(:, ik_trlan), st%X(psi)(:, :, :, ik_trlan), nrow)
 !!$     call trlan(op, info, nrow, mev, &
 !!$                st%eigenval(:, ik_trlan), evec(:,:,:), nrow)
      if(info%stat.ne.0) then
@@ -77,13 +77,13 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
      niter     = info%matvec
 
 !!$     do i = 1, st%nst
-!!$        st%R_FUNC(psi)(:, :, i, ik_trlan) = evec(:, :, i)
+!!$        st%X(psi)(:, :, i, ik_trlan) = evec(:, :, i)
 !!$     enddo
 
   enddo
 
-  call R_FUNC(scal)(sys%m%np*st%dim*st%nst*st%nik, &
-                    R_TOTYPE(1.0/sqrt(sys%m%vol_pp)), st%R_FUNC(psi), 1)
+  call X(scal)(sys%m%np*st%dim*st%nst*st%nik, &
+       R_TOTYPE(1.0/sqrt(sys%m%vol_pp)), st%X(psi)(1,1,1,1), 1)
 
   if(conf%verbose > 999) then
     call io_close(unit)
@@ -101,7 +101,7 @@ subroutine op(nrow, ncol, xin, ldx, yout, ldy)
   integer :: i
 
   do i = 1, ncol
-     call R_FUNC(Hpsi) (h_trlan, m_trlan, st_trlan, sys_trlan, ik_trlan, &
+     call X(Hpsi) (h_trlan, m_trlan, st_trlan, sys_trlan, ik_trlan, &
           xin(1:, i), yout(2:,i))
   enddo
 

@@ -125,7 +125,7 @@ contains
         tr%v_old(:, :, 3) = tr%v_old(:, :, 0)
 
         call zcalcdens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, st, sys=sys)
+        call zh_calc_vhxc(h, m, st, sys, calc_eigenval=.true.)
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
@@ -167,7 +167,7 @@ contains
         end do
         
         call zcalcdens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, st, sys=sys)
+        call zh_calc_vhxc(h, m, st, sys, calc_eigenval=.true.)
         
         st%zpsi = zpsi1
         deallocate(zpsi1)

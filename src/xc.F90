@@ -87,8 +87,16 @@ type xc_type
   real(r8) :: lb94_threshold
 
   ! for the OEP
-  integer :: oep_level  ! 0 = Slater, 1 = KLI, 2 = full OEP
+  integer  :: oep_level  ! 0 = Slater, 1 = KLI, 2 = full OEP
+  real(r8) :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
 end type xc_type
+
+type xc_oep_type
+  integer           :: eigen_n
+  integer,  pointer :: eigen_type(:), eigen_index(:)
+  real(r8)          :: socc, sfact
+  real(r8), pointer :: vxc(:), lxc(:,:), uxc_bar(:)
+end type xc_oep_type
 
 real(r8), parameter :: small     = 1e-5_r8
 real(r8), parameter :: tiny      = 1.0e-12_r8
@@ -117,7 +125,7 @@ subroutine xc_write_info(xcs, iunit)
     end do
 
     if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
-      write(iunit, '(a)') 'The OEP equation will be handle of the level of:'
+      write(iunit, '(a)') 'The OEP equation will be handle at the level of:'
       select case(xcs%oep_level)
       case (0); write(iunit, '(a)') '      Slater approximation'
       case (1); write(iunit, '(a)') '      KLI approximation'
@@ -233,6 +241,10 @@ subroutine xc_init(xcs, nlcc)
       message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
       call write_fatal(2)
     end if
+    if(xcs%oep_level == 2) then
+      call oct_parse_double("OEP_mixing", M_ONE, xcs%oep_mixing)
+    end if
+
   end if
 
   call pop_sub()
@@ -243,39 +255,60 @@ subroutine xc_end(xcs)
   return
 end subroutine xc_end
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! A couple of auxiliary functions
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine getSpinFactor(nspin, socc, sfact)
-  integer, intent(in) :: nspin
-  real(r8), intent(out) :: socc, sfact
+! A couple of auxiliary functions for oep
+subroutine xc_oep_SpinFactor(oep, nspin)
+  type(xc_oep_type), intent(out) :: oep
+  integer,           intent(in)  :: nspin
 
   select case(nspin)
   case(1) ! we need to correct for the spin occupancies
-     socc  = 0.5_r8
-     sfact = 2.0_r8
+    oep%socc  = M_HALF
+    oep%sfact = M_TWO
   case(2, 4)
-     socc  = 1.0_r8
-     sfact = 1.0_r8
+    oep%socc  = M_ONE
+    oep%sfact = M_ONE
   case default
-     write(6,'(a,I2)') 'OEP: error cannot handle nspin=', nspin
+    write(6,'(a,I2)') 'OEP: error cannot handle nspin=', nspin
   end select
-end subroutine getSpinFactor
+end subroutine xc_oep_SpinFactor
 
-function my_sign(a)
-  real(r8), intent(in) ::  a
-  real(r8) :: my_sign
+subroutine xc_oep_AnalizeEigen(oep, st, is)
+   type(xc_oep_type), intent(out) :: oep
+   type(states_type), intent(in)  :: st
+   integer,           intent(in)  :: is
 
-  if(a < 0) then
-     my_sign = -1.0_r8
-  else
-     my_sign = 1.0_r8
-  end if
-  return
-end function my_sign
+   integer  :: i
+   real(r8) :: max_eigen
+
+   ! find out the top occupied state, to correct for the assymptotics
+   ! of the potential
+   max_eigen = -1e30_r8
+   do i = 1, st%nst
+     if((st%occ(i, is) .gt. small).and.(st%eigenval(i, is).gt.max_eigen)) then
+       max_eigen = st%eigenval(i, is)
+     end if
+   end do
+    
+   oep%eigen_n = 1
+   do i = 1, st%nst
+     if(st%occ(i, is) .gt. small) then
+       ! criterium for degeneracy
+       if(abs(st%eigenval(i, is)-max_eigen).le.1e-3_r8) then
+         oep%eigen_type(i) = 2
+       else
+         oep%eigen_type(i) = 1
+         oep%eigen_index(oep%eigen_n) = i
+         oep%eigen_n = oep%eigen_n +1
+       end if
+     else
+       oep%eigen_type(i) = 0
+     end if
+   end do
+   oep%eigen_n = oep%eigen_n - 1
+ 
+end subroutine xc_oep_AnalizeEigen
 
 ! include the xc potentials
-
 #include "xc_LDA.F90"
 #include "xc_GGA.F90"
 !#include "xc_MGGA.F90"

@@ -17,14 +17,13 @@
 
 !!! This routine calculates the SIC exchange functional. note that the LDA
 !!! part of the functional is already included by the LDA routines
-subroutine X(oep_x_sic) (xcs, m, st, is, socc, sfact, lx_, ex)
-  type(xc_type),     intent(in)  :: xcs
-  type(mesh_type),   intent(in)  :: m
-  type(states_type), intent(inout)  :: st
-  integer,           intent(in)  :: is
-  real(r8),          intent(in)  :: socc, sfact
-  R_TYPE,            intent(out) :: lx_(m%np, st%nst)
-  real(r8),          intent(out) :: ex
+subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
+  type(xc_type),     intent(in)    :: xcs
+  type(mesh_type),   intent(in)    :: m
+  type(states_type), intent(inout) :: st
+  integer,           intent(in)    :: is
+  type(xc_oep_type), intent(inout) :: oep
+  real(r8),          intent(out)   :: ex
 
   integer  :: i, k, i1, i2
   real(r8) :: ex2, edummy, r
@@ -48,17 +47,17 @@ subroutine X(oep_x_sic) (xcs, m, st, is, socc, sfact, lx_, ex)
       vx2 = M_ZERO
       ex2 = M_ZERO
 
-      st%rho(:, 1) = socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
+      st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
 
       call xc_lda (xcs2, m, st, vx2, ex2, edummy)
 
-      ex = ex - sfact*ex2
+      ex = ex - oep%sfact*ex2
       
       vx2(:, 2) = M_ZERO
       call poisson_solve(m, vx2(:, 2), rho(:, 1))
-      lx_(:, i) = lx_(:, i) - (vx2(:, 1) + vx2(:,2))*R_CONJ(st%X(psi) (:, 1, i, is))
+      oep%lxc(:, i) = oep%lxc(:, i) - (vx2(:, 1) + vx2(:,2))*R_CONJ(st%X(psi) (:, 1, i, is))
 
-      ex = ex - M_HALF*sfact*socc*st%occ(i, is)* &
+      ex = ex - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
            sum(vx2(:, 2)* R_ABS(st%X(psi)(:, 1, i, is))**2)*m%vol_pp
     end if
   end do
@@ -70,14 +69,13 @@ subroutine X(oep_x_sic) (xcs, m, st, is, socc, sfact, lx_, ex)
 
 end subroutine X(oep_x_sic)
 
-subroutine X(oep_c_sic) (xcs, m, st, is, socc, sfact, lc_, ec)
-  type(xc_type),     intent(in)  :: xcs
-  type(mesh_type),   intent(in)  :: m
-  type(states_type), intent(inout)  :: st
-  integer,           intent(in)  :: is
-  real(r8),          intent(in)  :: socc, sfact
-  R_TYPE,            intent(out) :: lc_(m%np, st%nst)
-  real(r8),          intent(out) :: ec
+subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
+  type(xc_type),     intent(in)    :: xcs
+  type(mesh_type),   intent(in)    :: m
+  type(states_type), intent(inout) :: st
+  integer,           intent(in)    :: is
+  type(xc_oep_type), intent(inout) :: oep
+  real(r8),          intent(out)   :: ec
 
   integer  :: i, k, i1, i2
   real(r8) :: ec2, edummy, r
@@ -101,12 +99,12 @@ subroutine X(oep_c_sic) (xcs, m, st, is, socc, sfact, lc_, ec)
       vc2 = M_ZERO
       ec2 = M_ZERO
 
-      st%rho(:, 1) = socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
+      st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
 
       call xc_lda (xcs2, m, st, vc2, edummy, ec2)
 
-      ec = ec - sfact*ec2
-      lc_(:, i) = lc_(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
+      ec = ec - oep%sfact*ec2
+      oep%lxc(:, i) = oep%lxc(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
     end if
   end do
 

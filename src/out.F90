@@ -80,7 +80,7 @@ subroutine output_init(outp)
   end if
 
   if(outp%what(output_something)) then
-
+    outp%how = 0
     call oct_parse_logical("OutputAxisX", .false., l)
     if(l) outp%how = ior(outp%how, output_axis_x)
     if(conf%dim > 1) then

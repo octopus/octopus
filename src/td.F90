@@ -178,7 +178,7 @@ subroutine td_run(td, u_st, sys, h)
     call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call zh_calc_vhxc(h, sys%m, sys%st, sys=sys)
+    call zh_calc_vhxc(h, sys%m, sys%st, sys, calc_eigenval=.true.)
     call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)
 
     ! Recalculate forces, update velocities...

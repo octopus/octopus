@@ -36,7 +36,7 @@ noinst_HEADERS = \
 	out_inc.F90 math_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a \
-  @LIB_FFT@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@ 
+  @LIB_FFT@ @LIB_TRLAN@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@
 
 # this has to be repeated...
 octopus_mpi_SOURCES     = $(octopus_SOURCES)

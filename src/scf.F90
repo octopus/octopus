@@ -150,7 +150,7 @@ subroutine scf_run(scf, sys, h)
     call X(calcdens)(sys%st, sys%m%np, rhoout)
     if (scf%what2mix == MIXPOT) then
        sys%st%rho = rhoout
-       call X(h_calc_vhxc) (h, sys%m, sys%st)
+       call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
        vout = h%vhxc
     end if
     evsum_out = states_eigenvalues_sum(sys%st)
@@ -178,7 +178,7 @@ subroutine scf_run(scf, sys, h)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
        call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, rhoin, rhoout, sys%st%rho)
-       call X(h_calc_vhxc) (h, sys%m, sys%st)!, sys)
+       call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
     case (MIXPOT)
        ! mix input and output potentials
        call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, vin, vout, h%vhxc)
@@ -209,7 +209,7 @@ subroutine scf_run(scf, sys, h)
   end do
 
   if (scf%what2mix == MIXPOT) then
-     call X(h_calc_vhxc) (h, sys%m, sys%st)!, sys=sys)
+     call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
      deallocate(vout, vin)
   end if
   deallocate(rhoout, rhoin)

@@ -15,22 +15,15 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Calculates the potential
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(xc_KLI_solve) (m, st, oep_level, is, socc, lxc, vxc_)
+subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   type(mesh_type),   intent(in)    :: m
   type(states_type), intent(in)    :: st
+  type(xc_oep_type), intent(inout) :: oep
   integer,           intent(in)    :: oep_level, is
-  real(r8),          intent(in)    :: socc
-  R_TYPE,            intent(in)    :: lxc(m%np, st%nst)
-  real(r8),          intent(inout) :: vxc_(m%np, st%nspin)
 
-  integer i, j, k, eigen_n
-  real(r8), allocatable :: rho_sigma(:), vxc(:), v_bar_S(:)
+  integer :: i, j, n
+  real(r8), allocatable :: rho_sigma(:), v_bar_S(:)
   real(r8), allocatable :: Ma(:,:), x(:), y(:)
-  integer,  allocatable :: eigen_type(:), eigen_index(:)
-  real(r8) :: max_eigen, uxc_bar
 
   ! variables needed by LAPACK
   character(len=1) :: la_EQUED
@@ -41,96 +34,66 @@ subroutine X(xc_KLI_solve) (m, st, oep_level, is, socc, lxc, vxc_)
 
   ! some intermediate quantities
   ! vxc contains the Slater part!
-  allocate(vxc(m%np), rho_sigma(m%np))
-  do k = 1, m%np
-    rho_sigma(k) = max(sum(socc*st%occ(:, is)*R_ABS(st%X(psi)(k, 1, :, is))**2), 1e-20_r8)
-    vxc(k)   = socc*sum(st%occ(:, is)*R_REAL(lxc(k, :)*st%X(psi)(k, 1, :, is))) &
-         /rho_sigma(k)
+  allocate(rho_sigma(m%np))
+  do i = 1, m%np
+    rho_sigma(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), 1e-20_r8)
+    oep%vxc(i)       = oep%socc* &
+         sum(st%occ(:, is)*R_REAL(oep%lxc(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
   end do
 
+  n = oep%eigen_n
   slater_approx: if(oep_level > 0) then
 
     allocate(v_bar_S(st%nst))
     do i = 1, st%nst
       if(st%occ(i, is) .gt. small) then
-        v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * vxc(:))*m%vol_pp
-      end if
-    end do
-
-    ! find out the top occupied state, to correct for the assymptotics
-    ! of the potential
-    allocate(eigen_type(st%nst), eigen_index(st%nst))
-    max_eigen = -1e30_r8
-    do i = 1, st%nst
-      if((st%occ(i, is) .gt. small).and.(st%eigenval(i, is).gt.max_eigen)) then
-        max_eigen = st%eigenval(i, is)
+        v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * oep%vxc(:))*m%vol_pp
       end if
     end do
     
-    eigen_n = 1
-    do i = 1, st%nst
-      if(st%occ(i, is) .gt. small) then
-        ! criterium for degeneracy
-        if(abs(st%eigenval(i,is)-max_eigen).le.1e-3_r8) then
-          eigen_type(i) = 2
-        else
-          eigen_type(i) = 1
-          eigen_index(eigen_n) = i
-          eigen_n = eigen_n +1
-        end if
-      else
-        eigen_type(i) = 0
-      end if
-    end do
-    eigen_n = eigen_n - 1
-    
-    if(eigen_n > 0) then ! there is more than one state, so solve linear equation
-      allocate(x(eigen_n))
+    if(n > 0) then ! there is more than one state, so solve linear equation
+      allocate(x(n))
       x = 0.0_r8
-      allocate(Ma(eigen_n, eigen_n), y(eigen_n))
-      do i=1,eigen_n
-        do j=i,eigen_n
+      allocate(Ma(n, n), y(n))
+      do i = 1, n
+        do j = i, n
           Ma(i,j) = -sum(                                 &
-               R_ABS(st%X(psi)(:, 1, eigen_index(i), is))**2 * &
-               R_ABS(st%X(psi)(:, 1, eigen_index(j), is))**2 / &
+               R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 * &
+               R_ABS(st%X(psi)(:, 1, oep%eigen_index(j), is))**2 / &
                rho_sigma(:))*m%vol_pp
           Ma(j,i) = Ma(i,j)
         end do
         Ma(i,i) = 1 + Ma(i,i)
         
-        ! y(i) = v_bar_S - uxc_bar
-        uxc_bar = sum(R_REAL(st%X(psi)(:, 1, i, is) * lxc(:, i)))*m%vol_pp
-        y(i) = v_bar_S(eigen_index(i)) - uxc_bar
+        y(i) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
       end do
       
       ! setup lapack arrays
-      allocate(la_AF(eigen_n,eigen_n), la_IPIV(eigen_n), la_R(eigen_n), &
-           la_C(eigen_n), la_work(4*eigen_n), la_iwork(eigen_n))
+      allocate(la_AF(n, n), la_IPIV(n), la_R(n), &
+           la_C(n), la_work(4*n), la_iwork(n))
       
-      call DGESVX('N', 'N', eigen_n, 1, Ma, eigen_n, la_AF, eigen_n,     &
-           la_IPIV, la_EQUED, la_R, la_C, y, eigen_n, x, eigen_n,       &
+      call DGESVX('N', 'N', n, 1, Ma, n, la_AF, n,               &
+           la_IPIV, la_EQUED, la_R, la_C, y, n, x, n,            &
            la_R_cond, la_Ferr, la_Berr, la_work, la_iwork, info)
       if(info.ne.0) then
-        write(6,'(a,I5,a)') 'KLI:: error in lapack (info=',info,')'
+        write(6,'(a,I5,a)') 'xc_KLI_solve:: error in lapack (info=',info,')'
       end if
       
       deallocate(la_AF, la_IPIV, la_R, la_C, la_work, la_iwork)
       deallocate(Ma, y)
       
       ! add contribution of low lying states
-      do i = 1, eigen_n
-        vxc(:) = vxc(:) + &
-             socc*st%occ(eigen_index(i),is)* x(i) *  &
-             R_ABS(st%X(psi)(:, 1, eigen_index(i), is))**2 / rho_sigma(:)
+      do i = 1, n
+        oep%vxc(:) = oep%vxc(:) + &
+             oep%socc*st%occ(oep%eigen_index(i),is)* x(i) *  &
+             R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 / rho_sigma(:)
       end do
       deallocate(x)
     end if
     
-    deallocate(eigen_type, eigen_index, v_bar_S)
+    deallocate(v_bar_S)
   end if slater_approx
 
-  vxc_(:,is) = vxc_(:,is) + vxc(:)
-  
-  deallocate(vxc, rho_sigma)
+  deallocate(rho_sigma)
 
 end subroutine X(xc_KLI_solve)

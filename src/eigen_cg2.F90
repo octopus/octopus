@@ -68,7 +68,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         !call pre(hpsi%val   , g%val   ) 
         !call pre(psi(m)%val , ppsi%val)
         g = h_psi
-        ppsi = st%X(psi)(1:,:, p, ik)
+        ppsi = st%X(psi)(:,:, p, ik)
         
         es(1) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), g)
         es(2) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), ppsi)

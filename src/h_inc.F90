@@ -387,11 +387,12 @@ subroutine X(vborders) (h, m, st, psi, Hpsi)
   call pop_sub()
 end subroutine X(vborders)
 
-subroutine X(h_calc_vhxc)(h, m, st, sys)
+subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
   type(hamiltonian_type), intent(inout) :: h
   type(mesh_type),        intent(in)    :: m
   type(states_type),      intent(inout) :: st
-  type(system_type),      intent(in), optional :: sys
+  type(system_type),      intent(in)    :: sys
+  logical, intent(in), optional         :: calc_eigenval
 
   integer :: is
   real(r8), allocatable :: rho_aux(:), vhartree(:)
@@ -400,28 +401,7 @@ subroutine X(h_calc_vhxc)(h, m, st, sys)
 
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
     h%epot = M_ZERO
-
-    ! first we calculate the xc terms
-    call X(xc_pot)(h%xc, m, st, h%vhxc, h%ex, h%ec, &
-         -minval(st%eigenval(st%nst, :)), st%qtot)
-
-    ! The OEP family has to handle specially
-    if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
-      call X(h_xc_oep)(h%xc, m, st, h%vhxc, h%ex, h%ec)
-    end if
-
-    select case(h%ispin)
-    case(UNPOLARIZED)
-      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1))
-    case(SPIN_POLARIZED)
-      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
-           - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
-    case(SPINORS)
-      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
-           - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
-      h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
-           h%vhxc(:, 3) - M_zI* h%vhxc(:, 4))
-    end select
+    h%vhxc = M_ZERO
 
     ! now we add the hartree contribution
     allocate(vhartree(m%np))
@@ -447,15 +427,38 @@ subroutine X(h_calc_vhxc)(h, m, st, sys)
        h%vhxc(:, 1:2) = h%vhxc(:, 1:2) + reshape(vhartree, (/m%np, 2/), vhartree)
     end select
 
+    ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
+    ! this yields the correct formula epot = - int n (vxc + vH/2)
     do is = 1, st%spin_channels
-      h%epot = h%epot - M_HALF*dmf_dotp(m, st%rho(:, is), vhartree)
+      h%epot = h%epot + M_HALF*dmf_dotp(m, st%rho(:, is), vhartree)
     end do
-
     deallocate(vhartree)
+
+    ! first we calculate the xc terms
+    call X(xc_pot)(h%xc, m, st, h%vhxc, h%ex, h%ec, &
+         -minval(st%eigenval(st%nst, :)), st%qtot)
+
+    ! The OEP family has to handle specially
+    if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
+      call X(h_xc_oep)(h%xc, m, h, sys, st, h%vhxc, h%ex, h%ec)
+    end if
+
+    select case(h%ispin)
+    case(UNPOLARIZED)
+      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1))
+    case(SPIN_POLARIZED)
+      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
+           - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
+    case(SPINORS)
+      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
+           - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
+      h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
+           h%vhxc(:, 3) - M_zI* h%vhxc(:, 4))
+    end select
   end if
 
   ! this, I think, belongs here
-  if(present(sys)) call X(hamiltonian_eigenval) (h, st, sys)
+  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, st, sys)
 
   call pop_sub()
 end subroutine X(h_calc_vhxc)

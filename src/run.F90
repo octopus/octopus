@@ -140,7 +140,7 @@ subroutine run()
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call X(h_calc_vhxc)(h, sys%m, sys%st, sys=sys) ! get potentials
+      call X(h_calc_vhxc)(h, sys%m, sys%st, sys, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%m)                      ! occupations
       call hamiltonian_energy(h, sys%st, sys%eii, -1)       ! total energy
 
@@ -237,7 +237,7 @@ subroutine run()
       ! load zpsi from static file.
       if(zstates_load_restart("tmp/restart.static", sys%m, sys%st)) then
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%st, sys=sys)
+        call zh_calc_vhxc(h, sys%m, sys%st, sys, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
 #ifdef HAVE_MPI
         call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
@@ -263,7 +263,7 @@ subroutine run()
            sys%m, sys%st, iter=td%iter, v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))) then
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%st, sys=sys)
+        call zh_calc_vhxc(h, sys%m, sys%st, sys, calc_eigenval=.true.)
         call hamiltonian_span(h, minval(sys%m%h), minval(sys%st%eigenval(1,:)))
         call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
         

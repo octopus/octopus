@@ -125,7 +125,7 @@ contains
 
       call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
       call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
-      call X(h_calc_vhxc) (h, sys%m, sys%st, sys=sys)
+      call X(h_calc_vhxc) (h, sys%m, sys%st, sys, calc_eigenval=.true.)
       call hamiltonian_energy(h, sys%st, sys%eii, -1)
   
       ! do scf calculation

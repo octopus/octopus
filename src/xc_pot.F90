@@ -37,7 +37,6 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   ! If "self-consistent" LB94 is not to be used, should be 1/32
   ! ip = M_ONE/32.0_r8
   
-  vxc = M_ZERO
   ex  = M_ZERO
   ec  = M_ZERO
 
