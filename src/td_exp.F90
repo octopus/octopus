@@ -227,7 +227,7 @@ contains
         call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, n+1), zpsi, t)
         hm(n    , n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n)    , zpsi)
         hm(n + 1, n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n + 1), zpsi)
-        call zgemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n:n+1, n + 1), 1, M_z1, zpsi, 1)
+        call zgemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n, n + 1), 1, M_z1, zpsi(1, 1), 1)
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
         res = abs(beta*abs(expo(1, n+1)))
         beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
@@ -241,7 +241,7 @@ contains
       endif
       
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call zgemv('n', np, korder, M_z1*nrm, v, np, expo(1, 1), 1, M_z0, zpsi, 1)
+      call zgemv('n', np, korder, M_z1*nrm, v(1, 1, 1), np, expo(1, 1), 1, M_z0, zpsi(1, 1), 1)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)

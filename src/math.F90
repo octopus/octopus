@@ -100,7 +100,7 @@ module math
      end function dznrm2
 
      subroutine dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
-       ! matrix-matrix multiplication
+       ! matrix-matrix multiplication plus matrix
        use global
        character(1), intent(in) :: transa, transb
        integer, intent(in) :: m, n, k, lda, ldb, ldc
@@ -111,7 +111,7 @@ module math
      end subroutine dgemm
 
      subroutine zgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
-       ! matrix-matrix multiplication
+       ! matrix-matrix multiplication plus matrix
        use global
        character(1), intent(in) :: transa, transb
        integer, intent(in) :: m, n, k, lda, ldb, ldc
@@ -120,6 +120,17 @@ module math
        complex(r8), intent(in) :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
        complex(r8), intent(inout) :: c ! c(ldc,n)
      end subroutine zgemm
+
+     subroutine zgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+       ! matrix-vector multiplication plus vector
+       use global
+       character(1), intent(in) :: trans
+       integer, intent(in) :: m, n, lda, incx, incy
+       complex(r8), intent(in) :: alpha, beta
+       complex(r8), intent(in) :: a ! a(lda,n)
+       complex(r8), intent(in) :: x ! x(:)
+       complex(r8), intent(inout) :: y ! y(:)
+     end subroutine zgemv
 
      subroutine dcopy(n, dx, incx, dy, incy)
        ! copies a vector, x, to a vector, y

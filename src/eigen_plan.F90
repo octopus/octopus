@@ -176,9 +176,9 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
        
         if ( d2+1.le.krylov .and. matvec.lt.maxmatvecs) then
           ! In this case, compute only the lowes Ritz eigenpair.
-          call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), v, n, hevec, 1, &
+          call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), v(1, 1), n, hevec(1, 1), 1, &
                R_TOTYPE(M_ZERO), eigenvec(1, nec + 1), 1)
-          call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), av, n, hevec, 1, &
+          call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), av(1, 1), n, hevec(1, 1), 1, &
                R_TOTYPE(M_ZERO), av(1, d2 + 1), 1)
           call residual(av(1:n, d2+1), eigenvec(1:n, nec+1), tmp(1), av(1:n, d2+1), res(nec+1))
           
@@ -186,11 +186,11 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           ! Ritz vectors and the residual norms.
           if(res(nec+1)<tol) then
             do i = 2, winsiz
-              call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), v, n, hevec(1, i), 1, &
+              call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), v(1, 1), n, hevec(1, i), 1, &
                    R_TOTYPE(M_ZERO), eigenvec(1, nec+i), 1)
             enddo
             do i = 2, winsiz
-              call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), av, n, hevec(1, i), 1, &
+              call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), av(1, 1), n, hevec(1, i), 1, &
                    R_TOTYPE(M_ZERO), v  (1, i),     1) 
             enddo
             do i = 2, winsiz
@@ -200,11 +200,11 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           d1 = d2
         else
           do i = 1, winsiz
-            call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), v, n, hevec(1, i), 1, &
+            call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), v(1, 1), n, hevec(1, i), 1, &
                  R_TOTYPE(M_ZERO), eigenvec(1, nec+i), 1)
           enddo
           do i = 1, winsiz
-            call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), av, n, hevec(1, i), 1, &
+            call R_FUNC(gemv)('N', n, d2, R_TOTYPE(M_ONE), av(1, 1), n, hevec(1, i), 1, &
                  R_TOTYPE(M_ZERO), v(1, i), 1)
           enddo
           do i = 1, winsiz
