@@ -317,7 +317,8 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
        h%epot = h%epot - M_HALF*dmesh_dotp(m, st%rho(:, is), h%vhartree)
     enddo
 
-    call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
+    call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec, -minval(st%eigenval(st%nst, :)))
+
     select case(h%ispin)
       case(UNPOLARIZED)
         h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))

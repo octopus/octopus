@@ -15,15 +15,16 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_gga(func, nlcc, m, st, pot, energy)
+subroutine xc_gga(func, nlcc, m, st, pot, energy, ip)
   use liboct
   integer, intent(in) :: func
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
+  real(r8), intent(in) :: ip
   
-  real(r8) :: e, e_x, dvol, den(3), dpol, dtot, vpol, glob(4, 3)!, loc(st%spin_channels)
+  real(r8) :: e, e_x, dvol, den(3), dpol, dtot, vpol, glob(4, 3), r
   real(r8), parameter :: tiny = 1.0e-12_r8
 
   real(r8), allocatable :: d(:, :),    &
@@ -33,11 +34,11 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
   real(r8), allocatable :: grhoplus(:, :), grhominus(:, :), gmag(:, :)
   real(r8), allocatable :: vlocaldedgd(:, :, :)
 
-  real(r8) :: locald(st%spin_channels), localgd(3, st%spin_channels), &
+  real(r8) :: x(3), locald(st%spin_channels), localgd(3, st%spin_channels), &
               localdedd(st%spin_channels), &
               localdedd_x(st%spin_channels), localdedgd_x(3, st%spin_channels)
 
-  integer :: i, j, is, in, ic, ind(3), k
+  integer :: i, j, is, in, ic, ind(3), k, n
 
   call push_sub('xc_gga')
 
@@ -61,6 +62,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
 
   grhoplus = M_ZERO; grhominus = M_ZERO
   do i = 1, m%np
+
     select case(st%ispin)
     case(UNPOLARIZED)
       rhoplus(i) = max(d(i, 1), M_ZERO)
@@ -96,7 +98,16 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     case(X_FUNC_GGA_PBER)
       call pbex(1, st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(X_FUNC_GGA_LB94)
-      call xc_x_lb94(st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
+      ! The value of 1.5 bohrs is temporarily hard-coded.
+      call mesh_inborder(m, i, n, x, 1.5_r8)
+      if( n > 0 ) then
+        call mesh_r(m, i, r)
+      else
+        r  = -M_ONE
+      endif
+      call lb94(st%spin_channels, locald, localgd, localdedd, r, ip)
+           e = M_ZERO
+           vlocaldedgd(:, i, :) = M_ZERO
     case(C_FUNC_GGA_PBE)
       call pbec(st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(C_FUNC_GGA_PBEX)
@@ -133,61 +144,20 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
 
   ! If LB94, we have to calculate the energy 
   ! Levy-Perdew relation (PRA 32, 2010 (1985))
-  if(func == X_FUNC_GGA_LB94) then
-    energy = 0._r8
-    do is = 1, st%nspin
-      call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
-      do i = 1, m%np
-        energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*gd(:, i, is))
-      end do
-    end do
-    energy = - energy * m%vol_pp
-  end if
+  ! WARNING: THIS HAS TO BE PUT BACK IN THE CODE, OR THE TOTAL ENERGY WILL BE WRONG.
+!!$  if(func == X_FUNC_GGA_LB94) then
+!!$    energy = 0._r8
+!!$    do is = 1, st%nspin
+!!$      call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
+!!$      do i = 1, m%np
+!!$        energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*gd(:, i, is))
+!!$      end do
+!!$    end do
+!!$    energy = - energy * m%vol_pp
+!!$  end if
+  energy = M_ZERO
 
   deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus, vlocaldedgd)
   call pop_sub()
 end subroutine xc_gga
 
-subroutine xc_x_lb94(nspin, dens, gdens, ex, dexdd, dexdgd)
-  integer, intent(in)  :: nspin
-  real(r8), intent(IN) :: dens(nspin), gdens(3, nspin)
-  real(r8), intent(out):: ex, dexdd(nspin), dexdgd(3, nspin)
-  
-  ! Internal variables
-  integer(i4) :: is 
-  real(r8)    :: d(nspin), gd(3, nspin), gdm, x, f
-
-! Lower bounds of density and its gradient to avoid divisions by zero
-! plus some numerical constants
-  real(r8), parameter :: &
-      DENMIN = 1.E-20_r8,    GDMIN  = 1.E-20_r8,          &
-      THRD   = 1._r8/3._r8,        &
-      FTHRD  = 4._r8/3._r8, BETA   = 0.05_r8
-
-! first we add the LDA potential
-  call exchng(0, nspin, dens, ex, dexdd)
-
-! Translate density and its gradient to new variables
-  if (nspin .eq. 1) then
-    d(1)     = dens(1) * M_HALF
-    gd(:, 1) = gdens(:, 1) * M_HALF
-  else
-    d  = dens
-    gd = gdens
-  endif
-
-  do is = 1, nspin
-    gdm   = sqrt( gd(1,is)**2 + gd(2,is)**2 + gd(3,is)**2 )
-    
-    if(d(is) >= DENMIN .and. gdm >=GDMIN) then
-      x = gdm / d(is)**FTHRD
-      f = x**2/(1._r8 + 3._r8*BETA*x*oct_asinh(x))
-      dexdd(is) = dexdd(is) - BETA * d(is)**THRD * f
-    end if
-  end do
-
- ! this is to be calculated afterwards
-  ex = M_ZERO; dexdgd = M_ZERO
-
-  return
-end subroutine xc_x_lb94  

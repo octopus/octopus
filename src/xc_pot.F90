@@ -15,12 +15,13 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
+subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out)    :: vxc(m%np, st%nspin), ex, ec
+  real(r8), intent(in) :: ip
 
   real(r8), allocatable :: vaux(:, :) 
 
@@ -31,6 +32,11 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
 
   call push_sub('xc_pot')
 
+  ! "ip" variable is only meaningfull if LB94 potential is to be used. Should
+  ! bear the opposite of the value of the last eigenvalue ( = ionization potential)
+  ! If "self-consistent" LB94 is not to be used, should be 1/32
+  ! ip = M_ONE/32.0_r8
+  
   allocate(vaux(m%np, st%nspin))
   vxc = M_ZERO; vaux = M_ZERO
   ex  = M_ZERO; ec = M_ZERO
@@ -40,7 +46,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
   case(XC_FAMILY_LDA)
     call R_FUNC(xc_lda) (xcs%x_func, xcs%nlcc, m, st, vxc, ex)
   case(XC_FAMILY_GGA)
-    call xc_gga(xcs%x_func, xcs%nlcc, m, st, vxc, ex)
+    call xc_gga(xcs%x_func, xcs%nlcc, m, st, vxc, ex, ip)
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vx, ex)
@@ -53,7 +59,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
   case(XC_FAMILY_LDA)
     call R_FUNC(xc_lda) (xcs%c_func, xcs%nlcc, m, st, vaux, ec)
   case(XC_FAMILY_GGA)
-    call xc_gga(xcs%c_func, xcs%nlcc, m, st, vaux, ec)
+    call xc_gga(xcs%c_func, xcs%nlcc, m, st, vaux, ec, ip)
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vc, ec)
