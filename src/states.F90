@@ -85,24 +85,29 @@ subroutine states_init(st, m, val_charge)
     call write_fatal(2)
   end if
 
-#ifdef POLYMERS
-  call oct_parse_int(C_string('NumberKPoints'), 1, st%nik)
-  if (st%nik < 1) then
-    write(message(1),'(a,i4,a)') "Input: '", st%nik,"' is not a valid NumberKPoints"
-    message(2) = '(NumberKPoints >= 1)'
-    call write_fatal(2)
+  if (conf%periodic_dim>0) then
+    call oct_parse_int(C_string('NumberKPoints'), 4, st%nik)
+    if (st%nik < 1) then
+      write(message(1),'(a,i4,a)') "Input: '", st%nik,"' is not a valid NumberKPoints"
+      message(2) = '(NumberKPoints >= 1)'
+      call write_fatal(2)
+    else if (st%nik == 1) then
+      message(1) = "The system is periodic, but the number of k points is set to 1"
+      message(2) = "output will be generated for the Gamma point only"
+      call write_warning(2)
+    end if
+  else
+    st%nik = 1
   end if
-#else
-  st%nik = 1
-#endif
   
   call oct_parse_double(C_string('ExcessCharge'), 0.0_r8, excess_charge)
 
-#ifdef POLYMERS
-  i = 2 ! we take two extra states, just in case we have a metal
-#else
-  i = 0 ! no extra states
-#endif
+  if(conf%periodic_dim>0) then
+    i = 2 ! we take two extra states, just in case we have a metal
+  else
+    i = 0 ! no extra states
+  end if
+
   call oct_parse_int(C_string('ExtraStates'), i, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
@@ -388,7 +393,7 @@ subroutine states_fermi(st, m)
        enddo
     enddo
   endif
- 
+  
   call pop_sub()
   return
 end subroutine states_fermi
@@ -452,12 +457,6 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   if(mpiv%node == 0) then
 #endif
 
-    write(iunit, '(a4)', advance='no') '#'
-    do ik = 1, st%nik
-      write(iunit, '(1x,a12,3x,a12,2x,a10,i1,a1)', advance='no') &
-           ' Eigenvalue', 'Occupation ', 'Error (', ik, ')'
-    end do
-    write(iunit, '(1x)', advance='yes')
     
     do j = 1, nst
       if(j > st%nst) then
@@ -471,18 +470,30 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
         endif
       end if
       
-      write(iunit, '(i4)', advance='no') j
       do ik = 1, st%nik
-        if(st%ispin == 3) then
-          write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
-               st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
-        else
-          write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-               st%eigenval(j, ik)/units_out%energy%factor, o(ik)
-        endif
-         if(present(error)) then
-          write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
-        end if
+      write(iunit, '(a4)', advance='no') '#'
+      write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1,/)', advance='no') &
+           ' Eigenvalue', 'Occupation ', 'Error (', ik, ')'
+      write(iunit, '(i4)', advance='no') j
+      if(present(error)) then
+         if(st%ispin == 3) then
+            write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
+                  st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
+            write(iunit, '(a7,es7.1,a1/)', advance='no')'      (', error(j, ik), ')'
+         else
+            write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+                  st%eigenval(j, ik)/units_out%energy%factor, o(ik)
+            write(iunit, '(a7,es7.1,a1/)', advance='no')'      (', error(j, ik), ')'
+         endif
+      else
+         if(st%ispin == 3) then
+            write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3/)', advance='no') &
+                  st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
+         else
+            write(iunit, '(1x,f12.6,3x,f12.6/)', advance='no') &
+                  st%eigenval(j, ik)/units_out%energy%factor, o(ik)
+         endif
+      end if
       end do
       write(iunit, '(1x)', advance='yes')
     end do
