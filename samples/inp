@@ -19,7 +19,7 @@ Units = "eVA"
 # 2. Species.
 ###############################################################################
 %Species
-  "Na"  | 23.0 | 11 | "tm" | 2 | 1
+  "Na"  | 23.0 | 11 | "tm2" | 1 | 0
 %
 
 ###############################################################################
@@ -49,11 +49,10 @@ OutputCoordinates = yes
 ###############################################################################
 # 5. Mesh description.
 ###############################################################################
-BoxShape = 1 # a sphere...
+BoxShape = 1
 Radius  = 8.0
-Zlength = 8.0 # not necessary in this case.
 Spacing = 0.3
-DerivativesSpace = 0 # Real space derivatives (1 for Fourier space).
+DerivativesSpace = 0
 OrderDerivatives = 4
 DoubleFFTParameter = 2.0
 
@@ -65,9 +64,6 @@ SpinComponents = 1
 NumberkPoints  = 1 
 ExcessCharge   = 0
 ExtraStates    = 0
-#%Occupations
-#2
-#%
 ElectronicTemperature = 0.0
 
 ###############################################################################
@@ -75,14 +71,13 @@ ElectronicTemperature = 0.0
 ###############################################################################
 NonInteractingElectrons = no
 ClassicPotential = no
-LocalPotentialSpace = 1
+LocalPotentialSpace = 0
 NonLocalPotentialSpace = 0
 GridRefinement = 0
 
 ###############################################################################
 # 8. Exchange and Correlation.
 ###############################################################################
-
 XFunctional = "LDA"
 CFunctional = "PZ81"
 
@@ -97,11 +92,10 @@ ConvRelEnergy = 0
 
 LCAOStart = yes
 SCFinLCAO = no
-LCAOMode = 0 (0 for memory intensive, 1 for cpu intensive)
 
 EigenSolver = 0
-EigenSolverInitTolerance = 1e-10
-EigenSoverFinalTolerance = 1e-14
+EigenSolverInitTolerance = 1e-2
+EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 20		
 EigenSolverMaxIter = 25
 NuberCG = 3
@@ -126,7 +120,7 @@ TDSaveIter    = 1000
 TDEvolutionMethod = 4
 TDTimeStep = 0.003
 
-%Lasers
+%TDLasers
 1 | 0 | 0 | 1 | 1.57 | 2 | 30 | 30
 %
 TDOutputLaser = yes
@@ -137,9 +131,9 @@ TDDeltaStrength = 0.01
 0 | 0 | 1
 %
 
-TDAbsorbingBoundaries = 0
-TDABWidth = 3.0
-TDABHeight = -4.0
+AbsorbingBoundaries = 0
+ABWidth = 3.0
+ABHeight = -4.0
 
 TDDipoleLMax = 1
 
@@ -172,11 +166,14 @@ OutputWfs         = no
 OutputELF         = no
 OutputGeometry    = no
 
+OutputAxisX = no
+OutputAxisY = no
+OutputAxisZ = no
 OutputPlaneX = no
 OutputPlaneY = no
 OutputPlaneZ = no
 OutputDX = no
-OutputEvery = 1000
+OutputEvery = 10
 
 ###############################################################################
 # 15. Spectrum calculations.
