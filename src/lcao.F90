@@ -19,11 +19,14 @@ type lcao_type
   integer           :: mode
   integer           :: dim
   real(r8), pointer :: psis(:,:,:)
-  real(r8), pointer :: hamilt(:,:), s(:,:,:)
+  real(r8), pointer :: hamilt(:,:), k_plus_psv(:,:,:), s(:,:,:)
   logical, pointer  :: atoml(:,:)
 end type
 
 type(lcao_type) :: lcao_data
+
+integer, parameter :: MEM_INTENSIVE = 0, &
+                      CPU_INTENSIVE = 1
 
 contains
 
@@ -130,14 +133,17 @@ contains
   end subroutine from_pseudopotential
 end subroutine lcao_dens
 
-subroutine lcao_init(sys)
-  type(system_type), intent(IN) :: sys
+subroutine lcao_init(sys, h)
+  type(system_type), intent(IN)      :: sys
+  type(hamiltonian_type), intent(IN) :: h
 
-  integer :: norbs, i, ik, n1, i1, l1, lm1, d1, n2, i2, l2, lm2, d2
+  integer :: norbs, i, a, ik, n1, i1, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
   integer, parameter :: orbs_local = 2
 
-  real(r8), allocatable :: psi1(:,:), psi2(:,:)
+  real(r8), allocatable :: psi1(:,:), psi2(:,:), hpsi(:,:)
   real(r8) :: s
+
+  real(r8) :: uVpsi
 
   sub_name = 'lcao_init'; call push_sub
 
@@ -195,10 +201,13 @@ subroutine lcao_init(sys)
   end if
 
   ! Allocation of variables
-  allocate(lcao_data%hamilt(norbs, norbs), lcao_data%s(sys%st%nik, norbs, norbs))
+  allocate(lcao_data%hamilt(norbs, norbs), lcao_data%s(sys%st%nik, norbs, norbs), &
+           lcao_data%k_plus_psv(sys%st%nik, norbs, norbs))
 
-  !Fixes, once and for all, the overlap matrix.
+  !Fixes, once and for all, the overlap matrix and kinetic + pseudopotential matrixes..
   if(lcao_data%mode == 1) allocate(psi1(0:sys%m%np, sys%st%dim), psi2(0:sys%m%np, sys%st%dim))
+  allocate(hpsi(sys%m%np, sys%st%dim))
+  hpsi = 0.0_r8
   ik_loop : do ik = 1, sys%st%nik
     n1 = 1
     atoms1_loop: do i1 = 1, sys%natoms
@@ -206,21 +215,37 @@ subroutine lcao_init(sys)
         if(.not. lcao_data%atoml(i1, l1))  cycle
         lm1_loop: do lm1 = -l1, l1
           d1_loop: do d1 = 1, sys%st%dim
-            if(lcao_data%mode == 1) call get_wf(sys, i1, l1, lm1, d1, psi1)
-            
+            select case(lcao_data%mode)
+            case(CPU_INTENSIVE)
+              call get_wf(sys, i1, l1, lm1, d1, psi1)
+              call R_FUNC(mesh_derivatives) (sys%m, psi1(:, d1), lapl=hpsi(:, d1))
+              hpsi = -hpsi/2.0_r8
+              hpsi(:, d1) = hpsi(:, d1) + h%vpsl*psi1(1:,d1)
+              call dvnlpsi(sys, psi1(:,:), hpsi)
+            case(MEM_INTENSIVE)
+              call R_FUNC(mesh_derivatives) (sys%m, lcao_data%psis(:,d1,n1), lapl=hpsi(:, d1))
+              hpsi = -hpsi/2.0_r8
+              hpsi(:, d1) = hpsi(:, d1) + h%vpsl*lcao_data%psis(1:,d1,n1)
+              call dvnlpsi(sys, lcao_data%psis(:,:,n1), hpsi)
+            end select
+
             n2 = 1
             atoms2_loop: do i2 = 1, sys%natoms
               l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max
                 if(.not. lcao_data%atoml(i1, l1)) cycle
                 lm2_loop: do lm2 = -l2, l2
                   d2_loop: do d2 = 1, sys%st%dim
-                    if(lcao_data%mode == 0) then
-                      lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, lcao_data%psis(1:,:,n1), lcao_data%psis(1:,:,n2))
-                    else
+                    select case(lcao_data%mode)
+                    case(CPU_INTENSIVE)
                       call get_wf(sys, i2, l2, lm2, d2, psi2)
                       lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
-                    end if
+                      lcao_data%k_plus_psv(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:, :))
+                    case(MEM_INTENSIVE)
+                      lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, lcao_data%psis(1:,:,n1), lcao_data%psis(1:,:,n2))
+                      lcao_data%k_plus_psv(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, :, n2))
+                    end select
                     lcao_data%s(ik, n2, n1) = lcao_data%s(ik, n1, n2)
+                    lcao_data%k_plus_psv(ik, n2, n1) = lcao_data%k_plus_psv(ik, n1, n2)
 
                     n2 = n2 + 1
                     if(n2 > n1) exit atoms2_loop
@@ -236,6 +261,7 @@ subroutine lcao_init(sys)
     end do atoms1_loop
   enddo ik_loop
   if(lcao_data%mode==1) deallocate(psi1, psi2)
+  deallocate(hpsi)
 
   call pop_sub()
 end subroutine lcao_init
@@ -243,7 +269,8 @@ end subroutine lcao_init
 subroutine lcao_end
   sub_name = 'lcao_end'; call push_sub()
 
-  deallocate(lcao_data%psis, lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
+  if(lcao_data%mode == MEM_INTENSIVE) deallocate(lcao_data%psis)
+  deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
 
   call pop_sub()
 end subroutine lcao_end
@@ -254,10 +281,11 @@ subroutine lcao_wf(sys, h)
   
   integer, parameter :: orbs_local = 2
 
-  integer :: i, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
+  integer :: a, idim, i, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
   real(r8), allocatable :: hpsi(:,:), psi1(:,:), psi2(:,:)
   real(r8), allocatable :: s(:,:)
+  real(r8) :: uvpsi
 
   ! variables for dsyev (LAPACK)
   character(len=1) :: jobz, uplo
@@ -282,12 +310,15 @@ subroutine lcao_wf(sys, h)
         if(.not.lcao_data%atoml(i1, l1)) cycle l1_loop
         lm1_loop: do lm1 = -l1, l1
           d1_loop: do d1 = 1, sys%st%dim
-            if(mode == 0) then
-              call dhpsi(h, sys, ik, lcao_data%psis(:,:,n1), hpsi)
-            else
+            select case(lcao_data%mode)
+            case(MEM_INTENSIVE)
+              hpsi(:, d1) = h%vhartree*lcao_data%psis(1:, d1, n1)
+              hpsi(:, d1) = hpsi(:, d1) + h%Vxc(:, d1)*lcao_data%psis(1:, d1, n1)
+            case(CPU_INTENSIVE)
               call get_wf(sys, i1, l1, lm1, d1, psi1)
-              call dhpsi(h, sys, ik, psi1, hpsi)
-            end if
+              hpsi(:, d1) = h%vhartree*psi1(1:, d1)
+              hpsi(:, d1) = hpsi(:, d1) + h%Vxc(:, d1)*psi1(1:, d1)
+            end select
             
             n2 = 1
             atoms2_loop: do i2 = 1, sys%natoms
@@ -295,15 +326,17 @@ subroutine lcao_wf(sys, h)
                 if(.not.lcao_data%atoml(i2, l2)) cycle l2_loop
                 lm2_loop: do lm2 = -l2, l2
                   d2_loop: do d2 = 1, sys%st%dim
-                    if(mode == 0) then
-                      lcao_data%hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:,:,n2))
-                    else
+                    select case(lcao_data%mode)
+                    case(MEM_INTENSIVE)
+                      lcao_data%hamilt(n1, n2) = lcao_data%k_plus_psv(ik, n1, n2) + & 
+                                                 dstates_dotp(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, : ,n2))
+                    case(CPU_INTENSIVE)
                       call get_wf(sys, i2, l2, lm2, d2, psi2)
-                      lcao_data%hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
-                    end if
-                    
-                    lcao_data%hamilt(n2, n1) = lcao_data%hamilt(n1, n2)
+                      lcao_data%hamilt(n1, n2) = lcao_data%k_plus_psv(ik, n1, n2) + &
+                                                 dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
+                    end select
 
+                    lcao_data%hamilt(n2, n1) = lcao_data%hamilt(n1, n2)
                     n2 = n2 + 1
                     if(n2 > n1) exit atoms2_loop
                   end do d2_loop

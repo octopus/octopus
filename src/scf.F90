@@ -86,7 +86,7 @@ subroutine scf_run(scf, sys, h)
 
   sub_name = 'scf_run'; call push_sub()
 
-  if(scf%lcao_restricted) call lcao_init(sys)
+  if(scf%lcao_restricted) call lcao_init(sys, h)
 
   do iter = 1, scf%max_iter
     if(clean_stop()) exit

@@ -17,7 +17,6 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, sys, st_start, st_end)
     end do
   end do
 
-  deallocate(Hpsi)
   call pop_sub()
   return
 end subroutine R_FUNC(hamiltonian_eigenval)
@@ -70,6 +69,34 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
          h%Vxc(:, 2)*psi(1:, 2) + R_CONJ(h%R_FUNC(Vxc_off)(:))*psi(1:, 1)
   end select
 
+  ! Non-local part
+  call R_FUNC(vnlpsi) (sys, psi, Hpsi)
+
+  ! spin-orbit coupling
+#if defined(COMPLEX_WFNS)
+  if(h%soc) then
+    allocate(Vtot(sys%m%np), dVtot(3, sys%m%np))
+    do 
+    deallocate(Vtot, dVtot)
+  end if
+#endif
+
+  !call pop_sub()
+end subroutine R_FUNC(Hpsi)
+
+subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
+  type(system_type), intent(IN) :: sys
+  R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
+  R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
+
+  integer :: is, idim, np, dim, a, lm
+  R_TYPE :: uVpsi
+  type(atom_type), pointer :: atm
+  type(specie_type), pointer :: spec
+  
+  np = sys%m%np
+  dim = sys%st%dim
+
   ! Ionic pseudopotential
   do a = 1, sys%natoms
     atm => sys%atom(a)
@@ -87,17 +114,8 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
     end if
   enddo
 
-  ! spin-orbit coupling
-#if defined(COMPLEX_WFNS)
-  if(h%soc) then
-    allocate(Vtot(sys%m%np), dVtot(3, sys%m%np))
-    do 
-    deallocate(Vtot, dVtot)
-  end if
-#endif
-
   !call pop_sub()
-end subroutine R_FUNC(Hpsi)
+end subroutine R_FUNC(vnlpsi)
 
 subroutine R_FUNC(hamiltonian_setup)(h, sys)
   type(hamiltonian_type), intent(inout) :: h

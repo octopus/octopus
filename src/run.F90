@@ -149,7 +149,7 @@ subroutine run()
       if(log) then
         message(1) = 'Info: Performing LCAO calculation.'
         call write_info(1)
-        call lcao_init(sys)
+        call lcao_init(sys, h)
         call lcao_wf(sys, h)
         call lcao_end
       end if
