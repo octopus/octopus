@@ -73,7 +73,7 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
     if(spec%ps%L_max >= 0) then
       do idim = 1, dim
         do lm = 1, (spec%ps%L_max + 1)**2
-          uVpsi = sum(atm%uV(:, lm)*psi(atm%Jxyz(:), idim))*sys%m%h**3 &
+          uVpsi = sum(atm%uV(:, lm)*psi(atm%Jxyz(:), idim))*sys%m%vol_pp &
                * atm%uVu(lm)
           Hpsi(atm%Jxyz(:), idim) = Hpsi(atm%Jxyz(:), idim) + uVpsi*atm%uV(:, lm)
         end do

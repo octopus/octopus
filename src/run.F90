@@ -1,8 +1,12 @@
 #include "config.h"
 
 module run_prog
+use global
+use units
 use system
 use hamiltonian
+use lcao
+use scf
 use pulpo
 
 implicit none
@@ -38,9 +42,7 @@ integer, private, parameter :: &
 contains
 
 subroutine run()
-  use global
-  use units
-  implicit none
+  integer :: i
 
   sub_name = 'run'; call push_sub()
 
@@ -71,13 +73,35 @@ subroutine run()
       message(1) = 'Info: Random generating starting wavefunctions'
       call write_info(1)
 
+      ! wave functions are simply random gaussians
       call states_generate_random(sys%st, sys%m)
+      ! we will need some starting density in order to have the hamiltonian
+      ! well defined
+      i = min(sys%st%ispin, 2)
+      call lcao_dens(sys, i, sys%st%rho(:,i))
+      ! the off-diagonal densities are set to zero
+      if(sys%st%ispin > 2) then
+        sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
+      end if
 
     case(I_SETUP_HAMILTONIAN)
       message(1) = 'Info: Setting up Hamiltonian'
       call write_info(1)
-      call hamiltonian_setup(h, sys)
-        
+
+      call hamiltonian_setup(h, sys)                    ! get potentials
+      call dhamiltonian_eigenval(h, sys, 1, sys%st%nst) ! eigenvalues
+      call states_fermi(sys%st)                         ! occupations
+      call hamiltonian_energy(h, sys, -1)               ! get the total energy
+
+    case(I_SCF)
+#ifdef COMPLEX_WFNS
+      message(1) = 'Info: SCF using complex wavefunctions'
+#else
+      message(1) = 'Info: SCF using real wavefunctions'
+#endif
+      call write_info(1)
+      call scf_run(sys, h)
+
     case(I_PULPO)
       call pulpo_print()
 

@@ -186,7 +186,7 @@ subroutine hartree_cg(h, m, pot, dist)
       end do
     end do
   end do
-  rholm = rholm*m%h**3
+  rholm = rholm*m%vol_pp
 
   allocate(wk(-m%nx:m%nx, -m%nx:m%nx, -m%nx:m%nx))
 

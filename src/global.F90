@@ -17,8 +17,6 @@ type conf_type
                      ! > 0   -> warning only
                      ! > 20  -> normal program info
                      ! >= 999 -> debug
-
-  character(len=20) :: sysname ! the name of the system we are running
 end type conf_type
 
 type mpi_type
@@ -220,11 +218,9 @@ function clean_stop()
   clean_stop = .false.
   inquire(file='stop', exist=file_exists)
   if(file_exists) then
-    if(conf%verbose > 20) then
-      write(message(1), '(a,/,6x,a)') 'Info: Clean STOP', &
-          "(don't forget to remove the file 'stop' ;)"
-      call write_info(1)
-    end if
+    message(1) = 'Clean STOP'
+    message(2) = "(don't forget to remove the file 'stop' ;)"
+    call write_warning(2)
     clean_stop = .true.
   end if
 

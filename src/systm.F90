@@ -7,6 +7,8 @@ use states
 implicit none
 
 type system_type
+  character(len=20) :: sysname ! the name of the system we are running
+
   integer :: natoms
   type(atom_type), pointer :: atom(:)
   real(r8) :: eii ! the ion-ion energy
@@ -28,6 +30,7 @@ subroutine system_init(s)
 
   sub_name = 'system_init'; call push_sub()
 
+  s%sysname = fdf_string('SystemName', 'system')
   s%nspecies = specie_init(s%specie)
   s%natoms = atom_init(s%atom, s%nspecies, s%specie)
   call mesh_init(s%m, s%natoms, s%atom)

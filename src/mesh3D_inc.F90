@@ -6,7 +6,7 @@ function R_FUNC(mesh_dp)(m, f1, f2)
   R_TYPE :: R_FUNC(mesh_dp)
   R_TYPE, external :: R_DOT
   
-  R_FUNC(mesh_dp) = R_DOT(m%np, f1(1:m%np), 1,  f2(1:m%np), 1)*m%H**3
+  R_FUNC(mesh_dp) = R_DOT(m%np, f1(1:m%np), 1,  f2(1:m%np), 1)*m%vol_pp
 end function R_FUNC(mesh_dp)
 
 ! Conversion subroutines
@@ -41,6 +41,18 @@ subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh)
   end do
 end subroutine R_FUNC(cube_to_mesh)
 
+! integrates a function on the mesh (could not find BLAS routine to do it ;))
+function R_FUNC(mesh_integrate) (m, f)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN) :: f(1:m%np)
+
+  R_TYPE :: R_FUNC(mesh_integrate)
+
+  R_FUNC(mesh_integrate) = sum(f(1:m%np))*m%vol_pp
+
+end function R_FUNC(mesh_integrate)
+
+! calculates the laplacian and the gradient of a function on the mesh
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)

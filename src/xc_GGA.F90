@@ -33,7 +33,7 @@ subroutine xc_gga(func, m, ispin, rho, rho_core, pot, energy)
       call xc_c_pbe(ispin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     end select
-    energy = energy + sum(d(i, :)) * e * m%h**3
+    energy = energy + sum(d(i, :)) * e * m%vol_pp
 
     do is = 1, ispin
       pot(i, is) = pot(i, is) + dedd(is)
@@ -70,7 +70,7 @@ subroutine xc_gga(func, m, ispin, rho, rho_core, pot, energy)
              m%Lx(i)*gd(i, 1, is) + m%Ly(i)*gd(i, 2, is) + m%Lz(i)*gd(i, 3, is))
       end do
     end do
-    energy = - energy * m%h**3
+    energy = - energy * m%vol_pp
   end if
 
   call pop_sub()

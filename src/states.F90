@@ -99,7 +99,7 @@ subroutine states_init(st, m, val_charge)
   do j = 1, st%nst
     do i = 1, st%nik
       st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
-      st%qtot = st%qtot + st%occ(i, j)
+      st%qtot = st%qtot + st%occ(j, i)
     end do
   end do
 
@@ -199,7 +199,7 @@ subroutine states_fermi(st)
   conv = .true.
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
-     st%occ = 2.0_r8/max(2, st%ispin)
+     st%occ = 2.0_r8/min(2, st%ispin)
 
      call pop_sub()
      return
@@ -223,7 +223,7 @@ subroutine states_fermi(st)
 
     do ik = 1, st%nik
       do ie =1, st%nst
-        sumq = sumq + stepf((st%eigenval(ie, ik) - st%ef)/t)/max(2, st%ispin)
+        sumq = sumq + stepf((st%eigenval(ie, ik) - st%ef)/t)/min(2, st%ispin)
       end do
     end do
 
@@ -242,7 +242,7 @@ subroutine states_fermi(st)
 
   do ik = 1, st%nik
     do ie = 1, st%nst
-      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/max(2, st%ispin)
+      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/min(2, st%ispin)
     end do
   end do
  

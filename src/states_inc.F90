@@ -1,14 +1,21 @@
 ! Orthonormalizes nst orbital in mesh m
-subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi)
+subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(inout) :: psi(0:m%np, dim, nst)
+  integer, intent(in), optional :: start
 
-  integer :: p, q, id
+  integer :: p, q, id, stst
   real(r8) :: nrm2
   R_TYPE :: ss
 
-  do p = 1, nst
+  if(present(start)) then
+    stst = start
+  else
+    stst = 1
+  end if
+
+  do p = stst, nst
     do q = 1, p - 1
       ss = R_FUNC(states_ddot)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
       do id = 1, dim

@@ -272,7 +272,6 @@
 !                                                                             !
 ! Jose Soler, Alberto Garcia Dec 1996                                         !
 !                                                                             !
-! $Id$                        !
 !                                                                             !
 !                                                                             !
 !     Notes:                                                                  !

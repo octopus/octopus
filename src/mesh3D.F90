@@ -34,6 +34,7 @@ type mesh_type
   real(r8) :: zsize     ! the length of the cilinder in the z direction
   
   integer  :: np        ! number of points in inner mesh
+  real(r8) :: vol_pp    ! element of volume for integrations
   
   ! return x, y and z for each point
   integer, pointer :: Lx(:), Ly(:), Lz(:)

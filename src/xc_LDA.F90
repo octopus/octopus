@@ -35,7 +35,7 @@ subroutine xc_lda(func, m, ispin, rho, rho_core, pot, energy)
 
     end select
 
-    energy = energy + sum(d(1:is)) * e * m%h**3
+    energy = energy + sum(d(1:is)) * e * m%vol_pp
 
     if(ispin == 4) then
       ! rotate bak potential

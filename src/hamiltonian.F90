@@ -102,7 +102,7 @@ subroutine hamiltonian_setup(h, sys)
 
   allocate(v_aux1(h%np, h%ispin), v_aux2(h%np, h%ispin))
 
-  is = max(H%ispin, 2)
+  is = min(H%ispin, 2)
   h%epot = 0._r8 ! The energy coming from the potentials
 
   do i = 1, is
@@ -128,11 +128,6 @@ subroutine hamiltonian_setup(h, sys)
   end if
 
   deallocate(v_aux1, v_aux2)
-
-  call dhamiltonian_eigenval(h, sys, 1, sys%st%nst)
-
-  call states_fermi(sys%st)
-  call hamiltonian_energy(h, sys, stdout)
 
 end subroutine hamiltonian_setup
 

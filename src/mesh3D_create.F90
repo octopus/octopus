@@ -36,6 +36,8 @@ subroutine mesh3D_create(m, natoms, atom)
     message(2) = '(0.01 <= Spacing [b] <= 2)'
     call write_fatal(2)
   end if
+  m%vol_pp = m%h**3
+
   m%rsize = fdf_double('radius', 20.0_r8/units_inp%length%factor)*units_inp%length%factor
   if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
     write(err, *) m%rsize
