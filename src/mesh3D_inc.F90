@@ -163,11 +163,8 @@ contains
     integer :: k, in, ind1(3), ind2(3), ix, iy, iz, i
 
     do k = 1, m%np
-      ! first we add the 0 contribution
-      den1 = f(k)
-      den2 = f(k)
       if(present(lapl)) then
-        lapl(k) = (m%d%dlidfj(0)*f(k))*sum(1/m%h(:)**2)
+        lapl(k) = alp*(m%d%dlidfj(0)*f(k))*sum(1/m%h(:)**2)
       end if
       if(present(grad)) then
         grad(:, k) = m%d%dgidfj(0)*f(k)
