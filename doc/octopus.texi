@@ -16,9 +16,6 @@ This manual is for octopus 1.1, a first principles, electronic
 structure, excited states, time-dependent density functional
 theory program.
 
-@strong{Warning: this is not yet the final version of the manual
-for the 1.1 version.}
-
 Copyright @copyright{} 2002, 2003
 Miguel A. L. Marques, Alberto Castro and Angel Rubio
 
@@ -2112,8 +2109,7 @@ it may see the @code{inp} file, and the directories created by it.
 
 This utility generates the dipole strength function of the given system.
 Its main input is the @code{td.general/multipoles} file. Output is written
-to a file called @code{system.spectrum} where @code{system} is the system
-name, as defined in @code{SystemName} variable. This file is made of two
+to a file called @code{spectrum}. This file is made of two
 columns: energy (in eV or a.u., depending on the units specified in @code{inp}),
 and dipole strength function (in 1/eV, or 1/a.u., idem).
 

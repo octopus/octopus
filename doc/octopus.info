@@ -10,9 +10,6 @@ This manual is for octopus 1.1, a first principles, electronic
 structure, excited states, time-dependent density functional theory
 program.
 
-   *Warning: this is not yet the final version of the manual for the
-1.1 version.*
-
    Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
 Angel Rubio
 
@@ -23,58 +20,58 @@ Angel Rubio
    
 
 Indirect:
-octopus.info-1: 739
-octopus.info-2: 49204
+octopus.info-1: 655
+octopus.info-2: 49036
 
 Tag Table:
 (Indirect)
-Node: Top739
-Node: Copying2253
-Node: Authors3654
-Node: Introduction6833
-Node: Description of octopus7032
-Ref: Description of octopus-Footnote-19476
-Node: Time dependent density functional theory9869
-Ref: Time dependent density functional theory-Footnote-113628
-Ref: Time dependent density functional theory-Footnote-213860
-Ref: Time dependent density functional theory-Footnote-314162
-Ref: Time dependent density functional theory-Footnote-414318
-Ref: Time dependent density functional theory-Footnote-514502
-Node: Installation14578
-Node: Quick instructions14777
-Node: Long instructions15307
-Ref: Long instructions-Footnote-122299
-Node: Troubleshooting22814
-Node: The input file24762
-Node: The parser24972
-Node: Input file options28119
-Node: Generalities28744
-Node: Species31391
-Node: Coordinates34822
-Node: Velocities38692
-Node: Mesh39875
-Node: States42880
-Node: Hamiltonian45362
-Node: Exchange and correlation47276
-Node: SCF49204
-Node: Unoccupied States52933
-Node: Time Dependent53654
-Node: Photo-electron spectrum62763
-Node: Geometry optimization63745
-Node: Function output for visualization64500
-Node: Spectrum calculations68171
-Node: Varia70305
-Node: External utilities71290
-Node: strength-function71802
-Node: hs-from-mult72689
-Node: hs-from-acc72907
-Node: nbo2xyz73115
-Node: excitations73328
-Node: broad73865
-Node: Examples74180
-Node: Hello world74335
-Ref: Hello world-Footnote-180979
-Node: Benzene81063
-Node: Options Index81871
+Node: Top655
+Node: Copying2085
+Node: Authors3486
+Node: Introduction6665
+Node: Description of octopus6864
+Ref: Description of octopus-Footnote-19308
+Node: Time dependent density functional theory9701
+Ref: Time dependent density functional theory-Footnote-113460
+Ref: Time dependent density functional theory-Footnote-213692
+Ref: Time dependent density functional theory-Footnote-313994
+Ref: Time dependent density functional theory-Footnote-414150
+Ref: Time dependent density functional theory-Footnote-514334
+Node: Installation14410
+Node: Quick instructions14609
+Node: Long instructions15139
+Ref: Long instructions-Footnote-122131
+Node: Troubleshooting22646
+Node: The input file24594
+Node: The parser24804
+Node: Input file options27951
+Node: Generalities28576
+Node: Species31223
+Node: Coordinates34654
+Node: Velocities38524
+Node: Mesh39707
+Node: States42712
+Node: Hamiltonian45194
+Node: Exchange and correlation47108
+Node: SCF49036
+Node: Unoccupied States52765
+Node: Time Dependent53486
+Node: Photo-electron spectrum62595
+Node: Geometry optimization63577
+Node: Function output for visualization64332
+Node: Spectrum calculations68003
+Node: Varia70137
+Node: External utilities71122
+Node: strength-function71634
+Node: hs-from-mult72443
+Node: hs-from-acc72661
+Node: nbo2xyz72869
+Node: excitations73082
+Node: broad73619
+Node: Examples73934
+Node: Hello world74089
+Ref: Hello world-Footnote-180733
+Node: Benzene80817
+Node: Options Index81625
 
 End Tag Table
