@@ -146,7 +146,7 @@ subroutine units_eV_Ang(u)
 
   u%force%abbrev  = "eV/A"
   u%force%name    = "electron volt/amstrong"
-  u%force%factor  = u%length%factor/u%energy%factor
+  u%force%factor  = u%energy%factor/u%length%factor
 
   u%acceleration%abbrev = "AeV(2pi/h)^2"
   u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
