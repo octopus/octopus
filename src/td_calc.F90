@@ -87,7 +87,7 @@
          
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(sys%m, sys%st, sys, &
+          call zvnlpsi(ik, sys%m, sys%st, sys, &
                xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
           do idim = 1, sys%st%dim
             x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
@@ -104,7 +104,7 @@
         
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(sys%m, sys%st, sys, &
+          call zvnlpsi(ik, sys%m, sys%st, sys, &
                xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
           do idim = 1, sys%st%dim
             x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
