@@ -124,7 +124,7 @@ contains
       write(stdout, '(1x)')
 
       ! now we diagonalise the matrix
-      call deigensolve(n_pairs, mat, mat, energies(:, 1))
+      call lalg_eigensolve(n_pairs, mat, mat, energies(:, 1))
       energies(:, 1) = sqrt(energies(:, 1))
 
       ! let us get now the oscillator strengths
