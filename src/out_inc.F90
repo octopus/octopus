@@ -21,7 +21,7 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   if(conf%dim > 2.and.iand(outp%how, output_plane_x).ne.0) call plane_x()
   if(conf%dim > 2.and.iand(outp%how, output_plane_y).ne.0) call plane_y()
   if(conf%dim > 1.and.iand(outp%how, output_plane_z).ne.0) call plane_z()
-  if(iand(outp%how, output_dx     ).ne.0) call dx()
+  if(iand(outp%how, output_dx).ne.0) call dx()
 
   deallocate(c)
 
@@ -126,6 +126,7 @@ contains
   subroutine dx()
     integer :: ix, iy, iz
 
+    call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".dx", status='unknown')
     
     write(iunit, '(a)') 'header = marker "Start data\n"'

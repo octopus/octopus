@@ -18,7 +18,7 @@
 ## 02111-1307, USA.
 ##
 
-SUBDIRS = liboct src doc faq share
+SUBDIRS = liboct src doc share
 
 EXTRA_DIST = TODO autogen.sh build/*.m4 build/*.in debian/* samples/inp
 

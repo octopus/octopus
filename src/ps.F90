@@ -97,7 +97,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
     ps%l_max_occ = ps%l_max
     ps%l_loc = lloc
-    ps%so_l_max = min(pstm%npotd - 1, lmax) ! is this the corect value?
+    ps%so_l_max = min(pstm%npotu - 1, lmax) ! is this the corect value?
     ps%z = z
     call tm_process(pstm, lmax, lloc)
     if(conf%verbose > 999) call tm_debug(pstm)
@@ -329,11 +329,9 @@ subroutine tm_load(ps, pstm)
   ps%h(0:ps%l_max, 1, 1) = pstm%dkbcos(0:ps%l_max)
   ps%dknrm (0:ps%l_max) = pstm%dknrm (0:ps%l_max)
 
-  ps%k(:, 1, 1) = 0.0_r8
-  ps%so_dknrm(:) = 0.0_r8
-  if(ps%so_l_max > 0) then
-    ps%k(1:ps%so_l_max, 1, 1) = pstm%so_dkbcos(1:ps%so_l_max)
-    ps%so_dknrm(1:ps%so_l_max) = pstm%so_dknrm(1:ps%so_l_max)
+  if(ps%so_l_max >= 0) then
+    ps%k(0:ps%so_l_max, 1, 1) = pstm%so_dkbcos(1:ps%so_l_max+1)
+    ps%so_dknrm(0:ps%so_l_max) = pstm%so_dknrm(1:ps%so_l_max+1)
   end if
 
   ! Increasing radius a little, just in case.

@@ -302,7 +302,7 @@ contains
     allocate(c(m%np))
     do_is: do is = 1, st%nspin
       ! first term
-      allocate(r(0:m%np), gr(conf%dim, m%np))
+      allocate(r(0:m%np), gr(3, m%np))
       r(1:m%np) = st%rho(1:m%np, is)/s
       r(0) = 0._r8
       call dmesh_derivatives(m, r(0:m%np), grad=gr)
@@ -314,7 +314,7 @@ contains
       deallocate(gr)
 
       ! now the second term
-      allocate(gpsi(conf%dim, m%np))
+      allocate(gpsi(3, 1:m%np))
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim

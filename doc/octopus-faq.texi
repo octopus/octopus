@@ -1,0 +1,314 @@
+\input texinfo @c -*-texinfo-*- 
+@c %**start of header
+@setfilename octopus-faq.info 
+@settitle @code{octopus} faq
+@c %**end of header
+
+
+@dircategory Individual utilities
+@direntry
+* octopus-faq: (octopus).           The octopus program FAQ.
+@end direntry
+
+@c ***************SUMMARY DESCRIPTION AND COPYRIGTH**********************
+@ifinfo
+The purpose of this info file is compiling a series of FAQ related to
+the octopus program.
+
+Copyright 2002 M. A. L. Marques, Alberto Castro and Angel Rubio
+
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+@ignore
+Permission is granted to process this file through TeX
+and print the results, provided the printed document
+carries a copying permission notice identical to this
+one except for the removal of this paragraph (this
+paragraph not being relevant to the printed manual).
+@end ignore
+
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying''
+is included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
+
+@end ifinfo
+
+@c ***************TITLE PAGE AND COPYRIGHT*******************************
+@titlepage
+
+@title @code{octopus} FAQ
+@subtitle Electronic Structure
+@subtitle Molecular Dynamics
+@subtitle Excited-State Dynamics
+@subtitle Recipes-Generator
+@subtitle March 2002
+@sp 4
+@c @center Male Hapalochlaena lunulata (top),
+@c @center and female Hapalochlaena lunulata (bottom).
+@c @center Photograph by Roy Caldwell.
+
+@sp 2
+@author By Miguel A. L. Marques, Alberto Castro and Angel Rubio
+at the Donostia International Physics Center (DIPC)
+
+San Sebasti@'an/Donostia, Spain
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2002 M. A. L. Marques, Alberto Castro and Angel Rubio
+@vskip 24pt
+This program, along with its documentation, is free software;
+you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation;
+either version 2 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public
+License along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+@vskip 24pt
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying'' and ``GNU General Public License''
+are included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+     
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
+@end titlepage
+
+@c **********************************************************************
+@iftex
+@headings off
+@c @evenheading @thispage{}            @| @thistitle @|
+@c @oddheading                         @| @thischapter  @| @thispage{} 
+@evenheading @thispage{}            @| @thistitle @|
+@oddheading  @| @thischapter  @| @thispage{} 
+@end iftex
+
+
+
+@c ***************TOP NODE AND MASTER MENU*******************************
+@ifinfo
+@node Top, Units, (dir), (dir)
+@top octopus
+@c The purpose of this info file is describing how to use
+@c the octopus program. This is obvious, I know, but texinfo manual
+@c encourages to put something over here.
+@end ifinfo
+
+@c @ifhtml
+@c @center Male Hapalochlaena lunulata (top),
+@c @center and female Hapalochlaena lunulata (bottom).
+@c @center Photograph by Roy Caldwell.
+@c @end ifhtml
+
+@menu
+* Units::                       
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Units
+
+* What are these @emph{atomic units}?::  
+* What are these @emph{convenient units}?::  
+* How do I set a laser pulse of x W/cm2 of intensity?::  
+
+@end detailmenu
+@end menu
+
+@c ***************THE BODY OF THE DOCUMENT*******************************
+
+@c ***************UNITS**************************************************
+@node Units,  , Top, Top
+@chapter Units
+
+@menu
+* What are these @emph{atomic units}?::  
+* What are these @emph{convenient units}?::  
+* How do I set a laser pulse of x W/cm2 of intensity?::  
+@end menu
+
+@node What are these @emph{atomic units}?, What are these @emph{convenient units}?, Units, Units
+@section What are these @emph{atomic units}?
+
+Atomic units are a Gaussian system of units (by ``Gaussian'' I mean that the
+vacuum dielectric constant has no dimensins and is set to be @tex
+$\epsilon_0 = {1 \over {4\pi}}$
+@end tex
+), in which the numerical values of the Bohr radius, the electronic
+charge, the electronic mass, and the reduced Planck's constant are set to one:
+@tex
+$$
+\eqalignno{a_0 &= 1;\> e^2 = 1;\> m_e = 1;\>\hbar = 1.&(1)\cr}
+$$
+@end tex
+This simplifies formulae.@footnote{
+Although, in my opinion, seriously hazards dimensionality analysis,
+formulae interpretation and understanding, and Physics in general.
+But this is just a personal taste.
+} This sets directly two fundamental units: the atomic
+units of length and of mass:
+@tex
+$$
+\eqalignno{
+{\rm au}_{\rm length} &= a_0 = 5.2917721\times 10^{-11}~{\rm m};\quad 
+{\rm au}_{\rm mass} = m_e = 9.1093819\times 10^{-31}~{\rm kg}.&(2)\cr}
+$$
+@tex
+Since the squared charge must have units of energy times length, we can thus
+set the atomic unit of energy:
+@tex
+$$
+\eqalignno{
+{\rm au}_{\rm energy} &= {e^2 \over a_0} = 4.3597438\times 10^{-18}~{\rm J},&(3)\cr}
+$$
+@tex
+which it is called Hartree, Ha. And, since the energy has units of mass times
+length squared per time squared, this help us get the atomic unit of time:
+@tex
+$$
+\eqalignno{
+{\rm Ha} &= m_e { a_0^2 \over {\rm} {\rm au}_{\rm time}^2} \to 
+{\rm au}_{\rm time} = a_0 \sqrt{m_e \over {\rm Ha}} = {a_0 \over e} \sqrt{m_e a_0}
+= 2.4188843\times 10^{-17}~{\rm s}.&(4)\cr}
+$$
+@end tex
+Now the catch is: what about Planck's constant? Its dimensions are of energy
+times time, and thus we should be able to derive its value by now. But at the
+beginning we set it to one! The point is that from the four physics constants
+used (@tex
+$a_0, m_e, e^2, \hbar$
+@end tex
+) are not independent, since:
+@tex
+$$
+\eqalignno{
+a_0 &=  { \hbar^2 \over {m_e \; {e^2 \over {4 \pi \epsilon_0} } } }&(5)\cr}
+$$
+@end tex
+In this way, we could actually have derived the atomic unit of time in an
+easier way, using Planck's constant:
+@tex
+$$
+\eqalignno{
+\hbar &= 1\; {\rm Ha}\,{\rm au}_{\rm time} \to {\rm au}_{\rm time} 
+      = { \hbar \over {\rm Ha}} = 
+{ {\hbar a_0} \over e^2}.&(6)\cr}
+$$
+@end tex
+And combining (6) and (5) we retrieve (4).
+
+
+@node What are these @emph{convenient units}?, How do I set a laser pulse of x W/cm2 of intensity?, What are these @emph{atomic units}?, Units
+@section What are these @emph{convenient units}?
+
+A lot of the literature in this field is written using @AA{}nstr@"oms and electron-volts
+as the units of length and of energy, respectively. So it may be ``convenient''
+to define a system of units, derived of the atomic system of units, in which
+we make that substitution. And so we will call it ``convenient''.
+
+The unit mass remains the same, and thus the unit of time must change, being
+now the @tex
+$\hbar /{\rm eV}\,.$
+@end tex
+
+
+@node How do I set a laser pulse of x W/cm2 of intensity?,  , What are these @emph{convenient units}?, Units
+@section How do I set a laser pulse of x W/cm2 of intensity?
+
+
+@ifinfo
+The detailed explanation of this needs formulae to be displayed. Please
+refer to a printed (dvi, for example) version of this FAQ.
+@end ifinfo
+
+@ifnotinfo
+The relation between the peak intensity, @tex
+$I_0,$
+@end tex
+and the peak electric field, @tex
+$E_0,$
+@end tex
+is given by
+@tex
+$$
+I_0 = {\textstyle{1 \over 2}} \; c \; \epsilon_0 \; E_0^2.
+$$
+@end tex
+That is, in a Gaussian system of units (@tex
+$\epsilon_0 = {{1} \over {4\pi}}$
+@end tex
+), we have @tex
+$E_0 = \sqrt{ {{8\pi} \over {c}} \; I_0 }$.
+@end tex
+
+The amplitude of the laser field is specified in the input file through a numerical
+value @tex
+$x$
+@end tex
+in the lasers block. The question is thus how to relate this value to watts per
+squared centimeter. The two formulae that produce this task are:
+
+@itemize
+@item If atomics units are used in the input file:
+@tex
+$
+I_{0} = 3.5094\times 10^{16}\,x^2\rm~W/cm^2
+$
+@end tex
+@item If convenient units are used in the input file:
+@tex
+$
+I_{0} = 1.3272\times 10^{13}\,x^2\rm~W/cm^2
+$
+@end tex
+@end itemize
+These formulae may be derived from previous equation and a bit of units handling. It is 
+important to note that the amplitude introduced in the input file does not correspond to the
+electric field amplitude @tex
+$E$,
+@end tex
+but to the corresponding force, @tex
+$e\,E\,.$
+@end tex
+This is numerically irrelevant in the case of atomic units, but it is important to derive the
+expression for convenient units. In this case, one should just note that @tex
+$e^2 = 14.399644\rm~eV\,\AA$.
+@end tex
+
+@end ifnotinfo
+
+@contents
+
+@bye
+@c **********************************************************************

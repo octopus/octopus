@@ -14,10 +14,7 @@
 ! the size of the pointers
 #undef POINTER_SIZE
 
-! Dimensionality of the system
-#undef ONE_D
-#undef TWO_D
-#undef THREE_D
+! Polymers anyone?
 #undef POLYMERS
 
 #undef HAVE_MPI

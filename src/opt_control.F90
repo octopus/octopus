@@ -43,6 +43,7 @@ subroutine opt_control_run(td, sys, h)
 
   integer :: i, iunit, ctr_iter, ctr_iter_max
   real(r8) :: eps, alpha, overlap, functional, old_functional
+  character(len=80) :: filename
 
   call init()
 
@@ -80,7 +81,8 @@ subroutine opt_control_run(td, sys, h)
     write(stdout, '(1x)')
 
     ! write new field to file
-    call write_field('opt-control/laser_f', laser_i)
+    write(filename,'(a,i3.3)') 'opt-control/laser.', ctr_iter
+    call write_field(filename, laser_i)
 
     ! setup backward propagation
     call read_state(psi_f, "wf.final")
@@ -116,8 +118,6 @@ subroutine opt_control_run(td, sys, h)
     end do
     td%dt = -td%dt
     write(stdout, '(1x)')
-
-    call write_field('opt-control/laser_b', laser_f)
   end do ctr_loop
 
   ! output some useful information
