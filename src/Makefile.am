@@ -90,7 +90,7 @@ DISTCLEANFILES = Makefile.in dirs.h
 		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
-	@rm -f $*.f90
+	@rm -f $*_oct.f90
 
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)
