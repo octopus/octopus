@@ -70,7 +70,6 @@ AC_ARG_ENABLE(fft, [  --enable-fft=ARG    enable fft support
 case "${fft}" in
   fftw3*)
     if test "${SINGLE_PRECISION}"; then
-   echo HHHHHHHHHHHHHHHHHHHHHHHHHHHHh
       ACX_CHECK_FUNC([LIB_FFT], [sfftw_plan_dft_1d])
       ACX_CHECK_LIB([LIB_FFT], [fftw3f],  [sfftw_plan_dft_1d], [-lfftw3f])
     else

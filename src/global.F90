@@ -133,13 +133,24 @@ subroutine global_init()
   mpiv%numprocs = 1
 #endif
 
-  ! init some of the stuff
-  ierr = loct_parse_init('inp', 'out.oct')
+  ! initialize the parser
+  ierr = loct_parse_init('out.oct')
   if(ierr .ne. 0) then
-    ierr = loct_parse_init("-", 'out.oct')
+    message(1) = "Error initializing liboct"
+    message(2) = "Do you have write permissions in this directory?"
+    call write_fatal(2)
+  end if
+
+  ! add our own symbols to be used in the parser
+  call global_init_symbols()
+
+  ierr = loct_parse_input('inp')
+  if(ierr .ne. 0) then
+    ierr = loct_parse_init("-")
     if(ierr .ne. 0) then
       message(1) = "Error initializing liboct"
-      call write_fatal(1)
+      message(2) = "Can not open input file or standard input!"
+      call write_fatal(2)
     end if
   end if
   
@@ -170,6 +181,57 @@ subroutine global_init()
   call loct_parse_logical('BoundaryZeroDerivative', .false., conf%boundary_zero_derivative)
 
 end subroutine global_init
+
+! Initializes the parser symbol table
+subroutine global_init_symbols()
+
+  call loct_parse_putsym(      "gs_start", 1) ! CalculationMode
+  call loct_parse_putsym(            "gs", 2)
+  call loct_parse_putsym(   "unocc_start", 3)
+  call loct_parse_putsym(         "unocc", 4)
+  call loct_parse_putsym(      "td_start", 5)
+  call loct_parse_putsym(            "td", 6)
+  call loct_parse_putsym(     "pol_start", 7)
+  call loct_parse_putsym(           "pol", 8)
+  call loct_parse_putsym(          "geom", 10)
+  call loct_parse_putsym(        "phonon", 11)
+  call loct_parse_putsym(   "opt_control", 12)
+  call loct_parse_putsym(        "recipe", 99)
+  call loct_parse_putsym(        "sphere", 1) ! BoxShape
+  call loct_parse_putsym(      "cylinder", 2)
+  call loct_parse_putsym(       "minimum", 3)
+  call loct_parse_putsym("parallelepiped", 4)
+  call loct_parse_putsym(    "real_space", 0) ! DerivativesSpace, LocalPotentialSpace
+  call loct_parse_putsym( "fourier_space", 1)
+  call loct_parse_putsym(   "unpolarized", 1) ! SpinComponents
+  call loct_parse_putsym(     "polarized", 2)
+  call loct_parse_putsym( "non_collinear", 3)
+  call loct_parse_putsym(    "spin_orbit", 1) ! RelativisticCorrection
+  call loct_parse_putsym(            "cg", 0) ! EigenSolver
+  call loct_parse_putsym(       "lanczos", 2)
+  call loct_parse_putsym(       "density", 0) ! What2Mix
+  call loct_parse_putsym(     "potential", 1)
+  call loct_parse_putsym(        "linear", 0) ! TypeOfMixing
+  call loct_parse_putsym(      "gr_pulay", 1)
+  call loct_parse_putsym(       "broyden", 2)
+  call loct_parse_putsym(         "split", 0) ! TDExponentialMethod
+  call loct_parse_putsym("suzuki_trotter", 1) ! (lanczos = 2 is already defined above)
+  call loct_parse_putsym(      "standard", 3) 
+  call loct_parse_putsym(     "chebyshev", 4)
+  call loct_parse_putsym(          "etrs", 2) ! TDEvolutionMethod
+  call loct_parse_putsym(         "aetrs", 3)
+  call loct_parse_putsym(       "exp_mid", 4)
+  call loct_parse_putsym(        "magnus", 5)
+  call loct_parse_putsym(        "length", 1) ! TDGauge
+  call loct_parse_putsym(      "velocity", 2)
+  call loct_parse_putsym(        "verlet", 3) ! MoveIons
+  call loct_parse_putsym(    "vel_verlet", 4)
+  call loct_parse_putsym(          "sin2", 1) ! AbsorbingBoundaries
+  call loct_parse_putsym(          "mask", 2)
+  call loct_parse_putsym(         "steep", 1) ! GOMethod
+  call loct_parse_putsym(           "fft", 3) ! PoissonSolver (cg defined above)
+
+end subroutine global_init_symbols
 
 subroutine global_end()
   integer :: ierr

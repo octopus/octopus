@@ -42,16 +42,54 @@
 #include "string_f.h"
 
 /* --------------------- Interface to the parsing routines ---------------------- */
+
+/* Initialization of the library */
 int F90_FUNC_(oct_parse_init, OCT_PARSE_INIT)
-		 (STR_F_TYPE in, STR_F_TYPE out STR_ARG2)
+		 (STR_F_TYPE s STR_ARG1)
 {
 	int r;
-	char *in_c, *out_c;
+	char *s_c;
 
-	in_c  = TO_C_STR1(in);
-	out_c = TO_C_STR2(out);
-	r = parse_init(in_c, out_c); 
-	free(in_c); free(out_c);
+	s_c  = TO_C_STR1(s);
+	r = parse_init(s_c); 
+	free(s_c);
+
+	return r;
+}
+
+void F90_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
+		 (STR_F_TYPE s, int *i  STR_ARG1)
+{
+	symrec *rec;
+	char *s_c;
+
+	s_c = TO_C_STR1(s);
+	rec =  putsym(s_c, S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, (double)(*i), 0);
+	free(s_c);
+}
+
+void F90_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
+		 (STR_F_TYPE s, double *d STR_ARG1)
+{
+	symrec *rec;
+	char *s_c;
+
+	s_c = TO_C_STR1(s);
+	rec =  putsym(s_c, S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, *d, 0);
+	free(s_c);
+}
+
+int F90_FUNC_(oct_parse_input, OCT_PARSE_INIT)
+		 (STR_F_TYPE s STR_ARG1)
+{
+	int r;
+	char *s_c;
+
+	s_c  = TO_C_STR1(s);
+	r = parse_input(s_c); 
+	free(s_c);
 
 	return r;
 }
@@ -62,6 +100,7 @@ void F90_FUNC_(oct_parse_end, OCT_PARSE_END)
 	parse_end(); 
 }
 
+/* Parser functions */
 int F90_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 		 (STR_F_TYPE name STR_ARG1)
 { 
@@ -197,7 +236,7 @@ void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 	free(name_c);
 }
 
-double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
+double F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 		 (double *x, double *y, double *z, double *r, STR_F_TYPE pot STR_ARG1)
 {
 	symrec *rec;

@@ -22,7 +22,7 @@ module lib_oct_parser
 
   ! Define the which routines can be seen from the outside
   private
-  public :: loct_parse_init, loct_parse_end
+  public :: loct_parse_init, loct_parse_putsym, loct_parse_input, loct_parse_end
   public :: loct_parse_isdef, loct_parse_int, loct_parse_float, loct_parse_cmplx, &
       loct_parse_string, loct_parse_logical
   public :: loct_parse_block_n, loct_parse_block_cols
@@ -31,9 +31,27 @@ module lib_oct_parser
   public :: loct_parse_potential
   
   interface loct_parse_init
-    integer function oct_parse_init(file_in, file_out)
-      character(len=*), intent(in)  :: file_in, file_out
+    integer function oct_parse_init(file_out)
+      character(len=*), intent(in)  :: file_out
     end function oct_parse_init
+  end interface
+
+  interface loct_parse_putsym
+    subroutine oct_parse_putsym_int(sym, i)
+      character(len=*), intent(in)  :: sym
+      integer, intent(in) :: i
+    end subroutine oct_parse_putsym_int
+    subroutine oct_parse_putsym_double(sym, d)
+      character(len=*), intent(in)  :: sym
+      real(8), intent(in) :: d
+    end subroutine oct_parse_putsym_double
+    module procedure oct_parse_putsym_double4
+  end interface
+
+  interface loct_parse_input
+    integer function oct_parse_input(file_in)
+      character(len=*), intent(in)  :: file_in
+    end function oct_parse_input
   end interface
 
   interface loct_parse_end
@@ -173,6 +191,14 @@ contains
   ! The code may want to compile in single precision mode
   ! As I did not want to change the parser library, these
   ! driver functions just convert their arguments.
+
+  subroutine oct_parse_putsym_double4(sym, d4)
+    character(len=*), intent(in) :: sym
+    real(4), intent(in) :: d4
+
+    call oct_parse_putsym_double(sym, real(d4, 8))
+  end subroutine oct_parse_putsym_double4
+
   subroutine oct_parse_double4(name, def4, res4)
     character(len=*), intent(in) :: name
     real(4), intent(in)          :: def4

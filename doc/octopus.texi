@@ -748,11 +748,11 @@ routines that we didn't want to write in boring Fortran.
 @item @code{share}: Made to contain ``auxiliary'' files eventually used by the code;
 in practice now it contains the Troullier-Martins and Hartwigsen-Goedecker-Hutter
 pseudopotential files.
+@item @code{share/util}: Currently, the @emph{utilities} include a couple of IBM
+OpenDX networks (@pxref{wf.net}), to visualize wavefunctions, densities, etc.
 @item @code{src}: Fortran 90 source files. Note that these have to be preprocessed
 before being fed to the Fortran compiler, so do not be scared by
 all the # directives.
-@item @code{util}: Currently, the @emph{utilities} include a couple of IBM
-OpenDX networks (@pxref{wf.net}), to visualize wavefunctions, densities, etc.
 @end itemize
 
 Before configuring you can (should) setup a couple of options. Although
@@ -953,7 +953,7 @@ The syntax is the following:
 %
 @end example
 Rows in a block are separated by a newline, while columns are
-separated by the character ``|''. There may be any number of lines and any
+separated by the character ``|'' or by a tab. There may be any number of lines and any
 number of columns in a block. Note also that each line can have a different
 number of columns.
 
@@ -1028,19 +1028,19 @@ variable. Note that not all options may be available in all cases.
 
 It defines the type of simulation to perform. Options are:
   @itemize @minus
-    @item @code{1}: Start static calculation.
-    @item @code{2}: Resume static calculation.
-    @item @code{3}: Calculate unoccuppied states.
-    @item @code{4}: Resume calculation of unoccupied states.
-    @item @code{5}: Start time-dependent propagation.
-    @item @code{6}: Resume time-dependent propagation.
-    @item @code{7}: Start static polarizability calculation.
-    @item @code{8}: Resume static polarizability calculation.
+    @item @code{gs_start} or @code{1}: Start static calculation.
+    @item @code{gs} or @code{2}: Resume static calculation.
+    @item @code{unocc_start} or @code{3}: Calculate unoccuppied states.
+    @item @code{unocc} or @code{4}: Resume calculation of unoccupied states.
+    @item @code{td_start} or @code{5}: Start time-dependent propagation.
+    @item @code{td} or @code{6}: Resume time-dependent propagation.
+    @item @code{pol_start} or @code{7}: Start static polarizability calculation.
+    @item @code{pol} or @code{8}: Resume static polarizability calculation.
     @c @item @code{9}: Perform Born-Oppenheimer MD simulation.
-    @item @code{10}: Perform geometry minimization.
-    @item @code{11}: Calculates the phonon spectrum of the system.
-    @item @code{12}: @emph{Optimum control} mode (experimental).
-    @item @code{99}: Print out an octopus recipe.
+    @item @code{geom} or @code{10}: Perform geometry minimization.
+    @item @code{phonon} or @code{11}: Calculates the phonon spectrum of the system.
+    @item @code{opt_control} or @code{12}: @emph{Optimum control} mode (experimental).
+    @item @code{recipe} or @code{99}: Print out an octopus recipe.
   @end itemize
 
 @node Units, UnitsInput, CalculationMode, Generalities
@@ -1432,11 +1432,11 @@ the split-operator, or Suzuki-Trotter propagators, this option should be turned 
 
 Defines the spin mode @code{octopus} will run in. Valid modes are:
   @itemize @minus
-    @item @code{1}: Spin-unpolarised calculation.
-    @item @code{2}: Spin-polarised calculation (collinear spin). This mode
+    @item @code{unpolarized} or @code{1}: Spin-unpolarised calculation.
+    @item @code{polarized} or @code{2}: Spin-polarised calculation (collinear spin). This mode
 will double the number of wave-functions necessary for a spin-unpolarised 
 calculation.
-    @item @code{3}: Non-collinear spin. This mode will double the number 
+    @item @code{non_collinear} or @code{3}: Non-collinear spin. This mode will double the number 
 of wave-functions necessary for a spin-unpolarised calculation, and each of
 the wave-functions will be a 2-spinor.
   @end itemize
@@ -1541,8 +1541,8 @@ the @code{DoubleFFTParameter} is used for this purpose.
 @vindex @code{RelativisticCorrection}
 
 The default value means that @emph{no} relativistic correction is used. To
-include spin-orbit coupling turn @code{RelativisticCorrection} to 1 (this will only
-work when using an executable compiled for complex wave-functions.)
+include spin-orbit coupling turn @code{RelativisticCorrection} to @code{spin_orbit} or @code{1} 
+(this will only work when using an executable compiled for complex wave-functions.)
 
 
 
@@ -1677,8 +1677,8 @@ At each SCF cycle step, a diagonalisation of the Hamiltonian is performed.
 This variable chooses the eigensolver used to diagonalise the Kohn-Sham Hamiltonian.
 Possible values are:
   @itemize @minus
-    @item @code{0}: Conjugated Gradients method.
-    @item @code{2}: Block-Lanczos method.
+    @item @code{cg} or @code{0}: Conjugated Gradients method.
+    @item @code{lanczos} or @code{2}: Block-Lanczos method.
   @end itemize
 Look up the source to know what the differences are.
 
@@ -1723,8 +1723,8 @@ is stopped even if the desired tolerance was not achieved.
 Selects what should be mixed during the SCF cycle. Possible
 values are:
   @itemize @minus
-    @item @code{0}: Density
-    @item @code{1}: Potential
+    @item @code{density} or @code{0}: Density
+    @item @code{potential} or @code{1}: Potential
   @end itemize
 
 @node TypeOfMixing, Mixing, What2Mix, SCF
@@ -1734,9 +1734,9 @@ values are:
 Selects the mixing procedure to be used during the SCF cycle. Possible
 values are:
   @itemize @minus
-    @item @code{0}: Linear mixing.
-    @item @code{1}: Guaranteed-reduction Pulay (GR-Pulay).
-    @item @code{2}: Broyden mixing.
+    @item @code{linear} or @code{0}: Linear mixing.
+    @item @code{gr_pulay} or @code{1}: Guaranteed-reduction Pulay (GR-Pulay).
+    @item @code{broyden} or @code{2}: Broyden mixing.
   @end itemize
 
 @node Mixing, MixNumberSteps, TypeOfMixing, SCF
@@ -1960,7 +1960,7 @@ Time-step for the propagation;
 in previous notation, @math{\delta t}.
 
 @node TDExponentialMethod, TDExpOrder, TDTimeStep, Time Dependent
-@subsection @code{TDExponentialMethod} (integer, 1)
+@subsection @code{TDExponentialMethod} (integer, 3)
 @vindex @code{TDExponentialMethod}
 
 Method used to numerically calculate the exponential of the Hamiltonian,
@@ -1972,44 +1972,7 @@ by this variable.
 
 @itemize @minus
 
-@item @code{1}: N-th order standard expansion of the exponential (STD). 
-
-This method amounts to a straightforward application of the definition of
-the exponential of an operator, in terms of it Taylor expansion.
-@tex
-$$
-\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.
-$$
-@end tex
-@ifnottex
-
-\exp_@{\rm STD@} (-i\delta t H) = \sum_@{i=0@}^@{k@} @{(-i\delta t)^i\over@{i!@}@} H^i.
-
-@end ifnottex
-
-The order @math{k} is determined by variable @code{TDExpOder} (@pxref{TDExpOrder}).
-Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
-see @uref{http://www.phys.washington.edu/~bertsch/num3.ps})
-suggest the 4th order as especially suitable and stable.
-
-@item @code{2}: Lanczos approximation (LAN).
-
-Allows for larger time-steps.
-However, the larger the time-step, the longer the computational time per time-step. 
-In certain cases, if the time-step is too large, the code will emit a warning
-whenever it considers that the evolution may not be properly proceeding --
-the Lanczos process did not converge. The method consists in a Krylov
-subspace approximation of the action of the exponential
-(see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal. @strong{34}, 1911 (1997) for details). 
-Two more variables control the performance of the method: the maximum dimension
-of this subspace (controlled by variable @code{TDExpOrder}), and
-the stopping criterium (controlled by variable @code{TDLanczosTol}).
-The smaller the stopping criterium, the more precisely the exponential
-is calculated, but also the larger the dimension of the Arnoldi
-subspace. If the maximum dimension allowed by @code{TDExpOrder} is not
-enough to meet the criterium, the above-mentioned warning is emitted.
-
-@item @code{3}: Split-operator (SO).
+@item @code{split} or @code{0}: Split-operator (SO).
 
 It is important to distinguish between applying the split operator method
 to calculate the exponential of the Hamiltonian at a given time -- which
@@ -2041,7 +2004,7 @@ the evolution operator (@code{TDEvolutionMethod = 0}), a different procedure is 
 will be described below --, and in fact the variable @code{TDExponentialMethod} has no
 effect at all.
 
-@item @code{4}: Suzuki-Trotter (ST). 
+@item @code{suzuki-trotter} or @code{1}: Suzuki-Trotter (ST). 
 
 This is a higher-order SO based algorithm. See O. Sugino and Y. Miyamoto,
 Phys. Rev. B @strong{59}, 2579 (1999). Allows for larger time-steps,
@@ -2053,7 +2016,44 @@ means to approximate the exponential also apply here. Setting @code{TDEvolutionM
 enforces the use of the ST as an algorithm to approximate the full evolution operator,
 which is slightly different (see below).
 
-@item @code{5}: N-th order Chebyshev expansion (CHEB). 
+@item @code{lanczos} or @code{2}: Lanczos approximation (LAN).
+
+Allows for larger time-steps.
+However, the larger the time-step, the longer the computational time per time-step. 
+In certain cases, if the time-step is too large, the code will emit a warning
+whenever it considers that the evolution may not be properly proceeding --
+the Lanczos process did not converge. The method consists in a Krylov
+subspace approximation of the action of the exponential
+(see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal. @strong{34}, 1911 (1997) for details). 
+Two more variables control the performance of the method: the maximum dimension
+of this subspace (controlled by variable @code{TDExpOrder}), and
+the stopping criterium (controlled by variable @code{TDLanczosTol}).
+The smaller the stopping criterium, the more precisely the exponential
+is calculated, but also the larger the dimension of the Arnoldi
+subspace. If the maximum dimension allowed by @code{TDExpOrder} is not
+enough to meet the criterium, the above-mentioned warning is emitted.
+
+@item @code{standard} or @code{3}: N-th order standard expansion of the exponential (STD). 
+
+This method amounts to a straightforward application of the definition of
+the exponential of an operator, in terms of it Taylor expansion.
+@tex
+$$
+\exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta t)^i\over{i!}} H^i.
+$$
+@end tex
+@ifnottex
+
+\exp_@{\rm STD@} (-i\delta t H) = \sum_@{i=0@}^@{k@} @{(-i\delta t)^i\over@{i!@}@} H^i.
+
+@end ifnottex
+
+The order @math{k} is determined by variable @code{TDExpOder} (@pxref{TDExpOrder}).
+Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
+see @uref{http://www.phys.washington.edu/~bertsch/num3.ps})
+suggest the 4th order as especially suitable and stable.
+
+@item @code{chebyshev} or @code{4}: N-th order Chebyshev expansion (CHEB). 
 
 In principle, the Chebyshev expansion
 of the exponential represents it more accurately than the canonical or standard expansion. 
@@ -2086,7 +2086,7 @@ C. W. Clenshaw, MTAC @strong{9}, 118 (1955).
 @subsection @code{TDExpOrder} (integer, 4)
 @vindex @code{TDExpOrder}
 
-For @code{TDExponentialMethod} equal @code{1} or @code{5}, the order to which
+For @code{TDExponentialMethod} equal @code{standard} or @code{chebyshev}, the order to which
 the exponential is expanded. For the Lanczos approximation, it is the maximum
 Lanczos-subspace dimension.
 
@@ -2128,7 +2128,7 @@ the extrapolation is not reliable.
 
 @itemize @bullet
 
-@item @code{0}: Split Operator (SO). 
+@item @code{split} or @code{0}: Split Operator (SO). 
 
 This is one of the most traditional methods. It splits the full Hamiltonian
 into a kinetic and a potential part, performing the first in Fourier-space,
@@ -2167,7 +2167,7 @@ same that the one that we would have by making use of the Exponential Midpoint R
 exponential of the Hamiltonian, and a full self-consistent procedure.
 
 
-@item @code{1}: Suzuki-Trotter (ST).
+@item @code{suzuki-trotter} or @code{1}: Suzuki-Trotter (ST).
 
 This is the generalization of the Suzuki-Trotter algorithm, described
 as one of the choices of the @code{TDExponentialMethod} (@pxref{TDExponentialMethod}),
@@ -2176,7 +2176,7 @@ Phys. Rev. B @strong{59}, 2579 (1999), for details.
 
 It requires of Hamiltonian extrapolations.
 
-@item @code{2}: Enforced Time-Reversal Symmetry (ETRS).
+@item @code{etrs} or @code{2}: Enforced Time-Reversal Symmetry (ETRS).
 
 The idea is to make use of the time-reversal symmetry from the beginning:
 
@@ -2211,7 +2211,7 @@ But we need to know @math{H_{n+1}}, which can only be known exactly through the 
 @math{H_{n+1} = H[\psi^{*}_{n+1}]}. Thus no extrapolation is performed in this case.
 
 
-@item @code{3}: Approximated Enforced Time-Reversal Symmetry (AETRS).
+@item @code{aetrs} or @code{3}: Approximated Enforced Time-Reversal Symmetry (AETRS).
 
 A modification of previous method to make it faster.
 It is based on extrapolation of the time-dependent potentials. It is faster
@@ -2221,7 +2221,7 @@ The only difference is the procedure to estimate @math{H_{n+1}}: in this case
 it is extrapolated trough a second-order polynomial by making use of the
 Hamiltonian at time @math{t-2\delta t}, @math{t-\delta t} and @math{t}.
 
-@item @code{4}: Exponential Midpoint Rule (EM).
+@item @code{exp_mid} or @code{4}: Exponential Midpoint Rule (EM).
 
 This is maybe the simplest method, but is is very well grounded theretically:
 it is unitary (if the exponential is performed correctly) and preserves
@@ -2239,7 +2239,7 @@ U_@{\rm EM@}(t+\delta t, t) = \exp \left( -i\delta t H_@{t+\delta t/2@}\right)\,
 @end ifnottex
 
 
-@item @code{5}: Magnus Expansion (M4).
+@item @code{magnus} or @code{5}: Magnus Expansion (M4).
 This is the most sophisticated approach. It is a fourth order scheme (feature
 that shares with the ST scheme; the other schemes are in principle second order).
 It is tailored for making use of very large time steps, or equivalently,
@@ -2318,8 +2318,8 @@ defined function.
 
 In which gauge to treat the laser. Options are:
 @itemize @minus
-    @item @code{1}: Length gauge.
-    @item @code{2}: Velocity gauge.
+    @item @code{length} or @code{1}: Length gauge.
+    @item @code{velocity} or @code{2}: Velocity gauge.
 @end itemize
 
 @node TDDeltaStrength, TDPolarization, TDGauge, Time Dependent
@@ -2357,7 +2357,7 @@ during a time-dependent simulation.
 @subsection @code{TDOutputMultipoles} (logical, true)
 @vindex @code{TDOutputMultipoles}
 
-If true, outputs the multipole moments of the density to the file @code{td.general/projections}.
+If true, outputs the multipole moments of the density to the file @code{td.general/multipoles}.
 This is required to, e.g., calculate optical absorption spectra of finite systems.
 
 @node TDOutputCoordinates, TDOutputGSProjection, TDOutputMultipoles, Time Dependent
@@ -2411,9 +2411,9 @@ file @code{td.general/projections.XXX}.
 
 What kind of simulation to perform. Possible values are:
 @itemize @minus
-@item @code{0}: Do not move the ions.
-@item @code{3}: Newtonian dynamics using Verlet.
-@item @code{4}: Newtonian dynamics using velocity Verlet.
+@item @code{no} or @code{0}: Do not move the ions.
+@item @code{verlet} or @code{3}: Newtonian dynamics using Verlet.
+@item @code{vel_verlet} or @code{4}: Newtonian dynamics using velocity Verlet.
 @end itemize
 
 @node AbsorbingBoundaries, ABWidth, MoveIons, Time Dependent
@@ -2424,9 +2424,9 @@ To improve the quality of the spectra by avoiding the formation of
 standing density waves, one can make the boundaries of the simulation 
 box absorbing. The possible values for this parameter are:
   @itemize @minus
-    @item @code{0}: No absorbing boundaries.
-    @item @code{1}: A sin@math{^2} imaginary potential is added at the boundaries.
-    @item @code{2}: A mask is applied to the wave-functions at the boundaries.
+    @item @code{no} or @code{0}: No absorbing boundaries.
+    @item @code{sin2} or @code{1}: A sin@math{^2} imaginary potential is added at the boundaries.
+    @item @code{mask} or @code{2}: A mask is applied to the wave-functions at the boundaries.
   @end itemize
 
 @node ABWidth, ABHeight, AbsorbingBoundaries, Time Dependent
@@ -2496,7 +2496,7 @@ potential.
 @vindex @code{GOMethod}
 
   Method by which the minimization is performed. The only possible value is
-  @code{1} (simple steepest descent).
+  @code{steep} (simple steepest descent).
 
 @node GOTolerance, GOMaxIter, GOMethod, Geometry optimization
 @subsection @code{GOTolerance} (real, 0.0001)
@@ -2812,8 +2812,8 @@ for more details.
 In 3D defines which method to use in order to solve the Poisson equation.
 Allowed values are:
 @itemize @minus
-@item @code{1}: Conjugated gradient method.
-@item @code{3}: FFTs with spherical cutoff.
+@item @code{cg} or @code{0}: Conjugated gradient method.
+@item @code{fft} or @code{3}: FFTs with spherical cutoff.
 @end itemize
 The value of variable @code{DoubleFFTParameter} is used in case @code{3} method is used.
 

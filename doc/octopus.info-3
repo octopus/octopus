@@ -7,6 +7,38 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
+File: octopus.info,  Node: oct-sf,  Next: oct-rsf,  Prev: External utilities,  Up: External utilities
+
+`oct-sf'
+========
+
+   This utility generates the dipole strength function of the given
+system.  Its main input is the `td.general/multipoles' file. Output is
+written to a file called `spectrum'. This file is made of two columns:
+energy (in eV or a.u., depending on the units specified in `inp'), and
+dipole strength function (in 1/eV, or 1/a.u., idem).
+
+   In the `inp' file, the user may set the `SpecTransformMode' - this
+should be set to "sin" for proper use -, the `SpecDampMode' -
+recommended value is "pol", which ensures fulfilling of the N-sum rule,
+the `SpecStartTime', the `SpecEndTime', the `SpecEnergyStep', the
+`SpecMinEnergy' and the `SpecMaxEnergy'.
+
+
+File: octopus.info,  Node: oct-rsf,  Next: oct-hs-mult,  Prev: oct-sf,  Up: External utilities
+
+`oct-rsf'
+=========
+
+
+File: octopus.info,  Node: oct-hs-mult,  Next: oct-hs-acc,  Prev: oct-rsf,  Up: External utilities
+
+`oct-hs-mult'
+=============
+
+   Calculates the harmonic spectrum, out of the multipoles file. To do.
+
+
 File: octopus.info,  Node: oct-hs-acc,  Next: oct-xyz-anim,  Prev: oct-hs-mult,  Up: External utilities
 
 `oct-hs-acc'

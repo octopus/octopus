@@ -134,13 +134,6 @@ dnl now we search for libraries
 dnl FFT
 ACX_LIB_FFTW
 
-if test -z "${LIB_FFT}"; then
-  AC_MSG_WARN([Octopus will be compiled *without* fft support])
-else
-  AC_DEFINE_UNQUOTED(HAVE_FFT, $fft, [FFT library (fftw2 | fftw3)])
-  AC_SUBST(LIB_FFT)
-fi
-
 dnl tests for trlan. Default behavior will be *not* using it.   
 lib_ok="no"
 if test -z "${LIB_TRLAN}"; then

@@ -22,7 +22,8 @@
 
 #include <gsl/gsl_complex.h>
 
-int parse_init(char *file_in, char *file_out);
+int parse_init(char *file_out);
+int parse_input(char *file_in);
 void parse_end();
 
 int parse_isdef(char *name);

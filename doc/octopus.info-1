@@ -639,13 +639,13 @@ of octopus, created by the `tar' command.
      code; in practice now it contains the Troullier-Martins and
      Hartwigsen-Goedecker-Hutter pseudopotential files.
 
+   * `share/util': Currently, the _utilities_ include a couple of IBM
+     OpenDX networks (*note wf.net::), to visualize wavefunctions,
+     densities, etc.
+
    * `src': Fortran 90 source files. Note that these have to be
      preprocessed before being fed to the Fortran compiler, so do not
      be scared by all the # directives.
-
-   * `util': Currently, the _utilities_ include a couple of IBM OpenDX
-     networks (*note wf.net::), to visualize wavefunctions, densities,
-     etc.
 
    Before configuring you can (should) setup a couple of options.
 Although the configure script tries to guess your system settings for
@@ -842,9 +842,9 @@ column format.  The syntax is the following:
        ...
      %
    Rows in a block are separated by a newline, while columns are
-separated by the character "|". There may be any number of lines and any
-number of columns in a block. Note also that each line can have a
-different number of columns.
+separated by the character "|" or by a tab. There may be any number of
+lines and any number of columns in a block. Note also that each line
+can have a different number of columns.
 
    If `octopus' tries to read a variable that is not defined in the
 `inp' file, it automatically assigns to it a default value. All
@@ -922,29 +922,29 @@ File: octopus.info,  Node: CalculationMode,  Next: Units,  Prev: Dimensions,  Up
 ------------------------------
 
    It defines the type of simulation to perform. Options are:
-   - `1': Start static calculation.
+   - `gs_start' or `1': Start static calculation.
 
-   - `2': Resume static calculation.
+   - `gs' or `2': Resume static calculation.
 
-   - `3': Calculate unoccuppied states.
+   - `unocc_start' or `3': Calculate unoccuppied states.
 
-   - `4': Resume calculation of unoccupied states.
+   - `unocc' or `4': Resume calculation of unoccupied states.
 
-   - `5': Start time-dependent propagation.
+   - `td_start' or `5': Start time-dependent propagation.
 
-   - `6': Resume time-dependent propagation.
+   - `td' or `6': Resume time-dependent propagation.
 
-   - `7': Start static polarizability calculation.
+   - `pol_start' or `7': Start static polarizability calculation.
 
-   - `8': Resume static polarizability calculation.
+   - `pol' or `8': Resume static polarizability calculation.
 
-   - `10': Perform geometry minimization.
+   - `geom' or `10': Perform geometry minimization.
 
-   - `11': Calculates the phonon spectrum of the system.
+   - `phonon' or `11': Calculates the phonon spectrum of the system.
 
-   - `12': _Optimum control_ mode (experimental).
+   - `opt_control' or `12': _Optimum control_ mode (experimental).
 
-   - `99': Print out an octopus recipe.
+   - `recipe' or `99': Print out an octopus recipe.
 
 
 File: octopus.info,  Node: Units,  Next: UnitsInput,  Prev: CalculationMode,  Up: Generalities
@@ -1371,15 +1371,15 @@ File: octopus.info,  Node: SpinComponents,  Next: NumberKPoints,  Prev: States, 
 -----------------------------
 
    Defines the spin mode `octopus' will run in. Valid modes are:
-   - `1': Spin-unpolarised calculation.
+   - `unpolarized' or `1': Spin-unpolarised calculation.
 
-   - `2': Spin-polarised calculation (collinear spin). This mode will
-     double the number of wave-functions necessary for a
+   - `polarized' or `2': Spin-polarised calculation (collinear spin).
+     This mode will double the number of wave-functions necessary for a
      spin-unpolarised calculation.
 
-   - `3': Non-collinear spin. This mode will double the number of
-     wave-functions necessary for a spin-unpolarised calculation, and
-     each of the wave-functions will be a 2-spinor.
+   - `non_collinear' or `3': Non-collinear spin. This mode will double
+     the number of wave-functions necessary for a spin-unpolarised
+     calculation, and each of the wave-functions will be a 2-spinor.
 
 
 File: octopus.info,  Node: NumberKPoints,  Next: ExcessCharge,  Prev: SpinComponents,  Up: States
@@ -1392,14 +1392,4 @@ points to use in the calculation. If `NumberKPoints == 1', use only the
 Gamma point. (Note: current version in fact does not implement this
 possibility. Setting this variable to more that 1 may lead to erroneous
 results.)
-
-
-File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: NumberKPoints,  Up: States
-
-`ExcessCharge' (double, 1)
---------------------------
-
-   The net charge of the system. A negative value means that we are
-adding electrons, while a positive value means we are taking electrons
-from the system.
 

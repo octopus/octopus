@@ -73,7 +73,7 @@ subroutine poisson_init(m)
       poisson_solver = 2
     end if
 #else
-    poisson_solver = 1
+    poisson_solver = 0
 #endif
 
     call poisson3D_init(m)
@@ -118,7 +118,7 @@ subroutine poisson_solve(m, pot, dist)
     call poisson1d_solve(m, pot, dist)
   case(-2)
     call poisson2d_solve(m, pot, dist)
-  case(1)
+  case(0)
     call poisson_cg(m, pot, dist)
 #ifdef HAVE_FFT
   case(2,3)

@@ -21,7 +21,7 @@ subroutine poisson3D_init(m)
   ASSERT(poisson_solver>=1.or.poisson_solver<=3)
 
   select case(poisson_solver)
-  case(1)
+  case(0)
     message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
     call write_info(1)
     call init_real()

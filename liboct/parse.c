@@ -65,26 +65,33 @@ static int parse_get_line(FILE *f, char **s, int *length)
 	return c;
 }
 
-int parse_init(char *file_in, char *file_out)
+int parse_init(char *file_out)
 {
-	FILE *f;
-	char *s;
-	int c, length = 0;
-
 	sym_init_table();
-
-	if(strcmp(file_in, "-") == 0)
-		f = stdin;
-	else
-		f = fopen(file_in, "r");
 
 	if(strcmp(file_out, "-") == 0)
 		fout = stdout;
 	else{
 		fout = fopen(file_out, "w");
+		if(!fout)
+			return -1; /* error opening file */
 		setvbuf(fout, NULL, _IONBF, 0);
 	}
 	fprintf(fout, "# Octopus parser started\n");
+
+	return 0;
+}
+
+int parse_input(char *file_in)
+{
+	FILE *f;
+	char *s;
+	int c, length = 0;
+
+	if(strcmp(file_in, "-") == 0)
+		f = stdin;
+	else
+		f = fopen(file_in, "r");
 
 	if(!f)
 		return -1; /* error opening file */
@@ -123,7 +130,7 @@ int parse_init(char *file_in, char *file_out)
 							rec->value.block->lines[l].fields = NULL;
 
 							/* parse columns */
-							for(s1 = s; (tok = strtok(s1, "|")) != NULL; s1 = NULL){
+							for(s1 = s; (tok = strtok(s1, "|\t")) != NULL; s1 = NULL){
 								char *tok2 = strdup(tok);
 								str_trim(tok2);
 

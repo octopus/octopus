@@ -588,7 +588,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   if(niter.gt.40) go to 3
   et = e + de
 ! the following line is the fundamental "bisection"
-  e = 0.5*(e1+e2)
+  e = M_HALF*(e1+e2)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -614,8 +614,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   if(abs(de).lt.tol) go to 6
 2 call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
 !     write(6,101) l,dr,n1,nt,nnode,n2,e1,e,e2,de
-!101  format('  l     dr     n1  nt   n  n2       e1           e',
-!    1       '          e2          de'/i3,d10.3,4i4,4f12.5)
+!101  format('  l     dr     n1  nt   n  n2       e1           e', &
+!           '          e2          de'/i3,d10.3,4i4,4f12.5)
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

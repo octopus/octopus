@@ -133,8 +133,6 @@ static struct init_cnst arith_cnts[] = {
 	{"pi",    M_PI}, {"e",     M_E},
 	{"true",  1}, {"t",     1}, {"yes",   1},
 	{"false", 0}, {"f",     0}, {"no",    0},
-	{"sphere", 1}, {"cylinder", 2}, {"minimum", 3}, {"parallelepiped", 4},
-	{"real_space", 0}, {"fourier_space", 1},
 	{0, 0}
 };
 

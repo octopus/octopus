@@ -7,6 +7,16 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
+File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: NumberKPoints,  Up: States
+
+`ExcessCharge' (double, 1)
+--------------------------
+
+   The net charge of the system. A negative value means that we are
+adding electrons, while a positive value means we are taking electrons
+from the system.
+
+
 File: octopus.info,  Node: ExtraStates,  Next: Occupations,  Prev: ExcessCharge,  Up: States
 
 `ExtraStates' (integer, 1)
@@ -98,9 +108,9 @@ File: octopus.info,  Node: RelativisticCorrection,  Prev: LocalPotentialSpace,  
 -------------------------------------
 
    The default value means that _no_ relativistic correction is used. To
-include spin-orbit coupling turn `RelativisticCorrection' to 1 (this
-will only work when using an executable compiled for complex
-wave-functions.)
+include spin-orbit coupling turn `RelativisticCorrection' to
+`spin_orbit' or `1' (this will only work when using an executable
+compiled for complex wave-functions.)
 
 
 File: octopus.info,  Node: Exchange and correlation,  Next: SCF,  Prev: Hamiltonian,  Up: Input file options
@@ -264,9 +274,9 @@ File: octopus.info,  Node: EigenSolver,  Next: EigenSolverInitTolerance,  Prev: 
    At each SCF cycle step, a diagonalisation of the Hamiltonian is
 performed.  This variable chooses the eigensolver used to diagonalise
 the Kohn-Sham Hamiltonian.  Possible values are:
-   - `0': Conjugated Gradients method.
+   - `cg' or `0': Conjugated Gradients method.
 
-   - `2': Block-Lanczos method.
+   - `lanczos' or `2': Block-Lanczos method.
    Look up the source to know what the differences are.
 
    In both cases, for the first iterations of the cycle there is no
@@ -319,9 +329,9 @@ File: octopus.info,  Node: What2Mix,  Next: TypeOfMixing,  Prev: EigenSolverMaxI
 
    Selects what should be mixed during the SCF cycle. Possible values
 are:
-   - `0': Density
+   - `density' or `0': Density
 
-   - `1': Potential
+   - `potential' or `1': Potential
 
 
 File: octopus.info,  Node: TypeOfMixing,  Next: Mixing,  Prev: What2Mix,  Up: SCF
@@ -331,11 +341,11 @@ File: octopus.info,  Node: TypeOfMixing,  Next: Mixing,  Prev: What2Mix,  Up: SC
 
    Selects the mixing procedure to be used during the SCF cycle.
 Possible values are:
-   - `0': Linear mixing.
+   - `linear' or `0': Linear mixing.
 
-   - `1': Guaranteed-reduction Pulay (GR-Pulay).
+   - `gr_pulay' or `1': Guaranteed-reduction Pulay (GR-Pulay).
 
-   - `2': Broyden mixing.
+   - `broyden' or `2': Broyden mixing.
 
 
 File: octopus.info,  Node: Mixing,  Next: MixNumberSteps,  Prev: TypeOfMixing,  Up: SCF
@@ -529,7 +539,7 @@ File: octopus.info,  Node: TDTimeStep,  Next: TDExponentialMethod,  Prev: TDMaxi
 
 File: octopus.info,  Node: TDExponentialMethod,  Next: TDExpOrder,  Prev: TDTimeStep,  Up: Time Dependent
 
-`TDExponentialMethod' (integer, 1)
+`TDExponentialMethod' (integer, 3)
 ----------------------------------
 
    Method used to numerically calculate the exponential of the
@@ -539,40 +549,7 @@ evolution operator, specified through the variable `TDEvolutionMethod'
 described below, the action of the exponential of the Magnus operator
 is also calculated through the algorithm specified by this variable.
 
-   - `1': N-th order standard expansion of the exponential (STD).
-
-     This method amounts to a straightforward application of the
-     definition of the exponential of an operator, in terms of it
-     Taylor expansion.
-
-     \exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta
-     t)^i\over{i!}} H^i.
-
-     The order k is determined by variable `TDExpOder' (*note
-     TDExpOrder::).  Some numerical considerations (by Jeff
-     Giansiracusa and George F. Bertsch; see
-     `http://www.phys.washington.edu/~bertsch/num3.ps') suggest the 4th
-     order as especially suitable and stable.
-
-   - `2': Lanczos approximation (LAN).
-
-     Allows for larger time-steps.  However, the larger the time-step,
-     the longer the computational time per time-step.  In certain
-     cases, if the time-step is too large, the code will emit a warning
-     whenever it considers that the evolution may not be properly
-     proceeding - the Lanczos process did not converge. The method
-     consists in a Krylov subspace approximation of the action of the
-     exponential (see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal.
-     *34*, 1911 (1997) for details).  Two more variables control the
-     performance of the method: the maximum dimension of this subspace
-     (controlled by variable `TDExpOrder'), and the stopping criterium
-     (controlled by variable `TDLanczosTol').  The smaller the stopping
-     criterium, the more precisely the exponential is calculated, but
-     also the larger the dimension of the Arnoldi subspace. If the
-     maximum dimension allowed by `TDExpOrder' is not enough to meet
-     the criterium, the above-mentioned warning is emitted.
-
-   - `3': Split-operator (SO).
+   - `split' or `0': Split-operator (SO).
 
      It is important to distinguish between applying the split operator
      method to calculate the exponential of the Hamiltonian at a given
@@ -600,7 +577,7 @@ is also calculated through the algorithm specified by this variable.
      procedure is taken - it will be described below -, and in fact the
      variable `TDExponentialMethod' has no effect at all.
 
-   - `4': Suzuki-Trotter (ST).
+   - `suzuki-trotter' or `1': Suzuki-Trotter (ST).
 
      This is a higher-order SO based algorithm. See O. Sugino and Y.
      Miyamoto, Phys. Rev. B *59*, 2579 (1999). Allows for larger
@@ -613,7 +590,41 @@ is also calculated through the algorithm specified by this variable.
      the ST as an algorithm to approximate the full evolution operator,
      which is slightly different (see below).
 
-   - `5': N-th order Chebyshev expansion (CHEB).
+   - `lanczos' or `2': Lanczos approximation (LAN).
+
+     Allows for larger time-steps.  However, the larger the time-step,
+     the longer the computational time per time-step.  In certain
+     cases, if the time-step is too large, the code will emit a warning
+     whenever it considers that the evolution may not be properly
+     proceeding - the Lanczos process did not converge. The method
+     consists in a Krylov subspace approximation of the action of the
+     exponential (see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal.
+     *34*, 1911 (1997) for details).  Two more variables control the
+     performance of the method: the maximum dimension of this subspace
+     (controlled by variable `TDExpOrder'), and the stopping criterium
+     (controlled by variable `TDLanczosTol').  The smaller the stopping
+     criterium, the more precisely the exponential is calculated, but
+     also the larger the dimension of the Arnoldi subspace. If the
+     maximum dimension allowed by `TDExpOrder' is not enough to meet
+     the criterium, the above-mentioned warning is emitted.
+
+   - `standard' or `3': N-th order standard expansion of the
+     exponential (STD).
+
+     This method amounts to a straightforward application of the
+     definition of the exponential of an operator, in terms of it
+     Taylor expansion.
+
+     \exp_{\rm STD} (-i\delta t H) = \sum_{i=0}^{k} {(-i\delta
+     t)^i\over{i!}} H^i.
+
+     The order k is determined by variable `TDExpOder' (*note
+     TDExpOrder::).  Some numerical considerations (by Jeff
+     Giansiracusa and George F. Bertsch; see
+     `http://www.phys.washington.edu/~bertsch/num3.ps') suggest the 4th
+     order as especially suitable and stable.
+
+   - `chebyshev' or `4': N-th order Chebyshev expansion (CHEB).
 
      In principle, the Chebyshev expansion of the exponential
      represents it more accurately than the canonical or standard
@@ -638,9 +649,9 @@ File: octopus.info,  Node: TDExpOrder,  Next: TDLanczosTol,  Prev: TDExponential
 `TDExpOrder' (integer, 4)
 -------------------------
 
-   For `TDExponentialMethod' equal `1' or `5', the order to which the
-exponential is expanded. For the Lanczos approximation, it is the
-maximum Lanczos-subspace dimension.
+   For `TDExponentialMethod' equal `standard' or `chebyshev', the order
+to which the exponential is expanded. For the Lanczos approximation, it
+is the maximum Lanczos-subspace dimension.
 
 
 File: octopus.info,  Node: TDLanczosTol,  Next: TDEvolutionMethod,  Prev: TDExpOrder,  Up: Time Dependent
@@ -681,7 +692,7 @@ stopped. In practice, in `octopus' we perform a second-order
 extrapolation without self-consistente check, except for the first two
 iterations, where obviously the extrapolation is not reliable.
 
-   * `0': Split Operator (SO).
+   * `split' or `0': Split Operator (SO).
 
      This is one of the most traditional methods. It splits the full
      Hamiltonian into a kinetic and a potential part, performing the
@@ -712,7 +723,7 @@ iterations, where obviously the extrapolation is not reliable.
      algorithm to calculate the action of the exponential of the
      Hamiltonian, and a full self-consistent procedure.
 
-   * `1': Suzuki-Trotter (ST).
+   * `suzuki-trotter' or `1': Suzuki-Trotter (ST).
 
      This is the generalization of the Suzuki-Trotter algorithm,
      described as one of the choices of the `TDExponentialMethod'
@@ -722,7 +733,7 @@ iterations, where obviously the extrapolation is not reliable.
 
      It requires of Hamiltonian extrapolations.
 
-   * `2': Enforced Time-Reversal Symmetry (ETRS).
+   * `etrs' or `2': Enforced Time-Reversal Symmetry (ETRS).
 
      The idea is to make use of the time-reversal symmetry from the
      beginning:
@@ -741,7 +752,8 @@ iterations, where obviously the extrapolation is not reliable.
      \right) \psi_n, and then H_n+1 = H[\psi^*_n+1]. Thus no
      extrapolation is performed in this case.
 
-   * `3': Approximated Enforced Time-Reversal Symmetry (AETRS).
+   * `aetrs' or `3': Approximated Enforced Time-Reversal Symmetry
+     (AETRS).
 
      A modification of previous method to make it faster.  It is based
      on extrapolation of the time-dependent potentials. It is faster by
@@ -751,7 +763,7 @@ iterations, where obviously the extrapolation is not reliable.
      case it is extrapolated trough a second-order polynomial by making
      use of the Hamiltonian at time t-2\delta t, t-\delta t and t.
 
-   * `4': Exponential Midpoint Rule (EM).
+   * `exp_mid' or `4': Exponential Midpoint Rule (EM).
 
      This is maybe the simplest method, but is is very well grounded
      theretically: it is unitary (if the exponential is performed
@@ -761,13 +773,13 @@ iterations, where obviously the extrapolation is not reliable.
      U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta
      t/2}\right)\,.
 
-   * `5': Magnus Expansion (M4).  This is the most sophisticated
-     approach. It is a fourth order scheme (feature that shares with
-     the ST scheme; the other schemes are in principle second order).
-     It is tailored for making use of very large time steps, or
-     equivalently, dealing with problem with very high-frequency time
-     dependence.  It is still in a experimental state; we are not yet
-     sure of when it is advantageous.
+   * `magnus' or `5': Magnus Expansion (M4).  This is the most
+     sophisticated approach. It is a fourth order scheme (feature that
+     shares with the ST scheme; the other schemes are in principle
+     second order).  It is tailored for making use of very large time
+     steps, or equivalently, dealing with problem with very
+     high-frequency time dependence.  It is still in a experimental
+     state; we are not yet sure of when it is advantageous.
 
 
    This proliferation of methods is certainly excessive; The reason for
@@ -819,9 +831,9 @@ File: octopus.info,  Node: TDGauge,  Next: TDDeltaStrength,  Prev: TDLasers,  Up
 ----------------------
 
    In which gauge to treat the laser. Options are:
-   - `1': Length gauge.
+   - `length' or `1': Length gauge.
 
-   - `2': Velocity gauge.
+   - `velocity' or `2': Velocity gauge.
 
 
 File: octopus.info,  Node: TDDeltaStrength,  Next: TDPolarization,  Prev: TDGauge,  Up: Time Dependent
@@ -865,7 +877,7 @@ File: octopus.info,  Node: TDOutputMultipoles,  Next: TDOutputCoordinates,  Prev
 ------------------------------------
 
    If true, outputs the multipole moments of the density to the file
-`td.general/projections'.  This is required to, e.g., calculate optical
+`td.general/multipoles'.  This is required to, e.g., calculate optical
 absorption spectra of finite systems.
 
 
@@ -935,11 +947,11 @@ File: octopus.info,  Node: MoveIons,  Next: AbsorbingBoundaries,  Prev: TDOutput
 -----------------------
 
    What kind of simulation to perform. Possible values are:
-   - `0': Do not move the ions.
+   - `no' or `0': Do not move the ions.
 
-   - `3': Newtonian dynamics using Verlet.
+   - `verlet' or `3': Newtonian dynamics using Verlet.
 
-   - `4': Newtonian dynamics using velocity Verlet.
+   - `vel_verlet' or `4': Newtonian dynamics using velocity Verlet.
 
 
 File: octopus.info,  Node: AbsorbingBoundaries,  Next: ABWidth,  Prev: MoveIons,  Up: Time Dependent
@@ -950,11 +962,13 @@ File: octopus.info,  Node: AbsorbingBoundaries,  Next: ABWidth,  Prev: MoveIons,
    To improve the quality of the spectra by avoiding the formation of
 standing density waves, one can make the boundaries of the simulation
 box absorbing. The possible values for this parameter are:
-   - `0': No absorbing boundaries.
+   - `no' or `0': No absorbing boundaries.
 
-   - `1': A sin^2 imaginary potential is added at the boundaries.
+   - `sin2' or `1': A sin^2 imaginary potential is added at the
+     boundaries.
 
-   - `2': A mask is applied to the wave-functions at the boundaries.
+   - `mask' or `2': A mask is applied to the wave-functions at the
+     boundaries.
 
 
 File: octopus.info,  Node: ABWidth,  Next: ABHeight,  Prev: AbsorbingBoundaries,  Up: Time Dependent
@@ -993,7 +1007,7 @@ File: octopus.info,  Node: GOMethod,  Next: GOTolerance,  Prev: Geometry optimiz
 -----------------------
 
    Method by which the minimization is performed. The only possible
-value is   `1' (simple steepest descent).
+value is   `steep' (simple steepest descent).
 
 
 File: octopus.info,  Node: GOTolerance,  Next: GOMaxIter,  Prev: GOMethod,  Up: Geometry optimization
@@ -1339,9 +1353,9 @@ File: octopus.info,  Node: PoissonSolver,  Next: POLStaticField,  Prev: Varia,  
 
    In 3D defines which method to use in order to solve the Poisson
 equation.  Allowed values are:
-   - `1': Conjugated gradient method.
+   - `cg' or `0': Conjugated gradient method.
 
-   - `3': FFTs with spherical cutoff.
+   - `fft' or `3': FFTs with spherical cutoff.
    The value of variable `DoubleFFTParameter' is used in case `3'
 method is used.
 
@@ -1388,36 +1402,4 @@ it may see the `inp' file, and the directories created by it.
 * oct-choose-st::
 * oct-center-geom::
 * wf.net::
-
-
-File: octopus.info,  Node: oct-sf,  Next: oct-rsf,  Prev: External utilities,  Up: External utilities
-
-`oct-sf'
-========
-
-   This utility generates the dipole strength function of the given
-system.  Its main input is the `td.general/multipoles' file. Output is
-written to a file called `spectrum'. This file is made of two columns:
-energy (in eV or a.u., depending on the units specified in `inp'), and
-dipole strength function (in 1/eV, or 1/a.u., idem).
-
-   In the `inp' file, the user may set the `SpecTransformMode' - this
-should be set to "sin" for proper use -, the `SpecDampMode' -
-recommended value is "pol", which ensures fulfilling of the N-sum rule,
-the `SpecStartTime', the `SpecEndTime', the `SpecEnergyStep', the
-`SpecMinEnergy' and the `SpecMaxEnergy'.
-
-
-File: octopus.info,  Node: oct-rsf,  Next: oct-hs-mult,  Prev: oct-sf,  Up: External utilities
-
-`oct-rsf'
-=========
-
-
-File: octopus.info,  Node: oct-hs-mult,  Next: oct-hs-acc,  Prev: oct-rsf,  Up: External utilities
-
-`oct-hs-mult'
-=============
-
-   Calculates the harmonic spectrum, out of the multipoles file. To do.
 
