@@ -3078,8 +3078,6 @@ developments, so don't blame us...
 
    o   CurrentDFT
 
-   o   GuessDensityAtomsMagnet
-
    o   KineticCutoff
 
    o   LB94_beta
@@ -3599,10 +3597,10 @@ Node: oct-make-st106576
 Node: oct-center-geom107856
 Node: wf.net108902
 Node: Undocumented Variables110283
-Node: Examples111391
-Node: Hello world111550
-Ref: Hello world-Footnote-1118173
-Node: Benzene118257
-Node: Options Index119074
+Node: Examples111359
+Node: Hello world111518
+Ref: Hello world-Footnote-1118141
+Node: Benzene118225
+Node: Options Index119042
 
 End Tag Table
