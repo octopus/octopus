@@ -118,11 +118,14 @@ contains
     FLOAT, intent(in), optional :: vmagnus(sys%m%np, sys%st%nspin, 2)
 
     logical :: apply_magnus
+    integer :: n, np, dim
 
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
     call push_sub('td_dtexp')
+
+    np = sys%m%np ; dim = sys%st%dim ; n = np*dim    
 
     select case(te%exp_method)
     case(FOURTH_ORDER);      call fourth
@@ -159,14 +162,14 @@ contains
       
       call push_sub('fourth')
       
-      allocate(zpsi1(sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
+      allocate(zpsi1(np, dim), hzpsi1(np, dim))
       zfact = M_z1
-      call lalg_copy(sys%m%np*sys%st%dim, zpsi(1, 1), 1, zpsi1(1, 1), 1)
+      call zstates_copy(sys%m, dim, zpsi, zpsi1)
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)
-        call lalg_axpy(sys%m%np*sys%st%dim, zfact, hzpsi1(1, 1), 1, zpsi(1, 1), 1)
-        if(i .ne. te%exp_order) call lalg_copy(sys%m%np*sys%st%dim, hzpsi1(1, 1), 1, zpsi1(1, 1), 1)
+        call zstates_axpy(sys%m, dim, zfact, hzpsi1,zpsi)
+        if(i .ne. te%exp_order) call zstates_copy(sys%m, dim, hzpsi1, zpsi1)
       end do
       deallocate(zpsi1, hzpsi1)
       
@@ -188,7 +191,7 @@ contains
       !   u0 := twot*u1 - u2 + c[k];
       !  od;
       !  ChebySum := 0.5*(u0 - u2);}
-      integer :: j, n
+      integer :: j
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
       
@@ -196,21 +199,22 @@ contains
       
       allocate(zpsi1(sys%m%np, sys%st%dim, 0:2))
       zpsi1 = M_z0
-      n = sys%m%np*sys%st%dim
       do j = te%exp_order-1, 0, -1
-        call lalg_copy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
-        call lalg_copy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
-        call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
+        call zstates_copy(sys%m, dim, zpsi1(1:np, 1:dim, 1), zpsi1(1:np, 1:dim, 2))
+        call zstates_copy(sys%m, dim, zpsi1(1:np, 1:dim, 0), zpsi1(1:np, 1:dim, 1))
+        call operate(zpsi1(1:np, 1:dim, 1), zpsi1(1:np, 1:dim, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
-        call lalg_axpy(n, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
-             zpsi1(1, 1, 1), 1, zpsi1(1, 1, 0), 1)
-        call lalg_scal(n, cmplx(1./h%spectral_half_span, M_ZERO, PRECISION), zpsi1(1, 1, 0), 1)
-        call lalg_scal(n, cmplx(M_TWO, M_ZERO, PRECISION),                   zpsi1(1, 1, 0), 1)
-        call lalg_axpy(n, zfact, zpsi(1, 1),                                1,   zpsi1(1, 1, 0), 1)
-        call lalg_axpy(n, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
+        call zstates_axpy(sys%m, dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+             zpsi1(1:np, 1:dim, 1), zpsi1(1:np, 1:dim, 0))
+        call zstates_scal(sys%m, dim, cmplx(1./h%spectral_half_span, M_ZERO, PRECISION), &
+             zpsi1(1:np, 1:dim, 0))
+        call zstates_scal(sys%m, dim, cmplx(M_TWO, M_ZERO, PRECISION), zpsi1(1:np, 1:dim, 0))
+        call zstates_axpy(sys%m, dim, zfact, zpsi(1:np, 1:dim), zpsi1(1:np, 1:dim, 0))
+        call zstates_axpy(sys%m, dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(1:np, 1:dim, 2), &
+             zpsi1(1:np, 1:dim, 0))
       end do
-      zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      call lalg_scal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(1, 1), 1)
+      zpsi(1:np, 1:dim) = M_HALF*(zpsi1(1:np, 1:dim, 0) - zpsi1(1:np, 1:dim, 2))
+      call zstates_scal(sys%m, dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi)
       deallocate(zpsi1)
       
       if(present(order)) order = te%exp_order
@@ -218,51 +222,50 @@ contains
     end subroutine cheby
     
     subroutine lanczos
-      integer ::  korder, is, n, nn, np, i, info
+      integer ::  korder, is, nc, nn, i, info
       CMPLX, allocatable :: hm(:, :), v(:, :, :), expo(:, :)
       FLOAT :: alpha, beta, res, tol, nrm
       
       call push_sub('lanczos')
       
-      np = sys%m%np*sys%st%dim
       korder = te%exp_order
       tol = te%lanczos_tol
-      allocate(v(sys%m%np, sys%st%dim, korder), &
+      allocate(v(np, dim, korder), &
            hm(korder, korder),         &
            expo(korder, korder))
       
       ! Normalize input vector, and put it into v(:, :, 1)
-      nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi)
+      nrm = zstates_nrm2(sys%m, dim, zpsi)
       v(:, :, 1) = zpsi(:, :)/nrm
       
       ! Operate on v(:, :, 1) and place it onto w.
       call operate(v(:, :, 1), zpsi)
-      alpha = zstates_dotp(sys%m, sys%st%dim, v(:, :, 1), zpsi)
-      call lalg_axpy(np, -M_z1*alpha, v(1, 1, 1), 1, zpsi(1, 1), 1)
+      alpha = zstates_dotp(sys%m, dim, v(:, :, 1), zpsi)
+      call zstates_axpy(sys%m, dim, -M_z1*alpha, v(1:np, 1:dim, 1), zpsi)
       
       hm = M_z0; hm(1, 1) = alpha
-      beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
-      do n = 1, korder - 1
-        v(:, :, n + 1) = zpsi(:, :)/beta
-        hm(n+1, n) = beta
-        call operate(v(:, :, n+1), zpsi)
-        hm(n    , n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n)    , zpsi)
-        hm(n + 1, n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n + 1), zpsi)
-        call lalg_gemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n, n + 1), 1, M_z1, zpsi(1, 1), 1)
-        call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
-        res = abs(beta*abs(expo(1, n+1)))
-        beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
+      beta = zstates_nrm2(sys%m, dim, zpsi)
+      do nc = 1, korder - 1
+        v(1:np, 1:dim, nc + 1) = zpsi(1:np, 1:dim)/beta
+        hm(nc+1, nc) = beta
+        call operate(v(1:np, 1:dim, nc+1), zpsi)
+        hm(nc    , nc + 1) = zstates_dotp(sys%m, dim, v(1:np, 1:dim, nc)    , zpsi)
+        hm(nc + 1, nc + 1) = zstates_dotp(sys%m, dim, v(1:np, 1:dim, nc + 1), zpsi)
+        call lalg_gemv('n', n, 2, -M_z1, v(1, 1, nc), n, hm(nc, nc + 1), 1, M_z1, zpsi(1, 1), 1)
+        call zmatexp(nc+1, hm(1:nc+1, 1:nc+1), expo(1:nc+1, 1:nc+1), -M_zI*timestep, method = 2)
+        res = abs(beta*abs(expo(1, nc+1)))
+        beta = zstates_nrm2(sys%m, dim, zpsi)
         if(beta < CNST(1.0e-12)) exit
         if(n>1 .and. res<tol) exit
       enddo
-      korder = min(korder, n + 1)
+      korder = min(korder, nc + 1)
       if(res > tol .and. beta > CNST(1.0e-12)) then
         write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
         call write_warning(1)
       endif
       
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv('n', np, korder, M_z1*nrm, v(1, 1, 1), np, expo(1, 1), 1, M_z0, zpsi(1, 1), 1)
+      call lalg_gemv('n', n, korder, M_z1*nrm, v(1, 1, 1), n, expo(1, 1), 1, M_z0, zpsi(1, 1), 1)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)

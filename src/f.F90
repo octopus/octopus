@@ -20,6 +20,7 @@
 module functions
   use global
   use lib_oct_parser
+  use lib_alg
   use mesh_function
   use cube_function
 

@@ -15,8 +15,49 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-!!!  integrates a function
-!!! (could not find BLAS routine to do it ;))
+! scales a vector by a constant
+subroutine X(mf_scal) (m, a, f)
+  type(mesh_type), intent(in)    :: m
+  R_TYPE,          intent(in)    :: a
+  R_TYPE,          intent(inout) :: f(m%np)
+
+#if defined(HAVE_BLAS)
+  call lalg_scal(m%np, a, f(1), 1)
+#else
+  f = a*f
+#endif
+
+end subroutine X(mf_scal)
+
+! computes a constant times a function plus a function
+subroutine X(mf_axpy) (m, a, fx, fy)
+  type(mesh_type), intent(in)    :: m
+  R_TYPE,          intent(in)    :: a, fx(m%np)
+  R_TYPE,          intent(inout) :: fy(m%np)
+
+#if defined(HAVE_BLAS)
+  call lalg_axpy(m%np, a, fx(1), 1, fy(1), 1)
+#else
+  fy = a*fx + fy
+#endif
+
+end subroutine X(mf_axpy)
+
+! copies a vector, fx, to a vector, fy
+subroutine X(mf_copy) (m, fx, fy)
+  type(mesh_type), intent(in)    :: m
+  R_TYPE,          intent(in)    :: fx(m%np)
+  R_TYPE,          intent(out) :: fy(m%np)
+
+#if defined(HAVE_BLAS)
+  call lalg_copy(m%np, fx(1), 1, fy(1), 1)
+#else
+  fy = fx
+#endif
+
+end subroutine X(mf_copy)
+
+! integrates a function
 function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
@@ -25,8 +66,7 @@ function X(mf_integrate) (m, f) result(d)
   d = sum(f(1:m%np))*m%vol_pp
 end function X(mf_integrate)
 
-!!! this function returns the dot product between two vectors
-!!! if HAVE_BLAS is defined it uses the BLAS library
+! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f1(m%np), f2(m%np)
@@ -39,8 +79,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
 
 end function X(mf_dotp)
 
-!!! this function returns the norm of a vector
-!!! if HAVE_BLAS is defined it uses the BLAS library
+! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
@@ -48,7 +87,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
 #if defined(HAVE_BLAS)
   nrm2 = lalg_nrm2(m%np, f(1), 1)*sqrt(m%vol_pp)
 #else
-  nrm2 = sqrt(dot_product(f)*m%vol_pp)
+  nrm2 = sqrt(dot_product(f, f)*m%vol_pp)
 #endif
 
 end function X(mf_nrm2)

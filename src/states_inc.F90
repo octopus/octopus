@@ -99,7 +99,7 @@ subroutine X(states_random)(m, f)
   end do
 
   r = X(mf_nrm2)(m, f)
-  call lalg_scal(m%np, R_TOTYPE(M_ONE/r), f(1), 1) 
+  call X(mf_scal)(m, R_TOTYPE(M_ONE/r), f) 
 
   call pop_sub()
 end subroutine X(states_random)
@@ -125,26 +125,73 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   do p = stst, nst
     do q = 1, p - 1
       ss = X(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
-      do id = 1, dim
-        call lalg_axpy(m%np, -ss, psi(1, id, q), 1, psi(1, id, p), 1)
-      end do
+      call X(states_axpy)(m, dim, -ss, psi(1:m%np, 1:dim, q), psi(1:m%np, 1:dim, p))
     enddo
-    nrm2 = X(states_nrm2)(m, dim, psi(1:m%np, :, p))
+    nrm2 = X(states_nrm2)(m, dim, psi(1:m%np, 1:dim, p))
     ss = R_TOTYPE(M_ONE/nrm2)
-    do id = 1, dim
-      call lalg_scal(m%np, ss, psi(1, id, p), 1)
-    end do
+    call X(states_scal)(m, dim, ss, psi(1:m%np, 1:dim, p))
   end do
 
   return
 end subroutine X(states_gram_schmidt)
+
+
+! scales a state by a constant
+subroutine X(states_scal) (m, dim, a, f)
+  type(mesh_type), intent(in)    :: m
+  integer,         intent(in)    :: dim
+  R_TYPE,          intent(in)    :: a
+  R_TYPE,          intent(inout) :: f(m%np, dim)
+
+  integer :: i
+
+  do i = 1, dim
+    call X(mf_scal) (m, a, f(1:m%np, i))
+  end do
+
+end subroutine X(states_scal)
+
+! computes a constant times a state plus a state
+subroutine X(states_axpy) (m, dim, a, f1, f2)
+  type(mesh_type), intent(in)    :: m
+  integer,         intent(in)    :: dim
+  R_TYPE,          intent(in)    :: a, f1(m%np, dim)
+  R_TYPE,          intent(inout) :: f2(m%np, dim)
+
+  integer :: i
+
+  do i = 1, dim
+    call X(mf_axpy) (m, a, f1(1:m%np, i), f2(1:m%np, i))
+  end do
+
+end subroutine X(states_axpy)
+
+! copies a state, f1, to a state, f2
+subroutine X(states_copy) (m, dim, f1, f2)
+  type(mesh_type), intent(in)  :: m
+  integer,         intent(in)  :: dim
+  R_TYPE,          intent(in)  :: f1(m%np, dim)
+  R_TYPE,          intent(out) :: f2(m%np, dim)
+
+  integer :: i
+
+  do i = 1, dim
+    call X(mf_copy) (m, f1(1:m%np, i), f2(1:m%np, i))
+  end do
+
+end subroutine X(states_copy)
 
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f1, f2
 
-  dotp = lalg_dot(m%np*dim, f1(1), 1, f2(1), 1)*m%vol_pp
+  integer :: i
+
+  dotp = R_TOTYPE(M_ZERO)
+  do i = 1, dim
+    dotp = dotp + X(mf_dotp)(m, f1((i-1)*m%np+1:i*m%np), f2((i-1)*m%np+1:i*m%np))
+  end do
 
 end function X(states_dotp)
 
@@ -153,7 +200,7 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f
 
-  nrm2 = lalg_nrm2(m%np*dim, f(1), 1)*sqrt(m%vol_pp)
+  nrm2 = sqrt(X(states_dotp)(m, dim, f, f))
 
 end function X(states_nrm2)
 
@@ -651,7 +698,9 @@ subroutine X(mesh_angular_momentum)(m, f, lf)
      lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
   enddo
 #if defined(R_TCOMPLEX)
-  call lalg_scal(3*m%np, -M_zI, lf(1, 1), 1)
+  do i = 1, 3
+    call zmf_scal(m, -M_zI, lf(i, 1:m%np))
+  end do
 #endif
   deallocate(gf)
 end subroutine X(mesh_angular_momentum)
