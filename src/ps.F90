@@ -508,30 +508,30 @@ subroutine get_splines_tm_fourier(psf,ps)
 ! This should be thought more accurately.
   real, parameter :: h = CNST(0.1)   ! mesh for the |G| values
   real, parameter :: a_erf = M_TWO   ! see epot
-  FLOAT :: modg(psf%nrval), int(psf%nrval)
+  FLOAT :: modg(psf%nrval), intg(psf%nrval)
 
-  integer :: i,j
+  integer :: i, j
+  FLOAT   :: d
 
   call push_sub('get_splines_tm_fourier')
 
-  int = M_ZERO
-  do j = 2, psf%nrval
-    int(1) = int(1) +  &
-            (loct_splint(ps%vlocal,ps%g%rofi(j)) -    &
-             ps%Z_val*(M_ONE - loct_erf(a_erf*ps%g%rofi(j))))*   &
-             ps%g%rofi(j)*ps%g%drdi(j)
-
-  end do
-  do i = 2, psf%nrval
+  intg = M_ZERO
+  do i = 1, psf%nrval
     modg(i) = (i-1)*h 
     do j = 2, psf%nrval
-      int(i) = int(i) +  &
-              (loct_splint(ps%vlocal,ps%g%rofi(j)) -  &
-               ps%Z_val*(M_ONE - loct_erf(a_erf*ps%g%rofi(j))))*   &
-               sin(modg(i)*ps%g%rofi(j))*modg(i)*ps%g%drdi(j)
+      d = (loct_splint(ps%vlocal, ps%g%rofi(j)) -    &
+           ps%Z_val*(M_ONE - loct_erf(a_erf*ps%g%rofi(j)))) * ps%g%drdi(j)
+
+      if(i == 1) then
+        d = d * ps%g%rofi(j)
+      else
+        d = d * sin(modg(i)*ps%g%rofi(j))*modg(i)
+      end if
+      intg(i) = intg(i) + d
     end do
   end do
-  call loct_spline_fit(psf%nrval, modg, int, ps%vlocal_f)
+
+  call loct_spline_fit(psf%nrval, modg, intg, ps%vlocal_f)
 
 end subroutine get_splines_tm_fourier
 
