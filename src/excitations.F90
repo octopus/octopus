@@ -61,7 +61,7 @@ program excitations
   st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
   call states_end(sys%st)
 
-  call X(restart_read) ("tmp/restart_occ", st, sys%m, err)
+  call X(restart_read) ("tmp/restart_unocc", st, sys%m, err)
   if(err.ne.0) then
     message(1) = "Error opening 'restart.occ' file"
     call write_fatal(1)
