@@ -38,9 +38,9 @@ noinst_HEADERS = \
 	out_inc.F90 math_inc.F90\
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
-core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @LIB_METIS@ @GSL_LIBS@ @LDF90FLAGS@
-octopus_LDADD = @LIB_FFT@ @LIB_TRLAN@ @LAPACK_LIBS@ @BLAS_LIBS@ @LIB_NETCDF@ \
-	@LIB_MPI@ $(core_LIBS)
+core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDF90FLAGS@
+octopus_LDADD = @LIBS_FFTW@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
+	@LIBS_MPI@ $(core_LIBS)
 
 # now the utility programs
 oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
