@@ -25,8 +25,8 @@ implicit none
 
 private
 public :: ps_file,                    &
-          read_file_data_bin, read_file_data_ascii, solve_shroedinger, calculate_valence_screening, &
-          psf_debug, ps_tm_read_file
+     read_file_data_bin, read_file_data_ascii, solve_shroedinger, calculate_valence_screening, &
+     psf_debug, ps_tm_read_file
 
 type ps_file
   character(len=2)  :: namatm, icorr
@@ -53,32 +53,36 @@ subroutine ps_tm_read_file(psf, filename)
 
   sub_name = 'ps_tm_read_file'; call push_sub()
 
-  inquire(file=filename//'.vps', exist=found)
+  filename2 = trim(filename)//'.vps'
+  inquire(file=filename2, exist=found)
+  message(1) = "Info: Reading pseudopotential from file:"
   if(found) then
+    write(message(2), '(6x,3a)') "'", trim(filename2), "'"
+    call write_info(2)
+    
     call io_assign(iunit)
-    open(iunit, file=filename//'.vps', form='unformatted', status='unknown')
+    open(iunit, file=filename2, form='unformatted', status='old')
     call read_file_data_bin(iunit, psf)
     call io_close(iunit)
   else
-    inquire(file=filename//'.ascii', exist=found)
-    if(found) then
-      call io_assign(iunit)
-      open(iunit, file=filename//'.ascii', form='formatted', status='unknown')
-      call read_file_data_ascii(iunit, psf)
-      call io_close(iunit)
-    else
-      filename2 = SHARE_OCTOPUS//"/PP/TM2/"//filename//".ascii"
+    filename2 = trim(filename)//'.ascii'
+    inquire(file=filename2, exist=found)
+    if(.not.found) then
+      filename2 = SHARE_OCTOPUS//"/PP/TM2/"//trim(filename)//".ascii"
       inquire(file=filename2, exist=found)
-      if(found) then
-         call io_assign(iunit)
-         open(iunit, file=filename//'.ascii', form='formatted', status='unknown')
-         call read_file_data_ascii(iunit, psf)
-         call io_close(iunit)
-      else
-         message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
-         call write_fatal(1)
-      endif
+      if(.not.found) then
+        message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
+        call write_fatal(1)
+      end if
     end if
+
+    write(message(2), '(6x,3a)') "'", trim(filename2), "'"
+    call write_info(2)
+    
+    call io_assign(iunit)
+    open(iunit, file=filename2, form='formatted', status='old')
+    call read_file_data_ascii(iunit, psf)
+    call io_close(iunit)
   end if
 
   call pop_sub(); return
@@ -363,10 +367,11 @@ subroutine psf_debug(psf, label)
   open(unit=unit, file=trim(label)//'.tm.debug')
 
   do i = 1, psf%nrval
-     write(unit, *) psf%rofi(i) / units_out%length%factor,  &
-                    (psf%vlocal(i)/2.0_r8) /units_out%energy%factor, &
-                    (psf%vps(i, l), l=0, psf%npotd-1)
-  enddo
+    write(unit, *) &
+         psf%rofi(i) / units_out%length%factor,  &
+         (psf%vlocal(i)/2.0_r8) /units_out%energy%factor, &
+         (psf%vps(i, l), l=0, psf%npotd-1)
+  end do
   call io_close(unit)
  
   return

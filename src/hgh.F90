@@ -84,33 +84,30 @@ subroutine ps_ghg_read_file(psp, filename)
 
   sub_name = 'ps_ghg_read_file'; call push_sub()
 
-  inquire(file=filename//'.hgh', exist=found)
-  if(found) then
-    call io_assign(iunit)
-    open(iunit, file=filename//'.hgh', form='formatted')
-    i = load_params(iunit, psp)
-    if(i .ne. 0) then
-      message(1) = 'Error reading hgh file'
+  filename2 = filename//'.hgh'
+  inquire(file=filename2, exist=found)
+  if(.not.found) then
+    filename2 = SHARE_OCTOPUS//"/PP/HGH/"//filename//".hgh"
+    inquire(file=filename2, exist=found)
+    if(.not.found) then
+      message(1) = "Pseudopotential file '"//trim(filename)//"hgh' not found!"
       call write_fatal(1)
-    endif
-    call io_close(iunit)
-  else
-      filename2 = SHARE_OCTOPUS//"/PP/HGH/"//filename//".hgh"
-      inquire(file=filename2, exist=found)
-      if(found) then
-         call io_assign(iunit)
-         open(iunit, file=filename//'.ascii', form='formatted')
-         i = load_params(iunit, psp)
-         if(i .ne. 0) then
-           message(1) = 'Error reading hgh file'
-           call write_fatal(1)
-         endif
-         call io_close(iunit)
-      else
-         message(1) = "Pseudopotential file '"//trim(filename)//"hgh' not found"
-         call write_fatal(1)
-      end if
+    end if
   end if
+
+  message(1) = "Info: Reading pseudopotential from file:"
+  write(message(2), '(6x,3a)') "'", trim(filename2), "'"
+  call write_info(2)
+
+  call io_assign(iunit)
+  open(iunit, file=filename2, form='formatted', status='old')
+  i = load_params(iunit, psp)
+  if(i .ne. 0) then
+    message(1) = 'Error reading hgh file!'
+    call write_fatal(1)
+  endif
+  call io_close(iunit)
+
 !!$      ! This should go someday...
 !!$      write(*,'(a)') '****'
 !!$      write(*,'(a2,i5,5f14.8)') psf%atom_name, psf%z_val, psf%rlocal, psf%c(1:4)

@@ -672,10 +672,11 @@ subroutine write_pseudo_info_tm(unit, psf, ps)
   write(message(6),'(a,a2)')   'Exchange/correlation used in generation: ', psf%icorr
   write(message(7),'(a,a3)')   'Relativistic character of calculations: ', psf%irel
   write(message(8),'(a,a4)')   'Type of core corrections: ', ps%icore
-  write(message(9),'(a, 6a10)')'Signature of pseudopotential: ', (psf%method(l), l=1,6)
-  message(10)  = 'Valence configuration in calculations:   '
-  message(11) = ' (orbital - occupancy - core radius)'
-  call write_info(11, unit)
+  write(message(9),'(a)')      'Signature of pseudopotential: '
+  write(message(10), '(6x,6a10)') (psf%method(l), l=1,6)
+  message(11)  = 'Valence configuration in calculations:   '
+  message(12) = ' (orbital - occupancy - core radius)'
+  call write_info(12, unit)
   i = 1; k = 1
   do while(index(psf%title(i:),'/') /= 0)
     j = i
