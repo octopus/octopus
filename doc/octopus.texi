@@ -1,27 +1,24 @@
 \input texinfo @c -*-texinfo-*- 
 @c %**start of header
 @setfilename octopus.info 
-@settitle the @code{octopus} manual
+@include version.texi
+@settitle the @code{octopus} @value{VERSION} manual
 @c %**end of header
 
-@c This is to install octopus into the info main tree.
-@dircategory Individual utilities
-@direntry
-* octopus: (octopus).           The octopus program.
-@end direntry
+
+@macro octopus
+@code{octopus}@w{ }
+@end macro
+
 
 
 @copying
-This manual is for octopus 1.3, a first principles, electronic
+This manual is for octopus @value{VERSION}, a first principles, electronic
 structure, excited states, time-dependent density functional
 theory program.
 
-Copyright @copyright{} 2002, 2003
+Copyright @copyright{} 2002, 2003, 2004
 Miguel A. L. Marques, Alberto Castro and Angel Rubio
-
-
-
-
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -30,6 +27,11 @@ any later version published by the Free Software Foundation.
 @end quotation
 @end copying
 
+@c This is to install octopus into the info main tree.
+@dircategory Individual utilities
+@direntry
+* octopus: (octopus).           The octopus program.
+@end direntry
 
 
 
@@ -39,27 +41,31 @@ any later version published by the Free Software Foundation.
 @titlepage
 
 @title the @code{octopus} manual
+@subtitle Version @value{VERSION}
+@sp 1
 @subtitle Electronic Structure
 @subtitle Molecular Dynamics
 @subtitle Excited-State Dynamics
 @subtitle Recipes-Generator
-@subtitle March 2002
+@subtitle @value{UPDATED-MONTH}
 @sp 4
 @image{img/octosex,8cm,}
 @center Male Hapalochlaena lunulata (top),
 @center and female Hapalochlaena lunulata (bottom).
 @center Photograph by Roy Caldwell.
 
-@sp 2
-@author By Miguel A. L. Marques, Alberto Castro and Angel Rubio.
-
-San Sebasti@'an (Spain), Valladolid (Spain), Berlin (Germany).
+@sp 1
+@author Miguel A. L. Marques
+@author Alberto Castro
+@author Angel Rubio.
 
 @page
 @vskip 0pt plus 1filll
 @insertcopying
 @end titlepage
 
+@c @summarycontents
+@contents
 
 
 
@@ -75,7 +81,7 @@ San Sebasti@'an (Spain), Valladolid (Spain), Berlin (Germany).
 
 
 @ifnottex
-@node Top, Copying, (dir), (dir)
+@node Top, Authors, (dir), (dir)
 @top octopus
 @insertcopying
 @end ifnottex
@@ -88,14 +94,14 @@ San Sebasti@'an (Spain), Valladolid (Spain), Berlin (Germany).
 @end ifhtml
 
 @menu
-* Copying::                     
 * Authors::                     
+* Copying::                     
 * Introduction::                
 * Installation::                
 * The parser::                  
 * Input file options::          
-* Undocumented Variables::      
 * External utilities::          
+* Undocumented Variables::      
 * Examples::                    
 * Options Index::               
 
@@ -111,6 +117,7 @@ Installation
 
 * Quick instructions::          
 * Long instructions::           
+* Different octopus executables::  
 * Troubleshooting::             
 
 Input file options
@@ -159,7 +166,7 @@ Mesh
 * BoxShape::                    
 * Radius::                      
 * Lsize::                       
-* ZLength::                     
+* XLength::                     
 * Spacing::                     
 * DerivativesSpace::            
 * OrderDerivatives::            
@@ -169,7 +176,6 @@ Mesh
 States
 
 * SpinComponents::              
-* NumberKPoints::               
 * ExcessCharge::                
 * ExtraStates::                 
 * Occupations::                 
@@ -186,6 +192,8 @@ Exchange and correlation
 
 * XFunctional::                 
 * CFunctional::                 
+* OEP_level::                   
+* SICCorrection::               
 
 SCF
 
@@ -194,8 +202,8 @@ SCF
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
-* GuessMagnetDensity
-* AtomsMagnetDirection::            
+* GuessMagnetDensity::          
+* AtomsMagnetDirection::        
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -303,55 +311,28 @@ Examples
 @end detailmenu
 @end menu
 
-@c ***************THE BODY OF THE DOCUMENT*******************************
-
-@c ***************COPYING************************************************
-@node Copying, Authors, Top, Top
-@chapter Copying
-
-This program is ``free''; this means that everyone is free to use it and free to
-redistribute it on a free basis.
-What is not allowed is to try to prevent others from further sharing
-any version of this program that they might get from you.
-
-Specifically, we want to make sure that you have the right to give
-away copies of the program, that you receive
-source code or else can get it if you want it, that you can change this
-program or use pieces of them in new free programs, and that you know
-you can do these things.
-
-To make sure that everyone has such rights, we have to forbid you to
-deprive anyone else of these rights.  For example, if you distribute
-copies of the program, you must give the recipients all
-the rights that you have.  You must make sure that they, too, receive or
-can get the source code.  And you must tell them their rights.
-
-Also, for our own protection, we must make certain that everyone finds
-out that there is no warranty for this program.
-If these programs are modified by someone else and passed on, we want
-their recipients to know that what they have is not what we distributed,
-so that any problems introduced by others will not reflect on our
-reputation.
-
-The precise conditions of the license 
-are found in the General Public
-Licenses that accompany it.
-
-@c ********************AUTHORS, COLLABORATORS AND ACKNOWLEDGEMENTS*******
-@node Authors, Introduction, Copying, Top
-@chapter Authors, Collaborators and Acknowledgements.
+@node Authors, Copying, Top, Top
+@cartouche
+@unnumbered
 
 The main developing team of this program is composed of:
-
+         
 @itemize @bullet
 @item Miguel A. L. Marques 
-(Freie Universit@"at, Berlin, Deutschland), 
+(Donostia International Physics Center, San Sebasti@'{a}n, Espa@~na)
 @item Angel Rubio, 
 (Donostia International Physics Center and Department of Materials Science
 UPV/EHU, San Sebasti@'{a}n, Espa@~na), and 
 @item Alberto Castro, 
-(Universidad de Valladolid, Departamento de
-F@'{@dotless{i}}sica Te@'orica, Valladolid, Espa@~na).
+(alberto.castro@@tddft.org, Theoretische Physik, Freie Universit@"at Berlin,
+Berlin 14195, Deutschland).
+@end itemize
+
+Other contributors are:
+@itemize @bullet
+@item Micael Oliveira: mixing, and a lot of stuff.
+@item Carlo Andrea Rozzi - infinite systems (almost done!)
+@item Sebastien Hamel    - paralel version of oct-excite.
 @end itemize
 
 @code{octopus} is based on a fixed-nucleus code written by
@@ -400,11 +381,50 @@ if you give reference to this work and previous ones.
 If you have some free time, and if you feel like taking a joy ride with
 Fortran 90, just drop us an @email{octopus@@tddft.org, email}. You can
 also send us patches, comments, ideas, wishes, etc. They will be included
-in new releases of octopus.  
+in new releases of octopus.     
+
+@end cartouche
+
+
+
+@node Copying, Introduction, Authors, Top
+@cartouche
+@unnumbered The @octopus{} Copying Conditions
+
+This program is ``free''; this means that everyone is free to use it and free to
+redistribute it on a free basis.
+What is not allowed is to try to prevent others from further sharing
+any version of this program that they might get from you.
+
+Specifically, we want to make sure that you have the right to give
+away copies of the program, that you receive
+source code or else can get it if you want it, that you can change this
+program or use pieces of them in new free programs, and that you know
+you can do these things.
+
+To make sure that everyone has such rights, we have to forbid you to
+deprive anyone else of these rights.  For example, if you distribute
+copies of the program, you must give the recipients all
+the rights that you have.  You must make sure that they, too, receive or
+can get the source code.  And you must tell them their rights.
+
+Also, for our own protection, we must make certain that everyone finds
+out that there is no warranty for this program.
+If these programs are modified by someone else and passed on, we want
+their recipients to know that what they have is not what we distributed,
+so that any problems introduced by others will not reflect on our
+reputation.
+
+The precise conditions of the license 
+are found in the General Public
+Licenses that accompany it.
+@end cartouche
+
 
 @c ********************* INTRODUCTION ***********************************
-@node Introduction, Installation, Authors, Top
+@node Introduction, Installation, Copying, Top
 @chapter Introduction
+
 
 @ifinfo
 [Note to info readers:
@@ -417,10 +437,14 @@ they will show up as the TeX commands that produce them in the printed
 documentation]
 @end ifinfo
 
+
 @menu
 * Description of octopus::      
 * Time dependent density functional theory::  
 @end menu
+
+
+
 
 @node  Description of octopus, Time dependent density functional theory, Introduction, Introduction
 @section Description of @code{octopus}
@@ -521,18 +545,33 @@ it is hence not meant for the calculation of electronic excitations.
 However, one can extend the ideas of static DFT. When one asks for the 
 evolution of the system under the influence of a time-dependent external
 potential, one should search the extrema of the quantum mechanical
-action
+action:
 
+
+@c This is the way in which equations will be typed hereafter. The 
+@c text within the verbatin environment should be the same that the one
+@c between $$s. I have tried to simplify this scheme
+@c defining a macro, but it did not work properly, due to limitations
+@c in the Texinfo macro implementations. I hope that in future versions this
+@c will be possible.
 @ifnottex
-  A = \int_t0^t1 dt  <\psi(t) | i\partial_t -H(t) | \psi>
+@verbatim
+A[\Psi] = \int_{t_0}^{t_1} {\rm d}t
+\langle \Psi(t) \vert {\rm i} {\partial \over \partial t} - H(t) \vert
+\Psi(t) \rangle,
+@end verbatim
 @end ifnottex
 @tex
 $$
-  A = \int_{t_0}^{t_1} {\rm d}t
-  \langle \Psi(t) \vert {\rm i} {\partial \over \partial t} - H(t) \vert
-  \Psi(t) \rangle,
+A[\Psi] = \int_{t_0}^{t_1} {\rm d}t
+\langle \Psi(t) \vert {\rm i} {\partial \over \partial t} - H(t) \vert
+\Psi(t) \rangle,
 $$
 @end tex
+
+
+
+
 
 Theorems have now been established for time-dependent DFT@footnote{
 Runge, E. and E. K. U. Gross, 1984, Phys. Rev. Lett. @strong{52} 997.
@@ -569,18 +608,20 @@ Thus the Euler equation corresponding to the extrema of
 @math{A[\rho],}
 
 @ifnottex
-  \delta A[\rho] / \delta \rho(r) = 0,
+@verbatim
+{\delta A[\rho] \over \delta \rho({\bf r},t)} =0,
+@end verbatim
 @end ifnottex
 @tex
 $$
-  {\delta A[\rho] \over \delta \rho({\bf r},t)} =0,
+{\delta A[\rho] \over \delta \rho({\bf r},t)} =0,
 $$ 
 @end tex
 
 determines the time-dependent density, just
 as in the Hohenberg-Kohn formalism the static ground state
 density is given by the minimum of the total energy
-(@math{\delta E[\rho]/\delta \rho({\bf r},t)=0}).
+(@math{\delta E[\rho]/\delta \rho({\bf r})=0}).
 
 Similarly, one can define a time-dependent Kohn-Sham (KS) scheme by
 introducing a non-interacting system that reproduces the exact
@@ -588,32 +629,40 @@ interacting density @math{\rho({\bf r},t)}.
 One gets the following time-dependent KS-equations:
 
 @ifnottex
-  ( 1/2 \nabla^2 + V_eff(r,t) ) \psi_i(r,t)  = i \partial_t \psi_i(r,t)
+@verbatim
+\left[ - {1 \over 2} \nabla^2 + V_{\rm eff}({\bf r},t)
+\right] \psi_i({\bf r},t) = {\rm i}{\partial\over\partial t} \psi_i({\bf
+r},t),
+@end verbatim
 @end ifnottex
-
 @ifnottex
-  \rho(r,t) = V_H(r,t) = \sum_i=1^N |\psi_i(r,t)|^2
+@verbatim
+\rho({\bf r},t) = \sum_{i=1}^N \vert \psi_i({\bf r},t) \vert^2
+@end verbatim
 @end ifnottex
 @tex
 $$
-  \left[ - {1 \over 2} \nabla^2 + V_{\rm eff}({\bf r},t)
-  \right] \psi_i({\bf r},t) = {\rm i}{\partial\over\partial t} \psi_i({\bf
-  r},t),
+\left[ - {1 \over 2} \nabla^2 + V_{\rm eff}({\bf r},t)
+\right] \psi_i({\bf r},t) = {\rm i}{\partial\over\partial t} \psi_i({\bf
+r},t),
 $$
 $$
-  \rho({\bf r},t) = \sum_{i=1}^N \vert \psi_i({\bf r},t) \vert^2
+\rho({\bf r},t) = \sum_{i=1}^N \vert \psi_i({\bf r},t) \vert^2
 $$
 @end tex
 
-where 
+where:
 
 @ifnottex
-  V_eff(r,t) = V_H(r,t) + V_xc(r,t) + V_ext(r,t)
+@verbatim
+V_{\rm eff}({\bf r},t)= V_{\rm H}({\bf r},t) + V_{\rm xc}({\bf r},t)+
+V_{\rm ext}({\bf r},t)
+@end verbatim
 @end ifnottex
 @tex
 $$
-  V_{\rm eff}({\bf r},t)= V_{\rm H}({\bf r},t) + V_{\rm xc}({\bf r},t)+
-  V_{\rm ext}({\bf r},t)
+V_{\rm eff}({\bf r},t)= V_{\rm H}({\bf r},t) + V_{\rm xc}({\bf r},t)+
+V_{\rm ext}({\bf r},t)
 $$
 @end tex 
 
@@ -622,15 +671,17 @@ time-dependent potential felt by the electrons. It consists of
 the sum of the external time-dependent applied field,
 the time-dependent Hartree term, plus the  xc potential (defined
 through the equivalence between the interacting and fictitious
-non-interacting systems). The variational principle yields
-
+non-interacting systems). The variational principle yields:
 @ifnottex
-  V_xc(r,t) = \delta A_xc[\rho] / \delta \rho(r,t).
+@verbatim
+V_{\rm xc}({\bf r},t) = 
+{\delta A_{\rm xc}[\rho] \over \delta \rho({\bf r},t)},
+@end verbatim
 @end ifnottex
 @tex 
 $$
-  V_{\rm xc}({\bf r},t) = 
-  {\delta A_{\rm xc}[\rho] \over \delta \rho({\bf r},t)},
+V_{\rm xc}({\bf r},t) = 
+{\delta A_{\rm xc}[\rho] \over \delta \rho({\bf r},t)},
 $$ 
 @end tex
 
@@ -645,9 +696,22 @@ such as time-dependent Hartree-Fock or configuration interaction.
 @node Installation, The parser, Introduction, Top
 @chapter Installation
 
+Maybe somebody else installed the @octopus for you. In that case, the files
+should be under some directory that we can call @code{PREFIX}: the executables
+in @code{PREFIX/bin} (e.g. if @code{PREFIX=/usr/local}, the main @code{octopus}
+executable is then @code{/usr/local/bin/octopus}); the documentation in @code{info} format
+in @code{PREFIX/info} (so that you may see it by typing @code{info -f PREFIX/info/octopus.info}
+if the @code{info} program is installed in your system); some sample files
+in @code{PREFIX/share/octopus/samples}; the pseudopotential files that @octopus will
+need in @code{PREFIX/share/octopus/PP}, etc.
+
+However, you may be unlucky and that is not the case. In the following we will try
+to help you with the, still rather unfriendly, task of compiling and installing the @octopus .
+
 @menu
 * Quick instructions::          
 * Long instructions::           
+* Different octopus executables::  
 * Troubleshooting::             
 @end menu
 
@@ -668,7 +732,7 @@ the following paragraphs.
 
 Also, rpm and deb binaries for linux are supplied on the web-page.
 
-@node Long instructions, Troubleshooting, Quick instructions, Installation
+@node Long instructions, Different octopus executables, Quick instructions, Installation
 @section Long instructions
 
 The code is written in standard Fortran 90, with some routines written
@@ -676,7 +740,8 @@ in C (and in bison, if we count the input parser). To build it
 you will need both a C compiler (@code{gcc} works just fine), and a
 Fortran 90 compiler. No free-software Fortran 90 compiler is available yet,
 so, if you want to chew the @code{octopus}, you will have either
-to help the @uref{http://g95.sourceforge.net, g95} project
+to help the @uref{http://g95.sourceforge.net, g95} or @uref{http://gcc.gnu.org/fortran, gfortran}
+projects,
 or use any of the available comercial compilers.
 
 Besides the compiler, you will also need:
@@ -705,7 +770,7 @@ just grab the source from @uref{http://www.netlib.org, here}.
 library! @sc{gsl} still needs to grow, but it is already quite useful and impressive.
 @code{octopus} uses splines, complex numbers, special functions, etc. from @sc{gsl},
 so it is a must! If you don't have it already installed in your system, you can
-obtain GSL from @uref{http://sources.redhat.com/gsl/, here}. You will need version 1.0 
+obtain @sc{gsl} from @uref{http://sources.redhat.com/gsl/, here}. You will need version 1.0 
 or higher.
 
 @item @sc{mpi}: If you want to run @code{octopus} in multi-tentacle (parallel) mode,
@@ -744,14 +809,14 @@ to the building system or the CVS repository. May actually not be there.
 Not of real interest for the plain user.
 @item @code{doc}: The documentation of @code{octopus} in @emph{texinfo} format.
 @item @code{liboct}: Small C library that handles the interface to
-GSL and the parsing of the input file. It also contains some assorted
+@sc{gsl} and the parsing of the input file. It also contains some assorted
 routines that we didn't want to write in boring Fortran.
-@item @code{samples}: Sample input files for @code{octopus}.
-@item @code{share}: Made to contain ``auxiliary'' files eventually used by the code;
-in practice now it contains the Troullier-Martins and Hartwigsen-Goedecker-Hutter
+@item @code{share/PP}: Pseudopotentials.
+In practice now it contains the Troullier-Martins and Hartwigsen-Goedecker-Hutter
 pseudopotential files.
 @item @code{share/util}: Currently, the @emph{utilities} include a couple of IBM
 OpenDX networks (@pxref{wf.net}), to visualize wavefunctions, densities, etc.
+@item @code{share/samples}: A couple of sample input files.
 @item @code{src}: Fortran 90 source files. Note that these have to be preprocessed
 before being fed to the Fortran compiler, so do not be scared by
 all the # directives.
@@ -797,10 +862,10 @@ You can now run the configure script (@code{./configure}).
 @footnote{
 If you downloaded the cvs version, you will not find the @code{configure} script. 
 In order to compile the development version you will first have to run the GNU autotools.
-This may be done by executing the script @code{./autogen.sh}. 
+This may be done by executing the @code{autoreconf} perl script (a part of the @code{autoconf} distribution). 
 Note that you need to have working versions of the @code{automake} (1.8.5), 
 @code{autoconf} (2.59) and @code{libtool} (1.5.6) programs (the versions we 
-currently use are between parentheses). Note that the @code{autogen.sh} script will likely fail if
+currently use are between parentheses). Note that the @code{autoreconf} script will likely fail if
 you have (much) older versions of the autotools.
 }
 You can use
@@ -813,42 +878,53 @@ commonly used options include:
 to @code{PREFIX}. The executable will be installed in @code{PREFIX/bin},
 the libraries in @code{PREFIX/lib} and the documentation in @code{PREFIX/info}.
 @code{PREFIX} defaults to the home directory of the user who runs @code{configure}.
+@footnote{You may fine-tune further the instalation by making use of a set of standard
+options (@code{--exec-prefix, --bindir, --datadir, --program-prefix}, etc) that
+are described in the output of @code{./configure --help}
+}
 @item
 @code{--with-fft=fftw2}: Instruct the @code{configure} script to use the @sc{fftw}
 library, and specifically to use the @sc{fftw} version 2. You may also
-set @code{--with-fft=fftw3} or even @code{--disable-fft}.
+set @code{--with-fft=fftw3} or even @code{--disable-fft}, although this last option
+is dis-encouraged.
 @item
-@code{--with-lapack=<lib>}: @sc{lapack} library
+@code{--with-fft-lib=<lib>}: Instruct the @code{configure} script to look for the
+@sc{fftw} library exactly in the way that it is specified in the @code{<lib>} argument,
+i.e @code{--with-fft-lib='-L/opt/lib -lfftw3'}.
 @item
-@code{--with-gsl-prefix=DIR}: Installation directory of the GSL library. The
+@code{--with-blas=<lib>}: Instruct the @code{configure} script to look for 
+the @sc{blas} library in the way that it is specified in the @code{<lib>} argument.
+@item
+@code{--with-lapack=<lib>}: Instruct the @code{configure} script to look for 
+the @sc{blas} library in the way that it is specified in the @code{<lib>} argument.
+@item
+@code{--with-gsl-prefix=DIR}: Installation directory of the @sc{gsl} library. The
 libraries are expected to be in @code{DIR/lib} and the include
 files in @code{DIR/include}. The value of @code{DIR} is usually found by
-issuing the command @code{gsl-config --prefix}. (If the GSL library is
+issuing the command @code{gsl-config --prefix}. (If the @sc{gsl} library is
 installed, the program @code{gsl-config} should be somewhere.)
 @item
-@code{--with-netcdf=<lib>}: @sc{netcdf} library. This is a recommended library.
-@item
-@code{--enable-mpi}: Builds the parallel version (MPI) of @code{octopus}.
-@item
-@code{--enable-complex}: Builds a version with complex wave-functions
-for the ground-state calculations (wave-functions are always complex for
-the evolution). This is needed when spinors are needed --- e.g. noncollinear
-magnetism is going to be considered, or the spin-orbit coupling term will
-be used.
-@item
-@code{--enable-debug}: Builds a version that is able to emit some
-debugging information. Useful for developers, or to report bugs. If @code{octopus}
-has been built with this option enabled, you may set the variable
-@code{Verbose} to ``debug'' level, and set @code{DebugLevel} 
-(@pxref{Verbose} and @pxref{DebugLevel}, respectively). 
+@code{--with-netcdf=<lib>}: @sc{netcdf} library. This is a recommended library, although
+not necessary.
 @end itemize
+
+In addition to these options, several other options have to be passed to build
+different executables of octopus (parallel, debugging version, etc) 
+-- @xref{Different octopus executables}.
 
 Run @code{make}, and then @code{make install}. If everything went fine, you
 should now be able to taste @code{octopus}. Depending on the options passed to
-the configure script, some suffixes or prefixes could be added to the generic
-name @code{octopus} --- i.e. @code{zoctopus} for the code compiled for
-complex wave-functions, @code{zoctopus-mpi} for a parallel version of the code compiled for
-complex wave-function, and so on.
+the configure script, some suffixes could be added to the generic
+name @code{octopus} --- i.e. @code{octopus_cmplx} for the code compiled for
+complex wave-functions, @code{octopus_cmplx_mpi} for a parallel version of the code compiled for
+complex wave-function, and so on. 
+
+Depending on the value given to the @code{--prefix=PREFIX} given,
+the executables will reside in @code{PREFIX/bin}, the info file with the
+documentation in @code{PREFIX/info} (so that it may be viewed running
+@code{info -f PREFIX/info/octopus.info}), and the auxiliary files will be copied
+to @code{PREFIX/share/octopus}. The sample input files will be copied
+to @code{PREFIX/share/octopus/samples}.
 
 The program has been tested in the following platforms:
 @itemize @bullet
@@ -871,7 +947,45 @@ a series of formats are available, namely @code{dvi}, @code{html},
 @code{pdf} and @code{info}. The @code{octopus.texi} source code of this
 document is in the @code{OCTOPUS-HOME/doc} directory.
 
-@node Troubleshooting,  , Long instructions, Installation
+
+@node Different octopus executables, Troubleshooting, Long instructions, Installation
+@section Different octopus executables
+
+By performing the standard install, you will get an executable called @code{octopus},
+and a set of utility programs called @code{oct-}@emph{something}. However, the code
+may be compiled differently in order to profit from special feautures (e.g
+parallel executables, etc). The following is a list of the options that have to be
+passed to the @code{configure} script in order to obtain these different executables.
+
+@itemize @bullet
+@item
+@code{--enable-complex}: Builds a version with complex wave-functions
+for the ground-state calculations (wave-functions are always complex for
+the evolution). This is needed when spinors are needed --- e.g. noncollinear
+magnetism is going to be considered, or the spin-orbit coupling term will
+be used. The suffix @code{_cmplx} is appended to the @code{octopus} executable name.
+@item
+@code{--enable-debug}: Builds a version that is able to emit some
+debugging information. Useful for developers, or to report bugs. If @code{octopus}
+has been built with this option enabled, you may set the variable
+@code{Verbose} to ``debug'' level, and set @code{DebugLevel} 
+(@pxref{Verbose} and @pxref{DebugLevel}, respectively). 
+The suffix @code{_debug} is appended to the @code{octopus} executable name.
+@item
+@code{--enable-single}: Builds a version that works in single precision
+mode, rather than in the standard double precision. It will work faster.
+Unfortunately we are not yet fully sure of the proper functioning
+of the code in this manner.
+The suffix @code{_single} is appended to the @code{octopus} executable name.
+@item
+@code{--enable-mpi}: Builds the parallel version (MPI) of @code{octopus}.
+The suffix @code{_mpi} is appended to the @code{octopus} executable name.
+
+
+@end itemize
+
+
+@node Troubleshooting,  , Different octopus executables, Installation
 @section Troubleshooting
 
 If you are reading this it is because something went wrong. Let us see
@@ -879,8 +993,8 @@ if we can fix it ;)
 
 @strong{Could not find library...}:
 This is probably the most common error you can get. @code{octopus} uses
-three different libraries, @code{GSL}, @code{FFTW}, and 
-@code{BLAS}/@code{LAPACK}. We assume that you have already
+three different libraries, @sc{gsl}, @sc{fftw}, and 
+@sc{blas}/@sc{lapack}. We assume that you have already
 installed these libraries but, for some reason, you were not able to
 compile the code. So, what went wrong?
 @itemize @bullet
@@ -927,9 +1041,11 @@ else went wrong, please subscribe to @code{octopus-users} mailing list, and ask.
 All input options should be in a file called ``@code{inp}'', in the
 directory @code{octopus} is run from. Alternatively, if this file is not
 found, standard input is read. For a fairly comprehensive
-example, just look at the file @code{OCTOPUS_HOME/samples/inp}
+example, just look at the file @code{OCTOPUS_HOME/share/samples/Na2} --- 
+if you installed the code (you did the @code{make install}), this file will also be in
+@code{PREFIX/share/octopus/samples/Na2}.
 
-At the beginning of the program @code{liboct} reads the @code{inp}
+At the beginning of the program @code{liboct} reads the input
 file, parses it, and generates a list of variables that will be
 read by @code{octopus} (note that the input is case independent). 
 There are two kind of variables, scalar
@@ -987,7 +1103,7 @@ number of columns in a block. Note also that each line can have a different
 number of columns.
 
 If @code{octopus} tries to read a variable that is not defined in the
-@code{inp} file, it automatically assigns to it a default value. All
+input file, it automatically assigns to it a default value. All
 variables read are output to the file ``@code{out.oct}''. If you are
 not sure of what the program is reading, just take a look at it.
 Everything following the character ``#'' until the end of the line
@@ -995,7 +1111,7 @@ is considered a comment and is simply cast into oblivion.
 
 
 
-@node Input file options, Undocumented Variables, The parser, Top
+@node Input file options, External utilities, The parser, Top
 @chapter Input file options
 
 @code{octopus} has quite a few options, that we will subdivide in different groups.
@@ -1055,7 +1171,8 @@ variable. Note that not all options may be available in all cases.
 @subsection @code{CalculationMode} (integer, gs_start)
 @vindex @code{CalculationMode}
 
-It defines the type of simulation to perform. Options are:
+This is a very important variable, since
+it defines the type of simulation to perform. The options are:
   @itemize @minus
     @item @code{gs_start}: Start static calculation.
     @item @code{gs}: Resume static calculation.
@@ -1078,15 +1195,14 @@ It defines the type of simulation to perform. Options are:
 
 Atomic units seem to be the preferred system in the atomic and
 molecular physics community (despite the opinion of some of the authors
-of this program). Internally, the code works in atommic units. However, for input
+of this program). Internally, the code works in atomic units. However, for input
 or output, some people like using eV for energies and @AA{} 
 for lengths. This other system of units (the @emph{convenient system}, 
-in words of Prof. George F. Bertsch), can also be used. See the Frequently
-Asked Questions for some more details.
+in words of Prof. George F. Bertsch), can also be used.
 Valid options are:
 @itemize @minus
-  @item @code{'a.u'}: atomic units
-  @item @code{'eVA'}: electron-volts/@aa{}ngstr@"om
+@item @code{'a.u'}: atomic units
+@item @code{'eVA'}: electron-volts/@aa{}ngstr@"om
 @end itemize
 
 @node UnitsInput, UnitsOutput, Units, Generalities
@@ -1117,7 +1233,9 @@ more verbose @code{octopus} is. Current levels are:
 @item @code{Verbose >  20}: Normal program info.
 @item @code{Verbose > 999}: Debug mode. Issues a message to standard error 
 every time the  program enters an (important) subroutine, and 
-prints the time it spend upon return.
+prints the time it spend upon return. It only works for executables that
+have been compiled with debugging capabilities (the configure script
+was given the @code{--enable-debug} option).
 @end itemize
 
 @node DebugLevel,  , Verbose, Generalities
@@ -1125,7 +1243,7 @@ prints the time it spend upon return.
 @vindex @code{DebugLevel}
 
 In debug mode (@code{Verbose > 999}), it restricts the output 
-of entry/exit subroutine information to the required level.
+of entry/exit subroutine information to the required level.     
 
 @node Species Block, Coordinates Description, Generalities, Input file options
 @section Species Block
@@ -1138,8 +1256,8 @@ of entry/exit subroutine information to the required level.
 @subsection @code{Species} (block data)
 @vindex @code{Species}
 
-A specie is by definition an ion (nucleus + core electrons) described
-through a pseudo-potential, or a model potential.
+A specie is by definition either an ``ion'' (nucleus + core electrons) described
+through a pseudo-potential, or an user-defined, model potential.
 The format of this block is different for 1, 2 or 3 dimensions, and
 can be best understood through examples. 
 
@@ -1155,11 +1273,12 @@ This defines a species labelled '@code{H}' of weight @code{1.0079},
 and valence charge @code{1}. This ``valence charge'' is used to calculate
 the number of electrons present in the calculation: as many
 as indicated by the valence charges of the species, plus any extra charge
-specified by the user (@pxref{States}). Last field may be
+specified by the user (@pxref{States}). The last field may be
 any user defined potetial -- use @code{x}, @code{r} (and @code{y} in the 2D case) for the 
 position of the electron relative to the species center.
-For example. the potential often used in 1D calculations is the soft-Coulomb 
-potential -Z/sqrt(x*x + 1).
+For example, the potential often used in 1D calculation is
+the soft-Coulomb potential @math{-Z/\sqrt{x^2 + 1}}. The previous example would then
+be an appropriate description of a Hydrogen nucleus for one-dimensional calculations.
 
 @item In 3D, e.g.
 @example
@@ -1168,10 +1287,11 @@ potential -Z/sqrt(x*x + 1).
     'H'       |  1.0079 | 1   | "hgh"  | 0 | 0
     'jelli01' | 23.2    | 8.0 |  5.0
     'point01' | 32.3    | 2.0
-    'usdef'   | 1 | 8 | "1/2*r^2"
+    'usdef'   | 1       | 8   | "1/2*r^2"
   %
 @end example
-In this case, we have 5 ``species'' present:
+In this case, we have 5 ``species'' present, which exemplify the five kinds that
+may be present:
 @itemize @minus
 @item Oxygen labelled '@code{O}'. Next number is the atomic mass (in atomic 
 mass units), and third field, the atomic number (8, in this case).
@@ -1184,7 +1304,7 @@ Next two numbers are the maximum
 calculation, and the @emph{l}-component to consider as local.
 @item Hydrogen defined in the same way as Oxygen. In this case, however, the
 flavour is ``hgh'' standing for Hartwigsen-Goedecker-Hutter. Last two numbers
-are irrelevant.
+are irrelevant, since they do are not necessary to define the HGH pseudopotentials.
 @item All species whose label starts by 'jelli' are jellium spheres.
 The other parameters are the weight, the nuclear charge, and the
 valence charge of the sphere.
@@ -1201,7 +1321,7 @@ to define the potential.
 @end itemize
 
 Note that some common pseudopotentials are distributed with the code in the
-directory @code{OCTOPUS-HOME/share/PP/}. To use this pseudopotentials you are
+directory @code{OCTOPUS-HOME/share/PP/}. To use these pseudopotentials you are
 not required to define them explicitly in the @code{Species} block, as defaults 
 are provided by the program (you can override these defaults in any case). 
 Additional pseudopotentials can be downloaded from the 
@@ -1214,7 +1334,7 @@ Additional pseudopotentials can be downloaded from the
 @node Coordinates Description, Mesh, Species Block, Input file options
 @section Coordinates Description
 @code{octopus} successively tries to read the atomic coordinates from
-a PDB file, a XYZ file, or else directly from the @code{inp} file.
+a PDB file, a XYZ file, or else directly from the input file.
 
 
 
@@ -1231,13 +1351,13 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
 @subsection @code{PDBCoordinates} (string, 'coords.pdb')
 @vindex @code{PDBCoordinates}
 
-Tries to read the atomic coordinates from the file @code{PDBCoordinates}.
+Tries to read the atomic coordinates from the file specified by the variable @code{PDBCoordinates}.
 The PDB (@uref{http://www.rcsb.org/pdb/,Protein Data Bank}) format is
 quite complicated, and it goes well beyond the scope of this manual. You
 can find a comprehensive description in 
 @uref{http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html}.
 From the plethora of instructions defined in the PDB standard, @code{octopus}
-only reads 2, @code{ATOM} and @code{HETATOM}. From these fields, it reads:
+only reads two, @code{ATOM} and @code{HETATOM}. From these fields, it reads:
 @itemize @minus
 @item columns 13-16 : The specie; in fact @code{octopus} only cares about the first
 letter -- 'CA' and 'CB' will both refer to Carbon -- so elements whose
@@ -1258,7 +1378,7 @@ point charge. Its charge will be given by columns 61-65.
 @vindex @code{XYZCoordinates}
 
 If @code{PDBCoordinates} is not present, reads the atomic coordinates
-from the XYZ file @code{XYZCoordinates}. The XYZ format is very simple,
+from the XYZ file specified by the variable @code{XYZCoordinates}. The XYZ format is very simple,
 as can be seem from this example for the CO molecule (in @AA{}).
 @example
 2
@@ -1299,7 +1419,10 @@ possible to fix @emph{all} atoms using the @code{MoveIons} directive.
 @vindex @code{XYZVelocities}
 
 @code{octopus} will try to read the starting velocities of the atoms from the XYZ file 
-@code{XYZVelocities}.
+specified by the variable @code{XYZVelocities} ('velocities.xyz' by default).
+Note that you do not need to specify initial velocities if you are not going
+to perform ion dynamics; if you are going to allow the ions to move but the velocities
+are not specified, they are considered to be null.
 
 @node Velocities, RandomVelocityTemp, XYZVelocities, Coordinates Description
 @subsection @code{Velocities} (block data)
@@ -1329,7 +1452,7 @@ following a Bolzmann distribution with temperature @code{RandomVelocityTemp}.
 
 
 
-@c **********************************************************************
+
 @node Mesh, States, Coordinates Description, Input file options
 @section Mesh
 
@@ -1343,7 +1466,7 @@ be tuned to suit the geometric configuration of the system.
 * BoxShape::                    
 * Radius::                      
 * Lsize::                       
-* ZLength::                     
+* XLength::                     
 * Spacing::                     
 * DerivativesSpace::            
 * OrderDerivatives::            
@@ -1364,7 +1487,7 @@ in the z direction
     @item @code{minimum}: Sum of spheres around each atom.
     @item @code{parallelepiped}: As the name indicates.
   @end itemize
-For a 1D calculation, it would obviously always be a 1D ``sphere''.
+For a one-dimensional calculation, it would obviously always be a 1D ``sphere''.
 
 @node Radius, Lsize, BoxShape, Mesh
 @subsection @code{Radius} (double, 20.0 a.u.)
@@ -1373,7 +1496,7 @@ For a 1D calculation, it would obviously always be a 1D ``sphere''.
 If @code{BoxShape != parallelepiped} defines the radius of the
 spheres or of the cylinder. 
 
-@node Lsize, ZLength, Radius, Mesh
+@node Lsize, XLength, Radius, Mesh
 @subsection @code{Lsize} (block data)
 @vindex @code{Lsize}
 
@@ -1386,13 +1509,13 @@ is assumed to be a block of the form:
   @end example
 where the @code{size*} are half of the lengths of the box in each direction.
 
-@node ZLength, Spacing, Lsize, Mesh
+@node XLength, Spacing, Lsize, Mesh
 @subsection @code{XLength} (double, 1.0 a.u.)
 @vindex @code{XLength}
 
-If @code{BoxShape == cylinder} is half the total length of the cylinder.
+If @code{BoxShape == cylinder}, it is half the total length of the cylinder.
 
-@node Spacing, DerivativesSpace, ZLength, Mesh
+@node Spacing, DerivativesSpace, XLength, Mesh
 @subsection @code{Spacing} (double, 0.6 a.u.) or (block data)
 @vindex @code{Spacing}
 
@@ -1425,7 +1548,8 @@ Defines in which space gradients and the Laplacian are calculated. Allowed value
 
 If @code{DerivativesSpace == real_space} use a finite difference discretisation
 of this order for the derivatives, that is a @code{OrderDerivatives*2 + 1} formula.
-See (MISSING ARTICLE) for details.
+See [@emph{octopus: a first principles tool for excited states electron-ion
+dynamics}, Comp. Phys. Comm. @strong{151}, 60 (2003)] for details.
 
 @node DoubleFFTParameter, FFTOptimize, OrderDerivatives, Mesh
 @subsection @code{DoubleFFTParameter} (real, 2.0)
@@ -1434,13 +1558,18 @@ See (MISSING ARTICLE) for details.
 For solving Poisson equation in Fourier space, and for applying the local potential
 in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
 the circumscribed cube to the usual mesh by a factor @code{DoubleFFTParameter}. See
-the section that refers to Poisson equation, and to the local potential for details.
+the section that refers to Poisson equation, and to the local potential for details
+[The default value of two is typically good].
 
 @node FFTOptimize,  , DoubleFFTParameter, Mesh
 @subsection @code{FFTOptimize} (logical, true)
 @vindex @code{FFTOptimize}
 
-Should @code{octopus} optimize the FFT dimension? In some cases, namely when using
+Should @code{octopus} optimize the FFT dimension? 
+This means that the cubic mesh to which FFTs are applied is not taken to be as small
+as possible: some points may be added to each direction in order to get a ``good number''
+for the performance of the FFT algorithm.
+In some cases, namely when using
 the split-operator, or Suzuki-Trotter propagators, this option should be turned off.
 
 
@@ -1452,39 +1581,42 @@ the split-operator, or Suzuki-Trotter propagators, this option should be turned 
 
 @menu
 * SpinComponents::              
-* NumberKPoints::               
 * ExcessCharge::                
 * ExtraStates::                 
 * Occupations::                 
 * ElectronicTemperature::       
 @end menu
 
-@node SpinComponents, NumberKPoints, States, States
+@node SpinComponents, ExcessCharge, States, States
 @subsection @code{SpinComponents} (integer, 1)
 @vindex @code{SpinComponents}
 
 Defines the spin mode @code{octopus} will run in. Valid modes are:
-  @itemize @minus
-    @item @code{unpolarized}: Spin-unpolarised calculation.
-    @item @code{polarized}: Spin-polarised calculation (collinear spin). This mode
+@itemize @minus
+@item @code{unpolarized}: Spin-unpolarised calculation. That is, the code will attempt
+to put two-electrons per orbital.
+@item @code{polarized}: Spin-polarised calculation (collinear spin). This mode
 will double the number of wave-functions necessary for a spin-unpolarised 
 calculation.
-    @item @code{non_collinear}: Non-collinear spin. This mode will double the number 
+@item @code{non_collinear}: Non-collinear spin. This mode will double the number 
 of wave-functions necessary for a spin-unpolarised calculation, and each of
-the wave-functions will be a 2-spinor.
-  @end itemize
+the wave-functions will be a two-spinor. This effectively allows the spin-density
+to arrange non-collinearly -- i.e. the magnetization vector is allowed to take
+different directions in different points.
+@end itemize
 
-@node NumberKPoints, ExcessCharge, SpinComponents, States
-@subsection @code{NumberKPoints} (integer, 1)
-@vindex @code{NumberKPoints}
+@c @node NumberKPoints, ExcessCharge, SpinComponents, States
+@c @subsection @code{NumberKPoints} (integer, 1)
+@c @vindex @code{NumberKPoints}
+@c 
+@c If @code{octopus} was compiled for periodic systems, the number of
+@c @emph{k} points to use in the calculation. If @code{NumberKPoints == 1},
+@c use only the Gamma point. (Note: current version in fact does not
+@c implement this possibility. Setting this variable to more that 1 may
+@c lead to erroneous results.)
+@c 
 
-If @code{octopus} was compiled for periodic systems, the number of
-@emph{k} points to use in the calculation. If @code{NumberKPoints == 1},
-use only the Gamma point. (Note: current version in fact does not
-implement this possibility. Setting this variable to more that 1 may
-lead to erroneous results.)
-
-@node ExcessCharge, ExtraStates, NumberKPoints, States
+@node ExcessCharge, ExtraStates, SpinComponents, States
 @subsection @code{ExcessCharge} (double, 1)
 @vindex @code{ExcessCharge}
 
@@ -1496,8 +1628,18 @@ from the system.
 @subsection @code{ExtraStates} (integer, 0)
 @vindex @code{ExtraStates}
 
-How many unoccupied states to use in the ground-state
-calculation. Note that this number is unrelated to @code{CalculationMode == 4}.
+The number of states is in principle calculated considering the minimum
+numbers of states necessary to hold the electrons present in the system.
+The number of electrons is
+in turn calculated considering the nature of the species supplied in the
+@code{Species} block (@pxref{Species}), and the value of the @code{ExcessCharge} variable
+-- see @ref{ExcessCharge}.
+However, one may command @octopus to put more states, which is necessary if one wants to
+use fractional occupational numbers, either fixed from the origin through
+the @code{Occupations} block (@pxref{Occupations}) or by prescribing
+an artifactal electronic temperature (@pxref{ElectronicTemperature}).
+
+Note that this number is unrelated to @code{CalculationMode == 4}.
 
 @node Occupations, ElectronicTemperature, ExtraStates, States
 @subsection @code{Occupations} (block data)
@@ -1511,7 +1653,7 @@ variable. For example:
     %
   @end example
 would fix the occupations of the five states to @code{2.0}. There must be
-as many columns as states in the calculation. If @code{SpinComponents == 2}
+as many columns as states in the calculation. If @code{SpinComponents == polarized}
 this block should contain two lines, one for each spin channel.
 This variable is very useful when dealing with highly symmetric small systems
 (like an open shell atom), for it allows us to fix the occupation numbers
@@ -1570,12 +1712,14 @@ in Fourier space; Otherwise do it directly in real space. The auxiliary box defi
 the @code{DoubleFFTParameter} is used for this purpose. 
 
 @node RelativisticCorrection,  , LocalPotentialSpace, Hamiltonian
-@subsection @code{RelativisticCorrection} (integer, 0)
+@subsection @code{RelativisticCorrection} (integer, no)
 @vindex @code{RelativisticCorrection}
 
 The default value means that @emph{no} relativistic correction is used. To
 include spin-orbit coupling turn @code{RelativisticCorrection} to @code{spin_orbit} or @code{1} 
-(this will only work when using an executable compiled for complex wave-functions.)
+(this will only work when using an executable compiled for complex wave-functions,
+and if @code{SpinComponents} has been set to @code{non_collinear}, which ensures
+the use of spinors).
 
 
 
@@ -1590,46 +1734,81 @@ The possible values are:
 @menu
 * XFunctional::                 
 * CFunctional::                 
+* OEP_level::                   
+* SICCorrection::               
 @end menu
 
 @node XFunctional, CFunctional, Exchange and correlation, Exchange and correlation
-@subsection @code{XFunctional} (string, 'LDA')
+@subsection @code{XFunctional} (integer, lda_x)
 @vindex @code{XFunctional}
 
 @itemize @bullet
-@item @code{XFunctional == 'ZER'}: No exchange.
-@item @code{XFunctional == 'LDA'}: Local density approximation.
-@item @code{XFunctional == 'RLDA'}: Relativistic LDA.
-@item @code{XFunctional == 'PBE'}:  J.P.Perdew, K.Burke and M.Ernzerhof, 
-    	PRL @strong{77}, 3865 (1996).
-@item @code{XFunctional == 'RPBE'}: PBE with some relativistic corrections.
-@item @code{XFunctional == 'LB94'}: van Leeuwen and Baerends functional.
-@item @code{XFunctional == 'EXX'}: Exact exchange functional in the KLI approximation.
-@item @code{XFunctional == 'SIC'}: Self interaction corrected LDA in the KLI approximation.
+@item @code{XFunctional == lda_x}: 
+@item @code{XFunctional == gga_x_pbe}: 
+@item @code{XFunctional == gga_xc_lb}: 
+@item @code{XFunctional == mgga_x_tpss}:  
+@item @code{XFunctional == oep_x}: 
 @end itemize
 
 
-@node CFunctional,  , XFunctional, Exchange and correlation
-@subsection @code{CFunctional} (string, 'PZ81')
+@node CFunctional, OEP_level, XFunctional, Exchange and correlation
+@subsection @code{CFunctional} (integer, lda_c_pz)
 @vindex @code{CFunctional}
 
 @itemize @bullet
-@item @code{CFunctional == 'ZER'}: No correlation.
-@item @code{CFunctional ==   'PZ81'}:  Perdew and Zunger, 
-      PRB @strong{23}, 5075 (1981).
-@item @code{CFunctional == 'PW92'}: J.P.Perdew and Y.Wang, 
-      PRB @strong{45}, 13244 (1992).
-@item @code{CFunctional == 'PBE'}: J.P.Perdew, K.Burke and M.Ernzerhof, 
-    	PRL @strong{77}, 3865 (1996).
-@item @code{CFunctional == 'SIC'}: Self interaction corrected LDA in the KLI approximation.
+@item @code{CFunctional == lda_c_wigner}:
+@item @code{CFunctional == lda_c_rpa}:
+@item @code{CFunctional == lda_c_hl}:
+@item @code{CFunctional == lda_c_gl}:
+@item @code{CFunctional == lda_c_xalpha}:
+@item @code{CFunctional == lda_c_vw}:
+@item @code{CFunctional == lda_c_pz}:
+@item @code{CFunctional == lda_c_ob_pz}:
+@item @code{CFunctional == lda_c_pw}:
+@item @code{CFunctional == lda_c_ob_pw}:
+@item @code{CFunctional == lda_c_lyp}:
+@item @code{CFunctional == lda_c_amgb}:
+@item @code{CFunctional == gga_c_pbe}:
+@item @code{CFunctional == mgga_c_tpss}:
 @end itemize
+
+@node OEP_level, SICCorrection, CFunctional, Exchange and correlation
+@subsection @code{OEP_level} (integer, oep_none)
+@vindex @code{OEP_level}
+
+@itemize @bullet
+@item @code{OEP_level = oep_none}
+@item @code{OEP_level = oep_slater}
+@item @code{OEP_level = oep_kli}
+@item @code{OEP_level = oep_ceda}
+@item @code{OEP_level = oep_full}
+@end itemize
+
+@node SICCorrection,  , OEP_level, Exchange and correlation
+@subsection @code{SICCorrection} (integer, 0)
+@vindex @code{SICCorrection}
+
 
 @c **********************************************************************
 @node SCF, Unoccupied States, Exchange and correlation, Input file options
 @section SCF
 
+The ground-state electronic density in a Kohn-Sham (KS) based
+electronic structure code such as @octopus is obtained after a
+self-consistent process that attempts to solve the KS equations.
+In essence, the problem is the following: at a given iteration step,
+one departs from an approximated solution -- some KS eigenfunctions
+@math{\psi^{inp}_j}, eigenvalues @math{\epsilon^{inp}_j} and 
+density @math{\rho^{inp}}, which
+determines a KS ``input'' Hamiltonian. By diagonalizing this Hamiltonian, one obtains
+the corresponding ``output'' eigenfunctions, eigenvalues, and density.
+This cycle is considered to be closed, and the solution achieved, when some
+convergence criterion is fulfilled.
+In our case, we have allowed for four
+different criteria, to be defined below.
 The self consistent procedure will stop when the first of the convergence
-criteria is fulfilled.
+criteria is fulfilled, or either when a a maximum number of iterations
+has been performed.
 
 @menu
 * MaximumIter::                 
@@ -1637,8 +1816,8 @@ criteria is fulfilled.
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
-* GuessMagnetDensity::            
-* AtomsMagnetDirection::
+* GuessMagnetDensity::          
+* AtomsMagnetDirection::        
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1656,35 +1835,86 @@ criteria is fulfilled.
 @subsection @code{MaximumIter} (integer, 200)
 @vindex @code{MaximumIter}
 
-Maximum number of SCF iterations. @code{0} means unlimited.
+Maximum number of SCF iterations. The code will stop even if convergence
+has not been achieved. @code{0} means unlimited.
 
 @node ConvAbsDens, ConvRelDens, MaximumIter, SCF
 @subsection @code{ConvAbsDens} (double, 1e-5)
 @vindex @code{ConvAbsDens}
 
-Absolute convergence of the density. @code{0} means do 
-not use this criterion.
+Absolute convergence of the density: 
+
+@ifnottex
+@verbatim
+\epsilon = \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2
+@end verbatim
+@end ifnottex
+@tex
+$$
+\epsilon = \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2
+$$
+@end tex
+
+A zero value means do not use this criterion.
 
 @node ConvRelDens, ConvAbsEv, ConvAbsDens, SCF
-@subsection @code{ConvRelDens} (double, 0.0)
+@subsection @code{ConvRelDens} (double, 0)
 @vindex @code{ConvRelDens}
 
-Relative convergence of the density. @code{0} means do 
-not use this criterion.
+Relative convergence of the density:
+
+@ifnottex
+@verbatim
+\epsilon = {1\over N} \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2
+@end verbatim
+@end ifnottex
+@tex
+$$
+\epsilon = {1\over N} \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2
+$$
+@end tex
+
+@math{N} is the total number of electrons in the problem.
+A zero value means do not use this criterion.
 
 @node ConvAbsEv, ConvRelEv, ConvRelDens, SCF
-@subsection @code{ConvAbsEv} (double, 0.0)
+@subsection @code{ConvAbsEv} (double, 0)
 @vindex @code{ConvAbsEv}
 
-Absolute convergence of the eigenvalues. @code{0} means do 
-not use this criterion.
+Absolute convergence of the eigenvalues:
+
+@ifnottex
+@verbatim
+\epsilon = \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert\,.
+@end verbatim
+@end ifnottex
+@tex
+$$
+\epsilon = \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert\,.
+$$
+@end tex
+
+A zero value means do not use this criterion.
 
 @node ConvRelEv, GuessMagnetDensity, ConvAbsEv, SCF
-@subsection @code{ConvRelEnergy} (double, 0.0)
+@subsection @code{ConvRelEnergy} (double, 0)
 @vindex @code{ConvRelEnergy}
 
-Relative convergence of the eigenvalues. @code{0} means do 
-not use this criterion.
+Relative convergence of the eigenvalues:
+
+@ifnottex
+@verbatim
+\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert\,.
+@end verbatim
+@end ifnottex
+@tex
+$$
+\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert\,.
+$$
+@end tex
+
+@math{N} is the total number of electrons. A zero value means do not use this criterion.
+
 
 @node GuessMagnetDensity, AtomsMagnetDirection, ConvRelEv, SCF
 @subsection @code{GuessMagnetDensity} (integer, polarized)
@@ -1723,7 +1953,6 @@ ordering in which the species were defined in the coordinates specifications.
 
 For spin-polarized calculations the vectors should have only one component and
 for non-collinear spin calculations they should have three components.
-
 
 @node LCAOStart, SCFinLCAO, AtomsMagnetDirection, SCF
 @subsection @code{LCAOStart} (logical, true)
@@ -1833,8 +2062,16 @@ density/potential.
 @node Unoccupied States, Time Dependent, SCF, Input file options
 @section Unoccupied States
 
-These variables are only used in @code{CalculationMode == unocc, unocc_start} (or in @code{td} and @code{td_start}
+These variables are only used in 
+@code{CalculationMode == unocc, unocc_start}. The purpose of these run modes
+is to calculate higher lying Kohn-Sham orbitals. For that purpose, it reads
+the restart information from a converged previous ground-state calculation,
+and builds the corresponding Hamiltonian. Then, it calculates the eigenvalues
+and eigenfunctions that are requested by the user.
+
+Note: These variables are also used in @code{CalculationMode = td} or @code{td_start}
 if @code{TDOccupationalAnalysis == 1}).
+
 
 
 @menu
@@ -1855,7 +2092,8 @@ How many unoccupied states to compute.
 
 Maximum number of iterations while calculating the unoccupied states.
 Note that these are @emph{not} SCF iterations, for the density and the 
-Hamiltonian are not updated!
+Hamiltonian are not updated! These iterations correspond to the iterative
+@emph{diagonalization} of the Hamiltonian.
 
 @node UnoccConv,  , UnoccMaximumIter, Unoccupied States
 @subsection @code{UnoccConv} (double, 1e-4)
@@ -2907,13 +3145,13 @@ controls how much the atoms are to be moved in order to calculate the dynamical 
 
 
 @c **********************************************************************
-@node External utilities, Examples, Undocumented Variables, Top
+@node External utilities, Undocumented Variables, Input file options, Top
 @chapter External utilities
 
 A few small programs are generated along with @code{octopus}, for the
 purpose of post-processing the generated information. These utilities
 should all be run from the directory where @code{octopus} was run, so that
-it may see the @code{inp} file, and the directories created by it.
+it may see the input file, and the directories created by it.
 
 @menu
 * oct-sf::                      
@@ -2934,10 +3172,10 @@ it may see the @code{inp} file, and the directories created by it.
 This utility generates the dipole strength function of the given system.
 Its main input is the @code{td.general/multipoles} file. Output is written
 to a file called @code{spectrum}. This file is made of two
-columns: energy (in eV or a.u., depending on the units specified in @code{inp}),
+columns: energy (in eV or a.u., depending on the units specified in the input file),
 and dipole strength function (in 1/eV, or 1/a.u., idem).
 
-In the @code{inp} file, the user may set the @code{SpecTransformMode} -- this
+In the input file, the user may set the @code{SpecTransformMode} -- this
 should be set to ``sin'' for proper use --, the @code{SpecDampMode} -- recommended
 value is ``pol'', which ensures fulfilling of the N-sum rule, 
 the @code{SpecStartTime}, the @code{SpecEndTime}, the @code{SpecEnergyStep}, 
@@ -2986,7 +3224,7 @@ utility. The parameters of the spectrum can be set using the variables
 
 @code{make_st} reads @code{tmp/restart.static} and replaces some of the
 Kohn-Sham states by Gaussians wave packets. The states which should be replaced are 
-given in the @code{%MakeStates} section in the @code{inp} file and written to 
+given in the @code{%MakeStates} section in the input file and written to 
 @code{tmp/restart.static.new}. (You probably want to copy that file to 
 @code{tmp/restart.static} and use then @code{CalculationMode=5} or @code{6}.)
 
@@ -3091,7 +3329,7 @@ a small tutorial. Follow it from now on.
 @end itemize
 
 @c **********************************************************************
-@node Undocumented Variables, External utilities, Input file options, Top
+@node Undocumented Variables, Examples, External utilities, Top
 @chapter Undocumented Variables
 
 If you want to use these variables you will have to go to the code to find out what they 
@@ -3109,6 +3347,8 @@ developments, so don't blame us...
   CenterOfInversion
 @item
   CurrentDFT
+@item
+  GuessDensityAtomsMagnet
 @item
   KineticCutoff
 @item
@@ -3154,7 +3394,7 @@ developments, so don't blame us...
 @end itemize
 
 @c **********************************************************************
-@node Examples, Options Index, External utilities, Top
+@node Examples, Options Index, Undocumented Variables, Top
 @chapter Examples
 
 @menu
@@ -3349,7 +3589,5 @@ mesh. It also takes much more time...
      
 @printindex vr
      
-@contents
-
 @bye
 @c **********************************************************************

@@ -1,35 +1,35 @@
 This is octopus.info, produced by makeinfo version 4.7 from
 octopus.texi.
 
-INFO-DIR-SECTION Individual utilities
-START-INFO-DIR-ENTRY
-* octopus: (octopus).           The octopus program.
-END-INFO-DIR-ENTRY
-
-   This manual is for octopus 1.3, a first principles, electronic
+   This manual is for octopus 1.99devel, a first principles, electronic
 structure, excited states, time-dependent density functional theory
 program.
 
-   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
-Angel Rubio
+   Copyright (C) 2002, 2003, 2004 Miguel A. L. Marques, Alberto Castro
+and Angel Rubio
 
      Permission is granted to copy, distribute and/or modify this
      document under the terms of the GNU Free Documentation License,
      Version 1.1 or any later version published by the Free Software
      Foundation.
 
+INFO-DIR-SECTION Individual utilities
+START-INFO-DIR-ENTRY
+* octopus: (octopus).           The octopus program.
+END-INFO-DIR-ENTRY
+
 
-File: octopus.info,  Node: Top,  Next: Copying,  Prev: (dir),  Up: (dir)
+File: octopus.info,  Node: Top,  Next: Authors,  Prev: (dir),  Up: (dir)
 
 octopus
 *******
 
-This manual is for octopus 1.3, a first principles, electronic
+This manual is for octopus 1.99devel, a first principles, electronic
 structure, excited states, time-dependent density functional theory
 program.
 
-   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
-Angel Rubio
+   Copyright (C) 2002, 2003, 2004 Miguel A. L. Marques, Alberto Castro
+and Angel Rubio
 
      Permission is granted to copy, distribute and/or modify this
      document under the terms of the GNU Free Documentation License,
@@ -38,14 +38,14 @@ Angel Rubio
 
 * Menu:
 
-* Copying::
 * Authors::
+* Copying::
 * Introduction::
 * Installation::
 * The parser::
 * Input file options::
-* Undocumented Variables::
 * External utilities::
+* Undocumented Variables::
 * Examples::
 * Options Index::
 
@@ -60,6 +60,7 @@ Installation
 
 * Quick instructions::
 * Long instructions::
+* Different octopus executables::
 * Troubleshooting::
 
 Input file options
@@ -108,7 +109,7 @@ Mesh
 * BoxShape::
 * Radius::
 * Lsize::
-* ZLength::
+* XLength::
 * Spacing::
 * DerivativesSpace::
 * OrderDerivatives::
@@ -118,7 +119,6 @@ Mesh
 States
 
 * SpinComponents::
-* NumberKPoints::
 * ExcessCharge::
 * ExtraStates::
 * Occupations::
@@ -135,6 +135,8 @@ Exchange and correlation
 
 * XFunctional::
 * CFunctional::
+* OEP_level::
+* SICCorrection::
 
 SCF
 
@@ -143,7 +145,7 @@ SCF
 * ConvRelDens::
 * ConvAbsEv::
 * ConvRelEv::
-* GuessMagnetDensity
+* GuessMagnetDensity::
 * AtomsMagnetDirection::
 * LCAOStart::
 * SCFinLCAO::
@@ -250,52 +252,27 @@ Examples
 * Benzene::
 
 
-File: octopus.info,  Node: Copying,  Next: Authors,  Prev: Top,  Up: Top
+File: octopus.info,  Node: Authors,  Next: Copying,  Prev: Top,  Up: Top
 
-1 Copying
-*********
 
-This program is "free"; this means that everyone is free to use it and
-free to redistribute it on a free basis.  What is not allowed is to try
-to prevent others from further sharing any version of this program that
-they might get from you.
-
-   Specifically, we want to make sure that you have the right to give
-away copies of the program, that you receive source code or else can
-get it if you want it, that you can change this program or use pieces
-of them in new free programs, and that you know you can do these things.
-
-   To make sure that everyone has such rights, we have to forbid you to
-deprive anyone else of these rights.  For example, if you distribute
-copies of the program, you must give the recipients all the rights that
-you have.  You must make sure that they, too, receive or can get the
-source code.  And you must tell them their rights.
-
-   Also, for our own protection, we must make certain that everyone
-finds out that there is no warranty for this program.  If these
-programs are modified by someone else and passed on, we want their
-recipients to know that what they have is not what we distributed, so
-that any problems introduced by others will not reflect on our
-reputation.
-
-   The precise conditions of the license are found in the General Public
-Licenses that accompany it.
-
-
-File: octopus.info,  Node: Authors,  Next: Introduction,  Prev: Copying,  Up: Top
-
-2 Authors, Collaborators and Acknowledgements.
-**********************************************
 
 The main developing team of this program is composed of:
 
-   * Miguel A. L. Marques (Freie Universita"t, Berlin, Deutschland),
+   * Miguel A. L. Marques (Donostia International Physics Center, San
+     Sebastia'n, Espan~a)
 
    * Angel Rubio, (Donostia International Physics Center and Department
      of Materials Science UPV/EHU, San Sebastia'n, Espan~a), and
 
-   * Alberto Castro, (Universidad de Valladolid, Departamento de
-     Fi'sica Teo'rica, Valladolid, Espan~a).
+   * Alberto Castro, (alberto.castro@tddft.org, Theoretische Physik,
+     Freie Universita"t Berlin, Berlin 14195, Deutschland).
+
+   Other contributors are:
+   * Micael Oliveira: mixing, and a lot of stuff.
+
+   * Carlo Andrea Rozzi - infinite systems (almost done!)
+
+   * Sebastien Hamel    - paralel version of oct-excite.
 
    `octopus' is based on a fixed-nucleus code written by George F.
 Bertsch and K. Yabana to perform real-time dynamics in clusters (Phys
@@ -342,10 +319,43 @@ with Fortran 90, just drop us an email <octopus@tddft.org>. You can
 also send us patches, comments, ideas, wishes, etc. They will be
 included in new releases of octopus.
 
-
-File: octopus.info,  Node: Introduction,  Next: Installation,  Prev: Authors,  Up: Top
 
-3 Introduction
+
+File: octopus.info,  Node: Copying,  Next: Introduction,  Prev: Authors,  Up: Top
+
+The `octopus'  Copying Conditions
+*********************************
+
+This program is "free"; this means that everyone is free to use it and
+free to redistribute it on a free basis.  What is not allowed is to try
+to prevent others from further sharing any version of this program that
+they might get from you.
+
+   Specifically, we want to make sure that you have the right to give
+away copies of the program, that you receive source code or else can
+get it if you want it, that you can change this program or use pieces
+of them in new free programs, and that you know you can do these things.
+
+   To make sure that everyone has such rights, we have to forbid you to
+deprive anyone else of these rights.  For example, if you distribute
+copies of the program, you must give the recipients all the rights that
+you have.  You must make sure that they, too, receive or can get the
+source code.  And you must tell them their rights.
+
+   Also, for our own protection, we must make certain that everyone
+finds out that there is no warranty for this program.  If these
+programs are modified by someone else and passed on, we want their
+recipients to know that what they have is not what we distributed, so
+that any problems introduced by others will not reflect on our
+reputation.
+
+   The precise conditions of the license are found in the General Public
+Licenses that accompany it.
+
+
+File: octopus.info,  Node: Introduction,  Next: Installation,  Prev: Copying,  Up: Top
+
+1 Introduction
 **************
 
 [Note to info readers: The preferred way to read this manual is in its
@@ -364,7 +374,7 @@ documentation]
 
 File: octopus.info,  Node: Description of octopus,  Next: Time dependent density functional theory,  Prev: Introduction,  Up: Introduction
 
-3.1 Description of `octopus'
+1.1 Description of `octopus'
 ============================
 
 `octopus' (1) is a program aimed at the ab initio virtual
@@ -428,7 +438,7 @@ branches.  (Taken from the Merryam-Webster's dictionary.)
 
 File: octopus.info,  Node: Time dependent density functional theory,  Prev: Description of octopus,  Up: Introduction
 
-3.2 Time dependent density functional theory
+1.2 Time dependent density functional theory
 ============================================
 
 Several reviews of time-dependent density function theory (TDDFT) and
@@ -440,9 +450,12 @@ theory, and it is hence not meant for the calculation of electronic
 excitations.  However, one can extend the ideas of static DFT. When one
 asks for the evolution of the system under the influence of a
 time-dependent external potential, one should search the extrema of the
-quantum mechanical action
+quantum mechanical action:
 
-   A = \int_t0^t1 dt  <\psi(t) | i\partial_t -H(t) | \psi>
+
+A[\Psi] = \int_{t_0}^{t_1} {\rm d}t
+\langle \Psi(t) \vert {\rm i} {\partial \over \partial t} - H(t) \vert
+\Psi(t) \rangle,
 
    Theorems have now been established for time-dependent DFT(5) which
 are parallel to those of static DFT.  The first theorem proves a
@@ -471,32 +484,38 @@ densities, the action is a functional of the density that must have a
 stationary point at the correct time-dependent density.  Thus the Euler
 equation corresponding to the extrema of A[\rho],
 
-   \delta A[\rho] / \delta \rho(r) = 0,
+
+{\delta A[\rho] \over \delta \rho({\bf r},t)} =0,
 
    determines the time-dependent density, just as in the Hohenberg-Kohn
 formalism the static ground state density is given by the minimum of
-the total energy (\delta E[\rho]/\delta \rho(\bf r,t)=0).
+the total energy (\delta E[\rho]/\delta \rho(\bf r)=0).
 
    Similarly, one can define a time-dependent Kohn-Sham (KS) scheme by
 introducing a non-interacting system that reproduces the exact
 interacting density \rho(\bf r,t).  One gets the following
 time-dependent KS-equations:
 
-   ( 1/2 \nabla^2 + V_eff(r,t) ) \psi_i(r,t)  = i \partial_t \psi_i(r,t)
 
-   \rho(r,t) = V_H(r,t) = \sum_i=1^N |\psi_i(r,t)|^2
+\left[ - {1 \over 2} \nabla^2 + V_{\rm eff}({\bf r},t)
+\right] \psi_i({\bf r},t) = {\rm i}{\partial\over\partial t} \psi_i({\bf
+r},t),
 
-   where
+\rho({\bf r},t) = \sum_{i=1}^N \vert \psi_i({\bf r},t) \vert^2
 
-   V_eff(r,t) = V_H(r,t) + V_xc(r,t) + V_ext(r,t)
+   where:
+
+
+V_{\rm eff}({\bf r},t)= V_{\rm H}({\bf r},t) + V_{\rm xc}({\bf r},t)+
+V_{\rm ext}({\bf r},t)
 
    is the effective time-dependent potential felt by the electrons. It
 consists of the sum of the external time-dependent applied field, the
 time-dependent Hartree term, plus the  xc potential (defined through
 the equivalence between the interacting and fictitious non-interacting
-systems). The variational principle yields
-
-   V_xc(r,t) = \delta A_xc[\rho] / \delta \rho(r,t).
+systems). The variational principle yields:
+V_{\rm xc}({\bf r},t) =
+{\delta A_{\rm xc}[\rho] \over \delta \rho({\bf r},t)},
 
    where A_\rm xc[\rho] is the xc part of the action functional.
 
@@ -530,19 +549,34 @@ A. Bencini (World Scientific, Singapure).
 
 File: octopus.info,  Node: Installation,  Next: The parser,  Prev: Introduction,  Up: Top
 
-4 Installation
+2 Installation
 **************
+
+Maybe somebody else installed the `octopus'  for you. In that case, the
+files should be under some directory that we can call `PREFIX': the
+executables in `PREFIX/bin' (e.g. if `PREFIX=/usr/local', the main
+`octopus' executable is then `/usr/local/bin/octopus'); the
+documentation in `info' format in `PREFIX/info' (so that you may see it
+by typing `info -f PREFIX/info/octopus.info' if the `info' program is
+installed in your system); some sample files in
+`PREFIX/share/octopus/samples'; the pseudopotential files that
+`octopus'  will need in `PREFIX/share/octopus/PP', etc.
+
+   However, you may be unlucky and that is not the case. In the
+following we will try to help you with the, still rather unfriendly,
+task of compiling and installing the `octopus'  .
 
 * Menu:
 
 * Quick instructions::
 * Long instructions::
+* Different octopus executables::
 * Troubleshooting::
 
 
 File: octopus.info,  Node: Quick instructions,  Next: Long instructions,  Prev: Installation,  Up: Installation
 
-4.1 Quick instructions
+2.1 Quick instructions
 ======================
 
 For the inpatients, here goes the quick-start:
@@ -558,9 +592,9 @@ following paragraphs.
    Also, rpm and deb binaries for linux are supplied on the web-page.
 
 
-File: octopus.info,  Node: Long instructions,  Next: Troubleshooting,  Prev: Quick instructions,  Up: Installation
+File: octopus.info,  Node: Long instructions,  Next: Different octopus executables,  Prev: Quick instructions,  Up: Installation
 
-4.2 Long instructions
+2.2 Long instructions
 =====================
 
 The code is written in standard Fortran 90, with some routines written
@@ -568,8 +602,8 @@ in C (and in bison, if we count the input parser). To build it you will
 need both a C compiler (`gcc' works just fine), and a Fortran 90
 compiler. No free-software Fortran 90 compiler is available yet, so, if
 you want to chew the `octopus', you will have either to help the g95
-(http://g95.sourceforge.net) project or use any of the available
-comercial compilers.
+(http://g95.sourceforge.net) or gfortran (http://gcc.gnu.org/fortran)
+projects, or use any of the available comercial compilers.
 
    Besides the compiler, you will also need:
   1. `make':  most computers have it installed, otherwise just grab and
@@ -635,15 +669,15 @@ of octopus, created by the `tar' command.
      the parsing of the input file. It also contains some assorted
      routines that we didn't want to write in boring Fortran.
 
-   * `samples': Sample input files for `octopus'.
-
-   * `share': Made to contain "auxiliary" files eventually used by the
-     code; in practice now it contains the Troullier-Martins and
-     Hartwigsen-Goedecker-Hutter pseudopotential files.
+   * `share/PP': Pseudopotentials.  In practice now it contains the
+     Troullier-Martins and Hartwigsen-Goedecker-Hutter pseudopotential
+     files.
 
    * `share/util': Currently, the _utilities_ include a couple of IBM
      OpenDX networks (*note wf.net::), to visualize wavefunctions,
      densities, etc.
+
+   * `share/samples': A couple of sample input files.
 
    * `src': Fortran 90 source files. Note that these have to be
      preprocessed before being fed to the Fortran compiler, so do not
@@ -701,13 +735,24 @@ options include:
      to `PREFIX'. The executable will be installed in `PREFIX/bin', the
      libraries in `PREFIX/lib' and the documentation in `PREFIX/info'.
      `PREFIX' defaults to the home directory of the user who runs
-     `configure'.
+     `configure'.  (2)
 
    * `--with-fft=fftw2': Instruct the `configure' script to use the FFTW
      library, and specifically to use the FFTW version 2. You may also
-     set `--with-fft=fftw3' or even `--disable-fft'.
+     set `--with-fft=fftw3' or even `--disable-fft', although this last
+     option is dis-encouraged.
 
-   * `--with-lapack=<lib>': LAPACK library
+   * `--with-fft-lib=<lib>': Instruct the `configure' script to look
+     for the FFTW library exactly in the way that it is specified in
+     the `<lib>' argument, i.e `--with-fft-lib='-L/opt/lib -lfftw3''.
+
+   * `--with-blas=<lib>': Instruct the `configure' script to look for
+     the BLAS library in the way that it is specified in the `<lib>'
+     argument.
+
+   * `--with-lapack=<lib>': Instruct the `configure' script to look for
+     the BLAS library in the way that it is specified in the `<lib>'
+     argument.
 
    * `--with-gsl-prefix=DIR': Installation directory of the GSL
      library. The libraries are expected to be in `DIR/lib' and the
@@ -717,28 +762,25 @@ options include:
      somewhere.)
 
    * `--with-netcdf=<lib>': NETCDF library. This is a recommended
-     library.
+     library, although not necessary.
 
-   * `--enable-mpi': Builds the parallel version (MPI) of `octopus'.
-
-   * `--enable-complex': Builds a version with complex wave-functions
-     for the ground-state calculations (wave-functions are always
-     complex for the evolution). This is needed when spinors are needed
-     -- e.g. noncollinear magnetism is going to be considered, or the
-     spin-orbit coupling term will be used.
-
-   * `--enable-debug': Builds a version that is able to emit some
-     debugging information. Useful for developers, or to report bugs.
-     If `octopus' has been built with this option enabled, you may set
-     the variable `Verbose' to "debug" level, and set `DebugLevel'
-     (*note Verbose:: and *note DebugLevel::, respectively).
+   In addition to these options, several other options have to be
+passed to build different executables of octopus (parallel, debugging
+version, etc) - *Note Different octopus executables::.
 
    Run `make', and then `make install'. If everything went fine, you
 should now be able to taste `octopus'. Depending on the options passed
-to the configure script, some suffixes or prefixes could be added to
-the generic name `octopus' -- i.e. `zoctopus' for the code compiled for
-complex wave-functions, `zoctopus-mpi' for a parallel version of the
-code compiled for complex wave-function, and so on.
+to the configure script, some suffixes could be added to the generic
+name `octopus' -- i.e. `octopus_cmplx' for the code compiled for
+complex wave-functions, `octopus_cmplx_mpi' for a parallel version of
+the code compiled for complex wave-function, and so on.
+
+   Depending on the value given to the `--prefix=PREFIX' given, the
+executables will reside in `PREFIX/bin', the info file with the
+documentation in `PREFIX/info' (so that it may be viewed running `info
+-f PREFIX/info/octopus.info'), and the auxiliary files will be copied
+to `PREFIX/share/octopus'. The sample input files will be copied to
+`PREFIX/share/octopus/samples'.
 
    The program has been tested in the following platforms:
    * `i686*-linux-gnu': with the Absoft (http://www.absoft.com),   and
@@ -771,26 +813,69 @@ are available, namely `dvi', `html', `pdf' and `info'. The
    (1) If you downloaded the cvs version, you will not find the
 `configure' script.  In order to compile the development version you
 will first have to run the GNU autotools.  This may be done by
-executing the script `./autogen.sh'.  Note that you need to have
-working versions of the `automake' (1.8.5), `autoconf' (2.59) and
-`libtool' (1.5.6) programs (the versions we currently use are between
-parentheses). Note that the `autogen.sh' script will likely fail if you
-have (much) older versions of the autotools.
+executing the `autoreconf' perl script (a part of the `autoconf'
+distribution).  Note that you need to have working versions of the
+`automake' (1.8.5), `autoconf' (2.59) and `libtool' (1.5.6) programs
+(the versions we currently use are between parentheses). Note that the
+`autoreconf' script will likely fail if you have (much) older versions
+of the autotools.
+
+   (2) You may fine-tune further the instalation by making use of a set
+of standard options (`--exec-prefix, --bindir, --datadir,
+--program-prefix', etc) that are described in the output of
+`./configure --help'
 
 
-File: octopus.info,  Node: Troubleshooting,  Prev: Long instructions,  Up: Installation
+File: octopus.info,  Node: Different octopus executables,  Next: Troubleshooting,  Prev: Long instructions,  Up: Installation
 
-4.3 Troubleshooting
+2.3 Different octopus executables
+=================================
+
+By performing the standard install, you will get an executable called
+`octopus', and a set of utility programs called `oct-'_something_.
+However, the code may be compiled differently in order to profit from
+special feautures (e.g parallel executables, etc). The following is a
+list of the options that have to be passed to the `configure' script in
+order to obtain these different executables.
+
+   * `--enable-complex': Builds a version with complex wave-functions
+     for the ground-state calculations (wave-functions are always
+     complex for the evolution). This is needed when spinors are needed
+     -- e.g. noncollinear magnetism is going to be considered, or the
+     spin-orbit coupling term will be used. The suffix `_cmplx' is
+     appended to the `octopus' executable name.
+
+   * `--enable-debug': Builds a version that is able to emit some
+     debugging information. Useful for developers, or to report bugs.
+     If `octopus' has been built with this option enabled, you may set
+     the variable `Verbose' to "debug" level, and set `DebugLevel'
+     (*note Verbose:: and *note DebugLevel::, respectively).  The
+     suffix `_debug' is appended to the `octopus' executable name.
+
+   * `--enable-single': Builds a version that works in single precision
+     mode, rather than in the standard double precision. It will work
+     faster.  Unfortunately we are not yet fully sure of the proper
+     functioning of the code in this manner.  The suffix `_single' is
+     appended to the `octopus' executable name.
+
+   * `--enable-mpi': Builds the parallel version (MPI) of `octopus'.
+     The suffix `_mpi' is appended to the `octopus' executable name.
+
+
+
+File: octopus.info,  Node: Troubleshooting,  Prev: Different octopus executables,  Up: Installation
+
+2.4 Troubleshooting
 ===================
 
 If you are reading this it is because something went wrong. Let us see
 if we can fix it ;)
 
    *Could not find library...*: This is probably the most common error
-you can get. `octopus' uses three different libraries, `GSL', `FFTW',
-and `BLAS'/`LAPACK'. We assume that you have already installed these
-libraries but, for some reason, you were not able to compile the code.
-So, what went wrong?
+you can get. `octopus' uses three different libraries, GSL, FFTW, and
+BLAS/LAPACK. We assume that you have already installed these libraries
+but, for some reason, you were not able to compile the code. So, what
+went wrong?
    * Did you pass the correct `--with-XXXX' (where XXXX is gsl, fftw or
      lapack in lowercase) to the configure script? If your libraries are
      installed in a non-standard directory (like `/opt/lapack'), you
@@ -822,15 +907,17 @@ subscribe to `octopus-users' mailing list, and ask.
 
 File: octopus.info,  Node: The parser,  Next: Input file options,  Prev: Installation,  Up: Top
 
-5 The parser
+3 The parser
 ************
 
 All input options should be in a file called "`inp'", in the directory
 `octopus' is run from. Alternatively, if this file is not found,
 standard input is read. For a fairly comprehensive example, just look
-at the file `OCTOPUS_HOME/samples/inp'
+at the file `OCTOPUS_HOME/share/samples/Na2' -- if you installed the
+code (you did the `make install'), this file will also be in
+`PREFIX/share/octopus/samples/Na2'.
 
-   At the beginning of the program `liboct' reads the `inp' file,
+   At the beginning of the program `liboct' reads the input file,
 parses it, and generates a list of variables that will be read by
 `octopus' (note that the input is case independent).  There are two
 kind of variables, scalar values (strings or numbers), and blocks (that
@@ -889,16 +976,16 @@ lines and any number of columns in a block. Note also that each line
 can have a different number of columns.
 
    If `octopus' tries to read a variable that is not defined in the
-`inp' file, it automatically assigns to it a default value. All
+input file, it automatically assigns to it a default value. All
 variables read are output to the file "`out.oct'". If you are not sure
 of what the program is reading, just take a look at it.  Everything
 following the character "#" until the end of the line is considered a
 comment and is simply cast into oblivion.
 
 
-File: octopus.info,  Node: Input file options,  Next: Undocumented Variables,  Prev: The parser,  Up: Top
+File: octopus.info,  Node: Input file options,  Next: External utilities,  Prev: The parser,  Up: Top
 
-6 Input file options
+4 Input file options
 ********************
 
 `octopus' has quite a few options, that we will subdivide in different
@@ -925,7 +1012,7 @@ applicable) are given in parenthesis.
 
 File: octopus.info,  Node: Generalities,  Next: Species Block,  Prev: Input file options,  Up: Input file options
 
-6.1 Generalities
+4.1 Generalities
 ================
 
 * Menu:
@@ -942,7 +1029,7 @@ File: octopus.info,  Node: Generalities,  Next: Species Block,  Prev: Input file
 
 File: octopus.info,  Node: SystemName,  Next: Dimensions,  Prev: Generalities,  Up: Generalities
 
-6.1.1 `SystemName' (string, 'system')
+4.1.1 `SystemName' (string, 'system')
 -------------------------------------
 
 A string that identifies the current run. This parameter is seldomly
@@ -951,7 +1038,7 @@ used, but it is sometimes useful to have in the input file.
 
 File: octopus.info,  Node: Dimensions,  Next: CalculationMode,  Prev: SystemName,  Up: Generalities
 
-6.1.2 `Dimensions' (integer, 3)
+4.1.2 `Dimensions' (integer, 3)
 -------------------------------
 
 `octopus' can run in 1, 2 or 3 dimensions, depending on the value of
@@ -960,10 +1047,11 @@ this variable. Note that not all options may be available in all cases.
 
 File: octopus.info,  Node: CalculationMode,  Next: Units,  Prev: Dimensions,  Up: Generalities
 
-6.1.3 `CalculationMode' (integer, gs_start)
+4.1.3 `CalculationMode' (integer, gs_start)
 -------------------------------------------
 
-It defines the type of simulation to perform. Options are:
+This is a very important variable, since it defines the type of
+simulation to perform. The options are:
    - `gs_start': Start static calculation.
 
    - `gs': Resume static calculation.
@@ -991,16 +1079,15 @@ It defines the type of simulation to perform. Options are:
 
 File: octopus.info,  Node: Units,  Next: UnitsInput,  Prev: CalculationMode,  Up: Generalities
 
-6.1.4 `Units' (string, 'a.u')
+4.1.4 `Units' (string, 'a.u')
 -----------------------------
 
 Atomic units seem to be the preferred system in the atomic and
 molecular physics community (despite the opinion of some of the authors
-of this program). Internally, the code works in atommic units. However,
+of this program). Internally, the code works in atomic units. However,
 for input or output, some people like using eV for energies and AA for
 lengths. This other system of units (the _convenient system_, in words
-of Prof. George F. Bertsch), can also be used. See the Frequently Asked
-Questions for some more details.  Valid options are:
+of Prof. George F. Bertsch), can also be used.  Valid options are:
    - `'a.u'': atomic units
 
    - `'eVA'': electron-volts/aangstro"m
@@ -1008,7 +1095,7 @@ Questions for some more details.  Valid options are:
 
 File: octopus.info,  Node: UnitsInput,  Next: UnitsOutput,  Prev: Units,  Up: Generalities
 
-6.1.5 `UnitsInput' (string, 'a.u.'):
+4.1.5 `UnitsInput' (string, 'a.u.'):
 ------------------------------------
 
 Same as `Units', but only refers to the values in the input file.  That
@@ -1018,7 +1105,7 @@ will be considered to be in eV and AA.
 
 File: octopus.info,  Node: UnitsOutput,  Next: Verbose,  Prev: UnitsInput,  Up: Generalities
 
-6.1.6 `UnitsOutput' (string, 'a.u.')
+4.1.6 `UnitsOutput' (string, 'a.u.')
 ------------------------------------
 
 Same as `Units', but only refers to the values in the output files.
@@ -1028,7 +1115,7 @@ files will be written in eV and AA.
 
 File: octopus.info,  Node: Verbose,  Next: DebugLevel,  Prev: UnitsOutput,  Up: Generalities
 
-6.1.7 `Verbose' (integer, 30)
+4.1.7 `Verbose' (integer, 30)
 -----------------------------
 
 Verbosity level of the program. The higher, the more verbose `octopus'
@@ -1041,12 +1128,14 @@ is. Current levels are:
 
    - `Verbose > 999': Debug mode. Issues a message to standard error
      every time the  program enters an (important) subroutine, and
-     prints the time it spend upon return.
+     prints the time it spend upon return. It only works for
+     executables that have been compiled with debugging capabilities
+     (the configure script was given the `--enable-debug' option).
 
 
 File: octopus.info,  Node: DebugLevel,  Prev: Verbose,  Up: Generalities
 
-6.1.8 `DebugLevel' (integer, 3)
+4.1.8 `DebugLevel' (integer, 3)
 -------------------------------
 
 In debug mode (`Verbose > 999'), it restricts the output of entry/exit
@@ -1055,7 +1144,7 @@ subroutine information to the required level.
 
 File: octopus.info,  Node: Species Block,  Next: Coordinates Description,  Prev: Generalities,  Up: Input file options
 
-6.2 Species Block
+4.2 Species Block
 =================
 
 * Menu:
@@ -1065,13 +1154,13 @@ File: octopus.info,  Node: Species Block,  Next: Coordinates Description,  Prev:
 
 File: octopus.info,  Node: Species,  Prev: Species Block,  Up: Species Block
 
-6.2.1 `Species' (block data)
+4.2.1 `Species' (block data)
 ----------------------------
 
-A specie is by definition an ion (nucleus + core electrons) described
-through a pseudo-potential, or a model potential.  The format of this
-block is different for 1, 2 or 3 dimensions, and can be best understood
-through examples.
+A specie is by definition either an "ion" (nucleus + core electrons)
+described through a pseudo-potential, or an user-defined, model
+potential.  The format of this block is different for 1, 2 or 3
+dimensions, and can be best understood through examples.
 
    * In 1D, or 2D, e.g.
             %Species
@@ -1081,11 +1170,13 @@ through examples.
      valence charge `1'. This "valence charge" is used to calculate the
      number of electrons present in the calculation: as many as
      indicated by the valence charges of the species, plus any extra
-     charge specified by the user (*note States::). Last field may be
-     any user defined potetial - use `x', `r' (and `y' in the 2D case)
-     for the position of the electron relative to the species center.
-     For example. the potential often used in 1D calculations is the
-     soft-Coulomb potential -Z/sqrt(x*x + 1).
+     charge specified by the user (*note States::). The last field may
+     be any user defined potetial - use `x', `r' (and `y' in the 2D
+     case) for the position of the electron relative to the species
+     center.  For example, the potential often used in 1D calculation is
+     the soft-Coulomb potential -Z/\sqrtx^2 + 1. The previous example
+     would then be an appropriate description of a Hydrogen nucleus for
+     one-dimensional calculations.
 
    * In 3D, e.g.
             %Species
@@ -1093,9 +1184,10 @@ through examples.
               'H'       |  1.0079 | 1   | "hgh"  | 0 | 0
               'jelli01' | 23.2    | 8.0 |  5.0
               'point01' | 32.3    | 2.0
-              'usdef'   | 1 | 8 | "1/2*r^2"
+              'usdef'   | 1       | 8   | "1/2*r^2"
             %
-     In this case, we have 5 "species" present:
+     In this case, we have 5 "species" present, which exemplify the
+     five kinds that may be present:
         - Oxygen labelled '`O''. Next number is the atomic mass (in
           atomic mass units), and third field, the atomic number (8, in
           this case).  Afterwards, "tm2" is the flavour of the
@@ -1109,7 +1201,9 @@ through examples.
 
         - Hydrogen defined in the same way as Oxygen. In this case,
           however, the flavour is "hgh" standing for
-          Hartwigsen-Goedecker-Hutter. Last two numbers are irrelevant.
+          Hartwigsen-Goedecker-Hutter. Last two numbers are irrelevant,
+          since they do are not necessary to define the HGH
+          pseudopotentials.
 
         - All species whose label starts by 'jelli' are jellium spheres.
           The other parameters are the weight, the nuclear charge, and
@@ -1128,7 +1222,7 @@ through examples.
           or `r' variables to define the potential.
 
      Note that some common pseudopotentials are distributed with the
-     code in the directory `OCTOPUS-HOME/share/PP/'. To use this
+     code in the directory `OCTOPUS-HOME/share/PP/'. To use these
      pseudopotentials you are not required to define them explicitly in
      the `Species' block, as defaults are provided by the program (you
      can override these defaults in any case).  Additional
@@ -1139,11 +1233,11 @@ through examples.
 
 File: octopus.info,  Node: Coordinates Description,  Next: Mesh,  Prev: Species Block,  Up: Input file options
 
-6.3 Coordinates Description
+4.3 Coordinates Description
 ===========================
 
 `octopus' successively tries to read the atomic coordinates from a PDB
-file, a XYZ file, or else directly from the `inp' file.
+file, a XYZ file, or else directly from the input file.
 
 * Menu:
 
@@ -1157,16 +1251,17 @@ file, a XYZ file, or else directly from the `inp' file.
 
 File: octopus.info,  Node: PDBCoordinates,  Next: XYZCoordinates,  Prev: Coordinates Description,  Up: Coordinates Description
 
-6.3.1 `PDBCoordinates' (string, 'coords.pdb')
+4.3.1 `PDBCoordinates' (string, 'coords.pdb')
 ---------------------------------------------
 
-Tries to read the atomic coordinates from the file `PDBCoordinates'.
-The PDB (Protein Data Bank (http://www.rcsb.org/pdb/)) format is quite
-complicated, and it goes well beyond the scope of this manual. You can
-find a comprehensive description in
+Tries to read the atomic coordinates from the file specified by the
+variable `PDBCoordinates'.  The PDB (Protein Data Bank
+(http://www.rcsb.org/pdb/)) format is quite complicated, and it goes
+well beyond the scope of this manual. You can find a comprehensive
+description in
 `http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html'.
 From the plethora of instructions defined in the PDB standard, `octopus'
-only reads 2, `ATOM' and `HETATOM'. From these fields, it reads:
+only reads two, `ATOM' and `HETATOM'. From these fields, it reads:
    - columns 13-16 : The specie; in fact `octopus' only cares about the
      first letter - 'CA' and 'CB' will both refer to Carbon - so
      elements whose chemical symbol has more than one letter can not be
@@ -1188,12 +1283,13 @@ only reads 2, `ATOM' and `HETATOM'. From these fields, it reads:
 
 File: octopus.info,  Node: XYZCoordinates,  Next: Coordinates,  Prev: PDBCoordinates,  Up: Coordinates Description
 
-6.3.2 `XYZCoordinates' (string, 'coords.xyz')
+4.3.2 `XYZCoordinates' (string, 'coords.xyz')
 ---------------------------------------------
 
 If `PDBCoordinates' is not present, reads the atomic coordinates from
-the XYZ file `XYZCoordinates'. The XYZ format is very simple, as can be
-seem from this example for the CO molecule (in AA).
+the XYZ file specified by the variable `XYZCoordinates'. The XYZ format
+is very simple, as can be seem from this example for the CO molecule
+(in AA).
      2
      CO molecule in equilibrium
          C  -0.56415   0.0   0.0
@@ -1206,7 +1302,7 @@ chemical species and the Cartesian coordinates of the atom.
 
 File: octopus.info,  Node: Coordinates,  Next: XYZVelocities,  Prev: XYZCoordinates,  Up: Coordinates Description
 
-6.3.3 `Coordinates' (block data)
+4.3.3 `Coordinates' (block data)
 --------------------------------
 
 If neither a `XYZCoordinates' nor a `PDBCoordinates' was found,
@@ -1228,16 +1324,20 @@ fix _all_ atoms using the `MoveIons' directive.
 
 File: octopus.info,  Node: XYZVelocities,  Next: Velocities,  Prev: Coordinates,  Up: Coordinates Description
 
-6.3.4 `XYZVelocities' (string, 'velocities.xyz')
+4.3.4 `XYZVelocities' (string, 'velocities.xyz')
 ------------------------------------------------
 
 `octopus' will try to read the starting velocities of the atoms from
-the XYZ file `XYZVelocities'.
+the XYZ file specified by the variable `XYZVelocities'
+('velocities.xyz' by default).  Note that you do not need to specify
+initial velocities if you are not going to perform ion dynamics; if you
+are going to allow the ions to move but the velocities are not
+specified, they are considered to be null.
 
 
 File: octopus.info,  Node: Velocities,  Next: RandomVelocityTemp,  Prev: XYZVelocities,  Up: Coordinates Description
 
-6.3.5 `Velocities' (block data)
+4.3.5 `Velocities' (block data)
 -------------------------------
 
 If `XYZVelocities' is not present, `octopus' will try to fetch the
@@ -1256,7 +1356,7 @@ in the coordinates specifications.
 
 File: octopus.info,  Node: RandomVelocityTemp,  Prev: Velocities,  Up: Coordinates Description
 
-6.3.6 `RandomVelocityTemp' (double, 0)
+4.3.6 `RandomVelocityTemp' (double, 0)
 --------------------------------------
 
 If this variable is present, `octopus' will assign random velocities to
@@ -1266,7 +1366,7 @@ the atoms following a Bolzmann distribution with temperature
 
 File: octopus.info,  Node: Mesh,  Next: States,  Prev: Coordinates Description,  Up: Input file options
 
-6.4 Mesh
+4.4 Mesh
 ========
 
 `octopus' uses a grid in real space to solve the Kohn-Sham equations.
@@ -1279,7 +1379,7 @@ tuned to suit the geometric configuration of the system.
 * BoxShape::
 * Radius::
 * Lsize::
-* ZLength::
+* XLength::
 * Spacing::
 * DerivativesSpace::
 * OrderDerivatives::
@@ -1289,7 +1389,7 @@ tuned to suit the geometric configuration of the system.
 
 File: octopus.info,  Node: BoxShape,  Next: Radius,  Prev: Mesh,  Up: Mesh
 
-6.4.1 `BoxShape' (integer, minimum)
+4.4.1 `BoxShape' (integer, minimum)
 -----------------------------------
 
 It is the shape of the simulation box. The allowed values are:
@@ -1301,21 +1401,22 @@ It is the shape of the simulation box. The allowed values are:
    - `minimum': Sum of spheres around each atom.
 
    - `parallelepiped': As the name indicates.
-   For a 1D calculation, it would obviously always be a 1D "sphere".
+   For a one-dimensional calculation, it would obviously always be a 1D
+"sphere".
 
 
 File: octopus.info,  Node: Radius,  Next: Lsize,  Prev: BoxShape,  Up: Mesh
 
-6.4.2 `Radius' (double, 20.0 a.u.)
+4.4.2 `Radius' (double, 20.0 a.u.)
 ----------------------------------
 
 If `BoxShape != parallelepiped' defines the radius of the spheres or of
 the cylinder.
 
 
-File: octopus.info,  Node: Lsize,  Next: ZLength,  Prev: Radius,  Up: Mesh
+File: octopus.info,  Node: Lsize,  Next: XLength,  Prev: Radius,  Up: Mesh
 
-6.4.3 `Lsize' (block data)
+4.4.3 `Lsize' (block data)
 --------------------------
 
 In case `BoxShape = parallelepiped', this is assumed to be a block of
@@ -1327,17 +1428,17 @@ the form:
 direction.
 
 
-File: octopus.info,  Node: ZLength,  Next: Spacing,  Prev: Lsize,  Up: Mesh
+File: octopus.info,  Node: XLength,  Next: Spacing,  Prev: Lsize,  Up: Mesh
 
-6.4.4 `XLength' (double, 1.0 a.u.)
+4.4.4 `XLength' (double, 1.0 a.u.)
 ----------------------------------
 
-If `BoxShape == cylinder' is half the total length of the cylinder.
+If `BoxShape == cylinder', it is half the total length of the cylinder.
 
 
-File: octopus.info,  Node: Spacing,  Next: DerivativesSpace,  Prev: ZLength,  Up: Mesh
+File: octopus.info,  Node: Spacing,  Next: DerivativesSpace,  Prev: XLength,  Up: Mesh
 
-6.4.5 `Spacing' (double, 0.6 a.u.) or (block data)
+4.4.5 `Spacing' (double, 0.6 a.u.) or (block data)
 --------------------------------------------------
 
 If the code is compiled in 1D mode or if `BoxShape != parallelepiped'
@@ -1350,7 +1451,7 @@ is assumed to be a block of the form:
 
 File: octopus.info,  Node: DerivativesSpace,  Next: OrderDerivatives,  Prev: Spacing,  Up: Mesh
 
-6.4.6 `DerivativesSpace' (integer, real_space)
+4.4.6 `DerivativesSpace' (integer, real_space)
 ----------------------------------------------
 
 Defines in which space gradients and the Laplacian are calculated.
@@ -1366,58 +1467,64 @@ Allowed values are:
 
 File: octopus.info,  Node: OrderDerivatives,  Next: DoubleFFTParameter,  Prev: DerivativesSpace,  Up: Mesh
 
-6.4.7 `OrderDerivatives' (integer, 4)
+4.4.7 `OrderDerivatives' (integer, 4)
 -------------------------------------
 
 If `DerivativesSpace == real_space' use a finite difference
 discretisation of this order for the derivatives, that is a
-`OrderDerivatives*2 + 1' formula.  See (MISSING ARTICLE) for details.
+`OrderDerivatives*2 + 1' formula.  See [_octopus: a first principles
+tool for excited states electron-ion dynamics_, Comp. Phys. Comm.
+*151*, 60 (2003)] for details.
 
 
 File: octopus.info,  Node: DoubleFFTParameter,  Next: FFTOptimize,  Prev: OrderDerivatives,  Up: Mesh
 
-6.4.8 `DoubleFFTParameter' (real, 2.0)
+4.4.8 `DoubleFFTParameter' (real, 2.0)
 --------------------------------------
 
 For solving Poisson equation in Fourier space, and for applying the
 local potential in Fourier space, an auxiliary cubic mesh is built.
 This mesh will be larger than the circumscribed cube to the usual mesh
 by a factor `DoubleFFTParameter'. See the section that refers to
-Poisson equation, and to the local potential for details.
+Poisson equation, and to the local potential for details [The default
+value of two is typically good].
 
 
 File: octopus.info,  Node: FFTOptimize,  Prev: DoubleFFTParameter,  Up: Mesh
 
-6.4.9 `FFTOptimize' (logical, true)
+4.4.9 `FFTOptimize' (logical, true)
 -----------------------------------
 
-Should `octopus' optimize the FFT dimension? In some cases, namely when
-using the split-operator, or Suzuki-Trotter propagators, this option
-should be turned off.
+Should `octopus' optimize the FFT dimension?  This means that the cubic
+mesh to which FFTs are applied is not taken to be as small as possible:
+some points may be added to each direction in order to get a "good
+number" for the performance of the FFT algorithm.  In some cases,
+namely when using the split-operator, or Suzuki-Trotter propagators,
+this option should be turned off.
 
 
 File: octopus.info,  Node: States,  Next: Hamiltonian,  Prev: Mesh,  Up: Input file options
 
-6.5 States
+4.5 States
 ==========
 
 * Menu:
 
 * SpinComponents::
-* NumberKPoints::
 * ExcessCharge::
 * ExtraStates::
 * Occupations::
 * ElectronicTemperature::
 
 
-File: octopus.info,  Node: SpinComponents,  Next: NumberKPoints,  Prev: States,  Up: States
+File: octopus.info,  Node: SpinComponents,  Next: ExcessCharge,  Prev: States,  Up: States
 
-6.5.1 `SpinComponents' (integer, 1)
+4.5.1 `SpinComponents' (integer, 1)
 -----------------------------------
 
 Defines the spin mode `octopus' will run in. Valid modes are:
-   - `unpolarized': Spin-unpolarised calculation.
+   - `unpolarized': Spin-unpolarised calculation. That is, the code
+     will attempt to put two-electrons per orbital.
 
    - `polarized': Spin-polarised calculation (collinear spin). This mode
      will double the number of wave-functions necessary for a
@@ -1425,24 +1532,15 @@ Defines the spin mode `octopus' will run in. Valid modes are:
 
    - `non_collinear': Non-collinear spin. This mode will double the
      number of wave-functions necessary for a spin-unpolarised
-     calculation, and each of the wave-functions will be a 2-spinor.
+     calculation, and each of the wave-functions will be a two-spinor.
+     This effectively allows the spin-density to arrange
+     non-collinearly - i.e. the magnetization vector is allowed to take
+     different directions in different points.
 
 
-File: octopus.info,  Node: NumberKPoints,  Next: ExcessCharge,  Prev: SpinComponents,  Up: States
+File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: SpinComponents,  Up: States
 
-6.5.2 `NumberKPoints' (integer, 1)
-----------------------------------
-
-If `octopus' was compiled for periodic systems, the number of _k_
-points to use in the calculation. If `NumberKPoints == 1', use only the
-Gamma point. (Note: current version in fact does not implement this
-possibility. Setting this variable to more that 1 may lead to erroneous
-results.)
-
-
-File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: NumberKPoints,  Up: States
-
-6.5.3 `ExcessCharge' (double, 1)
+4.5.2 `ExcessCharge' (double, 1)
 --------------------------------
 
 The net charge of the system. A negative value means that we are adding
@@ -1452,16 +1550,26 @@ the system.
 
 File: octopus.info,  Node: ExtraStates,  Next: Occupations,  Prev: ExcessCharge,  Up: States
 
-6.5.4 `ExtraStates' (integer, 0)
+4.5.3 `ExtraStates' (integer, 0)
 --------------------------------
 
-How many unoccupied states to use in the ground-state calculation. Note
-that this number is unrelated to `CalculationMode == 4'.
+The number of states is in principle calculated considering the minimum
+numbers of states necessary to hold the electrons present in the system.
+The number of electrons is in turn calculated considering the nature of
+the species supplied in the `Species' block (*note Species::), and the
+value of the `ExcessCharge' variable - see *Note ExcessCharge::.
+However, one may command `octopus'  to put more states, which is
+necessary if one wants to use fractional occupational numbers, either
+fixed from the origin through the `Occupations' block (*note
+Occupations::) or by prescribing an artifactal electronic temperature
+(*note ElectronicTemperature::).
+
+   Note that this number is unrelated to `CalculationMode == 4'.
 
 
 File: octopus.info,  Node: Occupations,  Next: ElectronicTemperature,  Prev: ExtraStates,  Up: States
 
-6.5.5 `Occupations' (block data)
+4.5.4 `Occupations' (block data)
 --------------------------------
 
 The occupation numbers of the orbitals can be fixed through the use of
@@ -1470,13 +1578,13 @@ this variable. For example:
            2.0 | 2.0 | 2.0 | 2.0 | 2.0
          %
    would fix the occupations of the five states to `2.0'. There must be
-as many columns as states in the calculation. If `SpinComponents == 2'
-this block should contain two lines, one for each spin channel.  This
-variable is very useful when dealing with highly symmetric small systems
-(like an open shell atom), for it allows us to fix the occupation
-numbers of degenerate states in order to help `octopus' to converge.
-This is to be used in conjuction with `ExtraStates'. For example, to
-calculate the carbon atom, one would do:
+as many columns as states in the calculation. If `SpinComponents ==
+polarized' this block should contain two lines, one for each spin
+channel.  This variable is very useful when dealing with highly
+symmetric small systems (like an open shell atom), for it allows us to
+fix the occupation numbers of degenerate states in order to help
+`octopus' to converge. This is to be used in conjuction with
+`ExtraStates'. For example, to calculate the carbon atom, one would do:
        ExtraStates=2
        %Occupations
            2 | 2/3 | 2/3 | 2/3
@@ -1485,7 +1593,7 @@ calculate the carbon atom, one would do:
 
 File: octopus.info,  Node: ElectronicTemperature,  Prev: Occupations,  Up: States
 
-6.5.6 `ElectronicTemperature' (double, 0.0)
+4.5.5 `ElectronicTemperature' (double, 0.0)
 -------------------------------------------
 
 If `Occupations' is not set, `ElectronicTemperature' is the temperature
@@ -1495,7 +1603,7 @@ existing states.
 
 File: octopus.info,  Node: Hamiltonian,  Next: Exchange and correlation,  Prev: States,  Up: Input file options
 
-6.6 Hamiltonian
+4.6 Hamiltonian
 ===============
 
 * Menu:
@@ -1508,7 +1616,7 @@ File: octopus.info,  Node: Hamiltonian,  Next: Exchange and correlation,  Prev: 
 
 File: octopus.info,  Node: NonInteractingElectrons,  Next: ClassicPotential,  Prev: Hamiltonian,  Up: Hamiltonian
 
-6.6.1 `NonInteractingElectrons' (logical, false)
+4.6.1 `NonInteractingElectrons' (logical, false)
 ------------------------------------------------
 
 If `true', treat the electrons as non-interacting, i.e. neglect both
@@ -1518,7 +1626,7 @@ potential.  A probable choice for one-electron problems.
 
 File: octopus.info,  Node: ClassicPotential,  Next: LocalPotentialSpace,  Prev: NonInteractingElectrons,  Up: Hamiltonian
 
-6.6.2 `ClassicPotential' (logical, false)
+4.6.2 `ClassicPotential' (logical, false)
 -----------------------------------------
 
 If `true', add to the external potential the potential generated by the
@@ -1527,7 +1635,7 @@ point charges read from the PDB input (see `PBDCoordinates').
 
 File: octopus.info,  Node: LocalPotentialSpace,  Next: RelativisticCorrection,  Prev: ClassicPotential,  Up: Hamiltonian
 
-6.6.3 `LocalPotentialSpace' (integer, fourier_space)
+4.6.3 `LocalPotentialSpace' (integer, fourier_space)
 ----------------------------------------------------
 
 If `fourier_space', generate the local part of the pseudo-potential in
@@ -1537,18 +1645,19 @@ box defined via the `DoubleFFTParameter' is used for this purpose.
 
 File: octopus.info,  Node: RelativisticCorrection,  Prev: LocalPotentialSpace,  Up: Hamiltonian
 
-6.6.4 `RelativisticCorrection' (integer, 0)
--------------------------------------------
+4.6.4 `RelativisticCorrection' (integer, no)
+--------------------------------------------
 
 The default value means that _no_ relativistic correction is used. To
 include spin-orbit coupling turn `RelativisticCorrection' to
 `spin_orbit' or `1' (this will only work when using an executable
-compiled for complex wave-functions.)
+compiled for complex wave-functions, and if `SpinComponents' has been
+set to `non_collinear', which ensures the use of spinors).
 
 
 File: octopus.info,  Node: Exchange and correlation,  Next: SCF,  Prev: Hamiltonian,  Up: Input file options
 
-6.7 Exchange and correlation
+4.7 Exchange and correlation
 ============================
 
 The exchange-correlation functional is controlled by the parameters
@@ -1558,60 +1667,101 @@ The exchange-correlation functional is controlled by the parameters
 
 * XFunctional::
 * CFunctional::
+* OEP_level::
+* SICCorrection::
 
 
 File: octopus.info,  Node: XFunctional,  Next: CFunctional,  Prev: Exchange and correlation,  Up: Exchange and correlation
 
-6.7.1 `XFunctional' (string, 'LDA')
------------------------------------
-
-   * `XFunctional == 'ZER'': No exchange.
-
-   * `XFunctional == 'LDA'': Local density approximation.
-
-   * `XFunctional == 'RLDA'': Relativistic LDA.
-
-   * `XFunctional == 'PBE'':  J.P.Perdew, K.Burke and M.Ernzerhof,
-     PRL *77*, 3865 (1996).
-
-   * `XFunctional == 'RPBE'': PBE with some relativistic corrections.
-
-   * `XFunctional == 'LB94'': van Leeuwen and Baerends functional.
-
-   * `XFunctional == 'EXX'': Exact exchange functional in the KLI
-     approximation.
-
-   * `XFunctional == 'SIC'': Self interaction corrected LDA in the KLI
-     approximation.
-
-
-File: octopus.info,  Node: CFunctional,  Prev: XFunctional,  Up: Exchange and correlation
-
-6.7.2 `CFunctional' (string, 'PZ81')
+4.7.1 `XFunctional' (integer, lda_x)
 ------------------------------------
 
-   * `CFunctional == 'ZER'': No correlation.
+   * `XFunctional == lda_x':
 
-   * `CFunctional ==   'PZ81'':  Perdew and Zunger,       PRB *23*,
-     5075 (1981).
+   * `XFunctional == gga_x_pbe':
 
-   * `CFunctional == 'PW92'': J.P.Perdew and Y.Wang,       PRB *45*,
-     13244 (1992).
+   * `XFunctional == gga_xc_lb':
 
-   * `CFunctional == 'PBE'': J.P.Perdew, K.Burke and M.Ernzerhof,
-     PRL *77*, 3865 (1996).
+   * `XFunctional == mgga_x_tpss':
 
-   * `CFunctional == 'SIC'': Self interaction corrected LDA in the KLI
-     approximation.
+   * `XFunctional == oep_x':
+
+
+File: octopus.info,  Node: CFunctional,  Next: OEP_level,  Prev: XFunctional,  Up: Exchange and correlation
+
+4.7.2 `CFunctional' (integer, lda_c_pz)
+---------------------------------------
+
+   * `CFunctional == lda_c_wigner':
+
+   * `CFunctional == lda_c_rpa':
+
+   * `CFunctional == lda_c_hl':
+
+   * `CFunctional == lda_c_gl':
+
+   * `CFunctional == lda_c_xalpha':
+
+   * `CFunctional == lda_c_vw':
+
+   * `CFunctional == lda_c_pz':
+
+   * `CFunctional == lda_c_ob_pz':
+
+   * `CFunctional == lda_c_pw':
+
+   * `CFunctional == lda_c_ob_pw':
+
+   * `CFunctional == lda_c_lyp':
+
+   * `CFunctional == lda_c_amgb':
+
+   * `CFunctional == gga_c_pbe':
+
+   * `CFunctional == mgga_c_tpss':
+
+
+File: octopus.info,  Node: OEP_level,  Next: SICCorrection,  Prev: CFunctional,  Up: Exchange and correlation
+
+4.7.3 `OEP_level' (integer, oep_none)
+-------------------------------------
+
+   * `OEP_level = oep_none'
+
+   * `OEP_level = oep_slater'
+
+   * `OEP_level = oep_kli'
+
+   * `OEP_level = oep_ceda'
+
+   * `OEP_level = oep_full'
+
+
+File: octopus.info,  Node: SICCorrection,  Prev: OEP_level,  Up: Exchange and correlation
+
+4.7.4 `SICCorrection' (integer, 0)
+----------------------------------
 
 
 File: octopus.info,  Node: SCF,  Next: Unoccupied States,  Prev: Exchange and correlation,  Up: Input file options
 
-6.8 SCF
+4.8 SCF
 =======
 
-The self consistent procedure will stop when the first of the
-convergence criteria is fulfilled.
+The ground-state electronic density in a Kohn-Sham (KS) based
+electronic structure code such as `octopus'  is obtained after a
+self-consistent process that attempts to solve the KS equations.  In
+essence, the problem is the following: at a given iteration step, one
+departs from an approximated solution - some KS eigenfunctions
+\psi^inp_j, eigenvalues \epsilon^inp_j and density \rho^inp, which
+determines a KS "input" Hamiltonian. By diagonalizing this Hamiltonian,
+one obtains the corresponding "output" eigenfunctions, eigenvalues, and
+density.  This cycle is considered to be closed, and the solution
+achieved, when some convergence criterion is fulfilled.  In our case,
+we have allowed for four different criteria, to be defined below.  The
+self consistent procedure will stop when the first of the convergence
+criteria is fulfilled, or either when a a maximum number of iterations
+has been performed.
 
 * Menu:
 
@@ -1637,51 +1787,70 @@ convergence criteria is fulfilled.
 
 File: octopus.info,  Node: MaximumIter,  Next: ConvAbsDens,  Prev: SCF,  Up: SCF
 
-6.8.1 `MaximumIter' (integer, 200)
+4.8.1 `MaximumIter' (integer, 200)
 ----------------------------------
 
-Maximum number of SCF iterations. `0' means unlimited.
+Maximum number of SCF iterations. The code will stop even if convergence
+has not been achieved. `0' means unlimited.
 
 
 File: octopus.info,  Node: ConvAbsDens,  Next: ConvRelDens,  Prev: MaximumIter,  Up: SCF
 
-6.8.2 `ConvAbsDens' (double, 1e-5)
+4.8.2 `ConvAbsDens' (double, 1e-5)
 ----------------------------------
 
-Absolute convergence of the density. `0' means do not use this
-criterion.
+Absolute convergence of the density:
+
+
+\epsilon = \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2
+
+   A zero value means do not use this criterion.
 
 
 File: octopus.info,  Node: ConvRelDens,  Next: ConvAbsEv,  Prev: ConvAbsDens,  Up: SCF
 
-6.8.3 `ConvRelDens' (double, 0.0)
----------------------------------
+4.8.3 `ConvRelDens' (double, 0)
+-------------------------------
 
-Relative convergence of the density. `0' means do not use this
-criterion.
+Relative convergence of the density:
+
+
+\epsilon = {1\over N} \int {\rm d}^3r (\rho^{out}(\bf r) -\rho^{inp}(\bf r))^2
+
+   N is the total number of electrons in the problem.  A zero value
+means do not use this criterion.
 
 
 File: octopus.info,  Node: ConvAbsEv,  Next: ConvRelEv,  Prev: ConvRelDens,  Up: SCF
 
-6.8.4 `ConvAbsEv' (double, 0.0)
--------------------------------
+4.8.4 `ConvAbsEv' (double, 0)
+-----------------------------
 
-Absolute convergence of the eigenvalues. `0' means do not use this
-criterion.
+Absolute convergence of the eigenvalues:
+
+
+\epsilon = \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert\,.
+
+   A zero value means do not use this criterion.
 
 
 File: octopus.info,  Node: ConvRelEv,  Next: GuessMagnetDensity,  Prev: ConvAbsEv,  Up: SCF
 
-6.8.5 `ConvRelEnergy' (double, 0.0)
------------------------------------
+4.8.5 `ConvRelEnergy' (double, 0)
+---------------------------------
 
-Relative convergence of the eigenvalues. `0' means do not use this
-criterion.
+Relative convergence of the eigenvalues:
+
+
+\epsilon = {1 \over N} \sum_{j=1}^{N_{occ}} \vert \epsilon_j^{out}-\epsilon_j^{inp}\vert\,.
+
+   N is the total number of electrons. A zero value means do not use
+this criterion.
 
 
 File: octopus.info,  Node: GuessMagnetDensity,  Next: AtomsMagnetDirection,  Prev: ConvRelEv,  Up: SCF
 
-6.8.6 `GuessMagnetDensity' (integer, polarized)
+4.8.6 `GuessMagnetDensity' (integer, polarized)
 -----------------------------------------------
 
 The guess density for the SCF cycle is just the sum of all the atomic
@@ -1711,7 +1880,7 @@ the other options.
 
 File: octopus.info,  Node: AtomsMagnetDirection,  Next: LCAOStart,  Prev: GuessMagnetDensity,  Up: SCF
 
-6.8.7 `AtomsMagnetDirection' (block data)
+4.8.7 `AtomsMagnetDirection' (block data)
 -----------------------------------------
 
 This option is only used when `GuessMagnetDensity' is set to
@@ -1729,7 +1898,7 @@ three components.
 
 File: octopus.info,  Node: LCAOStart,  Next: SCFinLCAO,  Prev: AtomsMagnetDirection,  Up: SCF
 
-6.8.8 `LCAOStart' (logical, true)
+4.8.8 `LCAOStart' (logical, true)
 ---------------------------------
 
 Before starting a SCF calculation, performs a LCAO calculation. These
@@ -1740,7 +1909,7 @@ minimal basis set used.)
 
 File: octopus.info,  Node: SCFinLCAO,  Next: EigenSolver,  Prev: LCAOStart,  Up: SCF
 
-6.8.9 `SCFinLCAO' (logical, false)
+4.8.9 `SCFinLCAO' (logical, false)
 ----------------------------------
 
 Performs all the SCF cycle restricting the calculation to the LCAO
@@ -1751,7 +1920,7 @@ that point for an unrestricted calculation).
 
 File: octopus.info,  Node: EigenSolver,  Next: EigenSolverInitTolerance,  Prev: SCFinLCAO,  Up: SCF
 
-6.8.10 `EigenSolver' (integer, cg):
+4.8.10 `EigenSolver' (integer, cg):
 -----------------------------------
 
 At each SCF cycle step, a diagonalisation of the Hamiltonian is
@@ -1772,7 +1941,7 @@ asked.  Next variables take care of this process.
 
 File: octopus.info,  Node: EigenSolverInitTolerance,  Next: EigenSolverFinalTolerance,  Prev: EigenSolver,  Up: SCF
 
-6.8.11 `EigenSolverInitTolerance' (double, 1.0e-10)
+4.8.11 `EigenSolverInitTolerance' (double, 1.0e-10)
 ---------------------------------------------------
 
 This is the initial tolerance for the eigenvectors.
@@ -1780,7 +1949,7 @@ This is the initial tolerance for the eigenvectors.
 
 File: octopus.info,  Node: EigenSolverFinalTolerance,  Next: EigenSolverFinalToleranceIteration,  Prev: EigenSolverInitTolerance,  Up: SCF
 
-6.8.12 `EigenSolverFinalTolerance' (double, 1.0e-14)
+4.8.12 `EigenSolverFinalTolerance' (double, 1.0e-14)
 ----------------------------------------------------
 
 This is the final tolerance for the eigenvectors.
@@ -1788,7 +1957,7 @@ This is the final tolerance for the eigenvectors.
 
 File: octopus.info,  Node: EigenSolverFinalToleranceIteration,  Next: EigenSolverMaxIter,  Prev: EigenSolverFinalTolerance,  Up: SCF
 
-6.8.13 `EigenSolverFinalToleranceIteration' (integer, 7)
+4.8.13 `EigenSolverFinalToleranceIteration' (integer, 7)
 --------------------------------------------------------
 
 Determines how many interactions are needed to go from
@@ -1797,7 +1966,7 @@ Determines how many interactions are needed to go from
 
 File: octopus.info,  Node: EigenSolverMaxIter,  Next: What2Mix,  Prev: EigenSolverFinalToleranceIteration,  Up: SCF
 
-6.8.14 `EigenSolverMaxIter' (integer, 25)
+4.8.14 `EigenSolverMaxIter' (integer, 25)
 -----------------------------------------
 
 It determines the maximum number of iterations for the eigensolver (per
@@ -1807,7 +1976,7 @@ stopped even if the desired tolerance was not achieved.
 
 File: octopus.info,  Node: What2Mix,  Next: TypeOfMixing,  Prev: EigenSolverMaxIter,  Up: SCF
 
-6.8.15 `What2Mix' (integer, density)
+4.8.15 `What2Mix' (integer, density)
 ------------------------------------
 
 Selects what should be mixed during the SCF cycle. Possible values are:
@@ -1818,7 +1987,7 @@ Selects what should be mixed during the SCF cycle. Possible values are:
 
 File: octopus.info,  Node: TypeOfMixing,  Next: Mixing,  Prev: What2Mix,  Up: SCF
 
-6.8.16 `TypeOfMixing' (integer, broyden)
+4.8.16 `TypeOfMixing' (integer, broyden)
 ----------------------------------------
 
 Selects the mixing procedure to be used during the SCF cycle. Possible
@@ -1832,7 +2001,7 @@ values are:
 
 File: octopus.info,  Node: Mixing,  Next: MixNumberSteps,  Prev: TypeOfMixing,  Up: SCF
 
-6.8.17 `Mixing' (double, 0.3)
+4.8.17 `Mixing' (double, 0.3)
 -----------------------------
 
 Determines the amount of the new density/potential which is to be mixed
@@ -1841,7 +2010,7 @@ with the old one. Used only by linear mixing and Broyden mixing.
 
 File: octopus.info,  Node: MixNumberSteps,  Prev: Mixing,  Up: SCF
 
-6.8.18 `MixNumberSteps' (integer, 3)
+4.8.18 `MixNumberSteps' (integer, 3)
 ------------------------------------
 
 Number of steps used by Broyden mixing or GR-Pulay mixing to
@@ -1850,12 +2019,18 @@ extrapolate the new density/potential.
 
 File: octopus.info,  Node: Unoccupied States,  Next: Time Dependent,  Prev: SCF,  Up: Input file options
 
-6.9 Unoccupied States
+4.9 Unoccupied States
 =====================
 
 These variables are only used in `CalculationMode == unocc,
-unocc_start' (or in `td' and `td_start' if `TDOccupationalAnalysis ==
-1').
+unocc_start'. The purpose of these run modes is to calculate higher
+lying Kohn-Sham orbitals. For that purpose, it reads the restart
+information from a converged previous ground-state calculation, and
+builds the corresponding Hamiltonian. Then, it calculates the
+eigenvalues and eigenfunctions that are requested by the user.
+
+   Note: These variables are also used in `CalculationMode = td' or
+`td_start' if `TDOccupationalAnalysis == 1').
 
 * Menu:
 
@@ -1866,7 +2041,7 @@ unocc_start' (or in `td' and `td_start' if `TDOccupationalAnalysis ==
 
 File: octopus.info,  Node: UnoccNumberStates,  Next: UnoccMaximumIter,  Prev: Unoccupied States,  Up: Unoccupied States
 
-6.9.1 `UnoccNumberStates' (integer, 5)
+4.9.1 `UnoccNumberStates' (integer, 5)
 --------------------------------------
 
 How many unoccupied states to compute.
@@ -1874,17 +2049,18 @@ How many unoccupied states to compute.
 
 File: octopus.info,  Node: UnoccMaximumIter,  Next: UnoccConv,  Prev: UnoccNumberStates,  Up: Unoccupied States
 
-6.9.2 `UnoccMaximumIter' (integer, 200)
+4.9.2 `UnoccMaximumIter' (integer, 200)
 ---------------------------------------
 
 Maximum number of iterations while calculating the unoccupied states.
 Note that these are _not_ SCF iterations, for the density and the
-Hamiltonian are not updated!
+Hamiltonian are not updated! These iterations correspond to the
+iterative _diagonalization_ of the Hamiltonian.
 
 
 File: octopus.info,  Node: UnoccConv,  Prev: UnoccMaximumIter,  Up: Unoccupied States
 
-6.9.3 `UnoccConv' (double, 1e-4)
+4.9.3 `UnoccConv' (double, 1e-4)
 --------------------------------
 
 Absolute convergence in the eigenvectors. So don't try to put it too
@@ -1893,7 +2069,7 @@ good or else you won't converge.
 
 File: octopus.info,  Node: Time Dependent,  Next: Geometry optimization,  Prev: Unoccupied States,  Up: Input file options
 
-6.10 Time Dependent
+4.10 Time Dependent
 ===================
 
 When `CalculationMode = (td | td_start)', the code performs the time
@@ -2005,7 +2181,7 @@ TDExponentialMethod::).
 
 File: octopus.info,  Node: TDMaximumIter,  Next: TDTimeStep,  Prev: Time Dependent,  Up: Time Dependent
 
-6.10.1 `TDMaximumIter' (integer, 1500)
+4.10.1 `TDMaximumIter' (integer, 1500)
 --------------------------------------
 
 Number of time steps in which the total integration time is divided; in
@@ -2014,7 +2190,7 @@ previous notation, N.
 
 File: octopus.info,  Node: TDTimeStep,  Next: TDExponentialMethod,  Prev: TDMaximumIter,  Up: Time Dependent
 
-6.10.2 `TDTimeStep' (double, 0.07 a.u.)
+4.10.2 `TDTimeStep' (double, 0.07 a.u.)
 ---------------------------------------
 
 Time-step for the propagation; in previous notation, \delta t.
@@ -2022,7 +2198,7 @@ Time-step for the propagation; in previous notation, \delta t.
 
 File: octopus.info,  Node: TDExponentialMethod,  Next: TDExpOrder,  Prev: TDTimeStep,  Up: Time Dependent
 
-6.10.3 `TDExponentialMethod' (integer, standard)
+4.10.3 `TDExponentialMethod' (integer, standard)
 ------------------------------------------------
 
 Method used to numerically calculate the exponential of the Hamiltonian,
@@ -2128,7 +2304,7 @@ is also calculated through the algorithm specified by this variable.
 
 File: octopus.info,  Node: TDExpOrder,  Next: TDLanczosTol,  Prev: TDExponentialMethod,  Up: Time Dependent
 
-6.10.4 `TDExpOrder' (integer, 4)
+4.10.4 `TDExpOrder' (integer, 4)
 --------------------------------
 
 For `TDExponentialMethod' equal `standard' or `chebyshev', the order to
@@ -2138,7 +2314,7 @@ the maximum Lanczos-subspace dimension.
 
 File: octopus.info,  Node: TDLanczosTol,  Next: TDEvolutionMethod,  Prev: TDExpOrder,  Up: Time Dependent
 
-6.10.5 `TDLanczosTol' (real, 5e-4)
+4.10.5 `TDLanczosTol' (real, 5e-4)
 ----------------------------------
 
 An internal tolerance variable for the Lanczos method. The smaller, the
@@ -2150,7 +2326,7 @@ evolution will be wrong.
 
 File: octopus.info,  Node: TDEvolutionMethod,  Next: TDLasers,  Prev: TDLanczosTol,  Up: Time Dependent
 
-6.10.6 `TDEvolutionMethod' (integer, etrs)
+4.10.6 `TDEvolutionMethod' (integer, etrs)
 ------------------------------------------
 
 This variable determines which algorithm will be used to approximate
@@ -2272,7 +2448,7 @@ default choices and make sure the time step is small enough.
 
 File: octopus.info,  Node: TDLasers,  Next: TDGauge,  Prev: TDEvolutionMethod,  Up: Time Dependent
 
-6.10.7 `TDLasers' (block data)
+4.10.7 `TDLasers' (block data)
 ------------------------------
 
 Each line of the block describes a laser pulse applied to the system.
@@ -2308,7 +2484,7 @@ interpolated / extrapolated from this numerically defined function.
 
 File: octopus.info,  Node: TDGauge,  Next: TDDeltaStrength,  Prev: TDLasers,  Up: Time Dependent
 
-6.10.8 `TDGauge' (integer, length)
+4.10.8 `TDGauge' (integer, length)
 ----------------------------------
 
 In which gauge to treat the laser. Options are:
@@ -2319,7 +2495,7 @@ In which gauge to treat the laser. Options are:
 
 File: octopus.info,  Node: TDDeltaStrength,  Next: TDPolarization,  Prev: TDGauge,  Up: Time Dependent
 
-6.10.9 `TDDeltaStrength' (double, 0.0 a.u.)
+4.10.9 `TDDeltaStrength' (double, 0.0 a.u.)
 -------------------------------------------
 
 When no laser is applied, a delta (in time) electric field with
@@ -2329,7 +2505,7 @@ linear optical spectra.
 
 File: octopus.info,  Node: TDPolarization,  Next: TDOutputMultipoles,  Prev: TDDeltaStrength,  Up: Time Dependent
 
-6.10.10 `TDPolarization' (block data)
+4.10.10 `TDPolarization' (block data)
 -------------------------------------
 
 The (real) polarisation of the delta electric field. The format of the
@@ -2345,7 +2521,7 @@ project if someone is interested in getting into `octopus'.
 
 File: octopus.info,  Node: TDOutputMultipoles,  Next: TDDipoleMax,  Prev: TDPolarization,  Up: Time Dependent
 
-6.10.11 `TDOutputMultipoles' (logical, true)
+4.10.11 `TDOutputMultipoles' (logical, true)
 --------------------------------------------
 
 If true, outputs the multipole moments of the density to the file
@@ -2355,7 +2531,7 @@ absorption spectra of finite systems.
 
 File: octopus.info,  Node: TDDipoleMax,  Next: TDOutputCoordinates,  Prev: TDOutputMultipoles,  Up: Time Dependent
 
-6.10.12 `TDDipoleLmax' (integer , 1)
+4.10.12 `TDDipoleLmax' (integer , 1)
 ------------------------------------
 
 Maximum multi-pole of the density output to the file
@@ -2364,7 +2540,7 @@ Maximum multi-pole of the density output to the file
 
 File: octopus.info,  Node: TDOutputCoordinates,  Next: TDOutputGSProjection,  Prev: TDDipoleMax,  Up: Time Dependent
 
-6.10.13 `TDOutputCoordinates' (logical, `MoveIons' > 0 )
+4.10.13 `TDOutputCoordinates' (logical, `MoveIons' > 0 )
 --------------------------------------------------------
 
 If true (and if the atoms are allowed to move), outputs the
@@ -2374,7 +2550,7 @@ coordinates, velocities, and forces of the atoms to the the file
 
 File: octopus.info,  Node: TDOutputGSProjection,  Next: TDOutputAcceleration,  Prev: TDOutputCoordinates,  Up: Time Dependent
 
-6.10.14 `TDOutputGSProjection' (logical, false)
+4.10.14 `TDOutputGSProjection' (logical, false)
 -----------------------------------------------
 
 If true, outputs the projection of the time-dependent Kohn-Sham Slater
@@ -2385,7 +2561,7 @@ fairly heavy, this is only done every `OutputEvery' iterations.
 
 File: octopus.info,  Node: TDOutputAcceleration,  Next: TDOutputLaser,  Prev: TDOutputGSProjection,  Up: Time Dependent
 
-6.10.15 `TDOutputAcceleration' (logical, false)
+4.10.15 `TDOutputAcceleration' (logical, false)
 -----------------------------------------------
 
 When _true_ outputs the acceleration, calculated from Ehrenfest theorem,
@@ -2395,7 +2571,7 @@ by the utility "hs-from-acc" in order to obtain the harmonic spectrum.
 
 File: octopus.info,  Node: TDOutputLaser,  Next: TDOutputElEnergy,  Prev: TDOutputAcceleration,  Up: Time Dependent
 
-6.10.16 `TDOutputLaser' (logical, true)
+4.10.16 `TDOutputLaser' (logical, true)
 ---------------------------------------
 
 If `true', `octopus' outputs the laser field to the file
@@ -2404,7 +2580,7 @@ If `true', `octopus' outputs the laser field to the file
 
 File: octopus.info,  Node: TDOutputElEnergy,  Next: TDOutputOccAnalysis,  Prev: TDOutputLaser,  Up: Time Dependent
 
-6.10.17 `TDOutputElEnergy' (logical, false)
+4.10.17 `TDOutputElEnergy' (logical, false)
 -------------------------------------------
 
 If `true', `octopus' outputs the different components of the electronic
@@ -2413,7 +2589,7 @@ energy to the file `td.general/el_energy'.
 
 File: octopus.info,  Node: TDOutputOccAnalysis,  Next: MoveIons,  Prev: TDOutputElEnergy,  Up: Time Dependent
 
-6.10.18 `TDOutputOccAnalysis' (logical, false)
+4.10.18 `TDOutputOccAnalysis' (logical, false)
 ----------------------------------------------
 
 If true, outputs the projections of the time-dependent Kohn-Sham
@@ -2423,7 +2599,7 @@ wave-functions onto the static (zero time) wave-functions to the file
 
 File: octopus.info,  Node: MoveIons,  Next: AbsorbingBoundaries,  Prev: TDOutputOccAnalysis,  Up: Time Dependent
 
-6.10.19 `MoveIons' (integer, no)
+4.10.19 `MoveIons' (integer, no)
 --------------------------------
 
 What kind of simulation to perform. Possible values are:
@@ -2436,7 +2612,7 @@ What kind of simulation to perform. Possible values are:
 
 File: octopus.info,  Node: AbsorbingBoundaries,  Next: ABWidth,  Prev: MoveIons,  Up: Time Dependent
 
-6.10.20 `AbsorbingBoundaries' (integer, no)
+4.10.20 `AbsorbingBoundaries' (integer, no)
 -------------------------------------------
 
 To improve the quality of the spectra by avoiding the formation of
@@ -2451,7 +2627,7 @@ box absorbing. The possible values for this parameter are:
 
 File: octopus.info,  Node: ABWidth,  Next: ABHeight,  Prev: AbsorbingBoundaries,  Up: Time Dependent
 
-6.10.21 `ABWidth' (real, 0.4 a.u.):
+4.10.21 `ABWidth' (real, 0.4 a.u.):
 -----------------------------------
 
 Width of the region used to apply the absorbing boundaries.
@@ -2459,7 +2635,7 @@ Width of the region used to apply the absorbing boundaries.
 
 File: octopus.info,  Node: ABHeight,  Prev: ABWidth,  Up: Time Dependent
 
-6.10.22 `ABHeight' (real, -0.2 a.u.)
+4.10.22 `ABHeight' (real, -0.2 a.u.)
 ------------------------------------
 
 When `AbsorbingBoundaries == sin2', is the height of the imaginary
@@ -2468,7 +2644,7 @@ potential.
 
 File: octopus.info,  Node: Geometry optimization,  Next: Function output for visualization,  Prev: Time Dependent,  Up: Input file options
 
-6.11 Geometry optimization
+4.11 Geometry optimization
 ==========================
 
 * Menu:
@@ -2481,7 +2657,7 @@ File: octopus.info,  Node: Geometry optimization,  Next: Function output for vis
 
 File: octopus.info,  Node: GOMethod,  Next: GOTolerance,  Prev: Geometry optimization,  Up: Geometry optimization
 
-6.11.1 `GOMethod' (integer, steep)
+4.11.1 `GOMethod' (integer, steep)
 ----------------------------------
 
 Method by which the minimization is performed. The only possible value
@@ -2490,7 +2666,7 @@ is   `steep' (simple steepest descent).
 
 File: octopus.info,  Node: GOTolerance,  Next: GOMaxIter,  Prev: GOMethod,  Up: Geometry optimization
 
-6.11.2 `GOTolerance' (real, 0.0001)
+4.11.2 `GOTolerance' (real, 0.0001)
 -----------------------------------
 
 Convergence criterium to stop the minimization. In units of force;
@@ -2499,7 +2675,7 @@ minimization   is stopped when all forces on ions are smaller.
 
 File: octopus.info,  Node: GOMaxIter,  Next: GOStep,  Prev: GOTolerance,  Up: Geometry optimization
 
-6.11.3 `GOMaxIter' (integer, 200)
+4.11.3 `GOMaxIter' (integer, 200)
 ---------------------------------
 
 Even if previous convergence criterium is not satisfied, minimization
@@ -2508,7 +2684,7 @@ will stop   after this number of iterations.
 
 File: octopus.info,  Node: GOStep,  Prev: GOMaxIter,  Up: Geometry optimization
 
-6.11.4 `GOStep' (double, 0.5)
+4.11.4 `GOStep' (double, 0.5)
 -----------------------------
 
 Initial step for the geometry optimizer.
@@ -2516,7 +2692,7 @@ Initial step for the geometry optimizer.
 
 File: octopus.info,  Node: Function output for visualization,  Next: Spectrum calculations,  Prev: Geometry optimization,  Up: Input file options
 
-6.12 Function output for visualization
+4.12 Function output for visualization
 ======================================
 
 Every given number of time iterations, or after ground-state
@@ -2555,7 +2731,7 @@ the value zero in those files.
 
 File: octopus.info,  Node: OutputKSPotential,  Next: OutputDensity,  Prev: Function output for visualization,  Up: Function output for visualization
 
-6.12.1 `OutputKSPotential' (logical, false)
+4.12.1 `OutputKSPotential' (logical, false)
 -------------------------------------------
 
 Prints out Kohn-Sham potential, separated by parts. File names would be
@@ -2567,7 +2743,7 @@ stands for the spin channel.
 
 File: octopus.info,  Node: OutputDensity,  Next: OutputWfs,  Prev: OutputKSPotential,  Up: Function output for visualization
 
-6.12.2 `OutputDensity' (logical, false)
+4.12.2 `OutputDensity' (logical, false)
 ---------------------------------------
 
 Prints out the density. The output file is called "density-i", where
@@ -2576,7 +2752,7 @@ Prints out the density. The output file is called "density-i", where
 
 File: octopus.info,  Node: OutputWfs,  Next: OutputWfsNumber,  Prev: OutputDensity,  Up: Function output for visualization
 
-6.12.3 `OutputWfs' (logical, false)
+4.12.3 `OutputWfs' (logical, false)
 -----------------------------------
 
 Prints out wave-functions. Which wavefunctions are to be printed is
@@ -2587,7 +2763,7 @@ state, and i for the spin channel.
 
 File: octopus.info,  Node: OutputWfsNumber,  Next: OutputElf,  Prev: OutputWfs,  Up: Function output for visualization
 
-6.12.4 `OutputWfsNumber' (string, "1-1024")
+4.12.4 `OutputWfsNumber' (string, "1-1024")
 -------------------------------------------
 
 Which wavefunctions to print, in list form, i.e., "1-5" to print the
@@ -2596,7 +2772,7 @@ first five states, "2,3" to print the second and the third state, etc.
 
 File: octopus.info,  Node: OutputElf,  Next: OutputGeometry,  Prev: OutputWfsNumber,  Up: Function output for visualization
 
-6.12.5 `OutputELF' (logical, false)
+4.12.5 `OutputELF' (logical, false)
 -----------------------------------
 
 Prints out the electron localization function, ELF. The output file is
@@ -2605,7 +2781,7 @@ called   "elf-i", where i stands for the spin channel.
 
 File: octopus.info,  Node: OutputGeometry,  Next: OutputAxisX,  Prev: OutputElf,  Up: Function output for visualization
 
-6.12.6 `OutputGeometry' (logical, false)
+4.12.6 `OutputGeometry' (logical, false)
 ----------------------------------------
 
 If true `octopus' outputs a XYZ file called "geometry.xyz" containing
@@ -2616,7 +2792,7 @@ be output in the file "geometry_classical.xyz".
 
 File: octopus.info,  Node: OutputAxisX,  Next: OutputAxisY,  Prev: OutputGeometry,  Up: Function output for visualization
 
-6.12.7 `OutputAxisX' (logical, false)
+4.12.7 `OutputAxisX' (logical, false)
 -------------------------------------
 
 The values of the function on the x axis are printed. The string
@@ -2625,7 +2801,7 @@ The values of the function on the x axis are printed. The string
 
 File: octopus.info,  Node: OutputAxisY,  Next: OutputAxisZ,  Prev: OutputAxisX,  Up: Function output for visualization
 
-6.12.8 `OutputAxisY' (logical, false)
+4.12.8 `OutputAxisY' (logical, false)
 -------------------------------------
 
 The values of the function on the y axis are printed. The string
@@ -2634,7 +2810,7 @@ The values of the function on the y axis are printed. The string
 
 File: octopus.info,  Node: OutputAxisZ,  Next: OutputPlaneX,  Prev: OutputAxisY,  Up: Function output for visualization
 
-6.12.9 `OutputAxisZ' (logical, false)
+4.12.9 `OutputAxisZ' (logical, false)
 -------------------------------------
 
 The values of the function on the z axis are printed. The string
@@ -2643,7 +2819,7 @@ The values of the function on the z axis are printed. The string
 
 File: octopus.info,  Node: OutputPlaneX,  Next: OutputPlaneY,  Prev: OutputAxisZ,  Up: Function output for visualization
 
-6.12.10 `OutputPlaneX' (logical, false)
+4.12.10 `OutputPlaneX' (logical, false)
 ---------------------------------------
 
 A plane slice at x=0 is printed. The string ".x=0" is appended to
@@ -2652,7 +2828,7 @@ previous file names.
 
 File: octopus.info,  Node: OutputPlaneY,  Next: OutputPlaneZ,  Prev: OutputPlaneX,  Up: Function output for visualization
 
-6.12.11 `OutputPlaneY' (logical, false)
+4.12.11 `OutputPlaneY' (logical, false)
 ---------------------------------------
 
 A plane slice at y=0 is printed. The string ".y=0" is appended to
@@ -2661,7 +2837,7 @@ previous file names.
 
 File: octopus.info,  Node: OutputPlaneZ,  Next: OutputDX,  Prev: OutputPlaneY,  Up: Function output for visualization
 
-6.12.12 `OutputPlaneZ' (logical, false)
+4.12.12 `OutputPlaneZ' (logical, false)
 ---------------------------------------
 
 A plane slice at y=0 is printed. The string ".z=0" is appended to
@@ -2670,7 +2846,7 @@ previous file names.
 
 File: octopus.info,  Node: OutputDX,  Next: OutputNETCDF,  Prev: OutputPlaneZ,  Up: Function output for visualization
 
-6.12.13 `OutputDX' (logical, false)
+4.12.13 `OutputDX' (logical, false)
 -----------------------------------
 
 For printing all the three dimensional information, the open source
@@ -2680,7 +2856,7 @@ The string ".dx" is appended to previous file names.  *Note wf.net::.
 
 File: octopus.info,  Node: OutputNETCDF,  Next: OutputEvery,  Prev: OutputDX,  Up: Function output for visualization
 
-6.12.14 `OutputNETCDF' (logical, false)
+4.12.14 `OutputNETCDF' (logical, false)
 ---------------------------------------
 
 Outputs in NetCDF (`http://www.unidata.ucar.edu/packages/netcdf/')
@@ -2690,7 +2866,7 @@ format. This file can then be read, for example, by OpenDX. The string
 
 File: octopus.info,  Node: OutputEvery,  Prev: OutputNETCDF,  Up: Function output for visualization
 
-6.12.15 `OutputEvery' (integer, 1000)
+4.12.15 `OutputEvery' (integer, 1000)
 -------------------------------------
 
 `OutputEvery' The output is saved when the iteration number is a
@@ -2699,7 +2875,7 @@ multiple of the `OutputEvery' variable.
 
 File: octopus.info,  Node: Spectrum calculations,  Next: Varia,  Prev: Function output for visualization,  Up: Input file options
 
-6.13 Spectrum calculations
+4.13 Spectrum calculations
 ==========================
 
 Once `octopus' has been run, results must be analyzed somehow. The most
@@ -2723,7 +2899,7 @@ utilities." Common options read by these utilities are:
 
 File: octopus.info,  Node: SpecTransformNode,  Next: SpecDampMode,  Prev: Spectrum calculations,  Up: Spectrum calculations
 
-6.13.1 `SpecTransformMode' (string, 'sin')
+4.13.1 `SpecTransformMode' (string, 'sin')
 ------------------------------------------
 
 What kind of Fourier transform is calculated. 'sin' and 'cos' are the
@@ -2732,7 +2908,7 @@ valid options, with obvious meanings.
 
 File: octopus.info,  Node: SpecDampMode,  Next: SpecDampFactor,  Prev: SpecTransformNode,  Up: Spectrum calculations
 
-6.13.2 `SpecDampMode' (string, 'exp')
+4.13.2 `SpecDampMode' (string, 'exp')
 -------------------------------------
 
 A damping function may be applied to the input fuction before
@@ -2748,7 +2924,7 @@ present or has any other value, no damping function is applied.
 
 File: octopus.info,  Node: SpecDampFactor,  Next: SpecStartTime,  Prev: SpecDampMode,  Up: Spectrum calculations
 
-6.13.3 `SpecDampFactor' (real, 0.0)
+4.13.3 `SpecDampFactor' (real, 0.0)
 -----------------------------------
 
 If `SpecDampMode' is set to "exp", the damping parameter of the
@@ -2757,7 +2933,7 @@ exponential is fixed through this variable.
 
 File: octopus.info,  Node: SpecStartTime,  Next: SpecEndTime,  Prev: SpecDampFactor,  Up: Spectrum calculations
 
-6.13.4 `SpecStartTime' (real, 0.0)
+4.13.4 `SpecStartTime' (real, 0.0)
 ----------------------------------
 
 Processing is done for the given function in a time-window that starts
@@ -2766,7 +2942,7 @@ at the value of this variable.
 
 File: octopus.info,  Node: SpecEndTime,  Next: SpecEnergyStep,  Prev: SpecStartTime,  Up: Spectrum calculations
 
-6.13.5 `SpecEndTime' (real, -1.0)
+4.13.5 `SpecEndTime' (real, -1.0)
 ---------------------------------
 
 Processing is done for the given function in a time-window that ends at
@@ -2775,7 +2951,7 @@ the value of this variable.
 
 File: octopus.info,  Node: SpecEnergyStep,  Next: SpecMinEnergy,  Prev: SpecEndTime,  Up: Spectrum calculations
 
-6.13.6 `SpecEnergyStep' (real, 0.05)
+4.13.6 `SpecEnergyStep' (real, 0.05)
 ------------------------------------
 
 Sampling rate for the spectrum.
@@ -2783,7 +2959,7 @@ Sampling rate for the spectrum.
 
 File: octopus.info,  Node: SpecMinEnergy,  Next: SpecMaxEnergy,  Prev: SpecEnergyStep,  Up: Spectrum calculations
 
-6.13.7 `SpecMinEnergy' (real, 0.0)
+4.13.7 `SpecMinEnergy' (real, 0.0)
 ----------------------------------
 
 The Fourier transform is calculated for energies bigger than this value.
@@ -2791,7 +2967,7 @@ The Fourier transform is calculated for energies bigger than this value.
 
 File: octopus.info,  Node: SpecMaxEnergy,  Next: HSPolarization,  Prev: SpecMinEnergy,  Up: Spectrum calculations
 
-6.13.8 `SpecMaxEnergy' (real, 20.0)
+4.13.8 `SpecMaxEnergy' (real, 20.0)
 -----------------------------------
 
 The Fourier transform is calculated for energies smaller than this
@@ -2800,7 +2976,7 @@ value.
 
 File: octopus.info,  Node: HSPolarization,  Prev: SpecMaxEnergy,  Up: Spectrum calculations
 
-6.13.9 `HSPolarization' (string, 'z')
+4.13.9 `HSPolarization' (string, 'z')
 -------------------------------------
 
 For the utilities `hs-from-acc', and `hs-from-mult', the polarization
@@ -2812,7 +2988,7 @@ and `hs-from-mult' for more details.
 
 File: octopus.info,  Node: Varia,  Prev: Spectrum calculations,  Up: Input file options
 
-6.14 Varia
+4.14 Varia
 ==========
 
 * Menu:
@@ -2824,7 +3000,7 @@ File: octopus.info,  Node: Varia,  Prev: Spectrum calculations,  Up: Input file 
 
 File: octopus.info,  Node: PoissonSolver,  Next: POLStaticField,  Prev: Varia,  Up: Varia
 
-6.14.1 `PoissonSolver' (integer, 3)
+4.14.1 `PoissonSolver' (integer, 3)
 -----------------------------------
 
 In 3D defines which method to use in order to solve the Poisson
@@ -2838,7 +3014,7 @@ method is used.
 
 File: octopus.info,  Node: POLStaticField,  Next: Displacement,  Prev: PoissonSolver,  Up: Varia
 
-6.14.2 `POLStaticField' (double, 0.001 a.u.)
+4.14.2 `POLStaticField' (double, 0.001 a.u.)
 --------------------------------------------
 
 Magnitude of the static field used to calculate the static
@@ -2847,7 +3023,7 @@ polarizability in `CalculationMode = 7, 8'.
 
 File: octopus.info,  Node: Displacement,  Prev: POLStaticField,  Up: Varia
 
-6.14.3 `Displacement' (double, 0.01 a.u.)
+4.14.3 `Displacement' (double, 0.01 a.u.)
 -----------------------------------------
 
 When calculating phonon properties (`CalculationMode = 11')
@@ -2855,15 +3031,15 @@ When calculating phonon properties (`CalculationMode = 11')
 calculate the dynamical matrix.
 
 
-File: octopus.info,  Node: External utilities,  Next: Examples,  Prev: Undocumented Variables,  Up: Top
+File: octopus.info,  Node: External utilities,  Next: Undocumented Variables,  Prev: Input file options,  Up: Top
 
-7 External utilities
+5 External utilities
 ********************
 
 A few small programs are generated along with `octopus', for the
 purpose of post-processing the generated information. These utilities
 should all be run from the directory where `octopus' was run, so that
-it may see the `inp' file, and the directories created by it.
+it may see the input file, and the directories created by it.
 
 * Menu:
 
@@ -2881,16 +3057,16 @@ it may see the `inp' file, and the directories created by it.
 
 File: octopus.info,  Node: oct-sf,  Next: oct-rsf,  Prev: External utilities,  Up: External utilities
 
-7.1 `oct-sf'
+5.1 `oct-sf'
 ============
 
 This utility generates the dipole strength function of the given system.
 Its main input is the `td.general/multipoles' file. Output is written
 to a file called `spectrum'. This file is made of two columns: energy
-(in eV or a.u., depending on the units specified in `inp'), and dipole
-strength function (in 1/eV, or 1/a.u., idem).
+(in eV or a.u., depending on the units specified in the input file),
+and dipole strength function (in 1/eV, or 1/a.u., idem).
 
-   In the `inp' file, the user may set the `SpecTransformMode' - this
+   In the input file, the user may set the `SpecTransformMode' - this
 should be set to "sin" for proper use -, the `SpecDampMode' -
 recommended value is "pol", which ensures fulfilling of the N-sum rule,
 the `SpecStartTime', the `SpecEndTime', the `SpecEnergyStep', the
@@ -2899,13 +3075,13 @@ the `SpecStartTime', the `SpecEndTime', the `SpecEnergyStep', the
 
 File: octopus.info,  Node: oct-rsf,  Next: oct-hs-mult,  Prev: oct-sf,  Up: External utilities
 
-7.2 `oct-rsf'
+5.2 `oct-rsf'
 =============
 
 
 File: octopus.info,  Node: oct-hs-mult,  Next: oct-hs-acc,  Prev: oct-rsf,  Up: External utilities
 
-7.3 `oct-hs-mult'
+5.3 `oct-hs-mult'
 =================
 
 Calculates the harmonic spectrum, out of the multipoles file. To do.
@@ -2913,7 +3089,7 @@ Calculates the harmonic spectrum, out of the multipoles file. To do.
 
 File: octopus.info,  Node: oct-hs-acc,  Next: oct-xyz-anim,  Prev: oct-hs-mult,  Up: External utilities
 
-7.4 `oct-hs-acc'
+5.4 `oct-hs-acc'
 ================
 
 Calculates the harmonic spectrum, out of the acceleration file. To do.
@@ -2921,7 +3097,7 @@ Calculates the harmonic spectrum, out of the acceleration file. To do.
 
 File: octopus.info,  Node: oct-xyz-anim,  Next: oct-excite,  Prev: oct-hs-acc,  Up: External utilities
 
-7.5 `oct-xyz-anim'
+5.5 `oct-xyz-anim'
 ==================
 
 Reads out the `td.general/coordinates' file, and makes a movie in XYZ
@@ -2930,7 +3106,7 @@ format. To do.
 
 File: octopus.info,  Node: oct-excite,  Next: oct-broad,  Prev: oct-xyz-anim,  Up: External utilities
 
-7.6 `oct-excite'
+5.6 `oct-excite'
 ================
 
 Calculates the excitation spectrum within linear response. This utility
@@ -2945,7 +3121,7 @@ variable `ExciteStates' (*note OutputWfsNumber::)
 
 File: octopus.info,  Node: oct-broad,  Next: oct-make-st,  Prev: oct-excite,  Up: External utilities
 
-7.7 `oct-broad'
+5.7 `oct-broad'
 ===============
 
 Generates a spectrum by broadening the excitations obtained by the
@@ -2956,12 +3132,12 @@ the variables `LinBroadening', `LinMinEnergy', `LinMaxEnergy', and
 
 File: octopus.info,  Node: oct-make-st,  Next: oct-center-geom,  Prev: oct-broad,  Up: External utilities
 
-7.8 `oct-make-st'
+5.8 `oct-make-st'
 =================
 
 `make_st' reads `tmp/restart.static' and replaces some of the Kohn-Sham
 states by Gaussians wave packets. The states which should be replaced
-are given in the `%MakeStates' section in the `inp' file and written to
+are given in the `%MakeStates' section in the input file and written to
 `tmp/restart.static.new'. (You probably want to copy that file to
 `tmp/restart.static' and use then `CalculationMode=5' or `6'.)
 
@@ -2999,7 +3175,7 @@ sigma^2)),
 
 File: octopus.info,  Node: oct-center-geom,  Next: wf.net,  Prev: oct-make-st,  Up: External utilities
 
-7.9 `oct-center-geom'
+5.9 `oct-center-geom'
 =====================
 
 This utility centers and aligns the coordinates of the molecule. It
@@ -3028,7 +3204,7 @@ following parameters are read from the `inp'ut file:
 
 File: octopus.info,  Node: wf.net,  Prev: oct-center-geom,  Up: External utilities
 
-7.10 `wf.net'
+5.10 `wf.net'
 =============
 
 This is an OpenDX network, aimed at the visualization of wave-functions.
@@ -3058,9 +3234,9 @@ steps:
 
 
 
-File: octopus.info,  Node: Undocumented Variables,  Next: External utilities,  Prev: Input file options,  Up: Top
+File: octopus.info,  Node: Undocumented Variables,  Next: Examples,  Prev: External utilities,  Up: Top
 
-8 Undocumented Variables
+6 Undocumented Variables
 ************************
 
 If you want to use these variables you will have to go to the code to
@@ -3077,6 +3253,8 @@ developments, so don't blame us...
    o   CenterOfInversion
 
    o   CurrentDFT
+
+   o   GuessDensityAtomsMagnet
 
    o   KineticCutoff
 
@@ -3121,9 +3299,9 @@ developments, so don't blame us...
    o   FromScratch
 
 
-File: octopus.info,  Node: Examples,  Next: Options Index,  Prev: External utilities,  Up: Top
+File: octopus.info,  Node: Examples,  Next: Options Index,  Prev: Undocumented Variables,  Up: Top
 
-9 Examples
+7 Examples
 **********
 
 * Menu:
@@ -3134,7 +3312,7 @@ File: octopus.info,  Node: Examples,  Next: Options Index,  Prev: External utili
 
 File: octopus.info,  Node: Hello world,  Next: Benzene,  Prev: Examples,  Up: Examples
 
-9.0.1 Hello world
+7.0.1 Hello world
 -----------------
 
 As a first example, we will take a sodium atom.  With your favourite
@@ -3288,7 +3466,7 @@ printed...
 
 File: octopus.info,  Node: Benzene,  Prev: Hello world,  Up: Examples
 
-9.0.2 Benzene
+7.0.2 Benzene
 -------------
 
 Well, the sodium atom is a bit too trivial. Let's try something harder:
@@ -3369,8 +3547,8 @@ Options Index
 * MoveIons:                              MoveIons.             (line  6)
 * NonInteractingElectrons:               NonInteractingElectrons.
                                                                (line  6)
-* NumberKPoints:                         NumberKPoints.        (line  6)
 * Occupations:                           Occupations.          (line  6)
+* OEP_level:                             OEP_level.            (line  6)
 * OrderDerivatives:                      OrderDerivatives.     (line  6)
 * OutputAxisX:                           OutputAxisX.          (line  6)
 * OutputAxisY:                           OutputAxisY.          (line  6)
@@ -3394,6 +3572,7 @@ Options Index
 * RelativisticCorrection:                RelativisticCorrection.
                                                                (line  6)
 * SCFinLCAO:                             SCFinLCAO.            (line  6)
+* SICCorrection:                         SICCorrection.        (line  6)
 * Spacing:                               Spacing.              (line  6)
 * SpecDampFactor:                        SpecDampFactor.       (line  6)
 * SpecDampMode:                          SpecDampMode.         (line  6)
@@ -3435,172 +3614,175 @@ Options Index
 * Verbose:                               Verbose.              (line  6)
 * What2Mix:                              What2Mix.             (line  6)
 * XFunctional:                           XFunctional.          (line  6)
-* XLength:                               ZLength.              (line  6)
+* XLength:                               XLength.              (line  6)
 * XYZCoordinates:                        XYZCoordinates.       (line  6)
 * XYZVelocities:                         XYZVelocities.        (line  6)
 
 
 
 Tag Table:
-Node: Top655
-Node: Copying4303
-Node: Authors5705
-Node: Introduction8925
-Node: Description of octopus9559
-Ref: Description of octopus-Footnote-112008
-Node: Time dependent density functional theory12401
-Ref: Time dependent density functional theory-Footnote-116165
-Ref: Time dependent density functional theory-Footnote-216397
-Ref: Time dependent density functional theory-Footnote-316699
-Ref: Time dependent density functional theory-Footnote-416855
-Ref: Time dependent density functional theory-Footnote-517039
-Node: Installation17110
-Node: Quick instructions17309
-Node: Long instructions17844
-Ref: Long instructions-Footnote-127072
-Node: Troubleshooting27587
-Node: The parser29529
-Node: Input file options32676
-Node: Generalities33297
-Node: SystemName33577
-Node: Dimensions33884
-Node: CalculationMode34194
-Node: Units35056
-Node: UnitsInput35758
-Node: UnitsOutput36107
-Node: Verbose36452
-Node: DebugLevel37033
-Node: Species Block37292
-Node: Species37473
-Node: Coordinates Description41042
-Node: PDBCoordinates41461
-Node: XYZCoordinates42942
-Node: Coordinates43718
-Node: XYZVelocities44716
-Node: Velocities45028
-Node: RandomVelocityTemp45806
-Node: Mesh46139
-Node: BoxShape46681
-Node: Radius47166
-Node: Lsize47403
-Node: ZLength47752
-Node: Spacing47971
-Node: DerivativesSpace48417
-Node: OrderDerivatives49026
-Node: DoubleFFTParameter49404
-Node: FFTOptimize49919
-Node: States50236
-Node: SpinComponents50476
-Node: NumberKPoints51129
-Node: ExcessCharge51590
-Node: ExtraStates51909
-Node: Occupations52202
-Node: ElectronicTemperature53160
-Node: Hamiltonian53495
-Node: NonInteractingElectrons53753
-Node: ClassicPotential54160
-Node: LocalPotentialSpace54505
-Node: RelativisticCorrection54944
-Node: Exchange and correlation55368
-Node: XFunctional55710
-Node: CFunctional56474
-Node: SCF57051
-Node: MaximumIter57643
-Node: ConvAbsDens57854
-Node: ConvRelDens58092
-Node: ConvAbsEv58326
-Node: ConvRelEv58558
-Node: GuessMagnetDensity58805
-Node: AtomsMagnetDirection59975
-Node: LCAOStart60751
-Node: SCFinLCAO61156
-Node: EigenSolver61564
-Node: EigenSolverInitTolerance62459
-Node: EigenSolverFinalTolerance62736
-Node: EigenSolverFinalToleranceIteration63036
-Node: EigenSolverMaxIter63402
-Node: What2Mix63804
-Node: TypeOfMixing64102
-Node: Mixing64474
-Node: MixNumberSteps64764
-Node: Unoccupied States65010
-Node: UnoccNumberStates65366
-Node: UnoccMaximumIter65608
-Node: UnoccConv65970
-Node: Time Dependent66229
-Node: TDMaximumIter70642
-Node: TDTimeStep70923
-Node: TDExponentialMethod71180
-Node: TDExpOrder76479
-Node: TDLanczosTol76842
-Node: TDEvolutionMethod77331
-Node: TDLasers83131
-Node: TDGauge84551
-Node: TDDeltaStrength84834
-Node: TDPolarization85187
-Node: TDOutputMultipoles85774
-Node: TDDipoleMax86154
-Node: TDOutputCoordinates86461
-Node: TDOutputGSProjection86848
-Node: TDOutputAcceleration87324
-Node: TDOutputLaser87760
-Node: TDOutputElEnergy88040
-Node: TDOutputOccAnalysis88363
-Node: MoveIons88737
-Node: AbsorbingBoundaries89122
-Node: ABWidth89691
-Node: ABHeight89929
-Node: Geometry optimization90159
-Node: GOMethod90420
-Node: GOTolerance90720
-Node: GOMaxIter91029
-Node: GOStep91317
-Node: Function output for visualization91503
-Node: OutputKSPotential92923
-Node: OutputDensity93470
-Node: OutputWfs93782
-Node: OutputWfsNumber94225
-Node: OutputElf94577
-Node: OutputGeometry94904
-Node: OutputAxisX95372
-Node: OutputAxisY95687
-Node: OutputAxisZ95999
-Node: OutputPlaneX96312
-Node: OutputPlaneY96605
-Node: OutputPlaneZ96899
-Node: OutputDX97189
-Node: OutputNETCDF97592
-Node: OutputEvery97976
-Node: Spectrum calculations98262
-Node: SpecTransformNode98957
-Node: SpecDampMode99280
-Node: SpecDampFactor100075
-Node: SpecStartTime100373
-Node: SpecEndTime100662
-Node: SpecEnergyStep100947
-Node: SpecMinEnergy101170
-Node: SpecMaxEnergy101432
-Node: HSPolarization101697
-Node: Varia102190
-Node: PoissonSolver102368
-Node: POLStaticField102806
-Node: Displacement103101
-Node: External utilities103428
-Node: oct-sf104003
-Node: oct-rsf104778
-Node: oct-hs-mult104905
-Node: oct-hs-acc105114
-Node: oct-xyz-anim105328
-Node: oct-excite105559
-Node: oct-broad106217
-Node: oct-make-st106576
-Node: oct-center-geom107856
-Node: wf.net108902
-Node: Undocumented Variables110283
-Node: Examples111359
-Node: Hello world111518
-Ref: Hello world-Footnote-1118141
-Node: Benzene118225
-Node: Options Index119042
+Node: Top667
+Node: Authors4377
+Node: Copying7737
+Node: Introduction9196
+Node: Description of octopus9830
+Ref: Description of octopus-Footnote-112279
+Node: Time dependent density functional theory12672
+Ref: Time dependent density functional theory-Footnote-116657
+Ref: Time dependent density functional theory-Footnote-216889
+Ref: Time dependent density functional theory-Footnote-317191
+Ref: Time dependent density functional theory-Footnote-417347
+Ref: Time dependent density functional theory-Footnote-517531
+Node: Installation17602
+Node: Quick instructions18596
+Node: Long instructions19131
+Ref: Long instructions-Footnote-128770
+Ref: Long instructions-Footnote-229328
+Node: Different octopus executables29540
+Node: Troubleshooting31404
+Node: The parser33350
+Node: Input file options36624
+Node: Generalities37241
+Node: SystemName37521
+Node: Dimensions37828
+Node: CalculationMode38138
+Node: Units39045
+Node: UnitsInput39688
+Node: UnitsOutput40037
+Node: Verbose40382
+Node: DebugLevel41117
+Node: Species Block41376
+Node: Species41557
+Node: Coordinates Description45435
+Node: PDBCoordinates45854
+Node: XYZCoordinates47364
+Node: Coordinates48166
+Node: XYZVelocities49164
+Node: Velocities49748
+Node: RandomVelocityTemp50526
+Node: Mesh50859
+Node: BoxShape51401
+Node: Radius51899
+Node: Lsize52136
+Node: XLength52485
+Node: Spacing52708
+Node: DerivativesSpace53154
+Node: OrderDerivatives53763
+Node: DoubleFFTParameter54237
+Node: FFTOptimize54797
+Node: States55331
+Node: SpinComponents55553
+Node: ExcessCharge56453
+Node: ExtraStates56773
+Node: Occupations57655
+Node: ElectronicTemperature58621
+Node: Hamiltonian58956
+Node: NonInteractingElectrons59214
+Node: ClassicPotential59621
+Node: LocalPotentialSpace59966
+Node: RelativisticCorrection60405
+Node: Exchange and correlation60922
+Node: XFunctional61296
+Node: CFunctional61661
+Node: OEP_level62337
+Node: SICCorrection62673
+Node: SCF62837
+Node: MaximumIter64240
+Node: ConvAbsDens64513
+Node: ConvRelDens64834
+Node: ConvAbsEv65210
+Node: ConvRelEv65533
+Node: GuessMagnetDensity65919
+Node: AtomsMagnetDirection67089
+Node: LCAOStart67865
+Node: SCFinLCAO68270
+Node: EigenSolver68678
+Node: EigenSolverInitTolerance69573
+Node: EigenSolverFinalTolerance69850
+Node: EigenSolverFinalToleranceIteration70150
+Node: EigenSolverMaxIter70516
+Node: What2Mix70918
+Node: TypeOfMixing71216
+Node: Mixing71588
+Node: MixNumberSteps71878
+Node: Unoccupied States72124
+Node: UnoccNumberStates72846
+Node: UnoccMaximumIter73088
+Node: UnoccConv73533
+Node: Time Dependent73792
+Node: TDMaximumIter78205
+Node: TDTimeStep78486
+Node: TDExponentialMethod78743
+Node: TDExpOrder84042
+Node: TDLanczosTol84405
+Node: TDEvolutionMethod84894
+Node: TDLasers90694
+Node: TDGauge92114
+Node: TDDeltaStrength92397
+Node: TDPolarization92750
+Node: TDOutputMultipoles93337
+Node: TDDipoleMax93717
+Node: TDOutputCoordinates94024
+Node: TDOutputGSProjection94411
+Node: TDOutputAcceleration94887
+Node: TDOutputLaser95323
+Node: TDOutputElEnergy95603
+Node: TDOutputOccAnalysis95926
+Node: MoveIons96300
+Node: AbsorbingBoundaries96685
+Node: ABWidth97254
+Node: ABHeight97492
+Node: Geometry optimization97722
+Node: GOMethod97983
+Node: GOTolerance98283
+Node: GOMaxIter98592
+Node: GOStep98880
+Node: Function output for visualization99066
+Node: OutputKSPotential100486
+Node: OutputDensity101033
+Node: OutputWfs101345
+Node: OutputWfsNumber101788
+Node: OutputElf102140
+Node: OutputGeometry102467
+Node: OutputAxisX102935
+Node: OutputAxisY103250
+Node: OutputAxisZ103562
+Node: OutputPlaneX103875
+Node: OutputPlaneY104168
+Node: OutputPlaneZ104462
+Node: OutputDX104752
+Node: OutputNETCDF105155
+Node: OutputEvery105539
+Node: Spectrum calculations105825
+Node: SpecTransformNode106520
+Node: SpecDampMode106843
+Node: SpecDampFactor107638
+Node: SpecStartTime107936
+Node: SpecEndTime108225
+Node: SpecEnergyStep108510
+Node: SpecMinEnergy108733
+Node: SpecMaxEnergy108995
+Node: HSPolarization109260
+Node: Varia109753
+Node: PoissonSolver109931
+Node: POLStaticField110369
+Node: Displacement110664
+Node: External utilities110991
+Node: oct-sf111576
+Node: oct-rsf112360
+Node: oct-hs-mult112487
+Node: oct-hs-acc112696
+Node: oct-xyz-anim112910
+Node: oct-excite113141
+Node: oct-broad113799
+Node: oct-make-st114158
+Node: oct-center-geom115438
+Node: wf.net116484
+Node: Undocumented Variables117865
+Node: Examples118963
+Node: Hello world119126
+Ref: Hello world-Footnote-1125749
+Node: Benzene125833
+Node: Options Index126650
 
 End Tag Table

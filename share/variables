@@ -81,10 +81,38 @@ c_pw             = 10   # Perdew & Wang
 c_ob_pw          = 11   # Ortiz & Ballone (PW)
 c_lyp            = 12   # Lee, Yang, & Parr LDA
 c_amgb           = 13   # Attacalite et al
-
 x_pbe            = 101  # Perdew, Burke & Ernzerhof exchange
 c_pbe            = 102  # Perdew, Burke & Ernzerhof correlation
 xc_lb            = 103  # van Leeuwen & Baerends
+
+lda_x        = 1
+lda_c_wigner = 2
+lda_c_rpa    = 3
+lda_c_hl     = 4
+lda_c_gl     = 5
+lda_c_xalpha = 6
+lda_c_vwn    = 7
+lda_c_pz     = 8
+lda_c_ob_pz  = 9
+lda_c_pw     = 10
+lda_c_ob_pw  = 11
+lda_c_lyp    = 12
+lda_c_amgb   = 13
+
+gga_x_pbe    = 101
+gga_xc_lb    = 103
+gga_c_pbe    = 102
+
+mgga_x_tpss  = 201
+mgga_c_tpss  = 202
+
+oep_x        = 301
+
+oep_none     = 0
+oep_slater   = 1
+oep_kli      = 2
+oep_ceda     = 3
+oep_full     = 4
 
 # symbols for oct-center-geom
 inertia          = 1  
