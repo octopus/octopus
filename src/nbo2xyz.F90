@@ -17,20 +17,23 @@
 
 #include "config_F90.h"
 
-program nbo2xyz
+subroutine nbo2xyz(sampling)
   use global
   use liboct
   use atom
 
   implicit none
 
+  integer :: sampling
+
   character(len=80) :: sysname, str, nbofile, xyzfile
-  integer :: ierr, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, samp, iter, j
+  integer :: ierr, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
   real(r8) :: dump
   type(atom_type), pointer :: atm(:)
   type(atom_classical_type), pointer :: catm(:)
   type(specie_type), pointer :: spec(:)
 
+  write(*,*) 'step1'
   ! Opens and parses the inp file through the liboct
   ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
   if(ierr .ne. 0) then
@@ -38,6 +41,7 @@ program nbo2xyz
     call write_fatal(1)
   end if
   
+  write(*,*) 'step2'
   ! Finds out if we want to be verbose or not.
   call oct_parse_int(C_string('verbose'), 30, conf%verbose)
   if(conf%verbose >= 999 .and. mpiv%node == 0) then
@@ -48,12 +52,14 @@ program nbo2xyz
   ! Sets the dimensionaliy of the problem.
   conf%dim=3
 
+  write(*,*) 'step3'
   ! Fixes the units.
   call units_init()
 
   ! Gets the system name
   call oct_parse_str('SystemName', 'system', sysname)
 
+  write(*,*)'step4'
   ! Sets the filenames
   nbofile = trim(sysname)//'.nbo'
   xyzfile = trim(sysname)//'-movie.xyz'
@@ -70,16 +76,15 @@ program nbo2xyz
   end if
   allocate(spec(nspecies))
 
+  write(*,*) 'step5'
   do i = 1, nspecies
     call oct_parse_block_str(str, i-1, 0, spec(i)%label)
     call oct_parse_block_double(str, i-1, 1, spec(i)%weight)
   end do
 
+  write(*,*) 'step6'
   ! Initializes the atom
   call atom_init(natoms, atm, ncatoms, catm, nspecies, spec)
-
-  ! How often do you want to write
-  call oct_parse_int(C_String("nbo2xyz-sampling"), 100, samp)
 
   ! Opens the nbo file
   call io_assign(nbo_unit)
@@ -97,7 +102,7 @@ program nbo2xyz
   do while(ierr == 0)
      read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &
          ((atm(i)%x(j), j = 1, 3), i = 1, natoms)
-     if(mod(iter, samp) == 0) then
+     if(mod(iter, sampling) == 0) then
        call write_xyz
      endif
   enddo
@@ -122,4 +127,4 @@ subroutine write_xyz
   return
 end subroutine write_xyz
 
-end program nbo2xyz
+end subroutine nbo2xyz
