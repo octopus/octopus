@@ -20,16 +20,16 @@
 
 SUBDIRS = liboct src doc faq share
 
-EXTRA_DIST = TODO autogen.sh build/*.m4 build/*.in samples/inp
+EXTRA_DIST = TODO autogen.sh build/*.m4 build/*.in debian/* samples/inp
 
 CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec
 
 RPM_DIR = /usr/src/redhat
-DEB_DIR = /usr/src/debian
+DEB_DIR = deb-work
 
 rpm: dist
-	cp -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
+	mv -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
 	rpm --clean -ba build/$(PACKAGE).spec
 	scp $(RPM_DIR)/RPMS/i386/octopus*.rpm $(RPM_DIR)/SRPMS/octopus*.rpm \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
@@ -40,10 +40,10 @@ rpm: dist
 	@echo "-------------------------------------------------------------"
 
 deb: dist
-	cvs-buildpackage -rfakeroot
-	scp $(DEB_DIR)/i386/octopus/octopus*.deb \
+	rm -rf $(DEB_DIR)
+	mkdir $(DEB_DIR)
+	mv -f $(PACKAGE)-$(VERSION).tar.gz $(DEB_DIR)
+	(cd $(DEB_DIR); tar xzf *gz; cd $(PACKAGE)-$(VERSION); debuild -E -ePATH)
+	rm -rf $(DEB_DIR)/$(PACKAGE)-$(VERSION)
+	scp $(DEB_DIR)/octopus*.deb \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
-	@echo "-------------------------------------------------------------"
-	@echo "  debs are built, and are located under:"
-	@echo "       $(DEB_DIR)/i386/octopus"
-	@echo "-------------------------------------------------------------"

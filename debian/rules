@@ -23,18 +23,19 @@ endif
 
 config.status: configure
 	dh_testdir
-        # Add here commands to configure the package.
-	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info --with-fftw=/opt/intel/lib/ --with-lapack=/opt/intel/lib --with-blas=/opt/intel/lib --with-gsl-prefix=/opt/intel
-
+  # Add here commands to configure the package.
+	./autogen.sh
+	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
+	LDFLAGS="-static $(LDFLAGS)" F90=ifc
 
 build: build-stamp
 
 build-stamp:  config.status
 	dh_testdir
 
-        # Add here commands to compile the package.
+  # Add here commands to compile the package.
 	$(MAKE)
-        #/usr/bin/docbook-to-man debian/octopus.sgml > octopus.1
 
 	touch build-stamp
 
@@ -44,13 +45,6 @@ clean:
 	rm -f build-stamp 
 
         # Add here commands to clean up after the build process.
-	-$(MAKE) distclean
-	-test -r /usr/share/misc/config.sub && \
-	  cp -f /usr/share/misc/config.sub config.sub
-	-test -r /usr/share/misc/config.guess && \
-	  cp -f /usr/share/misc/config.guess config.guess
-
-
 	dh_clean
 
 install: build
@@ -59,7 +53,7 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
-        # Add here commands to install the package into debian/octopus.
+  # Add here commands to install the package into debian/octopus.
 	$(MAKE) install prefix=$(CURDIR)/debian/octopus/usr
 
 
@@ -80,7 +74,7 @@ binary-arch: build install
 #	dh_installpam
 #	dh_installmime
 #	dh_installinit
-	dh_installcron
+#	dh_installcron
 	dh_installman
 	dh_installinfo
 #	dh_undocumented

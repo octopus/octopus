@@ -66,17 +66,19 @@ subroutine lcao_dens(sys, nspin, rho)
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
     s => a%spec
-    
+
+#if defined(ONE_D) || defined(TWO_D)
+    call from_userdef(sys%m, rho(:, 1))    
+#elif defined(THREE_D)
     select case(s%label(1:5))
     case('usdef')
       call from_userdef(sys%m, rho(:, 1))
-#if defined(THREE_D)
     case('jelli', 'point')
       call from_jellium(sys%m, rho(:, 1))
     case default
       call from_pseudopotential(sys%m)
-#endif
     end select
+#endif
   end do
 
   ! we now renormalize the density (necessary if we have a charged system)

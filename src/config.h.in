@@ -16,6 +16,7 @@
 
 ! Dimensionality of the system
 #undef ONE_D
+#undef TWO_D
 #undef THREE_D
 #undef POLYMERS
 
