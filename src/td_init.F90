@@ -75,7 +75,7 @@ subroutine td_init(td, sys, m, st)
   end select
   call write_info(1)
 
-  call oct_parse_double(C_string("TDLanczosTol"), 1e-4_r8, td%lanczos_tol)
+  call oct_parse_double(C_string("TDLanczosTol"), 5e-4_r8, td%lanczos_tol)
   if (td%lanczos_tol <= 0._r8) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%lanczos_tol, "' is not a valid TDLanczosTol"
     message(2) = '(0 < TDLanczosTol)'

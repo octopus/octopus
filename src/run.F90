@@ -299,10 +299,10 @@ subroutine run()
       call td_run(td, unoccv%st, sys, h)
 
     case(I_SETUP_OCC_AN)
-      message(1) = 'Info: Seting up occupational analysis.'
-      call write_info(1)
 
       if(td%occ_analysis) then
+        message(1) = 'Info: Seting up occupational analysis.'
+        call write_info(1)
         instr = instr - 1
         call m_load_unocc()
         cycle program

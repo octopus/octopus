@@ -24,8 +24,10 @@ subroutine td_rti(h, sys, td, t)
   integer :: is  
   sub_name = 'td_rti'; call push_sub()
 
-  call dcopy(sys%st%nspin*sys%m%np, td%v_old(1, 1, 2), 1, td%v_old(1, 1, 3), 1)
-  call dcopy(sys%st%nspin*sys%m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
+!!$  call dcopy(sys%st%nspin*sys%m%np, td%v_old(1, 1, 2), 1, td%v_old(1, 1, 3), 1)
+!!$  call dcopy(sys%st%nspin*sys%m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
+  td%v_old(:, :, 3) = td%v_old(:, :, 2)
+  td%v_old(:, :, 2) = td%v_old(:, :, 1)
   do is = 1, sys%st%nspin
      td%v_old(:, is, 1) = h%vhartree(:) + h%vxc(:, is)
   enddo
@@ -36,7 +38,11 @@ subroutine td_rti(h, sys, td, t)
   case(REVERSAL)
     call td_rti2
   case(APP_REVERSAL)
-    call td_rti3
+    if(t<3*td%dt) then
+      call td_rti2
+    else
+      call td_rti3
+    endif
   case(EXPONENTIAL_MIDPOINT)
     call td_rti4
   end select
@@ -149,12 +155,12 @@ contains
 
     allocate(aux(sys%m%np, sys%st%nspin))
 
-    call xpolate_pot(td%dt/2._r8, td%dt, sys%m%np, sys%st%nspin, &
+    call xpolate_pot(td%dt, td%dt, sys%m%np, sys%st%nspin, &
                      td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
     
     ! propagate dt/2 with H(t-dt)
     h%Vhartree = 0._r8
-    h%vxc = td%v_old(:, :, 2)
+    h%vxc = td%v_old(:, :, 1)
     do ik = 1, sys%st%nik
       do ist = sys%st%st_start, sys%st%st_end
         call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
