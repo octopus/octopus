@@ -34,6 +34,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   ! some intermediate quantities
   ! vxc contains the Slater part!
   allocate(rho_sigma(m%np))
+
 #if defined(HAVE_MPI)
   allocate(d(m%np))
   do i = 1, m%np
@@ -86,10 +87,10 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   allocate(phi1(m%np, st%d%dim), phi2(m%np, st%d%dim))
   phi1 = M_ZERO; phi2 = M_ZERO
 
-
   ! If there is more than one state, so solve linear equation.
   linear_equation: if(n > 0) then 
 
+    allocate(d(m%np))
 
     allocate(x(n, 1))
     x = M_ZERO
@@ -115,8 +116,9 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
        phi1(:, :) = st%X(psi)(:, :, oep%eigen_index(i), is)
      endif
 #else
-       phi1(:, :) = st%X(psi)(:, :, oep%eigen_index(i), is)
+     phi1(:, :) = st%X(psi)(:, :, oep%eigen_index(i), is)
 #endif
+     d(:) = (R_REAL(phi1(:, 1))**2 + R_AIMAG(phi1(:, 1))**2) / rho_sigma(:) * m%vol_pp(:)
       do j = i, n
 #if defined(HAVE_MPI)
        if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
@@ -140,10 +142,10 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
 #else
         phi2(:, :) = st%X(psi)(:, :, oep%eigen_index(j), is)
 #endif
-        Ma(i, j) = - sum(R_ABS(phi1(:, 1))**2 * R_ABS(phi2(:, 1))**2 / rho_sigma(:) * m%vol_pp(:))
+        Ma(i, j) = - sum(   d(:) * (R_REAL(phi2(:, 1))**2 + R_AIMAG(phi2(:, 1))**2) )
         Ma(j,i) = Ma(i,j)
       end do
-      Ma(i,i) = 1 + Ma(i,i)
+      Ma(i,i) = CNST(1.0) + Ma(i,i)
       
       y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
     end do
@@ -158,6 +160,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
     call mpi_barrier(mpi_comm_world, ierr)
 #endif
     deallocate(Ma, y)
+
 
     do i = 1, n
        ! add contribution of low lying states. Once again, we have to send every state
@@ -207,9 +210,9 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
     deallocate(x)
 
 
+    deallocate(d)
   end if linear_equation
   ! The previous stuff is only needed if n>0.
-
 
 #if defined(HAVE_MPI)
   ! Since only node 0 holds the true vxc, broadcast it to all processors.
@@ -220,6 +223,5 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   call mpi_barrier(mpi_comm_world, ierr)
 #endif
 
-    
   deallocate(v_bar_S, rho_sigma)
 end subroutine X(xc_KLI_solve)
