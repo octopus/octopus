@@ -1,0 +1,1648 @@
+#include "global.h"
+
+      module crystal
+
+      use global
+      use io
+      use units
+
+      implicit none
+
+      FLOAT, allocatable :: xk(:,:)
+      integer, allocatable :: kmap(:)
+
+      integer :: ntrans, gmtrx(48,3,3)
+      integer :: rmtrx(48,3,3)
+      FLOAT :: tnp(48,3),   &
+                  trans(3,3,48) !rotation matrices in cartesian coordinates
+
+      FLOAT, private :: a(3,3)    ! lattice vectors in cart. coord.
+      FLOAT, private :: amet(3,3) ! adot(i,j) = a_i dot a_j
+      FLOAT, private :: b(3,3)    ! reciprocal lattice vectors
+      FLOAT, private :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
+
+      FLOAT, private :: volume_check, xdum
+      integer, private ::  i, j, k, l, m, ierr
+
+      FLOAT :: tnpi(3), xmt(3,3)
+      character(len=1) :: i1(3)
+      character(len=5) :: nametr(3)
+
+
+!   subroutines internal to this module
+
+      private invers
+      private monkpack
+      private symgen
+      private symchk
+      private symm_ident
+      private atftmt
+      private pgl
+      private rot
+      private rlv
+
+      contains
+
+      subroutine init_crystal(al,ntype,natom,maxnatom,coorat,    &
+                              nk_axis,k_shift,nrk,rk,w)
+
+      integer  :: nx,ny,nz,nrk,ntype,maxnatom,nk_axis(3)
+      integer  :: natom(ntype)
+      FLOAT :: sx,sy,sz,k_shift(3)
+      FLOAT :: rk(3,*) , w(*) , al(3,3)
+      FLOAT :: coorat(ntype,maxnatom,3)
+
+! Local
+
+      integer  :: ipr, invers_no, jabs, jcar, neg
+      FLOAT :: volume_check, scale, celvol, ek, ek1, ek2
+      FLOAT :: a1(3),a2(3),a3(3),am(3),      &
+                       b1(3), b2(3), b3(3), ba(3),   &
+                       rktran(3), rktran_inv(3) ,    &
+                       rkcar(3),rkmod(3,4)
+      character(len=1) :: np
+      logical :: vol_input
+
+
+!  now only for cubic crystls..will be made general later on
+
+      a = al
+      nx = nk_axis(1)
+      ny = nk_axis(2)
+      nz = nk_axis(3)
+      sx = k_shift(3)
+      sy = k_shift(2)
+      sz = k_shift(3)
+
+
+!      compute reciprocal lattice and reset scales.
+!               T                       T        -1          T -1
+!              B A  = 2pi (1), so b =  B  = 2pi(A  )  = 2pi(a )
+!     and we can compute the determinant (celvol) and the inverse.
+!     But note that the 2pi factor is NOT needed here yet. (It
+!     will be put in below)
+!
+      do i = 1, 3
+        do j = 1, 3
+          b(i,j) = a(j,i)
+        enddo
+      enddo
+
+      call invers(b,volume_check)
+      if (volume_check < 0) then
+        message(1) = 'Note: The lattice vectors as given do not form a direct triad'
+        call write_warning(1)
+        volume_check = - volume_check
+      endif
+
+      celvol = volume_check
+
+      write(message(1), '(a15,f10.4,a)')'CRYSTAL: cell volume = ', &
+            celvol/units_out%length%factor**3,'['//trim(units_out%length%abbrev)//'^3]'
+      call write_info(1)
+
+!     compute the inner products ba, put in the 2pi factor and clean up.
+
+      do i = 1, 3
+        a1(i) = a(i,1)
+        a2(i) = a(i,2)
+        a3(i) = a(i,3)
+        b(i,:) = M_TWO*M_PI*b(i,:)
+      end do
+
+      am(1) = sqrt(a1(1)*a1(1)+a1(2)*a1(2)+a1(3)*a1(3))
+      am(2) = sqrt(a2(1)*a2(1)+a2(2)*a2(2)+a2(3)*a2(3))
+      am(3) = sqrt(a3(1)*a3(1)+a3(2)*a3(2)+a3(3)*a3(3))
+
+      do i = 1, 3
+        ba(i) = M_TWO*M_PI/am(i)
+        b1(i) = b(i,1)
+        b2(i) = b(i,2)
+        b3(i) = b(i,3)
+      end do
+      
+!     compute metrics bmet(i,j) and amet(i,j)
+
+      do i = 1, 3
+        do j = i, 3
+          bmet(i,j) = 0
+          amet(i,j) = 0
+          do k = 1, 3
+            bmet(i,j) = bmet(i,j) + b(k,i)*b(k,j)
+            amet(i,j) = amet(i,j) + a(k,i)*a(k,j)
+          end do
+          if (i /= j) then
+            bmet(j,i) = bmet(i,j)
+            amet(j,i) = amet(i,j)
+          end if
+         end do
+      end do
+
+!      printout
+
+      message(1) = 'CRYSTAL: lattice vectors ['//trim(units_out%length%abbrev)//']'
+      write(message(2), '(a,3(f10.5,1x))') 'a1 = ',a1/units_out%length%factor
+      write(message(3), '(a,3(f10.5,1x))') 'a2 = ',a2/units_out%length%factor
+      write(message(4), '(a,3(f10.5,1x))') 'a3 = ',a3/units_out%length%factor
+      call write_info(4)
+      message(1) = 'CRYSTAL: reciprocal basis ['//trim(units_out%length%abbrev)//']'
+      write(message(2), '(a,3(f10.5,1x))') 'b1 = ',b1*units_out%length%factor
+      write(message(3), '(a,3(f10.5,1x))') 'b2 = ',b2*units_out%length%factor
+      write(message(4), '(a,3(f10.5,1x))') 'b3 = ',b3*units_out%length%factor
+      call write_info(4)
+      
+      
+!      write(6,9140) b1, b2, b3
+! 9140 format(/' reciprocal basis (Ang)',/3(/1x,3f10.5))
+      write(6,9150) ((amet(i,j),j=1,3),i=1,3)
+ 9150 format(/' direct space metrix (some units)',/3(/1x,3f10.5))
+      write(6,9160) ((bmet(i,j),j=1,3),i=1,3)
+ 9160 format(/' reciprocal space metrix (some units)',/3(/1x,3f10.5))
+
+! generate symmetries operation
+
+      ipr = 1
+      call symgen(ipr,a,coorat,natom,maxnatom,ntype,invers_no)
+
+!  k-points are generated by the MP scheme
+
+      allocate(xk(3,nx*ny*nz),kmap(nx*ny*nz))
+
+      call monkpack(nx,ny,nz,sx,sy,sz,nrk,rk,w,.false.)
+
+      message(1) =' ikp       weight             kpoint (relative)                kpoint (absolute)'
+      call write_info(1)
+
+      do 120 i = 1, nrk
+
+         do j = 1, 4
+            do k = 1, 3
+               rkmod(k,j) = rk(k,i)
+            end do
+         end do
+         rkmod(1,2) = rkmod(1,2) - 1.d0
+         rkmod(2,3) = rkmod(2,3) - 1.d0
+         rkmod(3,4) = rkmod(3,4) - 1.d0
+         ek = 2000.d0
+         do j = 1, 4
+            ek1 = 0.d0
+            ek2 = 0.d0
+            do k = 1, 3
+               do l = 1, 3
+                  ek1 = ek1 + rkmod(k,j)*bmet(k,l)*rkmod(l,j)
+                  ek2 = ek2 + (rkmod(k,j)-1.d0)*bmet(k,l)* (rkmod(l,j)-1.d0)
+               end do
+            end do
+            if (ek1 .lt. ek) then
+               ek = ek1
+               jcar = j
+            end if
+            if (ek2 .lt. ek) then
+               ek = ek2
+               jcar = -j
+            end if
+          end do
+
+!      rk in cartesian coordinates
+
+         neg = 0
+         do k = 1, 3
+            jabs = abs(jcar)
+            rkcar(k) = b1(k)*rkmod(1,jabs) + b2(k)*rkmod(2,jabs) + b3(k)*rkmod(3,jabs)
+            if (jcar .lt. 0) rkcar(k) = rkcar(k) - b1(k) - b2(k) - b3(k)
+            if (rkcar(k) .lt. 0.d0) neg = neg + 1
+         end do
+         if (neg .le. 1) neg = 1
+         if (neg .gt. 1) neg = -1
+
+!      printout
+
+!        write(message(1),'(i4,3x,f10.6,3x,3f10.6,3x,3f10.6)') &
+!              i,w(i),(rk(j,i),j=1,3), (dble(neg)*rkcar(j),j=1,3)
+!        call write_info(1)
+       write(6,9060)i,w(i),(rk(j,i),j=1,3), (dble(neg)*rkcar(j),j=1,3)
+9060  format(i4,3x,f10.6,3x,3f10.6,3x,3f10.6)
+
+  120 continue
+
+!        write(message(1),'(//1x,i3,a,/1x,51('-'),//4x,a3,3i5,6x,a3,3f6.2,//)') &
+!             nrk,' k points generated by program from parameters :', &
+!             'n =',nx, ny, nz,'s =',sx, sy, sz
+!        call write_info(1)
+
+      write(6,9070) nrk, nx, ny, nz, sx, sy, sz      
+ 9070 format(//1x,i3,' k points generated by program from',               &
+            ' parameters :',/1x,51('-'),//4x,'n =',3i5,6x,'s =',3f6.2,//)
+
+      deallocate(xk,kmap)
+
+      end subroutine init_crystal
+
+      subroutine invers(mat,determinant)
+
+!     Compute the inverse of a 3x3 matrix (in situ) and its determinant
+
+      FLOAT :: mat(3,3), tmp(3,3), determinant
+
+      integer :: ipvt(3)
+      FLOAT :: det(2)
+
+      call dinv33(mat,tmp,determinant)
+     
+      mat = tmp
+
+      return
+
+      end subroutine invers
+
+       subroutine dinv33(matrix,invers,det)
+       ! Inverts 3X3 matrix
+       
+       implicit none
+       FLOAT,intent(in)  :: matrix(3,3)
+       FLOAT,intent(out) :: invers(3,3)
+       FLOAT,intent(out) :: det
+
+       call vecprod(matrix(1:3,2),matrix(1:3,3),invers(1:3,1))
+       call vecprod(matrix(1:3,3),matrix(1:3,1),invers(1:3,2))
+       call vecprod(matrix(1:3,1),matrix(1:3,2),invers(1:3,3))
+       
+       det = DOT_PRODUCT(matrix(1:3,1),invers(1:3,1))
+       
+       if (det == 0.d0) then
+         message(1) = 'CRYSTAL: Matrix with null determinant'
+         write(message(2),'(3f12.5)') matrix(1,:)
+         write(message(3),'(3f12.5)') matrix(2,:)
+         write(message(4),'(3f12.5)') matrix(3,:) 
+         call write_fatal(2)
+         return
+       endif
+       
+       ! comment this out if you want to get the transpose of the inverse
+       invers = TRANSPOSE(invers)
+       
+       invers=invers/det
+       
+     end subroutine dinv33
+
+       subroutine vecprod(a,b,c)
+       ! calculates vector product a x b = c
+       
+       implicit none
+       FLOAT,intent( in) :: a(3),b(3)
+       FLOAT,intent(out) :: c(3)
+
+       c(1) = a(2)*b(3) - a(3)*b(2)
+       c(2) = a(3)*b(1) - a(1)*b(3)
+       c(3) = a(1)*b(2) - a(2)*b(1)
+
+       end subroutine vecprod
+
+      subroutine monkpack(nx,ny,nz,sx,sy,sz,nrk,rk,w,need_gw)
+
+      implicit none
+
+!      Implements the Monkhorst-Pack scheme.
+
+!      Sets up uniform array of k points. Use the normal MP scheme
+!      (PRB13, 5188, (1976)) when sx=sy=sz=0.5. If sx=sy=0,
+!      the special hexagonal scheme is used (PRB16, 1748, (1977))
+
+!     .. Scalar Arguments ..
+       FLOAT :: sx, sy, sz
+       integer nrk, nx, ny, nz
+
+!     .. Array Arguments ..
+      FLOAT :: rk(3,*), w(*)
+
+!     .. Local Scalars ..
+      FLOAT :: dw, dx, dy, dz, xdum
+      integer i, im, ip, irk, j, jm, jp, k, kdel, km, kp, l, n
+      character tmny_kpnts*80, wkarr_ovfw*80
+      logical need_gw
+
+!     .. Local Arrays ..
+
+      FLOAT :: rktran(3), rktran_inv(3)
+
+!     .. Intrinsic Functions ..
+      intrinsic abs, dble
+
+!     Reduces x to its appropriate equivalent in [0,1)
+!     It works for -500 < x < infinity...
+!     A function that works for all x is: mod(mod(x,1)+1,1), but it
+!     involves two mods...
+
+      FLOAT :: reduce_01
+      FLOAT :: x_dummy
+
+      reduce_01(x_dummy) = mod(x_dummy+500d0, 1.d0)
+
+!      nx, ny, and nz are the number of points in the three
+!      directions dermined by the lattice wave vectors. sx, sy, and
+!      sz shift the grid of integration points from the origin.
+!
+!      kmap is used to mark reducible k points and also to
+!      map reducible to irreducible k points
+
+      dx = 1.0D0/dble(nx)
+      dy = 1.0D0/dble(ny)
+      dz = 1.0D0/dble(nz)
+      n = 0
+      do 30 i = 1, nx
+         do 20 j = 1, ny
+            do 10 k = 1, nz
+               n = n + 1
+               xk(1,n) = (dble(i-1)+sx)*dx
+               xk(2,n) = (dble(j-1)+sy)*dy
+               xk(3,n) = (dble(k-1)+sz)*dz
+               kmap(n) = n
+   10       continue
+   20    continue
+   30 continue
+
+!      reduce to irreducible zone
+
+      dw = 1.0D0/dble(n)
+      nrk = 0
+      do 120 i = 1, n
+         if (kmap(i) .ne. i) go to 120
+
+!      new irreducible point
+!      mark with negative kmap
+
+         nrk = nrk + 1
+         do 40 j = 1, 3
+            rk(j,nrk) = xk(j,i)
+   40    continue
+         kmap(i) = -nrk
+         w(nrk) = dw
+         if (i .eq. n) go to 120
+!ang         goto 120
+
+!      operate on irreducible rk with the symmetry operations
+!
+         do 110 j = 1, ntrans
+            do 60 k = 1, 3
+               rktran(k) = 0.0D0
+               do 50 l = 1, 3
+                  rktran(k) = gmtrx(j,k,l)*rk(l,nrk) + rktran(k)
+   50          continue
+
+!      translate to interval 0-1 and compute its inverse for
+!      later use. (built as reduce_01(-rk)). This
+!          fixes a bug when rktran(l)=0 (first reported by
+!          Mike Surh, March 1992)
+!
+               rktran(k) = reduce_01(rktran(k))
+               rktran_inv(k) = reduce_01(-rktran(k))
+   60       continue
+
+!      remove (mark) k points related to irreducible rk by symmetry
+
+            do 100 k = i + 1, n
+               if (kmap(k) .ne. k) go to 100
+
+!      both the transformed rk ...
+
+               do 70 l = 1, 3
+                  if (abs(rktran(l)-xk(l,k)) .gt. 1.0D-5) go to 80
+   70          continue
+               w(nrk) = w(nrk) + dw
+               kmap(k) = nrk
+
+               go to 100
+
+!      ... and its inverse (see construction above)
+!ar        do not use in GW calculations!!
+
+   80          continue
+         if (need_gw) go to 100
+               do 90 l = 1, 3
+                 if (abs(rktran_inv(l)-xk(l,k) ).gt.1.0D-5) go to 100
+   90          continue
+               w(nrk) = w(nrk) + dw
+               kmap(k) = nrk
+  100       continue
+  110    continue
+  120 continue
+
+
+      return
+
+      end subroutine monkpack
+
+
+      subroutine symgen(ipr, a,coorat,natom,maxnatom,ntype,invers_no)
+
+      implicit none
+
+      integer     ipr        ! ipr=1 print
+
+!     This is the driver routine to generate the symmetry
+!     operations.
+!
+!     Adapted by J.L. Martins from the program GROUP
+!     written in 1974 by Warren and Worlton
+!     Computer Physics Communications, vol 8, 71-74 (1974)
+!     incorporated by Eckold et al into UNISOFT. 
+!     Modified by Alberto Garcia (1990)
+!
+!     Let us see if we can get the rotations both in real and
+!     in reciprocal space:
+!
+!     gmtrx : g-space representation
+!     rmtrx: r-space representation
+!
+!     Input:
+!
+!     a(i,j) is the i-th cartesian component of the j-th primitive
+!     translation vector of the direct lattice and thus it is the 
+!     transpose of the matrix A defined by Jones in The Theory
+!     of Brillouin Zones and Electronic States in Crystals
+!
+!     coorat(i,j,k) is the k-th component (lattice coordinates) of
+!     the position of the j-th atom of type i.
+!
+!     natom(i) is the number of atoms of type i.
+!
+!     ntype is the total number of types of atoms.
+!
+!     internal:
+!
+!     b contains the reciprocal lattice vectors in the 
+!     crystallographic usage, that is, WITHOUT the 2pi factor.
+!     This matrix IS Jones.
+!
+!     na is the number of atoms.
+!
+!     ity(i) is an integer distinguishing atoms of different type
+!     i.e. different atomic species.
+!
+!     x(j,i) is the j-th cartesian component of the position vector for
+!     the i-th atom in the unit cell.
+!
+!     output:
+!
+!     ntrans is the number of point group operations.
+!
+!     gmtrx is the matrix of rotations in g-lattice coordinates.
+!     rmtrx is the matrix of rotations in r-lattice coordinates.
+!
+!     tnp(oper,ilat) is the fractional translation in latt. coor.
+!
+!     invers_no is the operation number of the inversion (0 if not
+!     present). It is used to restore the inversion symmetry by
+!     a simple change of origin when possible
+!
+!     .. Scalar Arguments ..
+      integer :: ntype, invers_no,  maxnatom
+!     ..
+!     .. Array Arguments ..
+      FLOAT :: a(3,3), coorat(ntype,maxnatom,3)
+      integer :: natom(ntype)
+!     ..
+!     .. Local Scalars ..
+      FLOAT :: xdum
+      integer :: i, ihg, ind, ipm, j, k, l, li, m, na, nat, ierr
+!     ..
+!     .. Local Arrays ..
+      FLOAT :: b(3,3), r(49,3,3), r1(3,3), rlat(48,3,3)
+
+      
+      FLOAT, allocatable :: x(:,:)
+      integer, allocatable :: ity(:)
+
+
+      integer :: ib(48)
+      character :: id(48)*10
+!     ..
+!     .. Intrinsic Functions ..
+      intrinsic :: int, mod
+!     ..
+      ipm = 0
+
+      allocate(x(3,ntype*maxnatom))
+      allocate(ity(ntype*maxnatom))
+
+
+!
+!     Calculate cartesian coordinates, atom types, and number of atoms.
+!
+      na = 0
+      do 40 i = 1, ntype
+         nat = natom(i)
+         do 30 j = 1, nat
+            ind = na + j
+            do 20 k = 1, 3
+               x(k,ind) = 0.0d0
+               do 10 l = 1, 3
+                  x(k,ind) = x(k,ind) + a(k,l)*coorat(i,j,l)
+   10          continue
+   20       continue
+            ity(ind) = i
+   30    continue
+         na = na + natom(i)
+   40 continue
+!
+!     Determine reciprocal lattice basis vectors.
+!     We know that 
+!
+!               T                             T -1         -1
+!              B A  = 2pi (1), so   B  = 2pi(A )   = 2pi(a )
+!
+!     and we can use the linpack (SCILIB version) routines 
+!     sgefa and sgedi to 
+!     compute the determinant (celvol) and the inverse.
+!     But note that the 2pi factor is NOT needed here.
+!
+      do 888 i=1,3
+         do 999 j=1,3
+            b(i,j) = a(i,j)
+  999    continue
+  888 continue
+!
+      call invers(b,xdum)
+!
+      call pgl(a,b,r,ntrans,ib,ihg)
+!
+!     Subroutine pgl determines the point group of the lattice and the
+!     crystal system. The array ib contains the locations of the group
+!     operations and ntrans is the order of the group.
+!
+      call atftmt(ipr,a,b,x,r,ity,na,ib,ihg,ipm,li,ntrans,     &
+           invers_no, ntype, maxnatom)
+!
+!     Subroutine atftmt determines the point group of the crystal, 
+!     the atom transformation table f0, the fractional translations 
+!     tnp associated with each rotation and the multiplication 
+!     table mt for the point group of the crystal. The array ib now 
+!     contains operations in the point group of the crystal and ntrans 
+!     is the order of this group.
+!
+!     if(li.gt.0) write(6,180)
+! 180 format (5x,'the point group of the crystal contains the',
+!    1' inversion, therefore,',/,5x,'time reversal invariance will',
+!    2' be invoked for all wave vectors.')
+!
+!     We have the rotations in cartesian coordinates.
+!     Transform into lattice coordinates (r-space and g-space)
+!
+         do 130 l = 1, ntrans
+! 
+!           In terms of the real-space basis vectors:
+!                      T
+!              y^prime = ( B R a ) y     ( y are the r-lattice coord.)
+!
+!                              T
+!              watch out: b = B
+!
+!           Trans * a ...
+!     
+            do 90 j = 1, 3
+               do 80 k = 1, 3
+                  r1(j,k) = 0.0d0
+                  do 70 m = 1, 3
+                     r1(j,k) = r1(j,k) + trans(m,j,l)*a(m,k)
+   70             continue
+   80          continue
+   90       continue
+! 
+!           B * Trans * a
+!
+            do 120 j = 1, 3
+               do 110 k = 1, 3
+                  rlat(l,j,k) = 0.0d0
+                  do 100 m = 1, 3
+                     rlat(l,j,k) = rlat(l,j,k) + b(j,m)*r1(m,k)
+  100             continue
+                  rmtrx(l,j,k) = nint(rlat(l,j,k))
+  110          continue
+  120       continue
+  130    continue
+!
+!        Identify the symmetry operations
+!
+         call symm_ident(ntrans,rmtrx,tnp,id)
+!
+!
+         do l = 1, ntrans
+!            
+!           In terms of the g-space basis vectors:
+!                      T  T
+!              z^prime = ( a  R  b ) z    ( z are the g-lattice coord.)
+!
+            do k=1,3
+               gmtrx(l,:,k)=rmtrx(l,k,:)
+            end do
+         end do
+
+!
+!       write the matrices and fractional translations
+!
+         if(ipr .eq. 1) then
+            write(6,9000)
+ 9000       format(///4x,'Rotation matrices (r-lattice) and fractional', &
+            ' translations (r-lattice)',//)
+!
+            do i = 1, ntrans
+               write(6,9010) i, ((rmtrx(i,j,k),k=1,3),j=1,3),           &
+                    (tnp(i,k),k=1,3), id(i)
+!
+            end do
+ 9010       format(i5,3(3x,3i3),4x,3f9.5,1x,a5)
+
+            write(6,*) ' skipping symmetry check!' 
+         endif
+!      call symchk(ipr,ierr,ntrans,rmtrx,tnp,1)
+!      call symchk(ipr,ierr,ntrans,gmtrx,tnp,0)
+
+!
+         deallocate(x)
+         deallocate(ity)
+!
+      return
+!
+      end subroutine symgen
+!     
+!
+      subroutine symchk(ipr,ierr,ntrans,mtrx,tnp,flag)
+!
+!     symchk checks if the symmetry operations defined by
+!     mtrx and tnp really forms a group.
+!
+!     Jan 7, 1990: AG/ 2pi factor removed ! /
+!
+!
+! Out  ierr                returns 0 if no error, otherwise it returns
+!                          the number of the suspected operation.
+!
+! Inp  flag                0 for g-space check, 1 for r-space check
+!
+!     .. Scalar Arguments ..
+      integer :: ierr, ntrans, flag, ipr
+!     ..
+!     .. Array Arguments ..
+      FLOAT :: tnp(48,3)
+      integer :: mtrx(48,3,3)
+!     ..
+!     .. Arrays in Common ..
+      integer :: mult(48,48), nerr(48)
+!     ..
+!     .. Local Scalars ..
+      FLOAT :: ttest, xdum
+      integer :: i, im, itest, j, k, l, m, maxerr
+      character(len=80) ::  not_a_grp
+!     ..
+!     .. Local Arrays ..
+      integer :: mtest(3,3)
+!     ..
+!     .. Intrinsic Functions ..
+      intrinsic :: abs, atan, dble
+!     ..
+!     .. Common blocks ..
+      common mult, nerr
+!     ..
+!
+      not_a_grp = 'The symmetry operations' //                   &
+                 ' do not form a group. Check operation no%i4$\n'
+!
+!
+!      check for duplicate operations
+!
+      if (ntrans .eq. 1) return
+      do 40 i = 2, ntrans
+         im = i - 1
+         do 30 j = 1, im
+            do 20 k = 1, 3
+               if (abs(tnp(i,k)-tnp(j,k)) .gt. 1.d-8) go to 30
+               do 10 l = 1, 3
+                  if (mtrx(i,k,l) .ne. mtrx(j,k,l)) go to 30
+   10          continue
+   20       continue
+            if(ipr .eq. 1) then
+!            write(message(1),'(/,a20,i3,a4,i3,a10)')  &
+!                 ' symmetry operations',j,' and',i,' are equal'
+!            call write_info(1)
+               write(6,9000) j, i
+            endif
+ 9000       format(/' symmetry operations',i3,' and',i3,' are equal')
+            ierr = i
+            write(message(1),'(a)')not_a_grp
+            call write_fatal(1)
+            write(6,'(a)')not_a_grp ; stop
+!
+            return
+!
+   30    continue
+   40 continue
+!
+!      construct muliplication table
+!
+      do 120 i = 1, ntrans
+         nerr(i) = 0
+         do 110 j = 1, ntrans
+            mult(i,j) = 0
+!
+!      mulitiply i and j
+!
+            do 70 k = 1, 3
+               do 60 l = 1, 3
+                  mtest(k,l) = 0
+                  do 50 m = 1, 3
+                     mtest(k,l) = mtest(k,l) + mtrx(i,k,m)*mtrx(j,m,l)
+   50             continue
+   60          continue
+   70       continue
+!
+!      check for match
+!
+            do 100 k = 1, ntrans
+               do 90 l = 1, 3
+                  do 80 m = 1, 3
+                     if (mtest(l,m) .ne. mtrx(k,l,m)) go to 100
+   80             continue
+   90          continue
+               mult(i,j) = k
+  100       continue
+  110    continue
+  120 continue
+!
+!      if translations not correct set mult(i,j) to -1
+!
+      if (flag.eq.0) then
+!
+         if(ipr .eq. 1) then
+         message(1) = 'Checking in g-space'
+         call write_info(1)
+         endif
+      do 160 i = 1, ntrans
+         do 150 j = 1, ntrans
+            k = mult(i,j)
+            if (k .eq. 0) go to 150
+            do 140 l = 1, 3
+               ttest = tnp(j,l)
+               do 130 m = 1, 3
+                  ttest = ttest + dble(mtrx(i,m,l))*(tnp(i,m)-tnp(k,m))
+  130          continue
+               ttest = abs(ttest)
+               itest = nint(ttest) 
+               if (abs(ttest-dble(itest)) .lt. 1.d-4) go to 140
+!     if (abs(ttest-dble(itest)) .lt. 1.d-6) go to 140
+               write(6,*) i,j,l,abs(ttest-dble(itest))
+               mult(i,j) = -1
+!
+               go to 150
+!
+  140       continue
+  150    continue
+  160 continue
+!
+      else
+!
+         if(ipr .eq. 1) then
+           message(1) = 'Checking in r-space'
+           call write_info(1)
+         endif
+      do 560 i = 1, ntrans
+         do 550 j = 1, ntrans
+            k = mult(i,j)
+            if (k .eq. 0) go to 550
+            do 540 l = 1, 3
+               ttest = tnp(i,l) - tnp(k,l)
+               do 530 m = 1, 3
+                  ttest = ttest + mtrx(i,l,m)*tnp(j,m)
+  530          continue
+               itest = nint(ttest) 
+               if (abs(ttest-dble(itest)) .lt. 1.d-4) go to 540
+!               if (abs(ttest-dble(itest)) .lt. 1.d-6) go to 540
+               write(6,*) i,j,k,l,abs(ttest-dble(itest))
+               mult(i,j) = -1
+!
+               go to 550
+!
+  540       continue
+  550    continue
+  560 continue
+!
+      endif
+!
+!      check multiplication table
+!
+      do 180 i = 1, ntrans
+         do 170 j = 1, ntrans
+            if (mult(i,j) .gt. 0) go to 170
+            nerr(i) = nerr(i) + 1
+            nerr(j) = nerr(j) + 1
+  170    continue
+  180 continue
+!
+!      find element with max error
+!
+      ierr = 0
+      maxerr = 0
+      do 190 i = 1, ntrans
+         if (nerr(i) .le. maxerr) go to 190
+         maxerr = nerr(i)
+         ierr = i
+  190 continue
+      if (ierr .eq. 0) return
+      if(ipr .eq. 1) then
+         write(6,9010)
+ 9010    format('1Multiplication table',/)
+      do 200 i = 1, ntrans
+         write(6,9020) (mult(i,j),j=1,ntrans)
+ 9020    format(1x,48i2)
+  200 continue
+      endif
+      write(message(1),'(a)')not_a_grp
+      call write_fatal(1)
+      write(6,'(a)')not_a_grp ; stop
+!
+      return
+!
+     end subroutine symchk
+!
+!
+      subroutine symm_ident(ntrans,mtrx,tnp,id)
+!
+      implicit none
+!
+      integer :: ntrans
+      integer :: mtrx(48,3,3)
+      FLOAT :: tnp(48,3)
+      character :: id(48)*10
+!
+      integer :: i,j, oper, ierr, ipt
+      logical :: proper, nonsym(48)
+      FLOAT :: det, trace, te, tt
+      integer :: iv1(3)
+      FLOAT :: a(3,3), z(3,3), wr(3), wi(3), fv1(3)
+      FLOAT :: t(3), e(3), canon_t(3)
+      FLOAT :: rdot
+      character(len=2) :: axes(-2:2)
+!
+      data axes / 'C2', 'C3', 'C4', 'C6', 'E ' /
+
+      do 100 oper = 1, ntrans
+!
+!       Copy the matrix to a FLOAT format for
+!       processing with EISPACK. Also, copy the non-primitive
+!       translation.
+!      
+        do 20 i = 1, 3
+          do 10 j = 1 , 3
+            a(i,j) = mtrx(oper,i,j)
+            t(j) = tnp(48,j)
+  10      continue
+  20    continue
+!
+!       Compute determinant  and trace
+!       
+        det = a(1,1)*a(2,2)*a(3,3) + a(2,1)*a(3,2)*a(1,3) +       &
+              a(1,2)*a(2,3)*a(3,1) - a(3,1)*a(2,2)*a(1,3) -       &
+              a(2,1)*a(1,2)*a(3,3) - a(1,1)*a(3,2)*a(2,3)
+!
+        proper = (nint(det) .eq. 1)
+!
+        trace = a(1,1) + a(2,2) + a(3,3)
+!
+        if (proper) then
+!
+!           Proper operation
+!
+
+            id(oper) = axes(nint(trace - 1))
+!
+        else
+!
+!           R = IS , where S is proper
+!
+            call sscal(9,-1.d0,a,1)
+            id(oper) = 'I' // axes(nint(-trace - 1))
+!
+        endif
+!
+!       Find eigenvector of a with eigenvalue = +1 (vector
+!       parallel to the axis.
+!
+!        call rg(3,3,a,wr,wi,1,z,iv1,fv1,ierr)
+!
+!        do 40 i = 1, 3
+!           if ( abs( cmplx(wr(i),wi(i)) - (1.d0,0.d0) )
+!     &          .lt. 1.d-8 ) ipt = i 
+!   40   continue
+!c
+!c       Get the correct eigenvector
+!c
+!        call scopy(3,z(1,ipt),1,e,1)
+!c
+!c       Perform the dot product with t:
+!c
+!        te = rdot(e,t)
+!c
+!        nonsym(oper) = .false.
+!c
+!        if (proper) then
+!c
+!          if (abs(te) .gt. 1.d-8) then
+!c
+!            nonsym(oper) = .true.
+!            call scopy(3,e,1,canon_t,1)
+!            call sscal(3,te,canon_t,1)
+!c
+!          endif
+!c
+!        else
+!c
+!          tt = rdot(t,t)
+!          if (abs(te) - sqrt(tt) .gt. 1.d-8) then
+!c
+!             nonsym(oper) = .true.
+!             call scopy(3,t,1,canon_t,1)
+!             call saxpy(3,-te,e,1,canon_t,1)
+!c
+!          endif
+!c
+!        endif       
+!c
+!        if (nonsym(oper)) id(oper) = id(oper) // '*'
+!
+  100 continue
+!
+      return
+!
+      end subroutine symm_ident
+!
+!
+      subroutine atftmt(ipr, a,ai,x,r,ity,na,ib,ihg        &
+                        ,ipm,li,nc,invers_no, mxdtyp, mxdatm)
+
+      implicit none
+!
+!     INPUT:
+!     -----
+!
+      integer :: ipr,         & ! print flag
+           ihg,               & ! holohedral group number
+           ipm,               & ! print flag for multiplication table
+           na,                & ! total number of atoms (of all kinds)
+           mxdtyp,            & ! max number of atom types
+           mxdatm               ! max number of atoms of each type
+
+      FLOAT ::                 &
+           x(3,mxdtyp*mxdatm), &! compact list of all coordinates (cartesian)
+           r(49,3,3),          &! the rotation matrices as they come 
+                                ! out of the pgl subroutine
+           a(3,3),             &! realspace lattice vectors 
+           ai(3,3)              ! inverse of lattice vectors (no 2pi)
+
+!
+!     INPUT/OUTPUT:
+!
+      integer :: ity(mxdtyp*mxdatm), & ! compact list of all the types of all atoms
+           ib(48),             &! index map for symmetry operations 
+           nc                   ! number of symm-ops without/with basis
+ 
+!
+!     OUTPUT:
+!     ------
+!
+      integer :: li,          & ! something to do with inversion?
+           invers_no            ! which operation is the inversion
+!
+!     DESCRIPTION:
+!     -----------
+!
+!
+!     subroutine atftmt determines the point group of the crystal, the
+!     atom transformation table,f0, the fractional translations,tnp,
+!     associated with each rotation and finally the multiplication table
+!     mt, for the point group of the crystal. ib now contains
+!     operations in the p.g. of the crystal and ntrans is the order of
+!     this group.
+!
+!
+!     1997 Bernd Pfrommer, based on a routine from Alberto Garcia s
+!     code. I cleaned up some more, put in dynamic memory allocation, 
+!     explicit typing, fortran 90 style, and more comments. Also,
+!     some shortcuts were put in to speed up the case where the
+!     symmetry is low. The rdiff array precomputes the rotated
+!     vectors to speed up things
+
+!
+!     ------------------------ local variables -----------------------
+!
+!     ..
+      FLOAT :: v(3,48), vr(3), vt(3), xb(3)
+      integer :: ia(48), ic(48), mt(48,48)
+
+      FLOAT :: da, dif, eps, ts, vs
+      parameter(eps=1.0d-8)    ! used to be 1.0d-8
+
+      integer :: i, il, is, isy, iu, j, k, k1, k2, k3, k4, ks, &
+                 l, m, n, n1, n2, n3, nca, ni
+
+      FLOAT, allocatable :: rx(:,:), rdiff(:,:,:)
+      integer, allocatable :: if0(:,:)
+
+
+      character :: cst(7)*12
+!     ..
+!     .. Intrinsic Functions ..
+      intrinsic :: abs, mod
+!     ..
+!     .. Data statements ..
+!     
+      data cst/'triclinic   ', 'monoclinic  ', 'orthorhombic',  &
+           'tetragonal  ', 'cubic       ', 'trigonal    ',      &
+           'hexagonal   '/
+!     ..
+      invers_no = 0
+
+      allocate(rx(3,mxdtyp*mxdatm))
+      allocate(if0(48,mxdtyp*mxdatm))
+      allocate(rdiff(3,na,na))
+!
+!     eps should be slightly larger than computer precision
+!
+      nca = 0
+      ni = 13
+      if (ihg .lt. 6) ni = 25
+      li = 0
+      do 130 n = 1, nc          ! loop over all lattice symmetry operations 
+         l = ib(n)              ! get index of symmetry operation
+         ic(n) = ib(n)
+!
+!        operate on all atoms with symmetry operation l, and store in
+!        list rx
+!
+         do k = 1, na
+            do i = 1, 3
+               rx(i,k) = 0.0d0
+               do j = 1, 3
+                  rx(i,k) = rx(i,k) + r(l,i,j)*x(j,k)
+               end do
+            end do
+         end do
+!
+!     
+!     This piece of code is pretty naive, and scales like order(n**3).
+!     It basically checks if for each
+!
+!       R*x_1 - x_2   there is a matching R*x_3-x4
+!
+!     excluding the trivial case of x_1 .eq. x_3  and  x_2 .eq. x_4
+!
+!
+         do k1 = 1, na          ! precompute the rdiffs first
+            do k2 = 1, na
+               xb(:) = rx(:,k1)-x(:,k2)
+               call rlv(ai,xb,rdiff(1,k2,k1),il) ! rdiff = R*x_1 -x_2
+!     subroutine rlv removes a direct lattice vector from xb
+!     leaving the remainder in rdiff. if a nonzero lattice vector was
+!     removed, il is made nonzero. 
+            end do
+         end do
+!
+!
+!
+         do k1 = 1, na          ! double loop over compact atom list
+            do k2 = 1, na
+               if (ity(k1) .eq. ity(k2)) then ! same type atoms?
+                  vr = rdiff(:,k2,k1) !vr stands for v-reference.
+                  ks = 0
+                  do k3 = 1, na
+                     do k4 = 1, na
+                        if (ity(k3) .eq. ity(k4)) then
+                           vt = rdiff(:,k4,k3) ! vt stands for v-test
+                           dif = 0.0d0
+                           do i = 1, 3
+                              da = abs(vr(i)-vt(i)) + eps
+                              dif = dif + mod(da,1.d0)
+                           end do
+                           if (dif .le. 10.0D0*eps) then
+                              if0(l,k3) = k4
+!     if0 is the function defined in maradudin and vosko by
+!     eq.(2.35). it defines the atom transformation table
+                              ks = ks + k4
+                              if (ks .eq. na*(na+1)/2) go to 110 ! found all
+                              go to 80
+                           end if
+                        end if
+                     end do
+                     exit
+ 80                  continue
+                  end do
+!
+!                 BP put in this shortcut (check carefully). If there
+!                 is a single R*x_1- x_2 without match, then give up.
+                  if(ks.eq.0) goto 130 ! this is not a symmetry operation
+               end if
+            end do
+         end do
+!
+         go to 130              ! this was not a symmetry operation
+!
+ 110     continue               ! we found a symmetry operation
+         nca = nca + 1
+!
+!        v(i,l) is the i-th cartesian component of the fractional
+!        translation associated with the rotation r(l).
+!
+         v(1:3,l) = vr(1:3)
+!
+         ib(nca) = l
+         if (l .eq. ni) then
+            li = l
+            invers_no = nca
+         endif
+  130 continue
+
+      deallocate(rdiff)
+!
+!     -------------- there are no gotos across this line -------------------
+!
+      if(ipr.eq.1) then
+         if ((ihg.eq.7.and.nca.eq.24).or.(ihg.eq.5.and.nca.eq.48)) then
+            write(6,9010) cst(ihg)
+ 9010       format(/' The point group of the crystal is the full ' &
+                 ,a12,'group')
+         else
+            write(6,9000) cst(ihg), (ic(i),i=1,nc)
+ 9000       format(/' The crystal system is ',a12       &
+                 ,' with operations: ',/5x,24i3,/5x,24i3,/)
+         endif
+      endif
+
+
+      vs = 0.0d0
+      nc = nca
+      do n = 1, nc
+         l = ib(n)
+         vs = sum(abs(v(1:3,l)))
+      end do
+      if (vs .gt. eps) then
+         if(ipr .eq. 1)  then 
+           message(1) = ''
+           message(2) = ' The space group is non-symmorphic'
+           message(3) =' (Or a non standard  origin of coordinates is used)'
+           message(4) = ''
+           call write_info(4)
+         end if
+
+         isy = 0
+         is = 0
+      else
+         if(ipr .eq. 1) then
+           message(1) = ''
+           message(2) = ' the space group of the crystal is symmorphic'
+           message(3) = ''
+           call write_info(3)
+      end if
+         isy = 1
+         is = 1
+      endif
+
+!
+!    !construct the multiplication table
+!
+      do n1 = 1, nc
+         do n2 = 1, nc
+            l = ib(n1)
+            m = ib(n2)
+            do i = 1, 3
+               do j = 1, 3
+                  r(49,i,j) = 0.0d0
+                  do k = 1, 3
+                     r(49,i,j) = r(49,i,j) + r(l,i,k)*r(m,k,j)
+                  end do
+               end do
+            end do
+            do n3 = 1, nc
+               n = ib(n3)
+               ts = 0.0d0
+               do i = 1, 3
+                  do j = 1, 3
+                     ts = ts + abs(r(49,i,j)-r(n,i,j))
+                  end do
+               end do
+               if (ts .gt. 100.0D0*eps) cycle
+               mt(l,m) = n
+               exit
+            end do
+         end do
+      end do
+!
+      il = 1
+      iu = nc
+      if (iu .gt. 24) iu = 24
+  280 continue
+      if(ipr .eq. 1) then
+         write(6,9040) (ib(i),i=il,iu)
+!        write(message(1),'(a19,24i3)')' Operation number  ',(ib(i),i=il,iu)
+!        call write_info(1)
+      endif
+ 9040 format(' Operation number  ',24i3)
+      do 300 i = 1, na
+         do 290 j = 1, nc
+            l = ib(j)
+            ia(j) = if0(l,i)
+  290    continue
+  300 continue
+      if (nc-iu) 320, 320, 310
+  310 continue
+      if(ipr .eq. 1) then
+!      write(message(1),'(//)')''
+!      call write_info(1)
+         write(6,9050)
+      endif
+ 9050 format(//)
+      il = 25
+      iu = nc
+!
+      go to 280
+!
+!     Print multiplication table and fractional translations.
+!
+  320 continue
+      if (ipm .eq. 0) go to 410
+      il = 1
+      iu = nc
+      if (nc .gt. 24) iu = 24
+      if (is) 330, 330, 340
+  330 continue
+      if(ipr .eq. 1) then
+      
+!        write(message(1),'(a1,57x,a,30x,a)')'0','Multiplication table','Fractional translations'
+!        write(message(2),'(a1,4x,24i4)')'0',(ib(i),i=il,iu)
+!        write(message(3),'(a,107x,a)')'+','v(1)      v(2)      v(3)'
+!        call write_info(3)
+         write(6,9060)
+ 9060    format('0',57x,'Multiplication table',30x,'Fractional translations')
+         write(6,9070) (ib(i),i=il,iu)
+ 9070    format('0',4x,24i4)
+         write(6,9080)
+ 9080    format('+',107x,'v(1)      v(2)      v(3)')
+      endif
+!
+      go to 360
+!
+  340 continue
+      if(ipr .eq. 1) then
+        write(message(1),'(a1,57x,a)')'0','Multiplication table'
+        call write_info(1)
+         write(6,9090)
+      endif
+ 9090 format('0',57x,'Multiplication table')
+  350 continue
+      if(ipr .eq. 1) then
+        write(message(1),'(a1,4x,24i4)')'0',(ib(i),i=il,iu)
+        call write_info(1)
+         write(6,9100) (ib(i),i=il,iu)
+      endif
+ 9100 format('0',4x,24i4)
+  360 continue
+      do 400 j = 1, nc
+         l = ib(j)
+         do 370 i = il, iu
+            n = ib(i)
+            ia(i) = mt(l,n)
+  370    continue
+         if (is) 380, 380, 390
+  380    continue
+         if(ipr .eq. 1) then
+           write(message(1),'(i5,24i4)')ib(j), (ia(i),i=il,iu)
+           call write_info(1)
+           write(message(1),'(a,,102x,3f10.4)')'+',(v(i,l),i=1,3)
+           call write_info(1)
+            write(6,9120) ib(j), (ia(i),i=il,iu)
+            write(6,9110) (v(i,l),i=1,3)
+ 9110       format('+',102x,3f10.4)
+         endif
+!
+         go to 400
+!
+  390    continue
+         if(ipr .eq. 1) then
+           write(message(1),'(i5,24i4)')ib(j), (ia(i),i=il,iu)
+           call write_info(1)         
+            write(6,9120) ib(j), (ia(i),i=il,iu)
+         endif
+  400 continue
+ 9120 format(i5,24i4)
+      if (iu .eq. nc) go to 410
+      il = 25
+      iu = nc
+      is = 1
+!
+      go to 350
+!
+  410 continue
+!
+
+      do 440 i = 1, nc
+         l = ib(i)
+         do 430 j = 1, 3
+            tnp(i,j) = -v(j,l)
+            do 420 k = 1, 3
+               trans(j,k,i) = r(l,j,k)
+  420       continue
+  430    continue
+
+  440 continue
+!
+      deallocate(rx)
+      deallocate(if0)
+
+      return
+!
+      end subroutine atftmt
+!
+!     ------------------------------------------------------------------------
+!
+!
+      subroutine pgl(a,b,r,nc,ib,ihg)
+!
+!     .. Scalar Arguments ..
+      integer :: ihg, nc
+!     ..
+!     .. Array Arguments ..
+      FLOAT :: a(3,3), b(3,3), r(49,3,3)
+      integer :: ib(48)
+!     ..
+!     .. Local Scalars ..
+      FLOAT :: eps, tr
+      parameter(eps=1.0d-8)    ! used to be 1.0d-8
+      integer :: i, ihc, j, k, lx, n, nr
+!     ..
+!     .. Local Arrays ..
+      FLOAT :: vr(3), xa(3)
+!     ..
+!     .. Intrinsic Functions ..
+      intrinsic abs
+!     ..
+!
+!     eps should be slightly larger than computer precision
+!
+      
+      ihc = 0
+!
+!     ihc is 0 for hexagonal groups and 1 for cubic groups.
+!
+      nr = 24
+   10 continue
+      nc = 0
+      call rot(r,nr)
+      do 60 n = 1, nr
+         ib(n) = 0
+         tr = 0.0d0
+         do 50 k = 1, 3
+            do 30 i = 1, 3
+               xa(i) = 0.0d0
+               do 20 j = 1, 3
+                  xa(i) = xa(i) + r(n,i,j)*a(j,k)
+   20          continue
+   30       continue
+            call rlv(b,xa,vr,lx)
+            do 40 i = 1, 3
+               tr = tr + abs(vr(i))
+   40       continue
+   50    continue
+         if (tr .le. 10.0D0*eps) then
+            nc = nc + 1
+            ib(nc) = n
+         end if
+   60 continue
+      if (ihc .eq. 0) then
+         if (nc .eq. 12) then
+            ihg = 6
+!
+            return
+!
+         end if
+         if (nc .gt. 12) then
+            ihg = 7
+!
+            return
+!
+         end if
+         if (nc .lt. 12) then
+            nr = 48
+            ihc = 1
+!
+            go to 10
+!
+         end if
+      else
+         if (nc .eq. 16) then
+            ihg = 4
+!
+            return
+!
+         end if
+         if (nc .gt. 16) then
+            ihg = 5
+!
+            return
+!
+         end if
+         if (nc .lt. 16) then
+            if (nc .eq. 4) then
+               ihg = 2
+!
+               return
+!
+            end if
+            if (nc .gt. 4) then
+               ihg = 3
+!
+               return
+!
+            end if
+            if (nc .lt. 4) then
+               ihg = 1
+!
+               return
+!
+            end if
+         end if
+      end if
+!
+!     ihg stands for holohedral group number.
+!
+      end subroutine pgl
+!
+      subroutine rot(r,nr)
+!
+!     .. Scalar Arguments ..
+      integer :: nr
+!     ..
+!     .. Array Arguments ..
+      FLOAT :: r(49,3,3)
+!     ..
+!     .. Local Scalars ..
+      FLOAT :: f
+      integer :: i, j, k, n, nv
+!     ..
+!     .. Intrinsic Functions ..
+      intrinsic sqrt
+!     ..
+      do 30 n = 1, nr
+         do 20 i = 1, 3
+            do 10 j = 1, 3
+               r(n,i,j) = 0.0d0
+   10       continue
+   20    continue
+   30 continue
+!
+      if (nr .le. 24) then
+!
+!        define the generators for the rotation matrices
+!                                 --hexagonal group
+!
+         f = sqrt(3.0d0)/2.0d0
+         r(2,1,1) = 0.5d0
+         r(2,1,2) = -f
+         r(2,2,1) = f
+         r(2,2,2) = 0.5d0
+         r(7,1,1) = -0.5d0
+         r(7,1,2) = -f
+         r(7,2,1) = -f
+         r(7,2,2) = 0.5d0
+         do 40 n = 1, 6
+            r(n,3,3) = 1.0d0
+            r(n+18,3,3) = 1.0d0
+            r(n+6,3,3) = -1.0d0
+            r(n+12,3,3) = -1.0d0
+   40    continue
+!
+!     generate the rest of the rotation matrices
+!
+         do 70 i = 1, 2
+            r(1,i,i) = 1.0d0
+            do 60 j = 1, 2
+               r(6,i,j) = r(2,j,i)
+               do 50 k = 1, 2
+                  r(3,i,j) = r(3,i,j) + r(2,i,k)*r(2,k,j)
+                  r(8,i,j) = r(8,i,j) + r(2,i,k)*r(7,k,j)
+                  r(12,i,j) = r(12,i,j) + r(7,i,k)*r(2,k,j)
+   50          continue
+   60       continue
+   70    continue
+         do 100 i = 1, 2
+            do 90 j = 1, 2
+               r(5,i,j) = r(3,j,i)
+               do 80 k = 1, 2
+                  r(4,i,j) = r(4,i,j) + r(2,i,k)*r(3,k,j)
+                  r(9,i,j) = r(9,i,j) + r(2,i,k)*r(8,k,j)
+                  r(10,i,j) = r(10,i,j) + r(12,i,k)*r(3,k,j)
+                  r(11,i,j) = r(11,i,j) + r(12,i,k)*r(2,k,j)
+   80          continue
+   90       continue
+  100    continue
+!
+         do 130 n = 1, 12
+            nv = n + 12
+            do 120 i = 1, 2
+               do 110 j = 1, 2
+                  r(nv,i,j) = -r(n,i,j)
+  110          continue
+  120       continue
+  130    continue
+      else
+!
+!        define the generators for the rotation matrices
+!                                          --cubic group
+!
+         r(9,1,3) = 1.0d0
+         r(9,2,1) = 1.0d0
+         r(9,3,2) = 1.0d0
+         r(19,1,1) = 1.0d0
+         r(19,2,3) = -1.0d0
+         r(19,3,2) = 1.0d0
+         do 160 i = 1, 3
+            r(1,i,i) = 1.0d0
+            do 150 j = 1, 3
+               r(20,i,j) = r(19,j,i)
+               r(5,i,j) = r(9,j,i)
+               do 140 k = 1, 3
+                  r(2,i,j) = r(2,i,j) + r(19,i,k)*r(19,k,j)
+                  r(16,i,j) = r(16,i,j) + r(9,i,k)*r(19,k,j)
+                  r(23,i,j) = r(23,i,j) + r(19,i,k)*r(9,k,j)
+  140          continue
+  150       continue
+  160    continue
+         do 190 i = 1, 3
+            do 180 j = 1, 3
+               do 170 k = 1, 3
+                  r(6,i,j) = r(6,i,j) + r(2,i,k)*r(5,k,j)
+                  r(7,i,j) = r(7,i,j) + r(16,i,k)*r(23,k,j)
+                  r(8,i,j) = r(8,i,j) + r(5,i,k)*r(2,k,j)
+                  r(10,i,j) = r(10,i,j) + r(2,i,k)*r(9,k,j)
+                  r(11,i,j) = r(11,i,j) + r(9,i,k)*r(2,k,j)
+                  r(12,i,j) = r(12,i,j) + r(23,i,k)*r(16,k,j)
+                  r(14,i,j) = r(14,i,j) + r(16,i,k)*r(2,k,j)
+                  r(15,i,j) = r(15,i,j) + r(2,i,k)*r(16,k,j)
+                  r(22,i,j) = r(22,i,j) + r(23,i,k)*r(2,k,j)
+                  r(24,i,j) = r(24,i,j) + r(2,i,k)*r(23,k,j)
+  170          continue
+  180       continue
+  190    continue
+         do 220 i = 1, 3
+            do 210 j = 1, 3
+               do 200 k = 1, 3
+                  r(3,i,j) = r(3,i,j) + r(5,i,k)*r(12,k,j)
+                  r(4,i,j) = r(4,i,j) + r(5,i,k)*r(10,k,j)
+                  r(13,i,j) = r(13,i,j) + r(23,i,k)*r(11,k,j)
+                  r(17,i,j) = r(17,i,j) + r(16,i,k)*r(12,k,j)
+                  r(18,i,j) = r(18,i,j) + r(16,i,k)*r(10,k,j)
+                  r(21,i,j) = r(21,i,j) + r(12,i,k)*r(15,k,j)
+  200          continue
+  210       continue
+  220    continue
+         do 250 n = 1, 24
+            nv = n + 24
+            do 240 i = 1, 3
+               do 230 j = 1, 3
+                  r(nv,i,j) = -r(n,i,j)
+  230          continue
+  240       continue
+  250    continue
+      end if
+!
+      end subroutine rot
+!     ----------------------------------------------
+      subroutine rlv(p,g,y,l)
+      
+      implicit none
+!
+!     INPUT:
+!     -----
+!
+      FLOAT  g(3),  &  ! vector to be multiplied
+                        p(3,3)    ! multiplication matrix, e.g. lattice vectors
+!      
+!
+!     OUTPUT:
+!     ------
+!
+      FLOAT  y(3)    ! mod(multiplied vector,lattice vector)
+      integer l                 ! is nonzero if a lattice vector was removed
+
+!     subroutine rlv removes a direct lattice vector from g by
+!     operation p, leaving the remainder in y. If a nonzero lattice
+!     vector was removed, l is made nonzero.
+
+      intrinsic abs, nint
+
+      y(1:3)=matmul(p(1:3,1:3),g(1:3))
+      l=sum(nint(abs(y(1:3))))
+      y(1:3)=y(1:3)-1.d0*nint(y(1:3))
+      
+      return
+!
+      end subroutine rlv
+!
+      end module crystal
+
