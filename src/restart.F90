@@ -192,6 +192,7 @@ subroutine restart_load(dir, st, m, ierr, iter, nvprev, vprev)
   endif
 
   if(any(.not.filled)) then
+     call fill()
      ierr = -1
   endif
 
@@ -201,7 +202,7 @@ subroutine restart_load(dir, st, m, ierr, iter, nvprev, vprev)
 
   contains
 
-  subroutine fill ! Put random function in orbitals that could not be read.
+  subroutine fill() ! Put random function in orbitals that could not be read.
      do ik = 1, st%d%nik
         do ist = 1, st%nst
            do idim = 1, st%d%dim
@@ -212,7 +213,7 @@ subroutine restart_load(dir, st, m, ierr, iter, nvprev, vprev)
         enddo
      enddo
   end subroutine fill
-  logical function index_is_wrong ! .true. if the index (idim, ist, ik) is not present in st structure...
+  logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
     if(idim > st%d%dim .or. idim < 1 .or.   &
        ist  > st%nst   .or. ist  < 1 .or.   &
        ik   > st%d%nik .or. ik   < 1) then
