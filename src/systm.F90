@@ -41,6 +41,7 @@ contains
     type(system_type), intent(out) :: s
 
     FLOAT :: def_h, def_rsize
+    logical :: filter
 
     call push_sub('system_init')
     
@@ -56,6 +57,11 @@ contains
     call f_der_build(s%f_der)
 
     call mesh_write_info(s%m, stdout)
+
+    ! do we want to filter out the external potentials, or not.
+    call loct_parse_logical("FilterPotentials", .false., filter)
+    if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%m))
+    call geometry_filter(s%geo, mesh_gcutoff(s%m))
     
     ! initialize the other stuff
     allocate(s%st)

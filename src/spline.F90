@@ -644,7 +644,7 @@ contains
 
     if(present(fs)) then
       call loct_spline_init(splw)
-      call loct_spline_3dft(spl, splw, CNST(2.0)*fs(1))
+      call loct_spline_besselft(spl, splw, l, CNST(2.0)*fs(1))
       call loct_spline_cut(splw, fs(1), fs(2))
       call loct_spline_besselft(splw, spl, l)
       call loct_spline_end(splw)

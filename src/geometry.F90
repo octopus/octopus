@@ -175,6 +175,18 @@ subroutine geometry_init_xyz(geo)
 
 end subroutine geometry_init_xyz
 
+subroutine geometry_filter(geo, gmax)
+  type(geometry_type), intent(inout) :: geo
+  FLOAT, intent(in) :: gmax
+
+  integer :: i
+
+  do i = 1, geo%nspecies
+     if(.not.geo%specie(i)%local) call specie_filter(geo%specie(i), gmax)
+  enddo
+
+end subroutine geometry_filter
+
 subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   type(geometry_type), intent(inout) :: geo
   FLOAT, optional, intent(out)   :: val_charge_ ! the valence charge
@@ -262,7 +274,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
     end do
     val_charge = val_charge - geo%atom(i)%spec%Z_val
   end do
-  
+
   ! find out if we need non-local core corrections
   geo%nlcc = .false.
   geo%nlpp = .false.

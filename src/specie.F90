@@ -63,6 +63,16 @@ end type specie_type
 
 contains
 
+  subroutine specie_filter(s, gmax)
+    type(specie_type),     intent(inout) :: s
+    FLOAT, intent(in) :: gmax
+    call push_sub('specie_cutoff')
+    call ps_filter(s%ps, gmax)
+    ! This is for debugging. It should not be here, though.
+    !if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
+    call pop_sub(); return
+  end subroutine specie_filter
+
   ! ---------------------------------------------------------
   subroutine specie_init(s, location, blk, line, ispin)
     type(specie_type),     intent(inout) :: s
@@ -245,11 +255,13 @@ contains
       end if
       
     case(SPEC_PS_TM2, SPEC_PS_HGH)
-      if(r >= r_small) then
-        l = (loct_splint(s%ps%vlocal,  r) - s%Z_val)/r
-      else
-        l = s%ps%Vlocal_origin
-      end if
+!!$      if(r >= r_small) then
+!!$        l = (loct_splint(s%ps%vlocal,  r) - s%Z_val)/r
+!!$        l = loct_splint(s%ps%vl, r)
+!!$      else
+!!$        l = s%ps%Vlocal_origin
+!!$      end if
+        l = loct_splint(s%ps%vl, r)
     end select
 
   end function specie_get_local

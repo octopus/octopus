@@ -30,7 +30,7 @@ use hgh
 implicit none
 
 private
-public :: ps_type, ps_init, ps_debug, ps_end
+public :: ps_type, ps_init, ps_filter, ps_debug, ps_end
 
 integer, parameter, public :: &
    PS_TM2 = 100, &
@@ -48,6 +48,7 @@ type ps_type
   type(loct_spline_type), pointer :: so_dkb(:, :)
   type(loct_spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
   type(loct_spline_type) :: vlocal    ! local part
+  type(loct_spline_type) :: vl        ! local part (once again)
   type(loct_spline_type) :: vlocal_f  ! localized part of local potential 
                                       ! in Fourier space (for periodic)
   type(loct_spline_type) :: dvlocal   ! derivative of the local part
@@ -164,22 +165,12 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%so_dknrm(0:ps%l_max) = M_ZERO
   endif
 
-  do i = 0, ps%L_max
-     do j = 1, ps%kbc
-        call loct_spline_init(ps%kb(i, j))
-        call loct_spline_init(ps%dkb(i, j))
-        if(ps%so_l_max >= 0) call loct_spline_init(ps%so_kb(i, j))
-        if(ps%so_l_max >= 0) call loct_spline_init(ps%so_dkb(i, j))
-     enddo
-  enddo
-
-  do i = 1, ps%conf%p
-     do is = 1, ps%ispin
-        call loct_spline_init(ps%ur(i, is))
-     enddo
-  enddo
-
+  call loct_spline_init(ps%kb)
+  call loct_spline_init(ps%dkb)
+  if(ps%so_l_max >= 0) call loct_spline_init(ps%so_kb)
+  if(ps%so_l_max >= 0) call loct_spline_init(ps%so_dkb)
   call loct_spline_init(ps%vlocal)
+  call loct_spline_init(ps%vl)
   call loct_spline_init(ps%dvlocal)
   call loct_spline_init(ps%core)
   if (conf%periodic_dim > 0) then
@@ -198,6 +189,48 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 
   call pop_sub()
 end subroutine ps_init
+
+subroutine ps_filter(ps, gmax)
+  type(ps_type), intent(inout) :: ps
+  FLOAT, intent(in) :: gmax
+  FLOAT, parameter :: alpha = CNST(2.0)
+  integer :: i, l, k
+  type(loct_spline_type) :: vloc
+  FLOAT :: r
+  FLOAT, allocatable :: y(:)
+
+  call push_sub('ps_filter')
+
+  ! Filter the local part.
+  call loct_spline_init(vloc)
+  allocate(y(ps%g%nrval))
+  y(1) = loct_splint(ps%vl, CNST(0.0)) + ps%z_val*(M_TWO/sqrt(M_PI))*alpha
+  do i = 2, ps%g%nrval
+     r = ps%g%rofi(i)
+     y(i) = loct_splint(ps%vl, r) + ps%z_val*loct_erf(alpha*r)/r
+  enddo
+  call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, vloc)
+  call loct_spline_filter(vloc, fs = (/ CNST(0.75)*gmax, CNST(18.0) /))
+  call loct_spline_end(ps%vl)
+  y(1) = loct_splint(vloc, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*alpha
+  do i = 2, ps%g%nrval
+     r = ps%g%rofi(i)
+     y(i) = loct_splint(vloc, r) - ps%z_val*loct_erf(alpha*r)/r
+  enddo
+
+  call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, ps%vl)
+
+  do l = 0, ps%l_max
+     do k = 1, ps%kbc
+        call loct_spline_filter(ps%kb(l, k), l, fs = (/ CNST(0.75)*gmax, CNST(18.0) /), &
+                                                rs = (/ CNST(2.5), CNST(0.4) /))
+     enddo
+  enddo
+
+  call loct_spline_end(vloc)
+  deallocate(y)
+  call pop_sub(); return
+end subroutine ps_filter
 
 subroutine ps_debug(ps)
   type(ps_type), intent(IN) :: ps
@@ -306,9 +339,9 @@ subroutine ps_debug(ps)
 
   ! Closes files and exits
   call io_close(local_unit); call io_close(dlocal_unit); call io_close(localw_unit)
-  call io_close(nl_unit)   ; call io_close(dnl_unit)   ; call io_assign(nlw_unit)
-  call io_assign(so_unit)   ; call io_assign(dso_unit)   ; call io_assign(sow_unit)
-  call io_assign(info_unit) ;  call io_assign(wave_unit)
+  call io_close(nl_unit)   ; call io_close(dnl_unit)   ; call io_close(nlw_unit)
+  call io_close(so_unit)   ; call io_close(dso_unit)   ; call io_close(sow_unit)
+  call io_close(info_unit) ;  call io_close(wave_unit)
   call pop_sub(); return
 end subroutine ps_debug
 
@@ -321,33 +354,17 @@ subroutine ps_end(ps)
 
   if(.not. associated(ps%kb)) return
 
-!!$  do i = 0, ps%L_max
-!!$    do j = 1, ps%kbc
-!!$      call loct_spline_end(ps%kb(i, j))
-!!$      call loct_spline_end(ps%dkb(i, j))
-!!$    enddo
-!!$  end do
   call loct_spline_end(ps%kb)
   call loct_spline_end(ps%dkb)
-!!$  do i = 1, ps%conf%p
-!!$    do is = 1, ps%ispin
-!!$      call loct_spline_end(ps%Ur(i, is))
-!!$    enddo
-!!$  enddo
   call loct_spline_end(ps%ur)
   if(ps%so_l_max>=0) then
-!!$  do i = 0, ps%so_L_max
-!!$    do j = 1, ps%kbc
-!!$      call loct_spline_end(ps%so_kb(i, j))
-!!$      call loct_spline_end(ps%so_dkb(i, j))
-!!$    end do
-!!$  end do
      call loct_spline_end(ps%so_kb)
      call loct_spline_end(ps%so_dkb)
   endif
 
   call loct_spline_end(ps%vlocal)
   call loct_spline_end(ps%dvlocal)
+  call loct_spline_end(ps%vl)
   call loct_spline_end(ps%core)  
   if (conf%periodic_dim > 0) then
     call loct_spline_end(ps%vlocal_f)
@@ -414,7 +431,8 @@ subroutine tm_load(ps, pstm)
   end if
 
   ! Increasing radius a little, just in case.
-  ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * CNST(1.1)
+  ! I have hard-coded a larger increase of the cutoff for the filtering.
+  ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * CNST(1.5)
 
   ! now we fit the splines
   call get_splines_tm(pstm, ps)
@@ -486,6 +504,9 @@ subroutine get_splines_tm(psf, ps)
   ! and the derivative now
   call derivate_in_log_grid(psf%g, hato, derhato)
   call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
+
+  hato = psf%vlocal/M_TWO
+  call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vl)
 
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
