@@ -1,7 +1,7 @@
 SystemName = "C6H6"
 Units = "eVA"
 
-CalculationMode = gs_start
+CalculationMode = gs
 
 BoxShape = sphere
 radius   = 6
