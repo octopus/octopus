@@ -125,9 +125,8 @@ subroutine lcao_wf(sys, h)
 
   integer :: i, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
-  real(r8), allocatable :: hamilt(:,:), s(:,:), hpsi(:,:)
-  real(r8), allocatable, target :: psis(:,:,:)
-  real(r8), pointer :: psi1(:,:), psi2(:,:)
+  real(r8), allocatable :: hamilt(:,:), s(:,:)
+  real(r8), allocatable :: hpsi(:,:), psis(:,:,:), psi1(:,:), psi2(:,:)
 
   ! variables for dsyev (LAPACK)
   character(len=1) :: jobz, uplo
@@ -184,12 +183,11 @@ subroutine lcao_wf(sys, h)
         lm1_loop: do lm1 = -l1, l1
           d1_loop: do d1 = 1, sys%st%dim
             if(mode == 0) then
-              psi1 => psis(:,:, n1)
+              call dhpsi(h, sys, ik, psis(:,:,n1), hpsi)
             else
               call get_wf(i1, l1, lm1, d1, psi1)
+              call dhpsi(h, sys, ik, psi1, hpsi)
             end if
-
-            call dhpsi(h, sys, ik, psi1, hpsi)
             
             n2 = 1
             atoms2_loop: do i2 = 1, sys%natoms
@@ -197,13 +195,14 @@ subroutine lcao_wf(sys, h)
                 lm2_loop: do lm2 = -l2, l2
                   d2_loop: do d2 = 1, sys%st%dim
                     if(mode == 0) then
-                      psi2 => psis(:,:, n2)
+                      hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psis(1:,:,n2))
+                      s(n1, n2) = dstates_dotp(sys%m, sys%st%dim, psis(1:,:,n1), psis(1:,:,n2))
                     else
                       call get_wf(i2, l2, lm2, d2, psi2)
+                      hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
+                      s(n1, n2) = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
                     end if
                     
-                    hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
-                    s(n1, n2) = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
                     hamilt(n2, n1) = hamilt(n1, n2)
                     s(n2, n1) = s(n1, n2)
 
@@ -227,7 +226,25 @@ subroutine lcao_wf(sys, h)
         end do lm1_loop
       end do l1_loop
     end do atoms1_loop
-    
+
+!!$    ! For debugging, print out the hamiltonian and overlap matrixes...
+!!$    write(*,'(a)') '  LCAO debugging:'
+!!$    write(*,'(a)') '    Hamiltonian matrix:'
+!!$    do n1=1, norbs
+!!$       do n2=1, norbs
+!!$          write(*,'(4x,f12.6)', advance='no') hamilt(n1,n2)/units_out%energy%factor
+!!$       enddo
+!!$       write(*,*)
+!!$    enddo
+!!$    write(*,'(a)') '    Overlap matrix:'
+!!$    do n1=1, norbs
+!!$       do n2=1, norbs
+!!$          write(*,'(4x,f12.6)', advance='no') s(n1,n2)
+!!$       enddo
+!!$       write(*,*)
+!!$    enddo
+!!$    ! End of debugging
+
     ! Setting variables for dsyev
     jobz = 'v'
     uplo = 'u'
@@ -249,15 +266,18 @@ subroutine lcao_wf(sys, h)
         do lm1 = -l1, l1
           do d1 = 1, sys%st%dim
             if(mode == 0) then
-              psi1 => psis(:,:, n1)
+              do n2 = 1, sys%st%nst
+                 sys%st%R_FUNC(psi) (:,:, n2, ik) = sys%st%R_FUNC(psi) (:,:, n2, ik) + &
+                   hamilt(n1, n2)*psis(:,:,n1)
+              enddo
             else
               call get_wf(i1, l1, lm1, d1, psi1)
+              do n2 = 1, sys%st%nst
+                 sys%st%R_FUNC(psi) (:,:, n2, ik) = sys%st%R_FUNC(psi) (:,:, n2, ik) + &
+                    hamilt(n1, n2)*psi1(:,:)
+              enddo
             end if
 
-            do n2 = 1, sys%st%nst
-              sys%st%R_FUNC(psi) (:,:, n2, ik) = sys%st%R_FUNC(psi) (:,:, n2, ik) + &
-                   hamilt(n1, n2)*psi1(:,:)
-            enddo
             n1 = n1 + 1
           end do
         end do
