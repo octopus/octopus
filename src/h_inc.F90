@@ -83,11 +83,10 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   R_TYPE, intent(IN) :: psi(m%np, st%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
   integer :: ik
+
   R_TYPE, allocatable :: grad(:,:)
   real(r8) :: k2
-
   integer :: idim, i, np, dim
-  R_TYPE :: d
 
   call push_sub('kinetic')
   np = m%np
@@ -98,7 +97,8 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
     allocate(grad(3, m%np))
     k2 = sum(st%kpoints(:, ik)**2)
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), grad=grad(:,:))
+      call R_FUNC(mf_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
+      call R_FUNC(mf_gradient)  (m, psi(:, idim), grad(:, :))
       do i = 1, m%np
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
              + M_TWO*M_zI*sum(st%kpoints(:, ik)*grad(:, i)) &
@@ -113,10 +113,10 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
 #endif
   
   else
-    d = R_TOTYPE(-M_HALF)
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), alpha=d, cutoff = h%cutoff )
+      call R_FUNC(mf_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
     end do
+    call R_FUNC(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi, 1)
   end if
 
 
@@ -437,7 +437,7 @@ subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
       call laser_vector_field(h%no_lasers, h%lasers, t, f)
       allocate(grad(3, m%np))
       do idim = 1, st%dim
-        call R_FUNC(mesh_derivatives)(m, psi(:, idim), grad=grad)
+        call R_FUNC(mf_gradient)(m, psi(:, idim), grad)
         do k = 1, m%np
           hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
                sum(f**2)/2._r8 * psi(k, idim)
@@ -484,7 +484,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
     call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
     h%epot = M_ZERO
     do is = 1, st%spin_channels
-       h%epot = h%epot - M_HALF*dmesh_dotp(m, st%rho(:, is), h%vhartree)
+       h%epot = h%epot - M_HALF*dmf_dotp(m, st%rho(:, is), h%vhartree)
     enddo
 
     call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec, &
@@ -492,15 +492,15 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
 
     select case(h%ispin)
       case(UNPOLARIZED)
-        h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
+        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1))
       case(SPIN_POLARIZED)
-        h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) - &
-                        dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
+        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1)) &
+                        - dmf_dotp(m, st%rho(:, 2), h%vxc(:, 2))
       case(SPINORS)
-        h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) - &
-                        dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
-        h%epot = h%epot - M_TWO*zmesh_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
-                                            h%vxc(:, 3) - M_zI*h%vxc(:, 4))
+        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1)) &
+                        - dmf_dotp(m, st%rho(:, 2), h%vxc(:, 2))
+        h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
+                                             h%vxc(:, 3) - M_zI* h%vxc(:, 4))
     end select
   endif
 

@@ -138,7 +138,7 @@ subroutine mix_dens(smix, iter, st, m, dist)
   allocate(dummy(m%np))
   do is = 1, st%nspin
     dummy = (st%rho(:,is) - rhoout(:,is))**2
-    dist = dist + dmesh_integrate(m, dummy)
+    dist = dist + dmf_integrate(m, dummy)
   end do
   dist = sqrt(dist)
   deallocate(dummy)

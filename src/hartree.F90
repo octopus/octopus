@@ -20,7 +20,7 @@
 module hartree
 use global
 use oct_parser
-use mesh
+use mesh_function
 use math
 #ifdef HAVE_FFT
 use fft

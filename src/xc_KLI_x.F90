@@ -42,7 +42,7 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
       vx(:, 1) = -pot(:)
     elseif(occ(1, 1) == 2.0_r8) then
       vx(:, 1) = -0.5_r8*pot(:)
-      Ex = 0.5_r8*dmesh_dotp(m, vx(:, 1), rho(:, 1))
+      Ex = 0.5_r8*dmf_dotp(m, vx(:, 1), rho(:, 1))
     else
       write(*,*) 'Warning in kli_x', occ(1, 1)
     endif

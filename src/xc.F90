@@ -20,7 +20,7 @@
 module xc
 use oct_parser
 use math
-use mesh
+use mesh_function
 use hartree
 use states
 use vxc

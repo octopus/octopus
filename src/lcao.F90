@@ -91,7 +91,7 @@ subroutine lcao_dens(sys, nspin, rho)
   ! we now renormalize the density (necessary if we have a charged system)
   r = M_ZERO
   do is = 1, sys%st%spin_channels
-     r = r + dmesh_integrate(sys%m, rho(:, is))
+     r = r + dmf_integrate(sys%m, rho(:, is))
   end do
   write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
   call write_info(1)
@@ -99,7 +99,7 @@ subroutine lcao_dens(sys, nspin, rho)
   rho = r*rho
   r = M_ZERO
   do is = 1, sys%st%spin_channels
-     r = r + dmesh_integrate(sys%m, rho(:, is))
+     r = r + dmf_integrate(sys%m, rho(:, is))
   end do
   write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
   call write_info(1)

@@ -19,11 +19,9 @@
 
 module states
 use global
-use liboct
-use io
+use mesh_function
 use math
 use output
-use mesh
 
 implicit none
 
@@ -377,8 +375,8 @@ subroutine states_fermi(st, m)
      if(st%ispin == 3) then
        do ik = 1, st%nik
          do ie = 1, st%nst
-            st%mag(ie, ik, 1) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 1) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
          enddo
        enddo
      endif
@@ -407,8 +405,8 @@ subroutine states_fermi(st, m)
      if(st%ispin == 3) then
        do ik = 1, st%nik
          do ie = 1, st%nst
-            st%mag(ie, ik, 1) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 1) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
          enddo
        enddo
      endif
@@ -462,8 +460,8 @@ subroutine states_fermi(st, m)
   if(st%ispin == 3) then
     do ik = 1, st%nik
        do ie = 1, st%nst
-          st%mag(ie, ik, 1) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-          st%mag(ie, ik, 2) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+          st%mag(ie, ik, 1) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+          st%mag(ie, ik, 2) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
        enddo
     enddo
   endif
@@ -705,7 +703,7 @@ subroutine calc_current(m, st, j)
   
   do ik = 1, st%nik, sp
     do p  = st%st_start, st%st_end
-      call zmesh_derivatives(m, st%zpsi(:, 1, p, ik), grad=aux(:,:))
+      call zmf_gradient(m, st%zpsi(:, 1, p, ik), aux)
       
       ! spin-up density
       do k = 1, m%np
@@ -715,7 +713,7 @@ subroutine calc_current(m, st, j)
         
       ! spin-down density
       if(st%ispin == 2) then
-        call zmesh_derivatives(m, st%zpsi(:, 1, p, ik+1), grad=aux(:,:))
+        call zmf_gradient(m, st%zpsi(:, 1, p, ik+1), aux)
 
         do k = 1, m%np
           j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%kweights(ik+1)*st%occ(p, ik+1) &
@@ -724,7 +722,7 @@ subroutine calc_current(m, st, j)
 
         ! WARNING: the next lines DO NOT work properly
       else if(st%ispin == 3) then ! off-diagonal densities
-        call zmesh_derivatives(m, st%zpsi(:, 2, p, ik), grad=aux(:,:))
+        call zmf_gradient(m, st%zpsi(:, 2, p, ik), aux)
 
         do k = 1, m%np
           j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%kweights(ik)*st%occ(p, ik) &

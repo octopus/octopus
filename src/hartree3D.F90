@@ -158,25 +158,25 @@ subroutine hartree_cg(h, m, pot, dist)
   end do
   deallocate(rholm)
 
-  call dmesh_derivatives(h%m_aux, wk, lapl=lwk)
+  call dmf_laplacian(h%m_aux, wk, lwk)
 
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed
 
   pk = zk
-  s1 = dmesh_nrm2(m, zk)**2
+  s1 = dmf_nrm2(m, zk)**2
 
   ! now we start the conjugate gradient cycles
   iter = 0
   do 
     iter = iter + 1
-    call dmesh_derivatives(m, pk, lapl=tk)
+    call dmf_laplacian(m, pk, tk)
 
-    s2 = dmesh_dotp(m, zk, tk)
+    s2 = dmf_dotp(m, zk, tk)
     ak = s1/s2
     pot = pot + ak*pk
     zk = zk - ak*tk
-    s3 = dmesh_nrm2(m, zk)**2
+    s3 = dmf_nrm2(m, zk)**2
 
     if(iter >= 400 .or. abs(s3) < 1.0e-5_r8) exit
 

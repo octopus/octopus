@@ -85,7 +85,7 @@
           call zvnlpsi(ik, sys%m, sys%st, sys, &
                xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
           do idim = 1, sys%st%dim
-            x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
+            x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmf_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
                  vnl_xzpsi(1:sys%m%np, idim) )
           end do
         end do
@@ -103,7 +103,7 @@
                xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
           do idim = 1, sys%st%dim
             x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
-                  zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
+                  zmf_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
                   vnl_xzpsi(1:sys%m%np, idim) )
           end do
         end do
@@ -162,7 +162,7 @@
 !!$                                  alpha = -M_zI )
 !!$             do j = 1, 3
 !!$                x(j) = x(j) + &
-!!$                 sys%st%occ(ist,ik)*zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim,ist,ik)), &
+!!$                 sys%st%occ(ist,ik)*zmf_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim,ist,ik)), &
 !!$                                               hzpsi(j,1:sys%m%np) )
 !!$             enddo
 !!$          enddo
@@ -186,7 +186,7 @@
 !!$               call zvnlpsi( sys, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$               p = (0.0_r8, 0.0_r8)
 !!$               do idim = 1, sys%st%dim
-!!$                  p = p + sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
+!!$                  p = p + sys%st%occ(ist, ik)*zmf_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
 !!$                                              vnl_xzpsi(1:sys%m%np, idim) )
 !!$               enddo
 !!$               x(j) = x(j) - 2.0_r8*aimag(p)
@@ -249,7 +249,7 @@
 !!$            do j = 1, 3
 !!$               p = (0.0_r8, 0.0_r8)
 !!$               do idim = 1, sys%st%dim
-!!$                  p = p + sys%st%occ(ist, ik) * zmesh_dotp(sys%m, hzpsi(:, idim), xzpsi(1:, idim, j))
+!!$                  p = p + sys%st%occ(ist, ik) * zmf_dotp(sys%m, hzpsi(:, idim), xzpsi(1:, idim, j))
 !!$               enddo
 !!$               x(j) = x(j) - 2.0_r8*aimag(p)
 !!$            enddo
@@ -317,7 +317,7 @@
 !!$
 !!$            do j = 1, 3
 !!$               do idim = 1, sys%st%dim
-!!$                  x(j) = x(j) - 2.0_r8*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, hhzpsi(1:, idim), xzpsi(1:, idim, j))
+!!$                  x(j) = x(j) - 2.0_r8*sys%st%occ(ist, ik)*zmf_dotp(sys%m, hhzpsi(1:, idim), xzpsi(1:, idim, j))
 !!$               enddo
 !!$            enddo
 !!$
@@ -331,7 +331,7 @@
 !!$
 !!$            do j = 1, 3
 !!$               do idim = 1, sys%st%dim
-!!$                  x(j) = x(j) + 2.0_r8*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, hzpsi(1:, idim), xzpsi(1:, idim, j))
+!!$                  x(j) = x(j) + 2.0_r8*sys%st%occ(ist, ik)*zmf_dotp(sys%m, hzpsi(1:, idim), xzpsi(1:, idim, j))
 !!$               enddo
 !!$            enddo
 !!$
@@ -384,7 +384,7 @@
 !!$            do j = 1, 3
 !!$               do idim = 1, sys%st%dim
 !!$                  call zmesh_derivatives (sys%m, sys%st%zpsi(:, idim, ist, ik), grad = hhzpsi, alpha = -M_zI)
-!!$                  x(j) = x(j) - 2*aimag( sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:,idim)), hhzpsi(j, 1:)) )
+!!$                  x(j) = x(j) - 2*aimag( sys%st%occ(ist, ik)*zmf_dotp(sys%m, R_CONJ(hzpsi(1:,idim)), hhzpsi(j, 1:)) )
 !!$               enddo
 !!$            enddo
 !!$
@@ -399,7 +399,7 @@
 !!$               vnl_xzpsi = (0.0_r8, 0.0_r8)
 !!$               call zvnlpsi( sys, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$               do idim = 1, sys%st%dim
-!!$                  x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
+!!$                  x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmf_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
 !!$                                                                   vnl_xzpsi(1:sys%m%np, idim) )
 !!$               enddo
 !!$            enddo
@@ -415,7 +415,7 @@
 !!$               vnl_xzpsi = (0.0_r8, 0.0_r8)
 !!$               call zvnlpsi( sys, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$               do idim = 1, sys%st%dim
-!!$                  x(j) = x(j) + 2*sys%st%occ(ist, ik)* zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
+!!$                  x(j) = x(j) + 2*sys%st%occ(ist, ik)* zmf_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
 !!$                                            vnl_xzpsi(1:sys%m%np, idim) )
 !!$               enddo
 !!$            enddo

@@ -8,13 +8,13 @@ EXTRA_PROGRAMS = octopus octopus-mpi \
 octopus_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
-	atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 xc.F90 \
+	atom.F90 mesh.F90 mf.F90 hartree.F90 out.F90 states.F90 xc.F90 \
 	systm.F90 lasers.F90 h.F90 \
 	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
 	geom_opt.F90 phonons.F90 pes.F90 td.F90 opt_control.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	real.F90 complex.F90 undef.F90 mesh.F90 mesh_inc.F90 mesh_create.F90\
+	real.F90 complex.F90 undef.F90 mf_inc.F90 mesh_inc.F90 mesh_create.F90\
 	fftw2.F90	fftw3.F90 \
 	hartree1D.F90 hartree2D.F90 hartree3D.F90 \
 	specie1D.F90 specie3D.F90\
@@ -52,19 +52,19 @@ phonon_spectrum_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 phonon_s
 phonon_spectrum_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 excitations_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 atomic.F90 vxc.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
-                      atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
+                      atom.F90 mesh.F90 mf.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       linear.F90 excitations.F90
 excitations_LDADD = $(octopus_LDADD)
 broad_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 broad.F90
 broad_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 choose_st_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
-                      atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
+                      atom.F90 mesh.F90 mf.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       choose_st.F90
 choose_st_LDADD = $(octopus_LDADD)
 make_st_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
-                      atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
+                      atom.F90 mesh.F90 mf.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       make_st.F90
 make_st_LDADD = $(octopus_LDADD)
 oct_centergeom_SOURCES = global.F90 io.F90 liboct_parser.F90 units.F90 atom.F90 centergeom.F90
@@ -102,6 +102,7 @@ config_F90.h: config.h
 
 # dependencies. Please update consistently
 mesh.o: mesh_inc.F90 mesh_create.F90
+mf.o: mf_inc.F90
 specie.o: specie1D.F90 specie3D.F90
 hartree.o: hartree1D.F90 hartree2D.F90 hartree3D.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90

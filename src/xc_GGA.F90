@@ -79,8 +79,8 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, &
     end select
   enddo
 
-  call dmesh_derivatives(m, rhoplus(:),  grad=grhoplus(:, :))
-  if(st%ispin > UNPOLARIZED) call dmesh_derivatives(m, rhominus(:), grad=grhominus(:, :))
+  call dmf_gradient(m, rhoplus, grhoplus)
+  if(st%ispin > UNPOLARIZED) call dmf_gradient(m, rhominus, grhominus)
   energy = M_ZERO
   lpot = M_ZERO
 
@@ -120,7 +120,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, &
   ! We now add substract the divergence of the functional derivative of fxc with respect to
   ! the gradient of the density.
   do is = 1, st%spin_channels
-     call dmesh_divergence(m, vlocaldedgd(:,:,is), rhoplus(:))
+     call dmf_divergence(m, vlocaldedgd(:,:,is), rhoplus(:))
      call daxpy(m%np, -M_ONE, rhoplus, 1, lpot(1, is), 1)
   enddo
 
@@ -144,7 +144,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, &
   if(func == X_FUNC_GGA_LB94) then
     energy = 0._r8
     do is = 1, st%nspin
-      call dmesh_derivatives(m, pot(:, is), grad=grhoplus)
+      call dmf_gradient(m, pot(:, is), grhoplus)
       do i = 1, m%np
         energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*grhoplus(:, i))
       end do

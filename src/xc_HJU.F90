@@ -49,7 +49,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, nlcc, type, Vx, ex)
         end if
         if(m%Lxyz(3, k) == 0) st%rho(k, 1) = 0.5_r8*rho(k, is)
       end do
-      N_alpha = dmesh_integrate(m, st%rho(:, 1))
+      N_alpha = dmf_integrate(m, st%rho(:, 1))
 
       ! first the lda term
       Vx2 = 0.0_r8; Ex2 = 0.0_r8

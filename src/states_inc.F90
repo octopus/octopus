@@ -399,7 +399,7 @@ contains
       ! first term
       allocate(r(m%np), gr(3, m%np))
       r(1:m%np) = st%rho(1:m%np, is)/s
-      call dmesh_derivatives(m, r(:), grad=gr)
+      call dmf_gradient(m, r, gr)
       do i = 1, m%np
         if(r(i) >= dmin) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
@@ -415,7 +415,7 @@ contains
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(:, idim, ist, ik), grad=gpsi(:,:))
+            call R_FUNC(mf_gradient) (m, st%R_FUNC(psi)(:, idim, ist, ik), gpsi)
             do i = 1, m%np
               if(r(i) >= dmin) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
@@ -586,11 +586,35 @@ subroutine R_FUNC(states_calculate_angular)(m, st, angular)
      do j = 1, st%nst
         do idim = 1, st%dim
            call R_FUNC(mesh_angular_momentum)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi)
-           angular(1) = angular(1) + st%occ(j, ik)*R_FUNC(mesh_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(1, :))
-           angular(2) = angular(2) + st%occ(j, ik)*R_FUNC(mesh_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(2, :))
-           angular(3) = angular(3) + st%occ(j, ik)*R_FUNC(mesh_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(3, :))
+           angular(1) = angular(1) + st%occ(j, ik)*R_FUNC(mf_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(1, :))
+           angular(2) = angular(2) + st%occ(j, ik)*R_FUNC(mf_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(2, :))
+           angular(3) = angular(3) + st%occ(j, ik)*R_FUNC(mf_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(3, :))
         enddo
      enddo
   enddo
   deallocate(lpsi)
 end subroutine R_FUNC(states_calculate_angular)
+
+subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(in)  :: f(m%np)
+  R_TYPE, intent(out) :: lf(3, m%np)
+
+  R_TYPE, allocatable :: gf(:, :)
+  real(r8) :: x(3)
+  integer :: i
+
+  allocate(gf(3, m%np))
+  call R_FUNC(mf_gradient)(m, f, grad = gf)
+
+  do i = 1, m%np
+     call mesh_xyz(m, i, x)
+     lf(1, i) = (x(2)*gf(3, i)-x(3)*gf(2, i))
+     lf(2, i) = (x(3)*gf(1, i)-x(1)*gf(3, i))
+     lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
+  enddo
+#if defined(R_TCOMPLEX)
+  call zscal(3*m%np, -M_zI, lf, 1)
+#endif
+  deallocate(gf)
+end subroutine R_FUNC(mesh_angular_momentum)
