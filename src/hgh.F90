@@ -550,24 +550,25 @@ subroutine solve_schroedinger(psp)
   call pop_sub()
 end subroutine solve_schroedinger
 
-subroutine hgh_debug(psp)
+subroutine hgh_debug(psp, dir)
   type(hgh_type), intent(in) :: psp
+  character(len=*), intent(in) :: dir
 
   integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
-  character(len=30) :: dir
+  character(len=256) :: dirname
 
   call push_sub('hgh_debug')
 
   ! Opens files.
-  dir = 'pseudos/' // psp%atom_name // '.hgh'
+  dirname = 'dir'//'/hgh.'//trim(psp%atom_name)
   call loct_mkdir(trim(dir))
   call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
-  open(hgh_unit, file = trim(dir)//'/hgh')
-  open(loc_unit, file = trim(dir)//'/local')
-  open(dat_unit, file = trim(dir)//'/info')
-  open(kbp_unit, file = trim(dir)//'/nonlocal')
-  open(wav_unit, file = trim(dir)//'/wave')
+  open(hgh_unit, file = trim(dirname)//'/hgh')
+  open(loc_unit, file = trim(dirname)//'/local')
+  open(dat_unit, file = trim(dirname)//'/info')
+  open(kbp_unit, file = trim(dirname)//'/nonlocal')
+  open(wav_unit, file = trim(dirname)//'/wave')
 
   ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
   write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)

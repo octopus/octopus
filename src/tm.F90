@@ -751,25 +751,26 @@ subroutine get_local(psf, l_loc, rcore)
   call pop_sub()
 end subroutine get_local
 
-subroutine tm_debug(pstm)
+subroutine tm_debug(pstm, dir)
   type(tm_type), intent(IN) :: pstm
+  character(len=*), intent(in) :: dir
 
   integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
-  character(len=30) :: dir
+  character(len=256) :: dirname
 
   call push_sub('tm_debug')
 
   ! Opens files.
-  dir = 'pseudos/'//trim(pstm%namatm)//'.tm2'
-  call loct_mkdir(trim(dir))
+  dirname = 'dir'//'/tm2.'//trim(pstm%namatm)
+  call loct_mkdir(trim(dirname))
   call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
   call io_assign(so_unit) ; call io_assign(so_unit)
-  open(loc_unit, file = trim(dir)//'/local')
-  open(dat_unit, file = trim(dir)//'/info')
-  open(kbp_unit, file = trim(dir)//'/nonlocal')
-  open(wav_unit, file = trim(dir)//'/wave')
-  open(so_unit,  file = trim(dir)//'/so')
+  open(loc_unit, file = trim(dirname)//'/local')
+  open(dat_unit, file = trim(dirname)//'/info')
+  open(kbp_unit, file = trim(dirname)//'/nonlocal')
+  open(wav_unit, file = trim(dirname)//'/wave')
+  open(so_unit,  file = trim(dirname)//'/so')
 
   ! First of all, writes down the info.
   write(dat_unit,'(a,/)') pstm%namatm

@@ -112,6 +112,7 @@ contains
     FLOAT, intent(in) :: gmax
     call push_sub('specie_cutoff')
     call ps_filter(s%ps, gmax, s%alpha, s%beta, s%rcut, s%beta2)
+    call ps_getradius(s%ps)
     call ps_derivatives(s%ps)
     call pop_sub(); return
   end subroutine specie_filter
@@ -361,6 +362,7 @@ contains
     if(.not.s%local) then
       allocate(s%ps) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
+      call ps_getradius(s%ps)
       call ps_derivatives(s%ps)
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )

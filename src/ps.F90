@@ -30,7 +30,7 @@ use hgh
 implicit none
 
 private
-public :: ps_type, ps_init, ps_filter, ps_derivatives, ps_debug, ps_end
+public :: ps_type, ps_init, ps_filter, ps_getradius, ps_derivatives, ps_debug, ps_end
 
 integer, parameter, public :: &
    PS_TM2 = 100, &
@@ -93,9 +93,6 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 
   call push_sub('ps_init')
 
-  ! Makes the directory for debugging.
-  if(conf%verbose>999) call loct_mkdir('pseudos')
-
   ! Sets the flavour, label, and number of spin channels.
   ps%flavour = flavour
   ps%label   = label
@@ -127,7 +124,6 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     allocate(ps%g%rofi(ps%g%nrval),ps%g%drdi(ps%g%nrval))
     ps%g%rofi = pstm%g%rofi
     ps%g%drdi = pstm%g%drdi
-    if(conf%verbose > 999) call tm_debug(pstm)
 
   case(PS_HGH)
     call hgh_init(psp, trim(label), ispin)
@@ -144,7 +140,6 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     allocate(ps%g%rofi(ps%g%nrval),ps%g%drdi(ps%g%nrval))
     ps%g%rofi = psp%g%rofi
     ps%g%drdi = psp%g%drdi
-    if(conf%verbose > 999) call hgh_debug(psp)
 
   end select
 
@@ -209,9 +204,45 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   call pop_sub()
 end subroutine ps_init
 
+subroutine ps_getradius(ps)
+  type(ps_type), intent(inout) :: ps
+  call push_sub('ps_getradius')
+  integer :: l, j, i
+  FLOAT   :: r, dx, y
+  FLOAT, parameter :: threshold = CNST(1.0e-3)
+
+  ps%rc_max = CNST(0.0)
+  dx = CNST(0.01)
+
+  do l = 0, ps%l_max
+     do j = 1, ps%kbc
+        do i = 2000, 1, -1
+           r = dx*(i-1)
+           y = loct_splint(ps%kb(l, j), r)
+           if(y > threshold) exit
+        enddo
+        ps%rc_max = max(ps%rc_max, r)        
+     enddo
+  end do
+  do l = 0, ps%so_l_max
+     do j = 1, ps%kbc
+        do i = 2000, 1, -1
+           r = dx*(i-1)
+           y = loct_splint(ps%so_kb(l, j), r)
+           if(y > threshold) exit
+        enddo
+        ps%rc_max = max(ps%rc_max, r)        
+     enddo
+  enddo
+
+  call pop_sub()
+end subroutine ps_getradius
+
 subroutine ps_derivatives(ps)
   type(ps_type), intent(inout) :: ps
   integer :: l, j
+  call push_sub('ps_derivatives')
+
   do l = 0, ps%l_max
      do j = 1, ps%kbc
         call loct_spline_der(ps%kb(l, j), ps%dkb(l, j))
@@ -223,6 +254,7 @@ subroutine ps_derivatives(ps)
      enddo
   enddo
   call loct_spline_der(ps%vl, ps%dvl)
+  call pop_sub()
 end subroutine ps_derivatives
 
 subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
