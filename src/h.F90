@@ -288,16 +288,16 @@ subroutine hamiltonian_output(h, m, dir, outp)
 
   u = units_out%energy%factor
   if(outp%what(output_potential)) then
-    call doutput_function(outp, dir, "v0", m, h%Vpsl, u)
+    call doutput_function(outp%how, dir, "v0", m, h%Vpsl, u)
 
     if(h%ep%classic_pot > 0) then
-      call doutput_function(outp, dir, "vc", m, h%ep%Vclassic, u)
+      call doutput_function(outp%how, dir, "vc", m, h%ep%Vclassic, u)
     end if
 
     if(.not.h%ip_app) then
       do is = 1, min(h%ispin, 2)
         write(fname, '(a,i1)') 'vhxc-', is
-        call doutput_function(outp, dir, fname, m, h%Vhxc(:, is), u)
+        call doutput_function(outp%how, dir, fname, m, h%Vhxc(:, is), u)
       end do
     end if
   end if

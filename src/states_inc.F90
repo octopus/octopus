@@ -360,7 +360,7 @@ subroutine X(states_output) (st, m, dir, outp)
     if(outp%what(output_density)) then
       do is = 1, st%nspin
         write(fname, '(a,i1)') 'density-', is
-        call doutput_function(outp, dir, fname, m, st%rho(:, is), u)
+        call doutput_function(outp%how, dir, fname, m, st%rho(:, is), u)
       end do
     end if
 #ifdef HAVE_MPI
@@ -374,7 +374,7 @@ subroutine X(states_output) (st, m, dir, outp)
         do ik = 1, st%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
-            call X(output_function) (outp, dir, fname, m, &
+            call X(output_function) (outp%how, dir, fname, m, &
                  st%X(psi) (1:, idim, ist, ik), sqrt(u))
           end do
         end do
@@ -389,7 +389,7 @@ subroutine X(states_output) (st, m, dir, outp)
         do ik = 1, st%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
-            call doutput_function (outp, dir, fname, m, &
+            call doutput_function (outp%how, dir, fname, m, &
                  abs(st%X(psi) (1:, idim, ist, ik))**2, sqrt(u))
           end do
         end do
@@ -468,7 +468,7 @@ contains
       deallocate(r)
       
       write(fname, '(a,i1)') 'elf-', is
-      call doutput_function(outp, dir, fname, m, c, 1._r8)
+      call doutput_function(outp%how, dir, fname, m, c, 1._r8)
       
     end do do_is
 #if defined(R_TCOMPLEX)

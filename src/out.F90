@@ -112,6 +112,20 @@ subroutine output_init(outp)
   call oct_parse_logical("OutputDuringSCF", .false., outp%duringscf)
 end subroutine output_init
 
+integer function output_fill_how(where) result(how)
+  character(len=*), intent(in) :: where
+  if(index(where, "AxisX").ne.0)  how = ior(how, output_axis_x)
+  if(index(where, "AxisY").ne.0)  how = ior(how, output_axis_y)
+  if(index(where, "AxisZ").ne.0)  how = ior(how, output_axis_z)
+  if(index(where, "PlaneX").ne.0) how = ior(how, output_plane_x)
+  if(index(where, "PlaneY").ne.0) how = ior(how, output_plane_y)
+  if(index(where, "PlaneZ").ne.0) how = ior(how, output_plane_z)
+  if(index(where, "DX").ne.0)     how = ior(how, output_dx)
+#if defined(HAVE_NETCDF)
+  if(index(where, "NETCDF").ne.0) how = ior(how, output_dx_cdf)
+#endif
+end function output_fill_how
+
 #include "undef.F90"
 #include "real.F90"
 #include "out_inc.F90"

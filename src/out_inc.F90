@@ -15,8 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine X(output_function) (outp, dir, fname, m, f, u)
-  type(output_type), intent(IN) :: outp
+subroutine X(output_function) (how, dir, fname, m, f, u)
+  integer, intent(in) :: how
   character(len=*), intent(IN) :: dir, fname
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
@@ -32,15 +32,15 @@ subroutine X(output_function) (outp, dir, fname, m, f, u)
   call X(cf_alloc_RS) (c)
   call X(mf2cf) (m, f, c)
 
-  if(iand(outp%how, output_axis_x) .ne.0) call axis_x()
-  if(iand(outp%how, output_axis_y) .ne.0) call axis_y()
-  if(iand(outp%how, output_axis_z) .ne.0) call axis_z()
-  if(iand(outp%how, output_plane_x).ne.0) call plane_x()
-  if(iand(outp%how, output_plane_y).ne.0) call plane_y()
-  if(iand(outp%how, output_plane_z).ne.0) call plane_z()
-  if(iand(outp%how, output_dx)     .ne.0) call dx()
+  if(iand(how, output_axis_x) .ne.0) call axis_x()
+  if(iand(how, output_axis_y) .ne.0) call axis_y()
+  if(iand(how, output_axis_z) .ne.0) call axis_z()
+  if(iand(how, output_plane_x).ne.0) call plane_x()
+  if(iand(how, output_plane_y).ne.0) call plane_y()
+  if(iand(how, output_plane_z).ne.0) call plane_z()
+  if(iand(how, output_dx)     .ne.0) call dx()
 #if defined(HAVE_NETCDF) && defined(R_TREAL)
-  if(iand(outp%how, output_dx_cdf) .ne.0) call dx_cdf()
+  if(iand(how, output_dx_cdf) .ne.0) call dx_cdf()
 #endif
 
   call X(cf_free) (c)
