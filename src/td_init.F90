@@ -120,9 +120,6 @@ subroutine td_init(td, sys, m, st)
   
   call td_init_states()
 
-  ! get name of continuation file
-  write(td%filename, '(a,i3.3)') "restart.td.", mpiv%node
-
 contains
   subroutine td_init_lasers()
     call laser_init(m, td%no_lasers, td%lasers)

@@ -168,7 +168,7 @@ subroutine scf_run(scf, sys, h)
 
   ! output final information
   call scf_write_static("static", "info")
-  call states_output(sys%st, sys%m, "static", sys%outp)
+  call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
   if(sys%outp%what(output_geometry)) call system_write_xyz("static", "geometry", sys)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
 

@@ -73,7 +73,6 @@ type td_type
 #endif
 
   real(r8), pointer :: v_old1(:,:), v_old2(:,:)
-  character(len=100) :: filename ! name of the continuation file
 end type td_type
 
   integer, parameter :: STATIC_IONS = 0,    &
@@ -93,7 +92,7 @@ subroutine td_run(td, u_st, sys, h)
                            x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:), tacc(:, :)
   real(r8) :: etime
   complex(r4), allocatable :: projections(:,:,:,:)
-  character(len=100) :: proj_filename
+  character(len=100) :: filename
 
   sub_name = 'systm_td'; call push_sub()
 
@@ -111,8 +110,6 @@ subroutine td_run(td, u_st, sys, h)
 
   ! occupational analysis stuff
   if(td%occ_analysis) then
-    write(proj_filename, '(a,a,i3.3,a)') trim(sys%sysname), &
-         '.', mpiv%node, '.proj'
     allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, td%save_iter))
   end if
 
@@ -257,10 +254,18 @@ subroutine td_run(td, u_st, sys, h)
       ii = 1
 
       ! first resume file
-      call zstates_write_restart(trim(td%filename), sys%m, sys%st, &
+      write(filename, '(a,i3.3)') "restart.td.", mpiv%node
+      call zstates_write_restart(trim(filename), sys%m, sys%st, &
            iter=i, v1=td%v_old1, v2=td%v_old2)
 
       if(mpiv%node == 0) call td_write_data()
+
+      ! now write down the rest
+      write(filename, '(a,i7.7)') "td.", i  ! name of directory
+      call zstates_output(sys%st, sys%m, filename, sys%outp)
+      if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
+      call hamiltonian_output(h, sys%m, filename, sys%outp)
+      
     end if save
 
   end do
@@ -294,12 +299,15 @@ contains
       end do
     end if
 
+    ! create general subdir
+    call oct_mkdir("td.general")
+
     ! output static dipole (iter 0)
     allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
          dipole, multipole)
     call io_assign(iunit)
-    open(iunit, status='unknown', file=trim(sys%sysname)//'.mult')
+    open(iunit, status='unknown', file='td.general/multipoles')
     call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
     call io_close(iunit)
     deallocate(dipole, multipole)
@@ -307,7 +315,7 @@ contains
     ! output laser
     if(td%output_laser) then
       call io_assign(iunit)
-      open(unit=iunit, file='laser.out', status='unknown')
+      open(unit=iunit, file='td.general/laser', status='unknown')
       call td_write_laser(iunit, 0, 0._r8, .true.)
       call io_close(iunit)
     end if
@@ -315,7 +323,8 @@ contains
     ! output occupational analysis data
     if(td%occ_analysis) then
       call io_assign(iunit)
-      open(iunit, form='unformatted', status='unknown', file=proj_filename)
+      write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
+      open(iunit, form='unformatted', status='unknown', file=filename)
       write(iunit) sys%st%nik, sys%st%st_start, sys%st%st_end, u_st%nst
       call io_close(iunit)
     end if
@@ -323,7 +332,7 @@ contains
     ! output positions, velocities, forces...
     if(td%move_ions > 0) then
        call io_assign(iunit)
-       open(iunit, file=trim(sys%sysname)//'.nbo')
+       open(iunit, file='td.general/coordinates')
        allocate(pos(sys%natoms, 3), vel(sys%natoms, 3), for(sys%natoms, 3))
        do j=1, sys%natoms
           pos(j, 1:3) = sys%atom(j)%x(1:3)
@@ -338,7 +347,7 @@ contains
     ! output harmonic spectrum
     if(td%harmonic_spectrum) then
        call io_assign(iunit)
-       open(iunit, file=trim(sys%sysname)//'.acc')
+       open(iunit, file='td.general/acceleration')
        call td_calc_tacc(t_acc, 0.0_r8)
        call td_write_acc(iunit, 0, 0.0_r8, t_acc, header=.true.)
        call io_close(iunit)
@@ -351,7 +360,7 @@ contains
 
     ! output multipoles
     call io_assign(iunit)
-    open(iunit, position='append', file=trim(sys%sysname)//".mult")
+    open(iunit, position='append', file="td.general/multipoles")
     do j = 1, td%save_iter
       jj = i - td%save_iter + j
       call td_write_multipole(iunit, jj, jj*td%dt, &
@@ -359,10 +368,36 @@ contains
     end do
     call io_close(iunit)
 
+    ! output the laser field
+    if(td%output_laser) then
+      call io_assign(iunit)
+      open(iunit, position='append', file='td.general/laser')
+      do j = 1, td%save_iter
+        jj = i - td%save_iter + j
+        call td_write_laser(iunit, jj, jj*td%dt, .false.)
+      end do
+      call io_close(iunit)
+    end if
+
+    ! and now we should output the projections
+    if(td%occ_analysis) then
+      call io_assign(iunit)
+      write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
+      open(iunit, form='unformatted', position='append', file=filename)
+      do j = 1, td%save_iter
+        do ik = 1, sys%st%nik
+          do ist = 1, sys%st%st_start, sys%st%st_end
+            write(iunit) (projections(uist, ist, ik, j), uist = 1, u_st%nst)
+          end do
+        end do
+      end do
+      call io_close(iunit)
+    end if
+
     ! output positions, vels...
     if(td%move_ions > 0) then
     call io_assign(iunit)
-    open(iunit, position='append', file=trim(sys%sysname)//".nbo")
+    open(iunit, position='append', file='td.general/coordinates')
     do j = 1, td%save_iter
        jj = i -td%save_iter + j
        call td_write_nbo(iunit, jj, jj*td%dt, ke(j), pe(j), x(j, :, :), v(j, :, :), f(j, :, :), & 
@@ -374,38 +409,13 @@ contains
     ! output electron acceleration if desired
     if(td%harmonic_spectrum) then
        call io_assign(iunit)
-       open(iunit, position='append', file=trim(sys%sysname)//".acc")
+       open(iunit, position='append', file="td.general/acceleration")
        do j = 1, td%save_iter
           jj = i - td%save_iter + j
           call td_write_acc(iunit, jj, jj*td%dt, tacc(j, 1:3), header=.false.)
        enddo
        call io_close(iunit)
     endif
-
-    ! and now we should output the projections
-    if(td%occ_analysis) then
-      call io_assign(iunit)
-      open(iunit, form='unformatted', position='append', file=proj_filename)
-      do j = 1, td%save_iter
-        do ik = 1, sys%st%nik
-          do ist = 1, sys%st%st_start, sys%st%st_end
-            write(iunit) (projections(uist, ist, ik, j), uist = 1, u_st%nst)
-          end do
-        end do
-      end do
-      call io_close(iunit)
-    end if
-
-    ! output the laser field
-    if(td%output_laser) then
-      call io_assign(iunit)
-      open(iunit, position='append', file='laser.out')
-      do j = 1, td%save_iter
-        jj = i - td%save_iter + j
-        call td_write_laser(iunit, jj, jj*td%dt, .false.)
-      end do
-      call io_close(iunit)
-    end if
 
 #ifndef DISABLE_PES
     call PES_output(td%PESv, sys%m, sys%st, i, td%save_iter, td%dt)

@@ -87,6 +87,7 @@ subroutine run()
   type(td_type), pointer :: td
   integer :: iunit
   logical :: log
+  character(len=100) :: filename
 
   sub_name = 'run'; call push_sub()
 
@@ -263,7 +264,8 @@ subroutine run()
       message(1) = 'Info: Loading zpsi.'
       call write_info(1)
 
-      if(zstates_load_restart(trim(td%filename), &
+      write(filename, '(a,i3.3)') "restart.td.", mpiv%node
+      if(zstates_load_restart(trim(filename), &
            sys%m, sys%st, iter=td%iter, v1=td%v_old1, v2=td%v_old2)) then
 
         if(h%ispin == 3) then

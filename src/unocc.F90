@@ -147,7 +147,7 @@ subroutine unocc_run(u, scf, sys, h)
   call io_close(iunit)
 
   ! output wave-functions
-  call states_output(sys%st, sys%m, "static", sys%outp)
+  call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
 
   ! we now put this back
   sys%st => tmp_st
