@@ -25,6 +25,9 @@ subroutine td_write_angular(out, sys, td, iter)
   character(len=130) :: aux
   real(r8) :: angular(3)
 
+  ! The angular momentum has to be calculated by all nodes...
+  call zstates_calculate_angular(sys%m, sys%st, angular)
+
   if(mpiv%node.ne.0) return ! only first node outputs
 
   if(iter ==0) then
@@ -41,8 +44,6 @@ subroutine td_write_angular(out, sys, td, iter)
     call write_iter_header(out, aux)
     call write_iter_nl(out)
   endif
-
-  call zstates_calculate_angular(sys%m, sys%st, angular)
 
   call write_iter_start(out)
   call write_iter_double(out, angular(1:3), 3)

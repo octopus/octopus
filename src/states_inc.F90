@@ -606,21 +606,30 @@ subroutine X(states_calculate_angular)(m, st, angular)
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: angular(3)
 
+  real(r8) :: temp(3)
   R_TYPE, allocatable :: lpsi(:, :)
-  integer :: idim, ik, j, i
+  integer :: idim, ik, j, i, ierr
 
-  angular = M_ZERO
+  temp = M_ZERO
   allocate(lpsi(conf%dim, m%np))
   do ik = 1, st%nik
-     do j = 1, st%nst
+     do j  = st%st_start, st%st_end
         do idim = 1, st%dim
            call X(mesh_angular_momentum)(m, st%X(psi)(:, idim, j, ik), lpsi)
-           angular(1) = angular(1) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(1, :))
-           angular(2) = angular(2) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(2, :))
-           angular(3) = angular(3) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(3, :))
+           temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(1, :))
+           temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(2, :))
+           temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(3, :))
         enddo
      enddo
   enddo
+
+#if defined(HAVE_MPI) && defined(MPI_TD)
+    call MPI_ALLREDUCE(temp, angular, 3, &
+         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+#else
+  angular = temp
+#endif
+
   deallocate(lpsi)
 end subroutine X(states_calculate_angular)
 
