@@ -62,6 +62,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       read(iunit, *) natoms
       read(iunit, *) ! skip comment line
       allocate(a(natoms))
+      allocate(ca(0))
       
       do i = 1, natoms
         read(iunit,*) label, a(i)%x(:)
@@ -82,6 +83,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       end if
       
       allocate(a(natoms))
+      allocate(ca(0))
       do i = 1, natoms
         call oct_parse_block_str    (str, i-1, 0, label)
         a(i)%spec => s(get_specie(label))

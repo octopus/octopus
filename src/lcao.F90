@@ -109,8 +109,8 @@ contains
         end if
       end do
 #elif defined(ONE_D)
-      !rho(i) = rho(i) + s%z_val*exp(-r**2)/sqrt(m_pi)
-      call R_FUNC(calcdens)(sys%st, m%np, rho)
+      rho(i) = rho(i) + s%z_val*exp(-r**2)/sqrt(m_pi)
+      !call R_FUNC(calcdens)(sys%st, m%np, rho)
 #endif
     end do
     
