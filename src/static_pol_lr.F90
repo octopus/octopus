@@ -65,6 +65,7 @@ contains
     fromScratch = .true.
 
     call lr_init(sys%st, sys%m, lr)
+    call build_fxc_kernel(sys%st%d, sys%m, sys%st%rho, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
     call lr_end(lr)
@@ -73,6 +74,7 @@ contains
 
   contains
 
+    ! ---------------------------------------------------------
     subroutine init_()
       call push_sub('static_pol_lr_run')
 
@@ -81,12 +83,16 @@ contains
 
     end subroutine init_
 
+
+    ! ---------------------------------------------------------
     subroutine end_()
       deallocate(sys%st%X(psi))
       
       call pop_sub()
     end subroutine end_
     
+
+    ! ---------------------------------------------------------
     subroutine output()
       integer :: j, iunit
       FLOAT :: msp
@@ -172,19 +178,18 @@ contains
 
     call init_response_e()
 
-
-    do iter=1, lr%max_iter
+    iter_loop: do iter=1, lr%max_iter
 
       dl_rhoin(1,:,:) = lr%dl_rho(:,:)
 
-      do i = 1, m%np
-        tmp(i) = sum(lr%dl_rho(i,:))
-      end do
       if(.not.h%ip_app) then
+        do i = 1, m%np
+          tmp(i) = sum(lr%dl_rho(i,:))
+        end do
          call poisson_solve(m, sys%f_der, lr%dl_Vhar, tmp) 
       end if 
       do ik = 1, st%d%nspin
-        do ist = 1, st%nst 
+        do ist = 1, st%nst
           if (st%occ(ist, ik) > M_ZERO) then  
             Y(:,1) = (lr%dl_Vhar(:) + m%x(:,alpha))
             do ik2 = 1, st%d%nspin
@@ -193,7 +198,7 @@ contains
             Y(:,1) = -Y(:,1)*st%X(psi)(:, 1, ist, ik)
 
             call lr_orth_vector(m, st, Y, ik)
-            call lr_solve_AXeY(sys, h, lr, ist, ik, Y, 500, CNST(1.0e-5))
+            call lr_solve_AXeY(sys, h, lr, ist, ik, Y, 500, CNST(1.0e-9))
 	    
           endif
         end do
@@ -213,6 +218,7 @@ contains
         lr%abs_dens = lr%abs_dens + dmf_integrate(m, tmp)
       end do
       lr%abs_dens = sqrt(lr%abs_dens)
+
       finish = (lr%abs_dens <= lr%conv_abs_dens) 
       if(finish) then 
         write(message(1), '(a, i4, a)')        &
@@ -224,7 +230,8 @@ contains
         ! without mixing it seems to go faster!!!!
         lr%dl_rho(:,:) = dl_rhonew(1,:,:)
       end if
-    end do
+
+    end do iter_loop
 
     deallocate(dl_rhoin, dl_rhonew, dl_rhotmp)
     deallocate(tmp, Y)
@@ -238,7 +245,7 @@ contains
       do ik = 1, st%d%nspin
         do ist = 1, st%nst
           if (st%occ(ist, ik) > M_ZERO) then
-            do i = 1, m%np 
+            do i = 1, m%np
               call mesh_r(m, i, rd)
               lr%X(dl_psi)(i, 1, ist, ik) = st%X(psi)(i, 1, ist, ik)*rd*exp(-rd)
             end do

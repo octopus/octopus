@@ -161,7 +161,6 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   deallocate(Vpsl_save, trrho, dipole)
   
   call end_()
-  call pop_sub()
 
 contains
 

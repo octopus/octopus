@@ -37,7 +37,7 @@ module linear_response
     CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the complex KS orbitals
     
     FLOAT, pointer :: dl_Vhar(:)      ! linear change of the Hartree potential
-    FLOAT, pointer :: dl_Vxc(:,:,:)   ! linear change of the xc potential
+    FLOAT, pointer :: dl_Vxc(:,:,:)   ! linear change of the xc potential (fxc)
   end type lr_type
 
 contains
@@ -140,9 +140,9 @@ contains
     pp(:,:) = lr%X(dl_psi)(:,:, ist, ik)
     call X(Hpsi)(h, sys%m, sys%f_der, pp, z, ik)
 
-    z(:,:) = -z(:,:) + sys%st%eigenval(ist, ik)*pp(:,:) + Y(:,:)
-    pp(:,:) = z(:,:)
-    do iter = 1, MAXITER     
+    z (:,:) = -z(:,:) + sys%st%eigenval(ist, ik)*pp(:,:) + Y(:,:)
+    pp(:,:) =  z(:,:)
+    iter_loop: do iter = 1, MAXITER     
       call X(Hpsi)(h, sys%m, sys%f_der, pp, t, ik)
       t(:,:) = t(:,:) - sys%st%eigenval(ist, ik)*pp(:,:)
 
@@ -157,12 +157,12 @@ contains
       beta = sm3/sm1
 
       if(sm3 <= tol) then 
-        exit
+        exit iter_loop
       else 
         pp(:,:) = beta*pp(:,:) + g(:,:)
         z(:,:) = g(:,:) 
-      endif
-    end do
+      end if
+    end do iter_loop
 
     if(sm3 > tol) then 
       message(1) = "Response using CG: Not converged!"
