@@ -132,8 +132,6 @@
 #endif
     acc = acc + x
 
-    1001 continue
-
     call pop_sub(); return 
   end subroutine td_calc_tacc
 
