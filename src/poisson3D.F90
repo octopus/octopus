@@ -149,7 +149,7 @@ subroutine poisson_cg(m, der, pot, rho)
     add_lm = 1
     do l = 0, ml
       if(l == 0) then 
-        s1 = r**l*rho(i)*m%vol_pp(i)
+        s1 = rho(i)*m%vol_pp(i)*r**l
       else
         s1 = rho(i)*m%vol_pp(i)
       end if
@@ -161,7 +161,6 @@ subroutine poisson_cg(m, der, pot, rho)
       end do
     end do
   end do
-  rholm = rholm
 
   ! build initial guess for the potential
   allocate(wk(m%np_tot), lwk(m%np_tot))
@@ -181,7 +180,7 @@ subroutine poisson_cg(m, der, pot, rho)
   end do
   deallocate(rholm)
 
-  call dderivatives_lapl(der, wk, lwk, .false.)
+  call dderivatives_lapl(der, wk, lwk, .true.)
 
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed
@@ -217,7 +216,6 @@ subroutine poisson_cg(m, der, pot, rho)
   deallocate(zk, tk, pk)
 
   call pop_sub()
-  return
 end subroutine poisson_cg
 
 #if defined(HAVE_FFT)

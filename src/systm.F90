@@ -176,22 +176,21 @@ contains
 
     case (3) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
-      do k = 1,3**conf%periodic_dim
+      do k = 1, 3**conf%periodic_dim
         do i = 1, m%np
           call mesh_r(m, i, r, a=atom%x+m%shift(k,:))
+          r = max(r, r_small)
           do n = 1, s%ps%conf%p
-            if(r >= r_small) then
-              select case(spin_channels)
-              case(1)
-                psi1 = loct_splint(s%ps%Ur(n, 1), r)
-                rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-              case(2)
-                psi1 = loct_splint(s%ps%Ur(n, 1), r)
-                psi2 = loct_splint(s%ps%Ur(n, 2), r)
-                rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-                rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
-              end select
-            end if
+            select case(spin_channels)
+            case(1)
+              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+            case(2)
+              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              psi2 = loct_splint(s%ps%Ur(n, 2), r)
+              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+              rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
+            end select
           end do
         end do
       end do

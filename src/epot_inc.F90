@@ -137,7 +137,7 @@ contains
         
         call specie_get_glocal(atm%spec, x, gv)
         d = sum(st%rho(j, 1:ns))*mesh%vol_pp(j)
-        atm%f(:) = atm%f(:) - d*gv(:)
+        atm%f(1:conf%dim) = atm%f(1:conf%dim) - d*gv(1:conf%dim)
       end do
     end do
   end subroutine local_RS
@@ -162,7 +162,7 @@ contains
         call dcf_FS2RS(cf_for)
         call dcf2mf(mesh, cf_for, force)
         do l = 1, st%d%nspin
-          atm%f(j) = atm%f(j) + sum(force(:)*st%rho(:, l)*mesh%vol_pp(:))
+          atm%f(j) = atm%f(j) + sum(force(1:mesh%np)*st%rho(1:mesh%np, l)*mesh%vol_pp(1:mesh%np))
         end do
       end do
     end do

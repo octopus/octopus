@@ -95,7 +95,7 @@ contains
   FLOAT function curvlinear_det_Jac(cv, geo, x, chi) result(jdet)
     type(curvlinear_type), intent(in)  :: cv
     type(geometry_type),   intent(in)  :: geo
-    FLOAT,                 intent(in)  ::   x(:)  !   x(conf%dim)
+    FLOAT,                 intent(in)  :: x(:)    !   x(conf%dim)
     FLOAT,                 intent(in)  :: chi(:)  ! chi(conf%dim)
 
     FLOAT :: dummy(conf%dim), Jac(conf%dim, conf%dim)

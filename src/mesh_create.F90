@@ -328,7 +328,7 @@ subroutine mesh_create_xyz(m, enlarge)
   type(mesh_type),     intent(inout) :: m
   integer,             intent(in)    :: enlarge
 
-  integer :: i, il, ix, iy, iz
+  integer :: i, j, k, il, ix, iy, iz, ey, ez
   integer, pointer :: Lxyz_tmp(:,:,:)
   FLOAT :: chi(3)
   FLOAT, pointer :: x(:,:,:,:)
@@ -351,6 +351,10 @@ subroutine mesh_create_xyz(m, enlarge)
   x(:,:,:,:)        = M_ZERO
 
   ! We label 2 the points inside the mesh + enlargement
+  ey = 0; ez = 0
+  if(conf%dim > 1) ey = enlarge
+  if(conf%dim > 2) ez = enlarge
+
   do ix = m%nr(1,1), m%nr(2,1)
     chi(1) = real(ix, PRECISION) * m%h(1)
 
@@ -360,20 +364,21 @@ subroutine mesh_create_xyz(m, enlarge)
       do iz = m%nr(1,3), m%nr(2,3)
         chi(3) = real(iz, PRECISION) * m%h(3)
         
-        call curvlinear_chi2x(m%cv, m%geo, chi, x(:, ix, iy, iz))
+        call curvlinear_chi2x(m%cv, m%geo, chi(:), x(:, ix, iy, iz))
 
         if(in_mesh(m, x(:, ix, iy, iz))) then
-          do i = -enlarge, 0 ! first include the points on the left
-            if(ix+i>=m%nr(1,1))                Lxyz_tmp(ix+i, iy, iz) = 2
-            if(iy+i>=m%nr(1,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
-            if(iz+i>=m%nr(1,3).and.conf%dim>2) Lxyz_tmp(ix, iy, iz+i) = 2
+          do i = -enlarge, enlarge
+            do j = -ey, ey
+              do k = -ez, ez
+                if(  &
+                   ix+i>=m%nr(1,1).and.ix+i<=m%nr(2,1).and. &
+                   iy+j>=m%nr(1,2).and.iy+j<=m%nr(2,2).and. &
+                   iz+k>=m%nr(1,2).and.iz+k<=m%nr(2,3)) Lxyz_tmp(ix+i, iy+j, iz+k) = 2
+              end do
+            end do
           end do
-          do i = 1, enlarge ! and now on the right
-            if(ix+i<=m%nr(2,1))                Lxyz_tmp(ix+i, iy, iz) = 2
-            if(iy+i<=m%nr(2,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
-            if(iz+i<=m%nr(2,3).and.conf%dim>2) Lxyz_tmp(ix, iy, iz+i) = 2
-          end do
-        endif
+        end if
+
       end do
     end do
   end do
@@ -391,9 +396,9 @@ subroutine mesh_create_xyz(m, enlarge)
   m%np_tot = il
 
   allocate(m%Lxyz(m%np_tot, 3), m%x(m%np_tot, 3))
-  il = 0
 
   ! first we fill the points in the inner mesh
+  il = 0
   do ix = m%nr(1,1), m%nr(2,1)
     do iy = m%nr(1,2), m%nr(2,2)
       do iz = m%nr(1,3), m%nr(2,3)
@@ -455,6 +460,7 @@ contains
       chi(1:conf%dim) = m%Lxyz(i, 1:conf%dim)*m%h(1:conf%dim)
       m%vol_pp(i) = m%vol_pp(i)*curvlinear_det_Jac(m%cv, m%geo, m%x(i,:), chi)
     end do
+
   end subroutine get_vol_pp
 
 end subroutine mesh_create_xyz
@@ -538,7 +544,6 @@ function mesh_index(m, ix_, dir) result(index)
     end do
 
     if(index.ne.0) index = m%Lxyz_inv(ix(1), ix(2), ix(3))
-    print *, ix, index
 
     if(index==0.and.conf%boundary_zero_derivative) then
       do

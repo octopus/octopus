@@ -96,6 +96,11 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   ! Hamiltonian must know about the dimensionality of the states
   h%d => states_dim
 
+  ! initialize variables
+  h%epot = M_ZERO
+  h%ex = M_ZERO; h%ec = M_ZERO
+  h%etot = M_ZERO
+
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)

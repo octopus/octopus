@@ -21,23 +21,21 @@ function X(mf_integrate) (m, f) result(d)
   R_TYPE,          intent(IN) :: f(:)  ! f(m%np)
   R_TYPE                      :: d
 
-  d = sum(f(:)*m%vol_pp(:))
+  d = sum(f(1:m%np)*m%vol_pp(1:m%np))
 end function X(mf_integrate)
 
 !!! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: f1(:), f2(:) ! f(m%np)
+  R_TYPE, intent(in) :: f1(:), f2(:) ! f(m%np)
 
   R_TYPE, allocatable :: l(:)
 
   if(m%use_curvlinear) then
-
     allocate(l(m%np))
-    l(:) = f1(:) * m%vol_pp(:)
+    l(1:m%np) = f1(1:m%np) * m%vol_pp(1:m%np)
     dotp = lalg_dot(m%np, l(:),  f2(:))
     deallocate(l)
-
   else
     dotp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
   end if
@@ -50,7 +48,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   R_TYPE,          intent(IN) :: f(:) ! f(m%np)
 
   if(m%use_curvlinear) then
-    nrm2 = sqrt(X(mf_dotp) (m, f, f))
+   nrm2 = sqrt(X(mf_dotp) (m, f, f))
   else
     nrm2 = lalg_nrm2(m%np, f(:))*sqrt(m%vol_pp(1))
   end if

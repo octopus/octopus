@@ -239,8 +239,8 @@ contains
     integer :: iunit, i
 
     call io_assign(iunit)
-    write(iunit, mfmtheader) '#', 'x', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", status='unknown')
+    write(iunit, mfmtheader) '#', 'x', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
         write(iunit, mformat) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
@@ -253,8 +253,8 @@ contains
     integer :: iunit, i
 
     call io_assign(iunit)
-    write(iunit, mfmtheader) '#', 'y', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,z=0", status='unknown')
+    write(iunit, mfmtheader) '#', 'y', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
         write(iunit, mformat) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
@@ -267,8 +267,8 @@ contains
     integer :: iunit, i
 
     call io_assign(iunit)
-    write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,y=0", status='unknown')
+    write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
         write(iunit, mformat) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
@@ -281,8 +281,8 @@ contains
     integer  :: iunit, i
 
     call io_assign(iunit)
-    write(iunit, mfmtheader) '#', 'x', 'y', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0", status='unknown')
+    write(iunit, mfmtheader) '#', 'x', 'y', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i,1)==0) then
         write(iunit, mformat) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
@@ -295,8 +295,8 @@ contains
     integer  :: iunit, i
 
     call io_assign(iunit)
-    write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", status='unknown')
+    write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i,2)==0) then
         write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
@@ -309,8 +309,8 @@ contains
     integer  :: iunit, i
 
     call io_assign(iunit)
-    write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", status='unknown')
+    write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i,3)==0) then
         write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u

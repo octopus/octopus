@@ -123,7 +123,6 @@ subroutine mesh_write_info(m, unit)
   call push_sub('mesh_write_info')
   
   write(unit, '(a,a,1x)') '  Type = ', bs(m%box_shape)
-  call write_info(1, unit)
 
   if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
     write(unit, '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
@@ -211,11 +210,11 @@ subroutine mesh_r(m, i, r, a, x)
 
   FLOAT :: xx(conf%dim)
 
-  xx(:) = m%x(i,:)
-  if(present(a)) xx = xx - a
+  xx(1:conf%dim) = m%x(i,1:conf%dim)
+  if(present(a)) xx(1:conf%dim) = xx(1:conf%dim) - a(1:conf%dim)
   r = sqrt(dot_product(xx, xx))
 
-  if(present(x)) x = xx
+  if(present(x)) x(1:conf%dim) = xx(1:conf%dim)
 end subroutine mesh_r
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

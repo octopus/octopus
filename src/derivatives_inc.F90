@@ -23,6 +23,7 @@
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
     logical, optional,    intent(in)  :: have_ghost_
     
+    integer :: i
     R_TYPE, pointer :: fp(:)
     logical :: have_ghost
 

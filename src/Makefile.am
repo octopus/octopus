@@ -28,7 +28,7 @@ noinst_HEADERS = \
 	global.h \
 	real.F90 complex.F90 undef.F90 \
 	fftw2.F90 fftw3.F90 \
-	mesh_create.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
+	mesh_create.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
 	specie1D.F90 specie3D.F90\
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
