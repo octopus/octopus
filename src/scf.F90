@@ -197,10 +197,6 @@ subroutine scf_write_static(dir, fname)
   call mesh_write_info(sys%m, iunit)
   write(iunit,'(1x)')
 
-  !write(iunit, '(a)') 'Geometry [A]:'
-  !call write_geom_info(sys, iunit)
-  !write(iunit,'(1x)')
-
   if(.not. h%ip_app) then
     write(iunit, '(a)') 'Exchange and correlation functionals:'
     call xc_write_info(h%xc, iunit)
@@ -227,6 +223,18 @@ subroutine scf_write_static(dir, fname)
   if(sys%st%ispin > 1) then
     call write_magnet(iunit, sys%st)
   end if
+
+  do i = 1, sys%st%nspin
+    write(iunit, '(a, i1, 4a)') 'Dipole (', i, ')', &
+         ' [', trim(units_out%length%abbrev), ']:'
+    write(iunit, '(6x, a, es17.8)') 'x = ', &
+         sum(sys%m%Lx(:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(1) / units_out%length%factor
+    write(iunit, '(6x, a, es17.8)') 'y = ', &
+         sum(sys%m%Ly(:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(2) / units_out%length%factor
+    write(iunit, '(6x, a, es17.8)') 'z = ', &
+         sum(sys%m%Lz(:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(3) / units_out%length%factor
+    write(iunit, '(1x)')
+  end do
 
   write(iunit, '(a)') 'Convergence:'
   write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &

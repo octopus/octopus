@@ -407,7 +407,7 @@ contains
     m1 = 0._r8; m1(1,1) = 1._r8; m1(2,2) = 1._r8; m1(3,3) = 1._r8
 
     ! rotate the to axis to the z axis
-    if(to(1).ne.0._r8 .and. to(2).ne.0._r8) then
+    if(to(2).ne.0._r8) then
       alpha = atan2(to(2), to(1))
       call rotate_z(m1, alpha)
     end if
