@@ -28,23 +28,6 @@
 
 #include "string_f.h"
 
-int FC_FUNC_(print_file, PRINT_FILE)
-     (char *name)
-{
-  FILE *pf;
-  int c;
-
-  pf = fopen(name, "r");
-  if (pf == NULL) return 1;
-
-	while((c = fgetc(pf)) != EOF)
-		fputc(c, stdout);
-	fclose(pf); 
-
-	fflush(stdout); 
-	return 0;
-}
-
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 		 (STR_F_TYPE _dir, STR_F_TYPE filename STR_ARG2)
 {

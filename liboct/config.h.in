@@ -56,6 +56,9 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Defined if you have METIS library. */
+#undef HAVE_METIS
+
 /* Defined if you have MPI library. */
 #undef HAVE_MPI
 

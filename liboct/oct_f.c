@@ -137,8 +137,8 @@ void FC_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
 		 (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
 			int *edgecut, idxtype *epart, idxtype *npart)
 {
-	/* METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart); */
-	METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
+	METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
+	/*METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);*/
 }
 #endif
 
