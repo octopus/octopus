@@ -81,7 +81,7 @@ subroutine mix_init(smix, m, st)
     call write_fatal(2)
   end if
 
-  if(smix%type_of_mixing == 2) then
+  if(smix%type_of_mixing == BROYDEN) then
     call oct_parse_int(C_string("BroydenNumber"), 3, smix%broyden_number)
     if(smix%broyden_number <= 1 .or. smix%broyden_number > 5) then
       write(message(1), '(a, i4,a)') "Input: '", smix%broyden_number, &
@@ -89,13 +89,14 @@ subroutine mix_init(smix, m, st)
       message(2) = '(1 < BroydenNumber <= 5)'
       call write_fatal(2)
     end if
-  end if
-
-  if(smix%type_of_mixing == BROYDEN) then
     allocate(smix%df(m%np, st%nspin, smix%broyden_number + 1))
     allocate(smix%dv(m%np, st%nspin, smix%broyden_number + 1))
     smix%df = 0._r8
     smix%dv = 0._r8
+    write(message(1), '(a)') 'Info: Broyden mixing used. It can (i) boost your convergence, '
+    write(message(2), '(a)') '      (ii) do nothing special, or (iii) totally screw up the run.'
+    write(message(3), '(a)') '      Good luck!'
+    call write_info(3)
   end if
 
   call pop_sub()
@@ -148,6 +149,10 @@ subroutine mix_dens(smix, iter, st, m, dist)
 !!$      call anderson_mix(rho,rhoout, iter, errorflag)
   case(BROYDEN)
     call mix_broyden(st%nspin, m%np, smix, st%rho, rhoout, iter, errorflag)
+    if(errorflag .ne. 0) then
+      write(message(1), '(a,i3)') 'mix_broyden returned error ', errorflag
+      call write_fatal(1)
+    endif
   end select
     
   deallocate(rhoout)
@@ -207,7 +212,13 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     smix%dv(:,:, ipos) = vin  - smix%dv(:,:, ipos)
 
     do is = 1, nspin
-      gamma = 1._r8/DNRM2(np, smix%df(1, is, ipos), 1)
+      gamma = dnrm2(np, smix%df(1, is, ipos), 1)
+      if(gamma > 1e-8_r8) then
+         gamma = 1.0_r8/gamma
+      else
+         gamma = 1.0_r8
+      endif
+      !gamma = 1._r8/DNRM2(np, smix%df(1, is, ipos), 1)
       call dscal (np, gamma, smix%df(1, is, ipos), 1)
       call dscal (np, gamma, smix%dv(1, is, ipos), 1)
     end do
@@ -222,7 +233,7 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     beta = 0._r8
     do i = 1, iter_used
       do j = i + 1, iter_used
-        beta(i, j) = w(i)*w(j)*DDOT(np, smix%df(1, is, j), 1, smix%df(1, is, i), 1)
+        beta(i, j) = w(i)*w(j)*DDOT(np, smix%df(1:np, is, j), 1, smix%df(1:np, is, i), 1)
         beta(j, i) = beta(i, j)
       end do
       beta(i, i) = w0**2 + w(i)**2
@@ -231,14 +242,14 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     ! invert matrix beta
     call dsytrf('u', iter_used, beta, maxter, iwork, work, maxter, info)
     if(info .ne. 0) then
-      errorflag = 1
-      return
+      write(message(1), '(a, i3)') 'mix_broyden: dsytrf returned info = ', info
+      call write_fatal(1)
     end if
 
     call dsytri('u', iter_used, beta, maxter, iwork, work, info)
     if(info .ne. 0) then
-      errorflag = 2
-      return
+      write(message(1), '(a, i3)') 'mix_broyden: dsytri returned info = ', info
+      call write_fatal(1)
     end if
   
     ! complete the matrix
@@ -269,7 +280,7 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
   smix%df(:,:, i) = smix%df(:,:, smix%broyden_number + 1)
   smix%dv(:,:, i) = smix%dv(:,:, smix%broyden_number + 1)
 
-  return
+  errorflag = 0; return
 end subroutine mix_broyden
   
 ! This routine (obviously) assumes complex wave-functions

@@ -308,7 +308,7 @@ contains
     ! and thus the kick for the nuclei is:
     ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
     ! where M and Z are the ionic mass and charge, respectively.
-    if(td%move_ions) then
+    if(td%move_ions > 0) then
       do j = 1, sys%natoms
           sys%atom(j)%v(1:3) = sys%atom(j)%v(1:3) - &
             td%pol(1:3)*sys%atom(j)%spec%z_val*td%delta_strength / sys%atom(j)%spec%weight
