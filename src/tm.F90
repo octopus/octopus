@@ -571,13 +571,13 @@ subroutine tm_debug(pstm)
   sub_name = 'tm_end'; call push_sub()
 
   ! Opens files.
-  call oct_mkdir(C_string('tm2.'//trim(pstm%namatm)))
+  call oct_mkdir(C_string('pseudos/'+'tm2.'+trim(pstm%namatm)))
   call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
-  open(loc_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'local')
-  open(dat_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'info')
-  open(kbp_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'nonlocal')
-  open(wav_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'wave')
+  open(loc_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'local')
+  open(dat_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'info')
+  open(kbp_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'nonlocal')
+  open(wav_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'wave')
 
   ! First of all, writes down the info.
   write(dat_unit,'(a,/)') pstm%namatm

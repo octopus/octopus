@@ -71,6 +71,8 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
   ps%flavour = flavour
   ps%label   = label
 
+  if(conf%verbose>999) call oct_mkdir('pseudos')
+
 ! Initialization and processing.
   select case(flavour(1:2))
   case('tm')
@@ -138,13 +140,13 @@ subroutine ps_debug(ps)
   sub_name = 'ps_debug'; call push_sub()
 
   ! Opens the files.
-  call oct_mkdir(C_string(trim(ps%label)))
+  call oct_mkdir(C_string('pseudos/'+trim(ps%label)))
   call io_assign(info_unit); call io_assign(local_unit)
   call io_assign(nonlocal_unit); call io_assign(wave_unit)
-  open(info_unit, file=trim(ps%label)+'/info')
-  open(local_unit, file=trim(ps%label)+'/local')
-  open(nonlocal_unit, file=trim(ps%label)+'/nonlocal')
-  open(wave_unit, file=trim(ps%label)+'/wave')
+  open(info_unit, file='pseudos/'+trim(ps%label)+'/info')
+  open(local_unit, file='pseudos/'+trim(ps%label)+'/local')
+  open(nonlocal_unit, file='pseudos/'+trim(ps%label)+'/nonlocal')
+  open(wave_unit, file='pseudos/'+trim(ps%label)+'/wave')
 
   ! Writes down the info.
   write(info_unit,'(a,/)')      ps%label

@@ -642,14 +642,14 @@ subroutine hgh_debug(psp)
   sub_name = 'hgh_debug'; call push_sub()
 
   ! Opens files.
-  call oct_mkdir(C_string('hgh.'//trim(psp%atom_name)))
+  call oct_mkdir(C_string('pseudos/'+'hgh.'+trim(psp%atom_name)))
   call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
-  open(hgh_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'hgh')
-  open(loc_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'local')
-  open(dat_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'info')
-  open(kbp_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'nonlocal')
-  open(wav_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'wave')
+  open(hgh_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'hgh')
+  open(loc_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'local')
+  open(dat_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'info')
+  open(kbp_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'nonlocal')
+  open(wav_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'wave')
 
   ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
   write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)
