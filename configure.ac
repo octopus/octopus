@@ -159,7 +159,8 @@ if test "$lib_ok" = "ok"; then
   AC_DEFINE(HAVE_TRLAN, 1, [TRLAN library (www.nersc.gov/research/SIMON/trlan.html)])
   AC_SUBST(LIB_TRLAN)
 else
-  LIB_TRLAN=""           AC_MSG_WARN([Will not use trlan])
+  LIB_TRLAN=""
+  AC_MSG_WARN([Will not use trlan])
 fi
 
 dnl tests for BLAS
