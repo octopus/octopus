@@ -140,8 +140,9 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   allocate(diff(st%nst, st%nik)); diff = M_ONE
   
   if(iter < eigens%final_tol_iter) then
-      tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
-           eigens%init_tol
+      tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
+            log(eigens%init_tol)
+      tol = exp(tol)
   else
       tol = eigens%final_tol
   end if
