@@ -43,10 +43,11 @@ subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
   call read_box()           ! parameters defining the simulation box
   call read_spacing ()      ! parameters defining the (canonical) spacing
   call build_lattice()      ! build lattice vectors
-  call adjust_nr()          ! find out the extension simulation box
 
   ! initialize curvlinear coordinates
-  m%use_curvlinear = curvlinear_init(m%nr(2,:)*m%h(:), m%cv)
+  m%use_curvlinear = curvlinear_init(m%lsize(:), m%cv)
+
+  call adjust_nr()          ! find out the extension of the simulation box
 
   call pop_sub()
   
@@ -113,8 +114,9 @@ contains
       if(def_rsize>M_ZERO.and.conf%periodic_dim==0) call check_def(def_rsize, m%xsize, 'xlength')
     end if
 
+    m%lsize = -M_ONE
     if(m%box_shape == PARALLELEPIPED) then
-      if(loct_parse_block_n('lsize')<1) then
+      if(loct_parse_block_n('lsize') < 1) then
         message(1) = 'Block "lsize" not found in input file.'
         call write_fatal(1)
       endif
@@ -125,14 +127,17 @@ contains
       m%lsize = m%lsize*units_inp%length%factor
     end if
     
-    ! fill in lsize structure (do not really know if it is necessary...)
+    ! fill in lsize structure
     select case(m%box_shape)
-    case(SPHERE, MINIMUM)
-      m%lsize(1)   = m%rsize
-      m%lsize(2:3) = M_ZERO
+    case(SPHERE)
+      m%lsize(1:conf%dim) = m%rsize
     case(CYLINDER)
-      m%lsize(1)   = m%xsize
-      m%lsize(2:3) = M_ZERO
+      m%lsize(1)          = m%xsize
+      m%lsize(2:conf%dim) = m%rsize
+    case(MINIMUM)
+      do i = 1, conf%dim
+        m%lsize(i)        = maxval(geo%atom(:)%x(i)) + m%rsize
+      end do
     end select
     
   end subroutine read_box
@@ -215,42 +220,33 @@ contains
   ! set nr and adjust the mesh so that:
   ! 1) the new grid exactly fills the box;
   ! 2) the new mesh is not larger than the user defined mesh.
-
-  ! WARNING: This has to be changed for curvlinear coordinates
   subroutine adjust_nr()
     integer :: i, j
-    FLOAT   :: max_x(3);
+    FLOAT   :: x(conf%dim), chi(conf%dim)
+    logical :: out
 
     m%nr = 0
-    select case(m%box_shape)
-    case(SPHERE)
-      m%nr(2, 1:conf%dim) = int((m%rsize+DELTA_R)/m%h(1))
-    case(CYLINDER)
-      m%nr(2, 1:conf%dim) = max(int((m%rsize+DELTA_R)/m%h(1)), int((m%xsize+DELTA_R)/m%h(1)))
-    case(MINIMUM)
-      max_x = 0
-      do i = 1, geo%natoms
-        do j = 1, conf%dim
-          if(abs(geo%atom(i)%x(j)) > max_x(j)) max_x(j) = abs(geo%atom(i)%x(j))
-        end do
+    do i = 1, conf%dim
+      chi(:) = M_ZERO; j = 0
+      out = .false.
+      do while(.not.out)
+        j      = j + 1
+        chi(i) = j*m%h(i)
+        call curvlinear_chi2x(m%cv, m%geo, chi(:), x(:))
+        out = (x(i) > m%lsize(i))
       end do
-      max_x = max_x + m%rsize + DELTA_R
-      m%nr(2, 1:conf%dim) = int(max_x(1:conf%dim) / m%h(1))
-    case(PARALLELEPIPED)
-      m%nr(2, 1:conf%dim) = int((m%lsize(1:conf%dim)+DELTA_R)/m%h(1:conf%dim))
-      do i = 1, conf%dim
-        if (m%lsize(i)-m%nr(2,i)*m%h(i) > DELTA_R) then
-          m%nr(2, i) = m%nr(2, i) + 1
-          m%h(i) = m%lsize(i)/real(m%nr(2, i))
-        end if
-      end do
-    end select
+      m%nr(2, i) = j - 1
+    end do
+
+    ! we have a symmetric mesh (for now)
     m%nr(1,:) = -m%nr(2,:)
     
-    ! the last point is equivalent to the first one in periodic directions
+    ! we have to ajust a couple of things for the periodic directions
     do i = 1, conf%periodic_dim
+      m%h(i)     = m%lsize(i)/real(m%nr(2, i))
       m%nr(2, i) = m%nr(2, i) - 1
     end do
+
     m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
   end subroutine adjust_nr
 
@@ -518,53 +514,6 @@ contains
   end function in_minimum
 end function in_mesh
 
-subroutine derivatives_init_filter(m, order, filter)
-  type(mesh_type), intent(in) :: m
-  integer, intent(in) :: order
-  type(derivatives_type) :: filter
-
-  FLOAT, parameter :: alpha = M_HALF
-  FLOAT, allocatable :: dfidfj(:) ! the coefficients for the filter
-  integer :: i, j, ix(3), ik, in, nf
-
-  call push_sub('derivatives_init_filter')
-
-  filter%norder = order
-
-  allocate(dfidfj(-1:1))
-  dfidfj = alpha
-  dfidfj(-1) = M_HALF*(M_ONE-alpha)
-  dfidfj( 1) = M_HALF*(M_ONE-alpha)
-
-  filter%n = conf%dim*(2*1+1)
-  allocate(filter%i(filter%n, m%np), &
-           filter%w(filter%n, m%np))
-  filter%i = 1
-  filter%w = M_ZERO
-
-  do i = 1, m%np
-    ix(:) = m%Lxyz(i,:)
-    
-    ! fill in the table
-    nf = 0
-    do j = 1, conf%dim
-      do ik = -order, order
-        ix(j) = ix(j) + ik
-        in = mesh_index(m, ix, sign(j, ik))
-        if(in > 0) then
-          nf    = nf    + 1
-          filter%i(nf, i) = in
-          filter%w(nf, i) = dfidfj(ik)/conf%dim
-        end if
-        ix(j) = ix(j) - ik
-      end do
-    end do
-    
-  end do        
-
-  deallocate(dfidfj)
-  call pop_sub()
-end subroutine derivatives_init_filter
 
 ! this function takes care of the boundary conditions
 ! for a given x,y,z it returns the true index of the point

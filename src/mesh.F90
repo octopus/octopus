@@ -34,15 +34,6 @@ integer, parameter :: &
      MINIMUM  = 3,    &
      PARALLELEPIPED = 4
 
-! WARNING: This is to go away, as soon as we clean up filter
-type derivatives_type
-  integer :: norder
-  integer :: n
-  integer :: np
-  integer, pointer :: i(:, :)
-  FLOAT, pointer   :: w(:, :)
-end type derivatives_type
-
 type mesh_type
   integer  :: box_shape ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                         ! 4->parallelpiped (orthonormal, up to now).
@@ -124,61 +115,58 @@ subroutine mesh_write_info(m, unit)
       'around nuclei ', &
       'parallelepiped'/)
 
+#ifdef HAVE_MPI
+  if(mpiv%node .ne. 0) return
+#endif
+  if(unit==stdout.and.conf%verbose<VERBOSE_NORMAL) return
+
   call push_sub('mesh_write_info')
   
-  write(message(1), '(a,a,1x)') '  Type = ', bs(m%box_shape)
-  if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER  .or. m%box_shape == MINIMUM) then
-    write(message(2), '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
-                                   m%rsize/units_out%length%factor
-  endif
-  if(m%box_shape == CYLINDER) then
-    write(message(2), '(a,3a,f7.3)') trim(message(2)), ', xlength [', &
-         trim(units_out%length%abbrev), '] = ', m%xsize/units_out%length%factor
-  end if
-  if(m%box_shape == PARALLELEPIPED) then
-    write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a)') &
-       '  Lengths [', trim(units_out%length%abbrev), '] = ',         &
-       '(', m%lsize(1)/units_out%length%factor, ',',                     &
-            m%lsize(2)/units_out%length%factor, ',',                     &
-            m%lsize(3)/units_out%length%factor, ')'
-  endif
-  write(message(3),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)') &
-       '  Spacing [', trim(units_out%length%abbrev), '] = ',         &
-       '(', m%h(1)/units_out%length%factor, ',',                     &
-            m%h(2)/units_out%length%factor, ',',                     &
-            m%h(3)/units_out%length%factor, ')',                     &
-       '   volume/point [', trim(units_out%length%abbrev), '^3] = ', &
-       m%vol_pp(1)/units_out%length%factor**3
-  write(message(4),'(a, i6)') '  # inner mesh = ', m%np
-  call write_info(4, unit)
-
-  write(message(1),'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
-                                 (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
+  write(unit, '(a,a,1x)') '  Type = ', bs(m%box_shape)
   call write_info(1, unit)
+
+  if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
+    write(unit, '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
+       m%rsize/units_out%length%factor
+  end if
+  if(m%box_shape == CYLINDER) then
+    write(unit, '(a,3a,f7.3)') trim(message(2)), ', xlength [', &
+       trim(units_out%length%abbrev), '] = ', m%xsize/units_out%length%factor
+  end if
+
+  write(unit,'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')     &
+     '  Spacing [', trim(units_out%length%abbrev), '] = ',           &
+     '(', m%h(1)/units_out%length%factor, ',',                       &
+          m%h(2)/units_out%length%factor, ',',                       &
+          m%h(3)/units_out%length%factor, ')',                       &
+     '   volume/point [', trim(units_out%length%abbrev), '^3] = ',   &
+       m%vol_pp(1)/units_out%length%factor**3
+
+  write(unit,'(3a, a, f6.3, a, f6.3, a, f6.3, a)')                   &
+     '  Lengths [', trim(units_out%length%abbrev), '] = ',           &
+     '(', m%lsize(1)/units_out%length%factor, ',',                   &
+          m%lsize(2)/units_out%length%factor, ',',                   &
+          m%lsize(3)/units_out%length%factor, ')'
+
+  write(unit,'(a, i6)') '  # inner mesh = ', m%np
+
+  write(unit,'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
+     (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
       
   if (conf%periodic_dim > 0) then
-    write(message(1),'(1x)')
-    write(message(2),'(a,3a,a)')'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
-    write(message(3),'(a,f8.3)')'    x axis ', &
-                    m%rlat(1,1)/units_out%length%factor
-    write(message(4),'(a,f8.3)')'    y axis ', &
-                    m%rlat(2,2)/units_out%length%factor
-    write(message(5),'(a,f8.3)')'    z axis ', &
-                    m%rlat(3,3) /units_out%length%factor
-    write(message(6),'(a,3a,a)') 'Reciprocal Lattice Primitive Vectors [', &
-                    trim(units_out%length%abbrev), '^-1]'
-    write(message(7),'(a,f8.3)')'  k_x axis ', &
-                    m%klat(1,1)*units_out%length%factor
-    write(message(8),'(a,f8.3)')'  k_y axis ', &
-                    m%klat(2,2)*units_out%length%factor
-    write(message(9),'(a,f8.3)')'  k_z axis ', &
-                    m%klat(3,3)*units_out%length%factor
-  call write_info(9, unit)
+    write(unit,'(1x)')
+    write(unit,'(a,3a,a)')'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
+    write(unit,'(a,f8.3)')'    x axis ', m%rlat(1,1)/units_out%length%factor
+    write(unit,'(a,f8.3)')'    y axis ', m%rlat(2,2)/units_out%length%factor
+    write(unit,'(a,f8.3)')'    z axis ', m%rlat(3,3) /units_out%length%factor
+    write(unit,'(a,3a,a)') 'Reciprocal Lattice Primitive Vectors [', trim(units_out%length%abbrev), '^-1]'
+    write(unit,'(a,f8.3)')'  k_x axis ', m%klat(1,1)*units_out%length%factor
+    write(unit,'(a,f8.3)')'  k_y axis ', m%klat(2,2)*units_out%length%factor
+    write(unit,'(a,f8.3)')'  k_z axis ', m%klat(3,3)*units_out%length%factor
   end if
 
 
   call pop_sub()
-  return
 end subroutine mesh_write_info
 
 ! subroutines to get xyzr

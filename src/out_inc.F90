@@ -194,9 +194,8 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   R_TYPE,           intent(IN) :: f(:)  ! f(m%np)
   FLOAT,            intent(in) :: u
   
-  integer :: iunit, i
-  type(X(cf)) :: c
-  character(len=20) :: mformat
+  integer :: i
+  character(len=20) :: mformat, mfmtheader
 
   ! do not bother with errors
   call loct_mkdir(trim(dir))
@@ -204,15 +203,13 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   if(iand(how, output_plain) .ne.0) call plain()
   if(how==output_plain) return ! Return if no other output is needed.
 
-  call X(cf_new) (m%l, c)
-  call X(cf_alloc_RS) (c)
-  call X(mf2cf) (m, f, c)
-
 ! Define the format; check if code is single precision or double precision
 #if defined(SINGLE_PRECISION)
-    mformat = '(4es15.6)'
+    mformat    = '(4es15.6)'
+    mfmtheader = '(a,a7,3a15)'
 #else
-    mformat = '(4es23.14)'
+    mformat    = '(4es23.14)'
+    mfmtheader = '(a,a10,3a23)'
 #endif
 
   if(iand(how, output_axis_x) .ne.0) call axis_x()
@@ -226,131 +223,114 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   if(iand(how, output_dx_cdf) .ne.0) call dx_cdf()
 #endif
 
-  call X(cf_free) (c)
-
 contains
-#define MFMTHEADER '(a,a3,a12,a12,a12)'
 
   subroutine plain()
+    integer :: iunit
+
     call io_assign(iunit)
-    open(unit = iunit, file = trim(dir) // "/" // trim(fname), status = 'unknown', form = 'unformatted')
+    open (unit = iunit, file = trim(dir) // "/" // trim(fname), status = 'unknown', form = 'unformatted')
     write(unit = iunit) X(output_kind)*kind(f(1)), m%np
     write(unit = iunit) f(1:m%np)
     call io_close(iunit)
   end subroutine plain
 
   subroutine axis_x()
-    integer  :: ix
-    FLOAT :: x
+    integer :: iunit, i
 
     call io_assign(iunit)
+    write(iunit, mfmtheader) '#', 'x', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", status='unknown')
-    do ix = 1, m%np
-      if(m%Lxyz(ix, 2)==0.and.m%Lxyz(ix, 3)==0) then
-        call mesh_x(m, ix, x)
-        write(iunit, mformat) x, R_REAL(f(ix))/u, R_AIMAG(f(ix))/u
+    do i = 1, m%np
+      if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
+        write(iunit, mformat) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
-
-!    do ix = 1, c%n(1)
-!       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
-!       write(iunit, mformat) x, R_REAL(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u, &
-!            R_AIMAG(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u
-!    end do
     call io_close(iunit)
   end subroutine axis_x
 
   subroutine axis_y()
-    integer  :: iy
-    FLOAT :: y
+    integer :: iunit, i
 
     call io_assign(iunit)
+    write(iunit, mfmtheader) '#', 'y', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,z=0", status='unknown')
-    do iy = 1, c%n(2)
-       y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
-       write(iunit, mformat) y, R_REAL(c%RS(c%n(1)/2 + 1, iy, c%n(3)/2 + 1))/u, &
-            R_AIMAG(c%RS(c%n(1)/2 + 1, iy, c%n(3)/2 + 1))/u
-    enddo
+    do i = 1, m%np
+      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
+        write(iunit, mformat) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
     call io_close(iunit)
   end subroutine axis_y
 
   subroutine axis_z()
-    integer  :: iz
-    FLOAT :: z
+    integer :: iunit, i
 
     call io_assign(iunit)
+    write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,y=0", status='unknown')
-    do iz = 1, c%n(3)
-       z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
-       write(iunit, mformat) z, R_REAL(c%RS(c%n(1)/2 + 1, c%n(2)/2 + 1, iz))/u, &
-            R_AIMAG(c%RS(c%n(1)/2 + 1, c%n(2)/2 + 1, iz))/u
-    enddo
+    do i = 1, m%np
+      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
+        write(iunit, mformat) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
     call io_close(iunit)
   end subroutine axis_z
 
   subroutine plane_x()
-    integer  :: iy, iz
-    FLOAT :: y, z
+    integer  :: iunit, i
 
     call io_assign(iunit)
+    write(iunit, mfmtheader) '#', 'x', 'y', 'Re', 'Im'
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0", status='unknown')
-    write(iunit, MFMTHEADER) '#', 'y', 'z', 'Re', 'Im'
-    do iy = 1, c%n(2)
-      y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
-      do iz = 1, c%n(3)
-        z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, mformat) y, z, R_REAL(c%RS(c%n(1)/2 + 1, iy, iz))/u, &
-             R_AIMAG(c%RS(c%n(1)/2 + 1, iy, iz))/u
-      end do
-      write(iunit, '(1x)')
+    do i = 1, m%np
+      if(m%Lxyz(i,1)==0) then
+        write(iunit, mformat) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
     end do
     call io_close(iunit)
   end subroutine plane_x
 
   subroutine plane_y()
-    integer  :: ix, iz
-    FLOAT :: x, z
+    integer  :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
-    do ix = 1, c%n(1)
-      x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
-      do iz = 1, c%n(3)
-        z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, mformat) x, z, R_REAL(c%RS(ix, c%n(2)/2 + 1, iz))/u, &
-             R_AIMAG(c%RS(ix, c%n(2)/2 + 1, iz))/u
-      end do
-      write(iunit, '(1x)')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", status='unknown')
+    do i = 1, m%np
+      if(m%Lxyz(i,2)==0) then
+        write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
     end do
     call io_close(iunit)
   end subroutine plane_y
 
   subroutine plane_z()
-    integer  :: ix, iy
-    FLOAT :: x, y
+    integer  :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
-    do ix = 1, c%n(1)
-      x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
-      do iy = 1, c%n(2)
-        y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
-        write(iunit, mformat) x, y, R_REAL(c%RS(ix, iy, c%n(3)/2 + 1))/u, &
-             R_AIMAG(c%RS(ix, iy, c%n(3)/2 + 1))/u
-      end do
-      write(iunit, '(1x)')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", status='unknown')
+    do i = 1, m%np
+      if(m%Lxyz(i,3)==0) then
+        write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
     end do
     call io_close(iunit)
   end subroutine plane_z
 
   subroutine dx()
-    integer :: ix, iy, iz
+    integer :: iunit, ix, iy, iz
     FLOAT :: offset(3)
     character(LEN=40) :: nitems
+    type(X(cf)) :: c
+
+    ! put values in a nice cube
+    call X(cf_new) (m%l, c)
+    call X(cf_alloc_RS) (c)
+    call X(mf2cf) (m, f, c)
     
-! the offset is different in periodic directions
+    ! the offset is different in periodic directions
     do i=1,conf%periodic_dim
       offset(i)=-(c%n(i))/2 * m%h(i) / units_out%length%factor
     end do
@@ -391,6 +371,8 @@ contains
     write(iunit, '(a)') 'end'
    
     call io_close(iunit)
+    call X(cf_free) (c)
+
   end subroutine dx
 
 #if defined(HAVE_NETCDF)
@@ -400,6 +382,12 @@ contains
     character(len=200) :: filename
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2), ierr
     real(r4) :: pos(2, 3)
+    type(X(cf)) :: c
+
+    ! put values in a nice cube
+    call X(cf_new) (m%l, c)
+    call X(cf_alloc_RS) (c)
+    call X(mf2cf) (m, f, c)
 
     filename = trim(dir) // "/" // trim(fname) // ".ncdf"
     NCDFCALL(nf90_create, (trim(filename), NF90_CLOBBER, ncid))
@@ -452,6 +440,8 @@ contains
 
     ! close
     NCDFCALL(nf90_close, (ncid))
+    call X(cf_free) (c)
+
   end subroutine dx_cdf
 
 #undef NCDFCALL

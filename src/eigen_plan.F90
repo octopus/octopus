@@ -65,7 +65,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
   FLOAT, parameter :: eps    = CNST(1e-15)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call push_sub('eigen_solver_blan')
+  call push_sub('eigen_solver_plan')
   
   n          = m%np*st%dim
   np         = m%np
@@ -137,9 +137,11 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
             call lalg_axpy(n, -av(ii, d1 + 1), eigenvec(:, ii), v(:, i))
           enddo
           do ii = 1, i - 1
+            stop 'Does not work due to vol_pp'
 !! WARNING            av(ii, d1 + 1) = lalg_dot(n, v(:, ii), v(:, i))*m%vol_pp
             call lalg_axpy(n, -av(ii, d1 + 1), v(:, ii), v(:, i))
           enddo
+            stop 'Does not work due to vol_pp'
 !! WARNING          x = lalg_nrm2(n, v(:, i))*m%vol_pp
           if(x .le. eps) then
             call X(mf_random)(m, v(1:m%np, i))
@@ -154,6 +156,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
           do idim = 1, st%dim
             aux(1:np, idim) = v((idim-1)*np+1:idim*np, d1 + i)
           enddo
+          stop 'Does not work due to vol_pp'
 !! WARNING          call X(Hpsi)(hamilt, m, aux, av(:, d1 + i), ik)
         enddo
         matvec = matvec + blk
@@ -162,6 +165,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
         ! part of  the matrix since it is symmetric (LAPACK routine only need the upper triangle)
         do i = d1 + 1, d2
           do ii = 1, i
+            stop 'Does not work due to vol_pp'
 !! WARNING            h(ii, i) = lalg_dot(n, v(:, ii), av(:, i))*m%vol_pp
           enddo
         enddo
@@ -252,7 +256,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
         ! Preconditioning
         do idim = 1, st%dim
           call lalg_copy(np, av((idim-1)*np+1:, d1 + 1), aux(:, idim))
-          call X(mf_filter) (m, filter, aux(:, idim), v((idim-1)*np+1:idim*np, d1+1))
+          call X(nl_operator_operate) (filter, aux(:, idim), v((idim-1)*np+1:idim*np, d1+1))
         enddo
         
       enddo inner_loop

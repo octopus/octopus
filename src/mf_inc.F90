@@ -68,23 +68,6 @@ function X(mf_moment) (m, f, i, n) result(r)
 end function X(mf_moment)
 
 
-!!! applies a low-frequency filter to a function in a mesh.
-subroutine X(mf_filter) (m, filter, f, filteredf)
-  type(mesh_type),        intent(in)  :: m
-  type(derivatives_type), intent(in)  :: filter
-  R_TYPE,                 intent(in)  :: f(:)          ! (m%np)
-  R_TYPE,                 intent(out) :: filteredf(:)  ! (m%np)
-
-  integer :: k, nl
-  call push_sub("mf_filter")
-
-  do k = 1, m%np
-    filteredf(k) = sum(filter%w(1:filter%n, k)*f(filter%i(1:filter%n, k)))
-  end do
-
-  call pop_sub()
-end subroutine X(mf_filter)
-
 !!! This subroutine generates a gaussian wave-function in a random
 !!! position in space
 subroutine X(mf_random)(m, f)

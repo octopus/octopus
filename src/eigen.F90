@@ -23,6 +23,8 @@ module eigen_solver
   use lib_basic_alg
   use lib_adv_alg
   use io
+  use nl_operator
+  use stencil_star
   use mesh
   use states
   use hamiltonian
@@ -58,7 +60,7 @@ module eigen_solver
   type(states_type),      pointer :: st_trlan
 #endif
 
-  type(derivatives_type) :: filter
+  type(nl_operator_type) :: filter
 
 contains
 
@@ -79,7 +81,7 @@ subroutine eigen_solver_init(eigens, st, m)
 #endif
   case(RS_PLAN)
     message(1) = 'Info: Eigensolver type: Preconditioned Lanczos'
-    call derivatives_init_filter(m, 1, filter)
+    call init_filter()
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -128,20 +130,37 @@ subroutine eigen_solver_init(eigens, st, m)
   eigens%matvec    = 0
 
   call pop_sub()
+
+contains
+  subroutine init_filter()
+    FLOAT, parameter :: alpha = M_HALF
+
+    ! the filter has a star stencil like the laplacian
+    call nl_operator_init(filter, conf%dim*2 + 1)
+    call stencil_star_get_lapl(2, filter%stencil)
+    call nl_operator_build(m, filter, m%np, .true.)
+
+    filter%w(1, 1) = alpha
+    filter%w(2:,1) = M_HALF*(M_ONE-alpha)/conf%dim
+
+  end subroutine init_filter
 end subroutine eigen_solver_init
 
+
+! ---------------------------------------------------------
 subroutine eigen_solver_end(eigens)
   type(eigen_solver_type), intent(inout) :: eigens
 
   select case(eigens%es_type)
   case(RS_PLAN)
-    !call derivatives_end(filter)
-    stop 'still does not work'
+    call nl_operator_end(filter)
   end select
   nullify(eigens%diff)
 
 end subroutine eigen_solver_end
 
+
+! ---------------------------------------------------------
 subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
   type(eigen_solver_type), intent(inout) :: eigens
   type(mesh_type),         intent(IN)    :: m

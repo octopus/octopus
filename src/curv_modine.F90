@@ -46,12 +46,12 @@ contains
     FLOAT,                  intent(in)  :: l(:)  ! l(1:conf%dim)
     type(curv_modine_type), intent(out) :: cv
 
-    cv%L = M_ZERO
-    cv%L(1:conf%dim) = l(1:conf%dim)
-
     call loct_parse_float('CurvModineXBar', M_ONE/M_THREE, cv%xbar)
     call loct_parse_float('CurvModineJBar', M_HALF, cv%Jbar)
     
+    cv%L = M_ZERO
+    cv%L(1:conf%dim) = l(1:conf%dim)/ cv%Jbar
+
     if(cv%xbar<M_ZERO.or.cv%xbar>M_ONE) then
       message(1) = 'The parameter "CurvModineXBar" must lie between 0 and 1.'
       call write_fatal(1)
@@ -81,7 +81,7 @@ contains
     logical :: neg
     integer :: i
     
-    chibar = cv%xbar*cv%L(:) / cv%Jbar
+    chibar = cv%xbar*cv%L(:)
 
     do i = 1, conf%dim
       neg = (chi_(i) < 0)
@@ -93,7 +93,7 @@ contains
         x(i) = x(i) + cv%L(i)/M_TWO*(1-cv%Jbar) * r**q *   &
            (q + M_ONE - (q - M_ONE)*r)
       end if
-      
+
       if(neg) x(i) = -x(i)
     end do
 
@@ -118,7 +118,7 @@ contains
     logical :: neg
     integer :: i, ix, iy
     
-    chibar = cv%xbar*cv%L(:) / cv%Jbar
+    chibar = cv%xbar*cv%L(:)
 
     J2(:) = M_ZERO
     do i = 1, conf%dim

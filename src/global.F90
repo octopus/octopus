@@ -103,6 +103,12 @@ integer :: stderr = 0
 integer :: stdin  = 5
 integer :: stdout = 6
 
+integer, parameter :: &
+   VERBOSE_QUIET   = -9999, &
+   VERBOSE_WARNING = 0,     &
+   VERBOSE_NORMAL  = 30,    &
+   VERBOSE_DEBUG   = 999
+
 ! some variables to be used everywhere
 character(len=80), dimension(20) :: message ! to be output by fatal, warning
 
@@ -157,8 +163,8 @@ subroutine global_init()
     end if
   end if
   
-  call loct_parse_int('Verbose', 30, conf%verbose)
-  if(conf%verbose > 999 .and. mpiv%node == 0) then
+  call loct_parse_int('Verbose', VERBOSE_NORMAL, conf%verbose)
+  if(conf%verbose > VERBOSE_DEBUG .and. mpiv%node == 0) then
     call loct_parse_int('DebugLevel', 3, conf%debug_level)
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
@@ -242,7 +248,7 @@ subroutine write_warning(no_lines)
 
   ! this always writes from ALL nodes
 
-  if(conf%verbose>0) then
+  if(conf%verbose >= VERBOSE_WARNING) then
     write(stdout, '(/,a)') '** Warning:'
 #ifdef HAVE_MPI
     write(stdout, '(a,i4)') "** From node = ", mpiv%node
@@ -272,7 +278,7 @@ subroutine write_info(no_lines, iunit, verbose_limit)
     iu = stdout
   end if
 
-  if(conf%verbose>20) then
+  if(conf%verbose >= VERBOSE_NORMAL) then
     do i = 1, no_lines
       if(.not.present(verbose_limit)) then
         write(iu, '(a)') trim(message(i))
@@ -298,7 +304,7 @@ subroutine push_sub(sub_name)
     sub_stack(no_sub_stack) = trim(sub_name)
     time_stack(no_sub_stack) = loct_clock()
 
-    if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
+    if(conf%verbose >= VERBOSE_DEBUG .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
       write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", loct_clock()/CNST(1e6), &
            loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
@@ -315,7 +321,7 @@ subroutine pop_sub()
   integer i
 
   if(no_sub_stack > 0) then
-    if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
+    if(conf%verbose > VERBOSE_DEBUG .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
       
       ! It seems in std C libraries the number of clock ticks per second is 1e6...
       write(stderr,'(a,f10.3,i10, a)', advance='no') "* O ", &

@@ -35,7 +35,9 @@ module derivatives
     integer                  :: boundaries(3) ! bounday conditions
     logical                  :: zero_bc
 
-    type(nl_operator_type), pointer :: lapl
+    type(nl_operator_type), pointer :: op(:)  ! op(1:conf%dim) => gradient
+                                              ! op(conf%dim+1) => laplacian
+    type(nl_operator_type), pointer :: lapl   ! these are just shortcuts for op
     type(nl_operator_type), pointer :: grad(:)
   end type der_discr_type
 
@@ -72,6 +74,10 @@ contains
     call loct_parse_int('DerivativesOrder', 4, der%order)
 
     ! construct lapl and grad structures
+    allocate(der%op(conf%dim + 1))
+    der%grad => der%op
+    der%lapl => der%op(conf%dim + 1)
+
     call derivatives_get_stencil_lapl(der)
     call derivatives_get_stencil_grad(der)
 
@@ -90,7 +96,6 @@ contains
     n_ghost(:) = 0
     do i = 1, conf%dim
       if(der%boundaries(i) == DER_BC_ZERO_F) then
-!        n_ghost(i) = max(maxval(abs(der%grad(i)%stencil(i,:))), maxval(abs(der%lapl%stencil(i,:))))
         n_ghost(i) = maxval(abs(der%lapl%stencil(i,:)))
       end if
     end do
@@ -107,16 +112,14 @@ contains
 
     call push_sub('derivatives_end')
 
-    ASSERT(associated(der%lapl))
-    ASSERT(associated(der%grad))
+    ASSERT(associated(der%op))
 
-    call nl_operator_end(der%lapl)
-    do i = 1, conf%dim
-      call nl_operator_end(der%grad(i))
+    do i = 1, conf%dim+1
+      call nl_operator_end(der%op(i))
     end do
 
-    deallocate(der%lapl, der%grad)
-    nullify   (der%lapl, der%grad, der%m)
+    deallocate(der%op)
+    nullify   (der%op, der%lapl, der%grad, der%m)
 
     call pop_sub()
   end subroutine derivatives_end
@@ -130,7 +133,7 @@ contains
     
     call push_sub('derivatives_get_stencil_lapl')
     
-    ASSERT(.not.associated(der%lapl))
+    ASSERT(associated(der%lapl))
 
     ! get size of stencil
     select case(der%stencil_type)
@@ -141,7 +144,6 @@ contains
     end select
 
     ! initialize nl operator
-    allocate(der%lapl)
     call nl_operator_init(der%lapl, n)
     
     ! create stencil
@@ -165,7 +167,7 @@ contains
     
     call push_sub('derivatives_get_stencil_grad')
     
-    ASSERT(.not.associated(der%grad))
+    ASSERT(associated(der%grad))
 
     ! get size of stencil
     select case(der%stencil_type)
@@ -176,7 +178,6 @@ contains
     end select
     
     ! initialize nl operator
-    allocate(der%grad(conf%dim))
     do i = 1, conf%dim
       call nl_operator_init(der%grad(i), n)
 
@@ -198,57 +199,77 @@ contains
   subroutine derivatives_build(der)
     type(der_discr_type), intent(inout) :: der
 
+    integer, allocatable :: polynomials(:,:)
+    FLOAT,   allocatable :: rhs(:,:)
+    logical :: const_w    
+    integer :: i
+
     call push_sub('derivatives_build')
     
-    call derivatives_build_lapl(der)
-    call derivatives_build_grad(der)
-    
-    call pop_sub()
-  end subroutine derivatives_build
-
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_build_lapl(der)
-    type(der_discr_type), intent(inout) :: der
-
-    integer, allocatable :: polynomials(:,:), rhs(:)
-    logical :: const_w
-
-    call push_sub('derivatives_build_lapl')
-    
-    ASSERT(associated(der%lapl))
+    ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_CUBE)
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.der%m%use_curvlinear))
 
+    ! build operators
+    do i = 1, conf%dim+1
+      call nl_operator_build(der%m, der%op(i), der%m%np, .not.der%m%use_curvlinear)
+    end do
+
     if(der%m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
-      call nl_operator_build(der%m, der%lapl, der%m%np, .not.der%m%use_curvlinear)
-      allocate(polynomials(conf%dim, der%lapl%n), rhs(der%lapl%n))
 
       select case(der%stencil_type)
-      case(DER_STAR)
-        call stencil_star_polynomials_lapl(polynomials, der%order)
-      case(DER_CUBE)
+      case(DER_STAR) ! laplacian and gradient have different stencils
+        do i = 1, conf%dim + 1
+          allocate(polynomials(conf%dim, der%op(i)%n), rhs(der%op(i)%n,1))
+
+          if(i <= conf%dim) then  ! gradient
+            call stencil_star_polynomials_grad(i, polynomials, der%order)
+            call get_rhs_grad(i, rhs(:,1))
+          else                      ! laplacian
+            call stencil_star_polynomials_lapl(polynomials, der%order)
+            call get_rhs_lapl(rhs(:,1))
+          end if
+
+          call make_discretization(der%m, polynomials, rhs, 1, der%op(i:i))
+          deallocate(polynomials, rhs)
+        end do
+
+      case(DER_CUBE) ! laplacian and gradient have similar stencils
+        allocate(polynomials(conf%dim, der%op(1)%n), rhs(der%op(1)%n,conf%dim+1))
         call stencil_cube_polynomials_lapl(polynomials, der%order)
+
+        do i = 1, conf%dim
+          call get_rhs_grad(i, rhs(:,i))
+        end do
+        call get_rhs_lapl(rhs(:,conf%dim+1))
+
+        call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
+
+        deallocate(polynomials, rhs)
       end select
 
-      call get_rhs()
-      call make_discretization(der%m, polynomials, rhs, der%lapl)
-      deallocate(polynomials, rhs)
-    else
-      call nl_operator_build(der%m, der%lapl, der%m%np, .true.)
+    else ! we have the explicit coefficients
+
+      ! get laplacian
       select case(der%stencil_type)
       case(DER_STAR)  
         call stencil_star_coeff_lapl(der%m%h, der%order, der%lapl)
       case(DER_VARIATIONAL)
         call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl)
       end select
-    end if
 
+      ! get gradient (we use the same both for star and variational)
+      do i = 1, conf%dim
+        call stencil_star_coeff_grad(der%m%h(i), der%order, der%grad(i))
+      end do
+    end if
+    
     call pop_sub()
 
   contains
+    subroutine get_rhs_lapl(rhs)
+      FLOAT, intent(out) :: rhs(:)
 
-    subroutine get_rhs()
       integer :: i, j, k
       logical :: this_one
 
@@ -265,105 +286,85 @@ contains
         end do
       end do
 
-    end subroutine get_rhs
+    end subroutine get_rhs_lapl
 
-  end subroutine derivatives_build_lapl
+    subroutine get_rhs_grad(dir, rhs)
+      integer, intent(in)  :: dir
+      FLOAT,   intent(out) :: rhs(:)
 
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_build_grad(der)
-    type(der_discr_type), intent(inout) :: der
-
-    integer :: i
-    integer, allocatable :: polynomials(:,:), rhs(:)
-
-    call push_sub('derivatives_build_grad')
-
-    ASSERT(associated(der%grad))
-    ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_CUBE)
-    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.der%m%use_curvlinear))
-
-    do i = 1, conf%dim
-      if(der%m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
-        call nl_operator_build(der%m, der%grad(i), der%m%np, .not.der%m%use_curvlinear)
-        allocate(polynomials(conf%dim, der%grad(i)%n), rhs(der%grad(i)%n))
-      
-        select case(der%stencil_type)
-        case(DER_STAR)
-          call stencil_star_polynomials_grad(i, polynomials, der%order)
-        case(DER_CUBE)
-          call stencil_cube_polynomials_grad(i, polynomials, der%order)
-        end select
-
-        call get_rhs()
-        call make_discretization(der%m, polynomials, rhs, der%grad(i))
-        deallocate(polynomials, rhs)
-      else
-        call nl_operator_build(der%m, der%grad(i), der%m%np, .true.)
-        select case(der%stencil_type)
-        case(DER_STAR, DER_VARIATIONAL)
-          call stencil_star_coeff_grad(der%m%h(i), der%order, der%grad(i))
-        end select
-      end if
-    end do
-
-    call pop_sub()
-
-  contains
-    subroutine get_rhs()
       integer :: j, k
       logical :: this_one
 
       ! find right hand side for operator
       rhs(:) = M_ZERO
-      do j = 1, der%grad(i)%n
+      do j = 1, der%grad(dir)%n
         this_one = .true.
         do k = 1, conf%dim
-          if(k == i .and. polynomials(k, j).ne.1) this_one = .false.
-          if(k.ne.i .and. polynomials(k, j).ne.0) this_one = .false.
+          if(k == dir .and. polynomials(k, j).ne.1) this_one = .false.
+          if(k.ne.dir .and. polynomials(k, j).ne.0) this_one = .false.
         end do
         if(this_one) rhs(j) = M_ONE
       end do
 
-    end subroutine get_rhs
-
-  end subroutine derivatives_build_grad
+    end subroutine get_rhs_grad
+  end subroutine derivatives_build
 
 
   ! ---------------------------------------------------------
-  subroutine make_discretization(m, pol, rhs_, op)
+  subroutine make_discretization(m, pol, rhs, n, op)
     type(mesh_type),        intent(in)    :: m
     integer,                intent(in)    :: pol(:,:)  ! pol(conf%dim, op%n)
-    integer,                intent(in)    :: rhs_(:)   ! rhs_(op%n, 1)
-    type(nl_operator_type), intent(inout) :: op
+    integer,                intent(in)    :: n
+    FLOAT,                  intent(inout) :: rhs(:,:)   ! rhs_(op%n, n)
+    type(nl_operator_type), intent(inout) :: op(:)
     
-    integer :: p, p_max, i, j, k
+    integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(conf%dim)
-    FLOAT, allocatable :: mat(:,:), rhs(:,:), sol(:,:)
+    FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
     
     call push_sub('make_discretization')
 
-    allocate(mat(op%n, op%n), rhs(op%n, 1), sol(op%n, 1))
-    rhs(:, 1) = rhs_(:)
+    allocate(mat(op(1)%n, op(1)%n), sol(op(1)%n, n))
     
-    p_max = op%np
-    if(op%const_w) p_max = 1
+    ! use to generate power lookup table
+    pow_max = maxval(pol)
+    allocate(powers(conf%dim, 0:pow_max))
+    powers(:,:) = M_ZERO
+    powers(:,0) = M_ONE
+
+    p_max = op(1)%np
+    if(op(1)%const_w) p_max = 1
 
     do p = 1, p_max
       mat(1,:) = M_ONE
-      do i = 1, op%n
-        x(1:conf%dim) = m%x(p, 1:conf%dim) - m%x(op%i(i, p), 1:conf%dim)
-        do j = 2, op%n
-          mat(j, i) = product(x(1:conf%dim)**pol(1:conf%dim, j))
+      do i = 1, op(1)%n
+        x(1:conf%dim) = m%x(p, 1:conf%dim) - m%x(op(1)%i(i, p), 1:conf%dim)
+
+        ! calculate powers
+        do j = 1, conf%dim
+          powers(j,1) = x(j)
+          do k = 2, pow_max
+            powers(j,k) = x(j)*powers(j,k-1)
+          end do
+        end do
+
+        ! generate the matrix
+        do j = 2, op(1)%n
+          mat(j, i) = powers(1, pol(1, j))
+          do k = 2, conf%dim
+            mat(j, i) = mat(j, i)*powers(k, pol(k, j))
+          end do
         end do
       end do
       
-      call lalg_linsyssolve(op%n, 1, mat, rhs, sol)
-      op%w(:, p) = sol(:, 1)
-      
+      call lalg_linsyssolve(op(1)%n, n, mat, rhs, sol)
+      do i = 1, n
+        op(i)%w(:, p) = sol(:, n)
+      end do
+
     end do
 
-    deallocate(mat, rhs, sol)
+    deallocate(mat, sol, powers)
 
     call pop_sub()
   end subroutine make_discretization
