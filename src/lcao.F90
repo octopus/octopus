@@ -33,6 +33,8 @@ subroutine lcao_dens(sys, nspin, rho)
     select case(s%label(1:5))
     case('jelli', 'point')
       call from_jellium(sys%m, rho(:, 1))
+    case('usdef')
+      call from_userdef(sys%m, rho(:, 1))
     case default
       call from_pseudopotential(sys%m, rho(:, 1))
     end select
@@ -74,6 +76,18 @@ contains
     end if
   end subroutine from_jellium
   
+  subroutine from_userdef(m, rho)
+    type(mesh_type), intent(in) :: m
+    real(r8), intent(inout) :: rho(m%np)
+
+    integer :: i
+
+    do i = 1, m%np
+      call mesh_r(m, i, r, a=a%x)
+      rho(i) = rho(i) + real(s%Z_val, r8)/(m%np*m%vol_pp)
+    end do
+  end subroutine from_userdef
+
   subroutine from_pseudopotential(m, rho)
     type(mesh_type), intent(in) :: m
     real(r8), intent(inout) :: rho(m%np)

@@ -23,6 +23,8 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
   integer :: ierr
 #endif 
 
+  sub_name = 'forces'; call push_sub()
+
   ! And now the non-local part...
   ! this comes first to do the reduce...
   atm_loop: do i = 1, sys%natoms
@@ -94,55 +96,56 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
   end do
 
   ! now comes the local part of the PP
-  if(h%vpsl_space == 0) then ! Real space
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
-
-      do j = 1, sys%m%np
-        call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
-        if(r < r_small) cycle
+  if(.not.atm%spec%local) then
+    if(h%vpsl_space == 0) then ! Real space
+      do i = 1, sys%natoms
+        atm => sys%atom(i)
         
-        vl  = splint(atm%spec%ps%vlocal, r)
-        dvl = splint(atm%spec%ps%dvlocal, r)
-        
-        d = sum(sys%st%rho(j, :)) * sys%m%vol_pp* &
-             (dvl - (vl - atm%spec%Z_val)/r)/r**2
-        atm%f(:) = atm%f(:) + d * x(:)
-      end do
-    end do
-  else ! Fourier space
-#if defined(THREE_D)
-    allocate( &
-         fw1(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         fw2(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         fr (sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         force(sys%m%np))
-    
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
-      do j = 1, 3
-        fw1 = M_z0
-        call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
-        call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2, j)
-
-        call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
-        force = 0._r8
-        call dcube_to_mesh(sys%m, fr, force, t=2)
-        do l = 1, sys%st%nspin
-          atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
+        do j = 1, sys%m%np
+          call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
+          if(r < r_small) cycle
+          
+          vl  = splint(atm%spec%ps%vlocal, r)
+          dvl = splint(atm%spec%ps%dvlocal, r)
+          
+          d = sum(sys%st%rho(j, :)) * sys%m%vol_pp* &
+               (dvl - (vl - atm%spec%Z_val)/r)/r**2
+          atm%f(:) = atm%f(:) + d * x(:)
         end do
       end do
-    end do
-    deallocate(fw1, fw2, fr, force)
+    else ! Fourier space
+#if defined(THREE_D)
+      allocate( &
+           fw1(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+           fw2(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+           fr (sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+           force(sys%m%np))
+      
+      do i = 1, sys%natoms
+        atm => sys%atom(i)
+        do j = 1, 3
+          fw1 = M_z0
+          call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
+          call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2, j)
+          
+          call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
+          force = 0._r8
+          call dcube_to_mesh(sys%m, fr, force, t=2)
+          do l = 1, sys%st%nspin
+            atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
+          end do
+        end do
+      end do
+      deallocate(fw1, fw2, fr, force)
 #elif defined(ONE_D)
-    allocate( &
-         fw1(sys%m%hfft_n2), &
-         fw2(sys%m%hfft_n2), &
-         fr (sys%m%fft_n2(1)), &
-         force(sys%m%np))
-    
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
+      allocate( &
+           fw1(sys%m%hfft_n2), &
+           fw2(sys%m%hfft_n2), &
+           fr (sys%m%fft_n2(1)), &
+           force(sys%m%np))
+      
+      do i = 1, sys%natoms
+        atm => sys%atom(i)
         fw1 = M_z0
         call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
         call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2)
@@ -152,8 +155,11 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
         do l = 1, sys%st%nspin
           atm%f(1) = atm%f(1) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
         end do
-    end do
-    deallocate(fw1, fw2, fr, force)
+      end do
+      deallocate(fw1, fw2, fr, force)
 #endif
+    end if
   end if
+
+  call pop_sub()
 end subroutine R_FUNC(forces)

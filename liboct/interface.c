@@ -175,7 +175,6 @@ double  F77_FUNC_(parse_potential, PARSE_POTENTIAL)
 	GSL_SET_COMPLEX(&rec->value.c, *r, 0);
 
 	parse_exp(pot, &c);
-	printf("%f %f %f\n", *r, *r**r, GSL_REAL(c.value.c));
 
 	rmsym("x");
 	rmsym("y");

@@ -85,7 +85,8 @@ function specie_init(s)
       
     case('usdef') ! user defined
       s(i)%local = .true.
-      call oct_parse_block_str(str, i-1, 2, s(i)%user_def)
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
+      call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
       ! convert to C string
       j = len(trim(s(i)%user_def))
       s(i)%user_def(j+1:j+1) = achar(0) 

@@ -43,10 +43,10 @@ subroutine hartree_init(h, m)
     call write_fatal(2)
   end if
   if(h%solver.eq.3 .and. m%box_shape.eq.4 ) then
-    write(message(1), '(a,i2,a)') "Input: '", h%solver, &
-         "' is not a valid PoissonSolver when parallelpiped box-shape is used."
-    message(2) = 'PoissonSolver = 1(cg)'
-    call write_fatal(2)
+    write(message(1), '(a,i2,a)') "Input: '", h%solver, "'"
+    message(2) = "  is not a valid PoissonSolver when parallelpiped box-shape is used."
+    message(3) = 'PoissonSolver = 1(cg)'
+    call write_fatal(3)
   end if
 
   select case(h%solver)
