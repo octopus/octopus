@@ -1,0 +1,21 @@
+###############################################################################
+#          Makefile for the linux operating system                            #
+###############################################################################
+ 
+
+###############################################################################
+# Fortran compilers etc                                                       #
+############################################################################### 
+#FC          = mpif90
+FC          = f90
+FFLAGS      = -en -m3 -YEXT_NAMES=LCS -YEXT_SFX=_
+AR          = ar
+ARFLAGS     = cr
+RANLIB      = ranlib
+FORLIBS     = -lg2c -ldfftw -ldrfftw -loct -L/usr/lib -lgsl -llapack -lblas -lgslcblas -lm -lc
+UTIL_LIBS   = -lU77
+LDBENCH     = $(FC)
+CPP         = /lib/cpp
+CPPFLAGS    = -C -D NO_PSM -D HHAVE_MPI -D MPI_TD
+
+export FC AR RANLIB FFLAGS FORLIBS LDBENCH CPP CPPFLAGS UTIL_LIBS

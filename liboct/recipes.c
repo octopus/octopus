@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "config.h"
 
 static char *disc[]={
-  "DISCLAIMER: The authors do not guarantee that "
+  "DISCLAIMER: The authors do not guarantee that the "
   "implementation of this recipe leads to an eatable dish, for it is "
   "clearly \"system dependent\".",
   NULL
@@ -51,7 +52,7 @@ static char *en[]={
 #define NO_LANGS 2
 static char **rec[] = {disc,en,es};
 
-void printrecipe_(int *lang)
+void PROTO(printrecipe)(int *lang)
 {
 	int i, j, n;
 	time_t t;
@@ -95,7 +96,7 @@ void printrecipe_(int *lang)
 					n--;
 				}
 			}
-			if(n > 0) //unlikely, we don't care so much
+			if(n > 0) //unlikely, we do not care so much
 				for(i=0; i<n; i++)
 					c[i] = ' ';
 			c[NCOLS]='\n'; c[NCOLS+1] = '\0';
