@@ -326,9 +326,9 @@ subroutine spectrum_mult_info(sysname, iunit, nspin, time_steps, dt)
 
   ! open files
   call io_assign(iunit)
-  open(iunit, file=trim(sysname)//'.mult', status='old', iostat=i)
+  open(iunit, file='td.general/multipoles', status='old', iostat=i)
   if(i.ne.0) then
-    write(message(1),'(3a)') "Could not open file '", trim(sysname), ".mult'"
+    write(message(1),'(3a)') "Could not open file td.general/multipoles"
     call write_fatal(1)
   endif
   
@@ -368,9 +368,9 @@ subroutine spectrum_acc_info(sysname, iunit, time_steps, dt)
 
   ! open files
   call io_assign(iunit)
-  open(iunit, file=trim(sysname)//'.acc', status='old', iostat=i)
+  open(iunit, file='td.general/acceleration', status='old', iostat=i)
   if(i.ne.0) then
-    write(message(1),'(3a)') "Could not open file '", trim(sysname), ".acc'"
+    write(message(1),'(3a)') "Could not open file td.general/acceleration"
     call write_fatal(1)
   endif
   
