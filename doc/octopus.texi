@@ -155,7 +155,7 @@ Examples
 @node Copying, Authors, Top, Top
 @chapter Copying
 
-This program is "free"; this means that everyone is free to use it and free to
+This program is ``free''; this means that everyone is free to use it and free to
 redistribute it on a free basis.
 What is not allowed is to try to prevent others from further sharing
 any version of this program that they might get from you.
@@ -187,15 +187,15 @@ Licenses that accompany it.
 @node Authors, Introduction, Copying, Top
 @chapter Authors, Collaborators and Acknowledgements.
 
-The main developing team of this program is composed by
+The main developing team of this program is composed of
 Miguel A. L. Marques and Angel Rubio, working at the Donostia
 International Physics Center and Department of Materials Science
 UPV/EHU (San Sebastian, Espa@~na), and Alberto
 Castro, who works at the University of Valladolid, Departamento de
-F@'isica Te@'orica (Valladolid, Espa@~na).
+F@'{@dotless{i}}sica Te@'orica (Valladolid, Espa@~na).
 
 @code{octopus} is based on a fixed-nucleus code written by
-George F. Bertsch, K. Yabana to perform real-time dynamics in
+George F. Bertsch and K. Yabana to perform real-time dynamics in
 clusters (Phys Rev B @strong{54}, 4484 (1996))
 and on a condensed matter real-space plane-wave based code written 
 by A. Rubio, X. Blase and S.G. Louie 
@@ -210,15 +210,15 @@ named ``tddft''.
 This version was consequently enhanced and beautified by A. Castro 
 (at the time Ph.D. student of A. Rubio), originating a fairly verbose 15,000 
 lines of Fortran 90/77. In the year 2000, M. Marques (aka Hyllios, 
-aka Ant@'onio de Faria, cors@'ario portugu@^es), joins the A. Rubio group 
+aka Ant@'onio de Faria, cors@'ario portugu@^es), joined the A. Rubio group 
 in Valladolid as a postdoc. Having to use ``tddft'' for his work, and being 
 petulant enough to think he could structure the code better than his 
-predecessors, starts a major rewrite of the code together with A. Castro, 
+predecessors, he started a major rewrite of the code together with A. Castro, 
 finishing version 0.2 of ``tddft.'' But things were still not perfect: due to 
 their limited experience in Fortran 90, and due to the inadequacy of this 
 language for anything beyond a HELLO WORLD program, several parts of the code 
 were still clumsy. Also the idea of GPLing the almost 20,000 lines arose 
-during an alcoholic evening. So after several weeks of frantic coding and 
+during an alcoholic evening. So after several weeks of fantic coding and 
 after getting rid of the Numerical Recipes code that still lingered around, 
 @code{octopus} was born.
 
@@ -306,7 +306,7 @@ magnetic fields will be incorporated.
 biological calculations (interaction of biomolecules with electromagnetic
 fields).
 
-@item It allows for one and two dimesional modes, by using for
+@item It allows for one and two dimesional modes by using for
 example the soft-coulomb potential or any other given as input.
 
 @item Laser-pulse optimisation using genetic algorithms (to be done).
@@ -320,7 +320,7 @@ example the soft-coulomb potential or any other given as input.
 @node  Time dependent density functional theory,  , Description of octopus, Introduction
 @section Time dependent density functional theory
 
-Several reviews of time dependent density function theory (TDDFT)
+Several reviews of time-dependent density function theory (TDDFT)
 and its applications have appeared recently, like the works by 
 Gross et al. @footnote{
   Gross, E.K.U., C.A. Ullricht and U.J. Grossmann, 1994, in
@@ -358,8 +358,8 @@ potential, one should search the extrema of the quantum mechanical
 action
 @tex
 $$
-  A = \int_{t_0}^{t_1} dt
-  \langle \Psi(t) \vert i {\partial \over \partial t} - H(t) \vert
+  A = \int_{t_0}^{t_1} {\rm d}t
+  \langle \Psi(t) \vert {\rm i} {\partial \over \partial t} - H(t) \vert
   \Psi(t) \rangle \, ,
 $$
 @end tex
@@ -401,7 +401,7 @@ Thus the Euler equation corresponding to the extrema of
   {\delta A[\rho] \over \delta \rho({\bf r},t)} =0,
 $$ 
 @end tex
-determines the time dependent density, just
+determines the time-dependent density, just
 as in the Hohenberg-Kohn formalism the static ground state
 density is given by the minimum of the total energy
 @tex ($\delta E[\rho]/\delta \rho({\bf r},t)=0$). @end tex
@@ -412,8 +412,8 @@ interacting density
 @tex $\rho({\bf r},t)$. @end tex
 One gets the following time-dependent KS-equations:
 @tex $$
-  \left[ - {1 \over 2} \nabla^2 + V_{eff}({\bf r},t)
-  \right] \psi_i({\bf r},t) = i{\partial\over\partial t} \psi_i({\bf
+  \left[ - {1 \over 2} \nabla^2 + V_{\rm eff}({\bf r},t)
+  \right] \psi_i({\bf r},t) = {\rm i}{\partial\over\partial t} \psi_i({\bf
   r},t)
 $$
 $$
@@ -425,7 +425,7 @@ where
   V_{\rm ext}({\bf r},t)
 $$ @end tex 
 is the effective
-time dependent potential felt by the electrons. It consist of
+time-dependent potential felt by the electrons. It consists of
 the sum of the external time-dependent applied field,
 the time-dependent Hartree term, plus the  xc potential (defined
 through the equivalence between the interacting and fictitious
@@ -438,9 +438,9 @@ $$
 @end tex
 where @tex $A_{\rm xc}[\rho] $ 
 @end tex
-is the xc part of the action functional
+is the xc part of the action functional.
 
-The main advantage of the time-dependent KS-scheme lies in its
+The main advantage of the time-dependent KS scheme lies in its
 computational simplicity compared to other quantum-chemical models 
 such as time-dependent Hartree-Fock or configuration interaction.
 @end ifnotinfo
@@ -470,7 +470,7 @@ prompt> make install
 This will probably @strong{not} work, so before giving up, just read
 the following paragraphs.
 
-Also, rpm and deb binaries for linux are supplied in the web-page.
+Also, rpm and deb binaries for linux are supplied on the web-page.
 
 @node Long instructions, Troubleshooting, Quick instructions, Installation
 @section Long instructions
@@ -496,7 +496,7 @@ the @code{-C} flag (preserve comments) should work just as well.
 
 @item LAPACK/BLAS: Not heavily used, but required. If you are running Linux,
 there is a fair chance they are already installed in your system. The same
-goes to the more heavyweight machines (alphas, IBMs, SGIs, etc). Otherwise,
+goes to the more heavyweight machines (alphas, IBMs, SGIs, etc.). Otherwise,
 just grab the source from @uref{http://www.netlib.org, here}.
 
 @item GSL: Finally that someone had the nice idea of making a public scientific
@@ -522,10 +522,10 @@ The sources of the cvs version (in general more unstable the the @emph{official}
 distribution) may be downloaded by anonymous cvs access:
 
 @example
-prompt> cvs -d :pserver:anonymousnautilus.fis.uc.pt:/server/cvsroot 
+prompt> cvs -d :pserver:anonymous@@nautilus.fis.uc.pt:/server/cvsroot 
         login
 
-prompt> cvs -d :pserver:anonymousnautilus.fis.uc.pt:/server/cvsroot 
+prompt> cvs -d :pserver:anonymous@@nautilus.fis.uc.pt:/server/cvsroot 
         co marques/octopus
 @end example
 
@@ -541,17 +541,17 @@ The @code{OCTOPUS-HOME} contains the following subdirectories:
     for the plain user.
   @item @code{CVS}: May actually not be there; contains files related to the CVS -- the 
     user does not need to know anything about it.
-  @item @code{doc} : The documentation of @code{octopus} in @emph{texinfo} format.
-  @item @code{faq} : Will contain a list of frequently asked questions -- very small list
+  @item @code{doc}: The documentation of @code{octopus} in @emph{texinfo} format.
+  @item @code{faq}: Will contain a list of frequently asked questions -- very small list
     for the moment.
-  @item @code{liboct} : Small C library that handles the interface to
+  @item @code{liboct}: Small C library that handles the interface to
     GSL and the parsing of the input file. It also contains some assorted
     routines that we didn't want to write in boring Fortran.
-  @item @code{samples} : Sample input files for @code{octopus}.
+  @item @code{samples}: Sample input files for @code{octopus}.
   @item @code{share}: Made to contain ``auxiliary'' files eventually used by the code;
     in practice now it contains the Troullier-Martins and Hartwigsen-Goedecker-Hutter
     pseudopotential files.
-  @item @code{src} : Fortran 90 source files. Note that these have to be preprocessed
+  @item @code{src}: Fortran 90 source files. Note that these have to be preprocessed
     before being fed to the Fortran compiler, so do not be scared by
     all the # directives.
 @end itemize
@@ -575,37 +575,37 @@ generate this script. This may be done by issuing the short script
 @code{automake}, @code{autoconf} and @code{libtool} programs.
 }
 You can use
-a fair amount of options to spice (@code{octopus}) to your own taste.
+a fair amount of options to spice @code{octopus} to your own taste.
 To obtain a full list just type @code{./configure --help}. Some 
 commonly used options include:
 @itemize @bullet
 @item
-@code{--prefix=PREFIX} : Change the base installation dir of @code{octopus}
+@code{--prefix=PREFIX}: Change the base installation dir of @code{octopus}
   to @code{PREFIX}. The executable will be installed in @code{PREFIX/bin},
   the libraries in @code{PREFIX/lib} and the documentation in @code{PREFIX/info}.
   @code{PREFIX} defaults to the home directory of the user who runs @code{configure}.
 @item
-@code{--with-fftw=DIR} : Installation directory of the FFTW library.
+@code{--with-fftw=DIR}: Installation directory of the FFTW library.
 @item
-@code{--with-lapack=DIR} : Installation directory of the LAPACK and
+@code{--with-lapack=DIR}: Installation directory of the LAPACK and
   BLAS libraries.
 @item
-@code{--with-gsl-prefix=DIR} : Installation directory of the GSL library. The
+@code{--with-gsl-prefix=DIR}: Installation directory of the GSL library. The
   libraries are expected to be in @code{DIR/lib} and the include
   files in @code{DIR/include}. The value of @code{DIR} is usually found by
   issuing the command @code{gsl-config --prefix}. (If the GSL library is
-  installed, the program @code{gsl-config} should be somewhere).
+  installed, the program @code{gsl-config} should be somewhere.)
 @item
-@code{--enable-1d} : Build the 1d version of @code{octopus}.
+@code{--enable-1d}: Build the 1d version of @code{octopus}.
 @item
-@code{--enable-2d} : Build the 2d version of @code{octopus}.
+@code{--enable-2d}: Build the 2d version of @code{octopus}.
 @item
-@code{--enable-3d} : Build the 3d version of @code{octopus}. This is the
+@code{--enable-3d}: Build the 3d version of @code{octopus}. This is the
   default behaviour.
 @item
-@code{--enable-mpi} : Builds the parallel version (MPI) of @code{octopus}.
+@code{--enable-mpi}: Builds the parallel version (MPI) of @code{octopus}.
 @item
-@code{--enable-complex} : Builds a version with complex wave-functions
+@code{--enable-complex}: Builds a version with complex wave-functions
 for the ground-state calculations (wave-functions are always complex for
 the evolution). This is needed when spinors are needed --- e.g. noncollinear
 magnetism is going to be considered, or the spin-orbit coupling term will
@@ -622,12 +622,12 @@ complex wave-function, and so on.
 
 The program has been tested in the following platforms:
 @itemize @bullet
-@item @code{i686*-linux-gnu} : with the @uref{http://www.absoft.com, Absoft},
+@item @code{i686*-linux-gnu}: with the @uref{http://www.absoft.com, Absoft},
   and the @uref{http://www.intel.com/software/products/compilers/, Intel} compiler.
-@item @code{alphae*} : both in Linux and in OSF with Compac's @code{fort} compiler.
+@item @code{alphae*}: both in Linux and in OSF/1 with Compaq's @code{fort} compiler.
 @item @code{powerpc-ibm-aix4.3.3.0}: with native @code{xlf90} compiler.
 @end itemize
-If you manage to compile/run @code{octopus} in a different platform
+If you manage to compile/run @code{octopus} on a different platform
 or with a different compiler, please let us know so we can update the
 list. Patches to solve compiler issues are also welcomed.
 
@@ -653,20 +653,20 @@ compile the code. So, what went wrong?
 
 @item Did you pass the correct @code{--with-XXXX} (where XXXX is gsl, fftw or
   lapack in lowercase) to the configure script? If your libraries are
-  installed in an non-standard directory (like @code{/opt/lapack}), you will
+  installed in a non-standard directory (like @code{/opt/lapack}), you will
   have to pass the script the location of the library (in this example,
   you could try @code{./configure --with-lapack=/opt/lapack}.
 
-@item If you are working in an alpha station, do not forget that the @code{CXML}
+@item If you are working on an alpha station, do not forget that the @code{CXML}
   library includes @code{BLAS} and @code{LAPACK}, so it can be used by
   @code{octopus}. If needed, just set the correct path with @code{--with-lapack}.
 
 @item If the configuration script can not find @code{FFTW}, it is probable that
   you did not compile @code{FFTW} with the same Fortran compiler or with the
-  same compiler options. The basic problem is that Fortran some times converts
-  the function names to uppercase, other times to lowercase, and it can
-  add an "_" to them, or even two. Obviously all libraries and the program have
-  to use the same convention, so the best is to compile everything with
+  same compiler options. The basic problem is that Fortran sometimes converts
+  the function names to uppercase, at other times to lowercase, and it can
+  add an ``_'' to them, or even two. Obviously all libraries and the program
+  have to use the same convention, so the best is to compile everything with
   the same Fortran compiler/options. If you are a power user, you can check the
   convention used by your compiler using the command @code{nm <library>}.
 
@@ -728,17 +728,17 @@ matrices). A scalar variable @code{var} can be defined by:
 @example
 var = exp
 @end example
-@code{var} can contain any alphanumeric character plus "_", and 
+@code{var} can contain any alphanumeric character plus ``_'', and 
 @code{exp} can be a quote delimited string, a number (integer,
 real, or complex), a variable name, or a mathematical expression. 
 In the expressions all arithmetic operators are supported 
-("a+b", "a-b", "a*b", "a/b"; for exponentiation the C syntax
-"a^b" is used), and the following functions can be use:
+(``a+b'', ``a-b'', ``a*b'', ``a/b''; for exponentiation the C syntax
+``a^b'' is used), and the following functions can be used:
 @itemize @bullet
-@item @code{sqrt(x)} : The square root of @code{x}.
-@item @code{exp(x)} : The exponential of @code{x}.
+@item @code{sqrt(x)}: The square root of @code{x}.
+@item @code{exp(x)}: The exponential of @code{x}.
 @item @code{log(x)} or @code{ln(x)}: The natural logarithm of @code{x}.
-@item @code{log10(x)} : Base 10 logarithm of @code{x}.
+@item @code{log10(x)}: Base 10 logarithm of @code{x}.
 @item @code{sin(x)}, @code{cos(x)}, @code{tan(x)}, @code{cot(x)},
   @code{sec(x)}, @code{csc(x)}: The sinus, co-sinus, tangent, co-tangent,
   secant and co-secant of @code{x}.
@@ -754,11 +754,11 @@ In the expressions all arithmetic operators are supported
 @end itemize
 You can also use any of the predefined variables:
 @itemize @bullet
-@item @code{pi} : 3.141592653589793, what else is there to say?
-@item @code{e} : The base of the natural logarithms.
-@item @code{false} or @code{f} or @code{no} : False in all its flavors. For the
+@item @code{pi}: 3.141592653589793, what else is there to say?
+@item @code{e}: The base of the natural logarithms.
+@item @code{false} or @code{f} or @code{no}: False in all its flavors. For the
   curious, @code{false} is defined as 0.
-@item @code{true} or @code{t} or @code{yes} : The truthful companion of @code{false}. For the
+@item @code{true} or @code{t} or @code{yes}: The truthful companion of @code{false}. For the
   curious, @code{true} is defined as 1.
 @end itemize
 
@@ -772,7 +772,7 @@ The syntax is the following:
 %
 @end example
 Rows in a block are separated by a newline, while columns are
-separated by the character "|". There may be any number of lines and any
+separated by the character ``|''. There may be any number of lines and any
 number of columns in a block. Note also that each line can have a different
 number of columns.
 
@@ -780,7 +780,7 @@ If @code{octopus} tries to read a variable that is not defined in the
 @code{inp} file, it automatically assigns to it a default value. All
 variables read are output to the file '@code{out.oct}'. If you are
 not sure of what the program is reading, just take a look at it.
-Everything following the character "#" until the end of the line
+Everything following the character ``#'' until the end of the line
 is considered a comment and is simply cast into oblivion.
 
 @node Input file options,  , The parser, The input file
@@ -815,39 +815,39 @@ are given in parenthesis.
 @itemize @bullet
 
 @item @vindex @code{Verbose}
-  @code{Verbose} (integer, 30) : 
+  @code{Verbose} (integer, 30): 
 Verbosity level of the program. The higher, the
 more verbose @code{octopus} is. Current levels are:
 @itemize @minus
-  @item @code{verbose <=  0} : Silent mode. No output except fatal errors.
-  @item @code{verbose >   0} : Warnings only.
-  @item @code{verbose >  20} : Normal program info.
-  @item @code{verbose > 999} : Debug mode. Issues a message every time the 
-program enters a (important) subroutine, and prints the time it spend upon return.
+  @item @code{verbose <=  0}: Silent mode. No output except fatal errors.
+  @item @code{verbose >   0}: Warnings only.
+  @item @code{verbose >  20}: Normal program info.
+  @item @code{verbose > 999}: Debug mode. Issues a message every time the 
+program enters an (important) subroutine, and prints the time it spend upon return.
 @end itemize
 
 @item @vindex @code{SystemName}
-  @code{SystemName} (string, 'system') :
+  @code{SystemName} (string, 'system'):
 A string that identifies the current run. This parameter is used 
 to build the names of some files generated by @code{octopus}.
 
 @item @vindex @code{CalculationMode}
-  @code{CalculationMode} (integer, 1) :
+  @code{CalculationMode} (integer, 1):
 It defines the type of simulation to perform. Options are:
   @itemize @minus
-    @item @code{1} : Start static calculation.
-    @item @code{2} : Resume static calculation.
-    @item @code{3} : Calculate unoccuppied states.
-    @item @code{4} : Resume calculation of unoccupied states.
-    @item @code{5} : Start time-dependent propagation.
-    @item @code{6} : Resume time-dependent propagation.
-    @item @code{7} : Start static polarizability calculation.
-    @item @code{8} : Resume static polarizability calculation.
-    @c @item @code{9} : Perform Born-Oppenheimer MD simulation.
+    @item @code{1}: Start static calculation.
+    @item @code{2}: Resume static calculation.
+    @item @code{3}: Calculate unoccuppied states.
+    @item @code{4}: Resume calculation of unoccupied states.
+    @item @code{5}: Start time-dependent propagation.
+    @item @code{6}: Resume time-dependent propagation.
+    @item @code{7}: Start static polarizability calculation.
+    @item @code{8}: Resume static polarizability calculation.
+    @c @item @code{9}: Perform Born-Oppenheimer MD simulation.
     @item @code{10}: Perform geometry minimization.
     @item @code{11}: Calculates the phonon spectrum of the system.
     @item @code{12}: @emph{Optimum control} mode.
-    @item @code{99} : Print out an octopus recipe.
+    @item @code{99}: Print out an octopus recipe.
   @end itemize
 
 @item @vindex @code{Units}
@@ -861,8 +861,8 @@ in words of Prof. George F. Bertsch), can also be used. See the Frequently
 Asked Questions for some more details.
 Valid options are:
 @itemize @minus
-  @item @code{'a.u'} : atomic units
-  @item @code{'eVA'} : electron-volts/@aa{}ngstr@"om
+  @item @code{'a.u'}: atomic units
+  @item @code{'eVA'}: electron-volts/@aa{}ngstr@"om
 @end itemize
 
 @item @vindex @code{UnitsInput}
@@ -881,7 +881,7 @@ Same as @code{Units}, but only refers to the values in the output files.
 @itemize @bullet
 
 @item @vindex @code{Species}
-@code{Species} (block data) : 
+@code{Species} (block data): 
 A specie is by definition an ion (nucleus + core electrons) described
 through a pseudo-potential, or a model potential.
 The format of this block is different for 1, 2 or 3 dimensions, and
@@ -915,7 +915,7 @@ potential -Z/sqrt(x*x + 1).
     'usdef'   | 1 | 8 | "1/2*r^2"
   %
 @end example
-In this case, we have 4 "species" present:
+In this case, we have 4 ``species'' present:
 @itemize @minus
 @item Oxygen labelled '@code{O}'. Next number is the atomic mass (in atomic 
 mass units), and third field, the atomic number (8, in this case).
@@ -956,7 +956,7 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
 @itemize @bullet
 
 @item @vindex @code{PDBCoordinates}
-@code{PDBCoordinates} (string, 'coords.pdb') :
+@code{PDBCoordinates} (string, 'coords.pdb'):
   Tries to read the atomic coordinates from the file @code{PDBCoordinates}.
   The PDB (@uref{http://www.rcsb.org/pdb/,Protein Data Bank}) format is
   quite complicated, and it goes well beyond the scope of this manual. You
@@ -980,7 +980,7 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
   @end itemize
 
 @item @vindex @code{XYZCoordinates}
-@code{XYZCoordinates} (string, 'coords.xyz') :
+@code{XYZCoordinates} (string, 'coords.xyz'):
   If @code{PDBCoordinates} is not present, reads the atomic coordinates
   from the XYZ file @code{XYZCoordinates}. The XYZ format is very simple,
   as can be seem from this example for the CO molecule (in @AA{}).
@@ -996,8 +996,8 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
   the chemical species and the Cartesian coordinates of the atom.
 
 @item @vindex @code{Coordinates}
-@code{Coordinates} (block data) :
-  If neither a @code{XYZCoordinates} or a @code{PDBCoordinates} was found,
+@code{Coordinates} (block data):
+  If neither a @code{XYZCoordinates} nor a @code{PDBCoordinates} was found,
   @code{octopus} tries to read the coordinates for the atoms from the
   block @code{Coordinates}. The format is quite straightforward:
   @example
@@ -1016,7 +1016,7 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
   the @code{MoveIons} variable).
 
 @item @vindex @code{AdjustCoordinates}
-@code{AdjustCoordinates} (logical, false) :
+@code{AdjustCoordinates} (logical, false):
   If true, translates the atom coordinates so that the
   geometrical centre of the molecule coincides with the zero of 
   the mesh, and rotates them, fixing the largest dimension
@@ -1025,31 +1025,31 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
   it out!
 
 @item @vindex @code{MainAxis}
-@code{MainAxis} (block data) :
+@code{MainAxis} (block data):
   Defines the axis to be used if @code{AdjustCoordinates} is true.
   If not set defaults to the z axis.
 
 @item @vindex @code{OutputCoordinates}
-@code{OutputCoordinates} (logical, false) :
+@code{OutputCoordinates} (logical, false):
   If true @code{octopus} outputs a XYZ file called 
-  '@code{SystemName}.xyz' containing the coordinates of the atoms
+  ``@code{SystemName}.xyz'' containing the coordinates of the atoms
   treated within Quantum Mechanics. If point charges were defined
   in the PDB file (see @code{PDBCoordinates}), they will be output
-  in the file '@code{SystemName_classical.xyz}'.
+  in the file ``@code{SystemName_classical.xyz}''.
 @end itemize
 
 @node Velocities, Mesh, Coordinates, Input file options
 @subsection Velocities
 
 @itemize @bullet
-@item @vindex @code{XYZVelocities} :
-@code{XYZVelocities} (string, 'velocities.xyz') :
+@item @vindex @code{XYZVelocities}:
+@code{XYZVelocities} (string, 'velocities.xyz'):
   @code{octopus} will try to read the starting velocities of the atoms from the XYZ file 
   @code{XYZVelocities}.
 
 @item @vindex @code{Velocities}
-@code{Velocities} (block data) :
-  If @code{XYZVelocities} is not present, @code{octopus} will try fetch the initial 
+@code{Velocities} (block data):
+  If @code{XYZVelocities} is not present, @code{octopus} will try to fetch the initial 
   atomic velocities from this block. If this block is not present, @code{octopus}
   will reset the initial velocities to zero. The format of this block can be
   illustrated by this example:
@@ -1062,7 +1062,7 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
   It describes one Carbon and one Oxygen moving at the relative
   velocity of @code{3.4}, velocity units.
 @end itemize
-Note: it is important to maintain for the velocities the ordering 
+Note: It is important for the velocities to maintain the ordering 
 in which the species were defined in the coordinates specifications.
 
 @c **********************************************************************
@@ -1077,7 +1077,7 @@ be tuned to suit the geometric configuration of the system.
 @itemize @bullet
 
 @item @vindex @code{BoxShape}
-@code{BoxShape} (integer, sphere) :
+@code{BoxShape} (integer, sphere):
 It is the shape of the simulation box. The allowed 
 values are:
   @itemize @minus
@@ -1090,12 +1090,12 @@ in the z direction
 For a 1D calculation, it would obviously always be a 1D ``sphere''.
 
 @item @vindex @code{Radius}
-@code{Radius} (double, 20.0 a.u.) :
+@code{Radius} (double, 20.0 a.u.):
 If @code{BoxShape != parallelepiped} defines the radius of the
 spheres or of the cylinder. 
 
 @item @vindex @code{Lsize}
-@code{Lsize} (block data) :
+@code{Lsize} (block data):
 In case @code{BoxShape = parallelepiped}, this
 is assumed to be a block of the form:
   @example
@@ -1106,11 +1106,11 @@ is assumed to be a block of the form:
 where the @code{size*} are half of the lengths of the box in each direction.
 
 @item @vindex @code{ZLength}
-@code{ZLength} (double, 1.0 a.u.) :
+@code{ZLength} (double, 1.0 a.u.):
 If @code{BoxShape == cylinder} is half the total length of the cylinder.
 
 @item @vindex @code{Spacing}
-@code{Spacing} (double, 0.6 a.u.) or (block data) :
+@code{Spacing} (double, 0.6 a.u.) or (block data):
 If the code is compiled in 1D mode or if @code{BoxShape != parallelepiped}
 defines the (constant) spacing between points in the grid. Otherwise, it
 is assumed to be a block of the form:
@@ -1122,18 +1122,18 @@ is assumed to be a block of the form:
 
 @item @vindex @code{DerivativesSpace}
 @code{DerivativesSpace} (integer, real_space)
-Defines in which space gradients and the laplacian are calculated. Allowed values are:
+Defines in which space gradients and the Laplacian are calculated. Allowed values are:
   @itemize @minus
-    @item @code{real_space} or @code{0} : Derivatives are calculated in real-space
+    @item @code{real_space} or @code{0}: Derivatives are calculated in real-space
       using finite differences. The order of the derivative can be set with
       @code{OrderDerivatives}.
-    @item @code{fourier_space} or @code{1} : Derivatives are calculated in
+    @item @code{fourier_space} or @code{1}: Derivatives are calculated in
       reciprocal space. Obviously this case implies cyclic boundary conditions,
       so be careful.
   @end itemize
 
 @item @vindex @code{OrderDerivatives}
-@code{OrderDerivatives} (integer, 4) :
+@code{OrderDerivatives} (integer, 4):
 If @code{DerivativesSpace == real_space} use a finite difference discretisation
 of this order for the derivatives, that is a @code{OrderDerivatives*2 + 1} formula.
 See (MISSING ARTICLE) for details.
@@ -1141,8 +1141,8 @@ See (MISSING ARTICLE) for details.
 @item @vindex @code{DoubleFFTParameter}
 @code{DoubleFFTParameter} (real, 2.0):
 For solving Poisson equation in Fourier space, and for applying the local potential
-in Fourier space, an auxiliary cubic mess is built. This mesh will be larger than
-the circunscript cube to the usual mesh by a factor @code{DoubleFFTParameter}. See
+in Fourier space, an auxiliary cubic mesh is built. This mesh will be larger than
+the circumscribed cube to the usual mesh by a factor @code{DoubleFFTParameter}. See
 the section that refers to Poisson equation, and to the local potential for details.
 
 @end itemize
@@ -1154,39 +1154,39 @@ the section that refers to Poisson equation, and to the local potential for deta
 @itemize @bullet
 
 @item @vindex @code{SpinComponents}
-@code{SpinComponents} (integer, 1) :
+@code{SpinComponents} (integer, 1):
 Defines the spin mode @code{octopus} will run in. Valid modes are:
   @itemize @minus
-    @item @code{1} : Spin-unpolarised calculation.
-    @item @code{2} : Spin-polarised calculation (collinear spin). This mode
+    @item @code{1}: Spin-unpolarised calculation.
+    @item @code{2}: Spin-polarised calculation (collinear spin). This mode
 will double the number of wave-functions necessary for a spin-unpolarised 
 calculation.
-    @item @code{3} : Non-collinear spin. This mode will double the number 
+    @item @code{3}: Non-collinear spin. This mode will double the number 
 of wave-functions necessary for a spin-unpolarised calculation, and each of
 the wave-functions will be a 2-spinor.
   @end itemize
 
 @item @vindex @code{NumberKPoints}
-@code{NumberKPoints} (integer, 1) :
+@code{NumberKPoints} (integer, 1):
 If @code{octopus} was compiled for periodic systems, the number of
 @emph{k} points to use in the calculation. If @code{NumberKPoints == 1},
 use only the Gamma point. (Note: current version in fact does not
 implement this possibility. Setting this variable to more that 1 may
-lead to erroneous results).
+lead to erroneous results.)
 
 @item @vindex @code{ExcessCharge}
-@code{ExcessCharge} (double, 1) :
+@code{ExcessCharge} (double, 1):
 The net charge of the system. A negative value means that we are adding 
 electrons, while a positive value means we are taking electrons
 from the system.
 
 @item @vindex @code{ExtraStates}
-@code{ExtraStates} (integer, 1) :
+@code{ExtraStates} (integer, 1):
 How many unoccupied states to use in the ground-state
 calculation. Note that this number is unrelated to @code{CalculationMode == 4}.
 
 @item @vindex @code{Occupations}
-@code{Occupations} (blockdata) :
+@code{Occupations} (block data):
 The occupation numbers of the orbitals can be fixed through the use of this
 variable. For example:
   @example
@@ -1210,7 +1210,7 @@ carbon atom, one would do:
   @end example
 
 @item @vindex @code{ElectronicTemperature}
-@code{ElectronicTemperature} (double, 0.0)
+@code{ElectronicTemperature} (double, 0.0):
 If @code{Occupations} is not set, @code{ElectronicTemperature} is the
 temperature in the Fermi-Dirac function used to distribute the electrons
 among the existing states.
@@ -1223,33 +1223,33 @@ among the existing states.
 @itemize @bullet
 
 @item @vindex @code{NonInteractingElectrons}
-@code{NonInteractingElectrons} (logical, false) :
+@code{NonInteractingElectrons} (logical, false):
   If @code{true}, treat the electrons as non-interacting, i.e. neglect both
   Hartree and exchange-correlation contributions to the Kohn-Sham potential.
   A probable choice for one-electron problems.
 
 @item @vindex @code{ClassicPotential}
-@code{ClassicPotential} (logical, false) :
+@code{ClassicPotential} (logical, false):
 If @code{true}, add to the external potential the potential generated by 
 the point charges read from the PDB input (see @code{PBDCoordinates}).
 
 @item @vindex @code{LocalPotentialSpace}
-@code{LocalPotentialSpace} (integer, fourier_space) :
+@code{LocalPotentialSpace} (integer, fourier_space):
 If @code{fourier_space}, generate the local part of the pseudo-potential
 in Fourier space; Otherwise do it directly in real space. The auxiliary box defined via
 the @code{DoubleFFTParameter} is used for this purpose. 
 
 @item @vindex @code{NonLocalPotentialSpace}
-@code{NonLocalPotentialSpace} (integer, real_space) :
+@code{NonLocalPotentialSpace} (integer, real_space):
 If @code{fourier_space} generate the non-local part of the pseudo-potential
 in Fourier space; Otherwise do it directly in real space. @emph{Generating
 the potential in Fourier space seems to reduce the egg-box effect but this
 option has not been extensively tested.}
 
 @item @vindex @code{GridRefinement}
-@code{GridRefinement} (integer, 3) :
+@code{GridRefinement} (integer, 3):
 If @code{NonLocalPotentialSpace == fourier_space}, a grid refinement
-technique is applied to reduce the error in the calculation of the nonlocal
+technique is applied to reduce the error in the calculation of the non-local
 projectors. This variable defines the number of
 points to interpolate between the normal mesh points, in order to 
 apply this  method. @emph{This seems to reduce the egg-box effect but this
@@ -1271,23 +1271,23 @@ parameters control the exchange part of the functional, while the
 @vindex @code{XFunctional}
 
 @itemize @bullet
-@item @code{XFamily == 'ZER'} : No exchange.
-@item @code{XFamily == 'LDA'} : Local density approximation.
+@item @code{XFamily == 'ZER'}: No exchange.
+@item @code{XFamily == 'LDA'}: Local density approximation.
   @itemize @minus
-    @item @code{XFunctional == 'NREL'} : Non-relativistic exchange.
-    @item @code{XFunctional ==  'REL'} : Relativistic exchange.
+    @item @code{XFunctional == 'NREL'}: Non-relativistic exchange.
+    @item @code{XFunctional ==  'REL'}: Relativistic exchange.
   @end itemize
-@item @code{XFamily == 'GGA'} : Generalised gradient approximations.
+@item @code{XFamily == 'GGA'}: Generalised gradient approximations.
   @itemize @minus
-    @item @code{XFunctional ==  'PBE'} :  J.P.Perdew, K.Burke and M.Ernzerhof, 
-    	PRL @strong{77}, 3865 (1996)
-    @item @code{XFunctional == 'PBER'} : PBE with some relativistic corrections.
-    @item @code{XFunctional == 'LB94'} : van Leeuwen and Baerends functional.
+    @item @code{XFunctional ==  'PBE'}:  J.P.Perdew, K.Burke and M.Ernzerhof, 
+    	PRL @strong{77}, 3865 (1996).
+    @item @code{XFunctional == 'PBER'}: PBE with some relativistic corrections.
+    @item @code{XFunctional == 'LB94'}: van Leeuwen and Baerends functional.
   @end itemize
-@item @code{XFamily == 'KLI'} : Optimised effective potential method within
+@item @code{XFamily == 'KLI'}: Optimised effective potential method within
   the Krieger, Lee and Iafrate approximation.
   @itemize @minus
-    @item @code{XFunctional ==   'X'} : Exact exchange functional.
+    @item @code{XFunctional ==   'X'}: Exact exchange functional.
     @item @code{XFunctional == 'SIC'}: Self interaction corrected LDA.
   @end itemize
 @end itemize
@@ -1297,17 +1297,17 @@ And now comes the correlation variables:
 @vindex @code{CFunctional}
 
 @itemize @bullet
-@item @code{CFamily == 'ZER'} : No correlation
-@item @code{CFamily == 'LDA'} : Local density approximation.
+@item @code{CFamily == 'ZER'}: No correlation.
+@item @code{CFamily == 'LDA'}: Local density approximation.
   @itemize @minus
-    @item @code{CFunctional ==   'PZ81'} :  Perdew and Zunger, 
-      PRB @strong{23}, 5075 (1981)
-    @item @code{CFunctional == 'PW92'} : J.P.Perdew and Y.Wang, 
-      PRB @strong{45}, 13244 (1992)
+    @item @code{CFunctional ==   'PZ81'}:  Perdew and Zunger, 
+      PRB @strong{23}, 5075 (1981).
+    @item @code{CFunctional == 'PW92'}: J.P.Perdew and Y.Wang, 
+      PRB @strong{45}, 13244 (1992).
   @end itemize
-@item @code{CFamily == 'GGA'} : Generalised gradient approximations. 
+@item @code{CFamily == 'GGA'}: Generalised gradient approximations. 
   @itemize @minus
-    @item @code{CFunctional == 'PBE'} : J.P.Perdew, K.Burke and M.Ernzerhof, 
+    @item @code{CFunctional == 'PBE'}: J.P.Perdew, K.Burke and M.Ernzerhof, 
     	PRL @strong{77}, 3865 (1996)
   @end itemize
 @item @code{CFamily == 'KLI'}: Optimised effective potential method within
@@ -1325,26 +1325,26 @@ The self consistent procedure will stop when the first of the convergence
 criteria is fulfilled.
 @itemize @bullet
 @item @vindex @code{MaximumIter}
-@code{MaximumIter} (integer, 200) :
+@code{MaximumIter} (integer, 200):
 Maximum number of SCF iterations. @code{0} means unlimited.
 
 @item @vindex @code{ConvAbsDens}
-@code{ConvAbsDens} (double, 1e-5) :
+@code{ConvAbsDens} (double, 1e-5):
 Absolute convergence of the density. @code{0} means do 
 not use this criterion.
 
 @item @vindex @code{ConvRelDens}
-@code{ConvRelDens} (double, 0.0) :
+@code{ConvRelDens} (double, 0.0):
 Relative convergence of the density. @code{0} means do 
 not use this criterion.
 
 @item @vindex @code{ConvAbsEnergy}
-@code{ConvAbsEnergy} (double, 0.0) :
+@code{ConvAbsEnergy} (double, 0.0):
 Absolute convergence of the total energy. @code{0} means do 
 not use this criterion.
 
 @item @vindex @code{ConvRelEnergy}
-@code{ConvRelEnergy} (double, 0.0) :
+@code{ConvRelEnergy} (double, 0.0):
 Relative convergence of the total energy. @code{0} means do 
 not use this criterion.
 
@@ -1353,28 +1353,28 @@ There are some more variables controlling the SCF cycle:
 @itemize @bullet
 
 @item @vindex @code{LCAOStart}
-@code{LCAOStart} (logical, true) :
+@code{LCAOStart} (logical, true):
 Before starting a SCF calculation, performs
-a LCAO calculation. these should provide @code{octopus} with a good set
+a LCAO calculation. These should provide @code{octopus} with a good set
 of initial wave-functions, and help the convergence of the SCF cycle.
-(Up to current version, only a minimal basis set used).
+(Up to current version, only a minimal basis set used.)
 
 @item @vindex @code{SCFinLCAO}
-@code{SCFinLCAO} (logical, false) :
+@code{SCFinLCAO} (logical, false):
 Performs all the SCF cycle restricting the calculation to the LCAO subspace.
 This may be useful for systems with convergence problems (first do a 
 calculation within the LCAO subspace, then restart from that point for
 an unrestricted calculation).
 
 @item @vindex @code{EigenSolver}
-@code{EigenSolver} (integer, 0) :
+@code{EigenSolver} (integer, 0):
 At each SCF cycle step, a diagonalisation of the Hamiltonian is performed.
 This variables tells
 which eigensolver to use to diagonalise the Kohn-Sham Hamiltonian.
 Possible values are:
   @itemize @minus
-    @item @code{0} : Conjugated Gradients method I.
-    @item @code{1} : Conjugated Gradients method II.
+    @item @code{0}: Conjugated Gradients method I.
+    @item @code{1}: Conjugated Gradients method II.
   @end itemize
 Method I should be better. Look up the source to know what the differences
 are.
@@ -1388,46 +1388,46 @@ Next variables take care of this process. This possiblity is only
 available when method 0 is used.
 
 @item @vindex @code{EigenSolverInitTolerance}
-@code{EigenSolverInitTolerance} (double, 1.0e-10) :
+@code{EigenSolverInitTolerance} (double, 1.0e-10):
 When @code{EigenSolver == 0} is the initial tolerance for the eigenvectors.
 
 @item @vindex @code{EigenSolverFinalTolerance}
-@code{EigenSolverFinalTolerance} (double, 1.0e-14) :
+@code{EigenSolverFinalTolerance} (double, 1.0e-14):
 When @code{EigenSolver == 0} is the final tolerance for the eigenvectors.
 
 @item @vindex @code{EigenSolverFinalToleranceIteration}
-@code{EigenSolverFinalToleranceIteration} (integer, 7) :
+@code{EigenSolverFinalToleranceIteration} (integer, 7):
 When @code{EigenSolver == 0} determines how many interactions are needed 
 to go from @code{EigenSolverInitTolerance} to @code{EigenSolverFinalTolerance}.
 
 @item @vindex @code{EigenSolverMaxIter}
-@code{EigenSolverMaxIter} (integer, 25) :
+@code{EigenSolverMaxIter} (integer, 25):
 When @code{EigenSolver == 0} determines the maximum number of iterations 
 for the eigensolver --- that is, if this number is reached, the diagonalisation
 is stopped even if the desired tolerance was not achieved.
 
 @item @vindex @code{NumberCG}
-@code{NumberCG} (integer, 3) :
+@code{NumberCG} (integer, 3):
 When @code{EigenSolver == 1} determines the number of conjugated gradient 
 steps per iteration.
 
 @item @vindex @code{TypeOfMixing}
-@code{TypeOfMixing} (integer, 0) :
+@code{TypeOfMixing} (integer, 0):
 Selects the mixing procedure for the density during the SCF cycle. Possible
 values are:
   @itemize @minus
-    @item @code{0} : Linear mixing.
-    @item @code{1} : Reserved for Anderson-Pulay mixing; currently not implemented.
-    @item @code{2} : Broyden mixing.
+    @item @code{0}: Linear mixing.
+    @item @code{1}: Reserved for Anderson-Pulay mixing; currently not implemented.
+    @item @code{2}: Broyden mixing.
   @end itemize
 
 @item @vindex @code{Mixing}
-@code{Mixing} (double, 0.3) :
+@code{Mixing} (double, 0.3):
 Determines the amount of the new density which is to be mixed
 with the old density.
 
 @item @vindex @code{BroydenNumber}
-@code{BroydenNumber} (integer, 3) :
+@code{BroydenNumber} (integer, 3):
 Number of steps used by Broyden mixing to extrapolate the new density.
 
 @end itemize
@@ -1441,17 +1441,17 @@ if @code{TDOccupationalAnalysis == 1}.)
 @itemize @bullet
 
 @item @vindex @code{UnoccNumberStates}
-@code{UnoccNumberStates} (integer, 5) :
+@code{UnoccNumberStates} (integer, 5):
   How many unoccupied states to compute.
 
 @item @vindex @code{UnoccMaximumIter}
-@code{UnoccMaximumIter} (integer, 200) :
+@code{UnoccMaximumIter} (integer, 200):
   Maximum number of iterations while calculating the unoccupied states.
   Note that this are @emph{not} SCF iterations, for the density and the 
   Hamiltonian are not updated!
 
 @item @vindex @code{UnoccConv}
-@code{UnoccConv} (double, 1e-4) :
+@code{UnoccConv} (double, 1e-4):
   Absolute convergence in the eigenvectors. So don't try to put it too
   good or else you won't converge.
 @end itemize
@@ -1462,67 +1462,67 @@ if @code{TDOccupationalAnalysis == 1}.)
 @itemize @bullet
 
 @item @vindex @code{TDMaximumIter}
-@code{TDMaximumIter} (integer, 1500) :
+@code{TDMaximumIter} (integer, 1500):
 Number of time steps.
 
 @item @vindex @code{TDSaveIter}
-@code{TDSaveIter} (integer, 100) :
+@code{TDSaveIter} (integer, 100):
 Output stuff every @code{TDSaveIter} steps.
 
 @item @vindex @code{TDEvolutionMethod}
-@code{TDEvolutionMethod} (integer, 3) :
+@code{TDEvolutionMethod} (integer, 3):
 Method used to perform the time propagation. Authorised values are:
   @itemize @minus
-    @item @code{1} : ``Old-Style'' method. One should check carefully 
+    @item @code{1}: ``Old-Style'' method. One should check carefully 
 the time-step, and it only works with density based functionals.
 It is quick per time step, but allows for very small time-steps.
-    @item @code{2} : Method designed to enforce the time-reversal symmetry. 
+    @item @code{2}: Method designed to enforce the time-reversal symmetry. 
 Better time steps. Default.
-    @item @code{3} : A modification of previous method to make it faster.
-It is based on extrapolation of the time dependent potentials. Due to some
+    @item @code{3}: A modification of previous method to make it faster.
+It is based on extrapolation of the time-dependent potentials. Due to some
 unknown problems, currently being investigated, it is not the default method.
-    @item @code{4} : Exponential midpoint rule. In principle, it should  also
+    @item @code{4}: Exponential midpoint rule. In principle, it should  also
 respect the time-reversal symmetry.
   @end itemize
 
 @item @vindex @code{TDExponentialMethod}
-@code{TDExponentialMethod} (integer, 1) :
+@code{TDExponentialMethod} (integer, 1):
 Method used to numerically calculate the exponential of the hamiltonian,
 a core part of the calculation in any of the previously described methods
 to perform the evolution.
   @itemize @minus
-    @item @code{1} : N-th order expansion of the exponential.
-    @item @code{2} : Lanczos approximation. Allows for larger time-steps.
+    @item @code{1}: N-th order expansion of the exponential.
+    @item @code{2}: Lanczos approximation. Allows for larger time-steps.
 However, the larger the time-step, the longer the time per time-step. In
 certain cases, if the time-step is too large, the code will emit a warning
 whenever it considers that the evolution may not be proberly proceeding --
 the Lanczos process did not converge. This possibility is still somehow
 experimental. (REFERENCE MISSING).
-    @item @code{3} : Split-operator.
-    @item @code{4} : Suzuki-Trotter (REFERENCE MISSING). This is a higher-order
+    @item @code{3}: Split-operator.
+    @item @code{4}: Suzuki-Trotter (REFERENCE MISSING). This is a higher-order
 split-operator based method.
-    @item @code{5} : N-th order Chebyshev expansion. In principle, the Chebyshev expansion
+    @item @code{5}: N-th order Chebyshev expansion. In principle, the Chebyshev expansion
 of the exponential represents it more accurately than the canonical expansion
 (method 1). This is only true for high orders, though.
   @end itemize
 
 @item @vindex @code{TDExpOrder}
-@code{TDExpOrder} (integer, 4) :
+@code{TDExpOrder} (integer, 4):
 For @code{TDExponentialMethod} equal @code{1} or @code{5}, the order to which
 the exponential is expanded. For the Lanczos approximation, it is the maximum
 Lanczos-subspace dimension.
 
 @item @vindex @code{TDLanczosTol}
-@code{TDLanczosTol} (real, 1e-4) :
+@code{TDLanczosTol} (real, 1e-4):
 An internal tolerance variable for the Lanczos method. The smaller, the more
 precise the exponential is calculated.
 
 @item @vindex @code{TDTimeStep}
-@code{TDTimeStep} (double, 0.07 a.u.) :
+@code{TDTimeStep} (double, 0.07 a.u.):
   Time step for the propagation.
 
 @item @vindex @code{TDLasers}
-@code{TDLasers} (block data) :
+@code{TDLasers} (block data):
 Each line of the block describes a laser pulse applied to the system. 
 The syntax is:
   @example
@@ -1536,15 +1536,15 @@ middle (maximum) of the pulse and @code{omega0} the frequency of
 the pulse. The meaning of @code{tau0} depends on the envelope function. 
 The possible values for @code{envelope} are:
   @itemize @minus
-    @item @code{1} : Gaussian envelope. @code{tau0} is the standard deviation 
+    @item @code{1}: Gaussian envelope. @code{tau0} is the standard deviation 
       of the pulse.
-    @item @code{2} : Cosinoidal envelope. @code{tau0} is half the total length
+    @item @code{2}: Cosinoidal envelope. @code{tau0} is half the total length
       of the pulse.
-    @item @code{3} : Ramp. In this case there is an extra parameter 
+    @item @code{3}: Ramp. In this case there is an extra parameter 
       @code{tau1}. @code{tau0} is the length of the constant part of the ramp,
       and @code{tau1} is the raising (decaying) time. @code{tau1} should be
       an extra field after @code{t0}
-    @item @code{4} : Shape is read from a file.
+    @item @code{4}: Shape is read from a file.
   @end itemize
 
 If @code{envelope=4}, the @code{t0} parameter is substituted by a string that
@@ -1555,15 +1555,15 @@ that the program will use are interpolated / extrapolated from this numerically
 defined function.
 
 @item @vindex @code{TDGauge}
-@code{TDGauge} (integer, 0) :
+@code{TDGauge} (integer, 0):
 In which gauge to treat the laser. Options are:
 @itemize @minus
-    @item @code{1} : Length gauge.
-    @item @code{2} : Velocity gauge.
+    @item @code{1}: Length gauge.
+    @item @code{2}: Velocity gauge.
   @end itemize
 
 @item @vindex @code{TDOutputLaser}
-@code{TDOutputLaser} (logical, false) :
+@code{TDOutputLaser} (logical, false):
 If @code{true}, @code{octopus} outputs the laser field to the file '@code{laser.out}'.
 
 @item @vindex @code{TDDeltaStrength}
@@ -1583,46 +1583,46 @@ block is:
   @end example
 
 @item @vindex @code{TDAbsorbingBoundaries}
-@code{TDAbsorbingBoundaries} (integer, 0) :
+@code{TDAbsorbingBoundaries} (integer, 0):
 To improve the quality of the spectra by avoiding the formation of 
 standing density waves, one can make the boundaries of the simulation 
 box absorbing. The possible values for this parameter are:
   @itemize @minus
-    @item @code{0} : No absorbing boundaries.
-    @item @code{1} : A sin@math{^2} imaginary potential is added at the boundaries.
-    @item @code{2} : A mask is applied to the wave-functions at the boundaries.
+    @item @code{0}: No absorbing boundaries.
+    @item @code{1}: A sin@math{^2} imaginary potential is added at the boundaries.
+    @item @code{2}: A mask is applied to the wave-functions at the boundaries.
   @end itemize
 
 @item @vindex @code{TDABWidth}
-@code{TDABWidth} (real, 0.4 a.u.) :
+@code{TDABWidth} (real, 0.4 a.u.):
 Width of the region used to apply the absorbing boundaries.
 
 @item @vindex @code{TDABHeight}
-@code{TDABHeight} (real, -0.2 a.u.) :
+@code{TDABHeight} (real, -0.2 a.u.):
 When @code{TDAbsorbingBoundaries == 1}, is the height of the imaginary 
 potential.
 
 @item @vindex @code{TDDipoleLmax}
-@code{TDDipoleLmax} (integer , 1) :
+@code{TDDipoleLmax} (integer , 1):
 Maximum multi-pole of the density output to the file '@code{Sysname}.mult' 
 during a time-dependent simulation.
 
 @item @vindex @code{TDOccupationalAnalysis}
-@code{TDOccupationalAnalysis} (logical, false) :
+@code{TDOccupationalAnalysis} (logical, false):
 If true, outputs the projections of the time-dependent Kohn-Sham
 wave-functions onto the static (zero time) wave-functions to the
 file '@code{Sysname}.proj'.
 
 @item
-@code{MoveIons} (integer, 0) : 
+@code{MoveIons} (integer, 0): 
 What kind of simulation to perform. Possible values are:
   @itemize @minus
-    @item @code{0} : Do not move the ions.
-    @item @code{1} : Steepest descents.
-    @item @code{2} : Damped Newtonian dynamics using Verlet.
-    @item @code{3} : Newtonian dynamics using Verlet.
-    @item @code{4} : Newtonian dynamics using velocity Verlet.
-    @item @code{5} : Minimisation using conjugated gradients.
+    @item @code{0}: Do not move the ions.
+    @item @code{1}: Steepest descents.
+    @item @code{2}: Damped Newtonian dynamics using Verlet.
+    @item @code{3}: Newtonian dynamics using Verlet.
+    @item @code{4}: Newtonian dynamics using velocity Verlet.
+    @item @code{5}: Minimisation using conjugated gradients.
   @end itemize
 But in fact, for a time-dependent simulation can only takes the values 
 @code{0}, @code{3}, and @code{4}. The rest are
@@ -1637,14 +1637,14 @@ ignored in present version.
 @itemize @bullet
 
 @item @vindex @code{CalcPES_rc}
-@code{CalcPES_rc} (logical, false) :
+@code{CalcPES_rc} (logical, false):
   If @code{true}, store the wave functions in specific points in order to 
 calculate the photo-electron spectrum in a point far in the box as proposed in 
 A. Pohl, P.-G. Reinhard, and E. Suraud Phys. Rev. Lett. @strong{84}, 5090 (2000).
 
 
 @item @vindex @code{PES_rc_points}
-@code{PES_rc_points} (block data) :
+@code{PES_rc_points} (block data):
   List of points where to calculate the photo-electron spectrum a la Suraud.
   The exact syntax is:
   @example
@@ -1829,29 +1829,29 @@ are described in section ``External utilities.'' Common options read by these ut
 @c @itemize @bullet
 @c 
 @c @item @vindex @code{MoveIons}
-@c @code{MoveIons} (integer, 0) :
+@c @code{MoveIons} (integer, 0):
 @c   What kind of simulation to perform. Possible values are:
 @c   @itemize @minus
-@c     @item @code{0} : Do not move the ions.
-@c     @item @code{1} : Steepest descents.
-@c     @item @code{2} : Damped Newtonian dynamics using Verlet.
-@c     @item @code{3} : Newtonian dynamics using Verlet.
-@c     @item @code{4} : Newtonian dynamics using velocity Verlet.
-@c     @item @code{5} : Minimisation using conjugated gradients.
+@c     @item @code{0}: Do not move the ions.
+@c     @item @code{1}: Steepest descents.
+@c     @item @code{2}: Damped Newtonian dynamics using Verlet.
+@c     @item @code{3}: Newtonian dynamics using Verlet.
+@c     @item @code{4}: Newtonian dynamics using velocity Verlet.
+@c     @item @code{5}: Minimisation using conjugated gradients.
 @c   @end itemize
 @c 
 @c @item @vindex @code{BOnSteps}
-@c @code{BOnSteps} (integer, 1000) :
+@c @code{BOnSteps} (integer, 1000):
 @c   Number of time-steps to perform during the Born-Oppenheimer simulation.
 @c 
 @c @item @vindex @code{BOTimeStep}
-@c @code{BOTimeStep} (double, 0.1 a.u.) :
+@c @code{BOTimeStep} (double, 0.1 a.u.):
 @c   Time-step used to integrate the Born-Oppenheimer equations of motion. 
 @c   The default value @code{0.1} can safely be increased when performing
 @c   steepest descents (@code{MoveIons == 1}).
 @c 
 @c @item @vindex @code{Gamma}
-@c @code{Gamma} (double, 0.4) :
+@c @code{Gamma} (double, 0.4):
 @c   Value for the drag term when performing damped
 @c   Newtonian dynamics (@code{MoveIons == 2}).
 @c @end itemize
@@ -1862,23 +1862,23 @@ are described in section ``External utilities.'' Common options read by these ut
 @itemize @bullet
 
 @item @vindex @code{PoissonSolver}
-@code{PoissonSolver} (integer, 3) :
+@code{PoissonSolver} (integer, 3):
   In 3D defines which method to use in order to solve the Poisson equation.
   Allowed values are:
   @itemize @minus
-    @item @code{1} : Conjugated gradient method.
-    @item @code{3} : FFTs with spherical cutoff.
+    @item @code{1}: Conjugated gradient method.
+    @item @code{3}: FFTs with spherical cutoff.
   @end itemize
   The value of variable @code{DoubleFFTParameter} is used in case @code{3} method
   is used.
 
 @item @vindex @code{POLStaticField}
-@code{POLStaticField} (double, 0.001 a.u.) :
+@code{POLStaticField} (double, 0.001 a.u.):
   Magnitude of the static field used to calculate the static polarizability 
   in @code{CalculationMode = 7, 8}.
 
 @item @vindex @code{RecipeLang}
-@code{RecipeLang} (string, 'en') :
+@code{RecipeLang} (string, 'en'):
   In @code{CalculationMode = 99} defines the language in which to print
   the recipe. Allowed values are (for now) @code{'en'} and @code{'es'}.
 
@@ -2086,7 +2086,7 @@ you want to start a time-dependent calculation afterwards.
 Finally, you can safely ignore @code{out.oct}: it is an output from 
 the liboct library, irrelevant in what concerns physics ;).
 
-@strong{Exercises} :
+@strong{Exercises}:
 @itemize @bullet
 @item Study how the total energy and eigenvalue of the sodium atom improve
   with the mesh spacing.
