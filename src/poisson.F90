@@ -27,8 +27,12 @@ module poisson
   use fft
   use cube_function
 #endif
+!!!!WARNING
+  use mesh_function
+!!!!END OF WARNING
   use functions
   use math
+  use poisson_corrections
   use poisson_cg
 
   implicit none
@@ -47,11 +51,12 @@ module poisson
   integer, parameter :: FFT_SPH       = 0, &
                         FFT_CYL       = 1, &
                         FFT_PLA       = 2, &
-                        FFT_NOCUT     = 3
+                        FFT_NOCUT     = 3, &
+                        FFT_CORRECTED = 4
 #endif
 
-  integer, parameter :: CG            = 4, &
-                        CG_CORRECTED  = 5
+  integer, parameter :: CG            = 5, &
+                        CG_CORRECTED  = 6
 
 
 
@@ -59,7 +64,7 @@ contains
 
 subroutine poisson_init(m)
   type(mesh_type),     intent(inout) :: m
-  
+
   if(poisson_solver.ne.-99) return ! already initialized
   
   call push_sub('poisson_init')
@@ -70,19 +75,22 @@ subroutine poisson_init(m)
     call write_info(1)
   else
 #ifdef HAVE_FFT
-    call loct_parse_int('PoissonSolver', conf%periodic_dim, poisson_solver)
+    call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
     if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
       write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
       message(2) = 'PoissonSolver = 0 (fft spherical cutoff)   | '
       message(3) = '                1 (fft cylindrical cutoff) | '
       message(4) = '                2 (fft planar cutoff)      | '
-      message(5) = '                3 (fft no cutoff)          | '    
-      message(6) = '                4 (conj grad)              | '
-      message(7) = '                5 (corrected conj grad) '
-      call write_fatal(7)
+      message(5) = '                3 (fft no cutoff)          | '
+      message(6) = '                4 (fft + corrections)      | '
+      message(7) = '                5 (conj grad)              | '
+      message(8) = '                6 (corrected conj grad) '
+      call write_fatal(8)
     end if
-    if (poisson_solver /= conf%periodic_dim .and. poisson_solver < CG) then
+    if (poisson_solver /= conf%periodic_dim .and. &
+        poisson_solver < CG .and. &
+        poisson_solver /= FFT_CORRECTED) then
       write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
       write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
       message(3) =                 'You know what you are doing, right?'
@@ -93,8 +101,8 @@ subroutine poisson_init(m)
     if(poisson_solver < CG) then
       write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
-      message(2) = 'PoissonSolver = 4 (conj grad)              | '
-      message(3) = '                5 (corrected conj grad) '
+      message(2) = 'PoissonSolver = 5 (conj grad)              | '
+      message(3) = '                6 (corrected conj grad) '
       message(4) = '[The code was compiled without FFT support ' 
       call write_fatal(3)
     endif
@@ -127,10 +135,12 @@ subroutine poisson_end()
 end subroutine poisson_end
 
 subroutine poisson_solve(m, f_der, pot, rho)
-  type(mesh_type),  intent(in)    :: m
-  type(f_der_type), intent(in)    :: f_der
+  type(mesh_type), target,  intent(in)    :: m
+  type(f_der_type), target, intent(in)    :: f_der
   FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
   FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
+
+    FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
   call push_sub('poisson_solve')
 
@@ -148,6 +158,12 @@ subroutine poisson_solve(m, f_der, pot, rho)
 #ifdef HAVE_FFT
   case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call poisson_fft(m, pot, rho)
+  case(FFT_CORRECTED)
+    allocate(rho_corrected(m%np), vh_correction(m%np))
+    call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
+    call poisson_fft(m, pot, rho_corrected, average_to_zero = .true.)
+    pot = pot + vh_correction
+    deallocate(rho_corrected, vh_correction)
 #endif
   end select
 

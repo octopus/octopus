@@ -54,7 +54,7 @@ module eigen_solver
     integer           :: converged
   end type eigen_solver_type
 
-  integer, parameter :: RS_CG      = 4
+  integer, parameter :: RS_CG      = 5
 #ifdef HAVE_TRLAN
   integer, parameter :: RS_LANCZOS = 1
 #endif

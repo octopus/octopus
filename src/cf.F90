@@ -40,7 +40,8 @@ module cube_function
             dcf_RS2FS, zcf_RS2FS, &
             dcf_FS2RS, zcf_FS2RS, &
             dcf_FS_lapl, zcf_FS_lapl, &
-            dcf_FS_grad, zcf_FS_grad
+            dcf_FS_grad, zcf_FS_grad, &
+            cf_surface_average
 
   type dcf
     integer :: n(3)   ! the linear dimensions of the cube
@@ -67,6 +68,58 @@ module cube_function
   end type zcf
 
 contains
+
+  ! This function calculates the surface average of any function.
+  ! WARNING: Some more careful testing should be done on this.
+  FLOAT function cf_surface_average(m, cf) result(x)
+    type(mesh_type), intent(in) :: m
+    type(dcf), intent(in)       :: cf
+
+    integer ix, iy, iz, npoints
+    x = M_ZERO
+
+    do iy = 2, cf%n(2) - 1
+       do iz = 2, cf%n(3) - 1
+          x = x + (cf%RS(1, iy, iz) + cf%RS(cf%n(1), iy, iz))
+       enddo
+    enddo
+
+    do ix = 2, cf%n(1) - 1
+       do iz = 2, cf%n(3) - 1
+          x = x + (cf%RS(ix, 1, iz) + cf%RS(ix, cf%n(2), iz))
+       enddo
+    enddo
+
+    do ix = 2, cf%n(1) - 1
+       do iy = 2, cf%n(2) - 1
+          x = x + (cf%RS(ix, iy, 1) + cf%RS(ix, iy, cf%n(3)))
+       enddo
+    enddo
+
+    do iz = 2, cf%n(3) - 1
+       x = x + cf%RS(1, 1, iz) + cf%RS(cf%n(1), 1, iz) + &
+               cf%RS(1, cf%n(2), iz) + cf%RS(cf%n(1), cf%n(2), 1) 
+    enddo
+
+    do iy = 2, cf%n(2) - 1
+       x = x + cf%RS(1, iy, 1) + cf%RS(cf%n(1), iy, 1) + &
+               cf%RS(1, iy, cf%n(3)) + cf%RS(cf%n(1), iy, cf%n(3)) 
+    enddo
+
+    do ix = 2, cf%n(1) - 1
+       x = x + cf%RS(ix, 1, 1) + cf%RS(ix, cf%n(2), 1) + &
+               cf%RS(ix, 1, cf%n(3)) + cf%RS(ix, cf%n(2), cf%n(3)) 
+    enddo
+
+    x = x + cf%RS(1, 1, 1)             + cf%RS(cf%n(1), 1, 1) + &
+            cf%RS(1, cf%n(2), 1)       + cf%RS(cf%n(1), cf%n(2), 1) + &
+            cf%RS(1, 1, cf%n(3))       + cf%RS(cf%n(1), 1, cf%n(3)) + &
+            cf%RS(1, cf%n(2), cf%n(3)) + cf%RS(cf%n(1), cf%n(2), cf%n(3))
+
+    npoints = 6*(cf%n(1)-2)**2 + 12*(cf%n(1)-2) + 8
+    x = x/npoints
+
+  end function cf_surface_average
 
 #ifdef HAVE_FFT
   ! this routine computes

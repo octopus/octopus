@@ -17,8 +17,6 @@
 
 subroutine poisson3D_init(m)
   type(mesh_type),     intent(inout) :: m
-  integer :: maxl
-  FLOAT   :: threshold
   ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= CG_CORRECTED)
 
   select case(poisson_solver)
@@ -31,6 +29,8 @@ subroutine poisson3D_init(m)
       message(1) = 'Info: Using FFTs with planar cutoff to solve Poisson equation .'
     case(FFT_NOCUT)
       message(1) = 'Info: Using FFTs without cutoff to solve Poisson equation.'
+    case(FFT_CORRECTED)
+      message(1)= 'Info: Using FFTs with error corrections.'
 #endif
     case(CG)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
@@ -46,7 +46,13 @@ subroutine poisson3D_init(m)
   call write_info(1)
 
 #ifdef HAVE_FFT
-  if (poisson_solver <= 3) call init_fft()
+  if (poisson_solver <= FFT_CORRECTED) call init_fft()
+
+  if (poisson_solver == FFT_CORRECTED) then
+    call loct_parse_int('PoissonSolverCGMaxMultipole', 2, maxl)
+    call build_aux(m)
+    call build_phi(m)
+  endif
 #endif
 
   call pop_sub()
@@ -60,15 +66,20 @@ contains
     FLOAT :: gpar,gperp,gx,gz,r_c
     FLOAT :: DELTA_R = CNST(1.0e-12)
 
+
     ! double the box to perform the fourier transforms
-    call mesh_double_box(m, db)                 ! get dimensions of the double box
-    if (poisson_solver == FFT_SPH) db(:) = maxval(db)
+    if(poisson_solver.ne.FFT_CORRECTED) then
+       call mesh_double_box(m, db)                 ! get dimensions of the double box
+       if (poisson_solver == FFT_SPH) db(:) = maxval(db)
+    else
+       db(:) = m%l(:)
+    endif
 
     call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
     call dcf_fft_init(fft_cf)   ! the ffts
     db = fft_cf%n               ! dimensions may have been optimized
 
-  if (poisson_solver <= 2) then
+  if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
     call loct_parse_float('PoissonCutoffRadius',&
            maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
@@ -109,14 +120,14 @@ contains
                  gz = abs(temp(3)*ixx(3))
                  gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
                  fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar*r_c,gz*r_c)/vec
-               case(FFT_NOCUT)
+               case(FFT_NOCUT, FFT_CORRECTED)
                  fft_Coulb_FS(ix, iy, iz) = M_ONE/vec
               end select               
             else
               select case(poisson_solver)
               case(FFT_SPH)
                 fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-              case (FFT_CYL,FFT_PLA,FFT_NOCUT)
+              case (FFT_CYL,FFT_PLA,FFT_NOCUT, FFT_CORRECTED)
                 fft_Coulb_FS(ix, iy, iz) = M_ZERO
               end select
             endif
@@ -133,12 +144,14 @@ end subroutine poisson3D_init
 
 
 #if defined(HAVE_FFT)
-subroutine poisson_fft(m, pot, rho)
+subroutine poisson_fft(m, pot, rho, average_to_zero)
   type(mesh_type), intent(IN) :: m
   FLOAT, intent(out) :: pot(:) ! pot(m%np)
   FLOAT, intent(in)  :: rho(:) ! rho(m%np)
+  logical, intent(in), optional :: average_to_zero
 
   integer :: k
+  FLOAT :: average
 
   call push_sub('poisson_fft')
 
@@ -155,8 +168,14 @@ subroutine poisson_fft(m, pot, rho)
   end do
 
   call dcf_FS2RS(fft_cf)             ! Fourier transform back
+  if(present(average_to_zero)) then
+    if(average_to_zero) then
+       average = cf_surface_average(m, fft_cf)
+       fft_cf%RS = fft_cf%RS - average
+    endif
+  endif
   call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
-  
+
   call dcf_free_RS(fft_cf)           ! memory is no longer needed
   call dcf_free_FS(fft_cf)
 
