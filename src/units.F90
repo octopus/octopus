@@ -41,6 +41,14 @@ use lib_oct_parser
 
 implicit none
 
+private
+public :: unit_type,        &
+          unit_system_type, &
+          units_init,       &
+          units_inp,        &
+          units_out
+
+
 type unit_type
   FLOAT :: factor
   character(len=12) :: abbrev ! common abbreviation of the unit name

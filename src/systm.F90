@@ -19,12 +19,27 @@
 
 module system
 use global
+use lib_oct_gsl_spline
 use mesh
+use functions
+use specie
 use geometry
 use states
 use hamiltonian
+use output
 
 implicit none
+
+private
+public :: system_type,          &
+          system_init,          &
+          system_end,           &
+          atom_get_wf,          &
+          atom_density,         &
+          system_guess_density, &
+          dsystem_h_setup,      &
+          zsystem_h_setup
+
 
 type system_type
   FLOAT                        :: val_charge ! the charge of the valence electrons (necessary to initialize states)

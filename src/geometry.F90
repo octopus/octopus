@@ -27,6 +27,25 @@ module geometry
 
   implicit none
 
+  private
+  public :: atom_type,             &
+            atom_classical_type,   &
+            geometry_type,         &
+            geometry_init_xyz,     &
+            geometry_init_vel,     &
+            geometry_filter,       &
+            geometry_init_species, &
+            geometry_debug,        &
+            geometry_nvnl,         &
+            geometry_end,          &
+            ion_ion_energy,        &
+            kinetic_energy,        &
+            geometry_dipole,       &
+            cm_pos,                &
+            cm_vel,                &
+            atom_write_xyz,        &
+            loadPDB
+
   type atom_type
     character(len=15) :: label
     type(specie_type), pointer :: spec ! pointer to specie

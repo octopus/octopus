@@ -266,10 +266,11 @@ subroutine write_warning(no_lines)
   return
 end subroutine write_warning
 
-subroutine write_info(no_lines, iunit, verbose_limit)
+subroutine write_info(no_lines, iunit, verbose_limit, stress)
   integer, intent(in) :: no_lines
   integer, intent(in), optional :: iunit
   integer, intent(in), optional :: verbose_limit
+  logical, optional, intent(in) :: stress
 
   integer :: i, iu
 
@@ -284,6 +285,7 @@ subroutine write_info(no_lines, iunit, verbose_limit)
   end if
 
   if(conf%verbose >= VERBOSE_NORMAL) then
+    if(present(stress)) write(iu, '(a)') stars
     do i = 1, no_lines
       if(.not.present(verbose_limit)) then
         write(iu, '(a)') trim(message(i))
@@ -291,6 +293,7 @@ subroutine write_info(no_lines, iunit, verbose_limit)
         write(iu, '(a)') trim(message(i))
       endif
     enddo
+    if(present(stress)) write(iu, '(a,/)') stars
   end if
   return
 end subroutine write_info

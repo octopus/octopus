@@ -18,6 +18,7 @@
 #include "global.h"
 
 module fxc
+  use global
   use mesh
   use states
 

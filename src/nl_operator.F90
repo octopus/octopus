@@ -18,6 +18,7 @@
 #include "global.h"
 
 module nl_operator
+  use global
   use mesh
 
   implicit none

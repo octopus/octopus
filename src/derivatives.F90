@@ -21,6 +21,7 @@ module derivatives
   use global
   use mesh
   use nl_operator
+  use lib_adv_alg
   use stencil_star
   use stencil_variational
   use stencil_cube

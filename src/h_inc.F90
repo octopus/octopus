@@ -82,7 +82,7 @@ subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
   call pop_sub()
 end subroutine X(Hpsi)
 
-#if defined(R_TCOMPLEX)
+!#if defined(R_TCOMPLEX)
 subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
@@ -149,7 +149,7 @@ subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
   deallocate(auxpsi, aux2psi)
   call pop_sub()
 end subroutine X(magnus)
-#endif
+!#endif
 
 subroutine X(kinetic) (h, m, f_der, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN)  :: h

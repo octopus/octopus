@@ -21,6 +21,7 @@ module external_pot
   use global
   use lib_oct_parser
   use mesh
+  use functions
 #ifdef HAVE_FFT
   use cube_function
 #endif
@@ -32,6 +33,16 @@ module external_pot
   use lasers
 
   implicit none
+
+  private
+  public :: nonlocal_op,             &
+            epot_type,               &
+            epot_init,               &
+            epot_end,                &
+            epot_generate,           &
+            epot_laser_field,        &
+            epot_laser_vector_field, &
+            depot_forces, zepot_forces
 
   type nonlocal_op
     integer :: n, c

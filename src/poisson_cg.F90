@@ -18,6 +18,7 @@
 #include "global.h"
 
 module poisson_cg
+  use math
   use mesh
   use functions
 

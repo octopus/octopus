@@ -24,6 +24,8 @@
 
 module curv_briggs
   use lib_oct_parser
+  use global
+  use units
   use geometry
   use lib_adv_alg
 

@@ -20,6 +20,7 @@
 module mesh_function
   use global
   use lib_basic_alg
+  use math
   use mesh
   use cube_function
 

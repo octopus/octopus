@@ -23,6 +23,14 @@ module xc_functl
 
   implicit none
 
+  private
+  public :: xc_functl_type,             &
+            xc_functl_init,             &
+            xc_functl_init_exchange,    &
+            xc_functl_init_correlation, &
+            xc_functl_end,              &
+            xc_functl_write_info
+
   type xc_functl_type
     integer :: family              ! LDA, GGA, etc.
     integer :: id                  ! identifier
@@ -30,6 +38,7 @@ module xc_functl
     integer :: ispin               ! UNPOLARIZED | SPIN_POLARIZED | SPINORS
     integer :: spin_channels       ! XC_UNPOLARIZED | XC_POLARIZED
     
+
     integer(POINTER_SIZE) :: conf  ! the pointer used to call the library
     integer(POINTER_SIZE) :: info  ! information about the functional
   end type xc_functl_type

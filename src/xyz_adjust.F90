@@ -18,7 +18,9 @@
 #include "global.h"
 
 module xyz_adjust
+  use global
   use geometry
+  use lib_adv_alg
 
   implicit none
 

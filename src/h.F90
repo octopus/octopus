@@ -21,16 +21,34 @@ module hamiltonian
 use global
 use lib_oct_parser
 use lib_basic_alg
+use functions
 use mesh
 use mesh_function
 use geometry
 use states
 use external_pot
 use poisson
+use lib_xc
 use xc
 use output
 
 implicit none
+
+private
+public :: hamiltonian_type,   &
+          hamiltonian_init,   &
+          hamiltonian_end,    &
+          hamiltonian_energy, &
+          hamiltonian_output, &
+          hamiltonian_span,   &
+          dhpsi, zhpsi,       &
+          dvlpsi, zvlpsi,     &
+          dvnlpsi, zvnlpsi,   &
+          dmagnus, zmagnus,   &
+          dkinetic, zkinetic, &
+          dh_calc_vhxc,       &
+          zh_calc_vhxc
+
 
 type hamiltonian_type
   ! The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -69,17 +87,17 @@ type hamiltonian_type
   FLOAT :: cutoff
 end type hamiltonian_type
 
-integer, parameter :: NOREL      = 0, &
-                      SPIN_ORBIT = 1, &
-                      APP_ZORA   = 2, &
-                      ZORA       = 3
+integer, public, parameter :: NOREL      = 0, &
+                              SPIN_ORBIT = 1, &
+                              APP_ZORA   = 2, &
+                              ZORA       = 3
 
-integer, parameter :: NO_ABSORBING        = 0, &
-                      IMAGINARY_ABSORBING = 1, &
-                      MASK_ABSORBING      = 2
+integer, public, parameter :: NO_ABSORBING        = 0, &
+                              IMAGINARY_ABSORBING = 1, &
+                              MASK_ABSORBING      = 2
 
-integer, parameter :: LENGTH = 1, &
-                      VELOCITY = 2
+integer, public, parameter :: LENGTH = 1, &
+                              VELOCITY = 2
 contains
 
 subroutine hamiltonian_init(h, m, geo, states_dim)
@@ -153,9 +171,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     ! initilize hartree and xc modules
     call poisson_init(m)
     call xc_init(h%xc, geo%nlcc, states_dim%ispin, states_dim%spin_channels)
-    message(1) = "Info: Exchange and correlation"
-    call write_info(1)
-    if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
+    if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(h%xc, stdout)
   end if
 
   ! gauge

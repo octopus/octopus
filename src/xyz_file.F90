@@ -21,6 +21,7 @@ module xyz_file
   use lib_oct_parser
   use io
   use units
+  use global
 
   implicit none
 

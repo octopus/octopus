@@ -22,6 +22,8 @@ module td_rti
   use mesh
   use states
   use hamiltonian
+  use lasers
+  use external_pot
   use td_exp
 
   implicit none

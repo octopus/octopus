@@ -72,6 +72,14 @@ module lib_xc
   integer, parameter :: &
      XC_OEP_X             = 301     ! Exact exchange
 
+  ! the OEP levels
+  integer, parameter :: &
+     XC_OEP_NONE   = 0, &
+     XC_OEP_SLATER = 1, &
+     XC_OEP_KLI    = 2, &
+     XC_OEP_CEDA   = 3, & ! not yet implemented
+     XC_OEP_FULL   = 4    ! half implemented
+
   ! info
   interface
     integer function xc_info_number(info)

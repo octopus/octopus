@@ -23,9 +23,11 @@ module lcao
   use lib_oct_gsl_spline
   use lib_basic_alg
   use lib_adv_alg
+  use functions
   use mesh
   use specie
   use geometry
+  use states
   use system
   use hamiltonian
 

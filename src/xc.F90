@@ -23,11 +23,26 @@ use lib_oct_parser
 use lib_basic_alg
 use lib_adv_alg
 use mesh
+use functions
 use poisson
 use states
+use lib_xc
 use xc_functl
 
 implicit none
+
+private
+public :: xc_type, &
+          xc_oep_type, &
+          xc_init, &
+          xc_end, &
+          xc_write_info, &
+          xc_oep_SpinFactor, &
+          xc_oep_AnalizeEigen, &
+          xc_get_vxc, &
+          dxc_KLI_solve, zxc_KLI_solve, &
+          doep_x, zoep_x, &
+          doep_sic, zoep_sic
 
 type xc_type
   logical :: nlcc                   ! repeated from system
@@ -46,13 +61,6 @@ type xc_type
   integer  :: oep_level  ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
   FLOAT    :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
 end type xc_type
-
-integer, parameter :: &
-   XC_OEP_NONE   = 0, &
-   XC_OEP_SLATER = 1, &
-   XC_OEP_KLI    = 2, &
-   XC_OEP_CEDA   = 3, & ! not yet implemented
-   XC_OEP_FULL   = 4    ! half implemented
 
 type xc_oep_type
   integer          :: eigen_n
@@ -76,7 +84,9 @@ contains
 #ifdef HAVE_MPI
     if(mpiv%node == 0) then
 #endif
-      
+      write(iunit,'(/,a)') &
+         '**********************************************************************'
+      write(iunit,'(a)') " Exchange and correlation:"
       do i = 1, 2
         call xc_functl_write_info(xcs%functl(i), iunit)
       end do
@@ -94,12 +104,13 @@ contains
         case (XC_OEP_FULL);   write(iunit, '(a)') '    Full OEP'
         end select
       end if
+      write(iunit,'(a,/)') &
+         '**********************************************************************'
       
 #ifdef HAVE_MPI
     end if
 #endif
   end subroutine xc_write_info
-
 
   subroutine xc_init(xcs, nlcc, ispin, spin_channels)
     type(xc_type), intent(out) :: xcs

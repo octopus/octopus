@@ -28,6 +28,22 @@ use lib_adv_alg
   
 implicit none
 
+private
+public :: mesh_type, &
+          mesh_init, &
+          mesh_end, &
+          mesh_create_xyz, &
+          mesh_double_box, &
+          mesh_index, &
+          mesh_inborder, &
+          mesh_xyz, &
+          mesh_x, &
+          mesh_y, &
+          mesh_z, &
+          mesh_r, &
+          mesh_gcutoff, &
+          mesh_write_info
+
 integer, parameter :: &
      SPHERE   = 1,    &
      CYLINDER = 2,    &

@@ -56,10 +56,12 @@ program octopus
 
   ! print date
   call date_and_time(values=val)
-  write(message(1),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
-       "Info: Calculation started on ", val(1), "/", val(2), "/", val(3), &
+  write(message(2),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
+       "Calculation started on ", val(1), "/", val(2), "/", val(3), &
        " at ", val(5), ":", val(6), ":", val(7)
-  call write_info(1)
+  message(1) = str_center(trim(message(2)), 70)
+  message(2) = ""
+  call write_info(2)
 
   ! create temporary dir (we will need it)
   call loct_mkdir("tmp")
@@ -68,14 +70,19 @@ program octopus
   if(conf%verbose>=VERBOSE_DEBUG) call loct_mkdir('debug')
 
   ! now we really start
+  call run_init()
   call run()
+  call run_end()
 
   ! print date
   call date_and_time(values=val)
-  write(message(1),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
-       "Info: Calculation ended on ", val(1), "/", val(2), "/", val(3), &
+  message(1) = ""
+  write(message(3),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
+       "Calculation ended on ", val(1), "/", val(2), "/", val(3), &
        " at ", val(5), ":", val(6), ":", val(7)
-  call write_info(1)
+  message(2) = str_center(trim(message(3)), 70)
+  message(3) = ""
+  call write_info(3)
 
 #if defined(HAVE_MPI)
   ! wait for all processors to finish

@@ -20,6 +20,7 @@
 module poisson
   use global
   use lib_oct_parser
+  use units
   use geometry
   use mesh
 #ifdef HAVE_FFT
@@ -31,7 +32,11 @@ module poisson
   use poisson_cg
 
   implicit none
+
   private
+  public :: poisson_init,  &
+            poisson_solve, &
+            poisson_end
 
   integer :: poisson_solver = -99
 
@@ -48,7 +53,7 @@ module poisson
   integer, parameter :: CG            = 4, &
                         CG_CORRECTED  = 5
 
-public :: poisson_init, poisson_solve, poisson_end
+
 
 contains
 

@@ -37,6 +37,11 @@ use pulpo
 
 implicit none
 
+private
+public :: run_init, &
+          run,      &
+          run_end
+
 type(system_type) :: sys
 type(hamiltonian_type) :: h
 integer :: calc_mode
@@ -78,8 +83,6 @@ subroutine run()
   logical :: fromScratch(M_GS:M_LR_STATIC_POL)
 
   call push_sub('run')
-
-  call run_init()
 
   instr = 0
   call define_run_modes()
@@ -157,7 +160,6 @@ subroutine run()
     instr = instr - 1
   end do program
       
-  call run_end()
   call pop_sub()
 
 contains
@@ -232,19 +234,19 @@ subroutine run_init()
     call write_fatal(11)
   end if
 
-  ! print dimension info
-  write(message(1), '(a,i1,a)') 'Info: Octopus will run in ', conf%dim, ' dimension(s)'
-  call write_info(1)
-  write(message(1), '(a,i1,a)') 'Info: Octopus will treat system as periodic in ', conf%periodic_dim, ' dimension(s)'
-  call write_info(1)
+  write(message(1), '(a,i2)')   'Info: Calculation Mode = ', calc_mode
+  write(message(2), '(a,i1,a)') 'Info: The octopus will run in ', conf%dim, ' dimension(s).'
+  write(message(3), '(a,i1,a)') '      The octopus will treat system as periodic in ', &
+                                 conf%periodic_dim, ' dimension(s)'
 
-  message(1) = "Info: Boundary conditions:"
+  message(5) = "Info: Boundary conditions:"
   if(conf%boundary_zero_derivative) then
-    write(message(1), '(2a)') trim(message(1)), " zero derivatives"
+    write(message(4), '(2a)') trim(message(5)), " zero derivatives"
   else
-    write(message(1), '(2a)') trim(message(1)), " zero wave-functions"
+    write(message(4), '(2a)') trim(message(5)), " zero wave-functions"
   end if
-  call write_info(1)
+
+  call write_info(4, stress = .true.)
 
   ! initialize ffts
 #ifdef HAVE_FFT

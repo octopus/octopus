@@ -31,20 +31,35 @@ use output
 use geometry
 use crystal
 
-
 implicit none
 
-type states_dim_type
-  integer :: dim           ! * Dimension of the state (one or two for spinors)
-  integer :: nik           ! * Number of irreducible subspaces
-  integer :: nik_axis(3)   ! * Number of kpoints per axis
-  integer :: ispin         ! * spin mode (unpolarized, spin polarized, spinors)
-  integer :: nspin         ! * dimension of rho (1, 2 or 4)
-  integer :: spin_channels ! * 1 or 2, wether spin is or not considered.
-  logical :: cdft          ! * Are we using Current-DFT or not?
-  FLOAT, pointer :: kpoints(:,:) ! * obviously the kpoints
-  FLOAT, pointer :: kweights(:)  ! * weights for the kpoint integrations
-end type states_dim_type
+private
+public :: states_type, &
+          states_dim_type, &
+          states_init, &
+          states_null, &
+          states_end,  &
+          states_copy, &
+          states_generate_random, &
+          states_fermi, &
+          states_calculate_multipoles, &
+          states_eigenvalues_sum, &
+          states_write_eigenvalues, &
+          states_write_bands, &
+          states_spin_channel, &
+          calc_projection, &
+          calc_current_physical, &
+          kpoints_write_info, &
+          dcalcdens, zcalcdens, &
+          dstates_gram_schmidt, zstates_gram_schmidt, &
+          dstates_dotp, zstates_dotp, &
+          dstates_nrm2, zstates_nrm2, &
+          dstates_residue, zstates_residue, &
+          dstates_output, zstates_output, &
+          dstates_mpdotp, zstates_mpdotp, &
+          dstates_calculate_magnetization, zstates_calculate_magnetization, &
+          dstates_calculate_angular, zstates_calculate_angular
+
 
 type states_type
 
@@ -81,10 +96,22 @@ type states_type
 
 end type states_type
 
+type states_dim_type
+  integer :: dim           ! * Dimension of the state (one or two for spinors)
+  integer :: nik           ! * Number of irreducible subspaces
+  integer :: nik_axis(3)   ! * Number of kpoints per axis
+  integer :: ispin         ! * spin mode (unpolarized, spin polarized, spinors)
+  integer :: nspin         ! * dimension of rho (1, 2 or 4)
+  integer :: spin_channels ! * 1 or 2, wether spin is or not considered.
+  logical :: cdft          ! * Are we using Current-DFT or not?
+  FLOAT, pointer :: kpoints(:,:) ! * obviously the kpoints
+  FLOAT, pointer :: kweights(:)  ! * weights for the kpoint integrations
+end type states_dim_type
+
 ! Parameters...
-integer, parameter :: UNPOLARIZED    = 1, &
-                      SPIN_POLARIZED = 2, &
-                      SPINORS        = 3
+integer, public, parameter :: UNPOLARIZED    = 1, &
+                              SPIN_POLARIZED = 2, &
+                              SPINORS        = 3
 
 interface assignment (=)
   module procedure states_copy

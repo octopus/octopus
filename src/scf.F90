@@ -25,6 +25,8 @@ module scf
   use states
   use restart
   use hamiltonian
+  use external_pot 
+  use xc
   use eigen_solver
   use mix
   use lcao

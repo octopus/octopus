@@ -18,10 +18,12 @@
 #include "global.h"
 
 module linear_response
+  use global
   use mesh
   use states
   use mix
   use system
+  use hamiltonian
 
   implicit none
 

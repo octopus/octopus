@@ -21,6 +21,7 @@ module timedep
 use global
 use lib_oct
 use lib_oct_parser
+use geometry
 use mesh
 use states
 use restart

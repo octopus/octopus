@@ -26,6 +26,7 @@ module eigen_solver
   use nl_operator
   use stencil_star
   use mesh
+  use functions
   use states
   use hamiltonian
 

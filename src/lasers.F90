@@ -22,6 +22,7 @@ use global
 use io
 use lib_oct_parser
 use lib_oct_gsl_spline
+use units
 use mesh
 
 implicit none
