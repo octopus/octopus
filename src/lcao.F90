@@ -84,6 +84,8 @@ subroutine lcao_init(lcao_data, m, st, geo, h)
     end if
   end do atoms_loop
 
+  if(st%d%ispin == SPINORS) norbs = norbs * 2
+
   if(norbs < st%nst) then ! we do not have enough states
     deallocate(lcao_data%atoml)
     message(1) = 'Not enough basis functions to perform LCAO calculation'
@@ -91,8 +93,6 @@ subroutine lcao_init(lcao_data, m, st, geo, h)
     lcao_data%state = 0
     return
   end if
-
-  if(st%d%ispin == SPINORS) norbs = norbs * 2
 
   lcao_data%dim = norbs
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
