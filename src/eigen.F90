@@ -138,7 +138,7 @@ contains
 
     ! the filter has a star stencil like the laplacian
     call nl_operator_init(filter, conf%dim*2 + 1)
-    call stencil_star_get_lapl(2, filter%stencil)
+    call stencil_star_get_lapl(1, filter%stencil)
     call nl_operator_build(m, filter, m%np, .true.)
 
     filter%w(1, 1) = alpha
