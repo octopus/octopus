@@ -28,7 +28,7 @@ module geometry
   implicit none
 
   type atom_type
-    character(len=10) :: label
+    character(len=15) :: label
     type(specie_type), pointer :: spec ! pointer to specie
 
     FLOAT :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
@@ -37,10 +37,10 @@ module geometry
   end type atom_type
 
   type atom_classical_type
+    character(len=15) :: label
+
     FLOAT :: x(3), v(3), f(3)
     FLOAT :: charge
-
-    character(len=4) :: label
   end type atom_classical_type
 
   type geometry_type
@@ -208,7 +208,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
       end if
     end do
     if(.not.ok) then
-      write(message(1),'(aaa)') "Specie '", geo%atom(i)%label, "' was not found"
+      write(message(1),'(3a)') "Specie '", geo%atom(i)%label, "' was not found"
       call write_fatal(1)
     end if
   end do
@@ -322,21 +322,6 @@ contains
 
   end subroutine read_species_label
 
-  integer function get_specie(label) result(n)
-    character(len=*) :: label
-
-    integer :: j
-
-    n = -1
-    do j = 1, geo%nspecies
-      if( trim(label) == trim(geo%specie(j)%label) ) then
-        n = j
-        return
-      end if
-    end do
-    
-  end function get_specie
-  
 end subroutine geometry_init_species
 
 subroutine loadPDB(iunit, geo)
@@ -380,7 +365,6 @@ subroutine loadPDB(iunit, geo)
         call str_trim(atm)
         if(trim(res) == 'QM') then
           read(record, '(30x,3f8.3)') geo%atom(na)%x
-          !a(na)%spec => s(get_specie(atm(1:1)))
           geo%atom(na)%label = atm(1:1)
           na = na + 1
         else

@@ -173,7 +173,7 @@ contains
       if(m%h(i) < M_ZERO) then
         if(def_h > M_ZERO) then
           m%h(i) = def_h
-          write(message(1), '(ai1aaaf6.3)') "Info: Using default spacing(", i, &
+          write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
                ") [", trim(units_out%length%abbrev), "] = ",                 &
                m%h(i)/units_out%length%factor
           call write_info(1)
@@ -196,7 +196,7 @@ contains
 
     if(var > def) then
       write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
-      write(message(2), '(f8.3af8.3)') var, ' > ', def
+      write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
       call write_warning(2)
     end if
   end subroutine check_def

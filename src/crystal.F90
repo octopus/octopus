@@ -1314,7 +1314,7 @@
          if(ipr .eq. 1) then
            write(message(1),'(i5,24i4)')ib(j), (ia(i),i=il,iu)
            call write_info(1)
-           write(message(1),'(a,,102x,3f10.4)')'+',(v(i,l),i=1,3)
+           write(message(1),'(a,102x,3f10.4)')'+',(v(i,l),i=1,3)
            call write_info(1)
             write(6,9120) ib(j), (ia(i),i=il,iu)
             write(6,9110) (v(i,l),i=1,3)
