@@ -330,38 +330,24 @@ contains
       add_lm = 1
       do l = 0, s%ps%l_max
          do lm = -l, l
-            call build_kb_sphere(i)
+            call nonlocal_op_kill(ep%vnl(i))
+            ! This if is a performance hack, necessary for when the ions move.
+            ! For each atom, the sphere is the same, so we just calculate it once.
+            if(add_lm == 1) then
+              k = i
+              call build_kb_sphere(i)
+            else
+              ep%vnl(i)%n = ep%vnl(k)%n
+              ep%vnl(i)%c = ep%vnl(k)%c
+              ep%vnl(i)%jxyz => ep%vnl(k)%jxyz
+            endif
+            call allocate_nl_part(i)
             call build_nl_part(i, l, lm, add_lm)
             add_lm = add_lm + 1
             i = i + 1
          enddo
       enddo
     end do
-
-    ! Build the phases...
-    if(conf%periodic_dim/=0) then
-    i = 1
-    do ia = 1, geo%natoms
-       a => geo%atom(ia)
-       s => a%spec
-       if(s%local) cycle
-       add_lm = 1
-       do l = 0, s%ps%l_max
-          do lm = -l, l
-             allocate(ep%vnl(i)%phases(ep%vnl(i)%n, st%d%nik))
-                allocate(ep%vnl(i)%phases(ep%vnl(i)%n, st%d%nik))
-                do j = 1, ep%vnl(i)%n
-                   call mesh_xyz(m, ep%vnl(i)%jxyz(j), x)
-                   do k=1, st%d%nik
-                      ep%vnl(i)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-                   end do
-                end do
-             add_lm = add_lm + 1
-             i = i + 1
-          enddo
-       enddo
-    enddo
-    endif
 
 #ifdef HAVE_FFT
     if(ep%vpsl_space == RECIPROCAL_SPACE) then
@@ -444,26 +430,7 @@ contains
       ep%vnl(ivnl)%n = j
       ep%vnl(ivnl)%c = s%ps%kbc
 
-      call nonlocal_op_kill(ep%vnl(ivnl))
-
-      ! First, the "normal" non-local projectors
-      allocate(ep%vnl(ivnl)%jxyz(j), &
-               ep%vnl(ivnl)%uv(j, s%ps%kbc), &
-               ep%vnl(ivnl)%duv(3, j, s%ps%kbc), &
-               ep%vnl(ivnl)%uvu(s%ps%kbc, s%ps%kbc))
-      ep%vnl(ivnl)%uv(:,:)     = M_ZERO
-      ep%vnl(ivnl)%duv(:,:, :) = M_ZERO
-      ep%vnl(ivnl)%uvu(:, :)   = M_ZERO
-
-      ! Then, the spin-orbit projectors (Eventually I will change this).
-      allocate(ep%vnl(ivnl)%so_uv(j, s%ps%kbc), &
-               ep%vnl(ivnl)%so_duv(3, j, s%ps%kbc), &
-               ep%vnl(ivnl)%so_uvu(s%ps%kbc, s%ps%kbc), &
-               ep%vnl(ivnl)%so_luv(j, s%ps%kbc, 3))
-      ep%vnl(ivnl)%so_uv(:, :)     = M_z0
-      ep%vnl(ivnl)%so_duv(:, :, :) = M_z0
-      ep%vnl(ivnl)%so_uvu(: , :)   = M_z0
-      ep%vnl(ivnl)%so_luv(:, :, :) = M_z0
+      allocate(ep%vnl(ivnl)%jxyz(j))
 
       j = 0
       do k = 1, m%np
@@ -479,6 +446,39 @@ contains
       
       call pop_sub()
     end subroutine build_kb_sphere
+
+    subroutine allocate_nl_part(ivnl)
+      integer, intent(in) :: ivnl
+      integer :: j, c
+      call push_sub('allocate_nl_part')
+
+      j = ep%vnl(ivnl)%n
+      c = ep%vnl(ivnl)%c
+
+      ! First, the "normal" non-local projectors
+      allocate(ep%vnl(ivnl)%uv(j, c), &
+               ep%vnl(ivnl)%duv(3, j, c), &
+               ep%vnl(ivnl)%uvu(c, c))
+      ep%vnl(ivnl)%uv(:,:)     = M_ZERO
+      ep%vnl(ivnl)%duv(:,:, :) = M_ZERO
+      ep%vnl(ivnl)%uvu(:, :)   = M_ZERO
+
+      ! Then, the spin-orbit projectors (Eventually I will change this).
+      allocate(ep%vnl(ivnl)%so_uv(j, c), &
+               ep%vnl(ivnl)%so_duv(3, j, c), &
+               ep%vnl(ivnl)%so_uvu(s%ps%kbc, c), &
+               ep%vnl(ivnl)%so_luv(j, c, 3))
+      ep%vnl(ivnl)%so_uv(:, :)     = M_z0
+      ep%vnl(ivnl)%so_duv(:, :, :) = M_z0
+      ep%vnl(ivnl)%so_uvu(: , :)   = M_z0
+      ep%vnl(ivnl)%so_luv(:, :, :) = M_z0
+
+      if(conf%periodic_dim/=0) then
+        allocate(ep%vnl(ivnl)%phases(ep%vnl(ivnl)%n, st%d%nik))
+      endif
+
+      call pop_sub()
+    end subroutine allocate_nl_part
 
     subroutine build_nl_part(ivnl, l, lm, add_lm)
       integer, intent(in) :: ivnl, l, lm, add_lm
@@ -565,7 +565,16 @@ contains
         ep%vnl(ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
         ep%vnl(ivnl)%so_uvu(1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
       end if
-      
+
+      if(conf%periodic_dim/=0) then
+        do j = 1, ep%vnl(ivnl)%n
+           call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x)
+           do k=1, st%d%nik
+              ep%vnl(ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
+           end do
+        end do
+      endif
+
       call pop_sub(); return
     end subroutine build_nl_part
     
