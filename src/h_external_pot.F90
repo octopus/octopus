@@ -38,51 +38,51 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
 
     if (conf%periodic_dim==0) then
       do ix = 1, m%fft_n2(1)
-	ixx(1) = ix - (m%fft_n2(1)/2 + 1)
-	do iy = 1, m%fft_n2(2)
+        ixx(1) = ix - (m%fft_n2(1)/2 + 1)
+        do iy = 1, m%fft_n2(2)
           ixx(2) = iy - (m%fft_n2(2)/2 + 1)
           do iz = 1, m%fft_n2(3)
             ixx(3) = iz - (m%fft_n2(3)/2 + 1)
-
+            
             x(:) = m%h(:)*ixx(:)
             fr(ix, iy, iz) = specie_get_local(s(i), x)
           end do
-	end do
+        end do
       end do
       call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
       n = m%hfft_n2*m%fft_n2(2)*m%fft_n2(3)
       c = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), M_ZERO, r8)
       call zscal(n, c, s(i)%local_fw,  1)
     else
-       allocate(v(2:s(i)%ps%g%nrval))
-       temp(:) = M_TWO*M_PI/(m%fft_n2(:)*m%h(:))
-       do ix = 1, m%hfft_n2
-         ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
-	 do iy = 1, m%fft_n2(2)
-           ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
-           do iz = 1, m%fft_n2(3)
-             ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
-             modg = sqrt(sum((temp(:)*ixx(:))**2))
-             if(modg.ne.M_ZERO) then
-	       do j = 2, s(i)%ps%g%nrval
-	          v(j) = (sin(modg*s(i)%ps%g%rofi(j))/(modg*s(i)%ps%g%rofi(j)))*     &
-		          s(i)%ps%g%rofi(j)**2*(splint(s(i)%ps%vlocal,s(i)%ps%g%rofi(j)))
-	     enddo
-	       s(i)%local_fw(ix, iy, iz) = M_FOUR*M_PI*    &
-	       (sum(s(i)%ps%g%drdi(2:s(i)%ps%g%nrval)*v(2:s(i)%ps%g%nrval))-s(i)%ps%z_val/modg)
-	     else
-	       s(i)%local_fw(ix, iy, iz) = M_ZERO
-	     end if
-           end do
-	 end do
-       end do
-       deallocate(v)
+      allocate(v(2:s(i)%ps%g%nrval))
+      temp(:) = M_TWO*M_PI/(m%fft_n2(:)*m%h(:))
+      do ix = 1, m%hfft_n2
+        ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
+        do iy = 1, m%fft_n2(2)
+          ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
+          do iz = 1, m%fft_n2(3)
+            ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+            modg = sqrt(sum((temp(:)*ixx(:))**2))
+            if(modg.ne.M_ZERO) then
+              do j = 2, s(i)%ps%g%nrval
+                v(j) = (sin(modg*s(i)%ps%g%rofi(j))/(modg*s(i)%ps%g%rofi(j)))*     &
+                     s(i)%ps%g%rofi(j)**2*(splint(s(i)%ps%vlocal,s(i)%ps%g%rofi(j)))
+              enddo
+              s(i)%local_fw(ix, iy, iz) = M_FOUR*M_PI*    &
+                   (sum(s(i)%ps%g%drdi(2:s(i)%ps%g%nrval)*v(2:s(i)%ps%g%nrval))-s(i)%ps%z_val/modg)
+            else
+              s(i)%local_fw(ix, iy, iz) = M_ZERO
+            end if
+          end do
+        end do
+      end do
+      deallocate(v)
     end if
     
     ! now we built the non-local core corrections in momentum space
     if(nlcc) then
       allocate(s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
-
+      
       fr = 0.0_r8
       do ix = 1, m%fft_n2(1)
         ixx(1) = ix - (m%fft_n2(1)/2 + 1)
