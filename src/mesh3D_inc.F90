@@ -165,21 +165,23 @@ contains
 
         ! If you prefer 0 wave functions at the boundary, uncomment the following
         ! Just be careful with the LB94 xc potential, for it will probably not work!
+#ifndef BOUNDARIES_ZERO_DERIVATIVE
         den1(:) = f(ind1(:))
         den2(:) = f(ind2(:))
-
-        ! Or, if you dont care about speed...
-!!$        den1 = 0._r8; den2 = 0._r8
+#else
+        ! This also sets zero wavefunction
+        ! den1 = 0._r8; den2 = 0._r8
 
         ! This peace of code changes the boundary conditions
-        ! to have 0 derivative at the boundary
-!!$        if(ind1(1) > 0)den1(1) = f(ind1(1))
-!!$        if(ind1(2) > 0)den1(2) = f(ind1(2))
-!!$        if(ind1(3) > 0)den1(3) = f(ind1(3))
-!!$        
-!!$        if(ind2(1) > 0)den2(1) = f(ind2(1))
-!!$        if(ind2(2) > 0)den2(2) = f(ind2(2))
-!!$        if(ind2(3) > 0)den2(3) = f(ind2(3))
+        ! to have 0 derivative at the boundary 
+        if(ind1(1) > 0)den1(1) = f(ind1(1))
+        if(ind1(2) > 0)den1(2) = f(ind1(2))
+        if(ind1(3) > 0)den1(3) = f(ind1(3))
+        
+        if(ind2(1) > 0)den2(1) = f(ind2(1))
+        if(ind2(2) > 0)den2(2) = f(ind2(2))
+        if(ind2(3) > 0)den2(3) = f(ind2(3))
+#endif
     
         if(present(lapl)) then
           lapl(k) = lapl(k) + m%d%dlidfj(in)*sum(den1(:)+den2(:))

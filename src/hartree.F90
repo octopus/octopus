@@ -1,0 +1,330 @@
+#include "config.h"
+
+module hartree
+use global
+use mesh
+use math
+#ifdef HAVE_FFTW
+use fft
+#endif
+implicit none
+
+private
+
+type hartree_type
+  integer :: solver
+
+  ! used by conjugated gradients (method 1)
+  integer :: ncgiter
+
+#ifdef HAVE_FFTW
+  integer n, nnx 
+  real(r8) :: alpha
+  real(r8), pointer :: ff(:, :, :)
+  integer(POINTER_SIZE) :: planf, planb
+#endif
+end type hartree_type
+
+public :: hartree_type, hartree_init, hartree_solve, hartree_end
+
+contains
+
+subroutine hartree_init(h, m)
+  type(hartree_type), intent(inout) :: h
+  type(mesh_type), intent(IN) :: m
+
+  integer :: ix, iy, iz, ixx, iyy, izz
+  real(r8) :: l, r_0, temp, vec
+
+  sub_name = 'hartree_init'; call push_sub()
+
+  h%solver = fdf_integer('PoissonSolver', 3)
+  if(h%solver.ne.1 .and. h%solver.ne.3 ) then
+    write(message(1), '(a,i2,a)') "Input: '", h%solver, &
+         "' is not a valid PoissonSolver"
+    message(2) = 'PoissonSolver = 1(cg) | 3(fft)'
+    call write_fatal(2)
+  end if
+
+  select case(h%solver)
+  case(1)
+    message(1) = 'Info: Using conjugated gradients method to solve poisson equation'
+    call write_info(1)
+    
+#ifdef HAVE_FFTW
+  case(3) ! setup spherical ffts
+    h%alpha = fdf_double('PoissonSolverParameter', 2.0_r8)
+    if (h%alpha < 1.0_r8 .or. h%alpha > 3.0_r8 ) then
+      write(message(1), '(a,f12.5,a)') "Input: '", h%alpha, &
+           "' is not a valid PoissonSolverParameter"
+      message(2) = '1.0 <= PoissonSolverParameter <= 3.0'
+      call write_fatal(2)
+    end if
+
+    h%nnx = nint(h%alpha*m%nr)
+    h%n = 2*h%nnx
+
+    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff'
+    write(message(2), '(6x,a,i4,a,i4,a,i4,a)') 'box size = (', h%n, ',', h%n, ',',h%n,')'
+    write(message(3), '(6x,a,f12.5)') 'alpha = ', h%alpha
+    call write_info(3)
+
+    allocate(h%ff(h%n/2 + 1, h%n, h%n))
+    h%ff = 0.0_r8
+
+    l = h%n*m%h
+    r_0 = l/2.0_r8
+    temp = 2.0_r8*M_PI/l
+      
+    do ix = 1, h%n/2 + 1
+      do iy = 1, h%n
+        do iz = 1, h%n
+          ixx = pad_feq(ix, h%n, .true.)
+          iyy = pad_feq(iy, h%n, .true.)
+          izz = pad_feq(iz, h%n, .true.)
+          vec = temp * sqrt(real(ixx**2 + iyy**2 + izz**2, r8) )
+
+          if(vec.ne.0.0_r8) then
+            h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
+          else
+!            h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+          end if
+        end do
+      end do
+    end do
+      
+    call rfftw3d_f77_create_plan(h%planf, h%n, h%n, h%n, &
+         fftw_forward, fftw_measure + fftw_threadsafe)
+    call rfftw3d_f77_create_plan(h%planb, h%n, h%n, h%n, &
+         fftw_backward, fftw_measure + fftw_threadsafe)
+#endif
+  end select
+
+  call pop_sub()
+  return
+end subroutine hartree_init
+
+subroutine hartree_end(h)
+  type(hartree_type), intent(inout) :: h
+
+  sub_name = 'hartree_end'; call push_sub()
+
+  select case(h%solver)
+  case(1)
+#ifdef HAVE_FFTW
+  case(3)
+    if(associated(h%ff)) then ! has been allocated => destroy
+      deallocate(h%ff); nullify(h%ff)
+      call fftw_f77_destroy_plan(h%planb)
+      call fftw_f77_destroy_plan(h%planf)
+    end if
+#endif
+  end select
+
+  call pop_sub()
+  return
+end subroutine hartree_end
+
+subroutine hartree_solve(h, m, pot, dist)
+  type(hartree_type), intent(inout) :: h
+  type(mesh_type), intent(IN) :: m
+  real(r8), dimension(:), intent(inout) :: pot
+  real(r8), dimension(:,:), intent(IN) :: dist
+
+  sub_name = 'hartree_solve'; call push_sub()
+
+  select case(h%solver)
+  case(1)
+    call hartree_cg(h, m, pot, dist)
+
+#ifdef HAVE_FFTW
+  case(3)
+    call hartree_cut_sp(h, m, pot, dist)
+#endif
+
+  case default
+    message(1) = "Hartree structure not initialized"
+    call write_fatal(1)
+  end select
+
+  call pop_sub()
+  return
+end subroutine hartree_solve
+
+subroutine hartree_cg(h, m, pot, dist)
+  type(hartree_type), intent(inout) :: h
+  type(mesh_type), intent(IN) :: m
+  real(r8), dimension(:), intent(out) :: pot
+  real(r8), dimension(:,:), intent(IN) :: dist
+  
+  integer :: i, ix, iy, iz, iter, a, j, imax, add_lm, l, mm, ml
+  real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, xx, yy, zz, temp
+  real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), ylm(:), wk(:,:,:)
+
+  sub_name = 'hartree_cg'; call push_sub()
+
+  ml = 4
+  allocate(zk(m%np), tk(m%np), pk(m%np))
+  allocate(rholm((ml+1)**2) , ylm((ml+1)**2) )
+  rholm = 0.0_r8
+
+  ! calculate multipole moments till ml
+  do i = 1, m%np
+    call mesh_r(m, i, r, x=x)
+
+    temp   = sum(dist(i, :))
+    add_lm = 1
+    do l = 0, ml
+      do mm = -l, l
+        call ylmr(x(1), x(2), x(3), l, mm, sa)
+        if(l == 0) then ! this avoids 0**0
+          rholm(add_lm) = rholm(add_lm) + temp*sa
+        else
+          rholm(add_lm) = rholm(add_lm) + r**l*temp*sa
+        end if
+        add_lm = add_lm+1
+      end do
+    end do
+  end do
+  rholm = rholm*m%h**3
+
+  allocate(wk(-m%nx:m%nx, -m%nx:m%nx, -m%nx:m%nx))
+
+  ! what is this for???? seems not to be used
+  wk = 0.0d0
+  do i = 1, m%nk
+    x(1) = m%kx(i)*m%H; x(2) = m%ky(i)*m%H; x(3) = m%kz(i)*m%H
+    r = sqrt(sum(x)**2) + 1e-50_r8
+
+    add_lm = 1
+    do l = 0, ml
+      do mm = -l, l
+        call ylmr(x(1), x(2), x(3), l, mm, sa)
+        ylm(add_lm) = sa
+        add_lm = add_lm + 1
+      end do
+    end do
+
+    add_lm = 1
+    do l = 0, ml
+      do mm = -l, l
+        wk(m%Kx(i), m%Ky(i), m%Kz(i)) = wk(m%Kx(i), m%Ky(i), m%Kz(i)) +   &
+            ylm(add_lm)* ((4.0_r8*M_Pi)/(2.0_r8*l + 1.0_r8)) *            &
+            rholm(add_lm)/r**(l + 1)
+        add_lm = add_lm+1
+      enddo
+    enddo
+  enddo
+
+  do i = 1, m%np
+    zk(i) = -4.0d0*M_Pi*sum(dist(i,:))
+    wk(m%Lx(i), m%Ly(i), m%Lz(i)) = pot(i)
+  enddo 
+
+  ! I think this just calculates the laplacian of pot(i) -> zk?
+  ! should not this call derivatives?
+  do i = 1, m%np
+    ix = m%Lx(i); iy = m%Ly(i); iz = m%Lz(i)
+    zk(i) = zk(i) - 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)/m%h**2
+    do j = 1, m%d%norder
+      zk(i) = zk(i) -  m%d%dlidfj(j)*(  &
+          wk(ix+j, iy, iz) + wk(ix-j, iy, iz) + &
+          wk(ix, iy+j, iz) + wk(ix, iy-j, iz) + &
+          wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h**2
+    end do
+  end do
+
+  wk = 0.d0
+  pk = zk
+  s1 = dmesh_dp(m, zk, zk)
+
+  iter = 0
+  do 
+    iter = iter + 1
+    do i = 1, m%np
+      wk(m%Lx(i), m%Ly(i), m%Lz(i)) = pk(i)
+    enddo
+    ! again the laplacian of wk -> tk
+    do i = 1, m%np
+      ix = m%Lx(i); iy = m%Ly(i); iz = m%Lz(i)
+      tk(i) = 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)
+      do j = 1, m%d%norder
+        tk(i) = tk(i) + m%d%dlidfj(j)*( &
+            wk(ix+j, iy, iz) + wk(ix-j, iy, iz) + &
+            wk(ix, iy+j, iz) + wk(ix, iy-j, iz) + &
+            wk(ix, iy, iz+j) + wk(ix, iy, iz-j))
+      enddo
+      tk(i) = tk(i) /m%h**2
+    enddo
+
+    s2 = dmesh_dp(m, zk, tk)
+    ak = s1/s2
+    pot = pot + ak*pk
+    zk = zk - ak*tk
+    s3 = dmesh_dp(m, zk, zk)
+
+    if(iter >= 400 .or. abs(s3) < 1.0E-5_r8) exit
+
+    ck = s3/s1
+    s1 = s3
+    pk = zk+ck*pk
+
+  end do
+
+  if(iter >= 400) then
+    message(1) = "Hartree using conjugated gradients: Not converged!"
+    write(message(2),*) "iter = ", iter, " s3 = ", s3
+    call write_warning(2)
+  endif
+
+  h%ncgiter = iter
+
+  deallocate(wk, zk, tk, pk, rholm)
+
+  call pop_sub()
+  return
+end subroutine hartree_cg
+
+#ifdef HAVE_FFTW
+subroutine hartree_cut_sp(h, m, pot, dist)
+  type(hartree_type), intent(IN) :: h
+  type(mesh_type), intent(IN) :: m
+  real(r8), dimension(:), intent(out) :: pot
+  real(r8), dimension(:,:), intent(IN) :: dist
+
+  integer i, ix, iy, iz
+  real(r8), allocatable :: f(:,:,:)
+  complex(r8), allocatable :: gg(:,:,:)
+
+  sub_name = 'hartree_cut_sp'; call push_sub()
+
+  allocate(f(h%n, h%n, h%n), gg(h%n/2 + 1, h%n, h%n))
+  f = 0.0_8
+
+  do i = 1, m%np
+     ix = m%Lx(i) + h%nnx + 1
+     iy = m%Ly(i) + h%nnx + 1
+     iz = m%Lz(i) + h%nnx + 1
+     f(ix, iy, iz) = sum(dist(i,:))
+  enddo
+
+! Fourier transform the charge density
+  call rfft3d(f, gg, h%n, h%n, h%n, h%planf, fftw_forward)
+  gg = gg*h%ff
+  call rfft3d(f, gg, h%n, h%n, h%n, h%planb, fftw_backward)
+
+  do i = 1, m%np
+     ix = m%Lx(i) + h%nnx + 1
+     iy = m%Ly(i) + h%nnx + 1
+     iz = m%Lz(i) + h%nnx + 1
+     pot(i) = f(ix, iy, iz)
+  enddo
+
+  deallocate(f, gg)
+
+  call pop_sub()
+  return
+end subroutine hartree_cut_sp
+#endif
+
+end module hartree

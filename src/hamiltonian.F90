@@ -3,6 +3,8 @@ use global
 use spline
 use fft
 use system
+use hartree
+use xc
 
 implicit none
 
@@ -23,24 +25,28 @@ type hamiltonian_type
   ! System under the independent particle approximation, or not.
   logical :: ip_app
 
+  ! hartree potential structure
+  type(hartree_type) :: hart
+  type(xc_type) :: xc
+
 end type hamiltonian_type
 
 contains
 
-subroutine hamiltonian_init(h, ispin, np)
+subroutine hamiltonian_init(h, sys)
   type(hamiltonian_type), intent(out) :: h
-  integer, intent(in) :: ispin, np
+  type(system_type), intent(inout) :: sys
 
-  h%ispin = ispin
-  h%np  = np
+  sub_name = 'hamiltonian_init'; call push_sub()
 
-  allocate(h%Vpsl(np), h%rho_core(np))
-  if(ispin == 1) then
-    allocate(h%Vhxc(np, 1))
-  else
-    allocate(h%Vhxc(np, 2))
-  end if
+  ! Duplicate this two variables
+  h%ispin = sys%st%ispin
+  h%np  = sys%m%np
 
+  ! allocate potentials and density of the cores
+  allocate(h%Vpsl(h%np), h%Vhxc(h%np, h%ispin), h%rho_core(h%np))
+
+  ! should we calculate the local pseudopotentials in Fourier space?
   h%vpsl_space = fdf_integer('LocalPotentialSpace', 0)
   if(h%vpsl_space < 0 .or. h%vpsl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
@@ -49,16 +55,82 @@ subroutine hamiltonian_init(h, ispin, np)
     call write_fatal(2)
   end if
 
+  if(h%vpsl_space == 1) then
+    call specie_fourier_init(sys%nspecies, sys%specie, sys%m)
+  end if
+
+  call hartree_init(h%hart, sys%m)
+  call xc_init(h%xc, sys%m, h%ispin)
+
+  call pop_sub()
 end subroutine hamiltonian_init
 
 subroutine hamiltonian_end(h)
   type(hamiltonian_type) :: h
 
+  sub_name = 'hamiltonian_end'; call push_sub()
+
   if(associated(h%Vpsl)) then
     deallocate(h%Vpsl, h%Vhxc)
     nullify(h%Vpsl, h%Vhxc)
   end if
+
+  call hartree_end(h%hart)
+  call xc_end(h%xc)
+
+  call pop_sub()
 end subroutine hamiltonian_end
+
+! This subroutine should be in specie.F90, but due to the limitations
+! of f90 to handle circular dependences it had to come here!
+subroutine specie_fourier_init(ns, s, m)
+  integer, intent(in) :: ns
+  type(specie_type), pointer :: s(:)
+  type(mesh_type), intent(IN) :: m
+
+  integer :: i, j, ix, iy, iz
+  real(r8) :: r, vl
+  real(r8), allocatable :: fr(:,:,:)
+
+  sub_name = 'specie_init_fourier'; call push_sub()
+
+  allocate(fr(m%fft_n,  m%fft_n, m%fft_n))
+  do i = 1, ns
+
+    allocate(s(i)%local_fw(m%hfft_n, m%fft_n, m%fft_n))
+    fr = 0.0_r8
+    do j = 1, m%np
+      call mesh_r(m, j, r)
+      ix = m%lx(j) + m%fft_n/2 + 1;
+      iy = m%ly(j) + m%fft_n/2 + 1;
+      iz = m%lz(j) + m%fft_n/2 + 1;
+      vl  = splint(s(i)%ps%vlocal, r)
+      if(r >= r_small) then
+        fr(ix, iy, iz) = (vl - s(i)%Z_val)/r
+      else
+        fr(ix, iy, iz) = s(i)%ps%vlocal_origin
+      endif
+    enddo
+    call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, s(i)%local_fw)
+    call zscal(m%fft_n**2*m%hfft_n, cmplx(1.0_r8/m%fft_n**3, 0.0_r8, r8), s(i)%local_fw, 1)
+
+    if(s(i)%ps%icore /= 'nc  ') then
+      fr = 0._r8
+      do j = 1, m%np
+        call mesh_r(m, j, r)
+        ix = m%lx(j) + m%fft_n/2 + 1;
+        iy = m%ly(j) + m%fft_n/2 + 1;
+        iz = m%lz(j) + m%fft_n/2 + 1;
+        vl  = splint(s(i)%ps%core, r)
+        fr(ix, iy, iz) = vl
+      enddo
+      call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, s(i)%rhocore_fw)
+      call zscal(m%fft_n**2*m%hfft_n, cmplx(1.0_r8/m%fft_n**3, 0.0_r8, r8), s(i)%rhocore_fw, 1)
+    end if
+  end do
+  
+  call pop_sub()
+end subroutine specie_fourier_init
 
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
@@ -69,6 +141,12 @@ subroutine generate_external_pot(h, sys)
   type(atom_type),   pointer :: a
   complex(r8), allocatable :: fw(:,:,:), fwc(:,:,:)
   real(r8), allocatable :: fr(:,:,:)
+
+  ! WARNING DEBUG
+!!$  integer :: i, j
+!!$  real(r8), allocatable :: f(:,:,:)
+
+  sub_name = 'generate_external_pot'; call push_sub()
 
   if(h%vpsl_space == 1) then
     allocate(fw(sys%m%hfft_n, sys%m%fft_n, sys%m%fft_n), &
@@ -91,13 +169,25 @@ subroutine generate_external_pot(h, sys)
   
   if(h%vpsl_space == 1) then
     allocate(fr(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
-    call rfftwnd_f77_one_complex_to_real(sys%m%zplanb, fw, fr)
+    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb, fw, fr)
     call dcube_to_mesh(sys%m, fr, h%vpsl)
-    call rfftwnd_f77_one_complex_to_real(sys%m%zplanb, fwc, fr)
+    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb, fwc, fr)
     call dcube_to_mesh(sys%m, fr, h%rho_core)
 
     deallocate(fw, fwc, fr)
   end if
+
+  ! WARNING DEBUG
+!!$  allocate(f(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
+!!$  call dmesh_to_cube(sys%m, h%Vpsl, f)
+!!$  do i = 1, sys%m%fft_n
+!!$    do j = 1, sys%m%fft_n
+!!$      print *, i, j, f(i, j, sys%m%fft_n/2 + 1)
+!!$    end do
+!!$    print *
+!!$  end do
+  
+  call pop_sub()
 contains
   !***************************************************
   !  jellium stuff
@@ -112,11 +202,11 @@ contains
     a2 = s%Z/s%jradius
     Rb2= s%jradius**2
     do i = 1, h%np
-      call mesh_r(m, i, a%x, r)
+      call mesh_r(m, i, r, a=a%x)
       if(r <= s%jradius) then
-        h%Vpsl(i) = h%Vpsl(i) + (a1*(r*r - Rb2) - a2) * P_E2
+        h%Vpsl(i) = h%Vpsl(i) + (a1*(r*r - Rb2) - a2)
       else
-        h%Vpsl(i) = h%Vpsl(i) - s%Z/r * P_E2
+        h%Vpsl(i) = h%Vpsl(i) - s%Z/r
       end if
     end do
     
@@ -166,7 +256,7 @@ contains
 
     if(h%vpsl_space == 0) then
       do i = 1, m%np
-        call mesh_r(m, i, a%x, r)
+        call mesh_r(m, i, r, a=a%x)
         vl  = splint(s%ps%vlocal, r)
         if(r >= r_small) then
           h%Vpsl(i) = h%Vpsl(i) + (vl - s%Z_val)/r
@@ -194,7 +284,7 @@ contains
     
     j = 0
     do k = 1, h%np
-      call mesh_r(m, k, a%x, r)
+      call mesh_r(m, k, r, a=a%x)
       if(r < s%ps%rc_max) j = j + 1
     end do
     a%Mps = j
@@ -206,7 +296,7 @@ contains
     
     j = 0
     do k = 1, h%np
-      call mesh_r(m, k, a%x, r)
+      call mesh_r(m, k, r, a=a%x)
       if(r < s%ps%rc_max) then
         j = j + 1
         a%Jxyz(j) = k

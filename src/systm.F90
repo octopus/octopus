@@ -37,7 +37,7 @@ subroutine system_init(s)
     val_charge = val_charge - s%atom(i)%spec%Z_val
   enddo
 
-  call states_init(s%st, val_charge)
+  call states_init(s%st, s%m, val_charge)
 
   call pop_sub()
 end subroutine system_init

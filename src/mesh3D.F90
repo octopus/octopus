@@ -73,40 +73,42 @@ subroutine mesh_init(m, natoms, atom)
   ! init rs -> create -> init fft
   if(m%d%space == 0) then ! real space
     message(1) = 'Info: Derivatives calculated in real-space'
-    call write_info(1)
-    
-    k = fdf_integer('OrderDerivatives', 4)
-    m%d%norder = k
-    if (k < 1) then
-      write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
-      message(2) = '(1 <= OrderDerivatives)'
-      call write_fatal(2)
-    end if
-    allocate(m%d%dlidfj(-k:k), m%d%dgidfj(-k:k))
-    morder = 2*k
-    allocate(cc(0:morder, 0:morder, 0:2))
-    call weights(2, morder, cc)
-    m%d%dgidfj(0) = cc(0, morder, 1)
-    m%d%dlidfj(0) = cc(0, morder, 2)
-    
-    j = 1
-    do i = 1, k
-      m%d%dgidfj(-i) = cc(j, morder, 1)
-      m%d%dlidfj(-i) = cc(j, morder, 2)
-      j = j + 1
-      m%d%dgidfj( i) = cc(j, morder, 1)
-      m%d%dlidfj( i) = cc(j, morder, 2)
-      j = j + 1
-    end do
-    deallocate(cc)
   else
-    m%d%norder = 0
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
-    call write_info(1)
   end if
+  call write_info(1)
+
+  ! we may still need this for cg hartree
+  ! the overhead is small, so we calculate it always :))
+  k = fdf_integer('OrderDerivatives', 4)
+  m%d%norder = k
+  if (k < 1) then
+    write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
+    message(2) = '(1 <= OrderDerivatives)'
+    call write_fatal(2)
+  end if
+  allocate(m%d%dlidfj(-k:k), m%d%dgidfj(-k:k))
+  morder = 2*k
+  allocate(cc(0:morder, 0:morder, 0:2))
+  call weights(2, morder, cc)
+  m%d%dgidfj(0) = cc(0, morder, 1)
+  m%d%dlidfj(0) = cc(0, morder, 2)
+  
+  j = 1
+  do i = 1, k
+    m%d%dgidfj(-i) = cc(j, morder, 1)
+    m%d%dlidfj(-i) = cc(j, morder, 2)
+    j = j + 1
+    m%d%dgidfj( i) = cc(j, morder, 1)
+    m%d%dlidfj( i) = cc(j, morder, 2)
+    j = j + 1
+  end do
+  deallocate(cc)
   
   call mesh3D_create(m, natoms, atom)
 
+  ! we will probably need ffts in a lot of places
+  ! once again the overhead is small
   m%fft_n  = 2*m%nr + 1
   m%hfft_n = m%fft_n/2 + 1
   call rfftw3d_f77_create_plan(m%dplanf, m%fft_n, m%fft_n, m%fft_n, &
@@ -214,17 +216,17 @@ subroutine mesh_z(m, i, z)
   z = m%Lz(i)*m%H
 end subroutine mesh_z
 
-subroutine mesh_r(m, i, a, r, x)
+subroutine mesh_r(m, i, r, a, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(in) :: a(3)
   real(r8), intent(out) :: r
+  real(r8), intent(in), optional :: a(3)
   real(r8), intent(out), optional :: x(3)
 
   real(r8) :: xx(3)
 
   call mesh_xyz(m, i, xx)
-  xx = xx - a
+  if(present(a)) xx = xx - a
   r = sqrt(xx(1)**2 + xx(2)**2 + xx(3)**2)
 
   if(present(x)) x = xx

@@ -6,7 +6,6 @@ use ps
 
 implicit none
 
-
 type specie_type
   character(len=10) :: label
   real(r8) :: Z, Z_val
@@ -73,7 +72,7 @@ function specie_init(s)
       end select
 
       s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
-
+      
     end do
   else
     message(1) = "Input: Species block not specified"
@@ -100,6 +99,13 @@ subroutine specie_end(ns, s)
   do i = 1, ns
     if(.not. s(i)%local .and. associated(s(i)%ps)) then
       call ps_end(s(i)%ps)
+    end if
+
+    if(associated(s(i)%local_fw)) then
+      deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
+    end if
+    if(s(i)%ps%icore /= 'nc  ' .and. associated(s(i)%rhocore_fw)) then
+      deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
     end if
   end do
 

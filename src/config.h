@@ -3,6 +3,7 @@
 #endif
 
 !#define COMPLEX_WFNS
+!#define BOUNDARIES_ZERO_DERIVATIVE
 
 #define HAVE_FFTW
 #define HAVE_LAPACK
