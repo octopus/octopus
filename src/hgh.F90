@@ -440,9 +440,11 @@ subroutine solve_schroedinger(psp)
   type(hgh_type), intent(inout)     :: psp
   
   integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
-  FLOAT :: vtot, e, z, dr, rmax, a2b4, diff, nonl
-  FLOAT, allocatable :: s(:), hato(:), g(:), y(:), prev(:, :), rho(:, :), ve(:, :)
+  FLOAT :: vtot, a2b4, diff, nonl
+  FLOAT, allocatable :: prev(:, :), rho(:, :), ve(:, :)
   FLOAT, parameter :: tol = CNST(1.0e-4)
+  DOUBLE :: e, z, dr, rmax
+  DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
   call push_sub('solve_schroedinger')
 
@@ -501,7 +503,8 @@ subroutine solve_schroedinger(psp)
          e = psp%eigen(n); z = psp%z_val
       endif
       dr = -CNST(1.0e5); rmax = psp%g%rofi(psp%g%nrval)
-      call egofv(hato, s, psp%g%nrval, e, g, y, l, z, psp%g%a, psp%g%b, rmax, nprin, nnode, dr)
+      call egofv(hato, s, psp%g%nrval, e, g, y, l, z, &
+                 real(psp%g%a, 8), real(psp%g%b, 8), rmax, nprin, nnode, dr)
       psp%eigen(n) = e
 
       psp%rphi(2:psp%g%nrval, n) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))

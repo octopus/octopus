@@ -213,9 +213,14 @@ subroutine solve_schroedinger(psf)
 
   character(len=3) :: functl
   integer :: iter, ir, is, l, nnode, nprin, irel
-  FLOAT :: vtot, diff, e, z, dr, rmax, a2b4
-  FLOAT, allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
+  FLOAT :: vtot, diff, a2b4
+  FLOAT, allocatable :: ve(:, :), rho(:, :), prev(:, :)
   FLOAT, parameter :: tol = CNST(1.0e-10)
+
+  ! These variables are in double precision, no matter if single precision version of
+  ! octopus is compiled, because they are passed to egofv.
+  DOUBLE :: e, z, dr, rmax
+  DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
   call push_sub('solve_schroedinger')
 
@@ -273,7 +278,7 @@ subroutine solve_schroedinger(psf)
     nnode = 1; nprin = l + 1
     e = -((psf%zval/dble(nprin))**2); z = psf%zval
     dr = CNST(-1.0e5); rmax = psf%rofi(psf%nrval)
-    call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
+    call egofv(hato, s, psf%nrval, e, g, y, l, z, real(psf%a, 8), real(psf%b, 8), rmax, nprin, nnode, dr)
     psf%eigen(l, 1) = e
 
     psf%rphi(2:psf%nrval, l, 1) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
@@ -315,7 +320,7 @@ subroutine solve_schroedinger(psf)
         nnode = 1; nprin = l + 1
         e = -((psf%zval/dble(nprin))**2); z = psf%zval
         dr = -CNST(1.0e5); rmax = psf%rofi(psf%nrval)
-        call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
+        call egofv(hato, s, psf%nrval, e, g, y, l, z, real(psf%a, 8), real(psf%b, 8), rmax, nprin, nnode, dr)
         psf%eigen(l, 1 + is) = e
 
         psf%rphi(2:psf%nrval, l, 1 + is) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
@@ -604,8 +609,11 @@ subroutine ghost_analysis(pstm, lmax)
 
   character(len=3) :: functl
   integer :: ir, l, nnode, nprin, ighost, irel
-  FLOAT :: vtot, a2b4, z, e, dr, rmax
-  FLOAT, allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
+  FLOAT :: vtot, a2b4
+  FLOAT, allocatable :: ve(:), elocal(:,:)
+
+  DOUBLE :: z, e, dr, rmax
+  DOUBLE, allocatable :: hato(:), s(:), g(:), y(:)
 
   call push_sub('ghost_analysis')
 
@@ -635,7 +643,7 @@ subroutine ghost_analysis(pstm, lmax)
       z = pstm%zval
       dr = CNST(-1.0e5)
       rmax = pstm%rofi(pstm%nrval)
-      call egofv(hato, s, pstm%nrval, e, g, y, l, z, pstm%a, pstm%b, rmax, nprin, nnode, dr)
+      call egofv(hato, s, pstm%nrval, e, g, y, l, z, real(pstm%a, 8), real(pstm%b, 8), rmax, nprin, nnode, dr)
       elocal(nnode,l) = e
     end do
   end do

@@ -27,6 +27,9 @@
 !!#  define IN inout
 #endif
 
+#define DOUBLE real(8)
+#define SINGLE real(4)
+
 #if defined(SINGLE_PRECISION)
 #  define PRECISION 4
 #  define FLOAT     real(4)

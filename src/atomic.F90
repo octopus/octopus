@@ -537,6 +537,12 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   end subroutine vhrtre
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! FROM NOW, ON, ALL SUBROUTINES ARE IN DOUBLE PRECISION, NO MATTER IF THE CODE
+! IS COMPILED WITH SINGLE PRECISION OR NOT. APPARENTLY DOUBLE PRECISION IS
+! NEEDED FOR THESE PROCEDURES.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  egofv determines the eigenenergy and wavefunction corresponding            !
 !  to a particular l, principal quantum number and boundary condition.        !
 !                                                                             !
@@ -556,12 +562,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
 
-  implicit FLOAT (a-h,o-z)
+  implicit DOUBLE (a-h,o-z)
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
 
-  FLOAT,dimension(*) ::h,s,g,y
-
-  FLOAT, parameter :: tol = CNST(1.0e-5)
+  DOUBLE, dimension(*) :: h, s, g, y
+  DOUBLE, parameter :: tol = CNST(1.0e-5)
 
   ncor=nprin-l-1
   n1=nnode
@@ -590,7 +595,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 ! the following line is the fundamental "bisection"
   e = M_HALF*(e1+e2)
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  the following concatenation of logical ors ensures that node               !
@@ -606,7 +610,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !     whereas setting e to et is use of the variational estimate.             !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
   if(et.le.e1 .or. et.ge.e2 .or.                                              &
      nt.lt.nnode-1 .or. nt.gt.nnode) go to 2
@@ -624,12 +627,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
   if(nt.ge.nnode) go to 5
 !  too few nodes; set e1 and n1
   e1=e
   n1=nt
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -714,9 +715,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-  implicit FLOAT (a-h,o-z)
-  FLOAT :: h(*),s(*),y(*)
+  implicit DOUBLE (a-h,o-z)
+  DOUBLE :: h(*), s(*), y(*)
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
 
   zdr = z*a*b
@@ -735,10 +735,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  satisfied by the radial wave function at the origin                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
   knk=n
   call numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
@@ -817,11 +815,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !             (dr/di = a*b at the origin)                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-  implicit FLOAT (a-h,o-z)
-  FLOAT s(*),g(*),norm
+  implicit DOUBLE (a-h,o-z)
+  DOUBLE s(*), g(*), norm
   integer :: n,nm1,nm2,i
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  determine the norm of g(i) using simpsons rule                            !
@@ -857,20 +853,17 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
-  implicit FLOAT (a-h,o-z)
-  FLOAT h(*),s(*)
+  implicit DOUBLE (a-h,o-z)
+  DOUBLE h(*), s(*)
   integer :: l
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   the quantity called d(i) in the program is actually the inverse           !
 !   of the diagonal of the tri-diagonal numerov matrix                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
   t2=h(2)-e*s(2)
   d2=-((CNST(24.)+M_TEN*t2)/(CNST(12.)-t2))
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  the following section deals with the fact that the independent             !
@@ -882,7 +875,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the second derivative gpp is finite making y finite.  for l > 1,           !
 !  g and its first two derivatives vanish, making y zero.                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
   if(l.ge.2) goto 3
   if(l.gt.0) goto 1
@@ -909,9 +901,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 ! 22.7.85                                                                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-  implicit FLOAT (a-h,o-z)
-  FLOAT  h(*),s(*),                                                          &
+  implicit DOUBLE (a-h,o-z)
+  DOUBLE  h(*),s(*),                                                          &
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
   integer :: n
 
@@ -939,9 +930,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
-  implicit FLOAT (a-h,o-z)
+  implicit DOUBLE (a-h,o-z)
   integer :: i,n,nnode,knk
-  FLOAT :: h(n),s(n),y(n)
+  DOUBLE :: h(n),s(n),y(n)
 
   y(n)=yn
   t=h(n)-e*s(n)
@@ -992,9 +983,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
-  implicit FLOAT (a-h,o-z)
+  implicit DOUBLE (a-h,o-z)
   integer :: ncor,nnode,knk,i,nm4
-  FLOAT :: h(knk),s(knk),y(knk)
+  DOUBLE :: h(knk),s(knk),y(knk)
 
   y(1)=M_ZERO
   y(2)=y2
