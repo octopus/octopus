@@ -378,7 +378,7 @@ contains
     type(geometry_type), intent(inout) :: geo
     integer,             intent(in)    :: reltype
 
-    integer :: ia, i, l, lm, add_lm, k, ierr
+    integer :: ia, i, l, lm, add_lm, k, ierr, p
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
@@ -417,13 +417,21 @@ contains
       s => a%spec
       if(s%local) cycle
       add_lm = 1
+      p = 1
       do l = 0, s%ps%l_max
+         if(s%ps%l_loc == l) then
+            add_lm = add_lm + 2*l + 1
+            cycle
+         endif
          do lm = -l, l
             call nonlocal_op_kill(ep%vnl(i))
             ! This if is a performance hack, necessary for when the ions move.
             ! For each atom, the sphere is the same, so we just calculate it once.
-            if(add_lm == 1) then
+            ! This if is a performance hack, necessary for when the ions move.
+            ! For each atom, the sphere is the same, so we just calculate it once.
+            if(p == 1) then
               k = i
+              p = 2
               deallocate(ep%vnl(i)%jxyz, stat = ierr)
               call build_kb_sphere(i)
             else

@@ -45,6 +45,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     if(atm%spec%local) cycle
 
     do l = 0, atm%spec%ps%l_max
+      if(l == atm%spec%ps%l_loc) cycle
       do m = -l, l
         
         ik_loop: do ik = 1, st%d%nik

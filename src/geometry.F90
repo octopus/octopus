@@ -401,14 +401,17 @@ function geometry_nvnl(geo) result(res)
   integer                         :: res
 
   type(specie_type), pointer :: s
-  integer :: ia
+  integer :: ia, l
 
   call push_sub('atom_nvnl')
   res = 0
   do ia = 1, geo%natoms
      s => geo%atom(ia)%spec
      if(s%local) cycle
-     res = res + (s%ps%l_max+1)**2
+     do l = 0, s%ps%l_max
+        if(l == s%ps%l_loc) cycle
+        res = res + 2*l + 1
+     enddo
   enddo
 
   call pop_sub()
