@@ -10,7 +10,6 @@
 * octopus: (octopus).           The octopus program.
 @end direntry
 
-
 @c ***************SUMMARY DESCRIPTION AND COPYRIGTH**********************
 @ifinfo
 The purpose of this info file is describing how to use
@@ -33,8 +32,8 @@ paragraph not being relevant to the printed manual).
 Permission is granted to copy and distribute modified
 versions of this manual under the conditions for
 verbatim copying, provided also that the section
-entitled ``Copying'' and ``GNU General Public License''
-are included exactly as in the original, and provided
+entitled ``Copying''
+is included exactly as in the original, and provided
 that the entire resulting derived work is distributed
 under the terms of a permission notice identical to this
 one.
@@ -46,9 +45,6 @@ except that this permission notice may be stated in a
 translation approved by the Free Software Foundation.
 
 @end ifinfo
-@c **********************************************************************
-
-
 
 @c ***************TITLE PAGE AND COPYRIGHT*******************************
 @titlepage
@@ -103,8 +99,8 @@ under the above conditions for modified versions,
 except that this permission notice may be stated in a
 translation approved by the Free Software Foundation.
 @end titlepage
-@c **********************************************************************
 
+@c **********************************************************************
 @iftex
 @headings off
 @c @evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
@@ -118,7 +114,6 @@ translation approved by the Free Software Foundation.
 @c ***************TOP NODE AND MASTER MENU*******************************
 @ifinfo
 @node Top, Copying, (dir), (dir)
-@c    Node name,  next         , previous , up
 @top octopus
 @c The purpose of this info file is describing how to use
 @c the octopus program. This is obvious, I know, but texinfo manual
@@ -139,7 +134,7 @@ translation approved by the Free Software Foundation.
 * Installation::                
 * The input file::              
 * A word about units::          
-* Variable Index::              
+* Options Index::               
 
 @detailmenu
  --- The Detailed Node Listing ---
@@ -148,6 +143,7 @@ Description of input options
 
 * The parser::                  
 * Input file options::          
+* Examples::                    
 
 Input file options
 
@@ -155,24 +151,28 @@ Input file options
 * Species::                     
 * Coordinates::                 
 * Velocities::                  
+* Mesh::                        
 * States::                      
-* xx::                          
+* Hamiltonian::                 
+* Exchange and correlation::    
+* SCF::                         
+* Unoccupied States::           
+* Time Dependent::              
+* Photo-electron spectrum::     
+* Born-Oppenheimer Dynamics::   
+* Varia::                       
+
+Examples
+
+* Hello world::                 
+* Benzene::                     
 
 @end detailmenu
 @end menu
 
-@c **********************************************************************
-
-
-
-
-
-
 @c ***************THE BODY OF THE DOCUMENT*******************************
 
-@c **********************************************************************
 @c ***************COPYING************************************************
-@c **********************************************************************
 @node Copying, Authors, Top, Top
 @chapter Copying
 
@@ -204,14 +204,8 @@ reputation.
   The precise conditions of the license 
 are found in the General Public
 Licenses that accompany it.
-@c **********************************************************************
-@c **********************************************************************
-@c **********************************************************************
 
-
-@c **********************************************************************
 @c ********************AUTHORS, COLLABORATORS AND ACKNOWLEDGEMENTS*******
-@c **********************************************************************
 @node Authors, Introduction, Copying, Top
 @chapter Authors, Collaborators and Acknowledgements.
 
@@ -224,21 +218,12 @@ by the same team, and this one in turn was developed as an extension
 of a linear optical response code written by George F. Bertsch, K. Yabana
 and Angel Rubio.
 
-If you have some time free, and if you feel like taking a joy ride with
+If you have some free time, and if you feel like taking a joy ride with
 FORTRAN 90, just drop us an @email{marques@@nautilus.fis.uc.pt, email}. You can
 also send us patches, comments, ideas, wishes, etc.
 
-@c **********************************************************************
-@c **********************************************************************
-@c **********************************************************************
-
-
-
-@c **********************************************************************
 @c ********************* INTRODUCTION ***********************************
-@c **********************************************************************
 @node Introduction, Installation, Authors, Top
-@c    node-name,     next,          previous,     up
 @chapter Introduction
 
      
@@ -258,21 +243,14 @@ main characteristics are:
 
 @itemize @bullet
 @item Electrons are describe quantum-mechanically within the
-Density-Functional Theory (DFT), in its time-dependent form (TDDFT)
-when doing simulations in time. Nuclei are described classically
-as point particles. 
+  Density-Functional Theory (DFT), in its time-dependent form (TDDFT)
+  when doing simulations in time. Nuclei are described classically
+  as point particles. 
 @item Electron-nucleus interaction is described within the
-Pseudopotential approximation..
+  Pseudopotential approximation..
 @end itemize
-@c **********************************************************************
-@c **********************************************************************
-@c **********************************************************************
 
-
-
-@c **********************************************************************
 @c *************************INSTALLATION*********************************
-@c **********************************************************************
 @node Installation, The input file, Introduction, Top
 @chapter Installation
 
@@ -293,37 +271,36 @@ in C (and in bison, if we count the input parser). To build it
 you will need both a C compiler (@code{gcc} works just fine), and a
 Fortran 90 compiler. No free Fortran 90 compiler is available yet,
 so, if you want to chew the @code{octopus}, you will have either
-to help the @code{g95} project @uref{http://g95.sourceforge.net}
+to help the @uref{http://g95.sourceforge.net, g95} project
 or pay some money.
 
-Besides the compilers, you will still need
+Besides the compilers, you will also need:
 @enumerate
-@item
-@code{make} :  Version 3.79 or higher of the GNU @code{make} 
-  should work, any other @emph{could} work, but maybe not.
-@item
-@code{cpp} : The C preprocessor is heavily used in @code{octopus}.
+@item @code{make} :  Version 3.79 or higher of GNU @code{make} 
+  should work; any other @emph{could} work, but maybe not.
+
+@item @code{cpp} : The C preprocessor is heavily used in @code{octopus}.
   GNU @code{cpp} is just fine, but any @code{cpp} that accepts
-  the @code{-C} flag (preserve comments) should work just fine.
-@item
-FFTW : In principle @code{octopus} can live without FFTW, but he will
+  the @code{-C} flag (preserve comments) should work just as well.
+
+@item FFTW : In principle @code{octopus} can live without FFTW, but he will
   feel somehow weaker. Just grab this great library from @uref{http://www.fftw.org/}
-@item
-LAPACK/BLAS : Not heavily used, but required. If you are running Linux,
-there is a fair change they are already installed in your system. The same
+
+@item LAPACK/BLAS : Not heavily used, but required. If you are running Linux,
+there is a fair chance they are already installed in your system. The same
 goes to the more heavyweight machines (alphas, IBMs, SGIs, etc). Otherwise,
 just grab the source from @uref{http://www.netlib.org}.
-@item
-GSL : Finally that someone had the nice idea of making a public scientific
+
+@item GSL : Finally that someone had the nice idea of making a public scientific
   library! GSL still needs to grow, but it is already quite useful and impressive.
   @code{octopus} uses splines, complex numbers, special functions, etc. from GSL,
   so it is a must! If you don't have it already installed in your system, you can
   obtain FFTW from @uref{http://sources.redhat.com/gsl/}. You will need version 1.0 
   or higher.
-@item
-MPI : If you want to run @code{octopus} in multi-tentacle (parallel) mode,
-  you will need an implementation of MPI. @code{mpich} 
-  (@code{http://www-unix.mcs.anl.gov/mpi/mpich/}) works just fine in our
+
+@item MPI : If you want to run @code{octopus} in multi-tentacle (parallel) mode,
+  you will need an implementation of MPI. 
+  @uref{http://www-unix.mcs.anl.gov/mpi/mpich/, @code{mpich}} works just fine in our
   Linux boxes.
 @end enumerate
 
@@ -339,17 +316,14 @@ octopus, created by the @code{tar} command.
 
 The @code{OCTOPUS-HOME} contains the following subdirectories:
 @itemize
-@item
-@code{doc} : The documentation of @code{octopus} in @emph{texinfo} format.
-@item
-@code{liboct} : Small C library that handles the interface to
-  GSL and the parsing of the input file. It also contains some assorted
-  routines that we didn't want to write in boring Fortran.
-@item
-@code{src} : Fortran 90 source files. Note that these have to be preprocessed
-  before being fed to the Fortran compiler, so do not be scared by
-  all the # directives.
-@code{samples} : Sample input files for @code{octopus}
+  @item @code{doc} : The documentation of @code{octopus} in @emph{texinfo} format.
+  @item @code{liboct} : Small C library that handles the interface to
+    GSL and the parsing of the input file. It also contains some assorted
+    routines that we didn't want to write in boring Fortran.
+  @item @code{src} : Fortran 90 source files. Note that these have to be preprocessed
+    before being fed to the Fortran compiler, so do not be scared by
+    all the # directives.
+  @item @code{samples} : Sample input files for @code{octopus}
 @end itemize
 
 Before configuring you can (should) setup a couple of options. Although
@@ -392,7 +366,7 @@ commonly used options include:
   default behaviour.
 @end itemize
 
-Run @code{make}, and the @code{make install}. If everything went fine, you
+Run @code{make}, and then @code{make install}. If everything went fine, you
 should now be able to taste @code{octopus}.
 
 The program has been tested in the following platforms:
@@ -401,7 +375,7 @@ The program has been tested in the following platforms:
 @code{i686-pc-linux-gnu} : with the @uref{http://www.absoft.com, Absoft}
   compiler.
 @end itemize
-If you manage to compile/run @code{octopus} in a different platform,
+If you manage to compile/run @code{octopus} in a different platform
 or with a different compiler, please let us know so we can update the
 list. Patches to solve compiler issues are also welcomed.
 
@@ -414,32 +388,25 @@ program by typing @code{info -f octopus.info}, or alternatively may
 be installed in your general @code{info} structure by typing 
 @code{make install}.
 
-@c **********************************************************************
-@c **********************************************************************
-@c **********************************************************************
-
-
-
-@c **********************************************************************
 @c *******************DESCRIPTION OF INPUT OPTION************************
-@c **********************************************************************
 @node The input file, A word about units, Installation, Top
-@c    node-name,     next,          previous,     up
 @chapter Description of input options
 
 @menu
 * The parser::                  
 * Input file options::          
+* Examples::                    
 @end menu
 
+@c **********************************************************************
 @node The parser, Input file options, The input file, The input file
 @section The parser
 
-All input options should be in a file called "@code{inp}", in the
+All input options should be in a file called '@code{inp}', in the
 directory @code{octopus} is run from. For a fairly comprehensive
 example, just look at the file @code{OCTOPUS_HOME/samples/inp}
 
-At the begining of the program @code{liboct} reads in the @code{inp}
+At the begining of the program @code{liboct} reads the @code{inp}
 file, parses it, and generates a list of variables that will be
 read by @code{octopus} (note that the input is case independent). 
 There are two kind of variables, scalar
@@ -451,7 +418,7 @@ var = exp
 @code{var} can contain any alphanumeric character plus "_", and 
 @code{exp} can be a quote delimited string, a number (integer,
 real, or complex), a variable name, or a mathematical expression. 
-In the expression all arithmetic operators are supported 
+In the expressions all arithmetic operators are supported 
 ("a+b", "a-b", "a*b", "a/b"; for exponenciation the C syntax
 "a^b" is used), and the following functions can be use:
 @itemize
@@ -493,17 +460,17 @@ The syntax is the following:
 @end example
 Rows in a block are separated by a newline, while columns are
 separated by the character "|". There may be any number of lines and any
-number of columns block. Note also that each lines can have a different
+number of columns in a block. Note also that each line can have a different
 number of columns.
 
 If @code{octopus} tries to read a variable that is not defined in the
 @code{inp} file, it automatically assigns to it a default value. All
-variables read are output to the file @code{out.oct}. If you are
+variables read are output to the file '@code{out.oct}'. If you are
 not sure of what the program is reading, just take a look at it.
 Everything following the character "#" until the end of the line
 is simply cast into oblivion.
 
-@node Input file options,  , The parser, The input file
+@node Input file options, Examples, The parser, The input file
 @section Input file options
 
 @code{octopus} has quite a few options, that we will subdivide in different groups.
@@ -515,17 +482,26 @@ are given in parentesis.
 * Species::                     
 * Coordinates::                 
 * Velocities::                  
+* Mesh::                        
 * States::                      
-* xx::                          
+* Hamiltonian::                 
+* Exchange and correlation::    
+* SCF::                         
+* Unoccupied States::           
+* Time Dependent::              
+* Photo-electron spectrum::     
+* Born-Oppenheimer Dynamics::   
+* Varia::                       
 @end menu
 
+@c **********************************************************************
 @node Generalities, Species, Input file options, Input file options
 @subsection Generalities
-
 @itemize @bullet
+
 @item @vindex @code{Verbose}
   @code{Verbose} (integer, 30) : 
-  Verbosity level of the program. The higher the
+  Verbosity level of the program. The higher, the
   more verbose @code{octopus} is. Current levels are:
   @itemize @minus
     @item @code{verbose <=  0} : Silent mode. No output except fatal errors.
@@ -579,10 +555,11 @@ are given in parentesis.
 
 @end itemize
 
+@c **********************************************************************
 @node Species, Coordinates, Generalities, Input file options
 @subsection Species
-
 @itemize @bullet
+
 @item @vindex @code{Species}
 @code{Species} (block data) : 
   A specie is by definition an ion (nucleus + core electrons) described
@@ -625,10 +602,11 @@ are given in parentesis.
   @end itemize
 @end itemize
 
+@c **********************************************************************
 @node Coordinates, Velocities, Species, Input file options
 @subsection Coordinates
-
 @itemize @bullet
+
 @item @vindex @code{PDBCoordinates}
 @code{PDBCoordinates} (string, 'coords.pdb') :
   Tries to read the atomic coordinates from the file @code{PDBCoordinates}.
@@ -657,7 +635,7 @@ are given in parentesis.
 @code{XYZCoordinates} (string, 'coords.xyz') :
   If @code{PDBCoordinates} is not present, reads the atomic coordinates
   from the XYZ file @code{XYZCoordinates}. The XYZ format is very simple,
-  as can be seem by this example for the CO molecule (in @AA{}).
+  as can be seem from this example for the CO molecule (in @AA{}).
   @example
     2
       CO molecule in equilibrium
@@ -666,7 +644,7 @@ are given in parentesis.
   @end example
   The first line of the file has an integer indicating the number of
   atoms. The second can contain comments that are simply ignored by 
-  @code{octopus}. Then there follow one line per each atom containing
+  @code{octopus}. Then there follows one line per each atom, containing
   the chemical species and the cartesian coordinates of the atom.
 
 @item @vindex @code{Coordinates}
@@ -688,7 +666,7 @@ are given in parentesis.
 
 @item @vindex @code{AdjustCoordinates}
 @code{AdjustCoordinates} (logical, false) :
-  If true applies a translates the atom coordinates so that the
+  If true, translates the atom coordinates so that the
   geometrical center of the molecule coincides with the zero of 
   the mesh, and rotates them, fixing the largest dimension
   of the molecule to the axis defined through @code{MainAxis}.
@@ -709,13 +687,13 @@ are given in parentesis.
   in the file '@code{SystemName}_classical.xyz'.
 @end itemize
 
-@node Velocities, States, Coordinates, Input file options
+@node Velocities, Mesh, Coordinates, Input file options
 @subsection Velocities
 
 @itemize @bullet
 @item @vindex @code{XYZVelocities} :
 @code{XYZVelocities} (string, 'velocities.xyz') :
-  @code{octopus} will try to read the starting coordinates of the atoms from the XYZ file 
+  @code{octopus} will try to read the starting velocities of the atoms from the XYZ file 
   @code{XYZVelocities}.
 
 @item @vindex @code{Velocities}
@@ -731,13 +709,85 @@ are given in parentesis.
     %
   @end example
   It describes one Carbon and one Oxygen moving at the relative
-  velocity of @code{3.4} velocity units.
+  velocity of @code{3.4}, velocity units.
 @end itemize
 
-@node States, xx, Velocities, Input file options
-@subsection States
+@c **********************************************************************
+@node Mesh, States, Velocities, Input file options
+@subsection Mesh
+
+@code{octopus} uses a grid in real space to solve the Kohn-Sham equations.
+  The grid is equally-spaced, but the spacings can be different for each 
+  cartesian direction. The shape of the simulation region may also
+  be tuned to suit the geometric configuration of the system.
 
 @itemize @bullet
+
+@item @vindex @code{BoxShape}
+@code{BoxShape} (integer, sphere) :
+  In a 3D calculation, it is the shape of the simulation box. The allowed 
+  values are:
+  @itemize
+    @item @code{sphere} or @code{1}: A sphere
+    @item @code{cilinder} or @code{2}: A cilinder. The cilinder axis will be 
+      in the z direction
+    @item @code{minimum} or @code{3}: Sum of spheres around each atom.
+    @item @code{parallelpiped} or @code{4}: As the name indicates.
+  @end itemize
+
+@item @vindex @code{Radius}
+@code{Radius} (double, 20.0 a.u.) or (block data) :
+  If @code{BoxShape != parallelpiped} defines the radius of the
+  spheres or of the cilinder. Otherwise, @code{Radius} is assumed to
+  be a block of the form:
+  @example
+    %Radius
+      sizex | sizey | sizez
+    %
+  @end example
+  where @code{size} is half an edge of the box.
+
+@item @vindex @code{ZLength}
+@code{ZLength} (double, 1.0 a.u.) :
+  If @code{BoxShape == cilinder} is half the total length of the cilinder.
+
+@item @vindex @code{Spacing}
+@code{Spacing} (double, 0.6 a.u.) or (block data) :
+  If the code is compiled in 1D mode or if @code{BoxShape != parallelpiped}
+  defines the (constant) spacing between points in the grid. Otherwise, it
+  is assumed to be a block of the form:
+  @example
+    %Spacing
+      spacingx | spacingy | spacingz
+    %
+  @end example
+
+@item @vindex @code{DerivativesSpace}
+@code{DerivativesSpace} (integer, real_space)
+  Defines in which space gradients and the laplacian are calculated. Allowed values
+  are:
+  @itemize @minus
+    @item @code{real_space} or @code{0} : Derivatives are calculated in real-space
+      using finite differences. The order of the derivative can be set with
+      @code{OrderDerivatives}.
+    @item @code{fourier_space} or @code{1} : Derivatives are calculated in
+      reciprocal space. Obviously this case implies cyclic boundary conditions,
+      so be careful.
+  @end itemize
+
+@item @vindex @code{OrderDerivatives}
+@code{OrderDerivatives} (integer, 4) :
+  If @code{DerivativesSpace == real_space} use a finite difference discretization
+  for the derivatives of order @code{OrderDerivatives*2 + 1}.
+
+@end itemize
+
+
+@c **********************************************************************
+@node States, Hamiltonian, Mesh, Input file options
+@subsection States
+@itemize @bullet
+
 @item @vindex @code{SpinComponents}
 @code{SpinComponents} (integer, 1) :
   Defines the spin mode @code{octopus} will run in. Valid modes are:
@@ -754,19 +804,19 @@ are given in parentesis.
 @item @vindex @code{NumberKPoints}
 @code{NumberKPoints} (integer, 1) :
   If @code{octopus} was compiled for periodic systems, the number of
-  @emph{k} points to use in the calculation. If @code{NumberKPoints = 1},
+  @emph{k} points to use in the calculation. If @code{NumberKPoints == 1},
   use only the Gamma point.
 
 @item @vindex @code{ExcessCharge}
-@code{NumberKPoints} (double, 1) :
+@code{ExcessCharge} (double, 1) :
   The net charge of the system. A negative value means that we are adding 
   electrons, while a positive value means we are taking electrons
-  away from the system.
+  from the system.
 
 @item @vindex @code{EmptyStates}
 @code{EmptyStates} (integer, 1) :
   How many unoccupied states to use in the ground-state
-  calculation. Note that this number is unrelated to @code{CalculationMode = 4}.
+  calculation. Note that this number is unrelated to @code{CalculationMode == 4}.
 
 @item @vindex @code{Occupations}
 @code{Occupations} (blockdata) :
@@ -778,34 +828,602 @@ are given in parentesis.
     %
   @end example
   would fix the occupations of the five states to @code{2.0}. There must be
-  as many columns as states in the calculation. If @code{SpinComponents = 2}
+  as many columns as states in the calculation. If @code{SpinComponents == 2}
   this block should contain two lines, one for each spin channel.
   This variable is very useful when dealing with highly symmetric small systems
   (like an open shell atom), for it allows us to fix the occupation numbers
   of degenerate states in order to help @code{octopus} to converge.
+
+@item @vindex @code{ElectronicTemperature}
+@code{ElectronicTemperature} (double, 0.0)
+  If @code{Occupations} is not set, @code{ElectronicTemperature} is the
+  temperature in the Fermi-Dirac function used to distribute the electrons
+  among the existing states.
+
 @end itemize
-
-@node xx,  , States, Input file options
-@subsection xx
-
-@itemize @bullet
-@end itemize
-
-The real-space mesh is an equally-spaced one, although the spacings maybe
-different for each direction. The shape of the simulation region may also
-be tuned to suit the geometric configuration of the system.
-
-@node A word about units, Variable Index, The input file, Top
-@appendix A word about units
 
 @c **********************************************************************
+@node Hamiltonian, Exchange and correlation, States, Input file options
+@subsection Hamiltonian
+@itemize @bullet
+
+@item @vindex @code{NonInteractingElectrons}
+@code{NonInteractingElectrons} (logical, false) :
+  If @code{true}, treat the electrons as non-interacting, i.e. neglect both
+  Hartree and exchange-correlation contributions to the Kohn-Sham potential.
+
+@item @vindex @code{ClassicPotential}
+@code{ClassicPotential} (logical, false) :
+  If @code{truee}, add to the external potential the potential generated by 
+  the point charges read from the PDB input (see @code{PBDCoordinates}).
+
+@item @vindex @code{LocalPotentialSpace}
+@code{LocalPotentialSpace} (integer, fourier_space) :
+  If @code{fourier_space}, generate the local part of the pseudopotential
+  in Fourier space; Otherwise do it directly in real space. @emph{Generating
+  the potential in Fourier space seems to reduce the egg-box effect but this
+  option has not been extensively tested.}
+
+@item @vindex @code{NonLocalPotentialSpace}
+@code{NonLocalPotentialSpace} (integer, real_space) :
+  If @code{fourier_space} generate the non-local part of the pseudopotential
+  in Fourier space; Otherwise do it directly in real space. @emph{Generating
+  the potential in Fourier space seems to reduce the egg-box effect but this
+  option has not been extensively tested.}
+
+@item @vindex @code{GridRefinement}
+@code{GridRefinement} (integer, 3) :
+  If @code{NonLocalPotentialSpace == fourier_space} defines the number of
+  points to use in the interpolation method for the non-local part of the
+  pseudopotential. @emph{This seems to reduce the egg-box effect but this
+  option has not been extensively tested.}
+
+@end itemize
+
+@c **********************************************************************
+@node Exchange and correlation, SCF, Hamiltonian, Input file options
+@subsection Exchange and correlation
+
+The exchange-correlation functional is controled by the
+4 parameters @code{XFamily}, @code{XFunctional},
+@code{CFamily} and @code{CFunctional}. Obviously, the @code{X}
+parameters control the exchange part of the functional, while the
+@code{C} parameters control the correlation. The possible values are:
+
+@vindex @code{XFamily}
+@vindex @code{XFunctional}
+
+@itemize @bullet
+@item @code{XFamily == 'ZER'} : No exchange.
+@item @code{XFamily == 'LDA'} : Local density approximation.
+  @itemize @minus
+    @item @code{XFunctional == 'NREL'} : Non-relativistic exchange.
+    @item @code{XFunctional ==  'REL'} : Relativistic exchange.
+  @end itemize
+@item @code{XFamily == 'GGA'} : Generalized gradient approximations.
+  @itemize @minus
+    @item @code{XFunctional ==  'PBE'} :  J.P.Perdew, K.Burke and M.Ernzerhof, 
+    	PRL @strong{77}, 3865 (1996)
+    @item @code{XFunctional == 'PBER'} : PBE with some relativistic corrections.
+    @item @code{XFunctional == 'LB94'} : van Leeuwen and Baerends functional.
+  @end itemize
+@item @code{XFamily == 'KLI'} : Optimized effective potential method within
+  the Krieger, Lee and Iafrate approximation.
+  @itemize @minus
+    @item @code{XFunctional ==   'X'} : Exact exchange functional.
+    @item @code{XFunctional == 'SIC'}: Self interaction corrected LDA.
+  @end itemize
+@end itemize
+
+And now comes the correlation variables:
+@vindex @code{CFamily}
+@vindex @code{CFunctional}
+
+@itemize @bullet
+@item @code{CFamily == 'ZER'} : No correlation
+@item @code{CFamily == 'LDA'} : Local density approximation.
+  @itemize @minus
+    @item @code{CFunctional ==   'PZ'} :  Perdew and Zunger, 
+      PRB @strong{23}, 5075 (1981)
+    @item @code{CFunctional == 'PW92'} : J.P.Perdew and Y.Wang, 
+      PRB @strong{45}, 13244 (1992)
+  @end itemize
+@item @code{CFamily == 'GGA'} : Generalized gradient approximations. 
+  @itemize @minus
+    @item @code{CFunctional == 'PBE'} : J.P.Perdew, K.Burke and M.Ernzerhof, 
+    	PRL @strong{77}, 3865 (1996)
+  @end itemize
+@item @code{CFamily == 'KLI'}: Optimized effective potential method within
+  the Krieger, Lee and Iafrate approximation.
+  @itemize @minus
+    @item @code{CFunctional == 'SIC'}: Self interaction corrected LDA.
+  @end itemize
+@end itemize
+
+@c **********************************************************************
+@node SCF, Unoccupied States, Exchange and correlation, Input file options
+@subsection SCF
+
+The self consistent procedure will stop when the first of the convergence
+criteria is fulfilled.
+@itemize @bullet
+@item @vindex @code{MaximumIter}
+@code{MaximumIter} (integer, 200) :
+  Maximum number of SCF iterations. @code{0} means unlimited.
+
+@item @vindex @code{ConvAbsDens}
+@code{ConvAbsDens} (double, 1e-5) :
+  Absolute convergence of the density. @code{0} means do 
+  not use this criterium.
+
+@item @vindex @code{ConvRelDens}
+@code{ConvRelDens} (double, 0.0) :
+  Relative convergence of the density. @code{0} means do 
+  not use this criterium.
+
+@item @vindex @code{ConvAbsEnergy}
+@code{ConvAbsEnergy} (double, 0.0) :
+  Absolute convergence of the total energy. @code{0} means do 
+  not use this criterium.
+
+@item @vindex @code{ConvRelEnergy}
+@code{ConvRelEnergy} (double, 0.0) :
+  Relative convergence of the total energy. @code{0} means do 
+  not use this criterium.
+
+@end itemize
+There are some more variables controlling the SCF cycle:
+@itemize @bullet
+
+@item @vindex @code{LCAOStart}
+@code{LCAOStart} (logical, true) :
+  Before starting a SCF calculation (@code{CalculationMode == 1}), perform
+  a LCAO calulation. these should provide @code{octopus} with a good set
+  of initial wavefunctions, and help the convergence of the SCF cycle.
+
+@item @vindex @code{LCAOMode}
+@code{LCAOMode} (integer, 0) :
+  How to perform the LCAO calculation. Allowed values are:
+  @itemize @minus
+    @item @code{0} : Memory intensive. Store all LCAO wavefunctions in memory.
+    @item @code{1} : CPU intensive. Recalculate the LCAO wavefunctions
+      everytime they are needed.
+  @end itemize
+
+@item @vindex @code{EigenSolver}
+@code{EigenSolver} (integer, 0) :
+  Which eigensolver to use to diagonalize the Kohn-Sham Hamiltonian.
+  Possible values are:
+  @itemize @minus
+    @item @code{0} : Conjugated Gradients method I.
+    @item @code{1} : Conjugated Gradients method II.
+  @end itemize
+  Method II should be used unless you know what you are doing!
+
+@item @vindex @code{EigenSolverInitTolerance}
+@code{EigenSolverInitTolerance} (double, 1.0e-10) :
+  When @code{EigenSolver == 0} is the initial tolerance for the eigenvectors.
+
+@item @vindex @code{EigenSolverFinalTolerance}
+@code{EigenSolverFinalTolerance} (double, 1.0e-14) :
+  When @code{EigenSolver == 0} is the final tolerance for the eigenvectors.
+
+@item @vindex @code{EigenSolverFinalToleranceIteration}
+@code{EigenSolverFinalToleranceIteration} (integer, 7) :
+  When @code{EigenSolver == 0} determines how many interactions are needed 
+  to go from @code{EigenSolverInitTolerance} to @code{EigenSolverFinalTolerance}.
+
+@item @vindex @code{EigenSolverMaxIter}
+@code{EigenSolverMaxIter} (integer, 25) :
+  When @code{EigenSolver == 0} determines the maximum number of iterations 
+  for the eigensolver.
+
+@item @vindex @code{NumberCG}
+@code{NumberCG} (integer, 3) :
+  When @code{EigenSolver == 1} determines the number of conjugated gradient 
+  steps per iteration.
+
+@item @vindex @code{TypeOfMixing}
+@code{TypeOfMixing} (integer, 0) :
+  Selects the mixing procedure for the density during the SCF cycle. Possible
+  values are:
+  @itemize
+    @item @code{0} : Linear mixing.
+    @item @code{1} : Broyden mixing.
+  @end itemize
+
+@item @vindex @code{Mixing}
+@code{Mixing} (double, 0.3) :
+  Determines the amount of the new density which is to be mixed
+  with the old density.
+
+@item @vindex @code{BroydenNumber}
+@code{BroydenNumber} (integer, 3) :
+  Number of steps used by Broyden mixing to extrapolate the new density.
+
+@end itemize
+
+@c **********************************************************************
+@node Unoccupied States, Time Dependent, SCF, Input file options
+@subsection Unoccupied States
+
+These variables are only used in @code{CalculationMode == 3, 4} (or in 5 and 6
+if @code{TDOccupationalAnalysis == 1}.)
+@itemize @bullet
+
+@item @vindex @code{UnoccNumberStates}
+@code{UnoccNumberStates} (integer, 5) :
+  How many unoccupied states to compute.
+
+@item @vindex @code{UnoccMaximumIter}
+@code{UnoccMaximumIter} (integer, 200) :
+  Maximum number of iterations while calculating the unoccupied states.
+  Note that this are @emph{not} SCF iterations, for the density and the 
+  hamiltonian are not updated!
+
+@item @vindex @code{UnoccConv}
+@code{UnoccConv} (double, 1e-4) :
+  Absolute convergence in the eigenvectors.
+@end itemize
+
+@c **********************************************************************
+@node Time Dependent, Photo-electron spectrum, Unoccupied States, Input file options
+@subsection Time Dependent
+@itemize @bullet
+
+@item @vindex @code{TDMaximumIter}
+@code{TDMaximumIter} (integer, 1500) :
+  Number of time steps.
+
+@item @vindex @code{TDSaveIter}
+@code{TDSaveIter} (integer, 100) :
+  Output stuff every @code{TDSaveIter} steps.
+
+@item @vindex @code{TDEvolutionMethod}
+@code{TDEvolutionMethod} (integer, 2) :
+  Method used to perform the time propagation. Authorized values are:
+  @itemize
+    @item @code{1} : Quick and dirty method. One should check carefully 
+      the time-step, and it only works with density based functionals.
+    @item @code(2) : Modified Krank-Nicholson method. Very stable method,
+      but significatively slower than method @code{1}.
+  @end itemize
+
+@item @vindex @code{TDTimeStep}
+@code{TDTimeStep} (double, 0.07 a.u.) :
+  Time step for the propagation.
+
+@item @vindex @code{Lasers}
+@code{Lasers} (block data) :
+  Each line of the block describes a laser pulse applied to the system. 
+  The syntax is:
+  @example
+    %Lasers
+      polx | poly | polz | A0 | envelope | tau0 | t0 | omega0
+    %
+  @end example
+  where @code{pol} is the (complex) polarization of the laser field, @code{A0}
+  the amplitude, @code{envelope} the envelope function, @code{t0} the 
+  middle (maximum) of the pulse and @code{omega0} the frequency of 
+  the pulse. The meaning of @code{tau0} depends on the envelope function. 
+  The possible values for @code{envelope}
+  are:
+  @itemize @minus
+    @item @code{1} : Gaussian envelope. @code{tau0} is the standard deviation 
+      of the pulse.
+    @item @code{2} : Cosinoidal envelope. @code{tau0} is half the total length
+      of the pulse.
+    @item @code{3} : Ramp. In this case there is an extra parameter 
+      @code{tau1}. @code{tau0} is the length of the constant part of the ramp,
+      and @code{tau1} is the raising (decaying) time.
+  @end itemize
+
+@item @vindex @code{TDGauge}
+@code{TDGauge} (integer, 0) :
+  In which gauge to treat the laser. Options are:
+  @itemize @minus
+    @item @code{1} : Length gauge.
+    @item @code{2} : Velocity gauge.
+  @end itemize
+
+@item @vindex @code{TDOutputLaser}
+@code{TDOutputLaser} (logical, false) :
+  If @code{true}, @code{octopus} outputs the laser field to the file '@code{laser.out}'.
+
+@item @vindex @code{TDDeltaStrength}
+@code{TDDeltaStrength} (double, 0.0 a.u.)
+  When no laser is applied, a delta (in time) electric field with
+  stength @code{TDDeltaStrength} is applied. This is used to calculate
+  the linear optical spectra.
+
+@item @vindex @code{TDPolarization}
+@code{TDPolarization} (block data)
+  The (real) polarization of the delta electric field. The format of the
+  block is:
+  @example
+    %TDPolarization
+      polx | poly | polz
+    %
+  @end example
+
+@item @vindex @code{TDAbsorbingBoundaries}
+@code{TDAbsorbingBoundaries} (integer, 0) :
+  To improve the quality of the spectra by avoiding the formation of 
+  standing density waves, one can make the boundaries of the simulation 
+  box absorbing. The possible values for this parameter are:
+  @itemize @minus
+    @item @code{0} : No absorbing boundaries.
+    @item @code{1} : A sin^2 imaginary potential is added at the boundaries.
+    @item @code{2} : A mask is applied to the wavefunctions at the boundaries.
+  @end itemize
+
+@item @vindex @code{TDABWidth}
+@code{TDABWidth} (real, 0.4 a.u.) :
+  Width of the region used to apply the absorbing boundaries.
+
+@item @vindex @code{TDABWidth}
+@code{TDABWidth} (real, -0.2 a.u.) :
+  When @code{TDAbsorbingBoundaries == 1}, is the height of the imaginary 
+  potential.
+
+@item @vindex @code{TDDipoleLmax}
+@code{TDDipoleLmax} (integer , 1) :
+  Maximum multipole of the density output to the file '@code{Sysname}.mult' 
+  during a time-dependent simulation.
+
+@item @vindex @code{TDOccupationalAnalysis}
+@code{TDOccupationalAnalysis} (logical, false) :
+  If true, outputs the projections of the time-dependent Kohn-Sham
+  wavefunctions onto the static (zero time) wavefunctions to the
+  file '@code{Sysname}.proj'.
+
+@item
+@code{MoveIons} (integer, 0) : 
+  See @code{MoveIons} in the Born-Oppenheimer section.
+  For a time-dependent simulation can only takes the values 
+  @code{0}, @code{3}, and @code{4}.
+
+@end itemize
 
 
+@c **********************************************************************
+@node Photo-electron spectrum, Born-Oppenheimer Dynamics, Time Dependent, Input file options
+@subsection Photo-electron spectrum
+@itemize @bullet
+
+@item @vindex @code{TDCalcPES_rc}
+@code{TDCalcPES_rc} (logical, false) :
+  If @code{true}, store the wave functions in specific points in order to calculate 
+  the photo-electron spectrum a la Suraud.
+
+@item @vindex @code{TDPES_rc_points}
+@code{TDPES_rc_points} (block data) :
+  List of points where to calculate the photo-electron spectrum a la Suraud.
+  The exact syntax is:
+  @example
+    %TDPES_rc_points
+      x1 | y1 | z1
+    %
+  @end example
+
+@item @vindex @code{TDCalcPES_mask}
+@code{TDCalcPES_mask} (logical, false)
+  If @code{true}, calculate the photo-electron spectrum using the mask method. 
+  In order for this to work, masking boundaries are necessary 
+  (@code{TDAbsorbingBoundaries == 2}).
+
+@end itemize
+
+@c **********************************************************************
+@node Born-Oppenheimer Dynamics, Varia, Photo-electron spectrum, Input file options
+@subsection Born-Oppenheimer Dynamics
+@itemize @bullet
+
+@item @vindex @code{MoveIons}
+@code{MoveIons} (integer, 0) :
+  What kind of simulation to perform. Possible values are:
+  @itemize
+    @item @code{0} : Do not move the ions.
+    @item @code{1} : Steepest descents.
+    @item @code{2} : Damped newtonian dymamics using Verlet.
+    @item @code{3} : Newtonian dynamics using Verlet.
+    @item @code{4} : Newtonian dynamics using velocity Verlet.
+    @item @code{5} : Minimization using conjugated gradients.
+  @end itemize
+
+@item @vindex @code{BOnSteps}
+@code{BOnSteps} (integer, 1000) :
+  Number of time-steps to perform during the Born-Oppenheimer simulation.
+
+@item @vindex @code{BOTimeStep}
+@code{BOTimeStep} (double, 0.1 a.u.) :
+  Time-step used to integrate the Born-Oppenheimer equations of motion. 
+  The default value @code{0.1} can safely be increased when performing
+  steepest descents (@code{MoveIons == 1}).
+
+@item @vindex @code{Gamma}
+@code{Gamma} (double, 0.4) :
+  Value for the drag term when performing damped
+  newtonian dynamics (@code{MoveIons == 2}).
+@end itemize
+
+@c **********************************************************************
+@node Varia,  , Born-Oppenheimer Dynamics, Input file options
+@subsection Varia
+@itemize @bullet
+
+@item @vindex @code{PoissonSolver}
+@code{PoissonSolver} (integer, 3) :
+  In 3D defines which method to use in order to solve the Poisson equation.
+  Allowed values are:
+  @itemize @minus
+    @item @code{1} : Conjugated gradient method.
+    @item @code{3} : FFTs with spherical cutoff.
+  @end itemize
+
+@item @vindex @code{DoubleFFTParameter}
+@code{DoubleFFTParameter} (double, 2.0) :
+  If the Poisson equation is solved in Fourier space, @code{octopus}
+  uses a box larger than the simulation box in order to avoid the spurious
+  interaction between neighbouring boxes when the system is charged.
+  Ideally, this parameter should be @code{2.0}, but it can be safely 
+  decreased in order to improve the efficiency of @code{octopus} for
+  neutral systems and if there is little ionization.
+
+@item @vindex @code{POLStaticField}
+@code{POLStaticField} (double, 0.001 a.u.) :
+  Magnitude of the static field used to calculate the static polarizability 
+  in @code{CalculationMode = 7, 8}.
+
+@item @vindex @code{RecipeLang}
+@code{RecipeLang} (string, 'en') :
+  In @code{CalculationMode = 99} defines the language in which to print
+  the recipe. Allowed values are (for now) @code{'en'} and @code{'es'}.
+
+@end itemize
+
+@c **********************************************************************
+@node Examples,  , Input file options, The input file
+@section Examples
+
+@menu
+* Hello world::                 
+* Benzene::                     
+@end menu
+
+@node Hello world, Benzene, Examples, Examples
+@subsection Hello world
+
+As a first example, we will take a sodium atom. The pseudopotential
+for sodium can be found in @code{pseudo/vps/i686/Na.vps}.
+Start by creating a working directory, in which you should place the
+pseudopotential file. Then, with your favorite text editor, create
+the following input file (let's call it @code{inp} ;)
+@example
+  SystemName = 'Na_atom'
+  CalculationMode = 2
+
+  %Species
+    'Na' | 22.989768 | 11 | 0 | 0
+  %
+
+  %Coordinates
+    'Na' | 0.0 | 0.0 | 0.0 | no
+  %
+
+  Radius = 12.0
+  Spacing = .7
+
+  TypeOfMixing = 2
+@end example
+
+This input file should be essencially self-explanatory.
+Then run the @code{octopus} program. Take now a look at the 
+working directory. It should include the following files:
+@example
+-rw-r--r--    1 user  group           565 Jul 25 22:47 inp
+-rw-r--r--    1 user  group        267288 Jul 25 22:51 Na_atom.restart
+-rw-r--r--    1 user  group          1061 Jul 25 22:51 Na_atom.static
+-rw-r--r--    1 user  group         59281 Jul 25 22:44 Na.vps
+-rw-r--r--    1 user  group          2506 Jul 25 22:51 out.oct
+@end example
+
+Besides the two initial files (@code{inp} and @code{Na.vps}), three other
+were created. @code{Na_atom.restart} contains essentially the wavefunctions
+in binary, and will be used in subsequent runs. @code{Na_atom.static}
+contains a summary of the ground-state properties, the most important
+of each are the eigenspectrum of the system, and the total energy.
+Finally, you can safely ignore @code{out.oct}: it is an output from 
+the liboct library, irrelevant in what concerns physics ;).
+
+@strong{Exercices} :
+@itemize
+@item Study how the total energy and eigenvalue of the sodium atom improve
+  with the mesh spacing.
+
+@item Calculate the static polarizability of the sodium atom (@code{CalculationMode = 7}).
+  Two new files will be generated: @code{Na_atom.pol_restart} that can be used to resume
+  the polarizability calculation, and @code{Na_atom.pol} that contains the static polarizability
+  tensor. This calculation overwrites @code{Na_atom.restart}, so please @strong{delete it}
+  after finishing the polarizability calculation.
+
+@item Calculate a few unoccupied states (@code{CalculationMode = 3}). The eigenspectrum
+  will be in the file @code{Na_atom.occ}. Why don't we find a Rydberg series in the
+  eigenspectrum?
+
+@item Repeat the previous calculation with PBE, LB94, and exact echange. Comment the results
+  you obtained. Don't forget to @strong{move} the file @code{Na_atom.restart} when switching
+  between exchange-correlation functionals.
+
+@item Perform a time-dependent evolution (@code{CalculationMode = 5}), to calculate
+  the optical spectrum of the Na atom. Use a @code{TDDeltaStrength = 0.05}, polarized
+  in the @code{x} direction. The multipole moments of the density are output to
+  the file @code{Na_atom.mult}. You can process this file with the utility
+  @code{spectrum.x} to obtain the optical spectrum. 
+  If you have computer time to waste, re-run the time-dependent simulation for some other xc choices.
+
+@end itemize
+
+@node Benzene,  , Hello world, Examples
+@subsection Benzene
+
+Well, the sodium atom is a bit too trivial. Let's try something harder: benzene.
+In principle, you will just need the pseudopotencial for Carbon and Hydrogen, and the
+geometry for benzene to be able to play. Here they are:
+
+@example
+   pg      Carbon  
+        tm2
+ n=C  c=ca
+       0.0       0.0       0.0       0.0       0.0       0.0
+    1    4 
+    2    0     2.00      0.00
+    2    1     2.00      0.00
+    3    2     0.00      0.00
+    4    3     0.00      0.00
+   1.50     1.50     1.50     1.50
+@end example
+
+@example
+   pg      Hydrogen  
+        tm2
+ n=H  c=ca
+       0.0       0.0       0.0       0.0       0.0       0.0
+    0    4 
+    1    0     1.00      0.00
+    2    1     0.00      0.00
+    3    2     0.00      0.00
+    4    3     0.00      0.00
+   1.25     1.25     1.25     1.25
+@end example
+
+and the geometry is (in @AA{})
+@example
+ C  0.000  1.396  0.000
+ C  1.209  0.698  0.000
+ C  1.209 -0.698  0.000
+ C  0.000 -1.396  0.000
+ C -1.209 -0.698  0.000
+ C -1.209  0.698  0.000
+ H  0.000  2.479  0.000
+ H  2.147  1.240  0.000
+ H  2.147 -1.240  0.000
+ H  0.000 -2.479  0.000
+ H -2.147 -1.240  0.000
+ H -2.147  1.240  0.000
+@end example
+
+Follow now the steps of the previous example. Carbon and Hydrogen have a much harder
+pseudopotential than Sodium, so you will probably have to use a tighter
+mesh. It also takes much more time...
+
+@c **********************************************************************
+@node A word about units, Options Index, The input file, Top
+@appendix A word about units
 
 @c ***************THE END OF THE DOCUMENT********************************
-@node    Variable Index,  , A word about units, Top
-@c       node-name,    next, previous,     up
-@unnumbered Variable Index
+@node    Options Index,  , A word about units, Top
+@unnumbered Options Index
      
 @printindex vr
      
