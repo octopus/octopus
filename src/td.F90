@@ -41,7 +41,7 @@ type td_type
   integer :: evolution_method ! which evolution method to use
   integer :: exp_method       ! which method is used to apply the exponential
   real(r8) :: lanczos_tol
-  integer  :: lanczos_max
+  integer  :: exp_order
 
   real(r8) :: dt            ! time step
   integer  :: move_ions     ! how do we move the ions?
@@ -72,9 +72,12 @@ end type td_type
                         APP_REVERSAL         = 3, &
                         EXPONENTIAL_MIDPOINT = 4
 
+
   integer, parameter :: FOURTH_ORDER       = 1, &
                         LANCZOS_EXPANSION  = 2, &
-                        SPLIT_OPERATOR     = 3
+                        SPLIT_OPERATOR     = 3, &
+                        SUZUKI_TROTTER     = 4, &
+                        CHEBYSHEV          = 5
 
 contains
 
@@ -138,6 +141,7 @@ subroutine td_run(td, u_st, sys, h)
   endif
 
   if(td%iter == 0) call td_run_zero_iter(sys%m)
+  !call td_check_trotter(td, sys, h)
   td%iter = td%iter + 1
 
   ii = 1
@@ -410,6 +414,50 @@ contains
 #include "td_write.F90"
 
 end subroutine td_run
+
+!!$subroutine td_check_trotter(td, sys, h)
+!!$  type(td_type), intent(in) :: td
+!!$  type(system_type), intent(in) :: sys
+!!$  type(hamiltonian_type), intent(inout) :: h
+!!$
+!!$  integer :: unit, order, i
+!!$  complex(r8), allocatable :: expzpsi(:, :), goodzpsi(:, :), hzpsi(:, :)
+!!$  real(r8) :: res(8)
+!!$
+!!$  call io_assign(unit)
+!!$  open(unit, file = 'td_check')
+!!$
+!!$  allocate(expzpsi(0:sys%m%np, sys%st%dim), goodzpsi(0:sys%m%np, sys%st%dim), &
+!!$           hzpsi(sys%m%np, sys%st%dim))
+!!$  do i = 1, 5001, 25
+!!$     goodzpsi = sys%st%zpsi(:, :, 1, 1)
+!!$     call td_dtexp(h, sys, td, 1, goodzpsi, td%dt*i, 0.0_r8, &
+!!$                   exp_method = LANCZOS_EXPANSION, &
+!!$                   lanczos_tol = 10.0_r8**(-8),    &
+!!$                   expansion_order = 100)
+!!$
+!!$        expzpsi = sys%st%zpsi(:, :, 1, 1)
+!!$        call zhpsi(h, sys, 1, expzpsi, hzpsi)
+!!$        !write(*, *) zstates_dotp(sys%m, sys%st%dim, hzpsi, expzpsi(1:sys%m%np, 1:sys%st%dim)), &
+!!$        !           sys%st%eigenval(1, 1)
+!!$        call td_dtexp(h, sys, td, 1, expzpsi, td%dt*i, 0.0_r8, &
+!!$                      exp_method = CHEBYSHEV, &
+!!$        expzpsi = expzpsi - goodzpsi
+!!$        res(order) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
+!!$
+!!$        expzpsi = sys%st%zpsi(:, :, 1, 1)
+!!$        call td_dtexp(h, sys, td, 1, expzpsi, td%dt*i, 0.0_r8, &
+!!$                      exp_method = FOURTH_ORDER, &
+!!$                      expansion_order = 8)
+!!$        expzpsi = expzpsi - goodzpsi
+!!$        res(2) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
+!!$        write(unit,'(21es12.4)') td%dt*i, (res(order), order = 1,2)
+!!$  end do
+!!$
+!!$  deallocate(expzpsi, goodzpsi)
+!!$  call io_close(unit)
+!!$  stop
+!!$end subroutine td_check_trotter
 
 #include "td_init.F90"
 #include "td_rti.F90"

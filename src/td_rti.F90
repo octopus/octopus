@@ -44,7 +44,11 @@ subroutine td_rti(h, sys, td, t)
       call td_rti3
     endif
   case(EXPONENTIAL_MIDPOINT)
-    call td_rti4
+    if(t<3*td%dt) then
+      call td_rti2
+    else
+      call td_rti4
+    endif
   end select
 
   call pop_sub(); return
@@ -210,6 +214,5 @@ contains
     call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2, 1, pot, 1)
 
   end subroutine xpolate_pot
-
 
 end subroutine td_rti

@@ -26,6 +26,11 @@ module liboct
       real(8), intent(in) :: x
     end function oct_gamma
 
+    real(8) function oct_bessel(n, x)
+      integer,  intent(in) :: n
+      real(8), intent(in)  :: x
+    end function oct_bessel
+    
     real(8) function oct_asinh(x)
       real(8), intent(in) :: x
     end function oct_asinh

@@ -80,6 +80,9 @@ type hamiltonian_type
   real(r8) :: ab_height  ! height of the absorbing boundary
   real(r8), pointer :: ab_pot(:) ! where we store the ab potential
 
+  ! Spectral range.
+  real(r8) :: spectral_middle_point
+  real(r8) :: spectral_half_span
 end type hamiltonian_type
 
 integer, parameter :: NOREL      = 0, &
@@ -368,6 +371,15 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
   return
 end subroutine hamiltonian_energy
 
+subroutine hamiltonian_span(h, delta, emin)
+  type(hamiltonian_type), intent(inout) :: h
+  real(r8), intent(in) :: delta, emin
+  sub_name = 'hamiltonian_span'; call push_sub()
+    h%spectral_middle_point = ((M_Pi**2/(2*delta**2))+emin)/2._r8
+    h%spectral_half_span    = ((M_Pi**2/(2*delta**2))-emin)/2._r8
+  call pop_sub(); return
+end subroutine hamiltonian_span
+
 subroutine hamiltonian_output(h, m, dir, outp)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
@@ -377,9 +389,9 @@ subroutine hamiltonian_output(h, m, dir, outp)
   integer :: is
   character(len=80) :: fname  
   real(r8) :: u
+  sub_name = 'hamiltonian_output'; call push_sub()
 
   u = units_out%energy%factor
-
   if(outp%what(output_potential)) then
     call doutput_function(outp, dir, "v0", m, h%Vpsl, u)
 
@@ -397,6 +409,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
     end if
   end if
 
+  call pop_sub(); return
 end subroutine hamiltonian_output
 
 #include "h_external_pot.F90"

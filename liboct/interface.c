@@ -28,8 +28,11 @@
 #include <string.h>
 #include <math.h>
 
+#include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_erf.h>
 #include <gsl/gsl_sf_gamma.h>
+#include <gsl/gsl_sf_bessel.h>
+#include <gsl/gsl_chebyshev.h>
 #include <gsl/gsl_spline.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
@@ -41,6 +44,12 @@ double F90_FUNC_(oct_gamma, OCT_GAMMA)
 		 (double *x)
 {
   return gsl_sf_gamma(*x);
+}
+
+double F90_FUNC_(oct_bessel, OCT_BESSEL)
+     (int *n, double *x)
+{
+  return gsl_sf_bessel_Jn(*n, *x);
 }
 
 /* Fortran does not have the asinh intrinsic, 
@@ -194,6 +203,26 @@ void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 		res[len] = res[len + 1];
 	}
 }
+
+/*
+void F90_FUNC_(oct_chebyshev_coeffs, OCT_CHEBYSHEV_COEFFS)
+     (gsl_complex *coeffs, int *order)
+{
+  int i;
+  double f (double x, void *p){return cos(x);}
+  double g (double x, void *p){return -sin(x);}
+  gsl_cheb_series *cs = gsl_cheb_alloc (*order);
+  gsl_function F;
+  F.function = f;
+  F.params = 0;
+  gsl_cheb_init (cs, &F, -1.0, 1.0);
+  for(i=0; i<=12; i++){GSL_SET_REAL(&coeffs[i], (*cs).c[i]);}
+  F.function = g;
+  F.params = 0;
+  gsl_cheb_init (cs, &F, -1.0, 1.0);
+  for(i=0; i<=12; i++){GSL_SET_IMAG(&coeffs[i], (*cs).c[i]);}    
+}
+*/
 
 double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 		 (double *x, double *y, double *z, double *r, char *pot)

@@ -67,7 +67,10 @@ subroutine td_init(td, sys, m, st)
     case(FOURTH_ORDER);         message(1) = 'Info: Exponential method: 4th order expansion.'
     case(LANCZOS_EXPANSION);    message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
     case(SPLIT_OPERATOR);       message(1) = 'Info: Exponential method: Split-Operator.'
-     call mesh_alloc_ffts(m, 1)
+      call mesh_alloc_ffts(m, 1)
+    case(SUZUKI_TROTTER);       message(1) = 'Info: Exponential method: Suzuki-Trotter.'
+      call mesh_alloc_ffts(m, 1)
+    case(CHEBYSHEV);            message(1) = 'Info: Exponential method: Chebyshev.'
     case default
      write(message(1), '(a,i6,a)') "Input: '", td%exp_method, "' is not a valid TDEvolutionMethod"
      message(2) = '(1 <= TDExponentialMethod <= 3)'
@@ -82,10 +85,10 @@ subroutine td_init(td, sys, m, st)
     call write_fatal(2)
   end if
 
-  call oct_parse_int(C_string("TDLanczosMax"), 10, td%lanczos_max)
-  if (td%lanczos_max < 2) then
-    write(message(1), '(a,i6,a)') "Input: '", td%lanczos_max, "' is not a valid TDLanczosMax"
-    message(2) = '(3 <= TDLanczosMax)'
+  call oct_parse_int(C_string("TDExpOrder"), 4, td%exp_order)
+  if (td%exp_order < 2) then
+    write(message(1), '(a,i6,a)') "Input: '", td%exp_order, "' is not a valid TDLanczosMax"
+    message(2) = '(2 <= TDExpOrder)'
     call write_fatal(2)
   end if
 
