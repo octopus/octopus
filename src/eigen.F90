@@ -44,7 +44,7 @@ module eigen_solver
     integer           :: converged
   end type eigen_solver_type
 
-  integer, parameter :: RS_CG      = 0
+  integer, parameter :: RS_CG      = 4
 #ifdef HAVE_TRLAN
   integer, parameter :: RS_LANCZOS = 1
 #endif
@@ -83,7 +83,7 @@ subroutine eigen_solver_init(eigens, st, m)
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
-    message(2) = '(0 <= EigenSolver <= 0)'
+    message(2) = '( EigenSolver =  cg | lanczos )'
     call write_fatal(2)
   end select
   call write_info(1)
