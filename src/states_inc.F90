@@ -84,7 +84,7 @@ subroutine X(states_random)(m, f)
   integer :: i
   FLOAT :: a(3), rnd, r
 
-  call push_sub('mesh_random')
+  call push_sub('states_random')
 
   call quickrnd(iseed, rnd)
   a(1) = M_TWO*(2*rnd - 1)

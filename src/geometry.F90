@@ -208,7 +208,7 @@ subroutine geometry_init(geo, val_charge, no_species_init)
   geo%nlpp = .false.
   do i = 1, geo%nspecies
     geo%nlcc = (geo%nlcc.or.geo%specie(i)%nlcc)
-    geo%nlpp = (geo%nlcc.or.(.not.geo%specie(i)%local))
+    geo%nlpp = (geo%nlpp.or.(.not.geo%specie(i)%local))
   end do
 
   call pop_sub()

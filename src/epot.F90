@@ -294,7 +294,7 @@ contains
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
     
-    call push_sub('generate_external_pot')
+    call push_sub('epot_generate')
     
     ! first we assume that we need to recalculate the ion_ion energy
     geo%eii = ion_ion_energy(geo)
@@ -384,7 +384,6 @@ contains
           call mesh_xyz(m, i, x)
           x = x - a%x
           Vpsl(i) = Vpsl(i) + specie_get_local(s, x)
-          
           if(s%nlcc) then
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if

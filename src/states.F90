@@ -236,7 +236,7 @@ subroutine states_init(st, m, val_charge, nlcc)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
-  nullify(st%dpsi, st%zpsi, st%rho_core)
+  nullify(st%dpsi, st%zpsi)
 
   ! Duplicate this
   st%dim   = st%d%dim
