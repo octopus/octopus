@@ -175,13 +175,17 @@ function load_params(unit, params)
                                                  ! 1 otherwise.
 
   integer :: i, iostat, j, k, ierr, confunit, sc
-  character(len=200) :: line
+  character(len=VALCONF_STRING_LENGTH) :: line
 
   sub_name = 'load_params'; call push_sub()
 
   ! Set initially everything to zero.
   params%c(1:4) = 0.0_r8; params%rlocal = 0.0_r8;
   params%rc = 0.0_r8; params%h = 0.0_r8; params%k = 0.0_r8
+
+  ! get valence configuration
+  read(unit,'(a)') line
+  call read_valconf(line, params%conf)
 
   ! Reads the file in a hopefully smart way
   iostat = 1; j = 5
@@ -192,15 +196,6 @@ function load_params(unit, params)
   end do
   if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
   if( iostat.ne.0 ) then
-    load_params = 1
-    call pop_sub(); return
-  endif
-
-  call io_assign(confunit)
-  open(confunit, file = SHARE_OCTOPUS+"/PP/HGH/"+"configurations")
-  sc = 0; if(index(params%atom_name,'_').ne.0) sc = 1
-  call get_valconf(confunit, params%atom_name(1:2), sc, params%conf, ierr)
-  if(ierr.ne.0) then
     load_params = 1
     call pop_sub(); return
   endif

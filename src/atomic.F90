@@ -19,7 +19,6 @@
             write_valconf, &
             read_valconf, &
             valconf_null, &
-            get_valconf, &
             VALCONF_STRING_LENGTH
   character(len=1), parameter :: spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
   integer, parameter :: VALCONF_STRING_LENGTH = 80
@@ -82,31 +81,6 @@
        end select
     enddo
   end subroutine read_valconf
-
-  subroutine get_valconf(unit, symbol, type, c, ierr)
-    integer, intent(in) :: unit
-    character(len=*), intent(in) :: symbol
-    integer, intent(in) :: type
-    type(valconf), intent(out) :: c
-    integer, intent(out) :: ierr
-
-    character(len=2) :: symb
-    character(len=VALCONF_STRING_LENGTH) :: string
-    integer :: i, typ
-
-    ierr = 1
-    call valconf_null(c)
-    101 do
-      read(unit,'(3x,a2,i1)',err=101,end=102) symb, typ
-      if(symb==symbol .and. typ == type) exit
-    enddo
-    backspace(unit)
-    read(unit,'(a)') string
-    call read_valconf(string, c)
-    ierr = 0
-    102 return
-  end subroutine get_valconf
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   subroutine atomhxc(functl, irel, g, nspin, dens, v, extra)
     character(len=*), intent(in)   :: functl
