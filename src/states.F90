@@ -25,8 +25,11 @@ type states_type
   ! the density (after all we are doing DFT :)
   real(r8), pointer :: rho(:,:)
 
-  real(r8), pointer :: eigenval(:,:)
-  real(r8), pointer :: occ(:,:)
+  real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
+
+  logical           :: fixed_occ ! should the occupation numbers be fixed?
+  real(r8), pointer :: occ(:,:)  ! the occupation numbers
+
   real(r8) :: qtot    ! (-) The total charge in the system (used in Fermi)
 
   real(r8) :: el_temp ! electronic temperature for the Fermi function
@@ -44,6 +47,7 @@ subroutine states_init(st, m, val_charge)
 
   real(r8) :: excess_charge, r
   integer :: nempty, i, j
+  character(len=80) :: str
 
   sub_name = 'states_init'; call push_sub()
 
@@ -74,8 +78,9 @@ subroutine states_init(st, m, val_charge)
     call write_fatal(2)
   end if
   
-  st%nst = -int((val_charge + excess_charge)/2._r8)
-  if(st%nst*2._r8 < -(val_charge + excess_charge)) &
+  st%qtot = -(val_charge + excess_charge)
+  st%nst  = int(st%qtot/2._r8)
+  if(st%nst*2._r8 < st%qtot) &
        st%nst = st%nst + 1
   st%nst = st%nst + nempty
 
@@ -95,21 +100,36 @@ subroutine states_init(st, m, val_charge)
   allocate(st%rho(m%np, st%nspin), &
        st%occ(st%nst, st%nik), st%eigenval(st%nst, st%nik))
 
-  ! first guest for occupation...paramagnetic configuration
-  ! TODO: for polimers this has to be changed
-  r = 2.0_r8
-  if (st%ispin > 1) r = 1.0_r8
-  st%occ  = 0.0_r8
-  st%qtot = 0.0_r8
-  do j = 1, st%nst
-    do i = 1, st%nik
-      st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
-      st%qtot = st%qtot + st%occ(j, i)
-    end do
-  end do
+  str = C_string("Occupations")
+  occ_fix: if(oct_parse_isdef(str) .ne. 0) then
+    print *, "HHHELLOO"
+    ! read in occupations
+    st%fixed_occ = .true.
 
-  ! read in fermi distribution temperature
-  call oct_parse_double(C_string('ElectronicTemperature'), 0.0_r8, st%el_temp)
+    do i = 1, st%nik
+      do j = 1, st%nst
+        call oct_parse_block_double(str, i-1, j-1, st%occ(j, i))
+      end do
+    end do
+  else
+    st%fixed_occ = .false.
+
+    ! first guest for occupation...paramagnetic configuration
+    ! TODO: for polimers this has to be changed
+    r = 2.0_r8
+    if (st%ispin > 1) r = 1.0_r8
+    st%occ  = 0.0_r8
+    st%qtot = 0.0_r8
+    do j = 1, st%nst
+      do i = 1, st%nik
+        st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
+        st%qtot = st%qtot + st%occ(j, i)
+      end do
+    end do
+    
+    ! read in fermi distribution temperature
+    call oct_parse_double(C_string('ElectronicTemperature'), 0.0_r8, st%el_temp)
+  end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
 
@@ -211,6 +231,11 @@ subroutine states_fermi(st)
   logical :: conv
 
   sub_name = 'fermi'; call push_sub()
+
+  if(st%fixed_occ) then ! nothing to do
+    call pop_sub()
+    return
+  end if
 
 ! Initializations
   emin = minval(st%eigenval)
