@@ -150,16 +150,18 @@ integer function output_fill_how(where) result(how)
 end function output_fill_how
 
 #if defined(HAVE_NETCDF)
-subroutine ncdf_error(func, status, ierr)
+subroutine ncdf_error(func, status, filename, ierr)
     character(len=*), intent(in) :: func
     integer, intent(in) :: status
+    character(len=*), intent(in) :: filename
     integer, intent(out) :: ierr
 
     if(status .eq. NF90_NOERR) return
     message(1) = "NETCDF error in function '" // trim(func) // "'"
-    write(message(2), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
+    message(2) = "(reading/writing "//trim(filename)//")"
+    write(message(3), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
+    call write_warning(3)
     ierr = 5
-    call write_warning(2)
 end subroutine ncdf_error
 #endif
 

@@ -56,7 +56,7 @@ subroutine X(calcdens)(st, np, rho, reduce)
     end do
   end do
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   ! reduce density (assumes memory is contiguous)
   if(present(reduce)) then
     if(reduce) then
@@ -139,233 +139,6 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   deallocate(res)
 
 end function X(states_residue)
-
-! TODO use netcdf
-subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
-  character(len=*),  intent(in) :: filename
-  type(mesh_type),   intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  integer, optional, intent(in) :: iter ! used in TD
-  FLOAT,   optional, intent(IN) :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
-
-  integer :: iunit, ik, ist, id
-  integer(i4) :: mode
-
-  call push_sub('states_write_restart')
-
-  call io_assign(iunit)
-  if(st%restart_format == 1) then
-    open(iunit, status='unknown', file=trim(filename), form='unformatted')
-  else
-    open(iunit, status='unknown', file=trim(filename) // '.ascii', form='formatted')
-  end if
-
-#ifdef R_TREAL
-  mode = 0_i4
-#else
-  mode = 1_i4
-#endif
-
-  if(st%restart_format == 1) then
-    write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%xsize
-    write(iunit) int(m%np, i4), int(st%d%dim, i4), int(st%st_start, i4), &
-        int(st%st_end, i4), int(st%d%nik, i4), int(st%d%ispin, i4), mode
-  else
-    write(iunit,'(i12,7E23.14)') int(m%box_shape, i4), m%h, m%rsize, m%xsize
-    write(iunit,'(7i12)') int(m%np, i4), int(st%d%dim, i4), int(st%st_start, i4), &
-        int(st%st_end, i4), int(st%d%nik, i4), int(st%d%ispin, i4), mode
-  end if
-
-  ! psi has to be written in parts, or segmentation fault in some machines
-  do ik = 1, st%d%nik
-    do ist = st%st_start, st%st_end
-      do id = 1, st%d%dim
-        if(st%restart_format == 1) then
-          write(iunit) st%X(psi)(1:m%np, id, ist, ik)
-        else
-          write(iunit,*) st%X(psi)(1:m%np, id, ist, ik)
-        end if
-      end do
-    end do
-  end do
-
-  ! eigenvalues are also needed ;)
-  do ik = 1, st%d%nik
-    do ist = st%st_start, st%st_end
-      if(st%restart_format == 1) then
-        write(iunit) st%eigenval(ist, ik)
-      else
-        write(iunit,*) st%eigenval(ist, ik)
-      end if
-    end do
-  end do
-
-  if(present(iter)) then
-    if(st%restart_format == 1) then
-      write(iunit) int(iter, i4), v1, v2
-    else
-      write(iunit,*) int(iter, i4), v1, v2
-    end if
-  end if
-  call io_close(iunit)
-  
-  call pop_sub()
-end subroutine X(states_write_restart)
-
-logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
-  character(len=*),  intent(in)    :: filename
-  type(mesh_type),   intent(IN)    :: m
-  type(states_type), intent(inout) :: st
-  integer, optional, intent(out)   :: iter ! used in TD
-  FLOAT,   optional, intent(out)   :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
-
-  integer :: iunit, ik, ist, id, restart_format
-  integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
-  logical :: found
-  character(len=256) :: fname
-  FLOAT :: e
-  FLOAT, allocatable :: dpsi(:)
-  CMPLX, allocatable :: zpsi(:)
-
-  call push_sub('states_load_restart')
-  ok = .true.
-
-  call io_assign(iunit)
-
-  ! check what kind of restart file we have
-  inquire(file=filename, exist=found)
-  if(found) then ! unformatted file
-    fname = trim(filename)
-    restart_format = 1
-    
-    open(iunit, status='old', file=trim(fname), form='unformatted', err=998)
-    read(iunit, err=999) ! mesh stuff is now skipped
-    read(iunit, err=100) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
-    go to 200
-
-    ! ugly thing to handle old restarts
-100 continue
-    backspace(iunit)
-    read(iunit, err=999) old_np, old_dim, old_start, old_end, old_nik, old_ispin
-    mode = -1 ! old restart file
-200 continue
-
-  else ! unformatted
-    inquire(file=trim(filename) // '.ascii', exist=found)
-    if(found) then ! unformatted file
-      fname = trim(filename) // '.ascii'
-      restart_format = 2
-
-      open(iunit, status='old', file=trim(fname), form='formatted', err=998)
-      read(iunit, *, err=999) ! mesh stuff is now skipped
-      read(iunit, *, err=999) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
-    else ! error
-      go to 999 ! one go to does not harm :)
-    end if
-  end if
-
-  if(conf%verbose > 20) then
-    write(stdout, '(3a)') "Info: Reading wavefunctions from file '", &
-        trim(fname), "'"
-  end if
-
-  if(old_np.ne.m%np .or. old_dim.ne.st%dim .or. & ! different mesh, cannot read
-       old_start.gt.st%st_start .or. old_end.lt.st%st_end .or. old_nik.ne.st%nik) then
-    message(1) = 'Restart file has a different mesh!'
-    write(message(2), '(a,i6,a,i6,a)') '  m%np        = ', m%np,        ' != ', old_np, ' or'
-    write(message(3), '(a,i6,a,i6,a)') '  st%d%dim    = ', st%d%dim,    ' != ', old_dim, ' or'
-    write(message(4), '(a,i6,a,i6,a)') '  st%st_start = ', st%st_start, ' <  ', old_start, ' or'
-    write(message(5), '(a,i6,a,i6,a)') '  st%st_end   = ', st%st_end,   ' >  ', old_end, ' or'
-    write(message(6), '(a,i6,a,i6)')   '  st%d%nik    = ', st%d%nik,    ' != ', old_nik
-
-    call write_warning(6)
-    go to 999 ! one go to does not harm :)
-  end if
-
-  st%X(psi) = R_TOTYPE(M_ZERO)
-
-  if(mode == 0 .or. mode == -1) then
-    allocate(dpsi(1:m%np))
-  else
-    allocate(zpsi(1:m%np))
-  end if
-  
-  do ik = 1, st%d%nik
-    do ist = old_start, old_end
-      do id = 1, st%dim
-        imode: if(mode == 0 .or. mode == -1) then
-          if(restart_format == 1) then
-            read(iunit, err=999) dpsi(:)
-          else
-            read(iunit, *, err=999) dpsi(:)
-          end if
-          if(ist >= st%st_start .and. ist <= st%st_end) then
-#           ifdef R_TREAL
-              st%dpsi(1:m%np, id, ist, ik) = dpsi(:)
-#           else
-              st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), M_ZERO, PRECISION)
-#           endif
-          end if
-        else
-          read(iunit, err=999) zpsi(:)
-          if(ist >= st%st_start .and. ist <= st%st_end) then
-#           ifdef R_TREAL
-              st%dpsi(1:m%np, id, ist, ik) = real(zpsi(:), PRECISION)
-#           else
-              st%zpsi(1:m%np, id, ist, ik) = zpsi(:)
-#           endif
-          end if
-        end if imode
-
-      end do
-    end do
-  end do
-
-  if(mode == 0 .or. mode == -1) then
-    deallocate(dpsi)
-  else
-    deallocate(zpsi)
-  end if
-
-  if(mode == -1) then
-    read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%d%nik)
-  else
-    do ik = 1, st%d%nik
-      do ist = old_start, old_end
-        if(restart_format == 1) then
-          read(iunit, err=999) e
-        else
-          read(iunit, *, err=999) e
-        end if
-        if(ist >= st%st_start .and. ist <= st%st_end) then
-          st%eigenval(ist, ik) = e
-        end if
-      end do
-    end do
-  end if
-
-  if(present(iter)) then ! read the time-dependent stuff
-    if(st%restart_format == 1) then
-      read(iunit, err=999) ii, v1, v2
-    else
-      read(iunit, *, err=999) ii, v1, v2
-    end if
-    iter = int(ii)
-  end if
-  
-  call io_close(iunit)
-  call pop_sub()
-  return
-
-999 call io_close(iunit)
-998 continue
-  message(1) = 'Error reading from file ' // trim(filename) // "'"
-  call write_warning(1)
-  ok = .false.
-  call pop_sub()
-  return
-
-end function X(states_load_restart)
 
 subroutine X(states_output) (st, m, dir, outp)
   type(states_type), intent(IN) :: st
@@ -590,7 +363,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
       R_TYPE,            intent(out) :: a(n, n)
 
       integer :: i, j, dim
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
       R_TYPE, allocatable :: phi2(:, :)
       integer :: k, l, r, sn, sn1, ierr
       integer :: status(MPI_STATUS_SIZE)
@@ -598,7 +371,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 #endif
 
       dim = st1%dim
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
 
       ! This code just builds an integer array, node, that assigns to each
       ! state the process that holds it. If such a thing is ever needed for any other
@@ -706,7 +479,7 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
 
   end select
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
     call MPI_ALLREDUCE(temp, mag, 3, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
 #else
@@ -753,7 +526,7 @@ subroutine X(states_calculate_angular)(m, st, angular, l2)
      enddo
   enddo
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
     call MPI_ALLREDUCE(temp, angular, 3, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
     if(present(l2)) &

@@ -50,3 +50,5 @@
 #else
 #  include "real.F90"
 #endif
+
+#define MPINODE0 if(mpiv%node==0)

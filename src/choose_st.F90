@@ -23,13 +23,14 @@ program choose_st
   use lib_oct
   use units
   use states
+  use restart
   use system
 
   implicit none
 
   type(system_type) :: sys
   type(states_type) :: st1
-  integer :: i, n_st, n_unocc, flags(32)
+  integer :: i, n_st, n_unocc, flags(32), ierr
   character(len=100) :: ch
 
   ! Initialize stuff
@@ -49,8 +50,9 @@ program choose_st
   sys%st%st_end = sys%st%nst
   allocate(sys%st%X(psi) (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik), &
        sys%st%eigenval(sys%st%nst, sys%st%nik))
-  if(.not.X(states_load_restart) ("tmp/restart.occ", sys%m, sys%st)) then
-    message(1) = "Error opening 'restart.occ' file"
+  call restart_load("tmp/restart_occ", sys%st, sys%m, ierr)
+  if(ierr.ne.0) then
+    message(1) = "Error loading states in tmp/restart_occ directory"
     call write_fatal(1)
   endif
 
@@ -82,7 +84,7 @@ program choose_st
   end do
 
   call loct_parse_string("ChooseStatesFilename", "wf.initial", ch)
-  call X(states_write_restart) ("opt-control/" // trim(ch), sys%m, st1)
+  call restart_write("opt-control/"//trim(ch), st1, sys%m, ierr)
 
   stop
 end program choose_st

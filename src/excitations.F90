@@ -25,6 +25,7 @@ program excitations
   use fft
 #endif
   use states
+  use restart
   use system
   use linear
 
@@ -32,7 +33,7 @@ program excitations
 
   type(system_type) :: sys
   type(states_type), target :: st
-  integer :: n_occ, n_unocc, flags(32)
+  integer :: n_occ, n_unocc, flags(32), ierr
   character(len=100) :: ch
   logical :: l
 
@@ -60,12 +61,14 @@ program excitations
   st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
   call states_end(sys%st)
 
-  if(X(states_load_restart) ("tmp/restart.occ", sys%m, st)) then
-    call X(calcdens)(st, sys%m%np, st%rho)
-  else
+  call restart_load("tmp/restart_occ", st, sys%m, ierr)
+  if(ierr.ne.0) then
     message(1) = "Error opening 'restart.occ' file"
     call write_fatal(1)
   endif
+
+  ! Get the density...
+  call X(calcdens)(st, sys%m%np, st%rho)
 
   ! which states to take into account
   call loct_parse_string("ExciteStates", "1-1024", ch)

@@ -224,9 +224,9 @@ subroutine xc_init(xcs, nlcc)
     call write_fatal(2)
   end select
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   if(btest(xcs%family, XC_FAMILY_OEP)) then
-    message(1) = "OEP is not allowed with MPI_TD!"
+    message(1) = "OEP is not allowed with the code parallelized on orbitals..."
     call write_fatal(1)
   end if
 #endif

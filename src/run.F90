@@ -21,6 +21,7 @@ module run_prog
 use global
 use lcao
 use states
+use restart
 use external_pot
 use hamiltonian
 use system
@@ -130,7 +131,8 @@ subroutine run()
       message(1) = 'Info: Loading rpsi.'
       call write_info(1)
 
-      if(X(states_load_restart)("tmp/restart.static", sys%m, sys%st)) then
+      call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
+      if(ierr<=0) then ! Fatal error are flagged by ierr > 0
         call states_fermi(sys%st, sys%m)
         call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
@@ -214,8 +216,8 @@ subroutine run()
       message(1) = 'Info: Loading unoccupied states.'
       call write_info(1)
 
-      if(.not.X(states_load_restart)("tmp/restart.occ", &
-           sys%m, unoccv%st)) then
+      call restart_load("tmp/restart_unocc", unoccv%st, sys%m, ierr)
+      if(ierr>0) then
         if(calc_mode .ne. M_RESUME_UNOCC_STATES) then
           i_stack(instr) = I_UNOCC_RUN
           instr = instr + 1
@@ -252,7 +254,8 @@ subroutine run()
       call write_info(1)
 
       ! load zpsi from static file.
-      if(zstates_load_restart("tmp/restart.static", sys%m, sys%st)) then
+      call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
+      if(ierr.eq.0) then ! In this case, we require strict perfect reading....
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
@@ -275,9 +278,9 @@ subroutine run()
       message(1) = 'Info: Loading zpsi.'
       call write_info(1)
 
-      write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
-      if(zstates_load_restart(trim(filename), &
-           sys%m, sys%st, iter=td%iter, v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))) then
+      call restart_load("tmp/restart_td", sys%st, sys%m, ierr, &
+                        iter = td%iter, nvprev = 2, vprev = td%tr%v_old(1:sys%m%np, 1:sys%st%d%nspin, 1:2))
+      if(ierr<=0) then
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
@@ -289,6 +292,9 @@ subroutine run()
         call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)        
 
       else
+        write(message(1),'(a,i3)') 'Error loading zpsi -- Error code = ',ierr
+        write(message(2),'(a)')    'Wavefunctions will be initialized, but maybe the restart is useless'
+        call write_warning(2)
         i_stack(instr) = I_INIT_ZPSI
         cycle program
       end if

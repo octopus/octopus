@@ -23,6 +23,7 @@ use lib_oct_parser
 use lib_oct
 use mesh
 use states
+use restart
 use hamiltonian
 use eigen_solver
 
@@ -100,7 +101,7 @@ subroutine unocc_run(u, m, st, h, outp)
   type(output_type),      intent(IN)    :: outp
 
   type(eigen_solver_type) :: eigens
-  integer :: iunit
+  integer :: iunit, ierr
   logical :: converged
 
   call push_sub('unocc_run')
@@ -137,7 +138,7 @@ subroutine unocc_run(u, m, st, h, outp)
   end if
 
   ! write restart information.
-  call X(states_write_restart)("tmp/restart.occ", m, u%st) 
+  call restart_write("tmp/restart_occ", u%st, m, ierr)
 
   ! output wave-functions
   call X(states_output) (u%st, m, "static", outp)

@@ -299,12 +299,21 @@ subroutine td_write_gsp(out, m, st, td, iter)
   integer,               intent(in) :: iter
 
   CMPLX :: gsp
+  type(states_type) :: stgs
+  integer :: ierr
 
   call push_sub('td_write_gsp')
-  
+
   ! all processors calculate the projection
-  call zstates_project_gs(st, m, gsp)
-  
+  stgs = st
+  call restart_load("tmp/restart_gs", stgs, m, ierr)
+  if(ierr.ne.0) then
+    message(1) = 'Error loading GS in zstates_project_gs'
+    call write_fatal(1)
+  endif
+  gsp = zstates_mpdotp(m, 1, stgs, st)
+  call states_end(stgs)
+
   ! but only first node outputs
   if(mpiv%node.ne.0) then
     call pop_sub; return

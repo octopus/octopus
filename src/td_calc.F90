@@ -114,7 +114,7 @@
    end do
    deallocate(hzpsi, hhzpsi, conj)
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
    if(present(reduce)) then
      if(reduce) then
        call MPI_ALLREDUCE(x(1), y(1), conf%dim, &

@@ -122,7 +122,7 @@ subroutine X(input_function)(filename, m, f, ierr)
 
 #if defined(HAVE_NETCDF)
 ! I define this macro in order to call ncdf_error every time.
-#define NCDFCALL(x, y) status = x y; call ncdf_error(#x, status, ierr)
+#define NCDFCALL(x, y) status = x y; call ncdf_error(#x, status, filename, ierr)
   subroutine dx_cdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
                dim_data_id(3), dim_pos_id(2), ndim(3), xtype
@@ -169,7 +169,7 @@ subroutine X(input_function)(filename, m, f, ierr)
     endif
 
 #if defined(R_TCOMPLEX)
-    NCDFCALL(nf90_get_var, (ncid, data_id, re%RS))
+    NCDFCALL(nf90_get_var, (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
     if(file_kind<0) then
        NCDFCALL(nf90_get_var, (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
     endif
@@ -386,7 +386,7 @@ contains
 
 #if defined(HAVE_NETCDF)
 ! I define this macro in order to call ncdf_error every time.
-#define NCDFCALL(x, y) status = x y; call ncdf_error(#x, status, ierr)
+#define NCDFCALL(x, y) status = x y; call ncdf_error(#x, status, filename, ierr)
   subroutine dx_cdf()
     character(len=200) :: filename
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2), ierr

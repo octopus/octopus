@@ -28,7 +28,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   FLOAT :: f(3)
   integer :: ierr
 #endif
@@ -72,7 +72,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     
   end do atm_loop
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   do i = 1, geo%natoms
     atm => geo%atom(i)
     if(atm%spec%local) cycle

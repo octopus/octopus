@@ -23,13 +23,14 @@ program make_st
   use lib_oct_parser
   use mesh
   use states
+  use restart
   use system
 
   implicit none
 
   type(system_type) :: sys
   character(len=100) :: str
-  integer :: i, n, ik, ist, idim, type
+  integer :: i, n, ik, ist, idim, type, ierr
 
   ! Initialize stuff
   call global_init()
@@ -43,7 +44,8 @@ program make_st
   allocate(sys%st%zpsi (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik), &
        sys%st%eigenval(sys%st%nst, sys%st%nik))
   
-  if(.not.zstates_load_restart ("tmp/restart.static", sys%m, sys%st)) then
+  call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
+  if(ierr.ne.0) then
     message(1) = "Error opening 'restart.static' file"
     call write_fatal(1)
   endif
@@ -65,7 +67,11 @@ program make_st
   call wf_renormalize()
 
   ! save wfs in a new static file
-  call zstates_write_restart("tmp/restart.static.new", sys%m, sys%st)
+  call restart_write("tmp/restart_gs_new", sys%st, sys%m, ierr)
+  if(ierr.ne.0) then
+    message(1) = 'Unsuccesfull write of "tmp/restart_gs_new" functions...'
+    call write_fatal(1)
+  endif
 
 contains
   subroutine wf_gaussian(line)

@@ -23,6 +23,7 @@ use lib_oct
 use lib_oct_parser
 use mesh
 use states
+use restart
 use hamiltonian
 use external_pot
 use td_rti
@@ -295,6 +296,7 @@ contains
     if(td%out_acc)    call td_write_acc(out_acc, m, st, geo, h, td, 0)
     if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
     if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
+
     call td_write_data(0)
 
     call td_rti_run_zero_iter(h, td%tr)
@@ -425,14 +427,18 @@ contains
   subroutine td_write_data(iter)
     integer, intent(in) :: iter
 
+    integer :: ierr
     character(len=50) :: filename
   
     call push_sub('td_write_data')
     
     ! first resume file
-    write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
-    call zstates_write_restart(trim(filename), m, st, iter=iter, &
-                 v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))
+    call restart_write("tmp/restart_td", st, m, ierr, &
+                       iter = iter, nvprev = 2, vprev = td%tr%v_old(1:m%np, 1:st%d%nspin, 1:2))
+    if(ierr.ne.0) then
+      write(message(1),'(a,i3)') 'Unsuccesful write of restart information. Error code = ',ierr
+      call write_warning(1)
+    endif 
     
     ! calculate projection onto the ground state
     if(td%out_gsp) call td_write_gsp(out_gsp, m, st, td, iter)

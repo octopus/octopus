@@ -23,6 +23,7 @@ use lib_oct
 use lib_oct_parser
 use io
 use states
+use restart
 use hamiltonian
 use timedep
 use td_rti
@@ -273,9 +274,10 @@ contains
   subroutine read_state(st, filename)
     type(states_type), intent(out) :: st
     character(len=*),  intent(in)  :: filename
-
-    if(.not.zstates_load_restart("opt-control/" // trim(filename), m, st)) then
-      message(1) = "Could not read file 'opt-control/" // trim(filename) // "'"
+    integer :: ierr
+    call restart_load("opt-control/"//trim(filename), st, m, ierr)
+    if(ierr.ne.0) then
+      message(1) = "Unsuccesfull read of states in 'opt-control/" // trim(filename) // "'"
       call write_fatal(1)
     end if
   end subroutine read_state

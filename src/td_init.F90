@@ -104,7 +104,7 @@ subroutine td_init(td, m, st, h, outp)
 contains
   
   subroutine td_init_states()
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
     integer :: i, ix
 
     if(st%nst < mpiv%numprocs) then

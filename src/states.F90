@@ -241,7 +241,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   call loct_parse_int('RestartFileFormat', 1, st%restart_format)
   if (st%restart_format < 1 .or. st%restart_format > 2) then
     write(message(1),'(a,i4,a)') "Input: '", st%restart_format,"' is not a valid RestartFileFormat"
-    message(2) = '(RestartFileFormat = unformatted | formatted)'
+    message(2) = '(RestartFileFormat = plain | netcdf)'
     call write_fatal(2)
   end if
 
@@ -732,7 +732,7 @@ subroutine calc_current_paramagnetic(m, st, jp)
 
   integer :: ik, p, sp, k
   CMPLX, allocatable :: grad(:,:)
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   integer :: ierr
   FLOAT, allocatable :: red(:,:,:)
 #endif
@@ -781,7 +781,7 @@ subroutine calc_current_paramagnetic(m, st, jp)
   end do
   deallocate(grad)
 
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   allocate(red(3, m%np, st%d%nspin))
   call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
        MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
@@ -799,7 +799,7 @@ subroutine calc_current_physical(m, st, j)
 
   integer :: ik, p, sp, k
   CMPLX, allocatable :: grad(:,:)
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#if defined(HAVE_MPI)
   integer :: ierr
   FLOAT, allocatable :: red(:,:,:)
 #endif
@@ -814,26 +814,6 @@ subroutine calc_current_physical(m, st, j)
 
   call pop_sub()
 end subroutine calc_current_physical
-
-subroutine zstates_project_gs(st, m, p)
-  type(states_type), intent(IN)  :: st
-  type(mesh_type),   intent(IN)  :: m
-  CMPLX,             intent(out) :: p
-
-  type(states_type) :: stgs
-
-  call push_sub('zstates_project_gs')
-
-  stgs = st
-  if(.not.zstates_load_restart("tmp/restart.static", m, stgs)) then
-    message(1) = 'Error loading GS in zstates_project_gs'
-    call write_fatal(1)
-  endif
-  p = zstates_mpdotp(m, 1, stgs, st)
-
-  call states_end(stgs)
-  call pop_sub()
-end subroutine zstates_project_gs
 
 #include "states_kpoints.F90"
 

@@ -23,6 +23,7 @@ module scf
   use units
   use geometry
   use states
+  use restart
   use hamiltonian
   use eigen_solver
   use mix
@@ -136,7 +137,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
   type(lcao_type) :: lcao_data
 
-  integer :: iter, iunit, is, idim, np, nspin, dim
+  integer :: iter, iunit, is, idim, np, nspin, dim, ierr
   FLOAT :: evsum_out, evsum_in
   FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
   FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
@@ -238,8 +239,13 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     end select
 
     ! save restart information
-    if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) &
-         call X(states_write_restart)("tmp/restart.static", m, st)
+    if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
+         call restart_write("tmp/restart_gs", st, m, ierr)
+         if(ierr.ne.0) then
+           write(message(1),'(a,i5)') 'Failed attempt to write restart states file. Error code = ',ierr
+           call write_warning(1)
+         endif
+    endif
 
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
