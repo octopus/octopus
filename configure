@@ -8891,7 +8891,7 @@ if test -z "${F90FLAGS}"; then
 			F90FLAGS="$F90FLAGS -O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		ifc*)
-			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW -mp1"
+			F90FLAGS="$F90FLAGS -O3 -nbs -mp1"
 		;;
 		*)
 			F90FLAGS="$F90FLAGS -O"
@@ -9176,7 +9176,7 @@ if test -z "${F90FLAGS}"; then
 			F90FLAGS="$F90FLAGS -O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		ifc*)
-			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp6 -O3 -rcd -xW -mp1"
+			F90FLAGS="$F90FLAGS -O3 -nbs -mp1"
 		;;
 		*)
 			F90FLAGS="$F90FLAGS -O"
