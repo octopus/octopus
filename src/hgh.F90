@@ -36,7 +36,7 @@ public  :: hgh_type, hgh_init, hgh_process, hgh_debug, hgh_end
 !   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
 type hgh_type
   ! HGH parameters.
-  character(len=2) :: atom_name
+  character(len=5) :: atom_name
   integer          :: z_val
   real(r8)         :: rlocal
   real(r8)         :: rc(0:3)
@@ -114,8 +114,10 @@ subroutine hgh_init(psp, filename)
   psp%l_max_occ = max(0, psp%l_max)
 
   ! Initializes the logarithmic grid. Parameters are hard-coded.
-       psp%g%a = 1.25e-2_r8; psp%g%b = 4.0e-4_r8
-       psp%g%nrval = 1001
+       !psp%g%a = 1.25e-2_r8; psp%g%b = 4.0e-4_r8
+       !psp%g%nrval = 1001
+       psp%g%a = 3e-2_r8; psp%g%b = 4.0e-4_r8
+       psp%g%nrval = 431
   call init_logrid(psp%g, psp%g%a, psp%g%b, psp%g%nrval)
 
   ! Allocation of stuff.
@@ -461,8 +463,8 @@ subroutine solve_schroedinger(psp)
   endif
 
   ! Fixes the occupations.
-  psp%occ = hgh_occs(psp%atom_name(1:2), psp%l_max_occ)
- 
+  psp%occ = hgh_occs(psp%atom_name, psp%l_max_occ)
+
   ! "Double" self consistent loop: nonlocal and xc parts have to be calculated
   ! self-consistently.
   diff = 1e5_r8
@@ -506,12 +508,12 @@ subroutine solve_schroedinger(psp)
     do l = 0, psp%l_max_occ
        rho = rho + psp%occ(l)*psp%rphi(1:psp%g%nrval, l)**2
     enddo
-    !if(iter>0) rho = 0.5*rho + 0.5*prev
+    if(iter>0) rho = 0.5*rho + 0.5*prev
     diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval)-prev(2:psp%g%nrval))**2))
-    if(conf%verbose>20 .and. mpiv%node == 0) then
-      write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
-      call write_info(1)
-    endif
+    !if(conf%verbose>20 .and. mpiv%node == 0) then
+    !  write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
+    !  call write_info(1)
+    !endif
     call calculate_valence_screening(psp, rho, ve)
 
   enddo self_consistent
@@ -587,7 +589,7 @@ subroutine calculate_valence_screening(psp, rhoval, ve)
 end subroutine calculate_valence_screening
 
 function hgh_occs(label, lmax)
-  character(len=2), intent(in) :: label
+  character(len=5), intent(in) :: label
   integer, intent(in)          :: lmax
   real(r8)                     :: hgh_occs(0:lmax)
 
@@ -614,7 +616,8 @@ function hgh_occs(label, lmax)
     case('Ca'); hgh_occs(0:2) = (/ 2, 0, 0 /)
     case('Sc'); hgh_occs(0:2) = (/ 2, 0, 1 /)
     case('Ti'); hgh_occs(0:2) = (/ 2, 0, 2 /)
-    case('Au'); hgh_occs(0:2) = (/ 1, 0, 10 /)
+    case('Au'); hgh_occs(0:2) = (/ 1, 0, 0 /)
+    case('Au_sc'); hgh_occs(0:2) = (/1, 0, 10 /)
     case default
     if(mpiv%node == 0) then
       message(1) = 'Specie '//trim(label)//' not included in occupation-numbers data base.'
