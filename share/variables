@@ -73,12 +73,13 @@ c_vwn            = 7    # Vosko, Wilk, & Nussair
 c_pz             = 8    # Perdew & Zunger
 c_ob_pz          = 9    # Ortiz & Ballone (PZ)
 c_pw             = 10   # Perdew & Wang
-c_oc_pw          = 11   # Ortiz & Ballone (PW)
+c_ob_pw          = 11   # Ortiz & Ballone (PW)
 c_lyp            = 12   # Lee, Yang, & Parr LDA
 c_amgb           = 13   # Attacalite et al
 
 x_pbe            = 101  # Perdew, Burke & Ernzerhof exchange
 c_pbe            = 102  # Perdew, Burke & Ernzerhof correlation
+xc_lb            = 103  # van Leeuwen & Baerends
 
 # symbols for oct-center-geom
 inertia          = 1  
