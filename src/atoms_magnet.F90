@@ -90,11 +90,11 @@ program atoms_magnet
         do i = 1, m%np
           call mesh_r(m, i, ri, a=geo%atom(ia)%x)
           if (ri > r) cycle
-          c = R_CONJ(st%zpsi(i, 1, ist, ik)) * st%zpsi(i, 2, ist, ik)
-          mg(1) = mg(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
-          mg(2) = mg(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
+          c = conjg(st%zpsi(i, 1, ist, ik)) * st%zpsi(i, 2, ist, ik)
+          mg(1) = mg(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*real(c,PRECISION)
+          mg(2) = mg(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*aimag(c)
           c = R_ABS(st%zpsi(i, 1, ist, ik))**2 - R_ABS(st%zpsi(i, 2, ist, ik))**2
-          mg(3) = mg(3) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
+          mg(3) = mg(3) + st%d%kweights(ik)*st%occ(ist, ik)* real(c,PRECISION)
         end do
       end do
     end do
