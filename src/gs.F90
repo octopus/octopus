@@ -92,7 +92,8 @@ contains
     if(lcao_start) then
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)
-      
+     
+      lcao_data%state = 0 ! Uninitialized here.
       call lcao_init(lcao_data, sys%m, sys%f_der, sys%st, sys%geo, h)
       if(lcao_data%state == 1) then
         call lcao_wf(lcao_data, sys%m, sys%st, h)
