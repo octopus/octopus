@@ -180,7 +180,9 @@ subroutine laser_end(no_l, l)
         call spline_end(l(i)%amplitude)
         call spline_end(l(i)%phase)
       case(99)
-        deallocate(l(i)%numerical); nullify(l(i)%numerical)
+        if(associated(l(i)%numerical)) then
+          deallocate(l(i)%numerical); nullify(l(i)%numerical)
+        end if
       end select
   end do
   
@@ -224,9 +226,8 @@ subroutine laser_field(no_l, l, t, field)
   integer, intent(in) :: no_l
   type(laser_type), intent(IN) :: l(no_l)
   real(r8), intent(in) :: t
-  real(r8), intent(out) :: field(3)
+  real(r8), intent(out) :: field(conf%dim)
 
-  real(r8) :: r
   complex(r8), allocatable :: amp(:)
   integer :: i
 
@@ -236,17 +237,17 @@ subroutine laser_field(no_l, l, t, field)
   end if
 
   if(no_l == 1 .and. l(1)%envelope == 99) then
-    field(:) = l(i)%numerical(:, int(t/l(i)%dt))
-    return
+    i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
+    field(1:conf%dim) = l(1)%numerical(1:conf%dim, i)
+  else
+    allocate(amp(no_l));
+    call laser_amplitude(no_l, l, t, amp)
+    field = 0._r8
+    do i = 1, no_l
+      field(1:3) = field(1:3) + real(amp(i)*l(i)%pol(1:3))
+    end do
+    deallocate(amp)
   end if
-
-  allocate(amp(no_l));
-  call laser_amplitude(no_l, l, t, amp)
-  field = 0._r8
-  do i = 1, no_l
-    field(1:3) = field(1:3) + real(amp(i)*l(i)%pol(1:3))
-  end do
-  deallocate(amp)
 
   return
 end subroutine laser_field
@@ -256,7 +257,7 @@ subroutine laser_vector_field(no_l, l, t, field)
   integer, intent(in) :: no_l
   type(laser_type), intent(IN) :: l(no_l)
   real(r8), intent(in) :: t
-  real(r8), intent(out) :: field(3)
+  real(r8), intent(out) :: field(conf%dim)
 
   real(r8) :: r
   complex(r8), allocatable :: amp(:)
@@ -266,7 +267,7 @@ subroutine laser_vector_field(no_l, l, t, field)
   call laser_vector_amplitude(no_l, l, t, amp)
   field = 0._r8
   do i = 1, no_l
-    field(1:3) = field(1:3) + real(amp(i)*l(i)%pol(1:3))
+    field(1:conf%dim) = field(1:conf%dim) + real(amp(i)*l(i)%pol(1:conf%dim))
   end do
   deallocate(amp)
 

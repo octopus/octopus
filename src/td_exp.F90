@@ -217,7 +217,8 @@ contains
 
     sub_name = 'kinetic'; call push_sub()
 
-    temp(:) = 2.0_r8*M_PI/(sys%m%fft_n(:)*sys%m%h(:))
+    temp = M_ZERO
+    temp(1:conf%dim) = 2.0_r8*M_PI/(sys%m%fft_n(1:conf%dim)*sys%m%h(1:conf%dim))
 
     allocate(&
          wf_r(sys%m%fft_n(1), sys%m%fft_n(2), sys%m%fft_n(3)), &
@@ -320,46 +321,49 @@ contains
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: t, dt
 
-    integer :: j, idim
+    integer :: j, ik, idim
     real(r8) :: r, x(3), las(3)
 
     sub_name = 'local_part'; call push_sub()
 
     if(h%no_lasers > 0 .and. h%gauge == 1) then
-      call laser_field(h%no_lasers, h%lasers, t + dt/2._r8, las)
+      call laser_field(h%no_lasers, h%lasers, t + dt/M_TWO, las)
     end if
 
     ! Propagation of the local part and external field
-        do j = 1, m%np
-          r = h%Vpsl(j) + h%Vhartree(j)
-          select case(sys%st%ispin)
-          case(1) ! dim = 1
+    do j = 1, m%np
+      r = h%Vpsl(j)
+      if(.not.h%ip_app) then
+        r = r + h%Vhartree(j)
+        select case(sys%st%ispin)
+        case(1) ! dim = 1
+          r = r + h%Vxc(j, 1)
+        case(2) ! dim = 1
+          if(modulo(ik, 2) == 0) then ! we have a spin down
             r = r + h%Vxc(j, 1)
-          case(2) ! dim = 1
-            if(modulo(ik, 2) == 0) then ! we have a spin down
-              r = r + h%Vxc(j, 1)
-            else ! spin down
-              r = r + h%Vxc(j, 2)
-            end if
-          case(3) ! dim = 2
-            message(1) = "Suzuki-Trotter propagation not implemented for ispin=3"
-            call write_fatal(1)
-          end select
-
-          if(h%ab .eq. 1) then
-            r = r + h%ab_pot(j)
+          else ! spin down
+            r = r + h%Vxc(j, 2)
           end if
-
-          if(h%no_lasers > 0 .and. h%gauge == 1) then
-            call mesh_xyz(m, j, x)
-            r = r + sum(x(:)*las(:))
-          end if
-
-          ! Warning: this does not work for spinors...
-          do idim = 1, sys%st%dim
-             zpsi(j, idim) = zpsi(j, idim) * exp(-M_zI*dt*r)
-          enddo
-        end do
+        case(3) ! dim = 2
+          message(1) = "Suzuki-Trotter propagation not implemented for ispin=3"
+          call write_fatal(1)
+        end select
+      end if
+      
+      if(h%ab .eq. 1) then
+        r = r + h%ab_pot(j)
+      end if
+      
+      if(h%no_lasers > 0 .and. h%gauge == 1) then
+        call mesh_xyz(m, j, x)
+        r = r + sum(x(1:conf%dim)*las(1:conf%dim))
+      end if
+      
+      ! Warning: this does not work for spinors...
+      do idim = 1, sys%st%dim
+        zpsi(j, idim) = zpsi(j, idim) * exp(-M_zI*dt*r)
+      enddo
+    end do
 
     call pop_sub(); return
   end subroutine local_part

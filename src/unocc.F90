@@ -110,7 +110,7 @@ subroutine unocc_run(u, scf, sys, h)
     call states_write_eigenvalues(stdout, u%st%nst, u%st, diff)
     
     ! save restart information
-    call R_FUNC(states_write_restart)("restart.occ", sys%m, u%st)
+    call R_FUNC(states_write_restart)("tmp/restart.occ", sys%m, u%st)
 
     finish = (u%conv > 0) .and. (tol <= u%conv)
     if(finish) then

@@ -52,6 +52,7 @@ subroutine td_init(td, sys, m, st)
   
   call oct_parse_int(C_string("TDEvolutionMethod"), REVERSAL, td%evolution_method)
   select case(td%evolution_method)
+    case(SIMPLE_EXP);           message(1) = 'Info: Evolution method:  Simple Exponential Method.'
     case(OLD_REVERSAL);         message(1) = 'Info: Evolution method:  Old-Style.'
     case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
@@ -74,7 +75,7 @@ subroutine td_init(td, sys, m, st)
     case(CHEBYSHEV);            message(1) = 'Info: Exponential method: Chebyshev.'
     case default
      write(message(1), '(a,i6,a)') "Input: '", td%exp_method, "' is not a valid TDEvolutionMethod"
-     message(2) = '(1 <= TDExponentialMethod <= 3)'
+     message(2) = '(1 <= TDExponentialMethod <= 4)'
      call write_fatal(2)
   end select
   call write_info(1)
@@ -88,7 +89,7 @@ subroutine td_init(td, sys, m, st)
 
   call oct_parse_int(C_string("TDExpOrder"), 4, td%exp_order)
   if (td%exp_order < 2) then
-    write(message(1), '(a,i6,a)') "Input: '", td%exp_order, "' is not a valid TDLanczosMax"
+    write(message(1), '(a,i6,a)') "Input: '", td%exp_order, "' is not a valid TDExpOrder"
     message(2) = '(2 <= TDExpOrder)'
     call write_fatal(2)
   end if

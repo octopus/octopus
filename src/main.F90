@@ -71,7 +71,9 @@ program octopus
   end if
   write(message(1), '(a,i1,a)') 'Octupus will run in ', conf%dim, ' dimension(s)'
 
-  
+  ! create temporary dir (is always necessary)
+  call oct_mkdir(C_string("tmp"))
+
   ! now we really start
   call run()
 

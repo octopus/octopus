@@ -150,7 +150,7 @@ subroutine scf_run(scf, sys, h)
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.clean_stop()) &
-         call R_FUNC(states_write_restart)("restart.static", sys%m, sys%st)
+         call R_FUNC(states_write_restart)("tmp/restart.static", sys%m, sys%st)
 
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'

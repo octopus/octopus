@@ -61,10 +61,7 @@ program function_to_dx
 
   allocate(sys%st%dpsi(0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
-  call oct_parse_str('SystemName', 'system', sysname)
-  filename = trim(sysname)+'.occ_restart'
-
-  if(dstates_load_restart(trim(sys%sysname)+".occ_restart", sys%m, sys%st)) then
+  if(dstates_load_restart("tmp/restart.occ", sys%m, sys%st)) then
      call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
   else
      message(1) = "Error opening restart file"

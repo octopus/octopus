@@ -71,7 +71,7 @@ program excitations
   sys%st => st
 
   allocate(sys%st%R_FUNC(psi) (0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
-  if(R_FUNC(states_load_restart) ("restart.occ", sys%m, sys%st)) then
+  if(R_FUNC(states_load_restart) ("tmp/restart.occ", sys%m, sys%st)) then
     call R_FUNC(calcdens)(sys%st, sys%m%np, st%rho)
   else
     message(1) = "Error opening 'restart.occ' file"

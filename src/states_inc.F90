@@ -84,8 +84,7 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   sub_name = 'states_write_restart'; call push_sub()
 
   call io_assign(iunit)
-  call oct_mkdir(C_string("tmp"))
-  open(iunit, status='unknown', file = "tmp/"+trim(filename), form='unformatted')
+  open(iunit, status='unknown', file=trim(filename), form='unformatted')
     
 #ifdef R_TREAL
   mode = 0_i4
@@ -143,8 +142,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   end if
 
   call io_assign(iunit)
-  open(iunit, status='old', file="tmp/"+trim(filename), form='unformatted', err=998)
-
+  open(iunit, status='old', file=trim(filename), form='unformatted', err=998)
   read(iunit, err=999) ! mesh stuff is now skipped
   read(iunit, err=100) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
   go to 200
@@ -168,7 +166,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
     call write_warning(6)
     go to 999 ! one go to does not harm :)
   else
-    st%R_FUNC(psi) = R_TOTYPE(0._r8)
+    st%R_FUNC(psi) = R_TOTYPE(M_ZERO)
 
     if(mode == 0 .or. mode == -1) then
       allocate(dpsi(1:m%np))
@@ -185,7 +183,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
 #             ifdef R_TREAL
                 st%dpsi(1:m%np, id, ist, ik) = dpsi(:)
 #             else
-                st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), 0._r8, r8)
+                st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), M_ZERO, r8)
 #             endif
             end if
           else

@@ -67,11 +67,11 @@ end type td_type
                         NORMAL_VERLET   = 3,  &
                         VELOCITY_VERLET = 4
 
-  integer, parameter :: OLD_REVERSAL         = 1, &
+  integer, parameter :: SIMPLE_EXP           = 0, &
+                        OLD_REVERSAL         = 1, &
                         REVERSAL             = 2, &
                         APP_REVERSAL         = 3, &
                         EXPONENTIAL_MIDPOINT = 4
-
 
   integer, parameter :: FOURTH_ORDER       = 1, &
                         LANCZOS_EXPANSION  = 2, &
@@ -254,7 +254,7 @@ subroutine td_run(td, u_st, sys, h)
       ii = 1
 
       ! first resume file
-      write(filename, '(a,i3.3)') "restart.td.", mpiv%node
+      write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
       call zstates_write_restart(trim(filename), sys%m, sys%st, &
            iter=i, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))
 

@@ -5,38 +5,49 @@
 @c %**end of header
 
 
+@dircategory Individual utilities
+@direntry
+* octopus: (octopus).           The octopus program.
+@end direntry
 
-
-@copying
+@c ***************SUMMARY DESCRIPTION AND COPYRIGTH**********************
+@ifinfo
 This manual is for octopus 1.1, a first principles, electronic
 structure, excited states, Time-dependent density functional
 theory program.
 
-@strong{Warning: this is not yet the final version of the manual
-for the 1.1 version.}
+Copyright 2002 M. A. L. Marques, Alberto Castro and Angel Rubio
 
-Copyright @copyright{} 2002, 2003
-Miguel A. L. Marques, Alberto Castro and Angel Rubio
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+@ignore
+Permission is granted to process this file through TeX
+and print the results, provided the printed document
+carries a copying permission notice identical to this
+one except for the removal of this paragraph (this
+paragraph not being relevant to the printed manual).
+@end ignore
 
-@quotation
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
-any later version published by the Free Software Foundation.
-@end quotation
-@end copying
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying''
+is included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
 
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
 
+@end ifinfo
 
-
-@c This is to install octopus into the info main tree.
-@c @dircategory Individual utilities
-@c @direntry
-@c * octopus: (octopus).           The octopus program.
-@c @end direntry
-
-
-
-
+@c ***************TITLE PAGE AND COPYRIGHT*******************************
 
 @titlepage
 
@@ -55,11 +66,7 @@ any later version published by the Free Software Foundation.
 @sp 2
 @author By Miguel A. L. Marques, Alberto Castro and Angel Rubio.
 
-San Sebasti@'an/Donostia and Valladolid (Spain); Berlin (Germany).
-
-@page
-@vskip 0pt plus 1filll
-@insertcopying
+San Sebasti@'an (Spain), Valladolid (Spain), Berlin (Germany).
 @end titlepage
 
 
@@ -79,7 +86,6 @@ San Sebasti@'an/Donostia and Valladolid (Spain); Berlin (Germany).
 @ifnottex
 @node Top, Copying, (dir), (dir)
 @top octopus
-@insertcopying
 @end ifnottex
 
 @ifhtml
@@ -1046,7 +1052,7 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
 @subsection Velocities
 
 @itemize @bullet
-@item @vindex @code{XYZVelocities} :
+@item @vindex @code{XYZVelocities}
 @code{XYZVelocities} (string, 'velocities.xyz') :
   @code{octopus} will try to read the starting velocities of the atoms from the XYZ file 
   @code{XYZVelocities}.

@@ -59,10 +59,22 @@ subroutine td_rti(h, m, st, sys, td, t)
     else
       call td_rti4
     endif
+  case(SIMPLE_EXP)
+    call td_rti0
   end select
 
   call pop_sub(); return
 contains
+
+  subroutine td_rti0
+    integer is, ik, ist
+
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+      end do
+    end do
+  end subroutine td_rti0
 
   ! Warning: this subroutine should only be used with LDA/GGA functionals
   subroutine td_rti1
@@ -110,55 +122,61 @@ contains
 
     sub_name = 'td_rti2'; call push_sub()
 
-    allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
-    zpsi1 = st%zpsi ! store zpsi
+    if(.not.h%ip_app) then
+      allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
+      zpsi1 = st%zpsi ! store zpsi
     
-    allocate(vhxc_t1(m%np, st%nspin))
-    do is = 1, min(2,st%nspin)
-      Vhxc_t1(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
-    end do
-    if(st%nspin == 4) vhxc_t1(:, 3:4) = h%vxc(:, 3:4)
-    
-    ! propagate dt with H(t-dt)
-    do ik = 1, st%nik
-      do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+      allocate(vhxc_t1(m%np, st%nspin))
+      do is = 1, min(2,st%nspin)
+        Vhxc_t1(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
       end do
-    end do
+      if(st%nspin == 4) vhxc_t1(:, 3:4) = h%vxc(:, 3:4)
+      
+      ! propagate dt with H(t-dt)
+      do ik = 1, st%nik
+        do ist = st%st_start, st%st_end
+          call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+        end do
+      end do
     
-    call zcalcdens(st, m%np, st%rho, .true.)
-    call zhamiltonian_setup(h, m, st, sys)
+      call zcalcdens(st, m%np, st%rho, .true.)
+      call zhamiltonian_setup(h, m, st, sys)
     
-    st%zpsi = zpsi1
-    deallocate(zpsi1)
+      st%zpsi = zpsi1
+      deallocate(zpsi1)
     
-    ! store Vhxc at t
-    allocate(vhxc_t2(m%np, st%nspin))
-    do is = 1, min(2,st%nspin)
-      Vhxc_t2(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
-    end do
-    if(st%nspin == 4) vhxc_t2(:, 3:4) = h%vxc(:, 3:4)
-    
+      ! store Vhxc at t
+      allocate(vhxc_t2(m%np, st%nspin))
+      do is = 1, min(2,st%nspin)
+        Vhxc_t2(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
+      end do
+      if(st%nspin == 4) vhxc_t2(:, 3:4) = h%vxc(:, 3:4)
+
+      h%Vhartree = 0._r8
+      h%Vxc = Vhxc_t1
+    end if
+
     ! propagate dt/2 with H(t-dt)
-    h%Vhartree = 0._r8
-    h%Vxc = Vhxc_t1
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
         call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
       end do
     end do
     
-    deallocate(vhxc_t1)
+    if(.not.h%ip_app) then
+      deallocate(vhxc_t1)
     
+      h%Vxc = Vhxc_t2
+    end if
+
     ! propagate dt/2 with H(t)
-    h%Vxc = Vhxc_t2
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
         call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
       end do
     end do
     
-    deallocate(vhxc_t2)
+    if(.not.h%ip_app) deallocate(vhxc_t2)
 
     call pop_sub(); return
   end subroutine td_rti2
@@ -169,28 +187,32 @@ contains
 
     sub_name = 'td_rti3'; call push_sub()
 
-    allocate(aux(m%np, st%nspin))
+    if(.not.h%ip_app) then
+      allocate(aux(m%np, st%nspin))
 
-    call xpolate_pot(td%dt, td%dt, m%np, st%nspin, &
-         td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
-    
-    ! propagate dt/2 with H(t-dt)
-    h%Vhartree = 0._r8
-    h%vxc = td%v_old(:, :, 1)
+      call xpolate_pot(td%dt, td%dt, m%np, st%nspin, &
+           td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
+      
+      ! propagate dt/2 with H(t-dt)
+      h%Vhartree = 0._r8
+      h%vxc = td%v_old(:, :, 1)
+    end if
+
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
         call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
       end do
     end do
     
-    h%vxc = aux
+    if(.not.h%ip_app) h%vxc = aux
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
         call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
       end do
     end do
  
-    deallocate(aux)   
+    if(.not.h%ip_app) deallocate(aux)
+
     call pop_sub(); return
   end subroutine td_rti3
 
@@ -205,7 +227,7 @@ contains
     h%vhartree = 0._r8
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t + td%dt/2._r8)
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t - td%dt/2._r8)
       end do
     end do
 
