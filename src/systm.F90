@@ -223,7 +223,7 @@ contains
     integer,             intent(in)  :: nspin, spin_channels
     FLOAT,               intent(out) :: rho(:, :)
     
-    integer :: ia, is, gd_spin, i
+    integer :: ia, is, gmd_opt, i
     integer, save :: iseed = 321
     integer(POINTER_SIZE) :: blk
     FLOAT :: r, rnd, phi, theta, mag(3)
@@ -232,19 +232,19 @@ contains
     call push_sub('guess_density')
 
     if (spin_channels == 1) then
-      gd_spin = 1
+      gmd_opt = 1
     else
-      call loct_parse_int("GuessDensitySpin", 2, gd_spin)
-      if (gd_spin < 0 .or. gd_spin > 4) then
-        write(message(1),'(a,i1,a)') "Input: '",gd_spin ,"' is not a valid GuessDensitySpin"
-        message(2) = '(GuessDensitySpin = 1 | 2 | 3 | 4)'
+      call loct_parse_int("GuessMagnetDensity", 2, gmd_opt)
+      if (gmd_opt < 1 .or. gmd_opt > 4) then
+        write(message(1),'(a,i1,a)') "Input: '",gmd_opt ,"' is not a valid GuessMagnetDensity"
+        message(2) = '(GuessMagnetDensity = 1 | 2 | 3 | 4)'
         call write_fatal(2)
       end if
     end if
 
     rho = M_ZERO
-    select case (gd_spin)
-    case (1) ! Spin-unpolarized
+    select case (gmd_opt)
+    case (1) ! Paramagnetic
       allocate(atom_rho(m%np, 1))
       do ia = 1, geo%natoms
         call atom_density(m, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
@@ -255,7 +255,7 @@ contains
         rho(1:m%np, 2) = rho(1:m%np, 1)
       end if
 
-    case (2) ! Spin-polarized
+    case (2) ! Ferromagnetic
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
         call atom_density(m, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
@@ -294,13 +294,13 @@ contains
 
     case (4) ! User-defined
 
-      if(loct_parse_block("GuessDensityAtomsMagnet", blk) < 0) then
-        message(1) = "GuessDensityAtomsMagnet block is not defined "
+      if(loct_parse_block("AtomsMagnetDirection", blk) < 0) then
+        message(1) = "AtomsMagnetDirection block is not defined "
         call write_fatal(1)
       end if
 
       if (loct_parse_block_n(blk) /= geo%natoms) then
-        message(1) = "GuessDensityAtomsMagnet block has the wrong number of rows"
+        message(1) = "AtomsMagnetDirection block has the wrong number of rows"
         call write_fatal(1)
       end if
 
@@ -309,6 +309,13 @@ contains
         call atom_density(m, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
+          call loct_parse_block_float(blk, ia-1, 0, mag(1))
+          if (mag(1) > M_ZERO) then
+            rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+          else
+            rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
+            rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
+          end if
 
         elseif (nspin == 4) then
           do i = 1, 3

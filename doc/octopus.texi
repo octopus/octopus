@@ -194,7 +194,8 @@ SCF
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
-* GuessDensitySpin::            
+* GuessMagnetDensity
+* AtomsMagnetDirection::            
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1636,7 +1637,8 @@ criteria is fulfilled.
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
-* GuessDensitySpin::            
+* GuessMagnetDensity::            
+* AtomsMagnetDirection::
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1677,28 +1679,53 @@ not use this criterion.
 Absolute convergence of the eigenvalues. @code{0} means do 
 not use this criterion.
 
-@node ConvRelEv, GuessDensitySpin, ConvAbsEv, SCF
+@node ConvRelEv, GuessMagnetDensity, ConvAbsEv, SCF
 @subsection @code{ConvRelEnergy} (double, 0.0)
 @vindex @code{ConvRelEnergy}
 
 Relative convergence of the eigenvalues. @code{0} means do 
 not use this criterion.
 
-@node GuessDensitySpin, LCAOStart, ConvRelEv, SCF
-@subsection @code{GuessDensitySpin} (integer, polarized)
-@vindex @code{GuessDensitySpin}
+@node GuessMagnetDensity, AtomsMagnetDirection, ConvRelEv, SCF
+@subsection @code{GuessMagnetDensity} (integer, polarized)
+@vindex @code{GuessMagnetDensity}
 
 The guess density for the SCF cycle is just the sum of all the atomic densities.
 When performing spin-polarized or non-collinear spin calculations this option sets 
-the spin-polarization of the guess density.
+the guess magnetization density.
 Possible values are:
   @itemize @minus
-    @item @code{unpolarized}: Spin-unpolarized
-    @item @code{polarized}: Spin-polarized
-    @item @code{non_collinear}: Non-collinear
+    @item @code{paramagnetic}:  Magnetization density is zero.
+    @item @code{ferromagnetic}: Magnetization density is the sum of the atomic magnetization densities.
+    @item @code{random}: Each atomic magnetization density is randomly rotated.
+    @item @code{user_defined}: The atomic magnetization densities are rotated so that the magnetization 
+                               vector has the same direction as a vector provided by the user.
   @end itemize
+When the @code{user_defined} option is used the @code{AtomsMagnetDirection} block 
+has to be set.
 
-@node LCAOStart, SCFinLCAO, GuessDensitySpin, SCF
+For anti-ferromagnetic configurations the @code{user_defined} option should be used.
+
+Note that if the @code{paramagnetic} option is used the final ground-state will also be
+paramagnetic, but the same is not true for the other options.
+
+
+@node AtomsMagnetDirection, LCAOStart, GuessMagnetDensity, SCF
+@subsection @code{AtomsMagnetDirection} (block data)
+@vindex @code{AtomsMagnetDirection}
+
+This option is only used when @code{GuessMagnetDensity} is set to 
+@code{user_defined}. It provides a direction for each atoms magnetization 
+vector when building the guess density. In order to do that the user should
+specifie the coordinates of a vector that has the desired direction. The norm 
+of the vector is ignored. Note that it is necessaty to maintain the 
+ordering in which the species were defined in the coordinates specifications.
+
+For spin-polarized calculations the vectors should have only one component and
+for non-collinear spin calculations they should have three components.
+
+
+@node LCAOStart, SCFinLCAO, AtomsMagnetDirection, SCF
 @subsection @code{LCAOStart} (logical, true)
 @vindex @code{LCAOStart}
 
@@ -3082,8 +3109,6 @@ developments, so don't blame us...
   CenterOfInversion
 @item
   CurrentDFT
-@item
-  GuessDensityAtomsMagnet
 @item
   KineticCutoff
 @item

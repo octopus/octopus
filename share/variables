@@ -31,6 +31,10 @@ potential        = 1
 linear           = 0 # TypeOfMixing
 gr_pulay         = 1
 broyden          = 2
+paramagnetic     = 1 # GuessMagnetDensity
+ferromagnetic    = 2
+random           = 3
+user_defined     = 4
 split            = 0 # TDExponentialMethod
 suzuki_trotter   = 1 # (lanczos = 2 is already defined above)
 standard         = 3

@@ -143,7 +143,8 @@ SCF
 * ConvRelDens::
 * ConvAbsEv::
 * ConvRelEv::
-* GuessDensitySpin::
+* GuessMagnetDensity
+* AtomsMagnetDirection::
 * LCAOStart::
 * SCFinLCAO::
 * EigenSolver::
@@ -1619,7 +1620,8 @@ convergence criteria is fulfilled.
 * ConvRelDens::
 * ConvAbsEv::
 * ConvRelEv::
-* GuessDensitySpin::
+* GuessMagnetDensity::
+* AtomsMagnetDirection::
 * LCAOStart::
 * SCFinLCAO::
 * EigenSolver::
@@ -1668,7 +1670,7 @@ Absolute convergence of the eigenvalues. `0' means do not use this
 criterion.
 
 
-File: octopus.info,  Node: ConvRelEv,  Next: GuessDensitySpin,  Prev: ConvAbsEv,  Up: SCF
+File: octopus.info,  Node: ConvRelEv,  Next: GuessMagnetDensity,  Prev: ConvAbsEv,  Up: SCF
 
 6.8.5 `ConvRelEnergy' (double, 0.0)
 -----------------------------------
@@ -1677,25 +1679,57 @@ Relative convergence of the eigenvalues. `0' means do not use this
 criterion.
 
 
-File: octopus.info,  Node: GuessDensitySpin,  Next: LCAOStart,  Prev: ConvRelEv,  Up: SCF
+File: octopus.info,  Node: GuessMagnetDensity,  Next: AtomsMagnetDirection,  Prev: ConvRelEv,  Up: SCF
 
-6.8.6 `GuessDensitySpin' (integer, polarized)
----------------------------------------------
+6.8.6 `GuessMagnetDensity' (integer, polarized)
+-----------------------------------------------
 
 The guess density for the SCF cycle is just the sum of all the atomic
 densities.  When performing spin-polarized or non-collinear spin
-calculations this option sets the spin-polarization of the guess
-density.  Possible values are:
-   - `unpolarized': Spin-unpolarized
+calculations this option sets the guess magnetization density.
+Possible values are:
+   - `paramagnetic':  Magnetization density is zero.
 
-   - `polarized': Spin-polarized
+   - `ferromagnetic': Magnetization density is the sum of the atomic
+     magnetization densities.
 
-   - `non_collinear': Non-collinear
+   - `random': Each atomic magnetization density is randomly rotated.
+
+   - `user_defined': The atomic magnetization densities are rotated so
+     that the magnetization                                vector has
+     the same direction as a vector provided by the user.
+   When the `user_defined' option is used the `AtomsMagnetDirection'
+block has to be set.
+
+   For anti-ferromagnetic configurations the `user_defined' option
+should be used.
+
+   Note that if the `paramagnetic' option is used the final
+ground-state will also be paramagnetic, but the same is not true for
+the other options.
 
 
-File: octopus.info,  Node: LCAOStart,  Next: SCFinLCAO,  Prev: GuessDensitySpin,  Up: SCF
+File: octopus.info,  Node: AtomsMagnetDirection,  Next: LCAOStart,  Prev: GuessMagnetDensity,  Up: SCF
 
-6.8.7 `LCAOStart' (logical, true)
+6.8.7 `AtomsMagnetDirection' (block data)
+-----------------------------------------
+
+This option is only used when `GuessMagnetDensity' is set to
+`user_defined'. It provides a direction for each atoms magnetization
+vector when building the guess density. In order to do that the user
+should specifie the coordinates of a vector that has the desired
+direction. The norm of the vector is ignored. Note that it is necessaty
+to maintain the ordering in which the species were defined in the
+coordinates specifications.
+
+   For spin-polarized calculations the vectors should have only one
+component and for non-collinear spin calculations they should have
+three components.
+
+
+File: octopus.info,  Node: LCAOStart,  Next: SCFinLCAO,  Prev: AtomsMagnetDirection,  Up: SCF
+
+6.8.8 `LCAOStart' (logical, true)
 ---------------------------------
 
 Before starting a SCF calculation, performs a LCAO calculation. These
@@ -1706,7 +1740,7 @@ minimal basis set used.)
 
 File: octopus.info,  Node: SCFinLCAO,  Next: EigenSolver,  Prev: LCAOStart,  Up: SCF
 
-6.8.8 `SCFinLCAO' (logical, false)
+6.8.9 `SCFinLCAO' (logical, false)
 ----------------------------------
 
 Performs all the SCF cycle restricting the calculation to the LCAO
@@ -1717,8 +1751,8 @@ that point for an unrestricted calculation).
 
 File: octopus.info,  Node: EigenSolver,  Next: EigenSolverInitTolerance,  Prev: SCFinLCAO,  Up: SCF
 
-6.8.9 `EigenSolver' (integer, cg):
-----------------------------------
+6.8.10 `EigenSolver' (integer, cg):
+-----------------------------------
 
 At each SCF cycle step, a diagonalisation of the Hamiltonian is
 performed.  This variable chooses the eigensolver used to diagonalise
@@ -1738,7 +1772,7 @@ asked.  Next variables take care of this process.
 
 File: octopus.info,  Node: EigenSolverInitTolerance,  Next: EigenSolverFinalTolerance,  Prev: EigenSolver,  Up: SCF
 
-6.8.10 `EigenSolverInitTolerance' (double, 1.0e-10)
+6.8.11 `EigenSolverInitTolerance' (double, 1.0e-10)
 ---------------------------------------------------
 
 This is the initial tolerance for the eigenvectors.
@@ -1746,7 +1780,7 @@ This is the initial tolerance for the eigenvectors.
 
 File: octopus.info,  Node: EigenSolverFinalTolerance,  Next: EigenSolverFinalToleranceIteration,  Prev: EigenSolverInitTolerance,  Up: SCF
 
-6.8.11 `EigenSolverFinalTolerance' (double, 1.0e-14)
+6.8.12 `EigenSolverFinalTolerance' (double, 1.0e-14)
 ----------------------------------------------------
 
 This is the final tolerance for the eigenvectors.
@@ -1754,7 +1788,7 @@ This is the final tolerance for the eigenvectors.
 
 File: octopus.info,  Node: EigenSolverFinalToleranceIteration,  Next: EigenSolverMaxIter,  Prev: EigenSolverFinalTolerance,  Up: SCF
 
-6.8.12 `EigenSolverFinalToleranceIteration' (integer, 7)
+6.8.13 `EigenSolverFinalToleranceIteration' (integer, 7)
 --------------------------------------------------------
 
 Determines how many interactions are needed to go from
@@ -1763,7 +1797,7 @@ Determines how many interactions are needed to go from
 
 File: octopus.info,  Node: EigenSolverMaxIter,  Next: What2Mix,  Prev: EigenSolverFinalToleranceIteration,  Up: SCF
 
-6.8.13 `EigenSolverMaxIter' (integer, 25)
+6.8.14 `EigenSolverMaxIter' (integer, 25)
 -----------------------------------------
 
 It determines the maximum number of iterations for the eigensolver (per
@@ -1773,7 +1807,7 @@ stopped even if the desired tolerance was not achieved.
 
 File: octopus.info,  Node: What2Mix,  Next: TypeOfMixing,  Prev: EigenSolverMaxIter,  Up: SCF
 
-6.8.14 `What2Mix' (integer, density)
+6.8.15 `What2Mix' (integer, density)
 ------------------------------------
 
 Selects what should be mixed during the SCF cycle. Possible values are:
@@ -1784,7 +1818,7 @@ Selects what should be mixed during the SCF cycle. Possible values are:
 
 File: octopus.info,  Node: TypeOfMixing,  Next: Mixing,  Prev: What2Mix,  Up: SCF
 
-6.8.15 `TypeOfMixing' (integer, broyden)
+6.8.16 `TypeOfMixing' (integer, broyden)
 ----------------------------------------
 
 Selects the mixing procedure to be used during the SCF cycle. Possible
@@ -1798,7 +1832,7 @@ values are:
 
 File: octopus.info,  Node: Mixing,  Next: MixNumberSteps,  Prev: TypeOfMixing,  Up: SCF
 
-6.8.16 `Mixing' (double, 0.3)
+6.8.17 `Mixing' (double, 0.3)
 -----------------------------
 
 Determines the amount of the new density/potential which is to be mixed
@@ -1807,7 +1841,7 @@ with the old one. Used only by linear mixing and Broyden mixing.
 
 File: octopus.info,  Node: MixNumberSteps,  Prev: Mixing,  Up: SCF
 
-6.8.17 `MixNumberSteps' (integer, 3)
+6.8.18 `MixNumberSteps' (integer, 3)
 ------------------------------------
 
 Number of steps used by Broyden mixing or GR-Pulay mixing to
@@ -3291,6 +3325,7 @@ Options Index
 * ABHeight:                              ABHeight.             (line  6)
 * AbsorbingBoundaries:                   AbsorbingBoundaries.  (line  6)
 * ABWidth:                               ABWidth.              (line  6)
+* AtomsMagnetDirection:                  AtomsMagnetDirection. (line  6)
 * AxisType:                              oct-center-geom.      (line 19)
 * BoxShape:                              BoxShape.             (line  6)
 * CalculationMode:                       CalculationMode.      (line  6)
@@ -3323,7 +3358,7 @@ Options Index
 * GOMethod:                              GOMethod.             (line  6)
 * GOStep:                                GOStep.               (line  6)
 * GOTolerance:                           GOTolerance.          (line  6)
-* GuessDensitySpin:                      GuessDensitySpin.     (line  6)
+* GuessMagnetDensity:                    GuessMagnetDensity.   (line  6)
 * HSPolarization:                        HSPolarization.       (line  6)
 * LCAOStart:                             LCAOStart.            (line  6)
 * LocalPotentialSpace:                   LocalPotentialSpace.  (line  6)
@@ -3410,163 +3445,164 @@ Options Index
 
 Tag Table:
 Node: Top655
-Node: Copying4278
-Node: Authors5680
-Node: Introduction8900
-Node: Description of octopus9534
-Ref: Description of octopus-Footnote-111983
-Node: Time dependent density functional theory12376
-Ref: Time dependent density functional theory-Footnote-116140
-Ref: Time dependent density functional theory-Footnote-216372
-Ref: Time dependent density functional theory-Footnote-316674
-Ref: Time dependent density functional theory-Footnote-416830
-Ref: Time dependent density functional theory-Footnote-517014
-Node: Installation17085
-Node: Quick instructions17284
-Node: Long instructions17819
-Ref: Long instructions-Footnote-127047
-Node: Troubleshooting27562
-Node: The parser29504
-Node: Input file options32651
-Node: Generalities33272
-Node: SystemName33552
-Node: Dimensions33859
-Node: CalculationMode34169
-Node: Units35031
-Node: UnitsInput35733
-Node: UnitsOutput36082
-Node: Verbose36427
-Node: DebugLevel37008
-Node: Species Block37267
-Node: Species37448
-Node: Coordinates Description41017
-Node: PDBCoordinates41436
-Node: XYZCoordinates42917
-Node: Coordinates43693
-Node: XYZVelocities44691
-Node: Velocities45003
-Node: RandomVelocityTemp45781
-Node: Mesh46114
-Node: BoxShape46656
-Node: Radius47141
-Node: Lsize47378
-Node: ZLength47727
-Node: Spacing47946
-Node: DerivativesSpace48392
-Node: OrderDerivatives49001
-Node: DoubleFFTParameter49379
-Node: FFTOptimize49894
-Node: States50211
-Node: SpinComponents50451
-Node: NumberKPoints51104
-Node: ExcessCharge51565
-Node: ExtraStates51884
-Node: Occupations52177
-Node: ElectronicTemperature53135
-Node: Hamiltonian53470
-Node: NonInteractingElectrons53728
-Node: ClassicPotential54135
-Node: LocalPotentialSpace54480
-Node: RelativisticCorrection54919
-Node: Exchange and correlation55343
-Node: XFunctional55685
-Node: CFunctional56449
-Node: SCF57026
-Node: MaximumIter57591
-Node: ConvAbsDens57802
-Node: ConvRelDens58040
-Node: ConvAbsEv58274
-Node: ConvRelEv58506
-Node: GuessDensitySpin58751
-Node: LCAOStart59277
-Node: SCFinLCAO59678
-Node: EigenSolver60086
-Node: EigenSolverInitTolerance60979
-Node: EigenSolverFinalTolerance61256
-Node: EigenSolverFinalToleranceIteration61556
-Node: EigenSolverMaxIter61922
-Node: What2Mix62324
-Node: TypeOfMixing62622
-Node: Mixing62994
-Node: MixNumberSteps63284
-Node: Unoccupied States63530
-Node: UnoccNumberStates63886
-Node: UnoccMaximumIter64128
-Node: UnoccConv64490
-Node: Time Dependent64749
-Node: TDMaximumIter69162
-Node: TDTimeStep69443
-Node: TDExponentialMethod69700
-Node: TDExpOrder74999
-Node: TDLanczosTol75362
-Node: TDEvolutionMethod75851
-Node: TDLasers81651
-Node: TDGauge83071
-Node: TDDeltaStrength83354
-Node: TDPolarization83707
-Node: TDOutputMultipoles84294
-Node: TDDipoleMax84674
-Node: TDOutputCoordinates84981
-Node: TDOutputGSProjection85368
-Node: TDOutputAcceleration85844
-Node: TDOutputLaser86280
-Node: TDOutputElEnergy86560
-Node: TDOutputOccAnalysis86883
-Node: MoveIons87257
-Node: AbsorbingBoundaries87642
-Node: ABWidth88211
-Node: ABHeight88449
-Node: Geometry optimization88679
-Node: GOMethod88940
-Node: GOTolerance89240
-Node: GOMaxIter89549
-Node: GOStep89837
-Node: Function output for visualization90023
-Node: OutputKSPotential91443
-Node: OutputDensity91990
-Node: OutputWfs92302
-Node: OutputWfsNumber92745
-Node: OutputElf93097
-Node: OutputGeometry93424
-Node: OutputAxisX93892
-Node: OutputAxisY94207
-Node: OutputAxisZ94519
-Node: OutputPlaneX94832
-Node: OutputPlaneY95125
-Node: OutputPlaneZ95419
-Node: OutputDX95709
-Node: OutputNETCDF96112
-Node: OutputEvery96496
-Node: Spectrum calculations96782
-Node: SpecTransformNode97477
-Node: SpecDampMode97800
-Node: SpecDampFactor98595
-Node: SpecStartTime98893
-Node: SpecEndTime99182
-Node: SpecEnergyStep99467
-Node: SpecMinEnergy99690
-Node: SpecMaxEnergy99952
-Node: HSPolarization100217
-Node: Varia100710
-Node: PoissonSolver100888
-Node: POLStaticField101326
-Node: Displacement101621
-Node: External utilities101948
-Node: oct-sf102523
-Node: oct-rsf103298
-Node: oct-hs-mult103425
-Node: oct-hs-acc103634
-Node: oct-xyz-anim103848
-Node: oct-excite104079
-Node: oct-broad104737
-Node: oct-make-st105096
-Node: oct-center-geom106376
-Node: wf.net107422
-Node: Undocumented Variables108803
-Node: Examples109911
-Node: Hello world110070
-Ref: Hello world-Footnote-1116693
-Node: Benzene116777
-Node: Options Index117594
+Node: Copying4303
+Node: Authors5705
+Node: Introduction8925
+Node: Description of octopus9559
+Ref: Description of octopus-Footnote-112008
+Node: Time dependent density functional theory12401
+Ref: Time dependent density functional theory-Footnote-116165
+Ref: Time dependent density functional theory-Footnote-216397
+Ref: Time dependent density functional theory-Footnote-316699
+Ref: Time dependent density functional theory-Footnote-416855
+Ref: Time dependent density functional theory-Footnote-517039
+Node: Installation17110
+Node: Quick instructions17309
+Node: Long instructions17844
+Ref: Long instructions-Footnote-127072
+Node: Troubleshooting27587
+Node: The parser29529
+Node: Input file options32676
+Node: Generalities33297
+Node: SystemName33577
+Node: Dimensions33884
+Node: CalculationMode34194
+Node: Units35056
+Node: UnitsInput35758
+Node: UnitsOutput36107
+Node: Verbose36452
+Node: DebugLevel37033
+Node: Species Block37292
+Node: Species37473
+Node: Coordinates Description41042
+Node: PDBCoordinates41461
+Node: XYZCoordinates42942
+Node: Coordinates43718
+Node: XYZVelocities44716
+Node: Velocities45028
+Node: RandomVelocityTemp45806
+Node: Mesh46139
+Node: BoxShape46681
+Node: Radius47166
+Node: Lsize47403
+Node: ZLength47752
+Node: Spacing47971
+Node: DerivativesSpace48417
+Node: OrderDerivatives49026
+Node: DoubleFFTParameter49404
+Node: FFTOptimize49919
+Node: States50236
+Node: SpinComponents50476
+Node: NumberKPoints51129
+Node: ExcessCharge51590
+Node: ExtraStates51909
+Node: Occupations52202
+Node: ElectronicTemperature53160
+Node: Hamiltonian53495
+Node: NonInteractingElectrons53753
+Node: ClassicPotential54160
+Node: LocalPotentialSpace54505
+Node: RelativisticCorrection54944
+Node: Exchange and correlation55368
+Node: XFunctional55710
+Node: CFunctional56474
+Node: SCF57051
+Node: MaximumIter57643
+Node: ConvAbsDens57854
+Node: ConvRelDens58092
+Node: ConvAbsEv58326
+Node: ConvRelEv58558
+Node: GuessMagnetDensity58805
+Node: AtomsMagnetDirection59975
+Node: LCAOStart60751
+Node: SCFinLCAO61156
+Node: EigenSolver61564
+Node: EigenSolverInitTolerance62459
+Node: EigenSolverFinalTolerance62736
+Node: EigenSolverFinalToleranceIteration63036
+Node: EigenSolverMaxIter63402
+Node: What2Mix63804
+Node: TypeOfMixing64102
+Node: Mixing64474
+Node: MixNumberSteps64764
+Node: Unoccupied States65010
+Node: UnoccNumberStates65366
+Node: UnoccMaximumIter65608
+Node: UnoccConv65970
+Node: Time Dependent66229
+Node: TDMaximumIter70642
+Node: TDTimeStep70923
+Node: TDExponentialMethod71180
+Node: TDExpOrder76479
+Node: TDLanczosTol76842
+Node: TDEvolutionMethod77331
+Node: TDLasers83131
+Node: TDGauge84551
+Node: TDDeltaStrength84834
+Node: TDPolarization85187
+Node: TDOutputMultipoles85774
+Node: TDDipoleMax86154
+Node: TDOutputCoordinates86461
+Node: TDOutputGSProjection86848
+Node: TDOutputAcceleration87324
+Node: TDOutputLaser87760
+Node: TDOutputElEnergy88040
+Node: TDOutputOccAnalysis88363
+Node: MoveIons88737
+Node: AbsorbingBoundaries89122
+Node: ABWidth89691
+Node: ABHeight89929
+Node: Geometry optimization90159
+Node: GOMethod90420
+Node: GOTolerance90720
+Node: GOMaxIter91029
+Node: GOStep91317
+Node: Function output for visualization91503
+Node: OutputKSPotential92923
+Node: OutputDensity93470
+Node: OutputWfs93782
+Node: OutputWfsNumber94225
+Node: OutputElf94577
+Node: OutputGeometry94904
+Node: OutputAxisX95372
+Node: OutputAxisY95687
+Node: OutputAxisZ95999
+Node: OutputPlaneX96312
+Node: OutputPlaneY96605
+Node: OutputPlaneZ96899
+Node: OutputDX97189
+Node: OutputNETCDF97592
+Node: OutputEvery97976
+Node: Spectrum calculations98262
+Node: SpecTransformNode98957
+Node: SpecDampMode99280
+Node: SpecDampFactor100075
+Node: SpecStartTime100373
+Node: SpecEndTime100662
+Node: SpecEnergyStep100947
+Node: SpecMinEnergy101170
+Node: SpecMaxEnergy101432
+Node: HSPolarization101697
+Node: Varia102190
+Node: PoissonSolver102368
+Node: POLStaticField102806
+Node: Displacement103101
+Node: External utilities103428
+Node: oct-sf104003
+Node: oct-rsf104778
+Node: oct-hs-mult104905
+Node: oct-hs-acc105114
+Node: oct-xyz-anim105328
+Node: oct-excite105559
+Node: oct-broad106217
+Node: oct-make-st106576
+Node: oct-center-geom107856
+Node: wf.net108902
+Node: Undocumented Variables110283
+Node: Examples111391
+Node: Hello world111550
+Ref: Hello world-Footnote-1118173
+Node: Benzene118257
+Node: Options Index119074
 
 End Tag Table
