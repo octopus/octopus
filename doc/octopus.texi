@@ -138,7 +138,6 @@ External utilities
 * strength-function::           
 * hs-from-mult::                
 * hs-from-acc::                 
-* function-to-dx::              
 * nbo2xyz::                     
 
 Examples
@@ -1748,10 +1747,9 @@ A plane slice at y=0 is printed. The string ``.z=0'' is appended to previous fil
 
 @item @vindex @code{OutputDX}
 @code{OutputDX} (logical, false)
-For printing all the three dimensional information, the open source program visualization
-tool OpenDX (http://www.opendx.org/) is used. The string ``.general'' is appended to 
-previous file names. However, this feature is still in developing proccess. More 
-information in future releases of this manual, or else ask directly to @code{octopus-users@@tddft.org}.
+For printing all the three dimensional information, the open source program
+visualization tool OpenDX (@uref{http://www.opendx.org/}) is used. The string
+``.dx'' is appended to previous file names. 
 
 @end itemize
 
@@ -1898,7 +1896,6 @@ it may see the @code{inp} file, and the directories created by it.
 * strength-function::           
 * hs-from-mult::                
 * hs-from-acc::                 
-* function-to-dx::              
 * nbo2xyz::                     
 @end menu
 
@@ -1923,17 +1920,12 @@ the @code{SpecMinEnergy} and the @code{SpecMaxEnergy}.
 
 Calculates the harmonic spectrum, out of the acceleration file. To do.
 
-@node hs-from-acc, function-to-dx, hs-from-mult, External utilities
+@node hs-from-acc, nbo2xyz, hs-from-mult, External utilities
 @section @code{hs-from-mult}
 
 Calculates the harmonic spectrum, out of the multipoles file. To do.
 
-@node function-to-dx, nbo2xyz, hs-from-acc, External utilities
-@section @code{function-to-dx}
-
-Outputs functions in OpenDX format, from restart files. To do.
-
-@node nbo2xyz,  , function-to-dx, External utilities
+@node nbo2xyz,  , hs-from-acc, External utilities
 @section @code{nbo2xyz}
 
 Reads out the @code{td.general/coordinates} file, and makes
