@@ -245,9 +245,12 @@ int parse_block_int(char *name, int l, int col, int *r)
 	o = parse_block_work(name, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_CMPLX){
-		*r = (int)(GSL_REAL(pr.value.c) + 0.5);
-		fprintf(fout, "%s(%d, %d) = %d\n", name, l, col, *r);
-		return 0;
+	  if( (int)(GSL_REAL(pr.value.c)) > 0 ) {
+	    *r = (int)(GSL_REAL(pr.value.c) + 0.5);
+	  }else
+	    *r = - (int)(-GSL_REAL(pr.value.c) + 0.5);
+	  fprintf(fout, "%s(%d, %d) = %d\n", name, l, col, *r);
+	  return 0;
 	}else
 		return o;
 }
