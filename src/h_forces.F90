@@ -96,7 +96,7 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
   end do
 
   ! now comes the local part of the PP
-  if(.not.atm%spec%local) then
+  !if(.not.atm%spec%local) then
     if(h%vpsl_space == 0) then ! Real space
       do i = 1, sys%natoms
         atm => sys%atom(i)
@@ -159,7 +159,7 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
       deallocate(fw1, fw2, fr, force)
 #endif
     end if
-  end if
+  !end if
 
   call pop_sub()
 end subroutine R_FUNC(forces)
