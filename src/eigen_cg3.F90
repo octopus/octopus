@@ -80,8 +80,8 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
 
   enddo
 
-  call X(lalg_scal)(m%np*st%dim*st%nst*st%nik, &
-       R_TOTYPE(1.0/sqrt(m%vol_pp)), st%X(psi)(1,1,1,1), 1)
+  call X(lalg_scal)(m%np*st%d%dim*st%nst*st%d%nik, R_TOTYPE(M_ONE/sqrt(m%vol_pp)), &
+                    st%X(psi)(1:m%np,1:st%d%dim,1:st%nst,1:st%d%nik))
 
   if(conf%verbose > 999) then
     call io_close(unit)
