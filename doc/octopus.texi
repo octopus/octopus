@@ -1488,7 +1488,7 @@ if @code{TDOccupationalAnalysis == 1}).
 Number of time steps.
 
 @item @vindex @code{TDEvolutionMethod}
-@code{TDEvolutionMethod} (integer, 3):
+@code{TDEvolutionMethod} (integer, 2):
 Method used to perform the time propagation. Authorised values are:
 
 @tex
@@ -1496,9 +1496,12 @@ Method used to perform the time propagation. Authorised values are:
 @math{t} and @math{\psi_{n+1}} the wavefunction at time @math{t+\delta t}.)
 @end tex
 @itemize @minus
+
 @item @code{1}: ``Old-Style'' method. One should check carefully 
 the time-step, and it only works with density based functionals.
 It is quick per time step, but allows for very small time-steps.
+Deprecated in favour of method number 3, but still present in
+the code for @emph{historical} reasons.
 @ifnottex
 (See a printed version of the manual for details)
 @end ifnottex
@@ -1518,40 +1521,130 @@ and $t$;
 (ii) An initial estimation $\psi^{'}_{n+1}$ is
 obtained by calculating the exponential $\psi^{'}_{n+1} = \exp ( -i\delta t H_{n+1/2} ) \psi_n$;
 (iii) By making use of $\psi^{'}_{n+1}$, the density at $t+\delta t$ is estimated, and the
-density at $t+\delta t/2$ is approximated via $\rho_{n+1/2}=1/2(\rho_n+\rho_{n+1}$;
+density at $t+\delta t/2$ is approximated via $\rho_{n+1/2}=1/2(\rho_n+\rho_{n+1})$;
 (iv) This density is used to build the estimated Hamiltonian $H_{n+1/2}$.
 @end tex
-    @item @code{2}: Method designed to enforce the time-reversal symmetry. 
+
+@item @code{2}: Method designed to enforce the time-reversal symmetry. 
 Better time steps. Default.
-    @item @code{3}: A modification of previous method to make it faster.
-It is based on extrapolation of the time-dependent potentials. Due to some
-unknown problems, currently being investigated, it is not the default method.
-    @item @code{4}: Exponential midpoint rule. In principle, it should  also
+@ifnottex
+(See a printed version of the manual for details)
+@end ifnottex
+
+@tex
+The idea is to make use of the time-reversal symmetry from the beginning:
+$$
+\exp \left(-i\delta t/2 H_{n}\right)\psi_n = exp \left(i\delta t/2 H_{n+1}\right)
+\psi_{n+1},
+$$
+and then invert to obtain:
+$$
+\psi_{n+1} = \exp \left(-i\delta t/2 H_{n+1}\right) exp \left(-i\delta t/2 H_{n}\right)
+\psi_{n}.
+$$
+But we need to know $H_{n+1}$, which can only be known exactly through the solution
+$\psi_{n+1}$. What we do is to estimate it by performing a single exponential:
+$\psi^{'}_{n+1}=\exp \left( -i\delta t H_{n} \right) \psi_n$, and then
+$H_{n+1} = H[\psi^{'}_{n+1}]$.
+@end tex
+
+@item @code{3}: A modification of previous method to make it faster.
+It is based on extrapolation of the time-dependent potentials. It is faster
+by about 40%.
+@ifnottex
+(See a printed version of the manual for details)
+@end ifnottex
+
+@tex
+The only difference is the procedure to estimate $H_{n+1}$: in this case
+it is extrapolated trough a second-order polynomial by making use of the
+Hamiltonian at time $t-2\delta t, t-\delta t$ and $t$.
+@end tex
+
+@item @code{4}: Exponential midpoint rule. In principle, it should  also
 respect the time-reversal symmetry.
-  @end itemize
+@ifnottex
+(See a printed version of the manual for details)
+@end ifnottex
+
+@tex
+It consists on applying:
+$$
+\psi_{n+1} \exp \left( -i\delta t H_{n+1/2}\right) \psi_n,
+$$
+where a second-order polynomial extrapolation is used to estimate
+$H_{n+1/2}$.
+@end tex
+
+@end itemize
+
+(The methods which make use of extrapolation cannot be used safely the first
+two iterations, and so method number 2 is used for those iterations).
+
+This proliferation of methods (which also affects the exponentiation of the 
+Hamiltonian, see below) may look as excessive; The reason for it is that 
+the propagation algorithm is currently a topic of active development. We
+hope that in the future the optimal scheme is clearly identified. In the
+mean time, if you don't feel like testing, use the default choices and
+make sure the time step is small enough.
+
 
 @item @vindex @code{TDExponentialMethod}
 @code{TDExponentialMethod} (integer, 1):
 Method used to numerically calculate the exponential of the Hamiltonian,
 a core part of the calculation in any of the previously described methods
 to perform the evolution.
-  @itemize @minus
-    @item @code{1}: N-th order expansion of the exponential.
-    @item @code{2}: Lanczos approximation. Allows for larger time-steps.
+  
+@itemize @minus
+
+@item @code{1}: N-th order expansion of the exponential. The order is
+determined by variable @code{TDExpOder} (see below).
+@tex
+$$
+\exp (-i\delta t H) = \sum_{i=0}^{N} {(-i\delta t)^i\over{i!}} H^i.
+$$
+@end tex
+
+Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
+see http://www.phys.washington.edu/~bertsch/num3.ps)
+suggest the 4th order as especially suitable and stable.
+
+@item @code{2}: Lanczos approximation. Allows for larger time-steps.
 However, the larger the time-step, the longer the time per time-step. In
 certain cases, if the time-step is too large, the code will emit a warning
 whenever it considers that the evolution may not be proberly proceeding --
-the Lanczos process did not converge. This possibility is still somehow
-experimental. (REFERENCE MISSING).
-    @item @code{3}: Split-operator.
-    @item @code{4}: Suzuki-Trotter (REFERENCE MISSING). This is a higher-order
-split-operator based method.
-    @item @code{5}: N-th order Chebyshev expansion. In principle, the Chebyshev expansion
+the Lanczos process did not converge. The method consists in a Krylov
+subspace approximation of the action of the exponential
+(see M. Hochbruck and C. Lubich, SIAM J. Numer. Anal. @strong{34}, 1911 (1997) for details). 
+Two more variables control the performance of the method: the dimension
+of this subspace (controlled by variable @code{TDExpOrder}), and
+the stopping criterium (controlled by variable @code{TDLanczosTol}).
+The smaller the stopping criterium, the more precisely the exponential
+is calculated, but also the larger the dimension of the Arnoldi
+subspace. Time spent in the calculation grows linearly with this dimension.
+
+@item @code{3}: Split-operator.
+This is a well known method. In our real-space implementation, we do not find it
+specially suitable (too many transformations from real to reciprocal spaces).
+@tex
+The equation applied is:
+$$
+\exp (-i \delta t H) = \exp (-i \delta t/2 T) \exp (-i \delta t V) \exp (-i \delta t/2 T)
++ O(\delta t^2).
+$$
+
+@end tex
+
+@item @code{4}: Suzuki-Trotter. This is a higher-order
+split-operator based method. See O. Sugino and Y. Miyamoto,
+Phys. Rev. B @strong{59}, 2579 (1999). Allows for larger time-steps,
+but requires five times more time.
+
+@item @code{5}: N-th order Chebyshev expansion. In principle, the Chebyshev expansion
 of the exponential represents it more accurately than the canonical expansion
-(method 1). This is only true for high orders, though.
-  @end itemize
-When using method 3 or 4 please turn @code{FFTOptimize} off, or the propagator will loose 
-precision.
+(method 1). 
+
+@end itemize
 
 @item @vindex @code{TDExpOrder}
 @code{TDExpOrder} (integer, 4):

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.3 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,14 +6,29 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
+This manual is for octopus 1.1, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   *Warning: this is not yet the final version of the manual for the
+1.1 version.*
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
 
 Indirect:
-octopus.info-1: 207
+octopus.info-1: 739
 octopus.info-2: 49402
 
 Tag Table:
 (Indirect)
-Node: Top207
+Node: Top739
 Node: Copying2253
 Node: Authors3654
 Node: Introduction6833
@@ -44,22 +59,22 @@ Node: Exchange and correlation47474
 Node: SCF49402
 Node: Unoccupied States53134
 Node: Time Dependent53855
-Node: Photo-electron spectrum60438
-Node: Geometry optimization61420
-Node: Function output for visualization62409
-Node: Spectrum calculations66066
-Node: Varia68200
-Node: External utilities69185
-Node: strength-function69697
-Node: hs-from-mult70584
-Node: hs-from-acc70802
-Node: nbo2xyz71010
-Node: excitations71223
-Node: broad71764
-Node: Examples72079
-Node: Hello world72234
-Ref: Hello world-Footnote-179384
-Node: Benzene79468
-Node: Options Index80276
+Node: Photo-electron spectrum62335
+Node: Geometry optimization63317
+Node: Function output for visualization64306
+Node: Spectrum calculations67963
+Node: Varia70097
+Node: External utilities71082
+Node: strength-function71594
+Node: hs-from-mult72481
+Node: hs-from-acc72699
+Node: nbo2xyz72907
+Node: excitations73120
+Node: broad73661
+Node: Examples73976
+Node: Hello world74131
+Ref: Hello world-Footnote-181281
+Node: Benzene81365
+Node: Options Index82173
 
 End Tag Table
