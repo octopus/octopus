@@ -394,6 +394,13 @@ subroutine run_init()
     call write_fatal(13)
   end if
 
+  ! print dimension info
+  write(message(1), '(a,i1,a)') 'Info: Octopus will run in ', conf%dim, ' dimension(s)'
+  call write_info(1)
+  write(message(1), '(a,i1,a)') 'Info: Octopus will treat system as periodic in ', conf%periodic_dim, ' dimension(s)'
+  call write_info(1)
+
+
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
     call units_init()
     call system_init(sys)
