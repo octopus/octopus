@@ -63,13 +63,12 @@ subroutine hartree_init(h, m)
       message(2) = 'PoissonSolver = 1(cg) | 2(fft) | 3(fft spherical cutoff)'
       call write_fatal(2)
     end if
-#ifdef POLYMERS
-    if(h%solver.ne.2) then
-      message(1) = "Sorry, but for polymers only the fft method (method 2)"
+
+    if(conf%periodic_dim>0 .and. h%solver.ne.2) then
+      message(1) = "Sorry, but for periodic systemps only the fft method"
       message(2) = "is available for solving the poisson equation"
       call write_fatal(2)
     end if
-#endif
 
     call hartree3D_init(h, m)
   end if
