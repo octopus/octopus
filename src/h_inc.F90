@@ -308,17 +308,29 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
   type(system_type), intent(in), optional :: sys
 
   integer :: is
+  real(r8), allocatable :: rho_aux(:)
 
   call push_sub('hamiltonian_setup')
 
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
-    call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
+    if(st%spin_channels == 1) then
+      call poisson_solve(m, h%vhartree, st%rho(:, 1))
+    else
+      allocate(rho_aux(m%np))                    ! need an auxiliary array to
+      rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
+      do is = 2, st%spin_channels
+        rho_aux(:) = rho_aux(:) + st%rho(:, is)
+      end do
+      call poisson_solve(m, h%vhartree, rho_aux) ! solve the poisson equation
+      deallocate(rho_aux)
+    end if
+
     h%epot = M_ZERO
     do is = 1, st%spin_channels
        h%epot = h%epot - M_HALF*dmf_dotp(m, st%rho(:, is), h%vhartree)
     enddo
 
-    call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec, &
+    call R_FUNC(xc_pot)(h%xc, m, st, h%vxc, h%ex, h%ec, &
                         -minval(st%eigenval(st%nst, :)), st%qtot)
 
     select case(h%ispin)

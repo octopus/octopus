@@ -17,10 +17,9 @@
 
 ! Please use this functional only in spin polarized calculations
 ! and for finite systems
-subroutine R_FUNC(kli_hju) (m, st, hartr, nlcc, type, Vx, ex)
+subroutine R_FUNC(kli_hju) (m, st, nlcc, type, Vx, ex)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  type(hartree_type), intent(inout) :: hartr
   logical, intent(in) :: nlcc
   integer, intent(in) :: type
   real(r8), intent(out) :: Vx(m%np, st%nspin), ex
@@ -64,7 +63,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, nlcc, type, Vx, ex)
         write(message(1), '(a,i2,a,f14.6)') 'N(', is, ') = ', N_alpha
         call write_info(1)
 
-        call hartree_solve(hartr, m, Vx2(:, 1), st%rho(:, 1:1))
+        call poisson_solve(m, Vx2(:, 1), st%rho(:, 1))
         Ex2 = 0._r8
         do k = 1, m%np
           if((ia == 1.and.m%Lxyz(3, k)>=0).or.(ia == 2.and.m%Lxyz(3, k)<=0)) then

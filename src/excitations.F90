@@ -29,7 +29,6 @@ program excitations
 
   type(system_type) :: sys
   type(states_type), target :: st
-  type(hartree_type) :: hart
   integer :: n_occ, n_unocc, flags(32)
   character(len=100) :: ch
   logical :: l
@@ -69,26 +68,26 @@ program excitations
   call oct_parse_string("ExciteStates", "1-1024", ch)
   call oct_wfs_list(ch, flags)
 
-  ! initialize Hartree potential
-  call hartree_init(hart, sys%m)
+  ! initialize Poisson solver
+  call poisson_init(sys%m)
 
   ! calculate resonances
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
   call oct_parse_logical("LinEigenvalues", .true., l)
-  if(l) call calc_petersilka(0, st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'eps-diff')
+  if(l) call calc_petersilka(0, st, sys%m, n_occ, n_unocc, flags, 'linear', 'eps-diff')
   
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
   call oct_parse_logical("LinPetersilka", .true., l)
-  if(l) call calc_petersilka(1, st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
+  if(l) call calc_petersilka(1, st, sys%m, n_occ, n_unocc, flags, 'linear', 'petersilka')
 
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
   call oct_parse_logical("LinCasida", .true., l)
-  if(l)call calc_petersilka(2, st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'casida')
+  if(l)call calc_petersilka(2, st, sys%m, n_occ, n_unocc, flags, 'linear', 'casida')
 
-  call hartree_end(hart)
+  call poisson_end()
 
 end program excitations

@@ -15,11 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip, qtot)
+subroutine R_FUNC(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out)    :: vxc(m%np, st%nspin), ex, ec
   real(r8), intent(in) :: ip, qtot
 
@@ -52,7 +51,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip, qtot)
 !    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vx, ex)
   case(XC_FAMILY_KLI)
-    call R_FUNC(xc_kli) (xcs%x_func, xcs%nlcc, m, st, hartr, vxc, ex)
+    call R_FUNC(xc_kli) (xcs%x_func, xcs%nlcc, m, st, vxc, ex)
   end select
 
   select case(xcs%c_family)
@@ -66,7 +65,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip, qtot)
 !    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vc, ec)
   case(XC_FAMILY_KLI)
-    call R_FUNC(xc_kli) (xcs%c_func, xcs%nlcc, m, st, hartr, vaux, ec)
+    call R_FUNC(xc_kli) (xcs%c_func, xcs%nlcc, m, st, vaux, ec)
   end select
 
   vxc = vxc + vaux

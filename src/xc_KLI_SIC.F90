@@ -15,12 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, hartr, Vx, ex)
+subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, Vx, ex)
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   R_TYPE, intent(IN) :: psi(m%np, st%nst, st%nspin)
-  type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: Vx(m%np, st%nspin), ex
 
   integer :: is, i, k, i1, i2
@@ -45,10 +44,10 @@ subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, hartr, Vx, ex)
   call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, nlcc, m, st, Vx, ex)
 
 ! calculate the u_sij using poissons equation
-  rho(1:m%np, 2) = 0.0_r8
+  rho(1:m%np, 2) = M_ZERO
   do is = 1, st%nspin
-     u_xc     = 0.0_r8
-     u_bar_xc = 0.0_r8
+     u_xc     = M_ZERO
+     u_bar_xc = M_ZERO
 
      do i = 1, st%nst
         if(st%occ(i, is) .gt. small) then ! we only need the occupied states
@@ -63,7 +62,7 @@ subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, hartr, Vx, ex)
            u_xc(1:m%np, i) = - Vx2(1:m%np, 1)
            Ex = Ex - sfact*ex2
 
-           call hartree_solve(hartr, m, Vx2(:, 1), rho(:, 1:1))
+           call poisson_solve(m, Vx2(:, 1), rho(:, 1))
            u_xc(1:m%np, i) = u_xc(1:m%np, i) - Vx2(1:m%np, 1)
 
            u_bar_xc(i) = sum(u_xc(1:m%np, i) * R_ABS(psi(1:m%np, i, is))**2)*m%vol_pp
@@ -87,12 +86,11 @@ subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, hartr, Vx, ex)
   return
 end subroutine R_FUNC(kli_x_sic)
 
-subroutine R_FUNC(kli_c_sic) (nlcc, m, st, psi, hartr, Vc, ec)
+subroutine R_FUNC(kli_c_sic) (nlcc, m, st, psi, Vc, ec)
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   R_TYPE, intent(IN) :: psi(m%np, st%nst, st%nspin)
-  type(hartree_type), intent(IN) :: hartr
   real(r8), intent(out) :: Vc(m%np, st%nspin), ec
 
   integer :: is, i, k, i1, i2

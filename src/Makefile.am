@@ -10,7 +10,7 @@ core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 atom.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \
-	hartree.F90 out.F90 states.F90 xc.F90 systm.F90 mix.F90
+	poisson.F90 out.F90 states.F90 xc.F90 systm.F90 mix.F90
 
 octopus_SOURCES = $(core_SRCS) lasers.F90 h.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
@@ -25,7 +25,7 @@ noinst_HEADERS = \
 	real.F90 complex.F90 undef.F90 \
 	fftw2.F90 fftw3.F90 \
 	mesh_create.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
-	hartree1D.F90 hartree2D.F90 hartree3D.F90 \
+	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
 	specie1D.F90 specie3D.F90\
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 xc_HJU.F90 \
 	h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90 \
@@ -113,7 +113,7 @@ cf.o: cf_inc.F90
 mf.o: mf_inc.F90
 f.o: f_inc.F90
 specie.o: specie1D.F90 specie3D.F90
-hartree.o: hartree1D.F90 hartree2D.F90 hartree3D.F90
+poisson.o: poisson1D.F90 poisson2D.F90 poisson3D.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90
 xc.o: xc_KLI_SIC.F90 xc_HJU.F90
 h.o: h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90

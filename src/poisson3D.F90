@@ -15,28 +15,26 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine hartree3D_init(h, m)
-  type(hartree_type), intent(inout) :: h
+subroutine poisson3D_init(m)
   type(mesh_type), intent(inout) :: m
 
-  select case(h%solver)
-    case(1)
-      message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-      call write_info(1)
-      call init_real()
+  ASSERT(poisson_solver>=1.or.poisson_solver<=3)
+
+  select case(poisson_solver)
+  case(1)
+    message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
+    call write_info(1)
+    call init_real()
 #ifdef HAVE_FFT
-    case(2)
-      message(1) = 'Info: Using FFTs to solve poisson equation.'
-      call write_info(1)
-      call init_fft()
-    case(3)
-      message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
-      call write_info(1)
-      call init_fft()
+  case(2)
+    message(1) = 'Info: Using FFTs to solve poisson equation.'
+    call write_info(1)
+    call init_fft()
+  case(3)
+    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
+    call write_info(1)
+    call init_fft()
 #endif
-    case default
-      message(1) = "Internal error in hartree3D_init"
-      call write_fatal(1)
   end select
 
   call pop_sub()
@@ -45,10 +43,10 @@ contains
   subroutine init_real()
  
     ! setup mesh including ghost points
-    allocate(h%m_aux)
-    h%m_aux = m
-    nullify(h%m_aux%lxyz, h%m_aux%lxyz_inv, h%m_aux%laplacian, h%m_aux%grad)
-    call mesh_create_xyz(h%m_aux, m%laplacian%norder)
+    allocate(cg_m_aux)
+    cg_m_aux = m
+    nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%laplacian, cg_m_aux%grad)
+    call mesh_create_xyz(cg_m_aux, m%laplacian%norder)
     
   end subroutine init_real
 
@@ -59,38 +57,38 @@ contains
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(m, db)
-    if(h%solver == 3) db(:) = maxval(db)
+    if(poisson_solver == 3) db(:) = maxval(db)
 
     ! initialize the ffts
-    call fft_init(db, fft_real, h%fft)
-    call fft_getdim_real   (h%fft, db)
-    call fft_getdim_complex(h%fft, dbc)
+    call dcf_new(db, fft_cf)
+    call dcf_fft_init(fft_cf)
 
     ! store the fourier transform of the Coulomb interaction
-    allocate(h%ff(dbc(1), dbc(2), dbc(3)))
-    h%ff = M_ZERO
+    allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
+    fft_Coulb_FS = M_ZERO
+
     r_0 = maxval(db(:)*m%h(:))/M_TWO
     temp(:) = 2.0_r8*M_PI/(db(:)*m%h(:))
       
-    do ix = 1, dbc(1)
-      ixx(1) = pad_feq(ix, db(1), .true.)
-      do iy = 1, dbc(2)
-        ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, dbc(3)
-          ixx(3) = pad_feq(iz, db(3), .true.)
+    do iz = 1, fft_cf%n(3)
+      ixx(3) = pad_feq(iz, fft_cf%n(3), .true.)
+      do iy = 1, fft_cf%n(2)
+        ixx(2) = pad_feq(iy, fft_cf%n(2), .true.)
+        do ix = 1, fft_cf%nx
+          ixx(1) = pad_feq(ix, fft_cf%n(1), .true.)
 
           vec = sum((temp(:)*ixx(:))**2) 
           if(vec.ne.M_ZERO) then
-            if(h%solver==2) then
-              h%ff(ix, iy, iz) = 4.0_r8*M_PI / vec
+            if(poisson_solver==2) then
+              fft_Coulb_FS(ix, iy, iz) = 4.0_r8*M_PI / vec
             else
-              h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(sqrt(vec)*r_0)) / vec 
+              fft_Coulb_FS(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(sqrt(vec)*r_0)) / vec 
             endif
           else
-            if(h%solver==2) then
-              h%ff(ix, iy, iz) = M_ZERO
+            if(poisson_solver==2) then
+              fft_Coulb_FS(ix, iy, iz) = M_ZERO
             else
-              h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+              fft_Coulb_FS(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
             endif
           end if
         end do
@@ -100,22 +98,21 @@ contains
   end subroutine init_fft
 #endif
 
-end subroutine hartree3D_init
+end subroutine poisson3D_init
 
-subroutine hartree_cg(h, m, pot, dist)
-  type(hartree_type), intent(inout) :: h
+subroutine poisson_cg(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:, :), intent(IN) :: dist
+  real(r8), intent(inout) :: pot(m%np)
+  real(r8), intent(in)    :: rho(m%np)
   
   integer, parameter :: ml = 4 ! maximum multipole moment to include
   real(r8), parameter :: fpi = M_FOUR*M_PI
 
   integer :: i, iter, add_lm, l, mm
-  real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, temp
+  real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck
   real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:), lwk(:)
 
-  call push_sub('hartree_cg')
+  call push_sub('poisson_cg')
 
   allocate(rholm((ml+1)**2))             ! to store the multipole moments
   allocate(zk(m%np), tk(m%np), pk(m%np)) ! for the cg
@@ -125,12 +122,16 @@ subroutine hartree_cg(h, m, pot, dist)
   do i = 1, m%np
     call mesh_r(m, i, r, x=x)
     
-    temp   = sum(dist(i, :))
-    zk(i) = -fpi*temp ! this will be needed later
+    zk(i) = -fpi*rho(i) ! this will be needed later
 
     add_lm = 1
     do l = 0, ml
-      s1 = r**l*temp
+      if(l == 0) then 
+        s1 = r**l*rho(i)
+      else
+        s1 = rho(i)
+      end if
+
       do mm = -l, l
         sa = oct_ylm(x(1), x(2), x(3), l, mm)
         rholm(add_lm) = rholm(add_lm) + s1*sa
@@ -141,10 +142,10 @@ subroutine hartree_cg(h, m, pot, dist)
   rholm = rholm*m%vol_pp
 
   ! build initial guess for the potential
-  allocate(wk(h%m_aux%np), lwk(h%m_aux%np))
+  allocate(wk(cg_m_aux%np), lwk(cg_m_aux%np))
   wk(1:m%np) = pot(1:m%np)
-  do i = h%m_aux%np_in+1, h%m_aux%np ! boundary conditions
-    call mesh_r(h%m_aux, i, r, x=x)
+  do i = cg_m_aux%np_in+1, cg_m_aux%np ! boundary conditions
+    call mesh_r(cg_m_aux, i, r, x=x)
     
     add_lm = 1
     do l = 0, ml
@@ -158,7 +159,7 @@ subroutine hartree_cg(h, m, pot, dist)
   end do
   deallocate(rholm)
 
-  call dmf_laplacian(h%m_aux, wk, lwk)
+  call dmf_laplacian(cg_m_aux, wk, lwk)
 
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed
@@ -186,56 +187,38 @@ subroutine hartree_cg(h, m, pot, dist)
   end do
 
   if(iter >= 400) then
-    message(1) = "Hartree using conjugated gradients: Not converged!"
+    message(1) = "Poisson using conjugated gradients: Not converged!"
     write(message(2),*) "iter = ", iter, " s3 = ", s3
     call write_warning(2)
   endif
-
-  h%ncgiter = iter
 
   deallocate(zk, tk, pk)
 
   call pop_sub()
   return
-end subroutine hartree_cg
+end subroutine poisson_cg
 
 #if defined(HAVE_FFT)
-subroutine hartree_fft(h, m, pot, dist)
-  type(hartree_type), intent(IN) :: h
+subroutine poisson_fft(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), dimension(:), intent(out) :: pot
-  real(r8), dimension(:, :), intent(IN) :: dist
+  real(r8), intent(out) :: pot(m%np)
+  real(r8), intent(in)  :: rho(m%np)
 
-  integer :: i, db(3), dbc(3), c(3)
-  real(r8), allocatable :: f(:,:,:)
-  complex(r8), allocatable :: gg(:,:,:)
+  call push_sub('poisson_fft')
 
-  call push_sub('hartree_fft')
+  call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
+  call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
 
-  call fft_getdim_real   (h%fft, db)  ! get dimensions of real array
-  call fft_getdim_complex(h%fft, dbc) ! get dimensions of complex array
-  c(:) = db(:)/2 + 1                  ! get center of double box
+  call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
+  call dcf_RS2FS(fft_cf)             ! Fourier transform
+  fft_cf%FS = fft_cf%FS*fft_Coulb_FS ! multiply by the FS of the Coulomb interaction
+  call dcf_FS2RS(fft_cf)             ! Fourier transform back
+  call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
   
-  allocate(f(db(1), db(2), db(3)), gg(dbc(1), dbc(2), dbc(3)))
-
-  f = M_ZERO
-  do i = 1, m%np
-    f(m%Lxyz(1, i)+c(1), m%Lxyz(2, i)+c(2), m%Lxyz(3, i)+c(3)) = sum(dist(i, :))
-  end do
-  
-  ! Fourier transform the charge density
-  
-  call dfft_forward (h%fft, f, gg)
-  gg = gg*h%ff
-  call dfft_backward(h%fft, gg, f)
-  
-  do i = 1, m%np
-    pot(i) = f(m%Lxyz(1, i) + c(1), m%Lxyz(2, i) + c(2), m%Lxyz(3, i) + c(3))
-  end do
-
-  deallocate(f, gg)
+  call dcf_free_RS(fft_cf)           ! memory is no longer needed
+  call dcf_free_FS(fft_cf)
 
   call pop_sub()
   return
-end subroutine hartree_fft
+end subroutine poisson_fft
 #endif

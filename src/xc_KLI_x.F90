@@ -15,19 +15,18 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
+subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, Vx, ex, rho)
 
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: nspin, nst
   real(r8), intent(IN) :: occ(nst, nspin), eigenval(nst, nspin)
   R_TYPE, intent(IN) :: psi(m%np, nst, nspin)
-  type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: Vx(m%np, nspin), ex
   real(r8), intent(in)  :: rho(m%np, nspin)
 
   integer :: is, i, j, k
   real(r8) :: charge, socc, sfact
-  real(r8), allocatable :: rho_ij(:,:)
+  real(r8), allocatable :: rho_ij(:)
   real(r8), allocatable :: pot(:)             ! For real
   real(r8), allocatable :: pot_r(:), pot_i(:) ! For complex
   real(r8), allocatable :: u_xc(:,:), u_bar_xc(:)
@@ -37,7 +36,7 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
 
   if(nst==1 .and. nspin==1) then
     allocate(pot(m%np))
-    call hartree_solve(hartr, m, pot, rho(:, 1:1))
+    call poisson_solve(m, pot, rho(:, 1))
     if(occ(1, 1) == 1.0_r8) then
       vx(:, 1) = -pot(:)
     elseif(occ(1, 1) == 2.0_r8) then
@@ -61,14 +60,14 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
       if(occ(i, is) .gt. small) then ! we only need the occupied states
         do j=1, nst
           if(occ(j, is) .gt. small) then
-            allocate(rho_ij(1:m%np,1:1))
+            allocate(rho_ij(1:m%np))
 
 #ifdef R_TREAL
             allocate(pot(m%np))
             pot = M_ZERO
 
-            rho_ij(1:m%np, 1) = psi(1:m%np, i, is)*psi(1:m%np, j, is)
-            call hartree_solve(hartr, m, pot, rho_ij(:, 1:1))
+            rho_ij(1:m%np) = psi(1:m%np, i, is)*psi(1:m%np, j, is)
+            call poisson_solve(m, pot, rho_ij)
             deallocate(rho_ij)
             do k = 1, m%np
               u_xc(k, i) = u_xc(k, i) - occ(j,is)*socc*pot(k)*    &
@@ -81,13 +80,13 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
             pot_r = 0._r8
             pot_i = 0._r8
 
-            rho_ij(1:m%np, 1) = real(psi(1:m%np, i, is))*real(psi(1:m%np, j, is)) + &
+            rho_ij(1:m%np) = real(psi(1:m%np, i, is))*real(psi(1:m%np, j, is)) + &
                 aimag(psi(1:m%np, i, is))*aimag(psi(1:m%np, j, is))
-            call hartree_solve(hartr, m, pot_r, rho_ij(1:m%np, 1:1))
+            call poisson_solve(m, pot_r, rho_ij)
             ! and now the imaginary part
-            rho_ij(1:m%np, 1) = real(psi(1:m%np, i, is))*aimag(psi(1:m%np, j, is)) - &
+            rho_ij(1:m%np) = real(psi(1:m%np, i, is))*aimag(psi(1:m%np, j, is)) - &
                 aimag(psi(1:m%np, i, is))*real(psi(1:m%np, j, is))
-            call hartree_solve(hartr, m, pot_i, rho_ij(1:m%np, 1:1))
+            call poisson_solve(m, pot_i, rho_ij)
             deallocate(rho_ij)
             do k=1, m%np
               u_xc(k, i) = u_xc(k, i) - occ(j,is)*socc*real((pot_r(k) + M_zI*pot_i(k))*  &

@@ -15,26 +15,27 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine hartree1D_solve(h, m, pot, dist)
-  type(hartree_type), intent(inout) :: h
+subroutine poisson1D_solve(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:, :), intent(IN) :: dist
+  real(r8), intent(out) :: pot(m%np)
+  real(r8), intent(in)  :: rho(m%np)
 
   integer  :: i, j
   real(r8) :: x, y
 
-  call push_sub('hartree1D_solve')
+  ASSERT(poisson_solver == -1)
 
-  do i=1, m%np
-     pot(i) = 0.0_r8
-     call mesh_x(m, i, x)
-     do j=1, m%np
-        call mesh_x(m, j, y)
-        pot(i) = pot(i) + sum(dist(j, :))/sqrt(1.0_r8 + (x-y)**2)
-     enddo
-     pot(i) = pot(i)*m%vol_pp
-  enddo
+  call push_sub('poisson1D_solve')
+
+  pot = M_ZERO
+  do i = 1, m%np
+    call mesh_x(m, i, x)
+    do j=1, m%np
+      call mesh_x(m, j, y)
+      pot(i) = pot(i) + rho(j)/sqrt(1.0_r8 + (x-y)**2)
+    end do
+    pot(i) = pot(i)*m%vol_pp
+  end do
 
   call pop_sub()
-end subroutine hartree1D_solve
+end subroutine poisson1D_solve

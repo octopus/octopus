@@ -15,30 +15,31 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine hartree2D_solve(h, m, pot, dist)
-  type(hartree_type), intent(inout) :: h
+subroutine poisson2D_solve(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), dimension(:), intent(inout) :: pot
-  real(r8), dimension(:, :), intent(IN) :: dist
+  real(r8), intent(out) :: pot(m%np)
+  real(r8), intent(in)  :: rho(m%np)
 
   integer  :: i, ip, j, jp
   real(r8) :: x(2), y(2)
 
-  call push_sub('hartree2D_solve')
+  ASSERT(poisson_solver == -2)
+  
+  call push_sub('poisson2D_solve')
 
   pot = M_ZERO
   do i = 1, m%np
     call mesh_xyz(m, i, x)
     do j = 1, m%np
       if(i == j) then
-        pot(i) = pot(i) + M_TWO*sqrt(M_PI)*sum(dist(i, :))/m%h(1)
+        pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)
       else
         call mesh_xyz(m, j, y)
-        pot(i) = pot(i) + sum(dist(j, :))/sqrt(sum((x-y)**2))
+        pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))
       end if
     end do
     pot(i) = pot(i)*m%vol_pp
   end do
 
   call pop_sub()
-end subroutine hartree2D_solve
+end subroutine poisson2D_solve

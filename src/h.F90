@@ -28,7 +28,7 @@ use units
 use output
 use system
 use specie
-use hartree
+use poisson
 use xc
 use lasers
 
@@ -60,8 +60,6 @@ type hamiltonian_type
   integer :: classic_pot
   real(r8), pointer :: Vclassic(:)! potential created by classic point charges
 
-  ! hartree potential structure
-  type(hartree_type) :: hart
   type(xc_type) :: xc
 
 #ifdef HAVE_FFT
@@ -194,7 +192,7 @@ subroutine hamiltonian_init(h, sys)
     call write_info(1)
   else
     ! initilize hartree and xc modules
-    call hartree_init(h%hart, sys%m)
+    call poisson_init(sys%m)
     call xc_init(h%xc, sys%nlcc)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
@@ -285,7 +283,7 @@ subroutine hamiltonian_end(h, sys)
   end if
 
   if(.not.h%ip_app) then
-    call hartree_end(h%hart)
+    call poisson_end()
     call xc_end(h%xc)
   end if
 

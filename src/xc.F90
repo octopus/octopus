@@ -21,7 +21,7 @@ module xc
 use oct_parser
 use math
 use mesh_function
-use hartree
+use poisson
 use states
 use vxc
 

@@ -18,19 +18,15 @@
 #include "config_F90.h"
 
 module linear
-  use global
-  use io
-  use mesh
-  use hartree
+  use poisson
   use states
 
   implicit none
 
 contains
-  subroutine calc_petersilka(type, st, m, hart, n_occ, n_unocc, flags, dir, fname)
+  subroutine calc_petersilka(type, st, m, n_occ, n_unocc, flags, dir, fname)
     type(states_type), intent(IN) :: st
     type(mesh_type), intent(inout) :: m
-    type(hartree_type), intent(inout) :: hart
     integer, intent(IN) :: type, n_occ, n_unocc, flags(32)
     character(len=*), intent(IN) :: dir, fname
 
@@ -179,21 +175,21 @@ contains
     
       integer :: ik
       real(r8) :: fxc
-      real(r8), allocatable :: rho_i(:,:), rho_j(:,:), pot(:)
-      allocate(rho_i(m%np, 1), rho_j(m%np, 1), pot(m%np))
+      real(r8), allocatable :: rho_i(:), rho_j(:), pot(:)
+      allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
     
-      rho_i(:, 1) =  st%R_FUNC(psi) (1:m%np, 1, i, 1) * st%R_FUNC(psi) (1:m%np, 1, a, 1)
-      rho_j(:, 1) =  st%R_FUNC(psi) (1:m%np, 1, j, 1) * st%R_FUNC(psi) (1:m%np, 1, b, 1)
+      rho_i(:) =  st%R_FUNC(psi) (1:m%np, 1, i, 1) * st%R_FUNC(psi) (1:m%np, 1, a, 1)
+      rho_j(:) =  st%R_FUNC(psi) (1:m%np, 1, j, 1) * st%R_FUNC(psi) (1:m%np, 1, b, 1)
     
-     !  first the Hartree part (only works for real wfs...)
+      !  first the Hartree part (only works for real wfs...)
       pot = 0._r8
-      call hartree_solve(hart, m, pot, rho_j(:, 1:1))
-      K_term = sum(rho_i(:,1)*pot(:))*m%vol_pp
+      call poisson_solve(m, pot, rho_j)
+      K_term = sum(rho_i(:)*pot(:))*m%vol_pp
       
       ! now we have fxc
       do ik = 1, m%np
         call fxc_LDA(st%rho(ik, 1), fxc)
-        K_term = K_term + rho_i(ik, 1)*rho_j(ik, 1)*fxc*m%vol_pp
+        K_term = K_term + rho_i(ik)*rho_j(ik)*fxc*m%vol_pp
       end do
       
       deallocate(rho_i, rho_j, pot)
