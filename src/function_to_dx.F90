@@ -17,7 +17,7 @@
 
 #include "config_F90.h"
 
-program strength_function
+program function_to_dx
   use global
   use liboct
   use states
@@ -101,4 +101,4 @@ program strength_function
   endif
 
   stop  
-end program strength_function
+end program function_to_dx
