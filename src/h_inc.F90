@@ -195,6 +195,10 @@ subroutine X(kinetic) (h, m, f_der, psi, hpsi, ik)
     call lalg_scal(m%np, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
   end if
 
+  if (h%em_app) then
+    call lalg_scal(m%np, h%d%dim, R_TOTYPE(M_ONE/h%m_ratio), Hpsi)
+  end if
+
 
   call pop_sub()
 end subroutine X(kinetic)
@@ -367,6 +371,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   integer :: idim
+  R_TYPE, allocatable :: lhpsi(:,:)
 
   call push_sub('vlpsi')
 
@@ -387,18 +392,28 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   end select
 
   if (associated(h%ep%b)) then
+    allocate(lhpsi(m%np, h%d%dim))
     select case (h%d%ispin)
     case (UNPOLARIZED)
     case (SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(:, 1) = hpsi(:, 1) - M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
+        lhpsi(:, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
+
+        hpsi(:, 1) = hpsi(:, 1) 
       else
-        hpsi(:, 1) = hpsi(:, 1) + M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
+        lhpsi(:, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
+
+        hpsi(:, 1) = hpsi(:, 1) 
       end if
     case (SPINORS)
-      hpsi(:, 1) = M_HALF/P_C*( h%ep%b(3)*psi(:, 1) + (h%ep%b(1) - M_zI*h%ep%b(2))*psi(:, 2))
-      hpsi(:, 2) = M_HALF/P_C*(-h%ep%b(3)*psi(:, 2) + (h%ep%b(1) + M_zI*h%ep%b(2))*psi(:, 1))
+      lhpsi(:, 1) = M_HALF/P_C*( h%ep%b(3)*psi(:, 1) + (h%ep%b(1) - M_zI*h%ep%b(2))*psi(:, 2))
+      lhpsi(:, 2) = M_HALF/P_C*(-h%ep%b(3)*psi(:, 2) + (h%ep%b(1) + M_zI*h%ep%b(2))*psi(:, 1))
     end select
+    if (h%em_app) then
+      call lalg_scal(m%np, h%d%dim, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi)
+    end if
+    hpsi = hpsi + lhpsi
+    deallocate(lhpsi)
   end if
 
   call pop_sub()
@@ -507,6 +522,9 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
     end do
     call poisson_solve(m, f_der, vhartree, rho_aux) ! solve the poisson equation
     deallocate(rho_aux)
+  end if
+  if (h%em_app) then
+    call lalg_scal(m%np, M_ONE/h%e_ratio, vhartree)
   end if
   
   h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)

@@ -88,6 +88,13 @@ type hamiltonian_type
 
   ! Kinetic Cutoff
   FLOAT :: cutoff
+
+  !Effective-mass approximation
+  logical :: em_app
+  FLOAT :: m_ratio  !(electron effective-mass)/(electron mass)
+  FLOAT :: g_ratio   !(effective gyromagnetic ratio)/(gyromagnetic ratio)
+  FLOAT :: e_ratio   !(effective dielectric constant)/(dielectric constant)
+
 end type hamiltonian_type
 
 integer, public, parameter :: NOREL      = 0, &
@@ -177,6 +184,17 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
 
     call xc_init(h%xc, geo%nlcc, states_dim%spin_channels)
     if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(h%xc, stdout)
+  end if
+
+  !Are we going to use the effective-mass model?
+  call loct_parse_logical("EffectiveMassModel", .false., h%em_app)
+  if (h%em_app) then
+    !Get the ratios
+    call loct_parse_float("ElectronMassRatio",    CNST(0.067), h%m_ratio)
+    call loct_parse_float("GyromagneticRatio",    CNST(0.44),   h%g_ratio)
+    call loct_parse_float("DielectricConstRatio", CNST(12.4),   h%e_ratio)
+  else
+    h%m_ratio = M_ZERO; h%g_ratio = M_ZERO; h%e_ratio = M_ZERO
   end if
 
   ! gauge
