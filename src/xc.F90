@@ -74,7 +74,9 @@ type xc_oep_type
   integer          :: eigen_n
   integer, pointer :: eigen_type(:), eigen_index(:)
   FLOAT            :: socc, sfact
-  FLOAT,   pointer :: vxc(:), lxc(:,:), uxc_bar(:)
+  FLOAT,   pointer :: vxc(:), uxc_bar(:)
+  FLOAT,   pointer :: dlxc(:, :)
+  CMPLX,   pointer :: zlxc(:, :)
 end type xc_oep_type
 
 FLOAT, parameter :: small     = CNST(1.0e-5)
@@ -209,8 +211,8 @@ contains
   ! A couple of auxiliary functions for oep
   ! -----------------------------------------------------------
   subroutine xc_oep_SpinFactor(oep, nspin)
-    type(xc_oep_type), intent(out) :: oep
-    integer,           intent(in)  :: nspin
+    type(xc_oep_type), intent(inout) :: oep
+    integer,           intent(in)    :: nspin
     
     select case(nspin)
     case(1) ! we need to correct or the spin occupancies
@@ -228,9 +230,9 @@ contains
 
   ! -----------------------------------------------------------
   subroutine xc_oep_AnalizeEigen(oep, st, is)
-    type(xc_oep_type), intent(out) :: oep
-    type(states_type), intent(in)  :: st
-    integer,           intent(in)  :: is
+    type(xc_oep_type), intent(inout) :: oep
+    type(states_type), intent(in)    :: st
+    integer,           intent(in)    :: is
     
     integer  :: i, ierr, k
     FLOAT :: max_eigen

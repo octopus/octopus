@@ -54,7 +54,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
-      oep%lxc(:, i) = oep%lxc(:, i) - &
+      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - &
          vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))      
       
       ! calculate the Hartree contribution using poissons equation
@@ -64,8 +64,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
          sum(vxc2(:, 2) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
 
-      oep%lxc(:, i) = oep%lxc(:, i) - &
-         vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
+      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
     end if
   end do
 

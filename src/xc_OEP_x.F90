@@ -43,10 +43,10 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
       if(i.ne.j) r = M_TWO
       lx(:) = lx(:) - r*oep%socc*st%occ(j, is)*F_ij(:)*st%dpsi(:, 1, j, is)
 
-      oep%lxc(:, i) = oep%lxc(:, i) - &
+      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - &
          oep%socc*st%occ(j, is)*st%dpsi(:, 1, j, is)*F_ij(:)
       if(i.ne.j) then
-        oep%lxc(:, j) = oep%lxc(:, j) - &
+        oep%X(lxc)(:, j) = oep%X(lxc)(:, j) - &
            oep%socc*st%occ(i, is)*st%dpsi(:, 1, i, is)*R_CONJ(F_ij(:))
       end if
     end do

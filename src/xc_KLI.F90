@@ -45,7 +45,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
     rho_sigma = d
   endif
   do i = 1, m%np
-     d(i)   = oep%socc * sum(st%occ(:, is)*R_REAL(oep%lxc(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
+     d(i)   = oep%socc * sum(st%occ(:, is)*R_REAL(oep%X(lxc)(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
   enddo
   if(st%st_end - st%st_start + 1 < st%nst) then
     call mpi_allreduce(d(1), oep%vxc(1), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
@@ -57,7 +57,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   do i = 1, m%np
     rho_sigma(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
     oep%vxc(i)   = oep%socc* &
-       sum(st%occ(:, is)*R_REAL(oep%lxc(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
+       sum(st%occ(:, is)*R_REAL(oep%X(lxc)(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
   enddo
 #endif
 

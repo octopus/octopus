@@ -51,7 +51,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
   ! initialize oep structure
   allocate(oep%eigen_type(st%nst))
   allocate(oep%eigen_index(st%nst))
-  allocate(oep%lxc(m%np, st%st_start:st%st_end))
+  allocate(oep%X(lxc)(m%np, st%st_start:st%st_end))
   allocate(oep%uxc_bar(st%nst))
   allocate(oep%vxc(m%np))
   
@@ -61,7 +61,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
 
   ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
-    oep%lxc = M_ZERO
+    oep%X(lxc) = M_ZERO
 
     ! get lxc
     functl_loop: do ixc = 1, 2
@@ -85,7 +85,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%lxc(:, ist))*m%vol_pp(:))
+      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%X(lxc)(:, ist))*m%vol_pp(:))
     end do
 #if defined(HAVE_MPI)
     if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
@@ -108,7 +108,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
 
-  deallocate(oep%eigen_type, oep%eigen_index, oep%vxc, oep%lxc, oep%uxc_bar)
+  deallocate(oep%eigen_type, oep%eigen_index, oep%vxc, oep%X(lxc), oep%uxc_bar)
   call pop_sub()
 end subroutine X(h_xc_OEP)
 
@@ -139,7 +139,7 @@ subroutine X(h_xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
     do ist = 1, st%nst
       ! evaluate right-hand side
       vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
-      b(:) = (oep%vxc(:)*R_CONJ(st%X(psi)(:, 1, ist, is))  - oep%lxc(:, ist))  &
+      b(:) = (oep%vxc(:)*R_CONJ(st%X(psi)(:, 1, ist, is))  - oep%X(lxc)(:, ist))  &
            - (vxc_bar - oep%uxc_bar(ist))*R_CONJ(st%X(psi)(:, 1, ist, is))
       
       ! initialize psi to something
