@@ -18,24 +18,45 @@
 subroutine poisson3D_init(m)
   type(mesh_type), intent(inout) :: m
 
-  ASSERT(poisson_solver>=1.or.poisson_solver<=3)
+  FLOAT :: gpar,gperp,gx,gz,r_c
+
+  ASSERT(poisson_solver >= 0 .or. poisson_solver <= 4)
 
   select case(poisson_solver)
-  case(0)
-    message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-    call write_info(1)
-    call init_real()
 #ifdef HAVE_FFT
-  case(2)
-    message(1) = 'Info: Using FFTs to solve poisson equation.'
-    call write_info(1)
-    call init_fft()
-  case(3)
-    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
-    call write_info(1)
-    call init_fft()
+    case(FFT_SPH)
+      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation .'
+    case(FFT_CYL)
+      message(1) = 'Info: Using FFTs with cylindrical cutoff to solve Poisson equation .'
+    case(FFT_PLA)
+      message(1) = 'Info: Using FFTs with planar cutoff to solve Poisson equation .'
+    case(FFT_NOCUT)
+      message(1) = 'Info: Using FFTs without cutoff to solve Poisson equation.'
 #endif
+    case(CG)
+      message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
+      call write_info(1)
+      call pop_sub(); return
   end select
+  call write_info(1)
+
+#ifdef HAVE_FFT
+  if (poisson_solver <= 2) then
+    call loct_parse_float('PoissonCutoffRadius',&
+           maxval(m%l(:)*m%h(:))/units_inp%length%factor , r_c)
+    r_c = r_c*units_inp%length%factor
+    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+                        trim(units_out%length%abbrev), '] = ',       &
+                        r_c/units_out%length%factor
+    call write_info(1)
+    if ( r_c > maxval(m%l(:)*m%h(:)) ) then
+      message(1) = 'Poisson cutoff radius is larger than cell size.'
+      message(2) = 'You can see electrons in next cell(s).'
+      call write_warning(2)
+    end if
+  end if
+  if (poisson_solver <= 3) call init_fft()
+#endif
 
   call pop_sub()
 
@@ -54,11 +75,11 @@ contains
 #ifdef HAVE_FFT
   subroutine init_fft()
     integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: r_0, temp(3), vec
+    FLOAT :: temp(3), vec
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(m, db)                 ! get dimensions of the double box
-    if(poisson_solver == 3) db(:) = maxval(db)
+    if (poisson_solver == FFT_SPH) db(:) = maxval(db)
 
     call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
     call dcf_fft_init(fft_cf)   ! the ffts
@@ -68,7 +89,6 @@ contains
     allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
     fft_Coulb_FS = M_ZERO
 
-    r_0 = maxval(db(:)*m%h(:))/M_TWO
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
       
     do iz = 1, db(3)
@@ -78,20 +98,30 @@ contains
         do ix = 1, fft_cf%nx
           ixx(1) = pad_feq(ix, db(1), .true.)
 
-          vec = sum((temp(:)*ixx(:))**2) 
-          if(vec.ne.M_ZERO) then
-            if(poisson_solver==2) then
-              fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI / vec
+           vec = sum((temp(:)*ixx(:))**2)
+           if(vec /= M_ZERO) then
+             select case(poisson_solver)
+               case(FFT_SPH)
+                 fft_Coulb_FS(ix, iy, iz) = cutoff0(sqrt(vec)*r_c)/vec
+               case(FFT_CYL)
+                 gx = abs(temp(1)*ixx(1))
+                 gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
+                 fft_Coulb_FS(ix, iy, iz) = cutoff1(gx*r_c,gperp*r_c)/vec
+               case(FFT_PLA)
+                 gz = abs(temp(3)*ixx(3))
+                 gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
+                 fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar*r_c,gz*r_c)/vec
+               case(FFT_NOCUT)
+                 fft_Coulb_FS(ix, iy, iz) = M_ONE/vec
+              end select               
             else
-              fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_Pi*(M_ONE - cos(sqrt(vec)*r_0)) / vec 
+              select case(poisson_solver)
+              case(FFT_SPH)
+                fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+              case (FFT_CYL,FFT_PLA,FFT_NOCUT)
+                fft_Coulb_FS(ix, iy, iz) = M_ZERO
+              end select
             endif
-          else
-            if(poisson_solver==2) then
-              fft_Coulb_FS(ix, iy, iz) = M_ZERO
-            else
-              fft_Coulb_FS(ix, iy, iz) = M_TWO*M_Pi*r_0**2 
-            endif
-          end if
         end do
       end do
     end do
