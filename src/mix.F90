@@ -49,9 +49,9 @@ end type mix_type
 contains
 
 ! ---------------------------------------------------------
-subroutine mix_init(smix, dim, np, nspin, def_)
+subroutine mix_init(smix, d1, d2, d3, def_)
   type(mix_type),    intent(out) :: smix
-  integer,           intent(in)  :: dim, np, nspin
+  integer,           intent(in)  :: d1, d2, d3
   integer, optional, intent(in)  :: def_
 
   integer :: def
@@ -95,8 +95,8 @@ subroutine mix_init(smix, dim, np, nspin, def_)
     write(message(3), '(a)') '      Good luck!'
     call write_info(3)
 
-    allocate(smix%df(dim, np, nspin, smix%ns + 1), smix%vin_old(dim, np, nspin), &
-             smix%dv(dim, np, nspin, smix%ns + 1), smix%f_old  (dim, np, nspin)   )
+    allocate(smix%df(d1, d2, d3, smix%ns + 1), smix%vin_old(d1, d2, d3), &
+             smix%dv(d1, d2, d3, smix%ns + 1), smix%f_old  (d1, d2, d3)   )
     smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
   case (MIX_BROYDEN)
@@ -105,8 +105,8 @@ subroutine mix_init(smix, dim, np, nspin, def_)
     write(message(3), '(a)') '      Good luck!'
     call write_info(3)
 
-    allocate(smix%df(dim, np, nspin, smix%ns), smix%vin_old(dim, np, nspin), &
-             smix%dv(dim, np, nspin, smix%ns), smix%f_old  (dim, np, nspin)   )
+    allocate(smix%df(d1, d2, d3, smix%ns), smix%vin_old(d1, d2, d3), &
+             smix%dv(d1, d2, d3, smix%ns), smix%f_old  (d1, d2, d3)   )
     smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
   end select
@@ -132,9 +132,9 @@ end subroutine mix_end
 
 
 ! ---------------------------------------------------------
-subroutine mixing(smix, iter, dim, np, nspin, vin, vout, vnew)
+subroutine mixing(smix, iter, d1, d2, d3, vin, vout, vnew)
   type(mix_type), intent(inout) :: smix
-  integer,        intent(in)    :: iter, dim, np, nspin
+  integer,        intent(in)    :: iter, d1, d2, d3
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
 
@@ -147,13 +147,13 @@ subroutine mixing(smix, iter, dim, np, nspin, vin, vout, vnew)
 
   select case (smix%type_of_mixing)
   case (MIX_LINEAR)
-    call mixing_linear(smix%alpha, np, vin, vout, vnew)
+    call mixing_linear(smix%alpha, d1, vin, vout, vnew)
 
   case (MIX_BROYDEN)
-    call mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
+    call mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
 
   case (MIX_GRPULAY)
-    call mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
+    call mixing_grpulay(smix, d1, d2, d3, vin, vout, vnew, iter)
 
   end select
 
@@ -162,9 +162,9 @@ end subroutine mixing
 
 
 ! ---------------------------------------------------------
-subroutine mixing_linear(alpha, np, vin, vout, vnew)
+subroutine mixing_linear(alpha, d1, vin, vout, vnew)
   FLOAT,   intent(in)  :: alpha
-  integer, intent(in)  :: np
+  integer, intent(in)  :: d1
   FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :)
   FLOAT,   intent(out) :: vnew(:, :, :)
 
@@ -174,9 +174,9 @@ end subroutine mixing_linear
 
 
 ! ---------------------------------------------------------
-subroutine mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
+subroutine mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
-  integer,        intent(in)    :: dim, np, nspin, iter
+  integer,        intent(in)    :: d1, d2, d3, iter
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
 
@@ -184,27 +184,27 @@ subroutine mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
   FLOAT :: gamma
   FLOAT, allocatable :: f(:, :, :)
 
-  allocate(f(dim, np, nspin))
+  allocate(f(d1, d2, d3))
 
-  f(1:dim, 1:np, 1:nspin) = vout(1:dim, 1:np, 1:nspin) - vin(1:dim, 1:np, 1:nspin)
+  f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
   if(iter > 1) then
     ! Store df and dv from current iteration
     ipos = mod(smix%last_ipos, smix%ns) + 1
 
-    call lalg_copy(dim, np, nspin, f(:, :, :), smix%df(:, :, :, ipos))
-    call lalg_copy(dim, np, nspin, vin(:, :, :), smix%dv(:, :, :, ipos))
-    call lalg_axpy(dim, np, nspin, -M_ONE, smix%f_old(:, :, :),   smix%df(:, :, :, ipos))
-    call lalg_axpy(dim, np, nspin, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, f(:, :, :), smix%df(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, vin(:, :, :), smix%dv(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%f_old(:, :, :),   smix%df(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
 
-    gamma = sqrt(sum(smix%df(1:dim, 1:np, 1:nspin, ipos)*smix%df(1:dim, 1:np, 1:nspin, ipos)))
+    gamma = sqrt(sum(smix%df(1:d1, 1:d2, 1:d3, ipos)*smix%df(1:d1, 1:d2, 1:d3, ipos)))
 
     if(gamma > CNST(1e-8)) then
       gamma = M_ONE/gamma
     else
       gamma = M_ONE
     endif
-    call lalg_scal(dim, np, nspin, gamma, smix%df(:, :, :, ipos))
-    call lalg_scal(dim, np, nspin, gamma, smix%dv(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, gamma, smix%df(:, :, :, ipos))
+    call lalg_scal(d1, d2, d3, gamma, smix%dv(:, :, :, ipos))
 
     smix%last_ipos = ipos
   end if
@@ -215,9 +215,9 @@ subroutine mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
 
   ! extrapolate new vector
   iter_used = min(iter - 1, smix%ns)
-  call broyden_extrapolation(smix%alpha, dim, np, nspin, vin, vout, vnew, iter_used, f, &
-     smix%df(1:dim, 1:np, 1:nspin, 1:iter_used), &
-     smix%dv(1:dim, 1:np, 1:nspin, 1:iter_used))
+  call broyden_extrapolation(smix%alpha, d1, d2, d3, vin, vout, vnew, iter_used, f, &
+     smix%df(1:d1, 1:d2, 1:d3, 1:iter_used), &
+     smix%dv(1:d1, 1:d2, 1:d3, 1:iter_used))
 
   deallocate(f)
 
@@ -225,9 +225,9 @@ end subroutine mixing_broyden
 
 
 ! ---------------------------------------------------------
-subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_used, f, df, dv)
+subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vout, vnew, iter_used, f, df, dv)
   FLOAT,   intent(in)  :: alpha
-  integer, intent(in)  :: dim, np, nspin, iter_used
+  integer, intent(in)  :: d1, d2, d3, iter_used
   FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :)
   FLOAT,   intent(in)  :: df(:, :, :, :), dv(:, :, :, :)
   FLOAT,   intent(out) :: vnew(:, :, :)
@@ -235,12 +235,12 @@ subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_us
 
   FLOAT, parameter :: w0 = CNST(0.01)
 
-  integer  :: i, j, ispin, idim
+  integer  :: i, j, ispin, id2
   FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used)
 
   if (iter_used == 0) then
     ! linear mixing...
-    vnew(1:dim, 1:np, 1:nspin) = vin(1:dim, 1:np, 1:nspin) + alpha*f(1:dim, 1:np, 1:nspin)
+    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
     return
   end if
 
@@ -250,7 +250,7 @@ subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_us
   beta = M_ZERO
   do i = 1, iter_used
     do j = i + 1, iter_used
-      beta(i, j) = w(i)*w(j)*sum(df(1:dim, 1:np, 1:nspin, j)*df(1:dim, 1:np, 1:nspin, i))
+      beta(i, j) = w(i)*w(j)*sum(df(1:d1, 1:d2, 1:d3, j)*df(1:d1, 1:d2, 1:d3, i))
       beta(j, i) = beta(i, j)
     end do
     beta(i, i) = w0**2 + w(i)**2
@@ -260,12 +260,12 @@ subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_us
   call lalg_invert(iter_used, beta)
 
   do i = 1, iter_used
-    work(i) = sum(df(1:dim, 1:np, 1:nspin, i)*f(1:dim, 1:np, 1:nspin)) ! dot_product(df(:, :, :, i), f)
+    work(i) = sum(df(1:d1, 1:d2, 1:d3, i)*f(1:d1, 1:d2, 1:d3)) ! dot_product(df(:, :, :, i), f)
   end do
 
 
   ! linear mixing term
-  vnew(1:dim, 1:np, 1:nspin) = vin(1:dim, 1:np, 1:nspin) + alpha*f(1:dim, 1:np, 1:nspin)
+  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + alpha*f(1:d1, 1:d2, 1:d3)
 
   ! other terms
   do i = 1, iter_used
@@ -273,8 +273,8 @@ subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_us
     do j = 1, iter_used
       gamma = gamma + beta(j, i)*w(j)*work(j)
     end do
-    vnew(1:dim, 1:np, 1:nspin) = vnew(1:dim, 1:np, 1:nspin) - w(i)*gamma*(alpha*df(1:dim, 1:np, 1:nspin, i) + &
-                                                                          dv(1:dim, 1:np, 1:nspin, i))
+    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - w(i)*gamma*(alpha*df(1:d1, 1:d2, 1:d3, i) + &
+                                                                          dv(1:d1, 1:d2, 1:d3, i))
   end do
 
 end subroutine broyden_extrapolation
@@ -283,9 +283,9 @@ end subroutine broyden_extrapolation
 ! ---------------------------------------------------------
 ! Guaranteed-reduction Pulay
 ! ---------------------------------------------------------
-subroutine mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
+subroutine mixing_grpulay(smix, d1, d2, d3, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
-  integer,        intent(in)    :: dim, np, nspin
+  integer,        intent(in)    :: d2, d1, d3
   integer,        intent(in)    :: iter
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
@@ -293,7 +293,7 @@ subroutine mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
   integer :: ipos, iter_used, i
   FLOAT, allocatable :: f(:, :, :)
 
-  allocate(f(dim, np, nspin))
+  allocate(f(d1, d2, d3))
   f = vout - vin
 
   ! we only extrapolate a new vector every two iterations
@@ -302,10 +302,10 @@ subroutine mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
     ! Store df and dv from current iteration
     if (iter > 1) then
       ipos = smix%last_ipos
-      call lalg_copy(dim, np, nspin, f(:, :, :), smix%df(:, :, :, ipos))
-      call lalg_copy(dim, np, nspin, vin(:, :, :), smix%dv(:, :, :, ipos))
-      call lalg_axpy(dim, np, nspin, -M_ONE, smix%f_old(:, :, :), smix%df(:, :, :, ipos))
-      call lalg_axpy(dim, np, nspin, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
+      call lalg_copy(d1, d2, d3, f(:, :, :), smix%df(:, :, :, ipos))
+      call lalg_copy(d1, d2, d3, vin(:, :, :), smix%dv(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, -M_ONE, smix%f_old(:, :, :), smix%df(:, :, :, ipos))
+      call lalg_axpy(d1, d2, d3, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
     end if
 
     ! Store residual and vin for next extrapolation
@@ -318,18 +318,18 @@ subroutine mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
     ! Store df and dv from current iteration in arrays df and dv so that we can use them
     ! for the extrapolation. Next iterations they will be lost.
     ipos = mod(smix%last_ipos, smix%ns + 1) + 1
-    call lalg_copy(dim, np, nspin, f(:, :, :), smix%df(:, :, :, ipos))
-    call lalg_copy(dim, np, nspin, vin(:, :, :), smix%dv(:, :, :, ipos))
-    call lalg_axpy(dim, np, nspin, -M_ONE, smix%f_old(:, :, :), smix%df(:, :, :, ipos))
-    call lalg_axpy(dim, np, nspin, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, f(:, :, :), smix%df(:, :, :, ipos))
+    call lalg_copy(d1, d2, d3, vin(:, :, :), smix%dv(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%f_old(:, :, :), smix%df(:, :, :, ipos))
+    call lalg_axpy(d1, d2, d3, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
 
     smix%last_ipos = ipos
 
     ! extrapotate new vector
     iter_used = min(iter/2, smix%ns + 1)
-    call pulay_extrapolation(dim, np, nspin, vin, vout, vnew, iter_used, f, &
-                                 smix%df(1:dim, 1:np, 1:nspin, 1:iter_used), &
-                                 smix%dv(1:dim, 1:np, 1:nspin, 1:iter_used))
+    call pulay_extrapolation(d1, d2, d3, vin, vout, vnew, iter_used, f, &
+                                 smix%df(1:d1, 1:d2, 1:d3, 1:iter_used), &
+                                 smix%dv(1:d1, 1:d2, 1:d3, 1:iter_used))
   end select
 
   deallocate(f)
@@ -337,8 +337,8 @@ end subroutine mixing_grpulay
 
 
 ! ---------------------------------------------------------
-subroutine pulay_extrapolation(dim, np, nspin, vin, vout, vnew, iter_used, f, df, dv)
-  integer, intent(in)   :: dim, np, nspin, iter_used 
+subroutine pulay_extrapolation(d1, d2, d3, vin, vout, vnew, iter_used, f, df, dv)
+  integer, intent(in)   :: d1, d2, d3, iter_used 
   FLOAT, intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)
   FLOAT, intent(out) :: vnew(:, :, :)
 
