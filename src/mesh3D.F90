@@ -33,7 +33,7 @@ subroutine mesh_init(m, natoms, atom)
   end if
 
   do i = 1, j
-    m%fft_n2(i) = 2*nint(m%fft_alpha*m%nr(i)) + 1
+    m%fft_n2(i) = 2*nint(m%fft_alpha*maxval(m%nr)) + 1
     call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
   end do
   do i = j+1, 3 ! for periodic systems

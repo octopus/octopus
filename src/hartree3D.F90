@@ -97,7 +97,7 @@ subroutine hartree_init(h, m)
 
     l = m%fft_n2(1)*m%h(1)
     r_0 = l/2.0_r8
-    temp(1) = (2.0_r8*M_PI/l)**2
+    temp(1) = (2.0_r8*M_PI/l)
       
     do ix = 1, m%hfft_n2
       ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
@@ -105,8 +105,7 @@ subroutine hartree_init(h, m)
         ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
         do iz = 1, m%fft_n2(1)
           ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
-          vec = temp(1)*sum(real(ixx(:)**2, r8))
-          
+          vec = temp(1)*sqrt(real(ixx(1)**2 + ixx(2)**2 + ixx(3)**2, r8))
           if(vec.ne.0.0_r8) then
             h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
           else
@@ -311,7 +310,7 @@ subroutine hartree_fft(h, m, pot, dist)
   sub_name = 'hartree_fft'; call push_sub()
 
   if(h%solver == 3) then
-    s(:) = m%hfft_n2
+    s(:) = m%fft_n2(1)
   else
     s(:) = m%fft_n2(:)
   end if

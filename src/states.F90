@@ -414,9 +414,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   
 end subroutine states_write_eigenvalues
 
-#ifdef POLYMERS
 #include "states_kpoints.F90"
-#endif
 
 #include "undef.F90"
 #include "real.F90"
