@@ -27,9 +27,6 @@ module poisson
   use fft
   use cube_function
 #endif
-!!!!WARNING
-  use mesh_function
-!!!!END OF WARNING
   use functions
   use math
   use poisson_corrections
@@ -48,7 +45,9 @@ module poisson
   type(dcf) :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
 
-  integer, parameter :: FFT_SPH       = 0, &
+  integer, parameter :: DIRECT_SUM_1D = -1,&
+                        DIRECT_SUM_2D = -2,&
+                        FFT_SPH       = 0, &
                         FFT_CYL       = 1, &
                         FFT_PLA       = 2, &
                         FFT_NOCUT     = 3, &
@@ -69,12 +68,50 @@ subroutine poisson_init(m)
   
   call push_sub('poisson_init')
   
-  if(conf%dim == 1 .or. conf%dim == 2) then
+
+
+
+  dimensions: select case(conf%dim)
+
+
+  case(1)   !!! 1D PROBLEMS
+
     poisson_solver = -conf%dim ! internal type
     message(1) = 'Info: Using direct integration method to solve poisson equation'
     call write_info(1)
-  else
+
+  case(2)   !!! 2D PROBLEMS
+
+#if defined(HAVE_FFT)
+    call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
+    if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
+      write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
+           "' is not a valid PoissonSolver"
+      message(2) = 'PoissonSolver = -1 (direct summation)     | '
+      message(3) = '                 0 (fft spherical cutoff) '
+      call write_fatal(3)
+    endif
+
+#else
+    poisson_solver = -conf%dim ! internal type
+    message(1) = 'Info: Using direct integration method to solve poisson equation'
+    call write_info(1)
+#endif
+
+   if(m%use_curvlinear .and. (poisson_solver .ne. -conf%dim) ) then
+      message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
+      message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
+      call write_fatal(2)
+   endif
+
+   call poisson2D_init(m)
+
+
+  case(3)   !!! 3D PROBLEMS
+
+
 #ifdef HAVE_FFT
+
     call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
     if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
       write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
@@ -114,8 +151,13 @@ subroutine poisson_init(m)
       call write_fatal(2)
     endif
     call poisson3D_init(m)
-  end if
+
+  end select dimensions
+
+
 end subroutine poisson_init
+
+
 
 subroutine poisson_end()
   call push_sub('poisson_end')
@@ -133,6 +175,8 @@ subroutine poisson_end()
   call pop_sub()
   return
 end subroutine poisson_end
+
+
 
 subroutine poisson_solve(m, f_der, pot, rho)
   type(mesh_type), target,  intent(in)    :: m
@@ -169,6 +213,48 @@ subroutine poisson_solve(m, f_der, pot, rho)
 
   call pop_sub()
 end subroutine poisson_solve
+
+#if defined(HAVE_FFT)
+subroutine poisson_fft(m, pot, rho, average_to_zero)
+  type(mesh_type), intent(IN) :: m
+  FLOAT, intent(out) :: pot(:) ! pot(m%np)
+  FLOAT, intent(in)  :: rho(:) ! rho(m%np)
+  logical, intent(in), optional :: average_to_zero
+
+  integer :: k
+  FLOAT :: average
+
+  call push_sub('poisson_fft')
+
+  call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
+  call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
+
+  call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
+  call dcf_RS2FS(fft_cf)             ! Fourier transform
+
+  ! multiply by the FS of the Coulomb interaction
+  ! this works around a bug in Intel ifort 8
+  do k = 1, fft_cf%n(3)
+    fft_cf%FS(:,:,k) = fft_cf%FS(:,:,k)*fft_Coulb_FS(:,:,k)
+  end do
+
+  call dcf_FS2RS(fft_cf)             ! Fourier transform back
+  if(present(average_to_zero)) then
+    if(average_to_zero) then
+       average = cf_surface_average(m, fft_cf)
+       fft_cf%RS = fft_cf%RS - average
+    endif
+  endif
+  call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
+
+  call dcf_free_RS(fft_cf)           ! memory is no longer needed
+  call dcf_free_FS(fft_cf)
+
+  call pop_sub()
+  return
+end subroutine poisson_fft
+#endif
+
 
 #include "poisson1D.F90"
 #include "poisson2D.F90"

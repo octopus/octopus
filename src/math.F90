@@ -36,6 +36,7 @@ module math
             cutoff0, &
             cutoff1, &
             cutoff2, &
+            besselint, &
             dextrapolate, zextrapolate, &
             zgexpv, zgpadm
 
@@ -337,6 +338,26 @@ FLOAT function cutoff2(p, z)
   end if
   
 end function cutoff2
+
+FLOAT function besselint(x) result(y)
+  FLOAT, intent(in) :: x
+  real(8), external :: bessel
+  integer :: k
+  real(8) :: z
+  if(x < CNST(0.2)) then
+     y = CNST(2.0)*M_PI - (M_PI/CNST(6.0))*x**2
+     return
+  endif
+  y = CNST(0.0)
+  k = 1
+  do
+    z = loct_bessel(k, x)/x
+    y = y + z
+    if(abs(z) < CNST(1.0e-9)) exit
+    k = k + 2
+  enddo
+  y = CNST(4.0)*M_PI*y
+end function
 
 !function phaseshift(perdim, ix)
 !  FLOAT, intent(in) ::  perdim, ix(3)

@@ -69,6 +69,12 @@ double FC_FUNC_(oct_bessel, OCT_BESSEL)
   return gsl_sf_bessel_Jn(*n, *x);
 }
 
+double FC_FUNC_(oct_bessel_in, OCT_BESSEL_IN)
+     (int *n, double *x)
+{
+  return gsl_sf_bessel_In(*n, *x);
+}
+
 double FC_FUNC_(oct_bessel_j0, OCT_BESSEL_J0)
      (double *x)
 {
