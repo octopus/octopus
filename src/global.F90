@@ -17,6 +17,7 @@ type conf_type
                      ! > 0   -> warning only
                      ! > 20  -> normal program info
                      ! >= 999 -> debug
+  integer :: dim
 end type conf_type
 
 type mpi_type

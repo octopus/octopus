@@ -20,32 +20,44 @@ end function R_FUNC(mesh_nrm2)
 
 ! Conversion subroutines
 ! they actually add, do not forget it
-subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube)
+subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube, t)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN)    :: f_mesh(m%np)
-  R_TYPE, intent(inout) :: f_cube(m%fft_n, m%fft_n, m%fft_n)
+  R_TYPE, intent(inout) :: f_cube(:,:,:)
+  integer, intent(in), optional :: t
   
-  integer :: i, ix, iy, iz
+  integer :: i, ix, iy, iz, n
+
+  n = m%hfft_n
+  if(present(t)) then
+    if(t == 2) n = m%hfft_n2
+  end if
   
   do i = 1, m%np
-    ix = m%lx(i) + m%fft_n/2 + 1
-    iy = m%Ly(i) + m%fft_n/2 + 1
-    iz = m%Lz(i) + m%fft_n/2 + 1
+    ix = m%lx(i) + n
+    iy = m%Ly(i) + n
+    iz = m%Lz(i) + n
     f_cube(ix, iy, iz) = f_cube(ix, iy, iz) + f_mesh(i)
   end do
 end subroutine R_FUNC(mesh_to_cube)
 
-subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh)
+subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN)    :: f_cube(m%fft_n, m%fft_n, m%fft_n)
   R_TYPE, intent(inout) :: f_mesh(m%np)
+  integer, intent(in), optional :: t
   
-  integer :: i, ix, iy, iz
+  integer :: i, ix, iy, iz, n
+
+  n = m%hfft_n
+  if(present(t)) then
+    if(t == 2) n = m%hfft_n2
+  end if
 
   do i = 1, m%np
-    ix = m%lx(i) + m%fft_n/2 + 1
-    iy = m%Ly(i) + m%fft_n/2 + 1
-    iz = m%Lz(i) + m%fft_n/2 + 1
+    ix = m%lx(i) + n
+    iy = m%Ly(i) + n
+    iz = m%Lz(i) + n
     f_mesh(i) = f_mesh(i) + f_cube(ix, iy, iz) 
   end do
 end subroutine R_FUNC(cube_to_mesh)

@@ -71,6 +71,7 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   if(h%vpsl_space == 1) then
+    call mesh_alloc_ffts(sys%m, 1)
     call specie_fourier_init(sys%nspecies, sys%specie, sys%m)
   end if
 
