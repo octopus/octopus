@@ -243,7 +243,7 @@ contains
     call fftwnd_f77_one(fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
-    call zlalg_scal(fft%n(1), fft%n(2), fft%n(3), &
+    call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
        M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine zfft_backward

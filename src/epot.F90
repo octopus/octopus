@@ -558,7 +558,7 @@ contains
             exit
           enddo
         enddo
-        ep%vnl(ivnl)%so_luv = -M_zI*ep%vnl(ivnl)%so_luv
+        ep%vnl(ivnl)%so_luv(:, :, :) = -M_zI*ep%vnl(ivnl)%so_luv(:, :, :)
       endif
       
       ! and here we calculate the uVu
