@@ -52,6 +52,7 @@ subroutine mesh1D_create(m)!, natoms, atom)
       call write_fatal(2)
   end if    
   m%h(2) = 0.0_r8; m%h(3) = 0.0_r8
+  m%iso = .true. ! This is obvious in 1D...
   m%vol_pp = m%h(1) 
 
   call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)

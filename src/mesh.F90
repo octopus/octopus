@@ -47,6 +47,7 @@ type mesh_type
   integer  :: box_shape ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                         ! 4->parallelpiped (orthonormal, up to now).
   real(r8) :: h(3)      ! the (constant) spacing between the points
+  logical  :: iso
   
   real(r8) :: rsize     ! the radius of the sphere or of the cylinder
   real(r8) :: zsize     ! the length of the cylinder in the z direction

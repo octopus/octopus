@@ -60,11 +60,17 @@ subroutine mesh3D_create(m, natoms, atom)
     call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h(1))
     m%h(1) = m%h(1)*units_inp%length%factor 
     m%h(2) = m%h(1); m%h(3) = m%h(1)
+    m%iso = .true.
   case(PARALLELEPIPED)
     call oct_parse_block_double(C_string('spacing'), 0, 0, m%h(1))
     call oct_parse_block_double(C_string('spacing'), 0, 1, m%h(2))
     call oct_parse_block_double(C_string('spacing'), 0, 2, m%h(3))
     m%h = m%h*units_inp%length%factor
+    if( (m%h(1)==m%h(2)) .and. (m%h(1)==m%h(3)) ) then
+      m%iso = .true.
+    else
+      m%iso = .false.
+    endif
   end select
   m%vol_pp = m%h(1)*m%h(2)*m%h(3)
 
