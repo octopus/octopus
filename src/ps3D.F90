@@ -531,7 +531,8 @@ subroutine get_splines_tm(psf, ps)
     hato = 0.0d0
     nrc = nint(log(ps%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l) * ps%dknrm(l) / psf%rofi(2:nrc)
-    hato(1) = hato(2)    
+    !hato(1) = hato(2)
+    hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
     call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
 
 ! and now the derivatives...

@@ -263,6 +263,7 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV)
   real(r8), intent(out) :: uV, duV(3)
 
   real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
+  real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
 
   r = sqrt(sum(x**2))
   uVr0  = splint(s%ps%kb(l, i), r)
@@ -272,7 +273,22 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV)
   if(r >= r_small) then
     duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
   else
-    duv(:) = 0.0_r8
+    !!! WARNING
+    if(l==1) then
+      duv = 0.0_r8
+      if(lm==-1) then
+        duv(2) = - ylmconst * duvr0
+      elseif(lm==0) then
+        duv(3) =   ylmconst * duvr0
+      elseif(lm==1) then
+        duv(1) = - ylmconst * duvr0
+      endif
+    else
+     duv = 0.0_r8
+    endif
+    ! This was before
+    !duv(:) = 0.0_r8
+    !!!ENDOFWARNING
   endif
 
 end subroutine specie_get_nl_part

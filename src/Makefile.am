@@ -20,7 +20,7 @@ noinst_HEADERS = \
 	eigen_cg1.F90 eigen_cg2.F90 \
 	states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
-	td_init.F90 td_rti.F90 td_rti3.F90\
+	td_init.F90 td_rti.F90 td_rti3.F90 td_write.F90 td_calc.F90\
 	mix_inc.F90 out_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
@@ -80,6 +80,6 @@ h.o: h_inc.F90 h_external_pot.F90 h_forces.F90
 eigen.o: eigen_cg1.F90 eigen_cg2.F90
 states.o: states_inc.F90
 pes.o: pes_rc.F90 pes_mask.F90
-td.o: td_init.F90 td_rti.F90 td_rti3.F90
+td.o: td_init.F90 td_rti.F90 td_rti3.F90 td_write.F90 td_calc.F90
 mix.o: mix_inc.F90
 out.o: out_inc.F90

@@ -123,7 +123,7 @@ contains
 # else
     do idim = 1, dim
       call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), &
-                                     alpha = -1.0_r8/2.0_r8)
+                                     alpha = R_TOTYPE(-1.0_r8/2.0_r8) )
     end do
 #endif
 

@@ -64,13 +64,13 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
-  real(r8), intent(in), optional :: alpha
+  R_TYPE, intent(in), optional :: alpha
 
-  real(r8) :: alp
+  R_TYPE :: alp
 
   sub_name = 'mesh_derivatives'; call push_sub()
   
-  alp = 1._r8
+  alp = R_TOTYPE(1._r8)
   if(present(alpha)) alp = alpha
 
   select case(m%d%space)
@@ -125,7 +125,7 @@ contains
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
 
-        call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(alp/real(n(1)*n(2)*n(3), r8)), fr, 1)
+        call R_FUNC(scal)(n(1)*n(2)*n(3), alp/(n(1)*n(2)*n(3)), fr, 1)
         grad(i, :) = R_TOTYPE(0._r8)
         call R_FUNC(cube_to_mesh) (m, fr, grad(i, :))
       end do
@@ -143,7 +143,7 @@ contains
       call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
 
-      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(alp/real(n(1)*n(2)*n(3), r8)), fr, 1)
+      call R_FUNC(scal)(n(1)*n(2)*n(3), alp/(n(1)*n(2)*n(3)), fr, 1)
       lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
 
