@@ -286,10 +286,18 @@ contains
 
     sub_name = 'td_run_zero_iter'; call push_sub()
 
-    do i = 1, sys%st%nspin
-      td%v_old(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
-    end do
-    td%v_old(:, :, 3) = td%v_old(:, :, 2)
+    select case(sys%st%ispin)
+    case(UNPOLARIZED, SPIN_POLARIZED)
+      do i = 1, sys%st%nspin
+         td%v_old(:, i, 2) = h%vhartree(:) + h%vxc(:, i)
+      enddo
+    case(SPINORS)
+      td%v_old(:, 1, 2) = h%vhartree(:) + h%vxc(:, 1)
+      td%v_old(:, 2, 2) = h%vhartree(:) + h%vxc(:, 2)
+      td%v_old(:, 3, 2) = h%vxc(:, 3)
+      td%v_old(:, 4, 2) = h%vxc(:, 4)
+    end select
+    td%v_old(:, :, 3) = td%v_old(:, :, 1)
 
     ! we now apply the delta(0) impulse to the wf
     print *, td%delta_strength

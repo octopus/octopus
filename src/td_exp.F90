@@ -237,7 +237,7 @@ contains
              ixx(2) = pad_feq(iy, m%fft_n(2), .true.)
              do iz = 1, m%fft_n(3)
                 ixx(3) = pad_feq(iz, m%fft_n(3), .true.)
-                vec = min(10._r8, sum((temp(:)*ixx(:))**2)/2._r8)
+                vec = sum((temp(:)*ixx(:))**2)/M_TWO
                 wf_k(ix, iy, iz) = exp(- M_zI*dt*vec) * wf_k(ix, iy, iz)
              end do
           end do
@@ -321,7 +321,7 @@ contains
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: t, dt
 
-    integer :: j, ik, idim
+    integer :: j, idim
     real(r8) :: r, x(3), las(3)
 
     sub_name = 'local_part'; call push_sub()
