@@ -16,7 +16,7 @@
 !! 02111-1307, USA.
 
 ! Calculates the new density out the wavefunctions and occupations...
-subroutine R_FUNC(calcdens)(st, np, rho, reduce)
+subroutine X(calcdens)(st, np, rho, reduce)
   type(states_type), intent(in) :: st
   integer, intent(in) :: np
   real(r8), intent(out) :: rho(np, st%nspin)
@@ -41,16 +41,16 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
   do ik = 1, st%nik, sp
     do p  = st%st_start, st%st_end
       do i = 1, np
-           rho(i, 1) = rho(i, 1) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
+           rho(i, 1) = rho(i, 1) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 1, p, ik))**2
          select case(st%ispin)
          case(SPIN_POLARIZED)
-           rho(i, 2) = rho(i, 2) + st%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
+           rho(i, 2) = rho(i, 2) + st%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%X(psi)(i, 1, p, ik+1))**2
          case(SPINORS)
-           rho(i, 2) = rho(i, 2) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
+           rho(i, 2) = rho(i, 2) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 2, p, ik))**2
            rho(i, 3) = rho(i, 3) + st%kweights(ik)*st%occ(p, ik)  * &
-                       R_REAL (st%R_FUNC(psi)(i, 1, p, ik) * R_CONJ(st%R_FUNC(psi)(i, 2, p, ik)))
+                       R_REAL (st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
            rho(i, 4) = rho(i, 4) + st%kweights(ik)*st%occ(p, ik)  * &
-                       R_AIMAG(st%R_FUNC(psi)(i, 1, p, ik) * R_CONJ(st%R_FUNC(psi)(i, 2, p, ik)))
+                       R_AIMAG(st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
 
          end select
       end do
@@ -72,7 +72,7 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
 
   call pop_sub()
   return
-end subroutine R_FUNC(calcdens)
+end subroutine X(calcdens)
 
 !!! This subroutine generates a gaussian wave-function in a random
 !!! position in space
@@ -106,7 +106,7 @@ end subroutine X(states_random)
 
 
 ! Orthonormalizes nst orbital in mesh m
-subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
+subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(inout) :: psi(:, :, :)
@@ -124,41 +124,40 @@ subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
 
   do p = stst, nst
     do q = 1, p - 1
-      ss = R_FUNC(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
+      ss = X(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
       do id = 1, dim
-        call R_FUNC(axpy) (m%np, -ss, psi(1, id, q), 1, psi(1, id, p), 1)
+        call X(axpy) (m%np, -ss, psi(1, id, q), 1, psi(1, id, p), 1)
       end do
     enddo
-    nrm2 = R_FUNC(states_nrm2)(m, dim, psi(1:m%np, :, p))
+    nrm2 = X(states_nrm2)(m, dim, psi(1:m%np, :, p))
     ss = R_TOTYPE(1.0_r8/nrm2)
     do id = 1, dim
-      call R_FUNC(scal) (m%np, ss, psi(1, id, p), 1)
+      call X(scal) (m%np, ss, psi(1, id, p), 1)
     end do
   end do
 
   return
-end subroutine R_FUNC(states_gram_schmidt)
+end subroutine X(states_gram_schmidt)
 
-R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
+R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f1, f2
-  R_TYPE :: R_FUNC(states_ddot)
 
   dotp = R_DOT(m%np*dim, f1(1), 1, f2(1), 1)*m%vol_pp
 
-end function R_FUNC(states_dotp)
+end function X(states_dotp)
 
-real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
+real(r8) function X(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f
 
   nrm2 = R_NRM2(m%np*dim, f(1), 1)*sqrt(m%vol_pp)
 
-end function R_FUNC(states_nrm2)
+end function X(states_nrm2)
 
-real(r8) function R_FUNC(states_residue)(m, dim, hf, e, f, res) result(r)
+real(r8) function X(states_residue)(m, dim, hf, e, f, res) result(r)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(:, :) :: hf, f
@@ -167,14 +166,14 @@ real(r8) function R_FUNC(states_residue)(m, dim, hf, e, f, res) result(r)
 
   if(present(res)) then
     res = hf - e*f
-    r = R_FUNC(states_nrm2)(m, dim, res)
+    r = X(states_nrm2)(m, dim, res)
   else
-    r = R_FUNC(states_nrm2)(m, dim, hf - e*f)
+    r = X(states_nrm2)(m, dim, hf - e*f)
   endif
-end function R_FUNC(states_residue)
+end function X(states_residue)
 
 ! TODO use netcdf
-subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
+subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   character(len=*), intent(in) :: filename
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
@@ -203,7 +202,7 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
       do id = 1, st%dim
-        write(iunit) st%R_FUNC(psi)(1:m%np, id, ist, ik)
+        write(iunit) st%X(psi)(1:m%np, id, ist, ik)
       end do
     end do
   end do
@@ -221,9 +220,9 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   call io_close(iunit)
   
   call pop_sub()
-end subroutine R_FUNC(states_write_restart)
+end subroutine X(states_write_restart)
 
-logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
+logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
   character(len=*), intent(in) :: filename
   type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
@@ -269,7 +268,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
     call write_warning(6)
     go to 999 ! one go to does not harm :)
   else
-    st%R_FUNC(psi) = R_TOTYPE(M_ZERO)
+    st%X(psi) = R_TOTYPE(M_ZERO)
 
     if(mode == 0 .or. mode == -1) then
       allocate(dpsi(1:m%np))
@@ -341,9 +340,9 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   call pop_sub()
   return
 
-end function R_FUNC(states_load_restart)
+end function X(states_load_restart)
 
-subroutine R_FUNC(states_output) (st, m, dir, outp)
+subroutine X(states_output) (st, m, dir, outp)
   type(states_type), intent(IN) :: st
   type(mesh_type), intent(IN) :: m
   character(len=*), intent(IN) :: dir
@@ -375,8 +374,8 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
         do ik = 1, st%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
-            call R_FUNC(output_function) (outp, dir, fname, m, &
-                 st%R_FUNC(psi) (1:, idim, ist, ik), sqrt(u))
+            call X(output_function) (outp, dir, fname, m, &
+                 st%X(psi) (1:, idim, ist, ik), sqrt(u))
           end do
         end do
       end if
@@ -391,7 +390,7 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
             call doutput_function (outp, dir, fname, m, &
-                 abs(st%R_FUNC(psi) (1:, idim, ist, ik))**2, sqrt(u))
+                 abs(st%X(psi) (1:, idim, ist, ik))**2, sqrt(u))
           end do
         end do
       end if
@@ -445,7 +444,7 @@ contains
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call R_FUNC(f_gradient) (m, st%R_FUNC(psi)(:, idim, ist, ik), gpsi)
+            call X(f_gradient) (m, st%X(psi)(:, idim, ist, ik), gpsi)
             do i = 1, m%np
               if(r(i) >= dmin) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
@@ -478,7 +477,7 @@ contains
     deallocate(c)
 
   end subroutine elf
-end subroutine R_FUNC(states_output)
+end subroutine X(states_output)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Returns the dot product of two many-body states st1 and st2, for a given
@@ -490,7 +489,7 @@ end subroutine R_FUNC(states_output)
 !  two states (this is not the case for the moment), or if any of the
 !  occupation is null (this can be problem, and will have to be cared about.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
+R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   implicit none
   type(mesh_type), intent(in) :: m
   integer, intent(in) :: ik
@@ -503,8 +502,8 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
 
   allocate(a(st1%nst, st1%nst))
 
-  call R_FUNC(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
-  dotp = R_FUNC(det)(a, st1%nst)
+  call X(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
+  dotp = X(det)(a, st1%nst)
 
   select case(st1%ispin)
    case(UNPOLARIZED)
@@ -512,15 +511,15 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
    case(SPIN_POLARIZED)
      ! We assume that ik is an odd number (maybe this should be checked. So one
      ! spin component is ik and another spin component is ik + 1.
-     call R_FUNC(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
-     dotp = dotp*R_FUNC(det)(a, st1%nst)
+     call X(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
+     dotp = dotp*X(det)(a, st1%nst)
   end select
 
   deallocate(a)
   call pop_sub()
   contains
 
-    subroutine R_FUNC(calculate_matrix)(m, ik, st1, st2, n, a)
+    subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
       implicit none
       type(mesh_type), intent(in) :: m
       integer, intent(in) :: ik
@@ -557,7 +556,7 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
       do i = st1%st_start, st1%st_end
          do j = 0, mpiv%numprocs-1
             if(mpiv%node.ne.j) then
-               call MPI_ISEND(st2%R_FUNC(psi)(1, 1, i, ik), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
+               call MPI_ISEND(st2%X(psi)(1, 1, i, ik), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
                               j, i, MPI_COMM_WORLD, request, ierr)
             endif
          enddo
@@ -571,10 +570,10 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
             call MPI_RECV(phi2(1, 1), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
                           l, j, MPI_COMM_WORLD, status, ierr)
          else
-            phi2(:, :) = st2%R_FUNC(psi)(:, :, j, ik)
+            phi2(:, :) = st2%X(psi)(:, :, j, ik)
          endif
          do i = st1%st_start, st1%st_end
-            a(i, j) = R_FUNC(states_dotp)(m, dim, st1%R_FUNC(psi)(1:, :, i, ik), &
+            a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
                                                 phi2(1:, :))
          enddo
       enddo
@@ -592,17 +591,17 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
 #else
       do i = 1, n
          do j = 1, n
-            a(i, j) = R_FUNC(states_dotp)(m, dim, st1%R_FUNC(psi)(1:, :, i, ik), &
-                                                  st2%R_FUNC(psi)(1:, :, j, ik))
+            a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
+                                                  st2%X(psi)(1:, :, j, ik))
          enddo
       enddo
 #endif
-    end subroutine R_FUNC(calculate_matrix)
+    end subroutine X(calculate_matrix)
 
-end function R_FUNC(states_mpdotp)
+end function X(states_mpdotp)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine R_FUNC(states_calculate_angular)(m, st, angular)
+subroutine X(states_calculate_angular)(m, st, angular)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: angular(3)
@@ -615,17 +614,17 @@ subroutine R_FUNC(states_calculate_angular)(m, st, angular)
   do ik = 1, st%nik
      do j = 1, st%nst
         do idim = 1, st%dim
-           call R_FUNC(mesh_angular_momentum)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi)
-           angular(1) = angular(1) + st%occ(j, ik)*R_FUNC(mf_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(1, :))
-           angular(2) = angular(2) + st%occ(j, ik)*R_FUNC(mf_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(2, :))
-           angular(3) = angular(3) + st%occ(j, ik)*R_FUNC(mf_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(3, :))
+           call X(mesh_angular_momentum)(m, st%X(psi)(:, idim, j, ik), lpsi)
+           angular(1) = angular(1) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(1, :))
+           angular(2) = angular(2) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(2, :))
+           angular(3) = angular(3) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(3, :))
         enddo
      enddo
   enddo
   deallocate(lpsi)
-end subroutine R_FUNC(states_calculate_angular)
+end subroutine X(states_calculate_angular)
 
-subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
+subroutine X(mesh_angular_momentum)(m, f, lf)
   type(mesh_type), intent(in) :: m
   R_TYPE, intent(in)  :: f(m%np)
   R_TYPE, intent(out) :: lf(3, m%np)
@@ -635,7 +634,7 @@ subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
   integer :: i
 
   allocate(gf(3, m%np))
-  call R_FUNC(f_gradient)(m, f, grad = gf)
+  call X(f_gradient)(m, f, grad = gf)
 
   do i = 1, m%np
      call mesh_xyz(m, i, x)
@@ -647,4 +646,4 @@ subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
   call zscal(3*m%np, -M_zI, lf(1, 1), 1)
 #endif
   deallocate(gf)
-end subroutine R_FUNC(mesh_angular_momentum)
+end subroutine X(mesh_angular_momentum)

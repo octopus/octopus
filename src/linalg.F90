@@ -196,5 +196,92 @@ module linalg
     end subroutine zhegv
     
   end interface
+
+contains
+  ! ddet and zdet return the determinant of a square matrix a of dimensions (n,n)
+  ! (ddet for real and zdet for complex numbers)
+  real(r8) function ddet(a, n)
+    integer, intent(in) :: n
+    real(r8) :: a(n, n)
+    
+    integer :: i, info, ipiv(n)
+    
+    call dgetrf(n, n, a(1,1), n, ipiv(1), info)
+    if(info < 0) then
+      write(message(1),'(a,i4)') 'In det, LAPACK dgetrf returned error code ',info
+      call write_fatal(1)
+    endif
+    ddet = M_ONE
+    do i = 1, n
+      ddet = ddet*a(i, i)
+      if(ipiv(i).ne.i) then
+        ipiv(ipiv(i)) = ipiv(i)
+        ddet = -ddet
+      endif
+    enddo
+    
+  end function ddet
+
+  complex(r8) function zdet(a, n)
+    integer, intent(in) :: n
+    complex(r8) :: a(n, n)
+    
+    integer :: info, i, ipiv(n)
+    
+    call zgetrf(n, n, a(1,1), n, ipiv(1), info)
+    if(info < 0) then
+      write(message(1),'(a,i4)') 'In zdet, LAPACK zgetrf returned error code ',info
+      call write_fatal(1)
+    endif
+    zdet = M_z1
+    do i = 1, n
+      zdet = zdet*a(i, i)
+      if(ipiv(i).ne.i) then
+        ipiv(ipiv(i)) = ipiv(i)
+        zdet = -zdet
+      endif
+    enddo
+    
+  end function zdet
   
+!!! These routines diagonalize a matrix using LAPACK
+  subroutine diagonalise(dim, a, b, e)
+    integer  :: dim
+    real(r8) :: a(dim, dim), b(dim, dim)
+    real(r8) :: e(dim)
+    
+    integer :: info, lwork
+    real(r8), allocatable :: work(:)
+    
+    lwork = 6*dim
+    allocate(work(lwork))
+    b = a
+    call dsyev('V', 'U', dim, b(1,1), dim, e(1), work(1), lwork, info)
+    if(info.ne.0) then
+      write(message(1),'(a,i5)') 'dsyev returned error message ', info
+      call write_fatal(1)
+    endif
+    deallocate(work)
+  end subroutine diagonalise
+  
+  subroutine ziagonalise(dim, a, b, e)
+    integer     :: dim
+    complex(r8) :: a(dim, dim), b(dim, dim)
+    real(r8)    :: e(dim)
+    
+    integer :: info, lwork
+    complex(r8), allocatable :: work(:)
+    real(r8), allocatable :: rwork(:)
+    
+    lwork = 6*dim
+    allocate(work(lwork), rwork(max(1,3*dim-2)))
+    b = a
+    call zheev('V','U', dim, b(1,1), dim, e(1), work(1), lwork, rwork(1), info)
+    if(info.ne.0) then
+      write(message(1),'(a,i5)') 'dsyev returned error message ', info
+      call write_fatal(1)
+    endif
+    deallocate(work, rwork)
+  end subroutine ziagonalise
+
 end module linalg

@@ -15,11 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module output
-  use oct_parser
-  use units
   use functions
 #if defined(HAVE_NETCDF)
   use netcdf

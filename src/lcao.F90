@@ -15,16 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module lcao
-  use global
-  use liboct
-  use spline
-  use mesh
-  use system
   use hamiltonian
-  use states
 
   implicit none
 
@@ -243,7 +237,7 @@ subroutine lcao_init(sys, h)
   allocate(hpsi(sys%m%np, sys%st%dim))
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
-      call R_FUNC(kinetic) (h, ik, sys%m, sys%st, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      call X(kinetic) (h, ik, sys%m, sys%st, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)
@@ -257,10 +251,10 @@ subroutine lcao_init(sys, h)
       end select 
  
       do n2 = n1, lcao_data%dim
-        lcao_data%k(n1, n2, ik) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
-                                                      hpsi, lcao_data%psis(1:, : ,n2, ik))
-        lcao_data%s(n1, n2, ik) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
-                                                      lcao_data%psis(:, :, n1, ik), lcao_data%psis(:, : ,n2, ik))
+        lcao_data%k(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
+             hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%s(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
+             lcao_data%psis(:, :, n1, ik), lcao_data%psis(:, : ,n2, ik))
       end do
       
     end do
@@ -310,10 +304,10 @@ subroutine lcao_wf(sys, h)
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
-      call R_FUNC(vlpsi)   (h, sys%m, sys%st, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
-      if(sys%nlpp) call R_FUNC(vnlpsi)  (ik, sys%m, sys%st, sys, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      call X(vlpsi) (h, sys%m, sys%st, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      if(sys%nlpp) call X(vnlpsi) (ik, sys%m, sys%st, sys, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
       do n2 = n1, lcao_data%dim
-        lcao_data%v(n1, n2, ik) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+        lcao_data%v(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
                                                       hpsi, lcao_data%psis(1:, : ,n2, ik))
         lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
       end do
@@ -336,21 +330,15 @@ subroutine lcao_wf(sys, h)
     endif
     sys%st%eigenval(1:sys%st%nst, ik) = w(1:sys%st%nst)
     deallocate(work, w, s, rwork)
-    sys%st%R_FUNC(psi)(:,:,:, ik) = R_TOTYPE(0.0_r8)
-!!$    do n1 = 1, lcao_data%dim
-!!$       do n2 = 1, sys%st%nst
-!!$          call R_FUNC(axpy)(sys%m%np*sys%st%dim, lcao_data%hamilt(n1, n2, ik), &
-!!$                            lcao_data%psis    (1, 1, n1, ik), 1,           & 
-!!$                            sys%st%R_FUNC(psi)(1, 1, n2, ik), 1)
-!!$       end do
-!!$    end do
+    sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(0.0_r8)
+
     ! Change of base
-    call R_FUNC(gemm)('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
-                       R_TOTYPE(M_ONE),                                         &
-                       lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
-                       lcao_data%hamilt(1, 1, ik), norbs,                       &
-                       R_TOTYPE(M_ZERO),                                        &
-                       sys%st%R_FUNC(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
+    call X(gemm)('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
+                 R_TOTYPE(M_ONE),                                         &
+                 lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
+                 lcao_data%hamilt(1, 1, ik), norbs,                       &
+                 R_TOTYPE(M_ZERO),                                        &
+                 sys%st%X(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
  
    end do
 

@@ -1,4 +1,4 @@
-#include "config_F90.h"
+#include "global.h"
 
 module vxc
 

@@ -27,8 +27,8 @@
 #endif
 
 ! what do you wish for dinner, dear?
-!#ifdef COMPLEX_WFNS
-!#  include "complex.F90"
-!#else
-!#  include "real.F90"
-!#endif
+#ifdef COMPLEX_WFNS
+#  include "complex.F90"
+#else
+#  include "real.F90"
+#endif

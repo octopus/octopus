@@ -15,18 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module hamiltonian
-use global
-use oct_parser
-use math
-use spline
-#ifdef HAVE_FFT
-use fft
-#endif
-use units
-use output
 use system
 use specie
 use poisson

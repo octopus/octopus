@@ -15,17 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module opt_control
-use global
-use oct_parser
-use io
-use system
-use states
-use hamiltonian
-use mix
-use lasers
 use timedep
 
 implicit none

@@ -15,8 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
-
 subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, reorder)
   use trl_info
   use trl_interface

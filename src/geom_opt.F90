@@ -15,12 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module geom_opt
-  use oct_parser
-  use system
-  use hamiltonian
   use scf
   
   implicit none
@@ -127,8 +124,8 @@ contains
       call atom_write_xyz(".", "work-min", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
 
       call generate_external_pot(h, sys)
-      call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
-      call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+      call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
+      call X(hamiltonian_setup) (h, sys%m, sys%st, sys)
       call hamiltonian_energy(h, sys%st, sys%eii, -1)
   
       ! do scf calculation

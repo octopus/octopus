@@ -36,7 +36,6 @@
 
 module units
 use global
-use liboct
 
 implicit none
 

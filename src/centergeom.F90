@@ -1,6 +1,4 @@
 program centergeom
-  use global
-  use units
   use atom
 
   integer :: natoms, ncatoms, iunit, i

@@ -15,12 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module phonons
-  use liboct
-  use system
-  use hamiltonian
   use scf
 
   implicit none
@@ -90,11 +87,6 @@ contains
     real(r8) :: energ
     real(r8), allocatable :: forces(:,:), forces0(:,:)
 
-#if defined(HAVE_LAPACK)
-    real(r8), allocatable :: work(:)
-    integer :: lwork, info
-#endif
-
     allocate(forces0(sys%natoms, 3), forces(sys%natoms, 3))
     n = sys%natoms*3
 
@@ -111,8 +103,8 @@ contains
 
         ! first force
         call generate_external_pot(h, sys)
-        call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
-        call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+        call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
+        call X(hamiltonian_setup) (h, sys%m, sys%st, sys)
         call hamiltonian_energy (h, sys%st, sys%eii, -1)
         call scf_run(scf, sys, h)
         do j = 1, sys%natoms
@@ -123,8 +115,8 @@ contains
 
         ! second force
         call generate_external_pot(h, sys)
-        call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
-        call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+        call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
+        call X(hamiltonian_setup) (h, sys%m, sys%st, sys)
         call hamiltonian_energy(h, sys%st, sys%eii, -1)
         call scf_run(scf, sys, h)
         do j = 1, sys%natoms
@@ -149,17 +141,7 @@ contains
     call io_close(iunit)
 
     ! diagonalize DM
-#if defined(HAVE_LAPACK)
-    lwork = 3*ph%dim - 1
-    allocate(work(lwork))
-    call dsyev('v', 'u', ph%dim, ph%DM(1, 1), ph%dim, ph%freq(1), work(1), lwork, info)
-
-    if(info.ne.0) then
-      write(message(1),'(a,i5)') 'LAPACK "dsygv" returned error code ', info
-      call write_fatal(1)
-    endif
-    deallocate(work)
-#endif
+    call diagonalise(ph%dim, ph%DM, ph%DM, ph%freq)
     
   end subroutine get_DM
 

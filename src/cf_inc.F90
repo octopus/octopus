@@ -156,7 +156,7 @@ end subroutine X(cf_FS2RS)
 ! This function calculates the laplacian of a function in Fourier space.
 ! optionally, one can apply a cutoff
 ! i.e. \nabla^2 f = min(cutoff, G^2) * f
-subroutine R_FUNC(cf_FS_lapl)(m, cf, cutoff_)
+subroutine X(cf_FS_lapl)(m, cf, cutoff_)
   type(mesh_type), intent(in) :: m
   type(X(cf)), intent(inout)  :: cf
   real(r8), intent(in), optional :: cutoff_
@@ -186,9 +186,9 @@ subroutine R_FUNC(cf_FS_lapl)(m, cf, cutoff_)
     end do
   end do
 
-end subroutine R_FUNC(cf_FS_lapl)
+end subroutine X(cf_FS_lapl)
 
-subroutine R_FUNC(cf_FS_grad)(m, cf, j)
+subroutine X(cf_FS_grad)(m, cf, j)
   type(mesh_type), intent(in) :: m
   type(X(cf)), intent(inout)  :: cf
   integer, intent(in) :: j
@@ -216,6 +216,6 @@ subroutine R_FUNC(cf_FS_grad)(m, cf, j)
   end do
 
   call pop_sub()
-end subroutine R_FUNC(cf_FS_grad)
+end subroutine X(cf_FS_grad)
 
 #endif

@@ -19,7 +19,6 @@ module tm
 use global
 use atomic
 use io
-use units
 use logrid
 
 implicit none

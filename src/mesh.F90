@@ -18,12 +18,6 @@
 #include "global.h"
 
 module mesh
-use global
-use oct_parser
-use units
-#ifdef HAVE_FFT
-use fft
-#endif
 use atom
   
 implicit none

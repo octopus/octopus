@@ -49,10 +49,10 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
       case(XC_FAMILY_GGA)
         call xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$      case(XC_FAMILY_MGGA)
-!!$        call R_FUNC(xc_mgga) (xcs%functl, xcs, m, nst, st%nspin, psi, occ, eigenval, &
+!!$        call X(xc_mgga) (xcs%functl, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !!$             rho, vx, ex)
       case(XC_FAMILY_KLI)
-        call R_FUNC(xc_kli) (xcs, m, st, vxc, ex, ec)
+        call X(xc_kli) (xcs, m, st, vxc, ex, ec)
       end select
     end if
   end do
@@ -77,4 +77,4 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$  vx = vx + save_vxc
 
   call pop_sub()
-end subroutine R_FUNC(xc_pot)
+end subroutine X(xc_pot)

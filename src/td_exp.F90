@@ -18,7 +18,6 @@
 #include "global.h"
 
 module td_exp
-  use math
   use td_exp_split
   
   implicit none

@@ -15,20 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module run_prog
-use global
-use oct_parser
-use io
-use units
-use states
-use system
-use hamiltonian
-use lcao
-use scf
 use unocc
-use timedep
 use static_pol
 use geom_opt
 use phonons
@@ -110,12 +100,12 @@ subroutine run()
     case(I_SETUP_RPSI)
       message(1) = 'Info: Allocating rpsi.'
       call write_info(1)
-      allocate(sys%st%R_FUNC(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+      allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
     case(I_END_RPSI)
       message(1) = 'Info: Deallocating rpsi.'
       call write_info(1)
-      deallocate(sys%st%R_FUNC(psi), stat = ierr); nullify(sys%st%R_FUNC(psi))
+      deallocate(sys%st%X(psi), stat = ierr); nullify(sys%st%X(psi))
 
     case(I_RANDOMIZE_RPSI)
       message(1) = 'Info: Random generating starting wavefunctions.'
@@ -123,7 +113,7 @@ subroutine run()
 
       ! wave functions are simply random gaussians
       call states_generate_random(sys%st, sys%m)
-      call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
+      call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       ! this is certainly a better density
       call lcao_dens(sys, sys%st%nspin, sys%st%rho)
 
@@ -131,9 +121,9 @@ subroutine run()
       message(1) = 'Info: Loading rpsi.'
       call write_info(1)
       
-      if(R_FUNC(states_load_restart)("tmp/restart.static", &
+      if(X(states_load_restart)("tmp/restart.static", &
            sys%m, sys%st)) then
-        call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
+        call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
         ! run scf unless it is already in the stack
         if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
@@ -150,7 +140,7 @@ subroutine run()
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call R_FUNC(hamiltonian_setup)(h, sys%m, sys%st, sys) ! get potentials
+      call X(hamiltonian_setup)(h, sys%m, sys%st, sys) ! get potentials
       call states_fermi(sys%st, sys%m)                      ! occupations
       call hamiltonian_energy(h, sys%st, sys%eii, -1)       ! total energy
 
@@ -197,7 +187,7 @@ subroutine run()
       call write_info(1)
       
       ! first copy the occupied states
-      unoccv%st%R_FUNC(psi)(:,:,1:sys%st%nst,:) = sys%st%R_FUNC(psi)(:,:,1:sys%st%nst,:)
+      unoccv%st%X(psi)(:,:,1:sys%st%nst,:) = sys%st%X(psi)(:,:,1:sys%st%nst,:)
       unoccv%st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
       call states_end(sys%st) ! to save memory
 
@@ -207,7 +197,7 @@ subroutine run()
       message(1) = 'Info: Loading unoccupied states.'
       call write_info(1)
 
-      if(.not.R_FUNC(states_load_restart)("tmp/restart.occ", &
+      if(.not.X(states_load_restart)("tmp/restart.occ", &
            sys%m, unoccv%st)) then
         if(calc_mode .ne. M_RESUME_UNOCC_STATES) then
           i_stack(instr) = I_UNOCC_RUN

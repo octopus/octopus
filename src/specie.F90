@@ -15,18 +15,12 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module specie
-use global
-use oct_parser
 use units
 use ps
-use spline
 use math
-#ifdef HAVE_FFT
-use fft
-#endif
 
 implicit none
 

@@ -15,17 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module PES
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-use global
-use units
-use oct_parser
-use io
-use mesh
 use states
-use fft
 
 implicit none
 

@@ -52,14 +52,14 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
     eigenfunction_loop : do p = 1, st%nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, &
-           st%R_FUNC(psi)(1:np, 1:st%dim, 1:p, ik), start=p)
+      call X(states_gram_schmidt)(p, sys%m, st%dim, &
+           st%X(psi)(1:np, 1:st%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call R_FUNC(Hpsi)(h, sys%m, st, sys, ik, st%R_FUNC(psi)(:,:, p, ik) , h_psi)
+      call X(Hpsi)(h, sys%m, st, sys, ik, st%X(psi)(:,:, p, ik) , h_psi)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), h_psi))
+      st%eigenval(p, ik) = R_REAL(X(states_dotp) (sys%m, st%dim, st%X(psi)(1:,:, p, ik), h_psi))
 
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter
@@ -68,26 +68,26 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         !call pre(hpsi%val   , g%val   ) 
         !call pre(psi(m)%val , ppsi%val)
         g = h_psi
-        ppsi = st%R_FUNC(psi)(1:,:, p, ik)
+        ppsi = st%X(psi)(1:,:, p, ik)
         
-        es(1) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, p, ik), g)
-        es(2) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, p, ik), ppsi)
+        es(1) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), g)
+        es(2) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
         
         ! Orthogonalize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
-          a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, j, ik), g)
-          g(:,:) = g(:,:) - a0 * st%R_FUNC(psi)(:,:, j, ik)
+          a0 = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, j, ik), g)
+          g(:,:) = g(:,:) - a0 * st%X(psi)(:,:, j, ik)
         end do
         
-        if(iter .ne. 1) gg1 = R_FUNC(states_dotp) (sys%m, st%dim, g, g0)
+        if(iter .ne. 1) gg1 = X(states_dotp) (sys%m, st%dim, g, g0)
         
         ! Approximate inverse preconditioner...
         !call ipre(g, g0)
         g0 = g
         
-        gg = R_FUNC(states_dotp) (sys%m, st%dim, g, g0)
+        gg = X(states_dotp) (sys%m, st%dim, g, g0)
         
         ! Starting or following iterations...
         if(iter .eq. 1) then
@@ -101,17 +101,17 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
           cg(:,:) = cg(:,:) + g(:,:)
 
           norma = gamma*cg0*sin(theta)
-          cg(:,:) = cg(:,:) - norma * st%R_FUNC(psi)(:,:, p, ik)
+          cg(:,:) = cg(:,:) - norma * st%X(psi)(:,:, p, ik)
         end if
         
         ! cg contains now the conjugate gradient
-        cg0 = R_FUNC(states_nrm2) (sys%m, st%dim, cg(:,:))
-        call R_FUNC(Hpsi) (h, sys%m, st, sys, ik, cg, ppsi)
+        cg0 = X(states_nrm2) (sys%m, st%dim, cg(:,:))
+        call X(Hpsi) (h, sys%m, st, sys, ik, cg, ppsi)
         
         ! Line minimization.
-        a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, p, ik), ppsi)
-        a0 = 2.0_r8 * a0 / cg0
-        b0 = R_FUNC(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
+        a0 = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
+        a0 = M_TWO * a0 / cg0
+        b0 = X(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/2.0_r8
@@ -127,13 +127,13 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         ! Upgrade psi...
         a0 = cos(theta)
         b0 = sin(theta)/cg0
-        st%R_FUNC(psi)(:,:, p, ik) = a0*st%R_FUNC(psi)(:,:, p, ik) + b0*cg(:,:)
+        st%X(psi)(:,:, p, ik) = a0*st%X(psi)(:,:, p, ik) + b0*cg(:,:)
         
         ! Calculate H|psi>
         h_psi = a0*h_psi + b0*ppsi
 
-        res = R_FUNC(states_residue)(sys%m, st%dim, h_psi, st%eigenval(p, ik), &
-                                     st%R_FUNC(psi)(:, :, p, ik))
+        res = X(states_residue)(sys%m, st%dim, h_psi, st%eigenval(p, ik), &
+             st%X(psi)(:, :, p, ik))
         ! Test convergence.
         if(res < tol) then
           converged = converged + 1
@@ -157,13 +157,13 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
           i = i + 1
           moved = moved + 1
           e0 = st%eigenval(p, ik)
-          cg = st%R_FUNC(psi)(:,:, p, ik)
+          cg = st%X(psi)(:,:, p, ik)
           do j = p, i + 1 , -1
             st%eigenval(j, ik) = st%eigenval(j-1, ik)
-            st%R_FUNC(psi)(:,:, j, ik) = st%R_FUNC(psi)(:,:, j-1, ik)
+            st%X(psi)(:,:, j, ik) = st%X(psi)(:,:, j-1, ik)
           end do
           st%eigenval(i, ik) = e0
-          st%R_FUNC(psi)(:,:, i, ik) = cg
+          st%X(psi)(:,:, i, ik) = cg
         end if
       end if
       ! End of reordering

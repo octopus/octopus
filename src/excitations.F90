@@ -15,14 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 program excitations
-  use global
-  use liboct
-  use states
   use system
-  use mix
   use linear
 
   implicit none
@@ -50,15 +46,15 @@ program excitations
   call states_init(st, sys%m, sys%val_charge)
   st%nst = n_unocc + n_occ
   st%st_end = st%nst
-  allocate(st%R_FUNC(psi) (sys%m%np, st%dim, st%nst, st%nik))
+  allocate(st%X(psi) (sys%m%np, st%dim, st%nst, st%nik))
   allocate(st%eigenval(st%nst, st%nik), st%occ(st%nst, st%nik))
   st%eigenval = M_ZERO
   st%occ      = M_ZERO
   st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
   call states_end(sys%st)
 
-  if(R_FUNC(states_load_restart) ("tmp/restart.occ", sys%m, st)) then
-    call R_FUNC(calcdens)(st, sys%m%np, st%rho)
+  if(X(states_load_restart) ("tmp/restart.occ", sys%m, st)) then
+    call X(calcdens)(st, sys%m%np, st%rho)
   else
     message(1) = "Error opening 'restart.occ' file"
     call write_fatal(1)

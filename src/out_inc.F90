@@ -1,4 +1,21 @@
-subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
+subroutine X(output_function) (outp, dir, fname, m, f, u)
   type(output_type), intent(IN) :: outp
   character(len=*), intent(IN) :: dir, fname
   type(mesh_type), intent(IN) :: m
@@ -13,7 +30,7 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
 
   call X(cf_new) (m%l, c)
   call X(cf_alloc_RS) (c)
-  call R_FUNC(mf2cf) (m, f, c)
+  call X(mf2cf) (m, f, c)
 
   if(iand(outp%how, output_axis_x) .ne.0) call axis_x()
   if(iand(outp%how, output_axis_y) .ne.0) call axis_y()
@@ -232,5 +249,5 @@ contains
   end subroutine ncdf_error
 #endif
 
-end subroutine R_FUNC(output_function)
+end subroutine X(output_function)
 

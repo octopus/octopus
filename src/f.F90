@@ -18,7 +18,6 @@
 #include "global.h"
 
 module functions
-  use math
   use mesh_function
   use cube_function
 

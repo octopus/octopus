@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(forces) (h, sys, t, reduce)
+subroutine X(forces) (h, sys, t, reduce)
   type(hamiltonian_type), intent(IN) :: h
   type(system_type), intent(inout) :: sys
   real(r8), intent(in), optional :: t
@@ -57,12 +57,12 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
             m_loop: do m = -l, l
               do ii = 1, atm%spec%ps%kbc
               do jj = 1, atm%spec%ps%kbc
-                 uVpsi = sum(atm%R_FUNC(uV)(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
-                         sys%st%R_FUNC(psi)(atm%Jxyz(:), idim, ist, ik)) * &
-                         sys%m%vol_pp**2 * atm%R_FUNC(uVu)(add_lm, ii, jj)
+                 uVpsi = sum(atm%X(uV)(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
+                         sys%st%X(psi)(atm%Jxyz(:), idim, ist, ik)) * &
+                         sys%m%vol_pp**2 * atm%X(uVu)(add_lm, ii, jj)
 
                  do j = 1, 3
-                    p = sum(atm%R_FUNC(duV)(j, :, add_lm, jj) * R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik)))
+                    p = sum(atm%X(duV)(j, :, add_lm, jj) * R_CONJ(sys%st%X(psi) (atm%Jxyz(:), idim, ist, ik)))
                    atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
                  end do
               end do
@@ -172,4 +172,4 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
     end subroutine local_FS
 #endif
 
-end subroutine R_FUNC(forces)
+end subroutine X(forces)

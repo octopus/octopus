@@ -15,12 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module states
-use global
-use mesh_function
-use math
 use output
 
 implicit none
@@ -347,10 +344,10 @@ subroutine states_generate_random(st, m, ist_start)
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
-         call R_FUNC(states_random)(m, st%R_FUNC(psi)(1:m%np, id, ist, ik))
+         call X(states_random)(m, st%X(psi)(1:m%np, id, ist, ik))
       end do
     end do
-    call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(1:,:,:,ik))
+    call X(states_gram_schmidt)(st%nst, m, st%dim, st%X(psi)(1:,:,:,ik))
   end do
   st%eigenval = M_ZERO
 
@@ -375,8 +372,8 @@ subroutine states_fermi(st, m)
      if(st%ispin == 3) then
        do ik = 1, st%nik
          do ie = 1, st%nst
-            st%mag(ie, ik, 1) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
          enddo
        enddo
      endif
@@ -405,8 +402,8 @@ subroutine states_fermi(st, m)
      if(st%ispin == 3) then
        do ik = 1, st%nik
          do ie = 1, st%nst
-            st%mag(ie, ik, 1) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-            st%mag(ie, ik, 2) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
          enddo
        enddo
      endif
@@ -460,8 +457,8 @@ subroutine states_fermi(st, m)
   if(st%ispin == 3) then
     do ik = 1, st%nik
        do ie = 1, st%nst
-          st%mag(ie, ik, 1) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
-          st%mag(ie, ik, 2) = R_FUNC(mf_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+          st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+          st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
        enddo
     enddo
   endif
@@ -679,8 +676,8 @@ subroutine calc_projection(u_st, st, m, p)
   do ik = 1, st%nik
      do ist = st%st_start, st%st_end
         do uist = 1, u_st%nst
-          p(uist, ist, ik) = zstates_dotp( m, st%dim,                                          &
-                                           cmplx(u_st%R_FUNC(psi)(1:, :, uist, ik), kind=r8) , &
+          p(uist, ist, ik) = zstates_dotp( m, st%dim,                                     &
+                                           cmplx(u_st%X(psi)(1:, :, uist, ik), kind=r8) , &
                                            st%zpsi(1:, :, ist, ik) )
         end do
      end do

@@ -19,7 +19,6 @@
 
 module poisson
   use functions
-  use math
 
   implicit none
   private

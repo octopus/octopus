@@ -16,7 +16,7 @@
 !! 02111-1307, USA.
 
 ! calculates the eigenvalues of the real orbitals
-subroutine R_FUNC(hamiltonian_eigenval)(h, st, sys)
+subroutine X(hamiltonian_eigenval)(h, st, sys)
   type(hamiltonian_type), intent(IN) :: h
   type(states_type), intent(inout) :: st
   type(system_type), intent(in) :: sys
@@ -30,17 +30,17 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, st, sys)
 
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
-      call R_FUNC(Hpsi) (h, sys%m, st, sys, ik, st%R_FUNC(psi)(:, :, ist, ik), Hpsi)
-      e = R_FUNC(states_dotp)(sys%m, st%dim, st%R_FUNC(psi)(1:, :, ist, ik), Hpsi)
+      call X(Hpsi) (h, sys%m, st, sys, ik, st%X(psi)(:, :, ist, ik), Hpsi)
+      e = X(states_dotp)(sys%m, st%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
   end do
 
   deallocate(Hpsi)
   call pop_sub()
-end subroutine R_FUNC(hamiltonian_eigenval)
+end subroutine X(hamiltonian_eigenval)
 
-subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
+subroutine X(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -52,9 +52,9 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
 
   call push_sub('Hpsi')
 
-  call R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
-  call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
-  if(sys%nlpp) call R_FUNC(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
+  call X(kinetic) (h, ik, m, st, psi, Hpsi)
+  call X(vlpsi)   (h, m, st, ik, psi, Hpsi)
+  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -69,14 +69,14 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   end select
 
   if(present(t)) then
-    call R_FUNC(vlasers)  (h, m, st, psi, Hpsi, t)
-    call R_FUNC(vborders) (h, m, st, psi, Hpsi)
+    call X(vlasers)  (h, m, st, psi, Hpsi, t)
+    call X(vborders) (h, m, st, psi, Hpsi)
   endif
 
   call pop_sub()
-end subroutine R_FUNC(Hpsi)
+end subroutine X(Hpsi)
 
-subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
+subroutine X(kinetic) (h, ik, m, st, psi, Hpsi)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -97,8 +97,8 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
     allocate(grad(3, m%np))
     k2 = sum(st%kpoints(:, ik)**2)
     do idim = 1, dim
-      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-      call R_FUNC(f_gradient)  (m, psi(:, idim), grad(:, :))
+      call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_gradient)  (m, psi(:, idim), grad(:, :))
       do i = 1, m%np
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
              + M_TWO*M_zI*sum(st%kpoints(:, ik)*grad(:, i)) &
@@ -114,16 +114,16 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   
   else
     do idim = 1, dim
-      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
-    call R_FUNC(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi(1, 1), 1)
+    call X(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi(1, 1), 1)
   end if
 
 
   call pop_sub()
-end subroutine R_FUNC(kinetic)
+end subroutine X(kinetic)
 
-subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
+subroutine X(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   integer, intent(in) :: ik
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -186,14 +186,14 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-              uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(1, add_lm, ikbc), 1, lpsi(1), 1) * &
-                   m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
+              uvpsi = R_DOT(atm%mps, atm%X(uv)(1, add_lm, ikbc), 1, lpsi(1), 1) * &
+                   m%vol_pp*atm%X(uvu)(add_lm, ikbc, jkbc) 
               if (conf%periodic_dim==0) then
-                call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(1, add_lm, jkbc), 1, lHpsi(1), 1)
+                call X(axpy) (atm%mps, uvpsi, atm%X(uv)(1, add_lm, jkbc), 1, lHpsi(1), 1)
               else
 #               ifdef R_TCOMPLEX
-                  conj = R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc)
-                  call R_FUNC(axpy) (atm%mps, uvpsi, conj(1), 1, lHpsi(1), 1)
+                  conj = R_CONJ(atm%phases(:,ik))*atm%X(uv)(:, add_lm, jkbc)
+                  call X(axpy) (atm%mps, uvpsi, conj(1), 1, lHpsi(1), 1)
 #               else
                   message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
                   message(2) = "Reconfigure with --enable-complex, and remake"
@@ -216,9 +216,9 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   end do do_atm
 
   call pop_sub()
-end subroutine R_FUNC(vnlpsi)
+end subroutine X(vnlpsi)
 
-subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
+subroutine X(vlpsi) (h, m, st, ik, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
@@ -254,9 +254,9 @@ subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
     end select
 
   call pop_sub()
-end subroutine R_FUNC(vlpsi)
+end subroutine X(vlpsi)
 
-subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
+subroutine X(vlasers) (h, m, st, psi, Hpsi, t)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
@@ -284,7 +284,7 @@ subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
       call laser_vector_field(h%no_lasers, h%lasers, t, f)
       allocate(grad(3, m%np))
       do idim = 1, st%dim
-        call R_FUNC(f_gradient)(m, psi(:, idim), grad)
+        call X(f_gradient)(m, psi(:, idim), grad)
         do k = 1, m%np
           hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
                sum(f**2)/2._r8 * psi(k, idim)
@@ -295,9 +295,9 @@ subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
   end if
   
   call pop_sub()
-end subroutine R_FUNC(vlasers)
+end subroutine X(vlasers)
 
-subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
+subroutine X(vborders) (h, m, st, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
@@ -315,9 +315,9 @@ subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
   end if
 
   call pop_sub()
-end subroutine R_FUNC(vborders)
+end subroutine X(vborders)
 
-subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
+subroutine X(hamiltonian_setup)(h, m, st, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
@@ -356,7 +356,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
        h%vhxc(:, 3:4) = M_ZERO
     end select
 
-    call R_FUNC(xc_pot)(h%xc, m, st, h%vxc, h%ex, h%ec, &
+    call X(xc_pot)(h%xc, m, st, h%vxc, h%ex, h%ec, &
                         -minval(st%eigenval(st%nst, :)), st%qtot)
 
     select case(h%ispin)
@@ -376,12 +376,12 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
   endif
 
   ! this, I think, belongs here
-  if(present(sys)) call R_FUNC(hamiltonian_eigenval) (h, st, sys)
+  if(present(sys)) call X(hamiltonian_eigenval) (h, st, sys)
 
   call pop_sub()
-end subroutine R_FUNC(hamiltonian_setup)
+end subroutine X(hamiltonian_setup)
 
-subroutine R_FUNC(calcvhxc)(h, m, st, vhxc)
+subroutine X(calcvhxc)(h, m, st, vhxc)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
@@ -423,7 +423,7 @@ subroutine R_FUNC(calcvhxc)(h, m, st, vhxc)
 
     allocate(vxc(m%np, h%nspin)) ; vxc = M_ZERO
     xcdum = h%xc
-    call R_FUNC(xc_pot)(xcdum, m, st, vxc, exdum, ecdum, &
+    call X(xc_pot)(xcdum, m, st, vxc, exdum, ecdum, &
                         -minval(st%eigenval(st%nst, :)), st%qtot)
 
     vhxc = vhxc + vxc
@@ -431,4 +431,4 @@ subroutine R_FUNC(calcvhxc)(h, m, st, vhxc)
   endif
 
   call pop_sub()
-end subroutine R_FUNC(calcvhxc)
+end subroutine X(calcvhxc)

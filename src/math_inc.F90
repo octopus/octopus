@@ -41,7 +41,7 @@
 !         decomposition method. If this argument is not passed, it defaults to
 !         1. */
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine R_FUNC(matexp) (order, in, out, factor, norm, method)
+subroutine X(matexp) (order, in, out, factor, norm, method)
   integer, intent(in)            :: order
   R_TYPE, intent(in)        :: in(order, order)
   R_TYPE, intent(out)       :: out(order, order)
@@ -68,15 +68,15 @@ subroutine R_FUNC(matexp) (order, in, out, factor, norm, method)
         write(message(1),'(a)') 'Internal [matexp]: invalid "norm" variable value'
         call write_fatal(1)
      endif
-     call R_FUNC(matexp_scaleandsquare)(order, in, out, factor, lnorm)
+     call X(matexp_scaleandsquare)(order, in, out, factor, lnorm)
   case(DECOMPOSITION)
-     call R_FUNC(matexp_decomposition)(order, in, out, factor)
+     call X(matexp_decomposition)(order, in, out, factor)
   case default
     write(message(1),'(a,i5,a)') 'Internal [matexp]: "method" input argument,', lmethod,', not valid.'
     call write_fatal(1)
   end select
 
-end subroutine R_FUNC(matexp)
+end subroutine X(matexp)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! /* Calculates exp(factor*in), and places it into out, where in and out
@@ -93,7 +93,7 @@ end subroutine R_FUNC(matexp)
 ! factor   : the factor to multiply in before exponentiation.
 ! exporder : the order of the Taylor expansion to be used. */ 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine R_FUNC(matexp_polynomial)(order, in, out, factor, exporder)
+subroutine X(matexp_polynomial)(order, in, out, factor, exporder)
   integer, intent(in)      :: order, exporder
   R_TYPE, intent(in)  :: in(:, :)
   R_TYPE, intent(out) :: out(:, :)
@@ -109,16 +109,16 @@ subroutine R_FUNC(matexp_polynomial)(order, in, out, factor, exporder)
      out(n, n) = M_ONE
   enddo
   zfact = M_ONE
-  call R_FUNC(copy) (order**2, out(1, 1), 1, aux(1, 1), 1)
+  call X(copy) (order**2, out(1, 1), 1, aux(1, 1), 1)
   do n = 1, exporder
-     call R_FUNC(copy) (order**2, aux(1, 1), 1, dd(1, 1), 1)
-     call R_FUNC(gemm) ('n', 'n', order, order, order, R_TOTYPE(M_ONE), dd(1, 1), order, in(1, 1), order, R_TOTYPE(M_ZERO), aux(1 ,1), order)
+     call X(copy) (order**2, aux(1, 1), 1, dd(1, 1), 1)
+     call X(gemm) ('n', 'n', order, order, order, R_TOTYPE(M_ONE), dd(1, 1), order, in(1, 1), order, R_TOTYPE(M_ZERO), aux(1 ,1), order)
      zfact = zfact*factor/n
-     call R_FUNC(axpy)(order**2, zfact, aux(1, 1), 1, out(1, 1), 1)
+     call X(axpy)(order**2, zfact, aux(1, 1), 1, out(1, 1), 1)
   enddo
   deallocate(aux, dd)
 
-end subroutine R_FUNC(matexp_polynomial)
+end subroutine X(matexp_polynomial)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! /* Calculates exp(factor*in), and places it into out, where in and out
@@ -135,7 +135,7 @@ end subroutine R_FUNC(matexp_polynomial)
 ! norm  : (optional) The euclidean norm of the matrix, (times factor), 
 !         or at least a reasonable approximation */
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine R_FUNC(matexp_scaleandsquare)(order, in, out, factor, norm)
+subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   integer, intent(in)  :: order
   R_TYPE, intent(in)   :: in(:, :)
   R_TYPE, intent(out)  :: out(:, :)
@@ -149,15 +149,15 @@ subroutine R_FUNC(matexp_scaleandsquare)(order, in, out, factor, norm)
 
   allocate(aux(order, order))
 
-  call R_FUNC(matexp_polynomial)(order, in, out, factor/2**j, 12)
+  call X(matexp_polynomial)(order, in, out, factor/2**j, 12)
   
   do i = 1, j
-     call R_FUNC(copy)(order**2, out(1, 1), 1, aux(1, 1), 1)
-     call R_FUNC(gemm)('n', 'n', order, order, order, R_TOTYPE(M_ONE), aux(1, 1), order, aux(1, 1), order, R_TOTYPE(M_ZERO), out(1, 1), order)
+     call X(copy)(order**2, out(1, 1), 1, aux(1, 1), 1)
+     call X(gemm)('n', 'n', order, order, order, R_TOTYPE(M_ONE), aux(1, 1), order, aux(1, 1), order, R_TOTYPE(M_ZERO), out(1, 1), order)
   enddo
 
   deallocate(aux)  
-end subroutine R_FUNC(matexp_scaleandsquare)
+end subroutine X(matexp_scaleandsquare)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! /* Calculates exp(factor*in), and places it into out, where in and out
@@ -172,36 +172,30 @@ end subroutine R_FUNC(matexp_scaleandsquare)
 ! out   : output matrix, out = exp(factor*in) if subroutine.
 ! factor: the factor to multiply in before exponentiation. */
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine R_FUNC(matexp_decomposition)(order, in, out, factor)
-  integer, intent(in)           :: order
-  R_TYPE, intent(in)       :: in(order, order)
-  R_TYPE, intent(out)      :: out(order, order)
-  R_TYPE, intent(in)        :: factor
+subroutine X(matexp_decomposition)(order, in, out, factor)
+  integer, intent(in)  :: order
+  R_TYPE,  intent(in)  :: in(order, order)
+  R_TYPE,  intent(out) :: out(order, order)
+  R_TYPE,  intent(in)  :: factor
 
-  R_TYPE :: aux(order, order), dd(order, order), zfact
   integer ::  n, info, lwork
-  real(r8), allocatable :: w(:), rwork(:)
-  R_TYPE, allocatable :: work(:)
+  R_TYPE :: zfact
+  R_TYPE, allocatable :: aux(:,:), dd(:,:)
+  real(r8), allocatable :: w(:)
 
-  call R_FUNC(copy)(order**2, in(1, 1), 1, aux(1, 1), 1)
-  lwork = 4*order
-  allocate(work(lwork), rwork(max(1,3*order-2)), w(order))
-#if defined(R_TCOMPLEX)
-  call zheev('v', 'u', order, aux(1, 1), order, w(1), work(1), lwork, rwork(1), info)
-#else	
-  call dsyev('v', 'u', order, aux(1, 1), order, w(1), work(1), lwork, info)
-#endif
-  if(info .ne. 0) then
-     write(message(1),'(a,i4)') 'Internal: "info" parameter of z returned', info
-     call write_fatal(1)
-  endif
+  allocate(aux(order, order), dd(order, order), w(order))
+  call X(iagonalise) (order, in, aux, w)
+
   dd = M_z0
   do n = 1, order
      dd(n, n) = exp(factor*w(n))
   enddo
-  call R_FUNC(gemm)('n', 'c', order, order, order, R_TOTYPE(M_ONE), dd(1, 1),  order, aux(1, 1), order, R_TOTYPE(M_ZERO), out(1, 1), order)
-  call R_FUNC(copy)(order**2, out(1, 1), 1, dd(1, 1), 1)
-  call R_FUNC(gemm)('n', 'n', order, order, order, R_TOTYPE(M_ONE), aux(1, 1), order, dd(1, 1),  order, R_TOTYPE(M_ZERO), out(1, 1), order) 
-  deallocate(work, w, rwork)
 
-end subroutine R_FUNC(matexp_decomposition)
+  call X(gemm)('n', 'c', order, order, order, R_TOTYPE(M_ONE), &
+       dd(1, 1),  order, aux(1, 1), order, R_TOTYPE(M_ZERO), out(1, 1), order)
+  call X(copy)(order**2, out(1, 1), 1, dd(1, 1), 1)
+  call X(gemm)('n', 'n', order, order, order, R_TOTYPE(M_ONE), &
+       aux(1, 1), order, dd(1, 1),  order, R_TOTYPE(M_ZERO), out(1, 1), order) 
+
+  deallocate(aux, dd, w)
+end subroutine X(matexp_decomposition)

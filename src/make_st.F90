@@ -15,12 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 program make_st
-  use global
-  use liboct
-  use states
   use system
 
   implicit none

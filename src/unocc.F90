@@ -15,12 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module unocc
-use oct_parser
-use io
-use states
 use eigen_solver
 
 implicit none
@@ -65,7 +62,7 @@ subroutine unocc_init(u, m, st, sys)
   ! setup variables
   u%st%nst = u%st%nst + st%nst
   u%st%st_end = u%st%nst
-  allocate(u%st%R_FUNC(psi) (m%np, u%st%dim, u%st%nst, u%st%nik))
+  allocate(u%st%X(psi) (m%np, u%st%dim, u%st%nst, u%st%nik))
   allocate(u%st%eigenval(u%st%nst, u%st%nik), u%st%occ(u%st%nst, u%st%nik))
   u%st%eigenval = 0._r8
   u%st%occ      = 0._r8
@@ -127,10 +124,10 @@ subroutine unocc_run(u, sys, h)
   end if
 
   ! write restart information.
-  call R_FUNC(states_write_restart)("tmp/restart.occ", sys%m, u%st) 
+  call X(states_write_restart)("tmp/restart.occ", sys%m, u%st) 
 
   ! output wave-functions
-  call R_FUNC(states_output) (u%st, sys%m, "static", sys%outp)
+  call X(states_output) (u%st, sys%m, "static", sys%outp)
 
   ! Deallocate eigens..
   deallocate(eigens%diff); nullify(eigens%diff)

@@ -18,8 +18,6 @@
 #include "global.h"
 
 module mix
-use global
-use oct_parser
 use math
 
 implicit none

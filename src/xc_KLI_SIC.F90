@@ -17,7 +17,7 @@
 
 !!! This routine calculates the SIC exchange functional. note that the LDA
 !!! part of the functional is already included by the LDA routines
-subroutine R_FUNC(kli_x_sic) (xcs, m, st, is, socc, sfact, lx_, ex)
+subroutine X(kli_x_sic) (xcs, m, st, is, socc, sfact, lx_, ex)
   type(xc_type),     intent(in)  :: xcs
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(inout)  :: st

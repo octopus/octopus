@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module linear
   use global
@@ -88,9 +88,9 @@ contains
   contains
     
     subroutine solve_matrix()
-      real(r8), allocatable :: mat(:,:), w(:), work(:), os(:,:)
+      real(r8), allocatable :: mat(:,:), os(:,:)
       real(r8) :: temp
-      integer :: ia, jb, i, j, a, b, lwork, info
+      integer :: ia, jb, i, j, a, b
       integer :: max, actual, iunit
 
       allocate(mat(n_pairs, n_pairs))
@@ -120,17 +120,9 @@ contains
       end do
       write(stdout, '(1x)')
 
-      ! now we diagonalise the matrix using LAPACK
-      lwork = 3*n_pairs - 1
-      allocate(work(lwork), w(n_pairs))
-      call dsyev ('v', 'u', n_pairs, mat(1, 1), n_pairs, w(1), work(1), lwork, info)
-      if(info.ne.0) then
-        write(message(1),'(a,i5)') 'LAPACK "dsyev" returned error code ', info
-        call write_fatal(1)
-      endif
-
-      energies(:, 1) = sqrt(w(:))
-      deallocate(work, w)
+      ! now we diagonalise the matrix
+      call diagonalise(n_pairs, mat, mat, energies(:, 1))
+      energies(:, 1) = sqrt(energies(:, 1))
 
       ! let us get now the oscillator strengths
       allocate(os(n_pairs, 3))
@@ -180,8 +172,8 @@ contains
       real(r8), allocatable :: rho_i(:), rho_j(:), pot(:)
       allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
     
-      rho_i(:) =  st%R_FUNC(psi) (1:m%np, 1, i, 1) * st%R_FUNC(psi) (1:m%np, 1, a, 1)
-      rho_j(:) =  st%R_FUNC(psi) (1:m%np, 1, j, 1) * st%R_FUNC(psi) (1:m%np, 1, b, 1)
+      rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * st%X(psi) (1:m%np, 1, a, 1)
+      rho_j(:) =  st%X(psi) (1:m%np, 1, j, 1) * st%X(psi) (1:m%np, 1, b, 1)
     
       !  first the Hartree part (only works for real wfs...)
       pot = 0._r8
@@ -278,7 +270,7 @@ contains
       s = 0._r8
       do k = 1, m%np
         call mesh_xyz(m, k, x)
-        s = s + x * R_CONJ(st%R_FUNC(psi) (k, 1, i, 1)) * st%R_FUNC(psi) (k, 1, j, 1)
+        s = s + x * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1)
       end do
 
       s = s*m%vol_pp

@@ -15,16 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module scf
-use oct_parser
-use io
-use units
-use output
-use system
-use states
-use hamiltonian
 use eigen_solver
 use mix
 use lcao
@@ -154,10 +147,10 @@ subroutine scf_run(scf, sys, h)
     call states_fermi(sys%st, sys%m)
 
     ! compute output density, potential (if needed) and eigenvalues sum
-    call R_FUNC(calcdens)(sys%st, sys%m%np, rhoout)
+    call X(calcdens)(sys%st, sys%m%np, rhoout)
     if (scf%what2mix == MIXPOT) then
        sys%st%rho = rhoout
-       call R_FUNC(calcvhxc) (h, sys%m, sys%st, vout)!, sys)
+       call X(calcvhxc) (h, sys%m, sys%st, vout)!, sys)
     end if
     evsum_out = states_eigenvalues_sum(sys%st)
 
@@ -175,8 +168,8 @@ subroutine scf_run(scf, sys, h)
     finish = &
         (scf%conv_abs_dens > M_ZERO .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
         (scf%conv_rel_dens > M_ZERO .and. scf%rel_dens <= scf%conv_rel_dens) .or. &
-        (scf%conv_abs_ev > M_ZERO .and. scf%abs_ev <= scf%conv_abs_ev) .or. &
-        (scf%conv_rel_ev > M_ZERO .and. scf%rel_ev <= scf%conv_rel_ev)
+        (scf%conv_abs_ev   > M_ZERO .and. scf%abs_ev   <= scf%conv_abs_ev) .or. &
+        (scf%conv_rel_ev   > M_ZERO .and. scf%rel_ev   <= scf%conv_rel_ev)
 
     call scf_write_iter
 
@@ -184,7 +177,7 @@ subroutine scf_run(scf, sys, h)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
        call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, rhoin, rhoout, sys%st%rho)
-       call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
+       call X(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
     case (MIXPOT)
        ! mix input and output potentials
        call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, vin, vout, h%vhxc)
@@ -192,7 +185,7 @@ subroutine scf_run(scf, sys, h)
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.clean_stop()) &
-         call R_FUNC(states_write_restart)("tmp/restart.static", sys%m, sys%st)
+         call X(states_write_restart)("tmp/restart.static", sys%m, sys%st)
 
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
@@ -202,7 +195,7 @@ subroutine scf_run(scf, sys, h)
     end if
 
     if(sys%outp%duringscf) then
-      call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
+      call X(states_output) (sys%st, sys%m, "static", sys%outp)
       call hamiltonian_output(h, sys%m, "static", sys%outp)
     endif
 
@@ -215,7 +208,7 @@ subroutine scf_run(scf, sys, h)
   end do
 
   if (scf%what2mix == MIXPOT) then
-     call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
+     call X(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
      deallocate(vout, vin)
   end if
   deallocate(rhoout, rhoin)
@@ -226,11 +219,11 @@ subroutine scf_run(scf, sys, h)
   end if
 
   ! calculate forces
-  call R_FUNC(forces)(h, sys)
+  call X(forces)(h, sys)
 
   ! output final information
   call scf_write_static("static", "info")
-  call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
+  call X(states_output) (sys%st, sys%m, "static", sys%outp)
   if(sys%outp%what(output_geometry)) &
      call atom_write_xyz("static", "geometry", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
@@ -372,10 +365,10 @@ subroutine write_magnet(iunit, st)
     do ik = 1, st%nik
       do ist = 1, st%nst
         do i = 1, sys%m%np
-          c = R_CONJ(st%R_FUNC(psi) (i, 1, ist, ik)) * st%R_FUNC(psi) (i, 2, ist, ik)
+          c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
           m(1) = m(1) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_REAL(c)
           m(2) = m(2) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_AIMAG(c)
-          c = R_ABS(st%R_FUNC(psi) (i, 1, ist, ik))**2 - R_ABS(st%R_FUNC(psi) (i, 2, ist, ik))**2
+          c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
           m(3) = m(3) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_REAL(c)
         end do
       end do
