@@ -93,13 +93,13 @@ contains
 
     character(len=5) :: xcfunc, xcauth
     integer :: is, ir
-    real(r8), allocatable :: vxc(:, :), ve(:, :), rho(:, :)
+    real(r8), allocatable :: xc(:, :), ve(:, :), rho(:, :)
     real(r8) :: r2, ex, ec, dx, dc
 
     call push_sub('atomhxc')
 
-    allocate(ve(g%nrval, nspin), vxc(g%nrval, nspin), rho(g%nrval, nspin))
-             ve = M_ZERO; vxc = M_ZERO; rho = M_ZERO
+    allocate(ve(g%nrval, nspin), xc(g%nrval, nspin), rho(g%nrval, nspin))
+             ve = M_ZERO; xc = M_ZERO; rho = M_ZERO
 
     ! To calculate the Hartree term, we put all the density in one variable.
     do is = 1, nspin
@@ -136,11 +136,11 @@ contains
     enddo
 
     call atomxc(xcfunc, xcauth, irel, g%nrval, g%nrval, g%rofi, &
-                nspin, rho, ex, ec, dx, dc, vxc)
+                nspin, rho, ex, ec, dx, dc, xc)
 
-    v = ve + vxc
+    v = ve + xc
 
-    deallocate(ve, vxc, rho)
+    deallocate(ve, xc, rho)
     call pop_sub()
   end subroutine atomhxc
 
@@ -167,7 +167,7 @@ contains
 !                     Uppercase is optional                                   !
 ! INTEGER IREL         : Relativistic exchange? (0=>no, 1=>yes)               !
 ! INTEGER NR           : Number of radial mesh points                         !
-! INTEGER MAXR         : Physical first dimension of RMESH, DENS and VXC      !
+! INTEGER MAXR         : Physical first dimension of RMESH, DENS and V_XC     !
 ! REAL*8  RMESH(MAXR)  : Radial mesh points                                   !
 ! INTEGER NSPIN        : NSPIN=1 => unpolarized; NSPIN=2 => polarized         !
 ! REAL*8  DENS(MAXR,NSPIN) : Total (NSPIN=1) or spin (NSPIN=2) electron       !
@@ -177,7 +177,7 @@ contains
 ! REAL*8  EC              : Total correlation energy                          !
 ! REAL*8  DX              : IntegralOf( rho * (eps_x - v_x) )                 !
 ! REAL*8  DC              : IntegralOf( rho * (eps_c - v_c) )                 !
-! REAL*8  VXC(MAXR,NSPIN) : (Spin) exch-corr potential                        !
+! REAL*8  V_XC(MAXR,NSPIN): (Spin) exch-corr potential                        !
 ! ************************ UNITS ************************************         !
 ! Distances in atomic units (Bohr).                                           !
 ! Densities in atomic units (electrons/Bohr**3)                               !
@@ -187,7 +187,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine atomxc( FUNCTL, AUTHOR, IREL,                                    &
                      NR, MAXR, RMESH, NSPIN, DENS,                            &
-                     EX, EC, DX, DC, VXC )
+                     EX, EC, DX, DC, V_XC )
   use global
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -198,7 +198,7 @@ contains
 
   character(len=*) :: FUNCTL, AUTHOR
   integer :: IREL, MAXR, NR, NSPIN
-  real(r8) :: DENS(MAXR,NSPIN), RMESH(MAXR), VXC(MAXR,NSPIN)
+  real(r8) :: DENS(MAXR,NSPIN), RMESH(MAXR), V_XC(MAXR,NSPIN)
   real(r8) :: DC, DX, EC, EX
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -259,7 +259,7 @@ contains
   DC = 0
   DO 20 IS = 1,NSPIN
      DO 10 IR = 1,NR
-        VXC(IR,IS) = 0
+        V_XC(IR,IS) = 0
      10   CONTINUE
   20 CONTINUE
 
@@ -351,15 +351,15 @@ contains
         DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
         DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
         IF (GGA) THEN
-            VXC(IR,IS) = VXC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
+            V_XC(IR,IS) = V_XC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
             DO 120 IN = IN1,IN2
                DX= DX - DVOL * DENS(IR+IN,IS) * DEXDGD(3,IS) * DGIDFJ(IN)
                DC= DC - DVOL * DENS(IR+IN,IS) * DECDGD(3,IS) * DGIDFJ(IN)
-               VXC(IR+IN,IS) = VXC(IR+IN,IS) + DVOL *                         &
+               V_XC(IR+IN,IS) = V_XC(IR+IN,IS) + DVOL *                         &
                   (DEXDGD(3,IS) + DECDGD(3,IS)) * DGIDFJ(IN)
             120 CONTINUE
         ELSE
-            VXC(IR,IS) = DEXDD(IS) + DECDD(IS)
+            V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
         ENDIF
      130 CONTINUE
   140 CONTINUE
@@ -372,7 +372,7 @@ contains
      DO 160 IS = 1,NSPIN
         DO 150 IR = 1,NR
            DVOL = AUX(IR)
-           VXC(IR,IS) = VXC(IR,IS) / DVOL
+           V_XC(IR,IS) = V_XC(IR,IS) / DVOL
         150 CONTINUE
      160 CONTINUE
   ENDIF
@@ -387,7 +387,7 @@ contains
   DC = DC / EUNIT
   DO 180 IS = 1,NSPIN
      DO 170 IR = 1,NR
-        VXC(IR,IS) = VXC(IR,IS) / EUNIT
+        V_XC(IR,IS) = V_XC(IR,IS) / EUNIT
      170 CONTINUE
   180 CONTINUE
 
@@ -551,7 +551,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   real(r8),dimension(*) ::h,s,g,y
 
-  data tol   /1.e-5_r8/
+  real(r8), parameter :: tol = 1.0e-5_r8
+
   ncor=nprin-l-1
   n1=nnode
   n2=nnode-1
@@ -705,7 +706,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   implicit real(r8) (a-h,o-z)
-  dimension h(*),s(*),y(*)
+  real(r8) :: h(*),s(*),y(*)
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
 
   zdr = z*a*b
