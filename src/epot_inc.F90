@@ -79,7 +79,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     if(present(reduce_)) then
       if(reduce_) then
         call MPI_ALLREDUCE(atm%f(1), f(1), conf%dim, &
-             MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+             MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
         atm%f = f
       end if
     end if

@@ -20,7 +20,7 @@
 #define X(x)        z ## x
 
 #define R_TYPE      CMPLX
-#define R_MPITYPE   MPI_DOUBLE_COMPLEX
+#define R_MPITYPE   MPI_CMPLX
 #define R_TOTYPE(x) cmplx(x, M_ZERO, PRECISION)
 
 #define R_ABS(x)    abs(x)

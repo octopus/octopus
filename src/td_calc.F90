@@ -118,7 +118,7 @@
    if(present(reduce)) then
      if(reduce) then
        call MPI_ALLREDUCE(x(1), y(1), conf%dim, &
-            MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+            MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
        x = y
      end if
    end if

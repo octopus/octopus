@@ -260,7 +260,7 @@ subroutine run()
         call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
 #ifdef HAVE_MPI
-        call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
+        call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
 #endif
         call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
         call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)
@@ -286,7 +286,7 @@ subroutine run()
         call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
 #ifdef HAVE_MPI
-        call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
+        call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
 #endif
         call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
         call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)        

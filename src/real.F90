@@ -20,7 +20,7 @@
 #define X(x)        d ## x
 
 #define R_TYPE      FLOAT
-#define R_MPITYPE   MPI_DOUBLE_PRECISION
+#define R_MPITYPE   MPI_FLOAT
 #define R_TOTYPE(x) real(x, PRECISION)
 
 #define R_ABS(x)    abs(x)

@@ -130,7 +130,7 @@ contains
 #ifdef HAVE_MPI
       allocate(mpi_mat(n_pairs, n_pairs))
       call MPI_ALLREDUCE(mat(1,1), mpi_mat(1,1), n_pairs**2, &
-         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)      
+         MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)      
       mat = mpi_mat
       deallocate(mpi_mat)
 #endif

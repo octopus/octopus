@@ -62,7 +62,7 @@ subroutine X(calcdens)(st, np, rho, reduce)
     if(reduce) then
       allocate(reduce_rho(1:np, st%d%nspin))
       call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
-           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
       rho = reduce_rho
       deallocate(reduce_rho)
     end if
@@ -353,86 +353,86 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 
   deallocate(a)
   call pop_sub()
-  contains
-
-    subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
-      type(mesh_type),   intent(IN)  :: m
-      integer,           intent(in)  :: ik
-      type(states_type), intent(IN)  :: st1, st2
-      integer,           intent(in)  :: n
-      R_TYPE,            intent(out) :: a(n, n)
-
-      integer :: i, j, dim
+  
+contains
+  
+  subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
+    type(mesh_type),   intent(IN)  :: m
+    integer,           intent(in)  :: ik
+    type(states_type), intent(IN)  :: st1, st2
+    integer,           intent(in)  :: n
+    R_TYPE,            intent(out) :: a(n, n)
+    
+    integer :: i, j, dim
 #if defined(HAVE_MPI)
-      R_TYPE, allocatable :: phi2(:, :)
-      integer :: k, l, r, sn, sn1, ierr
-      integer :: status(MPI_STATUS_SIZE)
-      integer :: request, node(st1%nst)
+    R_TYPE, allocatable :: phi2(:, :)
+    integer :: k, l, r, sn, sn1, ierr
+    integer :: status(MPI_STATUS_SIZE)
+    integer :: request, node(st1%nst)
 #endif
-
-      dim = st1%dim
+    
+    dim = st1%dim
 #if defined(HAVE_MPI)
+    
+    ! This code just builds an integer array, node, that assigns to each
+    ! state the process that holds it. If such a thing is ever needed for any other
+    ! purpose, maybe it should go to other place, more general (such as "st%node")
+    sn  = st1%nst/mpiv%numprocs
+    sn1 = sn + 1
+    r  = mod(st1%nst, mpiv%numprocs)
+    do j = 1, r
+      node((j-1)*sn1+1:j*sn1) = j - 1
+    end do
+    k = sn1*r
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    do j = 1, mpiv%numprocs - r
+      node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
+    enddo
 
-      ! This code just builds an integer array, node, that assigns to each
-      ! state the process that holds it. If such a thing is ever needed for any other
-      ! purpose, maybe it should go to other place, more general (such as "st%node")
-      sn  = st1%nst/mpiv%numprocs
-      sn1 = sn + 1
-      r  = mod(st1%nst, mpiv%numprocs)
-      do j = 1, r
-         node((j-1)*sn1+1:j*sn1) = j - 1
-      enddo
-      k = sn1*r
-      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-      do j = 1, mpiv%numprocs - r
-         node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
-      enddo
+    ! Each process sends the states in st2 to the rest of the processes.
+    do i = st1%st_start, st1%st_end
+      do j = 0, mpiv%numprocs-1
+        if(mpiv%node.ne.j) then
+          call MPI_ISEND(st2%X(psi)(1, 1, i, ik), st1%dim*m%np, R_MPITYPE, &
+             j, i, MPI_COMM_WORLD, request, ierr)
+        end if
+      end do
+    end do
 
-      ! Each process sends the states in st2 to the rest of the processes.
+    ! Processes are received, and then the matrix elements are calculated.
+    allocate(phi2(m%np, st1%dim))
+    do j = 1, n
+      l = node(j)
+      if(l.ne.mpiv%node) then
+        call MPI_RECV(phi2(1, 1), st1%dim*m%np, R_MPITYPE, &
+           l, j, MPI_COMM_WORLD, status, ierr)
+      else
+        phi2(:, :) = st2%X(psi)(:, :, j, ik)
+      end if
       do i = st1%st_start, st1%st_end
-         do j = 0, mpiv%numprocs-1
-            if(mpiv%node.ne.j) then
-               call MPI_ISEND(st2%X(psi)(1, 1, i, ik), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
-                              j, i, MPI_COMM_WORLD, request, ierr)
-            endif
-         enddo
-      enddo
+        a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), phi2(1:, :))
+      end do
+    end do
+    deallocate(phi2)
 
-      ! Processes are received, and then the matrix elements are calculated.
-      allocate(phi2(m%np, st1%dim))
+    ! Each process holds some lines of the matrix. So it is broadcasted (All processes
+    ! should get the whole matrix)
+    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+    do i = 1, n
+      k = node(i)
       do j = 1, n
-         l = node(j)
-         if(l.ne.mpiv%node) then
-            call MPI_RECV(phi2(1, 1), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
-                          l, j, MPI_COMM_WORLD, status, ierr)
-         else
-            phi2(:, :) = st2%X(psi)(:, :, j, ik)
-         endif
-         do i = st1%st_start, st1%st_end
-            a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
-                                                phi2(1:, :))
-         enddo
+        call MPI_BCAST(a(i, j), 1, R_MPITYPE, k, MPI_COMM_WORLD, ierr)
       enddo
-      deallocate(phi2)
-
-      ! Each process holds some lines of the matrix. So it is broadcasted (All processes
-      ! should get the whole matrix)
-      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-      do i = 1, n
-         k = node(i)
-         do j = 1, n
-            call MPI_BCAST(a(i, j), 1, MPI_DOUBLE_COMPLEX, k, MPI_COMM_WORLD, ierr)
-         enddo
-      enddo
+    enddo
 #else
-      do i = 1, n
-         do j = 1, n
-            a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
-                                                  st2%X(psi)(1:, :, j, ik))
-         enddo
-      enddo
+    do i = 1, n
+      do j = 1, n
+        a(i, j) = X(states_dotp)(m, dim, st1%X(psi)(1:, :, i, ik), &
+           st2%X(psi)(1:, :, j, ik))
+      end do
+    end do
 #endif
-    end subroutine X(calculate_matrix)
+  end subroutine X(calculate_matrix)
 
 end function X(states_mpdotp)
 
@@ -480,8 +480,7 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
   end select
 
 #if defined(HAVE_MPI)
-    call MPI_ALLREDUCE(temp, mag, 3, &
-         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+  call MPI_ALLREDUCE(temp, mag, 3, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
 #else
   mag = temp
 #endif
@@ -527,15 +526,16 @@ subroutine X(states_calculate_angular)(m, st, angular, l2)
   enddo
 
 #if defined(HAVE_MPI)
-    call MPI_ALLREDUCE(temp, angular, 3, &
-         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-    if(present(l2)) &
-    call MPI_ALLREDUCE(ltemp, l2, 1, &
-         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+  call MPI_ALLREDUCE(temp, angular, 3, &
+     MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  if(present(l2)) call MPI_ALLREDUCE(ltemp, l2, 1, &
+     MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
 #else
   angular = temp
   if(present(l2)) l2 = ltemp
 #endif
+
   deallocate(lpsi)
   call pop_sub()
+
 end subroutine X(states_calculate_angular)

@@ -784,7 +784,7 @@ subroutine calc_current_paramagnetic(m, st, jp)
 #if defined(HAVE_MPI)
   allocate(red(3, m%np, st%d%nspin))
   call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
-       MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+       MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
   jp = red
   deallocate(red)
 #endif
