@@ -295,3 +295,22 @@ double F90_FUNC_(oct_clock, OCT_CLOCK)
 {
   return (double) clock();
 }
+
+int F90_FUNC_(print_file, PRINT_FILE)
+     (char *name)
+{
+#define MAXLINEA 256
+
+  FILE *pf;
+  char linea[MAXLINEA];
+
+  pf = fopen(name, "r");
+  if (pf != NULL) {
+    while(fgets(linea, MAXLINEA, pf) != NULL)
+      fputs(linea, stdout);
+    fclose(pf); fflush(stdout); return 0;
+  }
+  else{
+    fclose(pf); fflush(stdout); return 1;
+  }
+}

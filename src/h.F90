@@ -93,15 +93,21 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
-  call oct_parse_int(C_string('LocalPotentialSpace'), 1, h%vpsl_space)
-  if(h%vpsl_space < 0 .or. h%vpsl_space > 1) then
-    write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
-         "' is not a valid LocalPotentialSpace"
-    message(2) = '(LocalPotentialSpace = 0 | 1)'
-    call write_fatal(2)
-  end if
+  call oct_parse_int(C_string('LocalPotentialSpace'), RECIPROCAL_SPACE, h%vpsl_space)
+  select case(h%vpsl_space)
+    case(RECIPROCAL_SPACE)
+      message(1) = 'Info: Local Potential in Reciprocal Space.'
+    case(REAL_SPACE)
+      message(1) = 'Info: Local Potential in Real Space.'
+    case default
+      write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
+           "' is not a valid LocalPotentialSpace"
+      message(2) = '(LocalPotentialSpace = 0 | 1)'
+      call write_fatal(2)
+  end select
+  call write_info(1)
 
-  call oct_parse_int(C_string('NonLocalPotentialSpace'), 0, h%vnl_space)
+  call oct_parse_int(C_string('NonLocalPotentialSpace'), REAL_SPACE, h%vnl_space)
   if(h%vnl_space < 0 .or. h%vnl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
          "' is not a valid NonLocalPotentialSpace"
@@ -109,12 +115,12 @@ subroutine hamiltonian_init(h, sys)
     call write_fatal(2)
   end if
 
-  if(h%vpsl_space == 1) then
+  if(h%vpsl_space == RECIPROCAL_SPACE) then
     call mesh_alloc_ffts(sys%m, 2)
     call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%st%nlcc)
   end if
 
-  if(h%vnl_space == 1) then
+  if(h%vnl_space == RECIPROCAL_SPACE) then
     call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
     if(h%nextra < 0) then
       write(message(1), '(a,i5,a)') "Input: '", h%nextra, &

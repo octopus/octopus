@@ -1,4 +1,3 @@
-
 !! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -177,7 +176,7 @@ subroutine ps_debug(ps)
   write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
   do i =1, npoints
      r = (i-1)*grid 
-     write(nonlocal_unit, '('//trim(fm)//'e14.6)') r, &
+     write(nonlocal_unit, '('//trim(fm)//'f16.8)') r, &
            ( (splint(ps%kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
            ( (splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
   enddo
@@ -186,7 +185,7 @@ subroutine ps_debug(ps)
   write(fm,'(i4)') ps%l_max+2; fm = adjustl(fm)
   do i = 1, npoints
      r = (i-1)*grid
-     write(wave_unit, '('//trim(fm)//'e14.6)') &
+     write(wave_unit, '('//trim(fm)//'f16.8)') &
            r, (splint(ps%ur(l), r), l = 0, ps%l_max_occ)
   enddo
 

@@ -246,7 +246,7 @@ subroutine generate_external_pot(h, sys)
   ! first we assume that we need to recalculate the ion_ion energy
   sys%eii = ion_ion_energy(sys%natoms, sys%atom)
 
-  if(h%vpsl_space == 1) then
+  if(h%vpsl_space == RECIPROCAL_SPACE) then
 #if defined(THREE_D)
     allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
     fw = M_z0
@@ -316,7 +316,7 @@ contains
     real(r8) :: x(3), r
 
     sub_name = 'build_local_part'; call push_sub()
-    if(h%vpsl_space == 0) then ! real space
+    if(h%vpsl_space == REAL_SPACE) then ! real space
       do i = 1, h%np
         call mesh_xyz(m, i, x)
         x = x - a%x

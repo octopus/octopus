@@ -128,13 +128,13 @@ subroutine tm_process(pstm, lmax, lloc)
   call get_local(pstm, lloc, 5.0_r8)
 
 ! calculates kb cosines and norms
-  call calculate_kb_cosines(pstm, lmax, lloc)
+  call calculate_kb_cosines(pstm, lloc)
 
 ! Ghost analysis.
   call ghost_analysis(pstm, lmax)
 
 ! Define the KB-projector cut-off radii
-  call get_cutoff_radii(pstm, lmax, lloc)
+  call get_cutoff_radii(pstm, lloc)
 
   call pop_sub(); return
 end subroutine tm_process
@@ -395,9 +395,9 @@ subroutine read_file_data_ascii(unit, psf)
   call pop_sub(); return
 end subroutine read_file_data_ascii
 
-subroutine calculate_kb_cosines(pstm, lmax, lloc)
+subroutine calculate_kb_cosines(pstm, lloc)
   type(tm_type), intent(inout) :: pstm
-  integer, intent(in)          :: lmax, lloc
+  integer, intent(in)          :: lloc
 
   integer :: ir, l
   real(r8) :: dnrm, avgv, vphi
@@ -409,7 +409,7 @@ subroutine calculate_kb_cosines(pstm, lmax, lloc)
 !               || (v_l - v_local) phi_l ||^2 / < (v_l - v_local)phi_l | phi_l >  [Rydberg]
 !       dknrm(0:spec%ps_lmax) stores the KB "norms:"
 !               1 / || (v_l - v_local) phi_l || [1/Rydberg]
-  do l = 0, lmax
+  do l = 0, pstm%npotd-1
     if(l == lloc) then
       pstm%dkbcos(l) = 0.0_r8; pstm%dknrm(l) = 0.0_r8
       cycle
@@ -489,9 +489,9 @@ subroutine ghost_analysis(pstm, lmax)
   call pop_sub; return
 end subroutine ghost_analysis
 
-subroutine get_cutoff_radii(pstm, lmax, lloc)
+subroutine get_cutoff_radii(pstm, lloc)
   type(tm_type), intent(inout) :: pstm
-  integer, intent(in)          :: lmax, lloc
+  integer, intent(in)          :: lloc
 
   integer             :: l, ir
   real(r8)            :: dincv, phi
@@ -503,10 +503,10 @@ subroutine get_cutoff_radii(pstm, lmax, lloc)
     dincv = abs(pstm%vlocal(ir)*pstm%rofi(ir) + 2.0_r8*pstm%zval)
     if(dincv > eps) exit
   enddo
-  pstm%kbr(lmax + 1) = pstm%rofi(ir + 1)
+  pstm%kbr(pstm%npotd) = pstm%rofi(ir + 1)
   
   ! non-local part....
-  do l = 0, lmax
+  do l = 0, pstm%npotd-1
     if(l == lloc) then
       pstm%kbr(l) = 0.0_r8
       cycle
@@ -566,10 +566,56 @@ end subroutine get_local
 subroutine tm_debug(pstm)
   type(tm_type), intent(in) :: pstm
 
+  integer :: loc_unit, kbp_unit, dat_unit, wav_unit, i, l
+
   sub_name = 'tm_end'; call push_sub()
 
-  message(1) = 'Debuggin TM pseudopotentials not written yet.'
-  call write_info(1)
+  ! Opens files.
+  call oct_mkdir(C_string('tm2.'//trim(pstm%namatm)))
+  call io_assign(loc_unit); call io_assign(wav_unit)
+  call io_assign(dat_unit); call io_assign(kbp_unit)
+  open(loc_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'local')
+  open(dat_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'info')
+  open(kbp_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'nonlocal')
+  open(wav_unit, file = 'tm2.'//trim(pstm%namatm)//'/'//'wave')
+
+  ! First of all, writes down the info.
+  write(dat_unit,'(a,/)') pstm%namatm
+  write(dat_unit,'(a)')   'Valence configuration and core radii:'
+  write(dat_unit,'(a,/)')   pstm%title
+  write(dat_unit,'(a)')   'Descriptive string of the generation process:'
+  write(dat_unit,'(6a,/)')   (pstm%method(i), i = 1, 6)
+  write(dat_unit,'(a)')   'Relativistic character: '+pstm%irel
+  write(dat_unit,'(a)')   'XC:                     '+pstm%icorr
+  write(dat_unit,'(a)')   'Core correction:        '+pstm%icore
+  write(dat_unit,'(/,a,i4)') 'Maximum L: ', pstm%npotd-1
+  write(dat_unit,'(/,a)') 'Eigenvalues: '
+  write(dat_unit,'(4x,4f14.6)') pstm%eigen(0:pstm%npotd-1)/2
+  write(dat_unit,'(/,a)') 'Cutoff radii: '
+  write(dat_unit,'(4x,5f14.6)') pstm%kbr(0:pstm%npotd)
+  write(dat_unit,'(/,a)') 'KB norms: '
+  write(dat_unit,'(4x,4e14.4)') pstm%dknrm(0:pstm%npotd-1)*2
+  write(dat_unit,'(/,a)') 'KB cosines: '
+  write(dat_unit,'(4x,4e14.6)') pstm%dkbcos(0:pstm%npotd-1)/2
+
+  ! Now the local part
+  do i = 1, pstm%g%nrval
+     write(loc_unit,*) pstm%rofi(i), pstm%vlocal(i)/2
+  enddo
+
+  ! Nonlocal components.
+  do i = 1, pstm%g%nrval
+     write(kbp_unit,*) pstm%rofi(i), (pstm%vps(i, l)/2, l = 0, pstm%npotd-1)
+  enddo
+  
+  ! Pseudo wave-functions
+  do i = 1, pstm%nrval
+     write(wav_unit,*) pstm%rofi(i), (pstm%rphi(i, l), l = 0, pstm%npotd-1)
+  enddo
+
+  ! Closes files and exits
+  call io_close(loc_unit); call io_close(wav_unit)
+  call io_close(dat_unit); call io_close(kbp_unit)
 
   call pop_sub(); return
 end subroutine tm_debug

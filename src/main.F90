@@ -61,31 +61,8 @@ program octopus
 #endif
 
   ! Let us print our logo
-  ! it is damn hard to print ascii-art in FORTRAN ;((
-  if(conf%verbose > 20 .and. mpiv%node == 0) then
-    write(stdout, *)
-    write(stdout,'(4x,a)')"<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"
-    write(stdout,'(9x,a)')"                       ___"
-    write(stdout,'(9x,a)')"                    .-'   `'."
-    write(stdout,'(9x,a)')"                   /         \ "
-    write(stdout,'(9x,a)')"                   |         ;"
-    write(stdout,'(9x,a)')"                   |         |           ___.--,"
-    write(stdout,'(9x,a)')"          _.._     |0) ~ (0) |    _.---'`__.-( (_."
-    write(stdout,'(9x,2a)')"   __.--'`_.. '.__.\    '--. \_.-' ,.--'`     `",'""`'
-    write(stdout,'(9x,a)')"  ( ,.--'`   ',__ /./;   ;, '.__.'`    __"
-    write(stdout,'(9x,2a)')"  _`) )  .---.__.' / |   |\   \__..--",'""  """--.,_'
-    write(stdout,'(9x,a)')" `---' .'.''-._.-'`_./  /\ '.  \ _.-~~~````~~~-._`-.__.'"
-    write(stdout,'(9x,a)')"       | |  .' _.-' |  |  \  \  '.               `~---`"
-    write(stdout,'(9x,a)')"        \ \/ .'     \  \   '. '-._)"
-    write(stdout,'(9x,a)')"         \/ /        \  \    `=.__`~-."
-    write(stdout,'(9x,2a)')"    jgs  / /\         `) )    / / `",'"".`\ '
-    write(stdout,'(9x,a)')"   , _.-'.'\ \        / /    ( (     / /"
-    write(stdout,'(9x,a)')"    `--~`   ) )    .-'.'      '.'.  | ("
-    write(stdout,'(9x,a)')"           (/`    ( (`          ) )  '-;"
-    write(stdout,'(9x,a)')"            `      '-;         (-'"
-    write(stdout,'(4x,a)')"<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>"
-    write(stdout, *)
-  end if
+  if(conf%verbose > 20 .and. mpiv%node == 0) &
+     ierr = print_file(C_string(SHARE_OCTOPUS//'/logo'))
 
   ! print date
   call date_and_time(values=val)

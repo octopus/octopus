@@ -25,6 +25,9 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   c = R_TOTYPE(0._r8)
   call R_FUNC(mesh_to_cube) (m, f, c)
 
+  if(iand(outp%how, output_axis_x).ne.0) call axis_x()
+  if(iand(outp%how, output_axis_y).ne.0) call axis_y()
+  if(iand(outp%how, output_axis_z).ne.0) call axis_z()
   if(iand(outp%how, output_plane_x).ne.0) call plane_x()
   if(iand(outp%how, output_plane_y).ne.0) call plane_y()
   if(iand(outp%how, output_plane_z).ne.0) call plane_z()
@@ -34,6 +37,46 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
 #endif
 
 contains
+
+  subroutine axis_x()
+    integer  :: ix
+    real(r8) :: x
+
+    call io_assign(iunit)
+    open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0,z=0", status='unknown')
+    do ix = 1, m%fft_n(1)
+       x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
+       write(iunit, *) x, c(ix, m%fft_n(2)/2 + 1, m%fft_n(3)/2 + 1)/u
+    enddo
+    call io_close(iunit)
+  end subroutine axis_x
+
+  subroutine axis_y()
+    integer  :: iy
+    real(r8) :: y
+
+    call io_assign(iunit)
+    open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,z=0", status='unknown')
+    do iy = 1, m%fft_n(2)
+       y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
+       write(iunit, *) y, c(m%fft_n(1)/2 + 1, iy, m%fft_n(3)/2 + 1)/u
+    enddo
+    call io_close(iunit)
+  end subroutine axis_y
+
+  subroutine axis_z()
+    integer  :: iz
+    real(r8) :: z
+
+    call io_assign(iunit)
+    open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,y=0", status='unknown')
+    do iz = 1, m%fft_n(3)
+       z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
+       write(iunit, *) z, c(m%fft_n(1)/2 + 1, m%fft_n(2)/2 + 1, iz)/u
+    enddo
+    call io_close(iunit)
+  end subroutine axis_z
+
   subroutine plane_x()
     integer  :: iy, iz
     real(r8) :: y, z

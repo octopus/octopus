@@ -168,62 +168,6 @@ subroutine hgh_process(psp)
   call pop_sub(); return
 end subroutine hgh_process
 
-subroutine hgh_debug(psp)
-  type(hgh_type), intent(in) :: psp
-
-  integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
-
-  sub_name = 'hgh_debug'; call push_sub()
-
-  ! Opens files.
-  call oct_mkdir(C_string('hgh.'//trim(psp%atom_name)))
-  call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
-  call io_assign(dat_unit); call io_assign(kbp_unit)
-  open(hgh_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'hgh')
-  open(loc_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'local')
-  open(dat_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'info')
-  open(kbp_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'nonlocal')
-  open(wav_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'wave')
-
-  ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
-  write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)
-  write(hgh_unit,'(  11x,4f12.6)') psp%rc(0), (psp%h(0,i,i), i = 1, 3)
-  do k = 1, 3
-     write(hgh_unit,'(  11x,4f12.6)') psp%rc(k), (psp%h(k, i, i), i = 1, 3)
-     write(hgh_unit,'(  23x,4f12.6)')            (psp%k(k, i, i), i = 1, 3)
-  enddo
-
-  ! Writes down some info.
-  write(dat_unit,'(a,i3)')        'lmax  = ', psp%l_max
-  if(psp%l_max >= 0) then
-     write(dat_unit,'(a,4f14.6)') 'kbr   = ', psp%kbr
-  endif
-  write(dat_unit,'(a,4f14.6)')    'eigen = ', psp%eigen
-
-  ! Writes down local part.
-  do i = 1, psp%g%nrval
-     write(loc_unit, *) psp%g%rofi(i), psp%vlocal(i)
-  enddo
-
-  ! Writes down nonlocal part.
-  if(psp%l_max >=0) then
-    do i = 1, psp%g%nrval
-       write(kbp_unit, *) psp%g%rofi(i), ( (psp%kb(i, l, k) ,k = 1, 3),l = 0, psp%l_max)
-    enddo
-  endif
-
-  ! And the pseudo-wavefunctions.
-  do i = 1, psp%g%nrval
-     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 0, psp%l_max_occ)
-  enddo
-
-  ! Closes files and exits
-  call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
-  call io_close(dat_unit); call io_close(kbp_unit)
-
-  call pop_sub(); return
-end subroutine hgh_debug
-
 function load_params(unit, params)
   integer, intent(in)             :: unit        ! where to read from
   type(hgh_type), intent(out)     :: params      ! obvious
@@ -653,6 +597,16 @@ function hgh_occs(label, lmax)
     case('F');  hgh_occs(0:1) = (/ 2, 5 /)
     case('Ne'); hgh_occs(0:1) = (/ 2, 6 /)
     case('Na'); hgh_occs(0:1) = (/ 1, 0 /)
+    case('Mg'); hgh_occs(0:1) = (/ 2, 0 /)
+    case('Al'); hgh_occs(0:1) = (/ 2, 1 /)
+    case('Si'); hgh_occs(0:1) = (/ 2, 2 /)
+    case('P');  hgh_occs(0:1) = (/ 2, 3 /)
+    case('S');  hgh_occs(0:1) = (/ 2, 4 /)
+    case('Cl'); hgh_occs(0:1) = (/ 2, 5 /)
+    case('Ar'); hgh_occs(0:1) = (/ 2, 6 /)
+    case('K');  hgh_occs(0:2) = (/ 1, 0, 0 /)
+    case('Ca'); hgh_occs(0:2) = (/ 2, 0, 0 /)
+    case('Sc'); hgh_occs(0:2) = (/ 2, 0, 1 /)
     case('Ti'); hgh_occs(0:2) = (/ 2, 0, 2 /)
     case default
     if(mpiv%node == 0) then
@@ -664,5 +618,61 @@ function hgh_occs(label, lmax)
   end select
 
 end function hgh_occs
+
+subroutine hgh_debug(psp)
+  type(hgh_type), intent(in) :: psp
+
+  integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
+
+  sub_name = 'hgh_debug'; call push_sub()
+
+  ! Opens files.
+  call oct_mkdir(C_string('hgh.'//trim(psp%atom_name)))
+  call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
+  call io_assign(dat_unit); call io_assign(kbp_unit)
+  open(hgh_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'hgh')
+  open(loc_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'local')
+  open(dat_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'info')
+  open(kbp_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'nonlocal')
+  open(wav_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'wave')
+
+  ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
+  write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)
+  write(hgh_unit,'(  11x,4f12.6)') psp%rc(0), (psp%h(0,i,i), i = 1, 3)
+  do k = 1, 3
+     write(hgh_unit,'(  11x,4f12.6)') psp%rc(k), (psp%h(k, i, i), i = 1, 3)
+     write(hgh_unit,'(  23x,4f12.6)')            (psp%k(k, i, i), i = 1, 3)
+  enddo
+
+  ! Writes down some info.
+  write(dat_unit,'(a,i3)')        'lmax  = ', psp%l_max
+  if(psp%l_max >= 0) then
+     write(dat_unit,'(a,4f14.6)') 'kbr   = ', psp%kbr
+  endif
+  write(dat_unit,'(a,4f14.6)')    'eigen = ', psp%eigen
+
+  ! Writes down local part.
+  do i = 1, psp%g%nrval
+     write(loc_unit, *) psp%g%rofi(i), psp%vlocal(i)
+  enddo
+
+  ! Writes down nonlocal part.
+  if(psp%l_max >=0) then
+    do i = 1, psp%g%nrval
+       write(kbp_unit, *) psp%g%rofi(i), ( (psp%kb(i, l, k) ,k = 1, 3),l = 0, psp%l_max)
+    enddo
+  endif
+
+  ! And the pseudo-wavefunctions.
+  do i = 1, psp%g%nrval
+     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 0, psp%l_max_occ)
+  enddo
+
+  ! Closes files and exits
+  call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
+  call io_close(dat_unit); call io_close(kbp_unit)
+
+  call pop_sub(); return
+end subroutine hgh_debug
 
 end module hgh

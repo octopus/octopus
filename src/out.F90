@@ -42,10 +42,13 @@ integer, parameter :: &
      output_something = 6   ! this one should be the last
 
 integer, parameter ::     &
-     output_plane_x = 1,  &
-     output_plane_y = 2,  &
-     output_plane_z = 4,  &
-     output_dx      = 16
+     output_axis_x  = 1,  &
+     output_axis_y  = 2,  &
+     output_axis_z  = 4,  &
+     output_plane_x = 8,  &
+     output_plane_y = 16,  &
+     output_plane_z = 32,  &
+     output_dx      = 64
 
 contains
 
@@ -75,6 +78,12 @@ subroutine output_init(outp)
   if(outp%what(output_something)) then
 
 #if defined(THREE_D)
+    call oct_parse_logical("OutputAxisX", .false., l)
+    if(l) outp%how = ior(outp%how, output_axis_x)
+    call oct_parse_logical("OutputAxisY", .false., l)
+    if(l) outp%how = ior(outp%how, output_axis_y)
+    call oct_parse_logical("OutputAxisZ", .false., l)
+    if(l) outp%how = ior(outp%how, output_axis_z)
     call oct_parse_logical("OutputPlaneX", .false., l)
     if(l) outp%how = ior(outp%how, output_plane_x)
     call oct_parse_logical("OutputPlaneY", .false., l)
