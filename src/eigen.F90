@@ -100,16 +100,17 @@ subroutine eigen_solver_init(eigens)
 
   end select
   
-  call pop_sub()
+  call pop_sub(); return
 end subroutine eigen_solver_init
 
-subroutine eigen_solver_run(eigens, st, sys, h, iter, diff)
+subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
   type(eigen_solver_type), intent(IN) :: eigens
   type(states_type), intent(inout) :: st
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(IN) :: h
   integer, intent(in) :: iter
   real(r8), intent(out) :: diff(st%nst, st%nik)
+  logical, intent(inout), optional :: conv
 
   integer :: ik, maxiter, converged, errorflag
   real(r8) :: tol
@@ -125,6 +126,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff)
     end if
   end if
 
+  if(present(conv)) conv = .false.
   select case(eigens%es_type)
   case(ES_NEW_CG)
     maxiter = eigens%es_maxiter
@@ -134,6 +136,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff)
          tol, maxiter, converged, errorflag, diff)
     write(message(1),'(a,i5)') 'Info: Converged = ',converged
     call write_info(1)
+    if(present(conv).and. converged == st%nst) conv = .true.
   case(ES_OLD_CG)
     call eigen_solver_cg1(eigens%no_cg, st, sys, h, diff)
     do ik = 1, st%nik
@@ -142,7 +145,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff)
     end do
   end select
 
-  call pop_sub()
+  call pop_sub(); return
 end subroutine eigen_solver_run
 
 #include "eigen_cg1.F90"

@@ -65,12 +65,12 @@ subroutine unocc_init(u, m, st, sys)
   ! setup variables
   u%st%nst = u%st%nst + st%nst
   u%st%st_end = u%st%nst
-  allocate(u%st%R_FUNC(psi) (0:m%np, u%st%dim, u%st%nst, u%st%nik))
+  allocate(u%st%R_FUNC(psi) (0:m%np, st%dim, u%st%nst, st%nik))
   allocate(u%st%eigenval(u%st%nst, st%nik), u%st%occ(u%st%nst, st%nik))
   u%st%eigenval = 0._r8
   u%st%occ      = 0._r8
 
-  call pop_sub()
+  call pop_sub(); return
 end subroutine unocc_init
 
 subroutine unocc_end(u)
@@ -91,45 +91,23 @@ subroutine unocc_run(u, scf, sys, h)
   type(hamiltonian_type), intent(inout) :: h
 
   integer :: iter, is, j, iunit
-  logical :: finish, file_exists
+  logical :: finish, file_exists, converged
   real(r8) :: tol, diff(u%st%nst, u%st%nik)
 
   sub_name = 'unocc_scf'; call push_sub()
 
-  iter_loop: do iter = 1, u%max_iter
-    if(clean_stop()) exit
+  iter = 1
+  call eigen_solver_run(scf%eigens, u%st, sys, h, iter, diff, converged)
 
-    call eigen_solver_run(scf%eigens, u%st, sys, h, iter, diff)
-    tol = maxval(diff)
-
-    ! compute eigenvalues
-    call R_FUNC(hamiltonian_eigenval) (h, u%st, sys) ! eigenvalues
-
-    write(message(1), '(a,i5,a,f12.6)') 'Info: iter = ', iter, ' tol = ', tol
-    call write_info(1)
-    call states_write_eigenvalues(stdout, u%st%nst, u%st, diff)
-    
-    ! save restart information
-    call R_FUNC(states_write_restart)("tmp/restart.occ", sys%m, u%st)
-
-    finish = (u%conv > 0) .and. (tol <= u%conv)
-    if(finish) then
-      write(message(1), '(a, i4, a)') &
-           'Info: Occupation analysis SCF converged in ', iter, ' iterations.'
-      call write_info(1)
-      exit iter_loop
-    end if
-
-  end do iter_loop
+  ! compute eigenvalues
+  call R_FUNC(hamiltonian_eigenval) (h, u%st, sys) ! eigenvalues
 
   ! write output file
   call io_assign(iunit)
   call oct_mkdir(C_string("static"))
   open(iunit, status='unknown', file='eigenvalues')
-
-  if(.not.finish) then
-    write(iunit, '(a, i4, a)') &
-         'Occupation analysis SCF converged in ', iter, ' iterations.'
+  if(converged) then
+    write(iunit,'(a)') 'Occupation analysis SCF converged.'
   else
     write(iunit,'(a)') 'Occupational analysis did *not* converge!'
   end if
@@ -138,11 +116,13 @@ subroutine unocc_run(u, scf, sys, h)
   call states_write_eigenvalues(iunit, u%st%nst, u%st, diff)
   call io_close(iunit)
 
+  ! write restart information.
+  call R_FUNC(states_write_restart)("tmp/restart.occ", sys%m, u%st) 
+
   ! output wave-functions
   call R_FUNC(states_output) (u%st, sys%m, "static", sys%outp)
 
-  call pop_sub()
+  call pop_sub(); return
 end subroutine unocc_run
-
 
 end module unocc
