@@ -1,6 +1,6 @@
 EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-excite oct-broad oct-ph oct-xyz-anim \
-	oct-choose-st oct-make-st oct-center-geom \
+	oct-make-st oct-center-geom \
 	oct-atoms-magnet
 
 bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
@@ -66,9 +66,6 @@ oct_broad_LDADD = $(core_LIBS)
 
 oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
-
-oct_choose_st_SOURCES = $(core_SRCS) systm.F90 choose_st.F90
-oct_choose_st_LDADD = $(octopus_LDADD)
 
 oct_make_st_SOURCES = $(core_SRCS) systm.F90 make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
