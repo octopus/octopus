@@ -61,7 +61,6 @@ contains
     ! do we want to filter out the external potentials, or not.
     call loct_parse_logical("FilterPotentials", .false., filter)
     if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%m))
-    call geometry_filter(s%geo, mesh_gcutoff(s%m))
     
     ! initialize the other stuff
     allocate(s%st)
