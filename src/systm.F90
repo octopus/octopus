@@ -87,7 +87,7 @@ contains
     type(loct_spline_type), pointer :: s
 
     call push_sub('atom_get_wf')
-    
+
     a = atom%x
     if(atom%spec%local) then
       ! add a couple of harmonic oscilator functions
@@ -114,7 +114,7 @@ contains
 
     integer :: opt, i, in_points, k, n
     FLOAT :: r
-    R_TYPE :: psi1
+    R_TYPE :: psi1, psi2
     type(specie_type), pointer :: s
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
@@ -132,7 +132,7 @@ contains
         opt = 3
       end select
     else
-      opt = 1      
+      opt = 1
     end if
 
     rho = M_ZERO
@@ -170,11 +170,12 @@ contains
               select case(spin_channels)
               case(1)
                 psi1 = loct_splint(s%ps%Ur(n, 1), r)
-                rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)  
+                rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
               case(2)
                 psi1 = loct_splint(s%ps%Ur(n, 1), r)
+                psi2 = loct_splint(s%ps%Ur(n, 2), r)
                 rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
-                rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi1*psi1 /(M_FOUR*M_PI)
+                rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi2*psi2 /(M_FOUR*M_PI)
               end select
             end if
           end do
@@ -194,22 +195,22 @@ contains
     
     integer :: ia, is, gd_spin, i
     integer, save :: iseed = 321
-    FLOAT :: r, rnd, phi, theta
+    FLOAT :: r, rnd, phi, theta, mag(3)
     FLOAT, allocatable :: atom_rho(:,:)
-    
+
     call push_sub('guess_density')
-    
+
     if (spin_channels == 1) then
       gd_spin = 1
     else
       call loct_parse_int("GuessDensitySpin", 2, gd_spin)
-      if (gd_spin < 0 .or. gd_spin > 3) then
+      if (gd_spin < 0 .or. gd_spin > 4) then
         write(message(1),'(a,i1,a)') "Input: '",gd_spin ,"' is not a valid GuessDensitySpin"
-        message(2) = '(GuessDensitySpin = 1 | 2 | 3)'
+        message(2) = '(GuessDensitySpin = 1 | 2 | 3 | 4)'
         call write_fatal(2)
       end if
     end if
-    
+
     rho = M_ZERO
     select case (gd_spin)
     case (1) ! Spin-unpolarized
@@ -220,17 +221,17 @@ contains
         rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)
         rho(1:m%np, 2) = rho(1:m%np, 1)
       end if
-      
+
     case (2) ! Spin-polarized
       do ia = 1, geo%natoms
         rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_density(m, geo%atom(ia), 2)
       end do
-      
+
     case (3) ! Random oriented spins
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
         atom_rho = atom_density(m, geo%atom(ia), 2)
-        
+
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
           rnd = rnd - M_HALF
@@ -255,7 +256,40 @@ contains
                                             (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
         end if
       end do
-      
+
+    case (4) ! User-defined
+      allocate(atom_rho(m%np, 2))
+
+      if (loct_parse_block_n("GuessDensityAtomsMagnet") /= geo%natoms) then
+        message(1) = "GuessDensityAtomsMagnet block is not defined "
+        message(2) = "or it has the wrong number of rows"
+        call write_fatal(2)
+      end if
+
+      do ia = 1, geo%natoms
+        atom_rho = atom_density(m, geo%atom(ia), 2)
+
+        if (nspin == 2) then
+
+        elseif (nspin == 4) then
+          do i = 1, 3
+            call loct_parse_block_float("GuessDensityAtomsMagnet", ia-1, i-1, mag(i))
+          end do
+
+          phi = acos(mag(1)/sqrt(dot_product(mag, mag)))
+          if (mag(2) < M_ZERO) phi = M_TWO*M_PI - phi
+          theta = acos(mag(3)/sqrt(dot_product(mag, mag)))
+          rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+                                          + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+          rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+                                          + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+          rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
+                                            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+          rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
+                                            (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+        end if
+      end do    
+
     end select
 
     ! we now renormalize the density (necessary if we have a charged system)
@@ -278,7 +312,6 @@ contains
     call write_info(1)
     
     call pop_sub()
-
   end subroutine system_guess_density
   
 end module system
