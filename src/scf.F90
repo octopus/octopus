@@ -385,7 +385,7 @@ subroutine write_magnet(iunit, st)
           m(1) = m(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
           m(2) = m(2) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
           c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
-          m(3) = m(3) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+          m(3) = m(3) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
         end do
       end do
     end do
