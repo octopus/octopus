@@ -43,13 +43,19 @@ subroutine states_choose_kpoints(st, m)
         st%kpoints(i, ik) = -l(i)*k/(st%nik - 1)
     end do
 ! this does not take into accout the symmetries
-! it is correct only in 1D
+! it is correct only for simple cubic with center of inversion in point group
     st%kweights(ik) = M_ONE/real(st%nik, r8)
   end do
 
-! DEBUG
-!  do ik = 1, st%nik
-!  write(UNIT=11,FMT='(i3,1x,4F8.3)')ik,st%kpoints(:, ik)*units_out%length%factor,st%kweights(ik)
-!  end do
-
 end subroutine states_choose_kpoints
+
+subroutine kpoints_write_info(st,iunit)
+  
+  type(states_type), intent(IN) :: st
+  integer, intent(IN) :: iunit
+  
+  
+  write(message(1),'(i4)') 'Number of K points in each direction = ',st%nik
+  call write_info(1,iunit)
+
+end subroutine kpoints_write_info
