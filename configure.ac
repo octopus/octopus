@@ -121,9 +121,14 @@ if test -z "${LIB_FFTW3}"; then
 fi
 
 if test "$lib_ok" = "ok"; then
+if test "${LIB_FFTW3}"; then
 	AC_DEFINE(HAVE_FFTW3, 1, [FFTW library (www.fftw.org)])
 	AC_SUBST(LIB_FFTW)
-else
+fi
+fi
+
+dnl If FFTW3 was not found, variable ${LIB_FFTW3} should be empty, and FFTW2 will be searched.
+if test -z "${LIB_FFTW3}"; then
 
 dnl tests for FFTW
 lib_ok="ok"
