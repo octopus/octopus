@@ -19,7 +19,7 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   end do
   call io_close(i)
 
-#elseif defined(THREE_D)
+#elif defined(THREE_D)
 
   allocate(c(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
   c = R_TOTYPE(0._r8)
