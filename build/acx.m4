@@ -58,3 +58,52 @@ AC_DEFUN([ACX_CHECK_LIB],
 		AC_CHECK_LIB([$2], [$3], [$1="$4"], [$5], [$6])
 	fi
 ])
+
+AC_DEFUN([ACX_LIB_FFTW],
+[
+AC_ARG_ENABLE(fft, [  --enable-fft=ARG    enable fft support
+      ARG=no          (the same as --disable-fft) disable FFT support
+      ARG=fftw3       FFTW3 support through libfftw3 (default)
+      ARG=fftw2       FFTW2 support through libfftw],
+  [fft=$enableval], [fft=fftw3])
+
+case "${fft}" in
+  fftw3*)
+    if test "${SINGLE_PRECISION}"; then
+   echo HHHHHHHHHHHHHHHHHHHHHHHHHHHHh
+      ACX_CHECK_FUNC([LIB_FFT], [sfftw_plan_dft_1d])
+      ACX_CHECK_LIB([LIB_FFT], [fftw3f],  [sfftw_plan_dft_1d], [-lfftw3f])
+    else
+      ACX_CHECK_FUNC([LIB_FFT], [dfftw_plan_dft_1d])
+      ACX_CHECK_LIB([LIB_FFT], [fftw3],  [dfftw_plan_dft_1d], [-lfftw3])
+    fi
+
+    AS_IF([test -z "${LIB_FFT}"], AC_MSG_ERROR([could not find fftw3 library]))
+    fft=3
+    ;;
+  fftw2*)
+      ACX_CHECK_FUNC([LIB_FFT], [fftw3d_f77_create_plan])
+      ACX_CHECK_LIB([LIB_FFT], [fftw],  [fftw3d_f77_create_plan], [-lfftw])
+      ACX_CHECK_LIB([LIB_FFT], [dfftw], [fftw3d_f77_create_plan], [-ldfftw])
+      AS_IF([test -z "${LIB_FFT}"], AC_MSG_ERROR([could not find fftw library]))
+	
+      ACX_CHECK_FUNC([lib_rfft], [rfftw3d_f77_create_plan], [], [], [${LIB_FFT}])
+      ACX_CHECK_LIB([lib_rfft], [rfftw], [rfftw3d_f77_create_plan], [-lrfftw], [], [${LIB_FFT}])
+      ACX_CHECK_LIB([lib_rfft], [drfftw], [rfftw3d_f77_create_plan], [-ldrfftw], [], [${LIB_FFT}])
+      AS_IF([test -z "${lib_rfft}"], AC_MSG_ERROR([could not find rfftw library]))
+
+      LIB_FFT="${lib_rfft} ${LIB_FFT}"
+      fft=2
+      ;;
+    *)
+      fft=no
+      ;;
+  esac
+
+if test -z "${LIB_FFT}"; then
+  AC_MSG_WARN([Octopus will be compiled *without* fft support])
+else
+  AC_DEFINE_UNQUOTED(HAVE_FFT, $fft, [FFT library (fftw2 | fftw3)])
+  AC_SUBST(LIB_FFT)
+fi
+])

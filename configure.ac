@@ -132,43 +132,13 @@ dnl ===================================================================
 dnl now we search for libraries
 
 dnl FFT
-AC_ARG_ENABLE(fft, [  --enable-fft=ARG    enable fft support
-      ARG=no          (the same as --disable-fft) disable FFT support
-      ARG=fftw3       FFTW3 support through libfftw3 (default)
-      ARG=fftw2       FFTW2 support through libfftw],
-        [fft=$enableval], [fft=fftw3])
+ACX_LIB_FFTW
 
-case "${fft}" in
-	fftw3*)
-		ACX_CHECK_FUNC([lib_fft], [dfftw_plan_dft_1d])
-		ACX_CHECK_LIB([lib_fft], [fftw3],  [dfftw_plan_dft_1d], [-lfftw3])
-		AS_IF([test -z "${lib_fft}"], AC_MSG_ERROR([could not find fftw3 library]))
-		fft=3
-		;;
-  fftw2*)
-		ACX_CHECK_FUNC([lib_fft], [fftw3d_f77_create_plan])
-		ACX_CHECK_LIB([lib_fft], [fftw],  [fftw3d_f77_create_plan], [-lfftw])
-		ACX_CHECK_LIB([lib_fft], [dfftw], [fftw3d_f77_create_plan], [-ldfftw])
-		AS_IF([test -z "${lib_fft}"], AC_MSG_ERROR([couldn't find fftw library]))
-	
-  	ACX_CHECK_FUNC([lib_rfft], [rfftw3d_f77_create_plan], [], [], [${lib_fft}])
-   	ACX_CHECK_LIB([lib_rfft], [rfftw], [rfftw3d_f77_create_plan], [-lrfftw], [], [${lib_fft}])
-   	ACX_CHECK_LIB([lib_rfft], [drfftw], [rfftw3d_f77_create_plan], [-ldrfftw], [], [${lib_fft}])
-		AS_IF([test -z "${lib_rfft}"], AC_MSG_ERROR([couldn't find rfftw library]))
-
-		lib_fft="${lib_rfft} ${lib_fft}"
-		fft=2
-		;;
-  *)
-		fft=no
-		;;
-esac
-
-if test $fft = "no"; then
-	AC_MSG_WARN([Octopus will be compiled *without* fft support])
+if test -z "${LIB_FFT}"; then
+  AC_MSG_WARN([Octopus will be compiled *without* fft support])
 else
-	AC_DEFINE_UNQUOTED(HAVE_FFT, $fft, [FFT library (fftw2 | fftw3)])
-	AC_SUBST(LIB_FFT, ${lib_fft})
+  AC_DEFINE_UNQUOTED(HAVE_FFT, $fft, [FFT library (fftw2 | fftw3)])
+  AC_SUBST(LIB_FFT)
 fi
 
 dnl tests for trlan. Default behavior will be *not* using it.   

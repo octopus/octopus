@@ -20,7 +20,7 @@
 #if defined(SINGLE_PRECISION)
 #  define DBLAS(x) s ## x
 #  define ZBLAS(x) c ## x
-#  define ZNRM2    dcnrm2
+#  define ZNRM2    scnrm2
 #else
 #  define DBLAS(x) d ## x
 #  define ZBLAS(x) z ## x

@@ -611,7 +611,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   if(et.le.e1 .or. et.ge.e2 .or.                                              &
      nt.lt.nnode-1 .or. nt.gt.nnode) go to 2
   e=et
-  if(dabs(de).lt.tol) go to 6
+  if(abs(de).lt.tol) go to 6
 2 call yofe(e,de,dr,rmax,h,s,y,n,l,ncor,nt,z,a,b)
 !     write(6,101) l,dr,n1,nt,nnode,n2,e1,e,e2,de
 !101  format('  l     dr     n1  nt   n  n2       e1           e',
@@ -752,7 +752,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   yn = M_ZERO
-  if(n.lt.nmax .or. dabs(dr).gt.CNST(1.e3)) go to 7
+  if(n.lt.nmax .or. abs(dr).gt.CNST(1.e3)) go to 7
   call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
 
 
@@ -845,7 +845,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   norm=norm + g(i)*s(i)*g(i)
 4 continue
   norm = norm/M_THREE
-  srnrm = dsqrt(norm)
+  srnrm = sqrt(norm)
   do 5 i=1,n
   g(i) = g(i)/srnrm
 5 continue
