@@ -68,7 +68,7 @@ subroutine scf_init(scf, sys, h)
 
   if(scf%max_iter <= 0) scf%max_iter = huge(scf%max_iter)
 
-  call oct_parse_int("What2Mix", 0_i4, scf%what2mix)
+  call oct_parse_int("What2Mix", 0, scf%what2mix)
   select case (scf%what2mix)
   case (MIXDENS)
      message(1) = 'Info: SCF mixing the density.'
