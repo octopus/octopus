@@ -37,6 +37,7 @@ type conf_type
                          ! > 20  -> normal program info
                          ! > 999 -> debug
   integer :: debug_level ! How much debug should print
+  integer :: periodic_dim
   integer :: dim
 end type conf_type
 
@@ -150,6 +151,20 @@ subroutine global_init()
     call write_fatal(1)
   end if
 
+  call oct_parse_int(C_string('PeriodicDimensions'), 0, conf%periodic_dim)
+  if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
+    message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
+    call write_fatal(1)
+  endif
+  if(conf%periodic_dim > conf%dim) then
+    message(1) = 'PeriodicDimensions must be <= Dimensions'
+    call write_fatal(1)
+  end if
+!  if (conf%periodic_dim > 1 ) then
+!   message(1) = 'Periodic dimensions > 1 not implemented yet.'
+!   call write_fatal(1)
+!  endif
+
   ! create temporary dir (is always necessary)
   call oct_mkdir(C_string("tmp"))
 
@@ -211,9 +226,10 @@ subroutine write_warning(no_lines)
   return
 end subroutine write_warning
 
-subroutine write_info(no_lines, iunit)
+subroutine write_info(no_lines, iunit, verbose_limit)
   integer, intent(in) :: no_lines
   integer, intent(in), optional :: iunit
+  integer, intent(in), optional :: verbose_limit
 
   integer :: i, iu
 
@@ -228,9 +244,12 @@ subroutine write_info(no_lines, iunit)
   end if
 
   if(conf%verbose>20) then
-    do i=1,no_lines
-      write(iu, '(a)') trim(message(i))
-    end do
+    if((.not.present(verbose_limit)) .or. &
+      ((present(verbose_limit)) .and. (conf%verbose>verbose_limit))) then
+       do i=1,no_lines
+         write(iu, '(a)') trim(message(i))
+       end do
+    end if
   end if
 
   return
