@@ -150,24 +150,22 @@ contains
         lapl(k) = (m%d%dlidfj(0)*f(k))*(1/m%h(1)**2)
       end if
       if(present(grad)) then
-        grad(:, k) = m%d%dgidfj(0)*f(k)
+        grad(1, k) = m%d%dgidfj(0)*f(k)
       end if
 
-      ix = m%Lx(k); iy = m%Ly(k); iz = m%Lz(k)
+      ix = m%Lx(k)
       do in = 1, m%d%norder
-        ind1(1) = m%Lxyz_inv(ix-in, iy, iz); ind1(2) = 0; ind1(3) = 0
-    
-        ind2(1) = m%Lxyz_inv(ix+in, iy, iz); ind2(2) = 0; ind2(3) = 0
+        ind1(1) = m%Lxyz_inv(ix-in, 0, 0)
+        ind2(1) = m%Lxyz_inv(ix+in, 0, 0)
 
         ! If you prefer 0 wave functions at the boundary, uncomment the following
         ! Just be careful with the LB94 xc potential, for it will probably not work!
 #ifndef BOUNDARIES_ZERO_DERIVATIVE
-        den1(:) = f(ind1(:))
-        den2(:) = f(ind2(:))
+        den1(1) = f(ind1(1))
+        den2(1) = f(ind2(1))
 #else
         ! This also sets zero wavefunction
         ! den1 = 0._r8; den2 = 0._r8
-
         ! This peace of code changes the boundary conditions
         ! to have 0 derivative at the boundary 
         if(ind1(1) > 0)den1(1) = f(ind1(1))
@@ -179,14 +177,15 @@ contains
         end if
         
         if(present(grad)) then
-          grad(:, k) = grad(:, k) + m%d%dgidfj(-in)*den1(:) + m%d%dgidfj(in)*den2(:)
+          grad(1, k) = grad(1, k) + m%d%dgidfj(-in)*den1(1) + m%d%dgidfj(in)*den2(1)
         end if
         
       end do
     end do
 
     if(present(grad)) then
-         grad(i,:) = grad(i,:) / m%h(1)
+         grad(1,:) = grad(1,:) / m%h(1)
+         grad(2:3,:) = 0.0_r8
     end if
 
     return
