@@ -130,11 +130,12 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
+  h%vpsl_space = REAL_SPACE
+  h%vnl_space  = REAL_SPACE
 #ifdef HAVE_FFT
   call oct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, h%vpsl_space)
-#else
-  h%vpsl_space = REAL_SPACE
 #endif
+
   select case(h%vpsl_space)
     case(RECIPROCAL_SPACE)
       message(1) = 'Info: Local Potential in Reciprocal Space.'
