@@ -482,7 +482,7 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
   case(SPINORS) ! non-collinear
     temp = M_ZERO
     do ik = 1, st%nik
-      do ist = 1, st%nst
+      do ist = st%st_start, st%st_end
         do i = 1, m%np
           c = st%X(psi) (i, 1, ist, ik) * R_CONJ(st%X(psi) (i, 2, ist, ik))* m%vol_pp(i)
 
