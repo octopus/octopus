@@ -36,7 +36,7 @@ module poisson
 
   private
   public :: poisson_init,  &
-            poisson_solve, &
+            dpoisson_solve, zpoisson_solve, &
             poisson_end
 
   integer :: poisson_solver = -99
@@ -53,7 +53,6 @@ module poisson
                         FFT_NOCUT     = 3, &
                         FFT_CORRECTED = 4
 #endif
-
   integer, parameter :: CG            = 5, &
                         CG_CORRECTED  = 6
 
@@ -61,203 +60,236 @@ module poisson
 
 contains
 
-subroutine poisson_init(m)
-  type(mesh_type),     intent(inout) :: m
+  !-----------------------------------------------------------------
+  subroutine poisson_init(m)
+    type(mesh_type),     intent(inout) :: m
 
-  if(poisson_solver.ne.-99) return ! already initialized
+    if(poisson_solver.ne.-99) return ! already initialized
   
-  call push_sub('poisson_init')
+    call push_sub('poisson_init')
   
+    select case(conf%dim)
+    case(1); call init_1D()
+    case(2); call init_2D()
+    case(3); call init_3D()
+    end select
+
+  contains
+
+    !-----------------------------------------------------------------
+    subroutine init_1D()
+      poisson_solver = -conf%dim ! internal type
+      message(1) = 'Info: Using direct integration method to solve poisson equation'
+      call write_info(1)
+    end subroutine init_1D
 
 
-
-  dimensions: select case(conf%dim)
-
-
-  case(1)   !!! 1D PROBLEMS
-
-    poisson_solver = -conf%dim ! internal type
-    message(1) = 'Info: Using direct integration method to solve poisson equation'
-    call write_info(1)
-
-  case(2)   !!! 2D PROBLEMS
-
+    !-----------------------------------------------------------------
+    subroutine init_2D()
 #if defined(HAVE_FFT)
-    call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
-    if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
-      write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
+      call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
+      if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
+        write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
-      message(2) = 'PoissonSolver = -1 (direct summation)     | '
-      message(3) = '                 0 (fft spherical cutoff) '
-      call write_fatal(3)
-    endif
-
+        message(2) = 'PoissonSolver = -1 (direct summation)     | '
+        message(3) = '                 0 (fft spherical cutoff) '
+        call write_fatal(3)
+      endif
+      
 #else
-    poisson_solver = -conf%dim ! internal type
-    message(1) = 'Info: Using direct integration method to solve poisson equation'
-    call write_info(1)
+      poisson_solver = -conf%dim ! internal type
+      message(1) = 'Info: Using direct integration method to solve poisson equation'
+      call write_info(1)
 #endif
 
-   if(m%use_curvlinear .and. (poisson_solver .ne. -conf%dim) ) then
-      message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
-      message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
-      call write_fatal(2)
-   endif
-
-   call poisson2D_init(m)
-
-
-  case(3)   !!! 3D PROBLEMS
+      if(m%use_curvlinear .and. (poisson_solver .ne. -conf%dim) ) then
+        message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
+        message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
+        call write_fatal(2)
+      endif
+      
+      call poisson2D_init(m)
+    end subroutine init_2D
 
 
+    !-----------------------------------------------------------------
+    subroutine init_3D()
 #ifdef HAVE_FFT
-
-    call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
-    if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
-      write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
+      call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
+      if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
+        write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
-      message(2) = 'PoissonSolver = 0 (fft spherical cutoff)   | '
-      message(3) = '                1 (fft cylindrical cutoff) | '
-      message(4) = '                2 (fft planar cutoff)      | '
-      message(5) = '                3 (fft no cutoff)          | '
-      message(6) = '                4 (fft + corrections)      | '
-      message(7) = '                5 (conj grad)              | '
-      message(8) = '                6 (corrected conj grad) '
-      call write_fatal(8)
-    end if
-    if (poisson_solver /= conf%periodic_dim .and. &
-        poisson_solver < CG .and. &
-        poisson_solver /= FFT_CORRECTED) then
-      write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
-      write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
-      message(3) =                 'You know what you are doing, right?'
-      call write_warning(3)
-    end if
+        message(2) = 'PoissonSolver = 0 (fft spherical cutoff)   | '
+        message(3) = '                1 (fft cylindrical cutoff) | '
+        message(4) = '                2 (fft planar cutoff)      | '
+        message(5) = '                3 (fft no cutoff)          | '
+        message(6) = '                4 (fft + corrections)      | '
+        message(7) = '                5 (conj grad)              | '
+        message(8) = '                6 (corrected conj grad) '
+        call write_fatal(8)
+      end if
+      if (poisson_solver /= conf%periodic_dim .and. &
+         poisson_solver < CG .and. &
+         poisson_solver /= FFT_CORRECTED) then
+        write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
+        write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
+        message(3) =                 'You know what you are doing, right?'
+        call write_warning(3)
+      end if
 #else
-    call loct_parse_int('PoissonSolver', CG, poisson_solver)
-    if(poisson_solver < CG) then
-      write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
+      call loct_parse_int('PoissonSolver', CG, poisson_solver)
+      if(poisson_solver < CG) then
+        write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
-      message(2) = 'PoissonSolver = 5 (conj grad)              | '
-      message(3) = '                6 (corrected conj grad) '
-      message(4) = '[The code was compiled without FFT support ' 
-      call write_fatal(3)
-    endif
+        message(2) = 'PoissonSolver = 5 (conj grad)              | '
+        message(3) = '                6 (corrected conj grad) '
+        message(4) = '[The code was compiled without FFT support ' 
+        call write_fatal(3)
+      end if
 #endif
+      
+      if(m%use_curvlinear .and. (poisson_solver .ne. CG_CORRECTED) ) then
+        message(1) = 'If curvilinear coordinates are used, then the only working'
+        message(2) = 'Poisson solver is 5 ("corrected conjugate gradients")'
+        call write_fatal(2)
+      end if
 
-    if(m%use_curvlinear .and. (poisson_solver .ne. CG_CORRECTED) ) then
-      message(1) = 'If curvilinear coordinates are used, then the only working'
-      message(2) = 'Poisson solver is 5 ("corrected conjugate gradients")'
-      call write_fatal(2)
-    endif
-    call poisson3D_init(m)
+      call poisson3D_init(m)    
+    end subroutine init_3D
 
-  end select dimensions
-
-
-end subroutine poisson_init
-
+  end subroutine poisson_init
 
 
-subroutine poisson_end()
-  call push_sub('poisson_end')
+  !-----------------------------------------------------------------
+  subroutine poisson_end()
+    call push_sub('poisson_end')
 
-  select case(poisson_solver)
+    select case(poisson_solver)
 #ifdef HAVE_FFT
-  case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
-    call dcf_free(fft_cf)
-    deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
+    case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
+      call dcf_free(fft_cf)
+      deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
 #endif
-  case(CG_CORRECTED)
-    call poisson_cg2_end()
-  end select
-
-  call pop_sub()
-  return
-end subroutine poisson_end
-
+    case(CG_CORRECTED)
+      call poisson_cg2_end()
+    end select
+    
+    call pop_sub()
+  end subroutine poisson_end
 
 
-subroutine poisson_solve(m, f_der, pot, rho)
-  type(mesh_type), target,  intent(in)    :: m
-  type(f_der_type), target, intent(in)    :: f_der
-  FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
-  FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
+  !-----------------------------------------------------------------
+  subroutine zpoisson_solve(m, f_der, pot, rho)
+    type(mesh_type),  target, intent(in)    :: m
+    type(f_der_type), target, intent(in)    :: f_der
+    CMPLX,                    intent(inout) :: pot(:)  ! pot(m%np)
+    CMPLX,                    intent(in)    :: rho(:)  ! rho(m%np)
+    
+    FLOAT, allocatable :: aux1(:), aux2(:)
+    
+    call push_sub('zpoisson_solve')
+
+    allocate(aux1(m%np), aux2(m%np))
+    
+    ! first the real part
+    aux1(:) = real(rho(:))
+    aux2(:) = M_ZERO
+    call dpoisson_solve(m, f_der, aux2, aux1)
+    pot(:)  = aux2(:)
+    
+    ! now the imaginary part
+    aux1(:) = aimag(rho(:))
+    aux2(:) = M_ZERO
+    call dpoisson_solve(m, f_der, aux2, aux1)
+    pot(:)  = pot(:) + M_zI*aux2(:)
+
+    deallocate(aux1, aux2)
+
+    call pop_sub()
+  end subroutine zpoisson_solve
+
+
+  !-----------------------------------------------------------------
+  subroutine dpoisson_solve(m, f_der, pot, rho)
+    type(mesh_type), target,  intent(in)    :: m
+    type(f_der_type), target, intent(in)    :: f_der
+    FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
+    FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
-  call push_sub('poisson_solve')
+    call push_sub('dpoisson_solve')
 
-  ASSERT(poisson_solver.ne.-99)
+    ASSERT(poisson_solver.ne.-99)
 
-  select case(poisson_solver)
-  case(-1)
-    call poisson1d_solve(m, pot, rho)
-  case(-2)
-    call poisson2d_solve(m, pot, rho)
-  case(CG)
-    call poisson_cg1(m, f_der%der_discr, pot, rho)
-  case(CG_CORRECTED)
-    call poisson_cg2(m, f_der%der_discr, pot, rho)
+    select case(poisson_solver)
+    case(-1)
+      call poisson1d_solve(m, pot, rho)
+    case(-2)
+      call poisson2d_solve(m, pot, rho)
+    case(CG)
+      call poisson_cg1(m, f_der%der_discr, pot, rho)
+    case(CG_CORRECTED)
+      call poisson_cg2(m, f_der%der_discr, pot, rho)
 #ifdef HAVE_FFT
-  case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
-    call poisson_fft(m, pot, rho)
-  case(FFT_CORRECTED)
-    allocate(rho_corrected(m%np), vh_correction(m%np))
-    call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
-    call poisson_fft(m, pot, rho_corrected, average_to_zero = .true.)
-    pot = pot + vh_correction
-    deallocate(rho_corrected, vh_correction)
+    case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
+      call poisson_fft(m, pot, rho)
+    case(FFT_CORRECTED)
+      allocate(rho_corrected(m%np), vh_correction(m%np))
+      call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
+      call poisson_fft(m, pot, rho_corrected, average_to_zero = .true.)
+      pot = pot + vh_correction
+      deallocate(rho_corrected, vh_correction)
 #endif
-  end select
+    end select
 
-  call pop_sub()
-end subroutine poisson_solve
+    call pop_sub()
+  end subroutine dpoisson_solve
 
 #if defined(HAVE_FFT)
-subroutine poisson_fft(m, pot, rho, average_to_zero)
-  type(mesh_type), intent(IN) :: m
-  FLOAT, intent(out) :: pot(:) ! pot(m%np)
-  FLOAT, intent(in)  :: rho(:) ! rho(m%np)
-  logical, intent(in), optional :: average_to_zero
+  !-----------------------------------------------------------------
+  subroutine poisson_fft(m, pot, rho, average_to_zero)
+    type(mesh_type), intent(IN) :: m
+    FLOAT, intent(out) :: pot(:) ! pot(m%np)
+    FLOAT, intent(in)  :: rho(:) ! rho(m%np)
+    logical, intent(in), optional :: average_to_zero
 
-  integer :: k
-  FLOAT :: average
+    integer :: k
+    FLOAT :: average
+    
+    call push_sub('poisson_fft')
+  
+    call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
+    call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
+    
+    call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
+    call dcf_RS2FS(fft_cf)             ! Fourier transform
+    
+    ! multiply by the FS of the Coulomb interaction
+    ! this works around a bug in Intel ifort 8
+    do k = 1, fft_cf%n(3)
+      fft_cf%FS(:,:,k) = fft_cf%FS(:,:,k)*fft_Coulb_FS(:,:,k)
+    end do
+    
+    call dcf_FS2RS(fft_cf)             ! Fourier transform back
+    if(present(average_to_zero)) then
+      if(average_to_zero) then
+        average = cf_surface_average(m, fft_cf)
+        fft_cf%RS = fft_cf%RS - average
+      end if
+    end if
+    call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
 
-  call push_sub('poisson_fft')
+    call dcf_free_RS(fft_cf)           ! memory is no longer needed
+    call dcf_free_FS(fft_cf)
 
-  call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
-  call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
-
-  call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
-  call dcf_RS2FS(fft_cf)             ! Fourier transform
-
-  ! multiply by the FS of the Coulomb interaction
-  ! this works around a bug in Intel ifort 8
-  do k = 1, fft_cf%n(3)
-    fft_cf%FS(:,:,k) = fft_cf%FS(:,:,k)*fft_Coulb_FS(:,:,k)
-  end do
-
-  call dcf_FS2RS(fft_cf)             ! Fourier transform back
-  if(present(average_to_zero)) then
-    if(average_to_zero) then
-       average = cf_surface_average(m, fft_cf)
-       fft_cf%RS = fft_cf%RS - average
-    endif
-  endif
-  call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
-
-  call dcf_free_RS(fft_cf)           ! memory is no longer needed
-  call dcf_free_FS(fft_cf)
-
-  call pop_sub()
-  return
-end subroutine poisson_fft
+    call pop_sub()
+  end subroutine poisson_fft
 #endif
 
 
 #include "poisson1D.F90"
 #include "poisson2D.F90"
 #include "poisson3D.F90"
-
+  
 end module poisson

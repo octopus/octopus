@@ -32,7 +32,7 @@ noinst_HEADERS = \
 	fftw2.F90 fftw3.F90 \
 	mesh_create.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
-	xc_pot.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
+	xc_pot.F90 xc_fxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
 	epot_inc.F90 \
 	h_inc.F90 h_xc_OEP.F90 h_so.F90 \
 	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90\
@@ -134,6 +134,7 @@ depend:
 
 
 # Dependencies. 
+linear_response.o: linear_response_inc.F90
 #liboct_parser.o : liboct_parser.F90 complex.F90 global.h 
 #io.o : io.F90 liboct_parser.o 
 #liboct.o : liboct.F90 complex.F90 global.h 

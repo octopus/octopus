@@ -72,13 +72,14 @@ contains
     rho_ij(:) = st%dpsi(:, 1, i, is)*st%dpsi(:, 1, j, is)
 
     F_ij = M_ZERO
-    call poisson_solve(m, f_der, F_ij, rho_ij)
+    call dpoisson_solve(m, f_der, F_ij, rho_ij)
 
     deallocate(rho_ij)
 
   end subroutine get_F_ij
 
 #else
+  ! WARNING: should call zpoisson_solve
   ! calculates for complex wave-functions
   !    F_ij = \int d^3 r2 \frac{\phi_i,is^*(r2) \phi_j,is(r2)}{|r-r2|}
   subroutine get_F_ij(i, j, is, F_ij)
@@ -94,7 +95,7 @@ contains
        aimag(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is))
 
     pot(:) = M_ZERO
-    call poisson_solve(m, f_der, pot, rho_ij)
+    call dpoisson_solve(m, f_der, pot, rho_ij)
 
     ! this is the real part of F_ij
     F_ij(:) = pot(:)
@@ -104,7 +105,7 @@ contains
        aimag(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is))
 
     pot(:) = M_ZERO
-    call poisson_solve(m, f_der, pot, rho_ij)
+    call dpoisson_solve(m, f_der, pot, rho_ij)
     deallocate(rho_ij)
 
     F_ij(:) = F_ij(:) + M_zI*pot(:)

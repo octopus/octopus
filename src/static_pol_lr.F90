@@ -69,11 +69,11 @@ contains
     !  if(X(restart_read) ('tmp/restart_lr_static_pol', sys%st, sys%m).ne.0) then
     fromScratch = .true.
 
-    call lr_init(sys%st, sys%m, lr)
+    call X(lr_init) (sys%st, sys%m, lr)
     call lr_build_fxc(sys%m, sys%st, h%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
-    call lr_end(lr)
+    call X(lr_end) (lr)
 
     call end_()
 
@@ -144,11 +144,11 @@ contains
       call write_info(1)
 
       call mix_init(lr%mixer, 1, sys%m%np, sys%st%d%nspin)
-      call get_response_e(sys, h, lr, i)
+      call get_response_e(sys, h, lr, i, M_ZERO)
       call mix_end(lr%mixer)
       
       do j = 1, sys%m%np
-        rhov = sum(lr%dl_rho(j,:))*sys%m%vol_pp(j)
+        rhov = sum(lr%X(dl_rho)(j,:))*sys%m%vol_pp(j)
         pol(i, :) = pol(i, :) - sys%m%x(j, :)*rhov
       end do
       
@@ -159,13 +159,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_response_e(sys, h, lr, alpha)
+  subroutine get_response_e(sys, h, lr, alpha, omega)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
     type(lr_type),          intent(inout) :: lr
     integer,                intent(in)    :: alpha
+    R_TYPE,                 intent(in)    :: omega
     
-    integer :: iter, ik, ik2, ist, i 
+    integer :: iter, iter_max, sigma, ik, ik2, ist, i 
     FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:), dl_rhonew(:,:,:), dl_rhotmp(:,:,:)
     R_TYPE, allocatable :: Y(:, :)
     logical :: finish
@@ -185,45 +186,63 @@ contains
 
     iter_loop: do iter=1, lr%max_iter
 
-      dl_rhoin(1,:,:) = lr%dl_rho(:,:)
+      dl_rhoin(1,:,:) = lr%X(dl_rho)(:,:)
 
       if(.not.h%ip_app) then
         do i = 1, m%np
-          tmp(i) = sum(lr%dl_rho(i,:))
+          tmp(i) = sum(lr%X(dl_rho)(i,:))
         end do
-         call poisson_solve(m, sys%f_der, lr%dl_Vhar, tmp) 
+        call dpoisson_solve(m, sys%f_der, lr%ddl_Vhar, tmp) 
       end if 
-      do ik = 1, st%d%nspin
-        do ist = 1, st%nst
-          if (st%occ(ist, ik) > M_ZERO) then  
-            Y(:,1) = (lr%dl_Vhar(:) + m%x(:,alpha))
+
+      lr%X(dl_rho) = M_ZERO
+      do sigma = -1, 1, 2
+        if(omega==M_ZERO .and. sigma==1) cycle
+
+        do ik = 1, st%d%nspin
+          do ist = 1, st%nst
+            if(st%occ(ist, ik) <= M_ZERO) cycle
+
+            Y(:,1) = (lr%ddl_Vhar(:) + m%x(:,alpha))
             do ik2 = 1, st%d%nspin
-              Y(:,1) = Y(:,1) + lr%dl_Vxc(:, ik, ik2)*lr%dl_rho(:,ik2)  
+              Y(:,1) = Y(:,1) + lr%dl_Vxc(:, ik, ik2)*lr%X(dl_rho)(:,ik2)  
             end do
             Y(:,1) = -Y(:,1)*st%X(psi)(:, 1, ist, ik)
-
+            
             call lr_orth_vector(m, st, Y, ik)
-            call lr_solve_AXeY(sys, h, lr, ist, ik, Y, 500, CNST(1.0e-9))
-	    
-          endif
+            
+            iter_max = 50
+            call X(lr_solve_HXeY) (lr, sys, h, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
+               -sys%st%eigenval(ist, ik) + real(sigma, PRECISION)*omega)
+
+            print *, lr%iter, sum(lr%X(dl_psi)(:,1, ist, ik)**2*sys%m%vol_pp(:))
+          end do
         end do
+
+
+        !call lr_orth_response(m, st, lr)
+        call X(lr_build_dl_rho)(m, st, lr, 1)
+        lr%X(dl_rho) = M_TWO*lr%X(dl_rho)
       end do
 
-      call lr_orth_response(m, st, lr)
-      call lr_build_dl_rho(m, st, lr)
+      ! if static perturbation, then psi^+ and psi^- are the same
+      !if(omega==M_ZERO) lr%X(dl_rho) = M_TWO*lr%X(dl_rho)
 
+      ! mix to get new density
       dl_rhonew(1,:,:) = M_ZERO
-      dl_rhotmp(1,:,:) = lr%dl_rho(:,:)
+      dl_rhotmp(1,:,:) = lr%X(dl_rho)(:,:)
       call mixing(lr%mixer, iter, 1, m%np, st%d%nspin, &
          dl_rhoin, dl_rhotmp, dl_rhonew)  
 
+      ! check for convergence
       lr%abs_dens = M_ZERO
       do ik = 1, st%d%nspin
-        tmp(:) = (dl_rhoin(1,:,ik) - lr%dl_rho(:,ik))**2
+        tmp(:) = (dl_rhoin(1,:,ik) - lr%X(dl_rho)(:,ik))**2
         lr%abs_dens = lr%abs_dens + dmf_integrate(m, tmp)
       end do
       lr%abs_dens = sqrt(lr%abs_dens)
 
+      ! are we finished?
       finish = (lr%abs_dens <= lr%conv_abs_dens) 
       if(finish) then 
         write(message(1), '(a, i4, a)')        &
@@ -232,7 +251,7 @@ contains
         call write_info(1)
         exit
       else  
-        lr%dl_rho(:,:) = dl_rhonew(1,:,:)
+        lr%X(dl_rho)(:,:) = dl_rhonew(1,:,:)
       end if
 
     end do iter_loop
@@ -256,10 +275,11 @@ contains
           endif
         end do
       end do
-      lr%dl_Vhar(:) = M_ZERO
+      lr%ddl_Vhar(:) = M_ZERO
       
       call lr_orth_response(m, st, lr)
-      call lr_build_dl_rho(m, st, lr)
+      call X(lr_build_dl_rho)(m, st, lr, 1)
+      lr%X(dl_rho) = M_TWO*lr%X(dl_rho)
       
     end subroutine init_response_e
 
