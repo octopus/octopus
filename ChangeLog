@@ -1,3 +1,7 @@
+31/5/02 (marques)
+  - Added new laser mode (read from file)
+  - Started rewitting the output system (first attempt at elf)
+  - funny thing with strings (hard to explain... fortran...)
 13/5/02 (marques)
   - Rename hamiltonian* -> h*
   - continuation of td simulation now uses .nbo file

@@ -121,6 +121,11 @@ module liboct
     subroutine oct_getcwd(name)
       character(len=*), intent(out) :: name
     end subroutine oct_getcwd
+
+    subroutine oct_wfs_list(str, l)
+      character(len=*), intent(in) :: str
+      integer(4), intent(out) :: l(32)
+    end subroutine oct_wfs_list
   end interface
 
   private :: oct_parse_string, oct_parse_block_string

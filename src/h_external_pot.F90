@@ -241,10 +241,6 @@ subroutine generate_external_pot(h, sys)
   complex(r8), allocatable :: fw(:), fwc(:,:,:)
   real(r8), allocatable :: fr(:)
 #endif
-  ! WARNING DEBUG
-!!$  integer :: j
-!!$  real(r8), allocatable :: f(:,:,:)
-
   sub_name = 'generate_external_pot'; call push_sub()
 
   ! first we assume that we need to recalculate the ion_ion energy
@@ -308,18 +304,6 @@ subroutine generate_external_pot(h, sys)
   if (h%classic_pot) then
     h%Vpsl = h%Vpsl + h%Vclassic
   end if
-
-  ! WARNING DEBUG
-!!$  allocate(f(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
-!!$  f = 0._r8
-!!$  call dmesh_to_cube(sys%m, h%Vpsl, f)
-!!$  do i = 1, sys%m%fft_n
-!!$    do j = 1, sys%m%fft_n
-!!$      print *, i, j, f(i, j, sys%m%hfft_n)
-!!$    end do
-!!$    print *
-!!$  end do
-!!$  stop
 
   call pop_sub()
 
@@ -397,7 +381,6 @@ contains
     real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
 
     sub_name = 'build_nl_part'; call push_sub()
-
     if(h%vnl_space == 0) then
       j_loop: do j = 1, a%Mps
         call mesh_xyz(m, a%Jxyz(j), x)
@@ -406,14 +389,14 @@ contains
         add_lm = 1
         l_loop: do l = 0, s%ps%L_max
           lm_loop: do lm = -l , l
-          i_loop : do i = 1, s%ps%kbc
-            if(l .ne. s%ps%L_loc) then
-              add_lm = l**2 + l + lm + 1
-              call specie_get_nl_part(s, x, l, lm, i, a%uV(j, add_lm, i), a%duV(:, j, add_lm, i))
-            end if
+            i_loop : do i = 1, s%ps%kbc
+              if(l .ne. s%ps%L_loc) then
+                add_lm = l**2 + l + lm + 1
+                call specie_get_nl_part(s, x, l, lm, i, a%uV(j, add_lm, i), a%duV(:, j, add_lm, i))
+              end if
 
-          end do i_loop
-          add_lm = add_lm + 1
+            end do i_loop
+            add_lm = add_lm + 1
           end do lm_loop
         end do l_loop
       end do j_loop
@@ -463,43 +446,41 @@ contains
     end if
     
     ! and here we calculate the uVu
-    if(s%ps%flavour == 'tm') then
-
+    if(s%ps%flavour(1:2) == 'tm') then
       a%uVu = 0._r8
       add_lm = 1
       do l = 0, s%ps%L_max
-      do lm = -l , l
-        if(l .ne. s%ps%L_loc) then
-          do j = 1, a%Mps
-            call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
-            ylm = oct_ylm(x(1), x(2), x(3), l, lm)
-            
-            if(r > 0._r8 .or. l>0) then ! 0**l crashes in osf
-              a%uVu(add_lm, 1, 1) = a%uVu(add_lm, 1, 1) + a%uV(j, add_lm, 1)* &
-                   splint(s%ps%Ur(l), r) * ylm * (r**l)
-            else
-              a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)*splint(s%ps%ur(l), r)*ylm
-            endif
-          end do
-          a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
-          if(abs((a%uVu(add_lm, 1, 1) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.05_r8) then
-            write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
-                 add_lm
-            write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm, 1, 1)
-            message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
-            call write_warning(3)
+        do lm = -l , l
+          if(l .ne. s%ps%L_loc) then
+            do j = 1, a%Mps
+              call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
+              ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+              
+              if(r > 0._r8 .or. l>0) then ! 0**l crashes in osf
+                a%uVu(add_lm, 1, 1) = a%uVu(add_lm, 1, 1) + a%uV(j, add_lm, 1)* &
+                     splint(s%ps%Ur(l), r) * ylm * (r**l)
+              else
+                a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)*splint(s%ps%ur(l), r)*ylm
+              endif
+            end do
+            a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
+            if(abs((a%uVu(add_lm, 1, 1) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.05_r8) then
+              write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
+                   add_lm
+              write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm, 1, 1)
+              message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
+              call write_warning(3)
+            end if
+            ! uVu can be calculated exactly, or numerically
+            !a%uVu(add_lm) = s%ps%dkbcos(l)
+            a%uvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
           end if
-          ! uVu can be calculated exactly, or numerically
-          !a%uVu(add_lm) = s%ps%dkbcos(l)
-          a%uvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
-        end if
           
-        add_lm = add_lm + 1
-      end do
+          add_lm = add_lm + 1
+        end do
       end do
 
     else
-
       add_lm = 1
       do l = 0, s%ps%l_max
       do lm = -l, l

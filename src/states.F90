@@ -22,6 +22,7 @@ use global
 use liboct
 use io
 use math
+use output
 use mesh
 
 implicit none
@@ -439,6 +440,107 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 #endif
   
 end subroutine states_write_eigenvalues
+
+subroutine states_output(st, m, dir, outp)
+  type(states_type), intent(IN) :: st
+  type(mesh_type), intent(IN) :: m
+  character(len=*), intent(IN) :: dir
+  type(output_type), intent(IN) :: outp
+
+  integer :: ik, ist, idim, is
+  character(len=80) :: fname
+  real(r8) :: u
+
+#if defined(ONE_D)
+  u = 1._r8/units_out%length%factor
+#else if defined(THREE_D)
+  u = 1._r8/units_out%length%factor**3
+#endif
+
+#ifdef HAVE_MPI
+  if(mpiv%node == 0) then
+#endif
+    if(outp%what(output_density)) then
+      do is = 1, st%nspin
+        write(fname, '(a,i1)') 'density-', is
+        call doutput_function(outp, dir, fname, m, st%rho(:, is), u)
+      end do
+    end if
+#ifdef HAVE_MPI
+  end if
+#endif
+
+  if(outp%what(output_wfs)) then
+    do ist = 1, st%nst
+      is = outp%wfs((ist-1)/32 + 1)
+      if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
+        do ik = 1, st%nik
+          do idim = 1, st%dim
+            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
+            call R_FUNC(output_function) (outp, dir, fname, m, &
+                 st%R_FUNC(psi) (1:, idim, ist, ik), sqrt(u))
+          end do
+        end do
+      end if
+    end do
+  end if
+
+#if defined THREE_D
+  if(outp%what(output_elf)) then
+    call elf()
+  end if
+#endif
+
+contains
+  subroutine elf()
+    real(r8) :: f
+    real(r8), allocatable :: c(:), r(:), gr(:,:)
+    R_TYPE, allocatable :: gpsi(:,:)
+    integer :: i, is, ik
+
+    allocate(c(m%np))
+    do_is: do is = 1, st%nspin
+      ! first term
+      allocate(r(0:m%np), gr(3, m%np))
+      r(:) = st%rho(1:, is)/st%nspin
+      r(0) = 0._r8
+      call dmesh_derivatives(m, r, grad=gr)
+      do i = 1, m%np
+        if(r(i) >= 1d-16) then
+          c(i) = -0.25_r8*sum(gr(:, i)**2)/r(i)
+        end if
+      end do
+      deallocate(r, gr)
+
+      ! now the second term
+      allocate(gpsi(3, m%np))
+      do ik = is, st%nik, st%nspin
+        do ist = 1, st%nst
+          do idim = 1, st%dim
+            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(:, idim, ist, ik), grad=gpsi)
+            do i = 1, m%np
+              if(R_ABS(st%R_FUNC(psi)(i, idim, ist, ik)) >= 1d-8) then
+                c(i) = c(i) + sum(gpsi(:, i)*R_CONJ(gpsi(:, i)))
+              end if
+            end do
+          end do
+        end do
+      end do
+      deallocate(gpsi)
+
+      f = 3._r8/5._r8*(6*M_PI**2)**(2._r8/3._r8)
+      do i = 1, m%np
+        c(i) = 1._r8/(1._r8 + (c(i)/(f*(st%rho(i, is)/st%nspin)**(5._r8/3._r8)))**2)
+      end do
+
+      write(fname, '(a,i1)') 'elf-', is
+      call doutput_function(outp, dir, fname, m, c, u)
+
+    end do do_is
+    deallocate(c)
+
+  end subroutine elf
+end subroutine states_output
 
 #include "states_kpoints.F90"
 

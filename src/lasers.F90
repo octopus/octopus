@@ -125,7 +125,7 @@ contains
     l%tau0   = l%tau0 * units_inp%time%factor
 
     ! open file
-    call oct_parse_block_string(str, i-1, 7, filename)
+    call oct_parse_block_str(str, i-1, 7, filename)
     call io_assign(iunit)
     open(iunit, file=trim(filename), status='old', iostat=j)
     if(j.ne.0) then

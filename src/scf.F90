@@ -20,6 +20,7 @@
 module scf
 use io
 use units
+use output
 use system
 use states
 use hamiltonian
@@ -166,17 +167,23 @@ subroutine scf_run(scf, sys, h)
   call R_FUNC(forces)(h, sys)
 
   ! output final information
-  call  scf_write_static()
+  call scf_write_static("static", "info")
+  call states_output(sys%st, sys%m, "static", sys%outp)
+  if(sys%outp%what(output_geometry)) call system_write_xyz("static", "geometry", sys)
+  call hamiltonian_output(h, sys%m, "static", sys%outp)
 
   call pop_sub()
 
 contains
 
-subroutine scf_write_static()
+subroutine scf_write_static(dir, fname)
+  character(len=*), intent(in) :: dir, fname
+
   integer iunit, i
 
+  call oct_mkdir(C_string(trim(dir)))
   call io_assign(iunit)
-  open(iunit, status='unknown', file=trim(sys%sysname)//'.static')
+  open(iunit, status='unknown', file=trim(dir)+"/"+trim(fname))
 
   ! mesh
   write(iunit, '(a,a)') 'System name: ', sys%sysname

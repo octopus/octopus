@@ -20,8 +20,11 @@
 #include "config.h"
 
 #include <stdio.h>
-#include <sys/stat.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 #include <math.h>
 
@@ -218,11 +221,50 @@ double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 void F90_FUNC_(oct_mkdir, OCT_MKDIR)
 		 (char *name)
 {
+	struct stat buf;
+	if(!*name || stat(name, &buf) == 0) return;
+
 	mkdir(name, 0775);
 }
 
 void F90_FUNC_(oct_getcwd, OCT_GETCWD)
-                 (char *name)
+		 (char *name)
 {
-  getcwd(name);
+  getcwd(name, 256);
+}
+
+/* this function gets a string of the form '1-12, 34' and fills
+	 array l with the 1 if the number is in the list, or 0 otherwise */
+void F90_FUNC_(oct_wfs_list, OCT_WFS_LIST)
+		 (char *str, int l[32])
+{
+	int i, i1, i2;
+	char c[20], *c1, *s = str;
+
+	/* clear list */
+	for(i=0; i<32; i++)
+		l[i] = 0;
+	
+	while(*s){
+		/* get integer */
+		for(c1 = c; isdigit(*s) || isspace(*s); s++)
+			if(isdigit(*s)) *c1++ = *s;
+		*c1 = '\0';
+		i1 = atoi(c) - 1;
+
+		if(*s == '-'){ /* range */
+			s++;
+			for(c1 = c; isdigit(*s) || isspace(*s); s++)
+				if(isdigit(*s)) *c1++ = *s;
+			*c1 = '\0';
+			i2 = atoi(c) - 1;
+		}else /* single value */
+			i2 = i1;
+
+		for(i=i1; i<=i2; i++)
+			if(i>=0 && i<1024)
+				l[i/32] |= 1 << (i % 32);
+
+		if(*s) s++;
+	}
 }

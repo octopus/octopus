@@ -72,19 +72,19 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, debug)
   ps%flavour = trim(flavour)
 
 ! First of all we read the input files
-  select case(trim(flavour))
+  select case(flavour(1:2))
   case('tm')
     call ps_tm_read_file(psf, trim(label))
     ps%kbc = 1
     ps%L_max = min(psf%npotd - 1, lmax)   ! Maybe the file has not enough components.
     ps%l_loc = lloc
-  case('hgh')
+  case('hg')
     call ps_ghg_read_file(psp, trim(label))
     ps%kbc = 3
     ps%l_max = psp%l_max
     ps%l_loc = -1
   case default
-    message(1) = 'Unknown pseudopotential type: '//trim(flavour)
+    message(1) = "Unknown pseudopotential type: '"+trim(flavour)+"'"
     call write_fatal(1)
   end select
 
@@ -109,10 +109,10 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, debug)
   allocate(ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
 
 ! Now we load the necessary information.
-  select case(trim(flavour))
+  select case(flavour(1:2))
   case('tm')
     call ps_tm_load(ps, psf, trim(label), debug)
-  case('hgh')
+  case('hg')
     call ps_hgh_load(ps, psp, trim(label), debug)
   end select
 

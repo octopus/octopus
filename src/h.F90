@@ -23,6 +23,7 @@ use liboct
 use spline
 use fft
 use units
+use output
 use system
 use specie
 use hartree
@@ -224,6 +225,37 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
   call pop_sub()
   return
 end subroutine hamiltonian_energy
+
+subroutine hamiltonian_output(h, m, dir, outp)
+  type(hamiltonian_type), intent(IN) :: h
+  type(mesh_type), intent(IN) :: m
+  character(len=*), intent(IN) :: dir
+  type(output_type), intent(IN) :: outp
+
+  integer :: is
+  character(len=80) :: fname  
+  real(r8) :: u
+
+  u = units_out%energy%factor
+
+  if(outp%what(output_potential)) then
+    call doutput_function(outp, dir, "v0", m, h%Vpsl, u)
+
+    if(h%classic_pot) then
+      call doutput_function(outp, dir, "vc", m, h%Vclassic, u)
+    end if
+
+    if(.not.h%ip_app) then
+      call doutput_function(outp, dir, "vh", m, h%Vhartree, u)
+
+      do is = 1, min(h%ispin, 2)
+        write(fname, '(a,i1)') 'vxc-', is
+        call doutput_function(outp, dir, fname, m, h%Vxc(:, is), u)
+      end do
+    end if
+  end if
+
+end subroutine hamiltonian_output
 
 #include "h_external_pot.F90"
 

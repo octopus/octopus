@@ -19,7 +19,9 @@
 
 module output
   use liboct
-
+  use units
+  use mesh
+  
 implicit none
 
 type output_type
@@ -27,6 +29,8 @@ type output_type
   integer :: how    ! how to output
 
   integer :: iter   ! output every iter
+  
+  integer :: wfs(32) ! which wfs to output
 end type output_type
 
 integer, parameter :: &
@@ -42,7 +46,7 @@ integer, parameter ::     &
      output_plane_y = 2,  &
      output_plane_z = 4,  &
      output_xyz     = 8,  &
-     output_matrix  = 16
+     output_dx      = 16
 
 contains
 
@@ -51,6 +55,7 @@ subroutine output_init(outp)
 
   integer :: i
   logical :: l
+  character(len=80) :: owf
 
   call oct_parse_logical("OutputKSPotential", .false., outp%what(output_potential))
   call oct_parse_logical("OutputDensity",     .false., outp%what(output_density))
@@ -63,7 +68,14 @@ subroutine output_init(outp)
     outp%what(output_something) = outp%what(output_something).or.outp%what(i)
   end do
 
+  if(outp%what(output_wfs)) then
+    call oct_parse_str("OutputWfsNumber", "1-1024", owf)
+    call oct_wfs_list(C_string(owf), outp%wfs)
+  end if
+
   if(outp%what(output_something)) then
+
+#if defined(THREE_D)
     call oct_parse_logical("OutputPlaneX", .false., l)
     if(l) outp%how = ior(outp%how, output_plane_x)
     call oct_parse_logical("OutputPlaneY", .false., l)
@@ -72,12 +84,22 @@ subroutine output_init(outp)
     if(l) outp%how = ior(outp%how, output_plane_z)
     call oct_parse_logical("OutputXYZ",    .false., l)
     if(l) outp%how = ior(outp%how, output_xyz)
-    call oct_parse_logical("OutputMatrix", .false., l)
-    if(l) outp%how = ior(outp%how, output_matrix)
+    call oct_parse_logical("OutputDX", .false., l)
+    if(l) outp%how = ior(outp%how, output_dx)
+#endif
 
     call oct_parse_int(C_string("OutputEvery"), 1000, outp%iter)
   end if
   
 end subroutine output_init
+
+#include "undef.F90"
+#include "real.F90"
+#include "out_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "out_inc.F90"
+#include "undef.F90"
 
 end module output

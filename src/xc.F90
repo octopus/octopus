@@ -122,55 +122,55 @@ subroutine xc_init(xcs, m, ispin)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: ispin
 
-  character(len=5) :: xfam, cfam, xfunc, cfunc
+  character(len=50) :: xfam, cfam, xfunc, cfunc
 
   sub_name = 'xc_init'; call push_sub()
 
   call oct_parse_str('XFamily',     'LDA',  xfam)
   call oct_parse_str('XFunctional', 'NREL', xfunc)
   call oct_parse_str('CFamily',     'LDA',  cfam)
-  call oct_parse_str('CFunctional', 'PZ',   cfunc)
+  call oct_parse_str('CFunctional', 'PZ81', cfunc)
 
   ! the exchange
-  select case(trim(xfam))
+  select case(xfam(1:3))
   case('ZER')
     xcs%x_family = XC_FAMILY_ZER
     xcs%x_func   = X_FUNC_ZER
   case('LDA')
     xcs%x_family = XC_FAMILY_LDA
-    select case(trim(xfunc))
-    case('NREL')
+    select case(xfunc(1:3))
+    case('NRE')
       xcs%x_func = X_FUNC_LDA_NREL
     case('REL')
       xcs%x_func = X_FUNC_LDA_REL
     case default
-      write(message(1), '(a,a,a)') "'", trim(xfam), &
+      write(message(1), '(a,a,a)') "'", trim(xfunc), &
           "' is not a known exchange LDA functional!"
       message(2) = "(XFunc = NREL | REL)"
       call write_fatal(2)
     end select
   case('GGA')
     xcs%x_family = XC_FAMILY_GGA
-    select case(trim(xfunc))
+    select case(xfunc(1:3))
     case('PBE')
       xcs%x_func = X_FUNC_GGA_PBE
-    case('PBER')
+    case('RPB')
       xcs%x_func = X_FUNC_GGA_PBER
-    case('LB94')
+    case('LB9')
       xcs%x_func = X_FUNC_GGA_LB94
     case default
-      write(message(1), '(a,a,a)') "'", trim(xfam), &
+      write(message(1), '(a,a,a)') "'", trim(xfunc), &
           "' is not a known exchange GGA functional!"
-      message(2) = "(XFunc = PBE | LB94)"
+      message(2) = "(XFunc = PBE | RPBE | LB94)"
       call write_fatal(2)
     end select
-  case('MGGA')
+  case('MGG')
     xcs%x_family = XC_FAMILY_MGGA
-    select case(trim(xfunc))
-    case('PKZB')
+    select case(xfunc(1:3))
+    case('PKZ')
       xcs%x_func = X_FUNC_MGGA_PKZB
     case default
-      write(message(1), '(a,a,a)') "'", trim(xfam), &
+      write(message(1), '(a,a,a)') "'", trim(xfunc), &
           "' is not a known exchange MGGA functional!"
       message(2) = "(XFunc = PKZB)"
       call write_fatal(2)
@@ -182,7 +182,7 @@ subroutine xc_init(xcs, m, ispin)
     call write_fatal(1)
 #endif
     xcs%x_family = XC_FAMILY_KLI
-    select case(trim(xfunc))
+    select case(xfunc(1:3))
     case('EXX')
       xcs%x_func = X_FUNC_KLI_X
     case('SIC')
@@ -202,49 +202,49 @@ subroutine xc_init(xcs, m, ispin)
   end select
 
   ! now the correlation
-  select case(trim(cfam))
+  select case(cfam(1:3))
   case('ZER')
     xcs%c_family = XC_FAMILY_ZER
     xcs%c_func   = C_FUNC_ZER
   case('LDA')
     xcs%c_family = XC_FAMILY_LDA
-    select case(trim(cfunc))
-    case('PZ')
+    select case(cfunc(1:3))
+    case('PZ8')
       xcs%c_func = C_FUNC_LDA_PZ
-    case('PW92')
+    case('PW9')
       xcs%c_func = C_FUNC_LDA_PW92
     case default
-      write(message(1), '(a,a,a)') "'", trim(xfam), &
+      write(message(1), '(a,a,a)') "'", trim(cfunc), &
           "' is not a known correlation LDA functional!"
-      message(2) = "(CFunc = PZ | PW92)"
+      message(2) = "(CFunc = PZ81 | PW92)"
       call write_fatal(2)
     end select
   case('GGA')
     xcs%c_family = XC_FAMILY_GGA
-    select case(trim(cfunc))
+    select case(cfunc(1:3))
     case('PBE')
       xcs%c_func = C_FUNC_GGA_PBE
     case default
-      write(message(1), '(a,a,a)') "'", trim(cfam), &
+      write(message(1), '(a,a,a)') "'", trim(cfunc), &
           "' is not a known correlation GGA functional!"
       message(2) = "(CFunc = PBE)"
       call write_fatal(2)
     end select
 #ifdef HAVE_LAPACK
-  case('MGGA')
+  case('MGG')
     xcs%c_family = XC_FAMILY_MGGA
-    select case(trim(cfunc))
-    case('PKZB')
+    select case(cfunc(1:3))
+    case('PKZ')
       xcs%c_func = C_FUNC_MGGA_PKZB
     case default
-      write(message(1), '(a,a,a)') "'", trim(cfam), &
+      write(message(1), '(a,a,a)') "'", trim(cfunc), &
           "' is not a known exchange MGGA functional!"
       message(2) = "(CFunc = PKZB)"
       call write_fatal(2)
     end select
   case('KLI')
     xcs%c_family = XC_FAMILY_KLI
-    select case(trim(xfunc))
+    select case(xfunc(1:3))
     case('SIC')
       xcs%c_func = C_FUNC_KLI_SIC
     case default

@@ -53,7 +53,6 @@ subroutine system_init(s)
 
   integer :: i
   real(r8) :: val_charge
-  logical :: l
 
   sub_name = 'system_init'; call push_sub()
 
@@ -61,10 +60,8 @@ subroutine system_init(s)
   s%nspecies = specie_init(s%specie)
 
   call atom_init(s%natoms, s%atom, s%ncatoms, s%catom, s%nspecies, s%specie)
-  call oct_parse_logical("OutputCoordinates", .false., l)
-  if(l) then
-    call system_write_xyz(s%sysname, s)
-  end if
+
+  call output_init(s%outp)
 
   call mesh_init(s%m, s%natoms, s%atom)
 
@@ -103,8 +100,8 @@ subroutine system_end(s)
   call pop_sub()
 end subroutine system_end
 
-subroutine system_write_xyz(filename_base, s)
-  character(len=*), intent(in)  :: filename_base
+subroutine system_write_xyz(dir, fname, s)
+  character(len=*), intent(in)  :: dir, fname
   type(system_type), intent(IN) :: s
 
   integer i, iunit
@@ -114,8 +111,10 @@ subroutine system_write_xyz(filename_base, s)
   if(mpiv%node == 0) then
 #endif
 
+    call oct_mkdir(C_string(trim(dir)))
+
     call io_assign(iunit)
-    open(iunit, file=trim(filename_base)//'.xyz', status='unknown')
+    open(iunit, file=trim(dir)+"/"+trim(fname)+'.xyz', status='unknown')
     write(iunit, '(i4)') s%natoms
     write(iunit, '(1x)')
     do i = 1, s%natoms
@@ -123,10 +122,10 @@ subroutine system_write_xyz(filename_base, s)
            s%atom(i)%spec%label, s%atom(i)%x(:)/units_out%length%factor
     end do
     call io_close(iunit)
-
+    
     if(s%ncatoms > 0) then
       call io_assign(iunit)
-      open(iunit, file=trim(filename_base)//'_classical.xyz', status='unknown')
+      open(iunit, file=trim(dir)+"/"+trim(fname)+'_classical.xyz', status='unknown')
       write(iunit, '(i4)') s%ncatoms
       write(iunit, '(1x)')
       do i = 1, s%ncatoms
