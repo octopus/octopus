@@ -40,7 +40,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
     do j = i, st%nst
       if(st%occ(j, is) .le. small) cycle
       
-      rho_ij(:) = st%X(psi)(:, 1, i, is)*st%X(psi)(:, 1, j, is)
+      rho_ij(:) = R_CONJ(st%X(psi)(:, 1, i, is))*st%X(psi)(:, 1, j, is)
       call X(poisson_solve)(m, f_der, F_ij, rho_ij)
 
       ! lx will the be used to get the energy
