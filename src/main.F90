@@ -75,5 +75,10 @@ program octopus
 
   call global_end()
 
+#if defined(HAVE_MPI)
+  ! wait for all processors to finish
+  call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
+
   stop
 end program octopus
