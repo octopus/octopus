@@ -23,6 +23,7 @@
 #include <string.h>
 #include <math.h>
 #include <gsl/gsl_sf_erf.h>
+#include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_spline.h>
 
 #include "symbols.h"
@@ -30,6 +31,12 @@
 
 /* Fortran does not have the asinh intrinsic, 
 	 so we use the one from libm.a */
+double F90_FUNC_(oct_gamma, OCT_GAMMA)
+		 (double *x)
+{
+  return gsl_sf_gamma(*x);
+}
+
 double F90_FUNC_(oct_asinh, OCT_ASINH)
 		 (double *x)
 {
