@@ -108,7 +108,17 @@ config_F90.h: config.h
 ../liboct/liboct.a:
 	(cd ../liboct; $(MAKE))
 
-# dependencies. Please update consistently
+
+# This is to generate the dependencies. It makes use of the makedepf90 program of 
+# Erik Edelmann (http://www.helsinki.fi/~eedelman/makedepf90.html). It should be run
+# from time to time (just typing make depend within the src directory), substituting
+# the dependencies below by the resulting new dependencies. (For normal compilation
+# of octopus, there is absolutely no need of installing makedepf90).
+depend:
+	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_sf_SOURCES) $(oct_rsf_SOURCES) $(oct_hs_mult_SOURCES) $(oct_hs_acc_SOURCES) $(oct_excite_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
+
+
+# Dependencies. 
 liboct_parser.o : liboct_parser.F90 complex.F90 global.h 
 io.o : io.F90 liboct_parser.o 
 liboct.o : liboct.F90 complex.F90 global.h 
@@ -183,6 +193,3 @@ phonon_spectrum.o : phonon_spectrum.F90 complex.F90 global.h units.o io.o global
 xyz_adjust.o : xyz_adjust.F90 complex.F90 global.h geometry.o 
 centergeom.o : centergeom.F90 complex.F90 global.h xyz_adjust.o geometry.o units.o global.o 
 atoms_magnet.o : atoms_magnet.F90 complex.F90 global.h restart.o states.o out.o geometry.o mf.o mesh.o units.o liboct.o liboct_parser.o global.o 
-
-depend:
-	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_sf_SOURCES) $(oct_rsf_SOURCES) $(oct_hs_mult_SOURCES) $(oct_hs_acc_SOURCES) $(oct_excite_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
