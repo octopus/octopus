@@ -18,6 +18,13 @@
 #include "global.h"
 
 module external_pot
+  use global
+  use oct_parser
+  use mesh
+#ifdef HAVE_FFT
+  use cube_function
+#endif
+  use specie
   use system
   use lasers
 

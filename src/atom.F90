@@ -18,6 +18,9 @@
 #include "global.h"
 
 module atom
+use global
+use oct_parser
+use liboct
 use io
 use specie
 

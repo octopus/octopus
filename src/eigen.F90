@@ -18,8 +18,14 @@
 #include "global.h"
 
 module eigen_solver
+  use global
+  use oct_parser
   use linalg
+  use io
+  use states
+  use mesh
   use hamiltonian
+  use system
 
   implicit none
 

@@ -18,6 +18,7 @@
 #include "global.h"
 
 module atomic
+  use global
   use vxc
   use logrid
 

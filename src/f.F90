@@ -18,6 +18,8 @@
 #include "global.h"
 
 module functions
+  use global
+  use oct_parser
   use mesh_function
   use cube_function
 

@@ -18,6 +18,11 @@
 #include "global.h"
 
 program choose_st
+  use global
+  use oct_parser
+  use liboct
+  use units
+  use states
   use system
 
   implicit none

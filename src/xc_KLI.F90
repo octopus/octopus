@@ -23,14 +23,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
 
   integer :: i, j, n
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:)
-  FLOAT, allocatable :: Ma(:,:), x(:), y(:)
-
-  ! variables needed by LAPACK
-  character(len=1) :: la_EQUED
-  FLOAT, allocatable :: la_AF(:,:), la_R(:), la_C(:), la_work(:)
-  FLOAT :: la_R_cond, la_Ferr(1), la_Berr(1)
-  integer, allocatable :: la_IPIV(:), la_iwork(:)
-  integer :: info
+  FLOAT, allocatable :: Ma(:,:), x(:,:), y(:,:)
 
   ! some intermediate quantities
   ! vxc contains the Slater part!
@@ -52,9 +45,9 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
     end do
     
     if(n > 0) then ! there is more than one state, so solve linear equation
-      allocate(x(n))
+      allocate(x(n, 1))
       x = M_ZERO
-      allocate(Ma(n, n), y(n))
+      allocate(Ma(n, n), y(n, 1))
       do i = 1, n
         do j = i, n
           Ma(i,j) = -sum(                                 &
@@ -65,27 +58,16 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
         end do
         Ma(i,i) = 1 + Ma(i,i)
         
-        y(i) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
+        y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
       end do
       
-      ! setup lapack arrays
-      allocate(la_AF(n, n), la_IPIV(n), la_R(n), &
-           la_C(n), la_work(4*n), la_iwork(n))
-      
-      call DGESVX('N', 'N', n, 1, Ma, n, la_AF, n,               &
-           la_IPIV, la_EQUED, la_R, la_C, y, n, x, n,            &
-           la_R_cond, la_Ferr, la_Berr, la_work, la_iwork, info)
-      if(info.ne.0) then
-        write(6,'(a,I5,a)') 'xc_KLI_solve:: error in lapack (info=',info,')'
-      end if
-      
-      deallocate(la_AF, la_IPIV, la_R, la_C, la_work, la_iwork)
+      call dlinsyssolve(n, 1, Ma, y, x)
       deallocate(Ma, y)
       
       ! add contribution of low lying states
       do i = 1, n
         oep%vxc(:) = oep%vxc(:) + &
-             oep%socc*st%occ(oep%eigen_index(i),is)* x(i) *  &
+             oep%socc*st%occ(oep%eigen_index(i),is)* x(i,1) *  &
              R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 / rho_sigma(:)
       end do
       deallocate(x)

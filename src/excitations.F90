@@ -18,6 +18,13 @@
 #include "global.h"
 
 program excitations
+  use global
+  use oct_parser
+  use liboct
+#ifdef HAVE_FFT
+  use fft
+#endif
+  use states
   use system
   use linear
 

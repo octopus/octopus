@@ -18,8 +18,10 @@
 #include "global.h"
 
 program broad
+  use global
   use io
   use units
+  use oct_parser
 
   implicit none
 

@@ -18,6 +18,7 @@
 #include "global.h"
 
 module cube_function
+  use global
   use mesh
 #if defined(HAVE_FFT)
   use fft

@@ -267,4 +267,42 @@ subroutine dinvert(n, a)
 
 end subroutine dinvert
 
+! compute the solution to a real system of linear equations A*X = B,
+!  where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
+subroutine dlinsyssolve(n, nhrs, a, b, x)
+  integer, intent(in)    :: n, nhrs
+  FLOAT,   intent(inout) :: a(n, n), b(n, nhrs)
+  FLOAT,   intent(out)   :: x(n, nhrs)
 
+  interface
+    subroutine DLAPACK(gesvx) (fact, trans, n, nhrs, a, lda, af, ldaf, ipiv, equed, r, &
+                               c, b, ldb, x, ldx, rcond, ferr, berr, work, iwork, info)
+      character(1), intent(in)    :: fact, trans
+      integer,      intent(in)    :: n, nhrs, lda, ldaf, ldb, ldx
+      FLOAT,        intent(inout) :: a, af, r, c, b      ! a(lda,n), af(ldaf,n), r(n), c(n), b(ldb,nhrs)
+      integer,      intent(inout) :: ipiv                ! ipiv(n)
+      FLOAT,        intent(out)   :: x, ferr, berr, work ! x(ldx,nhrs), ferr(nhrs), berr(nhrs), work(4*n)
+      FLOAT,        intent(out)   :: rcond
+      character(1), intent(inout) :: equed
+      integer,      intent(out)   :: iwork               ! iwork(n)
+      integer,      intent(out)   :: info
+    end subroutine DLAPACK(gesvx)
+  end interface
+
+  integer :: info
+  integer, allocatable :: ipiv(:), iwork(:)
+  FLOAT :: rcond
+  FLOAT, allocatable :: ferr(:), berr(:), work(:), r(:), c(:), af(:,:)
+  character(1) :: equed
+
+  allocate(ipiv(n), iwork(n), ferr(nhrs), berr(nhrs), work(4*n), r(n), c(n), af(n, n))
+  call DLAPACK(gesvx) ("N", "N", n, nhrs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
+                       rcond, ferr(1), berr(1), work(1), iwork(1), info)
+  if(info /= 0) then
+    write(message(1), '(a, i3)') 'In dlinsyssolve, LAPACK dgesvx returned info = ', info
+    call write_fatal(1)
+  end if
+  deallocate(ipiv, iwork, ferr, berr, work, r, c, af)
+
+
+end subroutine dlinsyssolve

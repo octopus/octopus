@@ -1,4 +1,7 @@
 program centergeom
+  use global
+  use units
+  use oct_parser
   use atom
 
   integer :: natoms, ncatoms, iunit, i
