@@ -143,6 +143,17 @@ contains
 
   end subroutine fft_init
 
+  subroutine fft_copy(fft_i, fft_o)
+    type(fft_type), intent( in) :: fft_i
+    type(fft_type), intent(out) :: fft_o
+    
+    ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
+    ASSERT(fft_refs(fft_i%slot) > 0)
+
+    fft_o = fft_i
+    fft_refs(fft_i%slot) = fft_refs(fft_i%slot) + 1
+  end subroutine fft_copy
+
   subroutine fft_end(fft)
     type(fft_type), intent(inout) :: fft
 

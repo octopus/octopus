@@ -416,8 +416,8 @@ end subroutine run_init
 
 subroutine run_end()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
+    call hamiltonian_end(h, sys)
     call system_end(sys)
-    call hamiltonian_end(h)
   endif
 
 #ifdef HAVE_FFT

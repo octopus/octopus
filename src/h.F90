@@ -64,9 +64,10 @@ type hamiltonian_type
   type(hartree_type) :: hart
   type(xc_type) :: xc
 
-  ! fft used to calculate the external potential in FS
 #ifdef HAVE_FFT
-  type(fft_type) :: fft
+  ! For the local pseudopotential in Fourier space...
+  type(dcf), pointer :: local_cf(:)
+  type(dcf), pointer :: rhocore_cf(:)  ! and for the core density
 #endif
 
   ! gauge
@@ -106,7 +107,7 @@ subroutine hamiltonian_init(h, sys)
   type(hamiltonian_type), intent(out) :: h
   type(system_type), intent(inout) :: sys
 
-  integer :: i, j, db(3), n
+  integer :: i, j, n
   real(r8) :: d(3), r, x(3)
 
   call push_sub('hamiltonian_init')
@@ -155,11 +156,7 @@ subroutine hamiltonian_init(h, sys)
   call write_info(1)
 
 #ifdef HAVE_FFT
-  if(h%vpsl_space == RECIPROCAL_SPACE) then
-    call mesh_double_box(sys%m, db)
-    call fft_init(db, fft_real, h%fft)
-    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, h%fft, sys%nlcc)
-  end if
+  if(h%vpsl_space == RECIPROCAL_SPACE) call h_local_fourier_init(sys%m, h, sys)
 #endif
 
   call oct_parse_int("RelativisticCorrection", NOREL, h%reltype)
@@ -271,9 +268,12 @@ subroutine hamiltonian_init(h, sys)
   call pop_sub()
 end subroutine hamiltonian_init
 
-subroutine hamiltonian_end(h)
-  type(hamiltonian_type) :: h
-
+subroutine hamiltonian_end(h, sys)
+  type(hamiltonian_type), intent(inout) :: h
+  type(system_type), intent(in) :: sys
+  
+  integer :: i
+  
   call push_sub('hamiltonian_end')
 
   if(associated(h%Vpsl)) then
@@ -297,7 +297,14 @@ subroutine hamiltonian_end(h)
   call laser_end(h%no_lasers, h%lasers)
 
 #ifdef HAVE_FFT
-  if(h%vpsl_space == RECIPROCAL_SPACE) call fft_end(h%fft)
+  if(h%vpsl_space == RECIPROCAL_SPACE) then
+    do i = 1, sys%nspecies
+      call dcf_free(h%local_cf(i))
+      if(sys%nlcc) call dcf_free(h%rhocore_cf(i))
+    end do
+    deallocate(h%local_cf)
+    if(sys%nlcc) deallocate(h%rhocore_cf)
+  end if
 #endif
 
   call pop_sub()

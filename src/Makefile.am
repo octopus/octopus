@@ -76,7 +76,7 @@ oct_centergeom_SOURCES = global.F90 io.F90 liboct_parser.F90 units.F90 atom.F90 
 oct_centergeom_LDADD = $(octopus_LDADD)
 
 # cleaning
-CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
+CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
 DISTCLEANFILES = Makefile.in dirs.h
 
 # how to compile a F90 file :)
@@ -122,3 +122,4 @@ td.o: td_init.F90 td_rti.F90 td_exp.F90 td_write.F90 td_calc.F90
 mix.o: mix_inc.F90
 out.o: out_inc.F90
 math.o: math_inc.F90
+fft.o: fftw2.F90 fftw3.F90

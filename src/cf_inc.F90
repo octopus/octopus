@@ -20,7 +20,7 @@ subroutine X(cf_new)(n, cf)
   integer, intent(in) :: n(3)
   type(X(cf)), intent(out) :: cf
 
-  ASSERT(n(1)>0.and.n(2)>0.and.n(3)>0)
+  ASSERT(all(n>0))
 
   nullify(cf%RS)
   nullify(cf%FS)
@@ -30,6 +30,27 @@ subroutine X(cf_new)(n, cf)
   nullify(cf%fft)
 #endif
 end subroutine X(cf_new)
+
+subroutine X(cf_new_from)(cf, cf_i)
+  type(X(cf)), intent(out) :: cf
+  type(X(cf)), intent( in) :: cf_i
+
+  ASSERT(all(cf_i%n>0))
+
+  nullify(cf%RS)
+  nullify(cf%FS)
+  cf%n = cf_i%n
+
+#if defined(HAVE_FFT)
+  if(associated(cf_i%fft)) then
+    allocate(cf%fft)
+    call fft_copy(cf_i%fft, cf%fft)
+    cf%nx = cf_i%nx
+  else
+    nullify(cf%fft)
+  end if
+#endif
+end subroutine X(cf_new_from)
 
 subroutine X(cf_alloc_RS)(cf)
   type(X(cf)), intent(inout) :: cf

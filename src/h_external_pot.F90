@@ -19,74 +19,95 @@
 ! of f90 to handle circular dependences it had to come here!
 
 #ifdef HAVE_FFT
-subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
-  integer, intent(in) :: ns
-  type(specie_type), pointer :: s(:)
-  type(mesh_type), intent(IN) :: m
-  type(fft_type), intent(in) :: fft
-  logical, intent(in) :: nlcc
+subroutine h_local_fourier_init(m, h, sys)
+  type(mesh_type), intent(in) :: m
+  type(hamiltonian_type), intent(inout) :: h
+  type(system_type), intent(in) :: sys
 
-  integer :: i, j, ix, iy, iz, n, ixx(3), db(3), dbc(3), c(3)
-  real(r8) :: x(3), g(3), modg, temp(3)
-  real(r8), allocatable :: fr(:,:,:), v(:)
-  !complex(r8) :: c
+  integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
+  real(r8) :: x(3), modg, temp(3)
+  real(r8), allocatable :: v(:)
+
+  type(specie_type), pointer :: s ! shortcuts
+  type(dcf), pointer :: cf
 
   call push_sub('specie_local_fourier_init')
 
-  call fft_getdim_real   (fft, db)  ! get dimensions of real array
-  call fft_getdim_complex(fft, dbc) ! get dimensions of complex array
+  call mesh_double_box(sys%m, db)
   c(:) = db(:)/2 + 1                ! get center of double box
 
-  allocate(fr(db(1), db(2), db(3)))
+  allocate(h%local_cf(sys%nspecies))
 
-  do i = 1, ns
-    allocate(s(i)%local_fw(dbc(1), dbc(2), dbc(3)))
+  specie: do i = 1, sys%nspecies
+    s  => sys%specie(i)
+    cf => h%local_cf(i)
 
-    if (conf%periodic_dim==0) then
-      do ix = 1, db(1)
-        ixx(1) = ix - c(1)
+    if(i == 1) then
+      call dcf_new(db, cf)                 ! initialize the cube
+      call dcf_fft_init(cf)                ! and initialize the ffts
+
+      if(sys%nlcc) then                               ! if we have non-linear core corrections
+        call dcf_new(db, h%rhocore_cf(i))
+        call dcf_fft_init(h%rhocore_cf(i))
+      end if
+    else
+      call dcf_new_from(cf, h%local_cf(1)) ! we can just copy from the first one
+      if(sys%nlcc) call dcf_new_from(h%rhocore_cf(i), h%rhocore_cf(1))
+    end if
+
+    periodic: if (conf%periodic_dim==0) then
+      call dcf_alloc_RS(cf)                  ! allocate the cube in real space
+
+      do iz = 1, db(3)
+        ixx(3) = iz - c(3)
         do iy = 1, db(2)
           ixx(2) = iy - c(2)
-          do iz = 1, db(3)
-            ixx(3) = iz - c(3)
+          do ix = 1, db(1)
+            ixx(1) = ix - c(1)
             
             x(:) = m%h(:)*ixx(:)
-            fr(ix, iy, iz) = specie_get_local(s(i), x)
+            cf%RS(ix, iy, iz) = specie_get_local(s, x)
           end do
         end do
       end do
-      call dfft_forward(fft, fr, s(i)%local_fw)
+
+      call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
+      call dcf_RS2FS(cf)         ! Fourier transform
+      call dcf_free_RS(cf)       ! we do not need the real space any longer
     else
-      allocate(v(2:s(i)%ps%g%nrval))
+      call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
+
+      allocate(v(2:s%ps%g%nrval))
       temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-      do ix = 1, dbc(1)
+      do ix = 1, cf%nx
         ixx(1) = pad_feq(ix, db(1), .true.)
-        do iy = 1, dbc(2)
+        do iy = 1, db(2)
           ixx(2) = pad_feq(iy, db(2), .true.)
-          do iz = 1, dbc(3)
+          do iz = 1, db(3)
             ixx(3) = pad_feq(iz, db(3), .true.)
+
             modg = sqrt(sum((temp(:)*ixx(:))**2))
             if(modg.ne.M_ZERO) then
-              do j = 2, s(i)%ps%g%nrval
-                v(j) = (sin(modg*s(i)%ps%g%rofi(j))/(modg*s(i)%ps%g%rofi(j)))*     &
-                     s(i)%ps%g%rofi(j)**2*(splint(s(i)%ps%vlocal,s(i)%ps%g%rofi(j)))
+              do j = 2, s%ps%g%nrval
+                v(j) = (sin(modg*s%ps%g%rofi(j))/(modg*s%ps%g%rofi(j)))*     &
+                     s%ps%g%rofi(j)**2*(splint(s%ps%vlocal,s%ps%g%rofi(j)))
               enddo
-              s(i)%local_fw(ix, iy, iz) = M_FOUR*M_PI*    &
-                   (sum(s(i)%ps%g%drdi(2:s(i)%ps%g%nrval)*v(2:s(i)%ps%g%nrval))-s(i)%ps%z_val/modg)
+              cf%FS(ix, iy, iz) = M_FOUR*M_PI*    &
+                   (sum(s%ps%g%drdi(2:s%ps%g%nrval)*v(2:s%ps%g%nrval))-s%ps%z_val/modg)
             else
-              s(i)%local_fw(ix, iy, iz) = M_ZERO
+              cf%FS(ix, iy, iz) = M_ZERO
             end if
           end do
         end do
       end do
       deallocate(v)
-    end if
+      
+    end if periodic
     
     ! now we built the non-local core corrections in momentum space
-    if(nlcc) then
-      allocate(s(i)%rhocore_fw(dbc(1), dbc(2), dbc(3)))
+    nlcc: if(sys%nlcc) then
+      call dcf_alloc_RS(h%rhocore_cf(i))
       
-      fr = 0.0_r8
       do ix = 1, db(1)
         ixx(1) = ix - c(1)
         do iy = 1, db(2)
@@ -95,31 +116,29 @@ subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
             ixx(3) = iz - c(3)
             
             x(:) = m%h(:)*ixx(:)
-            fr(ix, iy, iz) = specie_get_nlcc(s(i), x)
+            if(sys%nlcc) h%rhocore_cf(i)%RS(ix, iy, iz) = specie_get_nlcc(s, x)
           end do
         end do
       end do
-
-      call dfft_forward(fft, fr, s(i)%rhocore_fw)
-    end if
-
-  end do
+      call dcf_alloc_FS(h%rhocore_cf(i))      ! allocate the tube in Fourier space
+      call dcf_RS2FS(h%rhocore_cf(i))         ! Fourier transform
+      call dcf_free_RS(h%rhocore_cf(i))       ! we do not need the real space any longer
+    end if nlcc
+    
+  end do specie
   
-  deallocate(fr)
   call pop_sub()
-end subroutine specie_local_fourier_init
+end subroutine h_local_fourier_init
 #endif
 
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(inout) :: sys
 
-  integer :: ia, db(3), dbc(3)
+  integer :: ia
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
-  real(r8), allocatable :: fr(:,:,:)
-  complex(r8), allocatable :: fw(:,:,:)
-  complex(r8), allocatable :: fwc(:,:,:) ! for the nl core corrections
+  type(dcf) :: cf_loc, cf_nlcc
 
   call push_sub('generate_external_pot')
 
@@ -128,21 +147,17 @@ subroutine generate_external_pot(h, sys)
 
 #ifdef HAVE_FFT
   if(h%vpsl_space == RECIPROCAL_SPACE) then
-    call fft_getdim_real   (h%fft, db)  ! get dimensions of real array
-    call fft_getdim_complex(h%fft, dbc) ! get dimensions of complex array
-    
-    allocate(fw(dbc(1), dbc(2), dbc(3)))
-    fw = M_z0
+    call dcf_new_from(cf_loc, h%local_cf(1)) ! at least one specie must exist
+    call dcf_alloc_FS(cf_loc)
+    cf_loc%FS = M_z0
 
     if(sys%nlcc) then
-      allocate(fwc(dbc(1), dbc(2), dbc(3)))
-      fwc = M_z0
+      call dcf_new_from(cf_nlcc, h%rhocore_cf(1)) ! at least one specie must exist
+      call dcf_alloc_FS(cf_nlcc)
+      cf_nlcc%FS = M_z0
     end if
   end if
 #endif
-
-  h%Vpsl = M_ZERO
-  if(sys%nlcc) sys%st%rho_core = M_ZERO
 
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
@@ -159,20 +174,19 @@ subroutine generate_external_pot(h, sys)
 
 #ifdef HAVE_FFT
   if(h%vpsl_space == RECIPROCAL_SPACE) then
-    allocate(fr(db(1), db(2), db(3)))
-
     ! first the potential
-    call dfft_backward(h%fft, fw, fr)
-    call dcube_to_mesh(sys%m, fr, h%Vpsl, db)
+    call dcf_alloc_RS(cf_loc)
+    call dcf_FS2RS(cf_loc)
+    call dcf2mf(sys%m, cf_loc, h%Vpsl)
+    call dcf_free(cf_loc)
       
     ! and the non-local core corrections
     if(sys%nlcc) then
-      call dfft_backward(h%fft, fwc, fr)
-      call dcube_to_mesh(sys%m, fr, sys%st%rho_core, db)
-      deallocate(fwc)
+      call dcf_alloc_RS(cf_nlcc)
+      call dcf_FS2RS(cf_nlcc)
+      call dcf2mf(sys%m, cf_nlcc, sys%st%rho_core)
+      call dcf_free(cf_nlcc)
     end if
-    
-    deallocate(fw, fr)
   end if
 #endif
 
@@ -203,9 +217,9 @@ contains
 
 #ifdef HAVE_FFT
     else ! momentum space
-      call phase_factor(m, db, a%x, s%local_fw, fw)
+      call cf_phase_factor(m, a%x, h%local_cf(s%index), cf_loc)
       if(s%nlcc) then
-        call phase_factor(m, db, a%x, s%rhocore_fw, fwc)
+        call cf_phase_factor(m, a%x, h%rhocore_cf(s%index), cf_nlcc)
       end if
 #endif
     end if

@@ -31,6 +31,8 @@ use fft
 implicit none
 
 type specie_type
+  integer :: index                ! just a counter
+
   character(len=10) :: label      ! Identifier for the species:
                                   ! "jelli" : jellium sphere.
                                   ! "point" : jellium sphere of radius 0.5 a.u.
@@ -52,9 +54,6 @@ type specie_type
   ! for the user defined potential
   character(len=1024) :: user_def
 
-  ! For the local pseudopotential in Fourier space...
-  complex(r8), pointer :: local_fw(:,:,:)
-
   ! jellium stuff
   real(r8) :: jradius
 
@@ -62,9 +61,6 @@ type specie_type
   character(len=3) :: ps_flavour
   type(ps_type), pointer :: ps
   logical           :: nlcc       ! true if we have non-local core corrections
-  
-  ! for the core density in Fourier space
-  complex(r8), pointer :: rhocore_fw(:,:,:)      
   
 end type specie_type
 
@@ -110,11 +106,6 @@ function specie_init(s)
     call specie3D_init(nspecies, str, s)
   end if
 
-  ! Nullify all the pointers for sanity.
-  do i = 1, nspecies
-    nullify(s(i)%local_fw, s(i)%rhocore_fw)
-  enddo
-
   specie_init = nspecies
 
   call pop_sub()
@@ -131,17 +122,7 @@ subroutine specie_end(ns, s)
   do i = 1, ns
     if(s(i)%local) cycle
 
-    if(associated(s(i)%ps)) then
-      if(s(i)%nlcc.and.associated(s(i)%rhocore_fw)) then
-        deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
-      end if
-      call ps_end(s(i)%ps)
-    end if
-
-    if(associated(s(i)%local_fw)) then
-      deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
-    end if
-    
+    if(associated(s(i)%ps)) call ps_end(s(i)%ps)
   end do
   
   if(associated(s)) then ! sanity check

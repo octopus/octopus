@@ -145,31 +145,30 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
     ! WARNING: this is still not working
 #ifdef HAVE_FFT
     subroutine local_FS()
-      complex(r8), allocatable :: fw(:,:,:)
-      real(r8), allocatable :: fr(:,:,:), force(:)
-      integer :: db(3), dbc(3)
+      type(dcf) :: cf_for
+      real(r8), allocatable :: force(:)
 
-      call fft_getdim_real   (h%fft, db)
-      call fft_getdim_complex(h%fft, dbc)
+      allocate(force(sys%m%np))
+      call dcf_new_from(cf_for, h%local_cf(1)) ! at least one specie must exist
+      call dcf_alloc_FS(cf_for)
+      call dcf_alloc_RS(cf_for)
       
-      allocate(fw(dbc(1), dbc(2), dbc(3)), fr(db(1), db(2), db(3)), force(sys%m%np))
-
       do i = 1, sys%natoms
         atm => sys%atom(i)
         do j = 1, conf%dim
-          fw = M_z0
-          call phase_factor(sys%m, db, atm%x, atm%spec%local_fw, fw)
-          call dmesh_gradq(sys%m, fw, j, db)
-          call dfft_backward(h%fft, fw, fr)
-          force = M_ZERO
-          call dcube_to_mesh(sys%m, fr, force, db)
+          cf_for%FS = M_z0
+          call cf_phase_factor(sys%m, atm%x, h%local_cf(atm%spec%index), cf_for)
+          
+          call dcf_FS_grad(sys%m, cf_for, j)
+          call dcf_FS2RS(cf_for)
+          call dcf2mf(sys%m, cf_for, force)
           do l = 1, sys%st%nspin
             atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
           end do
         end do
       end do
 
-      deallocate(fw, fr, force)
+     deallocate(force)
     end subroutine local_FS
 #endif
 

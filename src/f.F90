@@ -57,13 +57,11 @@ contains
   else
     call dcf_new(m%l, dcf_der)
     call dcf_fft_init(dcf_der)
-    call dcf_new(m%l, dcf_aux)
-    call dcf_fft_init(dcf_aux)
-    
+    call dcf_new_from(dcf_aux, dcf_der)
+
     call zcf_new(m%l, zcf_der)
     call zcf_fft_init(zcf_der)
-    call zcf_new(m%l, zcf_aux)
-    call zcf_fft_init(zcf_aux)
+    call zcf_new_from(zcf_aux, zcf_der)
     
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
   end if

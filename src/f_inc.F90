@@ -75,7 +75,7 @@ subroutine X(f_laplacian) (m, f, lapl, cutoff_)
 
 #if defined(HAVE_FFT)
   case(RECIPROCAL_SPACE)
-    
+
     ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
     cutoff = -M_ONE
     if(present(cutoff_)) cutoff = cutoff_
@@ -115,6 +115,7 @@ subroutine X(f_gradient) (m, f, grad)
 
 #if defined(HAVE_FFT)
   case(RECIPROCAL_SPACE)
+
     call X(cf_alloc_RS)(X(cf_aux))     ! allocate cube in real space
     call X(mf2cf)(m, f, X(cf_aux))     ! convert to cube
 

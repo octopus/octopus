@@ -6,6 +6,7 @@ subroutine specie1D_init(nspecies, str, s)
   integer :: i, j
 
   do i = 1, nspecies
+    s(i)%index = i
     s(i)%local = .true.
     s(i)%nlcc  = .false.
 
