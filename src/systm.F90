@@ -274,11 +274,26 @@ contains
         elseif (nspin == 4) then
           do i = 1, 3
             call loct_parse_block_float("GuessDensityAtomsMagnet", ia-1, i-1, mag(i))
+            if (abs(mag(i)) < CNST(1.0e-20)) mag(i) = M_ZERO
           end do
 
-          phi = acos(mag(1)/sqrt(dot_product(mag, mag)))
-          if (mag(2) < M_ZERO) phi = M_TWO*M_PI - phi
           theta = acos(mag(3)/sqrt(dot_product(mag, mag)))
+          if (mag(1) == M_ZERO) then
+            if (mag(2) == M_ZERO) then
+              phi = M_ZERO
+            elseif (mag(2) < M_ZERO) then
+              phi = M_PI*M_TWOTHIRD
+            elseif (mag(2) > M_ZERO) then
+              phi = M_PI*M_HALF
+            end if
+          else
+            if (mag(2) < M_ZERO) then
+              phi = M_TWO*M_PI - acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
+            elseif (mag(2) >= M_ZERO) then
+              phi = acos(mag(1)/sin(theta)/sqrt(dot_product(mag, mag)))
+            end if
+          end if
+
           rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
                                           + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
           rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
