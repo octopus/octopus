@@ -91,7 +91,7 @@ program nbo2xyz
 
   ! Skips the header
   rewind(unit = nbo_unit)
-  read(unit = nbo_unit, *); read(unit = nbo_unit, *)
+  read(unit = nbo_unit, fmt = *); read(unit = nbo_unit, fmt = *)
 
   ierr = 0
   do while(ierr == 0)
