@@ -173,9 +173,9 @@ subroutine PES_mask_output(v, m, st, file)
   ! first output power spectra
   do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
-      call io_assign(iunit)
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_power.', ik, '.',p
-      open(iunit, status='unknown', file=trim(fn))
+      iunit = io_open(fn)
+
       do ix = 1, n
         if(npoints(ix) > 0) then
           write(iunit, *)  (ix-1)*step/units_out%energy%factor, spis(ix, p, ik), npoints(ix)
@@ -184,9 +184,10 @@ subroutine PES_mask_output(v, m, st, file)
       call io_close(iunit)
     end do
   end do
-  call io_assign(iunit)
+
   write(fn, '(a,a)') trim(file), '_power.sum'
-  open(iunit, status='unknown', file=trim(fn))
+  iunit = io_open(fn)
+
   do ix = 1, n
     if(npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*step/units_out%energy%factor, sum(spis(ix, :, :)), npoints(ix)
@@ -197,9 +198,9 @@ subroutine PES_mask_output(v, m, st, file)
   ! now output ar spectra
   do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
-      call io_assign(iunit)
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar.', ik, '.', p
-      open(iunit, status='unknown', file=trim(fn))
+      iunit = io_open(fn)
+
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
           write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
@@ -209,9 +210,10 @@ subroutine PES_mask_output(v, m, st, file)
       call io_close(iunit)
     end do
   end do
-  call io_assign(iunit);
+
   write(fn, '(a,a)') trim(file), '_ar.sum'
-  open(iunit, status='unknown', file=trim(fn))
+  iunit = io_open(fn)
+
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
@@ -251,9 +253,9 @@ subroutine PES_mask_output(v, m, st, file)
   ! now output real ar spectra
   do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
-      call io_assign(iunit)
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar_r.', ik, '.', p
-      open(iunit, status='unknown', file=trim(fn))
+      iunit = io_open(fn)
+
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
           write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
@@ -263,9 +265,9 @@ subroutine PES_mask_output(v, m, st, file)
       call io_close(iunit)
     end do
   end do
-  call io_assign(iunit)
+
   write(fn, '(a,a)') trim(file), '_ar_r.sum'
-  open(iunit, status='unknown', file=trim(fn))
+  iunit = io_open(fn)
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &

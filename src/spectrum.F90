@@ -167,8 +167,8 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    call io_assign(iunit)
-    open(iunit, file=out_file, status='unknown')
+    iunit = io_open(out_file)
+
     ! should output units, etc...
     do i = 0, sf%no_e
       write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
@@ -268,8 +268,8 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    call io_assign(iunit)
-    open(iunit, file=out_file, status='unknown')
+    iunit = io_open(out_file)
+
     ! should output units, etc...
     do i = 0, rsf%no_e
       write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
@@ -320,7 +320,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
     case('y')
       dipole(i) = -sum(d(1, :))
     case('z')
-      dipole(i) = sum(d(2, :))
+      dipole(i) =  sum(d(2, :))
     case('+')
       dipole(i) = -sum(d(3, :) + M_zI*d(1, :)) / sqrt(M_TWO)
     case('-')
@@ -362,8 +362,8 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    call io_assign(iunit)
-    open(iunit, file=trim(out_file) // "." // trim(sh%pol), status='unknown')
+    iunit = io_open(trim(out_file) // "." // trim(sh%pol))
+
     ! should output units, etc...
     do i = 0, sh%no_e
       write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
@@ -424,8 +424,8 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    call io_assign(iunit)
-    open(iunit, file=trim(out_file) // "." // trim(sh%pol), status='unknown')
+    iunit = io_open(trim(out_file) // "." // trim(sh%pol))
+
     ! should output units, etc...
     do i = 0, sh%no_e
       write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
@@ -451,13 +451,7 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   integer :: i, j
   FLOAT :: t1, t2, dummy
 
-  call io_assign(iunit)
-  open(iunit, file=file, status='old', iostat=i)
-  if(i.ne.0) then
-    write(message(1),'(2a)') "Could not open ",trim(adjustl(file))
-    write(message(2),'(a,i4,a)') "[iostat =",i,"]"
-    call write_fatal(2)
-  endif
+  iunit = io_open(file, status='old')
 
   ! First line may contain some informative integer n (or not...)
   read(iunit,'(10x,i2)', iostat = i) n
@@ -479,7 +473,7 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   time_steps = time_steps - 1
   
   if(time_steps < 3) then
-    write(message(1),'(a,a,a)') "Empty ",trim(adjustl(file)),"?"
+    write(message(1),'(a,a,a)') "Empty ", trim(adjustl(file)),"?"
     call write_fatal(1)
   end if
 
@@ -496,14 +490,10 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
 
   ! open files
   call io_assign(iunit)
-  open(iunit, file='td.general/multipoles', status='old', iostat=i)
-  if(i.ne.0) then
-    open(iunit, file='multipoles', status='old', iostat=i)
-    if(i.ne.0) then
-      write(message(1),'(3a)') "Could not open multipoles file!"
-      call write_fatal(1)
-    end if
-  endif
+  iunit = io_open('multipoles', status='old', die=.false.)
+  if(iunit < 0) then
+    iunit = io_open('td.general/multipoles', status='old')
+  end if
   
   ! read in dipole
   read(iunit, '(10x,i2)') nspin
@@ -539,14 +529,9 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   FLOAT :: t1, t2, dummy
 
   ! open files
-  call io_assign(iunit)
-  open(iunit, file='td.general/acceleration', status='old', iostat=i)
-  if(i.ne.0) then
-    open(iunit, file='acceleration', status='old', iostat=i)
-    if(i.ne.0) then
-      write(message(1),'(3a)') "Could not open acceleration file!"
-      call write_fatal(1)
-    end if
+  iunit = io_open('acceleration', status='old', die=.false.)
+  if(iunit < 0) then
+    iunit = io_open('td.general/acceleration', status='old')
   endif
   
   ! read in dipole

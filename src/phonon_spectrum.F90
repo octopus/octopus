@@ -31,15 +31,7 @@ program phonon_spectrum
   call units_init()
 
   ! Opens the coordinates files.
-  call io_assign(iunit)
-  open(iunit, file='td.general/coordinates', status='old', action='read', iostat=ierr)
-  if(ierr .ne. 0) then
-    message(1) = 'Error opening file td.general/coordinates'
-    call write_fatal(1)
-  end if
-
-  ! Counts the number of lines in the file ( 2 is the number of lines in the header)
-  time_steps = loct_number_of_lines('td.general/coordinates') - 2
+  iunit = io_open('td.general/coordinates', status='old', action='read')
 
   ! Closes file and exits
   call io_close(iunit)

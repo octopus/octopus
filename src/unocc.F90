@@ -59,7 +59,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   if(.not.fromScratch) then
     ! not all states will be read, that is the reason for the <0 instead of .ne.0
-    call X(restart_read)("tmp/restart_unocc", sys%st, sys%m, err)
+    call X(restart_read) ('tmp/restart_unocc', sys%st, sys%m, err)
     if(err < 0) then
       message(1) = "Could not load tmp/restart_unocc: Starting from scratch"
       call write_warning(1)
@@ -69,7 +69,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
 
   if(fromScratch) then
-    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
     if(err < 0) then
       message(1) = "Could not load tmp/restart_gs: Starting from scratch"
       call write_warning(1)
@@ -101,7 +101,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
     call write_info(1)
 
     ! write restart information.
-    call X(restart_write)("tmp/restart_unocc", sys%st, sys%m, err)
+    call X(restart_write) ('tmp/restart_unocc', sys%st, sys%m, err)
     if(err.ne.0) then
       message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
       call write_fatal(1)
@@ -115,9 +115,9 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call write_info(2)
 
   ! write output file
-  call io_assign(iunit)
-  call loct_mkdir("static")
-  open(iunit, status='unknown', file='static/eigenvalues')
+  call io_mkdir('static')
+  iunit = io_open('static/eigenvalues')
+
   if(converged) then
     write(iunit,'(a)') 'All unoccupied states converged.'
   else
@@ -129,8 +129,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call io_close(iunit)
   
   if (conf%periodic_dim>0 .and. sys%st%d%nik>sys%st%d%nspin) then
-    call io_assign(iunit)
-    open(iunit, status='unknown', file='static/bands.dat')
+    iunit = io_open('static/bands.dat')
     call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if

@@ -18,17 +18,21 @@
 
 module io
   use lib_oct_parser
+  use lib_oct
 
   implicit none
 
-  integer, private, parameter :: min_lun=10, max_lun=99
-  
-  logical, private   :: lun_is_free(min_lun:max_lun)
-  
+  private
+  public :: stderr, stdin, stdout
+  public :: io_workpath, io_open, io_mkdir
+  public :: io_init, io_end, io_status, io_dump_file, io_free, io_close, io_assign
+
   ! the standard input and output
-  integer :: stderr
-  integer :: stdin
-  integer :: stdout
+  integer :: stderr, stdin, stdout
+
+  integer, parameter :: min_lun=10, max_lun=99
+  logical            :: lun_is_free(min_lun:max_lun)
+  character(len=512) :: work_dir    ! name of the ourput directory
 
 contains
 
@@ -56,6 +60,9 @@ contains
       open(stderr, file=filename, status='unknown')
     end if
 
+    ! check where to output files
+    call loct_parse_string('WorkDir', '.', work_dir)
+
   end subroutine io_init
 
 
@@ -68,13 +75,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! Logical unit management
-  ! ---------------------------------------------------------
   subroutine io_assign(lun)
     integer, intent(out) :: lun
 
     integer :: iostat
     logical :: used
+
+    lun = -1
 
     ! Looks for a free unit and assigns it to lun
     do lun = min_lun, max_lun
@@ -85,7 +92,6 @@ contains
         if (.not. used) return
       end if
     end do
-    stop 'No luns available in io_assign'
 
   end subroutine io_assign
 
@@ -98,15 +104,83 @@ contains
        lun_is_free(lun) = .true.
   end subroutine io_free
 
+  ! ---------------------------------------------------------
+  character(len=512) function io_workpath(path) result(wpath)
+    character(len=*), intent(in) :: path
+
+    write(wpath, '(3a)') trim(work_dir), "/", trim(path)
+  end function io_workpath
+  
 
   ! ---------------------------------------------------------
-  ! Use this routine instead of a simple close!!
-  ! ---------------------------------------------------------
-  subroutine io_close(lun)
-    integer, intent(in) :: lun
+  subroutine io_mkdir(fname)
+    character(len=*), intent(in) :: fname
 
-    close(lun)
-    call io_free(lun)
+    call loct_mkdir(trim(io_workpath(fname)))
+  end subroutine io_mkdir
+  
+
+  ! ---------------------------------------------------------
+  integer function io_open(file, status, form, action, position, die) result(iunit)
+    character(len=*), intent(in) :: file
+    character(len=*), intent(in), optional :: status, form, action, position
+    logical,          intent(in), optional :: die
+
+    character(len=20)  :: status_, form_, action_, position_
+    character(len=512) :: file_
+    logical            :: die_
+    integer            :: iostat
+
+    status_ = 'unknown'
+    if(present(status  )) status_   = status
+    form_   = 'formatted'
+    if(present(form    )) form_     = form
+    action_ = 'readwrite'
+    if(present(action  )) action_   = action
+    position_ = 'asis'
+    if(present(position)) position_ = position
+    die_    = .true.
+    if(present(die     )) die_      = die  
+
+    call io_assign(iunit)
+    if(iunit<0) then
+      if(die_) then
+        write(stderr, '(a') '*** IO Error: Too many files open'
+        stop 'io_open'
+      end if
+      return
+    end if
+    
+    if(file(1:1) .ne. '/') then
+      file_ = io_workpath(file)
+    else
+      file_ = file
+    end if
+
+    open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
+       action=trim(action_), iostat=iostat)
+
+    if(iostat.ne.0) then
+      call io_free(iunit)
+      iunit = -1
+      if(die_) then
+        write(*, '(4a)') '*** IO Error: Could not open file "', trim(file_), &
+           '" for action="', trim(action_)
+        stop 'io_open'
+      end if
+    end if
+
+  end function io_open
+  
+
+  ! ---------------------------------------------------------
+  subroutine io_close(iunit)
+    integer, intent(inout) :: iunit
+
+    close(iunit)
+    call io_free(iunit)
+    iunit = -1
+
   end subroutine io_close
 
 

@@ -60,7 +60,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -76,7 +76,7 @@ contains
     call X(system_h_setup) (sys, h)
 
     ! create directory for output
-    call loct_mkdir('phonons')
+    call io_mkdir('phonons')
 
     ph%dim = sys%geo%natoms*conf%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
@@ -88,16 +88,14 @@ contains
     call get_DM(sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp, ph)
 
     ! output phonon frequencies and eigenvectors
-    call io_assign(iunit)
-    open(iunit, file='phonons/freq', status='unknown')
+    iunit = io_open('phonons/freq')
     do i = 1, ph%dim
       write(iunit, *) i, sqrt(abs(ph%freq(i))) * 219474.63 ! output cm^-1
     end do
     call io_close(iunit)
 
     ! output phonon eigenvectors
-    call io_assign(iunit)
-    open(iunit, file='phonons/vec', status='unknown')
+    iunit = io_open('phonons/vec')
     do i = 1, ph%dim
       write(iunit, '(i6)', advance='no') i
       do j = 1, ph%dim
@@ -146,7 +144,7 @@ contains
     n = geo%natoms*conf%dim
 
     call io_assign(iunit)
-    open(iunit, file='phonons/DM', status='unknown')
+    iunit = io_open('phonons/DM')
 
     do i = 1, geo%natoms
       do alpha = 1, conf%dim

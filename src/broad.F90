@@ -87,14 +87,9 @@ contains
     allocate(s(4,n))
     s = M_ZERO
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // fname, status='old', iostat=istat)
-    if(istat.ne.0) then
-      write(message(1),'(3a)') "Could not open multipoles file!"
-      call write_fatal(1)
-    end if
-    read(iunit, *) ! skip header
+    iunit = io_open(trim(dir)//"/"// fname, status='old')
 
+    read(iunit, *) ! skip header
     do
       if(extracols) then
         read(iunit, *, end=100) j1, j2, e, f
@@ -112,8 +107,7 @@ contains
     call io_close(iunit)
       
     ! print spectra
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/spectrum." // fname, status='unknown')
+    iunit = io_open(trim(dir)//"/spectrum."//fname)
     do j1 = 1, n
       w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
       write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor

@@ -51,7 +51,7 @@ contains
     message(1) = 'Info: Loading wave-functions'
     call write_info(1)
 
-    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, ierr)
+    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)

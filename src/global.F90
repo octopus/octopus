@@ -373,12 +373,14 @@ function clean_stop()
   return
 end function clean_stop
 
+
 ! Given a path, it returns the extension (if it exists) of the file
 ! (that is, the part of the name that comes after its last point)
 ! If the filename does not have an extension, it returns the empty string.
 character(len=8) function get_extension(path) result(ext)
   character(len = * ), intent(in)  :: path
   integer :: i, j
+
   i = index(path, ".", back = .true.)
   j = index(path(i+1:), "/")
   if(i.eq.0 .or. j.ne.0) then
@@ -388,98 +390,5 @@ character(len=8) function get_extension(path) result(ext)
   endif
 end function get_extension
 
-! Upcases a string
-!  15-OCT-2000: First version, Fernando Nogueira
-SUBROUTINE upcase(str)
-  
-  CHARACTER (LEN=*), INTENT(INOUT) :: str
-  INTEGER :: i, s
-  
-  DO i = 1, LEN(str)
-    s = IACHAR(str(i:i))
-    IF ( (s<=122) .AND. (s>=97) ) s = s-32
-    str(i:i) = ACHAR(s)
-  ENDDO
-  
-END SUBROUTINE upcase
-
-! Lowcases a string
-!  15-OCT-2000: First version, Fernando Nogueira
-SUBROUTINE lowcase(str)
-
-  CHARACTER (LEN=*), INTENT(INOUT) :: str
-  INTEGER :: i, s
-  
-  DO i = 1, LEN(str)
-    s = IACHAR(str(i:i))
-    IF ( (s<=90) .AND. (s>=65) ) s = s+32
-    str(i:i) = ACHAR(s)
-  ENDDO
-  
-END SUBROUTINE lowcase
-
-! Removes all spaces from a string
-!  15-OCT-2000: First version, Fernando Nogueira
-SUBROUTINE compact(str)
-
-  CHARACTER (LEN=*), INTENT(INOUT) :: str
-  INTEGER :: i, j
-  
-  DO i = 1, LEN(str)
-    IF ( str(i:i) == ' ' ) THEN
-      DO j = i, LEN(str)-1
-        str(j:j) = str(j+1:j+1)
-      ENDDO
-      str(LEN(str):LEN(str)) = ' '
-    ENDIF
-  ENDDO
-  
-END SUBROUTINE compact
-
-subroutine str_trim(str)
-  character (len=*), intent(inout) :: str
-  integer :: i, j, l
-  
-  l = len(str)
-  do i = 1, l
-    if(str(i:i) .ne. ' ') exit
-  end do
-
-  do j = 1, l - i + 1
-    str(j:j) = str(i:i)
-    i = i + 1
-  end do
-
-  do i = j, l
-    str(j:j) = ' '
-  end do
-
-end subroutine str_trim
-
-! puts space around string, so that it is centered
-character(len=80) function str_center(s_in, l) result(s_out)
-  character(len=*), intent(in) :: s_in
-  integer,          intent(in) :: l
-
-  integer :: pad, i, li
-
-  li = len(s_in)
-  if(l < li) then
-    s_out(1:l) = s_in(1:l)
-    return
-  end if
-  
-  pad = (l - li)/2
-
-  s_out = ""
-  do i = 1, pad
-    s_out(i:i) = " ";
-  end do
-  s_out(pad + 1:pad + li + 1) = s_in(1:li)
-  do i = pad + li + 1, l
-    s_out(i:i) = " ";
-  end do
-  
-end function str_center
 
 end module global

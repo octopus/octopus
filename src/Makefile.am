@@ -6,7 +6,7 @@ bin_PROGRAMS = octopus oct-excite oct-atoms-magnet @UTILITY_PROGRAMS@
 
 check_PROGRAMS = oct-test
 
-core_SRCS = liboct_parser.F90 io.F90 liboct.F90 global.F90 units.F90 \
+core_SRCS = liboct_parser.F90 liboct.F90 io.F90 string.F90 global.F90 units.F90 \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \

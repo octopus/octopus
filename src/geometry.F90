@@ -19,6 +19,7 @@
 
 module geometry
   use global
+  use string
   use units
   use lib_oct_parser
   use lib_oct
@@ -307,6 +308,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   call pop_sub()
 end subroutine geometry_init_species
 
+
 subroutine geometry_debug(geo, dir)
   type(geometry_type), intent(in) :: geo
   character(len=*), intent(in) :: dir
@@ -316,14 +318,15 @@ subroutine geometry_debug(geo, dir)
 
   call push_sub('specie_debug')
 
-  dirname = trim(dir)//'/geometry'
-  call loct_mkdir(trim(dirname))
+  write(dirname, '(2a)') trim(dir), '/geometry'
+  call io_mkdir(dirname)
   do i = 1, geo%nspecies
      call specie_debug(trim(dirname), geo%specie(i))
   end do
 
   call pop_sub()
 end subroutine geometry_debug
+
 
 subroutine loadPDB(iunit, geo)
   integer,             intent(in)    :: iunit
@@ -393,6 +396,7 @@ subroutine geometry_end(geo)
   call specie_end(geo%nspecies, geo%specie)
 
 end subroutine geometry_end
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Returns the number of non-local operator that should be defined.
@@ -500,10 +504,9 @@ subroutine atom_write_xyz(dir, fname, geo)
   if(mpiv%node == 0) then
 #endif
 
-    call loct_mkdir(trim(dir))
+    call io_mkdir(dir)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz')
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // '.xyz', status='unknown')
     write(iunit, '(i4)') geo%natoms
     write(iunit, '(1x)')
     do i = 1, geo%natoms
@@ -512,8 +515,7 @@ subroutine atom_write_xyz(dir, fname, geo)
     call io_close(iunit)
     
     if(geo%ncatoms > 0) then
-      call io_assign(iunit)
-      open(iunit, file=trim(dir) // "/" // trim(fname) // '_classical.xyz', status='unknown')
+      iunit = io_open(trim(dir)//'/'//trim(fname))
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do i = 1, geo%ncatoms

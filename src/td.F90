@@ -261,7 +261,6 @@ contains
     ! allocate memory
     allocate(st%zpsi(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
-    !
     call td_init(td, m, st, h, sys%outp)
 
   end subroutine init_
@@ -281,7 +280,7 @@ contains
 
     ierr = 0
     if(.not.fromScratch) then
-      call zrestart_read("tmp/restart_td", st, m, err, td%iter)
+      call zrestart_read('tmp/restart_td', st, m, err, td%iter)
       if(err.ne.0) then
         message(1) = "Could not load tmp/restart_td: Starting from scratch"
         call write_warning(1)
@@ -300,7 +299,7 @@ contains
     end if
 
     if(fromScratch) then
-      call zrestart_read ("tmp/restart_gs", st, m, ierr)
+      call zrestart_read('tmp/restart_gs', st, m, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load tmp/restart_gs: Starting from scratch"
         call write_warning(1)
@@ -324,7 +323,7 @@ contains
 
   ! initialize buffers for output
   subroutine init_iter_output()
-    character(len=100) :: filename
+    character(len=256) :: filename
 
     integer :: first
 
@@ -335,27 +334,28 @@ contains
     end if
 
     if(mpiv%node==0) then
-      if(td%out_multip) &
-         call write_iter_init(out_multip,  first, td%dt/units_out%time%factor, "td.general/multipoles")
-      if(td%out_angular) &
-         call write_iter_init(out_angular, first, td%dt/units_out%time%factor, "td.general/angular")
-      if(td%out_spin) &
-         call write_iter_init(out_spin,    first, td%dt/units_out%time%factor, "td.general/spin")
-      if(td%out_coords) &
-         call write_iter_init(out_coords,  first, td%dt/units_out%time%factor, "td.general/coordinates")
-      if(td%out_gsp) &
-         call write_iter_init(out_gsp,     first, td%dt/units_out%time%factor, "td.general/gs_projection")
-      if(td%out_acc) &
-         call write_iter_init(out_acc,     first, td%dt/units_out%time%factor, "td.general/acceleration")
-      if(td%out_laser) &
-         call write_iter_init(out_laser,   first, td%dt/units_out%time%factor, "td.general/laser")
-      if(td%out_energy) &
-         call write_iter_init(out_energy,  first, td%dt/units_out%time%factor, "td.general/el_energy")
+      if(td%out_multip)  call write_iter_init(out_multip,  first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/multipoles")))
+      if(td%out_angular) call write_iter_init(out_angular, first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/angular")))
+      if(td%out_spin)    call write_iter_init(out_spin,    first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/spin")))
+      if(td%out_coords)  call write_iter_init(out_coords,  first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/coordinates")))
+      if(td%out_gsp)     call write_iter_init(out_gsp,     first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/gs_projection")))
+      if(td%out_acc)     call write_iter_init(out_acc,     first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/acceleration")))
+      if(td%out_laser)   call write_iter_init(out_laser,   first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/laser")))
+      if(td%out_energy)  call write_iter_init(out_energy,  first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/el_energy")))
     end if
 
     if(td%out_proj) then
       write(filename, '(i3.3)') mpiv%node
-      call write_iter_init(out_proj,    first, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
+      call write_iter_init(out_proj, first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/projections."//trim(filename))) )
     end if
 
   end subroutine init_iter_output
@@ -410,7 +410,7 @@ contains
     call push_sub('td_run_zero_iter')
 
     ! create general subdir
-    call loct_mkdir("td.general")
+    call io_mkdir('td.general')
 
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
     if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, td, 0)
@@ -519,16 +519,13 @@ contains
     logical :: found
     integer :: i, iunit
 
-    inquire(file='td.general/coordinates', exist=found)
-    if(.not.found) then
+    iunit = io_open('td.general/coordinates', status='old', die=.false.)
+    if(iunit < 0) then
       message(1) = "Could not open file 'td.general/coordinates'"
       message(2) = "Starting simulation from initial geometry"
       call write_warning(2)
       return
     end if
-    
-    call io_assign(iunit)
-    open(iunit, file='td.general/coordinates', status='old')
 
     read(iunit, *); read(iunit, *) ! skip header
     do i = 0, td%iter - 1
@@ -556,7 +553,7 @@ contains
     integer, intent(in) :: iter
 
     integer :: i, is, ierr
-    character(len=50) :: filename
+    character(len=256) :: filename
   
     call push_sub('td_write_data')
     
@@ -571,7 +568,10 @@ contains
     do i = 1, 2
       do is = 1, st%d%nspin
         write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
-        call doutput_function(restart_format, "tmp/restart_td", filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
+
+        call doutput_function(restart_format, "tmp/restart_td", &
+           filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
+
         if(ierr.ne.0) then
           write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
           call write_fatal(1)
@@ -595,6 +595,7 @@ contains
     
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+
     call zstates_output(st, m, sys%f_der, filename, sys%outp)
     if(sys%outp%what(output_geometry)) &
          call atom_write_xyz(filename, "geometry", geo)

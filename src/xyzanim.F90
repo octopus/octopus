@@ -27,7 +27,7 @@ program xyzanim
 
   implicit none
 
-  character(len=80) :: str, nbofile, xyzfile
+  character(len=256) :: str, nbofile, xyzfile
   integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j
   FLOAT :: dump
 
@@ -39,8 +39,8 @@ program xyzanim
   if(conf%verbose<999) conf%verbose = -1
 
   ! Sets the filenames
-  write(nbofile, '(a)') 'td.general/coordinates'
-  write(xyzfile, '(a)') 'movie.xyz'
+  nbofile = 'td.general/coordinates'
+  xyzfile = 'td.general/movie.xyz'
 
   ! how often do we sample?
   call loct_parse_int('AnimationSampling', 100, sampling)
@@ -53,12 +53,10 @@ program xyzanim
   call geometry_init_xyz(geo)
 
   ! Opens the nbo file
-  call io_assign(nbo_unit)
-  open(unit = nbo_unit, file = nbofile, action = 'read')
+  nbo_unit = io_open(nbofile, action='read')
 
   ! Opens the xyz file
-  call io_assign(xyz_unit)
-  open(unit = xyz_unit, file = xyzfile, action = 'write')
+  xyz_unit = io_open(xyzfile, action='write')
 
   ! Skips the header
   rewind(unit = nbo_unit)

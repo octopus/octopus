@@ -18,10 +18,11 @@
 #include "global.h"
 
 module xyz_file
+  use global
+  use string
+  use units
   use lib_oct_parser
   use io
-  use units
-  use global
 
   implicit none
 
@@ -102,8 +103,7 @@ contains
 
       call loct_parse_string('PDB'//trim(what), 'coords.pdb', str)
       
-      call io_assign(iunit)
-      open(iunit, status='unknown', file=trim(str))
+      iunit = io_open(str)
       call xyz_file_read_PDB(iunit, gf)
       call io_close(iunit)
 
@@ -111,8 +111,7 @@ contains
       gf%file_type = XYZ_FILE_XYZ
       call loct_parse_string('XYZ'//trim(what), 'coords.xyz', str)
 
-      call io_assign(iunit)
-      open(iunit, status='unknown', file=trim(str))
+      iunit = io_open(str)
       read(iunit, *) gf%n
       read(iunit, *) ! skip comment line
 

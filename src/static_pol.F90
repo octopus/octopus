@@ -57,7 +57,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   call init_()
  
   ! load wave-functions
-  call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+  call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
   if(err.ne.0) then
     message(1) = "Could not load wave-functions: Starting from scratch"
     call write_warning(1)
@@ -82,8 +82,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
 
     if(resume) then
       ! Finds out how many dipoles have already been written.
-      call io_assign(iunit)
-      open(unit = iunit, file='tmp/restart.pol', status='old', action='read')
+      iunit = io_open('tmp/restart.pol', status='old', action='read')
       rewind(iunit)
       i_start = 1
       do i = 1, 3
@@ -98,8 +97,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   end if
 
   if(fromScratch) then
-    call io_assign(iunit)
-    open(unit = iunit, file='tmp/restart.pol', status='unknown', action='write')
+    iunit = io_open('tmp/restart.pol', action='write')
     call io_close(iunit)
     i_start = 1
   end if
@@ -136,8 +134,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
     end do
 
     ! Writes down the dipole to the file
-    call io_assign(iunit)
-    open(unit=iunit, file='tmp/restart.pol', action='write', status='old', position='append')
+    iunit = io_open('tmp/restart.pol', action='write', status='old', position='append')
     write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, conf%dim), k = 1, 2)
     call io_close(iunit)
     
@@ -151,9 +148,8 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   call io_close(iunit)
 
   if(out_pol) then ! output pol file
-    call loct_mkdir("linear")
-    call io_assign(iunit)
-    open(iunit, file='linear/polarizability', status='unknown')
+    call io_mkdir('linear')
+    iunit = io_open('linear/polarizability')
     write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
        trim(units_out%length%abbrev)
     if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim

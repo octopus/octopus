@@ -17,8 +17,6 @@
 
 #include "global.h"
 
-#define RESTART_FILE "tmp/restart_linear"
-
 module linear
   use global
   use units
@@ -36,14 +34,14 @@ module linear
 contains
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine LR_el_excitations(type, st, m, f_der, n_occ, n_unocc, flags, dir, fname, from_scratch)
+  subroutine LR_el_excitations(type, st, m, f_der, n_occ, n_unocc, flags, fname, from_scratch)
     integer,           intent(in)    :: type         ! 1 => eps diff; 2 => petersilka; 3 => casida
     type(states_type), intent(IN)    :: st           ! the wave-functions
     type(mesh_type),   intent(inout) :: m            ! the mesh
     type(f_der_type),  intent(in)    :: f_der
     integer,           intent(in)    :: n_occ, n_unocc ! number of occupied and unoccupied states
     integer,           intent(in)    :: flags(32)    ! which electron-hole pairs to take into account
-    character(len=*),  intent(in)    :: dir, fname   ! directory and filename to write
+    character(len=*),  intent(in)    :: fname        ! filename to write
     logical,           intent(in)    :: from_scratch ! should I start from scratch, or use information from restart file
 
     ! variables global to the subroutine
@@ -51,13 +49,15 @@ contains
     FLOAT,   allocatable :: mat(:,:)              ! general purpose matrix
     FLOAT,   allocatable :: energies(:,:)         ! excitation energies and intensities
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
+    character(len=256)   :: restart_file
     integer :: n_pairs                            ! number of particle-hole pairs to take into account
 
     ! sanity checks
     ASSERT(type>=0.and.type<=2)
 
     ! output
-    if (mpiv%node == 0) call loct_mkdir(trim(dir))
+    call io_mkdir('linear')
+    restart_file = 'tmp/restart_linear'
 
     ! get occupied/unoccupied pairs
     call get_pairs()
@@ -95,8 +95,7 @@ contains
       call loct_progress_bar(-1, n_pairs-1)
 
       ! file to save matrix elements
-      call io_assign(iunit)
-      open(iunit, file=RESTART_FILE, action='write', status='unknown', position='append')
+      iunit = io_open(restart_file, action='write', position='append')
       
       do ia = 1, n_pairs
         a = pair_a(ia)
@@ -179,8 +178,7 @@ contains
       write(stdout, '(1x)')
 
       ! complete the matrix and output the restart file
-      call io_assign(iunit)
-      open(iunit, file=RESTART_FILE, action='write', status='unknown', position='append')
+      iunit = io_open(restart_file, action='write', position='append')
       do ia = 1, n_pairs
         i = pair_i(ia)
         a = pair_a(ia)
@@ -293,17 +291,20 @@ contains
 
     end subroutine get_pairs
 
+
     subroutine free_pairs
       deallocate(pair_i, pair_a)
     end subroutine free_pairs
+
 
     subroutine load_saved
       integer :: iunit, err
       integer :: ia, jb
       FLOAT   :: val
       
-      call io_assign(iunit)
-      open(unit=iunit, file=RESTART_FILE, iostat=err, action='read', status='old')
+      iunit = io_open(restart_file, action='read', status='old', die=.false.)
+      err = min(iunit, 0)
+
       do while(err .eq. 0)
         read(iunit, fmt=*, iostat=err) ia, jb, val
         if(err.eq.0 .and. (ia > 0.and.ia <= n_pairs) .and. (jb > 0.and.jb <= n_pairs)) then
@@ -311,9 +312,11 @@ contains
           saved_K(ia, jb) = .true.
         end if
       end do
+
       call io_close(iunit)
 
     end subroutine load_saved
+
 
     subroutine sort_energies
       FLOAT :: tmp(4), emin
@@ -346,8 +349,7 @@ contains
       FLOAT   :: temp
 
       ! output excitation energies and oscillator strengths
-      call io_assign(iunit)
-      open(iunit, file=trim(dir) // "/" // trim(fname), status='unknown')
+      iunit = io_open('linear/'//trim(fname))
 
       if(type == 0) write(iunit, '(2a4)', advance='no') 'From', ' To '
       write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
@@ -363,8 +365,7 @@ contains
       ! output eigenvectors in casida approach
       if(type.ne.2) return
       
-      call io_assign(iunit)
-      open(iunit, file=trim(dir) // "/" // trim(fname) // ".vec", status='unknown')
+      iunit = io_open('linear/'//trim(fname)//'.vec')
       write(iunit, '(a14)', advance = 'no') ' value '
       do ia = 1, n_pairs
         write(iunit, '(3x,i4,a1,i4,2x)', advance='no') pair_i(ia), ' - ', pair_a(ia)
@@ -462,5 +463,3 @@ contains
 
   end subroutine fxc_LDA
 end module linear
-
-#undef RESTART_FILE

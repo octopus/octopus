@@ -51,7 +51,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions in pol_lr_run: Starting from scratch"
       call write_warning(1)
@@ -67,7 +67,7 @@ contains
     call X(system_h_setup) (sys, h)
     
     !if(.not.fromScratch) then ! try to load delta_psi
-    !  if(X(restart_read) ("tmp/restart_lr_static_pol", sys%st, sys%m).ne.0) then
+    !  if(X(restart_read) ('tmp/restart_lr_static_pol', sys%st, sys%m).ne.0) then
     fromScratch = .true.
 
     call lr_init(sys%st, sys%m, lr)
@@ -102,10 +102,9 @@ contains
     subroutine output()
       integer :: j, iunit
       FLOAT :: msp
-      call loct_mkdir("linear")
+      call io_mkdir('linear')
 
-      call io_assign(iunit)
-      open(iunit, file='linear/polarizability_lr', status='unknown')
+      iunit = io_open('linear/polarizability_lr')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
          trim(units_out%length%abbrev)
       if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim

@@ -87,82 +87,76 @@ contains
     complex(8), allocatable :: cd(:)
 
     call io_assign(iunit)
-    open(unit = iunit, file = trim(filename), &
-       status = 'old', action = 'read', form = 'unformatted', iostat = i)
+    iunit = io_open(filename, status='old', action='read', form='unformatted', die=.false.)
     
-    if(i.ne.0) then
+    if(iunit< 0) then
       ierr = 2
-    else
-
-      read(unit = iunit, iostat = i) file_kind, file_np
-      if(i.ne.0) then
-        ierr = 3
-      else if (file_np .ne. m%np) then
-        ierr = 4
-      end if
-
-      if(ierr==0) then
-        if(file_kind == function_kind) then
-          read(unit = iunit) f(1:m%np)
-
-        else ! Adequate conversions....
-          select case(file_kind)
-          case(doutput_kind*4) ! Real, single precision
-            allocate(rs(m%np))
-            read(unit = iunit) rs(1:m%np)
-            f = rs
-            deallocate(rs)
-            ierr = -1
-
-          case(zoutput_kind*4) ! Complex, single precision
-            allocate(cs(m%np))
-            read(unit = iunit) cs(1:m%np)
-            f = cs
-            deallocate(cs)
-            ierr = -2
-
-          case(doutput_kind*8) ! Real, double precision
-            allocate(rd(m%np))
-            read(unit = iunit) rd(1:m%np)
-            f = rd
-            deallocate(rd)
-            ierr = -3
-
-          case(zoutput_kind*8) ! Complex, double precision
-            allocate(cd(m%np))
-            read(unit = iunit) cd(1:m%np)
-            f = cd
-            deallocate(cd)
-            ierr = -4
-
-          end select
-        end if
-      end if
-
-      call io_close(iunit)
+      return
     end if
+
+    read(unit = iunit, iostat = i) file_kind, file_np
+    if(i.ne.0) then
+      ierr = 3
+    else if (file_np .ne. m%np) then
+      ierr = 4
+    end if
+
+    if(ierr==0) then
+      if(file_kind == function_kind) then
+        read(unit = iunit) f(1:m%np)
+        
+      else ! Adequate conversions....
+        select case(file_kind)
+        case(doutput_kind*4) ! Real, single precision
+          allocate(rs(m%np))
+          read(unit = iunit) rs(1:m%np)
+          f = rs
+          deallocate(rs)
+          ierr = -1
+          
+        case(zoutput_kind*4) ! Complex, single precision
+          allocate(cs(m%np))
+          read(unit = iunit) cs(1:m%np)
+          f = cs
+          deallocate(cs)
+          ierr = -2
+          
+        case(doutput_kind*8) ! Real, double precision
+          allocate(rd(m%np))
+          read(unit = iunit) rd(1:m%np)
+          f = rd
+          deallocate(rd)
+          ierr = -3
+          
+        case(zoutput_kind*8) ! Complex, double precision
+          allocate(cd(m%np))
+          read(unit = iunit) cd(1:m%np)
+          f = cd
+          deallocate(cd)
+          ierr = -4
+          
+        end select
+      end if
+    end if
+    
+    call io_close(iunit)
   end subroutine plain
 
 
   ! ---------------------------------------------------------
 #if defined(HAVE_NETCDF)
 
-  ! I define this macro in order to call ncdf_error every time.
-#define NCDFCALL(x, y) \
-  if(status == NF90_NOERR) then ; \
-    status = x y; \
-    call ncdf_error(#x, status, filename, ierr); \
-  end if
-
-
   ! ---------------------------------------------------------
   subroutine dx_cdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
                dim_data_id(3), dim_pos_id(2), ndim(3), xtype
-    real(r4) :: pos(2, 3)
-    logical :: function_is_complex = .false.
+    real(r4)           :: pos(2, 3)
+    logical            :: function_is_complex = .false.
+    character(len=512) :: file
 
-    status = nf90_open(trim(filename), NF90_WRITE, ncid)
+    file = io_workpath(filename)
+
+    status = nf90_open(trim(file), NF90_WRITE, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2
       return
@@ -171,30 +165,30 @@ contains
     !Inquire about dimensions
     if(status == NF90_NOERR) then
       status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
-      call ncdf_error('nf90_inq_dimid', status, filename, ierr)
+      call ncdf_error('nf90_inq_dimid', status, file, ierr)
     endif
 
     if(status == NF90_NOERR) then
       status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
-      call ncdf_error('nf90_inq_dimid', status, filename, ierr)
+      call ncdf_error('nf90_inq_dimid', status, file, ierr)
     endif
 
     if(status == NF90_NOERR) then
       status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
-      call ncdf_error('nf90_inq_dimid', status, filename, ierr)
+      call ncdf_error('nf90_inq_dimid', status, file, ierr)
     endif
 
     if(status == NF90_NOERR) then
       status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(1))
-      call ncdf_error('nf90_inquire_dimension', status, filename, ierr)
+      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     endif
     if(status == NF90_NOERR) then
       status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
-      call ncdf_error('nf90_inquire_dimension', status, filename, ierr)
+      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     endif
     if(status == NF90_NOERR) then
       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(3))
-      call ncdf_error('nf90_inquire_dimension', status, filename, ierr)
+      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     endif
     if((ndim(1) .ne. c%n(1)) .or. &
        (ndim(2) .ne. c%n(2)) .or. &
@@ -204,7 +198,7 @@ contains
 
     if(status == NF90_NOERR) then
       status = nf90_inq_varid (ncid, "rdata", data_id)
-      call ncdf_error('nf90_inq_varid', status, filename, ierr)
+      call ncdf_error('nf90_inq_varid', status, file, ierr)
     endif
     status = nf90_inq_varid(ncid, "idata", data_im_id)
     if(status == 0) then
@@ -216,7 +210,7 @@ contains
        
     if(status == NF90_NOERR) then
       status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
-      call ncdf_error('nf90_inquire_variable', status, filename, ierr)
+      call ncdf_error('nf90_inquire_variable', status, file, ierr)
     endif
 
     if(xtype == NF90_FLOAT) then
@@ -236,18 +230,18 @@ contains
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       status = nf90_get_var (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-      call ncdf_error('nf90_get_var', status, filename, ierr)
+      call ncdf_error('nf90_get_var', status, file, ierr)
     endif
     if(file_kind<0) then
       if(status == NF90_NOERR) then
         status = nf90_get_var (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-        call ncdf_error('nf90_get_var', status, filename, ierr)
+        call ncdf_error('nf90_get_var', status, file, ierr)
       endif
     endif
 #else
     if(status == NF90_NOERR) then
       status = nf90_get_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-      call ncdf_error('nf90_get_var', status, filename, ierr)
+      call ncdf_error('nf90_get_var', status, file, ierr)
     endif
 #endif
 
@@ -269,10 +263,9 @@ subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
   integer,          intent(out) :: ierr
   
   integer :: i
-  character(len=20) :: mformat, mfmtheader
+  character(len=20)  :: mformat, mfmtheader
 
-  ! do not bother with errors
-  call loct_mkdir(trim(dir))
+  call io_mkdir(dir)
 
 ! Define the format; check if code is single precision or double precision
 #if defined(SINGLE_PRECISION)
@@ -296,20 +289,15 @@ subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
 #endif
 
 contains
-
   ! ---------------------------------------------------------
   subroutine plain()
     integer :: iunit
 
-    call io_assign(iunit)
-    open (unit = iunit, file = trim(dir) // "/" // trim(fname), &
-       status='unknown', form='unformatted', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname), form='unformatted', action='write')
 
-    if(ierr==0) then
-      write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np
-      write(unit=iunit, iostat=ierr) f(1:m%np)
-      call io_close(iunit)
-    end if
+    write(unit=iunit) X(output_kind)*kind(f(1)), m%np
+    write(unit=iunit) f(1:m%np)
+    call io_close(iunit)
 
   end subroutine plain
 
@@ -318,19 +306,15 @@ contains
   subroutine axis_x()
     integer :: iunit, i
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", &
-       status='unknown', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write')
 
-    if(ierr == 0) then
-      write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
-      do i = 1, m%np
-        if(ierr==0.and.m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-        end if
-      end do
-      call io_close(iunit)
-    end if
+    write(iunit, mfmtheader) '#', 'x', 'Re', 'Im'
+    do i = 1, m%np
+      if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
+        write(iunit, mformat) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
+    call io_close(iunit)
 
   end subroutine axis_x
 
@@ -339,19 +323,15 @@ contains
   subroutine axis_y()
     integer :: iunit, i
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,z=0", &
-       status='unknown', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write')
 
-    if(ierr == 0) then
-      write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
-      do i = 1, m%np
-        if(ierr==0.and.m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-        end if
-      end do
-      call io_close(iunit)
-    end if
+    write(iunit, mfmtheader) '#', 'y', 'Re', 'Im'
+    do i = 1, m%np
+      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
+        write(iunit, mformat) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
+    call io_close(iunit)
 
   end subroutine axis_y
 
@@ -360,19 +340,15 @@ contains
   subroutine axis_z()
     integer :: iunit, i
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,y=0", &
-       status='unknown', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write')
 
-    if(ierr == 0) then
-      write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
-      do i = 1, m%np
-        if(ierr==0.and.m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-        end if
-      end do
-      call io_close(iunit)
-    end if
+    write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
+    do i = 1, m%np
+      if(ierr==0.and.m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
+        write(iunit, mformat) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
+    call io_close(iunit)
 
   end subroutine axis_z
 
@@ -381,19 +357,15 @@ contains
   subroutine plane_x()
     integer  :: iunit, i
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0", &
-       status='unknown', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write')
 
-    if(ierr == 0) then
-      write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
-      do i = 1, m%np
-        if(ierr==0.and.m%Lxyz(i,1)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-        end if
-      end do
-      call io_close(iunit)
-    end if
+    write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
+    do i = 1, m%np
+      if(ierr==0.and.m%Lxyz(i,1)==0) then
+        write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
+    call io_close(iunit)
 
   end subroutine plane_x
 
@@ -402,19 +374,15 @@ contains
    subroutine plane_y()
     integer  :: iunit, i
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", &
-       status='unknown', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write')
 
-    if(ierr == 0) then
-      write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
-      do i = 1, m%np
-        if(ierr==0.and.m%Lxyz(i,2)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-        end if
-      end do
-      call io_close(iunit)
-    end if
+    write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
+    do i = 1, m%np
+      if(m%Lxyz(i,2)==0) then
+        write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
+    call io_close(iunit)
     
   end subroutine plane_y
 
@@ -423,19 +391,15 @@ contains
   subroutine plane_z()
     integer  :: iunit, i
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", &
-       status='unknown', iostat=ierr)
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write')
 
-    if(ierr == 0) then
-      write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
-      do i = 1, m%np
-        if(ierr==0.and.m%Lxyz(i,3)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-        end if
-      end do
-      call io_close(iunit)
-    end if
+    write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
+    do i = 1, m%np
+      if(m%Lxyz(i,3)==0) then
+        write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
+    end do
+    call io_close(iunit)
     
   end subroutine plane_z
 
@@ -462,10 +426,9 @@ contains
 
 ! just for nice formatting of the output
     write(nitems,*)c%n(1)*c%n(2)*c%n(3)
-    nitems=TRIM(ADJUSTL(nitems))
+    nitems=trim(adjustl(nitems))
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".dx", status='unknown')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write')
     
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',c%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
@@ -501,7 +464,7 @@ contains
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine dx_cdf()
-    character(len=200) :: filename
+    character(len=256) :: filename
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf)) :: c
@@ -513,7 +476,8 @@ contains
     call X(cf_alloc_RS) (c)
     call X(mf2cf) (m, f, c)
 
-    write(filename,'(a,a1,a,a5)') trim(dir), "/", trim(fname), ".ncdf"
+    filename = io_workpath(trim(dir)//'/'//trim(fname)//".ncdf");
+
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2
@@ -630,7 +594,6 @@ contains
 
   end subroutine dx_cdf
 
-#undef NCDFCALL
 #endif
 
 end subroutine X(output_function)

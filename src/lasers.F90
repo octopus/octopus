@@ -138,12 +138,7 @@ contains
 
     ! open file
     call loct_parse_block_string(blk, i-1, 7, filename)
-    call io_assign(iunit)
-    open(iunit, file=trim(filename), status='old', iostat=j)
-    if(j.ne.0) then
-      write(message(1),'(3a)') "Could not open file '", trim(filename), "'"
-      call write_fatal(1)
-    endif
+    iunit = io_open(filename, status='old')
 
     ! count lines in file
     lines = 0

@@ -67,19 +67,15 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
 
   ASSERT(associated(st%X(psi)))
 
-  call loct_mkdir(dir)
+  call io_mkdir(dir)
 
   ierr = 0
   if(mpiv%node==0) then
-    call io_assign(iunit)
-    open(unit=iunit,  file=trim(dir)//'/wfns', iostat=err, &
-       form='formatted', action='write', status='replace', recl = 200)
+    iunit = io_open(trim(dir)//'/wfns', action='write')
     write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
     write(iunit,'(a)') '%Wavefunctions'
 
-    call io_assign(iunit2)
-    open(unit=iunit2, file=trim(dir)//'/occs', iostat=err, &
-       form='formatted', action='write', status='replace', recl = 200)
+    iunit2 = io_open(trim(dir)//'/occs', action='write')
     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]'
     write(iunit2,'(a)') '%Occupations_Eigenvalues'
   end if
@@ -201,28 +197,20 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
 contains
 
   subroutine open_files
-    ! open wfns file
-    call io_assign(iunit)
-    open(unit = iunit, file=trim(dir)//'/wfns', iostat = err, &
-       form='formatted', action='read', status='old', recl = 200)
-    
-    if(err .ne. 0) then
+    iunit  = io_open(trim(dir)//'/wfns',  status='old', die=.false.)
+    if(iunit < 0) then
       ierr = -1
-      call io_free(iunit)
       return
     end if
 
-    ! open occs file
-    call io_assign(iunit2)
-    open(unit = iunit2, file=trim(dir)//'/occs', iostat = err, &
-       form='formatted', action='read', status='old', recl = 200)
-
-    if(err .ne. 0) then
+    iunit2 = io_open(trim(dir)//'/occs',  status='old', die=.false.)
+    if(iunit2 < 0) then
+      call io_close(iunit)
       ierr = -1
-      call io_free(iunit)
-      call io_free(iunit2)
     end if
+
   end subroutine open_files
+
 
   subroutine fill() ! Put random function in orbitals that could not be read.
     do ik = 1, st%d%nik

@@ -40,30 +40,10 @@ program atoms_magnet
   R_TYPE :: c
   FLOAT :: val_charge, def_h, def_rsize, mg(3), r, rmin, ri
 
-  ! Initialize stuff
-  call global_init()
-  call units_init()
-
-  allocate(geo)
-  call geometry_init_xyz(geo)
-  call geometry_init_species(geo, val_charge, def_h, def_rsize)
-  allocate(m)
-  call mesh_init(m, geo, def_h, def_rsize)
-  call f_der_init(m, f_der)
-  call mesh_create_xyz(m, f_der%n_ghost(1))
-  call f_der_build(f_der)
-  call mesh_write_info(m, stdout)
-
-  allocate(st)
-  call states_init(st, m, geo, val_charge, geo%nlcc)
-  if (st%d%ispin == UNPOLARIZED) then
-    message(1) = "You cannot use this utility with spin-unpolarized calculations"
-    call write_fatal(1)
-  end if
-  allocate(st%X(psi)(m%np, st%d%dim, st%nst, st%d%nik))
+  call init_()
 
   ! load information
-  call X(restart_read)("tmp/restart_gs", st, m, err)
+  call X(restart_read)('tmp/restart_gs', st, m, err)
   if(err.ne.0) then
     message(1) = "Error opening states in 'tmp/restart_gs'"
     call write_fatal(1)
@@ -85,8 +65,8 @@ program atoms_magnet
   r = r * units_inp%length%factor
 
   ! open file for output
-  call io_assign(iunit)
-  open(iunit, status='unknown', file="atoms_magnet")
+  iunit = io_open('static/atoms_magnet')
+
   write(iunit, '(a)') geo%sysname
   write(iunit,'(/a)') "Magnetization"
   select case (st%d%ispin)
@@ -131,14 +111,49 @@ program atoms_magnet
     end select
   end do
 
-  ! end stuff
   call io_close(iunit)
-  if(associated(st)) then
+  call end_()
+    
+
+contains
+  ! Initialize stuff
+  subroutine init_()
+    call global_init()
+    call units_init()
+
+    allocate(geo, m)
+    
+    call geometry_init_xyz(geo)
+    call geometry_init_species(geo, val_charge, def_h, def_rsize)
+    
+    call mesh_init(m, geo, def_h, def_rsize)
+    call f_der_init(m, f_der)
+    call mesh_create_xyz(m, f_der%n_ghost(1))
+    call f_der_build(f_der)
+    call mesh_write_info(m, stdout)
+    
+    allocate(st)
+    call states_init(st, m, geo, val_charge, geo%nlcc)
+    if (st%d%ispin == UNPOLARIZED) then
+      message(1) = "You cannot use this utility with spin-unpolarized calculations"
+      call write_fatal(1)
+    end if
+    allocate(st%X(psi)(m%np, st%d%dim, st%nst, st%d%nik))
+
+  end subroutine init_
+
+  subroutine end_()
     call states_end(st)
     deallocate(st); nullify(st)
-  end if
-  call geometry_end(geo)
-  call mesh_end(m)
-  deallocate(geo)
+      
+    call geometry_end(geo)
+    call f_der_end(f_der)
+    call mesh_end(m)
+
+    deallocate(geo, m)
+    
+    call global_end()
+    
+  end subroutine end_
 
 end program atoms_magnet

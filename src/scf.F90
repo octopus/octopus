@@ -250,7 +250,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
-      call X(restart_write) ("tmp/restart_gs", st, m, err, iter=iter)
+      call X(restart_write) ('tmp/restart_gs', st, m, err, iter=iter)
       if(err.ne.0) then
         message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
         call write_fatal(1)
@@ -305,8 +305,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
   call hamiltonian_output(h, m, "static", outp)
 
   if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
-    call io_assign(iunit)
-    open(iunit, status='unknown', file='static/bands.dat')
+    iunit = io_open('static/bands.dat')
     call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
   end if
@@ -348,9 +347,8 @@ contains
     
     call push_sub('scf_write_static') 
 
-    call loct_mkdir(trim(dir))
-    call io_assign(iunit)
-    open(iunit, status='unknown', file=trim(dir) // "/" // trim(fname))
+    call io_mkdir(dir)
+    iunit = io_open(trim(dir) // "/" // trim(fname))
     
     ! mesh
     write(iunit, '(a,a)') 'System name: ', geo%sysname

@@ -61,7 +61,7 @@ program excitations
   st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
   call states_end(sys%st)
 
-  call X(restart_read) ("tmp/restart_unocc", st, sys%m, err)
+  call X(restart_read) ('tmp/restart_unocc', st, sys%m, err)
   if(err.ne.0) then
     message(1) = "Error opening 'restart.occ' file"
     call write_fatal(1)
@@ -84,18 +84,18 @@ program excitations
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
   call loct_parse_logical("LinEigenvalues", .true., l)
-  if(l) call LR_el_excitations(0, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'linear', 'eps-diff', from_scratch)
+  if(l) call LR_el_excitations(0, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'eps-diff', from_scratch)
   
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
   call loct_parse_logical("LinPetersilka", .true., l)
-  if(l) call LR_el_excitations(1, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'linear', 'petersilka', from_scratch)
+  if(l) call LR_el_excitations(1, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'petersilka', from_scratch)
 
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
   call loct_parse_logical("LinCasida", .true., l)
-  if(l)call LR_el_excitations(2, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'linear', 'casida', from_scratch)
+  if(l) call LR_el_excitations(2, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'casida', from_scratch)
 
   call poisson_end()
   call global_end()

@@ -91,12 +91,11 @@ contains
     integer :: iunit
 
     call push_sub('specie_debug')
-    call io_assign(iunit)
 
     dirname = trim(dir)//'/'//trim(s%label)
-    call loct_mkdir(trim(dirname))
+    call io_mkdir(dirname)
 
-    open(unit = iunit, file = trim(dirname)//'/info')
+    iunit = io_open(trim(dirname)//'/info')
 
     write(iunit, '(a,i3)')    'Index  = ', s%index
     write(iunit, '(2a)')      'Label  = ', trim(s%label)
@@ -176,17 +175,21 @@ contains
     write(fname, '(2a)') trim(conf%share), "/PP/defaults"
     n_spec_def = max(0, loct_number_of_lines(fname))
     if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
-    call io_assign(iunit)
-    open(unit=iunit, file=fname, action='read')
-    read(iunit,*)
-    default_file: do i = 1, n_spec_def
-      read(iunit,*) lab
-      if(trim(lab)==trim(label)) then
-        call read_from_default_file(iunit, read_data, s)
-        exit default_file
-      end if
-    end do default_file
-    call io_close(iunit)
+
+    iunit = io_open(fname, action='read', status='old', die=.false.)
+    if(iunit > 0) then
+      read(iunit,*)
+
+      default_file: do i = 1, n_spec_def
+        read(iunit,*) lab
+        if(trim(lab) == trim(label)) then
+          call read_from_default_file(iunit, read_data, s)
+          exit default_file
+        end if
+      end do default_file
+
+      call io_close(iunit)
+    end if
 
     if(read_data == 0) then
       message(1) = 'Species '//trim(label)//' not found.'

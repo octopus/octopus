@@ -18,6 +18,7 @@
 #include "global.h"
 
 program octopus
+  use string
   use global
   use lib_oct
   use run_prog
@@ -64,10 +65,10 @@ program octopus
   call write_info(2)
 
   ! create temporary dir (we will need it)
-  call loct_mkdir("tmp")
+  call io_mkdir('tmp')
 
   ! create debug directory if in debugging mode
-  if(conf%verbose>=VERBOSE_DEBUG) call loct_mkdir('debug')
+  if(conf%verbose>=VERBOSE_DEBUG) call io_mkdir('debug')
 
   ! now we really start
   call run_init()

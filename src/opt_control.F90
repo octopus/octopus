@@ -280,7 +280,7 @@ contains
 
     integer :: ier
 
-    call zrestart_read("opt-control/"//trim(filename), st, m, ierr)
+    call zrestart_read('opt-control/'//trim(filename), st, m, ierr)
     if(ierr.ne.0) then
       message(1) = "Unsuccesfull read of states in 'opt-control/" // trim(filename) // "'"
       call write_fatal(1)
@@ -293,8 +293,7 @@ contains
 
     integer :: i, iunit
 
-    call io_assign(iunit)
-    open(iunit, file=trim(filename), status='unknown')
+    iunit = io_open(filename)
     do i = 0, 2*td%max_iter
       write(iunit, '(4es20.12)') i*td%dt/M_TWO, las(:, i)
     end do
@@ -305,9 +304,8 @@ contains
   subroutine output()
     integer :: iunit
 
-    call io_assign(iunit)
-    open(iunit, file='opt-control/info', status='unknown')
-    write(iunit, '(a,i4)')     'Iterations = ', ctr_iter
+    iunit = io_open('opt-control/info')
+    write(iunit, '(a,i4)')    'Iterations = ', ctr_iter
     write(iunit, '(a,f14.8)') 'Overlap    = ', overlap
     write(iunit, '(a,f14.8)') 'Functional = ', functional
     call io_close(iunit)

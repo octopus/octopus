@@ -79,8 +79,7 @@ subroutine tm_init(pstm, filename, ispin)
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
     call write_info(2)
     
-    call io_assign(iunit)
-    open(iunit, file=filename2, form='unformatted', status='old')
+    iunit = io_open(filename2, form='unformatted', status='old')
     call read_file_data_bin(iunit, pstm)
     call io_close(iunit)
   else
@@ -98,8 +97,7 @@ subroutine tm_init(pstm, filename, ispin)
     write(message(2), '(6x,3a)') "'", trim(filename2), "'"
     call write_info(2)
     
-    call io_assign(iunit)
-    open(iunit, file=filename2, form='formatted', status='old')
+    iunit = io_open(filename2, form='formatted', status='old')
     call read_file_data_ascii(iunit, pstm)
     call io_close(iunit)
   end if
@@ -761,16 +759,13 @@ subroutine tm_debug(pstm, dir)
   call push_sub('tm_debug')
 
   ! Opens files.
-  dirname = 'dir'//'/tm2.'//trim(pstm%namatm)
-  call loct_mkdir(trim(dirname))
-  call io_assign(loc_unit); call io_assign(wav_unit)
-  call io_assign(dat_unit); call io_assign(kbp_unit)
-  call io_assign(so_unit) ; call io_assign(so_unit)
-  open(loc_unit, file = trim(dirname)//'/local')
-  open(dat_unit, file = trim(dirname)//'/info')
-  open(kbp_unit, file = trim(dirname)//'/nonlocal')
-  open(wav_unit, file = trim(dirname)//'/wave')
-  open(so_unit,  file = trim(dirname)//'/so')
+  dirname = trim(dir)//'/tm2.'//trim(pstm%namatm)
+  call io_mkdir(dirname)
+  loc_unit = io_open(trim(dirname)//'/local')
+  dat_unit = io_open(trim(dirname)//'/info')
+  kbp_unit = io_open(trim(dirname)//'/nonlocal')
+  wav_unit = io_open(trim(dirname)//'/wave')
+  so_unit  = io_open(trim(dirname)//'/so')
 
   ! First of all, writes down the info.
   write(dat_unit,'(a,/)') pstm%namatm

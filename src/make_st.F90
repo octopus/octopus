@@ -44,7 +44,7 @@ program make_st
   allocate(sys%st%zpsi (sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
        sys%st%eigenval(sys%st%nst, sys%st%d%nik))
   
-  call X(restart_read)("tmp/restart_gs", sys%st, sys%m, err)
+  call X(restart_read)('tmp/restart_gs', sys%st, sys%m, err)
   if(err < 0) then
     message(1) = "Error opening 'restart.static' file"
     call write_fatal(1)
@@ -72,7 +72,7 @@ program make_st
   call wf_renormalize()
 
   ! save wfs in a new static file
-  call X(restart_write) ("tmp/restart_gs_new", sys%st, sys%m, err)
+  call X(restart_write) ('tmp/restart_gs_new', sys%st, sys%m, err)
   if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "tmp/restart_gs_new"'
     call write_fatal(1)
