@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine zso (h, m, natoms, atom, dim, ik, psi, Hpsi)
+subroutine zso (h, m, psi, hpsi, natoms, atom, dim, ik)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   integer, intent(in) :: dim, natoms, ik

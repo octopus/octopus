@@ -164,8 +164,11 @@ subroutine mix_linear(alpha, np, nc, vin, vout, vnew)
   real(r8), dimension(np, nc), intent(in) :: vin, vout
   real(r8), dimension(np, nc), intent(out) :: vnew
 
-  vnew = vin*(1.0_r8 - alpha) + alpha*vout
+  call dcopy(np*nc, vin(1, 1), 1, vnew(1, 1), 1)
+  call dscal(np*nc, 1.0_r8 - alpha, vnew(1, 1), 1)
+  call daxpy(np*nc, alpha, vout(1, 1), 1, vnew(1, 1), 1)
 
+  return
 end subroutine mix_linear
 
 ! Broyden mixing...
@@ -188,14 +191,14 @@ subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
     smix%dv(:, ipos, :) = vin - smix%vin_old
 
     do i = 1,nc
-      gamma = sqrt(dot_product(smix%df(:, ipos, i), smix%df(:, ipos, i)))
+      gamma = dnrm2(np, smix%df(1, ipos, i), 1)
       if(gamma > 1e-8_r8) then
         gamma = 1.0_r8/gamma
       else
         gamma = 1.0_r8
       endif
-      smix%df(:, ipos, i) = smix%df(:, ipos, i)*gamma
-      smix%dv(:, ipos, i) = smix%dv(:, ipos, i)*gamma
+      call dscal (np, gamma, smix%df(1, ipos, i), 1)
+      call dscal (np, gamma, smix%dv(1, ipos, i), 1)
     end do
 
     smix%last_ipos = ipos
@@ -226,7 +229,8 @@ subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, d
 
   if (iter_used == 0) then
     ! linear mixing...
-    vnew = vin + alpha*f
+    call dcopy(np, vin(1), 1, vnew(1), 1)
+    call daxpy(np, alpha, f(1), 1, vnew(1), 1) 
     return
   end if
 
@@ -236,7 +240,7 @@ subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, d
   beta = 0._r8
   do i = 1, iter_used
     do j = i + 1, iter_used
-      beta(i, j) = w(i)*w(j)*dot_product(df(:, j), df(:, i))
+      beta(i, j) = w(i)*w(j)*DDOT(np, df(1, j), 1, df(1, i), 1)
       beta(j, i) = beta(i, j)
     end do
     beta(i, i) = w0**2 + w(i)**2
@@ -246,11 +250,12 @@ subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, d
   call dsyinvert(iter_used, iter_used, beta)
 
   do i = 1, iter_used
-    work(i) = dot_product(df(:, i), f)
+    work(i) = ddot(np, df(1, i), 1, f(1), 1)
   end do
 
   ! linear mixing term
-  vnew = vin + alpha*f
+  call dcopy(np, vin(1), 1, vnew(1), 1)
+  call daxpy(np, alpha, f(1), 1, vnew(1), 1)
 
   ! other terms
   do i = 1, iter_used
@@ -323,10 +328,10 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   a = 0._r8
   do i = 1, iter_used
     do j = i + 1, iter_used
-      a(i, j) = dot_product(df(:, j), df(:, i))
+      a(i, j) = ddot(np, df(1, j), 1, df(1, i), 1)
       a(j, i) = a(i, j)
     end do
-    a(i, i) = dot_product(df(:, i), df(:, i))
+    a(i, i) = ddot(np, df(1, i), 1, df(1, i), 1)
   end do
   if (all(a < 1.0E-8)) then
     ! residuals are too small. Do not mix.
@@ -342,7 +347,7 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   do i = 1,iter_used
     alpha = 0._r8
     do j = 1,iter_used
-      alpha = alpha - a(j, i)*dot_product(df(:, j), f)
+      alpha = alpha - a(j, i)*DDOT(np, df(1, j), 1, f(1), 1)
     end do
     vnew = vnew + alpha * dv(:, i)
   end do

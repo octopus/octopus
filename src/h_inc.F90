@@ -30,7 +30,7 @@ subroutine X(hamiltonian_eigenval)(h, st, sys)
 
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
-      call X(Hpsi) (h, sys%m, st, sys, ik, st%X(psi)(:, :, ist, ik), Hpsi)
+      call X(hpsi) (h, sys%m, st%X(psi)(:, :, ist, ik), hpsi, sys, ik)
       e = X(states_dotp)(sys%m, st%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
@@ -40,28 +40,27 @@ subroutine X(hamiltonian_eigenval)(h, st, sys)
   call pop_sub()
 end subroutine X(hamiltonian_eigenval)
 
-subroutine X(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
+subroutine X(Hpsi) (h, m, psi, hpsi, sys, ik, t)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
   type(system_type), intent(in) :: sys ! this is necessary due to the nl part of the PP
   integer, intent(in) :: ik
-  R_TYPE, intent(IN) :: psi(m%np, st%dim)
-  R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
+  R_TYPE, intent(IN) :: psi(m%np, h%dim)
+  R_TYPE, intent(out) :: Hpsi(m%np, h%dim)
   real(r8), intent(in), optional :: t
 
   call push_sub('Hpsi')
 
-  call X(kinetic) (h, ik, m, st, psi, Hpsi)
-  call X(vlpsi)   (h, m, st, ik, psi, Hpsi)
-  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
+  call X(kinetic) (h, m, psi, hpsi, ik)
+  call X(vlpsi)   (h, m, psi, hpsi, ik)
+  if(sys%nlpp) call X(vnlpsi)  (h, m, psi, hpsi, sys, ik)
 
   ! Relativistic corrections...
   select case(h%reltype)
   case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-    call zso (h, m, sys%natoms, sys%atom, st%dim, ik, psi, Hpsi)
+    call zso (h, m, psi, hpsi, sys%natoms, sys%atom, h%dim, ik)
 #endif
   case default
     message(1) = 'Error: Internal.'
@@ -69,23 +68,22 @@ subroutine X(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   end select
 
   if(present(t)) then
-    call X(vlasers)  (h, m, st, psi, Hpsi, t)
-    call X(vborders) (h, m, st, psi, Hpsi)
+    call X(vlasers)  (h, m, psi, hpsi, t)
+    call X(vborders) (h, m, psi, hpsi)
   endif
 
   call pop_sub()
 end subroutine X(Hpsi)
 
 #if defined(R_TCOMPLEX)
-subroutine X(magnus) (h, m, st, sys, ik, psi, Hpsi, vmagnus)
+subroutine X(magnus) (h, m, psi, hpsi, sys, ik, vmagnus)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
   type(system_type), intent(in) :: sys ! this is necessary due to the nl part of the PP
   integer, intent(in) :: ik
-  R_TYPE, intent(IN) :: psi(m%np, st%dim)
-  R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
-  real(r8), intent(in) :: vmagnus(m%np, st%nspin, 2)
+  R_TYPE, intent(IN) :: psi(m%np, h%dim)
+  R_TYPE, intent(out) :: Hpsi(m%np, h%dim)
+  real(r8), intent(in) :: vmagnus(m%np, h%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim
@@ -93,13 +91,13 @@ subroutine X(magnus) (h, m, st, sys, ik, psi, Hpsi, vmagnus)
 
   call push_sub('magnus')
 
-  allocate(auxpsi(m%np, st%dim), aux2psi(m%np, st%dim))
+  allocate(auxpsi(m%np, h%dim), aux2psi(m%np, h%dim))
 
-  call X(kinetic) (h, ik, m, st, psi, hpsi)
+  call X(kinetic) (h, m, psi, hpsi, ik)
 
   auxpsi = hpsi
-  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, psi, auxpsi)
-  select case(st%ispin)
+  if(sys%nlpp) call X(vnlpsi)  (h, m, psi, auxpsi, sys, ik)
+  select case(h%ispin)
   case(UNPOLARIZED)
     hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
   case(SPIN_POLARIZED)
@@ -110,7 +108,7 @@ subroutine X(magnus) (h, m, st, sys, ik, psi, Hpsi, vmagnus)
     end if
   end select
 
-  select case(st%ispin)
+  select case(h%ispin)
   case(UNPOLARIZED)
     auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
   case(SPIN_POLARIZED)
@@ -120,15 +118,15 @@ subroutine X(magnus) (h, m, st, sys, ik, psi, Hpsi, vmagnus)
       auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
     end if
   end select
-  call X(kinetic) (h, ik, m, st, auxpsi, aux2psi)
-  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, auxpsi, aux2psi)
+  call X(kinetic) (h, m, auxpsi, aux2psi, ik)
+  if(sys%nlpp) call X(vnlpsi)  (h, m, auxpsi, aux2psi, sys, ik)
   hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
 
-  do idim = 1, st%dim
+  do idim = 1, h%dim
       hpsi(:, idim) = hpsi(:, idim) + h%Vpsl(:)*psi(:,idim)
   end do
 
-  select case(st%ispin)
+  select case(h%ispin)
   case(UNPOLARIZED)
     hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(:, 1)
   case(SPIN_POLARIZED)
@@ -138,20 +136,19 @@ subroutine X(magnus) (h, m, st, sys, ik, psi, Hpsi, vmagnus)
       hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
     end if
   end select
-  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
-  call X(vborders) (h, m, st, psi, hpsi)
+  if(sys%nlpp) call X(vnlpsi)  (h, m, psi, Hpsi, sys, ik)
+  call X(vborders) (h, m, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
   call pop_sub()
 end subroutine X(magnus)
 #endif
 
-subroutine X(kinetic) (h, ik, m, st, psi, Hpsi)
+subroutine X(kinetic) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  R_TYPE, intent(IN) :: psi(m%np, st%dim)
-  R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
+  R_TYPE, intent(IN) :: psi(m%np, h%dim)
+  R_TYPE, intent(out) :: hpsi(m%np, h%dim)
   integer :: ik
 
   R_TYPE, allocatable :: grad(:,:)
@@ -160,18 +157,18 @@ subroutine X(kinetic) (h, ik, m, st, psi, Hpsi)
 
   call push_sub('kinetic')
   np = m%np
-  dim = st%dim
+  dim = h%dim
 
   if(conf%periodic_dim>0) then
 #if defined(COMPLEX_WFNS)
     allocate(grad(3, m%np))
-    k2 = sum(st%kpoints(:, ik)**2)
+    k2 = sum(h%kpoints(:, ik)**2)
     do idim = 1, dim
       call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
       call X(f_gradient)  (m, psi(:, idim), grad(:, :))
       do i = 1, m%np
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
-             + M_TWO*M_zI*sum(st%kpoints(:, ik)*grad(:, i)) &
+             + M_TWO*M_zI*sum(h%kpoints(:, ik)*grad(:, i)) &
              - k2*psi(i, idim))
       end do
     end do
@@ -193,13 +190,13 @@ subroutine X(kinetic) (h, ik, m, st, psi, Hpsi)
   call pop_sub()
 end subroutine X(kinetic)
 
-subroutine X(vnlpsi) (ik, m, st, sys, psi, Hpsi)
+subroutine X(vnlpsi) (h, m, psi, hpsi, sys, ik)
+  type(hamiltonian_type), intent(in) :: h
   integer, intent(in) :: ik
   type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
   type(system_type), intent(IN) :: sys
-  R_TYPE, intent(IN) :: psi(m%np, st%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
+  R_TYPE, intent(IN) :: psi(m%np, h%dim)
+  R_TYPE, intent(inout) :: Hpsi(m%np, h%dim)
 
   integer :: i, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
   real(r8) :: x(conf%dim)
@@ -225,11 +222,12 @@ subroutine X(vnlpsi) (ik, m, st, sys, psi, Hpsi)
     ! they are necessary to get the correct periodicity 
     ! for the nonlocal part of the pseudopotential
     if (conf%periodic_dim/=0) then
-      allocate(atm%phases(atm%mps,st%nik))
+      !allocate(atm%phases(atm%mps,st%nik))
+      allocate(atm%phases(atm%mps,h%nik))
       do i=1,atm%mps
         call mesh_xyz(m, atm%jxyz(i), x)
-        do k=1,st%nik
-          atm%phases(i,k)=exp(M_zI*sum(st%kpoints(:,k)*x(:)))
+        do k=1, h%nik
+          atm%phases(i,k)=exp(M_zI*sum(h%kpoints(:,k)*x(:)))
         end do
       end do
     end if
@@ -238,7 +236,7 @@ subroutine X(vnlpsi) (ik, m, st, sys, psi, Hpsi)
       allocate(conj(atm%mps))
 #   endif
 
-    do_dim: do idim = 1, st%dim
+    do_dim: do idim = 1, h%dim
       allocate(lpsi(atm%mps), lHpsi(atm%mps))
       if (conf%periodic_dim==0) then
         lpsi(:) = psi(atm%jxyz(:), idim)
@@ -288,26 +286,25 @@ subroutine X(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   call pop_sub()
 end subroutine X(vnlpsi)
 
-subroutine X(vlpsi) (h, m, st, ik, psi, Hpsi)
+subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
-  type(states_type), intent(in) :: st
   integer, intent(in) :: ik
-  R_TYPE, intent(in) :: psi(m%np, st%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
+  R_TYPE, intent(in) :: psi(m%np, h%dim)
+  R_TYPE, intent(inout) :: Hpsi(m%np, h%dim)
 
   integer :: is, idim, np, dim
 
   call push_sub('vlpsi')
 
   np = m%np
-  dim = st%dim
+  dim = h%dim
 
     do idim = 1, dim
       Hpsi(:, idim) = Hpsi(:, idim) + h%Vpsl*psi(1:,idim)
     end do
 
-    select case(st%ispin)
+    select case(h%ispin)
     case(UNPOLARIZED)
       hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1)
     case(SPIN_POLARIZED)
@@ -326,12 +323,12 @@ subroutine X(vlpsi) (h, m, st, ik, psi, Hpsi)
   call pop_sub()
 end subroutine X(vlpsi)
 
-subroutine X(vlasers) (h, m, st, psi, Hpsi, t)
+subroutine X(vlasers) (h, m, psi, hpsi, t)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
-  type(states_type), intent(in) :: st
-  R_TYPE, intent(in) :: psi(m%np, st%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
+  R_TYPE, intent(in) :: psi(m%np, h%dim)
+  R_TYPE, intent(inout) :: Hpsi(m%np, h%dim)
+
   real(r8), intent(in) :: t
 
   integer :: is, i, k, idim, np, dim
@@ -353,7 +350,7 @@ subroutine X(vlasers) (h, m, st, psi, Hpsi, t)
     case(2) ! velocity gauge
       call epot_laser_vector_field(h%ep, t, f)
       allocate(grad(3, m%np))
-      do idim = 1, st%dim
+      do idim = 1, h%dim
         call X(f_gradient)(m, psi(:, idim), grad)
         do k = 1, m%np
           hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
@@ -367,19 +364,18 @@ subroutine X(vlasers) (h, m, st, psi, Hpsi, t)
   call pop_sub()
 end subroutine X(vlasers)
 
-subroutine X(vborders) (h, m, st, psi, Hpsi)
+subroutine X(vborders) (h, m, psi, hpsi)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
-  type(states_type), intent(in) :: st
-  R_TYPE, intent(in) :: psi(m%np, st%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
+  R_TYPE, intent(in) :: psi(m%np, h%dim)
+  R_TYPE, intent(inout) :: Hpsi(m%np, h%dim)
 
   integer :: idim
 
   call push_sub('vborders')
 
   if(h%ab .eq. IMAGINARY_ABSORBING) then
-    do idim = 1, st%dim
+    do idim = 1, h%dim
        hpsi(:, idim) = hpsi(:, idim) + M_zI*h%ab_pot(:)*psi(1:, idim)
     end do
   end if

@@ -239,13 +239,13 @@ subroutine lcao_init(sys, h)
   allocate(hpsi(sys%m%np, sys%st%dim))
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
-      call X(kinetic) (h, ik, sys%m, sys%st, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      call X(kinetic) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, sys%m, sys%natoms, sys%atom, sys%st%dim, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+        call zso (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys%natoms, sys%atom, sys%st%dim, ik)
 #endif
       case default
         message(1) = 'Error: Internal.'
@@ -306,8 +306,8 @@ subroutine lcao_wf(sys, h)
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
-      call X(vlpsi) (h, sys%m, sys%st, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
-      if(sys%nlpp) call X(vnlpsi) (ik, sys%m, sys%st, sys, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      call X(vlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      if(sys%nlpp) call X(vnlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys, ik)
       do n2 = n1, lcao_data%dim
         lcao_data%v(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
                                                       hpsi, lcao_data%psis(1:, : ,n2, ik))

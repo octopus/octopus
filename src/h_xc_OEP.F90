@@ -170,7 +170,7 @@ contains
     psi = psi - r*st%X(psi)(:, :, ist, is)
 
     ! Calculate starting gradient: |hpsi> = (H-eps_i)|psi> + b
-    call X(Hpsi)(h, m, st, sys, 1, psi, res)
+    call X(Hpsi)(h, m, psi, res, sys, 1)
     res(:,1) = res(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
 
     ! orthogonalize direction to phi
@@ -182,7 +182,7 @@ contains
 
     iter_loop: do iter = 1, 50
       ! verify
-      call X(Hpsi)(h, m, st, sys, 1, psi, tmp)
+      call X(Hpsi)(h, m, psi, tmp, sys, 1)
       tmp(:,1) = tmp(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
       if(X(states_nrm2)(m, st%dim, tmp).lt.1e-6_8) exit iter_loop
 
@@ -194,7 +194,7 @@ contains
         p  = -res + ek*p
       end if
 
-      call X(Hpsi)(h, m, st, sys, 1, p, z)
+      call X(Hpsi)(h, m, p, z, sys, 1)
       z(:,1) = z(:,1) - st%eigenval(ist, 1)*p(:,1)
       r = X(states_dotp) (m, st%dim, z, st%X(psi)(:, :, ist, is))
       z = z - r*st%X(psi)(:, :, ist, is)

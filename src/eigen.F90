@@ -194,7 +194,7 @@ subroutine eigen_diagon_subspace(st, sys, h)
     f = st%X(psi)(:,:,:, ik)
 
     eigenfunction_loop : do i = 1, st%nst
-      call X(Hpsi)(h, sys%m, st, sys, ik, st%X(psi)(:,:, i, ik) , f(:,:, 1))
+      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, i, ik) , f(:,:, 1), sys, ik)
       h_subspace(i, i) = st%eigenval(i, ik)
       do j = i, st%nst
         h_subspace(i, j) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))

@@ -101,8 +101,7 @@ subroutine op(nrow, ncol, xin, ldx, yout, ldy)
   integer :: i
 
   do i = 1, ncol
-     call X(Hpsi) (h_trlan, m_trlan, st_trlan, sys_trlan, ik_trlan, &
-          xin(1:, i), yout(2:,i))
+     call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), sys_trlan, ik_trlan)
   enddo
 
 end subroutine op

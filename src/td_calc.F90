@@ -65,7 +65,7 @@
     do ik = 1, sys%st%nik
       do ist = sys%st%st_start, sys%st%st_end
         
-        call zhpsi(h, sys%m, sys%st, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:))
+        call zhpsi(h, sys%m, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:), sys, ik)
         call epot_laser_field(h%ep, t, field)
         do k = 1, sys%m%np
           call mesh_xyz(sys%m, k, mesh_x)
@@ -82,8 +82,8 @@
          
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(ik, sys%m, sys%st, sys, &
-               xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+          call zvnlpsi(h, sys%m, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim), sys, ik)
+               
           do idim = 1, sys%st%dim
             x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmf_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
                  vnl_xzpsi(1:sys%m%np, idim) )
@@ -99,8 +99,7 @@
         
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(ik, sys%m, sys%st, sys, &
-               xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+          call zvnlpsi(h, sys%m, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim), sys, ik)
           do idim = 1, sys%st%dim
             x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
                   zmf_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &

@@ -25,9 +25,18 @@ use xc
 implicit none
 
 type hamiltonian_type
-  integer :: spin_channels ! How to handle spin (duplicated in states_type)
-  integer :: nspin
-  integer :: ispin
+  ! This information is duplicated from states_type....
+  integer :: dim           ! Dimension of the state (one or two for spinors)
+  integer :: nst           ! Number of states in each irreducible subspace
+  integer :: nik           ! Number of irreducible subspaces
+  integer :: nik_axis(3)   ! Number of kpoints per axis
+  integer :: ispin         ! spin mode (unpolarized, spin polarized, spinors)
+  integer :: nspin         ! dimension of rho (1, 2 or 4)
+  integer :: spin_channels ! 1 or 2, wether spin is or not considered.
+  logical :: select_axis(3)! which axes are used fo k points
+  real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
+  real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
+
 
   integer :: reltype ! type of relativistic correction to use
 
@@ -81,10 +90,19 @@ subroutine hamiltonian_init(h, sys)
 
   call push_sub('hamiltonian_init')
 
-  ! Duplicate this two variables
+  ! Duplicate these variables from states_type...
+  h%dim           = sys%st%dim
+  h%nst           = sys%st%nst
+  h%nik           = sys%st%nik
+  h%nik_axis      = sys%st%nik_axis
   h%ispin         = sys%st%ispin
-  h%spin_channels = sys%st%spin_channels
   h%nspin         = sys%st%nspin
+  h%spin_channels = sys%st%spin_channels
+  h%select_axis   = sys%st%select_axis
+  allocate(h%kpoints(3, h%nik), h%kweights(h%nik))
+  h%kpoints       = sys%st%kpoints
+  h%kweights      = sys%st%kweights
+
 
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
@@ -209,6 +227,14 @@ subroutine hamiltonian_end(h, sys)
 
   if(associated(h%ab_pot)) then
     deallocate(h%ab_pot); nullify(h%ab_pot)
+  end if
+
+  if(associated(h%kpoints)) then
+    deallocate(h%kpoints); nullify(h%kpoints)
+  end if;1001
+
+  if(associated(h%kweights)) then
+    deallocate(h%kweights); nullify(h%kweights)
   end if
 
   call pop_sub()
