@@ -201,7 +201,7 @@ lib_ok="ok"
 if test -z "${LIB_NETCDF}"; then
 	AC_ARG_WITH(netcdf, 
 		AC_HELP_STRING([--with-netcdf=DIR], [optional (http://www.unidata.ucar.edu/packages/netcdf/)]),
-			[NETCDFDIR=$withval], [NETCDF=""])
+			[NETCDFDIR=$withval], [NETCDFDIR="no"])
 
 	if test "$NETCDFDIR" = "no"; then
 		lib_ok="no"
