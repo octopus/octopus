@@ -301,7 +301,8 @@ contains
     if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,     &
                                               a%zuv, a%zduv, a%zuvu,       &
                                               a%so_uv, a%so_duv, a%so_uvu, &
-					      a%so_luv, a%phases)
+					      a%so_luv)
+    if(conf%periodic_dim/=0 .and. associated(a%phases)) deallocate(a%phases)
     
     if (any(s%ps%rc_max + m%h(1)>=m%lsize(1:conf%periodic_dim))) then
       message(1)='KB sphere is larger than the box size'
