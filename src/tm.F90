@@ -25,7 +25,7 @@ use logrid
 implicit none
 
 private
-public :: tm_type, tm_init, tm_end, tm_process
+public :: tm_type, tm_init, tm_end, tm_process, tm_debug
 
 type tm_type
   ! First, the contents of the file.
@@ -110,6 +110,7 @@ subroutine tm_end(pstm)
 
   deallocate(pstm%rofi, pstm%vps, pstm%chcore, pstm%rho_val, pstm%vlocal, &
              pstm%rphi, pstm%eigen, pstm%dkbcos, pstm%dknrm, pstm%kbr)
+  call kill_logrid(pstm%g)
 
   call pop_sub(); return
 end subroutine tm_end
@@ -561,5 +562,16 @@ subroutine get_local(psf, l_loc, rcore)
 
   call pop_sub()
 end subroutine get_local
+
+subroutine tm_debug(pstm)
+  type(tm_type), intent(in) :: pstm
+
+  sub_name = 'tm_end'; call push_sub()
+
+  message(1) = 'Debuggin TM pseudopotentials not written yet.'
+  call write_info(1)
+
+  call pop_sub(); return
+end subroutine tm_debug
 
 end module

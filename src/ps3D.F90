@@ -48,6 +48,7 @@ type ps_type
 end type ps_type
 
 real(r8), parameter :: eps = 1.0e-8_r8
+
 contains
 
 subroutine ps_init(ps, label, flavour, z, lmax, lloc)
@@ -58,7 +59,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
   real(r8), intent(in) :: z
 
   type(tm_type)      :: pstm ! In case Troullier-Martins ps are used.
-  type(ps_st_params) :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
+  type(hgh_type)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
   integer :: i, j
 
@@ -68,7 +69,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
   ps%flavour = flavour
   ps%label   = label
 
-! First of all we read the input files
+! Initialization and processing.
   select case(flavour(1:2))
   case('tm')
     call tm_init(pstm, trim(label))
@@ -77,12 +78,15 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
     ps%l_loc = lloc
     ps%z = z
     call tm_process(pstm, lmax, lloc)
+    if(conf%verbose > 999) call tm_debug(pstm)
   case('hg')
-    call ps_ghg_read_file(psp, trim(label))
+    call hgh_init(psp, trim(label))
     ps%kbc = 3
     ps%l_max = psp%l_max
     ps%l_loc = -1
     ps%z = z
+    call hgh_process(psp)
+    if(conf%verbose > 999) call hgh_debug(psp)
   case default
     message(1) = "Unknown pseudopotential type: '"+trim(flavour)+"'"
     call write_fatal(1)
@@ -90,6 +94,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
 
 ! We allocate all the stuff
   allocate(ps%kb(0:ps%l_max, ps%kbc), ps%dkb(0:ps%l_max, ps%kbc), ps%Ur(0:ps%L_max))
+  allocate(ps%dknrm(0:ps%L_max), ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
   do i = 0, ps%L_max
      do j = 1, ps%kbc
         call spline_init(ps%kb(i, j))
@@ -100,15 +105,15 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
   call spline_init(ps%vlocal)
   call spline_init(ps%dvlocal)
   call spline_init(ps%core)
-  allocate(ps%dknrm(0:ps%L_max), ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
 
 ! Now we load the necessary information.
   select case(flavour(1:2))
   case('tm')
-    call ps_tm_load(ps, pstm)
+    call tm_load(ps, pstm)
     call tm_end(pstm)
   case('hg')
-    call ps_hgh_load(ps, psp, trim(label))
+    call hgh_load(ps, psp)
+    call hgh_end(psp)
   end select
 
   call pop_sub()
@@ -170,7 +175,8 @@ subroutine ps_debug(ps)
   do i =1, npoints
      r = (i-1)*grid 
      write(nonlocal_unit, '('//trim(fm)//'e14.6)') r, &
-           ( (splint(ps%kb(k, j), r), splint(ps%dkb(k, j), r), k=0, ps%l_max), j=1, ps%kbc)
+           ( (splint(ps%kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
+           ( (splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
   enddo
 
   ! Pseudo-wavefunctions
@@ -214,76 +220,29 @@ subroutine ps_end(ps)
   call pop_sub()
 end subroutine ps_end
 
-subroutine ps_hgh_load(ps, psp, filename)
+subroutine hgh_load(ps, psp)
   type(ps_type), intent(inout)      :: ps
-  type(ps_st_params), intent(inout) :: psp
-  character(len=*), intent(in)      :: filename
+  type(hgh_type), intent(inout)     :: psp
 
-  integer  :: iunit, i, ir, l
-  logical  :: found
-  real(r8) :: ea, rpb
-
-  sub_name = 'ps_hgh_load'; call push_sub()
-
-! Calculate logarithmic grid parameters.
-  psp%a = 1.25e-2_r8; psp%b = 4.0e-4_r8
-  psp%nrval = 1001
-  allocate(psp%s(psp%nrval), psp%drdi(psp%nrval), psp%rofi(psp%nrval))
-  rpb = psp%b; ea = exp(psp%a)
-  do ir = 1, psp%nrval
-    psp%drdi(ir) = psp%a*rpb
-    psp%s(ir) = sqrt(psp%a*rpb)
-    rpb = rpb*ea
-    psp%rofi(ir) = psp%b * ( exp( psp%a * (ir - 1) ) - 1.0_r8 ) 
-  end do
-
-! Allocates psp variables
-  allocate(psp%vlocal(1:psp%nrval), psp%kb(1:psp%nrval, 0:ps%l_max, 1:3))
-  psp%vlocal = 0.0_r8; psp%kb = 0.0_r8
+  sub_name = 'hgh_load'; call push_sub()
 
 ! Fixes some components of ps, read in psf
   ps%z_val = psp%z_val
   ps%icore = 'nc'
-
-! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
-! are obtained, but not the real ones!!!
-  allocate(psp%rphi(psp%nrval, 0:ps%l_max), psp%eigen(0:ps%l_max))
-  call solve_schroedinger_hgh(psp, ps%l_max)
-
-! Fixes the local potential
-  psp%vlocal(1:psp%nrval) = vlocalr(psp%rofi, psp)
-
-! And the projectors
-  do l = 0, ps%l_max
-     do i = 1, 3
-        psp%kb(1:psp%nrval, l, i) = projectorr(psp%rofi, psp, i, l)
-     enddo
-  enddo
-
-! Define the KB-projector cut-off radii
-  call get_cutoff_radii_psp(psp, ps%l_max, ps%l_loc)
-       ps%rc_max = maxval(psp%kbr(0:ps%l_max))
+  ps%rc_max = 1.1_r8 * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
+  ps%h = psp%h
 
 ! now we fit the splines
   call get_splines_hgh(psp, ps)
 
-! Increase radius a little, just in case.
-  ps%rc_max = ps%rc_max * 1.1_r8
-
-! Defines the constant matrix.
-  ps%h = psp%h
-
-! Deallocation
-  deallocate(psp%rofi, psp%drdi, psp%s, psp%vlocal, psp%kb)
-
   call pop_sub(); return
-end subroutine ps_hgh_load
+end subroutine hgh_load
 
-subroutine ps_tm_load(ps, pstm)
+subroutine tm_load(ps, pstm)
   type(ps_type), intent(inout) :: ps
   type(tm_type), intent(inout) :: pstm
 
-  sub_name = 'ps_tm_load'; call push_sub()
+  sub_name = 'tm_load'; call push_sub()
 
   ! Fixes some components of ps, read in pstm
   ps%z_val = pstm%zval
@@ -300,40 +259,7 @@ subroutine ps_tm_load(ps, pstm)
   ps%h = ps%h / 2._r8; ps%dknrm = ps%dknrm * 2._r8
 
   call pop_sub(); return
-end subroutine ps_tm_load
-
-subroutine get_cutoff_radii_psp(psp, lmax, lloc)
-  type(ps_st_params), intent(inout) :: psp
-  integer, intent(in)               :: lmax, lloc
-
-  integer  :: ir, l, i
-  real(r8) :: dincv, tmp
-
-  sub_name = 'get_cutoff_radii_psp'; call push_sub()
-
-  ! local part ....
-  psp%kbr(0:lmax + 1) = 0.0_r8
-  do ir = psp%nrval, 2, -1
-    dincv = abs(psp%vlocal(ir)*psp%rofi(ir) + psp%z_val)
-    if(dincv > eps) exit
-  end do
-  psp%kbr(lmax + 1) = psp%rofi(ir + 1)
-
-  ! non-local part....
-  do l = 0, lmax
-    tmp = 0.0_r8
-    do i = 1, 3
-       do ir = psp%nrval, 2, -1
-          dincv = abs(psp%kb(ir, l, i))
-          if(dincv > eps) exit
-       enddo
-       tmp = psp%rofi(ir + 1)
-       psp%kbr(l) = max(tmp, psp%kbr(l))
-    enddo
-  end do
-
-  call pop_sub(); return
-end subroutine get_cutoff_radii_psp
+end subroutine tm_load
 
 subroutine get_splines_tm(psf, ps)
   type(tm_type), intent(in) :: psf
@@ -360,7 +286,7 @@ subroutine get_splines_tm(psf, ps)
     call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
 
 ! and now the derivatives...
-    call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
+    call derivate_in_log_grid(psf%g, hato, derhato)
     call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
   end do
 
@@ -379,7 +305,7 @@ subroutine get_splines_tm(psf, ps)
   ps%vlocal_origin = psf%vlocal(1) / 2._r8
 
   ! and the derivative now
-  call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
+  call derivate_in_log_grid(psf%g, hato, derhato)
   call spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
 
 ! Define the table for the pseudo-wavefunction components (using splines)
@@ -422,7 +348,7 @@ subroutine get_splines_tm(psf, ps)
 end subroutine get_splines_tm
 
 subroutine get_splines_hgh(psp, ps)
-  type(ps_st_params), intent(in) :: psp
+  type(hgh_type), intent(in)   :: psp
   type(ps_type), intent(inout) :: ps
 
   integer :: l, nrc, ir, nrcore, j
@@ -431,18 +357,18 @@ subroutine get_splines_hgh(psp, ps)
 
   sub_name = 'get_splines_hgh'; call push_sub()
 
-  allocate(hato(psp%nrval), derhato(psp%nrval))
+  allocate(hato(psp%g%nrval), derhato(psp%g%nrval))
 
 ! Interpolate the KB-projection functions
   do l = 0, ps%l_max
   do j = 1, 3
     hato = 0.0_r8
-    nrc = nint(log(psp%kbr(l)/psp%b + 1.0_r8)/psp%a) + 1
+    nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
     hato(1:nrc) = psp%kb(1:nrc, l, j)
-    call spline_fit(psp%nrval, psp%rofi, hato, ps%kb(l, j))
+    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
     ! and now the derivatives...
-    call derivate_in_log_grid(psp%a, psp%b, psp%nrval, hato, derhato)
-    call spline_fit(psp%nrval, psp%rofi, derhato, ps%dkb(l, j))
+    call derivate_in_log_grid(psp%g, hato, derhato)
+    call spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
   end do
   end do
 
@@ -450,32 +376,32 @@ subroutine get_splines_hgh(psp, ps)
 ! where the asymptotic part is substracted 
 !...local part...
   hato = 0.0_r8
-  nrc = nint(log(psp%kbr(ps%L_max + 1)/psp%b + 1.0_r8)/psp%a) + 1
+  nrc = nint(log(psp%kbr(ps%L_max + 1)/psp%g%b + 1.0_r8)/psp%g%a) + 1
 
-  hato(2:psp%nrval) = psp%vlocal(2:psp%nrval)*psp%rofi(2:psp%nrval) + psp%z_val
+  hato(2:psp%g%nrval) = psp%vlocal(2:psp%g%nrval)*psp%g%rofi(2:psp%g%nrval) + psp%z_val
   hato(1) = psp%z_val
   
-  call spline_fit(psp%nrval, psp%rofi, hato, ps%vlocal)
+  call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psp%vlocal(1)
 
   ! and the derivative now
-  call derivate_in_log_grid(psp%a, psp%b, psp%nrval, hato, derhato)
-  call spline_fit(psp%nrval, psp%rofi, derhato, ps%dvlocal)
+  call derivate_in_log_grid(psp%g, hato, derhato)
+  call spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dvlocal)
 
 ! Define the table for the pseudo-wavefunction components (using splines)
 ! with a correct normalization function
   do l = 0 , ps%L_max
-    nrc = nint(log(psp%kbr(l)/psp%b + 1.0_r8)/psp%a) + 1
-    do ir = nrc+ 2, psp%nrval-2
-      if ( abs(psp%rphi(ir,l)/psp%rofi(ir)**(l+1)) < eps ) exit
+    nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
+    do ir = nrc+ 2, psp%g%nrval-2
+      if ( abs(psp%rphi(ir,l)/psp%g%rofi(ir)**(l+1)) < eps ) exit
     enddo
     nrc = ir + 1
 
     hato = 0.0_r8
-    hato(2:nrc) = psp%rphi(2:nrc, l)/psp%rofi(2:nrc)**(l + 1)
+    hato(2:nrc) = psp%rphi(2:nrc, l)/psp%g%rofi(2:nrc)**(l + 1)
     hato(1) = hato(2)
 
-    call spline_fit(psp%nrval, psp%rofi, hato, ps%Ur(l))
+    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l))
   end do
 
   call pop_sub(); return

@@ -58,14 +58,15 @@ subroutine kill_logrid(g)
   deallocate(g%rofi, g%drdi, g%s)
 end subroutine kill_logrid
 
-subroutine derivate_in_log_grid(a, b, nrval, f, dfdr)
-  real(r8), intent(in) :: a, b
-  integer,  intent(in) :: nrval
-  real(r8), intent(IN) :: f(nrval)
-  real(r8), intent(out) :: dfdr(nrval)
+subroutine derivate_in_log_grid(g, f, dfdr)
+  type(logrid_type)     :: g
+  real(r8), intent(IN)  :: f(g%nrval)
+  real(r8), intent(out) :: dfdr(g%nrval)
 
-  real(r8) :: x,y
-  integer :: i
+  real(r8) :: x, y, a, b
+  integer :: i, nrval
+
+  a = g%a; b = g%b; nrval = g%nrval
 
   x = 1.0_r8 - exp(-2*a)
   y = 1.0_r8 - exp(-a)

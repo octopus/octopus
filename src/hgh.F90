@@ -29,19 +29,12 @@ use logrid
 implicit none
 
 private
-public  :: ps_st_params,          & ! Data types
-           load_params,           & ! Procedures
-           vlocalr,               &
-           vlocalg,               &
-           projectorr,            &
-           projectorg,            &
-           ps_ghg_read_file,      &
-           solve_schroedinger_hgh
+public  :: hgh_type, hgh_init, hgh_process, hgh_debug, hgh_end
 
 ! Next data type contains:
 !   (a) the pseudopotential parameters, as read from a *.hgh file,
 !   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
-type ps_st_params
+type hgh_type
   ! HGH parameters.
   character(len=2) :: atom_name
   integer          :: z_val
@@ -54,17 +47,15 @@ type ps_st_params
   integer          :: l_max ! Maximum l
 
   ! Logarithmic grid parameters
-  real(r8)         :: a, b
-  integer          :: nrval
-  real(r8), pointer :: s(:), drdi(:), rofi(:)
+  type(logrid_type) :: g
 
   real(r8), pointer :: vlocal(:) ! Local potential
   real(r8), pointer :: kb(:,:,:) ! KB projectors
   real(r8), pointer :: kbr(:)    ! KB radii
-
-  ! Pseudo wave functions and pseudo eigenvalues
   real(r8), pointer :: rphi(:,:), eigen(:)
-end type ps_st_params
+end type hgh_type
+
+real(r8), parameter :: eps = 1.0e-8_r8
 
 interface vlocalr
   module procedure vlocalr_scalar, vlocalr_vector
@@ -75,15 +66,15 @@ end interface
 
 contains
 
-subroutine ps_ghg_read_file(psp, filename)
-  type(ps_st_params), intent(inout) :: psp
+subroutine hgh_init(psp, filename)
+  type(hgh_type), intent(inout)     :: psp
   character(len=*), intent(in)      :: filename
 
   integer :: iunit, i
   logical :: found
   character(len=256) :: filename2
 
-  sub_name = 'ps_ghg_read_file'; call push_sub()
+  sub_name = 'hgh_init'; call push_sub()
 
   filename2 = filename//'.hgh'
   inquire(file=filename2, exist=found)
@@ -109,29 +100,128 @@ subroutine ps_ghg_read_file(psp, filename)
   endif
   call io_close(iunit)
 
-!!$      ! This should go someday...
-!!$      write(*,'(a)') '****'
-!!$      write(*,'(a2,i5,5f14.8)') psf%atom_name, psf%z_val, psf%rlocal, psf%c(1:4)
-!!$      write(*,'(7x,4f14.8)')    psf%rc(0), (psf%h(0, i, i), i=1, 3)
-!!$      write(*,'(7x,4f14.8)')    psf%rc(1), (psf%h(1, i, i), i=1, 3)
-!!$      write(*,'(21x, 3f14.8)')             (psf%k(1, i, i), i=1, 3)
-!!$      stop
-
+  ! Finds out psp%l_max
   psp%l_max = 0
   do while(psp%rc(psp%l_max)>0.01_r8)
      psp%l_max = psp%l_max + 1
   end do
   psp%l_max = psp%l_max - 1
 
+  ! Initializes the logarithmic grid. Parameters are hard-coded.
+       psp%g%a = 1.25e-2_r8; psp%g%b = 4.0e-4_r8
+       psp%g%nrval = 1001
+  call init_logrid(psp%g, psp%g%a, psp%g%b, psp%g%nrval)
+
+  ! Allocation of stuff.
+  allocate(psp%vlocal(1:psp%g%nrval))
   allocate(psp%kbr(0:psp%l_max+1))
+  if(psp%l_max >= 0) then
+    allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))    
+  endif
+  allocate(psp%rphi(psp%g%nrval, 0:max(psp%l_max,0)), psp%eigen(0:max(psp%l_max,0)))
+  psp%vlocal = 0.0_r8; psp%kb = 0.0_r8; psp%rphi = 0.0_r8
 
   call pop_sub(); return
-end subroutine ps_ghg_read_file
+end subroutine hgh_init
 
-! Loads all the necessary parameters.
+subroutine hgh_end(psp)
+  type(hgh_type), intent(inout) :: psp
+
+  sub_name = 'hgh_end'; call push_sub()
+
+  deallocate(psp%kbr, psp%vlocal, psp%rphi, psp%eigen)
+  if(associated(psp%kb)) deallocate(psp%kb)
+  call kill_logrid(psp%g)
+
+  call pop_sub(); return
+end subroutine hgh_end
+
+subroutine hgh_process(psp)
+  type(hgh_type), intent(inout) :: psp
+
+  integer :: l, i
+
+  sub_name = 'hgh_process'; call push_sub()
+
+! Fixes the local potential
+  psp%vlocal(1:psp%g%nrval) = vlocalr(psp%g%rofi, psp)
+
+! And the projectors
+  do l = 0, psp%l_max
+     do i = 1, 3
+        psp%kb(1:psp%g%nrval, l, i) = projectorr(psp%g%rofi, psp, i, l)
+     enddo
+  enddo
+
+! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
+! are obtained, but not the real ones!!!
+  call solve_schroedinger(psp)
+
+! Define the KB-projector cut-off radii
+  call get_cutoff_radii(psp)
+
+  call pop_sub(); return
+end subroutine hgh_process
+
+subroutine hgh_debug(psp)
+  type(hgh_type), intent(in) :: psp
+
+  integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
+
+  sub_name = 'hgh_debug'; call push_sub()
+
+  ! Opens files.
+  call oct_mkdir(C_string('hgh.'//trim(psp%atom_name)))
+  call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
+  call io_assign(dat_unit); call io_assign(kbp_unit)
+  open(hgh_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'hgh')
+  open(loc_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'local')
+  open(dat_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'info')
+  open(kbp_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'nonlocal')
+  open(wav_unit, file = 'hgh.'//trim(psp%atom_name)//'/'//'wave')
+
+  ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
+  write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)
+  write(hgh_unit,'(  11x,4f12.6)') psp%rc(0), (psp%h(0,i,i), i = 1, 3)
+  do k = 1, 3
+     write(hgh_unit,'(  11x,4f12.6)') psp%rc(k), (psp%h(k, i, i), i = 1, 3)
+     write(hgh_unit,'(  23x,4f12.6)')            (psp%k(k, i, i), i = 1, 3)
+  enddo
+
+  ! Writes down some info.
+  write(dat_unit,'(a,i3)')        'lmax  = ', psp%l_max
+  if(psp%l_max >= 0) then
+     write(dat_unit,'(a,4f14.6)') 'kbr   = ', psp%kbr
+  endif
+  write(dat_unit,'(a,4f14.6)')    'eigen = ', psp%eigen
+
+  ! Writes down local part.
+  do i = 1, psp%g%nrval
+     write(loc_unit, *) psp%g%rofi(i), psp%vlocal(i)
+  enddo
+
+  ! Writes down nonlocal part.
+  if(psp%l_max >=0) then
+    do i = 1, psp%g%nrval
+       write(kbp_unit, *) psp%g%rofi(i), ( (psp%kb(i, l, k) ,k = 1, 3),l = 0, psp%l_max)
+    enddo
+  endif
+
+  ! And the pseudo-wavefunctions.
+  do i = 1, psp%g%nrval
+     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 0, max(0, psp%l_max))
+  enddo
+
+  ! Closes files and exits
+  call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
+  call io_close(dat_unit); call io_close(kbp_unit)
+
+  call pop_sub(); return
+end subroutine hgh_debug
+
 function load_params(unit, params)
   integer, intent(in)             :: unit        ! where to read from
-  type(ps_st_params), intent(out) :: params      ! obvious
+  type(hgh_type), intent(out)     :: params      ! obvious
   integer                         :: load_params ! 0 if success, 
                                                  ! 1 otherwise.
 
@@ -220,21 +310,45 @@ function load_params(unit, params)
      enddo
   enddo
 
-!!$  do k = 0, 3
-!!$     write(*, '(a)')
-!!$     do i = 1, 3
-!!$        write(*, *) (params%h(k, i, j), j = 1, 3)
-!!$     enddo
-!!$  enddo
-!!$  stop
-
   load_params = 0
   call pop_sub(); return
 end function load_params
 
+subroutine get_cutoff_radii(psp)
+  type(hgh_type), intent(inout)     :: psp
+
+  integer  :: ir, l, i
+  real(r8) :: dincv, tmp
+
+  sub_name = 'get_cutoff_radii_psp'; call push_sub()
+
+  ! local part ....
+  psp%kbr(0:psp%l_max + 1) = 0.0_r8
+  do ir = psp%g%nrval, 2, -1
+    dincv = abs(psp%vlocal(ir)*psp%g%rofi(ir) + psp%z_val)
+    if(dincv > eps) exit
+  end do
+  psp%kbr(psp%l_max + 1) = psp%g%rofi(ir + 1)
+
+  ! non-local part....
+  do l = 0, psp%l_max
+    tmp = 0.0_r8
+    do i = 1, 3
+       do ir = psp%g%nrval, 2, -1
+          dincv = abs(psp%kb(ir, l, i))
+          if(dincv > eps) exit
+       enddo
+       tmp = psp%g%rofi(ir + 1)
+       psp%kbr(l) = max(tmp, psp%kbr(l))
+    enddo
+  end do
+
+  call pop_sub(); return
+end subroutine get_cutoff_radii
+
 ! Local pseudopotential, both in real and reciprocal space.
 function vlocalr_scalar(r, p)
-  type(ps_st_params), intent(in) :: p
+  type(hgh_type), intent(in)     :: p
   real(r8), intent(in)           :: r
   real(r8)                       :: vlocalr_scalar
 
@@ -254,7 +368,7 @@ function vlocalr_scalar(r, p)
 end function vlocalr_scalar
 
 function vlocalr_vector(r, p)
-  type(ps_st_params), intent(in)  :: p
+  type(hgh_type), intent(in)      :: p
   real(r8), intent(in)            :: r(:)
   real(r8), pointer               :: vlocalr_vector(:)
 
@@ -268,7 +382,7 @@ function vlocalr_vector(r, p)
 end function vlocalr_vector
 
 function vlocalg(g, p)
-  type(ps_st_params), intent(in) :: p
+  type(hgh_type), intent(in)     :: p
   real(r8), intent(in)           :: g
   real(r8)                       :: vlocalg
 
@@ -284,7 +398,7 @@ function vlocalg(g, p)
 end function vlocalg
 
 function projectorr_scalar(r, p, i, l)
-  type(ps_st_params), intent(in) :: p
+  type(hgh_type), intent(in)     :: p
   real(r8), intent(in)           :: r
   integer, intent(in)            :: i, l
   real(r8)                       :: projectorr_scalar
@@ -300,7 +414,7 @@ function projectorr_scalar(r, p, i, l)
 end function projectorr_scalar
 
 function projectorr_vector(r, p, i, l)
-  type(ps_st_params), intent(in) :: p
+  type(hgh_type), intent(in)     :: p
   real(r8), intent(in)           :: r(:)
   integer, intent(in)            :: i, l
   real(r8), pointer              :: projectorr_vector(:)
@@ -315,7 +429,7 @@ function projectorr_vector(r, p, i, l)
 end function projectorr_vector
 
 function projectorg(g, p, i, l)
-  type(ps_st_params), intent(in) :: p
+  type(hgh_type), intent(in)     :: p
   real(r8), intent(in)           :: g
   integer, intent(in)            :: i, l
   real(r8)                       :: projectorg
@@ -370,48 +484,91 @@ function projectorg(g, p, i, l)
 
 end function projectorg
 
-subroutine solve_schroedinger_hgh(psp, lmax)
-  type(ps_st_params), intent(inout) :: psp
-  integer, intent(in)               :: lmax
+subroutine solve_schroedinger(psp)
+  type(hgh_type), intent(inout)     :: psp
   
-  integer :: ir, l, nnode, nprin
-  real(r8) :: rpb, ea, vtot, r2, e, z, dr, rmax, f, dsq, a2b4
-  real(r8), allocatable :: s(:), hato(:), g(:), y(:)
-  
-  sub_name = 'solve_schroedinger_hgh'; call push_sub()
+  integer :: iter, ir, l, nnode, nprin, i, j, irr
+  real(r8) :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
+  real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:), rho(:), ve(:), occs(:)
+  real(r8), parameter :: tol = 1.0e-4_r8
+
+  sub_name = 'solve_schroedinger'; call push_sub()
 
   ! Allocations...
-  allocate(s(psp%nrval), hato(psp%nrval))
+  allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval), &
+           rho(psp%g%nrval), ve(psp%g%nrval), occs(0:max(0,psp%l_max)))
+  hato = 0.0_r8; g = 0.0_r8;  y = 0.0_r8; rho = 0.0_r8; ve = 0.0_r8
 
   ! Calculation of the pseudo-wave functions.
-  s(2:psp%nrval) = psp%drdi(2:psp%nrval)*psp%drdi(2:psp%nrval)
+  s(2:psp%g%nrval) = psp%g%drdi(2:psp%g%nrval)*psp%g%drdi(2:psp%g%nrval)
   s(1) = s(2)
-  a2b4 = 0.25_r8*psp%a**2
+  a2b4 = 0.25_r8*psp%g%a**2
 
-  allocate(g(psp%nrval), y(psp%nrval))
-  g = 0.0_r8;  y = 0.0_r8
+  if(conf%verbose > 20 .and. mpiv%node == 0) then
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '//psp%atom_name//'....'
+    call write_info(1)
+  endif
   
-  do l = 0, lmax
-    do ir = 2, psp%nrval
-      vtot = psp%vlocal(ir) + dble(l*(l + 1))/(psp%rofi(ir)**2)
-      hato(ir) = vtot*s(ir) + a2b4
-    end do
-    hato(1) = hato(2)
-    
-    nnode = 1; nprin = l + 1
-    e = -((psp%z_val/dble(nprin))**2); z = psp%z_val
-    dr = -1.0e5_r8; rmax = psp%rofi(psp%nrval)
-    call egofv(hato, s, psp%nrval, e, g, y, l, z, psp%a, psp%b, rmax, nprin, nnode, dr)
-    psp%eigen(l) = e
+  diff = 1e5_r8
+  iter = 0
+  self_consistent: do while( diff > tol )
+    prev = rho
+    iter = iter + 1
+    do l = 0, max(0, psp%l_max)
+      do ir = 2, psp%g%nrval
+        vtot = 2*psp%vlocal(ir) + ve(ir) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
+        nonl = 0.0_r8
+        if(iter>1 .and. psp%l_max >=0 .and. psp%rphi(ir, l) > 1.0e-7) then
+           do i = 1, 3
+           do j = 1, 3
+              do irr = 2, psp%g%nrval
+                 nonl = nonl + psp%h(l, i, j)*psp%kb(ir, l, i)* & 
+                        psp%g%drdi(irr)*psp%g%rofi(irr)*psp%rphi(irr, l)*psp%kb(irr,l,j)
+              enddo
+           enddo
+           enddo
+           nonl = 2*nonl/psp%rphi(ir, l)*psp%g%rofi(ir)
+        endif
+        vtot = vtot + nonl
+        hato(ir) = vtot*s(ir) + a2b4
+      end do
+      hato(1) = hato(2)
+      nnode = 1; nprin = l + 1
+      if(iter == 0) then
+         e = -((psp%z_val/dble(nprin))**2); z = psp%z_val
+      else
+         e = psp%eigen(l); z = psp%z_val
+      endif
+      dr = -1.0e5_r8; rmax = psp%g%rofi(psp%g%nrval)
+      call egofv(hato, s, psp%g%nrval, e, g, y, l, z, psp%g%a, psp%g%b, rmax, nprin, nnode, dr)
+      psp%eigen(l) = e
 
-    psp%rphi(2:psp%nrval, l) = g(2:psp%nrval) * sqrt(psp%drdi(2:psp%nrval))
-    psp%rphi(1, l) = psp%rphi(2, l)
-  end do
-  deallocate(g, y)
+      psp%rphi(2:psp%g%nrval, l) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
+      psp%rphi(1, l) = psp%rphi(2, l)
+    end do
+    occs = hgh_occs(psp%atom_name(1:2), max(0,psp%l_max))
+    rho = 0.0_r8
+    do l = 0, max(0,psp%l_max)
+       rho = rho + occs(l)*psp%rphi(1:psp%g%nrval, l)**2
+    enddo
+    !if(iter>0) rho = 0.5*rho + 0.5*prev
+    diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval)-prev(2:psp%g%nrval))**2))
+    if(conf%verbose>20 .and. mpiv%node == 0) then
+      write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
+      call write_info(1)
+    endif
+    call calculate_valence_screening(psp, rho, ve)
+
+  enddo self_consistent
+
+  if(conf%verbose > 20 .and. mpiv%node == 0) then
+    message(1) = '      Done.'
+    call write_info(1)
+  endif
 
   !  checking normalization of the calculated wave functions
-  do l = 0, lmax
-    e = sqrt(sum(psp%drdi(2:psp%nrval)*psp%rphi(2:psp%nrval, l)**2))
+  do l = 0, psp%l_max
+    e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, l)**2))
     e = abs(e - 1.0d0)
     if (e > 1.0d-5 .and. conf%verbose > 0) then
       write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
@@ -420,8 +577,87 @@ subroutine solve_schroedinger_hgh(psp, lmax)
     end if
   end do
 
-  deallocate(s, hato)
+  ! Output in Ha and not in stupid Rydbergs.
+  psp%eigen = psp%eigen / 2.0_r8
+
+  ! Deallocations.
+  deallocate(s, hato, g, y, rho, prev)
+
   call pop_sub; return
-end subroutine solve_schroedinger_hgh
+end subroutine solve_schroedinger
+
+subroutine calculate_valence_screening(psp, rhoval, ve)
+  type(hgh_type), intent(in) :: psp
+  real(r8), intent(in)       :: rhoval(1:psp%g%nrval)
+  real(r8), intent(out)      :: ve(1:psp%g%nrval)
+
+  character(len=5) :: xcfunc, xcauth
+  integer          :: irelt
+  real(r8)         :: e_x, e_c, dx, dc, r2
+  real(r8), allocatable :: v_xc(:,:), auxrho(:)
+
+  sub_name = 'valence_screening'; call push_sub()
+
+  ! Set this to zero...
+  ve = 0.0_r8
+
+  ! Allocates the auxiliary stuff
+  allocate(v_xc(psp%g%nrval, 1), auxrho(psp%g%nrval))
+  auxrho = rhoval
+
+  ! Gets the hartree potential first.
+  call vhrtre(rhoval, ve, psp%g%rofi, psp%g%drdi, psp%g%s, psp%g%nrval, psp%g%a)
+
+  ! We will assume this for the moment (GGA pseudos could also be got from Goedecker...)
+  xcfunc = 'LDA'
+  xcauth = 'PZ'
+  irelt = 1
+
+  ! Fix aux_rho (just rho/(4 \pi r^2))
+  auxrho(2:psp%g%nrval) = auxrho(2:psp%g%nrval)/(4.0_r8*M_PI*psp%g%rofi(2:psp%g%nrval)**2)
+  r2 = psp%g%rofi(2)/(psp%g%rofi(3)-psp%g%rofi(2))
+  auxrho(1) = auxrho(2) - (auxrho(3)-auxrho(2))*r2
+
+  ! And gets v_xc.
+  call atomxc(xcfunc, xcauth, irelt, psp%g%nrval, psp%g%nrval, psp%g%rofi, &
+              1, auxrho, e_x, e_c, dx, dc, v_xc)
+
+  ! Sums the vxc to the hartree.
+  ve(1:psp%g%nrval) = ve(1:psp%g%nrval) + v_xc(1:psp%g%nrval, 1)
+
+  ! And deallocates.
+  deallocate(v_xc, auxrho)
+
+  call pop_sub(); return
+end subroutine calculate_valence_screening
+
+function hgh_occs(label, lmax)
+  character(len=2), intent(in) :: label
+  integer, intent(in)          :: lmax
+  real(r8)                     :: hgh_occs(0:lmax)
+
+  select case(label)
+    case('H');  hgh_occs(0)   = 1
+    case('He'); hgh_occs(0)   = 2
+    case('Li'); hgh_occs(0:1) = (/ 1, 0 /)
+    case('Be'); hgh_occs(0:1) = (/ 2, 0 /)
+    case('B');  hgh_occs(0:1) = (/ 2, 1 /)
+    case('C');  hgh_occs(0:1) = (/ 2, 2 /)
+    case('N');  hgh_occs(0:1) = (/ 2, 3 /)
+    case('O');  hgh_occs(0:1) = (/ 2, 4 /)
+    case('F');  hgh_occs(0:1) = (/ 2, 5 /)
+    case('Ne'); hgh_occs(0:1) = (/ 2, 6 /)
+    case('Na'); hgh_occs(0:1) = (/ 1, 0 /)
+    case('Ti'); hgh_occs(0:2) = (/ 2, 0, 2 /)
+    case default
+    if(mpiv%node == 0) then
+      message(1) = 'Specie '//trim(label)//' not included in occupation-numbers data base.'
+      message(2) = 'Add it or complain to the lazy developer of this piece of code:'
+      message(3) = 'alberto.castro@tddft.org'
+      call write_fatal(3)
+    endif
+  end select
+
+end function hgh_occs
 
 end module hgh
