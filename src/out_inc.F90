@@ -33,10 +33,11 @@
 !             -3 : function in file is real, dp.
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
-integer function X(input_function)(filename, m, f) result(ierr)
+subroutine X(input_function)(filename, m, f, ierr)
   character(len=*), intent(in)  :: filename
   type(mesh_type),  intent(in)  :: m
   R_TYPE,           intent(out) :: f(:)
+  integer,          intent(out) :: ierr
 
   integer :: iunit, i, function_kind, file_kind
   type(X(cf)) :: c
@@ -50,21 +51,21 @@ integer function X(input_function)(filename, m, f) result(ierr)
 
   select case(trim(get_extension(filename)))
   case("")
-    ierr = plain()
+    call plain()
 
 #if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
     call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
     call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
-    ierr = dx_cdf()
+    call dx_cdf()
     c%RS = re%RS + M_zI*im%RS
     call X(cf2mf) (m, c, f)
     call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
 #else
     call X(cf_new)(m%l, c)
     call X(cf_alloc_RS)(c)
-    ierr = dx_cdf()
+    call dx_cdf()
     call X(cf2mf) (m, c, f)
     call X(cf_free)(c)
 #endif
@@ -78,7 +79,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer function plain() result(ierr)
+  subroutine plain()
     integer                 :: file_np
     real(4),    allocatable :: rs(:)
     real(8),    allocatable :: rd(:)
@@ -140,7 +141,7 @@ contains
 
       call io_close(iunit)
     end if
-  end function plain
+  end subroutine plain
 
 
   ! ---------------------------------------------------------
@@ -154,7 +155,7 @@ contains
   end if
 
   ! ---------------------------------------------------------
-  integer function dx_cdf() result(ierr)
+  subroutine dx_cdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
                dim_data_id(3), dim_pos_id(2), ndim(3), xtype
     real(r4) :: pos(2, 3)
@@ -214,21 +215,21 @@ contains
 #endif
 
     status = nf90_close(ncid)
-  end function dx_cdf
+  end subroutine dx_cdf
 
 #endif
 
-
-end function X(input_function)
+end subroutine X(input_function)
 
 
 ! ---------------------------------------------------------
-integer function X(output_function) (how, dir, fname, m, f, u) result(ierr)
-  integer,          intent(in) :: how
-  character(len=*), intent(in) :: dir, fname
-  type(mesh_type),  intent(IN) :: m
-  R_TYPE,           intent(IN) :: f(:)  ! f(m%np)
-  FLOAT,            intent(in) :: u
+subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
+  integer,          intent(in)  :: how
+  character(len=*), intent(in)  :: dir, fname
+  type(mesh_type),  intent(in)  :: m
+  R_TYPE,           intent(in)  :: f(:)  ! f(m%np)
+  FLOAT,            intent(in)  :: u
+  integer,          intent(out) :: ierr
   
   integer :: i
   character(len=20) :: mformat, mfmtheader
@@ -245,22 +246,22 @@ integer function X(output_function) (how, dir, fname, m, f, u) result(ierr)
     mfmtheader = '(a,a10,3a23)'
 #endif
 
-  if(iand(how, output_plain)  .ne.0) ierr = plain()
-  if(iand(how, output_axis_x) .ne.0) ierr = axis_x()
-  if(iand(how, output_axis_y) .ne.0) ierr = axis_y()
-  if(iand(how, output_axis_z) .ne.0) ierr = axis_z()
-  if(iand(how, output_plane_x).ne.0) ierr = plane_x()
-  if(iand(how, output_plane_y).ne.0) ierr = plane_y()
-  if(iand(how, output_plane_z).ne.0) ierr = plane_z()
+  if(iand(how, output_plain)  .ne.0) call plain()
+  if(iand(how, output_axis_x) .ne.0) call axis_x()
+  if(iand(how, output_axis_y) .ne.0) call axis_y()
+  if(iand(how, output_axis_z) .ne.0) call axis_z()
+  if(iand(how, output_plane_x).ne.0) call plane_x()
+  if(iand(how, output_plane_y).ne.0) call plane_y()
+  if(iand(how, output_plane_z).ne.0) call plane_z()
   if(iand(how, output_dx)     .ne.0) call dx()
 #if defined(HAVE_NETCDF)
-  if(iand(how, output_dx_cdf) .ne.0) ierr = dx_cdf()
+  if(iand(how, output_dx_cdf) .ne.0) call dx_cdf()
 #endif
 
 contains
 
   ! ---------------------------------------------------------
-  integer function plain() result(ierr)
+  subroutine plain()
     integer :: iunit
 
     call io_assign(iunit)
@@ -273,11 +274,11 @@ contains
       call io_close(iunit)
     end if
 
-  end function plain
+  end subroutine plain
 
 
   ! ---------------------------------------------------------
-  integer function axis_x() result(ierr)
+  subroutine axis_x()
     integer :: iunit, i
 
     call io_assign(iunit)
@@ -294,11 +295,11 @@ contains
       call io_close(iunit)
     end if
 
-  end function axis_x
+  end subroutine axis_x
 
 
   ! ---------------------------------------------------------
-  integer function axis_y() result(ierr)
+  subroutine axis_y()
     integer :: iunit, i
 
     call io_assign(iunit)
@@ -315,11 +316,11 @@ contains
       call io_close(iunit)
     end if
 
-  end function axis_y
+  end subroutine axis_y
 
 
   ! ---------------------------------------------------------
-  integer function axis_z() result(ierr)
+  subroutine axis_z()
     integer :: iunit, i
 
     call io_assign(iunit)
@@ -336,11 +337,11 @@ contains
       call io_close(iunit)
     end if
 
-  end function axis_z
+  end subroutine axis_z
 
 
   ! ---------------------------------------------------------
-  integer function plane_x() result(ierr)
+  subroutine plane_x()
     integer  :: iunit, i
 
     call io_assign(iunit)
@@ -357,11 +358,11 @@ contains
       call io_close(iunit)
     end if
 
-  end function plane_x
+  end subroutine plane_x
 
 
   ! ---------------------------------------------------------
-   integer function plane_y() result(ierr)
+   subroutine plane_y()
     integer  :: iunit, i
 
     call io_assign(iunit)
@@ -378,11 +379,11 @@ contains
       call io_close(iunit)
     end if
     
-  end function plane_y
+  end subroutine plane_y
 
 
   ! ---------------------------------------------------------
-  integer function plane_z() result(ierr)
+  subroutine plane_z()
     integer  :: iunit, i
 
     call io_assign(iunit)
@@ -399,7 +400,7 @@ contains
       call io_close(iunit)
     end if
     
-  end function plane_z
+  end subroutine plane_z
 
 
   ! ---------------------------------------------------------
@@ -462,7 +463,7 @@ contains
 
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
-  integer function dx_cdf() result(ierr)
+  subroutine dx_cdf()
     character(len=200) :: filename
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
@@ -532,9 +533,9 @@ contains
     status = nf90_close(ncid)
     call X(cf_free) (c)
 
-  end function dx_cdf
+  end subroutine dx_cdf
 
 #undef NCDFCALL
 #endif
 
-end function X(output_function)
+end subroutine X(output_function)

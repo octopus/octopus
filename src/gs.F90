@@ -33,7 +33,7 @@ contains
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
 
-    type(scf_type)        :: scfv
+    type(scf_type) :: scfv
 
     call push_sub('ground_state_run')
     ierr = 0
@@ -45,7 +45,8 @@ contains
     message(1) = 'Info: Loading wave-functions'
     call write_info(1)
 
-    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, ierr)
+    if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
       ierr = 1
@@ -79,7 +80,7 @@ contains
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
 
-    integer :: ierr
+    integer :: err
     logical :: lcao_start 
     type(lcao_type) :: lcao_data
 
@@ -117,7 +118,8 @@ contains
     end if
    
         ! write wave-functions to disk
-    if(X(restart_write)("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+    call X(restart_write)("tmp/restart_gs", sys%st, sys%m, err)
+    if(err.ne.0) then
       message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
       call write_fatal(1)
     end if

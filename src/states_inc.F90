@@ -175,7 +175,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
     if(outp%what(output_density)) then
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
-        ierr = doutput_function(outp%how, dir, fname, m, st%rho(:, is), u)
+        call doutput_function(outp%how, dir, fname, m, st%rho(:, is), u, ierr)
       end do
     end if
 #ifdef HAVE_MPI
@@ -189,8 +189,8 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
         do ik = 1, st%d%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
-            ierr = X(output_function) (outp%how, dir, fname, m, &
-                 st%X(psi) (1:, idim, ist, ik), sqrt(u))
+            call X(output_function) (outp%how, dir, fname, m, &
+               st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
           end do
         end do
       end if
@@ -206,7 +206,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
             dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
-            ierr = doutput_function (outp%how, dir, fname, m, dtmp, u)
+            call doutput_function (outp%how, dir, fname, m, dtmp, u, ierr)
           end do
         end do
       end if
@@ -323,7 +323,7 @@ contains
       
       deallocate(r, gr, j)
       write(fname, '(a,a,i1)') trim(filename), '-', is
-      ierr = doutput_function(outp%how, dir, trim(fname), m, c, M_ONE)
+      call doutput_function(outp%how, dir, trim(fname), m, c, M_ONE, ierr)
       
     end do do_is
     

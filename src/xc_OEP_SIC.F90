@@ -50,7 +50,7 @@ subroutine X(oep_x_sic) (xcs, m, f_der, st, is, oep, ex)
 
       st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
 
-      call xc_lda (xcs2, m, st, vx2, ex2, edummy)
+      call xc_get_lda (xcs2, m, st, vx2, ex2, edummy)
 
       ex = ex - oep%sfact*ex2
       
@@ -103,7 +103,7 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
 
     st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
     
-    call xc_lda (xcs2, m, st, vc2, edummy, ec2)
+    call xc_get_lda (xcs2, m, st, vc2, edummy, ec2)
     
     ec = ec - oep%sfact*ec2
     oep%lxc(:, i) = oep%lxc(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))

@@ -272,7 +272,10 @@ contains
     type(states_type), intent(out) :: st
     character(len=*),  intent(in)  :: filename
 
-    if(zrestart_read("opt-control/"//trim(filename), st, m).ne.st%nst) then
+    integer :: ier
+
+    call zrestart_read("opt-control/"//trim(filename), st, m, ierr)
+    if(ierr.ne.0) then
       message(1) = "Unsuccesfull read of states in 'opt-control/" // trim(filename) // "'"
       call write_fatal(1)
     end if

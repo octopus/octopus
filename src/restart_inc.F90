@@ -17,89 +17,87 @@
 
 
 ! ---------------------------------------------------------
-integer function X(restart_write_function)(dir, filename, m, f) result(ierr)
-  character(len=*), intent(in) :: dir
-  character(len=*), intent(in) :: filename
-  type(mesh_type),  intent(in) :: m
-  R_TYPE,           intent(in) :: f(:)
+subroutine X(restart_write_function)(dir, filename, m, f, ierr)
+  character(len=*), intent(in)  :: dir
+  character(len=*), intent(in)  :: filename
+  type(mesh_type),  intent(in)  :: m
+  R_TYPE,           intent(in)  :: f(:)
+  integer,          intent(out) :: ierr
 
   call push_sub('restart_write_function')
 
-  ierr = X(output_function) (restart_format, trim(dir), trim(filename), &
-     m, f(:), M_ONE)
+  call X(output_function) (restart_format, trim(dir), trim(filename), &
+     m, f(:), M_ONE, ierr)
 
   call pop_sub()
-end function X(restart_write_function)
+end subroutine X(restart_write_function)
 
 
 ! ---------------------------------------------------------
-integer function X(restart_read_function)(dir, filename, m, f) result(ierr)
+subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
   type(mesh_type),  intent(in)  :: m
   R_TYPE,           intent(out) :: f(:)
+  integer,          intent(out) :: ierr
 
   call push_sub('restart_read_function')
 
-  ierr = X(input_function) (trim(dir)//'/'//trim(filename), m, f(:))
+  call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr)
 
   ! If problems, try with the netcdf files
-  if(ierr>0) ierr = X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:))
+  if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr)
 
   call pop_sub()
-end function X(restart_read_function)
+end subroutine X(restart_read_function)
 
 
 ! ---------------------------------------------------------
-integer function X(restart_write) (dir, st, m, iter) result(ierr)
-  character(len=*),  intent(in) :: dir
-  type(states_type), intent(in) :: st
-  type(mesh_type),   intent(in) :: m
-  integer, intent(in), optional :: iter
+subroutine X(restart_write) (dir, st, m, ierr, iter)
+  character(len=*),  intent(in)  :: dir
+  type(states_type), intent(in)  :: st
+  type(mesh_type),   intent(in)  :: m
+  integer,           intent(out) :: ierr
+  integer, optional, intent(in)  :: iter
 
-  integer :: iunit, err, ik, ist, idim, i, is
-  character(len=6) :: filename
+  integer :: iunit, iunit2, err, ik, ist, idim, i, is
+  character(len=10) :: filename
 
   call push_sub('restart_write')
+
+  ASSERT(associated(st%X(psi)))
 
   call loct_mkdir(dir)
 
   ierr = 0
   if(mpiv%node==0) then
     call io_assign(iunit)
-    open(unit = iunit, file=trim(dir)//'/data', iostat = err, &
+    open(unit=iunit,  file=trim(dir)//'/wfns', iostat=err, &
        form='formatted', action='write', status='replace', recl = 200)
+    write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
+    write(iunit,'(a)') '%Wavefunctions'
 
-    if(err .ne. 0) then
-      ierr = -1
-
-      call io_free(iunit)
-      call pop_sub()
-      return
-    end if
+    call io_assign(iunit2)
+    open(unit=iunit2, file=trim(dir)//'/occs', iostat=err, &
+       form='formatted', action='write', status='replace', recl = 200)
+    write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]'
+    write(iunit2,'(a)') '%Occupations_Eigenvalues'
   end if
-
-  ASSERT(associated(st%X(psi)))
 
   i = 1
-  if(mpiv%node==0) then 
-    write(iunit,'(2a)') '#     #kpoint            #st            #dim    ', &
-       'filename           occupations           eigenvalue[a.u.]'
-    write(iunit,'(a)') '%Wavefunctions'
-  end if
-
   do ik = 1, st%d%nik
     do ist = 1, st%nst
       do idim = 1, st%d%dim
-        write(filename,'(i6.6)') i
+        write(filename,'(i10.10)') i
         
-        if(mpiv%node==0) write(unit = iunit, fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', &
-           trim(filename), '" | ', st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
+        if(mpiv%node==0) then
+          write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
+          write(unit=iunit2, fmt=*) st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
+        end if
         
         if(st%st_start <= ist .and. st%st_end >= ist) then
-          if(X(restart_write_function)(dir, filename, m, st%X(psi) (:, idim, ist, ik)) == 0) then
-            ierr = ierr + 1
-          end if
+          call X(restart_write_function)(dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
+          if(err == 0) ierr = ierr + 1
         end if
 
         i = i + 1
@@ -107,31 +105,39 @@ integer function X(restart_write) (dir, st, m, iter) result(ierr)
     end do
   end do
   
+  if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
+
   if(mpiv%node==0)  then 
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
+    write(iunit2, '(a)') '%'
   end if
 
 #if defined(HAVE_MPI)
   call mpi_barrier(MPI_COMM_WORLD, i) ! Since some processors did more than others...
 #endif
 
-  if(mpiv%node==0) call io_close(iunit)
+  if(mpiv%node==0) then
+    call io_close(iunit)
+    call io_close(iunit2)
+  end if
+
   call pop_sub()
-end function X(restart_write)
+end subroutine X(restart_write)
 
 
 ! returns
 ! <0 => Fatal error
 ! =0 => read all wave-functions
 ! >0 => could only read x wavefunctions
-integer function X(restart_read) (dir, st, m, iter) result(ierr)
+subroutine X(restart_read) (dir, st, m, ierr, iter)
   character(len=*),  intent(in)    :: dir
   type(states_type), intent(inout) :: st
   type(mesh_type),   intent(in)    :: m
+  integer,           intent(out)   :: ierr
   integer, optional, intent(out)   :: iter
 
-  integer :: iunit, err, ik, ist, idim, i, is
+  integer :: iunit, iunit2, err, ik, ist, idim, i, is
   character(len=50) :: blockname
   character(len=12) :: filename
   character(len=1) :: char
@@ -139,34 +145,38 @@ integer function X(restart_read) (dir, st, m, iter) result(ierr)
 
   call push_sub('restart_read')
 
-  ierr = 0
-  call io_assign(iunit)
-  open(unit = iunit, file=trim(dir)//'/data', iostat = err, &
-       form='formatted', action='read', status='old', recl = 200)
-
-  if(err .ne. 0) then
-    ierr = -1
-
-    call io_free(iunit)
-    call pop_sub()
-    return
-  endif
-
+  ! sanity check
   ASSERT(associated(st%X(psi)))
 
+  ierr = 0
+
+  ! open files to read
+  call open_files()
+  if(ierr.ne.0) then
+    call pop_sub()
+    return
+  end if
+
+  ! now we really start
   allocate(filled(st%d%dim, st%st_start:st%st_end, st%d%nik)); filled = .false.
 
-  read(iunit, *); read(iunit, *) ! Skip two lines...
+  read(iunit, *);  read(iunit, *)  ! Skip two lines...
+  read(iunit2, *); read(iunit2, *) ! Skip two lines...
   do
-    read(unit = iunit, fmt = '(a)', iostat = i) char
+    read(unit=iunit, fmt='(a)', iostat=i) char
     if(i.ne.0.or.char=='%') exit
-    backspace(unit = iunit)
-    read(unit = iunit, iostat = i, fmt = *) ik, char, ist, char, idim, char, filename, char, &
-       st%occ(ist,ik), st%eigenval(ist, ik)
+    backspace(unit=iunit)
 
-    if(index_is_wrong()) cycle
-    if(st%st_start <= ist .and. st%st_end >= ist) then
-      if(X(restart_read_function) (dir, filename, m, st%X(psi) (:, idim, ist, ik))<=0) then
+    read(unit=iunit, iostat=i, fmt=*) ik, char, ist, char, idim, char, filename
+    if(index_is_wrong()) then
+      read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the occs file
+      cycle
+    end if
+
+    if(ist >= st%st_start .and. ist <= st%st_end) then
+      read(unit=iunit2, iostat=i, fmt=*) st%occ(ist,ik), char, st%eigenval(ist, ik)
+      call X(restart_read_function) (dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
+      if(err <= 0) then
         filled(idim, ist, ik) = .true.
         ierr = ierr + 1
       end if
@@ -174,35 +184,43 @@ integer function X(restart_read) (dir, st, m, iter) result(ierr)
   end do
 
   if(present(iter)) then
-    read(unit = iunit, fmt = *) filename, filename, iter
+    read(unit=iunit, fmt=*) filename, filename, iter
   endif
 
-!  if(present(vprev)) then
-!     do i = 1, nvprev
-!        do is = 1, st%d%nspin
-!           write(filename,'(a1,i2.2,i3.3)') 'p',i, is
-!           call dinput_function(trim(dir)//'/'//trim(filename), m, vprev(1:m%np, is, i), err)
-!           ! If problems, try with the netcdf files. However, it will always try to read first
-!           ! the plain files, which may be a problem if both are present, and the "good" one is the netcdf.
-!           ! This has to be fixed.
-!           if(err>0) call dinput_function(trim(dir)//'/'//trim(filename)//'.ncdf', m, vprev(1:m%np, is, i), err)
-!           if(err>0) then 
-!             write(message(1),'(a)') 'Problem reading potential in restart file for extrapolation'
-!             write(message(2),'(a,i3)') 'Error code = ',err
-!             call write_warning(2)
-!           endif
-!        enddo
-!     enddo
-!  endif
-
   if(any(.not.filled)) call fill()
-  if(ierr == (st%st_end-st%st_start)*st%d%nik*st%d%dim) ierr = 0 ! Alles OK
+  if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0 ! Alles OK
 
   deallocate(filled)
   call io_close(iunit)
+  call io_close(iunit2)
+
   call pop_sub()
 
 contains
+
+  subroutine open_files
+    ! open wfns file
+    call io_assign(iunit)
+    open(unit = iunit, file=trim(dir)//'/wfns', iostat = err, &
+       form='formatted', action='read', status='old', recl = 200)
+    
+    if(err .ne. 0) then
+      ierr = -1
+      call io_free(iunit)
+      return
+    end if
+
+    ! open occs file
+    call io_assign(iunit2)
+    open(unit = iunit2, file=trim(dir)//'/occs', iostat = err, &
+       form='formatted', action='read', status='old', recl = 200)
+
+    if(err .ne. 0) then
+      ierr = -1
+      call io_free(iunit)
+      call io_free(iunit2)
+    end if
+  end subroutine open_files
 
   subroutine fill() ! Put random function in orbitals that could not be read.
     do ik = 1, st%d%nik
@@ -228,4 +246,4 @@ contains
     endif
   end function index_is_wrong
 
-end function X(restart_read)
+end subroutine X(restart_read)

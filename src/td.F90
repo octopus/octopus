@@ -254,13 +254,14 @@ contains
 
 
   integer function init_wfs() result(ierr)
-    integer :: i, is
+    integer :: i, is, err
     character(len=50) :: filename
     FLOAT :: x
 
     ierr = 0
     if(.not.fromScratch) then
-      if(zrestart_read("tmp/restart_td", sys%st, sys%m) < 0) then
+      call zrestart_read("tmp/restart_td", sys%st, sys%m, err)
+      if(err.ne.0) then
         message(1) = "Could not load tmp/restart_td: Starting from scratch"
         call write_warning(1)
         
@@ -270,7 +271,7 @@ contains
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a,i2.2,i3.3)') 'tmp/restart_td/vprev_', i, is
-            ierr = dinput_function(filename, m, td%tr%v_old(1:m%np, is, i))
+            call dinput_function(filename, m, td%tr%v_old(1:m%np, is, i), ierr)
           end do
         end do
         
@@ -278,7 +279,8 @@ contains
     end if
 
     if(fromScratch) then
-      if(zrestart_read ("tmp/restart_gs", sys%st, sys%m) < 0) then
+      call zrestart_read ("tmp/restart_gs", sys%st, sys%m, ierr)
+      if(ierr.ne.0) then
         message(1) = "Could not load tmp/restart_gs: Starting from scratch"
         call write_warning(1)
         
@@ -536,7 +538,8 @@ contains
     call push_sub('td_write_data')
     
     ! first write resume file
-    if(zrestart_write("tmp/restart_td", st, m, iter).ne.(st%st_end-st%st_start+1)) then
+    call zrestart_write("tmp/restart_td", st, m, ierr, iter)
+    if(ierr.ne.0) then
       message(1) = 'Unsuccesfull write of "tmp/restart_td"'
       call write_fatal(1)
     end if
@@ -545,7 +548,11 @@ contains
     do i = 1, 2
       do is = 1, st%d%nspin
         write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
-        ierr = doutput_function(restart_format, "tmp/restart_td", filename, m, td%tr%v_old(1:m%np, is, i), M_ONE)
+        call doutput_function(restart_format, "tmp/restart_td", filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
+        if(ierr.ne.0) then
+          write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
+          call write_fatal(1)
+        end if
       end do
     end do
 

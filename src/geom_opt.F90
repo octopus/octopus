@@ -54,14 +54,15 @@ contains
     
     type(geom_opt_type) :: g_opt
     
-    integer :: i
+    integer :: i, err
     FLOAT, allocatable :: x(:)
     
     ierr = 0
     call init_()
 
     ! load wave-functions
-    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
       

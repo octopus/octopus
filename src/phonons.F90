@@ -48,13 +48,14 @@ contains
     type(hamiltonian_type), intent(inout) :: h
 
     type(phonons_type) :: ph
-    integer :: i, j, iunit
+    integer :: i, j, iunit, err
 
     ierr = 0
     call init_()
 
     ! load wave-functions
-    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
       

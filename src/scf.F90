@@ -134,7 +134,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
 
   type(lcao_type) :: lcao_data
 
-  integer :: iter, iunit, is, idim, nspin, dim, ierr
+  integer :: iter, iunit, is, idim, nspin, dim, err
   FLOAT :: evsum_out, evsum_in
   FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
   FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
@@ -238,7 +238,8 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
-      if(X(restart_write) ("tmp/restart_gs", st, m, iter).ne.st%nst) then
+      call X(restart_write) ("tmp/restart_gs", st, m, err, iter=iter)
+      if(err.ne.0) then
         message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
         call write_fatal(1)
       end if

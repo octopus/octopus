@@ -7,7 +7,7 @@ bin_PROGRAMS = octopus oct-excite @UTILITY_PROGRAMS@
 
 core_SRCS = liboct_parser.F90 io.F90 liboct.F90 global.F90 units.F90 \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
-	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
+	libxc.F90 vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
 	mesh.F90 nl_operator.F90 \
@@ -41,7 +41,8 @@ noinst_HEADERS = \
 	out_inc.F90 math_inc.F90\
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
-core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a @GSL_LIBS@ @LDFCFLAGS@
+core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a \
+  @GSL_LIBS@ @LDFCFLAGS@
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
 

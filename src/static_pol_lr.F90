@@ -39,13 +39,14 @@ contains
 
     type(lr_type) :: lr
     FLOAT :: pol(conf%dim, conf%dim)
-
+    integer :: err
     
     ierr = 0
     call init_()
 
     ! load wave-functions
-    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    if(err.ne.0) then
       message(1) = "Could not load wave-functions in pol_lr_run: Starting from scratch"
       call write_warning(1)
       
@@ -60,7 +61,7 @@ contains
     call X(system_h_setup) (sys, h)
     
     !if(.not.fromScratch) then ! try to load delta_psi
-    !  if(X(restart_read) ("tmp/restart_lr_static_pol", sys%st, sys%m).ne.sys%st%nst) then
+    !  if(X(restart_read) ("tmp/restart_lr_static_pol", sys%st, sys%m).ne.0) then
     fromScratch = .true.
 
     call lr_init(sys%st, sys%m, lr)

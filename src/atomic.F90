@@ -20,6 +20,7 @@
 module atomic
   use global
   use vxc
+  use lib_xc
   use logrid
 
   implicit none
@@ -246,24 +247,40 @@ contains
   logical :: GGA 
   integer :: IN, IN1, IN2, IR, IS, JN 
   FLOAT :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             & 
-              DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
-              DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       & 
-              EPSC, EPSX, F1, F2, GD(3,NSPIN)
+     DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
+     DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       & 
+     EPSC, EPSX, F1, F2, GD(3,NSPIN)
+
+  integer(POINTER_SIZE) :: x_conf, c_conf
   !external :: GGAXC, LDAXC 
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Set GGA switch                                                              !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! sanity check
+  ASSERT(NSPIN==1.or.NSPIN==2)
 
+  ! Set GGA switch                                                              !
   IF ( FUNCTL.EQ.'LDA' .OR. FUNCTL.EQ.'lda' .OR.                              &
-       FUNCTL.EQ.'LSD' .OR. FUNCTL.EQ.'lsd' ) THEN
-     GGA = .FALSE.
+     FUNCTL.EQ.'LSD' .OR. FUNCTL.EQ.'lsd' ) THEN
+    GGA = .FALSE.
   ELSEIF ( FUNCTL.EQ.'GGA' .OR. FUNCTL.EQ.'gga') THEN
-     GGA = .TRUE.
+    GGA = .TRUE.
   ELSE
-     WRITE(6,*) 'atomxc: Unknown functional ', FUNCTL
-     STOP
+    WRITE(6,*) 'atomxc: Unknown functional ', FUNCTL
+    STOP
   ENDIF
+
+  ! initialize xc functional
+  if(.not.GGA) then
+    call xc_lda_x_init(x_conf, NSPIN, 3, IREL)
+    if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
+       AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
+      call xc_lda_init(c_conf, XC_LDA_C_PZ, NSPIN)
+    else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
+      call xc_lda_init(c_conf, XC_LDA_C_PW, NSPIN)
+    else
+      WRITE(6,*) 'LDAXC: Unknown author ', AUTHOR
+      STOP     
+    end if
+  end if
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Initialize output                                                           !
@@ -350,7 +367,8 @@ contains
         CALL GGAXC( AUTHOR, IREL, NSPIN, D, GD,                               &
                     EPSX, EPSC, DEXDD, DECDD, DEXDGD, DECDGD )
      ELSE
-        CALL LDAXC( AUTHOR, IREL, NSPIN, D, EPSX, EPSC, DEXDD, DECDD )
+       call xc_lda(x_conf, D(1), EPSX, DEXDD(1))
+       call xc_lda(c_conf, D(1), EPSC, DECDD(1))
      ENDIF
 
 !       Add contributions to exchange-correlation energy and its
@@ -372,6 +390,7 @@ contains
             V_XC(IR,IS) = DEXDD(IS) + DECDD(IS)
         ENDIF
      130 CONTINUE
+
   140 CONTINUE
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -395,13 +414,17 @@ contains
   EC = EC / EUNIT
   DX = DX / EUNIT
   DC = DC / EUNIT
-  DO 180 IS = 1,NSPIN
-     DO 170 IR = 1,NR
-        V_XC(IR,IS) = V_XC(IR,IS) / EUNIT
-     170 CONTINUE
-  180 CONTINUE
+  DO IS = 1,NSPIN
+    DO IR = 1,NR
+      V_XC(IR,IS) = V_XC(IR,IS) / EUNIT
+    end DO
+  end DO
 
-  end subroutine atomxc
+  if(.not.GGA) then
+    call xc_lda_end(x_conf)
+    call xc_lda_end(c_conf)
+  end if
+end subroutine atomxc
 
 
 

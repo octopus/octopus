@@ -56,21 +56,28 @@ curv_uniform     = 1 #
 curv_gygi        = 2
 curv_briggs      = 3
 curv_modine      = 4
-<<<<<<< variables
 usdef            = 1 # Species block (type)
 point            = 2
 jelli            = 3
-ps_tm2           = 100
-ps_hgh           = 101
-=======
 tm2              = 100
 hgh              = 101
-ps_tm2           = 100
-ps_hgh           = 101
 
->>>>>>> 1.5
+# symbols for libxc
+x_lda            = 1    # Exchange
+c_wigner         = 2    # Wigner parametrization
+c_rpa            = 3    # Random Phase Approximation
+c_hl             = 4    # Hedin & Lundqvist
+c_gl             = 5    # Gunnarson & Lundqvist
+c_xalpha         = 6    # Slater's Xalpha
+c_vwn            = 7    # Vosko, Wilk, & Nussair
+c_pz             = 8    # Perdew & Zunger
+c_ob_pz          = 9    # Ortiz & Ballone (PZ)
+c_pw             = 10   # Perdew & Wang
+c_oc_pw          = 11   # Ortiz & Ballone (PW)
+c_lyp            = 12   # Lee, Yang, & Parr LDA
+c_amgb           = 13   # Attacalite et al
 
-#  symbols for oct-center-geom
+# symbols for oct-center-geom
 inertia          = 1  
 pseudo           = 2  
 large            = 3

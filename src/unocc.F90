@@ -45,7 +45,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   logical,                intent(inout) :: fromScratch
 
   type(eigen_solver_type) :: eigens
-  integer :: max_iter, iunit
+  integer :: max_iter, iunit, err
   FLOAT   :: conv
   logical :: converged
 
@@ -53,7 +53,9 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call init_()
 
   if(.not.fromScratch) then
-    if(X(restart_read)("tmp/restart_unocc", sys%st, sys%m) < 0) then
+    ! not all states will be read, that is the reason for the <0 instead of .ne.0
+    call X(restart_read)("tmp/restart_unocc", sys%st, sys%m, err)
+    if(err < 0) then
       message(1) = "Could not load tmp/restart_unocc: Starting from scratch"
       call write_warning(1)
 
@@ -62,7 +64,8 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
 
   if(fromScratch) then
-    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m) < 0) then
+    call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
+    if(err.ne.0) then
       message(1) = "Could not load tmp/restart_gs: Starting from scratch"
       call write_warning(1)
 
@@ -108,7 +111,8 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
   
   ! write restart information.
-  if(X(restart_write)("tmp/restart_unocc", sys%st, sys%m).ne.sys%st%nst) then
+  call X(restart_write)("tmp/restart_unocc", sys%st, sys%m, err)
+  if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
     call write_fatal(1)
   end if

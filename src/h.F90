@@ -152,7 +152,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   else
     ! initilize hartree and xc modules
     call poisson_init(m)
-    call xc_init(h%xc, geo%nlcc)
+    call xc_init(h%xc, geo%nlcc, states_dim%spin_channels)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
@@ -253,7 +253,7 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   FLOAT :: e
 #ifdef HAVE_MPI
   FLOAT :: s
-  integer :: ierr
+  integer :: err
 #endif 
 
   call push_sub('hamiltonian_energy')
@@ -264,7 +264,7 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   if(present(reduce)) then
     if(reduce) then
       call MPI_ALLREDUCE(e, s, 1, &
-           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, err)
       e = s
     end if
   end if
@@ -304,7 +304,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
   character(len=*),       intent(in) :: dir
   type(output_type),      intent(IN) :: outp
 
-  integer :: is, ierr
+  integer :: is, err
   character(len=80) :: fname  
   FLOAT :: u
 
@@ -312,16 +312,16 @@ subroutine hamiltonian_output(h, m, dir, outp)
 
   u = units_out%energy%factor
   if(outp%what(output_potential)) then
-    ierr = doutput_function(outp%how, dir, "v0", m, h%Vpsl, u)
+    call doutput_function(outp%how, dir, "v0", m, h%Vpsl, u, err)
 
     if(h%ep%classic_pot > 0) then
-      ierr = doutput_function(outp%how, dir, "vc", m, h%ep%Vclassic, u)
+      call doutput_function(outp%how, dir, "vc", m, h%ep%Vclassic, u, err)
     end if
 
     if(.not.h%ip_app) then
       do is = 1, min(h%d%ispin, 2)
         write(fname, '(a,i1)') 'vhxc-', is
-        ierr = doutput_function(outp%how, dir, fname, m, h%Vhxc(:, is), u)
+        call doutput_function(outp%how, dir, fname, m, h%Vhxc(:, is), u, err)
       end do
     end if
   end if

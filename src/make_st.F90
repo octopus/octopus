@@ -29,7 +29,7 @@ program make_st
   implicit none
 
   type(system_type) :: sys
-  integer :: i, n, ik, ist, idim, type
+  integer :: i, n, ik, ist, idim, type, err
   integer(POINTER_SIZE) :: blk
 
   ! Initialize stuff
@@ -44,7 +44,8 @@ program make_st
   allocate(sys%st%zpsi (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik), &
        sys%st%eigenval(sys%st%nst, sys%st%nik))
   
-  if(X(restart_read)("tmp/restart_gs", sys%st, sys%m) < 0) then
+  call X(restart_read)("tmp/restart_gs", sys%st, sys%m, err)
+  if(err < 0) then
     message(1) = "Error opening 'restart.static' file"
     call write_fatal(1)
   endif
@@ -71,7 +72,8 @@ program make_st
   call wf_renormalize()
 
   ! save wfs in a new static file
-  if(X(restart_write) ("tmp/restart_gs_new", sys%st, sys%m).ne.sys%st%nst) then
+  call X(restart_write) ("tmp/restart_gs_new", sys%st, sys%m, err)
+  if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "tmp/restart_gs_new"'
     call write_fatal(1)
   endif

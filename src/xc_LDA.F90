@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_lda (xcs, m, st, vxc, ex, ec)
+subroutine xc_get_lda(xcs, m, st, vxc, ex, ec)
   type(xc_type),     intent(in)  :: xcs
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
@@ -23,7 +23,7 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
   
   FLOAT, allocatable :: d(:), p(:), pd(:), pd1(:)
   FLOAT :: dtot, dpol, vpol, e
-  integer  :: i, ixc, is, ifunc, spin_channels
+  integer  :: i, ixc, is, spin_channels
 
   call push_sub('xc_lda')
 
@@ -47,34 +47,18 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
     end if
 
     pd = M_ZERO
-    functl_loop: do ixc = 0, N_X_FUNCTL+N_C_FUNCTL-1
-      if(.not.btest(xcs%functl, ixc)) cycle
-      ifunc = ibset(0, ixc)
-      if(.not.( &
-           ifunc == X_FUNC_LDA_NREL .or. &
-           ifunc == X_FUNC_LDA_REL  .or. &
-           ifunc == C_FUNC_LDA_PZ   .or. &
-           ifunc == C_FUNC_LDA_PW92 .or. &
-           ifunc == C_FUNC_LDA_ATTA) ) cycle
+    functl_loop: do ixc = 1, XC_LDA_N
+      if(.not.btest(xcs%lda_functl, ixc)) cycle
 
-      select case(ifunc)
-      case(X_FUNC_LDA_NREL)
-        call exchange(spin_channels, d, e, pd1, 0)
-      case(X_FUNC_LDA_REL)
-        call exchange(spin_channels, d, e, pd1, 1)
-      case(C_FUNC_LDA_PZ)
-        call correlation_lda_3D_pz(spin_channels, d, e, pd1)
-      case(C_FUNC_LDA_PW92)
-        call correlation_lda_3D_pw92(spin_channels, d, e, pd1)
-      case(C_FUNC_LDA_ATTA)
-        call correlation_lda_2D_atta(spin_channels, d, e, pd1)
-      end select
+      ! call xc library
+      call xc_lda(xcs%lda_conf(ixc), d(1), e, pd1(1))
 
-      if(ixc < N_X_FUNCTL) then
+      if(ixc == XC_LDA_X) then
         ex = ex + sum(d(1:spin_channels)) * e * m%vol_pp(i)
       else
         ec = ec + sum(d(1:spin_channels)) * e * m%vol_pp(i)
       end if
+
       pd = pd + pd1
     end do functl_loop
 
@@ -96,4 +80,4 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
   deallocate(d, p, pd, pd1)
 
   call pop_sub()
-end subroutine xc_lda
+end subroutine xc_get_lda

@@ -33,7 +33,7 @@ program excitations
 
   type(system_type) :: sys
   type(states_type), target :: st
-  integer :: n_occ, n_unocc, flags(32)
+  integer :: n_occ, n_unocc, flags(32), err
   character(len=100) :: ch
   logical :: from_scratch, l
 
@@ -61,7 +61,8 @@ program excitations
   st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
   call states_end(sys%st)
 
-  if(X(restart_read) ("tmp/restart_occ", st, sys%m).ne.st%nst) then
+  call X(restart_read) ("tmp/restart_occ", st, sys%m, err)
+  if(err.ne.0) then
     message(1) = "Error opening 'restart.occ' file"
     call write_fatal(1)
   endif

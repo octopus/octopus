@@ -25,7 +25,8 @@ use lib_adv_alg
 use mesh
 use poisson
 use states
-use vxc
+use lib_xc
+use vxc ! WARNING: this has to go
 
 implicit none
 
@@ -96,7 +97,11 @@ type xc_type
   ! for the OEP
   integer  :: oep_level  ! 0 = Slater, 1 = KLI, 2 = full OEP
   FLOAT :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
+
+  integer               :: lda_functl
+  integer(POINTER_SIZE) :: lda_conf(XC_LDA_N)
 end type xc_type
+
 
 type xc_oep_type
   integer           :: eigen_n
@@ -121,15 +126,15 @@ subroutine xc_write_info(xcs, iunit)
   if(mpiv%node == 0) then
 #endif
 
-    do i = 0, N_X_FUNCTL+N_C_FUNCTL-1
-      if(btest(xcs%functl, i)) then
-        if(i < N_X_FUNCTL) then
-          write(iunit, '(6x,a,a)') 'Exchange    : ', xc_name_functionals(i+1)
-        else
-          write(iunit, '(6x,a,a)') 'Correlation : ', xc_name_functionals(i+1)
-        end if
-      end if
-    end do
+!    do i = 0, N_X_FUNCTL+N_C_FUNCTL-1
+!      if(btest(xcs%functl, i)) then
+!       if(i < N_X_FUNCTL) then
+!         write(iunit, '(6x,a,a)') 'Exchange    : ', xc_name_functionals(i+1)
+!       else
+!          write(iunit, '(6x,a,a)') 'Correlation : ', xc_name_functionals(i+1)
+!       end if
+!     end if
+!   end do
 
     if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
       write(iunit, '(a)') 'The OEP equation will be handle at the level of:'
@@ -145,82 +150,89 @@ subroutine xc_write_info(xcs, iunit)
 #endif
 end subroutine xc_write_info
 
-subroutine xc_init(xcs, nlcc)
+subroutine xc_init(xcs, nlcc, spin_channels)
   type(xc_type), intent(out) :: xcs
   logical, intent(in) :: nlcc
+  integer, intent(in) :: spin_channels
 
-  character(len=50) :: func
+  integer :: func, rel
+  FLOAT :: alpha
 
   call push_sub('xc_init')
 
-  xcs%nlcc   = nlcc  ! make a copy of falg indicating non-local core corrections
+  xcs%nlcc   = nlcc  ! make a copy of flag indicating non-local core corrections
   xcs%family = 0     ! initialize xc family and functional to zero
   xcs%functl = 0
 
+  xcs%lda_functl = 0
+
   ! set the appropriate flags
-  call loct_parse_string('XFunctional', 'LDA', func)
-  select case(func(1:4))
-  case('ZER ')
-  case('LDA ')
+  call loct_parse_int('XFunctional', XC_LDA_X, func)
+  select case(func)
+  case(0)
+  case(XC_LDA_X)
     xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, X_FUNC_LDA_NREL)
-  case('RLDA')
-    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, X_FUNC_LDA_REL)
-  case('PBE')
-    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-    xcs%functl = ior(xcs%functl, X_FUNC_GGA_PBE)
-  case('RPBE')
-    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-    xcs%functl = ior(xcs%functl, X_FUNC_GGA_PBER)
-  case('LB94')
-    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-    xcs%functl = ior(xcs%functl, X_FUNC_GGA_LB94)
-  case('PKZB')
-    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
-    xcs%functl = ior(xcs%functl, X_FUNC_MGGA_PKZB)
-  case('EXX ')
-    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
-    xcs%functl = ior(xcs%functl, X_FUNC_OEP_X)
-  case('SIC ')
-    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
-    xcs%functl = ior(xcs%functl, X_FUNC_OEP_SIC)
+    xcs%lda_functl = ibset(xcs%lda_functl, XC_LDA_X)
+    call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
+    call xc_lda_x_init(xcs%lda_conf(XC_LDA_X), spin_channels, conf%dim, rel)
+    
+!  case('PBE')
+!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
+!    xcs%functl = ior(xcs%functl, X_FUNC_GGA_PBE)
+!  case('RPBE')
+!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
+!    xcs%functl = ior(xcs%functl, X_FUNC_GGA_PBER)
+!  case('LB94')
+!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
+!    xcs%functl = ior(xcs%functl, X_FUNC_GGA_LB94)
+!  case('PKZB')
+!    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
+!    xcs%functl = ior(xcs%functl, X_FUNC_MGGA_PKZB)
+!  case('EXX ')
+!    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
+!    xcs%functl = ior(xcs%functl, X_FUNC_OEP_X)
+!  case('SIC ')
+!    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
+!    xcs%functl = ior(xcs%functl, X_FUNC_OEP_SIC)
   case default
-    write(message(1), '(a,a,a)') "'", trim(func), "' is not a known exchange functional!"
+    write(message(1), '(a,i3,a)') "'", func, "' is not a known exchange functional!"
     message(2) = "Please check the manual for a list of possible values."
     call write_fatal(2)
   end select
 
   ! now the correlation
-  call loct_parse_string('CFunctional', 'PZ81', func)
-  select case(func(1:4))
-  case('ZER ')
-  case('PZ81')
+  call loct_parse_int('CFunctional', XC_LDA_C_PZ, func)
+  select case(func)
+  case(0)
+
+  case(XC_LDA_C_WIGNER, XC_LDA_C_RPA, XC_LDA_C_HL, XC_LDA_C_GL, XC_LDA_C_XALPHA, &
+     XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
+     XC_LDA_C_LYP, XC_LDA_C_AMGB)
+    
     xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, C_FUNC_LDA_PZ)
-  case('PW92')
-    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, C_FUNC_LDA_PW92)
-  case('ATTA')
-    if(conf%dim.ne.2) then
-      message(1) = 'Attacalite et al. correlation potential is only suited for 2D'
-      call write_fatal(1)
-    endif
-    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, C_FUNC_LDA_ATTA)
-  case('PBE ')
-    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-    xcs%functl = ior(xcs%functl, C_FUNC_GGA_PBE)
-  case('PKZB')
-    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
-    xcs%functl = ior(xcs%functl, C_FUNC_MGGA_PKZB)
-  case('SIC ')
-    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
-    xcs%functl = ior(xcs%functl, C_FUNC_OEP_SIC)
+    if(func.ne.XC_LDA_C_XALPHA) then
+      xcs%lda_functl = ibset(xcs%lda_functl, func)
+      call xc_lda_init(xcs%lda_conf(func), func, spin_channels)
+    else
+      call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
+      ! WARNING: check what is the most convenient default for alpha
+      call loct_parse_float('Xalpha', -M_ONE/M_THREE, alpha) 
+      call xc_lda_c_xalpha_init(xcs%lda_conf(func), spin_channels, conf%dim, rel, alpha)
+    end if
+
+!  case('PBE ')
+!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
+!    xcs%functl = ior(xcs%functl, C_FUNC_GGA_PBE)
+!  case('PKZB')
+!    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
+!    xcs%functl = ior(xcs%functl, C_FUNC_MGGA_PKZB)
+!  case('SIC ')
+!    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
+!    xcs%functl = ior(xcs%functl, C_FUNC_OEP_SIC)
   case default
-    write(message(1), '(a,a,a)') "'", trim(func), &
-         "' is not a known correlation functional family!"
-    message(2) = "(CFamily = ZER | LDA | GGA | OEP)"
+    write(message(1), '(a,i3,a)') "'", func, &
+         "' is not a known correlation functional functional!"
+    message(2) = "Please check the manual for a list of possible values."
     call write_fatal(2)
   end select
 
@@ -231,42 +243,50 @@ subroutine xc_init(xcs, nlcc)
   end if
 #endif
 
+  !! SHOULD CHECK IF IN 1 OR 2D ATTA is used.
+
   ! the SIC potential has an LDA part, so let us add it
-  if(iand(xcs%functl, X_FUNC_OEP_SIC).ne.0) then
-    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, X_FUNC_LDA_NREL)
-  end if
-  if(iand(xcs%functl, C_FUNC_OEP_SIC).ne.0) then
-    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%functl = ior(xcs%functl, C_FUNC_LDA_PZ)
-  end if
-
-  ! Extra parameters to fine-tune LB94 potential.
-  if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-    call loct_parse_float("LB94_beta", CNST(0.05), xcs%lb94_beta)
-    call loct_parse_float("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
-    call loct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
-  end if
-
-  if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
-    call loct_parse_int("OEP_level", 1, xcs%oep_level)
-    if(xcs%oep_level<0.or.xcs%oep_level>2) then
-      message(1) = "OEP_level can only take the values:"
-      message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
-      call write_fatal(2)
-    end if
-    if(xcs%oep_level == 2) then
-      call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
-    end if
-
-  end if
+!!$  if(iand(xcs%functl, X_FUNC_OEP_SIC).ne.0) then
+!!$    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
+!!$    xcs%functl = ior(xcs%functl, X_FUNC_LDA_NREL)
+!!$  end if
+!!$  if(iand(xcs%functl, C_FUNC_OEP_SIC).ne.0) then
+!!$    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
+!!$    xcs%functl = ior(xcs%functl, C_FUNC_LDA_PZ)
+!!$  end if
+!!$
+!!$  ! Extra parameters to fine-tune LB94 potential.
+!!$  if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
+!!$    call loct_parse_float("LB94_beta", CNST(0.05), xcs%lb94_beta)
+!!$    call loct_parse_float("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
+!!$    call loct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
+!!$  end if
+!!$
+!!$  if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
+!!$    call loct_parse_int("OEP_level", 1, xcs%oep_level)
+!!$    if(xcs%oep_level<0.or.xcs%oep_level>2) then
+!!$      message(1) = "OEP_level can only take the values:"
+!!$      message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
+!!$      call write_fatal(2)
+!!$    end if
+!!$    if(xcs%oep_level == 2) then
+!!$      call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
+!!$    end if
+!!$
+!!$  end if
 
   call pop_sub()
 end subroutine xc_init
 
 subroutine xc_end(xcs)
   type(xc_type), intent(inout) :: xcs
-  return
+
+  integer :: ixc
+
+  do ixc = 1, XC_LDA_N
+    if(btest(xcs%lda_functl, ixc)) call xc_lda_end(xcs%lda_conf(ixc))
+  end do
+
 end subroutine xc_end
 
 ! A couple of auxiliary functions for oep
