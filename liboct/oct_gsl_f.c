@@ -150,6 +150,48 @@ double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
 }
 
 
+/* This function returns the number of points with which a spline
+was constructed (the size compoent of the gsl_spline struct).
+It is an obfuscated line that I do not really understand even though
+I wrote it, so those of you who actually know C please correct it */
+int FC_FUNC_(oct_spline_npoints, OCT_SPLINE_NPOINTS)
+                 (void **spl)
+{  return (int)(* ( (gsl_spline *)(*spl) ) ).size ; }
+
+/* This function places in the x array the x values of a given spline spl*/ 
+void FC_FUNC_(oct_spline_x, OCT_SPLINE_X)
+     (void **spl, double *x)
+{
+  int d,i;
+
+  d = (int)(* ( (gsl_spline *)(*spl) ) ).size;
+  for(i=0;i<=d;i++){
+     x[i] = (* ( (gsl_spline *)(*spl) ) ).x[i];
+  }
+  return;
+}
+
+/* This function places in the y array the y values of a given spline spl*/ 
+void FC_FUNC_(oct_spline_y, OCT_SPLINE_Y)
+     (void **spl, double *y)
+{
+  int d,i;
+
+  d = (int)(* ( (gsl_spline *)(*spl) ) ).size;
+  for(i=0;i<=d;i++){
+     y[i] = (* ( (gsl_spline *)(*spl) ) ).y[i];
+  }
+  return;
+}
+
+/* Returns the integral of the spline stored in spl, between a and b */
+double FC_FUNC_(oct_spline_eval_integ, OCT_SPLINE_EVAL_INTEG)
+     (void **spl, double *a, double *b, void **acc)
+{
+  return gsl_spline_eval_integ((gsl_spline *)(*spl), *a, *b, (gsl_interp_accel *)(* acc));
+}
+
+
 /* Chebyshev Approximations */
 /*
 void FC_FUNC_(oct_chebyshev_coeffs, OCT_CHEBYSHEV_COEFFS)
