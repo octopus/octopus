@@ -83,6 +83,7 @@ end type specie_type
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine specie_debug(dir, s)
     character(len=*), intent(in)  :: dir
     type(specie_type), intent(in) :: s
@@ -120,16 +121,24 @@ contains
     call pop_sub()
   end subroutine specie_debug
 
+
+  ! ---------------------------------------------------------
   subroutine specie_filter(s, gmax)
     type(specie_type),     intent(inout) :: s
     FLOAT, intent(in) :: gmax
-    call push_sub('specie_cutoff')
+
+    call push_sub('specie_filter')
+
     call ps_filter(s%ps, gmax, s%alpha, s%beta, s%rcut, s%beta2)
     call ps_getradius(s%ps)
     call ps_derivatives(s%ps)
-    call pop_sub(); return
+
+    call pop_sub()
+
   end subroutine specie_filter
 
+
+  ! ---------------------------------------------------------
   subroutine specie_read(s, label)
     type(specie_type),     intent(inout) :: s
     character(len=*), intent(in) :: label
@@ -199,6 +208,8 @@ contains
     call pop_sub()
   end subroutine specie_read
 
+
+  ! ---------------------------------------------------------
   subroutine read_from_default_file(iunit, read_data, s)
     integer,           intent(in)    :: iunit
     integer,           intent(inout) :: read_data
@@ -241,6 +252,8 @@ contains
     call pop_sub()
   end subroutine read_from_default_file
 
+
+  ! ---------------------------------------------------------
   subroutine read_from_block(blk, row, s, read_data)
     integer(POINTER_SIZE), intent(in) :: blk
     integer, intent(in) :: row
@@ -322,6 +335,8 @@ contains
     call pop_sub()
   end subroutine read_from_block
 
+
+  ! ---------------------------------------------------------
   subroutine specie_init(s, ispin)
     type(specie_type), intent(inout) :: s
     integer,           intent(in)    :: ispin
@@ -343,6 +358,7 @@ contains
 
     call pop_sub()
   end subroutine specie_init
+
 
   ! ---------------------------------------------------------
   subroutine specie_end(ns, s)
@@ -367,6 +383,7 @@ contains
   end subroutine specie_end
 
 
+  ! ---------------------------------------------------------
   FLOAT function specie_get_local(s, x) result(l)
     type(specie_type), intent(in) :: s
     FLOAT,             intent(in) :: x(3)

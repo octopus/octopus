@@ -259,8 +259,8 @@ subroutine solve_schroedinger(psf)
    case('pb');   functl = 'GGA'
    case default; functl = 'LDA'
   end select
-  irel = 0; if(psf%irel=='rel') irel = 1
-  call atomhxc(functl, irel, psf%g, 1, rho(:, 1:1), ve(:, 1:1), psf%chcore)
+  !irel = 0; if(psf%irel=='rel') irel = 1
+  call atomhxc(functl, psf%g, 1, rho(:, 1:1), ve(:, 1:1), psf%chcore)
  
   ! Calculation of the pseudo-wave functions.
   !       rphi(1:nrval, 1:psf%conf%p, :) : radial pseudo-wave functions. They are normalized so that
@@ -344,7 +344,7 @@ subroutine solve_schroedinger(psf)
       if(iter>1) rho = 0.5*rho + 0.5*prev
       !write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
       !call write_info(1)
-      call atomhxc(functl, irel, psf%g, 2, rho, ve, psf%chcore)
+      call atomhxc(functl, psf%g, 2, rho, ve, psf%chcore)
     enddo self_consistent
 
   endif spin_polarized
@@ -622,7 +622,7 @@ subroutine ghost_analysis(pstm, lmax)
    case default; functl = 'LDA'
   end select
   irel = 0; if(pstm%irel=='rel') irel = 1
-  call atomhxc(functl, irel, pstm%g, 1, pstm%rho_val, ve(:), pstm%chcore)
+  call atomhxc(functl, pstm%g, 1, pstm%rho_val, ve(:), pstm%chcore)
 
   s(2:pstm%nrval) = pstm%g%drdi(2:pstm%nrval)**2
   s(1) = s(2)

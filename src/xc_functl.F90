@@ -71,7 +71,7 @@ contains
     type(xc_functl_type), intent(out) :: functl
     integer,              intent(in)  :: spin_channels
       
-    integer :: rel, j
+    integer :: j
     FLOAT :: alpha
       
     ! initialize structure
@@ -86,9 +86,8 @@ contains
         
     case(XC_LDA_X)
       functl%family = XC_FAMILY_LDA
-      call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
       call xc_lda_init(functl%conf, functl%info, XC_LDA_X, &
-         spin_channels, conf%dim, rel)
+         spin_channels, conf%dim)
       
     case(XC_GGA_X_PBE, XC_GGA_XC_LB)
       functl%family = XC_FAMILY_GGA
@@ -124,7 +123,6 @@ contains
     type(xc_functl_type), intent(out) :: functl
     integer,              intent(in)  :: spin_channels
     
-    integer :: rel
     FLOAT :: alpha
 
     ! initialize structure
@@ -151,10 +149,9 @@ contains
       if(functl%id.ne.XC_LDA_C_XALPHA) then
         call xc_lda_init(functl%conf, functl%info, functl%id, spin_channels)
       else
-        call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
         call loct_parse_float('Xalpha', M_ONE, alpha) 
         call xc_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
-           spin_channels, conf%dim, rel, alpha)
+           spin_channels, conf%dim, alpha)
       end if
       
     case(XC_GGA_C_PBE)

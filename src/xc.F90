@@ -40,6 +40,7 @@ public :: xc_type, &
           xc_oep_SpinFactor, &
           xc_oep_AnalizeEigen, &
           xc_get_vxc, &
+          xc_get_fxc, &
           dxc_KLI_solve, zxc_KLI_solve, &
           doep_x, zoep_x, &
           doep_sic, zoep_sic
@@ -287,6 +288,7 @@ contains
 
 ! -----------------------------------------------------------
 #include "xc_pot.F90"
+#include "xc_fxc.F90"
 
 #include "undef.F90"
 #include "real.F90"

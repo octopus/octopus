@@ -99,9 +99,9 @@ contains
     enddo
   end subroutine read_valconf
 
-  subroutine atomhxc(functl, irel, g, nspin, dens, v, extra)
+  subroutine atomhxc(functl, g, nspin, dens, v, extra)
     character(len=*),  intent(in)  :: functl
-    integer,           intent(in)  :: irel, nspin
+    integer,           intent(in)  :: nspin
     type(logrid_type), intent(IN)  :: g
     FLOAT,             intent(IN)  :: dens(g%nrval, nspin)
     FLOAT,             intent(out) :: v(g%nrval, nspin)
@@ -151,7 +151,7 @@ contains
        enddo
     enddo
 
-    call atomxc(xcfunc, xcauth, irel, g%nrval, g%nrval, g%rofi, &
+    call atomxc(xcfunc, xcauth, g%nrval, g%nrval, g%rofi, &
                 nspin, rho, ex, ec, dx, dc, xc)
 
     v = ve + xc
@@ -181,7 +181,6 @@ contains
 !                     the local density limit of the next:                    !
 !          PBE => GGA Perdew, Burke & Ernzerhof, PRL 77, 3865 (1996)      !
 !                     Uppercase is optional                                   !
-! INTEGER IREL         : Relativistic exchange? (0=>no, 1=>yes)               !
 ! INTEGER NR           : Number of radial mesh points                         !
 ! INTEGER MAXR         : Physical first dimension of RMESH, DENS and V_XC     !
 ! REAL*8  RMESH(MAXR)  : Radial mesh points                                   !
@@ -201,7 +200,7 @@ contains
 ! ********* ROUTINES CALLED *****************************************         !
 ! GGAXC, LDAXC                                                                !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine atomxc( FUNCTL, AUTHOR, IREL,                                    &
+  subroutine atomxc( FUNCTL, AUTHOR,                                          &
                      NR, MAXR, RMESH, NSPIN, DENS,                            &
                      EX, EC, DX, DC, V_XC )
   use global
@@ -213,7 +212,7 @@ contains
   implicit none
 
   character(len=*) :: FUNCTL, AUTHOR
-  integer :: IREL, MAXR, NR, NSPIN
+  integer :: MAXR, NR, NSPIN
   FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR), V_XC(MAXR,NSPIN)
   FLOAT :: DC, DX, EC, EX
 
@@ -272,7 +271,7 @@ contains
     call xc_gga_init(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
     call xc_gga_init(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
   else
-    call xc_lda_init(x_conf, x_info, XC_LDA_X, NSPIN, 3, IREL)
+    call xc_lda_init(x_conf, x_info, XC_LDA_X, NSPIN, 3)
     if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
       call xc_lda_init(c_conf, c_info, XC_LDA_C_PZ, NSPIN)

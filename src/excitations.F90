@@ -33,6 +33,7 @@ program excitations
 
   type(system_type) :: sys
   type(states_type), target :: st
+  type(xc_type) :: xcs
   integer :: n_occ, n_unocc, flags(32), err
   character(len=100) :: ch
   logical :: from_scratch, l
@@ -74,8 +75,9 @@ program excitations
   call loct_parse_string("ExciteStates", "1-1024", ch)
   call loct_wfs_list(ch, flags)
 
-  ! initialize Poisson solver
+  ! initialize Poisson solver and xc functionals
   call poisson_init(sys%m)
+  call xc_init(xcs, sys%geo%nlcc, st%d%spin_channels)
 
   ! should we start from scratch, or use restart file
   call loct_parse_logical("FromScratch", .false., from_scratch)
@@ -84,18 +86,18 @@ program excitations
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
   call loct_parse_logical("LinEigenvalues", .true., l)
-  if(l) call LR_el_excitations(0, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'eps-diff', from_scratch)
+  if(l) call LR_el_excitations(0, st, sys%m, sys%f_der, xcs, n_occ, n_unocc, flags, 'eps-diff', from_scratch)
   
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
   call loct_parse_logical("LinPetersilka", .true., l)
-  if(l) call LR_el_excitations(1, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'petersilka', from_scratch)
+  if(l) call LR_el_excitations(1, st, sys%m, sys%f_der, xcs, n_occ, n_unocc, flags, 'petersilka', from_scratch)
 
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
   call loct_parse_logical("LinCasida", .true., l)
-  if(l) call LR_el_excitations(2, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'casida', from_scratch)
+  if(l) call LR_el_excitations(2, st, sys%m, sys%f_der, xcs, n_occ, n_unocc, flags, 'casida', from_scratch)
 
   call poisson_end()
   call global_end()

@@ -160,14 +160,14 @@ contains
     end if
 
     open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-       action=trim(action_), iostat=iostat)
+       action=trim(action_), position=trim(position_), iostat=iostat)
 
     if(iostat.ne.0) then
       call io_free(iunit)
       iunit = -1
       if(die_) then
-        write(*, '(4a)') '*** IO Error: Could not open file "', trim(file_), &
-           '" for action="', trim(action_)
+        write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
+           '" for action="', trim(action_), '"'
         stop 'io_open'
       end if
     end if

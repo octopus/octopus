@@ -519,7 +519,7 @@ subroutine solve_schroedinger(psp)
     !  write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
     !  call write_info(1)
     !endifq
-    call atomhxc('LDA', 1, psp%g, 1, rho, ve)
+    call atomhxc('LDA', psp%g, 1, rho, ve)
 
   enddo self_consistent
 

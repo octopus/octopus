@@ -523,7 +523,7 @@ contains
 #if defined(HAVE_NETCDF)
   ! ---------------------------------------------------------
   subroutine dx_cdf()
-    character(len=256) :: filename
+    character(len=512) :: filename
     integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf)) :: c

@@ -114,22 +114,20 @@ module lib_xc
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_lda_init_
-    subroutine xc_lda_x_init(p, info, functional, nspin, dim, rel)
+    subroutine xc_lda_x_init(p, info, functional, nspin, dim)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
       integer,               intent(in)  :: dim    ! 2 or 3 dimensions
-      integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
     end subroutine xc_lda_x_init
     
-    subroutine xc_lda_c_xalpha_init(p, info, functional, nspin, dim, rel, alpha)
+    subroutine xc_lda_c_xalpha_init(p, info, functional, nspin, dim, alpha)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
       integer,               intent(in)  :: dim    ! 2 or 3 dimensions
-      integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
       FLOAT,                 intent(in)  :: alpha  ! Ec = alpha Ex
     end subroutine xc_lda_c_xalpha_init
   end interface
@@ -145,6 +143,12 @@ module lib_xc
       FLOAT,                 intent(out) :: e     ! the energy per unit particle
       FLOAT,                 intent(out) :: v     ! v(nspin) the potential
     end subroutine xc_lda
+
+    subroutine xc_lda_fxc(p, rho, fxc)
+      integer(POINTER_SIZE), intent(in)  :: p
+      FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
+      FLOAT,                 intent(out) :: fxc   ! v(nspin,nspin) the xc kernel
+    end subroutine xc_lda_fxc
   end interface
 
 
