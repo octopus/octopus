@@ -10,7 +10,7 @@ core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \
 	specie.F90 atom.F90 geometry.F90\
-	poisson.F90 out.F90 states.F90 xc.F90 mix.F90
+	poisson.F90 out.F90 crystal.F90 states.F90 xc.F90 mix.F90
 
 octopus_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
@@ -31,7 +31,7 @@ noinst_HEADERS = \
 	epot_inc.F90 \
 	h_inc.F90 h_xc_OEP.F90 h_so.F90 \
 	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90\
-	states_inc.F90 states_kpoints.F90\
+	crystal.F90 states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
 	out_inc.F90 math_inc.F90\
