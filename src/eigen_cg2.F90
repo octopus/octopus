@@ -127,7 +127,12 @@ subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, re
         ! Upgrade psi...
         a0 = cos(theta)
         b0 = sin(theta)/cg0
-        st%X(psi)(:,:, p, ik) = a0*st%X(psi)(:,:, p, ik) + b0*cg(:,:)
+        ! This does the sum: st%X(psi)(:, :, p, ik) = a0*st%X(psi)(:, :, p, ik) + b0*cg(:, :)
+        ! It can crash in Intel compiler version 8 otherwise.
+        do j = 1, st%dim
+           call lalg_scal(np, a0, st%X(psi)(:, j, p, ik))
+           call lalg_axpy(np, b0, cg(:, j), st%X(psi)(:, j, p, ik))
+        enddo
         
         ! Calculate H|psi>
         h_psi = a0*h_psi + b0*ppsi
@@ -177,3 +182,5 @@ subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, re
  
   call pop_sub()
 end subroutine eigen_solver_cg2
+
+
