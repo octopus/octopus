@@ -104,7 +104,6 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
     call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%rho_core, &
          h%Vxc, v_aux, h%ex, h%ec)
     h%Vxc = h%Vxc + v_aux
-      h%vxc(:, 1) = -0.5_r8*h%vhartree(:)
     do i = 1, sys%st%nspin
       h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
     end do
