@@ -115,6 +115,7 @@ contains
              hm(korder, korder),         &
              expo(korder, korder),      &
              hh(korder))
+    v(0, :, :) = M_z0
 
     ! Normalize input vector, and put it into v(:, :, 1)
     nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi(1:sys%m%np, 1:sys%st%dim))
@@ -187,7 +188,7 @@ contains
 
   subroutine suzuki
     real(r8) :: p, tim(5), tt, dt(5), pp(5)
-    integer :: ist, ik, k
+    integer :: ist, k
 
     sub_name = 'suzuki'; call push_sub()
 

@@ -35,7 +35,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
               localdedd_x(st%spin_channels), localdedgd_x(3, st%spin_channels)
   complex(r8), allocatable :: u(:, :, :)
 
-  integer :: i, is, in, ic, ind(3), k
+  integer :: i, j, is, in, ic, ind(3), k
 
   sub_name = 'xc_gga'; call push_sub()
 
@@ -129,7 +129,8 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
        do ic = 1, 3
           if(ind(ic) > 0) then
             if(st%ispin == SPINORS) then
-               call to_local (glob(:, ic),             loc,  u(:, :, ind(ic)))
+               j = ind(ic)
+               call to_local (glob(:, ic), loc,  u(:, :, j))
             else
                loc(:) = localdedgd(ic, :)
             endif
