@@ -1,69 +1,42 @@
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
+#include "global.h"
+
 program centergeom
   use global
   use units
-  use lib_oct_parser
-  use atom
   use geometry
+  use xyz_adjust
 
   implicit none
 
-  integer :: iunit, i
-  character(len=80) :: label, str
+  FLOAT :: dummy
   type(geometry_type) :: geo
 
-  call global_init()
+  call global_init()                       ! initialize
+
   call units_init()
+  call geometry_init_xyz(geo)              ! we need the geometry
+  call geometry_init_species(geo, dummy)   ! we also need the masses
 
-  if(loct_parse_isdef("PDBCoordinates").ne.0) then
-    call loct_parse_string('PDBCoordinates', 'coords.pdb', label)
-    call io_assign(iunit)
-    open(iunit, status='unknown', file=trim(label))
-    call loadPDB(iunit, geo)
-    call io_close(iunit)
-  elseif(loct_parse_isdef("XYZCoordinates").ne.0) then
-    call loct_parse_string('XYZCoordinates', 'coords.xyz', label)
-    call io_assign(iunit)
-    open(iunit, status='unknown', file=trim(label))
-    read(iunit, *) geo%natoms
-    read(iunit, *) ! skip comment line
-    allocate(geo%atom(geo%natoms))
-    nullify(geo%catom); geo%ncatoms = 0;
-    do i = 1, geo%natoms
-       read(iunit,*) geo%atom(i)%label, geo%atom(i)%x(:)
-       geo%atom(i)%move = .true.
-    end do
-    call io_close(iunit)
-  else
-    str = "Coordinates"
-    geo%natoms = loct_parse_block_n(str)
-    if(geo%natoms <= 0) then
-      message(1) = "Input: Coordinates block not specified"
-      message(2) = '% Coordinates'
-      message(3) = '  specie  x  y  z  move'
-      message(4) = '%'
-      call write_fatal(4)
-    end if
-      
-    allocate(geo%atom(geo%natoms))
-    nullify(geo%catom); geo%ncatoms = 0
-    do i = 1, geo%natoms
-       call loct_parse_block_string(str, i-1, 0, geo%atom(i)%label)
-       call loct_parse_block_float  (str, i-1, 1, geo%atom(i)%x(1))
-       call loct_parse_block_float  (str, i-1, 2, geo%atom(i)%x(2))
-       call loct_parse_block_float  (str, i-1, 3, geo%atom(i)%x(3))
-       call loct_parse_block_logical(str, i-1, 4, geo%atom(i)%move)
-    end do
-  endif
-
-  ! units conversion
-  do i = 1, geo%natoms
-    geo%atom(i)%x = geo%atom(i)%x * units_inp%length%factor
-  end do
-  do i = 1, geo%ncatoms
-    geo%catom(i)%x = geo%catom(i)%x * units_inp%length%factor
-  end do
-  
-  call geometry_adjust(geo)
+  call xyz_adjust_it(geo)
   call atom_write_xyz(".", "adjusted", geo)
 
+  call geometry_end(geo)                   ! clean up
+  call global_end()
 end program centergeom

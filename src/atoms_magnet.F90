@@ -42,7 +42,8 @@ program atoms_magnet
   call global_init()
   call units_init()
   call mesh_init(m)
-  call geometry_init(geo, val_charge)
+  call geometry_init_xyz(geo)
+  call geometry_init_species(geo, val_charge)
   allocate(st)
   call states_init(st, m, val_charge, geo%nlcc)
   if (st%d%ispin /= SPINORS) then

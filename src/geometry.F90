@@ -26,11 +26,12 @@ module geometry
   use mesh_function
   use atom
   use specie
+  use xyz_file
 
   implicit none
 
   type geometry_type
-    character(len=20)          :: sysname    ! the name of the system we are running
+    character(len=20) :: sysname    ! the name of the system we are running
 
     integer :: natoms
     type(atom_type), pointer :: atom(:)
@@ -49,93 +50,62 @@ module geometry
 
 contains
 
-subroutine geometry_init(geo, val_charge, no_species_init)
+subroutine geometry_init_xyz(geo)
   type(geometry_type), intent(inout) :: geo
-  FLOAT,               intent(out), optional :: val_charge
-  logical,             intent(in),  optional :: no_species_init
 
   integer :: iunit, i, j
   integer(POINTER_SIZE) :: random_gen_pointer
   character(len=80) :: str, label
   FLOAT :: temperature, sigma, x(3), kin1, kin2
+  type(xyz_file_info) :: xyz
 
   call push_sub('geometry_init')
 
   ! get the name of the system
   call loct_parse_string('SystemName', 'system', geo%sysname)
 
-  ! this is not very nice, but it is needed for the xyzanim
-  if (present(no_species_init)) then
-    if (.not.no_species_init) geo%nspecies = specie_init(geo%specie)
-  else
-    geo%nspecies = specie_init(geo%specie)
-  end if
+  ! load positions of the atoms
+  call xyz_file_init(xyz)
+  call xyz_file_read('Coordinates', xyz)
 
-  if(conf%dim == 3.and.loct_parse_isdef("PDBCoordinates").ne.0) then
-    call loct_parse_string('PDBCoordinates', 'coords.pdb', label)
-
-    call io_assign(iunit)
-    open(iunit, status='unknown', file=trim(label))
-    call loadPDB(iunit, geo)
-    do i = 1, geo%natoms
-      geo%atom(i)%spec => geo%specie(get_specie(geo%atom(i)%label))
-    enddo
-    call io_close(iunit)
-
-  else
-    ! we now load the positions, either from the input, or from a file
-    if(conf%dim == 3.and.loct_parse_isdef("XYZCoordinates").ne.0) then ! read a xyz file
-      call loct_parse_string('XYZCoordinates', 'coords.xyz', label)
-
-      call io_assign(iunit)
-      open(iunit, status='unknown', file=trim(label))
-      read(iunit, *) geo%natoms
-      read(iunit, *) ! skip comment line
-      allocate(geo%atom(geo%natoms))
-      nullify(geo%catom); geo%ncatoms = 0;
-
-      do i = 1, geo%natoms
-        read(iunit,*) geo%atom(i)%label, geo%atom(i)%x(:)
-        geo%atom(i)%move = .true.
-        geo%atom(i)%spec => geo%specie(get_specie(geo%atom(i)%label))
-      end do
-
-      call io_close(iunit)
-    else
-      str = "Coordinates"
-      geo%natoms = loct_parse_block_n(str)
-      if(geo%natoms <= 0) then
-        message(1) = "Input: Coordinates block not specified"
-        message(2) = '% Coordinates'
-        message(3) = '  specie  x  y  z  move'
-        message(4) = '%'
-        call write_fatal(4)
-      end if
-      
-      allocate(geo%atom(geo%natoms))
-      nullify(geo%catom); geo%ncatoms = 0
-      do i = 1, geo%natoms
-        call loct_parse_block_string (str, i-1, 0, geo%atom(i)%label)
-        geo%atom(i)%spec => geo%specie(get_specie(geo%atom(i)%label))
-        call loct_parse_block_float  (str, i-1, 1, geo%atom(i)%x(1))
-        call loct_parse_block_float  (str, i-1, 2, geo%atom(i)%x(2))
-        call loct_parse_block_float  (str, i-1, 3, geo%atom(i)%x(3))
-        call loct_parse_block_logical(str, i-1, 4, geo%atom(i)%move)
-      end do
-    end if
-  end if
-
-  ! units conversion
+  ! copy information from xyz to geo
+  geo%natoms = xyz%n
+  allocate(geo%atom(geo%natoms))
   do i = 1, geo%natoms
-    geo%atom(i)%x = geo%atom(i)%x * units_inp%length%factor
+    geo%atom(i)%label = xyz%atom(i)%label
+    geo%atom(i)%x     = xyz%atom(i)%x
+    geo%atom(i)%f     = M_ZERO
+    if(iand(xyz%flags, XYZ_FLAGS_MOVE).ne.0) then
+      geo%atom(i)%move = xyz%atom(i)%move
+    else
+      geo%atom(i)%move = .true.
+    end if
   end do
-  do i = 1, geo%ncatoms
-    geo%catom(i)%x = geo%catom(i)%x * units_inp%length%factor
-  end do
+  call xyz_file_end(xyz)
 
+  ! load positions of the classical atoms, if any
+  call xyz_file_init(xyz)
+  call xyz_file_read('Classical', xyz)
+  if(xyz%file_type.ne.XYZ_FILE_ERR) then ! found classical atoms
+    if(.not.iand(xyz%flags, XYZ_FLAGS_CHARGE).ne.0) then
+      message(1) = "Need to know charge for the Classical atoms"
+      message(2) = "Please use a .pdb"
+      call write_fatal(2)
+    end if
+    geo%ncatoms = xyz%n
+    allocate(geo%catom(geo%ncatoms))
+    do i = 1, geo%ncatoms
+      geo%catom(i)%label  = xyz%atom(i)%label
+      geo%catom(i)%x      = xyz%atom(i)%x
+      geo%catom(i)%v      = M_ZERO
+      geo%catom(i)%f      = M_ZERO
+      geo%catom(i)%charge = xyz%atom(i)%charge
+    end do
+    call xyz_file_end(xyz)
+  end if
+    
   ! we now load the velocities, either from the temperature, from the input, or from a file
   if(loct_parse_isdef("RandomVelocityTemp").ne.0) then
-    
     call loct_ran_init(random_gen_pointer)
     call loct_parse_float("RandomVelocityTemp", M_ZERO, temperature)
     do i = 1, geo%natoms
@@ -166,36 +136,42 @@ subroutine geometry_init(geo, val_charge, no_species_init)
     write(message(4),'(a)')
     call write_info(4)
 
-  elseif(loct_parse_isdef("XYZVelocities").ne.0 .and. conf%dim==3) then ! read a xyz file
-    call io_assign(iunit)
-    call loct_parse_string('XYZVelocities', 'velocities.xyz', label)
-    open(iunit, status='unknown', file=trim(label))
+  else
+    call xyz_file_init(xyz)
+    call xyz_file_read('Velocities', xyz)
+    if(xyz%file_type.ne.XYZ_FILE_ERR) then
+      if(geo%natoms.ne.xyz%n) then
+        write(message(1), '(a,i4,a,i4)') 'I need exactly ', geo%natoms, ' velocities, but I found ', xyz%n
+        call write_fatal(1)
+      end if
       
-    read(iunit, *)
-    read(iunit, *) ! skip comment line
-      
-    do i = 1, geo%natoms
-      read(iunit,*) label, geo%atom(i)%v
-      geo%atom(i)%v = units_inp%velocity%factor * geo%atom(i)%v !units conversion
-    end do
-
-    call io_close(iunit)
-  else 
-    str = "Velocities"
-    if(loct_parse_isdef(str).ne.0) then
+      ! copy information and adjust units
       do i = 1, geo%natoms
-        call loct_parse_block_float(str, i-1, 1, geo%atom(i)%v(1))
-        call loct_parse_block_float(str, i-1, 2, geo%atom(i)%v(2))
-        call loct_parse_block_float(str, i-1, 3, geo%atom(i)%v(3))
-        geo%atom(i)%v = geo%atom(i)%v * units_inp%velocity%factor
+        geo%atom(i)%v = xyz%atom(i)%x * (units_inp%velocity%factor / units_inp%length%factor)
       end do
+      call xyz_file_end(xyz)
     else
-      geo%atom%v(1) = M_ZERO
-      geo%atom%v(2) = M_ZERO
-      geo%atom%v(3) = M_ZERO
+      do i = 1, geo%natoms
+        geo%atom(i)%v = M_ZERO
+      end do
     end if
   end if
 
+  call pop_sub()
+
+end subroutine geometry_init_xyz
+
+subroutine geometry_init_species(geo, val_charge)
+  type(geometry_type), intent(inout) :: geo
+  FLOAT,               intent(out), optional :: val_charge
+
+  integer :: i
+
+  geo%nspecies = specie_init(geo%specie)
+  do i = 1, geo%natoms
+    geo%atom(i)%spec => geo%specie(get_specie(geo%atom(i)%label))
+  enddo
+  
   !  find total charge of the system
   val_charge = M_ZERO
   do i = 1, geo%natoms
@@ -210,10 +186,7 @@ subroutine geometry_init(geo, val_charge, no_species_init)
     geo%nlpp = (geo%nlpp.or.(.not.geo%specie(i)%local))
   end do
 
-  call pop_sub()
-
 contains
-
   integer function get_specie(label)
     character(len=*) :: label
 
@@ -235,8 +208,8 @@ contains
     end if
     
   end function get_specie
-
-end subroutine geometry_init
+  
+end subroutine geometry_init_species
 
 subroutine loadPDB(iunit, geo)
   integer,             intent(in)    :: iunit
@@ -534,236 +507,5 @@ subroutine atom_write_xyz(dir, fname, geo)
 #endif
   
 end subroutine atom_write_xyz
-
-subroutine geometry_adjust(geo)
-  type(geometry_type), intent(inout) :: geo
-
-  FLOAT :: center(3), from(3), from2(3), to(3)
-  character(len=80) :: str
-
-  ! is there something to do
-  if(geo%natoms <= 1) return
-
-  ! recenter
-  call find_center(center)
-  call translate(-center)
-
-  ! get to axis
-  str = "MainAxis"
-  if(loct_parse_isdef(str) .ne. 0) then
-    call loct_parse_block_float(str, 0, 0, to(1))
-    call loct_parse_block_float(str, 0, 1, to(2))
-    call loct_parse_block_float(str, 0, 2, to(3))
-  else
-    to(1) = M_ZERO; to(2) = M_ZERO; to(3) = M_ONE
-  end if
-  to = to / sqrt(sum(to**2))
-
-  ! rotate to main axis
-  call find_axis(from, from2)
-  call rotate(from, from2, to)
-
-  ! recenter
-  call find_center(center)
-  call translate(-center)
-  
-contains
-
-  subroutine find_center(x)
-    FLOAT, intent(out) :: x(3)
-
-    FLOAT :: xmin(3), xmax(3)
-    integer  :: i, j
-
-    xmin =  CNST(1e10)
-    xmax = -CNST(1e10)
-    do i = 1, geo%natoms
-      do j = 1, 3
-        if(geo%atom(i)%x(j) > xmax(j)) xmax(j) = geo%atom(i)%x(j)
-        if(geo%atom(i)%x(j) < xmin(j)) xmin(j) = geo%atom(i)%x(j)
-      end do
-    end do
-
-    x = (xmax + xmin)/M_TWO
-  end subroutine find_center
-
-  subroutine translate(x)
-    FLOAT, intent(in) :: x(3)
-
-    integer  :: i
-
-    do i = 1, geo%natoms
-      geo%atom(i)%x = geo%atom(i)%x + x
-    end do
-    do i = 1, geo%ncatoms
-      geo%catom(i)%x = geo%catom(i)%x + x
-    end do
-  end subroutine translate
-
-  subroutine find_axis(x, x2)
-    FLOAT, intent(out) :: x(3), x2(3)
-
-    integer  :: i, j
-    FLOAT :: rmax, r, r2
-
-    ! first get the further apart atoms
-    rmax = -CNST(1e10)
-    do i = 1, geo%natoms
-      do j = 1, geo%natoms/2 + 1
-        r = sqrt(sum((geo%atom(i)%x-geo%atom(j)%x)**2))
-        if(r > rmax) then
-          rmax = r
-          x = geo%atom(i)%x - geo%atom(j)%x
-        end if
-      end do
-    end do
-    x  = x /sqrt(sum(x**2))
-
-    ! now let us find out what is the second most important axis
-    rmax = -CNST(1e10)
-    do i = 1, geo%natoms
-      r2 = sum(x * geo%atom(i)%x)
-      r = sqrt(sum((geo%atom(i)%x - r2*x)**2))
-      if(r > rmax) then
-        rmax = r
-        x2 = geo%atom(i)%x - r2*x
-      end if
-    end do
-    if(sum(x2**2) == M_ZERO) then ! linear molecule
-      if(x(1) == M_ZERO) then
-        x2(1) = x(1); x2(2) = -x(3); x2(3) = x(2)
-      else if(x(1) == M_ZERO) then
-        x2(2) = x(2); x2(1) = -x(3); x2(3) = x(1)
-      else
-        x2(3) = x(3); x2(1) = -x(2); x2(2) = x(1)
-      end if
-    end if
-    x2 = x2/sqrt(sum(x2**2))
-
-  end subroutine find_axis
-
-  subroutine rotate(from, from2, to)
-    FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
-
-    integer :: i
-    FLOAT :: m1(3,3), m2(3,3), m3(3,3), f2(3), per(3)
-    FLOAT :: alpha, r
-
-    ! initialize matrices
-    m1 = M_ZERO; m1(1,1) = M_ONE; m1(2,2) = M_ONE; m1(3,3) = M_ONE
-
-    ! rotate the to axis to the z axis
-    if(to(2).ne.M_ZERO) then
-      alpha = atan2(to(2), to(1))
-      call rotate_z(m1, alpha)
-    end if
-    alpha = atan2(sqrt(to(1)**2 + to(2)**2), to(3))
-    call rotate_y(m1, -alpha)
-
-    ! get perpendicular to z and from
-    f2 = matmul(m1, from)
-    per(1) = -f2(2)
-    per(2) =  f2(1)
-    per(3) = M_ZERO
-    r = sqrt(sum(per**2))
-    if(r > M_ZERO) then
-      per = per/r
-    else
-      per(2) = M_ONE
-    end if
-
-    ! rotate perpendicular axis to the y axis
-    m2 = M_ZERO; m2(1,1) = M_ONE; m2(2,2) = M_ONE; m2(3,3) = M_ONE
-    alpha = atan2(per(1), per(2))
-    call rotate_z(m2, -alpha)
-
-    ! rotate from => to (around the y axis)
-    m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
-    alpha = acos(sum(from*to))
-    call rotate_y(m3, -alpha)
-    
-    ! join matrices
-    m2 = matmul(transpose(m2), matmul(m3, m2))
-
-    ! rotate around the z axis to get the second axis
-    per = matmul(m2, matmul(m1, from2))
-    alpha = atan2(per(1), per(2))
-    call rotate_z(m2, -alpha) ! second axis is now y
-
-    ! get combined transformation
-    m1 = matmul(transpose(m1), matmul(m2, m1))
-
-    ! now transform the coordinates
-    ! it is written in this way to avoid what I consider a bug in the Intel compiler
-    do i = 1, geo%natoms
-      f2 = geo%atom(i)%x
-      geo%atom(i)%x = matmul(m1, f2)
-    end do
-
-    do i = 1, geo%ncatoms
-      f2 = geo%catom(i)%x
-      geo%catom(i)%x = matmul(m1, f2)
-    end do
-
-  end subroutine rotate
-
-  subroutine rotate_x(m, angle)
-    FLOAT, intent(inout) :: m(3,3)
-    FLOAT, intent(in) :: angle
-
-    FLOAT :: aux(3,3), ca, sa
-
-    ca = cos(angle)
-    sa = sin(angle)
-
-    aux = M_ZERO
-    aux(1, 1) = M_ONE
-    aux(2, 2) = ca
-    aux(3, 3) = ca
-    aux(2, 3) = sa
-    aux(3, 2) = -sa
-
-    m = matmul(aux, m)
-  end subroutine rotate_x
-
-  subroutine rotate_y(m, angle)
-    FLOAT, intent(inout) :: m(3,3)
-    FLOAT, intent(in) :: angle
-
-    FLOAT :: aux(3,3), ca, sa
-
-    ca = cos(angle)
-    sa = sin(angle)
-
-    aux = M_ZERO
-    aux(2, 2) = M_ONE
-    aux(1, 1) = ca
-    aux(3, 3) = ca
-    aux(1, 3) = sa
-    aux(3, 1) = -sa
-
-    m = matmul(aux, m)
-  end subroutine rotate_y
-
-  subroutine rotate_z(m, angle)
-    FLOAT, intent(inout) :: m(3,3)
-    FLOAT, intent(in) :: angle
-
-    FLOAT :: aux(3,3), ca, sa
-
-    ca = cos(angle)
-    sa = sin(angle)
-
-    aux = M_ZERO
-    aux(3, 3) = M_ONE
-    aux(1, 1) = ca
-    aux(2, 2) = ca
-    aux(1, 2) = sa
-    aux(2, 1) = -sa
-
-    m = matmul(aux, m)
-  end subroutine rotate_z
-
-end subroutine geometry_adjust
 
 end module geometry

@@ -291,37 +291,34 @@ subroutine weights(N, M, cc)
 
 end subroutine weights
 
-function cutoff0(x)
+FLOAT function cutoff0(x)
   FLOAT, intent(in) ::  x
-  FLOAT :: cutoff0
-
-    cutoff0 = M_ONE - cos(x)
-
+    
+  cutoff0 = M_ONE - cos(x)
+  
 end function cutoff0
 
-function cutoff1(x, p)
+FLOAT function cutoff1(x, p)
   FLOAT, intent(in) ::  x, p
-  FLOAT :: cutoff1
-
+  
   if ( x == M_ZERO ) then
     cutoff1 = M_ZERO
   else
     cutoff1 = M_ONE + p*loct_bessel_j1(p)*loct_bessel_k0(x) &
-                    - x*loct_bessel_j0(p)*loct_bessel_k1(x)
+         - x*loct_bessel_j0(p)*loct_bessel_k1(x)
   end if
-
+  
 end function cutoff1
 
-function cutoff2(p, z)
+FLOAT function cutoff2(p, z)
   FLOAT, intent(in) ::  p, z
-  FLOAT :: cutoff2
-
+  
   if ( p == M_ZERO ) then
     cutoff2 = M_ZERO
   else
     cutoff2 = M_ONE + exp(-p)*(z*sin(z)/p-cos(z))
-  end if          
-
+  end if
+  
 end function cutoff2
 
 !function phaseshift(perdim, ix)

@@ -73,7 +73,7 @@ program xyzanim
   end do
 
   ! Initializes the atom system
-  call geometry_init(geo, no_species_init=.true.)
+  call geometry_init_xyz(geo)
 
   ! Opens the nbo file
   call io_assign(nbo_unit)
@@ -92,7 +92,7 @@ program xyzanim
      read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &
          ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
      if(mod(iter, sampling) == 0) then
-       call write_xyz
+       call write_xyz()
      endif
   enddo
 
@@ -100,19 +100,17 @@ program xyzanim
 
 contains
 
-
-subroutine write_xyz
-
-  integer :: i
-  
-  ! xyz format, for easy plot in rasmol
+  subroutine write_xyz
+    
+    integer :: i
+    
+    ! xyz format
     write(xyz_unit, '(i4)') geo%natoms
     write(xyz_unit, '(i10)') iter
     do i = 1, geo%natoms
       write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%spec%label, geo%atom(i)%x(:)/units_out%length%factor
     end do
-
-  return
-end subroutine write_xyz
+  
+  end subroutine write_xyz
 
 end program xyzanim

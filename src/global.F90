@@ -241,6 +241,10 @@ subroutine global_init_symbols()
   call loct_parse_putsym(   "unformatted", 1) ! RestartFileFormat
   call loct_parse_putsym(     "formatted", 2)
 
+  ! symbols for oct-center-geom
+  call loct_parse_putsym(       "inertia", 1)
+  call loct_parse_putsym(        "pseudo", 2)
+  call loct_parse_putsym(         "large", 3)
 end subroutine global_init_symbols
 
 subroutine global_end()

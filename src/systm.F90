@@ -41,11 +41,12 @@ subroutine system_init(s)
   call push_sub('system_init')
 
   ! initialize the stuff related to the mesh
+  call geometry_init_xyz(s%geo)
   call mesh_init(s%m)
   call functions_init(s%m)
 
   ! initialize the other stuff
-  call geometry_init(s%geo, s%val_charge)
+  call geometry_init_species(s%geo, s%val_charge)
   allocate(s%st)
   call states_init(s%st, s%m, s%val_charge, s%geo%nlcc)
   call output_init(s%outp)
