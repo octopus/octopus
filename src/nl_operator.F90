@@ -256,12 +256,16 @@ contains
     FLOAT,                  intent(out) :: fo(:)  ! fo(op%np)
 
     integer :: i, n
+    FLOAT, allocatable :: w(:)
 
     n = op%n
     if(op%const_w) then
+      allocate(w(n))
+      w(1:n) = op%w(1:n, 1)
       do i = 1, op%np
-        fo(i) = sum(op%w(1:n,1)*fi(op%i(1:n,i)))
+        fo(i) = sum(w(1:n)*fi(op%i(1:n,i)))
       end do
+      deallocate(w)
     else
       do i = 1, op%np
         fo(i) = sum(op%w(1:n,i)*fi(op%i(1:n,i)))
@@ -277,15 +281,19 @@ contains
     CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
 
     integer :: i, n
+    FLOAT, allocatable :: w(:)
 
     n = op%n
     if(op%const_w) then
+      allocate(w(n))
+      w(1:n) = op%w(1:n, 1)
       do i = 1, op%np
-        fo(i) = sum(op%w(1:n,1)*fi(op%i(1:n,i)))
+        fo(i) = sum(  cmplx(  w(1:n)*real(fi(op%i(1:n,i))),  w(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
       end do
+      deallocate(w)
     else
       do i = 1, op%np
-        fo(i) = sum(op%w(1:n,i)*fi(op%i(1:n,i)))
+        fo(i) = sum(  cmplx(  op%w(1:n, i)*real(fi(op%i(1:n,i))),  op%w(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
       end do
     end if
 
