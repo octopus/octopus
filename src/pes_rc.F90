@@ -23,7 +23,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
 
   character(len=80) :: str
   integer  :: i
-  real(r8) ::  x(3)
+  FLOAT ::  x(3)
 
   message(1) = 'Info: Calculating PES using rc technique'
   call write_info(1)
@@ -88,7 +88,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
   type(PES_rc_type), intent(in) :: v
   type(states_type), intent(IN) :: st
   integer, intent(in) :: iter, save_iter
-  real(r8), intent(in) :: dt
+  FLOAT, intent(in) :: dt
   
   integer :: ix, iunit, j, jj, ik, p, idim
 

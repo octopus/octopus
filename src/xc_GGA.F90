@@ -19,17 +19,17 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   type(xc_type),     intent(in)  :: xcs
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
-  real(r8),          intent(out) :: vxc(m%np, st%nspin), ex, ec
-  real(r8),          intent(in)  :: ip, qtot
+  FLOAT,          intent(out) :: vxc(m%np, st%nspin), ex, ec
+  FLOAT,          intent(in)  :: ip, qtot
   
-  real(r8) :: e, dpol, dtot, vpol, r
+  FLOAT :: e, dpol, dtot, vpol, r
 
-  real(r8), allocatable :: d(:, :), lpot(:, :)
-  real(r8), allocatable :: rhoplus(:), rhominus(:)
-  real(r8), allocatable :: grhoplus(:, :), grhominus(:, :)
-  real(r8), allocatable :: vlocaldedgd(:,:,:), vlocaldedgd1(:,:)
+  FLOAT, allocatable :: d(:, :), lpot(:, :)
+  FLOAT, allocatable :: rhoplus(:), rhominus(:)
+  FLOAT, allocatable :: grhoplus(:, :), grhominus(:, :)
+  FLOAT, allocatable :: vlocaldedgd(:,:,:), vlocaldedgd1(:,:)
 
-  real(r8) :: x(3), locald(st%spin_channels), localgd(3, st%spin_channels), &
+  FLOAT :: x(3), locald(st%spin_channels), localgd(3, st%spin_channels), &
        localdedd(st%spin_channels), &
        localdedd_x(st%spin_channels), localdedgd_x(3, st%spin_channels)
 

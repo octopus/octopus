@@ -25,64 +25,62 @@ module vxc
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine exchng( irel, nsp, ds, ex, vx )
     integer, intent(in)   :: irel, nsp
-    real(r8), intent(in)  :: ds(nsp)
-    real(r8), intent(out) :: vx(nsp), ex
+    FLOAT, intent(in)  :: ds(nsp)
+    FLOAT, intent(out) :: vx(nsp), ex
 
-    real(r8), parameter :: opf = 1.5_r8,                      &
-                           c014 = 0.014_r8,                   &
-                           ftrd = M_FOUR/M_THREE,             &
-                           alp  = M_TWO*M_THIRD
-    real(r8) :: d1, d2, d, z, fz, fzp, rs, vxp, exp, vxf, exf, &
+    FLOAT, parameter :: opf = CNST(1.5), c014 = CNST(0.014),  &
+        ftrd = M_FOUR/M_THREE, alp  = M_TWO*M_THIRD
+    FLOAT :: d1, d2, d, z, fz, fzp, rs, vxp, exp, vxf, exf,   &
                 beta, sb, alb, tftm, a0
 
-  a0   = (M_FOUR/(9*M_PI))**M_THIRD
-  tftm = M_TWO**FTRD - M_TWO
+    a0   = (M_FOUR/(9*M_PI))**M_THIRD
+    tftm = M_TWO**FTRD - M_TWO
 
-  IF (NSP .EQ. 2) THEN
-     D1 = MAX(DS(1),0.0_r8)
-     D2 = MAX(DS(2),0.0_r8)
-     D = D1 + D2
-     IF (D .LE. M_ZERO) THEN
-        EX = M_ZERO
+    IF (NSP .EQ. 2) THEN
+      D1 = MAX(DS(1), M_ZERO)
+      D2 = MAX(DS(2), M_ZERO)
+      D = D1 + D2
+      IF (D .LE. M_ZERO) THEN
+        EX    = M_ZERO
         VX(1) = M_ZERO
         VX(2) = M_ZERO
         RETURN
-     ENDIF
-     Z = (D1 - D2) / D
-     FZ = ((1+Z)**FTRD+(1-Z)**FTRD-2)/TFTM
-     FZP = FTRD*((1+Z)**M_THIRD-(1-Z)**M_THIRD)/TFTM 
-  ELSE
-     D = DS(1)
-     IF (D .LE. M_ZERO) THEN
+      ENDIF
+      Z = (D1 - D2) / D
+      FZ = ((1+Z)**FTRD+(1-Z)**FTRD-2)/TFTM
+      FZP = FTRD*((1+Z)**M_THIRD-(1-Z)**M_THIRD)/TFTM 
+    ELSE
+      D = DS(1)
+      IF (D .LE. M_ZERO) THEN
         EX = M_ZERO
         VX(1) = M_ZERO
         RETURN
-     ENDIF
-     Z = M_ZERO
-     FZ = M_ZERO
-     FZP = M_ZERO
-  ENDIF
-  RS = (3 / (4*M_PI*D) )**M_THIRD
-  VXP = -(3*ALP/(2*M_PI*A0*RS))
-  EXP = 3*VXP/4
-  IF (IREL .EQ. 1) THEN
-     BETA = C014/RS
-     SB = SQRT(1+BETA*BETA)
-     ALB = LOG(BETA+SB)
-     VXP = VXP * (-M_HALF + OPF * ALB / (BETA*SB))
-     EXP = EXP * (M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
-  ENDIF
-  VXF = 2**M_THIRD*VXP
-  EXF = 2**M_THIRD*EXP
-  IF (NSP .EQ. 2) THEN
-     VX(1) = VXP + FZ*(VXF-VXP) + (1-Z)*FZP*(EXF-EXP)
-     VX(2) = VXP + FZ*(VXF-VXP) - (1+Z)*FZP*(EXF-EXP)
-     EX    = EXP + FZ*(EXF-EXP)
-  ELSE
-     VX(1) = VXP
-     EX    = EXP
-  ENDIF
-
+      ENDIF
+      Z = M_ZERO
+      FZ = M_ZERO
+      FZP = M_ZERO
+    ENDIF
+    RS = (3 / (4*M_PI*D) )**M_THIRD
+    VXP = -(3*ALP/(2*M_PI*A0*RS))
+    EXP = 3*VXP/4
+    IF (IREL .EQ. 1) THEN
+      BETA = C014/RS
+      SB = SQRT(1+BETA*BETA)
+      ALB = LOG(BETA+SB)
+      VXP = VXP * (-M_HALF + OPF * ALB / (BETA*SB))
+      EXP = EXP * (M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
+    ENDIF
+    VXF = 2**M_THIRD*VXP
+    EXF = 2**M_THIRD*EXP
+    IF (NSP .EQ. 2) THEN
+      VX(1) = VXP + FZ*(VXF-VXP) + (1-Z)*FZP*(EXF-EXP)
+      VX(2) = VXP + FZ*(VXF-VXP) - (1+Z)*FZP*(EXF-EXP)
+      EX    = EXP + FZ*(EXF-EXP)
+    ELSE
+      VX(1) = VXP
+      EX    = EXP
+    ENDIF
+    
   end subroutine exchng
 
 
@@ -98,20 +96,20 @@ module vxc
   use global
 
 
-  IMPLICIT NONE
-  CHARACTER(len=*) :: AUTHOR
-  INTEGER :: IREL, NSPIN
-  REAL(r8) :: D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),                        &
-                        DEXDD(NSPIN), DEXDGD(3,NSPIN),                        &
-                        EPSC, EPSX, GD(3,NSPIN)
+  implicit none
+  character(len=*) :: AUTHOR
+  integer :: IREL, NSPIN
+  FLOAT :: D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),  &
+      DEXDD(NSPIN), DEXDGD(3,NSPIN),                 &
+      EPSC, EPSX, GD(3,NSPIN)
 
   IF (NSPIN .GT. 2) STOP 'GGAXC: Not prepared for this NSPIN'
 
   IF (AUTHOR.EQ.'PBE' .OR. AUTHOR.EQ.'pbe') THEN
-     CALL PBEX( IREL, NSPIN, D, GD,                                          &
-                 EPSX, DEXDD, DEXDGD)
-     CALL PBEC( NSPIN, D, GD,                                          &
-                 EPSC, DECDD, DECDGD )
+    CALL PBEX( IREL, NSPIN, D, GD,   &
+        EPSX, DEXDD, DEXDGD)
+    CALL PBEC( NSPIN, D, GD,         &
+        EPSC, DECDD, DECDGD )
   ELSE
      WRITE(6,*) 'GGAXC: Unknown author ', AUTHOR
      STOP
@@ -151,12 +149,12 @@ module vxc
   IMPLICIT NONE
   CHARACTER(len=*) :: AUTHOR
   INTEGER :: IREL, NSPIN
-  REAL(r8) :: D(NSPIN), EPSC, EPSX, VX(NSPIN), VC(NSPIN)
+  FLOAT :: D(NSPIN), EPSC, EPSX, VX(NSPIN), VC(NSPIN)
 
   INTEGER :: IS, NS
-  REAL(r8) :: DD(2), DPOL, DTOT, TINY, VCD(2), VPOL, VXD(2)
+  FLOAT :: DD(2), DPOL, DTOT, VCD(2), VPOL, VXD(2)
 
-  PARAMETER ( TINY = 1.E-12 )
+  FLOAT, parameter :: TINY = CNST(1.e-12)
 
   IF (NSPIN .EQ. 4) THEN
 !       Find eigenvalues of density matrix (up and down densities
@@ -164,9 +162,9 @@ module vxc
 !       Note: D(1)=D11, D(2)=D22, D(3)=Real(D12), D(4)=Im(D12)
      NS = 2
      DTOT = D(1) + D(2)
-     DPOL = SQRT( (D(1)-D(2))**2 + 4.0_r8*(D(3)**2+D(4)**2) )
-     DD(1) = 0.50_r8 * ( DTOT + DPOL )
-     DD(2) = 0.50_r8 * ( DTOT - DPOL )
+     DPOL = SQRT( (D(1)-D(2))**2 + M_FOUR*(D(3)**2+D(4)**2) )
+     DD(1) = M_HALF * ( DTOT + DPOL )
+     DD(2) = M_HALF * ( DTOT - DPOL )
   ELSE
      NS = NSPIN
      DO 10 IS = 1,NSPIN
@@ -190,13 +188,13 @@ module vxc
 !       Find dE/dD(nspin) = dE/dDup * dDup/dD(nspin) +
 !                           dE/dDdown * dDown/dD(nspin)
      VPOL  = (VXD(1)-VXD(2)) * (D(1)-D(2)) / (DPOL+TINY)
-     VX(1) = 0.50_r8 * ( VXD(1) + VXD(2) + VPOL )
-     VX(2) = 0.50_r8 * ( VXD(1) + VXD(2) - VPOL )
+     VX(1) = M_HALF * ( VXD(1) + VXD(2) + VPOL )
+     VX(2) = M_HALF * ( VXD(1) + VXD(2) - VPOL )
      VX(3) = (VXD(1)-VXD(2)) * D(3) / (DPOL+TINY)
      VX(4) = (VXD(1)-VXD(2)) * D(4) / (DPOL+TINY)
      VPOL  = (VCD(1)-VCD(2)) * (D(1)-D(2)) / (DPOL+TINY)
-     VC(1) = 0.50_r8 * ( VCD(1) + VCD(2) + VPOL )
-     VC(2) = 0.50_r8 * ( VCD(1) + VCD(2) - VPOL )
+     VC(1) = M_HALF * ( VCD(1) + VCD(2) + VPOL )
+     VC(2) = M_HALF * ( VCD(1) + VCD(2) - VPOL )
      VC(3) = (VCD(1)-VCD(2)) * D(3) / (DPOL+TINY)
      VC(4) = (VCD(1)-VCD(2)) * D(4) / (DPOL+TINY)
   ELSE
@@ -249,33 +247,31 @@ module vxc
 
   implicit none 
   integer :: IREL, NSPIN
-  real(r8) :: DENS(NSPIN),                                                    &
+  FLOAT :: DENS(NSPIN),                                                    &
               DEXDD(NSPIN), DEXDGD(3,NSPIN), GDENS(3,NSPIN)
 
 ! Internal variables
   integer :: IS, IX 
 
-  real(r8) :: A, BETA, D(2), DADD, DECUDD, DENMIN,                            & 
+  FLOAT :: A, BETA, D(2), DADD, DECUDD,                                       & 
               DF1DD, DF2DD, DF3DD, DF4DD, DF1DGD, DF3DGD, DF4DGD,             &
               DFCDD(2), DFCDGD(3,2), DFDD, DFDGD, DFXDD(2), DFXDGD(3,2),      &
               DHDD, DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD,                   &
               DS(2), DSDD, DSDGD, DT, DTDD, DTDGD, DZDD(2),                   &
               EC, ECUNIF, EX, EXUNIF,                                         &
               F, F1, F2, F3, F4, FC, FX,                                      &
-              GAMMA, GD(3,2), GDM(2), GDMIN, GDMS, GDMT, GDS, GDT(3),         &
+              GAMMA, GD(3,2), GDM(2), GDMS, GDMT, GDS, GDT(3),                &
               H, KAPPA, KF, KFS, KS, MU, PHI, RS, S,                          &
               T, VCUNIF(2), VXUNIF(2), ZETA
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
-
-  PARAMETER ( DENMIN = 1.E-12 )
-  PARAMETER ( GDMIN  = 1.E-12 )
+  FLOAT, parameter :: DENMIN = CNST(1.e-12), GDMIN = CNST(1.e-12)
 
 ! Fix some more numerical constants
-  BETA = 0.066725_r8
-  GAMMA = (1 - LOG(M_TWO)) / M_PI**2
-  MU = BETA * M_PI**2 / M_THREE
-  KAPPA = 0.8040_r8
+  BETA  = CNST(0.066725)
+  GAMMA = (M_ONE - log(M_TWO)) / M_PI**2
+  MU    = BETA * M_PI**2 / M_THREE
+  KAPPA = CNST(0.8040)
 
 ! Translate density and its gradient to new variables
   IF (NSPIN .EQ. 1) THEN
@@ -347,33 +343,33 @@ module vxc
                     EC, DECDD, DECDGD )
   implicit none 
   integer ::  NSPIN
-  real(r8) :: DENS(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),                     &
+  FLOAT :: DENS(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),                     &
               GDENS(3,NSPIN)
 
 ! Internal variables
   integer :: IS, IX 
 
-  real(r8) :: A, BETA, D(2), DADD, DECUDD, DENMIN,                            & 
+  FLOAT :: A, BETA, D(2), DADD, DECUDD,                                       & 
               DF1DD, DF2DD, DF3DD, DF4DD, DF1DGD, DF3DGD, DF4DGD,             &
               DFCDD(2), DFCDGD(3,2), DFDD, DFDGD, DFXDD(2), DFXDGD(3,2),      &
               DHDD, DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD,                   &
               DS(2), DSDD, DSDGD, DT, DTDD, DTDGD, DZDD(2),                   &
               EC, ECUNIF, EX, EXUNIF,                                         &
               F, F1, F2, F3, F4, FC, FX,                                      &
-              GAMMA, GD(3,2), GDM(2), GDMIN, GDMS, GDMT, GDS, GDT(3),         &
+              GAMMA, GD(3,2), GDM(2), GDMS, GDMT, GDS, GDT(3),                &
               H, KAPPA, KF, KFS, KS, MU, PHI, RS, S,                          &
               T, VCUNIF(2), VXUNIF(2), ZETA
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
 
-  PARAMETER ( DENMIN = 1.E-12 )
-  PARAMETER ( GDMIN  = 1.E-12 )
+! Lower bounds of density and its gradient to avoid divisions by zero
+  FLOAT, parameter :: DENMIN = CNST(1.e-12), GDMIN = CNST(1.e-12)
 
 ! Fix some more numerical constants
-  BETA = 0.066725_r8
-  GAMMA = (1 - LOG(M_TWO)) / M_PI**2
-  MU = BETA * M_PI**2 / M_THREE
-  KAPPA = 0.8040_r8
+  BETA  = CNST(0.066725)
+  GAMMA = (M_ONE - log(M_TWO)) / M_PI**2
+  MU    = BETA * M_PI**2 / M_THREE
+  KAPPA = CNST(0.8040)
 
 ! Translate density and its gradient to new variables
   IF (NSPIN .EQ. 1) THEN
@@ -466,13 +462,13 @@ module vxc
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine lb94(nspin, dens, gdens, dexdd, r, ip, qtot, modified, beta, threshold)
     integer, intent(in)  :: nspin
-    real(r8), intent(in) :: dens(nspin), gdens(3, nspin)
-    real(r8), intent(out):: dexdd(nspin)!, dexdgd(3, nspin)
-    real(r8), intent(in) :: r, ip, qtot, beta, threshold
+    FLOAT, intent(in) :: dens(nspin), gdens(3, nspin)
+    FLOAT, intent(out):: dexdd(nspin)!, dexdgd(3, nspin)
+    FLOAT, intent(in) :: r, ip, qtot, beta, threshold
     logical, intent(in) :: modified
 
     integer  :: is
-    real(r8) :: alpha, gdm, gd(3, nspin), x, f, gamma
+    FLOAT :: alpha, gdm, gd(3, nspin), x, f, gamma
 
     ! First, get the LDA exchange potential.
     call exchng(0, nspin, dens, x, dexdd)
@@ -527,30 +523,27 @@ module vxc
   subroutine pw92c( NSPIN, DENS, EC, VC )
   implicit none 
   integer :: NSPIN
-  real(r8) :: DENS(NSPIN), EC, VC(NSPIN)
+  FLOAT :: DENS(NSPIN), EC, VC(NSPIN)
 
   ! Internal variable declarations
   integer :: IG
-  real(r8) :: A(0:2), ALPHA1(0:2), B, BETA(0:2,4), C,                         &
-       DBDRS, DECDD(2), DECDRS, DECDZ, DENMIN, DFDZ,           &
-       DGDRS(0:2), DCDRS, DRSDD, DTOT, DZDD(2),                &
-       F, FPP0, FOUTHD, G(0:2),                                &
-       P(0:2), RS, THRHLF, ZETA
+  FLOAT :: A(0:2), ALPHA1(0:2), B, BETA(0:2,4), C,     &
+       DBDRS, DECDD(2), DECDRS, DECDZ, DFDZ,           &
+       DGDRS(0:2), DCDRS, DRSDD, DTOT, DZDD(2),        &
+       F, FPP0, G(0:2), P(0:2), RS, ZETA
 
   ! Fix lower bound of density to avoid division by zero
-  PARAMETER ( DENMIN = 1.E-12 )
-
-  ! Fix some numerical constants
-  PARAMETER ( FOUTHD=4.0_r8/3.0_r8, THRHLF=1.50_r8 )
+  FLOAT, parameter :: DENMIN = CNST(1e-12), &
+      FOUTHD = M_FOUR/M_THREE, THRHLF = M_THREE/M_TWO
 
   ! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
-  DATA P      / 1.00_r8,     1.00_r8,     1.00_r8     /
-  DATA A      / 0.031091_r8, 0.015545_r8, 0.016887_r8 /
-  DATA ALPHA1 / 0.21370_r8,  0.20548_r8,  0.11125_r8  /
-  DATA BETA   / 7.5957_r8,  14.1189_r8,  10.357_r8,                           &
-                3.5876_r8,   6.1977_r8,   3.6231_r8,                          &
-                1.6382_r8,   3.3662_r8,   0.88026_r8,                         &
-                0.49294_r8,  0.62517_r8,  0.49671_r8 /    
+  DATA P      / CNST(1.00    ), CNST( 1.00    ), CNST( 1.00    )  /
+  DATA A      / CNST(0.031091), CNST( 0.015545), CNST( 0.016887)  /
+  DATA ALPHA1 / CNST(0.21370 ), CNST( 0.20548 ), CNST( 0.11125 )  /
+  DATA BETA   / CNST(7.5957  ), CNST(14.1189  ), CNST(10.357   ), &
+                CNST(3.5876  ), CNST( 6.1977  ), CNST( 3.6231  ), &
+                CNST(1.6382  ), CNST( 3.3662  ), CNST( 0.88026 ), &
+                CNST(0.49294 ), CNST( 0.62517 ), CNST( 0.49671 )  /    
 
   ! Find rs and zeta
   IF (NSPIN .EQ. 1) THEN
@@ -632,45 +625,46 @@ module vxc
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine pzc( NSP, DS, EC, VC )
     integer, intent(in)   :: nsp
-    real(r8), intent(in)  :: ds(nsp)
-    real(r8), intent(out) :: ec, vc(nsp)
+    FLOAT, intent(in)  :: ds(nsp)
+    FLOAT, intent(out) :: ec, vc(nsp)
 
-    real(r8), PARAMETER :: PFIVE=.50_r8,OPF=1.50_r8,PNN=.99_r8
-    real(r8), PARAMETER :: PTHREE=0.30_r8,PSEVF=0.750_r8,C0504=0.0504_r8
-    real(r8), PARAMETER :: C0254=0.02540_r8,C014=0.0140_r8,C0406=0.04060_r8
-    real(r8), PARAMETER :: C15P9=15.90_r8,C0666=0.06660_r8,C11P4=11.40_r8
-    real(r8), PARAMETER :: C045=0.0450_r8,C7P8=7.80_r8,C88=0.880_r8,C20P59=20.5920_r8
-    real(r8), PARAMETER :: C3P52=3.520_r8,C0311=0.03110_r8,C0014=0.00140_r8
-    real(r8), PARAMETER :: C0538=0.05380_r8,C0096=0.00960_r8,C096=0.0960_r8
-    real(r8), PARAMETER :: C0622=0.06220_r8,C004=0.0040_r8,C0232=0.02320_r8
-    real(r8), PARAMETER :: C1686=0.16860_r8,C1P398=1.39810_r8,C2611=0.26110_r8
-    real(r8), PARAMETER :: C2846=0.28460_r8,C1P053=1.05290_r8,C3334=0.33340_r8
+    FLOAT, parameter :: &
+        FIVE  = CNST(0.50    ), OPF   = CNST(1.50),    PNN  = CNST(.99    ), &
+        PTHREE= CNST( 0.30   ), PSEVF = CNST(0.750),   C0504= CNST(0.0504 ), &
+        C0254 = CNST( 0.02540), C014  = CNST(0.0140),  C0406= CNST(0.04060), &
+        C15P9 = CNST(15.90   ), C0666 = CNST(0.06660), C11P4= CNST(11.40  ), &
+        C045  = CNST( 0.0450 ), C7P8  = CNST(7.80),    C88  = CNST(0.880  ), C20P59 = CNST(20.5920), &
+        C3P52 = CNST( 3.520  ), C0311 = CNST(0.03110), C0014= CNST(0.00140), &
+        C0538 = CNST( 0.05380), C0096 = CNST(0.00960), C096 = CNST(0.0960 ), &
+        C0622 = CNST( 0.06220), C004  = CNST(0.0040),  C0232= CNST(0.02320), &
+        C1686 = CNST( 0.16860), C1P398= CNST(1.39810), C2611= CNST(0.26110), &
+        C2846 = CNST( 0.28460), C1P053= CNST(1.05290), C3334= CNST(0.33340)
 
     ! Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
-    real(r8), PARAMETER :: CON1=1.0_r8/6, CON2=0.0080_r8/3, CON3=0.35020_r8/3 
-    real(r8), PARAMETER :: CON4=0.05040_r8/3, CON5=0.00280_r8/3, CON6=0.19250_r8/3
-    real(r8), PARAMETER :: CON7=0.02060_r8/3, CON8=9.78670_r8/6, CON9=1.0444_r8/3
-    real(r8), PARAMETER :: CON10=7.37030_r8/6, CON11=1.33360_r8/3
+    FLOAT, parameter :: &
+        CON1 = M_ONE/M_SIX,           CON2 = CNST(0.0080 )/M_THREE, &
+        CON3 = CNST(0.35020)/M_THREE, CON4 = CNST(0.05040)/M_THREE, &
+        CON5 = CNST(0.00280)/M_THREE, CON6 = CNST(0.19250)/M_THREE, &
+        CON7 = CNST(0.02060)/M_THREE, CON8 = CNST(9.78670)/M_SIX,   &
+        CON9 = CNST(1.0444 )/M_THREE, CON10= CNST(7.37030)/M_SIX,   &
+        CON11= CNST(1.33360)/M_THREE
 
-    !      X-alpha parameter:
-    real(r8), PARAMETER :: ALP = 2.0_r8 / 3.0_r8
+    ! X-alpha parameter:
+    FLOAT, parameter :: ALP = M_TWOTHIRD
 
-    !      Other variables converted into parameters by J.M.Soler
-    real(r8), PARAMETER :: TRD  = 1.0_r8 / 3.0_r8 
-    real(r8), PARAMETER :: FTRD = 4.0_r8 / 3.0_r8
-    real(r8), PARAMETER :: TFTM = 0.519842099789746380_r8
-    real(r8), PARAMETER :: A0   = 0.521061761197848080_r8
-    real(r8), PARAMETER :: CRS  = 0.6203504908994000870_r8
-    real(r8), PARAMETER :: CXP  = (- 3.0_r8) * ALP / (M_PI*A0)
-    real(r8), PARAMETER :: CXF  = 1.259921049894873190_r8
+    ! Other variables converted into parameters by J.M.Soler
+    FLOAT, parameter :: TRD  = M_THIRD, FTRD = M_FOUR / M_THREE, &
+        TFTM = CNST(0.519842099789746380 ),  A0 = CNST(0.521061761197848080), &
+        CRS  = CNST(0.6203504908994000870), CXP = -M_THREE*ALP/(M_PI*A0),     &
+        CXF  = CNST(1.259921049894873190 )
 
-    real(r8) :: d1, d2, d, z, fz, fzp, rs, sqrs, te, be, ecp, vcp, ecf, vcf, rslog
+    FLOAT :: d1, d2, d, z, fz, fzp, rs, sqrs, te, be, ecp, vcp, ecf, vcf, rslog
     integer :: isp
 
     !      Find density and polarization
     IF (NSP .EQ. 2) THEN
-     D1 = MAX(DS(1),0.0_r8)
-     D2 = MAX(DS(2),0.0_r8)
+     D1 = MAX(DS(1), M_ZERO)
+     D2 = MAX(DS(2), M_ZERO)
      D = D1 + D2
      IF (D .LE. M_ZERO) THEN
         EC = M_ZERO

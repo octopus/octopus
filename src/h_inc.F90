@@ -47,7 +47,7 @@ subroutine X(Hpsi) (h, m, psi, hpsi, sys, ik, t)
   integer, intent(in) :: ik
   R_TYPE, intent(IN) :: psi(m%np, h%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, h%dim)
-  real(r8), intent(in), optional :: t
+  FLOAT, intent(in), optional :: t
 
   call push_sub('Hpsi')
 
@@ -83,7 +83,7 @@ subroutine X(magnus) (h, m, psi, hpsi, sys, ik, vmagnus)
   integer, intent(in) :: ik
   R_TYPE, intent(IN) :: psi(m%np, h%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, h%dim)
-  real(r8), intent(in) :: vmagnus(m%np, h%nspin, 2)
+  FLOAT, intent(in) :: vmagnus(m%np, h%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim
@@ -152,7 +152,7 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
   integer :: ik
 
   R_TYPE, allocatable :: grad(:,:)
-  real(r8) :: k2
+  FLOAT :: k2
   integer :: idim, i, np, dim
 
   call push_sub('kinetic')
@@ -199,14 +199,14 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, sys, ik)
   R_TYPE, intent(inout) :: Hpsi(m%np, h%dim)
 
   integer :: i, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
-  real(r8) :: x(conf%dim)
+  FLOAT :: x(conf%dim)
   R_TYPE :: phase
   R_TYPE :: uVpsi
   R_TYPE, allocatable :: lpsi(:), lHpsi(:)
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
 #ifdef R_TCOMPLEX
-  complex(r8), allocatable :: conj(:)
+  CMPLX, allocatable :: conj(:)
 #endif
 
   call push_sub('vnlpsi')
@@ -329,10 +329,10 @@ subroutine X(vlasers) (h, m, psi, hpsi, t)
   R_TYPE, intent(in) :: psi(m%np, h%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, h%dim)
 
-  real(r8), intent(in) :: t
+  FLOAT, intent(in) :: t
 
   integer :: is, i, k, idim, np, dim
-  real(r8) :: x(3), f(3)
+  FLOAT :: x(3), f(3)
   R_TYPE, allocatable :: grad(:,:)
 
   call push_sub('vlasers')
@@ -354,7 +354,7 @@ subroutine X(vlasers) (h, m, psi, hpsi, t)
         call X(f_gradient)(m, psi(:, idim), grad)
         do k = 1, m%np
           hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
-               sum(f**2)/2._r8 * psi(k, idim)
+               sum(f**2)/M_TWO * psi(k, idim)
         end do
       end do
       deallocate(grad)
@@ -391,10 +391,10 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
   logical, intent(in), optional         :: calc_eigenval
 
   integer :: is
-  real(r8), allocatable :: rho_aux(:), vhartree(:)
+  FLOAT, allocatable :: rho_aux(:), vhartree(:)
 
   ! next 2 lines are for an RPA calculation
-  !real(r8), save, pointer ::  RPA_Vhxc(:, :)
+  !FLOAT, save, pointer ::  RPA_Vhxc(:, :)
   !logical, save :: RPA_first = .true.
 
   call push_sub('h_calc_vhxc')

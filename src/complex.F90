@@ -19,13 +19,13 @@
 
 #define X(x)        z ## x
 
-#define R_TYPE      complex(r8)
+#define R_TYPE      CMPLX
 #define R_MPITYPE   MPI_DOUBLE_COMPLEX
-#define R_TOTYPE(x) cmplx(x, 0.0_r8, r8)
+#define R_TOTYPE(x) cmplx(x, M_ZERO, PRECISION)
 
 #define R_ABS(x)    abs(x)
 #define R_CONJ(x)   conjg(x)
-#define R_REAL(x)   real(x, r8)
+#define R_REAL(x)   real(x, PRECISION)
 #define R_AIMAG(x)  aimag(x)
 #define R_DOT       zdotc
 #define R_NRM2      dznrm2

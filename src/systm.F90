@@ -30,7 +30,7 @@ type system_type
   integer :: ncatoms  ! For QM+MM calculations
   type(atom_classical_type), pointer :: catom(:)
 
-  real(r8) :: eii, kinetic_energy ! the ion-ion energy
+  FLOAT :: eii, kinetic_energy ! the ion-ion energy
 
   integer :: nspecies
   type(specie_type), pointer :: specie(:)
@@ -38,7 +38,7 @@ type system_type
   logical :: nlcc    ! is any species having non-local core corrections?
 
   ! the charge of the valence electrons (necessary to initialize states)
-  real(r8) :: val_charge 
+  FLOAT :: val_charge 
 
   type(mesh_type) :: m
   type(states_type), pointer :: st

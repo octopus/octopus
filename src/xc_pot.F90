@@ -19,15 +19,15 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  real(r8), intent(out)    :: vxc(m%np, st%nspin), ex, ec
-  real(r8), intent(in) :: ip, qtot
+  FLOAT, intent(out)    :: vxc(m%np, st%nspin), ex, ec
+  FLOAT, intent(in) :: ip, qtot
 
   integer :: i
-  real(r8) :: e_aux
+  FLOAT :: e_aux
 
   ! for fxc != vxc...
   ! fxc is always LDA!!!!
-!!$  real(r8), allocatable, save :: save_vxc(:,:)
+!!$  FLOAT, allocatable, save :: save_vxc(:,:)
 !!$  logical, save :: first_time = .true.
 
   call push_sub('xc_pot')
@@ -35,7 +35,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   ! "ip" variable is only meaningfull if LB94 potential is to be used. Should
   ! bear the opposite of the value of the last eigenvalue ( = ionization potential)
   ! If "self-consistent" LB94 is not to be used, should be 1/32
-  ! ip = M_ONE/32.0_r8
+  ! ip = M_ONE/CNST(32.0)
   
   ex  = M_ZERO
   ec  = M_ZERO

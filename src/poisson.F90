@@ -30,7 +30,7 @@ module poisson
 
 #ifdef HAVE_FFT
   type(dcf) :: fft_cf
-  real(r8), pointer :: fft_coulb_FS(:,:,:)
+  FLOAT, pointer :: fft_coulb_FS(:,:,:)
 #endif
 
 public :: poisson_init, poisson_solve, poisson_end
@@ -99,8 +99,8 @@ end subroutine poisson_end
 
 subroutine poisson_solve(m, pot, dist)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(inout) :: pot(m%np)
-  real(r8), intent(IN)    :: dist(m%np)
+  FLOAT, intent(inout) :: pot(m%np)
+  FLOAT, intent(IN)    :: dist(m%np)
 
   call push_sub('poisson_solve')
 

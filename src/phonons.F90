@@ -27,9 +27,9 @@ module phonons
 
   type phonons_type
     integer :: dim
-    real(r8), pointer :: DM(:,:), freq(:)
+    FLOAT, pointer :: DM(:,:), freq(:)
 
-    real(r8) :: disp
+    FLOAT :: disp
   end type phonons_type
 
 contains
@@ -48,7 +48,7 @@ contains
     ph%dim = sys%natoms*3
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
-    call oct_parse_double("Displacement", 0.01_r8/units_inp%length%factor, ph%disp)
+    call oct_parse_double("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
@@ -84,8 +84,8 @@ contains
     type(phonons_type), intent(inout) :: ph
 
     integer :: i, j, alpha, beta, n, iunit
-    real(r8) :: energ
-    real(r8), allocatable :: forces(:,:), forces0(:,:)
+    FLOAT :: energ
+    FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
     allocate(forces0(sys%natoms, 3), forces(sys%natoms, 3))
     n = sys%natoms*3
@@ -111,7 +111,7 @@ contains
           forces0(j, :) = sys%atom(j)%f(:)
         end do
 
-        sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) - 2._r8*ph%disp
+        sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) - M_TWO*ph%disp
 
         ! second force
         call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
@@ -128,7 +128,7 @@ contains
         do j = 1, sys%natoms
           do beta = 1, 3
             ph%DM(3*(i-1) + alpha, 3*(j-1) + beta) = &
-                 (forces0(j, beta) - forces(j, beta)) / (2._r8*ph%disp &
+                 (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
                  * sqrt(sys%atom(i)%spec%weight*sys%atom(j)%spec%weight))
             write(iunit, '(es14.5)', advance='no') ph%DM(3*(i-1) + alpha, 3*(j-1) + beta)
           end do

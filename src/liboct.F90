@@ -22,29 +22,29 @@ module liboct
   implicit none
   
   interface
-    real(8) function oct_gamma(x)
-      real(8), intent(in) :: x
+    FLOAT function oct_gamma(x)
+      FLOAT, intent(in) :: x
     end function oct_gamma
 
-    real(8) function oct_bessel(n, x)
+    FLOAT function oct_bessel(n, x)
       integer,  intent(in) :: n
-      real(8), intent(in)  :: x
+      FLOAT, intent(in)  :: x
     end function oct_bessel
     
-    real(8) function oct_asinh(x)
-      real(8), intent(in) :: x
+    FLOAT function oct_asinh(x)
+      FLOAT, intent(in) :: x
     end function oct_asinh
 
-    real(8) function oct_erf(x)
-      real(8), intent(in) :: x
+    FLOAT function oct_erf(x)
+      FLOAT, intent(in) :: x
     end function oct_erf
 
-    real(8) function oct_erfc(x)
-      real(8), intent(in) :: x
+    FLOAT function oct_erfc(x)
+      FLOAT, intent(in) :: x
     end function oct_erfc
 
-    real(8) function oct_ylm(x, y, z, l, m)
-      real(8), intent(in) :: x, y, z
+    FLOAT function oct_ylm(x, y, z, l, m)
+      FLOAT, intent(in) :: x, y, z
       integer, intent(in) :: l, m
     end function oct_ylm
 
@@ -70,9 +70,9 @@ module liboct
       integer, intent(out) :: l(32)
     end subroutine oct_wfs_list
 
-    real(8) function oct_ran_gaussian(r, sigma)
+    FLOAT function oct_ran_gaussian(r, sigma)
       integer(POINTER_SIZE), intent(in) :: r
-      real(8), intent(in) :: sigma
+      FLOAT, intent(in) :: sigma
     end function oct_ran_gaussian
 
     subroutine oct_ran_init(r)
@@ -83,7 +83,7 @@ module liboct
       integer(POINTER_SIZE), intent(out) :: r
     end subroutine oct_ran_end
 
-    real(8) function oct_clock()
+    FLOAT function oct_clock()
     end function oct_clock
 
     integer function oct_getmem()

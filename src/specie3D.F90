@@ -53,7 +53,7 @@ subroutine specie3D_init(nspecies, str, s)
       s(i)%nlcc  = .false.
 
       call oct_parse_block_double(str, i-1, 2, s(i)%Z)
-      s(i)%jradius = 0.5_r8
+      s(i)%jradius = M_HALF
       s(i)%Z_val = 0 
       
     case('usdef') ! user defined
@@ -84,9 +84,9 @@ subroutine specie3D_init(nspecies, str, s)
   end do
 end subroutine specie3D_init
 
-real(r8) function specie_get_nlcc(s, x) result(l)
+FLOAT function specie_get_nlcc(s, x) result(l)
   type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(3)
+  FLOAT, intent(in) :: x(3)
 
   ! only for 3D pseudopotentials, please
   if(conf%dim==3.and.(s%label(1:5).ne.'jelli'.and.s%label(1:5).ne.'point'.and.s%label(1:5).ne.'usdef')) then
@@ -97,11 +97,11 @@ end function specie_get_nlcc
 
 subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
   type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(3)
+  FLOAT, intent(in) :: x(3)
   integer, intent(in) :: l, lm, i
-  real(r8), intent(out) :: uV, duV(3)
-  real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
-  real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
+  FLOAT, intent(out) :: uV, duV(3)
+  FLOAT :: r, f, uVr0, duvr0, ylm, gylm(3)
+  FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
   logical, optional, intent(in) :: so
 
   r = sqrt(sum(x**2))
@@ -123,7 +123,7 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
     duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
   else
     if(l == 1) then
-      duv = 0.0_r8
+      duv = M_ZERO
       if(lm == -1) then
         duv(2) = -ylmconst * duvr0
       else if(lm == 0) then
@@ -132,7 +132,7 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
         duv(1) = -ylmconst * duvr0
       end if
     else
-      duv = 0.0_r8
+      duv = M_ZERO
     end if
   end if
 

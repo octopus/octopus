@@ -29,10 +29,10 @@ integer, parameter :: MIXDENS = 0, &
 
 type scf_type  ! some variables used for the scf cycle
   integer :: max_iter ! maximum number of scf iterations
-  real(r8) :: conv_abs_dens, conv_rel_dens, &
+  FLOAT :: conv_abs_dens, conv_rel_dens, &
        conv_abs_ev, conv_rel_ev ! several convergence criteria
   
-  real(r8) :: abs_dens, rel_dens, abs_ev, rel_ev
+  FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
 
   integer :: what2mix
 
@@ -51,15 +51,15 @@ subroutine scf_init(scf, sys, h)
 
   call push_sub('systm_scf_init')
 
-  call oct_parse_int("MaximumIter", 200, scf%max_iter)
-  call oct_parse_double("ConvAbsDens", 1e-5_r8, scf%conv_abs_dens)
-  call oct_parse_double("ConvRelDens",   0._r8, scf%conv_rel_dens)
-  call oct_parse_double("ConvAbsEv", 0._r8, scf%conv_abs_ev)
-  call oct_parse_double("ConvRelEv", 0._r8, scf%conv_rel_ev)
+  call oct_parse_int   ("MaximumIter",        200, scf%max_iter)
+  call oct_parse_double("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
+  call oct_parse_double("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
+  call oct_parse_double("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
+  call oct_parse_double("ConvRelEv",       M_ZERO, scf%conv_rel_ev)
 
   if(scf%max_iter <= 0 .and. &
-      scf%conv_abs_dens <= 0.0_r8 .and. scf%conv_rel_dens <= 0.0_r8 .and. &
-      scf%conv_abs_ev <= 0.0_r8 .and. scf%conv_rel_ev <= 0.0_r8) then
+      scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
+      scf%conv_abs_ev <= M_ZERO .and. scf%conv_rel_ev <= M_ZERO) then
     message(1) = "Input: Not all convergence criteria can be <= 0"
     message(2) = "Please set one of the following:"
     message(3) = "MaximumIter | ConvAbsDens | ConvRelDens | ConvAbsEv | ConvRelEv"
@@ -118,9 +118,9 @@ subroutine scf_run(scf, sys, h)
   type(scf_type), intent(inout) :: scf
 
   integer :: iter, iunit, ik, ist, id, is
-  real(r8) :: evsum_out, evsum_in
-  real(r8), allocatable :: rhoout(:,:), rhoin(:,:)
-  real(r8), allocatable :: vout(:,:), vin(:,:)
+  FLOAT :: evsum_out, evsum_in
+  FLOAT, allocatable :: rhoout(:,:), rhoin(:,:)
+  FLOAT, allocatable :: vout(:,:), vin(:,:)
   logical :: finish
 
   call push_sub('scf_run')
@@ -131,7 +131,7 @@ subroutine scf_run(scf, sys, h)
   rhoin = sys%st%rho
   if (scf%what2mix == MIXPOT) then
      allocate(vout(sys%m%np, sys%st%nspin), vin(sys%m%np, sys%st%nspin))
-     vin = h%vhxc; vout = 0._r8
+     vin = h%vhxc; vout = M_ZERO
   end if
   evsum_in = states_eigenvalues_sum(sys%st)
 
@@ -156,7 +156,7 @@ subroutine scf_run(scf, sys, h)
     evsum_out = states_eigenvalues_sum(sys%st)
 
     ! compute convergence criteria
-    scf%abs_dens = 0._r8
+    scf%abs_dens = M_ZERO
     do is = 1, sys%st%nspin
        scf%abs_dens = scf%abs_dens + dmf_integrate(sys%m, (rhoin(:,is) - rhoout(:,is))**2)
     end do
@@ -345,14 +345,14 @@ subroutine write_magnet(iunit, st)
   integer, intent(in) :: iunit
   type(states_type), intent(IN) :: st
   
-  real(r8) :: m(3), sign
+  FLOAT :: m(3), sign
   R_TYPE :: c
   integer :: i, ik, ist
   
   write(iunit, '(a)') 'Magnetization:'
   if(st%ispin == 2) then ! collinear spin
-    sign = 1._r8
-    m(3) = 0._r8
+    sign = M_ONE
+    m(3) = M_ZERO
     do ik = 1, st%nik
       do ist = 1, st%nst
         m(3) = m(3) + sign*st%kweights(ik)*st%occ(ist, ik)
@@ -362,15 +362,15 @@ subroutine write_magnet(iunit, st)
     write(iunit, '(a,f15.6)') ' mz = ', m(3)
     
   else if(st%ispin == 3) then ! non-collinear
-    m = 0._r8
+    m = M_ZERO
     do ik = 1, st%nik
       do ist = 1, st%nst
         do i = 1, sys%m%np
           c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
-          m(1) = m(1) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_REAL(c)
-          m(2) = m(2) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_AIMAG(c)
+          m(1) = m(1) + st%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+          m(2) = m(2) + st%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
           c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
-          m(3) = m(3) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_REAL(c)
+          m(3) = m(3) + st%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
         end do
       end do
     end do

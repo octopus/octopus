@@ -29,11 +29,11 @@ program hs_from_acc
   call global_init()
   call units_init()
 
-  call oct_parse_double("SpecStartTime", 0._r8, s%start_time)
-  call oct_parse_double("SpecEndTime", -1._r8, s%end_time)
-  call oct_parse_double("SpecEnergyStep", 0.05_r8/units_inp%energy%factor, s%energy_step)
-  call oct_parse_double("SpecMinEnergy", 0._r8, s%min_energy)
-  call oct_parse_double("SpecMaxEnergy", 1._r8/units_inp%energy%factor, s%max_energy)
+  call oct_parse_double("SpecStartTime",  M_ZERO, s%start_time)
+  call oct_parse_double("SpecEndTime",   -M_ONE,  s%end_time)
+  call oct_parse_double("SpecEnergyStep", CNST(0.05)/units_inp%energy%factor, s%energy_step)
+  call oct_parse_double("SpecMinEnergy",  M_ZERO, s%min_energy)
+  call oct_parse_double("SpecMaxEnergy",  M_ONE     /units_inp%energy%factor, s%max_energy)
 
   ! adjust units
   s%start_time  = s%start_time  * units_inp%time%factor

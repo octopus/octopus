@@ -46,13 +46,13 @@ subroutine X(matexp) (order, in, out, factor, norm, method)
   R_TYPE, intent(in)        :: in(order, order)
   R_TYPE, intent(out)       :: out(order, order)
   R_TYPE, intent(in)        :: factor
-  real(r8), intent(in), optional :: norm
+  FLOAT, intent(in), optional :: norm
   integer, intent(in), optional  :: method
 
   integer, parameter :: SCALEANDSQUARE = 1, &
                         DECOMPOSITION  = 2
   integer :: lmethod
-  real(r8) :: lnorm
+  FLOAT :: lnorm
 
   lmethod = SCALEANDSQUARE
   if(present(method)) lmethod = method
@@ -141,12 +141,12 @@ subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   R_TYPE, intent(in)   :: in(:, :)
   R_TYPE, intent(out)  :: out(:, :)
   R_TYPE, intent(in)   :: factor 
-  real(r8), intent(in) :: norm
+  FLOAT, intent(in) :: norm
 
   integer :: i, j
   R_TYPE, allocatable :: aux(:, :)
 
-  j = max(int(log(norm)/log(2._r8))+1, 0)
+  j = max(int(log(norm)/log(M_TWO)) + 1, 0)
 
   allocate(aux(order, order))
 
@@ -183,7 +183,7 @@ subroutine X(matexp_decomposition)(order, in, out, factor)
   integer ::  n, info, lwork
   R_TYPE :: zfact
   R_TYPE, allocatable :: aux(:,:), dd(:,:)
-  real(r8), allocatable :: w(:)
+  FLOAT, allocatable :: w(:)
 
   allocate(aux(order, order), dd(order, order), w(order))
   call X(iagonalise) (order, in, aux, w)
@@ -216,10 +216,10 @@ subroutine X(extrapolate)(order, n, v, vex, dt, t)
   integer, intent(in)  :: order, n
   R_TYPE, intent(in)   :: v(*)
   R_TYPE, intent(out)  :: vex(*)
-  real(r8), intent(in) :: dt, t
+  FLOAT, intent(in) :: dt, t
 
   integer :: j
-  real(r8) :: x
+  FLOAT :: x
   R_TYPE, allocatable :: c(:)
 
   x = (t/dt)

@@ -23,7 +23,7 @@ subroutine td_write_angular(out, sys, td, iter)
 
   integer :: is, i
   character(len=130) :: aux
-  real(r8) :: angular(3)
+  FLOAT :: angular(3)
 
   ! The angular momentum has to be calculated by all nodes...
   call zstates_calculate_angular(sys%m, sys%st, angular)
@@ -68,7 +68,7 @@ subroutine td_write_multipole(out, sys, td, iter)
   
   integer :: is, l, m, add_lm
   character(len=50) :: aux
-  real(r8), allocatable :: dipole(:), multipole(:,:)
+  FLOAT, allocatable :: dipole(:), multipole(:,:)
   
   if(mpiv%node.ne.0) return ! only first node outputs
   
@@ -150,7 +150,7 @@ subroutine td_write_nbo(out, sys, td, iter, ke, pe)
   type(system_type), intent(in) :: sys
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
-  real(r8),          intent(in) :: ke, pe
+  FLOAT,          intent(in) :: ke, pe
 
   integer :: i, j
   character(len=50) :: aux
@@ -222,7 +222,7 @@ subroutine td_write_gsp(out, sys, td, iter)
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
 
-  complex(r8) :: gsp
+  CMPLX :: gsp
   
   call push_sub('td_write_gsp')
   
@@ -267,7 +267,7 @@ subroutine td_write_acc(out, sys, h, td, iter)
 
   integer :: i
   character(len=7) :: aux
-  real(r8) :: acc(3)
+  FLOAT :: acc(3)
   
   if(mpiv%node.ne.0) return ! only first node outputs
   
@@ -311,7 +311,7 @@ subroutine td_write_laser(out, h, td, iter)
   integer,           intent(in) :: iter
 
   integer :: i
-  real(r8) :: field(3)
+  FLOAT :: field(3)
   character(len=80) :: aux
   
   if(mpiv%node.ne.0) return ! only first node outputs
@@ -417,7 +417,7 @@ subroutine td_write_proj(out, sys, u_st, iter)
   type(states_type), intent(in) :: u_st
   integer,           intent(in) :: iter
 
-  complex(r8), allocatable :: projections(:,:,:)
+  CMPLX, allocatable :: projections(:,:,:)
   character(len=20) :: aux
   integer :: ik, ist, uist
 

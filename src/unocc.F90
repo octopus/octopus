@@ -24,7 +24,7 @@ implicit none
 
 type unocc_type
   integer  :: max_iter ! maximum number of iterations
-  real(r8) :: conv     ! convergence criterium for the eigenvectors
+  FLOAT :: conv     ! convergence criterium for the eigenvectors
 
   type(states_type), pointer :: st
 end type unocc_type
@@ -40,8 +40,8 @@ subroutine unocc_init(u, m, st, sys)
   call push_sub('unocc_init')
 
   call oct_parse_int("UnoccMaximumIter", 200, u%max_iter)
-  call oct_parse_double("UnoccConv", 1e-4_r8, u%conv)
-  if(u%max_iter <= 0 .and. u%conv <= 0.0_r8) then
+  call oct_parse_double("UnoccConv", CNST(1e-4), u%conv)
+  if(u%max_iter <= 0 .and. u%conv <= M_ZERO) then
     message(1) = "Input: Not all occ convergence criteria can be <= 0"
     message(2) = "Please set one of the following:"
     message(3) = "UnoccMaximumIter | UnoccConv"
@@ -64,8 +64,8 @@ subroutine unocc_init(u, m, st, sys)
   u%st%st_end = u%st%nst
   allocate(u%st%X(psi) (m%np, u%st%dim, u%st%nst, u%st%nik))
   allocate(u%st%eigenval(u%st%nst, u%st%nik), u%st%occ(u%st%nst, u%st%nik))
-  u%st%eigenval = 0._r8
-  u%st%occ      = 0._r8
+  u%st%eigenval = M_ZERO
+  u%st%occ      = M_ZERO
 
   call pop_sub()
 end subroutine unocc_init

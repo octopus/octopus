@@ -81,8 +81,8 @@ contains
     integer, intent(inout) :: n(3)
     integer, intent(in) :: is_real
     type(fft_type), intent(out) :: fft
-    real(r8), allocatable    :: rin(:, :, :), rout(:, :, :)
-    complex(r8), allocatable :: cin(:, :, :), cout(:, :, :)
+    FLOAT, allocatable    :: rin(:, :, :), rout(:, :, :)
+    CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
 
 
     integer :: i, j
@@ -191,15 +191,15 @@ contains
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
     type(fft_type), intent(in) :: fft
-    real(r8), intent(in)     :: r(:,:,:)
-    complex(r8), intent(out) :: c(:,:,:)
+    FLOAT, intent(in)     :: r(:,:,:)
+    CMPLX, intent(out) :: c(:,:,:)
     call dfftw_execute_dft_r2c(fft%planf, r, c)
   end subroutine dfft_forward
 
   subroutine dfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
-    complex(r8), intent(in) :: c(:,:,:)
-    real(r8), intent(out)   :: r(:,:,:)
+    CMPLX, intent(in) :: c(:,:,:)
+    FLOAT, intent(out)   :: r(:,:,:)
 
     integer :: n
 
@@ -207,22 +207,22 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call dscal(n, M_ONE/real(n, r8), r(1, 1, 1), 1)
+    call dscal(n, M_ONE/real(n, PRECISION), r(1, 1, 1), 1)
 
   end subroutine dfft_backward
 
   ! first the complex versions
   subroutine zfft_forward(fft, in, out)
     type(fft_type), intent(in) :: fft
-    complex(r8), intent(in)  :: in(:,:,:)
-    complex(r8), intent(out) :: out(:,:,:)
+    CMPLX, intent(in)  :: in(:,:,:)
+    CMPLX, intent(out) :: out(:,:,:)
     call dfftw_execute_dft(fft%planf, in, out)
   end subroutine zfft_forward
 
   subroutine zfft_backward(fft, in, out)
     type(fft_type), intent(in) :: fft
-    complex(r8), intent(in)  :: in(:,:,:)
-    complex(r8), intent(out) :: out(:,:,:)
+    CMPLX, intent(in)  :: in(:,:,:)
+    CMPLX, intent(out) :: out(:,:,:)
 
     integer :: n
 
@@ -230,7 +230,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call zscal(n, M_z1/real(n, r8), out(1, 1, 1), 1)
+    call zscal(n, M_z1/real(n, PRECISION), out(1, 1, 1), 1)
 
   end subroutine zfft_backward
 

@@ -31,8 +31,8 @@ type PES_rc_type
 end type PES_rc_type
 
 type PES_mask_type
-  complex(r8), pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
-  real(r8),    pointer :: r(:,:,:,:,:)   ! summed masked density in real space
+  CMPLX, pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
+  FLOAT,    pointer :: r(:,:,:,:,:)   ! summed masked density in real space
 
   type(fft_type) :: fft
 end type PES_mask_type
@@ -81,8 +81,8 @@ subroutine PES_doit(p, m, st, ii, dt, mask)
   type(PES_type), intent(inout) :: p
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(in) :: dt
-  real(r8), pointer :: mask(:)
+  FLOAT, intent(in) :: dt
+  FLOAT, pointer :: mask(:)
   integer, intent(in) :: ii
 
   if(p%calc_rc)   call PES_rc_doit  (p%rc, st, ii)
@@ -95,7 +95,7 @@ subroutine PES_output(p, m, st, iter, save_iter, dt)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   integer, intent(in) :: iter, save_iter
-  real(r8), intent(in) :: dt
+  FLOAT, intent(in) :: dt
 
   if(p%calc_rc)   call PES_rc_output   (p%rc, st, iter, save_iter, dt)
   if(p%calc_mask) call PES_mask_output (p%mask, m, st, "PES")

@@ -83,24 +83,24 @@ type xc_type
 
   ! For LB94 fine-tuning
   logical  :: lb94_modified
-  real(r8) :: lb94_beta
-  real(r8) :: lb94_threshold
+  FLOAT :: lb94_beta
+  FLOAT :: lb94_threshold
 
   ! for the OEP
   integer  :: oep_level  ! 0 = Slater, 1 = KLI, 2 = full OEP
-  real(r8) :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
+  FLOAT :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
 end type xc_type
 
 type xc_oep_type
   integer           :: eigen_n
   integer,  pointer :: eigen_type(:), eigen_index(:)
-  real(r8)          :: socc, sfact
-  real(r8), pointer :: vxc(:), lxc(:,:), uxc_bar(:)
+  FLOAT          :: socc, sfact
+  FLOAT, pointer :: vxc(:), lxc(:,:), uxc_bar(:)
 end type xc_oep_type
 
-real(r8), parameter :: small     = 1e-5_r8
-real(r8), parameter :: tiny      = 1.0e-12_r8
-real(r8), parameter :: denom_eps = 1e-20_r8 ! added to denominators to avoid overflows...
+FLOAT, parameter :: small     = CNST(1.0e-5)
+FLOAT, parameter :: tiny      = CNST(1.0e-12)
+FLOAT, parameter :: denom_eps = CNST(1.0e-20) ! added to denominators to avoid overflows...
 
 contains
 
@@ -229,8 +229,8 @@ subroutine xc_init(xcs, nlcc)
 
   ! Extra parameters to fine-tune LB94 potential.
   if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-    call oct_parse_double("LB94_beta", 0.05_r8, xcs%lb94_beta)
-    call oct_parse_double("LB94_threshold", 1.0e-6_r8, xcs%lb94_threshold)
+    call oct_parse_double("LB94_beta", CNST(0.05), xcs%lb94_beta)
+    call oct_parse_double("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
     call oct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
   end if
 
@@ -278,11 +278,11 @@ subroutine xc_oep_AnalizeEigen(oep, st, is)
    integer,           intent(in)  :: is
 
    integer  :: i
-   real(r8) :: max_eigen
+   FLOAT :: max_eigen
 
    ! find out the top occupied state, to correct for the assymptotics
    ! of the potential
-   max_eigen = -1e30_r8
+   max_eigen = CNST(-1e30)
    do i = 1, st%nst
      if((st%occ(i, is) .gt. small).and.(st%eigenval(i, is).gt.max_eigen)) then
        max_eigen = st%eigenval(i, is)
@@ -293,7 +293,7 @@ subroutine xc_oep_AnalizeEigen(oep, st, is)
    do i = 1, st%nst
      if(st%occ(i, is) .gt. small) then
        ! criterium for degeneracy
-       if(abs(st%eigenval(i, is)-max_eigen).le.1e-3_r8) then
+       if(abs(st%eigenval(i, is)-max_eigen).le.CNST(1e-3)) then
          oep%eigen_type(i) = 2
        else
          oep%eigen_type(i) = 1

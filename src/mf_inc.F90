@@ -41,7 +41,7 @@ end function X(mf_dotp)
 
 !!! this function returns the norm of a vector
 !!! if HAVE_BLAS is defined it uses the BLAS library
-real(r8) function X(mf_nrm2)(m, f) result(nrm2)
+FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
 

@@ -30,26 +30,26 @@ contains
 ! a simple congruent random number generator
 subroutine quickrnd(iseed, rnd)
   integer, intent(inout) :: iseed
-  real(r8), intent(inout) :: rnd
+  FLOAT, intent(inout) :: rnd
 
   integer, parameter :: im=6075, ia=106, ic=1283
 
   iseed = mod(iseed*ia + ic, im)
-  rnd = real(iseed, r8)/real(im, r8)
+  rnd = real(iseed, PRECISION)/real(im, PRECISION)
   
 end subroutine quickrnd
 
 ! Step function, needed for definition of fermi function.
 function stepf(x)
-  real(r8), intent(in) ::  x
-  real(r8) :: stepf
+  FLOAT, intent(in) ::  x
+  FLOAT :: stepf
 
-  if (x.gt.100.0_r8) then
-     stepf = 0.0_r8
-  elseif (x.lt.-100.0_r8) then
-     stepf = 2.0_r8
+  if (x.gt.CNST(100.0)) then
+     stepf = M_ZERO
+  elseif (x.lt.CNST(-100.0)) then
+     stepf = M_TWO
   else
-     stepf = 2.0_r8 / ( 1.0_r8 + exp(x) )
+     stepf = M_TWO / ( M_ONE + exp(x) )
   endif
 
 end function stepf
@@ -61,24 +61,23 @@ end function stepf
 ! with (theta,phi) the polar angles of r, c a positive normalization
 subroutine grylmr(x, y, z, li, mi, ylm, grylm)
   integer, intent(in) :: li, mi
-  real(r8), intent(in) :: x, y, z
-  real(r8), intent(out) :: ylm, grylm(3)
+  FLOAT, intent(in) :: x, y, z
+  FLOAT, intent(out) :: ylm, grylm(3)
 
   integer, parameter :: lmaxd = 20
-  real(r8), parameter :: tiny=1.e-30_r8, zero=0.0_r8, half=0.5_r8, one=1.0_r8, &
-       two=2.0_r8, three=3.0_r8, six=6.0_r8
+  FLOAT,   parameter :: tiny = CNST(1.e-30)
   integer :: i, ilm0, l, m, mabs
   integer, save :: lmax = -1
 
-  real(r8) :: cmi, cosm, cosmm1, cosphi, dphase, dplg, fac, &
+  FLOAT :: cmi, cosm, cosmm1, cosphi, dphase, dplg, fac, &
        fourpi, plgndr, phase, pll, pmm, pmmp1, sinm, &
        sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
-  real(r8), save :: c(0:(lmaxd+1)*(lmaxd+1))
+  FLOAT, save :: c(0:(lmaxd+1)*(lmaxd+1))
   
 
 ! evaluate normalization constants once and for all
   if (li.gt.lmax) then
-    fourpi = two**4*datan(one)
+    fourpi = M_FOUR*M_PI
     do l = 0, li
       ilm0 = l*l + l
       do m = 0, l
@@ -88,7 +87,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
         end do
         c(ilm0 + m) = sqrt(fac)
         ! next line because ylm are real combinations of m and -m
-        if(m.ne.0) c(ilm0 + m) = c(ilm0 + m)*sqrt(two)
+        if(m.ne.0) c(ilm0 + m) = c(ilm0 + m)*sqrt(M_TWO)
         c(ilm0 - m) = c(ilm0 + m)
       end do
     end do
@@ -98,15 +97,15 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
   ! if l=0, no calculations are required
   if (li.eq.0) then
     ylm = c(0)
-    grylm(:) = zero
+    grylm(:) = M_ZERO
     return
   end if
 
   ! if r=0, direction is undefined => make ylm=0 except for l=0
   r2 = x**2 + y**2 + z**2
   if(r2.lt.tiny) then
-    ylm = zero
-    grylm(:) = zero
+    ylm = M_ZERO
+    grylm(:) = M_ZERO
     return
   endif
   rsize = sqrt(r2)
@@ -121,16 +120,16 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
     case(-1)
       ylm = (-c(1))*Ry
       grylm(1) = c(1)*Rx*Ry/rsize
-      grylm(2) = (-c(1))*(one - Ry*Ry)/rsize
+      grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
       grylm(3) = c(1)*Rz*Ry/rsize 
     case(0)
       ylm = c(2)*Rz
       grylm(1) = (-c(2))*Rx*Rz/rsize
       grylm(2) = (-c(2))*Ry*Rz/rsize
-      grylm(3) = c(2)*(one - Rz*Rz)/rsize
+      grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
     case(1)
       ylm = (-c(3))*Rx
-      grylm(1) = (-c(3))*(one - Rx*Rx)/rsize
+      grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
       grylm(2) = c(3)*Ry*Rx/rsize
       grylm(3) = c(3)*Rz*Rx/rsize
     end select
@@ -140,30 +139,30 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
   if(li.eq.2) then
     select case(mi)
     case(-2)
-      ylm = c(4)*six*Rx*Ry
-      grylm(1) = (-c(4))*six*(two*Rx*Rx*Ry - Ry)/rsize
-      grylm(2) = (-c(4))*six*(two*Ry*Rx*Ry - Rx)/rsize
-      grylm(3) = (-c(4))*six*(two*Rz*Rx*Ry)/rsize
+      ylm = c(4)*M_SIX*Rx*Ry
+      grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
+      grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
+      grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
     case(-1)
-      ylm = (-c(5))*three*Ry*Rz
-      grylm(1) = c(5)*three*(two*Rx*Ry*Rz)/rsize
-      grylm(2) = c(5)*three*(two*Ry*Ry*Rz - Rz)/rsize
-      grylm(3) = c(5)*three*(two*Rz*Ry*Rz - Ry)/rsize
+      ylm = (-c(5))*M_THREE*Ry*Rz
+      grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
+      grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
+      grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
     case(0)
-      ylm = c(6)*half*(three*Rz*Rz - one)
-      grylm(1) = (-c(6))*three*(Rx*Rz*Rz)/rsize
-      grylm(2) = (-c(6))*three*(Ry*Rz*Rz)/rsize
-      grylm(3) = (-c(6))*three*(Rz*Rz - one)*Rz/rsize
+      ylm = c(6)*M_HALF*(M_THREE*Rz*Rz - M_ONE)
+      grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
+      grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
+      grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
     case(1)
-      ylm = (-c(7))*three*Rx*Rz
-      grylm(1) = c(7)*three*(two*Rx*Rx*Rz - Rz)/rsize
-      grylm(2) = c(7)*three*(two*Ry*Rx*Rz)/rsize
-      grylm(3) = c(7)*three*(two*Rz*Rx*Rz - Rx)/rsize
+      ylm = (-c(7))*M_THREE*Rx*Rz
+      grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
+      grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
+      grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
     case(2)
-      ylm = c(8)*three*(Rx*Rx - Ry*Ry)
-      grylm(1) = (-c(8))*six*(Rx*Rx - Ry*Ry - one)*Rx/rsize
-      grylm(2) = (-c(8))*six*(Rx*Rx - Ry*Ry + one)*Ry/rsize
-      grylm(3) = (-c(8))*six*(Rx*Rx - Ry*Ry)*Rz/rsize
+      ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
+      grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
+      grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
+      grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
     end select
     return
   end if
@@ -173,8 +172,8 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
   xysize = sqrt(max(Rx*Rx + Ry*Ry, tiny))
   cosphi = Rx/xysize
   sinphi = Ry/xysize
-  cosm = one
-  sinm = zero
+  cosm = M_ONE
+  sinm = M_ZERO
   do m = 1, mabs
     cosmm1 = cosm
     sinmm1 = sinm
@@ -190,13 +189,13 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
     dphase = (-mabs)*sinm
   end if
 
-  pmm = one
-  fac = one
+  pmm = M_ONE
+  fac = M_ONE
 
-  if(mabs.gt.zero) then
+  if(mabs.gt.M_ZERO) then
     do i = 1, mabs
       pmm = (-pmm)*fac*xysize
-      fac = fac + two
+      fac = fac + M_TWO
     end do
   end if
 
@@ -226,7 +225,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
        -cmi*plgndr*dphase*Ry/(rsize*xysize**2)
   grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
        +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
-  grylm(3)= cmi*dplg*(one - Rz*Rz)*phase/rsize
+  grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
    
   return
 end subroutine grylmr
@@ -240,11 +239,11 @@ end subroutine grylmr
 !              j=0,k: the coefficients acting of each point
 subroutine weights(N, M, cc)
   integer, intent(in) :: N, M
-  real(r8), intent(out) :: cc(0:M, 0:M, 0:N)
+  FLOAT, intent(out) :: cc(0:M, 0:M, 0:N)
 
   integer :: i, j, k, mn
-  real(r8) :: c1, c2, c3, c4, c5, xi
-  real(r8) :: x(0:M)
+  FLOAT :: c1, c2, c3, c4, c5, xi
+  FLOAT :: x(0:M)
 
   ! grid-points for one-side finite-difference formulas on an equi.spaced grid
   ! x(:) = (/(i,i=0,M)/) 
@@ -253,17 +252,17 @@ subroutine weights(N, M, cc)
   mn = M/2
   x(:) = (/0,(-i,i,i=1,mn)/)
 
-  xi = 0.0_r8  ! point at which the approx. are to be accurate
+  xi = M_ZERO  ! point at which the approx. are to be accurate
 
-  cc = 0.0_r8
-  cc(0,0,0) = 1.0_r8
+  cc = M_ZERO
+  cc(0,0,0) = M_ONE
 
-  c1 = 1.0_r8
+  c1 = M_ONE
   c4 = x(0) - xi
        
   do j = 1, M
     mn = min(j,N)
-    c2 = 1.0_r8
+    c2 = M_ONE
     c5 = c4
     c4 = x(j) - xi
     
@@ -271,7 +270,7 @@ subroutine weights(N, M, cc)
       c3 = x(j) - x(k)
       c2 = c2*c3
       
-      if (j <= N) cc(k, j - 1, j) = 0.0_r8
+      if (j <= N) cc(k, j - 1, j) = M_ZERO
       cc(k, j, 0) = c4*cc(k, j - 1, 0)/c3
       
       do i = 1, mn

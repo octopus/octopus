@@ -34,17 +34,17 @@ type hamiltonian_type
   integer :: nspin         ! dimension of rho (1, 2 or 4)
   integer :: spin_channels ! 1 or 2, wether spin is or not considered.
   logical :: select_axis(3)! which axes are used fo k points
-  real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
-  real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
+  FLOAT, pointer :: kpoints(:,:) ! obviously the kpoints
+  FLOAT, pointer :: kweights(:)  ! weights for the kpoint integrations
 
 
   integer :: reltype ! type of relativistic correction to use
 
-  real(r8), pointer :: Vpsl(:)     ! the external potential
-  real(r8), pointer :: Vhxc(:,:)   ! xc potential + hartree potential
+  FLOAT, pointer :: Vpsl(:)     ! the external potential
+  FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
 
   ! the energies (total, ion-ion, exchange, correlation)
-  real(r8) :: etot, eii, ex, ec, epot
+  FLOAT :: etot, eii, ex, ec, epot
 
   ! System under the independent particle approximation, or not.
   logical :: ip_app
@@ -59,16 +59,16 @@ type hamiltonian_type
 
   ! absorbing boundaries
   integer  :: ab         ! do we have absorbing boundaries?
-  real(r8) :: ab_width   ! width of the absorbing boundary
-  real(r8) :: ab_height  ! height of the absorbing boundary
-  real(r8), pointer :: ab_pot(:) ! where we store the ab potential
+  FLOAT :: ab_width   ! width of the absorbing boundary
+  FLOAT :: ab_height  ! height of the absorbing boundary
+  FLOAT, pointer :: ab_pot(:) ! where we store the ab potential
 
   ! Spectral range.
-  real(r8) :: spectral_middle_point
-  real(r8) :: spectral_half_span
+  FLOAT :: spectral_middle_point
+  FLOAT :: spectral_half_span
 
   ! Kinetic Cutoff
-  real(r8) :: cutoff
+  FLOAT :: cutoff
 end type hamiltonian_type
 
 integer, parameter :: NOREL      = 0, &
@@ -86,7 +86,7 @@ subroutine hamiltonian_init(h, sys)
   type(system_type), intent(inout) :: sys
 
   integer :: i, j, n
-  real(r8) :: d(3), r, x(3)
+  FLOAT :: d(3), r, x(3)
 
   call push_sub('hamiltonian_init')
 
@@ -170,10 +170,10 @@ subroutine hamiltonian_init(h, sys)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
-    call oct_parse_double("ABWidth", 4._r8/units_inp%length%factor, h%ab_width)
+    call oct_parse_double("ABWidth", M_FOUR/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
-      call oct_parse_double("ABHeight", -0.2_r8/units_inp%energy%factor, h%ab_height)
+      call oct_parse_double("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
       h%ab_height = M_ONE
@@ -246,12 +246,12 @@ end subroutine hamiltonian_end
 subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   type(hamiltonian_type), intent(inout) :: h
   type(states_type), intent(in) :: st
-  real(r8), intent(in) :: eii
+  FLOAT, intent(in) :: eii
   integer, intent(in) :: iunit
   logical, intent(in), optional :: reduce
 
   integer :: ik
-  real(r8) :: s, e
+  FLOAT :: s, e
 #ifdef HAVE_MPI
   integer :: ierr
 #endif 
@@ -290,12 +290,12 @@ end subroutine hamiltonian_energy
 
 subroutine hamiltonian_span(h, delta, emin)
   type(hamiltonian_type), intent(inout) :: h
-  real(r8), intent(in) :: delta, emin
+  FLOAT, intent(in) :: delta, emin
 
   call push_sub('hamiltonian_span')
 
-  h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/2._r8
-  h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/2._r8
+  h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/M_TWO
+  h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/M_TWO
 
   call pop_sub()
 end subroutine hamiltonian_span
@@ -308,7 +308,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
 
   integer :: is
   character(len=80) :: fname  
-  real(r8) :: u
+  FLOAT :: u
 
   call push_sub('hamiltonian_output')
 

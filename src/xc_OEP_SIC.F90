@@ -23,12 +23,12 @@ subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  real(r8),          intent(out)   :: ex
+  FLOAT,          intent(out)   :: ex
 
   integer  :: i, k, i1, i2
-  real(r8) :: ex2, edummy, r
-  real(r8), allocatable :: vx2(:, :)
-  real(r8), pointer :: rho(:,:), rho_save(:,:)
+  FLOAT :: ex2, edummy, r
+  FLOAT, allocatable :: vx2(:, :)
+  FLOAT, pointer :: rho(:,:), rho_save(:,:)
   type(xc_type) :: xcs2
 
   allocate(rho(m%np, 2), Vx2(m%np, 2))
@@ -75,12 +75,12 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  real(r8),          intent(out)   :: ec
+  FLOAT,          intent(out)   :: ec
 
   integer  :: i, k, i1, i2
-  real(r8) :: ec2, edummy, r
-  real(r8), allocatable :: vc2(:, :)
-  real(r8), pointer :: rho(:,:), rho_save(:,:)
+  FLOAT :: ec2, edummy, r
+  FLOAT, allocatable :: vc2(:, :)
+  FLOAT, pointer :: rho(:,:), rho_save(:,:)
   type(xc_type) :: xcs2
 
   allocate(rho(m%np, 2), Vc2(m%np, 2))

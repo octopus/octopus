@@ -17,11 +17,11 @@
 
 subroutine poisson1D_solve(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(out) :: pot(m%np)
-  real(r8), intent(in)  :: rho(m%np)
+  FLOAT, intent(out) :: pot(m%np)
+  FLOAT, intent(in)  :: rho(m%np)
 
   integer  :: i, j
-  real(r8) :: x, y
+  FLOAT :: x, y
 
   ASSERT(poisson_solver == -1)
 
@@ -32,7 +32,7 @@ subroutine poisson1D_solve(m, pot, rho)
     call mesh_x(m, i, x)
     do j=1, m%np
       call mesh_x(m, j, y)
-      pot(i) = pot(i) + rho(j)/sqrt(1.0_r8 + (x-y)**2)
+      pot(i) = pot(i) + rho(j)/sqrt(M_ONE + (x-y)**2)
     end do
     pot(i) = pot(i)*m%vol_pp
   end do

@@ -27,7 +27,7 @@ program xyzanim
   character(len=80) :: str, nbofile, xyzfile
   character(len=5000) :: line
   integer :: ierr, sampling, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
-  real(r8) :: dump
+  FLOAT :: dump
 
   type(atom_type), pointer :: atm(:)
   type(atom_classical_type), pointer :: catm(:)

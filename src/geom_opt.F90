@@ -27,12 +27,12 @@ module geom_opt
   
   type geom_opt_type
     integer  :: method
-    real(r8) :: step
-    real(r8) :: tol
+    FLOAT :: step
+    FLOAT :: tol
     integer  :: max_iter
     
-    real(r8) :: f
-    real(r8), pointer :: x(:), df(:)
+    FLOAT :: f
+    FLOAT, pointer :: x(:), df(:)
     
   end type geom_opt_type
 
@@ -46,7 +46,7 @@ contains
     type(geom_opt_type) :: geo
 
     integer :: i
-    real(r8), allocatable :: x(:)
+    FLOAT, allocatable :: x(:)
     !integer, external :: oct_geom_opt
     
     call push_sub('geom_opt_run')
@@ -96,11 +96,11 @@ contains
         call write_fatal(2)
       end if
 
-      call oct_parse_double("GOTolerance", 0.0001_r8/units_inp%force%factor, geo%tol)
+      call oct_parse_double("GOTolerance", CNST(0.0001)/units_inp%force%factor, geo%tol)
       geo%tol = geo%tol*units_inp%force%factor
 
       ! WARNING: in some weird units
-      call oct_parse_double("GOStep", 0.5_r8, geo%step)
+      call oct_parse_double("GOStep", M_HALF, geo%step)
 
       call oct_parse_int("GOMaxIter", 200, geo%max_iter)
       if(geo%max_iter <= 0) then
@@ -111,8 +111,8 @@ contains
     end subroutine geo_init
 
     subroutine geom_calc_point(x, f, df)
-      real(r8), intent(IN)  :: x(3*sys%natoms)
-      real(r8), intent(out) :: f, df(3*sys%natoms)
+      FLOAT, intent(IN)  :: x(3*sys%natoms)
+      FLOAT, intent(out) :: f, df(3*sys%natoms)
       
       integer :: i
       
@@ -143,10 +143,10 @@ contains
     end subroutine geom_calc_point
     
     integer function steepest_descents(x)
-      real(r8), intent(inout) :: x(:)
+      FLOAT, intent(inout) :: x(:)
 
-      real(r8), allocatable :: x1(:), df(:), df1(:)
-      real(r8) :: f, f1
+      FLOAT, allocatable :: x1(:), df(:), df1(:)
+      FLOAT :: f, f1
       integer :: iter, count
 
       allocate(x1(3*sys%natoms), df(3*sys%natoms), df1(3*sys%natoms))

@@ -54,7 +54,7 @@ contains
 #ifdef HAVE_FFT
   subroutine init_fft()
     integer :: ix, iy, iz, ixx(3), db(3), dbc(3)
-    real(r8) :: r_0, temp(3), vec
+    FLOAT :: r_0, temp(3), vec
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(m, db)                 ! get dimensions of the double box
@@ -69,7 +69,7 @@ contains
     fft_Coulb_FS = M_ZERO
 
     r_0 = maxval(db(:)*m%h(:))/M_TWO
-    temp(:) = 2.0_r8*M_PI/(db(:)*m%h(:))
+    temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
       
     do iz = 1, db(3)
       ixx(3) = pad_feq(iz, db(3), .true.)
@@ -81,15 +81,15 @@ contains
           vec = sum((temp(:)*ixx(:))**2) 
           if(vec.ne.M_ZERO) then
             if(poisson_solver==2) then
-              fft_Coulb_FS(ix, iy, iz) = 4.0_r8*M_PI / vec
+              fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI / vec
             else
-              fft_Coulb_FS(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(sqrt(vec)*r_0)) / vec 
+              fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_Pi*(M_ONE - cos(sqrt(vec)*r_0)) / vec 
             endif
           else
             if(poisson_solver==2) then
               fft_Coulb_FS(ix, iy, iz) = M_ZERO
             else
-              fft_Coulb_FS(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+              fft_Coulb_FS(ix, iy, iz) = M_TWO*M_Pi*r_0**2 
             endif
           end if
         end do
@@ -103,15 +103,15 @@ end subroutine poisson3D_init
 
 subroutine poisson_cg(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(inout) :: pot(m%np)
-  real(r8), intent(in)    :: rho(m%np)
+  FLOAT, intent(inout) :: pot(m%np)
+  FLOAT, intent(in)    :: rho(m%np)
   
   integer, parameter :: ml = 4 ! maximum multipole moment to include
-  real(r8), parameter :: fpi = M_FOUR*M_PI
+  FLOAT, parameter :: fpi = M_FOUR*M_PI
 
   integer :: i, iter, add_lm, l, mm
-  real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck
-  real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:), lwk(:)
+  FLOAT :: sa, x(3), r, s1, s2, s3, ak, ck
+  FLOAT, allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:), lwk(:)
 
   call push_sub('poisson_cg')
 
@@ -180,7 +180,7 @@ subroutine poisson_cg(m, pot, rho)
     zk = zk - ak*tk
     s3 = dmf_nrm2(m, zk)**2
 
-    if(iter >= 400 .or. abs(s3) < 1.0e-5_r8) exit
+    if(iter >= 400 .or. abs(s3) < CNST(1.0e-5)) exit
 
     ck = s3/s1
     s1 = s3
@@ -202,8 +202,8 @@ end subroutine poisson_cg
 #if defined(HAVE_FFT)
 subroutine poisson_fft(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(out) :: pot(m%np)
-  real(r8), intent(in)  :: rho(m%np)
+  FLOAT, intent(out) :: pot(m%np)
+  FLOAT, intent(in)  :: rho(m%np)
 
   call push_sub('poisson_fft')
 

@@ -61,9 +61,9 @@ subroutine X(f_laplacian) (m, f, lapl, cutoff_)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(in) :: f(m%np)
   R_TYPE, intent(out) :: lapl(m%np)
-  real(r8), intent(in), optional :: cutoff_
+  FLOAT, intent(in), optional :: cutoff_
 
-  real(r8) :: cutoff
+  FLOAT :: cutoff
 
   call push_sub("f_laplacian")
 

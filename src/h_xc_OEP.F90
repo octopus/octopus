@@ -26,10 +26,10 @@ subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
   type(hamiltonian_type), intent(in) :: h
   type(system_type), intent(in)    :: sys
   type(states_type), intent(inout) :: st
-  real(r8),          intent(inout) :: vxc(m%np, st%nspin), ex, ec
+  FLOAT,          intent(inout) :: vxc(m%np, st%nspin), ex, ec
   
   type(xc_oep_type) :: oep
-  real(r8) :: e
+  FLOAT :: e
   integer :: is, ist, ixc, ifunc
 
   call push_sub('h_xc_oep')
@@ -105,12 +105,12 @@ subroutine X(h_xc_oep_solve) (m, h, sys, st, is, vxc, oep)
   type(system_type), intent(in)    :: sys
   type(states_type), intent(in)    :: st
   integer,           intent(in)    :: is
-  real(r8),          intent(inout) :: vxc(m%np)
+  FLOAT,          intent(inout) :: vxc(m%np)
   type(xc_oep_type), intent(inout) :: oep
 
   integer :: iter, i, ist
-  real(r8) :: vxc_bar
-  real(r8), allocatable :: s(:), vxc_old(:)
+  FLOAT :: vxc_bar
+  FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:), psi(:,:)
 
   allocate(b(m%np), s(m%np), psi(m%np, 1), vxc_old(m%np))
@@ -139,7 +139,7 @@ subroutine X(h_xc_oep_solve) (m, h, sys, st, is, vxc, oep)
       s(:) = s(:) + M_TWO*R_REAL(psi(:,1)*st%X(psi)(:, 1, ist, is))
     end do
     print *, iter, "s = ", dmf_nrm2(m, s)
-    oep%vxc(:) = oep%vxc(:) + 2._r8*s(:)
+    oep%vxc(:) = oep%vxc(:) + M_TWO*s(:)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then

@@ -159,20 +159,20 @@ end subroutine X(cf_FS2RS)
 subroutine X(cf_FS_lapl)(m, cf, cutoff_)
   type(mesh_type), intent(in) :: m
   type(X(cf)), intent(inout)  :: cf
-  real(r8), intent(in), optional :: cutoff_
+  FLOAT, intent(in), optional :: cutoff_
 
-  real(r8) :: cutoff, temp(3), g2
+  FLOAT :: cutoff, temp(3), g2
   integer :: k(3), ix, iy, iz
 
   ASSERT(associated(cf%FS))
 
-  cutoff = 1e10_r8
+  cutoff = CNST(1e10)
   if(present(cutoff_)) then
     if(cutoff_>M_ZERO) cutoff = cutoff_
   end if
 
   temp = M_ZERO
-  temp(1:conf%dim) = (2.0_r8*M_Pi)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
+  temp(1:conf%dim) = (M_TWO*M_PI)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
 
   do iz = 1, cf%n(3)
     k(3) = pad_feq(iz, cf%n(3), .true.)
@@ -193,13 +193,13 @@ subroutine X(cf_FS_grad)(m, cf, j)
   type(X(cf)), intent(inout)  :: cf
   integer, intent(in) :: j
 
-  real(r8) :: temp(3), g
+  FLOAT :: temp(3), g
   integer :: k(3), ix, iy, iz
 
   call push_sub('cf_FS_grad')
 
   temp = M_ZERO
-  temp(1:conf%dim) = (2.0_r8*M_Pi)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
+  temp(1:conf%dim) = (M_TWO*M_PI)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
 
   k = 0
   do iz = 1, cf%n(3)

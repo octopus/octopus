@@ -31,7 +31,7 @@ integer, parameter :: &
 type lookup_type
   integer :: n
   integer, pointer :: i(:)
-  real(r8), pointer :: w(:)
+  FLOAT, pointer :: w(:)
 end type lookup_type
 
 type derivatives_type
@@ -42,14 +42,14 @@ end type derivatives_type
 type mesh_type
   integer  :: box_shape ! 1->sphere, 2->cylinder, 3->sphere around each atom,
                         ! 4->parallelpiped (orthonormal, up to now).
-  real(r8) :: h(3)      ! the (constant) spacing between the points
+  FLOAT :: h(3)      ! the (constant) spacing between the points
   
-  real(r8) :: rsize     ! the radius of the sphere or of the cylinder
-  real(r8) :: xsize     ! the length of the cylinder in the x direction
-  real(r8) :: lsize(3)  ! half of the length of the parallelepiped in each direction.
-  real(r8) :: rlat(3,3)   ! lattice primitive vectors
-  real(r8) :: klat(3,3)   ! reciprocal lattice primitive vectors
-  real(r8) :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
+  FLOAT :: rsize     ! the radius of the sphere or of the cylinder
+  FLOAT :: xsize     ! the length of the cylinder in the x direction
+  FLOAT :: lsize(3)  ! half of the length of the parallelepiped in each direction.
+  FLOAT :: rlat(3,3)   ! lattice primitive vectors
+  FLOAT :: klat(3,3)   ! reciprocal lattice primitive vectors
+  FLOAT :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
   
   integer  :: np        ! number of points in mesh
   integer  :: np_in     ! number of points without the enlargement
@@ -64,9 +64,9 @@ type mesh_type
   type(derivatives_type) :: laplacian
   type(derivatives_type), pointer :: grad(:)
 
-  real(r8) :: fft_alpha ! enlargement factor for double box
+  FLOAT :: fft_alpha ! enlargement factor for double box
 
-  real(r8) :: vol_pp    ! element of volume for integrations
+  FLOAT :: vol_pp    ! element of volume for integrations
 end type mesh_type
 
 contains
@@ -83,8 +83,8 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_create(m, natoms, atom)
 
-  call oct_parse_double('DoubleFFTParameter', 2.0_r8, m%fft_alpha)
-  if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
+  call oct_parse_double('DoubleFFTParameter', M_TWO, m%fft_alpha)
+  if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
          "' is not a valid DoubleFFTParameter"
     message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
@@ -184,7 +184,7 @@ end subroutine mesh_write_info
 subroutine mesh_xyz(m, i, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(out) :: x(conf%dim)
+  FLOAT, intent(out) :: x(conf%dim)
 
   x(1:conf%dim) = m%Lxyz(1:conf%dim, i)*m%h(1:conf%dim)
 end subroutine mesh_xyz
@@ -192,7 +192,7 @@ end subroutine mesh_xyz
 subroutine mesh_x(m, i, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(out) :: x
+  FLOAT, intent(out) :: x
 
   x = m%Lxyz(1, i)*m%h(1)
 end subroutine mesh_x
@@ -200,7 +200,7 @@ end subroutine mesh_x
 subroutine mesh_y(m, i, y)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(out) :: y
+  FLOAT, intent(out) :: y
 
   y = m%Lxyz(2, i)*m%h(2)
 end subroutine mesh_y
@@ -208,7 +208,7 @@ end subroutine mesh_y
 subroutine mesh_z(m, i, z)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(out) :: z
+  FLOAT, intent(out) :: z
 
   z = m%Lxyz(3, i)*m%h(3)
 end subroutine mesh_z
@@ -216,11 +216,11 @@ end subroutine mesh_z
 subroutine mesh_r(m, i, r, a, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(out) :: r
-  real(r8), intent(in), optional :: a(conf%dim)
-  real(r8), intent(out), optional :: x(conf%dim)
+  FLOAT, intent(out) :: r
+  FLOAT, intent(in), optional :: a(conf%dim)
+  FLOAT, intent(out), optional :: x(conf%dim)
 
-  real(r8) :: xx(conf%dim)
+  FLOAT :: xx(conf%dim)
 
   call mesh_xyz(m, i, xx)
   if(present(a)) xx = xx - a
@@ -247,12 +247,12 @@ end subroutine mesh_r
 subroutine mesh_inborder(m, i, n, d, width)
   type(mesh_type), intent(in) :: m
   integer, intent(in)   :: i
-  real(r8), intent(in)  :: width
+  FLOAT, intent(in)  :: width
   integer, intent(out)  :: n
-  real(r8), intent(out) :: d(3)
+  FLOAT, intent(out) :: d(3)
 
   integer :: j
-  real(r8) :: x(3), r, dd
+  FLOAT :: x(3), r, dd
 
   call mesh_r(m, i, r, x=x)
   n = 0

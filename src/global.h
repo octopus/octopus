@@ -19,16 +19,31 @@
 
 #define __STRING(x)     #x
 
-#ifdef DEBUG
+#if defined(DEBUG)
 #  define ASSERT(expr) \
   if(.not.(expr)) call assert_die (__STRING(expr), __FILE__, __LINE__)
 #else
 #  define ASSERT(expr)
 #endif
 
+#if defined(SINGLE_PRECISION)
+#  define PRECISION 4
+#  define FLOAT     real(4)
+#  define CMPLX     complex(4) 
+#  define PREC(x)   s ## x
+#  define CNST(x)   x ## _4
+#else
+#  define PRECISION 8
+#  define FLOAT     real(8)
+#  define CMPLX     complex(8)
+#  define PREC(x)   d ## x
+#  define CNST(x)   x ## _8
+#endif
+
 ! what do you wish for dinner, dear?
-#ifdef COMPLEX_WFNS
+#if defined(COMPLEX_WFNS)
 #  include "complex.F90"
 #else
 #  include "real.F90"
 #endif
+

@@ -32,7 +32,7 @@ subroutine PES_mask_init(v, m, st)
        v%r(m%l(1), m%l(2), m%l(3),         st%st_start:st%st_end, st%nik))
 
   v%k = M_z0
-  v%r = 0._r8
+  v%r = M_ZERO
    
 end subroutine PES_mask_init
 
@@ -51,15 +51,15 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   type(PES_mask_type), intent(inout) :: v
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(IN) :: dt
-  real(r8), pointer :: mask(:)
+  FLOAT, intent(IN) :: dt
+  FLOAT, pointer :: mask(:)
 
   integer :: j, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
-  complex(r8), allocatable :: wf1(:,:,:), wf2(:,:,:)
-  real(r8) :: temp(3), vec
+  CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
+  FLOAT :: temp(3), vec
 
   ! propagate wave-function in momentum space
-  temp(:) = 2.0_r8*M_PI/(m%l(:)*m%h(:))
+  temp(:) = M_TWO*M_PI/(m%l(:)*m%h(:))
   do ix = 1, m%l(1)
     ixx(1) = pad_feq(ix, m%l(1), .true.)
     do iy = 1, m%l(2)
@@ -67,7 +67,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
       do iz = 1, m%l(3)
         ixx(3) = pad_feq(iz, m%l(3), .true.)
 
-        vec = sum((temp(:) * ixx(:))**2) / 2._r8
+        vec = sum((temp(:) * ixx(:))**2) / M_TWO
         v%k(ix, iy, iz,:,:,:) = v%k(ix, iy, iz,:,:,:)*exp(-M_zI*dt*vec)
       enddo
     enddo
@@ -112,23 +112,23 @@ subroutine PES_mask_output(v, m, st, file)
   type(states_type), intent(IN) :: st
   character(len=*), intent(in) :: file
 
-  real(r8), allocatable :: spis(:,:,:), arpis(:,:,:)
-  real(r8) :: vec, temp(3)
+  FLOAT, allocatable :: spis(:,:,:), arpis(:,:,:)
+  FLOAT :: vec, temp(3)
   integer, allocatable :: npoints(:), ar_npoints(:)
   integer :: p, ik, ii, ix, iy, iz, ixx(3), iunit
   character(len=100) :: fn
   
   integer,  parameter :: n = 600, ar_n = 90
-  real(r8), parameter :: step = 0.005_r8
+  FLOAT, parameter :: step = CNST(0.005)
 
   allocate( &
        spis (n,    st%st_start:st%st_end, st%nik), &
        arpis(ar_n, st%st_start:st%st_end, st%nik))
   allocate(npoints(n), ar_npoints(ar_n))
-  spis = 0._r8; arpis = 0._r8
+  spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
   
-  temp(:) = 2.0_r8*M_PI/(m%l(:)*m%h(:))
+  temp(:) = M_TWO*M_PI/(m%l(:)*m%h(:))
   do ix = 1, m%l(1)
     ixx(1) = pad_feq(ix, m%l(1), .true.)
     do iy = 1, m%l(2)
@@ -138,7 +138,7 @@ subroutine PES_mask_output(v, m, st, file)
         
         if(ixx(1).ne.0 .or. ixx(2).ne.0 .or. ixx(3).ne.0) then
           ! power spectrum
-          vec = sum((temp(:) * ixx(:))**2) / 2._r8
+          vec = sum((temp(:) * ixx(:))**2) / M_TWO
           ii = nint(vec / step) + 1
           if(ii <= n) then
             do ik = 1, st%nik
@@ -152,7 +152,7 @@ subroutine PES_mask_output(v, m, st, file)
           
           ! angle resolved (assumes the pol is in the x direction)
           if(ixx(3)==0 .and. (ixx(1).ne.0 .or. ixx(2).ne.0)) then
-            vec = atan2(real(ixx(2), r8), real(ixx(1), r8))
+            vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
             ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
             if(ii <= ar_n) then ! should always be true
               do ik = 1, st%nik
@@ -202,7 +202,7 @@ subroutine PES_mask_output(v, m, st, file)
       open(iunit, status='unknown', file=trim(fn))
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*180._r8/real(ar_n-1, r8), &
+          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
                arpis(ix, p, ik), ar_npoints(ix)
         end if
       end do
@@ -214,14 +214,14 @@ subroutine PES_mask_output(v, m, st, file)
   open(iunit, status='unknown', file=trim(fn))
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*180._r8/real(ar_n-1, r8), &
+      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
            sum(arpis(ix, :, :)), ar_npoints(ix)
     end if
   end do
   call io_close(iunit)
 
   ! now we do the ar spectrum in real space
-  arpis = 0._r8
+  arpis = M_ZERO
   ar_npoints = 0
   do ix = 1, m%l(1)
     ixx(1) = ix - m%l(1)/2 - 1
@@ -232,7 +232,7 @@ subroutine PES_mask_output(v, m, st, file)
         
         ! angle resolved
         if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then
-          vec = atan2(real(ixx(2), r8), real(ixx(1), r8))
+          vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
           ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
           if(ii <= ar_n) then ! should always be true
             do ik = 1, st%nik
@@ -256,7 +256,7 @@ subroutine PES_mask_output(v, m, st, file)
       open(iunit, status='unknown', file=trim(fn))
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*180._r8/real(ar_n-1, r8), &
+          write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
                arpis(ix, p, ik), ar_npoints(ix)
         end if
       end do
@@ -268,7 +268,7 @@ subroutine PES_mask_output(v, m, st, file)
   open(iunit, status='unknown', file=trim(fn))
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*180._r8/real(ar_n-1, r8), &
+      write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &
            sum(arpis(ix, :, :)), ar_npoints(ix)
     end if
   end do

@@ -21,7 +21,7 @@ subroutine states_choose_kpoints(st, m)
 
   logical  :: coi
   integer  :: i, ik, jk, kk, j, k, skip, tmp_nik_axis(3)
-  real(r8) :: l(3), total_weight
+  FLOAT :: l(3), total_weight
 
   allocate(st%kpoints(3, st%nik), st%kweights(st%nik))
   st%kpoints = M_ZERO

@@ -57,37 +57,39 @@ integer, parameter  ::  r4 = selected_real_kind(6,37)
 integer, parameter  ::  i4 = selected_int_kind(9)
 integer, parameter  ::  i2 = selected_int_kind(3)
 
-real(r8), parameter :: eps_r8 = epsilon(1._r8)
-real(r8), parameter :: inf_r8 = 10.0_r8 ** (12)
-real(r8), parameter :: r_small = 0.0001_r8
+FLOAT, parameter :: r_small = CNST(0.0001)
 
 ! some mathematical constants
-real(r8), parameter    :: M_Pi=3.141592653589793_r8
-complex(r8), parameter :: M_zI=(0.0_r8,1.0_r8)
-complex(r8), parameter :: M_z0=(0.0_r8,0.0_r8)
-complex(r8), parameter :: M_z1=(1.0_r8,0.0_r8)
-real(r8), parameter    :: M_ZERO      = 0._r8
-real(r8), parameter    :: M_ONE       = 1._r8
-real(r8), parameter    :: M_TWO       = 2._r8
-real(r8), parameter    :: M_THREE     = 3._r8
-real(r8), parameter    :: M_FOUR      = 4._r8
-real(r8), parameter    :: M_FIVE      = 5._r8
-real(r8), parameter    :: M_HALF      = 0.5_r8
-real(r8), parameter    :: M_THIRD     = M_ONE/M_THREE
-real(r8), parameter    :: M_TWOTHIRD  = M_TWO/M_THREE
-real(r8), parameter    :: M_FOURTH    = 0.25_r8
+FLOAT, parameter :: M_Pi        = CNST(3.141592653589793)
+FLOAT, parameter :: M_ZERO      = CNST(0.0)
+FLOAT, parameter :: M_ONE       = CNST(1.0)
+FLOAT, parameter :: M_TWO       = CNST(2.0)
+FLOAT, parameter :: M_THREE     = CNST(3.0)
+FLOAT, parameter :: M_FOUR      = CNST(4.0)
+FLOAT, parameter :: M_FIVE      = CNST(5.0)
+FLOAT, parameter :: M_SIX       = CNST(6.0)
+FLOAT, parameter :: M_SEVEN     = CNST(7.0)
+FLOAT, parameter :: M_EIGHT     = CNST(8.0)
+FLOAT, parameter :: M_NINE      = CNST(9.0)
+FLOAT, parameter :: M_TEN       = CNST(10.0)
+FLOAT, parameter :: M_HALF      = CNST(0.5)
+FLOAT, parameter :: M_THIRD     = M_ONE/M_THREE
+FLOAT, parameter :: M_TWOTHIRD  = M_TWO/M_THREE
+FLOAT, parameter :: M_FOURTH    = M_ONE/M_FOUR
+CMPLX, parameter :: M_z0        = (M_ZERO, M_ZERO)
+CMPLX, parameter :: M_z1        = (M_ONE,  M_ZERO)
+CMPLX, parameter :: M_zI        = (M_ZERO, M_ONE)
 
 ! some physical constants
-real(r8), parameter :: P_Ang =  1._r8 / 0.529177_r8
-real(r8), parameter :: P_eV  =  1._r8 / 13.60580_r8
-real(r8), parameter :: P_E   =  3.79470065_r8! (electrons charge)
-real(r8), parameter :: P_M   =  0.13123_r8   ! (electrons mass)
-real(r8), parameter :: P_E2  =  14.399753_r8 ! ( = 2.0_r8/(Ang*eV) )
-real(r8), parameter :: P_H2M = 3.81_r8
-real(r8), parameter :: P_a_B = 0.529177_r8
-real(r8), parameter :: P_Ry = 13.6058_r8
-real(r8), parameter :: P_Kb = 3.166815104e-6_r8 ! Boltzmann constant in Ha/K
-real(r8), parameter :: P_c = 137.036
+FLOAT, parameter :: P_Ang =  M_ONE / CNST(0.529177)
+FLOAT, parameter :: P_eV  =  M_ONE / CNST(13.60580)
+FLOAT, parameter :: P_E   =  CNST(3.79470065)        ! (electron charge)
+FLOAT, parameter :: P_M   =  CNST(0.13123)           ! (electrons mass)
+FLOAT, parameter :: P_E2  =  CNST(14.399753)         ! = 2/(Ang*eV)
+FLOAT, parameter :: P_a_B =  CNST(0.529177)
+FLOAT, parameter :: P_Ry  =  CNST(13.6058)
+FLOAT, parameter :: P_Kb  =  CNST(3.166815104e-6)    ! Boltzmann constant in Ha/K
+FLOAT, parameter :: P_c   =  CNST(137.036)
 
 ! the standard input and output
 integer :: stderr = 0
@@ -100,7 +102,7 @@ character(len=80), dimension(20) :: message ! to be output by fatal, warning
 ! some private variables to this module
 #ifdef DEBUG
 character(len=40), private :: sub_stack(50)
-real(r8), private          :: time_stack(50)
+FLOAT, private          :: time_stack(50)
 integer, private           :: no_sub_stack = 0
 #endif
 
@@ -283,7 +285,7 @@ subroutine push_sub(sub_name)
     time_stack(no_sub_stack) = oct_clock()
 
     if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
-      write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", oct_clock()/1e6_r8, &
+      write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", oct_clock()/CNST(1e6), &
            oct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(stderr,'(a)', advance='no') "  "
@@ -300,10 +302,11 @@ subroutine pop_sub()
 
   if(no_sub_stack > 0) then
     if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
- 
+      
       ! It seems in std C libraries the number of clock ticks per second is 1e6...
-      write(stderr,'(a,f10.3,i10, a)', advance='no') "* O ", (oct_clock()-time_stack(no_sub_stack))/1e6_r8, &
-           oct_getmem(), " | "
+      write(stderr,'(a,f10.3,i10, a)', advance='no') "* O ", &
+          (oct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
+          oct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(stderr,'(a)', advance='no') "  "
       end do

@@ -53,10 +53,10 @@ contains
 subroutine lcao_dens(sys, nspin, rho)
   type(system_type), intent(IN) :: sys
   integer, intent(in) :: nspin
-  real(r8), intent(out) :: rho(sys%m%np, nspin)
+  FLOAT, intent(out) :: rho(sys%m%np, nspin)
   
   integer :: ia, is
-  real(r8) :: r
+  FLOAT :: r
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
 
@@ -106,7 +106,7 @@ contains
 
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
-      rho(i, 1) = rho(i, 1) + real(s%Z_val, r8)/(m%np*m%vol_pp)
+      rho(i, 1) = rho(i, 1) + real(s%Z_val, PRECISION)/(m%np*m%vol_pp)
     end do
   end subroutine from_userdef
 
@@ -114,7 +114,7 @@ contains
     type(mesh_type), intent(in) :: m
 
     integer :: i, in_points
-    real(r8) :: r
+    FLOAT :: r
 
     in_points = 0
     do i = 1, m%np
@@ -128,7 +128,7 @@ contains
       do i = 1, m%np
         call mesh_r(m, i, r, a=a%x)
         if(r <= s%jradius) then
-          rho(i, 1) = rho(i, 1) + real(s%Z_val, r8)/(in_points*m%vol_pp)
+          rho(i, 1) = rho(i, 1) + real(s%Z_val, PRECISION)/(in_points*m%vol_pp)
         end if
       end do
     end if
@@ -139,7 +139,7 @@ contains
     
     integer :: i, n, is
     integer, save :: j = 1
-    real(r8) :: r
+    FLOAT :: r
     R_TYPE :: psi1, psi2
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
@@ -171,9 +171,9 @@ subroutine lcao_init(sys, h)
   integer, parameter :: orbs_local = 2
 
   R_TYPE, allocatable :: psi1(:,:), psi2(:,:), hpsi(:,:)
-  real(r8) :: s
+  FLOAT :: s
 
-  real(r8) :: uVpsi
+  FLOAT :: uVpsi
 
   if(conf%dim.ne.3) return
   if(lcao_data%state == 1) return
@@ -211,7 +211,7 @@ subroutine lcao_init(sys, h)
   call write_info(1)
 
   allocate(lcao_data%psis(sys%m%np, sys%st%dim, norbs, sys%st%nik))
-  lcao_data%psis = 0._r8
+  lcao_data%psis = M_ZERO
   do ik = 1, sys%st%nik
      n1 = 1
      do i1 = 1, sys%natoms
@@ -289,12 +289,12 @@ subroutine lcao_wf(sys, h)
   integer :: norbs, mode
   R_TYPE, allocatable :: hpsi(:,:)
   R_TYPE, allocatable :: s(:,:)
-  real(r8) :: uvpsi
+  FLOAT :: uvpsi
 
   ! variables for dsyev (LAPACK)
   integer :: lwork, info
   R_TYPE, allocatable :: work(:)
-  real(r8), allocatable :: rwork(:), w(:)
+  FLOAT, allocatable :: rwork(:), w(:)
 
   if(conf%dim.ne.3) return
   call push_sub('lcao_wf')
@@ -332,7 +332,7 @@ subroutine lcao_wf(sys, h)
     endif
     sys%st%eigenval(1:sys%st%nst, ik) = w(1:sys%st%nst)
     deallocate(work, w, s, rwork)
-    sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(0.0_r8)
+    sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
     call X(gemm)('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
@@ -354,7 +354,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
   R_TYPE, intent(out) :: psi(sys%m%np)
     
   integer :: j, d2, ll
-  real(r8) :: x(3), a(3), r, p, ylm, g(3)
+  FLOAT :: x(3), a(3), r, p, ylm, g(3)
   type(spline_type), pointer :: s
 
   call push_sub('get_wf')

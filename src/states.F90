@@ -33,28 +33,28 @@ type states_type
   logical :: select_axis(3)! which axes are used fo k points
 
   ! pointers to the wavefunctions
-  real(r8), pointer :: dpsi(:,:,:,:)
-  complex(r8), pointer :: zpsi(:,:,:,:)
+  FLOAT, pointer :: dpsi(:,:,:,:)
+  CMPLX, pointer :: zpsi(:,:,:,:)
 
   ! the densities (after all we are doing DFT :)
-  real(r8), pointer :: rho(:,:)
+  FLOAT, pointer :: rho(:,:)
 
-  real(r8), pointer :: rho_core(:)! core charge for nl core corrections
+  FLOAT, pointer :: rho_core(:)! core charge for nl core corrections
 
-  real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
+  FLOAT, pointer :: eigenval(:,:) ! obviously the eigenvalues
   logical           :: fixed_occ ! should the occupation numbers be fixed?
-  real(r8), pointer :: occ(:,:)  ! the occupation numbers
-  real(r8), pointer :: mag(:, :, :)
+  FLOAT, pointer :: occ(:,:)  ! the occupation numbers
+  FLOAT, pointer :: mag(:, :, :)
 
-  real(r8) :: qtot    ! (-) The total charge in the system (used in Fermi)
+  FLOAT :: qtot    ! (-) The total charge in the system (used in Fermi)
 
-  real(r8) :: el_temp ! electronic temperature for the Fermi function
-  real(r8) :: ef      ! the fermi energy
+  FLOAT :: el_temp ! electronic temperature for the Fermi function
+  FLOAT :: ef      ! the fermi energy
 
   integer :: st_start, st_end ! needed for some parallel parts
 
-  real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
-  real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
+  FLOAT, pointer :: kpoints(:,:) ! obviously the kpoints
+  FLOAT, pointer :: kweights(:)  ! weights for the kpoint integrations
 
 end type states_type
 
@@ -77,9 +77,9 @@ end subroutine states_null
 subroutine states_init(st, m, val_charge)
   type(states_type), intent(inout) :: st
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(in) :: val_charge
+  FLOAT, intent(in) :: val_charge
 
-  real(r8) :: excess_charge, r
+  FLOAT :: excess_charge, r
   integer :: nempty, i, j
   character(len=80) :: str
 
@@ -130,7 +130,7 @@ subroutine states_init(st, m, val_charge)
   end if
 
   
-  call oct_parse_double('ExcessCharge', 0.0_r8, excess_charge)
+  call oct_parse_double('ExcessCharge', M_ZERO, excess_charge)
 
   call oct_parse_int('ExtraStates', 0, nempty)
   if (nempty < 0) then
@@ -140,8 +140,8 @@ subroutine states_init(st, m, val_charge)
   end if
   
 !!$  st%qtot = -(val_charge + excess_charge)
-!!$  st%nst  = int(st%qtot/2._r8)
-!!$  if(st%nst*2._r8 < st%qtot) &
+!!$  st%nst  = int(st%qtot/M_TWO)
+!!$  if(st%nst*M_TWO < st%qtot) &
 !!$       st%nst = st%nst + 1
 !!$
 !!$  select case(st%ispin)
@@ -211,13 +211,13 @@ subroutine states_init(st, m, val_charge)
 
     ! first guest for occupation...paramagnetic configuration
     if(st%ispin == UNPOLARIZED) then
-      r = 2._r8
+      r = M_TWO
     else
-      r = 1._r8
+      r = M_ONE
     endif
-!!$    r = 2.0_r8 / st%nspin
-    st%occ  = 0.0_r8
-    st%qtot = 0.0_r8
+!!$    r = M_TWO / st%nspin
+    st%occ  = M_ZERO
+    st%qtot = M_ZERO
     do j = 1, st%nst
       do i = 1, st%nik
         st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
@@ -226,7 +226,7 @@ subroutine states_init(st, m, val_charge)
     end do
 
     ! read in fermi distribution temperature
-    call oct_parse_double('ElectronicTemperature', 0.0_r8, st%el_temp)
+    call oct_parse_double('ElectronicTemperature', M_ZERO, st%el_temp)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
@@ -334,7 +334,7 @@ subroutine states_generate_random(st, m, ist_start)
 
   integer, save :: iseed = 123
   integer :: ist, ik, id, i, ist_s
-  real(r8) :: a(3), rnd, r
+  FLOAT :: a(3), rnd, r
 
   call push_sub('states_generate_random')
 
@@ -361,8 +361,8 @@ subroutine states_fermi(st, m)
 ! Local variables
   integer :: ie, ik, iter
   integer, parameter :: nitmax = 200
-  real(r8) :: drange, t, emin, emax, sumq
-  real(r8), parameter :: tol = 1.0e-10_r8
+  FLOAT :: drange, t, emin, emax, sumq
+  FLOAT, parameter :: tol = CNST(1.0e-10)
   logical :: conv
 
   call push_sub('fermi')
@@ -386,18 +386,18 @@ subroutine states_fermi(st, m)
   emax = maxval(st%eigenval)
 
   if(st%ispin == 3) then
-     sumq = real(st%nst, r8)
+     sumq = real(st%nst, PRECISION)
   else
-     sumq = 2.0_r8*st%nst
+     sumq = M_TWO*st%nst
   endif
 
-  t = max(st%el_temp, 1.0e-6_r8)
+  t = max(st%el_temp, CNST(1.0e-6))
   st%ef = emax
 
   conv = .true.
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
-     st%occ = 2.0_r8/st%spin_channels!st%nspin
+     st%occ = M_TWO/st%spin_channels!st%nspin
      ! Calculate magnetizations...
      if(st%ispin == 3) then
        do ik = 1, st%nik
@@ -418,14 +418,14 @@ subroutine states_fermi(st, m)
     call write_fatal(2)
   endif
 
-  drange = t*sqrt(-log(tol*.01_r8))
+  drange = t*sqrt(-log(tol*CNST(.01)))
 
   emin = emin - drange
   emax = emax + drange
 
   do iter = 1, nitmax
-    st%ef = 0.5_r8*(emin + emax)
-    sumq  = 0.0_r8
+    st%ef = M_HALF*(emin + emax)
+    sumq  = M_ZERO
 
     do ik = 1, st%nik
       do ie =1, st%nst
@@ -471,13 +471,13 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   integer, intent(in) :: lmax
-  real(r8), intent(in) :: pol(3)
-  real(r8), intent(out) :: dipole(st%nspin), multipole((lmax + 1)**2, st%nspin)
+  FLOAT, intent(in) :: pol(3)
+  FLOAT, intent(out) :: dipole(st%nspin), multipole((lmax + 1)**2, st%nspin)
 
   integer :: i, is, l, lm, add_lm
-  real(r8) :: x(3), r, ylm, mult
+  FLOAT :: x(3), r, ylm, mult
 
-  dipole = 0._r8
+  dipole = M_ZERO
   do is = 1, st%nspin
     do i = 1, m%np
       call mesh_xyz(m, i, x)
@@ -489,7 +489,7 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
     add_lm = 1
     do l = 0, lmax
       do lm = -l, l
-        mult = 0._r8
+        mult = M_ZERO
 
         do i = 1, m%np
           call mesh_r(m, i, r, x=x)
@@ -510,7 +510,7 @@ end subroutine states_calculate_multipoles
 
 ! function to calculate the eigenvalues sum using occupations as weights
 function states_eigenvalues_sum(st)
-  real(r8) :: states_eigenvalues_sum
+  FLOAT :: states_eigenvalues_sum
   type(states_type), intent(in) :: st
 
   states_eigenvalues_sum = sum(st%eigenval * st%occ)
@@ -520,10 +520,10 @@ end function states_eigenvalues_sum
 subroutine states_write_eigenvalues(iunit, nst, st, error)
   integer, intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st
-  real(r8), intent(in), optional :: error(nst, st%nik)
+  FLOAT, intent(in), optional :: error(nst, st%nik)
 
   integer ik, j, ns, is
-  real(r8) :: o, oplus, ominus
+  FLOAT :: o, oplus, ominus
 
   if(iunit==stdout.and.conf%verbose<=20) return
 
@@ -669,16 +669,16 @@ end function
 subroutine calc_projection(u_st, st, m, p)
   type(states_type), intent(in) :: u_st, st
   type(mesh_type),   intent(in) :: m
-  complex(r8), intent(out)      :: p(u_st%nst, st%st_start:st%st_end, st%nik)
+  CMPLX, intent(out)      :: p(u_st%nst, st%st_start:st%st_end, st%nik)
 
   integer :: uist, uik, ist, ik
 
   do ik = 1, st%nik
      do ist = st%st_start, st%st_end
         do uist = 1, u_st%nst
-          p(uist, ist, ik) = zstates_dotp( m, st%dim,                                     &
-                                           cmplx(u_st%X(psi)(1:, :, uist, ik), kind=r8) , &
-                                           st%zpsi(1:, :, ist, ik) )
+          p(uist, ist, ik) = zstates_dotp( m, st%dim,          &
+              cmplx(u_st%X(psi)(:, :, uist, ik), kind=PRECISION) , &
+              st%zpsi(:, :, ist, ik) )
         end do
      end do
   end do
@@ -688,12 +688,12 @@ end subroutine calc_projection
 subroutine calc_current(m, st, j)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(out) :: j(3, m%np, st%nspin)
+  FLOAT, intent(out) :: j(3, m%np, st%nspin)
   
   integer :: ik, p, sp, ierr, k
-  complex(r8), allocatable :: aux(:,:)
+  CMPLX, allocatable :: aux(:,:)
 #if defined(HAVE_MPI) && defined(MPI_TD)
-  real(r8), allocatable :: red(:,:,:)
+  FLOAT, allocatable :: red(:,:,:)
 #endif
 
   call push_sub('calc_current')
@@ -754,7 +754,7 @@ end subroutine calc_current
 subroutine zstates_project_gs(st, m, p)
   type(states_type), intent(in) :: st
   type(mesh_type), intent(in)   :: m
-  complex(r8), intent(out) :: p
+  CMPLX, intent(out) :: p
 
   type(states_type) :: stgs
 

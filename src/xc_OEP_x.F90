@@ -20,14 +20,14 @@ subroutine X(oep_x) (m, st, is, oep, ex)
   type(states_type), intent(in)    :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  real(r8),          intent(out)   :: ex
+  FLOAT,          intent(out)   :: ex
 
   integer :: i, j
-  real(r8) :: r
+  FLOAT :: r
   R_TYPE, allocatable :: lx(:)
-  real(r8), allocatable :: rho_ij(:)
-  real(r8), allocatable :: pot(:)             ! For real
-  real(r8), allocatable :: pot_r(:), pot_i(:) ! For complex
+  FLOAT, allocatable :: rho_ij(:)
+  FLOAT, allocatable :: pot(:)             ! For real
+  FLOAT, allocatable :: pot_r(:), pot_i(:) ! For complex
   
   allocate(lx(m%np))
 

@@ -17,11 +17,11 @@
 
 subroutine poisson2D_solve(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(out) :: pot(m%np)
-  real(r8), intent(in)  :: rho(m%np)
+  FLOAT, intent(out) :: pot(m%np)
+  FLOAT, intent(in)  :: rho(m%np)
 
   integer  :: i, ip, j, jp
-  real(r8) :: x(2), y(2)
+  FLOAT :: x(2), y(2)
 
   ASSERT(poisson_solver == -2)
   

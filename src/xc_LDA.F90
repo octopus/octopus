@@ -19,10 +19,10 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
   type(xc_type),     intent(in)  :: xcs
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
-  real(r8),          intent(out) :: ex, ec, vxc(m%np, st%nspin)
+  FLOAT,          intent(out) :: ex, ec, vxc(m%np, st%nspin)
   
-  real(r8), allocatable :: d(:), p(:), pd(:), pd1(:)
-  real(r8) :: dtot, dpol, vpol, e
+  FLOAT, allocatable :: d(:), p(:), pd(:), pd1(:)
+  FLOAT :: dtot, dpol, vpol, e
   integer  :: i, ixc, is, ifunc
 
   call push_sub('xc_lda')

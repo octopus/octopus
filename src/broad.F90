@@ -24,7 +24,7 @@ program broad
   implicit none
 
   type broad_type
-    real(r8) :: b, energy_step, min_energy, max_energy
+    FLOAT :: b, energy_step, min_energy, max_energy
   end type broad_type
 
   integer :: ierr
@@ -36,10 +36,10 @@ program broad
   call units_init()
 
   ! broadening to use
-  call oct_parse_double("LinBroadnening", 0.02/units_inp%energy%factor, b%b)
-  call oct_parse_double("LinEnergyStep", 0.01_r8/units_inp%energy%factor, b%energy_step)
-  call oct_parse_double("LinMinEnergy", 0._r8, b%min_energy)
-  call oct_parse_double("LinMaxEnergy", 1._r8/units_inp%energy%factor, b%max_energy)
+  call oct_parse_double("LinBroadnening", CNST(0.02)/units_inp%energy%factor, b%b)
+  call oct_parse_double("LinEnergyStep",  CNST(0.01)/units_inp%energy%factor, b%energy_step)
+  call oct_parse_double("LinMinEnergy",   M_ZERO, b%min_energy)
+  call oct_parse_double("LinMaxEnergy",   M_ONE/units_inp%energy%factor, b%max_energy)
 
   b%b = b%b * units_inp%energy%factor
   b%energy_step = b%energy_step * units_inp%energy%factor
@@ -78,13 +78,13 @@ contains
     character(len=*), intent(in) :: fname
     logical, intent(in) :: extracols
     
-    real(r8), allocatable :: s(:,:)
-    real(r8) :: w, e, f(4)
+    FLOAT, allocatable :: s(:,:)
+    FLOAT :: w, e, f(4)
     integer :: istat, n, iunit, j1, j2
 
     n = (b%max_energy - b%min_energy) / b%energy_step
     allocate(s(4,n))
-    s = 0._r8
+    s = M_ZERO
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+fname, status='old', iostat=istat)
@@ -103,7 +103,7 @@ contains
       e = e * units_inp%energy%factor
 
       do j1 = 1, n
-        w = b%min_energy + real(j1-1, r8)*b%energy_step
+        w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
         s(:, j1) = s(:, j1) + f(:)*b%b/((w-e)**2 + b%b**2)/M_PI ! lorentzian
       end do
     end do
@@ -114,7 +114,7 @@ contains
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/spectrum."+fname, status='unknown')
     do j1 = 1, n
-      w = b%min_energy + real(j1-1, r8)*b%energy_step
+      w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
       write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor
     end do
     call io_close(iunit)

@@ -27,32 +27,32 @@ type atom_type
   character(len=10) :: label
   type(specie_type), pointer :: spec ! pointer to specie
 
-  real(r8) :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
+  FLOAT :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
 
   logical :: move              ! should I move this atom in the optimization mode
 
   ! the mesh around a given atom...
   integer :: Mps
   integer, pointer :: Jxyz(:)
-  real(r8), pointer ::    pnts_ps,            &  ! # points in ps sphere
+  FLOAT, pointer ::    pnts_ps,            &  ! # points in ps sphere
                           duV(:,:,:),         &
                           duVu(:,:,:),        &  ! the Kleinman Bylander projectors
                           dduV(:,:,:,:)
   ! This is for performance reasons.
-  complex(r8), pointer :: zpnts_ps,           & 
+  CMPLX, pointer :: zpnts_ps,           & 
                           zuV(:,:,:),         &
                           zuVu(:,:,:),        &
                           zduV(:,:,:,:)
-  complex(r8), pointer :: so_uv(:, :, :),     &
+  CMPLX, pointer :: so_uv(:, :, :),     &
                           so_uvu(:, :, :),    &
                           so_duv(:, :, :, :), &
                           so_luv(:, :, :, :)
-  complex(r8), pointer :: phases(:,:)    ! factors exp(ik*x)
+  CMPLX, pointer :: phases(:,:)    ! factors exp(ik*x)
 end type atom_type
 
 type atom_classical_type
-  real(r8) :: x(3), v(3), f(3)
-  real(r8) :: charge
+  FLOAT :: x(3), v(3), f(3)
+  FLOAT :: charge
 
   character(len=4) :: label
 end type atom_classical_type
@@ -70,7 +70,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   integer(POINTER_SIZE) :: random_gen_pointer
   character(len=80) :: str, label
   logical :: l
-  real(r8) :: temperature, sigma, x(3), kin1, kin2
+  FLOAT :: temperature, sigma, x(3), kin1, kin2
 
   call push_sub('atom_init')
 
@@ -144,7 +144,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   if(oct_parse_isdef("RandomVelocityTemp").ne.0) then
     
     call oct_ran_init(random_gen_pointer)
-    call oct_parse_double("RandomVelocityTemp", 0.0_r8, temperature)
+    call oct_parse_double("RandomVelocityTemp", M_ZERO, temperature)
     do i = 1, natoms
        sigma = sqrt( P_Kb*temperature / a(i)%spec%weight )
        do j = 1, 3
@@ -168,7 +168,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
                                    (kinetic_energy(natoms, a)/natoms)/units_out%energy%factor, &
                                    units_out%energy%abbrev
     write(message(3),'(a,f8.4,1x,a)') 'Info: 3/2 k_B T =', &
-                                   (3.0_r8 / 2.0_r8)*P_Kb*temperature/units_out%energy%factor, &
+                                   (M_THREE/M_TWO)*P_Kb*temperature/units_out%energy%factor, &
                                    units_out%energy%abbrev
     write(message(4),'(a)')
     call write_info(4)
@@ -197,9 +197,9 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
         a(i)%v = a(i)%v * units_inp%velocity%factor
       end do
     else
-      a(:)%v(1) = 0._r8
-      a(:)%v(2) = 0._r8
-      a(:)%v(3) = 0._r8
+      a(:)%v(1) = M_ZERO
+      a(:)%v(2) = M_ZERO
+      a(:)%v(3) = M_ZERO
     end if
   end if
   
@@ -334,7 +334,7 @@ subroutine atom_adjust(natoms, a, ncatoms, ca)
   type(atom_type), pointer :: a(:)
   type(atom_classical_type), pointer :: ca(:)
 
-  real(r8) :: center(3), from(3), from2(3), to(3)
+  FLOAT :: center(3), from(3), from2(3), to(3)
   character(len=80) :: str
 
   ! is there something to do
@@ -351,7 +351,7 @@ subroutine atom_adjust(natoms, a, ncatoms, ca)
     call oct_parse_block_double(str, 0, 1, to(2))
     call oct_parse_block_double(str, 0, 2, to(3))
   else
-    to(1) = 0._r8; to(2) = 0._r8; to(3) = 1._r8
+    to(1) = M_ZERO; to(2) = M_ZERO; to(3) = M_ONE
   end if
   to = to / sqrt(sum(to**2))
 
@@ -366,13 +366,13 @@ subroutine atom_adjust(natoms, a, ncatoms, ca)
 contains
 
   subroutine find_center(x)
-    real(r8), intent(out) :: x(3)
+    FLOAT, intent(out) :: x(3)
 
-    real(r8) :: xmin(3), xmax(3)
+    FLOAT :: xmin(3), xmax(3)
     integer  :: i, j
 
-    xmin =  1e10_r8
-    xmax = -1e10_r8
+    xmin =  CNST(1e10)
+    xmax = -CNST(1e10)
     do i = 1, natoms
       do j = 1, 3
         if(a(i)%x(j) > xmax(j)) xmax(j) = a(i)%x(j)
@@ -380,11 +380,11 @@ contains
       end do
     end do
 
-    x = (xmax + xmin)/2._r8
+    x = (xmax + xmin)/M_TWO
   end subroutine find_center
 
   subroutine translate(x)
-    real(r8), intent(in) :: x(3)
+    FLOAT, intent(in) :: x(3)
 
     integer  :: i
 
@@ -397,13 +397,13 @@ contains
   end subroutine translate
 
   subroutine find_axis(x, x2)
-    real(r8), intent(out) :: x(3), x2(3)
+    FLOAT, intent(out) :: x(3), x2(3)
 
     integer  :: i, j
-    real(r8) :: rmax, r, r2
+    FLOAT :: rmax, r, r2
 
     ! first get the further apart atoms
-    rmax = -1e10_r8
+    rmax = -CNST(1e10)
     do i = 1, natoms
       do j = 1, natoms/2 + 1
         r = sqrt(sum((a(i)%x-a(j)%x)**2))
@@ -416,7 +416,7 @@ contains
     x  = x /sqrt(sum(x**2))
 
     ! now let us find out what is the second most important axis
-    rmax = -1e10_r8
+    rmax = -CNST(1e10)
     do i = 1, natoms
       r2 = sum(x(:) * a(i)%x(:))
       r = sqrt(sum((a(i)%x(:) - r2*x(:))**2))
@@ -439,17 +439,17 @@ contains
   end subroutine find_axis
 
   subroutine rotate(from, from2, to)
-    real(r8), intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
+    FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
 
     integer :: i
-    real(r8) :: m1(3,3), m2(3,3), m3(3,3), f2(3), per(3)
-    real(r8) :: alpha, r
+    FLOAT :: m1(3,3), m2(3,3), m3(3,3), f2(3), per(3)
+    FLOAT :: alpha, r
 
     ! initialize matrices
-    m1 = 0._r8; m1(1,1) = 1._r8; m1(2,2) = 1._r8; m1(3,3) = 1._r8
+    m1 = M_ZERO; m1(1,1) = M_ONE; m1(2,2) = M_ONE; m1(3,3) = M_ONE
 
     ! rotate the to axis to the z axis
-    if(to(2).ne.0._r8) then
+    if(to(2).ne.M_ZERO) then
       alpha = atan2(to(2), to(1))
       call rotate_z(m1, alpha)
     end if
@@ -460,21 +460,21 @@ contains
     f2 = matmul(m1, from)
     per(1) = -f2(2)
     per(2) =  f2(1)
-    per(3) = 0._r8
+    per(3) = M_ZERO
     r = sqrt(sum(per**2))
-    if(r > 0._r8) then
+    if(r > M_ZERO) then
       per = per/r
     else
-      per(2) = 1._r8
+      per(2) = M_ONE
     end if
 
     ! rotate perpendicular axis to the y axis
-    m2 = 0._r8; m2(1,1) = 1._r8; m2(2,2) = 1._r8; m2(3,3) = 1._r8
+    m2 = M_ZERO; m2(1,1) = M_ONE; m2(2,2) = M_ONE; m2(3,3) = M_ONE
     alpha = atan2(per(1), per(2))
     call rotate_z(m2, -alpha)
 
     ! rotate from => to (around the y axis)
-    m3 = 0._r8; m3(1,1) = 1._r8; m3(2,2) = 1._r8; m3(3,3) = 1._r8
+    m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
     alpha = acos(sum(from*to))
     call rotate_y(m3, -alpha)
     
@@ -504,16 +504,16 @@ contains
   end subroutine rotate
 
   subroutine rotate_x(m, angle)
-    real(r8), intent(inout) :: m(3,3)
-    real(r8), intent(in) :: angle
+    FLOAT, intent(inout) :: m(3,3)
+    FLOAT, intent(in) :: angle
 
-    real(r8) :: aux(3,3), ca, sa
+    FLOAT :: aux(3,3), ca, sa
 
     ca = cos(angle)
     sa = sin(angle)
 
-    aux = 0._r8
-    aux(1, 1) = 1._r8
+    aux = M_ZERO
+    aux(1, 1) = M_ONE
     aux(2, 2) = ca
     aux(3, 3) = ca
     aux(2, 3) = sa
@@ -523,16 +523,16 @@ contains
   end subroutine rotate_x
 
   subroutine rotate_y(m, angle)
-    real(r8), intent(inout) :: m(3,3)
-    real(r8), intent(in) :: angle
+    FLOAT, intent(inout) :: m(3,3)
+    FLOAT, intent(in) :: angle
 
-    real(r8) :: aux(3,3), ca, sa
+    FLOAT :: aux(3,3), ca, sa
 
     ca = cos(angle)
     sa = sin(angle)
 
-    aux = 0._r8
-    aux(2, 2) = 1._r8
+    aux = M_ZERO
+    aux(2, 2) = M_ONE
     aux(1, 1) = ca
     aux(3, 3) = ca
     aux(1, 3) = sa
@@ -542,16 +542,16 @@ contains
   end subroutine rotate_y
 
   subroutine rotate_z(m, angle)
-    real(r8), intent(inout) :: m(3,3)
-    real(r8), intent(in) :: angle
+    FLOAT, intent(inout) :: m(3,3)
+    FLOAT, intent(in) :: angle
 
-    real(r8) :: aux(3,3), ca, sa
+    FLOAT :: aux(3,3), ca, sa
 
     ca = cos(angle)
     sa = sin(angle)
 
-    aux = 0._r8
-    aux(3, 3) = 1._r8
+    aux = M_ZERO
+    aux(3, 3) = M_ONE
     aux(1, 1) = ca
     aux(2, 2) = ca
     aux(1, 2) = sa
@@ -562,15 +562,15 @@ contains
 
 end subroutine atom_adjust
 
-real(r8) function ion_ion_energy(natoms, atom)
+FLOAT function ion_ion_energy(natoms, atom)
   integer, intent(in)         :: natoms
   type(atom_type), intent(in) :: atom(natoms)
   
-  real(r8) :: r
+  FLOAT :: r
   integer :: i, j
 
   ! calculate the ion-ion energy
-  ion_ion_energy = 0.0_r8
+  ion_ion_energy = M_ZERO
 
   do i = 2, natoms
     do j = 1, i - 1
@@ -582,15 +582,15 @@ real(r8) function ion_ion_energy(natoms, atom)
 
 end function ion_ion_energy
 
-real(r8) function kinetic_energy(natoms, atom)
+FLOAT function kinetic_energy(natoms, atom)
   integer, intent(in)         :: natoms
   type(atom_type), intent(in) :: atom(natoms)
 
   integer :: i
 
-  kinetic_energy = 0.0_r8
+  kinetic_energy = M_ZERO
   do i = 1, natoms
-     kinetic_energy = kinetic_energy + 0.5_r8*atom(i)%spec%weight* &
+     kinetic_energy = kinetic_energy + M_HALF*atom(i)%spec%weight* &
          sum(atom(i)%v(:)**2)
   enddo
 
@@ -599,9 +599,9 @@ end function kinetic_energy
 subroutine cm_pos(natoms, atom, pos)
   integer, intent(in)         :: natoms
   type(atom_type), intent(in) :: atom(natoms)
-  real(r8), intent(out) :: pos(3)
+  FLOAT, intent(out) :: pos(3)
 
-  real(r8) :: m
+  FLOAT :: m
   integer :: i
 
   pos = M_ZERO; m = M_ZERO
@@ -615,9 +615,9 @@ end subroutine cm_pos
 subroutine cm_vel(natoms, atom, vel)
   integer, intent(in)         :: natoms
   type(atom_type), intent(in) :: atom(natoms)
-  real(r8), intent(out) :: vel(3)
+  FLOAT, intent(out) :: vel(3)
 
-  real(r8) :: m
+  FLOAT :: m
   integer :: i
 
   vel = M_ZERO; m = M_ZERO

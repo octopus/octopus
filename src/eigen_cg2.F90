@@ -20,17 +20,17 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
   type(states_type), intent(inout)   :: st
   type(system_type), intent(IN)      :: sys
   type(hamiltonian_type), intent(IN) :: h
-  real(r8), intent(in)               :: tol
+  FLOAT, intent(in)               :: tol
   integer, intent(inout)             :: niter
   integer, intent(out)               :: errorflag, converged
-  real(r8), intent(out), optional    :: diff(1:st%nst,1:st%nik)
+  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
   logical, intent(in), optional      :: reorder
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
        cg(:,:), ppsi(:,:)
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  real(r8) :: cg0, e0, res
+  FLOAT :: cg0, e0, res
   integer  :: ik, np, moved, p, j, iter, i, maxter
   logical  :: reord = .true.
 
@@ -114,7 +114,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         b0 = X(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
-        theta = atan(R_REAL(a0/(e0 - b0)))/2.0_r8
+        theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
         es(1) = ((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
         es(2) =(-(e0-b0)*cos(M_TWO*theta) - a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
         
@@ -150,9 +150,9 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
 
       ! Reordering... (this should be improved)
       if(p>1 .and. reord) then
-        if(st%eigenval(p, ik) - st%eigenval(p-1, ik) .lt. -2.0_r8*tol) then
+        if(st%eigenval(p, ik) - st%eigenval(p-1, ik) .lt. -M_TWO*tol) then
           do i = p - 2, 1, -1
-            if (st%eigenval(p, ik) - st%eigenval(i, ik) .gt. 2.0_r8*tol) exit
+            if (st%eigenval(p, ik) - st%eigenval(i, ik) .gt. M_TWO*tol) exit
           end do
           i = i + 1
           moved = moved + 1

@@ -28,8 +28,8 @@ module cube_function
   type dcf
     integer :: n(3)   ! the linear dimensions of the cube
 
-    real(r8),    pointer :: RS(:,:,:)
-    complex(r8), pointer :: FS(:,:,:)
+    FLOAT,    pointer :: RS(:,:,:)
+    CMPLX, pointer :: FS(:,:,:)
 
 #if defined(HAVE_FFT)
     integer :: nx ! = n(1)/2 + 1, first dimension of the FS array
@@ -40,8 +40,8 @@ module cube_function
   type zcf
     integer :: n(3)   ! the linear dimensions of the cube
 
-    complex(r8), pointer :: RS(:,:,:)
-    complex(r8), pointer :: FS(:,:,:)
+    CMPLX, pointer :: RS(:,:,:)
+    CMPLX, pointer :: FS(:,:,:)
 
 #if defined(HAVE_FFT)
     integer :: nx ! = n(1),  first dimension of the FS array
@@ -56,18 +56,18 @@ contains
   ! cf_o = cf_o + exp(-k vec) cf_i
   subroutine cf_phase_factor(m, vec, cf_i, cf_o)
     type(mesh_type), intent(in) :: m
-    real(r8), intent(in)        :: vec(3)
+    FLOAT, intent(in)        :: vec(3)
     type(dcf), intent(in)       :: cf_i
     type(dcf), intent(inout)    :: cf_o
   
-    complex(r8) :: k(3)
+    CMPLX :: k(3)
     integer     :: n(3), ix, iy, iz, ixx, iyy, izz
   
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
 
     k = M_z0
-    k(1:conf%dim) = M_zI * ((2.0_r8*M_Pi)/(cf_i%n(1:conf%dim)*m%h(1:conf%dim)))
+    k(1:conf%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:conf%dim)*m%h(1:conf%dim)))
 
     n  = cf_i%n
     do iz = 1, n(3)

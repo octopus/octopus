@@ -45,13 +45,13 @@ program rotational_strength
     rsf%damp = SPECTRUM_DAMP_NONE
   end select
 
-  call oct_parse_double("SpecDampFactor", 0.15_r8, rsf%damp_factor)
-  call oct_parse_double("SpecStartTime", 0._r8, s%start_time)
-  call oct_parse_double("SpecEndTime", -1._r8, s%end_time)
-  call oct_parse_double("SpecEnergyStep", 0.05_r8, s%energy_step)
-  call oct_parse_double("SpecMaxEnergy", 20._r8, s%max_energy)
-  call oct_parse_double("SpecMinEnergy", 0._r8, s%min_energy)
-  call oct_parse_double("TDDeltaStrength", 0.05_r8, rsf%delta_strength)
+  call oct_parse_double("SpecDampFactor",  CNST(0.15), rsf%damp_factor)
+  call oct_parse_double("SpecStartTime",   M_ZERO,       s%start_time)
+  call oct_parse_double("SpecEndTime",    -M_ONE,        s%end_time)
+  call oct_parse_double("SpecEnergyStep",  CNST(0.05),   s%energy_step)
+  call oct_parse_double("SpecMaxEnergy",   CNST(20.0),   s%max_energy)
+  call oct_parse_double("SpecMinEnergy",   M_ZERO,       s%min_energy)
+  call oct_parse_double("TDDeltaStrength", CNST(0.05), rsf%delta_strength)
   !!! read in the default direction for the polarization
   rsf%pol(:) = M_ZERO
   if(oct_parse_isdef('TDPolarization') .ne. 0) then

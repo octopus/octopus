@@ -15,6 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "global.h"
+
 module hgh
 ! For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
 !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
@@ -35,11 +37,11 @@ type hgh_type
   ! HGH parameters.
   character(len=5) :: atom_name
   integer          :: z_val
-  real(r8)         :: rlocal
-  real(r8)         :: rc(0:3)
-  real(r8)         :: c(1:4)
-  real(r8)         :: h(0:3, 1:3, 1:3)
-  real(r8)         :: k(0:3, 1:3, 1:3)
+  FLOAT         :: rlocal
+  FLOAT         :: rc(0:3)
+  FLOAT         :: c(1:4)
+  FLOAT         :: h(0:3, 1:3, 1:3)
+  FLOAT         :: k(0:3, 1:3, 1:3)
 
   type(valconf)    :: conf
   integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
@@ -47,13 +49,13 @@ type hgh_type
   ! Logarithmic grid parameters
   type(logrid_type) :: g
 
-  real(r8), pointer :: vlocal(:) ! Local potential
-  real(r8), pointer :: kb(:,:,:) ! KB projectors
-  real(r8), pointer :: kbr(:)    ! KB radii
-  real(r8), pointer :: rphi(:,:), eigen(:)
+  FLOAT, pointer :: vlocal(:) ! Local potential
+  FLOAT, pointer :: kb(:,:,:) ! KB projectors
+  FLOAT, pointer :: kbr(:)    ! KB radii
+  FLOAT, pointer :: rphi(:,:), eigen(:)
 end type hgh_type
 
-real(r8), parameter :: eps = 1.0e-8_r8
+FLOAT, parameter :: eps = CNST(1.0e-8)
 
 interface vlocalr
   module procedure vlocalr_scalar, vlocalr_vector
@@ -101,13 +103,13 @@ subroutine hgh_init(psp, filename, ispin)
 
   ! Finds out psp%l_max. The most special cases are H, He, Li_sc and Be_sc, where psp%l_max = -1.
   psp%l_max = 0
-  do while(psp%rc(psp%l_max)>0.01_r8)
+  do while(psp%rc(psp%l_max)>CNST(0.01))
      psp%l_max = psp%l_max + 1
   end do
   psp%l_max = psp%l_max - 1
 
   ! Initializes the logarithmic grid. Parameters are hard-coded.
-       psp%g%a = 3e-2_r8; psp%g%b = 4.0e-4_r8
+       psp%g%a = CNST(3.0e-2); psp%g%b = CNST(4.0e-4)
        psp%g%nrval = 431
   call init_logrid(psp%g, psp%g%a, psp%g%b, psp%g%nrval)
 
@@ -177,8 +179,8 @@ function load_params(unit, params)
   call push_sub('load_params')
 
   ! Set initially everything to zero.
-  params%c(1:4) = 0.0_r8; params%rlocal = 0.0_r8;
-  params%rc = 0.0_r8; params%h = 0.0_r8; params%k = 0.0_r8
+  params%c(1:4) = M_ZERO; params%rlocal = M_ZERO;
+  params%rc = M_ZERO; params%h = M_ZERO; params%k = M_ZERO
 
   ! get valence configuration
   read(unit,'(a)') line
@@ -220,7 +222,7 @@ function load_params(unit, params)
         j = j - 1
         read(line, *, iostat = iostat) params%rc(k), (params%h(k, i, i), i = 1, j)
      enddo
-     if(params%rc(k) == 0.0_r8) exit kloop
+     if(params%rc(k) == M_ZERO) exit kloop
      read(unit, '(a)') line
      iostat = 1; j = 4
      do while((iostat .ne. 0) .and. (j>0))
@@ -230,34 +232,36 @@ function load_params(unit, params)
   enddo kloop
 
 ! Fill in the rest of the parameters matrices...
-  params%h(0, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(3.0_r8/5.0_r8)       * params%h(0, 2, 2)
-  params%h(0, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(5.0_r8/21.0_r8)      * params%h(0, 3, 3)
-  params%h(0, 2, 3) = -(1.0_r8/2.0_r8) * sqrt(100.0_r8/63.0_r8)    * params%h(0, 3, 3)
-  params%h(1, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(5.0_r8/7.0_r8)       * params%h(1, 2, 2)
-  params%h(1, 1, 3) =  (1.0_r8/6.0_r8) * sqrt(35.0_r8/11.0_r8)     * params%h(1, 3, 3)
-  params%h(1, 2, 3) = -(1.0_r8/6.0_r8) * (14.0_r8 / sqrt(11.0_r8)) * params%h(1, 3, 3)
-  params%h(2, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(7.0_r8/9.0_r8)       * params%h(2, 2, 2)
-  params%h(2, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(63.0_r8/143.0_r8)    * params%h(2, 3, 3)
-  params%h(2, 2, 3) = -(1.0_r8/2.0_r8) * (18.0_r8/sqrt(143.0_r8))  * params%h(2, 3, 3)
+! Fill in the rest of the parameters matrices...
+  params%h(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%h(0, 2, 2)
+  params%h(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%h(0, 3, 3)
+  params%h(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%h(0, 3, 3)
+  params%h(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/M_SEVEN)            * params%h(1, 2, 2)
+  params%h(1, 1, 3) =  M_ONE/M_SIX * sqrt(CNST(35.0)/CNST(11.0))     * params%h(1, 3, 3)
+  params%h(1, 2, 3) = -M_ONE/M_SIX * (CNST(14.0) / sqrt(CNST(11.0))) * params%h(1, 3, 3)
+  params%h(2, 1, 2) = -M_HALF      * sqrt(M_SEVEN/M_NINE)            * params%h(2, 2, 2)
+  params%h(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%h(2, 3, 3)
+  params%h(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%h(2, 3, 3)
 
-  params%k(0, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(3.0_r8/5.0_r8)       * params%k(0, 2, 2)
-  params%k(0, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(5.0_r8/21.0_r8)      * params%k(0, 3, 3)
-  params%k(0, 2, 3) = -(1.0_r8/2.0_r8) * sqrt(100.0_r8/63.0_r8)    * params%k(0, 3, 3)
-  params%k(1, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(5.0_r8/7.0_r8)       * params%k(1, 2, 2)
-  params%k(1, 1, 3) =  (1.0_r8/6.0_r8) * sqrt(35.0_r8/11.0_r8)     * params%k(1, 3, 3)
-  params%k(1, 2, 3) = -(1.0_r8/6.0_r8) * (14.0_r8 / sqrt(11.0_r8)) * params%k(1, 3, 3)
-  params%k(2, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(7.0_r8/9.0_r8)       * params%k(2, 2, 2)
-  params%k(2, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(63.0_r8/143.0_r8)    * params%k(2, 3, 3)
-  params%k(2, 2, 3) = -(1.0_r8/2.0_r8) * (18.0_r8/sqrt(143.0_r8))  * params%k(2, 3, 3)
+  params%k(0, 1, 2) = -M_HALF      * sqrt(M_THREE/M_FIVE)            * params%k(0, 2, 2)
+  params%k(0, 1, 3) =  M_HALF      * sqrt(M_FIVE/CNST(21.0))         * params%k(0, 3, 3)
+  params%k(0, 2, 3) = -M_HALF      * sqrt(CNST(100.0)/CNST(63.0))    * params%k(0, 3, 3)
+  params%k(1, 1, 2) = -M_HALF      * sqrt(M_FIVE/M_SEVEN)            * params%k(1, 2, 2)
+  params%k(1, 1, 3) =  M_ONE/M_SIX * sqrt(CNST(35.0)/CNST(11.0))     * params%k(1, 3, 3)
+  params%k(1, 2, 3) = -M_ONE/M_SIX * (CNST(14.0) / sqrt(CNST(11.0))) * params%k(1, 3, 3)
+  params%k(2, 1, 2) = -M_HALF      * sqrt(M_SEVEN/M_NINE)            * params%k(2, 2, 2)
+  params%k(2, 1, 3) =  M_HALF      * sqrt(CNST(63.0)/CNST(143.0))    * params%k(2, 3, 3)
+  params%k(2, 2, 3) = -M_HALF      * (CNST(18.0)/sqrt(CNST(143.0)))  * params%k(2, 3, 3)
+
 
 ! Parameters are symmetric.
   do k = 0, 3
-     do i = 1, 3
-        do j = i + 1, 3
-           params%h(k, j, i) = params%h(k, i, j)
-           params%k(k, j, i) = params%k(k, i, j)
-        enddo
-     enddo
+    do i = 1, 3
+      do j = i + 1, 3
+        params%h(k, j, i) = params%h(k, i, j)
+        params%k(k, j, i) = params%k(k, i, j)
+      enddo
+    enddo
   enddo
 
   load_params = 0
@@ -268,13 +272,13 @@ subroutine get_cutoff_radii(psp)
   type(hgh_type), intent(inout)     :: psp
 
   integer  :: ir, l, i
-  real(r8) :: dincv, tmp
-  real(r8), parameter :: threshold = 1.0e-4_r8
+  FLOAT :: dincv, tmp
+  FLOAT, parameter :: threshold = CNST(1.0e-4)
 
   call push_sub('get_cutoff_radii_psp')
 
   do l = 0, psp%l_max
-    tmp = 0.0_r8
+    tmp = M_ZERO
     do i = 1, 3
        do ir = psp%g%nrval, 2, -1
           dincv = abs(psp%kb(ir, l, i))
@@ -291,28 +295,28 @@ end subroutine get_cutoff_radii
 ! Local pseudopotential, both in real and reciprocal space.
 function vlocalr_scalar(r, p)
   type(hgh_type), intent(in)     :: p
-  real(r8), intent(in)           :: r
-  real(r8)                       :: vlocalr_scalar
+  FLOAT, intent(in)           :: r
+  FLOAT                       :: vlocalr_scalar
 
-  real(r8) :: r1, r2, r4, r6
+  FLOAT :: r1, r2, r4, r6
 
   r1 = r/p%rlocal; r2 = r1**2; r4 = r2**2; r6 = r4*r2
 
-  if(r < 1e-7_r8) then
-     vlocalr_scalar = - (2.0_r8 * p%z_val)/(sqrt(2.0_r8*M_Pi)*p%rlocal) + p%c(1)
+  if(r < CNST(1.0e-7)) then
+     vlocalr_scalar = - (M_TWO * p%z_val)/(sqrt(M_TWO*M_Pi)*p%rlocal) + p%c(1)
      return
   endif
 
-  vlocalr_scalar = - (p%z_val/r)*oct_erf(r1/sqrt(2.0_r8))   &
-                   + exp( -(1.0_r8/2.0_r8)*r2 ) *    &
+  vlocalr_scalar = - (p%z_val/r)*oct_erf(r1/sqrt(M_TWO))   &
+                   + exp( -M_HALF*r2 ) *    &
                    ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
 
 end function vlocalr_scalar
 
 function vlocalr_vector(r, p)
   type(hgh_type), intent(in)      :: p
-  real(r8), intent(in)            :: r(:)
-  real(r8), pointer               :: vlocalr_vector(:)
+  FLOAT, intent(in)            :: r(:)
+  FLOAT, pointer               :: vlocalr_vector(:)
 
   integer :: i
 
@@ -325,46 +329,46 @@ end function vlocalr_vector
 
 function vlocalg(g, p)
   type(hgh_type), intent(in)     :: p
-  real(r8), intent(in)           :: g
-  real(r8)                       :: vlocalg
+  FLOAT, intent(in)           :: g
+  FLOAT                       :: vlocalg
 
-  real(r8) :: g1, g2, g4, g6
+  FLOAT :: g1, g2, g4, g6
 
   g1 = g*p%rlocal; g2 = g1*g1; g4 = g2*g2; g6 = g4*g2
 
-  vlocalg = -(4.0_r8*M_Pi*p%z_val/g**2) * exp( -g2/2.0_r8) +            &
-            sqrt(8.0_r8*M_Pi**3) * p%rlocal**3 * exp( -g2/2.0_r8) *    &
-            ( p%c(1) + p%c(2)*(3.0_r8 - g2) + p%c(3)*(15.0_r8 - 10.0_r8*g2 + g4) + &
-              p%c(4)*(105.0_r8 -105.0_r8*g2 + 21.0_r8*g4 - g6) )
+  vlocalg = -(M_FOUR*M_Pi*p%z_val/g**2) * exp( -g2/M_TWO) +            &
+            sqrt(M_EIGHT*M_Pi**3) * p%rlocal**3 * exp( -g2/M_TWO) *    &
+            ( p%c(1) + p%c(2)*(M_THREE - g2) + p%c(3)*(CNST(15.0) - M_TEN*g2 + g4) + &
+              p%c(4)*(CNST(105.0) -CNST(105.0)*g2 + CNST(21.0)*g4 - g6) )
 
 end function vlocalg
 
 function projectorr_scalar(r, p, i, l)
   type(hgh_type), intent(in)     :: p
-  real(r8), intent(in)           :: r
+  FLOAT, intent(in)           :: r
   integer, intent(in)            :: i, l
-  real(r8)                       :: projectorr_scalar
+  FLOAT                       :: projectorr_scalar
 
-  real(r8) :: x, y, rr
+  FLOAT :: x, y, rr
 
-  x = l + real(4*i-1, r8)/2
+  x = l + real(4*i-1, PRECISION)/M_TWO
   y = oct_gamma(x); x = sqrt(y)
   if(l==0 .and. i==1) then
-    rr = 1._r8
+    rr = M_ONE
   else
     rr = r ** (l + 2*(i-1))
   endif
  
-  projectorr_scalar = sqrt(2.0_r8) * rr * exp(-r**2/(2.0_r8*p%rc(l)**2)) / &
-              (  p%rc(l)**(l + real(4*i-1,r8)/2) * x )  
+  projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
+              (  p%rc(l)**(l + real(4*i-1, PRECISION)/M_TWO) * x )  
 
 end function projectorr_scalar
 
 function projectorr_vector(r, p, i, l)
   type(hgh_type), intent(in)     :: p
-  real(r8), intent(in)           :: r(:)
+  FLOAT, intent(in)           :: r(:)
   integer, intent(in)            :: i, l
-  real(r8), pointer              :: projectorr_vector(:)
+  FLOAT, pointer              :: projectorr_vector(:)
 
   integer :: j
 
@@ -377,52 +381,52 @@ end function projectorr_vector
 
 function projectorg(g, p, i, l)
   type(hgh_type), intent(in)     :: p
-  real(r8), intent(in)           :: g
+  FLOAT, intent(in)           :: g
   integer, intent(in)            :: i, l
-  real(r8)                       :: projectorg
+  FLOAT                       :: projectorg
 
-  !real(r8), external :: gamma
-  real(r8) :: pif, ex
+  !FLOAT, external :: gamma
+  FLOAT :: pif, ex
 
-  pif = M_Pi**(5.0_r8/4.0_r8)
+  pif = M_Pi**(M_FIVE/M_FOUR)
 
-  ex = exp( (1.0_r8/2.0_r8)*(g*p%rc(l))**2 )
+  ex = exp( M_HALF*(g*p%rc(l))**2 )
 
   select case(l)
   case(0)
     select case(i)
     case(1)
-      projectorg = ( 4.0_r8*sqrt(2.0_r8*p%rc(0)**3)*pif ) / ex
+      projectorg = ( M_FOUR*sqrt(M_TWO*p%rc(0)**3)*pif ) / ex
     case(2)
-      projectorg = ( sqrt(8.0_r8*2*p%rc(0)**3/15.0_r8)*pif * &
-           (3.0_r8 - (g*p%rc(0))**2) ) / ex
+      projectorg = ( sqrt(M_EIGHT*2*p%rc(0)**3/CNST(15.0))*pif * &
+           (M_THREE - (g*p%rc(0))**2) ) / ex
     case(3)
-      projectorg = ( 16.0_r8*sqrt(2.0_r8*p%rc(0)**3/105.0_r8) * pif * &
-           (15.0_r8 - 10.0_r8*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (3.0_r8*ex)
+      projectorg = ( CNST(16.0)*sqrt(M_TWO*p%rc(0)**3/CNST(105.0)) * pif * &
+           (CNST(15.0) - M_TEN*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (M_THREE*ex)
     end select
 
   case(1)
     select case(i)
     case(1)
-      projectorg = ( 8.0_r8*sqrt(p%rc(1)**5/3.0_r8)*pif*g ) / ex
+      projectorg = ( M_EIGHT*sqrt(p%rc(1)**5/M_THREE)*pif*g ) / ex
     case(2)
-      projectorg = ( 16.0_r8*sqrt(p%rc(1)**5/105.0_r8)* pif * g * & 
-           ( 5.0_r8 - (g*p%rc(1))**2 ) ) / ex
+      projectorg = ( CNST(16.0)*sqrt(p%rc(1)**5/CNST(105.0))* pif * g * & 
+           ( M_FIVE - (g*p%rc(1))**2 ) ) / ex
     case(3)
-      projectorg = ( 32.0_r8*sqrt(p%rc(1)**5/1155.0_r8)* pif * g * &
-           ( 35.0_r8 - 14.0_r8*g**2*p%rc(1)**2 + (g*p%rc(1))**4 ) ) / &
-           (3.0_r8*ex)
+      projectorg = ( CNST(32.0)*sqrt(p%rc(1)**5/CNST(1155.0))* pif * g * &
+           ( CNST(35.0) - CNST(14.0)*g**2*p%rc(1)**2 + (g*p%rc(1))**4 ) ) / &
+           (M_THREE*ex)
     end select
 
   case(2)
     select case(i)
     case(1)
-      projectorg = ( 8.0_r8 * sqrt(2.0_r8*p%rc(2)**7/15.0_r8) * pif * g**2 ) / ex
+      projectorg = ( M_EIGHT * sqrt(M_TWO*p%rc(2)**7/CNST(15.0)) * pif * g**2 ) / ex
     case(2)
-      projectorg = ( 16.0_r8 * sqrt(2.0_r8*p%rc(2)**7/105.0_r8) * pif * g**2 * &
-           (7.0_r8 - g**2*p%rc(2)**2) ) / (3.0_r8*ex)
+      projectorg = ( CNST(16.0) * sqrt(M_TWO*p%rc(2)**7/CNST(105.0)) * pif * g**2 * &
+           (M_SEVEN - g**2*p%rc(2)**2) ) / (M_THREE*ex)
     case(3)
-      projectorg = 0.0_r8 ! ??
+      projectorg = M_ZERO ! ??
     end select
     
   case(3)    
@@ -435,21 +439,21 @@ subroutine solve_schroedinger(psp)
   type(hgh_type), intent(inout)     :: psp
   
   integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
-  real(r8) :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
-  real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:, :), rho(:, :), ve(:, :)
-  real(r8), parameter :: tol = 1.0e-4_r8
+  FLOAT :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
+  FLOAT, allocatable :: s(:), hato(:), g(:), y(:), prev(:, :), rho(:, :), ve(:, :)
+  FLOAT, parameter :: tol = CNST(1.0e-4)
 
   call push_sub('solve_schroedinger')
 
   ! Allocations...
   allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval, 1), &
            rho(psp%g%nrval, 1), ve(psp%g%nrval, 1))
-  hato = 0.0_r8; g = 0.0_r8;  y = 0.0_r8; rho = 0.0_r8; ve = 0.0_r8
+  hato = M_ZERO; g = M_ZERO;  y = M_ZERO; rho = M_ZERO; ve = M_ZERO
 
   ! These numerical parameters have to be fixed for egofv to work.
   s(2:psp%g%nrval) = psp%g%drdi(2:psp%g%nrval)*psp%g%drdi(2:psp%g%nrval)
   s(1) = s(2)
-  a2b4 = 0.25_r8*psp%g%a**2
+  a2b4 = M_FOURTH*psp%g%a**2
 
   ! Let us be a bit informative.
   if(conf%verbose > 20 .and. mpiv%node == 0) then
@@ -459,7 +463,7 @@ subroutine solve_schroedinger(psp)
 
   ! "Double" self consistent loop: nonlocal and xc parts have to be calculated
   ! self-consistently.
-  diff = 1e5_r8
+  diff = CNST(1e5)
   iter = 0
   self_consistent: do while( diff > tol )
     prev = rho
@@ -468,7 +472,7 @@ subroutine solve_schroedinger(psp)
       l = psp%conf%l(n)
       do ir = 2, psp%g%nrval
         vtot = 2*psp%vlocal(ir) + ve(ir, 1) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
-        nonl = 0.0_r8
+        nonl = M_ZERO
         if(iter>1 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > 1.0e-7) then
            do i = 1, 3
            do j = 1, 3
@@ -495,7 +499,7 @@ subroutine solve_schroedinger(psp)
       else
          e = psp%eigen(n); z = psp%z_val
       endif
-      dr = -1.0e5_r8; rmax = psp%g%rofi(psp%g%nrval)
+      dr = -CNST(1.0e5); rmax = psp%g%rofi(psp%g%nrval)
       call egofv(hato, s, psp%g%nrval, e, g, y, l, z, psp%g%a, psp%g%b, rmax, nprin, nnode, dr)
       psp%eigen(n) = e
 
@@ -526,7 +530,7 @@ subroutine solve_schroedinger(psp)
   do n = 1, psp%conf%p
     e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
     e = abs(e - M_ONE)
-    if (e > 1.0e-5_r8 .and. conf%verbose > 0) then
+    if (e > CNST(1.0e-5) .and. conf%verbose > 0) then
       write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
       write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
       call write_warning(2)

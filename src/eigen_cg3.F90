@@ -22,10 +22,10 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
   type(states_type), target, intent(inout)   :: st
   type(system_type), target, intent(IN)      :: sys
   type(hamiltonian_type), target, intent(IN) :: h
-  real(r8), intent(in)               :: tol
+  FLOAT, intent(in)               :: tol
   integer, intent(inout)             :: niter
   integer, intent(out)               :: errorflag, converged
-  real(r8), intent(out), optional    :: diff(1:st%nst,1:st%nik)
+  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
   logical, intent(in), optional      :: reorder
 
   integer :: unit, i
@@ -39,7 +39,7 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
 !!$  allocate(evec(sys%m%np, st%dim, mev))
 
-  call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = 1.0e-5_r8, trestart = 3)
+  call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = CNST(1.0e-5), trestart = 3)
 
   if(conf%verbose > 999) then
     call io_assign(unit)
@@ -95,8 +95,8 @@ end subroutine eigen_solver_cg3
 
 subroutine op(nrow, ncol, xin, ldx, yout, ldy)
   integer, intent(in) :: nrow, ncol, ldx, ldy
-  real(r8), dimension(ldx, ncol), intent(in)  :: xin
-  real(r8), dimension(ldy, ncol), intent(out) :: yout
+  FLOAT, dimension(ldx, ncol), intent(in)  :: xin
+  FLOAT, dimension(ldy, ncol), intent(out) :: yout
 
   integer :: i
 

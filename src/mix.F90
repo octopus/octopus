@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module mix
 use global
@@ -35,11 +35,11 @@ type mix_type
   private
   integer  :: type_of_mixing
 
-  real(r8) :: alpha               !  vnew = (1-alpha)*vin + alpha*vout
+  FLOAT :: alpha               !  vnew = (1-alpha)*vin + alpha*vout
 
   integer :: ns    ! number of steps used to extrapolate the new vector
 
-  real(r8), pointer :: df(:,:,:)    , &
+  FLOAT, pointer :: df(:,:,:)    , &
                        dv(:,:,:)    , &
                        f_old(:,:)   , &
                        vin_old(:,:)
@@ -65,8 +65,8 @@ subroutine mix_init(smix, np, nc)
   end if
 
   if (smix%type_of_mixing == LINEAR .or. smix%type_of_mixing == BROYDEN) then
-    call oct_parse_double("Mixing", 0.3_r8, smix%alpha)
-    if(smix%alpha <= 0.0_r8 .or. smix%alpha > 1.0_r8) then
+    call oct_parse_double("Mixing", CNST(0.3), smix%alpha)
+    if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) then
       write(message(1), '(a, f14.6,a)') "Input: '",smix%alpha,"' is not a valid Mixing"
       message(2) = '(0 < Mixing <= 1)'
       call write_fatal(2)
@@ -94,7 +94,7 @@ subroutine mix_init(smix, np, nc)
              smix%dv(np, smix%ns + 1, nc),&
              smix%vin_old(np, nc),    &
              smix%f_old(np, nc)        )
-    smix%df = 0._r8; smix%dv = 0._r8; smix%vin_old = 0._r8; smix%f_old = 0._r8
+    smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
   case (BROYDEN)
     write(message(1), '(a)') 'Info: Broyden mixing used. It can (i) boost your convergence, '
@@ -106,7 +106,7 @@ subroutine mix_init(smix, np, nc)
              smix%dv(np, smix%ns, nc),&
              smix%vin_old(np, nc),    &
              smix%f_old(np, nc)        )
-    smix%df = 0._r8; smix%dv = 0._r8; smix%vin_old = 0._r8; smix%f_old = 0._r8
+    smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
   end select
 
@@ -132,8 +132,8 @@ end subroutine mix_end
 subroutine mixing(smix, iter, np, nc, vin, vout, vnew)
   type(mix_type), intent(inout) :: smix
   integer, intent(in)      :: iter, np, nc
-  real(r8), dimension(np, nc), intent(in) :: vin, vout
-  real(r8), dimension(np, nc), intent(out) :: vnew
+  FLOAT, dimension(np, nc), intent(in) :: vin, vout
+  FLOAT, dimension(np, nc), intent(out) :: vnew
 
   call push_sub('mixing')
 
@@ -159,12 +159,12 @@ end subroutine mixing
 
 ! Performs the linear mixing...
 subroutine mix_linear(alpha, np, nc, vin, vout, vnew)
-  real(r8), intent(in) :: alpha
+  FLOAT, intent(in) :: alpha
   integer, intent(in) :: np, nc
-  real(r8), dimension(np, nc), intent(in) :: vin, vout
-  real(r8), dimension(np, nc), intent(out) :: vnew
+  FLOAT, dimension(np, nc), intent(in) :: vin, vout
+  FLOAT, dimension(np, nc), intent(out) :: vnew
 
-  vnew = vin*(1.0_r8 - alpha) + alpha*vout
+  vnew = vin*(M_ONE - alpha) + alpha*vout
 
 end subroutine mix_linear
 
@@ -173,11 +173,11 @@ subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
   integer, intent(in)     :: np, nc
   integer, intent(in)     :: iter
-  real(r8), dimension(np, nc), intent(in)  :: vin, vout 
-  real(r8), dimension(np, nc), intent(out) :: vnew
+  FLOAT, dimension(np, nc), intent(in)  :: vin, vout 
+  FLOAT, dimension(np, nc), intent(out) :: vnew
 
   integer :: i, ipos, iter_used
-  real(r8) :: gamma, f(np, nc)
+  FLOAT :: gamma, f(np, nc)
 
   f = vout - vin
   if(iter > 1) then
@@ -189,10 +189,10 @@ subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
 
     do i = 1,nc
       gamma = sqrt(dot_product(smix%df(:, ipos, i), smix%df(:, ipos, i)))
-      if(gamma > 1e-8_r8) then
-        gamma = 1.0_r8/gamma
+      if(gamma > CNST(1e-8)) then
+        gamma = M_ONE/gamma
       else
-        gamma = 1.0_r8
+        gamma = M_ONE
       endif
       smix%df(:, ipos, i) = smix%df(:, ipos, i)*gamma
       smix%dv(:, ipos, i) = smix%dv(:, ipos, i)*gamma
@@ -214,15 +214,15 @@ subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
 end subroutine mix_broyden
 
 subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, dv)
-  real(r8), intent(in)  :: alpha
+  FLOAT, intent(in)  :: alpha
   integer, intent(in)   :: np, iter_used
-  real(r8), intent(in)  :: vin(np), vout(np), f(np), df(np, iter_used), dv(np, iter_used)
-  real(r8), intent(out) :: vnew(np)
+  FLOAT, intent(in)  :: vin(np), vout(np), f(np), df(np, iter_used), dv(np, iter_used)
+  FLOAT, intent(out) :: vnew(np)
 
-  real(r8), parameter :: w0 = 0.01_r8
+  FLOAT, parameter :: w0 = CNST(0.01)
 
   integer  :: i, j
-  real(r8) :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used)
+  FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used)
 
   if (iter_used == 0) then
     ! linear mixing...
@@ -230,10 +230,10 @@ subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, d
     return
   end if
 
-  w  = 5.0_r8
+  w  = M_FIVE
 
   ! compute matrix beta
-  beta = 0._r8
+  beta = M_ZERO
   do i = 1, iter_used
     do j = i + 1, iter_used
       beta(i, j) = w(i)*w(j)*dot_product(df(:, j), df(:, i))
@@ -269,11 +269,11 @@ subroutine mix_grpulay(smix, np, nc, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
   integer, intent(in)     :: np, nc
   integer, intent(in)     :: iter
-  real(r8), dimension(np, nc), intent(in)  :: vin, vout 
-  real(r8), dimension(np, nc), intent(out) :: vnew
+  FLOAT, dimension(np, nc), intent(in)  :: vin, vout 
+  FLOAT, dimension(np, nc), intent(out) :: vnew
 
   integer :: ipos, iter_used, i
-  real(r8) :: f(np, nc)
+  FLOAT :: f(np, nc)
 
   f = vout - vin
 
@@ -313,14 +313,14 @@ end subroutine mix_grpulay
 
 subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   integer, intent(in)   :: np, iter_used
-  real(r8), intent(in)  :: vin(np), vout(np), f(np), df(np, iter_used), dv(np, iter_used)
-  real(r8), intent(out) :: vnew(np)
+  FLOAT, intent(in)  :: vin(np), vout(np), f(np), df(np, iter_used), dv(np, iter_used)
+  FLOAT, intent(out) :: vnew(np)
 
   integer :: i, j
-  real(r8) :: a(iter_used, iter_used), alpha
+  FLOAT :: a(iter_used, iter_used), alpha
 
   ! set matrix A
-  a = 0._r8
+  a = M_ZERO
   do i = 1, iter_used
     do j = i + 1, iter_used
       a(i, j) = dot_product(df(:, j), df(:, i))
@@ -340,7 +340,7 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   ! compute new density
   vnew = vin
   do i = 1,iter_used
-    alpha = 0._r8
+    alpha = M_ZERO
     do j = 1,iter_used
       alpha = alpha - a(j, i)*dot_product(df(:, j), f)
     end do

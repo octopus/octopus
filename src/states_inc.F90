@@ -19,12 +19,12 @@
 subroutine X(calcdens)(st, np, rho, reduce)
   type(states_type), intent(in) :: st
   integer, intent(in) :: np
-  real(r8), intent(out) :: rho(np, st%nspin)
+  FLOAT, intent(out) :: rho(np, st%nspin)
   logical, intent(in), optional :: reduce
 
   integer :: i, ik, p, sp
 #ifdef HAVE_MPI
-  real(r8), allocatable :: reduce_rho(:,:)
+  FLOAT, allocatable :: reduce_rho(:,:)
   R_TYPE, allocatable :: reduce_rho_off(:)
   integer :: ierr
 #endif
@@ -82,16 +82,16 @@ subroutine X(states_random)(m, f)
 
   integer, save :: iseed = 123
   integer :: i
-  real(r8) :: a(3), rnd, r
+  FLOAT :: a(3), rnd, r
 
   call push_sub('mesh_random')
 
   call quickrnd(iseed, rnd)
-  a(1) = 2.0_r8*(2*rnd - 1)
+  a(1) = M_TWO*(2*rnd - 1)
   call quickrnd(iseed, rnd)
-  a(2) = 2.0_r8*(2*rnd - 1)
+  a(2) = M_TWO*(2*rnd - 1)
   call quickrnd(iseed, rnd)
-  a(3) = 2.0_r8*(2*rnd - 1)
+  a(3) = M_TWO*(2*rnd - 1)
 
   do i = 1, m%np
      call mesh_r(m, i, r, a=a)
@@ -113,7 +113,7 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in), optional :: start
 
   integer :: p, q, id, stst
-  real(r8) :: nrm2
+  FLOAT :: nrm2
   R_TYPE :: ss
 
   if(present(start)) then
@@ -130,7 +130,7 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
       end do
     enddo
     nrm2 = X(states_nrm2)(m, dim, psi(1:m%np, :, p))
-    ss = R_TOTYPE(1.0_r8/nrm2)
+    ss = R_TOTYPE(M_ONE/nrm2)
     do id = 1, dim
       call X(scal) (m%np, ss, psi(1, id, p), 1)
     end do
@@ -148,7 +148,7 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
 
 end function X(states_dotp)
 
-real(r8) function X(states_nrm2)(m, dim, f) result(nrm2)
+FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f
@@ -157,11 +157,11 @@ real(r8) function X(states_nrm2)(m, dim, f) result(nrm2)
 
 end function X(states_nrm2)
 
-real(r8) function X(states_residue)(m, dim, hf, e, f, res) result(r)
+FLOAT function X(states_residue)(m, dim, hf, e, f, res) result(r)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(:, :) :: hf, f
-  real(r8), intent(in)  :: e
+  FLOAT, intent(in)  :: e
   R_TYPE, intent(out), optional :: res(:, :)
 
   if(present(res)) then
@@ -178,7 +178,7 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
   integer, intent(in), optional :: iter ! used in TD
-  real(r8), intent(in), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
+  FLOAT, intent(in), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
   integer :: iunit, ik, ist, id
   integer(i4) :: mode
@@ -227,13 +227,13 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
   type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
   integer, intent(out), optional :: iter ! used in TD
-  real(r8), intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
+  FLOAT, intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
   integer :: iunit, ik, ist, id
   integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
-  real(r8) :: e
-  real(r8), allocatable :: dpsi(:)
-  complex(r8), allocatable :: zpsi(:)
+  FLOAT :: e
+  FLOAT, allocatable :: dpsi(:)
+  CMPLX, allocatable :: zpsi(:)
 
   call push_sub('states_load_restart')
   ok = .true.
@@ -285,14 +285,14 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
 #             ifdef R_TREAL
                 st%dpsi(1:m%np, id, ist, ik) = dpsi(:)
 #             else
-                st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), M_ZERO, r8)
+                st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), M_ZERO, PRECISION)
 #             endif
             end if
           else
             read(iunit, err=999) zpsi(:)
             if(ist >= st%st_start .and. ist <= st%st_end) then
 #             ifdef R_TREAL
-                st%dpsi(1:m%np, id, ist, ik) = real(zpsi(:), r8)
+                st%dpsi(1:m%np, id, ist, ik) = real(zpsi(:), PRECISION)
 #             else
                 st%zpsi(1:m%np, id, ist, ik) = zpsi(:)
 #             endif
@@ -350,9 +350,9 @@ subroutine X(states_output) (st, m, dir, outp)
 
   integer :: ik, ist, idim, is
   character(len=80) :: fname
-  real(r8) :: u
+  FLOAT :: u
 
-  u = 1._r8/units_out%length%factor**conf%dim
+  u = M_ONE/units_out%length%factor**conf%dim
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
@@ -404,18 +404,18 @@ subroutine X(states_output) (st, m, dir, outp)
 contains
   ! WARNING some constants are probably wrong for 1 and 2D
   subroutine elf()
-    real(r8) :: f, d, s
-    real(r8), allocatable :: c(:), j(:,:,:), r(:), gr(:,:)
+    FLOAT :: f, d, s
+    FLOAT, allocatable :: c(:), j(:,:,:), r(:), gr(:,:)
     R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
 
-    real(r8), parameter :: dmin = 1e-10_r8
+    FLOAT, parameter :: dmin = CNST(1e-10)
     
     ! single or double occupancy
     if(st%nspin == 1) then
-      s = 2._r8
+      s = M_TWO
     else
-      s = 1._r8
+      s = M_ONE
     end if
 
 #if defined(R_TCOMPLEX)
@@ -431,7 +431,7 @@ contains
       call df_gradient(m, r, gr)
       do i = 1, m%np
         if(r(i) >= dmin) then
-          c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
+          c(i) = -M_FOURTH*sum(gr(1:conf%dim, i)**2)/r(i)
 #if defined(R_TCOMPLEX)
           c(i) = c(i) - sum(j(1:conf%dim, i, is)**2)/(s*s*r(i))
 #endif
@@ -455,11 +455,11 @@ contains
       end do
       deallocate(gpsi)
       
-      f = 3._r8/5._r8*(6._r8*M_PI**2)**(2._r8/3._r8)
+      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
       do i = 1, m%np
         if(r(i) >= dmin) then
-          d    = f*r(i)**(5._r8/3._r8)
-          c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
+          d    = f*r(i)**(M_FIVE/M_THREE)
+          c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
         else
           c(i) = M_ZERO
         end if
@@ -468,7 +468,7 @@ contains
       deallocate(r)
       
       write(fname, '(a,i1)') 'elf-', is
-      call doutput_function(outp%how, dir, fname, m, c, 1._r8)
+      call doutput_function(outp%how, dir, fname, m, c, M_ONE)
       
     end do do_is
 #if defined(R_TCOMPLEX)
@@ -604,9 +604,9 @@ end function X(states_mpdotp)
 subroutine X(states_calculate_angular)(m, st, angular)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(out) :: angular(3)
+  FLOAT, intent(out) :: angular(3)
 
-  real(r8) :: temp(3)
+  FLOAT :: temp(3)
   R_TYPE, allocatable :: lpsi(:, :)
   integer :: idim, ik, j, i, ierr
 
@@ -639,7 +639,7 @@ subroutine X(mesh_angular_momentum)(m, f, lf)
   R_TYPE, intent(out) :: lf(3, m%np)
 
   R_TYPE, allocatable :: gf(:, :)
-  real(r8) :: x(3)
+  FLOAT :: x(3)
   integer :: i
 
   allocate(gf(3, m%np))

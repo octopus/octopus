@@ -34,12 +34,12 @@ type specie_type
                                   ! "usdef" : user defined function
                                   ! other   : a pseudopotential.
 
-  real(r8)          :: z          ! charge of the species. 
+  FLOAT          :: z          ! charge of the species. 
 
-  real(r8)          :: z_val      ! valence charge of the species -- the total charge
+  FLOAT          :: z_val      ! valence charge of the species -- the total charge
                                   ! minus the core charge in the case of the pseudopotentials.
 
-  real(r8)          :: weight     ! mass, in atomic mass units (=! atomic units of mass)
+  FLOAT          :: weight     ! mass, in atomic mass units (=! atomic units of mass)
 
   logical           :: local      ! true if the potential is local, which in this case means
                                   ! it is *not* a pseudopotential.
@@ -50,7 +50,7 @@ type specie_type
   character(len=1024) :: user_def
 
   ! jellium stuff
-  real(r8) :: jradius
+  FLOAT :: jradius
 
   ! For the pseudopotential
   character(len=3) :: ps_flavour
@@ -128,12 +128,12 @@ subroutine specie_end(ns, s)
   return
 end subroutine specie_end
 
-real(r8) function specie_get_local(s, x) result(l)
+FLOAT function specie_get_local(s, x) result(l)
   type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(3)
+  FLOAT, intent(in) :: x(3)
 
-  real(r8) :: a1, a2, Rb2 ! for jellium
-  real(r8) :: xx(3), r
+  FLOAT :: a1, a2, Rb2 ! for jellium
+  FLOAT :: xx(3), r
 
   xx = M_ZERO
   xx(1:conf%dim) = x(:)
@@ -145,7 +145,7 @@ real(r8) function specie_get_local(s, x) result(l)
   else
     select case(s%label(1:5))
     case('jelli', 'point')
-      a1 = s%Z/(2._r8*s%jradius**3)
+      a1 = s%Z/(M_TWO*s%jradius**3)
       a2 = s%Z/s%jradius
       Rb2= s%jradius**2
       
@@ -169,11 +169,11 @@ end function specie_get_local
 ! returns the gradient of the external potential
 subroutine specie_get_glocal(s, x, gv)
   type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(conf%dim)
-  real(r8), intent(out) :: gv(conf%dim)
+  FLOAT, intent(in) :: x(conf%dim)
+  FLOAT, intent(out) :: gv(conf%dim)
 
-  real(r8), parameter :: Delta = 1e-4_r8
-  real(r8) :: xx(3), r, vl, dvl, l1, l2
+  FLOAT, parameter :: Delta = CNST(1e-4)
+  FLOAT :: xx(3), r, vl, dvl, l1, l2
   integer :: i
 
   gv = M_ZERO
@@ -193,7 +193,7 @@ subroutine specie_get_glocal(s, x, gv)
 
     select case(s%label(1:5))
     case('jelli', 'point')
-      l1 = s%Z/(2._r8*s%jradius**3)
+      l1 = s%Z/(M_TWO*s%jradius**3)
       
       if(r <= s%jradius) then
         gv(:) = l1*x(:)

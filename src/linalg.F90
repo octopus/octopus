@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-!#include "global.h"
+#include "global.h"
 
 ! This module is intended to contain "only mathematical" functions and        !
 !	procedures.                                                           !
@@ -38,96 +38,96 @@ module linalg
     ! scales a vector by a constant
     subroutine dscal(n, da, dx, incx)
       integer, intent(in)    :: n, incx
-      real(8), intent(in)    :: da
-      real(8), intent(inout) :: dx ! dx(n)
+      FLOAT, intent(in)    :: da
+      FLOAT, intent(inout) :: dx ! dx(n)
     end subroutine dscal
     
     ! scales a vector by a constant
     subroutine zscal(n, za, zx, incx)
       integer,    intent(in)    :: n, incx
-      complex(8), intent(in)    :: za
-      complex(8), intent(inout) :: zx ! zx(n)
+      CMPLX, intent(in)    :: za
+      CMPLX, intent(inout) :: zx ! zx(n)
     end subroutine zscal
     
     ! constant times a vector plus a vector
     subroutine daxpy(n, da, dx, incx, dy, incy)
       integer, intent(in)    :: n, incx, incy
-      real(8), intent(in)    :: da, dx ! dx(n)
-      real(8), intent(inout) :: dy     ! dy(n)
+      FLOAT, intent(in)    :: da, dx ! dx(n)
+      FLOAT, intent(inout) :: dy     ! dy(n)
     end subroutine daxpy
     
     ! constant times a vector plus a vector
     subroutine zaxpy(n, za, zx, incx, zy, incy)
       integer,    intent(in)    :: n, incx, incy
-      complex(8), intent(in)    :: za, zx ! zx(n)
-      complex(8), intent(inout) :: zy     ! zy(n)
+      CMPLX, intent(in)    :: za, zx ! zx(n)
+      CMPLX, intent(inout) :: zy     ! zy(n)
     end subroutine zaxpy
     
     ! forms the dot product of two vectors
-    real(8) function ddot(n, dx, incx, dy, incy)
+    FLOAT function ddot(n, dx, incx, dy, incy)
       integer, intent(in) :: n, incx, incy
-      real(8), intent(in) :: dx, dy ! dx(n), dy(n)
+      FLOAT, intent(in) :: dx, dy ! dx(n), dy(n)
     end function ddot
     
-    complex(8) function zdotc(n, zx, incx, zy, incy)
+    CMPLX function zdotc(n, zx, incx, zy, incy)
       integer,    intent(in) :: n, incx, incy
-      complex(8), intent(in) :: zx, zy ! zx(n), zy(n)
+      CMPLX, intent(in) :: zx, zy ! zx(n), zy(n)
     end function zdotc
     
     ! returns the euclidean norm of a vector
-    real(8) function dnrm2(n, dx, incx)
+    FLOAT function dnrm2(n, dx, incx)
       integer, intent(in) :: n, incx
-      real(8), intent(in) :: dx ! dx(n)
+      FLOAT, intent(in) :: dx ! dx(n)
     end function dnrm2
     
     ! returns the euclidean norm of a vector
-    real(8) function dznrm2(n, zx, incx)
+    FLOAT function dznrm2(n, zx, incx)
       integer, intent(in)    :: n, incx
-      complex(8), intent(in) :: zx ! zx(n)
+      CMPLX, intent(in) :: zx ! zx(n)
     end function dznrm2
     
     ! matrix-matrix multiplication plus matrix
     subroutine dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
-      real(8),      intent(in)    :: alpha, beta
-      real(8),      intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
-      real(8),      intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
-      real(8),      intent(inout) :: c ! c(ldc,n) 
+      FLOAT,      intent(in)    :: alpha, beta
+      FLOAT,      intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
+      FLOAT,      intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
+      FLOAT,      intent(inout) :: c ! c(ldc,n) 
     end subroutine dgemm
     
     ! matrix-matrix multiplication plus matrix
     subroutine zgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
-      complex(8),   intent(in)    :: alpha, beta
-      complex(8),   intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
-      complex(8),   intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
-      complex(8),   intent(inout) :: c ! c(ldc,n)
+      CMPLX,   intent(in)    :: alpha, beta
+      CMPLX,   intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
+      CMPLX,   intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
+      CMPLX,   intent(inout) :: c ! c(ldc,n)
     end subroutine zgemm
     
     ! matrix-vector multiplication plus vector
     subroutine zgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: m, n, lda, incx, incy
-      complex(8),   intent(in)    :: alpha, beta
-      complex(8),   intent(in)    :: a ! a(lda,n)
-      complex(8),   intent(in)    :: x ! x(:)
-      complex(8),   intent(inout) :: y ! y(:)
+      CMPLX,   intent(in)    :: alpha, beta
+      CMPLX,   intent(in)    :: a ! a(lda,n)
+      CMPLX,   intent(in)    :: x ! x(:)
+      CMPLX,   intent(inout) :: y ! y(:)
     end subroutine zgemv
     
     ! copies a vector, x, to a vector, y
     subroutine dcopy(n, dx, incx, dy, incy)
       integer, intent(in)  :: n, incx, incy
-      real(8), intent(in)  :: dx ! dx(n)
-      real(8), intent(out) :: dy ! dy(n)
+      FLOAT, intent(in)  :: dx ! dx(n)
+      FLOAT, intent(out) :: dy ! dy(n)
     end subroutine dcopy
 
     ! copies a vector, x, to a vector, y
     subroutine zcopy(n, zx, incx, zy, incy)
       integer,    intent(in)  :: n, incx, incy
-      complex(8), intent(in)  :: zx ! dz(n)
-      complex(8), intent(out) :: zy ! zy(n)
+      CMPLX, intent(in)  :: zx ! dz(n)
+      CMPLX, intent(out) :: zy ! zy(n)
     end subroutine zcopy
     
     
@@ -137,7 +137,7 @@ module linalg
     ! using partial pivoting with row interchanges.
     subroutine dgetrf(m, n, a, lda, ipiv, info)
       integer, intent(in)    :: m, n, lda
-      real(8), intent(inout) :: a    ! a(lda,n)
+      FLOAT, intent(inout) :: a    ! a(lda,n)
       integer, intent(out)   :: ipiv ! ipiv(min(m,n))
       integer, intent(out)   :: info
     end subroutine dgetrf
@@ -146,7 +146,7 @@ module linalg
     ! using partial pivoting with row interchanges.
     subroutine zgetrf(m, n, a, lda, ipiv, info)
       integer,    intent(in)    :: m, n, lda
-      complex(8), intent(inout) :: a    ! a(lda,n)
+      CMPLX, intent(inout) :: a    ! a(lda,n)
       integer,    intent(out)   :: ipiv ! ipiv(min(m,n))
       integer,    intent(out)   :: info
     end subroutine zgetrf
@@ -155,8 +155,8 @@ module linalg
     subroutine dsyev(jobz, uplo, n, a, lda, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
-      real(8),      intent(inout) :: a       ! a(lda,n)
-      real(8),      intent(out)   :: w, work ! w(n), work(lwork)
+      FLOAT,      intent(inout) :: a       ! a(lda,n)
+      FLOAT,      intent(out)   :: w, work ! w(n), work(lwork)
       integer,      intent(out)   :: info 
     end subroutine dsyev
     
@@ -164,9 +164,9 @@ module linalg
     subroutine zheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, lda, lwork
-      complex(8),   intent(inout) :: a        ! a(lda,n)
-      real(8),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      complex(8),   intent(out)   :: work     ! work(lwork)
+      CMPLX,   intent(inout) :: a        ! a(lda,n)
+      FLOAT,      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
+      CMPLX,   intent(out)   :: work     ! work(lwork)
       integer,      intent(out)   :: info
     end subroutine zheev
     
@@ -177,8 +177,8 @@ module linalg
     subroutine dsygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: itype, n, lda, ldb, lwork
-      real(8),      intent(inout) :: a, b    ! a(lda,n), b(ldb,n)
-      real(8),      intent(out)   :: w, work ! w(n), work(lwork)
+      FLOAT,      intent(inout) :: a, b    ! a(lda,n), b(ldb,n)
+      FLOAT,      intent(out)   :: w, work ! w(n), work(lwork)
       integer,      intent(out)   :: info
     end subroutine dsygv
     
@@ -189,9 +189,9 @@ module linalg
     subroutine zhegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
       character(1), intent(in)    :: jobz, uplo
       integer,      intent(in)    :: n, itype, lda, ldb, lwork
-      complex(8),   intent(inout) :: a, b     ! a(lda,n), b(ldb,n)
-      real(8),      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
-      complex(8),   intent(out)   :: work     ! work(lwork)
+      CMPLX,   intent(inout) :: a, b     ! a(lda,n), b(ldb,n)
+      FLOAT,      intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
+      CMPLX,   intent(out)   :: work     ! work(lwork)
       integer,      intent(out)   :: info 
     end subroutine zhegv
     
@@ -200,9 +200,9 @@ module linalg
 contains
   ! ddet and zdet return the determinant of a square matrix a of dimensions (n,n)
   ! (ddet for real and zdet for complex numbers)
-  real(r8) function ddet(a, n)
+  FLOAT function ddet(a, n)
     integer, intent(in) :: n
-    real(r8) :: a(n, n)
+    FLOAT :: a(n, n)
     
     integer :: i, info, ipiv(n)
     
@@ -222,9 +222,9 @@ contains
     
   end function ddet
 
-  complex(r8) function zdet(a, n)
+  CMPLX function zdet(a, n)
     integer, intent(in) :: n
-    complex(r8) :: a(n, n)
+    CMPLX :: a(n, n)
     
     integer :: info, i, ipiv(n)
     
@@ -247,11 +247,11 @@ contains
 !!! These routines diagonalize a matrix using LAPACK
   subroutine diagonalise(dim, a, b, e)
     integer  :: dim
-    real(r8) :: a(dim, dim), b(dim, dim)
-    real(r8) :: e(dim)
+    FLOAT :: a(dim, dim), b(dim, dim)
+    FLOAT :: e(dim)
     
     integer :: info, lwork
-    real(r8), allocatable :: work(:)
+    FLOAT, allocatable :: work(:)
     
     lwork = 6*dim
     allocate(work(lwork))
@@ -266,12 +266,12 @@ contains
   
   subroutine ziagonalise(dim, a, b, e)
     integer     :: dim
-    complex(r8) :: a(dim, dim), b(dim, dim)
-    real(r8)    :: e(dim)
+    CMPLX :: a(dim, dim), b(dim, dim)
+    FLOAT    :: e(dim)
     
     integer :: info, lwork
-    complex(r8), allocatable :: work(:)
-    real(r8), allocatable :: rwork(:)
+    CMPLX, allocatable :: work(:)
+    FLOAT, allocatable :: rwork(:)
     
     lwork = 6*dim
     allocate(work(lwork), rwork(max(1,3*dim-2)))
@@ -287,11 +287,11 @@ contains
   ! Invert a real symmetric matrix using LAPACK
   subroutine dsyinvert(n, m, matrix)
     integer, intent(in) :: n, m
-    real(r8), intent(inout) :: matrix(m, m)
+    FLOAT, intent(inout) :: matrix(m, m)
 
     integer :: info, i, j
     integer, allocatable :: iwork(:)
-    real(r8), allocatable :: work(:)
+    FLOAT, allocatable :: work(:)
 
     allocate(work(m), iwork(m))
 

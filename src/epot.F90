@@ -29,7 +29,7 @@ module external_pot
     integer :: nextra               ! extra points for the interpolation method(s)
     
     integer :: classic_pot          ! How to include the classic charges
-    real(r8), pointer :: Vclassic(:)! We use it to store the potential of the classic charges
+    FLOAT, pointer :: Vclassic(:)! We use it to store the potential of the classic charges
  
     ! lasers stuff
     integer :: no_lasers ! number of laser pulses used
@@ -133,8 +133,8 @@ contains
     type(system_type), intent(in)    :: sys
     
     integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
-    real(r8) :: x(3), modg, temp(3)
-    real(r8), allocatable :: v(:)
+    FLOAT :: x(3), modg, temp(3)
+    FLOAT, allocatable :: v(:)
     
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
@@ -243,7 +243,7 @@ contains
     type(epot_type),   intent(inout) :: ep
     type(mesh_type),   intent(in)    :: m
     type(system_type), intent(inout) :: sys
-    real(r8),          pointer       :: Vpsl(:)
+    FLOAT,          pointer       :: Vpsl(:)
     integer,           intent(in)    :: reltype
 
     integer :: ia
@@ -311,7 +311,7 @@ contains
   contains
     subroutine build_local_part()
       integer :: i
-      real(r8) :: x(3), r
+      FLOAT :: x(3), r
       
       call push_sub('build_local_part')
       if(ep%vpsl_space == REAL_SPACE) then ! real space
@@ -339,7 +339,7 @@ contains
   
     subroutine build_kb_sphere()
       integer :: i, j, k
-      real(r8) :: r, x(3)
+      FLOAT :: r, x(3)
       
       call push_sub('build_kb_sphere')
       
@@ -375,7 +375,7 @@ contains
            a%so_duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%so_uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc), &
            a%so_luv(j, (s%ps%L_max+1)**2, s%ps%kbc, 3))
       
-      a%duv    = 0.0_r8; a%dduV   = 0.0_r8; a%duVu   = 0.0_r8
+      a%duv    = M_ZERO; a%dduV   = M_ZERO; a%duVu   = M_ZERO
       a%zuv    = M_z0;   a%zduV   = M_z0;   a%zuVu   = M_z0
       a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0; a%so_luv = M_z0
       
@@ -396,8 +396,8 @@ contains
 
     subroutine build_nl_part()
       integer :: i, j, k, l, lm, n, add_lm, p, ix(3), center(3)
-      real(r8) :: r, x(3), x_in(3), ylm
-      real(r8) :: so_uv, so_duv(3)
+      FLOAT :: r, x(3), x_in(3), ylm
+      FLOAT :: so_uv, so_duv(3)
       
       call push_sub('build_nl_part')
       
@@ -475,7 +475,7 @@ contains
                 end do
               end do
               a%duvu(add_lm, 1, 1) = M_ONE/(a%duvu(add_lm, 1, 1)*s%ps%dknrm(l))
-              if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8 .and. s%ps%ispin==1) then
+              if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > CNST(0.05) .and. s%ps%ispin==1) then
                 write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                      add_lm
                 write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%duVu(add_lm, 1, 1)
@@ -514,7 +514,7 @@ contains
     type(system_type), intent(IN)    :: sys
     
     integer i, ia
-    real(r8) :: r, rc
+    FLOAT :: r, rc
     
     call push_sub('epot_generate_classic')
     
@@ -529,11 +529,11 @@ contains
         case(2) ! gaussion smeared charge
           select case(sys%catom(ia)%label(1:1)) ! covalent radii
           case('H')
-            rc = 0.4_r8*P_Ang
+            rc = CNST(0.4)*P_Ang
           case('C') 
-            rc = 0.8_r8*P_Ang
+            rc = CNST(0.8)*P_Ang
           case default
-            rc = 0.7_r8*P_Ang
+            rc = CNST(0.7)*P_Ang
           end select
           if(abs(r - rc) < r_small) r = rc + sign(r_small, r-rc)
           ep%Vclassic(i) = ep%Vclassic(i) - sys%catom(ia)%charge*(r**4 - rc**4)/(r**5 - rc**5)
@@ -546,16 +546,16 @@ contains
 
   subroutine epot_laser_field(ep, t, field)
     type(epot_type), intent(in) :: ep
-    real(r8),         intent(in)  :: t
-    real(r8),         intent(out) :: field(conf%dim)
+    FLOAT,         intent(in)  :: t
+    FLOAT,         intent(out) :: field(conf%dim)
 
     call laser_field(ep%no_lasers, ep%lasers, t, field)
   end subroutine epot_laser_field
 
   subroutine epot_laser_vector_field(ep, t, field)
     type(epot_type), intent(in) :: ep
-    real(r8),         intent(in)  :: t
-    real(r8),         intent(out) :: field(conf%dim)
+    FLOAT,         intent(in)  :: t
+    FLOAT,         intent(out) :: field(conf%dim)
 
     call laser_vector_field(ep%no_lasers, ep%lasers, t, field)
   end subroutine epot_laser_vector_field

@@ -28,8 +28,8 @@ module td_rti
     type(td_exp_type) :: te             ! how to apply the propagator (e^{-i H \Delta t})
 
 
-    real(r8), pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
-    real(r8), pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
+    FLOAT, pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
+    FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
 
     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_rti_type
@@ -41,7 +41,7 @@ module td_rti
                                  EXPONENTIAL_MIDPOINT = 4, &
                                  MAGNUS               = 5 
 
-  real(r8), parameter, private :: scf_threshold = 1.0e-3_r8
+  FLOAT, parameter, private :: scf_threshold = CNST(1.0e-3)
   
 contains
   subroutine td_rti_init(m, st, tr)
@@ -109,11 +109,11 @@ contains
     type(states_type), intent(inout) :: st
     type(system_type), intent(in) :: sys
     type(td_rti_type), intent(inout) :: tr
-    real(r8), intent(in) :: t, dt
+    FLOAT, intent(in) :: t, dt
 
     integer :: is
     logical :: self_consistent
-    complex(r8), allocatable :: zpsi1(:, :, :, :)
+    CMPLX, allocatable :: zpsi1(:, :, :, :)
     
     call push_sub('td_rti')
 
@@ -196,7 +196,7 @@ contains
 
     ! Suzuki-Trotter.
     subroutine td_rti1
-      real(r8) :: p, pp(5), time(5), dtime(5)
+      FLOAT :: p, pp(5), time(5), dtime(5)
       integer :: ik, ist, k
       call push_sub('td_rti1')
 
@@ -226,8 +226,8 @@ contains
     end subroutine td_rti1
 
     subroutine td_rti2
-      real(r8), allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-      complex(r8), allocatable :: zpsi1(:,:,:,:)
+      FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
+      CMPLX, allocatable :: zpsi1(:,:,:,:)
       integer is, ik, ist
       
       call push_sub('td_rti2')
@@ -259,7 +259,7 @@ contains
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t-dt)
+          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
@@ -267,7 +267,7 @@ contains
       h%vhxc = vhxc_t2
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t)
+          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -282,14 +282,14 @@ contains
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t-dt)
+           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t)
+          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -306,7 +306,7 @@ contains
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/2._r8)
+          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
         end do
       end do
       
@@ -315,15 +315,15 @@ contains
 
     subroutine td_rti5
       integer :: j, is, ist, k
-      real(r8) :: time(2), x(3), f(3)
-      real(r8), allocatable :: vaux(:, :, :)
+      FLOAT :: time(2), x(3), f(3)
+      FLOAT, allocatable :: vaux(:, :, :)
 
       call push_sub('td_rti5')
 
       allocate(vaux(m%np, st%nspin, 2))
 
-      time(1) = (M_HALF-sqrt(M_THREE)/6.0_r8)*dt
-      time(2) = (M_HALF+sqrt(M_THREE)/6.0_r8)*dt
+      time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
+      time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
       if(.not.h%ip_app) then
         do j = 1, 2
@@ -352,7 +352,7 @@ contains
       enddo
 
       tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
-      tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/12.0_r8)*dt*(vaux(:, :, 2) - vaux(:, :, 1))
+      tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
       do k = 1, st%nik
         do ist = st%st_start, st%st_end

@@ -189,16 +189,16 @@ contains
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
     type(fft_type), intent(in) :: fft
-    real(r8), intent(in)     :: r(:,:,:)
-    complex(r8), intent(out) :: c(:,:,:)
+    FLOAT, intent(in)     :: r(:,:,:)
+    CMPLX, intent(out) :: c(:,:,:)
 
     call rfftwnd_f77_one_real_to_complex(fft%planf, r, c)
   end subroutine dfft_forward
 
   subroutine dfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
-    complex(r8), intent(in) :: c(:,:,:)
-    real(r8), intent(out)   :: r(:,:,:)
+    CMPLX, intent(in) :: c(:,:,:)
+    FLOAT, intent(out)   :: r(:,:,:)
 
     integer :: n
 
@@ -206,23 +206,23 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call dscal(n, M_ONE/real(n, r8), r(1, 1, 1), 1)
+    call dscal(n, M_ONE/real(n, PRECISION), r(1, 1, 1), 1)
 
   end subroutine dfft_backward
 
   ! first the complex versions
   subroutine zfft_forward(fft, r, c)
     type(fft_type), intent(in) :: fft
-    complex(r8), intent(in)  :: r(:,:,:)
-    complex(r8), intent(out) :: c(:,:,:)
+    CMPLX, intent(in)  :: r(:,:,:)
+    CMPLX, intent(out) :: c(:,:,:)
 
     call fftwnd_f77_one(fft%planf, r, c)
   end subroutine zfft_forward
 
   subroutine zfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
-    complex(r8), intent(in)  :: c(:,:,:)
-    complex(r8), intent(out) :: r(:,:,:)
+    CMPLX, intent(in)  :: c(:,:,:)
+    CMPLX, intent(out) :: r(:,:,:)
 
     integer :: n
 
@@ -230,7 +230,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call zscal(n, M_z1/real(n, r8), r(1, 1, 1), 1)
+    call zscal(n, M_z1/real(n, PRECISION), r(1, 1, 1), 1)
 
   end subroutine zfft_backward
 

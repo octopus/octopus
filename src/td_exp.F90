@@ -25,7 +25,7 @@ module td_exp
   type td_exp_type
     integer  :: exp_method      ! which method is used to apply the exponential
 
-    real(r8) :: lanczos_tol     ! tolerance for the lanczos method
+    FLOAT :: lanczos_tol     ! tolerance for the lanczos method
     integer  :: exp_order       ! order to which the propagator is expanded
 
     type(zcf) :: cf             ! auxiliary cube for split operator methods
@@ -52,8 +52,8 @@ contains
       message(1) = 'Info: Exponential method: Chebyshev.'
 
     case(LANCZOS_EXPANSION)
-      call oct_parse_double("TDLanczosTol", 5e-4_r8, te%lanczos_tol)
-      if (te%lanczos_tol <= 0._r8) then
+      call oct_parse_double("TDLanczosTol", CNST(5e-4), te%lanczos_tol)
+      if (te%lanczos_tol <= M_ZERO) then
         write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
         message(2) = '(0 < TDLanczosTol)'
         call write_fatal(2)
@@ -104,11 +104,11 @@ contains
     type(hamiltonian_type), intent(in) :: h
     type(system_type), intent(in)      :: sys
     integer, intent(in) :: ik
-    complex(r8), intent(inout) :: zpsi(sys%m%np, sys%st%dim)
-    real(r8), intent(in) :: timestep, t
+    CMPLX, intent(inout) :: zpsi(sys%m%np, sys%st%dim)
+    FLOAT, intent(in) :: timestep, t
     integer, optional, intent(out) :: order ! For the methods that rely on Hamiltonian-vector
                                             ! multiplication, the number of these.
-    real(r8), intent(in), optional :: vmagnus(sys%m%np, sys%st%nspin, 2)
+    FLOAT, intent(in), optional :: vmagnus(sys%m%np, sys%st%nspin, 2)
 
     logical :: apply_magnus
 
@@ -137,7 +137,7 @@ contains
   contains
 
     subroutine operate(psi, oppsi)
-      complex(r8) :: psi(sys%m%np, sys%st%dim), oppsi(sys%m%np, sys%st%dim)
+      CMPLX :: psi(sys%m%np, sys%st%dim), oppsi(sys%m%np, sys%st%dim)
       if(apply_magnus) then
         call zmagnus(h, sys%m, psi, oppsi, sys, ik, vmagnus)
       else
@@ -146,8 +146,8 @@ contains
     end subroutine operate
 
     subroutine fourth
-      complex(r8) :: zfact
-      complex(r8), allocatable :: zpsi1(:,:), hzpsi1(:,:)
+      CMPLX :: zfact
+      CMPLX, allocatable :: zpsi1(:,:), hzpsi1(:,:)
       integer :: i
       
       call push_sub('fourth')
@@ -182,8 +182,8 @@ contains
       !  od;
       !  ChebySum := 0.5*(u0 - u2);}
       integer :: j, n
-      complex(r8) :: zfact
-      complex(r8), allocatable :: zpsi1(:,:,:)
+      CMPLX :: zfact
+      CMPLX, allocatable :: zpsi1(:,:,:)
       
       call push_sub('cheby')
       
@@ -195,12 +195,12 @@ contains
         call zcopy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*oct_bessel(j, h%spectral_half_span*timestep)
-        call zaxpy(n, cmplx(-h%spectral_middle_point, 0.0_r8, r8), &
+        call zaxpy(n, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
              zpsi1(1, 1, 1), 1, zpsi1(1, 1, 0), 1)
-        call zscal(n, cmplx(1./h%spectral_half_span,0._r8, r8),    zpsi1(1, 1, 0), 1)
-        call zscal(n, cmplx(2._r8,0._r8, r8),                      zpsi1(1, 1, 0), 1)
-        call zaxpy(n, zfact, zpsi(1, 1),                      1,   zpsi1(1, 1, 0), 1)
-        call zaxpy(n, cmplx(-1._r8,0._r8,r8), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
+        call zscal(n, cmplx(1./h%spectral_half_span, M_ZERO, PRECISION), zpsi1(1, 1, 0), 1)
+        call zscal(n, cmplx(M_TWO, M_ZERO, PRECISION),                   zpsi1(1, 1, 0), 1)
+        call zaxpy(n, zfact, zpsi(1, 1),                                1,   zpsi1(1, 1, 0), 1)
+        call zaxpy(n, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
       end do
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
       call zscal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(1, 1), 1)
@@ -212,8 +212,8 @@ contains
     
     subroutine lanczos
       integer ::  korder, is, n, nn, np, i, info
-      complex(r8), allocatable :: hm(:, :), v(:, :, :), expo(:, :)
-      real(r8) :: alpha, beta, res, tol, nrm
+      CMPLX, allocatable :: hm(:, :), v(:, :, :), expo(:, :)
+      FLOAT :: alpha, beta, res, tol, nrm
       
       call push_sub('lanczos')
       
@@ -245,11 +245,11 @@ contains
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
         res = abs(beta*abs(expo(1, n+1)))
         beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
-        if(beta < 1.0e-12_r8) exit
+        if(beta < CNST(1.0e-12)) exit
         if(n>1 .and. res<tol) exit
       enddo
       korder = min(korder, n + 1)
-      if(res > tol .and. beta > 1.0e-12_r8) then
+      if(res > tol .and. beta > CNST(1.0e-12)) then
         write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
         call write_warning(1)
       endif
@@ -282,8 +282,8 @@ contains
     end subroutine split
     
     subroutine suzuki
-      real(r8) :: tim(5), tt, dt(5)
-      real(r8) :: p, pp(5)
+      FLOAT :: tim(5), tt, dt(5)
+      FLOAT :: p, pp(5)
       integer :: ist, k
       
       call push_sub('suzuki')

@@ -46,7 +46,7 @@ type ps_type
 
   integer  :: ispin ! Consider spin (ispin = 2) or not (ispin = 1)
   integer  :: kbc  ! Number of KB components (1 for TM ps, 3 for HGH)
-  real(r8) :: z, z_val
+  FLOAT :: z, z_val
   integer :: l_max ! maximum value of l to take
   integer :: l_loc ! which component to take as local
   integer :: so_l_max ! obvious meaning ;)
@@ -54,15 +54,15 @@ type ps_type
   type(valconf) :: conf
 
   character(len=4) :: icore
-  real(r8) :: rc_max
-  real(r8) :: vlocal_origin ! local pseudopotential at the orginin
+  FLOAT :: rc_max
+  FLOAT :: vlocal_origin ! local pseudopotential at the orginin
 
-  real(r8), pointer :: dknrm(:) ! KB norm
-  real(r8), pointer :: so_dknrm(:)
-  real(r8), pointer :: h(:,:,:), k(:, :, :)
+  FLOAT, pointer :: dknrm(:) ! KB norm
+  FLOAT, pointer :: so_dknrm(:)
+  FLOAT, pointer :: h(:,:,:), k(:, :, :)
 end type ps_type
 
-real(r8), parameter :: eps = 1.0e-8_r8
+FLOAT, parameter :: eps = CNST(1.0e-8)
 
 contains
 
@@ -71,7 +71,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   character(len=10), intent(in) :: label
   character(len=3),  intent(in) :: flavour
   integer, intent(in) :: lmax, lloc, ispin
-  real(r8), intent(in) :: z
+  FLOAT, intent(in) :: z
 
   type(tm_type)      :: pstm ! In case Troullier-Martins ps are used.
   type(hgh_type)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
@@ -189,12 +189,12 @@ subroutine ps_debug(ps)
 
   ! I think I can hardcode these two numbers.
   integer, parameter  :: npoints = 20001
-  real(r8), parameter :: grid = 0.01_r8
+  FLOAT, parameter :: grid = CNST(0.01)
 
   character(len=4)  :: fm
   integer           :: info_unit, local_unit, nonlocal_unit, wave_unit, so_unit, &
                        i, j, k, l, is
-  real(r8)          :: r
+  FLOAT          :: r
 
   call push_sub('ps_debug')
 
@@ -241,7 +241,7 @@ subroutine ps_debug(ps)
        write(local_unit, *) r, (splint(ps%vlocal,  r) - ps%z_val)/r, &
                               (splint(ps%dvlocal, r)*r - (splint(ps%vlocal, r)-ps%z_val))/r**2
      else
-       write(local_unit, *) r, ps%vlocal_origin, 0.0_r8
+       write(local_unit, *) r, ps%vlocal_origin, M_ZERO
      end if
   enddo
 
@@ -325,7 +325,7 @@ subroutine hgh_load(ps, psp)
   type(hgh_type), intent(inout)     :: psp
 
   integer :: l, ll
-  real(r8) :: x
+  FLOAT :: x
 
   call push_sub('hgh_load')
 
@@ -333,7 +333,7 @@ subroutine hgh_load(ps, psp)
   ps%z_val = psp%z_val
   ps%icore = 'nc'
   if(ps%l_max>=0) then
-     ps%rc_max = 1.1_r8 * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
+     ps%rc_max = CNST(1.1) * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
   else
      ps%rc_max = M_ZERO
   endif
@@ -345,7 +345,7 @@ subroutine hgh_load(ps, psp)
     do l = 1, ps%conf%p
        ll = ps%conf%l(l)
        x = ps%conf%occ(l, 1)
-       ps%conf%occ(l, 1) = min(x, real(2*ll+1,r8))
+       ps%conf%occ(l, 1) = min(x, real(2*ll+1, PRECISION))
        ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
     enddo
   endif
@@ -377,17 +377,17 @@ subroutine tm_load(ps, pstm)
   end if
 
   ! Increasing radius a little, just in case.
-  ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * 1.1_r8
+  ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * CNST(1.1)
 
   ! now we fit the splines
   call get_splines_tm(pstm, ps)
 
   ! Passes from Rydbergs to Hartrees.
-  ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / 2._r8
-  ps%dknrm(0:ps%L_max)    = ps%dknrm(0:ps%L_max)    * 2._r8
+  ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
+  ps%dknrm(0:ps%L_max)    = ps%dknrm(0:ps%L_max)    * M_TWO
   if(ps%so_l_max >= 0) then
-    ps%k(0:ps%l_max,:,:)    = ps%k(0:ps%l_max,:,:)    / 2._r8
-    ps%so_dknrm(0:ps%L_max) = ps%so_dknrm(0:ps%L_max) * 2._r8
+    ps%k(0:ps%l_max,:,:)    = ps%k(0:ps%l_max,:,:)    / M_TWO
+    ps%so_dknrm(0:ps%L_max) = ps%so_dknrm(0:ps%L_max) * M_TWO
   end if
 
   call pop_sub()
@@ -398,8 +398,8 @@ subroutine get_splines_tm(psf, ps)
   type(ps_type), intent(inout) :: ps
   
   integer :: is, l, ll, nrc, ir, nrcore
-  real(r8) :: chc
-  real(r8), allocatable :: hato(:), derhato(:)
+  FLOAT :: chc
+  FLOAT, allocatable :: hato(:), derhato(:)
 
   call push_sub('get_splines_tm')
 
@@ -407,8 +407,8 @@ subroutine get_splines_tm(psf, ps)
 
   ! Interpolate the KB-projection functions
   do l = 0, ps%l_max
-    hato = 0.0_r8
-    nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
+    hato = M_ZERO
+    nrc = nint(log(psf%kbr(l)/psf%b + M_ONE)/psf%a) + 1
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l, 1) * & 
                    ps%dknrm(l) / psf%rofi(2:nrc)
     hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
@@ -419,7 +419,7 @@ subroutine get_splines_tm(psf, ps)
 
   if(ps%so_l_max>=0) then
    do l = 0, ps%l_max
-      hato = 0.0_r8
+      hato = M_ZERO
       if(l>0 .and. psf%irel=='rel') then
         nrc = psf%g%nrval
         hato(2:nrc) = (psf%vso(2:nrc, l))*psf%rphi(2:nrc, l, 1) * & 
@@ -434,14 +434,14 @@ subroutine get_splines_tm(psf, ps)
 
   ! Now the part corresponding to the local pseudopotential
   ! where the asymptotic part is substracted 
-  hato = 0.0_r8
-  nrc = nint(log(psf%kbr(ps%L_max + 1)/psf%b + 1.0_r8)/psf%a) + 1
-  hato(2:psf%nrval) = psf%vlocal(2:psf%nrval)*psf%rofi(2:psf%nrval) + 2.0_r8*psf%zval
-  hato(1) = 2.0_r8*psf%zval
+  hato = M_ZERO
+  nrc = nint(log(psf%kbr(ps%L_max + 1)/psf%b + M_ONE)/psf%a) + 1
+  hato(2:psf%nrval) = psf%vlocal(2:psf%nrval)*psf%rofi(2:psf%nrval) + M_TWO*psf%zval
+  hato(1) = M_TWO*psf%zval
   ! WARNING: Rydbergs -> Hartrees
-  hato = hato / 2._r8
+  hato = hato / M_TWO
   call spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
-  ps%vlocal_origin = psf%vlocal(1) / 2._r8
+  ps%vlocal_origin = psf%vlocal(1) / M_TWO
 
   ! and the derivative now
   call derivate_in_log_grid(psf%g, hato, derhato)
@@ -452,12 +452,12 @@ subroutine get_splines_tm(psf, ps)
   do is = 1, ps%ispin
     do l = 1, ps%conf%p
       ll = ps%conf%l(l)
-      nrc = nint(log(psf%kbr(ll)/psf%b + 1.0_r8)/psf%a) + 1
+      nrc = nint(log(psf%kbr(ll)/psf%b + M_ONE)/psf%a) + 1
       do ir = nrc+ 2, psf%nrval-2
         if ( abs(psf%rphi(ir, l-1, 1+is)/psf%rofi(ir)) < eps ) exit
       end do
       nrc = ir + 1
-      hato = 0.0_r8
+      hato = M_ZERO
       hato(2:nrc) = psf%rphi(2:nrc, l-1, 1 + is)/psf%rofi(2:nrc)
       hato(1) = hato(2)
       call spline_fit(psf%nrval, psf%rofi, hato, ps%ur(l, is))
@@ -468,16 +468,16 @@ subroutine get_splines_tm(psf, ps)
   if(ps%icore /= 'nc  ') then
     nrcore = 0
     do ir = psf%nrval, 2, -1
-      chc = psf%chcore(ir)/(4.0_r8*M_PI*(psf%rofi(ir)**2))
+      chc = psf%chcore(ir)/(M_FOUR*M_PI*(psf%rofi(ir)**2))
       if((chc > eps).and.(nrcore == 0)) then
         nrcore = ir + 1
         exit
       end if
     end do
-    hato = 0.0_r8
+    hato = M_ZERO
     hato(2:nrcore) = psf%chcore(2:nrcore)/(M_FOUR*M_PI*psf%rofi(2:nrcore)**2)
     hato(1) = hato(2)
-    nrc = nint(log(psf%rofi(ir +1)/psf%b + 1.0_r8)/psf%a) + 1
+    nrc = nint(log(psf%rofi(ir +1)/psf%b + M_ONE)/psf%a) + 1
     call spline_fit(psf%nrval, psf%rofi, hato, ps%core)
   end if
 
@@ -491,8 +491,8 @@ subroutine get_splines_hgh(psp, ps)
   type(ps_type), intent(inout) :: ps
 
   integer :: l, ll, is, nrc, ir, nrcore, j
-  real(r8) :: chc
-  real(r8), allocatable :: hato(:), derhato(:)
+  FLOAT :: chc
+  FLOAT, allocatable :: hato(:), derhato(:)
 
   call push_sub('get_splines_hgh')
 
@@ -501,8 +501,8 @@ subroutine get_splines_hgh(psp, ps)
   ! Interpolate the KB-projection functions
   do l = 0, psp%l_max
   do j = 1, 3
-    hato = 0.0_r8
-    nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
+    hato = M_ZERO
+    nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
     hato(1:nrc) = psp%kb(1:nrc, l, j)
     call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
     call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))

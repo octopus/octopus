@@ -40,14 +40,14 @@ module oct_parser
 
     subroutine oct_parse_double(name, def, res)
       character(len=*), intent(in) :: name
-      real(8), intent(in)          :: def
-      real(8), intent(out)         :: res
+      FLOAT, intent(in)          :: def
+      FLOAT, intent(out)         :: res
     end subroutine oct_parse_double
     
     subroutine oct_parse_complex(name, def, res)
       character(len=*), intent(in) :: name
-      complex(8), intent(in)       :: def
-      complex(8), intent(out)      :: res
+      CMPLX, intent(in)       :: def
+      CMPLX, intent(out)      :: res
     end subroutine oct_parse_complex
 
     subroutine oct_parse_string(name, def, res)
@@ -73,13 +73,13 @@ module oct_parser
     subroutine oct_parse_block_double(name, l, c, res)
       character(len=*), intent(in) :: name
       integer, intent(in)          :: l, c
-      real(8), intent(out)         :: res
+      FLOAT, intent(out)         :: res
     end subroutine oct_parse_block_double
 
     subroutine oct_parse_block_complex(name, l, c, res)
       character(len=*), intent(in) :: name
       integer, intent(in)          :: l, c
-      complex(8), intent(out)      :: res
+      CMPLX, intent(out)      :: res
     end subroutine oct_parse_block_complex
 
     subroutine oct_parse_block_string(name, l, c, res)
@@ -88,8 +88,8 @@ module oct_parser
       character(len=*), intent(out):: res
     end subroutine oct_parse_block_string
 
-    real(8) function oct_parse_potential(x, y, z, r, pot)
-      real(8), intent(in) :: x, y, z, r
+    FLOAT function oct_parse_potential(x, y, z, r, pot)
+      FLOAT, intent(in) :: x, y, z, r
       character(len=*), intent(in) :: pot
     end function oct_parse_potential
 

@@ -24,19 +24,19 @@ use global
 implicit none
 
 type logrid_type
-  real(r8) :: a,b
+  FLOAT :: a,b
   integer  :: nrval
-  real(r8), pointer :: rofi(:), drdi(:), s(:)
+  FLOAT, pointer :: rofi(:), drdi(:), s(:)
 end type
 
 contains
 
 subroutine init_logrid(g, a, b, nrval)
   type(logrid_type), intent(out) :: g
-  real(r8), intent(in)           :: a,b
+  FLOAT, intent(in)           :: a,b
   integer, intent(in)            :: nrval
 
-  real(r8) :: rpb, ea
+  FLOAT :: rpb, ea
   integer  :: ir
 
   g%a = a; g%b = b; g%nrval = nrval
@@ -48,7 +48,7 @@ subroutine init_logrid(g, a, b, nrval)
     g%drdi(ir) = a*rpb
     g%s(ir) = sqrt(a*rpb)
     rpb = rpb*ea
-    g%rofi(ir) = b * ( exp( a * (ir - 1) ) - 1.0_r8 )
+    g%rofi(ir) = b * ( exp( a * (ir - 1) ) - M_ONE )
   end do
 
 end subroutine init_logrid
@@ -60,16 +60,16 @@ end subroutine kill_logrid
 
 subroutine derivate_in_log_grid(g, f, dfdr)
   type(logrid_type)     :: g
-  real(r8), intent(IN)  :: f(g%nrval)
-  real(r8), intent(out) :: dfdr(g%nrval)
+  FLOAT, intent(IN)  :: f(g%nrval)
+  FLOAT, intent(out) :: dfdr(g%nrval)
 
-  real(r8) :: x, y, a, b
+  FLOAT :: x, y, a, b
   integer :: i, nrval
 
   a = g%a; b = g%b; nrval = g%nrval
 
-  x = 1.0_r8 - exp(-2*a)
-  y = 1.0_r8 - exp(-a)
+  x = M_ONE - exp(-2*a)
+  y = M_ONE - exp(-a)
 
   dfdr(1) = (1/(y*b))*exp(-a)*(f(2)-f(1))  
   do i = 2, nrval-1

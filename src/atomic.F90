@@ -45,7 +45,7 @@ module atomic
     integer           :: p        ! number of orbitals.
     integer           :: n(6)     ! n quantum number
     integer           :: l(6)     ! l quantum number
-    real(r8)          :: occ(6,2) ! occupations of each level
+    FLOAT          :: occ(6,2) ! occupations of each level
   end type
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -102,14 +102,14 @@ contains
     character(len=*), intent(in)   :: functl
     integer, intent(in)            :: irel, nspin
     type(logrid_type), intent(in)  :: g
-    real(r8), intent(in)           :: dens(g%nrval, nspin)
-    real(r8), intent(out)          :: v(g%nrval, nspin)
-    real(r8), intent(in), optional :: extra(g%nrval)
+    FLOAT, intent(in)           :: dens(g%nrval, nspin)
+    FLOAT, intent(out)          :: v(g%nrval, nspin)
+    FLOAT, intent(in), optional :: extra(g%nrval)
 
     character(len=5) :: xcfunc, xcauth
     integer :: is, ir
-    real(r8), allocatable :: xc(:, :), ve(:, :), rho(:, :)
-    real(r8) :: r2, ex, ec, dx, dc
+    FLOAT, allocatable :: xc(:, :), ve(:, :), rho(:, :)
+    FLOAT :: r2, ex, ec, dx, dc
 
     call push_sub('atomhxc')
 
@@ -146,7 +146,7 @@ contains
 
     do is = 1, nspin
        do ir = 1, g%nrval
-          if(rho(ir, is) < 1.0e-15_r8) rho(ir, is) = 0.0_r8
+          if(rho(ir, is) < CNST(1.0e-15)) rho(ir, is) = M_ZERO
        enddo
     enddo
 
@@ -213,8 +213,8 @@ contains
 
   character(len=*) :: FUNCTL, AUTHOR
   integer :: IREL, MAXR, NR, NSPIN
-  real(r8) :: DENS(MAXR,NSPIN), RMESH(MAXR), V_XC(MAXR,NSPIN)
-  real(r8) :: DC, DX, EC, EX
+  FLOAT :: DENS(MAXR,NSPIN), RMESH(MAXR), V_XC(MAXR,NSPIN)
+  FLOAT :: DC, DX, EC, EX
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Internal parameters                                                         !
@@ -230,13 +230,13 @@ contains
 !                   EUNIT=0.03674903 => eV                                    !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  real(r8), parameter :: EUNIT = 0.5_r8
+  FLOAT, parameter :: EUNIT = M_HALF
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! DVMIN is added to differential of volume to avoid division by zero          !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  real(r8), parameter :: DVMIN = 1.0E-12
+  FLOAT, parameter :: DVMIN = 1.0E-12
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Local variables and arrays                                                  !
@@ -244,10 +244,10 @@ contains
 
   logical :: GGA 
   integer :: IN, IN1, IN2, IR, IS, JN 
-  real(r8) :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             & 
+  FLOAT :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             & 
               DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
               DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       & 
-              EPSC, EPSX, F1, F2, GD(3,NSPIN), PI
+              EPSC, EPSX, F1, F2, GD(3,NSPIN)
   !external :: GGAXC, LDAXC 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -279,12 +279,6 @@ contains
   20 CONTINUE
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Get number pi                                                               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  PI = 4 * ATAN(1.0_r8)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Loop on mesh points                                                         !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -300,7 +294,7 @@ contains
         IF (IN .EQ. 0) THEN
            DGDM(IN) = 0
            DO 30 JN = IN1,IN2
-              IF (JN.NE.0) DGDM(IN) = DGDM(IN) + 1.0_r8 / (0 - JN)
+              IF (JN.NE.0) DGDM(IN) = DGDM(IN) + M_ONE / (0 - JN)
            30 CONTINUE
         ELSE
            F1 = 1
@@ -320,7 +314,7 @@ contains
      60 CONTINUE
 
 !       Find differential of volume. Use trapezoidal integration rule
-     DVOL = 4 * PI * RMESH(IR)**2 * DRDM
+     DVOL = 4 * M_PI * RMESH(IR)**2 * DRDM
 !    DVMIN is a small number added to avoid a division by zero
      DVOL = DVOL + DVMIN
      IF (IR.EQ.1 .OR. IR.EQ.NR) DVOL = DVOL / 2
@@ -430,19 +424,19 @@ contains
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
-  real(r8), intent(IN), dimension(*) :: rho, r, drdi, srdrdi
-  real(r8), intent(in) :: a
-  real(r8), intent(out), dimension(*) :: v
+  FLOAT, intent(IN), dimension(*) :: rho, r, drdi, srdrdi
+  FLOAT, intent(in) :: a
+  FLOAT, intent(out), dimension(*) :: v
   integer, intent(in) :: nr
 
-  real(r8) :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
+  FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
   integer :: nrm1,nrm2,ir
 
   NRM1 = NR - 1
   NRM2 = NR - 2
-  A2BY4 = A*A/4.0_r8
-  YBYQ = 1.0_r8 - A*A/48.0_r8
-  QBYY = 1.0_r8/YBYQ
+  A2BY4 = A*A/M_FOUR
+  YBYQ = M_ONE - A*A/CNST(48.0)
+  QBYY = M_ONE/YBYQ
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  SIMPSONS RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          ! 
@@ -453,8 +447,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  trapeziodal rule for integration). A. Rubio. Jan. 2000                     !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  V0 = 0.0_r8
-  QT = 0.0_r8
+  V0 = M_ZERO
+  QT = M_ZERO
   do IR = 2, NRM1, 2
     DZ = DRDI(IR)*RHO(IR)
     QT = QT + DZ
@@ -470,7 +464,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   QT = (QT + QT + DZ)*M_HALF
   V0 = (V0 + V0 + DZ/R(NR))
-  V(1) = 2.0_r8*V0
+  V(1) = M_TWO*V0
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  THE ELECTROSTATIC POTENTIAL AT R=0 IS SET EQUAL TO                         !
@@ -496,10 +490,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  REQUIRED TO START THE NUMEROV PROCEDURE.                                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  X = 0.0_r8
-  Y = 0.0_r8
-  Q = (Y - BETA/12.0_r8)*QBYY
-  V(IR) = 2.0_r8*T*Q
+  X = M_ZERO
+  Y = M_ZERO
+  Q = (Y - BETA/CNST(12.0))*QBYY
+  V(IR) = M_TWO*T*Q
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  BEGINNING OF THE NUMEROV ALGORITHM                                         !
@@ -510,8 +504,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   IR = IR + 1
   T  = SRDRDI(IR)/R(IR)
   BETA = T*DRDI(IR)*RHO(IR)
-  Q = (Y-BETA/12.0_r8)*QBYY
-  V(IR) = 2.0_r8*T*Q
+  Q = (Y-BETA/CNST(12.0))*QBYY
+  V(IR) = M_TWO*T*Q
   IF(IR.LT.NR) GO TO 3
 
 
@@ -524,9 +518,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  VANISH AT THE ORIGIN.                                                      !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  QPARTC = R(NR)*V(NR)/2.0_r8
+  QPARTC = R(NR)*V(NR)/M_TWO
   DZ = QT - QPARTC
-  DV = 2.0_r8*DZ/R(NR)
+  DV = M_TWO*DZ/R(NR)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  THE LOOP FOLLOWING ADDS THE CONSTANT SOLUTION OF THE HOMOGENEOUSi          !
@@ -561,12 +555,12 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
 
-  implicit real(r8) (a-h,o-z)
+  implicit FLOAT (a-h,o-z)
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
 
-  real(r8),dimension(*) ::h,s,g,y
+  FLOAT,dimension(*) ::h,s,g,y
 
-  real(r8), parameter :: tol = 1.0e-5_r8
+  FLOAT, parameter :: tol = CNST(1.0e-5)
 
   ncor=nprin-l-1
   n1=nnode
@@ -684,7 +678,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 6 g(1) = M_ZERO
   do 7 i=2,n
   t=h(i)-e*s(i)
-  g(i)=y(i)/(M_ONE-t/12._r8)
+  g(i)=y(i)/(M_ONE-t/CNST(12.))
 7 continue
   call nrmlzg(g,s,n)
   return
@@ -720,8 +714,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  implicit real(r8) (a-h,o-z)
-  real(r8) :: h(*),s(*),y(*)
+  implicit FLOAT (a-h,o-z)
+  FLOAT :: h(*),s(*),y(*)
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
 
   zdr = z*a*b
@@ -757,7 +751,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   yn = M_ZERO
-  if(n.lt.nmax .or. dabs(dr).gt.1.e3_r8) go to 7
+  if(n.lt.nmax .or. dabs(dr).gt.CNST(1.e3)) go to 7
   call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
 
 
@@ -823,8 +817,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  implicit real(r8) (a-h,o-z)
-  real(r8) s(*),g(*),norm
+  implicit FLOAT (a-h,o-z)
+  FLOAT s(*),g(*),norm
   integer :: n,nm1,nm2,i
 
 
@@ -862,8 +856,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
-  implicit real(r8) (a-h,o-z)
-  real(r8) h(*),s(*)
+  implicit FLOAT (a-h,o-z)
+  FLOAT h(*),s(*)
   integer :: l
 
 
@@ -874,7 +868,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   t2=h(2)-e*s(2)
-  d2=-((24._r8+10._r8*t2)/(12._r8-t2))
+  d2=-((CNST(24.)+M_TEN*t2)/(CNST(12.)-t2))
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -891,14 +885,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   if(l.ge.2) goto 3
   if(l.gt.0) goto 1
-  c0=zdr/6._r8
-  c0=c0/(M_ONE-0.75*zdr)
+  c0=zdr/M_SIX
+  c0=c0/(M_ONE-CNST(0.75)*zdr)
   go to 2
-1 c0=M_ONE/12._r8
-  c0=(-c0)*8._r8/M_THREE
-2 c1=c0*(12._r8+13._r8*t2)/(12._r8-t2)
+1 c0=M_ONE/CNST(12.)
+  c0=(-c0)*M_EIGHT/M_THREE
+2 c1=c0*(CNST(12.)+CNST(13.)*t2)/(CNST(12.)-t2)
   t3=h(3)-e*s(3)
-  c2=(-M_HALF)*c0*(24._r8-t3)/(12._r8-t3)
+  c2=(-M_HALF)*c0*(CNST(24.)-t3)/(CNST(12.)-t3)
   d2=(d2-c1)/(M_ONE-c2)
 3 y2=(-M_ONE)/d2
   return
@@ -915,8 +909,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  implicit real(r8) (a-h,o-z)
-  real(r8)  h(*),s(*),                                                          &
+  implicit FLOAT (a-h,o-z)
+  FLOAT  h(*),s(*),                                                          &
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
   integer :: n
 
@@ -928,11 +922,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   dg=a*beta*(dr+M_ONE-M_HALF/beta)
 
 
-  c2=24._r8*dg/(12._r8-tn)
-  dn=-((24._r8+10._r8*tn)/(12._r8-tn))
+  c2=CNST(24.)*dg/(CNST(12.)-tn)
+  dn=-((CNST(24.)+CNST(10.)*tn)/(CNST(12.)-tn))
 
-  c1= (M_ONE-tnm1/6._r8)/(M_ONE-tnm1/12._r8)
-  c3=-((M_ONE-tnp1/6._r8)/(M_ONE-tnp1/12._r8))
+  c1= (M_ONE-tnm1/M_SIX)/(M_ONE-tnm1/CNST(12.))
+  c3=-((M_ONE-tnp1/M_SIX)/(M_ONE-tnp1/CNST(12.)))
   yn=-((M_ONE-c1/c3)/(dn-c2/c3))
 
 
@@ -944,18 +938,18 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
-  implicit real(r8) (a-h,o-z)
+  implicit FLOAT (a-h,o-z)
   integer :: i,n,nnode,knk
-  real(r8) :: h(n),s(n),y(n)
+  FLOAT :: h(n),s(n),y(n)
 
   y(n)=yn
   t=h(n)-e*s(n)
-  g=y(n)/(M_ONE-t/12._r8)
+  g=y(n)/(M_ONE-t/CNST(12.))
   gsg=g*s(n)*g
   i=n-1
   y(i)=M_ONE
   t=h(i)-e*s(i)
-  g=y(i)/(M_ONE-t/12._r8)
+  g=y(i)/(M_ONE-t/CNST(12.))
   gsg=gsg+g*s(i)*g
   x=y(i)-y(n)
   nnode=0
@@ -973,7 +967,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   y(i)=y(i+1)+x
   if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
   t=h(i)-e*s(i)
-  g=y(i)/(M_ONE-t/12._r8)
+  g=y(i)/(M_ONE-t/CNST(12.))
   gsg=gsg+g*s(i)*g
   if(i.gt.knk) go to 1
 
@@ -997,18 +991,18 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
-  implicit real(r8) (a-h,o-z)
+  implicit FLOAT (a-h,o-z)
   integer :: ncor,nnode,knk,i,nm4
-  real(r8) :: h(knk),s(knk),y(knk)
+  FLOAT :: h(knk),s(knk),y(knk)
 
   y(1)=M_ZERO
   y(2)=y2
   t=h(2)-e*s(2)
-  g=y(2)/(M_ONE-t/12._r8)
+  g=y(2)/(M_ONE-t/CNST(12.))
   gsg=g*s(2)*g
   y(3)=M_ONE
   t=h(3)-e*s(3)
-  g=y(3)/(M_ONE-t/12._r8)
+  g=y(3)/(M_ONE-t/CNST(12.))
   gsg=gsg+g*s(3)*g
   x=y(3)-y(2)
   i=3
@@ -1029,7 +1023,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !300  format(i5,5d14.5)
   if( y(i)*y(i-1) .lt. M_ZERO) nnode=nnode+1
   t=h(i)-e*s(i)
-  g=y(i)/(M_ONE-t/12._r8)
+  g=y(i)/(M_ONE-t/CNST(12.))
   gsg=gsg+g*s(i)*g
   if(i.eq.nm4) go to 2
   if(nnode.lt.ncor) go to 1

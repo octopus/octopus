@@ -23,27 +23,27 @@ use mesh
 implicit none
 
 type laser_type
-  complex(r8) :: pol(3) ! the polarization of the laser
-  real(r8) :: A0     ! the initial amplitude of the laser
-  real(r8) :: omega0 ! the average frequency of the laser
+  CMPLX :: pol(3) ! the polarization of the laser
+  FLOAT :: A0     ! the initial amplitude of the laser
+  FLOAT :: omega0 ! the average frequency of the laser
 
   integer  :: envelope
 
-  real(r8) :: t0     ! the maximum of the pulse
-  real(r8) :: tau0   ! the width of the pulse
-  real(r8) :: tau1   ! for the ramped shape, the length of the "ramping" intervals 
+  FLOAT :: t0     ! the maximum of the pulse
+  FLOAT :: tau0   ! the width of the pulse
+  FLOAT :: tau1   ! for the ramped shape, the length of the "ramping" intervals 
                      ! (tau0 will be the length of the constant interval)
 
-  real(r8), pointer :: numerical(:,:) ! when the laser is numerical
-  real(r8) :: dt
+  FLOAT, pointer :: numerical(:,:) ! when the laser is numerical
+  FLOAT :: dt
 
   type(spline_type) :: phase      ! when reading a laser from a file
   type(spline_type) :: amplitude
 
   ! For the velocity gauge
   ! cosine envelope
-  complex(r8) :: field_1
-  real(r8) :: w1, a1, r1
+  CMPLX :: field_1
+  FLOAT :: w1, a1, r1
 end type laser_type
 
 contains
@@ -54,7 +54,7 @@ subroutine laser_init(m, no_l, l)
   type(laser_type), pointer :: l(:)
 
   integer :: i, k, iunit
-  real(r8) :: x, y, z
+  FLOAT :: x, y, z
   character(len=80) :: str
 
   call push_sub('laser_init')
@@ -96,8 +96,8 @@ subroutine laser_init(m, no_l, l)
       ! velocity gauge
       if(l(i)%envelope == 2) then
         ! setup some constants
-        l(i)%w1 = M_PI/ (2._r8*l(i)%tau0)
-        l(i)%a1 = -M_PI/2._r8 * (2._r8 + l(i)%t0/l(i)%tau0)
+        l(i)%w1 = M_PI/ (M_TWO*l(i)%tau0)
+        l(i)%a1 = -M_PI/M_TWO * (M_TWO + l(i)%t0/l(i)%tau0)
         l(i)%r1 = 1/((l(i)%w1 - l(i)%omega0)*(l(i)%w1 + l(i)%omega0))
         l(i)%field_1 = -M_zI * l(i)%omega0 * cos(l(i)%a1) &
              - l(i)%w1 * sin(l(i)%a1)
@@ -117,8 +117,8 @@ contains
 
     integer :: iunit, lines, j
     character(len=50) :: filename
-    real(r8) :: dummy
-    real(r8), allocatable :: t(:), am(:), ph(:)
+    FLOAT :: dummy
+    FLOAT, allocatable :: t(:), am(:), ph(:)
 
     call oct_parse_block_double(str, i-1, 6, l%tau0)
     l%tau0   = l%tau0 * units_inp%time%factor
@@ -205,7 +205,7 @@ subroutine laser_write_info(no_l, l, iunit)
          l(i)%A0/units_inp%energy%factor*units_inp%length%factor, &
          ' [', trim(units_inp%energy%abbrev), '/', trim(units_inp%length%abbrev), ']'
     write(iunit, '(3x,a,es14.4,a)') 'Intensity: ', &
-         (l(i)%A0*5.14225e9_r8)**2*1.3272e-3_r8, " [W/cm^2]"
+         (l(i)%A0*CNST(5.14225e9))**2*CNST(1.3272e-3), " [W/cm^2]"
     write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', l(i)%tau0/units_inp%time%factor, &
          ' [', trim(units_inp%time%abbrev), ']'
     if(l(i)%envelope > 0.and.l(i)%envelope < 4) then
@@ -225,10 +225,10 @@ end subroutine laser_write_info
 subroutine laser_field(no_l, l, t, field)
   integer,          intent(in)  :: no_l
   type(laser_type), intent(in)  :: l(no_l)
-  real(r8),         intent(in)  :: t
-  real(r8),         intent(out) :: field(conf%dim)
+  FLOAT,         intent(in)  :: t
+  FLOAT,         intent(out) :: field(conf%dim)
 
-  complex(r8), allocatable :: amp(:)
+  CMPLX, allocatable :: amp(:)
   integer :: i
 
   if(no_l .eq. 0) then
@@ -242,7 +242,7 @@ subroutine laser_field(no_l, l, t, field)
   else
     allocate(amp(no_l));
     call laser_amplitude(no_l, l, t, amp)
-    field = 0._r8
+    field = M_ZERO
     do i = 1, no_l
       field(1:conf%dim) = field(1:conf%dim) + real(amp(i)*l(i)%pol(1:conf%dim))
     end do
@@ -256,16 +256,16 @@ end subroutine laser_field
 subroutine laser_vector_field(no_l, l, t, field)
   integer, intent(in) :: no_l
   type(laser_type), intent(IN) :: l(no_l)
-  real(r8), intent(in) :: t
-  real(r8), intent(out) :: field(conf%dim)
+  FLOAT, intent(in) :: t
+  FLOAT, intent(out) :: field(conf%dim)
 
-  real(r8) :: r
-  complex(r8), allocatable :: amp(:)
+  FLOAT :: r
+  CMPLX, allocatable :: amp(:)
   integer :: i
 
   allocate(amp(no_l));
   call laser_vector_amplitude(no_l, l, t, amp)
-  field = 0._r8
+  field = M_ZERO
   do i = 1, no_l
     field(1:conf%dim) = field(1:conf%dim) + real(amp(i)*l(i)%pol(1:conf%dim))
   end do
@@ -281,28 +281,28 @@ end subroutine laser_vector_field
 subroutine laser_amplitude(no_l, l, t, amp)
   integer, intent(in) :: no_l
   type(laser_type), intent(in) :: l(no_l)
-  real(r8), intent(in) :: t
-  complex(r8), intent(out) :: amp(no_l)
+  FLOAT, intent(in) :: t
+  CMPLX, intent(out) :: amp(no_l)
 
-  real(r8) :: r, ph
+  FLOAT :: r, ph
   integer :: i
 
   do i = 1, no_l
-    ph = 0._r8; r = 0._r8
+    ph = M_ZERO; r = M_ZERO
     select case (l(i)%envelope)
     case(1) ! Gaussian
-      r = exp(-(t - l(i)%t0)**2 / (2.0_r8*l(i)%tau0**2))
+      r = exp(-(t - l(i)%t0)**2 / (M_TWO*l(i)%tau0**2))
     case(2) ! cosinoidal
       if(abs(t - l(i)%t0) <= l(i)%tau0) then
         r = cos( (M_Pi/2)*((t - 2*l(i)%tau0 - l(i)%t0)/l(i)%tau0) )
       end if
     case(3) ! ramped
-      if(t > l(i)%t0-l(i)%tau0/2.0_r8-l(i)%tau1 .and. t <= l(i)%t0-l(i)%tau0/2.0_r8) then
-        r = (t - (l(i)%t0 - l(i)%tau0/2.0 - l(i)%tau1))/l(i)%tau1
-      elseif(t>l(i)%t0-l(i)%tau0/2.0_r8 .and. t <=l(i)%t0+l(i)%tau0/2.0_r8) then
-        r = 1._r8
-      elseif(t>l(i)%t0+l(i)%tau0/2.0_r8 .and. t <=l(i)%t0+l(i)%tau0/2.0_r8+l(i)%tau1) then
-        r = (l(i)%t0 + l(i)%tau0/2.0_r8 + l(i)%tau1 - t)/l(i)%tau1
+      if(t > l(i)%t0-l(i)%tau0/M_TWO-l(i)%tau1 .and. t <= l(i)%t0-l(i)%tau0/M_TWO) then
+        r = (t - (l(i)%t0 - l(i)%tau0/M_TWO - l(i)%tau1))/l(i)%tau1
+      elseif(t>l(i)%t0-l(i)%tau0/M_TWO .and. t <=l(i)%t0+l(i)%tau0/M_TWO) then
+        r = M_ONE
+      elseif(t>l(i)%t0+l(i)%tau0/M_TWO .and. t <=l(i)%t0+l(i)%tau0/M_TWO+l(i)%tau1) then
+        r = (l(i)%t0 + l(i)%tau0/M_TWO + l(i)%tau1 - t)/l(i)%tau1
       endif
     case(10)
       r  = splint(l(i)%amplitude, t)
@@ -319,17 +319,17 @@ end subroutine laser_amplitude
 subroutine laser_vector_amplitude(no_l, l, t, amp)
   integer, intent(in) :: no_l
   type(laser_type), intent(in) :: l(no_l)
-  real(r8), intent(in) :: t
-  complex(r8), intent(out) :: amp(no_l)
+  FLOAT, intent(in) :: t
+  CMPLX, intent(out) :: amp(no_l)
 
-  complex(r8) :: r, tt
+  CMPLX :: r, tt
   integer :: i
 
   do i = 1, no_l
     select case (l(i)%envelope)
     case(1) ! Gaussian
       ! not yet implemented
-      r = 0._r8
+      r = M_ZERO
     case(2) ! cosinoidal
       if(t < l(i)%t0 - l(i)%tau0) then
         tt = l(i)%t0 - l(i)%tau0
@@ -343,9 +343,9 @@ subroutine laser_vector_amplitude(no_l, l, t, amp)
            (M_zI*l(i)%omega0*cos(l(i)%a1 + l(i)%w1*tt) + l(i)%w1*sin(l(i)%a1 + l(i)%w1*tt)))
     case(3) ! ramp
       ! not yet implemented
-      r = 0._r8
+      r = M_ZERO
     case default
-      r = 0._r8
+      r = M_ZERO
     end select
     amp(i) = l(i)%A0 * r
   end do

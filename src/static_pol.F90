@@ -30,16 +30,16 @@ subroutine static_pol_run(scf, sys, h)
   type(scf_type), intent(inout) :: scf
   
   integer :: iunit, ios, i_start, i, j, is, k
-  real(r8) :: e_field
-  real(r8), allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
+  FLOAT :: e_field
+  FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
   logical :: resume, out_pol
 
   call push_sub('static_pol_run')
 
   ! read in e_field value
-  call oct_parse_double('POLStaticField', 0.01_r8/units_inp%energy%factor*units_inp%length%factor, e_field)
+  call oct_parse_double('POLStaticField', CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
   e_field = e_field * units_inp%energy%factor / units_inp%length%factor
-  if (e_field <= 0._r8) then
+  if (e_field <= M_ZERO) then
     write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"
     message(2) = '(0 < POLStaticField)'
     call write_fatal(2)

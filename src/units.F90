@@ -33,6 +33,7 @@
 ! 1u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) * 
 !      (1/7.619963358) cu_[mass] = 239.225360 cu_[mass].
 
+#include "global.h"
 
 module units
 use global
@@ -40,7 +41,7 @@ use global
 implicit none
 
 type unit_type
-  real(r8) :: factor
+  FLOAT :: factor
   character(len=12) :: abbrev ! common abbreviation of the unit name
   character(len=50) :: name   ! common name
 end type unit_type
@@ -110,31 +111,31 @@ subroutine units_atomic(u)
 
   u%length%abbrev = "b"
   u%length%name   = "bohr"
-  u%length%factor = 1._r8
+  u%length%factor = M_ONE
 
   u%energy%abbrev = "H"
   u%energy%name   = "Hartree"
-  u%energy%factor = 1._r8
+  u%energy%factor = M_ONE
 
   u%time%abbrev = "hbar/H"
   u%time%name   = "hbar/Hartree"
-  u%time%factor = 1._r8/u%energy%factor
+  u%time%factor = M_ONE/u%energy%factor
 
   u%velocity%abbrev = "bH(2pi/h)"
   u%velocity%name   = "bohr times Hartree over h bar"
-  u%velocity%factor = 1._r8
+  u%velocity%factor = M_ONE
 
   u%mass%abbrev   = "u"
   u%mass%name     = "1/12 of the mass of C^12"
-  u%mass%factor   = 1._r8/5.485799110e-4_r8
+  u%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
   u%force%abbrev  = "H/b"
   u%force%name    = "Hartree/bohr"
-  u%force%factor  = 1.0_r8
+  u%force%factor  = M_ONE
 
   u%acceleration%abbrev = "bH(2pi/h)^2"
   u%acceleration%name   = "bohr times (Hartree over h bar) squared"
-  u%acceleration%factor = 1._r8
+  u%acceleration%factor = M_ONE
 end subroutine units_atomic
 
 subroutine units_eV_Ang(u)
@@ -146,11 +147,11 @@ subroutine units_eV_Ang(u)
 
   u%energy%abbrev = "eV"
   u%energy%name   = "electron volt"
-  u%energy%factor = 1._r8/(2._r8*P_Ry)   ! 1 a.u. = 27.2 eV
+  u%energy%factor = M_ONE/(M_TWO*P_Ry)   ! 1 a.u. = 27.2 eV
 
   u%time%abbrev = "hbar/eV"
   u%time%name   = "hbar/electron volt"
-  u%time%factor = 1._r8/u%energy%factor
+  u%time%factor = M_ONE/u%energy%factor
 
   u%velocity%abbrev = "AeV(2pi/h)"
   u%velocity%name   = "Angstrom times electron volts over h bar"
@@ -158,7 +159,7 @@ subroutine units_eV_Ang(u)
 
   u%mass%abbrev   = "u"
   u%mass%name     = "1/12 of the mass of C^12"
-  u%mass%factor   = 1._r8/5.485799110e-4_r8
+  u%mass%factor   = M_ONE/CNST(5.485799110e-4)
 
   u%force%abbrev  = "eV/A"
   u%force%name    = "electron volt/amstrong"

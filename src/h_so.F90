@@ -24,9 +24,9 @@ subroutine zso (h, m, psi, hpsi, natoms, atom, dim, ik)
   R_TYPE, intent(inout) :: Hpsi(m%np, dim)
 
   integer :: is, ia, i, j,  mps,add_lm, ikbc,jkbc, idim, l, lm 
-  complex(r8), allocatable :: tpsi(:, :), tHpsi(:, :)
+  CMPLX, allocatable :: tpsi(:, :), tHpsi(:, :)
   type(specie_type), pointer :: spec
-  complex(r8) :: uvpsi
+  CMPLX :: uvpsi
 
   call push_sub('zso')
 

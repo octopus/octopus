@@ -27,13 +27,13 @@ implicit none
 
 type td_type
   type(td_rti_type) :: tr             ! contains the details of the time evolution
-  real(r8)          :: dt             ! time step
+  FLOAT          :: dt             ! time step
   integer           :: max_iter       ! maximum number of iterations to perform
   integer           :: iter           ! the actual iteration
 
   integer           :: move_ions      ! how do we move the ions?
 
-  real(r8)          :: pol(3)         ! the direction of the polarization of the field
+  FLOAT          :: pol(3)         ! the direction of the polarization of the field
   integer           :: lmax           ! maximum multipole moment to output
 
   !variables controlling the output
@@ -69,8 +69,8 @@ subroutine td_run(td, u_st, sys, h)
   integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
        out_laser, out_energy, out_proj, out_angular
 
-  real(r8), allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
-  real(r8) :: etime
+  FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
+  FLOAT :: etime
   character(len=100) :: filename
 
   call push_sub('td_run')
@@ -111,7 +111,7 @@ subroutine td_run(td, u_st, sys, h)
         do j = 1, sys%natoms
            if(sys%atom(j)%move) then
              x1(j, :) = sys%atom(j)%x(:) - td%dt*sys%atom(j)%v(:) + &
-                        0.5_r8 * td%dt**2/sys%atom(j)%spec%weight * &
+                        M_HALF * td%dt**2/sys%atom(j)%spec%weight * &
                         sys%atom(j)%f(:)
            else
              x1(j, :) = sys%atom(j)%x(:)
@@ -141,16 +141,16 @@ subroutine td_run(td, u_st, sys, h)
           do j = 1, sys%natoms
              if(sys%atom(j)%move) then
                 x1(j, :) = sys%atom(j)%x(:)
-                sys%atom(j)%x(:) = 2._r8*x1(j, :) - x2(j, :) + &
+                sys%atom(j)%x(:) = M_TWO*x1(j, :) - x2(j, :) + &
                    td%dt**2/sys%atom(j)%spec%weight * sys%atom(j)%f(:)
-                sys%atom(j)%v(:) = (sys%atom(j)%x(:) - x2(j, :)) / (2._r8*td%dt)
+                sys%atom(j)%v(:) = (sys%atom(j)%x(:) - x2(j, :)) / (M_TWO*td%dt)
              endif
           enddo
         case(VELOCITY_VERLET)
           do j=1, sys%natoms
              if(sys%atom(j)%move) then
                 sys%atom(j)%x(:) = sys%atom(j)%x(:) +  td%dt*sys%atom(j)%v(:) + &
-                   0.5_r8*td%dt**2/sys%atom(j)%spec%weight * sys%atom(j)%f(:)
+                   M_HALF*td%dt**2/sys%atom(j)%spec%weight * sys%atom(j)%f(:)
              endif
           enddo
       end select
@@ -168,7 +168,7 @@ subroutine td_run(td, u_st, sys, h)
         do ist = sys%st%st_start, sys%st%st_end
           do idim = 1, sys%st%dim
             sys%st%zpsi(1:sys%m%np, idim, ist, ik) = sys%st%zpsi(1:sys%m%np, idim, ist, ik) * &
-                 (1._r8 - h%ab_pot(1:sys%m%np))
+                 (M_ONE - h%ab_pot(1:sys%m%np))
           end do
         end do
       end do
@@ -193,7 +193,7 @@ subroutine td_run(td, u_st, sys, h)
         do j = 1, sys%natoms
           if(sys%atom(j)%move) then
             sys%atom(j)%v(:) = sys%atom(j)%v(:) + &
-                 td%dt/(2._r8*sys%atom(j)%spec%weight) * &
+                 td%dt/(M_TWO*sys%atom(j)%spec%weight) * &
                  (f1(j, :) + sys%atom(j)%f(:))             
           end if
         end do
@@ -291,8 +291,8 @@ contains
     type(mesh_type), intent(IN) :: m
 
     integer     :: i
-    real(r8)    :: k, x(conf%dim)
-    complex(r8) :: c
+    FLOAT    :: k, x(conf%dim)
+    CMPLX :: c
 
     !!! units are 1/length
     call oct_parse_double("TDDeltaStrength", M_ZERO, k)

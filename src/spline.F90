@@ -39,12 +39,12 @@ interface
 
   subroutine oct_spline_fit(nrc, x, y, spl, acc)
     integer, intent(in) :: nrc
-    real(8), intent(in) :: x, y
+    FLOAT, intent(in) :: x, y
     integer(POINTER_SIZE), intent(inout) :: spl, acc
   end subroutine oct_spline_fit
 
-  real(8) function oct_spline_eval(x, spl, acc)
-    real(8), intent(in) :: x
+  FLOAT function oct_spline_eval(x, spl, acc)
+    FLOAT, intent(in) :: x
     integer(POINTER_SIZE), intent(in) :: spl, acc
   end function oct_spline_eval
 
@@ -69,7 +69,7 @@ end subroutine spline_end
 
 subroutine spline_fit(nrc, rofi, ffit, spl)
   integer, intent(in) :: nrc
-  real(8), intent(IN) :: ffit(nrc), rofi(nrc)
+  FLOAT, intent(IN) :: ffit(nrc), rofi(nrc)
   type(spline_type), intent(out) :: spl
 
   call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
@@ -78,10 +78,10 @@ subroutine spline_fit(nrc, rofi, ffit, spl)
 end subroutine spline_fit
 
 function splint(spl, x)
-  real(8) :: splint
+  FLOAT :: splint
 
   type(spline_type), intent(IN) :: spl
-  real(8), intent(IN) :: x
+  FLOAT, intent(IN) :: x
   
   splint = oct_spline_eval(x, spl%spl, spl%acc)
 

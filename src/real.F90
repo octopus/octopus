@@ -19,13 +19,13 @@
 
 #define X(x)        d ## x
 
-#define R_TYPE      real(r8)
+#define R_TYPE      FLOAT
 #define R_MPITYPE   MPI_DOUBLE_PRECISION
-#define R_TOTYPE(x) real(x, r8)
+#define R_TOTYPE(x) real(x, PRECISION)
 
 #define R_ABS(x)    abs(x)
 #define R_CONJ(x)   (x)
 #define R_REAL(x)   (x)
-#define R_AIMAG(x)  (0._r8)
+#define R_AIMAG(x)  (M_ZERO)
 #define R_DOT       ddot
 #define R_NRM2      dnrm2

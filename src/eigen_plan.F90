@@ -29,10 +29,10 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   type(states_type), target, intent(inout)   :: st
   type(system_type), target, intent(IN)      :: sys
   type(hamiltonian_type), target, intent(IN) :: hamilt
-  real(r8), intent(in)               :: tol
+  FLOAT, intent(in)               :: tol
   integer, intent(inout)             :: niter
   integer, intent(out)               :: converged
-  real(r8), intent(out), optional    :: diff(1:st%nst,1:st%nik)
+  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Local stuff
@@ -45,23 +45,23 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   integer :: maxmatvecs ! Maximum number of matrix-vectors applications allowed.
                         ! On exit reset to actual number of MATVECs used
   integer :: me         ! array size of eigenval, res and number of columns in eigenvec.
-  real(r8), allocatable :: eigenval(:)  ! The eigenvalues
+  FLOAT, allocatable :: eigenval(:)  ! The eigenvalues
   R_TYPE, allocatable :: eigenvec(:, :) ! The eigenvectors
-  real(r8), allocatable :: res(:)       ! The residuals
+  FLOAT, allocatable :: res(:)       ! The residuals
   R_TYPE, allocatable :: v(:, :)        ! The Krylov subspace basis vectors
   R_TYPE, allocatable :: av(:, :)       ! Workspace: W = A V
-  real(r8), allocatable :: tmp(:)       ! Workspace.
+  FLOAT, allocatable :: tmp(:)       ! Workspace.
   R_TYPE, allocatable :: h(:, :)        ! Projection of the hamiltonian onto Krylov subspace.
   R_TYPE, allocatable :: hevec(:, :)
   R_TYPE, allocatable :: aux(:, :)
   
   integer  :: blk, i, ii, idim, j, jj, d1, d2, matvec, nconv, ik, knec, np
-  real(r8) :: x
+  FLOAT :: x
 
   ! Some hard coded parameters.
   integer, parameter  :: winsiz = 5 ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
-  real(r8), parameter :: eps    = 1e-15_r8
+  FLOAT, parameter :: eps    = CNST(1e-15)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   call push_sub('eigen_solver_blan')
@@ -282,9 +282,9 @@ contains
     implicit none
     R_TYPE, intent(inout), dimension(n) :: hv
     R_TYPE, intent(inout), dimension(n) :: v
-    real(r8), intent(in)  :: e
+    FLOAT, intent(in)  :: e
     R_TYPE, intent(inout), dimension(n) :: res
-    real(r8), intent(out) :: r
+    FLOAT, intent(out) :: r
     
     res(1:n) = hv(1:n) - e*v(1:n)
     r = X(states_nrm2)(sys%m, st%dim, res)

@@ -15,6 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "global.h"
+
 module tm
 use global
 use atomic
@@ -34,9 +36,9 @@ type tm_type
   character(len=10) :: method(6) 
   character(len=70) :: title
   integer :: npotd, npotu, nr
-  real(r8) :: b, a
-  real(r8) :: zval
-  real(r8), pointer :: rofi(:),      &
+  FLOAT :: b, a
+  FLOAT :: zval
+  FLOAT, pointer :: rofi(:),      &
                        vps(:, :),    &
                        vso(:, :),    &
                        vlocal(:),    &
@@ -51,13 +53,13 @@ type tm_type
   ! Other stuff
   integer :: nrval
   type(logrid_type) :: g
-  real(r8), pointer :: dkbcos(:), dknrm(:), &
+  FLOAT, pointer :: dkbcos(:), dknrm(:), &
                        so_dkbcos(:), so_dknrm(:)
 
   integer :: ispin
 end type tm_type
 
-real(r8), parameter :: eps = 1.0e-8_r8
+FLOAT, parameter :: eps = CNST(1.0e-8)
 
 contains
 
@@ -69,7 +71,7 @@ subroutine tm_init(pstm, filename, ispin)
   character(len=256) :: filename2
   integer :: iunit, l, n
   logical :: found
-  real(r8) :: x, y
+  FLOAT :: x, y
 
   call push_sub('ps_tm_read_file')
 
@@ -127,7 +129,7 @@ subroutine tm_init(pstm, filename, ispin)
      l = pstm%conf%l(n)
      if(ispin==2 .and. pstm%irel.ne.'isp') then
        x = pstm%conf%occ(n, 1)
-       pstm%conf%occ(n,1) = min(x, real(2*l+1,r8))
+       pstm%conf%occ(n,1) = min(x, real(2*l+1, PRECISION))
        pstm%conf%occ(n,2) = x - pstm%conf%occ(n,1)
      endif
   enddo
@@ -197,7 +199,7 @@ subroutine tm_process(pstm, lmax, lloc)
   call solve_schroedinger(pstm)
 
 ! Fixes the local potential. Final argument is the core radius ??!!
-  call get_local(pstm, lloc, 3.0_r8)
+  call get_local(pstm, lloc, M_THREE)
 
 ! calculates kb cosines and norms
   call calculate_kb_cosines(pstm, lloc)
@@ -216,9 +218,9 @@ subroutine solve_schroedinger(psf)
 
   character(len=3) :: functl
   integer :: iter, ir, is, l, nnode, nprin, irel
-  real(r8) :: vtot, diff, r2, e, z, dr, rmax, f, dsq, a2b4, dnrm, avgv, vphi
-  real(r8), allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
-  real(r8), parameter :: tol = 1.0e-10_r8
+  FLOAT :: vtot, diff, r2, e, z, dr, rmax, f, dsq, a2b4, dnrm, avgv, vphi
+  FLOAT, allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
+  FLOAT, parameter :: tol = CNST(1.0e-10)
 
   call push_sub('solve_schroedinger')
 
@@ -234,12 +236,13 @@ subroutine solve_schroedinger(psf)
            ve  (psf%g%nrval, psf%ispin), &
            rho (psf%g%nrval, psf%ispin), &
            prev(psf%g%nrval, psf%ispin))
-           s = 0._r8; hato = 0._r8; g = 0._r8; y = 0._r8; ve = 0._r8; rho = 0._r8; prev = 0._r8
+  s = M_ZERO; hato = M_ZERO; g = M_ZERO; y = M_ZERO; 
+  ve = M_ZERO; rho = M_ZERO; prev = M_ZERO
 
   ! These numerical parameters have to be fixed for egofv to work.  
   s(2:psf%nrval) = psf%g%drdi(2:psf%g%nrval)*psf%g%drdi(2:psf%g%nrval)
   s(1) = s(2)
-  a2b4 = 0.25_r8*psf%a**2
+  a2b4 = M_FOURTH*psf%a**2
 
   !  ionic pseudopotential if core-correction for hartree
   if((psf%icore == 'pche') .or. (psf%icore == 'fche')) then
@@ -274,7 +277,7 @@ subroutine solve_schroedinger(psf)
     
     nnode = 1; nprin = l + 1
     e = -((psf%zval/dble(nprin))**2); z = psf%zval
-    dr = -1.0e5_r8; rmax = psf%rofi(psf%nrval)
+    dr = CNST(-1.0e5); rmax = psf%rofi(psf%nrval)
     call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
     psf%eigen(l, 1) = e
 
@@ -286,7 +289,7 @@ subroutine solve_schroedinger(psf)
   do l = 0, psf%npotd-1! ps%L_max
     e = sqrt(sum(psf%g%drdi(2:psf%nrval)*psf%rphi(2:psf%nrval, l, 1)**2))
     e = abs(e - M_ONE)
-    if (e > 1.0e-5_r8 .and. conf%verbose > 0) then
+    if (e > CNST(1.0e-5) .and. conf%verbose > 0) then
       write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
       write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
       call write_warning(2)
@@ -301,7 +304,7 @@ subroutine solve_schroedinger(psf)
 
     rho = M_ZERO    ! Here information of previous calculation could be used, but
     prev = M_ZERO   ! to save code lines, let us start from scratch.
-    diff = 1.0e5_r8
+    diff = CNST(1.0e5)
     iter = 0
     self_consistent: do
       prev = rho
@@ -316,7 +319,7 @@ subroutine solve_schroedinger(psf)
         hato(1) = hato(2)
         nnode = 1; nprin = l + 1
         e = -((psf%zval/dble(nprin))**2); z = psf%zval
-        dr = -1.0e5_r8; rmax = psf%rofi(psf%nrval)
+        dr = -CNST(1.0e5); rmax = psf%rofi(psf%nrval)
         call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
         psf%eigen(l, 1 + is) = e
 
@@ -360,8 +363,8 @@ subroutine read_file_data_bin(unit, psf)
   type(tm_type), intent(inout) :: psf
   
   integer  :: ndown, nup, l, ir, i
-  real(r8) :: r2
-  real(r8), allocatable :: aux(:)
+  FLOAT :: r2
+  FLOAT, allocatable :: aux(:)
 
   call push_sub('read_file_data_bin')
 
@@ -440,7 +443,7 @@ subroutine read_file_data_bin(unit, psf)
   psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
 
   ! adjust units from Rydbergs -> Hartree
-  ! psf%vps = psf%vps / 2._r8
+  ! psf%vps = psf%vps / M_TWO
 
   deallocate(aux)
   call pop_sub()
@@ -451,8 +454,8 @@ subroutine read_file_data_ascii(unit, psf)
   type(tm_type), intent(inout) :: psf
   
   integer  :: ndown, nup, i, l, ir
-  real(r8) :: r2
-  real(r8), allocatable :: aux(:)
+  FLOAT :: r2
+  FLOAT, allocatable :: aux(:)
   character(len=70) :: aux_s
 
   call push_sub('read_file_data_ascii')
@@ -550,7 +553,7 @@ subroutine read_file_data_ascii(unit, psf)
   psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
 
   ! adjust units from Rydbergs -> Hartree
-  ! psf%vps = psf%vps / 2._r8
+  ! psf%vps = psf%vps / M_TWO
 
   call pop_sub()
 end subroutine read_file_data_ascii
@@ -560,7 +563,7 @@ subroutine calculate_kb_cosines(pstm, lloc)
   integer, intent(in)          :: lloc
 
   integer :: ir, l
-  real(r8) :: dnrm, avgv, vphi
+  FLOAT :: dnrm, avgv, vphi
 
   call push_sub('calculate_kb_cosines')
 
@@ -571,30 +574,30 @@ subroutine calculate_kb_cosines(pstm, lloc)
 !               1 / || (v_l - v_local) phi_l || [1/Rydberg]
   do l = 0, pstm%npotd-1
     if(l == lloc) then
-      pstm%dkbcos(l) = 0.0_r8; pstm%dknrm(l) = 0.0_r8
+      pstm%dkbcos(l) = M_ZERO; pstm%dknrm(l) = M_ZERO
       cycle
     end if
-    dnrm = 0.0_r8
-    avgv = 0.0_r8
+    dnrm = M_ZERO
+    avgv = M_ZERO
     do ir = 2, pstm%g%nrval
       vphi = (pstm%vps(ir, l) - pstm%vlocal(ir))*pstm%rphi(ir, l, 1)
       dnrm = dnrm + vphi*vphi*pstm%g%drdi(ir)
       avgv = avgv + vphi*pstm%rphi(ir, l, 1)*pstm%g%drdi(ir)
     end do
-    pstm%dkbcos(l) = dnrm/(avgv + 1.0e-20_r8)
-    pstm%dknrm(l) = 1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
+    pstm%dkbcos(l) = dnrm/(avgv + CNST(1.0e-20))
+    pstm%dknrm(l)  = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
   end do
 
   do l = 1, pstm%npotu
-    dnrm = 0.0_r8
-    avgv = 0.0_r8
+    dnrm = M_ZERO
+    avgv = M_ZERO
     do ir = 2, pstm%g%nrval
       vphi = pstm%vso(ir, l)*pstm%rphi(ir, l, 1)
       dnrm = dnrm + vphi*vphi*pstm%g%drdi(ir)
       avgv = avgv + vphi*pstm%rphi(ir, l, 1)*pstm%g%drdi(ir)
     end do
-    pstm%so_dkbcos(l) = dnrm/(avgv + 1.0e-20_r8)
-    pstm%so_dknrm(l) =  1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
+    pstm%so_dkbcos(l) = dnrm/(avgv + CNST(1.0e-20))
+    pstm%so_dknrm(l)  = M_ONE/(sqrt(dnrm) + CNST(1.0e-20))
   end do
 
   call pop_sub()
@@ -606,8 +609,8 @@ subroutine ghost_analysis(pstm, lmax)
 
   character(len=3) :: functl
   integer :: ir, l, nnode, nprin, ighost, irel
-  real(r8) :: vtot, a2b4, z, e, dr, rmax, dnrm, avgv
-  real(r8), allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
+  FLOAT :: vtot, a2b4, z, e, dr, rmax, dnrm, avgv
+  FLOAT, allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
 
   call push_sub('ghost_analysis')
 
@@ -623,7 +626,7 @@ subroutine ghost_analysis(pstm, lmax)
   s(2:pstm%nrval) = pstm%g%drdi(2:pstm%nrval)**2
   s(1) = s(2)
   ! calculate eigenvalues of the local potential for ghost analysis
-  a2b4 = 0.25_r8*pstm%a**2
+  a2b4 = M_FOURTH*pstm%a**2
   do l = 0, lmax
     do ir = 2, pstm%g%nrval
       !vtot = psf%vps(ir, ps%L_loc) + ve(ir) + dble(l*(l+1))/(psf%rofi(ir)**2)
@@ -635,7 +638,7 @@ subroutine ghost_analysis(pstm, lmax)
       nprin = l + 1
       e = -(pstm%zval/dble(nprin))**2
       z = pstm%zval
-      dr = -1.0e5_r8
+      dr = CNST(-1.0e5)
       rmax = pstm%rofi(pstm%nrval)
       call egofv(hato, s, pstm%nrval, e, g, y, l, z, pstm%a, pstm%b, rmax, nprin, nnode, dr)
       elocal(nnode,l) = e
@@ -670,14 +673,14 @@ subroutine get_cutoff_radii(pstm, lloc)
   integer, intent(in)          :: lloc
 
   integer             :: l, ir
-  real(r8)            :: dincv, phi
-  real(r8), parameter :: threshold = 1.0e-6_r8
+  FLOAT            :: dincv, phi
+  FLOAT, parameter :: threshold = CNST(1.0e-6)
 
   call push_sub('get_cutoff_radii')
 
   ! local part ....
   do ir = pstm%g%nrval, 2, -1
-    dincv = abs(pstm%vlocal(ir)*pstm%rofi(ir) + 2.0_r8*pstm%zval)
+    dincv = abs(pstm%vlocal(ir)*pstm%rofi(ir) + M_TWO*pstm%zval)
     if(dincv > threshold) exit
   enddo
   pstm%kbr(pstm%npotd) = pstm%rofi(ir + 1)
@@ -685,7 +688,7 @@ subroutine get_cutoff_radii(pstm, lloc)
   ! non-local part....
   do l = 0, pstm%npotd-1
     if(l == lloc) then
-      pstm%kbr(l) = 0.0_r8
+      pstm%kbr(l) = M_ZERO
       cycle
     endif
     do ir = pstm%g%nrval, 2, -1
@@ -707,11 +710,11 @@ end subroutine get_cutoff_radii
 subroutine get_local(psf, l_loc, rcore)
   type(tm_type), intent(inout) :: psf
   integer, intent(in)          :: l_loc
-  real(r8), intent(in)         :: rcore
+  FLOAT, intent(in)         :: rcore
 
   integer :: ir
-  real(r8) :: a, b, qtot
-  real(r8), allocatable :: rho(:)
+  FLOAT :: a, b, qtot
+  FLOAT, allocatable :: rho(:)
 
   call push_sub('get_local')
 
@@ -725,13 +728,13 @@ subroutine get_local(psf, l_loc, rcore)
     message(1) = "Info: Vanderbilt function local potential"
     call write_info(1)
 
-    a = 1.82_r8 / rcore
-    b = 1.0_r8
+    a = CNST(1.82) / rcore
+    b = M_ONE
     allocate(rho(psf%nrval))
 
     do ir = 1, psf%nrval
       rho(ir) = exp( -( sinh(a*b*psf%rofi(ir)) / sinh(b) )**2 )
-      rho(ir) = 4.0_r8 * M_Pi * rho(ir) * psf%rofi(ir)**2
+      rho(ir) = M_FOUR * M_Pi * rho(ir) * psf%rofi(ir)**2
     end do
     qtot = sum(rho(2:psf%nrval)*psf%g%drdi(2:psf%nrval))
     rho(:) = rho(:)*(psf%zval/qtot)

@@ -66,7 +66,7 @@ contains
   subroutine wf_gaussian(line)
     integer, intent(in) :: line
     
-    real(r8) :: x1(3), x(3), s, k(3)
+    FLOAT :: x1(3), x(3), s, k(3)
     integer :: i, j
     
     ! read gaussian parameters
@@ -98,7 +98,7 @@ contains
   
   subroutine wf_renormalize()
     integer :: ik, ist
-    real(r8) :: nrm2
+    FLOAT :: nrm2
     
     do ik = 1, sys%st%nik
       do ist = 1, sys%st%nst

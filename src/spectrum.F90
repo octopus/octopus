@@ -29,11 +29,11 @@ integer, parameter :: SPECTRUM_DAMP_NONE       = 0, &
                       SPECTRUM_DAMP_GAUSSIAN   = 3
 
 type spec_type
-  real(r8) :: start_time  ! start time for the transform
-  real(r8) :: end_time    ! when to stop the transform
-  real(r8) :: energy_step ! step in energy mesh
-  real(r8) :: min_energy  ! maximum of energy mesh
-  real(r8) :: max_energy  ! maximum of energy mesh
+  FLOAT :: start_time  ! start time for the transform
+  FLOAT :: end_time    ! when to stop the transform
+  FLOAT :: energy_step ! step in energy mesh
+  FLOAT :: min_energy  ! maximum of energy mesh
+  FLOAT :: max_energy  ! maximum of energy mesh
 end type spec_type
 
 ! For the strength function
@@ -41,28 +41,28 @@ type spec_sf
   ! input
   integer  :: transform        ! The Fourier transform to perform (sin, cos)
   integer  :: damp             ! Damp type (none, exp or pol)
-  real(r8) :: damp_factor      ! factor used in damping
-  real(r8) :: delta_strength   ! strength of the delta perturbation
+  FLOAT :: damp_factor      ! factor used in damping
+  FLOAT :: delta_strength   ! strength of the delta perturbation
 
   ! output
   integer :: no_e, nspin ! dimensions of sp
-  real(r8), pointer :: sp(:,:) ! do not forget to deallocate this
-  real(r8) :: ewsum  ! electronic sum rule
-  real(r8) :: alpha  ! Polariz. (sum rule)
-  real(r8) :: alpha2 ! Polariz. (F.T.)
+  FLOAT, pointer :: sp(:,:) ! do not forget to deallocate this
+  FLOAT :: ewsum  ! electronic sum rule
+  FLOAT :: alpha  ! Polariz. (sum rule)
+  FLOAT :: alpha2 ! Polariz. (F.T.)
 end type spec_sf
 
 ! For the rotational strength function
 type spec_rsf
   ! input
   integer  :: damp             ! Damp type (none, exp or pol)
-  real(r8) :: damp_factor      ! factor used in damping
-  real(r8) :: delta_strength   ! strength of the delta perturbation
-  real(r8) :: pol(3)           ! Direction of the perturbation
+  FLOAT :: damp_factor      ! factor used in damping
+  FLOAT :: delta_strength   ! strength of the delta perturbation
+  FLOAT :: pol(3)           ! Direction of the perturbation
 
   ! output
   integer :: no_e
-  complex(r8), pointer :: sp(:) ! do not forget to deallocate this
+  CMPLX, pointer :: sp(:) ! do not forget to deallocate this
 end type spec_rsf
 
 type spec_sh
@@ -71,7 +71,7 @@ type spec_sh
 
   ! output
   integer :: no_e ! dimensions of sp
-  real(r8), pointer :: sp(:) ! do not forget to deallocate this
+  FLOAT, pointer :: sp(:) ! do not forget to deallocate this
 end type spec_sh
 
 contains
@@ -84,9 +84,9 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   integer :: iunit, i, is, ie, &
       ntiter, j, jj, k, isp, time_steps
-  real(r8) :: dump, dt, x
-  real(r8), allocatable :: dumpa(:)
-  real(r8), allocatable :: dipole(:,:)
+  FLOAT :: dump, dt, x
+  FLOAT, allocatable :: dumpa(:)
+  FLOAT, allocatable :: dipole(:,:)
 
   call spectrum_mult_info(iunit, sf%nspin, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
@@ -106,8 +106,8 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   sf%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sf%sp(0:sf%no_e, sf%nspin))
-  sf%sp = 0._r8
-  sf%alpha = 0._r8; sf%alpha2 = 0._r8; sf%ewsum = 0._r8
+  sf%sp = M_ZERO
+  sf%alpha = M_ZERO; sf%alpha2 = M_ZERO; sf%ewsum = M_ZERO
 
   ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
   allocate(dumpa(is:ie))
@@ -115,12 +115,12 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
      jj = j - is
       select case(sf%damp)
       case(SPECTRUM_DAMP_NONE)
-        dumpa(j) = 1._r8
+        dumpa(j) = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
         dumpa(j)= exp(-jj*dt*sf%damp_factor)
       case(SPECTRUM_DAMP_POLYNOMIAL)
-        dumpa(j) = 1.0 - 3.0*(real(jj)/ntiter)**2                          &
-            + 2.0*(real(jj)/ntiter)**3
+        dumpa(j) = M_ONE - M_THREE*(real(jj)/ntiter)**2                          &
+            + M_TWO*(real(jj)/ntiter)**3
       case(SPECTRUM_DAMP_GAUSSIAN)
         dumpa(j)= exp(-(jj*dt)**2*sf%damp_factor**2)
       end select
@@ -151,7 +151,7 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
     sf%sp(k, :) = sf%sp(k, :)*dt
 
     ! calculate strength function
-    sf%sp(k, :) = (sf%sp(k, :)*s%energy_step*k*2._r8)/(M_pi*sf%delta_strength)
+    sf%sp(k, :) = (sf%sp(k, :)*s%energy_step*k*M_TWO)/(M_pi*sf%delta_strength)
 
     do isp = 1, sf%nspin
       if(k.ne.0) then
@@ -208,10 +208,10 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
 
   integer :: iunit, i, is, ie, &
       ntiter, j, jj, k, isp, time_steps
-  real(r8) :: dump, dt, x
-  complex(r8) :: z
-  real(r8), allocatable :: dumpa(:)
-  real(r8), allocatable :: angular(:, :)
+  FLOAT :: dump, dt, x
+  CMPLX :: z
+  FLOAT, allocatable :: dumpa(:)
+  FLOAT, allocatable :: angular(:, :)
 
   call spectrum_file_info("td.general/angular", iunit, time_steps, dt, i)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
@@ -239,7 +239,7 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
      jj = j - is
       select case(rsf%damp)
       case(SPECTRUM_DAMP_NONE)
-        dumpa(j) = 1._r8
+        dumpa(j) = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
         dumpa(j)= exp(-jj*dt*rsf%damp_factor)
       case(SPECTRUM_DAMP_POLYNOMIAL)
@@ -300,10 +300,10 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
   logical, intent(in) :: print_info
 
   integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter
-  real(r8) :: dt, dump
-  real(r8), allocatable :: d(:,:)
-  complex(r8) :: c
-  complex(r8), allocatable :: dipole(:), ddipole(:)
+  FLOAT :: dt, dump
+  FLOAT, allocatable :: d(:,:)
+  CMPLX :: c
+  CMPLX, allocatable :: dipole(:), ddipole(:)
 
   call spectrum_mult_info(iunit, nspin, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
@@ -321,11 +321,11 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
     case('z')
       dipole(i) = sum(d(2, :))
     case('+')
-      dipole(i) = -sum(d(3, :) + M_zI*d(1, :)) / sqrt(2._r8)
+      dipole(i) = -sum(d(3, :) + M_zI*d(1, :)) / sqrt(M_TWO)
     case('-')
-      dipole(i) = -sum(d(3, :) - M_zI*d(1, :)) / sqrt(2._r8)
+      dipole(i) = -sum(d(3, :) - M_zI*d(1, :)) / sqrt(M_TWO)
     end select
-    dipole(i) = dipole(i) * units_out%length%factor * sqrt(4*M_PI/3)
+    dipole(i) = dipole(i) * units_out%length%factor * sqrt(M_FOUR*M_PI/M_THREE)
   end do
   deallocate(d)
 
@@ -333,14 +333,14 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
   allocate(ddipole(0:time_steps))
   ddipole(0) = (dipole(1) - dipole(0))/dt
   do i = 1, time_steps - 1
-    ddipole(i) = (dipole(i + 1) - dipole(i - 1))/(2._r8*dt)
+    ddipole(i) = (dipole(i + 1) - dipole(i - 1))/(M_TWO*dt)
   end do
   ddipole(time_steps) = (dipole(time_steps) - dipole(time_steps - 1))/dt
 
   ! and the second time derivative
   dipole(0) = (ddipole(1) - ddipole(0))/dt
   do i = 1, time_steps - 1
-    dipole(i) = (ddipole(i + 1) - ddipole(i - 1))/(2._r8*dt)
+    dipole(i) = (ddipole(i + 1) - ddipole(i - 1))/(M_TWO*dt)
   end do
   dipole(time_steps) = (ddipole(time_steps) - ddipole(time_steps - 1))/dt
   deallocate(ddipole)
@@ -348,7 +348,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
   ! now we Fourier transform
   sh%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sh%sp(0:sh%no_e))
-  sh%sp = 0._r8
+  sh%sp = M_ZERO
   
   do i = 0, sh%no_e
     c = M_z0
@@ -380,16 +380,16 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
   logical, intent(in) :: print_info
 
   integer :: i, j, iunit, time_steps, is, ie, ntiter
-  real(r8) :: dt, dummy, a(3)
-  complex(r8), allocatable :: acc(:)
-  complex(r8) :: c
+  FLOAT :: dt, dummy, a(3)
+  CMPLX, allocatable :: acc(:)
+  CMPLX :: c
   
   call spectrum_acc_info(iunit, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
   
   ! load dipole from file
   allocate(acc(0:time_steps))
-  acc = 0._r8
+  acc = M_ZERO
   do i = 1, time_steps
     read(iunit, *) j, dummy, a
     select case(sh%pol)
@@ -400,9 +400,9 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
     case('z')
       acc(i) = a(3)
     case('+')
-      acc(i) = (a(1) + M_zI*a(2)) / sqrt(2._r8)
+      acc(i) = (a(1) + M_zI*a(2)) / sqrt(M_TWO)
     case('-')
-      acc(i) = (a(1) - M_zI*a(2)) / sqrt(2._r8)
+      acc(i) = (a(1) - M_zI*a(2)) / sqrt(M_TWO)
     end select
     acc(i) = acc(i) * units_out%acceleration%factor
   end do
@@ -410,7 +410,7 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
   ! now we Fourier transform
   sh%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sh%sp(0:sh%no_e))
-  sh%sp = 0._r8
+  sh%sp = M_ZERO
   
   do i = 0, sh%no_e
     c = M_z0
@@ -445,10 +445,10 @@ end subroutine spectrum_hs_from_acc
 subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   character(len=*), intent(in) :: file
   integer, intent(out) :: iunit, n, time_steps
-  real(r8), intent(out) :: dt
+  FLOAT, intent(out) :: dt
 
   integer :: ierr, i, j
-  real(r8) :: t1, t2, dummy
+  FLOAT :: t1, t2, dummy
 
   open(iunit, file=file, status='old', iostat=i)
   if(i.ne.0) then
@@ -487,10 +487,10 @@ end subroutine spectrum_file_info
 
 subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
   integer, intent(out) :: iunit, nspin, time_steps
-  real(r8), intent(out) :: dt
+  FLOAT, intent(out) :: dt
 
   integer :: i, j
-  real(r8) :: t1, t2, dummy
+  FLOAT :: t1, t2, dummy
 
   ! open files
   call io_assign(iunit)
@@ -531,10 +531,10 @@ end subroutine spectrum_mult_info
 
 subroutine spectrum_acc_info(iunit, time_steps, dt)
   integer, intent(out) :: iunit, time_steps
-  real(r8), intent(out) :: dt
+  FLOAT, intent(out) :: dt
 
   integer :: i, j
-  real(r8) :: t1, t2, dummy
+  FLOAT :: t1, t2, dummy
 
   ! open files
   call io_assign(iunit)
@@ -574,16 +574,16 @@ end subroutine spectrum_acc_info
 
 subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, is, ie, ntiter)
   integer, intent(in) :: time_steps
-  real(r8), intent(in) :: dt
-  real(r8), intent(inout) :: start_time, end_time
+  FLOAT, intent(in) :: dt
+  FLOAT, intent(inout) :: start_time, end_time
   integer, intent(out) :: is, ie, ntiter
 
-  real(r8) :: ts, te, dummy
+  FLOAT :: ts, te, dummy
 
-  ts = 0._r8; te = time_steps*dt
+  ts = M_ZERO; te = time_steps*dt
   if(start_time < ts) start_time = ts
   if(start_time > te) start_time = te
-  if(end_time   > te .or. end_time <= 0._r8) end_time   = te
+  if(end_time   > te .or. end_time <= M_ZERO) end_time   = te
   if(end_time   < ts) end_time   = ts
 
   if(end_time < start_time) then

@@ -20,7 +20,7 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   character(len=*), intent(IN) :: dir, fname
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
-  real(r8), intent(in) :: u
+  FLOAT, intent(in) :: u
   
   integer :: iunit, i
   type(X(cf)) :: c
@@ -51,7 +51,7 @@ contains
 
   subroutine axis_x()
     integer  :: ix
-    real(r8) :: x
+    FLOAT :: x
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0,z=0", status='unknown')
@@ -65,7 +65,7 @@ contains
 
   subroutine axis_y()
     integer  :: iy
-    real(r8) :: y
+    FLOAT :: y
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,z=0", status='unknown')
@@ -79,7 +79,7 @@ contains
 
   subroutine axis_z()
     integer  :: iz
-    real(r8) :: z
+    FLOAT :: z
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,y=0", status='unknown')
@@ -93,7 +93,7 @@ contains
 
   subroutine plane_x()
     integer  :: iy, iz
-    real(r8) :: y, z
+    FLOAT :: y, z
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0", status='unknown')
@@ -112,7 +112,7 @@ contains
 
   subroutine plane_y()
     integer  :: ix, iz
-    real(r8) :: x, z
+    FLOAT :: x, z
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0", status='unknown')
@@ -131,7 +131,7 @@ contains
 
   subroutine plane_z()
     integer  :: ix, iy
-    real(r8) :: x, y
+    FLOAT :: x, y
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".z=0", status='unknown')
@@ -150,7 +150,7 @@ contains
 
   subroutine dx()
     integer :: ix, iy, iz
-    real(r8) :: offset(3)
+    FLOAT :: offset(3)
     character(LEN=40) :: nitems
     
 ! the offset is different in periodic directions

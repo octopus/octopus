@@ -31,11 +31,11 @@ subroutine opt_control_run(td, sys, h)
 
   type(states_type), pointer :: psi_i
   type(states_type)          :: psi_f
-  real(r8), pointer :: v_old_i(:,:,:), v_old_f(:,:,:)
-  real(r8), pointer :: laser_i(:,:), laser_f(:,:)
+  FLOAT, pointer :: v_old_i(:,:,:), v_old_f(:,:,:)
+  FLOAT, pointer :: laser_i(:,:), laser_f(:,:)
 
   integer :: i, iunit, ctr_iter, ctr_iter_max
-  real(r8) :: eps, alpha, overlap, functional, old_functional, laser_init
+  FLOAT :: eps, alpha, overlap, functional, old_functional, laser_init
   character(len=80) :: filename
 
   call init()
@@ -43,7 +43,7 @@ subroutine opt_control_run(td, sys, h)
   ! first propagate psi_f to ti
   call prop_psi_f()
 
-  old_functional = -1e10_r8
+  old_functional = -CNST(1e10)
   ctr_iter = 1
   ctr_loop: do
     ! first propagate both states forward
@@ -169,10 +169,10 @@ contains
 
   subroutine update_field(iter, l)
     integer, intent(in) :: iter
-    real(r8), intent(inout) :: l(0:2*td%max_iter, conf%dim)
+    FLOAT, intent(inout) :: l(0:2*td%max_iter, conf%dim)
 
-    complex(r8), allocatable :: grad(:,:)
-    complex(r8) :: d1, d2(conf%dim)
+    CMPLX, allocatable :: grad(:,:)
+    CMPLX :: d1, d2(conf%dim)
     integer :: ik, p, dim, i, j
 
     d1 = M_z0; d2 = M_z0
@@ -271,7 +271,7 @@ contains
 
   subroutine write_field(filename, las)
     character(len=*), intent(in) :: filename
-    real(r8), intent(in) :: las(1:conf%dim,0:2*td%max_iter)
+    FLOAT, intent(in) :: las(1:conf%dim,0:2*td%max_iter)
 
     integer :: i, iunit
 
@@ -333,7 +333,7 @@ contains
     laser_i = laser_init
     laser_f = laser_init
     call oct_parse_double("OptControlAlpha", M_ONE, alpha)
-    call oct_parse_double("OptControlEps", 1e-3_r8, eps)
+    call oct_parse_double("OptControlEps", CNST(1e-3), eps)
     call oct_parse_int("OptControlMaxIter", 10, ctr_iter_max)
     if(ctr_iter_max < 0.and.eps<M_ZERO) then
       message(1) = "OptControlMaxIter and OptControlEps can not be both <0"

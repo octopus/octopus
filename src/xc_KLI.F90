@@ -22,13 +22,13 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   integer,           intent(in)    :: oep_level, is
 
   integer :: i, j, n
-  real(r8), allocatable :: rho_sigma(:), v_bar_S(:)
-  real(r8), allocatable :: Ma(:,:), x(:), y(:)
+  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:)
+  FLOAT, allocatable :: Ma(:,:), x(:), y(:)
 
   ! variables needed by LAPACK
   character(len=1) :: la_EQUED
-  real(r8), allocatable :: la_AF(:,:), la_R(:), la_C(:), la_work(:)
-  real(r8) :: la_R_cond, la_Ferr(1), la_Berr(1)
+  FLOAT, allocatable :: la_AF(:,:), la_R(:), la_C(:), la_work(:)
+  FLOAT :: la_R_cond, la_Ferr(1), la_Berr(1)
   integer, allocatable :: la_IPIV(:), la_iwork(:)
   integer :: info
 
@@ -36,7 +36,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   ! vxc contains the Slater part!
   allocate(rho_sigma(m%np))
   do i = 1, m%np
-    rho_sigma(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), 1e-20_r8)
+    rho_sigma(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
     oep%vxc(i)       = oep%socc* &
          sum(st%occ(:, is)*R_REAL(oep%lxc(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
   end do
@@ -53,7 +53,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
     
     if(n > 0) then ! there is more than one state, so solve linear equation
       allocate(x(n))
-      x = 0.0_r8
+      x = M_ZERO
       allocate(Ma(n, n), y(n))
       do i = 1, n
         do j = i, n

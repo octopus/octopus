@@ -26,12 +26,12 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine td_calc_tacc(acc, t, reduce)
     implicit none
-    real(r8), intent(in)  :: t
-    real(r8), intent(out) :: acc(3)
+    FLOAT, intent(in)  :: t
+    FLOAT, intent(out) :: acc(3)
     logical, intent(in), optional :: reduce
 
-    real(r8) :: field(3), x(3), y(3), mesh_x(3), r, vl, dvl, d, charge
-    complex(r8), allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
+    FLOAT :: field(3), x(3), y(3), mesh_x(3), r, vl, dvl, d, charge
+    CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
     integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj, ierr
     type(atom_type), pointer :: atm
 
@@ -59,7 +59,7 @@
     end if
 
     ! And now, i<[H,[V_nl,x]]>
-    x = 0.0_r8
+    x = M_ZERO
     allocate(hzpsi(sys%m%np, sys%st%dim), hhzpsi(3, sys%m%np))
 
     do ik = 1, sys%st%nik

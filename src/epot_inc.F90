@@ -18,16 +18,16 @@
 subroutine X(epot_forces) (ep, sys, t, reduce_)
   type(epot_type),   intent(in)    :: ep
   type(system_type), intent(inout) :: sys
-  real(r8),          intent(in), optional :: t
+  FLOAT,          intent(in), optional :: t
   logical,           intent(in), optional :: reduce_
 
   integer :: i, j, l, m, add_lm, idim, ist, ik, ii, jj
-  real(r8) :: d, r, zi, zj, vl, dvl, x(3)
+  FLOAT :: d, r, zi, zj, vl, dvl, x(3)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-  real(r8) :: f(3)
+  FLOAT :: f(3)
   integer :: ierr
 #endif 
   
@@ -61,7 +61,7 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
                   
                   do j = 1, 3
                     p = sum(atm%X(duV)(j, :, add_lm, jj) * R_CONJ(sys%st%X(psi) (atm%Jxyz(:), idim, ist, ik)))
-                    atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
+                    atm%f(j) = atm%f(j) + M_TWO * R_REAL(uVpsi * p)
                   end do
                 end do
               end do
@@ -120,7 +120,7 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
   
 contains
   subroutine local_RS()
-    real(r8) :: r, x(3), d, gv(3)
+    FLOAT :: r, x(3), d, gv(3)
     integer  :: ns
     
     ns = min(2, sys%st%nspin)
@@ -141,7 +141,7 @@ contains
 #ifdef HAVE_FFT
   subroutine local_FS()
     type(dcf) :: cf_for
-    real(r8), allocatable :: force(:)
+    FLOAT, allocatable :: force(:)
     
     allocate(force(sys%m%np))
     call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist

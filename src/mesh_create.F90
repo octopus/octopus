@@ -21,7 +21,7 @@
 ! if norder is present, then set nk, Kx, Ky and Kz
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#define DELTA_R 1e-12_r8
+#define DELTA_R CNST(1e-12)
 
 subroutine mesh_create(m, natoms, atom, enlarge_)
   type(mesh_type), intent(inout) :: m
@@ -65,12 +65,12 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
 
   ! Read the box size.
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER) then
-    call oct_parse_double('radius', 20.0_r8/units_inp%length%factor, m%rsize)
+    call oct_parse_double('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     m%lsize(1) = m%rsize
   end if
   if(m%box_shape == CYLINDER) then
-    call oct_parse_double('xlength', 1.0_r8/units_inp%length%factor, m%xsize)
+    call oct_parse_double('xlength', M_ONE/units_inp%length%factor, m%xsize)
     m%xsize = m%xsize * units_inp%length%factor
     m%lsize(1) = m%xsize
   end if
@@ -112,11 +112,11 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
   m%h = M_ZERO
   select case(m%box_shape)
   case(SPHERE,CYLINDER)
-    call oct_parse_double('spacing', 0.6_r8/units_inp%length%factor, m%h(1))
+    call oct_parse_double('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
     m%h(1:conf%dim) = m%h(1)
   case(PARALLELEPIPED)
-    if(oct_parse_block_n('spacing')<1) then
-      m%h(1:3) = 0.6_r8/units_inp%length%factor
+    if(oct_parse_block_n('spacing') < 1) then
+      m%h(1:3) = CNST(0.6)/units_inp%length%factor
     else
       do i = 1, conf%dim
          call oct_parse_block_double('spacing', 0, i-1, m%h(i))
@@ -270,7 +270,7 @@ logical function in_mesh(m, ix, iy, iz)
 
   select case(m%box_shape)
   case(SPHERE)
-    in_mesh = (sqrt(real(ix**2 + iy**2 + iz**2, r8))*m%h(1) <= m%rsize+DELTA_R)
+    in_mesh = (sqrt(real(ix**2 + iy**2 + iz**2, PRECISION))*m%h(1) <= m%rsize+DELTA_R)
   case(CYLINDER)
     in_mesh = in_cylinder()
   case(PARALLELEPIPED)
@@ -281,8 +281,8 @@ logical function in_mesh(m, ix, iy, iz)
 contains
 
   logical function in_cylinder()
-    real(r8) r, x
-    r = sqrt(real(iy**2 + iz**2, r8))*m%h(1)
+    FLOAT r, x
+    r = sqrt(real(iy**2 + iz**2, PRECISION))*m%h(1)
     x = ix*m%h(1)
     
     in_cylinder = (r<=m%rsize+DELTA_R .and. abs(x)<=m%xsize+DELTA_R)
@@ -296,8 +296,8 @@ subroutine derivatives_init_diff(m, order, laplacian, grad)
   type(derivatives_type) :: laplacian
   type(derivatives_type), pointer :: grad(:)
 
-  real(r8), allocatable :: dgidfj(:) ! the coefficients for the gradient
-  real(r8), allocatable :: dlidfj(:) ! the coefficients for the laplacian
+  FLOAT, allocatable :: dgidfj(:) ! the coefficients for the gradient
+  FLOAT, allocatable :: dlidfj(:) ! the coefficients for the laplacian
   integer :: i, j, ix(3), ik, in, nl, ng(3)
 
   call push_sub('build_lookup_tables')
@@ -374,7 +374,7 @@ contains
     use math, only: weights
 
     integer :: k, i, j, morder
-    real(r8), allocatable :: cc(:,:,:)
+    FLOAT, allocatable :: cc(:,:,:)
 
     call push_sub('derivatives_coeff')
     k = order
@@ -411,8 +411,8 @@ subroutine derivatives_init_filter(m, order, filter)
   integer, intent(in) :: order
   type(derivatives_type) :: filter
 
-  real(r8), parameter :: alpha = M_HALF
-  real(r8), allocatable :: dfidfj(:) ! the coefficients for the filter
+  FLOAT, parameter :: alpha = M_HALF
+  FLOAT, allocatable :: dfidfj(:) ! the coefficients for the filter
   integer :: i, j, ix(3), ik, in, nf
 
   call push_sub('derivatives_init_filter')

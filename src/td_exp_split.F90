@@ -32,13 +32,13 @@ contains
     type(mesh_type), intent(in) :: m
     type(states_type), intent(in) :: st
     type(hamiltonian_type), intent(in) :: h
-    complex(r8), intent(inout) :: psi(m%np, st%dim)
+    CMPLX, intent(inout) :: psi(m%np, st%dim)
     integer, intent(in) :: ik
     type(zcf), intent(inout) :: cf
-    complex(r8), intent(in) :: factor
+    CMPLX, intent(in) :: factor
     
     integer :: ix, iy, iz, k(3), idim
-    real(r8) :: cutoff, temp(3), g2
+    FLOAT :: cutoff, temp(3), g2
 
     call push_sub('exp_kinetic')
     
@@ -50,11 +50,11 @@ contains
     if(h%cutoff > M_ZERO) then
       cutoff = h%cutoff
     else
-      cutoff = 1e10_r8
+      cutoff = CNST(1e10)
     endif
 
     temp = M_ZERO
-    temp(1:conf%dim) = (2.0_r8*M_Pi)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
+    temp(1:conf%dim) = (M_TWO*M_Pi)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
@@ -92,13 +92,13 @@ contains
     type(mesh_type), intent(in) :: m
     type(states_type), intent(in) :: st
     type(hamiltonian_type), intent(in) :: h
-    complex(r8), intent(inout) :: psi(m%np, st%dim)
+    CMPLX, intent(inout) :: psi(m%np, st%dim)
     integer, intent(in) :: ik
-    real(r8), intent(in) :: t
-    complex(r8), intent(in) :: factor
+    FLOAT, intent(in) :: t
+    CMPLX, intent(in) :: factor
 
     integer :: is, idim, np, dim, k
-    real(r8) :: x(3), f(3)
+    FLOAT :: x(3), f(3)
     
     call push_sub('vlpsi')
     
@@ -142,15 +142,15 @@ contains
     type(mesh_type), intent(in) :: m
     type(states_type), intent(in) :: st
     type(system_type), intent(in) :: sys
-    complex(r8), intent(inout) :: psi(m%np, st%dim)
+    CMPLX, intent(inout) :: psi(m%np, st%dim)
     integer, intent(in) :: ik
-    complex(r8), intent(in) :: factor
+    CMPLX, intent(in) :: factor
     logical, intent(in) :: order
 
     integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm, &
          ia_start, ia_end, step, l_start, l_end, kbc_start, kbc_end
-    complex(r8) :: uvpsi, p2, ctemp
-    complex(r8), allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
+    CMPLX :: uvpsi, p2, ctemp
+    CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
     type(atom_type), pointer :: atm
     type(specie_type), pointer :: spec
 

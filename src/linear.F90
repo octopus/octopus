@@ -33,7 +33,7 @@ contains
     character(len=*), intent(IN) :: dir, fname
 
     integer, allocatable :: pair_i(:), pair_a(:)
-    real(r8), allocatable :: energies(:,:)
+    FLOAT, allocatable :: energies(:,:)
     integer :: iunit, n_pairs, i, a, ia
 
     ! output
@@ -50,12 +50,12 @@ contains
         i = pair_i(ia)
         energies(ia, 1) = st%eigenval(a, 1) - st%eigenval(i, 1)
         if(type == 1) then 
-          energies(ia, 1) = energies(ia, 1) + 2._r8*K_term(i, a, i, a)
+          energies(ia, 1) = energies(ia, 1) + M_TWO*K_term(i, a, i, a)
         end if
 
         ! oscilator strengths?
         call matrix_elem(i, a, energies(ia, 2:4))
-        energies(ia, 2:4) = 2._r8 * (energies(ia, 2:4))**2 * &
+        energies(ia, 2:4) = M_TWO * (energies(ia, 2:4))**2 * &
              (st%eigenval(a, 1) - st%eigenval(i, 1))
 
         call oct_progress_bar(ia-1, n_pairs-1)
@@ -78,7 +78,7 @@ contains
         write(iunit, '(2i4)', advance='no') pair_i(ia), pair_a(ia)
       end if
       write(iunit, '(5(e15.8,1x))') energies(ia,1) / units_out%energy%factor, &
-           energies(ia, 2:4), 2._r8/3._r8*sum(energies(ia, 2:4))
+           energies(ia, 2:4), M_TWOTHIRD*sum(energies(ia, 2:4))
     end do
     call io_close(iunit)
 
@@ -88,13 +88,13 @@ contains
   contains
     
     subroutine solve_matrix()
-      real(r8), allocatable :: mat(:,:), os(:,:)
-      real(r8) :: temp
+      FLOAT, allocatable :: mat(:,:), os(:,:)
+      FLOAT :: temp
       integer :: ia, jb, i, j, a, b
       integer :: max, actual, iunit
 
       allocate(mat(n_pairs, n_pairs))
-      mat = 0._r8
+      mat = M_ZERO
 
       max = n_pairs*(1 + n_pairs)/2 - 1
       actual = 0
@@ -105,7 +105,7 @@ contains
         do jb = ia, n_pairs
           j = pair_i(jb)
           b = pair_a(jb)
-          mat(ia, jb) = 4._r8 * K_term(i, a, j, b) &
+          mat(ia, jb) = M_FOUR * K_term(i, a, j, b) &
                         * sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
 
           if(jb /= ia) mat(jb, ia) = mat(ia, jb) ! the matrix is symmetric
@@ -134,7 +134,7 @@ contains
 
       do ia = 1, n_pairs
         do j = 1, 3
-          energies(ia, 1+j) = 2._r8 * (sum(os(:,j)*mat(:,ia)        &
+          energies(ia, 1+j) = M_TWO * (sum(os(:,j)*mat(:,ia)        &
                *sqrt(st%eigenval(pair_a(:), 1) - st%eigenval(pair_i(:), 1)) ))**2 
         end do
       end do
@@ -150,7 +150,7 @@ contains
 
       do ia = 1, n_pairs
         write(iunit, '(es14.6)', advance='no') energies(ia, 1) / units_out%energy%factor
-        temp = 1._r8
+        temp = M_ONE
         if(maxval(mat(:, ia)) < abs(minval(mat(:, ia)))) temp = -temp
         do j = 1, n_pairs
           write(iunit, '(es14.6)', advance='no') temp*mat(j, ia)
@@ -164,19 +164,19 @@ contains
     end subroutine solve_matrix
 
     function K_term(i, a, j, b)
-      real(r8) :: K_term
+      FLOAT :: K_term
       integer, intent(in) :: i, j, a, b
     
       integer :: ik
-      real(r8) :: fxc
-      real(r8), allocatable :: rho_i(:), rho_j(:), pot(:)
+      FLOAT :: fxc
+      FLOAT, allocatable :: rho_i(:), rho_j(:), pot(:)
       allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
     
       rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * st%X(psi) (1:m%np, 1, a, 1)
       rho_j(:) =  st%X(psi) (1:m%np, 1, j, 1) * st%X(psi) (1:m%np, 1, b, 1)
     
       !  first the Hartree part (only works for real wfs...)
-      pot = 0._r8
+      pot = M_ZERO
       call poisson_solve(m, pot, rho_j)
       K_term = sum(rho_i(:)*pot(:))*m%vol_pp
       
@@ -214,7 +214,7 @@ contains
       ! allocate stuff
       allocate(pair_i(n_pairs), pair_a(n_pairs))
       allocate(energies(n_pairs, 4)) ! excitations + intensities
-      energies = 0._r8
+      energies = M_ZERO
       
       ! create pairs
       j = 1
@@ -235,7 +235,7 @@ contains
     end subroutine fix_pairs
 
     subroutine sort_energies
-      real(r8) :: tmp(4), emin
+      FLOAT :: tmp(4), emin
       integer ia, jb, min, itmp
 
       ! stupid algorith, but who cares
@@ -262,12 +262,12 @@ contains
 
     subroutine matrix_elem(i, j, s)
       integer, intent(in) :: i, j
-      real(r8), intent(out) :: s(3)
+      FLOAT, intent(out) :: s(3)
 
-      real(r8) :: x(3)
+      FLOAT :: x(3)
       integer :: k
 
-      s = 0._r8
+      s = M_ZERO
       do k = 1, m%np
         call mesh_xyz(m, k, x)
         s = s + x * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1)
@@ -282,37 +282,37 @@ contains
 
   ! WARNING This should be very improved...
   subroutine fxc_LDA(n, fxc)
-    real(r8), intent(in) :: n
-    real(r8), intent(out) :: fxc
+    FLOAT, intent(in) :: n
+    FLOAT, intent(out) :: fxc
 
-    real(r8), parameter :: &
-         ZERO=0.0_r8, ONE=1.0_r8, HALF=.5_r8, OPF=1.5_r8, C014=0.014_r8, &
-         TRD = ONE/3.0_r8, FTRD = 4.0_r8*TRD, ALP = 2.0_r8 * TRD, &
-         TFTM = 0.519842099789746380_r8, A0   = 0.521061761197848080_r8, &
-         CRS  = 0.6203504908994000870_r8, CXP  = (- 3.0_r8) * ALP / (M_PI*A0), &
-         CXF  = 1.259921049894873190_r8
+    FLOAT, parameter :: &
+         OPF  = CNST(1.5), C014 = CNST(0.014),                                 &
+         TRD  = M_ONE/M_THREE, FTRD = M_FOUR*TRD, ALP = M_TWO*TRD,             &
+         TFTM = CNST(0.519842099789746380 ),  A0 = CNST(0.521061761197848080), &
+         CRS  = CNST(0.6203504908994000870), CXP = -M_THREE*ALP / (M_PI*A0),   &
+         CXF  = CNST(1.259921049894873190)
 
-    real(r8), parameter :: &
-         C0311=0.03110_r8, C0014=0.00140_r8, &
-         C0538=0.05380_r8, C0096=0.00960_r8, C096=0.0960_r8, &
-         C0622=0.06220_r8, C004=0.0040_r8, C0232=0.02320_r8, &
-         C1686=0.16860_r8, C1P398=1.39810_r8, C2611=0.26110_r8, &
-         C2846=0.28460_r8, C1P053=1.05290_r8, C3334=0.33340_r8
+    FLOAT, parameter :: &
+         C0311 = CNST(0.03110), C0014 = CNST(0.00140), &
+         C0538 = CNST(0.05380), C0096 = CNST(0.00960), C096  = CNST(0.0960 ), &
+         C0622 = CNST(0.06220), C004  = CNST(0.0040 ), C0232 = CNST(0.02320), &
+         C1686 = CNST(0.16860), C1P398= CNST(1.39810), C2611 = CNST(0.26110), &
+         C2846 = CNST(0.28460), C1P053= CNST(1.05290), C3334 = CNST(0.33340)
 
     !    Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
-    real(r8), parameter :: &
-         CON2=0.0080_r8/3, CON3=0.35020_r8/3, &
-         CON4=0.05040_r8/3, CON5=0.00280_r8/3, CON6=0.19250_r8/3, &
-         CON7=0.02060_r8/3, CON8=9.78670_r8/6, CON9=1.0444_r8/3, &
-         CON10=7.37030_r8/6, CON11=1.33360_r8/3
+    FLOAT, parameter :: &
+                                      CON2 = CNST(0.0080 )/M_THREE, &
+        CON3 = CNST(0.35020)/M_THREE, CON4 = CNST(0.05040)/M_THREE, &
+        CON5 = CNST(0.00280)/M_THREE, CON6 = CNST(0.19250)/M_THREE, &
+        CON7 = CNST(0.02060)/M_THREE, CON8 = CNST(9.78670)/M_SIX,   &
+        CON9 = CNST(1.0444 )/M_THREE, CON10= CNST(7.37030)/M_SIX,   &
+        CON11= CNST(1.33360)/M_THREE
 
-    real(r8) :: rs, sqrs, rslog, te, be, dte, dbe, exp, ecp
-
-    fxc = 0._r8
+    FLOAT :: rs, sqrs, rslog, te, be, dte, dbe, exp, ecp
 
     ! calculate rs
-    if(n < 1e-30_r8) then
-      fxc = 0._r8
+    if(n < CNST(1e-30)) then
+      fxc = M_ZERO
       return
     end if
     rs = CRS / n**TRD
@@ -321,21 +321,21 @@ contains
     fxc = - CXP/(rs*rs)
 
     ! now PZ correlation
-    if (rs .gt. ONE) then
+    if (rs .gt. M_ONE) then
       sqrs = sqrt(rs)
-      te   = ONE + CON10*sqrs  + CON11*rs
-      dte  = CON10/(2._r8*sqrs)  + CON11
-      be   = ONE + C1P053*sqrs + C3334*rs
-      dbe  = C1P053/(2._r8*sqrs) + C3334
+      te   = M_ONE + CON10*sqrs  + CON11*rs
+      dte  = CON10/(M_TWO*sqrs)  + CON11
+      be   = M_ONE + C1P053*sqrs + C3334*rs
+      dbe  = C1P053/(M_TWO*sqrs) + C3334
       ecp  = -(C2846/be)
-      fxc  = fxc + ecp/be**2 * (dte*be - 2._r8*dbe*te)
+      fxc  = fxc + ecp/be**2 * (dte*be - M_TWO*dbe*te)
     else
       rslog = log(rs)
-      fxc  = fxc + C0622/rs + CON2*(1._r8 + rslog) - CON4
+      fxc  = fxc + C0622/rs + CON2*(M_ONE + rslog) - CON4
     end if
 
-    fxc = - fxc*rs/(n*3._r8) ! missing factor d rs/d n
-    fxc =   fxc / 2._r8      ! Rydbergs -> Hartree
+    fxc = - fxc*rs/(n*M_THREE) ! missing factor d rs/d n
+    fxc =   fxc / M_TWO        ! Rydbergs -> Hartree
 
   end subroutine fxc_LDA
 end module linear
