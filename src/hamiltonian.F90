@@ -9,6 +9,7 @@ use units
 use system
 use hartree
 use xc
+use lasers
 
 implicit none
 
@@ -22,7 +23,7 @@ type hamiltonian_type
   integer :: vnl_space            ! How should the nl    potential be calculated
   integer :: nextra               ! extra points for the interpolation method(s)
   real(r8), pointer :: Vpsl(:)    ! the external potential
-  real(r8), pointer :: Vhartree(:)! the external potential
+  real(r8), pointer :: Vhartree(:)! the hartree potential
   real(r8), pointer :: Vxc(:,:)   ! xc potential
   real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
@@ -185,9 +186,11 @@ end subroutine hamiltonian_energy
 #include "undef.F90"
 #include "real.F90"
 #include "hamiltonian_inc.F90"
+#include "h_forces.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "hamiltonian_inc.F90"
+#include "h_forces.F90"
 
 end module hamiltonian

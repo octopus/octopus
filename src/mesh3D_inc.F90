@@ -93,8 +93,7 @@ contains
     R_TYPE, allocatable :: fr(:,:,:)
     complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
     
-    integer :: n(3), nx, i, j, ix, iy, iz, kx, ky, kz
-    real(r8) :: temp(3), g2
+    integer :: n(3), nx, i, j
 
     do i=1, 3
        n(i) = m%fft_n(i)
@@ -120,23 +119,8 @@ contains
     if(present(grad)) then
       allocate(fw2(nx, n(2), n(3)))
       
-
       do i = 1, 3
-        temp(i) = (2.0_r8*M_Pi)/(n(i)*m%h(i))
-        fw2 = (0._r8, 0._r8)
-        kx = 0; ky = 0; kz = 0
-        do iz = 1, n(3)
-          if(i == 3) kz = pad_feq(iz, n(3), .true.)
-          do iy = 1, n(2)
-            if(i == 2) ky = pad_feq(iy, n(2), .true.)
-            do ix = 1, nx
-              if(i == 1) kx = pad_feq(ix, n(1), .true.)
-              
-              g2 = temp(1)*kx + temp(2)*ky + temp(3)*kz
-              fw2(ix, iy, iz) = g2*M_zI*fw1(ix, iy, iz)
-            end do
-          end do
-        end do
+        call mesh_gradient_in_FS(m, fw1, nx, n, fw2, i)
 #ifdef R_TREAL
         call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
 #else
@@ -151,21 +135,7 @@ contains
     end if
     
     if(present(lapl)) then
-      do i=1, 3
-         temp(i) = ((2.0_r8*M_Pi)/(n(i)*m%h(i)))**2
-      enddo
-      do iz = 1, n(3)
-        kz = pad_feq(iz, n(3), .true.)
-        do iy = 1, n(2)
-          ky = pad_feq(iy, n(3), .true.)
-          do ix = 1, nx
-            kx = pad_feq(ix, n(1), .true.)
-            
-            g2 = temp(1)*kx**2 + temp(2)*ky**2 + temp(3)*kz**2
-            fw1(ix, iy, iz) = -g2*fw1(ix, iy, iz)
-          end do
-        end do
-      end do
+      call mesh_laplacian_in_FS(m, fw1, nx, n, fw2)
 #ifdef R_TREAL
       call rfftwnd_f77_one_complex_to_real(m%dplanb, fw1, fr)
 #else
@@ -239,10 +209,6 @@ contains
       end do
     end do
 
-    !if(present(lapl)) then
-    !  lapl = lapl !/ (m%h(1)**2)
-    !end if
-
     if(present(grad)) then
       do i=1, 3
          grad(i,:) = grad(i,:) / m%h(i)
@@ -253,3 +219,4 @@ contains
   end subroutine rs_derivative
 
 end subroutine R_FUNC(mesh_derivatives)
+

@@ -119,10 +119,6 @@ subroutine scf_run(scf, sys, h)
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
       call write_info(1)
-
-!      call R_FUNC(ion_forces) (sys, rpsi, forces, &
-!                               ion_ion_forces=ion_ion_forces, local_forces=local_forces, &
-!                               non_local_forces=non_local_forces)
       exit
     end if
   end do
@@ -131,6 +127,9 @@ subroutine scf_run(scf, sys, h)
     message(1) = 'SCF *not* converged!'
     call write_warning(1)
   end if
+
+  ! calculate forces
+  call R_FUNC(forces)(h, sys)
 
   ! output final information
   call  scf_write_static()
@@ -193,17 +192,13 @@ subroutine scf_write_static()
       ' [',  trim(units_out%energy%abbrev), ']'
   write(iunit,'(1x)') 
 
-! TODO
-!  write(iunit,'(a)') 'Forces on the ions [eV/A]'
-!  write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-!  do i=1,sys%nions
-!     write(iunit,'(i4,a,3f15.6)') i,'  ion-ion:',ion_ion_forces(1:3,i)
-!     write(iunit,'(4x,a,3f15.6)')   ' nonlocal:',non_local_forces(1:3,i)
-!     write(iunit,'(4x,a,3f15.6)')   '    local:',local_forces(1:3,i)
-!     write(iunit,'(4x,a,3f15.6)')   '    total:',ion_ion_forces(1:3,i) + &
-!                                                 non_local_forces(1:3,i) + &
-!                                                 local_forces(1:3,i)
-!  enddo
+  write(iunit,'(5a)') 'Forces on the ions [', trim(units_out%energy%abbrev), &
+       "/", trim(units_out%length%abbrev), "]"
+  write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
+  do i = 1,sys%natoms
+    write(iunit,'(i4,a10,3f15.6)') i, trim(sys%atom(i)%spec%label), &
+         sys%atom(i)%f(:) * units_out%length%factor / units_out%energy%factor
+  end do
 
   call io_close(iunit)
   return
