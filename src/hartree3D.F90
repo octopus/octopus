@@ -192,7 +192,7 @@ subroutine hartree_cg(h, m, pot, dist)
   return
 end subroutine hartree_cg
 
-#ifdef HAVE_FFTW
+#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
 subroutine hartree_fft(h, m, pot, dist)
   type(hartree_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m

@@ -1,3 +1,6 @@
+/* FFTW library (www.fftw.org), version 3 */
+#undef HAVE_FFTW3
+
 /* FFTW library (www.fftw.org) */
 #undef HAVE_FFTW
 

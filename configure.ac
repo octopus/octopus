@@ -99,6 +99,32 @@ AC_LANG_PREPROC(Fortran 90)
 dnl how Fortran mangles function names
 AC_F90_WRAPPERS
 
+dnl tests for FFTW3
+dnl Will use FFTW3 if present, otherwise it will revert to FFTW2.
+lib_ok="ok"
+if test -z "${LIB_FFTW3}"; then
+	AC_ARG_WITH(fftw3, AC_HELP_STRING([--with-fftw3=DIR], [get it! (www.fftw.org)]), 
+                    [FFTW3DIR=$withval], [FFTW3DIR=""])
+	if test "$FFTW3DIR" = "no"; then
+		lib_ok="no"
+	else
+		save_ldflags="$LDFLAGS"
+		AS_IF([test "$FFTW3DIR"], [LDFLAGS="${LDFLAGS} -L${FFTW3DIR} -L${FFTW3DIR}/lib"])
+		ACX_CHECK_FUNC([LIB_FFTW3], [dfftw_plan_dft_1d])
+		ACX_CHECK_LIB([LIB_FFTW3], [fftw3],  [dfftw_plan_dft_1d], [-lfftw3])
+		AS_IF([test -z "${LIB_FFTW3}"], AC_MSG_WARN([couldn't find fftw3 library]))
+
+		LDFLAGS="$save_ldflags"
+		LIB_FFTW="${LIB_FFTW3}"
+		AS_IF([test "$FFTW3DIR"], [LIB_FFTW="-L${FFTW3DIR} -L${FFTW3DIR}/lib ${LIB_FFTW}"])
+	fi
+fi
+
+if test "$lib_ok" = "ok"; then
+	AC_DEFINE(HAVE_FFTW3, 1, [FFTW library (www.fftw.org)])
+	AC_SUBST(LIB_FFTW)
+else
+
 dnl tests for FFTW
 lib_ok="ok"
 if test -z "${LIB_FFTW}"; then
@@ -132,6 +158,9 @@ if test "$lib_ok" = "ok"; then
 	AC_DEFINE(HAVE_FFTW, 1, [FFTW library (www.fftw.org)])
 	AC_SUBST(LIB_FFTW)
 fi
+
+fi
+
 
 dnl tests for trlan. Default behaviour will be *not* using it.   
 lib_ok="no"

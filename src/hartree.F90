@@ -36,7 +36,7 @@ type hartree_type
   integer :: ncgiter
   type(mesh_type), pointer :: m_aux
 
-#ifdef HAVE_FFTW
+#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
   ! used by the fft methods
   type(fft_type) :: fft
   real(r8), pointer :: ff(:, :, :)   
@@ -88,7 +88,7 @@ subroutine hartree_end(h)
     nullify(h%m_aux%d) ! this is a copy from sys%m, so it should not be dealloated here
     call mesh_end(h%m_aux)
     deallocate(h%m_aux); nullify(h%m_aux)
-#ifdef HAVE_FFTW
+#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
   case(2,3)
     call fft_end(h%fft)
     deallocate(h%ff); nullify(h%ff)
@@ -114,7 +114,7 @@ subroutine hartree_solve(h, m, pot, dist)
     call hartree2d_solve(h, m, pot, dist)
   case(1)
     call hartree_cg(h, m, pot, dist)
-#ifdef HAVE_FFTW
+#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
   case(2,3)
     call hartree_fft(h, m, pot, dist)
 #endif

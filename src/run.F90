@@ -91,7 +91,7 @@ contains
 
 subroutine run()
   type(td_type), pointer :: td
-  integer :: iunit, i
+  integer :: iunit, i, ierr
   real(r8) :: x
   logical :: log
   character(len=100) :: filename
@@ -110,16 +110,12 @@ subroutine run()
     case(I_SETUP_RPSI)
       message(1) = 'Info: Allocating rpsi.'
       call write_info(1)
-        
       allocate(sys%st%R_FUNC(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
     case(I_END_RPSI)
       message(1) = 'Info: Deallocating rpsi.'
       call write_info(1)
-
-      if(associated(sys%st%R_FUNC(psi))) then
-        deallocate(sys%st%R_FUNC(psi)); nullify(sys%st%R_FUNC(psi))
-      end if
+      deallocate(sys%st%R_FUNC(psi), stat = ierr); nullify(sys%st%R_FUNC(psi))
 
     case(I_RANDOMIZE_RPSI)
       message(1) = 'Info: Random generating starting wavefunctions.'
