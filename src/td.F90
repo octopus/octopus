@@ -636,17 +636,20 @@ contains
         acc(:) = acc - d * x(:)
       end do
     end do
-    
-    ! now the gradient of the Hartree + xc potential
-    allocate(V(sys%m%np), dV(3, sys%m%np))
-    do j = 1, sys%st%nspin
-      V(:) = h%Vhartree(:) + h%Vxc(:, j)
-      call dmesh_derivatives(sys%m, V, grad=dV)
-      do k = 1, sys%m%np
-        acc(:) = acc(:) - dV(:, k) * sys%st%rho(k, j) * sys%m%vol_pp
-      end do
-    end do
-    deallocate(V, dV)
+
+!!$!   NOT NEEDED!   
+!!$    ! now the gradient of the Hartree + xc potential
+!!$    if(.not. h%ip_app) then
+!!$    allocate(V(sys%m%np), dV(3, sys%m%np))
+!!$    do j = 1, sys%st%nspin
+!!$      V(:) = h%Vhartree(:) + h%Vxc(:, j)
+!!$      call dmesh_derivatives(sys%m, V, grad=dV)
+!!$      do k = 1, sys%m%np
+!!$        acc(:) = acc(:) - dV(:, k) * sys%st%rho(k, j) * sys%m%vol_pp
+!!$      end do
+!!$    end do
+!!$    deallocate(V, dV)
+!!$    endif
 
     ! Adds the laser contribution
     call laser_field(td%no_lasers, td%lasers, t, field)
