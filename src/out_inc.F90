@@ -263,29 +263,36 @@ subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
   integer,          intent(out) :: ierr
   
   integer :: i
-  character(len=20)  :: mformat, mfmtheader
+  FLOAT   :: x0
+  character(len=20)  :: mformat, mformat2, mfmtheader
+  logical            :: gnuplot_mode = .false.
 
   call io_mkdir(dir)
 
 ! Define the format; check if code is single precision or double precision
 #if defined(SINGLE_PRECISION)
     mformat    = '(4es15.6)'
-    mfmtheader = '(a,a7,3a15)'
+    mformat2   = '(i4,5es15.6)'
+    mfmtheader = '(a,a7,5a15)'
 #else
     mformat    = '(4es23.14)'
-    mfmtheader = '(a,a10,3a23)'
+    mformat2   = '(i4,5es23.14)'
+    mfmtheader = '(a,a10,5a23)'
 #endif
 
-  if(iand(how, output_plain)  .ne.0) call plain()
-  if(iand(how, output_axis_x) .ne.0) call axis_x()
-  if(iand(how, output_axis_y) .ne.0) call axis_y()
-  if(iand(how, output_axis_z) .ne.0) call axis_z()
-  if(iand(how, output_plane_x).ne.0) call plane_x()
-  if(iand(how, output_plane_y).ne.0) call plane_y()
-  if(iand(how, output_plane_z).ne.0) call plane_z()
-  if(iand(how, output_dx)     .ne.0) call dx()
+  if(iand(how, output_gnuplot)   .ne.0) gnuplot_mode = .true.
+  if(iand(how, output_plain)     .ne.0) call plain()
+  if(iand(how, output_axis_x)    .ne.0) call axis_x()
+  if(iand(how, output_axis_y)    .ne.0) call axis_y()
+  if(iand(how, output_axis_z)    .ne.0) call axis_z()
+  if(iand(how, output_plane_x)   .ne.0) call plane_x()
+  if(iand(how, output_plane_y)   .ne.0) call plane_y()
+  if(iand(how, output_plane_z)   .ne.0) call plane_z()
+  if(iand(how, output_plane_z)   .ne.0) call plane_z()
+  if(iand(how, output_mesh_index).ne.0) call mesh_index()
+  if(iand(how, output_dx)        .ne.0) call dx()
 #if defined(HAVE_NETCDF)
-  if(iand(how, output_dx_cdf) .ne.0) call dx_cdf()
+  if(iand(how, output_dx_cdf)    .ne.0) call dx_cdf()
 #endif
 
 contains
@@ -360,13 +367,22 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
+    x0 = m%x(1,2)
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    
     do i = 1, m%np
-      if(ierr==0.and.m%Lxyz(i,1)==0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
+       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 2)) then
+          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
+          x0 = m%x(i, 2)
+       endif
+       if(ierr == 0.and.m%Lxyz(i,1)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+       end if
     end do
+    
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
-
+    
   end subroutine plane_x
 
 
@@ -377,11 +393,20 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write')
 
     write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
+    x0 = m%x(1,1)
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    
     do i = 1, m%np
-      if(m%Lxyz(i,2)==0) then
-        write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
+       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
+          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
+          x0 = m%x(i, 1)
+       endif
+       if(ierr == 0.and.m%Lxyz(i,2)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+       end if
     end do
+    
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
     
   end subroutine plane_y
@@ -394,14 +419,48 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write')
 
     write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
+    x0 = m%x(1,1)
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    
     do i = 1, m%np
-      if(m%Lxyz(i,3)==0) then
-        write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
+       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
+          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
+          x0 = m%x(i, 1)
+       endif
+       
+       if(ierr == 0.and.m%Lxyz(i,3)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+       end if
     end do
+    
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
     
   end subroutine plane_z
+
+
+  ! ---------------------------------------------------------
+  subroutine mesh_index()
+    integer  :: iunit, i
+    
+    iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write')
+
+    write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
+    x0 = m%x(1,1)
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+       
+    do i=1,m%np
+       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
+          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
+          x0 = m%x(i, 1)
+       endif
+       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, m%x(i,1),  &
+            m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+    enddo
+
+    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    call io_close(iunit)
+  end subroutine mesh_index
 
 
   ! ---------------------------------------------------------

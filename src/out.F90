@@ -51,25 +51,28 @@ type output_type
 end type output_type
 
 integer, public, parameter :: &
-     output_potential = 1, &
-     output_density   = 2, &
-     output_wfs       = 3, &
-     output_ELF       = 4, &
-     output_ELF_FS    = 5, &
-     output_geometry  = 6, &
-     output_wfs_sqmod = 7, &   
-     output_something = 8   ! this one should be the last
+     output_potential  =  1, &
+     output_density    =  2, &
+     output_wfs        =  3, &
+     output_ELF        =  4, &
+     output_ELF_FS     =  5, &
+     output_geometry   =  6, &
+     output_wfs_sqmod  =  7, &   
+     output_something  =  8   ! this one should be the last
 
-integer, parameter, private ::        &
-     output_axis_x    =   1, &
-     output_axis_y    =   2, &
-     output_axis_z    =   4, &
-     output_plane_x   =   8, &
-     output_plane_y   =  16, &
-     output_plane_z   =  32, &
-     output_dx        =  64, &
-     output_dx_cdf    = 128, &
-     output_plain     = 256
+integer, parameter, private :: &
+     output_axis_x     =    1, &
+     output_axis_y     =    2, &
+     output_axis_z     =    4, &
+     output_plane_x    =    8, &
+     output_plane_y    =   16, &
+     output_plane_z    =   32, &
+     output_dx         =   64, &
+     output_dx_cdf     =  128, &
+     output_plain      =  256, &
+     output_mesh_index =  512, &
+     output_gnuplot    = 1024
+
 
 ! doutput_kind => real variables; zoutput_kind => complex variables.
 integer, parameter, private :: &
@@ -105,6 +108,8 @@ subroutine output_init(outp)
 
   if(outp%what(output_something)) then
     outp%how = 0
+    call loct_parse_logical("OutputMeshIndex", .false., l)
+    if(l) outp%how = ior(outp%how, output_mesh_index)
     call loct_parse_logical("OutputAxisX", .false., l)
     if(l) outp%how = ior(outp%how, output_axis_x)
     if(conf%dim > 1) then
@@ -112,6 +117,8 @@ subroutine output_init(outp)
       if(l) outp%how = ior(outp%how, output_axis_y)
       call loct_parse_logical("OutputPlaneZ", .false., l)
       if(l) outp%how = ior(outp%how, output_plane_z)
+      call loct_parse_logical("OutputGnuplotMode", .false., l)
+      if(l) outp%how = ior(outp%how, output_gnuplot)
       if(conf%dim > 2) then
         call loct_parse_logical("OutputAxisZ", .false., l)
         if(l) outp%how = ior(outp%how, output_axis_z)
@@ -146,14 +153,15 @@ end subroutine output_init
 integer function output_fill_how(where) result(how)
   character(len=*), intent(in) :: where
   how = 0
-  if(index(where, "AxisX").ne.0)  how = ior(how, output_axis_x)
-  if(index(where, "AxisY").ne.0)  how = ior(how, output_axis_y)
-  if(index(where, "AxisZ").ne.0)  how = ior(how, output_axis_z)
-  if(index(where, "PlaneX").ne.0) how = ior(how, output_plane_x)
-  if(index(where, "PlaneY").ne.0) how = ior(how, output_plane_y)
-  if(index(where, "PlaneZ").ne.0) how = ior(how, output_plane_z)
-  if(index(where, "DX").ne.0)     how = ior(how, output_dx)
-  if(index(where, "Plain").ne.0)  how = ior(how, output_plain)
+  if(index(where, "AxisX").ne.0)   how = ior(how, output_axis_x)
+  if(index(where, "AxisY").ne.0)   how = ior(how, output_axis_y)
+  if(index(where, "AxisZ").ne.0)   how = ior(how, output_axis_z)
+  if(index(where, "PlaneX").ne.0)  how = ior(how, output_plane_x)
+  if(index(where, "PlaneY").ne.0)  how = ior(how, output_plane_y)
+  if(index(where, "PlaneZ").ne.0)  how = ior(how, output_plane_z)
+  if(index(where, "DX").ne.0)      how = ior(how, output_dx)
+  if(index(where, "Plain").ne.0)   how = ior(how, output_plain)
+  if(index(where, "Gnuplot").ne.0) how = ior(how, output_gnuplot)
 #if defined(HAVE_NETCDF)
   if(index(where, "NETCDF").ne.0) how = ior(how, output_dx_cdf)
 #endif
