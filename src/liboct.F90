@@ -117,6 +117,10 @@ module liboct
     subroutine oct_mkdir(name)
       character(len=*), intent(in) :: name
     end subroutine oct_mkdir
+
+    subroutine oct_getcwd(name)
+      character(len=*), intent(out) :: name
+    end subroutine oct_getcwd
   end interface
 
   private :: oct_parse_string, oct_parse_block_string

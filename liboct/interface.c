@@ -217,3 +217,9 @@ void F90_FUNC_(oct_mkdir, OCT_MKDIR)
 {
 	mkdir(name, 0775);
 }
+
+void F90_FUNC_(oct_getcwd, OCT_GETCWD)
+                 (char *name)
+{
+  getcwd(name);
+}
