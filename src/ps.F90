@@ -50,9 +50,9 @@ type ps_type
   real(r8) :: z, z_val
   integer :: l_max ! maximum value of l to take
   integer :: l_loc ! which component to take as local
-  integer :: l_max_occ ! maximum l-component which has non-null atomic occupation numbers
   integer :: so_l_max ! obvious meaning ;)
-  real(r8), pointer :: occ(:, :)
+
+  type(valconf) :: conf
 
   character(len=4) :: icore
   real(r8) :: rc_max
@@ -93,9 +93,11 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   select case(flavour(1:2))
   case('tm')
     call tm_init(pstm, trim(label), ispin)
-    ps%kbc = 1
     ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
-    ps%l_max_occ = ps%l_max
+    call valconf_copy(ps%conf, pstm%conf)
+    ps%conf%z = z
+    ps%conf%p = ps%l_max + 1
+    ps%kbc = 1
     ps%l_loc = lloc
     if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
     if(pstm%npotu==0) then
@@ -108,9 +110,9 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     if(conf%verbose > 999) call tm_debug(pstm)
   case('hg')
     call hgh_init(psp, trim(label), ispin)
+    call valconf_copy(ps%conf, psp%conf)
     ps%kbc = 3
     ps%l_max = psp%l_max
-    ps%l_max_occ = max(psp%l_max, 0)
     ps%l_loc = -1
     ps%so_l_max = ps%l_max
     ps%z = z
@@ -124,15 +126,11 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 ! We allocate all the stuff
   allocate(ps%kb      (0:ps%l_max, ps%kbc),         &
            ps%dkb     (0:ps%l_max, ps%kbc),         &
-           ps%ur      (0:ps%L_max_occ, ps%ispin),   &
+           ps%ur      (ps%conf%p, ps%ispin),   &
            ps%dknrm   (0:ps%L_max),                 &
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
-           ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
-           ps%occ     (0:ps%l_max_occ, ps%ispin))
-  ps%dknrm   (0:ps%l_max)                     = M_ZERO
-  ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
-  ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
-  ps%occ     (0:ps%l_max_occ, ps%ispin)       = M_ZERO
+           ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))!, &
+           ps%dknrm = M_ZERO; ps%h = M_ZERO; ps%k = M_ZERO!; ps%occ = M_ZERO
   if(ps%so_l_max >= 0) then
     allocate(ps%so_kb (0:ps%l_max, ps%kbc), &
              ps%so_dkb(0:ps%l_max, ps%kbc), &
@@ -147,10 +145,14 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
         if(ps%so_l_max >= 0) call spline_init(ps%so_kb(i, j))
         if(ps%so_l_max >= 0) call spline_init(ps%so_dkb(i, j))
      enddo
+  enddo
+
+  do i = 1, ps%conf%p
      do is = 1, ps%ispin
         call spline_init(ps%ur(i, is))
      enddo
   enddo
+
   call spline_init(ps%vlocal)
   call spline_init(ps%dvlocal)
   call spline_init(ps%core)
@@ -254,7 +256,7 @@ subroutine ps_debug(ps)
   do i = 1, npoints
      r = (i-1)*grid
      write(wave_unit, '('//trim(fm)//'f16.8)') &
-           r, ((splint(ps%ur(l, is), r), l = 0, ps%l_max_occ), is = 1, ps%ispin)
+           r, ((splint(ps%ur(l, is), r), l = 1, ps%conf%p), is = 1, ps%ispin)
   enddo
 
   ! Closes files and exits
@@ -279,10 +281,12 @@ subroutine ps_end(ps)
       call spline_end(ps%kb(i, j))
       call spline_end(ps%dkb(i, j))
     enddo
+  end do
+  do i = 1, ps%conf%p
     do is = 1, ps%ispin
       call spline_end(ps%Ur(i, is))
     enddo
-  end do
+  enddo
   if(ps%so_l_max>=0) then
   do i = 0, ps%so_L_max
     do j = 1, ps%kbc
@@ -296,7 +300,7 @@ subroutine ps_end(ps)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
 
-  deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k, ps%occ)
+  deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
   if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
 
   call pop_sub(); return
@@ -306,23 +310,29 @@ subroutine hgh_load(ps, psp)
   type(ps_type), intent(inout)      :: ps
   type(hgh_type), intent(inout)     :: psp
 
-  integer :: l
+  integer :: l, ll
+  real(r8) :: x
 
   sub_name = 'hgh_load'; call push_sub()
 
   ! Fixes some components of ps, read in psf
   ps%z_val = psp%z_val
   ps%icore = 'nc'
-  ps%rc_max = 1.1_r8 * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
+  if(ps%l_max>=0) then
+     ps%rc_max = 1.1_r8 * maxval(psp%kbr(0:ps%l_max)) ! Increase a little.
+  else
+     ps%rc_max = M_ZERO
+  endif
   ps%h = psp%h
   ps%k = psp%k
 
   ! Fixes the occupations
-  ps%occ(0:ps%l_max_occ, 1) = psp%occ(0:ps%l_max_occ)
   if(ps%ispin == 2) then
-    do l = 0, psp%l_max_occ
-       ps%occ(l, 1) = min(psp%occ(l), real(2*l+1,r8))
-       ps%occ(l, 2) = psp%occ(l) - ps%occ(l, 1)
+    do l = 1, ps%conf%p
+       ll = ps%conf%l(l)
+       x = ps%conf%occ(l, 1)
+       ps%conf%occ(l, 1) = min(x, real(2*ll+1,r8))
+       ps%conf%occ(l, 2) = x - ps%conf%occ(l, 1)
     enddo
   endif
 
@@ -355,9 +365,6 @@ subroutine tm_load(ps, pstm)
   ! Increasing radius a little, just in case.
   ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * 1.1_r8
 
-  ! Fixes the occupations
-  ps%occ(0:ps%l_max, 1:ps%ispin) = pstm%occ(0:ps%l_max, 1:ps%ispin)
-
   ! now we fit the splines
   call get_splines_tm(pstm, ps)
 
@@ -376,7 +383,7 @@ subroutine get_splines_tm(psf, ps)
   type(tm_type), intent(in) :: psf
   type(ps_type), intent(inout) :: ps
   
-  integer :: is, l, nrc, ir, nrcore
+  integer :: is, l, ll, nrc, ir, nrcore
   real(r8) :: chc
   real(r8), allocatable :: hato(:), derhato(:)
 
@@ -429,16 +436,17 @@ subroutine get_splines_tm(psf, ps)
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
   do is = 1, ps%ispin
-    do l = 0 , ps%L_max
-      nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
+    do l = 1, ps%conf%p
+      ll = ps%conf%l(l)
+      nrc = nint(log(psf%kbr(ll)/psf%b + 1.0_r8)/psf%a) + 1
       do ir = nrc+ 2, psf%nrval-2
-        if ( abs(psf%rphi(ir, l, 1+is)/psf%rofi(ir)) < eps ) exit
+        if ( abs(psf%rphi(ir, l-1, 1+is)/psf%rofi(ir)) < eps ) exit
       end do
       nrc = ir + 1
       hato = 0.0_r8
-      hato(2:nrc) = psf%rphi(2:nrc, l, 1 + is)/psf%rofi(2:nrc)
+      hato(2:nrc) = psf%rphi(2:nrc, l-1, 1 + is)/psf%rofi(2:nrc)
       hato(1) = hato(2)
-      call spline_fit(psf%nrval, psf%rofi, hato, ps%Ur(l, is))
+      call spline_fit(psf%nrval, psf%rofi, hato, ps%ur(l, is))
     end do
   end do
 
@@ -468,7 +476,7 @@ subroutine get_splines_hgh(psp, ps)
   type(hgh_type), intent(in)   :: psp
   type(ps_type), intent(inout) :: ps
 
-  integer :: l, is, nrc, ir, nrcore, j
+  integer :: l, ll, is, nrc, ir, nrcore, j
   real(r8) :: chc
   real(r8), allocatable :: hato(:), derhato(:)
 
@@ -493,8 +501,6 @@ subroutine get_splines_hgh(psp, ps)
 
   ! Now the part corresponding to the local pseudopotential
   ! where the asymptotic part is substracted 
-  hato = 0.0_r8
-  nrc = nint(log(psp%kbr(ps%L_max + 1)/psp%g%b + 1.0_r8)/psp%g%a) + 1
   hato(2:psp%g%nrval) = psp%vlocal(2:psp%g%nrval)*psp%g%rofi(2:psp%g%nrval) + psp%z_val
   hato(1) = psp%z_val
   call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%vlocal)
@@ -506,14 +512,8 @@ subroutine get_splines_hgh(psp, ps)
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
   do is = 1, ps%ispin
-  do l = 0 , ps%l_max_occ
-    nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
-    do ir = nrc+ 2, psp%g%nrval-2
-      if ( abs(psp%rphi(ir,l)/psp%g%rofi(ir)) < eps ) exit
-    enddo
-    nrc = ir + 1
-    hato = 0.0_r8
-    hato(2:nrc) = psp%rphi(2:nrc, l)/psp%g%rofi(2:nrc)
+  do l = 1, ps%conf%p
+    hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
     hato(1) = hato(2)
     call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
   end do

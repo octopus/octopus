@@ -136,22 +136,22 @@ contains
   subroutine from_pseudopotential(m)
     type(mesh_type), intent(in) :: m
     
-    integer :: i, l, is
+    integer :: i, n, is
     real(r8) :: r
     R_TYPE :: psi1, psi2
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
-      do l = 0 , s%ps%L_max_occ
+      do n = 1, s%ps%conf%p
         if(r >= r_small) then
           select case(sys%st%spin_channels)
           case(1)
-            psi1 = splint(s%ps%Ur(l, 1), r)
-            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1 /(4*M_PI)  
+            psi1 = splint(s%ps%Ur(n, 1), r)
+            rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)  
           case(2)
-            psi1 = splint(s%ps%Ur(l, 1), r)
-            psi2 = splint(s%ps%Ur(l, 2), r)
-            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1) * psi1*psi1 /(4*M_PI)
-            rho(i, 2) = rho(i, 2) + s%ps%occ(l, 2) * psi2*psi2 /(4*M_PI)
+            psi1 = splint(s%ps%Ur(n, 1), r)
+            psi2 = splint(s%ps%Ur(n, 2), r)
+            rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1) * psi1*psi1 /(4*M_PI)
+            rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2) * psi2*psi2 /(4*M_PI)
           end select
         end if
       end do
@@ -164,7 +164,7 @@ subroutine lcao_init(sys, h)
   type(system_type), intent(IN)      :: sys
   type(hamiltonian_type), intent(IN) :: h
 
-  integer :: norbs, i, ispin, a, ik, n1, i1, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
+  integer :: norbs, i, ispin, a, ik, n1, i1, l, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
   integer, parameter :: orbs_local = 2
 
   R_TYPE, allocatable :: psi1(:,:), psi2(:,:), hpsi(:,:)
@@ -181,9 +181,10 @@ subroutine lcao_init(sys, h)
   lcao_data%atoml = .true.
   norbs = 0
   atoms_loop: do i1 = 1, sys%natoms
-    l_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
-      if(sum(sys%atom(i1)%spec%ps%occ(l1, :)).ne.0.0_r8) then
-        norbs = norbs + (2*l1+1)
+    l_loop: do l1 = 1, sys%atom(i1)%spec%ps%conf%p
+      l = sys%atom(i1)%spec%ps%conf%l(l1)
+      if(sum(sys%atom(i1)%spec%ps%conf%occ(l1, :)).ne.M_ZERO) then
+        norbs = norbs + (2*l+1)
       else
         lcao_data%atoml(i1, l1) = .false.
       endif
@@ -211,9 +212,10 @@ subroutine lcao_init(sys, h)
   do ik = 1, sys%st%nik
      n1 = 1
      do i1 = 1, sys%natoms
-        do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
+        do l1 = 1, sys%atom(i1)%spec%ps%conf%p
+           l = sys%atom(i1)%spec%ps%conf%l(l1)
            if(.not. lcao_data%atoml(i1, l1)) cycle
-           do lm1 = -l1, l1
+           do lm1 = -l, l
               do d1 = 1, sys%st%dim
                  ispin = states_spin_channel(sys%st%ispin, ik, d1)
                  call get_wf(sys, i1, l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
@@ -315,7 +317,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
   integer, intent(in)   :: i, l, lm, ispin
   R_TYPE, intent(out) :: psi(0:sys%m%np)
     
-  integer :: j, d2
+  integer :: j, d2, ll
   real(r8) :: x(3), a(3), r, p, ylm, g(3)
   type(spline_type), pointer :: s
 
@@ -328,10 +330,11 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
   else
     s => sys%atom(i)%spec%ps%Ur(l, ispin)
 
+    ll = sys%atom(i)%spec%ps%conf%l(l)
     do j = 1, sys%m%np
       call mesh_r(sys%m, j, r, x=x, a=a)
       p = splint(s, r)
-      ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+      ylm = oct_ylm(x(1), x(2), x(3), ll, lm)
       psi(j) = p * ylm
     end do
   end if

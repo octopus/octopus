@@ -47,12 +47,14 @@ type tm_type
                        rho_val(:),   &
                        kbr(:)
 
+  type(valconf) :: conf
+
   ! Other stuff
   integer :: nrval
   type(logrid_type) :: g
   real(r8), pointer :: dkbcos(:), dknrm(:), &
                        so_dkbcos(:), so_dknrm(:)
-  real(r8), pointer :: occ(:, :)
+
   integer :: ispin
 end type tm_type
 
@@ -66,7 +68,7 @@ subroutine tm_init(pstm, filename, ispin)
   integer, intent(in)          :: ispin
 
   character(len=256) :: filename2
-  integer :: iunit, l
+  integer :: iunit, l, n
   logical :: found
   real(r8) :: x, y
 
@@ -118,44 +120,61 @@ subroutine tm_init(pstm, filename, ispin)
            pstm%dknrm(0:pstm%npotd-1),               &
            pstm%so_dkbcos(1:pstm%npotu),             &
            pstm%so_dknrm(1:pstm%npotu),              &
-           pstm%kbr(0:pstm%npotd),                   &
-           pstm%occ(0:pstm%npotd-1, ispin))
+           pstm%kbr(0:pstm%npotd))
 
-  ! Fixes the occupations
-  select case(pstm%irel)
-    case('isp')
-      do l = 0, pstm%npotd - 1
-         read(pstm%title(l*17+3:l*17+11),'(f4.2,1x,f4.2)') x, y
-         if(pstm%ispin == 1) then
-           pstm%occ(l, 1) = x + y
-         else
-           pstm%occ(l, 1) = x; pstm%occ(l, 2) = y
-         endif
-      enddo
-    case('nrl')
-      do l = 0, pstm%npotd - 1
-         read(pstm%title(l*17+3:l*17+7), '(f5.2)') x
-         if(pstm%ispin == 1) then
-           pstm%occ(l, 1) = x
-         else
-           pstm%occ(l, 1) = min(x, real(2*l+1,r8))
-           pstm%occ(l, 2) = x - pstm%occ(l, 1)
-         endif
-      enddo
-    case('rel')
-      do l = 0, pstm%npotd - 1
-         read(pstm%title(l*17+3:l*17+7), '(f5.2)') x
-         if(pstm%ispin == 1) then
-           pstm%occ(l, 1) = x
-         else
-           pstm%occ(l, 1) = min(x, real(2*l+1,r8))!min(x, real(2*l,r8))
-           pstm%occ(l, 2) = x - pstm%occ(l, 1)
-         endif
-      enddo
-  end select
+  ! Fills the valence configuration data.
+  call build_valconf(pstm)
+  do n = 1, pstm%npotd
+     l = pstm%conf%l(n)
+     if(ispin==2 .and. pstm%irel.ne.'isp') then
+       x = pstm%conf%occ(n, 1)
+       pstm%conf%occ(n,1) = min(x, real(2*l+1,r8))
+       pstm%conf%occ(n,2) = x - pstm%conf%occ(n,1)
+     endif
+  enddo
 
   call pop_sub(); return
 end subroutine tm_init
+
+subroutine build_valconf(pstm)
+  type(tm_type) :: pstm
+
+  character(len=1) :: char1(6), char2
+  integer :: l
+
+  sub_name = 'build_valconf'; call push_sub()
+
+  call valconf_null(pstm%conf)
+  pstm%conf%symbol = pstm%namatm
+  pstm%conf%p = pstm%npotd
+  write(char2,'(i1)') pstm%conf%p
+
+  select case(pstm%irel)
+  case('nrl')
+    read(pstm%title,'('+char2+'(i1,a1,f5.2,10x))') &
+          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
+  case('isp')
+    read(pstm%title,'('+char2+'(i1,a1,f4.2,1x,f4,2,6x))') &
+          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), pstm%conf%occ(l,2), l = 1, pstm%npotd)
+  case('rel')
+    read(pstm%title,'('+char2+'(i1,a1,f5.2,10x))') &
+          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
+  end select
+
+  do l = 1, pstm%npotd
+     select case(char1(l))
+       case('s'); pstm%conf%l(l) = 0
+       case('p'); pstm%conf%l(l) = 1
+       case('d'); pstm%conf%l(l) = 2
+       case('f'); pstm%conf%l(l) = 3
+       case default
+         message(1) = 'Error reading pseudopotential file.'
+         call write_fatal(1)
+     end select
+  enddo
+
+  call pop_sub(); return
+end subroutine build_valconf
 
 subroutine tm_end(pstm)
   type(tm_type), intent(inout) :: pstm
@@ -303,9 +322,9 @@ subroutine solve_schroedinger(psf)
   call calculate_valence_screening(rho(:, 1:1), psf%chcore, ve(:, 1:1), psf%g, 1, psf%icorr, psf%irel)
 
   ! Calculation of the pseudo-wave functions.
-  !       rphi(1:nrval, 0:spec%ps_lmax, :) : radial pseudo-wave functions. They are normalized so that
+  !       rphi(1:nrval, 1:psf%conf%p, :) : radial pseudo-wave functions. They are normalized so that
   !                                      int dr {rphi^2} = 1. Thus its units are of bohr^(-1/2).
-  !       eigen(0:spec%ps_lmax, :)        : eigenvalues, in Rydbergs.
+  !       eigen(1:psf%conf%p, :)        : eigenvalues, in Rydbergs.
   do l = 0, psf%npotd-1
     do ir = 2, psf%nrval
       vtot = psf%vps(ir, l) + ve(ir, 1) + dble(l*(l + 1))/(psf%rofi(ir)**2)
@@ -340,8 +359,8 @@ subroutine solve_schroedinger(psf)
   ! And now, for the spin polarized case...
   spin_polarized: if(psf%ispin == 2) then
 
-    rho = 0.0_r8    ! Here information of previous calculation could be used, but
-    prev = 0.0_r8   ! to save code lines, let us start from scratch.
+    rho = M_ZERO    ! Here information of previous calculation could be used, but
+    prev = M_ZERO   ! to save code lines, let us start from scratch.
     diff = 1.0e5_r8
     iter = 0
     self_consistent: do
@@ -366,15 +385,15 @@ subroutine solve_schroedinger(psf)
       end do ang
       end do spin
 
-      rho = 0.0_r8
+      rho = M_ZERO
       do is = 1, psf%ispin
       do l = 0, psf%npotd-1
          rho(1:psf%g%nrval, is) = rho(1:psf%g%nrval, is) + &
-                                  psf%occ(l, is)*psf%rphi(1:psf%g%nrval, l, 1 + is)**2
+                                  psf%conf%occ(l+1, is)*psf%rphi(1:psf%g%nrval, l, 1 + is)**2
       enddo
       enddo
 
-      diff = 0.0_r8
+      diff = M_ZERO
       do is = 1, psf%ispin
          diff = diff + sqrt( sum(psf%g%drdi(2:psf%g%nrval) * &
                                (rho(2:psf%g%nrval, is)-prev(2:psf%g%nrval, is))**2) )
@@ -811,7 +830,7 @@ subroutine tm_debug(pstm)
   write(dat_unit,'(/,a,i4)') 'Maximum L: ', pstm%npotd-1
   write(dat_unit,'(/,a)')   'Occupations:'
   do is = 1, pstm%ispin
-     write(dat_unit,'(4x,4f14.6)') pstm%occ(0:pstm%npotd-1, is)
+     write(dat_unit,'(4x,4f14.6)') pstm%conf%occ(1:pstm%conf%p, is)
   enddo
   write(dat_unit,'(/,a)') 'Eigenvalues: '
   write(dat_unit,'(4x,4f14.6)') pstm%eigen(0:pstm%npotd-1, 1)/2

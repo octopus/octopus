@@ -426,7 +426,7 @@ contains
               call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
               ylm = oct_ylm(x(1), x(2), x(3), l, lm)
               a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
-                                     splint(s%ps%ur(l, 1), r)*ylm*m%vol_pp
+                                     splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
             end do
             a%duvu(add_lm, 1, 1) = M_ONE/(a%duvu(add_lm, 1, 1)*s%ps%dknrm(l))
             if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8 .and. s%ps%ispin==1) then

@@ -45,10 +45,7 @@ type hgh_type
   real(r8)         :: k(0:3, 1:3, 1:3)
 
   type(valconf)    :: conf
-
   integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
-  integer          :: l_max_occ ! Maximum l-value of the occupied wavefunctions
-  real(r8)         :: occ(0:3)  ! Occupations of the pseudo-wavefunctions
 
   ! Logarithmic grid parameters
   type(logrid_type) :: g
@@ -105,33 +102,29 @@ subroutine hgh_init(psp, filename, ispin)
   endif
   call io_close(iunit)
 
-  ! Finds out psp%l_max
+  ! Finds out psp%l_max. The most special cases are H, He, Li_sc and Be_sc, where psp%l_max = -1.
   psp%l_max = 0
   do while(psp%rc(psp%l_max)>0.01_r8)
      psp%l_max = psp%l_max + 1
   end do
   psp%l_max = psp%l_max - 1
 
-  ! Fixes psp%l_max_occ. It is equal to l_max, except for H and He, where
-  ! l_max = -1 (no nonlocal components).
-  psp%l_max_occ = max(0, psp%l_max)
-
   ! Initializes the logarithmic grid. Parameters are hard-coded.
-       !psp%g%a = 1.25e-2_r8; psp%g%b = 4.0e-4_r8
-       !psp%g%nrval = 1001
        psp%g%a = 3e-2_r8; psp%g%b = 4.0e-4_r8
        psp%g%nrval = 431
   call init_logrid(psp%g, psp%g%a, psp%g%b, psp%g%nrval)
 
   ! Allocation of stuff.
-  allocate(psp%vlocal(1:psp%g%nrval), &
-           psp%kbr(0:psp%l_max+1))
+  allocate(psp%vlocal(1:psp%g%nrval))
+           psp%vlocal = M_ZERO
   if(psp%l_max >= 0) then
-    allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))
-    psp%kb = 0.0_r8;
+    allocate(psp%kbr(0:psp%l_max), &
+             psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))
+             psp%kbr = M_ZERO; psp%kb = M_ZERO
   endif
-  allocate(psp%rphi(psp%g%nrval, 0:psp%l_max_occ), psp%eigen(0:psp%l_max_occ))
-  psp%vlocal = 0.0_r8; psp%rphi = 0.0_r8
+  allocate(psp%rphi (psp%g%nrval, psp%conf%p), &
+           psp%eigen(psp%conf%p))
+           psp%rphi = M_ZERO; psp%eigen = M_ZERO
 
   call pop_sub(); return
 end subroutine hgh_init
@@ -141,8 +134,8 @@ subroutine hgh_end(psp)
 
   sub_name = 'hgh_end'; call push_sub()
 
-  deallocate(psp%kbr, psp%vlocal, psp%rphi, psp%eigen)
-  if(associated(psp%kb)) deallocate(psp%kb)
+  deallocate(psp%vlocal, psp%rphi, psp%eigen)
+  if(associated(psp%kb)) deallocate(psp%kb, psp%kbr)
   call kill_logrid(psp%g)
 
   call pop_sub(); return
@@ -190,9 +183,6 @@ function load_params(unit, params)
   params%c(1:4) = 0.0_r8; params%rlocal = 0.0_r8;
   params%rc = 0.0_r8; params%h = 0.0_r8; params%k = 0.0_r8
 
-  ! reads occupations from file
-  !read(unit, *) params%occ(0:3)
-
   ! Reads the file in a hopefully smart way
   iostat = 1; j = 5
   read(unit,'(a)') line
@@ -214,7 +204,6 @@ function load_params(unit, params)
     load_params = 1
     call pop_sub(); return
   endif
-  params%occ(0:3) = params%conf%occ(1:4)
 
   read(unit,'(a)', iostat = iostat) line
   if(iostat .ne. 0) then
@@ -292,15 +281,6 @@ subroutine get_cutoff_radii(psp)
 
   sub_name = 'get_cutoff_radii_psp'; call push_sub()
 
-  ! local part ....
-  psp%kbr(0:psp%l_max + 1) = 0.0_r8
-  do ir = psp%g%nrval, 2, -1
-    dincv = abs(psp%vlocal(ir)*psp%g%rofi(ir) + psp%z_val)
-    if(dincv > threshold) exit
-  end do
-  psp%kbr(psp%l_max + 1) = psp%g%rofi(ir + 1)
-
-  ! non-local part....
   do l = 0, psp%l_max
     tmp = 0.0_r8
     do i = 1, 3
@@ -462,7 +442,7 @@ end function projectorg
 subroutine solve_schroedinger(psp)
   type(hgh_type), intent(inout)     :: psp
   
-  integer :: iter, ir, l, nnode, nprin, i, j, irr
+  integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
   real(r8) :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
   real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:), rho(:), ve(:)
   real(r8), parameter :: tol = 1.0e-4_r8
@@ -492,43 +472,49 @@ subroutine solve_schroedinger(psp)
   self_consistent: do while( diff > tol )
     prev = rho
     iter = iter + 1
-    do l = 0, psp%l_max_occ
+    do n = 1, psp%conf%p
+      l = psp%conf%l(n)
       do ir = 2, psp%g%nrval
         vtot = 2*psp%vlocal(ir) + ve(ir) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
         nonl = 0.0_r8
-        if(iter>1 .and. psp%l_max >=0 .and. psp%rphi(ir, l) > 1.0e-7) then
+        if(iter>1 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > 1.0e-7) then
            do i = 1, 3
            do j = 1, 3
               do irr = 2, psp%g%nrval
                  nonl = nonl + psp%h(l, i, j)*psp%kb(ir, l, i)* & 
-                        psp%g%drdi(irr)*psp%g%rofi(irr)*psp%rphi(irr, l)*psp%kb(irr,l,j)
+                        psp%g%drdi(irr)*psp%g%rofi(irr)*psp%rphi(irr, n)*psp%kb(irr,l,j)
               enddo
            enddo
            enddo
-           nonl = 2*nonl/psp%rphi(ir, l)*psp%g%rofi(ir)
+           nonl = 2*nonl/psp%rphi(ir, n)*psp%g%rofi(ir)
         endif
         vtot = vtot + nonl
         hato(ir) = vtot*s(ir) + a2b4
       end do
       hato(1) = hato(2)
-      nnode = 1; nprin = l + 1
+      ! We will assume there is only the possibility of two equal l numbers...
+      nnode = 1
+      do k = 1, n - 1
+         if(psp%conf%l(k)==psp%conf%l(n)) nnode = 2
+      enddo
+      nprin = l + 1
       if(iter == 1) then
          e = -((psp%z_val/dble(nprin))**2); z = psp%z_val
       else
-         e = psp%eigen(l); z = psp%z_val
+         e = psp%eigen(n); z = psp%z_val
       endif
       dr = -1.0e5_r8; rmax = psp%g%rofi(psp%g%nrval)
       call egofv(hato, s, psp%g%nrval, e, g, y, l, z, psp%g%a, psp%g%b, rmax, nprin, nnode, dr)
-      psp%eigen(l) = e
+      psp%eigen(n) = e
 
-      psp%rphi(2:psp%g%nrval, l) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
-      psp%rphi(1, l) = psp%rphi(2, l)
+      psp%rphi(2:psp%g%nrval, n) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
+      psp%rphi(1, n) = psp%rphi(2, n)
     end do
-    rho = 0.0_r8
-    do l = 0, psp%l_max_occ
-       rho = rho + psp%occ(l)*psp%rphi(1:psp%g%nrval, l)**2
+    rho = M_ZERO
+    do n = 1, psp%conf%p
+       rho = rho + psp%conf%occ(n,1)*psp%rphi(1:psp%g%nrval, n)**2
     enddo
-    if(iter>1) rho = 0.5*rho + 0.5*prev
+    if(iter>1) rho = M_HALF*(rho + prev)
     diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval)-prev(2:psp%g%nrval))**2))
     !if(conf%verbose>20 .and. mpiv%node == 0) then
     !  write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
@@ -544,18 +530,19 @@ subroutine solve_schroedinger(psp)
   endif
 
   !  checking normalization of the calculated wave functions
-  do l = 0, psp%l_max_occ
-    e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, l)**2))
+  !do l = 0, psp%l_max_occ
+  do n = 1, psp%conf%p
+    e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
     e = abs(e - 1.0d0)
     if (e > 1.0d-5 .and. conf%verbose > 0) then
-      write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
+      write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
       write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
       call write_warning(2)
     end if
   end do
 
   ! Output in Ha and not in stupid Rydbergs.
-  psp%eigen = psp%eigen / 2.0_r8
+  psp%eigen = psp%eigen / M_TWO
 
   ! Deallocations.
   deallocate(s, hato, g, y, rho, prev)
@@ -638,8 +625,8 @@ subroutine hgh_debug(psp)
   if(psp%l_max >= 0) then
      write(dat_unit,'(a,4f14.6)') 'kbr   = ', psp%kbr
   endif
-  write(dat_unit,'(a,4f14.6)')    'eigen = ', psp%eigen
-
+  write(dat_unit,'(a,5f14.6)')    'eigen = ', psp%eigen
+  write(dat_unit,'(a,5f14.6)')    'occ   = ', psp%conf%occ(1:psp%conf%p, 1)
   ! Writes down local part.
   do i = 1, psp%g%nrval
      write(loc_unit, *) psp%g%rofi(i), psp%vlocal(i)
@@ -654,7 +641,7 @@ subroutine hgh_debug(psp)
 
   ! And the pseudo-wavefunctions.
   do i = 1, psp%g%nrval
-     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 0, psp%l_max_occ)
+     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 1, psp%conf%p)
   enddo
 
   ! Closes files and exits

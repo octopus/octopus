@@ -13,17 +13,23 @@
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Next stuff is for the "valence_conf" data type, made to handle atomic configurations.
-  public :: valconf, write_valconf, read_valconf, valconf_null, get_valconf, VALCONF_STRING_LENGTH
+  public :: valconf, &
+            valconf_copy, &
+            write_valconf, &
+            read_valconf, &
+            valconf_null, &
+            get_valconf, &
+            VALCONF_STRING_LENGTH
   character(len=1), parameter :: spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
   integer, parameter :: VALCONF_STRING_LENGTH = 80
   type valconf
     integer           :: z
     character(len=2)  :: symbol
-    integer           :: type   ! 0 for the most normal valence configuration, 1 for semicore.
-    integer           :: p      ! number of orbitals.
-    integer           :: n(6)   ! n quantum number
-    integer           :: l(6)   ! l quantum number
-    real(r8)          :: occ(6) ! occupations of each level
+    integer           :: type     ! 0 for the most normal valence configuration, 1 for semicore.
+    integer           :: p        ! number of orbitals.
+    integer           :: n(6)     ! n quantum number
+    integer           :: l(6)     ! l quantum number
+    real(r8)          :: occ(6,2) ! occupations of each level
   end type
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -38,12 +44,24 @@
     c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
   end subroutine valconf_null
 
+  subroutine valconf_copy(cout, cin)
+    type(valconf), intent(out) :: cout
+    type(valconf), intent(in)  :: cin
+    cout%z      = cin%z
+    cout%symbol = cin%symbol
+    cout%type   = cin%type
+    cout%p      = cin%p
+    cout%n      = cin%n
+    cout%l      = cin%l
+    cout%occ    = cin%occ
+  end subroutine valconf_copy
+
   subroutine write_valconf(c, s)
     type(valconf), intent(in) :: c
     character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
-         (c%n(j),spec_notation(c%l(j)),c%occ(j),',',j=1,c%p)
+         (c%n(j),spec_notation(c%l(j)),c%occ(j,1),',',j=1,c%p)
   end subroutine write_valconf
 
   subroutine read_valconf(s, c)
@@ -52,7 +70,7 @@
     integer :: j
     character(len=1) :: lvalues(1:6)
     read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
-         (c%n(j),lvalues(j),c%occ(j),j=1,c%p)
+         (c%n(j),lvalues(j),c%occ(j,1),j=1,c%p)
     do j = 1, c%p
        select case(lvalues(j))
        case('s'); c%l(j) = 0
