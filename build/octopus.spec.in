@@ -46,14 +46,15 @@ rm -rf $RPM_BUILD_ROOT
 
 %build
 
+MYHOME="/home/marques/software"
+
 %configure \
-  F90=ifc \
-  F90FLAGS="-nbs -pc80 -pad -align -O3 -tpp7 -I/home/marques/include" \
-  CFLAGS="-Wall -O2 -I/home/marques/include" \
-  LDFLAGS="-L/home/marques/lib -L/opt/intel/mkl/lib/32" \
-  LIB_LAPACK="-lmkl_lapack" LIB_BLAS='-lmkl_p4' \
-  LDF90FLAGS="-static -lguide -lpthread" \
-  --enable-netcdf
+  FC=ifc \
+  FCFLAGS="-nbs -pc80 -pad -align -O3 -tpp6 -I$MYHOME/include" \
+  CFLAGS="-Wall -O2 -I$MYHOME/include" \
+  LDFLAGS="-L$MYHOME/lib -L/usr/lib/gcc-lib/i386-redhat-linux/3.3.2" \
+  LDFCFLAGS="-static -lguide -lpthread" \
+  --with-netcdf
 
 make
 (cd doc; make octopus.ps; gzip octopus.ps)
