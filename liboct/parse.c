@@ -172,7 +172,7 @@ int parse_int(char *name, int def)
 
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_CMPLX){
-		ret = (int)(GSL_REAL(ptr->value.c) + 0.5);
+		ret = (int)rint(GSL_REAL(ptr->value.c));
 		fprintf(fout, "%s = %d\n", name, ret);
 	}else{
 		ret = def;
@@ -264,7 +264,7 @@ int parse_block_int(char *name, int l, int col, int *r)
 	o = parse_block_work(name, l, col, &pr);
 
 	if(o == 0 && pr.type == PR_CMPLX){
-		*r = (int)(GSL_REAL(pr.value.c) + 0.5);
+		*r = (int)rint(GSL_REAL(pr.value.c));
 		fprintf(fout, "%s(%d, %d) = %d\n", name, l, col, *r);
 		return 0;
 	}else

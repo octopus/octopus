@@ -1,4 +1,5 @@
 05/5/02 (marques)
+  - Added a couple of .hgh files
   - Created Makefiles for HGH share directory
   - Added split-operator propagator (do *not* use with velocity gauge)
 03/5/02 (acastro)
