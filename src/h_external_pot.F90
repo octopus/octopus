@@ -64,7 +64,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
 
-  integer :: n(3), hn, i, j, ix, iy, iz, ixx, iyy, izz, l, lm, add_lm
+  integer :: n(3), hn, i, j, ix, iy, iz, ixx, iyy, izz, l, lm, add_lm, kx, ky, kz
   integer(POINTER_SIZE) :: nl_planf
   real(r8) :: r, x(3), vl, g(3)
   real(r8), allocatable :: fr(:,:,:)
@@ -114,20 +114,25 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
             end do
           end do
         end do
-        call rfftwnd_f77_one_real_to_complex(nl_planf, fr, fw)
-        r = real(s(i)%nl_fft_n(1)*s(i)%nl_fft_n(2)*s(i)%nl_fft_n(3)* &
-             n(1)*n(2)*n(3), r8)
-        call zscal(hn*n(2)*n(3), cmplx(1.0_r8/sqrt(r), 0.0_r8, r8), &
+        call rfftwnd_f77_one_real_to_complex(nl_planf, fr(1,1,1), fw(1,1,1))
+        r = real(n(1)*n(2)*n(3), r8)
+        call zscal(hn*n(2)*n(3), cmplx(1.0_r8/r, 0.0_r8, r8), &
              fw(1, 1, 1), 1)
 
         ! have to cut the high frequencies
         do ix = 1, s(i)%nl_hfft_n
-          ixx = pad_feq(pad_feq(ix, s(i)%nl_fft_n(1), .true.), n(1), .false.)
+          kx  = pad_feq(ix, s(i)%nl_fft_n(1), .true.)
+          ixx = pad_feq(kx, n(1), .false.)
           do iy = 1, s(i)%nl_fft_n(2)
-            iyy = pad_feq(pad_feq(iy, s(i)%nl_fft_n(2), .true.), n(2), .false.)
+            ky  = pad_feq(iy, s(i)%nl_fft_n(2), .true.)
+            iyy = pad_feq(ky, n(2), .false.)
             do iz = 1, s(i)%nl_fft_n(3)
-              izz = pad_feq(pad_feq(iz, s(i)%nl_fft_n(3), .true.), n(3), .false.)
-              s(i)%nl_fw(ix, iy, iz, add_lm) = fw(ixx, iyy, izz)
+              kz  = pad_feq(iz, s(i)%nl_fft_n(3), .true.)
+              izz = pad_feq(kz, n(3), .false.)
+              s(i)%nl_fw(ix, iy, iz, add_lm) = fw(ixx, iyy, izz) * exp(-M_PI*M_zi* (&
+                   kx*(1._r8/n(1)-1._r8/s(i)%nl_fft_n(1)) + &
+                   ky*(1._r8/n(2)-1._r8/s(i)%nl_fft_n(2)) + &
+                   kz*(1._r8/n(3)-1._r8/s(i)%nl_fft_n(3))))
             end do
           end do
         end do
@@ -321,7 +326,8 @@ contains
     j = 0
     do k = 1, h%np
       call mesh_r(m, k, r, a=a%x)
-      if(r <= s%ps%rc_max) then
+      ! we enlarge slightly the mesh (good for the interpolation scheme)
+      if(r <= s%ps%rc_max + m%h(1)) then
         j = j + 1
         a%Jxyz(j) = k
       end if
@@ -348,10 +354,12 @@ contains
             if(l .ne. s%ps%L_loc) then
               call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
             end if
+
             add_lm = add_lm + 1
           end do lm_loop
         end do l_loop
       end do j_loop
+
      else ! Fourier space
       center(:) = nint(a%x(:)/m%h(:))
       x(:)  = a%x(:) - center(:)*m%h(:)
@@ -369,17 +377,17 @@ contains
         lm_loop2: do lm = -l , l
           nl_fw = M_z0
           call phase_factor(m, s%nl_fft_n(1:3), x, s%nl_fw(:,:,:, add_lm), nl_fw)
-          nl_fw =  s%nl_fw(:,:,:, add_lm)
           call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_fr)
           
           j_loop2: do j = 1, a%Mps
             p = a%Jxyz(j)
             ix = m%Lx(p) - center(1) + s%nl_fft_n(1)/2 + 1
             iy = m%Ly(p) - center(2) + s%nl_fft_n(2)/2 + 1
-            iz = m%Lz(p) - center(3) + s%nl_fft_n(2)/2 + 1
+            iz = m%Lz(p) - center(3) + s%nl_fft_n(3)/2 + 1
             
             a%uV(j, add_lm) = nl_fr(ix, iy, iz)
           end do j_loop2
+
           add_lm = add_lm + 1
         end do lm_loop2
       end do l_loop2
