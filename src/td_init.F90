@@ -123,9 +123,6 @@ subroutine td_init(td, sys, m, st, h)
     call write_fatal(4)
   endif
   
-  ! occupational analysis stuff
-  call oct_parse_logical("TDOccupationalAnalysis", .false., td%occ_analysis)
-
   ! Check what should be output
   call oct_parse_logical("TDOutputMultipoles", .true., td%out_multip)
   if(td%move_ions>0) then
@@ -142,6 +139,7 @@ subroutine td_init(td, sys, m, st, h)
   endif
   call oct_parse_logical("TDOutputLaser", h%no_lasers>0, td%out_laser)
   call oct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
+  call oct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
 
   call td_init_states()
 

@@ -51,9 +51,6 @@ type td_type
 
   integer :: lmax        ! maximum multipole moment to write
 
-  !!! WARNING: should this stay or should this go?
-  logical :: occ_analysis ! do we perform occupational analysis?
-
   !variables controlling the output
   logical :: out_multip  ! multipoles
   logical :: out_coords  ! coordinates
@@ -61,6 +58,7 @@ type td_type
   logical :: out_acc     ! electronic acceleration
   logical :: out_laser   ! laser field
   logical :: out_energy  ! several components of the electronic energy
+  logical :: out_proj    ! projection onto the GS KS eigenfunctions
 
 #ifndef DISABLE_PES
   type(PES_type) :: PESv
@@ -95,19 +93,17 @@ subroutine td_run(td, u_st, sys, h)
   type(hamiltonian_type), intent(inout) :: h
 
   integer :: i, ii, j, idim, ist, ik
-  integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, out_laser, out_energy
+  integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
+       out_laser, out_energy, out_proj
 
-  real(r8), allocatable :: dipole(:), multipole(:,:)  ! stuff for calculating multipoles
   real(r8), allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
-  real(r8) :: etime, tacc(3)
-  complex(r8) :: gsp
+  real(r8) :: etime
   character(len=100) :: filename
 
   sub_name = 'td_run'; call push_sub()
   
-  allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
-
   if(mpiv%node==0) then
+    write(filename, '(i3.3)') mpiv%node
     if(td%out_multip) &
          call write_iter_init(out_multip, td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
     if(td%out_coords) &
@@ -120,6 +116,8 @@ subroutine td_run(td, u_st, sys, h)
          call write_iter_init(out_laser,  td%iter, td%dt/units_out%time%factor, "td.general/laser")
     if(td%out_energy) &
          call write_iter_init(out_energy, td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
+    if(td%out_proj) &
+         call write_iter_init(out_proj,   td%iter, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
   end if
 
   ! Calculate initial forces and kinetic energy
@@ -229,25 +227,22 @@ subroutine td_run(td, u_st, sys, h)
     end if
 
     ! output multipoles
-    if(td%out_multip) then
-      call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, dipole, multipole)
-      call td_write_multipole(i)
-    end if
+    if(td%out_multip) call td_write_multipole(i)
 
     ! output positions, vels, etc.
     if(td%out_coords) call td_write_nbo(i, sys%kinetic_energy, h%etot)
 
     ! If harmonic spectrum is desired, get the acceleration
-    if(td%out_acc) then
-      call td_calc_tacc(tacc, td%dt*i, reduce = .true.)
-      call td_write_acc(i, tacc)
-    end if
+    if(td%out_acc) call td_write_acc(i)
 
     ! output laser field
     if(td%out_laser) call td_write_laser(i)
 
     ! output electronic energy
     if(td%out_energy) call td_write_el_energy(i)
+
+    ! output projections onto the GS KS eigenfunctions
+    if(td%out_proj) call td_write_proj(i)
     
 #ifndef DISABLE_PES
     call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
@@ -280,9 +275,9 @@ subroutine td_run(td, u_st, sys, h)
     if(td%out_acc)    call write_iter_end(out_acc)
     if(td%out_laser)  call write_iter_end(out_laser)
     if(td%out_energy) call write_iter_end(out_energy)
+    if(td%out_proj)   call write_iter_end(out_proj)
   end if
 
-  deallocate(dipole, multipole)
 contains
 
   subroutine td_run_zero_iter(m)
@@ -297,11 +292,8 @@ contains
     ! create general subdir
     call oct_mkdir("td.general")
 
-    ! output static dipole (iter 0)
-    if(td%out_multip) then
-      call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, dipole, multipole)
-      call td_write_multipole(0)
-    end if
+    if(td%out_multip) call td_write_multipole(0)
+    if(td%out_proj)   call td_write_proj(0)
 
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. M_ZERO) then
@@ -343,10 +335,7 @@ contains
 
     ! create files for output and output headers
     if(td%out_coords) call td_write_nbo(0, sys%kinetic_energy, h%etot)    
-    if(td%out_acc) then
-      call td_calc_tacc(tacc, M_ZERO, reduce = .true.)
-      call td_write_acc(0, tacc)
-    end if
+    if(td%out_acc)    call td_write_acc(0)
     if(td%out_laser)  call td_write_laser(0)
     if(td%out_energy) call td_write_el_energy(0)
     call td_write_data(0)

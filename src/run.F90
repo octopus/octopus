@@ -294,7 +294,7 @@ subroutine run()
 
     case(I_SETUP_OCC_AN)
 
-      if(td%occ_analysis) then
+      if(td%out_proj) then
         message(1) = 'Info: Seting up occupational analysis.'
         call write_info(1)
         instr = instr - 1
@@ -308,7 +308,7 @@ subroutine run()
       message(1) = 'Info: Cleaning up occupational analysis.'
       call write_info(1)
 
-      if(td%occ_analysis) then
+      if(td%out_proj) then
         i_stack(instr) = I_END_UNOCC
         cycle program
       else

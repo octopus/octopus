@@ -947,9 +947,6 @@ Finally, the potential itself is defined by the fourth argument.
 Use any of the @code{x}, @code{y}, @code{z} or @code{r} variables
 to define the potential.
 
-Note that further pseudopotentials can be downloaded from the
-@uref{http://www.tddft.org/programs/octopus/pseudo.php, @code{octopus} homepage}.
-
 @end itemize
 @end itemize
 @end itemize
@@ -1110,8 +1107,8 @@ is assumed to be a block of the form:
   @end example
 where the @code{size*} are half of the lengths of the box in each direction.
 
-@item @vindex @code{XLength}
-@code{XLength} (double, 1.0 a.u.):
+@item @vindex @code{ZLength}
+@code{ZLength} (double, 1.0 a.u.):
 If @code{BoxShape == cylinder} is half the total length of the cylinder.
 
 @item @vindex @code{Spacing}
@@ -1124,24 +1121,6 @@ is assumed to be a block of the form:
       spacingx | spacingy | spacingz
     %
   @end example
-In plane-wave codes, the quality of the calculations is determined by the
-``cutoff'' energy: the larger the cutoff, the better the calculation. This cutoff
-is defined as the kinetic energy of the higuest-frequency plane wave used
-in the calculation. The spacing is the equivalent parameter for real-space 
-calculations. We may establish a correspondance between the two magnitudes,
-that is, a real-space mesh has a ``Grid Cutoff'' (this value is given on output) 
-which is the cutoff of the corresponding FFT grid. On 1D calculations,
-the plane-wave @math{\rm G} vectors have the values:
-@math{
-{\rm G} = {{2\pi} \over {Nh}}j, j = -N/2, \dots N/2,
-}
-where @math{h} is the grid spacing.
-The cutoff is then @math{G_{max}^2/2 = {{\pi^2} \over {2h^2}}}.
-For higuer dimensionality, one has to put the coarsest @math{h}. Note that in
-this case this value does not correspond to the highest possible
-kinetic energy of the plane-waves, but to the the higuest kinetic energy
-of the plane waves of pure x, y or z directions.
-
 
 @item @vindex @code{DerivativesSpace}
 @code{DerivativesSpace} (integer, real_space)
@@ -1776,17 +1755,44 @@ getting into @code{octopus}.
 Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
 during a time-dependent simulation.
 
-@item @vindex @code{TDOccupationalAnalysis}
-@code{TDOccupationalAnalysis} (logical, false):
-If true, outputs the projections of the time-dependent Kohn-Sham
-wave-functions onto the static (zero time) wave-functions to the
-file @code{td.general/projections}.
+@item @vindex @code{TDOutputMultipoles}
+@code{TDOutputMultipoles} (logical, true):
+If true, outputs the multipole moments of the density to the file @code{td.general/projections}.
+This is required to, e.g., calculate optical absorption spectra of finite systems.
 
-@item @vindex @code{TDWriteHarmonicSpectrum}
-@code{TDWriteHarmonicSpectrum} (logical, false):
+@item @vindex @code{TDOutputCoordinates}
+@code{TDOutputCoordinates} (logical, @code{MoveIons} > 0 ):
+If true (and if the atoms are allowed to move), outputs the coordinates, velocities,
+and forces of the atoms to the the file @code{td.general/coordinates}.
+
+@item @vindex @code{TDOutputGSProjection}
+@code{TDOutputGSProjection} (logical, false):
+If true, outputs the projection of the time-dependent Kohn-Sham Slater determinant
+onto the ground-state to the file @code{td.general/gs_projection}. As the calculation
+of the projection is fairly heavy, this is only done every @code{OutputEvery} 
+iterations.
+
+@item @vindex @code{TDOutputAcceleration}
+@code{TDOutputAcceleration} (logical, false):
 When @emph{true} outputs the acceleration, calculated from Ehrenfest theorem,
 in the file @code{td.general/acceleration}. This file can then be
 processed by the utility "hs-from-acc" in order to obtain the harmonic spectrum.
+
+@item @vindex @code{TDOutputLaser}
+@code{TDOutputLaser} (logical, true):
+If @code{true}, @code{octopus} outputs the laser field to the file ``@code{td.general/laser}''.
+
+@item @vindex @code{TDOutputElEnergy}
+@code{TDOutputElEnergy} (logical, false):
+If @code{true}, @code{octopus} outputs the different components of the electronic energy
+to the file @code{td.general/el_energy}.
+
+@item @vindex @code{TDOutputOccAnalysis}
+@code{TDOutputOccAnalysis} (logical, false):
+If true, outputs the projections of the time-dependent Kohn-Sham
+wave-functions onto the static (zero time) wave-functions to the
+file @code{td.general/projections.XXX}.
+
 
 @item @vindex @code{MoveIons}
 @code{MoveIons} (integer, 0): 
@@ -1890,11 +1896,7 @@ where ``x'' stands for the iteration number at which each write is done.
 Note that if you wish to plot any function (@code{OutputKSPotential = yes}, etc.),
 at least one of the output formats should be enabled (@code{OutputPlaneX = yes},
 @code{OutputDX = yes}, @code{OutputNETCDF = yes}, etc.). [This is not necessary
-if you wish to plot the geometry (@code{OutputGeometry = yes})]. Note further
-that the data written by @code{OutputAxisX}, @code{OutputPlaneX} etc. has
-always the (side) length of the longest axis; this is independent from the
-chosen geometry. Data points which are inexistent in the actual geometry
-have the value zero in those files.
+if you wish to plot the geometry (@code{OutputGeometry = yes})].
 
 @itemize @bullet
 
@@ -1990,13 +1992,6 @@ The output is saved when the iteration number is a multiple of the
 @itemize @bullet
 @item @vindex @code{OutputEvery}
 @code{OutputEvery} (integer, 1000)
-@end itemize
-
-In a time-dependent simulation it is also possible to output the laser field using:
-@itemize @bullet
-@item @vindex @code{OutputLaser}
-@code{OutputLaser} (logical, false):
-If @code{true}, @code{octopus} outputs the laser field to the file ``@code{td.general/laser}''.
 @end itemize
 
 

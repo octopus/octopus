@@ -25,10 +25,7 @@
            iter=iter, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
 
       ! calculate projection onto the ground state
-      if(td%out_gsp) then
-        call zstates_project_gs(sys%st, sys%m, gsp)
-        call td_write_gsp(iter, gsp)
-      end if
+      if(td%out_gsp) call td_write_gsp(iter)
 
       if(mpiv%node==0) then
         if(td%out_multip) call write_iter_flush(out_multip)
@@ -56,6 +53,7 @@
 
     integer :: is, l, m, add_lm
     character(len=50) :: aux
+    real(r8), allocatable :: dipole(:), multipole(:,:)
     
     if(mpiv%node.ne.0) return ! only first node outputs
 
@@ -111,6 +109,9 @@
       call write_iter_nl(out_multip)
     end if
     
+    allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
+    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, dipole, multipole)
+   
     call write_iter_start(out_multip)
     do is = 1, sys%st%nspin
       call write_iter_double(out_multip, dipole(is)/units_out%length%factor, 1)
@@ -126,6 +127,7 @@
     end do
     call write_iter_nl(out_multip)
     
+    deallocate(dipole, multipole)
   end subroutine td_write_multipole
 
   subroutine td_write_nbo(iter, ke, pe)
@@ -196,11 +198,15 @@
     
   end subroutine td_write_nbo
 
-  subroutine td_write_gsp(iter, p)
+  subroutine td_write_gsp(iter)
     integer, intent(in)  :: iter
-    complex(r8), intent(in) :: p
+    complex(r8) :: gsp
 
-    if(mpiv%node.ne.0) return ! only first node outputs
+    ! all processors calculate the projection
+    call zstates_project_gs(sys%st, sys%m, gsp)
+
+    ! but only first node outputs
+    if(mpiv%node.ne.0) return
 
     if(iter == 0) then
       ! empty file
@@ -221,18 +227,18 @@
     ! can not call write_iter_start, for the step is not 1
     call write_iter_int(out_gsp, iter, 1)
     call write_iter_double(out_gsp, iter*td%dt/units_out%time%factor,  1)
-    call write_iter_double(out_gsp, real(p),  1)
-    call write_iter_double(out_gsp, aimag(p), 1)
+    call write_iter_double(out_gsp, real(gsp),  1)
+    call write_iter_double(out_gsp, aimag(gsp), 1)
     call write_iter_nl(out_gsp)
 
   end subroutine td_write_gsp
 
-  subroutine td_write_acc(iter, acc)
+  subroutine td_write_acc(iter)
     integer, intent(in)  :: iter
-    real(r8), intent(in) :: acc(3)
 
     integer :: i
     character(len=7) :: aux
+    real(r8) :: acc(3)
 
     if(mpiv%node.ne.0) return ! only first node outputs
 
@@ -256,6 +262,8 @@
       end do
       call write_iter_nl(out_acc)
     endif
+
+    call td_calc_tacc(acc, td%dt*i, reduce = .true.)
 
     call write_iter_start(out_acc)
     call write_iter_double(out_acc, acc/units_out%acceleration%factor, conf%dim)
@@ -364,3 +372,45 @@
     call write_iter_nl(out_energy)
 
   end subroutine td_write_el_energy
+
+  subroutine td_write_proj(iter)
+    integer, intent(in)  :: iter
+
+    complex(r8), allocatable :: projections(:,:,:)
+    character(len=20) :: aux
+    integer :: ik, ist, uist
+
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_proj)
+
+      ! first line -> column names
+      call write_iter_header_start(out_proj)
+      do ik = 1, sys%st%nik
+        do ist = 1, sys%st%nst
+          do uist = 1, u_st%nst
+            write(aux, '(i3,a,i3)') ist, ' -> ', uist
+            call write_iter_header(out_proj, 'Re {'//trim(aux)//'}')
+            call write_iter_header(out_proj, 'Im {'//trim(aux)//'}')
+          end do
+        end do
+      end do
+      call write_iter_nl(out_proj)
+    endif
+
+    allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik))
+    call calc_projection(u_st, sys%st, sys%m, projections)
+
+    call write_iter_start(out_proj)
+    do ik = 1, sys%st%nik
+      do ist = 1, sys%st%nst
+        do uist = 1, u_st%nst
+          call write_iter_double(out_proj,  real(projections(uist, ist, ik)), 1)
+          call write_iter_double(out_proj, aimag(projections(uist, ist, ik)), 1)
+        end do
+      end do
+    end do
+    call write_iter_nl(out_proj)
+
+    deallocate(projections)
+  end subroutine td_write_proj
