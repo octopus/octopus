@@ -31,9 +31,11 @@ type states_type
   integer :: dim           ! Dimension of the state (one or two for spinors)
   integer :: nst           ! Number of states in each irreducible subspace
   integer :: nik           ! Number of irreducible subspaces
+  integer :: nik_axis(3)   ! Number of kpoints per axis
   integer :: ispin         ! spin mode (unpolarized, spin polarized, spinors)
   integer :: nspin         ! dimension of rho (1, 2 or 4)
   integer :: spin_channels ! 1 or 2, wether spin is or not considered.
+  logical :: select_axis(3)! which axes are used fo k points
 
   ! pointers to the wavefunctions
   real(r8), pointer :: dpsi(:,:,:,:)
@@ -58,6 +60,7 @@ type states_type
 
   real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
   real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
+
 end type states_type
 
 ! Parameters...
@@ -97,29 +100,44 @@ subroutine states_init(st, m, val_charge)
   end if
 
   if (conf%periodic_dim>0) then
-    call oct_parse_int('NumberKPoints', 4, st%nik)
-    if (st%nik < 1) then
-      write(message(1),'(a,i4,a)') "Input: '", st%nik,"' is not a valid NumberKPoints"
+    if(oct_parse_block_n('NumberKPoints')<1) then
+      message(1) = 'Block "NumberKPoints" not found in input file.'
+      call write_fatal(1)
+    end if
+    st%nik_axis = 1
+    do i = 1, conf%periodic_dim
+      call oct_parse_block_int('NumberKPoints', 0, i-1, st%nik_axis(i))
+    end do    
+    if (any(st%nik_axis < 1)) then
+      message(1) = 'Input: NumberKPoints is not valid'
       message(2) = '(NumberKPoints >= 1)'
       call write_fatal(2)
-    else if (st%nik == 1) then
-      message(1) = "The system is periodic, but the number of k points is set to 1"
-      message(2) = "output will be generated for the Gamma point only"
-      call write_warning(2)
     end if
+    
+    select case(oct_parse_block_n('SelectKAxis'))
+    case(1)
+      do i = 1, conf%periodic_dim
+	call oct_parse_block_logical('SelectKAxis', 0, i-1, st%select_axis(i))
+      end do
+      do i=1, conf%periodic_dim
+	if (.not.st%select_axis(i)) then
+	  write(message(1),'(a,i1,a)')'Info: K points in axis ',i,' are neglected'
+	  call write_info(1) 
+	  st%nik_axis(i)=1
+	end if
+      end do
+    case default
+      st%select_axis=.true.
+    end select
+    st%nik=PRODUCT(st%nik_axis)
   else
     st%nik = 1
   end if
+
   
   call oct_parse_double('ExcessCharge', 0.0_r8, excess_charge)
 
-  if(conf%periodic_dim>0) then
-    i = 2 ! we take two extra states, just in case we have a metal
-  else
-    i = 0 ! no extra states
-  end if
-
-  call oct_parse_int('ExtraStates', i, nempty)
+  call oct_parse_int('ExtraStates', 0, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
     message(2) = '(0 <= ExtraStates)'
@@ -455,6 +473,14 @@ subroutine states_fermi(st, m)
   return
 end subroutine states_fermi
 
+!DEBUG
+!subroutine fermi_level(st)
+!  type(states_type), intent(inout) :: st
+!  
+!  st%ef
+!
+!end subroutine fermi_level
+
 subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -506,23 +532,36 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 
   if(iunit==stdout.and.conf%verbose<=20) return
 
+  ns = 1
+  if(st%nspin == 2) ns = 2
+
   message(1) = 'Eigenvalues ['//trim(units_out%energy%abbrev)//']'
   call write_info(1, iunit)
+  if (conf%periodic_dim>0) then 
+!DEBUG
+!    message(1) = 'Eigenvalues are relative to the Fermi energy'
+!    write(message(2),'(a,f12.6,a)')'Fermi energy =',st%ef,' ['//trim(units_out%energy%abbrev)//']'
+!   call write_info(2, iunit)
+  end if
+  if (st%nik > ns) then
+    message(1) = 'Kpoints ['//trim(units_out%length%abbrev)//'^-1]'
+    call write_info(1, iunit)
+  end if
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
 #endif
 
-    ns = 1
-    if(st%nspin == 2) ns = 2
-
     do ik = 1, st%nik, ns
       if(st%nik > ns) then
-        write(iunit, '(3(a,f12.6),a)') 'k = (', st%kpoints(1, ik), ',', st%kpoints(2, ik), ',', st%kpoints(3, ik), ')'
+        write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
+        st%kpoints(1, ik)*units_out%length%factor, ',',           &
+        st%kpoints(2, ik)*units_out%length%factor, ',',           &
+        st%kpoints(3, ik)*units_out%length%factor, ')'
       end if
       
       do is = 1, ns
-        write(iunit, '(a4)', advance='no') '#'
+        write(iunit, '(a4)', advance='no') '#st'
         write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
              ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
       end do
@@ -542,15 +581,29 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
           end if
       
           write(iunit, '(i4)', advance='no') j
-          if(st%ispin == 3) then
-            write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
-                 st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
-            if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+          if (conf%periodic_dim>0) then 
+            if(st%ispin == 3) then
+              write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
+                   (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+            else
+              write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+!DEBUG
+!                   (st%eigenval(j, ik+is)-st%ef)/units_out%energy%factor, o
+                    (st%eigenval(j, ik+is))/units_out%energy%factor, o
+             if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+            endif
           else
-            write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-                 st%eigenval(j, ik+is)/units_out%energy%factor, o
-            if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
-          endif
+            if(st%ispin == 3) then
+              write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
+                   st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+            else
+              write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+                   st%eigenval(j, ik+is)/units_out%energy%factor, o
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+            endif
+          end if
         end do
         write(iunit, '(1x)', advance='yes')
       end do
@@ -561,6 +614,48 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 #endif
   
 end subroutine states_write_eigenvalues
+
+subroutine states_write_bands(iunit, nst, st)
+  integer, intent(in) :: iunit, nst
+  type(states_type), intent(IN) :: st
+
+  integer ik, j, ns, is, pd
+!  type(mesh_type):: m
+
+  if(iunit==stdout.and.conf%verbose<=20) return
+  
+  ! shortcuts
+  pd=conf%periodic_dim
+  ns = 1
+  if(st%nspin == 2) ns = 2
+
+#ifdef HAVE_MPI
+  if(mpiv%node == 0) then
+#endif
+      do j = 1, nst
+        do ik = 1, st%nik, ns
+!DEBUG
+!          do is = 0, ns-1
+!          if(st%ispin == 3) then
+!
+!          else
+            write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
+            st%kpoints(:,ik)*units_out%length%factor,            &
+!DEBUG
+!            (st%eigenval(j, ik)-st%ef)/units_out%energy%factor
+            (st%eigenval(j, ik))/units_out%energy%factor
+!          end if       
+!          end do
+        end do
+        write(iunit, '(a)')' '
+      end do                 
+                 
+#ifdef HAVE_MPI
+  end if
+#endif
+
+end subroutine states_write_bands
+
 
 integer function states_spin_channel(ispin, ik, dim)
   integer, intent(in) :: ispin, ik, dim
