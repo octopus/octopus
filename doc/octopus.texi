@@ -1401,18 +1401,19 @@ Selects the mixing procedure to be used during the SCF cycle. Possible
 values are:
   @itemize @minus
     @item @code{0}: Linear mixing.
-    @item @code{1}: Reserved for Anderson-Pulay mixing; currently not implemented.
+    @item @code{1}: Guaranteed-reduction Pulay (GR-Pulay).
     @item @code{2}: Broyden mixing.
   @end itemize
 
 @item @vindex @code{Mixing}
 @code{Mixing} (double, 0.3):
 Determines the amount of the new density/potential which is to be mixed
-with the old one.
+with the old one. Used only by linear mixing and Broyden mixing.
 
-@item @vindex @code{BroydenNumber}
-@code{BroydenNumber} (integer, 3):
-Number of steps used by Broyden mixing to extrapolate the new density/potential.
+@item @vindex @code{MixNumberSteps}
+@code{MixNumberSteps} (integer, 3):
+Number of steps used by Broyden mixing or GR-Pulay mixing to extrapolate the new 
+density/potential.
 
 @end itemize
 

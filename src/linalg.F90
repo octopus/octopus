@@ -284,4 +284,38 @@ contains
     deallocate(work, rwork)
   end subroutine ziagonalise
 
+  ! Invert a real symmetric matrix using LAPACK
+  subroutine dsyinvert(n, m, matrix)
+    integer, intent(in) :: n, m
+    real(r8), intent(inout) :: matrix(m, m)
+
+    integer :: info, i, j
+    integer, allocatable :: iwork(:)
+    real(r8), allocatable :: work(:)
+
+    allocate(work(m), iwork(m))
+
+    call dsytrf('u', n, matrix, m, iwork, work, m, info)
+    if(info /= 0) then
+      write(message(1), '(a, i3)') 'dsyinvert: LAPACK dsytrf returned info = ', info
+      call write_fatal(1)
+    end if
+
+    call dsytri('u', n, matrix, m, iwork, work, info)
+    if(info /= 0) then
+      write(message(1), '(a, i3)') 'dsyinvert: LAPACK dsytri returned info = ', info
+      call write_fatal(1)
+    end if
+
+    deallocate(work, iwork)
+
+    ! complete the matrix
+    do i = 1, n
+      do j = i + 1, n
+        matrix(j, i) = matrix(i, j)
+      end do
+    end do
+
+  end subroutine dsyinvert
+
 end module linalg
