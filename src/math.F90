@@ -377,7 +377,7 @@ subroutine ziagonalise(dim, a, b, e)
   deallocate(work, rwork)
 end subroutine ziagonalise
 
-include "undef.F90"
+#include "undef.F90"
 #include "complex.F90"
 #include "math_inc.F90"
 
