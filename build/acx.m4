@@ -16,31 +16,33 @@
 ## 02111-1307, USA.
 ##
 
+################################################
 # Check size of a pointer
+# ----------------------------------
 AC_DEFUN([ACX_POINTER_SIZE],
 [AC_MSG_CHECKING([for the size of a pointer])
-AC_REQUIRE([AC_PROG_CC])
-if test -z "$POINTER_SIZE"; then
-cat >pointertest.c <<EOF
+  AC_REQUIRE([AC_PROG_CC])
+  if test -z "$POINTER_SIZE"; then
+  cat >pointertest.c <<EOF
 #include <stdio.h>
 void main()
 {
   printf("%ld", sizeof(void *));
 }
 EOF
-	ac_try='$CC $CFLAGS -o pointertest.x pointertest.c 1>&AC_FD_CC'
-	if AC_TRY_EVAL(ac_try); then
-  	ac_try=""
-	else
-  	echo "configure: failed program was:" >&AC_FD_CC
-	  cat pointertest.c >&AC_FD_CC
-  	rm -f pointertest*
-	  AC_MSG_ERROR(failed to compile c program to find the size of a pointer)
-	fi
-	ac_pointersize=`./pointertest.x`;
-	rm -f pointertest*
-	AC_DEFINE_UNQUOTED(POINTER_SIZE, ${ac_pointersize}, [The size of a C pointer])
-	AC_MSG_RESULT([${ac_pointersize} bytes])
+  ac_try='$CC $CFLAGS -o pointertest.x pointertest.c 1>&AC_FD_CC'
+  if AC_TRY_EVAL(ac_try); then
+    ac_try=""
+  else
+    echo "configure: failed program was:" >&AC_FD_CC
+    cat pointertest.c >&AC_FD_CC
+    rm -f pointertest*
+    AC_MSG_ERROR(failed to compile c program to find the size of a pointer)
+  fi
+  ac_pointersize=`./pointertest.x`;
+  rm -f pointertest*
+  AC_DEFINE_UNQUOTED(POINTER_SIZE, ${ac_pointersize}, [The size of a C pointer])
+  AC_MSG_RESULT([${ac_pointersize} bytes])
 fi
 ])
 
@@ -57,4 +59,54 @@ m4_define([AC_LANG_PREPROC(Fortran)],[
   # this should not be hardwired
   if test -z "$FCCPP"; then FCCPP="/lib/cpp -C"; fi
   AC_SUBST(FCCPP)
+])
+
+################################################
+# Get default FFLAGS
+# ----------------------------------
+# this function can certainly be improved on
+AC_DEFUN([ACX_FCFLAGS],
+[
+AC_REQUIRE([AC_CANONICAL_HOST])
+
+if test -z "${FCFLAGS}"; then
+  case "${host}" in
+  i?86*linux*)
+    case "${FC}" in
+    pgf90*)
+      FCFLAGS="-O2 -fast -Munroll -Mnoframe -Mdalign"
+      ;;
+    abf90*)
+      FCFLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
+      ;;
+    ifc|ifort*)
+      FCFLAGS="-u -zero -fpp1 -nbs -pc80 -pad -align -unroll -O3 -ip"
+      a=`echo $host | sed "s/^i//" | sed "s/86*//"`
+      if test $a > 5 ; then
+         FCFLAGS="$FCFLAGS -tpp7 -xW"
+      fi
+    ;;
+    *)
+      FCFLAGS="-O"
+    esac
+    ;;
+  x86_64*)
+    dnl NAG => FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4"
+    dnl ABSOFT => FCFLAGS="-O3 -mcmodel=medium -m64 -cpu:host -YEXT_NAMES=LCS -YEXT_SFX=_ -YDEALLOC=MINE"
+    dnl PGI => FCFLAGS="-fastsse -mcmodel=medium -O4 -Mdalign -Mlarge_arrays -Mscalarsse -Munroll=c:4,n:4 -Mvect=assoc,sse,cachesize:262144 -Minfo"
+    ;;
+  alphaev*)
+    FCFLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
+    ;;
+  powerpc-ibm*)
+    FCFLAGS="-bmaxdata:0x80000000 -qmaxmem=-1 -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
+    ;;
+  mips-sgi-irix*)
+    FCFLAGS="-O3 -INLINE -n32 -LANG:recursive=on"
+    ;;
+  *)
+    FCFLAGS="-O"
+  esac
+fi
+AC_MSG_NOTICE([Using FCFLAGS="$FCFLAGS"])
 ])

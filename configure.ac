@@ -82,8 +82,9 @@ esac
 
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
+acx_save_fcflags="$FCFLAGS"
 if test x"$enable_mpi" = x"yes"; then
-  AC_PROG_FC([mpif90 mpf90 mpxlf90 mpxlf95 mpxlf_r],[Fortran 90])
+  AC_PROG_FC([mpif90 mpf90 mpxlf90 mpxlf95 mpxlf_r], [Fortran 90])
 else
   AC_PROG_FC([], Fortran 90)
 fi
@@ -92,6 +93,9 @@ if test x"$FC" = x; then
 fi
 AC_LANG_PUSH(Fortran)
 AC_FC_SRCEXT(f90)
+FCFLAGS="${acx_save_fcflags}"
+
+ACX_FCFLAGS
 
 dnl octopus needs the preprocessor. The result goes to FCCPP
 dnl this is a hack, and should be changed in the future
