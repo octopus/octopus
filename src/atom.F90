@@ -18,6 +18,7 @@
 #include "global.h"
 
 module atom
+use io
 use specie
 
 implicit none

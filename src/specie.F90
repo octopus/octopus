@@ -21,6 +21,7 @@ module specie
 use units
 use ps
 use math
+use spline
 
 implicit none
 
