@@ -46,7 +46,7 @@ Units = "eVA"
 # 5. Mesh description.
 ###############################################################################
 BoxShape = sphere
-Radius  = 7.0
+Radius  = 8.0
 Spacing = 0.3
 DerivativesSpace = real_space
 OrderDerivatives = 4
@@ -56,7 +56,7 @@ DoubleFFTParameter = 2.0
 # 6. States.
 ###############################################################################
 
-SpinComponents = 3
+SpinComponents = unpolarized
 NumberkPoints  = 1 
 ExcessCharge   = 0
 ExtraStates    = 0
