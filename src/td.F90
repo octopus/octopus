@@ -64,6 +64,7 @@ type td_type
   logical :: out_laser   ! laser field
   logical :: out_energy  ! several components of the electronic energy
   logical :: out_proj    ! projection onto the GS KS eigenfunctions
+  logical :: out_angular ! total angular momentum.
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   type(PES_type) :: PESv
@@ -99,7 +100,7 @@ subroutine td_run(td, u_st, sys, h)
 
   integer :: i, ii, j, idim, ist, ik
   integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
-       out_laser, out_energy, out_proj
+       out_laser, out_energy, out_proj, out_angular
 
   real(r8), allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
   real(r8) :: etime
@@ -111,6 +112,8 @@ subroutine td_run(td, u_st, sys, h)
     write(filename, '(i3.3)') mpiv%node
     if(td%out_multip) &
          call write_iter_init(out_multip, td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
+    if(td%out_angular) &
+         call write_iter_init(out_angular, td%iter, td%dt/units_out%time%factor, "td.general/angular")
     if(td%out_coords) &
          call write_iter_init(out_coords, td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
     if(td%out_gsp) &
@@ -193,7 +196,7 @@ subroutine td_run(td, u_st, sys, h)
     call td_rti(h, sys%m, sys%st, sys, td, i*td%dt)
 
     ! mask function?
-    if(h%ab == MASK_ABSORBING) then	
+    if(h%ab == MASK_ABSORBING) then
       do ik = 1, sys%st%nik
         do ist = sys%st%st_start, sys%st%st_end
           do idim = 1, sys%st%dim
@@ -233,6 +236,9 @@ subroutine td_run(td, u_st, sys, h)
 
     ! output multipoles
     if(td%out_multip) call td_write_multipole(i)
+
+    ! output angular momentum
+    if(td%out_angular) call td_write_angular(i)
 
     ! output positions, vels, etc.
     if(td%out_coords) call td_write_nbo(i, sys%kinetic_energy, h%etot)
@@ -274,13 +280,14 @@ subroutine td_run(td, u_st, sys, h)
 
   ! close all buffers
   if(mpiv%node==0) then
-    if(td%out_multip) call write_iter_end(out_multip)
-    if(td%out_coords) call write_iter_end(out_coords)
-    if(td%out_gsp)    call write_iter_end(out_gsp)
-    if(td%out_acc)    call write_iter_end(out_acc)
-    if(td%out_laser)  call write_iter_end(out_laser)
-    if(td%out_energy) call write_iter_end(out_energy)
-    if(td%out_proj)   call write_iter_end(out_proj)
+    if(td%out_multip)  call write_iter_end(out_multip)
+    if(td%out_angular) call write_iter_end(out_angular)
+    if(td%out_coords)  call write_iter_end(out_coords)
+    if(td%out_gsp)     call write_iter_end(out_gsp)
+    if(td%out_acc)     call write_iter_end(out_acc)
+    if(td%out_laser)   call write_iter_end(out_laser)
+    if(td%out_energy)  call write_iter_end(out_energy)
+    if(td%out_proj)    call write_iter_end(out_proj)
   end if
 
 contains
@@ -297,8 +304,9 @@ contains
     ! create general subdir
     call oct_mkdir("td.general")
 
-    if(td%out_multip) call td_write_multipole(0)
-    if(td%out_proj)   call td_write_proj(0)
+    if(td%out_multip)  call td_write_multipole(0)
+    if(td%out_angular) call td_write_angular(0)
+    if(td%out_proj)    call td_write_proj(0)
 
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. M_ZERO) then

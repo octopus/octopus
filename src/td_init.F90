@@ -134,6 +134,7 @@ subroutine td_init(td, sys, m, st, h)
   else
     td%out_coords = .false.
   end if
+  call oct_parse_logical("TDOutputAngularMomentum", .false., td%out_angular)
   call oct_parse_logical("TDOutputGSProjection", .false., td%out_gsp)
   call oct_parse_logical("TDOutputAcceleration", .false., td%out_acc)
   if(td%out_acc.and.td%move_ions>0) then

@@ -30,12 +30,13 @@
     if(td%out_gsp) call td_write_gsp(iter)
     
     if(mpiv%node==0) then
-      if(td%out_multip) call write_iter_flush(out_multip)
-      if(td%out_coords) call write_iter_flush(out_coords)
-      if(td%out_gsp)    call write_iter_flush(out_gsp)
-      if(td%out_acc)    call write_iter_flush(out_acc)
-      if(td%out_laser)  call write_iter_flush(out_laser)
-      if(td%out_energy) call write_iter_flush(out_energy)
+      if(td%out_multip)  call write_iter_flush(out_multip)
+      if(td%out_angular) call write_iter_flush(out_angular)
+      if(td%out_coords)  call write_iter_flush(out_coords)
+      if(td%out_gsp)     call write_iter_flush(out_gsp)
+      if(td%out_acc)     call write_iter_flush(out_acc)
+      if(td%out_laser)   call write_iter_flush(out_laser)
+      if(td%out_energy)  call write_iter_flush(out_energy)
     end if
     
     ! now write down the rest
@@ -51,6 +52,37 @@
 
     call pop_sub()
   end subroutine td_write_data
+
+  subroutine td_write_angular(iter)
+    integer, intent(in) :: iter
+    integer :: is, i
+    character(len=130) :: aux
+    real(r8) :: angular(3)
+
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    if(iter ==0) then
+      !empty file
+      call write_iter_clear(out_angular)
+
+      !first line -> columns name
+      call write_iter_header_start(out_angular)
+      write(aux, '(a2,18x)') 'Lx'
+      call write_iter_header(out_angular, aux)
+      write(aux, '(a2,18x)') 'Ly'
+      call write_iter_header(out_angular, aux)
+      write(aux, '(a2,18x)') 'Lz'
+      call write_iter_header(out_angular, aux)
+      call write_iter_nl(out_angular)
+    endif
+
+    call zstates_calculate_angular(sys%m, sys%st, angular)
+
+    call write_iter_start(out_angular)
+    call write_iter_double(out_angular, angular(1:3), 3)
+    call write_iter_nl(out_angular)
+
+  end subroutine td_write_angular
 
   subroutine td_write_multipole(iter)
     integer, intent(in) :: iter

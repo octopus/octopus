@@ -571,3 +571,26 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
 
 end function R_FUNC(states_mpdotp)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine R_FUNC(states_calculate_angular)(m, st, angular)
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  real(r8), intent(out) :: angular(3)
+
+  R_TYPE, allocatable :: lpsi(:, :)
+  integer :: idim, ik, j, i
+
+  angular = M_ZERO
+  allocate(lpsi(conf%dim, m%np))
+  do ik = 1, st%nik
+     do j = 1, st%nst
+        do idim = 1, st%dim
+           call R_FUNC(mesh_angular_momentum)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi)
+           angular(1) = angular(1) + st%occ(j, ik)*R_FUNC(mesh_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(1, :))
+           angular(2) = angular(2) + st%occ(j, ik)*R_FUNC(mesh_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(2, :))
+           angular(3) = angular(3) + st%occ(j, ik)*R_FUNC(mesh_dotp)(m, st%R_FUNC(psi)(:, idim, j, ik), lpsi(3, :))
+        enddo
+     enddo
+  enddo
+  deallocate(lpsi)
+end subroutine R_FUNC(states_calculate_angular)

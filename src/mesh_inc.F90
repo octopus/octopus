@@ -248,6 +248,27 @@ subroutine R_FUNC(mesh_divergence)(m, f, divf)
   call pop_sub(); return
 end subroutine R_FUNC(mesh_divergence)
 
+subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(in)  :: f(m%np)
+  R_TYPE, intent(out) :: lf(3, m%np)
+  R_TYPE, allocatable :: gf(:, :)
+  real(r8) :: x(3)
+  integer :: i
+  allocate(gf(3, m%np))
+  call R_FUNC(mesh_derivatives)(m, f, grad = gf)
+  do i = 1, m%np
+     call mesh_xyz(m, i, x)
+     lf(1, i) = (x(2)*gf(3, i)-x(3)*gf(2, i))
+     lf(2, i) = (x(3)*gf(1, i)-x(1)*gf(3, i))
+     lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
+  enddo
+#if defined(R_TCOMPLEX)
+  call zscal(3*m%np, -M_zI, lf, 1)
+#endif
+  deallocate(gf)
+end subroutine R_FUNC(mesh_angular_momentum)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculates the laplacian and the gradient of a function on the mesh.
 ! The optional argument "alpha" is a multiplicative factor (i.e. if the
