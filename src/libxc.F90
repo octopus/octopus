@@ -65,9 +65,7 @@ module lib_xc
 
   ! the OEP
   integer, parameter :: &
-     XC_OEP_X             = 201, &  ! Exact exchange
-     XC_OEP_X_SIC         = 202, &  ! Selft-interaction corrected LDA
-     XC_OEP_C_SIC         = 203
+     XC_OEP_X             = 201     ! Exact exchange
 
   ! info
   interface

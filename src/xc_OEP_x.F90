@@ -25,63 +25,94 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 
   integer :: i, j
   FLOAT :: r
-  R_TYPE, allocatable :: lx(:)
-  FLOAT, allocatable :: rho_ij(:)
-#if defined(R_TREAL)
-  FLOAT, allocatable :: pot(:)             ! For real
-#else
-  FLOAT, allocatable :: pot_r(:), pot_i(:) ! For complex
-#endif  
+  R_TYPE, allocatable :: F_ij(:), lx(:) 
 
-  allocate(lx(m%np))
+  allocate(F_ij(m%np), lx(m%np))
 
   do i = 1, st%nst
-    lx = R_TOTYPE(M_ZERO)
     if(st%occ(i, is) .le. small) cycle ! we only need the occupied states
     
-    do j = 1, st%nst
+    lx = R_TOTYPE(M_ZERO)
+    do j = i, st%nst
       if(st%occ(j, is) .le. small) cycle
-      allocate(rho_ij(1:m%np))
       
-#ifdef R_TREAL
-      allocate(pot(m%np))
-      pot = M_ZERO
-      
-      rho_ij(:) = st%dpsi(:, 1, i, is)*st%dpsi(:, 1, j, is)
-      call poisson_solve(m, f_der, pot, rho_ij)
-      deallocate(rho_ij)
+      call get_F_ij(i, j, is, F_ij)
 
-      lx(:) = lx(:) - oep%socc*st%occ(j, is)*pot(:)*st%dpsi(:, 1, j, is)
+      ! lx will the be used to get the energy
+      r = M_ONE
+      if(i.ne.j) r = M_TWO
+      lx(:) = lx(:) - r*oep%socc*st%occ(j, is)*F_ij(:)*st%dpsi(:, 1, j, is)
 
-      deallocate(pot)
-#else
-      allocate(pot_r(m%np), pot_i(m%np))
-      pot_r = M_ZERO
-      pot_i = M_ZERO
-      
-      rho_ij(:) = real(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is)) + &
-         aimag(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is))
-      call poisson_solve(m, f_der, pot_r, rho_ij)
-      ! and now the imaginary part
-      rho_ij(:) = real(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is)) - &
-         aimag(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is))
-      call poisson_solve(m, f_der, pot_i, rho_ij)
-      deallocate(rho_ij)
-
-      lx(:) = lx(:) - st%occ(j, is)*oep%socc* &
-         (pot_r(:) + M_zI*pot_i(:))*conjg(st%zpsi(:, 1, j, is))
-
-      deallocate(pot_r, pot_i)
-#endif
-            
+      oep%lxc(:, i) = oep%lxc(:, i) - &
+         oep%socc*st%occ(j, is)*st%dpsi(:, 1, j, is)*F_ij(:)
+      if(i.ne.j) then
+        oep%lxc(:, j) = oep%lxc(:, j) - &
+           oep%socc*st%occ(i, is)*st%dpsi(:, 1, i, is)*R_CONJ(F_ij(:))
+      end if
     end do
 
-    oep%lxc(:, i) = oep%lxc(:, i) + lx(:)
-    
-    r = sum(R_REAL(st%X(psi)(:, 1, i, is) * lx(:))*m%vol_pp(:))
+    r = sum(R_REAL(st%X(psi)(:, 1, i, is)*lx(:))*m%vol_pp(:))
     ex = ex + M_HALF*oep%socc*oep%sfact*st%occ(i, is)*r
   end do
 
-  deallocate(lx)
+  deallocate(lx, F_ij)
+
+contains
+#if defined(R_TREAL)
+  ! calculates for real wave-functions
+  !    F_ij = \int d^3 r2 \frac{\phi_i,is(r2) \phi_j,is(r2)}{|r-r2|}
+  subroutine get_F_ij(i, j, is, F_ij)
+    integer, intent(in)  :: i, j, is
+    FLOAT,   intent(out) :: F_ij(:)
+
+    FLOAT, allocatable :: rho_ij(:)
+
+    allocate(rho_ij(1:m%np))
+      
+    rho_ij(:) = st%dpsi(:, 1, i, is)*st%dpsi(:, 1, j, is)
+
+    F_ij = M_ZERO
+    call poisson_solve(m, f_der, F_ij, rho_ij)
+
+    deallocate(rho_ij)
+
+  end subroutine get_F_ij
+
+#else
+  ! calculates for complex wave-functions
+  !    F_ij = \int d^3 r2 \frac{\phi_i,is^*(r2) \phi_j,is(r2)}{|r-r2|}
+  subroutine get_F_ij(i, j, is, F_ij)
+    integer, intent(in)  :: i, j, is
+    CMPLX,   intent(out) :: F_ij(:)
+
+    FLOAT, allocatable :: rho_ij(:), pot(:)
+
+    allocate(rho_ij(m%np), pot(m%np))
+    
+    ! first we solve for the real part
+    rho_ij(:) = real(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is)) + &
+       aimag(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is))
+
+    pot(:) = M_ZERO
+    call poisson_solve(m, f_der, pot, rho_ij)
+
+    ! this is the real part of F_ij
+    F_ij(:) = pot(:)
+
+    ! and now the imaginary part
+    rho_ij(:) = real(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is)) - &
+       aimag(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is))
+
+    pot(:) = M_ZERO
+    call poisson_solve(m, f_der, pot, rho_ij)
+    deallocate(rho_ij)
+
+    F_ij(:) = F_ij(:) + M_zI*pot(:)
+
+    deallocate(rho_ij, pot)
+  
+  end subroutine get_F_ij
+#endif
+
 
 end subroutine X(oep_x)
