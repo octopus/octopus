@@ -60,8 +60,10 @@ subroutine eigen_solver_init(eigens)
   select case(eigens%es_type)
   case(RS_CG)
     message(1) = 'Info: Eigensolver type: Real-space conjugate gradients'
+#ifdef HAVE_TRLAN
   case(RS_LANCZOS)
     message(1) = 'Info: Eigensolver type: Lanczos algorithm (TRLan package)'
+#endif
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -102,11 +104,6 @@ subroutine eigen_solver_init(eigens)
       message(3) = '(EigenSolverMaxIter >=1 )'
       call write_fatal(2)
   endif
-  
-  select case (eigens%es_type)
-  case(RS_LANCZOS)
-
-  end select
   
   call pop_sub(); return
 end subroutine eigen_solver_init
