@@ -29,8 +29,8 @@ module vxc
   PARAMETER (PFIVE=.5_r8,OPF=1.5_r8,C014=0.014_r8)
   DIMENSION DS(NSP), VX(NSP)
 
-  TRD = ONE/3
-  FTRD = 4*TRD
+  TRD = M_ONE/M_THREE
+  FTRD = M_FOUR*TRD
   TFTM = 2**FTRD-2
   A0 = (4/(9*M_PI))**TRD
 
@@ -41,10 +41,10 @@ module vxc
      D1 = MAX(DS(1),0.0_r8)
      D2 = MAX(DS(2),0.0_r8)
      D = D1 + D2
-     IF (D .LE. ZERO) THEN
-        EX = ZERO
-        VX(1) = ZERO
-        VX(2) = ZERO
+     IF (D .LE. M_ZERO) THEN
+        EX = M_ZERO
+        VX(1) = M_ZERO
+        VX(2) = M_ZERO
         RETURN
      ENDIF
      Z = (D1 - D2) / D
@@ -52,14 +52,14 @@ module vxc
      FZP = FTRD*((1+Z)**TRD-(1-Z)**TRD)/TFTM 
   ELSE
      D = DS(1)
-     IF (D .LE. ZERO) THEN
-        EX = ZERO
-        VX(1) = ZERO
+     IF (D .LE. M_ZERO) THEN
+        EX = M_ZERO
+        VX(1) = M_ZERO
         RETURN
      ENDIF
-     Z = ZERO
-     FZ = ZERO
-     FZP = ZERO
+     Z = M_ZERO
+     FZ = M_ZERO
+     FZP = M_ZERO
   ENDIF
   RS = (3 / (4*M_PI*D) )**TRD
   VXP = -(3*ALP/(2*M_PI*A0*RS))
@@ -620,13 +620,13 @@ module vxc
      D1 = MAX(DS(1),0.0_r8)
      D2 = MAX(DS(2),0.0_r8)
      D = D1 + D2
-     IF (D .LE. ZERO) THEN
-        EX = ZERO
-        EC = ZERO
-        VX(1) = ZERO
-        VX(2) = ZERO
-        VC(1) = ZERO
-        VC(2) = ZERO
+     IF (D .LE. M_ZERO) THEN
+        EX = M_ZERO
+        EC = M_ZERO
+        VX(1) = M_ZERO
+        VX(2) = M_ZERO
+        VC(1) = M_ZERO
+        VC(2) = M_ZERO
         RETURN
      ENDIF
      Z = (D1 - D2) / D
@@ -634,16 +634,16 @@ module vxc
      FZP = FTRD*((1+Z)**TRD-(1-Z)**TRD)/TFTM 
   ELSE
      D = DS(1)
-     IF (D .LE. ZERO) THEN
-        EX = ZERO
-        EC = ZERO
-        VX(1) = ZERO
-        VC(1) = ZERO
+     IF (D .LE. M_ZERO) THEN
+        EX = M_ZERO
+        EC = M_ZERO
+        VX(1) = M_ZERO
+        VC(1) = M_ZERO
         RETURN
      ENDIF
-     Z = ZERO
-     FZ = ZERO
-     FZP = ZERO
+     Z = M_ZERO
+     FZ = M_ZERO
+     FZP = M_ZERO
   ENDIF
   RS = CRS / D**TRD
 
@@ -655,20 +655,20 @@ module vxc
      SB = SQRT(1+BETA*BETA)
      ALB = LOG(BETA+SB)
      VXP = VXP * (-PFIVE + OPF * ALB / (BETA*SB))
-     EXP = EXP *(ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
+     EXP = EXP *(M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
   ENDIF
   VXF = CXF * VXP
   EXF = CXF * EXP
 
 !      Correlation 
-  IF (RS .GT. ONE) THEN  
+  IF (RS .GT. M_ONE) THEN  
       SQRS=SQRT(RS)
-      TE = ONE+CON10*SQRS+CON11*RS
-      BE = ONE+C1P053*SQRS+C3334*RS
+      TE = M_ONE+CON10*SQRS+CON11*RS
+      BE = M_ONE+C1P053*SQRS+C3334*RS
       ECP = -(C2846/BE)
       VCP = ECP*TE/BE
-      TE = ONE+CON8*SQRS+CON9*RS
-      BE = ONE+C1P398*SQRS+C2611*RS
+      TE = M_ONE+CON8*SQRS+CON9*RS
+      BE = M_ONE+C1P398*SQRS+C2611*RS
       ECF = -(C1686/BE)
       VCF = ECF*TE/BE
   ELSE
