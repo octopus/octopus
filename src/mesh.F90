@@ -102,12 +102,30 @@ subroutine mesh_double_box(m, db)
   integer :: i
 
   db = 1
-  do i = conf%periodic_dim+1, conf%dim
-    db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
-  end do
-  do i = 1, conf%periodic_dim ! for periodic systems
-    db(i) = m%nr(2,i) - m%nr(1,i) + 1
-  end do
+
+! OLD: I let it here because maybe I revert to this method later
+  ! double mesh with 2n + 1 points
+!  do i = conf%periodic_dim + 1, conf%dim
+!    db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
+!  end do
+!  do i = 1, conf%periodic_dim ! for periodic systems
+!    db(i) = m%nr(2,i) - m%nr(1,i) + 1
+!  end do
+
+! NEW
+  ! double mesh with 2n points
+  if (conf %periodic_dim == 0) then
+    do i = 1, conf%dim
+      db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
+    end do
+  else
+    do i = 1, conf%periodic_dim 
+      db(i) = m%nr(2,i) - m%nr(1,i) + 1
+    end do
+    do i = conf%periodic_dim + 1, conf%dim
+      db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i)))
+    end do
+ end if
 
 end subroutine mesh_double_box
 
