@@ -416,16 +416,7 @@ subroutine read_file_data_bin(unit, psf)
 
   ! Allocates the varibales to psf%nrval:
   allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
-           psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
-  if(psf%irel=='rel') then
-    if(psf%npotu .ne. psf%npotd-1) then
-      message(1) = 'Number of "down" potentials in TM pseudo file should be equal to '
-      message(2) = 'number of "up" potentials minus 1. Check sanity of this file.'
-      call write_fatal(2)
-    else
-      allocate(psf%vso(psf%nrval, 1:psf%npotu))
-    endif
-  endif
+           psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval), psf%vso(psf%nrval, psf%npotu))
 
   ! Reads the radial values, in bohrs
   !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
@@ -458,6 +449,7 @@ subroutine read_file_data_bin(unit, psf)
        psf%vso(1,l) = psf%vso(2,l)
     end do       
   else
+    psf%vso = 0.0_r8
     do nup = 1, psf%npotu
        read(unit) l
     end do
@@ -507,16 +499,7 @@ subroutine read_file_data_ascii(unit, psf)
   ! Allocates the varibales to psf%nrval:  ! Reads the pseudo-valence charge density, in bohr^(-3)
   !   rho_val(1:nrval) : pseudo-valence charge distribution
   allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
-       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
-  if(psf%irel=='rel') then
-    if(psf%npotu .ne. psf%npotd-1) then
-      message(1) = 'Number of "down" potentials in TM pseudo file should be equal to '
-      message(2) = 'number of "up" potentials minus 1. Check sanity of this file.'
-      call write_fatal(2)
-    else
-      allocate(psf%vso(psf%nrval, 1:psf%npotu))
-    endif
-  endif
+           psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval), psf%vso(psf%nrval, psf%npotu) )
 
   ! Reads the radial values, in bohrs
   !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
@@ -558,6 +541,7 @@ subroutine read_file_data_ascii(unit, psf)
        psf%vso(1, l) = psf%vps(2, l)
     end do       
   else
+    psf%vso = 0.0_r8
     do nup = 1, psf%npotu
        read(unit, 9040) aux_s
        read(unit, 8000) l
@@ -719,8 +703,10 @@ subroutine get_cutoff_radii(pstm, lloc)
       dincv = abs((pstm%vps(ir, l) - pstm%vlocal(ir))*phi)
       if(dincv > threshold) exit
       phi = (pstm%rphi(ir, l, 1)/pstm%rofi(ir))*pstm%dknrm(l)
-      dincv = abs((pstm%vso(ir, l))*phi)
-      if(dincv > threshold) exit
+      if(pstm%irel=='rel') then
+        dincv = abs((pstm%vso(ir, l))*phi)
+        if(dincv > threshold) exit
+      endif
     enddo
     pstm%kbr(l) = pstm%rofi(ir + 1)
   end do
