@@ -306,6 +306,46 @@ subroutine mesh_r(m, i, r, a, x)
   if(present(x)) x = xx
 end subroutine mesh_r
 
+subroutine mesh_gradient_in_FS(m, nx, n, f, grad, dir)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: nx, n(3), dir
+  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
+  complex(r8), intent(out) :: grad(nx, n(2), n(3))
+
+  real(r8) :: temp(3), g2
+  integer :: kx, ky, kz, ix, iy, iz
+  
+  temp(1) = (2.0_r8*M_Pi)/(n(1)*m%h(1)); temp(2) = 0.0_r8; temp(3) = 0.0_r8
+  kx = 0; ky = 0; kz = 0
+  iy = 0; iz = 0
+  do ix=1, nx
+     kx = pad_feq(ix, n(1), .true.)
+     g2 = temp(1)*kx
+     grad(ix, iy, iz) = g2 * M_zI * f(ix, iy, iz)
+  enddo
+
+end subroutine mesh_gradient_in_FS
+
+subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: nx, n(3)
+  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
+  complex(r8), intent(out) :: lapl(nx, n(2), n(3))
+
+  real(r8) :: temp(3), g2
+  integer :: kx, ky, kz, ix, iy, iz
+  
+  temp(1) = (2.0_r8*M_Pi)/(n(1)*m%h(1)); temp(2) = 0.0_r8; temp(3) = 0.0_r8
+  kx = 0; ky = 0; kz = 0
+  iy = 0; iz = 0
+  do ix=1, nx
+     kx = pad_feq(ix, n(1), .true.)
+     g2 = temp(1)**2*kx**2
+     lapl(ix, iy, iz) = - g2 * f(ix, iy, iz)
+  enddo  
+
+end subroutine mesh_laplacian_in_FS
+
 #include "mesh1D_create.F90"
 
 #include "undef.F90"
