@@ -182,7 +182,6 @@
       !intrinsic AINT,ABS,CMPLX,DBLE,INT,LOG10,MAX,MIN,NINT,SIGN,SQRT
       intrinsic AINT,ABS,cmplx,DBLE,INT,LOG10,MAX,MIN,NINT,SIGN,SQRT
       CMPLX :: ZDOTC
-      double precision DZNRM2
 
 !---  check restrictions on input parameters ...
 
@@ -233,7 +232,8 @@
 
       sgn = SIGN( 1.0d0,t )
       call ZCOPY( n, v(1),1, w(1),1 )
-      beta = DZNRM2( n, w,1 )
+!!$      beta = DZNRM2( n, w,1 )
+      beta = lalg_nrm2(n, w(1:n))
       vnorm = beta
       hump = beta 
 
@@ -271,7 +271,8 @@
             call ZAXPY( n, -hij, wsp(iv+(i-1)*n),1, wsp(j1v),1 )
             wsp(ih+(j-1)*mh+i-1) = hij
          enddo
-         hj1j = DZNRM2( n, wsp(j1v),1 )
+!!$         hj1j = DZNRM2( n, wsp(j1v),1 )
+         hj1j = lalg_nrm2( n, wsp(j1v:))
 !---     if happy breakdown, go straightforward at the end ... 
          if ( hj1j.le.break_tol ) then
             print*,'happy breakdown: mbrkdwn =',j,' h =',hj1j
@@ -289,7 +290,8 @@
  200  continue
       nmult = nmult + 1
       call matvec( wsp(j1v-n), wsp(j1v) )
-      avnorm = DZNRM2( n, wsp(j1v),1 )
+!!$      avnorm = DZNRM2( n, wsp(j1v),1 )
+      avnorm = lalg_nrm2( n, wsp(j1v:))
 
 !---  set 1 for the 2-corrected scheme ...
 
@@ -371,9 +373,9 @@
 
       mx = mbrkdwn + MAX( 0,k1-1 )
       hij = cmplx( beta )
-!!$      call ZGEMV( 'n', n,mx,hij,wsp(iv),n,wsp(iexph),1,ZERO,w,1 )
       call ZGEMV( 'n', n,mx,hij,wsp(iv),n,wsp(iexph),1,ZERO,w(1),1 )
-      beta = DZNRM2( n, w,1 )
+!!$      beta = DZNRM2( n, w,1 )
+      beta = lalg_nrm2(n, w(1:n))
       hump = MAX( hump, beta )
 
 !---  suggested value for the next stepsize ...
