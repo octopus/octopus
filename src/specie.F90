@@ -21,7 +21,7 @@ type specie_type
   complex(r8), pointer :: local_fw(:,:,:), rhocore_fw(:,:,:)
 
   ! For the non-local pp in fourier space
-  integer(POINTER_SIZE) :: nl_planf, nl_planb
+  integer(POINTER_SIZE) :: nl_planb
   integer :: nl_fft_n(3), nl_hfft_n
   complex(r8), pointer :: nl_fw(:,:,:,:)
 end type specie_type
@@ -76,7 +76,7 @@ function specie_init(s)
       call oct_parse_block_int(str, i-1, 3, lmax)
       call oct_parse_block_int(str, i-1, 4, lloc)
       call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
-      s(i)%nl_planf = int(-1, POINTER_SIZE)
+      s(i)%nl_planb= int(-1, POINTER_SIZE)
     end select
 
     s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
@@ -108,8 +108,7 @@ subroutine specie_end(ns, s)
     if(associated(s(i)%local_fw)) then
       deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
     end if
-    if(s(i)%nl_planf .ne. int(-1, POINTER_SIZE)) then
-      call fftw_f77_destroy_plan(s(i)%nl_planf)
+    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
       call fftw_f77_destroy_plan(s(i)%nl_planb)
       deallocate(s(i)%nl_fw); nullify(s(i)%nl_fw)
     end if

@@ -61,33 +61,39 @@ subroutine specie_local_fourier_init(ns, s, m)
   call pop_sub()
 end subroutine specie_local_fourier_init
 
-subroutine specie_nl_fourier_init(ns, s, m)
-  integer, intent(in) :: ns
+subroutine specie_nl_fourier_init(ns, s, m, nextra)
+  integer, intent(in) :: ns, nextra
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
 
-  integer :: n(3), hn, i, j, ix, iy, iz, l, lm, add_lm
+  integer :: n(3), hn, i, j, ix, iy, iz, ixx, iyy, izz, l, lm, add_lm
+  integer(POINTER_SIZE) :: nl_planf
   real(r8) :: r, x(3), vl, g(3)
   real(r8), allocatable :: fr(:,:,:)
+  complex(r8), allocatable :: fw(:,:,:)
 
   sub_name = 'specie_nl_fourier_init'; call push_sub()
   
   specie_loop: do i = 1, ns
     ! first get the dimensions of the thing
     n(1:3) = 2*nint(s(i)%ps%rc_max/m%h(1:3)) + 5 ! this should be enough
-    hn = n(1)/2 + 1
+    hn = (n(1)-1)/2 + 1
     s(i)%nl_fft_n(1:3) = n(1:3)
     s(i)%nl_hfft_n = hn
 
     ! allocate memory and FFT plans
     allocate(s(i)%nl_fw(hn, n(2), n(3), (s(i)%ps%L_max + 1)**2))
-    call rfftw3d_f77_create_plan(s(i)%nl_planf, n(1), n(2), n(3), &
-         fftw_forward, fftw_measure + fftw_threadsafe)
     call rfftw3d_f77_create_plan(s(i)%nl_planb, n(1), n(2), n(3), &
          fftw_backward, fftw_measure + fftw_threadsafe)    
 
+    n(1:3) = (n(1:3)-1)*(1 + nextra)+1
+    hn = (n(1)-1)/2 + 1
+
+    call rfftw3d_f77_create_plan(nl_planf, n(1), n(2), n(3), &
+         fftw_forward, fftw_measure + fftw_threadsafe)
+
     ! fill in structure
-    allocate(fr(n(1), n(2), n(3)))
+    allocate(fr(n(1), n(2), n(3)), fw(hn, n(2), n(3)))
 
     ! we will recalculate this value on the mesh
     add_lm = 1
@@ -99,25 +105,41 @@ subroutine specie_nl_fourier_init(ns, s, m)
       
       lm_loop: do lm = -l, l
         do ix = 1, n(1)
-          x(1) = m%h(1) * real(ix - n(1)/2 - 1, r8)
+          x(1) = m%h(1) * real(ix - n(1)/2 - 1, r8) / real(1 + nextra, r8)
           do iy = 1, n(2)
-            x(2) = m%h(2) * real(iy - n(2)/2 - 1, r8)
+            x(2) = m%h(2) * real(iy - n(2)/2 - 1, r8) / real(1 + nextra, r8)
             do iz = 1, n(3)
-              x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8)
+              x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8) / real(1 + nextra, r8)
               r = sqrt(sum(x**2))
               
               call get_nl_part(s(i)%ps, x, l, lm, fr(ix, iy, iz), g)
             end do
           end do
         end do
-        call rfftwnd_f77_one_real_to_complex(s(i)%nl_planf, fr, s(i)%nl_fw(:,:,:, add_lm))
-        call zscal(hn*n(2)*n(3), cmplx(1.0_r8/(n(1)*n(2)*n(3)), 0.0_r8, r8), s(i)%nl_fw(1, 1, 1, add_lm), 1)
-        
+        call rfftwnd_f77_one_real_to_complex(nl_planf, fr, fw)
+        r = real(s(i)%nl_fft_n(1)*s(i)%nl_fft_n(2)*s(i)%nl_fft_n(3)* &
+             n(1)*n(2)*n(3), r8)
+        call zscal(hn*n(2)*n(3), cmplx(1.0_r8/sqrt(r), 0.0_r8, r8), &
+             fw(1, 1, 1), 1)
+
+        ! have to cut the high frequencies
+        do ix = 1, s(i)%nl_hfft_n
+          ixx = pad_feq(pad_feq(ix, s(i)%nl_fft_n(1), .true.), n(1), .false.)
+          do iy = 1, s(i)%nl_fft_n(2)
+            iyy = pad_feq(pad_feq(iy, s(i)%nl_fft_n(2), .true.), n(2), .false.)
+            do iz = 1, s(i)%nl_fft_n(3)
+              izz = pad_feq(pad_feq(iz, s(i)%nl_fft_n(3), .true.), n(3), .false.)
+              s(i)%nl_fw(ix, iy, iz, add_lm) = fw(ixx, iyy, izz)
+            end do
+          end do
+        end do
+
         add_lm = add_lm + 1
       end do lm_loop
     end do l_loop
 
-    deallocate(fr)
+    call fftw_f77_destroy_plan(nl_planf)
+    deallocate(fr, fw)
   end do specie_loop
 
   call pop_sub()
@@ -368,13 +390,11 @@ contains
             if(l .ne. s%ps%L_loc) then
               call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
             end if
-            
             add_lm = add_lm + 1
           end do lm_loop
         end do l_loop
       end do j_loop
-      
-    else ! Fourier space
+     else ! Fourier space
       center(:) = nint(a%x(:)/m%h(:))
       x(:)  = a%x(:) - center(:)*m%h(:)
       
@@ -391,6 +411,7 @@ contains
         lm_loop2: do lm = -l , l
           nl_fw = M_z0
           call phase_factor(m, s%nl_fft_n(1:3), x, s%nl_fw(:,:,:, add_lm), nl_fw)
+          nl_fw =  s%nl_fw(:,:,:, add_lm)
           call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_fr)
           
           j_loop2: do j = 1, a%Mps
@@ -401,11 +422,9 @@ contains
             
             a%uV(j, add_lm) = nl_fr(ix, iy, iz)
           end do j_loop2
-          
           add_lm = add_lm + 1
         end do lm_loop2
       end do l_loop2
-      
       deallocate(nl_fw, nl_fr)
     end if
     
@@ -423,8 +442,17 @@ contains
                  splint(s%ps%Ur(l), r) * ylm * (r**l)
           end do
           ! uVu can be calculated exactly, or numerically
-          !a%uVu(add_lm) = s%ps%dkbcos(l)
-          a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
+          a%uVu(add_lm) = s%ps%dkbcos(l)
+          !a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
+          if(abs(a%uVu(add_lm) - s%ps%dkbcos(l))/s%ps%dkbcos(l) > 0.25_r8) then
+            write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
+                 add_lm
+            write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm)
+            message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
+            call write_warning(3)
+
+            a%uVu(add_lm) = s%ps%dkbcos(l)
+          end if
         end if
           
         add_lm = add_lm + 1

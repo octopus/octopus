@@ -20,6 +20,7 @@ type hamiltonian_type
 
   integer :: vpsl_space           ! How should the local potential be calculated
   integer :: vnl_space            ! How should the nl    potential be calculated
+  integer :: nextra               ! extra points for the interpolation method(s)
   real(r8), pointer :: Vpsl(:)    ! the external potential
   real(r8), pointer :: Vhartree(:)! the external potential
   real(r8), pointer :: Vxc(:,:)   ! xc potential
@@ -80,13 +81,21 @@ subroutine hamiltonian_init(h, sys)
     call write_fatal(2)
   end if
 
+  call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
+  if(h%vpsl_space < 0) then
+    write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
+         "' is not a valid GridRefinement"
+    message(2) = '(GridRefinement >= 0)'
+    call write_fatal(2)
+  end if
+
   if(h%vpsl_space == 1) then
     call mesh_alloc_ffts(sys%m, 2)
     call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m)
   end if
 
   if(h%vnl_space == 1) then
-    call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m)
+    call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
   end if  
 
   ! Should we treat the particles as independent?
