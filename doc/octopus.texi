@@ -13,7 +13,7 @@
 
 @copying
 This manual is for octopus 1.1, a first principles, electronic
-structure, excited states, Time-dependent density functional
+structure, excited states, time-dependent density functional
 theory program.
 
 @strong{Warning: this is not yet the final version of the manual
@@ -262,7 +262,7 @@ eight muscular arms equipped with two rows of suckers;
 broadly, any octopod excepting the paper nautilus.
 Something that resembles an octopus especially in having many 
 centrally directed branches.
-(taken from the Merryam-Webster's dictionary.)
+(Taken from the Merryam-Webster's dictionary.)
 }
 is a program aimed at the ab initio virtual experimentation on
 electron/ion dynamics in external electromagnetic fields of arbitrary
@@ -470,7 +470,7 @@ prompt> make install
 This will probably @strong{not} work, so before giving up, just read
 the following paragraphs.
 
-Also, rpm binaries for linux are supplied in the web-page.
+Also, rpm and deb binaries for linux are supplied in the web-page.
 
 @node Long instructions, Troubleshooting, Quick instructions, Installation
 @section Long instructions
@@ -485,28 +485,28 @@ or use any of the available comercial compilers.
 
 Besides the compiler, you will also need:
 @enumerate
-@item @code{make} :  most computers have it installed, otherwise just
+@item @code{make}:  most computers have it installed, otherwise just
 grab the GNU @code{make} and install it.
 
-@item @code{cpp} : The C preprocessor is heavily used in @code{octopus}.
+@item @code{cpp}: The C preprocessor is heavily used in @code{octopus}.
 GNU @code{cpp} is just fine, but any @code{cpp} that accepts
 the @code{-C} flag (preserve comments) should work just as well.
 
-@item FFTW : Just grab this great library from @uref{http://www.fftw.org/, here}
+@item FFTW: Just grab this great library from @uref{http://www.fftw.org/, here}
 
-@item LAPACK/BLAS : Not heavily used, but required. If you are running Linux,
+@item LAPACK/BLAS: Not heavily used, but required. If you are running Linux,
 there is a fair chance they are already installed in your system. The same
 goes to the more heavyweight machines (alphas, IBMs, SGIs, etc). Otherwise,
 just grab the source from @uref{http://www.netlib.org, here}.
 
-@item GSL : Finally that someone had the nice idea of making a public scientific
+@item GSL: Finally that someone had the nice idea of making a public scientific
 library! GSL still needs to grow, but it is already quite useful and impressive.
 @code{octopus} uses splines, complex numbers, special functions, etc. from GSL,
 so it is a must! If you don't have it already installed in your system, you can
 obtain GSL from @uref{http://sources.redhat.com/gsl/, here}. You will need version 1.0 
 or higher.
 
-@item MPI : If you want to run @code{octopus} in multi-tentacle (parallel) mode,
+@item MPI: If you want to run @code{octopus} in multi-tentacle (parallel) mode,
 you will need an implementation of MPI. 
 @uref{http://www-unix.mcs.anl.gov/mpi/mpich/, @code{mpich}} works just fine in our
 Linux boxes.
@@ -862,7 +862,7 @@ Asked Questions for some more details.
 Valid options are:
 @itemize @minus
   @item @code{'a.u'} : atomic units
-  @item @code{'eVA'} : electron-volts/amstrongs
+  @item @code{'eVA'} : electron-volts/@aa{}ngstrom
 @end itemize
 
 @item @vindex @code{UnitsInput}
@@ -1959,7 +1959,7 @@ the following input 'inp'.
   SystemName = 'Na'
   CalculationMode = 1
   %Species
-    'Na' | 22.989768 | 11 | "tm" | 0 | 0
+    'Na' | 22.989768 | 11 | "tm2" | 0 | 0
   %
   %Coordinates
     'Na' | 0.0 | 0.0 | 0.0 | no
