@@ -130,7 +130,7 @@ module liboct
 
     subroutine oct_wfs_list(str, l)
       character(len=*), intent(in) :: str
-      integer(4), intent(out) :: l(32)
+      integer, intent(out) :: l(32)
     end subroutine oct_wfs_list
 
     real(8) function oct_ran_gaussian(r, sigma)
