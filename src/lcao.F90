@@ -61,19 +61,19 @@ subroutine lcao_dens(sys, nspin, rho)
 
   sub_name = 'lcao_dens'; call push_sub()
   
-  rho = 0._r8
+  rho = M_ZERO
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
     s => a%spec
 
     if(conf%dim==1.or.conf%dim==2) then
-      call from_userdef(sys%m, rho(:, 1))
+      call from_userdef(sys%m)
     else
       select case(s%label(1:5))
       case('usdef')
-        call from_userdef(sys%m, rho(:, 1))
+        call from_userdef(sys%m)
       case('jelli', 'point')
-        call from_jellium(sys%m, rho(:, 1))
+        call from_jellium(sys%m)
       case default
         call from_pseudopotential(sys%m)
       end select
@@ -98,25 +98,24 @@ subroutine lcao_dens(sys, nspin, rho)
 
   call pop_sub()
 contains
-  subroutine from_userdef(m, rho)
+  subroutine from_userdef(m)
     type(mesh_type), intent(in) :: m
-    real(r8), intent(inout) :: rho(m%np)
 
     integer :: i
 
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
-      rho(i) = rho(i) + real(s%Z_val, r8)/(m%np*m%vol_pp)
+      rho(i, 1) = rho(i, 1) + real(s%Z_val, r8)/(m%np*m%vol_pp)
     end do
   end subroutine from_userdef
 
-  subroutine from_jellium(m, rho)
+  subroutine from_jellium(m)
     type(mesh_type), intent(in) :: m
-    real(r8), intent(inout) :: rho(m%np)
 
     integer :: i, in_points
     real(r8) :: r
 
+    in_points = 0
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
       if(r <= s%jradius) then
@@ -128,7 +127,7 @@ contains
       do i = 1, m%np
         call mesh_r(m, i, r, a=a%x)
         if(r <= s%jradius) then
-          rho(i) = rho(i) + real(s%Z_val, r8)/(in_points*m%vol_pp)
+          rho(i, 1) = rho(i, 1) + real(s%Z_val, r8)/(in_points*m%vol_pp)
         end if
       end do
     end if

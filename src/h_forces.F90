@@ -93,6 +93,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
   if(h%no_lasers>0) then
     call laser_field(h%no_lasers, h%lasers, t, x)
     do i = 1, sys%natoms
+      if(sys%atom(i)%spec%local) cycle
       sys%atom(i)%f(1:conf%dim) = sys%atom(i)%f(1:conf%dim) + &
            sys%atom(i)%spec%Z_val * x(1:conf%dim)
     end do
@@ -100,6 +101,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 
   ! first the ion, ion force term
   do i = 1, sys%natoms
+    if(sys%atom(i)%spec%local) cycle
     zi = sys%atom(i)%spec%Z_val
     do j = 1, sys%natoms
       if(i .ne. j) then
@@ -117,7 +119,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
   if(h%vpsl_space == 0) then ! Real space
     do i = 1, sys%natoms
       atm => sys%atom(i)
-      
+      if(sys%atom(i)%spec%local) cycle  
       do j = 1, sys%m%np
         call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
         if(r < r_small) cycle
@@ -142,6 +144,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
     
     do i = 1, sys%natoms
       atm => sys%atom(i)
+      if(sys%atom(i)%spec%local) cycle
       do j = 1, conf%dim
         fw1 = M_z0
         call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)

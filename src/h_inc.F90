@@ -281,7 +281,10 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
   sub_name = 'hamiltonian_setup'; call push_sub()
 
   call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
-  h%epot = - M_HALF*dmesh_dotp(m, st%rho(:, 1), h%vhartree)
+  h%epot = M_ZERO
+  do is = 1, st%spin_channels
+     h%epot = h%epot - M_HALF*dmesh_dotp(m, st%rho(:, is), h%vhartree)
+  enddo
 
   call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
   select case(h%ispin)
