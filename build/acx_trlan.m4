@@ -17,7 +17,7 @@ dnl First, check if it links
 if test $acx_trlan_ok = no; then
   LIBS="$LIBS_TRLAN $acx_trlan_save_LIBS $FLIBS"
   AC_MSG_CHECKING([for trl_info module])
-  AC_LINK_IFELSE([use trl_info], acx_trlan_ok=yes, [])
+  AC_LINK_IFELSE(AC_LANG_PROGRAM([], [use trl_info]), acx_trlan_ok=yes, [])
   AC_MSG_RESULT($acx_trlan_ok)
 fi
 
@@ -26,7 +26,7 @@ if test $acx_trlan_ok = no; then
   LIBS="$LIBS_TRLAN -ltrlan $acx_trlan_save_LIBS $FLIBS"
 
   AC_MSG_CHECKING([for trl_info module in -ltrlan])
-  AC_LINK_IFELSE([use trl_info], [acx_trlan_ok=yes; LIBS_TRLAN="$LIBS_TRLAN -ltrlan"], [])
+  AC_LINK_IFELSE(AC_LANG_PROGRAM([], [use trl_info]), [acx_trlan_ok=yes; LIBS_TRLAN="$LIBS_TRLAN -ltrlan"], [])
   AC_MSG_RESULT($acx_trlan_ok)
 fi
 

@@ -17,10 +17,10 @@ dnl First, check if it links
 if test $acx_netcdf_ok = no; then
   LIBS="$LIBS_NETCDF $acx_netcdf_save_LIBS $FLIBS"
   AC_MSG_CHECKING([for nf90_close])
-  AC_LINK_IFELSE([
+  AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
 use netcdf
-integer :: ncid
-call nf90_close(ncid)], acx_netcdf_ok=yes, [])
+integer :: ncid, status
+status=nf90_close(ncid)]), acx_netcdf_ok=yes, [])
   AC_MSG_RESULT($acx_netcdf_ok)
 fi
 
@@ -29,10 +29,10 @@ if test $acx_netcdf_ok = no; then
   LIBS="$LIBS_NETCDF -lnetcdf $acx_netcdf_save_LIBS $FLIBS"
 
   AC_MSG_CHECKING([for nf90_close in -lnetcdf])
-  AC_LINK_IFELSE([
+  AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
 use netcdf
-integer :: ncid
-call nf90_close(ncid)], [acx_netcdf_ok=yes; LIBS_NETCDF="$LIBS_NETCDF -lnetcdf"], [])
+integer :: ncid, status
+status=nf90_close(ncid)]), [acx_netcdf_ok=yes; LIBS_NETCDF="$LIBS_NETCDF -lnetcdf"], [])
   AC_MSG_RESULT($acx_netcdf_ok)
 fi
 
