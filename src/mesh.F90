@@ -18,6 +18,10 @@
 #include "global.h"
 
 module mesh
+use global
+use oct_parser
+use units
+use math
 use atom
   
 implicit none

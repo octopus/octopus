@@ -18,6 +18,9 @@
 #include "global.h"
 
 program hs_from_mult
+  use global
+  use units
+  use oct_parser
   use spectrum
 
   integer :: ierr

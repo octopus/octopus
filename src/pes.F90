@@ -19,6 +19,12 @@
 
 module PES
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
+use global
+use oct_parser
+use io
+use units
+use fft
+use mesh
 use states
 
 implicit none

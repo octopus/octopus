@@ -18,6 +18,8 @@
 #include "global.h"
 
 program octopus
+  use global
+  use liboct
   use run_prog
 
   implicit none

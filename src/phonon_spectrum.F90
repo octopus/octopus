@@ -18,6 +18,7 @@
 #include "global.h"
 
 program phonon_spectrum
+  use global
   use io
   use units
 

@@ -18,7 +18,11 @@
 #include "global.h"
 
 module lcao
+  use global
+  use liboct
   use linalg
+  use spline
+  use mesh
   use hamiltonian
 
   implicit none

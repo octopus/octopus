@@ -19,7 +19,10 @@
 
 module linear
   use global
-  use math
+  use liboct
+  use io
+  use linalg
+  use mesh
   use poisson
   use states
 

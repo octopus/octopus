@@ -18,6 +18,13 @@
 #include "global.h"
 
 module opt_control
+use global
+use liboct
+use oct_parser
+use io
+use states
+use hamiltonian
+use system
 use timedep
 
 implicit none

@@ -18,6 +18,9 @@
 #include "global.h"
 
 module mesh_function
+  use global
+  use linalg
+  use mesh
   use cube_function
 
   implicit none

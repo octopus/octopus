@@ -21,6 +21,7 @@
 !	procedures.                                                           !
 
 module math
+  use global
   use linalg
 
   implicit none

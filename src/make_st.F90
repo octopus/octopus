@@ -18,6 +18,11 @@
 #include "global.h"
 
 program make_st
+  use global
+  use units
+  use oct_parser
+  use mesh
+  use states
   use system
 
   implicit none

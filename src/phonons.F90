@@ -18,7 +18,15 @@
 #include "global.h"
 
 module phonons
+  use global
+  use liboct
+  use oct_parser
+  use io
   use linalg
+  use external_pot
+  use hamiltonian
+  use states
+  use system
   use scf
 
   implicit none

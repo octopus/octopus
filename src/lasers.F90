@@ -18,6 +18,10 @@
 #include "global.h"
 
 module lasers
+use global
+use io
+use oct_parser
+use spline
 use mesh
 
 implicit none

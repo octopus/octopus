@@ -21,6 +21,7 @@ module hgh
 ! For information about the Hartwinger-Goedecker-Hutter pseudopotentials, take a look at:
 !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
 !  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
+use global
 use io
 use atomic
 use logrid

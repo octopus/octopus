@@ -18,6 +18,12 @@
 #include "global.h"
 
 module hamiltonian
+use global
+use oct_parser
+use linalg
+use mesh
+use output
+use mesh_function
 use external_pot
 use poisson
 use xc
