@@ -1,0 +1,13 @@
+The mf.* are openDX rpograms to plot quantities like wave-functions, 
+potentials, etc. In order to use these utilities, you will need
+
+*) openDX [1] 
+
+*) the chemistry packages form Cornell [2]. For convinience, a cleaned
+version of this library, hacked to read .xyz (the structure format of
+choice of octopus) can be found in the download section of the octopus
+web page [3].
+
+[1] http://www.opendx.org
+[2] http://www.tc.cornell.edu/Services/Vis/dx/index.asp
+[3] http://www.tddft.org/programs/octopus/download.php
