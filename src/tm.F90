@@ -71,7 +71,7 @@ subroutine tm_init(pstm, filename, ispin)
   character(len=256) :: filename2
   integer :: iunit, l, n
   logical :: found
-  FLOAT :: x, y
+  FLOAT :: x
 
   call push_sub('ps_tm_read_file')
 
@@ -218,7 +218,7 @@ subroutine solve_schroedinger(psf)
 
   character(len=3) :: functl
   integer :: iter, ir, is, l, nnode, nprin, irel
-  FLOAT :: vtot, diff, r2, e, z, dr, rmax, f, dsq, a2b4, dnrm, avgv, vphi
+  FLOAT :: vtot, diff, e, z, dr, rmax, a2b4
   FLOAT, allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
   FLOAT, parameter :: tol = CNST(1.0e-10)
 
@@ -362,7 +362,7 @@ subroutine read_file_data_bin(unit, psf)
   integer, intent(in) :: unit
   type(tm_type), intent(inout) :: psf
   
-  integer  :: ndown, nup, l, ir, i
+  integer  :: ndown, nup, l, i
   FLOAT :: r2
   FLOAT, allocatable :: aux(:)
 
@@ -453,7 +453,7 @@ subroutine read_file_data_ascii(unit, psf)
   integer, intent(in) :: unit
   type(tm_type), intent(inout) :: psf
   
-  integer  :: ndown, nup, i, l, ir
+  integer  :: ndown, nup, i, l
   FLOAT :: r2
   FLOAT, allocatable :: aux(:)
   character(len=70) :: aux_s
@@ -609,7 +609,7 @@ subroutine ghost_analysis(pstm, lmax)
 
   character(len=3) :: functl
   integer :: ir, l, nnode, nprin, ighost, irel
-  FLOAT :: vtot, a2b4, z, e, dr, rmax, dnrm, avgv
+  FLOAT :: vtot, a2b4, z, e, dr, rmax
   FLOAT, allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
 
   call push_sub('ghost_analysis')

@@ -150,7 +150,7 @@ subroutine X(f_divergence) (m, f, divf)
   R_TYPE, intent(in) :: f(m%np, conf%dim)
   R_TYPE, intent(out) :: divf(m%np)
 
-  integer :: i, n
+  integer :: i
   R_TYPE, allocatable :: aux(:)
 
   call push_sub("f_gradient")

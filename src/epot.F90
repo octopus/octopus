@@ -281,15 +281,14 @@ contains
 #endif
 
   subroutine epot_generate(ep, m, st, geo, Vpsl, reltype)
-    type(epot_type),   intent(inout) :: ep
-    type(mesh_type),   intent(in)    :: m
-    type(states_type), intent(inout) :: st
+    type(epot_type),     intent(inout) :: ep
+    type(mesh_type),     intent(in)    :: m
+    type(states_type),   intent(inout) :: st
     type(geometry_type), intent(inout) :: geo
-    FLOAT,          pointer       :: Vpsl(:)
-    integer,           intent(in)    :: reltype
+    FLOAT,               pointer       :: Vpsl(:)
+    integer,             intent(in)    :: reltype
 
-    integer :: ia, i, j, l, lm, add_lm, k
-    FLOAT :: x(conf%dim)
+    integer :: ia, i, l, lm, add_lm, k
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
@@ -376,7 +375,7 @@ contains
   contains
     subroutine build_local_part()
       integer :: i
-      FLOAT :: x(3), r
+      FLOAT :: x(3)
       
       call push_sub('build_local_part')
       if(ep%vpsl_space == REAL_SPACE) then ! real space
@@ -406,7 +405,7 @@ contains
     subroutine build_kb_sphere(ivnl)
       integer, intent(in) :: ivnl
       integer :: i, j, k
-      FLOAT :: r, x(3)
+      FLOAT :: r
       
       call push_sub('build_kb_sphere')
 
@@ -482,7 +481,7 @@ contains
     subroutine build_nl_part(ivnl, l, lm, add_lm)
       integer, intent(in) :: ivnl, l, lm, add_lm
 
-      integer :: i, j, k, n, p, ix(3), center(3)
+      integer :: i, j, k
       FLOAT :: r, x(3), x_in(3), ylm
       FLOAT :: so_uv, so_duv(3)
       

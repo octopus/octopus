@@ -23,7 +23,6 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   FLOAT, intent(in) :: ip, qtot
 
   integer :: i
-  FLOAT :: e_aux
 
   ! for fxc != vxc...
   ! fxc is always LDA!!!!

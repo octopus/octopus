@@ -49,8 +49,8 @@ contains
     integer, intent(in)   :: l, lm, ispin
     R_TYPE, intent(out) :: psi(m%np)
     
-    integer :: j, d2, ll
-    FLOAT :: x(3), a(3), r, p, ylm, g(3)
+    integer :: j, ll
+    FLOAT :: x(3), a(3), r, p, ylm
     type(loct_spline_type), pointer :: s
 
     call push_sub('atom_get_wf')
@@ -79,10 +79,10 @@ contains
     integer,         intent(in) :: spin_channels
     FLOAT                       :: rho(m%np, spin_channels)
 
-    integer :: opt, i, in_points, n, is
+    integer :: opt, i, in_points, n
     integer, save :: j = 1
     FLOAT :: r
-    R_TYPE :: psi1, psi2
+    R_TYPE :: psi1
     type(specie_type), pointer :: s
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)

@@ -129,7 +129,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(in)    :: outp
 
-  integer :: iter, iunit, ik, ist, id, is
+  integer :: iter, iunit, is
   FLOAT :: evsum_out, evsum_in
   FLOAT, allocatable :: rhoout(:,:), rhoin(:,:)
   FLOAT, allocatable :: vout(:,:), vin(:,:)

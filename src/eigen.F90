@@ -147,7 +147,7 @@ subroutine eigen_solver_run(eigens, m, st, h, iter, conv)
   integer, intent(in) :: iter
   logical, intent(inout), optional :: conv
 
-  integer :: ik, maxiter, errorflag
+  integer :: maxiter, errorflag
   FLOAT :: tol
 
   call push_sub('eigen_solver_run')

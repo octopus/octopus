@@ -229,7 +229,7 @@ contains
     subroutine td_rti2
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi1(:,:,:,:)
-      integer is, ik, ist
+      integer :: ik, ist
       
       call push_sub('td_rti2')
       
@@ -278,7 +278,7 @@ contains
     end subroutine td_rti2
     
     subroutine td_rti3
-      integer is, ik, ist
+      integer ik, ist
       call push_sub('td_rti3')
       
       do ik = 1, st%nik

@@ -30,10 +30,13 @@
     FLOAT, intent(out) :: acc(3)
     logical, intent(in), optional :: reduce
 
-    FLOAT :: field(3), x(3), y(3), mesh_x(3), r, vl, dvl, d, charge
+    FLOAT :: field(3), x(3), mesh_x(3)
     CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
-    integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj, ierr
-    type(atom_type), pointer :: atm
+    integer  :: j, k, i, ik, ist, idim
+#if defined(HAVE_MPI)
+    integer :: ierr
+    FLOAT :: y(3)
+#endif
 
     call push_sub('td_calc_tacc')
 

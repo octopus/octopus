@@ -89,7 +89,7 @@ contains
     integer, intent(inout) :: n(3)
     integer, intent(in) :: is_real
     type(fft_type), intent(out) :: fft
-    FLOAT, allocatable    :: rin(:, :, :), rout(:, :, :)
+    FLOAT, allocatable    :: rin(:, :, :)
     CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
 
 

@@ -29,7 +29,6 @@ program broad
     FLOAT :: b, energy_step, min_energy, max_energy
   end type broad_type
 
-  integer :: ierr
   logical :: l
   type(broad_type) :: b
 

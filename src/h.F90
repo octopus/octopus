@@ -88,7 +88,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   type(states_dim_type),  pointer       :: states_dim
 
   integer :: i, j, n
-  FLOAT :: d(3), r, x(3)
+  FLOAT :: d(3)
 
   call push_sub('hamiltonian_init')
 
@@ -237,8 +237,9 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   integer, intent(in) :: iunit
   logical, intent(in), optional :: reduce
 
-  FLOAT :: s, e
+  FLOAT :: e
 #ifdef HAVE_MPI
+  FLOAT :: s
   integer :: ierr
 #endif 
 

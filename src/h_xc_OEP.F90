@@ -106,7 +106,7 @@ subroutine X(h_xc_oep_solve) (m, h, st, is, vxc, oep)
   FLOAT,          intent(inout) :: vxc(m%np)
   type(xc_oep_type), intent(inout) :: oep
 
-  integer :: iter, i, ist
+  integer :: iter, ist
   FLOAT :: vxc_bar
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:), psi(:,:)
@@ -159,7 +159,7 @@ contains
   subroutine get_psi()
     integer :: iter
     R_TYPE, allocatable :: res(:,:), p(:,:), x(:,:), z(:,:), tmp(:,:)
-    R_TYPE :: r, ek, qk, sprod, spold, norm
+    R_TYPE :: r, ek, qk, spold
     
     allocate(res(m%np, 1), p(m%np, 1), x(m%np, 1), z(m%np, 1), tmp(m%np, 1))
     

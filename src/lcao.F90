@@ -64,13 +64,10 @@ subroutine lcao_init(m, st, geo, h)
   type(geometry_type),    intent(in) :: geo
   type(hamiltonian_type), intent(in) :: h
 
-  integer :: norbs, i, ispin, a, ik, n1, i1, l, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
+  integer :: norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2
   integer, parameter :: orbs_local = 2
 
-  R_TYPE, allocatable :: psi1(:,:), psi2(:,:), hpsi(:,:)
-  FLOAT :: s
-
-  FLOAT :: uVpsi
+  R_TYPE, allocatable :: hpsi(:,:)
 
   if(conf%dim.ne.3) return
   if(lcao_data%state == 1) return
@@ -182,11 +179,10 @@ subroutine lcao_wf(m, st, h)
 
   integer, parameter :: orbs_local = 2
 
-  integer :: a, idim, np, dim, nst, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
-  integer :: norbs, mode
+  integer :: np, dim, nst, ik, n1, n2
+  integer :: norbs
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
-  FLOAT :: uvpsi
 
   if(conf%dim.ne.3) return
   call push_sub('lcao_wf')

@@ -99,7 +99,6 @@ contains
     type(phonons_type),     intent(inout) :: ph
 
     integer :: i, j, alpha, beta, n, iunit
-    FLOAT :: energ
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
     allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))

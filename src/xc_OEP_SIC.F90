@@ -25,8 +25,8 @@ subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
   type(xc_oep_type), intent(inout) :: oep
   FLOAT,          intent(out)   :: ex
 
-  integer  :: i, k, i1, i2
-  FLOAT :: ex2, edummy, r
+  integer  :: i, i1, i2
+  FLOAT :: ex2, edummy
   FLOAT, allocatable :: vx2(:, :)
   FLOAT, pointer :: rho(:,:), rho_save(:,:)
   type(xc_type) :: xcs2
@@ -77,8 +77,8 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
   type(xc_oep_type), intent(inout) :: oep
   FLOAT,          intent(out)   :: ec
 
-  integer  :: i, k, i1, i2
-  FLOAT :: ec2, edummy, r
+  integer  :: i, i1, i2
+  FLOAT :: ec2, edummy
   FLOAT, allocatable :: vc2(:, :)
   FLOAT, pointer :: rho(:,:), rho_save(:,:)
   type(xc_type) :: xcs2

@@ -174,7 +174,7 @@ function load_params(unit, params)
   integer                         :: load_params ! 0 if success, 
                                                  ! 1 otherwise.
 
-  integer :: i, iostat, j, k, ierr, confunit, sc
+  integer :: i, iostat, j, k
   character(len=VALCONF_STRING_LENGTH) :: line
 
   call push_sub('load_params')
@@ -440,7 +440,7 @@ subroutine solve_schroedinger(psp)
   type(hgh_type), intent(inout)     :: psp
   
   integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
-  FLOAT :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
+  FLOAT :: vtot, e, z, dr, rmax, a2b4, diff, nonl
   FLOAT, allocatable :: s(:), hato(:), g(:), y(:), prev(:, :), rho(:, :), ve(:, :)
   FLOAT, parameter :: tol = CNST(1.0e-4)
 

@@ -99,7 +99,7 @@ contains
     FLOAT, intent(in) :: t
     CMPLX, intent(in) :: factor
 
-    integer :: is, idim, k
+    integer :: k
     FLOAT :: x(3), f(3)
     
     call push_sub('vlpsi')
@@ -145,8 +145,8 @@ contains
     CMPLX, intent(in) :: factor
     logical, intent(in) :: order
 
-    integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm, &
-         ivnl_start, ivnl_end, step, l_start, l_end, kbc_start, kbc_end, ivnl
+    integer :: idim, ikbc, jkbc, &
+         ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl
     CMPLX :: uvpsi, p2, ctemp
     CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
 

@@ -24,7 +24,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   logical,           intent(in), optional :: reduce_
 
   integer :: i, j, l, m, idim, ist, ik, ii, jj, ivnl
-  FLOAT :: d, r, zi, zj, vl, dvl, x(3)
+  FLOAT :: d, r, zi, zj, x(3)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
 

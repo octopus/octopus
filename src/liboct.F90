@@ -32,53 +32,53 @@ module lib_oct
   ! ------------------------------------------------------------
   ! Special functions
   interface loct_gamma
-    module procedure oct_gamma4
-
-    real(8) function oct_gamma(x)
+    function oct_gamma(x)
+      real(8) :: oct_gamma
       real(8), intent(in) :: x
     end function oct_gamma
+    module procedure oct_gamma4
   end interface
 
   interface loct_bessel
-    module procedure oct_bessel4
-
-    real(8) function oct_bessel(n, x)
+    function oct_bessel(n, x)
+      real(8) :: oct_bessel
       integer, intent(in) :: n
       real(8), intent(in)  :: x
     end function oct_bessel
+    module procedure oct_bessel4
   end interface
 
   interface loct_asinh
-    module procedure oct_asinh4
-
-    real(8) function oct_asinh(x)
+    function oct_asinh(x)
+      real(8) :: oct_asinh
       real(8), intent(in) :: x
     end function oct_asinh
+    module procedure oct_asinh4
   end interface
 
   interface loct_erf
-    module procedure oct_erf4
-
-    real(8) function oct_erf(x)
+    function oct_erf(x)
+      real(8) :: oct_erf
       real(8), intent(in) :: x
     end function oct_erf
+    module procedure oct_erf4
   end interface
 
   interface loct_erfc
-    module procedure oct_erfc4
-
-    real(8) function oct_erfc(x)
+    function oct_erfc(x)
+      real(8) oct_erfc
       real(8), intent(in) :: x
     end function oct_erfc
+    module procedure oct_erfc4
   end interface
 
   interface loct_ylm
-    module procedure oct_ylm4
-
-    real(8) function oct_ylm(x, y, z, l, m)
+    function oct_ylm(x, y, z, l, m)
+      real(8) :: oct_ylm
       real(8), intent(in) :: x, y, z
       integer, intent(in) :: l, m
     end function oct_ylm
+    module procedure oct_ylm4
   end interface
 
   ! ------------------------------------------------------------
@@ -96,18 +96,19 @@ module lib_oct
   end interface
 
   interface loct_ran_gaussian
-    module procedure oct_ran_gaussian4
-
-    real(8) function oct_ran_gaussian(r, sigma)
+    function oct_ran_gaussian(r, sigma)
+      real(8) :: oct_ran_gaussian
       integer(POINTER_SIZE), intent(in) :: r
       real(8), intent(in) :: sigma
     end function oct_ran_gaussian
+    module procedure oct_ran_gaussian4
   end interface
 
   ! ------------------------------------------------------------
   ! System information (time, memory, sysname)
   interface loct_clock
-    real(8) function oct_clock()
+    function oct_clock()
+      real(8) :: oct_clock
     end function oct_clock
   end interface
 

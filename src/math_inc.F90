@@ -180,8 +180,7 @@ subroutine X(matexp_decomposition)(order, in, out, factor)
   R_TYPE,  intent(out) :: out(order, order)
   R_TYPE,  intent(in)  :: factor
 
-  integer ::  n, info, lwork
-  R_TYPE :: zfact
+  integer ::  n
   R_TYPE, allocatable :: aux(:,:), auxt(:,:), dd(:,:)
   FLOAT, allocatable :: w(:)
 

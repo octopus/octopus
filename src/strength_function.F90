@@ -23,7 +23,6 @@ program strength_function
   use units
   use spectrum
 
-  integer :: ierr
   character(len=100) :: txt
   type(spec_type) :: s
   type(spec_sf) :: sf

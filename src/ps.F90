@@ -363,8 +363,6 @@ subroutine tm_load(ps, pstm)
   type(ps_type), intent(inout) :: ps
   type(tm_type), intent(inout) :: pstm
 
-  integer :: l
-
   call push_sub('tm_load')
 
   ! Fixes some components of ps, read in pstm
@@ -492,8 +490,7 @@ subroutine get_splines_hgh(psp, ps)
   type(hgh_type), intent(in)   :: psp
   type(ps_type), intent(inout) :: ps
 
-  integer :: l, ll, is, nrc, ir, nrcore, j
-  FLOAT :: chc
+  integer :: l, is, nrc, j
   FLOAT, allocatable :: hato(:), derhato(:)
 
   call push_sub('get_splines_hgh')

@@ -21,8 +21,6 @@ module pulpo
 
 contains
   subroutine pulpo_print()
-    character(len=2) :: lang
-    
     ! some white space
     message(1) = ''; message(2) = ''
     call write_info(2)

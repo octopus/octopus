@@ -149,9 +149,12 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
   R_TYPE, intent(out) :: hpsi(m%np, h%d%dim)
   integer :: ik
 
+  integer :: idim, np, dim
+#if defined(COMPLEX_WFNS)
+  integer :: i
   R_TYPE, allocatable :: grad(:,:)
   FLOAT :: k2
-  integer :: idim, i, np, dim
+#endif  
 
   call push_sub('kinetic')
   np = m%np
@@ -195,9 +198,7 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
   R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
 
-  integer :: i, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm, ivnl
-  FLOAT :: x(conf%dim)
-  R_TYPE :: phase
+  integer :: idim, ikbc, jkbc, ivnl
   R_TYPE :: uVpsi
   R_TYPE, allocatable :: lpsi(:), lHpsi(:)
   type(nonlocal_op), pointer :: nlop
@@ -261,7 +262,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   R_TYPE, intent(in) :: psi(m%np, h%d%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
 
-  integer :: is, idim, np, dim
+  integer :: idim, np, dim
 
   call push_sub('vlpsi')
 
@@ -299,7 +300,7 @@ subroutine X(vlasers) (h, m, psi, hpsi, t)
 
   FLOAT, intent(in) :: t
 
-  integer :: is, i, k, idim, np, dim
+  integer :: k, idim
   FLOAT :: x(3), f(3)
   R_TYPE, allocatable :: grad(:,:)
 

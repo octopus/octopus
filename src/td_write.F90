@@ -22,7 +22,6 @@ subroutine td_write_angular(out, m, st, td, iter)
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
 
-  integer :: is, i
   character(len=130) :: aux
   FLOAT :: angular(3)
 

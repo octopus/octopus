@@ -26,9 +26,12 @@ subroutine X(oep_x) (m, st, is, oep, ex)
   FLOAT :: r
   R_TYPE, allocatable :: lx(:)
   FLOAT, allocatable :: rho_ij(:)
+#if defined(R_TREAL)
   FLOAT, allocatable :: pot(:)             ! For real
+#else
   FLOAT, allocatable :: pot_r(:), pot_i(:) ! For complex
-  
+#endif  
+
   allocate(lx(m%np))
 
   do i = 1, st%nst

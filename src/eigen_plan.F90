@@ -54,7 +54,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
   R_TYPE, allocatable :: hevec(:, :)
   R_TYPE, allocatable :: aux(:, :)
   
-  integer  :: blk, i, ii, idim, j, jj, d1, d2, matvec, nconv, ik, knec, np
+  integer  :: blk, i, ii, idim, j, d1, d2, matvec, nconv, ik, knec, np
   FLOAT :: x
 
   ! Some hard coded parameters.

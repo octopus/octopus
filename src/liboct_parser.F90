@@ -72,23 +72,21 @@ module lib_oct_parser
   end interface
 
   interface loct_parse_float
-    module procedure oct_parse_double4
-    
     subroutine oct_parse_double(name, def, res)
       character(len=*), intent(in)  :: name
       real(8),          intent(in)  :: def
       real(8),          intent(out) :: res
     end subroutine oct_parse_double
+    module procedure oct_parse_double4
   end interface
 
   interface loct_parse_cmplx
-    module procedure oct_parse_complex4
-
     subroutine oct_parse_complex(name, def, res)
       character(len=*), intent(in) :: name
       complex(8), intent(in)       :: def
       complex(8), intent(out)      :: res
     end subroutine oct_parse_complex
+    module procedure oct_parse_complex4
   end interface
 
   interface loct_parse_string
@@ -120,23 +118,21 @@ module lib_oct_parser
   end interface
 
   interface loct_parse_block_float
-    module procedure oct_parse_block_double4
-
     subroutine oct_parse_block_double(name, l, c, res)
       character(len=*), intent(in) :: name
       integer, intent(in)          :: l, c
       real(8), intent(out)         :: res
     end subroutine oct_parse_block_double
+    module procedure oct_parse_block_double4
   end interface
 
   interface loct_parse_block_cmplx
-    module procedure oct_parse_block_complex4
-
     subroutine oct_parse_block_complex(name, l, c, res)
       character(len=*), intent(in) :: name
       integer, intent(in)          :: l, c
       complex(8), intent(out)      :: res
     end subroutine oct_parse_block_complex
+    module procedure oct_parse_block_complex4
   end interface
 
   interface loct_parse_block_string
@@ -147,13 +143,13 @@ module lib_oct_parser
     end subroutine oct_parse_block_string
   end interface
 
-  interface loct_parse_potential
-    module procedure oct_parse_potential4
-    
-    real(8) function oct_parse_potential(x, y, z, r, pot)
+  interface loct_parse_potential    
+    function oct_parse_potential(x, y, z, r, pot)
+      real(8) :: oct_parse_potential
       real(8), intent(in) :: x, y, z, r
       character(len=*), intent(in) :: pot
     end function oct_parse_potential
+    module procedure oct_parse_potential4
   end interface
 
 contains
@@ -179,7 +175,7 @@ contains
     integer, intent(in)          :: l, c
     logical, intent(out)         :: res
     
-    integer :: ires, r
+    integer :: ires
     
     call oct_parse_block_int(name, l, c, ires)
     res = (ires .ne. 0)

@@ -44,7 +44,7 @@ subroutine opt_control_run(td, m, st, val_charge, h, outp)
   FLOAT, pointer :: v_old_i(:,:,:), v_old_f(:,:,:)
   FLOAT, pointer :: laser_i(:,:), laser_f(:,:)
 
-  integer :: i, iunit, ctr_iter, ctr_iter_max
+  integer :: i, ctr_iter, ctr_iter_max
   FLOAT :: eps, alpha, overlap, functional, old_functional, laser_init
   character(len=80) :: filename
 
@@ -183,7 +183,7 @@ contains
 
     CMPLX, allocatable :: grad(:,:)
     CMPLX :: d1, d2(conf%dim)
-    integer :: ik, p, dim, i, j
+    integer :: ik, p, dim, i
 
     d1 = M_z0; d2 = M_z0
     allocate(grad(3, m%np))
@@ -309,8 +309,6 @@ contains
   end subroutine output
 
   subroutine init()
-    integer :: t
-
     ! psi_i is initialized in system_init
     psi_i => st
     v_old_i => td%tr%v_old

@@ -208,8 +208,8 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
   logical, intent(in) :: print_info
 
   integer :: iunit, i, is, ie, &
-      ntiter, j, jj, k, isp, time_steps
-  FLOAT :: dump, dt, x
+      ntiter, j, jj, k, time_steps
+  FLOAT :: dump, dt
   CMPLX :: z
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: angular(:, :)
@@ -448,9 +448,10 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   integer, intent(out) :: iunit, n, time_steps
   FLOAT, intent(out) :: dt
 
-  integer :: ierr, i, j
+  integer :: i, j
   FLOAT :: t1, t2, dummy
 
+  call io_assign(iunit)
   open(iunit, file=file, status='old', iostat=i)
   if(i.ne.0) then
     write(message(1),'(2a)') "Could not open ",trim(adjustl(file))

@@ -29,8 +29,7 @@ program xyzanim
   implicit none
 
   character(len=80) :: str, nbofile, xyzfile
-  character(len=5000) :: line
-  integer :: ierr, sampling, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
+  integer :: ierr, sampling, natoms, nspecies, i, nbo_unit, xyz_unit, iter, j
   FLOAT :: dump
 
   type(geometry_type) :: geo

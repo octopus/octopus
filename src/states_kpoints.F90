@@ -20,7 +20,7 @@ subroutine states_choose_kpoints(st, m)
   type(mesh_type), intent(IN) :: m
 
   logical  :: coi
-  integer  :: i, ik, jk, kk, j, k, skip, tmp_nik_axis(3)
+  integer  :: i, ik, jk, kk, k, skip, tmp_nik_axis(3)
   FLOAT :: l(3), total_weight
 
   allocate(st%d%kpoints(3, st%d%nik), st%d%kweights(st%d%nik))

@@ -253,16 +253,10 @@ module vxc
 ! Internal variables
   integer :: IS, IX 
 
-  FLOAT :: A, BETA, D(2), DADD, DECUDD,                                       & 
-              DF1DD, DF2DD, DF3DD, DF4DD, DF1DGD, DF3DGD, DF4DGD,             &
-              DFCDD(2), DFCDGD(3,2), DFDD, DFDGD, DFXDD(2), DFXDGD(3,2),      &
-              DHDD, DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD,                   &
-              DS(2), DSDD, DSDGD, DT, DTDD, DTDGD, DZDD(2),                   &
-              EC, ECUNIF, EX, EXUNIF,                                         &
-              F, F1, F2, F3, F4, FC, FX,                                      &
-              GAMMA, GD(3,2), GDM(2), GDMS, GDMT, GDS, GDT(3),                &
-              H, KAPPA, KF, KFS, KS, MU, PHI, RS, S,                          &
-              T, VCUNIF(2), VXUNIF(2), ZETA
+  FLOAT :: BETA, D(2), DF1DD, DF1DGD, DFDD, DFDGD, DFXDD(2),       &
+       DFXDGD(3,2), DKFDD, DS(2), DSDD, DSDGD, DT, EX, EXUNIF,     &
+       F, F1, FX, GAMMA, GD(3,2), GDM(2), GDMS, GDMT, GDS, GDT(3), &
+       KAPPA, KFS, MU, S, VXUNIF(2)
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
   FLOAT, parameter :: DENMIN = CNST(1.e-12), GDMIN = CNST(1.e-12)
@@ -349,16 +343,12 @@ module vxc
 ! Internal variables
   integer :: IS, IX 
 
-  FLOAT :: A, BETA, D(2), DADD, DECUDD,                                       & 
-              DF1DD, DF2DD, DF3DD, DF4DD, DF1DGD, DF3DGD, DF4DGD,             &
-              DFCDD(2), DFCDGD(3,2), DFDD, DFDGD, DFXDD(2), DFXDGD(3,2),      &
-              DHDD, DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD,                   &
-              DS(2), DSDD, DSDGD, DT, DTDD, DTDGD, DZDD(2),                   &
-              EC, ECUNIF, EX, EXUNIF,                                         &
-              F, F1, F2, F3, F4, FC, FX,                                      &
-              GAMMA, GD(3,2), GDM(2), GDMS, GDMT, GDS, GDT(3),                &
-              H, KAPPA, KF, KFS, KS, MU, PHI, RS, S,                          &
-              T, VCUNIF(2), VXUNIF(2), ZETA
+  FLOAT :: A, BETA, D(2), DADD, DECUDD, DF1DD, DF2DD, DF3DD,  &
+       DF4DD, DF3DGD, DF4DGD, DFCDD(2), DFCDGD(3,2), DHDD,    &
+       DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD, DT, DTDD,      &
+       DTDGD, DZDD(2), EC, ECUNIF, F1, F2, F3, F4, FC, GAMMA, & 
+       GD(3,2), GDM(2), GDMT, GDT(3), H, KAPPA, KF, KS, MU,   &
+       PHI, RS, T, VCUNIF(2), ZETA
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
 
@@ -468,7 +458,7 @@ module vxc
     logical, intent(in) :: modified
 
     integer  :: is
-    FLOAT :: alpha, gdm, gd(3, nspin), x, f, gamma
+    FLOAT :: alpha, gdm, x, f, gamma
 
     ! First, get the LDA exchange potential.
     call exchng(0, nspin, dens, x, dexdd)

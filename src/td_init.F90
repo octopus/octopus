@@ -22,7 +22,7 @@ subroutine td_init(td, m, st, h, outp)
   type(hamiltonian_type), intent(IN) :: h
   type(output_type), intent(in) :: outp
 
-  integer :: i, iunit, dummy
+  integer :: i, dummy
 
   call push_sub('td_init')
 
@@ -103,10 +103,9 @@ subroutine td_init(td, m, st, h, outp)
 contains
   
   subroutine td_init_states()
+#if defined(HAVE_MPI) && defined(MPI_TD)
     integer :: i, ix
 
-    ! MPI stuff
-#if defined(HAVE_MPI) && defined(MPI_TD)
     if(st%nst < mpiv%numprocs) then
       message(1) = "Have more processors than necessary"
       write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."

@@ -462,9 +462,12 @@ contains
   ! WARNING some constants are probably wrong for 1 and 2D
   subroutine elf()
     FLOAT :: f, d, s
-    FLOAT, allocatable :: c(:), j(:,:,:), r(:), gr(:,:)
+    FLOAT, allocatable :: c(:), r(:), gr(:,:)
     R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
+#if defined(R_TCOMPLEX)
+    FLOAT, allocatable :: j(:,:,:)
+#endif
 
     FLOAT, parameter :: dmin = CNST(1e-10)
     
@@ -583,9 +586,10 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
       integer, intent(in) :: n
       R_TYPE :: a(n, n)
 
-      R_TYPE, allocatable :: phi2(:, :)
-      integer :: i, j, k, l, r, sn, sn1, ierr, dim
+      integer :: i, j, dim
 #if defined(HAVE_MPI) && defined(MPI_TD)
+      R_TYPE, allocatable :: phi2(:, :)
+      integer :: k, l, r, sn, sn1, ierr
       integer :: status(MPI_STATUS_SIZE)
       integer :: request, node(st1%nst)
 #endif
@@ -664,7 +668,10 @@ subroutine X(states_calculate_angular)(m, st, angular)
 
   FLOAT :: temp(3)
   R_TYPE, allocatable :: lpsi(:, :)
-  integer :: idim, ik, j, i, ierr
+  integer :: idim, ik, j
+#if defined(HAVE_MPI)
+  integer :: i, ierr
+#endif
 
   temp = M_ZERO
   allocate(lpsi(conf%dim, m%np))

@@ -161,13 +161,84 @@ subroutine mesh_create(m, enlarge_)
   return
 end subroutine mesh_create
 
+#if defined(HAVE_METIS)
+subroutine mesh_partition(m, Lxyz_tmp)
+  type(mesh_type), intent(inout) :: m
+  integer, pointer :: Lxyz_tmp(:,:,:)
+  
+  integer :: i, ix, iy, iz, ne
+  integer :: nparts, edgecut
+  integer, allocatable :: elmnts(:), epart(:), npart(:)
+
+  ! let us count how many elements we have
+  ne = 0
+  do ix = m%nr(1,1), m%nr(2,1) - 1
+    do iy = m%nr(1,2), m%nr(2,2) - 1
+      do iz = m%nr(1,3), m%nr(2,3) - 1
+        if(.not.point_OK(ix, iy, iz)) cycle
+        ne = ne + 1
+      end do
+    end do
+  end do
+
+  ! allocate space necessary for the elements
+  allocate(elmnts(8*ne))
+
+  ! create elements array
+  i = 1
+  do ix = m%nr(1,1), m%nr(2,1) - 1
+    do iy = m%nr(1,2), m%nr(2,2) - 1
+      do iz = m%nr(1,3), m%nr(2,3) - 1
+        if(.not.point_OK(ix, iy, iz)) cycle
+        elmnts(i+0) = m%Lxyz_inv(ix,   iy,   iz)
+        elmnts(i+1) = m%Lxyz_inv(ix+1, iy,   iz)
+        elmnts(i+2) = m%Lxyz_inv(ix+1, iy+1, iz)
+        elmnts(i+3) = m%Lxyz_inv(ix,   iy+1, iz)
+        elmnts(i+4) = m%Lxyz_inv(ix,   iy,   iz+1)
+        elmnts(i+5) = m%Lxyz_inv(ix+1, iy,   iz+1)
+        elmnts(i+6) = m%Lxyz_inv(ix+1, iy+1, iz+1)
+        elmnts(i+7) = m%Lxyz_inv(ix,   iy+1, iz+1)
+        i = i + 8
+      end do
+    end do
+  end do
+  
+  allocate(epart(ne), npart(m%np))
+  nparts = 4
+  call oct_METIS_partition(ne, m%np, elmnts, 3, 1, nparts, edgecut, epart, npart)
+
+  deallocate(epart, npart)
+
+  contains
+    logical function point_OK(ix, iy, iz) result(OK)
+      integer, intent(in) :: ix, iy, iz
+
+      ! check if all 8 vertices are inside the mesh
+      ! the labelling is consistent with METIS requirements
+      if(     &
+           Lxyz_tmp(ix,   iy,   iz  ).eq.1.and. &   ! 1
+           Lxyz_tmp(ix+1, iy,   iz  ).eq.1.and. &   ! 2
+           Lxyz_tmp(ix+1, iy+1, iz  ).eq.1.and. &   ! 3
+           Lxyz_tmp(ix,   iy+1, iz  ).eq.1.and. &   ! 4
+           Lxyz_tmp(ix,   iy,   iz+1).eq.1.and. &   ! 5
+           Lxyz_tmp(ix+1, iy,   iz+1).eq.1.and. &   ! 6
+           Lxyz_tmp(ix+1, iy+1, iz+1).eq.1.and. &   ! 7
+           Lxyz_tmp(ix,   iy+1, iz+1).eq.1) then    ! 8
+        OK = .true.
+      else
+        OK = .false.
+      end if
+           
+    end function point_OK
+end subroutine mesh_partition
+#endif
+
 subroutine mesh_create_xyz(m, enlarge)
   type(mesh_type), intent(inout) :: m
   integer, intent(in) :: enlarge
 
-  integer :: i, il, ik, ix, iy, iz
+  integer :: i, il, ix, iy, iz
   integer, pointer :: Lxyz_tmp(:,:,:)
-  logical :: b
 
 ! enlarge mesh in the non-periodic dimensions
   do i = conf%periodic_dim+1, conf%dim
@@ -227,7 +298,7 @@ subroutine mesh_create_xyz(m, enlarge)
   allocate(m%Lxyz(3, il))
   il = 0
 
-  ! first we fill the poins in the inner mesh
+  ! first we fill the points in the inner mesh
   do ix = m%nr(1,1), m%nr(2,1)
     do iy = m%nr(1,2), m%nr(2,2)
       do iz = m%nr(1,3), m%nr(2,3)
@@ -257,6 +328,10 @@ subroutine mesh_create_xyz(m, enlarge)
       end do
     end do
   end do
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  call mesh_partition(m, Lxyz_tmp)
+#endif
 
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
 end subroutine mesh_create_xyz

@@ -57,8 +57,7 @@ subroutine laser_init(m, no_l, l)
   integer, intent(out) :: no_l
   type(laser_type), pointer :: l(:)
 
-  integer :: i, k, iunit
-  FLOAT :: x, y, z
+  integer :: i
   character(len=80) :: str
 
   call push_sub('laser_init')
@@ -263,7 +262,6 @@ subroutine laser_vector_field(no_l, l, t, field)
   FLOAT, intent(in) :: t
   FLOAT, intent(out) :: field(conf%dim)
 
-  FLOAT :: r
   CMPLX, allocatable :: amp(:)
   integer :: i
 

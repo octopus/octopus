@@ -55,8 +55,6 @@ subroutine mix_init(smix, np, nv)
   integer, intent(in) :: np
   integer, intent(in) :: nv
 
-  integer :: i
-
   call push_sub('mix_init')
 
   ! check input parameters

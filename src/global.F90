@@ -237,11 +237,11 @@ subroutine global_init_symbols()
 end subroutine global_init_symbols
 
 subroutine global_end()
-  integer :: ierr
-
 #ifdef HAVE_MPI
+  integer :: ierr
   call MPI_FINALIZE(ierr)
 #endif
+
   call loct_parse_end()
 
 end subroutine global_end
@@ -454,7 +454,7 @@ END SUBROUTINE compact
 
 subroutine str_trim(str)
   character (len=*), intent(inout) :: str
-  integer :: i, j, k, l
+  integer :: i, j, l
   
   l = len(str)
   do i = 1, l

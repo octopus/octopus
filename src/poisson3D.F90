@@ -53,7 +53,7 @@ contains
 
 #ifdef HAVE_FFT
   subroutine init_fft()
-    integer :: ix, iy, iz, ixx(3), db(3), dbc(3)
+    integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: r_0, temp(3), vec
 
     ! double the box to perform the fourier transforms

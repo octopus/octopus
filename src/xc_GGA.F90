@@ -29,11 +29,10 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   FLOAT, allocatable :: grhoplus(:, :), grhominus(:, :)
   FLOAT, allocatable :: vlocaldedgd(:,:,:), vlocaldedgd1(:,:)
 
-  FLOAT :: x(3), locald(st%d%spin_channels), localgd(3, st%d%spin_channels), &
-       localdedd(st%d%spin_channels), &
-       localdedd_x(st%d%spin_channels), localdedgd_x(3, st%d%spin_channels)
+  FLOAT :: locald(st%d%spin_channels), localgd(3, st%d%spin_channels), &
+       localdedd(st%d%spin_channels)
 
-  integer :: i, j, is, in, ic, ind(3), k, n, spin_channels
+  integer :: i, is, spin_channels
   integer :: ixc
 
   call push_sub('xc_gga')

@@ -38,8 +38,6 @@ contains
 subroutine system_init(s)
   type(system_type), intent(out) :: s
 
-  integer :: i
-
   call push_sub('system_init')
 
   ! initialize the stuff related to the mesh

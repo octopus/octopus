@@ -218,7 +218,7 @@ contains
     end subroutine cheby
     
     subroutine lanczos
-      integer ::  korder, is, n, nn, np, i, info
+      integer ::  korder, n, np
       CMPLX, allocatable :: hm(:, :), v(:, :, :), expo(:, :)
       FLOAT :: alpha, beta, res, tol, nrm
       
@@ -289,9 +289,8 @@ contains
     end subroutine split
     
     subroutine suzuki
-      FLOAT :: tim(5), tt, dt(5)
-      FLOAT :: p, pp(5)
-      integer :: ist, k
+      FLOAT :: dt(5), p, pp(5)
+      integer :: k
       
       call push_sub('suzuki')
       

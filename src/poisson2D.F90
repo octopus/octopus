@@ -20,7 +20,7 @@ subroutine poisson2D_solve(m, pot, rho)
   FLOAT, intent(out) :: pot(m%np)
   FLOAT, intent(in)  :: rho(m%np)
 
-  integer  :: i, ip, j, jp
+  integer  :: i, j
   FLOAT :: x(2), y(2)
 
   ASSERT(poisson_solver == -2)

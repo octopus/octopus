@@ -67,7 +67,7 @@ function specie_init(s)
   integer :: specie_init
   type(specie_type), pointer :: s(:)
 
-  integer :: nspecies, i, j, lmax, lloc
+  integer :: nspecies
   character(len=80) :: str
 
   integer :: ispin
@@ -175,7 +175,7 @@ subroutine specie_get_glocal(s, x, gv)
   FLOAT, intent(out) :: gv(conf%dim)
 
   FLOAT, parameter :: Delta = CNST(1e-4)
-  FLOAT :: xx(3), r, vl, dvl, l1, l2
+  FLOAT :: xx(3), r, l1, l2
   integer :: i
 
   gv = M_ZERO

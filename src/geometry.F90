@@ -57,7 +57,6 @@ subroutine geometry_init(geo, val_charge, no_species_init)
   integer :: iunit, i, j
   integer(POINTER_SIZE) :: random_gen_pointer
   character(len=80) :: str, label
-  logical :: l
   FLOAT :: temperature, sigma, x(3), kin1, kin2
 
   call push_sub('geometry_init')
@@ -412,7 +411,6 @@ subroutine lcao_dens(m, geo, qtot, nspin, spin_channels, rho)
 
   integer :: ia, is
   FLOAT :: r
-  type(atom_type),   pointer :: a
 
   call push_sub('lcao_dens')
 

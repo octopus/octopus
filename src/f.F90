@@ -41,7 +41,7 @@ contains
 
   subroutine functions_init(m)
     type(mesh_type), intent(inout) :: m
-    integer :: j, norder
+    integer :: norder
 
     call push_sub('functions_init')
 

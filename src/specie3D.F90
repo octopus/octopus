@@ -100,7 +100,7 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
   FLOAT, intent(in) :: x(3)
   integer, intent(in) :: l, lm, i
   FLOAT, intent(out) :: uV, duV(3)
-  FLOAT :: r, f, uVr0, duvr0, ylm, gylm(3)
+  FLOAT :: r, uVr0, duvr0, ylm, gylm(3)
   FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
   logical, optional, intent(in) :: so
 

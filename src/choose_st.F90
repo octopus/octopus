@@ -29,7 +29,7 @@ program choose_st
 
   type(system_type) :: sys
   type(states_type) :: st1
-  integer :: ierr, i, n_st, n_unocc, flags(32)
+  integer :: i, n_st, n_unocc, flags(32)
   character(len=100) :: ch
 
   ! Initialize stuff

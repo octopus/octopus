@@ -311,7 +311,7 @@ contains
         CON9 = CNST(1.0444 )/M_THREE, CON10= CNST(7.37030)/M_SIX,   &
         CON11= CNST(1.33360)/M_THREE
 
-    FLOAT :: rs, sqrs, rslog, te, be, dte, dbe, exp, ecp
+    FLOAT :: rs, sqrs, rslog, te, be, dte, dbe, ecp
 
     ! calculate rs
     if(n < CNST(1e-30)) then

@@ -77,9 +77,6 @@ contains
 subroutine mesh_init(m)
   type(mesh_type), intent(inout) :: m
 
-  integer :: i, k, morder
-  logical :: fft_optimize
-
   call push_sub('mesh_init')
 
   call mesh_create(m)
@@ -285,8 +282,6 @@ end subroutine mesh_inborder
 
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
-
-  integer :: i, j
 
   call push_sub('mesh_end')
 

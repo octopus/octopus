@@ -351,9 +351,7 @@ subroutine states_generate_random(st, m, ist_start)
   type(mesh_type), intent(IN) :: m
   integer, intent(in), optional :: ist_start
 
-  integer, save :: iseed = 123
-  integer :: ist, ik, id, i, ist_s
-  FLOAT :: a(3), rnd, r
+  integer :: ist, ik, id, ist_s
 
   call push_sub('states_generate_random')
 
@@ -643,13 +641,12 @@ subroutine states_write_bands(iunit, nst, st)
   integer, intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st
 
-  integer ik, j, ns, is, pd
-!  type(mesh_type):: m
+  integer ik, j, ns, pd
 
   if(iunit==stdout.and.conf%verbose<=20) return
   
   ! shortcuts
-  pd=conf%periodic_dim
+  pd = conf%periodic_dim
   ns = 1
   if(st%d%nspin == 2) ns = 2
 
@@ -699,9 +696,9 @@ end function
 subroutine calc_projection(u_st, st, m, p)
   type(states_type), intent(in) :: u_st, st
   type(mesh_type),   intent(in) :: m
-  CMPLX, intent(out)      :: p(u_st%nst, st%st_start:st%st_end, st%nik)
+  CMPLX, intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%nik)
 
-  integer :: uist, uik, ist, ik
+  integer :: uist, ist, ik
 
   do ik = 1, st%nik
      do ist = st%st_start, st%st_end
@@ -720,9 +717,10 @@ subroutine calc_current(m, st, j)
   type(states_type), intent(IN) :: st
   FLOAT, intent(out) :: j(3, m%np, st%d%nspin)
   
-  integer :: ik, p, sp, ierr, k
+  integer :: ik, p, sp, k
   CMPLX, allocatable :: aux(:,:)
 #if defined(HAVE_MPI) && defined(MPI_TD)
+  integer :: ierr
   FLOAT, allocatable :: red(:,:,:)
 #endif
 

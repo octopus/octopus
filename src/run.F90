@@ -88,7 +88,7 @@ contains
 
 subroutine run()
   type(td_type), pointer :: td
-  integer :: iunit, i, ierr
+  integer :: i, ierr
   FLOAT :: x
   logical :: log
   character(len=100) :: filename

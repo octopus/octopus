@@ -23,7 +23,6 @@ program hs_from_mult
   use lib_oct_parser
   use spectrum
 
-  integer :: ierr
   character(len=100) :: txt
   type(spec_type) :: s
   type(spec_sh) :: sh
