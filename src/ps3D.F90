@@ -76,9 +76,13 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, debug)
   case('tm')
     call ps_tm_read_file(psf, trim(label))
     ps%kbc = 1
+    ps%L_max = min(psf%npotd - 1, lmax)   ! Maybe the file has not enough components.
+    ps%l_loc = lloc
   case('hgh')
     call ps_ghg_read_file(psp, trim(label))
     ps%kbc = 3
+    ps%l_max = psp%l_max
+    ps%l_loc = -1
   case default
     message(1) = 'Unknown pseudopotential type: '//trim(flavour)
     call write_fatal(1)
@@ -86,16 +90,6 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, debug)
 
 ! Fixes the nuclear charge (which is probably useless)
   ps%z = z
-
-! Fixes the maximum l to consider, and the local component
-  select case(trim(flavour))
-  case('tm')
-    ps%L_max = min(psf%npotd - 1, lmax)   ! Maybe the file has not enough components.
-    ps%l_loc = lloc
-  case('hgh')
-    ps%l_max = psp%l_max
-    ps%l_loc = -1
-  end select
 
 ! We allocate all the stuff
   allocate(ps%kb(0:ps%l_max, ps%kbc), ps%dkb(0:ps%l_max, ps%kbc))
@@ -418,28 +412,34 @@ subroutine get_local(psf, l_loc, rcore)
 
   sub_name = 'get_local'; call push_sub()
 
-  b = 1.0_r8
-
-  a = 1.82_r8 / rcore
-
-  allocate(psf%vlocal(psf%nrval), rho(psf%nrval))
+  allocate(psf%vlocal(psf%nrval))
   if(l_loc >= 0) then
+    write(message(1), '(a,i2,a)') "Info: l = ", l_loc, " component used as local potential"
+    call write_info(1)
+
     psf%vlocal(1:psf%nrval) = psf%vps(1:psf%nrval, l_loc)
-  elseif(l_loc == -1) then
-    write(*,*) 'Vanderbilt function local potential'
+  else if(l_loc == -1) then
+    message(1) = "Info: Vanderbilt function local potential"
+    call write_info(1)
+
+    a = 1.82_r8 / rcore
+    b = 1.0_r8
+    allocate(rho(psf%nrval))
+
     do ir = 1, psf%nrval
-       rho(ir) = exp( -( sinh(a*b*psf%rofi(ir)) / sinh(b) )**2 )
-       rho(ir) = 4.0_r8 * M_Pi * rho(ir) * psf%rofi(ir)**2
-    enddo
+      rho(ir) = exp( -( sinh(a*b*psf%rofi(ir)) / sinh(b) )**2 )
+      rho(ir) = 4.0_r8 * M_Pi * rho(ir) * psf%rofi(ir)**2
+    end do
     qtot = sum(rho(2:psf%nrval)*psf%drdi(2:psf%nrval))
     rho(:) = rho(:)*(psf%zval/qtot)
+
     call vhrtre(-rho, psf%vlocal, psf%rofi, psf%drdi, psf%s, psf%nrval, psf%a)
     psf%vlocal(1) = psf%vlocal(2)
-  else
+
+    deallocate(rho)
   endif
 
-  deallocate(rho)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine get_local
 
 subroutine get_cutoff_radii_psp(psp, ps)

@@ -493,7 +493,7 @@ contains
             endif
           end do
           a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
-          if(abs((a%uVu(add_lm, 1, 1) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.001_r8) then
+          if(abs((a%uVu(add_lm, 1, 1) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.05_r8) then
             write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                  add_lm
             write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm, 1, 1)

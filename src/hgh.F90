@@ -90,7 +90,7 @@ subroutine ps_ghg_read_file(psp, filename)
     filename2 = SHARE_OCTOPUS//"/PP/HGH/"//filename//".hgh"
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      message(1) = "Pseudopotential file '"//trim(filename)//"hgh' not found!"
+      message(1) = "Pseudopotential file '"//trim(filename)//".hgh' not found!"
       call write_fatal(1)
     end if
   end if
@@ -138,16 +138,16 @@ function load_params(unit, params)
   sub_name = 'load_params'; call push_sub()
 
 ! Set initially everything to zero.
-  params%c(1:4 ) = 0.0_r8; params%rlocal = 0.0_r8;
+  params%c(1:4) = 0.0_r8; params%rlocal = 0.0_r8;
   params%rc = 0.0_r8; params%h = 0.0_r8; params%k = 0.0_r8
 
 ! Reads the file in a hopefully smart way
   iostat = 1; j = 5
   read(unit,'(a)') line
   do while((iostat .ne. 0) .and. (j > 0))
-     j = j - 1
-     read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal, params%c(1:j)
-  enddo
+    j = j - 1
+    read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal, params%c(1:j)
+  end do
   if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
   if( iostat.ne.0 ) then
     load_params = 1
