@@ -9,80 +9,93 @@ module vxc
   contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  Finds local exchange energy density and potential                          !
-!  Adapted by J.M.Soler from routine velect of Froyens                        !
-!    pseudopotential generation program. Madrid, Jan 97. Version 0.5.         !
-! **** Input ******************************************************           !
-! INTEGER IREL    : relativistic-exchange switch (0=no, 1=yes)                !
-! INTEGER NSP     : spin-polarizations (1=>unpolarized, 2=>polarized)         !
-! REAL*8  DS(NSP) : total (nsp=1) or spin (nsp=2) electron density            !
-! **** Output *****************************************************           !
-! REAL*8  EX      : exchange energy density                                   !
-! REAL*8  VX(NSP) : (spin-dependent) exchange potential                       !
-! **** Units ******************************************************           !
-! Densities in electrons/Bohr**3                                              !
-! Energies in Hartrees                                                        !
+! Calculates the exchange energy and exchange potential for a homogeneous
+! electron gas (LDA for exchange).
+! It works in both the 3D and 2D cases
+! (1D not yet implemented, although one) only has to find out the a_x constant,
+! but I do not know what is the value of \int_0^\infty sin**2(x)/x**3 )
+!
+! Input:
+! integer nsp   :: 1 for spin-unpolarized, 2 for spin-polarized.
+! integer irel  :: 0 for non-relativistic exchange; relativistic otherwise.
+! FLOAT ds(nsp) :: density.
+! Output:
+! vx(nsp)       :: exchange potential.
+! ex            :: exchange energy density.
+!
+! The basic formulae are (Hartree atomic units are assumed):
+!
+!    p = ((dim+1)/dim)
+!    ex(n) = a_x*n**(1/dim)
+!    ex(n,z) = a_x*f(z)
+!    vx_up(n, z) = ex(n)*( p*f(z) + (df/dz)(z)*(1-z) )
+!    vx_do(n, z) = ex(n)*( p*f(z) - (df/dz)(z)*(1+z) )
+!    f(z) = (1/2)*( (1+z)**p + (1-z)**p)
+!    a_x = -(3/(4*pi))*(3*pi**2)**(1/3) in 3D
+!    a_x = -(4/3)*sqrt(2/pi) in 2D
+!    a_x = -(1/2) * \int_0^\infty (sin(x))**2/x**3
+!
+! If irel is not zero, relativistic correction factors have to be applied.
+! These are however not implemented in 2D, so nothing is done in that case.
+!
+! WARNING: Check that the relativistic corrections are OK for the potential
+!          in the spin polarized case.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine exchng( irel, nsp, ds, ex, vx )
-    integer, intent(in)   :: irel, nsp
-    FLOAT, intent(in)  :: ds(nsp)
-    FLOAT, intent(out) :: vx(nsp), ex
+  subroutine exchange(nsp, ds, ex, vx, irel)
+    integer, intent(in) :: nsp, irel
+    FLOAT, intent(in)   :: ds(nsp)
+    FLOAT, intent(out)  :: ex, vx(nsp)
 
-    FLOAT, parameter :: opf = CNST(1.5), c014 = CNST(0.014),  &
-        ftrd = M_FOUR/M_THREE, alp  = M_TWO*M_THIRD
-    FLOAT :: d1, d2, d, z, fz, fzp, rs, vxp, exp, vxf, exf,   &
-                beta, sb, alb, tftm, a0
+    FLOAT, parameter :: c014 = CNST(0.014),                     &
+                        opf = CNST(1.5),                        &
+                        MINDEN = CNST(1e-15),                   &
+                        a_x(3) = (/ -M_ONE,                     &
+                                    CNST(-1.06384608107049),    &
+                                    CNST(-0.738558766382022) /)
+    FLOAT :: d, d1, d2, z, fz, dfdz, beta, alb, sb, rs, p
 
-    a0   = (M_FOUR/(9*M_PI))**M_THIRD
-    tftm = M_TWO**FTRD - M_TWO
+    p = (conf%dim+M_ONE)/conf%dim
 
-    IF (NSP .EQ. 2) THEN
-      D1 = MAX(DS(1), M_ZERO)
-      D2 = MAX(DS(2), M_ZERO)
-      D = D1 + D2
-      IF (D .LE. M_ZERO) THEN
-        EX    = M_ZERO
-        VX(1) = M_ZERO
-        VX(2) = M_ZERO
-        RETURN
-      ENDIF
-      Z = (D1 - D2) / D
-      FZ = ((1+Z)**FTRD+(1-Z)**FTRD-2)/TFTM
-      FZP = FTRD*((1+Z)**M_THIRD-(1-Z)**M_THIRD)/TFTM 
-    ELSE
-      D = DS(1)
-      IF (D .LE. M_ZERO) THEN
-        EX = M_ZERO
-        VX(1) = M_ZERO
-        RETURN
-      ENDIF
-      Z = M_ZERO
-      FZ = M_ZERO
-      FZP = M_ZERO
-    ENDIF
-    RS = (3 / (4*M_PI*D) )**M_THIRD
-    VXP = -(3*ALP/(2*M_PI*A0*RS))
-    EXP = 3*VXP/4
-    IF (IREL .EQ. 1) THEN
-      BETA = C014/RS
-      SB = SQRT(1+BETA*BETA)
-      ALB = LOG(BETA+SB)
-      VXP = VXP * (-M_HALF + OPF * ALB / (BETA*SB))
-      EXP = EXP * (M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
-    ENDIF
-    VXF = 2**M_THIRD*VXP
-    EXF = 2**M_THIRD*EXP
-    IF (NSP .EQ. 2) THEN
-      VX(1) = VXP + FZ*(VXF-VXP) + (1-Z)*FZP*(EXF-EXP)
-      VX(2) = VXP + FZ*(VXF-VXP) - (1+Z)*FZP*(EXF-EXP)
-      EX    = EXP + FZ*(EXF-EXP)
-    ELSE
-      VX(1) = VXP
-      EX    = EXP
-    ENDIF
-    
-  end subroutine exchng
+    select case(nsp)
+    case(1) ! Spin - unpolarized
+       d = max(M_ZERO, ds(1))
+       if(d < MINDEN) then
+         ex = M_ZERO; vx(1) = M_ZERO
+         return
+       endif
+       ex    = a_x(conf%dim)*d**(M_ONE/conf%dim)
+       vx(1) = p*ex
+    case(2) ! Spin-polarized
+       d1 = max(M_ZERO, ds(1))
+       d2 = max(M_ZERO, ds(2))
+       d = d1 + d2
+       if(d < MINDEN) then
+          ex = M_ZERO; vx(1:2) = M_ZERO
+          return
+       endif
+       z = (d1-d2)/(d1+d2)
+       fz = M_HALF * ( (1+z)**p+(1-z)**p )
+       dfdz = M_HALF * p * ( (1+z)**(p-1) - (1-z)**(p-1) )
+       ex = a_x(conf%dim)*d**(M_ONE/conf%dim) ! Unpolarized yet, to be used in the following formulae.
+       vx(1) = ex * ( p*fz + dfdz*(1-z) )
+       vx(2) = ex * ( p*fz - dfdz*(1+z) )
+       ex = ex*fz ! Now it is the correct polarized result.
+    case default
+       message(1) = 'Wrong "nsp" argument passed to exchange3d'
+       call write_fatal(1)
+    end select
 
+    ! Relativistic corrections (I believe that they are rather useless).
+    if( irel .ne. 0 .and. conf%dim == 3 ) then
+      rs = (M_THREE / (M_FOUR*M_PI*d) )**M_THIRD
+      beta = c014/rs
+      sb = sqrt(1+beta*beta)
+      alb = log(beta+sb)
+      ex = ex*(M_ONE-opf*((beta*sb-alb)/beta**2)**2)
+      vx = vx*(-M_HALF + opf * alb / (beta*sb))
+    endif
+
+  end subroutine exchange
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Finds the exchange and correlation energies at a point, and their           !
@@ -174,10 +187,10 @@ module vxc
 
   IF ( AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-     CALL EXCHNG(IREL, NS, DD, EPSX, VXD)
+     call exchange(ns, dd, epsx, vxd, irel)
      CALL PZC   (      NS, DD, EPSC, VCD)
   ELSEIF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-     CALL EXCHNG(IREL, NS, DD, EPSX, VXD)
+     call exchange(ns, dd, epsx, vxd, irel)
      CALL PW92C (      NS, DD, EPSC, VCD )
   ELSE
      WRITE(6,*) 'LDAXC: Unknown author ', AUTHOR
@@ -303,7 +316,7 @@ module vxc
     F = 1 + KAPPA - KAPPA / F1
     
     !Note nspin=1 in call to exchng...
-    CALL EXCHNG( IREL, 1, DS(IS), EXUNIF, VXUNIF(IS) )
+    call exchange( 1, ds(is), EXUNIF, VXUNIF(IS), irel )
     FX = FX + DS(IS) * EXUNIF * F
     
     DKFDD = M_THIRD * KFS / DS(IS)
@@ -461,7 +474,7 @@ module vxc
     FLOAT :: alpha, gdm, x, f, gamma
 
     ! First, get the LDA exchange potential.
-    call exchng(0, nspin, dens, x, dexdd)
+    call exchange(nspin, dens, x, dexdd, 0)
 
     ! If ip is zero, the alpha is set to 0.5. In this way, the boundary 
     ! condition is -1/r. Equivalently, if ip = 1/32, alpha is also 0.5
