@@ -214,9 +214,9 @@ contains
     end if
 
     ! dimensions
-    status = nf90_def_dim(ncid, "dim_1", c%n(1), dim_data_id(1))
+    status = nf90_def_dim(ncid, "dim_1", c%n(3), dim_data_id(1))
     status = nf90_def_dim(ncid, "dim_2", c%n(2), dim_data_id(2))
-    status = nf90_def_dim(ncid, "dim_3", c%n(3), dim_data_id(3))
+    status = nf90_def_dim(ncid, "dim_3", c%n(1), dim_data_id(3))
 
     status = nf90_def_dim(ncid, "pos_1", 2, dim_pos_id(1))
     status = nf90_def_dim(ncid, "pos_2", 3, dim_pos_id(2))
@@ -241,11 +241,15 @@ contains
     pos(2,:) = real(m%h(:) / units_out%length%factor, 4)
 
     status = nf90_put_var(ncid, pos_id, pos(:,:))
-    ! we have to transpose the matrix: stupid Fortran!
+
+    ! I still do not understand why I have to use a reshape in this context. I think
+    ! it is just fortran and netcdf trying to be too intelligent.
     if(iand(how, output_single) .ne.0) then
-      status = nf90_put_var(ncid, data_id, real(c%RS, 4), map=(/c%n(1)*c%n(2), c%n(1), 1/))
+      status = nf90_put_var(ncid, data_id, reshape(real(c%RS, 4), (/c%n(3), c%n(2), c%n(1)/)), &
+           map=(/c%n(1)*c%n(2), c%n(1), 1/))
     else
-      status = nf90_put_var(ncid, data_id, real(c%RS, 8), map=(/c%n(1)*c%n(2), c%n(1), 1/))
+      status = nf90_put_var(ncid, data_id, reshape(real(c%RS, 8), (/c%n(3), c%n(2), c%n(1)/)), &
+           map=(/c%n(1)*c%n(2), c%n(1), 1/))
     end if
 
     ! close
