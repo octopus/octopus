@@ -72,6 +72,7 @@ int rmsym (char *sym_name)
 				sym_table = ptr->next;
 			else
 				prev->next = ptr->next;
+			free(ptr->name);
 			free(ptr);
 
 			return 1;
