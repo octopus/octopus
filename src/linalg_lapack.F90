@@ -103,12 +103,11 @@ subroutine deigensolve(n, a, b, e)
   allocate(work(lwork))
   b = a
   call DLAPACK(syev) ('V', 'U', n, b(1,1), n, e(1), work(1), lwork, info)
-  deallocate(work)
-
   if(info.ne.0) then
     write(message(1),'(a,i5)') 'In deigensolve, LAPACK dsyev returned error message ', info
     call write_fatal(1)
   end if
+  deallocate(work)
 
 end subroutine deigensolve
 
@@ -137,13 +136,12 @@ subroutine zeigensolve(n, a, b, e)
   lwork = 6*n
   allocate(work(lwork), rwork(max(1,3*n-2)))
   b = a
-  deallocate(work, rwork)
-
   call ZLAPACK(heev) ('V','U', n, b(1,1), n, e(1), work(1), lwork, rwork(1), info)
   if(info.ne.0) then
     write(message(1),'(a,i5)') 'In zeigensolve, LAPACK zheev returned error message ', info
     call write_fatal(1)
   end if
+  deallocate(work, rwork)
 
 end subroutine zeigensolve
 
