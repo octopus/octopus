@@ -289,7 +289,7 @@ subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
   if(iand(how, output_plane_y)   .ne.0) call plane_y()
   if(iand(how, output_plane_z)   .ne.0) call plane_z()
   if(iand(how, output_plane_z)   .ne.0) call plane_z()
-  if(iand(how, output_mesh_index).ne.0) call mesh_index()
+  if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
   if(iand(how, output_dx)        .ne.0) call dx()
 #if defined(HAVE_NETCDF)
   if(iand(how, output_dx_cdf)    .ne.0) call dx_cdf()
@@ -440,7 +440,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine mesh_index()
+  subroutine out_mesh_index()
     integer  :: iunit, i
     
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write')
@@ -460,7 +460,7 @@ contains
 
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
-  end subroutine mesh_index
+  end subroutine out_mesh_index
 
 
   ! ---------------------------------------------------------
