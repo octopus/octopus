@@ -74,12 +74,14 @@ subroutine system_init(s)
   allocate(s%st)
   call states_init(s%st, s%m, val_charge)
 
+#if defined(THREE_D)
   ! find out if we need non-local core corrections
   s%st%nlcc = .false.
   do i = 1, s%nspecies
     s%st%nlcc = (s%st%nlcc.or.s%specie(i)%nlcc)
   end do
   if(s%st%nlcc) allocate(s%st%rho_core(s%m%np))
+#endif
 
   call pop_sub()
 end subroutine system_init

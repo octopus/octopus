@@ -18,8 +18,6 @@
 #include "config_F90.h"
 module dx
 
-#ifdef THREE_D
-
 use global
 use mesh
 use liboct
@@ -35,8 +33,6 @@ contains
 #include "complex.F90"
 #include "dx_inc.F90"
 #include "undef.F90"
-
-#endif
 
 end module dx
 

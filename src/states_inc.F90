@@ -252,11 +252,7 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
   character(len=80) :: fname
   real(r8) :: u
 
-#if defined(ONE_D)
-  u = 1._r8/units_out%length%factor
-#elif defined(THREE_D)
-  u = 1._r8/units_out%length%factor**3
-#endif
+  u = 1._r8/units_out%length%factor**conf%dim
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
@@ -286,13 +282,14 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
     end do
   end if
 
-#if defined THREE_D
+#if defined(THREE_D)
   if(outp%what(output_elf)) then
     call elf()
   end if
 #endif
 
 contains
+  ! WARNING some constants are probably wrong for 1 and 2D
   subroutine elf()
     real(r8) :: f, d, s
     real(r8), allocatable :: c(:), r(:), gr(:,:)
@@ -309,30 +306,30 @@ contains
     allocate(c(m%np))
     do_is: do is = 1, st%nspin
       ! first term
-      allocate(r(0:m%np), gr(3, m%np))
+      allocate(r(0:m%np), gr(conf%dim, m%np))
       r(1:m%np) = st%rho(1:m%np, is)/s
       r(0) = 0._r8
       call dmesh_derivatives(m, r(0:m%np), grad=gr)
       do i = 1, m%np
         if(r(i) >= 1d-16) then
-          c(i) = -0.25_r8*sum(gr(1:3, i)**2)/r(i)
+          c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
         end if
       end do
       deallocate(gr)
 
       ! now the second term
-      allocate(gpsi(3, m%np))
+      allocate(gpsi(conf%dim, m%np))
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
             call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(0:m%np, idim, ist, ik), grad=gpsi)
             do i = 1, m%np
               if(R_ABS(st%R_FUNC(psi)(i, idim, ist, ik)) >= 1d-8) then
-                c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:3, i)*R_CONJ(gpsi(1:3, i)))
+                c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
 
 #if defined(R_TCOMPLEX)
                 c(i) = c(i) - st%occ(ist, ik)/s* &
-                     sum(aimag(st%R_FUNC(psi)(i, idim, ist, ik)*conjg(gpsi(1:3, i)))**2)/r(i)
+                     sum(aimag(st%R_FUNC(psi)(i, idim, ist, ik)*conjg(gpsi(1:conf%dim, i)))**2)/r(i)
 #endif
               end if
             end do
@@ -340,18 +337,18 @@ contains
         end do
       end do
       deallocate(gpsi)
-
+      
       f = 3._r8/5._r8*(6._r8*M_PI**2)**(2._r8/3._r8)
       do i = 1, m%np
         d    = f*r(i)**(5._r8/3._r8)
         c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
       end do
-
+      
       deallocate(r)
-
+      
       write(fname, '(a,i1)') 'elf-', is
       call doutput_function(outp, dir, fname, m, c, 1._r8)
-
+      
     end do do_is
     deallocate(c)
 

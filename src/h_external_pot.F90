@@ -18,7 +18,6 @@
 ! This subroutine should be in specie.F90, but due to the limitations
 ! of f90 to handle circular dependences it had to come here!
 
-#if defined(THREE_D)
 subroutine specie_local_fourier_init(ns, s, m, nlcc)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
@@ -56,6 +55,7 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
     c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), 0.0_r8, r8)
     call zscal(n, c, s(i)%local_fw,  1)
     
+#if defined(THREE_D)
     ! now we built the non-local core corrections in momentum space
     if(nlcc) then
       allocate(s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
@@ -77,57 +77,15 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
       call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%rhocore_fw)
       call zscal(n, c, s(i)%rhocore_fw, 1)
     end if
-
-  end do
-  
-  deallocate(fr)
-  call pop_sub()
-end subroutine specie_local_fourier_init
-
-#elif defined(ONE_D)
-
-subroutine specie_local_fourier_init(ns, s, m, dummy)
-  integer, intent(in) :: ns
-  type(specie_type), pointer :: s(:)
-  type(mesh_type), intent(IN) :: m
-  logical, intent(in) :: dummy ! totaly useless.
-
-  integer :: i, j, ix, iy, iz, n, ixx 
-  real(r8) :: x, r, vl, r1
-  complex(r8) :: c
-  real(r8), allocatable :: fr(:), dfr(:)
-
-  sub_name = 'specie_local_fourier_init'; call push_sub()
-
-  allocate(fr(m%fft_n2(1)))
-
-  do i = 1, ns
-    allocate(s(i)%local_fw(m%hfft_n2))
-
-    do ix = 1, m%fft_n2(1)
-       ixx = ix - (m%fft_n2(1)/2 + 1)
-       r = abs(m%h(1)*ixx)
-       vl = splint(s(i)%ps%vlocal, r)
-       if(r >= r_small) then
-         fr(ix) = (vl -s(i)%z_val)/r
-       else
-         fr(ix) = s(i)%ps%vlocal_origin
-       endif
-    enddo
-
-    call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
-
-    n = m%hfft_n2
-    c  = cmplx(1.0_r8/(m%fft_n2(1)), 0.0_r8, r8)
-    call zscal(n, c, s(i)%local_fw,  1)
-  end do
-  
-  deallocate(fr)
-  call pop_sub()
-end subroutine specie_local_fourier_init
-
 #endif
 
+  end do
+  
+  deallocate(fr)
+  call pop_sub()
+end subroutine specie_local_fourier_init
+
+#if defined(THREE_D)
 subroutine specie_nl_fourier_init(ns, s, m, nextra)
   integer, intent(in) :: ns, nextra
   type(specie_type), pointer :: s(:)
@@ -227,6 +185,8 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   call pop_sub()
 end subroutine specie_nl_fourier_init
 
+#endif
+
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(inout) :: sys
@@ -234,12 +194,10 @@ subroutine generate_external_pot(h, sys)
   integer :: ia
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
-#if defined(THREE_D)
-  complex(r8), allocatable :: fw(:,:,:), fwc(:,:,:)
   real(r8), allocatable :: fr(:,:,:)
-#elif defined(ONE_D)
-  complex(r8), allocatable :: fw(:), fwc(:,:,:)
-  real(r8), allocatable :: fr(:)
+  complex(r8), allocatable :: fw(:,:,:)
+#if defined(THREE_D)
+  complex(r8), allocatable :: fwc(:,:,:) ! for the nl core corrections
 #endif
   sub_name = 'generate_external_pot'; call push_sub()
 
@@ -247,20 +205,18 @@ subroutine generate_external_pot(h, sys)
   sys%eii = ion_ion_energy(sys%natoms, sys%atom)
 
   if(h%vpsl_space == RECIPROCAL_SPACE) then
-#if defined(THREE_D)
     allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
     fw = M_z0
-#elif defined(ONE_D)
-    allocate(fw(sys%m%hfft_n2)); fw = M_z0
-#endif
   end if
-
   h%Vpsl  = 0._r8
+
+#if defined(THREE_D)
   if(sys%st%nlcc) then
     sys%st%rho_core = 0._r8
     allocate(fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
     fwc = M_z0
   end if
+#endif
 
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
@@ -268,38 +224,32 @@ subroutine generate_external_pot(h, sys)
     
     call build_local_part(sys%m)
 
+#if defined(THREE_D)
     if(.not.s%local) then
       call build_kb_sphere(sys%m)
       call build_nl_part(sys%m)
     end if
+#endif
 
   end do
 
   if(h%vpsl_space == 1) then
-#if defined(THREE_D)
     allocate(fr(sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)))
 
     ! first the potential
     call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
     call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
 
+#if defined(THREE_D)
     ! and the non-local core corrections
     if(sys%st%nlcc) then
       call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
       call dcube_to_mesh(sys%m, fr, sys%st%rho_core, 2)
       deallocate(fwc)
     end if
-    
-    deallocate(fw, fr)
-#elif defined(ONE_D)
-    allocate(fr(sys%m%fft_n2(1)))
-
-    ! first the potential
-    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
-    call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
-    
-    deallocate(fw, fr)
 #endif
+    
+    deallocate(fw, fr)
   end if
 
   if (h%classic_pot > 0) then
@@ -322,21 +272,26 @@ contains
         x = x - a%x
         h%Vpsl(i) = h%Vpsl(i) + specie_get_local(s, x)
         
+#if defined(THREE_D)
         if(s%nlcc) then
           sys%st%rho_core(i) = sys%st%rho_core(i) + specie_get_nlcc(s, x)
         end if
+#endif
       end do
 
     else ! momentum space
       call phase_factor(m, m%fft_n2, a%x, s%local_fw, fw)
+#if defined(THREE_D)
       if(s%nlcc) then
         call phase_factor(m, m%fft_n2(1:3), a%x, s%rhocore_fw, fwc)
       end if
+#endif
     end if
 
     call pop_sub(); return
   end subroutine build_local_part
 
+#if defined(THREE_D)
   subroutine build_kb_sphere(m)
     type(mesh_type), intent(in) :: m
     
@@ -384,7 +339,7 @@ contains
   subroutine build_nl_part(m)
     type(mesh_type), intent(IN) :: m
 
-    integer :: i, j, l, lm, add_lm, p, ix, iy, iz, center(3)
+    integer :: i, j, l, lm, add_lm, p, ix(3), center(3)
     real(r8) :: r, x(3), ylm
     complex(r8), allocatable :: nl_fw(:,:,:)
     real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
@@ -462,12 +417,10 @@ contains
           
           j_loop2: do j = 1, a%Mps
             p = a%Jxyz(j)
-            ix = m%Lx(p) - center(1) + s%nl_fft_n(1)/2 + 1
-            iy = m%Ly(p) - center(2) + s%nl_fft_n(2)/2 + 1
-            iz = m%Lz(p) - center(3) + s%nl_fft_n(3)/2 + 1
+            ix(:) = m%Lxyz(:,p) - center(:) + s%nl_fft_n(:)/2 + 1
             
-            a%duV(j, add_lm, i)     = nl_fr (ix, iy, iz)
-            a%dduV(:, j, add_lm, i) = nl_dfr(ix, iy, iz, :)
+            a%duV(j, add_lm, i)     = nl_fr (ix(1), ix(2), ix(3))
+            a%dduV(:, j, add_lm, i) = nl_dfr(ix(1), ix(2), ix(3), :)
           end do j_loop2
 
         end do i_loop2
@@ -529,6 +482,7 @@ contains
 
     call pop_sub(); return
   end subroutine build_nl_part
+#endif
 
 end subroutine generate_external_pot
 

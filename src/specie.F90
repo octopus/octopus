@@ -43,10 +43,11 @@ type specie_type
   logical           :: local      ! true if the potential is local, which in this case means
                                   ! it is *not* a pseudopotential.
 
-  logical           :: nlcc       ! true if we have non-local core corrections
-
   ! for the user defined potential
   character(len=1024) :: user_def
+
+  ! For the local pseudopotential in Fourier space...
+  complex(r8), pointer :: local_fw(:,:,:)
 
 #if defined(THREE_D)
   ! jellium stuff
@@ -55,12 +56,11 @@ type specie_type
   ! For the pseudopotential
   character(len=3) :: ps_flavour
   type(ps_type), pointer :: ps
-
-  ! For the local pseudopotential in Fourier space...
-  complex(r8), pointer :: &
-       local_fw(:,:,:),    &  ! for the potential
-       rhocore_fw(:,:,:)      ! for the core density
-
+  logical           :: nlcc       ! true if we have non-local core corrections
+  
+  ! for the core density in Fourier space
+  complex(r8), pointer :: rhocore_fw(:,:,:)      
+  
   ! For the non-local pp in fourier space
   integer(POINTER_SIZE) :: nl_planb
   integer :: nl_fft_n(3), nl_hfft_n

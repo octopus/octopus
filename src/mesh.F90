@@ -82,19 +82,73 @@ end type mesh_type
 
 contains
 
-#if defined(ONE_D)
-#  include "mesh1D.F90"
-#elif defined(THREE_D)
-#  include "mesh3D.F90"
+subroutine mesh_init(m, natoms, atom)
+  type(mesh_type), intent(inout) :: m
+  integer, intent(in), optional :: natoms
+  type(atom_type), pointer, optional :: atom(:)
+
+  integer :: i, j, k, morder
+
+  sub_name = 'mesh_init'; call push_sub()
+
+  call mesh_init_derivatives_coeff(m)
+  
+  call mesh_create(m, natoms, atom)
+
+  ! we will probably need ffts in a lot of places
+#ifdef POLYMERS
+  j = 2
+#else
+  j = 3
 #endif
-#include "mesh_create.F90"
-#include "undef.F90"
-#include "real.F90"
-#include "mesh_inc.F90"
-#include "undef.F90"
-#include "complex.F90"
-#include "mesh_inc.F90"
-#include "undef.F90"
+
+  m%fft_n(:)  = 2*m%nr(:) + 1
+  do i = 1, j
+    if(m%fft_n(i).ne.1) call oct_fft_optimize(m%fft_n(i), 7, 1) ! always ask for an odd number
+  end do
+  m%hfft_n = m%fft_n(1)/2 + 1
+  m%dplanf = int(-1, POINTER_SIZE)
+
+  call oct_parse_double(C_string('DoubleFFTParameter'), 2.0_r8, m%fft_alpha)
+  if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
+    write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
+         "' is not a valid DoubleFFTParameter"
+    message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
+    call write_fatal(2)
+  end if
+
+  m%fft_n2 = 1
+  do i = 1, min(j, conf%dim)
+    m%fft_n2(i) = 2*nint(m%fft_alpha*maxval(m%nr)) + 1
+    call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
+  end do
+  do i = j+1, 3 ! for periodic systems
+    m%fft_n2(i) = m%fft_n(i)
+  end do
+  
+  m%hfft_n2 = m%fft_n2(1)/2 + 1
+  m%dplanf2 = int(-1, POINTER_SIZE)
+
+  call oct_parse_int(C_string('DerivativesSpace'), REAL_SPACE, m%d%space)
+  if(m%d%space < 0 .or. m%d%space > 1) then
+    write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
+         "' is not a valid DerivativesSpace"
+    message(2) = '(0 <= DerivativesSpace <=1)'
+    call write_fatal(2)
+  end if
+
+  ! order is very important
+  ! init rs -> create -> init fft
+  if(m%d%space == REAL_SPACE) then 
+    message(1) = 'Info: Derivatives calculated in real-space'
+  else
+    call mesh_alloc_ffts(m, 1)
+    message(1) = 'Info: Derivatives calculated in reciprocal-space'
+  end if
+  call write_info(1)
+
+  call pop_sub()
+end subroutine mesh_init
 
 subroutine mesh_write_info(m, unit)
   type(mesh_type), intent(IN) :: m
@@ -144,7 +198,7 @@ subroutine mesh_xyz(m, i, x)
   integer, intent(in) :: i
   real(r8), intent(out) :: x(conf%dim)
 
-  x(:) = m%Lxyz(:, i)*m%h(:)
+  x(1:conf%dim) = m%Lxyz(1:conf%dim, i)*m%h(1:conf%dim)
 end subroutine mesh_xyz
 
 subroutine mesh_x(m, i, x)
@@ -221,6 +275,118 @@ subroutine mesh_init_derivatives_coeff(m)
 
 end subroutine mesh_init_derivatives_coeff
 
+subroutine mesh_alloc_ffts(m, i)
+  type(mesh_type), intent(inout) :: m
+  integer, intent(in) :: i
+
+  sub_name = 'mesh_alloc_ffts'; call push_sub()
+
+  if(i == 1 .and. m%dplanf == int(-1, POINTER_SIZE)) then
+    call rfftwnd_f77_create_plan(m%dplanf, conf%dim, m%fft_n, &
+         fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)
+    call rfftwnd_f77_create_plan(m%dplanb, conf%dim, m%fft_n, &
+         fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
+    call  fftwnd_f77_create_plan(m%zplanf, conf%dim, m%fft_n, &
+         fftw_forward,  fftw_measure + fftw_threadsafe)
+    call  fftwnd_f77_create_plan(m%zplanb, conf%dim, m%fft_n, &
+         fftw_backward, fftw_measure + fftw_threadsafe) 
+  else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
+    message(1) = "Info: FFTs used in a double box (for poisson | local potential)"
+    write(message(2), '(6x,a,i4,a,i4,a,i4,a)') &
+         'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
+    write(message(3), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
+    call write_info(3)
+    
+    call rfftwnd_f77_create_plan(m%dplanf2, conf%dim, m%fft_n2, &
+         fftw_forward, fftw_measure + fftw_threadsafe)
+    call rfftwnd_f77_create_plan(m%dplanb2, conf%dim, m%fft_n2, &
+         fftw_backward, fftw_measure + fftw_threadsafe)
+  end if
+
+  call pop_sub()
+end subroutine mesh_alloc_ffts
+
+! this actually adds to outp
+subroutine phase_factor(m, n, vec, inp, outp)
+  implicit none
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in)         :: n(3)
+  real(r8), intent(IN)        :: vec(3)
+  complex(r8), intent(IN)     :: inp (n(1)/2+1, n(2), n(3))
+  complex(r8), intent(inout)  :: outp(n(1)/2+1, n(2), n(3))
+  
+  complex(r8) :: k(3)
+  integer     :: ix, iy, iz, ixx, iyy, izz
+  
+  k = M_z0
+  k(1:conf%dim) = M_zI * ((2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim)))
+  do iz = 1, n(3)
+    izz = pad_feq(iz, n(3), .true.)
+    do iy = 1, n(2)
+      iyy = pad_feq(iy, n(2), .true.)
+      do ix = 1, n(1)/2 + 1
+        ixx = pad_feq(ix, n(1), .true.)
+        outp(ix, iy, iz) = outp(ix, iy, iz) + &
+             exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * inp(ix, iy, iz)
+      end do
+    end do
+  end do
+end subroutine phase_factor
+
+subroutine mesh_gradient_in_FS(m, nx, n, f, grad, dir)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: nx, n(3), dir
+  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
+  complex(r8), intent(out) :: grad(nx, n(2), n(3))
+
+  real(r8) :: temp(3), g2
+  integer :: k(3), ix, iy, iz
+  
+  k = 0
+  temp = M_ZERO
+  temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
+
+  do iz = 1, n(3)
+    if(dir == 3) k(3) = pad_feq(iz, n(3), .true.)
+    do iy = 1, n(2)
+      if(dir == 2) k(2) = pad_feq(iy, n(2), .true.)
+      do ix = 1, nx
+        if(dir == 1) k(1) = pad_feq(ix, n(1), .true.)
+        
+        g2 = sum(temp(1:conf%dim)*k(1:conf%dim))
+        grad(ix, iy, iz) = g2 * M_zI * f(ix, iy, iz)
+      end do
+    end do
+  end do
+
+end subroutine mesh_gradient_in_FS
+
+subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: nx, n(3)
+  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
+  complex(r8), intent(out) :: lapl(nx, n(2), n(3))
+
+  real(r8) :: temp(3), g2
+  integer :: k(3), ix, iy, iz
+  
+  temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
+
+  do iz = 1, n(3)
+    k(3) = pad_feq(iz, n(3), .true.)
+    do iy = 1, n(2)
+      k(2) = pad_feq(iy, n(2), .true.)
+      do ix = 1, nx
+        k(1) = pad_feq(ix, n(1), .true.)
+        
+        g2 = sum((temp(1:conf%dim)*k(1:conf%dim))**2)
+        lapl(ix, iy, iz) = - g2 * f(ix, iy, iz)
+      end do
+    end do
+  end do
+
+end subroutine mesh_laplacian_in_FS
+
 ! Deallocates what has to be deallocated ;)
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
@@ -255,5 +421,15 @@ subroutine mesh_end(m)
   call pop_sub()
   return
 end subroutine mesh_end
+
+#include "mesh_create.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "mesh_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "mesh_inc.F90"
 
 end module mesh

@@ -77,21 +77,23 @@ subroutine output_init(outp)
 
   if(outp%what(output_something)) then
 
-#if defined(THREE_D)
     call oct_parse_logical("OutputAxisX", .false., l)
     if(l) outp%how = ior(outp%how, output_axis_x)
+#if defined(TWO_D) || defined(THREE_D)
     call oct_parse_logical("OutputAxisY", .false., l)
     if(l) outp%how = ior(outp%how, output_axis_y)
+    call oct_parse_logical("OutputPlaneZ", .false., l)
+    if(l) outp%how = ior(outp%how, output_plane_z)
+#if defined(THREE_D)
     call oct_parse_logical("OutputAxisZ", .false., l)
     if(l) outp%how = ior(outp%how, output_axis_z)
     call oct_parse_logical("OutputPlaneX", .false., l)
     if(l) outp%how = ior(outp%how, output_plane_x)
     call oct_parse_logical("OutputPlaneY", .false., l)
     if(l) outp%how = ior(outp%how, output_plane_y)
-    call oct_parse_logical("OutputPlaneZ", .false., l)
-    if(l) outp%how = ior(outp%how, output_plane_z)
     call oct_parse_logical("OutputDX", .false., l)
     if(l) outp%how = ior(outp%how, output_dx)
+#endif
 #endif
 
     call oct_parse_int(C_string("OutputEvery"), 1000, outp%iter)

@@ -203,17 +203,21 @@ subroutine mesh_create(m, natoms, atom)
     enddo
   enddo
 
-  allocate(m%ind(6, m%d%norder, m%np))
+  allocate(m%ind(2*conf%dim, m%d%norder, m%np))
   m%ind = 0
   do il = 1, m%np
     ix = m%Lxyz(1, il); iy = m%Lxyz(2, il); iz = m%Lxyz(3, il)
     do ik = 1, m%d%norder
       m%ind(1, ik, il) = m%Lxyz_inv(ix-ik, iy, iz)
-      if(conf%dim > 1) m%ind(2, ik, il) = m%Lxyz_inv(ix, iy-ik, iz)
-      if(conf%dim > 2) m%ind(3, ik, il) = m%Lxyz_inv(ix, iy, iz-ik)
-      m%ind(4, ik, il) = m%Lxyz_inv(ix+ik, iy, iz)
-      if(conf%dim > 1) m%ind(5, ik, il) = m%Lxyz_inv(ix, iy+ik, iz)
+      m%ind(2, ik, il) = m%Lxyz_inv(ix+ik, iy, iz)
+#if defined(TWO_D) || defined(THREE_D)
+      if(conf%dim > 1) m%ind(3, ik, il) = m%Lxyz_inv(ix, iy-ik, iz)
+      if(conf%dim > 1) m%ind(4, ik, il) = m%Lxyz_inv(ix, iy+ik, iz)
+#endif
+#if defined(THREE_D)
+      if(conf%dim > 2) m%ind(5, ik, il) = m%Lxyz_inv(ix, iy, iz-ik)
       if(conf%dim > 2) m%ind(6, ik, il) = m%Lxyz_inv(ix, iy, iz+ik)
+#endif
     end do
   end do
 

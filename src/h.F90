@@ -111,7 +111,7 @@ subroutine hamiltonian_init(h, sys)
            h%Vxc(h%np, sys%st%nspin))
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
-  h%vpsl = ZERO; h%vhartree = ZERO; h%vxc = ZERO
+  h%vpsl = M_ZERO; h%vhartree = M_ZERO; h%vxc = M_ZERO
 
   if(sys%ncatoms > 0) then
     call oct_parse_int(C_string("ClassicPotential"), 0, h%classic_pot)
@@ -133,17 +133,18 @@ subroutine hamiltonian_init(h, sys)
   end select
   call write_info(1)
 
+  if(h%vpsl_space == RECIPROCAL_SPACE) then
+    call mesh_alloc_ffts(sys%m, 2)
+    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%st%nlcc)
+  end if
+
+#if defined(THREE_D)
   call oct_parse_int(C_string('NonLocalPotentialSpace'), REAL_SPACE, h%vnl_space)
   if(h%vnl_space < 0 .or. h%vnl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
          "' is not a valid NonLocalPotentialSpace"
     message(2) = '(NonLocalPotentialSpace = 0 | 1)'
     call write_fatal(2)
-  end if
-
-  if(h%vpsl_space == RECIPROCAL_SPACE) then
-    call mesh_alloc_ffts(sys%m, 2)
-    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%st%nlcc)
   end if
 
   if(h%vnl_space == RECIPROCAL_SPACE) then
@@ -157,6 +158,7 @@ subroutine hamiltonian_init(h, sys)
 
     call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
   end if
+#endif
 
   call oct_parse_int(C_string("RelativisticCorrection"), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -369,8 +371,10 @@ subroutine hamiltonian_span(h, delta, emin)
   type(hamiltonian_type), intent(inout) :: h
   real(r8), intent(in) :: delta, emin
   sub_name = 'hamiltonian_span'; call push_sub()
-    h%spectral_middle_point = ((M_Pi**2/(2*delta**2))+emin)/2._r8
-    h%spectral_half_span    = ((M_Pi**2/(2*delta**2))-emin)/2._r8
+
+  h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/2._r8
+  h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/2._r8
+
   call pop_sub(); return
 end subroutine hamiltonian_span
 
@@ -421,6 +425,5 @@ end subroutine hamiltonian_output
 #if defined(COMPLEX_WFNS)
 #include "h_so.F90"
 #endif
-!#include "h_rel.F90"
 
 end module hamiltonian

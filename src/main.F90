@@ -54,10 +54,14 @@ program octopus
   end if
   
   ! Sets the dimensionaliy of the problem.
-#ifdef ONE_D
-  conf%dim=1
+#if defined(ONE_D)
+  conf%dim = 1
+#elif defined(TWO_D)
+  conf%dim = 2
+#elif defined(THREE_D)
+  conf%dim = 3
 #else
-  conf%dim=3
+#error "Dimension not set!"
 #endif
 
   ! Let us print our logo

@@ -89,7 +89,7 @@
     logical, intent(in) :: header
 
     integer :: i
-    real(r8) :: l_field(1:3), l_vector_field(1:3)
+    real(r8) :: l_field(3), l_vector_field(3)
     character(len=80) :: aux
 
     ! TODO -> confirm these stupid units, especially for the vector field

@@ -18,7 +18,6 @@
 #include "config_F90.h"
 
 program function_to_dx
-#ifdef THREE_D
   use global
   use liboct
   use states
@@ -102,5 +101,4 @@ program function_to_dx
   endif
 
   stop
-#endif
 end program function_to_dx

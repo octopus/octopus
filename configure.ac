@@ -28,7 +28,8 @@ AC_PREFIX_DEFAULT($HOME)
 # what should I build?
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), 
 	MPIDIR=$enableval, MPIDIR=no)
-AC_ARG_ENABLE(1d, AC_HELP_STRING([--enable-1d], [Let us work in 1D]), ONE_D=1)
+AC_ARG_ENABLE(1d, AC_HELP_STRING([--enable-1d], [Let us work in 1D]),        [ONE_D=1])
+AC_ARG_ENABLE(2d, AC_HELP_STRING([--enable-1d], [or in 2D 2D]),              [TWO_D=1])
 AC_ARG_ENABLE(3d, AC_HELP_STRING([--enable-3d], [or, if you prefer, in 3D]), [THREE_D=1])
 AC_ARG_ENABLE(pol, AC_HELP_STRING([--enable-pol], [Polymers anyone?]), [POLYMERS=1])
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
@@ -39,6 +40,10 @@ if test "${ONE_D}"; then
 	AC_DEFINE(ONE_D, 1, [Code compiled for 1D systems])
 	PROGNAME="$PROGNAME-1d";
 	msg="finite 1D systems!"
+elif test "${TWO_D}"; then
+	AC_DEFINE(TWO_D, 1, [Code compiled for 2D systems])
+	PROGNAME="$PROGNAME-2d";
+	msg="finite 2D systems!"
 elif test "${POLYMERS}"; then
 	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systems])
 	AC_DEFINE(POLYMERS, 1, [Code compiled for polymers])
@@ -53,11 +58,10 @@ AC_SUBST(PROGNAME)
 
 # complex wavefunctions
 if test "${COMPLEX_WFNS}"; then
-        AC_DEFINE(COMPLEX_WFNS, 1, [Code compiled for ground-state complex wavefunctions])
-        msg2="complex wave functions"
-        PROGNAME="z$PROGNAME"
+	AC_DEFINE(COMPLEX_WFNS, 1, [Code compiled for ground-state complex wavefunctions])
+  msg2="complex wave functions"
 else
-	msg2="real wave functions"
+  msg2="real wave functions"
 fi
 
 
@@ -89,7 +93,7 @@ AC_C_CONST
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_SETVBUF_REVERSED
-AC_CHECK_FUNCS([sqrt strcasecmp strdup])
+AC_CHECK_FUNCS([sqrt strcasecmp strdup tcgetpgrp])
 
 # Checks for size of pointer
 ACX_POINTER_SIZE

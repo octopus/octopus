@@ -90,8 +90,193 @@ function R_FUNC(mesh_integrate) (m, f)
 
 end function R_FUNC(mesh_integrate)
 
-#if defined(ONE_D)
-#  include "mesh1D_inc.F90"
-#elif defined(THREE_D)
-#  include "mesh3D_inc.F90"
+! calculates the laplacian and the gradient of a function on the mesh
+subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN) :: f(0:m%np)
+  R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
+  R_TYPE, intent(in), optional :: alpha
+
+  R_TYPE :: alp
+
+  sub_name = 'mesh_derivatives'; call push_sub()
+  
+  alp = R_TOTYPE(1._r8)
+  if(present(alpha)) alp = alpha
+
+  select case(m%d%space)
+    case(REAL_SPACE)
+#if defined(POLYMERS) || defined(BOUNDARIES_ZERO_DERIVATIVE)
+      call rs_derivative()
+#else
+      if(m%iso .and. present(lapl) .and. (.not.present(grad)) ) then
+        call rs_lapl_fast()
+      else
+        call rs_derivative()
+      endif
 #endif
+    case(RECIPROCAL_SPACE)
+      call fft_derivative()
+  end select
+
+  call pop_sub(); return
+contains
+
+  subroutine fft_derivative()
+    R_TYPE, allocatable :: fr(:,:,:)
+    complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
+    
+    integer :: n(3), nx, i, j
+
+    n(:) = m%fft_n(:)
+#ifdef R_TREAL
+    nx = m%hfft_n
+#else
+    nx = n(1)
+#endif
+    
+    allocate(fr(n(1), n(2), n(3)), fw1(nx, n(2), n(3)))
+    fr = 0.0_r8; fw1 = R_TOTYPE(0._r8)
+    call R_FUNC(mesh_to_cube) (m, f(1:), fr)
+    
+#ifdef R_TREAL
+    call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, fw1)
+#else
+    call fftwnd_f77_one(m%zplanf, fr, fw1)
+#endif
+
+! I am not sure that implementation of the gradient is correct;
+! should be checked.
+    if(present(grad)) then
+      allocate(fw2(nx, n(2), n(3)))
+      
+      do i = 1, 3
+        call mesh_gradient_in_FS(m, nx, n, fw1, fw2, i)
+#ifdef R_TREAL
+        call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
+#else
+        call fftwnd_f77_one(m%zplanb, fw2, fr)
+#endif
+
+        call R_FUNC(scal)(n(1)*n(2)*n(3), alp/(n(1)*n(2)*n(3)), fr, 1)
+        grad(i, :) = R_TOTYPE(0._r8)
+        call R_FUNC(cube_to_mesh) (m, fr, grad(i, :))
+      end do
+      
+      deallocate(fw2)
+    end if
+    
+    if(present(lapl)) then
+      allocate(fw2(nx, n(2), n(3)))
+      
+      call mesh_laplacian_in_FS(m, nx, n, fw1, fw2)
+#ifdef R_TREAL
+      call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
+#else
+      call fftwnd_f77_one(m%zplanb, fw2, fr)
+#endif
+      
+      call R_FUNC(scal)(n(1)*n(2)*n(3), alp/(n(1)*n(2)*n(3)), fr, 1)
+      lapl = R_TOTYPE(0._r8)
+      call R_FUNC(cube_to_mesh) (m, fr, lapl)
+      
+      deallocate(fw2)
+    end if
+    
+    deallocate(fr, fw1)
+    return
+  end subroutine fft_derivative
+  
+  subroutine rs_lapl_fast()
+    R_TYPE :: sd
+    integer :: k, in, ix, iy, iz, i
+
+    do k = 1, m%np
+      sd = (m%d%dlidfj(0)*f(k))*real(conf%dim, r8)
+      do in = 1, m%d%norder
+        sd = sd + sum(f(m%ind(1:2*conf%dim, in, k)))*m%d%dlidfj(in)
+      end do
+      lapl(k) = sd
+    end do
+    call R_FUNC(scal) (m%np, alp/m%h(1)**2, lapl(1), 1)
+    
+    return
+  end subroutine rs_lapl_fast
+
+  subroutine rs_derivative()
+    R_TYPE :: den1(conf%dim), den2(conf%dim)
+    integer :: k, in, ind1(conf%dim), ind2(conf%dim), ix, iy, iz, i
+    
+    do k = 1, m%np
+      if(present(lapl)) then
+        lapl(k) = alp*(m%d%dlidfj(0)*f(k))*sum(1/m%h(1:conf%dim)**2)
+      end if
+      if(present(grad)) then
+        grad(:, k) = m%d%dgidfj(0)*f(k)
+      end if
+      
+      ix = m%Lxyz(1, k); iy = m%Lxyz(2, k); iz = m%Lxyz(3, k)
+      do in = 1, m%d%norder
+        ind1(1) = m%Lxyz_inv(ix-in, iy, iz)
+        ind2(1) = m%Lxyz_inv(ix+in, iy, iz)
+#if defined(TWO_D) || defined(THREE_D)
+        ind1(2) = m%Lxyz_inv(ix, iy-in, iz)
+        ind2(2) = m%Lxyz_inv(ix, iy+in, iz)
+#endif
+#if defined(THREE_D)
+        ind1(3) = m%Lxyz_inv(ix, iy, iz-in)
+        ind2(3) = m%Lxyz_inv(ix, iy, iz+in)
+#endif
+        
+        ! WARNING: change polymers to x direction
+#if defined(THREE_D) && defined(POLYMERS)
+        ! cyclic boundary conditions in the z direction
+        if(ind1(3) == 0) then
+          ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in)
+        end if
+        if(ind2(3) == 0) then
+          ind1(3) = m%Lxyz_inv(ix, iy, iz + in - 2*m%nr(3))
+        end if
+#endif
+        
+        ! If you prefer 0 wave functions at the boundary, uncomment the following
+        ! Just be careful with the LB94 xc potential, for it will probably not work!
+#ifndef BOUNDARIES_ZERO_DERIVATIVE
+        den1(1:conf%dim) = f(ind1(1:conf%dim))
+        den2(1:conf%dim) = f(ind2(1:conf%dim))
+#else
+        ! This also sets zero wavefunction
+        ! den1 = 0._r8; den2 = 0._r8
+        
+        ! This peace of code changes the boundary conditions
+        ! to have 0 derivative at the boundary
+        do i = 1, conf%dim
+          if(ind1(i) > 0)den1(i) = f(ind1(i))
+          if(ind2(i) > 0)den2(i) = f(ind2(i))
+        end do
+#endif
+        
+        if(present(lapl)) then
+          do i = 1, conf%dim
+            lapl(k) = lapl(k) + alp*m%d%dlidfj(in)*((den1(i)+den2(i))/m%h(i)**2)
+          end do
+        end if
+        
+        if(present(grad)) then
+          grad(1:conf%dim, k) = grad(1:conf%dim, k) + &
+               m%d%dgidfj(-in)*den1(1:conf%dim) + m%d%dgidfj(in)*den2(1:conf%dim)
+        end if
+        
+      end do
+    end do
+    
+    if(present(grad)) then
+      do i = 1, conf%dim
+        grad(i,:) = grad(i,:) * (alp/m%h(i))
+      enddo
+    end if
+    
+    return
+  end subroutine rs_derivative
+
+end subroutine R_FUNC(mesh_derivatives)

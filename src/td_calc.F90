@@ -112,7 +112,7 @@
          xzpsi = M_z0
          do k = 1, sys%m%np
            do j = 1, conf%dim
-             xzpsi(k, 1:sys%st%dim, j) = sys%m%lxyz(j, k)*sys%m%h(j) * hzpsi(k, 1:sys%st%dim)
+             xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * hzpsi(k, 1:sys%st%dim)
            end do
          enddo
 
