@@ -105,7 +105,7 @@ integer, parameter :: &
    VERBOSE_DEBUG   = 999
 
 ! some variables to be used everywhere
-character(len=80), dimension(20) :: message ! to be output by fatal, warning
+character(len=256), dimension(20) :: message ! to be output by fatal, warning
 
 ! some private variables to this module
 #ifdef DEBUG
