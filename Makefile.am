@@ -30,7 +30,7 @@ DEB_DIR = deb-work
 
 rpm: dist
 	mv -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
-	rpm --clean -ba build/$(PACKAGE).spec
+	rpmbuild --clean -ba build/$(PACKAGE).spec
 	scp $(RPM_DIR)/RPMS/i386/octopus*.rpm $(RPM_DIR)/SRPMS/octopus*.rpm \
 		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
 	@echo "-------------------------------------------------------------"
