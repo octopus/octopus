@@ -88,7 +88,8 @@ module td_exp
     enddo
     call zhpsi (h_p, m_p, f_der_p, psi, hpsi, ik_p, t_p)
     do is = 1, h_p%d%dim
-       y( (is-1)*m_p%np+1 : is*m_p%np ) = -M_zI * hpsi(1:m_p%np, is)
+       !y( (is-1)*m_p%np+1 : is*m_p%np ) = -M_zI * hpsi(1:m_p%np, is)
+       y( (is-1)*m_p%np+1 : is*m_p%np ) = hpsi(1:m_p%np, is)
     enddo
     deallocate(psi, hpsi)
   end subroutine matvec
@@ -285,7 +286,9 @@ module td_exp
       allocate(iwsp(liwsp), wsp(lwsp), expzpsi(m%np, h%d%dim))
 
       call matvec_init(m, h, f_der, ik, t)
-      call zgexpv( n, b, timestep, zpsi, expzpsi, &
+      !call zgexpv( n, b, timestep, zpsi, expzpsi, &
+      !             te%lanczos_tol, anorm, wsp, lwsp, iwsp, liwsp, matvec, itrace, iflag)
+      call zhexpv( n, b, -timestep, zpsi, expzpsi, &
                    te%lanczos_tol, anorm, wsp, lwsp, iwsp, liwsp, matvec, itrace, iflag)
       call matvec_kill()
 
