@@ -115,6 +115,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
       call td_read_nbo()
       call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
       geo%eii = ion_ion_energy(geo)
+      h%eii = geo%eii
     end if
 
     call zepot_forces(h%ep, m, st, geo, td%iter*td%dt, reduce_=.true.)
@@ -171,6 +172,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
 
       call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
       geo%eii = ion_ion_energy(geo)
+      h%eii = geo%eii
     endif
 
     ! time iterate wavefunctions
@@ -246,7 +248,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     ! write info
     write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
          i*td%dt       / units_out%time%factor, &
-         h%etot        / units_out%energy%factor, &
+         (h%etot + geo%kinetic_energy) / units_out%energy%factor, &
          (loct_clock() - etime)/1e6
     call write_info(1)
     etime = loct_clock()
