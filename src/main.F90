@@ -39,6 +39,13 @@ program octopus
   message(4) = ""
   call write_info(4)
 
+  ! Let us print where we are running
+  call oct_sysname(message(2))
+  write(message(1),'(a)') "The octopus is swimming on a "+trim(message(2))+" system."
+  message(1) = str_center(trim(message(1)),70)
+  write(message(2),'(a)')
+  call write_info(2)
+
   ! print date
   call date_and_time(values=val)
   write(message(1),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &

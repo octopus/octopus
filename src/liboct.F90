@@ -160,6 +160,9 @@ module liboct
       character(len=*), intent(in) :: filename
     end function number_of_lines
 
+    subroutine oct_sysname(name)
+      character(len=*), intent(out) :: name
+    end subroutine oct_sysname
   end interface
 
 contains

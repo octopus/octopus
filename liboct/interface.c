@@ -450,18 +450,36 @@ int F90_FUNC_(oct_getmem, OCT_GETMEM)
   FILE *pf;
   int pid, memory;
   char inst[100];
+  char *s;
 
-  mkdir("tmp",0775);
-  if ( (pf = fopen("tmp/.tmp","w")) == NULL) return -1;
-  pid = getpid();
-  sprintf(inst, "ps -p %d -o rsz | tail -n 1 > tmp/.tmp 2> tmp/.tmp", pid );
-  if ( system(inst) != 0) return -1;
-  fclose(pf);
-  if ( (pf = fopen("tmp/.tmp","r")) == NULL) return -1;
-  if(fscanf(pf,"%d",&memory) < 1) return -1;
-  fclose(pf);
-  system("rm -f tmp/.tmp");
-  return memory;
+  sysname(&s);
+  if(!strcmp(s,"Linux")){
+	mkdir("tmp",0775);
+	if ( (pf = fopen("tmp/.tmp","w")) == NULL) return -1;
+	pid = getpid();
+	sprintf(inst, "ps -p %d -o rsz | tail -n 1 > tmp/.tmp 2> tmp/.tmp", pid );
+	if ( system(inst) != 0) return -1;
+	fclose(pf);
+	if ( (pf = fopen("tmp/.tmp","r")) == NULL) return -1;
+	if(fscanf(pf,"%d",&memory) < 1) return -1;
+	fclose(pf);
+	system("rm -f tmp/.tmp");
+	free(s);
+	return memory;}
+  else{
+	free(s);
+	return -1;}
+}
+
+void F90_FUNC_(oct_sysname, OCT_SYSNAME)
+     (STR_F_TYPE name STR_ARG1)
+{
+  char *name_c;
+
+  name_c = TO_C_STR1(name);
+  sysname(&name_c);
+  TO_F_STR1(name_c, name);
+  free(name_c);
 }
 
 int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)

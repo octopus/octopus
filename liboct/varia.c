@@ -24,9 +24,23 @@
 #include <termios.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 
 #include "config.h"
 #include "varia.h"
+
+
+/* Gets the name of the operating system, as described in the
+ variable utsname.sysname */
+void sysname(char **c)
+{
+  struct utsname name;
+  uname(&name);
+  *c = (char *)calloc(sizeof(name.sysname)+1,sizeof(char));
+  strncpy(*c, name.sysname, strlen(name.sysname));
+  return;
+}
+
 
 /* optimizes the order of the fft
 	 p is the maximum prime allowed in n */
