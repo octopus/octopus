@@ -277,22 +277,28 @@ contains
   subroutine build_kb_sphere(m)
     type(mesh_type), intent(in) :: m
     
-    integer :: j, k
-    real(r8) :: r
+    integer :: i, j, k
+    real(r8) :: r, x(3)
 
     sub_name = 'build_kb_sphere'; call push_sub()
 
     ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
     if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,     &
                                               a%zuv, a%zduv, a%zuvu,       &
-                                              a%so_uv, a%so_duv, a%so_uvu, a%so_luv)
+                                              a%so_uv, a%so_duv, a%so_uvu, &
+					      a%so_luv, a%phases)
     
     j = 0
     do k = 1, h%np
-      call mesh_r(m, k, r, a=a%x)
-      if(r <= s%ps%rc_max + m%h(1)) j = j + 1
+      do i=1,3**conf%periodic_dim
+        call mesh_r(m, k, r, a=a%x+m%shift(i,:))
+        if(r > s%ps%rc_max + m%h(1)) cycle
+        j = j + 1
+        exit
+      end do
     end do
     a%Mps = j
+    
     allocate(a%Jxyz(j), a%duV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
          a%dduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%duVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
     allocate(a%zuV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
@@ -305,24 +311,27 @@ contains
     a%zuv    = M_z0;   a%zduV   = M_z0;   a%zuVu   = M_z0
     a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0; a%so_luv = M_z0
 
-    j = 0
-    do k = 1, h%np
-      call mesh_r(m, k, r, a=a%x)
-      ! we enlarge slightly the mesh (good for the interpolation scheme)
-      if(r <= s%ps%rc_max + m%h(1)) then
-        j = j + 1
-        a%Jxyz(j) = k
-      end if
-    end do
+    
+      j = 0
+      do k = 1, h%np
+        do i=1,3**conf%periodic_dim
+          call mesh_r(m, k, r, a=a%x+m%shift(i,:))
+          ! we enlarge slightly the mesh (good for the interpolation scheme)
+          if(r > s%ps%rc_max + m%h(1)) cycle
+            j = j + 1
+            a%Jxyz(j) = k
+            exit
+        end do
+      end do
 
-    call pop_sub(); return
+   call pop_sub(); return
   end subroutine build_kb_sphere
 
   subroutine build_nl_part(m)
     type(mesh_type), intent(IN) :: m
 
-    integer :: i, j, l, lm, add_lm, p, ix(3), center(3)
-    real(r8) :: r, x(3), ylm
+    integer :: i, j, k, l, lm, n, add_lm, p, ix(3), center(3)
+    real(r8) :: r, x(3), x_in(3), ylm
     complex(r8), allocatable :: nl_fw(:,:,:)
     real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
     real(r8) :: so_uv, so_duv(3)
@@ -331,42 +340,53 @@ contains
 
     ! This loop is done always, for spin-orbit is, up to now, only done in real space.
     ! If we want the nl part also in real space, it is read.
-    j_loop: do j = 1, a%Mps
-        call mesh_xyz(m, a%Jxyz(j), x)
-        x = x - a%x
-        
-        add_lm = 1
-        l_loop: do l = 0, s%ps%L_max
-          lm_loop: do lm = -l , l
-            i_loop : do i = 1, s%ps%kbc
-              if(l .ne. s%ps%L_loc .and. h%vnl_space == REAL_SPACE) then
-                 call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
-              end if
-              if(l>0 .and. s%ps%so_l_max>=0) then
-                 call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
-                 a%so_uv(j, add_lm, i) = so_uv
-                 a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
-              endif
-            end do i_loop
-            add_lm = add_lm + 1
-          end do lm_loop
-        end do l_loop
-    end do j_loop
+      j_loop: do j = 1, a%Mps
+          call mesh_xyz(m, a%Jxyz(j), x_in)
+          k_loop: do k=1,3**conf%periodic_dim
+            x(:) = x_in(:) - m%shift(k,:)          
+            r=sqrt(sum((x-a%x)*(x-a%x)))
+            if (r > s%ps%rc_max + m%h(1)) cycle
+            x = x - a%x
+            add_lm = 1
+            l_loop: do l = 0, s%ps%L_max
+              lm_loop: do lm = -l, l
+                i_loop : do i = 1, s%ps%kbc
+                  if(l .ne. s%ps%L_loc .and. h%vnl_space == REAL_SPACE) then
+                     call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
+                  end if
+                  if(l>0 .and. s%ps%so_l_max>=0) then
+                     call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
+                     a%so_uv(j, add_lm, i) = so_uv
+                     a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
+                  endif
+                end do i_loop
+                add_lm = add_lm + 1
+              end do lm_loop
+            end do l_loop
+            exit
+         end do k_loop
+      end do j_loop
 
     if(h%reltype == SPIN_ORBIT) then
       do j = 1, a%mps
-        call mesh_xyz(m, a%Jxyz(j), x)
-        x = x - a%x
-        do add_lm = 1, (a%spec%ps%l_max+1)**2
-          a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 1) = &
-                x(2)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc) - &
-                x(3)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc)
-          a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 2) = &
-                x(3)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc) - &
-                x(1)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc)
-          a%so_luv(j, add_lm, 1:a%spec%ps%kbc , 3) = &
-                x(1)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc ) - &
-                x(2)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc )
+        call mesh_xyz(m, a%Jxyz(j), x_in)
+        do k=1,3**conf%periodic_dim
+          x(:) = x_in(:) - m%shift(k,:)          
+          r=sqrt(sum((x-a%x)*(x-a%x)))
+          if (r > s%ps%rc_max + m%h(1)) cycle
+          x = x - a%x
+          do add_lm = 1, (a%spec%ps%l_max+1)**2
+            a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 1) = &
+                  x(2)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc) - &
+                  x(3)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc)
+            a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 2) = &
+                  x(3)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc) - &
+                  x(1)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc)
+            a%so_luv(j, add_lm, 1:a%spec%ps%kbc , 3) = &
+                  x(1)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc ) - &
+                  x(2)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc )
+          enddo
+          exit
         enddo
       enddo
       a%so_luv = -M_zI*a%so_luv
@@ -423,10 +443,16 @@ contains
         do lm = -l , l
           if(l .ne. s%ps%L_loc) then
             do j = 1, a%Mps
-              call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
-              ylm = oct_ylm(x(1), x(2), x(3), l, lm)
-              a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
-                                     splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
+              call mesh_r(m, a%Jxyz(j), r, x=x_in, a=a%x)
+              do k=1,3**conf%periodic_dim
+                x(:) = x_in(:) - m%shift(k,:)          
+                r=sqrt(sum(x*x))
+                if (r > s%ps%rc_max + m%h(1)) cycle
+                ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+                a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
+                                       splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
+                exit
+              end do
             end do
             a%duvu(add_lm, 1, 1) = M_ONE/(a%duvu(add_lm, 1, 1)*s%ps%dknrm(l))
             if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8 .and. s%ps%ispin==1) then
@@ -446,11 +472,11 @@ contains
     else
       add_lm = 1
       do l = 0, s%ps%l_max
-      do lm = -l, l
-         a%duvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
-         a%so_uvu(add_lm, 1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
-         add_lm = add_lm + 1
-      enddo
+        do lm = -l, l
+           a%duvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
+           a%so_uvu(add_lm, 1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
+           add_lm = add_lm + 1
+        enddo
       enddo
 
     end if
