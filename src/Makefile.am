@@ -38,14 +38,6 @@ noinst_HEADERS = \
 octopus_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a \
   @LIB_FFT@ @LIB_TRLAN@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@ @LIB_MPI@
 
-# this has to be repeated...
-#octopus_mpi_SOURCES     = $(octopus_SOURCES)
-#octopus_mpi_LDADD       = $(octopus_LDADD) @LIB_MPI@
-#zoctopus_SOURCES        = $(octopus_SOURCES)
-#zoctopus_LDADD          = $(octopus_LDADD)
-#zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
-#zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
-
 # now the utility programs
 oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
 oct_sf_LDADD   = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
