@@ -534,7 +534,7 @@ contains
       end do
 
       write(fname, '(a,i1)') 'elf-', is
-      call doutput_function(outp, dir, fname, m, c, u)
+      call doutput_function(outp, dir, fname, m, c, 1._r8)
 
     end do do_is
     deallocate(c)
