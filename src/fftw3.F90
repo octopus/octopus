@@ -95,11 +95,20 @@ contains
 
     integer :: i, j
 
+! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
-    do i = conf%periodic_dim+1, conf%dim 
-      if(n(i).ne.1 .and. fft_optimize) &
-           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
-    end do    
+!    do i = conf%periodic_dim + 1, conf%dim 
+!      if(n(i) /= 1 .and. fft_optimize) &
+!           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+!    end do    
+! NEW
+    ! optimize dimensions only for finite sys
+    if (conf %periodic_dim == 0) then
+      do i = 1, conf%dim 
+	if(n(i) /= 1 .and. fft_optimize) &
+             call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+      end do
+    end if    
 
     ! find out if fft has already been allocated
     j = 0
