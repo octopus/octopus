@@ -276,8 +276,6 @@ subroutine states_fermi(st)
   return
 end subroutine states_fermi
 
-#ifndef ONE_D
-
 subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -318,41 +316,6 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
     end do
   end do
 end subroutine states_calculate_multipoles
-
-#else
-
-subroutine states_calculate_multipoles(m, st, lmax, dipole, multipole)
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  integer, intent(in) :: lmax
-  real(r8), intent(out) :: dipole(st%nspin), multipole(lmax + 1, st%nspin)
-
-  integer :: i, is, l
-  real(r8) :: x, r, ylm, mult, lixo(3)
-
-  dipole = 0._r8
-  do is = 1, st%nspin
-    do i = 1, m%np
-      call mesh_x(m, i, x)
-      dipole(is) = dipole(is) + st%rho(i, is)*x
-    end do
-    dipole(is) = dipole(is) * m%vol_pp
-
-    do l = 0, lmax
-        mult = 0._r8
-
-        do i = 1, m%np
-          call mesh_r(m, i, r, x=x)
-            mult = mult + st%rho(i, is) * r**l
-        end do
-        multipole(l, is) = mult * m%vol_pp
-
-    end do
-
-  end do
-end subroutine states_calculate_multipoles
-
-#endif
 
 subroutine states_write_eigenvalues(iunit, nst, st, error)
   integer, intent(in) :: iunit, nst

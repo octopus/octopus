@@ -137,35 +137,6 @@ subroutine hamiltonian_end(h)
   call pop_sub()
 end subroutine hamiltonian_end
 
-subroutine hamiltonian_setup(h, sys)
-  type(hamiltonian_type), intent(inout) :: h
-  type(system_type), intent(inout) :: sys
-
-  real(r8), allocatable :: v_aux(:,:)
-  integer :: i
-
-  h%epot = 0._r8 ! The energy coming from the potentials
-
-  if(.not.h%ip_app) then
-    call hartree_solve(h%hart, sys%m, h%Vhartree, sys%st%rho)
-    do i = 1, sys%st%nspin
-      h%epot = h%epot - 0.5_r8*dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vhartree)
-    end do
-    
-    allocate(v_aux(h%np, sys%st%nspin))
-    call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%rho_core, &
-         h%Vxc, v_aux, h%ex, h%ec)
-    h%Vxc = h%Vxc + v_aux
-    do i = 1, sys%st%nspin
-      h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
-    end do
-    deallocate(v_aux)
-    
-  end if
-
-
-end subroutine hamiltonian_setup
-
 ! This subroutine calculates the total energy of the system. Basically, it
 ! adds up the KS eigenvalues, and then it substracts the whatever double
 ! counts exist (see TDDFT theory for details).

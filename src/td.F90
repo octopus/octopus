@@ -100,7 +100,7 @@ subroutine td_run(td, u_st, sys, h)
     call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call hamiltonian_setup(h, sys)
+    call zhamiltonian_setup(h, sys)
     call zhamiltonian_eigenval (h, sys, 1, sys%st%nst) ! eigenvalues
     call hamiltonian_energy(h, sys, -1, reduce=.true.)
 

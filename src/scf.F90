@@ -99,7 +99,7 @@ subroutine scf_run(scf, sys, h)
     scf%rel_dens = scf%abs_dens / sys%st%qtot
 
     ! compute new potentials
-    call hamiltonian_setup(h, sys)
+    call dhamiltonian_setup(h, sys)
 
     ! save restart information
     call R_FUNC(states_write_restart)(trim(sys%sysname)//".restart", sys%m, sys%st)

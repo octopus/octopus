@@ -136,7 +136,7 @@ subroutine run()
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call hamiltonian_setup(h, sys)                    ! get potentials
+      call R_FUNC(hamiltonian_setup)(h, sys)                    ! get potentials
       call R_FUNC(hamiltonian_eigenval)(h, sys, 1, sys%st%nst) ! eigenvalues
       call states_fermi(sys%st)                         ! occupations
       call hamiltonian_energy(h, sys, -1)               ! get the total energy
@@ -252,7 +252,7 @@ subroutine run()
 
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call hamiltonian_setup(h, sys)
+        call zhamiltonian_setup(h, sys)
         call zhamiltonian_eigenval (h, sys, 1, sys%st%nst)
         call hamiltonian_energy(h, sys, -1, reduce=.true.)        
         
@@ -283,6 +283,8 @@ subroutine run()
         instr = instr - 1
         call m_load_unocc()
         cycle program
+      else
+        allocate(unoccv%st) ! Otherwise td_run crashes
       end if
 
     case(I_END_OCC_AN)
@@ -292,6 +294,8 @@ subroutine run()
       if(td%occ_analysis) then
         i_stack(instr) = I_END_UNOCC
         cycle program
+      else
+        deallocate(unoccv%st)
       end if
 
     case(I_START_POL)

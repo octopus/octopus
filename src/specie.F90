@@ -53,6 +53,7 @@ function specie_init(s)
     call oct_parse_block_str(str, i-1, 0, s(i)%label)
     call oct_parse_block_double(str, i-1, 1, s(i)%weight)
 
+#ifdef THREE_D
     select case(s(i)%label(1:5))
     case('jelli')
       s(i)%local = .true.  ! we only have a local part
@@ -78,6 +79,13 @@ function specie_init(s)
       call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
       s(i)%nl_planb= int(-1, POINTER_SIZE)
     end select
+#elif defined(ONE_D)
+    s(i)%local = .true. ! In 1D, potential has to be local.
+    allocate(s(i)%ps)
+    call oct_parse_block_double(str, i-1, 2, s(i)%z)
+    call oct_parse_block_double(str, i-1, 3, s(i)%z_val)
+    call ps_init(s(i)%ps, s(i)%label, s(i)%Z, s(i)%Z_val)
+#endif
 
     s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
     
@@ -98,6 +106,7 @@ subroutine specie_end(ns, s)
   sub_name = 'specie_end'; call push_sub()
 
   do i = 1, ns
+
     if(.not. s(i)%local .and. associated(s(i)%ps)) then
       if(s(i)%ps%icore /= 'nc  ' .and. associated(s(i)%rhocore_fw)) then
         deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
@@ -108,7 +117,7 @@ subroutine specie_end(ns, s)
     if(associated(s(i)%local_fw)) then
       deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
     end if
-    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
+    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE) .and. (.not. s(i)%local) ) then
       call fftw_f77_destroy_plan(s(i)%nl_planb)
       deallocate(s(i)%nl_fw); nullify(s(i)%nl_fw)
     end if

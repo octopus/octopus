@@ -3,7 +3,7 @@
 #                         Makefile for TDDFT                                  #
 #                                                                             #
 ###############################################################################
-PROG_NAME_3D = octopus2.x
+PROG_NAME_3D = octopus.x
 PROG_NAME_1D = octopus_1d.x
 
 #############################################################################
@@ -11,13 +11,13 @@ PROG_NAME_1D = octopus_1d.x
 #############################################################################
 SRC_ALL1 = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 ps_xc.F90 ps_kb.F90
-SRC_ALL2 = states.F90 xc.F90 systm.F90 hamiltonian.F90 lcao.F90 \
-	eigen.F90 mix.F90 scf.F90 unocc.F90 static_pol.F90 \
+SRC_ALL2 = states.F90 xc.F90 systm.F90 hamiltonian.F90 \
+	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
 	lasers.F90 td.F90 run.F90 main.F90
 
 SRC_1D = ps1D.F90 specie.F90 atom.F90 mesh1D.F90 hartree1D.F90
 
-SRC_3D = ps.F90 specie.F90 atom.F90 mesh3D.F90 hartree.F90
+SRC_3D = ps3D.F90 specie.F90 atom.F90 mesh3D.F90 hartree.F90
 
 OBJS_1D = $(SRC_ALL1:.F90=.o) $(SRC_1D:.F90=.o) $(SRC_ALL2:.F90=.o)
 OBJS_3D = $(SRC_ALL1:.F90=.o) $(SRC_3D:.F90=.o) $(SRC_ALL2:.F90=.o)
@@ -77,6 +77,7 @@ clean:
 # Individual dependencies. Please update consistently...                      #
 ###############################################################################
 mesh3D.o: mesh3D_create.F90 mesh3D_inc.F90
+mesh1D.o: mesh1D_create.F90 mesh1D_inc.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90
 hamiltonian.o: hamiltonian_inc.F90 h_external_pot.F90
 eigen.o: eigen_cg1.F90 eigen_cg2.F90

@@ -1,8 +1,6 @@
 ! This subroutine should be in specie.F90, but due to the limitations
 ! of f90 to handle circular dependences it had to come here!
 
-#ifndef ONE_D
-
 subroutine specie_local_fourier_init(ns, s, m)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
@@ -144,46 +142,6 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
 
   call pop_sub()
 end subroutine specie_nl_fourier_init
-
-#else
-
-!!$subroutine specie_local_fourier_init(ns, s, m)
-!!$  integer, intent(in) :: ns
-!!$  type(specie_type), pointer :: s(:)
-!!$  type(mesh_type), intent(IN) :: m
-!!$
-!!$  integer :: i, j, ix
-!!$  real(r8) :: r, vl
-!!$  real(r8), allocatable :: fr(:)
-!!$
-!!$  sub_name = 'specie_local_fourier_init'; call push_sub()
-!!$
-!!$  allocate(fr(m%fft_n))
-!!$  do i = 1, ns
-!!$
-!!$    allocate(s(i)%local_fw(m%fft_n))
-!!$    fr = 0.0_r8
-!!$    do j = 1, m%np
-!!$      call mesh_r(m, j, r)
-!!$      ix = m%lx(j) + m%fft_n/2 + 1;
-!!$      vl  = splint(s(i)%ps%vlocal, r)
-!!$      if(r >= r_small) then
-!!$        fr(ix) = (vl - s(i)%Z_val)/r
-!!$      else
-!!$        fr(ix) = s(i)%ps%vlocal_origin
-!!$      endif
-!!$    enddo
-!!$    call rfftw_f77_one_real_to_complex(m%dplanf, fr, s(i)%local_fw)
-!!$    call zscal(m%fft_n, cmplx(1.0_r8/m%fft_n, 0.0_r8, r8), s(i)%local_fw, 1)
-!!$
-!!$  end do
-!!$  
-!!$  call pop_sub()
-!!$end subroutine specie_local_fourier_init
-
-
-
-#endif
 
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h

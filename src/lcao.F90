@@ -8,6 +8,7 @@ module lcao
   use system
   use hamiltonian
   use states
+  use mix
 
   implicit none
 
@@ -84,6 +85,7 @@ contains
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
       zval = s%Z_val
+#if defined(THREE_D)
       do l = 0 , s%ps%L_max
         if(r >= r_small) then
           psi = splint(s%ps%Ur(l), r)
@@ -92,6 +94,10 @@ contains
           rho(i) = rho(i) + zel*psi*psi*(r**(2*l))/(4*M_PI)
         end if
       end do
+#elif defined(ONE_D)
+      !rho(i) = rho(i) + s%z_val*exp(-r**2)/sqrt(m_pi)
+      call R_FUNC(calcdens)(sys%st, m%np, rho)
+#endif
     end do
     
   end subroutine from_pseudopotential

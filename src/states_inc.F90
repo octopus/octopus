@@ -23,7 +23,7 @@ subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
       end do
     enddo
     nrm2 = R_FUNC(states_nrm2)(m, dim, psi(1:m%np, :, p))
-    ss = R_TOTYPE(1.0_r8/sqrt(nrm2))
+    ss = R_TOTYPE(1.0_r8/nrm2)
     do id = 1, dim
       call R_FUNC(scal) (m%np, ss, psi(1:m%np, id, p), 1)
     end do

@@ -113,7 +113,7 @@ contains
     st%rho = (st%rho +  aux) / 2.0_r8
     deallocate(aux)
     
-    call hamiltonian_setup(h, sys)
+    call zhamiltonian_setup(h, sys)
     
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
@@ -152,7 +152,7 @@ contains
     end do
     
     call zcalcdens(st, m%np, st%rho, .true.)
-    call hamiltonian_setup(h, sys)
+    call zhamiltonian_setup(h, sys)
     
     st%zpsi = zpsi1
     deallocate(zpsi1)

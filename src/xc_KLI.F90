@@ -18,7 +18,7 @@ subroutine R_FUNC(xc_kli)(func, m, st, rho_core, hartr, pot, energy)
   select case(func)
     case(X_FUNC_KLI_X)
       call R_FUNC(kli_x) (m, st%nspin, st%nst, st%occ, st%eigenval, &
-           st%R_FUNC(psi) (0:,1,:,:), hartr, pot, energy)
+           st%R_FUNC(psi) (0:,1,:,:), hartr, pot, energy, st%rho)
     case(X_FUNC_KLI_SIC)
       call R_FUNC(kli_x_sic) (m, st%nspin, st%nst, st%occ, st%eigenval, &
            st%R_FUNC(psi) (0:,1,:,:), rho_core, hartr, pot, energy)

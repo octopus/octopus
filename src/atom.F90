@@ -9,11 +9,9 @@ implicit none
 
 type atom_type
   type(specie_type), pointer :: spec ! pointer to specie
-#ifndef ONE_D
+
   real(r8) :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
-#else
-  real(r8) :: x(1), v(1), f(1)
-#endif
+
   logical :: move              ! should I move this atom in the optimization mode
 
   ! the mesh around a given atom...
@@ -45,7 +43,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
   sub_name = 'atom_init'; call push_sub()
 
-  if(oct_parse_isdef(C_string("PDBCoordinates")).ne.0) then
+  if(oct_parse_isdef(C_string("PDBCoordinates")).ne.0 .and. conf%dim==3) then
     call io_assign(iunit)
     call oct_parse_str('PDBCoordinates', 'coords.pdb', label)
     open(iunit, status='unknown', file=trim(label))
@@ -55,7 +53,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
     close(iunit)
   else
     ! we now load the positions, either from the input, or from a file
-    if(oct_parse_isdef(C_string("XYZCoordinates")).ne.0) then ! read a xyz file
+    if(oct_parse_isdef(C_string("XYZCoordinates")).ne.0 .and. conf%dim==3) then ! read a xyz file
       call io_assign(iunit)
       call oct_parse_str('XYZCoordinates', 'coords.xyz', label)
       open(iunit, status='unknown', file=trim(label))
@@ -97,7 +95,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   end if
 
   ! we now load the velocities, either from the input, or from a file
-  if(oct_parse_isdef(C_string("XYZVelocities")).ne.0) then ! read a xyz file
+  if(oct_parse_isdef(C_string("XYZVelocities")).ne.0 .and. conf%dim==3) then ! read a xyz file
     call io_assign(iunit)
     call oct_parse_str('XYZVelocities', 'coords.xyz', label)
     open(iunit, status='unknown', file=trim(label))
