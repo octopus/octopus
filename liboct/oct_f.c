@@ -54,6 +54,16 @@ void F90_FUNC_(oct_mkdir, OCT_MKDIR)
 	free(name_c);
 }
 
+void F90_FUNC_(oct_rm, OCT_RM)
+     (STR_F_TYPE name STR_ARG1)
+{
+  char *name_c;
+
+  name_c = TO_C_STR1(name);
+  unlink(name_c);
+  free(name_c);
+}
+
 void F90_FUNC_(oct_getcwd, OCT_GETCWD)
 		 (STR_F_TYPE name STR_ARG1)
 {

@@ -34,17 +34,15 @@ subroutine static_pol_run(scf, sys, h)
   type(hamiltonian_type), intent(inout) :: h
   type(scf_type), intent(inout) :: scf
   
-  integer :: iunit, ios, i_start, i, j, is
+  integer :: iunit, ios, i_start, i, j, is, k
   real(r8) :: e_field
-  real(r8), allocatable :: Vpsl_save(:)
-  real(r8) :: dipole(0:conf%dim, conf%dim, sys%st%nspin)
-  logical :: out_pol
+  real(r8), allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
+  logical :: resume, out_pol
 
   call push_sub('static_pol_run')
 
   ! read in e_field value
-  call oct_parse_double('POLStaticField', &
-       0.001_r8/units_inp%energy%factor*units_inp%length%factor, e_field)
+  call oct_parse_double('POLStaticField', 0.01_r8/units_inp%energy%factor*units_inp%length%factor, e_field)
   e_field = e_field * units_inp%energy%factor / units_inp%length%factor
   if (e_field <= 0._r8) then
     write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"
@@ -52,57 +50,74 @@ subroutine static_pol_run(scf, sys, h)
     call write_fatal(2)
   end if
 
-  ! open restart file
-  call io_assign(iunit)
-  open(iunit, file='tmp/restart.pol', status='unknown')
-  do i_start = 0, conf%dim
-    read(iunit, fmt=*, iostat=ios) dipole(i_start, 1:conf%dim, :)
-    if(ios.ne.0) exit
-  end do
-  if(ios.eq.0) then ! all information is already calculated
-    i_start = 4 ! do not do the do loop
-    out_pol = .true.
-  else
-    out_pol = .false.
-  end if
-  call io_close(iunit)
+  ! Allocate the dipole...
+  allocate(dipole(conf%dim, conf%dim, 2))
+    dipole = M_ZERO
 
-  ! save local pseudopot
+  ! Finds out wether there is an existent restart.pol file.
+  inquire(file='tmp/restart.pol', exist=resume)
+
+  if(resume) then
+   ! Finds out how many dipoles have already been written.
+   call io_assign(iunit)
+   open(unit = iunit, file='tmp/restart.pol', status='old', action='read')
+   rewind(iunit)
+   i_start = 1
+   do i = 1, 3
+      read(iunit, fmt=*, iostat = ios) ((dipole(i, j, k), j = 1, 3), k = 1, 2)
+      if(ios.ne.0) exit
+      i_start = i_start + 1
+   enddo
+   call io_close(iunit)
+  else
+   call io_assign(iunit)
+   open(unit = iunit, file='tmp/restart.pol', status='new', action='write')
+   call io_close(iunit)
+   i_start = 1
+  endif
+
+  ! Save local pseudopotential
   allocate(Vpsl_save(sys%m%np))
   Vpsl_save = h%Vpsl
 
+  ! Allocate the trrho to the contain the trace of the density.
+  allocate(trrho(sys%m%np))
+    trrho = M_ZERO
+
   do i = i_start, conf%dim
-    if(clean_stop()) exit
+     do k = 1, 2
+        write(message(1), '(/,a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
+        call write_info(1)
 
-    write(message(1), '(a, i2)')'Info: Calculating dipole moment for field ', i
-    call write_info(1)
+        h%vpsl = vpsl_save + (-1)**k*sys%m%lxyz(i, :)*sys%m%h(i)*e_field
 
-    h%Vpsl = Vpsl_save
-    if(i>0) h%Vpsl = h%Vpsl - sys%m%Lxyz(i,:)*sys%m%h(i)*e_field
+        call scf_run(scf, sys, h)
 
-    call scf_run(scf, sys, h)
-    
-    ! calculate dipole
-    do is = 1, sys%st%nspin
-      do j = 1, conf%dim
-        dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lxyz(j,:))*sys%m%h(j)*sys%m%vol_pp
-      end do
-    end do
+        trrho = M_ZERO
+        do is = 1, sys%st%spin_channels
+           trrho(:) = trrho(:) + sys%st%rho(:, is)
+        enddo
 
-    ! output dipole
-    call io_assign(iunit)
-    open(iunit, file='tmp/restart.pol', status='unknown')
-    do j = 0, i
-      write(iunit, fmt=*) dipole(j, 1:conf%dim, :)
-    end do
-    call io_close(iunit)
+        ! calculate dipole
+        do j = 1, conf%dim
+           dipole(i, j, k) = R_FUNC(mesh_moment)(sys%m, trrho, j, 1)
+        enddo
 
-    if(i == conf%dim) then 
-      out_pol = .true.
-    end if
+     enddo
+
+     ! Writes down the dipole to the file
+     call io_assign(iunit)
+     open(unit=iunit, file='tmp/restart.pol', action='write', status='old', position='append')
+     write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, 3), k = 1, 2)
+     call io_close(iunit)
+
+     if(i == conf%dim) then 
+       out_pol = .true.
+     end if
   end do
 
-  deallocate(Vpsl_save)
+  ! Closes the restart file
+  call io_close(iunit)
 
   if(out_pol) then ! output pol file
     call oct_mkdir("linear")
@@ -113,14 +128,14 @@ subroutine static_pol_run(scf, sys, h)
     if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim
     write(iunit, '(a)') ']'
          
-    do is = 1, sys%st%nspin
-      do j = 1, conf%dim
-        write(iunit, '(3f12.6)') (dipole(j, 1:conf%dim, is) - dipole(0, 1:conf%dim, is))/e_field &
+    do j = 1, conf%dim
+        write(iunit, '(3f12.6)') (dipole(j, 1:conf%dim, 1) - dipole(j, 1:conf%dim, 2))/(M_TWO*e_field) &
              / units_out%length%factor**conf%dim
       end do
-    end do
     call io_close(iunit)
   end if
+
+  deallocate(Vpsl_save, trrho, dipole)
 
   call pop_sub()
   return

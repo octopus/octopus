@@ -56,6 +56,10 @@ module liboct
     subroutine oct_mkdir(name)
       character(len=*), intent(in) :: name
     end subroutine oct_mkdir
+
+    subroutine oct_rm(name)
+      character(len=*), intent(in) :: name
+    end subroutine oct_rm
     
     subroutine oct_getcwd(name)
       character(len=*), intent(out) :: name

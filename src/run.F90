@@ -315,11 +315,7 @@ subroutine run()
       ! just delete the pol file
       message(1) = 'Info: Starting static polarizability calculation'
       call write_info(1)
-
-      call io_assign(iunit)
-      open(iunit, file='tmp/restart.pol', status='unknown')
-      write(iunit, '(a)') ' '
-      call io_close(iunit)
+      call oct_rm('tmp/restart.pol')
         
     case(I_POL_SCF)
       message(1) = 'Info: Calculating static polarizability'

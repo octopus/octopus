@@ -111,6 +111,15 @@ function R_FUNC(mesh_integrate) (m, f)
   R_FUNC(mesh_integrate) = sum(f(1:m%np))*m%vol_pp
 end function R_FUNC(mesh_integrate)
 
+function R_FUNC(mesh_moment) (m, f, i, n)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(IN)          :: f(:)
+  integer, intent(in)         :: i, n
+  R_TYPE ::R_FUNC(mesh_moment)
+
+  R_FUNC(mesh_moment) = sum(f(1:m%np)*(m%lxyz(i, 1:m%np)*m%h(i))**n)*m%vol_pp
+end function R_FUNC(mesh_moment)
+
 !!$function R_FUNC(mesh_integrateq) (m, f)
 !!$  type(mesh_type), intent(IN) :: m
 !!$  complex(r8), intent(IN), dimension(*) :: f
