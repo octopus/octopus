@@ -163,18 +163,20 @@ FLOAT function ddet(a, n)
   integer :: i, info, ipiv(n)
     
   call DLAPACK(getrf) (n, n, a(1,1), n, ipiv(1), info)
-  if(info < 0) then
-    write(message(1),'(a,i4)') 'In ddet, LAPACK dgetrf returned error code ',info
-    call write_fatal(1)
+  if(info.ne.0) then
+    write(message(1),'(a,i4)') 'In ddet, LAPACK dgetrf returned unsuccesful code ',info
+    ddet = M_ZERO
+    call write_warning(1)
+    return
   endif
 
   ddet = M_ONE
   do i = 1, n
-    ddet = ddet*a(i, i)
-    if(ipiv(i).ne.i) then
-      ipiv(ipiv(i)) = ipiv(i)
-      ddet = -ddet
-    end if
+     if(ipiv(i).ne.i) then
+       ddet = - ddet*a(i, i)
+     else
+       ddet = ddet*a(i, i)
+     endif
   end do
 
 end function ddet
@@ -197,17 +199,19 @@ CMPLX function zdet(a, n)
 
   call ZLAPACK(getrf) (n, n, a(1,1), n, ipiv(1), info)
   if(info < 0) then
-    write(message(1),'(a,i4)') 'In zdet, LAPACK zgetrf returned error code ',info
-    call write_fatal(1)
+    write(message(1),'(a,i4)') 'In zdet, LAPACK zgetrf returned unsuccesfull code ',info
+    zdet = M_ZERO
+    call write_warning(1)
+    return
   endif
 
   zdet = M_z1
   do i = 1, n
-    zdet = zdet*a(i, i)
-    if(ipiv(i).ne.i) then
-      ipiv(ipiv(i)) = ipiv(i)
-      zdet = -zdet
-    end if
+     if(ipiv(i).ne.i) then
+       zdet = - zdet*a(i, i)
+     else
+       zdet = zdet*a(i, i)
+     endif
   end do
     
 end function zdet
