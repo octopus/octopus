@@ -43,9 +43,10 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
 
   call push_sub('restart_read_function')
 
+  ! try first to load plain binary files
   call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr)
 
-  ! If problems, try with the netcdf files
+  ! if we don't succeed try NetCDF
   if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr)
 
   call pop_sub()
@@ -186,7 +187,11 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   endif
 
   if(any(.not.filled)) call fill()
-  if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0 ! Alles OK
+  if(ierr == 0) then
+    ierr = -1 ! no files read
+  else
+    if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0 ! Alles OK
+  end if
 
   deallocate(filled)
   call io_close(iunit)

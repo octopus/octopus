@@ -31,6 +31,7 @@ use timedep
 use unocc
 use static_pol
 use static_pol_lr
+use casida
 use geom_opt
 use phonons
 use opt_control
@@ -55,10 +56,11 @@ integer, private, parameter ::   &
      M_UNOCC              = 2, &
      M_TD                 = 3, &
      M_STATIC_POL         = 4, &
-     M_LR_STATIC_POL      = 8, &
      M_GEOM_OPT           = 5, &
      M_PHONONS            = 6, &
      M_OPT_CONTROL        = 7, &
+     M_LR_STATIC_POL      = 8, &
+     M_CASIDA             = 9, &
      M_BO_MD              = 98,&
      M_PULPO_A_FEIRA      = 99
 
@@ -68,10 +70,11 @@ integer, private, parameter :: &
      I_UNOCC              = 102, &
      I_TD                 = 103, &
      I_STATIC_POL         = 104, &
-     I_LR_STATIC_POL      = 108, &
      I_GEOM_OPT           = 105, &
      I_PHONONS            = 106, &
      I_OPT_CONTROL        = 107, &
+     I_LR_STATIC_POL      = 108, &
+     I_CASIDA             = 109, &
      I_PULPO              = 999
 
 contains
@@ -82,7 +85,7 @@ subroutine run()
   logical :: log
   character(len=100) :: filename
 
-  logical :: fromScratch(M_GS:M_LR_STATIC_POL)
+  logical :: fromScratch(M_GS:M_CASIDA)
 
   call push_sub('run')
 
@@ -124,13 +127,6 @@ subroutine run()
         cycle program
       end if
 
-    case(I_LR_STATIC_POL)
-      if(static_pol_lr_run(sys, h, fromScratch(M_LR_STATIC_POL)).ne.0) then ! could not load wfs
-        i_stack(instr) = I_LR_STATIC_POL;      instr = instr + 1
-        i_stack(instr) = I_GS
-        cycle program
-      end if
-
     case(I_GEOM_OPT)
       if(geom_opt_run(sys, h).ne.0) then ! could not load wfs
         i_stack(instr) = I_GEOM_OPT;      instr = instr + 1
@@ -150,6 +146,20 @@ subroutine run()
       call write_info(1)
 
       ierr = opt_control_run(sys, h)
+
+    case(I_LR_STATIC_POL)
+      if(static_pol_lr_run(sys, h, fromScratch(M_LR_STATIC_POL)).ne.0) then ! could not load wfs
+        i_stack(instr) = I_LR_STATIC_POL;      instr = instr + 1
+        i_stack(instr) = I_GS
+        cycle program
+      end if
+
+    case(I_CASIDA)
+      if(casida_run(sys, h, fromScratch(M_CASIDA)).ne.0) then ! could not load wfs
+        i_stack(instr) = I_CASIDA;      instr = instr + 1
+        i_stack(instr) = I_UNOCC
+        cycle program
+      end if
 
     case(I_PULPO)
       call pulpo_print()
@@ -208,6 +218,10 @@ contains
       fromScratch(M_OPT_CONTROL) = fS
       instr = instr + 1; i_stack(instr) = I_OPT_CONTROL
 
+    case(M_CASIDA)
+      fromScratch(M_CASIDA) = fS
+      instr = instr + 1; i_stack(instr) = I_CASIDA
+
     case(M_PULPO_A_FEIRA)
       instr = instr + 1; i_stack(instr) = I_PULPO
   end select
@@ -220,7 +234,7 @@ subroutine run_init()
   ! initialize some stuff
 
   call loct_parse_int('CalculationMode', 1, calc_mode)
-  if( (calc_mode < 1 .or. calc_mode > 9) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+  if( (calc_mode < 1 .or. calc_mode > 10) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = '
     message(3) = '    gs          <= ground-state calculation'
@@ -229,11 +243,12 @@ subroutine run_init()
     message(6) = '    pol         <= calculate static polarizability'
     message(6) = '    pol_lr      <= calculate static polarizability from LR theory'
     message(7) = '    bo          <= perform Born-Oppenheimer MD'
-    message(8) = '    geom        <= calculate phonon frequencies'
+    message(8) = '    geom        <= geometry optimization'
     message(9) = '    phonon      <= calculate phonon frequencies'
     message(10)= '    opt_control <= optimum control'
-    message(11)= '    recipe      <= prints out the "Pulpo a Feira" recipe'
-    call write_fatal(11)
+    message(11)= '    casida      <= calculate excitation a la Marc Casida'
+    message(12)= '    recipe      <= prints out the "Pulpo a Feira" recipe'
+    call write_fatal(12)
   end if
 
   write(message(1), '(a,i2)')   'Info: Calculation Mode = ', calc_mode

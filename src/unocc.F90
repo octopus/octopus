@@ -78,6 +78,8 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
       call end_()
       return
     end if
+    message(1) = "Loaded wave-functions from 'tmp/restart_gs'"
+    call write_info(1)
   end if
 
   ! Setup Hamiltonian

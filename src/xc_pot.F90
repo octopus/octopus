@@ -16,14 +16,14 @@
 !! 02111-1307, USA.
 
 subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot, aux)
-  type(xc_type),        intent(in), target    :: xcs
-  type(mesh_type),      intent(in)    :: m
-  type(f_der_type),     intent(inout) :: f_der
-  FLOAT, intent(in)                   :: rho(:, :)
-  integer, intent(in)                 :: ispin
-  FLOAT,                intent(inout) :: vxc(:,:), ex, ec
-  FLOAT,                intent(in)    :: ip, qtot
-  logical, optional,    intent(in)    :: aux
+  type(xc_type), target, intent(in)    :: xcs
+  type(mesh_type),       intent(in)    :: m
+  type(f_der_type),      intent(inout) :: f_der
+  FLOAT,                 intent(in)    :: rho(:, :)
+  integer,               intent(in)    :: ispin
+  FLOAT,                 intent(inout) :: vxc(:,:), ex, ec
+  FLOAT,                 intent(in)    :: ip, qtot
+  logical, optional,     intent(in)    :: aux
   
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)

@@ -2,7 +2,7 @@ EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-broad oct-ph oct-xyz-anim \
 	oct-make-st oct-center-geom
 
-bin_PROGRAMS = octopus oct-excite oct-atoms-magnet @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus oct-atoms-magnet @UTILITY_PROGRAMS@
 
 check_PROGRAMS = oct-test
 
@@ -23,7 +23,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 opt_control.F90 \
-	linear_response.F90 static_pol_lr.F90 pulpo.F90 \
+	casida.F90 linear_response.F90 static_pol_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
@@ -60,9 +60,6 @@ oct_hs_mult_LDADD   = $(core_LIBS)
 
 oct_hs_acc_SOURCES  = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
 oct_hs_acc_LDADD    = $(core_LIBS)
-
-oct_excite_SOURCES = $(core_SRCS) linear.F90 lasers.F90 epot.F90 h.F90 systm.F90 excitations.F90
-oct_excite_LDADD = $(octopus_LDADD)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)
@@ -131,7 +128,7 @@ config_F90.h: config.h
 # the dependencies below by the resulting new dependencies. (For normal compilation
 # of octopus, there is absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_sf_SOURCES) $(oct_rsf_SOURCES) $(oct_hs_mult_SOURCES) $(oct_hs_acc_SOURCES) $(oct_excite_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
+	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_sf_SOURCES) $(oct_rsf_SOURCES) $(oct_hs_mult_SOURCES) $(oct_hs_acc_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
 
 
 # Dependencies. 
