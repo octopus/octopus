@@ -18,7 +18,6 @@
 subroutine poisson3D_init(m)
   type(mesh_type), intent(inout) :: m
 
-  FLOAT :: gpar,gperp,gx,gz,r_c
 
   ASSERT(poisson_solver >= 0 .or. poisson_solver <= 4)
 
@@ -41,20 +40,6 @@ subroutine poisson3D_init(m)
   call write_info(1)
 
 #ifdef HAVE_FFT
-  if (poisson_solver <= 2) then
-    call loct_parse_float('PoissonCutoffRadius',&
-           maxval(m%l(:)*m%h(:))/units_inp%length%factor , r_c)
-    r_c = r_c*units_inp%length%factor
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-                        trim(units_out%length%abbrev), '] = ',       &
-                        r_c/units_out%length%factor
-    call write_info(1)
-    if ( r_c > maxval(m%l(:)*m%h(:)) ) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in next cell(s).'
-      call write_warning(2)
-    end if
-  end if
   if (poisson_solver <= 3) call init_fft()
 #endif
 
@@ -76,6 +61,7 @@ contains
   subroutine init_fft()
     integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: temp(3), vec
+    FLOAT :: gpar,gperp,gx,gz,r_c
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(m, db)                 ! get dimensions of the double box
@@ -84,6 +70,21 @@ contains
     call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
     call dcf_fft_init(fft_cf)   ! the ffts
     db = fft_cf%n               ! dimensions may have been optimized
+
+  if (poisson_solver <= 2) then
+    call loct_parse_float('PoissonCutoffRadius',&
+           maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+    r_c = r_c*units_inp%length%factor
+    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+                        trim(units_out%length%abbrev), '] = ',       &
+                        r_c/units_out%length%factor
+    call write_info(1)
+    if ( r_c > maxval(db(:)*m%h(:)/M_TWO) ) then
+      message(1) = 'Poisson cutoff radius is larger than cell size.'
+      message(2) = 'You can see electrons in next cell(s).'
+      call write_warning(2)
+    end if
+  end if
 
     ! store the fourier transform of the Coulomb interaction
     allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
@@ -122,6 +123,7 @@ contains
                 fft_Coulb_FS(ix, iy, iz) = M_ZERO
               end select
             endif
+            fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
         end do
       end do
     end do
