@@ -111,8 +111,7 @@ contains
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
-    call xpolate_pot(dt, m%np, st%nspin, &
-           tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), tr%v_old(:, :, 0))
+    call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 1:3), h%vhxc, dt, dt)
 
     select case(tr%method)
     case(REVERSAL);             call td_rti2
@@ -222,8 +221,7 @@ contains
       call push_sub('td_rti4')
 
       if(.not.h%ip_app) then
-        call xpolate_pot(-dt/M_TWO, m%np, st%nspin, &
-             tr%v_old(:, :, 2), tr%v_old(:, :, 1), tr%v_old(:, :, 0), h%vhxc)
+        call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
       
       do ik = 1, st%nik
@@ -249,8 +247,7 @@ contains
 
       if(.not.h%ip_app) then
         do j = 1, 2
-           call xpolate_pot(time(j)-dt, m%np, st%nspin, &
-                          tr%v_old(:, :, 2), tr%v_old(:, :, 1), tr%v_old(:, :, 0), vaux(:, :, j))
+           call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 0:2), vaux(:, :, j), dt, time(j)-dt)
         enddo
       else
         vaux = M_ZERO
@@ -287,21 +284,6 @@ contains
       deallocate(vaux)
       call pop_sub()
     end subroutine td_rti5
-    
-    subroutine xpolate_pot(t, np, dim, pot2, pot1, pot0, pot)
-      real(r8), intent(in)  :: t
-      integer, intent(in)   :: np, dim
-      real(r8), intent(in)  :: pot0(np, dim), pot1(np, dim), pot2(np, dim)
-      real(r8), intent(out) :: pot(np, dim)
-
-      !pot = pot0 + t/dt       * (3._r8/2._r8*pot0 + 1._r8/2._r8*pot2 - 2.0_r8*pot1) + &
-      !             t**2/dt**2 * (1._r8/2._r8*pot0 + 1._r8/2._r8*pot2 -        pot1)
-       call dcopy(np*dim,                                                    pot0(1, 1), 1, pot(1, 1), 1)
-       call daxpy(np*dim, (t/dt)*(3._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot0(1, 1), 1, pot(1, 1), 1)
-       call daxpy(np*dim, (t/dt)*(-2._r8)      + (t**2/dt**2)*(-1._r8),      pot1(1, 1), 1, pot(1, 1), 1)
-       call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2(1, 1), 1, pot(1, 1), 1)
-
-    end subroutine xpolate_pot
     
   end subroutine td_rti_dt
 
