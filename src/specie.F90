@@ -18,10 +18,12 @@ type specie_type
   ! For the pseudopotential
   type(ps_type), pointer :: ps
 
-  ! For the local potential in Fourier space...
+  ! For the pseudopotential in Fourier space...
 #ifndef ONE_D
-  complex(r8), pointer :: local_fw(:,:,:)
-  complex(r8), pointer :: rhocore_fw(:,:,:)
+  complex(r8), pointer :: local_fw(:,:,:), rhocore_fw(:,:,:)
+  integer(POINTER_SIZE) :: nl_planf, nl_planb
+  integer :: nl_fft_n, nl_hfft_n
+  complex(r8), pointer :: nl_fw(:,:,:,:)
 #else
   complex(r8), pointer :: local_fw(:)
   complex(r8), pointer :: rhocore_fw(:)
@@ -74,6 +76,7 @@ function specie_init(s)
         allocate(s(i)%ps) ! allocate structure
         read(str, *) s(i)%label, s(i)%weight, s(i)%Z, lmax, lloc
         call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
+        s(i)%nl_planf = int(-1, POINTER_SIZE)
 #else
         s(i)%local = .true.
         allocate(s(i)%ps)
@@ -117,6 +120,11 @@ subroutine specie_end(ns, s)
 
     if(associated(s(i)%local_fw)) then
       deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
+    end if
+    if(s(i)%nl_planf .ne. int(-1, POINTER_SIZE)) then
+      call fftw_f77_destroy_plan(s(i)%nl_planf)
+      call fftw_f77_destroy_plan(s(i)%nl_planb)
+      deallocate(s(i)%nl_fw); nullify(s(i)%nl_fw)
     end if
   end do
 

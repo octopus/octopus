@@ -18,6 +18,7 @@ type hamiltonian_type
   integer :: soc ! spin-orbit coupling?
 
   integer :: vpsl_space           ! How should the local potential be calculated
+  integer :: vnl_space            ! How should the nl    potential be calculated
   real(r8), pointer :: Vpsl(:)    ! the external potential
   real(r8), pointer :: Vhartree(:)! the external potential
   real(r8), pointer :: Vxc(:,:)   ! xc potential
@@ -66,14 +67,26 @@ subroutine hamiltonian_init(h, sys)
   if(h%vpsl_space < 0 .or. h%vpsl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
          "' is not a valid LocalPotentialSpace"
-    message(2) = '(0 <= LocalPotentialSpace <=1)'
+    message(2) = '(LocalPotentialSpace = 0 | 1)'
+    call write_fatal(2)
+  end if
+
+  h%vnl_space = fdf_integer('NonLocalPotentialSpace', 0)
+  if(h%vnl_space < 0 .or. h%vnl_space > 1) then
+    write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
+         "' is not a valid NonLocalPotentialSpace"
+    message(2) = '(NonLocalPotentialSpace = 0 | 1)'
     call write_fatal(2)
   end if
 
   if(h%vpsl_space == 1) then
     call mesh_alloc_ffts(sys%m, 2)
-    call specie_fourier_init(sys%nspecies, sys%specie, sys%m)
+    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m)
   end if
+
+  if(h%vnl_space == 1) then
+    call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m)
+  end if  
 
   ! Should we treat the particles as independent?
   h%ip_app = fdf_boolean("NonInteractingElectrons", .false.)

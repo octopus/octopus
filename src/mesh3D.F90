@@ -157,7 +157,7 @@ subroutine mesh_alloc_ffts(m, i)
     call  fftw3d_f77_create_plan(m%zplanb, m%fft_n, m%fft_n, m%fft_n, &
          fftw_backward, fftw_measure + fftw_threadsafe) 
   else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
-    message(1) = "FFTs used in a double box (for poisson | local potential)"
+    message(1) = "Info: FFTs used in a double box (for poisson | local potential)"
     write(message(2), '(6x,a,i4,a,i4,a,i4,a)') 'box size = (', m%fft_n2, ',', m%fft_n2, ',',m%fft_n2,')'
     write(message(3), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
     call write_info(3)

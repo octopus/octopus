@@ -3,7 +3,7 @@
 
 #ifndef ONE_D
 
-subroutine specie_fourier_init(ns, s, m)
+subroutine specie_local_fourier_init(ns, s, m)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
@@ -12,7 +12,7 @@ subroutine specie_fourier_init(ns, s, m)
   real(r8) :: r, vl
   real(r8), allocatable :: fr(:,:,:)
 
-  sub_name = 'specie_init_fourier'; call push_sub()
+  sub_name = 'specie_local_fourier_init'; call push_sub()
 
   allocate(fr(m%fft_n2,  m%fft_n2, m%fft_n2))
   do i = 1, ns
@@ -54,11 +54,71 @@ subroutine specie_fourier_init(ns, s, m)
   end do
   
   call pop_sub()
-end subroutine specie_fourier_init
+end subroutine specie_local_fourier_init
+
+subroutine specie_nl_fourier_init(ns, s, m)
+  integer, intent(in) :: ns
+  type(specie_type), pointer :: s(:)
+  type(mesh_type), intent(IN) :: m
+
+  integer :: n, hn, i, j, ix, iy, iz, l, lm, add_lm
+  real(r8) :: vl, x(3), g(3)
+  real(r8), allocatable :: fr(:,:,:)
+
+  sub_name = 'specie_nl_fourier_init'; call push_sub()
+  
+  specie_loop: do i = 1, ns
+    ! first get the dimensions of the thing
+    n = 2*nint(s(i)%ps%rc_max/m%h) + 6 ! this should be enough
+    hn = n/2 + 1
+    s(i)%nl_fft_n = n
+    s(i)%nl_hfft_n = hn
+
+    ! allocate memory and FFT plans
+    allocate(s(i)%nl_fw(hn, n, n, (s(i)%ps%L_max + 1)**2))
+    call rfftw3d_f77_create_plan(s(i)%nl_planf, n, n, n, &
+         fftw_forward, fftw_measure + fftw_threadsafe)
+    call rfftw3d_f77_create_plan(s(i)%nl_planb, n, n, n, &
+         fftw_backward, fftw_measure + fftw_threadsafe)    
+
+    ! fill in structure
+    allocate(fr(n, n, n))
+    add_lm = 1
+    l_loop: do l = 0, s(i)%ps%L_max
+      if(l == s(i)%ps%L_loc) then
+        add_lm = add_lm + (2*l + 1)
+        cycle l_loop
+      end if
+      
+      lm_loop: do lm = -l, l
+        do ix = 1, n
+          x(1) = m%h * real(ix - hn, r8)
+          do iy = 1, n
+            x(2) = m%h * real(iy - hn, r8)
+            do iz = 1, n
+              x(3) = m%h * real(iz - hn, r8)
+              
+              call get_nl_part(s(i)%ps, x, l, lm, fr(ix, iy, iz), g)
+            end do
+          end do
+        end do
+        
+        call rfftwnd_f77_one_real_to_complex(s(i)%nl_planf, fr(1, 1, 1), s(i)%nl_fw(1, 1, 1, add_lm))
+        call zscal(hn*n**2, cmplx(1.0_r8/n**3, 0.0_r8, r8), s(i)%nl_fw(1, 1, 1, add_lm), 1)
+        
+        add_lm = add_lm + 1
+      end do lm_loop
+    end do l_loop
+    
+    deallocate(fr)
+  end do specie_loop
+
+  call pop_sub()
+end subroutine specie_nl_fourier_init
 
 #else
 
-subroutine specie_fourier_init(ns, s, m)
+subroutine specie_local_fourier_init(ns, s, m)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
@@ -67,7 +127,7 @@ subroutine specie_fourier_init(ns, s, m)
   real(r8) :: r, vl
   real(r8), allocatable :: fr(:)
 
-  sub_name = 'specie_init_fourier'; call push_sub()
+  sub_name = 'specie_local_fourier_init'; call push_sub()
 
   allocate(fr(m%fft_n))
   do i = 1, ns
@@ -90,7 +150,9 @@ subroutine specie_fourier_init(ns, s, m)
   end do
   
   call pop_sub()
-end subroutine specie_fourier_init
+end subroutine specie_local_fourier_init
+
+
 
 #endif
 
@@ -105,8 +167,8 @@ subroutine generate_external_pot(h, sys)
   real(r8), allocatable :: fr(:,:,:)
 
   ! WARNING DEBUG
-  integer :: i, j
-  real(r8), allocatable :: f(:,:,:)
+!!$  integer :: i, j
+!!$  real(r8), allocatable :: f(:,:,:)
 
   integer n, ix, iy, iz
 
@@ -198,25 +260,26 @@ contains
   end subroutine from_pseudopotential
 
   ! this actually adds to outp
-  subroutine phase_factor(m, vec, inp, outp)
+  subroutine phase_factor(m, n, vec, inp, outp)
     implicit none
     type(mesh_type), intent(IN) :: m
+    integer, intent(in)         :: n
     real(r8), intent(IN)        :: vec(3)
-    complex(r8), intent(IN)     :: inp(m%hfft_n2, m%fft_n2, m%fft_n2)
-    complex(r8), intent(inout)  :: outp(m%hfft_n2, m%fft_n2, m%fft_n2)
+    complex(r8), intent(IN)     :: inp (n/2+1, n, n)
+    complex(r8), intent(inout)  :: outp(n/2+1, n, n)
     
     complex(r8) :: k
     integer     :: ix, iy, iz, ixx, iyy, izz
     
-    k = M_zI * ((2.0_r8*M_Pi)/(m%fft_n2*m%h))
-    do iz = 1, m%fft_n2
-      izz = pad_feq(iz, m%fft_n2, .true.)
-      do iy = 1, m%fft_n2
-        iyy = pad_feq(iy, m%fft_n2, .true.)
-        do ix = 1, m%hfft_n2
-          ixx = pad_feq(ix, m%fft_n2, .true.)
+    k = M_zI * ((2.0_r8*M_Pi)/(n*m%h))
+    do iz = 1, n
+      izz = pad_feq(iz, n, .true.)
+      do iy = 1, n
+        iyy = pad_feq(iy, n, .true.)
+        do ix = 1, n/2 + 1
+          ixx = pad_feq(ix, n, .true.)
           outp(ix, iy, iz) = outp(ix, iy, iz) + &
-               exp( k * (vec(1)*ixx + vec(2)*iyy + vec(3)*izz) ) * inp(ix, iy, iz)
+               exp( - k * (vec(1)*ixx + vec(2)*iyy + vec(3)*izz) ) * inp(ix, iy, iz)
         end do
       end do
     end do
@@ -242,9 +305,9 @@ contains
         end if
       end do
     else
-      call phase_factor(m, a%x, s%local_fw, fw)
+      call phase_factor(m, m%fft_n2, a%x, s%local_fw, fw)
       if(s%ps%icore /= 'nc  ') then
-        call phase_factor(m, a%x, s%rhocore_fw, fwc)
+        call phase_factor(m, m%fft_n2, a%x, s%rhocore_fw, fwc)
       end if
     end if
 
@@ -264,7 +327,7 @@ contains
     a%Mps = j
     
     allocate(a%Jxyz(j), a%uV(j, (s%ps%L_max+1)**2), &
-         a%duV(j, (s%ps%L_max+1)**2, 3), a%uVu((s%ps%L_max+1)**2))
+         a%duV(3, j, (s%ps%L_max+1)**2), a%uVu((s%ps%L_max+1)**2))
     
     a%uV  = 0.0_r8; a%duV = 0.0_r8; a%uVu = 0.0_r8
     
@@ -282,81 +345,132 @@ contains
   subroutine build_nl_part(m)
     type(mesh_type), intent(IN) :: m
 
-    integer :: j, l, k, lm
-    real(r8) :: r, f, uVr0, duvr0, x(3), ylm, gylm(3)
+    integer :: j, l, lm, add_lm, p, ix, iy, iz, center(3)
+    real(r8) :: r, x(3), ylm
+    complex(r8), allocatable :: nl_fw(:,:,:)
+    real(r8), allocatable :: nl_fr(:,:,:)
 
-    j_loop: do j = 1, a%Mps
-      call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
+    if(h%vnl_space == 0) then
+      j_loop: do j = 1, a%Mps
+        call mesh_xyz(m, a%Jxyz(j), x)
+        x = x - a%x
      
-      k = 1
-      l_loop: do l = 0, s%ps%L_max
+        add_lm = 1
+        l_loop: do l = 0, s%ps%L_max
+          if(l == s%ps%L_loc) then
+            add_lm = add_lm + (2*l + 1)
+            cycle l_loop
+          end if
+          
+          lm_loop: do lm = -l , l
+            call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
+            add_lm = add_lm + 1
+          end do lm_loop
+          
+        end do l_loop
+      end do j_loop
+    else ! Fourier space
+      center(:) = nint(a%x(:)/m%h)
+      x(:)  = a%x(:) - center(:)*m%h
+
+      allocate(nl_fw(s%nl_hfft_n, s%nl_fft_n, s%nl_fft_n), nl_fr(s%nl_fft_n, s%nl_fft_n, s%nl_fft_n))
+
+      add_lm = 1
+      l_loop2: do l = 0, s%ps%L_max
         if(l == s%ps%L_loc) then
-          k = k + (2*l + 1)
-          cycle l_loop
+          add_lm = add_lm + (2*l + 1)
+          cycle l_loop2
         end if
+          
+        lm_loop2: do lm = -l , l
+          nl_fw = M_z0
+          call phase_factor(m, s%nl_fft_n, x, s%nl_fw(:,:,:, add_lm), nl_fw)
+          call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_fr)
+         
+          j_loop2: do j = 1, a%Mps
+            p = a%Jxyz(j)
+            ix = m%Lx(p) - center(1) + s%nl_hfft_n
+            iy = m%Ly(p) - center(2) + s%nl_hfft_n
+            iz = m%Lz(p) - center(3) + s%nl_hfft_n
 
-        uVr0  = splint(s%ps%kb(l), r)
-        duvr0 = splint(s%ps%dkb(l), r)
-        
-        lm_loop: do lm = -l , l
-          call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+            a%uV(j, add_lm) = nl_fr(ix, iy, iz)
+          end do j_loop2
 
-          select case(l)
-          case(0)
-            if(r >= r_small) then
-              f = ylm*duvr0/r
-            else
-              f = 0.0_r8
-            end if
-            a%uv(j, k) = uvr0*ylm
-            a%duv(j, k, :) = f*x(:)
-          case(1)
-            a%uv(j, k) = uvr0 * ylm * r
-            a%duv(j, k, :) = duvr0*x(:)*ylm
-            select case(lm)
-            case(1)
-              a%duv(j, k, 2) = a%duv(j, k, 2) - 0.488602511903_r8*uvr0
-            case(2)
-              a%duv(j, k, 3) = a%duv(j, k, 3) + 0.488602511903_r8*uvr0
-            case(3)
-              a%duv(j, k, 1) = a%duv(j, k, 1) - 0.488602511903_r8*uvr0
-            end select
-          case default
-            if(r >= r_small) then
-              f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
-            else
-              f = 0._r8
-            end if
-            
-            a%uV(j, k) = uVr0 * Ylm * (r**l)
-            a%duV(j, k, :) = f*x(:) + uVr0*gYlm(:)*(r**l)
-          end select
-            
-          ! now for the uVus
-          a%uVu(k) = a%uVu(k) + a%uV(j, k)* &
-               splint(s%ps%Ur(l), r) * ylm * (r**l)
+        end do lm_loop2
+      end do l_loop2
 
-          k = k + 1
-        end do lm_loop
+      deallocate(nl_fw, nl_fr)
+    end if
 
-      end do l_loop
-    end do j_loop
-
-    ! now we finish calculating the uVus
-    k = 1
+    ! now we calculate the uVus
+    add_lm = 1
     do l = 0 , s%ps%L_max
       do lm = -l , l
         if(l.ne.s%ps%L_loc) then
+          j_loop3: do j = 1, a%Mps
+            call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
+            ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+            a%uVu(add_lm) = a%uVu(add_lm) + a%uV(j, add_lm)* &
+                 splint(s%ps%Ur(l), r) * ylm * (r**l)
+          end do j_loop3
+        
           ! uVu can be calculated exactly, or numerically
-          a%uVu(k) = s%ps%dkbcos(l)
-          !a%uVu(k) = sum(a%uV(:, k)*a%uV(:, k))/(a%uVu(k)*s%ps%dknrm(l))
+          !a%uVu(add_lm) = s%ps%dkbcos(l)
+          a%uVu(add_lm) = sum(a%uV(:, add_lm)*a%uV(:, add_lm))/(a%uVu(add_lm)*s%ps%dknrm(l))
         end if
-        k = k + 1
+        add_lm = add_lm + 1
       end do
     end do
   end subroutine build_nl_part
   
 end subroutine generate_external_pot
+
+subroutine get_nl_part(ps, x, l, lm, uV, duV)
+  type(ps_type), intent(IN) :: ps
+  real(r8), intent(in) :: x(3)
+  integer, intent(in) :: l, lm
+  real(r8), intent(out) :: uV, duV(3)
+
+  real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
+
+  r = sqrt(sum(x**2))
+  uVr0  = splint(ps%kb(l), r)
+  duvr0 = splint(ps%dkb(l), r)
+        
+  call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+
+  select case(l)
+  case(0)
+    if(r >= r_small) then
+      f = ylm*duvr0/r
+    else
+      f = 0.0_r8
+    end if
+    Uv = uvr0*ylm
+    dUv(:) = f*x(:)
+  case(1)
+    Uv = uvr0 * ylm * r
+    dUv(:) = duvr0*x(:)*ylm
+    select case(lm)
+    case(1)
+      dUv(2) = dUv(2) - 0.488602511903_r8*uvr0
+    case(2)
+      dUv(3) = dUv(3) + 0.488602511903_r8*uvr0
+    case(3)
+      dUv(1) = dUv(1) - 0.488602511903_r8*uvr0
+    end select
+  case default
+    if(r >= r_small) then
+      f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
+    else
+      f = 0._r8
+    end if
+    
+    uV = uVr0 * Ylm * (r**l)
+    duV(:) = f*x(:) + uVr0*gYlm(:)*(r**l)
+  end select
+
+end subroutine get_nl_part
 
 subroutine generate_classic_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
