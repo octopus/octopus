@@ -232,7 +232,7 @@ subroutine generate_external_pot(h, sys)
   sub_name = 'generate_external_pot'; call push_sub()
 
   ! first we assume that we need to recalculate the ion_ion energy
-  call ion_ion_energy(sys)
+  sys%eii = ion_ion_energy(sys%natoms, sys%atom)
 
   if(h%vpsl_space == 1) then
 #if defined(THREE_D)

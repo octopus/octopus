@@ -99,7 +99,7 @@ subroutine td_run(td, u_st, sys, h)
   ! Calculate initial forces and kinetic energy
   if(td%move_ions > 0) then 
     call zforces(h, sys, td%iter*td%dt, td%no_lasers, td%lasers, reduce=.true.)
-    call kinetic_energy(sys)
+    sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
     select case(td%move_ions)
       case(NORMAL_VERLET)
         allocate(x1(sys%natoms, 3), x2(sys%natoms, 3))
@@ -151,7 +151,7 @@ subroutine td_run(td, u_st, sys, h)
          f(ii, j, 1:3) = sys%atom(j)%f(1:3)
       enddo
       call generate_external_pot(h, sys)
-      call ion_ion_energy(sys)
+      sys%eii = ion_ion_energy(sys%natoms, sys%atom)
     endif
 
     ! time iterate wavefunctions
@@ -183,7 +183,7 @@ subroutine td_run(td, u_st, sys, h)
            endif
         enddo
       endif
-      call kinetic_energy(sys)
+      sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
       ke(ii) = sys%kinetic_energy
     endif
 
