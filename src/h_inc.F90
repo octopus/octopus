@@ -52,7 +52,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
 
   sub_name = 'Hpsi'; call push_sub()
 
-  call R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
+  call R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
   if(sys%nlpp) call R_FUNC(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
 
@@ -76,7 +76,8 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   call pop_sub(); return
 end subroutine R_FUNC(Hpsi)
 
-subroutine R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
+subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
+  type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   R_TYPE, intent(IN) :: psi(0:m%np, st%dim)
@@ -114,7 +115,7 @@ subroutine R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
   else
     d = R_TOTYPE(-M_HALF)
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), alpha=d )
+      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), alpha=d, cutoff = h%cutoff )
     end do
   end if
 
