@@ -53,8 +53,9 @@ type td_type
 
   integer           :: move_ions      ! how do we move the ions?
 
-  FLOAT          :: pol(3)         ! the direction of the polarization of the field
+  FLOAT             :: pol(3)         ! the direction of the polarization of the field
   integer           :: lmax           ! maximum multipole moment to output
+  FLOAT             :: lmm_r          ! radius of the sphere used to compute the local magnetic moments
 
   !variables controlling the output
   logical           :: out_multip     ! multipoles
@@ -66,6 +67,7 @@ type td_type
   logical           :: out_proj       ! projection onto the GS KS eigenfunctions
   logical           :: out_angular    ! total angular momentum
   logical           :: out_spin       ! total spin
+  logical           :: out_magnets    ! local magnetic moments
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   type(PES_type) :: PESv
@@ -92,7 +94,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
 
   integer :: i, ii, j, idim, ist, ik
   integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
-       out_laser, out_energy, out_proj, out_angular, out_spin
+       out_laser, out_energy, out_proj, out_angular, out_spin, out_magnets
 
   FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
   FLOAT :: etime
@@ -187,7 +189,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
     end if
 
     ! update density
-    call zcalcdens(st, m%np, st%rho, reduce=.true.)
+    call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
     call zh_calc_vhxc(h, m, sys%f_der, st, calc_eigenval=.true.)
@@ -261,7 +263,7 @@ contains
     ! allocate memory
     allocate(st%zpsi(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
-    call td_init(td, m, st, h, sys%outp)
+    call td_init(td, m, st, geo, h, sys%outp)
 
   end subroutine init_
 
@@ -309,7 +311,7 @@ contains
     end if
 
     if(ierr==0) then
-      call zcalcdens(st, m%np, st%rho, reduce=.true.)
+      call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
       call zh_calc_vhxc(h, m, sys%f_der, st, calc_eigenval=.true.)
       x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
@@ -340,6 +342,8 @@ contains
          trim(io_workpath("td.general/angular")))
       if(td%out_spin)    call write_iter_init(out_spin,    first, td%dt/units_out%time%factor, &
          trim(io_workpath("td.general/spin")))
+      if(td%out_magnets) call write_iter_init(out_magnets, first, td%dt/units_out%time%factor, &
+         trim(io_workpath("td.general/magnetic_moments")))
       if(td%out_coords)  call write_iter_init(out_coords,  first, td%dt/units_out%time%factor, &
          trim(io_workpath("td.general/coordinates")))
       if(td%out_gsp)     call write_iter_init(out_gsp,     first, td%dt/units_out%time%factor, &
@@ -367,6 +371,7 @@ contains
       if(td%out_multip)  call write_iter_end(out_multip)
       if(td%out_angular) call write_iter_end(out_angular)
       if(td%out_spin)    call write_iter_end(out_spin)
+      if(td%out_magnets) call write_iter_end(out_magnets)
       if(td%out_coords)  call write_iter_end(out_coords)
       if(td%out_gsp)     call write_iter_end(out_gsp)
       if(td%out_acc)     call write_iter_end(out_acc)
@@ -387,6 +392,9 @@ contains
 
     ! output spin
     if(td%out_spin) call td_write_spin(out_spin, m, st, td, i)
+
+    ! output atoms magnetization
+    if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, i)
     
     ! output projections onto the GS KS eigenfunctions
 !!$    if(td%out_proj) call td_write_proj(out_proj, m, st, u_st, i)
@@ -415,6 +423,7 @@ contains
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
     if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, td, 0)
     if(td%out_spin)    call td_write_spin(out_spin, m, st, td, 0)
+    if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, 0)
 !!$    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
 
     call apply_delta_field()
@@ -586,6 +595,7 @@ contains
       if(td%out_multip)  call write_iter_flush(out_multip)
       if(td%out_angular) call write_iter_flush(out_angular)
       if(td%out_spin)    call write_iter_flush(out_spin)
+      if(td%out_magnets) call write_iter_flush(out_magnets)
       if(td%out_coords)  call write_iter_flush(out_coords)
       if(td%out_gsp)     call write_iter_flush(out_gsp)
       if(td%out_acc)     call write_iter_flush(out_acc)

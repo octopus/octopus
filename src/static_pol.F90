@@ -107,7 +107,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   allocate(trrho(m%np))
   trrho = M_ZERO
   
-  call scf_init(scfv, sys%m, sys%st, h)
+  call scf_init(scfv, sys%m, sys%st, sys%geo, h)
   do i = i_start, conf%dim
     do k = 1, 2
       write(message(1), '(a)')

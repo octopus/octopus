@@ -15,15 +15,17 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_init(td, m, st, h, outp)
-  type(td_type), intent(out) :: td
-  type(mesh_type), intent(inout) :: m
-  type(states_type), intent(inout) :: st
-  type(hamiltonian_type), intent(IN) :: h
-  type(output_type), intent(in) :: outp
+subroutine td_init(td, m, st, geo, h, outp)
+  type(td_type),          intent(out)   :: td
+  type(mesh_type),        intent(inout) :: m
+  type(states_type),      intent(inout) :: st
+  type(geometry_type),    intent(in)    :: geo
+  type(hamiltonian_type), intent(in)    :: h
+  type(output_type),      intent(in)    :: outp
 
   integer :: i, dummy
   integer(POINTER_SIZE) :: blk
+  FLOAT :: rmin
 
   call push_sub('td_init')
 
@@ -105,6 +107,10 @@ subroutine td_init(td, m, st, h, outp)
   call loct_parse_logical("TDOutputLaser", h%ep%no_lasers>0, td%out_laser)
   call loct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
   call loct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
+  call loct_parse_logical("TDOutputLocalMagneticMoments", .false., td%out_magnets)
+  call geometry_min_distance(geo, rmin)
+  call loct_parse_float("LocalMagneticMomentsSphereRadius", rmin*M_HALF/units_inp%length%factor, td%lmm_r)
+  td%lmm_r = td%lmm_r * units_inp%length%factor
 
   call td_rti_init(m, st, td%tr)
 

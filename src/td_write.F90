@@ -27,12 +27,11 @@ subroutine td_write_spin(out, m, st, td, iter)
 
   call push_sub('td_write_spin')
 
-  ! The spin has to be calculated by all nodes...
-  ! The expectation value of the spin operator is half the magnetization value
-  call zstates_calculate_magnetization(m, st, spin)
-  spin = M_HALF*spin
-
   if(mpiv%node == 0) then ! only first node outputs
+
+    ! The expectation value of the spin operator is half the total magnetic moment
+    call states_magnetic_moment(m, st, st%rho, spin)
+    spin = M_HALF*spin
 
     if(iter ==0) then
       !empty file
@@ -70,6 +69,67 @@ subroutine td_write_spin(out, m, st, td, iter)
   call pop_sub()
 end subroutine td_write_spin
 
+subroutine td_write_local_magnetic_moments(out, m, st, geo, td, iter)
+  integer(POINTER_SIZE), intent(in) :: out
+  type(mesh_type),       intent(in) :: m
+  type(states_type),     intent(in) :: st
+  type(geometry_type),   intent(in) :: geo
+  type(td_type),         intent(in) :: td
+  integer,               intent(in) :: iter
+
+  integer :: ia
+  character(len=50) :: aux
+  FLOAT, allocatable :: lmm(:,:)
+
+  call push_sub('td_write_local_magnetic_moments')
+
+  if(mpiv%node == 0) then ! only first node outputs
+
+    !get the atoms magnetization
+    allocate(lmm(3, geo%natoms))
+    call states_local_magnetic_moments(m, st, geo, st%rho, td%lmm_r, lmm)
+
+    if(iter ==0) then
+      !empty file
+      call write_iter_clear(out)
+
+      !fist line ->  now unused.
+      write(aux, '(a)') '#'
+      call write_iter_string(out, aux)
+      call write_iter_nl(out)
+
+      !second line -> columns name
+      call write_iter_header_start(out)
+      do ia = 1, geo%natoms
+        if (st%d%ispin == SPINORS) then
+          write(aux, '(a2,i2.2,16x)') 'mx', ia
+          call write_iter_header(out, aux)
+          write(aux, '(a2,i2.2,16x)') 'my', ia
+          call write_iter_header(out, aux)
+        end if
+        write(aux, '(a2,i2.2,16x)') 'mz', ia
+        call write_iter_header(out, aux)
+      end do
+      call write_iter_nl(out)
+
+    endif
+
+    call write_iter_start(out)
+    do ia = 1, geo%natoms
+      select case (st%d%ispin)
+      case (SPIN_POLARIZED)
+        call write_iter_double(out, lmm(3, ia), 1)
+      case (SPINORS)
+        call write_iter_double(out, lmm(1:3, ia), 3)
+      end select
+    end do
+    call write_iter_nl(out)
+    deallocate(lmm)
+  end if
+
+  call pop_sub()
+end subroutine td_write_local_magnetic_moments
+
 subroutine td_write_angular(out, m, f_der, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(IN) :: m
@@ -85,7 +145,7 @@ subroutine td_write_angular(out, m, f_der, st, td, iter)
   call push_sub('td_write_angular')
 
   ! The angular momentum has to be calculated by all nodes...
-  call zstates_calculate_angular(m, f_der, st, angular)
+  call zstates_calc_angular(m, f_der, st, angular)
 
   if(mpiv%node == 0) then ! Only first node outputs
 

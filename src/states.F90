@@ -49,17 +49,19 @@ public :: states_type, &
           states_write_bands, &
           states_spin_channel, &
           calc_projection, &
-          calc_current_physical, &
+          states_magnetization_dens, &
+          states_magnetic_moment, &
+          states_local_magnetic_moments, &
+          states_calc_physical_current, &
           kpoints_write_info, &
-          dcalcdens, zcalcdens, &
+          dstates_calc_dens, zstates_calc_dens, &
           dstates_gram_schmidt, zstates_gram_schmidt, &
           dstates_dotp, zstates_dotp, &
           dstates_nrm2, zstates_nrm2, &
           dstates_residue, zstates_residue, &
           dstates_output, zstates_output, &
           dstates_mpdotp, zstates_mpdotp, &
-          dstates_calculate_magnetization, zstates_calculate_magnetization, &
-          dstates_calculate_angular, zstates_calculate_angular
+          dstates_calc_angular, zstates_calc_angular
 #if defined(HAVE_MPI)
 public :: states_nodes
 #endif
@@ -734,8 +736,82 @@ subroutine calc_projection(u_st, st, m, p)
 
 end subroutine calc_projection
 
+subroutine states_magnetization_dens(st, np, rho, m)
+  type(states_type), intent(in)  :: st
+  integer,           intent(in)  :: np
+  FLOAT,             intent(in)  :: rho(np, st%d%nspin)
+  FLOAT,             intent(out) :: m(np, 3)
+
+  call push_sub('states_magnetization_dens')
+
+  select case (st%d%ispin)
+  case (UNPOLARIZED)
+    m = M_ZERO
+  case (SPIN_POLARIZED)
+    m = M_ZERO
+    m(:, 3) = rho(:, 1) - rho(:, 2)
+  case (SPINORS)
+    m(:, 1) =  M_TWO*rho(:, 3)
+    m(:, 2) = -M_TWO*rho(:, 4)
+    m(:, 3) = rho(:, 1) - rho(:, 2)
+  end select
+
+  call pop_sub()
+end subroutine states_magnetization_dens
+
+subroutine states_magnetic_moment(m, st, rho, mm)
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: st
+  FLOAT,             intent(in)  :: rho(m%np, st%d%nspin)
+  FLOAT,             intent(out) :: mm(3)
+
+  integer :: i
+  FLOAT, allocatable :: md(:,:)
+
+  call push_sub('states_magnetic_moment')
+
+  allocate(md(m%np, 3))
+  call states_magnetization_dens(st, m%np, rho, md)
+  mm = M_ZERO
+  do i = 1, m%np
+    mm = mm + md(i, :)*m%vol_pp(i)
+  end do
+  deallocate(md)
+
+  call pop_sub()
+end subroutine states_magnetic_moment
+
+subroutine states_local_magnetic_moments(m, st, geo, rho, r, lmm)
+  type(mesh_type),     intent(in)  :: m
+  type(states_type),   intent(in)  :: st
+  type(geometry_type), intent(in)  :: geo
+  FLOAT,               intent(in)  :: rho(m%np, st%d%nspin)
+  FLOAT,               intent(in)  :: r
+  FLOAT,               intent(out) :: lmm(3, geo%natoms)
+
+  integer :: ia, i
+  FLOAT :: ri
+  FLOAT, allocatable :: md(:,:)
+
+  call push_sub('states_local_magnetic_moments')
+
+  allocate(md(m%np, 3))
+  call states_magnetization_dens(st, m%np, rho, md)
+  lmm = M_ZERO
+  do ia = 1, geo%natoms
+    do i = 1, m%np
+      call mesh_r(m, i, ri, a=geo%atom(ia)%x)
+      if (ri > r) cycle
+      lmm(:, ia) = lmm(:, ia) + md(i, :)*m%vol_pp(i)
+    end do
+  end do
+  deallocate(md)
+
+  call pop_sub()
+end subroutine states_local_magnetic_moments
+
 ! This routine (obviously) assumes complex wave-functions
-subroutine calc_current_paramagnetic(m, f_der, st, jp)
+subroutine calc_paramagnetic_current(m, f_der, st, jp)
   type(mesh_type),   intent(in)    :: m
   type(f_der_type),  intent(inout) :: f_der
   type(states_type), intent(in)    :: st
@@ -748,7 +824,7 @@ subroutine calc_current_paramagnetic(m, f_der, st, jp)
   FLOAT, allocatable :: red(:,:,:)
 #endif
 
-  call push_sub('calc_current_paramagnetic')
+  call push_sub('calc_paramagnetic_current')
   
   if(st%d%ispin == SPIN_POLARIZED) then
     sp = 2
@@ -801,24 +877,24 @@ subroutine calc_current_paramagnetic(m, f_der, st, jp)
 #endif
 
   call pop_sub()
-end subroutine calc_current_paramagnetic
+end subroutine calc_paramagnetic_current
 
-subroutine calc_current_physical(m, f_der, st, j)
+subroutine states_calc_physical_current(m, f_der, st, j)
   type(mesh_type),     intent(in)    :: m
   type(f_der_type),    intent(inout) :: f_der
   type(states_type),   intent(in)    :: st
   FLOAT,               intent(out)   :: j(:,:,:)   ! j(m%np, conf%dim, st%d%nspin)
 
-  call push_sub('calc_current_physical')
+  call push_sub('states_calc_physical_current')
   
   ! Paramagnetic contribution to the physical current
-  call calc_current_paramagnetic(m, f_der, st, j)
+  call calc_paramagnetic_current(m, f_der, st, j)
 
   ! TODO
   ! Diamagnetic contribution to the physical current 
 
   call pop_sub()
-end subroutine calc_current_physical
+end subroutine states_calc_physical_current
 
 #ifdef HAVE_MPI
 subroutine states_nodes(st)

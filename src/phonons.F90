@@ -138,7 +138,7 @@ contains
     integer :: i, j, alpha, beta, n, iunit
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
-    call scf_init(scf, m, st, h)
+    call scf_init(scf, m, st, geo, h)
     allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))
     forces = M_ZERO; forces0 = M_ZERO
     n = geo%natoms*conf%dim
@@ -156,7 +156,7 @@ contains
 
         ! first force
         call epot_generate(h%ep, m, st, geo, h%reltype)
-        call X(calcdens) (st, m%np, st%rho)
+        call X(states_calc_dens) (st, m%np, st%rho)
         call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, st, geo%eii, -1)
         call scf_run(scf, m, f_der, st, geo, h, outp)
@@ -168,7 +168,7 @@ contains
 
         ! second force
         call epot_generate(h%ep, m, st, geo, h%reltype)
-        call X(calcdens) (st, m%np, st%rho)
+        call X(states_calc_dens) (st, m%np, st%rho)
         call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, st, geo%eii, -1)
         call scf_run(scf, m, f_der, st, geo, h, outp)

@@ -16,7 +16,7 @@
 !! 02111-1307, USA.
 
 ! Calculates the new density out the wavefunctions and occupations...
-subroutine X(calcdens)(st, np, rho, reduce)
+subroutine X(states_calc_dens)(st, np, rho, reduce)
   type(states_type), intent(IN)  :: st
   integer,           intent(in)  :: np
   FLOAT,             intent(out) :: rho(np, st%d%nspin)
@@ -31,7 +31,7 @@ subroutine X(calcdens)(st, np, rho, reduce)
   integer :: ierr
 #endif
 
-  call push_sub('calc_dens')
+  call push_sub('states_calc_dens')
 
   if(st%d%ispin == SPIN_POLARIZED) then
     sp = 2
@@ -74,7 +74,7 @@ subroutine X(calcdens)(st, np, rho, reduce)
 
   call pop_sub()
   return
-end subroutine X(calcdens)
+end subroutine X(states_calc_dens)
 
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
@@ -439,59 +439,7 @@ contains
 end function X(states_mpdotp)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(states_calculate_magnetization)(m, st, mag)
-  type(mesh_type),   intent(in)  :: m
-  type(states_type), intent(in)  :: st
-  FLOAT,             intent(out) :: mag(3)
-
-  integer :: ik, ist, i
-  FLOAT :: sign, temp(3)
-  R_TYPE :: c
-#if defined(HAVE_MPI)
-  integer :: ierr
-#endif
-
-  call push_sub('states_calculate_magnetization')
-
-  select case(st%d%ispin)
-  case(SPIN_POLARIZED) ! collinear spin
-    sign = M_ONE
-    temp = M_ZERO
-    do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
-        temp(3) = temp(3) + sign*st%d%kweights(ik)*st%occ(ist, ik)
-      end do
-      sign = -sign
-    end do
-
-  case(SPINORS) ! non-collinear
-    temp = M_ZERO
-    do ik = 1, st%d%nik
-      do ist = st%st_start, st%st_end
-        do i = 1, m%np
-          c = st%X(psi) (i, 1, ist, ik) * R_CONJ(st%X(psi) (i, 2, ist, ik))* m%vol_pp(i)
-
-          temp(1) = temp(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
-          temp(2) = temp(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
-          c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
-          temp(3) = temp(3) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
-        end do
-      end do
-    end do
-    temp = temp
-
-  end select
-
-#if defined(HAVE_MPI)
-  call MPI_ALLREDUCE(temp, mag, 3, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
-#else
-  mag = temp
-#endif
-
-  call pop_sub()
-end subroutine X(states_calculate_magnetization)
-
-subroutine X(states_calculate_angular)(m, f_der, st, angular, l2)
+subroutine X(states_calc_angular)(m, f_der, st, angular, l2)
   type(mesh_type),   intent(IN)  :: m
   type(f_der_type), intent(inout) :: f_der
   type(states_type), intent(IN)  :: st
@@ -505,8 +453,7 @@ subroutine X(states_calculate_angular)(m, f_der, st, angular, l2)
   integer :: i, ierr
 #endif
 
-  call push_sub('states_calculate_angular')
-
+  call push_sub('states_calc_angular')
 
   temp = M_ZERO; ltemp = M_ZERO
   allocate(lpsi(m%np, conf%dim))
@@ -540,6 +487,6 @@ subroutine X(states_calculate_angular)(m, f_der, st, angular, l2)
 #endif
 
   deallocate(lpsi)
-  call pop_sub()
 
-end subroutine X(states_calculate_angular)
+  call pop_sub()
+end subroutine X(states_calc_angular)

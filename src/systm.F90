@@ -386,7 +386,7 @@ contains
     call push_sub("hamiltonian_setup")
     
     call states_fermi(sys%st, sys%m)
-    call dcalcdens(sys%st, sys%m%np, sys%st%rho)
+    call dstates_calc_dens(sys%st, sys%m%np, sys%st%rho)
     
     call dh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%m)                            ! occupations
@@ -403,7 +403,7 @@ contains
     call push_sub("hamiltonian_setup")
     
     call states_fermi(sys%st, sys%m)
-    call zcalcdens(sys%st, sys%m%np, sys%st%rho)
+    call zstates_calc_dens(sys%st, sys%m%np, sys%st%rho)
     
     call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%m)                            ! occupations

@@ -84,7 +84,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   message(1) = 'Info: Setting up Hamiltonian.'
   call write_info(1)
   
-  call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
+  call X(states_calc_dens)(sys%st, sys%m%np, sys%st%rho)
   call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
   call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
   

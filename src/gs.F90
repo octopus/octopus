@@ -70,7 +70,7 @@ contains
 #endif
       call write_info(1)
 
-      call scf_init(scfv, sys%m, sys%st, h)
+      call scf_init(scfv, sys%m, sys%st, sys%geo, h)
       call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
     end if

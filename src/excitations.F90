@@ -69,7 +69,7 @@ program excitations
   endif
 
   ! Get the density...
-  call X(calcdens)(st, sys%m%np, st%rho)
+  call X(states_calc_dens)(st, sys%m%np, st%rho)
 
   ! which states to take into account
   call loct_parse_string("ExciteStates", "1-1024", ch)

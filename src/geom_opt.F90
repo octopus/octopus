@@ -81,7 +81,7 @@ contains
     call write_info(1)
     call X(system_h_setup) (sys, h)
 
-    call scf_init(scfv, sys%m, sys%st, h)
+    call scf_init(scfv, sys%m, sys%st, sys%geo, h)
 
     allocate(x(3*geo%natoms))
     do i = 0, geo%natoms - 1
@@ -172,7 +172,7 @@ contains
       call atom_write_xyz(".", "work-min", geo)
 
       call epot_generate(h%ep, m, st, geo, h%reltype)
-      call X(calcdens) (st, m%np, st%rho)
+      call X(states_calc_dens) (st, m%np, st%rho)
       call X(h_calc_vhxc) (h, m, sys%f_der, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
   

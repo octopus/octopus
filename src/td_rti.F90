@@ -158,7 +158,7 @@ contains
       do iter = 1, 3
         call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
-        call zcalcdens(st, m%np, st%rho, .true.)
+        call zstates_calc_dens(st, m%np, st%rho, .true.)
         call zh_calc_vhxc(h, m, f_der, st)
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
@@ -200,7 +200,7 @@ contains
             call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
-      call zcalcdens(st, m%np, st%rho, .true.)
+      call zstates_calc_dens(st, m%np, st%rho, .true.)
       call zh_calc_vhxc(h, m, f_der, st)
       do ik = 1, st%d%nik
          do ist = 1, st%nst
@@ -270,7 +270,7 @@ contains
           end do
         end do
         
-        call zcalcdens(st, m%np, st%rho, .true.)
+        call zstates_calc_dens(st, m%np, st%rho, .true.)
         call zh_calc_vhxc(h, m, f_der, st)
         
         st%zpsi = zpsi1

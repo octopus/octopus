@@ -43,6 +43,7 @@ module geometry
             ion_ion_energy,        &
             kinetic_energy,        &
             geometry_dipole,       &
+            geometry_min_distance, &
             cm_pos,                &
             cm_vel,                &
             atom_write_xyz,        &
@@ -465,6 +466,25 @@ subroutine geometry_dipole(geo, dipole)
   end do
 
 end subroutine geometry_dipole
+
+subroutine geometry_min_distance(geo, rmin)
+  type(geometry_type), intent(in)  :: geo
+  FLOAT,               intent(out) :: rmin
+
+  integer :: i, j
+  FLOAT :: r
+
+  rmin = huge(PRECISION)
+  do i = 1, geo%natoms
+    do j = i+1, geo%natoms
+      r = sqrt(sum((geo%atom(i)%x-geo%atom(j)%x)**2))
+      if(r < rmin) then
+        rmin = r
+      end if
+    end do
+  end do
+
+end subroutine geometry_min_distance
 
 subroutine cm_pos(geo, pos)
   type(geometry_type), intent(IN)  :: geo

@@ -60,15 +60,20 @@ module scf
 
     type(mix_type) :: smix
     type(eigen_solver_type) :: eigens
+
+    FLOAT :: lmm_r
   end type scf_type
 
 contains
 
-subroutine scf_init(scf, m, st, h)
+subroutine scf_init(scf, m, st, geo, h)
   type(scf_type),         intent(inout) :: scf
-  type(mesh_type),        intent(IN)    :: m
-  type(states_type),      intent(IN)    :: st
-  type(hamiltonian_type), intent(IN)    :: h
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(in)    :: st
+  type(geometry_type),    intent(inout) :: geo
+  type(hamiltonian_type), intent(in)    :: h
+
+  FLOAT :: rmin
 
   call push_sub('scf_init')
 
@@ -120,6 +125,10 @@ subroutine scf_init(scf, m, st, h)
     message(1) = 'Info: SCF restricted to LCAO subspace'
     call write_info(1)
   endif
+
+  call geometry_min_distance(geo, rmin)
+  call loct_parse_float("LocalMagneticMomentsSphereRadius", rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
+  scf%lmm_r = scf%lmm_r * units_inp%length%factor
 
   call pop_sub()
 end subroutine scf_init
@@ -195,10 +204,10 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
     call states_fermi(st, m)
 
     ! compute output density, potential (if needed) and eigenvalues sum
-    call X(calcdens)(st, m%np, st%rho)
+    call X(states_calc_dens)(st, m%np, st%rho)
     rhoout(1, :, :) = st%rho
     if (h%d%cdft) then
-      call calc_current_physical(m, f_der, st, st%j)
+      call states_calc_physical_current(m, f_der, st, st%j)
       rhoout(2:dim, :, :) = st%j
     end if
     if (scf%what2mix == MIXPOT) then
@@ -331,6 +340,11 @@ contains
     else
       call states_write_eigenvalues(stdout, st%nst, st)
     endif
+
+    if(st%d%ispin == SPINORS) then
+      call write_magnetic_moments(stdout, m, st)
+    end if
+
     write(message(1),'(a)') stars
     write(message(2),'(a)')
     call write_info(2)
@@ -387,7 +401,8 @@ contains
     write(iunit, '(1x)')
     
     if(st%d%ispin > UNPOLARIZED) then
-      call write_magnet(iunit, m, st)
+      call write_magnetic_moments(iunit, m, st)
+      write(iunit, '(1x)')
     end if
     
     ! Next lines of code calculate the dipole of the molecule, summing the electronic and
@@ -408,7 +423,7 @@ contains
     write(iunit,'(a)')
     
     if(conf%dim==3) then
-      call X(states_calculate_angular)(m, f_der, st, angular, l2 = l2)
+      call X(states_calc_angular)(m, f_der, st, angular, l2 = l2)
       write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
       do j = 1, conf%dim
         write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
@@ -442,32 +457,45 @@ contains
     call pop_sub()
   end subroutine scf_write_static
 
-  subroutine write_magnet(iunit, mesh, st)
+  subroutine write_magnetic_moments(iunit, m, st)
     integer,           intent(in) :: iunit
-    type(mesh_type),   intent(IN) :: mesh
-    type(states_type), intent(IN) :: st
+    type(mesh_type),   intent(in) :: m
+    type(states_type), intent(in) :: st
     
-    FLOAT :: m(3), sign
-    R_TYPE :: c
-    integer :: i, ik, ist
-    
-    call push_sub('write_magnet')
+    integer :: i
+    FLOAT :: mm(3)
+    FLOAT, allocatable :: lmm(:,:)
+
+    call push_sub('write_magnetic_moments')
  
-    write(iunit, '(a)') 'Magnetization:'
-    
-    call X(states_calculate_magnetization)(mesh, st, m)
+    call states_magnetic_moment(m, st, st%rho, mm)
+    write(iunit, '(a)') 'Total Magnetic Moment:'
     if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
-      write(iunit, '(a,f15.6)') ' mz = ', m(3)
+      write(iunit, '(a,f10.6)') ' mz = ', mm(3)
       
     else if(st%d%ispin == SPINORS) then ! non-collinear
-      write(iunit, '(a,f15.6)') ' mx = ', m(1)
-      write(iunit, '(a,f15.6)') ' my = ', m(2)
-      write(iunit, '(a,f15.6)') ' mz = ', m(3)
+      write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
     end if
-    write(iunit,'(1x)') 
+
+    allocate(lmm(3, geo%natoms))
+    call states_local_magnetic_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
+    write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
+          trim(units_out%length%abbrev),'] = ',scf%lmm_r/units_out%length%factor,'):'
+    if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
+      write(iunit,'(a,6x,14x,a)') ' Ion','mz'
+      do i = 1,geo%natoms
+        write(iunit,'(i4,a10,f15.6)') i, trim(geo%atom(i)%spec%label), lmm(3, i)
+      end do
+    else if(st%d%ispin == SPINORS) then ! non-collinear
+      write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
+      do i = 1,geo%natoms
+        write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
+      end do
+    end if
+    deallocate(lmm)
     
     call pop_sub()
-  end subroutine write_magnet
+  end subroutine write_magnetic_moments
 
 end subroutine scf_run
 
