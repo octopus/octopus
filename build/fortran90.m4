@@ -143,7 +143,7 @@ if test x"$2" = x"MPI" ; then
                   [mpif90 mpxlf90])])
 else
 	AC_CHECK_TOOLS(F90, [m4_default([$1],
-                  [f90 abf90 ifc xlf90 pgf90 epcf90 f95 fort xlf95 lf95 g95])])
+                  [f90 abf90 ifort ifc xlf90 pgf90 epcf90 f95 fort xlf95 lf95 g95])])
 fi
 
 # Provide some information about the compiler.
@@ -180,6 +180,9 @@ if test -z "${F90FLAGS}"; then
 		;;
 		ifc*)
 			F90FLAGS="$F90FLAGS -O3 -nbs -mp1"
+		;;
+		ifort*)
+			F90FLAGS="$F90FLAGS -O3"
 		;;
 		*)
 			F90FLAGS="$F90FLAGS -O"

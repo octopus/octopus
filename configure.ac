@@ -182,6 +182,9 @@ if test -z "${LIB_BLAS}"; then
 		ACX_CHECK_LIB([LIB_BLAS], [mkl_def],  [ddot], [-lmkl_def -lguide -lpthread], [], [-lmkl_def -lguide -lpthread])
 		ACX_CHECK_LIB([LIB_BLAS], [f77blas], [ddot], [-lf77blas -latlas], [], [-latlas])
 		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
+                dnl The following line uncaches blas, so that it may be checked again.
+                unset ac_cv_lib_blas_ddot
+		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas -lg2c], [], [-lg2c])
 		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
 		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [-lcxml])
 		ACX_CHECK_LIB([LIB_BLAS], [scs], [ddot], [-lscs])
@@ -214,7 +217,7 @@ if test -z "${LIB_LAPACK}"; then
 
 		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [mkl_lapack], [dsygv], [-lmkl_lapack], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS} -lg2c])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [scs], [dsygv], [-lscs], [], [${LIB_BLAS}])
