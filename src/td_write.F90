@@ -19,33 +19,36 @@
     integer, intent(in) :: iter
     character(len=50) :: filename
  
-      ! first resume file
-      write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
-      call zstates_write_restart(trim(filename), sys%m, sys%st, &
-           iter=iter, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
+    call push_sub('td_write_data')
 
-      ! calculate projection onto the ground state
-      if(td%out_gsp) call td_write_gsp(iter)
-
-      if(mpiv%node==0) then
-        if(td%out_multip) call write_iter_flush(out_multip)
-        if(td%out_coords) call write_iter_flush(out_coords)
-        if(td%out_gsp)    call write_iter_flush(out_gsp)
-        if(td%out_acc)    call write_iter_flush(out_acc)
-        if(td%out_laser)  call write_iter_flush(out_laser)
-        if(td%out_energy) call write_iter_flush(out_energy)
-      end if
-
-      ! now write down the rest
-      write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-      call zstates_output(sys%st, sys%m, filename, sys%outp)
-      if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
-      call hamiltonian_output(h, sys%m, filename, sys%outp)
-            
+    ! first resume file
+    write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
+    call zstates_write_restart(trim(filename), sys%m, sys%st, &
+         iter=iter, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
+    
+    ! calculate projection onto the ground state
+    if(td%out_gsp) call td_write_gsp(iter)
+    
+    if(mpiv%node==0) then
+      if(td%out_multip) call write_iter_flush(out_multip)
+      if(td%out_coords) call write_iter_flush(out_coords)
+      if(td%out_gsp)    call write_iter_flush(out_gsp)
+      if(td%out_acc)    call write_iter_flush(out_acc)
+      if(td%out_laser)  call write_iter_flush(out_laser)
+      if(td%out_energy) call write_iter_flush(out_energy)
+    end if
+    
+    ! now write down the rest
+    write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+    call zstates_output(sys%st, sys%m, filename, sys%outp)
+    if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
+    call hamiltonian_output(h, sys%m, filename, sys%outp)
+    
 #ifndef DISABLE_PES
     call PES_output(td%PESv, sys%m, sys%st, iter, sys%outp%iter, td%dt)
 #endif
 
+    call pop_sub()
   end subroutine td_write_data
 
   subroutine td_write_multipole(iter)
@@ -202,8 +205,11 @@
     integer, intent(in)  :: iter
     complex(r8) :: gsp
 
+    call push_sub('td_write_gsp')
+
     ! all processors calculate the projection
     call zstates_project_gs(sys%st, sys%m, gsp)
+    print *, oct_getmem()
 
     ! but only first node outputs
     if(mpiv%node.ne.0) return
@@ -231,6 +237,7 @@
     call write_iter_double(out_gsp, aimag(gsp), 1)
     call write_iter_nl(out_gsp)
 
+    call pop_sub()
   end subroutine td_write_gsp
 
   subroutine td_write_acc(iter)

@@ -269,7 +269,8 @@ subroutine push_sub(sub_name)
     time_stack(no_sub_stack) = oct_clock()
 
     if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
-      write(stderr,'(a,20x,a)', advance='no') "* I ", " | "
+      write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", oct_clock()/1e6_r8, &
+           oct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(stderr,'(a)', advance='no') "  "
       end do
