@@ -609,18 +609,16 @@ contains
     real(r8), intent(out) :: acc(3)
 
     real(r8) :: field(3), x(3), r, &
-                vl, dvl, d
+                vl, dvl, d, charge
     integer  :: j, k, is
 
     acc(1:3) = 0.0_r8
 
     ! Ionic acceleration
-    !do j=1, sys%natoms
-    !   acc(1:3) = acc(1:3) + sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
-    !enddo
+    do j=1, sys%natoms
+       acc(1:3) = acc(1:3) + sys%atom(j)%spec%z_val*sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
+    enddo
 
-    ! Gets the laser
-    call laser_field(td%no_lasers, td%lasers, t, field)
     ! Gets the gradient of the external pot
     do j=1, sys%natoms
        do k=1, sys%m%np
@@ -636,10 +634,10 @@ contains
        enddo
     enddo
 
-    ! Gets the expectation value...
-    do k = 1, 3
-       acc(k) = acc(k) - field(k)*sum(sys%st%rho(:, :))*sys%m%vol_pp
-    enddo
+    ! Adds the laser contribution
+    call laser_field(td%no_lasers, td%lasers, t, field)
+    charge = sum(sys%st%rho(:,:))*sys%m%vol_pp
+    acc(1:3) = acc(1:3) - field(1:3)*charge
  
   end subroutine td_calc_tacc
 
