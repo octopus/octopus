@@ -1085,7 +1085,7 @@ if @code{TDOccupationalAnalysis == 1}.)
   @itemize
     @item @code{1} : Quick and dirty method. One should check carefully 
       the time-step, and it only works with density based functionals.
-    @item @code(2) : Modified Krank-Nicholson method. Very stable method,
+    @item @code{2} : Modified Krank-Nicholson method. Very stable method,
       but significatively slower than method @code{1}.
   @end itemize
 

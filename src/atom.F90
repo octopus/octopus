@@ -107,7 +107,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   ! we now load the velocities, either from the input, or from a file
   if(oct_parse_isdef(C_string("XYZVelocities")).ne.0 .and. conf%dim==3) then ! read a xyz file
     call io_assign(iunit)
-    call oct_parse_str('XYZVelocities', 'coords.xyz', label)
+    call oct_parse_str('XYZVelocities', 'velocities.xyz', label)
     open(iunit, status='unknown', file=trim(label))
       
     read(iunit)

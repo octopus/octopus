@@ -185,9 +185,9 @@ ac_help="$ac_help
 ac_help="$ac_help
   --with-fftw=DIR         get it! (www.fftw.org)"
 ac_help="$ac_help
-  --with-lapack=DIR       get it! (http://www.netlib.org/lapack/)"
+		  --with-lapack=DIR       get it! (http://www.netlib.org/lapack/)"
 ac_help="$ac_help
-  --with-gsl=DIR          get it! (http://sources.redhat.com/gsl/)"
+		  --with-gsl=DIR          get it! (http://sources.redhat.com/gsl/)"
 ac_help="$ac_help
   --enable-1d             Let us work in 1D"
 ac_help="$ac_help
@@ -5370,7 +5370,6 @@ rm -f mangle-func*
 echo "$ac_t""$ac_f90_mangle_underscore" 1>&6
 
 
-#AC_PROG_CPP
 if test -z "$F90CPP"; then
 	F90CPP="/lib/cpp"
 	F90CPPFLAGS="-C"
@@ -5393,7 +5392,7 @@ fi
 # SVR4 /usr/ucb/install, which tries to use the nonexistent group "staff"
 # ./install, which can be erroneously created by make from ./install.sh.
 echo $ac_n "checking for a BSD compatible install""... $ac_c" 1>&6
-echo "configure:5397: checking for a BSD compatible install" >&5
+echo "configure:5396: checking for a BSD compatible install" >&5
 if test -z "$INSTALL"; then
 if eval "test \"`echo '$''{'ac_cv_path_install'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -5450,7 +5449,7 @@ do
 # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:5454: checking for $ac_word" >&5
+echo "configure:5453: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_YACC'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -5487,7 +5486,8 @@ ac_link='${F90-f90} -o conftest${ac_exeext} $F90FLAGS $LDFLAGS conftest.$ac_ext 
 cross_compiling=$ac_cv_prog_f90_cross
 
 
-# Check whether --with-fftw or --without-fftw was given.
+if test -z "${LIB_FFTW}"; then
+	# Check whether --with-fftw or --without-fftw was given.
 if test "${with_fftw+set}" = set; then
   withval="$with_fftw"
   FFTWDIR=$withval
@@ -5495,17 +5495,17 @@ else
   FFTWDIR=""
 fi
 
-if test "$FFTWDIR" != "no"; then
-  cat >> confdefs.h <<\EOF
+	if test "$FFTWDIR" != "no"; then
+  	cat >> confdefs.h <<\EOF
 #define HAVE_FFTW 1
 EOF
 
-  save_ldflags="$LDFLAGS"
-  if test "$FFTWDIR"; then
-    LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"
-  fi
-  if test -z "${LIB_FFTW}"; then
-  	echo $ac_n "checking for fftw3d_f77_create_plan""... $ac_c" 1>&6
+	  save_ldflags="$LDFLAGS"
+  	if test "$FFTWDIR"; then
+    	LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"
+	  fi
+  	if test -z "${LIB_FFTW}"; then
+  		echo $ac_n "checking for fftw3d_f77_create_plan""... $ac_c" 1>&6
 echo "configure:5510: checking for fftw3d_f77_create_plan" >&5
 if eval "test \"`echo '$''{'ac_cv_func_fftw3d_f77_create_plan'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -5536,9 +5536,9 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_FFTW}"; then
-    echo $ac_n "checking for fftw3d_f77_create_plan in -lfftw""... $ac_c" 1>&6
+	  fi
+  	if test -z "${LIB_FFTW}"; then
+    	echo $ac_n "checking for fftw3d_f77_create_plan in -lfftw""... $ac_c" 1>&6
 echo "configure:5543: checking for fftw3d_f77_create_plan in -lfftw" >&5
 ac_lib_var=`echo fftw'_'fftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
@@ -5572,9 +5572,9 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_FFTW}"; then
-    echo $ac_n "checking for fftw3d_f77_create_plan in -ldfftw""... $ac_c" 1>&6
+	  fi
+  	if test -z "${LIB_FFTW}"; then
+    	echo $ac_n "checking for fftw3d_f77_create_plan in -ldfftw""... $ac_c" 1>&6
 echo "configure:5579: checking for fftw3d_f77_create_plan in -ldfftw" >&5
 ac_lib_var=`echo dfftw'_'fftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
@@ -5608,13 +5608,13 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_FFTW}"; then
-    { echo "configure: error: couldn't find fftw library for --with-fftw" 1>&2; exit 1; }
-	fi
-
-	  if test -z "${LIB_RFFTW}"; then
-  	echo $ac_n "checking for rfftw3d_f77_create_plan""... $ac_c" 1>&6
+	  fi
+  	if test -z "${LIB_FFTW}"; then
+    	{ echo "configure: error: couldn't find fftw library for --with-fftw" 1>&2; exit 1; }
+		fi
+	
+			  if test -z "${LIB_RFFTW}"; then
+  		echo $ac_n "checking for rfftw3d_f77_create_plan""... $ac_c" 1>&6
 echo "configure:5619: checking for rfftw3d_f77_create_plan" >&5
 if eval "test \"`echo '$''{'ac_cv_func_rfftw3d_f77_create_plan'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -5645,9 +5645,9 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_RFFTW}"; then
-    echo $ac_n "checking for rfftw3d_f77_create_plan in -lrfftw""... $ac_c" 1>&6
+	  fi
+  	if test -z "${LIB_RFFTW}"; then
+    	echo $ac_n "checking for rfftw3d_f77_create_plan in -lrfftw""... $ac_c" 1>&6
 echo "configure:5652: checking for rfftw3d_f77_create_plan in -lrfftw" >&5
 ac_lib_var=`echo rfftw'_'rfftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
@@ -5681,9 +5681,9 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_RFFTW}"; then
-    echo $ac_n "checking for rfftw3d_f77_create_plan in -ldrfftw""... $ac_c" 1>&6
+	  fi
+  	if test -z "${LIB_RFFTW}"; then
+    	echo $ac_n "checking for rfftw3d_f77_create_plan in -ldrfftw""... $ac_c" 1>&6
 echo "configure:5688: checking for rfftw3d_f77_create_plan in -ldrfftw" >&5
 ac_lib_var=`echo drfftw'_'rfftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
@@ -5717,44 +5717,46 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_RFFTW}"; then
-    { echo "configure: error: couldn't find rfftw library for --with-fftw" 1>&2; exit 1; }
-	fi
+	  fi
+  	if test -z "${LIB_RFFTW}"; then
+    	{ echo "configure: error: couldn't find rfftw library for --with-fftw" 1>&2; exit 1; }
+		fi
 	
-  LDFLAGS="$save_ldflags"
+  	LDFLAGS="$save_ldflags"
 
-  if test "$FFTWDIR"; then
-		LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"
+	  if test "$FFTWDIR"; then
+			LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"
+		fi
 	fi
-	
 fi
 
-# Check whether --with-lapack or --without-lapack was given.
+
+if test -z "${LIB_LAPACK}"; then
+	# Check whether --with-lapack or --without-lapack was given.
 if test "${with_lapack+set}" = set; then
   withval="$with_lapack"
-  LAPACKDIR=$withval
+  		LAPACKDIR=$withval
 else
   LAPACKDIR=""
 fi
 
-if test "$LAPACKDIR" != "no"; then
-  cat >> confdefs.h <<\EOF
+	if test "$LAPACKDIR" != "no"; then
+  	cat >> confdefs.h <<\EOF
 #define HAVE_LAPACK 1
 EOF
 
-  cat >> confdefs.h <<\EOF
+	  cat >> confdefs.h <<\EOF
 #define HAVE_BLAS 1
 EOF
  
-  save_ldflags="$LDFLAGS"
-  if test "$LAPACKDIR"; then
-    LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"
-  fi
+  	save_ldflags="$LDFLAGS"
+	  if test "$LAPACKDIR"; then
+  	  LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"
+	  fi
 
-  if test -z "${LIB_LAPACK}"; then
-  	echo $ac_n "checking for dsygv""... $ac_c" 1>&6
-echo "configure:5758: checking for dsygv" >&5
+  	if test -z "${LIB_LAPACK}"; then
+	  	echo $ac_n "checking for dsygv""... $ac_c" 1>&6
+echo "configure:5760: checking for dsygv" >&5
 if eval "test \"`echo '$''{'ac_cv_func_dsygv'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -5764,7 +5766,7 @@ program main
   call dsygv()
 end program main
 EOF
-if { (eval echo configure:5768: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:5770: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_func_dsygv=yes"
 else
@@ -5784,10 +5786,10 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_LAPACK}"; then
-    echo $ac_n "checking for dsygv in -llapack""... $ac_c" 1>&6
-echo "configure:5791: checking for dsygv in -llapack" >&5
+  	fi
+	  if test -z "${LIB_LAPACK}"; then
+  	  echo $ac_n "checking for dsygv in -llapack""... $ac_c" 1>&6
+echo "configure:5793: checking for dsygv in -llapack" >&5
 ac_lib_var=`echo lapack'_'dsygv | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -5800,7 +5802,7 @@ program main
   call dsygv()
 end program main
 EOF
-if { (eval echo configure:5804: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:5806: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_lib_$ac_lib_var=yes"
 else
@@ -5820,21 +5822,23 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_LAPACK}"; then
-    { echo "configure: error: couldn't find lapack/blas library for --with-lapack" 1>&2; exit 1; }
-	fi
+	  fi
+  	if test -z "${LIB_LAPACK}"; then
+    	{ echo "configure: error: couldn't find lapack/blas library for --with-lapack" 1>&2; exit 1; }
+		fi
 
-  LDFLAGS="$save_ldflags"
+  	LDFLAGS="$save_ldflags"
 
-  if test "$LAPACKDIR"; then
-		LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"
+	  if test "$LAPACKDIR"; then
+			LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"
+		fi
 	fi
-	
 fi
 
 
-ac_ext=c
+if test -z "${LIB_GSL}"; then
+		
+	ac_ext=c
 # CFLAGS is not in ac_cpp because -g, -O, etc. are not valid cpp options.
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='${CC-cc} -c $CFLAGS $CPPFLAGS conftest.$ac_ext 1>&5'
@@ -5842,34 +5846,34 @@ ac_link='${CC-cc} -o conftest${ac_exeext} $CFLAGS $CPPFLAGS $LDFLAGS conftest.$a
 cross_compiling=$ac_cv_prog_cc_cross
 
 
-# now we check for gsl
-# Check whether --with-gsl or --without-gsl was given.
+	# now we check for gsl
+	# Check whether --with-gsl or --without-gsl was given.
 if test "${with_gsl+set}" = set; then
   withval="$with_gsl"
-  GSLDIR=$withval
+  		GSLDIR=$withval
 else
   GSLDIR=""
 fi
 
-if test "$GSLDIR" != "no"; then
-  cat >> confdefs.h <<\EOF
+	if test "$GSLDIR" != "no"; then
+  	cat >> confdefs.h <<\EOF
 #define HAVE_GSL 1
 EOF
 
-  save_ldflags="$LDFLAGS"
-  if test "$GSLDIR"; then
-    LDFLAGS="${LDFLAGS} -L${GSLDIR}/lib"
-		CPPFLAGS="${CPPFLAGS} -I${GSLDIR}/include"
-  fi
+	  save_ldflags="$LDFLAGS"
+  	if test "$GSLDIR"; then
+    	LDFLAGS="${LDFLAGS} -L${GSLDIR}/lib"
+			CPPFLAGS="${CPPFLAGS} -I${GSLDIR}/include"
+  	fi
 
-  if test -z "${LIB_GSL}"; then
-  	echo $ac_n "checking for gsl_complex_sqrt""... $ac_c" 1>&6
-echo "configure:5868: checking for gsl_complex_sqrt" >&5
+	  if test -z "${LIB_GSL}"; then
+  		echo $ac_n "checking for gsl_complex_sqrt""... $ac_c" 1>&6
+echo "configure:5872: checking for gsl_complex_sqrt" >&5
 if eval "test \"`echo '$''{'ac_cv_func_gsl_complex_sqrt'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 5873 "configure"
+#line 5877 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char gsl_complex_sqrt(); below.  */
@@ -5892,7 +5896,7 @@ gsl_complex_sqrt();
 
 ; return 0; }
 EOF
-if { (eval echo configure:5896: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:5900: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_func_gsl_complex_sqrt=yes"
 else
@@ -5911,10 +5915,10 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "${LIB_GSL}"; then
-    echo $ac_n "checking for gsl_complex_sqrt in -lgsl""... $ac_c" 1>&6
-echo "configure:5918: checking for gsl_complex_sqrt in -lgsl" >&5
+	  fi
+  	if test -z "${LIB_GSL}"; then
+    	echo $ac_n "checking for gsl_complex_sqrt in -lgsl""... $ac_c" 1>&6
+echo "configure:5922: checking for gsl_complex_sqrt in -lgsl" >&5
 ac_lib_var=`echo gsl'_'gsl_complex_sqrt | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -5922,7 +5926,7 @@ else
   ac_save_LIBS="$LIBS"
 LIBS="-lgsl "-lgslcblas" $LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 5926 "configure"
+#line 5930 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -5933,7 +5937,7 @@ int main() {
 gsl_complex_sqrt()
 ; return 0; }
 EOF
-if { (eval echo configure:5937: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:5941: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_lib_$ac_lib_var=yes"
 else
@@ -5953,17 +5957,19 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-  fi
-  if test -z "{$LIB_GSL}"; then
-    { echo "configure: error: couldn't find gsl library for --with-gsl" 1>&2; exit 1; }
+	  fi
+  	if test -z "{$LIB_GSL}"; then
+    	{ echo "configure: error: couldn't find gsl library for --with-gsl" 1>&2; exit 1; }
+		fi
+
+  	LDFLAGS="$save_ldflags"
+
+	  if test "$GSLDIR"; then
+  		LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"
+		fi
 	fi
 
-  LDFLAGS="$save_ldflags"
-
-  if test "$GSLDIR"; then
-  	LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"
-	fi
-	
+		
 fi
 
 
