@@ -425,6 +425,7 @@ contains
           c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
         else
           c(i) = M_ZERO
+        end if
       end do
       
       deallocate(r)
