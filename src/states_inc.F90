@@ -725,7 +725,7 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
     do ik = 1, st%nik
       do ist = 1, st%nst
         do i = 1, m%np
-          c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
+          c = st%X(psi) (i, 1, ist, ik) * R_CONJ(st%X(psi) (i, 2, ist, ik))
           temp(1) = temp(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
           temp(2) = temp(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
           c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
