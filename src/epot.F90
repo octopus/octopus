@@ -413,8 +413,7 @@ contains
             else
               ep%vnl(i)%n = ep%vnl(k)%n
               ep%vnl(i)%c = ep%vnl(k)%c
-              allocate(ep%vnl(i)%jxyz(ep%vnl(i)%n))
-              ep%vnl(i)%jxyz = ep%vnl(k)%jxyz
+              ep%vnl(i)%jxyz => ep%vnl(k)%jxyz
             endif
             call allocate_nl_part(i)
             call build_nl_part(i, l, lm, add_lm)
@@ -706,14 +705,16 @@ contains
     call laser_vector_field(ep%no_lasers, ep%lasers, t, field)
   end subroutine epot_laser_vector_field
 
+  ! This subroutine deallocates (if associated) every component of a nonlocal operator
+  ! type variabel, except for jxyz. This is not very elegant, but it helps with performance.
   subroutine nonlocal_op_kill(nlop)
     type(nonlocal_op) :: nlop
-    if(associated(nlop%jxyz)) then
-      deallocate(nlop%jxyz, nlop%uv, nlop%uvu, nlop%duv, &
+    if(associated(nlop%jxyz)) nullify(nlop%jxyz)
+    if(associated(nlop%uv)) then
+      deallocate(nlop%uv, nlop%uvu, nlop%duv, &
                  nlop%so_uv, nlop%so_duv, nlop%so_luv, nlop%so_uvu)
       if(conf%periodic_dim/=0 .and. associated(nlop%phases)) then
         deallocate(nlop%phases)
-        nullify(nlop%phases)
       end if
     end if
   end subroutine nonlocal_op_kill
