@@ -802,9 +802,9 @@ subroutine tm_debug(pstm)
   write(dat_unit,'(4x,4e14.6)') pstm%dkbcos(0:pstm%npotd-1)/2
   if(pstm%irel=='rel') then
     write(dat_unit,'(/,a)') 'SO-KB norms: '
-    write(dat_unit,'(4x,4e14.4)') pstm%so_dknrm(0:pstm%npotd-1)*2
+    write(dat_unit,'(4x,4e14.4)') pstm%so_dknrm(1:pstm%npotu)*2
     write(dat_unit,'(/,a)') 'SO-KB cosines: '
-    write(dat_unit,'(4x,4e14.6)') pstm%so_dkbcos(0:pstm%npotd-1)/2
+    write(dat_unit,'(4x,4e14.6)') pstm%so_dkbcos(1:pstm%npotu)/2
   endif
 
   ! Now the local part
