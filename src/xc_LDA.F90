@@ -62,9 +62,12 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
       case(X_FUNC_LDA_REL)
         call exchange(spin_channels, d, e, pd1, 1)
       case(C_FUNC_LDA_PZ)
-        call pzc(spin_channels, d, e, pd1)
+        call correlation_lda_3D_pz(spin_channels, d, e, pd1)
       case(C_FUNC_LDA_PW92)
-        call pw92c(spin_channels, d, e, pd1)
+!!$        call pw92c(spin_channels, d, e, pd1)
+        call correlation_lda_3D_pw92(spin_channels, d, e, pd1)
+      case(C_FUNC_LDA_ATTA)
+        call correlation_lda_2D_atta(spin_channels, d, e, pd1)
       end select
 
       if(ixc < N_X_FUNCTL) then

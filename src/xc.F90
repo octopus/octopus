@@ -34,7 +34,7 @@ implicit none
 integer, parameter ::     &
      N_XC_FAMILIES = 4,   &
      N_X_FUNCTL    = 8,   &
-     N_C_FUNCTL    = 6
+     N_C_FUNCTL    = 7
 
 !!! Families of xc functionals
 integer, parameter ::     &
@@ -55,10 +55,11 @@ integer, parameter ::     &
      X_FUNC_OEP_SIC   = ibset(0,  7), &
      C_FUNC_LDA_RPA   = ibset(0,  8), &
      C_FUNC_LDA_PZ    = ibset(0,  9), &
-     C_FUNC_LDA_PW92  = ibset(0, 10), &
-     C_FUNC_GGA_PBE   = ibset(0, 11), &
-     C_FUNC_OEP_SIC   = ibset(0, 12), &
-     C_FUNC_MGGA_PKZB = ibset(0, 13)
+     C_FUNC_LDA_ATTA  = ibset(0, 10), &
+     C_FUNC_LDA_PW92  = ibset(0, 11), &
+     C_FUNC_GGA_PBE   = ibset(0, 12), &
+     C_FUNC_OEP_SIC   = ibset(0, 13), &
+     C_FUNC_MGGA_PKZB = ibset(0, 14)
 
 
 character(len=4), parameter :: xc_name_families(N_XC_FAMILIES) =   &
@@ -77,6 +78,7 @@ character(len=20), parameter :: xc_name_functionals(N_X_FUNCTL+N_C_FUNCTL) = (/ 
      'LDA  - RPA          ', &  ! C_FUNC_LDA_RPA
      'LDA  - PZ81         ', &  ! C_FUNC_LDA_PZ
      'LDA  - PW92         ', &  ! C_FUNC_LDA_PW92
+     'LDA  - ATTA         ', &  ! C_FUNC_LDA_ATTA
      'GGA  - PBE          ', &  ! C_FUNC_GGA_PBE
      'OEP  - SIC (LDA)    ', &  ! C_FUNC_OEP_SIC
      'MGGA - PKZB         '  &  ! C_FUNC_MGGA_PKZB
@@ -199,6 +201,13 @@ subroutine xc_init(xcs, nlcc)
   case('PW92')
     xcs%family = ior(xcs%family, XC_FAMILY_LDA)
     xcs%functl = ior(xcs%functl, C_FUNC_LDA_PW92)
+  case('ATTA')
+    if(conf%dim.ne.2) then
+      message(1) = 'Attacalite et al. correlation potential is only suited for 2D'
+      call write_fatal(1)
+    endif
+    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
+    xcs%functl = ior(xcs%functl, C_FUNC_LDA_ATTA)
   case('PBE ')
     xcs%family = ior(xcs%family, XC_FAMILY_GGA)
     xcs%functl = ior(xcs%functl, C_FUNC_GGA_PBE)

@@ -6,7 +6,29 @@ module vxc
 
   implicit none
 
+  private :: change
+
   contains
+   
+  subroutine change(nsp, ds, d, z)
+    integer, intent(in) :: nsp
+    FLOAT, intent(in)   :: ds(nsp)
+    FLOAT, intent(out)  :: d, z
+    FLOAT :: d1, d2
+    select case(nsp)
+    case(1) ! Spin - unpolarized
+       d = max(M_ZERO, ds(1))
+       z = M_ZERO
+    case(2) ! Spin-polarized
+       d1 = max(M_ZERO, ds(1))
+       d2 = max(M_ZERO, ds(2))
+       d = d1 + d2
+       z = (d1-d2)/(d1+d2)
+    case default
+       message(1) = 'Wrong "nsp" argument passed to change'
+       call write_fatal(1)
+    end select
+  end subroutine change
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Calculates the exchange energy and exchange potential for a homogeneous
@@ -27,7 +49,7 @@ module vxc
 !
 !    p = ((dim+1)/dim)
 !    ex(n) = a_x*n**(1/dim)
-!    ex(n,z) = a_x*f(z)
+!    ex(n,z) = ex(n)*f(z)
 !    vx_up(n, z) = ex(n)*( p*f(z) + (df/dz)(z)*(1-z) )
 !    vx_do(n, z) = ex(n)*( p*f(z) - (df/dz)(z)*(1+z) )
 !    f(z) = (1/2)*( (1+z)**p + (1-z)**p)
@@ -188,10 +210,10 @@ module vxc
   IF ( AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
      call exchange(ns, dd, epsx, vxd, irel)
-     CALL PZC   (      NS, DD, EPSC, VCD)
+     CALL correlation_lda_3D_pz   (      NS, DD, EPSC, VCD)
   ELSEIF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
      call exchange(ns, dd, epsx, vxd, irel)
-     CALL PW92C (      NS, DD, EPSC, VCD )
+     CALL correlation_lda_3D_pw92 ( NS, DD, EPSC, VCD )
   ELSE
      WRITE(6,*) 'LDAXC: Unknown author ', AUTHOR
      STOP
@@ -400,7 +422,7 @@ module vxc
   GDMT   = MAX( GDMIN, GDMT )
 
 ! Find local correlation energy and potential
-  CALL PW92C( 2, D, ECUNIF, VCUNIF )
+  CALL correlation_lda_3D_pw92( 2, D, ECUNIF, VCUNIF )
 
 ! Find total correlation energy
   RS = (M_THREE / (4*M_PI*DT) )**M_THIRD
@@ -507,109 +529,182 @@ module vxc
 
   end subroutine lb94
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Implements the Perdew-Wang 92 local correlation (beyond RPA).               !
-  ! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)                             !
-  ! Written by L.C.Balbas and J.M.Soler. Dec 96.  Version 0.5.                  !
-  ! ********* INPUT ****************************************************        !
-  ! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
-  ! REAL*8  DENS(NSPIN) : Local (spin) density                                  !
-  ! ********* OUTPUT ***************************************************        !
-  ! REAL*8  EC        : Correlation energy density                              !
-  ! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
-  ! ********* UNITS ****************************************************        ! 
-  ! Densities in electrons per Bohr**3                                          ! 
-  ! Energies in Hartrees                                                        !
-  ! ********* ROUTINES CALLED ******************************************        !
-  ! None                                                                        !
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine pw92c( NSPIN, DENS, EC, VC )
-  implicit none 
-  integer :: NSPIN
-  FLOAT :: DENS(NSPIN), EC, VC(NSPIN)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Correlation energy per particle and potentials for a homogeneous electron
+! gas in 2D, as parametrized by Attacalite et al.
+! Refs: [1] C. Attacalite et al, Phys. Rev. Lett. 88, 256601 (2002) for 2D.
+!       [2] C. Attacalite, PhD thesis. 
+  subroutine correlation_lda_2D_atta(nsp, ds, ec, vc)
+    implicit none
+    integer, intent(in) :: nsp
+    FLOAT, intent(in)   :: ds(nsp)
+    FLOAT, intent(out)  :: ec, vc(nsp)
 
-  ! Internal variable declarations
-  integer :: IG
-  FLOAT :: A(0:2), ALPHA1(0:2), B, BETA(0:2,4), C,     &
-       DBDRS, DECDD(2), DECDRS, DECDZ, DFDZ,           &
-       DGDRS(0:2), DCDRS, DRSDD, DTOT, DZDD(2),        &
-       F, FPP0, G(0:2), P(0:2), RS, ZETA
+    FLOAT, parameter :: a(0:2) = (/ CNST(-0.1925),   CNST(0.117331),    CNST(0.0234188) /), &
+                        b(0:2) = (/ CNST(0.0863136), CNST(-3.394e-2),   CNST(-0.037093) /), &
+                        c(0:2) = (/ CNST(0.0572384), CNST(-7.66765e-3), CNST(0.0163618) /), &
+                        e(0:2) = (/ CNST(1.0022),    CNST(0.4133),      CNST(1.424301) /), &
+                        f(0:2) = (/ CNST(-0.02069),  CNST(0.0),         CNST(0.0) /), &
+                        g(0:2) = (/ CNST(0.33997),   CNST(6.68467e-2),  CNST(0.0) /), &
+                        h(0:2) = (/ CNST(1.747e-2),  CNST(7.799e-4),    CNST(1.163099) /), &
+                        d(0:2) = -a(0:2)*h(0:2)
+    FLOAT, parameter :: MINDEN = CNST(1e-15), &
+                        beta = CNST(1.3386)
+    FLOAT :: rs, dens, d1, d2, zeta, ex, ex0, vx(2), dd(2), ex6, calf, calfp, ax, decdrs, decdz
 
-  ! Fix lower bound of density to avoid division by zero
-  FLOAT, parameter :: DENMIN = CNST(1e-12), &
-      FOUTHD = M_FOUR/M_THREE, THRHLF = M_THREE/M_TWO
+    ax = -M_FOUR/(M_THREE*M_PI*sqrt(M_TWO))
 
-  ! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
-  DATA P      / CNST(1.00    ), CNST( 1.00    ), CNST( 1.00    )  /
-  DATA A      / CNST(0.031091), CNST( 0.015545), CNST( 0.016887)  /
-  DATA ALPHA1 / CNST(0.21370 ), CNST( 0.20548 ), CNST( 0.11125 )  /
-  DATA BETA   / CNST(7.5957  ), CNST(14.1189  ), CNST(10.357   ), &
-                CNST(3.5876  ), CNST( 6.1977  ), CNST( 3.6231  ), &
-                CNST(1.6382  ), CNST( 3.3662  ), CNST( 0.88026 ), &
-                CNST(0.49294 ), CNST( 0.62517 ), CNST( 0.49671 )  /    
+    ! Get the trace and the polarization of the density
+    call change(nsp, ds, dens, zeta)
+    ! Wigner radius
+    rs = sqrt(M_ONE / (M_PI*dens))
 
-  ! Find rs and zeta
-  IF (NSPIN .EQ. 1) THEN
-     DTOT = MAX( DENMIN, DENS(1) )
-     ZETA = 0
-     RS = ( 3 / (4*M_PI*DTOT) )**M_THIRD
-  !      Find derivatives dRs/dDens and dZeta/dDens
-     DRSDD = (- RS) / DTOT / 3
-     DZDD(1) = 0
-  ELSE
-     DTOT = MAX( DENMIN, DENS(1)+DENS(2) )
-     ZETA = ( DENS(1) - DENS(2) ) / DTOT
-     RS = ( 3 / (4*M_PI*DTOT) )**M_THIRD
-     DRSDD = (- RS) / DTOT / 3
-     DZDD(1) =   1 / DTOT - ZETA / DTOT
-     DZDD(2) = - (1 / DTOT) - (ZETA / DTOT)
-  ENDIF
+    ! If the density is too small, return zero  
+    if(dens < MINDEN) then
+       ec = M_ZERO; vc = M_ZERO
+       return
+    endif
 
-  ! Find eps_c(rs,0)=G(0), eps_c(rs,1)=G(1) and -alpha_c(rs)=G(2)
-  ! using eq.(10) of cited reference (Perdew & Wang, PRB, 45, 13244 (92))
+    ! In unpolarized cases, expressions are fairly simple.
+    if(nsp==1) then
+      ec = alpha(0)
+      vc(1) = dalphadrs(0)
+      return
+    endif
 
-  DO 20 IG = 0,2
-     B = BETA(IG,1) * RS**M_HALF   +                                            &
-         BETA(IG,2) * RS         +                                            &
-         BETA(IG,3) * RS**THRHLF +                                            &
-         BETA(IG,4) * RS**(P(IG)+1)
-     DBDRS = BETA(IG,1) * M_HALF      / RS**M_HALF +                              &
-         BETA(IG,2)                         +                                 &
-         BETA(IG,3) * THRHLF    * RS**M_HALF +                                  &
-         BETA(IG,4) * (P(IG)+1) * RS**P(IG)
-     C = 1 + 1 / (2 * A(IG) * B)
-     DCDRS = - ( (C-1) * DBDRS / B )
-     G(IG) = (- 2) * A(IG) * ( 1 + ALPHA1(IG)*RS ) * LOG(C)
-     DGDRS(IG) = (- 2) *A(IG) * ( ALPHA1(IG) * LOG(C) +                       &
-                                (1+ALPHA1(IG)*RS) * DCDRS / C )
-  20 CONTINUE
+    ! In the case of spin-polarized calculations, all this is necessary...
+    ! Unpolarized exchange energy...
+    ex0 = ((-M_FOUR*sqrt(M_TWO))/(M_THREE*M_PI*rs))
+    ! Polarized exchange energy
+    ex  = M_HALF*((M_ONE+zeta)**(M_HALF*M_THREE)+(M_ONE-zeta)**(M_HALF*M_THREE))*ex0
+    ! Taylor expansion of ex, in zeta, beyond fourth order.
+    ex6 = ex - (M_ONE  + (M_THREE/CNST(8.0))*zeta**2 + (M_THREE/CNST(128.0))*zeta**4)*ex0
+    ! Correlation energy (Eq.[1]3)
+    ec = alpha(0) + alpha(1)*zeta**2 + alpha(2)*zeta**4 + (exp(-beta*rs)-M_ONE)*ex6
+    ! Function calf (Eq.[2]4.10)
+    calf = (M_ONE+zeta)**(M_THREE/M_TWO)+(M_ONE-zeta)**(M_THREE/M_TWO) - &
+           (M_TWO + (M_THREE/M_FOUR)*zeta**2 + (M_THREE/CNST(64.0))*zeta**4)
+    ! Function calfp (Eq.[2]C8)
+    calfp = (M_THREE/M_TWO)*(sqrt(M_ONE+zeta)-sqrt(M_ONE-zeta)) &
+            - (M_THREE/M_TWO)*zeta - (M_THREE/CNST(16.0))*zeta**3
+    ! Derivative of the correlation energy with respect to rs (Eq.[2]C2)
+    decdrs = ax*calf*(M_ONE-exp(-beta*rs)*(M_ONE+beta*rs))/rs**2 + &
+             dalphadrs(0) + dalphadrs(1)*zeta**2 + dalphadrs(2)*zeta**4
+    ! Derivative of the correlation energy with respect to zeta (Eq.[2]C7)
+    decdz  = ax*(exp(-beta*rs)-M_ONE)*calfp/rs + M_TWO*alpha(1)*zeta + M_FOUR*alpha(2)*rs**3
+    ! And finally, the potentials (Eq.[2]C1)
+    vc(1) = ec - M_HALF*rs*decdrs - (zeta-M_ONE)*decdz
+    vc(1) = ec - M_HALF*rs*decdrs - (zeta+M_ONE)*decdz
 
-  ! Find f''(0) and f(zeta) from eq.(9)
-  C = 1 / (2**FOUTHD - 2)
-  FPP0 = 8 * C / 9
-  F = ( (1+ZETA)**FOUTHD + (1-ZETA)**FOUTHD - 2 ) * C
-  DFDZ = FOUTHD * ( (1+ZETA)**M_THIRD - (1-ZETA)**M_THIRD ) * C
+    contains
+    FLOAT function alpha(i) ! Eq.[1]4
+      integer, intent(in) :: i
+      alpha = a(i) + (b(i)*rs + c(i)*rs**2 + d(i)*rs**3) * &
+              log(M_ONE + M_ONE/(e(i)*rs + f(i)*sqrt(rs)**3 + g(i)*rs**2 + h(i)*rs**3) )
+    end function alpha
+    FLOAT function dalphadrs(i) ! Eq.[2]C3
+      integer, intent(in) :: i
+      FLOAT :: efe, efep, lg, x
+      efe  = e(i)*rs + f(i)*sqrt(rs)**3 + g(i)*rs**2 + h(i)*rs**3 ! Eq.[2]C5
+      efep = e(i) + M_HALF*M_THREE*f(i)*sqrt(rs) + M_TWO*g(i)*rs + M_THREE*h(i)*rs**2 ! Eq. [2]C6
+      lg = log(M_ONE + M_ONE/efe)
+      x  = ((b(i)+c(i)*rs**2+d(i)*rs**3)*efep)/(efe**2+efe)
+      dalphadrs = (b(i) + M_TWO*c(i)*rs + M_THREE*d(i)*rs**2)*lg - x ! Eq.[2]C3
+    end function dalphadrs
+  end subroutine correlation_lda_2D_atta
 
-  ! Find eps_c(rs,zeta) from eq.(8)
-  EC = G(0) - G(2) * F / FPP0 * (1-ZETA**4) +                                 &
-       (G(1)-G(0)) * F * ZETA**4
-  DECDRS = DGDRS(0) - DGDRS(2) * F / FPP0 * (1-ZETA**4) +                     &
-           (DGDRS(1)-DGDRS(0)) * F * ZETA**4
-  DECDZ = (- G(2)) / FPP0 * ( DFDZ*(1-ZETA**4) - F*4*ZETA**3 ) +              &
-          (G(1)-G(0)) * ( DFDZ*ZETA**4 + F*4*ZETA**3 )
-      
-  ! Find correlation potential
-  IF (NSPIN .EQ. 1) THEN
-     DECDD(1) = DECDRS * DRSDD
-     VC(1) = EC + DTOT * DECDD(1)
-  ELSE
-     DECDD(1) = DECDRS * DRSDD + DECDZ * DZDD(1)
-     DECDD(2) = DECDRS * DRSDD + DECDZ * DZDD(2)
-     VC(1) = EC + DTOT * DECDD(1)
-     VC(2) = EC + DTOT * DECDD(2)
-  ENDIF
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Calculates the exchange energy and correlation potential for a homogeneous
+! electron gas (LDA for exchange).
+! Ref: J.P.Perdew & Y.Wang, Phys. Rev. B 45, 13244 (1992).
+!
+! Input:
+! integer nsp   :: 1 for spin-unpolarized, 2 for spin-polarized.
+! FLOAT ds(nsp) :: density.
+! Output:
+! vc(nsp)       :: correlation potential.
+! ec            :: correlation energy density.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine correlation_lda_3D_pw92(nsp, ds, ec, vc)
+    implicit none
+    integer, intent(in) :: nsp
+    FLOAT, intent(in)   :: ds(nsp)
+    FLOAT, intent(out)  :: ec, vc(nsp)
 
-  end subroutine pw92c 
+    FLOAT :: d, d1, d2, z, ec0, ec1, alphac, rs, fz, fpz, &
+             dec0drs, dec1drs, dalphacdrs, decdrs, decdz
+    FLOAT, parameter :: a(3)       = (/ CNST(0.031091), CNST(0.015545), CNST(0.016887) /), &
+                        alpha(3)   = (/ CNST(0.21370),  CNST(0.20548),  CNST(0.11125) /), &
+                        beta(4, 3) = (/ CNST(7.5957),   CNST(3.5876),   CNST(1.6382),  CNST(0.49294), &
+                                        CNST(14.1189),  CNST(6.1977),   CNST(3.3662),  CNST(0.62517), &
+                                        CNST(10.357),   CNST(3.6231),   CNST(0.88026), CNST(0.49671) /) 
+    FLOAT, parameter :: MINDEN = CNST(1e-15), &
+                        fzconst = CNST(1.92366105093154), & ! = 1/(2**(4/3)-2)
+                        fz20 = CNST(1.709921)
+
+    select case(nsp)
+    case(1) ! Spin - unpolarized
+       d = max(M_ZERO, ds(1))
+       if(d < MINDEN) then
+         ec = M_ZERO; vc(1) = M_ZERO
+         return
+       endif
+       z   = M_ZERO
+       fz  = M_ZERO 
+       fpz = M_ZERO
+    case(2) ! Spin-polarized
+       d1 = max(M_ZERO, ds(1))
+       d2 = max(M_ZERO, ds(2))
+       d = d1 + d2
+       if(d < MINDEN) then
+          ec = M_ZERO; vc(1:2) = M_ZERO
+          return
+       endif
+       z   = (d1-d2)/(d1+d2)
+       fz  = fzconst*((M_ONE+z)**(M_FOUR/M_THREE) + (M_ONE-z)**(M_FOUR/M_THREE) - M_TWO)
+       fpz = fzconst*(M_FOUR/M_THREE)*((M_ONE+z)**(M_ONE/M_THREE) - (M_ONE-z)**(M_ONE/M_THREE))
+    case default
+       message(1) = 'Wrong "nsp" argument passed to exchange3d'
+       call write_fatal(1)
+    end select
+
+    rs = (M_THREE / (M_FOUR*M_PI*d) )**M_THIRD
+
+    ec0        =  g(1)
+    ec1        =  g(2)
+    alphac     = -g(3)
+    dec0drs    =  dgdrs(1)
+    dec1drs    =  dgdrs(2)
+    dalphacdrs = -dgdrs(3)
+
+    ec = ec0 + alphac*fz*(M_ONE-z**4)/fz20 + (ec1-ec0)*fz*z**4
+    decdrs = dec0drs*(M_ONE - fz*z**4) + dec1drs*fz*z**4 + dalphacdrs*fz*(M_ONE-z**4)/fz20
+    decdz  = M_FOUR*z**3*fz*(ec1-ec0-alphac/fz20) + &
+             fpz*(z**4*ec1 - z**4*ec0 + (M_ONE-z**4)*alphac/fz20)
+    vc(1) = ec - (rs/M_THREE)*decdrs - (z-M_ONE)*decdz
+    if(nsp==2) then
+       vc(2) = ec - (rs/M_THREE)*decdrs - (z+M_ONE)*decdz
+    endif
+
+    contains
+
+    ! Function g defined Eq. 10 of the original paper.
+    FLOAT function g(k)
+      integer, intent(in) :: k
+      g = - M_TWO * a(k) * ( M_ONE + alpha(k) * rs) * log( M_ONE + &
+          M_ONE/(M_TWO*a(k)*(beta(1, k)*sqrt(rs) + beta(2, k)*rs + beta(3, k)*sqrt(rs)**3 + beta(4, k)*rs**2)) )
+    end function g
+    ! The derivative of previous function with respect to rs (Eq. A5)
+    FLOAT function dgdrs(k)
+      integer, intent(in) :: k
+      FLOAT :: q0, q1, q1p, b
+      b = (beta(1, k)*sqrt(rs) + beta(2, k)*rs + beta(3, k)*sqrt(rs)**3 + beta(4, k)*rs**2)
+      q0 = -M_TWO * a(k) * ( M_ONE + alpha(k) * rs)
+      q1 = M_TWO * a(k) * b
+      q1p = a(k) * (beta(1, k)/sqrt(rs) + M_TWO*beta(2, k) + M_THREE*beta(3, k)*sqrt(rs) + M_FOUR*beta(4, k)*rs)
+      dgdrs = -M_TWO * a(k) * alpha(k) * log(M_ONE + M_ONE/q1) - (q0*q1p)/(q1**2+q1)
+    end function dgdrs
+  end subroutine correlation_lda_3D_pw92
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !  Perdew-Zunger parameterization of Ceperley-Alder                           !
@@ -625,8 +720,8 @@ module vxc
   ! **** Units *******************************************************          !
   ! Densities in electrons/Bohr**3                                              !
   ! Energies in Hartrees                                                        !
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine pzc( NSP, DS, EC, VC )
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine correlation_lda_3D_pz( NSP, DS, EC, VC )
     integer, intent(in)   :: nsp
     FLOAT, intent(in)  :: ds(nsp)
     FLOAT, intent(out) :: ec, vc(nsp)
@@ -726,6 +821,6 @@ module vxc
        VC(ISP) = M_HALF * VC(ISP)
     end do
 
-  end subroutine pzc 
+  end subroutine correlation_lda_3D_pz 
 
 end module vxc
