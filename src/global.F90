@@ -262,7 +262,10 @@ subroutine write_warning(no_lines)
       write(stderr, '(a,3x,a)') '**', trim(message(i))
     end do
   end if
-  
+#ifdef HAVE_FLUSH
+  call flush(stderr)
+#endif 
+ 
   return
 end subroutine write_warning
 
@@ -295,7 +298,10 @@ subroutine write_info(no_lines, iunit, verbose_limit, stress)
     enddo
     if(present(stress)) write(iu, '(a,/)') stars
   end if
-  return
+
+#ifdef HAVE_FLUSH
+  call flush(iu)
+#endif
 end subroutine write_info
 
 #ifdef DEBUG

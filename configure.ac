@@ -78,7 +78,7 @@ esac
 
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
-acx_save_fcflags="$FCFLAGS"
+acx_save_fcflags="${FCFLAGS}"
 if test x"$enable_mpi" = x"yes"; then
   AC_PROG_FC([mpif90 mpf90 mpxlf90 mpxlf95 mpxlf_r], [Fortran 90])
 else
@@ -99,6 +99,11 @@ AC_LANG_PREPROC
 
 dnl how Fortran mangles function names
 AC_FC_WRAPPERS
+acx_save_libs="${LIBS}"
+LIBS="${FCEXTRALIBS} $FCLIBS"
+
+dnl some functions we may need
+AC_CHECK_FUNCS([flush])
 
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
@@ -158,9 +163,11 @@ ACX_LAPACK([], AC_MSG_ERROR([could not find required lapack library]))
 
 dnl check for GSL
 AC_LANG_PUSH(C)
+LIBS="${acx_save_libs}"
 AM_PATH_GSL([1.0], 
   [CFLAGS="$CFLAGS $GSL_CFLAGS"], 
   AC_MSG_ERROR([could not find required gsl library]))
+LIBS="${FCLIBS}"
 AC_LANG_POP(C)
 
 dnl check for FFT
@@ -185,7 +192,7 @@ fi
 # how to do it right
 LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
-AC_SUBST(LDFCFLAGS)
+AC_SUBST(FCEXTRALIBS)
 
 AC_CONFIG_FILES([Makefile 
 	liboct_parser/Makefile liboct/Makefile libxc/Makefile src/Makefile doc/Makefile

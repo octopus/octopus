@@ -43,7 +43,7 @@ noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a \
-  @GSL_LIBS@ @LDFCFLAGS@
+  @GSL_LIBS@ @FCEXTRALIBS@
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
 
