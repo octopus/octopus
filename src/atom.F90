@@ -47,7 +47,8 @@ type atom_type
                           zduV(:,:,:,:)
   complex(r8), pointer :: so_uv(:, :, :),     &
                           so_uvu(:, :, :),    &
-                          so_duv(:, :, :, :)
+                          so_duv(:, :, :, :), &
+                          so_luv(:, :, :, :)
 end type atom_type
 
 type atom_classical_type
@@ -298,12 +299,14 @@ subroutine atom_dealloc(na, a)
 
   do ia = 1, na
     if(associated(a(ia)%Jxyz)) then
-      deallocate(a(ia)%Jxyz, a(ia)%duV,   a(ia)%duVu,   a(ia)%dduV, &
-                             a(ia)%zuV,   a(ia)%zuVu,   a(ia)%zduV, &
-                             a(ia)%so_uV, a(ia)%so_uVu, a(ia)%so_duV)
-      nullify(a(ia)%Jxyz, a(ia)%duV,   a(ia)%duVu,   a(ia)%duV, &
-                          a(ia)%zuV,   a(ia)%zuVu,   a(ia)%zuV, &
-                          a(ia)%so_uV, a(ia)%so_uVu, a(ia)%so_duV)
+      deallocate(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%dduV, &
+                             a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zduV, &
+                             a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
+                             a(ia)%so_luv)
+      nullify(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%duV, &
+                          a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zuV, &
+                          a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
+                          a(ia)%so_luv)
     end if
   end do
 

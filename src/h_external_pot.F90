@@ -346,9 +346,9 @@ contains
     sub_name = 'build_kb_sphere'; call push_sub()
 
     ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
-    if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,  &
-                                              a%zuv, a%zduv, a%zuvu,    &
-                                              a%so_uv, a%so_duv, a%so_uvu)
+    if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,     &
+                                              a%zuv, a%zduv, a%zuvu,       &
+                                              a%so_uv, a%so_duv, a%so_uvu, a%so_luv)
     
     j = 0
     do k = 1, h%np
@@ -361,11 +361,12 @@ contains
     allocate(a%zuV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
          a%zduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%zuVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
     allocate(a%so_uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
-         a%so_duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%so_uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
+         a%so_duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%so_uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc), &
+         a%so_luv(j, (s%ps%L_max+1)**2, s%ps%kbc, 3))
 
     a%duv    = 0.0_r8; a%dduV   = 0.0_r8; a%duVu   = 0.0_r8
     a%zuv    = M_z0;   a%zduV   = M_z0;   a%zuVu   = M_z0
-    a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0
+    a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0; a%so_luv = M_z0
 
     j = 0
     do k = 1, h%np
@@ -401,20 +402,35 @@ contains
         l_loop: do l = 0, s%ps%L_max
           lm_loop: do lm = -l , l
             i_loop : do i = 1, s%ps%kbc
-              if(l .ne. s%ps%L_loc) then
-                add_lm = l**2 + l + lm + 1
-                if(h%vnl_space == REAL_SPACE) &
-                   call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
+              if(l .ne. s%ps%L_loc .and. h%vnl_space == REAL_SPACE) then
+                 call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
               end if
               call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
               a%so_uv(j, add_lm, i) = so_uv
-              a%so_duv(:, j, add_lm, i) = so_duv
+              a%so_duv(:, j, add_lm, i) = so_duv(:)
 
             end do i_loop
             add_lm = add_lm + 1
           end do lm_loop
         end do l_loop
     end do j_loop
+
+    if(h%reltype == SPIN_ORBIT) then
+      do j = 1, a%mps
+        call mesh_xyz(m, a%Jxyz(j), x)
+        x = x - a%x
+        a%so_luv(j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc, 1) = &
+                x(2)*a%so_duv(3, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc) - &
+                x(3)*a%so_duv(2, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc)
+        a%so_luv(j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc, 2) = &
+                x(3)*a%so_duv(1, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc) - &
+                x(1)*a%so_duv(3, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc)
+        a%so_luv(j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc , 3) = &
+                x(1)*a%so_duv(2, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc ) - &
+                x(2)*a%so_duv(1, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc )
+      enddo
+      a%so_luv = -M_zI*a%so_luv
+    endif
 
     if(h%vnl_space == RECIPROCAL_SPACE) then
       center(:) = nint(a%x(:)/m%h(:))

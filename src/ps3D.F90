@@ -151,7 +151,7 @@ subroutine ps_debug(ps)
   real(r8), parameter :: grid = 0.01_r8
 
   character(len=4)  :: fm
-  integer           :: info_unit, local_unit, nonlocal_unit, wave_unit, &
+  integer           :: info_unit, local_unit, nonlocal_unit, wave_unit, so_unit, &
                        i, j, k, l, is
   real(r8)          :: r
 
@@ -161,10 +161,12 @@ subroutine ps_debug(ps)
   call oct_mkdir(C_string('pseudos/'+trim(ps%label)))
   call io_assign(info_unit); call io_assign(local_unit)
   call io_assign(nonlocal_unit); call io_assign(wave_unit)
+  call io_assign(so_unit)
   open(info_unit, file='pseudos/'+trim(ps%label)+'/info')
   open(local_unit, file='pseudos/'+trim(ps%label)+'/local')
   open(nonlocal_unit, file='pseudos/'+trim(ps%label)+'/nonlocal')
   open(wave_unit, file='pseudos/'+trim(ps%label)+'/wave')
+  open(so_unit, file='pseudos/'+trim(ps%label)+'/so')
 
   ! Writes down the info.
   write(info_unit,'(a,/)')      ps%label
@@ -210,6 +212,15 @@ subroutine ps_debug(ps)
            ( (splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
   enddo
 
+  ! Spin-Orbit projectors
+  write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
+  do i =1, npoints
+     r = (i-1)*grid 
+     write(so_unit, '('//trim(fm)//'f16.8)') r, &
+           ( (splint(ps%so_kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
+           ( (splint(ps%so_dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
+  enddo
+
   ! Pseudo-wavefunctions
   write(fm,'(i4)') ps%ispin*(ps%l_max+1)+1; fm = adjustl(fm)
   do i = 1, npoints
@@ -221,6 +232,7 @@ subroutine ps_debug(ps)
   ! Closes files and exits
   call io_close(info_unit); call io_close(local_unit)
   call io_close(nonlocal_unit); call io_close(wave_unit)
+  call io_close(so_unit)
 
   call pop_sub(); return
 end subroutine ps_debug
