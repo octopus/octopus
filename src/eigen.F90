@@ -125,7 +125,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
 
   sub_name = 'eigen_solver_run'; call push_sub()
 
-  allocate(diff(st%nst, st%nik))
+  allocate(diff(st%nst, st%nik)); diff = 1.0_r8
   
   if(iter < eigens%final_tol_iter) then
       tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
