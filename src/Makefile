@@ -13,11 +13,13 @@ SRC_ALL = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 fft.F90
 
 SRC_1D = ps_xc.F90 ps_kb.F90 ps1D.F90 specie.F90 atom.F90 mesh1D.F90 \
 	hartree1D.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
-	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90 main.F90
+	lcao.F90 eigen.F90 mix.F90 scf.F90 static_pol.F90\
+	lasers.F90 td.F90 run.F90 main.F90
 
 SRC_3D = ps_xc.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 mesh3D.F90 \
 	hartree.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
-	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90 main.F90
+	lcao.F90 eigen.F90 mix.F90 scf.F90 static_pol.F90 \
+	lasers.F90 td.F90 run.F90 main.F90
 
 OBJS_1D = $(SRC_ALL:.F90=.o) $(SRC_1D:.F90=.o) 
 OBJS_3D = $(SRC_ALL:.F90=.o) $(SRC_3D:.F90=.o) 

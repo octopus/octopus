@@ -9,6 +9,7 @@ use system
 use hamiltonian
 use lcao
 use scf
+use static_pol
 use timedep
 use pulpo
 
@@ -16,6 +17,7 @@ implicit none
 
 type(system_type) :: sys
 type(hamiltonian_type) :: h
+type(scf_type) :: scfv
 integer :: calc_mode
 
 ! run stack
@@ -55,6 +57,9 @@ integer, private, parameter :: &
      I_SETUP_OCC_AN       = 26,  &
      I_END_OCC_AN         = 27,  &
 
+     I_START_POL          = 30,  &
+     I_POL_SCF            = 31,  &
+
      I_PULPO              = 99
 
 contains
@@ -62,7 +67,7 @@ contains
 subroutine run()
   type(td_type), pointer :: td
   R_TYPE, pointer :: aux_psi(:,:,:,:)
-  integer :: i, aux_i1, aux_i2
+  integer :: i, aux_i1, aux_i2, iunit
 
   sub_name = 'run'; call push_sub()
 
@@ -145,7 +150,9 @@ subroutine run()
       message(1) = 'Info: SCF using real wavefunctions.'
 #endif
       call write_info(1)
-      call scf_run(sys, h)
+      call scf_init(scfv, sys)
+      call scf_run(scfv, sys, h)
+      call scf_end(scfv)
 
     case(I_SETUP_TD)
       message(1) = 'Info: Setting up TD.'
@@ -213,6 +220,25 @@ subroutine run()
       call write_info(1)
 
       call td_run(td, sys, h)
+
+    case(I_START_POL)
+      ! just delete the pol file
+      message(1) = 'Info: Starting static polarizability calculation'
+      call write_info(1)
+
+      call io_assign(iunit)
+      open(iunit, file=trim(sys%sysname)//'.pol_restart', status='unknown')
+      write(iunit, '(a)') ' '
+      call io_close(iunit)
+        
+    case(I_POL_SCF)
+      message(1) = 'Info: Calculating static polarizability'
+      call write_info(1)
+
+      call scf_init(scfv, sys)
+      call static_pol_run(scfv, sys, h)
+      call scf_end(scfv)
+
     case(I_PULPO)
       call pulpo_print()
 
@@ -297,6 +323,19 @@ subroutine define_run_modes()
     instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
     instr = instr + 1; i_stack(instr) = I_LOAD_ZPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_TD    
+  case(M_START_STATIC_POL)
+    instr = instr + 1; i_stack(instr) = I_END_RPSI
+    instr = instr + 1; i_stack(instr) = I_POL_SCF
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+    instr = instr + 1; i_stack(instr) = I_START_POL
+  case(M_RESUME_STATIC_POL)
+    instr = instr + 1; i_stack(instr) = I_END_RPSI
+    instr = instr + 1; i_stack(instr) = I_POL_SCF
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
   case(M_PULPO_A_FEIRA)
     instr = instr + 1; i_stack(instr) = I_PULPO
   end select

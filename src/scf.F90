@@ -64,18 +64,16 @@ subroutine scf_end(scf)
   return
 end subroutine scf_end
 
-subroutine scf_run(sys, h)
+subroutine scf_run(scf, sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
-  
-  type(scf_type) :: scf
+  type(scf_type), intent(inout) :: scf
 
   integer :: iter, iunit, ik, ist, id
   real(r8) :: old_etot, diff(sys%st%nst, sys%st%nik)
   logical :: finish
 
   sub_name = 'scf_run'; call push_sub()
-  call scf_init(scf, sys)
 
   do iter = 1, scf%max_iter
     if(clean_stop()) exit
@@ -136,7 +134,6 @@ subroutine scf_run(sys, h)
   ! output final information
   call  scf_write_static()
 
-  call scf_end(scf)
   call pop_sub()
 
 contains
