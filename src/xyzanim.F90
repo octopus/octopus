@@ -17,14 +17,15 @@
 
 #include "config_F90.h"
 
-program nbo2xyz
+program xyzanim
   use global
   use liboct
   use atom
 
   implicit none
 
-  character(len=80) :: sysname, str, nbofile, xyzfile
+  character(len=80) :: str, nbofile, xyzfile
+  character(len=5000) :: line
   integer :: ierr, sampling, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
   real(r8) :: dump
 
@@ -32,16 +33,20 @@ program nbo2xyz
   type(atom_classical_type), pointer :: catm(:)
   type(specie_type), pointer :: spec(:)
 
+
   ! Initialize stuff
   call global_init()
   call units_init()
 
-  ! Gets the system name
-  call oct_parse_str('SystemName', 'system', sysname)
+  if(units_out%length%name .ne. 'Angstrom') then
+    message(1) = 'Output in atomic units. Set UnitsOutput="eVA" if you want it in angstroms'
+    call write_warning(1)
+  endif
+  if(conf%verbose<999) conf%verbose = -1
 
   ! Sets the filenames
-  write(nbofile, '(2a)') trim(sysname), '.nbo'
-  write(xyzfile, '(2a)') trim(sysname), '-movie.xyz'
+  write(nbofile, '(a)') 'td.general/coordinates'
+  write(xyzfile, '(a)') 'movie.xyz'
 
   ! how many do we have?
   str = C_string("Species")
@@ -56,9 +61,9 @@ program nbo2xyz
   allocate(spec(nspecies))
 
   ! how often do we sample?
-  call oct_parse_int(C_string('nbo2xyz-sampling'), 100, sampling)
-  if(conf%verbose < 1 .and. mpiv%node == 0) then
-    message(1) = 'Sampling rate (nbo2xyz-sampling) should be bigger than 0'
+  call oct_parse_int(C_string('AnimationSampling'), 100, sampling)
+  if(sampling < 1) then
+    message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)
   end if
 
@@ -92,7 +97,6 @@ program nbo2xyz
   enddo
 
   call io_close(nbo_unit); call io_close(xyz_unit)
-  stop
 
 contains
 
@@ -111,4 +115,4 @@ subroutine write_xyz
   return
 end subroutine write_xyz
 
-end program nbo2xyz
+end program xyzanim

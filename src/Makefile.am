@@ -1,5 +1,5 @@
 bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
-	excitations broad phonon-spectrum nbo2xyz \
+	excitations broad phonon-spectrum xyzanim \
 	choose_st
 
 EXTRA_PROGRAMS = octopus octopus-mpi \
@@ -54,8 +54,8 @@ hs_from_mult_SOURCES      = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 
 hs_from_mult_LDADD        = ../liboct/liboct.a @GSL_LIBS@
 hs_from_acc_SOURCES       = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
 hs_from_acc_LDADD         = ../liboct/liboct.a @GSL_LIBS@
-nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
-nbo2xyz_LDADD   = ../liboct/liboct.a @GSL_LIBS@
+xyzanim_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 xyzanim.F90
+xyzanim_LDADD   = ../liboct/liboct.a @GSL_LIBS@
 phonon_spectrum_SOURCES = global.F90 io.F90 liboct.F90 units.F90 phonon_spectrum.F90
 phonon_spectrum_LDADD = ../liboct/liboct.a @GSL_LIBS@
 excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
