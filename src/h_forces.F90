@@ -23,7 +23,7 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
   real(r8), intent(in), optional :: t
   logical, intent(in), optional :: reduce
 
-  integer :: i, j, l, m, add_lm, idim, ist, ik
+  integer :: i, j, l, m, add_lm, idim, ist, ik, ii, jj
   real(r8) :: d, r, x(3), zi, zj, vl, dvl
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
@@ -61,13 +61,17 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
             end if
 
             m_loop: do m = -l, l
-              uVpsi = sum(atm%uV(:, add_lm) * sys%st%occ(ist, ik)  * &
-                   sys%st%R_FUNC(psi)(atm%Jxyz(:), idim, ist, ik)) * &
-                   sys%m%vol_pp**2 * atm%uVu(add_lm)
-            
-              do j = 1, 3
-                p = sum(atm%duV(j, :, add_lm) * R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik)))
-                atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
+              do ii = 1, atm%spec%ps%kbc
+              do jj = 1, atm%spec%ps%kbc
+                 uVpsi = sum(atm%uV(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
+                         sys%st%R_FUNC(psi)(atm%Jxyz(:), idim, ist, ik)) * &
+                         sys%m%vol_pp**2 * atm%uVu(add_lm, ii, jj)
+
+                 do j = 1, 3
+                    p = sum(atm%duV(j, :, add_lm, jj) * R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik)))
+                   atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
+                 end do
+              end do
               end do
 
               add_lm = add_lm + 1

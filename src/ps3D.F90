@@ -19,6 +19,8 @@ use io
 use units
 use spline
 use kb
+use tm
+use hgh
 
 implicit none
 
@@ -26,70 +28,99 @@ private
 public :: ps_type, ps_init, ps_end
 
 type ps_type
-  type(spline_type), pointer :: kb(:)   ! Kleynman-Bylander projectors
-  type(spline_type), pointer :: dkb(:)  ! derivatives of KB projectors
+  character(len=3) :: flavour
+
+  type(spline_type), pointer :: kb(:, :)   ! Kleynman-Bylander projectors
+  type(spline_type), pointer :: dkb(:, :)  ! derivatives of KB projectors
   type(spline_type), pointer :: Ur(:)   ! atomic wavefunctions
-  type(spline_type), pointer :: vps(:)  ! pseudopotential
   type(spline_type) :: vlocal  ! local part
   type(spline_type) :: dvlocal ! derivative of the local part
   type(spline_type) :: core    ! core charge
 
+  integer  :: kbc  ! Number of KB components (1 for TM ps, 3 for HGH)
+  real(r8) :: z, z_val
   integer :: L_max ! maximum value of l to take
   integer :: L_loc ! which component to take as local
   character(len=4) :: icore
+  real(r8) :: rc(0:3)
+  real(r8), pointer :: kbr(:), eigen(:)
   real(r8) :: rc_max
   real(r8) :: vlocal_origin ! local pseudopotential at the orginin
 
   real(r8), pointer :: dkbcos(:), dknrm(:) ! KB cosinus and norm
+  real(r8), pointer :: h(:,:,:)
 end type ps_type
-
-type ps_file
-  character(len=2)  :: namatm, icorr
-  character(len=3)  :: irel
-  character(len=4) :: icore
-  character(len=10) :: method(6) 
-  character(len=70) :: title
-  integer :: npotd, npotu, nr
-  real(r8) :: b, a, zval
-  real(r8), pointer :: rofi(:), vps(:,:), chcore(:), rho_val(:)
-  integer :: nrval ! not in file, but very useful :)
-end type ps_file
 
 real(r8), parameter :: eps = 1.0e-8_r8
 contains
 
-subroutine ps_init(ps, label, z, lmax, lloc, zval)
+subroutine ps_init(ps, label, flavour, z, lmax, lloc, debug)
   type(ps_type), intent(inout) :: ps
-  character(len=*), intent(in) :: label
+  character(len=*), intent(in) :: label, flavour
   integer, intent(in) :: lmax, lloc
   real(r8), intent(in) :: z
-  real(r8), intent(out) :: zval ! this is inside th ps file
+  logical, intent(in) :: debug
 
-  integer :: i
+  type(ps_file)      :: psf ! In case Troullier-Martins ps are used.
+  type(ps_st_params) :: psp ! In case Hartwigsen-Goedecker-Hutter ps are used.
+
+  integer :: i, j
 
   sub_name = 'ps_init'; call push_sub()
 
-  ps%L_max = lmax
-  ps%L_loc = lloc
+! Sets the flavour
+  ps%flavour = trim(flavour)
 
-  !First we allocate all the stuff
-  allocate(ps%kb(0:ps%L_max), ps%dkb(0:ps%L_max), &
-       ps%Ur(0:ps%L_max), ps%vps(0:ps%L_max))
+! First of all we read the input files
+  select case(trim(flavour))
+  case('tm')
+    call ps_tm_read_file(psf, trim(label))
+    ps%kbc = 1
+  case('hgh')
+    call ps_ghg_read_file(psp, trim(label))
+    ps%kbc = 3
+  case default
+    message(1) = 'Unknown pseudopotential type: '//trim(flavour)
+    call write_fatal(1)
+  end select
 
+! Fixes the nuclear charge (which is probably useless)
+  ps%z = z
+
+! Fixes the maximum l to consider, and the local component
+  select case(trim(flavour))
+  case('tm')
+    ps%L_max = min(psf%npotd - 1, lmax)   ! Maybe the file has not enough components.
+    ps%l_loc = lloc
+  case('hgh')
+    ps%l_max = psp%l_max
+    ps%l_loc = -1
+  end select
+
+! We allocate all the stuff
+  allocate(ps%kb(0:ps%l_max, ps%kbc), ps%dkb(0:ps%l_max, ps%kbc))
+  allocate(ps%Ur(0:ps%L_max))
   do i = 0, ps%L_max
-    call spline_init(ps%kb(i))
-    call spline_init(ps%dkb(i))
-    call spline_init(ps%Ur(i))
-    call spline_init(ps%vps(i))
-  end do
+     do j = 1, ps%kbc
+        call spline_init(ps%kb(i, j))
+        call spline_init(ps%dkb(i, j))
+     enddo
+     call spline_init(ps%ur(i))
+  enddo
   call spline_init(ps%vlocal)
   call spline_init(ps%dvlocal)
   call spline_init(ps%core)
 
-  allocate(ps%dkbcos(0:ps%L_max), ps%dknrm(0:ps%L_max))
+  allocate(ps%dkbcos(0:ps%L_max), ps%dknrm(0:ps%L_max), ps%kbr(0:ps%l_max+1))
+  allocate(ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
 
-  ! now we load the necessary information from the ps file
-  call ps_load(ps, trim(label), z, zval)
+! Now we load the necessary information.
+  select case(trim(flavour))
+  case('tm')
+    call ps_tm_load(ps, psf, trim(label), debug)
+  case('hgh')
+    call ps_hgh_load(ps, psp, trim(label), debug)
+  end select
 
   call pop_sub()
 end subroutine ps_init
@@ -97,371 +128,205 @@ end subroutine ps_init
 subroutine ps_end(ps)
   type(ps_type), intent(inout) :: ps
 
-  integer :: i
+  integer :: i, j
 
   sub_name = 'ps_end'; call push_sub()
 
   if(.not. associated(ps%kb)) return
 
   do i = 0, ps%L_max
-    call spline_end(ps%kb(i))
-    call spline_end(ps%dkb(i))
-    call spline_end(ps%Ur(i))
-    call spline_end(ps%vps(i))
+     do j = 1, ps%kbc
+        call spline_end(ps%kb(i, j))
+        call spline_end(ps%dkb(i, j))
+     enddo
+     call spline_end(ps%Ur(i))
   end do
 
-  deallocate(ps%kb, ps%dkb, ps%Ur, ps%vps)
+  deallocate(ps%kb, ps%dkb, ps%Ur)
   
   call spline_end(ps%vlocal)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
 
-  deallocate(ps%dkbcos, ps%dknrm)
-  
+  deallocate(ps%dkbcos, ps%dknrm, ps%kbr)
+  deallocate(ps%h)
+
   call pop_sub()
 end subroutine ps_end
 
-subroutine ps_load(ps, filename, z, zval)
-  type(ps_type), intent(inout) :: ps
-  character(len=*), intent(in) :: filename
-  real(r8), intent(in) :: z
-  real(r8), intent(out) :: zval
+subroutine ps_hgh_load(ps, psp, filename, debug)
+  type(ps_type), intent(inout)      :: ps
+  type(ps_st_params), intent(inout) :: psp
+  character(len=*), intent(in)      :: filename
+  logical, intent(in)               :: debug
 
-  logical :: found
-  integer :: i, iunit
-  character(len=256) :: filename2
-  real(r8), allocatable :: rphi(:,:), eigen(:), rc(:)
-  type(ps_file) :: psf
+  integer  :: iunit, i, ir, l
+  logical  :: found
+  real(r8) :: ea, rpb
 
-  inquire(file=filename//'.vps', exist=found)
-  if(found) then
-    call io_assign(iunit)
-    open(iunit, file=filename//'.vps', form='unformatted', status='unknown')
+  sub_name = 'ps_hgh_load'; call push_sub()
 
-    message(1) = "Reading file '"//filename//'.vps'//"'"
-    call write_info(1)
-    call read_file_data_bin(iunit, psf, ps)
-    call io_close(iunit)
-  else
-    filename2 = filename//'.ascii'
-    inquire(file=filename2, exist=found)
-    if(.not.found) then
-      filename2 = SHARE_OCTOPUS//"/PP/TM2/"//filename//'.ascii'
-      print *, "file = ", filename2
-      inquire(file=filename2, exist=found)
-      if(.not.found) then
-        message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
-        call write_fatal(1)
-      end if
-    end if
+! Reads the cut-off radii used to generate the ps, in bohrs.
+  ps%rc = 0.0_r8
+  do i = 0, ps%l_max
+     ps%rc(i) = psp%rc(i)
+  enddo
 
-    call io_assign(iunit)
-    open(iunit, file=filename2, form='formatted', status='unknown')
+! Calculate logarithmic grid parameters.
+  psp%a = 1.25e-2_r8; psp%b = 4.0e-4_r8
+  psp%nrval = 1001
+  allocate(psp%s(psp%nrval), psp%drdi(psp%nrval), psp%rofi(psp%nrval))
+  rpb = psp%b; ea = exp(psp%a)
+  do ir = 1, psp%nrval
+    psp%drdi(ir) = psp%a*rpb
+    psp%s(ir) = sqrt(psp%a*rpb)
+    rpb = rpb*ea
+    psp%rofi(ir) = psp%b * ( exp( psp%a * (ir - 1) ) - 1.0_r8 ) 
+  end do
 
-    message(1) = "Reading file '"//filename2//"'"
-    call write_info(1)
+! Allocates psp variables
+  allocate(psp%vlocal(1:psp%nrval), psp%kb(1:psp%nrval, 0:ps%l_max, 1:3))
+  psp%vlocal = 0.0_r8; psp%kb = 0.0_r8
 
-    call read_file_data_ascii(iunit, psf, ps)
-    call io_close(iunit)
-  end if
-  
-  zval = psf%zval
+! Fixes some components of ps, read in psf
+  ps%z_val = psp%z_val
+  ps%icore = 'nc'
 
-  ! Writes down info to stdout.
-  call write_info_about_pseudo_1(stdout, psf, ps, z)
+! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
+! are obtained, but not the real ones!!!
+  allocate(psp%rphi(psp%nrval, 0:ps%l_max), psp%eigen(0:ps%l_max))
+  call solve_schroedinger_hgh(psp, ps%l_max)
+  allocate(ps%eigen(0:ps%l_max))
+  ps%eigen(0:ps%l_max) = psp%eigen(0:ps%l_max)
 
-  ! get the pseudoatomic eigenfunctions
-  allocate(rphi(psf%nrval,0:ps%L_max), eigen(0:ps%L_max))
-  call solve_shroedinger(psf, ps, rphi, eigen)
+! Fixes the local potential
+  psp%vlocal(1:psp%nrval) = vlocalr(psp%rofi, psp)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! And the projectors
+  do l = 0, ps%l_max
+     do i = 1, 3
+        psp%kb(1:psp%nrval, l, i) = projectorr(psp%rofi, psp, i, l)
+     enddo
+  enddo
+
 ! Define the KB-projector cut-off radii
+  call get_cutoff_radii_psp(psp, ps)
 
-  allocate(rc(0:ps%L_max + 1))
-  call get_cutoff_radii(psf, ps, rphi, rc)
-  call write_info_about_pseudo_3(stdout, ps, rc)
+! now we fit the splines
+  call get_splines_hgh(psp, ps)
 
-  ! now we fit the splines
-  call get_splines(psf, ps, rphi, rc)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Increase radius a little, just in case, and final info
   ps%rc_max = ps%rc_max * 1.1_r8
 
-  call write_info_about_pseudo_4(stdout, ps, eigen)
+! Defines the constant matrix.
+  ps%h = psp%h
 
-  deallocate(rc, rphi, eigen)
-  deallocate(psf%rofi, psf%vps, psf%chcore, psf%rho_val)
+! And outputs some nice info about it...
+  call write_pseudo_info_hgh(stdout, psp, ps)
+
+! Debugging?
+  if(debug) call hgh_debug(psp, filename)
+
+! Deallocation
+  deallocate(psp%rofi, psp%drdi, psp%s, psp%vlocal, psp%kb)
+
+  call pop_sub(); return
+end subroutine ps_hgh_load
+
+subroutine ps_tm_load(ps, psf, filename, debug)
+  type(ps_type), intent(inout) :: ps
+  type(ps_file), intent(inout) :: psf
+  character(len=*), intent(in) :: filename
+  logical, intent(in)          :: debug
+
+  integer :: i, ir, j, l, iunit
+  real(r8) :: ea, rpb
+
+  sub_name = 'ps_tm_load'; call push_sub()
+
+! Reads the cut-off radii used to generate the ps, in bohrs.
+  ps%rc = 0.0_r8; i = 1; l = 0
+  do while(index(psf%title(i:),'/') /= 0)
+    j = i
+    i = i + index(psf%title(i:),'/')
+    read(psf%title(j+12:i-2),*) ps%rc(l)
+    l = l + 1
+  enddo
+
+! calculate logarithmic grid parameters.
+  allocate(psf%s(psf%nrval), psf%drdi(psf%nrval))
+  rpb = psf%b; ea = exp(psf%a)
+  do ir = 1, psf%nrval
+    psf%drdi(ir) = psf%a*rpb
+    psf%s(ir) = sqrt(psf%a*rpb)
+    rpb = rpb*ea
+  end do
+
+! Fixes some components of ps, read in psf
+  ps%z_val = psf%zval
+  ps%icore = psf%icore
+
+! get the pseudoatomic eigenfunctions
+  allocate(psf%rphi(psf%nrval, 0:psf%npotd-1), psf%eigen(0:psf%npotd-1))
+  call solve_shroedinger(psf)
+  allocate(ps%eigen(0:ps%l_max))
+  ps%eigen(0:ps%l_max) = psf%eigen(0:ps%l_max)
+
+! Fixes the local potential
+  call get_local(psf, ps%l_loc, maxval(ps%rc) )
+
+! calculates kb cosines and norms
+  call calculate_kb_cosines(psf, ps)
+
+! Ghost analysis.
+  call ghost_analysis(psf, ps)
+
+! Define the KB-projector cut-off radii
+  call get_cutoff_radii_tm(psf, ps)
+
+! now we fit the splines
+  call get_splines_tm(psf, ps)
+
+! Increase radius a little, just in case, and final info
+  ps%rc_max = ps%rc_max * 1.1_r8
 
 ! FIX UNITS (Should FIX instead kb.F90)
 ! Passing from Rydbergs -> Hartree
   ps%vlocal_origin = ps%vlocal_origin / 2._r8
-
+  ps%eigen = ps%eigen / 2._r8
   ps%dkbcos = ps%dkbcos / 2._r8
   ps%dknrm  = ps%dknrm  * 2._r8
 
-  return
-end subroutine ps_load
+! Defines the constant matrix.
+  ps%h(0:ps%l_max, 1, 1) = ps%dkbcos(0:ps%l_max)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine read_file_data_bin(unit, psf, ps)
-  integer, intent(in) :: unit
+! And outputs some nice info about it...
+  call write_pseudo_info_tm(stdout, psf, ps)
+
+! Debugging?
+  if(debug) call psf_debug(psf, filename)
+
+! Deallocate stuff
+  deallocate(ps%eigen)
+  deallocate(psf%rofi, psf%vps, psf%chcore, psf%rho_val)
+
+  call pop_sub(); return
+end subroutine ps_tm_load
+
+subroutine calculate_kb_cosines(psf, ps)
   type(ps_file), intent(inout) :: psf
   type(ps_type), intent(inout) :: ps
-  
-  integer  :: ndown, nup, l, ir
-  real(r8) :: r2
 
-  ! Reads the header line of the file, with general info about the ps.
-  read(unit) psf%namatm, psf%icorr, psf%irel, psf%icore,     &
-       (psf%method(l),l=1,6), psf%title, psf%npotd, psf%npotu, &
-       psf%nr, psf%b, psf%a, psf%zval
-  
-  ! fix some stuff
-  ps%icore = psf%icore
-  ps%L_max = min(psf%npotd - 1, ps%L_max)
-  psf%nrval = psf%nr + mod((psf%nr + 1), 2) 
-  
-  ! Reads data file:
-  !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) )
-  !   vps(1:nrval,0:spec%ps_lmax) : pseudopotential functions
-  !   chcore(1:nrval) : core-correction charge distribution
-  !   rho_val(1:nrval) : pseudo-valence charge distribution.
-  
-  allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:ps%L_max), &
-       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
+  integer :: ir, l
+  real(r8) :: dnrm, avgv, vphi
 
-  read(unit) psf%rofi(2:psf%nrval)
-  psf%rofi(1) = 0.0_r8
+  sub_name = 'calculate_kb_cosines'; call push_sub()
 
-  do ndown = 1, ps%L_max + 1
-    read(unit) l, psf%vps(2:psf%nrval, l)
-    if(l /= ndown-1 .and. conf%verbose > 0) then
-      message(1) = 'Unexpected angular momentum'
-      message(2) = 'Pseudopotential should be ordered by increasing l'
-      call write_warning(2)
-    end if
-    psf%vps(2:psf%nrval,l) = psf%vps(2:psf%nrval,l)/psf%rofi(2:psf%nrval)
-    psf%vps(1,l) = psf%vps(2,l)
-  end do
-
-  if(ps%L_max + 2 <= psf%npotd)then
-    do ndown = ps%L_max + 2, psf%npotd
-      read(unit) l
-    end do
-  end if
-
-  do nup = 1, psf%npotu
-    read(unit) l
-  end do
-
-  ! read the core correction charge density
-  r2 = psf%rofi(2)/(psf%rofi(3) - psf%rofi(2))
-  read(unit) (psf%chcore(ir), ir = 2, psf%nrval)
-  psf%chcore(1) = psf%chcore(2) - (psf%chcore(3) - psf%chcore(2))*r2
-
-  ! read the pseudo-valence charge density
-  read(unit) (psf%rho_val(ir), ir = 2, psf%nrval)
-  psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
-
-  ! adjust units from Rydbergs -> Hartree
-  ! psf%vps = psf%vps / 2._r8
-
-  return
-end subroutine read_file_data_bin
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine read_file_data_ascii(unit, psf, ps)
-  integer, intent(in) :: unit
-  type(ps_file), intent(inout) :: psf
-  type(ps_type), intent(inout) :: ps
-  
-  integer  :: ndown, nup, i, l, ir
-  real(r8) :: r2
-  real(r8), allocatable :: aux(:)
-  character(len=70) :: aux_s
-
-  ! Reads the header line of the file, with general info about the ps.
-  read(unit, 9000) psf%namatm, psf%icorr, psf%irel, psf%icore
-  read(unit, 9010) (psf%method(l),l=1,6), psf%title
-  read(unit, 9015) psf%npotd, psf%npotu, psf%nr, psf%b, psf%a, psf%zval
-
-9000 format(1x,a2,1x,a2,1x,a3,1x,a4)
-9010 format(1x,6a10,/,1x,a70)
-9015 format(1x,2i3,i5,3f20.10)
-  
-  ! fix some stuff
-  ps%icore = psf%icore
-  ps%L_max = min(psf%npotd - 1, ps%L_max)
-  psf%nrval = psf%nr + mod((psf%nr + 1), 2)
-  allocate(aux(psf%nr))
-  
-  ! Reads data file:
-  !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) )
-  !   vps(1:nrval,0:spec%ps_lmax) : pseudopotential functions
-  !   chcore(1:nrval) : core-correction charge distribution
-  !   rho_val(1:nrval) : pseudo-valence charge distribution.
-  
-  allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:ps%L_max), &
-       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
-
-  read(unit, 9040) aux_s
-  read(unit, 9030) (aux(i),i=1, psf%nr)
-  psf%rofi(2:psf%nrval) = aux(1:psf%nr)
-  psf%rofi(1) = 0.0_r8
-
-8000 format(1x,i2)
-9030 format(4(g20.12))
-9040 format(1x,a)
-
-  do ndown = 1, ps%L_max + 1
-    read(unit, 9040) aux_s
-    read(unit, 8000) l
-    read(unit, 9030) (aux(i),i=1, psf%nr)
-    if(l /= ndown-1 .and. conf%verbose > 0) then
-      message(1) = 'Unexpected angular momentum'
-      message(2) = 'Pseudopotential should be ordered by increasing l'
-      call write_warning(2)
-    end if
-    psf%vps(2:psf%nrval, l) = aux(1:psf%nr)/psf%rofi(2:psf%nrval)
-    psf%vps(1, l) = psf%vps(2, l)
-  end do
-
-  if(ps%L_max + 2 <= psf%npotd)then
-    do ndown = ps%L_max + 2, psf%npotd
-      read(unit, 9040) aux_s
-      read(unit, 8000) l
-      read(unit, 9030) (aux(i),i=1, psf%nr)
-    end do
-  end if
-
-  do nup = 1, psf%npotu
-    read(unit, 9040) aux_s
-    read(unit, 8000) l
-    read(unit, 9030) (aux(i),i=1, psf%nr)
-  end do
-
-  ! read the core correction charge density
-  r2 = psf%rofi(2)/(psf%rofi(3) - psf%rofi(2))
-  read(unit, 9040) aux_s
-  read(unit, 9030) (aux(i),i=1, psf%nr)
-  psf%chcore(2:psf%nrval) = aux(1:psf%nr)
-  psf%chcore(1) = psf%chcore(2) - (psf%chcore(3) - psf%chcore(2))*r2
-
-  ! read the pseudo-valence charge density
-  read(unit, 9040) aux_s
-  read(unit, 9030) (aux(i),i=1, psf%nr)
-  psf%rho_val(2:psf%nrval) = aux(1:psf%nr)
-  psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
-
-  ! adjust units from Rydbergs -> Hartree
-  ! psf%vps = psf%vps / 2._r8
-
-  return
-end subroutine read_file_data_ascii
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine solve_shroedinger(psf, ps, rphi, eigen)
-  type(ps_file), intent(inout) :: psf
-  type(ps_type), intent(inout) :: ps
-  real(r8), intent(out) :: rphi(psf%nrval,0:ps%L_max), eigen(0:ps%L_max)
-
-  integer :: ir, l, nnode, nprin
-  real(r8) :: rpb, ea, vtot, r2, e, z, dr, rmax, f, dsq, a2b4, &
-       dnrm, avgv, vphi
-  real(r8), allocatable :: s(:), drdi(:), ve(:), hato(:), g(:), y(:), rc(:)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! calculate parameters for solving Schroedinger equation
-
-  allocate(s(psf%nrval), drdi(psf%nrval), ve(psf%nrval), hato(psf%nrval))
-  rpb = psf%b; ea = exp(psf%a)
-  do ir = 1, psf%nrval
-    drdi(ir) = psf%a*rpb
-    s(ir) = sqrt(psf%a*rpb)
-    rpb = rpb*ea
-  end do
-  
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-!  ionic pseudopotential if core-correction for hartree
-  
-  if((ps%icore == 'pche').or.(ps%icore == 'fche')) then
-    call vhrtre(psf%chcore, ve, psf%rofi, drdi, s, psf%nrval, psf%a)
-!    ve = ve / 2._r8 ! Rydberg -> Hartree conversion
-    do l = 0, ps%L_max
-      psf%vps(2:psf%nrval, l) = psf%vps(2:psf%nrval, l) + ve(2:psf%nrval)
-    end do
-    psf%vps(1, l) = psf%vps(2, l)
-  end if
-   
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Calculation of the valence screening potential from the density:
-!       ve(1:nrval) is the hartree+xc potential created by the pseudo -
-!               valence charge distribution.
-
-  call calculate_valence_screening(psf, ps, drdi, s, ve)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Check at which radius the asymptotic 2*Zval/r is achieved
-!       rc(l) (l=0,spec%ps_lmax, l .ne. spec%ps_lloc) is the radius at which
-!               the l-component differ from the one chosen as local.
-!       rc(ps%L_loc) is the radius at which this potential differs from its
-!               asymptotic behaviour.
-!       rc(ps%rc_max) is the maximum value of all the "nonlocal" rc(l)
-
-  allocate(rc(0:ps%L_max))
-  call get_asymptotic_radii(psf, ps, rc)
-  call write_info_about_pseudo_2(stdout, ps, rc)
-  deallocate(rc)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Calculation of the pseudo-wave functions.
-!       rhpi(1:nrval,0:spec%ps_lmax) : pseudo-wave functions.
-!       eigen(0:spec%ps_lmax)        : eigenvalues.
-
-  s(2:psf%nrval) = drdi(2:psf%nrval)*drdi(2:psf%nrval)
-  s(1) = s(2)
-  a2b4 = 0.25_r8*psf%a**2
-  allocate(g(psf%nrval), y(psf%nrval))
-  g = 0.0_r8;  y = 0.0_r8
-
-  do l = 0, ps%L_max
-    do ir = 2, psf%nrval
-      vtot = psf%vps(ir, l) + ve(ir) + dble(l*(l + 1))/(psf%rofi(ir)**2)
-      hato(ir) = vtot*s(ir) + a2b4
-    end do
-    hato(1) = hato(2)
-    
-    nnode = 1; nprin = l + 1
-    e = -((psf%zval/dble(nprin))**2); z = psf%zval
-    dr = -1.0e5_r8; rmax = psf%rofi(psf%nrval)
-    call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
-    eigen(l) = e
-
-    rphi(2:psf%nrval, l) = g(2:psf%nrval) * sqrt(drdi(2:psf%nrval))
-    rphi(1, l) = rphi(2, l)
-  end do
-  deallocate(g, y)
-
-  !  checking normalization of the calculated wave functions
-  do l = 0, ps%L_max
-    e = sqrt(sum(drdi(2:psf%nrval)*rphi(2:psf%nrval, l)**2))
-    e = abs(e - 1.0d0)
-           
-    if (e > 1.0d-5 .and. conf%verbose > 0) then
-      write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
-      write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
-      call write_warning(2)
-    end if
-  end do
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! KB-cosines and KB-norms:
 !       dkbcos(0:spec%ps_lmax) stores the KB "cosines:"
-!               || (v_l - v_local) phi_l ||^2 / < (v_l - v_local)phi_l | phi_l > 
+!               || (v_l - v_local) phi_l ||^2 / < (v_l - v_local)phi_l | phi_l >  [Rydberg]
 !       dknrm(0:spec%ps_lmax) stores the KB "norms:"
-!               1 / || (v_l - v_local) phi_l ||
-
+!               1 / || (v_l - v_local) phi_l || [1/Rydberg]
   do l = 0, ps%L_max
     if(l == ps%L_loc) then
       ps%dkbcos(l) = 0.0_r8; ps%dknrm(l) = 0.0_r8
@@ -470,142 +335,41 @@ subroutine solve_shroedinger(psf, ps, rphi, eigen)
     dnrm = 0.0_r8
     avgv = 0.0_r8
     do ir = 2, psf%nrval
-      vphi = (psf%vps(ir, l) - psf%vps(ir, ps%L_loc))*rphi(ir, l)
-      dnrm = dnrm + vphi*vphi*drdi(ir)
-      avgv = avgv + vphi*rphi(ir, l)*drdi(ir)
+      vphi = (psf%vps(ir, l) - psf%vlocal(ir))*psf%rphi(ir, l)
+      dnrm = dnrm + vphi*vphi*psf%drdi(ir)
+      avgv = avgv + vphi*psf%rphi(ir, l)*psf%drdi(ir)
     end do
     ps%dkbcos(l) = dnrm/(avgv + 1.0e-20_r8)
     ps%dknrm(l) = 1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
   end do
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Ghost analysis.
+  call pop_sub; return
+end subroutine calculate_kb_cosines
 
-  call ghost_analysis(psf, ps, ve, s, eigen)
-
-  deallocate(s, drdi, ve, hato)
-  return
-end subroutine solve_shroedinger
-
-subroutine calculate_valence_screening(psf, ps, drdi, s, ve)
-  type(ps_file), intent(in) :: psf
-  type(ps_type), intent(in) :: ps
-  real(r8), intent(IN)  :: drdi(psf%nrval), s(psf%nrval)
-  real(r8), intent(out) :: ve(psf%nrval)
-
-  character(len=5) :: xcfunc, xcauth
-  integer          :: irelt
-  real(r8)         :: e_x, e_c, dx, dc, r2
-  real(r8), allocatable :: v_xc(:,:), auxrho(:)
-
-  ve = 0.0_r8
-  call vhrtre(psf%rho_val, ve, psf%rofi, drdi, s, psf%nrval, psf%a)
-!  ve = ve/2._r8 ! Rydberg -> Hartree
-
-  ! Set the xc functional
-  select case(psf%icorr)
-  case('ca') 
-     xcfunc = 'LDA'
-     xcauth = 'PZ'
-  case('pw') 
-     xcfunc = 'LDA'
-     xcauth = 'PW92'
-  case('pb') 
-     xcfunc = 'GGA'
-     xcauth = 'PBE'
-  end select
-  
-  if(psf%irel == 'rel') irelt=1
-  if(psf%irel /= 'rel') irelt=0
-
-  allocate(v_xc(psf%nrval, 1), auxrho(psf%nrval))
-  auxrho = psf%rho_val
-  if(ps%icore /= 'nc  ')  auxrho = auxrho + psf%chcore
-  auxrho(2:psf%nrval) = auxrho(2:psf%nrval)/(4.0_r8*M_PI*psf%rofi(2:psf%nrval)**2)
-
-  r2 = psf%rofi(2)/(psf%rofi(3)-psf%rofi(2))
-  auxrho(1) = auxrho(2) - (auxrho(3)-auxrho(2))*r2
-  call atomxc(xcfunc, xcauth, irelt, psf%nrval, psf%nrval, psf%rofi, &
-       1, auxrho, e_x, e_c, dx, dc, v_xc)
-  
-  ve(1:psf%nrval) = ve(1:psf%nrval) + v_xc(1:psf%nrval, 1)
-  deallocate(v_xc, auxrho)
-
-  return
-end subroutine calculate_valence_screening
-
-subroutine get_asymptotic_radii(psf, ps, rc)
-  type(ps_file), intent(in) :: psf
-  type(ps_type), intent(IN) :: ps
-  real(r8), intent(out) :: rc(0:ps%L_max)
-
-  integer             :: l, ir
-  real(r8)            :: dincv
-
-  do l = 0, ps%L_max
-    do ir = psf%nrval, 2, -1
-      if(l == ps%L_loc) then
-        dincv = abs(psf%vps(ir, l)*psf%rofi(ir) + 2.0_r8*psf%zval)
-      else
-        dincv = abs(psf%vps(ir, l) - psf%vps(ir, ps%L_loc))
-      endif
-      if(dincv > eps) exit
-    end do
-    rc(l) = psf%rofi(ir+1)
-  end do
-
-  return
-end subroutine get_asymptotic_radii
-
-subroutine get_cutoff_radii(psf, ps, rphi, rc)
-  type(ps_file), intent(in) :: psf
+subroutine ghost_analysis(psf, ps)
+  type(ps_file), intent(inout) :: psf
   type(ps_type), intent(inout) :: ps
-  real(r8), intent(IN)  :: rphi(psf%nrval, 0:ps%L_max)
-  real(r8), intent(out) :: rc(0:ps%L_max)
 
-  integer             :: l, ir
-  real(r8)            :: dincv, phi
-
-  ! local part ....
-  do ir = psf%nrval, 2, -1
-    dincv = abs(psf%vps(ir, ps%L_loc)*psf%rofi(ir) + 2.0_r8*psf%zval)
-    if(dincv > eps) exit
-  end do
-  rc(ps%L_max + 1) = psf%rofi(ir + 1)
-  
-  ! non-local part....
-  ps%rc_max = 0.0d0
-  do l = 0, ps%L_max
-    if(l == ps%L_loc) then
-      rc(l) = 0.0_r8
-      cycle
-    endif
-    do ir = psf%nrval, 2, -1
-      phi = (rphi(ir, l)/psf%rofi(ir))*ps%dknrm(l)
-      dincv = abs(psf%vps(ir, l) - psf%vps(ir, ps%L_loc))*phi
-      if(dincv > eps) exit
-    enddo
-    rc(l) = psf%rofi(ir + 1)
-    ps%rc_max = max(ps%rc_max, rc(l))
-  end do
-end subroutine get_cutoff_radii
-
-subroutine ghost_analysis(psf, ps, ve, s, eigen)
-  type(ps_file), intent(in) :: psf
-  type(ps_type), intent(in) :: ps
-  real(r8), intent(in) :: ve(psf%nrval), s(psf%nrval), eigen(0:ps%L_max)
-
-  integer  :: ir, l, nprin, nnode, ighost
+  integer :: ir, l, nnode, nprin, ighost
   real(r8) :: vtot, a2b4, z, e, dr, rmax, dnrm, avgv
-  real(r8), allocatable :: hato(:), g(:), y(:), elocal(:,:)
+  real(r8), allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
 
-  allocate(hato(psf%nrval), g(psf%nrval), y(psf%nrval), elocal(2, 0:ps%L_max))
+  sub_name = 'ghost_analysis'; call push_sub()
 
+  allocate(ve(psf%nrval), s(psf%nrval), hato(psf%nrval), g(psf%nrval), y(psf%nrval), elocal(2, 0:ps%L_max))
+! Calculation of the valence screening potential from the density:
+!       ve(1:nrval) is the hartree+xc potential created by the pseudo -
+!               valence charge distribution (everything in Rydberts, and bohrs)
+  call calculate_valence_screening(psf, psf%drdi, psf%s, ve)
+
+  s(2:psf%nrval) = psf%drdi(2:psf%nrval)**2
+  s(1) = s(2)
   ! calculate eigenvalues of the local potential for ghost analysis
   a2b4 = 0.25_r8*psf%a**2
   do l = 0, ps%L_max
     do ir = 2, psf%nrval
-      vtot = psf%vps(ir, ps%L_loc) + ve(ir) + dble(l*(l+1))/(psf%rofi(ir)**2)
+      !vtot = psf%vps(ir, ps%L_loc) + ve(ir) + dble(l*(l+1))/(psf%rofi(ir)**2)
+      vtot = psf%vlocal(ir) + ve(ir) + dble(l*(l+1))/(psf%rofi(ir)**2)
       hato(ir) = vtot*s(ir) + a2b4
     end do
     hato(1) = hato(2)
@@ -620,15 +384,15 @@ subroutine ghost_analysis(psf, ps, ve, s, eigen)
     end do
   end do
 
-!  calculate KB-cosines and ghost analysis
+! Ghost analysis
   do l = 0, ps%L_max
     ighost = -1
     if(ps%dkbcos(l) > 0.0d0) then
-      if(eigen(l) > elocal(2, l)) then
+      if(psf%eigen(l) > elocal(2, l)) then
         ighost = 1
       end if
     else if(ps%dkbcos(l) < 0d0) then
-      if(eigen(l) > elocal(1, l)) then
+      if(psf%eigen(l) > elocal(1, l)) then
         ighost = 1
       end if
     end if
@@ -638,96 +402,178 @@ subroutine ghost_analysis(psf, ps, ve, s, eigen)
     endif
   end do
 
-  deallocate(hato, g, y, elocal)
+  deallocate(hato, g, y, elocal, s, ve)
 
-  return
+  call pop_sub; return
 end subroutine ghost_analysis
 
-subroutine get_splines(psf, ps, rphi, rc)
+subroutine get_local(psf, l_loc, rcore)
+  type(ps_file), intent(inout) :: psf
+  integer, intent(in)          :: l_loc
+  real(r8), intent(in)         :: rcore
+
+  integer :: ir
+  real(r8) :: a, b, qtot
+  real(r8), allocatable :: rho(:)
+
+  sub_name = 'get_local'; call push_sub()
+
+  b = 1.0_r8
+
+  a = 1.82_r8 / rcore
+
+  allocate(psf%vlocal(psf%nrval), rho(psf%nrval))
+  if(l_loc >= 0) then
+    psf%vlocal(1:psf%nrval) = psf%vps(1:psf%nrval, l_loc)
+  elseif(l_loc == -1) then
+    write(*,*) 'Vanderbilt function local potential'
+    do ir = 1, psf%nrval
+       rho(ir) = exp( -( sinh(a*b*psf%rofi(ir)) / sinh(b) )**2 )
+       rho(ir) = 4.0_r8 * M_Pi * rho(ir) * psf%rofi(ir)**2
+    enddo
+    qtot = sum(rho(2:psf%nrval)*psf%drdi(2:psf%nrval))
+    rho(:) = rho(:)*(psf%zval/qtot)
+    call vhrtre(-rho, psf%vlocal, psf%rofi, psf%drdi, psf%s, psf%nrval, psf%a)
+    psf%vlocal(1) = psf%vlocal(2)
+  else
+  endif
+
+  deallocate(rho)
+  call pop_sub(); return
+end subroutine get_local
+
+subroutine get_cutoff_radii_psp(psp, ps)
+  type(ps_st_params), intent(in) :: psp
+  type(ps_type), intent(inout)   :: ps
+
+  integer  :: ir, l, i
+  real(r8) :: dincv, tmp
+
+  sub_name = 'get_cutoff_radii_psp'; call push_sub()
+
+  ! local part ....
+  ps%kbr(0:ps%l_max + 1) = 0.0_r8
+  do ir = psp%nrval, 2, -1
+    dincv = abs(psp%vlocal(ir)*psp%rofi(ir) + psp%z_val)
+    if(dincv > eps) exit
+  end do
+  ps%kbr(ps%L_max + 1) = psp%rofi(ir + 1)
+
+  ! non-local part....
+  ps%rc_max = 0.0d0
+  do l = 0, ps%L_max
+    tmp = 0.0_r8
+    do i = 1, 3
+       do ir = psp%nrval, 2, -1
+          dincv = abs(psp%kb(ir, l, i))
+          if(dincv > eps) exit
+       enddo
+       tmp = psp%rofi(ir + 1)
+       ps%kbr(l) = max(tmp, ps%kbr(l))
+    enddo
+    ps%rc_max = max(ps%rc_max, ps%kbr(l))
+  end do
+
+  call pop_sub(); return
+end subroutine get_cutoff_radii_psp
+
+subroutine get_cutoff_radii_tm(psf, ps)
   type(ps_file), intent(in) :: psf
   type(ps_type), intent(inout) :: ps
-  real(r8), intent(in) :: rphi(psf%nrval, 0:ps%L_max), rc(0:ps%L_max)
+
+  integer             :: l, ir
+  real(r8)            :: dincv, phi
+
+  sub_name = 'get_cutoff_radii_tm'; call push_sub()
+
+  ! local part ....
+  do ir = psf%nrval, 2, -1
+    dincv = abs(psf%vlocal(ir)*psf%rofi(ir) + 2.0_r8*psf%zval)
+    if(dincv > eps) exit
+  end do
+  ps%kbr(ps%L_max + 1) = psf%rofi(ir + 1)
+  
+  ! non-local part....
+  ps%rc_max = 0.0d0
+  do l = 0, ps%L_max
+    if(l == ps%L_loc) then
+      ps%kbr(l) = 0.0_r8
+      cycle
+    endif
+    do ir = psf%nrval, 2, -1
+      phi = (psf%rphi(ir, l)/psf%rofi(ir))*ps%dknrm(l)
+      dincv = abs((psf%vps(ir, l) - psf%vlocal(ir))*phi)
+      if(dincv > eps) exit
+    enddo
+    ps%kbr(l) = psf%rofi(ir + 1)
+    ps%rc_max = max(ps%rc_max, ps%kbr(l))
+  end do
+
+  call pop_sub(); return
+end subroutine get_cutoff_radii_tm
+
+subroutine get_splines_tm(psf, ps)
+  type(ps_file), intent(in) :: psf
+  type(ps_type), intent(inout) :: ps
   
   integer :: l, nrc, ir, nrcore
   real(r8) :: chc
   real(r8), allocatable :: hato(:), derhato(:)
 
-  allocate(hato(psf%nrval), derhato(psf%nrval))
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
-! Interpolate the KB-projection functions
+  sub_name = 'get_splines_tm'; call push_sub()
 
+  allocate(hato(psf%nrval), derhato(psf%nrval))
+
+! Interpolate the KB-projection functions
   do l = 0, ps%l_max
     if(l == ps%L_loc) cycle
 
     hato = 0.0d0
-    nrc = nint(log(rc(l)/psf%b + 1.0_r8)/psf%a) + 1
-    hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vps(2:nrc, ps%L_loc))*rphi(2:nrc, l) &
-         *ps%dknrm(l)/psf%rofi(2:nrc)**(l+1)
+    nrc = nint(log(ps%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
+    hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l) * ps%dknrm(l) / psf%rofi(2:nrc)
     hato(1) = hato(2)    
-    call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l))
+    call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
 
 ! and now the derivatives...
     call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
-    call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l))
+    call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
   end do
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Now the part corresponding to the local and non-local pseudopotential
+! Now the part corresponding to the local pseudopotential
 ! where the asymptotic part is substracted 
-
 !...local part...
   hato = 0.0_r8
-  nrc = nint(log(rc(ps%L_max + 1)/psf%b + 1.0_r8)/psf%a) + 1
+  nrc = nint(log(ps%kbr(ps%L_max + 1)/psf%b + 1.0_r8)/psf%a) + 1
 
-  hato(2:psf%nrval) = psf%vps(2:psf%nrval, ps%L_loc)*psf%rofi(2:psf%nrval) + 2.0_r8*psf%zval
+  hato(2:psf%nrval) = psf%vlocal(2:psf%nrval)*psf%rofi(2:psf%nrval) + 2.0_r8*psf%zval
   hato(1) = 2.0_r8*psf%zval
   
   ! WARNING: Rydbergs -> Hartrees
   hato = hato / 2._r8
   call spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
-  ps%vlocal_origin = psf%vps(1, ps%L_loc)
+  ps%vlocal_origin = psf%vlocal(1)
 
-! and the derivative now
+  ! and the derivative now
   call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
   call spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
 
-! and the non-local parts
-  do l = 0 , ps%L_max
-    if(l == ps%L_loc) cycle
-
-    hato = 0._r8
-    nrc=nint(log(rc(l)/psf%b + 1.0_r8)/psf%a) + 1
-    hato(2:psf%nrval) = (psf%vps(2:psf%nrval, l) - psf%vps(2:psf%nrval, ps%L_loc))*&
-         psf%rofi(2:psf%nrval)
-    hato(1) = 0.0_r8
-    
-    ! WARNING: Rydbergs -> Hartrees
-    hato = hato / 2._r8
-    call spline_fit(psf%nrval, psf%rofi, hato, ps%vps(l))
-  end do
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Define the table for the pseudo-wavefunction components (using splines)
 ! with a correct normalization function
-
   do l = 0 , ps%L_max
-    nrc = nint(log(rc(l)/psf%b + 1.0_r8)/psf%a) + 1
+    nrc = nint(log(ps%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
     do ir = nrc+ 2, psf%nrval-2
-      if ( abs(rphi(ir,l)/psf%rofi(ir)**(l+1)) < eps ) exit
+      if ( abs(psf%rphi(ir,l)/psf%rofi(ir)**(l+1)) < eps ) exit
     enddo
     nrc = ir + 1
 
     hato = 0.0_r8
-    hato(2:nrc) = rphi(2:nrc, l)/psf%rofi(2:nrc)**(l + 1)
+    hato(2:nrc) = psf%rphi(2:nrc, l)/psf%rofi(2:nrc)**(l + 1)
     hato(1) = hato(2)
 
     call spline_fit(psf%nrval, psf%rofi, hato, ps%Ur(l))
   end do
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  pseudo-core radius and Table with the pseudo-core data
-
   if(ps%icore /= 'nc  ') then
     nrcore = 0
     do ir = psf%nrval, 2, -1
@@ -745,123 +591,158 @@ subroutine get_splines(psf, ps, rphi, rc)
     call spline_fit(psf%nrval, psf%rofi, hato, ps%core)
   end if
 
-end subroutine get_splines
+  deallocate(hato, derhato)
 
-!---------------------------- Output ------------------------------------
-subroutine write_info_about_pseudo_1(unit, psf, ps, z)
-  integer, intent(in) :: unit
+  call pop_sub(); return
+end subroutine get_splines_tm
+
+subroutine get_splines_hgh(psp, ps)
+  type(ps_st_params), intent(in) :: psp
+  type(ps_type), intent(inout) :: ps
+
+  integer :: l, nrc, ir, nrcore, j
+  real(r8) :: chc
+  real(r8), allocatable :: hato(:), derhato(:)
+
+  sub_name = 'get_splines_hgh'; call push_sub()
+
+  allocate(hato(psp%nrval), derhato(psp%nrval))
+
+! Interpolate the KB-projection functions
+  do l = 0, ps%l_max
+  do j = 1, 3
+    hato = 0.0_r8
+    nrc = nint(log(ps%kbr(l)/psp%b + 1.0_r8)/psp%a) + 1
+    hato(1:nrc) = psp%kb(1:nrc, l, j)
+    call spline_fit(psp%nrval, psp%rofi, hato, ps%kb(l, j))
+    ! and now the derivatives...
+    call derivate_in_log_grid(psp%a, psp%b, psp%nrval, hato, derhato)
+    call spline_fit(psp%nrval, psp%rofi, derhato, ps%dkb(l, j))
+  end do
+  end do
+
+! Now the part corresponding to the local pseudopotential
+! where the asymptotic part is substracted 
+!...local part...
+  hato = 0.0_r8
+  nrc = nint(log(ps%kbr(ps%L_max + 1)/psp%b + 1.0_r8)/psp%a) + 1
+
+  hato(2:psp%nrval) = psp%vlocal(2:psp%nrval)*psp%rofi(2:psp%nrval) + psp%z_val
+  hato(1) = psp%z_val
+  
+  call spline_fit(psp%nrval, psp%rofi, hato, ps%vlocal)
+  ps%vlocal_origin = psp%vlocal(1)
+
+  ! and the derivative now
+  call derivate_in_log_grid(psp%a, psp%b, psp%nrval, hato, derhato)
+  call spline_fit(psp%nrval, psp%rofi, derhato, ps%dvlocal)
+
+! Define the table for the pseudo-wavefunction components (using splines)
+! with a correct normalization function
+  do l = 0 , ps%L_max
+    nrc = nint(log(ps%kbr(l)/psp%b + 1.0_r8)/psp%a) + 1
+    do ir = nrc+ 2, psp%nrval-2
+      if ( abs(psp%rphi(ir,l)/psp%rofi(ir)**(l+1)) < eps ) exit
+    enddo
+    nrc = ir + 1
+
+    hato = 0.0_r8
+    hato(2:nrc) = psp%rphi(2:nrc, l)/psp%rofi(2:nrc)**(l + 1)
+    hato(1) = hato(2)
+
+    call spline_fit(psp%nrval, psp%rofi, hato, ps%Ur(l))
+  end do
+
+  call pop_sub(); return
+end subroutine get_splines_hgh
+
+! Output
+subroutine write_pseudo_info_tm(unit, psf, ps)
+  integer, intent(in)       :: unit
   type(ps_file), intent(in) :: psf
   type(ps_type), intent(in) :: ps
-  real(r8), intent(in) :: z
-  
-  integer :: i, j
-  
+
+  integer :: l, i, j, k
+
   write(message(1),'(a)') ''
   write(message(2),'(a,a,a)')  '**********   Pseudopotential Information for: ', psf%namatm,'   **********'
-  write(message(3),'(a,f8.3)') 'Z: ', z
-  write(message(4),'(a,f7.3)')   'Valence charge: ', psf%zval
-  write(message(5),'(a,i2)')   'Maximum L-component to consider: ', ps%L_max
-  write(message(6),'(a,i2)')   'Maximum L-component in file: ', psf%npotd - 1
-  write(message(7),'(a,i2)')   'L-component considered as local: ', ps%L_loc
-  write(message(8),'(a,a2)')   'Exchange/correlation used in generation: ', psf%icorr
-  call write_info(8, unit)
-  
-  if(conf%verbose >= 999) then
-    message(1) = '             Options:'
-    message(2) = '               "ca" : Ceperley-Alder (LDA)'
-    message(3) = '               "wi  : Wigner (LDA)'
-    message(4) = '               "hl" : Hedin-Lundqvist (LDA)'
-    message(5) = '               "gl" : Gunnarson-Lundqvist (LDA)'
-    message(6) = '               "pb" : Perdew, Burke and Ernzerhof (GGA)'
-    message(7) = '               "pw" : PW92 (GGA)'
-    call write_info(7, unit)
-  endif
-  write(message(1),'(a,a3)')   'Relativistic character of calculations: ', psf%irel
-  call write_info(1, unit)
-  if(conf%verbose >= 999) then
-    message(1) = '             Options:'
-    message(2) = '               "rel" : Relativistic calculations.'
-    message(3) = '               "isp" : Spin polarized calculations'
-    message(4) = '               other : Non relativistic, non spin-polarized.'
-    call write_info(4, unit)
-  endif
-  write(message(1),'(a,a4)')   'Type of core corrections: ', ps%icore
-  call write_info(1, unit)
-  if(conf%verbose >= 999) then
-    message(1) = '             Options:'
-    message(2) = '               "pcec" : Partial core, xc.'
-    message(3) = '               "pche" : Partial core, h+xc.'
-    message(4) = '               "fcec" : Full core, xc.'
-    message(5) = '               "fche" : Full core, h+xc.'
-    message(6) = '               "nc"   : No core correction.'
-    call write_info(6, unit)
-  endif
-  message(1) = 'Valence configuration in calculations:   '
-  message(2) = ' (orbital - occupancy - core radius)'
-  call write_info(2, unit)
-  i = 1
+  write(message(3),'(a)')      '**********   FLAVOUR: TROULLIER-MARTINS.'
+  write(message(4),'(a,f10.4)')'Z    : ', ps%z
+  write(message(5),'(a,f10.4)')'Z_val: ', ps%z_val
+  write(message(6),'(a,a2)')   'Exchange/correlation used in generation: ', psf%icorr
+  write(message(7),'(a,a3)')   'Relativistic character of calculations: ', psf%irel
+  write(message(8),'(a,a4)')   'Type of core corrections: ', ps%icore
+  write(message(9),'(a, 6a10)')'Signature of pseudopotential: ', (psf%method(l), l=1,6)
+  message(10)  = 'Valence configuration in calculations:   '
+  message(11) = ' (orbital - occupancy - core radius)'
+  call write_info(11, unit)
+  i = 1; k = 1
   do while(index(psf%title(i:),'/') /= 0)
     j = i
     i = i + index(psf%title(i:),'/')
-    write(message(1),'(a,a,a)') ' ', psf%title(j:i-2)
-    call write_info(1, unit)
+    write(message(k),'(a,a)') '  ', psf%title(j:i-2)
+    k = k + 1
   enddo
-  write(message(1),'(a,i2)')  'Pseudopotential functions for spin-up:   ', psf%npotu
-  write(message(2),'(a,i2)')  'Pseudopotential functions for spin-down: ', psf%npotd
-  write(message(3),'(a)')     'Radial grid parameters ( R(I) = B*[ EXP(A*(I-1)) -1 ] )'
+  call write_info(k-1, unit)
+  write(message(1),'(a,i2)')       'Maximum L-component to consider: ', ps%L_max
+  write(message(2),'(a,i2)')     'Maximum L-component in file: ', psf%npotd - 1
+  write(message(3),'(a)')        'Radial grid parameters ( R(I) = B*[ EXP(A*(I-1)) -1 ] )'
   write(message(4),'(a,es14.6)') '             A = ', psf%a
   write(message(5),'(a,es14.6)') '             B = ', psf%b
-  write(message(6),'(a,i5)')  'Number of radial points: ', psf%nr
-  call write_info(6, unit)
-  
-  return
-end subroutine write_info_about_pseudo_1
-
-subroutine write_info_about_pseudo_2(unit, ps, rc) 
-  integer, intent(in)  :: unit
-  type(ps_type), intent(in) :: ps
-  real(r8), intent(in) :: rc(0:ps%L_max)
-  
-  message(1) = 'Pseudopotential asymptotic radii: ['//trim(units_out%length%abbrev)//']'
-  write(message(2),'(10x,10f14.6)') rc/units_out%length%factor
-  call write_info(2, unit)
-  
-  return
-end subroutine write_info_about_pseudo_2
-
-subroutine write_info_about_pseudo_3(unit, ps, rc) 
-  integer, intent(in) :: unit
-  type(ps_type), intent(IN) :: ps
-  real(r8), intent(IN) :: rc(0:ps%L_max+1)
-
-  message(1) = 'KB-projectors radii: ['//trim(units_out%length%abbrev)//']'
-  write(message(2),'(10x,10f14.6)') rc(0:ps%L_max)/units_out%length%factor
-  call write_info(2, unit)
-
-  return
-end subroutine write_info_about_pseudo_3
-
-subroutine write_info_about_pseudo_4(unit, ps, eigen)
-  integer, intent(in) :: unit
-  type(ps_type), intent(in) :: ps
-  real(r8), intent(in) :: eigen(0:ps%L_max)
-
+  write(message(6),'(a,i5)')     'Number of radial points: ', psf%nr
+  write(message(7),'(a,i5)')     'nrval: ', psf%nrval
+  write(message(8),'(a,a1,a,a1,4f9.5)') 'PS-generation cut-off radii: ', '[', &
+                                   trim(units_out%length%abbrev), ']', ps%rc(0:3)/units_out%length%factor
+  write(message(9),'(a,a1,a,a1,4f9.5)')'KB-spheres radii:            ', '[', &
+                                   trim(units_out%length%abbrev), ']', ps%kbr(0:ps%l_max)/units_out%length%factor
+  call write_info(9, unit)
   message(1) = 'KB-cosines: ['//trim(units_out%energy%abbrev)//']'
-  ! WARNING: RYDBERGS -> HARTREE (/2._R8)
-  write(message(2),'(10x,10f18.6)')  ps%dkbcos(0:ps%L_max)/units_out%energy%factor/2._r8
-  message(3) = 'KB-norms:'
+  write(message(2),'(10x,10f18.6)')  ps%dkbcos(0:ps%L_max)/units_out%energy%factor
+  message(3) = 'KB-norms: [1/'//trim(units_out%energy%abbrev)//']'
   write(message(4),'(10x,10f18.6)')  ps%dknrm(0:ps%L_max)
   message(5) = 'Eigenvalues of pseudo-eigenfunctions ['// &
        trim(units_out%energy%abbrev)//']'
-  ! WARNING: RYDBERGS -> HARTREE (/2._R8)
-  write(message(6),'(10x,10f18.6)')  eigen(0:ps%L_max)/units_out%energy%factor/2._r8
+  write(message(6),'(10x,10f18.6)')  ps%eigen(0:ps%L_max)/units_out%energy%factor
   write(message(7),'(a,f18.6)')      'Atomic radius: ['//&
        trim(units_out%length%abbrev)//']', ps%rc_max/units_out%length%factor
   message(8) = '*************************************************************'
   message(9) = ''
   call write_info(9, unit)
-  
+
   return
-end subroutine write_info_about_pseudo_4
+end subroutine write_pseudo_info_tm
+
+subroutine write_pseudo_info_hgh(unit, psp, ps)
+  integer, intent(in)       :: unit
+  type(ps_st_params), intent(in) :: psp
+  type(ps_type), intent(in) :: ps
+
+  integer :: l, i, j, k
+
+  write(message(1),'(a)') ''
+  write(message(2),'(a,a,a)')  '**********   Pseudopotential Information for: ', psp%atom_name,'   **********'
+  write(message(3),'(a)')      '**********   FLAVOUR: HARTWIGSEN-GOEDECKER-HUTTER.'
+  write(message(4),'(a,f10.4)')'Z    : ', ps%z
+  write(message(5),'(a,f10.4)')'Z_val: ', ps%z_val
+  write(message(6),'(a,i2)')       'Maximum L-component to consider: ', ps%L_max
+  call write_info(6, unit)
+  write(message(1),'(a,a1,a,a1,4f9.5)') 'PS-generation cut-off radii: ', '[', &
+                                   trim(units_out%length%abbrev), ']', ps%rc(0:3)/units_out%length%factor
+  write(message(2),'(a,a1,a,a1,4f9.5)')'KB-spheres radii:            ', '[', &
+                                   trim(units_out%length%abbrev), ']', ps%kbr(0:ps%l_max)/units_out%length%factor
+  call write_info(2, unit)
+  write(message(1),'(a,f18.6)')      'Atomic radius: ['//&
+       trim(units_out%length%abbrev)//']', ps%rc_max/units_out%length%factor
+  message(2) = '*************************************************************'
+  message(3) = ''
+  call write_info(3, unit)
+
+  return
+end subroutine write_pseudo_info_hgh
+
+
+
+
+
 
 

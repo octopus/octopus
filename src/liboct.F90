@@ -21,6 +21,10 @@ module liboct
   implicit none
   
   interface
+    real(8) function oct_gamma(x)
+      real(8), intent(in) :: x
+    end function oct_gamma
+
     real(8) function oct_asinh(x)
       real(8), intent(in) :: x
     end function oct_asinh

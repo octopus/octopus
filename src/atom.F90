@@ -35,8 +35,8 @@ type atom_type
   integer :: Mps
   integer, pointer :: Jxyz(:)
   real(r8), pointer :: pnts_ps, &  ! # points in ps sphere
-       uV(:,:), uVu(:),         &  ! the Kleinman Bylander projectors
-       duV(:,:,:)                  ! the gradient of the projectors
+       uV(:,:,:), uVu(:,:,:),         &  ! the Kleinman Bylander projectors
+       duV(:,:,:,:)                  ! the gradient of the projectors
 end type atom_type
 
 type atom_classical_type

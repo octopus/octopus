@@ -36,7 +36,6 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, sys, st_start, st_end)
     end do
   end do
 
-  deallocate(Hpsi)
   call pop_sub()
   return
 end subroutine R_FUNC(hamiltonian_eigenval)
@@ -136,7 +135,7 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
   R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
   R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
 
-  integer :: is, idim, np, dim, a, lm
+  integer :: is, idim, np, dim, a, lm, i, j, l, m
   R_TYPE :: uVpsi
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
@@ -152,10 +151,17 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
     ! do we have a pseudopotential, or a local pot?
     if(.not.spec%local) then
       do idim = 1, dim
-        do lm = 1, (spec%ps%L_max + 1)**2
-          uVpsi = sum(atm%uV(:, lm)*psi(atm%Jxyz(:), idim))*sys%m%vol_pp &
-               * atm%uVu(lm)
-          Hpsi(atm%Jxyz(:), idim) = Hpsi(atm%Jxyz(:), idim) + uVpsi*atm%uV(:, lm)
+        lm = 1
+        do l = 0, spec%ps%l_max
+           do m = -l, l
+              do i = 1, spec%ps%kbc
+              do j = 1, spec%ps%kbc
+                 uVpsi = sum(atm%uV(:, lm, i)*psi(atm%Jxyz(:), idim))*sys%m%vol_pp * atm%uVu(lm, i, j)
+                 Hpsi(atm%Jxyz(:), idim) = Hpsi(atm%Jxyz(:), idim) + uVpsi*atm%uV(:, lm, j)
+              end do
+              end do
+              lm = lm + 1
+           end do
         end do
       end do
     end if

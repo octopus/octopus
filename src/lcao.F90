@@ -57,6 +57,8 @@ subroutine lcao_dens(sys, nspin, rho)
   real(r8) :: r
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
+
+  sub_name = 'lcao_dens'; call push_sub()
   
   rho = 0._r8
   do ia = 1, sys%natoms
@@ -84,6 +86,7 @@ subroutine lcao_dens(sys, nspin, rho)
     rho(:, ia) = r*rho(:, 1)
   end do
 
+  call pop_sub()
 contains
   subroutine from_jellium(m, rho)
     type(mesh_type), intent(in) :: m

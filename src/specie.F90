@@ -40,6 +40,7 @@ type specie_type
   character(len=1024) :: user_def
 
   ! For the pseudopotential
+  character(len=3) :: ps_flavour
   type(ps_type), pointer :: ps
 
   ! For the local pseudopotential in Fourier space...
@@ -67,6 +68,7 @@ function specie_init(s)
 
   integer :: nspecies, i, j, lmax, lloc
   character(len=80) :: str
+  logical :: log
 
   sub_name = 'specie_init'; call push_sub()
 
@@ -117,16 +119,18 @@ function specie_init(s)
       j = len(trim(s(i)%user_def))
       s(i)%user_def(j+1:j+1) = achar(0) 
 
-    case default ! a pseudopotential file
+    case default ! a pseudopotential file8
       s(i)%local = .false.
 
       allocate(s(i)%ps) ! allocate structure
       call oct_parse_block_double(str, i-1, 2, s(i)%Z)
-      call oct_parse_block_int(str, i-1, 3, lmax)
-      call oct_parse_block_int(str, i-1, 4, lloc)
+      call oct_parse_block_str(str, i-1, 3, s(i)%ps_flavour)
+      call oct_parse_block_int(str, i-1, 4, lmax)
+      call oct_parse_block_int(str, i-1, 5, lloc)
+      call oct_parse_logical(C_string("DebugPseudo"), .false., log)
+      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, log)
 
-      call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
-
+      s(i)%z_val = s(i)%ps%z_val
       s(i)%nl_planb= int(-1, POINTER_SIZE)
       s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
     end select
@@ -252,50 +256,24 @@ real(r8) function specie_get_nlcc(s, x) result(l)
 
 end function specie_get_nlcc
 
-subroutine specie_get_nl_part(s, x, l, lm, uV, duV)
+subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV)
   type(specie_type), intent(IN) :: s
   real(r8), intent(in) :: x(3)
-  integer, intent(in) :: l, lm
+  integer, intent(in) :: l, lm, i
   real(r8), intent(out) :: uV, duV(3)
 
   real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
 
   r = sqrt(sum(x**2))
-  uVr0  = splint(s%ps%kb(l), r)
-  duvr0 = splint(s%ps%dkb(l), r)
-  
+  uVr0  = splint(s%ps%kb(l, i), r)
+  duvr0 = splint(s%ps%dkb(l, i), r)
   call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-
-  select case(l)
-  case(0)
-    if(r >= r_small) then
-      f = ylm*duvr0/r
-    else
-      f = 0.0_r8
-    end if
-    Uv = uvr0*ylm
-    dUv(:) = f*x(:)
-  case(1)
-    Uv = uvr0 * ylm * r
-    dUv(:) = duvr0*x(:)*ylm
-    select case(lm)
-    case(1)
-      dUv(2) = dUv(2) - 0.488602511903_r8*uvr0
-    case(2)
-      dUv(3) = dUv(3) + 0.488602511903_r8*uvr0
-    case(3)
-      dUv(1) = dUv(1) - 0.488602511903_r8*uvr0
-    end select
-  case default
-    if(r >= r_small) then
-      f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
-    else
-      f = 0._r8
-    end if
-    
-    uV = uVr0 * Ylm * (r**l)
-    duV(:) = f*x(:) + uVr0*gYlm(:)*(r**l)
-  end select
+  uv = uvr0*ylm
+  if(r >= r_small) then
+    duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
+  else
+    duv(:) = 0.0_r8
+  endif
 
 end subroutine specie_get_nl_part
 

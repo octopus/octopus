@@ -133,7 +133,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
 
-  integer :: n(3), hn, i, j, ix, iy, iz, ixx, iyy, izz, l, lm, add_lm, kx, ky, kz
+  integer :: n(3), hn, i, ii, j, ix, iy, iz, ixx, iyy, izz, l, lm, add_lm, kx, ky, kz
   integer(POINTER_SIZE) :: nl_planf
   real(r8) :: r, x(3), vl, g(3)
   complex(r8) :: c
@@ -173,6 +173,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
         cycle l_loop
       end if
       
+      ii_loop : do ii = 1, s(i)%ps%kbc
       lm_loop: do lm = -l, l
         do ix = 1, n(1)
           x(1) = m%h(1) * real(ix - n(1)/2 - 1, r8) / real(1 + nextra, r8)
@@ -182,7 +183,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
               x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8) / real(1 + nextra, r8)
               r = sqrt(sum(x**2))
               
-              call specie_get_nl_part(s(i), x, l, lm, fr(ix, iy, iz), dfr(ix, iy, iz, :))
+              call specie_get_nl_part(s(i), x, l, lm, ii, fr(ix, iy, iz), dfr(ix, iy, iz, :))
             end do
           end do
         end do
@@ -217,6 +218,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
         
         add_lm = add_lm + 1
       end do lm_loop
+      end do ii_loop
     end do l_loop
 
     call fftw_f77_destroy_plan(nl_planf)
@@ -326,7 +328,7 @@ subroutine generate_external_pot(h, sys)
   call oct_parse_logical("OutputLocalPotential", .false., output_local)
   if(output_local) then
     call clear_str(output_local_subspace)
-    call oct_parse_string("OutputLocalPotentialSubspace", output_local_subspace, output_local_subspace)
+    call oct_parse_string("OutputLocalPotSub", "x", output_local_subspace)
     call dmesh_write_function(sys%m, h%vpsl, units_out%energy%factor, &
          trim(sys%sysname)//'.lpot', output_local_subspace)
   end if
@@ -339,6 +341,7 @@ contains
     integer :: i
     real(r8) :: x(3), r
 
+    sub_name = 'build_local_part'; call push_sub()
     if(h%vpsl_space == 0) then ! real space
       do i = 1, h%np
         call mesh_xyz(m, i, x)
@@ -357,6 +360,7 @@ contains
       end if
     end if
 
+    call pop_sub(); return
   end subroutine build_local_part
 
   subroutine build_kb_sphere(m)
@@ -365,8 +369,9 @@ contains
     integer :: j, k
     real(r8) :: r
 
-    ! This is for the ions movement; probably it is not too elegant, I
-    ! will rethink it later.
+    sub_name = 'build_kb_sphere'; call push_sub()
+
+    ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
     if(associated(a%jxyz)) deallocate(a%jxyz, a%uv, a%duv, a%uvu)
     
     j = 0
@@ -376,8 +381,8 @@ contains
     end do
     a%Mps = j
     
-    allocate(a%Jxyz(j), a%uV(j, (s%ps%L_max+1)**2), &
-         a%duV(3, j, (s%ps%L_max+1)**2), a%uVu((s%ps%L_max+1)**2))
+    allocate(a%Jxyz(j), a%uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
+         a%duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
     
     a%uV  = 0.0_r8; a%duV = 0.0_r8; a%uVu = 0.0_r8
     
@@ -391,15 +396,18 @@ contains
       end if
     end do
 
+    call pop_sub(); return
   end subroutine build_kb_sphere
 
   subroutine build_nl_part(m)
     type(mesh_type), intent(IN) :: m
 
-    integer :: j, l, lm, add_lm, p, ix, iy, iz, center(3)
+    integer :: i, j, l, lm, add_lm, p, ix, iy, iz, center(3)
     real(r8) :: r, x(3), ylm
     complex(r8), allocatable :: nl_fw(:,:,:)
     real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
+
+    sub_name = 'build_nl_part'; call push_sub()
 
     if(h%vnl_space == 0) then
       j_loop: do j = 1, a%Mps
@@ -408,13 +416,16 @@ contains
         
         add_lm = 1
         l_loop: do l = 0, s%ps%L_max
+          i_loop : do i = 1, s%ps%kbc
           lm_loop: do lm = -l , l
             if(l .ne. s%ps%L_loc) then
-              call specie_get_nl_part(s, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
+              add_lm = l**2 + l + lm + 1
+              call specie_get_nl_part(s, x, l, lm, i, a%uV(j, add_lm, i), a%duV(:, j, add_lm, i))
             end if
 
             add_lm = add_lm + 1
           end do lm_loop
+          end do i_loop
         end do l_loop
       end do j_loop
     else ! Fourier space
@@ -432,6 +443,7 @@ contains
           cycle l_loop2
         end if
         
+        i_loop2 : do i = 1, s%ps%kbc
         lm_loop2: do lm = -l , l
           nl_fw = M_z0
           call phase_factor(m, s%nl_fft_n(1:3), x, s%nl_fw(:,:,:, add_lm), nl_fw)
@@ -450,49 +462,66 @@ contains
             iy = m%Ly(p) - center(2) + s%nl_fft_n(2)/2 + 1
             iz = m%Lz(p) - center(3) + s%nl_fft_n(3)/2 + 1
             
-            a%uV(j, add_lm)     = nl_fr (ix, iy, iz)
-            a%duV(:, j, add_lm) = nl_dfr(ix, iy, iz, :)
+            a%uV(j, add_lm, i)     = nl_fr (ix, iy, iz)
+            a%duV(:, j, add_lm, i) = nl_dfr(ix, iy, iz, :)
           end do j_loop2
 
           add_lm = add_lm + 1
         end do lm_loop2
+        end do i_loop2
       end do l_loop2
       deallocate(nl_fw, nl_fr, nl_dfr)
     end if
     
     ! and here we calculate the uVu
-    a%uVu = 0._r8
-    add_lm = 1
-    do l = 0, s%ps%L_max
+    if(s%ps%flavour == 'tm') then
+
+      a%uVu = 0._r8
+      add_lm = 1
+      do l = 0, s%ps%L_max
       do lm = -l , l
         if(l .ne. s%ps%L_loc) then
           do j = 1, a%Mps
             call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
             ylm = oct_ylm(x(1), x(2), x(3), l, lm)
             
-            if(r > 0._r8) then ! 0**l crashes in osf
-              a%uVu(add_lm) = a%uVu(add_lm) + a%uV(j, add_lm)* &
+            if(r > 0._r8 .or. l>0) then ! 0**l crashes in osf
+              a%uVu(add_lm, 1, 1) = a%uVu(add_lm, 1, 1) + a%uV(j, add_lm, 1)* &
                    splint(s%ps%Ur(l), r) * ylm * (r**l)
-            end if
+            else
+              a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)*splint(s%ps%ur(l), r)*ylm
+            endif
           end do
-          ! uVu can be calculated exactly, or numerically
-          a%uVu(add_lm) = s%ps%dkbcos(l)
-          !a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
-          if(abs(a%uVu(add_lm) - s%ps%dkbcos(l))/s%ps%dkbcos(l) > 0.25_r8) then
+          a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
+          if(abs((a%uVu(add_lm, 1, 1) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.001_r8) then
             write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                  add_lm
-            write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm)
+            write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm, 1, 1)
             message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
             call write_warning(3)
-
-            a%uVu(add_lm) = s%ps%dkbcos(l)
           end if
+          ! uVu can be calculated exactly, or numerically
+          !a%uVu(add_lm) = s%ps%dkbcos(l)
+          a%uvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
         end if
           
         add_lm = add_lm + 1
       end do
-    end do
+      end do
 
+    else
+
+      add_lm = 1
+      do l = 0, s%ps%l_max
+      do lm = -l, l
+         a%uvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
+         add_lm = add_lm + 1
+      enddo
+      enddo
+
+    end if
+
+    call pop_sub(); return
   end subroutine build_nl_part
 
 end subroutine generate_external_pot
