@@ -46,7 +46,7 @@ int FC_FUNC_(print_file, PRINT_FILE)
 }
 
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
-		 (char *_dir STR_ARG1)
+		 (STR_F_TYPE _dir STR_ARG1)
 {
   char *lang, *tmp, dir[512];
 	struct dirent **namelist;
