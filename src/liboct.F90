@@ -351,4 +351,5 @@ contains
 
     oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)
   end function oct_ran_gaussian4
+
 end module lib_oct

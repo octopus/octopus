@@ -1,9 +1,9 @@
 EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
-	oct-excite oct-broad oct-ph oct-xyz-anim \
+	oct-broad oct-ph oct-xyz-anim \
 	oct-make-st oct-center-geom \
 	oct-atoms-magnet
 
-bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus oct-excite @UTILITY_PROGRAMS@
 
 core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \

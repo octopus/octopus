@@ -95,5 +95,5 @@ program excitations
   if(l)call calc_petersilka(2, st, sys%m, n_occ, n_unocc, flags, 'linear', 'casida')
 
   call poisson_end()
-
+  call global_end()
 end program excitations

@@ -40,13 +40,13 @@ contains
     integer :: iunit, n_pairs, i, a, ia
 
     ! output
-    call loct_mkdir(trim(dir))
+    if (mpiv%node == 0) call loct_mkdir(trim(dir))
 
     ! get occupied/unoccupied pairs
     call fix_pairs()
     
     if(type == 0.or.type == 1) then ! eigenvalues or petersilka formula
-      call loct_progress_bar(-1, n_pairs) ! initialize bar
+      if (mpiv%node == 0) call loct_progress_bar(-1, n_pairs) ! initialize bar
 
       do ia = 1, n_pairs
         a = pair_a(ia)
@@ -61,7 +61,7 @@ contains
         energies(ia, 2:4) = M_TWO * (energies(ia, 2:4))**2 * &
              (st%eigenval(a, 1) - st%eigenval(i, 1))
 
-        call loct_progress_bar(ia-1, n_pairs-1)
+        if (mpiv%node == 0) call loct_progress_bar(ia-1, n_pairs-1)
       end do
 
     else if(type == 2) then ! solve full matrix
@@ -69,21 +69,23 @@ contains
     else
       call sort_energies()
     end if
-    write(*, "(1x)")
+    if (mpiv%node == 0) then
+      write(*, "(1x)")
 
-    call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname), status='unknown')
+      call io_assign(iunit)
+      open(iunit, file=trim(dir) // "/" // trim(fname), status='unknown')
 
-    if(type == 0) write(iunit, '(2a4)', advance='no') 'From', ' To '
-    write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
-    do ia = 1, n_pairs
-      if(type == 0.or.type == 1) then
-        write(iunit, '(2i4)', advance='no') pair_i(ia), pair_a(ia)
-      end if
-      write(iunit, '(5(e15.8,1x))') energies(ia,1) / units_out%energy%factor, &
+      if(type == 0) write(iunit, '(2a4)', advance='no') 'From', ' To '
+      write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
+      do ia = 1, n_pairs
+        if(type == 0.or.type == 1) then
+          write(iunit, '(2i4)', advance='no') pair_i(ia), pair_a(ia)
+        end if
+        write(iunit, '(5(e15.8,1x))') energies(ia,1) / units_out%energy%factor, &
            energies(ia, 2:4), M_TWOTHIRD*sum(energies(ia, 2:4))
-    end do
-    call io_close(iunit)
+      end do
+      call io_close(iunit)
+    end if
 
     ! clean up
     deallocate(pair_i, pair_a, energies)
@@ -95,17 +97,25 @@ contains
       FLOAT :: temp
       integer :: ia, jb, i, j, a, b
       integer :: max, actual, iunit
+#ifdef HAVE_MPI
+      integer :: ierr
+      FLOAT, allocatable :: mpi_mat(:,:)
+#endif
 
       allocate(mat(n_pairs, n_pairs))
       mat = M_ZERO
 
       max = n_pairs*(1 + n_pairs)/2 - 1
       actual = 0
-      call loct_progress_bar(-1, max)
+      if (mpiv%node == 0) call loct_progress_bar(-1, max)
+
       do ia = 1, n_pairs
         i = pair_i(ia)
         a = pair_a(ia)
         do jb = ia, n_pairs
+          actual = actual + 1
+          if(mod(actual, mpiv%numprocs) .ne. mpiv%node) cycle
+
           j = pair_i(jb)
           b = pair_a(jb)
           mat(ia, jb) = M_FOUR * K_term(i, a, j, b) &
@@ -113,55 +123,64 @@ contains
 
           if(jb /= ia) mat(jb, ia) = mat(ia, jb) ! the matrix is symmetric
 
-          actual = actual + 1
-          call loct_progress_bar(actual, max)
+          if (mpiv%node == 0) call loct_progress_bar(actual-1, max)
         end do
 
         temp = st%eigenval(a, 1) - st%eigenval(i, 1)
         mat(ia, :)  = sqrt(temp)*mat(ia, :)
         mat(ia, ia) = temp**2 + mat(ia, ia)
       end do
-      write(stdout, '(1x)')
 
-      ! now we diagonalise the matrix
-      call lalg_eigensolve(n_pairs, mat, mat, energies(:, 1))
-      energies(:, 1) = sqrt(energies(:, 1))
+#ifdef HAVE_MPI
+      allocate(mpi_mat(n_pairs, n_pairs))
+      call MPI_ALLREDUCE(mat(1,1), mpi_mat(1,1), n_pairs**2, &
+         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)      
+      mat = mpi_mat
+#endif
 
-      ! let us get now the oscillator strengths
-      allocate(os(n_pairs, 3))
-      do ia = 1, n_pairs
-        i = pair_i(ia)
-        a = pair_a(ia)
-        call matrix_elem(i, a, os(ia,:))
-      end do
+      if (mpiv%node == 0)  then
+        write(stdout, '(1x)')
 
-      do ia = 1, n_pairs
-        do j = 1, 3
-          energies(ia, 1+j) = M_TWO * (sum(os(:,j)*mat(:,ia)        &
-               *sqrt(st%eigenval(pair_a(:), 1) - st%eigenval(pair_i(:), 1)) ))**2 
+        ! now we diagonalise the matrix
+        call lalg_eigensolve(n_pairs, mat, mat, energies(:, 1))
+        energies(:, 1) = sqrt(energies(:, 1))
+
+        ! let us get now the oscillator strengths
+        allocate(os(n_pairs, 3))
+        do ia = 1, n_pairs
+          i = pair_i(ia)
+          a = pair_a(ia)
+          call matrix_elem(i, a, os(ia,:))
         end do
-      end do
-      
-      ! output eigenvectors
-      call io_assign(iunit)
-      open(iunit, file=trim(dir) // "/" // trim(fname) // ".vec", status='unknown')
-      write(iunit, '(a14)', advance = 'no') ' value '
-      do ia = 1, n_pairs
-        write(iunit, '(3x,i4,a1,i4,2x)', advance='no') pair_i(ia), ' - ', pair_a(ia)
-      end do
-      write(iunit, '(1x)')
-
-      do ia = 1, n_pairs
-        write(iunit, '(es14.6)', advance='no') energies(ia, 1) / units_out%energy%factor
-        temp = M_ONE
-        if(maxval(mat(:, ia)) < abs(minval(mat(:, ia)))) temp = -temp
-        do j = 1, n_pairs
-          write(iunit, '(es14.6)', advance='no') temp*mat(j, ia)
+        
+        do ia = 1, n_pairs
+          do j = 1, 3
+            energies(ia, 1+j) = M_TWO * (sum(os(:,j)*mat(:,ia)        &
+               *sqrt(st%eigenval(pair_a(:), 1) - st%eigenval(pair_i(:), 1)) ))**2 
+          end do
+        end do
+        
+        ! output eigenvectors
+        call io_assign(iunit)
+        open(iunit, file=trim(dir) // "/" // trim(fname) // ".vec", status='unknown')
+        write(iunit, '(a14)', advance = 'no') ' value '
+        do ia = 1, n_pairs
+          write(iunit, '(3x,i4,a1,i4,2x)', advance='no') pair_i(ia), ' - ', pair_a(ia)
         end do
         write(iunit, '(1x)')
-      end do
+        
+        do ia = 1, n_pairs
+          write(iunit, '(es14.6)', advance='no') energies(ia, 1) / units_out%energy%factor
+          temp = M_ONE
+          if(maxval(mat(:, ia)) < abs(minval(mat(:, ia)))) temp = -temp
+          do j = 1, n_pairs
+            write(iunit, '(es14.6)', advance='no') temp*mat(j, ia)
+          end do
+          write(iunit, '(1x)')
+        end do
 
-      call io_close(iunit)
+        call io_close(iunit)
+      end if ! mpiv%node == 0
 
       deallocate(mat)
     end subroutine solve_matrix
