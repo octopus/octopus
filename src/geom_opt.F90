@@ -69,7 +69,7 @@ subroutine geom_opt_run(scf, sys, h)
     sys%atom(i+1)%x(2) = x(3*i + 2)
     sys%atom(i+1)%x(3) = x(3*i + 3)
   end do
-  call geom_write_xyz("min", sys%natoms, sys%atom, sys%ncatoms, sys%catom)  
+  call system_write_xyz("min", sys)
   
   deallocate(x)
 
@@ -118,7 +118,7 @@ subroutine geom_calc_point(x, f, df)
     geo%sys%atom(i+1)%x(2) = x(3*i + 2)
     geo%sys%atom(i+1)%x(3) = x(3*i + 3)
   end do
-  call geom_write_xyz("work-min", geo%sys%natoms, geo%sys%atom, geo%sys%ncatoms, geo%sys%catom)  
+  call system_write_xyz("work-min", geo%sys)
 
   ! generate external potential
   call generate_external_pot(geo%h, geo%sys)

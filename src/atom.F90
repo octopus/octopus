@@ -508,48 +508,4 @@ real(r8) function kinetic_energy(natoms, atom)
 
 end function kinetic_energy
 
-subroutine geom_write_xyz(filename_base, natoms, atom, ncatoms, catom)
-  character(len=*), intent(in)          :: filename_base
-  integer, intent(in)                   :: natoms, ncatoms
-  type(atom_type), intent(in)           :: atom(natoms)
-  type(atom_classical_type), intent(in) :: catom(ncatoms)
-
-  integer i, iunit
-  
-  ! xyz format, for easy plot in rasmol
-#ifdef HAVE_MPI
-  if(mpiv%node == 0) then
-#endif
-
-    call io_assign(iunit)
-    open(iunit, file=trim(filename_base)//'.xyz', status='unknown')
-    write(iunit, '(i4)') natoms
-    write(iunit, '(1x)')
-    do i = 1, natoms
-      write(iunit, '(6x,a,2x,3f12.6)') &
-           atom(i)%spec%label, atom(i)%x(:)/units_out%length%factor
-    end do
-    call io_close(iunit)
-
-    if(ncatoms > 0) then
-      call io_assign(iunit)
-      open(iunit, file=trim(filename_base)//'_classical.xyz', status='unknown')
-      write(iunit, '(i4)') ncatoms
-      write(iunit, '(1x)')
-      do i = 1, ncatoms
-        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
-             catom(i)%label(1:1), catom(i)%x(:)/units_out%length%factor, &
-             " # ", catom(i)%charge
-      end do
-      call io_close(iunit)
-    end if
-
-#ifdef HAVE_MPI
-  end if
-#endif
-  
-  return
-end subroutine geom_write_xyz
-
-
 end module atom

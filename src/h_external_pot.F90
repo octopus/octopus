@@ -2,61 +2,61 @@
 ! of f90 to handle circular dependences it had to come here!
 
 #if defined(THREE_D)
-subroutine specie_local_fourier_init(ns, s, m)
+subroutine specie_local_fourier_init(ns, s, m, nlcc)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
+  logical, intent(in) :: nlcc
 
   integer :: i, j, ix, iy, iz, n, ixx(3)
-  real(r8) :: x(3), r, vl, r1
+  real(r8) :: x(3)
+  real(r8), allocatable :: fr(:,:,:)
   complex(r8) :: c
-  real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
 
   sub_name = 'specie_local_fourier_init'; call push_sub()
 
   allocate(fr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3)))
 
   do i = 1, ns
-    allocate( &
-         s(i)%local_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)), &
-         s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
-
+    allocate(s(i)%local_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+    
     do ix = 1, m%fft_n2(1)
       ixx(1) = ix - (m%fft_n2(1)/2 + 1)
       do iy = 1, m%fft_n2(2)
         ixx(2) = iy - (m%fft_n2(2)/2 + 1)
         do iz = 1, m%fft_n2(3)
           ixx(3) = iz - (m%fft_n2(3)/2 + 1)
-          r = sqrt(sum((m%h(:)*ixx(:))**2))
-          vl  = splint(s(i)%ps%vlocal,  r)
-          if(r >= r_small) then
-            fr(ix, iy, iz) = (vl - s(i)%Z_val)/r
-          else
-            fr(ix, iy, iz) = s(i)%ps%vlocal_origin
-          endif
+
+          x(:) = m%h(:)*ixx(:)
+          fr(ix, iy, iz) = specie_get_local(s(i), x)
         end do
       end do
     end do
 
     call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
-
+    
     n = m%fft_n2(2)*m%fft_n2(3)*m%hfft_n2
     c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), 0.0_r8, r8)
     call zscal(n, c, s(i)%local_fw,  1)
+    
+    ! now we built the non-local core corrections in momentum space
+    if(nlcc) then
+      allocate(s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
 
-    if(s(i)%ps%icore /= 'nc  ') then
       fr = 0.0_r8
       do ix = 1, m%fft_n2(1)
+        ixx(1) = ix - (m%fft_n2(1)/2 + 1)
         do iy = 1, m%fft_n2(2)
+          ixx(2) = iy - (m%fft_n2(2)/2 + 1)
           do iz = 1, m%fft_n2(3)
-             r = sqrt( ( m%h(1)*(ix - m%fft_n2(1)/2 - 1) )**2 + &
-                       ( m%h(2)*(iy - m%fft_n2(2)/2 - 1) )**2 + &
-                       ( m%h(3)*(iz - m%fft_n2(3)/2 - 1) )**2 )
-            vl  = splint(s(i)%ps%core, r)
-            fr(ix, iy, iz) = vl
+            ixx(3) = iz - (m%fft_n2(3)/2 + 1)
+
+            x(:) = m%h(:)*ixx(:)
+            fr(ix, iy, iz) = specie_get_nlcc(s(i), x)
           end do
         end do
       end do
+
       call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%rhocore_fw)
       call zscal(n, c, s(i)%rhocore_fw, 1)
     end if
@@ -165,7 +165,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
               x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8) / real(1 + nextra, r8)
               r = sqrt(sum(x**2))
               
-              call get_nl_part(s(i)%ps, x, l, lm, fr(ix, iy, iz), dfr(ix, iy, iz, :))
+              call specie_get_nl_part(s(i), x, l, lm, fr(ix, iy, iz), dfr(ix, iy, iz, :))
             end do
           end do
         end do
@@ -237,8 +237,7 @@ subroutine generate_external_pot(h, sys)
 
   if(h%vpsl_space == 1) then
 #if defined(THREE_D)
-    allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
+    allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
     fw = M_z0; fwc = M_z0
 #elif defined(ONE_D)
     allocate(fw(sys%m%hfft_n2)); fw = M_z0
@@ -246,18 +245,22 @@ subroutine generate_external_pot(h, sys)
   end if
 
   h%Vpsl  = 0._r8
+  if(sys%st%nlcc) then
+    sys%st%rho_core = 0._r8
+    allocate(fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
+  end if
+
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
     s => a%spec
+    
+    call build_local_part(sys%m)
 
-    select case(s%label(1:5))
-    case('jelli', 'point')
-      call from_jellium(sys%m)
-    case('usdef')
-      call from_user_def(sys%m)
-    case default
-      call from_pseudopotential(sys%m)
-    end select
+    if(.not.s%local) then
+      call build_kb_sphere(sys%m)
+      call build_nl_part(sys%m)
+    end if
+
   end do
 
   if(h%vpsl_space == 1) then
@@ -269,10 +272,13 @@ subroutine generate_external_pot(h, sys)
     call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
 
     ! and the non-local core corrections
-    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
-    call dcube_to_mesh(sys%m, fr, h%rho_core, 2)
+    if(sys%st%nlcc) then
+      call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
+      call dcube_to_mesh(sys%m, fr, sys%st%rho_core, 2)
+      deallocate(fwc)
+    end if
     
-    deallocate(fw, fwc, fr)
+    deallocate(fw, fr)
 #elif defined(ONE_D)
     allocate(fr(sys%m%fft_n2(1)))
 
@@ -310,84 +316,32 @@ subroutine generate_external_pot(h, sys)
 
   call pop_sub()
 contains
-  !***************************************************
-  !  jellium stuff
-  !***************************************************
-  subroutine from_jellium(m)
+  subroutine build_local_part(m)
     type(mesh_type), intent(in) :: m
-
-    integer :: i
-    real(r8) :: a1, a2, Rb2, x(3), r
-
-    a1 = s%Z/(2._r8*s%jradius**3)
-    a2 = s%Z/s%jradius
-    Rb2= s%jradius**2
-    do i = 1, h%np
-      call mesh_r(m, i, r, x=x, a=a%x)
-      if(r <= s%jradius) then
-        h%Vpsl(i)     = h%Vpsl(i) + (a1*(r*r - Rb2) - a2)
-      else
-        h%Vpsl(i)     = h%Vpsl(i) - s%Z/r
-      end if
-    end do
     
-  end subroutine from_jellium
-
-  subroutine from_user_def(m)
-    type(mesh_type), intent(in) :: m
-
     integer :: i
     real(r8) :: x(3), r
 
-    do i = 1, h%np
-      call mesh_r(m, i, r, x=x, a=a%x)
-      h%Vpsl(i) = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
-    end do
-    
-  end subroutine from_user_def
-
-  !***************************************************
-  !  pseudopotential stuff
-  !***************************************************
-  subroutine from_pseudopotential(m)
-    type(mesh_type), intent(in) :: m
-
-    call build_local_part(m)
-    call build_kb_sphere(m)
-    call build_nl_part(m)
-
-  end subroutine from_pseudopotential
-
-  subroutine build_local_part(m)
-    type(mesh_type), intent(in) :: m
-
-    integer :: i
-    real(r8) :: r, vl, dvl, x(3)
-
-    if(h%vpsl_space == 0) then
-      do i = 1, m%np
-        call mesh_r(m, i, r, x=x, a=a%x)
-        if(r >= r_small) then
-          vl  = splint(s%ps%vlocal,  r)
-          dvl = splint(s%ps%dvlocal, r)
-
-          h%Vpsl(i)     = h%Vpsl(i) + (vl - s%Z_val)/r
-        else
-          h%Vpsl(i) = h%Vpsl(i) + s%ps%Vlocal_origin
-        end if
-        if(s%ps%icore /= 'nc  ' ) then
-          h%rho_core(i) = h%rho_core(i) + splint(s%ps%core, r)
+    if(h%vpsl_space == 0) then ! real space
+      do i = 1, h%np
+        call mesh_xyz(m, i, x)
+        x = x - a%x
+        h%Vpsl(i) = h%Vpsl(i) + specie_get_local(s, x)
+        
+        if(s%nlcc) then
+          sys%st%rho_core(i) = sys%st%rho_core(i) + specie_get_nlcc(s, x)
         end if
       end do
-    else
+
+    else ! momentum space
       call phase_factor(m, m%fft_n2, a%x, s%local_fw, fw)
-      if(s%ps%icore /= 'nc  ') then
+      if(s%nlcc) then
         call phase_factor(m, m%fft_n2(1:3), a%x, s%rhocore_fw, fwc)
       end if
     end if
 
   end subroutine build_local_part
-  
+
   subroutine build_kb_sphere(m)
     type(mesh_type), intent(in) :: m
     
@@ -439,7 +393,7 @@ contains
         l_loop: do l = 0, s%ps%L_max
           lm_loop: do lm = -l , l
             if(l .ne. s%ps%L_loc) then
-              call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
+              call specie_get_nl_part(s, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
             end if
 
             add_lm = add_lm + 1
@@ -525,55 +479,6 @@ contains
   end subroutine build_nl_part
 
 end subroutine generate_external_pot
-
-subroutine get_nl_part(ps, x, l, lm, uV, duV)
-  type(ps_type), intent(IN) :: ps
-  real(r8), intent(in) :: x(3)
-  integer, intent(in) :: l, lm
-  real(r8), intent(out) :: uV, duV(3)
-
-  real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
-
-  r = sqrt(sum(x**2))
-  uVr0  = splint(ps%kb(l), r)
-  duvr0 = splint(ps%dkb(l), r)
-        
-  call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-
-  select case(l)
-  case(0)
-    if(r >= r_small) then
-      f = ylm*duvr0/r
-    else
-      f = 0.0_r8
-    end if
-    Uv = uvr0*ylm
-    dUv(:) = f*x(:)
-  case(1)
-    Uv = uvr0 * ylm * r
-    dUv(:) = duvr0*x(:)*ylm
-    select case(lm)
-    case(1)
-      dUv(2) = dUv(2) - 0.488602511903_r8*uvr0
-    case(2)
-      dUv(3) = dUv(3) + 0.488602511903_r8*uvr0
-    case(3)
-      dUv(1) = dUv(1) - 0.488602511903_r8*uvr0
-    end select
-  case default
-    if(r >= r_small) then
-      f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
-    else
-      f = 0._r8
-    end if
-    
-    uV = uVr0 * Ylm * (r**l)
-    duV(:) = f*x(:) + uVr0*gYlm(:)*(r**l)
-  end select
-
-end subroutine get_nl_part
-
-
 
 subroutine generate_classic_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h

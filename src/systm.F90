@@ -37,10 +37,11 @@ subroutine system_init(s)
 
   call oct_parse_str('SystemName', 'system', s%sysname)
   s%nspecies = specie_init(s%specie)
+
   call atom_init(s%natoms, s%atom, s%ncatoms, s%catom, s%nspecies, s%specie)
   call oct_parse_logical("OutputCoordinates", .false., l)
   if(l) then
-    call geom_write_xyz(s%sysname, s%natoms, s%atom, s%ncatoms, s%catom)
+    call system_write_xyz(s%sysname, s)
   end if
 
   call mesh_init(s%m, s%natoms, s%atom)
@@ -53,6 +54,13 @@ subroutine system_init(s)
 
   allocate(s%st)
   call states_init(s%st, s%m, val_charge)
+
+  ! find out if we need non-local core corrections
+  s%st%nlcc = .false.
+  do i = 1, s%nspecies
+    s%st%nlcc = (s%st%nlcc.or.s%specie(i)%nlcc)
+  end do
+  if(s%st%nlcc) allocate(s%st%rho_core(s%m%np))
 
   call pop_sub()
 end subroutine system_init
@@ -72,5 +80,46 @@ subroutine system_end(s)
 
   call pop_sub()
 end subroutine system_end
+
+subroutine system_write_xyz(filename_base, s)
+  character(len=*), intent(in)  :: filename_base
+  type(system_type), intent(IN) :: s
+
+  integer i, iunit
+  
+  ! xyz format, for easy plot in rasmol
+#ifdef HAVE_MPI
+  if(mpiv%node == 0) then
+#endif
+
+    call io_assign(iunit)
+    open(iunit, file=trim(filename_base)//'.xyz', status='unknown')
+    write(iunit, '(i4)') s%natoms
+    write(iunit, '(1x)')
+    do i = 1, s%natoms
+      write(iunit, '(6x,a,2x,3f12.6)') &
+           s%atom(i)%spec%label, s%atom(i)%x(:)/units_out%length%factor
+    end do
+    call io_close(iunit)
+
+    if(s%ncatoms > 0) then
+      call io_assign(iunit)
+      open(iunit, file=trim(filename_base)//'_classical.xyz', status='unknown')
+      write(iunit, '(i4)') s%ncatoms
+      write(iunit, '(1x)')
+      do i = 1, s%ncatoms
+        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
+             s%catom(i)%label(1:1), s%catom(i)%x(:)/units_out%length%factor, &
+             " # ", s%catom(i)%charge
+      end do
+      call io_close(iunit)
+    end if
+
+#ifdef HAVE_MPI
+  end if
+#endif
+  
+  return
+end subroutine system_write_xyz
 
 end module system

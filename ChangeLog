@@ -1,3 +1,6 @@
+23/4/02 (marques)
+  - Bug fix in restart in mpi mode (run.F90)
+  - Cleaned up non-linear core corrections (faster, smaller)
 20/4/02 (marques)
   - Changed AIX compiler options in fortran.m4
   - Bug fix related to the reading of OutputPotential...

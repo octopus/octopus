@@ -22,13 +22,15 @@ type states_type
   real(r8), pointer :: dpsi(:,:,:,:)
   complex(r8), pointer :: zpsi(:,:,:,:)
 
-  ! the density (after all we are doing DFT :)
+  ! the densities (after all we are doing DFT :)
   real(r8), pointer :: rho(:,:)
   real(r8),    pointer :: drho_off(:) ! if ispin = 3, off diagonal part of the density
   complex(r8), pointer :: zrho_off(:)
 
-  real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
+  logical :: nlcc  ! is any species having non-local core corrections?
+  real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
+  real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
   logical           :: fixed_occ ! should the occupation numbers be fixed?
   real(r8), pointer :: occ(:,:)  ! the occupation numbers
 
@@ -146,7 +148,7 @@ subroutine states_init(st, m, val_charge)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
-  nullify(st%dpsi, st%zpsi)
+  nullify(st%dpsi, st%zpsi, st%rho_core)
 
   call pop_sub()
 end subroutine states_init
@@ -159,6 +161,11 @@ subroutine states_end(st)
   if(associated(st%rho)) then
     deallocate(st%rho, st%occ, st%eigenval)
     nullify   (st%rho, st%occ, st%eigenval)
+  end if
+
+  if(st%nlcc.and.associated(st%rho_core)) then
+    deallocate(st%rho_core)
+    nullify(st%rho_core)
   end if
 
   if(st%ispin==3 .and. associated(st%drho_off)) then

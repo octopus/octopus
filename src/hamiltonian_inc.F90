@@ -169,7 +169,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
       nullify(v_aux2)
     end if
 
-    call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%rho_core, &
+    call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, &
          h%Vxc, v_aux, h%ex, h%ec, h%R_FUNC(Vxc_off),  v_aux2)
 
     h%Vxc = h%Vxc + v_aux

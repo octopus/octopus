@@ -1,19 +1,24 @@
-subroutine xc_gga(func, m, nspin, rho, rho_core, pot, energy)
+subroutine xc_gga(func, m, st, pot, energy)
+  integer, intent(in) :: func
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: func, nspin
-  real(r8), intent(IN) :: rho(m%np, nspin), rho_core(m%np)
-  real(r8), intent(out) :: pot(m%np, nspin), energy
-
-  real(r8) :: dedd(nspin), dedgd(3, nspin), e, dvol, den(3)
+  type(states_type), intent(IN) :: st
+  real(r8), intent(out) :: pot(m%np, st%nspin), energy
+  
+  real(r8) :: dedd(st%nspin), dedgd(3, st%nspin), e, dvol, den(3)
   real(r8), allocatable :: d(:,:), gd(:,:,:)
   integer :: i, is, in, ic, ind(3)
 
   sub_name = 'xc_gga'; call push_sub()
 
-  allocate(d(0:m%np, nspin), gd(3, m%np, nspin))
-  do is = 1, nspin
+  allocate(d(0:m%np, st%nspin), gd(3, m%np, st%nspin))
+  do is = 1, st%nspin
     d(0, is) = 0._r8
-    d(1:m%np, is) = rho(1:m%np, is) + rho_core(1:m%np)/nspin
+    d(1:m%np, is) = st%rho(1:m%np, is)
+
+    if(st%nlcc) then ! non-linear core corrections
+      d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%nspin
+    end if
+
     call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))
   end do
 
@@ -21,21 +26,21 @@ subroutine xc_gga(func, m, nspin, rho, rho_core, pot, energy)
   do i = 1, m%np
     select case(func)      
     case(X_FUNC_GGA_PBE)
-      call xc_x_pbe(.false., nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_x_pbe(.false., st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     case(X_FUNC_GGA_PBER)
-      call xc_x_pbe(.true.,  nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_x_pbe(.true.,  st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
 
     case(X_FUNC_GGA_LB94)
-      call xc_x_lb94(nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_x_lb94(st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     case(C_FUNC_GGA_PBE)
-      call xc_c_pbe(nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_c_pbe(st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     end select
     energy = energy + sum(d(i, :)) * e * m%vol_pp
 
-    do is = 1, nspin
+    do is = 1, st%nspin
       pot(i, is) = pot(i, is) + dedd(is)
 
       do in = -m%d%norder , m%d%norder
@@ -63,7 +68,7 @@ subroutine xc_gga(func, m, nspin, rho, rho_core, pot, energy)
   if(func == X_FUNC_GGA_LB94) then ! we have to calculate the energy
     ! Levy-Perdew relation (PRA 32, 2010 (1985))
     energy = 0._r8
-    do is = 1, nspin
+    do is = 1, st%nspin
       call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
       do i = 1, m%np
         energy = energy + d(i, is) * (  &

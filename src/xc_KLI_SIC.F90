@@ -1,7 +1,6 @@
-subroutine R_FUNC(kli_x_sic) (m, st, psi, rho_core, hartr, Vx, ex)
+subroutine R_FUNC(kli_x_sic) (m, st, psi, hartr, Vx, ex)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  real(r8), intent(IN) :: rho_core(m%np)
   R_TYPE, intent(IN) :: psi(0:m%np, st%nst, st%nspin)
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: Vx(m%np, st%nspin), ex
@@ -25,7 +24,7 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, rho_core, hartr, Vx, ex)
      end do
   end do
 
-  call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, m, st, rho_core, Vx, ex)
+  call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, m, st, Vx, ex)
 
 ! calculate the u_sij using poissons equation
   rho(1:m%np, 2) = 0.0_r8
@@ -40,7 +39,7 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, rho_core, hartr, Vx, ex)
 
            i1 = st%ispin; st%ispin = 2
            i2 = st%nspin; st%nspin = 2
-           call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, m, st, rho_core, Vx2, ex2)
+           call R_FUNC(xc_lda) (X_FUNC_LDA_NREL, m, st, Vx2, ex2)
            st%ispin = i1; st%nspin = i2;
 
            u_xc(1:m%np, i) = - Vx2(1:m%np, 1)
@@ -70,10 +69,9 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, rho_core, hartr, Vx, ex)
   return
 end subroutine R_FUNC(kli_x_sic)
 
-subroutine R_FUNC(kli_c_sic) (m, st, psi, rho_core, hartr, Vc, ec)
+subroutine R_FUNC(kli_c_sic) (m, st, psi, hartr, Vc, ec)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  real(r8), intent(IN) :: rho_core(m%np)
   R_TYPE, intent(IN) :: psi(0:m%np, st%nst, st%nspin)
   type(hartree_type), intent(IN) :: hartr
   real(r8), intent(out) :: Vc(m%np, st%nspin), ec
@@ -97,7 +95,7 @@ subroutine R_FUNC(kli_c_sic) (m, st, psi, rho_core, hartr, Vc, ec)
      end do
   end do
 
-  call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, m, st, rho_core, Vc, ec)
+  call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, m, st, Vc, ec)
 
 ! calculate the u_sij using poissons equation
   rho(1:m%np, 2) = 0.0_r8
@@ -112,7 +110,7 @@ subroutine R_FUNC(kli_c_sic) (m, st, psi, rho_core, hartr, Vc, ec)
 
            i1 = st%ispin; st%ispin = 2
            i2 = st%nspin; st%nspin = 2
-           call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, m, st, rho_core, Vc2, ec2)
+           call R_FUNC(xc_lda) (C_FUNC_LDA_PZ, m, st, Vc2, ec2)
            st%ispin = i1; st%nspin = i2;
 
            u_xc(1:m%np, i) = - Vc2(1:m%np, 1)

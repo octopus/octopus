@@ -7,6 +7,7 @@ use spline
 use fft
 use units
 use system
+use specie
 use hartree
 use xc
 use lasers
@@ -25,7 +26,6 @@ type hamiltonian_type
   real(r8), pointer :: Vpsl(:)    ! the external potential
   real(r8), pointer :: Vhartree(:)! the hartree potential
   real(r8), pointer :: Vxc(:,:)   ! xc potential
-  real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
   ! For non-collinear spin (ispin=3)
   real(r8), pointer :: dVxc_off(:)
@@ -60,8 +60,8 @@ subroutine hamiltonian_init(h, sys)
   h%np  = sys%m%np
 
   ! allocate potentials and density of the cores
-  allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, sys%st%nspin), h%rho_core(h%np))
-  h%Vhartree = 0._r8; h%Vxc = 0._r8; h%rho_core = 0._r8
+  allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, sys%st%nspin))
+  h%Vhartree = 0._r8; h%Vxc = 0._r8
   if(h%ispin == 3) then
     allocate(h%R_FUNC(Vxc_off) (h%np))
     h%R_FUNC(Vxc_off) = R_TOTYPE(0._r8)
@@ -93,7 +93,7 @@ subroutine hamiltonian_init(h, sys)
 
   if(h%vpsl_space == 1) then
     call mesh_alloc_ffts(sys%m, 2)
-    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m)
+    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%st%nlcc)
   end if
 
   if(h%vnl_space == 1) then

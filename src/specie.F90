@@ -4,6 +4,8 @@ module specie
 use global
 use units
 use ps
+use spline
+use math
 
 implicit none
 
@@ -12,6 +14,7 @@ type specie_type
   real(r8) :: Z, Z_val
   real(r8) :: weight
   logical :: local   ! true if the potential is local
+  logical :: nlcc    ! true if we have non-local core corrections
 
   ! jellium stuff
   real(r8) :: jradius
@@ -70,6 +73,8 @@ function specie_init(s)
     select case(s(i)%label(1:5))
     case('jelli')
       s(i)%local = .true.  ! we only have a local part
+      s(i)%nlcc  = .false. ! no non-local core corrections
+
       ! s(i)%Z       = the charge of the jellium sphere
       ! s(i)%jradius = the radius of the jellium sphere
       call oct_parse_block_double(str, i-1, 2, s(i)%Z)
@@ -78,13 +83,17 @@ function specie_init(s)
       s(i)%Z_val = s(i)%Z
       
     case('point') ! this is treated as a jellium with radius 0.5
-      s(i)%local = .true.  ! we only have a local part
+      s(i)%local = .true.
+      s(i)%nlcc  = .false.
+
       call oct_parse_block_double(str, i-1, 2, s(i)%Z)
       s(i)%jradius = 0.5_r8
       s(i)%Z_val = 0 
       
     case('usdef') ! user defined
       s(i)%local = .true.
+      s(i)%nlcc  = .false.
+
       call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
       call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
       ! convert to C string
@@ -93,12 +102,16 @@ function specie_init(s)
 
     case default ! a pseudopotential file
       s(i)%local = .false.
+
       allocate(s(i)%ps) ! allocate structure
       call oct_parse_block_double(str, i-1, 2, s(i)%Z)
       call oct_parse_block_int(str, i-1, 3, lmax)
       call oct_parse_block_int(str, i-1, 4, lloc)
+
       call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
+
       s(i)%nl_planb= int(-1, POINTER_SIZE)
+      s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
     end select
 
 #elif defined(ONE_D)
@@ -142,7 +155,7 @@ subroutine specie_end(ns, s)
 
     nlocal: if(.not. s(i)%local) then
       if(associated(s(i)%ps)) then
-        if(s(i)%ps%icore /= 'nc  ' .and. associated(s(i)%rhocore_fw)) then
+        if(s(i)%nlcc.and.associated(s(i)%rhocore_fw)) then
           deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
         end if
         call ps_end(s(i)%ps)
@@ -168,5 +181,105 @@ subroutine specie_end(ns, s)
   call pop_sub()
   return
 end subroutine specie_end
+
+real(r8) function specie_get_local(s, x) result(l)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(3)
+
+  real(r8) :: a1, a2, Rb2 ! for jellium
+  real(r8) :: r
+
+  r = sqrt(sum(x**2))
+
+  select case(s%label(1:5))
+  case('jelli', 'point')
+    a1 = s%Z/(2._r8*s%jradius**3)
+    a2 = s%Z/s%jradius
+    Rb2= s%jradius**2
+    
+    if(r <= s%jradius) then
+      l = (a1*(r*r - Rb2) - a2)
+    else
+      l = - s%Z/r
+    end if
+
+  case('usdef')
+    l = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
+
+  case default
+    if(r >= r_small) then
+      l = (splint(s%ps%vlocal,  r) - s%Z_val)/r
+    else
+      l = s%ps%Vlocal_origin
+    end if
+  end select
+
+end function specie_get_local
+
+real(r8) function specie_get_nlcc(s, x) result(l)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(3)
+
+  real(r8) :: r
+  r = sqrt(sum(x**2))
+
+  select case(s%label(1:5))
+  case('jelli', 'point', 'usdef')
+    message(1) = "Internal error in 'specie_get_nlcc'."
+    message(2) = "Please submit a bug report!"
+    call write_fatal(2)
+
+  case default
+    l = splint(s%ps%core, r)
+  end select
+
+end function specie_get_nlcc
+
+subroutine specie_get_nl_part(s, x, l, lm, uV, duV)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(3)
+  integer, intent(in) :: l, lm
+  real(r8), intent(out) :: uV, duV(3)
+
+  real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
+
+  r = sqrt(sum(x**2))
+  uVr0  = splint(s%ps%kb(l), r)
+  duvr0 = splint(s%ps%dkb(l), r)
+  
+  call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+
+  select case(l)
+  case(0)
+    if(r >= r_small) then
+      f = ylm*duvr0/r
+    else
+      f = 0.0_r8
+    end if
+    Uv = uvr0*ylm
+    dUv(:) = f*x(:)
+  case(1)
+    Uv = uvr0 * ylm * r
+    dUv(:) = duvr0*x(:)*ylm
+    select case(lm)
+    case(1)
+      dUv(2) = dUv(2) - 0.488602511903_r8*uvr0
+    case(2)
+      dUv(3) = dUv(3) + 0.488602511903_r8*uvr0
+    case(3)
+      dUv(1) = dUv(1) - 0.488602511903_r8*uvr0
+    end select
+  case default
+    if(r >= r_small) then
+      f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
+    else
+      f = 0._r8
+    end if
+    
+    uV = uVr0 * Ylm * (r**l)
+    duV(:) = f*x(:) + uVr0*gYlm(:)*(r**l)
+  end select
+
+end subroutine specie_get_nl_part
 
 end module specie
