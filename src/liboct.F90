@@ -15,6 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "config_F90.h"
+
 module liboct
   use global
 
@@ -126,6 +128,19 @@ module liboct
       character(len=*), intent(in) :: str
       integer(4), intent(out) :: l(32)
     end subroutine oct_wfs_list
+
+    real(8) function oct_ran_gaussian(r, sigma)
+      integer(POINTER_SIZE), intent(in) :: r
+      real(8), intent(in) :: sigma
+    end function oct_ran_gaussian
+
+    subroutine oct_ran_init(r)
+      integer(POINTER_SIZE), intent(out) :: r
+    end subroutine oct_ran_init
+
+    subroutine oct_ran_end(r)
+      integer(POINTER_SIZE), intent(out) :: r
+    end subroutine oct_ran_end
   end interface
 
   private :: oct_parse_string, oct_parse_block_string

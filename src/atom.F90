@@ -15,6 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "config_F90.h"
+
 module atom
 use global
 use liboct
@@ -55,9 +57,11 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
 
-  integer :: iunit, i
+  integer :: iunit, i, j
+  integer(POINTER_SIZE) :: random_gen_pointer
   character(len=80) :: str, label
   logical :: l
+  real(r8) :: temperature, sigma
 
   sub_name = 'atom_init'; call push_sub()
 
@@ -127,8 +131,30 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   call oct_parse_logical(C_string("AdjustCoordinates"), .false., l)
   if(l) call atom_adjust(natoms, a , ncatoms, ca)
 
-  ! we now load the velocities, either from the input, or from a file
-  if(oct_parse_isdef(C_string("XYZVelocities")).ne.0 .and. conf%dim==3) then ! read a xyz file
+  ! we now load the velocities, either from the temperature, from the input, or from a file
+  if(oct_parse_isdef(C_string("RandomVelocityTemp")).ne.0) then
+    
+    call oct_ran_init(random_gen_pointer)
+    call oct_parse_double(C_string("RandomVelocityTemp"), 0.0_r8, temperature)
+    do i = 1, natoms
+       sigma = sqrt( P_Kb*temperature / a(i)%spec%weight )
+       do j = 1, 3
+          a(i)%v(j) = oct_ran_gaussian(random_gen_pointer, sigma)
+       enddo
+    enddo
+    call oct_ran_end(random_gen_pointer)
+    write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', & 
+                                   temperature, 'K'
+    write(message(2),'(a,f8.4,1x,a)') 'Info: <K>       =', &
+                                   (kinetic_energy(natoms, a)/natoms)/units_out%energy%factor, &
+                                   units_out%energy%abbrev
+    write(message(3),'(a,f8.4,1x,a)') 'Info: 3/2 k_B T =', &
+                                   (3.0_r8 / 2.0_r8)*P_Kb*temperature/units_out%energy%factor, &
+                                   units_out%energy%abbrev
+    write(message(4),'(a)')
+    call write_info(4)    
+
+  elseif(oct_parse_isdef(C_string("XYZVelocities")).ne.0 .and. conf%dim==3) then ! read a xyz file
     call io_assign(iunit)
     call oct_parse_str('XYZVelocities', 'velocities.xyz', label)
     open(iunit, status='unknown', file=trim(label))

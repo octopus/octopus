@@ -70,6 +70,7 @@ real(r8), parameter :: P_E2  =  14.399753_r8 ! ( = 2.0_r8/(Ang*eV) )
 real(r8), parameter :: P_H2M = 3.81_r8
 real(r8), parameter :: P_a_B = 0.529177_r8
 real(r8), parameter :: P_Ry = 13.6058_r8
+real(r8), parameter :: P_Kb = 3.166815104e-6_r8 ! Boltzmann constant in Ha/K
 
 ! the standard input and output
 integer :: stderr = 0

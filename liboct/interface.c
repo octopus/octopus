@@ -31,6 +31,8 @@
 #include <gsl/gsl_sf_erf.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_spline.h>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 
 #include "symbols.h"
 #include "liboct.h"
@@ -267,4 +269,23 @@ void F90_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 
 		if(*s) s++;
 	}
+}
+
+double F90_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
+		(gsl_rng **r, double *sigma)
+{
+  return gsl_ran_gaussian(*r, *sigma);
+}
+
+void F90_FUNC_(oct_ran_init, OCT_RAN_INIT)
+     (gsl_rng **r)
+{
+  gsl_rng_env_setup();
+  *r = gsl_rng_alloc(gsl_rng_default);
+}
+
+void F90_FUNC_(oct_ran_end, OCT_RAN_END)
+     (gsl_rng **r)
+{
+  gsl_rng_free(*r);
 }
