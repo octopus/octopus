@@ -76,6 +76,7 @@ program strength_function
   s%end_time        = s%end_time        * units_inp%time%factor
   s%energy_step     = s%energy_step     * units_inp%energy%factor
   s%max_energy      = s%max_energy      * units_inp%energy%factor
+  s%min_energy      = s%min_energy      * units_inp%energy%factor
   sf%delta_strength = sf%delta_strength / units_inp%length%factor
 
   call spectrum_strength_function('spectrum', s, sf, .true.)
