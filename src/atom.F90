@@ -71,7 +71,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   integer(POINTER_SIZE) :: random_gen_pointer
   character(len=80) :: str, label
   logical :: l
-  real(r8) :: temperature, sigma
+  real(r8) :: temperature, sigma, x(3), kin1, kin2
 
   sub_name = 'atom_init'; call push_sub()
 
@@ -153,6 +153,16 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
        enddo
     enddo
     call oct_ran_end(random_gen_pointer)
+    kin1 = kinetic_energy(natoms, a)
+    call cm_vel(natoms, a, x)
+    do i = 1, natoms
+       a(i)%v(:) = a(i)%v(:) - x
+    enddo
+    kin2 = kinetic_energy(natoms, a)
+    do i = 1, natoms
+       a(i)%v(:) =  sqrt(kin1/kin2)*a(i)%v(:)
+    enddo
+
     write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', & 
                                    temperature, 'K'
     write(message(2),'(a,f8.4,1x,a)') 'Info: <K>       =', &
@@ -162,7 +172,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
                                    (3.0_r8 / 2.0_r8)*P_Kb*temperature/units_out%energy%factor, &
                                    units_out%energy%abbrev
     write(message(4),'(a)')
-    call write_info(4)    
+    call write_info(4)
 
   elseif(oct_parse_isdef(C_string("XYZVelocities")).ne.0 .and. conf%dim==3) then ! read a xyz file
     call io_assign(iunit)
@@ -578,5 +588,37 @@ real(r8) function kinetic_energy(natoms, atom)
   enddo
 
 end function kinetic_energy
+
+subroutine cm_pos(natoms, atom, pos)
+  integer, intent(in)         :: natoms
+  type(atom_type), intent(in) :: atom(natoms)
+  real(r8), intent(out) :: pos(3)
+
+  real(r8) :: m
+  integer :: i
+
+  pos = M_ZERO; m = M_ZERO
+  do i = 1, natoms
+     pos(:) = pos(:) + atom(i)%spec%weight*atom(i)%x(:)
+     m = m + atom(i)%spec%weight
+  enddo
+  pos = pos/m
+end subroutine cm_pos
+
+subroutine cm_vel(natoms, atom, vel)
+  integer, intent(in)         :: natoms
+  type(atom_type), intent(in) :: atom(natoms)
+  real(r8), intent(out) :: vel(3)
+
+  real(r8) :: m
+  integer :: i
+
+  vel = M_ZERO; m = M_ZERO
+  do i = 1, natoms
+     vel(:) = vel(:) + atom(i)%spec%weight*atom(i)%v(:)
+     m = m + atom(i)%spec%weight
+  enddo
+  vel = vel/m
+end subroutine cm_vel
 
 end module atom
