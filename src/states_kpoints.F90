@@ -34,7 +34,7 @@ subroutine states_choose_kpoints(d, m, geo)
   ! if not periodic just return the Gamma point
   if (conf%periodic_dim == 0) then
     select case(d%ispin)
-    case(1)
+    case(1,3)
       d%nik = 1
     case(2)
       d%nik = 2
