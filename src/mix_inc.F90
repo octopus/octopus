@@ -37,8 +37,6 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
     sp = 1
   end if
 
-  ! TODO: for polymers, do not forget to introduce integration factor
-  ! in momentum space
   rho = 0._r8
   if(st%ispin == 3) st%R_FUNC(rho_off) = 0._r8
   do ik = 1, st%nik, sp

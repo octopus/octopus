@@ -314,7 +314,7 @@ contains
           c(i) = -0.25_r8*sum(gr(1:3, i)**2)/r(i)
         end if
       end do
-      deallocate(r, gr)
+      deallocate(gr)
 
       ! now the second term
       allocate(gpsi(3, m%np))
@@ -325,6 +325,11 @@ contains
             do i = 1, m%np
               if(R_ABS(st%R_FUNC(psi)(i, idim, ist, ik)) >= 1d-8) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:3, i)*R_CONJ(gpsi(1:3, i)))
+
+#if defined(R_TCOMPLEX)
+                c(i) = c(i) - st%occ(ist, ik)/s* &
+                     sum(aimag(st%R_FUNC(psi)(i, idim, ist, ik)*conjg(gpsi(1:3, i)))**2)/r(i)
+#endif
               end if
             end do
           end do
@@ -334,9 +339,11 @@ contains
 
       f = 3._r8/5._r8*(6._r8*M_PI**2)**(2._r8/3._r8)
       do i = 1, m%np
-        d    = f*(st%rho(i, is)/s)**(5._r8/3._r8)
+        d    = f*r(i)**(5._r8/3._r8)
         c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
       end do
+
+      deallocate(r)
 
       write(fname, '(a,i1)') 'elf-', is
       call doutput_function(outp, dir, fname, m, c, 1._r8)
