@@ -19,7 +19,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  FLOAT, intent(out)    :: vxc(m%np, st%nspin), ex, ec
+  FLOAT, intent(out)    :: vxc(m%np, st%d%nspin), ex, ec
   FLOAT, intent(in) :: ip, qtot
 
   integer :: i
@@ -49,7 +49,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
       case(XC_FAMILY_GGA)
         call xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$      case(XC_FAMILY_MGGA)
-!!$        call X(xc_mgga) (xcs%functl, xcs, m, nst, st%nspin, psi, occ, eigenval, &
+!!$        call X(xc_mgga) (xcs%functl, xcs, m, nst, st%d%nspin, psi, occ, eigenval, &
 !!$             rho, vx, ex)
       end select
     end if
@@ -58,7 +58,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   ! Warning: For vxc != vxc
 !!$  if(first_time) then
 !!$    first_time = .false.
-!!$    allocate(save_vxc(m%np, st%nspin))
+!!$    allocate(save_vxc(m%np, st%d%nspin))
 !!$    save_vxc = vx + vc
 !!$
 !!$    ! now, we get the LDA xc

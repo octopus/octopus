@@ -122,7 +122,7 @@ subroutine unocc_run(u, sys, h)
   call states_write_eigenvalues(iunit, u%st%nst, u%st, eigens%diff)
   call io_close(iunit)
   
-  if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%nspin) then
+  if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
     call states_write_bands(iunit, u%st%nst, u%st)

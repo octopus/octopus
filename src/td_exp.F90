@@ -43,7 +43,6 @@ module td_exp
                                  LANCZOS_EXPANSION  = 2, &
                                  FOURTH_ORDER       = 3, &
                                  CHEBYSHEV          = 4
-
 contains
 
   subroutine td_exp_init(m, te)
@@ -115,7 +114,7 @@ contains
     FLOAT, intent(in) :: timestep, t
     integer, optional, intent(out) :: order ! For the methods that rely on Hamiltonian-vector
                                             ! multiplication, the number of these.
-    FLOAT, intent(in), optional :: vmagnus(sys%m%np, sys%st%nspin, 2)
+    FLOAT, intent(in), optional :: vmagnus(sys%m%np, sys%st%d%nspin, 2)
 
     logical :: apply_magnus
 

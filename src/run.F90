@@ -121,9 +121,10 @@ subroutine run()
 
       ! wave functions are simply random gaussians
       call states_generate_random(sys%st, sys%m)
+      ! Warning: I think this is pretty useless, since the occupation are null.
       call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       ! this is certainly a better density
-      call lcao_dens(sys, sys%st%nspin, sys%st%rho)
+      call lcao_dens(sys, sys%st%d%nspin, sys%st%rho)
 
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'

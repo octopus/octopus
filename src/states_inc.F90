@@ -19,7 +19,7 @@
 subroutine X(calcdens)(st, np, rho, reduce)
   type(states_type), intent(in) :: st
   integer, intent(in) :: np
-  FLOAT, intent(out) :: rho(np, st%nspin)
+  FLOAT, intent(out) :: rho(np, st%d%nspin)
   logical, intent(in), optional :: reduce
 
   integer :: i, ik, p, sp
@@ -31,25 +31,25 @@ subroutine X(calcdens)(st, np, rho, reduce)
 
   call push_sub('calc_dens')
 
-  if(st%ispin == SPIN_POLARIZED) then
+  if(st%d%ispin == SPIN_POLARIZED) then
     sp = 2
   else
     sp = 1
   end if
 
   rho = M_ZERO
-  do ik = 1, st%nik, sp
+  do ik = 1, st%d%nik, sp
     do p  = st%st_start, st%st_end
       do i = 1, np
-           rho(i, 1) = rho(i, 1) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 1, p, ik))**2
-         select case(st%ispin)
+           rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 1, p, ik))**2
+         select case(st%d%ispin)
          case(SPIN_POLARIZED)
-           rho(i, 2) = rho(i, 2) + st%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%X(psi)(i, 1, p, ik+1))**2
+           rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%X(psi)(i, 1, p, ik+1))**2
          case(SPINORS)
-           rho(i, 2) = rho(i, 2) + st%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 2, p, ik))**2
-           rho(i, 3) = rho(i, 3) + st%kweights(ik)*st%occ(p, ik)  * &
+           rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 2, p, ik))**2
+           rho(i, 3) = rho(i, 3) + st%d%kweights(ik)*st%occ(p, ik)  * &
                        R_REAL (st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
-           rho(i, 4) = rho(i, 4) + st%kweights(ik)*st%occ(p, ik)  * &
+           rho(i, 4) = rho(i, 4) + st%d%kweights(ik)*st%occ(p, ik)  * &
                        R_AIMAG(st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
 
          end select
@@ -61,8 +61,8 @@ subroutine X(calcdens)(st, np, rho, reduce)
   ! reduce density (assumes memory is contiguous)
   if(present(reduce)) then
   if(reduce) then
-    allocate(reduce_rho(1:np, st%nspin))
-    call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%nspin, &
+    allocate(reduce_rho(1:np, st%d%nspin))
+    call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
     rho = reduce_rho
     deallocate(reduce_rho)
@@ -178,7 +178,7 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
   integer, intent(in), optional :: iter ! used in TD
-  FLOAT, intent(in), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
+  FLOAT, intent(in), optional :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
 
   integer :: iunit, ik, ist, id
   integer(i4) :: mode
@@ -200,18 +200,18 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
 
   if(st%restart_format == 1) then
     write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%xsize
-    write(iunit) int(m%np, i4), int(st%dim, i4), int(st%st_start, i4), &
-        int(st%st_end, i4), int(st%nik, i4), int(st%ispin, i4), mode
+    write(iunit) int(m%np, i4), int(st%d%dim, i4), int(st%st_start, i4), &
+        int(st%st_end, i4), int(st%d%nik, i4), int(st%d%ispin, i4), mode
   else
     write(iunit,'(i12,7E23.14)') int(m%box_shape, i4), m%h, m%rsize, m%xsize
-    write(iunit,'(7i12)') int(m%np, i4), int(st%dim, i4), int(st%st_start, i4), &
-        int(st%st_end, i4), int(st%nik, i4), int(st%ispin, i4), mode
+    write(iunit,'(7i12)') int(m%np, i4), int(st%d%dim, i4), int(st%st_start, i4), &
+        int(st%st_end, i4), int(st%d%nik, i4), int(st%d%ispin, i4), mode
   end if
 
   ! psi has to be written in parts, or segmentation fault in some machines
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
-      do id = 1, st%dim
+      do id = 1, st%d%dim
         if(st%restart_format == 1) then
           write(iunit) st%X(psi)(1:m%np, id, ist, ik)
         else
@@ -222,7 +222,7 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   end do
 
   ! eigenvalues are also needed ;)
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       if(st%restart_format == 1) then
         write(iunit) st%eigenval(ist, ik)
@@ -249,7 +249,7 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
   type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
   integer, intent(out), optional :: iter ! used in TD
-  FLOAT, intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
+  FLOAT, intent(out), optional :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
 
   integer :: iunit, ik, ist, id, restart_format
   integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
@@ -305,10 +305,10 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
        old_start.gt.st%st_start .or. old_end.lt.st%st_end .or. old_nik.ne.st%nik) then
     message(1) = 'Restart file has a different mesh!'
     write(message(2), '(a,i6,a,i6,a)') '  m%np        = ', m%np,        ' != ', old_np, ' or'
-    write(message(3), '(a,i6,a,i6,a)') '  st%dim      = ', st%dim,      ' != ', old_dim, ' or'
+    write(message(3), '(a,i6,a,i6,a)') '  st%d%dim    = ', st%d%dim,    ' != ', old_dim, ' or'
     write(message(4), '(a,i6,a,i6,a)') '  st%st_start = ', st%st_start, ' <  ', old_start, ' or'
     write(message(5), '(a,i6,a,i6,a)') '  st%st_end   = ', st%st_end,   ' >  ', old_end, ' or'
-    write(message(6), '(a,i6,a,i6)')   '  st%nik      = ', st%nik,      ' != ', old_nik
+    write(message(6), '(a,i6,a,i6)')   '  st%d%nik    = ', st%d%nik,    ' != ', old_nik
 
     call write_warning(6)
     go to 999 ! one go to does not harm :)
@@ -321,7 +321,7 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
       allocate(zpsi(1:m%np))
     end if
 
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ist = old_start, old_end
         do id = 1, st%dim
           imode: if(mode == 0 .or. mode == -1) then
@@ -359,9 +359,9 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
     end if
 
     if(mode == -1) then
-      read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%nik)
+      read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%d%nik)
     else
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = old_start, old_end
           if(st%restart_format == 1) then
             read(iunit, err=999) e
@@ -415,7 +415,7 @@ subroutine X(states_output) (st, m, dir, outp)
   if(mpiv%node == 0) then
 #endif
     if(outp%what(output_density)) then
-      do is = 1, st%nspin
+      do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
         call doutput_function(outp%how, dir, fname, m, st%rho(:, is), u)
       end do
@@ -428,7 +428,7 @@ subroutine X(states_output) (st, m, dir, outp)
     do ist = st%st_start, st%st_end
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
-        do ik = 1, st%nik
+        do ik = 1, st%d%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
             call X(output_function) (outp%how, dir, fname, m, &
@@ -443,7 +443,7 @@ subroutine X(states_output) (st, m, dir, outp)
     do ist = 1, st%nst
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
-        do ik = 1, st%nik
+        do ik = 1, st%d%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
             call doutput_function (outp%how, dir, fname, m, &
@@ -469,19 +469,19 @@ contains
     FLOAT, parameter :: dmin = CNST(1e-10)
     
     ! single or double occupancy
-    if(st%nspin == 1) then
+    if(st%d%nspin == 1) then
       s = M_TWO
     else
       s = M_ONE
     end if
 
 #if defined(R_TCOMPLEX)
-    allocate(j(3, m%np, st%nspin))
+    allocate(j(3, m%np, st%d%nspin))
     call calc_current(m, st, j)
 #endif
 
     allocate(c(m%np))
-    do_is: do is = 1, st%nspin
+    do_is: do is = 1, st%d%nspin
       ! first term
       allocate(r(m%np), gr(3, m%np))
       r(1:m%np) = st%rho(1:m%np, is)/s
@@ -498,7 +498,7 @@ contains
 
       ! now the second term
       allocate(gpsi(3, m%np))
-      do ik = is, st%nik, st%nspin
+      do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
             call X(f_gradient) (m, st%X(psi)(:, idim, ist, ik), gpsi)
@@ -561,7 +561,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   call X(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
   dotp = lalg_det(a, st1%nst)
 
-  select case(st1%ispin)
+  select case(st1%d%ispin)
    case(UNPOLARIZED)
      dotp = dotp**2
    case(SPIN_POLARIZED)
@@ -668,7 +668,7 @@ subroutine X(states_calculate_angular)(m, st, angular)
 
   temp = M_ZERO
   allocate(lpsi(conf%dim, m%np))
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
      do j  = st%st_start, st%st_end
         do idim = 1, st%dim
            call X(mesh_angular_momentum)(m, st%X(psi)(:, idim, j, ik), lpsi)

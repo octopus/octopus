@@ -26,7 +26,7 @@ subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
   type(hamiltonian_type), intent(in) :: h
   type(system_type), intent(in)    :: sys
   type(states_type), intent(inout) :: st
-  FLOAT,          intent(inout) :: vxc(m%np, st%nspin), ex, ec
+  FLOAT,          intent(inout) :: vxc(m%np, st%d%nspin), ex, ec
   
   type(xc_oep_type) :: oep
   FLOAT :: e
@@ -35,7 +35,7 @@ subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
   call push_sub('h_xc_oep')
 
   ! this routine is only prepared for finite systems, and ispin = 1, 2
-  if(st%ispin > 2 .or. st%nik>st%ispin) then
+  if(st%d%ispin > SPIN_POLARIZED .or. st%nik>st%d%ispin) then
     message(1) = "OEP only works for finite systems and collinear spin!"
     call write_fatal(1)
   end if
@@ -45,9 +45,9 @@ subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
   allocate(oep%vxc(m%np), oep%lxc(m%np, st%nst), oep%uxc_bar(st%nst))
 
   ! obtain the spin factors
-  call xc_oep_SpinFactor(oep, st%nspin)
+  call xc_oep_SpinFactor(oep, st%d%nspin)
 
-  spin: do is = 1, min(st%nspin, 2)
+  spin: do is = 1, min(st%d%nspin, 2)
     oep%lxc = M_ZERO
     e       = M_ZERO
 

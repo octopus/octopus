@@ -123,7 +123,7 @@ contains
     FLOAT :: r, x(3), d, gv(3)
     integer  :: ns
     
-    ns = min(2, sys%st%nspin)
+    ns = min(2, sys%st%d%nspin)
     
     do i = 1, sys%natoms
       atm => sys%atom(i)
@@ -157,7 +157,7 @@ contains
         call dcf_FS_grad(sys%m, cf_for, j)
         call dcf_FS2RS(cf_for)
         call dcf2mf(sys%m, cf_for, force)
-        do l = 1, sys%st%nspin
+        do l = 1, sys%st%d%nspin
           atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
         end do
       end do

@@ -111,7 +111,7 @@ contains
     np = m%np
     dim = st%dim
 
-    select case(st%ispin)
+    select case(st%d%ispin)
     case(UNPOLARIZED)
       psi(:, 1) = exp(factor*(h%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
     case(SPIN_POLARIZED)

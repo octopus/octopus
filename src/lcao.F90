@@ -89,7 +89,7 @@ subroutine lcao_dens(sys, nspin, rho)
 
   ! we now renormalize the density (necessary if we have a charged system)
   r = M_ZERO
-  do is = 1, sys%st%spin_channels
+  do is = 1, sys%st%d%spin_channels
      r = r + dmf_integrate(sys%m, rho(:, is))
   end do
   write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
@@ -97,7 +97,7 @@ subroutine lcao_dens(sys, nspin, rho)
   r = sys%st%qtot/r
   rho = r*rho
   r = M_ZERO
-  do is = 1, sys%st%spin_channels
+  do is = 1, sys%st%d%spin_channels
      r = r + dmf_integrate(sys%m, rho(:, is))
   end do
   write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
@@ -151,7 +151,7 @@ contains
       call mesh_r(m, i, r, a=a%x)
       do n = 1, s%ps%conf%p
         if(r >= r_small) then
-          select case(sys%st%spin_channels)
+          select case(sys%st%d%spin_channels)
           case(1)
             psi1 = loct_splint(s%ps%Ur(n, 1), r)
             rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)  
@@ -201,10 +201,10 @@ subroutine lcao_init(sys, h)
     end do l_loop
   end do atoms_loop
 
-  select case(sys%st%ispin)
-  case(1);
-   case(2); ! No need to multiply by two, since each spin-channel goes to a k-subspace.
-   case(3); norbs = norbs * 2
+  select case(sys%st%d%ispin)
+  case(UNPOLARIZED);
+  case(SPIN_POLARIZED); ! No need to multiply by two, since each spin-channel goes to a k-subspace.
+  case(SPINORS); norbs = norbs * 2
   end select
 
   lcao_data%dim = norbs
@@ -226,7 +226,7 @@ subroutine lcao_init(sys, h)
            if(.not. lcao_data%atoml(i1, l1)) cycle
            do lm1 = -l, l
               do d1 = 1, sys%st%dim
-                 ispin = states_spin_channel(sys%st%ispin, ik, d1)
+                 ispin = states_spin_channel(sys%st%d%ispin, ik, d1)
                  call get_wf(sys, i1, l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
                  n1 = n1 + 1
               end do

@@ -30,15 +30,28 @@ use output
 
 implicit none
 
+type states_dim_type
+  integer :: dim           ! * Dimension of the state (one or two for spinors)
+  integer :: nik           ! * Number of irreducible subspaces
+  integer :: nik_axis(3)   ! * Number of kpoints per axis
+  integer :: ispin         ! * spin mode (unpolarized, spin polarized, spinors)
+  integer :: nspin         ! * dimension of rho (1, 2 or 4)
+  integer :: spin_channels ! * 1 or 2, wether spin is or not considered.
+  logical :: select_axis(3)! * which axes are used fo k points
+  FLOAT, pointer :: kpoints(:,:) ! * obviously the kpoints
+  FLOAT, pointer :: kweights(:)  ! * weights for the kpoint integrations
+end type states_dim_type
+
 type states_type
-  integer :: dim           ! Dimension of the state (one or two for spinors)
-  integer :: nst           ! Number of states in each irreducible subspace
+
+  type(states_dim_type), pointer :: d
+
+  ! This is (by now!) replicated from the states_dim_type
+  integer :: dim
   integer :: nik           ! Number of irreducible subspaces
-  integer :: nik_axis(3)   ! Number of kpoints per axis
-  integer :: ispin         ! spin mode (unpolarized, spin polarized, spinors)
   integer :: nspin         ! dimension of rho (1, 2 or 4)
-  integer :: spin_channels ! 1 or 2, wether spin is or not considered.
-  logical :: select_axis(3)! which axes are used fo k points
+  
+  integer :: nst           ! Number of states in each irreducible subspace
 
   ! pointers to the wavefunctions
   FLOAT, pointer :: dpsi(:,:,:,:)
@@ -61,9 +74,6 @@ type states_type
 
   integer :: st_start, st_end ! needed for some parallel parts
 
-  FLOAT, pointer :: kpoints(:,:) ! obviously the kpoints
-  FLOAT, pointer :: kweights(:)  ! weights for the kpoint integrations
-
   integer :: restart_format  ! how the restart file is written
 end type states_type
 
@@ -80,7 +90,9 @@ contains
 
 subroutine states_null(st)
   type(states_type) :: st
-  nullify(st%dpsi, st%zpsi, st%rho, st%rho_core, st%eigenval, st%occ, st%mag, st%kpoints, st%kweights)
+  nullify(st%dpsi, st%zpsi, st%rho, st%rho_core, st%eigenval, st%occ, st%mag)
+  nullify(st%d); allocate(st%d)
+  nullify(st%d%kpoints, st%d%kweights)
 end subroutine states_null
 
 subroutine states_init(st, m, val_charge)
@@ -96,9 +108,9 @@ subroutine states_init(st, m, val_charge)
 
   call states_null(st)
 
-  call loct_parse_int('SpinComponents', UNPOLARIZED, st%ispin)
-  if (st%ispin < UNPOLARIZED .or. st%ispin > SPINORS) then
-    write(message(1),'(a,i4,a)') "Input: '", st%ispin,"' is not a valid SpinComponents"
+  call loct_parse_int('SpinComponents', UNPOLARIZED, st%d%ispin)
+  if (st%d%ispin < UNPOLARIZED .or. st%d%ispin > SPINORS) then
+    write(message(1),'(a,i4,a)') "Input: '", st%d%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
     call write_fatal(2)
   end if
@@ -108,11 +120,11 @@ subroutine states_init(st, m, val_charge)
       message(1) = 'Block "NumberKPoints" not found in input file.'
       call write_fatal(1)
     end if
-    st%nik_axis = 1
+    st%d%nik_axis = 1
     do i = 1, conf%periodic_dim
-      call loct_parse_block_int('NumberKPoints', 0, i-1, st%nik_axis(i))
+      call loct_parse_block_int('NumberKPoints', 0, i-1, st%d%nik_axis(i))
     end do    
-    if (any(st%nik_axis < 1)) then
+    if (any(st%d%nik_axis < 1)) then
       message(1) = 'Input: NumberKPoints is not valid'
       message(2) = '(NumberKPoints >= 1)'
       call write_fatal(2)
@@ -121,23 +133,22 @@ subroutine states_init(st, m, val_charge)
     select case(loct_parse_block_n('SelectKAxis'))
     case(1)
       do i = 1, conf%periodic_dim
-         call loct_parse_block_logical('SelectKAxis', 0, i-1, st%select_axis(i))
+         call loct_parse_block_logical('SelectKAxis', 0, i-1, st%d%select_axis(i))
       end do
       do i=1, conf%periodic_dim
-         if (.not.st%select_axis(i)) then
+         if (.not.st%d%select_axis(i)) then
           write(message(1),'(a,i1,a)')'Info: K points in axis ',i,' are neglected'
           call write_info(1) 
-          st%nik_axis(i)=1
+          st%d%nik_axis(i) = 1
          end if
       end do
     case default
-      st%select_axis=.true.
+      st%d%select_axis=.true.
     end select
-    st%nik=PRODUCT(st%nik_axis)
+    st%d%nik=PRODUCT(st%d%nik_axis)
   else
-    st%nik = 1
+    st%d%nik = 1
   end if
-
   
   call loct_parse_float('ExcessCharge', M_ZERO, excess_charge)
 
@@ -150,49 +161,49 @@ subroutine states_init(st, m, val_charge)
   
   st%qtot = -(val_charge + excess_charge)
 
-  select case(st%ispin)
+  select case(st%d%ispin)
   case(UNPOLARIZED)
-    st%dim = 1
+    st%d%dim = 1
     st%nst = int(st%qtot/2)
     if(st%nst*2 < st%qtot) st%nst = st%nst + 1
     st%nst = st%nst + nempty
-    st%nspin = 1
-    st%spin_channels = 1
+    st%d%nspin = 1
+    st%d%spin_channels = 1
   case(SPIN_POLARIZED)
-    st%dim = 1
+    st%d%dim = 1
     st%nst = int(st%qtot/2)
     if(st%nst*2 < st%qtot) st%nst = st%nst + 1
     st%nst = st%nst + nempty
-    st%nik = st%nik*2
-    st%nspin = 2
-    st%spin_channels = 2
+    st%d%nik = st%d%nik*2
+    st%d%nspin = 2
+    st%d%spin_channels = 2
   case(SPINORS)
-    st%dim = 2
+    st%d%dim = 2
     st%nst = int(st%qtot)
     if(st%nst < st%qtot) st%nst = st%nst + 1
     st%nst = st%nst + nempty
-    st%nspin = 4
-    st%spin_channels = 2
+    st%d%nspin = 4
+    st%d%spin_channels = 2
   end select
 
   ! For non-periodic systems this should just return the Gamma point
   call states_choose_kpoints(st, m)
 
   ! we now allocate some arrays
-!!$  st%nspin = min(2, st%ispin)
-  allocate(st%rho(m%np, st%nspin), &
-           st%occ(st%nst, st%nik), &
-           st%eigenval(st%nst, st%nik))
-  if(st%ispin == SPINORS) then
-    allocate(st%mag(st%nst, st%nik, 2))
+  allocate(st%rho(m%np, st%d%nspin), &
+           st%occ(st%nst, st%d%nik), &
+           st%eigenval(st%nst, st%d%nik))
+  if(st%d%ispin == SPINORS) then
+    allocate(st%mag(st%nst, st%d%nik, 2))
   end if
+
 
   str = "Occupations"
   occ_fix: if(loct_parse_isdef(str) .ne. 0) then
     ! read in occupations
     st%fixed_occ = .true.
 
-    do i = 1, st%nik
+    do i = 1, st%d%nik
       do j = 1, st%nst
         call loct_parse_block_float(str, i-1, j-1, st%occ(j, i))
       end do
@@ -201,18 +212,19 @@ subroutine states_init(st, m, val_charge)
     st%fixed_occ = .false.
 
     ! first guest for occupation...paramagnetic configuration
-    if(st%ispin == UNPOLARIZED) then
+    if(st%d%ispin == UNPOLARIZED) then
       r = M_TWO
     else
       r = M_ONE
     endif
-!!$    r = M_TWO / st%nspin
     st%occ  = M_ZERO
     st%qtot = M_ZERO
+
     do j = 1, st%nst
-      do i = 1, st%nik
+      do i = 1, st%d%nik
         st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
         st%qtot = st%qtot + st%occ(j, i)
+
       end do
     end do
 
@@ -223,14 +235,18 @@ subroutine states_init(st, m, val_charge)
   st%st_start = 1; st%st_end = st%nst
   nullify(st%dpsi, st%zpsi, st%rho_core)
 
+  ! Duplicate this
+  st%dim   = st%d%dim
+  st%nik   = st%d%nik
+  st%nspin = st%d%nspin
+
   ! read restart format information
   call loct_parse_int('RestartFileFormat', 1, st%restart_format)
-  if (st%restart_format < 1 .or. st%ispin > 2) then
+  if (st%restart_format < 1 .or. st%restart_format > 2) then
     write(message(1),'(a,i4,a)') "Input: '", st%restart_format,"' is not a valid RestartFileFormat"
     message(2) = '(RestartFileFormat = unformatted | formatted)'
     call write_fatal(2)
   end if
-
 
   call pop_sub()
 end subroutine states_init
@@ -244,9 +260,7 @@ subroutine states_copy(stout, stin)
   stout%dim           = stin%dim
   stout%nst           = stin%nst
   stout%nik           = stin%nik
-  stout%ispin         = stin%ispin
   stout%nspin         = stin%nspin
-  stout%spin_channels = stin%spin_channels
   stout%qtot = stin%qtot
   stout%el_temp = stin%el_temp
   stout%ef = stin%ef
@@ -281,15 +295,21 @@ subroutine states_copy(stout, stin)
     allocate(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)))
     stout%mag = stin%mag
   endif
-  if(associated(stin%kpoints)) then
-    allocate(stout%kpoints(size(stin%kpoints, 1), size(stin%kpoints, 2)))
-    stout%kpoints = stin%kpoints
+  stout%d%dim = stin%d%dim
+  stout%d%nik = stin%d%nik
+  stout%d%nik_axis(:) = stout%d%nik_axis(:)
+  stout%d%ispin = stin%d%ispin
+  stout%d%nspin = stin%d%nspin
+  stout%d%spin_channels = stin%d%spin_channels
+  stout%d%select_axis(:) = stin%d%select_axis(:)
+  if(associated(stin%d%kpoints)) then
+    allocate(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)))
+    stout%d%kpoints = stin%d%kpoints
   endif
-  if(associated(stin%kweights)) then
-    allocate(stout%kweights(size(stin%kweights, 1)))
-    stout%kweights = stin%kweights
+  if(associated(stin%d%kweights)) then
+    allocate(stout%d%kweights(size(stin%d%kpoints, 1)))
+    stout%d%kweights = stin%d%kweights
   endif
-
 end subroutine states_copy
 
 subroutine states_end(st)
@@ -307,7 +327,7 @@ subroutine states_end(st)
     nullify(st%rho_core)
   end if
 
-  if(st%ispin==3 .and. associated(st%mag)) then
+  if(st%d%ispin==SPINORS .and. associated(st%mag)) then
     deallocate(st%mag); nullify(st%mag)
   end if
 
@@ -317,10 +337,6 @@ subroutine states_end(st)
 
   if(associated(st%zpsi)) then
     deallocate(st%zpsi); nullify(st%zpsi)
-  end if
-
-  if(associated(st%kpoints)) then
-    nullify(st%kpoints, st%kweights)
   end if
 
   call pop_sub()
@@ -369,7 +385,7 @@ subroutine states_fermi(st, m)
 
   if(st%fixed_occ) then ! nothing to do
      ! Calculate magnetizations...
-     if(st%ispin == 3) then
+     if(st%d%ispin == SPINORS) then
        do ik = 1, st%nik
          do ie = 1, st%nst
             st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
@@ -385,7 +401,7 @@ subroutine states_fermi(st, m)
   emin = minval(st%eigenval)
   emax = maxval(st%eigenval)
 
-  if(st%ispin == 3) then
+  if(st%d%ispin == SPINORS) then
      sumq = real(st%nst, PRECISION)
   else
      sumq = M_TWO*st%nst
@@ -397,9 +413,9 @@ subroutine states_fermi(st, m)
   conv = .true.
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
-     st%occ = M_TWO/st%spin_channels!st%nspin
+     st%occ = M_TWO/st%d%spin_channels!st%nspin
      ! Calculate magnetizations...
-     if(st%ispin == 3) then
+     if(st%d%ispin == SPINORS) then
        do ik = 1, st%nik
          do ie = 1, st%nst
             st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
@@ -429,7 +445,7 @@ subroutine states_fermi(st, m)
 
     do ik = 1, st%nik
       do ie =1, st%nst
-        sumq = sumq + st%kweights(ik)/st%spin_channels * & !st%nspin * &
+        sumq = sumq + st%d%kweights(ik)/st%d%spin_channels * & !st%nspin * &
              stepf((st%eigenval(ie, ik) - st%ef)/t)
       end do
     end do
@@ -449,12 +465,12 @@ subroutine states_fermi(st, m)
 
   do ik = 1, st%nik
     do ie = 1, st%nst
-      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%spin_channels!st%nspin
+      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%d%spin_channels!st%nspin
     end do
   end do
 
   ! Calculate magnetizations...
-  if(st%ispin == 3) then
+  if(st%d%ispin == SPINORS) then
     do ik = 1, st%nik
        do ie = 1, st%nst
           st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
@@ -470,7 +486,7 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   FLOAT, intent(in) :: pol(3)
-  FLOAT, intent(out) :: dipole(st%nspin)
+  FLOAT, intent(out) :: dipole(st%d%nspin)
   integer, intent(in), optional :: lmax
   !FLOAT, intent(out), optional :: multipole((lmax + 1)**2, st%nspin)
   FLOAT, intent(out), optional :: multipole(:, :)
@@ -481,7 +497,7 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   call push_sub('states_calculate_multipoles')
 
   dipole = M_ZERO
-  do is = 1, st%nspin
+  do is = 1, st%d%nspin
     do i = 1, m%np
       call mesh_xyz(m, i, x)
       dipole(is) = dipole(is) + st%rho(i, is)*sum(x*pol)
@@ -533,7 +549,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   if(iunit==stdout.and.conf%verbose<=20) return
 
   ns = 1
-  if(st%nspin == 2) ns = 2
+  if(st%d%nspin == 2) ns = 2
 
   message(1) = 'Eigenvalues ['+trim(units_out%energy%abbrev)+']'
   call write_info(1, iunit)
@@ -551,9 +567,9 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
     do ik = 1, st%nik, ns
       if(st%nik > ns) then
         write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-        st%kpoints(1, ik)*units_out%length%factor, ',',           &
-        st%kpoints(2, ik)*units_out%length%factor, ',',           &
-        st%kpoints(3, ik)*units_out%length%factor, ')'
+        st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
+        st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
+        st%d%kpoints(3, ik)*units_out%length%factor, ')'
       end if
       
       do is = 1, ns
@@ -572,10 +588,10 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
         do is = 0, ns-1
           if(j > st%nst) then
             o = M_ZERO
-            if(st%ispin == 3) oplus = M_ZERO; ominus = M_ZERO
+            if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
           else
             o = st%occ(j, ik+is)
-            if(st%ispin == 3) then 
+            if(st%d%ispin == SPINORS) then 
               oplus  = st%mag(j, ik+is, 1)
               ominus = st%mag(j, ik+is, 2)
             endif
@@ -583,7 +599,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
       
           write(iunit, '(i4)', advance='no') j
           if (conf%periodic_dim>0) then 
-            if(st%ispin == 3) then
+            if(st%d%ispin == SPINORS) then
               write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
                    (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
               if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
@@ -593,7 +609,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
             endif
           else
-            if(st%ispin == 3) then
+            if(st%d%ispin == SPINORS) then
               write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
                    st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
               if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
@@ -626,7 +642,7 @@ subroutine states_write_bands(iunit, nst, st)
   ! shortcuts
   pd=conf%periodic_dim
   ns = 1
-  if(st%nspin == 2) ns = 2
+  if(st%d%nspin == 2) ns = 2
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
@@ -634,7 +650,7 @@ subroutine states_write_bands(iunit, nst, st)
       do j = 1, nst
         do ik = 1, st%nik, ns
             write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
-            st%kpoints(:,ik)*units_out%length%factor,            &
+            st%d%kpoints(:,ik)*units_out%length%factor,            &
             (st%eigenval(j, ik))/units_out%energy%factor
         end do
         write(iunit, '(a)')' '
@@ -650,7 +666,7 @@ end subroutine states_write_bands
 integer function states_spin_channel(ispin, ik, dim)
   integer, intent(in) :: ispin, ik, dim
 
-  if( ispin < 1 .or. ispin>3 .or. &
+  if( ispin < UNPOLARIZED .or. ispin> SPINORS .or. &
       ik<0 .or.                   &
       dim<1 .or. dim>2 .or.       &
       (ispin.ne.3 .and. dim==2)) then
@@ -693,7 +709,7 @@ end subroutine calc_projection
 subroutine calc_current(m, st, j)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  FLOAT, intent(out) :: j(3, m%np, st%nspin)
+  FLOAT, intent(out) :: j(3, m%np, st%d%nspin)
   
   integer :: ik, p, sp, ierr, k
   CMPLX, allocatable :: aux(:,:)
@@ -703,7 +719,7 @@ subroutine calc_current(m, st, j)
 
   call push_sub('calc_current')
   
-  if(st%ispin == 2) then
+  if(st%d%ispin == SPIN_POLARIZED) then
     sp = 2
   else
     sp = 1
@@ -718,25 +734,25 @@ subroutine calc_current(m, st, j)
       
       ! spin-up density
       do k = 1, m%np
-        j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%kweights(ik)*st%occ(p, ik)  &
+        j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
              * aimag(st%zpsi(k, 1, p, ik) * conjg(aux(1:conf%dim, k)))
       end do
         
       ! spin-down density
-      if(st%ispin == 2) then
+      if(st%d%ispin == SPIN_POLARIZED) then
         call zf_gradient(m, st%zpsi(:, 1, p, ik+1), aux)
 
         do k = 1, m%np
-          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%kweights(ik+1)*st%occ(p, ik+1) &
+          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
              * aimag(st%zpsi(k, 1, p, ik+1) * conjg(aux(1:conf%dim, k)))
         end do
 
         ! WARNING: the next lines DO NOT work properly
-      else if(st%ispin == 3) then ! off-diagonal densities
+      else if(st%d%ispin == SPINORS) then ! off-diagonal densities
         call zf_gradient(m, st%zpsi(:, 2, p, ik), aux)
 
         do k = 1, m%np
-          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%kweights(ik)*st%occ(p, ik) &
+          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
                * aimag(st%zpsi(k, 2, p, ik) * conjg(aux(1:conf%dim, k)))
         end do
       end if
@@ -746,8 +762,8 @@ subroutine calc_current(m, st, j)
   deallocate(aux)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-  allocate(red(3, m%np, st%nspin))
-  call MPI_ALLREDUCE(j(1, 1, 1), red(1, 1, 1), 3*m%np*st%nspin, &
+  allocate(red(3, m%np, st%d%nspin))
+  call MPI_ALLREDUCE(j(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
        MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
   j = red
   deallocate(red)

@@ -94,7 +94,7 @@ subroutine scf_init(scf, sys, h)
    call write_info(1)
 
   ! Handle mixing now...
-  call mix_init(scf%smix, sys%m%np, sys%st%nspin)
+  call mix_init(scf%smix, sys%m%np, sys%st%d%nspin)
 
   ! now the eigen solver stuff
   call eigen_solver_init(scf%eigens, sys%st, sys%m)
@@ -133,10 +133,10 @@ subroutine scf_run(scf, sys, h)
 
   if(scf%lcao_restricted) call lcao_init(sys, h)
 
-  allocate(rhoout(sys%m%np, sys%st%nspin), rhoin(sys%m%np, sys%st%nspin))
+  allocate(rhoout(sys%m%np, sys%st%d%nspin), rhoin(sys%m%np, sys%st%d%nspin))
   rhoin = sys%st%rho
   if (scf%what2mix == MIXPOT) then
-     allocate(vout(sys%m%np, sys%st%nspin), vin(sys%m%np, sys%st%nspin))
+     allocate(vout(sys%m%np, sys%st%d%nspin), vin(sys%m%np, sys%st%d%nspin))
      vin = h%vhxc; vout = M_ZERO
   end if
   evsum_in = states_eigenvalues_sum(sys%st)
@@ -163,7 +163,7 @@ subroutine scf_run(scf, sys, h)
 
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
-    do is = 1, sys%st%nspin
+    do is = 1, sys%st%d%nspin
        scf%abs_dens = scf%abs_dens + dmf_integrate(sys%m, (rhoin(:,is) - rhoout(:,is))**2)
     end do
     scf%abs_dens = sqrt(scf%abs_dens)
@@ -183,11 +183,11 @@ subroutine scf_run(scf, sys, h)
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, rhoin, rhoout, sys%st%rho)
+       call mixing(scf%smix, iter, sys%m%np, sys%st%d%nspin, rhoin, rhoout, sys%st%rho)
        call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, sys%m%np, sys%st%nspin, vin, vout, h%vhxc)
+       call mixing(scf%smix, iter, sys%m%np, sys%st%d%nspin, vin, vout, h%vhxc)
     end select
 
     ! save restart information
@@ -235,7 +235,7 @@ subroutine scf_run(scf, sys, h)
      call atom_write_xyz("static", "geometry", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
 
-  if (conf%periodic_dim>0.and.sys%st%nik>sys%st%nspin) then
+  if (conf%periodic_dim>0.and.sys%st%nik>sys%st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
     call states_write_bands(iunit, sys%st%nst, sys%st)
@@ -269,7 +269,7 @@ end subroutine scf_write_iter
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
-  FLOAT :: e_dip(conf%dim, sys%st%nspin), n_dip(conf%dim)
+  FLOAT :: e_dip(conf%dim, sys%st%d%nspin), n_dip(conf%dim)
   FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
   integer :: iunit, i, j
 
@@ -313,7 +313,7 @@ subroutine scf_write_static(dir, fname)
   call hamiltonian_energy(h, sys%st, sys%eii, iunit)
   write(iunit, '(1x)')
 
-  if(sys%st%ispin > 1) then
+  if(sys%st%d%ispin > UNPOLARIZED) then
     call write_magnet(iunit, sys%st)
   end if
 
@@ -365,27 +365,27 @@ subroutine write_magnet(iunit, st)
   integer :: i, ik, ist
   
   write(iunit, '(a)') 'Magnetization:'
-  if(st%ispin == 2) then ! collinear spin
+  if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
     sign = M_ONE
     m(3) = M_ZERO
     do ik = 1, st%nik
       do ist = 1, st%nst
-        m(3) = m(3) + sign*st%kweights(ik)*st%occ(ist, ik)
+        m(3) = m(3) + sign*st%d%kweights(ik)*st%occ(ist, ik)
       end do
       sign = -sign
     end do
     write(iunit, '(a,f15.6)') ' mz = ', m(3)
     
-  else if(st%ispin == 3) then ! non-collinear
+  else if(st%d%ispin == SPINORS) then ! non-collinear
     m = M_ZERO
     do ik = 1, st%nik
       do ist = 1, st%nst
         do i = 1, sys%m%np
           c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
-          m(1) = m(1) + st%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
-          m(2) = m(2) + st%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
+          m(1) = m(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+          m(2) = m(2) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
           c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
-          m(3) = m(3) + st%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+          m(3) = m(3) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
         end do
       end do
     end do

@@ -32,8 +32,8 @@ subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
   type(xc_type) :: xcs2
 
   allocate(rho(m%np, 2), Vx2(m%np, 2))
-  i1 = st%spin_channels; st%spin_channels = 2
-  i2 = st%nspin;         st%nspin         = 2
+  i1 = st%d%spin_channels; st%d%spin_channels = 2
+  i2 = st%d%nspin;         st%d%nspin         = 2
   rho_save => st%rho;    st%rho => rho
 
 ! calculate the u_sij using poissons equation
@@ -62,8 +62,8 @@ subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
     end if
   end do
 
-  st%spin_channels = i1
-  st%nspin         = i2    
+  st%d%spin_channels = i1
+  st%d%nspin         = i2    
   st%rho => rho_save
   deallocate(rho, Vx2)
 
@@ -84,8 +84,8 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
   type(xc_type) :: xcs2
 
   allocate(rho(m%np, 2), Vc2(m%np, 2))
-  i1 = st%spin_channels; st%spin_channels = 2
-  i2 = st%nspin;         st%nspin         = 2
+  i1 = st%d%spin_channels; st%d%spin_channels = 2
+  i2 = st%d%nspin;         st%d%nspin         = 2
   rho_save => st%rho;    st%rho => rho
 
 ! calculate the u_sij using poissons equation
@@ -108,8 +108,8 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
     end if
   end do
 
-  st%spin_channels = i1
-  st%nspin         = i2    
+  st%d%spin_channels = i1
+  st%d%nspin         = i2    
   st%rho => rho_save
   deallocate(rho, Vc2)
 

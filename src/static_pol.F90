@@ -95,7 +95,7 @@ subroutine static_pol_run(scf, sys, h)
         call scf_run(scf, sys, h)
 
         trrho = M_ZERO
-        do is = 1, sys%st%spin_channels
+        do is = 1, sys%st%d%spin_channels
            trrho(:) = trrho(:) + sys%st%rho(:, is)
         enddo
 

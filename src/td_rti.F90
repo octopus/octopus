@@ -63,7 +63,7 @@ contains
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
-       allocate(tr%vmagnus(m%np, st%nspin, 2))
+       allocate(tr%vmagnus(m%np, st%d%nspin, 2))
     case default
       write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
       message(2) = '(0 <= TDEvolutionMethod <= 5)'
@@ -71,7 +71,7 @@ contains
     end select
     call write_info(1)
     
-    allocate(tr%v_old(m%np, st%nspin, 0:3)) ! allocate memory to store the old KS potentials
+    allocate(tr%v_old(m%np, st%d%nspin, 0:3)) ! allocate memory to store the old KS potentials
     call td_exp_init(m, tr%te)            ! initialize propagator
 
   end subroutine td_rti_init
@@ -127,7 +127,7 @@ contains
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
-    call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
+    call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
 
     select case(tr%method)
     case(SPLIT_OPERATOR);       call td_rti0
@@ -147,8 +147,7 @@ contains
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
-        !write(*, *) maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /))
-        if( maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /)) < scf_threshold) exit
+        if( maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%d%nspin) /)) < scf_threshold) exit
 
         st%zpsi = zpsi1
         select case(tr%method)
@@ -210,7 +209,7 @@ contains
       time(5) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
 
       do k = 1, 5
-         call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
+         call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
          do ik = 1, st%nik
             do ist = 1, st%nst
                call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
@@ -236,7 +235,7 @@ contains
         allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
         zpsi1 = st%zpsi ! store zpsi
         
-        allocate(vhxc_t1(m%np, st%nspin), vhxc_t2(m%np, st%nspin))
+        allocate(vhxc_t1(m%np, st%d%nspin), vhxc_t2(m%np, st%d%nspin))
         vhxc_t1 = h%vhxc
         
         ! propagate dt with H(t-dt)
@@ -301,7 +300,7 @@ contains
       call push_sub('td_rti4')
 
       if(.not.h%ip_app) then
-        call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
+        call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
       
       do ik = 1, st%nik
@@ -320,14 +319,14 @@ contains
 
       call push_sub('td_rti5')
 
-      allocate(vaux(m%np, st%nspin, 2))
+      allocate(vaux(m%np, st%d%nspin, 2))
 
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
       if(.not.h%ip_app) then
         do j = 1, 2
-           call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 0:2), vaux(:, :, j), dt, time(j)-dt)
+           call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), vaux(:, :, j), dt, time(j)-dt)
         enddo
       else
         vaux = M_ZERO
@@ -340,7 +339,7 @@ contains
             call laser_field(h%ep%no_lasers, h%ep%lasers, t-dt+time(j), f)
             do k = 1, m%np
                call mesh_xyz(m, k, x)
-               do is = 1, st%spin_channels
+               do is = 1, st%d%spin_channels
                   vaux(k, is, j) = vaux(k, is, j) + sum(x*f)
                enddo
             end do

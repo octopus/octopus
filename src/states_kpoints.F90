@@ -23,12 +23,12 @@ subroutine states_choose_kpoints(st, m)
   integer  :: i, ik, jk, kk, j, k, skip, tmp_nik_axis(3)
   FLOAT :: l(3), total_weight
 
-  allocate(st%kpoints(3, st%nik), st%kweights(st%nik))
-  st%kpoints = M_ZERO
+  allocate(st%d%kpoints(3, st%d%nik), st%d%kweights(st%d%nik))
+  st%d%kpoints = M_ZERO
   
   ! just return the Gamma point
-  if(st%nik == 1.or.(st%nik == 2.and.st%ispin == 2)) then 
-    st%kweights(:) = M_ONE
+  if(st%d%nik == 1.or.(st%d%nik == 2.and.st%d%ispin == 2)) then 
+    st%d%kweights(:) = M_ONE
     if(conf%periodic_dim>0) then 
       message(1) = 'Info: Only the Gamma k point is used'
       call write_info(1)
@@ -44,7 +44,7 @@ subroutine states_choose_kpoints(st, m)
     coi=.false.
   end if
 
-  if(st%ispin == 2) then
+  if(st%d%ispin == 2) then
     skip=M_TWO
   else
     skip=M_ONE
@@ -59,36 +59,36 @@ subroutine states_choose_kpoints(st, m)
   end if
   
   do i=1,3
-  if (st%nik_axis(i)==1) then
-    tmp_nik_axis(i)=st%nik_axis(i)+1
+  if (st%d%nik_axis(i)==1) then
+    tmp_nik_axis(i)=st%d%nik_axis(i)+1
   else
-    tmp_nik_axis(i)=st%nik_axis(i)
+    tmp_nik_axis(i)=st%d%nik_axis(i)
   end if
   end do
 
   total_weight = M_ZERO
   k=M_ONE
-  do kk = 1, st%nik_axis(3)
-  do jk = 1, st%nik_axis(2)
-  do ik = 1, st%nik_axis(1)
-    st%kpoints(1, k) = l(1)*m%klat(1,1)*(ik-1)/(tmp_nik_axis(1)-1)
-    st%kpoints(2, k) = l(2)*m%klat(2,2)*(jk-1)/(tmp_nik_axis(2)-1)
-    st%kpoints(3, k) = l(3)*m%klat(3,3)*(kk-1)/(tmp_nik_axis(3)-1)
+  do kk = 1, st%d%nik_axis(3)
+  do jk = 1, st%d%nik_axis(2)
+  do ik = 1, st%d%nik_axis(1)
+    st%d%kpoints(1, k) = l(1)*m%klat(1,1)*(ik-1)/(tmp_nik_axis(1)-1)
+    st%d%kpoints(2, k) = l(2)*m%klat(2,2)*(jk-1)/(tmp_nik_axis(2)-1)
+    st%d%kpoints(3, k) = l(3)*m%klat(3,3)*(kk-1)/(tmp_nik_axis(3)-1)
     if (coi) then
-      if (conf%periodic_dim==M_ONE .and. (k==0 .or. k==st%nik_axis(i)-1)) then
-        st%kweights(k) = M_ONE
+      if (conf%periodic_dim==M_ONE .and. (k==0 .or. k==st%d%nik_axis(i)-1)) then
+        st%d%kweights(k) = M_ONE
       else
-        st%kweights(k) = M_TWO
+        st%d%kweights(k) = M_TWO
       end if
     else
-      st%kweights(k) = M_ONE
+      st%d%kweights(k) = M_ONE
     end if
-    total_weight=total_weight+st%kweights(k)
+    total_weight=total_weight+st%d%kweights(k)
     k = (k+1)/skip
   end do
   end do
   end do
-  st%kweights=st%kweights/total_weight
+  st%d%kweights=st%d%kweights/total_weight
 
 end subroutine states_choose_kpoints
 
@@ -105,7 +105,7 @@ subroutine kpoints_write_info(st,iunit)
   message(2)='       --------------------------------------------------'
   call write_info(2,iunit,verbose_limit=80)
   do ik=1, st%nik
-    write(message(1),'(i4,1x,4f12.4)') ik,st%kpoints(:,ik)*units_out%length%factor, st%kweights(ik)
+    write(message(1),'(i4,1x,4f12.4)') ik,st%d%kpoints(:,ik)*units_out%length%factor, st%d%kweights(ik)
     call write_info(1,iunit,verbose_limit=80)
   end do
 

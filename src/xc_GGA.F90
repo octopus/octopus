@@ -19,7 +19,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   type(xc_type),     intent(in)  :: xcs
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
-  FLOAT,          intent(out) :: vxc(m%np, st%nspin), ex, ec
+  FLOAT,          intent(out) :: vxc(m%np, st%d%nspin), ex, ec
   FLOAT,          intent(in)  :: ip, qtot
   
   FLOAT :: e, dpol, dtot, vpol, r
@@ -29,35 +29,37 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   FLOAT, allocatable :: grhoplus(:, :), grhominus(:, :)
   FLOAT, allocatable :: vlocaldedgd(:,:,:), vlocaldedgd1(:,:)
 
-  FLOAT :: x(3), locald(st%spin_channels), localgd(3, st%spin_channels), &
-       localdedd(st%spin_channels), &
-       localdedd_x(st%spin_channels), localdedgd_x(3, st%spin_channels)
+  FLOAT :: x(3), locald(st%d%spin_channels), localgd(3, st%d%spin_channels), &
+       localdedd(st%d%spin_channels), &
+       localdedd_x(st%d%spin_channels), localdedgd_x(3, st%d%spin_channels)
 
-  integer :: i, j, is, in, ic, ind(3), k, n
+  integer :: i, j, is, in, ic, ind(3), k, n, spin_channels
   integer :: ixc
 
   call push_sub('xc_gga')
 
-  allocate(d(m%np, st%nspin), lpot(m%np, st%spin_channels))
+  spin_channels = st%d%spin_channels
+
+  allocate(d(m%np, st%d%nspin), lpot(m%np, spin_channels))
   allocate(rhoplus(m%np), rhominus(m%np))
   allocate(grhoplus(3, m%np), grhominus(3, m%np))
-  allocate(vlocaldedgd(m%np, 3, st%spin_channels), vlocaldedgd1(3, st%spin_channels))
+  allocate(vlocaldedgd(m%np, 3, spin_channels), vlocaldedgd1(3, spin_channels))
 
   ! Store in local variables d the density matrix
   ! (in the global reference system).
-  call dlalg_copy(m%np*st%nspin, st%rho(1:m%np, 1:st%nspin), d(1, 1))
+  call dlalg_copy(m%np*st%d%nspin, st%rho(1:m%np, 1:st%d%nspin), d(1, 1))
 
   ! If the pseudo has non-local core corrections, add the core charge
   ! (to the diagonal of the density matrix)
   if(xcs%nlcc) then
-    do is = 1, st%spin_channels
-      call dlalg_axpy(m%np, M_ONE/st%spin_channels, st%rho_core(1:m%np), d(1, is))
+    do is = 1, spin_channels
+      call dlalg_axpy(m%np, M_ONE/spin_channels, st%rho_core(1:m%np), d(1, is))
     end do
   end if
 
   grhoplus = M_ZERO; grhominus = M_ZERO
   do i = 1, m%np
-    select case(st%ispin)
+    select case(st%d%ispin)
     case(UNPOLARIZED)
       rhoplus(i) = max(d(i, 1), M_ZERO)
     case(SPIN_POLARIZED)
@@ -72,7 +74,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   enddo
 
   call df_gradient(m, rhoplus, grhoplus)
-  if(st%ispin > UNPOLARIZED) call df_gradient(m, rhominus, grhominus)
+  if(st%d%ispin > UNPOLARIZED) call df_gradient(m, rhominus, grhominus)
 
   lpot        = M_ZERO
   vlocaldedgd = M_ZERO
@@ -80,7 +82,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
         
     locald(1) = rhoplus(i)
     localgd(1:3, 1) = grhoplus(1:3, i)
-    if(st%ispin > UNPOLARIZED) then
+    if(st%d%ispin > UNPOLARIZED) then
       locald(2) = rhominus(i)
       localgd(1:3, 2) = grhominus(1:3, i)
     endif
@@ -91,17 +93,17 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
         
       select case(ibset(0, ixc))
       case(X_FUNC_GGA_PBE)
-        call pbex(0, st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
+        call pbex(0, spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
       case(X_FUNC_GGA_PBER)
-        call pbex(1, st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
+        call pbex(1, spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
       case(X_FUNC_GGA_LB94)
         call mesh_r(m, i, r)
-        call lb94(st%spin_channels, locald, localgd, localdedd, &
+        call lb94(spin_channels, locald, localgd, localdedd, &
              r, ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
         e = M_ZERO
         vlocaldedgd1(:,:) = M_ZERO
       case(C_FUNC_GGA_PBE)
-        call pbec(st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
+        call pbec(spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
       end select
       
       if(ixc < N_X_FUNCTL) then
@@ -118,13 +120,13 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
 
   ! We now add substract the divergence of the functional derivative of fxc with respect to
   ! the gradient of the density.
-  do is = 1, st%spin_channels
+  do is = 1, spin_channels
     call df_divergence(m, vlocaldedgd(:,:,is), rhoplus(:))
     call dlalg_axpy(m%np, -M_ONE, rhoplus(1), lpot(1, is))
   end do
       
   ! And now we rotate back (do not need the rotation matrix for this).
-  if(st%ispin == SPINORS) then
+  if(st%d%ispin == SPINORS) then
     do i = 1, m%np
       dtot = d(i, 1) + d(i, 2)
       dpol = sqrt( (d(i, 1)-d(i, 2))**2 + M_FOUR*(d(i, 3)**2+d(i, 4)**2) )
@@ -141,7 +143,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   ! If LB94, we have to calculate the energy 
   ! Levy-Perdew relation (PRA 32, 2010 (1985))
   if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-    do is = 1, st%nspin
+    do is = 1, st%d%nspin
       call df_gradient(m, vxc(:, is), grhoplus)
       do i = 1, m%np
         ex = ex - d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*grhoplus(:, i)) * m%vol_pp

@@ -31,18 +31,9 @@ use xc
 implicit none
 
 type hamiltonian_type
-  ! This information is duplicated from states_type....
-  integer :: dim           ! Dimension of the state (one or two for spinors)
-  integer :: nst           ! Number of states in each irreducible subspace
-  integer :: nik           ! Number of irreducible subspaces
-  integer :: nik_axis(3)   ! Number of kpoints per axis
-  integer :: ispin         ! spin mode (unpolarized, spin polarized, spinors)
-  integer :: nspin         ! dimension of rho (1, 2 or 4)
-  integer :: spin_channels ! 1 or 2, wether spin is or not considered.
-  logical :: select_axis(3)! which axes are used fo k points
-  FLOAT, pointer :: kpoints(:,:) ! obviously the kpoints
-  FLOAT, pointer :: kweights(:)  ! weights for the kpoint integrations
-
+  ! The Hamiltonian must know what are the "dimensions" of the spaces,
+  ! in order to be able to operate on the states.
+  type(states_dim_type), pointer :: d
 
   integer :: reltype ! type of relativistic correction to use
 
@@ -96,13 +87,13 @@ subroutine hamiltonian_init(h, sys)
 
   call push_sub('hamiltonian_init')
 
-  ! These two should be nullified (they are assigned in h_calc_vhxc)
-  nullify(h%kpoints, h%kweights)
+  ! Hamiltonian must know about the dimensionality of sys%st%d
+  h%d => sys%st%d
 
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
-  allocate(h%Vpsl(sys%m%np), h%Vhxc(sys%m%np, sys%st%nspin))
+  allocate(h%Vpsl(sys%m%np), h%Vhxc(sys%m%np, sys%st%d%nspin))
   h%vpsl = M_ZERO
   h%Vhxc = M_ZERO
 
@@ -224,12 +215,8 @@ subroutine hamiltonian_end(h, sys)
     deallocate(h%ab_pot); nullify(h%ab_pot)
   end if
 
-  if(associated(h%kpoints)) then
-    deallocate(h%kpoints); nullify(h%kpoints)
-  end if
-
-  if(associated(h%kweights)) then
-    deallocate(h%kweights); nullify(h%kweights)
+  if(associated(h%d)) then
+    nullify(h%d)
   end if
 
   call pop_sub()
@@ -255,7 +242,7 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
 
   e = 0
   do ik = 1, st%nik
-    e = e + st%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
+    e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
          st%eigenval(st%st_start:st%st_end, ik))
   end do
 #ifdef HAVE_MPI
@@ -316,7 +303,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
     end if
 
     if(.not.h%ip_app) then
-      do is = 1, min(h%ispin, 2)
+      do is = 1, min(h%d%ispin, 2)
         write(fname, '(a,i1)') 'vhxc-', is
         call doutput_function(outp%how, dir, fname, m, h%Vhxc(:, is), u)
       end do

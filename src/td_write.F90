@@ -77,14 +77,14 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_clear(out)
     
     ! first line
-    write(aux, '(a10,i2,a8,i2)') '# nspin = ', sys%st%nspin, ' lmax = ', td%lmax
+    write(aux, '(a10,i2,a8,i2)') '# nspin = ', sys%st%d%nspin, ' lmax = ', td%lmax
     call write_iter_string(out, aux)
     call write_iter_nl(out)
     
     ! second line -> columns name
     call write_iter_header_start(out)
 
-    do is = 1, sys%st%nspin
+    do is = 1, sys%st%d%nspin
       write(aux, '(a,i1,a)') 'dipole(', is, ')'
       call write_iter_header(out, aux)
     end do
@@ -92,7 +92,7 @@ subroutine td_write_multipole(out, sys, td, iter)
       write(aux,'(a,i1,a)')  'n.dip.(', j,  ')'
       call write_iter_header(out, aux)
     enddo
-    do is = 1, sys%st%nspin
+    do is = 1, sys%st%d%nspin
       do l = 0, td%lmax
         do m = -l, l
           write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
@@ -106,14 +106,14 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_string(out, '##########')
     call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
     
-    do is = 1, sys%st%nspin
+    do is = 1, sys%st%d%nspin
       call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
     end do
     do j = 1, conf%dim
       call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
     enddo
 
-    do is = 1, sys%st%nspin
+    do is = 1, sys%st%d%nspin
       do l = 0, td%lmax
         do m = -l, l
           select case(l)
@@ -131,18 +131,18 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_nl(out)
   end if
     
-  allocate(dipole(sys%st%nspin), nuclear_dipole(conf%dim), multipole((td%lmax + 1)**2, sys%st%nspin))
+  allocate(dipole(sys%st%d%nspin), nuclear_dipole(conf%dim), multipole((td%lmax + 1)**2, sys%st%d%nspin))
   call states_calculate_multipoles(sys%m, sys%st, td%pol, dipole, td%lmax, multipole)
   call atom_dipole(sys%natoms, sys%atom, nuclear_dipole)
   
   call write_iter_start(out)
-  do is = 1, sys%st%nspin
+  do is = 1, sys%st%d%nspin
     call write_iter_double(out, dipole(is)/units_out%length%factor, 1)
   end do
   do j = 1, conf%dim
     call write_iter_double(out, nuclear_dipole(j)/units_out%length%factor, 1)
   enddo
-  do is = 1, sys%st%nspin
+  do is = 1, sys%st%d%nspin
     add_lm = 1
     do l = 0, td%lmax
       do m = -l, l
