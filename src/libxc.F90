@@ -49,10 +49,8 @@ module lib_xc
   integer, parameter :: &
      XC_GGA_X_PBE         = 101, &  ! Perdew, Burke & Ernzerhof exchange
      XC_GGA_C_PBE         = 102, &  ! Perdew, Burke & Ernzerhof correlation
-     XC_GGA_N             = 102 - XC_GGA_X_PBE + 1
-
-  character(len=5), parameter :: xc_family(2) = &
-     (/ 'LDA  ', 'GGA  ' /)
+     XC_GGA_XC_LB         = 103, &  ! van Leeuwen & Baerends
+     XC_GGA_N             = 103 - XC_GGA_X_PBE + 1
 
   ! info
   interface
@@ -141,6 +139,24 @@ module lib_xc
                                                   ! in terms of the density
       FLOAT,                 intent(out) :: dedgd ! and in terms of the gradient of the density
     end subroutine xc_gga
+
+    subroutine xc_gga_lb_init(p, info, nspin, modified, threshold)
+      integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
+      integer,               intent(in)  :: nspin
+      integer,               intent(in)  :: modified
+      FLOAT,                 intent(in)  :: threshold
+    end subroutine xc_gga_lb_init
+
+    subroutine xc_gga_lb(p, rho, grho, r, ip, qtot, dedd)
+      integer(POINTER_SIZE), intent(in)  :: p
+      FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
+      FLOAT,                 intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
+      FLOAT,                 intent(in)  :: r     ! distance from center of finite system
+      FLOAT,                 intent(in)  :: ip    ! ionization potential
+      FLOAT,                 intent(in)  :: qtot  ! total charge
+      FLOAT,                 intent(out) :: dedd
+    end subroutine xc_gga_lb
   end interface
 
 end module lib_xc

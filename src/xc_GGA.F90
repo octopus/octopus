@@ -90,20 +90,19 @@ subroutine xc_get_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, XC_GGA_N
       if(.not.btest(xcs%gga_functl, ixc)) cycle
-        
-      ! call xc library
-      call xc_gga(xcs%gga_conf(ixc), locald(1), localgd(1,1), &
-         e, localdedd(1), vlocaldedgd1(1,1))
 
-      !case(X_FUNC_GGA_LB94)
-      !call mesh_r(m, i, r)
-      !call lb94(spin_channels, locald, localgd, localdedd, &
-      !     r, ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
-      !e = M_ZERO
-      !vlocaldedgd1(:,:) = M_ZERO
-      !case(C_FUNC_GGA_PBE)
-      !  call pbec(spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
-      !end select
+      ! call xc library
+      if(ixc == XC_GGA_XC_LB - 100) then
+        call mesh_r(m, i, r)
+        call xc_gga_lb(xcs%gga_conf(ixc), locald(1), localgd(1,1), &
+           r, ip, qtot, localdedd(1))
+
+        e = M_ZERO
+        vlocaldedgd1(:,:) = M_ZERO
+      else
+        call xc_gga(xcs%gga_conf(ixc), locald(1), localgd(1,1), &
+           e, localdedd(1), vlocaldedgd1(1,1))
+      end if
       
       if(ixc == XC_GGA_X_PBE-100) then
         ex = ex + sum(d(i,:)) * e * m%vol_pp(i)

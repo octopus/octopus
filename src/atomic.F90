@@ -19,7 +19,6 @@
 
 module atomic
   use global
-  use vxc
   use lib_xc
   use logrid
 

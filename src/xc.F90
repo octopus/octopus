@@ -26,7 +26,6 @@ use mesh
 use poisson
 use states
 use lib_xc
-use vxc ! WARNING: this has to go
 
 implicit none
 
@@ -133,8 +132,8 @@ subroutine xc_write_info(xcs, iunit)
 
     write(iunit, '(2x,a)') 'Exchange'
     call get_info(xcs%x_info)
-    write(iunit, '(2x,a)') 'Correlation'
-    call get_info(xcs%c_info)
+    !write(iunit, '(2x,a)') 'Correlation'
+    !call get_info(xcs%c_info)
 
     if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
       write(iunit, '(a)') 'The OEP equation will be handle at the level of:'
@@ -175,7 +174,7 @@ subroutine xc_init(xcs, nlcc, spin_channels)
   logical, intent(in) :: nlcc
   integer, intent(in) :: spin_channels
 
-  integer :: func, i, rel
+  integer :: func, i, j, rel
   FLOAT :: alpha
 
   call push_sub('xc_init')
@@ -199,16 +198,21 @@ subroutine xc_init(xcs, nlcc, spin_channels)
     call xc_lda_x_init(xcs%lda_conf(i), xcs%x_info, &
        spin_channels, conf%dim, rel)
     
-  case(XC_GGA_X_PBE)
+  case(XC_GGA_X_PBE, XC_GGA_XC_LB)
     i = func - 100;
     xcs%family     = ior(xcs%family, XC_FAMILY_GGA)
     xcs%gga_functl = ibset(xcs%gga_functl, i)
-    call xc_gga_init(xcs%gga_conf(i), xcs%x_info, &
-       func, spin_channels)
 
-!  case('LB94')
-!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-!    xcs%functl = ior(xcs%functl, X_FUNC_GGA_LB94)
+    if(func == XC_GGA_XC_LB) then
+      call loct_parse_int  ("LB94_modified", 0, j)
+      call loct_parse_float("LB94_threshold", CNST(1.0e-6), alpha)
+      call xc_gga_lb_init(xcs%gga_conf(i), xcs%x_info, &
+         spin_channels, j, alpha)
+    else
+      call xc_gga_init(xcs%gga_conf(i), xcs%x_info, &
+         func, spin_channels)
+    end if
+
 !  case('PKZB')
 !    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
 !    xcs%functl = ior(xcs%functl, X_FUNC_MGGA_PKZB)
@@ -285,25 +289,17 @@ subroutine xc_init(xcs, nlcc, spin_channels)
 !!$    xcs%functl = ior(xcs%functl, C_FUNC_LDA_PZ)
 !!$  end if
 !!$
-!!$  ! Extra parameters to fine-tune LB94 potential.
-!!$  if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-!!$    call loct_parse_float("LB94_beta", CNST(0.05), xcs%lb94_beta)
-!!$    call loct_parse_float("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
-!!$    call loct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
-!!$  end if
-!!$
-!!$  if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
-!!$    call loct_parse_int("OEP_level", 1, xcs%oep_level)
-!!$    if(xcs%oep_level<0.or.xcs%oep_level>2) then
-!!$      message(1) = "OEP_level can only take the values:"
-!!$      message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
-!!$      call write_fatal(2)
-!!$    end if
-!!$    if(xcs%oep_level == 2) then
-!!$      call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
-!!$    end if
-!!$
-!!$  end if
+  if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
+    call loct_parse_int("OEP_level", 1, xcs%oep_level)
+    if(xcs%oep_level<0.or.xcs%oep_level>2) then
+      message(1) = "OEP_level can only take the values:"
+      message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
+      call write_fatal(2)
+    end if
+    if(xcs%oep_level == 2) then
+      call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
+    end if
+  end if
 
   call pop_sub()
 end subroutine xc_init
