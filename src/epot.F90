@@ -61,10 +61,6 @@ module external_pot
     ! For the local pseudopotential in Fourier space...
     type(dcf), pointer :: local_cf(:)
     type(dcf), pointer :: rhocore_cf(:) ! and for the core density
-    
-    ! cutoff stuff
-    integer :: vlocal_cutoff        ! cutoff type
-    FLOAT :: r_0                 ! cutoff radius
 #endif
 
     ! Nonlocal operators
@@ -106,47 +102,6 @@ contains
     call write_info(1)
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == RECIPROCAL_SPACE) then
-      call loct_parse_int('VlocalCutoff', conf%periodic_dim , ep%vlocal_cutoff)
-      if (ep%vlocal_cutoff /= conf%periodic_dim) then
-        write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
-        write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ',ep%vlocal_cutoff,' dimensions.'
-        call write_warning(2)
-      end if
-      select case(ep%vlocal_cutoff)
-        case(0)
-          message(1) = 'Info: Vlocal Cutoff = sphere'
-          call write_info(1)
-        case(1)
-          message(1) = 'Info: Vlocal Cutoff = cylinder'
-          call write_info(1)
-        case(2)
-          message(1) = 'Info: Vlocal Cutoff = slab'
-          call write_info(1)
-        case(3)
-          message(1) = 'Info: Vlocal Cutoff = no cutoff'
-          call write_info(1)
-        case default
-          write(message(1), '(a,i2,a)') 'Input: ', ep%vlocal_cutoff, &
-             ' is not a valid VlocalCutoff'
-          message(2) = 'VlocalCutoff = 0(sphere) | 1(cylindrical) | 2(slab)'
-          message(3) = '               3(no cutoff)'
-          call write_fatal(3)
-      end select
-
-      if (ep%vlocal_cutoff == 3) then
-        ep%r_0 = M_ZERO
-      else
-        call loct_parse_float('VlocalCutoffRadius',&
-             maxval(m%l(:)*m%h(:))/units_inp%length%factor , ep%r_0)
-        ep%r_0 = ep%r_0*units_inp%length%factor
-        write(message(1),'(3a,f12.6)')'Info: Vlocal Cutoff Radius [',  &
-                          trim(units_out%length%abbrev), '] = ',       &
-                          ep%r_0/units_out%length%factor
-        call write_info(1)
-      end if
-    end if
-
     call epot_local_fourier_init(ep, m, geo)
 #endif
 
@@ -235,15 +190,43 @@ contains
     type(mesh_type),     intent(IN)    :: m
     type(geometry_type), intent(IN)    :: geo
     
+    integer :: vlocal_cutoff
     integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3)
     FLOAT :: g(3), gpar, gperp, gx, gz, modg
-    FLOAT :: a_erf, temp(3), tmp1, tmp2, norm
+    FLOAT :: a_erf, r_0, temp(3), tmp1, tmp2, norm
     
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
     
     call push_sub('epot_local_fourier_init')
+
+    call loct_parse_int('VlocalCutoff', conf%periodic_dim , vlocal_cutoff)
+    if (vlocal_cutoff /= conf%periodic_dim) then
+      write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
+      write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ',vlocal_cutoff,' dimensions.'
+      call write_warning(2)
+    end if
+    select case(vlocal_cutoff)
+      case(0)
+        message(1) = 'Info: Vlocal Cutoff = sphere'
+        call write_info(1)
+      case(1)
+        message(1) = 'Info: Vlocal Cutoff = cylinder'
+        call write_info(1)
+      case(2)
+        message(1) = 'Info: Vlocal Cutoff = slab'
+        call write_info(1)
+      case(3)
+        message(1) = 'Info: Vlocal Cutoff = no cutoff'
+        call write_info(1)
+      case default
+        write(message(1), '(a,i2,a)') 'Input: ', vlocal_cutoff, &
+           ' is not a valid VlocalCutoff'
+        message(2) = 'VlocalCutoff = 0(spherical) | 1(cylindrical) | 2(planar)'
+        message(3) = '               3(no cutoff)'
+        call write_fatal(3)
+    end select
 
     allocate(ep%local_cf(geo%nspecies))
     if(geo%nlcc) allocate(ep%rhocore_cf(geo%nspecies))
@@ -258,6 +241,17 @@ contains
         call dcf_fft_init(cf)   ! and initialize the ffts
         db = cf%n               ! dimensions of the box may have been optimized, so get them
         c(:) = db(:)/2 + 1      ! get center of double box
+        if (vlocal_cutoff == 3) then
+          r_0 = M_ZERO
+        else
+          call loct_parse_float('VlocalCutoffRadius',&
+               maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_0)
+          r_0 = r_0*units_inp%length%factor
+          write(message(1),'(3a,f12.6)')'Info: Vlocal Cutoff Radius [',  &
+                            trim(units_out%length%abbrev), '] = ',       &
+                            r_0/units_out%length%factor
+          call write_info(1)
+        end if
       else
         call dcf_new_from(cf, ep%local_cf(1))   ! we can just copy from the first one
       end if
@@ -304,13 +298,13 @@ contains
               tmp1 = specie_get_local_fourier(s, x)
               tmp2 = s%z_val*exp(-(modg/(2*a_erf))**2)     
               
-              select case(ep%vlocal_cutoff)
+              select case(vlocal_cutoff)
               case(0)
                 if(modg == M_ZERO) then
-                  cf%FS(ix, iy, iz) = -ep%r_0**2/M_TWO
+                  cf%FS(ix, iy, iz) = -r_0**2/M_TWO
                 else
                   cf%FS(ix, iy, iz) = &
-                    (tmp1 - tmp2)*cutoff0(modg*ep%r_0)/modg**2
+                    (tmp1 - tmp2)*cutoff0(modg*r_0)/modg**2
                 end if
               case(1)
                 gx = abs(temp(1)*ixx(1))
@@ -319,7 +313,7 @@ contains
                   cf%FS(ix, iy, iz) = M_ZERO
                 else
                   cf%FS(ix, iy, iz) = &
-                    (tmp1 - tmp2)*cutoff1(gx*ep%r_0,gperp*ep%r_0)/modg**2
+                    (tmp1 - tmp2)*cutoff1(gx*r_0,gperp*r_0)/modg**2
                 end if
               case(2)
                   gz = abs(temp(3)*ixx(3))
@@ -328,7 +322,7 @@ contains
                   cf%FS(ix, iy, iz) = M_ZERO
                 else
                   cf%FS(ix, iy, iz) = &
-                    (tmp1 - tmp2)*cutoff2(gpar*ep%r_0,gz*ep%r_0)/modg**2
+                    (tmp1 - tmp2)*cutoff2(gpar*r_0,gz*r_0)/modg**2
                 end if
               case(3)
                 if(modg == M_ZERO) then
@@ -387,7 +381,6 @@ contains
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
-    
     
     call push_sub('epot_generate')
     
@@ -735,7 +728,7 @@ contains
         deallocate(nlop%phases)
         nullify(nlop%phases)
       end if
-    endif
+    end if
   end subroutine nonlocal_op_kill
 
 #include "undef.F90"
@@ -747,3 +740,5 @@ contains
 #include "epot_inc.F90"
 
 end module external_pot
+
+
