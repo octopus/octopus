@@ -457,20 +457,36 @@ subroutine X(states_output) (st, m, dir, outp)
     deallocate(dtmp)
   end if
   
-  if(conf%dim==3.and.outp%what(output_elf)) then
-    call elf()
+  if(conf%dim==3) then
+    if(outp%what(output_elf))    call elf_FS(.true.,  'elf_rs')
+    if(outp%what(output_elf_FS)) call elf_FS(.false., 'elf_fs')
   end if
 
 contains
-  ! WARNING some constants are probably wrong for 1 and 2D
-  subroutine elf()
+  subroutine mf2mf_RS2FS(m, fin, fout, c)
+    type(mesh_type), intent(IN) :: m
+    R_TYPE, intent(IN) :: fin(m%np)
+    CMPLX, intent(out) :: fout(m%np)
+    type(X(cf)), intent(inout) :: c
+
+    call X(cf_alloc_RS) (c)
+    call X(cf_alloc_FS) (c)
+    call X(mf2cf) (m, fin, c)
+    call X(cf_RS2FS) (c)
+    call X(cf_FS2mf) (m, c, fout)
+    call X(cf_free_RS) (c)
+    call X(cf_free_FS) (c)
+  end subroutine mf2mf_RS2FS
+
+  subroutine elf_FS(rs, filename)
+    logical, intent(in) :: rs
+    character(len=*), intent(in) :: filename
+
     FLOAT :: f, d, s
-    FLOAT, allocatable :: c(:), r(:), gr(:,:)
-    R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
-#if defined(R_TCOMPLEX)
-    FLOAT, allocatable :: j(:,:,:)
-#endif
+    CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
+    FLOAT, allocatable :: c(:), r(:), gr(:,:), j(:,:)
+    type(X(cf)) :: cf_tmp
 
     FLOAT, parameter :: dmin = CNST(1e-10)
     
@@ -481,65 +497,83 @@ contains
       s = M_ONE
     end if
 
-#if defined(R_TCOMPLEX)
-    allocate(j(3, m%np, st%d%nspin))
-    call calc_current(m, st, j)
-#endif
+    if(.not.rs) then
+      call X(cf_new)(m%l, cf_tmp)
+      call X(cf_fft_init)(cf_tmp)
+    end if
 
     allocate(c(m%np))
-    do_is: do is = 1, st%d%nspin
-      ! first term
-      allocate(r(m%np), gr(3, m%np))
-      r(1:m%np) = st%rho(1:m%np, is)/s
-      call df_gradient(m, r, gr)
-      do i = 1, m%np
-        if(r(i) >= dmin) then
-          c(i) = -M_FOURTH*sum(gr(1:conf%dim, i)**2)/r(i)
-#if defined(R_TCOMPLEX)
-          c(i) = c(i) - sum(j(1:conf%dim, i, is)**2)/(s*s*r(i))
-#endif
-        end if
-      end do
-      deallocate(gr)
 
-      ! now the second term
-      allocate(gpsi(3, m%np))
+    do_is: do is = 1, st%d%nspin
+      allocate(r(m%np), gr(3, m%np), j(3, m%np))
+      r = M_ZERO; gr = M_ZERO; j  = M_ZERO
+      c = M_ZERO
+
+      allocate(psi_fs(m%np), gpsi(3, m%np))
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call X(f_gradient) (m, st%X(psi)(:, idim, ist, ik), gpsi)
+            
+            if(rs) then
+              psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
+            else
+              call mf2mf_RS2FS(m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
+            end if
+            call zf_gradient(m, psi_fs(:), gpsi)
+
+            if(.not.rs) then
+              do i = 1, conf%dim
+                gpsi(i,:) = gpsi(i,:) * m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+              end do
+            end if
+
+            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+            do i = 1, conf%dim
+              gr(i,:) = gr(i,:) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                   M_TWO * real(conjg(psi_fs(:))*gpsi(i,:))
+              j(i,:)  =  j(i,:) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                   aimag(conjg(psi_fs(:))*gpsi(i,:))
+            end do
+
             do i = 1, m%np
               if(r(i) >= dmin) then
-                c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
+                c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                     sum(abs(gpsi(1:conf%dim, i))**2)
               end if
             end do
           end do
         end do
       end do
-      deallocate(gpsi)
-      
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      deallocate(psi_fs, gpsi)
+
       do i = 1, m%np
         if(r(i) >= dmin) then
-          d    = f*r(i)**(M_FIVE/M_THREE)
+          c(i) = c(i) - (M_FOURTH*sum(gr(1:conf%dim, i)**2) + sum(j(1:conf%dim, i)**2))/(s*r(i))
+        end if
+      end do
+
+      ! normalization
+      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+      do i = 1, m%np
+        if(abs(r(i)) >= dmin) then
+          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
           c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
         else
           c(i) = M_ZERO
         end if
       end do
       
-      deallocate(r)
-      
-      write(fname, '(a,i1)') 'elf-', is
-      call doutput_function(outp%how, dir, fname, m, c, M_ONE)
+      deallocate(r, gr, j)
+      write(fname, '(a,a,i1)') trim(filename), '-', is
+      call doutput_function(outp%how, dir, trim(fname), m, c, M_ONE)
       
     end do do_is
-#if defined(R_TCOMPLEX)
-    deallocate(j)
-#endif
+    
+    if(.not.rs) call X(cf_free)(cf_tmp)
     deallocate(c)
+    
+  end subroutine elf_FS
 
-  end subroutine elf
 end subroutine X(states_output)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

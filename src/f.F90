@@ -23,6 +23,9 @@ module functions
   use lib_basic_alg
   use mesh_function
   use cube_function
+#if defined(HAVE_FFT)
+  use fft
+#endif
 
   implicit none
 

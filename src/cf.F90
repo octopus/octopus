@@ -29,7 +29,7 @@ module cube_function
   type dcf
     integer :: n(3)   ! the linear dimensions of the cube
 
-    FLOAT,    pointer :: RS(:,:,:)
+    FLOAT, pointer :: RS(:,:,:)
     CMPLX, pointer :: FS(:,:,:)
 
 #if defined(HAVE_FFT)

@@ -31,7 +31,7 @@ module output
 implicit none
 
 type output_type
-  logical :: what(7)
+  logical :: what(8)
   integer :: how    ! how to output
 
   integer :: iter   ! output every iter
@@ -45,9 +45,10 @@ integer, parameter :: &
      output_density   = 2, &
      output_wfs       = 3, &
      output_ELF       = 4, &
-     output_geometry  = 5, &
-     output_wfs_sqmod = 6, &   
-     output_something = 7   ! this one should be the last
+     output_ELF_FS    = 5, &
+     output_geometry  = 6, &
+     output_wfs_sqmod = 7, &   
+     output_something = 8   ! this one should be the last
 
 integer, parameter ::      &
      output_axis_x  =   1, &
@@ -73,6 +74,7 @@ subroutine output_init(outp)
   call loct_parse_logical("OutputDensity",     .false., outp%what(output_density))
   call loct_parse_logical("OutputWfs",         .false., outp%what(output_wfs))
   call loct_parse_logical("OutputELF",         .false., outp%what(output_elf))
+  call loct_parse_logical("OutputELF_FS",      .false., outp%what(output_elf_FS))
   call loct_parse_logical("OutputGeometry",    .false., outp%what(output_geometry))
   call loct_parse_logical("OutputWfsSqMod",    .false., outp%what(output_wfs_sqmod))
  

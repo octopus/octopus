@@ -57,6 +57,58 @@ subroutine X(cf2mf) (m, cf, mf)
 
 end subroutine X(cf2mf)
 
+!!! The next two subroutines convert a function in Fourier space
+!!! between the normal mesh and the cube
+subroutine X(mf2cf_FS) (m, mf, cf)
+  type(mesh_type), intent(IN)    :: m
+  CMPLX,           intent(IN)    :: mf(m%np)
+  type(X(cf)),     intent(inout) :: cf
+  
+  integer :: i, ix, iy, iz
+
+  ASSERT(associated(cf%FS))
+
+  cf%FS = M_z0
+ 
+  do i = 1, m%np
+    ix = pad_feq(m%Lxyz(1, i), cf%n(1), .false.)
+    if(ix > cf%nx) cycle ! negative frequencies are redundant
+    iy = pad_feq(m%Lxyz(2, i), cf%n(2), .false.)
+    iz = pad_feq(m%Lxyz(3, i), cf%n(3), .false.)
+
+    cf%FS(ix, iy, iz) = mf(i)
+  end do
+end subroutine X(mf2cf_FS)
+
+subroutine X(cf_FS2mf) (m, cf, mf)
+  type(mesh_type), intent(in)  :: m
+  type(X(cf)),     intent(in)  :: cf
+  CMPLX,           intent(out) :: mf(m%np)
+
+  integer :: i, ix, iy, iz
+
+  ASSERT(associated(cf%FS))
+
+  do i = 1, m%np
+    ix = pad_feq(m%Lxyz(1, i), cf%n(1), .false.)
+    iy = pad_feq(m%Lxyz(2, i), cf%n(2), .false.)
+    iz = pad_feq(m%Lxyz(3, i), cf%n(3), .false.)
+
+#   ifdef R_TREAL
+      if(ix > cf%nx) then
+        ix = pad_feq(-m%Lxyz(1, i), cf%n(1), .false.)
+        mf(i) = conjg(cf%FS(ix, iy, iz))
+      else
+        mf(i) = cf%FS(ix, iy, iz)
+      end if
+#   else
+      mf(i) = cf%FS(ix, iy, iz)
+#   endif
+  end do
+
+end subroutine X(cf_FS2mf)
+
+! Calculation of derivatives
 subroutine X(f_laplacian) (m, f, lapl, cutoff_)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(in) :: f(m%np)
