@@ -10275,13 +10275,13 @@ fi
 
 
 	if test -z "${LIB_BLAS}"; then
-		echo "$as_me:$LINENO: checking for ddot in -lmkl_lapack64" >&5
-echo $ECHO_N "checking for ddot in -lmkl_lapack64... $ECHO_C" >&6
-if test "${ac_cv_lib_mkl_lapack64_ddot+set}" = set; then
+		echo "$as_me:$LINENO: checking for ddot in -lmkl" >&5
+echo $ECHO_N "checking for ddot in -lmkl... $ECHO_C" >&6
+if test "${ac_cv_lib_mkl_ddot+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmkl_lapack64 -lmkl_lapack32 -lmkl -lguide $LIBS"
+LIBS="-lmkl -lmkl $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
       program main
       call ddot
@@ -10299,19 +10299,19 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_mkl_lapack64_ddot=yes
+  ac_cv_lib_mkl_ddot=yes
 else
   echo "$as_me: failed program was:" >&5
 cat conftest.$ac_ext >&5
-ac_cv_lib_mkl_lapack64_ddot=no
+ac_cv_lib_mkl_ddot=no
 fi
 rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_mkl_lapack64_ddot" >&5
-echo "${ECHO_T}$ac_cv_lib_mkl_lapack64_ddot" >&6
-if test $ac_cv_lib_mkl_lapack64_ddot = yes; then
-  LIB_BLAS="-lmkl_lapack64 -lmkl_lapack32 -lmkl -lguide"
+echo "$as_me:$LINENO: result: $ac_cv_lib_mkl_ddot" >&5
+echo "${ECHO_T}$ac_cv_lib_mkl_ddot" >&6
+if test $ac_cv_lib_mkl_ddot = yes; then
+  LIB_BLAS="-lmkl"
 fi
 
 	fi
@@ -10707,13 +10707,13 @@ fi
 
 
 	if test -z "${LIB_LAPACK}"; then
-		echo "$as_me:$LINENO: checking for dsygv in -lmkl_lapack64" >&5
-echo $ECHO_N "checking for dsygv in -lmkl_lapack64... $ECHO_C" >&6
-if test "${ac_cv_lib_mkl_lapack64_dsygv+set}" = set; then
+		echo "$as_me:$LINENO: checking for dsygv in -lmkl_lapack" >&5
+echo $ECHO_N "checking for dsygv in -lmkl_lapack... $ECHO_C" >&6
+if test "${ac_cv_lib_mkl_lapack_dsygv+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmkl_lapack64 -lmkl_lapack32 -lmkl -lguide $LIBS"
+LIBS="-lmkl_lapack ${LIB_BLAS} -lguide -lpthread $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
       program main
       call dsygv
@@ -10731,19 +10731,19 @@ if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  ac_cv_lib_mkl_lapack64_dsygv=yes
+  ac_cv_lib_mkl_lapack_dsygv=yes
 else
   echo "$as_me: failed program was:" >&5
 cat conftest.$ac_ext >&5
-ac_cv_lib_mkl_lapack64_dsygv=no
+ac_cv_lib_mkl_lapack_dsygv=no
 fi
 rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_mkl_lapack64_dsygv" >&5
-echo "${ECHO_T}$ac_cv_lib_mkl_lapack64_dsygv" >&6
-if test $ac_cv_lib_mkl_lapack64_dsygv = yes; then
-  LIB_LAPACK="-lmkl_lapack64 -lmkl_lapack32 -lmkl -lguide"
+echo "$as_me:$LINENO: result: $ac_cv_lib_mkl_lapack_dsygv" >&5
+echo "${ECHO_T}$ac_cv_lib_mkl_lapack_dsygv" >&6
+if test $ac_cv_lib_mkl_lapack_dsygv = yes; then
+  LIB_LAPACK="-lmkl_lapack"
 fi
 
 	fi
