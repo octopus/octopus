@@ -71,25 +71,10 @@ contains
     call td_exp_end(tr%te)       ! clean propagator method
   end subroutine td_rti_end
 
-  subroutine td_rti_run_zero_iter(h, st, tr)
+  subroutine td_rti_run_zero_iter(h, tr)
     type(hamiltonian_type), intent(in) :: h
-    type(states_type), intent(inout) :: st
     type(td_rti_type), intent(inout) :: tr
-
-    integer :: i
-
-    select case(st%ispin)
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      do i = 1, st%nspin
-         tr%v_old(:, i, 2) = h%vhartree(:) + h%vxc(:, i)
-      enddo
-    case(SPINORS)
-      tr%v_old(:, 1, 2) = h%vhartree(:) + h%vxc(:, 1)
-      tr%v_old(:, 2, 2) = h%vhartree(:) + h%vxc(:, 2)
-      tr%v_old(:, 3, 2) = h%vxc(:, 3)
-      tr%v_old(:, 4, 2) = h%vxc(:, 4)
-    end select
-
+    tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
   end subroutine td_rti_run_zero_iter
 
@@ -101,24 +86,12 @@ contains
     type(td_rti_type), intent(inout) :: tr
     real(r8), intent(in) :: t, dt
     
-    integer :: is  
     call push_sub('td_rti')
     
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
+    tr%v_old(:, :, 1) = h%vhxc(:, :)
 
-    select case(st%ispin)
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      do is = 1, st%nspin
-        tr%v_old(:, is, 1) = h%vhartree(:) + h%vxc(:, is)
-      end do
-    case(SPINORS)
-      tr%v_old(:, 1, 1) = h%vhartree(:) + h%vxc(:, 1)
-      tr%v_old(:, 2, 1) = h%vhartree(:) + h%vxc(:, 2)
-      tr%v_old(:, 3, 1) = h%vxc(:, 3)
-      tr%v_old(:, 4, 1) = h%vxc(:, 4)
-    end select
-  
     select case(tr%method)
     case(OLD_REVERSAL)
       call td_rti1
@@ -154,7 +127,7 @@ contains
       call xpolate_pot(dt/2._r8, m%np, st%nspin, &
            tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), aux)
       
-      h%VHartree = 0._r8; h%Vxc = aux
+      h%vhxc = aux
       allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
       zpsi1 = st%zpsi
       do ik = 1, st%nik
@@ -191,11 +164,8 @@ contains
         allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
         zpsi1 = st%zpsi ! store zpsi
         
-        allocate(vhxc_t1(m%np, st%nspin))
-        do is = 1, min(2,st%nspin)
-          Vhxc_t1(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
-        end do
-        if(st%nspin == 4) vhxc_t1(:, 3:4) = h%vxc(:, 3:4)
+        allocate(vhxc_t1(m%np, st%nspin), vhxc_t2(m%np, st%nspin))
+        vhxc_t1 = h%vhxc
         
         ! propagate dt with H(t-dt)
         do ik = 1, st%nik
@@ -210,15 +180,8 @@ contains
         st%zpsi = zpsi1
         deallocate(zpsi1)
         
-        ! store Vhxc at t
-        allocate(vhxc_t2(m%np, st%nspin))
-        do is = 1, min(2,st%nspin)
-          Vhxc_t2(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
-        end do
-        if(st%nspin == 4) vhxc_t2(:, 3:4) = h%vxc(:, 3:4)
-        
-        h%Vhartree = 0._r8
-        h%Vxc = Vhxc_t1
+        vhxc_t2 = h%vhxc
+        h%vhxc = vhxc_t1
       end if
       
       ! propagate dt/2 with H(t-dt)
@@ -228,20 +191,15 @@ contains
         end do
       end do
       
-      if(.not.h%ip_app) then
-        deallocate(vhxc_t1)
-        
-        h%Vxc = Vhxc_t2
-      end if
-      
       ! propagate dt/2 with H(t)
+      h%vhxc = vhxc_t2
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t)
         end do
       end do
       
-      if(.not.h%ip_app) deallocate(vhxc_t2)
+      if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2)
       
       call pop_sub()
     end subroutine td_rti2
@@ -254,13 +212,8 @@ contains
       
       if(.not.h%ip_app) then
         allocate(aux(m%np, st%nspin))
-        
         call xpolate_pot(dt, m%np, st%nspin, &
              tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), aux)
-        
-        ! propagate dt/2 with H(t-dt)
-        h%Vhartree = 0._r8
-        h%vxc = tr%v_old(:, :, 1)
       end if
       
       do ik = 1, st%nik
@@ -269,7 +222,7 @@ contains
         end do
       end do
       
-      if(.not.h%ip_app) h%vxc = aux
+      if(.not.h%ip_app) h%vhxc = aux
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t)
@@ -288,9 +241,7 @@ contains
       
       if(.not.h%ip_app) then
         call xpolate_pot(dt/2._r8, m%np, st%nspin, &
-             tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), h%vxc)
-        
-        h%vhartree = 0._r8
+             tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), h%vhxc)
       end if
       
       do ik = 1, st%nik

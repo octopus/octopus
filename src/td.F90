@@ -280,7 +280,7 @@ contains
     if(td%out_energy) call td_write_el_energy(out_energy, h, td, 0)
     call td_write_data(0)
 
-    call td_rti_run_zero_iter(h, sys%st, td%tr)
+    call td_rti_run_zero_iter(h, td%tr)
 
     call pop_sub()
   end subroutine td_run_zero_iter

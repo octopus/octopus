@@ -106,18 +106,14 @@ contains
     np = m%np
     dim = st%dim
 
-    do idim = 1, dim
-      psi(:, idim) = exp(factor*(h%vpsl(:)+h%vhartree(:)))*psi(:, idim)
-    end do
-
     select case(st%ispin)
     case(UNPOLARIZED)
-      psi(:, 1) = exp(factor*h%vxc(:, 1))*psi(:, 1)
+      psi(:, 1) = exp(factor*(h%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(:, 1) = exp(factor*h%vxc(:, 1))*psi(:, 1)
+        psi(:, 1) = exp(factor*(h%vpsl(:)+h%vxc(:, 1)))*psi(:, 1)
       else
-        psi(:, 1) = exp(factor*h%vxc(:, 2))*psi(:, 1)
+        psi(:, 1) = exp(factor*(h%vpsl(:)+h%vxc(:, 2)))*psi(:, 1)
       end if
     case(SPINORS)
       message(1) = 'Internal error in exp_vlpsi'
