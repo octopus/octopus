@@ -1493,10 +1493,37 @@ Number of time steps.
 @item @vindex @code{TDEvolutionMethod}
 @code{TDEvolutionMethod} (integer, 3):
 Method used to perform the time propagation. Authorised values are:
-  @itemize @minus
-    @item @code{1}: ``Old-Style'' method. One should check carefully 
+
+@tex
+(In the following @math{\psi_n} represents the wavefunction at time
+@math{t} and @math{\psi_{n+1}} the wavefunction at time @math{t+\delta t}.)
+@end tex
+@itemize @minus
+@item @code{1}: ``Old-Style'' method. One should check carefully 
 the time-step, and it only works with density based functionals.
 It is quick per time step, but allows for very small time-steps.
+@ifnottex
+(See a printed version of the manual for details)
+@end ifnottex
+
+@tex
+It is based on the evolution method defined in H. Flocard @emph{et al},
+Phys. Rev. C @strong{17}, 1682 (1978). It consists of applying the
+exponential:
+$$
+\psi_{n+1} = \exp ( -i\delta t H_{n+1/2} ) \psi_n,
+$$
+where $H_{n+1/2}$ is an estimation for the value of the hamiltonian
+at an intermediate time $t+\delta t/2$. This estimation is calculated
+in the following manner: (i) The Kohn-Sham Hamiltonian is extrapolated to time $t+\delta t/2$
+via a second order polynomial using the Hamiltonians at times $t-2\delta t, t-\delta t$
+and $t$;
+(ii) An initial estimation $\psi^{'}_{n+1}$ is
+obtained by calculating the exponential $\psi^{'}_{n+1} = \exp ( -i\delta t H_{n+1/2} ) \psi_n$;
+(iii) By making use of $\psi^{'}_{n+1}$, the density at $t+\delta t$ is estimated, and the
+density at $t+\delta t/2$ is approximated via $\rho_{n+1/2}=1/2(\rho_n+\rho_{n+1}$;
+(iv) This density is used to build the estimated Hamiltonian $H_{n+1/2}$.
+@end tex
     @item @code{2}: Method designed to enforce the time-reversal symmetry. 
 Better time steps. Default.
     @item @code{3}: A modification of previous method to make it faster.
