@@ -862,7 +862,7 @@ Asked Questions for some more details.
 Valid options are:
 @itemize @minus
   @item @code{'a.u'} : atomic units
-  @item @code{'eVA'} : electron-volts/@aa{}ngstrom
+  @item @code{'eVA'} : electron-volts/@aa{}ngstr@"om
 @end itemize
 
 @item @vindex @code{UnitsInput}
