@@ -190,10 +190,8 @@ subroutine lcao_init(sys, h)
   enddo atoms_loop 
   deallocate(psi1)
   lcao_data%dim = norbs
-  if(conf%verbose >= 999) then
-    write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
-    call write_info(1)
-  endif
+  write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
+  call write_info(1)
 
   ! Gets the mode
   call oct_parse_int(C_string("LCAOMode"), 0, lcao_data%mode)

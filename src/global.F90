@@ -33,7 +33,7 @@ type conf_type
   integer :: verbose ! <= 0  -> silent, no output except fatal errors
                      ! > 0   -> warning only
                      ! > 20  -> normal program info
-                     ! >= 999 -> debug
+                     ! > 999 -> debug
   integer :: dim
 end type conf_type
 

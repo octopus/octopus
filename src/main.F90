@@ -45,7 +45,7 @@ program octopus
   
   call oct_parse_int(C_string('verbose'), 30, conf%verbose)
   
-  if(conf%verbose >= 999 .and. mpiv%node == 0) then
+  if(conf%verbose > 999 .and. mpiv%node == 0) then
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
   end if
