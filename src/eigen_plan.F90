@@ -92,7 +92,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
     ! First of all, copy the initial estimates.
     do i = 1, sys%st%nst
       do idim = 1, st%dim
-        call X(mf_copy) (sys%m, st%X(psi)(1:np, idim, i, ik), eigenvec((idim-1)*np+1:idim*np, i))
+        call lalg_copy(np, st%X(psi)(1, idim, i, ik), 1, eigenvec((idim-1)*np+1, i), 1)
       enddo
       eigenval(i) = st%eigenval(i, ik)
     enddo
