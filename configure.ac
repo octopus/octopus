@@ -26,20 +26,11 @@ AM_CONFIG_HEADER([liboct/config.h src/config.h])
 AC_PREFIX_DEFAULT($HOME)
 
 # what should I build?
-AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), 
-	MPIDIR=$enableval, MPIDIR=no)
-AC_ARG_ENABLE(pol, AC_HELP_STRING([--enable-pol], [Polymers anyone?]), [POLYMERS=1])
+AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), MPIDIR=$enableval, MPIDIR=no)
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 
 # set program name
 PROGNAME="octopus"
-if test "${POLYMERS}"; then
-	AC_DEFINE(POLYMERS, 1, [Code compiled for polymers])
-	PROGNAME="$PROGNAME-pol"
-	msg="polymers"
-else
-	msg="finite systems"
-fi
 AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
 AC_SUBST(PROGNAME)
 
@@ -47,16 +38,15 @@ AC_SUBST(PROGNAME)
 if test "${COMPLEX_WFNS}"; then
 	AC_DEFINE(COMPLEX_WFNS, 1, [Code compiled for ground-state complex wavefunctions])
 	PROGNAME="z$PROGNAME"
-  msg2="complex wave functions"
+  msg="complex wave functions"
 else
-  msg2="real wave functions"
+  msg="real wave functions"
 fi
 
 
 echo "**********************************************"
 echo "***   $PROGNAME will be generated"
-echo "***       (for $msg)"
-echo "***       ($msg2)"
+echo "***       (with $msg)"
 echo "**********************************************"
 
 # who am i
@@ -205,9 +195,35 @@ fi
 dnl check for GSL
 AC_LANG_PUSH(C)
 AM_PATH_GSL([1.0])
+CFLAGS="$CFLAGS $GSL_CFLAGS"
+
+lib_ok="ok"
+if test -z "${LIB_NETCDF}"; then
+	AC_ARG_WITH(netcdf, 
+		AC_HELP_STRING([--with-netcdf=DIR], [optional (http://www.unidata.ucar.edu/packages/netcdf/)]),
+			[NETCDFDIR=$withval], [NETCDF=""])
+
+	if test "$NETCDFDIR" = "no"; then
+		lib_ok="no"
+	else
+  	save_ldflags="$LDFLAGS"
+	  AS_IF([test "$NETCDFDIR"], [LDFLAGS="$LDFLAGS -L$NETCDFDIR -L$NETCDFDIR/lib"])
+
+		ACX_CHECK_FUNC([LIB_NETCDF], [nc_create], [], [], [])
+		ACX_CHECK_LIB([LIB_NETCDF], [netcdf], [nc_create], [-lnetcdf], [], [])
+
+  	LDFLAGS="$save_ldflags"
+
+	  AS_IF([test "$NETCDFDIR"], [LIB_NETCDF="-L${NETCDFDIR} -L${NETCDFDIR}/lib ${LIB_NETCDF}"])
+	fi
+fi
+if test "$lib_ok" = "ok"; then
+	AC_DEFINE(HAVE_NETCDF, 1, [NetCDF Library (http://www.unidata.ucar.edu/packages/netcdf/)])
+	AC_SUBST(LIB_NETCDF)
+fi
+
 AC_LANG_POP(C)
 
-CFLAGS="$CFLAGS $GSL_CFLAGS"
 
 if test x"$MPIDIR" != x"no"; then
 	if test -z "${LIB_MPI}"; then

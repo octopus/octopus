@@ -21,7 +21,9 @@ module output
   use liboct
   use units
   use mesh
-  
+#if defined(HAVE_NETCDF)
+  use netcdf
+#endif
 implicit none
 
 type output_type
@@ -41,14 +43,15 @@ integer, parameter :: &
      output_geometry  = 5, &
      output_something = 6   ! this one should be the last
 
-integer, parameter ::     &
-     output_axis_x  = 1,  &
-     output_axis_y  = 2,  &
-     output_axis_z  = 4,  &
-     output_plane_x = 8,  &
-     output_plane_y = 16,  &
-     output_plane_z = 32,  &
-     output_dx      = 64
+integer, parameter ::      &
+     output_axis_x  =   1, &
+     output_axis_y  =   2, &
+     output_axis_z  =   4, &
+     output_plane_x =   8, &
+     output_plane_y =  16, &
+     output_plane_z =  32, &
+     output_dx      =  64, &
+     output_dx_cdf  = 128
 
 contains
 
@@ -93,6 +96,10 @@ subroutine output_init(outp)
         if(l) outp%how = ior(outp%how, output_plane_y)
         call oct_parse_logical("OutputDX", .false., l)
         if(l) outp%how = ior(outp%how, output_dx)
+#if defined(HAVE_NETCDF)
+        call oct_parse_logical("OutputNETCDF", .false., l)
+        if(l) outp%how = ior(outp%how, output_dx_cdf)
+#endif
       end if
     end if
 

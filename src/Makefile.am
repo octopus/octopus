@@ -3,9 +3,7 @@ bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
 	choose_st make_st
 
 EXTRA_PROGRAMS = octopus octopus-mpi \
-	octopus-pol octopus-pol-mpi \
-	zoctopus zoctopus-mpi \
-	zoctopus-pol zoctopus-pol-mpi
+	zoctopus zoctopus-mpi
 
 octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 \
@@ -28,24 +26,16 @@ noinst_HEADERS = \
 	td_init.F90 td_rti.F90 td_exp.F90 td_write.F90 td_calc.F90\
 	mix_inc.F90 out_inc.F90
 
-octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
+octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ \
+  @LIB_NETCDF@ @GSL_LIBS@ 
 
 # this has to be repeated...
 octopus_mpi_SOURCES     = $(octopus_SOURCES)
 octopus_mpi_LDADD       = $(octopus_LDADD) @LIB_MPI@
-octopus_pol_SOURCES     = $(octopus_SOURCES)
-octopus_pol_LDADD       = $(octopus_LDADD)
-octopus_pol_mpi_SOURCES = $(octopus_SOURCES)
-octopus_pol_mpi_LDADD   = $(octopus_mpi_LDADD)
 zoctopus_SOURCES        = $(octopus_SOURCES)
 zoctopus_LDADD          = $(octopus_LDADD)
 zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
 zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
-zoctopus_pol_SOURCES     = $(octopus_SOURCES)
-zoctopus_pol_LDADD       = $(octopus_LDADD)
-zoctopus_pol_mpi_SOURCES = $(octopus_SOURCES)
-zoctopus_pol_mpi_LDADD   = $(octopus_mpi_LDADD)
-
 
 # now the utility programs
 strength_function_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
@@ -62,19 +52,19 @@ excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       linear.F90 excitations.F90
-excitations_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
+excitations_LDADD = $(octopus_LDADD)
 broad_SOURCES = liboct.F90 global.F90 io.F90 units.F90 broad.F90
 broad_LDADD = ../liboct/liboct.a @GSL_LIBS@
 choose_st_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       choose_st.F90
-choose_st_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
+choose_st_LDADD = $(octopus_LDADD)
 make_st_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       make_st.F90
-make_st_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
+make_st_LDADD = $(octopus_LDADD)
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h

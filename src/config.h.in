@@ -1,29 +1,32 @@
-! F90 function mangling
-#undef F90_FUNC
-
-! Do we have FFTW
+/* FFTW library (www.fftw.org) */
 #undef HAVE_FFTW
 
-! Do we have GSL
-#undef HAVE_GSL
-
-! Do we have LAPACK
+/* Lapack Library (www.netlib.org) */
 #undef HAVE_LAPACK
+
+/* Blas Library (www.netlib.org) */
 #undef HAVE_BLAS
 
-! the size of the pointers
+/* NetCDF Library (http://www.unidata.ucar.edu/packages/netcdf/) */
+#undef HAVE_NETCDF
+
+/* The size of a C pointer */
 #undef POINTER_SIZE
 
-! Polymers anyone?
-#undef POLYMERS
-
+/* MPI library (www.mpich.org) */
 #undef HAVE_MPI
+
+/* Define to 1 if you have the <mpif.h> header file. */
+#undef HAVE_MPIF_H
+
+/* This should be cleaned at a certain point */
 #undef MPI_TD
 #undef MPI_MOD
 #undef MPI_H
 
 #undef BOUNDARIES_ZERO_DERIVATIVE
 
+/* Code compiled for ground-state complex wavefunctions */
 #undef COMPLEX_WFNS
 
 ! what do you wish for dinner, dear?

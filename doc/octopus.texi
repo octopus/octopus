@@ -1944,6 +1944,11 @@ For printing all the three dimensional information, the open source program
 visualization tool OpenDX (@uref{http://www.opendx.org/}) is used. The string
 ``.dx'' is appended to previous file names. 
 
+@item @vindex @code{OutputNETCDF}
+@code{OutputNETCDF} (logical, false)
+Outputs in NetCDF (@uref{http://www.unidata.ucar.edu/packages/netcdf/}) format. This file
+can then be read, for example, by OpenDX. The string ``.ncdf'' is appended to previous file names. 
+
 @end itemize
 
 The output is saved when the iteration number is a multiple of the
