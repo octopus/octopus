@@ -152,11 +152,16 @@ contains
     write(iunit, '(a,f12.6,a)') ' delta     0.000000',m%h(2) / units_out%length%factor, '    0.000000'
     write(iunit, '(a,f12.6)') ' delta     0.000000    0.000000',m%h(3) / units_out%length%factor
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts',m%fft_n(:)
+#if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ',nitems,' data follows'   
+#else
+    write(iunit, '(a,a,a)') 'object 3 class array type float category complex rank 0 items ',&
+                             nitems,' data follows'   
+#endif
     do ix = 1, m%fft_n(1)
       do iy = 1, m%fft_n(2)
         do iz = 1, m%fft_n(3)
-          write(iunit,'(e17.10)') R_REAL(c(ix, iy, iz))
+          write(iunit,'(2e20.10)') c(ix, iy, iz)
         end do
       end do
     end do
