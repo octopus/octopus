@@ -45,7 +45,6 @@ type mix_type
 
   logical :: icomp
   integer :: nc
-  FLOAT, pointer :: weights(:)
 end type mix_type
 
 contains
@@ -85,28 +84,18 @@ subroutine mix_init(smix, np, nv)
       call write_fatal(2)
     end if
 
-    call loct_parse_logical("MixComponentsIndep", .true., smix%icomp)
-    if (smix%icomp) then
-      smix%nc = 1
-      allocate(smix%weights(1))
-      smix%weights = M_ONE
-
-    else
-      smix%nc = nv
-      allocate(smix%weights(smix%nc))
-      if(loct_parse_block_n("MixWeights") < 1) then
-        smix%weights = M_ONE
-      elseif(loct_parse_block_cols("MixWeights", 0) /= smix%nc) then
-        write(message(1), '(a, i4,a)') 'Input: Block "MixWeights" must have', smix%nc, &
-                                       " columns."
-        call write_fatal(1)
+    if (nv /= 1) then
+      call loct_parse_logical("MixComponentsIndep", .false., smix%icomp)
+      if (smix%icomp) then
+        smix%nc = 1
       else
-        do i = 1,smix%nc
-          call loct_parse_block_float("MixWeights", 0, i-1, smix%weights(i))
-        end do
+        smix%nc = nv
       end if
+    else
+      smix%icomp = .true.
     end if
   end if
+
 
   select case (smix%type_of_mixing)
   case (GRPULAY)
@@ -151,7 +140,6 @@ subroutine mix_end(smix)
 
   call push_sub('mix_end')
 
-  if (associated(smix%weights)) deallocate(smix%weights)
   if (associated(smix%df))      deallocate(smix%df)
   if (associated(smix%dv))      deallocate(smix%dv)
   if (associated(smix%vin_old)) deallocate(smix%vin_old)
@@ -193,8 +181,8 @@ subroutine mixing(smix, iter, np, nv, vin, vout, vnew)
       ! Build total vectors
       allocate(vint(np*nv, 1), voutt(np*nv, 1), vnewt(np*nv, 1))
       do i = 1, nv
-        vint((i-1)*np+1:i*np, 1) = vin(:, i) * smix%weights(i)
-        voutt((i-1)*np+1:i*np, 1) = vout(:, i) * smix%weights(i)
+        vint((i-1)*np+1:i*np, 1) = vin(:, i)
+        voutt((i-1)*np+1:i*np, 1) = vout(:, i)
       end do
 
       select case(smix%type_of_mixing)
@@ -206,7 +194,7 @@ subroutine mixing(smix, iter, np, nv, vin, vout, vnew)
 
       ! recover vnew from vnewt
       do i = 1, nv
-        vnew(:, i) = vnewt((i-1)*np+1:i*np, 1) / smix%weights(i)
+        vnew(:, i) = vnewt((i-1)*np+1:i*np, 1)
       end do
       deallocate(vint, voutt, vnewt)
 
