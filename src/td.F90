@@ -92,7 +92,6 @@ integer function td_run(sys, h, fromScratch) result(ierr)
     call end_()
     return
   end if
-
   call init_iter_output()
 
   ! Calculate initial forces and kinetic energy
@@ -222,7 +221,6 @@ integer function td_run(sys, h, fromScratch) result(ierr)
     if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
       if(i == td%max_iter) sys%outp%iter = ii - 1
       ii = 1
-
       call td_write_data(i)
     end if
 
@@ -314,7 +312,7 @@ contains
       if(ierr.ne.0) then
         message(1) = "Could not load tmp/restart_gs: Starting from scratch"
         call write_warning(1)
-        
+
         ierr = 1
       end if
     end if
@@ -336,28 +334,36 @@ contains
   subroutine init_iter_output()
     character(len=100) :: filename
 
+    integer :: first
+
+    if (td%iter == 0) then
+      first = 0
+    else
+      first = td%iter + 1
+    end if
+
     if(mpiv%node==0) then
       if(td%out_multip) &
-         call write_iter_init(out_multip,  td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
+         call write_iter_init(out_multip,  first, td%dt/units_out%time%factor, "td.general/multipoles")
       if(td%out_angular) &
-         call write_iter_init(out_angular, td%iter, td%dt/units_out%time%factor, "td.general/angular")
+         call write_iter_init(out_angular, first, td%dt/units_out%time%factor, "td.general/angular")
       if(td%out_spin) &
-         call write_iter_init(out_spin,    td%iter, td%dt/units_out%time%factor, "td.general/spin")
+         call write_iter_init(out_spin,    first, td%dt/units_out%time%factor, "td.general/spin")
       if(td%out_coords) &
-         call write_iter_init(out_coords,  td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
+         call write_iter_init(out_coords,  first, td%dt/units_out%time%factor, "td.general/coordinates")
       if(td%out_gsp) &
-         call write_iter_init(out_gsp,     td%iter, td%dt/units_out%time%factor, "td.general/gs_projection")
+         call write_iter_init(out_gsp,     first, td%dt/units_out%time%factor, "td.general/gs_projection")
       if(td%out_acc) &
-         call write_iter_init(out_acc,     td%iter, td%dt/units_out%time%factor, "td.general/acceleration")
+         call write_iter_init(out_acc,     first, td%dt/units_out%time%factor, "td.general/acceleration")
       if(td%out_laser) &
-         call write_iter_init(out_laser,   td%iter, td%dt/units_out%time%factor, "td.general/laser")
+         call write_iter_init(out_laser,   first, td%dt/units_out%time%factor, "td.general/laser")
       if(td%out_energy) &
-         call write_iter_init(out_energy,  td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
+         call write_iter_init(out_energy,  first, td%dt/units_out%time%factor, "td.general/el_energy")
     end if
 
     if(td%out_proj) then
       write(filename, '(i3.3)') mpiv%node
-      call write_iter_init(out_proj,    td%iter, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
+      call write_iter_init(out_proj,    first, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
     end if
 
   end subroutine init_iter_output
