@@ -128,8 +128,18 @@ contains
 
   subroutine dx()
     integer :: ix, iy, iz
+    real(r8) :: offset(3)
     character(LEN=40) :: nitems
     
+! the offset is different in periodic directions
+    do i=1,conf%periodic_dim
+      offset(i)=-(m%fft_n(i))/2 * m%h(i) / units_out%length%factor
+    end do
+    do i=conf%periodic_dim+1,3
+      offset(i)=-(m%fft_n(i) - 1)/2 * m%h(i) / units_out%length%factor
+    end do
+
+! just for nice formatting of the output
     write(nitems,*)m%fft_n(1)*m%fft_n(2)*m%fft_n(3)
     nitems=TRIM(ADJUSTL(nitems))
 
@@ -137,7 +147,7 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".dx", status='unknown')
     
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',m%fft_n(:)
-    write(iunit, '(a,3f12.6)') ' origin',-(m%fft_n(:) - 1)/2 * m%h(:) / units_out%length%factor
+    write(iunit, '(a,3f12.6)') ' origin', offset(:)
     write(iunit, '(a,f12.6,a)') ' delta ',m%h(1) / units_out%length%factor, '    0.000000    0.000000'
     write(iunit, '(a,f12.6,a)') ' delta     0.000000',m%h(2) / units_out%length%factor, '    0.000000'
     write(iunit, '(a,f12.6)') ' delta     0.000000    0.000000',m%h(3) / units_out%length%factor
