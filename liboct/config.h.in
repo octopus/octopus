@@ -47,8 +47,7 @@
 /* Lapack Library (www.netlib.org) */
 #undef HAVE_LAPACK
 
-/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
-   to 0 otherwise. */
+/* Define to 1 if your system has a working `malloc' function. */
 #undef HAVE_MALLOC
 
 /* Define to 1 if you have the <malloc.h> header file. */
@@ -96,6 +95,9 @@
 /* Define to 1 if you have the `tcgetpgrp' function. */
 #undef HAVE_TCGETPGRP
 
+/* TRLAN library (www.nersc.gov/research/SIMON/trlan.html) */
+#undef HAVE_TRLAN
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
@@ -129,9 +131,6 @@
 /* The size of a C pointer */
 #undef POINTER_SIZE
 
-/* Define to 1 if the C compiler supports function prototypes. */
-#undef PROTOTYPES
-
 /* Define to 1 if the `setvbuf' function takes the buffering type as its
    second argument and the buffer pointer as the third, as on System V before
    release 3. */
@@ -151,11 +150,5 @@
 /* Version number of package */
 #undef VERSION
 
-/* Define like PROTOTYPES; this can be used by system headers. */
-#undef __PROTOTYPES
-
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
-
-/* Define to rpl_malloc if the replacement function should be used. */
-#undef malloc

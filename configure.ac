@@ -137,7 +137,7 @@ dnl tests for trlan. Default behaviour will be *not* using it.
 lib_ok="no"
 if test -z "${LIB_TRLAN}"; then
 	AC_ARG_WITH(trlan,
-  	          AC_HELP_STRING([--with-trlan=DIR], [get it! (www.trlan.org)]),
+  	          AC_HELP_STRING([--with-trlan=DIR], [get it! (www.nersc.gov/research/SIMON/trlan.html)]),
               [TRLANDIR=$withval], [TRLANDIR=""])
 
   if test "$TRLANDIR" = "no"; then
