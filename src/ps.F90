@@ -239,13 +239,15 @@ subroutine ps_debug(ps)
   enddo
 
   ! Spin-Orbit projectors
-  write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
-  do i =1, npoints
-     r = (i-1)*grid 
-     write(so_unit, '('//trim(fm)//'f16.8)') r, &
+  if(ps%so_l_max>=0) then
+    write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
+    do i =1, npoints
+      r = (i-1)*grid 
+      write(so_unit, '('//trim(fm)//'f16.8)') r, &
            ( (splint(ps%so_kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
            ( (splint(ps%so_dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
-  enddo
+    enddo
+  endif
 
   ! Pseudo-wavefunctions
   write(fm,'(i4)') ps%ispin*(ps%l_max+1)+1; fm = adjustl(fm)
@@ -281,18 +283,21 @@ subroutine ps_end(ps)
       call spline_end(ps%Ur(i, is))
     enddo
   end do
+  if(ps%so_l_max>=0) then
   do i = 0, ps%so_L_max
     do j = 1, ps%kbc
       call spline_end(ps%so_kb(i, j))
       call spline_end(ps%so_dkb(i, j))
     end do
   end do
+  endif
 
   call spline_end(ps%vlocal)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
 
-  deallocate(ps%kb, ps%dkb, ps%so_kb, ps%so_dkb, ps%ur, ps%dknrm, ps%h, ps%k, ps%occ)
+  deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k, ps%occ)
+  if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
 
   call pop_sub(); return
 end subroutine ps_end
