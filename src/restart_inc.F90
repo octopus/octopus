@@ -46,7 +46,7 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   ! try first to load plain binary files
   call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr)
 
-  ! if we don't succeed try NetCDF
+  ! if we do not succeed try NetCDF
   if(ierr>0) call X(input_function) (trim(dir)//'/'//trim(filename)//'.ncdf', m, f(:), ierr)
 
   call pop_sub()
