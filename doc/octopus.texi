@@ -138,7 +138,7 @@ External utilities
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
-* make_st::                       
+* make_st::                     
 
 Examples
 
@@ -2103,6 +2103,7 @@ it may see the @code{inp} file, and the directories created by it.
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
+* make_st::                     
 @end menu
 
 @node strength-function, hs-from-mult, External utilities, External utilities
@@ -2146,20 +2147,20 @@ M. Casida (@code{LinCasida}). This utility requires that a calculation
 of unoccupied states (@code{CalculationMode} = 3, 4) has been done before,
 and it outputs the results to the sub-directory "linear".
 
-@node  broad,  make_st, excitations, External utilities
+@node  broad, make_st, excitations, External utilities
 @section @code{broad}
 
 Generates a spectrum by broadening the excitations obtained by the @code{excitations} 
 utility. The parameters of the spectrum can be set using the variables
 @code{LinBroadening}, @code{MinEnergy}, @code{MaxEnergy}, and @code{EnergyStep}.
 
-@node  make_st, , broad, External utilities
+@node  make_st,  , broad, External utilities
 @section @code{make_st}
 
 @code{make_st} reads @code{tmp/restart.static} and replaces some of the
 Kohn-Sham states by Gaussians wave packets. The states which should be replaced are given in the @code{%MakeStates} section in the @code{inp} file and written to @code{tmp/restart.static.new}. (You probably want to copy that file to @code{tmp/restart.static} and use then @code{CalculationMode=5} or @code{6}.)
 
-@vindex{MakeStates}
+@vindex MakeStates
 @example
 %MakeStates
   ik | ist | idim | type | sigma | x0 | k
