@@ -558,7 +558,7 @@ contains
     logical :: found
     integer :: i, iunit
 
-    inquire(file=trim(sys%sysname)//'.nbo', exist=found)
+    inquire(file='td.general/coordinates', exist=found)
     if(.not.found) then
       message(1) = "Could not open file '"//trim(sys%sysname)//".nbo'"
       message(2) = "Starting simulation from initial geometry"
