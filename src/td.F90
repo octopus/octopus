@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module timedep
 use global
@@ -27,6 +27,7 @@ use states
 use hamiltonian
 use mix
 use lasers
+use td_exp
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use PES
 #endif
@@ -36,41 +37,35 @@ implicit none
 type td_type
   complex(r8), pointer :: zpsi(:,:,:) ! the complex wavefunctions
 
-  integer :: max_iter  ! maximum number of iterations to perform
-  integer :: iter      ! the actual iteration
+  integer :: max_iter                 ! maximum number of iterations to perform
+  integer :: iter                     ! the actual iteration
 
-  integer :: evolution_method ! which evolution method to use
-  integer :: exp_method       ! which method is used to apply the exponential
-  real(r8) :: lanczos_tol
-  integer  :: exp_order
+  integer :: evolution_method         ! which evolution method to use
+  type(td_exp_type) :: te             ! how to apply the propagator (e^{-i H \Delta t})
 
-  real(r8) :: dt            ! time step
-  integer  :: move_ions     ! how do we move the ions?
+  real(r8) :: dt                      ! time step
+  integer  :: move_ions               ! how do we move the ions?
 
-  real(r8) :: delta_strength  ! strength of the delta excitation
-  real(r8), pointer :: pol(:) ! direction of the polarization of the efield
+  real(r8) :: delta_strength          ! strength of the delta excitation
+  real(r8), pointer :: pol(:)         ! direction of the polarization of the efield
 
-  integer :: lmax        ! maximum multipole moment to write
-
-#ifdef HAVE_FFT
-  type(fft_type) :: fft  ! for the split operator method
-#endif
+  integer :: lmax                     ! maximum multipole moment to write
 
   !variables controlling the output
-  logical :: out_multip  ! multipoles
-  logical :: out_coords  ! coordinates
-  logical :: out_gsp     ! projection onto the ground state.
-  logical :: out_acc     ! electronic acceleration
-  logical :: out_laser   ! laser field
-  logical :: out_energy  ! several components of the electronic energy
-  logical :: out_proj    ! projection onto the GS KS eigenfunctions
-  logical :: out_angular ! total angular momentum.
+  logical :: out_multip               ! multipoles
+  logical :: out_coords               ! coordinates
+  logical :: out_gsp                  ! projection onto the ground state.
+  logical :: out_acc                  ! electronic acceleration
+  logical :: out_laser                ! laser field
+  logical :: out_energy               ! several components of the electronic energy
+  logical :: out_proj                 ! projection onto the GS KS eigenfunctions
+  logical :: out_angular              ! total angular momentum.
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   type(PES_type) :: PESv
 #endif
 
-  real(r8), pointer :: v_old(:, :, :)
+  real(r8), pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
 end type td_type
 
   ! Parameters.
@@ -83,12 +78,6 @@ end type td_type
                         REVERSAL             = 2, &
                         APP_REVERSAL         = 3, &
                         EXPONENTIAL_MIDPOINT = 4
-
-  integer, parameter :: FOURTH_ORDER       = 1, &
-                        LANCZOS_EXPANSION  = 2, &
-                        SPLIT_OPERATOR     = 3, &
-                        SUZUKI_TROTTER     = 4, &
-                        CHEBYSHEV          = 5
 
 contains
 
@@ -453,6 +442,5 @@ end subroutine td_run
 
 #include "td_init.F90"
 #include "td_rti.F90"
-#include "td_exp.F90"
 
 end module timedep

@@ -57,6 +57,16 @@ real(r8) function X(mf_nrm2)(m, f) result(nrm2)
 
 end function X(mf_nrm2)
 
+!!! This function calculates the x_i moment of the function f
+function X(mf_moment) (m, f, i, n) result(r)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(in)          :: f(1:m%np)
+  integer, intent(in)         :: i, n
+  R_TYPE                      :: r
+
+  r = sum(f(1:m%np)*m%Lxyz(i, 1:m%np)**n) * m%h(i)**n * m%vol_pp
+end function X(mf_moment)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! The following set of subroutines calculates derivatives
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,7 +116,7 @@ end subroutine X(mf_gradient)
 !!! Currently it only does so in real space.
 subroutine X(mf_divergence)(m, f, divf)
   type(mesh_type), intent(in) :: m
-  R_TYPE, intent(in)  :: f(conf%dim, m%np)
+  R_TYPE, intent(in)  :: f(m%np, conf%dim)
   R_TYPE, intent(out) :: divf(m%np)
 
   integer :: j, k, ng(3)
@@ -119,7 +129,7 @@ subroutine X(mf_divergence)(m, f, divf)
     ng = p%grad_n
     divf(k) = M_ZERO
     do j = 1, conf%dim
-      divf(k) = divf(k) + sum(p%grad_w(1:ng(j),j)*f(j, p%grad_i(1:ng(j), j)))
+      divf(k) = divf(k) + sum(p%grad_w(1:ng(j),j)*f(p%grad_i(1:ng(j), j), j))
     end do
   end do
 

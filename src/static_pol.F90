@@ -100,7 +100,7 @@ subroutine static_pol_run(scf, sys, h)
 
         ! calculate dipole
         do j = 1, conf%dim
-           dipole(i, j, k) = dmesh_moment(sys%m, trrho, j, 1)
+           dipole(i, j, k) = dmf_moment(sys%m, trrho, j, 1)
         enddo
 
      enddo

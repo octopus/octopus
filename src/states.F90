@@ -347,7 +347,7 @@ subroutine states_generate_random(st, m, ist_start)
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
-         call R_FUNC(mesh_random)(m, st%R_FUNC(psi)(1:m%np, id, ist, ik))
+         call R_FUNC(states_random)(m, st%R_FUNC(psi)(1:m%np, id, ist, ik))
       end do
     end do
     call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(1:,:,:,ik))

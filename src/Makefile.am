@@ -15,14 +15,16 @@ core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 octopus_SOURCES = $(core_SRCS) lasers.F90 h.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 unocc.F90 \
-	static_pol.F90 geom_opt.F90 phonons.F90 td.F90 opt_control.F90 pulpo.F90 \
+	static_pol.F90 geom_opt.F90 phonons.F90 \
+	td_exp_split.F90 td_exp.F90 td.F90 \
+	opt_control.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
 	global.h \
 	real.F90 complex.F90 undef.F90 \
 	fftw2.F90 fftw3.F90 \
-	mesh_inc.F90 mesh_create.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
+	mesh_create.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	hartree1D.F90 hartree2D.F90 hartree3D.F90 \
 	specie1D.F90 specie3D.F90\
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 xc_HJU.F90 \
@@ -30,7 +32,7 @@ noinst_HEADERS = \
 	eigen_cg1.F90 eigen_cg2.F90 eigen_plan.F90\
 	states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
-	td_init.F90 td_rti.F90 td_exp.F90 td_write.F90 td_calc.F90\
+	td_init.F90 td_rti.F90 td_write.F90 td_calc.F90\
 	mix_inc.F90 out_inc.F90 math_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a \
@@ -106,7 +108,7 @@ config_F90.h: config.h
 	(cd ../liboct; $(MAKE))
 
 # dependencies. Please update consistently
-mesh.o: mesh_inc.F90 mesh_create.F90
+mesh.o: mesh_create.F90
 cf.o: cf_inc.F90
 mf.o: mf_inc.F90
 f.o: f_inc.F90
@@ -118,7 +120,7 @@ h.o: h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90
 eigen.o: eigen_cg1.F90 eigen_cg2.F90
 states.o: states_inc.F90 states_kpoints.F90
 pes.o: pes_rc.F90 pes_mask.F90
-td.o: td_init.F90 td_rti.F90 td_exp.F90 td_write.F90 td_calc.F90
+td.o: td_init.F90 td_rti.F90 td_write.F90 td_calc.F90
 mix.o: mix_inc.F90
 out.o: out_inc.F90
 math.o: math_inc.F90

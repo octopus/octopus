@@ -23,9 +23,9 @@ module functions
 
   implicit none
 
-!  integer, parameter ::     &
-!       REAL_SPACE = 0,      &
-!       RECIPROCAL_SPACE = 1
+  integer, parameter ::     &
+       REAL_SPACE = 0,      &
+       RECIPROCAL_SPACE = 1
 
   integer, private :: derivatives_space
 
@@ -37,7 +37,7 @@ module functions
 contains
 
   subroutine functions_init(m)
-    type(mesh_type), intent(in) :: m
+    type(mesh_type), intent(inout) :: m
 
 #ifdef HAVE_FFT
   call oct_parse_int('DerivativesSpace', REAL_SPACE, derivatives_space)
@@ -52,6 +52,11 @@ contains
 #endif
 
   if(derivatives_space == REAL_SPACE) then
+    allocate(m%d)
+    call oct_parse_int('OrderDerivatives', 4, m%d%norder)
+    call mesh_init_derivatives_coeff(m%d)  ! initialize the coefficients
+    call lookup_table(m, m%d)              ! and now create the lookup table
+
     message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
   else
@@ -70,15 +75,30 @@ contains
 
 end subroutine functions_init
 
-subroutine functions_end()
+subroutine functions_end(m)
+  type(mesh_type), intent(inout) :: m
+  integer :: i
+  
+  if(derivatives_space == REAL_SPACE) then
+    deallocate(m%d%dgidfj, m%d%dlidfj)
+    nullify(m%d%dgidfj, m%d%dlidfj)
+    deallocate(m%d); nullify(m%d)
+
+    do i = 1, m%np
+      deallocate(m%der_lookup(i)%lapl_i, m%der_lookup(i)%grad_i)
+      deallocate(m%der_lookup(i)%lapl_w, m%der_lookup(i)%grad_w)
+    end do
+    deallocate(m%der_lookup)
+    nullify(m%der_lookup)
+    
 #if defined(HAVE_FFT)
-  if(derivatives_space == RECIPROCAL_SPACE) then
+  else
     call dcf_free(dcf_der)
     call zcf_free(zcf_der)
     call dcf_free(dcf_aux)
     call zcf_free(zcf_aux)
-  end if
 #endif
+  end if
 end subroutine functions_end
 
 #include "undef.F90"

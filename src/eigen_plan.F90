@@ -144,7 +144,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           enddo
           x = R_FUNC(states_nrm2)(sys%m, st%dim, v(1, i))
           if(x .le. eps) then
-            call R_FUNC(mesh_random)(sys%m, v(1, i))
+            call R_FUNC(states_random)(sys%m, v(1, i))
           else
             call R_FUNC(scal)(n, R_TOTYPE(M_ONE/x), v(1, i), 1)
             i = i + 1
@@ -279,7 +279,27 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   call pop_sub()
   
 contains
+  ! WARNING: This is not currently working
+  subroutine R_FUNC(low_frequency) (m, f, lapl)
+    type(mesh_type), intent(IN) :: m
+    R_TYPE, intent(IN)  :: f(m%np)
+    R_TYPE, intent(out) :: lapl(1:m%np)
+    
+    integer :: k, nl
+    !  type(der_lookup_type), pointer :: p
+
+    !  call push_sub('low_frequency')
+    
+!!$  do k = 1, m%np
+!!$    p => m%der_lookup(k)
+!!$    nl = p%lapl_n
+!!$    lapl(k) = sum(p%lapl_w(1:nl)*f(p%lapl_i(1:nl)))
+!!$  end do
+    
+    !  call pop_sub()
+  end subroutine R_FUNC(low_frequency)
   
+
   subroutine residual(hv, v, e, res, r)
     implicit none
     R_TYPE, intent(inout), dimension(n) :: hv

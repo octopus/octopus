@@ -15,7 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
+
 module mesh
 use global
 use oct_parser
@@ -26,10 +27,6 @@ use fft
 use atom
   
 implicit none
-
-integer, parameter ::     &
-     REAL_SPACE = 0,      &
-     RECIPROCAL_SPACE = 1
 
 integer, parameter :: &
      SPHERE   = 1,    &
@@ -44,12 +41,9 @@ type der_lookup_type
 end type der_lookup_type
 
 type mesh_derivatives_type
-  integer :: space ! 0 for FD, 1 for reciprocal-space (TAKE AWAY)
-
   integer :: norder ! order on the discretization of the gradient/laplace operator
   real(r8), pointer :: dgidfj(:) ! the coefficients for the gradient
-  real(r8), pointer :: dlidfj(:) ! the coefficients for the laplacian
-  
+  real(r8), pointer :: dlidfj(:) ! the coefficients for the laplacian  
 end type mesh_derivatives_type
 
 type mesh_type
@@ -78,10 +72,7 @@ type mesh_type
 
   type(der_lookup_type), pointer :: der_lookup(:)   ! lookup tables for derivatives
   
-#ifdef HAVE_FFT
-  type(fft_type) :: dfft, zfft ! to calculate derivatives using ffts
   real(r8) :: fft_alpha ! enlargement factor for double box
-#endif
 
   real(r8) :: vol_pp    ! element of volume for integrations
 end type mesh_type
@@ -98,13 +89,8 @@ subroutine mesh_init(m, natoms, atom)
 
   call push_sub('mesh_init')
 
-  allocate(m%d)
-  call oct_parse_int('OrderDerivatives', 4, m%d%norder)
-  call mesh_init_derivatives_coeff(m%d)
-
   call mesh_create(m, natoms, atom)
 
-#ifdef HAVE_FFT
   call oct_parse_double('DoubleFFTParameter', 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
@@ -113,35 +99,10 @@ subroutine mesh_init(m, natoms, atom)
     call write_fatal(2)
   end if
 
-  call oct_parse_int('DerivativesSpace', REAL_SPACE, m%d%space)
-  if(m%d%space < 0 .or. m%d%space > 1) then
-    write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
-         "' is not a valid DerivativesSpace"
-    message(2) = '(0 <= DerivativesSpace <=1)'
-    call write_fatal(2)
-  end if
-#else
-  m%d%space = REAL_SPACE
-#endif
-
-  ! order is very important
-  ! init rs -> create -> init fft
-  if(m%d%space == REAL_SPACE) then 
-    message(1) = 'Info: Derivatives calculated in real-space'
-#ifdef HAVE_FFT
-  else
-    call fft_init(m%l, fft_real,    m%dfft)
-    call fft_init(m%l, fft_complex, m%zfft)
-    message(1) = 'Info: Derivatives calculated in reciprocal-space'
-#endif
-  end if
-  call write_info(1)
-
   call pop_sub()
 end subroutine mesh_init
 
 ! finds the dimension of a box doubled in the non-periodic dimensions
-#ifdef HAVE_FFT
 subroutine mesh_double_box(m, db)
   type(mesh_type), intent(in) :: m
   integer, intent(out) :: db(3)
@@ -157,7 +118,6 @@ subroutine mesh_double_box(m, db)
   end do
 
 end subroutine mesh_double_box
-#endif
 
 subroutine mesh_write_info(m, unit)
   type(mesh_type), intent(IN) :: m
@@ -361,35 +321,6 @@ subroutine mesh_init_derivatives_coeff(d)
 
 end subroutine mesh_init_derivatives_coeff
 
-! this actually adds to outp
-#ifdef HAVE_FFT
-subroutine phase_factor(m, n, vec, inp, outp)
-  implicit none
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in)         :: n(3)
-  real(r8), intent(IN)        :: vec(3)
-  complex(r8), intent(IN)     :: inp (n(1)/2+1, n(2), n(3))
-  complex(r8), intent(inout)  :: outp(n(1)/2+1, n(2), n(3))
-  
-  complex(r8) :: k(3)
-  integer     :: ix, iy, iz, ixx, iyy, izz
-  
-  k = M_z0
-  k(1:conf%dim) = M_zI * ((2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim)))
-  do iz = 1, n(3)
-    izz = pad_feq(iz, n(3), .true.)
-    do iy = 1, n(2)
-      iyy = pad_feq(iy, n(2), .true.)
-      do ix = 1, n(1)/2 + 1
-        ixx = pad_feq(ix, n(1), .true.)
-        outp(ix, iy, iz) = outp(ix, iy, iz) + &
-             exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * inp(ix, iy, iz)
-      end do
-    end do
-  end do
-end subroutine phase_factor
-#endif
-
 ! Deallocates what has to be deallocated ;)
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
@@ -402,35 +333,11 @@ subroutine mesh_end(m)
     deallocate(m%Lxyz, m%Lxyz_inv)
     nullify(m%Lxyz, m%Lxyz_inv)
   end if
-  if(associated(m%d)) then
-    if(m%d%space == 0) then
-      deallocate(m%d%dgidfj, m%d%dlidfj)
-      nullify(m%d%dgidfj, m%d%dlidfj)
-    end if
-    deallocate(m%d); nullify(m%d)
-  end if
-
-  if(associated(m%der_lookup)) then
-    do i = 1, m%np
-      deallocate(m%der_lookup(i)%lapl_i, m%der_lookup(i)%grad_i)
-      deallocate(m%der_lookup(i)%lapl_w, m%der_lookup(i)%grad_w)
-    end do
-    deallocate(m%der_lookup)
-    nullify(m%der_lookup)
-  end if
 
   call pop_sub()
   return
 end subroutine mesh_end
 
 #include "mesh_create.F90"
-
-#include "undef.F90"
-#include "real.F90"
-#include "mesh_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "mesh_inc.F90"
 
 end module mesh

@@ -15,6 +15,37 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+!!! This subroutine generates a gaussian wave-function in a random
+!!! position in space
+subroutine X(states_random)(m, f)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(out) :: f(1:m%np)
+
+  integer, save :: iseed = 123
+  integer :: i
+  real(r8) :: a(3), rnd, r
+
+  call push_sub('mesh_random')
+
+  call quickrnd(iseed, rnd)
+  a(1) = 2.0_r8*(2*rnd - 1)
+  call quickrnd(iseed, rnd)
+  a(2) = 2.0_r8*(2*rnd - 1)
+  call quickrnd(iseed, rnd)
+  a(3) = 2.0_r8*(2*rnd - 1)
+
+  do i = 1, m%np
+     call mesh_r(m, i, r, a=a)
+     f(i) = exp(-M_HALF*r*r)
+  end do
+
+  r = X(mf_nrm2)(m, f)
+  call X(scal)(m%np, R_TOTYPE(M_ONE/r), f, 1) 
+
+  call pop_sub()
+end subroutine X(states_random)
+
+
 ! Orthonormalizes nst orbital in mesh m
 subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
@@ -49,37 +80,6 @@ subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   return
 end subroutine R_FUNC(states_gram_schmidt)
 
-!!$subroutine R_FUNC(states_gram_schmidtq)(nst, m, dim, psi, start)
-!!$  integer, intent(in) :: nst, dim
-!!$  type(mesh_type), intent(IN) :: m
-!!$  complex(r8), intent(inout), dimension(*) :: psi
-!!$  integer, intent(in), optional :: start
-!!$
-!!$  integer :: p, q, id, stst, n
-!!$  real(r8) :: nrm2
-!!$  complex(r8) :: ss
-!!$
-!!$  n = m%R_FUNC(npw)*dim
-!!$
-!!$  if(present(start)) then
-!!$    stst = start
-!!$  else
-!!$    stst = 1
-!!$  end if
-!!$
-!!$  do p = stst, nst
-!!$    do q = 1, p - 1
-!!$      ss = R_FUNC(states_dotpq)(m, dim, psi((q-1)*n+1), psi((p-1)*n+1))
-!!$      call R_FUNC(axpy) (n, -ss, psi((q-1)*n+1), 1, psi((p-1)*n+1), 1)
-!!$    enddo
-!!$    nrm2 = R_FUNC(states_nrm2q)(m, dim, psi((p-1)*n+1))
-!!$    ss = cmplx(1.0_r8/nrm2)
-!!$    call R_FUNC(scal) (n, ss, psi((p-1)*n+1), 1)
-!!$  end do
-!!$
-!!$  return
-!!$end subroutine R_FUNC(states_gram_schmidtq)
-
 R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
@@ -89,21 +89,6 @@ R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
 
   dotp = R_DOT(m%np*dim, f1, 1, f2, 1)*m%vol_pp
 end function R_FUNC(states_dotp)
-
-!!$complex(r8) function R_FUNC(states_dotpq)(m, dim, f1, f2) result(dotp)
-!!$  type(mesh_type), intent(IN) :: m
-!!$  integer, intent(in) :: dim
-!!$  complex(r8), intent(IN), dimension(*) :: f1, f2
-!!$  complex(r8) :: R_FUNC(states_ddot)
-!!$  complex(r8), external :: zdotc
-!!$
-!!$  integer :: i
-!!$
-!!$  dotp = R_TOTYPE(M_ZERO)
-!!$  do i = 1, dim
-!!$     dotp = dotp + R_FUNC(mesh_dotpq)(m, f1(m%R_FUNC(npw)*(i-1)+1), f2(m%R_FUNC(npw)*(i-1)+1))
-!!$  enddo
-!!$end function R_FUNC(states_dotpq)
 
 real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
@@ -128,20 +113,6 @@ real(r8) function R_FUNC(states_residue)(m, dim, hf, e, f, res) result(r)
     r = R_FUNC(states_nrm2)(m, dim, hf - e*f)
   endif
 end function R_FUNC(states_residue)
-
-!!$real(r8) function R_FUNC(states_nrm2q)(m, dim, f) result(nrm2)
-!!$  type(mesh_type), intent(IN) :: m
-!!$  integer, intent(in) :: dim
-!!$  complex(r8), intent(IN), dimension(*) :: f
-!!$  real(r8), external :: dznrm2
-!!$
-!!$  integer :: i
-!!$
-!!$  nrm2 = M_ZERO
-!!$  do i = 1, dim
-!!$     nrm2 = nrm2 + R_FUNC(mesh_nrm2q)(m, f(m%R_FUNC(npw)*(i-1)+1))
-!!$  enddo
-!!$end function R_FUNC(states_nrm2q)
 
 ! TODO use netcdf
 subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)

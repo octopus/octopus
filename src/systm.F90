@@ -100,7 +100,7 @@ subroutine system_end(s)
     call states_end(s%st)
     deallocate(s%st); nullify(s%st)
   end if
-  call functions_end()
+  call functions_end(s%m)
   call mesh_end(s%m)
   call atom_end(s%natoms, s%atom, s%ncatoms, s%catom)
   call specie_end(s%nspecies, s%specie)

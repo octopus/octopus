@@ -58,38 +58,6 @@ subroutine td_init(td, sys, m, st, h)
   end select
   call write_info(1)
 
-  call oct_parse_int("TDExponentialMethod", FOURTH_ORDER, td%exp_method)
-  select case(td%exp_method)
-    case(FOURTH_ORDER);         message(1) = 'Info: Exponential method: 4th order expansion.'
-    case(LANCZOS_EXPANSION);    message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
-#ifdef HAVE_FFT
-    case(SPLIT_OPERATOR);       message(1) = 'Info: Exponential method: Split-Operator.'
-      call fft_init(m%l, fft_complex, td%fft)
-    case(SUZUKI_TROTTER);       message(1) = 'Info: Exponential method: Suzuki-Trotter.'
-      call fft_init(m%l, fft_complex, td%fft)
-#endif
-    case(CHEBYSHEV);            message(1) = 'Info: Exponential method: Chebyshev.'
-    case default
-     write(message(1), '(a,i6,a)') "Input: '", td%exp_method, "' is not a valid TDEvolutionMethod"
-     message(2) = '(1 <= TDExponentialMethod <= 4)'
-     call write_fatal(2)
-  end select
-  call write_info(1)
-
-  call oct_parse_double("TDLanczosTol", 5e-4_r8, td%lanczos_tol)
-  if (td%lanczos_tol <= 0._r8) then
-    write(message(1),'(a,f14.6,a)') "Input: '", td%lanczos_tol, "' is not a valid TDLanczosTol"
-    message(2) = '(0 < TDLanczosTol)'
-    call write_fatal(2)
-  end if
-
-  call oct_parse_int("TDExpOrder", 4, td%exp_order)
-  if (td%exp_order < 2) then
-    write(message(1), '(a,i6,a)') "Input: '", td%exp_order, "' is not a valid TDExpOrder"
-    message(2) = '(2 <= TDExpOrder)'
-    call write_fatal(2)
-  end if
-
   call oct_parse_int("TDDipoleLmax", 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
@@ -146,6 +114,7 @@ subroutine td_init(td, sys, m, st, h)
   call oct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
   call oct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
 
+  call td_exp_init(m, td%te)      ! initialize propagator
   call td_init_states()
 
   call pop_sub()
@@ -205,11 +174,7 @@ subroutine td_end(td)
     deallocate(td%v_old);  nullify(td%v_old)
   end if
 
-#ifdef HAVE_FFT
-  if(td%exp_method==SPLIT_OPERATOR.or.td%exp_method==SUZUKI_TROTTER) then
-    call fft_end(td%fft)
-  end if
-#endif
+  call td_exp_end(td%te)
 
   call pop_sub()
 end subroutine td_end

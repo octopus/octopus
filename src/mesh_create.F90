@@ -260,9 +260,6 @@ subroutine mesh_create_xyz(m, enlarge)
     end do
   end do
 
-  ! now we calculate a lookup table for the derivatives
-  call lookup_table(m, m%d)
-
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
 end subroutine mesh_create_xyz
 

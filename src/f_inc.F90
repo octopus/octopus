@@ -144,3 +144,48 @@ subroutine X(f_gradient) (m, f, grad)
 
   call pop_sub()
 end subroutine X(f_gradient)
+
+subroutine X(f_divergence) (m, f, divf)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(in) :: f(m%np, conf%dim)
+  R_TYPE, intent(out) :: divf(m%np)
+
+  integer :: i, n
+  R_TYPE, allocatable :: aux(:)
+
+  call push_sub("f_gradient")
+
+  ASSERT(derivatives_space==REAL_SPACE.or.derivatives_space==RECIPROCAL_SPACE)
+
+  select case(derivatives_space)
+  case(REAL_SPACE)
+    call X(mf_divergence) (m, f, divf)
+
+#if defined(HAVE_FFT)
+  case(RECIPROCAL_SPACE)
+    allocate(aux(m%np))
+    call X(cf_alloc_RS)(X(cf_der))     ! allocate cube in real space
+    call X(cf_alloc_FS)(X(cf_der))     ! allocate cube in real space
+
+    do i = 1, conf%dim
+      call X(mf2cf)(m, f(:, i), X(cf_der))     ! convert to cube
+      call X(cf_RS2FS)(X(cf_der))        ! Fourier transform
+      call X(cf_FS_grad)(m, X(cf_der), i)        ! gradient in reciprocal space
+      call X(cf_FS2RS)(X(cf_der))                ! Fourier transform
+      call X(cf2mf)(m, X(cf_der), aux)    ! convert to mesh
+      
+      if(i == 1) then
+        divf = aux
+      else
+        divf = divf + aux
+      end if
+    end do
+    
+    call X(cf_free_RS)(X(cf_der))
+    call X(cf_free_FS)(X(cf_der))
+    deallocate(aux)
+#endif
+  end select
+
+  call pop_sub()
+end subroutine X(f_divergence)

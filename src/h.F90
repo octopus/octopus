@@ -250,12 +250,11 @@ subroutine hamiltonian_init(h, sys)
 
   end if absorbing_boundaries
   
-  ! Cutoff applied to the kinetic term. If derivatives are calculated in real space, this
-  ! parameter should not be specified in input file (does not make sense), or either be
-  ! non-positive.
+  ! Cutoff applied to the kinetic term.
+  ! it is used *both* in the calculation of the derivatives and in the split operator method
   call oct_parse_double("KineticCutoff", -M_ONE, h%cutoff)
-  h%cutoff = h%cutoff * units_inp%energy%factor
-  if(h%cutoff > M_ZERO .and. sys%m%d%space == RECIPROCAL_SPACE) then
+  if(h%cutoff > M_ZERO) then
+    h%cutoff = h%cutoff * units_inp%energy%factor
     write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
                                   h%cutoff/units_out%energy%factor, units_out%energy%abbrev
     call write_info(1)

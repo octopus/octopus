@@ -26,8 +26,6 @@ subroutine td_rti(h, m, st, sys, td, t)
   integer :: is  
   call push_sub('td_rti')
 
-!!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 2), 1, td%v_old(1, 1, 3), 1)
-!!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
   td%v_old(:, :, 3) = td%v_old(:, :, 2)
   td%v_old(:, :, 2) = td%v_old(:, :, 1)
   select case(st%ispin)
@@ -71,7 +69,7 @@ contains
 
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt/M_TWO)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt, t-td%dt/M_TWO)
       end do
     end do
   end subroutine td_rti0
@@ -94,7 +92,7 @@ contains
     zpsi1 = st%zpsi
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt, t-td%dt)
       end do
     end do
     st%zpsi = zpsi1
@@ -108,7 +106,7 @@ contains
     
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt, t-td%dt)
       end do
     end do
     
@@ -135,7 +133,7 @@ contains
       ! propagate dt with H(t-dt)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+          call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt, t-td%dt)
         end do
       end do
     
@@ -159,7 +157,7 @@ contains
     ! propagate dt/2 with H(t-dt)
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt/2._r8, t-td%dt)
       end do
     end do
     
@@ -172,7 +170,7 @@ contains
     ! propagate dt/2 with H(t)
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt/2._r8, t)
       end do
     end do
     
@@ -200,14 +198,14 @@ contains
 
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt/2._r8, t-td%dt)
       end do
     end do
     
     if(.not.h%ip_app) h%vxc = aux
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt/2._r8, t)
       end do
     end do
  
@@ -227,7 +225,7 @@ contains
     h%vhartree = 0._r8
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t - td%dt/2._r8)
+        call td_dtexp(td%te, sys, h, st%zpsi(:,:, ist, ik), ik, td%dt, t - td%dt/2._r8)
       end do
     end do
 
