@@ -80,8 +80,10 @@ double ylm(double x, double y, double z, int l, int m)
 		sinm = a*sinphi + b*cosphi;
 	}
 	phase = m<0 ? sinm : cosm;
+        phase = m==0 ? phase : sqrt(2.0)*phase;
 
 	r = gsl_sf_legendre_sphPlm(l, abs(m), rz);
 
+        /* I am not sure wether we are including the Condon-Shortley factor (-1)^m */
 	return r*phase;
 }
