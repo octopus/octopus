@@ -1,247 +1,259 @@
-! interchanges two vectors.
-subroutine dlalg_swap(n, dx, dy)
-  integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: dx(*), dy(*)
+#if   TYPE == 1
+#  define TYPE1 real(4)
+#  define TYPE2 real(4)
+#elif TYPE == 2
+#  define TYPE1 real(8)
+#  define TYPE2 real(8)
+#elif TYPE == 3
+#  define TYPE1 complex(4)
+#  define TYPE2 real(4)
+#elif TYPE == 4
+ #  define TYPE1 complex(8)
+ #  define TYPE2 real(8)
+#endif
 
-  integer :: i
-  FLOAT :: s
+#define FNAME(x) xFNAME(x, TYPE)
+#define xFNAME(x,y) yFNAME(x,y)
+#define yFNAME(x,y) x ## _ ## y
 
-  do i = 1, n
-    s = dx(i)
-    dx(i) = dy(i)
-    dy(i) = s
-  end do
+! ------------------------------------------------------------------
+! BLAS level I
+! ------------------------------------------------------------------
 
-end subroutine dlalg_swap
+! ------------------------------------------------------------------
+! swap two vectors
+! ------------------------------------------------------------------
 
-subroutine zlalg_swap(n, zx, zy)
-  integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: zx(*), zy(*)
+subroutine FNAME(swap_1)(n1, dx, dy)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(inout) :: dx(:), dy(:)
 
-  integer :: i
-  CMPLX :: s
+  TYPE1, allocatable :: dz(:)
+  allocate(dz(n1))
+  dz = dx; dx = dy; dy = dz
+  deallocate(dz) 
+  
+end subroutine FNAME(swap_1)
 
-  do i = 1, n
-    s = zx(i)
-    zx(i) = zy(i)
-    zy(i) = s
-  end do
+subroutine FNAME(swap_2)(n1, n2, dx, dy)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(inout) :: dx(:,:), dy(:,:)
 
-end subroutine zlalg_swap
+  TYPE1, allocatable :: dz(:,:)
+  allocate(dz(n1,n2))
+  dz = dx; dx = dy; dy = dz
+  deallocate(dz) 
+  
+end subroutine FNAME(swap_2)
 
+subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(inout) :: dx(:,:,:), dy(:,:,:)
+
+  TYPE1, allocatable :: dz(:,:,:)
+  allocate(dz(n1,n2,n3))
+  dz = dx; dx = dy; dy = dz
+  deallocate(dz)
+  
+end subroutine FNAME(swap_3)
+
+subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(inout) :: dx(:,:,:,:), dy(:,:,:,:)
+
+  TYPE1, allocatable :: dz(:,:,:,:)
+  allocate(dz(n1,n2,n3,n4))
+  dz = dx; dx = dy; dy = dz
+  deallocate(dz)
+  
+end subroutine FNAME(swap_4)
+
+! ------------------------------------------------------------------
 ! scales a vector by a constant
-subroutine dlalg_scal(n, da, dx)
-  integer, intent(in)    :: n
-  FLOAT,   intent(in)    :: da
-  FLOAT,   intent(inout) :: dx(*)
+! ------------------------------------------------------------------
 
-  dx(1:n) = dx(1:n)*da
+subroutine FNAME(scal_1)(n1, da, dx)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:)
 
-end subroutine dlalg_scal
+  dx(1:n1) = da*dx(1:n1)
 
-subroutine zlalg_scal(n, za, zx)
-  integer, intent(in)    :: n
-  CMPLX,   intent(in)    :: za
-  CMPLX,   intent(inout) :: zx(*)
+end subroutine FNAME(scal_1)
 
-  zx(1:n) = zx(1:n)*za
+subroutine FNAME(scal_2)(n1, n2, da, dx)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:,:)
 
-end subroutine zlalg_scal
+  dx(1:n1, 1:n2) = da*dx(1:n1,1:n2)
 
+end subroutine FNAME(scal_2)
+
+subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:,:,:)
+
+  dx(1:n1,1:n2,1:n3) = da*dx(1:n1,1:n2,1:n3)
+
+end subroutine FNAME(scal_3)
+
+subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:,:,:,:)
+
+  dx(1:n1,1:n2,1:n3,1:n4) = da*dx(1:n1,1:n2,1:n3,1:n4)
+
+end subroutine FNAME(scal_4)
+
+! ------------------------------------------------------------------
 ! constant times a vector plus a vector
-subroutine dlalg_axpy(n, da, dx, dy)
-  integer, intent(in)    :: n
-  FLOAT,   intent(in)    :: da, dx(*)
-  FLOAT,   intent(inout) :: dy(*)
+! ------------------------------------------------------------------
 
-  dy(1:n) = dy(1:n) + da*dx(1:n)
+subroutine FNAME(axpy_1)(n1, da, dx, dy)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:)
+  TYPE1,   intent(inout) :: dy(:)
 
-end subroutine dlalg_axpy
+  dy(1:n1) = dy(1:n1) + da*dx(1:n1)
 
-subroutine zlalg_axpy(n, za, zx, zy)
-  integer, intent(in)    :: n
-  CMPLX,   intent(in)    :: za, zx(*)
-  CMPLX,   intent(inout) :: zy(*)
+end subroutine FNAME(axpy_1)
 
-  zy(1:n) = zy(1:n) + za*zx(1:n)
+subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:,:)
+  TYPE1,   intent(inout) :: dy(:,:)
 
-end subroutine zlalg_axpy
+  dy(1:n1,1:n2) = dy(1:n1,1:n2) + da*dx(1:n1,1:n2)
 
-! forms the dot product of two vectors
-FLOAT function dlalg_dot(n, dx, dy)
+end subroutine FNAME(axpy_2)
+
+subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:,:,:)
+  TYPE1,   intent(inout) :: dy(:,:,:)
+
+  dy(1:n1,1:n2,1:n3) = dy(1:n1,1:n2,1:n3) + da*dx(1:n1,1:n2,1:n3)
+
+end subroutine FNAME(axpy_3)
+
+subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:,:,:,:)
+  TYPE1,   intent(inout) :: dy(:,:,:,:)
+
+  dy(1:n1,1:n2,1:n3,1:n4) = dy(1:n1,1:n2,1:n3,1:n4) + da*dx(1:n1,1:n2,1:n3,1:n4)
+
+end subroutine FNAME(axpy_4)
+
+! ------------------------------------------------------------------
+! Copies a vector x, to a vector y
+! ------------------------------------------------------------------
+
+subroutine FNAME(copy_1)(n1, dx, dy)
+  integer, intent(in)  :: n1
+  TYPE1,   intent(IN)  :: dx(:)
+  TYPE1,   intent(out) :: dy(:)
+
+  dy(1:n1) = dx(1:n1)
+end subroutine FNAME(copy_1)
+
+subroutine FNAME(copy_2)(n1, n2, dx, dy)
+  integer, intent(in)  :: n1, n2
+  TYPE1,   intent(IN)  :: dx(:,:)
+  TYPE1,   intent(out) :: dy(:,:)
+
+  dy(1:n1,1:n2) = dx(1:n1,1:n2)
+end subroutine FNAME(copy_2)
+
+subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
+  integer, intent(in)  :: n1, n2, n3
+  TYPE1,   intent(IN)  :: dx(:,:,:)
+  TYPE1,   intent(out) :: dy(:,:,:)
+
+  dy(1:n1,1:n2,1:n3) = dx(1:n1,1:n2,1:n3)
+end subroutine FNAME(copy_3)
+
+subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
+  integer, intent(in)  :: n1, n2, n3, n4
+  TYPE1,   intent(IN)  :: dx(:,:,:,:)
+  TYPE1,   intent(out) :: dy(:,:,:,:)
+
+  dy(1:n1,1:n2,1:n3,1:n4) = dx(1:n1,1:n2,1:n3,1:n4)
+end subroutine FNAME(copy_4)
+
+! ------------------------------------------------------------------
+! Forms the dot product of two vectors
+! ------------------------------------------------------------------
+
+TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
   integer, intent(in) :: n
-  FLOAT,   intent(in) :: dx(*), dy(*)
+  TYPE1,   intent(IN) :: dx(:), dy(:)
 
-  dlalg_dot = dot_product(dx(1:n), dy(1:n))
+  dot = dot_product(dx(1:n), dy(1:n))
 
-end function dlalg_dot
+end function FNAME(dot)
 
-CMPLX function zlalg_dot(n, zx, zy)
+! ------------------------------------------------------------------
+! Returns the euclidean norm of a vector
+! ------------------------------------------------------------------
+
+TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
-  CMPLX,   intent(in) :: zx(*), zy(*)
+  TYPE1,   intent(IN) :: dx(:)
 
-  zlalg_dot = dot_product(zx(1:n), zy(1:n))
+  nrm2 = sqrt(real(dot_product(dx(1:n), dx(1:n)), PRECISION))
 
-end function zlalg_dot
+end function FNAME(nrm2)
 
-! returns the euclidean norm of a vector
-FLOAT function dlalg_nrm2(n, dx)
-  integer, intent(in) :: n
-  FLOAT,   intent(in) :: dx(*)
+! ------------------------------------------------------------------
+! BLAS level II
+! ------------------------------------------------------------------
 
-  dlalg_nrm2 = sqrt(dot_product(dx(1:n), dx(1:n)))
-
-end function dlalg_nrm2
-
-FLOAT function zlalg_nrm2(n, zx)
-  integer, intent(in) :: n
-  CMPLX,   intent(in) :: zx(*)
-
-  zlalg_nrm2 = sqrt(real(dot_product(zx(1:n), zx(1:n)), PRECISION))
-
-end function zlalg_nrm2
-
-! copies a vector, x, to a vector, y
-subroutine dlalg_copy(n, dx, dy)
-  integer, intent(in)  :: n
-  FLOAT,   intent(in)  :: dx(*)
-  FLOAT,   intent(out) :: dy(*)
-
-  dy(1:n) = dx(1:n)
-
-end subroutine dlalg_copy
-
-subroutine zlalg_copy(n, zx, zy)
-  integer, intent(in)  :: n
-  CMPLX,   intent(in)  :: zx(*)
-  CMPLX,   intent(out) :: zy(*)
-
-  zy(1:n) = zx(1:n)
-
-end subroutine zlalg_copy
-
+! ------------------------------------------------------------------
 ! matrix-matrix multiplication plus matrix
-subroutine dlalg_gemm(m, n, k, alpha, a, b, beta, c)
-  integer,      intent(in)    :: m, n, k
-  FLOAT,        intent(in)    :: alpha, beta
-  FLOAT,        intent(in)    :: a(*)
-  FLOAT,        intent(in)    :: b(*)
-  FLOAT,        intent(inout) :: c(*)
+! ------------------------------------------------------------------
 
-  integer :: i, j, l, ls, js1, js2
-  real :: temp
+subroutine FNAME(gemm)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(IN)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(IN)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
 
-  js1 = -m
-  js2 = -k
-  do j = 1, n
-    js1 = js1 + m
-    if (beta == 0.0) then
-      do i = 1, m
-        c(js1 + i) = 0.0
-      end do
-    else if(beta /= 1.0) then
-      do i = 1, m
-        c(js1 + i) = beta*c(js1 + i)
-      end do
-    end if
+  c(1:m,1:n) = alpha*matmul(a(1:m,1:k), b(1:m,1:k)) + beta*c(1:m,1:n)
 
-    js2 = js2 + k
-    ls = -m
-    do l = 1, k
-      ls = ls + m
-      if (b(l + js2) /= 0.0) then
-        temp = alpha*b(js2 + l)
-        do i = 1, m
-          c(js1 + i) = c(js1 + i) + temp*a(i + ls)
-        end do
-      end if
-    end do
-  end do
+end subroutine FNAME(gemm)
 
-end subroutine dlalg_gemm
-
-subroutine zlalg_gemm(m, n, k, alpha, a, b, beta, c)
-  integer,      intent(in)    :: m, n, k
-  CMPLX,        intent(in)    :: alpha, beta
-  CMPLX,        intent(in)    :: a(*)
-  CMPLX,        intent(in)    :: b(*)
-  CMPLX,        intent(inout) :: c(*)
-
-  integer :: i, j, l, ls, js1, js2
-  real :: temp
-
-  js1 = -m
-  js2 = -k
-  do j = 1, n
-    js1 = js1 + m
-    if (beta == 0.0) then
-      do i = 1, m
-        c(js1 + i) = 0.0
-      end do
-    else if(beta /= 1.0) then
-      do i = 1, m
-        c(js1 + i) = beta*c(js1 + i)
-      end do
-    end if
-
-    js2 = js2 + k
-    ls = -m
-    do l = 1, k
-      ls = ls + m
-      if (b(l + js2) /= 0.0) then
-        temp = alpha*b(js2 + l)
-        do i = 1, m
-          c(js1 + i) = c(js1 + i) + temp*a(i + ls)
-        end do
-      end if
-    end do
-  end do
-
-end subroutine zlalg_gemm
- 
+! ------------------------------------------------------------------
 ! matrix-vector multiplication plus vector
-subroutine dlalg_gemv(m, n, alpha, a, x, beta, y)
-  integer,      intent(in)    :: m, n
-  FLOAT,        intent(in)    :: alpha, beta
-  FLOAT,        intent(in)    :: a(*)
-  FLOAT,        intent(in)    :: x(*)
-  FLOAT,        intent(inout) :: y(*)
+! ------------------------------------------------------------------
+ 
+subroutine FNAME(gemv)(m, n, alpha, a, x, beta, y)
+  integer, intent(in)    :: m, n
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(IN)    :: a(:,:)
+  TYPE1,   intent(IN)    :: x(:)
+  TYPE1,   intent(inout) :: y(:)
 
-  integer :: i, j, is
+  y(1:n) = alpha*matmul(a(1:m, 1:n), x(1:n)) + beta*y(1:n)
 
-  do i = 1, m
-    y(i) = beta*y(i)
-  end do
+end subroutine FNAME(gemv)
 
-  is = -m
-  do j = 1, n
-    is = is + m
-    do i = 1, m
-      y(i) = y(i) + alpha*a(is + i)*x(j)
-    end do
-  end do
+! ------------------------------------------------------------------
+! Clean up preprocessor directives
+! ------------------------------------------------------------------
 
-end subroutine dlalg_gemv
-
-subroutine zlalg_gemv(m, n, alpha, a, x, beta, y)
-  integer,      intent(in)    :: m, n
-  CMPLX,        intent(in)    :: alpha, beta
-  CMPLX,        intent(in)    :: a(*)
-  CMPLX,        intent(in)    :: x(*)
-  CMPLX,        intent(inout) :: y(*)
-
-  integer :: i, j, is
-
-  do i = 1, m
-    y(i) = beta*y(i)
-  end do
-
-  is = -m
-  do j = 1, n
-    is = is + m
-    do i = 1, m
-      y(i) = y(i) + alpha*a(is + i)*x(j)
-    end do
-  end do
-
-end subroutine zlalg_gemv
+#undef ARG_LIST
+#undef ARG_CALL
+#undef TYPE1
+#undef TYPE2
+#undef FNAME
+#undef xFNAME
+#undef yFNAME

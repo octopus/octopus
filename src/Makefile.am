@@ -36,7 +36,7 @@ noinst_HEADERS = \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
 	out_inc.F90 math_inc.F90\
-	linalg_basic_blas.F90 linalg_basic_blas_inc.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
+	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDF90FLAGS@
 octopus_LDADD = @LIBS_FFTW@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
@@ -124,6 +124,5 @@ td.o: td_init.F90 td_write.F90 td_calc.F90
 out.o: out_inc.F90
 math.o: math_inc.F90
 fft.o: fftw2.F90 fftw3.F90
-linalg_basic_blas.o: linalg_basic_blas_int.F90
 linalg_basic.o : linalg_basic_blas.F90 linalg_basic_int.F90
 linalg_adv.o : linalg_adv_lapack.F90

@@ -222,7 +222,7 @@ subroutine lcao_wf(lcao_data, m, st, h)
     ! Change of base
     call blas_gemm('N', 'N', np*dim, nst, norbs, R_TOTYPE(M_ONE), &
        lcao_data%psis(1,1,1, ik), np*dim, &
-       lcao_data%hamilt(1,1, ik), nst,    &
+       lcao_data%hamilt(1,1, ik), norbs,  &
        R_TOTYPE(M_ZERO), &
        st%X(psi)(1,1,1, ik), np*dim)
 

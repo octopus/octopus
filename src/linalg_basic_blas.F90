@@ -15,145 +15,258 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#if defined(SINGLE_PRECISION)
-#  define DBLAS(x) s ## x
-#  define ZBLAS(x) c ## x
-#  define ZNRM2    scnrm2
-#else
-#  define DBLAS(x) d ## x
-#  define ZBLAS(x) z ## x
-#  define ZNRM2    dznrm2
+! ------------------------------------------------------------------
+! Preprocessor directives
+! ------------------------------------------------------------------
+
+#if   TYPE == 1
+#  define TYPE1 real(4)
+#  define TYPE2 real(4)
+#elif TYPE == 2
+#  define TYPE1 real(8)
+#  define TYPE2 real(8)
+#elif TYPE == 3
+#  define TYPE1 complex(4)
+#  define TYPE2 real(4)
+#elif TYPE == 4
+ #  define TYPE1 complex(8)
+ #  define TYPE2 real(8)
 #endif
 
-module lib_basic_alg
-  use global
-  use blas
+#define FNAME(x) xFNAME(x, TYPE)
+#define xFNAME(x,y) yFNAME(x,y)
+#define yFNAME(x,y) x ## _ ## y
 
-  implicit none
+! ------------------------------------------------------------------
+! BLAS level I
+! ------------------------------------------------------------------
 
-!  private
-  public :: lalg_swap, lalg_scal, lalg_axpy, lalg_copy
+! ------------------------------------------------------------------
+! swap two vectors
+! ------------------------------------------------------------------
 
-  interface lalg_swap
-    module procedure swap_1_1
-    module procedure swap_2_1
-    module procedure swap_3_1
-    module procedure swap_4_1
-    module procedure swap_1_2
-    module procedure swap_2_2
-    module procedure swap_3_2
-    module procedure swap_4_2
-    module procedure swap_1_3
-    module procedure swap_2_3
-    module procedure swap_3_3
-    module procedure swap_4_3
-    module procedure swap_1_4
-    module procedure swap_2_4
-    module procedure swap_3_4
-    module procedure swap_4_4
-  end interface
+subroutine FNAME(swap_1)(n1, dx, dy)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(inout) :: dx(:), dy(:)
 
-  interface lalg_scal
-    module procedure scal_1_1
-    module procedure scal_2_1
-    module procedure scal_3_1
-    module procedure scal_4_1
-    module procedure scal_1_2
-    module procedure scal_2_2
-    module procedure scal_3_2
-    module procedure scal_4_2
-    module procedure scal_1_3
-    module procedure scal_2_3
-    module procedure scal_3_3
-    module procedure scal_4_3
-    module procedure scal_1_4
-    module procedure scal_2_4
-    module procedure scal_3_4
-    module procedure scal_4_4
-  end interface
+  call blas_swap(n1, dx(1), 1, dy(1), 1)
 
-  interface lalg_axpy
-    module procedure axpy_1_1
-    module procedure axpy_2_1
-    module procedure axpy_3_1
-    module procedure axpy_4_1
-    module procedure axpy_1_2
-    module procedure axpy_2_2
-    module procedure axpy_3_2
-    module procedure axpy_4_2
-    module procedure axpy_1_3
-    module procedure axpy_2_3
-    module procedure axpy_3_3
-    module procedure axpy_4_3
-    module procedure axpy_1_4
-    module procedure axpy_2_4
-    module procedure axpy_3_4
-    module procedure axpy_4_4
-  end interface
+end subroutine FNAME(swap_1)
 
-  interface lalg_copy
-    module procedure copy_1_1
-    module procedure copy_2_1
-    module procedure copy_3_1
-    module procedure copy_4_1
-    module procedure copy_1_2
-    module procedure copy_2_2
-    module procedure copy_3_2
-    module procedure copy_4_2
-    module procedure copy_1_3
-    module procedure copy_2_3
-    module procedure copy_3_3
-    module procedure copy_4_3
-    module procedure copy_1_4
-    module procedure copy_2_4
-    module procedure copy_3_4
-    module procedure copy_4_4
-  end interface
+subroutine FNAME(swap_2)(n1, n2, dx, dy)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(inout) :: dx(:,:), dy(:,:)
 
-  interface lalg_dot
-    module procedure dot_1
-    module procedure dot_2
-    module procedure dot_3
-    module procedure dot_4
-  end interface lalg_dot
+  call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
-  interface lalg_nrm2
-    module procedure nrm2_1
-    module procedure nrm2_2
-    module procedure nrm2_3
-    module procedure nrm2_4
-  end interface lalg_nrm2
+end subroutine FNAME(swap_2)
 
-  interface lalg_gemm
-    module procedure gemm_1
-    module procedure gemm_2
-    module procedure gemm_3
-    module procedure gemm_4
-  end interface lalg_gemm
+subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(inout) :: dx(:,:,:), dy(:,:,:)
 
-  interface lalg_gemv
-    module procedure gemv_1
-    module procedure gemv_2
-    module procedure gemv_3
-    module procedure gemv_4
-  end interface lalg_gemv
+  call blas_swap(n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
-contains
+end subroutine FNAME(swap_3)
 
-#define TYPE 1
-#include "linalg_basic_blas_inc.F90"
-#undef TYPE
+subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(inout) :: dx(:,:,:,:), dy(:,:,:,:)
 
-#define TYPE 2
-#include "linalg_basic_blas_inc.F90"
-#undef TYPE
+  call blas_swap(n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
-#define TYPE 3
-#include "linalg_basic_blas_inc.F90"
-#undef TYPE
+end subroutine FNAME(swap_4)
 
-#define TYPE 4
-#include "linalg_basic_blas_inc.F90"
-#undef TYPE
+! ------------------------------------------------------------------
+! scales a vector by a constant
+! ------------------------------------------------------------------
 
-end module lib_basic_alg
+subroutine FNAME(scal_1)(n1, da, dx)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:)
+
+  call blas_scal(n1, da, dx(1), 1)
+
+end subroutine FNAME(scal_1)
+
+subroutine FNAME(scal_2)(n1, n2, da, dx)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:,:)
+
+  call blas_scal(n1*n2, da, dx(1,1), 1)
+
+end subroutine FNAME(scal_2)
+
+subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:,:,:)
+
+  call blas_scal(n1*n2*n3, da, dx(1,1,1), 1)
+
+end subroutine FNAME(scal_3)
+
+subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(inout) :: dx(:,:,:,:)
+
+  call blas_scal(n1*n2*n3*n4, da, dx(1,1,1,1), 1)
+
+end subroutine FNAME(scal_4)
+
+! ------------------------------------------------------------------
+! constant times a vector plus a vector
+! ------------------------------------------------------------------
+
+subroutine FNAME(axpy_1)(n1, da, dx, dy)
+  integer, intent(in)    :: n1
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:)
+  TYPE1,   intent(inout) :: dy(:)
+
+  call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
+
+end subroutine FNAME(axpy_1)
+
+subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
+  integer, intent(in)    :: n1, n2
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:,:)
+  TYPE1,   intent(inout) :: dy(:,:)
+
+  call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
+
+end subroutine FNAME(axpy_2)
+
+subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
+  integer, intent(in)    :: n1, n2, n3
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:,:,:)
+  TYPE1,   intent(inout) :: dy(:,:,:)
+
+  call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
+
+end subroutine FNAME(axpy_3)
+
+subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
+  integer, intent(in)    :: n1, n2, n3, n4
+  TYPE1,   intent(in)    :: da
+  TYPE1,   intent(IN)    :: dx(:,:,:,:)
+  TYPE1,   intent(inout) :: dy(:,:,:,:)
+
+  call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
+
+end subroutine FNAME(axpy_4)
+
+! ------------------------------------------------------------------
+! Copies a vector x, to a vector y
+! ------------------------------------------------------------------
+
+subroutine FNAME(copy_1)(n1, dx, dy)
+  integer, intent(in)  :: n1
+  TYPE1,   intent(IN)  :: dx(:)
+  TYPE1,   intent(out) :: dy(:)
+
+  call blas_copy(n1, dx(1), 1, dy(1), 1)
+
+end subroutine FNAME(copy_1)
+
+subroutine FNAME(copy_2)(n1, n2, dx, dy)
+  integer, intent(in)  :: n1, n2
+  TYPE1,   intent(IN)  :: dx(:,:)
+  TYPE1,   intent(out) :: dy(:,:)
+
+  call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
+
+end subroutine FNAME(copy_2)
+
+subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
+  integer, intent(in)  :: n1, n2, n3
+  TYPE1,   intent(IN)  :: dx(:,:,:)
+  TYPE1,   intent(out) :: dy(:,:,:)
+
+  call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
+
+end subroutine FNAME(copy_3)
+
+subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
+  integer, intent(in)  :: n1, n2, n3, n4
+  TYPE1,   intent(IN)  :: dx(:,:,:,:)
+  TYPE1,   intent(out) :: dy(:,:,:,:)
+
+  call blas_copy (n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
+
+end subroutine FNAME(copy_4)
+
+! ------------------------------------------------------------------
+! Forms the dot product of two vectors
+! ------------------------------------------------------------------
+
+TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
+  integer, intent(in) :: n
+  TYPE1,   intent(IN) :: dx(:), dy(:)
+
+  dot = blas_dot(n, dx(1), 1, dy(1), 1)
+
+end function FNAME(dot)
+
+! ------------------------------------------------------------------
+! Returns the euclidean norm of a vector
+! ------------------------------------------------------------------
+
+TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
+  integer, intent(in) :: n
+  TYPE1,   intent(IN) :: dx(:)
+
+  nrm2 = blas_nrm2(n, dx(1), 1)
+
+end function FNAME(nrm2)
+
+! ------------------------------------------------------------------
+! BLAS level II
+! ------------------------------------------------------------------
+
+! ------------------------------------------------------------------
+! matrix-matrix multiplication plus matrix
+! ------------------------------------------------------------------
+
+subroutine FNAME(gemm)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(IN)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(IN)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
+
+  call blas_gemm('N', 'N', m, n, k, alpha, a(1,1), m, b(1,1), k, beta, c(1,1), m)
+
+end subroutine FNAME(gemm)
+
+! ------------------------------------------------------------------
+! matrix-vector multiplication plus vector
+! ------------------------------------------------------------------
+ 
+subroutine FNAME(gemv)(m, n, alpha, a, x, beta, y)
+  integer, intent(in)    :: m, n
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(IN)    :: a(:,:)
+  TYPE1,   intent(IN)    :: x(:)
+  TYPE1,   intent(inout) :: y(:)
+
+  call blas_gemv('N', m, n, alpha, a(1,1), m, x(1), 1, beta, y(1), 1)
+
+end subroutine FNAME(gemv)
+
+! ------------------------------------------------------------------
+! Clean up preprocessor directives
+! ------------------------------------------------------------------
+
+#undef ARG_LIST
+#undef ARG_CALL
+#undef TYPE1
+#undef TYPE2
+#undef FNAME
+#undef xFNAME
+#undef yFNAME

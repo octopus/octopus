@@ -17,8 +17,157 @@
 
 #include "global.h"
 
+module lib_basic_alg
+  use global
+  use blas
+
+  implicit none
+
+!  private
+  public :: lalg_swap, lalg_scal, lalg_axpy, lalg_copy
+
+  interface lalg_swap
+    module procedure swap_1_1
+    module procedure swap_2_1
+    module procedure swap_3_1
+    module procedure swap_4_1
+    module procedure swap_1_2
+    module procedure swap_2_2
+    module procedure swap_3_2
+    module procedure swap_4_2
+    module procedure swap_1_3
+    module procedure swap_2_3
+    module procedure swap_3_3
+    module procedure swap_4_3
+    module procedure swap_1_4
+    module procedure swap_2_4
+    module procedure swap_3_4
+    module procedure swap_4_4
+  end interface
+
+  interface lalg_scal
+    module procedure scal_1_1
+    module procedure scal_2_1
+    module procedure scal_3_1
+    module procedure scal_4_1
+    module procedure scal_1_2
+    module procedure scal_2_2
+    module procedure scal_3_2
+    module procedure scal_4_2
+    module procedure scal_1_3
+    module procedure scal_2_3
+    module procedure scal_3_3
+    module procedure scal_4_3
+    module procedure scal_1_4
+    module procedure scal_2_4
+    module procedure scal_3_4
+    module procedure scal_4_4
+  end interface
+
+  interface lalg_axpy
+    module procedure axpy_1_1
+    module procedure axpy_2_1
+    module procedure axpy_3_1
+    module procedure axpy_4_1
+    module procedure axpy_1_2
+    module procedure axpy_2_2
+    module procedure axpy_3_2
+    module procedure axpy_4_2
+    module procedure axpy_1_3
+    module procedure axpy_2_3
+    module procedure axpy_3_3
+    module procedure axpy_4_3
+    module procedure axpy_1_4
+    module procedure axpy_2_4
+    module procedure axpy_3_4
+    module procedure axpy_4_4
+  end interface
+
+  interface lalg_copy
+    module procedure copy_1_1
+    module procedure copy_2_1
+    module procedure copy_3_1
+    module procedure copy_4_1
+    module procedure copy_1_2
+    module procedure copy_2_2
+    module procedure copy_3_2
+    module procedure copy_4_2
+    module procedure copy_1_3
+    module procedure copy_2_3
+    module procedure copy_3_3
+    module procedure copy_4_3
+    module procedure copy_1_4
+    module procedure copy_2_4
+    module procedure copy_3_4
+    module procedure copy_4_4
+  end interface
+
+  interface lalg_dot
+    module procedure dot_1
+    module procedure dot_2
+    module procedure dot_3
+    module procedure dot_4
+  end interface lalg_dot
+
+  interface lalg_nrm2
+    module procedure nrm2_1
+    module procedure nrm2_2
+    module procedure nrm2_3
+    module procedure nrm2_4
+  end interface lalg_nrm2
+
+  interface lalg_gemm
+    module procedure gemm_1
+    module procedure gemm_2
+    module procedure gemm_3
+    module procedure gemm_4
+  end interface lalg_gemm
+
+  interface lalg_gemv
+    module procedure gemv_1
+    module procedure gemv_2
+    module procedure gemv_3
+    module procedure gemv_4
+  end interface lalg_gemv
+
+contains
+
 #if defined(HAVE_BLAS)
+
+#  define TYPE 1
 #  include "linalg_basic_blas.F90"
+#  undef TYPE
+
+#  define TYPE 2
+#  include "linalg_basic_blas.F90"
+#  undef TYPE
+
+#  define TYPE 3
+#  include "linalg_basic_blas.F90"
+#  undef TYPE
+
+#  define TYPE 4
+#  include "linalg_basic_blas.F90"
+#  undef TYPE
+
 #else
+
+#  define TYPE 1
 #  include "linalg_basic_int.F90"
+#  undef TYPE
+
+#  define TYPE 2
+#  include "linalg_basic_int.F90"
+#  undef TYPE
+
+#  define TYPE 3
+#  include "linalg_basic_int.F90"
+#  undef TYPE
+
+#  define TYPE 4
+#  include "linalg_basic_int.F90"
+#  undef TYPE
+
 #endif
+
+end module lib_basic_alg
