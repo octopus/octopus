@@ -68,6 +68,7 @@ contains
     FLOAT, intent(in) :: gmax
     call push_sub('specie_cutoff')
     call ps_filter(s%ps, gmax)
+    call ps_derivatives(s%ps)
     ! This is for debugging. It should not be here, though.
     !if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
     call pop_sub(); return
@@ -109,6 +110,7 @@ contains
     if(.not.s%local) then
       allocate(s%ps) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, lmax, lloc, ispin)
+      call ps_derivatives(s%ps)
       if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
       
       s%z_val = s%ps%z_val

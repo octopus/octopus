@@ -30,7 +30,7 @@ use hgh
 implicit none
 
 private
-public :: ps_type, ps_init, ps_filter, ps_debug, ps_end
+public :: ps_type, ps_init, ps_filter, ps_derivatives, ps_debug, ps_end
 
 integer, parameter, public :: &
    PS_TM2 = 100, &
@@ -189,6 +189,22 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 
   call pop_sub()
 end subroutine ps_init
+
+subroutine ps_derivatives(ps)
+  type(ps_type), intent(inout) :: ps
+  integer :: l, j
+  do l = 0, ps%l_max
+     do j = 1, ps%kbc
+        call loct_spline_der(ps%kb(l, j), ps%dkb(l, j))
+     enddo
+  end do
+  do l = 0, ps%so_l_max
+     do j = 1, ps%kbc
+        call loct_spline_der(ps%so_kb(l, j), ps%so_dkb(l, j))
+     enddo
+  enddo
+  call loct_spline_der(ps%vlocal, ps%dvlocal)
+end subroutine ps_derivatives
 
 subroutine ps_filter(ps, gmax)
   type(ps_type), intent(inout) :: ps
@@ -503,8 +519,6 @@ subroutine get_splines_tm(psf, ps)
        hato(ir) = (psf%vps(ir, l) - psf%vlocal(ir)) * ps%dknrm(l) * loct_splint(ps%ur(l+1, 1), psf%rofi(ir))
     enddo
     call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
-    call derivate_in_log_grid(psf%g, hato, derhato)
-    call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
   end do
 
   if(ps%so_l_max>=0) then
@@ -517,8 +531,6 @@ subroutine get_splines_tm(psf, ps)
         enddo
       endif
       call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
-      call derivate_in_log_grid(psf%g, hato, derhato)
-      call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%so_dkb(l, 1))
    end do
   endif
 
@@ -532,10 +544,6 @@ subroutine get_splines_tm(psf, ps)
   hato = hato / M_TWO
   call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psf%vlocal(1) / M_TWO
-
-  ! and the derivative now
-  call derivate_in_log_grid(psf%g, hato, derhato)
-  call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
 
   hato = psf%vlocal/M_TWO
   call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vl)
@@ -633,10 +641,6 @@ subroutine get_splines_hgh(psp, ps)
       hato(1:nrc) = psp%kb(1:nrc, l, j)
       call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
       call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
-      ! and now the derivatives...
-      call derivate_in_log_grid(psp%g, hato, derhato)
-      call loct_spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
-      call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_dkb(l, j))
     end do
   end do
 
@@ -646,9 +650,6 @@ subroutine get_splines_hgh(psp, ps)
   hato(1) = psp%z_val
   call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psp%vlocal(1)
-  ! and the derivative now
-  call derivate_in_log_grid(psp%g, hato, derhato)
-  call loct_spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dvlocal)
 
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
