@@ -295,7 +295,7 @@ contains
     CMPLX :: c
 
     !!! units are 1/length
-    call oct_parse_double("TDDeltaStrength", M_ZERO, k)
+    call oct_parse_float("TDDeltaStrength", M_ZERO, k)
     k = k / units_inp%length%factor
     
     !!! The wave-functions at time delta t read

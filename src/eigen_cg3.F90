@@ -82,7 +82,7 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   enddo
 
-  call X(scal)(sys%m%np*st%dim*st%nst*st%nik, &
+  call la_scal(sys%m%np*st%dim*st%nst*st%nik, &
        R_TOTYPE(1.0/sqrt(sys%m%vol_pp)), st%X(psi)(1,1,1,1), 1)
 
   if(conf%verbose > 999) then

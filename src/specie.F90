@@ -140,7 +140,7 @@ FLOAT function specie_get_local(s, x) result(l)
   r = sqrt(sum(xx(:)**2))
 
   if(conf%dim.ne.3 .or. s%label(1:5)=='usdef') then
-    l = oct_parse_potential(xx(1), xx(2), xx(3), r, s%user_def)
+    l = oct_parse_pot(xx(1), xx(2), xx(3), r, s%user_def)
 
   else
     select case(s%label(1:5))
@@ -182,9 +182,9 @@ subroutine specie_get_glocal(s, x, gv)
     do i = 1, conf%dim
       xx(1:conf%dim) = x(1:conf%dim)
       xx(i) = xx(i) - Delta
-      l1 = oct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+      l1 = oct_parse_pot(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
       xx(i) = xx(i) + M_TWO*Delta
-      l2 = oct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+      l2 = oct_parse_pot(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
       gv(i) = (l2 - l1)/(M_TWO*Delta)
     end do
   else

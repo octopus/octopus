@@ -65,7 +65,7 @@ subroutine mix_init(smix, np, nc)
   end if
 
   if (smix%type_of_mixing == LINEAR .or. smix%type_of_mixing == BROYDEN) then
-    call oct_parse_double("Mixing", CNST(0.3), smix%alpha)
+    call oct_parse_float("Mixing", CNST(0.3), smix%alpha)
     if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) then
       write(message(1), '(a, f14.6,a)') "Input: '",smix%alpha,"' is not a valid Mixing"
       message(2) = '(0 < Mixing <= 1)'

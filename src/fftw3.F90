@@ -207,7 +207,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call dscal(n, M_ONE/real(n, PRECISION), r(1, 1, 1), 1)
+    call la_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1), 1)
 
   end subroutine dfft_backward
 
@@ -230,7 +230,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call zscal(n, M_z1/real(n, PRECISION), out(1, 1, 1), 1)
+    call la_scal(n, M_z1/real(n, PRECISION), out(1, 1, 1), 1)
 
   end subroutine zfft_backward
 

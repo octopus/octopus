@@ -27,5 +27,3 @@
 #define R_CONJ(x)   (x)
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)
-#define R_DOT       ddot
-#define R_NRM2      dnrm2

@@ -36,10 +36,10 @@ program broad
   call units_init()
 
   ! broadening to use
-  call oct_parse_double("LinBroadnening", CNST(0.02)/units_inp%energy%factor, b%b)
-  call oct_parse_double("LinEnergyStep",  CNST(0.01)/units_inp%energy%factor, b%energy_step)
-  call oct_parse_double("LinMinEnergy",   M_ZERO, b%min_energy)
-  call oct_parse_double("LinMaxEnergy",   M_ONE/units_inp%energy%factor, b%max_energy)
+  call oct_parse_float("LinBroadnening", CNST(0.02)/units_inp%energy%factor, b%b)
+  call oct_parse_float("LinEnergyStep",  CNST(0.01)/units_inp%energy%factor, b%energy_step)
+  call oct_parse_float("LinMinEnergy",   M_ZERO, b%min_energy)
+  call oct_parse_float("LinMaxEnergy",   M_ONE/units_inp%energy%factor, b%max_energy)
 
   b%b = b%b * units_inp%energy%factor
   b%energy_step = b%energy_step * units_inp%energy%factor

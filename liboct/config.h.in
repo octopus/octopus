@@ -1,6 +1,6 @@
 /* liboct/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Code compiled for ground-state complex wavefunctions */
+/* octopus compiled for ground-state complex wavefunctions */
 #undef COMPLEX_WFNS
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
@@ -11,7 +11,7 @@
 /* Define to 1 if using `alloca.c'. */
 #undef C_ALLOCA
 
-/* Code compiled in debug mode */
+/* octopus compiled in debug mode */
 #undef DEBUG
 
 /* Define to dummy `main' function (if any) required to link to the Fortran 90
@@ -128,10 +128,16 @@
 /* The size of a C pointer */
 #undef POINTER_SIZE
 
+/* Define to 1 if the C compiler supports function prototypes. */
+#undef PROTOTYPES
+
 /* Define to 1 if the `setvbuf' function takes the buffering type as its
    second argument and the buffer pointer as the third, as on System V before
    release 3. */
 #undef SETVBUF_REVERSED
+
+/* octopus compiled in single precision */
+#undef SINGLE_PRECISION
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -146,6 +152,9 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Define like PROTOTYPES; this can be used by system headers. */
+#undef __PROTOTYPES
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

@@ -29,11 +29,11 @@ program hs_from_mult
   call global_init()
   call units_init()
 
-  call oct_parse_double("SpecStartTime",  M_ZERO,     s%start_time)
-  call oct_parse_double("SpecEndTime",   -M_ONE,      s%end_time)
-  call oct_parse_double("SpecEnergyStep", CNST(0.05), s%energy_step)
-  call oct_parse_double("SpecMinEnergy",  M_ZERO,     s%min_energy)
-  call oct_parse_double("SpecMaxEnergy",  CNST(20.0), s%max_energy)
+  call oct_parse_float("SpecStartTime",  M_ZERO,     s%start_time)
+  call oct_parse_float("SpecEndTime",   -M_ONE,      s%end_time)
+  call oct_parse_float("SpecEnergyStep", CNST(0.05), s%energy_step)
+  call oct_parse_float("SpecMinEnergy",  M_ZERO,     s%min_energy)
+  call oct_parse_float("SpecMaxEnergy",  CNST(20.0), s%max_energy)
 
   ! adjust units
   s%start_time  = s%start_time  * units_inp%time%factor

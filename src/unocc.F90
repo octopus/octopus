@@ -40,7 +40,7 @@ subroutine unocc_init(u, m, st, sys)
   call push_sub('unocc_init')
 
   call oct_parse_int("UnoccMaximumIter", 200, u%max_iter)
-  call oct_parse_double("UnoccConv", CNST(1e-4), u%conv)
+  call oct_parse_float("UnoccConv", CNST(1e-4), u%conv)
   if(u%max_iter <= 0 .and. u%conv <= M_ZERO) then
     message(1) = "Input: Not all occ convergence criteria can be <= 0"
     message(2) = "Please set one of the following:"

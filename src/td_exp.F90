@@ -52,7 +52,7 @@ contains
       message(1) = 'Info: Exponential method: Chebyshev.'
 
     case(LANCZOS_EXPANSION)
-      call oct_parse_double("TDLanczosTol", CNST(5e-4), te%lanczos_tol)
+      call oct_parse_float("TDLanczosTol", CNST(5e-4), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) then
         write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
         message(2) = '(0 < TDLanczosTol)'
@@ -154,12 +154,12 @@ contains
       
       allocate(zpsi1(sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
       zfact = M_z1
-      call zcopy(sys%m%np*sys%st%dim, zpsi(1, 1), 1, zpsi1(1, 1), 1)
+      call la_copy(sys%m%np*sys%st%dim, zpsi(1, 1), 1, zpsi1(1, 1), 1)
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)
-        call zaxpy(sys%m%np*sys%st%dim, zfact, hzpsi1(1, 1), 1, zpsi(1, 1), 1)
-        if(i .ne. te%exp_order) call zcopy(sys%m%np*sys%st%dim, hzpsi1(1, 1), 1, zpsi1(1, 1), 1)
+        call la_axpy(sys%m%np*sys%st%dim, zfact, hzpsi1(1, 1), 1, zpsi(1, 1), 1)
+        if(i .ne. te%exp_order) call la_copy(sys%m%np*sys%st%dim, hzpsi1(1, 1), 1, zpsi1(1, 1), 1)
       end do
       deallocate(zpsi1, hzpsi1)
       
@@ -191,19 +191,19 @@ contains
       zpsi1 = M_z0
       n = sys%m%np*sys%st%dim
       do j = te%exp_order-1, 0, -1
-        call zcopy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
-        call zcopy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
+        call la_copy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
+        call la_copy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*oct_bessel(j, h%spectral_half_span*timestep)
-        call zaxpy(n, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+        call la_axpy(n, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
              zpsi1(1, 1, 1), 1, zpsi1(1, 1, 0), 1)
-        call zscal(n, cmplx(1./h%spectral_half_span, M_ZERO, PRECISION), zpsi1(1, 1, 0), 1)
-        call zscal(n, cmplx(M_TWO, M_ZERO, PRECISION),                   zpsi1(1, 1, 0), 1)
-        call zaxpy(n, zfact, zpsi(1, 1),                                1,   zpsi1(1, 1, 0), 1)
-        call zaxpy(n, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
+        call la_scal(n, cmplx(1./h%spectral_half_span, M_ZERO, PRECISION), zpsi1(1, 1, 0), 1)
+        call la_scal(n, cmplx(M_TWO, M_ZERO, PRECISION),                   zpsi1(1, 1, 0), 1)
+        call la_axpy(n, zfact, zpsi(1, 1),                                1,   zpsi1(1, 1, 0), 1)
+        call la_axpy(n, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
       end do
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      call zscal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(1, 1), 1)
+      call la_scal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(1, 1), 1)
       deallocate(zpsi1)
       
       if(present(order)) order = te%exp_order
@@ -231,7 +231,7 @@ contains
       ! Operate on v(:, :, 1) and place it onto w.
       call operate(v(:, :, 1), zpsi)
       alpha = zstates_dotp(sys%m, sys%st%dim, v(:, :, 1), zpsi)
-      call zaxpy(np, -M_z1*alpha, v(1, 1, 1), 1, zpsi(1, 1), 1)
+      call la_axpy(np, -M_z1*alpha, v(1, 1, 1), 1, zpsi(1, 1), 1)
       
       hm = M_z0; hm(1, 1) = alpha
       beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
@@ -241,7 +241,7 @@ contains
         call operate(v(:, :, n+1), zpsi)
         hm(n    , n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n)    , zpsi)
         hm(n + 1, n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n + 1), zpsi)
-        call zgemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n, n + 1), 1, M_z1, zpsi(1, 1), 1)
+        call la_gemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n, n + 1), 1, M_z1, zpsi(1, 1), 1)
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
         res = abs(beta*abs(expo(1, n+1)))
         beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
@@ -255,7 +255,7 @@ contains
       endif
       
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call zgemv('n', np, korder, M_z1*nrm, v(1, 1, 1), np, expo(1, 1), 1, M_z0, zpsi(1, 1), 1)
+      call la_gemv('n', np, korder, M_z1*nrm, v(1, 1, 1), np, expo(1, 1), 1, M_z0, zpsi(1, 1), 1)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)

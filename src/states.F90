@@ -130,7 +130,7 @@ subroutine states_init(st, m, val_charge)
   end if
 
   
-  call oct_parse_double('ExcessCharge', M_ZERO, excess_charge)
+  call oct_parse_float('ExcessCharge', M_ZERO, excess_charge)
 
   call oct_parse_int('ExtraStates', 0, nempty)
   if (nempty < 0) then
@@ -226,7 +226,7 @@ subroutine states_init(st, m, val_charge)
     end do
 
     ! read in fermi distribution temperature
-    call oct_parse_double('ElectronicTemperature', M_ZERO, st%el_temp)
+    call oct_parse_float('ElectronicTemperature', M_ZERO, st%el_temp)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst

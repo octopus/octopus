@@ -83,7 +83,7 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_create(m, natoms, atom)
 
-  call oct_parse_double('DoubleFFTParameter', M_TWO, m%fft_alpha)
+  call oct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
   if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
          "' is not a valid DoubleFFTParameter"

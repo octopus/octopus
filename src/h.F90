@@ -170,10 +170,10 @@ subroutine hamiltonian_init(h, sys)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
-    call oct_parse_double("ABWidth", M_FOUR/units_inp%length%factor, h%ab_width)
+    call oct_parse_float("ABWidth", M_FOUR/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
-      call oct_parse_double("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)
+      call oct_parse_float("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
       h%ab_height = M_ONE
@@ -196,7 +196,7 @@ subroutine hamiltonian_init(h, sys)
   
   ! Cutoff applied to the kinetic term.
   ! it is used *both* in the calculation of the derivatives and in the split operator method
-  call oct_parse_double("KineticCutoff", -M_ONE, h%cutoff)
+  call oct_parse_float("KineticCutoff", -M_ONE, h%cutoff)
   if(h%cutoff > M_ZERO) then
     h%cutoff = h%cutoff * units_inp%energy%factor
     write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&

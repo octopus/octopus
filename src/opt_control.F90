@@ -329,11 +329,11 @@ contains
 
     ! read parameters from input
     ! we assume atomic units
-    call oct_parse_double("OptControlInitLaser", M_ZERO, laser_init)
+    call oct_parse_float("OptControlInitLaser", M_ZERO, laser_init)
     laser_i = laser_init
     laser_f = laser_init
-    call oct_parse_double("OptControlAlpha", M_ONE, alpha)
-    call oct_parse_double("OptControlEps", CNST(1e-3), eps)
+    call oct_parse_float("OptControlAlpha", M_ONE, alpha)
+    call oct_parse_float("OptControlEps", CNST(1e-3), eps)
     call oct_parse_int("OptControlMaxIter", 10, ctr_iter_max)
     if(ctr_iter_max < 0.and.eps<M_ZERO) then
       message(1) = "OptControlMaxIter and OptControlEps can not be both <0"

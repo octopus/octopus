@@ -65,12 +65,12 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
 
   ! Read the box size.
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER) then
-    call oct_parse_double('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
+    call oct_parse_float('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     m%lsize(1) = m%rsize
   end if
   if(m%box_shape == CYLINDER) then
-    call oct_parse_double('xlength', M_ONE/units_inp%length%factor, m%xsize)
+    call oct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
     m%xsize = m%xsize * units_inp%length%factor
     m%lsize(1) = m%xsize
   end if
@@ -112,7 +112,7 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
   m%h = M_ZERO
   select case(m%box_shape)
   case(SPHERE,CYLINDER)
-    call oct_parse_double('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
+    call oct_parse_float('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
     m%h(1:conf%dim) = m%h(1)
   case(PARALLELEPIPED)
     if(oct_parse_block_n('spacing') < 1) then

@@ -37,7 +37,7 @@ subroutine static_pol_run(scf, sys, h)
   call push_sub('static_pol_run')
 
   ! read in e_field value
-  call oct_parse_double('POLStaticField', CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
+  call oct_parse_float('POLStaticField', CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
   e_field = e_field * units_inp%energy%factor / units_inp%length%factor
   if (e_field <= M_ZERO) then
     write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"

@@ -193,11 +193,11 @@ contains
           do_m: do lm = -l*step, l*step, step
             do ikbc = kbc_start, kbc_end, step
               do jkbc = kbc_start, kbc_end, step
-                 p2 = zdotc(atm%mps, atm%zuv(1, add_lm, ikbc), 1, atm%zuv(1, add_lm, ikbc), 1)*m%vol_pp
+                 p2 = la_dot(atm%mps, atm%zuv(1, add_lm, ikbc), 1, atm%zuv(1, add_lm, ikbc), 1)*m%vol_pp
                  ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*factor
-                 uvpsi = zdotc(atm%mps, atm%zuv(1, add_lm, ikbc), 1, lpsi(1), 1) * m%vol_pp* &
+                 uvpsi = la_dot(atm%mps, atm%zuv(1, add_lm, ikbc), 1, lpsi(1), 1) * m%vol_pp* &
                        (exp(ctemp) - M_z1)/p2
-                 call zaxpy (atm%mps, uvpsi, atm%zuv(1, add_lm, jkbc), 1, lHpsi(1), 1)
+                 call la_axpy(atm%mps, uvpsi, atm%zuv(1, add_lm, jkbc), 1, lHpsi(1), 1)
               end do
             end do
             add_lm = add_lm + step

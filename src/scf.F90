@@ -52,10 +52,10 @@ subroutine scf_init(scf, sys, h)
   call push_sub('systm_scf_init')
 
   call oct_parse_int   ("MaximumIter",        200, scf%max_iter)
-  call oct_parse_double("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
-  call oct_parse_double("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
-  call oct_parse_double("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
-  call oct_parse_double("ConvRelEv",       M_ZERO, scf%conv_rel_ev)
+  call oct_parse_float("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
+  call oct_parse_float("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
+  call oct_parse_float("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
+  call oct_parse_float("ConvRelEv",       M_ZERO, scf%conv_rel_ev)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &

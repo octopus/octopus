@@ -28,7 +28,7 @@ subroutine td_init(td, sys, m, st, h)
 
   td%iter = 0
 
-  call oct_parse_double("TDTimeStep", CNST(0.07)/units_inp%time%factor, td%dt)
+  call oct_parse_float("TDTimeStep", CNST(0.07)/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= M_ZERO) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"

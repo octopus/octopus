@@ -322,12 +322,12 @@ subroutine lcao_wf(sys, h)
     sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
-    call X(gemm)('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
-                 R_TOTYPE(M_ONE),                                         &
-                 lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
-                 lcao_data%hamilt(1, 1, ik), norbs,                       &
-                 R_TOTYPE(M_ZERO),                                        &
-                 sys%st%X(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
+    call la_gemm('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
+                  R_TOTYPE(M_ONE),                                         &
+                  lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
+                  lcao_data%hamilt(1, 1, ik), norbs,                       &
+                  R_TOTYPE(M_ZERO),                                        &
+                  sys%st%X(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
  
    end do
 

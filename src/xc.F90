@@ -229,8 +229,8 @@ subroutine xc_init(xcs, nlcc)
 
   ! Extra parameters to fine-tune LB94 potential.
   if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-    call oct_parse_double("LB94_beta", CNST(0.05), xcs%lb94_beta)
-    call oct_parse_double("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
+    call oct_parse_float("LB94_beta", CNST(0.05), xcs%lb94_beta)
+    call oct_parse_float("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
     call oct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
   end if
 
@@ -242,7 +242,7 @@ subroutine xc_init(xcs, nlcc)
       call write_fatal(2)
     end if
     if(xcs%oep_level == 2) then
-      call oct_parse_double("OEP_mixing", M_ONE, xcs%oep_mixing)
+      call oct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
     end if
 
   end if

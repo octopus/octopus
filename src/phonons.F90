@@ -49,7 +49,7 @@ contains
     ph%dim = sys%natoms*3
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
-    call oct_parse_double("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
+    call oct_parse_float("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix

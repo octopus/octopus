@@ -83,7 +83,7 @@ subroutine eigen_solver_init(eigens, st, m)
   end select
   call write_info(1)
 
-  call oct_parse_double("EigenSolverInitTolerance", CNST(1.0e-10), eigens%init_tol)
+  call oct_parse_float("EigenSolverInitTolerance", CNST(1.0e-10), eigens%init_tol)
   if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -91,7 +91,7 @@ subroutine eigen_solver_init(eigens, st, m)
       call write_fatal(2)
   endif
 
-  call oct_parse_double("EigenSolverFinalTolerance", CNST(1.0e-14), eigens%final_tol)
+  call oct_parse_float("EigenSolverFinalTolerance", CNST(1.0e-14), eigens%final_tol)
   if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"

@@ -96,11 +96,11 @@ contains
         call write_fatal(2)
       end if
 
-      call oct_parse_double("GOTolerance", CNST(0.0001)/units_inp%force%factor, geo%tol)
+      call oct_parse_float("GOTolerance", CNST(0.0001)/units_inp%force%factor, geo%tol)
       geo%tol = geo%tol*units_inp%force%factor
 
       ! WARNING: in some weird units
-      call oct_parse_double("GOStep", M_HALF, geo%step)
+      call oct_parse_float("GOStep", M_HALF, geo%step)
 
       call oct_parse_int("GOMaxIter", 200, geo%max_iter)
       if(geo%max_iter <= 0) then

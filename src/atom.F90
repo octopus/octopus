@@ -144,7 +144,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   if(oct_parse_isdef("RandomVelocityTemp").ne.0) then
     
     call oct_ran_init(random_gen_pointer)
-    call oct_parse_double("RandomVelocityTemp", M_ZERO, temperature)
+    call oct_parse_float("RandomVelocityTemp", M_ZERO, temperature)
     do i = 1, natoms
        sigma = sqrt( P_Kb*temperature / a(i)%spec%weight )
        do j = 1, 3
