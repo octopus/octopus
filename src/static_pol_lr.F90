@@ -168,7 +168,8 @@ contains
     integer,                intent(in)    :: alpha
     
     integer :: iter, ik, ik2, ist, i 
-    FLOAT, allocatable :: tmp(:), Y(:,:), dl_rhoin(:,:,:), dl_rhonew(:,:,:), dl_rhotmp(:,:,:)
+    FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:), dl_rhonew(:,:,:), dl_rhotmp(:,:,:)
+    R_TYPE, allocatable :: Y(:, :)
     logical :: finish
     
     type(mesh_type), pointer :: m
