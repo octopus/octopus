@@ -455,21 +455,53 @@ subroutine get_splines_tm(psf, ps)
   type(tm_type), intent(IN)    :: psf
   type(ps_type), intent(inout) :: ps
   
-  integer :: is, l, ll, nrc, ir, nrcore
-  FLOAT :: chc
+  integer :: is, l, ll, nrc, ir, nrcore, k
+  logical :: threshold
+  FLOAT :: chc, r, lim
   FLOAT, allocatable :: hato(:), derhato(:)
 
   call push_sub('get_splines_tm')
 
   allocate(hato(psf%nrval), derhato(psf%nrval))
 
+  ! Define the table for the pseudo-wavefunction components (using splines)
+  ! with a correct normalization function.
+  do is = 1, ps%ispin
+    do l = 1, ps%conf%p
+      ll = ps%conf%l(l)
+      if(ll.ne.0) then 
+         hato(2:) = psf%rphi(2:, l-1, 1 + is)/psf%rofi(2:)
+         hato(1) = M_ZERO
+      else
+         threshold = .true.
+         ! Get the value of ur at zero:
+         lim = (psf%rphi(10, l - 1, 1 + is) - psf%rphi(5, l -1, 1 + is))/(psf%rofi(10) - psf%rofi(5))
+         do ir = psf%nrval, 2, -1
+            r = psf%rofi(ir)
+            if(r<CNST(0.005)) then
+               if(threshold) then 
+                  k = ir
+                  threshold = .false.
+               endif
+               hato(ir) = extrap(psf%rofi(ir), psf%rofi(1), psf%rofi(k+1), psf%rofi(k+10), &
+                             lim, hato(k+1), hato(k+10))
+            else
+               hato(ir) = psf%rphi(ir, l-1, 1 + is)/r
+           endif
+        enddo
+        hato(1) = lim
+      endif
+      call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%ur(l, is))
+    end do
+  end do
+
   ! Interpolate the KB-projection functions
   do l = 0, ps%l_max
     hato = M_ZERO
     nrc = nint(log(psf%kbr(l)/psf%b + M_ONE)/psf%a) + 1
-    hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l, 1) * & 
-                   ps%dknrm(l) / psf%rofi(2:nrc)
-    hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
+    do ir = 1, nrc
+       hato(ir) = (psf%vps(ir, l) - psf%vlocal(ir)) * ps%dknrm(l) * loct_splint(ps%ur(l+1, 1), psf%rofi(ir))
+    enddo
     call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
     call derivate_in_log_grid(psf%g, hato, derhato)
     call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
@@ -480,9 +512,9 @@ subroutine get_splines_tm(psf, ps)
       hato = M_ZERO
       if(l>0 .and. psf%irel=='rel') then
         nrc = psf%g%nrval
-        hato(2:nrc) = (psf%vso(2:nrc, l))*psf%rphi(2:nrc, l, 1) * & 
-                      ps%so_dknrm(l) / psf%rofi(2:nrc)
-        hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
+        do ir = 1, nrc
+           hato(ir) = psf%vso(ir, l) * ps%so_dknrm(l) * loct_splint(ps%ur(l+1, 1), psf%rofi(ir))
+        enddo
       endif
       call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
       call derivate_in_log_grid(psf%g, hato, derhato)
@@ -508,23 +540,6 @@ subroutine get_splines_tm(psf, ps)
   hato = psf%vlocal/M_TWO
   call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vl)
 
-  ! Define the table for the pseudo-wavefunction components (using splines)
-  ! with a correct normalization function
-  do is = 1, ps%ispin
-    do l = 1, ps%conf%p
-      ll = ps%conf%l(l)
-      nrc = nint(log(psf%kbr(ll)/psf%b + M_ONE)/psf%a) + 1
-      do ir = nrc+ 2, psf%nrval-2
-        if ( abs(psf%rphi(ir, l-1, 1+is)/psf%rofi(ir)) < eps ) exit
-      end do
-      nrc = ir + 1
-      hato = M_ZERO
-      hato(2:nrc) = psf%rphi(2:nrc, l-1, 1 + is)/psf%rofi(2:nrc)
-      hato(1) = hato(2)
-      call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%ur(l, is))
-    end do
-  end do
-
   !  pseudo-core radius and Table with the pseudo-core data
   if(ps%icore /= 'nc  ') then
     nrcore = 0
@@ -545,7 +560,23 @@ subroutine get_splines_tm(psf, ps)
   deallocate(hato, derhato)
 
   call pop_sub()
+
+  contains
+
+  FLOAT function extrap(r1, r2, r3, r4, y2, y3, y4)
+    FLOAT, intent(in) :: r1, r2, r3, r4, y2, y3, y4
+    FLOAT :: a, b, c, x, y
+    y = (y4-y2) - (y3-y2)*((r4-r2)/(r3-r2))
+    x = (r4**2-r2**2) - (r3**2-r2**2)*(r4-r2)/(r3-r2)
+    c = y/x
+    b = (M_ONE/(r3-r2))*((y3-y2) - c*(r3**2-r2**2))
+    a = y2 - b*r2 -c*r2**2
+    extrap = a + b*r1 + c*r1**2
+  end function extrap
+
 end subroutine get_splines_tm
+
+
 
 subroutine get_splines_tm_fourier(psf,ps)
   type(tm_type), intent(in) :: psf
