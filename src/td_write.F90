@@ -66,9 +66,9 @@ subroutine td_write_multipole(out, sys, td, iter)
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
   
-  integer :: is, l, m, add_lm
+  integer :: is, j, l, m, add_lm
   character(len=50) :: aux
-  FLOAT, allocatable :: dipole(:), multipole(:,:)
+  FLOAT, allocatable :: dipole(:), nuclear_dipole(:), multipole(:,:)
   
   if(mpiv%node.ne.0) return ! only first node outputs
   
@@ -88,6 +88,10 @@ subroutine td_write_multipole(out, sys, td, iter)
       write(aux, '(a,i1,a)') 'dipole(', is, ')'
       call write_iter_header(out, aux)
     end do
+    do j = 1, conf%dim
+      write(aux,'(a,i1,a)')  'n.dip.(', j,  ')'
+      call write_iter_header(out, aux)
+    enddo
     do is = 1, sys%st%nspin
       do l = 0, td%lmax
         do m = -l, l
@@ -105,7 +109,10 @@ subroutine td_write_multipole(out, sys, td, iter)
     do is = 1, sys%st%nspin
       call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
     end do
-    
+    do j = 1, conf%dim
+      call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
+    enddo
+
     do is = 1, sys%st%nspin
       do l = 0, td%lmax
         do m = -l, l
@@ -124,13 +131,17 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_nl(out)
   end if
     
-  allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
-  call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, dipole, multipole)
+  allocate(dipole(sys%st%nspin), nuclear_dipole(conf%dim), multipole((td%lmax + 1)**2, sys%st%nspin))
+  call states_calculate_multipoles(sys%m, sys%st, td%pol, dipole, td%lmax, multipole)
+  call atom_dipole(sys%natoms, sys%atom, nuclear_dipole)
   
   call write_iter_start(out)
   do is = 1, sys%st%nspin
     call write_iter_double(out, dipole(is)/units_out%length%factor, 1)
   end do
+  do j = 1, conf%dim
+    call write_iter_double(out, nuclear_dipole(j)/units_out%length%factor, 1)
+  enddo
   do is = 1, sys%st%nspin
     add_lm = 1
     do l = 0, td%lmax
@@ -142,7 +153,7 @@ subroutine td_write_multipole(out, sys, td, iter)
   end do
   call write_iter_nl(out)
   
-  deallocate(dipole, multipole)
+  deallocate(dipole, nuclear_dipole, multipole)
 end subroutine td_write_multipole
 
 subroutine td_write_nbo(out, sys, td, iter, ke, pe)

@@ -599,6 +599,22 @@ FLOAT function kinetic_energy(natoms, atom)
 
 end function kinetic_energy
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Calculates the dipole moment of the ionic charge distribution.
+subroutine atom_dipole(natoms, atom, dipole)
+  integer, intent(in)         :: natoms
+  type(atom_type), intent(in) :: atom(natoms)
+  FLOAT, intent(out) :: dipole(3)
+  integer :: i
+
+  dipole = M_ZERO
+  do i = 1, natoms
+     dipole(1:conf%dim) = dipole(1:conf%dim) + &
+                          atom(i)%spec%z_val*atom(i)%x(1:conf%dim)
+  enddo
+
+end subroutine atom_dipole
+
 subroutine cm_pos(natoms, atom, pos)
   integer, intent(in)         :: natoms
   type(atom_type), intent(in) :: atom(natoms)

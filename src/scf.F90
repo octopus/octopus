@@ -269,6 +269,8 @@ end subroutine scf_write_iter
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
+  FLOAT :: e_dip(conf%dim, sys%st%nspin), n_dip(conf%dim)
+  FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
   integer :: iunit, i, j
 
   call loct_mkdir(trim(dir))
@@ -315,15 +317,22 @@ subroutine scf_write_static(dir, fname)
     call write_magnet(iunit, sys%st)
   end if
 
-  do i = 1, sys%st%nspin
-    write(iunit, '(a, i1, 4a)') 'Dipole (', i, ')', &
-         ' [', trim(units_out%length%abbrev), ']:'
-    do j = 1, conf%dim
-      write(iunit, '(6x,a,i1,a,es17.8)') '<x', j, '> = ', &
-           sum(sys%m%Lxyz(j,:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(j) / units_out%length%factor
-    end do
-    write(iunit, '(1x)')
-  end do
+  ! Next lines of code calculate the dipole of the molecule, summing the electronic and
+  ! ionic contributions.
+                 call states_calculate_multipoles(sys%m, sys%st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
+  if(conf%dim>1) call states_calculate_multipoles(sys%m, sys%st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
+  if(conf%dim>2) call states_calculate_multipoles(sys%m, sys%st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
+  do j = 1, conf%dim
+     e_dip(j, 1) = sum(e_dip(j, :))
+  enddo
+  call atom_dipole(sys%natoms, sys%atom, n_dip)
+  n_dip(:) = n_dip(:) - e_dip(:, 1)
+  write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
+  do j = 1, conf%dim
+     write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
+                                                                    n_dip(j)*ATOMIC_TO_DEBYE
+  enddo
+  write(iunit,'(a)')
 
   write(iunit, '(a)') 'Convergence:'
   write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &

@@ -470,19 +470,22 @@ subroutine states_fermi(st, m)
     enddo
   endif
   
-  call pop_sub()
-  return
+  call pop_sub(); return
 end subroutine states_fermi
 
-subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
+subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  integer, intent(in) :: lmax
   FLOAT, intent(in) :: pol(3)
-  FLOAT, intent(out) :: dipole(st%nspin), multipole((lmax + 1)**2, st%nspin)
+  FLOAT, intent(out) :: dipole(st%nspin)
+  integer, intent(in), optional :: lmax
+  !FLOAT, intent(out), optional :: multipole((lmax + 1)**2, st%nspin)
+  FLOAT, intent(out), optional :: multipole(:, :)
 
   integer :: i, is, l, lm, add_lm
   FLOAT :: x(3), r, ylm, mult
+
+  call push_sub('states_calculate_multipoles')
 
   dipole = M_ZERO
   do is = 1, st%nspin
@@ -492,27 +495,29 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
     end do
     dipole(is) = dipole(is) * m%vol_pp
 
-
-    add_lm = 1
-    do l = 0, lmax
-      do lm = -l, l
-        mult = M_ZERO
-
-        do i = 1, m%np
-          call mesh_r(m, i, r, x=x)
-          ylm = loct_ylm(x(1), x(2), x(3), l, lm)
-          if(l == 0) then
-            mult = mult + st%rho(i, is) * ylm
-          else
-            mult = mult + st%rho(i, is) * ylm * r**l
-          end if
-        end do
-        multipole(add_lm, is) = mult * m%vol_pp
-        add_lm = add_lm + 1
-
+    if(present(lmax).and.present(multipole)) then
+      add_lm = 1
+      do l = 0, lmax
+         do lm = -l, l
+            mult = M_ZERO
+            do i = 1, m%np
+               call mesh_r(m, i, r, x=x)
+               ylm = loct_ylm(x(1), x(2), x(3), l, lm)
+               if(l == 0) then
+                 mult = mult + st%rho(i, is) * ylm
+               else
+                 mult = mult + st%rho(i, is) * ylm * r**l
+               end if
+            end do
+            multipole(add_lm, is) = mult * m%vol_pp
+            add_lm = add_lm + 1
+         end do
       end do
-    end do
+    endif
+
   end do
+
+  call pop_sub(); return
 end subroutine states_calculate_multipoles
 
 ! function to calculate the eigenvalues sum using occupations as weights
