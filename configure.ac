@@ -183,7 +183,7 @@ fi
 
 # This is certainly wrong, but I don't know
 # how to do it right
-LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
+LINK="$FC $FCFLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 AC_SUBST(LDF90FLAGS)
 
