@@ -184,7 +184,7 @@ contains
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
-  integer iunit, i, j
+  integer :: iunit, i, j
 
   call oct_mkdir(C_string(trim(dir)))
   call io_assign(iunit)
@@ -197,6 +197,11 @@ subroutine scf_write_static(dir, fname)
   write(iunit, '(a)') 'Mesh:'
   call mesh_write_info(sys%m, iunit)
   write(iunit,'(1x)')
+  
+  if (conf%periodic_dim > 0) then
+    call kpoints_write_info(sys%st,iunit)
+    write(iunit,'(1x)')
+  end if
 
   if(.not. h%ip_app) then
     write(iunit, '(a)') 'Exchange and correlation functionals:'
