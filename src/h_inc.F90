@@ -54,8 +54,15 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
 
   case(NOREL)
     call R_FUNC(kinetic) (sys, psi, Hpsi)
-    call R_FUNC(vlpsi) (h, sys, ik, psi, Hpsi)
-    call R_FUNC(vnlpsi) (sys, psi, Hpsi)
+    call R_FUNC(vlpsi)   (h, sys, ik, psi, Hpsi)
+    call R_FUNC(vnlpsi)  (sys, psi, Hpsi)
+#if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
+  case(SPIN_ORBIT)
+    call zkinetic (sys, psi, Hpsi)
+    call zvlpsi   (h, sys, ik, psi, Hpsi)
+    call zvnlpsi  (sys, psi, Hpsi)
+    call zso      (h, sys, ik, psi, Hpsi)
+#endif
   case default
     message(1) = 'Error: Internal.'
     call write_fatal(1)

@@ -469,7 +469,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
       write(iunit, '(i4)', advance='no') j
       do ik = 1, st%nik
         if(st%ispin == 3) then
-          write(iunit, '(1x,f12.6,1x,f5.3,a2,f5.3)', advance='no') &
+          write(iunit, '(1x,f12.6,1x,f5.3,a1,f5.3)', advance='no') &
                st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
         else
           write(iunit, '(1x,f12.6,1x,f12.6)', advance='no') &
@@ -487,6 +487,26 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 #endif
   
 end subroutine states_write_eigenvalues
+
+integer function states_spin_channel(ispin, ik, dim)
+  integer, intent(in) :: ispin, ik, dim
+
+  if( ispin < 1 .or. ispin>3 .or. &
+      ik<0 .or.                   &
+      dim<1 .or. dim>2 .or.       &
+      (ispin.ne.3 .and. dim==2)) then
+      message(1) = 'Internal bug: Unacceptable entry in states_spin_channel function'
+      call write_fatal(1)
+  else
+    select case(ispin)
+      case(1); states_spin_channel = 1
+      case(2); states_spin_channel = mod(ik+1, 2)+1
+      case(3); states_spin_channel = dim
+      case default; states_spin_channel = -1
+    end select
+  endif
+
+end function
 
 #include "states_kpoints.F90"
 

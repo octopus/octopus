@@ -68,9 +68,10 @@ end interface
 
 contains
 
-subroutine hgh_init(psp, filename)
+subroutine hgh_init(psp, filename, ispin)
   type(hgh_type), intent(inout)     :: psp
   character(len=*), intent(in)      :: filename
+  integer, intent(in)               :: ispin
 
   integer :: iunit, i
   logical :: found
@@ -121,13 +122,18 @@ subroutine hgh_init(psp, filename)
   call init_logrid(psp%g, psp%g%a, psp%g%b, psp%g%nrval)
 
   ! Allocation of stuff.
-  allocate(psp%vlocal(1:psp%g%nrval))
-  allocate(psp%kbr(0:psp%l_max+1), psp%occ(0:psp%l_max_occ))
+  allocate(psp%vlocal(1:psp%g%nrval), &
+           psp%kbr(0:psp%l_max+1),    &
+           psp%occ(0:psp%l_max_occ))
   if(psp%l_max >= 0) then
-    allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))    
+    allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))
   endif
   allocate(psp%rphi(psp%g%nrval, 0:psp%l_max_occ), psp%eigen(0:psp%l_max_occ))
   psp%vlocal = 0.0_r8; psp%kb = 0.0_r8; psp%rphi = 0.0_r8
+
+
+  ! Fixes the occupations.
+  psp%occ = hgh_occs(psp%atom_name, psp%l_max_occ)
 
   call pop_sub(); return
 end subroutine hgh_init
@@ -467,9 +473,6 @@ subroutine solve_schroedinger(psp)
     call write_info(1)
   endif
 
-  ! Fixes the occupations.
-  psp%occ = hgh_occs(psp%atom_name, psp%l_max_occ)
-
   ! "Double" self consistent loop: nonlocal and xc parts have to be calculated
   ! self-consistently.
   diff = 1e5_r8
@@ -623,6 +626,7 @@ function hgh_occs(label, lmax)
     case('Ti'); hgh_occs(0:2) = (/ 2, 0, 2 /)
     case('Au'); hgh_occs(0:2) = (/ 1, 0, 0 /)
     case('Au_sc'); hgh_occs(0:2) = (/1, 0, 10 /)
+    case('Hg'); hgh_occs(0:2) = (/ 2, 0, 0 /)
     case default
     if(mpiv%node == 0) then
       message(1) = 'Specie '//trim(label)//' not included in occupation-numbers data base.'

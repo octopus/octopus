@@ -159,9 +159,14 @@ subroutine hamiltonian_init(h, sys)
   end select
   call write_info(1)
   ! This is temporary...
-  if(h%reltype .ne. NOREL) then
-    message(1) = 'Error: Relativistic corrections not working yet'
+  if(h%reltype > SPIN_ORBIT) then
+    message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
     call write_fatal(1)
+  endif
+  if(h%reltype == SPIN_ORBIT) then
+    message(1) = 'WARNING: Spin-Orbit coupling currently only works if only HGH-type pseudopotentials'
+    message(2) = 'are used. Visit us soon for more generality.'
+    call write_warning(2)
   endif
 #else
   if(h%reltype .ne. NOREL) then
@@ -305,6 +310,7 @@ end subroutine hamiltonian_output
 #include "complex.F90"
 #include "h_inc.F90"
 #include "h_forces.F90"
+#include "h_so.F90"
 !#include "h_rel.F90"
 
 end module hamiltonian

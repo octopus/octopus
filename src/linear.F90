@@ -252,7 +252,7 @@ contains
 
     subroutine matrix_elem(i, j, s)
       integer, intent(in) :: i, j
-      R_TYPE, intent(out) :: s(3)
+      real(r8), intent(out) :: s(3)
 
       real(r8) :: x(3)
       integer :: k

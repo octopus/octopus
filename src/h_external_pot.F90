@@ -346,7 +346,7 @@ contains
     sub_name = 'build_kb_sphere'; call push_sub()
 
     ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
-    if(associated(a%jxyz)) deallocate(a%jxyz, a%uv, a%duv, a%uvu)
+    if(associated(a%jxyz)) deallocate(a%jxyz, a%uv, a%duv, a%uvu, a%uvuso)
     
     j = 0
     do k = 1, h%np
@@ -356,9 +356,10 @@ contains
     a%Mps = j
     
     allocate(a%Jxyz(j), a%uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
-         a%duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
+         a%duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc), &
+         a%uvuso((s%ps%l_max+1)**2, s%ps%kbc, s%ps%kbc))
     
-    a%uV  = 0.0_r8; a%duV = 0.0_r8; a%uVu = 0.0_r8
+    a%uV  = 0.0_r8; a%duV = 0.0_r8; a%uVu = 0.0_r8; a%uvuso = 0.0_r8
     
     j = 0
     do k = 1, h%np
@@ -459,10 +460,10 @@ contains
               
               if(r > 0._r8 .or. l>0) then ! 0**l crashes in osf
                 a%uVu(add_lm, 1, 1) = a%uVu(add_lm, 1, 1) + a%uV(j, add_lm, 1)* &
-                     splint(s%ps%Ur(l), r) * ylm * (r**l)
+                     splint(s%ps%ur(l, 1), r) * ylm * (r**l)
               else
                 a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)* &
-                     splint(s%ps%ur(l), r)*ylm
+                     splint(s%ps%ur(l, 1), r)*ylm
               endif
             end do
             a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
@@ -486,6 +487,7 @@ contains
       do l = 0, s%ps%l_max
       do lm = -l, l
          a%uvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
+         a%uvuso(add_lm, 1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
          add_lm = add_lm + 1
       enddo
       enddo

@@ -38,7 +38,8 @@ type atom_type
   integer, pointer :: Jxyz(:)
   real(r8), pointer :: pnts_ps, &  ! # points in ps sphere
        uV(:,:,:), uVu(:,:,:),   &  ! the Kleinman Bylander projectors
-       duV(:,:,:,:)                ! the gradient of the projectors
+       duV(:,:,:,:),            &  ! the gradient of the projectors
+       uvuso(:, :, :)
 end type atom_type
 
 type atom_classical_type
@@ -289,8 +290,8 @@ subroutine atom_dealloc(na, a)
 
   do ia = 1, na
     if(associated(a(ia)%Jxyz)) then
-      deallocate(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%duV)
-      nullify(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%duV)
+      deallocate(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%uvuso, a(ia)%duV)
+      nullify(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%uvuso, a(ia)%duV)
     end if
   end do
 

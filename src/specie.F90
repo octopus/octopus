@@ -81,6 +81,8 @@ function specie_init(s)
   integer :: nspecies, i, j, lmax, lloc
   character(len=80) :: str
 
+  integer :: ispin
+
   sub_name = 'specie_init'; call push_sub()
 
   ! how many do we have?
@@ -94,6 +96,16 @@ function specie_init(s)
     call write_fatal(4)    
   end if
   allocate(s(nspecies))
+
+  ! Reads the spin components. This is read here, as well as in states_init,
+  ! to be able to pass it to the pseudopotential initializations subroutine.
+  call oct_parse_int(C_string('SpinComponents'), 1, ispin)
+  if (ispin < 1 .or. ispin > 3) then
+    write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
+    message(2) = '(SpinComponents = 1 | 2 | 3)'
+    call write_fatal(2)
+  end if
+  ispin = min(2, ispin)
 
   do i = 1, nspecies
     call oct_parse_block_str(str, i-1, 0, s(i)%label)
@@ -138,12 +150,13 @@ function specie_init(s)
       call oct_parse_block_str(str, i-1, 3, s(i)%ps_flavour)
       call oct_parse_block_int(str, i-1, 4, lmax)
       call oct_parse_block_int(str, i-1, 5, lloc)
-      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc)
+      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, ispin)
       if(conf%verbose>999) call ps_debug(s(i)%ps)
 
       s(i)%z_val = s(i)%ps%z_val
       s(i)%nl_planb= int(-1, POINTER_SIZE)
       s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
+
     end select
 
 #elif defined(ONE_D)

@@ -171,6 +171,11 @@ subroutine run()
         call lcao_init(sys, h)
         call lcao_wf(sys, h)
         call lcao_end
+        call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
+        call states_fermi(sys%st, sys%m)                         ! occupations
+        message(1) = 'Info: Eigenvalues after LCAO calculations:'
+        call write_info(1)
+        call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
       end if
 
     case(I_SETUP_UNOCC)

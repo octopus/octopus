@@ -37,28 +37,35 @@ type tm_type
   integer :: npotd, npotu, nr
   real(r8) :: b, a
   real(r8) :: zval
-  real(r8), pointer :: rofi(:), vps(:,:), vlocal(:), rphi(:,:), &
-                       eigen(:), chcore(:), rho_val(:), kbr(:)
+  real(r8), pointer :: rofi(:), vps(:, :), vlocal(:), rphi(:, :,:), &
+                       eigen(:, :), chcore(:), rho_val(:), kbr(:)
 
   ! Other stuff
   integer :: nrval
   type(logrid_type) :: g
   real(r8), pointer :: dkbcos(:), dknrm(:)
+  real(r8), pointer :: occ(:, :)
+  integer :: ispin
 end type tm_type
 
 real(r8), parameter :: eps = 1.0e-8_r8
 
 contains
 
-subroutine tm_init(pstm, filename)
+subroutine tm_init(pstm, filename, ispin)
   type(tm_type), intent(inout) :: pstm
   character(len=*), intent(in) :: filename
+  integer, intent(in)          :: ispin
 
   character(len=256) :: filename2
-  integer :: iunit
+  integer :: iunit, l
   logical :: found
+  real(r8) :: x, y
 
   sub_name = 'ps_tm_read_file'; call push_sub()
+
+  ! Sets the spin components
+  pstm%ispin = ispin
 
   ! Find out where the hell the file is.
   filename2 = trim(filename)//'.vps'
@@ -97,8 +104,45 @@ subroutine tm_init(pstm, filename)
   call init_logrid(pstm%g, pstm%a, pstm%b, pstm%nrval)
 
   ! Allocates some stuff
-  allocate(pstm%rphi(pstm%nrval, 0:pstm%npotd-1), pstm%eigen(0:pstm%npotd-1), &
-           pstm%dkbcos(0:pstm%npotd-1), pstm%dknrm(0:pstm%npotd-1), pstm%kbr(0:pstm%npotd))
+  allocate(pstm%rphi(pstm%nrval, 0:pstm%npotd-1, 3), & 
+           pstm%eigen(0:pstm%npotd-1, 3),            &
+           pstm%dkbcos(0:pstm%npotd-1),              &
+           pstm%dknrm(0:pstm%npotd-1),               &
+           pstm%kbr(0:pstm%npotd),                   &
+           pstm%occ(0:pstm%npotd-1, ispin))
+
+  ! Fixes the occupations
+  select case(pstm%irel)
+    case('isp')
+      do l = 0, pstm%npotd - 1
+         read(pstm%title(l*17+3:l*17+11),'(f4.2,1x,f4.2)') x, y
+         if(pstm%ispin == 1) then
+           pstm%occ(l, 1) = x + y
+         else
+           pstm%occ(l, 1) = x; pstm%occ(l, 2) = y
+         endif
+      enddo
+    case('nrl')
+      do l = 0, pstm%npotd - 1
+         read(pstm%title(l*17+3:l*17+7), '(f5.2)') x
+         if(pstm%ispin == 1) then
+           pstm%occ(l, 1) = x
+         else
+           pstm%occ(l, 1) = min(x, real(2*l+1,r8))
+           pstm%occ(l, 2) = x - pstm%occ(l, 1)
+         endif
+      enddo
+    case('rel')
+      do l = 0, pstm%npotd - 1
+         read(pstm%title(l*17+3:l*17+7), '(f5.2)') x
+         if(pstm%ispin == 1) then
+           pstm%occ(l, 1) = x
+         else
+           pstm%occ(l, 1) = min(x, real(2*l+1,r8))!min(x, real(2*l,r8))
+           pstm%occ(l, 2) = x - pstm%occ(l, 1)
+         endif
+      enddo
+  end select
 
   call pop_sub(); return
 end subroutine tm_init
@@ -139,21 +183,35 @@ subroutine tm_process(pstm, lmax, lloc)
   call pop_sub(); return
 end subroutine tm_process
 
-subroutine calculate_valence_screening(psf, ve)
-  type(tm_type), intent(in) :: psf
-  real(r8), intent(out) :: ve(psf%nrval)
+subroutine calculate_valence_screening(rho, rhocore, ve, g, ispin, xccode, irel)
+  type(logrid_type), intent(in) :: g
+  real(r8), intent(in)          :: rho(g%nrval, ispin)
+  real(r8), intent(in)          :: rhocore(g%nrval)
+  real(r8), intent(out)         :: ve (g%nrval, ispin)
+  integer, intent(in)           :: ispin
+  character(len=3), intent(in)  :: irel
+  character(len=2), intent(in)  :: xccode ! ca, pw, or pb
 
   character(len=5) :: xcfunc, xcauth
-  integer          :: irelt
-  real(r8)         :: e_x, e_c, dx, dc, r2
-  real(r8), allocatable :: v_xc(:,:), auxrho(:)
+  integer  :: is, ir, irelt
+  real(r8) :: e_x, e_c, dx, dc, r2
+  real(r8), allocatable :: v_xc(:, :), auxrho(:, :)
 
+  ! Allocation.
+  allocate(v_xc(g%nrval, ispin), auxrho(g%nrval, ispin))
+           v_xc = 0.0_r8; auxrho = 0.0_r8
+
+  do is = 1, ispin
+     auxrho(:, 1) = auxrho(:, 1) + rho(:, is)
+  enddo
   ve = 0.0_r8
-  call vhrtre(psf%rho_val, ve, psf%rofi, psf%g%drdi, psf%g%s, psf%g%nrval, psf%g%a)
-!  ve = ve/2._r8 ! Rydberg -> Hartree
+  do is = 1, ispin
+     call vhrtre(auxrho(:, 1), ve(:, is), g%rofi, g%drdi, g%s, g%nrval, g%a)
+  enddo
+  ve(1, 1:ispin) = ve(2, 1:ispin)
 
   ! Set the xc functional
-  select case(psf%icorr)
+  select case(xccode)
   case('ca') 
      xcfunc = 'LDA'
      xcauth = 'PZ'
@@ -164,21 +222,27 @@ subroutine calculate_valence_screening(psf, ve)
      xcfunc = 'GGA'
      xcauth = 'PBE'
   end select
-  
-  if(psf%irel == 'rel') irelt=1
-  if(psf%irel /= 'rel') irelt=0
 
-  allocate(v_xc(psf%nrval, 1), auxrho(psf%nrval))
-  auxrho = psf%rho_val
-  if(psf%icore /= 'nc  ')  auxrho = auxrho + psf%chcore
-  auxrho(2:psf%nrval) = auxrho(2:psf%nrval)/(4.0_r8*M_PI*psf%rofi(2:psf%nrval)**2)
+  irelt = 0
+  if(irel == 'rel') irelt=1
+ 
+  auxrho = rho
+  do is = 1, ispin
+     auxrho(:, is) = auxrho(:, is) + rhocore(:)/ispin
+     auxrho(2:g%nrval, is) = auxrho(2:g%nrval, is)/(4.0_r8*M_PI*g%rofi(2:g%nrval)**2)
+  enddo
+  r2 = g%rofi(2)/(g%rofi(3)-g%rofi(2))
+  auxrho(1, 1:ispin) = auxrho(2, 1:ispin) - (auxrho(3, 1:ispin)-auxrho(2, 1:ispin))*r2
 
-  r2 = psf%rofi(2)/(psf%rofi(3)-psf%rofi(2))
-  auxrho(1) = auxrho(2) - (auxrho(3)-auxrho(2))*r2
-  call atomxc(xcfunc, xcauth, irelt, psf%nrval, psf%nrval, psf%rofi, &
-       1, auxrho, e_x, e_c, dx, dc, v_xc)
-  
-  ve(1:psf%nrval) = ve(1:psf%nrval) + v_xc(1:psf%nrval, 1)
+  do is = 1, ispin
+  do ir = 1, g%nrval
+     if(auxrho(ir, is) < 1.0e-15_r8) auxrho(ir, is) = 0.0_r8
+  enddo
+  enddo
+  call atomxc(xcfunc, xcauth, irelt, g%nrval, g%nrval, g%rofi, &
+              ispin, auxrho, e_x, e_c, dx, dc, v_xc)
+
+  ve = ve + v_xc
   deallocate(v_xc, auxrho)
 
   return
@@ -187,41 +251,54 @@ end subroutine calculate_valence_screening
 subroutine solve_schroedinger(psf)
   type(tm_type), intent(inout) :: psf
 
-  integer :: ir, l, nnode, nprin
-  real(r8) :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, dnrm, avgv, vphi
-  real(r8), allocatable :: s(:), ve(:), hato(:), g(:), y(:)
+  integer :: iter, ir, is, l, nnode, nprin
+  real(r8) :: vtot, diff, r2, e, z, dr, rmax, f, dsq, a2b4, dnrm, avgv, vphi
+  real(r8), allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
+  real(r8), parameter :: tol = 1.0e-10_r8
 
   sub_name = 'solve_schroedinger'; call push_sub()
 
-! Allocation.
-  allocate(s(psf%g%nrval), hato(psf%g%nrval), g(psf%g%nrval), y(psf%g%nrval), ve(psf%g%nrval))
+  ! Let us be a bit informative.
+  message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '//psf%namatm//'....'
+  call write_info(1)
 
-!  ionic pseudopotential if core-correction for hartree
-  if((psf%icore == 'pche').or.(psf%icore == 'fche')) then
-    call vhrtre(psf%chcore, ve, psf%g%rofi, psf%g%drdi, psf%g%s, psf%g%nrval, psf%g%a)
+  ! Allocation.
+  allocate(s   (psf%g%nrval),            &
+           hato(psf%g%nrval),            &
+           g   (psf%g%nrval),            &
+           y   (psf%g%nrval),            &
+           ve  (psf%g%nrval, psf%ispin), &
+           rho (psf%g%nrval, psf%ispin), &
+           prev(psf%g%nrval, psf%ispin))
+           s = 0._r8; hato = 0._r8; g = 0._r8; y = 0._r8; ve = 0._r8; rho = 0._r8; prev = 0._r8
+
+  ! These numerical parameters have to be fixed for egofv to work.  
+  s(2:psf%nrval) = psf%g%drdi(2:psf%g%nrval)*psf%g%drdi(2:psf%g%nrval)
+  s(1) = s(2)
+  a2b4 = 0.25_r8*psf%a**2
+
+  !  ionic pseudopotential if core-correction for hartree
+  if((psf%icore == 'pche') .or. (psf%icore == 'fche')) then
+    call vhrtre(psf%chcore, ve(:, 1), psf%g%rofi, psf%g%drdi, psf%g%s, psf%g%nrval, psf%g%a)
     do l = 0, psf%npotd - 1
-      psf%vps(2:psf%nrval, l) = psf%vps(2:psf%nrval, l) + ve(2:psf%nrval)
+      psf%vps(2:psf%nrval, l) = psf%vps(2:psf%nrval, l) + ve(2:psf%nrval, 1)
     end do
     psf%vps(1, l) = psf%vps(2, l)
   end if
 
-! Calculation of the valence screening potential from the density:
-!       ve(1:nrval) is the hartree+xc potential created by the pseudo -
-!               valence charge distribution (everything in Rydberts, and bohrs)
-  call calculate_valence_screening(psf, ve)
+  ! Calculation of the valence screening potential from the density:
+  !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
+  !               valence charge distribution (everything in Rydberts, and bohrs)
+       rho(:, 1) = psf%rho_val(:)
+  call calculate_valence_screening(rho(:, 1:1), psf%chcore, ve(:, 1:1), psf%g, 1, psf%icorr, psf%irel)
 
-! Calculation of the pseudo-wave functions.
-!       rphi(1:nrval,0:spec%ps_lmax) : radial pseudo-wave functions. They are normalized so that
-!                                      int dr {rphi^2} = 1. Thus its units are of bohr^(-1/2).
-!       eigen(0:spec%ps_lmax)        : eigenvalues, in Rydbergs.
-  s(2:psf%nrval) = psf%g%drdi(2:psf%g%nrval)*psf%g%drdi(2:psf%g%nrval)
-  s(1) = s(2)
-  a2b4 = 0.25_r8*psf%a**2
-  g = 0.0_r8;  y = 0.0_r8
-
+  ! Calculation of the pseudo-wave functions.
+  !       rphi(1:nrval, 0:spec%ps_lmax, :) : radial pseudo-wave functions. They are normalized so that
+  !                                      int dr {rphi^2} = 1. Thus its units are of bohr^(-1/2).
+  !       eigen(0:spec%ps_lmax, :)        : eigenvalues, in Rydbergs.
   do l = 0, psf%npotd-1
     do ir = 2, psf%nrval
-      vtot = psf%vps(ir, l) + ve(ir) + dble(l*(l + 1))/(psf%rofi(ir)**2)
+      vtot = psf%vps(ir, l) + ve(ir, 1) + dble(l*(l + 1))/(psf%rofi(ir)**2)
       hato(ir) = vtot*s(ir) + a2b4
     end do
     hato(1) = hato(2)
@@ -230,15 +307,15 @@ subroutine solve_schroedinger(psf)
     e = -((psf%zval/dble(nprin))**2); z = psf%zval
     dr = -1.0e5_r8; rmax = psf%rofi(psf%nrval)
     call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
-    psf%eigen(l) = e
+    psf%eigen(l, 1) = e
 
-    psf%rphi(2:psf%nrval, l) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
-    psf%rphi(1, l) = psf%rphi(2, l)
+    psf%rphi(2:psf%nrval, l, 1) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
+    psf%rphi(1, l, 1) = psf%rphi(2, l, 1)
   end do
 
   !  checking normalization of the calculated wave functions
   do l = 0, psf%npotd-1! ps%L_max
-    e = sqrt(sum(psf%g%drdi(2:psf%nrval)*psf%rphi(2:psf%nrval, l)**2))
+    e = sqrt(sum(psf%g%drdi(2:psf%nrval)*psf%rphi(2:psf%nrval, l, 1)**2))
     e = abs(e - 1.0d0)
     if (e > 1.0d-5 .and. conf%verbose > 0) then
       write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
@@ -247,7 +324,66 @@ subroutine solve_schroedinger(psf)
     end if
   end do
 
+  ! Make a copy of the wavefunctions.
+  psf%rphi(:, :, 2) = psf%rphi(:, :, 1)
+
+  ! And now, for the spin polarized case...
+  spin_polarized: if(psf%ispin == 2) then
+
+    rho = 0.0_r8    ! Here information of previous calculation could be used, but
+    prev = 0.0_r8   ! to save code lines, let us start from scratch.
+    diff = 1.0e5_r8
+    iter = 0
+    self_consistent: do
+      prev = rho
+      iter = iter + 1
+
+      spin: do is = 1, psf%ispin
+      ang: do l = 0, psf%npotd-1
+        do ir = 2, psf%nrval
+          vtot = psf%vps(ir, l) + ve(ir, is) + dble(l*(l + 1))/(psf%rofi(ir)**2)
+          hato(ir) = vtot*s(ir) + a2b4
+        end do
+        hato(1) = hato(2)
+        nnode = 1; nprin = l + 1
+        e = -((psf%zval/dble(nprin))**2); z = psf%zval
+        dr = -1.0e5_r8; rmax = psf%rofi(psf%nrval)
+        call egofv(hato, s, psf%nrval, e, g, y, l, z, psf%a, psf%b, rmax, nprin, nnode, dr)
+        psf%eigen(l, 1 + is) = e
+
+        psf%rphi(2:psf%nrval, l, 1 + is) = g(2:psf%nrval) * sqrt(psf%g%drdi(2:psf%nrval))
+        psf%rphi(1, l, 1 + is) = psf%rphi(2, l, 1 + is)
+      end do ang
+      end do spin
+
+      rho = 0.0_r8
+      do is = 1, psf%ispin
+      do l = 0, psf%npotd-1
+         rho(1:psf%g%nrval, is) = rho(1:psf%g%nrval, is) + &
+                                  psf%occ(l, is)*psf%rphi(1:psf%g%nrval, l, 1 + is)**2
+      enddo
+      enddo
+
+      diff = 0.0_r8
+      do is = 1, psf%ispin
+         diff = diff + sqrt( sum(psf%g%drdi(2:psf%g%nrval) * &
+                               (rho(2:psf%g%nrval, is)-prev(2:psf%g%nrval, is))**2) )
+      enddo
+
+      if(diff < tol) exit self_consistent
+      if(iter>1) rho = 0.5*rho + 0.5*prev
+      !write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
+      !call write_info(1)
+      call calculate_valence_screening(rho(:, :), psf%chcore, ve(:, :), psf%g, 2, psf%icorr, psf%irel)
+
+    enddo self_consistent
+
+  endif spin_polarized
+
+  ! Exit this...
+  message(1) = '      Done.'; call write_info(1)
   deallocate(s, ve, hato, g, y)
+
   call pop_sub; return
 end subroutine solve_schroedinger
 
@@ -417,9 +553,9 @@ subroutine calculate_kb_cosines(pstm, lloc)
     dnrm = 0.0_r8
     avgv = 0.0_r8
     do ir = 2, pstm%g%nrval
-      vphi = (pstm%vps(ir, l) - pstm%vlocal(ir))*pstm%rphi(ir, l)
+      vphi = (pstm%vps(ir, l) - pstm%vlocal(ir))*pstm%rphi(ir, l, 1)
       dnrm = dnrm + vphi*vphi*pstm%g%drdi(ir)
-      avgv = avgv + vphi*pstm%rphi(ir, l)*pstm%g%drdi(ir)
+      avgv = avgv + vphi*pstm%rphi(ir, l, 1)*pstm%g%drdi(ir)
     end do
     pstm%dkbcos(l) = dnrm/(avgv + 1.0e-20_r8)
     pstm%dknrm(l) = 1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
@@ -442,7 +578,8 @@ subroutine ghost_analysis(pstm, lmax)
 ! Calculation of the valence screening potential from the density:
 !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
 !               valence charge distribution (everything in Rydberts, and bohrs)
-  call calculate_valence_screening(pstm, ve)
+  !call calculate_valence_screening(pstm, ve, psf%rho)
+  call calculate_valence_screening(pstm%rho_val, pstm%chcore, ve, pstm%g, 1, pstm%icorr, pstm%irel)
 
   s(2:pstm%nrval) = pstm%g%drdi(2:pstm%nrval)**2
   s(1) = s(2)
@@ -470,11 +607,11 @@ subroutine ghost_analysis(pstm, lmax)
   do l = 0, lmax
     ighost = -1
     if(pstm%dkbcos(l) > 0.0d0) then
-      if(pstm%eigen(l) > elocal(2, l)) then
+      if(pstm%eigen(l, 1) > elocal(2, l)) then
         ighost = 1
       end if
     else if(pstm%dkbcos(l) < 0d0) then
-      if(pstm%eigen(l) > elocal(1, l)) then
+      if(pstm%eigen(l, 1) > elocal(1, l)) then
         ighost = 1
       end if
     end if
@@ -512,7 +649,7 @@ subroutine get_cutoff_radii(pstm, lloc)
       cycle
     endif
     do ir = pstm%g%nrval, 2, -1
-      phi = (pstm%rphi(ir, l)/pstm%rofi(ir))*pstm%dknrm(l)
+      phi = (pstm%rphi(ir, l, 1)/pstm%rofi(ir))*pstm%dknrm(l)
       dincv = abs((pstm%vps(ir, l) - pstm%vlocal(ir))*phi)
       if(dincv > eps) exit
     enddo
@@ -566,9 +703,9 @@ end subroutine get_local
 subroutine tm_debug(pstm)
   type(tm_type), intent(in) :: pstm
 
-  integer :: loc_unit, kbp_unit, dat_unit, wav_unit, i, l
+  integer :: loc_unit, kbp_unit, dat_unit, wav_unit, i, l, is
 
-  sub_name = 'tm_end'; call push_sub()
+  sub_name = 'tm_debug'; call push_sub()
 
   ! Opens files.
   call oct_mkdir(C_string('pseudos/'+'tm2.'+trim(pstm%namatm)))
@@ -589,8 +726,17 @@ subroutine tm_debug(pstm)
   write(dat_unit,'(a)')   'XC:                     '+pstm%icorr
   write(dat_unit,'(a)')   'Core correction:        '+pstm%icore
   write(dat_unit,'(/,a,i4)') 'Maximum L: ', pstm%npotd-1
+  write(dat_unit,'(/,a)')   'Occupations:'
+  do is = 1, pstm%ispin
+     write(dat_unit,'(4x,4f14.6)') pstm%occ(0:pstm%npotd-1, is)
+  enddo
   write(dat_unit,'(/,a)') 'Eigenvalues: '
-  write(dat_unit,'(4x,4f14.6)') pstm%eigen(0:pstm%npotd-1)/2
+  write(dat_unit,'(4x,4f14.6)') pstm%eigen(0:pstm%npotd-1, 1)/2
+  if(pstm%ispin==2) then
+    write(dat_unit,'(a)') 'Eigenvalues in spin-polarized calculations:'
+    write(dat_unit,'(4x,4f14.6)') pstm%eigen(0:pstm%npotd-1, 2)/2
+    write(dat_unit,'(4x,4f14.6)') pstm%eigen(0:pstm%npotd-1, 3)/2
+  endif
   write(dat_unit,'(/,a)') 'Cutoff radii: '
   write(dat_unit,'(4x,5f14.6)') pstm%kbr(0:pstm%npotd)
   write(dat_unit,'(/,a)') 'KB norms: '
@@ -610,7 +756,7 @@ subroutine tm_debug(pstm)
   
   ! Pseudo wave-functions
   do i = 1, pstm%nrval
-     write(wav_unit,*) pstm%rofi(i), (pstm%rphi(i, l), l = 0, pstm%npotd-1)
+     write(wav_unit,*) pstm%rofi(i), (pstm%rphi(i, l, 1), l = 0, pstm%npotd-1)
   enddo
 
   ! Closes files and exits
