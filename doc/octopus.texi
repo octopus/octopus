@@ -2078,11 +2078,6 @@ are described in section ``External utilities.'' Common options read by these ut
   When calculating phonon properties (@code{CalculationMode = 11}) @code{Displacement}
   controls how much the atoms are to be moved in order to calculate the dynamical matrix.
 
-@item @vindex @code{RecipeLang}
-@code{RecipeLang} (string, 'en'):
-  In @code{CalculationMode = 99} defines the language in which to print
-  the recipe. Allowed values are (for now) @code{'en'} and @code{'es'}.
-
 @end itemize
 
 
