@@ -63,12 +63,6 @@ subroutine hartree_init(h, m)
       message(2) = 'PoissonSolver = 1(cg) | 2(fft) | 3(fft spherical cutoff)'
       call write_fatal(2)
     end if
-    if(h%solver.eq.3 .and. m%box_shape.eq.4 ) then
-      write(message(1), '(a,i2,a)') "Input: '", h%solver, "'"
-      message(2) = "  is not a valid PoissonSolver when parallelpiped box-shape is used."
-      message(3) = 'PoissonSolver = 1(cg)'
-      call write_fatal(3)
-    end if
 #ifdef POLYMERS
     if(h%solver.ne.2) then
       message(1) = "Sorry, but for polymers only the fft method (method 2)"

@@ -21,71 +21,56 @@ subroutine hartree3D_init(h, m)
 
   integer :: ix, iy, iz, ixx(3)
   real(r8) :: l, r_0, temp(3), vec
-  
-  select case(h%solver)
-  case(1)
-    message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-    call write_info(1)
-    
-#ifdef HAVE_FFTW
-  case(2)
-    message(1) = 'Info: Using FFTs to solve poisson equation.'
-    call write_info(1)
-    allocate(h%ff(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
 
-    temp(:) = 2.0_r8*M_PI/(m%fft_n2(:)*m%h(:))
+  select case(h%solver)
+    case(1)
+      message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
+      call write_info(1)
+      call pop_sub(); return
+    case(2)
+      message(1) = 'Info: Using FFTs to solve poisson equation.'
+    case(3)
+      message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
+  end select
+  call write_info(1)
+
+  allocate(h%ff(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+  h%ff = M_ZERO
+  l = maxval(m%fft_n2(:)*m%h(:))
+  r_0 = l/M_TWO
+  temp(:) = 2.0_r8*M_PI/(m%fft_n2(:)*m%h(:))
       
-    do ix = 1, m%hfft_n2
-      ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
-      do iy = 1, m%fft_n2(2)
+  do ix = 1, m%hfft_n2
+     ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
+     do iy = 1, m%fft_n2(2)
         ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
         do iz = 1, m%fft_n2(3)
-          ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
-          vec = sum((temp(:)*ixx(:))**2)
-
-          if(vec.ne.0.0_r8) then
-            h%ff(ix, iy, iz) = 4.0_r8*M_PI / vec
-          else
-            h%ff(ix, iy, iz) = 0._r8 
-          end if          
+           ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+!!$           if(h%solver==2) then
+!!$              vec = sum((temp(:)*ixx(:))**2)
+!!$           else
+!!$              vec = sqrt(sum((temp(:)*ixx(:))**2))
+!!$           endif
+           vec = sum((temp(:)*ixx(:))**2) 
+           if(vec.ne.M_ZERO) then
+            if(h%solver==2) then
+               h%ff(ix, iy, iz) = 4.0_r8*M_PI / vec
+            else
+               h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(sqrt(vec)*r_0)) / vec 
+            endif
+           else
+            if(h%solver==2) then
+               h%ff(ix, iy, iz) = M_ZERO
+            else
+               h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+            endif
+           end if          
         end do
-      end do
-    end do
+     end do
+  end do
+  call mesh_alloc_ffts(m, 2)    
 
-    call mesh_alloc_ffts(m, 2)    
-  case(3) ! setup spherical ffts
-    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
-    call write_info(1)
-
-    allocate(h%ff(m%hfft_n2, m%fft_n2(1), m%fft_n2(1)))
-    h%ff = 0.0_r8
-
-    l = m%fft_n2(1)*m%h(1)
-    r_0 = l/2.0_r8
-    temp(1) = (2.0_r8*M_PI/l)
-      
-    do ix = 1, m%hfft_n2
-      ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
-      do iy = 1, m%fft_n2(1)
-        ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
-        do iz = 1, m%fft_n2(1)
-          ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
-          vec = temp(1)*sqrt(real(ixx(1)**2 + ixx(2)**2 + ixx(3)**2, r8))
-          if(vec.ne.0.0_r8) then
-            h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
-          else
-            h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
-          end if
-        end do
-      end do
-    end do
-
-    call mesh_alloc_ffts(m, 2)
-#endif
-  end select
-
-  call pop_sub()
-  return
+  call pop_sub(); return
 end subroutine hartree3D_init
 
 subroutine hartree_cg(h, m, pot, dist)

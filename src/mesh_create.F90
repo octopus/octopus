@@ -55,16 +55,20 @@ subroutine mesh_create(m, natoms, atom)
   if(conf%dim==1) m%box_shape=SPHERE
 
   ! Read the grid spacing.
-  m%h = 0._r8
+  m%h = M_ZERO
   select case(m%box_shape)
   case(SPHERE,CYLINDER,MINIMUM)
     call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h(1))
     m%h(1:conf%dim) = m%h(1)
     m%iso = .true.
   case(PARALLELEPIPED)
-    do i = 1, conf%dim
-      call oct_parse_block_double(C_string('spacing'), 0, i-1, m%h(i))
-    end do
+    if(oct_parse_block_n(C_string('spacing'))<1) then
+      m%h(1:3) = 0.6_r8/units_inp%length%factor
+    else
+      do i = 1, conf%dim
+         call oct_parse_block_double(C_string('spacing'), 0, i-1, m%h(i))
+      end do
+    endif
     m%iso = .true.
     do i = 2, conf%dim
       if(m%h(i).ne.m%h(1)) m%iso = .false.
@@ -72,7 +76,7 @@ subroutine mesh_create(m, natoms, atom)
   end select
   m%h(1:conf%dim) = m%h(1:conf%dim)*units_inp%length%factor
   
-  m%vol_pp = 1._r8
+  m%vol_pp = M_ONE
   do i = 1, conf%dim
     m%vol_pp = m%vol_pp*m%h(i)
   end do
@@ -87,6 +91,10 @@ subroutine mesh_create(m, natoms, atom)
     m%zsize = m%zsize * units_inp%length%factor
   end if
   if(m%box_shape == PARALLELEPIPED) then
+    if(oct_parse_block_n(C_string('lsize'))<1) then
+      message(1) = 'Block "lsize" not found in input file.'
+      call write_fatal(1)
+    endif
     do i = 1, conf%dim
       call oct_parse_block_double(C_string('lsize'), 0, i-1, m%lsize(i))
     end do
