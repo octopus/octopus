@@ -74,14 +74,13 @@ contains
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-      
+
     do iy = 1, db(2)
        ixx(2) = pad_feq(iy, db(2), .true.)
        do ix = 1, fft_cf%nx
           ixx(1) = pad_feq(ix, db(1), .true.)
           vec = sqrt((temp(1)*ixx(1))**2 + (temp(2)*ixx(2))**2)
           fft_coulb_fs(ix, iy, 1) = r_c*besselint(vec*r_c)
-          write(82, *) vec*r_c, fft_coulb_fs(ix, iy, 1)
        end do
     end do
 
