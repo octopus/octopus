@@ -37,7 +37,7 @@ if test $acx_lapack_ok = no; then
 fi
 
 dnl Generic LAPACK library?
-for lapack in lapack mkl_lapack lapack_rs6k; do
+for lapack in mkl_lapack lapack lapack_rs6k; do
   if test $acx_lapack_ok = no; then
     AC_CHECK_LIB($lapack, $cheev,
       [acx_lapack_ok=yes; LIBS_LAPACK="$LIBS_LAPACK -l$lapack"], [], [$FLIBS])

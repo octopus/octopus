@@ -54,10 +54,16 @@ if test $acx_blas_ok = no; then
   )
 fi
 
+dnl BLAS in version 6 of MKL or higher
+if test $acx_blas_ok = no; then
+  AC_CHECK_LIB(mkl_ia32, $sgemm, [acx_blas_ok=yes; LIBS_BLAS="$LIBS_BLAS -lmkl_ia32 -lguide -lpthread"],
+    [], [-lguide -lpthread])
+fi
+
 dnl BLAS in mkl_def
 if test $acx_blas_ok = no; then
   AC_CHECK_LIB(mkl_def, $sgemm, [acx_blas_ok=yes; LIBS_BLAS="$LIBS_BLAS -lmkl_def -lguide -lpthread"], 
-    [], [-lmkl_def -lguide -lpthread])
+    [], [-lguide -lpthread])
 fi
 
 dnl BLAS in PhiPACK libraries? (requires generic BLAS lib, too)
