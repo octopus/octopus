@@ -70,23 +70,16 @@ type mesh_type
 
   ! some other vars
   integer :: nr(2,3)  ! dimensions of the box where the points are contained
+  integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
 
   type(mesh_derivatives_type), pointer :: d
 
-  ! lookup tables for derivatives
-  type(der_lookup_type), pointer :: der_lookup(:)
-
-  ! THIS IS ALSO TO TAKE AWAY
-  real(r8) :: vol_pp    ! element of volume for integrations
-
-  integer  :: dnpw, znpw  ! number of plane waves for Fourier space representation.
-  real(r8) :: vol_ppw     ! The volume in reciprocal space
+  type(der_lookup_type), pointer :: der_lookup(:)   ! lookup tables for derivatives
   
-  integer :: fft_n(3), hfft_n ! we always want to perform FFTs ;)
-  integer(POINTER_SIZE) :: dplanf, dplanb, zplanf, zplanb
-  real(r8) :: fft_alpha
-  integer :: fft_n2(3), hfft_n2
-  integer(POINTER_SIZE) :: dplanf2, dplanb2
+  type(fft_type) :: dfft, zfft ! to calculate derivatives using ffts
+  real(r8) :: fft_alpha ! enlargement factor for double box
+
+  real(r8) :: vol_pp    ! element of volume for integrations
 end type mesh_type
 
 contains
@@ -107,24 +100,6 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_create(m, natoms, atom)
 
-  ! we will probably need ffts in a lot of places
-
-  call oct_parse_logical("FFTOptimize", .true., fft_optimize)
-  
-  ! only non-periodic directions are optimized
-  m%fft_n(:)  = 2*m%nr(2,:) + 1
-  do i = 1, conf%periodic_dim
-    m%fft_n(i) = m%fft_n(i) - 1
-  end do
-  do i = conf%periodic_dim+1, conf%dim ! always ask for an odd number
-     if(m%fft_n(i).ne.1 .and. fft_optimize) call oct_fft_optimize(m%fft_n(i), 7, 1)
-  end do
-  m%hfft_n = m%fft_n(1)/2 + 1
-  m%dplanf = int(-1, POINTER_SIZE)
-  m%dnpw = m%hfft_n*m%fft_n(2)*m%fft_n(3)
-  m%znpw = m%fft_n(1)*m%fft_n(2)*m%fft_n(3)
-  m%vol_ppw = m%vol_pp/m%znpw
-
   call oct_parse_double('DoubleFFTParameter', 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
@@ -132,19 +107,6 @@ subroutine mesh_init(m, natoms, atom)
     message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
     call write_fatal(2)
   end if
-
-  ! fft box is doubled and optimized only in non-periodic directions
-  m%fft_n2 = 1
-  do i = conf%periodic_dim+1, conf%dim
-    m%fft_n2(i) = 2*nint(m%fft_alpha*maxval(m%nr)) + 1
-    if(fft_optimize) call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
-  end do
-  do i = 1, conf%periodic_dim ! for periodic systems
-    m%fft_n2(i) = m%fft_n(i)
-  end do
-  
-  m%hfft_n2 = m%fft_n2(1)/2 + 1
-  m%dplanf2 = int(-1, POINTER_SIZE)
 
   call oct_parse_int('DerivativesSpace', REAL_SPACE, m%d%space)
   if(m%d%space < 0 .or. m%d%space > 1) then
@@ -159,13 +121,31 @@ subroutine mesh_init(m, natoms, atom)
   if(m%d%space == REAL_SPACE) then 
     message(1) = 'Info: Derivatives calculated in real-space'
   else
+    call fft_init(m%l, fft_real,    m%dfft)
+    call fft_init(m%l, fft_complex, m%zfft)
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
   end if
-  call mesh_alloc_ffts(m, 1)
   call write_info(1)
 
   call pop_sub()
 end subroutine mesh_init
+
+! finds the dimension of a box doubled in the non-periodic dimensions
+subroutine mesh_double_box(m, db)
+  type(mesh_type), intent(in) :: m
+  integer, intent(out) :: db(3)
+
+  integer :: i
+
+  db = 1
+  do i = conf%periodic_dim+1, conf%dim
+    db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
+  end do
+  do i = 1, conf%periodic_dim ! for periodic systems
+    db(i) = m%nr(2,i) - m%nr(1,i) + 1
+  end do
+
+end subroutine mesh_double_box
 
 subroutine mesh_write_info(m, unit)
   type(mesh_type), intent(IN) :: m
@@ -316,47 +296,6 @@ subroutine mesh_init_derivatives_coeff(d)
 
 end subroutine mesh_init_derivatives_coeff
 
-subroutine mesh_alloc_ffts(m, i)
-  type(mesh_type), intent(inout) :: m
-  integer, intent(in) :: i
-
-  call push_sub('mesh_alloc_ffts')
-
-  if(i == 1 .and. m%dplanf == int(-1, POINTER_SIZE)) then
-    call rfftwnd_f77_create_plan(m%dplanf, conf%dim, m%fft_n, &
-         fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)
-    call rfftwnd_f77_create_plan(m%dplanb, conf%dim, m%fft_n, &
-         fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
-    call  fftwnd_f77_create_plan(m%zplanf, conf%dim, m%fft_n, &
-         fftw_forward,  fftw_measure + fftw_threadsafe)
-    call  fftwnd_f77_create_plan(m%zplanb, conf%dim, m%fft_n, &
-         fftw_backward, fftw_measure + fftw_threadsafe) 
-  else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
-    if (conf%periodic_dim == conf%dim) then
-      message(1)='Info: System is fully periodic: ignoring DoubleFFTParameter'
-      call write_info(1)
-      write(message(1), '(6x,a,i4,a,i4,a,i4,a)') &
-         'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
-      call write_info(1)
-    else  if (conf%periodic_dim + 1 <= conf%dim) then
-      message(1) = "Info: FFTs used in a double box (for poisson | local potential)"
-      write(message(2),'(6x,a,i1,a,i1)') &
-           'doubled axis: from ',conf%periodic_dim+1,' to ',conf%dim
-      write(message(3), '(6x,a,i4,a,i4,a,i4,a)') &
-         'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
-      write(message(4), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
-      call write_info(4)
-    endif
-    
-    call rfftwnd_f77_create_plan(m%dplanf2, conf%dim, m%fft_n2, &
-         fftw_forward, fftw_measure + fftw_threadsafe)
-    call rfftwnd_f77_create_plan(m%dplanb2, conf%dim, m%fft_n2, &
-         fftw_backward, fftw_measure + fftw_threadsafe)
-  end if
-
-  call pop_sub()
-end subroutine mesh_alloc_ffts
-
 ! this actually adds to outp
 subroutine phase_factor(m, n, vec, inp, outp)
   implicit none
@@ -411,18 +350,6 @@ subroutine mesh_end(m)
     end do
     deallocate(m%der_lookup)
     nullify(m%der_lookup)
-  end if
-
-  if(m%dplanf.ne.int(-1, POINTER_SIZE)) then
-    call fftw_f77_destroy_plan(m%dplanf)
-    call fftw_f77_destroy_plan(m%dplanb)
-    call fftw_f77_destroy_plan(m%zplanf)
-    call fftw_f77_destroy_plan(m%zplanb)
-  end if
-
-  if(m%dplanf2.ne.int(-1, POINTER_SIZE)) then
-    call fftw_f77_destroy_plan(m%dplanf2)
-    call fftw_f77_destroy_plan(m%dplanb2)
   end if
 
   call pop_sub()

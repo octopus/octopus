@@ -51,6 +51,8 @@ type td_type
 
   integer :: lmax        ! maximum multipole moment to write
 
+  type(fft_type) :: fft  ! for the split operator method
+
   !variables controlling the output
   logical :: out_multip  ! multipoles
   logical :: out_coords  ! coordinates

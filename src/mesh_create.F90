@@ -149,6 +149,7 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
   do i = 1, conf%periodic_dim
     m%nr(2, i) = m%nr(2, i) - 1
   end do
+  m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
 
   m%vol_pp = M_ONE
   do i = 1, conf%dim

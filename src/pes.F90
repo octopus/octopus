@@ -25,6 +25,7 @@ use oct_parser
 use io
 use mesh
 use states
+use fft
 
 implicit none
 
@@ -38,6 +39,8 @@ end type PES_rc_type
 type PES_mask_type
   complex(r8), pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
   real(r8),    pointer :: r(:,:,:,:,:)   ! summed masked density in real space
+
+  type(fft_type) :: fft
 end type PES_mask_type
 
 type PES_type

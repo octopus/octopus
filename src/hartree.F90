@@ -37,7 +37,8 @@ type hartree_type
   type(mesh_type), pointer :: m_aux
 
 #ifdef HAVE_FFTW
-  ! used in method 3
+  ! used by the fft methods
+  type(fft_type) :: fft
   real(r8), pointer :: ff(:, :, :)   
 #endif
 end type hartree_type
@@ -89,6 +90,7 @@ subroutine hartree_end(h)
     deallocate(h%m_aux); nullify(h%m_aux)
 #ifdef HAVE_FFTW
   case(2,3)
+    call fft_end(h%fft)
     deallocate(h%ff); nullify(h%ff)
 #endif
   end select

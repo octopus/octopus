@@ -222,19 +222,34 @@ contains
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: dt
 
-    complex(r8),allocatable :: fw(:)
-    real(r8) :: cutoff
-    integer :: idim
+    complex(r8),allocatable :: fw(:,:,:)
+    real(r8) :: cutoff, temp(3), g2
+    integer :: idim, k(3), ix, iy, iz
 
     call push_sub('kinetic')
 
-    allocate(fw(m%znpw))
+    allocate(fw(m%l(1), m%l(2), m%l(3)))
     do idim = 1, sys%st%dim
        fw = M_z0
-       call zmesh_rs2fs(m, zpsi(1, idim), fw)
-       call zmesh_explaplq(m, fw, dt, cutoff = h%cutoff)
+       call zmesh_rs2fs(m, zpsi(:, idim), fw)
+
+       temp = M_ZERO
+       temp(1:conf%dim) = (2.0_r8*M_Pi)/(m%l(1:conf%dim)*m%h(1:conf%dim))
+
+       do ix = 1, m%l(1)
+         k(1) = pad_feq(ix, m%l(1), .true.)
+         do iy = 1, m%l(2)
+           k(2) = pad_feq(iy, m%l(2), .true.)
+           do iz = 1, m%l(3)
+             k(3) = pad_feq(iz, m%l(3), .true.)
+             g2 = min(cutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2)/M_TWO)
+             fw(ix, iy, iz) = exp(-M_zI*dt*g2)*fw(ix, iy, iz)
+           enddo
+         enddo
+       enddo
+
        zpsi = M_z0
-       call zmesh_fs2rs(m, fw, zpsi(1, idim))
+       call zmesh_fs2rs(m, fw, zpsi(:, idim))
     enddo
     deallocate(fw)
 

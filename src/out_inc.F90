@@ -11,9 +11,9 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   ! do not bother with errors
   call oct_mkdir(trim(dir))
 
-  allocate(c(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
+  allocate(c(m%l(1), m%l(2), m%l(3)))
   c = R_TOTYPE(0._r8)
-  call R_FUNC(mesh_to_cube) (m, f, c)
+  call R_FUNC(mesh_to_cube) (m, f, c, m%l)
 
   if(iand(outp%how, output_axis_x).ne.0) call axis_x()
   if(iand(outp%how, output_axis_y).ne.0) call axis_y()
@@ -37,10 +37,10 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0,z=0", status='unknown')
-    do ix = 1, m%fft_n(1)
-       x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
-       write(iunit, MFORMAT) x, R_REAL(c(ix, m%fft_n(2)/2 + 1, m%fft_n(3)/2 + 1))/u, &
-            R_AIMAG(c(ix, m%fft_n(2)/2 + 1, m%fft_n(3)/2 + 1))/u
+    do ix = 1, m%l(1)
+       x = (ix - m%l(1)/2 - 1)*m%h(1)/units_out%length%factor
+       write(iunit, MFORMAT) x, R_REAL(c(ix, m%l(2)/2 + 1, m%l(3)/2 + 1))/u, &
+            R_AIMAG(c(ix, m%l(2)/2 + 1, m%l(3)/2 + 1))/u
     enddo
     call io_close(iunit)
   end subroutine axis_x
@@ -51,10 +51,10 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,z=0", status='unknown')
-    do iy = 1, m%fft_n(2)
-       y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
-       write(iunit, MFORMAT) y, R_REAL(c(m%fft_n(1)/2 + 1, iy, m%fft_n(3)/2 + 1))/u, &
-            R_AIMAG(c(m%fft_n(1)/2 + 1, iy, m%fft_n(3)/2 + 1))/u
+    do iy = 1, m%l(2)
+       y = (iy - m%l(2)/2 - 1)*m%h(2)/units_out%length%factor
+       write(iunit, MFORMAT) y, R_REAL(c(m%l(1)/2 + 1, iy, m%l(3)/2 + 1))/u, &
+            R_AIMAG(c(m%l(1)/2 + 1, iy, m%l(3)/2 + 1))/u
     enddo
     call io_close(iunit)
   end subroutine axis_y
@@ -65,10 +65,10 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,y=0", status='unknown')
-    do iz = 1, m%fft_n(3)
-       z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
-       write(iunit, MFORMAT) z, R_REAL(c(m%fft_n(1)/2 + 1, m%fft_n(2)/2 + 1, iz))/u, &
-            R_AIMAG(c(m%fft_n(1)/2 + 1, m%fft_n(2)/2 + 1, iz))/u
+    do iz = 1, m%l(3)
+       z = (iz - m%l(3)/2 - 1)*m%h(3)/units_out%length%factor
+       write(iunit, MFORMAT) z, R_REAL(c(m%l(1)/2 + 1, m%l(2)/2 + 1, iz))/u, &
+            R_AIMAG(c(m%l(1)/2 + 1, m%l(2)/2 + 1, iz))/u
     enddo
     call io_close(iunit)
   end subroutine axis_z
@@ -80,12 +80,12 @@ contains
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'y', 'z', 'Re', 'Im'
-    do iy = 1, m%fft_n(2)
-      y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
-      do iz = 1, m%fft_n(3)
-        z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, MFORMAT) y, z, R_REAL(c(m%fft_n(1)/2 + 1, iy, iz))/u, &
-             R_AIMAG(c(m%fft_n(1)/2 + 1, iy, iz))/u
+    do iy = 1, m%l(2)
+      y = (iy - m%l(2)/2 - 1)*m%h(2)/units_out%length%factor
+      do iz = 1, m%l(3)
+        z = (iz - m%l(3)/2 - 1)*m%h(3)/units_out%length%factor
+        write(iunit, MFORMAT) y, z, R_REAL(c(m%l(1)/2 + 1, iy, iz))/u, &
+             R_AIMAG(c(m%l(1)/2 + 1, iy, iz))/u
       end do
       write(iunit, '(1x)')
     end do
@@ -99,12 +99,12 @@ contains
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
-    do ix = 1, m%fft_n(1)
-      x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
-      do iz = 1, m%fft_n(3)
-        z = (iz - m%fft_n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, MFORMAT) x, z, R_REAL(c(ix, m%fft_n(2)/2 + 1, iz))/u, &
-             R_AIMAG(c(ix, m%fft_n(2)/2 + 1, iz))/u
+    do ix = 1, m%l(1)
+      x = (ix - m%l(1)/2 - 1)*m%h(1)/units_out%length%factor
+      do iz = 1, m%l(3)
+        z = (iz - m%l(3)/2 - 1)*m%h(3)/units_out%length%factor
+        write(iunit, MFORMAT) x, z, R_REAL(c(ix, m%l(2)/2 + 1, iz))/u, &
+             R_AIMAG(c(ix, m%l(2)/2 + 1, iz))/u
       end do
       write(iunit, '(1x)')
     end do
@@ -118,12 +118,12 @@ contains
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".z=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
-    do ix = 1, m%fft_n(1)
-      x = (ix - m%fft_n(1)/2 - 1)*m%h(1)/units_out%length%factor
-      do iy = 1, m%fft_n(2)
-        y = (iy - m%fft_n(2)/2 - 1)*m%h(2)/units_out%length%factor
-        write(iunit, MFORMAT) x, y, R_REAL(c(ix, iy, m%fft_n(3)/2 + 1))/u, &
-             R_AIMAG(c(ix, iy, m%fft_n(3)/2 + 1))/u
+    do ix = 1, m%l(1)
+      x = (ix - m%l(1)/2 - 1)*m%h(1)/units_out%length%factor
+      do iy = 1, m%l(2)
+        y = (iy - m%l(2)/2 - 1)*m%h(2)/units_out%length%factor
+        write(iunit, MFORMAT) x, y, R_REAL(c(ix, iy, m%l(3)/2 + 1))/u, &
+             R_AIMAG(c(ix, iy, m%l(3)/2 + 1))/u
       end do
       write(iunit, '(1x)')
     end do
@@ -137,34 +137,34 @@ contains
     
 ! the offset is different in periodic directions
     do i=1,conf%periodic_dim
-      offset(i)=-(m%fft_n(i))/2 * m%h(i) / units_out%length%factor
+      offset(i)=-(m%l(i))/2 * m%h(i) / units_out%length%factor
     end do
     do i=conf%periodic_dim+1,3
-      offset(i)=-(m%fft_n(i) - 1)/2 * m%h(i) / units_out%length%factor
+      offset(i)=-(m%l(i) - 1)/2 * m%h(i) / units_out%length%factor
     end do
 
 ! just for nice formatting of the output
-    write(nitems,*)m%fft_n(1)*m%fft_n(2)*m%fft_n(3)
+    write(nitems,*)m%l(1)*m%l(2)*m%l(3)
     nitems=TRIM(ADJUSTL(nitems))
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".dx", status='unknown')
     
-    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',m%fft_n(:)
+    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',m%l(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
     write(iunit, '(a,f12.6,a)') ' delta ',m%h(1) / units_out%length%factor, '    0.000000    0.000000'
     write(iunit, '(a,f12.6,a)') ' delta     0.000000',m%h(2) / units_out%length%factor, '    0.000000'
     write(iunit, '(a,f12.6)') ' delta     0.000000    0.000000',m%h(3) / units_out%length%factor
-    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts',m%fft_n(:)
+    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts',m%l(:)
 #if defined(R_TREAL)
     write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ',nitems,' data follows'   
 #else
     write(iunit, '(a,a,a)') 'object 3 class array type float category complex rank 0 items ',&
                              nitems,' data follows'   
 #endif
-    do ix = 1, m%fft_n(1)
-      do iy = 1, m%fft_n(2)
-        do iz = 1, m%fft_n(3)
+    do ix = 1, m%l(1)
+      do iy = 1, m%l(2)
+        do iz = 1, m%l(3)
           write(iunit,'(2e20.10)') c(ix, iy, iz)
         end do
       end do
@@ -189,9 +189,9 @@ contains
     end if
 
     ! dimensions
-    status = nf90_def_dim(ncid, "dim_1", m%fft_n(1), dim_data_id(1))
-    status = nf90_def_dim(ncid, "dim_2", m%fft_n(2), dim_data_id(2))
-    status = nf90_def_dim(ncid, "dim_3", m%fft_n(3), dim_data_id(3))
+    status = nf90_def_dim(ncid, "dim_1", m%l(1), dim_data_id(1))
+    status = nf90_def_dim(ncid, "dim_2", m%l(2), dim_data_id(2))
+    status = nf90_def_dim(ncid, "dim_3", m%l(3), dim_data_id(3))
 
     status = nf90_def_dim(ncid, "pos_1", 2, dim_pos_id(1))
     status = nf90_def_dim(ncid, "pos_2", 3, dim_pos_id(2))
@@ -208,12 +208,12 @@ contains
     status = nf90_enddef(ncid)
 
     ! data
-    pos(1,:) = real(-(m%fft_n(:) - 1)/2 * m%h(:) / units_out%length%factor, r4)
+    pos(1,:) = real(-(m%l(:) - 1)/2 * m%h(:) / units_out%length%factor, r4)
     pos(2,:) = real(m%h(:) / units_out%length%factor, r4)
 
     status = nf90_put_var(ncid, pos_id, pos(:,:))
     ! we have to transpose the matrix: stupid Fortran!
-    status = nf90_put_var(ncid, data_id, c, map=(/m%fft_n(1)*m%fft_n(2), m%fft_n(1), 1/))
+    status = nf90_put_var(ncid, data_id, c, map=(/m%l(1)*m%l(2), m%l(1), 1/))
 
     ! close
     status = nf90_close(ncid)

@@ -22,15 +22,17 @@ subroutine hartree3D_init(h, m)
   select case(h%solver)
     case(1)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
+      call write_info(1)
       call init_real()
     case(2)
       message(1) = 'Info: Using FFTs to solve poisson equation.'
+      call write_info(1)
       call init_fft()
     case(3)
       message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
+      call write_info(1)
       call init_fft()
   end select
-  call write_info(1)
 
   call pop_sub()
 
@@ -46,22 +48,31 @@ contains
   end subroutine init_real
 
   subroutine init_fft()
-    integer :: ix, iy, iz, ixx(3)
-    real(r8) :: l, r_0, temp(3), vec
+    integer :: ix, iy, iz, ixx(3), db(3), dbc(3)
+    real(r8) :: r_0, temp(3), vec
 
+    ! double the box to perform the fourier transforms
+    call mesh_double_box(m, db)
+    if(h%solver == 3) db(:) = maxval(db)
 
-    allocate(h%ff(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+    ! initialize the ffts
+    call fft_init(db, fft_real, h%fft)
+    call fft_getdim_real   (h%fft, db)
+    call fft_getdim_complex(h%fft, dbc)
+
+    ! store the fourier transform of the Coulomb interaction
+    allocate(h%ff(dbc(1), dbc(2), dbc(3)))
     h%ff = M_ZERO
-    l = maxval(m%fft_n2(:)*m%h(:))
-    r_0 = l/M_TWO
-    temp(:) = 2.0_r8*M_PI/(m%fft_n2(:)*m%h(:))
+    r_0 = maxval(db(:)*m%h(:))/M_TWO
+    temp(:) = 2.0_r8*M_PI/(db(:)*m%h(:))
       
-    do ix = 1, m%hfft_n2
-      ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
-      do iy = 1, m%fft_n2(2)
-        ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
-        do iz = 1, m%fft_n2(3)
-          ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+    do ix = 1, dbc(1)
+      ixx(1) = pad_feq(ix, db(1), .true.)
+      do iy = 1, dbc(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
+        do iz = 1, dbc(3)
+          ixx(3) = pad_feq(iz, db(3), .true.)
+
           vec = sum((temp(:)*ixx(:))**2) 
           if(vec.ne.M_ZERO) then
             if(h%solver==2) then
@@ -79,7 +90,6 @@ contains
         end do
       end do
     end do
-    call mesh_alloc_ffts(m, 2)    
 
   end subroutine init_fft
 
@@ -189,30 +199,28 @@ subroutine hartree_fft(h, m, pot, dist)
   real(r8), dimension(:), intent(out) :: pot
   real(r8), dimension(:, :), intent(IN) :: dist
 
-  integer :: i, s(3), c(3)
+  integer :: i, db(3), dbc(3), c(3)
   real(r8), allocatable :: f(:,:,:)
   complex(r8), allocatable :: gg(:,:,:)
 
   call push_sub('hartree_fft')
 
-  if(h%solver == 3) then
-    s(:) = m%fft_n2(1)
-  else
-    s(:) = m%fft_n2(:)
-  end if
-  c(:) = s(:)/2 + 1
+  call fft_getdim_real   (h%fft, db)  ! get dimensions of real array
+  call fft_getdim_complex(h%fft, dbc) ! get dimensions of complex array
+  c(:) = db(:)/2 + 1                  ! get center of double box
   
-  allocate(f(s(1), s(2), s(3)), gg(s(1)/2+1, s(2), s(3)))
-  f = 0.0_8
-  
+  allocate(f(db(1), db(2), db(3)), gg(dbc(1), dbc(2), dbc(3)))
+
+  f = M_ZERO
   do i = 1, m%np
     f(m%Lxyz(1, i)+c(1), m%Lxyz(2, i)+c(2), m%Lxyz(3, i)+c(3)) = sum(dist(i, :))
   end do
   
   ! Fourier transform the charge density
-  call rfft3d(f, gg, s(1), s(2), s(3), m%dplanf2, fftw_forward)
+  
+  call rfft_forward (h%fft, f, gg)
   gg = gg*h%ff
-  call rfft3d(f, gg, s(1), s(2), s(3), m%dplanb2, fftw_backward)
+  call rfft_backward(h%fft, gg, f)
   
   do i = 1, m%np
     pot(i) = f(m%Lxyz(1, i) + c(1), m%Lxyz(2, i) + c(2), m%Lxyz(3, i) + c(3))

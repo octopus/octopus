@@ -1249,22 +1249,6 @@ If @code{fourier_space}, generate the local part of the pseudo-potential
 in Fourier space; Otherwise do it directly in real space. The auxiliary box defined via
 the @code{DoubleFFTParameter} is used for this purpose. 
 
-@item @vindex @code{NonLocalPotentialSpace}
-@code{NonLocalPotentialSpace} (integer, real_space):
-If @code{fourier_space} generate the non-local part of the pseudo-potential
-in Fourier space; Otherwise do it directly in real space. @emph{Generating
-the potential in Fourier space seems to reduce the egg-box effect but this
-option has not been extensively tested.}
-
-@item @vindex @code{GridRefinement}
-@code{GridRefinement} (integer, 3):
-If @code{NonLocalPotentialSpace == fourier_space}, a grid refinement
-technique is applied to reduce the error in the calculation of the non-local
-projectors. This variable defines the number of
-points to interpolate between the normal mesh points, in order to 
-apply this  method. @emph{This seems to reduce the egg-box effect but this
-option has not been extensively tested.}
-
 @item @vindex @code{RelativisticCorrection}
 @code{RelativisticCorrection} (integer, 0):
   The default value means that @emph{no} relativistic correction is used. To

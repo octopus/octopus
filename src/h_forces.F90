@@ -140,26 +140,26 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
       end do
     end subroutine local_RS
 
+    ! WARNING: this is still not working
     subroutine local_FS()
-      complex(r8), allocatable :: fw(:)
+      complex(r8), allocatable :: fw(:,:,:)
       real(r8), allocatable :: fr(:,:,:), force(:)
-      integer :: npw2
+      integer :: db(3), dbc(3)
 
-      npw2 = (sys%m%fft_n2(1)/2+1)*sys%m%fft_n2(2)*sys%m%fft_n2(3)
- 
-      allocate(fw(npw2),                                        &
-               fr(sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-               force(sys%m%np))
+      call fft_getdim_real   (h%fft, db)
+      call fft_getdim_complex(h%fft, dbc)
+      
+      allocate(fw(dbc(1), dbc(2), dbc(3)), fr(db(1), db(2), db(3)), force(sys%m%np))
 
       do i = 1, sys%natoms
         atm => sys%atom(i)
         do j = 1, conf%dim
           fw = M_z0
-          call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw)
-          call dmesh_gradq(sys%m, fw, j, t = 2)
-          call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
+          call phase_factor(sys%m, db, atm%x, atm%spec%local_fw, fw)
+          call dmesh_gradq(sys%m, fw, j, db)
+          call rfft_backward(h%fft, fw, fr)
           force = M_ZERO
-          call dcube_to_mesh(sys%m, fr, force, t=2)
+          call dcube_to_mesh(sys%m, fr, force, db)
           do l = 1, sys%st%nspin
             atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
           end do

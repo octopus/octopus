@@ -24,12 +24,12 @@ subroutine PES_mask_init(v, m, st)
   call write_info(1)
       
   ! alloc ffts in case they are not allocated yet
-  call mesh_alloc_ffts(m, 1)
+  call fft_init(m%l, fft_complex, v%fft)
 
   ! setup arrays to be used
   allocate(&
-       v%k(m%fft_n(1), m%fft_n(2), m%fft_n(3), st%dim, st%st_start:st%st_end, st%nik), &
-       v%r(m%fft_n(1), m%fft_n(2), m%fft_n(3),         st%st_start:st%st_end, st%nik))
+       v%k(m%l(1), m%l(2), m%l(3), st%dim, st%st_start:st%st_end, st%nik), &
+       v%r(m%l(1), m%l(2), m%l(3),         st%st_start:st%st_end, st%nik))
 
   v%k = M_z0
   v%r = 0._r8
@@ -40,6 +40,7 @@ subroutine PES_mask_end(v)
   type(PES_mask_type), intent(inout) :: v
 
   if(associated(v%k)) then
+    call fft_end(v%fft)
     deallocate(v%k, v%r)
     nullify   (v%k, v%r)
   end if
@@ -58,13 +59,13 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   real(r8) :: temp(3), vec
 
   ! propagate wave-function in momentum space
-  temp(:) = 2.0_r8*M_PI/(m%fft_n(:)*m%h(:))
-  do ix = 1, m%fft_n(1)
-    ixx(1) = pad_feq(ix, m%fft_n(1), .true.)
-    do iy = 1, m%fft_n(2)
-      ixx(2) = pad_feq(iy, m%fft_n(2), .true.)
-      do iz = 1, m%fft_n(3)
-        ixx(3) = pad_feq(iz, m%fft_n(3), .true.)
+  temp(:) = 2.0_r8*M_PI/(m%l(:)*m%h(:))
+  do ix = 1, m%l(1)
+    ixx(1) = pad_feq(ix, m%l(1), .true.)
+    do iy = 1, m%l(2)
+      ixx(2) = pad_feq(iy, m%l(2), .true.)
+      do iz = 1, m%l(3)
+        ixx(3) = pad_feq(iz, m%l(3), .true.)
 
         vec = sum((temp(:) * ixx(:))**2) / 2._r8
         v%k(ix, iy, iz,:,:,:) = v%k(ix, iy, iz,:,:,:)*exp(-M_zI*dt*vec)
@@ -74,8 +75,8 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
       
   ! we now add the contribution from this timestep
   allocate( &
-       wf1(m%fft_n(1), m%fft_n(2), m%fft_n(3)), &
-       wf2(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
+       wf1(m%l(1), m%l(2), m%l(3)), &
+       wf2(m%l(1), m%l(2), m%l(3)))
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
       do idim = 1, st%dim
@@ -83,7 +84,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
         wf1 = M_z0
 
         do j = 1, m%np
-          ix3(:) = m%Lxyz(:,j) + m%fft_n(:)/2 + 1
+          ix3(:) = m%Lxyz(:,j) + m%l(:)/2 + 1
           wf1(ix3(1), ix3(2), ix3(3)) = mask(j)*st%zpsi(j, idim, ist, ik)
         end do
 
@@ -91,7 +92,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
         v%r(:,:,:, ist, ik) = v%r(:,:,:, ist, ik) + abs(wf1)**2
 
         ! now we FT
-        call fftwnd_f77_one(m%zplanf, wf1, wf2)
+        call zfft_forward(v%fft, wf1, wf2)
 
         ! and add to our spectrum
         v%k(:,:,:, idim, ist, ik) = v%k(:,:,:, idim, ist, ik) + wf2
@@ -127,13 +128,13 @@ subroutine PES_mask_output(v, m, st, file)
   spis = 0._r8; arpis = 0._r8
   npoints = 0;  ar_npoints = 0
   
-  temp(:) = 2.0_r8*M_PI/(m%fft_n(:)*m%h(:))
-  do ix = 1, m%fft_n(1)
-    ixx(1) = pad_feq(ix, m%fft_n(1), .true.)
-    do iy = 1, m%fft_n(2)
-      ixx(2) = pad_feq(iy, m%fft_n(2), .true.)
-      do iz = 1, m%fft_n(3)
-        ixx(3) = pad_feq(iz, m%fft_n(3), .true.)
+  temp(:) = 2.0_r8*M_PI/(m%l(:)*m%h(:))
+  do ix = 1, m%l(1)
+    ixx(1) = pad_feq(ix, m%l(1), .true.)
+    do iy = 1, m%l(2)
+      ixx(2) = pad_feq(iy, m%l(2), .true.)
+      do iz = 1, m%l(3)
+        ixx(3) = pad_feq(iz, m%l(3), .true.)
         
         if(ixx(1).ne.0 .or. ixx(2).ne.0 .or. ixx(3).ne.0) then
           ! power spectrum
@@ -222,12 +223,12 @@ subroutine PES_mask_output(v, m, st, file)
   ! now we do the ar spectrum in real space
   arpis = 0._r8
   ar_npoints = 0
-  do ix = 1, m%fft_n(1)
-    ixx(1) = ix - m%fft_n(1)/2 - 1
-    do iy = 1, m%fft_n(2)
-      ixx(2) = iy - m%fft_n(2)/2 - 1
-      do iz = 1, m%fft_n(3)
-        ixx(3) = iz - m%fft_n(3)/2 - 1
+  do ix = 1, m%l(1)
+    ixx(1) = ix - m%l(1)/2 - 1
+    do iy = 1, m%l(2)
+      ixx(2) = iy - m%l(2)/2 - 1
+      do iz = 1, m%l(3)
+        ixx(3) = iz - m%l(3)/2 - 1
         
         ! angle resolved
         if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then

@@ -77,7 +77,6 @@ subroutine specie3D_init(nspecies, str, s)
       if(conf%verbose>999) call ps_debug(s(i)%ps)
 
       s(i)%z_val = s(i)%ps%z_val
-      s(i)%nl_planb= int(-1, POINTER_SIZE)
       s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
 
     end select

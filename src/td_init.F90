@@ -63,9 +63,9 @@ subroutine td_init(td, sys, m, st, h)
     case(FOURTH_ORDER);         message(1) = 'Info: Exponential method: 4th order expansion.'
     case(LANCZOS_EXPANSION);    message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
     case(SPLIT_OPERATOR);       message(1) = 'Info: Exponential method: Split-Operator.'
-      call mesh_alloc_ffts(m, 1)
+      call fft_init(m%l, fft_complex, td%fft)
     case(SUZUKI_TROTTER);       message(1) = 'Info: Exponential method: Suzuki-Trotter.'
-      call mesh_alloc_ffts(m, 1)
+      call fft_init(m%l, fft_complex, td%fft)
     case(CHEBYSHEV);            message(1) = 'Info: Exponential method: Chebyshev.'
     case default
      write(message(1), '(a,i6,a)') "Input: '", td%exp_method, "' is not a valid TDEvolutionMethod"
@@ -198,6 +198,10 @@ subroutine td_end(td)
 
   if(associated(td%v_old)) then
     deallocate(td%v_old);  nullify(td%v_old)
+  end if
+
+  if(td%exp_method==SPLIT_OPERATOR.or.td%exp_method==SUZUKI_TROTTER) then
+    call fft_end(td%fft)
   end if
 
   call pop_sub()

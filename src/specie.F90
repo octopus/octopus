@@ -24,6 +24,7 @@ use units
 use ps
 use spline
 use math
+use fft
 
 implicit none
 
@@ -63,11 +64,6 @@ type specie_type
   ! for the core density in Fourier space
   complex(r8), pointer :: rhocore_fw(:,:,:)      
   
-  ! For the non-local pp in fourier space
-  integer(POINTER_SIZE) :: nl_planb
-  integer :: nl_fft_n(3), nl_hfft_n
-  complex(r8), pointer :: nl_fw(:,:,:,:,:), nl_dfw(:,:,:,:,:,:)
-
 end type specie_type
 
 contains
@@ -114,7 +110,7 @@ function specie_init(s)
 
   ! Nullify all the pointers for sanity.
   do i = 1, nspecies
-     nullify(s(i)%local_fw, s(i)%rhocore_fw, s(i)%nl_fw, s(i)%nl_dfw)
+    nullify(s(i)%local_fw, s(i)%rhocore_fw)
   enddo
 
   specie_init = nspecies
@@ -138,12 +134,6 @@ subroutine specie_end(ns, s)
         deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
       end if
       call ps_end(s(i)%ps)
-    end if
-
-    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
-      call fftw_f77_destroy_plan(s(i)%nl_planb)
-      deallocate(s(i)%nl_fw, s(i)%nl_dfw)
-      nullify(s(i)%nl_fw, s(i)%nl_dfw)
     end if
 
     if(associated(s(i)%local_fw)) then

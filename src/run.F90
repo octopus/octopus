@@ -407,6 +407,8 @@ subroutine run_init()
   end if
   call write_info(1)
 
+  ! initialize ffts
+  call fft_all_init()
 
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
     call units_init()
@@ -423,6 +425,9 @@ subroutine run_end()
     call system_end(sys)
     call hamiltonian_end(h)
   endif
+
+  call fft_all_end()
+
 end subroutine run_end
 
 subroutine m_load_unocc()

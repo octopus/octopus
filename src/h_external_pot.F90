@@ -18,50 +18,52 @@
 ! This subroutine should be in specie.F90, but due to the limitations
 ! of f90 to handle circular dependences it had to come here!
 
-subroutine specie_local_fourier_init(ns, s, m, nlcc)
+subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
+  type(fft_type), intent(in) :: fft
   logical, intent(in) :: nlcc
 
-  integer :: i, j, ix, iy, iz, n, ixx(3)
+  integer :: i, j, ix, iy, iz, n, ixx(3), db(3), dbc(3), c(3)
   real(r8) :: x(3), g(3), modg, temp(3)
   real(r8), allocatable :: fr(:,:,:), v(:)
-  complex(r8) :: c
+  !complex(r8) :: c
 
   call push_sub('specie_local_fourier_init')
 
-  allocate(fr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3)))
+  call fft_getdim_real   (fft, db)  ! get dimensions of real array
+  call fft_getdim_complex(fft, dbc) ! get dimensions of complex array
+  c(:) = db(:)/2 + 1                ! get center of double box
+
+  allocate(fr(db(1), db(2), db(3)))
 
   do i = 1, ns
-    allocate(s(i)%local_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+    allocate(s(i)%local_fw(dbc(1), dbc(2), dbc(3)))
 
     if (conf%periodic_dim==0) then
-      do ix = 1, m%fft_n2(1)
-        ixx(1) = ix - (m%fft_n2(1)/2 + 1)
-        do iy = 1, m%fft_n2(2)
-          ixx(2) = iy - (m%fft_n2(2)/2 + 1)
-          do iz = 1, m%fft_n2(3)
-            ixx(3) = iz - (m%fft_n2(3)/2 + 1)
+      do ix = 1, db(1)
+        ixx(1) = ix - c(1)
+        do iy = 1, db(2)
+          ixx(2) = iy - c(2)
+          do iz = 1, db(3)
+            ixx(3) = iz - c(3)
             
             x(:) = m%h(:)*ixx(:)
             fr(ix, iy, iz) = specie_get_local(s(i), x)
           end do
         end do
       end do
-      call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
-      n = m%hfft_n2*m%fft_n2(2)*m%fft_n2(3)
-      c = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), M_ZERO, r8)
-      call zscal(n, c, s(i)%local_fw,  1)
+      call rfft_forward(fft, fr, s(i)%local_fw)
     else
       allocate(v(2:s(i)%ps%g%nrval))
-      temp(:) = M_TWO*M_PI/(m%fft_n2(:)*m%h(:))
-      do ix = 1, m%hfft_n2
-        ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
-        do iy = 1, m%fft_n2(2)
-          ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
-          do iz = 1, m%fft_n2(3)
-            ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+      temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
+      do ix = 1, dbc(1)
+        ixx(1) = pad_feq(ix, db(1), .true.)
+        do iy = 1, dbc(2)
+          ixx(2) = pad_feq(iy, db(2), .true.)
+          do iz = 1, dbc(3)
+            ixx(3) = pad_feq(iz, db(3), .true.)
             modg = sqrt(sum((temp(:)*ixx(:))**2))
             if(modg.ne.M_ZERO) then
               do j = 2, s(i)%ps%g%nrval
@@ -81,24 +83,23 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
     
     ! now we built the non-local core corrections in momentum space
     if(nlcc) then
-      allocate(s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+      allocate(s(i)%rhocore_fw(dbc(1), dbc(2), dbc(3)))
       
       fr = 0.0_r8
-      do ix = 1, m%fft_n2(1)
-        ixx(1) = ix - (m%fft_n2(1)/2 + 1)
-        do iy = 1, m%fft_n2(2)
-          ixx(2) = iy - (m%fft_n2(2)/2 + 1)
-          do iz = 1, m%fft_n2(3)
-            ixx(3) = iz - (m%fft_n2(3)/2 + 1)
-
+      do ix = 1, db(1)
+        ixx(1) = ix - c(1)
+        do iy = 1, db(2)
+          ixx(2) = iy - c(2)
+          do iz = 1, db(3)
+            ixx(3) = iz - c(3)
+            
             x(:) = m%h(:)*ixx(:)
             fr(ix, iy, iz) = specie_get_nlcc(s(i), x)
           end do
         end do
       end do
 
-      call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%rhocore_fw)
-      call zscal(n, c, s(i)%rhocore_fw, 1)
+      call rfft_forward(fft, fr, s(i)%rhocore_fw)
     end if
 
   end do
@@ -107,110 +108,11 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
   call pop_sub()
 end subroutine specie_local_fourier_init
 
-subroutine specie_nl_fourier_init(ns, s, m, nextra)
-  integer, intent(in) :: ns, nextra
-  type(specie_type), pointer :: s(:)
-  type(mesh_type), intent(IN) :: m
-
-  integer :: n(3), hn, i, ii, j, ix, iy, iz, ixx, iyy, izz, l, lm, add_lm, kx, ky, kz
-  integer(POINTER_SIZE) :: nl_planf
-  real(r8) :: r, x(3), vl, g(3)
-  complex(r8) :: c
-  real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
-  complex(r8), allocatable :: fw(:,:,:), dfw(:,:,:,:)
-
-  call push_sub('specie_nl_fourier_init')
-  
-  specie_loop: do i = 1, ns
-    ! first get the dimensions of the thing
-    n(1:3) = 2*nint(s(i)%ps%rc_max/m%h(1:3)) + 5 ! this should be enough
-    hn = n(1)/2 + 1
-    s(i)%nl_fft_n(1:3) = n(1:3)
-    s(i)%nl_hfft_n = hn
-
-    ! allocate memory and FFT plans
-    allocate(s(i)%nl_fw(hn, n(2), n(3), (s(i)%ps%L_max + 1)**2, s(i)%ps%kbc), &
-        s(i)%nl_dfw(hn, n(2), n(3), 3, (s(i)%ps%L_max + 1)**2, s(i)%ps%kbc))
-    call rfftw3d_f77_create_plan(s(i)%nl_planb, n(1), n(2), n(3), &
-         fftw_backward, fftw_measure + fftw_threadsafe)    
-
-    n(1:3) = (n(1:3) - 1)*(1 + nextra) + 1
-    hn = n(1)/2 + 1
-
-    call rfftw3d_f77_create_plan(nl_planf, n(1), n(2), n(3), &
-         fftw_forward, fftw_measure + fftw_threadsafe)
-
-    ! fill in structure
-    allocate(fr(n(1), n(2), n(3)), fw(hn, n(2), n(3)), &
-         dfr(n(1), n(2), n(3), 3), dfw(hn, n(2), n(3), 3))
-
-    ! we will recalculate this value on the mesh
-    add_lm = 1
-    l_loop: do l = 0, s(i)%ps%L_max
-      if(l == s(i)%ps%L_loc) then
-        add_lm = add_lm + (2*l + 1)
-        cycle l_loop
-      end if
-      lm_loop: do lm = -l, l
-      ii_loop : do ii = 1, s(i)%ps%kbc
-        do ix = 1, n(1)
-          x(1) = m%h(1) * real(ix - n(1)/2 - 1, r8) / real(1 + nextra, r8)
-          do iy = 1, n(2)
-            x(2) = m%h(2) * real(iy - n(2)/2 - 1, r8) / real(1 + nextra, r8)
-            do iz = 1, n(3)
-              x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8) / real(1 + nextra, r8)
-              r = sqrt(sum(x**2))
-              
-              call specie_get_nl_part(s(i), x, l, lm, ii, fr(ix, iy, iz), dfr(ix, iy, iz, :))
-            end do
-          end do
-        end do
-        c = cmplx(1._r8/real(n(1)*n(2)*n(3)), 0.0_r8, r8)
-        call rfftwnd_f77_one_real_to_complex(nl_planf, fr, fw)
-        call zscal(hn*n(2)*n(3), c, fw(1, 1, 1), 1)
-
-        do j = 1, 3
-          call rfftwnd_f77_one_real_to_complex(nl_planf, dfr(1, 1, 1, j), dfw(1, 1, 1, j))
-          call zscal(hn*n(2)*n(3), c, dfw(1, 1, 1, j), 1)
-        end do
-
-        ! have to cut the high frequencies
-        do ix = 1, s(i)%nl_hfft_n
-          kx  = pad_feq(ix, s(i)%nl_fft_n(1), .true.)
-          ixx = pad_feq(kx, n(1), .false.)
-          do iy = 1, s(i)%nl_fft_n(2)
-            ky  = pad_feq(iy, s(i)%nl_fft_n(2), .true.)
-            iyy = pad_feq(ky, n(2), .false.)
-            do iz = 1, s(i)%nl_fft_n(3)
-              kz  = pad_feq(iz, s(i)%nl_fft_n(3), .true.)
-              izz = pad_feq(kz, n(3), .false.)
-              c =  exp(-M_PI*M_zi* (&
-                   kx*(1._r8/n(1)-1._r8/s(i)%nl_fft_n(1)) + &
-                   ky*(1._r8/n(2)-1._r8/s(i)%nl_fft_n(2)) + &
-                   kz*(1._r8/n(3)-1._r8/s(i)%nl_fft_n(3))))
-              s(i)%nl_fw (ix, iy, iz, add_lm, ii)   = c * fw (ixx, iyy, izz)
-              s(i)%nl_dfw(ix, iy, iz,:, add_lm, ii) = c * dfw(ixx, iyy, izz, :)
-            end do
-          end do
-        end do
-      
-      end do ii_loop  
-        add_lm = add_lm + 1
-      end do lm_loop
-    end do l_loop
-
-    call fftw_f77_destroy_plan(nl_planf)
-    deallocate(fr, fw, dfr, dfw)
-  end do specie_loop
-
-  call pop_sub()
-end subroutine specie_nl_fourier_init
-
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(inout) :: sys
 
-  integer :: ia
+  integer :: ia, db(3), dbc(3)
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
   real(r8), allocatable :: fr(:,:,:)
@@ -223,23 +125,27 @@ subroutine generate_external_pot(h, sys)
   sys%eii = ion_ion_energy(sys%natoms, sys%atom)
 
   if(h%vpsl_space == RECIPROCAL_SPACE) then
-    allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
+    call fft_getdim_real   (h%fft, db)  ! get dimensions of real array
+    call fft_getdim_complex(h%fft, dbc) ! get dimensions of complex array
+    
+    allocate(fw(dbc(1), dbc(2), dbc(3)))
     fw = M_z0
-  end if
-  h%Vpsl  = 0._r8
 
-  if(sys%nlcc) then
-    sys%st%rho_core = 0._r8
-    allocate(fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
-    fwc = M_z0
+    if(sys%nlcc) then
+      allocate(fwc(dbc(1), dbc(2), dbc(3)))
+      fwc = M_z0
+    end if
   end if
+
+  h%Vpsl = M_ZERO
+  if(sys%nlcc) sys%st%rho_core = M_ZERO
 
   do ia = 1, sys%natoms
     a => sys%atom(ia) ! shortcuts
     s => a%spec
     
     call build_local_part(sys%m)
-
+    
     if(.not.s%local) then
       call build_kb_sphere(sys%m)
       call build_nl_part(sys%m)
@@ -247,17 +153,17 @@ subroutine generate_external_pot(h, sys)
 
   end do
 
-  if(h%vpsl_space == 1) then
-    allocate(fr(sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)))
+  if(h%vpsl_space == RECIPROCAL_SPACE) then
+    allocate(fr(db(1), db(2), db(3)))
 
     ! first the potential
-    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
-    call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
+    call rfft_backward(h%fft, fw, fr)
+    call dcube_to_mesh(sys%m, fr, h%Vpsl, db)
       
     ! and the non-local core corrections
     if(sys%nlcc) then
-      call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
-      call dcube_to_mesh(sys%m, fr, sys%st%rho_core, 2)
+      call rfft_backward(h%fft, fwc, fr)
+      call dcube_to_mesh(sys%m, fr, sys%st%rho_core, db)
       deallocate(fwc)
     end if
     
@@ -290,9 +196,9 @@ contains
       end do
 
     else ! momentum space
-      call phase_factor(m, m%fft_n2, a%x, s%local_fw, fw)
+      call phase_factor(m, db, a%x, s%local_fw, fw)
       if(s%nlcc) then
-        call phase_factor(m, m%fft_n2(1:3), a%x, s%rhocore_fw, fwc)
+        call phase_factor(m, db, a%x, s%rhocore_fw, fwc)
       end if
     end if
 
@@ -308,10 +214,11 @@ contains
     call push_sub('build_kb_sphere')
 
     ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
-    if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,     &
-                                              a%zuv, a%zduv, a%zuvu,       &
-                                              a%so_uv, a%so_duv, a%so_uvu, &
-					      a%so_luv)
+    if(associated(a%jxyz)) deallocate(&
+         a%jxyz, a%duv,  a%dduv,  a%duvu,     &
+         a%zuv, a%zduv, a%zuvu,       &
+         a%so_uv, a%so_duv, a%so_uvu, &
+         a%so_luv)
     if(conf%periodic_dim/=0 .and. associated(a%phases)) deallocate(a%phases)
     if (any(s%ps%rc_max + m%h(1)>=m%lsize(1:conf%periodic_dim))) then
       message(1)='KB sphere is larger than the box size'
@@ -343,19 +250,19 @@ contains
     a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0; a%so_luv = M_z0
 
     
-      j = 0
-      do k = 1, h%np
-        do i=1,3**conf%periodic_dim
-          call mesh_r(m, k, r, a=a%x+m%shift(i,:))
-          ! we enlarge slightly the mesh (good for the interpolation scheme)
-          if(r > s%ps%rc_max + m%h(1)) cycle
-            j = j + 1
-            a%Jxyz(j) = k
-            exit
-        end do
+    j = 0
+    do k = 1, h%np
+      do i=1,3**conf%periodic_dim
+        call mesh_r(m, k, r, a=a%x+m%shift(i,:))
+        ! we enlarge slightly the mesh (good for the interpolation scheme)
+        if(r > s%ps%rc_max + m%h(1)) cycle
+        j = j + 1
+        a%Jxyz(j) = k
+        exit
       end do
+    end do
 
-   call pop_sub()
+    call pop_sub()
   end subroutine build_kb_sphere
 
   subroutine build_nl_part(m)
@@ -363,40 +270,38 @@ contains
 
     integer :: i, j, k, l, lm, n, add_lm, p, ix(3), center(3)
     real(r8) :: r, x(3), x_in(3), ylm
-    complex(r8), allocatable :: nl_fw(:,:,:)
-    real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
     real(r8) :: so_uv, so_duv(3)
 
     call push_sub('build_nl_part')
 
     ! This loop is done always, for spin-orbit is, up to now, only done in real space.
     ! If we want the nl part also in real space, it is read.
-      j_loop: do j = 1, a%Mps
-          call mesh_xyz(m, a%Jxyz(j), x_in)
-          k_loop: do k=1,3**conf%periodic_dim
-            x(:) = x_in(:) - m%shift(k,:)          
-            r=sqrt(sum((x-a%x)*(x-a%x)))
-            if (r > s%ps%rc_max + m%h(1)) cycle
-            x = x - a%x
-            add_lm = 1
-            l_loop: do l = 0, s%ps%L_max
-              lm_loop: do lm = -l, l
-                i_loop : do i = 1, s%ps%kbc
-                  if(l .ne. s%ps%L_loc .and. h%vnl_space == REAL_SPACE) then
-                     call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
-                  end if
-                  if(l>0 .and. s%ps%so_l_max>=0) then
-                     call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
-                     a%so_uv(j, add_lm, i) = so_uv
-                     a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
-                  endif
-                end do i_loop
-                add_lm = add_lm + 1
-              end do lm_loop
-            end do l_loop
-            exit
-         end do k_loop
-      end do j_loop
+    j_loop: do j = 1, a%Mps
+      call mesh_xyz(m, a%Jxyz(j), x_in)
+      k_loop: do k=1,3**conf%periodic_dim
+        x(:) = x_in(:) - m%shift(k,:)          
+        r=sqrt(sum((x-a%x)*(x-a%x)))
+        if (r > s%ps%rc_max + m%h(1)) cycle
+        x = x - a%x
+        add_lm = 1
+        l_loop: do l = 0, s%ps%L_max
+          lm_loop: do lm = -l, l
+            i_loop : do i = 1, s%ps%kbc
+              if(l .ne. s%ps%L_loc .and. h%vnl_space == REAL_SPACE) then
+                call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
+              end if
+              if(l>0 .and. s%ps%so_l_max>=0) then
+                call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
+                a%so_uv(j, add_lm, i) = so_uv
+                a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
+              endif
+            end do i_loop
+            add_lm = add_lm + 1
+          end do lm_loop
+        end do l_loop
+        exit
+      end do k_loop
+    end do j_loop
 
     if(h%reltype == SPIN_ORBIT) then
       do j = 1, a%mps
@@ -423,49 +328,6 @@ contains
       a%so_luv = -M_zI*a%so_luv
     endif
 
-    if(h%vnl_space == RECIPROCAL_SPACE) then
-      center(:) = nint(a%x(:)/m%h(:))
-      x(:)  = a%x(:) - center(:)*m%h(:)
-      
-      allocate(nl_fw (s%nl_hfft_n,   s%nl_fft_n(1), s%nl_fft_n(1)), &
-               nl_fr (s%nl_fft_n(1), s%nl_fft_n(1), s%nl_fft_n(1)), &
-               nl_dfr(s%nl_fft_n(1), s%nl_fft_n(1), s%nl_fft_n(1), 3))
-      
-      add_lm = 1
-      l_loop2: do l = 0, s%ps%L_max
-        if(l == s%ps%L_loc) then
-          add_lm = add_lm + (2*l + 1)
-          cycle l_loop2
-        end if
-        
-        lm_loop2: do lm = -l , l
-        i_loop2 : do i = 1, s%ps%kbc
-          nl_fw = M_z0
-          call phase_factor(m, s%nl_fft_n(1:3), x, s%nl_fw(:,:,:, add_lm, i), nl_fw)
-          call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_fr)
-
-          ! now the gradient
-          do j = 1, 3
-            nl_fw = M_z0
-            call phase_factor(m, s%nl_fft_n(1:3), x, s%nl_dfw(:,:,:, j, add_lm, i), nl_fw)
-            call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_dfr(1, 1, 1, j))
-          end do
-          
-          j_loop2: do j = 1, a%Mps
-            p = a%Jxyz(j)
-            ix(:) = m%Lxyz(:,p) - center(:) + s%nl_fft_n(:)/2 + 1
-            
-            a%duV(j, add_lm, i)     = nl_fr (ix(1), ix(2), ix(3))
-            a%dduV(:, j, add_lm, i) = nl_dfr(ix(1), ix(2), ix(3), :)
-          end do j_loop2
-
-        end do i_loop2
-        add_lm = add_lm + 1
-        end do lm_loop2
-      end do l_loop2
-      deallocate(nl_fw, nl_fr, nl_dfr)
-    end if
-    
     ! and here we calculate the uVu
     if(s%ps%flavour(1:2) == 'tm') then
       a%duVu = M_ZERO

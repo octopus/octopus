@@ -62,6 +62,9 @@ type hamiltonian_type
   type(hartree_type) :: hart
   type(xc_type) :: xc
 
+  ! fft used to calculate the external potential in FS
+  type(fft_type) :: fft
+
   ! gauge
   integer :: gauge ! in which gauge shall we work in
                    ! 1 = length gauge
@@ -96,7 +99,7 @@ subroutine hamiltonian_init(h, sys)
   type(hamiltonian_type), intent(out) :: h
   type(system_type), intent(inout) :: sys
 
-  integer :: i, j
+  integer :: i, j, db(3)
   real(r8) :: d, r, x(3)
 
   call push_sub('hamiltonian_init')
@@ -141,30 +144,9 @@ subroutine hamiltonian_init(h, sys)
   call write_info(1)
 
   if(h%vpsl_space == RECIPROCAL_SPACE) then
-    call mesh_alloc_ffts(sys%m, 2)
-    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, sys%nlcc)
-  end if
-
-  if(conf%dim == 3) then ! non-local potentials only in 3D
-    call oct_parse_int('NonLocalPotentialSpace', REAL_SPACE, h%vnl_space)
-    if(h%vnl_space < 0 .or. h%vnl_space > 1) then
-      write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
-           "' is not a valid NonLocalPotentialSpace"
-      message(2) = '(NonLocalPotentialSpace = 0 | 1)'
-      call write_fatal(2)
-    end if
-    
-    if(h%vnl_space == RECIPROCAL_SPACE) then
-      call oct_parse_int('GridRefinement', 3, h%nextra)
-      if(h%nextra < 0) then
-        write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
-             "' is not a valid GridRefinement"
-        message(2) = '(GridRefinement >= 0)'
-        call write_fatal(2)
-      end if
-      
-      call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
-    end if
+    call mesh_double_box(sys%m, db)
+    call fft_init(db, fft_real, h%fft)
+    call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, h%fft, sys%nlcc)
   end if
 
   call oct_parse_int("RelativisticCorrection", NOREL, h%reltype)
@@ -326,6 +308,8 @@ subroutine hamiltonian_end(h)
   end if
 
   call laser_end(h%no_lasers, h%lasers)
+
+  if(h%vpsl_space == RECIPROCAL_SPACE) call fft_end(h%fft)
 
   call pop_sub()
 end subroutine hamiltonian_end
