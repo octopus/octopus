@@ -360,7 +360,7 @@ subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
       do ix = 1, nx
         kx = pad_feq(ix, n(1), .true.)
         
-        g2 = temp(1)*kx**2 + temp(2)*ky**2 + temp(3)*kz**2
+        g2 = (temp(1)*kx)**2 + (temp(2)*ky)**2 + (temp(3)*kz)**2
         lapl(ix, iy, iz) = - g2 * f(ix, iy, iz)
       end do
     end do
