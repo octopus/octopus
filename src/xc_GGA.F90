@@ -42,7 +42,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
   call push_sub('xc_gga')
 
   allocate(d     (     m%np, st%nspin), &
-           lpot  (     m%np, st%spin_channels))
+           lpot  (    0:m%np, st%spin_channels))
   allocate(rhoplus(m%np), rhominus(m%np))
   allocate(grhoplus(3, m%np), grhominus(3, m%np))
 
@@ -76,9 +76,9 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
 
   call dmesh_derivatives(m, rhoplus(:),  grad=grhoplus(:, :))
   if(st%ispin > UNPOLARIZED) call dmesh_derivatives(m, rhominus(:), grad=grhominus(:, :))
-
   energy = M_ZERO
   lpot = M_ZERO
+
   space_loop: do i = 1, m%np
 
     locald(1) = rhoplus(i)
@@ -109,8 +109,11 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
 
     lpot(i, :) = lpot(i, :) + localdedd(:)
     do in = -m%d%norder , m%d%norder
+       if(m%lxyz(1,i)+in<m%nr(1,1).or.m%lxyz(1,i)+in>m%nr(2,1)) cycle
        ind(1) = m%Lxyz_inv(m%Lxyz(1,i)+in,m%Lxyz(2,i),m%Lxyz(3,i))
+       if(m%lxyz(2,i)+in<m%nr(1,2).or.m%lxyz(2,i)+in>m%nr(2,2)) cycle
        ind(2) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i)+in,m%Lxyz(3,i))
+       if(m%lxyz(3,i)+in<m%nr(1,3).or.m%lxyz(3,i)+in>m%nr(2,3)) cycle
        ind(3) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i),m%Lxyz(3,i)+in)
        do ic = 1, 3
           if(ind(ic) > 0) then
