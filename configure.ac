@@ -179,7 +179,6 @@ if test -z "${LIB_LAPACK}"; then
 	  AS_IF([test "$LAPACKDIR"], [LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"])
 
 		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [f77lapack], [dsygv], [-lf77lapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
@@ -244,7 +243,7 @@ LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
 
 AC_CONFIG_FILES([Makefile 
-	liboct/Makefile src/Makefile doc/Makefile 
+	liboct/Makefile src/Makefile doc/Makefile faq/Makefile
 	share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile
 	build/octopus.spec
 ])

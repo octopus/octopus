@@ -10535,49 +10535,6 @@ fi
 
 
 	if test -z "${LIB_LAPACK}"; then
-		echo "$as_me:$LINENO: checking for dsygv in -lf77lapack" >&5
-echo $ECHO_N "checking for dsygv in -lf77lapack... $ECHO_C" >&6
-if test "${ac_cv_lib_f77lapack_dsygv+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lf77lapack ${LIB_BLAS} $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-      program main
-      call dsygv
-      end program main
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_f77lapack_dsygv=yes
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-ac_cv_lib_f77lapack_dsygv=no
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_f77lapack_dsygv" >&5
-echo "${ECHO_T}$ac_cv_lib_f77lapack_dsygv" >&6
-if test $ac_cv_lib_f77lapack_dsygv = yes; then
-  LIB_LAPACK="-lf77lapack"
-fi
-
-	fi
-
-
-	if test -z "${LIB_LAPACK}"; then
 		echo "$as_me:$LINENO: checking for dsygv in -llapack" >&5
 echo $ECHO_N "checking for dsygv in -llapack... $ECHO_C" >&6
 if test "${ac_cv_lib_lapack_dsygv+set}" = set; then
@@ -11310,7 +11267,7 @@ fi
 LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 
 
-ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile build/octopus.spec"
+ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile faq/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile build/octopus.spec"
 
 
 cat >confcache <<\_ACEOF
@@ -11805,6 +11762,7 @@ do
   "liboct/Makefile" ) CONFIG_FILES="$CONFIG_FILES liboct/Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
+  "faq/Makefile" ) CONFIG_FILES="$CONFIG_FILES faq/Makefile" ;;
   "share/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/Makefile" ;;
   "share/PP/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/PP/Makefile" ;;
   "share/PP/TM2/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/PP/TM2/Makefile" ;;

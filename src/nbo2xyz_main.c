@@ -16,8 +16,8 @@
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
  02111-1307, USA.
 */
-#include "nbo2xyz.h"
 #include "../liboct/config.h"
+#include "nbo2xyz.h"
 
 int main( int argc, char **argv )
 {

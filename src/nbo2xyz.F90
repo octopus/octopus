@@ -57,8 +57,8 @@ subroutine nbo2xyz(sampling)
   call oct_parse_str('SystemName', 'system', sysname)
 
   ! Sets the filenames
-  nbofile = trim(sysname)//'.nbo'
-  xyzfile = trim(sysname)//'-movie.xyz'
+  write(nbofile, '(2a)') trim(sysname), '.nbo'
+  write(xyzfile, '(2a)') trim(sysname), '-movie.xyz'
 
   ! how many do we have?
   str = C_string("Species")
