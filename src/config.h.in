@@ -1,3 +1,12 @@
+/* Code compiled for ground-state complex wavefunctions */
+#undef COMPLEX_WFNS
+
+/* Code compiled in debug mode */
+#undef DEBUG
+
+/* Code compiled in single precision */
+#undef SINGLE_PRECISION
+
 /* FFT library to use (fftw2 | fftw3) */
 #undef HAVE_FFT
 
@@ -26,11 +35,3 @@
 #undef MPI_TD
 #undef MPI_MOD
 #undef MPI_H
-
-#undef BOUNDARIES_ZERO_DERIVATIVE
-
-/* Code compiled for ground-state complex wavefunctions */
-#undef COMPLEX_WFNS
-
-/* Code compiled in debug mode */
-#undef DEBUG

@@ -1,9 +1,8 @@
-bin_PROGRAMS = @PROGNAME@ oct-sf oct-rsf oct-hs-mult oct-hs-acc \
+EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-excite oct-broad oct-ph oct-xyz-anim \
 	oct-choose-st oct-make-st oct-center-geom
 
-EXTRA_PROGRAMS = octopus octopus-mpi \
-	zoctopus zoctopus-mpi
+bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
 core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	linalg.F90 math.F90 spline.F90 fft.F90 \
@@ -37,15 +36,15 @@ noinst_HEADERS = \
 	out_inc.F90 math_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a \
-  @LIB_FFT@ @LIB_TRLAN@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@
+  @LIB_FFT@ @LIB_TRLAN@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@ @LIB_MPI@
 
 # this has to be repeated...
-octopus_mpi_SOURCES     = $(octopus_SOURCES)
-octopus_mpi_LDADD       = $(octopus_LDADD) @LIB_MPI@
-zoctopus_SOURCES        = $(octopus_SOURCES)
-zoctopus_LDADD          = $(octopus_LDADD)
-zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
-zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
+#octopus_mpi_SOURCES     = $(octopus_SOURCES)
+#octopus_mpi_LDADD       = $(octopus_LDADD) @LIB_MPI@
+#zoctopus_SOURCES        = $(octopus_SOURCES)
+#zoctopus_LDADD          = $(octopus_LDADD)
+#zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
+#zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
 
 # now the utility programs
 oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90

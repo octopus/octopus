@@ -25,37 +25,6 @@ AM_CONFIG_HEADER([liboct/config.h src/config.h])
 # Installation prefix by default
 AC_PREFIX_DEFAULT($HOME)
 
-# what should I build?
-AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), MPIDIR=$enableval, MPIDIR=no)
-AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Compile octopus in debug mode]), [DEBUG=1])
-
-# set program name
-PROGNAME="octopus"
-AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
-AC_SUBST(PROGNAME)
-
-# complex wavefunctions
-if test "${COMPLEX_WFNS}"; then
-	AC_DEFINE(COMPLEX_WFNS, 1, [Code compiled for ground-state complex wavefunctions])
-	PROGNAME="z$PROGNAME"
-  msg="complex wave functions"
-else
-  msg="real wave functions"
-fi
-
-if test "${DEBUG}"; then
-	AC_DEFINE(DEBUG, 1, [Code compiled in debug mode])
-  msg="$msg, debug mode"
-fi
-AC_SUBST(DEBUG)
-
-
-echo "**********************************************"
-echo "***   $PROGNAME will be generated"
-echo "***       (with $msg)"
-echo "**********************************************"
-
 # who am i
 AC_CANONICAL_HOST
 
@@ -90,7 +59,7 @@ AC_PROG_LIBTOOL
 if test x"$MPIDIR" != x"no"; then
   AC_PROG_F90([],[MPI])
 else
-	AC_PROG_F90
+  AC_PROG_F90
 fi
 AC_LANG_PUSH(Fortran 90)
 AC_LANG_PREPROC(Fortran 90)
@@ -98,8 +67,65 @@ AC_LANG_PREPROC(Fortran 90)
 dnl how Fortran mangles function names
 AC_F90_WRAPPERS
 
-dnl now we search for libraries
+dnl ============================================================================
+dnl This part of the configuration file tries to sort out what needs to be built.
+dnl In particular, the code can be compile in single precision, mpi, using
+dnl complex wave-functions in the ground-state, and in debug mode.
+
+dnl these are the --enable possible in octopus
+AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]), MPIDIR=$enableval, MPIDIR=no)
+AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
+AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [octopus in debug mode]), [DEBUG=1])
+
+dnl MPI version
+MYEXT=""
+AS_IF([test x"$MPIDIR" != x"no"], [MYEXT="${MYEXT}_mpi"])
+
+dnl complex wavefunctions for the ground-state
+if test "${COMPLEX_WFNS}"; then
+  AC_DEFINE(COMPLEX_WFNS, 1, [octopus compiled for ground-state complex wavefunctions])
+  MYEXT="${MYEXT}_cmplx"
+  msg="complex wave functions"
+else
+  msg="real wave functions"
+fi
+
+dnl debug mode
+if test "${SINGLE_PRECISION}"; then
+  AC_DEFINE(SINGLE_PRECISION, 1, [octopus compiled in single precision])
+  MYEXT="${MYEXT}_single"
+  msg="$msg, single precision"
+fi
+
+dnl debug mode
+if test "${DEBUG}"; then
+  AC_DEFINE(DEBUG, 1, [octopus compiled in debug mode])
+  MYEXT="${MYEXT}_debug"
+  msg="$msg, debug mode"
+fi
+AC_SUBST(DEBUG)
+
+dnl set the default extension for the programs
+EXEEXT="${MYEXT}${EXEEXT}"
+
+dnl we only generate the utilities if single precision, cmplx, and mpi are off
+if test x"$MPIDIR" = x"no" -a -z "${COMPLEX_WFNS}" -a -z "${SINGLE_PRECISION}"; then
+  UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
+  msg="$msg + utilities"
+else
+  UTILITY_PROGRAMS=''
+fi
+AC_SUBST(UTILITY_PROGRAMS)
+
+dnl tell the user what we will be compiling
+echo "**********************************************"
+echo "***   octopus${EXEEXT} will be generated using"
+echo "***          $msg"
+echo "**********************************************"
+
 dnl ===================================================================
+dnl now we search for libraries
 
 dnl FFT
 AC_ARG_ENABLE(fft, [  --enable-fft=ARG    enable fft support
