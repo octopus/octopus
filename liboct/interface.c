@@ -31,6 +31,12 @@ double PROTO(ylm)(double *x, double *y, double *z, int *l, int *m)
 	return ylm(*x, *y, *z, *l, *m);
 }
 
+// from varia.c
+void PROTO(fft_optimize) (int *n, int *p, int *par)
+{
+	fft_optimize(n, *p, *par);
+}
+
 // Interface to the GSL interpolation functions
 void PROTO(spline_end)(void **spl, void **acc)
 {

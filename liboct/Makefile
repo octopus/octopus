@@ -1,4 +1,4 @@
-SRC=recipes.c ylm.c parse.c parse_exp.c symbols.c interface.c
+SRC=recipes.c ylm.c parse.c parse_exp.c symbols.c varia.c interface.c
 OBJ= $(SRC:.c=.o)
 CPPFLAGS=
 CFLAGS=-Wall -g
