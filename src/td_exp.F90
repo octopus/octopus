@@ -31,6 +31,13 @@ module td_exp
   
   implicit none
 
+  private
+  public :: td_exp_type, &
+            td_exp_init, &
+            td_exp_end, &
+            td_exp_dt
+
+
   type td_exp_type
     integer  :: exp_method      ! which method is used to apply the exponential
 
@@ -40,59 +47,12 @@ module td_exp
     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_exp_type
 
-  integer, parameter, private :: SPLIT_OPERATOR     = 0, &
-                                 SUZUKI_TROTTER     = 1, &
-                                 LANCZOS_EXPANSION  = 2, &
-                                 FOURTH_ORDER       = 3, &
-                                 CHEBYSHEV          = 4
-
-
-  type(hamiltonian_type), pointer :: h_p
-  type(mesh_type), pointer :: m_p
-  type(f_der_type), pointer :: f_der_p
-  integer :: ik_p
-  FLOAT :: t_p
-
+  integer, parameter :: SPLIT_OPERATOR     = 0, &
+                        SUZUKI_TROTTER     = 1, &
+                        LANCZOS_EXPANSION  = 2, &
+                        FOURTH_ORDER       = 3, &
+                        CHEBYSHEV          = 4
   contains
-
-  ! The next three routines permit to define and pass the matvec 
-  ! operation needed by the expokit Lanczos algorithms
-  ! in expokit_inc.F90 file (ZGEXPV or ZHEXPV). It is a rather ugly
-  ! scheme, but I do not know how to make it better for the moment --
-  ! specially the stupid copying.
-  subroutine matvec_init(mesh, ham, f_der, ik_point, time)
-    type(mesh_type), target, intent(in)   :: mesh
-    type(hamiltonian_type), target, intent(in) :: ham
-    type(f_der_type), target, intent(in)  :: f_der
-    integer, intent(in) :: ik_point
-    FLOAT, intent(in) :: time
-    h_p     => ham
-    m_p     => mesh
-    f_der_p => f_der
-    ik_p    =  ik_point
-    t_p     =  time
-  end subroutine matvec_init
-
-  subroutine matvec_kill
-    nullify(h_p); nullify(m_p); nullify(f_der_p)
-  end subroutine matvec_kill
-
-  subroutine matvec(x, y)
-    CMPLX, intent(in)  :: x(*)
-    CMPLX, intent(out) :: y(*)
-    CMPLX, allocatable :: psi(:, :), hpsi(:, :)
-    integer :: is
-    allocate(psi(m_p%np, h_p%d%dim), hpsi(m_p%np, h_p%d%dim))
-    do is = 1, h_p%d%dim
-       psi(1:m_p%np, is) = x( (is-1)*m_p%np+1 : is*m_p%np )
-    enddo
-    call zhpsi (h_p, m_p, f_der_p, psi, hpsi, ik_p, t_p)
-    do is = 1, h_p%d%dim
-       !y( (is-1)*m_p%np+1 : is*m_p%np ) = -M_zI * hpsi(1:m_p%np, is)
-       y( (is-1)*m_p%np+1 : is*m_p%np ) = hpsi(1:m_p%np, is)
-    enddo
-    deallocate(psi, hpsi)
-  end subroutine matvec
 
   subroutine td_exp_init(m, te)
     type(mesh_type),   intent(IN) :: m
@@ -107,7 +67,7 @@ module td_exp
       message(1) = 'Info: Exponential method: Chebyshev.'
 
     case(LANCZOS_EXPANSION)
-      call loct_parse_float("TDLanczosTol", CNST(5e-4), te%lanczos_tol)
+      call loct_parse_float("TDLanczosTol", CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) then
         write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
         message(2) = '(0 < TDLanczosTol)'
@@ -271,32 +231,54 @@ module td_exp
     end subroutine cheby
     
     subroutine lanczos
-      integer :: n, b, ideg, lwsp, liwsp, itrace, iflag
-      FLOAT :: anorm
-      CMPLX, allocatable :: wsp(:), expzpsi(:, :)
-      integer, allocatable :: iwsp(:)
+      integer ::  korder, n, k, iflag
+      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:)
+      FLOAT :: beta, res, tol, nrm
 
-      n = m%np*h%d%dim
-      b = te%exp_order
-      anorm = CNST(1.0)
-      ideg = 6
-      lwsp = n*(b+1)+n+(b+2)**2+4*(b+2)**2+ideg+1
-      liwsp = b+2
-      itrace = 0
-      allocate(iwsp(liwsp), wsp(lwsp), expzpsi(m%np, h%d%dim))
+      call push_sub('lanczos')
+      
+      tol    = te%lanczos_tol
+      allocate(v(m%np, h%d%dim, te%exp_order+1), &
+               hm(te%exp_order+1, te%exp_order+1), &
+               expo(te%exp_order+1, te%exp_order+1))
+      hm = M_z0; expo = M_z0
+      
+      ! Normalize input vector, and put it into v(:, :, 1)
+      beta = zstates_nrm2(m, h%d%dim, zpsi)
+      v(:, :, 1) = zpsi(:, :)/beta
 
-      call matvec_init(m, h, f_der, ik, t)
-      !call zgexpv( n, b, timestep, zpsi, expzpsi, &
-      !             te%lanczos_tol, anorm, wsp, lwsp, iwsp, liwsp, matvec, itrace, iflag)
-      call zhexpv( n, b, -timestep, zpsi, expzpsi, &
-                   te%lanczos_tol, anorm, wsp, lwsp, iwsp, liwsp, matvec, itrace, iflag)
-      call matvec_kill()
+      ! This is the Lanczos loop...      
+      do n = 1, te%exp_order
+        call operate(v(:,:, n), zpsi)
+        korder = n
 
-      zpsi = expzpsi
-      if(present(order)) order = iwsp(1)
-      deallocate(iwsp, wsp, expzpsi)
+        do k = max(1, n-1), n
+           hm(k, n) = zstates_dotp(m, h%d%dim, v(:, :, k), zpsi)
+           zpsi(:, :) = zpsi(:, :) - hm(k, n)*v(:, :, k)
+        enddo
+        hm(n+1, n) = zstates_nrm2(m, h%d%dim, zpsi)
+        v(:, :, n+1) = zpsi(:, :)/real(hm(n+1, n), PRECISION)
+        call zgpadm(n, timestep, -M_zI*hm(1:n, 1:n), expo(1:n, 1:n), iflag)
 
+        res = abs(hm(n+1, n)*abs(expo(1, n)))
+        if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
+        if(n>2 .and. res<tol) exit
+      enddo
+
+      if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
+        write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+        call write_warning(1)
+      endif
+
+      call zgpadm(korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), expo(1:korder+1, 1:korder+1), iflag)
+      ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
+      call lalg_gemv(m%np, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
+      
+      if(present(order)) order = korder
+      deallocate(v, hm, expo)
+      call pop_sub()
     end subroutine lanczos
+
 
 #if defined(HAVE_FFT)
     subroutine split

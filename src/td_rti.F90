@@ -19,12 +19,17 @@
 
 module td_rti
   use global
+  use lib_basic_alg
   use math
   use mesh
+  use cube_function
+  use functions
+  use mesh_function
   use states
   use hamiltonian
   use external_pot
   use td_exp
+  use td_exp_split
 
   implicit none
 
