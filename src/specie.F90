@@ -214,6 +214,27 @@ subroutine specie_get_glocal(s, x, gv)
 
 end subroutine specie_get_glocal
 
+! returns the localized part of the potential in Fourier space
+FLOAT function specie_get_local_fourier(s, x) result(l)
+  type(specie_type), intent(IN) :: s
+  FLOAT, intent(in) :: x(3)
+
+  FLOAT :: gmod
+
+  if(conf%dim /= 3 .or. s%label(1:5) == 'usdef' &
+    .or. s%label(1:5) == 'jelli' .or. s%label(1:5) == 'point') then
+    message(1) = 'Periodic arrays of usedef, jelli, point,' 
+    message(2) = '1D and 2D systems not implemented yet.'
+    call write_fatal(2)
+
+  else
+    gmod = sqrt(sum(x(:)**2))
+    l = loct_splint(s%ps%vlocal_f, gmod)
+  end if
+
+end function specie_get_local_fourier
+
+
 #include "specie1D.F90"
 #include "specie3D.F90"
 
