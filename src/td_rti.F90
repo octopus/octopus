@@ -51,6 +51,8 @@ contains
     real(r8) :: x(3), f(3)
     integer i, k, idim
 
+    sub_name = 'td_dtexp'; call push_sub()
+
     allocate(zpsi1(0:sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
 
     zfact = 1._r8
@@ -97,7 +99,7 @@ contains
     end do
     
     deallocate(zpsi1, hzpsi1)
-    return
+    call pop_sub(); return
   end subroutine td_dtexp
   
   ! Warning: this subroutine should only be used with LDA/GGA functionals
@@ -109,6 +111,8 @@ contains
     real(r8), allocatable :: aux(:,:)
     complex(r8), allocatable :: zpsi1(:,:,:,:)
     
+    sub_name = 'td_rti1'; call push_sub()
+
     allocate(aux(m%np, st%nspin))
     
     do is = 1, sys%st%nspin
@@ -144,7 +148,7 @@ contains
       end do
     end do
     
-    return
+    call pop_sub(); return
   end subroutine td_rti1
 
   subroutine td_rti2(m, st)
@@ -158,6 +162,8 @@ contains
     real(r8), allocatable :: reduce_rho(:,:) ! temporary to do MPI_reduce
     integer :: ierr
 #endif
+
+    sub_name = 'td_rti2'; call push_sub()
 
     allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
     zpsi1 = st%zpsi ! store zpsi
@@ -207,7 +213,7 @@ contains
     
     deallocate(vhxc_t2)
     
-    return
+    call pop_sub(); return
   end subroutine td_rti2
 
 end subroutine td_rti
