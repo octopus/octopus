@@ -199,7 +199,7 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
            eigens%converged, errorflag, eigens%diff)
 #endif
   case(RS_PLAN)
-    call eigen_solver_plan(m, st, h, tol, maxiter, eigens%converged, eigens%diff)
+    call eigen_solver_plan(m, f_der, st, h, tol, maxiter, eigens%converged, eigens%diff)
   end select
 
   eigens%matvec = maxiter
