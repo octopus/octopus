@@ -204,7 +204,7 @@ subroutine lcao_init(sys, h)
     call write_fatal(2)
   endif
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
-  write(message(2), '(a)')    '      (not cosidering spin or k-points)'
+  write(message(2), '(a)')    '      (not considering spin or k-points)'
   call write_info(2)
 
   allocate(lcao_data%psis(0:sys%m%np, sys%st%dim, norbs, sys%st%nik))

@@ -100,7 +100,7 @@ program excitations
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
   call oct_parse_logical("LinCasida", .true., l)
-  if(l)call calc_petersilka(2, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'full')
+  if(l)call calc_petersilka(2, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'casida')
 
   call hartree_end(hart)
 

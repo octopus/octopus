@@ -87,7 +87,7 @@ program broad
   if(l) then
     message(1) = "      Casida"
     call write_info(1)
-    call calc_broad(b, 'linear', 'full', .false.)
+    call calc_broad(b, 'linear', 'casida', .false.)
   end if
 
 contains
@@ -123,7 +123,7 @@ contains
 
       do j1 = 1, n
         w = b%min_energy + real(j1-1, r8)*b%energy_step
-        s(:, j1) = s(:, j1) + f(:)*b%b/((w-e)**2 + b%b**2) ! lorentzian
+        s(:, j1) = s(:, j1) + f(:)*b%b/((w-e)**2 + b%b**2)/M_PI ! lorentzian
       end do
     end do
 100   continue
@@ -134,7 +134,7 @@ contains
     open(iunit, file=trim(dir)+"/spectrum."+fname, status='unknown')
     do j1 = 1, n
       w = b%min_energy + real(j1-1, r8)*b%energy_step
-      write(iunit, '(5es14.4)') w/units_inp%energy%factor, s(:, j1)
+      write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor
     end do
     call io_close(iunit)
 

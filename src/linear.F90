@@ -38,6 +38,9 @@ contains
     real(r8), allocatable :: energies(:,:)
     integer :: iunit, n_pairs, i, a, ia
 
+    ! output
+    call oct_mkdir(C_string(trim(dir)))
+
     ! get occupied/unoccupied pairs
     call fix_pairs()
     
@@ -62,14 +65,10 @@ contains
 
     else if(type == 2) then ! solve full matrix
       call solve_matrix()
+    else
+      call sort_energies()
     end if
     write(*, "(1x)")
-
-    ! sort energies
-    call sort_energies()
-
-    ! output
-    call oct_mkdir(C_string(trim(dir)))
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname), status='unknown')
@@ -94,7 +93,7 @@ contains
       real(r8), allocatable :: mat(:,:), w(:), work(:), os(:,:)
       real(r8) :: temp
       integer :: ia, jb, i, j, a, b, lwork, info
-      integer :: max, actual
+      integer :: max, actual, iunit
 
       allocate(mat(n_pairs, n_pairs))
       mat = 0._r8
@@ -144,11 +143,32 @@ contains
       end do
 
       do ia = 1, n_pairs
-       do j = 1, 3
-         energies(ia, 1+j) = 2._r8 * (sum(os(:,j)*mat(:,ia)        &
-              *sqrt(st%eigenval(pair_a(:), 1) - st%eigenval(pair_i(:), 1)) ))**2 
-       end do
+        do j = 1, 3
+          energies(ia, 1+j) = 2._r8 * (sum(os(:,j)*mat(:,ia)        &
+               *sqrt(st%eigenval(pair_a(:), 1) - st%eigenval(pair_i(:), 1)) ))**2 
+        end do
       end do
+      
+      ! output eigenvectors
+      call io_assign(iunit)
+      open(iunit, file=trim(dir)+"/"+trim(fname)+".vec", status='unknown')
+      write(iunit, '(a14)', advance = 'no') ' value '
+      do ia = 1, n_pairs
+        write(iunit, '(3x,i4,a1,i4,2x)', advance='no') pair_i(ia), ' - ', pair_a(ia)
+      end do
+      write(iunit, '(1x)')
+
+      do ia = 1, n_pairs
+        write(iunit, '(es14.6)', advance='no') energies(ia, 1) / units_out%energy%factor
+        temp = 1._r8
+        if(maxval(mat(:, ia)) < abs(minval(mat(:, ia)))) temp = -temp
+        do j = 1, n_pairs
+          write(iunit, '(es14.6)', advance='no') temp*mat(j, ia)
+        end do
+        write(iunit, '(1x)')
+      end do
+
+      call io_close(iunit)
 
       deallocate(mat)
     end subroutine solve_matrix
@@ -252,7 +272,7 @@ contains
 
     subroutine matrix_elem(i, j, s)
       integer, intent(in) :: i, j
-      real(r8), intent(out) :: s(3)
+      R_TYPE, intent(out) :: s(3)
 
       real(r8) :: x(3)
       integer :: k
