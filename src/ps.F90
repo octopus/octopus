@@ -44,6 +44,7 @@ type ps_type
   type(spline_type) :: vlocal  ! local part
   type(spline_type) :: dvlocal ! derivative of the local part
   type(spline_type) :: core    ! core charge
+  type(logrid_type) :: g
 
   integer  :: ispin ! Consider spin (ispin = 2) or not (ispin = 1)
   integer  :: kbc  ! Number of KB components (1 for TM ps, 3 for HGH)
@@ -107,6 +108,12 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     endif
     ps%z = z
     call tm_process(pstm, lmax, ps%l_loc)
+    ps%g%a = pstm%g%a
+    ps%g%b = pstm%g%b
+    ps%g%nrval = pstm%g%nrval
+    allocate(ps%g%rofi(ps%g%nrval),ps%g%drdi(ps%g%nrval))
+    ps%g%rofi = pstm%g%rofi
+    ps%g%drdi = pstm%g%drdi
     if(conf%verbose > 999) call tm_debug(pstm)
   case('hg')
     call hgh_init(psp, trim(label), ispin)
@@ -117,6 +124,12 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%so_l_max = ps%l_max
     ps%z = z
     call hgh_process(psp)
+    ps%g%a = psp%g%a
+    ps%g%b = psp%g%b
+    ps%g%nrval = psp%g%nrval
+    allocate(ps%g%rofi(ps%g%nrval),ps%g%drdi(ps%g%nrval))
+    ps%g%rofi = psp%g%rofi
+    ps%g%drdi = psp%g%drdi
     if(conf%verbose > 999) call hgh_debug(psp)
   case default
     message(1) = "Unknown pseudopotential type: '"+trim(flavour)+"'"
