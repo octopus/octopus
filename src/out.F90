@@ -57,7 +57,8 @@ integer, parameter ::      &
      output_plane_y =  16, &
      output_plane_z =  32, &
      output_dx      =  64, &
-     output_dx_cdf  = 128
+     output_dx_cdf  = 128, &
+     output_single  = 32768
 
 contains
 
@@ -105,9 +106,16 @@ subroutine output_init(outp)
         if(l) outp%how = ior(outp%how, output_dx)
 #if defined(HAVE_NETCDF)
         call loct_parse_logical("OutputNETCDF", .false., l)
-        if(l) outp%how = ior(outp%how, output_dx_cdf)
+        if(l) then
+          outp%how = ior(outp%how, output_dx_cdf)
+        end if
 #endif
       end if
+    end if
+
+    call loct_parse_logical("OutputSinglePrec", .true., l)
+    if(l) then
+      outp%how = ior(outp%how, output_single)
     end if
 
   end if

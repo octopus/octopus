@@ -312,77 +312,77 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
 
     call write_warning(6)
     go to 999 ! one go to does not harm :)
+  end if
+
+  st%X(psi) = R_TOTYPE(M_ZERO)
+
+  if(mode == 0 .or. mode == -1) then
+    allocate(dpsi(1:m%np))
   else
-    st%X(psi) = R_TOTYPE(M_ZERO)
-
-    if(mode == 0 .or. mode == -1) then
-      allocate(dpsi(1:m%np))
-    else
-      allocate(zpsi(1:m%np))
-    end if
-
-    do ik = 1, st%d%nik
-      do ist = old_start, old_end
-        do id = 1, st%dim
-          imode: if(mode == 0 .or. mode == -1) then
-            if(st%restart_format == 1) then
-              read(iunit, err=999) dpsi(:)
-            else
-              read(iunit, *, err=999) dpsi(:)
-            end if
-            if(ist >= st%st_start .and. ist <= st%st_end) then
-#             ifdef R_TREAL
-                st%dpsi(1:m%np, id, ist, ik) = dpsi(:)
-#             else
-                st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), M_ZERO, PRECISION)
-#             endif
-            end if
+    allocate(zpsi(1:m%np))
+  end if
+  
+  do ik = 1, st%d%nik
+    do ist = old_start, old_end
+      do id = 1, st%dim
+        imode: if(mode == 0 .or. mode == -1) then
+          if(restart_format == 1) then
+            read(iunit, err=999) dpsi(:)
           else
-            read(iunit, err=999) zpsi(:)
-            if(ist >= st%st_start .and. ist <= st%st_end) then
-#             ifdef R_TREAL
-                st%dpsi(1:m%np, id, ist, ik) = real(zpsi(:), PRECISION)
-#             else
-                st%zpsi(1:m%np, id, ist, ik) = zpsi(:)
-#             endif
-            end if
-          end if imode
-
-        end do
-      end do
-    end do
-
-    if(mode == 0 .or. mode == -1) then
-      deallocate(dpsi)
-    else
-      deallocate(zpsi)
-    end if
-
-    if(mode == -1) then
-      read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%d%nik)
-    else
-      do ik = 1, st%d%nik
-        do ist = old_start, old_end
-          if(st%restart_format == 1) then
-            read(iunit, err=999) e
-          else
-            read(iunit, *, err=999) e
+            read(iunit, *, err=999) dpsi(:)
           end if
           if(ist >= st%st_start .and. ist <= st%st_end) then
-            st%eigenval(ist, ik) = e
+#           ifdef R_TREAL
+              st%dpsi(1:m%np, id, ist, ik) = dpsi(:)
+#           else
+              st%zpsi(1:m%np, id, ist, ik) = cmplx(dpsi(:), M_ZERO, PRECISION)
+#           endif
           end if
-        end do
-      end do
-    end if
+        else
+          read(iunit, err=999) zpsi(:)
+          if(ist >= st%st_start .and. ist <= st%st_end) then
+#           ifdef R_TREAL
+              st%dpsi(1:m%np, id, ist, ik) = real(zpsi(:), PRECISION)
+#           else
+              st%zpsi(1:m%np, id, ist, ik) = zpsi(:)
+#           endif
+          end if
+        end if imode
 
-    if(present(iter)) then ! read the time-dependent stuff
-      if(st%restart_format == 1) then
-        read(iunit, err=999) ii, v1, v2
-      else
-        read(iunit, *, err=999) ii, v1, v2
-      end if
-      iter = int(ii)
+      end do
+    end do
+  end do
+
+  if(mode == 0 .or. mode == -1) then
+    deallocate(dpsi)
+  else
+    deallocate(zpsi)
+  end if
+
+  if(mode == -1) then
+    read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%d%nik)
+  else
+    do ik = 1, st%d%nik
+      do ist = old_start, old_end
+        if(restart_format == 1) then
+          read(iunit, err=999) e
+        else
+          read(iunit, *, err=999) e
+        end if
+        if(ist >= st%st_start .and. ist <= st%st_end) then
+          st%eigenval(ist, ik) = e
+        end if
+      end do
+    end do
+  end if
+
+  if(present(iter)) then ! read the time-dependent stuff
+    if(st%restart_format == 1) then
+      read(iunit, err=999) ii, v1, v2
+    else
+      read(iunit, *, err=999) ii, v1, v2
     end if
+    iter = int(ii)
   end if
   
   call io_close(iunit)

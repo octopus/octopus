@@ -215,7 +215,11 @@ contains
     status = nf90_def_dim(ncid, "pos_2", 3, dim_pos_id(2))
 
     ! variables
-    status = nf90_def_var(ncid, fname, NF90_DOUBLE, dim_data_id, data_id)
+    if(iand(how, output_single) .ne.0) then
+      status = nf90_def_var(ncid, fname, NF90_FLOAT, dim_data_id, data_id)
+    else
+      status = nf90_def_var(ncid, fname, NF90_DOUBLE, dim_data_id, data_id)
+    end if
     status = nf90_def_var(ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
 
     ! attributes
@@ -231,7 +235,11 @@ contains
 
     status = nf90_put_var(ncid, pos_id, pos(:,:))
     ! we have to transpose the matrix: stupid Fortran!
-    status = nf90_put_var(ncid, data_id, c%RS, map=(/c%n(1)*c%n(2), c%n(1), 1/))
+    if(iand(how, output_single) .ne.0) then
+      status = nf90_put_var(ncid, data_id, real(c%RS, r4), map=(/c%n(1)*c%n(2), c%n(1), 1/))
+    else
+      status = nf90_put_var(ncid, data_id, real(c%RS, r8), map=(/c%n(1)*c%n(2), c%n(1), 1/))
+    end if
 
     ! close
     status = nf90_close(ncid)
