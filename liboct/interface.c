@@ -289,3 +289,9 @@ void F90_FUNC_(oct_ran_end, OCT_RAN_END)
 {
   gsl_rng_free(*r);
 }
+
+double F90_FUNC_(oct_clock, OCT_CLOCK)
+       ()
+{
+  return (double) clock();
+}
