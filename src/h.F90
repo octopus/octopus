@@ -265,7 +265,7 @@ subroutine hamiltonian_init(h, sys)
         
       case(PARALLELEPIPED)
         do j = 1, conf%dim
-          d = x(j) - (sys%m%lsize(j)/2._r8 - h%ab_width)
+          d = abs(x(j)) - (sys%m%lsize(j)/2._r8 - h%ab_width)
           if(d.gt.0._r8) then
             h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
           end if
