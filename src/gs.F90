@@ -101,7 +101,7 @@ contains
 
     call loct_parse_logical("LCAOStart", .true., lcao_start)
     if(lcao_start) then
-      call dh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
+      call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
 
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)
