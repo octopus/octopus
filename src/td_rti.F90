@@ -31,10 +31,11 @@ module td_rti
     real(r8), pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
   end type td_rti_type
 
-  integer, parameter :: OLD_REVERSAL         = 1, &
-                        REVERSAL             = 2, &
+  integer, parameter :: REVERSAL             = 2, &
                         APP_REVERSAL         = 3, &
                         EXPONENTIAL_MIDPOINT = 4  
+
+  real(r8), parameter, private :: scf_threshold = 1.0e-3_r8
   
 contains
   subroutine td_rti_init(m, st, tr)
@@ -44,18 +45,17 @@ contains
 
     call oct_parse_int("TDEvolutionMethod", REVERSAL, tr%method)
     select case(tr%method)
-    case(OLD_REVERSAL);         message(1) = 'Info: Evolution method:  Old-Style.'
     case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case default
       write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
-      message(2) = '(1 <= TDEvolutionMethod <= 4)'
+      message(2) = '(2 <= TDEvolutionMethod <= 4)'
       call write_fatal(2)
     end select
     call write_info(1)
     
-    allocate(tr%v_old(m%np, st%nspin, 3)) ! allocate memory to store the old KS potentials
+    allocate(tr%v_old(m%np, st%nspin, 0:3)) ! allocate memory to store the old KS potentials
     call td_exp_init(m, tr%te)            ! initialize propagator
 
   end subroutine td_rti_init
@@ -76,6 +76,7 @@ contains
     type(td_rti_type), intent(inout) :: tr
     tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
+    tr%v_old(:, :, 1) = h%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
   subroutine td_rti_dt(h, m, st, sys, tr, t, dt)
@@ -85,74 +86,56 @@ contains
     type(system_type), intent(in) :: sys
     type(td_rti_type), intent(inout) :: tr
     real(r8), intent(in) :: t, dt
+
+    integer :: is
+    logical :: self_consistent
+    complex(r8), allocatable :: zpsi1(:, :, :, :)
     
     call push_sub('td_rti')
-    
+
+    self_consistent = .false.
+    if(t<3*dt .and. (.not.h%ip_app)) then
+       self_consistent = .true.
+       allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
+       zpsi1 = st%zpsi
+    endif
+
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
+    call xpolate_pot(dt, m%np, st%nspin, &
+           tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), tr%v_old(:, :, 0))
 
     select case(tr%method)
-    case(OLD_REVERSAL)
-      call td_rti1
-    case(REVERSAL)
-      call td_rti2
-    case(APP_REVERSAL)
-      if(t<3*dt) then
-        call td_rti2
-      else
-        call td_rti3
-      endif
-    case(EXPONENTIAL_MIDPOINT)
-      if(t<3*dt) then
-        call td_rti2
-      else
-        call td_rti4
-      endif
+    case(REVERSAL);             call td_rti2
+    case(APP_REVERSAL);         call td_rti3
+    case(EXPONENTIAL_MIDPOINT); call td_rti4
     end select
+
+    if(self_consistent) then
+      do
+        tr%v_old(:, :, 3) = tr%v_old(:, :, 0)
+
+        call zcalcdens(st, m%np, st%rho, .true.)
+        call zh_calc_vhxc(h, m, st, sys=sys)
+        tr%v_old(:, :, 0) = h%vhxc
+        h%vhxc = tr%v_old(:, :, 1)
+
+        if( maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /)) < scf_threshold) exit
+
+        st%zpsi = zpsi1
+        select case(tr%method)
+         case(REVERSAL);             call td_rti2
+         case(APP_REVERSAL);         call td_rti3
+         case(EXPONENTIAL_MIDPOINT); call td_rti4
+        end select
+      enddo
+      deallocate(zpsi1)
+    endif
 
     call pop_sub()
   contains
 
-    ! Warning: this subroutine should only be used with LDA/GGA functionals
-    subroutine td_rti1
-      integer is, ik, ist
-      real(r8), allocatable :: aux(:,:)
-      complex(r8), allocatable :: zpsi1(:,:,:,:)
-    
-      call push_sub('td_rti1')
-      
-      allocate(aux(m%np, st%nspin))
-      
-      call xpolate_pot(dt/2._r8, m%np, st%nspin, &
-           tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), aux)
-      
-      h%vhxc = aux
-      allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
-      zpsi1 = st%zpsi
-      do ik = 1, st%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
-        end do
-      end do
-      st%zpsi = zpsi1
-      deallocate(zpsi1)
-      
-      call zcalcdens(st, m%np, aux, .true.)
-      st%rho = (st%rho +  aux) / 2.0_r8
-      deallocate(aux)
-      
-      call zh_calc_vhxc(h, m, st, sys=sys)
-      
-      do ik = 1, st%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
-        end do
-      end do
-      
-      call pop_sub()
-    end subroutine td_rti1
-    
     subroutine td_rti2
       real(r8), allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       complex(r8), allocatable :: zpsi1(:,:,:,:)
@@ -206,42 +189,31 @@ contains
     
     subroutine td_rti3
       integer is, ik, ist
-      real(r8), allocatable :: aux(:,:)
-
       call push_sub('td_rti3')
-      
-      if(.not.h%ip_app) then
-        allocate(aux(m%np, st%nspin))
-        call xpolate_pot(dt, m%np, st%nspin, &
-             tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), aux)
-      end if
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t-dt)
+           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t-dt)
         end do
       end do
       
-      if(.not.h%ip_app) h%vhxc = aux
+      h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/2._r8, t)
         end do
       end do
       
-      if(.not.h%ip_app) deallocate(aux)
-      
       call pop_sub()
     end subroutine td_rti3
     
     subroutine td_rti4
       integer :: ist, ik
-      
       call push_sub('td_rti4')
-      
+
       if(.not.h%ip_app) then
-        call xpolate_pot(dt/2._r8, m%np, st%nspin, &
-             tr%v_old(:, :, 3), tr%v_old(:, :, 2), tr%v_old(:, :, 1), h%vhxc)
+        call xpolate_pot(-dt/M_TWO, m%np, st%nspin, &
+             tr%v_old(:, :, 2), tr%v_old(:, :, 1), tr%v_old(:, :, 0), h%vhxc)
       end if
       
       do ik = 1, st%nik
@@ -258,14 +230,14 @@ contains
       integer, intent(in)   :: np, dim
       real(r8), intent(in)  :: pot0(np, dim), pot1(np, dim), pot2(np, dim)
       real(r8), intent(out) :: pot(np, dim)
-    
+
       !pot = pot0 + t/dt       * (3._r8/2._r8*pot0 + 1._r8/2._r8*pot2 - 2.0_r8*pot1) + &
       !             t**2/dt**2 * (1._r8/2._r8*pot0 + 1._r8/2._r8*pot2 -        pot1)
-      call dcopy(np*dim,                                                    pot0(1, 1), 1, pot(1, 1), 1)
-      call daxpy(np*dim, (t/dt)*(3._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot0(1, 1), 1, pot(1, 1), 1)
-      call daxpy(np*dim, (t/dt)*(-2._r8)      + (t**2/dt**2)*(-1._r8),      pot1(1, 1), 1, pot(1, 1), 1)
-      call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2(1, 1), 1, pot(1, 1), 1)
-      
+       call dcopy(np*dim,                                                    pot0(1, 1), 1, pot(1, 1), 1)
+       call daxpy(np*dim, (t/dt)*(3._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot0(1, 1), 1, pot(1, 1), 1)
+       call daxpy(np*dim, (t/dt)*(-2._r8)      + (t**2/dt**2)*(-1._r8),      pot1(1, 1), 1, pot(1, 1), 1)
+       call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2(1, 1), 1, pot(1, 1), 1)
+
     end subroutine xpolate_pot
     
   end subroutine td_rti_dt
