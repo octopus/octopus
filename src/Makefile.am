@@ -27,7 +27,7 @@ noinst_HEADERS = \
 	mesh_create.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
 	specie1D.F90 specie3D.F90\
-	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 xc_HJU.F90 \
+	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 \
 	h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90 \
 	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90\
 	states_inc.F90 states_kpoints.F90\
@@ -115,7 +115,7 @@ f.o: f_inc.F90
 specie.o: specie1D.F90 specie3D.F90
 poisson.o: poisson1D.F90 poisson2D.F90 poisson3D.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90
-xc.o: xc_KLI_SIC.F90 xc_HJU.F90
+xc.o: xc_KLI_SIC.F90
 h.o: h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90
 eigen.o: eigen_cg2.F90 eigen_cg3.F90
 states.o: states_inc.F90 states_kpoints.F90
