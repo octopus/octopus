@@ -1,4 +1,4 @@
-tm2dir = $(pkgdatadir)/util
-dist_tm2_DATA = mf.cfg mf.net inp README
+utildir = $(pkgdatadir)/util
+dist_util_DATA = mf.cfg mf.net inp display_mesh_index.gp README
 
 DISTCLEANFILES = Makefile.in
