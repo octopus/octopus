@@ -17,6 +17,7 @@
  02111-1307, USA.
 */
 
+#include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -25,20 +26,22 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/utsname.h>
+#include <string.h>
 
 #include "config.h"
 #include "varia.h"
 
 
-/* Gets the name of the operating system, as described in the
- variable utsname.sysname */
+/* Gets the name of the machine */
 void sysname(char **c)
 {
   struct utsname name;
   uname(&name);
-  *c = (char *)calloc(sizeof(name.sysname)+1,sizeof(char));
-  strncpy(*c, name.sysname, strlen(name.sysname));
-  return;
+  *c = (char *)malloc(sizeof(name.nodename) + sizeof(name.sysname) + 4);
+  strcpy(*c, name.nodename);
+	strcat(*c, " (");
+	strcat(*c, name.sysname);
+	strcat(*c, ")");
 }
 
 
@@ -98,7 +101,7 @@ int getttywidth(void)
 void progress_bar(int actual, int max)
 {
 	static struct timeval start;
-	struct timeval now, td, wait;
+	struct timeval now;
 	char buf[512], fmt[64];
 	int i, ratio, barlength, remaining;
 	double elapsed;

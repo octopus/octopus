@@ -41,7 +41,7 @@ program octopus
 
   ! Let us print where we are running
   call oct_sysname(message(2))
-  message(1) = "The octopus is swimming on a "+trim(message(2))+" system."
+  message(1) = "The octopus is swimming in "+trim(message(2))
   message(1) = str_center(trim(message(1)),70)
   write(message(2),'(a)')
   call write_info(2)
