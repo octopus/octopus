@@ -93,7 +93,7 @@ am__include = @am__include@
 am__quote = @am__quote@
 install_sh = @install_sh@
 bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
-	excitations function-to-dx nbo2xyz
+	excitations function-to-dx phonon-spectrum nbo2xyz
 
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
@@ -148,6 +148,8 @@ function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 out.F90 spectrum
 function_to_dx_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
 nbo2xyz_LDADD = ../liboct/liboct.a @GSL_LIBS@
+phonon_spectrum_SOURCES = global.F90 io.F90 liboct.F90 units.F90 phonon_spectrum.F90
+phonon_spectrum_LDADD = ../liboct/liboct.a @GSL_LIBS@
 excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 ps_xc.F90 ps_kb.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
@@ -167,7 +169,8 @@ EXTRA_PROGRAMS = octopus$(EXEEXT) octopus-mpi$(EXEEXT) \
 	octopus-pol$(EXEEXT) octopus-pol-mpi$(EXEEXT)
 bin_PROGRAMS = @PROGNAME@ strength-function$(EXEEXT) \
 	hs-from-mult$(EXEEXT) hs-from-acc$(EXEEXT) excitations$(EXEEXT) \
-	function-to-dx$(EXEEXT) nbo2xyz$(EXEEXT)
+	function-to-dx$(EXEEXT) phonon-spectrum$(EXEEXT) \
+	nbo2xyz$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
 am_excitations_OBJECTS = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
@@ -248,6 +251,11 @@ am_octopus_pol_mpi_OBJECTS = $(am__objects_1)
 octopus_pol_mpi_OBJECTS = $(am_octopus_pol_mpi_OBJECTS)
 octopus_pol_mpi_DEPENDENCIES = ../liboct/liboct.a
 octopus_pol_mpi_LDFLAGS =
+am_phonon_spectrum_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) \
+	liboct.$(OBJEXT) units.$(OBJEXT) phonon_spectrum.$(OBJEXT)
+phonon_spectrum_OBJECTS = $(am_phonon_spectrum_OBJECTS)
+phonon_spectrum_DEPENDENCIES = ../liboct/liboct.a
+phonon_spectrum_LDFLAGS =
 am_strength_function_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) \
 	liboct.$(OBJEXT) units.$(OBJEXT) spectrum.$(OBJEXT) \
 	strength_function.$(OBJEXT)
@@ -265,11 +273,11 @@ DIST_SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) \
 	$(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) \
 	$(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) \
 	$(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) \
-	$(strength_function_SOURCES)
+	$(phonon_spectrum_SOURCES) $(strength_function_SOURCES)
 HEADERS = $(noinst_HEADERS)
 
 DIST_COMMON = $(noinst_HEADERS) Makefile.am Makefile.in config.h.in
-SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
+SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(phonon_spectrum_SOURCES) $(strength_function_SOURCES)
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -367,6 +375,9 @@ octopus-pol$(EXEEXT): $(octopus_pol_OBJECTS) $(octopus_pol_DEPENDENCIES)
 octopus-pol-mpi$(EXEEXT): $(octopus_pol_mpi_OBJECTS) $(octopus_pol_mpi_DEPENDENCIES) 
 	@rm -f octopus-pol-mpi$(EXEEXT)
 	$(LINK) $(octopus_pol_mpi_LDFLAGS) $(octopus_pol_mpi_OBJECTS) $(octopus_pol_mpi_LDADD) $(LIBS)
+phonon-spectrum$(EXEEXT): $(phonon_spectrum_OBJECTS) $(phonon_spectrum_DEPENDENCIES) 
+	@rm -f phonon-spectrum$(EXEEXT)
+	$(LINK) $(phonon_spectrum_LDFLAGS) $(phonon_spectrum_OBJECTS) $(phonon_spectrum_LDADD) $(LIBS)
 strength-function$(EXEEXT): $(strength_function_OBJECTS) $(strength_function_DEPENDENCIES) 
 	@rm -f strength-function$(EXEEXT)
 	$(LINK) $(strength_function_LDFLAGS) $(strength_function_OBJECTS) $(strength_function_LDADD) $(LIBS)
