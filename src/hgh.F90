@@ -80,6 +80,7 @@ subroutine ps_ghg_read_file(psp, filename)
 
   integer :: iunit, i
   logical :: found
+  character(len=256) :: filename2
 
   sub_name = 'ps_ghg_read_file'; call push_sub()
 
@@ -94,8 +95,21 @@ subroutine ps_ghg_read_file(psp, filename)
     endif
     call io_close(iunit)
   else
-    message(1) = "Pseudopotential file '"//trim(filename)//"hgh' not found"
-    call write_fatal(1)
+      filename2 = SHARE_OCTOPUS//"/PP/HGH/"//filename//".hgh"
+      inquire(file=filename2, exist=found)
+      if(found) then
+         call io_assign(iunit)
+         open(iunit, file=filename//'.ascii', form='formatted')
+         i = load_params(iunit, psp)
+         if(i .ne. 0) then
+           message(1) = 'Error reading hgh file'
+           call write_fatal(1)
+         endif
+         call io_close(iunit)
+      else
+         message(1) = "Pseudopotential file '"//trim(filename)//"hgh' not found"
+         call write_fatal(1)
+      end if
   end if
 !!$      ! This should go someday...
 !!$      write(*,'(a)') '****'

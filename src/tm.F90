@@ -47,6 +47,7 @@ subroutine ps_tm_read_file(psf, filename)
   type(ps_file), intent(inout) :: psf
   character(len=*), intent(in) :: filename
 
+  character(len=256) :: filename2
   integer :: iunit
   logical :: found
 
@@ -66,8 +67,17 @@ subroutine ps_tm_read_file(psf, filename)
       call read_file_data_ascii(iunit, psf)
       call io_close(iunit)
     else
-      message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
-      call write_fatal(1)
+      filename2 = SHARE_OCTOPUS//"/PP/TM2/"//filename//".ascii"
+      inquire(file=filename2, exist=found)
+      if(found) then
+         call io_assign(iunit)
+         open(iunit, file=filename//'.ascii', form='formatted', status='unknown')
+         call read_file_data_ascii(iunit, psf)
+         call io_close(iunit)
+      else
+         message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
+         call write_fatal(1)
+      endif
     end if
   end if
 
