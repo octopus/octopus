@@ -39,26 +39,25 @@ subroutine zso (h, m, psi, hpsi, dim, ik)
      do ikbc = 1, nlop%c
         do jkbc = 1, nlop%c
           ! WARNING: Not every efficient. Has to be changed, and checked.
-          stop 'Does not work due to vol_pp'
-          !uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 1), &
-          !   tpsi(:, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 1), &
+             tpsi(:, 1))*m%vol_pp(1)*nlop%so_uvu(ikbc, jkbc)
           call lalg_axpy(mps, uvpsi/2, nlop%so_uv(:, jkbc), tHpsi(:, 2))
-          !uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 1), &
-          !   tpsi(:, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 1), &
+             tpsi(:, 2))*m%vol_pp(1)*nlop%so_uvu(ikbc, jkbc)
           call lalg_axpy(mps, uvpsi/2, nlop%so_uv(:, jkbc), tHpsi(:, 1))
  
-          !uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 2), &
-          !   tpsi(:, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 2), &
+             tpsi(:, 1))*m%vol_pp(1)*nlop%so_uvu(ikbc, jkbc)
           call lalg_axpy(mps, M_zI*uvpsi/2, nlop%so_uv(:, jkbc), tHpsi(:, 2))
-          !uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 2), &
-          !   tpsi(:, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 2), &
+             tpsi(:, 2))*m%vol_pp(1)*nlop%so_uvu(ikbc, jkbc)
           call lalg_axpy(mps, -M_zI*uvpsi/2, nlop%so_uv(:, jkbc), tHpsi(:, 1))
 
-          !uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 3), &
-          !   tpsi(:, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 3), &
+             tpsi(:, 1))*m%vol_pp(1)*nlop%so_uvu(ikbc, jkbc)
           call lalg_axpy(mps, uvpsi/2, nlop%so_uv(:, jkbc), tHpsi(:, 1))
-          !uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 3), &
-          !   tpsi(:, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 3), &
+             tpsi(:, 2))*m%vol_pp(1)*nlop%so_uvu(ikbc, jkbc)
           call lalg_axpy(mps, -uvpsi/2, nlop%so_uv(:, jkbc), tHpsi(:, 2))
         end do
      end do
