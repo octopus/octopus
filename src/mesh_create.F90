@@ -33,7 +33,7 @@ subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
   integer :: i, ix, iy, iz, ii(3), enlarge
   
   call push_sub('mesh_init')
-  
+ 
   enlarge = 0
   if(present(enlarge_)) enlarge = enlarge_
 
@@ -42,6 +42,7 @@ subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
   call read_misc()          ! miscellany stuff
   call read_box()           ! parameters defining the simulation box
   call read_spacing ()      ! parameters defining the (canonical) spacing
+  call read_box_offset()    ! parameters defining the offset of the origin
   call build_lattice()      ! build lattice vectors
 
   ! initialize curvlinear coordinates
@@ -118,11 +119,17 @@ contains
 
     m%lsize = -M_ONE
     if(m%box_shape == PARALLELEPIPED) then
-      if(loct_parse_block('lsize', blk) < 1) then
+      
+      if(loct_parse_block('lsize', blk) == 0) then
+        if(loct_parse_block_cols(blk,0) < conf%dim) then
+            message(1) = 'Size of Block "lsize" does not match number of dimensions'
+            call write_fatal(1)
+        endif
+      else
         message(1) = 'Block "lsize" not found in input file.'
         call write_fatal(1)
       endif
-      
+     
       do i = 1, conf%dim
         call loct_parse_block_float(blk, 0, i-1, m%lsize(i))
         if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'lsize')
@@ -163,6 +170,9 @@ contains
           call loct_parse_block_float(blk, 0, i-1, m%h(i))
         end do
         call loct_parse_block_end(blk)
+      else
+        message(1) = '"Spacing" is a block if BoxShape == parallelepiped.'
+        call write_fatal(1)
       endif
     end select
 
@@ -187,6 +197,28 @@ contains
     end do
 
   end subroutine read_spacing
+
+  subroutine read_box_offset()
+    integer :: i
+    integer(POINTER_SIZE) :: blk
+
+    m%box_offset = M_ZERO
+    select case(m%box_shape)
+    case(PARALLELEPIPED)
+      if(loct_parse_block('BoxOffset', blk) == 0) then
+        do i = 1, conf%dim
+          call loct_parse_block_float(blk, 0, i-1, m%box_offset(i))
+        end do
+        call loct_parse_block_end(blk)
+      else
+        message(1) = 'Block "BoxOffset" not properly defined in input file.'
+        message(2) = 'Assuming zero offset in all directions.'
+        call write_warning(2)
+        m%box_offset = M_ZERO
+      endif
+    end select
+        
+  end subroutine read_box_offset
 
   subroutine check_def(var, def, text)
     FLOAT, intent(in) :: var, def
@@ -381,13 +413,13 @@ subroutine mesh_create_xyz(m, enlarge)
   if(conf%dim > 2) ez = enlarge
 
   do ix = m%nr(1,1), m%nr(2,1)
-    chi(1) = real(ix, PRECISION) * m%h(1)
+    chi(1) = real(ix, PRECISION) * m%h(1) + m%box_offset(1)
 
     do iy = m%nr(1,2), m%nr(2,2)
-      chi(2) = real(iy, PRECISION) * m%h(2)
+      chi(2) = real(iy, PRECISION) * m%h(2) + m%box_offset(2)
 
       do iz = m%nr(1,3), m%nr(2,3)
-        chi(3) = real(iz, PRECISION) * m%h(3)
+        chi(3) = real(iz, PRECISION) * m%h(3) + m%box_offset(3)
         
         call curvlinear_chi2x(m%cv, m%geo, chi(:), x(:, ix, iy, iz))
 
@@ -553,14 +585,16 @@ function mesh_index(m, ix_, dir) result(index)
     do i = 1, conf%dim
       if(ix(i) < m%nr(1, i)) then       ! first look left
         if(i <= conf%periodic_dim) then ! fold point
-          ix(i) = ix(i) - 2*m%nr(1, i)
+          ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i))
+!          ix(i) = ix(i) - 2*m%nr(1, i)
         else
           ix(i) = m%nr(1, i)
           index = 0
         end if
       else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
         if(i <= conf%periodic_dim) then
-          ix(i) = ix(i) + 2*m%nr(1, i)
+          ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i))
+!          ix(i) = ix(i) + 2*m%nr(1, i)
         else
           ix(i) = m%nr(2, i)
           index = 0
