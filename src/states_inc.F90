@@ -379,6 +379,21 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
     end do
   end if
 
+  if(outp%what(output_wfs_sqmod)) then
+    do ist = 1, st%nst
+      is = outp%wfs((ist-1)/32 + 1)
+      if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
+        do ik = 1, st%nik
+          do idim = 1, st%dim
+            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
+            call doutput_function (outp, dir, fname, m, &
+                 abs(st%R_FUNC(psi) (1:, idim, ist, ik))**2, sqrt(u))
+          end do
+        end do
+      end if
+    end do
+  end if
+  
   if(conf%dim==3.and.outp%what(output_elf)) then
     call elf()
   end if
@@ -390,8 +405,6 @@ contains
     real(r8), allocatable :: c(:), j(:,:,:), r(:), gr(:,:)
     R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
-
-    real(r8), parameter :: dmin = 1e-10_r8
 
     ! single or double occupancy
     if(st%nspin == 1) then
@@ -413,7 +426,7 @@ contains
       r(0) = 0._r8
       call dmesh_derivatives(m, r(0:m%np), grad=gr)
       do i = 1, m%np
-        if(r(i) >= dmin) then
+        if(r(i) >= 1d-10) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
 #if defined(R_TCOMPLEX)
           c(i) = c(i) - sum(j(1:conf%dim, i, is)**2)/(s*s*r(i))
@@ -429,7 +442,7 @@ contains
           do idim = 1, st%dim
             call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(0:m%np, idim, ist, ik), grad=gpsi(:,:))
             do i = 1, m%np
-              if(r(i) >= dmin) then
+              if(r(i) >= 1d-10) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
               end if
             end do
@@ -440,7 +453,7 @@ contains
       
       f = 3._r8/5._r8*(6._r8*M_PI**2)**(2._r8/3._r8)
       do i = 1, m%np
-        if(r(i) >= dmin) then
+        if(r(i) >= 1d-10) then
           d    = f*r(i)**(5._r8/3._r8)
           c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
         else
