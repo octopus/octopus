@@ -30,7 +30,7 @@ dnl Check f90 compiler
 AC_DEFUN(ACX_PROG_F90,
 [
 if test -z "$F90"; then
-  AC_CHECK_PROGS(F90, f90 abf90 xlf90)
+  AC_CHECK_PROGS(F90, [f90 abf90 pgf90 ifc xlf90])
     test -z "$F90" && AC_MSG_ERROR([no acceptable Fortran 90 compiler found in $PATH])
 fi
 
@@ -45,6 +45,9 @@ if test -z "${F90FLAGS}"; then
 		abf90*)
 			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
+		ifc*)
+			F90FLAGS="-O3 -lowercase -us"
+		;;
 		*)
 			F90FLAGS="-O"
 		esac
@@ -52,6 +55,9 @@ if test -z "${F90FLAGS}"; then
 	alphaev*)
 		F90FLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
 		;;
+	powerpc-ibm*)
+		F90FLAGS="-qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
+	  ;;
 	*)
 		F90FLAGS="-O"
 	esac

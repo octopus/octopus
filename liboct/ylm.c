@@ -3,18 +3,18 @@
 
 #include <gsl/gsl_sf_legendre.h>
 
-// normalization constants for the spherical harmonics
+/* normalization constants for the spherical harmonics */
 static double sph_cnsts[9] = {
-	0.282094791773878, // l = 0
-	0.488602511902920, 0.488602511902920, 0.488602511902920, // l = 1
+	0.282094791773878, /* l = 0 */
+	0.488602511902920, 0.488602511902920, 0.488602511902920, /* l = 1 */
 	0.182091405098680, 0.364182810197360, 0.630783130505040, 0.364182810197360, 0.182091405098680
 };
 
-// Computes real spherical harmonics ylm in the direction of vector r:
-//    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
-//    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
-// with (theta,phi) the polar angles of r, c a positive normalization
-// constant and plm associated legendre polynomials.
+/* Computes real spherical harmonics ylm in the direction of vector r:
+	 ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
+	 ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
+	 with (theta,phi) the polar angles of r, c a positive normalization
+	 constant and plm associated legendre polynomials. */
 double ylm(double x, double y, double z, int l, int m)
 {
 	double r, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
@@ -25,7 +25,7 @@ double ylm(double x, double y, double z, int l, int m)
 
 	r = sqrt(x*x + y*y + z*z);
 
-	// if r=0, direction is undefined => make ylm=0 except for l=0
+	/* if r=0, direction is undefined => make ylm=0 except for l=0 */
 	if(r == 0.) return 0.;
 
 	rx = x/r; ry = y/r; rz = z/r;
@@ -47,13 +47,13 @@ double ylm(double x, double y, double z, int l, int m)
 		}
 	}
 
-	// get phase
+	/* get phase */
 	r = sqrt(rx*rx + ry*ry);
-	if(fabs(r) < 1e-20) // one never knows...
+	if(fabs(r) < 1e-20) /* one never knows... */
 		r = 1e-20;
 	cosphi = rx/r; sinphi = ry/r;
 		
-	// compute sin(mphi) and cos(mphi) by adding cos/sin
+	/* compute sin(mphi) and cos(mphi) by adding cos/sin */
 	cosm = 1.; sinm=0.;
 	for(i=0; i<abs(m); i++){
 		double a = cosm, b = sinm;

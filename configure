@@ -3174,7 +3174,7 @@ test -n "$YACC" || YACC="yacc"
 
 
 if test -z "$F90"; then
-  for ac_prog in f90 abf90 xlf90
+  for ac_prog in f90 abf90 pgf90 ifc xlf90
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3229,6 +3229,9 @@ if test -z "${F90FLAGS}"; then
 		abf90*)
 			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
+		ifc*)
+			F90FLAGS="-O3 -lowercase -us"
+		;;
 		*)
 			F90FLAGS="-O"
 		esac
@@ -3236,6 +3239,9 @@ if test -z "${F90FLAGS}"; then
 	alphaev*)
 		F90FLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
 		;;
+	powerpc-ibm*)
+		F90FLAGS="-qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
+	  ;;
 	*)
 		F90FLAGS="-O"
 	esac
@@ -5468,7 +5474,7 @@ test "x$enable_libtool_lock" != xno && enable_libtool_lock=yes
 case $host in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5471 "configure"' > conftest.$ac_ext
+  echo '#line 5477 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -6004,7 +6010,7 @@ chmod -w .
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -o out/conftest2.$ac_objext"
 compiler_c_o=no
-if { (eval echo configure:6007: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
+if { (eval echo configure:6013: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
   # The compiler can only warn and ignore the option if not recognized
   # So say no if there are warnings
   if test -s out/conftest.err; then
@@ -7797,7 +7803,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7800 "configure"
+#line 7806 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -7895,7 +7901,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7898 "configure"
+#line 7904 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -9481,7 +9487,7 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_func_gsl_complex_sqrt" >&5
 echo "${ECHO_T}$ac_cv_func_gsl_complex_sqrt" >&6
 if test $ac_cv_func_gsl_complex_sqrt = yes; then
-  LIB_GSL=" "
+  LIB_GSL="-lm"
 fi
 
 	  fi
@@ -9492,7 +9498,7 @@ if test "${ac_cv_lib_gsl_gsl_complex_sqrt+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lgsl "-lgslcblas" $LIBS"
+LIBS="-lgsl -lgslcblas -lm $LIBS"
 cat >conftest.$ac_ext <<_ACEOF
 #line $LINENO "configure"
 #include "confdefs.h"
@@ -9542,11 +9548,11 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_lib_gsl_gsl_complex_sqrt" >&5
 echo "${ECHO_T}$ac_cv_lib_gsl_gsl_complex_sqrt" >&6
 if test $ac_cv_lib_gsl_gsl_complex_sqrt = yes; then
-  LIB_GSL="-lgsl -lgslcblas"
+  LIB_GSL="-lgsl -lgslcblas -lm"
 fi
 
 	  fi
-  	if test -z "{$LIB_GSL}"; then
+  	if test -z "${LIB_GSL}"; then
     	{ { echo "$as_me:$LINENO: error: couldn't find gsl library" >&5
 echo "$as_me: error: couldn't find gsl library" >&2;}
    { (exit 1); exit 1; }; }

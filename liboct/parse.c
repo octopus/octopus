@@ -21,15 +21,14 @@ static char *str_trim(char *in)
 	return in;
 }
 
-static char parse_get_line(FILE *f, char **s, int *length)
+static int parse_get_line(FILE *f, char **s, int *length)
 {
-	int i;
-	char c;
+	int i, c;
 
 	i = 0;
 	do{
 		c = getc(f);
-		if(c == '#') // skip comments
+		if(c == '#') /* skip comments */
 			while(c!=EOF && c!='\n') c = getc(f);
 		else if(c != EOF){
 			if (i == *length - 1){
@@ -48,8 +47,8 @@ static char parse_get_line(FILE *f, char **s, int *length)
 int parse_init(char *file_in, char *file_out)
 {
 	FILE *f;
-	char *s, c;
-	int length = 0;
+	char *s;
+	int c, length = 0;
 
 	sym_init_table();
 
@@ -67,23 +66,23 @@ int parse_init(char *file_in, char *file_out)
 	fprintf(fout, "# Octopus parser started\n");
 
 	if(!f)
-		return -1; // error opening file
+		return -1; /* error opening file */
 
-	// we now read in the file and parse
+	/* we now read in the file and parse */
 	length = 40;
 	s = (char *)malloc(length + 1);
 	do{
 		c = parse_get_line(f, &s, &length);
 		if(*s){
-			if(*s == '%'){ // we have a block
+			if(*s == '%'){ /* we have a block */
 				*s = ' ';
 				str_trim(s);
-				if(getsym(s) != NULL){ // error
+				if(getsym(s) != NULL){ /* error */
 					fprintf(stderr, "%s \"%s\" %s", "Block", s, "already defined");
-					do{ // skip block
+					do{ /* skip block */
 						c = parse_get_line(f, &s, &length);
 					}while(c != EOF && *s != '%');
-				}else{ // parse block
+				}else{ /* parse block */
 					symrec *rec;
 					rec = putsym(s, S_BLOCK);
 					rec->value.block = (sym_block *)malloc(sizeof(sym_block));
@@ -102,7 +101,7 @@ int parse_init(char *file_in, char *file_out)
 							rec->value.block->lines[l].n = 0;
 							rec->value.block->lines[l].fields = NULL;
 
-							// parse columns
+							/* parse columns */
 							for(s1 = s; (tok = strtok(s1, "|")) != NULL; s1 = NULL){
 								char *tok2 = strdup(tok);
 								str_trim(tok2);
@@ -116,7 +115,7 @@ int parse_init(char *file_in, char *file_out)
 						}
 					}while(c != EOF && *s != '%');
 				}
-			}else{ // we can parse it np
+			}else{ /* we can parse it np */
 				parse_result c;
 				parse_exp(s, &c);
 			}
@@ -227,7 +226,7 @@ static int parse_block_work(char *name, int l, int col, parse_result *r)
 	ptr = getsym(name);
 	if(ptr && ptr->type == S_BLOCK){
 		if(l < 0 || l >= ptr->value.block->n)
-			return -2; // dimension error
+			return -2; /* dimension error */
 		if(col < 0 || col >= ptr->value.block->lines[l].n)
 			return -2;
 

@@ -9,22 +9,22 @@
 #include "f77_func.h"
 #include "liboct.h"
 
-// Fortran does not have the asinh intrinsic, 
-// so we use the one from libm.a
+/* Fortran does not have the asinh intrinsic, 
+	 so we use the one from libm.a */
 double F77_FUNC_(asinh, ASINH)
 		 (double *x)
 {
   return asinh(*x);
 }
 
-// complementary error function (we use the one in gsl)
+/* complementary error function (we use the one in gsl) */
 double F77_FUNC_(erfc, ERFC)
 		 (double *x)
 {
 	return gsl_sf_erfc(*x);
 }
 
-// error function (we use the one in gsl)
+/* error function (we use the one in gsl) */
 double F77_FUNC_(erf, ERC)
 		 (double *x)
 {
@@ -37,14 +37,14 @@ double F77_FUNC_(ylm, YLM)
 	return ylm(*x, *y, *z, *l, *m);
 }
 
-// from varia.c
+/* from varia.c */
 void F77_FUNC_(fft_optimize, FFT_OPTIMIZE)
 		 (int *n, int *p, int *par)
 {
 	fft_optimize(n, *p, *par);
 }
 
-// Interface to the GSL interpolation functions
+/* Interface to the GSL interpolation functions */
 void F77_FUNC_(spline_end, SPLINE_END)
 		 (void **spl, void **acc)
 {
@@ -67,7 +67,7 @@ double F77_FUNC_(spline_eval, SPLINE_EVAL)
 	return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
-// Interface to the parsing routines
+/* Interface to the parsing routines */
 int F77_FUNC_(parse_init, PARSE_INIT)
 		 (char *in, char *out)
 { 

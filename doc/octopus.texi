@@ -389,10 +389,7 @@ stationary-action principle.
 
 The proof of the first theorem is based directly on the evolution of
 the time-dependent Schr@"odinger equation from a fixed initial
-many-particle state 
-@tex
-  $\Psi(t_0)=\Psi_0$ 
-@end tex
+many-particle state @tex $\Psi(t_0)=\Psi_0$ @end tex
 under the influence of a time-dependent potential @tex $v(t)$ @end tex
 required to be expandable in a Taylor series around @tex $t_0.$ @end tex
 The initial state @tex $\Psi_0$ @end tex
@@ -407,15 +404,18 @@ therefore the expectation value of any quantum mechanical operator
 is a unique functional of the density.
 
 The second theorem deals with the variational principle of the action
-functional with the initial condition @tex $\Psi(t_0)=\Psi_0.$ @end tex
+functional with the initial condition 
+@tex $\Psi(t_0)=\Psi_0.$ @end tex
 From the previous one-to-one mapping between time-dependent
 potentials and densities, the action is a functional of the density
 that must have a stationary point at the correct time-dependent
 density.
-Thus the Euler equation corresponding to the extrema of @tex $A[\rho],$ @end tex
+Thus the Euler equation corresponding to the extrema of 
+@tex $A[\rho],$ @end tex
 @tex $$
   {\delta A[\rho] \over \delta \rho({\bf r},t)} =0,
-$$ @end tex
+$$ 
+@end tex
 determines the time dependent density, just
 as in the Hohenberg-Kohn formalism the static ground state
 density is given by the minimum of the total energy
@@ -423,7 +423,8 @@ density is given by the minimum of the total energy
 
 Similarly, one can define a time-dependent Kohn-Sham (KS) scheme by
 introducing a non-interacting system that reproduces the exact
-interacting density @tex $\rho({\bf r},t)$. @end tex
+interacting density 
+@tex $\rho({\bf r},t)$. @end tex
 One gets the following time-dependent KS-equations:
 @tex $$
   \left[ - {1 \over 2} \nabla^2 + V_{eff}({\bf r},t)
@@ -444,11 +445,14 @@ the sum of the external time-dependent applied field,
 the time-dependent Hartree term, plus the  xc potential (defined
 through the equivalence between the interacting and fictitious
 non-interacting systems). The variational principle yields
-@tex $$
+@tex 
+$$
   V_{\rm xc}({\bf r},t) = 
   {\delta A_{\rm xc}[\rho] \over \delta \rho({\bf r},t)} \, ,
-$$ @end tex
-where @tex $A_{\rm xc}[\rho]$ @end tex
+$$ 
+@end tex
+where @tex $A_{\rm xc}[\rho] $ 
+@end tex
 is the xc part of the action functional
 
 The main advantage of the time-dependent KS-scheme lies in its

@@ -164,12 +164,12 @@ if test -z "${LIB_GSL}"; then
   	fi
 
 	  if test -z "${LIB_GSL}"; then
-  		AC_CHECK_FUNC(gsl_complex_sqrt, [LIB_GSL=" "])
+  		AC_CHECK_FUNC(gsl_complex_sqrt, [LIB_GSL="-lm"], [], [-lm])
 	  fi
   	if test -z "${LIB_GSL}"; then
-    	AC_CHECK_LIB(gsl, gsl_complex_sqrt, [LIB_GSL="-lgsl -lgslcblas"], [], "-lgslcblas")
+    	AC_CHECK_LIB(gsl, gsl_complex_sqrt, [LIB_GSL="-lgsl -lgslcblas -lm"], [], [-lgslcblas -lm])
 	  fi
-  	if test -z "{$LIB_GSL}"; then
+  	if test -z "${LIB_GSL}"; then
     	AC_MSG_ERROR([couldn't find gsl library])
 		fi
 

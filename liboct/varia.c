@@ -1,7 +1,7 @@
 #include <math.h>
 
-// optimizes the order of the fft
-// p is the maximum prime allowed in n
+/* optimizes the order of the fft
+	 p is the maximum prime allowed in n */
 void fft_optimize(int *n, int p, int par)
 {
 	if(*n <= 2) return;

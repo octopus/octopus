@@ -61,7 +61,7 @@ void F77_FUNC_(printrecipe, PRINTRECIPE)
 	int i, j, n;
 	char *s, c[NCOLS+5];
 
-	// initialize random numbers
+	/* initialize random numbers */
 	srand((unsigned int)time(NULL));
 
 	if(*lang<0 || *lang>=NO_LANGS){
@@ -69,15 +69,15 @@ void F77_FUNC_(printrecipe, PRINTRECIPE)
 		return;
 	}
 
-	// count recipes in this language
+	/* count recipes in this language */
 	n = 0;
 	while(rec[*lang][n] != NULL) n++;
 	i = (int) (((float)n)*rand()/(RAND_MAX+1.0));
 
-	// we now print it in 80 column format
+	/* we now print it in 80 column format */
 	s = rec[*lang][i];
 	do{
-		// skip inital white space
+		/* skip inital white space */
 		for(; *s!='\0' && *s==' '; s++);
 		for(i=0; i<NCOLS+1 && *s!='\0' && *s!='\n'; i++)
 			c[i] = *s++;
@@ -91,7 +91,7 @@ void F77_FUNC_(printrecipe, PRINTRECIPE)
 
 		if(c[i]!='\0' && c[i] != '\n'){
 			n = NCOLS-strlen(c);
-			//add extra spaces
+			/* add extra spaces */
 			for(j=NCOLS-1; j>=0 && i>=0 && n>0; j--, i--){
 				c[j] = c[i];
 				if(c[j] == ' '){
@@ -99,7 +99,7 @@ void F77_FUNC_(printrecipe, PRINTRECIPE)
 					n--;
 				}
 			}
-			if(n > 0) //unlikely, we do not care so much
+			if(n > 0) /* unlikely, we do not care so much */
 				for(i=0; i<n; i++)
 					c[i] = ' ';
 			c[NCOLS]='\n'; c[NCOLS+1] = '\0';

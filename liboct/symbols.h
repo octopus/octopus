@@ -17,22 +17,22 @@ typedef enum{
 	S_CMPLX, S_STR, S_BLOCK, S_FNCT
 }symrec_type;
 
-// Data type for links in the chain of symbols.
+/* Data type for links in the chain of symbols. */
 typedef struct symrec{
-	char *name;                  // name of symbol
-	symrec_type type;                     // type of symbol: either VAR or FNCT
+	char *name;                  /* name of symbol */
+	symrec_type type;            /* type of symbol: either VAR or FNCT */
 
 	union {
-		gsl_complex c;             // value of a VAR
-		char *str;                 // value of a STRING
-		sym_block *block;          // to store blocks
-		gsl_complex (*fnctptr)();  // value of a FNCT
+		gsl_complex c;             /* value of a VAR */
+		char *str;                 /* value of a STRING */
+		sym_block *block;          /* to store blocks */
+		gsl_complex (*fnctptr)();  /* value of a FNCT */
 	} value;
 
-	struct symrec *next;         // link field
+	struct symrec *next;         /* link field */
 } symrec;
 
-// The symbol table: a chain of struct symrec.
+/* The symbol table: a chain of struct symrec. */
 extern symrec *sym_table;
 
 symrec *putsym (char *sym_name, symrec_type sym_type);

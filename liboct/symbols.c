@@ -22,7 +22,7 @@ symrec *putsym (char *sym_name, symrec_type sym_type)
 	symrec *ptr;
 	ptr = (symrec *)malloc(sizeof(symrec));
 
-	// names are always lowercase
+	/* names are always lowercase */
 	ptr->name = strdup(sym_name);
 	str_tolower(ptr->name);
 
