@@ -228,7 +228,7 @@ subroutine mesh_r(m, i, r, a, x)
 
   call mesh_xyz(m, i, xx)
   if(present(a)) xx = xx - a
-  r = sqrt(sum(xx(:)**2))
+  r = sqrt(dot_product(xx))
 
   if(present(x)) x = xx
 end subroutine mesh_r
