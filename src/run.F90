@@ -243,7 +243,7 @@ subroutine run()
 
       ! load zpsi from static file.
       if(zstates_load_restart("restart.static", sys%m, sys%st)) then
-        if(h%ispin == 3) then
+        if(h%ispin == 3 .and. h%noncollinear_spin) then
           deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
           nullify(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
           allocate(h%zVxc_off(sys%m%np), sys%st%zrho_off(sys%m%np))
