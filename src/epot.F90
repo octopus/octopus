@@ -61,6 +61,10 @@ module external_pot
     ! For the local pseudopotential in Fourier space...
     type(dcf), pointer :: local_cf(:)
     type(dcf), pointer :: rhocore_cf(:) ! and for the core density
+    
+    ! cutoff stuff
+    integer :: vlocal_cutoff        ! cutoff type
+    FLOAT :: r_0                 ! cutoff radius
 #endif
 
     ! Nonlocal operators
@@ -102,7 +106,48 @@ contains
     call write_info(1)
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == RECIPROCAL_SPACE) call epot_local_fourier_init(ep, m, geo)
+    if(ep%vpsl_space == RECIPROCAL_SPACE) then
+      call loct_parse_int('VlocalCutoff', conf%periodic_dim , ep%vlocal_cutoff)
+      if (ep%vlocal_cutoff /= conf%periodic_dim) then
+        write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
+        write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ',ep%vlocal_cutoff,' dimensions.'
+        call write_warning(2)
+      end if
+      select case(ep%vlocal_cutoff)
+        case(0)
+          message(1) = 'Info: Vlocal Cutoff = sphere'
+          call write_info(1)
+        case(1)
+          message(1) = 'Info: Vlocal Cutoff = cylinder'
+          call write_info(1)
+        case(2)
+          message(1) = 'Info: Vlocal Cutoff = slab'
+          call write_info(1)
+        case(3)
+          message(1) = 'Info: Vlocal Cutoff = no cutoff'
+          call write_info(1)
+        case default
+          write(message(1), '(a,i2,a)') 'Input: ', ep%vlocal_cutoff, &
+             ' is not a valid VlocalCutoff'
+          message(2) = 'VlocalCutoff = 0(sphere) | 1(cylindrical) | 2(slab)'
+          message(3) = '               3(no cutoff)'
+          call write_fatal(3)
+      end select
+
+      if (ep%vlocal_cutoff == 3) then
+        ep%r_0 = M_ZERO
+      else
+        call loct_parse_float('VlocalCutoffRadius',&
+             maxval(m%l(:)*m%h(:))/units_inp%length%factor , ep%r_0)
+        ep%r_0 = ep%r_0*units_inp%length%factor
+        write(message(1),'(3a,f12.6)')'Info: Vlocal Cutoff Radius [',  &
+                          trim(units_out%length%abbrev), '] = ',       &
+                          ep%r_0/units_out%length%factor
+        call write_info(1)
+      end if
+    end if
+
+    call epot_local_fourier_init(ep, m, geo)
 #endif
 
     ep%classic_pot = 0
@@ -191,8 +236,9 @@ contains
     type(geometry_type), intent(IN)    :: geo
     
     integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
-    FLOAT :: x(3), modg, temp(3)
-    FLOAT, allocatable :: v(:)
+    FLOAT :: x(3)
+    FLOAT :: g(3), gpar, gperp, gx, gz, modg
+    FLOAT :: a_erf, temp(3), tmp1, tmp2, norm
     
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
@@ -218,6 +264,7 @@ contains
       
       if(geo%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
 
+
       periodic: if (conf%periodic_dim==0) then
         call dcf_alloc_RS(cf)                  ! allocate the cube in real space
         
@@ -240,8 +287,10 @@ contains
       else
         call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
         
-        allocate(v(2:s%ps%g%nrval))
+        a_erf = M_TWO
+        norm = cmplx(M_FOUR*M_PI/m%vol_pp)
         temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
+        cf%FS = M_Z0
         do ix = 1, cf%nx
           ixx(1) = pad_feq(ix, db(1), .true.)
           do iy = 1, db(2)
@@ -249,22 +298,53 @@ contains
             do iz = 1, db(3)
               ixx(3) = pad_feq(iz, db(3), .true.)
               
+              x = temp(:)*ixx(:)
               modg = sqrt(sum((temp(:)*ixx(:))**2))
-              if(modg.ne.M_ZERO) then
-                do j = 2, s%ps%g%nrval
-                  v(j) = (sin(modg*s%ps%g%rofi(j))/(modg*s%ps%g%rofi(j)))*     &
-                       s%ps%g%rofi(j)**2*(loct_splint(s%ps%vlocal,s%ps%g%rofi(j)))
-                enddo
-                ! this line was not compiling in the intel compiler version 8.
-!                cf%FS(ix, iy, iz) = M_FOUR*M_PI*    &
-!                     (sum(s%ps%g%drdi(2:s%ps%g%nrval)*v(2:s%ps%g%nrval))-s%ps%z_val/modg)
-              else
-                cf%FS(ix, iy, iz) = M_ZERO
-              end if
+
+              tmp1 = specie_get_local_fourier(s, x)
+              tmp2 = s%z_val*exp(-(modg/(2*a_erf))**2)     
+              
+              select case(ep%vlocal_cutoff)
+              case(0)
+                if(modg == M_ZERO) then
+                  cf%FS(ix, iy, iz) = -ep%r_0**2/M_TWO
+                else
+                  cf%FS(ix, iy, iz) = &
+                    (tmp1 - tmp2)*cutoff0(modg*ep%r_0)/modg**2
+                end if
+              case(1)
+                gx = abs(temp(1)*ixx(1))
+                gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
+               if(modg == M_ZERO) then
+                  cf%FS(ix, iy, iz) = M_ZERO
+                else
+                  cf%FS(ix, iy, iz) = &
+                    (tmp1 - tmp2)*cutoff1(gx*ep%r_0,gperp*ep%r_0)/modg**2
+                end if
+              case(2)
+                  gz = abs(temp(3)*ixx(3))
+                  gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
+                if(modg == M_ZERO) then
+                  cf%FS(ix, iy, iz) = M_ZERO
+                else
+                  cf%FS(ix, iy, iz) = &
+                    (tmp1 - tmp2)*cutoff2(gpar*ep%r_0,gz*ep%r_0)/modg**2
+                end if
+              case(3)
+                if(modg == M_ZERO) then
+                  cf%FS(ix, iy, iz) = tmp1
+                else
+                  cf%FS(ix, iy, iz) = (tmp1-tmp2)/modg**2
+                end if
+              end select
+ ! multiply by normalization factor and a phase shift to get the center of the box
+              cf%FS(ix, iy, iz) = norm*                         &
+                                  exp(M_PI*M_ZI*sum(ixx(:)))*   &
+                                  cf%FS(ix, iy, iz)
+ 
             end do
           end do
         end do
-        deallocate(v)
         
       end if periodic
     
@@ -307,6 +387,7 @@ contains
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
+    
     
     call push_sub('epot_generate')
     
@@ -650,8 +731,11 @@ contains
     if(associated(nlop%jxyz)) then
       deallocate(nlop%jxyz, nlop%uv, nlop%uvu, nlop%duv, &
                  nlop%so_uv, nlop%so_duv, nlop%so_luv, nlop%so_uvu)
-      if(conf%periodic_dim/=0) deallocate(nlop%phases)
     endif
+    if(conf%periodic_dim/=0 .and. associated(nlop%phases)) then
+      deallocate(nlop%phases)
+      nullify(nlop%phases)
+    end if
   end subroutine nonlocal_op_kill
 
 #include "undef.F90"
