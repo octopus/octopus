@@ -90,7 +90,7 @@ FLOAT function specie_get_nlcc(s, x) result(l)
 
   ! only for 3D pseudopotentials, please
   if(conf%dim==3.and.(s%label(1:5).ne.'jelli'.and.s%label(1:5).ne.'point'.and.s%label(1:5).ne.'usdef')) then
-    l = splint(s%ps%core, sqrt(sum(x**2)))
+    l = loct_splint(s%ps%core, sqrt(sum(x**2)))
   end if
 
 end function specie_get_nlcc
@@ -107,15 +107,15 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
   r = sqrt(sum(x**2))
   if(present(so)) then
     if(so) then
-      uVr0  = splint(s%ps%so_kb(l, i), r)
-      duvr0 = splint(s%ps%so_dkb(l, i), r)
+      uVr0  = loct_splint(s%ps%so_kb(l, i), r)
+      duvr0 = loct_splint(s%ps%so_dkb(l, i), r)
     else
       message(1) = 'Internal.'
       call write_fatal(1)
     endif
   else
-    uVr0  = splint(s%ps%kb(l, i), r)
-    duvr0 = splint(s%ps%dkb(l, i), r)
+    uVr0  = loct_splint(s%ps%kb(l, i), r)
+    duvr0 = loct_splint(s%ps%dkb(l, i), r)
   endif
   call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
   uv = uvr0*ylm

@@ -21,7 +21,7 @@ module ps
 use global
 use lib_oct
 use io
-use spline
+use lib_oct_gsl_spline
 use logrid
 use atomic
 use tm
@@ -36,14 +36,14 @@ type ps_type
   character(len=10) :: label
   character(len=3) :: flavour
 
-  type(spline_type), pointer :: kb(:, :)   ! Kleynman-Bylander projectors
-  type(spline_type), pointer :: so_kb(:, :)
-  type(spline_type), pointer :: dkb(:, :)  ! derivatives of KB projectors
-  type(spline_type), pointer :: so_dkb(:, :)
-  type(spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
-  type(spline_type) :: vlocal  ! local part
-  type(spline_type) :: dvlocal ! derivative of the local part
-  type(spline_type) :: core    ! core charge
+  type(loct_spline_type), pointer :: kb(:, :)   ! Kleynman-Bylander projectors
+  type(loct_spline_type), pointer :: so_kb(:, :)
+  type(loct_spline_type), pointer :: dkb(:, :)  ! derivatives of KB projectors
+  type(loct_spline_type), pointer :: so_dkb(:, :)
+  type(loct_spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
+  type(loct_spline_type) :: vlocal  ! local part
+  type(loct_spline_type) :: dvlocal ! derivative of the local part
+  type(loct_spline_type) :: core    ! core charge
   type(logrid_type) :: g
 
   integer  :: ispin ! Consider spin (ispin = 2) or not (ispin = 1)
@@ -156,22 +156,22 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 
   do i = 0, ps%L_max
      do j = 1, ps%kbc
-        call spline_init(ps%kb(i, j))
-        call spline_init(ps%dkb(i, j))
-        if(ps%so_l_max >= 0) call spline_init(ps%so_kb(i, j))
-        if(ps%so_l_max >= 0) call spline_init(ps%so_dkb(i, j))
+        call loct_spline_init(ps%kb(i, j))
+        call loct_spline_init(ps%dkb(i, j))
+        if(ps%so_l_max >= 0) call loct_spline_init(ps%so_kb(i, j))
+        if(ps%so_l_max >= 0) call loct_spline_init(ps%so_dkb(i, j))
      enddo
   enddo
 
   do i = 1, ps%conf%p
      do is = 1, ps%ispin
-        call spline_init(ps%ur(i, is))
+        call loct_spline_init(ps%ur(i, is))
      enddo
   enddo
 
-  call spline_init(ps%vlocal)
-  call spline_init(ps%dvlocal)
-  call spline_init(ps%core)
+  call loct_spline_init(ps%vlocal)
+  call loct_spline_init(ps%dvlocal)
+  call loct_spline_init(ps%core)
 
 ! Now we load the necessary information.
   select case(flavour(1:2))
@@ -240,8 +240,8 @@ subroutine ps_debug(ps)
   do i=1, npoints
      r = (i-1)*grid
      if(r >= r_small) then
-       write(local_unit, *) r, (splint(ps%vlocal,  r) - ps%z_val)/r, &
-                              (splint(ps%dvlocal, r)*r - (splint(ps%vlocal, r)-ps%z_val))/r**2
+       write(local_unit, *) r, (loct_splint(ps%vlocal,  r) - ps%z_val)/r, &
+           (loct_splint(ps%dvlocal, r)*r - (loct_splint(ps%vlocal, r)-ps%z_val))/r**2
      else
        write(local_unit, *) r, ps%vlocal_origin, M_ZERO
      end if
@@ -252,8 +252,8 @@ subroutine ps_debug(ps)
   do i =1, npoints
      r = (i-1)*grid 
      write(nonlocal_unit, '('+trim(fm)+'f16.8)') r, &
-           ( (splint(ps%kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
-           ( (splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
+           ( (loct_splint(ps% kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
+           ( (loct_splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
   enddo
 
   ! Spin-Orbit projectors
@@ -262,8 +262,8 @@ subroutine ps_debug(ps)
     do i =1, npoints
       r = (i-1)*grid 
       write(so_unit, '('+trim(fm)+'f16.8)') r, &
-           ( (splint(ps%so_kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
-           ( (splint(ps%so_dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
+           ( (loct_splint(ps%so_kb (k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
+           ( (loct_splint(ps%so_dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
     enddo
   endif
 
@@ -272,7 +272,7 @@ subroutine ps_debug(ps)
   do i = 1, npoints
      r = (i-1)*grid
      write(wave_unit, '('+trim(fm)+'f16.8)') &
-           r, ((splint(ps%ur(l, is), r), l = 1, ps%conf%p), is = 1, ps%ispin)
+           r, ((loct_splint(ps%ur(l, is), r), l = 1, ps%conf%p), is = 1, ps%ispin)
   enddo
 
   ! Closes files and exits
@@ -294,27 +294,27 @@ subroutine ps_end(ps)
 
   do i = 0, ps%L_max
     do j = 1, ps%kbc
-      call spline_end(ps%kb(i, j))
-      call spline_end(ps%dkb(i, j))
+      call loct_spline_end(ps%kb(i, j))
+      call loct_spline_end(ps%dkb(i, j))
     enddo
   end do
   do i = 1, ps%conf%p
     do is = 1, ps%ispin
-      call spline_end(ps%Ur(i, is))
+      call loct_spline_end(ps%Ur(i, is))
     enddo
   enddo
   if(ps%so_l_max>=0) then
   do i = 0, ps%so_L_max
     do j = 1, ps%kbc
-      call spline_end(ps%so_kb(i, j))
-      call spline_end(ps%so_dkb(i, j))
+      call loct_spline_end(ps%so_kb(i, j))
+      call loct_spline_end(ps%so_dkb(i, j))
     end do
   end do
   endif
 
-  call spline_end(ps%vlocal)
-  call spline_end(ps%dvlocal)
-  call spline_end(ps%core)  
+  call loct_spline_end(ps%vlocal)
+  call loct_spline_end(ps%dvlocal)
+  call loct_spline_end(ps%core)  
 
   deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
   if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
@@ -414,9 +414,9 @@ subroutine get_splines_tm(psf, ps)
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l, 1) * & 
                    ps%dknrm(l) / psf%rofi(2:nrc)
     hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
-    call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
+    call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
     call derivate_in_log_grid(psf%g, hato, derhato)
-    call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
+    call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
   end do
 
   if(ps%so_l_max>=0) then
@@ -428,9 +428,9 @@ subroutine get_splines_tm(psf, ps)
                       ps%so_dknrm(l) / psf%rofi(2:nrc)
         hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
       endif
-      call spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
+      call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
       call derivate_in_log_grid(psf%g, hato, derhato)
-      call spline_fit(psf%nrval, psf%rofi, derhato, ps%so_dkb(l, 1))
+      call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%so_dkb(l, 1))
    end do
   endif
 
@@ -442,12 +442,12 @@ subroutine get_splines_tm(psf, ps)
   hato(1) = M_TWO*psf%zval
   ! WARNING: Rydbergs -> Hartrees
   hato = hato / M_TWO
-  call spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
+  call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psf%vlocal(1) / M_TWO
 
   ! and the derivative now
   call derivate_in_log_grid(psf%g, hato, derhato)
-  call spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
+  call loct_spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
 
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
@@ -462,7 +462,7 @@ subroutine get_splines_tm(psf, ps)
       hato = M_ZERO
       hato(2:nrc) = psf%rphi(2:nrc, l-1, 1 + is)/psf%rofi(2:nrc)
       hato(1) = hato(2)
-      call spline_fit(psf%nrval, psf%rofi, hato, ps%ur(l, is))
+      call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%ur(l, is))
     end do
   end do
 
@@ -480,7 +480,7 @@ subroutine get_splines_tm(psf, ps)
     hato(2:nrcore) = psf%chcore(2:nrcore)/(M_FOUR*M_PI*psf%rofi(2:nrcore)**2)
     hato(1) = hato(2)
     nrc = nint(log(psf%rofi(ir +1)/psf%b + M_ONE)/psf%a) + 1
-    call spline_fit(psf%nrval, psf%rofi, hato, ps%core)
+    call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%core)
   end if
 
   deallocate(hato, derhato)
@@ -506,12 +506,12 @@ subroutine get_splines_hgh(psp, ps)
     hato = M_ZERO
     nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
     hato(1:nrc) = psp%kb(1:nrc, l, j)
-    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
-    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
+    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
+    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
     ! and now the derivatives...
     call derivate_in_log_grid(psp%g, hato, derhato)
-    call spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
-    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_dkb(l, j))
+    call loct_spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
+    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_dkb(l, j))
   end do
   end do
 
@@ -519,11 +519,11 @@ subroutine get_splines_hgh(psp, ps)
   ! where the asymptotic part is substracted 
   hato(2:psp%g%nrval) = psp%vlocal(2:psp%g%nrval)*psp%g%rofi(2:psp%g%nrval) + psp%z_val
   hato(1) = psp%z_val
-  call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%vlocal)
+  call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psp%vlocal(1)
   ! and the derivative now
   call derivate_in_log_grid(psp%g, hato, derhato)
-  call spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dvlocal)
+  call loct_spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dvlocal)
 
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
@@ -531,7 +531,7 @@ subroutine get_splines_hgh(psp, ps)
   do l = 1, ps%conf%p
     hato(2:psp%g%nrval) = psp%rphi(2:psp%g%nrval, l)/psp%g%rofi(2:psp%g%nrval)
     hato(1) = hato(2)
-    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
+    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
   end do
   end do
 

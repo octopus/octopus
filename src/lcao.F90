@@ -20,8 +20,8 @@
 module lcao
   use global
   use lib_oct
+  use lib_oct_gsl_spline
   use lib_alg
-  use spline
   use mesh
   use hamiltonian
 
@@ -152,11 +152,11 @@ contains
         if(r >= r_small) then
           select case(sys%st%spin_channels)
           case(1)
-            psi1 = splint(s%ps%Ur(n, 1), r)
+            psi1 = loct_splint(s%ps%Ur(n, 1), r)
             rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)  
           case(2)
             ! This is still a bit weird, but let us see how it works...
-            psi1 = splint(s%ps%Ur(n, 1), r)
+            psi1 = loct_splint(s%ps%Ur(n, 1), r)
             rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
             rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
             j = j + 1
@@ -346,7 +346,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
     
   integer :: j, d2, ll
   FLOAT :: x(3), a(3), r, p, ylm, g(3)
-  type(spline_type), pointer :: s
+  type(loct_spline_type), pointer :: s
 
   call push_sub('get_wf')
     
@@ -359,7 +359,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
     ll = sys%atom(i)%spec%ps%conf%l(l)
     do j = 1, sys%m%np
       call mesh_r(sys%m, j, r, x=x, a=a)
-      p = splint(s, r)
+      p = loct_splint(s, r)
       ylm = loct_ylm(x(1), x(2), x(3), ll, lm)
       psi(j) = p * ylm
     end do

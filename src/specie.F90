@@ -20,10 +20,10 @@
 module specie
 use global
 use lib_oct_parser
+use lib_oct_gsl_spline
 use units
 use ps
 use math
-use spline
 
 implicit none
 
@@ -159,7 +159,7 @@ FLOAT function specie_get_local(s, x) result(l)
 
     case default
       if(r >= r_small) then
-        l = (splint(s%ps%vlocal,  r) - s%Z_val)/r
+        l = (loct_splint(s%ps%vlocal,  r) - s%Z_val)/r
       else
         l = s%ps%Vlocal_origin
       end if
@@ -204,8 +204,8 @@ subroutine specie_get_glocal(s, x, gv)
       end if
 
     case default
-      l1 = splint(s%ps%vlocal, r)
-      l2 = splint(s%ps%dvlocal, r)
+      l1 = loct_splint(s%ps%vlocal, r)
+      l2 = loct_splint(s%ps%dvlocal, r)
       
       gv(:) = -(l2 - (l1 - s%Z_val)/r)/r**2 * x(:)
       

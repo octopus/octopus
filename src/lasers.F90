@@ -21,7 +21,7 @@ module lasers
 use global
 use io
 use lib_oct_parser
-use spline
+use lib_oct_gsl_spline
 use mesh
 
 implicit none
@@ -41,8 +41,8 @@ type laser_type
   FLOAT, pointer :: numerical(:,:) ! when the laser is numerical
   FLOAT :: dt
 
-  type(spline_type) :: phase      ! when reading a laser from a file
-  type(spline_type) :: amplitude
+  type(loct_spline_type) :: phase      ! when reading a laser from a file
+  type(loct_spline_type) :: amplitude
 
   ! For the velocity gauge
   ! cosine envelope
@@ -154,11 +154,11 @@ contains
 
     ! build splines
     t = t*l%tau0
-    call spline_init(l%amplitude)
-    call spline_fit(lines, t, am, l%amplitude)
+    call loct_spline_init(l%amplitude)
+    call loct_spline_fit(lines, t, am, l%amplitude)
 
-    call spline_init(l%phase)
-    call spline_fit(lines, t, ph, l%phase)
+    call loct_spline_init(l%phase)
+    call loct_spline_fit(lines, t, ph, l%phase)
 
     ! clean
     deallocate(t, am, ph)
@@ -177,8 +177,8 @@ subroutine laser_end(no_l, l)
   do i = 1, no_l
     select case(l(i)%envelope)
       case(10)
-        call spline_end(l(i)%amplitude)
-        call spline_end(l(i)%phase)
+        call loct_spline_end(l(i)%amplitude)
+        call loct_spline_end(l(i)%phase)
       case(99)
         if(associated(l(i)%numerical)) then
           deallocate(l(i)%numerical); nullify(l(i)%numerical)
@@ -309,8 +309,8 @@ subroutine laser_amplitude(no_l, l, t, amp)
         r = (l(i)%t0 + l(i)%tau0/M_TWO + l(i)%tau1 - t)/l(i)%tau1
       endif
     case(10)
-      r  = splint(l(i)%amplitude, t)
-      ph = splint(l(i)%phase, t)
+      r  = loct_splint(l(i)%amplitude, t)
+      ph = loct_splint(l(i)%phase, t)
     end select
 
     amp(i) = l(i)%A0 * r * exp(M_zI * (l(i)%omega0*t + ph))

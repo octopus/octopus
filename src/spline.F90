@@ -17,80 +17,100 @@
 
 #include "global.h"
 
-module spline
+module lib_oct_gsl_spline
 
   implicit none
 
-  type spline_type
+  ! Define the which routines can be seen from the outside
+  private
+  public :: loct_spline_type, loct_spline_init, loct_spline_end, loct_spline_fit, loct_splint
+
+  ! the basic spline datatype
+  type loct_spline_type
     integer(POINTER_SIZE) :: spl, acc
-  end type spline_type
+  end type loct_spline_type
 
   integer, parameter :: ntbmax = 200
 
-  interface loct_spline_init
-    subroutine oct_spline_init(nrc, spl, acc)
-      integer, intent(in) :: nrc
-      integer(POINTER_SIZE), intent(out) :: spl, acc
-    end subroutine oct_spline_init
-  end interface
-
-  interface loct_spline_end
+  ! some oct interfaces
+  interface
     subroutine oct_spline_end(spl, acc)
       integer(POINTER_SIZE), intent(inout) :: spl, acc
     end subroutine oct_spline_end
-  end interface
 
-  interface loct_spline_fit
     subroutine oct_spline_fit(nrc, x, y, spl, acc)
       integer, intent(in) :: nrc
-      FLOAT, intent(in) :: x, y
+      real(8), intent(in) :: x, y
       integer(POINTER_SIZE), intent(inout) :: spl, acc
     end subroutine oct_spline_fit
-  end interface
-
-  interface loct_spline_eval
-    FLOAT function oct_spline_eval(x, spl, acc)
-      FLOAT, intent(in) :: x
+    
+    real(8) function oct_spline_eval(x, spl, acc)
+      real(8), intent(in) :: x
       integer(POINTER_SIZE), intent(in) :: spl, acc
     end function oct_spline_eval
   end interface
 
+  interface loct_spline_fit
+    module procedure spline_fit4
+    module procedure spline_fit8
+  end interface
+
+  interface loct_splint
+    module procedure splint4
+    module procedure splint8
+  end interface
+
 contains
 
-subroutine spline_init(spl)
-  type(spline_type), intent(out) :: spl
+  subroutine loct_spline_init(spl)
+    type(loct_spline_type), intent(out) :: spl
+    
+    spl%spl = 0; spl%acc = 0
+  end subroutine loct_spline_init
 
-  spl%spl = 0; spl%acc = 0
-end subroutine spline_init
+  subroutine loct_spline_end(spl)
+    type(loct_spline_type), intent(inout) :: spl
+    
+    if(spl%spl.ne.0 .and. spl%acc.ne.0) then
+      call oct_spline_end(spl%spl, spl%acc)
+    end if
+    spl%spl = 0; spl%acc = 0
+  end subroutine loct_spline_end
 
-subroutine spline_end(spl)
-  type(spline_type), intent(inout) :: spl
+  subroutine spline_fit8(nrc, rofi, ffit, spl)
+    integer, intent(in) :: nrc
+    real(8), intent(in) :: ffit(nrc), rofi(nrc)
+    type(loct_spline_type), intent(out) :: spl
+    
+    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
+  end subroutine spline_fit8
 
-  if(spl%spl.ne.0 .and. spl%acc.ne.0) then
-    call loct_spline_end(spl%spl, spl%acc)
-  end if
-  spl%spl = 0; spl%acc = 0
-end subroutine spline_end
+  subroutine spline_fit4(nrc, rofi, ffit, spl)
+    integer, intent(in) :: nrc
+    real(4), intent(IN) :: rofi(nrc), ffit(nrc)
+    type(loct_spline_type), intent(out) :: spl
+    
+    real(8), allocatable :: rofi8(:), ffit8(:)
 
-subroutine spline_fit(nrc, rofi, ffit, spl)
-  integer, intent(in) :: nrc
-  FLOAT, intent(IN) :: ffit(nrc), rofi(nrc)
-  type(spline_type), intent(out) :: spl
+    allocate(rofi8(nrc), ffit8(nrc))
+    rofi8 = real(rofi, kind=8)
+    ffit8 = real(ffit, kind=8)
+    call oct_spline_fit(nrc, rofi8(1), ffit8(1), spl%spl, spl%acc)
+    deallocate(rofi8, ffit8)
+  end subroutine spline_fit4
 
-  call loct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
-
-  return
-end subroutine spline_fit
-
-function splint(spl, x)
-  FLOAT :: splint
-
-  type(spline_type), intent(IN) :: spl
-  FLOAT, intent(IN) :: x
+  real(8) function splint8(spl, x)
+    type(loct_spline_type), intent(in) :: spl
+    real(8), intent(in) :: x
   
-  splint = loct_spline_eval(x, spl%spl, spl%acc)
+    splint8 = oct_spline_eval(x, spl%spl, spl%acc)
+  end function splint8
 
-  return
-end function splint
+  real(4) function splint4(spl, x)
+    type(loct_spline_type), intent(in) :: spl
+    real(4), intent(in) :: x
+  
+    splint4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
+  end function splint4
 
-end module spline
+end module lib_oct_gsl_spline

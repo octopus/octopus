@@ -207,7 +207,7 @@ contains
               if(modg.ne.M_ZERO) then
                 do j = 2, s%ps%g%nrval
                   v(j) = (sin(modg*s%ps%g%rofi(j))/(modg*s%ps%g%rofi(j)))*     &
-                       s%ps%g%rofi(j)**2*(splint(s%ps%vlocal,s%ps%g%rofi(j)))
+                       s%ps%g%rofi(j)**2*(loct_splint(s%ps%vlocal,s%ps%g%rofi(j)))
                 enddo
                 ! this line was not compiling in the intel compiler version 8.
 !                cf%FS(ix, iy, iz) = M_FOUR*M_PI*    &
@@ -480,7 +480,7 @@ contains
                   if (r > s%ps%rc_max + m%h(1)) cycle
                   ylm = loct_ylm(x(1), x(2), x(3), l, lm)
                   a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
-                       splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
+                       loct_splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
                   exit
                 end do
               end do
