@@ -65,10 +65,10 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
 
     ! get lxc
     functl_loop: do ixc = 1, 2
-      if(xcs%functl(ixc)%family.ne.XC_FAMILY_OEP) cycle
+      if(xcs%functl(ixc,1)%family.ne.XC_FAMILY_OEP) cycle
 
       e = M_ZERO
-      select case(xcs%functl(ixc)%id)
+      select case(xcs%functl(ixc,1)%id)
       case(XC_OEP_X)
         call X(oep_x) (m, f_der, st, is, oep, e)
         ex = ex + e

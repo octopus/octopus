@@ -30,11 +30,11 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc, aux)
 
   type(xc_functl_type), pointer :: functl(:)
 
-  if(present(aux) .and. aux) then
-   functl => xcs%sic_aux
+  if(ispin == UNPOLARIZED) then
+    functl => xcs%functl(:, 1)
   else
-   functl => xcs%functl
-  endif
+    functl => xcs%functl(:, 2)
+  end if
 
   ! is there anything to do? (only LDA by now)
   if(.not.( &

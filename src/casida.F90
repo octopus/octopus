@@ -238,7 +238,7 @@ contains
   end subroutine casida_type_init
 
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
   subroutine casida_type_end(cas)
     type(casida_type), intent(inout) :: cas
 
@@ -438,8 +438,8 @@ contains
 
       allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
     
-      rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * st%X(psi) (1:m%np, 1, a, 1)
-      rho_j(:) =  st%X(psi) (1:m%np, 1, j, 1) * st%X(psi) (1:m%np, 1, b, 1)
+      rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * R_CONJ(st%X(psi) (1:m%np, 1, a, 1))
+      rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, 1)) * st%X(psi) (1:m%np, 1, b, 1)
     
       !  first the Hartree part (only works for real wfs...)
       pot = M_ZERO

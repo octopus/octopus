@@ -53,22 +53,24 @@ integer, public, parameter :: &
          XC_OEP_CEDA   = 3, & ! not yet implemented
          XC_OEP_FULL   = 4    ! half implemented
 
+  ! ---------------------------------------------------------
+
 type xc_type
   logical :: nlcc                   ! repeated from system
 
-  type(xc_functl_type) :: functl(2) ! 1: exchange, 2: correlation
+  type(xc_functl_type) :: functl(2,2) ! (1,:) => exchange,    (2,:) => correlation
+                                      ! (:,1) => unpolarized, (:,2) => polarized
 
-  ! the SIC needs auxiliary LDAs
-  integer              :: sic_correction
-  type(xc_functl_type) :: sic_aux(2)
+  ! do we want to use a SIC corrected functional
+  integer :: sic_correction
 
   ! the meta-GGA can be implemented in two ways
   integer :: mGGA_implementation  ! 1 => as a GGA like functional
                                   ! 2 => using the OEP method
 
   ! for the OEP
-  integer  :: oep_level  ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
-  FLOAT    :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
+  integer :: oep_level  ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
+  FLOAT   :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
 end type xc_type
 
 type xc_oep_type
@@ -98,7 +100,7 @@ contains
       write(iunit,'(/,a)') stars
       write(iunit,'(a)') " Exchange and correlation:"
       do i = 1, 2
-        call xc_functl_write_info(xcs%functl(i), iunit)
+        call xc_functl_write_info(xcs%functl(i, 1), iunit)
       end do
       
       if(xcs%sic_correction.ne.0) then
@@ -134,10 +136,13 @@ contains
     
     xcs%nlcc   = nlcc  ! make a copy of flag indicating non-local core corrections
     
-    call xc_functl_init_exchange   (xcs%functl(1), spin_channels)
-    call xc_functl_init_correlation(xcs%functl(2), spin_channels)
+    ! we get both spin polarized and unpolarized
+    do i = 1, 2
+      call xc_functl_init_exchange   (xcs%functl(1,i), i)
+      call xc_functl_init_correlation(xcs%functl(2,i), i)
+    end do
     
-    if(any(xcs%functl(:)%family==XC_FAMILY_MGGA)) then
+    if(any(xcs%functl(:,1)%family==XC_FAMILY_MGGA)) then
       call loct_parse_int("MGGAimplementation", 1, xcs%mGGA_implementation)
       if(xcs%mGGA_implementation.ne.1.and.xcs%mGGA_implementation.ne.2) then
         message(1) = 'MGGAimplementation can only assume the values:'
@@ -149,20 +154,14 @@ contains
 
     ! check for SIC
     xcs%sic_correction = 0
-    if(any(xcs%functl(:)%family==XC_FAMILY_LDA) .or. &
-       any(xcs%functl(:)%family==XC_FAMILY_GGA)) then
+    if(any(xcs%functl(:,1)%family==XC_FAMILY_LDA) .or. &
+       any(xcs%functl(:,1)%family==XC_FAMILY_GGA)) then
 
       call loct_parse_int("SICCorrection", 0, xcs%sic_correction)
-
-      ! we need some auxiliary functionals for the SIC
-      if(xcs%sic_correction.ne.0) then
-        call xc_functl_init_exchange   (xcs%sic_aux(1), XC_POLARIZED)
-        call xc_functl_init_correlation(xcs%sic_aux(2), XC_POLARIZED)
-      end if
     end if
 
     ! if OEP we need some extra variables
-    if((xcs%sic_correction.ne.0).or.(any(xcs%functl(:)%family==XC_FAMILY_OEP))) then
+    if((xcs%sic_correction.ne.0).or.(any(xcs%functl(:,1)%family==XC_FAMILY_OEP))) then
 #if defined(HAVE_MPI)
       if(xcs%oep_level == XC_OEP_FULL) then
         message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
@@ -192,16 +191,13 @@ contains
   ! -----------------------------------------------------------
   subroutine xc_end(xcs)
     type(xc_type), intent(inout) :: xcs
-    
-    integer :: ixc
-    
-    call xc_functl_end(xcs%functl(1))
-    call xc_functl_end(xcs%functl(2))
-    
-    if(xcs%sic_correction.ne.0) then
-      call xc_functl_end(xcs%sic_aux(1))
-      call xc_functl_end(xcs%sic_aux(2))
-    end if
+
+    integer :: i
+
+    do i = 1, 2
+      call xc_functl_end(xcs%functl(1,i))
+      call xc_functl_end(xcs%functl(2,i))
+    end do
 
   end subroutine xc_end
 

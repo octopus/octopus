@@ -15,6 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+! ---------------------------------------------------------
 subroutine td_init(td, m, st, geo, h, outp)
   type(td_type),          intent(out)   :: td
   type(mesh_type),        intent(inout) :: m
@@ -115,9 +116,10 @@ subroutine td_init(td, m, st, geo, h, outp)
   call td_rti_init(m, st, td%tr)
 
   call pop_sub()
-
 end subroutine td_init
 
+
+! ---------------------------------------------------------
 subroutine td_end(td)
   type(td_type), intent(inout) :: td
 

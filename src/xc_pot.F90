@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot, aux)
+subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
   type(xc_type), target, intent(in)    :: xcs
   type(mesh_type),       intent(in)    :: m
   type(f_der_type),      intent(inout) :: f_der
@@ -23,7 +23,6 @@ subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot, aux)
   integer,               intent(in)    :: ispin
   FLOAT,                 intent(inout) :: vxc(:,:), ex, ec
   FLOAT,                 intent(in)    :: ip, qtot
-  logical, optional,     intent(in)    :: aux
   
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
@@ -35,11 +34,11 @@ subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot, aux)
 
   type(xc_functl_type), pointer :: functl(:)
 
-  if(present(aux) .and. aux) then
-   functl => xcs%sic_aux
+  if(ispin == UNPOLARIZED) then
+    functl => xcs%functl(:, 1)
   else
-   functl => xcs%functl
-  endif
+    functl => xcs%functl(:, 2)
+  end if
 
   ! is there anything to do ?
   if(.not.( &

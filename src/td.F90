@@ -502,7 +502,7 @@ contains
           case (SPIN_POLARIZED)
             do ik = 1, st%d%nik, 2
               st%zpsi(i,:,:,ik) = c(1) * st%zpsi(i,:,:,ik)
-             end do
+            end do
           case (SPINORS)
             st%zpsi(i,1,:,:) = c(1) * st%zpsi(i,1,:,:)
           end select
