@@ -131,6 +131,7 @@ subroutine states_init(st, m, val_charge)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
+  nullify(st%dpsi, st%zpsi)
 
   call pop_sub()
 end subroutine states_init

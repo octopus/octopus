@@ -32,7 +32,7 @@ type ps_file
   character(len=3)  :: irel
   character(len=4) :: icore
   character(len=10) :: method(6) 
-  character(len=70) :: titleps
+  character(len=70) :: title
   integer :: npotd, npotu, nr
   real(r8) :: b, a, zval
   real(r8), pointer :: rofi(:), vps(:,:), chcore(:), rho_val(:)
@@ -73,7 +73,7 @@ subroutine ps_init(ps, label, z, lmax, lloc, zval)
   allocate(ps%dkbcos(0:ps%L_max), ps%dknrm(0:ps%L_max))
 
   ! now we load the necessary information from the ps file
-  call ps_load(ps, trim(label)//'.vps', z, zval)
+  call ps_load(ps, trim(label), z, zval)
 
   call pop_sub()
 end subroutine ps_init
@@ -116,44 +116,31 @@ subroutine ps_load(ps, filename, z, zval)
   real(r8), allocatable :: rphi(:,:), eigen(:), rc(:)
   type(ps_file) :: psf
 
-  inquire(file=filename, exist=found)
-  if(.not.found) then
-     message(1) = "Pseudopotential file '"//trim(filename)//"' not found"
-     call write_fatal(1)
-  endif
-  call io_assign(iunit)
-  open(iunit, file=filename, form='unformatted', status='unknown')
-  
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Reads the header line of the file, with general info about the ps.
-!       Writes down info to stdout.
+  inquire(file=filename//'.vps', exist=found)
+  if(found) then
+    call io_assign(iunit)
+    open(iunit, file=filename//'.vps', form='unformatted', status='unknown')
 
-  read(iunit) psf%namatm, psf%icorr, psf%irel, psf%icore,     &
-       (psf%method(i),i=1,6), psf%titleps, psf%npotd, psf%npotu, &
-       psf%nr, psf%b, psf%a, psf%zval
+    call read_file_data_bin(iunit, psf, ps)
+    call io_close(iunit)
+  else
+    inquire(file=filename//'.ascii', exist=found)
+    if(found) then
+      call io_assign(iunit)
+      open(iunit, file=filename//'.ascii', form='formatted', status='unknown')
+
+      call read_file_data_ascii(iunit, psf, ps)
+      call io_close(iunit)
+    else
+      message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
+      call write_fatal(1)
+    endif
+  end if
+  
   zval = psf%zval
-  ps%icore = psf%icore
+
+  ! Writes down info to stdout.
   call write_info_about_pseudo_1(stdout, psf, ps, z)
-  
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Fix lmax and nrval...
-
-  ps%L_max = min(psf%npotd - 1, ps%L_max)
-  psf%nrval = psf%nr + mod((psf%nr + 1), 2) 
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Reads data file:
-!       rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) )
-!       vps(1:nrval,0:spec%ps_lmax) : pseudopotential functions
-!       chcore(1:nrval) : core-correction charge distribution
-!       rho_val(1:nrval) : pseudo-valence charge distribution.
-
-  allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:ps%L_max), &
-       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
-  call read_file_data(iunit, psf, ps)
-  call io_close(iunit)
 
   ! get the pseudoatomic eigenfunctions
   allocate(rphi(psf%nrval,0:ps%L_max), eigen(0:ps%L_max))
@@ -189,16 +176,36 @@ subroutine ps_load(ps, filename, z, zval)
 end subroutine ps_load
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine read_file_data(unit, psf, ps)
+subroutine read_file_data_bin(unit, psf, ps)
   integer, intent(in) :: unit
   type(ps_file), intent(inout) :: psf
-  type(ps_type), intent(in) :: ps
+  type(ps_type), intent(inout) :: ps
   
   integer  :: ndown, nup, l, ir
   real(r8) :: r2
 
+  ! Reads the header line of the file, with general info about the ps.
+  read(unit) psf%namatm, psf%icorr, psf%irel, psf%icore,     &
+       (psf%method(l),l=1,6), psf%title, psf%npotd, psf%npotu, &
+       psf%nr, psf%b, psf%a, psf%zval
+  
+  ! fix some stuff
+  ps%icore = psf%icore
+  ps%L_max = min(psf%npotd - 1, ps%L_max)
+  psf%nrval = psf%nr + mod((psf%nr + 1), 2) 
+  
+  ! Reads data file:
+  !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) )
+  !   vps(1:nrval,0:spec%ps_lmax) : pseudopotential functions
+  !   chcore(1:nrval) : core-correction charge distribution
+  !   rho_val(1:nrval) : pseudo-valence charge distribution.
+  
+  allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:ps%L_max), &
+       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
+
   read(unit) psf%rofi(2:psf%nrval)
   psf%rofi(1) = 0.0_r8
+
   do ndown = 1, ps%L_max + 1
     read(unit) l, psf%vps(2:psf%nrval, l)
     if(l /= ndown-1 .and. conf%verbose > 0) then
@@ -209,11 +216,13 @@ subroutine read_file_data(unit, psf, ps)
     psf%vps(2:psf%nrval,l) = psf%vps(2:psf%nrval,l)/psf%rofi(2:psf%nrval)
     psf%vps(1,l) = psf%vps(2,l)
   end do
+
   if(ps%L_max + 2 <= psf%npotd)then
     do ndown = ps%L_max + 2, psf%npotd
       read(unit) l
     end do
   end if
+
   do nup = 1, psf%npotu
     read(unit) l
   end do
@@ -231,9 +240,99 @@ subroutine read_file_data(unit, psf, ps)
   ! psf%vps = psf%vps / 2._r8
 
   return
-end subroutine read_file_data
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+end subroutine read_file_data_bin
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine read_file_data_ascii(unit, psf, ps)
+  integer, intent(in) :: unit
+  type(ps_file), intent(inout) :: psf
+  type(ps_type), intent(inout) :: ps
+  
+  integer  :: ndown, nup, i, l, ir
+  real(r8) :: r2
+  real(r8), allocatable :: aux(:)
+  character(len=70) :: aux_s
+
+  ! Reads the header line of the file, with general info about the ps.
+  read(unit, 9000) psf%namatm, psf%icorr, psf%irel, psf%icore
+  read(unit, 9010) (psf%method(l),l=1,6), psf%title
+  read(unit, 9015) psf%npotd, psf%npotu, psf%nr, psf%b, psf%a, psf%zval
+
+9000 format(1x,a2,1x,a2,1x,a3,1x,a4)
+9010 format(1x,6a10,/,1x,a70)
+9015 format(1x,2i3,i5,3f20.10)
+  
+  ! fix some stuff
+  ps%icore = psf%icore
+  ps%L_max = min(psf%npotd - 1, ps%L_max)
+  psf%nrval = psf%nr + mod((psf%nr + 1), 2)
+  allocate(aux(psf%nr))
+  
+  ! Reads data file:
+  !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) )
+  !   vps(1:nrval,0:spec%ps_lmax) : pseudopotential functions
+  !   chcore(1:nrval) : core-correction charge distribution
+  !   rho_val(1:nrval) : pseudo-valence charge distribution.
+  
+  allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:ps%L_max), &
+       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
+
+  read(unit, 9040) aux_s
+  read(unit, 9030) (aux(i),i=1, psf%nr)
+  psf%rofi(2:psf%nrval) = aux(1:psf%nr)
+  psf%rofi(1) = 0.0_r8
+
+8000 format(1x,i2)
+9030 format(4(g20.12))
+9040 format(1x,a)
+
+  do ndown = 1, ps%L_max + 1
+    read(unit, 9040) aux_s
+    read(unit, 8000) l
+    read(unit, 9030) (aux(i),i=1, psf%nr)
+    if(l /= ndown-1 .and. conf%verbose > 0) then
+      message(1) = 'Unexpected angular momentum'
+      message(2) = 'Pseudopotential should be ordered by increasing l'
+      call write_warning(2)
+    end if
+    psf%vps(2:psf%nrval, l) = aux(1:psf%nr)/psf%rofi(2:psf%nrval)
+    psf%vps(1, l) = psf%vps(2, l)
+  end do
+
+  if(ps%L_max + 2 <= psf%npotd)then
+    do ndown = ps%L_max + 2, psf%npotd
+      read(unit, 9040) aux_s
+      read(unit, 8000) l
+      read(unit, 9030) (aux(i),i=1, psf%nr)
+    end do
+  end if
+
+  do nup = 1, psf%npotu
+    read(unit, 9040) aux_s
+    read(unit, 8000) l
+    read(unit, 9030) (aux(i),i=1, psf%nr)
+  end do
+
+  ! read the core correction charge density
+  r2 = psf%rofi(2)/(psf%rofi(3) - psf%rofi(2))
+  read(unit, 9040) aux_s
+  read(unit, 9030) (aux(i),i=1, psf%nr)
+  psf%chcore(2:psf%nrval) = aux(1:psf%nr)
+  psf%chcore(1) = psf%chcore(2) - (psf%chcore(3) - psf%chcore(2))*r2
+
+  ! read the pseudo-valence charge density
+  read(unit, 9040) aux_s
+  read(unit, 9030) (aux(i),i=1, psf%nr)
+  psf%rho_val(2:psf%nrval) = aux(1:psf%nr)
+  psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
+
+  ! adjust units from Rydbergs -> Hartree
+  ! psf%vps = psf%vps / 2._r8
+
+  return
+end subroutine read_file_data_ascii
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine solve_shroedinger(psf, ps, rphi, eigen)
   type(ps_file), intent(inout) :: psf
   type(ps_type), intent(inout) :: ps
@@ -694,10 +793,10 @@ subroutine write_info_about_pseudo_1(unit, psf, ps, z)
   message(2) = ' (orbital - occupancy - core radius)'
   call write_info(2, unit)
   i = 1
-  do while(index(psf%titleps(i:),'/') /= 0)
+  do while(index(psf%title(i:),'/') /= 0)
     j = i
-    i = i + index(psf%titleps(i:),'/')
-    write(message(1),'(a,a,a)') ' ', psf%titleps(j:i-2)
+    i = i + index(psf%title(i:),'/')
+    write(message(1),'(a,a,a)') ' ', psf%title(j:i-2)
     call write_info(1, unit)
   enddo
   write(message(1),'(a,i2)')  'Pseudopotential functions for spin-up:   ', psf%npotu
