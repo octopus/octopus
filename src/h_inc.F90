@@ -37,8 +37,7 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, st, sys)
   end do
 
   deallocate(Hpsi)
-  call pop_sub()
-  return
+  call pop_sub(); return
 end subroutine R_FUNC(hamiltonian_eigenval)
 
 subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
@@ -312,26 +311,27 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
 
   sub_name = 'hamiltonian_setup'; call push_sub()
 
-  call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
-  h%epot = M_ZERO
-  do is = 1, st%spin_channels
-     h%epot = h%epot - M_HALF*dmesh_dotp(m, st%rho(:, is), h%vhartree)
-  enddo
+  if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
+    call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
+    h%epot = M_ZERO
+    do is = 1, st%spin_channels
+       h%epot = h%epot - M_HALF*dmesh_dotp(m, st%rho(:, is), h%vhartree)
+    enddo
 
-  call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
-  select case(h%ispin)
-    case(UNPOLARIZED)
-      h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
-    case(SPIN_POLARIZED)
-      h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) - &
+    call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
+    select case(h%ispin)
+      case(UNPOLARIZED)
+        h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
+      case(SPIN_POLARIZED)
+        h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) - &
                         dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
-    case(SPINORS)
-      h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) - &
+      case(SPINORS)
+        h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) - &
                         dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
-      h%epot = h%epot - M_TWO*zmesh_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
+        h%epot = h%epot - M_TWO*zmesh_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
                                             h%vxc(:, 3) - M_zI*h%vxc(:, 4))
-
-  end select
+    end select
+  endif
 
   ! this, I think, belongs here
   if(present(sys)) call R_FUNC(hamiltonian_eigenval) (h, st, sys)
