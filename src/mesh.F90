@@ -34,6 +34,7 @@ integer, parameter :: &
      MINIMUM  = 3,    &
      PARALLELEPIPED = 4
 
+! WARNING: This is to go away, as soon as we clean up filter
 type derivatives_type
   integer :: norder
   integer :: n

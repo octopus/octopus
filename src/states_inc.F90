@@ -84,6 +84,8 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   FLOAT :: nrm2
   R_TYPE :: ss
 
+  call push_sub('states_gram_schmidt')
+
   if(present(start)) then
     stst = start
   else
@@ -101,6 +103,7 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
     call lalg_scal(m%np, dim, ss, psi(:, :, p))
   end do
 
+  call pop_sub()
 end subroutine X(states_gram_schmidt)
 
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
@@ -159,6 +162,8 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
   FLOAT :: u
   FLOAT, allocatable :: dtmp(:)
 
+  call push_sub('states_output')
+
   u = M_ONE/units_out%length%factor**conf%dim
 
 #ifdef HAVE_MPI
@@ -211,6 +216,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
     if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
   end if
 
+  call pop_sub()
 contains
   subroutine mf2mf_RS2FS(m, fin, fout, c)
     type(mesh_type), intent(IN) :: m

@@ -124,10 +124,10 @@ contains
   subroutine f_der_end(f_der)
     type(f_der_type), intent(inout) :: f_der
 
+    call push_sub('f_der_end')
+
     ASSERT(associated(f_der%m))
     ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
-
-    call push_sub('f_der_end')
 
     if(f_der%space == REAL_SPACE) then
       call derivatives_end(f_der%der_discr)
