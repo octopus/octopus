@@ -296,14 +296,29 @@ contains
   subroutine apply_delta_field(m)
     type(mesh_type), intent(IN) :: m
 
-    integer     :: i
+    integer     :: i, mode
     FLOAT    :: k, x(conf%dim)
-    CMPLX :: c
+    CMPLX :: c(2)
 
     !!! units are 1/length
     call loct_parse_float("TDDeltaStrength", M_ZERO, k)
     k = k / units_inp%length%factor
-    
+    call loct_parse_int("TDDeltaStrengthMode", 0, mode)
+    select case (mode)
+    case (1)
+    case (2:3)
+      if (sys%st%d%ispin == UNPOLARIZED) then
+        message(1) = "TDDeltaStrengthMode 2 or 3 can not be used when"
+        message(2) = "performing unpoarized calculations"
+        call write_fatal(1)
+      end if
+    case default
+      write(message(1), '(a,i6,a)') "Input: '", mode, "' is not a valid TDDeltaStrengthMode"
+      message(2) = '(0 <= TDDeltaStrengthMode <= 2 )'
+      call write_fatal(2)
+    end select
+
+
     !!! The wave-functions at time delta t read
     !!! psi(delta t) = psi(t) exp(i k x)
     if(k .ne. M_ZERO) then
@@ -311,8 +326,37 @@ contains
       call write_info(1)
       do i = 1, m%np
         call mesh_xyz(m, i, x)
-        c = exp(M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
-        sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
+        select case (mode)
+        case (0)
+          c(1) = exp(M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
+          sys%st%zpsi(i,:,:,:) = c(1) * sys%st%zpsi(i,:,:,:)
+
+        case (1)
+          c(1) = exp(M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
+          c(2) = exp(-M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
+          select case (sys%st%d%ispin)
+          case (SPIN_POLARIZED)
+            do ik = 1, sys%st%nik/2
+              sys%st%zpsi(i,:,:,2*ik-1) = c(1) * sys%st%zpsi(i,:,:,2*ik-1)
+              sys%st%zpsi(i,:,:,2*ik)   = c(2) * sys%st%zpsi(i,:,:,2*ik)
+            end do
+          case (SPINORS)
+            sys%st%zpsi(i,1,:,:) = c(1) * sys%st%zpsi(i,1,:,:)
+            sys%st%zpsi(i,2,:,:) = c(2) * sys%st%zpsi(i,2,:,:)
+          end select
+
+        case (2)
+          c(1) = exp(M_z2I * k * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
+          select case (sys%st%d%ispin)
+          case (SPIN_POLARIZED)
+            do ik = 1, sys%st%nik/2
+              sys%st%zpsi(i,:,:,2*ik-1) = c(1) * sys%st%zpsi(i,:,:,2*ik-1)
+             end do
+          case (SPINORS)
+            sys%st%zpsi(i,1,:,:) = c(1) * sys%st%zpsi(i,1,:,:)
+          end select
+
+        end select
       end do
     end if
 

@@ -78,6 +78,7 @@ FLOAT, parameter :: M_TWOTHIRD  = M_TWO/M_THREE
 FLOAT, parameter :: M_FOURTH    = M_ONE/M_FOUR
 CMPLX, parameter :: M_z0        = (M_ZERO, M_ZERO)
 CMPLX, parameter :: M_z1        = (M_ONE,  M_ZERO)
+CMPLX, parameter :: M_z2I       = (M_ZERO, M_TWO)
 CMPLX, parameter :: M_zI        = (M_ZERO, M_ONE)
 
 ! some physical constants
