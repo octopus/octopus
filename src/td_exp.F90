@@ -99,7 +99,7 @@ contains
     end if
   end subroutine td_exp_end
 
-  subroutine td_exp_dt(te, sys, h, zpsi, ik, timestep, t, order)
+  subroutine td_exp_dt(te, sys, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type), intent(inout)   :: te
     type(hamiltonian_type), intent(in) :: h
     type(system_type), intent(in)      :: sys
@@ -108,6 +108,12 @@ contains
     real(r8), intent(in) :: timestep, t
     integer, optional, intent(out) :: order ! For the methods that rely on Hamiltonian-vector
                                             ! multiplication, the number of these.
+    real(r8), intent(in), optional :: vmagnus(sys%m%np, sys%st%nspin, 2)
+
+    logical :: apply_magnus
+
+    apply_magnus = .false.
+    if(present(vmagnus)) apply_magnus = .true.
 
     call push_sub('td_dtexp')
 
@@ -130,6 +136,15 @@ contains
     call pop_sub()
   contains
 
+    subroutine operate(psi, oppsi)
+      complex(r8) :: psi(sys%m%np, sys%st%dim), oppsi(sys%m%np, sys%st%dim)
+      if(apply_magnus) then
+        call zmagnus(h, sys%m, sys%st,sys, ik, psi, oppsi, vmagnus)
+      else
+        call zHpsi(h, sys%m, sys%st, sys, ik, psi, oppsi, t)
+      endif
+    end subroutine operate
+
     subroutine fourth
       complex(r8) :: zfact
       complex(r8), allocatable :: zpsi1(:,:), hzpsi1(:,:)
@@ -142,7 +157,8 @@ contains
       call zcopy(sys%m%np*sys%st%dim, zpsi(1, 1), 1, zpsi1(1, 1), 1)
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
-        call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
+        call operate(zpsi1, hzpsi1)
+        !call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
         call zaxpy(sys%m%np*sys%st%dim, zfact, hzpsi1(1, 1), 1, zpsi(1, 1), 1)
         if(i .ne. te%exp_order) call zcopy(sys%m%np*sys%st%dim, hzpsi1(1, 1), 1, zpsi1(1, 1), 1)
       end do
@@ -178,7 +194,8 @@ contains
       do j = te%exp_order-1, 0, -1
         call zcopy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
         call zcopy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
-        call zhpsi(h, sys%m, sys%st, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)
+        call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
+        !call zhpsi(h, sys%m, sys%st, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)
         zfact = 2*(-M_zI)**j*oct_bessel(j, h%spectral_half_span*timestep)
         call zaxpy(n, cmplx(-h%spectral_middle_point, 0.0_r8, r8), &
              zpsi1(1, 1, 1), 1, zpsi1(1, 1, 0), 1)
@@ -214,7 +231,8 @@ contains
       v(:, :, 1) = zpsi(:, :)/nrm
       
       ! Operate on v(:, :, 1) and place it onto w.
-      call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, 1), zpsi, t)
+      call operate(v(:, :, 1), zpsi)
+      !call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, 1), zpsi, t)
       alpha = zstates_dotp(sys%m, sys%st%dim, v(:, :, 1), zpsi)
       call zaxpy(np, -M_z1*alpha, v(1, 1, 1), 1, zpsi(1, 1), 1)
       
@@ -223,7 +241,8 @@ contains
       do n = 1, korder - 1
         v(:, :, n + 1) = zpsi(:, :)/beta
         hm(n+1, n) = beta
-        call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, n+1), zpsi, t)
+        call operate(v(:, :, n+1), zpsi)
+        !call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, n+1), zpsi, t)
         hm(n    , n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n)    , zpsi)
         hm(n + 1, n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n + 1), zpsi)
         call zgemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n, n + 1), 1, M_z1, zpsi(1, 1), 1)

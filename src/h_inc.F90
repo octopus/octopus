@@ -76,6 +76,76 @@ subroutine X(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   call pop_sub()
 end subroutine X(Hpsi)
 
+#if defined(R_TCOMPLEX)
+subroutine X(magnus) (h, m, st, sys, ik, psi, Hpsi, vmagnus)
+  type(hamiltonian_type), intent(IN) :: h
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  type(system_type), intent(in) :: sys ! this is necessary due to the nl part of the PP
+  integer, intent(in) :: ik
+  R_TYPE, intent(IN) :: psi(m%np, st%dim)
+  R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
+  real(r8), intent(in) :: vmagnus(m%np, st%nspin, 2)
+
+  R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
+  integer :: idim
+  ! We will assume, for the moment, no spinors.
+
+  call push_sub('magnus')
+
+  allocate(auxpsi(m%np, st%dim), aux2psi(m%np, st%dim))
+
+  call X(kinetic) (h, ik, m, st, psi, hpsi)
+
+  auxpsi = hpsi
+  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, psi, auxpsi)
+  select case(st%ispin)
+  case(UNPOLARIZED)
+    hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
+  case(SPIN_POLARIZED)
+    if(modulo(ik+1, 2) == 0) then
+      hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
+    else
+      hpsi(:, 1) = hpsi(:, 1) - M_zI*vmagnus(:, 2, 1)*auxpsi(:, 1)
+    end if
+  end select
+
+  select case(st%ispin)
+  case(UNPOLARIZED)
+    auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
+  case(SPIN_POLARIZED)
+    if(modulo(ik+1, 2) == 0) then
+      auxpsi(:, 1) = vmagnus(:, 1, 1)*psi(:, 1)
+    else
+      auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
+    end if
+  end select
+  call X(kinetic) (h, ik, m, st, auxpsi, aux2psi)
+  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, auxpsi, aux2psi)
+  hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
+
+  do idim = 1, st%dim
+      hpsi(:, idim) = hpsi(:, idim) + h%Vpsl(:)*psi(:,idim)
+  end do
+
+  select case(st%ispin)
+  case(UNPOLARIZED)
+    hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(:, 1)
+  case(SPIN_POLARIZED)
+    if(modulo(ik+1, 2) == 0) then
+      hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 1, 2)*psi(1:, 1)
+    else
+      hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
+    end if
+  end select
+  if(sys%nlpp) call X(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
+  call X(vborders) (h, m, st, psi, hpsi)
+
+  deallocate(auxpsi, aux2psi)
+  call pop_sub()
+end subroutine X(magnus)
+#endif
+
 subroutine X(kinetic) (h, ik, m, st, psi, Hpsi)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m

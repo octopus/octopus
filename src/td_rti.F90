@@ -29,11 +29,13 @@ module td_rti
 
 
     real(r8), pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
+    real(r8), pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
   end type td_rti_type
 
   integer, parameter :: REVERSAL             = 2, &
                         APP_REVERSAL         = 3, &
-                        EXPONENTIAL_MIDPOINT = 4  
+                        EXPONENTIAL_MIDPOINT = 4, &
+                        MAGNUS               = 5 
 
   real(r8), parameter, private :: scf_threshold = 1.0e-3_r8
   
@@ -48,6 +50,8 @@ contains
     case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
+    case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
+       allocate(tr%vmagnus(m%np, st%nspin, 2))
     case default
       write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
       message(2) = '(2 <= TDEvolutionMethod <= 4)'
@@ -64,9 +68,13 @@ contains
     type(td_rti_type), intent(inout) :: tr
 
     ASSERT(associated(tr%v_old)) ! sanity check
-
     deallocate(tr%v_old)         ! clean ols KS potentials
     nullify(tr%v_old)
+
+    if(tr%method == MAGNUS) then
+      ASSERT(associated(tr%vmagnus))
+      deallocate(tr%vmagnus); nullify(tr%vmagnus)
+    endif
 
     call td_exp_end(tr%te)       ! clean propagator method
   end subroutine td_rti_end
@@ -110,6 +118,7 @@ contains
     case(REVERSAL);             call td_rti2
     case(APP_REVERSAL);         call td_rti3
     case(EXPONENTIAL_MIDPOINT); call td_rti4
+    case(MAGNUS);               call td_rti5
     end select
 
     if(self_consistent) then
@@ -128,6 +137,7 @@ contains
          case(REVERSAL);             call td_rti2
          case(APP_REVERSAL);         call td_rti3
          case(EXPONENTIAL_MIDPOINT); call td_rti4
+         case(MAGNUS);               call td_rti5
         end select
       enddo
       deallocate(zpsi1)
@@ -224,6 +234,59 @@ contains
       
       call pop_sub()
     end subroutine td_rti4
+
+    subroutine td_rti5
+      integer :: j, is, ist, k
+      real(r8) :: time(2), x(3), f(3)
+      real(r8), allocatable :: vaux(:, :, :)
+
+      call push_sub('td_rti5')
+
+      allocate(vaux(m%np, st%nspin, 2))
+
+      time(1) = (M_HALF-sqrt(M_THREE)/6.0_r8)*dt
+      time(2) = (M_HALF+sqrt(M_THREE)/6.0_r8)*dt
+
+      if(.not.h%ip_app) then
+        do j = 1, 2
+           call xpolate_pot(time(j)-dt, m%np, st%nspin, &
+                          tr%v_old(:, :, 2), tr%v_old(:, :, 1), tr%v_old(:, :, 0), vaux(:, :, j))
+        enddo
+      else
+        vaux = M_ZERO
+      endif
+
+      do j = 1, 2
+        if(h%ep%no_lasers > 0) then
+          select case(h%gauge)
+          case(1) ! length gauge
+            call laser_field(h%ep%no_lasers, h%ep%lasers, t-dt+time(j), f)
+            do k = 1, m%np
+               call mesh_xyz(m, k, x)
+               do is = 1, st%spin_channels
+                  vaux(k, is, j) = vaux(k, is, j) + sum(x*f)
+               enddo
+            end do
+          case(2) ! velocity gauge
+            write(message(1),'(a)') 'Inconsistency in td_rti5'
+            call write_fatal(1)
+          end select
+        endif
+      enddo
+
+      tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
+      tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/12.0_r8)*dt*(vaux(:, :, 2) - vaux(:, :, 1))
+
+      do k = 1, st%nik
+        do ist = st%st_start, st%st_end
+          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
+                         vmagnus = tr%vmagnus)
+        end do
+      end do
+
+      deallocate(vaux)
+      call pop_sub()
+    end subroutine td_rti5
     
     subroutine xpolate_pot(t, np, dim, pot2, pot1, pot0, pot)
       real(r8), intent(in)  :: t
