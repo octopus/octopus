@@ -1,5 +1,5 @@
 //
-// time: Thu Jan 27 17:31:53 2005
+// time: Fri Jan 28 14:07:37 2005
 //
 // version: 3.2.0 (format), 4.3.2 (DX)
 //
@@ -118,19 +118,19 @@ include "BallsAndSticks.net"
 // comment: on the "Details..." selector. 
 // page assignment: Crystal	order=6, windowed=0, showing=0
 // page assignment: Crystal Axes	order=5, windowed=0, showing=0
-// page assignment: Geometry	order=13, windowed=0, showing=0
+// page assignment: Geometry	order=13, windowed=0, showing=1
 // page assignment: Image	order=15, windowed=0, showing=0
-// page assignment: Import	order=2, windowed=0, showing=1
-// page assignment: ImportN	order=3, windowed=0, showing=0
+// page assignment: Import	order=1, windowed=0, showing=0
+// page assignment: ImportN	order=2, windowed=0, showing=0
 // page assignment: Iso 2	order=9, windowed=0, showing=0
 // page assignment: Isosurface	order=7, windowed=0, showing=0
-// page assignment: Statistics	order=4, windowed=0, showing=0
+// page assignment: Statistics	order=3, windowed=0, showing=0
 // page assignment: caption	order=12, windowed=0, showing=0
 // page assignment: map_iso	order=8, windowed=0, showing=0
 // page assignment: mapped_data	order=14, windowed=0, showing=0
 // page assignment: slab	order=10, windowed=0, showing=0
 // page assignment: slab_II	order=11, windowed=0, showing=0
-// workspace: width = 594, height = 505
+// workspace: width = 821, height = 521
 // layout: snap = 0, width = 50, height = 50, align = NN
 //
 macro main(
@@ -149,8 +149,8 @@ macro main(
     //
     // 
     // node FileSelector[2]: x = 167, y = 17, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = ""
-    // output[2]: visible = 1, type = 32, value = ""
+    // output[1]: visible = 1, type = 32, value = "/home/marques/NMR/dx-work/C6H6.xyz"
+    // output[2]: visible = 1, type = 32, value = "C6H6.xyz"
     // page group: Geometry
     //
     // 
@@ -187,146 +187,14 @@ main_Receiver_36_out_1[cache: 0] = geo;
     // node Vector[1]: x = 84, y = 114, inputs = 11, label = Vector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_1"
     // input[2]: visible = 0
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 1 1 1 ]
+    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 2 1 1 ]
     // input[5]: defaulting = 1, visible = 0, type = 8, value = [ 1.0 1.0 1.0 ]
     // input[6]: defaulting = 1, visible = 0, type = 8, value = [ 5.0 5.0 5.0 ]
     // input[7]: defaulting = 1, visible = 0, type = 8, value = [       1        1        1]
     // input[9]: defaulting = 1, visible = 0, type = 8, value = [ 0.0 0.0 0.0 ]
-    // output[1]: visible = 1, type = 8, value = [ 1 1 1 ]
+    // output[1]: visible = 1, type = 8, value = [ 2 1 1 ]
     // page group: Crystal
     //
-    // 
-    // node Vector[2]: x = 216, y = 60, inputs = 11, label = Vector
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_2"
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 1 1 1 ]
-    // input[5]: defaulting = 1, visible = 0, type = 8, value = [ 0.0 0.0 0.0 ]
-    // input[6]: defaulting = 1, visible = 0, type = 8, value = [ 1000000.0 1000000.0 1000000.0 ]
-    // input[7]: defaulting = 1, visible = 0, type = 8, value = [       1        1        1]
-    // input[9]: defaulting = 1, visible = 0, type = 8, value = [ 2.0 2.0 2.0 ]
-    // output[1]: visible = 1, type = 8, value = [ 1 1 1 ]
-    // page group: Crystal Axes
-    //
-    // 
-    // node Vector[3]: x = 296, y = 25, inputs = 11, label = Vector
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_3"
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 90 90 90 ]
-    // input[5]: defaulting = 1, visible = 0, type = 8, value = [ 0.0 0.0 0.0 ]
-    // input[6]: defaulting = 1, visible = 0, type = 8, value = [ 180.0 180.0 180.0 ]
-    // input[7]: defaulting = 1, visible = 0, type = 8, value = [       1        1        1]
-    // input[9]: defaulting = 1, visible = 0, type = 8, value = [ 1.0 1.0 1.0 ]
-    // output[1]: visible = 1, type = 8, value = [ 90 90 90 ]
-    // page group: Crystal Axes
-    //
-    // 
-    // node Compute[40]: x = 288, y = 107, inputs = 2, label = Transform to Radians
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0*3.14159/180.0"
-    // page group: Crystal Axes
-    // expression: value = a*3.14159/180.0
-    // name[2]: value = a
-    //
-main_Compute_40_out_1 = 
-    Compute(
-    main_Compute_40_in_1,
-    main_Vector_3_out_1
-    ) [instance: 40, cache: 1];
-    // 
-    // node Compute[37]: x = 7, y = 240, inputs = 3, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "1.0001*$0.x*[1, 0, 0]"
-    // page group: Crystal Axes
-    // expression: value = 1.0001*a.x*[1, 0, 0]
-    // name[2]: value = a
-    // name[3]: value = b
-    //
-main_Compute_37_out_1 = 
-    Compute(
-    main_Compute_37_in_1,
-    main_Vector_2_out_1,
-    main_Compute_40_out_1
-    ) [instance: 37, cache: 1];
-    // 
-    // node Transmitter[40]: x = 29, y = 323, inputs = 1, label = a1
-    // page group: Crystal Axes
-    //
-a1 = main_Compute_37_out_1;
-    // 
-    // node Receiver[44]: x = 170, y = 26, inputs = 1, label = a1
-    // page group: Crystal
-    //
-main_Receiver_44_out_1[cache: 0] = a1;
-    // 
-    // node Compute[38]: x = 101, y = 240, inputs = 3, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "1.0001*$0.y*[cos($1.z), sin($1.z), 0]"
-    // page group: Crystal Axes
-    // expression: value = 1.0001*a.y*[cos(b.z), sin(b.z), 0]
-    // name[2]: value = a
-    // name[3]: value = b
-    //
-main_Compute_38_out_1 = 
-    Compute(
-    main_Compute_38_in_1,
-    main_Vector_2_out_1,
-    main_Compute_40_out_1
-    ) [instance: 38, cache: 1];
-    // 
-    // node Transmitter[41]: x = 123, y = 319, inputs = 1, label = a2
-    // page group: Crystal Axes
-    //
-a2 = main_Compute_38_out_1;
-    // 
-    // node Receiver[45]: x = 194, y = 26, inputs = 1, label = a2
-    // page group: Crystal
-    //
-main_Receiver_45_out_1[cache: 0] = a2;
-    // 
-    // node Compute[44]: x = 295, y = 196, inputs = 3, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0.x * $0.y * $0.z * sqrt(1.0 - cos($1.x) ^2 - cos($1.y)^2 - cos($1.z)^2 + 2.0 * cos($1.x) * cos($1.y) * cos($1.z))"
-    // page group: Crystal Axes
-    // expression: value = a.x * a.y * a.z * sqrt(1.0 - cos(b.x) ^2 - cos(b.y)^2 - cos(b.z)^2 + 2.0 * cos(b.x) * cos(b.y) * cos(b.z))
-    // name[2]: value = a
-    // name[3]: value = b
-    //
-main_Compute_44_out_1 = 
-    Compute(
-    main_Compute_44_in_1,
-    main_Vector_2_out_1,
-    main_Compute_40_out_1
-    ) [instance: 44, cache: 1];
-    // 
-    // node Compute[39]: x = 189, y = 239, inputs = 4, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "[$0.z*cos($1.y), $0.z* (cos($1.x) - (cos($1.y) * cos($1.z))) / sin($1.z), $2 / ($0.x * $0.y * sin($1.z))]"
-    // page group: Crystal Axes
-    // expression: value = [a.z*cos(b.y), a.z* (cos(b.x) - (cos(b.y) * cos(b.z))) / sin(b.z), V / (a.x * a.y * sin(b.z))]
-    // name[2]: value = a
-    // name[3]: value = b
-    // name[4]: value = V
-    //
-main_Compute_39_out_1 = 
-    Compute(
-    main_Compute_39_in_1,
-    main_Vector_2_out_1,
-    main_Compute_40_out_1,
-    main_Compute_44_out_1
-    ) [instance: 39, cache: 1];
-    // 
-    // node Transmitter[42]: x = 213, y = 323, inputs = 1, label = a3
-    // page group: Crystal Axes
-    //
-a3 = main_Compute_39_out_1;
-    // 
-    // node Receiver[46]: x = 218, y = 26, inputs = 1, label = a3
-    // page group: Crystal
-    //
-main_Receiver_46_out_1[cache: 0] = a3;
-    // 
-    // node List[1]: x = 170, y = 92, inputs = 3, label = List
-    // page group: Crystal
-    //
-main_List_1_out_1 = 
-    List(
-    main_Receiver_44_out_1,
-    main_Receiver_45_out_1,
-    main_Receiver_46_out_1
-    ) [instance: 1, cache: 1];
     // 
     // node String[6]: x = 50, y = 555, inputs = 0, label = String
     // output[1]: visible = 1, type = 32, value = "a"
@@ -334,12 +202,13 @@ main_List_1_out_1 =
     //
     // 
     // node FileSelector[1]: x = 40, y = 9, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = ""
-    // output[2]: visible = 1, type = 32, value = ""
+    // output[1]: visible = 1, type = 32, value = "/home/marques/NMR/dx-work/Chi33.dx"
+    // output[2]: visible = 1, type = 32, value = "Chi33.dx"
     // page group: Import
     //
     // 
     // node Inquire[8]: x = 10, y = 113, inputs = 3, label = Inquire
+    // input[2]: defaulting = 0, visible = 1, type = 32, value = "is null"
     // page group: Import
     //
 main_Inquire_8_out_1 = 
@@ -840,10 +709,66 @@ main_Compute_1_out_1 =
     //
 grid_x = main_Compute_1_out_1;
     // 
-    // node Receiver[47]: x = 619, y = 14, inputs = 1, label = grid_x
+    // node Receiver[50]: x = 27, y = 86, inputs = 1, label = grid_x
+    // page group: Crystal Axes
+    //
+main_Receiver_50_out_1[cache: 0] = grid_x;
+    // 
+    // node Inquire[4]: x = 590, y = 237, inputs = 3, label = Inquire
+    // input[2]: defaulting = 0, visible = 1, type = 32, value = "deltas"
+    // page group: Statistics
+    //
+main_Inquire_4_out_1 = 
+    Inquire(
+    main_Receiver_1_out_1,
+    main_Inquire_4_in_2,
+    main_Inquire_4_in_3
+    ) [instance: 4, cache: 1];
+    // 
+    // node Select[1]: x = 805, y = 309, inputs = 3, label = Select
+    // input[2]: defaulting = 0, visible = 1, type = 1, value = 0
+    // page group: Statistics
+    //
+main_Select_1_out_1 = 
+    Select(
+    main_Inquire_4_out_1,
+    main_Select_1_in_2,
+    main_Select_1_in_3
+    ) [instance: 1, cache: 1];
+    // 
+    // node Transmitter[10]: x = 794, y = 385, inputs = 1, label = spacing_x
+    // page group: Statistics
+    //
+spacing_x = main_Select_1_out_1;
+    // 
+    // node Receiver[53]: x = 74, y = 86, inputs = 1, label = spacing_x
+    // page group: Crystal Axes
+    //
+main_Receiver_53_out_1[cache: 0] = spacing_x;
+    // 
+    // node Compute[45]: x = 89, y = 190, inputs = 3, label = Compute
+    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0*$1"
+    // page group: Crystal Axes
+    // expression: value = a*b
+    // name[2]: value = a
+    // name[3]: value = b
+    //
+main_Compute_45_out_1 = 
+    Compute(
+    main_Compute_45_in_1,
+    main_Receiver_50_out_1,
+    main_Receiver_53_out_1
+    ) [instance: 45, cache: 1];
+    // 
+    // node Transmitter[40]: x = 156, y = 278, inputs = 1, label = a1
+    // page group: Crystal Axes
+    //
+a1 = main_Compute_45_out_1;
+    // 
+    // node Receiver[44]: x = 170, y = 26, inputs = 1, label = a1
     // page group: Crystal
     //
-main_Receiver_47_out_1[cache: 0] = grid_x;
+main_Receiver_44_out_1[cache: 0] = a1;
     // 
     // node Compute[2]: x = 94, y = 296, inputs = 2, label = Compute
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0.y"
@@ -862,10 +787,55 @@ main_Compute_2_out_1 =
     //
 grid_y = main_Compute_2_out_1;
     // 
-    // node Receiver[48]: x = 666, y = 14, inputs = 1, label = grid_y
+    // node Receiver[51]: x = 145, y = 86, inputs = 1, label = grid_y
+    // page group: Crystal Axes
+    //
+main_Receiver_51_out_1[cache: 0] = grid_y;
+    // 
+    // node Select[2]: x = 888, y = 310, inputs = 3, label = Select
+    // input[2]: defaulting = 0, visible = 1, type = 1, value = 1
+    // page group: Statistics
+    //
+main_Select_2_out_1 = 
+    Select(
+    main_Inquire_4_out_1,
+    main_Select_2_in_2,
+    main_Select_2_in_3
+    ) [instance: 2, cache: 1];
+    // 
+    // node Transmitter[11]: x = 877, y = 385, inputs = 1, label = spacing_y
+    // page group: Statistics
+    //
+spacing_y = main_Select_2_out_1;
+    // 
+    // node Receiver[54]: x = 192, y = 86, inputs = 1, label = spacing_y
+    // page group: Crystal Axes
+    //
+main_Receiver_54_out_1[cache: 0] = spacing_y;
+    // 
+    // node Compute[51]: x = 158, y = 190, inputs = 3, label = Compute
+    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0*$1"
+    // page group: Crystal Axes
+    // expression: value = a*b
+    // name[2]: value = a
+    // name[3]: value = b
+    //
+main_Compute_51_out_1 = 
+    Compute(
+    main_Compute_51_in_1,
+    main_Receiver_51_out_1,
+    main_Receiver_54_out_1
+    ) [instance: 51, cache: 1];
+    // 
+    // node Transmitter[41]: x = 180, y = 278, inputs = 1, label = a2
+    // page group: Crystal Axes
+    //
+a2 = main_Compute_51_out_1;
+    // 
+    // node Receiver[45]: x = 194, y = 26, inputs = 1, label = a2
     // page group: Crystal
     //
-main_Receiver_48_out_1[cache: 0] = grid_y;
+main_Receiver_45_out_1[cache: 0] = a2;
     // 
     // node Compute[3]: x = 176, y = 297, inputs = 2, label = Compute
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0.z"
@@ -883,6 +853,76 @@ main_Compute_3_out_1 =
     // page group: Statistics
     //
 grid_z = main_Compute_3_out_1;
+    // 
+    // node Receiver[52]: x = 263, y = 86, inputs = 1, label = grid_z
+    // page group: Crystal Axes
+    //
+main_Receiver_52_out_1[cache: 0] = grid_z;
+    // 
+    // node Select[3]: x = 966, y = 310, inputs = 3, label = Select
+    // input[2]: defaulting = 0, visible = 1, type = 1, value = 2
+    // page group: Statistics
+    //
+main_Select_3_out_1 = 
+    Select(
+    main_Inquire_4_out_1,
+    main_Select_3_in_2,
+    main_Select_3_in_3
+    ) [instance: 3, cache: 1];
+    // 
+    // node Transmitter[12]: x = 955, y = 385, inputs = 1, label = spacing_z
+    // page group: Statistics
+    //
+spacing_z = main_Select_3_out_1;
+    // 
+    // node Receiver[55]: x = 310, y = 86, inputs = 1, label = spacing_z
+    // page group: Crystal Axes
+    //
+main_Receiver_55_out_1[cache: 0] = spacing_z;
+    // 
+    // node Compute[52]: x = 227, y = 190, inputs = 3, label = Compute
+    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0*$1"
+    // page group: Crystal Axes
+    // expression: value = a*b
+    // name[2]: value = a
+    // name[3]: value = b
+    //
+main_Compute_52_out_1 = 
+    Compute(
+    main_Compute_52_in_1,
+    main_Receiver_52_out_1,
+    main_Receiver_55_out_1
+    ) [instance: 52, cache: 1];
+    // 
+    // node Transmitter[42]: x = 204, y = 278, inputs = 1, label = a3
+    // page group: Crystal Axes
+    //
+a3 = main_Compute_52_out_1;
+    // 
+    // node Receiver[46]: x = 218, y = 26, inputs = 1, label = a3
+    // page group: Crystal
+    //
+main_Receiver_46_out_1[cache: 0] = a3;
+    // 
+    // node List[1]: x = 170, y = 92, inputs = 3, label = List
+    // page group: Crystal
+    //
+main_List_1_out_1 = 
+    List(
+    main_Receiver_44_out_1,
+    main_Receiver_45_out_1,
+    main_Receiver_46_out_1
+    ) [instance: 1, cache: 1];
+    // 
+    // node Receiver[47]: x = 619, y = 14, inputs = 1, label = grid_x
+    // page group: Crystal
+    //
+main_Receiver_47_out_1[cache: 0] = grid_x;
+    // 
+    // node Receiver[48]: x = 666, y = 14, inputs = 1, label = grid_y
+    // page group: Crystal
+    //
+main_Receiver_48_out_1[cache: 0] = grid_y;
     // 
     // node Receiver[49]: x = 713, y = 14, inputs = 1, label = grid_z
     // page group: Crystal
@@ -925,7 +965,7 @@ main_Compute_42_out_1 =
     // 
     // node Vector[4]: x = 602, y = 195, inputs = 11, label = Vector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_4"
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 0 0 0 ]
+    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 14 25 0 ]
     // input[4]: visible = 1
     // input[5]: defaulting = 1, visible = 1, type = 8, value = [ 0.0 0.0 0.0 ]
     // input[6]: defaulting = 1, visible = 1, type = 8, value = [63 63 63 ]
@@ -933,7 +973,7 @@ main_Compute_42_out_1 =
     // input[8]: visible = 1
     // input[9]: defaulting = 1, visible = 1, type = 8, value = [ 0.0 0.0 0.0 ]
     // input[11]: visible = 1
-    // output[1]: visible = 1, type = 8, value = [ 0 0 0 ]
+    // output[1]: visible = 1, type = 8, value = [ 14 25 0 ]
     // page group: Crystal
     //
 main_Vector_4_out_1[cache: 2] = 
@@ -978,12 +1018,12 @@ main_CrystalRepeat_1_out_1 =
     //
 geo_crystal = main_CrystalRepeat_1_out_1;
     // 
-    // node Receiver[35]: x = 206, y = 267, inputs = 1, label = geo_crystal
+    // node Receiver[35]: x = 352, y = 28, inputs = 1, label = geo_crystal
     // page group: Geometry
     //
 main_Receiver_35_out_1[cache: 0] = geo_crystal;
     // 
-    // node Scalar[4]: x = 380, y = 288, inputs = 11, label = Scalar
+    // node Scalar[4]: x = 526, y = 49, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_4"
     // input[3]: defaulting = 0, visible = 0, type = 5, value = 2.75 
     // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
@@ -994,7 +1034,7 @@ main_Receiver_35_out_1[cache: 0] = geo_crystal;
     // page group: Geometry
     //
     // 
-    // node AddBonds[1]: x = 227, y = 359, inputs = 2, label = AddBonds
+    // node AddBonds[1]: x = 373, y = 120, inputs = 2, label = AddBonds
     // page group: Geometry
     //
 main_AddBonds_1_out_1 = 
@@ -1003,12 +1043,12 @@ main_AddBonds_1_out_1 =
     main_Scalar_4_out_1
     ) [instance: 1, cache: 1];
     // 
-    // node String[3]: x = 373, y = 361, inputs = 0, label = String
+    // node String[3]: x = 519, y = 122, inputs = 0, label = String
     // output[1]: visible = 1, type = 32, value = "default"
     // page group: Geometry
     //
     // 
-    // node AddColors[1]: x = 227, y = 436, inputs = 2, label = AddColors
+    // node AddColors[1]: x = 373, y = 197, inputs = 2, label = AddColors
     // input[2]: defaulting = 1, visible = 1, type = 32, value = "default"
     // page group: Geometry
     //
@@ -1018,12 +1058,12 @@ main_AddColors_1_out_1 =
     main_String_3_out_1
     ) [instance: 1, cache: 1];
     // 
-    // node String[4]: x = 374, y = 438, inputs = 0, label = String
+    // node String[4]: x = 520, y = 199, inputs = 0, label = String
     // output[1]: visible = 1, type = 32, value = "default"
     // page group: Geometry
     //
     // 
-    // node AddRadii[1]: x = 234, y = 515, inputs = 2, label = AddRadii
+    // node AddRadii[1]: x = 380, y = 276, inputs = 2, label = AddRadii
     // input[2]: defaulting = 1, visible = 1, type = 32, value = "default"
     // page group: Geometry
     //
@@ -1033,7 +1073,7 @@ main_AddRadii_1_out_1 =
     main_String_4_out_1
     ) [instance: 1, cache: 1];
     // 
-    // node Scalar[5]: x = 331, y = 521, inputs = 11, label = Scalar
+    // node Scalar[5]: x = 477, y = 282, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_5"
     // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.25 
     // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
@@ -1044,7 +1084,7 @@ main_AddRadii_1_out_1 =
     // page group: Geometry
     //
     // 
-    // node Integer[3]: x = 407, y = 522, inputs = 11, label = Integer
+    // node Integer[3]: x = 553, y = 283, inputs = 11, label = Integer
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Integer_3"
     // input[3]: defaulting = 0, visible = 0, type = 1, value = 20 
     // input[5]: defaulting = 1, visible = 0, type = 1, value = 1
@@ -1055,12 +1095,12 @@ main_AddRadii_1_out_1 =
     // page group: Geometry
     //
     // 
-    // node String[5]: x = 482, y = 521, inputs = 0, label = String
+    // node String[5]: x = 628, y = 282, inputs = 0, label = String
     // output[1]: visible = 1, type = 32, value = NULL
     // page group: Geometry
     //
     // 
-    // node Scalar[6]: x = 550, y = 521, inputs = 11, label = Scalar
+    // node Scalar[6]: x = 696, y = 282, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_6"
     // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.2 
     // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
@@ -1071,7 +1111,7 @@ main_AddRadii_1_out_1 =
     // page group: Geometry
     //
     // 
-    // node Integer[4]: x = 620, y = 522, inputs = 11, label = Integer
+    // node Integer[4]: x = 766, y = 283, inputs = 11, label = Integer
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Integer_4"
     // input[3]: defaulting = 0, visible = 0, type = 1, value = 20 
     // input[5]: defaulting = 1, visible = 0, type = 1, value = 3
@@ -1082,7 +1122,7 @@ main_AddRadii_1_out_1 =
     // page group: Geometry
     //
     // 
-    // node BallsAndSticks[1]: x = 333, y = 617, inputs = 8, label = BallsAndSticks
+    // node BallsAndSticks[1]: x = 479, y = 378, inputs = 8, label = BallsAndSticks
     // input[2]: defaulting = 0, visible = 1, type = 1, value = 1
     // input[3]: defaulting = 1, visible = 1, type = 5, value = 0.2
     // input[4]: defaulting = 1, visible = 1, type = 1, value = 8
@@ -1196,17 +1236,17 @@ main_Route_3_out_2 =
     main_Receiver_4_out_1
     ) [instance: 3, cache: 1];
     // 
-    // node Receiver[7]: x = 626, y = 49, inputs = 1, label = grid_x
+    // node Receiver[7]: x = 633, y = 45, inputs = 1, label = grid_x
     // page group: slab
     //
 main_Receiver_7_out_1[cache: 0] = grid_x;
     // 
-    // node Receiver[8]: x = 680, y = 46, inputs = 1, label = grid_y
+    // node Receiver[8]: x = 685, y = 45, inputs = 1, label = grid_y
     // page group: slab
     //
 main_Receiver_8_out_1[cache: 0] = grid_y;
     // 
-    // node Receiver[9]: x = 736, y = 43, inputs = 1, label = grid_z
+    // node Receiver[9]: x = 738, y = 45, inputs = 1, label = grid_z
     // page group: slab
     //
 main_Receiver_9_out_1[cache: 0] = grid_z;
@@ -1229,8 +1269,8 @@ main_Switch_3_out_1 =
     // input[6]: defaulting = 1, visible = 0, type = 1, value = 1
     // input[7]: defaulting = 0, visible = 0, type = 16777217, value = { 1 64 1 1 64 1 }
     // page group: slab
-    // vcr[1]: min = 1, max = 64, beg = 1, end = 64, cur = 34, inc = 1, loop = off, step = on, pal = off
-    // window: position = (0.6471,0.0257), size = 0.2693x0.1048
+    // vcr[1]: min = 1, max = 64, beg = 1, end = 64, cur = 2, inc = 1, loop = off, step = on, pal = off
+    // window: position = (0.6469,0.0254), size = 0.2695x0.1045
     //
     main_Sequencer_1_in_3 = @frame;
 main_Sequencer_1_out_1[cache: 2] = 
@@ -1358,7 +1398,7 @@ main_Format_9_out_1 =
     main_Receiver_25_out_1
     ) [instance: 9, cache: 1];
     // 
-    // node Caption[2]: x = 275, y = 256, inputs = 9, label = Caption
+    // node Caption[2]: x = 277, y = 256, inputs = 9, label = Caption
     // page group: caption
     //
 main_Caption_2_out_1 = 
@@ -1421,7 +1461,7 @@ main_Receiver_6_out_1[cache: 0] = max;
     // input[19]: defaulting = 1, visible = 1, type = 32, value = "Slab colormap"
     // page group: slab
     // Colormap: title = Slab colormap
-    // window: position = (0.2800,0.0000), size = 0.6350x0.5857
+    // window: position = (0.2797,0.0000), size = 0.6352x0.5859
     //
 main_Colormap_2_out_1[cache: 2],
 main_Colormap_2_out_2[cache: 2] = 
@@ -1494,7 +1534,7 @@ main_ColorBar_1_out_1 =
     // toggle : 0
     //
     // 
-    // node Route[16]: x = 270, y = 352, inputs = 2, outputs = 2, label = Route
+    // node Route[16]: x = 271, y = 353, inputs = 2, outputs = 2, label = Route
     // page group: caption
     //
 main_Route_16_out_1,
@@ -1537,7 +1577,7 @@ main_Compute_19_out_1 =
     main_Integer_2_out_1
     ) [instance: 19, cache: 1];
     // 
-    // node Route[1]: x = 87, y = 216, inputs = 2, outputs = 2, label = Route
+    // node Route[1]: x = 89, y = 216, inputs = 2, outputs = 2, label = Route
     // page group: slab_II
     //
 main_Route_1_out_1,
@@ -1764,7 +1804,7 @@ main_Route_7_out_2 =
     main_FileSelector_3_out_1
     ) [instance: 7, cache: 1];
     // 
-    // node Import[2]: x = 401, y = 300, inputs = 6, label = Import
+    // node Import[2]: x = 409, y = 302, inputs = 6, label = Import
     // input[3]: defaulting = 0, visible = 1, type = 32, value = "dx"
     // page group: mapped_data
     //
@@ -1778,7 +1818,7 @@ main_Import_2_out_1 =
     main_Import_2_in_6
     ) [instance: 2, cache: 1];
     // 
-    // node Transmitter[23]: x = 377, y = 400, inputs = 1, label = function_to_map
+    // node Transmitter[23]: x = 389, y = 388, inputs = 1, label = function_to_map
     // page group: mapped_data
     //
 function_to_map = main_Import_2_out_1;
@@ -1814,7 +1854,7 @@ main_Map_2_out_1 =
     // input[19]: defaulting = 1, visible = 0, type = 32, value = "Mapped function colormap"
     // page group: map_iso
     // Colormap: title = Mapped function colormap
-    // window: position = (0.3450,0.0124), size = 0.6350x0.5857
+    // window: position = (0.3453,0.0127), size = 0.6352x0.5859
     //
 main_Colormap_3_out_1[cache: 2],
 main_Colormap_3_out_2[cache: 2] = 
@@ -1976,7 +2016,7 @@ slab = main_Collect_2_out_1;
     //
 main_Receiver_28_out_1[cache: 0] = slab;
     // 
-    // node Transmitter[22]: x = 396, y = 690, inputs = 1, label = geometry
+    // node Transmitter[22]: x = 542, y = 451, inputs = 1, label = geometry
     // page group: Geometry
     //
 geometry = main_BallsAndSticks_1_out_1;
@@ -2090,13 +2130,13 @@ main_Receiver_33_out_1[cache: 0] = coloured_isosurface_2;
     // 
     // node Toggle[13]: x = 648, y = 603, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_13"
-    // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
-    // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
+    // input[2]: defaulting = 0, visible = 0, type = 29, value = 1
+    // input[3]: defaulting = 0, visible = 0, type = 3, value = 1
     // input[4]: defaulting = 1, visible = 1, type = 29, value = 1
     // input[5]: defaulting = 1, visible = 1, type = 29, value = 0
-    // output[1]: visible = 1, type = 29, value = 0
+    // output[1]: visible = 1, type = 29, value = 1
     // page group: Crystal Axes
-    // toggle : 0
+    // toggle : 1
     //
     // 
     // node Receiver[38]: x = 512, y = 167, inputs = 1, label = a1
@@ -2395,86 +2435,6 @@ main_Collect_4_out_1 =
     main_Receiver_37_out_1
     ) [instance: 4, cache: 1];
     // 
-    // node Inquire[4]: x = 590, y = 237, inputs = 3, label = Inquire
-    // input[2]: defaulting = 0, visible = 1, type = 32, value = "deltas"
-    // page group: Statistics
-    //
-main_Inquire_4_out_1 = 
-    Inquire(
-    main_Receiver_1_out_1,
-    main_Inquire_4_in_2,
-    main_Inquire_4_in_3
-    ) [instance: 4, cache: 1];
-    // 
-    // node Select[1]: x = 805, y = 309, inputs = 3, label = Select
-    // input[2]: defaulting = 0, visible = 1, type = 1, value = 0
-    // page group: Statistics
-    //
-main_Select_1_out_1 = 
-    Select(
-    main_Inquire_4_out_1,
-    main_Select_1_in_2,
-    main_Select_1_in_3
-    ) [instance: 1, cache: 1];
-    // 
-    // node Compute[11]: x = 795, y = 382, inputs = 2, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0.0"
-    // page group: Statistics
-    // expression: value = a.0
-    // name[2]: value = a
-    //
-main_Compute_11_out_1 = 
-    Compute(
-    main_Compute_11_in_1,
-    main_Select_1_out_1
-    ) [instance: 11, cache: 1];
-    // 
-    // node Select[2]: x = 888, y = 310, inputs = 3, label = Select
-    // input[2]: defaulting = 0, visible = 1, type = 1, value = 1
-    // page group: Statistics
-    //
-main_Select_2_out_1 = 
-    Select(
-    main_Inquire_4_out_1,
-    main_Select_2_in_2,
-    main_Select_2_in_3
-    ) [instance: 2, cache: 1];
-    // 
-    // node Compute[12]: x = 878, y = 382, inputs = 2, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0.1"
-    // page group: Statistics
-    // expression: value = a.1
-    // name[2]: value = a
-    //
-main_Compute_12_out_1 = 
-    Compute(
-    main_Compute_12_in_1,
-    main_Select_2_out_1
-    ) [instance: 12, cache: 1];
-    // 
-    // node Select[3]: x = 966, y = 310, inputs = 3, label = Select
-    // input[2]: defaulting = 0, visible = 1, type = 1, value = 2
-    // page group: Statistics
-    //
-main_Select_3_out_1 = 
-    Select(
-    main_Inquire_4_out_1,
-    main_Select_3_in_2,
-    main_Select_3_in_3
-    ) [instance: 3, cache: 1];
-    // 
-    // node Compute[13]: x = 956, y = 380, inputs = 2, label = Compute
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "$0.2"
-    // page group: Statistics
-    // expression: value = a.2
-    // name[2]: value = a
-    //
-main_Compute_13_out_1 = 
-    Compute(
-    main_Compute_13_in_1,
-    main_Select_3_out_1
-    ) [instance: 13, cache: 1];
-    // 
     // node Toggle[9]: x = 356, y = 30, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_9"
     // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
@@ -2614,11 +2574,11 @@ main_Format_2_out_1 =
     // input[1]: defaulting = 0, visible = 0, type = 67108863, value = "Image_2"
     // input[4]: defaulting = 0, visible = 0, type = 1, value = 1
     // input[5]: defaulting = 0, visible = 0, type = 8, value = [9.09389 16.4306 6.86273]
-    // input[6]: defaulting = 0, visible = 0, type = 8, value = [89.7488 -31.3463 84.7371]
+    // input[6]: defaulting = 0, visible = 0, type = 8, value = [36.9401 -86.3453 66.1414]
     // input[7]: defaulting = 0, visible = 0, type = 5, value = 48.16
-    // input[8]: defaulting = 0, visible = 0, type = 1, value = 881
-    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.769
-    // input[10]: defaulting = 0, visible = 0, type = 8, value = [-0.219605 0.713597 0.665247]
+    // input[8]: defaulting = 0, visible = 0, type = 1, value = 804
+    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.82
+    // input[10]: defaulting = 0, visible = 0, type = 8, value = [-0.0399831 0.491077 0.870198]
     // input[11]: defaulting = 1, visible = 0, type = 5, value = 22.354
     // input[12]: defaulting = 0, visible = 0, type = 1, value = 0
     // input[14]: defaulting = 0, visible = 0, type = 1, value = 1
@@ -2634,7 +2594,7 @@ main_Format_2_out_1 =
     // input[41]: defaulting = 0, visible = 0, type = 32, value = "rotate"
     // page group: Image
     // depth: value = 24
-    // window: position = (0.1400,0.1533), size = 0.6393x0.6848
+    // window: position = (0.2867,0.2246), size = 0.6391x0.6846
     // internal caching: 1
     //
 main_Image_2_out_1,
@@ -2734,7 +2694,7 @@ main_Image_2_out_3 =
     main_ManageColormapEditor_2_in_3
     ) [instance: 2, cache: 1];
     // 
-    // node Toggle[5]: x = 432, y = 65, inputs = 6, label = Toggle
+    // node Toggle[5]: x = 195, y = 385, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_5"
     // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
     // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
@@ -2745,7 +2705,7 @@ main_Image_2_out_3 =
     // toggle : 0
     //
     // 
-    // node ManageControlPanel[1]: x = 344, y = 139, inputs = 2, label = ManageControlPanel
+    // node ManageControlPanel[1]: x = 107, y = 459, inputs = 2, label = ManageControlPanel
     // input[1]: defaulting = 0, visible = 1, type = 16777248, value = {"Geometry details"}
     // page group: Geometry
     //
@@ -2772,7 +2732,7 @@ main_Image_2_out_3 =
     main_Toggle_9_out_1
     ) [instance: 3, cache: 1];
     // 
-    // node Toggle[12]: x = 156, y = 404, inputs = 6, label = Toggle
+    // node Toggle[12]: x = 69, y = 344, inputs = 6, label = Toggle
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Toggle_12"
     // input[2]: defaulting = 0, visible = 0, type = 29, value = 0
     // input[3]: defaulting = 0, visible = 0, type = 3, value = 0
@@ -2783,7 +2743,7 @@ main_Image_2_out_3 =
     // toggle : 0
     //
     // 
-    // node ManageControlPanel[5]: x = 68, y = 491, inputs = 2, label = ManageControlPanel
+    // node ManageControlPanel[5]: x = 38, y = 440, inputs = 2, label = ManageControlPanel
     // input[1]: defaulting = 0, visible = 1, type = 16777248, value = {"Crystal"}
     // page group: Crystal Axes
     //
@@ -2811,21 +2771,6 @@ main_Image_2_out_3 =
     //
 mean = main_Statistics_2_out_1;
     // 
-    // node Transmitter[10]: x = 794, y = 459, inputs = 1, label = spacing_x
-    // page group: Statistics
-    //
-spacing_x = main_Compute_11_out_1;
-    // 
-    // node Transmitter[11]: x = 877, y = 459, inputs = 1, label = spacing_y
-    // page group: Statistics
-    //
-spacing_y = main_Compute_12_out_1;
-    // 
-    // node Transmitter[12]: x = 955, y = 459, inputs = 1, label = spacing_z
-    // page group: Statistics
-    //
-spacing_z = main_Compute_13_out_1;
-    // 
     // node Transmitter[13]: x = 648, y = 524, inputs = 1, label = origin
     // page group: Statistics
     //
@@ -2836,14 +2781,14 @@ origin = main_Inquire_5_out_1;
     //
 slab_origin = main_Inquire_7_out_1;
     //
-    // decorator Annotate	pos=(418,115) size=208x44 style(Label), value = <NULL>
+    // decorator Annotate	pos=(639,99) size=208x44 style(Label), value = <NULL>
     // annotation user_begin: 50
     // annotation user: Constructs the axes and 
     // annotation user: shows them when requested
     // annotation user_end: <NULL>
     // page group: Crystal Axes
     //
-    // decorator Annotate	pos=(15,52) size=189x44 style(Label), value = <NULL>
+    // decorator Annotate	pos=(27,21) size=189x44 style(Label), value = <NULL>
     // annotation user_begin: 49
     // annotation user: Computes lattice vectors 
     // annotation user: from lengths and angles
@@ -2859,7 +2804,7 @@ main_Toggle_4_in_4 = NULL;
 main_Toggle_4_in_5 = NULL;
 main_Toggle_4_in_6 = NULL;
 main_Toggle_4_out_1 = 0;
-main_FileSelector_2_out_1 = "";
+main_FileSelector_2_out_1 = "/home/marques/NMR/dx-work/C6H6.xyz";
 main_Route_6_out_1 = NULL;
 main_ImportStructure_1_in_2 = "xyz";
 main_ImportStructure_1_out_1 = NULL;
@@ -2867,7 +2812,7 @@ main_Transmitter_36_out_1 = NULL;
 main_Receiver_36_out_1 = NULL;
 main_Vector_1_in_1 = "Vector_1";
 main_Vector_1_in_2 = NULL;
-main_Vector_1_in_3 = [ 1 1 1 ];
+main_Vector_1_in_3 = [ 2 1 1 ];
 main_Vector_1_in_4 = NULL;
 main_Vector_1_in_5 = NULL;
 main_Vector_1_in_6 = NULL;
@@ -2876,52 +2821,11 @@ main_Vector_1_in_8 = NULL;
 main_Vector_1_in_9 = NULL;
 main_Vector_1_in_10 = NULL;
 main_Vector_1_in_11 = NULL;
-main_Vector_1_out_1 = [ 1 1 1 ];
-main_Vector_2_in_1 = "Vector_2";
-main_Vector_2_in_2 = NULL;
-main_Vector_2_in_3 = [ 1 1 1 ];
-main_Vector_2_in_4 = NULL;
-main_Vector_2_in_5 = NULL;
-main_Vector_2_in_6 = NULL;
-main_Vector_2_in_7 = NULL;
-main_Vector_2_in_8 = NULL;
-main_Vector_2_in_9 = NULL;
-main_Vector_2_in_10 = NULL;
-main_Vector_2_in_11 = NULL;
-main_Vector_2_out_1 = [ 1 1 1 ];
-main_Vector_3_in_1 = "Vector_3";
-main_Vector_3_in_2 = NULL;
-main_Vector_3_in_3 = [ 90 90 90 ];
-main_Vector_3_in_4 = NULL;
-main_Vector_3_in_5 = NULL;
-main_Vector_3_in_6 = NULL;
-main_Vector_3_in_7 = NULL;
-main_Vector_3_in_8 = NULL;
-main_Vector_3_in_9 = NULL;
-main_Vector_3_in_10 = NULL;
-main_Vector_3_in_11 = NULL;
-main_Vector_3_out_1 = [ 90 90 90 ];
-main_Compute_40_in_1 = "$0*3.14159/180.0";
-main_Compute_40_out_1 = NULL;
-main_Compute_37_in_1 = "1.0001*$0.x*[1, 0, 0]";
-main_Compute_37_out_1 = NULL;
-main_Transmitter_40_out_1 = NULL;
-main_Receiver_44_out_1 = NULL;
-main_Compute_38_in_1 = "1.0001*$0.y*[cos($1.z), sin($1.z), 0]";
-main_Compute_38_out_1 = NULL;
-main_Transmitter_41_out_1 = NULL;
-main_Receiver_45_out_1 = NULL;
-main_Compute_44_in_1 = "$0.x * $0.y * $0.z * sqrt(1.0 - cos($1.x) ^2 - cos($1.y)^2 - cos($1.z)^2 + 2.0 * cos($1.x) * cos($1.y) * cos($1.z))";
-main_Compute_44_out_1 = NULL;
-main_Compute_39_in_1 = "[$0.z*cos($1.y), $0.z* (cos($1.x) - (cos($1.y) * cos($1.z))) / sin($1.z), $2 / ($0.x * $0.y * sin($1.z))]";
-main_Compute_39_out_1 = NULL;
-main_Transmitter_42_out_1 = NULL;
-main_Receiver_46_out_1 = NULL;
-main_List_1_out_1 = NULL;
+main_Vector_1_out_1 = [ 2 1 1 ];
 main_String_6_out_1 = "a";
-main_FileSelector_1_out_1 = "";
-main_FileSelector_1_out_2 = "";
-main_Inquire_8_in_2 = NULL;
+main_FileSelector_1_out_1 = "/home/marques/NMR/dx-work/Chi33.dx";
+main_FileSelector_1_out_2 = "Chi33.dx";
+main_Inquire_8_in_2 = "is null";
 main_Inquire_8_in_3 = NULL;
 main_Inquire_8_out_1 = NULL;
 main_Compute_20_in_1 = "$0==1?0:1";
@@ -3032,14 +2936,48 @@ main_Inquire_3_out_1 = NULL;
 main_Compute_1_in_1 = "$0.x";
 main_Compute_1_out_1 = NULL;
 main_Transmitter_5_out_1 = NULL;
-main_Receiver_47_out_1 = NULL;
+main_Receiver_50_out_1 = NULL;
+main_Inquire_4_in_2 = "deltas";
+main_Inquire_4_in_3 = NULL;
+main_Inquire_4_out_1 = NULL;
+main_Select_1_in_2 = 0;
+main_Select_1_in_3 = NULL;
+main_Select_1_out_1 = NULL;
+main_Transmitter_10_out_1 = NULL;
+main_Receiver_53_out_1 = NULL;
+main_Compute_45_in_1 = "$0*$1";
+main_Compute_45_out_1 = NULL;
+main_Transmitter_40_out_1 = NULL;
+main_Receiver_44_out_1 = NULL;
 main_Compute_2_in_1 = "$0.y";
 main_Compute_2_out_1 = NULL;
 main_Transmitter_6_out_1 = NULL;
-main_Receiver_48_out_1 = NULL;
+main_Receiver_51_out_1 = NULL;
+main_Select_2_in_2 = 1;
+main_Select_2_in_3 = NULL;
+main_Select_2_out_1 = NULL;
+main_Transmitter_11_out_1 = NULL;
+main_Receiver_54_out_1 = NULL;
+main_Compute_51_in_1 = "$0*$1";
+main_Compute_51_out_1 = NULL;
+main_Transmitter_41_out_1 = NULL;
+main_Receiver_45_out_1 = NULL;
 main_Compute_3_in_1 = "$0.z";
 main_Compute_3_out_1 = NULL;
 main_Transmitter_7_out_1 = NULL;
+main_Receiver_52_out_1 = NULL;
+main_Select_3_in_2 = 2;
+main_Select_3_in_3 = NULL;
+main_Select_3_out_1 = NULL;
+main_Transmitter_12_out_1 = NULL;
+main_Receiver_55_out_1 = NULL;
+main_Compute_52_in_1 = "$0*$1";
+main_Compute_52_out_1 = NULL;
+main_Transmitter_42_out_1 = NULL;
+main_Receiver_46_out_1 = NULL;
+main_List_1_out_1 = NULL;
+main_Receiver_47_out_1 = NULL;
+main_Receiver_48_out_1 = NULL;
 main_Receiver_49_out_1 = NULL;
 main_Compute_43_in_1 = "[$0, $1, $2]";
 main_Compute_43_in_5 = NULL;
@@ -3048,7 +2986,7 @@ main_Compute_42_in_1 = "[$0-1, $1-1, $2-1]";
 main_Compute_42_out_1 = NULL;
 main_Vector_4_in_1 = "Vector_4";
 main_Vector_4_in_2 = NULL;
-main_Vector_4_in_3 = [ 0 0 0 ];
+main_Vector_4_in_3 = [ 14 25 0 ];
 main_Vector_4_in_4 = NULL;
 main_Vector_4_in_5 = NULL;
 main_Vector_4_in_7 = NULL;
@@ -3056,7 +2994,7 @@ main_Vector_4_in_8 = NULL;
 main_Vector_4_in_9 = NULL;
 main_Vector_4_in_10 = NULL;
 main_Vector_4_in_11 = NULL;
-main_Vector_4_out_1 = [ 0 0 0 ];
+main_Vector_4_out_1 = [ 14 25 0 ];
 main_List_2_out_1 = NULL;
 main_CrystalRepeat_1_out_1 = NULL;
 main_Transmitter_37_out_1 = NULL;
@@ -3468,12 +3406,12 @@ main_Color_43_out_1 = NULL;
 main_Transmitter_34_out_1 = NULL;
 main_Receiver_33_out_1 = NULL;
 main_Toggle_13_in_1 = "Toggle_13";
-main_Toggle_13_in_2 = 0;
-main_Toggle_13_in_3 = 0;
+main_Toggle_13_in_2 = 1;
+main_Toggle_13_in_3 = 1;
 main_Toggle_13_in_4 = NULL;
 main_Toggle_13_in_5 = NULL;
 main_Toggle_13_in_6 = NULL;
-main_Toggle_13_out_1 = 0;
+main_Toggle_13_out_1 = 1;
 main_Receiver_38_out_1 = NULL;
 main_Construct_2_in_1 = {[0 0 0]};
 main_Construct_2_in_2 = NULL;
@@ -3558,24 +3496,6 @@ main_Route_18_out_1 = NULL;
 main_Transmitter_38_out_1 = NULL;
 main_Receiver_37_out_1 = NULL;
 main_Collect_4_out_1 = NULL;
-main_Inquire_4_in_2 = "deltas";
-main_Inquire_4_in_3 = NULL;
-main_Inquire_4_out_1 = NULL;
-main_Select_1_in_2 = 0;
-main_Select_1_in_3 = NULL;
-main_Select_1_out_1 = NULL;
-main_Compute_11_in_1 = "$0.0";
-main_Compute_11_out_1 = NULL;
-main_Select_2_in_2 = 1;
-main_Select_2_in_3 = NULL;
-main_Select_2_out_1 = NULL;
-main_Compute_12_in_1 = "$0.1";
-main_Compute_12_out_1 = NULL;
-main_Select_3_in_2 = 2;
-main_Select_3_in_3 = NULL;
-main_Select_3_out_1 = NULL;
-main_Compute_13_in_1 = "$0.2";
-main_Compute_13_out_1 = NULL;
 main_Toggle_9_in_1 = "Toggle_9";
 main_Toggle_9_in_2 = 0;
 main_Toggle_9_in_3 = 0;
@@ -3923,11 +3843,11 @@ main_Image_2_in_1 = "Image_2";
 main_Image_2_in_3 = "X24,,";
 main_Image_2_in_4 = 1;
 main_Image_2_in_5 = [9.09389 16.4306 6.86273];
-main_Image_2_in_6 = [89.7488 -31.3463 84.7371];
+main_Image_2_in_6 = [36.9401 -86.3453 66.1414];
 main_Image_2_in_7 = 48.16;
-main_Image_2_in_8 = 881;
-main_Image_2_in_9 = 0.769;
-main_Image_2_in_10 = [-0.219605 0.713597 0.665247];
+main_Image_2_in_8 = 804;
+main_Image_2_in_9 = 0.82;
+main_Image_2_in_10 = [-0.0399831 0.491077 0.870198];
 main_Image_2_in_11 = NULL;
 main_Image_2_in_12 = 0;
 main_Image_2_in_13 = NULL;
