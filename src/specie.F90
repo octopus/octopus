@@ -57,7 +57,7 @@ type specie_type
   ! For the non-local pp in fourier space
   integer(POINTER_SIZE) :: nl_planb
   integer :: nl_fft_n(3), nl_hfft_n
-  complex(r8), pointer :: nl_fw(:,:,:,:), nl_dfw(:,:,:,:,:)
+  complex(r8), pointer :: nl_fw(:,:,:,:,:), nl_dfw(:,:,:,:,:,:)
 end type specie_type
 
 contains
