@@ -193,7 +193,28 @@ File: octopus.info,  Node: oct-center-geom,  Next: wf.net,  Prev: oct-choose-st,
 `oct-center-geom'
 =================
 
-   It centers the molecular geometry.
+   This utility centers and aligns the coordinates of the molecule. It
+reads the file specified in the input file (either by the `Coordinates'
+block, or by the `XYZCoordinates' or `PDBCoordinates' variables), and
+outputs the adjusted coordinates to the file `adjusted.xyz'. The
+following parameters are read from the `inp'ut file:
+
+   * `MainAxis' (block data): A vector of three reals defining the axis
+     to which the molecule should be align. If not present, the default
+     value will be
+              %MainAxis
+                1 | 0 | 1
+              %
+
+   * `AxisType' (int, inertia): This variable describes how to
+     calculate the "main" axis of the molecule. Possible values are:
+        - `inertia' or `1': Axis of inertia;
+
+        - `pseudo'  or `2': Axis of inertia calculated as if all atoms
+          had mass 1;
+
+        - `large'   or `2': The longest axis of the molecule.
+
 
 
 File: octopus.info,  Node: wf.net,  Prev: oct-center-geom,  Up: External utilities
@@ -429,6 +450,7 @@ Options Index
 * ABHeight:                              ABHeight.
 * AbsorbingBoundaries:                   AbsorbingBoundaries.
 * ABWidth:                               ABWidth.
+* AxisType:                              oct-center-geom.
 * BoxShape:                              BoxShape.
 * CalculationMode:                       CalculationMode.
 * CFunctional:                           CFunctional.
@@ -463,6 +485,7 @@ Options Index
 * LCAOStart:                             LCAOStart.
 * LocalPotentialSpace:                   LocalPotentialSpace.
 * Lsize:                                 Lsize.
+* MainAxis:                              oct-center-geom.
 * MakeStates:                            oct-make-st.
 * MaximumIter:                           MaximumIter.
 * Mixing:                                Mixing.

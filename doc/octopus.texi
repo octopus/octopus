@@ -193,7 +193,7 @@ SCF
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
-* GuessDensitySpin::
+* GuessDensitySpin::            
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1628,7 +1628,7 @@ criteria is fulfilled.
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
-* GuessDensitySpin::
+* GuessDensitySpin::            
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -3013,7 +3013,36 @@ they are:
 @node oct-center-geom, wf.net, oct-choose-st, External utilities
 @section @code{oct-center-geom}
 
-It centers the molecular geometry.
+This utility centers and aligns the coordinates of the molecule. It reads the
+file specified in the input file (either by the @code{Coordinates} block, or
+by the @code{XYZCoordinates} or @code{PDBCoordinates} variables), and outputs
+the adjusted coordinates to the file @code{adjusted.xyz}. The following
+parameters are read from the @code{inp}ut file:
+
+@itemize @bullet
+
+@item @vindex @code{MainAxis} 
+@code{MainAxis} (block data):
+A vector of three reals defining the axis to which the molecule should be align. If not
+present, the default value will be
+@example
+    %MainAxis
+      1 | 0 | 1
+    %
+@end example
+
+@item @vindex @code{AxisType} 
+@code{AxisType} (int, inertia):
+This variable describes how to calculate the "main" axis of the molecule. Possible values are:
+  @itemize @minus
+    @item @code{inertia} or @code{1}: Axis of inertia;
+    @item @code{pseudo}  or @code{2}: Axis of inertia calculated as if all atoms had mass 1;
+    @item @code{large}   or @code{2}: The longest axis of the molecule.
+  @end itemize
+
+
+@end itemize
+
 
 @node wf.net,  , oct-center-geom, External utilities
 @section @code{wf.net}
