@@ -731,11 +731,11 @@ contains
     if(associated(nlop%jxyz)) then
       deallocate(nlop%jxyz, nlop%uv, nlop%uvu, nlop%duv, &
                  nlop%so_uv, nlop%so_duv, nlop%so_luv, nlop%so_uvu)
+      if(conf%periodic_dim/=0 .and. associated(nlop%phases)) then
+        deallocate(nlop%phases)
+        nullify(nlop%phases)
+      end if
     endif
-    if(conf%periodic_dim/=0 .and. associated(nlop%phases)) then
-      deallocate(nlop%phases)
-      nullify(nlop%phases)
-    end if
   end subroutine nonlocal_op_kill
 
 #include "undef.F90"
