@@ -117,7 +117,7 @@ subroutine mix_init(smix, np, nc)
 end subroutine mix_init
 
 subroutine mix_end(smix)
-  type(mix_type), intent(in) :: smix
+  type(mix_type), intent(inout) :: smix
 
   call push_sub('mix_end')
 
