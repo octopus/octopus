@@ -52,8 +52,8 @@ contains
     allocate(cg_m_aux)
     cg_m_aux = m
     nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%grad)
-    call mesh_create_xyz(cg_m_aux, geo, m%laplacian%norder)
-    call derivatives_init_diff(cg_m_aux, m%laplacian%norder, cg_m_aux%laplacian, cg_m_aux%grad)
+    call mesh_create_xyz(cg_m_aux, geo, cg_m_aux%der_order)
+    call mf_add_der(cg_m_aux)
 
   end subroutine init_real
 
@@ -246,6 +246,7 @@ subroutine poisson_fft(m, pot, rho)
   call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
   call dcf_RS2FS(fft_cf)             ! Fourier transform
   fft_cf%FS = fft_cf%FS*fft_Coulb_FS ! multiply by the FS of the Coulomb interaction
+
   call dcf_FS2RS(fft_cf)             ! Fourier transform back
   call dcf2mf(m, fft_cf, pot)        ! put the density in a cube
   

@@ -374,24 +374,20 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 
   call push_sub('vlpsi')
 
-  do idim = 1, h%d%dim
-    Hpsi(:, idim) = Hpsi(:, idim) + h%Vpsl*psi(1:,idim)
-  end do
-
   select case(h%d%ispin)
   case(UNPOLARIZED)
-    hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1)
+    hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%vpsl(:))*psi(:, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-      hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1)
+      hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%vpsl(:))*psi(:, 1)
     else
-      hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 2)*psi(1:, 1)
+      hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 2) + h%vpsl(:))*psi(:, 1)
     end if
   case(SPINORS)
-    hpsi(:, 1) = hpsi(:, 1) + h%vhxc(:, 1)*psi(1:, 1) + &
-                 (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(1:, 2)
-    hpsi(:, 2) = hpsi(:, 2) + h%vhxc(:, 2)*psi(1:, 2) + &
-                 (h%vhxc(:, 3) + M_zI*h%vhxc(:, 4))*psi(1:, 1)
+    hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%vpsl(:))*psi(:, 1) + &
+                 (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(:, 2)
+    hpsi(:, 2) = hpsi(:, 2) + (h%vhxc(:, 2) + h%vpsl(:))*psi(:, 2) + &
+                 (h%vhxc(:, 3) + M_zI*h%vhxc(:, 4))*psi(:, 1)
   end select
 
   call pop_sub()

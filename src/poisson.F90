@@ -40,6 +40,7 @@ module poisson
 #ifdef HAVE_FFT
   type(dcf) :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
+
   integer, parameter :: FFT_SPH       = 0, &
                         FFT_CYL       = 1, &
                         FFT_PLA       = 2, &
@@ -77,7 +78,7 @@ subroutine poisson_init(m, geo)
       message(6) = '                4 (conj grad)   '
       call write_fatal(6)
     end if
-    if (poisson_solver /= conf%periodic_dim) then
+    if (poisson_solver /= conf%periodic_dim .and. poisson_solver /= CG) then
       write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
       write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
       message(3) =                 'You know what you are doing, right?'
@@ -97,12 +98,7 @@ subroutine poisson_end()
 
   select case(poisson_solver)
   case(CG)
-    call derivatives_end(cg_m_aux%laplacian)
-    do j = 1, conf%dim
-       call derivatives_end(cg_m_aux%grad(j))
-    enddo
-    deallocate(cg_m_aux%grad); nullify(cg_m_aux%grad)
-
+    call mf_end_der(cg_m_aux)
     call mesh_end(cg_m_aux)
     deallocate(cg_m_aux); nullify(cg_m_aux)
 #ifdef HAVE_FFT

@@ -32,15 +32,12 @@ integer, parameter :: &
      MINIMUM  = 3,    &
      PARALLELEPIPED = 4
 
-type lookup_type
-  integer :: n
-  integer, pointer :: i(:)
-  FLOAT, pointer :: w(:)
-end type lookup_type
-
 type derivatives_type
   integer :: norder
-  type(lookup_type), pointer :: lookup(:)
+  integer :: n
+  integer :: np
+  integer, pointer :: i(:, :)
+  FLOAT, pointer   :: w(:, :)
 end type derivatives_type
 
 type mesh_type
@@ -65,8 +62,10 @@ type mesh_type
   integer :: nr(2,3)  ! dimensions of the box where the points are contained
   integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
 
-  type(derivatives_type) :: laplacian
+  type(derivatives_type)          :: lapl
   type(derivatives_type), pointer :: grad(:)
+!!$  logical :: der_default
+  integer :: der_order
 
   FLOAT :: fft_alpha ! enlargement factor for double box
 

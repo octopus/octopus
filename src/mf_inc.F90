@@ -61,18 +61,12 @@ subroutine X(mf_laplacian) (m, f, lapl)
   type(mesh_type), intent(in) :: m
   R_TYPE, intent(in) :: f(m%np)
   R_TYPE, intent(out) :: lapl(m%np)
-
   integer :: k, nl
-  type(lookup_type), pointer :: p
-
   call push_sub("mf_laplacian")
-    
+  nl = m%lapl%n
   do k = 1, m%np
-    p => m%laplacian%lookup(k)
-    nl = p%n
-    lapl(k) = sum(p%w(1:nl)*f(p%i(1:nl)))
+     lapl(k) = sum(m%lapl%w(1:nl, k)*f(m%lapl%i(1:nl, k)))
   end do
-
   call pop_sub()
 end subroutine X(mf_laplacian)
 
@@ -82,16 +76,11 @@ subroutine X(mf_filter) (m, filter, f, filteredf)
   type(derivatives_type), intent(in) :: filter
   R_TYPE, intent(in) :: f(m%np)
   R_TYPE, intent(out) :: filteredf(m%np)
-
   integer :: k, nl
-  type(lookup_type), pointer :: p
-
   call push_sub("mf_filter")
 
   do k = 1, m%np
-    p => filter%lookup(k)
-    nl = p%n
-    filteredf(k) = sum(p%w(1:nl)*f(p%i(1:nl)))
+     filteredf(k) = sum(filter%w(1:filter%n, k)*f(filter%i(1:filter%n, k)))
   end do
 
   call pop_sub()
@@ -101,20 +90,14 @@ subroutine X(mf_gradient) (m, f, grad)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(in) :: f(m%np)
   R_TYPE, intent(out) :: grad(conf%dim, m%np)
-  
   integer :: j, k, ng(3)
-  type(lookup_type), pointer :: p
-
   call push_sub("mf_gradient")
-    
-  do k = 1, m%np
-    do j = 1, conf%dim
-       p => m%grad(j)%lookup(k)
-       ng = p%n
-       grad(j, k) = sum(p%w(1:ng(j))*f(p%i(1:ng(j))))
-    end do
-  end do
-
+  do j = 1, conf%dim
+     ng(j) = m%grad(j)%n
+     do k = 1, m%np
+        grad(j, k) = sum(m%grad(j)%w(1:ng(j), k)*f(m%grad(j)%i(1:ng(j), k)))
+     enddo
+  enddo
   call pop_sub()
 end subroutine X(mf_gradient)
 
@@ -124,19 +107,14 @@ subroutine X(mf_divergence)(m, f, divf)
   type(mesh_type), intent(in) :: m
   R_TYPE, intent(in)  :: f(conf%dim, m%np)
   R_TYPE, intent(out) :: divf(m%np)
-
   integer :: j, k, ng(3)
-  type(lookup_type), pointer :: p
-
   call push_sub('mf_divergence')
 
   divf = R_TOTYPE(M_ZERO)
-
   do j = 1, conf%dim
+     ng(j) = m%grad(j)%n
      do k = 1, m%np
-        p => m%grad(j)%lookup(k)
-        ng = p%n
-        divf(k) = divf(k) + sum(p%w(1:ng(j))*f(j, p%i(1:ng(j))))
+        divf(k) = divf(k) + sum(m%grad(j)%w(1:ng(j), k)*f(j, m%grad(j)%i(1:ng(j), k)))
      end do
   end do
 

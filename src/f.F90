@@ -44,7 +44,7 @@ contains
 
   subroutine functions_init(m)
     type(mesh_type), intent(inout) :: m
-    integer :: norder
+    integer :: norder, j
 
     call push_sub('functions_init')
 
@@ -62,8 +62,8 @@ contains
 
   if(derivatives_space == REAL_SPACE) then
     call loct_parse_int('OrderDerivatives', 4, norder)
-
-    call derivatives_init_diff(m, norder, m%laplacian, m%grad)
+    m%der_order   = norder
+    call mf_add_der(m)
 
     message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
@@ -89,12 +89,7 @@ subroutine functions_end(m)
   type(mesh_type), intent(inout) :: m
   integer :: j
   if(derivatives_space == REAL_SPACE) then
-    call derivatives_end(m%laplacian)
-    do j = 1, conf%dim
-       call derivatives_end(m%grad(j))
-    enddo
-    ASSERT(associated(m%grad))
-    deallocate(m%grad); nullify(m%grad)
+    call mf_end_der(m)
 #if defined(HAVE_FFT)
   else
     call dcf_free(dcf_der)

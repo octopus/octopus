@@ -464,122 +464,6 @@ contains
   end function in_minimum
 end function in_mesh
 
-subroutine derivatives_init_diff(m, order, laplacian, grad)
-  type(mesh_type), intent(inout) :: m
-  integer, intent(in) :: order
-  type(derivatives_type) :: laplacian
-  type(derivatives_type), pointer :: grad(:)
-
-  FLOAT, allocatable :: dgidfj(:) ! the coefficients for the gradient
-  FLOAT, allocatable :: dlidfj(:) ! the coefficients for the laplacian
-  integer :: i, j, ix(3), ik, in, nl, ng(3)
-
-  call push_sub('build_lookup_tables')
-
-  allocate(grad(conf%dim))!, laplacian)
-  laplacian%norder = order
-  do j = 1, conf%dim
-    grad(j)%norder = order
-  enddo
-
-  call derivatives_coeff()
-
-  allocate(laplacian%lookup(m%np))
-  do j = 1, conf%dim
-     allocate(grad(j)%lookup(m%np))
-  enddo
-
-  do i = 1, m%np
-    ix(:) = m%Lxyz(:, i)
-    
-    nl = 0; ng = 0
-    do j = 1, conf%dim
-      do ik = -order, order
-        ix(j) = ix(j) + ik
-        if(mesh_index(m, ix, sign(j, ik)) > 0) then
-          nl    = nl    + 1
-          ng(j) = ng(j) + 1
-        end if
-        ix(j) = ix(j) - ik
-      end do
-    end do
-
-    ! allocate
-    laplacian%lookup(i)%n = nl
-    do j = 1, conf%dim
-       grad(j)%lookup(i)%n = ng(j)
-    enddo
-    ng(1) = maxval(ng)
-    allocate(laplacian%lookup(i)%i(nl), laplacian%lookup(i)%w(nl))
-    do j = 1, conf%dim
-       allocate(grad(j)%lookup(i)%i(nl), grad(j)%lookup(i)%w(ng(1)))
-    enddo
-    
-    ! fill in the table
-    nl = 0; ng = 0
-    do j = 1, conf%dim
-      do ik = -order, order
-        ix(j) = ix(j) + ik
-        
-        in = mesh_index(m, ix, sign(j, ik))
-        if(in > 0) then
-          nl    = nl    + 1
-          ng(j) = ng(j) + 1
-          
-          laplacian%lookup(i)%i(nl) = in
-          laplacian%lookup(i)%w(nl) = dlidfj(abs(ik))/m%h(j)**2
-          
-          grad(j)%lookup(i)%i(ng(j)) = in
-          grad(j)%lookup(i)%w(ng(j)) = dgidfj(ik)/m%h(j)
-          
-        end if
-        
-        ix(j) = ix(j) - ik
-      end do
-    end do
-    
-  end do        
-
-  deallocate(dlidfj,dgidfj)
-  call pop_sub()
-contains
-
-  subroutine derivatives_coeff
-    use math, only: weights
-
-    integer :: k, i, j, morder
-    FLOAT, allocatable :: cc(:,:,:)
-
-    call push_sub('derivatives_coeff')
-    k = order
-    if (k < 1) then
-      write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
-      message(2) = '(1 <= OrderDerivatives)'
-      call write_fatal(2)
-    end if
-    allocate(dlidfj(-k:k), dgidfj(-k:k))
-    morder = 2*k
-    allocate(cc(0:morder, 0:morder, 0:2))
-    call weights(2, morder, cc)
-    dgidfj(0) = cc(0, morder, 1)
-    dlidfj(0) = cc(0, morder, 2)
-  
-    j = 1
-    do i = 1, k
-      dgidfj(-i) = cc(j, morder, 1)
-      dlidfj(-i) = cc(j, morder, 2)
-      j = j + 1
-      dgidfj( i) = cc(j, morder, 1)
-      dlidfj( i) = cc(j, morder, 2)
-      j = j + 1
-    end do
-    deallocate(cc)
-
-    call pop_sub()
-  end subroutine derivatives_coeff
-
-end subroutine derivatives_init_diff
-
 subroutine derivatives_init_filter(m, order, filter)
   type(mesh_type), intent(in) :: m
   integer, intent(in) :: order
@@ -591,7 +475,6 @@ subroutine derivatives_init_filter(m, order, filter)
 
   call push_sub('derivatives_init_filter')
 
-  !allocate(filter)
   filter%norder = order
 
   allocate(dfidfj(-1:1))
@@ -599,26 +482,15 @@ subroutine derivatives_init_filter(m, order, filter)
   dfidfj(-1) = M_HALF*(M_ONE-alpha)
   dfidfj( 1) = M_HALF*(M_ONE-alpha)
 
-  allocate(filter%lookup(m%np))
+  filter%n = conf%dim*(2*1+1)
+  allocate(filter%i(filter%n, m%np), &
+           filter%w(filter%n, m%np))
+  filter%i = 1
+  filter%w = M_ZERO
 
   do i = 1, m%np
     ix(:) = m%Lxyz(:, i)
     
-    nf = 0
-    do j = 1, conf%dim
-      do ik = -1, 1
-        ix(j) = ix(j) + ik
-        if(mesh_index(m, ix, sign(j, ik)) > 0) then
-          nf    = nf    + 1
-        end if
-        ix(j) = ix(j) - ik
-      end do
-    end do
-
-    ! allocate
-    filter%lookup(i)%n = nf
-    allocate(filter%lookup(i)%i(nf), filter%lookup(i)%w(nf))
-
     ! fill in the table
     nf = 0
     do j = 1, conf%dim
@@ -627,8 +499,8 @@ subroutine derivatives_init_filter(m, order, filter)
         in = mesh_index(m, ix, sign(j, ik))
         if(in > 0) then
           nf    = nf    + 1
-          filter%lookup(i)%i(nf) = in
-          filter%lookup(i)%w(nf) = dfidfj(ik)/conf%dim
+          filter%i(nf, i) = in
+          filter%w(nf, i) = dfidfj(ik)/conf%dim
         end if
         ix(j) = ix(j) - ik
       end do
@@ -643,10 +515,7 @@ end subroutine derivatives_init_filter
 subroutine derivatives_end(d)
   type(derivatives_type), intent(inout) :: d
   integer :: i
-  do i = 1, size(d%lookup)
-    deallocate(d%lookup(i)%i, d%lookup(i)%w)
-  end do
-  deallocate(d%lookup)
+  deallocate(d%i, d%w)
 end subroutine derivatives_end
 
 ! this function takes care of the boundary conditions
