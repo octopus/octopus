@@ -128,38 +128,34 @@ contains
 
   subroutine dx()
     integer :: ix, iy, iz
+    character(LEN=40) :: nitems
+    
+    write(nitems,*)m%fft_n(1)*m%fft_n(2)*m%fft_n(3)
+    nitems=TRIM(ADJUSTL(nitems))
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+".dx", status='unknown')
     
-    write(iunit, '(a)') 'header = marker "Start data\n"'
-    write(iunit,'(a,i4,a,i4,a,i4)') 'grid = ', m%fft_n(1), ' x ', m%fft_n(2), ' x ', m%fft_n(3)
-    write(iunit,'(a)') 'format = ascii'
-    write(iunit,'(a)') 'interleaving = record'
-    write(iunit,'(a)') 'majority = row'
-    write(iunit,'(a)') 'field = field0'
-    write(iunit,'(a)') 'type = float'
-    write(iunit,'(a)') 'dependency = positions'
-    
-    write(iunit,'(a,6(a,f12.6))') 'positions = regular, regular, regular', &
-         ',', -(m%fft_n(1) - 1)/2 * m%h(1) / units_out%length%factor, &
-         ',', m%h(1) / units_out%length%factor, &
-         ',', -(m%fft_n(2) - 1)/2 * m%h(2) / units_out%length%factor, &
-         ',', m%h(2) / units_out%length%factor, &
-         ',', -(m%fft_n(3) - 1)/2 * m%h(3) / units_out%length%factor, &
-         ',', m%h(3) / units_out%length%factor
-
-    write(iunit, '(1x)')
-    write(iunit, '(a)') 'end'
-    write(iunit, '(a)') 'Start data'
+    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',m%fft_n(:)
+    write(iunit, '(a,3f12.6)') ' origin',-(m%fft_n(:) - 1)/2 * m%h(:) / units_out%length%factor
+    write(iunit, '(a,f12.6,a)') ' delta ',m%h(1) / units_out%length%factor, '    0.000000    0.000000'
+    write(iunit, '(a,f12.6,a)') ' delta     0.000000',m%h(2) / units_out%length%factor, '    0.000000'
+    write(iunit, '(a,f12.6)') ' delta     0.000000    0.000000',m%h(3) / units_out%length%factor
+    write(iunit, '(a,3i7)') 'object 2 class gridconnections counts',m%fft_n(:)
+    write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ',nitems,' data follows'   
     do ix = 1, m%fft_n(1)
       do iy = 1, m%fft_n(2)
         do iz = 1, m%fft_n(3)
-          write(iunit, '(e17.10)') c(ix, iy, iz)
+          write(iunit,'(e17.10)') R_REAL(c(ix, iy, iz))
         end do
       end do
     end do
-    
+    write(iunit, '(a)') 'object "regular positions regular connections" class field'
+    write(iunit, '(a)') ' component "positions" value 1'
+    write(iunit, '(a)') ' component "connections" value 2'
+    write(iunit, '(a)') ' component "data" value 3'
+    write(iunit, '(a)') 'end'
+   
     call io_close(iunit)
   end subroutine dx
 
