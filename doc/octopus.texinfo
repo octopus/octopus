@@ -73,8 +73,8 @@ translation approved by the Free Software Foundation.
 
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} M. A. L. Marques, Alberto Castro and Angel Rubio
-
+Copyright @copyright{} 2002 M. A. L. Marques, Alberto Castro and Angel Rubio
+@vskip 24pt
 This program, along with its documentation, is free software;
 you can redistribute it and/or modify it under the terms of the GNU
 General Public License as published by the Free Software Foundation;
@@ -89,7 +89,7 @@ General Public License for more details.
 You should have received a copy of the GNU General Public
 License along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
+@vskip 24pt
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
 this permission notice are preserved on all copies.
@@ -318,35 +318,57 @@ Pseudopotential approximation..
 @chapter Installation
 
 
-@enumerate
-
-@item 
-Obtain the code gzipped-tarred file @code{octopus-version.tar.gz} (this
-you probably have already done). Code may be downloaded from t
-
-@item
-Build the documentation in the format you prefer.
-
-@end enumerate
-One you have the @code{octopus-x.x.x.tar.gz} file, gunzip and untar it.
-In the following, we will refer to the home directory of the program
-as @code{OCTOPUS-HOME}. 
 The code is written in standard Fortran 90, so you need a proper compiler.
 Any UN*X platform with an implementation of Fortran 90 should then
 be suitable to dive the @code{octopus}.
 
-Some external libraries are used; all of them are freely distributed and
-downloadable: the FFTW@footnote{
-@code{www.fftw.org}}
-package libraries, BLAS/LAPACK@footnote{
-@code{www.netlib.org}}
-libraries, and the GNU Scientific Library @code{gsl}@footnote{
-@code{www.gnu.org}}. 
+@enumerate
 
-Compilation is then done issuing the @code{make} command. This should
-work if it is a recent version of the GNU @code{make} command; other
-implementations might not interpret the @code{Makefile} correctly. The executable
+@item 
+Obtain the code gzipped-tarred file @code{octopus-version.tar.gz} (this
+you probably have already done). Code may be downloaded from its web
+page @code{www.tddft.org/octopus}. Uncompress it and untar it
+(@code{gzip -d octopus-version.tar.gz; tar -xvf octopus-version.tar}).
+In the following, @code{OCTOPUS-HOME} denotes the home directory of
+octopus, created by the @code{tar} command.
 
+@item
+Build the documentation in the format you prefer. Since you are reading
+this, you already have it in some format - you may build it in the
+format you prefer (dvi, html, pdf or info files) by moving into
+@code{OCTOPUS-HOME/doc} directory and typing @code{make dvi},
+@code{make html}, @code{make pdf} or @code{make info}. In the 
+latter case, the @code{octopus.info} file may be read by the @code{info}
+program by typing @code{info -f octopus.info}, or alternatively may
+be installed in your general @code{info} structure by typing 
+@code{make install-info}. You need to be root for doing this, and/or
+maybe some knowledge about how @code{info} works, to change the 
+appropriate variables in the @code{OCTOPUS-HOME/doc/Makefile}.
+
+@item
+Some external prerequisites are needed; besides the compiler (no free
+Fortran 90 compiler is available yet!) all of them are freely available
+and open-source projects:
+
+  @enumerate
+
+  @item
+  Compilation is done through @code{Makefiles}, so an implementation of
+  @code{make} is needed; version 3.79 or higher of the GNU @code{make} 
+  should work, any other @emph{could} work, but maybe not.
+
+  @item
+  the FFTW@footnote{
+  @code{www.fftw.org}}
+  package libraries,
+  BLAS/LAPACK@footnote{
+  @code{www.netlib.org}}
+  libraries, and the GNU Scientific Library @code{gsl}@footnote{
+  @code{www.gnu.org}}. 
+  
+  @end enumerate
+
+@item
 The variables in the file @code{Make.arch} must be adapted to the computer,
 compiler, preprocessor, etc. @code{arch} must be the output to the
 "@code{uname -m}" command. Occasionally you may need to change variable
@@ -360,7 +382,13 @@ contain, at least:
 
 The @code{-loct} links the @code{liboct.a} library,
 which is compiled previous to the main code when issuing
-@code{make}.
+
+@item 
+Compilation is then done issuing the @code{make} command. At the moment,
+two options are possible: generating code to perform calculations in 3D and
+1D - 2D will be available some time.
+
+@end enumerate
 @c **********************************************************************
 @c **********************************************************************
 @c **********************************************************************
