@@ -693,7 +693,60 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
     end subroutine X(calculate_matrix)
 
 end function X(states_mpdotp)
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine X(states_calculate_spin)(m, st, spin)
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: st
+  FLOAT,             intent(out) :: spin(3)
+
+  integer :: ik, ist, i
+  FLOAT :: sign, temp(3)
+  R_TYPE :: c
+#if defined(HAVE_MPI)
+  integer :: ierr
+#endif
+
+  call push_sub('states_calculate_spin')
+
+  select case(st%d%ispin)
+  case(SPIN_POLARIZED) ! collinear spin
+    sign = M_ONE
+    temp = M_ZERO
+    do ik = 1, st%nik
+      do ist = 1, st%nst
+        temp(3) = temp(3) + sign*st%d%kweights(ik)*st%occ(ist, ik)
+      end do
+      sign = -sign
+    end do
+    temp = M_HALF*temp
+    
+  case(SPINORS) ! non-collinear
+    temp = M_ZERO
+    do ik = 1, st%nik
+      do ist = 1, st%nst
+        do i = 1, m%np
+          c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
+          temp(1) = temp(1) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
+          temp(2) = temp(2) - st%d%kweights(ik)*st%occ(ist, ik)* R_AIMAG(c)
+          c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
+          temp(3) = temp(3) + st%d%kweights(ik)*st%occ(ist, ik)* M_HALF*R_REAL(c)
+        end do
+      end do
+    end do
+    temp = temp*m%vol_pp
+
+  end select
+
+#if defined(HAVE_MPI) && defined(MPI_TD)
+    call MPI_ALLREDUCE(temp, spin, 3, &
+         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+#else
+  spin = temp
+#endif
+
+  call pop_sub()
+end subroutine X(states_calculate_spin)
 
 subroutine X(states_calculate_angular)(m, st, angular)
   type(mesh_type),   intent(IN)  :: m
@@ -706,6 +759,8 @@ subroutine X(states_calculate_angular)(m, st, angular)
 #if defined(HAVE_MPI)
   integer :: i, ierr
 #endif
+
+  call push_sub('states_calculate_angular')
 
   temp = M_ZERO
   allocate(lpsi(conf%dim, m%np))
@@ -728,6 +783,8 @@ subroutine X(states_calculate_angular)(m, st, angular)
 #endif
 
   deallocate(lpsi)
+
+  call pop_sub()
 end subroutine X(states_calculate_angular)
 
 subroutine X(mesh_angular_momentum)(m, f, lf)

@@ -417,40 +417,21 @@ subroutine write_magnet(iunit, mesh, st)
   FLOAT :: m(3), sign
   R_TYPE :: c
   integer :: i, ik, ist
-  
+
   write(iunit, '(a)') 'Magnetization:'
+  call X(states_calculate_spin)(mesh, st, m)
+  m = M_TWO*m
+
   if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
-    sign = M_ONE
-    m(3) = M_ZERO
-    do ik = 1, st%nik
-      do ist = 1, st%nst
-        m(3) = m(3) + sign*st%d%kweights(ik)*st%occ(ist, ik)
-      end do
-      sign = -sign
-    end do
     write(iunit, '(a,f15.6)') ' mz = ', m(3)
     
   else if(st%d%ispin == SPINORS) then ! non-collinear
-    m = M_ZERO
-    do ik = 1, st%nik
-      do ist = 1, st%nst
-        do i = 1, mesh%np
-          c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
-          m(1) = m(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
-          m(2) = m(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
-          c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
-          m(3) = m(3) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
-        end do
-      end do
-    end do
-    m = m*mesh%vol_pp
     write(iunit, '(a,f15.6)') ' mx = ', m(1)
     write(iunit, '(a,f15.6)') ' my = ', m(2)
     write(iunit, '(a,f15.6)') ' mz = ', m(3)
   end if
-  
   write(iunit,'(1x)') 
-  
+
 end subroutine write_magnet
 
 end subroutine scf_run

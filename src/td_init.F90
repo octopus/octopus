@@ -85,6 +85,7 @@ subroutine td_init(td, m, st, h, outp)
     td%out_coords = .false.
   end if
   call loct_parse_logical("TDOutputAngularMomentum", .false., td%out_angular)
+  call loct_parse_logical("TDOutputSpin", .false., td%out_spin)
   call loct_parse_logical("TDOutputGSProjection", .false., td%out_gsp)
   call loct_parse_logical("TDOutputAcceleration", .false., td%out_acc)
   if(td%out_acc.and.td%move_ions>0) then

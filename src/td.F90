@@ -50,7 +50,8 @@ type td_type
   logical           :: out_laser      ! laser field
   logical           :: out_energy     ! several components of the electronic energy
   logical           :: out_proj       ! projection onto the GS KS eigenfunctions
-  logical           :: out_angular    ! total angular momentum.
+  logical           :: out_angular    ! total angular momentum
+  logical           :: out_spin       ! total spin
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   type(PES_type) :: PESv
@@ -76,7 +77,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
 
   integer :: i, ii, j, idim, ist, ik
   integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
-       out_laser, out_energy, out_proj, out_angular
+       out_laser, out_energy, out_proj, out_angular, out_spin
 
   FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
   FLOAT :: etime
@@ -90,6 +91,8 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
          call write_iter_init(out_multip,  td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
     if(td%out_angular) &
          call write_iter_init(out_angular, td%iter, td%dt/units_out%time%factor, "td.general/angular")
+    if(td%out_spin) &
+         call write_iter_init(out_spin,    td%iter, td%dt/units_out%time%factor, "td.general/spin")
     if(td%out_coords) &
          call write_iter_init(out_coords,  td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
     if(td%out_gsp) &
@@ -216,6 +219,9 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     ! output angular momentum
     if(td%out_angular) call td_write_angular(out_angular, m, st, td, i)
 
+    ! output spin
+    if(td%out_spin) call td_write_spin(out_spin, m, st, td, i)
+
     ! output projections onto the GS KS eigenfunctions
     if(td%out_proj) call td_write_proj(out_proj, m, st, u_st, i)
     
@@ -258,6 +264,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
   if(mpiv%node==0) then
     if(td%out_multip)  call write_iter_end(out_multip)
     if(td%out_angular) call write_iter_end(out_angular)
+    if(td%out_spin)    call write_iter_end(out_spin)
     if(td%out_coords)  call write_iter_end(out_coords)
     if(td%out_gsp)     call write_iter_end(out_gsp)
     if(td%out_acc)     call write_iter_end(out_acc)
@@ -277,6 +284,7 @@ contains
 
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
     if(td%out_angular) call td_write_angular(out_angular, m, st, td, 0)
+    if(td%out_spin)    call td_write_spin(out_spin, m, st, td, 0)
     if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
 
     call apply_delta_field()
@@ -299,6 +307,8 @@ contains
     integer :: i, mode
     FLOAT   :: k, x(conf%dim)
     CMPLX   :: c(2), kick
+
+    call push_sub('apply_delta_field')
 
     !!! units are 1/length
     call loct_parse_float("TDDeltaStrength", M_ZERO, k)
@@ -371,6 +381,7 @@ contains
       end do
     end if
     
+    call pop_sub()
   end subroutine apply_delta_field
 
   subroutine td_read_nbo() ! reads the pos and vel from coordinates file
@@ -428,6 +439,7 @@ contains
     if(mpiv%node==0) then
       if(td%out_multip)  call write_iter_flush(out_multip)
       if(td%out_angular) call write_iter_flush(out_angular)
+      if(td%out_spin)    call write_iter_flush(out_spin)
       if(td%out_coords)  call write_iter_flush(out_coords)
       if(td%out_gsp)     call write_iter_flush(out_gsp)
       if(td%out_acc)     call write_iter_flush(out_acc)

@@ -15,6 +15,59 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+subroutine td_write_spin(out, m, st, td, iter)
+  integer(POINTER_SIZE), intent(in) :: out
+  type(mesh_type),       intent(in) :: m
+  type(states_type),     intent(in) :: st
+  type(td_type),         intent(in) :: td
+  integer,               intent(in) :: iter
+
+  character(len=130) :: aux
+  FLOAT :: spin(3)
+
+  call push_sub('td_write_spin')
+
+  ! The spin has to be calculated by all nodes...
+  call zstates_calculate_spin(m, st, spin)
+
+  if(mpiv%node.ne.0) then ! only first node outputs
+    call pop_sub(); return
+  end if
+
+  if(iter ==0) then
+    !empty file
+    call write_iter_clear(out)
+
+    !fist line -> now unused.
+    write(aux, '(a)') '#'
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    !second line -> columns name
+    call write_iter_header_start(out)
+    if (st%d%ispin == SPINORS) then
+      write(aux, '(a2,18x)') 'Sx'
+      call write_iter_header(out, aux)
+      write(aux, '(a2,18x)') 'Sy'
+      call write_iter_header(out, aux)
+    end if
+    write(aux, '(a2,18x)') 'Sz'
+    call write_iter_header(out, aux)
+    call write_iter_nl(out)
+  endif
+
+  call write_iter_start(out)
+  select case (st%d%ispin)
+  case (SPIN_POLARIZED)
+    call write_iter_double(out, spin(3), 1)
+  case (SPINORS)
+    call write_iter_double(out, spin(1:3), 3)
+  end select
+  call write_iter_nl(out)
+
+  call pop_sub()
+end subroutine td_write_spin
+
 subroutine td_write_angular(out, m, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(IN) :: m
@@ -25,10 +78,14 @@ subroutine td_write_angular(out, m, st, td, iter)
   character(len=130) :: aux
   FLOAT :: angular(3)
 
+  call push_sub('td_write_angular')
+
   ! The angular momentum has to be calculated by all nodes...
   call zstates_calculate_angular(m, st, angular)
 
-  if(mpiv%node.ne.0) return ! only first node outputs
+  if(mpiv%node.ne.0) then ! only first node outputs
+    call pop_sub; return
+  end if
 
   if(iter ==0) then
     !empty file
@@ -58,6 +115,7 @@ subroutine td_write_angular(out, m, st, td, iter)
   call write_iter_double(out, angular(1:3), 3)
   call write_iter_nl(out)
   
+  call pop_sub()
 end subroutine td_write_angular
 
 subroutine td_write_multipole(out, mesh, st, geo, td, iter)
@@ -71,9 +129,9 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
   integer :: is, j, l, m, add_lm
   character(len=50) :: aux
   FLOAT, allocatable :: dipole(:), nuclear_dipole(:), multipole(:,:)
-  
+
   if(mpiv%node.ne.0) return ! only first node outputs
-  
+
   if(iter == 0) then
     ! empty file
     call write_iter_clear(out)
@@ -156,6 +214,7 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
   call write_iter_nl(out)
   
   deallocate(dipole, nuclear_dipole, multipole)
+
 end subroutine td_write_multipole
 
 subroutine td_write_nbo(out, geo, td, iter, ke, pe)
@@ -169,7 +228,7 @@ subroutine td_write_nbo(out, geo, td, iter, ke, pe)
   character(len=50) :: aux
 
   if(mpiv%node.ne.0) return ! only first node outputs
-  
+
   if(iter == 0) then
     ! empty file
     call write_iter_clear(out)
@@ -237,14 +296,16 @@ subroutine td_write_gsp(out, m, st, td, iter)
   integer,               intent(in) :: iter
 
   CMPLX :: gsp
-  
+
   call push_sub('td_write_gsp')
   
   ! all processors calculate the projection
   call zstates_project_gs(st, m, gsp)
   
   ! but only first node outputs
-  if(mpiv%node.ne.0) return
+  if(mpiv%node.ne.0) then
+    call pop_sub; return
+  end if
   
   if(iter == 0) then
     ! empty file
@@ -284,9 +345,9 @@ subroutine td_write_acc(out, mesh, st, geo, h, td, iter)
   integer :: i
   character(len=7) :: aux
   FLOAT :: acc(3)
-  
+
   if(mpiv%node.ne.0) return ! only first node outputs
-  
+
   if(iter == 0) then
     ! empty file
     call write_iter_clear(out)
