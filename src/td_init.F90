@@ -123,10 +123,9 @@ contains
       st%st_end = st%nst - (mpiv%numprocs - mpiv%node - 1)*i
       st%st_start = st%st_end - i + 1
     end if
+    call MPI_Barrier(MPI_COMM_WORLD, i)
     write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", mpiv%node, " will propagate state ", &
          st%st_start, " - ", st%st_end
-
-    ! syncronize to get the output properly
     call MPI_Barrier(MPI_COMM_WORLD, i)
   
 #else

@@ -39,12 +39,12 @@ type mix_type
 
   integer :: ns    ! number of steps used to extrapolate the new vector
 
-  real(r8), pointer :: df(:,:,:)    => NULL(), &
-                       dv(:,:,:)    => NULL(), &
-                       f_old(:,:)   => NULL(), &
-                       vin_old(:,:) => NULL()
+  real(r8), pointer :: df(:,:,:)    , &
+                       dv(:,:,:)    , &
+                       f_old(:,:)   , &
+                       vin_old(:,:)
 
-  integer :: last_ipos = 0
+  integer :: last_ipos
 end type mix_type
 
 contains
@@ -110,8 +110,9 @@ subroutine mix_init(smix, np, nc)
 
   end select
 
-  call pop_sub()
+  smix%last_ipos = 0
 
+  call pop_sub()
   return
 end subroutine mix_init
 

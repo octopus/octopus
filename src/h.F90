@@ -31,8 +31,8 @@ type hamiltonian_type
 
   integer :: reltype ! type of relativistic correction to use
 
-  real(r8), pointer :: Vpsl(:)     => NULL() ! the external potential
-  real(r8), pointer :: Vhxc(:,:)   => NULL() ! xc potential + hartree potential
+  real(r8), pointer :: Vpsl(:)     ! the external potential
+  real(r8), pointer :: Vhxc(:,:)   ! xc potential + hartree potential
 
   ! the energies (total, ion-ion, exchange, correlation)
   real(r8) :: etot, eii, ex, ec, epot

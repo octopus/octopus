@@ -29,16 +29,16 @@ module external_pot
     integer :: nextra               ! extra points for the interpolation method(s)
     
     integer :: classic_pot          ! How to include the classic charges
-    real(r8), pointer :: Vclassic(:) => NULL()  ! We use it to store the potential of the classic charges
+    real(r8), pointer :: Vclassic(:)! We use it to store the potential of the classic charges
  
     ! lasers stuff
     integer :: no_lasers ! number of laser pulses used
-    type(laser_type), pointer :: lasers(:) => NULL()    
+    type(laser_type), pointer :: lasers(:)
    
 #ifdef HAVE_FFT
     ! For the local pseudopotential in Fourier space...
-    type(dcf), pointer :: local_cf(:)   => NULL()
-    type(dcf), pointer :: rhocore_cf(:) => NULL() ! and for the core density
+    type(dcf), pointer :: local_cf(:)
+    type(dcf), pointer :: rhocore_cf(:) ! and for the core density
 #endif
   end type epot_type
 
