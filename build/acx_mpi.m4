@@ -13,7 +13,7 @@ if test $acx_mpi_ok = no; then
 fi
 
 if test $acx_mpi_ok = no; then
-  AC_CHECK_LIB(mpi, MPI_init, [acx_mpi_ok=yes; LIBS_MPI="$LIBS_MPI -l$mpi"])
+  AC_CHECK_LIB(mpi, MPI_init, [acx_mpi_ok=yes; LIBS_MPI="$LIBS_MPI -lmpi"])
 fi
 
 dnl let us see if we have a mpi module
