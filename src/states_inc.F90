@@ -108,6 +108,10 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
     end do
   end do
 
+  do ist = 1, st%natoms
+     write(iunit) st%atom(ist)%x, st%atom(ist)%v, st%atom(ist)%f
+  enddo
+
   if(present(iter)) then
     write(iunit) int(iter, i4), v1, v2
   end if
@@ -216,6 +220,10 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
         end do
       end do
     end if
+
+    do ist = 1, st%natoms
+       read(iunit, err=999) st%atom(ist)%x, st%atom(ist)%v, st%atom(ist)%f
+    enddo
 
     if(present(iter)) then ! read the time-dependent stuff
       read(iunit, err=999) ii, v1, v2
