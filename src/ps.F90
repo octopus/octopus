@@ -385,7 +385,7 @@ subroutine get_splines_tm(psf, ps)
   do l = 0, ps%l_max
      hato = 0.0_r8
      if(l>0 .and. psf%irel=='rel') then
-       nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
+       nrc = psf%g%nrval
        hato(2:nrc) = (psf%vso(2:nrc, l))*psf%rphi(2:nrc, l, 1) * & 
                      ps%so_dknrm(l) / psf%rofi(2:nrc)
        hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    

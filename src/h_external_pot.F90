@@ -344,7 +344,7 @@ contains
               end if
               call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
               a%so_uv(j, add_lm, i) = so_uv
-              a%so_duv(:, j, add_lm, i) = so_duv(:)
+              a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
 
             end do i_loop
             add_lm = add_lm + 1
@@ -356,15 +356,17 @@ contains
       do j = 1, a%mps
         call mesh_xyz(m, a%Jxyz(j), x)
         x = x - a%x
-        a%so_luv(j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc, 1) = &
-                x(2)*a%so_duv(3, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc) - &
-                x(3)*a%so_duv(2, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc)
-        a%so_luv(j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc, 2) = &
-                x(3)*a%so_duv(1, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc) - &
-                x(1)*a%so_duv(3, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc)
-        a%so_luv(j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc , 3) = &
-                x(1)*a%so_duv(2, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc ) - &
-                x(2)*a%so_duv(1, j, 1:(a%spec%ps%l_max+1)**2, 1:a%spec%ps%kbc )
+        do add_lm = 1, (a%spec%ps%l_max+1)**2
+          a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 1) = &
+                x(2)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc) - &
+                x(3)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc)
+          a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 2) = &
+                x(3)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc) - &
+                x(1)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc)
+          a%so_luv(j, add_lm, 1:a%spec%ps%kbc , 3) = &
+                x(1)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc ) - &
+                x(2)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc )
+        enddo
       enddo
       a%so_luv = -M_zI*a%so_luv
     endif
@@ -435,8 +437,8 @@ contains
             end if
             ! uVu is in fact calculated in the logarithmic grid, previous stuff is a check.
             a%duvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
-            a%so_uvu(add_lm, 1, 1) = s%ps%k(l, 1, 1)
           end if
+          a%so_uvu(add_lm, 1, 1) = s%ps%k(l, 1, 1)
           add_lm = add_lm + 1
         end do
       end do
