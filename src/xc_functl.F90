@@ -54,9 +54,7 @@ module xc_functl
     integer :: family              ! LDA, GGA, etc.
     integer :: id                  ! identifier
     
-    integer :: ispin               ! UNPOLARIZED | SPIN_POLARIZED | SPINORS
     integer :: spin_channels       ! XC_UNPOLARIZED | XC_POLARIZED
-    
 
     integer(POINTER_SIZE) :: conf  ! the pointer used to call the library
     integer(POINTER_SIZE) :: info  ! information about the functional
@@ -65,30 +63,27 @@ module xc_functl
 contains
 
   ! -----------------------------------------------------------
-  subroutine xc_functl_init(functl, ispin, spin_channels)
+  subroutine xc_functl_init(functl, spin_channels)
     type(xc_functl_type), intent(out) :: functl
-    integer,              intent(in)  :: ispin
     integer,              intent(in)  :: spin_channels
 
     functl%family = 0
     functl%id     = 0
     functl%spin_channels = spin_channels
-    functl%ispin  = ispin
  
   end subroutine xc_functl_init
 
 
   ! -----------------------------------------------------------
-  subroutine xc_functl_init_exchange(functl, ispin, spin_channels)
+  subroutine xc_functl_init_exchange(functl, spin_channels)
     type(xc_functl_type), intent(out) :: functl
-    integer,              intent(in)  :: ispin
     integer,              intent(in)  :: spin_channels
       
     integer :: rel, j
     FLOAT :: alpha
       
     ! initialize structure
-    call xc_functl_init(functl, ispin, spin_channels)
+    call xc_functl_init(functl, spin_channels)
 
     ! read input
     call loct_parse_int('XFunctional', XC_LDA_X, functl%id)
@@ -133,16 +128,15 @@ contains
   
 
   ! -----------------------------------------------------------
-  subroutine xc_functl_init_correlation(functl, ispin, spin_channels)
+  subroutine xc_functl_init_correlation(functl, spin_channels)
     type(xc_functl_type), intent(out) :: functl
-    integer,              intent(in)  :: ispin
     integer,              intent(in)  :: spin_channels
     
     integer :: rel
     FLOAT :: alpha
 
     ! initialize structure
-    call xc_functl_init(functl, ispin, spin_channels)
+    call xc_functl_init(functl, spin_channels)
 
     ! read input
     call loct_parse_int('CFunctional', XC_LDA_C_PZ, functl%id)

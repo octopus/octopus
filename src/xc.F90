@@ -126,8 +126,8 @@ contains
     
     xcs%nlcc   = nlcc  ! make a copy of flag indicating non-local core corrections
     
-    call xc_functl_init_exchange   (xcs%functl(1), ispin, spin_channels)
-    call xc_functl_init_correlation(xcs%functl(2), ispin, spin_channels)
+    call xc_functl_init_exchange   (xcs%functl(1), spin_channels)
+    call xc_functl_init_correlation(xcs%functl(2), spin_channels)
     
     if(any(xcs%functl(:)%family==XC_FAMILY_MGGA)) then
       call loct_parse_int("MGGAimplementation", 1, xcs%mGGA_implementation)
@@ -148,8 +148,8 @@ contains
 
       ! we need some auxiliary functionals for the SIC
       if(xcs%sic_correction.ne.0) then
-        call xc_functl_init_exchange   (xcs%sic_aux(1), SPIN_POLARIZED, XC_POLARIZED)
-        call xc_functl_init_correlation(xcs%sic_aux(2), SPIN_POLARIZED, XC_POLARIZED)
+        call xc_functl_init_exchange   (xcs%sic_aux(1), XC_POLARIZED)
+        call xc_functl_init_correlation(xcs%sic_aux(2), XC_POLARIZED)
       end if
     end if
 

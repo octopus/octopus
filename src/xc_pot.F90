@@ -44,8 +44,8 @@ subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   ! initialize a couple of handy variables
   gga           = any(functl(:)%family == XC_FAMILY_GGA)
   mgga          = any(functl(:)%family == XC_FAMILY_MGGA)
-  spin_channels = functl(1)%spin_channels
-  ispin         = functl(1)%ispin
+  spin_channels = st%d%spin_channels
+  ispin         = st%d%ispin
   
                   call  lda_init()
   if(gga.or.mgga) call  gga_init()
