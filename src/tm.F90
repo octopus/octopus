@@ -179,7 +179,7 @@ subroutine tm_process(pstm, lmax, lloc)
   call solve_schroedinger(pstm)
 
 ! Fixes the local potential. Final argument is the core radius ??!!
-  call get_local(pstm, lloc, 5.0_r8)
+  call get_local(pstm, lloc, 3.0_r8)
 
 ! calculates kb cosines and norms
   call calculate_kb_cosines(pstm, lloc)
@@ -681,7 +681,7 @@ subroutine get_cutoff_radii(pstm, lloc)
 
   integer             :: l, ir
   real(r8)            :: dincv, phi
-  real(r8), parameter :: threshold = 1.0e-8_r8
+  real(r8), parameter :: threshold = 1.0e-6_r8
 
   sub_name = 'get_cutoff_radii'; call push_sub()
 

@@ -97,9 +97,10 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
     ps%l_max_occ = ps%l_max
     ps%l_loc = lloc
-    ps%so_l_max = min(pstm%npotu, lmax) ! is this the corect value?
+    if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
+    ps%so_l_max = min(pstm%npotu, lmax)
     ps%z = z
-    call tm_process(pstm, lmax, lloc)
+    call tm_process(pstm, lmax, ps%l_loc)
     if(conf%verbose > 999) call tm_debug(pstm)
   case('hg')
     call hgh_init(psp, trim(label), ispin)
