@@ -49,6 +49,7 @@ contains
     allocate(s%geo)
     call geometry_init_xyz(s%geo)
     call geometry_init_species(s%geo, s%val_charge, def_h, def_rsize)
+    call geometry_init_vel(s%geo)
 
     allocate(s%m)
     call mesh_init(s%m, s%geo, def_h, def_rsize)

@@ -64,13 +64,13 @@ module geometry
 
 contains
 
+!-----------------------------------------------------------------
+! initializes the xyz positions of the atoms in the structure geo
+!
 subroutine geometry_init_xyz(geo)
   type(geometry_type), intent(inout) :: geo
 
-  integer :: iunit, i, j
-  integer(POINTER_SIZE) :: random_gen_pointer
-  character(len=80) :: str, label
-  FLOAT :: temperature, sigma, x(3), kin1, kin2
+  integer :: i
   type(xyz_file_info) :: xyz
 
   call push_sub('geometry_init_xyz')
@@ -117,18 +117,36 @@ subroutine geometry_init_xyz(geo)
     end do
     call xyz_file_end(xyz)
   end if
-    
+
+  call pop_sub()
+end subroutine geometry_init_xyz
+
+
+!-----------------------------------------------------------------
+! initializes the velocities of the atoms in the structure geo
+!
+subroutine geometry_init_vel(geo)
+  type(geometry_type), intent(inout) :: geo
+
+  integer :: i, j
+  FLOAT :: x(3), temperature, sigma, kin1, kin2
+  integer(POINTER_SIZE) :: random_gen_pointer
+  type(xyz_file_info) :: xyz
+
+  call push_sub('geometry_init_vel')
+
   ! we now load the velocities, either from the temperature, from the input, or from a file
   if(loct_parse_isdef("RandomVelocityTemp").ne.0) then
     call loct_ran_init(random_gen_pointer)
     call loct_parse_float("RandomVelocityTemp", M_ZERO, temperature)
     do i = 1, geo%natoms
-       sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
-       do j = 1, 3
-          geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
-       enddo
-    enddo
+      sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
+      do j = 1, 3
+        geo%atom(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
+      end do
+    end do
     call loct_ran_end(random_gen_pointer)
+
     kin1 = kinetic_energy(geo)
     call cm_vel(geo, x)
     do i = 1, geo%natoms
@@ -140,15 +158,14 @@ subroutine geometry_init_xyz(geo)
     enddo
 
     write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', & 
-                                   temperature, 'K'
-    write(message(2),'(a,f8.4,1x,a)') 'Info: <K>       =', &
-                                   (kinetic_energy(geo)/geo%natoms)/units_out%energy%factor, &
-                                   units_out%energy%abbrev
-    write(message(3),'(a,f8.4,1x,a)') 'Info: 3/2 k_B T =', &
-                                   (M_THREE/M_TWO)*P_Kb*temperature/units_out%energy%factor, &
-                                   units_out%energy%abbrev
-    write(message(4),'(a)')
-    call write_info(4)
+        temperature, 'K'
+    write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
+        (kinetic_energy(geo)/geo%natoms)/units_out%energy%factor, &
+        units_out%energy%abbrev
+    write(message(3),'(2x,a,f8.4,1x,a)') '3/2 k_B T =', &
+        (M_THREE/M_TWO)*P_Kb*temperature/units_out%energy%factor, &
+        units_out%energy%abbrev
+    call write_info(3)
 
   else
     call xyz_file_init(xyz)
@@ -164,16 +181,16 @@ subroutine geometry_init_xyz(geo)
         geo%atom(i)%v = xyz%atom(i)%x * (units_inp%velocity%factor / units_inp%length%factor)
       end do
       call xyz_file_end(xyz)
+
     else
       do i = 1, geo%natoms
         geo%atom(i)%v = M_ZERO
       end do
     end if
   end if
-
+  
   call pop_sub()
-
-end subroutine geometry_init_xyz
+end subroutine geometry_init_vel
 
 subroutine geometry_filter(geo, gmax)
   type(geometry_type), intent(inout) :: geo

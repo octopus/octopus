@@ -313,9 +313,7 @@ subroutine mesh_partition(m, Lxyz_tmp)
   else
     etype = 3 ! hexahedra
   end if
-  print *, "Ola"
   call oct_METIS_partition(ne, m%np, elmnts, etype, 1, mpiv%numprocs, edgecut, epart, npart)
-  print *, "Ola"
 
   if(mpiv%node == 0) then
     do i = 1, m%np
