@@ -1477,6 +1477,10 @@ if @code{TDOccupationalAnalysis == 1}).
 @code{TDMaximumIter} (integer, 1500):
 Number of time steps.
 
+@item @vindex @code{TDTimeStep}
+@code{TDTimeStep} (double, 0.07 a.u.):
+Time-step for the propagation.
+
 @item @vindex @code{TDEvolutionMethod}
 @code{TDEvolutionMethod} (integer, 2):
 Method used to perform the time propagation. Authorised values are:
@@ -1605,7 +1609,7 @@ see http://www.phys.washington.edu/~bertsch/num3.ps)
 suggest the 4th order as especially suitable and stable.
 
 @item @code{2}: Lanczos approximation. Allows for larger time-steps.
-However, the larger the time-step, the longer the time per time-step. In
+However, the larger the time-step, the longer the computational time per time-step. In
 certain cases, if the time-step is too large, the code will emit a warning
 whenever it considers that the evolution may not be proberly proceeding --
 the Lanczos process did not converge. The method consists in a Krylov
@@ -1627,7 +1631,6 @@ $$
 \exp (-i \delta t H) = \exp (-i \delta t/2 T) \exp (-i \delta t V) \exp (-i \delta t/2 T)
 + O(\delta t^2).
 $$
-
 @end tex
 
 @item @code{4}: Suzuki-Trotter. This is a higher-order
@@ -1637,7 +1640,23 @@ but requires five times more time.
 
 @item @code{5}: N-th order Chebyshev expansion. In principle, the Chebyshev expansion
 of the exponential represents it more accurately than the canonical expansion
-(method 1). 
+(method 1). As in the latter case, @code{TDExpOrder} determines the order of the expansion.
+@ifnottex
+(See a printed version of the manual for details)
+@end ifnottex
+@tex
+There exists a closed analytical form for the coefficients of the exponential in terms
+of Chebyshev polynomials:
+$$
+\exp \left( -i\delta t H \right) = \sum_{k=0}^{\infty} (2-\delta_{k0})(-i)^{k}
+J_k(\delta t) T_k(H),
+$$
+where $J_k$ are the Bessel functions of the first kind, and H has te be previously
+scaled to $[-1,1]$.
+@end tex
+See H. Tal-Ezer and R. Kosloff, J. Chem. Phys. @strong{81},
+3967 (1984); R. Kosloff, Annu. Rev. Phys. Chem. @strong{45}, 145 (1994);
+C. W. Clenshaw, MTAC @strong{9}, 118 (1955).
 
 @end itemize
 
@@ -1650,11 +1669,7 @@ Lanczos-subspace dimension.
 @item @vindex @code{TDLanczosTol}
 @code{TDLanczosTol} (real, 1e-4):
 An internal tolerance variable for the Lanczos method. The smaller, the more
-precise the exponential is calculated.
-
-@item @vindex @code{TDTimeStep}
-@code{TDTimeStep} (double, 0.07 a.u.):
-  Time-step for the propagation.
+precisely the exponential is calculated.
 
 @item @vindex @code{TDLasers}
 @code{TDLasers} (block data):
@@ -1670,17 +1685,35 @@ the amplitude, @code{envelope} the envelope function, @code{t0} the
 middle (maximum) of the pulse and @code{omega0} the frequency of 
 the pulse. The meaning of @code{tau0} depends on the envelope function. 
 The possible values for @code{envelope} are:
-  @itemize @minus
-    @item @code{1}: Gaussian envelope. @code{tau0} is the standard deviation 
-      of the pulse.
-    @item @code{2}: Cosinoidal envelope. @code{tau0} is half the total length
-      of the pulse.
-    @item @code{3}: Ramp. In this case there is an extra parameter 
-      @code{tau1}. @code{tau0} is the length of the constant part of the ramp,
-      and @code{tau1} is the raising (decaying) time. @code{tau1} should be
-      an extra field after @code{t0}.
-    @item @code{4}: Shape is read from a file.
-  @end itemize
+
+@itemize @minus
+@item @code{1}: Gaussian envelope. @code{tau0} is the standard deviation 
+of the pulse. 
+@tex
+$$
+E(t) = {\tt A0}\exp \left(  -{(t-{\tt t0})^2 \over 2*{\tt tau0}^2} \right).
+$$
+@center @image{gaussian,4cm,}
+@end tex
+@item @code{2}: Cosinoidal envelope. @code{tau0} is half the total length
+of the pulse.
+@tex
+$$
+E(t) = {\tt A0}\cos \left( {\pi \over 2} {(t - 2{\tt tau0} - {\tt t0)} \over {\tt tau0}} \right),\;\;\;
+|t-{\tt t0}| < {\tt tau0}.
+$$
+@center @image{cosine,4cm,}
+@end tex
+@item @code{3}: Ramp. In this case there is an extra parameter 
+@code{tau1}. @code{tau0} is the length of the constant part of the ramp,
+and @code{tau1} is the raising (decaying) time. @code{tau1} should be
+an extra field after @code{t0}.
+@tex
+@center @image{ramp,4cm,}
+@end tex
+
+@item @code{4}: Shape is read from a file.
+@end itemize
 
 If @code{envelope=4}, the @code{t0} parameter is substituted by a string that
 determines the name of the file. The format of this file should be three
@@ -1695,7 +1728,7 @@ In which gauge to treat the laser. Options are:
 @itemize @minus
     @item @code{1}: Length gauge.
     @item @code{2}: Velocity gauge.
-  @end itemize
+@end itemize
 
 @item @vindex @code{TDDeltaStrength}
 @code{TDDeltaStrength} (double, 0.0 a.u.)
@@ -1719,14 +1752,14 @@ getting into @code{octopus}.
 
 @item @vindex @code{TDDipoleLmax}
 @code{TDDipoleLmax} (integer , 1):
-Maximum multi-pole of the density output to the file '@code{Sysname}.mult' 
+Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
 during a time-dependent simulation.
 
 @item @vindex @code{TDOccupationalAnalysis}
 @code{TDOccupationalAnalysis} (logical, false):
 If true, outputs the projections of the time-dependent Kohn-Sham
 wave-functions onto the static (zero time) wave-functions to the
-file '@code{Sysname}.proj'.
+file @code{td.general/projections}.
 
 @item @vindex @code{TDWriteHarmonicSpectrum}
 @code{TDWriteHarmonicSpectrum} (logical, false):
@@ -1737,17 +1770,11 @@ processed by the utility "hs-from-acc" in order to obtain the harmonic spectrum.
 @item @vindex @code{MoveIons}
 @code{MoveIons} (integer, 0): 
 What kind of simulation to perform. Possible values are:
-  @itemize @minus
-    @item @code{0}: Do not move the ions.
-    @item @code{1}: Steepest descents.
-    @item @code{2}: Damped Newtonian dynamics using Verlet.
-    @item @code{3}: Newtonian dynamics using Verlet.
-    @item @code{4}: Newtonian dynamics using velocity Verlet.
-    @item @code{5}: Minimisation using conjugated gradients.
-  @end itemize
-But in fact, for a time-dependent simulation can only takes the values 
-@code{0}, @code{3}, and @code{4}. The rest are
-ignored in present version.
+@itemize @minus
+@item @code{0}: Do not move the ions.
+@item @code{3}: Newtonian dynamics using Verlet.
+@item @code{4}: Newtonian dynamics using velocity Verlet.
+@end itemize
 
 @item @vindex @code{AbsorbingBoundaries}
 @code{AbsorbingBoundaries} (integer, 0):
