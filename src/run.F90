@@ -200,6 +200,9 @@ subroutine run()
       ! first copy the occupied states
       unoccv%st%X(psi)(:,:,1:sys%st%nst,:) = sys%st%X(psi)(:,:,1:sys%st%nst,:)
       unoccv%st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
+      if(unoccv%st%d%ispin == SPINORS) then
+        unoccv%st%mag(1:sys%st%nst, 1:sys%st%d%nik, 1:2) = sys%st%mag(1:sys%st%nst, 1:sys%st%d%nik, 1:2)
+      endif
       call states_end(sys%st) ! to save memory
 
       call states_generate_random(unoccv%st, sys%m, sys%st%nst+1)

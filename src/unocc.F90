@@ -70,6 +70,10 @@ subroutine unocc_init(u, m, st, val_charge)
   u%st%st_end = u%st%nst
   allocate(u%st%X(psi) (m%np, u%st%dim, u%st%nst, u%st%nik))
   allocate(u%st%eigenval(u%st%nst, u%st%nik), u%st%occ(u%st%nst, u%st%nik))
+  if(u%st%d%ispin == SPINORS) then
+    allocate(u%st%mag(u%st%nst, u%st%d%nik, 2))
+    u%st%mag = M_ZERO
+  end if
   u%st%eigenval = M_ZERO
   u%st%occ      = M_ZERO
 
