@@ -34,7 +34,7 @@ noinst_HEADERS = \
 	epot_inc.F90 \
 	h_inc.F90 h_xc_OEP.F90 h_so.F90 \
 	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90\
-	crystal.F90 states_inc.F90 states_kpoints.F90\
+	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
 	out_inc.F90 math_inc.F90\
@@ -84,21 +84,21 @@ DISTCLEANFILES = Makefile.in dirs.h
 
 # how to compile a F90 file :)
 .F90.o:
-	@FCCPP@ $< > $*.f90
+	@FCCPP@ $< > $*_oct.f90
 	@if [ "x@DEBUG@" = "x" ]; then \
-		cat $*.f90 | grep -v pop_sub | grep -v push_sub >$*.f91; \
-		mv -f $*.f91 $*.f90; \
+		cat $*_oct.f90 | grep -v pop_sub | grep -v push_sub >$*_oct.f91; \
+		mv -f $*_oct.f91 $*_oct.f90; \
 	fi
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*.f90
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*.f90
 
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)
 global.o: global.F90
 	@FCCPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
-		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' $< > $*.f90
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*.f90
-	@rm -f $*.f90
+		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' $< > $*_oct.f90
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@rm -f $*_oct.f90
 
 # how to generate config_F90.h
 liboct_parser.F90: config_F90.h
