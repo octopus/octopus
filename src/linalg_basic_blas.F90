@@ -248,7 +248,7 @@ end subroutine FNAME(gemm)
 ! matrix-vector multiplication plus vector
 ! ------------------------------------------------------------------
  
-subroutine FNAME(gemv)(m, n, alpha, a, x, beta, y)
+subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m, n
   TYPE1,   intent(in)    :: alpha, beta
   TYPE1,   intent(IN)    :: a(:,:)
@@ -257,7 +257,18 @@ subroutine FNAME(gemv)(m, n, alpha, a, x, beta, y)
 
   call blas_gemv('N', m, n, alpha, a(1,1), m, x(1), 1, beta, y(1), 1)
 
-end subroutine FNAME(gemv)
+end subroutine FNAME(gemv_1)
+
+subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
+  integer, intent(in)    :: m1, m2, n
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(IN)    :: a(:,:,:)
+  TYPE1,   intent(IN)    :: x(:)
+  TYPE1,   intent(inout) :: y(:,:)
+
+  call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)
+
+end subroutine FNAME(gemv_2)
 
 ! ------------------------------------------------------------------
 ! Clean up preprocessor directives

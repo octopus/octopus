@@ -123,10 +123,14 @@ module lib_basic_alg
   end interface
 
   interface lalg_gemv
-    module procedure gemv_1
-    module procedure gemv_2
-    module procedure gemv_3
-    module procedure gemv_4
+    module procedure gemv_1_1
+    module procedure gemv_1_2
+    module procedure gemv_1_3
+    module procedure gemv_1_4
+    module procedure gemv_2_1
+    module procedure gemv_2_2
+    module procedure gemv_2_3
+    module procedure gemv_2_4
   end interface
 
 contains
