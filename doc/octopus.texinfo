@@ -5,6 +5,12 @@
 @c %**end of header
 
 
+@dircategory Individual utilities
+@direntry
+* octopus: (octopus).           The octopus program.
+@end direntry
+
+
 @c ***************SUMMARY DESCRIPTION AND COPYRIGTH**********************
 @ifinfo
 The purpose of this info file is describing how to use
@@ -81,15 +87,15 @@ translation.
 
 @iftex
 @headings off
-@oddheading @image{octosex,1.75cm} @| @thischapter @| @thispage
-@evenheading @thispage @| @thischapter @| @image{octosex,1.75cm}
+@evenheading @image{octosex,1.75cm} @| @thispage @| @today{}
+@oddheading @image{octosex,1.75cm} @| @| @today{}
 @end iftex
 
 
 
 @c ***************TOP NODE AND MASTER MENU*******************************
 @ifinfo
-@node Top,        Copying,                , (dir)
+@node Top, Copying, (dir), (dir)
 @c    Node name,  next         , previous , up
 @top octopus
 The purpose of this info file is describing how to use
@@ -97,10 +103,13 @@ the octopus program. This is obvious, I know.
 @end ifinfo
 
 @menu
-* Copying      :: Your Rights.
-* Introduction :: Brief and informative.
-* Concept Index:: 
+* Copying::                     
+* Introduction::                
+* Description of input options::  
+* Concept Index::               
+
 @end menu
+
 @c **********************************************************************
 
 
@@ -110,7 +119,7 @@ the octopus program. This is obvious, I know.
 
 @c ***************THE BODY OF THE DOCUMENT*******************************
 
-@node Copying,      Introduction,   Top,          Top
+@node Copying, Introduction, Top, Top
 @chapter Copying
 
 We have not settled down yet the legal details of the code. Eventually it
@@ -119,7 +128,7 @@ have not the right to copy, modify, etc, which you wouldn't want to do it
 anyhow.
 
 
-@node Introduction, Concept Index,  Copying,      Top
+@node Introduction, Description of input options, Copying, Top
 @c    node-name,     next,          previous,     up
 @chapter Introduction
 
@@ -131,13 +140,34 @@ is a program aimed at the ab initio virtual experimentation on
 a hopefully ever increasing range of systems types.
 
 
+@node Description of input options, Concept Index, Introduction, Top
+@c    node-name,     next,          previous,     up
+@chapter Description of input options
+
+The full description of the system to simulate on, and of the simulation
+to perform, is done in a file called "inp" that must be present in
+the directory where the @code{octopus} command is issued.
+
+@section General Stuff
+
+@subsection @code{SystemName}: A string of characters that is used
+to define
+
+@section Describing the species
+
+@section Describing the atoms
+
+@section Describing the electrons
+
+@section Mesh parameters
+
 
 @c **********************************************************************
 
 
 
 @c ***************THE END OF THE DOCUMENT********************************
-@node    Concept Index,    , Introduction, Top
+@node    Concept Index,  , Description of input options, Top
 @c       node-name,    next, previous,     up
 @unnumbered Concept Index
      

@@ -1,6 +1,11 @@
 This is octopus.info, produced by makeinfo version 4.0b from
 octopus.texinfo.
 
+INFO-DIR-SECTION Individual utilities
+START-INFO-DIR-ENTRY
+* octopus: (octopus).           The octopus program.
+END-INFO-DIR-ENTRY
+
    The purpose of this info file is describing how to use the octopus
 program.
 
@@ -23,12 +28,19 @@ versions, except that this permission notice may be stated in a
 translation.
 
 
-File: octopus.info,  Node: Top,  Next: Copying,  Up: (dir)
+File: octopus.info,  Node: Top,  Next: Copying,  Prev: (dir),  Up: (dir)
+
+octopus
+*******
+
+   The purpose of this info file is describing how to use the octopus
+program. This is obvious, I know.
 
 * Menu:
 
-* Copying      :: Your Rights.
-* Introduction :: Brief and informative.
+* Copying::
+* Introduction::
+* Description of input options::
 * Concept Index::
 
 
@@ -43,16 +55,50 @@ basically have not the right to copy, modify, etc, which you wouldn't
 want to do it anyhow.
 
 
-File: octopus.info,  Node: Introduction,  Next: Concept Index,  Prev: Copying,  Up: Top
+File: octopus.info,  Node: Introduction,  Next: Description of input options,  Prev: Copying,  Up: Top
 
 Introduction
 ************
 
-   `octopus' is a program aimed at the ab initio virtual
+   `octopus' (1) is a program aimed at the ab initio virtual
 experimentation on a hopefully ever increasing range of systems types.
 
+   ---------- Footnotes ----------
+
+   (1) From latin _octopus_, set of animals belonging to the...
+
 
-File: octopus.info,  Node: Concept Index,  Prev: Introduction,  Up: Top
+File: octopus.info,  Node: Description of input options,  Next: Concept Index,  Prev: Introduction,  Up: Top
+
+Description of input options
+****************************
+
+   The full description of the system to simulate on, and of the
+simulation to perform, is done in a file called "inp" that must be
+present in the directory where the `octopus' command is issued.
+
+General Stuff
+=============
+
+`SystemName': A string of characters that is used
+-------------------------------------------------
+
+   to define
+
+Describing the species
+======================
+
+Describing the atoms
+====================
+
+Describing the electrons
+========================
+
+Mesh parameters
+===============
+
+
+File: octopus.info,  Node: Concept Index,  Prev: Description of input options,  Up: Top
 
 Concept Index
 *************
@@ -61,9 +107,11 @@ Concept Index
 
 
 Tag Table:
-Node: Top926
-Node: Copying1088
-Node: Introduction1414
-Node: Concept Index1661
+Node: Top1058
+Node: Copying1346
+Node: Introduction1672
+Ref: Introduction-Footnote-11974
+Node: Description of input options2039
+Node: Concept Index2725
 
 End Tag Table
