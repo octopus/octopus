@@ -31,7 +31,7 @@ gsl_complex_step_real (double a)
     }
   else
     {
-      GSL_SET_COMPLEX (&z, 1, 1);
+      GSL_SET_COMPLEX (&z, 1, 0);
     }
 
   return z;
