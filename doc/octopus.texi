@@ -1,0 +1,695 @@
+\input texinfo @c -*-texinfo-*- 
+@c %**start of header
+@setfilename octopus.info 
+@settitle @code{octopus} manual
+@c %**end of header
+
+
+@dircategory Individual utilities
+@direntry
+* octopus: (octopus).           The octopus program.
+@end direntry
+
+
+@c ***************SUMMARY DESCRIPTION AND COPYRIGTH**********************
+@ifinfo
+The purpose of this info file is describing how to use
+the octopus program.
+
+Copyright 2002 M. A. L. Marques, Alberto Castro and Angel Rubio
+
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+@ignore
+Permission is granted to process this file through TeX
+and print the results, provided the printed document
+carries a copying permission notice identical to this
+one except for the removal of this paragraph (this
+paragraph not being relevant to the printed manual).
+     
+@end ignore
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying'' and ``GNU General Public License''
+are included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
+
+@end ifinfo
+@c **********************************************************************
+
+
+
+@c ***************TITLE PAGE AND COPYRIGHT*******************************
+@titlepage
+@c @sp 10
+@c @c The title is printed in a large font.
+@c @center @titlefont{@code{octopus} manual}
+@c @image{octosex,8cm}
+@c @center Male Hapalochlaena lunulata (top),
+@c @center and female Hapalochlaena lunulata (bottom).
+@c @center Photograph by Roy Caldwell.
+@c @c The following two commands start the copyright page.
+@title @code{octopus} manual
+@subtitle Electronic Structure, Molecular Dynamics and Recipes-Generator.
+@c @subtitle SECOND-SUBTITLE
+@sp 5
+@image{octosex,8cm}
+@center Male Hapalochlaena lunulata (top),
+@center and female Hapalochlaena lunulata (bottom).
+@center Photograph by Roy Caldwell.
+@author By Miguel A. L. Marques, Alberto Castro and Angel Rubio
+
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2002 M. A. L. Marques, Alberto Castro and Angel Rubio
+@vskip 24pt
+This program, along with its documentation, is free software;
+you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation;
+either version 2 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public
+License along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+@vskip 24pt
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying'' and ``GNU General Public License''
+are included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+     
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
+@end titlepage
+@c **********************************************************************
+
+@iftex
+@headings off
+@c @evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
+@c @oddheading  @image{octosex,1.75cm} @| @thischapter  @| @thispage{} 
+@evenheading @thispage{}            @| @thistitle @|
+@oddheading  @| @thischapter  @| @thispage{} 
+@end iftex
+
+
+
+@c ***************TOP NODE AND MASTER MENU*******************************
+@ifinfo
+@node Top, Copying, (dir), (dir)
+@c    Node name,  next         , previous , up
+@top octopus
+@c The purpose of this info file is describing how to use
+@c the octopus program. This is obvious, I know, but texinfo manual
+@c encourages to put something over here.
+@end ifinfo
+
+@ifhtml
+@image{octosex,8cm}
+@center Male Hapalochlaena lunulata (top),
+@center and female Hapalochlaena lunulata (bottom).
+@center Photograph by Roy Caldwell.
+@end ifhtml
+
+@menu
+* Copying::                     
+* Authors::                     
+* Introduction::                
+* Installation::                
+* Description of input options::  
+* A word about units::          
+* GNU General Public License::  
+* Concept Index::               
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Description of input options
+
+* Generalities::                
+* Describing the species::      
+* Describing the atoms::        
+* Describing the electrons::    
+* Mesh parameters::             
+* Self-consistent cycle::       
+* Time evolution::              
+* Varia::                       
+
+Generalities
+
+* Verbose::                     
+* SystemName::                  
+* CalculationMode::             
+* Units::                       
+
+Describing the species
+
+* NumberSpecies::               
+* Species::                     
+
+Describing the atoms
+
+* NumberAtoms::                 
+* PDBCoordinates::              
+* XYZCoordinates::              
+* Coordinates::                 
+* XYZVelocities::               
+* Velocities::                  
+
+@end detailmenu
+@end menu
+
+@c **********************************************************************
+
+
+
+
+
+
+@c ***************THE BODY OF THE DOCUMENT*******************************
+
+
+
+
+
+
+
+@c **********************************************************************
+@c ***************COPYING************************************************
+@c **********************************************************************
+@node Copying, Authors, Top, Top
+@chapter Copying
+
+  This programs is
+"free"; this means that everyone is free to use it and free to
+redistribute it on a free basis.
+What is not allowed is to try to prevent others from further sharing
+any version of this program that they might get from you.
+
+  Specifically, we want to make sure that you have the right to give
+away copies of the program, that you receive
+source code or else can get it if you want it, that you can change this
+program or use pieces of them in new free programs, and that you know
+you can do these things.
+
+  To make sure that everyone has such rights, we have to forbid you to
+deprive anyone else of these rights.  For example, if you distribute
+copies of the program, you must give the recipients all
+the rights that you have.  You must make sure that they, too, receive or
+can get the source code.  And you must tell them their rights.
+
+  Also, for our own protection, we must make certain that everyone finds
+out that there is no warranty for this program.
+If these programs are modified by someone else and passed on, we want
+their recipients to know that what they have is not what we distributed,
+so that any problems introduced by others will not reflect on our
+reputation.
+
+  The precise conditions of the license 
+are found in the General Public
+Licenses that accompany it.
+@c **********************************************************************
+@c **********************************************************************
+@c **********************************************************************
+
+
+
+
+
+
+
+
+@c **********************************************************************
+@c ********************AUTHORS, COLLABORATORS AND ACKNOWLEDGEMENTS*******
+@c **********************************************************************
+@node Authors, Introduction, Copying, Top
+@chapter Authors, Collaborators and Acknowledgements.
+
+The main developing team of the first version of this program is
+made up of Miguel A. L. Marques and Angel Rubio, working at the Donostia
+International Physics Center (San Sebastia, Espanya), and Alberto
+Castro, who works at the University of Valladolid, Departamento de
+Fisica Teorica. The code is a major remake of a previous version written
+by the same team, and this one in turn was developed as an extension
+of a linear optical response code written by George F. Bertsch, K. Yabana
+and Angel Rubio.
+@c **********************************************************************
+@c **********************************************************************
+@c **********************************************************************
+
+
+
+
+
+
+
+
+
+
+
+@c **********************************************************************
+@c ********************* INTRODUCTION ***********************************
+@c **********************************************************************
+@node Introduction, Installation, Authors, Top
+@c    node-name,     next,          previous,     up
+@chapter Introduction
+
+     
+@code{octopus} @footnote{
+From latin @emph{octopus}, set of animals belonging to the...
+}
+is a program aimed at the ab initio virtual experimentation on 
+a hopefully ever increasing range of systems types. Its 
+main characteristics are:
+
+@itemize @bullet
+@item Electrons are describe quantum-mechanically within the
+Density-Functional Theory (DFT), in its time-dependent form (TDDFT)
+when doing simulations in time. Nuclei are described classically
+as point particles. 
+@item Electron-nucleus interaction is described within the
+Pseudopotential approximation..
+@end itemize
+@c **********************************************************************
+@c **********************************************************************
+@c **********************************************************************
+
+
+
+
+
+
+
+
+
+
+
+@c **********************************************************************
+@c *************************INSTALLATION*********************************
+@c **********************************************************************
+@node Installation, Description of input options, Introduction, Top
+@chapter Installation
+
+
+The code is written in standard Fortran 90, so you need a proper compiler.
+Any UN*X platform with an implementation of Fortran 90 should then
+be suitable to dive the @code{octopus}.
+
+@enumerate
+
+@item 
+Obtain the code gzipped-tarred file @code{octopus-version.tar.gz} (this
+you probably have already done). Code may be downloaded from its web
+page @code{www.tddft.org/octopus}. Uncompress it and untar it
+(@code{gzip -d octopus-version.tar.gz; tar -xvf octopus-version.tar}).
+In the following, @code{OCTOPUS-HOME} denotes the home directory of
+octopus, created by the @code{tar} command.
+
+@item
+Build the documentation in the format you prefer. Since you are reading
+this, you already have it in some format - you may build it in the
+format you prefer (dvi, html, pdf or info files) by moving into
+@code{OCTOPUS-HOME/doc} directory and typing @code{make dvi},
+@code{make html}, @code{make pdf} or @code{make info}. In the 
+latter case, the @code{octopus.info} file may be read by the @code{info}
+program by typing @code{info -f octopus.info}, or alternatively may
+be installed in your general @code{info} structure by typing 
+@code{make install-info}. You need to be root for doing this, and/or
+maybe some knowledge about how @code{info} works, to change the 
+appropriate variables in the @code{OCTOPUS-HOME/doc/Makefile}.
+
+@item
+Some external prerequisites are needed; besides the compiler (no free
+Fortran 90 compiler is available yet!) all of them are freely available
+and open-source projects:
+
+  @enumerate
+
+  @item
+  Compilation is done through @code{Makefiles}, so an implementation of
+  @code{make} is needed; version 3.79 or higher of the GNU @code{make} 
+  should work, any other @emph{could} work, but maybe not.
+
+  @item
+  the FFTW@footnote{
+  @code{www.fftw.org}}
+  package libraries,
+  BLAS/LAPACK@footnote{
+  @code{www.netlib.org}}
+  libraries, and the GNU Scientific Library @code{gsl}@footnote{
+  @code{www.gnu.org}}. 
+  
+  @end enumerate
+
+@item
+The variables in the file @code{Make.arch} must be adapted to the computer,
+compiler, preprocessor, etc. @code{arch} must be the output to the
+"@code{uname -m}" command. Occasionally you may need to change variable
+definitions in the first lines of the @code{Makefile}.
+
+The variable @code{FORLIBS}, to be defined in @code{Make.arch}, contains
+all the libraries that must be linked with the rest of the code. It must
+contain, at least:
+
+@code{FORLIBS = -ldrfftw -ldfftw -lblas -llapack -lgslcblas -lgsl -loct}
+
+The @code{-loct} links the @code{liboct.a} library,
+which is compiled previous to the main code when issuing
+
+@item 
+Compilation is then done issuing the @code{make} command. At the moment,
+two options are possible: generating code to perform calculations in 3D and
+1D - 2D will be available some time.
+
+@end enumerate
+@c **********************************************************************
+@c **********************************************************************
+@c **********************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+@c **********************************************************************
+@c *******************DESCRIPTION OF INPUT OPTION************************
+@c **********************************************************************
+@node Description of input options, A word about units, Installation, Top
+@c    node-name,     next,          previous,     up
+@chapter Description of input options
+
+The full description of the system to simulate on, and of the simulation
+to perform, is done in a file called "inp" that must be present in
+the directory where the @code{octopus} command is issued.
+The reading of the options is done through the @code{fdf} package,
+so the input format must follow its rules. The best thing to do
+is to follow the @code{inp} example in @code{OCTOPUS_HOME/samples}
+ directory.
+
+@menu
+* Generalities::                
+* Describing the species::      
+* Describing the atoms::        
+* Describing the electrons::    
+* Mesh parameters::             
+* Self-consistent cycle::       
+* Time evolution::              
+* Varia::                       
+@end menu
+
+@node Generalities, Describing the species, Description of input options, Description of input options
+@section Generalities
+
+
+
+@menu
+* Verbose::                     
+* SystemName::                  
+* CalculationMode::             
+* Units::                       
+@end menu
+
+@node Verbose, SystemName, Generalities, Generalities
+@subsection @code{Verbose}
+@cindex @code{Verbose}
+Integer number that sets the level of verbosity of the program:
+@itemize @bullet
+@item @code{>999} : Debug mode, maximum verbosity.
+@item @code{>20}  : Normal program info.
+@item @code{>0}   : Just warnings.and errors
+@item @code{<=0}  : Silent, only fatal errors.
+@end itemize
+@emph{Default: 30}
+
+
+@node SystemName, CalculationMode, Verbose, Generalities
+@subsection @code{SystemName}:
+@cindex @code{SystemName}
+A string of characters that is used to build the filenames 
+(@code{SystemName.restart}, @code{SystemName.mult}, etc).
+
+@emph{Default: sysname.}
+
+@node CalculationMode, Units, SystemName, Generalities
+@subsection @code{CalculationMode}:
+@cindex @code{CalculationMode}
+Integer number. It defines the type of simulation to perform. Options are:
+@itemize @bullet
+@item @code{1} : Start static calculation
+@item @code{2} : Resume static calculation
+@item @code{3} : calculate unocuppied states
+@item @code{4} : resume unocuppied states calculation
+@item @code{5} : start td
+@item @code{6} : resume td
+@item @code{7} : start static polarizability
+@item @code{8} : resume static polarizability
+@item @code{9} : perform Born-Oppenheimer MD
+@item @code{99} : prints out the "Pulpo a Feira" recipe
+@end itemize
+@emph{Default: 1.}
+
+@node Units,  , CalculationMode, Generalities
+@subsection @code{Units}:
+@cindex @code{Units}
+Atomic units seem to be the preferred system in the atomic and
+molecular physics community, despite the opinion of some of the authors
+of this program. Accordingly, atomic units may be used for describing
+input and output magnitudes. However, some people like using eV
+for energies and @AA{}  for lengths, and this defines a new units system
+(the @emph{convenient system}, in words of Prof. George W. Bertsch),
+which can also be used due to inheritance reasons. Thus the options 
+for this descriptor are:
+@itemize @bullet
+@item @code{a.u} : atomic units
+@item @code{eVA} : electron-volts/amstrongs
+@end itemize
+@emph{Default: a.u}
+
+@xref{A word about units}, for detailed information about units. Two other 
+input descriptors are possible: @code{UnitsInput}, and @code{UnitsOutput},
+if different system units are desired in input or output.
+@cindex @code{UnitsInput}
+@cindex @code{UnitsOutput}
+
+
+@node Describing the species, Describing the atoms, Generalities, Description of input options
+@section Describing the species
+
+A specie, in principle,is an ion (nucleus + core electrons) described
+through a pseudopotential. However, the code allows for jellium 
+calculation, in which case the species will be the full jellium
+distribution, and point charges - which in fact are no more than
+@code{rather small} jellium spheres.
+
+@menu
+* NumberSpecies::               
+* Species::                     
+@end menu
+
+@node NumberSpecies, Species, Describing the species, Describing the species
+@subsection @code{NumberSpecies}
+@cindex @code{NumberSpecies}
+Obvious meaning. 
+
+@node Species,  , NumberSpecies, Describing the species
+@subsection @code{Species}
+@cindex @code{Species}
+It is a @code{fdf} block of data which contains the information
+about the species. Its format may be illustrated through an example:
+
+@example
+%block Species
+Na        23.0   11.   2    1
+jelli      8.0   8.0   5.0
+point      1.0   1.0   
+%endblock Species
+@end example
+
+In this case, we have three "species" present:
+@itemize @bullet
+@item A sodium, pseudopotential, labeled "@code{Na}", to be read
+from a pseudopotential file. Numbers following the label describe 
+succesively the weight, the nuclear charge, the maximum 
+@emph{l}-component of the pseudopotential to consider in the
+calculation, and the @emph{l}-component to consider as local.
+@end itemize
+
+
+
+
+@node Describing the atoms, Describing the electrons, Describing the species, Description of input options
+@section Describing the atoms
+
+Atoms may be described in three ways: throuhg a PDB file, through a
+XYZ file, or within the @code{fdf inp} file. The program will attempt
+the three methods in that order.
+
+@menu
+* NumberAtoms::                 
+* PDBCoordinates::              
+* XYZCoordinates::              
+* Coordinates::                 
+* XYZVelocities::               
+* Velocities::                  
+@end menu
+
+@node NumberAtoms, PDBCoordinates, Describing the atoms, Describing the atoms
+@subsection @code{NumberAtoms}
+@cindex @code{NumberAtoms}
+Obvious meaning. Bear in mind that an ``atom'' may also be a jellium sphere or 
+point charge.
+
+@emph{Default: 0}
+
+@node PDBCoordinates, XYZCoordinates, NumberAtoms, Describing the atoms
+@subsection @code{PDBCoordinates}
+@cindex @code{PDBCoordinates}
+The name of a PDB file describing the atomic positions.
+If this is not the format to be used, this descriptor should not 
+be present in the @code{fdf} file.
+
+@emph{Default: coords.pdb}
+
+@node XYZCoordinates, Coordinates, PDBCoordinates, Describing the atoms
+@subsection @code{XYZCoordinates}
+@cindex @code{XYZCoordinates}
+The name of a XYZ file describing the atomic positions.
+If this is not the format to be used, this descriptor should not
+be present in the @code{fdf} file.
+
+@emph{Default: coords.xyz}
+
+@node Coordinates, XYZVelocities, XYZCoordinates, Describing the atoms
+@subsection @code{Coordinates}
+@cindex @code{Coordinates}
+
+It is a @code{fdf} block of data which contains the information
+about the atom. It is used in absence of the @code{PDBCoordinates} 
+(@pxref{PDBCoordinates})  or
+@code{XYZCoordinates} 
+(@pxref{XYZCoordinates}) descriptor. Its format may be illustrated through an example:
+
+@example
+%block Coordinates
+Na      0.0     0.0     1.7     .true.
+Na      0.0     0.0     -1.7    .true.
+%endblock Coordinates
+@end example
+
+The first fied is the label of the atom species, as it is specified in the block
+@code{Species} (@pxref{Species}). Three next numbers are the coordinates of
+the atom, in the units specified by @code{Units} (@pxref{Units}). Last field
+is @code{.true.} or @code{.false.} and fixes that particular atom if it is @code{.false.}
+
+
+
+@node XYZVelocities, Velocities, Coordinates, Describing the atoms
+@subsection @code{XYZVelocities}
+@cindex @code{XYZVelocities}
+The name of a XYZ file describing the atomic initial velocities.
+If they are not to be read from an XYZ file, this descriptor should not
+be present in the @code{fdf} file.
+
+@emph{Default: vel.xyz}
+
+@node Velocities,  , XYZVelocities, Describing the atoms
+@subsection @code{Velocities}
+@cindex @code{Velocities}
+
+It is a @code{fdf} block of data which contains the initial velocities
+of the atoms. It is used in absence of the 
+@code{XYZVelocities} 
+(@pxref{XYZVelocities}) descriptor. Its format may be illustrated through an example:
+
+@example
+%block Coordinates
+Na      0.0     0.0     1.7
+Na      0.0     0.0     -1.7
+%endblock Coordinates
+@end example
+
+The first fied is the label of the atom species, as it is specified in the block
+@code{Species} (@pxref{Species}). Three next numbers are the velocities of
+the atom, in the units specified by @code{Units} (@pxref{Units}). 
+
+
+
+
+@node Describing the electrons, Mesh parameters, Describing the atoms, Description of input options
+@section Describing the electrons
+
+@node Mesh parameters, Self-consistent cycle, Describing the electrons, Description of input options
+@section Mesh parameters
+
+The real-space mesh is an equally-spaced one, although the spacings maybe
+different for each direction. The shape of the simulation region may also
+be tuned to suit the geometric configuration of the system.
+
+@node Self-consistent cycle, Time evolution, Mesh parameters, Description of input options
+@section Self-consistent cycle
+
+
+@node Time evolution, Varia, Self-consistent cycle, Description of input options
+@section Time evolution
+
+@node Varia,  , Time evolution, Description of input options
+@section Varia
+
+@node A word about units, GNU General Public License, Description of input options, Top
+@appendix A word about units
+
+@node GNU General Public License, Concept Index, A word about units, Top
+@appendix GNU General Public License
+
+@include GPL
+
+
+@c **********************************************************************
+
+
+
+@c ***************THE END OF THE DOCUMENT********************************
+@node    Concept Index,  , GNU General Public License, Top
+@c       node-name,    next, previous,     up
+@unnumbered Concept Index
+     
+@printindex cp
+     
+@contents
+
+@bye
+@c **********************************************************************

@@ -1,5 +1,3 @@
-#include "config.h"
-
 module hartree
 use global
 use liboct

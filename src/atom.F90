@@ -39,7 +39,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   type(specie_type), pointer :: s(:)
 
   integer :: iunit, i
-  character(len=20) :: str, label
+  character(len=40) :: str, label
 
   sub_name = 'atom_init'; call push_sub()
 

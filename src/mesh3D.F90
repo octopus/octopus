@@ -1,5 +1,3 @@
-#include "config.h"
-
 module mesh
 use global
 use units

@@ -1,7 +1,7 @@
 #include "config.h"
 
 #if defined(ONE_D)
-#  include "hartree1D.F90"
+#  include "mesh1D.F90"
 #elif defined(THREE_D)
-#  include "hartree3D.F90"
+#  include "mesh3D.F90"
 #endif

@@ -102,7 +102,6 @@ subroutine states_init(st, m, val_charge)
 
   str = C_string("Occupations")
   occ_fix: if(oct_parse_isdef(str) .ne. 0) then
-    print *, "HHHELLOO"
     ! read in occupations
     st%fixed_occ = .true.
 

@@ -1,8 +1,10 @@
+#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "config.h"
+
+#include "f77_func.h"
 
 static char *disc[]={
   "DISCLAIMER: The authors do not guarantee that the "
@@ -53,7 +55,8 @@ static char *en[]={
 #define NO_LANGS 2
 static char **rec[] = {disc,en,es};
 
-void PROTO(printrecipe)(int *lang)
+void F77_FUNC_(printrecipe, PRINTRECIPE)
+		 (int *lang)
 {
 	int i, j, n;
 	char *s, c[NCOLS+5];
