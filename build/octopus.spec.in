@@ -46,15 +46,10 @@ rm -rf $RPM_BUILD_ROOT
 
 %build
 
-MYHOME="/home/marques/software"
-
 %configure \
-  FC=ifc \
-  FCFLAGS="-nbs -pc80 -pad -align -O3 -tpp6 -I$MYHOME/include" \
-  CFLAGS="-Wall -O2 -I$MYHOME/include" \
-  LDFLAGS="-L$MYHOME/lib -L/usr/lib/gcc-lib/i386-redhat-linux/3.3.2" \
-  LDFCFLAGS="-static -lguide -lpthread" \
-  --with-netcdf
+  FC="@FC@" FCFLAGS="@FCFLAGS@" CFLAGS="@CFLAGS@" \
+  LDFLAGS="@LDFLAGS@" LDFCFLAGS="@LDFCFLAGS@" \
+  LIBS_BLAS="@LIBS_BLAS@" LIBS_LAPACK="@LIBS_LAPACK@"
 
 make
 (cd doc; make octopus.ps; gzip octopus.ps)
