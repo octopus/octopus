@@ -123,14 +123,52 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   call pop_sub()
 end subroutine R_FUNC(kinetic)
 
+subroutine R_FUNC(exp_kinetic) (h, ik, m, st, psi, factor)
+  type(hamiltonian_type), intent(IN) :: h
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  R_TYPE :: psi(:, :)
+  integer :: ik
+  R_TYPE, intent(in) :: factor
+
+  complex(r8), allocatable :: fw(:,:,:)
+  integer :: i, n(3), idim, np, dim
+  real(r8) :: k2
+
+  call push_sub('exp_kinetic')
+  np = m%np
+  dim = st%dim
+
+  if(conf%periodic_dim>0) then
+     message(1) = 'Internal bug in exp_kinetic'
+     call write_fatal(1)
+  endif
+
+#ifdef T_REAL
+  call fft_getdim_complex(m%dfft, n)
+#else
+  call fft_getdim_real   (m%dfft, n)
+#endif
+  allocate(fw(n(1), n(2), n(3)))
+  do idim = 1, dim
+     call R_FUNC(mesh_rs2fs)(m, psi(:, idim), fw)
+     call R_FUNC(mesh_laplq)(m, fw, n, exponential = -factor/M_TWO, cutoff = h%cutoff)
+     call R_FUNC(mesh_fs2rs)(m, fw, psi(:, idim))
+  enddo
+  deallocate(fw)
+
+  call pop_sub()
+end subroutine R_FUNC(exp_kinetic)
+
 subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
+  integer, intent(in) :: ik
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   type(system_type), intent(IN) :: sys
   R_TYPE, intent(IN) :: psi(m%np, st%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
 
-  integer :: i, ik, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
+  integer :: i, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
   real(r8) :: x(conf%dim)
   R_TYPE :: phase
   R_TYPE :: uVpsi
@@ -201,6 +239,84 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   call pop_sub()
 end subroutine R_FUNC(vnlpsi)
 
+! For the moment, let us define this function only in the complex case...
+#if defined(R_TCOMPLEX)
+subroutine R_FUNC(exp_vnlpsi) (ik, m, st, sys, psi, factor, order)
+  integer, intent(in) :: ik
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(in) :: st
+  type(system_type), intent(in) :: sys
+  R_TYPE :: psi(m%np, st%dim)
+  R_TYPE, intent(in) :: factor
+  logical, intent(in) :: order
+
+  integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm, &
+             ia_start, ia_end, step, l_start, l_end, kbc_start, kbc_end
+  complex(r8) :: uvpsi, p2, ctemp
+  complex(r8), allocatable :: lpsi(:), lhpsi(:), initzpsi(:, :)
+  type(atom_type), pointer :: atm
+  type(specie_type), pointer :: spec
+  complex(r8), external :: zdotc
+
+  call push_sub('vnlpsi')
+
+    if(order) then
+      step = 1;  ia_start = 1; ia_end = sys%natoms
+    else
+      step = -1; ia_start = sys%natoms; ia_end = 1
+    end if
+
+    allocate(initzpsi(m%np, 1:sys%st%dim))
+    initzpsi = psi
+    ! Ionic pseudopotential
+    do_atm: do ia = ia_start, ia_end, step
+      atm => sys%atom(ia)
+      spec => atm%spec
+      ! do we have a pseudopotential, or a local pot?
+      if(spec%local) cycle do_atm
+
+      do_dim: do idim = 1, sys%st%dim
+        allocate(lpsi(atm%mps), lHpsi(atm%mps))
+        lpsi(:) = initzpsi(atm%jxyz(:), idim)
+        lHpsi(:) = M_z0
+        if(order) then
+          l_start   = 0; l_end   = spec%ps%L_max
+          kbc_start = 1; kbc_end = spec%ps%kbc
+          add_lm = 1
+        else
+          l_start   = spec%ps%L_max; l_end = 0
+          kbc_start = spec%ps%kbc; kbc_end = 1
+          add_lm = (spec%ps%L_max + 1)**2
+        end if
+        do_l: do l = l_start, l_end, step
+          if (l == spec%ps%L_loc) then
+            add_lm = add_lm + (2*l + 1)*step
+            cycle do_l
+          end if
+
+          do_m: do lm = -l*step, l*step, step
+            do ikbc = kbc_start, kbc_end, step
+              do jkbc = kbc_start, kbc_end, step
+                 p2 = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, atm%zuv(:, add_lm, ikbc), 1)*m%vol_pp
+                 ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*factor
+                 uvpsi = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, lpsi(:), 1) * m%vol_pp* &
+                       (exp(ctemp) - M_z1)/p2
+                 call zaxpy (atm%mps, uvpsi, atm%zuv(:, add_lm, jkbc), 1, lHpsi(:), 1)
+              end do
+            end do
+            add_lm = add_lm + step
+          end do do_m
+        end do do_l
+        psi(atm%jxyz(:), idim) = psi(atm%jxyz(:), idim) + lhpsi(:)
+        deallocate(lpsi, lHpsi)
+      end do do_dim
+    end do do_atm
+
+    deallocate(initzpsi)
+    call pop_sub()
+end subroutine R_FUNC(exp_vnlpsi)
+#endif
+
 subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
@@ -238,6 +354,60 @@ subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
 
   call pop_sub()
 end subroutine R_FUNC(vlpsi)
+
+subroutine R_FUNC(exp_vlpsi) (h, m, st, ik, psi, t, factor)
+  type(hamiltonian_type), intent(in) :: h
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(in) :: st
+  integer, intent(in) :: ik
+  R_TYPE, intent(inout) :: psi(m%np, st%dim)
+  !R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
+  real(r8), intent(in) :: t
+  R_TYPE, intent(in) :: factor
+
+  integer :: is, idim, np, dim, k
+  real(r8) :: x(3), f(3)
+
+  call push_sub('vlpsi')
+
+  !!!!WARNING: spinors not yet supported.
+  np = m%np
+  dim = st%dim
+
+  do idim = 1, dim
+     psi(:, idim) = exp(factor*(h%vpsl(:)+h%vhartree(:)))*psi(:, idim)
+  end do
+
+  select case(st%ispin)
+    case(UNPOLARIZED)
+      psi(:, 1) = exp(factor*h%vxc(:, 1))*psi(:, 1)
+    case(SPIN_POLARIZED)
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        psi(:, 1) = exp(factor*h%vxc(:, 1))*psi(:, 1)
+      else
+        psi(:, 1) = exp(factor*h%vxc(:, 2))*psi(:, 1)
+      end if
+    case(SPINORS)
+      message(1) = 'Internal error in exp_vlpsi'
+      call write_fatal(1)
+  end select
+
+  if(h%no_lasers > 0) then
+      select case(h%gauge)
+      case(1) ! length gauge
+        call laser_field(h%no_lasers, h%lasers, t, f)
+        do k = 1, m%np
+          call mesh_xyz(m, k, x)
+          psi(k,:) = exp(factor*sum(x*f)) * psi(k,:)
+        end do
+      case(2) ! velocity gauge
+        message(1) = 'Internal error in exp_vlpsi'
+        call write_fatal(1)
+      end select
+  end if
+
+  call pop_sub()
+end subroutine R_FUNC(exp_vlpsi)
 
 subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
   type(hamiltonian_type), intent(in) :: h

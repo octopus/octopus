@@ -395,7 +395,7 @@ end subroutine td_run
 !!$  type(system_type), intent(in)         :: sys
 !!$  type(hamiltonian_type), intent(inout) :: h
 !!$
-!!$  integer :: unit, order, i, j
+!!$  integer :: unit, order, i, j, d
 !!$  complex(r8), allocatable :: expzpsi(:, :), goodzpsi(:, :), hzpsi(:, :)
 !!$  real(r8) :: res(8), dt
 !!$  complex(r8) :: r
@@ -408,27 +408,29 @@ end subroutine td_run
 !!$           goodzpsi(sys%m%np, sys%st%dim), &
 !!$           hzpsi   (sys%m%np, sys%st%dim))
 !!$
-!!$ do i = -300, 100, 10
+!!$  d = sys%m%np*sys%st%dim
+!!$
+!!$  do i = -300, 100, 10
 !!$
 !!$     ! Calculate the "good" valee
 !!$
 !!$     dt = exp(real(i, r8)/100._r8 * log(10.0_r8))
 !!$     write(*, *) 'Calculating the "good" value...'
-!!$     goodzpsi = sys%st%zpsi(:, :, 1, 1)
+!!$     call zcopy(d, sys%st%zpsi, 1, goodzpsi, 1)
 !!$     td%lanczos_tol = 1.0e-14_r8
-!!$     td%exp_order   = 64
-!!$     td%exp_method  = LANCZOS_EXPANSION
-!!$     call td_dtexp(h, sys, td, 1, goodzpsi, dt, 0.0_r8)
+!!$     td%exp_order   = 20
+!!$     td%exp_method  = FOURTH_ORDER
+!!$     call td_dtexp(h, sys, td, 1, goodzpsi, dt, M_ZERO)
 !!$     !goodzpsi(:, :) = exp(-M_zI*dt*sys%st%eigenval(1, 1))*sys%st%zpsi(:, :, 1, 1)
 !!$     write(*, *) 'Done.'
 !!$
 !!$     !do j = 1, 8
-!!$       expzpsi = sys%st%zpsi(:, :, 1, 1)
-!!$       td%exp_order   = 20
-!!$       td%lanczos_tol = 1.0e-4_r8
+!!$       call zcopy(d, sys%st%zpsi, 1, expzpsi, 1)
+!!$       td%exp_order   = 15
+!!$       td%lanczos_tol = 1.0e-8_r8
 !!$       td%exp_method  = SUZUKI_TROTTER
-!!$       call td_dtexp(h, sys, td, 1, expzpsi,  dt, 0.0_r8)
-!!$            expzpsi = expzpsi - goodzpsi
+!!$       call td_dtexp(h, sys, td, 1, expzpsi, dt, M_ZERO, order = order)
+!!$       call zaxpy(d, -M_ONE, goodzpsi, 1, expzpsi, 1)
 !!$       res(1) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$     !enddo
 !!$       open(unit, file='td_check', position='append')

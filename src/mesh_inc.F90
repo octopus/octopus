@@ -381,14 +381,16 @@ end subroutine R_FUNC(low_frequency)
 
 ! WARNING the next two functions need to be cleaned
 #ifdef HAVE_FFT
-subroutine R_FUNC(mesh_laplq)(m, f, n, cutoff)
+subroutine R_FUNC(mesh_laplq)(m, f, n, cutoff, exponential)
   type(mesh_type), intent(in)    :: m
   complex(r8), dimension(*) :: f
   integer, intent(in) :: n(3)
   real(r8), intent(in), optional :: cutoff
+  R_TYPE, intent(in), optional :: exponential
 
   real(r8) :: lcutoff, temp(3), g2
   integer :: i, k(3), ix, iy, iz, nx
+  R_TYPE :: lexp
 
   call push_sub('mesh_laplq')
 
@@ -399,6 +401,9 @@ subroutine R_FUNC(mesh_laplq)(m, f, n, cutoff)
      endif
   endif
 
+  lexp = R_TOTYPE(M_ZERO)
+  if(present(exponential)) lexp = exponential
+
   nx = n(1)
 #if defined(R_TREAL)
   nx = n(1)/2+1
@@ -407,19 +412,35 @@ subroutine R_FUNC(mesh_laplq)(m, f, n, cutoff)
   temp = M_ZERO
   temp(1:conf%dim) = (2.0_r8*M_Pi)/(m%l(1:conf%dim)*m%h(1:conf%dim))
 
-  i = 0
-  do iz = 1, n(3)
-     k(3) = pad_feq(iz, m%l(3), .true.)
-     do iy = 1, n(2)
-        k(2) = pad_feq(iy, m%l(2), .true.)
-        do ix = 1, nx
-           k(1) = pad_feq(ix, m%l(1), .true.)
-           g2 = min(lcutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2))
-           i = i + 1
-           f(i) = - g2*f(i)
-        enddo
-     enddo
-  enddo
+  if(present(exponential)) then
+    i = 0
+    do iz = 1, n(3)
+       k(3) = pad_feq(iz, m%l(3), .true.)
+       do iy = 1, n(2)
+          k(2) = pad_feq(iy, m%l(2), .true.)
+          do ix = 1, nx
+             k(1) = pad_feq(ix, m%l(1), .true.)
+             g2 = min(lcutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2))
+             i = i + 1
+             f(i) = exp(-lexp*g2)*f(i)
+          enddo
+       enddo
+    enddo
+  else
+    i = 0
+    do iz = 1, n(3)
+       k(3) = pad_feq(iz, m%l(3), .true.)
+       do iy = 1, n(2)
+          k(2) = pad_feq(iy, m%l(2), .true.)
+          do ix = 1, nx
+             k(1) = pad_feq(ix, m%l(1), .true.)
+             g2 = min(lcutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2))
+             i = i + 1
+             f(i) = - g2*f(i)
+          enddo
+       enddo
+    enddo
+  endif
 
   call pop_sub()
 end subroutine R_FUNC(mesh_laplq)

@@ -15,13 +15,16 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
+subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t, &
+                    order)
   type(hamiltonian_type), intent(in) :: h
   type(system_type), intent(in)      :: sys
   type(td_type), intent(in)          :: td
   integer, intent(in) :: ik
   complex(r8), intent(inout) :: zpsi(sys%m%np, sys%st%dim)
   real(r8), intent(in) :: timestep, t
+  integer, optional, intent(out) :: order ! For the methods that rely on Hamiltonian-vector
+                                          ! multipolication, the number of these.
 
   call push_sub('td_dtexp')
 
@@ -39,25 +42,24 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
 contains
 
   subroutine fourth
-    integer :: order
     complex(r8) :: zfact
     complex(r8), allocatable :: zpsi1(:,:), hzpsi1(:,:)
     integer :: i
 
     call push_sub('fourth')
 
-    order = td%exp_order
     allocate(zpsi1(sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
-    zfact = 1._r8
-    zpsi1 = zpsi
-    do i = 1, order
+    zfact = M_z1
+    call zcopy(sys%m%np*sys%st%dim, zpsi, 1, zpsi1, 1)
+    do i = 1, td%exp_order
       zfact = zfact*(-M_zI*timestep)/i
       call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
-      zpsi(1:,:) = zpsi(1:,:) + zfact*hzpsi1(:,:)
-      if(i .ne. order) zpsi1(1:,:) = hzpsi1(1:,:)
+      call zaxpy(sys%m%np*sys%st%dim, zfact, hzpsi1, 1, zpsi, 1)
+      if(i .ne. td%exp_order) call zcopy(sys%m%np*sys%st%dim, hzpsi1, 1, zpsi1, 1)
     end do
     deallocate(zpsi1, hzpsi1)
 
+    if(present(order)) order = td%exp_order
     call pop_sub()
   end subroutine fourth
 
@@ -75,17 +77,16 @@ contains
     !   u0 := twot*u1 - u2 + c[k];
     !  od;
     !  ChebySum := 0.5*(u0 - u2);} */
-    integer :: order = 4, j, n
+    integer :: j, n
     complex(r8) :: zfact
     complex(r8), allocatable :: zpsi1(:,:,:)
 
     call push_sub('cheby')
     
-    order = td%exp_order
     allocate(zpsi1(sys%m%np, sys%st%dim, 0:2))
     zpsi1 = M_z0
     n = sys%m%np*sys%st%dim
-    do j = order, 0, -1
+    do j = td%exp_order, 0, -1
        call zcopy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
        call zcopy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
        call zhpsi(h, sys%m, sys%st, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)
@@ -97,15 +98,16 @@ contains
        call zaxpy(n, zfact, zpsi(1, 1),                      1,   zpsi1(1, 1, 0), 1)
        call zaxpy(n, cmplx(-1._r8,0._r8,r8), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
     end do
-    zpsi(:, :) = 0.5_r8*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
+    zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
     call zscal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi, 1)
     deallocate(zpsi1)
 
+    if(present(order)) order = td%exp_order
     call pop_sub()
   end subroutine cheby
 
   subroutine lanczos
-    integer ::  korder, is, n, nn, i, info, order, j
+    integer ::  korder, is, n, nn, i, info, j
     complex(r8), allocatable :: hm(:, :), v(:, :, :), w(:, :), f(:, :), hh(:), expo(:, :)
     real(r8) :: alpha, beta, res, tol, nrm
 
@@ -157,18 +159,18 @@ contains
        if(beta < 1.0e-12_r8) exit
        if(n>1 .and. res<tol) exit
     enddo
-    order = min(korder, n + 1)
-    !if(present(lanczos_order)) lanczos_order = order
+    korder = n + 1
     if(res > tol .and. beta > 1.0e-12_r8) then
       write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
       call write_warning(1)
     endif
 
     zpsi = M_z0
-    do nn = 1, order
+    do nn = 1, korder
        call zaxpy(sys%m%np*sys%st%dim, nrm*expo(nn, 1), v(1, 1, nn), 1, zpsi, 1)
     enddo
 
+    if(present(order)) order = korder
     deallocate(v, w, f, hm, expo, hh)
     call pop_sub()
   end subroutine lanczos
@@ -182,17 +184,19 @@ contains
       call write_fatal(1)
     endif
 
-    call local_part(sys%m, t, timestep/M_TWO)
-    if(sys%nlpp) call non_local_pp(sys%m, timestep/M_TWO, .true.)
-    call kinetic(sys%m, timestep)
-    if(sys%nlpp) call non_local_pp(sys%m, timestep/M_TWO, .false.)
-    call local_part(sys%m, t, timestep/M_TWO)
+    call zexp_vlpsi (h, sys%m, sys%st, ik, zpsi, t, -M_zI*timestep/M_TWO)
+    if(sys%nlpp) call zexp_vnlpsi (ik, sys%m, sys%st, sys, zpsi, -M_zI*timestep/M_TWO, .true.)
+    call zexp_kinetic(h, ik, sys%m, sys%st, zpsi, -M_zI*timestep)
+    if(sys%nlpp) call zexp_vnlpsi (ik, sys%m, sys%st, sys, zpsi, -M_zI*timestep/M_TWO, .false.)
+    call zexp_vlpsi (h, sys%m, sys%st, ik, zpsi, t, -M_zI*timestep/M_TWO)
 
+    if(present(order)) order = 0
     call pop_sub()
   end subroutine split
 
   subroutine suzuki
-    real(r8) :: p, tim(5), tt, dt(5), pp(5)
+    real(r8) :: tim(5), tt, dt(5)
+    real(r8) :: p, pp(5)
     integer :: ist, k
 
     call push_sub('suzuki')
@@ -202,184 +206,21 @@ contains
       call write_fatal(1)
     endif
 
-    p = 1.0_r8/(4.0_r8 - 4.0_r8**(1.0_r8/3.0_r8))
-    pp(1) = p
-    pp(2) = p
-    pp(3) = 1 - 4*p
-    pp(4) = p
-    pp(5) = p
+    p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
+    pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
     dt(1:5) = pp(1:5)*timestep
 
     do k = 1, 5
-       call local_part(sys%m, t, dt(k)/M_TWO)
-       if(sys%nlpp) call non_local_pp(sys%m, dt(k)/M_TWO, .true.)
-       call kinetic(sys%m, dt(k))
-       if(sys%nlpp) call non_local_pp(sys%m, dt(k)/M_TWO, .false.)
-       call local_part(sys%m, t, dt(k)/M_TWO)
+       call zexp_vlpsi (h, sys%m, sys%st, ik, zpsi, t, -M_zI*dt(k)/M_TWO)
+       if(sys%nlpp) call zexp_vnlpsi (ik, sys%m, sys%st, sys, zpsi, -M_zI*dt(k)/M_TWO, .true.)
+       call zexp_kinetic(h, ik, sys%m, sys%st, zpsi, -M_zI*dt(k))
+       if(sys%nlpp) call zexp_vnlpsi (ik, sys%m, sys%st, sys, zpsi, -M_zI*dt(k)/M_TWO, .false.)
+       call zexp_vlpsi (h, sys%m, sys%st, ik, zpsi, t, -M_zI*dt(k)/M_TWO)
     end do
 
+    if(present(order)) order = 0
     call pop_sub()
   end subroutine suzuki
-
-  subroutine kinetic(m, dt)
-    type(mesh_type), intent(IN) :: m
-    real(r8), intent(in) :: dt
-
-    complex(r8),allocatable :: fw(:,:,:)
-    real(r8) :: cutoff, temp(3), g2
-    integer :: idim, k(3), ix, iy, iz
-
-    call push_sub('kinetic')
-
-    allocate(fw(m%l(1), m%l(2), m%l(3)))
-    do idim = 1, sys%st%dim
-       fw = M_z0
-       call zmesh_rs2fs(m, zpsi(:, idim), fw)
-
-       temp = M_ZERO
-       temp(1:conf%dim) = (2.0_r8*M_Pi)/(m%l(1:conf%dim)*m%h(1:conf%dim))
-
-       do ix = 1, m%l(1)
-         k(1) = pad_feq(ix, m%l(1), .true.)
-         do iy = 1, m%l(2)
-           k(2) = pad_feq(iy, m%l(2), .true.)
-           do iz = 1, m%l(3)
-             k(3) = pad_feq(iz, m%l(3), .true.)
-             g2 = min(cutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2)/M_TWO)
-             fw(ix, iy, iz) = exp(-M_zI*dt*g2)*fw(ix, iy, iz)
-           enddo
-         enddo
-       enddo
-
-       zpsi = M_z0
-       call zmesh_fs2rs(m, fw, zpsi(:, idim))
-    enddo
-    deallocate(fw)
-
-    call pop_sub()
-  end subroutine kinetic
-
-  subroutine non_local_pp (m, dt, order)
-    type(mesh_type), intent(IN) :: m
-    real(r8), intent(in) :: dt
-    logical, intent(in) :: order
-
-    integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm, &
-               ia_start, ia_end, step, l_start, l_end, kbc_start, kbc_end
-    complex(r8) :: uvpsi, p2, ctemp
-    complex(r8), allocatable :: lpsi(:), lhpsi(:), initzpsi(:, :)
-    type(atom_type), pointer :: atm
-    type(specie_type), pointer :: spec
-    complex(r8), external :: zdotc
-
-    call push_sub('vnlpsi')
-
-    if(order) then
-      step = 1;  ia_start = 1; ia_end = sys%natoms
-    else
-      step = -1; ia_start = sys%natoms; ia_end = 1
-    end if
-
-    allocate(initzpsi(m%np, 1:sys%st%dim))
-    initzpsi = zpsi
-    ! Ionic pseudopotential
-    do_atm: do ia = ia_start, ia_end, step
-      atm => sys%atom(ia)
-      spec => atm%spec
-      ! do we have a pseudopotential, or a local pot?
-      if(spec%local) cycle do_atm
-
-      do_dim: do idim = 1, sys%st%dim
-        allocate(lpsi(atm%mps), lHpsi(atm%mps))
-        lpsi(:) = initzpsi(atm%jxyz(:), idim)
-        lHpsi(:) = M_z0
-        if(order) then
-          l_start   = 0; l_end   = spec%ps%L_max
-          kbc_start = 1; kbc_end = spec%ps%kbc
-          add_lm = 1
-        else
-          l_start   = spec%ps%L_max; l_end = 0
-          kbc_start = spec%ps%kbc; kbc_end = 1
-          add_lm = (spec%ps%L_max + 1)**2
-        end if
-        do_l: do l = l_start, l_end, step
-          if (l == spec%ps%L_loc) then
-            add_lm = add_lm + (2*l + 1)*step
-            cycle do_l
-          end if
-
-          do_m: do lm = -l*step, l*step, step
-            do ikbc = kbc_start, kbc_end, step
-              do jkbc = kbc_start, kbc_end, step
-                 p2 = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, atm%zuv(:, add_lm, ikbc), 1)*m%vol_pp
-                 ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*(-M_zI*dt)
-                 uvpsi = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, lpsi(:), 1) * m%vol_pp* &
-                       (exp(ctemp) - M_z1)/p2
-                 call zaxpy (atm%mps, uvpsi, atm%zuv(:, add_lm, jkbc), 1, lHpsi(:), 1)
-              end do
-            end do
-            add_lm = add_lm + step
-          end do do_m
-        end do do_l
-        zpsi(atm%jxyz(:), idim) = zpsi(atm%jxyz(:), idim) + lhpsi(:)
-        deallocate(lpsi, lHpsi)
-      end do do_dim
-    end do do_atm
-
-    deallocate(initzpsi)
-    call pop_sub()
-  end subroutine non_local_pp
-
-  subroutine local_part(m, t, dt)
-    type(mesh_type), intent(IN) :: m
-    real(r8), intent(in) :: t, dt
-
-    integer :: j, idim
-    real(r8) :: r, x(3), las(3)
-
-    call push_sub('local_part')
-
-    if(h%no_lasers > 0 .and. h%gauge == 1) then
-      call laser_field(h%no_lasers, h%lasers, t, las)
-    end if
-
-    ! Propagation of the local part and external field
-    do j = 1, m%np
-      r = h%Vpsl(j)
-      if(.not.h%ip_app) then
-        r = r + h%Vhartree(j)
-        select case(sys%st%ispin)
-        case(1) ! dim = 1
-          r = r + h%Vxc(j, 1)
-        case(2) ! dim = 1
-          if(modulo(ik, 2) == 0) then ! we have a spin down
-            r = r + h%Vxc(j, 1)
-          else ! spin down
-            r = r + h%Vxc(j, 2)
-          end if
-        case(3) ! dim = 2
-          message(1) = "Suzuki-Trotter propagation not implemented for ispin=3"
-          call write_fatal(1)
-        end select
-      end if
-      
-      if(h%ab .eq. 1) then
-        r = r + h%ab_pot(j)
-      end if
-      
-      if(h%no_lasers > 0 .and. h%gauge == 1) then
-        call mesh_xyz(m, j, x)
-        r = r + sum(x(1:conf%dim)*las(1:conf%dim))
-      end if
-      
-      ! Warning: this does not work for spinors...
-      do idim = 1, sys%st%dim
-        zpsi(j, idim) = zpsi(j, idim) * exp(-M_zI*dt*r)
-      enddo
-    end do
-
-    call pop_sub()
-  end subroutine local_part
 #endif
 
 end subroutine td_dtexp
