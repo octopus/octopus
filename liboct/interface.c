@@ -57,7 +57,7 @@ double F90_FUNC_(oct_bessel, OCT_BESSEL)
 double F90_FUNC_(oct_asinh, OCT_ASINH)
 		 (double *x)
 {
-  return asinh(*x);
+	return gsl_asinh(*x);
 }
 
 /* complementary error function (we use the one in gsl) */
