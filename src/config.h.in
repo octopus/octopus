@@ -1,0 +1,27 @@
+! Do we have FFTW
+#undef HAVE_FFTW
+
+! Do we have GSL
+#undef HAVE_GSL
+
+! Do we have LAPACK
+#undef HAVE_LAPACK
+#undef HAVE_BLAS
+
+! the size of the pointers
+#undef POINTER_SIZE
+
+! Dimensionality of the system
+#undef ONE_D
+#undef THREE_D
+
+#undef BOUNDARIES_ZERO_DERIVATIVE
+
+#undef COMPLEX_WFNS
+
+! what do you wish for dinner, dear?
+#ifdef COMPLEX_WFNS
+#include "complex.F90"
+#else
+#include "real.F90"
+#endif
