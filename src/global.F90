@@ -38,6 +38,11 @@ type conf_type
                          ! > 20  -> normal program info
                          ! > 999 -> debug
   integer :: debug_level ! How much debug should print
+
+  character(len=256) :: share       ! Name of the share dir
+  character(len=50)  :: build_time  ! time octopus was compiled
+  character(len=10)  :: version     ! version number
+
   integer :: periodic_dim
   integer :: dim
   logical :: boundary_zero_derivative
@@ -112,13 +117,6 @@ character(len=70), parameter, private :: stars =  &
 character(len=68), parameter, private :: hyphens = &
     '--------------------------------------------------------------------'
 
-!!!!
-! Let us overload the + operator to concatenate strings. Thus the '//' operator
-! should be avoided because it confuses the C preprocessor.
-  interface operator ( + )
-    module procedure concatenate
-  end interface
-
 contains
 
 subroutine global_init()
@@ -133,6 +131,10 @@ subroutine global_init()
   mpiv%node = 0
   mpiv%numprocs = 1
 #endif
+
+  conf%share      = SHARE_OCTOPUS
+  conf%build_time = BUILD_TIME
+  conf%version    = OCTOPUS_VERSION
 
   ! initialize the parser
   ierr = loct_parse_init('out.oct')
@@ -497,12 +499,5 @@ character(len=80) function str_center(s_in, l) result(s_out)
   end do
   
 end function str_center
-
-function concatenate(a, b)
-  character(len=*), intent(in) :: a, b
-  character(len=len(a)+len(b)) :: concatenate
-
-  concatenate = a // b
-end function concatenate
 
 end module global

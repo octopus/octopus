@@ -88,7 +88,7 @@ contains
     s = M_ZERO
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+fname, status='old', iostat=istat)
+    open(iunit, file=trim(dir) // "/" // fname, status='old', iostat=istat)
     if(istat.ne.0) then
       write(message(1),'(3a)') "Could not open multipoles file!"
       call write_fatal(1)
@@ -113,7 +113,7 @@ contains
       
     ! print spectra
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/spectrum."+fname, status='unknown')
+    open(iunit, file=trim(dir) // "/spectrum." // fname, status='unknown')
     do j1 = 1, n
       w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
       write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor

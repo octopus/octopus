@@ -132,7 +132,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%g%drdi = psp%g%drdi
     if(conf%verbose > 999) call hgh_debug(psp)
   case default
-    message(1) = "Unknown pseudopotential type: '"+trim(flavour)+"'"
+    message(1) = "Unknown pseudopotential type: '" // trim(flavour) // "'"
     call write_fatal(1)
   end select
 
@@ -194,6 +194,7 @@ subroutine ps_debug(ps)
   FLOAT, parameter :: grid = CNST(0.01)
 
   character(len=4)  :: fm
+  character(len=30) :: dir
   integer           :: info_unit, local_unit, nonlocal_unit, wave_unit, so_unit, &
                        i, j, k, l, is
   FLOAT          :: r
@@ -201,15 +202,16 @@ subroutine ps_debug(ps)
   call push_sub('ps_debug')
 
   ! Opens the files.
-  call loct_mkdir('pseudos/'+trim(ps%label))
+  dir = 'pseudos/'//trim(ps%label)
+  call loct_mkdir(trim(dir))
   call io_assign(info_unit); call io_assign(local_unit)
   call io_assign(nonlocal_unit); call io_assign(wave_unit)
   call io_assign(so_unit)
-  open(info_unit, file='pseudos/'+trim(ps%label)+'/info')
-  open(local_unit, file='pseudos/'+trim(ps%label)+'/local')
-  open(nonlocal_unit, file='pseudos/'+trim(ps%label)+'/nonlocal')
-  open(wave_unit, file='pseudos/'+trim(ps%label)+'/wave')
-  open(so_unit, file='pseudos/'+trim(ps%label)+'/so')
+  open(    info_unit, file=trim(dir)//'/info')
+  open(   local_unit, file=trim(dir)//'/local')
+  open(nonlocal_unit, file=trim(dir)//'/nonlocal')
+  open(    wave_unit, file=trim(dir)//'/wave')
+  open(      so_unit, file=trim(dir)//'/so')
 
   ! Writes down the info.
   write(info_unit,'(a,/)')      ps%label
@@ -251,7 +253,7 @@ subroutine ps_debug(ps)
   write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
   do i =1, npoints
      r = (i-1)*grid 
-     write(nonlocal_unit, '('+trim(fm)+'f16.8)') r, &
+     write(nonlocal_unit, '('//trim(fm)//'f16.8)') r, &
            ( (loct_splint(ps% kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
            ( (loct_splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
   enddo
@@ -261,7 +263,7 @@ subroutine ps_debug(ps)
     write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
     do i =1, npoints
       r = (i-1)*grid 
-      write(so_unit, '('+trim(fm)+'f16.8)') r, &
+      write(so_unit, '('//trim(fm)//'f16.8)') r, &
            ( (loct_splint(ps%so_kb (k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
            ( (loct_splint(ps%so_dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
     enddo
@@ -271,7 +273,7 @@ subroutine ps_debug(ps)
   write(fm,'(i4)') ps%ispin*(ps%l_max+1)+1; fm = adjustl(fm)
   do i = 1, npoints
      r = (i-1)*grid
-     write(wave_unit, '('+trim(fm)+'f16.8)') &
+     write(wave_unit, '('//trim(fm)//'f16.8)') &
            r, ((loct_splint(ps%ur(l, is), r), l = 1, ps%conf%p), is = 1, ps%ispin)
   enddo
 

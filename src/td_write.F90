@@ -106,13 +106,13 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
     
     ! third line -> units
     call write_iter_string(out, '##########')
-    call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
+    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     
     do is = 1, st%d%nspin
-      call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
+      call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
     end do
     do j = 1, conf%dim
-      call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
+      call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
     enddo
 
     do is = 1, st%d%nspin
@@ -122,10 +122,10 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
           case(0)
             call write_iter_header(out, ' ')
           case(1)
-            call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
+            call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
           case default
             write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
-            call write_iter_header(out, '['+trim(aux)+']')
+            call write_iter_header(out, '[' // trim(aux) // ']')
           end select
         end do
       end do
@@ -202,12 +202,12 @@ subroutine td_write_nbo(out, geo, td, iter, ke, pe)
     
     ! second line: units
     call write_iter_string(out, '##########')
-    call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
+    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     call write_iter_string(out, &
-         'Energy in '      + trim(units_out%energy%abbrev)   +   &
-         ', Positions in ' + trim(units_out%length%abbrev)   +   &
-         ', Velocities in '+ trim(units_out%velocity%abbrev) + &
-         ', Forces in '    + trim(units_out%force%abbrev))
+         'Energy in '      // trim(units_out%energy%abbrev)   //   &
+         ', Positions in ' // trim(units_out%length%abbrev)   //   &
+         ', Velocities in '// trim(units_out%velocity%abbrev) //   &
+         ', Forces in '    // trim(units_out%force%abbrev))
     call write_iter_nl(out)
   end if
   
@@ -258,7 +258,7 @@ subroutine td_write_gsp(out, m, st, td, iter)
     
     ! second line -> units
     call write_iter_string(out, '##########')
-    call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
+    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     call write_iter_nl(out)
   end if
     
@@ -301,9 +301,9 @@ subroutine td_write_acc(out, mesh, st, geo, h, td, iter)
     
     ! second line: units
     call write_iter_string(out, '##########')
-    call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
+    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     do i = 1, conf%dim
-      call write_iter_header(out, '['+trim(units_out%acceleration%abbrev)+']')
+      call write_iter_header(out, '[' // trim(units_out%acceleration%abbrev) // ']')
     end do
     call write_iter_nl(out)
   endif
@@ -357,14 +357,14 @@ subroutine td_write_laser(out, h, td, iter)
     
     ! third line -> units
     call write_iter_string(out, '##########')
-    call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
+    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     
-    aux = '['+trim(units_out%energy%abbrev) + ' / ' + trim(units_inp%length%abbrev) + ']'
+    aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
     do i = 1, conf%dim
       call write_iter_header(out, aux)
     end do
     
-    aux = '[1/'+ trim(units_inp%length%abbrev) + ']'
+    aux = '[1/' // trim(units_inp%length%abbrev) // ']'
     do i = 1, conf%dim
       call write_iter_header(out, aux)
     end do
@@ -410,9 +410,9 @@ subroutine td_write_el_energy(out, h, iter)
 
     ! second line: units
     call write_iter_string(out, '##########')
-    call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
+    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     do i = 1, 5
-      call write_iter_header(out, '['+trim(units_out%energy%abbrev)+']')
+      call write_iter_header(out, '[' // trim(units_out%energy%abbrev) // ']')
     end do
     call write_iter_nl(out)
   endif

@@ -84,7 +84,7 @@ DISTCLEANFILES = Makefile.in dirs.h
 
 # how to compile a F90 file :)
 .F90.o:
-	@F90CPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' $< > $*.f90
+	@F90CPP@ $< > $*.f90
 	@if [ "x@DEBUG@" = "x" ]; then \
 		cat $*.f90 | grep -v pop_sub | grep -v push_sub >$*.f91; \
 		mv -f $*.f91 $*.f90; \
@@ -94,7 +94,7 @@ DISTCLEANFILES = Makefile.in dirs.h
 
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)
-main.o: main.F90
+global.o: global.F90
 	@F90CPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' $< > $*.f90
 	@F90@ @F90FLAGS@ -c -o $@ $*.f90

@@ -61,7 +61,7 @@ contains
     FLOAT :: x
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0,z=0", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", status='unknown')
     do ix = 1, c%n(1)
        x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
        write(iunit, mformat) x, R_REAL(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u, &
@@ -75,7 +75,7 @@ contains
     FLOAT :: y
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,z=0", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,z=0", status='unknown')
     do iy = 1, c%n(2)
        y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
        write(iunit, mformat) y, R_REAL(c%RS(c%n(1)/2 + 1, iy, c%n(3)/2 + 1))/u, &
@@ -89,7 +89,7 @@ contains
     FLOAT :: z
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,y=0", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,y=0", status='unknown')
     do iz = 1, c%n(3)
        z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
        write(iunit, mformat) z, R_REAL(c%RS(c%n(1)/2 + 1, c%n(2)/2 + 1, iz))/u, &
@@ -103,7 +103,7 @@ contains
     FLOAT :: y, z
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'y', 'z', 'Re', 'Im'
     do iy = 1, c%n(2)
       y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
@@ -122,7 +122,7 @@ contains
     FLOAT :: x, z
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
     do ix = 1, c%n(1)
       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
@@ -141,7 +141,7 @@ contains
     FLOAT :: x, y
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".z=0", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", status='unknown')
     write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
     do ix = 1, c%n(1)
       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
@@ -173,7 +173,7 @@ contains
     nitems=TRIM(ADJUSTL(nitems))
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".dx", status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".dx", status='unknown')
     
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',c%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
@@ -208,7 +208,7 @@ contains
     integer :: ncid, status, data_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
 
-    status = nf90_create(trim(dir)+"/"+trim(fname)+".ncdf", NF90_CLOBBER, ncid)
+    status = nf90_create(trim(dir) // "/" // trim(fname) // ".ncdf", NF90_CLOBBER, ncid)
     if (status /= NF90_NOERR) then
       call ncdf_error("nf90_create", status); return
     end if
@@ -230,22 +230,22 @@ contains
     status = nf90_def_var(ncid, "pos", NF90_FLOAT,  dim_pos_id,  pos_id)
 
     ! attributes
-    status = nf90_put_att(ncid, data_id, "field", trim(fname)+", scalar")
+    status = nf90_put_att(ncid, data_id, "field", trim(fname) // ", scalar")
     status = nf90_put_att(ncid, data_id, "positions", "pos, regular")
 
     ! end definitions
     status = nf90_enddef(ncid)
 
     ! data
-    pos(1,:) = real(-(c%n(:) - 1)/2 * m%h(:) / units_out%length%factor, r4)
-    pos(2,:) = real(m%h(:) / units_out%length%factor, r4)
+    pos(1,:) = real(-(c%n(:) - 1)/2 * m%h(:) / units_out%length%factor, 4)
+    pos(2,:) = real(m%h(:) / units_out%length%factor, 4)
 
     status = nf90_put_var(ncid, pos_id, pos(:,:))
     ! we have to transpose the matrix: stupid Fortran!
     if(iand(how, output_single) .ne.0) then
-      status = nf90_put_var(ncid, data_id, real(c%RS, r4), map=(/c%n(1)*c%n(2), c%n(1), 1/))
+      status = nf90_put_var(ncid, data_id, real(c%RS, 4), map=(/c%n(1)*c%n(2), c%n(1), 1/))
     else
-      status = nf90_put_var(ncid, data_id, real(c%RS, r8), map=(/c%n(1)*c%n(2), c%n(1), 1/))
+      status = nf90_put_var(ncid, data_id, real(c%RS, 8), map=(/c%n(1)*c%n(2), c%n(1), 1/))
     end if
 
     ! close
@@ -257,7 +257,7 @@ contains
     character(len=*), intent(in) :: func
     integer, intent(in) :: status
 
-    message(1) = "NETCDF error in function'"+trim(func)+"'"
+    message(1) = "NETCDF error in function'" // trim(func) // "'"
     write(message(2), '(6x,a,i4)')'error code = ', status
     call write_warning(2)
 

@@ -59,6 +59,7 @@ subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
            ifunc == X_FUNC_OEP_SIC  .or. &
            ifunc == C_FUNC_OEP_SIC)) cycle
       
+      e = M_ZERO
       select case(ifunc)
       case(X_FUNC_OEP_X)
         call X(oep_x) (m, st, is, oep, e)

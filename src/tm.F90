@@ -79,7 +79,7 @@ subroutine tm_init(pstm, filename, ispin)
   pstm%ispin = ispin
 
   ! Find out where the hell the file is.
-  filename2 = trim(filename)+'.vps'
+  filename2 = trim(filename) // '.vps'
   inquire(file=filename2, exist=found)
   message(1) = "Info: Reading pseudopotential from file:"
   if(found) then
@@ -91,13 +91,13 @@ subroutine tm_init(pstm, filename, ispin)
     call read_file_data_bin(iunit, pstm)
     call io_close(iunit)
   else
-    filename2 = trim(filename)+'.ascii'
+    filename2 = trim(filename) // '.ascii'
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      filename2 = SHARE_OCTOPUS+"/PP/TM2/"+trim(filename)+".ascii"
+      filename2 = trim(conf%share) // "/PP/TM2/" // trim(filename) // ".ascii"
       inquire(file=filename2, exist=found)
       if(.not.found) then
-        message(1) = "Pseudopotential file '"+trim(filename)+"{.vps|.ascii}' not found"
+        message(1) = "Pseudopotential file '" // trim(filename) // "{.vps|.ascii}' not found"
         call write_fatal(1)
       end if
     end if
@@ -140,7 +140,7 @@ end subroutine tm_init
 subroutine build_valconf(pstm)
   type(tm_type) :: pstm
 
-  character(len=1) :: char1(6), char2
+  character(len=1)  :: char1(6), char2
   integer :: l
 
   call push_sub('build_valconf')
@@ -152,14 +152,16 @@ subroutine build_valconf(pstm)
 
   select case(pstm%irel)
   case('nrl')
-    read(pstm%title,'('+char2+'(i1,a1,f5.2,10x))') &
-          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
+    ! It seems that with some compiler version in the SP4 we can not have string
+    ! concat inside the read statement, so we define read_fmt outside
+    read(pstm%title, '('//char2//'(i1,a1,f5.2,10x))') &
+         (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
   case('isp')
-    read(pstm%title,'('+char2+'(i1,a1,f4.2,1x,f4,2,6x))') &
-          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), pstm%conf%occ(l,2), l = 1, pstm%npotd)
+    read(pstm%title, '('//char2//'(i1,a1,f4.2,1x,f4,2,6x))') &
+         (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), pstm%conf%occ(l,2), l = 1, pstm%npotd)
   case('rel')
-    read(pstm%title,'('+char2+'(i1,a1,f5.2,10x))') &
-          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
+    read(pstm%title, '('//char2//'(i1,a1,f5.2,10x))') &
+         (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
   end select
 
   do l = 1, pstm%npotd
@@ -225,7 +227,7 @@ subroutine solve_schroedinger(psf)
   call push_sub('solve_schroedinger')
 
   ! Let us be a bit informative.
-  message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '+psf%namatm+'....'
+  message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psf%namatm // '....'
   call write_info(1)
 
   ! Allocation.
@@ -752,19 +754,21 @@ subroutine tm_debug(pstm)
   type(tm_type), intent(in) :: pstm
 
   integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
+  character(len=30) :: dir
 
   call push_sub('tm_debug')
 
   ! Opens files.
-  call loct_mkdir('pseudos/'+'tm2.'+trim(pstm%namatm))
+  dir = 'pseudos/'//trim(pstm%namatm)//'.tm2'
+  call loct_mkdir(trim(dir))
   call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
   call io_assign(so_unit) ; call io_assign(so_unit)
-  open(loc_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'local')
-  open(dat_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'info')
-  open(kbp_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'nonlocal')
-  open(wav_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'wave')
-  open(so_unit,  file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'so')
+  open(loc_unit, file = trim(dir)//'/local')
+  open(dat_unit, file = trim(dir)//'/info')
+  open(kbp_unit, file = trim(dir)//'/nonlocal')
+  open(wav_unit, file = trim(dir)//'/wave')
+  open(so_unit,  file = trim(dir)//'/so')
 
   ! First of all, writes down the info.
   write(dat_unit,'(a,/)') pstm%namatm
@@ -772,9 +776,9 @@ subroutine tm_debug(pstm)
   write(dat_unit,'(a,/)')   pstm%title
   write(dat_unit,'(a)')   'Descriptive string of the generation process:'
   write(dat_unit,'(6a,/)')   (pstm%method(i), i = 1, 6)
-  write(dat_unit,'(a)')   'Relativistic character: '+pstm%irel
-  write(dat_unit,'(a)')   'XC:                     '+pstm%icorr
-  write(dat_unit,'(a)')   'Core correction:        '+pstm%icore
+  write(dat_unit,'(a)')   'Relativistic character: ' // pstm%irel
+  write(dat_unit,'(a)')   'XC:                     ' // pstm%icorr
+  write(dat_unit,'(a)')   'Core correction:        ' // pstm%icore
   write(dat_unit,'(/,a,i4)') 'Maximum L: ', pstm%npotd-1
   write(dat_unit,'(/,a)')   'Occupations:'
   do is = 1, pstm%ispin

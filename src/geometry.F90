@@ -230,7 +230,7 @@ contains
     end do
     
     if(.not. l) then
-      message(1) = "Specie '"+trim(label)+"' not found"
+      message(1) = "Specie '" // trim(label) // "' not found"
       call write_fatal(1)
     end if
     
@@ -453,7 +453,7 @@ subroutine atom_write_xyz(dir, fname, geo)
     call loct_mkdir(trim(dir))
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+'.xyz', status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname) // '.xyz', status='unknown')
     write(iunit, '(i4)') geo%natoms
     write(iunit, '(1x)')
     do i = 1, geo%natoms
@@ -463,7 +463,7 @@ subroutine atom_write_xyz(dir, fname, geo)
     
     if(geo%ncatoms > 0) then
       call io_assign(iunit)
-      open(iunit, file=trim(dir)+"/"+trim(fname)+'_classical.xyz', status='unknown')
+      open(iunit, file=trim(dir) // "/" // trim(fname) // '_classical.xyz', status='unknown')
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do i = 1, geo%ncatoms

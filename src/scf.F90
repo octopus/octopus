@@ -281,7 +281,7 @@ subroutine scf_write_static(dir, fname)
 
   call loct_mkdir(trim(dir))
   call io_assign(iunit)
-  open(iunit, status='unknown', file=trim(dir)+"/"+trim(fname))
+  open(iunit, status='unknown', file=trim(dir) // "/" // trim(fname))
 
   ! mesh
   write(iunit, '(a,a)') 'System name: ', geo%sysname

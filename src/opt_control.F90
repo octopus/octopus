@@ -273,8 +273,8 @@ contains
     type(states_type), intent(out) :: st
     character(len=*), intent(in) :: filename
 
-    if(.not.zstates_load_restart("opt-control/"+trim(filename), m, st)) then
-      message(1) = "Could not read file 'opt-control/"+trim(filename)+"'"
+    if(.not.zstates_load_restart("opt-control/" // trim(filename), m, st)) then
+      message(1) = "Could not read file 'opt-control/" // trim(filename) // "'"
       call write_fatal(1)
     end if
   end subroutine read_state

@@ -189,7 +189,7 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   if(st%restart_format == 1) then
     open(iunit, status='unknown', file=trim(filename), form='unformatted')
   else
-    open(iunit, status='unknown', file=trim(filename)+'.ascii', form='formatted')
+    open(iunit, status='unknown', file=trim(filename) // '.ascii', form='formatted')
   end if
 
 #ifdef R_TREAL
@@ -283,9 +283,9 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
 200 continue
 
   else ! unformatted
-    inquire(file=trim(filename)+'.ascii', exist=found)
+    inquire(file=trim(filename) // '.ascii', exist=found)
     if(found) then ! unformatted file
-      fname = trim(filename)+'.ascii'
+      fname = trim(filename) // '.ascii'
       restart_format = 2
 
       open(iunit, status='old', file=trim(fname), form='formatted', err=998)
@@ -391,7 +391,7 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
 
 999 call io_close(iunit)
 998 continue
-  message(1) = 'Error reading from file '+trim(filename)+"'"
+  message(1) = 'Error reading from file ' // trim(filename) // "'"
   call write_warning(1)
   ok = .false.
   call pop_sub()

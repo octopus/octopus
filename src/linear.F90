@@ -72,7 +72,7 @@ contains
     write(*, "(1x)")
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir)+"/"+trim(fname), status='unknown')
+    open(iunit, file=trim(dir) // "/" // trim(fname), status='unknown')
 
     if(type == 0) write(iunit, '(2a4)', advance='no') 'From', ' To '
     write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
@@ -144,7 +144,7 @@ contains
       
       ! output eigenvectors
       call io_assign(iunit)
-      open(iunit, file=trim(dir)+"/"+trim(fname)+".vec", status='unknown')
+      open(iunit, file=trim(dir) // "/" // trim(fname) // ".vec", status='unknown')
       write(iunit, '(a14)', advance = 'no') ' value '
       do ia = 1, n_pairs
         write(iunit, '(3x,i4,a1,i4,2x)', advance='no') pair_i(ia), ' - ', pair_a(ia)

@@ -95,17 +95,17 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
   xcs2%family = XC_FAMILY_LDA
   xcs2%functl = C_FUNC_LDA_PZ
   do i = 1, st%nst
-    if(st%occ(i, is) .gt. small) then ! we only need the occupied states
-      vc2 = M_ZERO
-      ec2 = M_ZERO
+    if(st%occ(i, is) < small) cycle ! we only need the occupied states
 
-      st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
+    vc2 = M_ZERO
+    ec2 = M_ZERO
 
-      call xc_lda (xcs2, m, st, vc2, edummy, ec2)
-
-      ec = ec - oep%sfact*ec2
-      oep%lxc(:, i) = oep%lxc(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
-    end if
+    st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
+    
+    call xc_lda (xcs2, m, st, vc2, edummy, ec2)
+    
+    ec = ec - oep%sfact*ec2
+    oep%lxc(:, i) = oep%lxc(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
   end do
 
   st%d%spin_channels = i1

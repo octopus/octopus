@@ -397,9 +397,9 @@ subroutine run_init()
 
   message(1) = "Info: Boundary conditions:"
   if(conf%boundary_zero_derivative) then
-    message(1) = trim(message(1)) + " zero derivatives"
+    write(message(1), '(2a)') trim(message(1)), " zero derivatives"
   else
-    message(1) = trim(message(1)) + " zero wave-functions"
+    write(message(1), '(2a)') trim(message(1)), " zero wave-functions"
   end if
   call write_info(1)
 

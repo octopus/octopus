@@ -82,7 +82,7 @@ program choose_st
   end do
 
   call loct_parse_string("ChooseStatesFilename", "wf.initial", ch)
-  call X(states_write_restart) ("opt-control/"+trim(ch), sys%m, st1)
+  call X(states_write_restart) ("opt-control/" // trim(ch), sys%m, st1)
 
   stop
 end program choose_st

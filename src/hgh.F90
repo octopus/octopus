@@ -78,13 +78,13 @@ subroutine hgh_init(psp, filename, ispin)
 
   call push_sub('hgh_init')
 
-  filename2 = filename+'.hgh'
+  filename2 = filename // '.hgh'
   inquire(file=filename2, exist=found)
   if(.not.found) then
-    filename2 = SHARE_OCTOPUS+"/PP/HGH/"+filename+".hgh"
+    filename2 = trim(conf%share) // "/PP/HGH/" // filename // ".hgh"
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      message(1) = "Pseudopotential file '"+trim(filename)+".hgh' not found!"
+      message(1) = "Pseudopotential file '" // trim(filename) // ".hgh' not found!"
       call write_fatal(1)
     end if
   end if
@@ -458,7 +458,7 @@ subroutine solve_schroedinger(psp)
 
   ! Let us be a bit informative.
   if(conf%verbose > 20 .and. mpiv%node == 0) then
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '+psp%atom_name+'....'
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psp%atom_name // '....'
     call write_info(1)
   endif
 
@@ -551,18 +551,20 @@ subroutine hgh_debug(psp)
   type(hgh_type), intent(in) :: psp
 
   integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
+  character(len=30) :: dir
 
   call push_sub('hgh_debug')
 
   ! Opens files.
-  call loct_mkdir('pseudos/'+'hgh.'+trim(psp%atom_name))
+  dir = 'pseudos/' // psp%atom_name // '.hgh'
+  call loct_mkdir(trim(dir))
   call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
-  open(hgh_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'hgh')
-  open(loc_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'local')
-  open(dat_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'info')
-  open(kbp_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'nonlocal')
-  open(wav_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'wave')
+  open(hgh_unit, file = trim(dir)//'/hgh')
+  open(loc_unit, file = trim(dir)//'/local')
+  open(dat_unit, file = trim(dir)//'/info')
+  open(kbp_unit, file = trim(dir)//'/nonlocal')
+  open(wav_unit, file = trim(dir)//'/wave')
 
   ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
   write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)

@@ -25,13 +25,13 @@ program octopus
   implicit none
 
   integer :: ierr, val(8)
-  
+
   call global_init()
 
   ! Let us print our logo
   if(mpiv%node == 0) then
     ! Let us print our logo
-    if(conf%verbose > 20) ierr = loct_print_file(SHARE_OCTOPUS+'/logo')
+    if(conf%verbose > 20) ierr = loct_print_file(trim(conf%share) // '/logo')
 #ifdef DEBUG
     if(conf%verbose > 999) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
 #endif
@@ -39,15 +39,15 @@ program octopus
 
   ! Let us print the version
   message(1) = ""
-  message(2) = str_center(trim("Running octopus, version " + OCTOPUS_VERSION), 70)
-  message(3) = str_center(trim("(build time - " + BUILD_TIME + ")"), 70)
+  message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
+  message(3) = str_center("(build time - " // trim(conf%build_time) // ")", 70)
   message(4) = ""
   call write_info(4)
 
   ! Let us print where we are running
   if(conf%verbose > 20) then
     call loct_sysname(message(1))
-    write(stdout, '(a)') str_center("The octopus is swimming in "+trim(message(1)), 70)
+    write(stdout, '(a)') str_center("The octopus is swimming in " // trim(message(1)), 70)
   end if
 #if defined(HAVE_MPI)
   call MPI_Barrier(MPI_COMM_WORLD, ierr)
