@@ -244,14 +244,14 @@ subroutine write_info(no_lines, iunit, verbose_limit)
   end if
 
   if(conf%verbose>20) then
-    if((.not.present(verbose_limit)) .or. &
-      ((present(verbose_limit)) .and. (conf%verbose>verbose_limit))) then
-       do i=1,no_lines
-         write(iu, '(a)') trim(message(i))
-       end do
-    end if
+    do i = 1, no_lines
+      if(.not.present(verbose_limit)) then
+          write(iu, '(a)') trim(message(i))
+      elseif(conf%verbose>verbose_limit) then
+          write(iu, '(a)') trim(message(i))
+      endif
+    enddo
   end if
-
   return
 end subroutine write_info
 
