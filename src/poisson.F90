@@ -28,6 +28,7 @@ module poisson
 #endif
   use functions
   use math
+  use poisson_cg
 
   implicit none
   private
@@ -119,7 +120,7 @@ subroutine poisson_solve(m, f_der, pot, rho)
   case(-2)
     call poisson2d_solve(m, pot, rho)
   case(CG)
-    call poisson_cg(m, f_der%der_discr, pot, rho)
+    call poisson_cg1(m, f_der%der_discr, pot, rho)
 #ifdef HAVE_FFT
   case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call poisson_fft(m, pot, rho)

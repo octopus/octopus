@@ -28,9 +28,10 @@ implicit none
 private
 public :: mix_type, mix_init, mix_end, mixing
 
-integer, parameter :: LINEAR  = 0, &
-                      GRPULAY = 1, &
-                      BROYDEN = 2
+integer, parameter, public :: &
+   MIX_LINEAR  = 0, &
+   MIX_GRPULAY = 1, &
+   MIX_BROYDEN = 2
 
 type mix_type
   private
@@ -47,21 +48,27 @@ end type mix_type
 
 contains
 
-! Initialization...
-subroutine mix_init(smix, dim, np, nspin)
-  type(mix_type), intent(out) :: smix
-  integer, intent(in) :: dim, np, nspin
+! ---------------------------------------------------------
+subroutine mix_init(smix, dim, np, nspin, def_)
+  type(mix_type),    intent(out) :: smix
+  integer,           intent(in)  :: dim, np, nspin
+  integer, optional, intent(in)  :: def_
+
+  integer :: def
 
   call push_sub('mix_init')
 
+  def = MIX_BROYDEN
+  if(present(def_)) def = def_
+
   ! check input parameters
-  call loct_parse_int("TypeOfMixing", 2, smix%type_of_mixing)
-  if(smix%type_of_mixing < 0 .or. smix%type_of_mixing > 2) then
+  call loct_parse_int("TypeOfMixing", def, smix%type_of_mixing)
+  if(smix%type_of_mixing < MIX_LINEAR .or. smix%type_of_mixing > MIX_BROYDEN) then
     message(1) = 'Type of mixing passed to mix_init not allowed'
     call write_fatal(1)
   end if
 
-  if (smix%type_of_mixing == LINEAR .or. smix%type_of_mixing == BROYDEN) then
+  if (smix%type_of_mixing == MIX_LINEAR .or. smix%type_of_mixing == MIX_BROYDEN) then
     call loct_parse_float("Mixing", CNST(0.3), smix%alpha)
     if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) then
       write(message(1), '(a, f14.6,a)') "Input: '",smix%alpha,"' is not a valid Mixing"
@@ -70,7 +77,7 @@ subroutine mix_init(smix, dim, np, nspin)
     end if
   end if
 
-  if (smix%type_of_mixing == GRPULAY .or. smix%type_of_mixing == BROYDEN) then
+  if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
     call loct_parse_int("MixNumberSteps", 3, smix%ns)
     if(smix%ns <= 1) then
       write(message(1), '(a, i4,a)') "Input: '", smix%ns, &
@@ -82,7 +89,7 @@ subroutine mix_init(smix, dim, np, nspin)
 
 
   select case (smix%type_of_mixing)
-  case (GRPULAY)
+  case (MIX_GRPULAY)
     write(message(1), '(a)') 'Info: GR-Pulay mixing used. It can (i) boost your convergence, '
     write(message(2), '(a)') '      (ii) do nothing special, or (iii) totally screw up the run.'
     write(message(3), '(a)') '      Good luck!'
@@ -92,7 +99,7 @@ subroutine mix_init(smix, dim, np, nspin)
              smix%dv(dim, np, nspin, smix%ns + 1), smix%f_old  (dim, np, nspin)   )
     smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
-  case (BROYDEN)
+  case (MIX_BROYDEN)
     write(message(1), '(a)') 'Info: Broyden mixing used. It can (i) boost your convergence, '
     write(message(2), '(a)') '      (ii) do nothing special, or (iii) totally screw up the run.'
     write(message(3), '(a)') '      Good luck!'
@@ -109,6 +116,8 @@ subroutine mix_init(smix, dim, np, nspin)
   call pop_sub()
 end subroutine mix_init
 
+
+! ---------------------------------------------------------
 subroutine mix_end(smix)
   type(mix_type), intent(inout) :: smix
   call push_sub('mix_end')
@@ -121,13 +130,13 @@ subroutine mix_end(smix)
   call pop_sub()
 end subroutine mix_end
 
+
+! ---------------------------------------------------------
 subroutine mixing(smix, iter, dim, np, nspin, vin, vout, vnew)
   type(mix_type), intent(inout) :: smix
   integer,        intent(in)    :: iter, dim, np, nspin
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
-
-!  FLOAT, allocatable :: vint(:), voutt(:), vnewt(:)
 
   call push_sub('mixing')
 
@@ -137,37 +146,23 @@ subroutine mixing(smix, iter, dim, np, nspin, vin, vout, vnew)
   end if
 
   select case (smix%type_of_mixing)
-  case (LINEAR)
-    call mix_linear(smix%alpha, np, vin, vout, vnew)
+  case (MIX_LINEAR)
+    call mixing_linear(smix%alpha, np, vin, vout, vnew)
 
-  case (BROYDEN, GRPULAY)
-    ! Build total vectors
-!    allocate(vint(np), voutt(np), vnewt(np))
-!    do i = 1, nv
-!      vint((i-1)*np+1:i*np) = vin(:, i)
-!      voutt((i-1)*np+1:i*np) = vout(:, i)
-!    end do
+  case (MIX_BROYDEN)
+    call mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
 
-    select case(smix%type_of_mixing)
-    case (BROYDEN)
-      call mix_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
-    case (GRPULAY)
-      call mix_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
-    end select
-
-    ! recover vnew from vnewt
-!    do i = 1, nv
-!      vnew(:, i) = vnewt((i-1)*np+1:i*np)
-!    end do
-!    deallocate(vint, voutt, vnewt)
+  case (MIX_GRPULAY)
+    call mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
 
   end select
 
   call pop_sub()
 end subroutine mixing
 
-! Performs the linear mixing...
-subroutine mix_linear(alpha, np, vin, vout, vnew)
+
+! ---------------------------------------------------------
+subroutine mixing_linear(alpha, np, vin, vout, vnew)
   FLOAT,   intent(in)  :: alpha
   integer, intent(in)  :: np
   FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :)
@@ -175,10 +170,11 @@ subroutine mix_linear(alpha, np, vin, vout, vnew)
 
   vnew = vin*(M_ONE - alpha) + alpha*vout
 
-end subroutine mix_linear
+end subroutine mixing_linear
 
-! Broyden mixing...
-subroutine mix_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
+
+! ---------------------------------------------------------
+subroutine mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
   integer,        intent(in)    :: dim, np, nspin, iter
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
@@ -220,12 +216,15 @@ subroutine mix_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
   ! extrapotate new vector
   iter_used = min(iter - 1, smix%ns)
   call broyden_extrapolation(smix%alpha, dim, np, nspin, vin, vout, vnew, iter_used, f, &
-                                                        smix%df(1:dim, 1:np, 1:nspin, 1:iter_used), &
-                                                        smix%dv(1:dim, 1:np, 1:nspin, 1:iter_used))
+     smix%df(1:dim, 1:np, 1:nspin, 1:iter_used), &
+     smix%dv(1:dim, 1:np, 1:nspin, 1:iter_used))
+
   deallocate(f)
 
-end subroutine mix_broyden
+end subroutine mixing_broyden
 
+
+! ---------------------------------------------------------
 subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_used, f, df, dv)
   FLOAT,   intent(in)  :: alpha
   integer, intent(in)  :: dim, np, nspin, iter_used
@@ -281,8 +280,10 @@ subroutine broyden_extrapolation(alpha, dim, np, nspin, vin, vout, vnew, iter_us
 end subroutine broyden_extrapolation
 
 
+! ---------------------------------------------------------
 ! Guaranteed-reduction Pulay
-subroutine mix_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
+! ---------------------------------------------------------
+subroutine mixing_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
   integer,        intent(in)    :: dim, np, nspin
   integer,        intent(in)    :: iter
@@ -332,8 +333,10 @@ subroutine mix_grpulay(smix, dim, np, nspin, vin, vout, vnew, iter)
   end select
 
   deallocate(f)
-end subroutine mix_grpulay
+end subroutine mixing_grpulay
 
+
+! ---------------------------------------------------------
 subroutine pulay_extrapolation(dim, np, nspin, vin, vout, vnew, iter_used, f, df, dv)
   integer, intent(in)   :: dim, np, nspin, iter_used 
   FLOAT, intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)

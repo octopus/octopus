@@ -112,7 +112,7 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
         ! Line minimization.
         a0 = X(states_dotp) (m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
         a0 = M_TWO * a0 / cg0
-        b0 = X(states_dotp) (m, st%dim, cg(1:,:), ppsi)
+        b0 = X(states_dotp) (m, st%dim, cg(:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO

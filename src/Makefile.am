@@ -13,7 +13,8 @@ core_SRCS = liboct_parser.F90 io.F90 liboct.F90 global.F90 units.F90 \
 	mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
-	poisson.F90 out.F90 crystal.F90 states.F90 xc.F90 mix.F90 restart.F90
+	poisson_cg.F90 poisson.F90 \
+	out.F90 crystal.F90 states.F90 xc.F90 mix.F90 restart.F90
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 epot.F90 h.F90 systm.F90 \
@@ -40,7 +41,7 @@ noinst_HEADERS = \
 	out_inc.F90 math_inc.F90\
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
-core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDFCFLAGS@
+core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a @GSL_LIBS@ @LDFCFLAGS@
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
 
