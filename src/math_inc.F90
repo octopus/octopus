@@ -145,15 +145,15 @@ subroutine R_FUNC(matexp_scaleandsquare)(order, in, out, factor, norm)
   integer :: i, j
   R_TYPE, allocatable :: aux(:, :)
 
-  j = int(log(norm)/log(2._r8))+1
-	
+  j = max(int(log(norm)/log(2._r8))+1, 0)
+
   allocate(aux(order, order))
 
-  call R_FUNC(matexp_polynomial)(order, in, aux, factor/2**j, 12)
-
+  call R_FUNC(matexp_polynomial)(order, in, out, factor/2**j, 12)
+  
   do i = 1, j
-     call R_FUNC(gemm)('n', 'n', order, order, order, M_z1, aux, order, aux, order, M_z0, out, order)
      call R_FUNC(copy)(order**2, out, 1, aux, 1)
+     call R_FUNC(gemm)('n', 'n', order, order, order, M_z1, aux, order, aux, order, M_z0, out, order)
   enddo
 
   deallocate(aux)  
