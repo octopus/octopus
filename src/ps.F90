@@ -512,7 +512,7 @@ subroutine get_splines_tm_fourier(psf,ps)
 
   integer :: i,j
 
-  call push_sub('get_splines_tm')
+  call push_sub('get_splines_tm_fourier')
 
   int = M_ZERO
   do j = 2, psf%nrval

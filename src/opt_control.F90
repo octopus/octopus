@@ -31,10 +31,11 @@ implicit none
 
 contains
 
-subroutine opt_control_run(td, m, st, val_charge, h, outp)
+subroutine opt_control_run(td, m, geo, st, val_charge, h, outp)
   type(td_type),             intent(inout) :: td
   type(mesh_type),           intent(IN)    :: m
   type(states_type), target, intent(inout) :: st
+  type(geometry_type),       intent(in)    :: geo
   FLOAT,                     intent(in)    :: val_charge
   type(hamiltonian_type),    intent(inout) :: h
   type(output_type),         intent(IN)    :: outp
@@ -314,7 +315,7 @@ contains
     v_old_i => td%tr%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
-    call states_init(psi_f, m, val_charge)
+    call states_init(psi_f, m, geo, val_charge)
     if(h%ep%nvnl > 0) then
       allocate(psi_f%rho_core(m%np))
       psi_f%rho_core(m%np) = psi_i%rho_core(m%np)

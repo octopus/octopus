@@ -279,7 +279,7 @@ contains
         call dcf_free_RS(cf)       ! we do not need the real space any longer
       else
         call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
-        
+
         a_erf = M_TWO
         norm = cmplx(M_FOUR*M_PI/m%vol_pp)
         temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
@@ -290,7 +290,7 @@ contains
             ixx(2) = pad_feq(iy, db(2), .true.)
             do iz = 1, db(3)
               ixx(3) = pad_feq(iz, db(3), .true.)
-              
+
               x = temp(:)*ixx(:)
               modg = sqrt(sum((temp(:)*ixx(:))**2))
 
@@ -340,7 +340,7 @@ contains
         end do
         
       end if periodic
-    
+
       ! now we built the non-local core corrections in momentum space
       nlcc: if(s%nlcc) then
         call dcf_alloc_RS(ep%rhocore_cf(i))

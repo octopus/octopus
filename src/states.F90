@@ -27,6 +27,7 @@ use math
 use mesh
 use functions
 use output
+use geometry
 use crystal
 
 
@@ -98,11 +99,12 @@ subroutine states_null(st)
   nullify(st%d%kpoints, st%d%kweights)
 end subroutine states_null
 
-subroutine states_init(st, m, val_charge, nlcc)
-  type(states_type), intent(inout) :: st
-  type(mesh_type),   intent(IN)    :: m
-  FLOAT,             intent(in)    :: val_charge
-  logical,           intent(in), optional :: nlcc
+subroutine states_init(st, m, geo, val_charge, nlcc)
+  type(states_type),   intent(inout) :: st
+  type(mesh_type),     intent(IN)    :: m
+  type(geometry_type), intent(IN)    :: geo ! this is needed to generate the k points
+  FLOAT,               intent(in)    :: val_charge
+  logical, optional,   intent(in)    :: nlcc
 
   FLOAT :: excess_charge, r
   integer :: nempty, i, j
@@ -174,7 +176,7 @@ subroutine states_init(st, m, val_charge, nlcc)
 #endif
 
   ! For non-periodic systems this should just return the Gamma point
-  call states_choose_kpoints(st, m)
+  call states_choose_kpoints(st%d, m, geo)
 
   ! we now allocate some arrays
   allocate(st%rho(m%np, st%d%nspin), &

@@ -185,7 +185,7 @@ subroutine run()
       message(1) = 'Info: Initializing unoccupied states.'
       call write_info(1)
 
-      call unocc_init(unoccv, sys%m, sys%st, sys%val_charge)
+      call unocc_init(unoccv, sys%m, sys%geo, sys%st, sys%val_charge)
       
     case(I_END_UNOCC)
       message(1) = 'Info: Finalizing unoccupied states.'
@@ -351,7 +351,7 @@ subroutine run()
       message(1) = 'Info: Optimum control.'
       call write_info(1)
 
-      call opt_control_run(td, sys%m, sys%st, sys%val_charge, h, sys%outp)
+      call opt_control_run(td, sys%m, sys%geo, sys%st, sys%val_charge, h, sys%outp)
 
     case(I_PULPO)
       call pulpo_print()

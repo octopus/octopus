@@ -38,7 +38,7 @@ program choose_st
   call system_init(sys)
 
   deallocate(sys%st%rho, sys%st%occ, sys%st%eigenval)
-  call states_init(st1, sys%m, sys%val_charge)
+  call states_init(st1, sys%m, sys%geo, sys%val_charge)
   deallocate(st1%rho, st1%occ, st1%eigenval)
 
   ! how many states do we have?

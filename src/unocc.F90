@@ -37,11 +37,12 @@ end type unocc_type
 
 contains
 
-subroutine unocc_init(u, m, st, val_charge)
-  type(unocc_type),  intent(out) :: u
-  type(mesh_type),   intent(IN)  :: m
-  type(states_type), intent(IN)  :: st
-  FLOAT,             intent(in)  :: val_charge
+subroutine unocc_init(u, m, geo, st, val_charge)
+  type(unocc_type),    intent(out) :: u
+  type(mesh_type),     intent(IN)  :: m
+  type(geometry_type), intent(IN)  :: geo
+  type(states_type),   intent(IN)  :: st
+  FLOAT,               intent(in)  :: val_charge
 
   call push_sub('unocc_init')
 
@@ -57,7 +58,7 @@ subroutine unocc_init(u, m, st, val_charge)
 
   ! allocate states structure
   allocate(u%st)
-  call states_init(u%st, m, val_charge)
+  call states_init(u%st, m, geo, val_charge)
 
   call loct_parse_int("UnoccNumberStates", 5, u%st%nst)
   if(u%st%nst <= 0) then

@@ -50,7 +50,7 @@ contains
     
     ! initialize the other stuff
     allocate(s%st)
-    call states_init(s%st, s%m, s%val_charge, s%geo%nlcc)
+    call states_init(s%st, s%m, s%geo, s%val_charge, s%geo%nlcc)
     call output_init(s%outp)
     
     call pop_sub()

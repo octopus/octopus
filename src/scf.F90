@@ -331,7 +331,7 @@ subroutine scf_write_static(dir, fname)
   write(iunit,'(1x)')
   
   if (conf%periodic_dim > 0) then
-    call kpoints_write_info(st,iunit)
+    call kpoints_write_info(st%d, iunit)
     write(iunit,'(1x)')
   end if
 

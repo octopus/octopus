@@ -46,7 +46,7 @@ program atoms_magnet
   call mesh_init(m, geo, def_h, def_rsize)
 
   allocate(st)
-  call states_init(st, m, val_charge, geo%nlcc)
+  call states_init(st, m, geo, val_charge, geo%nlcc)
   if (st%d%ispin /= SPINORS) then
     message(1) = "You can only use this utility with spinors"
     call write_fatal(1)
