@@ -122,11 +122,11 @@ contains
     deallocate(grad)
 # else
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim))
+      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), &
+                                     alpha = -1.0_r8/2.0_r8)
     end do
 #endif
 
-    Hpsi = - Hpsi/2.0_r8
   end subroutine kinetic_energy
 
 end subroutine R_FUNC(Hpsi)

@@ -229,6 +229,22 @@ subroutine pop_sub()
 
 end subroutine pop_sub
 
+function elapsed_time()
+  real(r8) :: elapsed_time
+
+  character(len=8)  :: date
+  character(len=10) :: time
+  character(len=5) :: zone
+  integer, dimension(8) :: values
+
+  call date_and_time(date, time, zone, values)  
+
+  elapsed_time = values(8)/1000._r8 + (values(7) + &
+                 60*(values(6) + 60*(values(5))))!
+
+  return
+end function elapsed_time
+
 ! returns true if a file named stop exists
 function clean_stop()
   logical clean_stop, file_exists

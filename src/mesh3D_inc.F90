@@ -60,13 +60,17 @@ subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
 end subroutine R_FUNC(cube_to_mesh)
 
 ! calculates the laplacian and the gradient of a function on the mesh
-subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad)
+subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
+  real(r8), intent(in), optional :: alpha
+
+  real(r8) :: alp = 1.0_r8
 
   sub_name = 'mesh_derivatives'; call push_sub()
   
+  if(present(alpha)) alp = alpha
   select case(m%d%space)
     case(REAL_SPACE)
       if(m%iso) then
@@ -119,7 +123,7 @@ contains
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
 
-        call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)), fr, 1)
+        call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(alp/real(n(1)*n(2)*n(3), r8)), fr, 1)
         grad(i, :) = R_TOTYPE(0._r8)
         call R_FUNC(cube_to_mesh) (m, fr, grad(i, :))
       end do
@@ -137,7 +141,7 @@ contains
       call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
 
-      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)), fr, 1)
+      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(alp/real(n(1)*n(2)*n(3), r8)), fr, 1)
       lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
 
@@ -205,7 +209,7 @@ contains
     
         if(present(lapl)) then
           do i = 1, 3
-             lapl(k) = lapl(k) + m%d%dlidfj(in)*((den1(i)+den2(i))/m%h(i)**2)
+             lapl(k) = lapl(k) + alp*m%d%dlidfj(in)*((den1(i)+den2(i))/m%h(i)**2)
           enddo
         end if
         
@@ -218,7 +222,7 @@ contains
 
     if(present(grad)) then
       do i = 1, 3
-         grad(i,:) = grad(i,:) / m%h(i)
+         grad(i,:) = grad(i,:) * (alp/m%h(i))
       enddo
     end if
 
@@ -289,8 +293,8 @@ contains
       end do
     end do
 
-    if(present(grad)) grad = grad/m%h(1)
-    if(present(lapl)) lapl = lapl/m%h(1)**2
+    if(present(grad)) grad = (alp/m%h(1))*grad
+    if(present(lapl)) lapl = (alp/m%h(1)**2)*lapl
 
     return
   end subroutine rs_derivative_iso

@@ -91,12 +91,13 @@ subroutine td_run(td, u_st, sys, h)
   integer :: i, ii, j, idim, ist, ik
   real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:), &
                            x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:), tacc(:, :)
+  real(r8) :: etime
   complex(r4), allocatable :: projections(:,:,:,:)
   character(len=100) :: proj_filename
 
   sub_name = 'systm_td'; call push_sub()
 
-  write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Dipole(is) '
+  write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
   call write_info(1)
   
   allocate(dipole(sys%st%nspin, td%save_iter))
@@ -146,6 +147,7 @@ subroutine td_run(td, u_st, sys, h)
   td%iter = td%iter + 1
 
   ii = 1
+  etime = elapsed_time()
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
     ! Move the ions.
@@ -241,11 +243,12 @@ subroutine td_run(td, u_st, sys, h)
     end if
 
     ! write info
-    write(message(1), '(i7,1x,f14.5,f14.6,4es17.6)') i, &
+    write(message(1), '(i7,1x,3f14.6)') i, &
          i*td%dt       / units_out%time%factor, &
          h%etot        / units_out%energy%factor, &
-         dipole(:, ii) / units_out%length%factor
+         elapsed_time() - etime
     call write_info(1)
+    etime = elapsed_time()
 
     ! write down data
     ii = ii + 1
