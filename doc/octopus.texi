@@ -45,7 +45,7 @@ any later version published by the Free Software Foundation.
 @subtitle Recipes-Generator
 @subtitle March 2002
 @sp 4
-@image{octosex,8cm,}
+@image{img/octosex,8cm,}
 @center Male Hapalochlaena lunulata (top),
 @center and female Hapalochlaena lunulata (bottom).
 @center Photograph by Roy Caldwell.
@@ -81,7 +81,7 @@ San Sebasti@'an (Spain), Valladolid (Spain), Berlin (Germany).
 @end ifnottex
 
 @ifhtml
-@image{octosex,8cm}
+@image{img/octosex,8cm}
 @center Male Hapalochlaena lunulata (top),
 @center and female Hapalochlaena lunulata (bottom).
 @center Photograph by Roy Caldwell.
@@ -2357,7 +2357,7 @@ of the pulse.
 $$
 E(t) = {\tt A0}\exp \left(  -{(t-{\tt t0})^2 \over 2*{\tt tau0}^2} \right).
 $$
-@center @image{gaussian,4cm,}
+@center @image{img/gaussian,4cm,}
 @end tex
 @item @code{2}: Cosinoidal envelope. @code{tau0} is half the total length
 of the pulse.
@@ -2366,14 +2366,14 @@ $$
 E(t) = {\tt A0}\cos \left( {\pi \over 2} {(t - 2{\tt tau0} - {\tt t0)} \over {\tt tau0}} \right),\;\;\;
 |t-{\tt t0}| < {\tt tau0}.
 $$
-@center @image{cosine,4cm,}
+@center @image{img/cosine,4cm,}
 @end tex
 @item @code{3}: Ramp. In this case there is an extra parameter 
 @code{tau1}. @code{tau0} is the length of the constant part of the ramp,
 and @code{tau1} is the raising (decaying) time. @code{tau1} should be
 an extra field after @code{t0}.
 @tex
-@center @image{ramp,4cm,}
+@center @image{img/ramp,4cm,}
 @end tex
 
 @item @code{10}: Shape is read from a file.
