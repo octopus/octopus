@@ -80,10 +80,12 @@ subroutine mesh_create(m, natoms, atom)
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER .or. m%box_shape == MINIMUM) then
     call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
+    m%lsize(1) = m%rsize
   end if
   if(m%box_shape == CYLINDER) then
     call oct_parse_double(C_string('xlength'), 1.0_r8/units_inp%length%factor, m%xsize)
     m%xsize = m%xsize * units_inp%length%factor
+    m%lsize(1) = m%xsize
   end if
   if(m%box_shape == PARALLELEPIPED) then
     if(oct_parse_block_n(C_string('lsize'))<1) then
