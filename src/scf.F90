@@ -58,8 +58,6 @@ subroutine scf_init(scf, m, st, h)
   type(states_type),      intent(IN)    :: st
   type(hamiltonian_type), intent(IN)    :: h
 
-  integer :: np
-
   call push_sub('scf_init')
 
   call loct_parse_int  ("MaximumIter",        200, scf%max_iter)
@@ -99,9 +97,7 @@ subroutine scf_init(scf, m, st, h)
   call write_info(1)
 
   ! Handle mixing now...
-  np = st%d%nspin*m%np
-  if (h%d%cdft) np = np*(1 + conf%dim)
-  call mix_init(scf%smix, np)
+  call mix_init(scf%smix, 1, m%np, st%d%nspin)
 
   ! now the eigen solver stuff
   call eigen_solver_init(scf%eigens, st, m)
@@ -137,7 +133,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
   type(lcao_type) :: lcao_data
 
-  integer :: iter, iunit, is, idim, np, nspin, dim, ierr
+  integer :: iter, iunit, is, idim, nspin, dim, ierr
   FLOAT :: evsum_out, evsum_in
   FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
   FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
@@ -157,13 +153,14 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   nspin = st%d%nspin
   dim = 1
   if (h%d%cdft) dim = 1 + conf%dim
-  np = dim*nspin*m%np
 
   allocate(rhoout(dim, m%np, nspin), rhoin(dim, m%np, nspin))
+
   rhoin(1, :, :) = st%rho; rhoout = M_ZERO
   if (st%d%cdft) then
     rhoin(2:dim, :, :) = st%j
   end if
+
   if (scf%what2mix == MIXPOT) then
     allocate(vout(dim, m%np, nspin), vin(dim, m%np, nspin), vnew(dim, m%np, nspin))
     vin(1, :, :) = h%vhxc; vout = M_ZERO
@@ -227,13 +224,13 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, np, rhoin, rhoout, rhonew)
+       call mixing(scf%smix, iter, dim, m%np, nspin, rhoin, rhoout, rhonew)
        st%rho = rhonew(1, :, :)
        if (h%d%cdft) st%j = rhonew(2:dim, :, :)
        call X(h_calc_vhxc) (h, m, st)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, np, vin, vout, vnew)
+       call mixing(scf%smix, iter, dim, m%np, nspin, vin, vout, vnew)
        h%vhxc = vnew(1, :, :)
        if (h%d%cdft) h%ahxc = vnew(2:dim, :, :)
     end select
