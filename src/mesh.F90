@@ -139,12 +139,12 @@ subroutine mesh_write_info(m, unit)
   write(unit, '(a,a,1x)') '  Type = ', bs(m%box_shape)
 
   if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
-    write(unit, '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
+    write(unit, '(3a,f7.3)')   '  Radius  [', trim(units_out%length%abbrev), '] = ', &
        m%rsize/units_out%length%factor
   end if
   if(m%box_shape == CYLINDER) then
-    write(unit, '(a,3a,f7.3)') trim(message(2)), ', xlength [', &
-       trim(units_out%length%abbrev), '] = ', m%xsize/units_out%length%factor
+    write(unit, '(3a,f7.3)')   '  Xlength [', trim(units_out%length%abbrev), '] = ', &
+       m%xsize/units_out%length%factor
   end if
 
   write(unit,'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')     &
