@@ -259,7 +259,7 @@ subroutine td_run(td, u_st, sys, h)
       ! first resume file
       write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
       call zstates_write_restart(trim(filename), sys%m, sys%st, &
-           iter=i, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))
+           iter=i, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
 
       if(td%gs_projection) call zstates_project_gs(sys%st, sys%m, gsp)
 
