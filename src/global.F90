@@ -40,6 +40,7 @@ type conf_type
   integer :: debug_level ! How much debug should print
   integer :: periodic_dim
   integer :: dim
+  logical :: boundary_zero_derivative
 end type conf_type
 
 type mpi_type
@@ -163,6 +164,8 @@ subroutine global_init()
     message(1) = 'PeriodicDimensions must be <= Dimensions'
     call write_fatal(1)
   end if
+
+  call oct_parse_logical('BoundaryZeroDerivative', .false., conf%boundary_zero_derivative)
 
 end subroutine global_init
 

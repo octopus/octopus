@@ -65,7 +65,7 @@ subroutine unocc_init(u, m, st, sys)
   ! setup variables
   u%st%nst = u%st%nst + st%nst
   u%st%st_end = u%st%nst
-  allocate(u%st%R_FUNC(psi) (0:m%np, u%st%dim, u%st%nst, u%st%nik))
+  allocate(u%st%R_FUNC(psi) (m%np, u%st%dim, u%st%nst, u%st%nik))
   allocate(u%st%eigenval(u%st%nst, u%st%nik), u%st%occ(u%st%nst, u%st%nik))
   u%st%eigenval = 0._r8
   u%st%occ      = 0._r8

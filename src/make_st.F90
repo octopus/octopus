@@ -38,7 +38,7 @@ program make_st
   deallocate(sys%st%dpsi)
 #endif
 
-  allocate(sys%st%zpsi (0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik), &
+  allocate(sys%st%zpsi (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik), &
        sys%st%eigenval(sys%st%nst, sys%st%nik))
   
   if(.not.zstates_load_restart ("tmp/restart.static", sys%m, sys%st)) then

@@ -20,7 +20,7 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: nspin, nst
   real(r8), intent(IN) :: occ(nst, nspin), eigenval(nst, nspin)
-  R_TYPE, intent(IN) :: psi(0:m%np, nst, nspin)
+  R_TYPE, intent(IN) :: psi(m%np, nst, nspin)
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: Vx(m%np, nspin), ex
   real(r8), intent(in)  :: rho(m%np, nspin)

@@ -45,7 +45,7 @@ program excitations
   call states_init(st, sys%m, sys%val_charge)
   st%nst = n_unocc + n_occ
   st%st_end = st%nst
-  allocate(st%R_FUNC(psi) (0:sys%m%np, st%dim, st%nst, st%nik))
+  allocate(st%R_FUNC(psi) (sys%m%np, st%dim, st%nst, st%nik))
   allocate(st%eigenval(st%nst, st%nik), st%occ(st%nst, st%nik))
   st%eigenval = M_ZERO
   st%occ      = M_ZERO

@@ -46,7 +46,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   type(states_type), intent(IN) :: st
   type(system_type), intent(in) :: sys ! this is necessary due to the nl part of the PP
   integer, intent(in) :: ik
-  R_TYPE, intent(IN) :: psi(0:m%np, st%dim)
+  R_TYPE, intent(IN) :: psi(m%np, st%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
   real(r8), intent(in), optional :: t
 
@@ -80,7 +80,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  R_TYPE, intent(IN) :: psi(0:m%np, st%dim)
+  R_TYPE, intent(IN) :: psi(m%np, st%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
   integer :: ik
   R_TYPE, allocatable :: grad(:,:)
@@ -127,7 +127,7 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   type(system_type), intent(IN) :: sys
-  R_TYPE, intent(IN) :: psi(0:m%np, st%dim)
+  R_TYPE, intent(IN) :: psi(m%np, st%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
 
   integer :: i, ik, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
@@ -206,7 +206,7 @@ subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
   integer, intent(in) :: ik
-  R_TYPE, intent(in) :: psi(0:m%np, st%dim)
+  R_TYPE, intent(in) :: psi(m%np, st%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
 
   integer :: is, idim, np, dim
@@ -243,7 +243,7 @@ subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
-  R_TYPE, intent(in) :: psi(0:m%np, st%dim)
+  R_TYPE, intent(in) :: psi(m%np, st%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
   real(r8), intent(in) :: t
 
@@ -284,7 +284,7 @@ subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
-  R_TYPE, intent(in) :: psi(0:m%np, st%dim)
+  R_TYPE, intent(in) :: psi(m%np, st%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
 
   integer :: idim

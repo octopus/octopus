@@ -45,8 +45,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
   moved = 0
 
   allocate(h_psi(np, st%dim), g(np, st%dim), g0(np, st%dim), &
-       cg(0:np, st%dim), ppsi(np, st%dim))
-  cg(0,:) = R_TOTYPE(0._r8)
+       cg(np, st%dim), ppsi(np, st%dim))
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%nik

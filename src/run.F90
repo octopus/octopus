@@ -111,7 +111,7 @@ subroutine run()
       message(1) = 'Info: Allocating rpsi.'
       call write_info(1)
         
-      allocate(sys%st%R_FUNC(psi)(0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+      allocate(sys%st%R_FUNC(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
     case(I_END_RPSI)
       message(1) = 'Info: Deallocating rpsi.'
@@ -397,6 +397,14 @@ subroutine run_init()
   write(message(1), '(a,i1,a)') 'Info: Octopus will run in ', conf%dim, ' dimension(s)'
   call write_info(1)
   write(message(1), '(a,i1,a)') 'Info: Octopus will treat system as periodic in ', conf%periodic_dim, ' dimension(s)'
+  call write_info(1)
+
+  message(1) = "Info: Boundary conditions:"
+  if(conf%boundary_zero_derivative) then
+    message(1) = trim(message(1)) + " zero derivatives"
+  else
+    message(1) = trim(message(1)) + " zero wave-functions"
+  end if
   call write_info(1)
 
 

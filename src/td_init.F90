@@ -180,7 +180,7 @@ contains
 
     ! allocate memory
     allocate(td%v_old(m%np, st%nspin, 3))
-    allocate(st%zpsi(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
+    allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
   end subroutine td_init_states
 
 end subroutine td_init

@@ -209,6 +209,7 @@
 
     ! all processors calculate the projection
     call zstates_project_gs(sys%st, sys%m, gsp)
+    print *, oct_getmem()
 
     ! but only first node outputs
     if(mpiv%node.ne.0) return

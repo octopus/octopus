@@ -90,7 +90,7 @@ contains
          td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
     
     h%VHartree = 0._r8; h%Vxc = aux
-    allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
+    allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
     zpsi1 = st%zpsi
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
@@ -123,7 +123,7 @@ contains
     call push_sub('td_rti2')
 
     if(.not.h%ip_app) then
-      allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
+      allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
       zpsi1 = st%zpsi ! store zpsi
     
       allocate(vhxc_t1(m%np, st%nspin))

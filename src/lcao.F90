@@ -207,7 +207,7 @@ subroutine lcao_init(sys, h)
   write(message(2), '(a)')    '      (not considering spin or k-points)'
   call write_info(2)
 
-  allocate(lcao_data%psis(0:sys%m%np, sys%st%dim, norbs, sys%st%nik))
+  allocate(lcao_data%psis(sys%m%np, sys%st%dim, norbs, sys%st%nik))
   lcao_data%psis = 0._r8
   do ik = 1, sys%st%nik
      n1 = 1
@@ -315,7 +315,7 @@ end subroutine lcao_wf
 subroutine get_wf(sys, i, l, lm, ispin, psi)
   type(system_type), intent(IN) :: sys
   integer, intent(in)   :: i, l, lm, ispin
-  R_TYPE, intent(out) :: psi(0:sys%m%np)
+  R_TYPE, intent(out) :: psi(sys%m%np)
     
   integer :: j, d2, ll
   real(r8) :: x(3), a(3), r, p, ylm, g(3)
@@ -324,7 +324,6 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
   call push_sub('get_wf')
     
   a = sys%atom(i)%x
-  psi(0) = 0.0_r8
   if(sys%atom(i)%spec%local) then
     ! add a couple of harmonic oscilator functions
   else

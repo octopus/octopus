@@ -83,7 +83,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
            tmp(krylov),           &
            h(krylov, krylov),     &
            hevec(krylov, krylov), &
-           aux(0:sys%m%np, st%dim))
+           aux(sys%m%np, st%dim))
 
   knec  = 0 ! Initialize the total (including all irreps.) converged eigenvector counter.
   niter = 0 ! Initialize the total matrix-vector multiplication counter.
@@ -156,7 +156,6 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           do idim = 1, st%dim
             aux(1:sys%m%np, idim) = v((idim-1)*sys%m%np+1:idim*sys%m%np, d1 + i)
           enddo
-          aux(0, :) = R_TOTYPE(M_ZERO)
           call R_FUNC(Hpsi)(hamilt, sys%m, st, sys, ik, aux, av(1, d1 + i))
         enddo
         matvec = matvec + blk
@@ -255,7 +254,6 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         ! Preconditioning
         do idim = 1, st%dim
           call R_FUNC(copy) (np, av((idim-1)*np+1, d1 + 1), 1, aux(1, idim), 1)
-          aux(0, idim) = R_TOTYPE(M_ZERO)
           call R_FUNC(low_frequency)(sys%m, aux(:, idim), v((idim-1)*sys%m%np+1, d1 + 1))
         enddo
         
@@ -266,7 +264,6 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
     do i = 1, sys%st%nst
       do idim = 1, st%dim
         call R_FUNC(copy)(sys%m%np, eigenvec((idim-1)*sys%m%np+1, i), 1, st%R_FUNC(psi)(1, idim, i, ik), 1)
-        st%R_FUNC(psi)(0, 1, i, ik) = R_TOTYPE(M_ZERO)
       enddo
       st%eigenval(i, ik) = eigenval(i)
       diff(i, ik) = res(i)

@@ -234,8 +234,8 @@ end subroutine R_FUNC(mesh_random)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: f(0:m%np)
-  R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
+  R_TYPE, intent(IN) :: f(m%np)
+  R_TYPE, intent(out), optional:: lapl(:), grad(:,:)
   R_TYPE, intent(in), optional :: alpha
   real(r8), intent(in), optional :: cutoff
 
@@ -248,23 +248,16 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
   alp = R_TOTYPE(M_ONE)
   if(present(alpha)) alp = alpha
 
-  ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
-  lcutoff = -M_ONE
-  if(present(cutoff)) lcutoff = cutoff
-  if(alp.ne.M_z0) lcutoff = lcutoff*M_ONE/abs(alp)
-
   select case(m%d%space)
     case(REAL_SPACE)
-#if defined(BOUNDARIES_ZERO_DERIVATIVE)
       call rs_derivative()
-#else
-      if(m%iso .and. present(lapl) .and. (.not.present(grad)) .and. conf%periodic_dim==0 ) then
-        call rs_lapl_fast()
-      else
-        call rs_derivative()
-      endif
-#endif
+
     case(RECIPROCAL_SPACE)
+      ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
+      lcutoff = -M_ONE
+      if(present(cutoff)) lcutoff = cutoff
+      if(alp.ne.M_z0) lcutoff = lcutoff*M_ONE/abs(alp)
+
       call fft_derivative()
   end select
 
@@ -296,129 +289,44 @@ contains
     return
   end subroutine fft_derivative
   
-  subroutine rs_lapl_fast()
-    R_TYPE :: sd
-    integer :: k, in, ix, iy, iz, i
-
-    do k = 1, m%np
-      sd = (m%d%dlidfj(0)*f(k))*real(conf%dim, r8)
-      do in = 1, m%d%norder
-        sd = sd + sum(f(m%ind(1:2*conf%dim, in, k)))*m%d%dlidfj(in)
-      end do
-      lapl(k) = sd
-    end do
-    call R_FUNC(scal) (m%np, alp/m%h(1)**2, lapl(1), 1)
-    
-    return
-  end subroutine rs_lapl_fast
-
   subroutine rs_derivative()
-    R_TYPE :: den1(conf%dim), den2(conf%dim)
-    integer :: k, in, ind1(conf%dim), ind2(conf%dim), ix, iy, iz, i
-    
+    integer :: j, k, nl, ng(3)
+    type(der_lookup_type), pointer :: p
+
     do k = 1, m%np
+      p => m%der_lookup(k)
       if(present(lapl)) then
-        lapl(k) = alp*(m%d%dlidfj(0)*f(k))*sum(1/m%h(1:conf%dim)**2)
+        nl = p%lapl_n
+        lapl(k) = alp*sum(p%lapl_w(1:nl)*f(p%lapl_i(1:nl)))
       end if
       if(present(grad)) then
-        grad(:, k) = m%d%dgidfj(0)*f(k)
-      end if
-      
-      ix = m%Lxyz(1, k); iy = m%Lxyz(2, k); iz = m%Lxyz(3, k)
-      do in = 1, m%d%norder
-        ind1(1) = m%Lxyz_inv(ix-in, iy, iz)
-        ind2(1) = m%Lxyz_inv(ix+in, iy, iz)
-        if(conf%dim > 1) then
-          ind1(2) = m%Lxyz_inv(ix, iy-in, iz)
-          ind2(2) = m%Lxyz_inv(ix, iy+in, iz)
-          if(conf%dim > 2) then
-            ind1(3) = m%Lxyz_inv(ix, iy, iz-in)
-            ind2(3) = m%Lxyz_inv(ix, iy, iz+in)
-          end if
-        end if
-        
-        ! cyclic boundary conditions in the periodic direction(s)
-        if (conf%periodic_dim>0) then
-          if(ind1(1) == 0) then
-            ind1(1) = m%Lxyz_inv(2*m%nr(1) + ix - in, iy, iz )
-          end if
-          if(ind2(1) == 0) then
-            ind2(1) = m%Lxyz_inv(ix + in - 2*m%nr(1), iy, iz)
-          end if
-          if (conf%periodic_dim>1) then
-            if(ind1(2) == 0) then
-              ind1(2) = m%Lxyz_inv(ix, 2*m%nr(2) + iy - in, iz )
-            end if
-            if(ind2(2) == 0) then
-              ind2(2) = m%Lxyz_inv(ix, iy + in - 2*m%nr(2), iz)
-            end if
-            if (conf%periodic_dim>2) then
-             if(ind1(3) == 0) then
-               ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in )
-             end if
-             if(ind2(3) == 0) then
-               ind2(3) = m%Lxyz_inv(ix , iy, iz + in - 2*m%nr(3))
-             end if
-            end if
-          end if
-        end if
-        
-        ! If you prefer 0 wave functions at the boundary, uncomment the following
-        ! Just be careful with the LB94 xc potential, for it will probably not work!
-#ifndef BOUNDARIES_ZERO_DERIVATIVE
-        den1(1:conf%dim) = f(ind1(1:conf%dim))
-        den2(1:conf%dim) = f(ind2(1:conf%dim))
-#else
-        ! This also sets zero wavefunction
-        ! den1 = 0._r8; den2 = 0._r8
-        
-        ! This peace of code changes the boundary conditions
-        ! to have 0 derivative at the boundary
-        do i = conf%periodic_dim+1, conf%dim
-          if(ind1(i) > 0)den1(i) = f(ind1(i))
-          if(ind2(i) > 0)den2(i) = f(ind2(i))
+        ng = p%grad_n
+        do j = 1, conf%dim
+          grad(j, k) = alp*sum(p%grad_w(1:ng(j),j)*f(p%grad_i(1:ng(j),j)))
         end do
-        if (conf%periodic_dim>0)
-        message(1) = "Zero boundary conditions are not allowed in the periodic direction(s)"
-        write(message(2),'(6x,a,i1,a,i1)'),"Zero boundary applied only in directions from ",conf%periodic_dim+1,' to ',conf%dim
-        call write_warning(2)
-#endif
-        
-        if(present(lapl)) then
-          do i = 1, conf%dim
-            lapl(k) = lapl(k) + alp*m%d%dlidfj(in)*((den1(i)+den2(i))/m%h(i)**2)
-          end do
-        end if
-        
-        if(present(grad)) then
-          grad(1:conf%dim, k) = grad(1:conf%dim, k) + &
-               m%d%dgidfj(-in)*den1(1:conf%dim) + m%d%dgidfj(in)*den2(1:conf%dim)
-        end if
-        
-      end do
+      end if
     end do
-    
-    if(present(grad)) then
-      do i = 1, conf%dim
-        grad(i,:) = grad(i,:) * (alp/m%h(i))
-      enddo
-    end if
-    
+
   end subroutine rs_derivative
 
 end subroutine R_FUNC(mesh_derivatives)
 
+! WARNING: This is not currently working
 subroutine R_FUNC(low_frequency) (m, f, lapl)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)  :: f(0:m%np)
+  R_TYPE, intent(IN)  :: f(m%np)
   R_TYPE, intent(out) :: lapl(1:m%np)
-  integer :: k
+
+  integer :: k, nl
+  type(der_lookup_type), pointer :: p
 
   call push_sub('low_frequency')
 
-  do k = 1, m%np
-     lapl(k) = f(k)/M_TWO + sum(f(m%ind(1:2*conf%dim, 1, k)))/(M_FOUR*conf%dim)
-  end do
+!!$  do k = 1, m%np
+!!$    p => m%der_lookup(k)
+!!$    nl = p%lapl_n
+!!$    lapl(k) = sum(p%lapl_w(1:nl)*f(p%lapl_i(1:nl)))
+!!$  end do
 
   call pop_sub()
 end subroutine R_FUNC(low_frequency)
@@ -555,3 +463,27 @@ subroutine R_FUNC(mesh_gradq)(m, f, j, t)
 
   call pop_sub()
 end subroutine R_FUNC(mesh_gradq)
+
+! converts function f1 defined in mesh m1, to function f2 defined in m2
+! this subroutine is all but general
+subroutine R_FUNC(mesh_convert)(m1, f1, m2, f2)
+  type(mesh_type), intent(in) :: m1, m2
+  real(r8), intent(in)  :: f1(m1%np)
+  real(r8), intent(out) :: f2(m2%np)
+
+  integer :: i, j
+
+  f2 = R_TOTYPE(M_ZERO)
+  do i = 1, m1%np
+    ! does the point exist in the final mesh
+    if( &
+         m1%Lxyz(1,i) >= m2%nr(1,1) .and. m1%Lxyz(1,i) <= m2%nr(2,1) .and. &
+         m1%Lxyz(2,i) >= m2%nr(1,2) .and. m1%Lxyz(2,i) <= m2%nr(2,2) .and. &
+         m1%Lxyz(3,i) >= m2%nr(1,3) .and. m1%Lxyz(3,i) <= m2%nr(2,3)) then
+
+      j = m1%Lxyz_inv(m2%Lxyz(1,i), m2%Lxyz(1,i), m2%Lxyz(1,i))
+      if(j>0) f2(j) = f1(i)
+    end if
+  end do
+  
+end subroutine R_FUNC(mesh_convert)

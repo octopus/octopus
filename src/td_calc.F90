@@ -72,7 +72,7 @@
           hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)
         end do
         
-        allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
+        allocate(xzpsi(sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
         xzpsi = M_z0
         do k = 1, sys%m%np
           do j = 1, conf%dim
@@ -83,7 +83,7 @@
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
           call zvnlpsi(ik, sys%m, sys%st, sys, &
-               xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+               xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
           do idim = 1, sys%st%dim
             x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
                  vnl_xzpsi(1:sys%m%np, idim) )
@@ -100,7 +100,7 @@
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
           call zvnlpsi(ik, sys%m, sys%st, sys, &
-               xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+               xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
           do idim = 1, sys%st%dim
             x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
                   zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
@@ -171,11 +171,10 @@
 !!$    deallocate(hzpsi)
 !!$
 !!$    ! And this calculates i<[V_nl, x]>
-!!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
+!!$    allocate(xzpsi(sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
 !!$    do ik = 1, sys%st%nik
 !!$       do ist = sys%st%st_start, sys%st%st_end
 !!$
-!!$            xzpsi(0, :, :) = (0.0_r8, 0.0_r8)
 !!$            do k = 1, sys%m%np
 !!$               xzpsi(k, 1:sys%st%dim, 1) = sys%m%lx(k)*sys%m%h(1) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
 !!$               xzpsi(k, 1:sys%st%dim, 2) = sys%m%ly(k)*sys%m%h(2) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
@@ -184,7 +183,7 @@
 !!$
 !!$            do j = 1, 3
 !!$               vnl_xzpsi = (0.0_r8, 0.0_r8)
-!!$               call zvnlpsi( sys, xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+!!$               call zvnlpsi( sys, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$               p = (0.0_r8, 0.0_r8)
 !!$               do idim = 1, sys%st%dim
 !!$                  p = p + sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
@@ -227,7 +226,7 @@
 !!$    call push_sub('td_calc_tacc')
 !!$
 !!$    x = 0.0_r8
-!!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), hzpsi(sys%m%np, sys%st%dim))
+!!$    allocate(xzpsi(sys%m%np, sys%st%dim, 3), hzpsi(sys%m%np, sys%st%dim))
 !!$    do ik = 1, sys%st%nik
 !!$       do ist = sys%st%st_start, sys%st%st_end
 !!$
@@ -290,12 +289,12 @@
 !!$    call push_sub('td_calc_tacc')
 !!$
 !!$    x = 0.0_r8
-!!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), hzpsi(0:sys%m%np, sys%st%dim), hhzpsi(0:sys%m%np, sys%st%dim))
+!!$    allocate(xzpsi(sys%m%np, sys%st%dim, 3), hzpsi(sys%m%np, sys%st%dim), hhzpsi(sys%m%np, sys%st%dim))
 !!$    do ik = 1, sys%st%nik
 !!$       do ist = sys%st%st_start, sys%st%st_end
 !!$
-!!$            hzpsi(0:sys%m%np, 1:sys%st%dim) = (0.0_r8, 0.0_r8)
-!!$            hhzpsi(0:sys%m%np, 1:sys%st%dim) = (0.0_r8, 0.0_r8)
+!!$            hzpsi(sys%m%np, 1:sys%st%dim) = (0.0_r8, 0.0_r8)
+!!$            hhzpsi(sys%m%np, 1:sys%st%dim) = (0.0_r8, 0.0_r8)
 !!$            call zhpsi(h, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(1:,:))
 !!$            call laser_field(td%no_lasers, td%lasers, t, field)
 !!$            do k = 1, sys%m%np
@@ -369,7 +368,7 @@
 !!$    call push_sub('td_calc_tacc')
 !!$
 !!$    x = 0.0_r8
-!!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim), &
+!!$    allocate(xzpsi(sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim), &
 !!$             hzpsi(sys%m%np, sys%st%dim), hhzpsi(3, sys%m%np) )
 !!$
 !!$    do ik = 1, sys%st%nik
@@ -398,7 +397,7 @@
 !!$
 !!$            do j = 1, 3
 !!$               vnl_xzpsi = (0.0_r8, 0.0_r8)
-!!$               call zvnlpsi( sys, xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+!!$               call zvnlpsi( sys, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$               do idim = 1, sys%st%dim
 !!$                  x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
 !!$                                                                   vnl_xzpsi(1:sys%m%np, idim) )
@@ -414,7 +413,7 @@
 !!$
 !!$            do j = 1, 3
 !!$               vnl_xzpsi = (0.0_r8, 0.0_r8)
-!!$               call zvnlpsi( sys, xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+!!$               call zvnlpsi( sys, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
 !!$               do idim = 1, sys%st%dim
 !!$                  x(j) = x(j) + 2*sys%st%occ(ist, ik)* zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
 !!$                                            vnl_xzpsi(1:sys%m%np, idim) )

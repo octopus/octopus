@@ -20,7 +20,7 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
   type(system_type), intent(in)      :: sys
   type(td_type), intent(in)          :: td
   integer, intent(in) :: ik
-  complex(r8), intent(inout) :: zpsi(0:sys%m%np, sys%st%dim)
+  complex(r8), intent(inout) :: zpsi(sys%m%np, sys%st%dim)
   real(r8), intent(in) :: timestep, t
 
   call push_sub('td_dtexp')
@@ -45,7 +45,7 @@ contains
     call push_sub('fourth')
 
     order = td%exp_order
-    allocate(zpsi1(0:sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
+    allocate(zpsi1(sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
     zfact = 1._r8
     zpsi1 = zpsi
     do i = 1, order
@@ -73,29 +73,30 @@ contains
     !   u0 := twot*u1 - u2 + c[k];
     !  od;
     !  ChebySum := 0.5*(u0 - u2);} */
-    integer :: order = 4, j
+    integer :: order = 4, j, n
     complex(r8) :: zfact
     complex(r8), allocatable :: zpsi1(:,:,:)
 
     call push_sub('cheby')
     
     order = td%exp_order
-    allocate(zpsi1(0:sys%m%np, sys%st%dim, 0:2))
+    allocate(zpsi1(sys%m%np, sys%st%dim, 0:2))
     zpsi1 = M_z0
+    n = sys%m%np*sys%st%dim
     do j = order, 0, -1
-       call zcopy((sys%m%np+1)*sys%st%dim, zpsi1(0, 1, 1), 1, zpsi1(0, 1, 2), 1)
-       call zcopy((sys%m%np+1)*sys%st%dim, zpsi1(0, 1, 0), 1, zpsi1(0, 1, 1), 1)
+       call zcopy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
+       call zcopy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
        call zhpsi(h, sys%m, sys%st, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)
             zfact = 2*(-M_zI)**j*oct_bessel(j, h%spectral_half_span*timestep)
-       call zaxpy((sys%m%np+1)*sys%st%dim, cmplx(-h%spectral_middle_point, 0.0_r8, r8), &
-                                                                     zpsi1(0, 1, 1), 1, zpsi1(0, 1, 0), 1)
-       call zscal((sys%m%np+1)*sys%st%dim, cmplx(1./h%spectral_half_span,0._r8, r8),    zpsi1(0, 1, 0), 1)
-       call zscal((sys%m%np+1)*sys%st%dim, cmplx(2._r8,0._r8, r8),                      zpsi1(0, 1, 0), 1)
-       call zaxpy((sys%m%np+1)*sys%st%dim, zfact, zpsi(0, 1),                      1,   zpsi1(0, 1, 0), 1)
-       call zaxpy((sys%m%np+1)*sys%st%dim, cmplx(-1._r8,0._r8,r8), zpsi1(0, 1, 2), 1,   zpsi1(0, 1, 0), 1)
-    enddo
+       call zaxpy(n, cmplx(-h%spectral_middle_point, 0.0_r8, r8), &
+                                                                     zpsi1(1, 1, 1), 1, zpsi1(1, 1, 0), 1)
+       call zscal(n, cmplx(1./h%spectral_half_span,0._r8, r8),    zpsi1(1, 1, 0), 1)
+       call zscal(n, cmplx(2._r8,0._r8, r8),                      zpsi1(1, 1, 0), 1)
+       call zaxpy(n, zfact, zpsi(1, 1),                      1,   zpsi1(1, 1, 0), 1)
+       call zaxpy(n, cmplx(-1._r8,0._r8,r8), zpsi1(1, 1, 2), 1,   zpsi1(1, 1, 0), 1)
+    end do
     zpsi(:, :) = 0.5_r8*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-    call zscal((sys%m%np+1)*sys%st%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi, 1)
+    call zscal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi, 1)
     deallocate(zpsi1)
 
     call pop_sub()
@@ -110,20 +111,19 @@ contains
 
     korder = td%exp_order
     tol = td%lanczos_tol
-    allocate(v(0:sys%m%np, sys%st%dim, korder), &
-             w(  sys%m%np, sys%st%dim),         &
-             f(  sys%m%np, sys%st%dim),         &
+    allocate(v(sys%m%np, sys%st%dim, korder), &
+             w(sys%m%np, sys%st%dim),         &
+             f(sys%m%np, sys%st%dim),         &
              hm(korder, korder),         &
              expo(korder, korder),      &
              hh(korder))
-    v(0, :, :) = M_z0
 
     j = 1    
     ! Normalize input vector, and put it into v(:, :, 1)
     nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi(1:sys%m%np, 1:sys%st%dim))
     v(:, :, 1) = zpsi(:, :)/nrm
     ! Operate on v(:, :, 1) and place it onto w.
-    call zhpsi(h, sys%m, sys%st, sys, ik, v(0:sys%m%np, 1:sys%st%dim, 1), w(1:sys%m%np, 1:sys%st%dim), t)
+    call zhpsi(h, sys%m, sys%st, sys, ik, v(:, 1:sys%st%dim, 1), w(1:sys%m%np, 1:sys%st%dim), t)
     alpha = zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1), w(:, :))
     f(:, :) = w(:, :) - alpha*v(1:sys%m%np, 1:sys%st%dim, 1)
     hm = M_z0; hm(1, 1) = alpha
@@ -133,7 +133,7 @@ contains
        v(1:sys%m%np, 1:sys%st%dim, n + 1) = f(1:sys%m%np, 1:sys%st%dim)/beta
        hm(n+1, n) = beta
        call zhpsi(h, sys%m, sys%st, sys, ik, &
-            v(0:sys%m%np, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
+            v(:, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
        hh = M_z0
        do nn = j, n + 1
           hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:, :, nn), w)
@@ -164,7 +164,7 @@ contains
 
     zpsi = M_z0
     do nn = 1, order
-       call zaxpy((sys%m%np+1)*sys%st%dim, nrm*expo(nn, 1), v(0, 1, nn), 1, zpsi, 1)
+       call zaxpy(sys%m%np*sys%st%dim, nrm*expo(nn, 1), v(1, 1, nn), 1, zpsi, 1)
     enddo
 
     deallocate(v, w, f, hm, expo, hh)
@@ -262,7 +262,7 @@ contains
       step = -1; ia_start = sys%natoms; ia_end = 1
     end if
 
-    allocate(initzpsi(0:m%np, 1:sys%st%dim))
+    allocate(initzpsi(m%np, 1:sys%st%dim))
     initzpsi = zpsi
     ! Ionic pseudopotential
     do_atm: do ia = ia_start, ia_end, step

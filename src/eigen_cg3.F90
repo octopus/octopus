@@ -39,7 +39,7 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   nrow = (sys%m%np+1)*st%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
 
-!!$  allocate(evec(0:sys%m%np, st%dim, mev))
+!!$  allocate(evec(sys%m%np, st%dim, mev))
 
   call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = 1.0e-5_r8, trestart = 3)
 
@@ -70,7 +70,7 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
      call trlan(op, info, nrow, mev, &
                 st%eigenval(:, ik_trlan), st%R_FUNC(psi)(:, :, :, ik_trlan), nrow)
 !!$     call trlan(op, info, nrow, mev, &
-!!$                st%eigenval(:, ik_trlan), evec(0:,:,:), nrow)
+!!$                st%eigenval(:, ik_trlan), evec(:,:,:), nrow)
      if(info%stat.ne.0) then
         write(message(1),'(a,i5)') 'trlan call returned with error flag', info%stat
         call write_fatal(1)
@@ -84,7 +84,7 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   enddo
 
-  call R_FUNC(scal)((sys%m%np+1)*st%dim*st%nst*st%nik, &
+  call R_FUNC(scal)(sys%m%np*st%dim*st%nst*st%nik, &
                     R_TOTYPE(1.0/sqrt(sys%m%vol_pp)), st%R_FUNC(psi), 1)
 
   if(conf%verbose > 999) then

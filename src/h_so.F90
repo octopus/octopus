@@ -20,7 +20,7 @@ subroutine zso (h, m, natoms, atom, dim, ik, psi, Hpsi)
   type(mesh_type), intent(in) :: m
   integer, intent(in) :: dim, natoms, ik
   type(atom_type), intent(in) :: atom(natoms)
-  R_TYPE, intent(in) :: psi(0:m%np, dim)
+  R_TYPE, intent(in) :: psi(m%np, dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, dim)
 
   integer :: is, ia, i, j,  mps,add_lm, ikbc,jkbc, idim, l, lm 

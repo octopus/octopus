@@ -321,7 +321,7 @@ contains
     end if
     psi_f%st_start = psi_i%st_start
     psi_f%st_end = psi_i%st_end
-    allocate(psi_f%zpsi(0:sys%m%np, psi_f%dim, psi_f%st_start:psi_f%st_end, psi_f%nik))
+    allocate(psi_f%zpsi(sys%m%np, psi_f%dim, psi_f%st_start:psi_f%st_end, psi_f%nik))
     allocate(v_old_f(sys%m%np, psi_f%nspin, 3))
     
     ! prepare the initial laser

@@ -423,10 +423,9 @@ contains
     allocate(c(m%np))
     do_is: do is = 1, st%nspin
       ! first term
-      allocate(r(0:m%np), gr(3, m%np))
+      allocate(r(m%np), gr(3, m%np))
       r(1:m%np) = st%rho(1:m%np, is)/s
-      r(0) = 0._r8
-      call dmesh_derivatives(m, r(0:m%np), grad=gr)
+      call dmesh_derivatives(m, r(:), grad=gr)
       do i = 1, m%np
         if(r(i) >= dmin) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
@@ -442,7 +441,7 @@ contains
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(0:m%np, idim, ist, ik), grad=gpsi(:,:))
+            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(:, idim, ist, ik), grad=gpsi(:,:))
             do i = 1, m%np
               if(r(i) >= dmin) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
@@ -554,18 +553,18 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
       do i = st1%st_start, st1%st_end
          do j = 0, mpiv%numprocs-1
             if(mpiv%node.ne.j) then
-               call MPI_ISEND(st2%R_FUNC(psi)(0, 1, i, ik), st1%dim*(m%np+1), MPI_DOUBLE_COMPLEX, &
+               call MPI_ISEND(st2%R_FUNC(psi)(1, 1, i, ik), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
                               j, i, MPI_COMM_WORLD, request, ierr)
             endif
          enddo
       enddo
 
       ! Processes are received, and then the matrix elements are calculated.
-      allocate(phi2(0:m%np, st1%dim))
+      allocate(phi2(m%np, st1%dim))
       do j = 1, n
          l = node(j)
          if(l.ne.mpiv%node) then
-            call MPI_RECV(phi2(0, 1), st1%dim*(m%np+1), MPI_DOUBLE_COMPLEX, &
+            call MPI_RECV(phi2(1, 1), st1%dim*m%np, MPI_DOUBLE_COMPLEX, &
                           l, j, MPI_COMM_WORLD, status, ierr)
          else
             phi2(:, :) = st2%R_FUNC(psi)(:, :, j, ik)

@@ -43,7 +43,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
 
   allocate(d     (     m%np, st%nspin), &
            lpot  (     m%np, st%spin_channels))
-  allocate(rhoplus(0:m%np), rhominus(0:m%np))
+  allocate(rhoplus(m%np), rhominus(m%np))
   allocate(grhoplus(3, m%np), grhominus(3, m%np))
 
   ! Store in local variables d the density matrix
@@ -58,20 +58,20 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     enddo
   end if
 
-  rhoplus(0) = M_ZERO; rhominus(0) = M_ZERO; grhoplus = M_ZERO; grhominus = M_ZERO
+  grhoplus = M_ZERO; grhominus = M_ZERO
   do i = 1, m%np
-     select case(st%ispin)
-     case(UNPOLARIZED)
+    select case(st%ispin)
+    case(UNPOLARIZED)
       rhoplus(i) = max(d(i, 1), M_ZERO)
-     case(SPIN_POLARIZED)
+    case(SPIN_POLARIZED)
       rhoplus(i)  = max(d(i, 1), M_ZERO)
       rhominus(i) = max(d(i, 2), M_ZERO)
-     case(SPINORS)
+    case(SPINORS)
       dtot = d(i, 1) + d(i, 2)
       dpol = sqrt( (d(i, 1)-d(i, 2))**2 + M_FOUR*(d(i, 3)**2+d(i, 4)**2) )
       rhoplus(i)  = max(M_HALF*(dtot+dpol), M_ZERO)
       rhominus(i) = max(M_HALF*(dtot-dpol), M_ZERO)
-     end select
+    end select
   enddo
 
   call dmesh_derivatives(m, rhoplus(:),  grad=grhoplus(:, :))

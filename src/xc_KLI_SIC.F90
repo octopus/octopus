@@ -19,7 +19,7 @@ subroutine R_FUNC(kli_x_sic) (nlcc, m, st, psi, hartr, Vx, ex)
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  R_TYPE, intent(IN) :: psi(0:m%np, st%nst, st%nspin)
+  R_TYPE, intent(IN) :: psi(m%np, st%nst, st%nspin)
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: Vx(m%np, st%nspin), ex
 
@@ -91,7 +91,7 @@ subroutine R_FUNC(kli_c_sic) (nlcc, m, st, psi, hartr, Vc, ec)
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
-  R_TYPE, intent(IN) :: psi(0:m%np, st%nst, st%nspin)
+  R_TYPE, intent(IN) :: psi(m%np, st%nst, st%nspin)
   type(hartree_type), intent(IN) :: hartr
   real(r8), intent(out) :: Vc(m%np, st%nspin), ec
 

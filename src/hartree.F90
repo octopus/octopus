@@ -34,6 +34,7 @@ type hartree_type
 
   ! used by conjugated gradients (method 1)
   integer :: ncgiter
+  type(mesh_type), pointer :: m_aux
 
 #ifdef HAVE_FFTW
   ! used in method 3
@@ -83,11 +84,12 @@ subroutine hartree_end(h)
 
   select case(h%solver)
   case(1)
+    nullify(h%m_aux%d) ! this is a copy from sys%m, so it should not be dealloated here
+    call mesh_end(h%m_aux)
+    deallocate(h%m_aux); nullify(h%m_aux)
 #ifdef HAVE_FFTW
   case(2,3)
-    if(associated(h%ff)) then ! has been allocated => destroy
-      deallocate(h%ff); nullify(h%ff)
-    end if
+    deallocate(h%ff); nullify(h%ff)
 #endif
   end select
 

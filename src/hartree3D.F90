@@ -19,59 +19,70 @@ subroutine hartree3D_init(h, m)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(inout) :: m
 
-  integer :: ix, iy, iz, ixx(3)
-  real(r8) :: l, r_0, temp(3), vec
-
   select case(h%solver)
     case(1)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-      call write_info(1)
-      call pop_sub()
-      return
+      call init_real()
     case(2)
       message(1) = 'Info: Using FFTs to solve poisson equation.'
+      call init_fft()
     case(3)
       message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
+      call init_fft()
   end select
   call write_info(1)
 
-  allocate(h%ff(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
-  h%ff = M_ZERO
-  l = maxval(m%fft_n2(:)*m%h(:))
-  r_0 = l/M_TWO
-  temp(:) = 2.0_r8*M_PI/(m%fft_n2(:)*m%h(:))
+  call pop_sub()
+
+contains
+  subroutine init_real()
+ 
+    ! setup mesh including ghost points
+    allocate(h%m_aux)
+    h%m_aux = m
+    nullify(h%m_aux%Lxyz, h%m_aux%Lxyz_inv,  h%m_aux%der_lookup)
+    call mesh_create_xyz(h%m_aux, m%d%norder)
+    
+  end subroutine init_real
+
+  subroutine init_fft()
+    integer :: ix, iy, iz, ixx(3)
+    real(r8) :: l, r_0, temp(3), vec
+
+
+    allocate(h%ff(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
+    h%ff = M_ZERO
+    l = maxval(m%fft_n2(:)*m%h(:))
+    r_0 = l/M_TWO
+    temp(:) = 2.0_r8*M_PI/(m%fft_n2(:)*m%h(:))
       
-  do ix = 1, m%hfft_n2
-     ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
-     do iy = 1, m%fft_n2(2)
+    do ix = 1, m%hfft_n2
+      ixx(1) = pad_feq(ix, m%fft_n2(1), .true.)
+      do iy = 1, m%fft_n2(2)
         ixx(2) = pad_feq(iy, m%fft_n2(2), .true.)
         do iz = 1, m%fft_n2(3)
-           ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
-!!$           if(h%solver==2) then
-!!$              vec = sum((temp(:)*ixx(:))**2)
-!!$           else
-!!$              vec = sqrt(sum((temp(:)*ixx(:))**2))
-!!$           endif
-           vec = sum((temp(:)*ixx(:))**2) 
-           if(vec.ne.M_ZERO) then
+          ixx(3) = pad_feq(iz, m%fft_n2(3), .true.)
+          vec = sum((temp(:)*ixx(:))**2) 
+          if(vec.ne.M_ZERO) then
             if(h%solver==2) then
-               h%ff(ix, iy, iz) = 4.0_r8*M_PI / vec
+              h%ff(ix, iy, iz) = 4.0_r8*M_PI / vec
             else
-               h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(sqrt(vec)*r_0)) / vec 
+              h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(sqrt(vec)*r_0)) / vec 
             endif
-           else
+          else
             if(h%solver==2) then
-               h%ff(ix, iy, iz) = M_ZERO
+              h%ff(ix, iy, iz) = M_ZERO
             else
-               h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+              h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
             endif
-           end if          
+          end if
         end do
-     end do
-  end do
-  call mesh_alloc_ffts(m, 2)    
+      end do
+    end do
+    call mesh_alloc_ffts(m, 2)    
 
-  call pop_sub()
+  end subroutine init_fft
+
 end subroutine hartree3D_init
 
 subroutine hartree_cg(h, m, pot, dist)
@@ -80,96 +91,69 @@ subroutine hartree_cg(h, m, pot, dist)
   real(r8), dimension(:), intent(inout) :: pot
   real(r8), dimension(:, :), intent(IN) :: dist
   
-  integer :: i, ix, iy, iz, iter, a, j, imax, add_lm, l, mm, ml
-  real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, xx, yy, zz, temp
-  real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:,:,:)
+  integer, parameter :: ml = 4 ! maximum multipole moment to include
+  real(r8), parameter :: fpi = M_FOUR*M_PI
+
+  integer :: i, iter, add_lm, l, mm
+  real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, temp
+  real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:), lwk(:)
 
   call push_sub('hartree_cg')
 
-  ml = 4
-  allocate(zk(m%np), tk(m%np), pk(m%np))
-  allocate(rholm((ml+1)**2))
-  rholm = M_ZERO
+  allocate(rholm((ml+1)**2))             ! to store the multipole moments
+  allocate(zk(m%np), tk(m%np), pk(m%np)) ! for the cg
 
-  ! calculate multipole moments till ml
+  ! calculate multipole moments until ml
+  rholm = M_ZERO
   do i = 1, m%np
     call mesh_r(m, i, r, x=x)
-
+    
     temp   = sum(dist(i, :))
+    zk(i) = -fpi*temp ! this will be needed later
+
     add_lm = 1
     do l = 0, ml
+      s1 = r**l*temp
       do mm = -l, l
         sa = oct_ylm(x(1), x(2), x(3), l, mm)
-        if(l == 0) then ! this avoids 0**0
-          rholm(add_lm) = rholm(add_lm) + temp*sa
-        else
-          rholm(add_lm) = rholm(add_lm) + r**l*temp*sa
-        end if
+        rholm(add_lm) = rholm(add_lm) + s1*sa
         add_lm = add_lm+1
       end do
     end do
   end do
   rholm = rholm*m%vol_pp
 
-  allocate(wk(-m%nx(1):m%nx(1), -m%nx(2):m%nx(2), -m%nx(3):m%nx(3)))
-
-  wk = M_ZERO
-  do i = 1, m%nk
-    x(:) = m%kxyz(:, i)*m%h(:)
-    r = sqrt(sum(x**2)) + 1e-50_r8
-
+  ! build initial guess for the potential
+  allocate(wk(h%m_aux%np), lwk(h%m_aux%np))
+  wk(1:m%np) = pot(1:m%np)
+  do i = h%m_aux%np_in+1, h%m_aux%np ! boundary conditions
+    call mesh_r(h%m_aux, i, r, x=x)
+    
     add_lm = 1
     do l = 0, ml
+      s1 = fpi/((M_TWO*l + M_ONE)*r**(l + 1))
       do mm = -l, l
         sa = oct_ylm(x(1), x(2), x(3), l, mm)
-        ix = m%Kxyz(1,i); iy = m%Kxyz(2,i); iz = m%Kxyz(3,i)
-        wk(ix, iy, iz) = wk(ix, iy, iz) +   &
-            sa * ((4.0_r8*M_Pi)/(2.0_r8*l + 1.0_r8)) *            &
-            rholm(add_lm)/r**(l + 1)
+        wk(i) = wk(i) +  sa * rholm(add_lm) * s1
         add_lm = add_lm+1
-      enddo
-    enddo
-  enddo
-
-  do i = 1, m%np
-    zk(i) = -M_FOUR*M_Pi*sum(dist(i, :))
-    wk(m%Lxyz(1, i), m%Lxyz(2, i), m%Lxyz(3, i)) = pot(i)
-  enddo 
-
-  ! I think this just calculates the laplacian of pot(i) -> zk?
-  ! should not this call derivatives?
-  do i = 1, m%np
-    ix = m%Lxyz(1, i); iy = m%Lxyz(2, i); iz = m%Lxyz(3, i)
-    zk(i) = zk(i) - m%d%dlidfj(0)*wk(ix,iy,iz)*sum(1/m%h(:)**2)
-    do j = 1, m%d%norder
-      zk(i) = zk(i) -  m%d%dlidfj(j)*(  &
-          (wk(ix+j, iy, iz) + wk(ix-j, iy, iz))/m%h(1)**2 + &
-          (wk(ix, iy+j, iz) + wk(ix, iy-j, iz))/m%h(2)**2 + &
-          (wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h(3)**2 )
+      end do
     end do
   end do
+  deallocate(rholm)
 
-  wk = M_ZERO
+  call dmesh_derivatives(h%m_aux, wk, lapl=lwk)
+
+  zk(:) = zk(:) - lwk(1:m%np)
+  deallocate(wk, lwk) ! they are no longer needed
+
   pk = zk
   s1 = dmesh_nrm2(m, zk)**2
 
+  ! now we start the conjugate gradient cycles
   iter = 0
   do 
     iter = iter + 1
-    do i = 1, m%np
-      wk(m%Lxyz(1, i), m%Lxyz(2, i), m%Lxyz(3, i)) = pk(i)
-    enddo
-    ! again the laplacian of wk -> tk
-    do i = 1, m%np
-      ix = m%Lxyz(1, i); iy = m%Lxyz(2, i); iz = m%Lxyz(3, i)
-      tk(i) = m%d%dlidfj(0)*wk(ix,iy,iz)*sum(1/m%h(:)**2)
-      do j = 1, m%d%norder
-        tk(i) = tk(i) + m%d%dlidfj(j)*( &
-            (wk(ix+j, iy, iz) + wk(ix-j, iy, iz))/m%h(1)**2 + &
-            (wk(ix, iy+j, iz) + wk(ix, iy-j, iz))/m%h(2)**2 + &
-            (wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h(3)**2 )
-      enddo
-    enddo
+    call dmesh_derivatives(m, pk, lapl=tk)
 
     s2 = dmesh_dotp(m, zk, tk)
     ak = s1/s2
@@ -182,7 +166,6 @@ subroutine hartree_cg(h, m, pot, dist)
     ck = s3/s1
     s1 = s3
     pk = zk + ck*pk
-
   end do
 
   if(iter >= 400) then
@@ -193,7 +176,7 @@ subroutine hartree_cg(h, m, pot, dist)
 
   h%ncgiter = iter
 
-  deallocate(wk, zk, tk, pk, rholm)
+  deallocate(zk, tk, pk)
 
   call pop_sub()
   return

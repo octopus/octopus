@@ -35,13 +35,13 @@ subroutine R_FUNC(xc_kli)(func, nlcc, m, st, hartr, pot, energy)
   select case(func)
     case(X_FUNC_KLI_X)
       call R_FUNC(kli_x) (m, st%nspin, st%nst, st%occ, st%eigenval, &
-           st%R_FUNC(psi) (0:,1,:,:), hartr, pot, energy, st%rho)
+           st%R_FUNC(psi) (:,1,:,:), hartr, pot, energy, st%rho)
 
     case(X_FUNC_KLI_SIC)
-      call R_FUNC(kli_x_sic) (nlcc, m, st, st%R_FUNC(psi) (0:,1,:,:), &
+      call R_FUNC(kli_x_sic) (nlcc, m, st, st%R_FUNC(psi) (:,1,:,:), &
            hartr, pot, energy)
     case(C_FUNC_KLI_SIC)
-      call R_FUNC(kli_c_sic) (nlcc, m, st, st%R_FUNC(psi) (0:,1,:,:), &
+      call R_FUNC(kli_c_sic) (nlcc, m, st, st%R_FUNC(psi) (:,1,:,:), &
            hartr, pot, energy)
 
     case(X_FUNC_KLI_HJU)
@@ -65,7 +65,7 @@ subroutine R_FUNC(solve_KLI) (m, nspin, is, nst, socc, occ, eigenval, &
   real(r8), intent(in) :: socc
   real(r8), intent(IN) :: occ(nst, nspin), eigenval(nst, nspin), &
       u_xc(m%np, nst), u_bar_xc(nst)
-  R_TYPE, intent(IN) :: psi(0:m%np, nst, nspin)
+  R_TYPE, intent(IN) :: psi(m%np, nst, nspin)
   real(r8), intent(out) :: v_xc(m%np, nspin)
 
   integer i, j, k, eigen_n

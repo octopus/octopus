@@ -399,9 +399,9 @@ end subroutine td_run
 !!$  open(unit, file = 'td_check')
 !!$  close(unit)
 !!$
-!!$  allocate(expzpsi (0:sys%m%np, sys%st%dim), &
-!!$           goodzpsi(0:sys%m%np, sys%st%dim), &
-!!$           hzpsi   (  sys%m%np, sys%st%dim))
+!!$  allocate(expzpsi (sys%m%np, sys%st%dim), &
+!!$           goodzpsi(sys%m%np, sys%st%dim), &
+!!$           hzpsi   (sys%m%np, sys%st%dim))
 !!$
 !!$ do i = -300, 100, 10
 !!$
