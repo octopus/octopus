@@ -202,12 +202,6 @@ subroutine hamiltonian_init(h, sys)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
   end if
 
-  ! Temporarily spinors and 4-component densities do not work unless LDA.
-  if(h%ispin == SPINORS .and. (h%xc%x_family > 1 .or. h%xc%c_family > 1)) then
-    message(1) = 'Currently the spinors only work well with LDA functionals.'
-    call write_fatal(1)
-  endif
-
   ! gauge
   call oct_parse_int(C_string("TDGauge"), 1, h%gauge)
   if (h%gauge < 1 .or. h%gauge > 2) then
