@@ -2,13 +2,13 @@ The main developing team of this program is composed by:
 
  * Miguel A. L. Marques (marques@tddft.org)
  * Alberto Castro (Alberto.Castro@tddft.org, University of Valladolid, 
-   Departamento de Fisica Teorica, Spain
+   Departamento de Fisica Teorica, Spain)
  * Angel Rubio (Donostia International Physics Center and Department of 
-   Materials Science UPV/EHU, San Sebastián, Spain
+   Materials Science UPV/EHU, San Sebastián, Spain)
 
-octopus is based on a nuclear-physics code written by:
+octopus is based on a fixed-nucleus code written by:
 
-  * George F. Bertsch
   * K. Yabana
+  * George F. Bertsch
 
 Other contributors are:
