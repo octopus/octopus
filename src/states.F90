@@ -544,7 +544,10 @@ subroutine calc_current(m, st, j)
   
   integer :: ik, p, sp, ierr, k
   complex(r8), allocatable :: aux(:,:)
-  
+#if defined(HAVE_MPI) && defined(MPI_TD)
+  real(r8), allocatable :: red(:,:,:)
+#endif
+
   sub_name = 'calc_current'; call push_sub()
   
   if(st%ispin == 2) then
@@ -587,15 +590,16 @@ subroutine calc_current(m, st, j)
 
     end do
   end do
+  deallocate(aux)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-  ! reduce current (assumes memory is contiguous)
-  call MPI_ALLREDUCE(j(1, 1), aux(1, 1), m%np*st%nspin, &
+  allocate(red(3, m%np, st%nspin))
+  call MPI_ALLREDUCE(j(1, 1, 1), red(1, 1, 1), 3*m%np*st%nspin, &
        MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-  j = aux
+  j = red
+  deallocate(red)
 #endif
 
-  deallocate(aux)
   call pop_sub()
 end subroutine calc_current
 
