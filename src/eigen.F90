@@ -15,11 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module eigen_solver
-use global
-use oct_parser
+use math
 use hamiltonian
 use states
 
@@ -166,6 +165,50 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
 
   call pop_sub()
 end subroutine eigen_solver_run
+
+!!! This routine in principle diagonalises the hamiltonian in the
+!!! basis defined by st. It has not been tested, and it is not used now
+subroutine eigen_diagon_subspace(st, sys, h)
+  type(states_type), intent(inout)   :: st
+  type(system_type), intent(in)      :: sys
+  type(hamiltonian_type), intent(in) :: h
+
+  R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
+  integer :: ik, i, j
+
+  allocate(h_subspace(st%nst, st%nst), vec(st%nst, st%nst))
+  allocate(f(sys%m%np, st%dim, st%nst))
+
+  ik_loop: do ik = 1, st%nik
+    f = st%X(psi)(:,:,:, ik)
+
+    eigenfunction_loop : do i = 1, st%nst
+      call R_FUNC(Hpsi)(h, sys%m, st, sys, ik, st%X(psi)(:,:, i, ik) , f(:,:, 1))
+      h_subspace(i, i) = st%eigenval(i, ik)
+      do j = i, st%nst
+        h_subspace(i, j) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
+        h_subspace(j, i) = R_CONJ(h_subspace(i, j))
+      end do
+    end do eigenfunction_loop
+
+    call X(iagonalise) (st%nst, h_subspace, vec, st%eigenval(:, ik))
+
+    do i = 1, st%nst
+      ! build new state
+      st%X(psi)(:,:, i, ik) = vec(i, i)*st%X(psi)(:,:, i, ik)
+      do j = 1, st%nst
+        if(i.ne.j) st%X(psi)(:,:,i, ik) = st%X(psi)(:,:,i, ik) + vec(i, j)*f(:,:,j)
+      end do
+      
+      ! renormalize
+      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(sys%m, st%dim, st%X(psi)(:,:, i, ik))
+    end do
+  end do ik_loop
+
+  deallocate(f, h_subspace, vec)
+
+end subroutine eigen_diagon_subspace
+
 
 #include "eigen_cg2.F90"
 #ifdef HAVE_TRLAN

@@ -73,7 +73,7 @@ end function X(mf_moment)
 
 !!! calculates the laplacian of a function on the mesh.
 subroutine X(mf_laplacian) (m, f, lapl)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(in) :: m
   R_TYPE, intent(in) :: f(m%np)
   R_TYPE, intent(out) :: lapl(m%np)
 

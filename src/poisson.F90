@@ -79,8 +79,7 @@ subroutine poisson_end()
 
   select case(poisson_solver)
   case(1)
-    ! this is a copy from sys%m, so it should not be dealloated here
-    nullify(cg_m_aux%laplacian, cg_m_aux%grad)
+    call end_lookup_tables(cg_m_aux)
     call mesh_end(cg_m_aux)
     deallocate(cg_m_aux); nullify(cg_m_aux)
 #ifdef HAVE_FFT

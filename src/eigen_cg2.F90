@@ -70,15 +70,15 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         g = h_psi
         ppsi = st%R_FUNC(psi)(1:,:, p, ik)
         
-        es(1) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), g)
-        es(2) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), ppsi)
+        es(1) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, p, ik), g)
+        es(2) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
         
         ! Orthogonalize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
-          a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, j, ik), g)
-          g(:,:) = g(:,:) - a0 * st%R_FUNC(psi)(1:,:, j, ik)
+          a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, j, ik), g)
+          g(:,:) = g(:,:) - a0 * st%R_FUNC(psi)(:,:, j, ik)
         end do
         
         if(iter .ne. 1) gg1 = R_FUNC(states_dotp) (sys%m, st%dim, g, g0)
@@ -92,34 +92,35 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         ! Starting or following iterations...
         if(iter .eq. 1) then
           gg0 = gg
-          cg(1:, :) = g(:,:)
+          cg(:,:) = g(:,:)
         else
           !gamma = gg/gg0        ! (Fletcher-Reeves)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
           gg0 = gg
-          cg = gamma*cg
-          cg(1:,:) = cg(1:,:) + g(:,:)
+          cg(:,:) = gamma*cg(:,:)
+          cg(:,:) = cg(:,:) + g(:,:)
+
           norma = gamma*cg0*sin(theta)
-          cg(1:,:) = cg(1:,:) - norma * st%R_FUNC(psi)(1:,:, p, ik)
+          cg(:,:) = cg(:,:) - norma * st%R_FUNC(psi)(:,:, p, ik)
         end if
         
         ! cg contains now the conjugate gradient
-        cg0 = R_FUNC(states_nrm2) (sys%m, st%dim, cg(1:,:))
+        cg0 = R_FUNC(states_nrm2) (sys%m, st%dim, cg(:,:))
         call R_FUNC(Hpsi) (h, sys%m, st, sys, ik, cg, ppsi)
         
-        ! Minimization.
-        a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), ppsi)
+        ! Line minimization.
+        a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(:,:, p, ik), ppsi)
         a0 = 2.0_r8 * a0 / cg0
         b0 = R_FUNC(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/2.0_r8
-        es(1) = ((e0-b0)*cos(2.0_r8*theta) + a0*sin(2.0_r8*theta) + e0 + b0) / 2.0_r8
-        es(2) =(-(e0-b0)*cos(2.0_r8*theta) - a0*sin(2.0_r8*theta) + e0 + b0) / 2.0_r8
+        es(1) = ((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
+        es(2) =(-(e0-b0)*cos(M_TWO*theta) - a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
         
         ! Choose the minimum solutions. 
         if (R_REAL(es(2)) < R_REAL(es(1))) then
-          theta = theta + M_PI/2.0_r8
+          theta = theta + M_PI/M_TWO
         end if
         st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
         
@@ -132,7 +133,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         h_psi = a0*h_psi + b0*ppsi
 
         res = R_FUNC(states_residue)(sys%m, st%dim, h_psi, st%eigenval(p, ik), &
-                                     st%R_FUNC(psi)(1:, :, p, ik))
+                                     st%R_FUNC(psi)(:, :, p, ik))
         ! Test convergence.
         if(res < tol) then
           converged = converged + 1

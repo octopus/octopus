@@ -57,12 +57,7 @@ contains
   if(derivatives_space == REAL_SPACE) then
     call oct_parse_int('OrderDerivatives', 4, norder)
 
-    allocate(m%grad(conf%dim), m%laplacian)
-    m%laplacian%norder = norder
-    do j = 1, conf%dim
-       m%grad(j)%norder = norder
-    enddo
-    call build_lookup_tables(m)
+    call build_lookup_tables(m, norder)
 
     message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
@@ -85,22 +80,9 @@ end subroutine functions_init
 
 subroutine functions_end(m)
   type(mesh_type), intent(inout) :: m
-  integer :: i, j
   
   if(derivatives_space == REAL_SPACE) then
-     do i = 1, m%np
-        deallocate(m%laplacian%lookup(i)%i, m%laplacian%lookup(i)%w)
-     enddo
-     deallocate(m%laplacian%lookup)
-     do j = 1, conf%dim
-        do i = 1, m%np
-           deallocate(m%grad(j)%lookup(i)%i, m%grad(j)%lookup(i)%w)
-        enddo
-        deallocate(m%grad(j)%lookup)
-     enddo
-     deallocate(m%laplacian); nullify(m%laplacian)
-     deallocate(m%grad); nullify(m%grad)
-    
+    call end_lookup_tables(m)
 #if defined(HAVE_FFT)
   else
     call dcf_free(dcf_der)

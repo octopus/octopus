@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-!! This subroutine implements the preconditioned Lanczos eigensolver aas
+!! This subroutine implements the preconditioned Lanczos eigensolver as
 !! described in the paper:
 !!
 !! Y. Saad, A. Stathopoulos, J. Chelikowsky, K. Wu and S. Ogut,
@@ -297,8 +297,7 @@ contains
 !!$  end do
     
     !  call pop_sub()
-  end subroutine R_FUNC(low_frequency)
-  
+  end subroutine R_FUNC(low_frequency)  
 
   subroutine residual(hv, v, e, res, r)
     implicit none
@@ -312,44 +311,5 @@ contains
     r = R_FUNC(states_nrm2)(sys%m, st%dim, res)
     
   end subroutine residual
-  
-  subroutine diagonalise(dim, a, b, e)
-    integer  :: dim
-    real(r8) :: a(dim, dim), b(dim, dim)
-    real(r8) :: e(dim)
-    
-    integer :: info, lwork
-    real(r8), allocatable :: work(:)
-
-    lwork = 6*dim
-    allocate(work(lwork))
-    b = a
-    call dsyev('V', 'U', dim, b, dim, e, work, lwork, info)
-    if(info.ne.0) then
-      write(message(1),'(a,i5)') 'dsyev returned error message ', info
-      call write_fatal(1)
-    endif
-    deallocate(work)
-  end subroutine diagonalise
-
-  subroutine ziagonalise(dim, a, b, e)
-    integer     :: dim
-    complex(r8) :: a(dim, dim), b(dim, dim)
-    real(r8)    :: e(dim)
-    
-    integer :: info, lwork
-    complex(r8), allocatable :: work(:)
-    real(r8), allocatable :: rwork(:)
-
-    lwork = 6*dim
-    allocate(work(lwork), rwork(lwork))
-    b = a
-    call zheev('V','U', dim, b, dim, e, work, lwork, rwork, info)
-    if(info.ne.0) then
-      write(message(1),'(a,i5)') 'dsyev returned error message ', info
-      call write_fatal(1)
-    endif
-    deallocate(work, rwork)
-  end subroutine ziagonalise
 
 end subroutine eigen_solver_plan

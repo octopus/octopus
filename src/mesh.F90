@@ -97,6 +97,8 @@ subroutine mesh_init(m, natoms, atom)
     call write_fatal(2)
   end if
 
+  nullify(m%laplacian, m%grad)
+
   call pop_sub()
 end subroutine mesh_init
 
@@ -289,7 +291,7 @@ end subroutine mesh_inborder
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
 
-  integer :: i
+  integer :: i, j
 
   call push_sub('mesh_end')
 

@@ -15,20 +15,16 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 ! This module is intended to contain "only mathematical" functions and        !
 !	procedures.                                                           !
 
 module math
-
   use global
 
   implicit none
   
-  private
-  public :: grylmr, weights, quickrnd, stepf, ddet, zdet, zmatexp
-
 contains
 
 ! a simple congruent random number generator
@@ -341,7 +337,47 @@ complex(r8) function zdet(a, n)
 
 end function zdet
 
-#include "undef.F90"
+!!! These routines diagonalize a matrix using LAPACK
+subroutine diagonalise(dim, a, b, e)
+  integer  :: dim
+  real(r8) :: a(dim, dim), b(dim, dim)
+  real(r8) :: e(dim)
+  
+  integer :: info, lwork
+  real(r8), allocatable :: work(:)
+  
+  lwork = 6*dim
+  allocate(work(lwork))
+  b = a
+  call dsyev('V', 'U', dim, b, dim, e, work, lwork, info)
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') 'dsyev returned error message ', info
+    call write_fatal(1)
+  endif
+  deallocate(work)
+end subroutine diagonalise
+
+subroutine ziagonalise(dim, a, b, e)
+  integer     :: dim
+  complex(r8) :: a(dim, dim), b(dim, dim)
+  real(r8)    :: e(dim)
+  
+  integer :: info, lwork
+  complex(r8), allocatable :: work(:)
+  real(r8), allocatable :: rwork(:)
+  
+  lwork = 6*dim
+  allocate(work(lwork), rwork(lwork))
+  b = a
+  call zheev('V','U', dim, b, dim, e, work, lwork, rwork, info)
+  if(info.ne.0) then
+    write(message(1),'(a,i5)') 'dsyev returned error message ', info
+    call write_fatal(1)
+  endif
+  deallocate(work, rwork)
+end subroutine ziagonalise
+
+include "undef.F90"
 #include "complex.F90"
 #include "math_inc.F90"
 

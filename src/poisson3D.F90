@@ -47,7 +47,8 @@ contains
     cg_m_aux = m
     nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%laplacian, cg_m_aux%grad)
     call mesh_create_xyz(cg_m_aux, m%laplacian%norder)
-    
+    call build_lookup_tables(cg_m_aux, m%laplacian%norder)
+
   end subroutine init_real
 
 #ifdef HAVE_FFT
@@ -56,12 +57,12 @@ contains
     real(r8) :: r_0, temp(3), vec
 
     ! double the box to perform the fourier transforms
-    call mesh_double_box(m, db)
+    call mesh_double_box(m, db)                 ! get dimensions of the double box
     if(poisson_solver == 3) db(:) = maxval(db)
 
-    ! initialize the ffts
-    call dcf_new(db, fft_cf)
-    call dcf_fft_init(fft_cf)
+    call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
+    call dcf_fft_init(fft_cf)   ! the ffts
+    db = fft_cf%n               ! dimensions may have been optimized
 
     ! store the fourier transform of the Coulomb interaction
     allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
@@ -70,12 +71,12 @@ contains
     r_0 = maxval(db(:)*m%h(:))/M_TWO
     temp(:) = 2.0_r8*M_PI/(db(:)*m%h(:))
       
-    do iz = 1, fft_cf%n(3)
-      ixx(3) = pad_feq(iz, fft_cf%n(3), .true.)
-      do iy = 1, fft_cf%n(2)
-        ixx(2) = pad_feq(iy, fft_cf%n(2), .true.)
+    do iz = 1, db(3)
+      ixx(3) = pad_feq(iz, db(3), .true.)
+      do iy = 1, db(2)
+        ixx(2) = pad_feq(iy, db(2), .true.)
         do ix = 1, fft_cf%nx
-          ixx(1) = pad_feq(ix, fft_cf%n(1), .true.)
+          ixx(1) = pad_feq(ix, db(1), .true.)
 
           vec = sum((temp(:)*ixx(:))**2) 
           if(vec.ne.M_ZERO) then

@@ -290,8 +290,9 @@ contains
 
 end function in_mesh
 
-subroutine build_lookup_tables(m)
+subroutine build_lookup_tables(m, order)
   type(mesh_type), intent(inout) :: m
+  integer, intent(in) :: order
 
   real(r8), allocatable :: dgidfj(:) ! the coefficients for the gradient
   real(r8), allocatable :: dlidfj(:) ! the coefficients for the laplacian  
@@ -300,7 +301,13 @@ subroutine build_lookup_tables(m)
 
   call push_sub('build_lookup_tables')
 
-  call derivatives_coeff
+  allocate(m%grad(conf%dim), m%laplacian)
+  m%laplacian%norder = order
+  do j = 1, conf%dim
+    m%grad(j)%norder = order
+  enddo
+
+  call derivatives_coeff()
 
   allocate(m%laplacian%lookup(m%np))
   do j = 1, conf%dim
@@ -441,3 +448,26 @@ contains
   end function index
 
 end subroutine build_lookup_tables
+
+subroutine end_lookup_tables(m)
+  type(mesh_type), intent(inout) :: m
+
+  integer :: i, j
+
+  ASSERT(associated(m%laplacian))
+  ASSERT(associated(m%grad))
+
+  do i = 1, m%np
+    deallocate(m%laplacian%lookup(i)%i, m%laplacian%lookup(i)%w)
+  end do
+  deallocate(m%laplacian%lookup)
+  do j = 1, conf%dim
+    do i = 1, m%np
+      deallocate(m%grad(j)%lookup(i)%i, m%grad(j)%lookup(i)%w)
+    end do
+    deallocate(m%grad(j)%lookup)
+  end do
+  deallocate(m%laplacian); nullify(m%laplacian)
+  deallocate(m%grad); nullify(m%grad)
+
+end subroutine end_lookup_tables
