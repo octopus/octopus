@@ -171,28 +171,6 @@ subroutine states_choose_kpoints(st, m)
     st%d%kweights(2::2) = kw(:)
   end select
   
-! riciclare per scegliere assi in sp reciproco da plottare   
-!
-!    select case(loct_parse_block_n('SelectKAxis'))
-!    case(1)
-!      do i = 1, conf%periodic_dim
-!       call loct_parse_block_int('SelectKAxis', 0, i-1, st%d%select_axis(i))
-!      end do
-!      do i=1, conf%periodic_dim
-!       if (st%d%select_axis(i) == 0) then
-!         write(message(1),'(a,i1,a)')'Info: K points in axis ',i,' are neglected'
-!         call write_info(1) 
-!         st%d%nik_axis(i)=1
-!       end if
-!      end do
-!    case default
-!      st%d%select_axis = 1
-!    end select
-!    st%d%nik=PRODUCT(st%d%nik_axis)
-!  else
-!    st%d%nik = 1
-!  end if
-
   deallocate(natom,splabel,coorat)
   deallocate(kp,kw)
 
