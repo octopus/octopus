@@ -29,14 +29,14 @@
 #include "symbols.h"
 #include "liboct.h"
 
-/* Fortran does not have the asinh intrinsic, 
-	 so we use the one from libm.a */
 double F90_FUNC_(oct_gamma, OCT_GAMMA)
 		 (double *x)
 {
   return gsl_sf_gamma(*x);
 }
 
+/* Fortran does not have the asinh intrinsic, 
+	 so we use the one from libm.a */
 double F90_FUNC_(oct_asinh, OCT_ASINH)
 		 (double *x)
 {
