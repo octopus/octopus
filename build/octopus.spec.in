@@ -21,137 +21,47 @@ Name: @PACKAGE@
 Summary: real-space, real-time, TDDFT code
 Version: @VERSION@
 Release: 1
-Copyright: GPL
-#Icon: fftw-logo-thumb.gif
+Copyright: GPL 2.0
 Group: Programs
-Prefix: @prefix@
-BuildRoot: /tmp/%{name}-%{version}-buildroot
+BuildRoot: %{_tmppath}/%{name}-buildroot
 Source: http://www.tddft.org/programs/octopus/download/@PACKAGE@-@VERSION@.tar.gz
 URL: http://www.tddft.org/programs/octopus
 %description
-TODO
+octopus is a computer package aimed at the simulation of the electron-ion 
+dynamics of finite systems, both in one and three dimensions, under the 
+influence of time-dependent electromagnetic fields. The electronic degrees 
+of freedom are treated quantum mechanically within the time-dependent 
+Kohn-Sham formalism, while the ions are handled classically. All quantities 
+are expanded in a regular mesh in real space, and the simulations are 
+performed in real time. Although not optimized for that purpose, the 
+program is also able to obtain static properties like ground-state geometries,
+or static polarizabilities. The method employed proved quite reliable and 
+general, and has been successfully used to calculate linear and non-linear 
+absorption spectra, harmonic spectra, laser induced fragmentation, etc. 
+of a variety of systems, from small clusters to medium sized quantum dots.
+
 %prep
-
-# We will be compiling two copies of FFTW, one for double precision and
-# one for single precision.  During the build process, these copies
-# will be stored in fftw-%{version}/double and fftw-%{version}/single
-
-# Unpack the tar archive, first (-c) creating a fftw-%{version}
-# directory and then unpacking in there.
-%setup -c
-
-# Now, rename the unpacked FFTW directory to "double":
-mv ${RPM_PACKAGE_NAME}-${RPM_PACKAGE_VERSION} double
-
-# Second, make a copy of this directory in "single":
-cp -r double single
+rm -rf $RPM_BUILD_ROOT
+%setup -q
 
 %build
 
-# Configure and build the double and single precision versions.
-# Notes:
-#  (1) We install into ${RPM_BUILD_ROOT}, which is set either
-#      by the BuildRoot option above or by --buildroot at build-time.
-#      This allows you to build the RPM without blowing away your existing
-#      FFTW installation, and even without being root.
-#  (2) The double-precision version is installed with the normal library
-#      names, while the single-precision version is installed with an "s"
-#      prefix.
+%configure \
+  F90=ifc \
+  LDFLAGS="-static -L/usr/local/intel/mkl/lib/32/ -L/home/marques/lib -L/home/marques/lib/ifc"
 
-cd double
-%ifarch i386
-./configure --prefix="${RPM_BUILD_ROOT}%{prefix}" --enable-shared --enable-i386-hacks --enable-threads
-%else
-./configure --prefix="${RPM_BUILD_ROOT}%{prefix}" --enable-shared --enable-threads
-%endif
 make
-
-cd ../single
-./configure --prefix="${RPM_BUILD_ROOT}%{prefix}" --enable-shared --enable-type-prefix --enable-threads --enable-float
-make
+(cd doc; make octopus.ps; gzip octopus.ps)
 
 %install
 
-cd double
-make install
-
-cd ../single
-make install
+%makeinstall
 
 %clean
-
 rm -rf ${RPM_BUILD_ROOT}
 
-%post
-# Force ${RPM_INSTALL_PREFIX}/lib to be in /etc/ld.so.conf?
-# No...that would make it impossible to completely uninstall reliably.
-# Instead, warn the user fix a broken /etc/ld.so.conf manually:
-if test -z `grep ${RPM_INSTALL_PREFIX}/lib /etc/ld.so.conf`; then
-     echo "warning: ${RPM_INSTALL_PREFIX}/lib is not in /etc/ld.so.conf" 1>&2
-     echo "         You should add it and then run ldconfig." 1>&2
-fi
-
-# run ldconfig to update the runtime linker database with the new libraries
-# (make sure /sbin is in the $PATH)
-PATH="/sbin:$PATH" ldconfig
-
-%postun
-# after uninstall, run ldconfig to remove the libs from the linker database
-PATH="/sbin:$PATH" ldconfig
-
 %files
-/usr/local/lib/libfftw.so.@SHARED_VERSION@
-/usr/local/lib/libfftw_threads.so.@SHARED_VERSION@
-/usr/local/lib/librfftw.so.@SHARED_VERSION@
-/usr/local/lib/librfftw_threads.so.@SHARED_VERSION@
-/usr/local/lib/libsfftw.so.@SHARED_VERSION@
-/usr/local/lib/libsfftw_threads.so.@SHARED_VERSION@
-/usr/local/lib/libsrfftw.so.@SHARED_VERSION@
-/usr/local/lib/libsrfftw_threads.so.@SHARED_VERSION@
-/usr/local/lib/libfftw.so.2
-/usr/local/lib/libfftw_threads.so.2
-/usr/local/lib/librfftw.so.2
-/usr/local/lib/librfftw_threads.so.2
-/usr/local/lib/libsfftw.so.2
-/usr/local/lib/libsfftw_threads.so.2
-/usr/local/lib/libsrfftw.so.2
-/usr/local/lib/libsrfftw_threads.so.2
-%files devel
-/usr/local/include/fftw.h
-/usr/local/include/fftw_threads.h
-/usr/local/include/rfftw.h
-/usr/local/include/rfftw_threads.h
-/usr/local/include/sfftw.h
-/usr/local/include/sfftw_threads.h
-/usr/local/include/srfftw.h
-/usr/local/include/srfftw_threads.h
-/usr/local/info/fftw.info
-/usr/local/info/fftw.info-1
-/usr/local/info/fftw.info-2
-/usr/local/info/fftw.info-3
-/usr/local/info/fftw.info-4
-/usr/local/info/fftw.info-5
-/usr/local/lib/libfftw.a
-/usr/local/lib/libfftw.la
-/usr/local/lib/libfftw.so
-/usr/local/lib/libfftw_threads.a
-/usr/local/lib/libfftw_threads.la
-/usr/local/lib/libfftw_threads.so
-/usr/local/lib/librfftw.a
-/usr/local/lib/librfftw.la
-/usr/local/lib/librfftw.so
-/usr/local/lib/librfftw_threads.a
-/usr/local/lib/librfftw_threads.la
-/usr/local/lib/librfftw_threads.so
-/usr/local/lib/libsfftw.a
-/usr/local/lib/libsfftw.la
-/usr/local/lib/libsfftw.so
-/usr/local/lib/libsfftw_threads.a
-/usr/local/lib/libsfftw_threads.la
-/usr/local/lib/libsfftw_threads.so
-/usr/local/lib/libsrfftw.a
-/usr/local/lib/libsrfftw.la
-/usr/local/lib/libsrfftw.so
-/usr/local/lib/libsrfftw_threads.a
-/usr/local/lib/libsrfftw_threads.la
-/usr/local/lib/libsrfftw_threads.so
+%defattr(-,root,root,0755)
+%doc README NEWS COPYING AUTHORS doc/octopus.ps.*
+%{_bindir}/*
+%{_datadir}/octopus/*

@@ -25,20 +25,15 @@ EXTRA_DIST = TODO autogen.sh build/*.m4 build/*.in samples/inp
 CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec
 
-RPM_SRCDIR = `rpm --showrc |grep "^sourcedir" | sed 's/^.*: *//'`
-RPM_ARCH   = `rpm --showrc |grep "^build arch" | sed 's/^.*: *//'`
-RPM_RPMS   = `rpm --showrc |grep "^rpmdir" | sed 's/^.*: *//'`
-RPM_SRPMS  = `rpm --showrc |grep "^srcrpmdir" | sed 's/^.*: *//'`
-RPM_TOPDIR = `rpm --showrc |grep "^TOPDIRdir" | sed 's/^.*: *//'`
+RPM_DIR = /usr/src/redhat
 
 rpm: dist
-	cp -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_SRCDIR)/$(PACKAGE)-$(VERSION).tar.gz
-#	rm -f $(RPM_SRCDIR)/$(PACKAGE)-logo-thumb.gif
-#	lynx -source -dump http://www.fftw.org/fftw-logo-thumb.gif > $(RPM_SRCDIR)/fftw-logo-thumb.gif
+	cp -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
 	rpm --clean -ba build/$(PACKAGE).spec
-	rpm -U $(RPM_RPMS)/$(RPM_ARCH)/$(PACKAGE)-$(VERSION)-1.$(RPM_ARCH).rpm
+	scp $(RPM_DIR)/RPMS/i386/octopus*.rpm $(RPM_DIR)/SRPMS/octopus*.rpm \
+		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
 	@echo "-------------------------------------------------------------"
-	@echo "  RPMs are built and installed, and are located under:       "
-	@echo "       $(RPM_RPMS)/$(RPM_ARCH)"
-	@echo "       $(RPM_SRPMS)"
+	@echo "  RPMs are built, and are located under:"
+	@echo "       $(RPM_DIR)/RPMS/i386"
+	@echo "       $(RPM_DIR)/SRPMS"
 	@echo "-------------------------------------------------------------"

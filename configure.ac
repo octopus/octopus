@@ -16,7 +16,7 @@
 ## 02111-1307, USA.
 ##
 
-AC_INIT(Octopus, 1.0, marques@nautilus.fis.uc.pt, octopus)
+AC_INIT(Octopus, 1.01, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 
@@ -181,10 +181,10 @@ if test -z "${LIB_LAPACK}"; then
 	  AS_IF([test "$LAPACKDIR"], [LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"])
 
 		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [mkl_lapack], [dsygv], [-lmkl_lapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [mkl_lapack], [dsygv], [-lmkl_lapack], [], [${LIB_BLAS} -lguide -lpthread])
 		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
 
   	LDFLAGS="$save_ldflags"
