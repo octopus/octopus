@@ -50,7 +50,7 @@ type mesh_type
   logical  :: iso
   
   real(r8) :: rsize     ! the radius of the sphere or of the cylinder
-  real(r8) :: zsize     ! the length of the cylinder in the z direction
+  real(r8) :: xsize     ! the length of the cylinder in the x direction
   real(r8) :: lsize(3)  ! the lengths of the parallelepipeds in each direction.
   
   integer  :: np        ! number of points in inner mesh
@@ -90,7 +90,7 @@ subroutine mesh_init(m, natoms, atom)
   integer, intent(in), optional :: natoms
   type(atom_type), pointer, optional :: atom(:)
 
-  integer :: i, j, k, morder
+  integer :: i, k, morder
   logical :: fft_optimize
 
   sub_name = 'mesh_init'; call push_sub()
@@ -100,15 +100,12 @@ subroutine mesh_init(m, natoms, atom)
   call mesh_create(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
-#ifdef POLYMERS
-  j = 2
-#else
-  j = 3
-#endif
 
   call oct_parse_logical(C_string("FFTOptimize"), .true., fft_optimize)
+  
+  ! only non-periodic directions are optimized
   m%fft_n(:)  = 2*m%nr(:) + 1
-  do i = 1, j ! always ask for an odd number
+  do i = conf%periodic_dim+1, conf%dim ! always ask for an odd number
      if(m%fft_n(i).ne.1 .and. fft_optimize) call oct_fft_optimize(m%fft_n(i), 7, 1)
   end do
   m%hfft_n = m%fft_n(1)/2 + 1
@@ -125,12 +122,13 @@ subroutine mesh_init(m, natoms, atom)
     call write_fatal(2)
   end if
 
+  ! fft box is doubled and optimized only in non-periodic directions
   m%fft_n2 = 1
-  do i = 1, min(j, conf%dim)
+  do i = conf%periodic_dim+1, conf%dim
     m%fft_n2(i) = 2*nint(m%fft_alpha*maxval(m%nr)) + 1
     if(fft_optimize) call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
   end do
-  do i = j+1, 3 ! for periodic systems
+  do i = 1, conf%periodic_dim ! for periodic systems
     m%fft_n2(i) = m%fft_n(i)
   end do
   
@@ -162,39 +160,41 @@ subroutine mesh_write_info(m, unit)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: unit
 
-  character(len=15), parameter :: bs(3) = (/ &
-      'sphere       ', &
-      'cylinder     ', &
-      'around nuclei'/)
+  character(len=15), parameter :: bs(4) = (/ &
+      'sphere        ', &
+      'cylinder      ', &
+      'around nuclei ', &
+      'parallelepiped'/)
 
   sub_name = 'mesh_write_info'; call push_sub()
-
+  
+  write(message(1), '(a,a,1x)') ' Type = ', bs(m%box_shape)
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER  .or. m%box_shape == MINIMUM) then
-    write(message(1), '(a,a,1x,3a,f7.3)') '  Type = ', bs(m%box_shape), &
-       ' Radius [', trim(units_out%length%abbrev), '] = ', m%rsize/units_out%length%factor
+    write(message(2), '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
+                                   m%rsize/units_out%length%factor
   endif
   if(m%box_shape == CYLINDER) then
-    write(message(1), '(a,3a,f7.3)') trim(message(1)), ', zlength [', &
-         trim(units_out%length%abbrev), '] = ', m%zsize/units_out%length%factor
+    write(message(2), '(a,3a,f7.3)') trim(message(2)), ', xlength [', &
+         trim(units_out%length%abbrev), '] = ', m%xsize/units_out%length%factor
   end if
   if(m%box_shape == PARALLELEPIPED) then
-    write(message(1),'(3a, a, f6.3, a, f6.3, a, f6.3, a)') &
+    write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a)') &
        '  Lengths [', trim(units_out%length%abbrev), '] = ',         &
        '(', m%lsize(1)/units_out%length%factor, ',',                     &
             m%lsize(2)/units_out%length%factor, ',',                     &
             m%lsize(3)/units_out%length%factor, ')'
   endif
-  write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)') &
+  write(message(3),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)') &
        '  Spacing [', trim(units_out%length%abbrev), '] = ',         &
        '(', m%h(1)/units_out%length%factor, ',',                     &
             m%h(2)/units_out%length%factor, ',',                     &
             m%h(3)/units_out%length%factor, ')',                     &
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ', &
        m%vol_pp/units_out%length%factor**3
-  write(message(3),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
+  write(message(4),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
       '   # outer mesh = ', m%nk
 
-  call write_info(3, unit)
+  call write_info(4, unit)
 
   call pop_sub()
   return
@@ -299,11 +299,21 @@ subroutine mesh_alloc_ffts(m, i)
     call  fftwnd_f77_create_plan(m%zplanb, conf%dim, m%fft_n, &
          fftw_backward, fftw_measure + fftw_threadsafe) 
   else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
-    message(1) = "Info: FFTs used in a double box (for poisson | local potential)"
-    write(message(2), '(6x,a,i4,a,i4,a,i4,a)') &
+    if (conf%periodic_dim == conf%dim) then
+      message(1)='system is fully periodic: ignoring DoubleFFTParameter'
+      call write_info(1)
+      write(message(1), '(6x,a,i4,a,i4,a,i4,a)') &
          'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
-    write(message(3), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
-    call write_info(3)
+      call write_info(1)
+    else  if (conf%periodic_dim + 1 <= conf%dim) then
+      message(1) = "Info: FFTs used in a double box (for poisson | local potential)"
+      write(message(2),'(6x,a,i1,a,i1)') &
+           'doubled axis: from ',conf%periodic_dim+1,' to ',conf%dim
+      write(message(3), '(6x,a,i4,a,i4,a,i4,a)') &
+         'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
+      write(message(4), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
+      call write_info(4)
+    endif
     
     call rfftwnd_f77_create_plan(m%dplanf2, conf%dim, m%fft_n2, &
          fftw_forward, fftw_measure + fftw_threadsafe)
@@ -377,7 +387,7 @@ subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
 
   real(r8) :: temp(3), g2
   integer :: k(3), ix, iy, iz
-
+  
   temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
 
   do iz = 1, n(3)
