@@ -23,7 +23,7 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "liboct.h"
+#include "parser.h"
 #include "symbols.h"
 
 static FILE *fout;
@@ -238,6 +238,17 @@ int parse_block_n(char *name)
 	ptr = getsym(name);
 	if(ptr && ptr->type == S_BLOCK){
 		return ptr->value.block->n;
+	}else
+		return 0;
+}
+
+int parse_block_cols(char *name, int l)
+{
+	symrec *ptr;
+
+	ptr = getsym(name);
+	if(ptr && ptr->type == S_BLOCK && l<ptr->value.block->n){
+		return ptr->value.block->lines[l].n;
 	}else
 		return 0;
 }

@@ -22,13 +22,6 @@
 
 #include <gsl/gsl_complex.h>
 
-/* from ylm.c */
-double ylm(double x, double y, double z, int l, int m);
-
-/* from varia.c */
-void fft_optimize(int *n, int p, int par);
-
-/* from parse.c */
 int parse_init(char *file_in, char *file_out);
 void parse_end();
 

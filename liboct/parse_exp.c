@@ -24,7 +24,7 @@
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
 
-#include "liboct.h"
+#include "parser.h"
 #include "symbols.h"
 
 static char *par_string;
