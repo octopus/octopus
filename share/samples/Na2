@@ -11,7 +11,7 @@
 verbose = 30
 DebugLevel = 15
 SystemName = "Na2"
-CalculationMode = gs_start
+CalculationMode = gs
 Units = "eVA"
 #UnitsInput  = a.u
 #UnitsOutput = a.u

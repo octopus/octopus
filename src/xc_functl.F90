@@ -172,18 +172,18 @@ contains
     integer,              intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    integer :: i
+    integer(POINTER_SIZE) :: i
     
     if(functl%family==XC_FAMILY_LDA.or.functl%family==XC_FAMILY_GGA) then
       ! we hapilly call the xc library
 
       i = xc_info_kind(functl%info)
       select case(i)
-      case(XC_EXCHANGE)
+      case(int(XC_EXCHANGE, POINTER_SIZE))
         write(iunit, '(2x,a)') 'Exchange'
-      case(XC_CORRELATION)
+      case(int(XC_CORRELATION, POINTER_SIZE))
         write(iunit, '(2x,a)') 'Correlation'
-      case(XC_EXCHANGE_CORRELATION)
+      case(int(XC_EXCHANGE_CORRELATION, POINTER_SIZE))
         write(iunit, '(2x,a)') 'Exchange-correlation'
       end select
       

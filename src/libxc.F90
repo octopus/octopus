@@ -89,7 +89,7 @@ module lib_xc
 
     subroutine xc_info_refs(info, n, s)
       integer(POINTER_SIZE), intent(in)    :: info
-      integer,               intent(inout) :: n
+      integer(POINTER_SIZE), intent(inout) :: n
       character(len=*),      intent(out)   :: s
     end subroutine xc_info_refs
   end interface
