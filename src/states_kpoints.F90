@@ -20,26 +20,36 @@ subroutine states_choose_kpoints(st, m)
   type(states_type), intent(inout) :: st
   type(mesh_type), intent(IN) :: m
 
-  integer :: ik, k
-  real(r8) :: l
+  integer :: ik, i, k
+  real(r8) :: l(3)
 
   allocate(st%kpoints(3, st%nik), st%kweights(st%nik))
-  st%kpoints = 0._r8
+  st%kpoints = M_ZERO
 
   if(st%nik == 1.or.(st%nik == 2.and.st%ispin == 2)) then ! just return the Gamma point
-    st%kweights(:) = 1._r8
+    st%kweights(:) = M_ONE
     return
   end if
 
-  l = M_PI/m%h(3)
+  l=M_ZERO
   do ik = 1, st%nik
     if(st%ispin == 2) then
       k = (ik-1)/2
     else
       k = ik - 1
     end if
-
-    st%kpoints(3, ik) = -l*k/(st%nik - 1)
-    st%kweights(ik) = 1._r8/real(st%nik, r8)
+    do i=1,conf%periodic_dim
+        l(i) = M_PI/m%lsize(i)
+        st%kpoints(i, ik) = -l(i)*k/(st%nik - 1)
+    end do
+! this does not take into accout the symmetries
+! it is correct only in 1D
+    st%kweights(ik) = M_ONE/real(st%nik, r8)
   end do
+
+! DEBUG
+!  do ik = 1, st%nik
+!  write(UNIT=11,FMT='(i3,1x,4F8.3)')ik,st%kpoints(:, ik)*units_out%length%factor,st%kweights(ik)
+!  end do
+
 end subroutine states_choose_kpoints
