@@ -163,7 +163,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   if (st%d%current .and. st%d%ispin == SPINORS) then
     message(1) = "Sorry, Current DFT not working yet for spinors"
     call write_fatal(1)
-  else
+  elseif (st%d%current) then
     message(1) = "Info: Using Current DFT"
     call write_info(1)
   end if
