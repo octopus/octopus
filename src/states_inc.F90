@@ -457,8 +457,8 @@ subroutine X(states_output) (st, m, dir, outp)
   end if
   
   if(conf%dim==3) then
-    if(outp%what(output_elf))    call elf_FS(.true.,  'elf_rs')
-    if(outp%what(output_elf_FS)) call elf_FS(.false., 'elf_fs')
+    if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
+    if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
   end if
 
 contains
@@ -477,7 +477,7 @@ contains
     call X(cf_free_FS) (c)
   end subroutine mf2mf_RS2FS
 
-  subroutine elf_FS(rs, filename)
+  subroutine elf(rs, filename)
     logical, intent(in) :: rs
     character(len=*), intent(in) :: filename
 
@@ -571,7 +571,7 @@ contains
     if(.not.rs) call X(cf_free)(cf_tmp)
     deallocate(c)
     
-  end subroutine elf_FS
+  end subroutine elf
 
 end subroutine X(states_output)
 
