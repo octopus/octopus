@@ -112,17 +112,18 @@ subroutine states_init(st, m, val_charge)
   st%nst  = int(st%qtot/2._r8)
   if(st%nst*2._r8 < st%qtot) &
        st%nst = st%nst + 1
-  st%nst = st%nst + nempty
 
   select case(st%ispin)
   case(1)
     st%dim = 1
+    st%nst = st%nst + nempty
   case(2)
     st%dim = 1
+    st%nst = st%nst + nempty
     st%nik = st%nik*2
   case(3)
     st%dim = 2
-    st%nst = st%nst*2
+    st%nst = st%nst*2 + nempty
   end select
 
   ! For non-periodic systems this should just return the Gamma point

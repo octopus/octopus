@@ -98,35 +98,36 @@ subroutine R_FUNC(xc_lda) (func, m, st, pot, energy, pot_off)
   R_TYPE, pointer, optional :: pot_off(:)
 
   real(r8) :: d(st%nspin), p(st%nspin), d1, d2, e
-  R_TYPE   :: a(2,2)
+  R_TYPE   :: ri, a(2,2)
   integer  :: i
 
   energy = 0._r8
   do i = 1, m%np
     if(st%ispin == 3) then
-      d1 = st%rho(i, 1) + st%rho(i, 2)
-      d2 = st%rho(i, 1) - st%rho(i, 2)
-      d2 = sqrt(d2*d2 + 4._r8*R_ABS(st%R_FUNC(rho_off)(i))**2)
+      ri = st%R_FUNC(rho_off)(i)
 
-      ! eigenvalues of density matrix
-      d(1) = (d1 + d2) / 2._r8
-      d(2) = (d1 - d2) / 2._r8
-
-      ! normalization
-      d1 = sqrt( (st%rho(i, 1) - d(1))**2 + R_ABS(st%R_FUNC(rho_off)(i))**2 )
-      d2 = sqrt( (st%rho(i, 1) - d(2))**2 + R_ABS(st%R_FUNC(rho_off)(i))**2 )
-
-      ! eigenfunctions
-      if(abs(d(1) - d(2)) < 1e-10_r8) then
-        a(1,1) = R_TOTYPE(1._r8)
-        a(1,2) = R_TOTYPE(0._r8)
-        a(2,1) = R_TOTYPE(0._r8)
-        a(2,2) = R_TOTYPE(1._r8)
+      if(R_ABS(ri) < 1e-8_r8) then
+        d(1:2) = st%rho(i, 1:2)
+        a(1,1) = R_TOTYPE(1._r8); a(1,2) = R_TOTYPE(0._r8)
+        a(2,1) = R_TOTYPE(0._r8); a(2,2) = R_TOTYPE(1._r8)
       else
-        a(1,1) = -st%R_FUNC(rho_off)(i) / d1
-        a(1,2) = -st%R_FUNC(rho_off)(i) / d2
-        a(2,1) = (st%rho(i, 1) - d(1)) / d1
-        a(2,2) = (st%rho(i, 1) - d(2)) / d2
+        d1 = st%rho(i, 1) + st%rho(i, 2)
+        d2 = st%rho(i, 1) - st%rho(i, 2)
+        d2 = sqrt(d2*d2 + 4._r8*R_ABS(ri)**2)
+        
+        ! eigenvalues of density matrix
+        d(1) = (d1 + d2) / 2._r8
+        !d(2) = (d1 - d2) / 2._r8
+        
+        ! normalization
+        d1 = sqrt( (st%rho(i, 1) - d(1))**2 + R_ABS(ri)**2 )
+        !d2 = sqrt( (st%rho(i, 2) - d(2))**2 + R_ABS(ri)**2 )
+        
+        ! eigenfunctions
+        a(1,1) = (st%rho(i, 1) - d(1)) / d1
+        a(2,1) = -ri / d1
+        a(2,2) =  a(1,1)
+        a(1,2) = -a(2,1)
       end if
       
     else

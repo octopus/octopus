@@ -72,9 +72,9 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
   case(1) ! dim = 1
     Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
   case(2) ! dim = 1
-    if(modulo(ik, 2) == 0) then ! we have a spin down
+    if(modulo(ik+1, 2) == 0) then ! we have a spin down
       Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
-    else ! spin down
+    else ! spin up
       Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 2)*psi(1:, 1)
     end if
   case(3) ! dim = 2

@@ -43,8 +43,8 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
   xk=0.0_r8;    hxk=0.0_r8;  gk=0.0_r8;    pk=0.0_r8
 
 ! The cycles are performed
-  do p = 1, st%nst
-    do ik = 1, st%nik
+  do ik = 1, st%nik
+    do p = 1, st%nst
       if(present(diff)) then
         allocate(tmp_wf(np, st%dim))
         tmp_wf(1:np,:) = st%R_FUNC(psi)(1:np,:, p, ik)
@@ -106,8 +106,8 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
         diff(p, ik) = R_FUNC(mesh_nrm2) (sys%m, tmp_wf)
         deallocate(tmp_wf)
       end if
-    enddo
-  enddo
+    end do
+  end do
      
   deallocate(xk, hxk, gk, pk)
 

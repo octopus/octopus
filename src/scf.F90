@@ -204,14 +204,18 @@ subroutine scf_write_static()
   else
     write(iunit, '(a)') 'SCF *not* converged!'
   end if
-  write(iunit,'(1x)')
+  write(iunit, '(1x)')
 
   call states_write_eigenvalues(iunit, sys%st%nst, sys%st, diff)
-  write(iunit,'(1x)')
+  write(iunit, '(1x)')
 
-  write(iunit, '(a)') 'Energy [eV]:'
+  write(iunit, '(a)') 'Energy:'
   call hamiltonian_energy(h, sys, iunit)
-  write(iunit,'(1x)')
+  write(iunit, '(1x)')
+
+  if(sys%st%ispin > 1) then
+    call write_magnet(iunit, sys%st)
+  end if
 
   write(iunit, '(a)') 'Convergence:'
   write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
@@ -234,8 +238,50 @@ subroutine scf_write_static()
   end do
 
   call io_close(iunit)
-  return
 end subroutine scf_write_static
+
+subroutine write_magnet(iunit, st)
+  integer, intent(in) :: iunit
+  type(states_type), intent(IN) :: st
+  
+  real(r8) :: m(3), sign
+  R_TYPE :: c
+  integer :: i, ik, ist
+  
+  write(iunit, '(a)') 'Magnetization:'
+  if(st%ispin == 2) then ! collinear spin
+    sign = 1._r8
+    m(3) = 0._r8
+    do ik = 1, st%nik
+      do ist = 1, st%nst
+        m(3) = m(3) + sign*st%kweights(ik)*st%occ(ist, ik)
+      end do
+      sign = -sign
+    end do
+    write(iunit, '(a,f15.6)') ' mz = ', m(3)
+    
+  else if(st%ispin == 3) then ! non-collinear
+    m = 0._r8
+    do ik = 1, st%nik
+      do ist = 1, st%nst
+        do i = 1, sys%m%np
+          c = R_CONJ(st%R_FUNC(psi) (i, 1, ist, ik)) * st%R_FUNC(psi) (i, 2, ist, ik)
+          m(1) = m(1) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_REAL(c)
+          m(2) = m(2) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_AIMAG(c)
+          c = R_ABS(st%R_FUNC(psi) (i, 1, ist, ik))**2 - R_ABS(st%R_FUNC(psi) (i, 2, ist, ik))**2
+          m(3) = m(3) + st%kweights(ik)*st%occ(ist, ik)* 2._r8*R_REAL(c)
+        end do
+      end do
+    end do
+    m = m*sys%m%vol_pp
+    write(iunit, '(a,f15.6)') ' mx = ', m(1)
+    write(iunit, '(a,f15.6)') ' my = ', m(2)
+    write(iunit, '(a,f15.6)') ' mz = ', m(3)
+  end if
+  
+  write(iunit,'(1x)') 
+  
+end subroutine write_magnet
 
 end subroutine scf_run
 
