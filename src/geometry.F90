@@ -238,7 +238,6 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   def_rsize = -huge(PRECISION)
   do i = 1, geo%nspecies
     call specie_init(geo%specie(i), ispin)
-    if(conf%verbose>=VERBOSE_DEBUG) call specie_debug('debug', geo%specie(i))
     def_h     = min(def_h,     geo%specie(j)%def_h)
     def_rsize = max(def_rsize, geo%specie(j)%def_rsize)
   end do
@@ -270,6 +269,24 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
 
   call pop_sub()
 end subroutine geometry_init_species
+
+subroutine geometry_debug(geo, dir)
+  type(geometry_type), intent(in) :: geo
+  character(len=*), intent(in) :: dir
+
+  character(len=256) :: dirname
+  integer :: i
+
+  call push_sub('specie_debug')
+
+  dirname = trim(dir)//'/geometry'
+  call loct_mkdir(trim(dirname))
+  do i = 1, geo%nspecies
+     call specie_debug(trim(dirname), geo%specie(i))
+  end do
+
+  call pop_sub()
+end subroutine geometry_debug
 
 subroutine loadPDB(iunit, geo)
   integer,             intent(in)    :: iunit

@@ -99,6 +99,10 @@ contains
     write(iunit, '(a,i3)')    'lmax  = ', s%lmax
     write(iunit, '(a,i3)')    'lloc  = ', s%lloc
 
+    if(.not.s%local) then
+      if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps, trim(dirname))
+    endif
+
     call io_close(iunit)
     call pop_sub()
   end subroutine specie_debug
@@ -109,8 +113,6 @@ contains
     call push_sub('specie_cutoff')
     call ps_filter(s%ps, gmax, s%alpha, s%beta, s%rcut, s%beta2)
     call ps_derivatives(s%ps)
-    ! This is for debugging. It should not be here, though.
-    !if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
     call pop_sub(); return
   end subroutine specie_filter
 
@@ -360,7 +362,6 @@ contains
       allocate(s%ps) ! allocate structure
       call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_derivatives(s%ps)
-      if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )
     end if

@@ -258,14 +258,15 @@ subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
   call pop_sub(); return
 end subroutine ps_filter
 
-subroutine ps_debug(ps)
+subroutine ps_debug(ps, dir)
   type(ps_type), intent(IN) :: ps
+  character(len=*), intent(in) :: dir
 
   ! We will plot also some Fourier transforms.
   type(loct_spline_type), allocatable :: fw(:, :)
   FLOAT, parameter :: gmax = CNST(40.0)
 
-  character(len=30) :: dir
+  character(len=30) :: dirname
   integer  :: info_unit                            ! A text file with some basic data.
   integer  :: local_unit, dlocal_unit, localw_unit ! The local part, derivative, and FT.
   integer  :: nl_unit, dnl_unit, nlw_unit          ! Nonlocal part
@@ -276,24 +277,24 @@ subroutine ps_debug(ps)
   call push_sub('ps_debug')
 
   ! Opens the files.
-  dir = 'pseudos/'//trim(ps%label)
-  call loct_mkdir(trim(dir))
+  dirname = trim(dir)//'/ps.'//trim(ps%label)
+  call loct_mkdir(trim(dirname))
 
   call io_assign(local_unit); call io_assign(dlocal_unit); call io_assign(localw_unit)
   call io_assign(nl_unit)   ; call io_assign(dnl_unit)   ; call io_assign(nlw_unit)
   call io_assign(so_unit)   ; call io_assign(dso_unit)   ; call io_assign(sow_unit)
   call io_assign(info_unit) ;  call io_assign(wave_unit)
-  open(    info_unit, file=trim(dir)//'/info')
-  open(   local_unit, file=trim(dir)//'/local')
-  open(  dlocal_unit, file=trim(dir)//'/local_derivative')
-  open(  localw_unit, file=trim(dir)//'/local_ft')
-  open(      nl_unit, file=trim(dir)//'/nonlocal')
-  open(     dnl_unit, file=trim(dir)//'/nonlocal_derivative')
-  open(     nlw_unit, file=trim(dir)//'/nonlocal_ft')
-  open(      so_unit, file=trim(dir)//'/so')
-  open(     dso_unit, file=trim(dir)//'/so_derivative')
-  open(     sow_unit, file=trim(dir)//'/so_ft')
-  open(    wave_unit, file=trim(dir)//'/wavefunctions')
+  open(    info_unit, file=trim(dirname)//'/info')
+  open(   local_unit, file=trim(dirname)//'/local')
+  open(  dlocal_unit, file=trim(dirname)//'/local_derivative')
+  open(  localw_unit, file=trim(dirname)//'/local_ft')
+  open(      nl_unit, file=trim(dirname)//'/nonlocal')
+  open(     dnl_unit, file=trim(dirname)//'/nonlocal_derivative')
+  open(     nlw_unit, file=trim(dirname)//'/nonlocal_ft')
+  open(      so_unit, file=trim(dirname)//'/so')
+  open(     dso_unit, file=trim(dirname)//'/so_derivative')
+  open(     sow_unit, file=trim(dirname)//'/so_ft')
+  open(    wave_unit, file=trim(dirname)//'/wavefunctions')
 
   ! Writes down the info.
   write(info_unit,'(a,/)')      ps%label

@@ -61,6 +61,11 @@ contains
     ! do we want to filter out the external potentials, or not.
     call loct_parse_logical("FilterPotentials", .false., filter)
     if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%m))
+
+    ! Now that we are really done with initializing the geometry, print debugging information.
+    if(conf%verbose>=VERBOSE_DEBUG) then
+       call geometry_debug(s%geo, 'debug')
+    endif
     
     ! initialize the other stuff
     allocate(s%st)
