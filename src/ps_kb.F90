@@ -195,7 +195,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer, intent(in) :: nr
 
   real(r8) :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
-  integer :: nrm1,nrm2
+  integer :: nrm1,nrm2,ir
 
   NRM1 = NR - 1
   NRM2 = NR - 2
@@ -338,6 +338,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   implicit real(r8) (a-h,o-z)
+  integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
 
   real(r8),dimension(*) ::h,s,g,y
 
@@ -502,6 +503,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit real(r8) (a-h,o-z)
   dimension h(*),s(*),y(*)
+  integer :: nmax,l,ncor,nnode,n,knk,nndin,i
+
   zdr = z*a*b
   n=nmax
 8 if( h(n)-e*s(n) .lt. 1.d0 ) go to 9
@@ -603,6 +606,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit real(r8) (a-h,o-z)
   real(r8) s(*),g(*),norm
+  integer :: n,nm1,nm2,i
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -663,6 +667,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit real(r8) (a-h,o-z)
   real(r8) h(*),s(*)
+  integer :: l
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -716,6 +721,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   implicit real(r8) (a-h,o-z)
   real(r8)  h(*),s(*),                                                          &
    e,dr,rmax,yn,a,b,tnm1,tn,tnp1,beta,dg,c1,c2,c3,dn
+  integer :: n
 
 !     write(6,*) 'bcrmax:',dr
   tnm1=h(n-1)-e*s(n-1)
@@ -762,6 +768,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit real(r8) (a-h,o-z)
   real(r8) h(n),s(n),y(n)
+  integer :: i,n,nnode,knk
+
   y(n)=yn
   t=h(n)-e*s(n)
   g=y(n)/(1.d0-t/12.d0)
@@ -834,6 +842,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit real(r8) (a-h,o-z)
   real(r8) h(knk),s(knk),y(knk)
+  integer :: ncor,nnode,knk,i,nm4
+
   y(1)=0.d0
   y(2)=y2
   t=h(2)-e*s(2)
