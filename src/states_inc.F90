@@ -187,7 +187,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
         do ik = 1, st%d%nik
-          do idim = 1, st%dim
+          do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
             call X(output_function) (outp%how, dir, fname, m, &
                st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
@@ -203,7 +203,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
         do ik = 1, st%d%nik
-          do idim = 1, st%dim
+          do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
             dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
             call doutput_function (outp%how, dir, fname, m, dtmp, u, ierr)
@@ -270,7 +270,7 @@ contains
       allocate(psi_fs(m%np), gpsi(m%np, conf%dim))
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
-          do idim = 1, st%dim
+          do idim = 1, st%d%dim
             
             if(rs) then
               psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
@@ -388,7 +388,7 @@ contains
     integer :: request, node(st1%nst)
 #endif
     
-    dim = st1%dim
+    dim = st1%d%dim
 #if defined(HAVE_MPI)
     
     ! This code just builds an integer array, node, that assigns to each
@@ -410,18 +410,18 @@ contains
     do i = st1%st_start, st1%st_end
       do j = 0, mpiv%numprocs-1
         if(mpiv%node.ne.j) then
-          call MPI_ISEND(st2%X(psi)(1, 1, i, ik), st1%dim*m%np, R_MPITYPE, &
+          call MPI_ISEND(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
              j, i, MPI_COMM_WORLD, request, ierr)
         end if
       end do
     end do
 
     ! Processes are received, and then the matrix elements are calculated.
-    allocate(phi2(m%np, st1%dim))
+    allocate(phi2(m%np, st1%d%dim))
     do j = 1, n
       l = node(j)
       if(l.ne.mpiv%node) then
-        call MPI_RECV(phi2(1, 1), st1%dim*m%np, R_MPITYPE, &
+        call MPI_RECV(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, &
            l, j, MPI_COMM_WORLD, status, ierr)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
@@ -472,7 +472,7 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
   case(SPIN_POLARIZED) ! collinear spin
     sign = M_ONE
     temp = M_ZERO
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         temp(3) = temp(3) + sign*st%d%kweights(ik)*st%occ(ist, ik)
       end do
@@ -481,7 +481,7 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
 
   case(SPINORS) ! non-collinear
     temp = M_ZERO
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         do i = 1, m%np
           c = st%X(psi) (i, 1, ist, ik) * R_CONJ(st%X(psi) (i, 2, ist, ik))* m%vol_pp(i)
@@ -527,7 +527,7 @@ subroutine X(states_calculate_angular)(m, f_der, st, angular, l2)
   allocate(lpsi(m%np, conf%dim))
   do ik = 1, st%d%nik
     do j  = st%st_start, st%st_end
-      do idim = 1, st%dim
+      do idim = 1, st%d%dim
 #if defined(R_TREAL)
         temp = M_ZERO ! The expectation value of L of *any* real function is null
 #else

@@ -47,9 +47,9 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     do l = 0, atm%spec%ps%l_max
       do m = -l, l
         
-        ik_loop: do ik = 1, st%nik
+        ik_loop: do ik = 1, st%d%nik
           st_loop: do ist = st%st_start, st%st_end
-            dim_loop: do idim = 1, st%dim
+            dim_loop: do idim = 1, st%d%dim
 
               do ii = 1, ep%vnl(ivnl)%c
                 do jj = 1, ep%vnl(ivnl)%c

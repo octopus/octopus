@@ -45,7 +45,7 @@ contains
     ierr = 0
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+    allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
     
     ! load wave-functions
     message(1) = 'Info: Loading wave-functions'
@@ -93,7 +93,7 @@ contains
     call push_sub('ground_state_init')
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+    allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     message(1) = 'Info: Random generating starting wavefunctions.'
     call write_info(1)

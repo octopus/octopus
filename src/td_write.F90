@@ -520,7 +520,7 @@ subroutine td_write_proj(out, m, st, u_st, iter)
     
     ! first line -> column names
     call write_iter_header_start(out)
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ist = 1, st%nst
         do uist = 1, u_st%nst
           write(aux, '(i3,a,i3)') ist, ' -> ', uist
@@ -532,11 +532,11 @@ subroutine td_write_proj(out, m, st, u_st, iter)
     call write_iter_nl(out)
   endif
 
-  allocate(projections(u_st%nst, st%st_start:st%st_end, st%nik))
+  allocate(projections(u_st%nst, st%st_start:st%st_end, st%d%nik))
   call calc_projection(u_st, st, m, projections)
 
   call write_iter_start(out)
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ist = 1, st%nst
       do uist = 1, u_st%nst
         call write_iter_double(out,  real(projections(uist, ist, ik)), 1)

@@ -107,9 +107,9 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
   call write_info(1)
 
-  allocate(lcao_data%psis(m%np, st%dim, norbs, st%nik))
+  allocate(lcao_data%psis(m%np, st%d%dim, norbs, st%d%nik))
   lcao_data%psis = M_ZERO
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     n1 = 1
     do i1 = 1, geo%natoms
       if(geo%atom(i1)%spec%local) cycle
@@ -118,7 +118,7 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
         l = geo%atom(i1)%spec%ps%conf%l(l1)
         if(.not. lcao_data%atoml(i1, l1)) cycle
         do lm1 = -l, l
-          do d1 = 1, st%dim
+          do d1 = 1, st%d%dim
             ispin = states_spin_channel(st%d%ispin, ik, d1)
             call atom_get_wf(m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
             n1 = n1 + 1
@@ -129,14 +129,14 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
   end do
   
   ! Allocation of variables
-  allocate(lcao_data%hamilt (norbs, norbs, st%nik), &
-           lcao_data%s      (norbs, norbs, st%nik), &
-           lcao_data%k      (norbs, norbs, st%nik), &
-           lcao_data%v      (norbs, norbs, st%nik))
+  allocate(lcao_data%hamilt (norbs, norbs, st%d%nik), &
+           lcao_data%s      (norbs, norbs, st%d%nik), &
+           lcao_data%k      (norbs, norbs, st%d%nik), &
+           lcao_data%v      (norbs, norbs, st%d%nik))
 
   ! Overlap and kinetic+so matrices.
-  allocate(hpsi(m%np, st%dim))
-  do ik = 1, st%nik
+  allocate(hpsi(m%np, st%d%dim))
+  do ik = 1, st%d%nik
     do n1 = 1, lcao_data%dim
       call X(kinetic) (h, m, f_der, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
@@ -144,7 +144,7 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), st%dim, ik)
+        call zso (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), st%d%dim, ik)
 #endif
       case default
         message(1) = 'Error: Internal.'
@@ -152,8 +152,8 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
       end select
  
       do n2 = n1, lcao_data%dim
-        lcao_data%k(n1, n2, ik) = X(states_dotp)(m, st%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
-        lcao_data%s(n1, n2, ik) = X(states_dotp)(m, st%dim, lcao_data%psis(:, :, n1, ik), &
+        lcao_data%k(n1, n2, ik) = X(states_dotp)(m, st%d%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
+        lcao_data%s(n1, n2, ik) = X(states_dotp)(m, st%d%dim, lcao_data%psis(:, :, n1, ik), &
                                                  lcao_data%psis(:, : ,n2, ik))
       end do
       
@@ -201,12 +201,12 @@ subroutine lcao_wf(lcao_data, m, st, h)
 
   norbs = lcao_data%dim
   np = m%np
-  dim = st%dim
+  dim = st%d%dim
   nst = st%nst
 
   ! Hamiltonian and overlap matrices.
   allocate(hpsi(np, dim))
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
       call X(vlpsi) (h, m, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
@@ -218,7 +218,7 @@ subroutine lcao_wf(lcao_data, m, st, h)
     end do
   end do
   
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     allocate(ev(norbs))
     call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
          lcao_data%s(1:norbs, 1:norbs, ik), ev)

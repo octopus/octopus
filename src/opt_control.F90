@@ -195,9 +195,9 @@ contains
     integer :: ik, p, dim, i
 
     d1 = M_z0; d2 = M_z0
-    do ik = 1, psi_i%nik
+    do ik = 1, psi_i%d%nik
       do p  = psi_i%st_start, psi_i%st_end
-        do dim = 1, psi_i%dim
+        do dim = 1, psi_i%d%dim
           do i = 1, m%np
             d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik) * m%vol_pp(i)
             d2(1:conf%dim) = d2(1:conf%dim) - &
@@ -263,10 +263,10 @@ contains
 
     message(1) = "Overlap between wavefunctions"
     call write_info(1)
-    do ik = 1, psi_i%nik
+    do ik = 1, psi_i%d%nik
       do p  = psi_i%st_start, psi_i%st_end
         ! WARNING gives garbage when calculated through zstates_dotp
-        overlap = zstates_dotp(m, psi_i%dim, psi_i%zpsi(:,:, p, ik), psi_f%zpsi(:,:, p, ik))
+        overlap = zstates_dotp(m, psi_i%d%dim, psi_i%zpsi(:,:, p, ik), psi_f%zpsi(:,:, p, ik))
         functional = overlap - alpha*functional
         write(message(1), '(6x,i3,1x,i3,a,f16.10,a,f16.10)') ik, p, " => overlap:", overlap, "  functional: " , functional
         call write_info(1)
@@ -325,7 +325,7 @@ contains
     geo => sys%geo
     
     ! allocate memory
-    allocate(st%zpsi(sys%m%np, st%dim, st%st_start:st%st_end, st%nik))
+    allocate(st%zpsi(sys%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
     ! psi_i is initialized in system_init
     psi_i => st
@@ -339,8 +339,8 @@ contains
     end if
     psi_f%st_start = psi_i%st_start
     psi_f%st_end = psi_i%st_end
-    allocate(psi_f%zpsi(m%np, psi_f%dim, psi_f%st_start:psi_f%st_end, psi_f%nik))
-    allocate(v_old_f(m%np, psi_f%nspin, 3))
+    allocate(psi_f%zpsi(m%np, psi_f%d%dim, psi_f%st_start:psi_f%st_end, psi_f%d%nik))
+    allocate(v_old_f(m%np, psi_f%d%nspin, 3))
     
     ! prepare the initial laser
     if(h%ep%no_lasers.ne.0) then

@@ -60,7 +60,7 @@ program atoms_magnet
     message(1) = "You cannot use this utility with spin-unpolarized calculations"
     call write_fatal(1)
   end if
-  allocate(st%X(psi)(m%np, st%dim, st%nst, st%nik))
+  allocate(st%X(psi)(m%np, st%d%dim, st%nst, st%d%nik))
 
   ! load information
   call X(restart_read)("tmp/restart_gs", st, m, err)
@@ -99,7 +99,7 @@ program atoms_magnet
   ! compute the local magnetization around each atom 
   do ia = 1, geo%natoms
     mg = M_ZERO
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ist = 1, st%nst
         do i = 1, m%np
           call mesh_r(m, i, ri, a=geo%atom(ia)%x)

@@ -42,7 +42,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
   call push_sub('h_xc_oep')
 
   ! this routine is only prepared for finite systems, and ispin = 1, 2
-  if(st%d%ispin > SPIN_POLARIZED .or. st%nik>st%d%ispin) then
+  if(st%d%ispin > SPIN_POLARIZED .or. st%d%nik>st%d%ispin) then
     message(1) = "OEP only works for finite systems and collinear spin!"
     call write_fatal(1)
   end if
@@ -169,7 +169,7 @@ contains
     allocate(res(m%np, 1), p(m%np, 1), x(m%np, 1), z(m%np, 1), tmp(m%np, 1))
     
     ! Orthogonalize starting psi to phi
-    r = X(states_dotp) (m, st%dim, psi, st%X(psi)(:, :, ist, is))
+    r = X(states_dotp) (m, st%d%dim, psi, st%X(psi)(:, :, ist, is))
     psi = psi - r*st%X(psi)(:, :, ist, is)
 
     ! Calculate starting gradient: |hpsi> = (H-eps_i)|psi> + b
@@ -177,20 +177,20 @@ contains
     res(:,1) = res(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
 
     ! orthogonalize direction to phi
-    r = X(states_dotp) (m, st%dim, res, st%X(psi)(:, :, ist, is))
+    r = X(states_dotp) (m, st%d%dim, res, st%X(psi)(:, :, ist, is))
     res = res - r*st%X(psi)(:, :, ist, is)
 
     p = -res
-    spold = X(states_nrm2)(m, st%dim, res)**2
+    spold = X(states_nrm2)(m, st%d%dim, res)**2
 
     iter_loop: do iter = 1, 50
       ! verify
       call X(Hpsi)(h, m, f_der, psi, tmp, 1)
       tmp(:,1) = tmp(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
-      if(X(states_nrm2)(m, st%dim, tmp).lt.1e-6_8) exit iter_loop
+      if(X(states_nrm2)(m, st%d%dim, tmp).lt.1e-6_8) exit iter_loop
 
       if(iter > 1) then
-        r = X(states_nrm2)(m, st%dim, res)**2
+        r = X(states_nrm2)(m, st%d%dim, res)**2
         ek = r/spold
         spold = r
 
@@ -199,10 +199,10 @@ contains
 
       call X(Hpsi)(h, m, f_der, p, z, 1)
       z(:,1) = z(:,1) - st%eigenval(ist, 1)*p(:,1)
-      r = X(states_dotp) (m, st%dim, z, st%X(psi)(:, :, ist, is))
+      r = X(states_dotp) (m, st%d%dim, z, st%X(psi)(:, :, ist, is))
       z = z - r*st%X(psi)(:, :, ist, is)
 
-      qk    = spold/X(states_dotp)(m, st%dim, p, z)
+      qk    = spold/X(states_dotp)(m, st%d%dim, p, z)
       psi   = psi + qk*p
       res   = res + qk*z
 

@@ -41,8 +41,8 @@ program make_st
   deallocate(sys%st%dpsi)
 #endif
 
-  allocate(sys%st%zpsi (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik), &
-       sys%st%eigenval(sys%st%nst, sys%st%nik))
+  allocate(sys%st%zpsi (sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
+       sys%st%eigenval(sys%st%nst, sys%st%d%nik))
   
   call X(restart_read)("tmp/restart_gs", sys%st, sys%m, err)
   if(err < 0) then
@@ -116,10 +116,10 @@ contains
     integer :: ik, ist
     FLOAT :: nrm2
     
-    do ik = 1, sys%st%nik
+    do ik = 1, sys%st%d%nik
       do ist = 1, sys%st%nst
-        nrm2 = zstates_nrm2 (sys%m, sys%st%dim, sys%st%zpsi(:,:, ist, ik))
-        sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik) = sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik)/ sqrt(nrm2)
+        nrm2 = zstates_nrm2 (sys%m, sys%st%d%dim, sys%st%zpsi(:,:, ist, ik))
+        sys%st%zpsi(1:sys%m%np, 1:sys%st%d%dim, ist, ik) = sys%st%zpsi(1:sys%m%np, 1:sys%st%d%dim, ist, ik)/ sqrt(nrm2)
       end do
     end do
   end subroutine wf_renormalize

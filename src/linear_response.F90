@@ -55,7 +55,7 @@ contains
     call loct_parse_int("MaximumIter", 200, lr%max_iter)
     
     ! allocate variables
-    allocate(lr%dl_rho(m%np, st%d%nspin), lr%X(dl_psi)(m%np, st%d%dim, st%nst, st%nspin))
+    allocate(lr%dl_rho(m%np, st%d%nspin), lr%X(dl_psi)(m%np, st%d%dim, st%nst, st%d%nspin))
     allocate(lr%dl_Vhar(m%np), lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin))
 
   end subroutine lr_init
@@ -125,7 +125,7 @@ contains
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
     type(lr_type),          intent(inout) :: lr
-    R_TYPE,                 intent(in)    :: Y(:,:)   ! Y(m%np, st%dim) and st%dim=1
+    R_TYPE,                 intent(in)    :: Y(:,:)   ! Y(m%np, st%d%dim) and st%d%dim=1
     integer,                intent(in)    :: ist, ik
     integer,                intent(in)    :: MAXITER
     FLOAT,                  intent(in)    :: tol
@@ -137,7 +137,7 @@ contains
     call push_sub('lr_solve_AXeY')
 
     
-    allocate(z(sys%m%np, sys%st%dim), g(sys%m%np, sys%st%dim), pp(sys%m%np,sys%st%dim), t(sys%m%np,sys%st%dim))
+    allocate(z(sys%m%np, sys%st%d%dim), g(sys%m%np, sys%st%d%dim), pp(sys%m%np,sys%st%d%dim), t(sys%m%np,sys%st%d%dim))
 
     pp(:,:) = lr%X(dl_psi)(:,:, ist, ik)
     call X(Hpsi)(h, sys%m, sys%f_der, pp, z, ik)
@@ -148,14 +148,14 @@ contains
       call X(Hpsi)(h, sys%m, sys%f_der, pp, t, ik)
       t(:,:) = t(:,:) - sys%st%eigenval(ist, ik)*pp(:,:)
 
-      sm1 = X(states_dotp) (sys%m, sys%st%dim, z, z)
-      sm2 = X(states_dotp) (sys%m, sys%st%dim, z, t)
+      sm1 = X(states_dotp) (sys%m, sys%st%d%dim, z, z)
+      sm2 = X(states_dotp) (sys%m, sys%st%d%dim, z, t)
       alpha = sm1/sm2
 
       lr%X(dl_psi)(:,:, ist, ik) = lr%X(dl_psi)(:,:, ist, ik) + alpha*pp(:,:)
       g(:,:) = z(:,:)
       g(:,:) = g(:,:) - alpha*t(:,:)
-      sm3 = X(states_dotp) (sys%m, sys%st%dim, g, g) 
+      sm3 = X(states_dotp) (sys%m, sys%st%d%dim, g, g) 
       beta = sm3/sm1
 
       if(sm3 <= tol) then 
@@ -215,7 +215,7 @@ contains
     
     do ist = 1, st%nst
       if(st%occ(ist, ik) > M_ZERO) then
-        scalp = X(states_dotp)(m, st%dim, v, st%X(psi)(:,:, ist, ik))
+        scalp = X(states_dotp)(m, st%d%dim, v, st%X(psi)(:,:, ist, ik))
         v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
       end if
     end do

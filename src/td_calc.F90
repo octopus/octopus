@@ -64,7 +64,7 @@
     x = M_ZERO
     allocate(hzpsi(mesh%np, st%d%dim), hhzpsi(3, mesh%np), conj(mesh%np))
 
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         
         call zhpsi(h, mesh, f_der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)

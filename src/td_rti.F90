@@ -135,7 +135,7 @@ contains
     self_consistent = .false.
     if(t<3*dt .and. (.not.h%ip_app)) then
        self_consistent = .true.
-       allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
+       allocate(zpsi1(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
        zpsi1 = st%zpsi
     endif
 
@@ -194,21 +194,21 @@ contains
       integer :: ik, ist
       call push_sub('td_rti0')
       
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
          do ist = 1, st%nst
             call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
       call zcalcdens(st, m%np, st%rho, .true.)
       call zh_calc_vhxc(h, m, f_der, st)
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
          do ist = 1, st%nst
             if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
             call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
             if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
          enddo
       enddo
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
          do ist = 1, st%nst
             call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
          enddo
@@ -234,7 +234,7 @@ contains
 
       do k = 1, 5
          call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
-         do ik = 1, st%nik
+         do ik = 1, st%d%nik
             do ist = 1, st%nst
                call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
                if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
@@ -256,14 +256,14 @@ contains
       call push_sub('td_rti2')
       
       if(.not.h%ip_app) then
-        allocate(zpsi1(m%np, st%dim, st%st_start:st%st_end, st%nik))
+        allocate(zpsi1(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
         zpsi1 = st%zpsi ! store zpsi
         
         allocate(vhxc_t1(m%np, st%d%nspin), vhxc_t2(m%np, st%d%nspin))
         vhxc_t1 = h%vhxc
         
         ! propagate dt with H(t-dt)
-        do ik = 1, st%nik
+        do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
           end do
@@ -280,7 +280,7 @@ contains
       end if
       
       ! propagate dt/2 with H(t-dt)
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
@@ -288,7 +288,7 @@ contains
       
       ! propagate dt/2 with H(t)
       if(.not.h%ip_app) h%vhxc = vhxc_t2
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
@@ -303,14 +303,14 @@ contains
       integer ik, ist
       call push_sub('td_rti3')
       
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
            call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
       h%vhxc = tr%v_old(:, :, 0)
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
@@ -327,7 +327,7 @@ contains
         call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
       
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
         end do
@@ -377,7 +377,7 @@ contains
       tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
       tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
-      do k = 1, st%nik
+      do k = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
                          vmagnus = tr%vmagnus)

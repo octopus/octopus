@@ -65,12 +65,6 @@ public :: states_type, &
 type states_type
 
   type(states_dim_type), pointer :: d
-
-  ! This is (by now!) replicated from the states_dim_type
-  integer :: dim
-  integer :: nik           ! Number of irreducible subspaces
-  integer :: nspin         ! dimension of rho (1, 2 or 4)
-  
   integer :: nst           ! Number of states in each irreducible subspace
 
   ! pointers to the wavefunctions
@@ -261,11 +255,6 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   st%st_start = 1; st%st_end = st%nst
   nullify(st%dpsi, st%zpsi)
 
-  ! Duplicate this
-  st%dim   = st%d%dim
-  st%nik   = st%d%nik
-  st%nspin = st%d%nspin
-
   call pop_sub()
 end subroutine states_init
 
@@ -275,21 +264,25 @@ subroutine states_copy(stout, stin)
 
   call states_null(stout)
 
-  stout%dim           = stin%dim
+  stout%d%dim = stin%d%dim
+  stout%d%nik = stin%d%nik
+  stout%d%nik_axis(:) = stout%d%nik_axis(:)
+  stout%d%ispin = stin%d%ispin
+  stout%d%nspin = stin%d%nspin
+  stout%d%spin_channels = stin%d%spin_channels
+  stout%d%cdft = stin%d%cdft
   stout%nst           = stin%nst
-  stout%nik           = stin%nik
-  stout%nspin         = stin%nspin
   stout%qtot = stin%qtot
   stout%el_temp = stin%el_temp
   stout%ef = stin%ef
   stout%st_start = stin%st_start
   stout%st_end = stin%st_end
   if(associated(stin%dpsi)) then
-    allocate(stout%dpsi(size(stin%dpsi, 1), stin%dim, stin%st_start:stin%st_end, stin%nik))
+    allocate(stout%dpsi(size(stin%dpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik))
     stout%dpsi = stin%dpsi
   endif
   if(associated(stin%zpsi)) then
-    allocate(stout%zpsi(size(stin%zpsi, 1), stin%dim, stin%st_start:stin%st_end, stin%nik))
+    allocate(stout%zpsi(size(stin%zpsi, 1), stin%d%dim, stin%st_start:stin%st_end, stin%d%nik))
     stout%zpsi = stin%zpsi
   endif
   if(associated(stin%rho)) then
@@ -305,7 +298,7 @@ subroutine states_copy(stout, stin)
     stout%rho_core = stin%rho_core
   endif
   if(associated(stin%eigenval)) then
-    allocate(stout%eigenval(stin%st_start:stin%st_end, stin%nik))
+    allocate(stout%eigenval(stin%st_start:stin%st_end, stin%d%nik))
     stout%eigenval = stin%eigenval
   endif
   stout%fixed_occ = stin%fixed_occ
@@ -317,13 +310,6 @@ subroutine states_copy(stout, stin)
     allocate(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)))
     stout%mag = stin%mag
   endif
-  stout%d%dim = stin%d%dim
-  stout%d%nik = stin%d%nik
-  stout%d%nik_axis(:) = stout%d%nik_axis(:)
-  stout%d%ispin = stin%d%ispin
-  stout%d%nspin = stin%d%nspin
-  stout%d%spin_channels = stin%d%spin_channels
-  stout%d%cdft = stin%d%cdft
   if(associated(stin%d%kpoints)) then
     allocate(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)))
     stout%d%kpoints = stin%d%kpoints
@@ -392,14 +378,14 @@ subroutine states_generate_random(st, m, ist_start_, ist_end_)
   ist_end = st%nst
   if(present(ist_end_)) ist_end = ist_end_
 
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ist = ist_start, ist_end
-      do id = 1, st%dim
+      do id = 1, st%d%dim
         call X(mf_random)(m, st%X(psi)(:, id, ist, ik))
       end do
       st%eigenval(ist, ik) = M_ZERO
     end do
-    call X(states_gram_schmidt)(st%nst, m, st%dim, st%X(psi)(:,:,:,ik))
+    call X(states_gram_schmidt)(st%nst, m, st%d%dim, st%X(psi)(:,:,:,ik))
   end do
 
   call pop_sub()
@@ -421,7 +407,7 @@ subroutine states_fermi(st, m)
   if(st%fixed_occ) then ! nothing to do
      ! Calculate magnetizations...
      if(st%d%ispin == SPINORS) then
-       do ik = 1, st%nik
+       do ik = 1, st%d%nik
          do ie = 1, st%nst
             st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
             st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
@@ -448,10 +434,10 @@ subroutine states_fermi(st, m)
   conv = .true.
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
-     st%occ = M_TWO/st%d%spin_channels!st%nspin
+     st%occ = M_TWO/st%d%spin_channels!st%d%nspin
      ! Calculate magnetizations...
      if(st%d%ispin == SPINORS) then
-       do ik = 1, st%nik
+       do ik = 1, st%d%nik
          do ie = 1, st%nst
             st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
             st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
@@ -478,9 +464,9 @@ subroutine states_fermi(st, m)
     st%ef = M_HALF*(emin + emax)
     sumq  = M_ZERO
 
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do ie =1, st%nst
-        sumq = sumq + st%d%kweights(ik)/st%d%spin_channels * & !st%nspin * &
+        sumq = sumq + st%d%kweights(ik)/st%d%spin_channels * & !st%d%nspin * &
              stepf((st%eigenval(ie, ik) - st%ef)/t)
       end do
     end do
@@ -498,15 +484,15 @@ subroutine states_fermi(st, m)
     call write_fatal(1)
   end if
 
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ie = 1, st%nst
-      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%d%spin_channels!st%nspin
+      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%d%spin_channels!st%d%nspin
     end do
   end do
 
   ! Calculate magnetizations...
   if(st%d%ispin == SPINORS) then
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
        do ie = 1, st%nst
           st%mag(ie, ik, 1) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
           st%mag(ie, ik, 2) = X(mf_nrm2) (m, st%X(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
@@ -523,7 +509,7 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   FLOAT,             intent(in)  :: pol(:)          ! pol(3)
   FLOAT,             intent(out) :: dipole(:)       ! dipole(st%d%nspin)
   integer, optional, intent(in)  :: lmax
-  FLOAT,   optional, intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%nspin)
+  FLOAT,   optional, intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%d%nspin)
 
   integer :: i, is, l, lm, add_lm
   FLOAT :: x(3), r, ylm, mult
@@ -581,7 +567,7 @@ end function states_eigenvalues_sum
 subroutine states_write_eigenvalues(iunit, nst, st, error)
   integer,           intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st
-  FLOAT,             intent(IN), optional :: error(nst, st%nik)
+  FLOAT,             intent(IN), optional :: error(nst, st%d%nik)
 
   integer ik, j, ns, is
   FLOAT :: o, oplus, ominus
@@ -595,7 +581,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   call write_info(1, iunit)
   if (conf%periodic_dim>0) then 
   end if
-  if (st%nik > ns) then
+  if (st%d%nik > ns) then
     message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
     call write_info(1, iunit)
   end if
@@ -604,8 +590,8 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   if(mpiv%node == 0) then
 #endif
     
-    do ik = 1, st%nik, ns
-      if(st%nik > ns) then
+    do ik = 1, st%d%nik, ns
+      if(st%d%nik > ns) then
         write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
            st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
            st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
@@ -687,7 +673,7 @@ subroutine states_write_bands(iunit, nst, st)
 #endif
 
     do j = 1, nst
-      do ik = 1, st%nik, ns
+      do ik = 1, st%d%nik, ns
         write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
            st%d%kpoints(:,ik)*units_out%length%factor,            &
            (st%eigenval(j, ik))/units_out%energy%factor
@@ -727,17 +713,17 @@ end function states_spin_channel
 subroutine calc_projection(u_st, st, m, p)
   type(states_type), intent(IN)  :: u_st, st
   type(mesh_type),   intent(IN)  :: m
-  CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%nik)
+  CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%d%nik)
 
   integer :: uist, ist, ik
   CMPLX, allocatable :: tmp(:,:)
 
-  allocate(tmp(m%np, st%dim))
-  do ik = 1, st%nik
+  allocate(tmp(m%np, st%d%dim))
+  do ik = 1, st%d%nik
      do ist = st%st_start, st%st_end
         do uist = 1, u_st%nst
           tmp = cmplx(u_st%X(psi)(:, :, uist, ik), kind=PRECISION)
-          p(uist, ist, ik) = zstates_dotp(m, st%dim, tmp, st%zpsi(:, :, ist, ik) )
+          p(uist, ist, ik) = zstates_dotp(m, st%d%dim, tmp, st%zpsi(:, :, ist, ik) )
         end do
      end do
   end do
@@ -770,7 +756,7 @@ subroutine calc_current_paramagnetic(m, f_der, st, jp)
   jp = M_ZERO
   allocate(grad(m%np, conf%dim))
   
-  do ik = 1, st%nik, sp
+  do ik = 1, st%d%nik, sp
     do p  = st%st_start, st%st_end
       call zf_gradient(f_der, st%zpsi(:, 1, p, ik), grad)
       

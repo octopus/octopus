@@ -29,7 +29,7 @@ subroutine X(hamiltonian_eigenval)(h, m, f_der, st)
   call push_sub('hamiltonian_eigenval')
   allocate(Hpsi(m%np, st%d%dim))
 
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
       call X(hpsi) (h, m, f_der, st%X(psi)(:, :, ist, ik), hpsi, ik)
       e = X(states_dotp)(m, st%d%dim, st%X(psi)(1:, :, ist, ik), Hpsi)

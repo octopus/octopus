@@ -304,7 +304,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
      call atom_write_xyz("static", "geometry", geo)
   call hamiltonian_output(h, m, "static", outp)
 
-  if (conf%periodic_dim>0.and.st%nik>st%d%nspin) then
+  if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
     call states_write_bands(iunit, st%nst, st)

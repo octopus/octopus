@@ -28,8 +28,8 @@ subroutine PES_mask_init(v, m, st)
 
   ! setup arrays to be used
   allocate(&
-       v%k(m%l(1), m%l(2), m%l(3), st%dim, st%st_start:st%st_end, st%nik), &
-       v%r(m%l(1), m%l(2), m%l(3),         st%st_start:st%st_end, st%nik))
+       v%k(m%l(1), m%l(2), m%l(3), st%d%dim, st%st_start:st%st_end, st%d%nik), &
+       v%r(m%l(1), m%l(2), m%l(3),           st%st_start:st%st_end, st%d%nik))
 
   v%k = M_z0
   v%r = M_ZERO
@@ -77,9 +77,9 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   allocate( &
        wf1(m%l(1), m%l(2), m%l(3)), &
        wf2(m%l(1), m%l(2), m%l(3)))
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
-      do idim = 1, st%dim
+      do idim = 1, st%d%dim
 
         wf1 = M_z0
 
@@ -122,8 +122,8 @@ subroutine PES_mask_output(v, m, st, file)
   FLOAT, parameter :: step = CNST(0.005)
 
   allocate( &
-       spis (n,    st%st_start:st%st_end, st%nik), &
-       arpis(ar_n, st%st_start:st%st_end, st%nik))
+       spis (n,    st%st_start:st%st_end, st%d%nik), &
+       arpis(ar_n, st%st_start:st%st_end, st%d%nik))
   allocate(npoints(n), ar_npoints(ar_n))
   spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
@@ -141,7 +141,7 @@ subroutine PES_mask_output(v, m, st, file)
           vec = sum((temp(:) * ixx(:))**2) / M_TWO
           ii = nint(vec / step) + 1
           if(ii <= n) then
-            do ik = 1, st%nik
+            do ik = 1, st%d%nik
               do p = st%st_start, st%st_end
                 spis(ii, p, ik) = spis(ii, p, ik) + st%occ(p, ik) * &
                      sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
@@ -155,7 +155,7 @@ subroutine PES_mask_output(v, m, st, file)
             vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
             ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
             if(ii <= ar_n) then ! should always be true
-              do ik = 1, st%nik
+              do ik = 1, st%d%nik
                 do p = st%st_start, st%st_end
                   arpis(ii, p, ik) = arpis(ii, p, ik) + &
                        st%occ(p, ik)*sum(abs(v%k(ix, iy, iz, :, p, ik))**2)
@@ -171,7 +171,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   ! first output power spectra
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
       call io_assign(iunit)
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_power.', ik, '.',p
@@ -195,7 +195,7 @@ subroutine PES_mask_output(v, m, st, file)
   call io_close(iunit)
 
   ! now output ar spectra
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
       call io_assign(iunit)
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar.', ik, '.', p
@@ -235,7 +235,7 @@ subroutine PES_mask_output(v, m, st, file)
           vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
           ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
           if(ii <= ar_n) then ! should always be true
-            do ik = 1, st%nik
+            do ik = 1, st%d%nik
               do p = st%st_start, st%st_end
                 arpis(ii, p, ik) = arpis(ii, p, ik) + st%occ(p, ik)*v%r(ix, iy, iz, p, ik)
                 ar_npoints(ii) = ar_npoints(ii) + 1
@@ -249,7 +249,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   ! now output real ar spectra
-  do ik = 1, st%nik
+  do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
       call io_assign(iunit)
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar_r.', ik, '.', p

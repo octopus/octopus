@@ -211,7 +211,7 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
   end select
 
   eigens%matvec = maxiter
-  if(present(conv).and. eigens%converged == st%nst*st%nik) conv = .true.
+  if(present(conv).and. eigens%converged == st%nst*st%d%nik) conv = .true.
 
   call pop_sub()
 end subroutine eigen_solver_run
@@ -228,16 +228,16 @@ subroutine eigen_diagon_subspace(m, f_der, st, h)
   integer :: ik, i, j
 
   allocate(h_subspace(st%nst, st%nst), vec(st%nst, st%nst))
-  allocate(f(m%np, st%dim, st%nst))
+  allocate(f(m%np, st%d%dim, st%nst))
 
-  ik_loop: do ik = 1, st%nik
+  ik_loop: do ik = 1, st%d%nik
     f = st%X(psi)(:,:,:, ik)
 
     eigenfunction_loop : do i = 1, st%nst
       call X(Hpsi)(h, m, f_der, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
       h_subspace(i, i) = st%eigenval(i, ik)
       do j = i, st%nst
-        h_subspace(i, j) = X(states_dotp) (m, st%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
+        h_subspace(i, j) = X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
         h_subspace(j, i) = R_CONJ(h_subspace(i, j))
       end do
     end do eigenfunction_loop
@@ -252,7 +252,7 @@ subroutine eigen_diagon_subspace(m, f_der, st, h)
       end do
       
       ! renormalize
-      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(m, st%dim, st%X(psi)(:,:, i, ik))
+      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(m, st%d%dim, st%X(psi)(:,:, i, ik))
     end do
   end do ik_loop
 

@@ -85,7 +85,7 @@ contains
       call push_sub('static_pol_lr_run')
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+      allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     end subroutine init_
 

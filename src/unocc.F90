@@ -107,7 +107,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call states_write_eigenvalues(iunit, sys%st%nst, sys%st, eigens%diff)
   call io_close(iunit)
   
-  if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%d%nspin) then
+  if (conf%periodic_dim>0 .and. sys%st%d%nik>sys%st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
     call states_write_bands(iunit, sys%st%nst, sys%st)
@@ -144,8 +144,8 @@ contains
     sys%st%st_end = sys%st%nst
 
     deallocate(sys%st%eigenval, sys%st%occ)
-    allocate(sys%st%X(psi) (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
-    allocate(sys%st%eigenval(sys%st%nst, sys%st%nik), sys%st%occ(sys%st%nst, sys%st%nik))
+    allocate(sys%st%X(psi) (sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
     if(sys%st%d%ispin == SPINORS) then
       allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
       sys%st%mag = M_ZERO

@@ -176,9 +176,9 @@ integer function td_run(sys, h, fromScratch) result(ierr)
 
     ! mask function?
     if(h%ab == MASK_ABSORBING) then
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          do idim = 1, st%dim
+          do idim = 1, st%d%dim
             st%zpsi(1:m%np, idim, ist, ik) = st%zpsi(1:m%np, idim, ist, ik) * &
                  (M_ONE - h%ab_pot(1:m%np))
           end do
@@ -278,7 +278,7 @@ contains
 #endif
 
     ! allocate memory
-    allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
+    allocate(st%zpsi(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
     !
     call td_init(td, m, st, h, sys%outp)
@@ -497,7 +497,7 @@ contains
           c(2) = exp(-kick)
           select case (st%d%ispin)
           case (SPIN_POLARIZED)
-            do ik = 1, st%nik, 2
+            do ik = 1, st%d%nik, 2
               st%zpsi(i,:,:,ik)   = c(1) * st%zpsi(i,:,:,ik)
               st%zpsi(i,:,:,ik+1) = c(2) * st%zpsi(i,:,:,ik+1)
             end do
@@ -510,7 +510,7 @@ contains
           c(1) = exp(M_TWO*kick)
           select case (st%d%ispin)
           case (SPIN_POLARIZED)
-            do ik = 1, st%nik, 2
+            do ik = 1, st%d%nik, 2
               st%zpsi(i,:,:,ik) = c(1) * st%zpsi(i,:,:,ik)
              end do
           case (SPINORS)

@@ -25,7 +25,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
   FLOAT, intent(in)               :: tol
   integer, intent(inout)          :: niter
   integer, intent(out)            :: errorflag, converged
-  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
+  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%d%nik)
   logical, intent(in), optional   :: reorder
 
   integer :: unit, i
@@ -35,9 +35,9 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
 
   call push_sub('eigen_solver_cg3')
 
-  nrow = (m%np+1)*st%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
+  nrow = (m%np+1)*st%d%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
 
-!!$  allocate(evec(sys%m%np, st%dim, mev))
+!!$  allocate(evec(sys%m%np, st%d%dim, mev))
 
   call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = CNST(1.0e-5), trestart = 3)
 
@@ -47,7 +47,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
   endif
 
   call trl_set_iguess(info, nec = 0, iguess = 1)
-  do ik_trlan = 1, st%nik
+  do ik_trlan = 1, st%d%nik
      st%X(psi)(:, :, ik_trlan, 1) = R_TOTYPE(M_ZERO)
      do i = 1, st%nst
         st%X(psi)(:, :, 1, ik_trlan) = st%X(psi)(:, :, 1, ik_trlan) + &
@@ -59,7 +59,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
   m_trlan  => m
   st_trlan => st
 
-  do ik_trlan = 1, st%nik
+  do ik_trlan = 1, st%d%nik
 !!$     do i = 1, st%nst
 !!$        evec(:, :, i) = st%X(psi)(:, :, i, ik_trlan)
 !!$     enddo

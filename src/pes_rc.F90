@@ -54,7 +54,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   end do
 
   call loct_parse_block_end(blk)
-  allocate(v%wf(v%npoints, st%dim, st%st_start:st%st_end, st%nik, save_iter))
+  allocate(v%wf(v%npoints, st%d%dim, st%st_start:st%st_end, st%d%nik, save_iter))
 end subroutine PES_rc_init
 
 subroutine PES_rc_end(v)
@@ -74,9 +74,9 @@ subroutine PES_rc_doit(v, st, ii)
   integer :: ix, ik, p, idim
 
   do ix = 1, v%npoints
-    do ik = 1, st%nik
+    do ik = 1, st%d%nik
       do p = st%st_start, st%st_end
-        do idim = 1, st%dim
+        do idim = 1, st%d%dim
           v%wf(ix, idim, p, ik, ii) = st%occ(p, ik)*st%zpsi(v%points(ix), idim, p, ik)
         end do
       end do
@@ -100,9 +100,9 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
       write(iunit, '(a7,f17.6,3a)') &
            '# dt = ', dt/units_inp%time%factor, ' [', trim(units_inp%time%abbrev), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do p = st%st_start, st%st_end
-          do idim = 1, st%dim
+          do idim = 1, st%d%dim
             write(iunit, '(3x,a8,i3,a7,i3,a8,i3,3x)', advance='no') &
                  "ik = ", ik, " ist = ", p, " idim = ", idim
           end do
@@ -119,9 +119,9 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
     do j = 1, save_iter
       jj = iter - save_iter + j
       write(iunit, '(e17.10)', advance='no') jj*dt/units_inp%time%factor
-      do ik = 1, st%nik
+      do ik = 1, st%d%nik
         do p = st%st_start, st%st_end
-          do idim = 1, st%dim
+          do idim = 1, st%d%dim
             write(iunit, '(1x,a1,e17.10,a1,e17.10,a1)', advance='no') &
                  '(', real(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, &
                  ',', aimag(v%wf(ix, idim, p, ik, j))*units_out%length%factor**1.5, ')'
