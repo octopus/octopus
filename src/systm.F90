@@ -15,7 +15,7 @@ type system_type
   integer :: ncatoms  ! For QM+MM calculations
   type(atom_classical_type), pointer :: catom(:)
 
-  real(r8) :: eii ! the ion-ion energy
+  real(r8) :: eii, kinetic_energy ! the ion-ion energy
 
   integer :: nspecies
   type(specie_type), pointer :: specie(:)
@@ -94,6 +94,22 @@ subroutine ion_ion_energy(sys)
 
   call pop_sub()
 end subroutine ion_ion_energy
+
+subroutine kinetic_energy(sys)
+  type(system_type), intent(inout) :: sys
+
+  integer :: i
+
+  sub_name = 'kinetic_energy'; call push_sub()  
+
+  sys%kinetic_energy = 0.0_r8
+  do i = 1, sys%natoms
+     sys%kinetic_energy = sys%kinetic_energy + 0.5_r8*sys%atom(i)%spec%weight* &
+         (sys%atom(i)%v(1)**2 + sys%atom(i)%v(2)**2 + sys%atom(i)%v(3)**2)
+  enddo
+
+  call pop_sub()
+end subroutine kinetic_energy
 
 subroutine geom_write_xyz(sys)
   type(system_type), intent(IN) :: sys

@@ -58,6 +58,10 @@ type td_type
   character(len=100) :: filename ! name of the continuation file
 end type td_type
 
+  integer, parameter :: STATIC_IONS = 0,    &
+                        NORMAL_VERLET = 3,  &
+                        VELOCITY_VERLET = 4
+
 contains
 
 subroutine td_run(td, u_st, sys, h)
@@ -67,7 +71,8 @@ subroutine td_run(td, u_st, sys, h)
   type(hamiltonian_type), intent(inout) :: h
 
   integer :: i, ii, j, idim, ist, ik
-  real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:)
+  real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:), &
+                           x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:)
   complex(r4), allocatable :: projections(:,:,:,:)
   character(len=100) :: proj_filename
 
@@ -78,12 +83,11 @@ subroutine td_run(td, u_st, sys, h)
   
   allocate(dipole(sys%st%nspin, td%save_iter))
   allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
-!!!!(Cas)
   if(td%move_ions > 0) then
      allocate(x(td%save_iter, sys%natoms, 3), v(td%save_iter, sys%natoms, 3), &
               f(td%save_iter, sys%natoms, 3))
+     allocate(ke(td%save_iter), pe(td%save_iter))
   endif
-!!!!(EndCas)
 
   ! occupational analysis stuff
   if(td%occ_analysis) then
@@ -92,9 +96,26 @@ subroutine td_run(td, u_st, sys, h)
     allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, td%save_iter))
   end if
 
-  ! Calculate initial forces
-  if(td%move_ions > 0) call zforces(h, sys, td%iter*td%dt, &
-                                    td%no_lasers, td%lasers, reduce=.true.)
+  ! Calculate initial forces and kinetic energy
+  if(td%move_ions > 0) then 
+    call zforces(h, sys, td%iter*td%dt, td%no_lasers, td%lasers, reduce=.true.)
+    call kinetic_energy(sys)
+    select case(td%move_ions)
+      case(NORMAL_VERLET)
+        allocate(x1(sys%natoms, 3), x2(sys%natoms, 3))
+        do j = 1, sys%natoms
+           if(sys%atom(j)%move) then
+             x1(j, :) = sys%atom(j)%x(:) - td%dt*sys%atom(j)%v(:) + &
+                        0.5_r8 * td%dt**2/sys%atom(j)%spec%weight * &
+                        sys%atom(j)%f(:)
+           else
+             x1(j, :) = sys%atom(j)%x(:)
+           endif
+        enddo
+      case(VELOCITY_VERLET)
+        allocate(f1(sys%natoms, 3))
+    end select
+  endif
 
   if(td%iter == 0) call td_run_zero_iter(sys%m)
   td%iter = td%iter + 1
@@ -103,15 +124,34 @@ subroutine td_run(td, u_st, sys, h)
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
 
-    if( td%move_ions > 0 ) then 
-
-      call td_move_ions(t = i*td%dt)
-
+    ! Move the ions.
+    if( td%move_ions > 0 ) then
+      select case(td%move_ions)
+        case(NORMAL_VERLET)
+          x2 = x1
+          do j = 1, sys%natoms
+             if(sys%atom(j)%move) then
+                x1(j, :) = sys%atom(j)%x(:)
+                sys%atom(j)%x(:) = 2._r8*x1(j, :) - x2(j, :) + &
+                   td%dt**2/sys%atom(j)%spec%weight * sys%atom(j)%f(:)
+                sys%atom(j)%v(:) = (sys%atom(j)%x(:) - x2(j, :)) / (2._r8*td%dt)
+             endif
+          enddo
+        case(VELOCITY_VERLET)
+          do j=1, sys%natoms
+             if(sys%atom(j)%move) then
+                sys%atom(j)%x(:) = sys%atom(j)%x(:) +  td%dt*sys%atom(j)%v(:) + &
+                   0.5_r8*td%dt**2/sys%atom(j)%spec%weight * sys%atom(j)%f(:)
+             endif
+          enddo
+      end select
       do j=1, sys%natoms
          x(ii, j, 1:3) = sys%atom(j)%x(1:3)
          v(ii, j, 1:3) = sys%atom(j)%v(1:3)
          f(ii, j, 1:3) = sys%atom(j)%f(1:3)
       enddo
+      call generate_external_pot(h, sys)
+      call ion_ion_energy(sys)
     endif
 
     ! time iterate wavefunctions
@@ -124,6 +164,28 @@ subroutine td_run(td, u_st, sys, h)
     call zhamiltonian_setup(h, sys)
     call zhamiltonian_eigenval (h, sys, 1, sys%st%nst) ! eigenvalues
     call hamiltonian_energy(h, sys, -1, reduce=.true.)
+
+    ! Recalculate forces, update velocities...
+    if(td%move_ions > 0) then
+      pe(ii) = h%etot
+      if(td%move_ions == VELOCITY_VERLET) then
+        do j = 1, sys%natoms
+           f1(j, :) = sys%atom(j)%f(:)
+        enddo
+      endif
+      call zforces(h, sys, td%iter*td%dt, td%no_lasers, td%lasers, reduce=.true.)
+      if(td%move_ions == VELOCITY_VERLET) then
+        do j = 1, sys%natoms
+           if(sys%atom(j)%move) then
+              sys%atom(j)%v(:) = sys%atom(j)%v(:) + &
+                                 td%dt/(2._r8*sys%atom(j)%spec%weight) * &
+                                 (f1(j, :) + sys%atom(j)%f(:))             
+           endif
+        enddo
+      endif
+      call kinetic_energy(sys)
+      ke(ii) = sys%kinetic_energy
+    endif
 
     ! measuring
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
@@ -203,6 +265,7 @@ contains
     open(iunit, status='unknown', file=trim(sys%sysname)//'.mult')
     call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
     call io_close(iunit)
+    deallocate(dipole, multipole)
 
     ! output laser
     if(td%output_laser) then
@@ -221,7 +284,6 @@ contains
     end if
 
     ! output positions, velocities, forces...
-!!!!(Cas)
     if(td%move_ions > 0) then
        call io_assign(iunit)
        open(iunit, file=trim(sys%sysname)//'.nbo')
@@ -231,20 +293,12 @@ contains
           vel(j, 1:3) = sys%atom(j)%v(1:3)
           for(j, 1:3) = sys%atom(j)%f(1:3)
        enddo
-       call td_write_nbo(iunit, 0, 0._r8, pos, vel, for, header = .true.)
+       call td_write_nbo(iunit, 0, 0._r8, sys%kinetic_energy, h%etot, pos, vel, for, header = .true.)
        call io_close(iunit)
+       deallocate(pos, vel, for)
     endif
-!!!!(EndCas)
     
   end subroutine td_run_zero_iter
-
-  subroutine td_move_ions(t)
-    real(r8), intent(in) :: t
-   
-    ! calculates the forces
-    !call zforces(h, sys, t, td%no_lasers, td%lasers, reduce=.true.)
-
-  end subroutine td_move_ions
 
   subroutine td_write_data()
     integer :: iunit, j, jj, ist, ik, uist
@@ -265,7 +319,7 @@ contains
     open(iunit, position='append', file=trim(sys%sysname)//".nbo")
     do j = 1, td%save_iter
        jj = i -td%save_iter + j
-       call td_write_nbo(iunit, jj, jj*td%dt, x(j, :, :), v(j, :, :), f(j, :, :), & 
+       call td_write_nbo(iunit, jj, jj*td%dt, ke(j), pe(j), x(j, :, :), v(j, :, :), f(j, :, :), & 
                          header=.false.)
     enddo
     call io_close(iunit)
@@ -344,11 +398,11 @@ contains
     
   end subroutine td_write_laser
 
-  subroutine td_write_nbo(iunit, iter, t, x, v, f, header)
+  subroutine td_write_nbo(iunit, iter, t, ke, pe, x, v, f, header)
     integer, intent(in)  :: iunit, iter
     real(r8), intent(in) :: t
     logical, intent(in)  :: header
-    real(r8)             :: x(:, :), v(:, :), f(:, :)
+    real(r8)             :: ke, pe, x(:, :), v(:, :), f(:, :)
 
     integer :: i, j
     character(len=50) :: aux
@@ -378,11 +432,16 @@ contains
       write(iunit,'(1x)', advance='yes')
 
       ! second line: units
+      write(iunit,'(7a)') '#       ', 'Energy in ', trim(units_out%energy%abbrev),        &
+                                      ', Positions in ', trim(units_out%length%abbrev),   &
+                                      ', Velocities in ', trim(units_out%velocity%abbrev),&
+                                      ', Forces in', trim(units_out%force%abbrev)
     endif
     write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
     write(iunit, '(3es20.12)', advance='no') &
-        h%etot/units_out%energy%factor, h%etot/units_out%energy%factor, &
-        h%etot/units_out%energy%factor
+        ke/units_out%energy%factor, &
+        pe/units_out%energy%factor, &
+        (ke + pe)/units_out%energy%factor
     do i=1, sys%natoms
        write(iunit, '(3es20.12)', advance='no') &
          x(i, 1:3)/units_out%length%factor

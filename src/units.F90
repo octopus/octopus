@@ -35,6 +35,7 @@ type unit_system_type
   type(unit_type) :: time
   type(unit_type) :: velocity
   type(unit_type) :: mass
+  type(unit_type) :: force
 end type unit_system_type
 
 type(unit_system_type) :: units_inp, units_out
@@ -102,13 +103,17 @@ subroutine units_atomic(u)
   u%time%name   = "hbar/Hartree"
   u%time%factor = 1._r8/u%energy%factor
 
-  u%velocity%abbrev = "b H (2 pi/h)"
+  u%velocity%abbrev = "bH(2pi/h)"
   u%velocity%name   = "bohr times Hartree over h bar"
   u%velocity%factor = 1._r8
 
   u%mass%abbrev   = "u"
   u%mass%name     = "1/12 of the mass of C^12"
   u%mass%factor   = 1._r8/5.485799110e-4_r8
+
+  u%force%abbrev  = "H/b"
+  u%force%name    = "Hartree/bohr"
+  u%force%factor  = 1.0_r8
 end subroutine units_atomic
 
 subroutine units_eV_Ang(u)
@@ -126,13 +131,17 @@ subroutine units_eV_Ang(u)
   u%time%name   = "hbar/electron volt"
   u%time%factor = 1._r8/u%energy%factor
 
-  u%velocity%abbrev = "A eV (2 pi/h)"
+  u%velocity%abbrev = "AeV(2pi/h)"
   u%velocity%name   = "Angstrom times electron volts over h bar"
   u%velocity%factor = u%length%factor*u%energy%factor
 
   u%mass%abbrev   = "u"
   u%mass%name     = "1/12 of the mass of C^12"
   u%mass%factor   = 1._r8/5.485799110e-4_r8
+
+  u%force%abbrev  = "eV/A"
+  u%force%name    = "electron volt/amstrong"
+  u%force%factor  = u%length%factor/u%energy%factor
 end subroutine units_eV_Ang
 
 end module units
