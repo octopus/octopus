@@ -75,8 +75,8 @@ subroutine mix_init(smix, m, st)
   end if
 
   if(smix%type_of_mixing == BROYDEN) then
-    allocate(smix%df(m%np, st%nspin, smix%broyden_number))
-    allocate(smix%dv(m%np, st%nspin, smix%broyden_number))
+    allocate(smix%df(m%np, st%nspin, smix%broyden_number + 1))
+    allocate(smix%dv(m%np, st%nspin, smix%broyden_number + 1))
     smix%df = 0._r8
     smix%dv = 0._r8
   end if
@@ -126,7 +126,7 @@ subroutine mix_dens(smix, iter, st, m, dist)
     
   select case(smix%type_of_mixing)
   case(LINEAR)
-    call mix_linear(smix, m%np, st%ispin, st%rho, rhoout)
+    call mix_linear(smix, m%np, st%nspin, st%rho, rhoout)
 !!$  case(ANDERSON)
 !!$      call anderson_mix(rho,rhoout, iter, errorflag)
   case(BROYDEN)
@@ -134,19 +134,19 @@ subroutine mix_dens(smix, iter, st, m, dist)
   end select
     
   deallocate(rhoout)
-    
+
   call pop_sub()
 end subroutine mix_dens
 
 ! Performs the linear mixing...
-subroutine mix_linear(smix, np, ispin, rho, rhoout)
+subroutine mix_linear(smix, np, nspin, rho, rhoout)
   type(mix_type), intent(IN) :: smix
-  integer, intent(in) :: np, ispin
-  real(r8), intent(inout) :: rho(np, ispin)
-  real(r8), intent(IN) :: rhoout(np, ispin)
+  integer, intent(in) :: np, nspin
+  real(r8), intent(inout) :: rho(np, nspin)
+  real(r8), intent(IN) :: rhoout(np, nspin)
 
-  call dscal(np*ispin, 1.0_r8-smix%alpha, rho, 1)
-  call daxpy(np*ispin, smix%alpha, rhoout, 1, rho, 1)
+  call dscal(np*nspin, 1.0_r8 - smix%alpha, rho, 1)
+  call daxpy(np*nspin, smix%alpha, rhoout, 1, rho, 1)
 
   return
 end subroutine mix_linear
@@ -198,14 +198,15 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     
   ! save values for next iteration
   i = mod(iter - 1, smix%broyden_number) + 1
-  smix%df(:,:, i) = vout
-  smix%dv(:,:, i) = vin
+  smix%df(:,:, smix%broyden_number + 1) = vout
+  smix%dv(:,:, smix%broyden_number + 1) = vin
 
   is_loop: do is = 1, nspin
     beta = 0._r8
     do i = 1, iter_used
       do j = i + 1, iter_used
         beta(i, j) = w(i)*w(j)*DDOT(np, smix%df(1, is, j), 1, smix%df(1, is, i), 1)
+        beta(j, i) = beta(i, j)
       end do
       beta(i, i) = w0**2 + w(i)**2
     end do
@@ -245,6 +246,11 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     end do
   
   end do is_loop
+
+  ! put values in right positions
+  i = mod(iter - 1, smix%broyden_number) + 1
+  smix%df(:,:, i) = smix%df(:,:, smix%broyden_number + 1)
+  smix%dv(:,:, i) = smix%dv(:,:, smix%broyden_number + 1)
 
   return
 end subroutine mix_broyden

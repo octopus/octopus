@@ -3227,7 +3227,7 @@ if test -z "${F90FLAGS}"; then
   		F90FLAGS="-O2 -fast -Munroll -Mnoframe -Mdalign"
 		;;
 		abf90*)
-			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_ -trap=ALL"
+			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		ifc*)
 			F90FLAGS="-O3 -nbs -lowercase"

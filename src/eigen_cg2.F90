@@ -70,7 +70,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
         
-        ! Orthogonolize to lowest eigenvalues (already calculated)
+        ! Orthogonalize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
           a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, j, ik), g)
           g(:,:) = g(:,:) - a0 * st%R_FUNC(psi)(1:,:, j, ik)

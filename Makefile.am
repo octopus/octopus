@@ -4,5 +4,5 @@ SUBDIRS = liboct src doc
 
 EXTRA_DIST = TODO autogen.sh samples/inp
 
-CLEANFILES = *~ *.bak
+CLEANFILES = *~ *.bak work.pc*
 DISTCLEANFILES = Makefile.in

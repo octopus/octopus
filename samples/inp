@@ -19,7 +19,7 @@ CalculationMode = 1
 
 
 ###############################################################################
-Units = eVA
+Units = "eVA"
 #UnitsInput  = a.u
 #UnitsOutput = a.u
 # (default: a.u )
@@ -29,7 +29,7 @@ Units = eVA
 
 
 ###############################################################################
-SystemName = Na2
+SystemName = "Na2"
 # (default: system )
 
 
@@ -37,11 +37,9 @@ SystemName = Na2
 # Species description.
 ###############################################################################
 
-NumberSpecies = 1
-# (default: 0 )
-%block Species
-Na 23.0 11 2 1
-%endblock Species
+%Species
+  "Na"  | 23.0 | 11 | 2 | 1
+%
 
 
 ###############################################################################
@@ -52,17 +50,16 @@ Na 23.0 11 2 1
 # (default: coords.pdb)
 #XYZCoordinates = coords.xyz
 # (default: coords.xyz)
-NumberAtoms = 2
-%block Coordinates
-Na	0.0	0.0	1.7	.true.
-Na	0.0	0.0	-1.7	.true.
-%endblock Coordinates
+%Coordinates
+  "Na" | 0.0 | 0.0 | 1.7 | yes
+  "Na" | 0.0 | 0.0 |-1.7 | yes
+%
 #XYZVelocities = vel.xyz
 # (default = vel.xyz)
-%block Velocities
-Na	0.0	0.0	0.0
-Na	0.0	0.0	0.0
-%endblock Velocities
+%Velocities
+  "Na" | 0.0 | 0.0 | 0.0
+  "Na" | 0.0 | 0.0 | 0.0
+%
 
 
 ###############################################################################
@@ -80,9 +77,9 @@ BoxShape = 1
 #		4 <= Parallelpiped
 Spacing = 0.35
 # (default: 0.6b)
-#%block spacing
+#Spacing
 #   0.3 0.2 0.2
-#%endblock spacing
+#%
 Radius  = 8.0
 # (default: 20b)
 Zlength = 8.0
@@ -127,20 +124,20 @@ NonLocalPotentialSpace = 0
 #		1 <= Fourier-Space
 NonInteractingElectrons = no
 
-XFamily = LDA
-# (default: LDA )
+XFamily = "LDA"
+# (default: "LDA" )
 # Options:
 #
-XFunctional = NREL
-# (default: NREL )
+XFunctional = "NREL"
+# (default: "NREL" )
 # Options:
 #
-CFamily = LDA
-# (default: LDA )
+CFamily = "LDA"
+# (default: "LDA" )
 # Options:
 #
-CFunctional = PZ
-# (default: PZ )
+CFunctional = "PZ"
+# (default: "PZ" )
 # Options:
 #
 
@@ -198,7 +195,7 @@ PoissonSolver = 3
 #		1 <= Conjugate-Gradients
 #		3 <= Spherical Cut-off FFT
 
-RecipeLang = en
+RecipeLang = "en"
 # (default: en)
 
 verbose    = 30

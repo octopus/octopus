@@ -11,7 +11,6 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
   R_TYPE :: xkHxk, xkxk, Rk, pkpk, pkHxk, pkHpki,     &
        uk, alpha, Ak, Bk, Ck, pkHpk, s, xkpk, gkgk
   R_TYPE, allocatable :: xk(:,:), hxk(:,:), gk(:,:), pk(:,:), tmp_wf(:,:)
-  R_TYPE, pointer :: psi(:,:,:,:)
 
   sub_name = 'eigen_solver_cg1'; call push_sub()
 
@@ -19,7 +18,6 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
        gk(sys%m%np, st%dim), pk(0:sys%m%np, st%dim))
 
   np = sys%m%np ! shortcuts
-  psi => st%R_FUNC(psi)
 
   xkHxk=0.0_r8; xkxk=0.0_r8; Rk=0.0_r8
   gkgk=0.0_r8;  xkpk=0.0_r8; pkpk=0.0_r8;  pkHxk=0.0_r8
@@ -32,13 +30,14 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
     do ik = 1, st%nik
       if(present(diff)) then
         allocate(tmp_wf(np, st%dim))
-        tmp_wf(1:np,:) = psi(1:np,:, p, ik)
+        tmp_wf(1:np,:) = st%R_FUNC(psi)(1:np,:, p, ik)
       end if
 
       ! orthogonalize state p to all previous ones
-      call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, psi(:,:, 1:p, ik), start = p)
+      call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, &
+           st%R_FUNC(psi)(:,:, 1:p, ik), start = p)
 
-      xk(1:np,:) = psi(1:np,:, p, ik)
+      xk(1:np,:) = st%R_FUNC(psi)(1:np,:, p, ik)
       call R_FUNC(Hpsi) (h, sys, ik, xk, hxk)
 
       xkHxk      = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, xk(1:np,:), hxk))
@@ -47,9 +46,9 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
       do iter = 1, ncg
         gk = 2._r8*(hxk - Rk*xk(1:np,:))/xkxk
         do q = 1, p - 1
-          s = R_FUNC(states_dotp) (sys%m, st%dim, psi(1:np,:, q, ik), gk)
+          s = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:np,:, q, ik), gk)
           do idim = 1, st%dim
-            call R_FUNC(axpy) (np, -s, psi(1:np, idim, q, ik), 1, gk(1:np, idim), 1)
+            call R_FUNC(axpy) (np, -s, st%R_FUNC(psi)(1:np, idim, q, ik), 1, gk(1:np, idim), 1)
           end do
         end do
         r = R_FUNC(states_nrm2) (sys%m, st%dim, gk)**2
@@ -82,11 +81,11 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
         
         s = sqrt(xkxk)
         xk(1:np,:) = xk(1:np,:)/s
-        psi(1:np,:, p, ik) = xk(1:np,:)
+        st%R_FUNC(psi)(1:np,:, p, ik) = xk(1:np,:)
       end do
 
       if(present(diff)) then
-        tmp_wf = psi(1:np,:, p, ik) - tmp_wf
+        tmp_wf = st%R_FUNC(psi)(1:np,:, p, ik) - tmp_wf
         diff(p, ik) = R_FUNC(mesh_nrm2) (sys%m, tmp_wf)
         deallocate(tmp_wf)
       end if
@@ -94,7 +93,6 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
   enddo
      
   deallocate(xk, hxk, gk, pk)
-  nullify(psi)
 
   call pop_sub()
   return
