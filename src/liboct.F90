@@ -24,7 +24,7 @@ module lib_oct
   ! Define the which routines can be seen from the outside
   private
   public :: loct_gamma, loct_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
-  public :: loct_bessel_j0,loct_bessel_j1,loct_bessel_k0,loct_bessel_k1
+  public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
   public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
   public :: loct_mkdir, loct_rm, loct_print_file, loct_number_of_lines
@@ -51,7 +51,7 @@ module lib_oct
 
   interface loct_bessel_j0
     function oct_bessel_j0(x)
-      real(8) :: oct_bessel
+      real(8) :: oct_bessel_j0
       real(8), intent(in)  :: x
     end function oct_bessel_j0
     module procedure oct_bessel_j04
@@ -59,7 +59,7 @@ module lib_oct
   
   interface loct_bessel_j1
     function oct_bessel_j1(x)
-      real(8) :: oct_bessel
+      real(8) :: oct_bessel_j1
       real(8), intent(in)  :: x
     end function oct_bessel_j1
     module procedure oct_bessel_j14
@@ -67,7 +67,7 @@ module lib_oct
   
   interface loct_bessel_k0
     function oct_bessel_k0(x)
-      real(8) :: oct_bessel
+      real(8) :: oct_bessel_k0
       real(8), intent(in)  :: x
     end function oct_bessel_k0
     module procedure oct_bessel_k04
@@ -75,7 +75,7 @@ module lib_oct
   
  interface loct_bessel_k1
     function oct_bessel_k1(x)
-      real(8) :: oct_bessel
+      real(8) :: oct_bessel_k1
       real(8), intent(in)  :: x
     end function oct_bessel_k1
     module procedure oct_bessel_k14
