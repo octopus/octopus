@@ -105,7 +105,7 @@ contains
     ! optimize dimensions only for finite sys
     if (conf %periodic_dim == 0) then
       do i = 1, conf%dim 
-	if(n(i) /= 1 .and. fft_optimize) &
+         if(n(i) /= 1 .and. fft_optimize) &
              call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
       end do
     end if    
