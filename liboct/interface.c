@@ -80,7 +80,7 @@ static void parse_block_error(char *type, char *name, int l, int c){
 	exit(1);
 }
 
-void PROTO(parse_block_n)(char *name){
+int PROTO(parse_block_n)(char *name){
 	return parse_block_n(name);
 }
 
