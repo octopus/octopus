@@ -169,8 +169,8 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
     call oct_parse_str('XYZVelocities', 'velocities.xyz', label)
     open(iunit, status='unknown', file=trim(label))
       
-    read(iunit)
-    read(iunit) ! skip comment line
+    read(iunit, *)
+    read(iunit, *) ! skip comment line
       
     do i = 1, natoms
       read(iunit,*) label, a(i)%v(:)
