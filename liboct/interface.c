@@ -345,27 +345,6 @@ int F90_FUNC_(oct_getmem, OCT_GETMEM)
   return memory;
 }
 
-int F90_FUNC_(print_file, PRINT_FILE)
-     (char *name)
-{
-#define MAXLINEA 256
-
-  FILE *pf;
-  char linea[MAXLINEA];
-
-  pf = fopen(name, "r");
-  if (pf != NULL) {
-    while(fgets(linea, MAXLINEA, pf) != NULL)
-      fputs(linea, stdout);
-    fclose(pf); 
-    fflush(stdout); 
-    return 0;
-  }else{
-    fflush(stdout); 
-    return 1;
-  }
-}
-
 int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)
      (char *name)
 {

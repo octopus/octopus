@@ -27,21 +27,7 @@ contains
     message(1) = ''; message(2) = ''
     call write_info(2)
 
-    call oct_parse_str('RecipeLang', 'en', lang)
-    call lowcase(lang)
-    select case(lang)
-    case('en')
-      call oct_printRecipe(1)
-    case('es')
-      call oct_printRecipe(2)
-    case default
-      write(message(1), '(a,a,a)') "Language '", trim(lang), "' is not recognized"
-      message(2) = "  RecipeLang = en | es"
-      call write_fatal(2)
-    end select
-
-    ! DISCLAIMER
-    call oct_printRecipe(0)
+    call oct_printRecipe(c_string(SHARE_OCTOPUS))
 
   end subroutine pulpo_print
 end module pulpo
