@@ -179,6 +179,8 @@ subroutine geometry_filter(geo, gmax)
   type(geometry_type), intent(inout) :: geo
   FLOAT, intent(in) :: gmax
   integer :: i
+  message(1) = 'Info: filtering the potentials.'
+  call write_info(1)
   do i = 1, geo%nspecies
      if(.not.geo%specie(i)%local) call specie_filter(geo%specie(i), gmax)
   enddo

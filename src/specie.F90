@@ -59,7 +59,12 @@ type specie_type
 
   ! the default values for the spacing and atomic radius
   FLOAT :: def_rsize, def_h
+
+  ! For the TM pseudos, the lmax and lloc.
   integer :: lmax, lloc
+
+  ! The filtering parameters.
+  FLOAT :: alpha, beta, rcut, beta2
 end type specie_type
 
 contains
@@ -102,7 +107,7 @@ contains
     type(specie_type),     intent(inout) :: s
     FLOAT, intent(in) :: gmax
     call push_sub('specie_cutoff')
-    call ps_filter(s%ps, gmax)
+    call ps_filter(s%ps, gmax, s%alpha, s%beta, s%rcut, s%beta2)
     call ps_derivatives(s%ps)
     ! This is for debugging. It should not be here, though.
     !if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
@@ -180,7 +185,7 @@ contains
     type(specie_type),     intent(inout) :: s
 
     character(len=10) :: label
-    FLOAT :: weight, z, def_h, def_rsize
+    FLOAT :: weight, z, def_h, def_rsize, alpha, beta, rcut, beta2
     integer :: lloc, lmax
     integer :: type
 
@@ -191,7 +196,7 @@ contains
     ! If it is in the default file, it *has* to be a pseudopotential
     s%local = .false.
 
-    read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize
+    read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize, alpha, beta, rcut, beta2
     def_h     = def_h     * P_ANG  ! These units are always in Angstrom
     def_rsize = def_rsize * P_ANG
     ASSERT(trim(label) == trim(s%label))
@@ -205,26 +210,55 @@ contains
       s%lloc      = lloc
       s%def_h     = def_h
       s%def_rsize = def_rsize
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
     case(3)
       s%z         = z
       s%lmax      = lmax
       s%lloc      = lloc
       s%def_h     = def_h
       s%def_rsize = def_rsize
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
     case(4)
       s%lmax      = lmax
       s%lloc      = lloc
       s%def_h     = def_h
       s%def_rsize = def_rsize
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
     case(5)
       s%lloc      = lloc
       s%def_h     = def_h
       s%def_rsize = def_rsize
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
     case(6)
       s%def_h     = def_h
       s%def_rsize = def_rsize
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
     case(7)
       s%def_rsize = def_rsize
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
+    case(8)
+      s%alpha     = alpha
+      s%beta      = beta
+      s%rcut      = rcut
+      s%beta2     = beta2
     end select
 
     read_data = 8
@@ -294,6 +328,15 @@ contains
        s%def_rsize = s%def_rsize * units_inp%length%factor
        read_data = 8
      end if
+
+     if(n>8) then
+       ! For the moment being, let us assume that this is always in atomic units.
+       call loct_parse_block_float (blk, row, 8, s%alpha)
+       call loct_parse_block_float (blk, row, 9, s%beta)
+       call loct_parse_block_float (blk, row, 10, s%rcut)
+       call loct_parse_block_float (blk, row, 11, s%beta2)
+       read_data = 10
+     endif
 
     case default
       write(message(1), '(a,i2,a)') "Unknown pseudopotential type: '", s%type, "'"

@@ -66,7 +66,7 @@ type ps_type
 
   character(len=4) :: icore
   FLOAT :: rc_max
-  FLOAT :: a_erf = M_TWO ! the a constant in erf(ar)/r
+  FLOAT :: a_erf ! the a constant in erf(ar)/r
 
   FLOAT, pointer :: dknrm(:) ! KB norm
   FLOAT, pointer :: so_dknrm(:)
@@ -190,7 +190,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   end select
 
 ! Get the localized part of the pseudopotential.
-  ps%a_erf = CNST(2.0)
+  ps%a_erf = CNST(2.0) ! This is hard-coded to a reasonable value.
   allocate(y(ps%g%nrval))
   y(1) = loct_splint(ps%vl, CNST(0.0)) + ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
   do i = 2, ps%g%nrval
@@ -225,16 +225,17 @@ subroutine ps_derivatives(ps)
   call loct_spline_der(ps%vl, ps%dvl)
 end subroutine ps_derivatives
 
-subroutine ps_filter(ps, gmax)
+subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
   type(ps_type), intent(inout) :: ps
   FLOAT, intent(in) :: gmax
+  FLOAT, intent(in) :: alpha, beta, rcut, beta2
   integer :: i, l, k
   FLOAT :: r
   FLOAT, allocatable :: y(:)
 
   call push_sub('ps_filter')
 
-  call loct_spline_filter(ps%vlocalized, fs = (/ CNST(0.75)*gmax, CNST(100.0) /) ) 
+  call loct_spline_filter(ps%vlocalized, fs = (/ alpha*gmax, CNST(100.0) /) ) 
   call loct_spline_end(ps%vl)
   allocate(y(ps%g%nrval))
   y(1) = loct_splint(ps%vlocalized, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
@@ -246,12 +247,12 @@ subroutine ps_filter(ps, gmax)
 
   do l = 0, ps%l_max
      do k = 1, ps%kbc
-        call loct_spline_filter(ps%kb(l, k), l, fs = (/ CNST(0.75)*gmax, CNST(18.0) /), &
-                                                rs = (/ CNST(2.5), CNST(0.4) /))
+        call loct_spline_filter(ps%kb(l, k), l, fs = (/ alpha*gmax, beta /), &
+                                                rs = (/ rcut, beta2 /))
      enddo
   enddo
 
-  if(trim(ps%icore).ne.'nc') call loct_spline_filter(ps%core, fs = (/ CNST(0.75)*gmax, CNST(100.0) /) )
+  if(trim(ps%icore).ne.'nc') call loct_spline_filter(ps%core, fs = (/ alpha*gmax, CNST(100.0) /) )
 
   deallocate(y)
   call pop_sub(); return
