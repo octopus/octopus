@@ -36,6 +36,12 @@ program excitations
 
   ! Initialize stuff
   call global_init()
+
+  ! initialize ffts
+#ifdef HAVE_FFT
+  call fft_all_init()
+#endif
+
   call units_init()
   call system_init(sys)
 
