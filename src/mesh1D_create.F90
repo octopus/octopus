@@ -17,7 +17,7 @@ subroutine mesh1D_create(m, natoms, atom)
 
   sub_name = 'mesh1D_create'; call push_sub()
 
-  m%box_shape = fdf_integer('Box_shape', SPHERE)
+  call oct_parse_int(C_string('Box_shape'), SPHERE, m%box_shape)
   if (m%box_shape>1 .or. m%box_shape<1) then
     write(err, *) m%box_shape
     message(1) = "Input: '"//trim(err)//"' is not a valid Box_Shape"
@@ -25,7 +25,8 @@ subroutine mesh1D_create(m, natoms, atom)
     call write_fatal(2)
   end if
 
-  m%h = fdf_double('spacing', 0.6_r8/units_inp%length%factor)*units_inp%length%factor
+  call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h)
+  m%h = m%h * units_inp%length%factor
   if (m%h<0.01_r8 .or. m%h>2.0_r8) then
     write(err, *) m%h
     message(1) = "Input: '"//trim(err)//"' is not a valid spacing"
@@ -34,7 +35,8 @@ subroutine mesh1D_create(m, natoms, atom)
   end if
   m%vol_pp = m%h
 
-  m%rsize = fdf_double('radius', 20.0_r8/units_inp%length%factor)*units_inp%length%factor
+  call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
+  m%rsize = m%rsize * units_inp%length%factor
   if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
     write(err, *) m%rsize
     message(1) = "Input: '"//trim(err)//"' is not a valid radius"

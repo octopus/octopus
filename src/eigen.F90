@@ -29,7 +29,7 @@ subroutine eigen_solver_init(eigens)
   
   sub_name = 'eigen_solver_init'; call push_sub()
 
-  eigens%es_type = fdf_integer("EigenSolver", 0)
+  call oct_parse_int(C_string("EigenSolver"), 0, eigens%es_type)
   if(eigens%es_type < 0 .or. eigens%es_type > 1) then
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -39,7 +39,7 @@ subroutine eigen_solver_init(eigens)
   
   select case (eigens%es_type)
   case(0)
-    eigens%init_tol = fdf_double("EigenSolverInitTolerance", 1.0e-10_r8)
+    call oct_parse_double(C_string("EigenSolverInitTolerance"), 1.0e-10_r8, eigens%init_tol)
     if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -47,7 +47,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(2)
     endif
 
-    eigens%final_tol = fdf_double("EigenSolverFinalTolerance", 1.0e-14_r8)
+    call oct_parse_double(C_string("EigenSolverFinalTolerance"), 1.0e-14_r8, eigens%final_tol)
     if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -56,7 +56,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(3)
     endif
 
-    eigens%final_tol_iter = fdf_integer("EigenSolverFinalToleranceIteration", 20)
+    call oct_parse_int(C_string("EigenSolverFinalToleranceIteration"), 20, eigens%final_tol_iter)
     if(eigens%final_tol_iter <= 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
            "' is not a valid EigenSolverFinalToleranceIter"
@@ -64,7 +64,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(2)
     endif
 
-    eigens%es_maxiter = fdf_integer("EigenSolverMaxIter",25)
+    call oct_parse_int(C_string("EigenSolverMaxIter"), 25, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &
            "' is not a valid EigenSolverMaxIter"
@@ -73,7 +73,7 @@ subroutine eigen_solver_init(eigens)
     endif
 
   case(1)
-    eigens%no_cg = fdf_integer("NumberCG", 3);
+    call oct_parse_int(C_string("NumberCG"), 3, eigens%no_cg)
     if(eigens%no_cg <= 0) then
       write(message(1), '(a,i4,a)') "Input: '", eigens%no_cg, &
            "' is not a valid NumberCG"

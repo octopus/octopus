@@ -2,7 +2,6 @@
 
 module mix
 use global
-use fdf
 use mesh
 use states
 
@@ -47,7 +46,7 @@ subroutine mix_init(smix, m, st)
   sub_name = 'mix_init'; call push_sub()
   
   ! check input parameters
-  smix%type_of_mixing = fdf_integer("TypeOfMixing", 0)  
+  call oct_parse_int(C_string("TypeOfMixing"), 0, smix%type_of_mixing)
   if(smix%type_of_mixing == 1) then
     message(1) = 'Anderson mixing (TypeOfMixing = 1) currently not implemented)'
     call write_fatal(1)
@@ -57,7 +56,7 @@ subroutine mix_init(smix, m, st)
     call write_fatal(1)
   end if
 
-  smix%alpha = fdf_double("Mixing", 0.3_r8);
+  call oct_parse_double(C_string("Mixing"), 0.3_r8, smix%alpha);
   if(smix%alpha <= 0.0_r8 .or. smix%alpha > 1.0_r8) then
     write(message(1), '(a, f14.6,a)') "Input: '", smix%alpha, &
          "' is not a valid Mixing"
@@ -66,7 +65,7 @@ subroutine mix_init(smix, m, st)
   end if
 
   if(smix%type_of_mixing == 2) then
-    smix%broyden_number = fdf_integer("BroydenNumber",3)
+    call oct_parse_int(C_string("BroydenNumber"), 3, smix%broyden_number)
     if(smix%broyden_number <= 1 .or. smix%broyden_number > 5) then
       write(message(1), '(a, i4,a)') "Input: '", smix%broyden_number, &
            "' is not a valid BroydenNumber"

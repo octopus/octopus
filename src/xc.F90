@@ -1,7 +1,7 @@
 #include "config.h"
 
 module xc
-use fdf
+use liboct
 use math
 use mesh
 use fft
@@ -111,10 +111,10 @@ subroutine xc_init(xcs, m, ispin)
 
   sub_name = 'xc_init'; call push_sub()
 
-  xfam  = fdf_string('XFamily', 'LDA')
-  xfunc = fdf_string('XFunctional', 'NREL')
-  cfam  = fdf_string('CFamily', 'LDA')
-  cfunc = fdf_string('CFunctional', 'PZ')
+  call oct_parse_str('XFamily',     'LDA',  xfam)
+  call oct_parse_str('XFunctional', 'NREL', xfunc)
+  call oct_parse_str('CFamily',     'LDA',  cfam)
+  call oct_parse_str('CFunctional', 'PZ',   cfunc)
 
   ! the exchange
   select case(trim(xfam))
@@ -130,7 +130,7 @@ subroutine xc_init(xcs, m, ispin)
       xcs%x_func = X_FUNC_LDA_REL
     case default
       write(message(1), '(a,a,a)') "'", trim(xfam), &
-          "' is not a known exchange LDA functional"
+          "' is not a known exchange LDA functional!"
       message(2) = "(XFunc = NREL | REL)"
       call write_fatal(2)
     end select
@@ -145,7 +145,7 @@ subroutine xc_init(xcs, m, ispin)
       xcs%x_func = X_FUNC_GGA_LB94
     case default
       write(message(1), '(a,a,a)') "'", trim(xfam), &
-          "' is not a known exchange GGA functional"
+          "' is not a known exchange GGA functional!"
       message(2) = "(XFunc = PBE | LB94)"
       call write_fatal(2)
     end select
@@ -156,32 +156,32 @@ subroutine xc_init(xcs, m, ispin)
       xcs%x_func = X_FUNC_MGGA_PKZB
     case default
       write(message(1), '(a,a,a)') "'", trim(xfam), &
-          "' is not a known exchange MGGA functional"
+          "' is not a known exchange MGGA functional!"
       message(2) = "(XFunc = PKZB)"
       call write_fatal(2)
     end select
 #ifdef HAVE_LAPACK
   case('KLI')
 #if defined(HAVE_MPI) && defined(MPI_TD)
-    message(1) = "KLI is not allowed with MPI_TD"
+    message(1) = "KLI is not allowed with MPI_TD!"
     call write_fatal(1)
 #endif
     xcs%x_family = XC_FAMILY_KLI
     select case(trim(xfunc))
-    case('X')
+    case('EXX')
       xcs%x_func = X_FUNC_KLI_X
     case('SIC')
       xcs%x_func = X_FUNC_KLI_SIC
     case default
       write(message(1), '(a,a,a)') "'", trim(xfunc), &
-          "' is not a known exchange KLI functional"
+          "' is not a known exchange KLI functional!"
       message(2) = "(XFunc = X | SIC)"
       call write_fatal(2)
     end select
 #endif
   case default
     write(message(1), '(a,a,a)') "'", trim(xfam), &
-        "' is not a known exchange functional family"
+        "' is not a known exchange functional family!"
     message(2) = "(XFamily = ZER | LDA | GGA | KLI)"
     call write_fatal(2)
   end select
@@ -200,7 +200,7 @@ subroutine xc_init(xcs, m, ispin)
       xcs%c_func = C_FUNC_LDA_PW92
     case default
       write(message(1), '(a,a,a)') "'", trim(xfam), &
-          "' is not a known correlation LDA functional"
+          "' is not a known correlation LDA functional!"
       message(2) = "(CFunc = PZ | PW92)"
       call write_fatal(2)
     end select
@@ -211,7 +211,7 @@ subroutine xc_init(xcs, m, ispin)
       xcs%c_func = C_FUNC_GGA_PBE
     case default
       write(message(1), '(a,a,a)') "'", trim(cfam), &
-          "' is not a known correlation GGA functional"
+          "' is not a known correlation GGA functional!"
       message(2) = "(CFunc = PBE)"
       call write_fatal(2)
     end select
@@ -223,7 +223,7 @@ subroutine xc_init(xcs, m, ispin)
       xcs%c_func = C_FUNC_MGGA_PKZB
     case default
       write(message(1), '(a,a,a)') "'", trim(cfam), &
-          "' is not a known exchange MGGA functional"
+          "' is not a known exchange MGGA functional!"
       message(2) = "(CFunc = PKZB)"
       call write_fatal(2)
     end select
@@ -234,14 +234,14 @@ subroutine xc_init(xcs, m, ispin)
       xcs%c_func = C_FUNC_KLI_SIC
     case default
       write(message(1), '(a,a,a)') "'", trim(cfunc), &
-          "' is not a known correlation KLI functional"
+          "' is not a known correlation KLI functional!"
       message(2) = "(XFunc = SIC)"
       call write_fatal(2)
     end select
 #endif
   case default
     write(message(1), '(a,a,a)') "'", trim(cfam), &
-        "' is not a known correlation functional family"
+        "' is not a known correlation functional family!"
     message(2) = "(CFamily = ZER | LDA | GGA | KLI)"
     call write_fatal(2)
   end select
@@ -250,7 +250,7 @@ subroutine xc_init(xcs, m, ispin)
   if(ispin == 4 .and. &
        (.not.(xcs%x_family == XC_FAMILY_ZER.or.xcs%x_family == XC_FAMILY_LDA) .or. &
        .not.(xcs%c_family == XC_FAMILY_ZER.or.xcs%c_family == XC_FAMILY_LDA))) then
-    message(1) = "Can only handle non-colinear spin with LDA"
+    message(1) = "Can only handle non-colinear spin within the LDA!"
   end if
 
   call pop_sub()
@@ -303,14 +303,14 @@ end function my_sign
 #include "undef.F90"
 #include "real.F90"
 #include "xc_pot.F90"
-!#include "xc_KLI.F90"
-!#include "xc_KLI_x.F90"
-!#include "xc_KLI_SIC.F90"
+#include "xc_KLI.F90"
+#include "xc_KLI_x.F90"
+#include "xc_KLI_SIC.F90"
 #include "undef.F90"
 #include "complex.F90"
 #include "xc_pot.F90"
-!#include "xc_KLI.F90"
-!#include "xc_KLI_x.F90"
-!#include "xc_KLI_SIC.F90"
+#include "xc_KLI.F90"
+#include "xc_KLI_x.F90"
+#include "xc_KLI_SIC.F90"
 
 end module xc

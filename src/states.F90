@@ -2,12 +2,15 @@
 
 module states
 use global
-use fdf
+use liboct
+use io
 use math
 use mesh
 
 implicit none
 
+! If you change everything in this structure, do not forget to
+! change states_dup
 type states_type
   integer :: dim ! Dimension of the state
   integer :: nst ! Number of states in each irreducible subspace
@@ -44,7 +47,7 @@ subroutine states_init(st, m, val_charge)
 
   sub_name = 'states_init'; call push_sub()
 
-  st%ispin = fdf_integer('SpinComponents', 1)
+  call oct_parse_int(C_string('SpinComponents'), 1, st%ispin)
   if (st%ispin /= 1 .and. st%ispin /= 2 .and. st%ispin /= 4) then
     write(message(1),'(a,i4,a)') "Input: '", st%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 4)'
@@ -52,7 +55,7 @@ subroutine states_init(st, m, val_charge)
   end if
 
 #ifdef PERIODIC_1D
-  st%nik = fdf_integer('NumberKPoints', 1)
+  call oct_parse_int(C_string('NumberKPoints'), 1, st%nik)
   if (st%nik < 1) then
     write(message(1),'(a,i4,a)') "Input: '", st%nik,"' is not a valid NumberKPoints"
     message(2) = '(NumberKPoints >= 1)'
@@ -62,9 +65,9 @@ subroutine states_init(st, m, val_charge)
   st%nik = 1
 #endif
   
-  excess_charge = fdf_double('ExcessCharge', 0.0_r8)
+  call oct_parse_double(C_string('ExcessCharge'), 0.0_r8, excess_charge)
 
-  nempty = fdf_integer('EmptyStates', 0)
+  call oct_parse_int(C_string('EmptyStates'), 0, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid EmptyStates"
     message(2) = '(0 <= EmptyStates)'
@@ -106,7 +109,7 @@ subroutine states_init(st, m, val_charge)
   end do
 
   ! read in fermi distribution temperature
-  st%el_temp = fdf_double('ElectronicTemperature', 0.0_r8)
+  call oct_parse_double(C_string('ElectronicTemperature'), 0.0_r8, st%el_temp)
 
   st%st_start = 1; st%st_end = st%nst
 
@@ -135,23 +138,47 @@ subroutine states_end(st)
   call pop_sub()
 end subroutine states_end
 
+subroutine states_dup(i, o)
+  type(states_type), intent(IN) :: i
+  type(states_type), intent(out) :: o
+
+  o%dim   = i%dim
+  o%nst   = i%nst
+  o%nik   = i%nik
+  o%ispin = i%ispin
+  o%nspin = i%nspin
+
+  o%dpsi     => i%dpsi
+  o%zpsi     => i%zpsi
+  o%rho      => i%rho
+  o%eigenval => i%eigenval
+  o%occ      => i%occ
+
+  o%qtot     = i%qtot
+  o%el_temp  = i%el_temp
+  o%ef       = i%ef
+  o%st_start = i%st_start
+  o%st_end   = i%st_end
+end subroutine states_dup
+
 ! generate a hydrogen s-wavefunction around a random point
-
-#ifndef ONE_D
-
-subroutine states_generate_random(st, m)
+subroutine states_generate_random(st, m, ist_start)
   type(states_type), intent(inout) :: st
   type(mesh_type), intent(IN) :: m
+  integer, intent(in), optional :: ist_start
 
   integer, save :: iseed = 123
-  integer :: ist, ik, id, i
+  integer :: ist, ik, id, i, ist_s
   real(r8) :: a(3), rnd, r
 
   sub_name = 'states_generate_random'; call push_sub()
 
+  ist_s = 1
+  if(present(ist_start)) ist_s = ist_start
+
   st%dpsi(0, :, :, :) = 0.0_r8
   do ik = 1, st%nik
-    do ist = 1, st%nst
+    do ist = ist_s, st%nst
       do id = 1, st%dim
         call quickrnd(iseed, rnd)
         a(1) = 2.0_r8*(2*rnd - 1)
@@ -172,40 +199,6 @@ subroutine states_generate_random(st, m)
 
   call pop_sub()
 end subroutine states_generate_random
-
-#else
-
-subroutine states_generate_random(st, m)
-  type(states_type), intent(inout) :: st
-  type(mesh_type), intent(IN) :: m
-
-  integer, save :: iseed = 123
-  integer :: ist, ik, id, i
-  real(r8) :: a, rnd, r
-
-  sub_name = 'states_generate_random'; call push_sub()
-
-  st%dpsi(0, :, :, :) = 0.0_r8
-  do ik = 1, st%nik
-    do ist = 1, st%nst
-      do id = 1, st%dim
-        call quickrnd(iseed, rnd)
-        a = 2.0_r8*(2*rnd - 1)
-
-        do i = 1, m%np
-          call mesh_r(m, i, r, a=a)
-          st%R_FUNC(psi)(i, id, ist, ik) = exp(-0.5_r8*r*r)
-        end do
-      end do
-    end do
-    call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(:,:,:,ik))
-  end do
-  st%eigenval = 0._r8
-
-  call pop_sub()
-end subroutine states_generate_random
-
-#endif
 
 subroutine states_fermi(st)
   type(states_type), intent(inout) :: st

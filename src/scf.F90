@@ -1,6 +1,7 @@
 #include "config.h"
 
 module scf
+use io
 use units
 use system
 use states
@@ -29,11 +30,11 @@ subroutine scf_init(scf, sys)
 
   sub_name = 'systm_scf_init'; call push_sub()
 
-  scf%max_iter = fdf_integer("MaximumIter", 200)
-  scf%conv_abs_dens = fdf_double("ConvAbsDens", 1e-5_r8)
-  scf%conv_rel_dens = fdf_double("ConvRelDens", 0.0_r8)
-  scf%conv_abs_ener = fdf_double("ConvAbsEnergy", 0.0_r8) * units_inp%energy%factor
-  scf%conv_rel_ener = fdf_double("ConvRelEnergy", 0.0_r8) * units_inp%energy%factor
+  call oct_parse_int(C_string("MaximumIter"), 200, scf%max_iter)
+  call oct_parse_double(C_string("ConvAbsDens"), 1e-5_r8, scf%conv_abs_dens)
+  call oct_parse_double(C_string("ConvRelDens"),   0._r8, scf%conv_rel_dens)
+  call oct_parse_double(C_string("ConvAbsEnergy"), 0._r8, scf%conv_abs_ener)
+  call oct_parse_double(C_string("ConvRelEnergy"), 0._r8, scf%conv_rel_ener)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= 0.0_r8 .and. scf%conv_rel_dens <= 0.0_r8 .and. &

@@ -2,6 +2,7 @@
 
 module hamiltonian
 use global
+use liboct
 use spline
 use fft
 use units
@@ -58,12 +59,12 @@ subroutine hamiltonian_init(h, sys)
   h%Vxc = 0._r8
 
   if(sys%ncatoms > 0) then
-    h%classic_pot = fdf_boolean("ClassicPotential", .false.)
+    call oct_parse_logical(C_string("ClassicPotential"), .false., h%classic_pot)
     if(h%classic_pot) allocate(h%Vclassic(h%np))
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
-  h%vpsl_space = fdf_integer('LocalPotentialSpace', 1)
+  call oct_parse_int(C_string('LocalPotentialSpace'), 1, h%vpsl_space)
   if(h%vpsl_space < 0 .or. h%vpsl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
          "' is not a valid LocalPotentialSpace"
@@ -71,7 +72,7 @@ subroutine hamiltonian_init(h, sys)
     call write_fatal(2)
   end if
 
-  h%vnl_space = fdf_integer('NonLocalPotentialSpace', 0)
+  call oct_parse_int(C_string('NonLocalPotentialSpace'), 0, h%vnl_space)
   if(h%vnl_space < 0 .or. h%vnl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
          "' is not a valid NonLocalPotentialSpace"
@@ -89,7 +90,7 @@ subroutine hamiltonian_init(h, sys)
   end if  
 
   ! Should we treat the particles as independent?
-  h%ip_app = fdf_boolean("NonInteractingElectrons", .false.)
+  call oct_parse_logical(C_string("NonInteractingElectrons"), .false., h%ip_app)
   if(h%ip_app) then
     message(1) = 'Info: Treating the electrons as non-interacting'
     call write_info(1)
@@ -97,6 +98,9 @@ subroutine hamiltonian_init(h, sys)
     ! initilize hartree and xc modules
     call hartree_init(h%hart, sys%m)
     call xc_init(h%xc, sys%m, h%ispin)
+    message(1) = "Info: Exchange and correlation"
+    call write_info(1)
+    if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
   end if
 
   call pop_sub()

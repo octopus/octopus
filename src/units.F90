@@ -19,7 +19,7 @@
 
 module units
 use global
-use fdf
+use liboct
 
 implicit none
 
@@ -47,14 +47,14 @@ subroutine units_init()
 
   sub_name = 'units_init'; call push_sub()
 
-  if(fdf_defined("Units")) then
-    c = fdf_string("Units", "")
+  if(oct_parse_isdef(C_string("Units")).ne.0) then
+    call oct_parse_str("Units", "a.u", c)
     cinp = c(1:3)
     cout = c(1:3)
   else
-    c = fdf_string("UnitsInput", "a.u")
+    call oct_parse_str("UnitsInput", "a.u", c)
     cinp = c(1:3)
-    c = fdf_string("UnitsOutput", "a.u")
+    call oct_parse_str("UnitsOutput", "a.u", c)
     cout = c(1:3)
   end if
 

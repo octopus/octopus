@@ -2,13 +2,15 @@
 
 module run_prog
 use global
-use fdf
+use liboct
+use io
 use units
 use states
 use system
 use hamiltonian
 use lcao
 use scf
+use unocc
 use static_pol
 use timedep
 use pulpo
@@ -18,56 +20,59 @@ implicit none
 type(system_type) :: sys
 type(hamiltonian_type) :: h
 type(scf_type) :: scfv
+type(unocc_type) :: unoccv
 integer :: calc_mode
 
 ! run stack
 integer, private :: i_stack(100), instr
 integer, private, parameter :: &
-     M_START_STATIC_CALC             = 1, &
-     M_RESUME_STATIC_CALC            = 2, &
-     M_CALCULATE_UNOCC_STATES        = 3, &
-     M_RESUME_UNOCC_STATES           = 4, &
-     M_START_TD                      = 5, &
-     M_RESUME_TD                     = 6, &
-     M_START_STATIC_POL              = 7, &
-     M_RESUME_STATIC_POL             = 8, &
-     M_BO_MD                         = 9, &
-     M_PULPO_A_FEIRA                 = 99
+     M_START_STATIC_CALC   = 1, &
+     M_RESUME_STATIC_CALC  = 2, &
+     M_START_UNOCC_STATES  = 3, &
+     M_RESUME_UNOCC_STATES = 4, &
+     M_START_TD            = 5, &
+     M_RESUME_TD           = 6, &
+     M_START_STATIC_POL    = 7, &
+     M_RESUME_STATIC_POL   = 8, &
+     M_BO_MD               = 9, &
+     M_PULPO_A_FEIRA       = 99
 
 integer, private, parameter :: &
-     I_SETUP_RPSI         =  1,  &
-     I_END_RPSI           =  2,  &
-     I_RANDOMIZE_RPSI     =  3,  &
-     I_LOAD_RPSI          =  4,  &
-     I_SETUP_HAMILTONIAN  =  5,  &
-     I_SCF                =  6,  &
-     I_LCAO               =  7,  &
+     I_SETUP_RPSI          =  1,  &
+     I_END_RPSI            =  2,  &
+     I_RANDOMIZE_RPSI      =  3,  &
+     I_LOAD_RPSI           =  4,  &
+     I_SETUP_HAMILTONIAN   =  5,  &
+     I_SCF                 =  6,  &
+     I_LCAO                =  7,  &
 
-     I_SETUP_OCC_RPSI     = 11,  &
-     I_END_OCC_RPSI       = 12,  &
-     I_RANDOMIZE_OCC_RPSI = 13,  &
-     I_LOAD_OCC_RPSI      = 14,  &
-     I_OCC_SCF            = 15,  &
+     I_SETUP_UNOCC         = 11,  &
+     I_END_UNOCC           = 12,  &
+     I_RANDOMIZE_UNOCC     = 13,  &
+     I_LOAD_UNOCC          = 14,  &
+     I_UNOCC_RUN           = 15,  &
     
-     I_SETUP_TD           = 21,  &
-     I_END_TD             = 22,  &
-     I_INIT_ZPSI          = 23,  &
-     I_LOAD_ZPSI          = 24,  &
-     I_TD                 = 25,  &
-     I_SETUP_OCC_AN       = 26,  &
-     I_END_OCC_AN         = 27,  &
+     I_SETUP_TD            = 21,  &
+     I_END_TD              = 22,  &
+     I_INIT_ZPSI           = 23,  &
+     I_LOAD_ZPSI           = 24,  &
+     I_TD                  = 25,  &
+     I_SETUP_OCC_AN        = 26,  &
+     I_END_OCC_AN          = 27,  &
 
-     I_START_POL          = 30,  &
-     I_POL_SCF            = 31,  &
+     I_START_POL           = 30,  &
+     I_POL_SCF             = 31,  &
 
-     I_PULPO              = 99
+     I_PULPO               = 99
 
 contains
 
 subroutine run()
   type(td_type), pointer :: td
   R_TYPE, pointer :: aux_psi(:,:,:,:)
+  real(r8), pointer :: aux_eigen(:,:)
   integer :: i, aux_i1, aux_i2, iunit
+  logical :: log
 
   sub_name = 'run'; call push_sub()
 
@@ -109,13 +114,6 @@ subroutine run()
       !  sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
       !end if
 
-    case(I_LCAO)
-      if(fdf_boolean("LCAOStart", .true.)) then
-        message(1) = 'Info: Performing LCAO calculation.'
-        call write_info(1)
-        call lcao_wf(sys, h)
-      end if
-
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'
       call write_info(1)
@@ -154,6 +152,59 @@ subroutine run()
       call scf_run(scfv, sys, h)
       call scf_end(scfv)
 
+    case(I_LCAO)
+      call oct_parse_logical("LCAOStart", .true., log)
+      if(log) then
+        message(1) = 'Info: Performing LCAO calculation.'
+        call write_info(1)
+        call lcao_wf(sys, h)
+      end if
+
+    case(I_SETUP_UNOCC)
+      message(1) = 'Info: Initializing unoccupied states.'
+      call write_info(1)
+
+      call unocc_init(unoccv, sys%m, sys%st)
+      
+    case(I_END_UNOCC)
+      message(1) = 'Info: Finalizing unoccupied states.'
+      call write_info(1)
+
+      call unocc_end(unoccv)
+      
+    case(I_RANDOMIZE_UNOCC)
+      message(1) = 'Info: Generating starting unoccupied states.'
+      call write_info(1)
+      
+      ! first copy the occupied states
+      unoccv%st%R_FUNC(psi)(:,:,1:sys%st%nst,:) = sys%st%R_FUNC(psi)(:,:,1:sys%st%nst,:)
+      unoccv%st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
+
+      call states_generate_random(unoccv%st, sys%m, sys%st%nst+1)
+
+    case(I_LOAD_UNOCC)
+      message(1) = 'Info: Loading unoccupied states.'
+      call write_info(1)
+
+      if(.not.R_FUNC(states_load_restart)(trim(sys%sysname)//".occ_restart", &
+           sys%m, unoccv%st)) then
+        if(calc_mode .ne. M_RESUME_UNOCC_STATES) then
+          i_stack(instr) = I_UNOCC_RUN
+          instr = instr + 1
+        end if
+        i_stack(instr) = I_RANDOMIZE_UNOCC
+        cycle program 
+      end if
+      
+    case(I_UNOCC_RUN)
+      message(1) = 'Info: Calculation of unoccupied states.'
+      call write_info(1)
+
+      
+      call scf_init(scfv, sys)
+      call unocc_run(unoccv, scfv, sys, h)
+      call scf_end(scfv)
+
     case(I_SETUP_TD)
       message(1) = 'Info: Setting up TD.'
       call write_info(1)
@@ -184,6 +235,9 @@ subroutine run()
       do i = sys%st%st_start, sys%st%st_end
         sys%st%zpsi(:,:, i,:) = aux_psi(:,:, i,:)
       end do
+
+      message(1) = 'Info: Deallocating rpsi.'
+      call write_info(1)
       deallocate(aux_psi) ! clean up old wf
       nullify(aux_psi)
 
@@ -219,7 +273,26 @@ subroutine run()
       message(1) = 'Info: Time-dependent simulation.'
       call write_info(1)
 
-      call td_run(td, sys, h)
+      call td_run(td, unoccv%st, sys, h)
+
+    case(I_SETUP_OCC_AN)
+      message(1) = 'Info: Seting up occupational analysis.'
+      call write_info(1)
+
+      if(td%occ_analysis) then
+        instr = instr - 1
+        call m_load_unocc()
+        cycle program
+      end if
+
+    case(I_END_OCC_AN)
+      message(1) = 'Info: Cleaning up occupational analysis.'
+      call write_info(1)
+
+      if(td%occ_analysis) then
+        i_stack(instr) = I_END_UNOCC
+        cycle program
+      end if
 
     case(I_START_POL)
       ! just delete the pol file
@@ -258,7 +331,7 @@ end subroutine run
 subroutine run_init()
   ! initialize some stuff
 
-  calc_mode = fdf_integer('CalculationMode', 1)
+  call oct_parse_int(C_string('CalculationMode'), 1, calc_mode)
   if( (calc_mode < 1 .or. calc_mode > 9) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = 1 <= start static calculation'
@@ -291,6 +364,17 @@ subroutine run_end()
   endif
 end subroutine run_end
 
+subroutine m_load_unocc()
+  instr = instr + 1; i_stack(instr) = I_END_RPSI
+  instr = instr + 1; i_stack(instr) = I_LOAD_UNOCC   
+  instr = instr + 1; i_stack(instr) = I_SETUP_UNOCC
+  instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+  instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+  instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+
+  return
+end subroutine m_load_unocc
+
 subroutine define_run_modes()
   select case(calc_mode)
   case(M_START_STATIC_CALC)
@@ -306,6 +390,19 @@ subroutine define_run_modes()
     instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_START_UNOCC_STATES)
+    instr = instr + 1; i_stack(instr) = I_END_UNOCC
+    instr = instr + 1; i_stack(instr) = I_UNOCC_RUN
+    instr = instr + 1; i_stack(instr) = I_END_RPSI
+    instr = instr + 1; i_stack(instr) = I_RANDOMIZE_UNOCC
+    instr = instr + 1; i_stack(instr) = I_SETUP_UNOCC
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
+    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_RESUME_UNOCC_STATES)
+    instr = instr + 1; i_stack(instr) = I_END_UNOCC
+    instr = instr + 1; i_stack(instr) = I_UNOCC_RUN
+    call m_load_unocc()
   case(M_START_TD)
     instr = instr + 1; i_stack(instr) = I_END_TD
     instr = instr + 1; i_stack(instr) = I_END_OCC_AN

@@ -1,7 +1,7 @@
 #include "config.h"
 
 module lasers
-use fdf
+use liboct
 use global
 use units
 use mesh
@@ -34,32 +34,28 @@ subroutine laser_init(m, no_l, l)
 
   integer :: i, k, iunit
   real(r8) :: x, y, z
-  character(len=256) :: c
+  character(len=80) :: str
 
   sub_name = 'laser_init'; call push_sub()
 
-  no_l = fdf_integer('TDNumberLasers', 0)
+  str = C_string('TDLasers')
+  no_l = oct_parse_block_n(str)
   if(no_l > 0) then
     allocate(l(no_l))
 
-    if (.not.fdf_block('TDLasers', iunit)) then ! read in info
-      message(1) = 'Expecting TDLasers block'
-      call write_fatal(1)
-    end if
-
     do i = 1, no_l
-      ! This read *sucks*, because FORTRAN *sucks*
-      ! I give up, if you know a better way, let me know.
-      read(iunit,'(a)') c
-      read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope
+      call oct_parse_block_complex(str, i-1, 0, l(i)%pol(1))
+      call oct_parse_block_complex(str, i-1, 1, l(i)%pol(2))
+      call oct_parse_block_complex(str, i-1, 2, l(i)%pol(3))
+      call oct_parse_block_double (str, i-1, 3, l(i)%A0)
+      call oct_parse_block_int    (str, i-1, 4, l(i)%envelope)
+      call oct_parse_block_double (str, i-1, 5, l(i)%tau0)
+      call oct_parse_block_double (str, i-1, 6, l(i)%t0)
+      call oct_parse_block_double (str, i-1, 7, l(i)%omega0)
 
       if(l(i)%envelope == 3) then
-        read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope, &
-             l(i)%tau0, l(i)%t0, l(i)%omega0, l(i)%tau1
+        call oct_parse_block_double (str, i-1, 8, l(i)%tau1)
         l(i)%tau1 = l(i)%tau1 * units_inp%time%factor ! adjust units
-      else
-        read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope,&
-             l(i)%tau0, l(i)%t0, l(i)%omega0
       end if
 
       ! Adjust units of common variables

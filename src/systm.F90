@@ -1,4 +1,5 @@
 module system
+use io
 use specie
 use atom
 use mesh
@@ -30,13 +31,15 @@ subroutine system_init(s)
 
   integer :: i
   real(r8) :: val_charge
+  logical :: l
 
   sub_name = 'system_init'; call push_sub()
 
-  s%sysname = fdf_string('SystemName', 'system')
+  call oct_parse_str('SystemName', 'system', s%sysname)
   s%nspecies = specie_init(s%specie)
   call atom_init(s%natoms, s%atom, s%ncatoms, s%catom, s%nspecies, s%specie)
-  if(fdf_boolean("OutputCoordinates", .false.)) then
+  call oct_parse_logical("OutputCoordinates", .false., l)
+  if(l) then
     call geom_write_xyz(s)
   end if
 

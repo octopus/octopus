@@ -2,8 +2,8 @@
 
 module lcao
   use global
+  use liboct
   use spline
-  use math
   use mesh
   use system
   use hamiltonian
@@ -127,7 +127,7 @@ subroutine lcao_wf(sys, h)
   write(message(1),'(6x,i5,a)') norbs, ' functions to diagonalize.'
   call write_info(1)
 
-  mode = fdf_integer("LCAOMode", 0)
+  call oct_parse_int(C_string("LCAOMode"), 0, mode)
   if(mode < 0 .or. mode > 1) then
     message(1) = "LCAOMode not valid"
     message(2) = "LCAOMode = 0 (memory intensive) | 1 (cpu intensive)"

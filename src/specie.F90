@@ -1,7 +1,6 @@
 module specie
 use global
 use units
-use fdf
 use ps
 
 implicit none
@@ -38,65 +37,56 @@ function specie_init(s)
   integer :: specie_init
   type(specie_type), pointer :: s(:)
 
-  integer :: nspecies, iunit, i, lmax, lloc
-  character(len=100) :: str
+  integer :: nspecies, i, lmax, lloc
+  character(len=80) :: str
 
   sub_name = 'specie_init'; call push_sub()
 
   ! how many do we have?
-  nspecies = fdf_integer("NumberSpecies", 0)
+  str = C_string("Species")
+  nspecies = oct_parse_block_n(str)
   if (nspecies < 1) then
-    write(message(1), '(a,i4,a)') "Input: '", nspecies, "' is not a valid NumberSpecies"
-    message(2) = '(1 <= NumberSpecies)'
-    call write_fatal(2)
+    message(1) = "Input: Species block not specified"
+    message(2) = '% Species'
+    message(3) = '   specie <params>'
+    message(4) = '%'
+    call write_fatal(4)    
   end if
   allocate(s(nspecies))
 
-  if(fdf_block('Species', iunit) ) then
-    do i = 1, nspecies
-      read(iunit, '(a)') str ! read the complete line
-      read(str, *) s(i)%label
+  do i = 1, nspecies
+    call oct_parse_block_str(str, i-1, 0, s(i)%label)
+    call oct_parse_block_double(str, i-1, 1, s(i)%weight)
 
-      select case(s(i)%label(1:5))
-      case('jelli')
-        s(i)%local = .true.  ! we only have a local part
-        ! s(i)%Z       = the charge of the jellium sphere
-        ! s(i)%jradius = the radius of the jellium sphere
-        read(str, *) s(i)%label, s(i)%weight, s(i)%Z, s(i)%jradius
-        s(i)%jradius = units_inp%length%factor * s(i)%jradius ! units conversion
-        s(i)%Z_val = s(i)%Z
-
-      case('point') ! this is treated as a jellium with radius 0.5
-        s(i)%local = .true.  ! we only have a local part
-        read(str, *) s(i)%label, s(i)%weight, s(i)%Z
-        s(i)%jradius = 0.5_r8
-        s(i)%Z_val = 0 
-        
-      case default ! a pseudopotential file
-#ifndef ONE_D
-        s(i)%local = .false.
-        allocate(s(i)%ps) ! allocate structure
-        read(str, *) s(i)%label, s(i)%weight, s(i)%Z, lmax, lloc
-        call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
-        s(i)%nl_planf = int(-1, POINTER_SIZE)
-#else
-        s(i)%local = .true.
-        allocate(s(i)%ps)
-        read(str, *) s(i)%label, s(i)%weight, s(i)%z, s(i)%z_val
-        call ps_init(s(i)%ps, s(i)%label, s(i)%Z, s(i)%Z_val )
-#endif
-      end select
-
-      s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
+    select case(s(i)%label(1:5))
+    case('jelli')
+      s(i)%local = .true.  ! we only have a local part
+      ! s(i)%Z       = the charge of the jellium sphere
+      ! s(i)%jradius = the radius of the jellium sphere
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
+      call oct_parse_block_double(str, i-1, 3, s(i)%jradius)
+      s(i)%jradius = units_inp%length%factor * s(i)%jradius ! units conversion
+      s(i)%Z_val = s(i)%Z
       
-    end do
-  else
-    message(1) = "Input: Species block not specified"
-    message(2) = '%block Species'
-    message(3) = '   specie <params>'
-    message(4) = '%endblock Species'
-    call write_fatal(4)    
-  end if
+    case('point') ! this is treated as a jellium with radius 0.5
+      s(i)%local = .true.  ! we only have a local part
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
+      s(i)%jradius = 0.5_r8
+      s(i)%Z_val = 0 
+      
+    case default ! a pseudopotential file
+      s(i)%local = .false.
+      allocate(s(i)%ps) ! allocate structure
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
+      call oct_parse_block_int(str, i-1, 3, lmax)
+      call oct_parse_block_int(str, i-1, 4, lloc)
+      call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
+      s(i)%nl_planf = int(-1, POINTER_SIZE)
+    end select
+
+    s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
+    
+  end do
 
   specie_init = nspecies
 

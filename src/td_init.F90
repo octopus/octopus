@@ -4,34 +4,35 @@ subroutine td_init(td, sys, m, st)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
 
-  integer :: dummy, iunit
+  integer :: iunit
 
   sub_name = 'td_init'; call push_sub()
 
   td%iter = 0
 
-  td%max_iter = fdf_integer("TDMaximumIter", 1500)
+  call oct_parse_int(C_string("TDMaximumIter"), 1500, td%max_iter)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
     message(2) = '(1 <= TDMaximumIter)'
     call write_fatal(2)
   end if
   
-  td%save_iter = fdf_integer("TDSaveIter", 100)
+  call oct_parse_int(C_string("TDSaveIter"), 100, td%save_iter)
   if (td%save_iter < 0 .or. td%save_iter>td%max_iter) then
     write(message(1), '(a,i6,a)') "Input: '", td%save_iter, "' is not a valid TDSaveIter"
     message(2) = '(0 <= TDSaveIter <= TDMaximumIter)'
     call write_fatal(2)
   end if
 
-  td%dt = fdf_double("TDTimeStep", 0.001_r8/units_inp%time%factor)*units_inp%time%factor
+  call oct_parse_double(C_string("TDTimeStep"), 0.07_r8/units_inp%time%factor, td%dt)
+  td%dt = td%dt * units_inp%time%factor
   if (td%dt <= 0._r8) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
     message(2) = '(0 < TDTimeStep)'
     call write_fatal(2)
   end if
   
-  td%evolution_method = fdf_integer("TDEvolutionMethod", 2)
+  call oct_parse_int(C_string("TDEvolutionMethod"), 2, td%evolution_method)
   if (td%evolution_method<1 .or. td%evolution_method>3) then
     write(message(1), '(a,i6,a)') "Input: '", td%evolution_method, "' is not a valid TDEvolutionMethod"
     message(2) = '(1 <= TDEvolutionMethod <= 3)'
@@ -41,7 +42,7 @@ subroutine td_init(td, sys, m, st)
     call td_init_evolution_splitop()
   end if
 
-  td%lmax = fdf_integer("TDDipoleLmax", 1);
+  call oct_parse_int(C_string("TDDipoleLmax"), 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
     message(2) = '(0 <= TDDipoleLmax <= 4 )'
@@ -50,14 +51,17 @@ subroutine td_init(td, sys, m, st)
 
   ! delta impulse used to calculate optical spectrum
   ! units are 1/length
-  td%delta_strength = fdf_double("TDDeltaStrength", 0._r8)/units_inp%length%factor
-  if(fdf_block('TDPolarization', iunit)) then
-    read(iunit,*) td%pol(1), td%pol(2), td%pol(3)
+  call oct_parse_double(C_string("TDDeltaStrength"), 0._r8, td%delta_strength)
+  td%delta_strength = td%delta_strength / units_inp%length%factor
+  if(oct_parse_isdef(C_string('TDPolarization')) .ne. 0) then
+    call oct_parse_block_double(C_string('TDPolarization'), 0, 0, td%pol(1))
+    call oct_parse_block_double(C_string('TDPolarization'), 0, 1, td%pol(2))
+    call oct_parse_block_double(C_string('TDPolarization'), 0, 2, td%pol(3))
   else  !default along the z-direction
-    td%pol(1) = 0.0_r8; td%pol(2) = 0.0_r8; td%pol(3) = 1.0_r8
+    td%pol(:) = 0.0_r8
   endif
 
-  td%gauge = fdf_integer("TDGauge", 1);
+  call oct_parse_int(C_string("TDGauge"), 1, td%gauge)
   if (td%gauge < 1 .or. td%gauge > 2) then
     write(message(1), '(a,i6,a)') "Input: '", td%gauge, "' is not a valid TDGauge"
     message(2) = 'Accepted values are:'
@@ -76,11 +80,10 @@ subroutine td_init(td, sys, m, st)
   !call td_init_PES()
 
   ! occupational analysis stuff
-  dummy = fdf_integer("TDOccupationalAnalysis", 0_i4)
-  td%occ_analysis = (dummy .ne. 0)
+  call oct_parse_logical(C_string("TDOccupationalAnalysis"), .false., td%occ_analysis)
 
   ! should we move the ions during the simulation?
-  td%move_ions = fdf_integer("MoveIons", 0)
+  call oct_parse_int(C_string("MoveIons"), 0, td%move_ions)
   if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then
     write(message(1),'(a,i4)') "Input: '", td%move_ions, &
          "' is not a valid MoveIons"
@@ -126,8 +129,7 @@ contains
       if(conf%verbose > 20) call laser_write_info(td%no_lasers, td%lasers, stdout)
       
       td%delta_strength = 0._r8 ! no delta impulse if lasers exist
-      dummy = fdf_integer("TDOutputLaser", 0_i4)
-      if(dummy .ne. 0) td%output_laser = .true.
+      call oct_parse_logical(C_string("TDOutputLaser"), .false., td%output_laser)
     end if
 
   end subroutine td_init_lasers
@@ -136,14 +138,14 @@ contains
     integer :: i, dummy
     real(r8) :: d, r, x(3)
 
-    dummy = fdf_integer("TDAbsorbingBoundaries", 0_i4)
+    call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
     if(dummy .eq. 1 .or. dummy .eq. 2) then
       td%ab = dummy
-      td%ab_width  = fdf_double("TDABWidth", &
-           4._r8/units_inp%length%factor)*units_inp%length%factor
+      call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, td%ab_width)
+      td%ab_width  = td%ab_width * units_inp%length%factor
       if(td%ab == 1) then
-        td%ab_height = fdf_double("TDABHeight", &
-             -0.2_r8/units_inp%energy%factor)*units_inp%energy%factor
+        call oct_parse_double(C_string("TDABHeight"), -0.2_r8/units_inp%energy%factor, td%ab_height)
+        td%ab_height = td%ab_height * units_inp%energy%factor
       else
         td%ab_height = 1._r8
       end if

@@ -1,19 +1,19 @@
-subroutine xc_gga(func, m, ispin, rho, rho_core, pot, energy)
+subroutine xc_gga(func, m, nspin, rho, rho_core, pot, energy)
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: func, ispin
-  real(r8), intent(IN) :: rho(m%np, ispin), rho_core(m%np)
-  real(r8), intent(out) :: pot(m%np, ispin), energy
+  integer, intent(in) :: func, nspin
+  real(r8), intent(IN) :: rho(m%np, nspin), rho_core(m%np)
+  real(r8), intent(out) :: pot(m%np, nspin), energy
 
-  real(r8) :: dedd(ispin), dedgd(3, ispin), e, dvol, den(3)
+  real(r8) :: dedd(nspin), dedgd(3, nspin), e, dvol, den(3)
   real(r8), allocatable :: d(:,:), gd(:,:,:)
   integer :: i, is, in, ic, ind(3)
 
   sub_name = 'xc_gga'; call push_sub()
 
-  allocate(d(0:m%np, ispin), gd(3, m%np, ispin))
-  do is = 1, ispin
+  allocate(d(0:m%np, nspin), gd(3, m%np, nspin))
+  do is = 1, nspin
     d(0, is) = 0._r8
-    d(1:m%np, is) = rho(1:m%np, is) + rho_core(1:m%np)/ispin
+    d(1:m%np, is) = rho(1:m%np, is) + rho_core(1:m%np)/nspin
     call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))
   end do
 
@@ -21,21 +21,21 @@ subroutine xc_gga(func, m, ispin, rho, rho_core, pot, energy)
   do i = 1, m%np
     select case(func)      
     case(X_FUNC_GGA_PBE)
-      call xc_x_pbe(.false., ispin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_x_pbe(.false., nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     case(X_FUNC_GGA_PBER)
-      call xc_x_pbe(.true.,  ispin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_x_pbe(.true.,  nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
 
     case(X_FUNC_GGA_LB94)
-      call xc_x_lb94(ispin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_x_lb94(nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     case(C_FUNC_GGA_PBE)
-      call xc_c_pbe(ispin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
+      call xc_c_pbe(nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
       
     end select
     energy = energy + sum(d(i, :)) * e * m%vol_pp
 
-    do is = 1, ispin
+    do is = 1, nspin
       pot(i, is) = pot(i, is) + dedd(is)
 
       do in = -m%d%norder , m%d%norder
@@ -63,7 +63,7 @@ subroutine xc_gga(func, m, ispin, rho, rho_core, pot, energy)
   if(func == X_FUNC_GGA_LB94) then ! we have to calculate the energy
     ! Levy-Perdew relation (PRA 32, 2010 (1985))
     energy = 0._r8
-    do is = 1, ispin
+    do is = 1, nspin
       call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
       do i = 1, m%np
         energy = energy + d(i, is) * m%h * (  &
@@ -85,27 +85,27 @@ end subroutine xc_gga
 ! Written by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.            !
 ! ******** INPUT ******************************************************       !
 ! INTEGER IREL           : Relativistic-exchange switch (0=No, 1=Yes)         !
-! INTEGER ISPIN          : Number of spin polarizations (1 or 2)              !
-! REAL*8  DENS(ISPIN)    : Total electron density (if ISPIN=1) or             !
-!                           spin electron density (if ISPIN=2)                !
-! REAL*8  GDENS(3,ISPIN) : Total or spin density gradient                     !
+! INTEGER NSPIN          : Number of spin polarizations (1 or 2)              !
+! REAL*8  DENS(NSPIN)    : Total electron density (if NSPIN=1) or             !
+!                           spin electron density (if NSPIN=2)                !
+! REAL*8  GDENS(3,NSPIN) : Total or spin density gradient                     !
 ! ******** OUTPUT *****************************************************       !
 ! REAL*8  EX             : Exchange energy density                            !
 ! REAL*8  EC             : Correlation energy density                         !
-! REAL*8  DEXDD(ISPIN)   : Partial derivative                                 !
-!                           d(DensTot*Ex)/dDens(ispin),                       !
-!                           where DensTot = Sum_ispin( DENS(ispin) )          !
+! REAL*8  DEXDD(NSPIN)   : Partial derivative                                 !
+!                           d(DensTot*Ex)/dDens(nspin),                       !
+!                           where DensTot = Sum_nspin( DENS(nspin) )          !
 !                           For a constant density, this is the               !
 !                          exchange potential                                 !
-! REAL*8  DECDD(ISPIN)   : Partial derivative                                 !
-!                           d(DensTot*Ec)/dDens(ispin),                       !
-!                           where DensTot = Sum_ispin( DENS(ispin) )          !
+! REAL*8  DECDD(NSPIN)   : Partial derivative                                 !
+!                           d(DensTot*Ec)/dDens(nspin),                       !
+!                           where DensTot = Sum_nspin( DENS(nspin) )          !
 !                          For a constant density, this is the                !
 !                          correlation potential                              !
-! REAL*8  DEXDGD(3,ISPIN): Partial derivative                                 !
-!                           d(DensTot*Ex)/d(GradDens(i,ispin))                !
-! REAL*8  DECDGD(3,ISPIN): Partial derivative                                 !
-!                           d(DensTot*Ec)/d(GradDens(i,ispin))                !
+! REAL*8  DEXDGD(3,NSPIN): Partial derivative                                 !
+!                           d(DensTot*Ex)/d(GradDens(i,nspin))                !
+! REAL*8  DECDGD(3,NSPIN): Partial derivative                                 !
+!                           d(DensTot*Ec)/d(GradDens(i,nspin))                !
 ! ********* UNITS ****************************************************        !
 ! Lengths in Bohr                                                             !
 ! Densities in electrons per Bohr**3                                          !
@@ -114,12 +114,12 @@ end subroutine xc_gga
 ! ********* ROUTINES CALLED ******************************************        !
 ! EXCHNG, PW92C                                                               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine xc_x_pbe(IREL, ISPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
+subroutine xc_x_pbe(IREL, NSPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
 
   logical, intent(in)   :: irel
-  integer, intent(in)   :: ISPIN
-  real(r8), intent(IN)  :: DENS(ISPIN), GDENS(3, ISPIN)
-  real(r8), intent(out) :: EX, DEXDD(ISPIN), DEXDGD(3, ISPIN)
+  integer, intent(in)   :: NSPIN
+  real(r8), intent(IN)  :: DENS(NSPIN), GDENS(3, NSPIN)
+  real(r8), intent(out) :: EX, DEXDD(NSPIN), DEXDGD(3, NSPIN)
   
   ! Internal variables
   integer :: IS, IX 
@@ -137,7 +137,7 @@ subroutine xc_x_pbe(IREL, ISPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
       MU = BETA * M_PI**2 / 3, KAPPA = 0.8040_r8
 
 ! Translate density and its gradient to new variables
-  if (ISPIN .eq. 1) then
+  if (NSPIN .eq. 1) then
     D(1) = HALF * DENS(1)
     D(2) = D(1)
     DT = max( DENMIN, DENS(1) )
@@ -171,7 +171,7 @@ subroutine xc_x_pbe(IREL, ISPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
     F1 = 1 + MU * S**2 / KAPPA
     F = 1 + KAPPA - KAPPA / F1
     
-    !       Note ispin=1 in call to exchng...
+    !       Note nspin=1 in call to exchng...
     
     call xc_x_lda( IREL, 1_i4, DS(is:is), VXUNIF(is:is), EXUNIF )
     FX = FX + DS(IS) * EXUNIF * F
@@ -194,7 +194,7 @@ subroutine xc_x_pbe(IREL, ISPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
 
   ! Set output arguments
   EX = FX
-  do IS = 1, ISPIN
+  do IS = 1, NSPIN
     DEXDD(IS) = DFXDD(IS)
     do IX = 1,3
       DEXDGD(IX,IS) = DFXDGD(IX,IS)
@@ -204,11 +204,11 @@ subroutine xc_x_pbe(IREL, ISPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
   return
 end subroutine xc_x_pbe
 
-subroutine xc_c_pbe(ISPIN, DENS, GDENS, EC, DECDD, DECDGD)
+subroutine xc_c_pbe(NSPIN, DENS, GDENS, EC, DECDD, DECDGD)
 
-  integer, intent(in)   :: ISPIN
-  real(r8), intent(IN)  :: DENS(ISPIN), GDENS(3, ISPIN)
-  real(r8), intent(out) :: EC, DECDD(ISPIN), DECDGD(3, ISPIN)
+  integer, intent(in)   :: NSPIN
+  real(r8), intent(IN)  :: DENS(NSPIN), GDENS(3, NSPIN)
+  real(r8), intent(out) :: EC, DECDD(NSPIN), DECDGD(3, NSPIN)
 
 ! Internal variables
   integer :: IS, IX
@@ -231,7 +231,7 @@ subroutine xc_c_pbe(ISPIN, DENS, GDENS, EC, DECDD, DECDGD)
   GAMMA = (1 - log(2.0_r8)) / M_PI**2
 
 ! Translate density and its gradient to new variables
-  if (ISPIN .eq. 1) then
+  if (NSPIN .eq. 1) then
     D(1) = HALF * DENS(1)
     D(2) = D(1)
     DT = max( DENMIN, DENS(1) )
@@ -307,7 +307,7 @@ subroutine xc_c_pbe(ISPIN, DENS, GDENS, EC, DECDD, DECDGD)
 
 ! Set output arguments
   EC = FC
-  do IS = 1,ISPIN
+  do IS = 1,NSPIN
     DECDD(IS) = DFCDD(IS)
     do IX = 1,3
       DECDGD(IX,IS) = DFCDGD(IX,IS)
@@ -317,14 +317,14 @@ subroutine xc_c_pbe(ISPIN, DENS, GDENS, EC, DECDD, DECDGD)
   return
 end subroutine xc_c_pbe
 
-subroutine xc_x_lb94(ispin, dens, gdens, ex, dexdd, dexdgd)
-  integer, intent(in)  :: ispin
-  real(r8), intent(IN) :: dens(ispin), gdens(3, ispin)
-  real(r8), intent(out):: ex, dexdd(ispin), dexdgd(3, ispin)
+subroutine xc_x_lb94(nspin, dens, gdens, ex, dexdd, dexdgd)
+  integer, intent(in)  :: nspin
+  real(r8), intent(IN) :: dens(nspin), gdens(3, nspin)
+  real(r8), intent(out):: ex, dexdd(nspin), dexdgd(3, nspin)
   
   ! Internal variables
   integer(i4) :: is 
-  real(r8)    :: d(ispin), gd(3, ispin), gdm, x, f
+  real(r8)    :: d(nspin), gd(3, nspin), gdm, x, f
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
 ! plus some numerical constants
@@ -334,10 +334,10 @@ subroutine xc_x_lb94(ispin, dens, gdens, ex, dexdd, dexdgd)
       FTHRD  = 4._r8/3._r8, BETA   = 0.05_r8
 
 ! first we add the LDA potential
-  call xc_x_lda( .false., ispin, dens, dexdd, ex)
+  call xc_x_lda( .false., nspin, dens, dexdd, ex)
 
 ! Translate density and its gradient to new variables
-  if (ispin .eq. 1) then
+  if (nspin .eq. 1) then
     d(1)     = dens(1) * HALF
     gd(:, 1) = gdens(:, 1) * HALF
   else
@@ -345,7 +345,7 @@ subroutine xc_x_lb94(ispin, dens, gdens, ex, dexdd, dexdgd)
     gd = gdens
   endif
 
-  do is = 1, ispin
+  do is = 1, nspin
     gdm   = sqrt( gd(1,is)**2 + gd(2,is)**2 + gd(3,is)**2 )
     
     if(d(is) >= DENMIN .and. gdm >=GDMIN) then

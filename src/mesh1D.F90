@@ -1,6 +1,7 @@
 #include "config.h"
 
 module mesh
+use liboct
 use global
 use units
 use fft
@@ -69,7 +70,7 @@ subroutine mesh_init(m, natoms, atom)
 
   sub_name = 'mesh_init'; call push_sub()
 
-  m%d%space = fdf_integer('DerivativesSpace', REAL_SPACE)
+  call oct_parse_int(C_string('DerivativesSpace'), REAL_SPACE, m%d%space)
   if(m%d%space < 0 .or. m%d%space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
          "' is not a valid DerivativesSpace"
@@ -88,7 +89,7 @@ subroutine mesh_init(m, natoms, atom)
 
   ! we may still need this for cg hartree
   ! the overhead is small, so we calculate it always :))
-  k = fdf_integer('OrderDerivatives', 4)
+  call oct_parse_int(C_string('OrderDerivatives'), 4, k)
   m%d%norder = k
   if (k < 1) then
     write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"

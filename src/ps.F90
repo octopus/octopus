@@ -1,5 +1,5 @@
 module ps
-use fdf
+use io
 use units
 use spline
 use kb

@@ -10,23 +10,8 @@ module math
   implicit none
   
   private
-  public :: oct_asinh, stepf, oct_erf, oct_erfc, oct_ylm, grylmr, weights, quickrnd
+  public :: grylmr, weights, quickrnd, stepf
   
-  interface
-    real(8) function oct_asinh(x)
-      real(8), intent(in) :: x
-    end function oct_asinh
-    real(8) function oct_erf(x)
-      real(8), intent(in) :: x
-    end function oct_erf
-    real(8) function oct_erfc(x)
-      real(8), intent(in) :: x
-    end function oct_erfc
-    real(8) function oct_ylm(x, y, z, l, m)
-      real(8), intent(in) :: x, y, z
-      integer, intent(in) :: l, m
-    end function oct_ylm
-  end interface
 
 contains
 

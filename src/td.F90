@@ -2,6 +2,7 @@
 
 module timedep
 use global
+use io
 use system
 use states
 use hamiltonian
@@ -59,24 +60,34 @@ end type td_type
 
 contains
 
-subroutine td_run(td, sys, h)
+subroutine td_run(td, u_st, sys, h)
   type(td_type), intent(inout) :: td
+  type(states_type), intent(IN) :: u_st
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
 
   integer :: i, ii, idim, ist, ik
   real(r8), allocatable :: dipole(:,:), multipole(:,:,:)
+  complex(r4), allocatable :: projections(:,:,:,:)
+  character(len=100) :: proj_filename
 
   sub_name = 'systm_td'; call push_sub()
-
-  if(td%iter == 0) call td_run_zero_iter(sys%m)
-  td%iter = td%iter + 1
 
   write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Dipole(is) '
   call write_info(1)
   
   allocate(dipole(sys%st%nspin, td%save_iter))
   allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
+
+  ! occupational analysis stuff
+  if(td%occ_analysis) then
+    write(proj_filename, '(a,a,i3.3,a)') trim(sys%sysname), &
+         '.', mpiv%node, '.proj'
+    allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, td%save_iter))
+  end if
+
+  if(td%iter == 0) call td_run_zero_iter(sys%m)
+  td%iter = td%iter + 1
 
   ii = 1
   do i = td%iter, td%max_iter
@@ -96,10 +107,9 @@ subroutine td_run(td, sys, h)
     ! measuring
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
          dipole(:,ii), multipole(:,:,ii))
-    !TODO
-    !if(td%occ_analysis) then
-    !  call systm_td_calc_projection(sys, empty, td, projections(:,:,:,ii))
-    !end if
+    if(td%occ_analysis) then
+      call td_calc_projection(projections(:,:,:,ii))
+    end if
 
     ! mask function?
     if(td%ab == 2) then
@@ -136,11 +146,14 @@ subroutine td_run(td, sys, h)
   end do
 
   deallocate(dipole, multipole)
+  if(td%occ_analysis) then
+    deallocate(projections)
+  end if
 contains
 
   subroutine td_run_zero_iter(m)
     type(mesh_type), intent(IN) :: m
-
+    
     integer :: i, iunit
     real(r8) :: x(3)    
     complex(r8) :: c
@@ -162,7 +175,6 @@ contains
     end if
 
     ! output static dipole (iter 0)
-    
     allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
          dipole, multipole)
@@ -177,7 +189,13 @@ contains
       call td_write_laser(iunit, 0, 0._r8, .true.)
       call io_close(iunit)
     end if
-
+    
+    if(td%occ_analysis) then
+      call io_assign(iunit)
+      open(iunit, form='unformatted', status='unknown', file=proj_filename)
+      write(iunit) sys%st%nik, sys%st%st_start, sys%st%st_end, u_st%nst
+      call io_close(iunit)
+    end if
     ! output initial positions and velocities
 !TODO
 !!$    if(td%move_ions > 0) then
@@ -193,7 +211,7 @@ contains
   end subroutine td_run_zero_iter
 
   subroutine td_write_data()
-    integer :: iunit, j, jj
+    integer :: iunit, j, jj, ist, ik, uist
 
     ! output multipoles
     call io_assign(iunit)
@@ -204,6 +222,20 @@ contains
            dipole(:, j), multipole(:,:, j), .false.)
     end do
     call io_close(iunit)
+
+    ! and now we should output the projections
+    if(td%occ_analysis) then
+      call io_assign(iunit)
+      open(iunit, form='unformatted', position='append', file=proj_filename)
+      do j = 1, td%save_iter
+        do ik = 1, sys%st%nik
+          do ist = 1, sys%st%st_start, sys%st%st_end
+            write(iunit) (projections(uist, ist, ik, j), uist = 1, u_st%nst)
+          end do
+        end do
+      end do
+      call io_close(iunit)
+    end if
 
     ! output the laser field
     if(td%output_laser) then
@@ -337,6 +369,21 @@ contains
     write(iunit, '(1x)', advance='yes')
     
   end subroutine td_write_multipole
+
+  subroutine td_calc_projection(p)
+    complex(r4), intent(out) :: p(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik)
+
+    integer :: uist, uik, ist, ik
+
+    do ik = 1, sys%st%nik
+      do ist = sys%st%st_start, sys%st%st_end
+        do uist = 1, u_st%nst
+          p(uist, ist, ik) = cmplx(sum(sys%st%zpsi(1:sys%m%np,:, ist, ik)* &
+               u_st%R_FUNC(psi) (1:sys%m%np,:, uist, ik)), kind=r4)*sys%m%vol_pp
+        end do
+      end do
+    end do
+  end subroutine td_calc_projection
 
 end subroutine td_run
 

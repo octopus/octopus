@@ -55,6 +55,7 @@ real(r8), parameter :: P_a_B = 0.529177_r8
 real(r8), parameter :: P_Ry = 13.6058_r8
 
 ! the standard input and output
+integer :: stderr = 0
 integer :: stdin  = 5
 integer :: stdout = 6
 

@@ -1,7 +1,8 @@
 #include "config.h"
 
 module static_pol
-use fdf
+use liboct
+use io
 use units
 use system
 use hamiltonian
@@ -25,7 +26,8 @@ subroutine static_pol_run(scf, sys, h)
   sub_name = 'static_pol_run'; call push_sub()
 
   ! read in e_field value
-  e_field = fdf_double('POLStaticField', 0.001_r8/units_inp%energy%factor*units_inp%length%factor)
+  call oct_parse_double(C_string('POLStaticField'), &
+       0.001_r8/units_inp%energy%factor*units_inp%length%factor, e_field)
   e_field = e_field * units_inp%energy%factor / units_inp%length%factor
   if (e_field <= 0._r8) then
     write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"

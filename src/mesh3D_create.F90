@@ -17,7 +17,7 @@ subroutine mesh3D_create(m, natoms, atom)
 
   sub_name = 'mesh3D_create'; call push_sub()
 
-  m%box_shape = fdf_integer('Box_shape', SPHERE)
+  call oct_parse_int(C_string('Box_shape'), SPHERE, m%box_shape)
   if (m%box_shape>3 .or. m%box_shape<1) then
     write(err, *) m%box_shape
     message(1) = "Input: '"//trim(err)//"' is not a valid Box_Shape"
@@ -29,7 +29,8 @@ subroutine mesh3D_create(m, natoms, atom)
     call write_fatal(1)
   endif
 
-  m%h = fdf_double('spacing', 0.6_r8/units_inp%length%factor)*units_inp%length%factor
+  call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h)
+  m%h = m%h * units_inp%length%factor
   if (m%h<0.01_r8 .or. m%h>2.0_r8) then
     write(err, *) m%h
     message(1) = "Input: '"//trim(err)//"' is not a valid spacing"
@@ -38,15 +39,18 @@ subroutine mesh3D_create(m, natoms, atom)
   end if
   m%vol_pp = m%h**3
 
-  m%rsize = fdf_double('radius', 20.0_r8/units_inp%length%factor)*units_inp%length%factor
+  call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
+  m%rsize = m%rsize * units_inp%length%factor
   if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
     write(err, *) m%rsize
     message(1) = "Input: '"//trim(err)//"' is not a valid radius"
     message(2) = '(1 <= radius [b] <= 500)'
     call write_fatal(2)
   end if
+
   ! this is sometimes required, so we always read....
-  m%zsize = fdf_double('zlength', 1.0_r8/units_inp%length%factor)*units_inp%length%factor
+  call oct_parse_double(C_string('zlength'), 1.0_r8/units_inp%length%factor, m%zsize)
+  m%zsize = m%zsize * units_inp%length%factor
   if(m%zsize<1.0_r8 .or. m%zsize>500.0_r8) then
     write(err, *) m%zsize
     message(1) = "Input: '"//trim(err)//"' is not a valid zlength"
@@ -147,6 +151,8 @@ subroutine mesh3D_create(m, natoms, atom)
 
   deallocate(Lxyz); nullify(Lxyz)
 
+  message(1) = "Info: Mesh parameters"
+  call write_info(1)
   call mesh_write_info(m, stdout)
 
   call pop_sub()

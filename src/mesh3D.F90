@@ -2,6 +2,7 @@
 
 module mesh
 use global
+use liboct
 use units
 use fft
 use atom
@@ -76,7 +77,7 @@ subroutine mesh_init(m, natoms, atom)
 
   ! we may still need this for cg hartree
   ! the overhead is small, so we calculate it always :))
-  k = fdf_integer('OrderDerivatives', 4)
+  call oct_parse_int(C_string('OrderDerivatives'), 4, k)
   m%d%norder = k
   if (k < 1) then
     write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
@@ -109,7 +110,7 @@ subroutine mesh_init(m, natoms, atom)
   m%hfft_n = m%fft_n/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
 
-  m%fft_alpha = fdf_double('DoubleFFTParameter', 2.0_r8)
+  call oct_parse_double(C_string('DoubleFFTParameter'), 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
          "' is not a valid DoubleFFTParameter"
@@ -120,7 +121,7 @@ subroutine mesh_init(m, natoms, atom)
   m%hfft_n2 = m%fft_n2/2 + 1
   m%dplanf2 = int(-1, POINTER_SIZE)
 
-  m%d%space = fdf_integer('DerivativesSpace', REAL_SPACE)
+  call oct_parse_int(C_string('DerivativesSpace'), REAL_SPACE, m%d%space)
   if(m%d%space < 0 .or. m%d%space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
          "' is not a valid DerivativesSpace"

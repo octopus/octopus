@@ -2,6 +2,7 @@
 
 module hartree
 use global
+use liboct
 use mesh
 use math
 #ifdef HAVE_FFTW
@@ -36,7 +37,7 @@ subroutine hartree_init(h, m)
 
   sub_name = 'hartree_init'; call push_sub()
 
-  h%solver = fdf_integer('PoissonSolver', 3)
+  call oct_parse_int(C_string('PoissonSolver'), 3, h%solver)
   if(h%solver.ne.1 .and. h%solver.ne.3 ) then
     write(message(1), '(a,i2,a)') "Input: '", h%solver, &
          "' is not a valid PoissonSolver"

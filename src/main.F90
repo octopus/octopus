@@ -34,8 +34,8 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 program tddft
-  use fdf
   use global
+  use liboct
   use run_prog
 
   implicit none
@@ -53,13 +53,19 @@ program tddft
 #endif
 
   ! init some of the stuff
-  call fdf_init('inp', 'out.fdf')
-  conf%verbose = fdf_integer("verbose", 30)
+  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
+  if(ierr .ne. 0) then
+    message(1) = "Error initializing liboct"
+    call write_fatal(1)
+  end if
+  
+  call oct_parse_int(C_string('verbose'), 30, conf%verbose)
+  
   if(conf%verbose >= 999 .and. mpiv%node == 0) then
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
   end if
-
+  
   ! Sets the dimensionaliy of the problem.
 #ifdef ONE_D
   conf%dim=1
@@ -117,6 +123,7 @@ program tddft
   call MPI_FINALIZE(ierr)
 #endif
   
+  call oct_parse_end()
   stop
 end program tddft
 

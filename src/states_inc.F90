@@ -75,17 +75,18 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   call io_assign(iunit)
   open(iunit, status='unknown', file=trim(filename), form='unformatted')
     
-  write(iunit) m%box_shape, m%h, m%rsize, m%zsize
-  write(iunit) m%np, st%dim, 1, st%nst, st%nik, st%ispin
+  write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%zsize
+  write(iunit) int(m%np, i4), int(st%dim, i4), 1_i4, &
+       int(st%nst, i4), int(st%nik, i4), int(st%ispin, i4)
   write(iunit) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
   ! eigenvalues are also needed ;)
   write(iunit) st%eigenval(st%st_start:st%st_end, 1:st%nik)
 
   if(present(iter)) then
-    write(iunit) iter, v1, v2
+    write(iunit) int(iter, i4), v1, v2
   end if
   call io_close(iunit)
-
+  
 end subroutine R_FUNC(states_write_restart)
 
 logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
@@ -95,7 +96,8 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   integer, intent(out), optional :: iter ! used in TD
   real(r8), intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
-  integer :: iunit, ik, ist, id, old_np, old_dim, old_start, old_end, old_nik
+  integer :: iunit
+  integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik
 
   sub_name = 'systm_load_psi'; call push_sub()
   ok = .true.
@@ -128,7 +130,8 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
     read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%nik)
 
     if(present(iter)) then ! read the time-dependent stuff
-      read(iunit, err=999) iter, v1, v2
+      read(iunit, err=999) ii, v1, v2
+      iter = int(ii)
     end if
   end if
   

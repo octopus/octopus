@@ -1,8 +1,8 @@
-subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
+subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, rho_core, vx, vc, ex, ec)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  type(hartree_type), intent(inout) :: hart
+  type(hartree_type), intent(inout) :: hartr
   real(r8), intent(IN) :: rho_core(m%np)
   real(r8), intent(out) :: vx(m%np, st%nspin), vc(m%np, st%nspin), ex, ec
 
@@ -21,14 +21,13 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   case(XC_FAMILY_LDA)
     call xc_lda(xcs%x_func, m, st%ispin, st%nspin, st%rho, rho_core, vx, ex)
   case(XC_FAMILY_GGA)
-!    call xc_gga(xcs%x_func, xcs, m, st%ispin, st%rho, rho_core, vx, ex)
+    call xc_gga(xcs%x_func, m, st%nspin, st%rho, rho_core, vx, ex)
 #ifdef HAVE_LAPACK
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%ispin, psi, occ, eigenval, &
 !        rho, rho_core, vx, ex)
-!  case(XC_FAMILY_KLI)
-!    call R_FUNC(xc_kli) (xcs%x_func, m, st%ispin, nst, occ, eigenval, &
-!        psi, rho_core, hartr, vx, ex)
+  case(XC_FAMILY_KLI)
+    call R_FUNC(xc_kli) (xcs%x_func, m, st, rho_core, hartr, vx, ex)
 #endif
   end select
 
@@ -37,14 +36,13 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   case(XC_FAMILY_LDA)
     call xc_lda(xcs%c_func, m, st%ispin, st%nspin, st%rho, rho_core, vc, ec)
   case(XC_FAMILY_GGA)
-!    call xc_gga(xcs%c_func, xcs, m, st%ispin, st%rho, rho_core, vc, ec)
+    call xc_gga(xcs%c_func, m, st%nspin, st%rho, rho_core, vc, ec)
 #ifdef HAVE_LAPACK
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%ispin, psi, occ, eigenval, &
 !        rho, rho_core, vc, ec)
-!  case(XC_FAMILY_KLI)
-!    call R_FUNC(xc_kli) (xcs%c_func, m, st%ispin, nst, occ, eigenval, &
-!        psi, rho_core, hartr, vc, ec)
+  case(XC_FAMILY_KLI)
+    call R_FUNC(xc_kli) (xcs%c_func, m, st, rho_core, hartr, vc, ec)
 #endif
   end select
 

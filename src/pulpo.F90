@@ -1,6 +1,6 @@
 module pulpo
   use global
-  use fdf
+  use liboct
 
 contains
   subroutine pulpo_print()
@@ -10,7 +10,7 @@ contains
     message(1) = ''; message(2) = ''
     call write_info(2)
 
-    lang = fdf_string('RecipeLang', 'en')
+    call oct_parse_str('RecipeLang', 'en', lang)
     call lowcase(lang)
     select case(lang)
     case('en')
