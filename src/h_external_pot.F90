@@ -458,18 +458,16 @@ contains
                    splint(s%ps%Ur(l), r) * ylm * (r**l)
             end if
           end do
-          ! uVu can be calculated exactly, or numerically
-          a%uVu(add_lm) = s%ps%dkbcos(l)
-          !a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
-          if(abs(a%uVu(add_lm) - s%ps%dkbcos(l))/s%ps%dkbcos(l) > 0.25_r8) then
+          a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
+          if(abs((a%uVu(add_lm) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.01_r8) then
             write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                  add_lm
             write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm)
             message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
             call write_warning(3)
-
-            a%uVu(add_lm) = s%ps%dkbcos(l)
           end if
+          ! uVu can be calculated exactly, or numerically
+          a%uVu(add_lm) = s%ps%dkbcos(l)
         end if
           
         add_lm = add_lm + 1

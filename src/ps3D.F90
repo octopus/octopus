@@ -633,7 +633,7 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato = 0.0d0
     nrc = nint(log(rc(l)/psf%b + 1.0_r8)/psf%a) + 1
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vps(2:nrc, ps%L_loc))*rphi(2:nrc, l) &
-         *ps%dknrm(l)/psf%rofi(2:nrc)**(l+1)
+         *ps%dknrm(l)/psf%rofi(2:nrc)
     hato(1) = hato(2)    
     call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l))
 
