@@ -191,9 +191,9 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     smix%dv(:,:, ipos) = vin  - smix%dv(:,:, ipos)
 
     do is = 1, nspin
-      w0 = 1._r8/DNRM2(np, smix%df(1, is, ipos), 1)
-      call dscal (np, w0, smix%df(1, is, ipos), 1)
-      call dscal (np, w0, smix%dv(1, is, ipos), 1)
+      gamma = 1._r8/DNRM2(np, smix%df(1, is, ipos), 1)
+      call dscal (np, gamma, smix%df(1, is, ipos), 1)
+      call dscal (np, gamma, smix%dv(1, is, ipos), 1)
     end do
   endif
     
