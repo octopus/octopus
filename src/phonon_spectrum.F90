@@ -28,27 +28,8 @@ program phonon_spectrum
 
   integer :: ierr, iunit, time_steps
 
-  ! Inits the input file.
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
-    if(ierr .ne. 0) then
-      message(1) = "Error initializing liboct"
-      call write_fatal(1)
-    end if
-  end if
-
-  ! Sets, for developping only, verbosity to debug level
-  conf%verbose = 1000
-
-  ! Sets the dimensionality
-#ifdef ONE_D
-  conf%dim=1
-#else
-  conf%dim=3
-#endif
-
-  ! Initializes the units
+  ! Initialize stuff
+  call global_init()
   call units_init()
 
   ! Opens the coordinates files.

@@ -46,6 +46,9 @@ program octopus
        " at ", val(5), ":", val(6), ":", val(7)
   call write_info(1)
 
+  write(message(1), '(a,i1,a)') 'Info: Octopus will run in ', conf%dim, ' dimension(s)'
+  call write_info(1)
+
   ! now we really start
   call run()
 

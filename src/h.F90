@@ -220,18 +220,18 @@ subroutine hamiltonian_init(h, sys)
       if(conf%verbose > 20 .and. mpiv%node == 0) then
         call laser_write_info(h%no_lasers, h%lasers, stdout)
       end if
-      call oct_parse_logical(C_string("TDOutputLaser"), .false., h%output_laser)  
+      call oct_parse_logical(C_string("OutputLaser"), .false., h%output_laser)  
   end if
 
   ! absorbing boundaries
-  call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, h%ab)
+  call oct_parse_int(C_string("AbsorbingBoundaries"), 0, h%ab)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.eq. 1 .or. h%ab.eq.2) then
-    call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, h%ab_width)
+    call oct_parse_double(C_string("ABWidth"), 4._r8/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
-      call oct_parse_double(C_string("TDABHeight"), -0.2_r8/units_inp%energy%factor, h%ab_height)
+      call oct_parse_double(C_string("ABHeight"), -0.2_r8/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
       h%ab_height = 1._r8

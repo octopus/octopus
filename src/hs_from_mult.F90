@@ -27,17 +27,8 @@ program hs_from_mult
   type(spec_type) :: s
   type(spec_sh) :: sh
 
-  ! init liboct
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
-    if(ierr .ne. 0) then
-      message(1) = "Error initializing liboct"
-      call write_fatal(1)
-    end if
-  end if
-
-  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
+  ! Initialize stuff
+  call global_init()
   call units_init()
 
   call oct_parse_double(C_string("SpecStartTime"), 0._r8, s%start_time)

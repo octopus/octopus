@@ -30,34 +30,12 @@ program excitations
   type(system_type) :: sys
   type(states_type), target :: st
   type(hartree_type) :: hart
-  integer :: ierr, n_occ, n_unocc, flags(32)
+  integer :: n_occ, n_unocc, flags(32)
   character(len=100) :: ch
   logical :: l
 
-  mpiv%node = 0
-  mpiv%numprocs = 1
-
-  ! init some of the stuff
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
-    if(ierr .ne. 0) then
-      message(1) = "Error initializing liboct"
-      call write_fatal(1)
-    end if
-  end if
-
-  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
-
-  ! This only works for three dimensions
-  call oct_parse_int(C_string('Dimensions'), 3, conf%dim)
-  if(conf%dim<1 .or. conf%dim>3) then
-    message(1) = 'Dimensions must be either 1, 2, or 3'
-    call write_fatal(1)
-  end if
-  write(message(1), '(a,i1,a)') 'Octupus will run in ', conf%dim, ' dimension(s)'
-
   ! Initialize stuff
+  call global_init()
   call units_init()
   call system_init(sys)
 

@@ -30,27 +30,12 @@ program choose_st
   integer :: ierr, i, n_st, n_unocc, flags(32)
   character(len=100) :: ch
 
-  mpiv%node = 0
-  mpiv%numprocs = 1
-
-  ! init some of the stuff
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
-    if(ierr .ne. 0) then
-      message(1) = "Error initializing liboct"
-      call write_fatal(1)
-    end if
-  end if
-
-  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
-  call oct_parse_int(C_string('Dimensions'), 3, conf%dim)
-
   ! Initialize stuff
+  call global_init()
   call units_init()
   call system_init(sys)
-  deallocate(sys%st%rho, sys%st%occ, sys%st%eigenval)
 
+  deallocate(sys%st%rho, sys%st%occ, sys%st%eigenval)
   call states_init(st1, sys%m, sys%val_charge)
   deallocate(st1%rho, st1%occ, st1%eigenval)
 

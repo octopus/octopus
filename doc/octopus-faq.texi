@@ -139,8 +139,8 @@ translation approved by the Free Software Foundation.
 
 Units
 
-* What are these @emph{atomic units}?::  
-* What are these @emph{convenient units}?::  
+* What are these atomic units?::  
+* What are these convenient units?::  
 * How do I set a laser pulse of x W/cm2 of intensity?::  
 
 @end detailmenu
@@ -153,12 +153,12 @@ Units
 @chapter Units
 
 @menu
-* What are these @emph{atomic units}?::  
-* What are these @emph{convenient units}?::  
+* What are these atomic units?::  
+* What are these convenient units?::  
 * How do I set a laser pulse of x W/cm2 of intensity?::  
 @end menu
 
-@node What are these @emph{atomic units}?, What are these @emph{convenient units}?, Units, Units
+@node What are these atomic units?, What are these convenient units?, Units, Units
 @section What are these @emph{atomic units}?
 
 Atomic units are a Gaussian system of units (by ``Gaussian'' I mean that the
@@ -255,7 +255,7 @@ $$
 And combining (6) and (5) we retrieve (4).
 
 
-@node What are these @emph{convenient units}?, How do I set a laser pulse of x W/cm2 of intensity?, What are these @emph{atomic units}?, Units
+@node What are these convenient units?, How do I set a laser pulse of x W/cm2 of intensity?, What are these atomic units?, Units
 @section What are these @emph{convenient units}?
 
 A lot of the literature in this field is written using @AA{}ngstr@"oms and electron-volts
@@ -267,7 +267,7 @@ The unit mass remains the same, and thus the unit of time must change, being
 now @math{\hbar /{\rm eV}},
 with @math{\hbar = 6.582\,1220(20)\times 10^{-16}~\rm eV\,s}.
 
-@node How do I set a laser pulse of x W/cm2 of intensity?,  , What are these @emph{convenient units}?, Units
+@node How do I set a laser pulse of x W/cm2 of intensity?,  , What are these convenient units?, Units
 @section How do I set a laser pulse of x W/cm2 of intensity?
 
 

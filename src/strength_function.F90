@@ -27,17 +27,8 @@ program strength_function
   type(spec_type) :: s
   type(spec_sf) :: sf
 
-  ! init liboct
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then ! try stdin
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
-    if(ierr .ne. 0) then
-      message(1) = "Error initializing liboct"
-      call write_fatal(1)
-    end if
-  end if
-
-  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
+  ! Initialize stuff
+  call global_init()
   call units_init()
 
   call oct_parse_str("SpecTransformMode", "sin", txt)

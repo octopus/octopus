@@ -112,7 +112,7 @@ subroutine mesh_create(m, natoms, atom)
     message(1) = 'MINIMUM cage not correctly implemented. Sorry.'
     call write_fatal(1)
   case(PARALLELEPIPED)
-    m%nr(1:conf%dim) = int((m%lsize(1:conf%dim)/2.0_r8)/m%h(1:conf%dim))
+    m%nr(1:conf%dim) = int(m%lsize(1:conf%dim)/m%h(1:conf%dim))
   end select
   m%nx(1:conf%dim) = m%nr(1:conf%dim) + m%d%norder
 

@@ -33,25 +33,8 @@ program broad
   logical :: l
   type(broad_type) :: b
 
-  mpiv%node = 0
-  mpiv%numprocs = 1
-
-  ! init some of the stuff
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
-    if(ierr .ne. 0) then
-      message(1) = "Error initializing liboct"
-      call write_fatal(1)
-    end if
-  end if
-
-  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
-
-  ! This only works for three dimensions
-  conf%dim     = 3
-
   ! Initialize stuff
+  call global_init()
   call units_init()
 
   ! broadening to use

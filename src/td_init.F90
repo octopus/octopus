@@ -108,7 +108,7 @@ subroutine td_init(td, sys, m, st)
   endif
 
   ! now the photoelectron stuff
-  call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
+  call oct_parse_int(C_string("AbsorbingBoundaries"), 0, dummy)
   call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
 
   ! occupational analysis stuff

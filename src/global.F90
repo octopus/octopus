@@ -149,7 +149,6 @@ subroutine global_init()
     message(1) = 'Dimensions must be either 1, 2, or 3'
     call write_fatal(1)
   end if
-  write(message(1), '(a,i1,a)') 'Octopus will run in ', conf%dim, ' dimension(s)'
 
   ! create temporary dir (is always necessary)
   call oct_mkdir(C_string("tmp"))

@@ -32,24 +32,8 @@ program nbo2xyz
   type(atom_classical_type), pointer :: catm(:)
   type(specie_type), pointer :: spec(:)
 
-  ! Opens and parses the inp file through the liboct
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
-  if(ierr .ne. 0) then
-    message(1) = "Error initializing liboct"
-    call write_fatal(1)
-  end if
-  
-  ! Finds out if we want to be verbose or not.
-  call oct_parse_int(C_string('verbose'), 30, conf%verbose)
-  if(conf%verbose > 999 .and. mpiv%node == 0) then
-    message(1) = 'Entering DEBUG mode'
-    call write_warning(1)
-  end if
-  
-  ! Sets the dimensionaliy of the problem.
-  conf%dim=3
-
-  ! Fixes the units.
+  ! Initialize stuff
+  call global_init()
   call units_init()
 
   ! Gets the system name
@@ -119,7 +103,7 @@ subroutine write_xyz
   
   ! xyz format, for easy plot in rasmol
     write(xyz_unit, '(i4)') natoms
-    write(xyz_unit, '(1x)')
+    write(xyz_unit, '(i10)') iter
     do i = 1, natoms
       write(xyz_unit, '(6x,a,2x,3f12.6)') atm(i)%spec%label, atm(i)%x(:)/units_out%length%factor
     end do

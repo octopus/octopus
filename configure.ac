@@ -46,6 +46,7 @@ AC_SUBST(PROGNAME)
 # complex wavefunctions
 if test "${COMPLEX_WFNS}"; then
 	AC_DEFINE(COMPLEX_WFNS, 1, [Code compiled for ground-state complex wavefunctions])
+	PROGNAME="z$PROGNAME"
   msg2="complex wave functions"
 else
   msg2="real wave functions"
