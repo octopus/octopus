@@ -399,6 +399,20 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
 
   call push_sub('h_calc_vhxc')
 
+  ! Duplicate these variables from states_type...
+  h%dim           = sys%st%dim
+  h%nst           = sys%st%nst
+  h%nik           = sys%st%nik
+  h%nik_axis      = sys%st%nik_axis
+  h%ispin         = sys%st%ispin
+  h%nspin         = sys%st%nspin
+  h%spin_channels = sys%st%spin_channels
+  h%select_axis   = sys%st%select_axis
+  nullify(h%kpoints, h%kweights)
+  allocate(h%kpoints(3, h%nik), h%kweights(h%nik))
+  h%kpoints       = sys%st%kpoints
+  h%kweights      = sys%st%kweights
+
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
     h%epot = M_ZERO
     h%vhxc = M_ZERO

@@ -96,19 +96,8 @@ subroutine hamiltonian_init(h, sys)
 
   call push_sub('hamiltonian_init')
 
-  ! Duplicate these variables from states_type...
-  h%dim           = sys%st%dim
-  h%nst           = sys%st%nst
-  h%nik           = sys%st%nik
-  h%nik_axis      = sys%st%nik_axis
-  h%ispin         = sys%st%ispin
-  h%nspin         = sys%st%nspin
-  h%spin_channels = sys%st%spin_channels
-  h%select_axis   = sys%st%select_axis
-  allocate(h%kpoints(3, h%nik), h%kweights(h%nik))
-  h%kpoints       = sys%st%kpoints
-  h%kweights      = sys%st%kweights
-
+  ! These two should be nullified (they are assigned in h_calc_vhxc)
+  nullify(h%kpoints, h%kweights)
 
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
