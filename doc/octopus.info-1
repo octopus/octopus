@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -142,6 +142,7 @@ SCF
 * ConvRelDens::
 * ConvAbsEv::
 * ConvRelEv::
+* GuessDensitySpin::
 * LCAOStart::
 * SCFinLCAO::
 * EigenSolver::
@@ -1392,4 +1393,23 @@ points to use in the calculation. If `NumberKPoints == 1', use only the
 Gamma point. (Note: current version in fact does not implement this
 possibility. Setting this variable to more that 1 may lead to erroneous
 results.)
+
+
+File: octopus.info,  Node: ExcessCharge,  Next: ExtraStates,  Prev: NumberKPoints,  Up: States
+
+`ExcessCharge' (double, 1)
+--------------------------
+
+   The net charge of the system. A negative value means that we are
+adding electrons, while a positive value means we are taking electrons
+from the system.
+
+
+File: octopus.info,  Node: ExtraStates,  Next: Occupations,  Prev: ExcessCharge,  Up: States
+
+`ExtraStates' (integer, 1)
+--------------------------
+
+   How many unoccupied states to use in the ground-state calculation.
+Note that this number is unrelated to `CalculationMode == 4'.
 

@@ -193,6 +193,7 @@ SCF
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
+* GuessDensitySpin::
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1604,6 +1605,7 @@ criteria is fulfilled.
 * ConvRelDens::                 
 * ConvAbsEv::                   
 * ConvRelEv::                   
+* GuessDensitySpin::
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1644,14 +1646,28 @@ not use this criterion.
 Absolute convergence of the eigenvalues. @code{0} means do 
 not use this criterion.
 
-@node ConvRelEv, LCAOStart, ConvAbsEv, SCF
+@node ConvRelEv, GuessDensitySpin, ConvAbsEv, SCF
 @subsection @code{ConvRelEnergy} (double, 0.0)
 @vindex @code{ConvRelEnergy}
 
 Relative convergence of the eigenvalues. @code{0} means do 
 not use this criterion.
 
-@node LCAOStart, SCFinLCAO, ConvRelEv, SCF
+@node GuessDensitySpin, LCAOStart, ConvRelEv, SCF
+@subsection @code{GuessDensitySpin} (integer, 2)
+@vindex @code{GuessDensitySpin}
+
+The guess density for the SCF cycle is just the sum of all the atomic densities.
+When performing spin-polarized or non-collinear spin calculations this option sets 
+the spin-polarization of the guess density.
+Possible values are:
+  @itemize @minus
+    @item @code{1}: Spin-unpolarized
+    @item @code{2}: Spin-polarized
+    @item @code{3}: Non-collinear
+  @end itemize
+
+@node LCAOStart, SCFinLCAO, GuessDensitySpin, SCF
 @subsection @code{LCAOStart} (logical, true)
 @vindex @code{LCAOStart}
 

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,171 +6,184 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
+This manual is for octopus 1.3, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
 
 Indirect:
-octopus.info-1: 207
-octopus.info-2: 49919
-octopus.info-3: 99453
+octopus.info-1: 655
+octopus.info-2: 50534
+octopus.info-3: 99980
 
 Tag Table:
 (Indirect)
-Node: Top207
-Node: Copying4251
-Node: Authors5652
-Node: Introduction8871
-Node: Description of octopus9504
-Ref: Description of octopus-Footnote-111948
-Node: Time dependent density functional theory12341
-Ref: Time dependent density functional theory-Footnote-116100
-Ref: Time dependent density functional theory-Footnote-216332
-Ref: Time dependent density functional theory-Footnote-316634
-Ref: Time dependent density functional theory-Footnote-416790
-Ref: Time dependent density functional theory-Footnote-516974
-Node: Installation17045
-Node: Quick instructions17240
-Node: Long instructions17770
-Ref: Long instructions-Footnote-125875
-Node: Troubleshooting26390
-Node: The parser28309
-Node: Input file options31455
-Node: Generalities32071
-Node: SystemName32343
-Node: Dimensions32634
-Node: CalculationMode32935
-Node: Units33862
-Node: UnitsInput34555
-Node: UnitsOutput34894
-Node: Verbose35230
-Node: DebugLevel35802
-Node: Species Block36052
-Node: Species36225
-Node: Coordinates Description39490
-Node: PDBCoordinates39904
-Node: XYZCoordinates41376
-Node: Coordinates42143
-Node: XYZVelocities43132
-Node: Velocities43429
-Node: RandomVelocityTemp44198
-Node: Mesh44522
-Node: BoxShape45059
-Node: Radius45561
-Node: Lsize45789
-Node: ZLength46129
-Node: Spacing46339
-Node: DerivativesSpace46776
-Node: OrderDerivatives47387
-Node: DoubleFFTParameter47756
-Node: FFTOptimize48262
-Node: States48570
-Node: SpinComponents48802
-Node: NumberKPoints49467
-Node: ExcessCharge49919
-Node: ExtraStates50229
-Node: Occupations50513
-Node: ElectronicTemperature51462
-Node: Hamiltonian51788
-Node: NonInteractingElectrons52038
-Node: ClassicPotential52436
-Node: LocalPotentialSpace52772
-Node: RelativisticCorrection53202
-Node: Exchange and correlation53617
-Node: XFunctional53954
-Node: CFunctional54706
-Node: SCF55271
-Node: MaximumIter55810
-Node: ConvAbsDens56012
-Node: ConvRelDens56241
-Node: ConvAbsEv56466
-Node: ConvRelEv56689
-Node: LCAOStart56918
-Node: SCFinLCAO57303
-Node: EigenSolver57702
-Node: EigenSolverInitTolerance58598
-Node: EigenSolverFinalTolerance58862
-Node: EigenSolverFinalToleranceIteration59149
-Node: EigenSolverMaxIter59504
-Node: What2Mix59895
-Node: TypeOfMixing60184
-Node: Mixing60554
-Node: MixNumberSteps60833
-Node: Unoccupied States61068
-Node: UnoccNumberStates61393
-Node: UnoccMaximumIter61626
-Node: UnoccConv61979
-Node: Time Dependent62229
-Node: TDMaximumIter66624
-Node: TDTimeStep66894
-Node: TDExponentialMethod67140
-Node: TDExpOrder72454
-Node: TDLanczosTol72806
-Node: TDEvolutionMethod73284
-Node: TDLasers79116
-Node: TDGauge80525
-Node: TDDeltaStrength80801
-Node: TDPolarization81143
-Node: TDOutputMultipoles81717
-Node: TDDipoleMax82084
-Node: TDOutputCoordinates82378
-Node: TDOutputGSProjection82752
-Node: TDOutputAcceleration83215
-Node: TDOutputLaser83638
-Node: TDOutputElEnergy83905
-Node: TDOutputOccAnalysis84215
-Node: MoveIons84576
-Node: AbsorbingBoundaries84967
-Node: ABWidth85552
-Node: ABHeight85777
-Node: Geometry optimization85991
-Node: GOMethod86242
-Node: GOTolerance86523
-Node: GOMaxIter86821
-Node: GOStep87098
-Node: Function output for visualization87273
-Node: OutputKSPotential88686
-Node: OutputDensity89222
-Node: OutputWfs89523
-Node: OutputWfsNumber89955
-Node: OutputElf90296
-Node: OutputGeometry90612
-Node: OutputAxisX91069
-Node: OutputAxisY91373
-Node: OutputAxisZ91674
-Node: OutputPlaneX91976
-Node: OutputPlaneY92256
-Node: OutputPlaneZ92537
-Node: OutputDX92814
-Node: OutputNETCDF93204
-Node: OutputEvery93575
-Node: Spectrum calculations93848
-Node: SpecTransformNode94536
-Node: SpecDampMode94848
-Node: SpecDampFactor95632
-Node: SpecStartTime95919
-Node: SpecEndTime96197
-Node: SpecEnergyStep96471
-Node: SpecMinEnergy96683
-Node: SpecMaxEnergy96934
-Node: HSPolarization97188
-Node: Varia97670
-Node: PoissonSolver97838
-Node: POLStaticField98265
-Node: Displacement98549
-Node: External utilities98865
-Node: oct-sf99453
-Node: oct-rsf100224
-Node: oct-hs-mult100343
-Node: oct-hs-acc100547
-Node: oct-xyz-anim100756
-Node: oct-excite100982
-Node: oct-broad101525
-Node: oct-make-st101871
-Node: oct-choose-st103144
-Node: oct-center-geom103900
-Node: wf.net104084
-Node: Examples105459
-Node: Hello world105614
-Ref: Hello world-Footnote-1112258
-Node: Benzene112342
-Node: Options Index113150
+Node: Top655
+Node: Copying4272
+Node: Authors5673
+Node: Introduction8892
+Node: Description of octopus9525
+Ref: Description of octopus-Footnote-111969
+Node: Time dependent density functional theory12362
+Ref: Time dependent density functional theory-Footnote-116121
+Ref: Time dependent density functional theory-Footnote-216353
+Ref: Time dependent density functional theory-Footnote-316655
+Ref: Time dependent density functional theory-Footnote-416811
+Ref: Time dependent density functional theory-Footnote-516995
+Node: Installation17066
+Node: Quick instructions17261
+Node: Long instructions17791
+Ref: Long instructions-Footnote-125896
+Node: Troubleshooting26411
+Node: The parser28330
+Node: Input file options31476
+Node: Generalities32092
+Node: SystemName32364
+Node: Dimensions32655
+Node: CalculationMode32956
+Node: Units33883
+Node: UnitsInput34576
+Node: UnitsOutput34915
+Node: Verbose35251
+Node: DebugLevel35823
+Node: Species Block36073
+Node: Species36246
+Node: Coordinates Description39511
+Node: PDBCoordinates39925
+Node: XYZCoordinates41397
+Node: Coordinates42164
+Node: XYZVelocities43153
+Node: Velocities43450
+Node: RandomVelocityTemp44219
+Node: Mesh44543
+Node: BoxShape45080
+Node: Radius45582
+Node: Lsize45810
+Node: ZLength46150
+Node: Spacing46360
+Node: DerivativesSpace46797
+Node: OrderDerivatives47408
+Node: DoubleFFTParameter47777
+Node: FFTOptimize48283
+Node: States48591
+Node: SpinComponents48823
+Node: NumberKPoints49488
+Node: ExcessCharge49940
+Node: ExtraStates50250
+Node: Occupations50534
+Node: ElectronicTemperature51483
+Node: Hamiltonian51809
+Node: NonInteractingElectrons52059
+Node: ClassicPotential52457
+Node: LocalPotentialSpace52793
+Node: RelativisticCorrection53223
+Node: Exchange and correlation53638
+Node: XFunctional53975
+Node: CFunctional54727
+Node: SCF55292
+Node: MaximumIter55852
+Node: ConvAbsDens56054
+Node: ConvRelDens56283
+Node: ConvAbsEv56508
+Node: ConvRelEv56731
+Node: GuessDensitySpin56967
+Node: LCAOStart57438
+Node: SCFinLCAO57830
+Node: EigenSolver58229
+Node: EigenSolverInitTolerance59125
+Node: EigenSolverFinalTolerance59389
+Node: EigenSolverFinalToleranceIteration59676
+Node: EigenSolverMaxIter60031
+Node: What2Mix60422
+Node: TypeOfMixing60711
+Node: Mixing61081
+Node: MixNumberSteps61360
+Node: Unoccupied States61595
+Node: UnoccNumberStates61920
+Node: UnoccMaximumIter62153
+Node: UnoccConv62506
+Node: Time Dependent62756
+Node: TDMaximumIter67151
+Node: TDTimeStep67421
+Node: TDExponentialMethod67667
+Node: TDExpOrder72981
+Node: TDLanczosTol73333
+Node: TDEvolutionMethod73811
+Node: TDLasers79643
+Node: TDGauge81052
+Node: TDDeltaStrength81328
+Node: TDPolarization81670
+Node: TDOutputMultipoles82244
+Node: TDDipoleMax82611
+Node: TDOutputCoordinates82905
+Node: TDOutputGSProjection83279
+Node: TDOutputAcceleration83742
+Node: TDOutputLaser84165
+Node: TDOutputElEnergy84432
+Node: TDOutputOccAnalysis84742
+Node: MoveIons85103
+Node: AbsorbingBoundaries85494
+Node: ABWidth86079
+Node: ABHeight86304
+Node: Geometry optimization86518
+Node: GOMethod86769
+Node: GOTolerance87050
+Node: GOMaxIter87348
+Node: GOStep87625
+Node: Function output for visualization87800
+Node: OutputKSPotential89213
+Node: OutputDensity89749
+Node: OutputWfs90050
+Node: OutputWfsNumber90482
+Node: OutputElf90823
+Node: OutputGeometry91139
+Node: OutputAxisX91596
+Node: OutputAxisY91900
+Node: OutputAxisZ92201
+Node: OutputPlaneX92503
+Node: OutputPlaneY92783
+Node: OutputPlaneZ93064
+Node: OutputDX93341
+Node: OutputNETCDF93731
+Node: OutputEvery94102
+Node: Spectrum calculations94375
+Node: SpecTransformNode95063
+Node: SpecDampMode95375
+Node: SpecDampFactor96159
+Node: SpecStartTime96446
+Node: SpecEndTime96724
+Node: SpecEnergyStep96998
+Node: SpecMinEnergy97210
+Node: SpecMaxEnergy97461
+Node: HSPolarization97715
+Node: Varia98197
+Node: PoissonSolver98365
+Node: POLStaticField98792
+Node: Displacement99076
+Node: External utilities99392
+Node: oct-sf99980
+Node: oct-rsf100751
+Node: oct-hs-mult100870
+Node: oct-hs-acc101074
+Node: oct-xyz-anim101283
+Node: oct-excite101509
+Node: oct-broad102052
+Node: oct-make-st102398
+Node: oct-choose-st103671
+Node: oct-center-geom104427
+Node: wf.net104611
+Node: Examples105986
+Node: Hello world106141
+Ref: Hello world-Footnote-1112785
+Node: Benzene112869
+Node: Options Index113677
 
 End Tag Table
