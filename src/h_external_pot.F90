@@ -138,7 +138,6 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   real(r8) :: r, x(3), vl, g(3)
   complex(r8) :: c
   real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
-  complex(r8) :: fri, dfri(3)
   complex(r8), allocatable :: fw(:,:,:), dfw(:,:,:,:)
 
   sub_name = 'specie_nl_fourier_init'; call push_sub()
@@ -183,8 +182,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
               x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8) / real(1 + nextra, r8)
               r = sqrt(sum(x**2))
               
-              call specie_get_nl_part(s(i), x, l, lm, ii, fri, dfri)
-              fr(ix, iy, iz) = fri; dfr(ix, iy, iz, :) = dfri(:)
+              call specie_get_nl_part(s(i), x, l, lm, ii, fr(ix, iy, iz), dfr(ix, iy, iz, :))
             end do
           end do
         end do

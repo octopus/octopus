@@ -284,7 +284,7 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV)
   type(specie_type), intent(IN) :: s
   real(r8), intent(in) :: x(3)
   integer, intent(in) :: l, lm, i
-  R_TYPE, intent(out) :: uV, duV(3)
+  real(r8), intent(out) :: uV, duV(3)
   real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
   real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
 

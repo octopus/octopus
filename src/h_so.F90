@@ -86,11 +86,8 @@ subroutine zso (h, sys, ik, psi, Hpsi)
        m_loop: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
              do jkbc = 1, spec%ps%kbc
-               uvpsi = R_DOT(atm%mps, atm%uv(:, add_lm, ikbc), 1, psi, 1)*&
-                       sys%m%vol_pp*atm%uvuso(add_lm, ikbc, jkbc)
-               call    R_FUNC(axpy)  (atm%mps, uvpsi,                      &
-                                               atm%uv(:, add_lm, jkbc), 1, &
-                                               lHpsi(:), 1)
+               uvpsi = sum(atm%uv(:, add_lm, ikbc)*psi(:))*sys%m%vol_pp*atm%uvuso(add_lm, ikbc, jkbc)
+               lHpsi(:) = lHpsi(:) + uvpsi * atm%uv(:, add_lm, jkbc)
              end do
           end do
           add_lm = add_lm + 1
