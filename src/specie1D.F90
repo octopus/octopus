@@ -1,25 +1,22 @@
-subroutine specie1D_init(nspecies, str, s)
-  integer, intent(in) :: nspecies
-  character(len=*), intent(in) :: str
-  type(specie_type), pointer :: s(:)
+subroutine specie1D_init(s, location, line)
+  type(specie_type), intent(inout) :: s
+  integer,           intent(in)    :: location, line
 
-  integer :: i, j
+  integer :: j
 
-  do i = 1, nspecies
-    s(i)%index = i
-    s(i)%local = .true.
-    s(i)%nlcc  = .false.
+  if(location.ne.1) then
+    message(1) = "In 1 or 2 dimensions all species must be defined in the %Species block"
+    call write_fatal(1)
+  end if
 
-    call loct_parse_block_string(str, i-1, 0, s(i)%label)
-    call loct_parse_block_float (str, i-1, 1, s(i)%weight)
-    s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
+  call loct_parse_block_float ("Species", line-1, 1, s%weight)
+  s%weight =  units_inp%mass%factor * s%weight ! units conversion
 
-    s(i)%local = .true. ! In 1D or 2D, potential has to be local.
-    call loct_parse_block_float (str, i-1, 2, s(i)%Z_val)
-    call loct_parse_block_string(str, i-1, 3, s(i)%user_def)
-    ! convert to C string
-    j = len(trim(s(i)%user_def))
-    s(i)%user_def(j+1:j+1) = achar(0) 
-  end do
+  call loct_parse_block_float ("Species", line-1, 2, s%Z_val)
+  call loct_parse_block_string("Species", line-1, 3, s%user_def)
+
+  ! convert to C string
+  j = len(trim(s%user_def))
+  s%user_def(j+1:j+1) = achar(0) 
 
 end subroutine specie1D_init

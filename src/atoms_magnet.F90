@@ -35,15 +35,15 @@ program atoms_magnet
   type(states_type), pointer :: st         ! the states
   integer :: ik, ist, i, ia, j, iunit
   CMPLX :: c
-  FLOAT :: val_charge, mg(3), r, rmin, ri
+  FLOAT :: val_charge, def_h, def_rsize, mg(3), r, rmin, ri
 
   ! Initialize stuff
   call global_init()
   call units_init()
 
   call geometry_init_xyz(geo)
-  call mesh_init(m, geo)
-  call geometry_init_species(geo, val_charge)
+  call geometry_init_species(geo, val_charge, def_h, def_rsize)
+  call mesh_init(m, geo, def_h, def_rsize)
 
   allocate(st)
   call states_init(st, m, val_charge, geo%nlcc)

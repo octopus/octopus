@@ -15,73 +15,112 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine specie3D_init(nspecies, str, s)
-  integer, intent(in) :: nspecies
-  character(len=*), intent(in) :: str
-  type(specie_type), pointer :: s(:)
+subroutine specie3D_init(s, location, line, ispin)
+  type(specie_type), intent(inout) :: s
+  integer,           intent(in)    :: location, line, ispin
 
-  integer :: i, j, lmax, lloc, ispin
+  integer :: i, j, lmax, lloc
 
-  ! Reads the spin components. This is read here, as well as in states_init,
-  ! to be able to pass it to the pseudopotential initializations subroutine.
-  call loct_parse_int('SpinComponents', 1, ispin)
-  if (ispin < 1 .or. ispin > 3) then
-    write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
-    message(2) = '(SpinComponents = 1 | 2 | 3)'
-    call write_fatal(2)
+  ASSERT(location==1.or.location==2)
+
+  if(location == 1) then
+    call from_block()
+  else
+    call from_default()
   end if
-  ispin = min(2, ispin)
-  
-  do i = 1, nspecies
-    s(i)%index = i
-    call loct_parse_block_string(str, i-1, 0, s(i)%label)
-    call loct_parse_block_float (str, i-1, 1, s(i)%weight)
-    s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
-    
-    select case(s(i)%label(1:5))
-    case('jelli')
-      s(i)%local = .true.  ! we only have a local part
-      s(i)%nlcc  = .false. ! no non-local core corrections
 
-      call loct_parse_block_float(str, i-1, 2, s(i)%Z)      ! charge of the jellium sphere
-      call loct_parse_block_float(str, i-1, 3, s(i)%jradius)! radius of the jellium sphere
-      s(i)%jradius = units_inp%length%factor * s(i)%jradius ! units conversion
-      s(i)%Z_val = s(i)%Z
+  ! masses are always in a.u.m, so convert them to a.u.
+  s%weight =  units_inp%mass%factor * s%weight
+
+  if(.not.s%local) then
+    allocate(s%ps) ! allocate structure
+    call ps_init(s%ps, s%label, s%ps_flavour, s%Z, lmax, lloc, ispin)
+    if(conf%verbose>999) call ps_debug(s%ps)
+    
+    s%z_val = s%ps%z_val
+    s%nlcc = (s%ps%icore /= 'nc  ' )
+  end if
+
+contains
+  subroutine from_block()
+    integer :: n
+    
+    call loct_parse_block_float ("Species", line-1, 1, s%weight)
+    
+    select case(s%label(1:5))
+    case('jelli')
+      call loct_parse_block_float("Species", line-1, 2, s%Z)      ! charge of the jellium sphere
+      call loct_parse_block_float("Species", line-1, 3, s%jradius)! radius of the jellium sphere
+      s%jradius = units_inp%length%factor * s%jradius ! units conversion
+      s%Z_val = s%Z
       
     case('point') ! this is treated as a jellium with radius 0.5
-      s(i)%local = .true.
-      s(i)%nlcc  = .false.
-
-      call loct_parse_block_float(str, i-1, 2, s(i)%Z)
-      s(i)%jradius = M_HALF
-      s(i)%Z_val = 0 
+      call loct_parse_block_float("Species", line-1, 2, s%Z)
+      s%jradius = M_HALF
+      s%Z_val = 0 
       
     case('usdef') ! user defined
-      s(i)%local = .true.
-      s(i)%nlcc  = .false.
+      call loct_parse_block_float ("Species", line-1, 2, s%Z_val)
+      call loct_parse_block_string("Species", line-1, 3, s%user_def)
 
-      call loct_parse_block_float (str, i-1, 2, s(i)%Z_val)
-      call loct_parse_block_string(str, i-1, 3, s(i)%user_def)
       ! convert to C string
-      j = len(trim(s(i)%user_def))
-      s(i)%user_def(j+1:j+1) = achar(0) 
+      j = len(trim(s%user_def))
+      s%user_def(j+1:j+1) = achar(0) 
 
     case default ! a pseudopotential file
-      s(i)%local = .false.
+      s%local = .false.
+      n = loct_parse_block_cols("Species", line-1)
 
-      allocate(s(i)%ps) ! allocate structure
-      call loct_parse_block_float (str, i-1, 2, s(i)%Z)
-      call loct_parse_block_string(str, i-1, 3, s(i)%ps_flavour)
-      call loct_parse_block_int(str, i-1, 4, lmax)
-      call loct_parse_block_int(str, i-1, 5, lloc)
-      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, ispin)
-      if(conf%verbose>999) call ps_debug(s(i)%ps)
+      call loct_parse_block_float ("Species", line-1, 2, s%Z)
 
-      s(i)%z_val = s(i)%ps%z_val
-      s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
+      s%ps_flavour = "tm2"
+      if(n>3) call loct_parse_block_string("Species", line-1, 3, s%ps_flavour)
 
+      lmax = 2 ! default
+      if(n>4) call loct_parse_block_int   ("Species", line-1, 4, lmax)
+
+      lloc = 0 ! default
+      if(n>5) call loct_parse_block_int   ("Species", line-1, 5, lloc)
+
+      if(n>6) then
+        call loct_parse_block_float ("Species", line-1, 6, s%def_h)
+        s%def_h = s%def_h * units_inp%length%factor
+      end if
+
+      if(n>7) then
+        call loct_parse_block_float ("Species", line-1, 7, s%def_rsize)
+        s%def_rsize = s%def_rsize * units_inp%length%factor
+      end if
     end select
-  end do
+  end subroutine from_block
+
+  subroutine from_default()
+    integer :: iunit
+    character(len=256) :: fname
+    character(len=10)  :: label
+
+    s%local = .false. ! we have a pseudopential
+
+    write(fname, '(2a)') trim(conf%share), "/PP/defaults"
+    call io_assign(iunit)
+    open(unit=iunit, file=fname, action='read')
+
+    ! go to the right line of the file
+    do i = 1, line
+      read(iunit,*)
+    end do
+    
+    ! read information
+    read(iunit,*) label, s%weight, s%Z, s%ps_flavour, lmax, lloc, s%def_h, s%def_rsize
+    s%def_h     = s%def_h     * P_ANG  ! These units are always in Angstrom
+    s%def_rsize = s%def_rsize * P_ANG
+    call io_close(iunit)
+
+    ! sanity check
+    ASSERT(trim(label) == trim(s%label))
+
+  end subroutine from_default
+
 end subroutine specie3D_init
 
 FLOAT function specie_get_nlcc(s, x) result(l)
@@ -96,27 +135,26 @@ FLOAT function specie_get_nlcc(s, x) result(l)
 end function specie_get_nlcc
 
 subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
-  type(specie_type), intent(IN) :: s
-  FLOAT, intent(in) :: x(3)
-  integer, intent(in) :: l, lm, i
-  FLOAT, intent(out) :: uV, duV(3)
+  type(specie_type), intent(IN)  :: s
+  FLOAT,             intent(in)  :: x(3)
+  integer,           intent(in)  :: l, lm, i
+  FLOAT,             intent(out) :: uV, duV(3)
+  logical, optional, intent(in)  :: so
+
   FLOAT :: r, uVr0, duvr0, ylm, gylm(3)
   FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
-  logical, optional, intent(in) :: so
 
   r = sqrt(sum(x**2))
   if(present(so)) then
-    if(so) then
-      uVr0  = loct_splint(s%ps%so_kb(l, i), r)
-      duvr0 = loct_splint(s%ps%so_dkb(l, i), r)
-    else
-      message(1) = 'Internal.'
-      call write_fatal(1)
-    endif
+    ASSERT(so)
+    
+    uVr0  = loct_splint(s%ps%so_kb(l, i), r)
+    duvr0 = loct_splint(s%ps%so_dkb(l, i), r)
   else
     uVr0  = loct_splint(s%ps%kb(l, i), r)
     duvr0 = loct_splint(s%ps%dkb(l, i), r)
   endif
+
   call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
   uv = uvr0*ylm
   if(r >= r_small) then

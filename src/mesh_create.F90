@@ -23,9 +23,10 @@
 
 #define DELTA_R CNST(1e-12)
 
-subroutine mesh_create(m, geo, enlarge_)
+subroutine mesh_create(m, geo, def_h, def_rsize, enlarge_)
   type(mesh_type),     intent(inout) :: m
   type(geometry_type), intent(IN)    :: geo
+  FLOAT,               intent(in)    :: def_h, def_rsize
   integer, optional,   intent(in)    :: enlarge_
 
   ! some local stuff
@@ -37,7 +38,7 @@ subroutine mesh_create(m, geo, enlarge_)
   if(present(enlarge_)) enlarge = enlarge_
 
   ! Read box shape.
-  call loct_parse_int('BoxShape', SPHERE, m%box_shape)
+  call loct_parse_int('BoxShape', MINIMUM, m%box_shape)
   if(m%box_shape<1 .or. m%box_shape>4) then
     write(message(1), '(a,i2,a)') "Input: '", m%box_shape, "' is not a valid BoxShape"
     message(2) = '(1 <= Box_Shape <= 4)'
@@ -47,7 +48,7 @@ subroutine mesh_create(m, geo, enlarge_)
   select case(m%box_shape)
   case(SPHERE,MINIMUM)
     if(conf%dim>1 .and. conf%periodic_dim>0) then
-      message(1) = 'Spherical mesh is not allowed for periodic systems'
+      message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
       call write_fatal(1)
     end if
   case(CYLINDER)
@@ -62,29 +63,9 @@ subroutine mesh_create(m, geo, enlarge_)
   ! ignore box_shape in 1D
   if(conf%dim==1) m%box_shape=SPHERE
 
-  ! Read the box size.
-  if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
-    call loct_parse_float('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
-    m%rsize = m%rsize * units_inp%length%factor
-    m%lsize(1) = m%rsize
-    m%lsize(2:3) = M_ZERO
-  end if
-  if(m%box_shape == CYLINDER) then
-    call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
-    m%xsize = m%xsize * units_inp%length%factor
-    m%lsize(1) = m%xsize
-  end if
-  if(m%box_shape == PARALLELEPIPED) then
-    if(loct_parse_block_n('lsize')<1) then
-      message(1) = 'Block "lsize" not found in input file.'
-      call write_fatal(1)
-    endif
-    do i = 1, conf%dim
-      call loct_parse_block_float('lsize', 0, i-1, m%lsize(i))
-    end do
-    m%lsize = m%lsize*units_inp%length%factor
-  end if
-  
+  call read_box_size()
+  call read_spacing ()
+
   ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
   m%rlat = M_ZERO
   m%klat = M_ZERO
@@ -108,23 +89,7 @@ subroutine mesh_create(m, geo, enlarge_)
     end do
   end do
   
-  ! Read the grid spacing.
-  m%h = M_ZERO
-  select case(m%box_shape)
-  case(SPHERE,CYLINDER,MINIMUM)
-    call loct_parse_float('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
-    m%h(1:conf%dim) = m%h(1)
-  case(PARALLELEPIPED)
-    if(loct_parse_block_n('spacing') < 1) then
-      m%h(1:3) = CNST(0.6)/units_inp%length%factor
-    else
-      do i = 1, conf%dim
-         call loct_parse_block_float('spacing', 0, i-1, m%h(i))
-      end do
-    endif
-  end select
-  m%h(1:conf%dim) = m%h(1:conf%dim)*units_inp%length%factor
-
+  ! calculate the volume of the unit cell
   m%vol_pp = M_ONE
   do i = 1, conf%dim
     m%vol_pp = m%vol_pp*m%h(i)
@@ -137,6 +102,104 @@ subroutine mesh_create(m, geo, enlarge_)
   call pop_sub()
 
 contains
+  subroutine read_box_size()
+
+    m%rsize = -M_ONE
+    if(m%box_shape == MINIMUM.and.def_rsize>M_ZERO) m%rsize = def_rsize/units_inp%length%factor
+
+    if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
+      call loct_parse_float('radius', m%rsize, m%rsize)
+      if(m%rsize < 0) then
+        message(1) = "Either:"
+        message(2) = "   *) variable 'radius' is not defined"
+        message(3) = "   *) your input for 'radius' is negative"
+        message(4) = "   *) I can't find a suitable default"
+        call write_fatal(4)
+      end if
+      m%rsize = m%rsize * units_inp%length%factor
+      if(def_rsize>M_ZERO) call check_def(def_rsize, m%rsize, 'radius')
+    end if
+
+    if(m%box_shape == CYLINDER) then
+      call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
+      m%xsize = m%xsize * units_inp%length%factor
+      m%lsize(1) = m%xsize
+      if(def_rsize>M_ZERO.and.conf%periodic_dim==0) call check_def(def_rsize, m%xsize, 'xlength')
+    end if
+
+    if(m%box_shape == PARALLELEPIPED) then
+      if(loct_parse_block_n('lsize')<1) then
+        message(1) = 'Block "lsize" not found in input file.'
+        call write_fatal(1)
+      endif
+      do i = 1, conf%dim
+        call loct_parse_block_float('lsize', 0, i-1, m%lsize(i))
+        if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'lsize')
+      end do
+      m%lsize = m%lsize*units_inp%length%factor
+    end if
+    
+    ! fill in lsize structure (do not really know if it is necessary...)
+    select case(m%box_shape)
+    case(SPHERE, MINIMUM)
+      m%lsize(1)   = m%rsize
+      m%lsize(2:3) = M_ZERO
+    case(CYLINDER)
+      m%lsize(1)   = m%xsize
+      m%lsize(2:3) = M_ZERO
+    end select
+    
+  end subroutine read_box_size
+
+  subroutine read_spacing()
+    integer :: i
+
+    m%h = -M_ONE
+    select case(m%box_shape)
+    case(SPHERE,CYLINDER,MINIMUM)
+      call loct_parse_float('spacing', m%h(1), m%h(1))
+      m%h(1:conf%dim) = m%h(1)
+    case(PARALLELEPIPED)
+      if(loct_parse_block_n('spacing') >= 1) then
+        do i = 1, conf%dim
+          call loct_parse_block_float('spacing', 0, i-1, m%h(i))
+        end do
+      endif
+    end select
+
+    do i = 1, conf%dim
+      m%h(i) = m%h(i)*units_inp%length%factor
+      if(m%h(i) < M_ZERO) then
+        if(def_h > M_ZERO) then
+          m%h(i) = def_h
+          write(message(1), '(ai1aaaf6.3)') "Info: Using default spacing(", i, &
+               ") [", trim(units_out%length%abbrev), "] = ",                 &
+               m%h(i)/units_out%length%factor
+          call write_info(1)
+        else
+          message(1) = 'Either:'
+          message(2) = "   *) variable 'spacing' is not defined"
+          message(3) = "   *) your input for 'spacing' is negative"
+          message(4) = "   *) I can't find a suitable default"
+          call write_fatal(4)
+        end if
+      end if
+      if(def_rsize>M_ZERO) call check_def(m%h(i), def_rsize, 'spacing')
+    end do
+
+  end subroutine read_spacing
+
+  subroutine check_def(var, def, text)
+    FLOAT, intent(in) :: var, def
+    character(len=*), intent(in) :: text
+
+    if(var > def) then
+      write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
+      write(message(2), '(f8.3af8.3)') var, ' > ', def
+      call write_warning(2)
+    end if
+  end subroutine check_def
+
   ! set nr and adjust the mesh so that:
   ! 1) the new grid exactly fills the box;
   ! 2) the new mesh is not larger than the user defined mesh.
@@ -169,7 +232,6 @@ contains
       end do
     end select
     m%nr(1,:) = -m%nr(2,:)
-    print *, m%nr
     
     ! the last point is equivalent to the first one in periodic directions
     do i = 1, conf%periodic_dim

@@ -21,6 +21,7 @@ module specie
 use global
 use lib_oct_parser
 use lib_oct_gsl_spline
+use io
 use units
 use ps
 use math
@@ -34,19 +35,17 @@ type specie_type
                                   ! "jelli" : jellium sphere.
                                   ! "point" : jellium sphere of radius 0.5 a.u.
                                   ! "usdef" : user defined function
-                                  ! other   : a pseudopotential.
+                                  !  other  : a pseudopotential.
 
-  FLOAT          :: z          ! charge of the species. 
+  FLOAT   :: z          ! charge of the species. 
 
-  FLOAT          :: z_val      ! valence charge of the species -- the total charge
-                                  ! minus the core charge in the case of the pseudopotentials.
+  FLOAT   :: z_val      ! valence charge of the species -- the total charge
+                        ! minus the core charge in the case of the pseudopotentials.
 
-  FLOAT          :: weight     ! mass, in atomic mass units (=! atomic units of mass)
+  FLOAT   :: weight     ! mass, in atomic mass units (!= atomic units of mass)
 
-  logical           :: local      ! true if the potential is local, which in this case means
-                                  ! it is *not* a pseudopotential.
-
-  ! The rest of the stuff is only used in 3D calculations
+  logical :: local      ! true if the potential is local, which in this case means
+                        ! it is *not* a pseudopotential.
 
   ! for the user defined potential
   character(len=1024) :: user_def
@@ -55,58 +54,37 @@ type specie_type
   FLOAT :: jradius
 
   ! For the pseudopotential
-  character(len=3) :: ps_flavour
+  character(len=3)       :: ps_flavour
   type(ps_type), pointer :: ps
-  logical           :: nlcc       ! true if we have non-local core corrections
-  
+  logical                :: nlcc       ! true if we have non-local core corrections
+
+  ! the default values for the spacing and atomic radius
+  FLOAT :: def_rsize, def_h
 end type specie_type
 
 contains
 
-function specie_init(s)
-  integer :: specie_init
-  type(specie_type), pointer :: s(:)
+  subroutine specie_init(s, location, line, ispin)
+    type(specie_type), intent(inout) :: s
+    integer,           intent(in)    :: location, line, ispin
 
-  integer :: nspecies
-  character(len=80) :: str
+    call push_sub('specie_init')
 
-  integer :: ispin
-
-  call push_sub('specie_init')
-
-  ! how many do we have?
-  str = "Species"
-  nspecies = loct_parse_block_n(str)
-  if (nspecies < 1) then
-    message(1) = "Input: Species block not specified"
-    message(2) = '% Species'
-    message(3) = '   specie <params>'
-    message(4) = '%'
-    call write_fatal(4)    
-  end if
-  allocate(s(nspecies))
-
-  ! Reads the spin components. This is read here, as well as in states_init,
-  ! to be able to pass it to the pseudopotential initializations subroutine.
-  call loct_parse_int('SpinComponents', 1, ispin)
-  if (ispin < 1 .or. ispin > 3) then
-    write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
-    message(2) = '(SpinComponents = 1 | 2 | 3)'
-    call write_fatal(2)
-  end if
-  ispin = min(2, ispin)
-
-  ! call dimension specific routines
-  if(conf%dim==1.or.conf%dim==2) then
-    call specie1D_init(nspecies, str, s)
-  else
-    call specie3D_init(nspecies, str, s)
-  end if
-
-  specie_init = nspecies
-
-  call pop_sub()
-end function specie_init
+    ! some defaults
+    s%local     = .true.  ! a local potential
+    s%nlcc      = .false. ! without non-local core corrections
+    s%def_h     = -M_ONE  ! not defined
+    s%def_rsize = -M_ONE  ! not defined
+  
+    ! call dimension specific routines
+    if(conf%dim==1.or.conf%dim==2) then
+      call specie1D_init(s, location, line)
+    else
+      call specie3D_init(s, location, line, ispin)
+    end if
+    
+    call pop_sub()
+  end subroutine specie_init
 
 subroutine specie_end(ns, s)
   integer, intent(in) :: ns

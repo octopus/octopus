@@ -75,13 +75,14 @@ end type mesh_type
 
 contains
 
-subroutine mesh_init(m,geo)
+subroutine mesh_init(m, geo, def_h, def_rsize)
   type(mesh_type),     intent(inout) :: m
   type(geometry_type), intent(IN)    :: geo
+  FLOAT,               intent(in)    :: def_h, def_rsize
 
   call push_sub('mesh_init')
 
-  call mesh_create(m, geo)
+  call mesh_create(m, geo, def_h, def_rsize)
 
   call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
   if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then

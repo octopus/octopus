@@ -25,14 +25,13 @@ program centergeom
 
   implicit none
 
-  FLOAT :: dummy
   type(geometry_type) :: geo
 
   call global_init()                       ! initialize
 
   call units_init()
   call geometry_init_xyz(geo)              ! we need the geometry
-  call geometry_init_species(geo, dummy)   ! we also need the masses
+  call geometry_init_species(geo)          ! we also need the masses
 
   call xyz_adjust_it(geo)
   call atom_write_xyz(".", "adjusted", geo)
