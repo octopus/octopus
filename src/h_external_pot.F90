@@ -411,8 +411,10 @@ contains
             call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
             ylm = oct_ylm(x(1), x(2), x(3), l, lm)
             
-            a%uVu(add_lm) = a%uVu(add_lm) + a%uV(j, add_lm)* &
-                 splint(s%ps%Ur(l), r) * ylm * (r**l)
+            if(r > 0._r8) then ! 0**l crashes in osf
+              a%uVu(add_lm) = a%uVu(add_lm) + a%uV(j, add_lm)* &
+                   splint(s%ps%Ur(l), r) * ylm * (r**l)
+            end if
           end do
           ! uVu can be calculated exactly, or numerically
           a%uVu(add_lm) = s%ps%dkbcos(l)

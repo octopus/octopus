@@ -27,7 +27,7 @@ CLEANFILES = *~ *.bak *.mod config_F90.h
 DISTCLEANFILES = Makefile.in
 
 .F90.o:
-	/lib/cpp -C $< > $*.f90
+	$(F90CPP) -C $< > $*.f90
 	$(F90) $(F90FLAGS)	-c -o $@ $*.f90
 	@rm -f $*.f90
 
@@ -36,3 +36,14 @@ config_F90.h: config.h
 	sed 's%/\*%!%g; s%\*/%%g' config.h >config_F90.h
 ../liboct/liboct.a:
 	(cd ../liboct; $(MAKE))
+
+mesh.F90: mesh1D.F90 mesh1D_create.F90 mesh1D_inc.F90 \
+	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90
+ps.F90: ps1D.F90 ps3D.F90
+hartree.F90: hartree1D.F90 hartree3D.F90
+xc.F90: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90
+hamiltonian.F90: hamiltonian_inc.F90 h_external_pot.F90 h_forces.F90
+eigen.F90: eigen_cg1.F90 eigen_cg2.F90
+states.F90: states_inc.F90
+td.F90: td_init.F90 td_rti.F90
+mix.F90: mix_inc.F90

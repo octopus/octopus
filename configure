@@ -9608,6 +9608,11 @@ fi
 LINK="$F90 $F90FLAGS -o $PROGNAME"
 
 
+if test -z "$F90CPP"; then
+	F90CPP="/lib/cpp"
+fi
+
+
 ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile"
 
 
@@ -10242,6 +10247,7 @@ s,@LIB_LAPACK@,$LIB_LAPACK,;t t
 s,@LIB_GSL@,$LIB_GSL,;t t
 s,@PROGNAME@,$PROGNAME,;t t
 s,@LINK@,$LINK,;t t
+s,@F90CPP@,$F90CPP,;t t
 CEOF
 
 _ACEOF

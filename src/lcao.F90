@@ -281,7 +281,9 @@ contains
         r = r/2._r8 ! enlarge wfs ??????
         p = splint(s, r)
         ylm = oct_ylm(x(1), x(2), x(3), l, lm)
-        psi(j, d) = p * ylm * r**l
+        if(r > 0._r8) then
+          psi(j, d) = p * ylm * r**l
+        end if
       end do
     end if
 

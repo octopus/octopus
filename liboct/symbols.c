@@ -96,7 +96,8 @@ static struct init_cnst arith_cnts[] = {
 	{"true",  1}, {"t",     1}, {"yes",   1},
 	{"false", 0}, {"f",     0}, {"no",    0},
 	{"sphere", 1}, {"cilinder", 2}, {"minimum", 3}, {"parallelpiped", 4},
-  {"real_space", 0}, {"fourier_space", 1}
+	{"real_space", 0}, {"fourier_space", 1},
+	{0, 0}
 };
 
 void sym_init_table ()  /* puts arithmetic functions in table. */

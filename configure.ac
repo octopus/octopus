@@ -208,6 +208,11 @@ AC_SUBST(PROGNAME)
 LINK="$F90 $F90FLAGS -o $PROGNAME"
 AC_SUBST(LINK)
 
+if test -z "$F90CPP"; then
+	F90CPP="/lib/cpp"
+fi
+AC_SUBST(F90CPP)
+
 AC_CONFIG_FILES([Makefile liboct/Makefile src/Makefile doc/Makefile])
 
 AC_OUTPUT
