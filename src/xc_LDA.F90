@@ -22,8 +22,7 @@ subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: energy, pot(m%np, st%nspin)
 
-  real(r8) :: d(st%spin_channels), dtot, dpol, vpol, p(st%nspin), pd(st%spin_channels), e, &
-              dummy_x, dummy_vx(st%spin_channels)
+  real(r8) :: d(st%spin_channels), dtot, dpol, vpol, p(st%nspin), pd(st%spin_channels), e
   real(r8), parameter :: tiny = 1.0e-12_r8
   integer  :: i, is
 
@@ -34,11 +33,11 @@ subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
     if(st%ispin==SPINORS) then
      dtot = st%rho(i, 1) + st%rho(i, 2)
      dpol = sqrt( (st%rho(i, 1)-st%rho(i, 2))**2 + M_FOUR*(st%rho(i, 3)**2+st%rho(i, 4)**2) )
-     d(1) = M_HALF * ( dtot + dpol )
-     d(2) = M_HALF * ( dtot - dpol )
+     d(1) = max(M_HALF * ( dtot + dpol ), M_ZERO)
+     d(2) = max(M_HALF * ( dtot - dpol ), M_ZERO)
     else
      do is = 1, st%spin_channels
-        d(is) = st%rho(i, is)
+        d(is) = max(st%rho(i, is), M_ZERO)
      enddo
     endif
     if(nlcc) then    
@@ -51,7 +50,7 @@ subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
     case(X_FUNC_LDA_REL)
       call exchng(1, st%spin_channels, d, e, pd) 
     case(C_FUNC_LDA_PZ)
-      call pzxc(1, st%spin_channels, d, dummy_x, e, dummy_vx, pd)
+      call pzc(st%spin_channels, d, e, pd)
     case(C_FUNC_LDA_PW92)
       call pw92c(st%spin_channels, d, e, pd)
     end select

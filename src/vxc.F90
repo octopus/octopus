@@ -4,7 +4,10 @@ module vxc
 
   use global
 
+  implicit none
+
   contains
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  Finds local exchange energy density and potential                          !
 !  Adapted by J.M.Soler from routine velect of Froyens                        !
@@ -20,22 +23,20 @@ module vxc
 ! Densities in electrons/Bohr**3                                              !
 ! Energies in Hartrees                                                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine exchng( IREL, NSP, DS, EX, VX )
+  subroutine exchng( irel, nsp, ds, ex, vx )
+    integer, intent(in)   :: irel, nsp
+    real(r8), intent(in)  :: ds(nsp)
+    real(r8), intent(out) :: vx(nsp), ex
 
-  implicit real(r8) (A-H,O-Z)
-  implicit integer (I-N)
+    real(r8), parameter :: opf = 1.5_r8,                      &
+                           c014 = 0.014_r8,                   &
+                           ftrd = M_FOUR/M_THREE,             &
+                           alp  = M_TWO*M_THIRD
+    real(r8) :: d1, d2, d, z, fz, fzp, rs, vxp, exp, vxf, exf, &
+                beta, sb, alb, tftm, a0
 
-  PARAMETER (PFIVE=.5_r8,OPF=1.5_r8,C014=0.014_r8)
-  DIMENSION DS(NSP), VX(NSP)
-
-
-  TRD = M_ONE/M_THREE
-  FTRD = M_FOUR*TRD
-  TFTM = 2**FTRD-2
-  A0 = (4/(9*M_PI))**TRD
-
-!      X-alpha parameter:       
-  ALP = 2 * TRD
+  a0   = (M_FOUR/(9*M_PI))**M_THIRD
+  tftm = M_TWO**FTRD - M_TWO
 
   IF (NSP .EQ. 2) THEN
      D1 = MAX(DS(1),0.0_r8)
@@ -49,7 +50,7 @@ module vxc
      ENDIF
      Z = (D1 - D2) / D
      FZ = ((1+Z)**FTRD+(1-Z)**FTRD-2)/TFTM
-     FZP = FTRD*((1+Z)**TRD-(1-Z)**TRD)/TFTM 
+     FZP = FTRD*((1+Z)**M_THIRD-(1-Z)**M_THIRD)/TFTM 
   ELSE
      D = DS(1)
      IF (D .LE. M_ZERO) THEN
@@ -61,18 +62,18 @@ module vxc
      FZ = M_ZERO
      FZP = M_ZERO
   ENDIF
-  RS = (3 / (4*M_PI*D) )**TRD
+  RS = (3 / (4*M_PI*D) )**M_THIRD
   VXP = -(3*ALP/(2*M_PI*A0*RS))
   EXP = 3*VXP/4
   IF (IREL .EQ. 1) THEN
      BETA = C014/RS
      SB = SQRT(1+BETA*BETA)
      ALB = LOG(BETA+SB)
-     VXP = VXP * (-PFIVE + OPF * ALB / (BETA*SB))
+     VXP = VXP * (-M_HALF + OPF * ALB / (BETA*SB))
      EXP = EXP * (M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
   ENDIF
-  VXF = 2**TRD*VXP
-  EXF = 2**TRD*EXP
+  VXF = 2**M_THIRD*VXP
+  EXF = 2**M_THIRD*EXP
   IF (NSP .EQ. 2) THEN
      VX(1) = VXP + FZ*(VXF-VXP) + (1-Z)*FZP*(EXF-EXP)
      VX(2) = VXP + FZ*(VXF-VXP) - (1+Z)*FZP*(EXF-EXP)
@@ -107,8 +108,10 @@ module vxc
   IF (NSPIN .GT. 2) STOP 'GGAXC: Not prepared for this NSPIN'
 
   IF (AUTHOR.EQ.'PBE' .OR. AUTHOR.EQ.'pbe') THEN
-     CALL PBEXC( IREL, NSPIN, D, GD,                                          &
-                 EPSX, EPSC, DEXDD, DECDD, DEXDGD, DECDGD )
+     CALL PBEX( IREL, NSPIN, D, GD,                                          &
+                 EPSX, DEXDD, DEXDGD)
+     CALL PBEC( NSPIN, D, GD,                                          &
+                 EPSC, DECDD, DECDGD )
   ELSE
      WRITE(6,*) 'GGAXC: Unknown author ', AUTHOR
      STOP
@@ -173,9 +176,11 @@ module vxc
 
   IF ( AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-     CALL PZXC( IREL, NS, DD, EPSX, EPSC, VXD, VCD )
+     CALL EXCHNG(IREL, NS, DD, EPSX, VXD)
+     CALL PZC   (      NS, DD, EPSC, VCD)
   ELSEIF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-     CALL PW92XC( IREL, NS, DD, EPSX, EPSC, VXD, VCD )
+     CALL EXCHNG(IREL, NS, DD, EPSX, VXD)
+     CALL PW92C (      NS, DD, EPSC, VCD )
   ELSE
      WRITE(6,*) 'LDAXC: Unknown author ', AUTHOR
      STOP
@@ -207,6 +212,7 @@ module vxc
 ! Implements Perdew-Burke-Ernzerhof Generalized-Gradient-Approximation.       !
 ! Ref: J.P.Perdew, K.Burke & M.Ernzerhof, PRL 77, 3865 (1996)                 !
 ! Written by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.            !
+! NOTE: Split in two: pbec and pbex.                                          !
 ! ******** INPUT ******************************************************       !
 ! INTEGER IREL           : Relativistic-exchange switch (0=No, 1=Yes)         !
 ! INTEGER NSPIN          : Number of spin polarizations (1 or 2)              !
@@ -235,18 +241,114 @@ module vxc
 ! Densities in electrons per Bohr**3                                          !
 ! Energies in Hartrees                                                        !
 ! Gradient vectors in cartesian coordinates                                   !
-! ********* ROUTINES CALLED ******************************************        !
-! EXCHNG, PW92C                                                               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
 
-  subroutine pbexc( IREL, NSPIN, DENS, GDENS,                                 &
-                    EX, EC, DEXDD, DECDD, DEXDGD, DECDGD )
+  subroutine pbex( IREL, NSPIN, DENS, GDENS,                                  &
+                    EX, DEXDD, DEXDGD)
   use global
 
   implicit none 
   integer :: IREL, NSPIN
-  real(r8) :: DENS(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),                     &
+  real(r8) :: DENS(NSPIN),                                                    &
               DEXDD(NSPIN), DEXDGD(3,NSPIN), GDENS(3,NSPIN)
+
+! Internal variables
+  integer :: IS, IX 
+
+  real(r8) :: A, BETA, D(2), DADD, DECUDD, DENMIN,                            & 
+              DF1DD, DF2DD, DF3DD, DF4DD, DF1DGD, DF3DGD, DF4DGD,             &
+              DFCDD(2), DFCDGD(3,2), DFDD, DFDGD, DFXDD(2), DFXDGD(3,2),      &
+              DHDD, DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD,                   &
+              DS(2), DSDD, DSDGD, DT, DTDD, DTDGD, DZDD(2),                   &
+              EC, ECUNIF, EX, EXUNIF,                                         &
+              F, F1, F2, F3, F4, FC, FX,                                      &
+              GAMMA, GD(3,2), GDM(2), GDMIN, GDMS, GDMT, GDS, GDT(3),         &
+              H, KAPPA, KF, KFS, KS, MU, PHI, RS, S,                          &
+              T, VCUNIF(2), VXUNIF(2), ZETA
+
+! Lower bounds of density and its gradient to avoid divisions by zero
+
+  PARAMETER ( DENMIN = 1.E-12 )
+  PARAMETER ( GDMIN  = 1.E-12 )
+
+! Fix some more numerical constants
+  BETA = 0.066725_r8
+  GAMMA = (1 - LOG(M_TWO)) / M_PI**2
+  MU = BETA * M_PI**2 / M_THREE
+  KAPPA = 0.8040_r8
+
+! Translate density and its gradient to new variables
+  IF (NSPIN .EQ. 1) THEN
+     D(1) = M_HALF * DENS(1)
+     D(2) = D(1)
+     DT = MAX( DENMIN, DENS(1) )
+     DO 10 IX = 1, 3
+        GD(IX,1) = M_HALF * GDENS(IX,1)
+        GD(IX,2) = GD(IX,1)
+        GDT(IX) = GDENS(IX,1)
+     10 CONTINUE
+  ELSE
+     D(1) = DENS(1)
+     D(2) = DENS(2)
+     DT = MAX( DENMIN, DENS(1)+DENS(2) )
+     do IX = 1, 3
+       GD(IX,1) = GDENS(IX,1)
+       GD(IX,2) = GDENS(IX,2)
+       GDT(IX) = GDENS(IX,1) + GDENS(IX,2)
+     end do
+  ENDIF
+  GDM(1) = SQRT( GD(1,1)**2 + GD(2,1)**2 + GD(3,1)**2 )
+  GDM(2) = SQRT( GD(1,2)**2 + GD(2,2)**2 + GD(3,2)**2 )
+  GDMT   = SQRT( GDT(1)**2  + GDT(2)**2  + GDT(3)**2  )
+  GDMT   = MAX( GDMIN, GDMT )
+
+! Find exchange energy and potential
+  FX = 0
+  do IS = 1,2
+    DS(IS)   = MAX( DENMIN, 2 * D(IS) )
+    GDMS = MAX( GDMIN, 2 * GDM(IS) )
+    KFS = (3 * M_PI**2 * DS(IS))**M_THIRD
+    S = GDMS / (2 * KFS * DS(IS))
+    F1 = 1 + MU * S**2 / KAPPA
+    F = 1 + KAPPA - KAPPA / F1
+    
+    !Note nspin=1 in call to exchng...
+    CALL EXCHNG( IREL, 1, DS(IS), EXUNIF, VXUNIF(IS) )
+    FX = FX + DS(IS) * EXUNIF * F
+    
+    DKFDD = M_THIRD * KFS / DS(IS)
+    DSDD = S * ( -(DKFDD/KFS) - 1/DS(IS) )
+    DF1DD = 2 * (F1-1) * DSDD / S
+    DFDD = KAPPA * DF1DD / F1**2
+    DFXDD(IS) = VXUNIF(IS) * F + DS(IS) * EXUNIF * DFDD
+    
+    do IX = 1, 3
+      GDS = M_TWO * GD(IX,IS)
+      DSDGD = (S / GDMS) * GDS / GDMS
+      DF1DGD = M_TWO * MU * S * DSDGD / KAPPA
+      DFDGD = KAPPA * DF1DGD / F1**2
+      DFXDGD(IX,IS) = DS(IS) * EXUNIF * DFDGD
+    end do
+  end do
+  FX = M_HALF * FX / DT
+
+! Set output arguments
+  EX = FX
+  do IS = 1,NSPIN
+    DEXDD(IS) = DFXDD(IS)
+    do IX = 1,3
+      DEXDGD(IX,IS) = DFXDGD(IX,IS)
+    end do
+  end do
+  
+  end subroutine pbex
+
+  subroutine pbec(  NSPIN, DENS, GDENS,                                 &
+                    EC, DECDD, DECDGD )
+  implicit none 
+  integer ::  NSPIN
+  real(r8) :: DENS(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),                     &
+              GDENS(3,NSPIN)
 
 ! Internal variables
   integer :: IS, IX 
@@ -348,80 +450,40 @@ module vxc
     end do
   end do
 
-! Find exchange energy and potential
-  FX = 0
-  do IS = 1,2
-    DS(IS)   = MAX( DENMIN, 2 * D(IS) )
-    GDMS = MAX( GDMIN, 2 * GDM(IS) )
-    KFS = (3 * M_PI**2 * DS(IS))**M_THIRD
-    S = GDMS / (2 * KFS * DS(IS))
-    F1 = 1 + MU * S**2 / KAPPA
-    F = 1 + KAPPA - KAPPA / F1
-    
-    !Note nspin=1 in call to exchng...
-    
-    CALL EXCHNG( IREL, 1, DS(IS), EXUNIF, VXUNIF(IS) )
-    FX = FX + DS(IS) * EXUNIF * F
-    
-    DKFDD = M_THIRD * KFS / DS(IS)
-    DSDD = S * ( -(DKFDD/KFS) - 1/DS(IS) )
-    DF1DD = 2 * (F1-1) * DSDD / S
-    DFDD = KAPPA * DF1DD / F1**2
-    DFXDD(IS) = VXUNIF(IS) * F + DS(IS) * EXUNIF * DFDD
-    
-    do IX = 1, 3
-      GDS = M_TWO * GD(IX,IS)
-      DSDGD = (S / GDMS) * GDS / GDMS
-      DF1DGD = M_TWO * MU * S * DSDGD / KAPPA
-      DFDGD = KAPPA * DF1DGD / F1**2
-      DFXDGD(IX,IS) = DS(IS) * EXUNIF * DFDGD
-    end do
-  end do
-  FX = M_HALF * FX / DT
-
 ! Set output arguments
-  EX = FX
   EC = FC
   do IS = 1,NSPIN
-    DEXDD(IS) = DFXDD(IS)
     DECDD(IS) = DFCDD(IS)
     do IX = 1,3
-      DEXDGD(IX,IS) = DFXDGD(IX,IS)
       DECDGD(IX,IS) = DFCDGD(IX,IS)
     end do
   end do
   
-  end subroutine pbexc
+  end subroutine pbec
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Implements the Perdew-Wang 92 local correlation (beyond RPA).               !
-! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)                             !
-! Written by L.C.Balbas and J.M.Soler. Dec 96.  Version 0.5.                  !
-! ********* INPUT ****************************************************        !
-! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
-! REAL*8  DENS(NSPIN) : Local (spin) density                                  !
-! ********* OUTPUT ***************************************************        !
-! REAL*8  EC        : Correlation energy density                              !
-! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
-! ********* UNITS ****************************************************        !
-! Densities in electrons per Bohr**3                                          ! 
-! Energies in Hartrees                                                        !
-! ********* ROUTINES CALLED ******************************************        !
-! None                                                                        !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Implements the Perdew-Wang 92 local correlation (beyond RPA).               !
+  ! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)                             !
+  ! Written by L.C.Balbas and J.M.Soler. Dec 96.  Version 0.5.                  !
+  ! ********* INPUT ****************************************************        !
+  ! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
+  ! REAL*8  DENS(NSPIN) : Local (spin) density                                  !
+  ! ********* OUTPUT ***************************************************        !
+  ! REAL*8  EC        : Correlation energy density                              !
+  ! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
+  ! ********* UNITS ****************************************************        ! 
+  ! Densities in electrons per Bohr**3                                          ! 
+  ! Energies in Hartrees                                                        !
+  ! ********* ROUTINES CALLED ******************************************        !
+  ! None                                                                        !
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine pw92c( NSPIN, DENS, EC, VC )
-
-  use global
-
   implicit none 
-
-! Argument types and dimensions
-
   integer :: NSPIN
   real(r8) :: DENS(NSPIN), EC, VC(NSPIN)
 
-! Internal variable declarations
+  ! Internal variable declarations
   integer :: IG
   real(r8) :: A(0:2), ALPHA1(0:2), B, BETA(0:2,4), C,                         &
        DBDRS, DECDD(2), DECDRS, DECDZ, DENMIN, DFDZ,           &
@@ -429,13 +491,13 @@ module vxc
        F, FPP0, FOUTHD, G(0:2),                                &
        P(0:2), RS, THRHLF, ZETA
 
-! Fix lower bound of density to avoid division by zero
+  ! Fix lower bound of density to avoid division by zero
   PARAMETER ( DENMIN = 1.E-12 )
 
-! Fix some numerical constants
+  ! Fix some numerical constants
   PARAMETER ( FOUTHD=4.0_r8/3.0_r8, THRHLF=1.50_r8 )
 
-! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
+  ! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
   DATA P      / 1.00_r8,     1.00_r8,     1.00_r8     /
   DATA A      / 0.031091_r8, 0.015545_r8, 0.016887_r8 /
   DATA ALPHA1 / 0.21370_r8,  0.20548_r8,  0.11125_r8  /
@@ -444,12 +506,12 @@ module vxc
                 1.6382_r8,   3.3662_r8,   0.88026_r8,                         &
                 0.49294_r8,  0.62517_r8,  0.49671_r8 /    
 
-! Find rs and zeta
+  ! Find rs and zeta
   IF (NSPIN .EQ. 1) THEN
      DTOT = MAX( DENMIN, DENS(1) )
      ZETA = 0
      RS = ( 3 / (4*M_PI*DTOT) )**M_THIRD
-!      Find derivatives dRs/dDens and dZeta/dDens
+  !      Find derivatives dRs/dDens and dZeta/dDens
      DRSDD = (- RS) / DTOT / 3
      DZDD(1) = 0
   ELSE
@@ -461,8 +523,8 @@ module vxc
      DZDD(2) = - (1 / DTOT) - (ZETA / DTOT)
   ENDIF
 
-! Find eps_c(rs,0)=G(0), eps_c(rs,1)=G(1) and -alpha_c(rs)=G(2)
-! using eq.(10) of cited reference (Perdew & Wang, PRB, 45, 13244 (92))
+  ! Find eps_c(rs,0)=G(0), eps_c(rs,1)=G(1) and -alpha_c(rs)=G(2)
+  ! using eq.(10) of cited reference (Perdew & Wang, PRB, 45, 13244 (92))
 
   DO 20 IG = 0,2
      B = BETA(IG,1) * RS**M_HALF   +                                            &
@@ -480,13 +542,13 @@ module vxc
                                 (1+ALPHA1(IG)*RS) * DCDRS / C )
   20 CONTINUE
 
-! Find f''(0) and f(zeta) from eq.(9)
+  ! Find f''(0) and f(zeta) from eq.(9)
   C = 1 / (2**FOUTHD - 2)
   FPP0 = 8 * C / 9
   F = ( (1+ZETA)**FOUTHD + (1-ZETA)**FOUTHD - 2 ) * C
   DFDZ = FOUTHD * ( (1+ZETA)**M_THIRD - (1-ZETA)**M_THIRD ) * C
 
-! Find eps_c(rs,zeta) from eq.(8)
+  ! Find eps_c(rs,zeta) from eq.(8)
   EC = G(0) - G(2) * F / FPP0 * (1-ZETA**4) +                                 &
        (G(1)-G(0)) * F * ZETA**4
   DECDRS = DGDRS(0) - DGDRS(2) * F / FPP0 * (1-ZETA**4) +                     &
@@ -494,7 +556,7 @@ module vxc
   DECDZ = (- G(2)) / FPP0 * ( DFDZ*(1-ZETA**4) - F*4*ZETA**3 ) +              &
           (G(1)-G(0)) * ( DFDZ*ZETA**4 + F*4*ZETA**3 )
       
-! Find correlation potential
+  ! Find correlation potential
   IF (NSPIN .EQ. 1) THEN
      DECDD(1) = DECDRS * DRSDD
      VC(1) = EC + DTOT * DECDD(1)
@@ -507,110 +569,65 @@ module vxc
 
   end subroutine pw92c 
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !  Perdew-Zunger parameterization of Ceperley-Alder                           !
+  !  correlation. Ref: Perdew & Zunger, Phys. Rev. B 23 5075 (1981).            !
+  !  Adapted by J.M.Soler from routine velect of Froyen s                       !
+  !    pseudopotential generation program.                                      !
+  ! **** Input *****************************************************            !
+  ! INTEGER NSP     : spin-polarizations (1=>unpolarized, 2=>polarized)         !
+  ! REAL*8  DS(NSP) : total (nsp=1) or spin (nsp=2) electron density            !
+  ! **** Output *****************************************************           !
+  ! REAL*8  EC      : correlation energy density                                !
+  ! REAL*8  VC(NSP) : (spin-dependent) correlation potential                    !
+  ! **** Units *******************************************************          !
+  ! Densities in electrons/Bohr**3                                              !
+  ! Energies in Hartrees                                                        !
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine pzc( NSP, DS, EC, VC )
+    integer, intent(in)   :: nsp
+    real(r8), intent(in)  :: ds(nsp)
+    real(r8), intent(out) :: ec, vc(nsp)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Implements the Perdew-Wang 92 LDA/LSD exchange correlation                  !
-! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)                             !
-! Written by L.C.Balbas and J.M.Soler. Dec 96. Version 0.5.                   !
-! ********* INPUT ****************************************************        !
-! INTEGER IREL        : Relativistic-exchange switch (0=No, 1=Yes)            !
-! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
-! REAL*8  DENS(NSPIN) : Local (spin) density                                  !
-! ********* OUTPUT ***************************************************        !
-! REAL*8  EPSX       : Exchange energy density                                !
-! REAL*8  EPSC       : Correlation energy density                             !
-! REAL*8  VX(NSPIN)  : Exchange (spin) potential                              !
-! REAL*8  VC(NSPIN)  : Correlation (spin) potential                           !
-! ********* UNITS ****************************************************        !
-! Densities in electrons per Bohr**3                                          !
-! Energies in Hartrees                                                        !
-! ********* ROUTINES CALLED ******************************************        !
-! EXCHNG, PW92C                                                               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    real(r8), PARAMETER :: PFIVE=.50_r8,OPF=1.50_r8,PNN=.99_r8
+    real(r8), PARAMETER :: PTHREE=0.30_r8,PSEVF=0.750_r8,C0504=0.0504_r8
+    real(r8), PARAMETER :: C0254=0.02540_r8,C014=0.0140_r8,C0406=0.04060_r8
+    real(r8), PARAMETER :: C15P9=15.90_r8,C0666=0.06660_r8,C11P4=11.40_r8
+    real(r8), PARAMETER :: C045=0.0450_r8,C7P8=7.80_r8,C88=0.880_r8,C20P59=20.5920_r8
+    real(r8), PARAMETER :: C3P52=3.520_r8,C0311=0.03110_r8,C0014=0.00140_r8
+    real(r8), PARAMETER :: C0538=0.05380_r8,C0096=0.00960_r8,C096=0.0960_r8
+    real(r8), PARAMETER :: C0622=0.06220_r8,C004=0.0040_r8,C0232=0.02320_r8
+    real(r8), PARAMETER :: C1686=0.16860_r8,C1P398=1.39810_r8,C2611=0.26110_r8
+    real(r8), PARAMETER :: C2846=0.28460_r8,C1P053=1.05290_r8,C3334=0.33340_r8
 
-  subroutine pw92xc( IREL, NSPIN, DENS, EPSX, EPSC, VX, VC )
+    ! Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
+    real(r8), PARAMETER :: CON1=1.0_r8/6, CON2=0.0080_r8/3, CON3=0.35020_r8/3 
+    real(r8), PARAMETER :: CON4=0.05040_r8/3, CON5=0.00280_r8/3, CON6=0.19250_r8/3
+    real(r8), PARAMETER :: CON7=0.02060_r8/3, CON8=9.78670_r8/6, CON9=1.0444_r8/3
+    real(r8), PARAMETER :: CON10=7.37030_r8/6, CON11=1.33360_r8/3
 
-  use global
+    !      X-alpha parameter:
+    real(r8), PARAMETER :: ALP = 2.0_r8 / 3.0_r8
 
-  implicit none
+    !      Other variables converted into parameters by J.M.Soler
+    real(r8), PARAMETER :: TRD  = 1.0_r8 / 3.0_r8 
+    real(r8), PARAMETER :: FTRD = 4.0_r8 / 3.0_r8
+    real(r8), PARAMETER :: TFTM = 0.519842099789746380_r8
+    real(r8), PARAMETER :: A0   = 0.521061761197848080_r8
+    real(r8), PARAMETER :: CRS  = 0.6203504908994000870_r8
+    real(r8), PARAMETER :: CXP  = (- 3.0_r8) * ALP / (M_PI*A0)
+    real(r8), PARAMETER :: CXF  = 1.259921049894873190_r8
 
-  integer :: IREL, NSPIN
-  real(r8) :: DENS(NSPIN), EPSX, EPSC, VC(NSPIN), VX(NSPIN)
+    real(r8) :: d1, d2, d, z, fz, fzp, rs, sqrs, te, be, ecp, vcp, ecf, vcf, rslog
+    integer :: isp
 
-  CALL EXCHNG( IREL, NSPIN, DENS, EPSX, VX )
-  CALL PW92C( NSPIN, DENS, EPSC, VC )
-
-
-  end subroutine pw92xc
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  Perdew-Zunger parameterization of Ceperley-Alder exchange and              !
-!  correlation. Ref: Perdew & Zunger, Phys. Rev. B 23 5075 (1981).            !
-!  Adapted by J.M.Soler from routine velect of Froyen s                       !
-!    pseudopotential generation program. Madrid, Jan 97. Version 0.5.         !
-! **** Input *****************************************************            !
-! INTEGER IREL    : relativistic-exchange switch (0=no, 1=yes)                !
-! INTEGER NSP     : spin-polarizations (1=>unpolarized, 2=>polarized)         !
-! REAL*8  DS(NSP) : total (nsp=1) or spin (nsp=2) electron density            !
-! **** Output *****************************************************           !
-! REAL*8  EX      : exchange energy density                                   !
-! REAL*8  EC      : correlation energy density                                !
-! REAL*8  VX(NSP) : (spin-dependent) exchange potential                       !
-! REAL*8  VC(NSP) : (spin-dependent) correlation potential                    !
-! **** Units *******************************************************          !
-! Densities in electrons/Bohr**3                                              !
-! Energies in Hartrees                                                        !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  subroutine pzxc( IREL, NSP, DS, EX, EC, VX, VC )
-
-  use global
-
-  implicit real(r8) (A-H,O-Z)
-  implicit integer (I-N)
-
-  real(r8), dimension(NSP) :: DS,VX,VC
-
-  PARAMETER (PFIVE=.50_r8,OPF=1.50_r8,PNN=.99_r8)
-  PARAMETER (PTHREE=0.30_r8,PSEVF=0.750_r8,C0504=0.0504_r8) 
-  PARAMETER (C0254=0.02540_r8,C014=0.0140_r8,C0406=0.04060_r8)
-  PARAMETER (C15P9=15.90_r8,C0666=0.06660_r8,C11P4=11.40_r8)
-  PARAMETER (C045=0.0450_r8,C7P8=7.80_r8,C88=0.880_r8,C20P59=20.5920_r8)
-  PARAMETER (C3P52=3.520_r8,C0311=0.03110_r8,C0014=0.00140_r8)
-  PARAMETER (C0538=0.05380_r8,C0096=0.00960_r8,C096=0.0960_r8)
-  PARAMETER (C0622=0.06220_r8,C004=0.0040_r8,C0232=0.02320_r8)
-  PARAMETER (C1686=0.16860_r8,C1P398=1.39810_r8,C2611=0.26110_r8)
-  PARAMETER (C2846=0.28460_r8,C1P053=1.05290_r8,C3334=0.33340_r8)
-
-  ! Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
-  PARAMETER (CON1=1.0_r8/6, CON2=0.0080_r8/3, CON3=0.35020_r8/3) 
-  PARAMETER (CON4=0.05040_r8/3, CON5=0.00280_r8/3, CON6=0.19250_r8/3)
-  PARAMETER (CON7=0.02060_r8/3, CON8=9.78670_r8/6, CON9=1.0444_r8/3)
-  PARAMETER (CON10=7.37030_r8/6, CON11=1.33360_r8/3)
-
-!      X-alpha parameter:
-  PARAMETER ( ALP = 2.0_r8 / 3.0_r8 )
-
-!      Other variables converted into parameters by J.M.Soler
-  PARAMETER ( TRD  = 1.0_r8 / 3.0_r8 ) 
-  PARAMETER ( FTRD = 4.0_r8 / 3.0_r8 )
-  PARAMETER ( TFTM = 0.519842099789746380_r8 )
-  PARAMETER ( A0   = 0.521061761197848080_r8 )
-  PARAMETER ( CRS  = 0.6203504908994000870_r8 )
-  PARAMETER ( CXP  = (- 3.0_r8) * ALP / (M_PI*A0) )
-  PARAMETER ( CXF  = 1.259921049894873190_r8 )
-
-!      Find density and polarization
-  IF (NSP .EQ. 2) THEN
+    !      Find density and polarization
+    IF (NSP .EQ. 2) THEN
      D1 = MAX(DS(1),0.0_r8)
      D2 = MAX(DS(2),0.0_r8)
      D = D1 + D2
      IF (D .LE. M_ZERO) THEN
-        EX = M_ZERO
         EC = M_ZERO
-        VX(1) = M_ZERO
-        VX(2) = M_ZERO
         VC(1) = M_ZERO
         VC(2) = M_ZERO
         RETURN
@@ -618,36 +635,21 @@ module vxc
      Z = (D1 - D2) / D
      FZ = ((1+Z)**FTRD+(1-Z)**FTRD-2)/TFTM
      FZP = FTRD*((1+Z)**TRD-(1-Z)**TRD)/TFTM 
-  ELSE
+    ELSE
      D = DS(1)
      IF (D .LE. M_ZERO) THEN
-        EX = M_ZERO
         EC = M_ZERO
-        VX(1) = M_ZERO
         VC(1) = M_ZERO
         RETURN
      ENDIF
      Z = M_ZERO
      FZ = M_ZERO
      FZP = M_ZERO
-  ENDIF
-  RS = CRS / D**TRD
+    ENDIF
+    RS = CRS / D**TRD
 
-!      Exchange
-  VXP = CXP / RS
-  EXP = 0.750_r8 * VXP
-  IF (IREL .EQ. 1) THEN
-     BETA = C014/RS
-     SB = SQRT(1+BETA*BETA)
-     ALB = LOG(BETA+SB)
-     VXP = VXP * (-PFIVE + OPF * ALB / (BETA*SB))
-     EXP = EXP *(M_ONE-OPF*((BETA*SB-ALB)/BETA**2)**2) 
-  ENDIF
-  VXF = CXF * VXP
-  EXF = CXF * EXP
-
-!      Correlation 
-  IF (RS .GT. M_ONE) THEN  
+    !      Correlation 
+    IF (RS .GT. M_ONE) THEN  
       SQRS=SQRT(RS)
       TE = M_ONE+CON10*SQRS+CON11*RS
       BE = M_ONE+C1P053*SQRS+C3334*RS
@@ -657,37 +659,30 @@ module vxc
       BE = M_ONE+C1P398*SQRS+C2611*RS
       ECF = -(C1686/BE)
       VCF = ECF*TE/BE
-  ELSE
+    ELSE
       RSLOG=LOG(RS)
       ECP=(C0622+C004*RS)*RSLOG-C096-C0232*RS
       VCP=(C0622+CON2*RS)*RSLOG-CON3-CON4*RS
       ECF=(C0311+C0014*RS)*RSLOG-C0538-C0096*RS
       VCF=(C0311+CON5*RS)*RSLOG-CON6-CON7*RS
-  ENDIF
+    ENDIF
 
-!      Find up and down potentials
-  IF (NSP .EQ. 2) THEN
-      EX    = EXP + FZ*(EXF-EXP)
+    !      Find up and down potentials
+    IF (NSP .EQ. 2) THEN
       EC    = ECP + FZ*(ECF-ECP)
-      VX(1) = VXP + FZ*(VXF-VXP) + (1-Z)*FZP*(EXF-EXP)
-      VX(2) = VXP + FZ*(VXF-VXP) - (1+Z)*FZP*(EXF-EXP)
       VC(1) = VCP + FZ*(VCF-VCP) + (1-Z)*FZP*(ECF-ECP)
       VC(2) = VCP + FZ*(VCF-VCP) - (1+Z)*FZP*(ECF-ECP)
-  ELSE
-      EX    = EXP
+    ELSE
       EC    = ECP
-      VX(1) = VXP
       VC(1) = VCP
-  ENDIF
+    ENDIF
 
-!      Change from Rydbergs to Hartrees
-  EX = M_HALF * EX
-  EC = M_HALF * EC
-  do ISP = 1,NSP
-    VX(ISP) = M_HALF * VX(ISP)
-    VC(ISP) = M_HALF * VC(ISP)
-  end do
+    !      Change from Rydbergs to Hartrees
+    EC = M_HALF * EC
+    do ISP = 1,NSP
+       VC(ISP) = M_HALF * VC(ISP)
+    end do
 
-  end subroutine pzxc 
+  end subroutine pzc 
 
 end module vxc
