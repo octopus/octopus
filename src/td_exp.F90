@@ -91,7 +91,7 @@ contains
     allocate(zpsi1(sys%m%np, sys%st%dim, 0:2))
     zpsi1 = M_z0
     n = sys%m%np*sys%st%dim
-    do j = td%exp_order, 0, -1
+    do j = td%exp_order-1, 0, -1
        call zcopy(n, zpsi1(1, 1, 1), 1, zpsi1(1, 1, 2), 1)
        call zcopy(n, zpsi1(1, 1, 0), 1, zpsi1(1, 1, 1), 1)
        call zhpsi(h, sys%m, sys%st, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)

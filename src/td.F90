@@ -193,7 +193,7 @@ subroutine td_run(td, u_st, sys, h)
     call td_rti(h, sys%m, sys%st, sys, td, i*td%dt)
 
     ! mask function?
-    if(h%ab == 2) then
+    if(h%ab == MASK_ABSORBING) then	
       do ik = 1, sys%st%nik
         do ist = sys%st%st_start, sys%st%st_end
           do idim = 1, sys%st%dim

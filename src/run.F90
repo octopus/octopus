@@ -252,7 +252,7 @@ subroutine run()
 #ifdef HAVE_MPI
         call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
 #endif
-        call hamiltonian_span(h, minval(sys%m%h), x)
+        call hamiltonian_span(h, minval(sys%m%h(:)), x)
         call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
       else
         i_stack(instr) = I_INIT_ZPSI
