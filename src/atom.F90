@@ -49,6 +49,7 @@ type atom_type
                           so_uvu(:, :, :),    &
                           so_duv(:, :, :, :), &
                           so_luv(:, :, :, :)
+  complex(r8), pointer :: phases(:,:)    ! factors exp(ik*x)
 end type atom_type
 
 type atom_classical_type
@@ -312,11 +313,11 @@ subroutine atom_dealloc(na, a)
       deallocate(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%dduV, &
                              a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zduV, &
                              a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
-                             a(ia)%so_luv)
+                             a(ia)%so_luv, a(ia)%phases)
       nullify(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%duV, &
                           a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zuV, &
                           a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
-                          a(ia)%so_luv)
+                          a(ia)%so_luv, a(ia)%phases)
     end if
   end do
 
