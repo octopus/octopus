@@ -313,11 +313,15 @@ subroutine atom_dealloc(na, a)
       deallocate(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%dduV, &
                              a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zduV, &
                              a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
-                             a(ia)%so_luv, a(ia)%phases)
+                             a(ia)%so_luv)
       nullify(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%duV, &
                           a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zuV, &
                           a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
-                          a(ia)%so_luv, a(ia)%phases)
+                          a(ia)%so_luv)
+      if(conf%periodic_dim/=0 .and. associated(a(ia)%phases)) then
+        deallocate(a(ia)%phases)
+        nullify(a(ia)%phases)
+      end if
     end if
   end do
 
