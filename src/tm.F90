@@ -212,75 +212,11 @@ subroutine tm_process(pstm, lmax, lloc)
   call pop_sub(); return
 end subroutine tm_process
 
-subroutine calculate_valence_screening(rho, rhocore, ve, g, ispin, xccode, irel)
-  type(logrid_type), intent(in) :: g
-  integer, intent(in)           :: ispin
-  real(r8), intent(in)          :: rho(g%nrval, ispin)
-  real(r8), intent(in)          :: rhocore(g%nrval)
-  real(r8), intent(out)         :: ve (g%nrval, ispin)
-  character(len=3), intent(in)  :: irel
-  character(len=2), intent(in)  :: xccode ! ca, pw, or pb
-
-  character(len=5) :: xcfunc, xcauth
-  integer  :: is, ir, irelt
-  real(r8) :: e_x, e_c, dx, dc, r2
-  real(r8), allocatable :: v_xc(:, :), auxrho(:, :)
-
-  ! Allocation.
-  allocate(v_xc(g%nrval, ispin), auxrho(g%nrval, ispin))
-           v_xc = 0.0_r8; auxrho = 0.0_r8
-
-  do is = 1, ispin
-     auxrho(:, 1) = auxrho(:, 1) + rho(:, is)
-  enddo
-  ve = 0.0_r8
-  do is = 1, ispin
-     call vhrtre(auxrho(:, 1), ve(:, is), g%rofi, g%drdi, g%s, g%nrval, g%a)
-  enddo
-  ve(1, 1:ispin) = ve(2, 1:ispin)
-
-  ! Set the xc functional
-  select case(xccode)
-  case('ca') 
-     xcfunc = 'LDA'
-     xcauth = 'PZ'
-  case('pw') 
-     xcfunc = 'LDA'
-     xcauth = 'PW92'
-  case('pb') 
-     xcfunc = 'GGA'
-     xcauth = 'PBE'
-  end select
-
-  irelt = 0
-  if(irel == 'rel') irelt=1
- 
-  auxrho = rho
-  do is = 1, ispin
-     auxrho(:, is) = auxrho(:, is) + rhocore(:)/ispin
-     auxrho(2:g%nrval, is) = auxrho(2:g%nrval, is)/(4.0_r8*M_PI*g%rofi(2:g%nrval)**2)
-  enddo
-  r2 = g%rofi(2)/(g%rofi(3)-g%rofi(2))
-  auxrho(1, 1:ispin) = auxrho(2, 1:ispin) - (auxrho(3, 1:ispin)-auxrho(2, 1:ispin))*r2
-
-  do is = 1, ispin
-  do ir = 1, g%nrval
-     if(auxrho(ir, is) < 1.0e-15_r8) auxrho(ir, is) = 0.0_r8
-  enddo
-  enddo
-  call atomxc(xcfunc, xcauth, irelt, g%nrval, g%nrval, g%rofi, &
-              ispin, auxrho, e_x, e_c, dx, dc, v_xc)
-
-  ve = ve + v_xc
-  deallocate(v_xc, auxrho)
-
-  return
-end subroutine calculate_valence_screening
-
 subroutine solve_schroedinger(psf)
   type(tm_type), intent(inout) :: psf
 
-  integer :: iter, ir, is, l, nnode, nprin
+  character(len=3) :: functl
+  integer :: iter, ir, is, l, nnode, nprin, irel
   real(r8) :: vtot, diff, r2, e, z, dr, rmax, f, dsq, a2b4, dnrm, avgv, vphi
   real(r8), allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
   real(r8), parameter :: tol = 1.0e-10_r8
@@ -318,9 +254,14 @@ subroutine solve_schroedinger(psf)
   ! Calculation of the valence screening potential from the density:
   !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
   !               valence charge distribution (everything in Rydberts, and bohrs)
-       rho(:, 1) = psf%rho_val(:)
-  call calculate_valence_screening(rho(:, 1:1), psf%chcore, ve(:, 1:1), psf%g, 1, psf%icorr, psf%irel)
-
+  rho(:, 1) = psf%rho_val(:)
+  select case(psf%icorr)
+   case('pb');   functl = 'GGA'
+   case default; functl = 'LDA'
+  end select
+  irel = 0; if(psf%irel=='rel') irel = 1
+  call atomhxc(functl, irel, psf%g, 1, rho(:, 1:1), ve(:, 1:1), psf%chcore)
+ 
   ! Calculation of the pseudo-wave functions.
   !       rphi(1:nrval, 1:psf%conf%p, :) : radial pseudo-wave functions. They are normalized so that
   !                                      int dr {rphi^2} = 1. Thus its units are of bohr^(-1/2).
@@ -403,8 +344,7 @@ subroutine solve_schroedinger(psf)
       if(iter>1) rho = 0.5*rho + 0.5*prev
       !write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
       !call write_info(1)
-      call calculate_valence_screening(rho(:, :), psf%chcore, ve(:, :), psf%g, 2, psf%icorr, psf%irel)
-
+      call atomhxc(functl, irel, psf%g, 2, rho, ve, psf%chcore)
     enddo self_consistent
 
   endif spin_polarized
@@ -665,7 +605,8 @@ subroutine ghost_analysis(pstm, lmax)
   type(tm_type), intent(in) :: pstm
   integer, intent(in)       :: lmax
 
-  integer :: ir, l, nnode, nprin, ighost
+  character(len=3) :: functl
+  integer :: ir, l, nnode, nprin, ighost, irel
   real(r8) :: vtot, a2b4, z, e, dr, rmax, dnrm, avgv
   real(r8), allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
 
@@ -673,7 +614,12 @@ subroutine ghost_analysis(pstm, lmax)
 
   allocate(ve(pstm%nrval), s(pstm%nrval), hato(pstm%nrval), g(pstm%nrval), y(pstm%nrval), elocal(2, 0:lmax))
 
-  call calculate_valence_screening(pstm%rho_val, pstm%chcore, ve, pstm%g, 1, pstm%icorr, pstm%irel)
+  select case(pstm%icorr)
+   case('pb');   functl = 'GGA'
+   case default; functl = 'LDA'
+  end select
+  irel = 0; if(pstm%irel=='rel') irel = 1
+  call atomhxc(functl, irel, pstm%g, 1, pstm%rho_val, ve(:), pstm%chcore)
 
   s(2:pstm%nrval) = pstm%g%drdi(2:pstm%nrval)**2
   s(1) = s(2)

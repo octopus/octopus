@@ -4,11 +4,12 @@
 
   use global
   use vxc
+  use logrid
 
   implicit none
 
   private
-  public :: atomxc, vhrtre, egofv
+  public :: atomxc, atomhxc, vhrtre, egofv
 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,6 +107,67 @@
     102 return
   end subroutine get_valconf
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  subroutine atomhxc(functl, irel, g, nspin, dens, v, extra)
+    character(len=*), intent(in)   :: functl
+    integer, intent(in)            :: irel, nspin
+    type(logrid_type), intent(in)  :: g
+    real(r8), intent(in)           :: dens(g%nrval, nspin)
+    real(r8), intent(out)          :: v(g%nrval, nspin)
+    real(r8), intent(in), optional :: extra(g%nrval)
+
+    character(len=5) :: xcfunc, xcauth
+    integer :: is, ir
+    real(r8), allocatable :: vxc(:, :), ve(:, :), rho(:, :)
+    real(r8) :: r2, ex, ec, dx, dc
+
+    sub_name = 'atomhxc'; call push_sub()
+
+    allocate(ve(g%nrval, nspin), vxc(g%nrval, nspin), rho(g%nrval, nspin))
+             ve = M_ZERO; vxc = M_ZERO; rho = M_ZERO
+
+    ! To calculate the Hartree term, we put all the density in one variable.
+    do is = 1, nspin
+       rho(:, 1) = rho(:, 1) + dens(:, is)
+    enddo
+    ve = M_ZERO
+    do is = 1, nspin
+       call vhrtre(rho(:, 1), ve(:, is), g%rofi, g%drdi, g%s, g%nrval, g%a)
+    enddo
+    ve(1, 1:nspin) = ve(2, 1:nspin)
+
+    select case(functl)
+    case('LDA')
+      xcfunc = 'LDA'; xcauth = 'PZ'
+    case('GGA')
+      xcfunc = 'GGA'; xcauth = 'PBE'
+    case default
+      message(1) = 'Internal Error'
+      call write_fatal(1)
+    end select
+
+    rho = dens
+    do is = 1, nspin
+       if(present(extra)) rho(:, is) = rho(:, is) + extra(:)/nspin
+       rho(2:g%nrval, is) = rho(2:g%nrval, is)/(M_FOUR*M_PI*g%rofi(2:g%nrval)**2)
+    enddo
+    r2 = g%rofi(2)/(g%rofi(3)-g%rofi(2))
+    rho(1, 1:nspin) = rho(2, 1:nspin) - (rho(3, 1:nspin)-rho(2, 1:nspin))*r2
+
+    do is = 1, nspin
+       do ir = 1, g%nrval
+          if(rho(ir, is) < 1.0e-15_r8) rho(ir, is) = 0.0_r8
+       enddo
+    enddo
+
+    call atomxc(xcfunc, xcauth, irel, g%nrval, g%nrval, g%rofi, &
+                nspin, rho, ex, ec, dx, dc, vxc)
+
+    v = ve + vxc
+
+    deallocate(ve, vxc, rho)
+    call pop_sub(); return
+  end subroutine atomhxc
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -444,14 +444,14 @@ subroutine solve_schroedinger(psp)
   
   integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
   real(r8) :: vtot, r2, e, z, dr, rmax, f, dsq, a2b4, diff, nonl
-  real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:), rho(:), ve(:)
+  real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:, :), rho(:, :), ve(:, :)
   real(r8), parameter :: tol = 1.0e-4_r8
 
   sub_name = 'solve_schroedinger'; call push_sub()
 
   ! Allocations...
-  allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval), &
-           rho(psp%g%nrval), ve(psp%g%nrval))
+  allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval, 1), &
+           rho(psp%g%nrval, 1), ve(psp%g%nrval, 1))
   hato = 0.0_r8; g = 0.0_r8;  y = 0.0_r8; rho = 0.0_r8; ve = 0.0_r8
 
   ! These numerical parameters have to be fixed for egofv to work.
@@ -475,7 +475,7 @@ subroutine solve_schroedinger(psp)
     do n = 1, psp%conf%p
       l = psp%conf%l(n)
       do ir = 2, psp%g%nrval
-        vtot = 2*psp%vlocal(ir) + ve(ir) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
+        vtot = 2*psp%vlocal(ir) + ve(ir, 1) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
         nonl = 0.0_r8
         if(iter>1 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > 1.0e-7) then
            do i = 1, 3
@@ -512,15 +512,15 @@ subroutine solve_schroedinger(psp)
     end do
     rho = M_ZERO
     do n = 1, psp%conf%p
-       rho = rho + psp%conf%occ(n,1)*psp%rphi(1:psp%g%nrval, n)**2
+       rho(1:psp%g%nrval, 1) = rho(1:psp%g%nrval, 1) + psp%conf%occ(n,1)*psp%rphi(1:psp%g%nrval, n)**2
     enddo
     if(iter>1) rho = M_HALF*(rho + prev)
-    diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval)-prev(2:psp%g%nrval))**2))
+    diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval, 1)-prev(2:psp%g%nrval, 1))**2))
     !if(conf%verbose>20 .and. mpiv%node == 0) then
     !  write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
     !  call write_info(1)
-    !endif
-    call calculate_valence_screening(psp, rho, ve)
+    !endifq
+    call atomhxc('LDA', 1, psp%g, 1, rho, ve)
 
   enddo self_consistent
 
@@ -549,51 +549,6 @@ subroutine solve_schroedinger(psp)
 
   call pop_sub; return
 end subroutine solve_schroedinger
-
-subroutine calculate_valence_screening(psp, rhoval, ve)
-  type(hgh_type), intent(in) :: psp
-  real(r8), intent(in)       :: rhoval(1:psp%g%nrval)
-  real(r8), intent(out)      :: ve(1:psp%g%nrval)
-
-  character(len=5) :: xcfunc, xcauth
-  integer          :: irelt
-  real(r8)         :: e_x, e_c, dx, dc, r2
-  real(r8), allocatable :: v_xc(:,:), auxrho(:)
-
-  sub_name = 'valence_screening'; call push_sub()
-
-  ! Set this to zero...
-  ve = 0.0_r8
-
-  ! Allocates the auxiliary stuff
-  allocate(v_xc(psp%g%nrval, 1), auxrho(psp%g%nrval))
-  auxrho = rhoval
-
-  ! Gets the hartree potential first.
-  call vhrtre(rhoval, ve, psp%g%rofi, psp%g%drdi, psp%g%s, psp%g%nrval, psp%g%a)
-
-  ! We will assume this for the moment (GGA pseudos could also be got from Goedecker...)
-  xcfunc = 'LDA'
-  xcauth = 'PZ'
-  irelt = 1
-
-  ! Fix aux_rho (just rho/(4 \pi r^2))
-  auxrho(2:psp%g%nrval) = auxrho(2:psp%g%nrval)/(4.0_r8*M_PI*psp%g%rofi(2:psp%g%nrval)**2)
-  r2 = psp%g%rofi(2)/(psp%g%rofi(3)-psp%g%rofi(2))
-  auxrho(1) = auxrho(2) - (auxrho(3)-auxrho(2))*r2
-
-  ! And gets v_xc.
-  call atomxc(xcfunc, xcauth, irelt, psp%g%nrval, psp%g%nrval, psp%g%rofi, &
-              1, auxrho, e_x, e_c, dx, dc, v_xc)
-
-  ! Sums the vxc to the hartree.
-  ve(1:psp%g%nrval) = ve(1:psp%g%nrval) + v_xc(1:psp%g%nrval, 1)
-
-  ! And deallocates.
-  deallocate(v_xc, auxrho)
-
-  call pop_sub(); return
-end subroutine calculate_valence_screening
 
 subroutine hgh_debug(psp)
   type(hgh_type), intent(in) :: psp
