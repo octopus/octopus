@@ -24,7 +24,7 @@ AC_ARG_WITH(fft, [  --with-fft=ARG    fft support
       ARG=no          disable FFT support
       ARG=fftw3       FFTW3 support through libfftw3 (default)
       ARG=fftw2       FFTW2 support through libfftw],
-  [fft=$enableval], [fft=fftw3])
+  [fft=$withval], [fft=fftw3])
 
 case $fft in
   fftw3*)
