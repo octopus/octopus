@@ -15,7 +15,7 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
   real(r8), allocatable :: pot_r(:), pot_i(:) ! For complex
   real(r8), allocatable :: u_xc(:,:), u_bar_xc(:)
   
-  allocate(u_xc(m%np, nst), u_bar_xc(nst))
+
   call getSpinFactor(nspin, socc, sfact)
 
   allocate(pot(m%np))
@@ -24,11 +24,16 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
     if(occ(1, 1) == 1.0_r8) then
       vx(:, 1) = -pot(:); return
     elseif(occ(1, 1) == 2.0_r8) then
-      vx(:, 1) = -0.5_r8*pot(:); Ex = 0.5_r8*dmesh_dotp(m, vx(:, 1), rho(:, 1)); return
+      vx(:, 1) = -0.5_r8*pot(:)
+      Ex = 0.5_r8*dmesh_dotp(m, vx(:, 1), rho(:, 1))
+      deallocate(pot)
+      return
     else
       write(*,*) 'Warning in kli_x', occ(1, 1)
     endif
   endif
+
+  allocate(u_xc(m%np, nst), u_bar_xc(nst))
 
   ! calculate the u_sij using poissons equation
   Ex = 0.0_r8

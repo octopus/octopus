@@ -305,6 +305,10 @@ contains
     
     integer :: j, k
     real(r8) :: r
+
+    ! This is for the ions movement; probably it is not too elegant, I
+    ! will rethink it later.
+    if(associated(a%jxyz)) deallocate(a%jxyz, a%uv, a%duv, a%uvu)
     
     j = 0
     do k = 1, h%np
