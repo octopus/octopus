@@ -185,10 +185,10 @@ end subroutine tm_process
 
 subroutine calculate_valence_screening(rho, rhocore, ve, g, ispin, xccode, irel)
   type(logrid_type), intent(in) :: g
+  integer, intent(in)           :: ispin
   real(r8), intent(in)          :: rho(g%nrval, ispin)
   real(r8), intent(in)          :: rhocore(g%nrval)
   real(r8), intent(out)         :: ve (g%nrval, ispin)
-  integer, intent(in)           :: ispin
   character(len=3), intent(in)  :: irel
   character(len=2), intent(in)  :: xccode ! ca, pw, or pb
 
