@@ -703,7 +703,7 @@ subroutine get_cutoff_radii(pstm, lloc)
       dincv = abs((pstm%vps(ir, l) - pstm%vlocal(ir))*phi)
       if(dincv > threshold) exit
       phi = (pstm%rphi(ir, l, 1)/pstm%rofi(ir))*pstm%dknrm(l)
-      if(pstm%irel=='rel') then
+      if(pstm%irel=='rel' .and. l>0 .and. l<=pstm%npotu) then
         dincv = abs((pstm%vso(ir, l))*phi)
         if(dincv > threshold) exit
       endif

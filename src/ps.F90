@@ -98,7 +98,11 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_max_occ = ps%l_max
     ps%l_loc = lloc
     if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
-    ps%so_l_max = min(pstm%npotu, lmax)
+    if(pstm%npotu==0) then
+       ps%so_l_max = -1
+    else
+       ps%so_l_max = min(pstm%npotu, ps%l_max)
+    endif
     ps%z = z
     call tm_process(pstm, lmax, ps%l_loc)
     if(conf%verbose > 999) call tm_debug(pstm)
@@ -120,25 +124,28 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 ! We allocate all the stuff
   allocate(ps%kb      (0:ps%l_max, ps%kbc),         &
            ps%dkb     (0:ps%l_max, ps%kbc),         &
-           ps%so_kb   (0:ps%l_max, ps%kbc),         &
-           ps%so_dkb  (0:ps%l_max, ps%kbc),         &
            ps%ur      (0:ps%L_max_occ, ps%ispin),   &
            ps%dknrm   (0:ps%L_max),                 &
-           ps%so_dknrm(0:ps%so_l_max),                 &          
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%occ     (0:ps%l_max_occ, ps%ispin))
-           ps%dknrm    = M_ZERO
-           ps%so_dknrm = M_ZERO
-           ps%h        = M_ZERO
-           ps%k        = M_ZERO
-           ps%occ      = M_ZERO
+  ps%dknrm   (0:ps%l_max)                     = M_ZERO
+  ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
+  ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
+  ps%occ     (0:ps%l_max_occ, ps%ispin)       = M_ZERO
+  if(ps%so_l_max >= 0) then
+    allocate(ps%so_kb (0:ps%l_max, ps%kbc), &
+             ps%so_dkb(0:ps%l_max, ps%kbc), &
+             ps%so_dknrm(0:ps%l_max))
+    ps%so_dknrm(0:ps%l_max) = M_ZERO
+  endif
+
   do i = 0, ps%L_max
      do j = 1, ps%kbc
         call spline_init(ps%kb(i, j))
         call spline_init(ps%dkb(i, j))
-        call spline_init(ps%so_kb(i, j))
-        call spline_init(ps%so_dkb(i, j))
+        if(ps%so_l_max >= 0) call spline_init(ps%so_kb(i, j))
+        if(ps%so_l_max >= 0) call spline_init(ps%so_dkb(i, j))
      enddo
      do is = 1, ps%ispin
         call spline_init(ps%ur(i, is))
@@ -382,18 +389,20 @@ subroutine get_splines_tm(psf, ps)
     call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
   end do
 
-  do l = 0, ps%l_max
-     hato = 0.0_r8
-     if(l>0 .and. psf%irel=='rel') then
-       nrc = psf%g%nrval
-       hato(2:nrc) = (psf%vso(2:nrc, l))*psf%rphi(2:nrc, l, 1) * & 
-                     ps%so_dknrm(l) / psf%rofi(2:nrc)
-       hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
-     endif
-     call spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
-     call derivate_in_log_grid(psf%g, hato, derhato)
-     call spline_fit(psf%nrval, psf%rofi, derhato, ps%so_dkb(l, 1))
-  end do
+  if(ps%so_l_max>=0) then
+   do l = 0, ps%l_max
+      hato = 0.0_r8
+      if(l>0 .and. psf%irel=='rel') then
+        nrc = psf%g%nrval
+        hato(2:nrc) = (psf%vso(2:nrc, l))*psf%rphi(2:nrc, l, 1) * & 
+                      ps%so_dknrm(l) / psf%rofi(2:nrc)
+        hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
+      endif
+      call spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
+      call derivate_in_log_grid(psf%g, hato, derhato)
+      call spline_fit(psf%nrval, psf%rofi, derhato, ps%so_dkb(l, 1))
+   end do
+  endif
 
   ! Now the part corresponding to the local pseudopotential
   ! where the asymptotic part is substracted 
