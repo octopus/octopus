@@ -52,14 +52,22 @@ translation.
 
 @c ***************TITLE PAGE AND COPYRIGHT*******************************
 @titlepage
-@sp 10
-@c The title is printed in a large font.
-@center @titlefont{@code{octopus} manual}
+@c @sp 10
+@c @c The title is printed in a large font.
+@c @center @titlefont{@code{octopus} manual}
+@c @image{octosex,8cm}
+@c @center Male Hapalochlaena lunulata (top),
+@c @center and female Hapalochlaena lunulata (bottom).
+@c @center Photograph by Roy Caldwell.
+@c @c The following two commands start the copyright page.
+@title @code{octopus} manual
+@c @subtitle SUBTITLE-IF-ANY
+@c @subtitle SECOND-SUBTITLE
+@sp 5
 @image{octosex,8cm}
-@center Male Hapalochlaena lunulata (top),
-@center and female Hapalochlaena lunulata (bottom).
-@center Photograph by Roy Caldwell.
-@c The following two commands start the copyright page.
+@author By Miguel A. L. Marques, Alberto Castro and Angel Rubio
+
+
 @page
 @vskip 0pt plus 1filll
 Copyright @copyright{} not settled down yet.
@@ -87,8 +95,8 @@ translation.
 
 @iftex
 @headings off
-@evenheading @image{octosex,1.75cm} @| @thispage @| @today{}
-@oddheading @image{octosex,1.75cm} @| @| @today{}
+@evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
+@oddheading  @image{octosex,1.75cm} @| @thischapter  @| @thispage{} 
 @end iftex
 
 
@@ -99,7 +107,8 @@ translation.
 @c    Node name,  next         , previous , up
 @top octopus
 The purpose of this info file is describing how to use
-the octopus program. This is obvious, I know.
+the octopus program. This is obvious, I know, but texinfo manual
+encourages to put something over here.
 @end ifinfo
 
 @menu
@@ -148,10 +157,33 @@ The full description of the system to simulate on, and of the simulation
 to perform, is done in a file called "inp" that must be present in
 the directory where the @code{octopus} command is issued.
 
-@section General Stuff
+@section Generalities
 
-@subsection @code{SystemName}: A string of characters that is used
-to define
+@subsection @code{SystemName}:
+@cindex @code{SystemName}
+A string of characters that is used to build the filenames 
+(@code{SystemName.restart}, @code{SystemName.mult}, etc).
+@emph{Default: sysname.}
+
+@subsection @code{CalculationMode}:
+@cindex @code{CalculationMode}
+Integer number. It defines the type of simulation to perform. Options are:
+@itemize @bullet
+@item @code{1} : Start static calculation
+@item @code{2} : Resume static calculation
+@item @code{3} : calculate unocuppied states
+@item @code{4} : resume unocuppied states calculation
+@item @code{5} : start td
+@item @code{6} : resume td
+@item @code{7} : start static polarizability
+@item @code{8} : resume static polarizability
+@item @code{9} : perform Born-Oppenheimer MD
+@item @code{99} : prints out the "Pulpo a Feira" recipe
+@end itemize
+@emph{Default: 1.}
+
+@subsection @code{Verbose}:
+Level of verbosity in the output.
 
 @section Describing the species
 

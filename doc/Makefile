@@ -13,13 +13,13 @@ html:
 info:
 	makeinfo octopus.texinfo
 
-install-info:
+install-info: info
 	gzip octopus.info
 	cp octopus.info.gz $(INFODIR)
-	$(INSTALL-INFO) $(INFODIR)/octopus.info $(INFODIRFILE)
+	$(INSTALL-INFO) $(INFODIR)/octopus.info.gz $(INFODIRFILE)
 
 uninstall-info:
-	$(INSTALL-INFO) --delete $(INFODIR)/octopus.info $(INFODIRFILE)
+	$(INSTALL-INFO) --delete $(INFODIR)/octopus.info.gz $(INFODIRFILE)
 	rm /usr/share/info/octopus.info.gz
 
 clean:
