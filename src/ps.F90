@@ -127,6 +127,11 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%occ     (0:ps%l_max_occ, ps%ispin))
+           ps%dknrm    = M_ZERO
+           ps%so_dknrm = M_ZERO
+           ps%h        = M_ZERO
+           ps%k        = M_ZERO
+           ps%occ      = M_ZERO
   do i = 0, ps%L_max
      do j = 1, ps%kbc
         call spline_init(ps%kb(i, j))
