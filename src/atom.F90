@@ -103,6 +103,7 @@ contains
       opt = 1      
     end if
 
+    rho = M_ZERO
     ! build density...
     select case (opt)
     case (1) ! ...from userdef
