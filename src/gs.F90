@@ -88,8 +88,20 @@ contains
     ! allocate wfs
     allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
+    message(1) = 'Info: Random generating starting wavefunctions.'
+    call write_info(1)
+      
+    ! wave functions are simply random gaussians
+    call states_generate_random(sys%st, sys%m)
+
+    ! this is certainly a better density
+    call system_guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+       sys%st%d%spin_channels, sys%st%rho)      
+
     call loct_parse_logical("LCAOStart", .true., lcao_start)
     if(lcao_start) then
+      call dh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
+
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)
      
@@ -101,31 +113,17 @@ contains
         
         call states_fermi(sys%st, sys%m)                         ! occupations
         call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
-      else
-        lcao_start = .false.
       end if
     end if
    
-    if(.not.lcao_start) then
-      message(1) = 'Info: Random generating starting wavefunctions.'
-      call write_info(1)
-      
-      ! wave functions are simply random gaussians
-      call states_generate_random(sys%st, sys%m)
-
-      ! this is certainly a better density
-      call system_guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-         sys%st%d%spin_channels, sys%st%rho)      
-    end if
-    
-    ! write wave-functions to disk
+        ! write wave-functions to disk
     if(X(restart_write)("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
       message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
       call write_fatal(1)
     end if
 
     ! clean up
-    deallocate(sys%st%X(psi), stat = ierr)
+    deallocate(sys%st%X(psi))
     nullify(sys%st%X(psi))
 
     call pop_sub()

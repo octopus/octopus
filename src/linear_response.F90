@@ -42,6 +42,7 @@ module linear_response
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine lr_init(st, m, lr)
     type(states_type), intent(in)  :: st
     type(mesh_type),   intent(in)  :: m
@@ -58,6 +59,7 @@ contains
   end subroutine lr_init
 
 
+  ! ---------------------------------------------------------
   subroutine lr_end(lr)
     type(lr_type), intent(inout) :: lr
 
@@ -69,6 +71,7 @@ contains
   end subroutine lr_end
 
   
+  ! ---------------------------------------------------------
   subroutine lr_build_dl_rho(m, st, lr)
     type(mesh_type),   intent(in)    :: m
     type(states_type), intent(in)    :: st
@@ -100,6 +103,7 @@ contains
             lr%dl_rho(i, 2) = lr%dl_rho(i, 2) + M_TWO*st%d%kweights(ik)*st%occ(p, ik) * &
                R_REAL(st%X(psi)(i, 2, p, ik)*lr%X(dl_psi)(i, 2, p, ik))
 
+
             c = st%X(psi)(i, 1, p, ik) * R_CONJ(lr%X(dl_psi)(i, 2, p, ik)) + &
                 lr%X(dl_psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik))
 
@@ -108,28 +112,30 @@ contains
           end select
         end do
       end do
-    end do
+    end do     
 
     call pop_sub()
   end subroutine lr_build_dl_rho
 
 
+  ! ---------------------------------------------------------
   subroutine lr_solve_AXeY(sys, h, lr, ist, ik, Y, MAXITER, tol)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
     type(lr_type),          intent(inout) :: lr
-    R_TYPE,                 intent(in)    :: Y(:,:)   ! Y(m%np, st%dim)
+    R_TYPE,                 intent(in)    :: Y(:,:)   ! Y(m%np, st%dim) and st%dim=1
     integer,                intent(in)    :: ist, ik
     integer,                intent(in)    :: MAXITER
     FLOAT,                  intent(in)    :: tol
     
-    integer :: iter  
+    integer :: iter, stdim  
     R_TYPE, allocatable :: z(:,:), g(:,:), pp(:,:), t(:,:)
     FLOAT  :: sm1, sm2, sm3, alpha, beta
 
     call push_sub('lr_solve_AXeY')
 
-    allocate(z(sys%m%np,sys%st%dim), g(sys%m%np,sys%st%dim), pp(sys%m%np,sys%st%dim), t(sys%m%np,sys%st%dim))
+    
+    allocate(z(sys%m%np, sys%st%dim), g(sys%m%np, sys%st%dim), pp(sys%m%np,sys%st%dim), t(sys%m%np,sys%st%dim))
 
     pp(:,:) = lr%X(dl_psi)(:,:, ist, ik)
     call X(Hpsi)(h, sys%m, sys%f_der, pp, z, ik)
@@ -140,14 +146,14 @@ contains
       call X(Hpsi)(h, sys%m, sys%f_der, pp, t, ik)
       t(:,:) = t(:,:) - sys%st%eigenval(ist, ik)*pp(:,:)
 
-      sm1 = X(states_dotp) (sys%m, sys%st%d%dim, z, z)
-      sm2 = X(states_dotp) (sys%m, sys%st%d%dim, z, t)
+      sm1 = X(states_dotp) (sys%m, sys%st%dim, z, z)
+      sm2 = X(states_dotp) (sys%m, sys%st%dim, z, t)
       alpha = sm1/sm2
 
       lr%X(dl_psi)(:,:, ist, ik) = lr%X(dl_psi)(:,:, ist, ik) + alpha*pp(:,:)
       g(:,:) = z(:,:)
       g(:,:) = g(:,:) - alpha*t(:,:)
-      sm3 = X(states_dotp) (sys%m, sys%st%d%dim, g, g) 
+      sm3 = X(states_dotp) (sys%m, sys%st%dim, g, g) 
       beta = sm3/sm1
 
       if(sm3 <= tol) then 
@@ -169,7 +175,10 @@ contains
   end subroutine lr_solve_AXeY
   
 
-  ! orthogonalizes response of \alpha KS orbital to all \alpha KS orbitals  
+  ! ---------------------------------------------------------
+  ! orthogonalizes response of \alpha KS orbital to all occupied 
+  ! \alpha KS orbitals  
+  ! ---------------------------------------------------------
   subroutine lr_orth_response(m, st, lr)
     type(mesh_type),   intent(in)    :: m
     type(states_type), intent(in)    :: st
@@ -190,6 +199,7 @@ contains
   end subroutine lr_orth_response
 
   
+  ! ---------------------------------------------------------
   subroutine lr_orth_vector(m, st, v, ik)
     type(mesh_type),        intent(in)    :: m
     type(states_type),      intent(in)    :: st
@@ -203,7 +213,7 @@ contains
     
     do ist = 1, st%nst
       if(st%occ(ist, ik) > M_ZERO) then
-        scalp = X(states_dotp)(m, st%d%dim, v, st%X(psi)(:,:, ist, ik))
+        scalp = X(states_dotp)(m, st%dim, v, st%X(psi)(:,:, ist, ik))
         v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
       end if
     end do

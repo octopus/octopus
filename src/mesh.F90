@@ -90,18 +90,12 @@ subroutine mesh_double_box(m, db)
 
 ! NEW
   ! double mesh with 2n points
-  if (conf %periodic_dim == 0) then
-    do i = 1, conf%dim
-      db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
-    end do
-  else
-    do i = 1, conf%periodic_dim 
-      db(i) = m%nr(2,i) - m%nr(1,i) + 1
-    end do
-    do i = conf%periodic_dim + 1, conf%dim
-      db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i)))
-    end do
- end if
+  do i = 1, conf%periodic_dim 
+    db(i) = m%l(i)
+  end do
+  do i = conf%periodic_dim + 1, conf%dim
+    db(i) = nint(m%fft_alpha*(m%l(i)-1)) + 1
+  end do
 
 end subroutine mesh_double_box
 

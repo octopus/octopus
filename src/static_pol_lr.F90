@@ -18,14 +18,12 @@
 #include "global.h"
 
 module static_pol_lr
-  use geometry
+  use mesh
   use system
-  use states
   use restart
   use hamiltonian 
   use fxc
   use mix
-  use mesh
   use poisson
   use linear_response
 
@@ -33,6 +31,7 @@ module static_pol_lr
 
 contains
 
+  ! ---------------------------------------------------------
   integer function static_pol_lr_run(sys, h, fromScratch) result(ierr)
     type(system_type), intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -41,12 +40,13 @@ contains
     type(lr_type) :: lr
     FLOAT :: pol(conf%dim, conf%dim)
 
+    
     ierr = 0
     call init_()
 
     ! load wave-functions
     if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
-      message(1) = "Could not load wave-functions: Starting from scratch"
+      message(1) = "Could not load wave-functions in pol_lr_run: Starting from scratch"
       call write_warning(1)
       
       ierr = 1
@@ -55,10 +55,10 @@ contains
     end if
 
     ! setup Hamiltonian
-    message(1) = 'Info: Setting up Hamiltonian.'
+    message(1) = 'Info: Setting up Hamiltonian for linear response'
     call write_info(1)
     call X(system_h_setup) (sys, h)
-
+    
     !if(.not.fromScratch) then ! try to load delta_psi
     !  if(X(restart_read) ("tmp/restart_lr_static_pol", sys%st, sys%m).ne.sys%st%nst) then
     fromScratch = .true.
@@ -88,7 +88,7 @@ contains
     
     subroutine output()
       integer :: j, iunit
-
+      FLOAT :: msp
       call loct_mkdir("linear")
 
       call io_assign(iunit)
@@ -98,10 +98,17 @@ contains
       if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim
       write(iunit, '(a)') ']'
 
+      msp = M_ZERO
       do j = 1, conf%dim
         write(iunit, '(3f12.6)') pol(j, 1:conf%dim) &
            / units_out%length%factor**conf%dim
+        msp = msp + pol(j,j)
       end do
+      msp = msp / M_THREE
+
+      write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
+         / units_out%length%factor**conf%dim
+
       call io_close(iunit)
       
     end subroutine output
@@ -109,6 +116,7 @@ contains
   end function static_pol_lr_run
 
 
+  ! ---------------------------------------------------------
   subroutine pol_tensor(sys, h, lr, pol)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -127,17 +135,19 @@ contains
       call mix_init(lr%mixer, 1, sys%m%np, sys%st%d%nspin)
       call get_response_e(sys, h, lr, i)
       call mix_end(lr%mixer)
-
+      
       do j = 1, sys%m%np
         rhov = sum(lr%dl_rho(j,:))*sys%m%vol_pp(j)
         pol(i, :) = pol(i, :) - sys%m%x(j, :)*rhov
       end do
+      
     end do
     
     call pop_sub()
   end subroutine pol_tensor
 
 
+  ! ---------------------------------------------------------
   subroutine get_response_e(sys, h, lr, alpha)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -150,39 +160,40 @@ contains
     
     type(mesh_type), pointer :: m
     type(states_type), pointer :: st
-
+    
     call push_sub('get_response_e')
 
     m => sys%m
     st => sys%st
 
-    allocate(tmp(m%np), Y(m%np,st%d%dim))
-    allocate(dl_rhoin(1,m%np,st%d%dim), dl_rhonew(1,m%np,st%d%dim), dl_rhotmp(1,m%np,st%d%dim))
+    allocate(tmp(m%np), Y(m%np,1))
+    allocate(dl_rhoin(1,m%np,st%d%nspin), dl_rhonew(1,m%np,st%d%nspin), dl_rhotmp(1,m%np,st%d%nspin))
 
     call init_response_e()
 
+
     do iter=1, lr%max_iter
+
       dl_rhoin(1,:,:) = lr%dl_rho(:,:)
 
       do i = 1, m%np
         tmp(i) = sum(lr%dl_rho(i,:))
       end do
-      if(.not.h%ip_app) call poisson_solve(m, sys%f_der, lr%dl_Vhar, tmp) 
-      
+      if(.not.h%ip_app) then
+         call poisson_solve(m, sys%f_der, lr%dl_Vhar, tmp) 
+      end if 
       do ik = 1, st%d%nspin
         do ist = 1, st%nst 
           if (st%occ(ist, ik) > M_ZERO) then  
-
-            Y(:,1) = (lr%dl_Vhar(:) + m%x(:,alpha))*tmp(:) 
+            Y(:,1) = (lr%dl_Vhar(:) + m%x(:,alpha))
             do ik2 = 1, st%d%nspin
               Y(:,1) = Y(:,1) + lr%dl_Vxc(:, ik, ik2)*lr%dl_rho(:,ik2)  
             end do
-            do ik2 = 1, st%d%dim
-              Y(:,ik2) = -Y(:,1)*lr%X(dl_psi)(:, ik2, ist, ik)
-            end do
+            Y(:,1) = -Y(:,1)*st%X(psi)(:, 1, ist, ik)
 
             call lr_orth_vector(m, st, Y, ik)
             call lr_solve_AXeY(sys, h, lr, ist, ik, Y, 500, CNST(1.0e-5))
+	    
           endif
         end do
       end do
@@ -190,7 +201,7 @@ contains
       call lr_orth_response(m, st, lr)
       call lr_build_dl_rho(m, st, lr)
 
-      dl_rhonew(:,:,:) = M_ZERO
+      dl_rhonew(1,:,:) = M_ZERO
       dl_rhotmp(1,:,:) = lr%dl_rho(:,:)
       call mixing(lr%mixer, iter, 1, m%np, st%d%nspin, &
          dl_rhoin, dl_rhotmp, dl_rhonew)  
@@ -202,15 +213,15 @@ contains
       end do
       lr%abs_dens = sqrt(lr%abs_dens)
       finish = (lr%abs_dens <= lr%conv_abs_dens) 
-
       if(finish) then 
         write(message(1), '(a, i4, a)')        &
            'Info: SCF for response converged in ', &
-           iter, 'iterations'  
+           iter, ' iterations'  
+        call write_info(1)
         exit
       else  
         ! without mixing it seems to go faster!!!!
-        !lr%dl_rho(:,:) = dl_rhonew(1,:,:)
+        lr%dl_rho(:,:) = dl_rhonew(1,:,:)
       end if
     end do
 
