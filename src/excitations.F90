@@ -51,7 +51,7 @@ program excitations
 
   ! how many states do we have?
   n_occ = sys%st%nst
-  call loct_parse_int("UnoccNumberStates", 5, n_unocc)
+  call loct_parse_int("NumberUnoccStates", 5, n_unocc)
   call states_init(st, sys%m, sys%geo, sys%val_charge)
   st%nst = n_unocc + n_occ
   st%st_end = st%nst

@@ -218,9 +218,7 @@ SCF
 
 Unoccupied States
 
-* UnoccNumberStates::           
-* UnoccMaximumIter::            
-* UnoccConv::                   
+* NumberUnoccStates::           
 
 Time Dependent
 
@@ -268,8 +266,8 @@ Function output for visualization
 * OutputPlaneX::                
 * OutputPlaneY::                
 * OutputPlaneZ::                
-* OutputMeshIndex::                
-* OutputGnuplotMode::                
+* OutputMeshIndex::             
+* OutputGnuplotMode::           
 * OutputDX::                    
 * OutputNETCDF::                
 * OutputEvery::                 
@@ -2077,32 +2075,15 @@ if @code{TDOccupationalAnalysis == 1}).
 
 
 @menu
-* UnoccNumberStates::           
-* UnoccMaximumIter::            
-* UnoccConv::                   
+* NumberUnoccStates::           
 @end menu
 
-@node UnoccNumberStates, UnoccMaximumIter, Unoccupied States, Unoccupied States
-@subsection @code{UnoccNumberStates} (integer, 5)
+@node NumberUnoccStates,  , Unoccupied States, Unoccupied States
+@subsection @code{NumberUnoccStates} (integer, 5)
 @vindex @code{UnoccNumberStates}
 
 How many unoccupied states to compute.
 
-@node UnoccMaximumIter, UnoccConv, UnoccNumberStates, Unoccupied States
-@subsection @code{UnoccMaximumIter} (integer, 200)
-@vindex @code{UnoccMaximumIter}
-
-Maximum number of iterations while calculating the unoccupied states.
-Note that these are @emph{not} SCF iterations, for the density and the 
-Hamiltonian are not updated! These iterations correspond to the iterative
-@emph{diagonalization} of the Hamiltonian.
-
-@node UnoccConv,  , UnoccMaximumIter, Unoccupied States
-@subsection @code{UnoccConv} (double, 1e-4)
-@vindex @code{UnoccConv}
-
-Absolute convergence in the eigenvectors. So don't try to put it too
-good or else you won't converge.
 
 
 @c **********************************************************************
@@ -2867,8 +2848,8 @@ have the value zero in those files.
 * OutputPlaneX::                
 * OutputPlaneY::                
 * OutputPlaneZ::                
-* OutputMeshIndex::                
-* OutputGnuplotMode::                
+* OutputMeshIndex::             
+* OutputGnuplotMode::           
 * OutputDX::                    
 * OutputNETCDF::                
 * OutputEvery::                 
