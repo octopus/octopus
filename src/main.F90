@@ -45,11 +45,13 @@ program octopus
   call write_info(4)
 
   ! Let us print where we are running
-  call oct_sysname(message(2))
-  message(1) = "The octopus is swimming in "+trim(message(2))
-  message(1) = str_center(trim(message(1)),70)
-  write(message(2),'(a)')
-  call write_info(2)
+  if(conf%verbose > 20) then
+    call oct_sysname(message(1))
+    write(stdout, '(a)') str_center("The octopus is swimming in "+trim(message(1)), 70)
+  end if
+#if defined(HAVE_MPI)
+  call MPI_Barrier(MPI_COMM_WORLD, ierr)
+#endif
 
   ! print date
   call date_and_time(values=val)
