@@ -74,7 +74,7 @@ oct_choose_st_LDADD = $(octopus_LDADD)
 oct_make_st_SOURCES = $(core_SRCS) make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
 
-oct_center_geom_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 atom.F90 centergeom.F90
+oct_center_geom_SOURCES = $(core_SRCS) centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
 # cleaning
