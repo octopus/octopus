@@ -89,7 +89,7 @@ subroutine hamiltonian_init(h, sys)
 
   if(h%vnl_space == 1) then
     call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
-    if(h%vpsl_space < 0) then
+    if(h%nextra < 0) then
       write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
            "' is not a valid GridRefinement"
       message(2) = '(GridRefinement >= 0)'
