@@ -35,8 +35,8 @@ type atom_type
   integer :: Mps
   integer, pointer :: Jxyz(:)
   real(r8), pointer :: pnts_ps, &  ! # points in ps sphere
-       uV(:,:,:), uVu(:,:,:),         &  ! the Kleinman Bylander projectors
-       duV(:,:,:,:)                  ! the gradient of the projectors
+       uV(:,:,:), uVu(:,:,:),   &  ! the Kleinman Bylander projectors
+       duV(:,:,:,:)                ! the gradient of the projectors
 end type atom_type
 
 type atom_classical_type
@@ -422,12 +422,15 @@ contains
     m1 = matmul(transpose(m1), matmul(m2, m1))
 
     ! now transform the coordinates
+    ! it is written in this way to avoid what I consider a bug in the Intel compiler
     do i = 1, natoms
-      a(i)%x = matmul(m1, a(i)%x)
+      f2 = a(i)%x
+      a(i)%x = matmul(m1, f2)
     end do
 
     do i = 1, ncatoms
-      ca(i)%x = matmul(m1, ca(i)%x)
+      f2 = ca(i)%x
+      ca(i)%x = matmul(m1, f2)
     end do
 
   end subroutine rotate

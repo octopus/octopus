@@ -172,12 +172,6 @@ end subroutine write_info
 subroutine push_sub()
   integer i
 
-  character(len=8)  :: date
-  character(len=10) :: time
-  character(len=5) :: zone
-  integer, dimension(8) :: values
-  real(r8) :: t
-
   no_sub_stack = no_sub_stack + 1
   if(no_sub_stack > 49) then
     sub_stack(50) = 'push_sub'
@@ -185,12 +179,7 @@ subroutine push_sub()
     call write_fatal(1)
   else
     sub_stack(no_sub_stack) = trim(sub_name)
-
-    call date_and_time(date, time, zone, values)
-    t = values(8)/1000._r8 + (values(7) + &
-      60*(values(6) + 60*(values(5))))
-
-    time_stack(no_sub_stack) = t
+    time_stack(no_sub_stack) = elapsed_time()
 
     if(conf%verbose > 999 .and. mpiv%node == 0) then
       write(stdout,'(a)', advance='no') "* Debug: In: "
@@ -206,18 +195,11 @@ end subroutine push_sub
 
 subroutine pop_sub()
   integer i
-
-  character(len=8)  :: date
-  character(len=10) :: time
-  character(len=5) :: zone
-  integer, dimension(8) :: values
   real(r8) :: t
 
   if(no_sub_stack > 0) then
     if(conf%verbose > 999 .and. mpiv%node == 0) then
-      call date_and_time(date, time, zone, values)
-      t = values(8)/1000._r8 + (values(7) + &
-          60*(values(6) + 60*(values(5))))
+      t = elapsed_time()
  
       write(stdout,'(a)', advance='no') "* Debug: Out:"
       do i = no_sub_stack-1, 1, -1
@@ -242,14 +224,13 @@ function elapsed_time()
   character(len=8)  :: date
   character(len=10) :: time
   character(len=5) :: zone
-  integer, dimension(8) :: values
+  integer :: values(8)
 
   call date_and_time(date, time, zone, values)  
 
   elapsed_time = values(8)/1000._r8 + (values(7) + &
-                 60*(values(6) + 60*(values(5))))!
+                 60*(values(6) + 60*(values(5))))
 
-  return
 end function elapsed_time
 
 ! returns true if a file named stop exists
@@ -365,7 +346,8 @@ end function str_center
 function concatenate(a, b)
   character(len=*), intent(in) :: a, b
   character(len=len(a)+len(b)) :: concatenate
-  concatenate = a//b
+
+  concatenate = a // b
 end function concatenate
 
 end module global
