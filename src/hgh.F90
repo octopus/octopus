@@ -277,6 +277,7 @@ subroutine get_cutoff_radii(psp)
 
   integer  :: ir, l, i
   real(r8) :: dincv, tmp
+  real(r8), parameter :: threshold = 1.0e-4_r8
 
   sub_name = 'get_cutoff_radii_psp'; call push_sub()
 
@@ -284,7 +285,7 @@ subroutine get_cutoff_radii(psp)
   psp%kbr(0:psp%l_max + 1) = 0.0_r8
   do ir = psp%g%nrval, 2, -1
     dincv = abs(psp%vlocal(ir)*psp%g%rofi(ir) + psp%z_val)
-    if(dincv > eps) exit
+    if(dincv > threshold) exit
   end do
   psp%kbr(psp%l_max + 1) = psp%g%rofi(ir + 1)
 
@@ -294,7 +295,7 @@ subroutine get_cutoff_radii(psp)
     do i = 1, 3
        do ir = psp%g%nrval, 2, -1
           dincv = abs(psp%kb(ir, l, i))
-          if(dincv > eps) exit
+          if(dincv > threshold) exit
        enddo
        tmp = psp%g%rofi(ir + 1)
        psp%kbr(l) = max(tmp, psp%kbr(l))
@@ -678,7 +679,7 @@ subroutine hgh_debug(psp)
   ! Writes down nonlocal part.
   if(psp%l_max >=0) then
     do i = 1, psp%g%nrval
-       write(kbp_unit, *) psp%g%rofi(i), ( (psp%kb(i, l, k) ,k = 1, 3),l = 0, psp%l_max)
+       write(kbp_unit, '(10es14.4)') psp%g%rofi(i), ( (psp%kb(i, l, k) ,k = 1, 3),l = 0, psp%l_max)
     enddo
   endif
 

@@ -36,7 +36,7 @@ type atom_type
   ! the mesh around a given atom...
   integer :: Mps
   integer, pointer :: Jxyz(:)
-  real(r8), pointer :: pnts_ps, &  ! # points in ps sphere
+  R_TYPE, pointer :: pnts_ps, &  ! # points in ps sphere
        uV(:,:,:), uVu(:,:,:),   &  ! the Kleinman Bylander projectors
        duV(:,:,:,:),            &  ! the gradient of the projectors
        uvuso(:, :, :)

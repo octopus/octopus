@@ -116,8 +116,10 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
 
   integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm
   R_TYPE :: uVpsi
+  R_TYPE, allocatable :: lpsi(:), lHpsi(:)
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
+  R_TYPE, external :: R_DOT
 
   sub_name = 'vnlpsi'; call push_sub()
 
@@ -130,6 +132,9 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
     if(spec%local) cycle do_atm
 
     do_dim: do idim = 1, sys%st%dim
+      allocate(lpsi(atm%mps), lHpsi(atm%mps))
+      lpsi(:) = psi(atm%jxyz(:), idim)
+      lHpsi(:) = M_z0
       add_lm = 1
       do_l: do l = 0, spec%ps%l_max
         if (l == spec%ps%L_loc) then
@@ -140,17 +145,21 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-              uVpsi = sum(atm%uV(:, add_lm, ikbc)*psi(atm%Jxyz(:), idim))*sys%m%vol_pp * &
-                   atm%uVu(add_lm, ikbc, jkbc)
-              Hpsi(atm%Jxyz(:), idim) = Hpsi(atm%Jxyz(:), idim) + uVpsi*atm%uV(:, add_lm, jkbc)
+               uvpsi = R_DOT(atm%mps, atm%uv(:, add_lm, ikbc), 1, lpsi(1), 1) * &
+                             sys%m%vol_pp*atm%uvu(add_lm, ikbc, jkbc)
+               call    R_FUNC(axpy)  (atm%mps, uvpsi,                      &
+                                               atm%uv(:, add_lm, jkbc), 1, &
+                                               lHpsi(:), 1)
             end do
           end do
 
           add_lm = add_lm + 1
         end do do_m
       end do do_l
-
+      Hpsi(atm%jxyz(:), idim) = Hpsi(atm%jxyz(:), idim) + lHpsi(:)
+      deallocate(lpsi, lHpsi)
     end do do_dim
+
   end do do_atm
 
   call pop_sub(); return

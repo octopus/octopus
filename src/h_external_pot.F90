@@ -138,6 +138,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   real(r8) :: r, x(3), vl, g(3)
   complex(r8) :: c
   real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
+  complex(r8) :: fri, dfri(3)
   complex(r8), allocatable :: fw(:,:,:), dfw(:,:,:,:)
 
   sub_name = 'specie_nl_fourier_init'; call push_sub()
@@ -182,7 +183,8 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
               x(3) = m%h(3) * real(iz - n(3)/2 - 1, r8) / real(1 + nextra, r8)
               r = sqrt(sum(x**2))
               
-              call specie_get_nl_part(s(i), x, l, lm, ii, fr(ix, iy, iz), dfr(ix, iy, iz, :))
+              call specie_get_nl_part(s(i), x, l, lm, ii, fri, dfri)
+              fr(ix, iy, iz) = fri; dfr(ix, iy, iz, :) = dfri(:)
             end do
           end do
         end do
@@ -354,13 +356,12 @@ contains
       if(r <= s%ps%rc_max + m%h(1)) j = j + 1
     end do
     a%Mps = j
-    
     allocate(a%Jxyz(j), a%uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
          a%duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc), &
          a%uvuso((s%ps%l_max+1)**2, s%ps%kbc, s%ps%kbc))
     
     a%uV  = 0.0_r8; a%duV = 0.0_r8; a%uVu = 0.0_r8; a%uvuso = 0.0_r8
-    
+     
     j = 0
     do k = 1, h%np
       call mesh_r(m, k, r, a=a%x)
