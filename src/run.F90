@@ -28,6 +28,7 @@ use system
 use scf
 use unocc
 use static_pol
+use rsdfpt
 use geom_opt
 use phonons
 use opt_control
@@ -47,10 +48,11 @@ integer, private, parameter ::   &
      M_UNOCC              = 2, &
      M_TD                 = 3, &
      M_STATIC_POL         = 4, &
+     M_LR_STATIC_POL      = 8, &
      M_GEOM_OPT           = 5, &
      M_PHONONS            = 6, &
      M_OPT_CONTROL        = 7, &
-     M_BO_MD              = 8, &
+     M_BO_MD              = 98,&
      M_PULPO_A_FEIRA      = 99
 
 integer, private, parameter :: &
@@ -59,6 +61,7 @@ integer, private, parameter :: &
      I_UNOCC              = 102, &
      I_TD                 = 103, &
      I_STATIC_POL         = 104, &
+     I_LR_STATIC_POL      = 108, &
      I_GEOM_OPT           = 105, &
      I_PHONONS            = 106, &
      I_OPT_CONTROL        = 107, &
@@ -72,7 +75,7 @@ subroutine run()
   logical :: log
   character(len=100) :: filename
 
-  logical :: fromScratch(M_GS:M_OPT_CONTROL)
+  logical :: fromScratch(M_GS:M_LR_STATIC_POL)
 
   call push_sub('run')
 
@@ -113,6 +116,13 @@ subroutine run()
       if(static_pol_run(sys, h, fromScratch(M_STATIC_POL)).ne.0) then ! could not load wfs
         i_stack(instr) = I_STATIC_POL;      instr = instr + 1
         i_stack(instr) = I_GS_INIT
+        cycle program
+      end if
+
+    case(I_LR_STATIC_POL)
+      if(rsdfpt_run(sys, h, fromScratch(M_LR_STATIC_POL)).ne.0) then ! could not load wfs
+        i_stack(instr) = I_LR_STATIC_POL;      instr = instr + 1
+        i_stack(instr) = I_GS
         cycle program
       end if
 
@@ -178,6 +188,10 @@ contains
       fromScratch(M_STATIC_POL) = fS
       instr = instr + 1; i_stack(instr) = I_STATIC_POL
 
+    case(M_LR_STATIC_POL)
+      fromScratch(M_LR_STATIC_POL) = fS
+      instr = instr + 1; i_stack(instr) = I_LR_STATIC_POL
+
     case(M_GEOM_OPT)
       fromScratch(M_GEOM_OPT) = fS
       instr = instr + 1; i_stack(instr) = I_GEOM_OPT
@@ -202,7 +216,7 @@ subroutine run_init()
   ! initialize some stuff
 
   call loct_parse_int('CalculationMode', 1, calc_mode)
-  if( (calc_mode < 1 .or. calc_mode > 8) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+  if( (calc_mode < 1 .or. calc_mode > 9) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = '
     message(3) = '    gs          <= ground-state calculation'

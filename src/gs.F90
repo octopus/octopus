@@ -53,7 +53,6 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
-
       call X(system_h_setup) (sys, h)
     
       ! run self consistency
