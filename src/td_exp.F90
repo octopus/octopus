@@ -15,8 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t, &
-                    order)
+subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t, order)
   type(hamiltonian_type), intent(in) :: h
   type(system_type), intent(in)      :: sys
   type(td_type), intent(in)          :: td
@@ -30,7 +29,13 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t, &
 
   select case(td%exp_method)
    case(FOURTH_ORDER);      call fourth
-   case(LANCZOS_EXPANSION); call lanczos
+   case(LANCZOS_EXPANSION)
+       if(h%ab .eq. IMAGINARY_ABSORBING) then
+         message(1) = 'Lanczos expansion exponential method not supported for non-hermtian'
+         message(2) = 'Hamiltonians (e.g., with imaginary potential absorbing boundaries).'
+         call write_fatal(2)
+       endif
+       call lanczos
 #ifdef HAVE_FFT
    case(SPLIT_OPERATOR);    call split
    case(SUZUKI_TROTTER);    call suzuki
@@ -107,71 +112,54 @@ contains
   end subroutine cheby
 
   subroutine lanczos
-    integer ::  korder, is, n, nn, i, info, j
-    complex(r8), allocatable :: hm(:, :), v(:, :, :), w(:, :), f(:, :), hh(:), expo(:, :)
+    integer ::  korder, is, n, nn, np, i, info
+    complex(r8), allocatable :: hm(:, :), v(:, :, :), expo(:, :)
     real(r8) :: alpha, beta, res, tol, nrm
 
     call push_sub('lanczos')
 
+    np = sys%m%np*sys%st%dim
     korder = td%exp_order
     tol = td%lanczos_tol
     allocate(v(sys%m%np, sys%st%dim, korder), &
-             w(sys%m%np, sys%st%dim),         &
-             f(sys%m%np, sys%st%dim),         &
              hm(korder, korder),         &
-             expo(korder, korder),      &
-             hh(korder))
+             expo(korder, korder))
 
-    j = 1    
     ! Normalize input vector, and put it into v(:, :, 1)
-    nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi(1:sys%m%np, 1:sys%st%dim))
+    nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi)
     v(:, :, 1) = zpsi(:, :)/nrm
+
     ! Operate on v(:, :, 1) and place it onto w.
-    call zhpsi(h, sys%m, sys%st, sys, ik, v(:, 1:sys%st%dim, 1), w(1:sys%m%np, 1:sys%st%dim), t)
-    alpha = zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1), w(:, :))
-    f(:, :) = w(:, :) - alpha*v(1:sys%m%np, 1:sys%st%dim, 1)
+    call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, 1), zpsi, t)
+    alpha = zstates_dotp(sys%m, sys%st%dim, v(:, :, 1), zpsi)
+    call zaxpy(np, -M_z1*alpha, v, 1, zpsi, 1)
+
     hm = M_z0; hm(1, 1) = alpha
-    beta = zstates_nrm2(sys%m, sys%st%dim, f)
+    beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
     do n = 1, korder - 1
-       if(h%ab.ne.1) j = n
-       v(1:sys%m%np, 1:sys%st%dim, n + 1) = f(1:sys%m%np, 1:sys%st%dim)/beta
+       v(:, :, n + 1) = zpsi(:, :)/beta
        hm(n+1, n) = beta
-       call zhpsi(h, sys%m, sys%st, sys, ik, &
-            v(:, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
-       hh = M_z0
-       do nn = j, n + 1
-          hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:, :, nn), w)
-       enddo
-       f = w
-       do nn = j, n + 1
-          f = f - v(1:, :, nn)*hh(nn)
-       enddo
-       do nn = j, n  + 1
-          hm(nn, n + 1) = hh(nn)
-       enddo
-       if(h%ab .ne. 1) then
-         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
-       else
-         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 1)
-       endif
+       call zhpsi(h, sys%m, sys%st, sys, ik, v(:, :, n+1), zpsi, t)
+       hm(n    , n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n)    , zpsi)
+       hm(n + 1, n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n + 1), zpsi)
+       call zgemv('n', np, 2, -M_z1, v(1, 1, n), np, hm(n:n+1, n + 1), 1, M_z1, zpsi, 1)
+       call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
        res = abs(beta*abs(expo(1, n+1)))
-       beta = zstates_nrm2(sys%m, sys%st%dim, f)
+       beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
        if(beta < 1.0e-12_r8) exit
        if(n>1 .and. res<tol) exit
     enddo
-    korder = n + 1
+    korder = min(korder, n + 1)
     if(res > tol .and. beta > 1.0e-12_r8) then
       write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
       call write_warning(1)
     endif
 
-    zpsi = M_z0
-    do nn = 1, korder
-       call zaxpy(sys%m%np*sys%st%dim, nrm*expo(nn, 1), v(1, 1, nn), 1, zpsi, 1)
-    enddo
-
+    ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
+    call zgemv('n', np, korder, M_z1*nrm, v, np, expo(1, 1), 1, M_z0, zpsi, 1)
+    
     if(present(order)) order = korder
-    deallocate(v, w, f, hm, expo, hh)
+    deallocate(v, hm, expo)
     call pop_sub()
   end subroutine lanczos
 

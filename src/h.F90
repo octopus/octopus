@@ -97,6 +97,9 @@ integer, parameter :: NOREL      = 0, &
                       APP_ZORA   = 2, &
                       ZORA       = 3
 
+integer, parameter :: NO_ABSORBING        = 0, &
+                      IMAGINARY_ABSORBING = 1, &
+                      MASK_ABSORBING      = 2
 contains
 
 subroutine hamiltonian_init(h, sys)
@@ -222,10 +225,10 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! absorbing boundaries
-  call oct_parse_int("AbsorbingBoundaries", 0, h%ab)
+  call oct_parse_int("AbsorbingBoundaries", NO_ABSORBING, h%ab)
   nullify(h%ab_pot)
 
-  absorbing_boundaries: if(h%ab.eq. 1 .or. h%ab.eq.2) then
+  absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
     call oct_parse_double("ABWidth", 4._r8/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then

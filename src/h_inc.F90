@@ -461,7 +461,7 @@ subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
 
   call push_sub('vborders')
 
-  if(h%ab .eq. 1) then
+  if(h%ab .eq. IMAGINARY_ABSORBING) then
     do idim = 1, st%dim
        hpsi(:, idim) = hpsi(:, idim) + M_zI*h%ab_pot(:)*psi(1:, idim)
     end do
