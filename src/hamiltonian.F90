@@ -63,7 +63,7 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
-  h%vpsl_space = fdf_integer('LocalPotentialSpace', 0)
+  h%vpsl_space = fdf_integer('LocalPotentialSpace', 1)
   if(h%vpsl_space < 0 .or. h%vpsl_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
          "' is not a valid LocalPotentialSpace"

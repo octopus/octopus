@@ -62,14 +62,14 @@ subroutine specie_nl_fourier_init(ns, s, m)
   type(mesh_type), intent(IN) :: m
 
   integer :: n, hn, i, j, ix, iy, iz, l, lm, add_lm
-  real(r8) :: vl, x(3), g(3)
+  real(r8) :: r, x(3), vl, g(3)
   real(r8), allocatable :: fr(:,:,:)
 
   sub_name = 'specie_nl_fourier_init'; call push_sub()
   
   specie_loop: do i = 1, ns
     ! first get the dimensions of the thing
-    n = 2*nint(s(i)%ps%rc_max/m%h) + 6 ! this should be enough
+    n = 2*nint(s(i)%ps%rc_max/m%h) + 5 ! this should be enough
     hn = n/2 + 1
     s(i)%nl_fft_n = n
     s(i)%nl_hfft_n = hn
@@ -83,6 +83,8 @@ subroutine specie_nl_fourier_init(ns, s, m)
 
     ! fill in structure
     allocate(fr(n, n, n))
+
+    ! we will recalculate this value on the mesh
     add_lm = 1
     l_loop: do l = 0, s(i)%ps%L_max
       if(l == s(i)%ps%L_loc) then
@@ -97,19 +99,19 @@ subroutine specie_nl_fourier_init(ns, s, m)
             x(2) = m%h * real(iy - hn, r8)
             do iz = 1, n
               x(3) = m%h * real(iz - hn, r8)
+              r = sqrt(sum(x**2))
               
               call get_nl_part(s(i)%ps, x, l, lm, fr(ix, iy, iz), g)
             end do
           end do
         end do
-        
-        call rfftwnd_f77_one_real_to_complex(s(i)%nl_planf, fr(1, 1, 1), s(i)%nl_fw(1, 1, 1, add_lm))
+        call rfftwnd_f77_one_real_to_complex(s(i)%nl_planf, fr, s(i)%nl_fw(:,:,:, add_lm))
         call zscal(hn*n**2, cmplx(1.0_r8/n**3, 0.0_r8, r8), s(i)%nl_fw(1, 1, 1, add_lm), 1)
         
         add_lm = add_lm + 1
       end do lm_loop
     end do l_loop
-    
+
     deallocate(fr)
   end do specie_loop
 
@@ -322,7 +324,7 @@ contains
     j = 0
     do k = 1, h%np
       call mesh_r(m, k, r, a=a%x)
-      if(r < s%ps%rc_max) j = j + 1
+      if(r <= s%ps%rc_max) j = j + 1
     end do
     a%Mps = j
     
@@ -334,7 +336,7 @@ contains
     j = 0
     do k = 1, h%np
       call mesh_r(m, k, r, a=a%x)
-      if(r < s%ps%rc_max) then
+      if(r <= s%ps%rc_max) then
         j = j + 1
         a%Jxyz(j) = k
       end if
@@ -354,75 +356,77 @@ contains
       j_loop: do j = 1, a%Mps
         call mesh_xyz(m, a%Jxyz(j), x)
         x = x - a%x
-     
+        
         add_lm = 1
         l_loop: do l = 0, s%ps%L_max
-          if(l == s%ps%L_loc) then
-            add_lm = add_lm + (2*l + 1)
-            cycle l_loop
-          end if
-          
           lm_loop: do lm = -l , l
-            call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
+            if(l .ne. s%ps%L_loc) then
+              call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
+            end if
+            
             add_lm = add_lm + 1
           end do lm_loop
-          
         end do l_loop
       end do j_loop
+      
     else ! Fourier space
       center(:) = nint(a%x(:)/m%h)
       x(:)  = a%x(:) - center(:)*m%h
-
+      
       allocate(nl_fw(s%nl_hfft_n, s%nl_fft_n, s%nl_fft_n), nl_fr(s%nl_fft_n, s%nl_fft_n, s%nl_fft_n))
-
+      
       add_lm = 1
       l_loop2: do l = 0, s%ps%L_max
         if(l == s%ps%L_loc) then
           add_lm = add_lm + (2*l + 1)
           cycle l_loop2
         end if
-          
+        
         lm_loop2: do lm = -l , l
           nl_fw = M_z0
           call phase_factor(m, s%nl_fft_n, x, s%nl_fw(:,:,:, add_lm), nl_fw)
           call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_fr)
-         
+          
           j_loop2: do j = 1, a%Mps
             p = a%Jxyz(j)
             ix = m%Lx(p) - center(1) + s%nl_hfft_n
             iy = m%Ly(p) - center(2) + s%nl_hfft_n
             iz = m%Lz(p) - center(3) + s%nl_hfft_n
-
+            
             a%uV(j, add_lm) = nl_fr(ix, iy, iz)
           end do j_loop2
-
+          
+          add_lm = add_lm + 1
         end do lm_loop2
       end do l_loop2
-
+      
       deallocate(nl_fw, nl_fr)
     end if
-
-    ! now we calculate the uVus
+    
+    ! and here we calculate the uVu
+    a%uVu = 0._r8
     add_lm = 1
-    do l = 0 , s%ps%L_max
+    do l = 0, s%ps%L_max
       do lm = -l , l
-        if(l.ne.s%ps%L_loc) then
-          j_loop3: do j = 1, a%Mps
+        if(l .ne. s%ps%L_loc) then
+          do j = 1, a%Mps
             call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
             ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+            
             a%uVu(add_lm) = a%uVu(add_lm) + a%uV(j, add_lm)* &
                  splint(s%ps%Ur(l), r) * ylm * (r**l)
-          end do j_loop3
-        
+          end do
           ! uVu can be calculated exactly, or numerically
           !a%uVu(add_lm) = s%ps%dkbcos(l)
-          a%uVu(add_lm) = sum(a%uV(:, add_lm)*a%uV(:, add_lm))/(a%uVu(add_lm)*s%ps%dknrm(l))
+          a%uVu(add_lm) = sum(a%uV(:, add_lm)**2)/(a%uVu(add_lm)*s%ps%dknrm(l))
         end if
+          
         add_lm = add_lm + 1
       end do
     end do
+
   end subroutine build_nl_part
-  
+
 end subroutine generate_external_pot
 
 subroutine get_nl_part(ps, x, l, lm, uV, duV)
