@@ -90,16 +90,17 @@ if test "${fft}" != "no"; then
   done
 
   dnl if we have fftw2, search also for the real transforms
-  if test "${ffw}" = "2"; then
+  if test "${fft}" = "2"; then
     if test $acx_fftw_ok = yes; then
-      $acx_fftw_ok = no;
+
+      acx_fftw_ok=no;
 
       AC_CHECK_FUNC(rfftw3d_f77_create_plan, [acx_fftw_ok=yes])
 
       for fftw in rfftw drfftw; do
         if test $acx_fftw_ok = no; then
-          AC_CHECK_LIB($fftw, $fftw_func,
-            [acx_fftw_ok=yes; LIBS_FFTW="$LIBS_FFTW -l$fftw"], [], [$FLIBS])
+          AC_CHECK_LIB($fftw, rfftw3d_f77_create_plan,
+            [acx_fftw_ok=yes; LIBS_FFTW="$LIBS_FFTW -l$fftw"], [], [$LIBS_FFTW $FLIBS])
         fi
       done
     fi

@@ -52,6 +52,7 @@ subroutine X(input_function)(filename, m, f, ierr)
   select case(trim(get_extension(filename)))
   case("")
     call plain()
+#if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
     call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
@@ -66,6 +67,7 @@ subroutine X(input_function)(filename, m, f, ierr)
     call dx_cdf()
     call X(cf2mf) (m, c, f)
     call X(cf_free)(c)
+#endif
 #endif
   case default
     ierr = 1
