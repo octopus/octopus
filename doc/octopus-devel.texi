@@ -1,7 +1,7 @@
 \input texinfo @c -*-texinfo-*- 
 @c %**start of header
 @setfilename octopus-devel.info 
-@include version.texi
+@include vers-octopus-devel.texi
 @settitle the @code{octopus} @value{VERSION} developers' guide
 @c %**end of header
 

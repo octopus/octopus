@@ -147,11 +147,29 @@ potential at a given point depends only on the values of the density -
 and the gradient of the density and the kinetic energy density, for the
 GGA and mGGA cases - at a given point:
 
+
+v^{\rm LDA}_{\rm xc}(\vec{r}) = v^{\rm LDA}_{\rm xc}[n(\vec{r})]\,,
+
+v^{\rm GGA}_{\rm xc}(\vec{r}) = v^{\rm GGA}_{\rm xc}[n(\vec{r}), \vec{\nabla}n(\vec{r})]\,,
+
+v^{\rm mGGA}_{\rm xc}(\vec{r}) = v^{\rm mGGA}_{\rm xc}[n(\vec{r}), \vec{\nabla}n(\vec{r}), \tau(\vec{r})]\,.
+
    Note that these functionals are not the only ones used by the
 `octopus'  code - there is also the possibility of employing
 self-interaction corrections, optimized effective potential methods,
 etc.  To make use of them, the `hamiltonian' module makes also use of
 the `xc_functl' and `xc' modules.
+
+   The usage of this module is as follows: first, one must initialize a
+`POINTER_SIZE' integer trough either the `xc_lda_init', `xc_gga_init'
+or the `xc_mgga_init' subroutines (see below). This is a pointer to the
+a correspondig C data structure.  Once initialized, one may retrieve
+the values of the functional through the `xc_lda', `xc_gga' or the
+`xc_mgga' subroutines. Cleaning up is finally done through the
+`xc_lda_end', `xc_gga_end' and `xc_mgga' end subroutines.
+
+   One may also retrieve information about each functional with the the
+set of `xc_info' subroutines.
 
 * Menu:
 
@@ -389,17 +407,17 @@ Node: Authors1632
 Node: Copying2386
 Node: Introduction3851
 Node: lib_xc4403
-Node: subroutine xc_lda_init5596
-Node: subroutine xc_lda6812
-Node: subroutine xc_lda_end7549
-Node: subroutine xc_gga_init7813
-Node: subroutine xc_gga8277
-Node: subroutine xc_gga_lb8707
-Node: subroutine xc_mgga_init9184
-Node: subroutine xc_mgga10113
-Node: subroutine xc_mgga_end10636
-Node: LDA functionals10862
-Node: GGA functionals11684
-Node: MGGA functionals12044
+Node: subroutine xc_lda_init6444
+Node: subroutine xc_lda7660
+Node: subroutine xc_lda_end8397
+Node: subroutine xc_gga_init8661
+Node: subroutine xc_gga9125
+Node: subroutine xc_gga_lb9555
+Node: subroutine xc_mgga_init10032
+Node: subroutine xc_mgga10961
+Node: subroutine xc_mgga_end11484
+Node: LDA functionals11710
+Node: GGA functionals12532
+Node: MGGA functionals12892
 
 End Tag Table

@@ -1,4 +1,0 @@
-@set UPDATED 15 February 2005
-@set UPDATED-MONTH February 2005
-@set EDITION 1.99devel
-@set VERSION 1.99devel
