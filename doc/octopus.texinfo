@@ -1,7 +1,7 @@
 \input texinfo @c -*-texinfo-*- 
 @c %**start of header
 @setfilename octopus.info 
-@settitle Octopus Manual
+@settitle @code{octopus} manual
 @c %**end of header
 
 
@@ -48,11 +48,11 @@ translation.
 @titlepage
 @sp 10
 @c The title is printed in a large font.
-@center @titlefont{@code{octopus} Manual}
+@center @titlefont{@code{octopus} manual}
 @image{octosex,8cm}
-Male Hapalochlaena lunulata (top),
-and female Hapalochlaena lunulata (bottom).
-Photograph by Roy Caldwell.
+@center Male Hapalochlaena lunulata (top),
+@center and female Hapalochlaena lunulata (bottom).
+@center Photograph by Roy Caldwell.
 @c The following two commands start the copyright page.
 @page
 @vskip 0pt plus 1filll
@@ -79,11 +79,22 @@ translation.
 @end titlepage
 @c **********************************************************************
 
+@iftex
+@headings off
+@oddheading @image{octosex,1.75cm} @| @thischapter @| @thispage
+@evenheading @thispage @| @thischapter @| @image{octosex,1.75cm}
+@end iftex
+
 
 
 @c ***************TOP NODE AND MASTER MENU*******************************
+@ifinfo
 @node Top,        Copying,                , (dir)
 @c    Node name,  next         , previous , up
+@top octopus
+The purpose of this info file is describing how to use
+the octopus program. This is obvious, I know.
+@end ifinfo
 
 @menu
 * Copying      :: Your Rights.
@@ -113,7 +124,10 @@ anyhow.
 @chapter Introduction
 
      
-@code{octopus} is a program aimed at the ab initio virtual experimentation on 
+@code{octopus} @footnote{
+From latin @emph{octopus}, set of animals belonging to the...
+}
+is a program aimed at the ab initio virtual experimentation on 
 a hopefully ever increasing range of systems types.
 
 
