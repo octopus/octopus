@@ -206,10 +206,12 @@ end subroutine ps_init
 
 subroutine ps_getradius(ps)
   type(ps_type), intent(inout) :: ps
-  call push_sub('ps_getradius')
+
   integer :: l, j, i
   FLOAT   :: r, dx, y
   FLOAT, parameter :: threshold = CNST(1.0e-3)
+
+  call push_sub('ps_getradius')
 
   ps%rc_max = CNST(0.0)
   dx = CNST(0.01)

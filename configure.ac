@@ -51,10 +51,6 @@ AC_CHECK_FUNCS([sqrt strcasecmp strdup tcgetpgrp])
 # Checks for size of pointer
 ACX_POINTER_SIZE
 
-dnl libtool files
-AC_DISABLE_SHARED
-AC_PROG_LIBTOOL
-
 dnl ============================================================================
 dnl This part of the configuration file tries to sort out what needs to be built.
 dnl In particular, the code can be compile in single precision, mpi, using
