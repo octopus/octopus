@@ -1,0 +1,213 @@
+# Sample data file.
+
+###############################################################################
+# Generalities
+###############################################################################
+CalculationMode = 1
+# (default: 1 )
+# Options:
+#		1 <= start static calculation'
+#		2 <= resume static calculation'
+#		3 <= calculate unocuppied states'
+#		4 <= resume unocuppied states calculation'
+#		5 <= start td'
+#		6 <= resume td'
+#		7 <= start static polarizability'
+#		8 <= resume static polarizability'
+#		9 <= perform Born-Oppenheimer MD'
+#		99 <= prints out the "Pulpo a Feira" recipe'
+
+
+###############################################################################
+Units = eVA
+#UnitsInput  = a.u
+#UnitsOutput = a.u
+# (default: a.u )
+# Options:
+#		a.u (atomic units)
+#		eVA (Energy is eV, and length is A)
+
+
+###############################################################################
+SystemName = Na2
+# (default: system )
+
+
+###############################################################################
+# Species description.
+###############################################################################
+
+NumberSpecies = 1
+# (default: 0 )
+%block Species
+Na 23.0 11 2 1
+%endblock Species
+
+
+###############################################################################
+# Atoms description.
+###############################################################################
+
+#PDBCoordinates = coords.pdb
+# (default: coords.pdb)
+#XYZCoordinates = coords.xyz
+# (default: coords.xyz)
+NumberAtoms = 2
+%block Coordinates
+Na	0.0	0.0	1.7	.true.
+Na	0.0	0.0	-1.7	.true.
+%endblock Coordinates
+#XYZVelocities = vel.xyz
+# (default = vel.xyz)
+%block Velocities
+Na	0.0	0.0	0.0
+Na	0.0	0.0	0.0
+%endblock Velocities
+
+
+###############################################################################
+# Mesh description.
+###############################################################################
+
+OrderDerivatives = 4
+# (default: 4)
+BoxShape = 1
+# (default: 1)
+# Options:
+#		1 <= Sphere
+#		2 <= Cylinder
+#		3 <= Minimum shape
+#		4 <= Parallelpiped
+Spacing = 0.35
+# (default: 0.6b)
+#%block spacing
+#   0.3 0.2 0.2
+#%endblock spacing
+Radius  = 8.0
+# (default: 20b)
+Zlength = 8.0
+# (default: 1b)
+DoubleFFTParameter = 2.0
+# (default: 2.0)
+DerivativesSpace = 0
+# (default: 0 (Real-Space))
+# Options:
+#		0 <= Real-Space
+#		1 <= Fourier-Space
+
+
+
+###############################################################################
+# States.
+###############################################################################
+
+SpinComponents = 1
+# (default: 1)
+NumberkPoints  = 1 
+# (default: 1)
+ExcessCharge   = 0
+# (default: 0.0)
+EmptyStates    = 0
+# (default: 0)
+ElectronicTemperature = 0.0
+# (default: 0.0)
+
+
+###############################################################################
+# Hamiltonian.
+###############################################################################
+ClassicPotential = no
+# (default: no)
+LocalPotentialSpace = 1
+# (default: 1)
+NonLocalPotentialSpace = 0
+# (default: 0)
+# Options:
+#		0 <= Real-Space
+#		1 <= Fourier-Space
+NonInteractingElectrons = no
+
+XFamily = LDA
+# (default: LDA )
+# Options:
+#
+XFunctional = NREL
+# (default: NREL )
+# Options:
+#
+CFamily = LDA
+# (default: LDA )
+# Options:
+#
+CFunctional = PZ
+# (default: PZ )
+# Options:
+#
+
+
+###############################################################################
+# SCF cycle
+###############################################################################
+LCAOStart = yes
+# (default: yes )
+LCAOMode  = 0
+# (default: 0 )
+# Options:
+#		0 <= memory intensive
+#		1 <= cpu intensive
+
+MaximumIter = 200
+# (default: 200)
+ConvAbsDens = 1e-5
+# (default: 1e-5)
+ConvRelDens = 0.0
+# (default: 0.0)
+ConvAbsEnergy
+# (default: 0.0)
+ConvRelEnergy
+# (default: 0.0)
+
+TypeOfMixing = 0
+# (default: 0)
+# Options:
+#		0 <= Linear mixing
+#		2 <= Broyden mixing
+Mixing = 0.3
+# (default: 0.3)
+BroydenNumber = 3
+# (default: 3)
+
+EigenSolver = 0
+# (default: 0)
+# Options:
+#		0 or 1, two flavours of cg.
+EigenSolverInitTolerance = 1e-10
+EigenSoverFinalTolerance = 1e-14
+EigenSolverFinalToleranceIteration = 20		
+EigenSolverMaxIter = 25
+NuberCG = 3
+
+###############################################################################
+# Extra stuff
+###############################################################################
+
+
+PoissonSolver = 3
+# (default: 3 )
+# Options:
+#		1 <= Conjugate-Gradients
+#		3 <= Spherical Cut-off FFT
+
+RecipeLang = en
+# (default: en)
+
+verbose    = 30
+# (default: 30)
+# Options:
+#		> 999 : debug mode, maximum verbosity.
+#		> 20  : normal program info (default).
+#		> 0   : only warnings.
+#		<=0   : silent (only fatal errors).
+
+OutputCoordinates = yes
+# (default: no)
