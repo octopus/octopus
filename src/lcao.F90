@@ -138,6 +138,7 @@ contains
     type(mesh_type), intent(in) :: m
     
     integer :: i, n, is
+    integer, save :: j = 1
     real(r8) :: r
     R_TYPE :: psi1, psi2
     do i = 1, m%np
@@ -149,10 +150,11 @@ contains
             psi1 = splint(s%ps%Ur(n, 1), r)
             rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)  
           case(2)
-            ! We will build a spin-unpolarized density, also for spin-polarized calculations.
+            ! This is still a bit weird, but let us see how it works...
             psi1 = splint(s%ps%Ur(n, 1), r)
-            rho(i, 1) = rho(i, 1) + M_HALF*sum(s%ps%conf%occ(n, :))*psi1*psi1 / (M_FOUR*M_PI)
-            rho(i, 2) = rho(i, 1)
+            rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + M_HALF*s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
+            rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + M_HALF*s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
+            j = j + 1
           end select
         end if
       end do
