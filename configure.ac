@@ -55,7 +55,19 @@ ACX_POINTER_SIZE
 AC_DISABLE_SHARED
 AC_PROG_LIBTOOL
 
-# unfortunately we are Fortran 90 guys
+dnl ============================================================================
+dnl This part of the configuration file tries to sort out what needs to be built.
+dnl In particular, the code can be compile in single precision, mpi, using
+dnl complex wave-functions in the ground-state, and in debug mode.
+
+dnl these are the --enable possible in octopus
+AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]), MPIDIR=$enableval, MPIDIR=no)
+AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
+AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [octopus in debug mode]), [DEBUG=1])
+
+dnl try to find out what is the default FORTRAN 90 compiler
+dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
 if test x"$MPIDIR" != x"no"; then
   AC_PROG_F90([],[MPI])
 else
@@ -68,15 +80,7 @@ dnl how Fortran mangles function names
 AC_F90_WRAPPERS
 
 dnl ============================================================================
-dnl This part of the configuration file tries to sort out what needs to be built.
-dnl In particular, the code can be compile in single precision, mpi, using
-dnl complex wave-functions in the ground-state, and in debug mode.
-
-dnl these are the --enable possible in octopus
-AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]), MPIDIR=$enableval, MPIDIR=no)
-AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
-AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [octopus in debug mode]), [DEBUG=1])
+dnl find what is the extension of the programs supposed to be
 
 dnl MPI version
 MYEXT=""
