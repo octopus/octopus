@@ -138,7 +138,8 @@ External utilities
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
-* make_st::                     
+* make_st::                       
+* choose_st
 
 Examples
 
@@ -2103,7 +2104,8 @@ it may see the @code{inp} file, and the directories created by it.
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
-* make_st::                     
+* make_st::                       
+* choose_st::                       
 @end menu
 
 @node strength-function, hs-from-mult, External utilities, External utilities
@@ -2147,14 +2149,14 @@ M. Casida (@code{LinCasida}). This utility requires that a calculation
 of unoccupied states (@code{CalculationMode} = 3, 4) has been done before,
 and it outputs the results to the sub-directory "linear".
 
-@node  broad, make_st, excitations, External utilities
+@node  broad,  make_st, excitations, External utilities
 @section @code{broad}
 
 Generates a spectrum by broadening the excitations obtained by the @code{excitations} 
 utility. The parameters of the spectrum can be set using the variables
 @code{LinBroadening}, @code{MinEnergy}, @code{MaxEnergy}, and @code{EnergyStep}.
 
-@node  make_st,  , broad, External utilities
+@node  make_st, choose_st, broad, External utilities
 @section @code{make_st}
 
 @code{make_st} reads @code{tmp/restart.static} and replaces some of the
@@ -2194,6 +2196,24 @@ they are:
 @item @math{\sigma} the width of the Gaussian
 @item @math{k}: the @strong{k} vector. In 3D use @code{k1|k2|k3}.
 @item @math{x_0}: the coordinate where the Gaussian is initially centred. In 3D use @code{x01|x02|x03}.
+@end itemize
+
+
+@node  choose_st, , make_st, External utilities
+@section @code{choose_st}
+
+@code{choose_st} is used to choose the states used for optimum control (@code{CalculationMode=12}). You probably want to calculate unoccuppied states (@code{CalculationMode=12}) first since @code{choose_st} reads @code{tmp/restart.static} and writes the choosen states to the @code{opt-control} sub-directory. The following parameters are read from the @code{inp}ut file:
+
+@itemize @bullet
+
+@item @vindex @code{ChooseStates}
+@code{ChooseStates} (integer, 1-4024):
+  The states which should be written.
+
+@item @vindex @code{ChooseStatesFilename}
+@code{ChooseStatesFilename} (string, 'wf.initial'):
+  The file name to which the state(s) should be written.
+  For optimum control you only need 'wf.initial' and 'wf.final'.
 @end itemize
 
 
