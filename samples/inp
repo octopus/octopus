@@ -82,8 +82,8 @@ CFunctional = "PZ81"
 MaximumIter = 200
 ConvAbsDens = 1e-5
 ConvRelDens = 0
-ConvAbsEnergy = 0
-ConvRelEnergy = 0
+ConvAbsEv = 0
+ConvRelEv = 0
 
 LCAOStart = yes
 SCFinLCAO = no

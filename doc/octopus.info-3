@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.4 from
+This is octopus.info, produced by makeinfo version 4.2 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,18 +6,15 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
-This manual is for octopus 1.3, a first principles, electronic
-structure, excited states, time-dependent density functional theory
-program.
+
+File: octopus.info,  Node: oct-hs-acc,  Next: oct-xyz-anim,  Prev: oct-hs-mult,  Up: External utilities
 
-   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
-Angel Rubio
+`oct-hs-acc'
+============
 
-     Permission is granted to copy, distribute and/or modify this
-     document under the terms of the GNU Free Documentation License,
-     Version 1.1 or any later version published by the Free Software
-     Foundation.
-   
+   Calculates the harmonic spectrum, out of the acceleration file. To
+do.
+
 
 File: octopus.info,  Node: oct-xyz-anim,  Next: oct-excite,  Prev: oct-hs-acc,  Up: External utilities
 
@@ -363,9 +360,9 @@ Options Index
 * ChooseStatesFilename:                  oct-choose-st.
 * ClassicPotential:                      ClassicPotential.
 * ConvAbsDens:                           ConvAbsDens.
-* ConvAbsEv:                             ConvAbsEnergy.
+* ConvAbsEv:                             ConvAbsEv.
 * ConvRelDens:                           ConvRelDens.
-* ConvRelEnergy:                         ConvRelEnergy.
+* ConvRelEnergy:                         ConvRelEv.
 * Coordinates:                           Coordinates.
 * DebugLevel:                            DebugLevel.
 * DerivativesSpace:                      DerivativesSpace.

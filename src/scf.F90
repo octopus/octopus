@@ -54,8 +54,8 @@ subroutine scf_init(scf, sys, h)
   call oct_parse_int("MaximumIter", 200, scf%max_iter)
   call oct_parse_double("ConvAbsDens", 1e-5_r8, scf%conv_abs_dens)
   call oct_parse_double("ConvRelDens",   0._r8, scf%conv_rel_dens)
-  call oct_parse_double("ConvAbsEvsum", 0._r8, scf%conv_abs_ev)
-  call oct_parse_double("ConvRelEvsum", 0._r8, scf%conv_rel_ev)
+  call oct_parse_double("ConvAbsEv", 0._r8, scf%conv_abs_ev)
+  call oct_parse_double("ConvRelEv", 0._r8, scf%conv_rel_ev)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= 0.0_r8 .and. scf%conv_rel_dens <= 0.0_r8 .and. &

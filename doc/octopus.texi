@@ -191,8 +191,8 @@ SCF
 * MaximumIter::                 
 * ConvAbsDens::                 
 * ConvRelDens::                 
-* ConvAbsEnergy::               
-* ConvRelEnergy::               
+* ConvAbsEv::               
+* ConvRelEv::               
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1602,8 +1602,8 @@ criteria is fulfilled.
 * MaximumIter::                 
 * ConvAbsDens::                 
 * ConvRelDens::                 
-* ConvAbsEnergy::               
-* ConvRelEnergy::               
+* ConvAbsEv::               
+* ConvRelEv::               
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1630,28 +1630,28 @@ Maximum number of SCF iterations. @code{0} means unlimited.
 Absolute convergence of the density. @code{0} means do 
 not use this criterion.
 
-@node ConvRelDens, ConvAbsEnergy, ConvAbsDens, SCF
+@node ConvRelDens, ConvAbsEv, ConvAbsDens, SCF
 @subsection @code{ConvRelDens} (double, 0.0)
 @vindex @code{ConvRelDens}
 
 Relative convergence of the density. @code{0} means do 
 not use this criterion.
 
-@node ConvAbsEnergy, ConvRelEnergy, ConvRelDens, SCF
-@subsection @code{ConvAbsEnergy} (double, 0.0)
+@node ConvAbsEv, ConvRelEv, ConvRelDens, SCF
+@subsection @code{ConvAbsEv} (double, 0.0)
 @vindex @code{ConvAbsEv}
 
 Absolute convergence of the eigenvalues. @code{0} means do 
 not use this criterion.
 
-@node ConvRelEnergy, LCAOStart, ConvAbsEnergy, SCF
+@node ConvRelEv, LCAOStart, ConvAbsEv, SCF
 @subsection @code{ConvRelEnergy} (double, 0.0)
 @vindex @code{ConvRelEnergy}
 
 Relative convergence of the eigenvalues. @code{0} means do 
 not use this criterion.
 
-@node LCAOStart, SCFinLCAO, ConvRelEnergy, SCF
+@node LCAOStart, SCFinLCAO, ConvRelEv, SCF
 @subsection @code{LCAOStart} (logical, true)
 @vindex @code{LCAOStart}
 

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.4 from
+This is octopus.info, produced by makeinfo version 4.2 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,18 +6,15 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
-This manual is for octopus 1.3, a first principles, electronic
-structure, excited states, time-dependent density functional theory
-program.
+
+File: octopus.info,  Node: ExtraStates,  Next: Occupations,  Prev: ExcessCharge,  Up: States
 
-   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
-Angel Rubio
+`ExtraStates' (integer, 1)
+--------------------------
 
-     Permission is granted to copy, distribute and/or modify this
-     document under the terms of the GNU Free Documentation License,
-     Version 1.1 or any later version published by the Free Software
-     Foundation.
-   
+   How many unoccupied states to use in the ground-state calculation.
+Note that this number is unrelated to `CalculationMode == 4'.
+
 
 File: octopus.info,  Node: Occupations,  Next: ElectronicTemperature,  Prev: ExtraStates,  Up: States
 
@@ -178,8 +175,8 @@ convergence criteria is fulfilled.
 * MaximumIter::
 * ConvAbsDens::
 * ConvRelDens::
-* ConvAbsEnergy::
-* ConvRelEnergy::
+* ConvAbsEv::
+* ConvRelEv::
 * LCAOStart::
 * SCFinLCAO::
 * EigenSolver::
@@ -210,7 +207,7 @@ File: octopus.info,  Node: ConvAbsDens,  Next: ConvRelDens,  Prev: MaximumIter, 
 criterion.
 
 
-File: octopus.info,  Node: ConvRelDens,  Next: ConvAbsEnergy,  Prev: ConvAbsDens,  Up: SCF
+File: octopus.info,  Node: ConvRelDens,  Next: ConvAbsEv,  Prev: ConvAbsDens,  Up: SCF
 
 `ConvRelDens' (double, 0.0)
 ---------------------------
@@ -219,16 +216,16 @@ File: octopus.info,  Node: ConvRelDens,  Next: ConvAbsEnergy,  Prev: ConvAbsDens
 criterion.
 
 
-File: octopus.info,  Node: ConvAbsEnergy,  Next: ConvRelEnergy,  Prev: ConvRelDens,  Up: SCF
+File: octopus.info,  Node: ConvAbsEv,  Next: ConvRelEv,  Prev: ConvRelDens,  Up: SCF
 
-`ConvAbsEnergy' (double, 0.0)
------------------------------
+`ConvAbsEv' (double, 0.0)
+-------------------------
 
    Absolute convergence of the eigenvalues. `0' means do not use this
 criterion.
 
 
-File: octopus.info,  Node: ConvRelEnergy,  Next: LCAOStart,  Prev: ConvAbsEnergy,  Up: SCF
+File: octopus.info,  Node: ConvRelEv,  Next: LCAOStart,  Prev: ConvAbsEv,  Up: SCF
 
 `ConvRelEnergy' (double, 0.0)
 -----------------------------
@@ -237,7 +234,7 @@ File: octopus.info,  Node: ConvRelEnergy,  Next: LCAOStart,  Prev: ConvAbsEnergy
 criterion.
 
 
-File: octopus.info,  Node: LCAOStart,  Next: SCFinLCAO,  Prev: ConvRelEnergy,  Up: SCF
+File: octopus.info,  Node: LCAOStart,  Next: SCFinLCAO,  Prev: ConvRelEv,  Up: SCF
 
 `LCAOStart' (logical, true)
 ---------------------------
@@ -759,9 +756,10 @@ iterations, where obviously the extrapolation is not reliable.
      This is maybe the simplest method, but is is very well grounded
      theretically: it is unitary (if the exponential is performed
      correctly) and preserves time symmetry (if the self-consistency
-     problem is dealt with correctly).  It consists on applying:
+     problem is dealt with correctly).  It is defined as:
 
-     U_{\rm EM} = \exp \left( -i\delta t H_{t+\delta t/2}\right)\,.
+     U_{\rm EM}(t+\delta t, t) = \exp \left( -i\delta t H_{t+\delta
+     t/2}\right)\,.
 
    * `5': Magnus Expansion (M4).  This is the most sophisticated
      approach. It is a fourth order scheme (feature that shares with
@@ -1422,13 +1420,4 @@ File: octopus.info,  Node: oct-hs-mult,  Next: oct-hs-acc,  Prev: oct-rsf,  Up: 
 =============
 
    Calculates the harmonic spectrum, out of the multipoles file. To do.
-
-
-File: octopus.info,  Node: oct-hs-acc,  Next: oct-xyz-anim,  Prev: oct-hs-mult,  Up: External utilities
-
-`oct-hs-acc'
-============
-
-   Calculates the harmonic spectrum, out of the acceleration file. To
-do.
 
