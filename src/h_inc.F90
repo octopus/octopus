@@ -397,6 +397,10 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
   integer :: is
   real(r8), allocatable :: rho_aux(:), vhartree(:)
 
+  ! next 2 lines are for an RPA calculation
+  !real(r8), save, pointer ::  RPA_Vhxc(:, :)
+  !logical, save :: RPA_first = .true.
+
   call push_sub('h_calc_vhxc')
 
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
@@ -434,7 +438,12 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
     end do
     deallocate(vhartree)
 
-    ! first we calculate the xc terms
+    ! next 3 lines are for an RPA calculation
+    !if(RPA_first) then
+    !  allocate(RPA_Vhxc(sys%m%np, sys%st%nspin))
+    !  RPA_Vhxc = h%vhxc
+
+    ! now we calculate the xc terms
     call X(xc_pot)(h%xc, m, st, h%vhxc, h%ex, h%ec, &
          -minval(st%eigenval(st%nst, :)), st%qtot)
 
@@ -442,6 +451,13 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
     if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
       call X(h_xc_oep)(h%xc, m, h, sys, st, h%vhxc, h%ex, h%ec)
     end if
+
+    ! next 5 lines are for an RPA calculation
+    !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential
+    !  RPA_first = .false.
+    !else
+    !  h%vhxc = h%vhxc + RPA_Vhxc
+    !end if
 
     select case(h%ispin)
     case(UNPOLARIZED)
@@ -455,6 +471,7 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
       h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
            h%vhxc(:, 3) - M_zI* h%vhxc(:, 4))
     end select
+
   end if
 
   ! this, I think, belongs here

@@ -361,10 +361,9 @@ subroutine td_write_laser(out, h, td, iter)
   
 end subroutine td_write_laser
     
-subroutine td_write_el_energy(out, h, td, iter)
+subroutine td_write_el_energy(out, h, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(hamiltonian_type), intent(in) :: h
-  type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
 
   integer :: i
@@ -394,11 +393,11 @@ subroutine td_write_el_energy(out, h, td, iter)
   endif
   
   call write_iter_start(out)
-  call write_iter_double(out, h%etot/units_out%acceleration%factor, 1)
-  call write_iter_double(out, h%eii /units_out%acceleration%factor, 1)
-  call write_iter_double(out, h%ex  /units_out%acceleration%factor, 1)
-  call write_iter_double(out, h%ec  /units_out%acceleration%factor, 1)
-  call write_iter_double(out, h%epot/units_out%acceleration%factor, 1)
+  call write_iter_double(out, h%etot/units_out%energy%factor, 1)
+  call write_iter_double(out, h%eii /units_out%energy%factor, 1)
+  call write_iter_double(out, h%ex  /units_out%energy%factor, 1)
+  call write_iter_double(out, h%ec  /units_out%energy%factor, 1)
+  call write_iter_double(out, h%epot/units_out%energy%factor, 1)
   call write_iter_nl(out)
   
 end subroutine td_write_el_energy

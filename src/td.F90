@@ -220,7 +220,7 @@ subroutine td_run(td, u_st, sys, h)
     if(td%out_laser) call td_write_laser(out_laser, h, td, i)
 
     ! output electronic energy
-    if(td%out_energy) call td_write_el_energy(out_energy, h, td, i)
+    if(td%out_energy) call td_write_el_energy(out_energy, h, i)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
     call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
@@ -277,7 +277,7 @@ contains
     if(td%out_coords) call td_write_nbo(out_coords, sys, td, 0, sys%kinetic_energy, h%etot)    
     if(td%out_acc)    call td_write_acc(out_acc, sys, h, td, 0)
     if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
-    if(td%out_energy) call td_write_el_energy(out_energy, h, td, 0)
+    if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
     call td_write_data(0)
 
     call td_rti_run_zero_iter(h, td%tr)
