@@ -35,12 +35,18 @@ subroutine R_FUNC(xc_kli)(func, m, st, hartr, pot, energy)
     case(X_FUNC_KLI_X)
       call R_FUNC(kli_x) (m, st%nspin, st%nst, st%occ, st%eigenval, &
            st%R_FUNC(psi) (0:,1,:,:), hartr, pot, energy, st%rho)
+
     case(X_FUNC_KLI_SIC)
       call R_FUNC(kli_x_sic) (m, st, st%R_FUNC(psi) (0:,1,:,:), &
            hartr, pot, energy)
     case(C_FUNC_KLI_SIC)
       call R_FUNC(kli_c_sic) (m, st, st%R_FUNC(psi) (0:,1,:,:), &
            hartr, pot, energy)
+
+    case(X_FUNC_KLI_HJU)
+      call dkli_hju(m, st, hartr, X_FUNC_LDA_NREL, pot, energy)
+    case(C_FUNC_KLI_HJU)
+      call dkli_hju(m, st, hartr, C_FUNC_LDA_PZ,   pot, energy)
   end select
 
   call pop_sub()

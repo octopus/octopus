@@ -110,7 +110,8 @@ noinst_HEADERS = \
 	real.F90 complex.F90 undef.F90 mesh.F90 mesh_inc.F90\
 	mesh1D.F90 mesh1D_create.F90 mesh1D_inc.F90 ps1D.F90 hartree1D.F90 \
 	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90 ps3D.F90 hartree3D.F90 \
-	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 \
+	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 \
+	xc_KLI_SIC.F90 xc_HJU.F90 \
 	h_inc.F90 h_external_pot.F90 h_forces.F90 \
 	eigen_cg1.F90 eigen_cg2.F90 \
 	states_inc.F90 states_kpoints.F90\
@@ -517,7 +518,8 @@ mesh.o: mesh1D.F90 mesh1D_create.F90 mesh1D_inc.F90 \
 	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90 mesh_inc.F90
 ps.o: ps1D.F90 ps3D.F90
 hartree.o: hartree1D.F90 hartree3D.F90
-xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90
+xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90
+xc.o: xc_KLI_SIC.F90 xc_HJU.F90
 h.o: h_inc.F90 h_external_pot.F90 h_forces.F90
 eigen.o: eigen_cg1.F90 eigen_cg2.F90
 states.o: states_inc.F90

@@ -567,7 +567,7 @@ contains
     end if
     
     call io_assign(iunit)
-    open(iunit, file=trim(sys%sysname)//'.nbo', status='old')
+    open(iunit, file='td.general/coordinates', status='old')
 
     read(iunit, *); read(iunit, *) ! skip header
     do i = 0, td%iter - 1

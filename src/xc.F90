@@ -49,7 +49,8 @@ integer, parameter ::     &
     X_FUNC_MGGA_PKZB = 16, &
     X_FUNC_KLI_X     = 17, &
     X_FUNC_KLI_SIC   = 18, &
-    X_FUNC_END       = 18, &
+    X_FUNC_KLI_HJU   = 19, &
+    X_FUNC_END       = 19, &
     C_FUNC_START     = 48, &
     C_FUNC_ZER       = 48, &
     C_FUNC_LDA_RPA   = 49, &
@@ -58,7 +59,8 @@ integer, parameter ::     &
     C_FUNC_GGA_PBE   = 52, &
     C_FUNC_KLI_SIC   = 53, &
     C_FUNC_MGGA_PKZB = 54, &
-    C_FUNC_END       = 54
+    C_FUNC_KLI_HJU   = 55, &
+    C_FUNC_END       = 55
 
 character(len=4), parameter :: name_xc(XC_FAMILY_END-XC_FAMILY_START+1) = (/ &
     'None', &
@@ -75,7 +77,8 @@ character(len=18), parameter :: name_x(X_FUNC_END-X_FUNC_START+1) = (/ &
     'LB94              ', &
     'PKZB              ', &
     'exact exchange    ', &
-    'SIC (LDA)         ' /)
+    'SIC (LDA)         ', &
+    'SIC (HJU)         ' /)
 character(len=14), parameter :: name_c(C_FUNC_END-C_FUNC_START+1) = (/ &
     'none          ', &
     'RPA           ', &
@@ -83,6 +86,7 @@ character(len=14), parameter :: name_c(C_FUNC_END-C_FUNC_START+1) = (/ &
     'Perdew-Wang 92', &
     'PBE           ', &
     'SIC (LDA)     ', &
+    'SIC (HJU)     ', &
     'PKZB          ' /)
 
 type xc_type
@@ -187,10 +191,12 @@ subroutine xc_init(xcs, m, ispin)
       xcs%x_func = X_FUNC_KLI_X
     case('SIC')
       xcs%x_func = X_FUNC_KLI_SIC
+    case('HJU')
+      xcs%x_func = X_FUNC_KLI_HJU
     case default
       write(message(1), '(a,a,a)') "'", trim(xfunc), &
           "' is not a known exchange KLI functional!"
-      message(2) = "(XFunc = X | SIC)"
+      message(2) = "(XFunc = X | SIC | HJU)"
       call write_fatal(2)
     end select
 #endif
@@ -247,10 +253,12 @@ subroutine xc_init(xcs, m, ispin)
     select case(xfunc(1:3))
     case('SIC')
       xcs%c_func = C_FUNC_KLI_SIC
+    case('HJU')
+      xcs%c_func = C_FUNC_KLI_HJU
     case default
       write(message(1), '(a,a,a)') "'", trim(cfunc), &
           "' is not a known correlation KLI functional!"
-      message(2) = "(XFunc = SIC)"
+      message(2) = "(XFunc = SIC | HJU)"
       call write_fatal(2)
     end select
 #endif
@@ -313,6 +321,7 @@ end function my_sign
 
 #include "xc_LDA.F90"
 #include "xc_GGA.F90"
+#include "xc_HJU.F90"
 !#include "xc_MGGA.F90"
 
 #include "undef.F90"
@@ -322,10 +331,12 @@ end function my_sign
 #include "xc_KLI_x.F90"
 #include "xc_KLI_SIC.F90"
 #include "undef.F90"
+
 #include "complex.F90"
 #include "xc_pot.F90"
 #include "xc_KLI.F90"
 #include "xc_KLI_x.F90"
 #include "xc_KLI_SIC.F90"
+#include "undef.F90"
 
 end module xc
