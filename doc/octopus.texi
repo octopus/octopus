@@ -1685,10 +1685,10 @@ an extra field after @code{t0}.
 @center @image{ramp,4cm,}
 @end tex
 
-@item @code{4}: Shape is read from a file.
+@item @code{10}: Shape is read from a file.
 @end itemize
 
-If @code{envelope=4}, the @code{t0} parameter is substituted by a string that
+If @code{envelope=10}, the @code{t0} parameter is substituted by a string that
 determines the name of the file. The format of this file should be three
 columns of real numbers:
 time, field and phase. Atomic units are assumed. The values for the laser field

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.3 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -44,25 +44,25 @@ Node: Exchange and correlation46563
 Node: SCF47867
 Node: Unoccupied States51800
 Node: Time Dependent52521
-Node: Photo-electron spectrum62694
-Node: Geometry optimization63676
-Node: Function output for visualization64431
-Node: Spectrum calculations68693
-Node: Varia70827
-Node: External utilities71638
-Node: strength-function72187
-Node: hs-from-mult72996
-Node: hs-from-acc73214
-Node: nbo2xyz73422
-Node: excitations73635
-Node: broad74172
-Node: make_st74503
-Node: choose_st75756
-Node: wf.net76487
-Node: Examples77856
-Node: Hello world78011
-Ref: Hello world-Footnote-184655
-Node: Benzene84739
-Node: Options Index85547
+Node: Photo-electron spectrum62696
+Node: Geometry optimization63678
+Node: Function output for visualization64433
+Node: Spectrum calculations68695
+Node: Varia70829
+Node: External utilities71640
+Node: strength-function72189
+Node: hs-from-mult72998
+Node: hs-from-acc73216
+Node: nbo2xyz73424
+Node: excitations73637
+Node: broad74174
+Node: make_st74505
+Node: choose_st75758
+Node: wf.net76489
+Node: Examples77858
+Node: Hello world78013
+Ref: Hello world-Footnote-184657
+Node: Benzene84741
+Node: Options Index85549
 
 End Tag Table

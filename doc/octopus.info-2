@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.2 from
+This is octopus.info, produced by makeinfo version 4.3 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -253,14 +253,14 @@ Time Dependent
           `tau1' is the raising (decaying) time. `tau1' should be an
           extra field after `t0'.
 
-        - `4': Shape is read from a file.
+        - `10': Shape is read from a file.
 
-     If `envelope=4', the `t0' parameter is substituted by a string that
-     determines the name of the file. The format of this file should be
-     three columns of real numbers: time, field and phase. Atomic units
-     are assumed. The values for the laser field that the program will
-     use are interpolated / extrapolated from this numerically defined
-     function.
+     If `envelope=10', the `t0' parameter is substituted by a string
+     that determines the name of the file. The format of this file
+     should be three columns of real numbers: time, field and phase.
+     Atomic units are assumed. The values for the laser field that the
+     program will use are interpolated / extrapolated from this
+     numerically defined function.
 
    * `TDGauge' (integer, 0): In which gauge to treat the laser. Options
      are:
