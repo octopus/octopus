@@ -31,6 +31,7 @@ use unocc
 use timedep
 use static_pol
 use geom_opt
+use phonons
 use pulpo
 
 implicit none
@@ -54,6 +55,7 @@ integer, private, parameter ::   &
      M_RESUME_STATIC_POL   = 8,  &
      M_BO_MD               = 9,  &
      M_GEOM_OPT            = 10, &
+     M_PHONONS             = 11, &
      M_PULPO_A_FEIRA       = 99
 
 integer, private, parameter :: &
@@ -79,6 +81,7 @@ integer, private, parameter :: &
      I_START_POL           = 30,  &
      I_POL_SCF             = 31,  &
      I_GEOM_OPT            = 40,  &
+     I_PHONONS             = 50,  &
      I_PULPO               = 99
 
 contains
@@ -344,6 +347,14 @@ subroutine run()
       call geom_opt_run(scfv, sys, h)
       call scf_end(scfv)
 
+    case(I_PHONONS)
+      message(1) = 'Info: Calculating phonon frequencies'
+      call write_info(1)
+
+      call scf_init(scfv, sys)
+      call phonons_run(scfv, sys, h)
+      call scf_end(scfv)
+
     case(I_PULPO)
       call pulpo_print()
 
@@ -364,7 +375,7 @@ subroutine run_init()
   ! initialize some stuff
 
   call oct_parse_int(C_string('CalculationMode'), 1, calc_mode)
-  if( (calc_mode < 1 .or. calc_mode > 10) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+  if( (calc_mode < 1 .or. calc_mode > 11) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = 1 <= start static calculation'
     message(3) = '                   = 2 <= resume static calculation'
@@ -376,8 +387,9 @@ subroutine run_init()
     message(9) = '                   = 8 <= resume static polarizability'
     message(10)= '                   = 9 <= perform Born-Oppenheimer MD'
     message(11)= '                   =10 <= perform geometry minimization'
-    message(12)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
-    call write_fatal(12)
+    message(12)= '                   =10 <= calculate phonon frequencies'
+    message(13)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
+    call write_fatal(13)
   end if
 
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
@@ -466,6 +478,12 @@ subroutine define_run_modes()
   case(M_GEOM_OPT)
     instr = instr + 1; i_stack(instr) = I_END_RPSI
     instr = instr + 1; i_stack(instr) = I_GEOM_OPT
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_PHONONS)
+    instr = instr + 1; i_stack(instr) = I_END_RPSI
+    instr = instr + 1; i_stack(instr) = I_PHONONS
     instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI

@@ -42,6 +42,7 @@ type ps_type
   integer :: l_max ! maximum value of l to take
   integer :: l_loc ! which component to take as local
   integer :: l_max_occ ! maximum l-component which has non-null atomic occupation numbers
+  integer :: so_l_max ! obvious meaning ;)
   real(r8), pointer :: occ(:, :)
 
   character(len=4) :: icore
@@ -87,6 +88,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
     ps%l_max_occ = ps%l_max
     ps%l_loc = lloc
+    ps%so_l_max = min(pstm%npotu - 1, lmax) ! is this the corect value?
     ps%z = z
     call tm_process(pstm, lmax, lloc)
     if(conf%verbose > 999) call tm_debug(pstm)
@@ -96,6 +98,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_max = psp%l_max
     ps%l_max_occ = max(psp%l_max, 0)
     ps%l_loc = -1
+    ps%so_l_max = ps%l_max
     ps%z = z
     call hgh_process(psp)
     if(conf%verbose > 999) call hgh_debug(psp)
@@ -111,7 +114,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
            ps%so_dkb  (0:ps%l_max, ps%kbc),         &
            ps%ur      (0:ps%L_max_occ, ps%ispin),   &
            ps%dknrm   (0:ps%L_max),                 &
-           ps%so_dknrm(0:ps%l_max),                 &          
+           ps%so_dknrm(0:ps%so_l_max),                 &          
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%occ     (0:ps%l_max_occ, ps%ispin))
@@ -175,6 +178,7 @@ subroutine ps_debug(ps)
   write(info_unit,'(a,f6.3,/)') 'zval    : ', ps%z_val
   write(info_unit,'(a,i4)')     'lmax    : ', ps%l_max
   write(info_unit,'(a,i4)')     'lloc    : ', ps%l_loc
+  write(info_unit,'(a,i4)')     'so_lmax : ', ps%so_l_max
   write(info_unit,'(a,i4,/)')   'kbc     : ', ps%kbc
   write(info_unit,'(a,f9.5,/)') 'rcmax   : ', ps%rc_max
   write(info_unit,'(/,a,/)')    'h matrix:'
@@ -247,17 +251,22 @@ subroutine ps_end(ps)
   if(.not. associated(ps%kb)) return
 
   do i = 0, ps%L_max
-     do j = 1, ps%kbc
-        call spline_end(ps%kb(i, j))
-        call spline_end(ps%dkb(i, j))
-        call spline_end(ps%so_kb(i, j))
-        call spline_end(ps%so_dkb(i, j))
-     enddo
-     do is = 1, ps%ispin
-        call spline_end(ps%Ur(i, is))
-     enddo 
+    do j = 1, ps%kbc
+      call spline_end(ps%kb(i, j))
+      call spline_end(ps%dkb(i, j))
+    enddo
+    do is = 1, ps%ispin
+      call spline_end(ps%Ur(i, is))
+    enddo
   end do
   
+  do i = 0, ps%so_L_max
+    do j = 1, ps%kbc
+      call spline_end(ps%so_kb(i, j))
+      call spline_end(ps%so_dkb(i, j))
+    end do
+  end do
+
   call spline_end(ps%vlocal)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
@@ -312,12 +321,17 @@ subroutine tm_load(ps, pstm)
   ps%z_val = pstm%zval
   ps%icore = pstm%icore
   ps%h(0:ps%l_max, 1, 1) = pstm%dkbcos(0:ps%l_max)
-  ps%k(1:ps%l_max, 1, 1) = pstm%so_dkbcos(1:ps%l_max)
-  ps%k(0, 1, 1) = 0.0_r8
   ps%dknrm (0:ps%l_max) = pstm%dknrm (0:ps%l_max)
-  ps%so_dknrm(1:ps%l_max) = pstm%so_dknrm(1:ps%l_max)
+
+  ps%k(:, 1, 1) = 0.0_r8
+  ps%so_dknrm(:) = 0.0_r8
+  if(ps%so_l_max > 0) then
+    ps%k(1:ps%so_l_max, 1, 1) = pstm%so_dkbcos(1:ps%so_l_max)
+    ps%so_dknrm(1:ps%so_l_max) = pstm%so_dknrm(1:ps%so_l_max)
+  end if
+
+  ! Increasing radius a little, just in case.
   ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * 1.1_r8
-    ! Increasing radius a little, just in case.
 
   ! Fixes the occupations
   ps%occ(0:ps%l_max, 1:ps%ispin) = pstm%occ(0:ps%l_max, 1:ps%ispin)

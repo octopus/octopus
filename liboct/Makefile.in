@@ -95,7 +95,7 @@ install_sh = @install_sh@
 noinst_LIBRARIES = liboct.a
 
 liboct_a_SOURCES = recipes.c ylm.c parse.c parse_exp.c \
-	symbols.c varia.c interface.c geom_opt.c
+	symbols.c varia.c interface.c
 
 
 EXTRA_liboct_a_SOURCES = grammar.y
@@ -114,7 +114,7 @@ liboct_a_AR = $(AR) cru
 liboct_a_LIBADD =
 am_liboct_a_OBJECTS = recipes.$(OBJEXT) ylm.$(OBJEXT) parse.$(OBJEXT) \
 	parse_exp.$(OBJEXT) symbols.$(OBJEXT) varia.$(OBJEXT) \
-	interface.$(OBJEXT) geom_opt.$(OBJEXT)
+	interface.$(OBJEXT)
 liboct_a_OBJECTS = $(am_liboct_a_OBJECTS)
 
 DEFS = @DEFS@
@@ -124,11 +124,10 @@ LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
-@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/geom_opt.Po ./$(DEPDIR)/grammar.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/interface.Po ./$(DEPDIR)/parse.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/parse_exp.Po ./$(DEPDIR)/recipes.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/symbols.Po ./$(DEPDIR)/varia.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/ylm.Po
+@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/grammar.Po ./$(DEPDIR)/interface.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/parse.Po ./$(DEPDIR)/parse_exp.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/recipes.Po ./$(DEPDIR)/symbols.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/varia.Po ./$(DEPDIR)/ylm.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
@@ -196,7 +195,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/geom_opt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/grammar.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/interface.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/parse.Po@am__quote@

@@ -110,8 +110,6 @@ subroutine scf_run(scf, sys, h)
   allocate(diff(sys%st%nst, sys%st%nik))
 
   do iter = 1, scf%max_iter
-    if(clean_stop()) exit
-
     if(scf%lcao_restricted) then
       call lcao_wf(sys, h)
     else
@@ -138,9 +136,6 @@ subroutine scf_run(scf, sys, h)
     ! compute new potentials
     call R_FUNC(hamiltonian_setup) (h, sys)
 
-    ! save restart information
-    call R_FUNC(states_write_restart)("restart.static", sys%m, sys%st)
-
     ! are we finished?
     finish = &
         (scf%conv_abs_dens > 0.0_r8 .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
@@ -154,12 +149,18 @@ subroutine scf_run(scf, sys, h)
     write(message(2), '(a)') ''
     call write_info(2)
 
+    ! save restart information
+    if(finish.or.(modulo(iter, 3) == 0).or.clean_stop()) &
+         call R_FUNC(states_write_restart)("restart.static", sys%m, sys%st)
+
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
       call write_info(1)
       if(scf%lcao_restricted) call lcao_end
       exit
     end if
+
+    if(clean_stop()) exit
   end do
 
   if(.not.finish) then
