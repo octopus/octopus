@@ -27,7 +27,7 @@ subroutine mesh_create(m, natoms, atom)
   
   ! some local stuff
   integer :: i, il, ik, ix, iy, iz
-  integer :: nr_tmp(3)
+  integer :: ii(3), nr_tmp(3)
   integer, pointer :: Lxyz_tmp(:,:,:)
   logical :: b
   
@@ -52,13 +52,11 @@ subroutine mesh_create(m, natoms, atom)
       call write_fatal(1)
     end if
   case(CYLINDER)
-    if (conf%dim>1 .and. &
-    (conf%dim-conf%periodic_dim == 0) .or. (conf%dim-conf%periodic_dim == 1)) then
-        message(1) = 'Cylindrical mesh is not allowed for systems that are'
-        message(2) = 'periodic in more than 1 dimension.'
-        message(3) = 'A parallelepiped will be used'
-        call write_warning(3)
-        m%box_shape=PARALLELEPIPED
+    if (conf%dim>2 .and. &
+    ((conf%dim-conf%periodic_dim == 0) .or. (conf%dim-conf%periodic_dim == 1))) then
+        message(1) = 'Cylindrical mesh is not allowed for systems'
+        message(2) = 'that are periodic in more than one dimension'
+        call write_fatal(2)
     end if
   case(MINIMUM)
     select case(conf%dim)
@@ -107,14 +105,15 @@ subroutine mesh_create(m, natoms, atom)
   end do
  
   !build shifts to nearest neighbour primitive cells
+  ii=(/0,-1,1/)
   m%shift=M_ZERO
   i=1
-  do iz = -1, 1
-    do iy = -1, 1
-      do ix = -1, 1
-        m%shift(i,1)=ix*m%rlat(1,1)
-        m%shift(i,2)=iy*m%rlat(2,2)
-        m%shift(i,3)=iz*m%rlat(3,3)
+  do iz = 1, 3
+    do iy = 1, 3
+      do ix = 1, 3
+        m%shift(i,1)=ii(ix)*m%rlat(1,1)
+        m%shift(i,2)=ii(iy)*m%rlat(2,2)
+        m%shift(i,3)=ii(iz)*m%rlat(3,3)
         i = i + 1
       end do
     end do
