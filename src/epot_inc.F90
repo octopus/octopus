@@ -15,14 +15,14 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine X(forces) (h, sys, t, reduce)
-  type(hamiltonian_type), intent(IN) :: h
+subroutine X(epot_forces) (ep, sys, t, reduce_)
+  type(epot_type),   intent(in)    :: ep
   type(system_type), intent(inout) :: sys
-  real(r8), intent(in), optional :: t
-  logical, intent(in), optional :: reduce
+  real(r8),          intent(in), optional :: t
+  logical,           intent(in), optional :: reduce_
 
   integer :: i, j, l, m, add_lm, idim, ist, ik, ii, jj
-  real(r8) :: d, r, x(3), zi, zj, vl, dvl
+  real(r8) :: d, r, zi, zj, vl, dvl, x(3)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
 
@@ -30,15 +30,13 @@ subroutine X(forces) (h, sys, t, reduce)
   real(r8) :: f(3)
   integer :: ierr
 #endif 
-
-  call push_sub('forces')
-
+  
   ! init to 0
   do i = 1, sys%natoms
     sys%atom(i)%f = M_ZERO
   end do
 
-  ! And now the non-local part...
+  ! the non-local contribution
   ! this comes first to do the reduce...
   atm_loop: do i = 1, sys%natoms
     atm => sys%atom(i)
@@ -53,50 +51,42 @@ subroutine X(forces) (h, sys, t, reduce)
               add_lm = add_lm + (2*l + 1)
               cycle l_loop
             end if
-
+            
             m_loop: do m = -l, l
               do ii = 1, atm%spec%ps%kbc
-              do jj = 1, atm%spec%ps%kbc
-                 uVpsi = sum(atm%X(uV)(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
-                         sys%st%X(psi)(atm%Jxyz(:), idim, ist, ik)) * &
-                         sys%m%vol_pp**2 * atm%X(uVu)(add_lm, ii, jj)
-
-                 do j = 1, 3
+                do jj = 1, atm%spec%ps%kbc
+                  uVpsi = sum(atm%X(uV)(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
+                       sys%st%X(psi)(atm%Jxyz(:), idim, ist, ik)) * &
+                       sys%m%vol_pp**2 * atm%X(uVu)(add_lm, ii, jj)
+                  
+                  do j = 1, 3
                     p = sum(atm%X(duV)(j, :, add_lm, jj) * R_CONJ(sys%st%X(psi) (atm%Jxyz(:), idim, ist, ik)))
-                   atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
-                 end do
+                    atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
+                  end do
+                end do
               end do
-              end do
-
+              
               add_lm = add_lm + 1
             end do m_loop
           end do l_loop
-
+          
         end do dim_loop
       end do st_loop
     end do ik_loop
-
+    
 #if defined(HAVE_MPI) && defined(MPI_TD)
-    if(present(reduce)) then
-    if(reduce) then
-      call MPI_ALLREDUCE(atm%f(1), f(1), conf%dim, &
-           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-      atm%f = f
-    end if
+    if(present(reduce_)) then
+      if(reduce_) then
+        call MPI_ALLREDUCE(atm%f(1), f(1), conf%dim, &
+             MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+        atm%f = f
+      end if
     end if
 #endif
-
+    
   end do atm_loop
   
-  if(present(t).and.h%no_lasers>0) then
-    call laser_field(h%no_lasers, h%lasers, t, x)
-    do i = 1, sys%natoms
-      sys%atom(i)%f(1:conf%dim) = sys%atom(i)%f(1:conf%dim) + &
-           sys%atom(i)%spec%Z_val * x(1:conf%dim)
-    end do
-  end if
-
-  ! first the ion, ion force term
+  ! Now the ion, ion force term
   do i = 1, sys%natoms
     zi = sys%atom(i)%spec%Z_val
     do j = 1, sys%natoms
@@ -110,9 +100,9 @@ subroutine X(forces) (h, sys, t, reduce)
       end if
     end do
   end do
-
+  
   ! now comes the local part of the PP
-  if(h%vpsl_space == 0) then ! Real space
+  if(ep%vpsl_space == 0) then ! Real space
     call local_RS()
 #ifdef HAVE_FFT
   else ! Fourier space
@@ -120,56 +110,61 @@ subroutine X(forces) (h, sys, t, reduce)
 #endif
   end if
 
-  call pop_sub()
-
-  contains
-    subroutine local_RS()
-      real(r8) :: r, x(3), d, gv(3)
-      integer  :: ns
-
-      ns = min(2, sys%st%nspin)
-
-      do i = 1, sys%natoms
-        atm => sys%atom(i)
-        do j = 1, sys%m%np
-          call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
-          if(r < r_small) cycle
-
-          call specie_get_glocal(atm%spec, x, gv)
-          d = sum(sys%st%rho(j, 1:ns))*sys%m%vol_pp
-          atm%f(:) = atm%f(:) - d*gv(:)
-        end do
+  if(present(t).and.ep%no_lasers>0) then
+    call epot_laser_field(ep, t, x)
+    do i = 1, sys%natoms
+      sys%atom(i)%f(1:conf%dim) = sys%atom(i)%f(1:conf%dim) + &
+           sys%atom(i)%spec%Z_val * x(1:conf%dim)
+    end do
+  end if
+  
+contains
+  subroutine local_RS()
+    real(r8) :: r, x(3), d, gv(3)
+    integer  :: ns
+    
+    ns = min(2, sys%st%nspin)
+    
+    do i = 1, sys%natoms
+      atm => sys%atom(i)
+      do j = 1, sys%m%np
+        call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
+        if(r < r_small) cycle
+        
+        call specie_get_glocal(atm%spec, x, gv)
+        d = sum(sys%st%rho(j, 1:ns))*sys%m%vol_pp
+        atm%f(:) = atm%f(:) - d*gv(:)
       end do
-    end subroutine local_RS
-
-    ! WARNING: this is still not working
+    end do
+  end subroutine local_RS
+  
 #ifdef HAVE_FFT
-    subroutine local_FS()
-      type(dcf) :: cf_for
-      real(r8), allocatable :: force(:)
-
-      allocate(force(sys%m%np))
-      call dcf_new_from(cf_for, h%local_cf(1)) ! at least one specie must exist
-      call dcf_alloc_FS(cf_for)
-      call dcf_alloc_RS(cf_for)
-      
-      do i = 1, sys%natoms
-        atm => sys%atom(i)
-        do j = 1, conf%dim
-          cf_for%FS = M_z0
-          call cf_phase_factor(sys%m, atm%x, h%local_cf(atm%spec%index), cf_for)
-          
-          call dcf_FS_grad(sys%m, cf_for, j)
-          call dcf_FS2RS(cf_for)
-          call dcf2mf(sys%m, cf_for, force)
-          do l = 1, sys%st%nspin
-            atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
-          end do
+  subroutine local_FS()
+    type(dcf) :: cf_for
+    real(r8), allocatable :: force(:)
+    
+    allocate(force(sys%m%np))
+    call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist
+    call dcf_alloc_FS(cf_for)
+    call dcf_alloc_RS(cf_for)
+    
+    do i = 1, sys%natoms
+      atm => sys%atom(i)
+      do j = 1, conf%dim
+        cf_for%FS = M_z0
+        call cf_phase_factor(sys%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
+        
+        call dcf_FS_grad(sys%m, cf_for, j)
+        call dcf_FS2RS(cf_for)
+        call dcf2mf(sys%m, cf_for, force)
+        do l = 1, sys%st%nspin
+          atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
         end do
       end do
-
-     deallocate(force)
-    end subroutine local_FS
+    end do
+    
+    deallocate(force)
+  end subroutine local_FS
 #endif
 
-end subroutine X(forces)
+end subroutine X(epot_forces)

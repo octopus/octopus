@@ -99,11 +99,11 @@ subroutine td_run(td, u_st, sys, h)
   if(td%move_ions > 0) then 
     if(td%iter > 0) then
       call td_read_nbo()
-      call generate_external_pot(h, sys)
+      call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
       sys%eii = ion_ion_energy(sys%natoms, sys%atom)
     end if
 
-    call zforces(h, sys, td%iter*td%dt, reduce=.true.)
+    call zepot_forces(h%ep, sys, td%iter*td%dt, reduce_=.true.)
     sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
     select case(td%move_ions)
       case(NORMAL_VERLET)
@@ -155,7 +155,7 @@ subroutine td_run(td, u_st, sys, h)
           enddo
       end select
 
-      call generate_external_pot(h, sys)
+      call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
       sys%eii = ion_ion_energy(sys%natoms, sys%atom)
     endif
 
@@ -188,7 +188,7 @@ subroutine td_run(td, u_st, sys, h)
           f1(j, :) = sys%atom(j)%f(:)
         end do
       end if
-      call zforces(h, sys, i*td%dt, reduce=.true.)
+      call zepot_forces(h%ep, sys, i*td%dt, reduce_=.true.)
       if(td%move_ions == VELOCITY_VERLET) then
         do j = 1, sys%natoms
           if(sys%atom(j)%move) then

@@ -270,10 +270,10 @@ subroutine X(vlasers) (h, m, st, psi, Hpsi, t)
 
   call push_sub('vlasers')
 
-  if(h%no_lasers > 0) then
+  if(h%ep%no_lasers > 0) then
     select case(h%gauge)
     case(1) ! length gauge
-      call laser_field(h%no_lasers, h%lasers, t, f)
+      call epot_laser_field(h%ep, t, f)
       
       do k = 1, m%np
         call mesh_xyz(m, k, x)
@@ -281,7 +281,7 @@ subroutine X(vlasers) (h, m, st, psi, Hpsi, t)
       end do
       
     case(2) ! velocity gauge
-      call laser_vector_field(h%no_lasers, h%lasers, t, f)
+      call epot_laser_vector_field(h%ep, t, f)
       allocate(grad(3, m%np))
       do idim = 1, st%dim
         call X(f_gradient)(m, psi(:, idim), grad)

@@ -65,7 +65,7 @@ subroutine opt_control_run(td, sys, h)
     end do
 
     call oct_progress_bar(-1, td%max_iter-1)
-    h%lasers(1)%dt = td%dt
+    h%ep%lasers(1)%dt = td%dt
     functional = M_ZERO
     do i = 1, td%max_iter
       call prop_iter1(i)
@@ -103,7 +103,7 @@ subroutine opt_control_run(td, sys, h)
 
     call oct_progress_bar(-1, td%max_iter-1)
     td%dt = -td%dt
-    h%lasers(1)%dt = td%dt
+    h%ep%lasers(1)%dt = td%dt
     functional = M_ZERO
     do i = td%max_iter-1, 0, -1
       call prop_iter2(i)
@@ -118,7 +118,7 @@ subroutine opt_control_run(td, sys, h)
 
   ! clean up
   td%tr%v_old => v_old_i
-  nullify(h%lasers(1)%numerical)
+  nullify(h%ep%lasers(1)%numerical)
   deallocate(v_old_f, laser_i, laser_f)
   call states_end(psi_f)
 
@@ -131,14 +131,14 @@ contains
 
     ! psi_f
     td%tr%v_old => v_old_f
-    h%lasers(1)%numerical => laser_f
+    h%ep%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
     call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
     td%tr%v_old => v_old_i
-    h%lasers(1)%numerical => laser_i
+    h%ep%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
     call zh_calc_vhxc(h, sys%m, psi_i, sys=sys)
     call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
@@ -153,14 +153,14 @@ contains
 
     ! psi_i
     td%tr%v_old => v_old_i
-    h%lasers(1)%numerical => laser_i
+    h%ep%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
     call zh_calc_vhxc(h, sys%m, psi_i, sys=sys)
     call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
     td%tr%v_old => v_old_f
-    h%lasers(1)%numerical => laser_f
+    h%ep%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
     call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
@@ -224,11 +224,11 @@ contains
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
     
-    h%lasers(1)%numerical => laser_f
+    h%ep%lasers(1)%numerical => laser_f
     td%tr%v_old => v_old_f
 
     td%dt = -td%dt
-    h%lasers(1)%dt = td%dt
+    h%ep%lasers(1)%dt = td%dt
     call oct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
@@ -317,14 +317,14 @@ contains
     allocate(v_old_f(sys%m%np, psi_f%nspin, 3))
     
     ! prepare the initial laser
-    if(h%no_lasers.ne.0) then
+    if(h%ep%no_lasers.ne.0) then
       message(1) = "Please turn off any lasers for optimum control"
       call write_fatal(1)
     end if
-    h%no_lasers = 1
-    allocate(h%lasers(1))
-    h%lasers(1)%envelope = 99 ! internal type
-    h%lasers(1)%dt = td%dt
+    h%ep%no_lasers = 1
+    allocate(h%ep%lasers(1))
+    h%ep%lasers(1)%envelope = 99 ! internal type
+    h%ep%lasers(1)%dt = td%dt
     allocate(laser_i(conf%dim, 0:2*td%max_iter), laser_f(conf%dim, 0:2*td%max_iter))
 
     ! read parameters from input

@@ -349,11 +349,11 @@ subroutine td_write_laser(out, h, td, iter)
   call write_iter_start(out)
   
   field = M_ZERO
-  call laser_field(h%no_lasers, h%lasers, iter*td%dt, field)
+  call epot_laser_field(h%ep, iter*td%dt, field)
   field = field * units_inp%length%factor / units_inp%energy%factor
   call write_iter_double(out, field, conf%dim)
   
-  call laser_vector_field(h%no_lasers, h%lasers, iter*td%dt, field)
+  call epot_laser_vector_field(h%ep, iter*td%dt, field)
   field = field  * units_inp%length%factor
   call write_iter_double(out, field, conf%dim)
   

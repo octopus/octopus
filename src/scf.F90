@@ -219,7 +219,7 @@ subroutine scf_run(scf, sys, h)
   end if
 
   ! calculate forces
-  call X(forces)(h, sys)
+  call X(epot_forces)(h%ep, sys)
 
   ! output final information
   call scf_write_static("static", "info")

@@ -120,13 +120,13 @@ contains
       call write_fatal(1)
     end select
     
-    if(h%no_lasers > 0) then
+    if(h%ep%no_lasers > 0) then
       if(h%gauge.ne.1) then  ! only length gauge is supported
         message(1) = "Only the length gauge is supported in exp_vlpsi"
         call write_fatal(1)
       end if
 
-      call laser_field(h%no_lasers, h%lasers, t, f)
+      call epot_laser_field(h%ep, t, f)
       do k = 1, m%np
         call mesh_xyz(m, k, x)
         psi(k,:) = exp(factor*sum(x*f)) * psi(k,:)

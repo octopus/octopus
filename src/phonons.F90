@@ -102,7 +102,7 @@ contains
         sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) + ph%disp
 
         ! first force
-        call generate_external_pot(h, sys)
+        call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
         call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
         call X(h_calc_vhxc) (h, sys%m, sys%st, sys=sys)
         call hamiltonian_energy (h, sys%st, sys%eii, -1)
@@ -114,7 +114,7 @@ contains
         sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) - 2._r8*ph%disp
 
         ! second force
-        call generate_external_pot(h, sys)
+        call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
         call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
         call X(h_calc_vhxc) (h, sys%m, sys%st, sys=sys)
         call hamiltonian_energy(h, sys%st, sys%eii, -1)

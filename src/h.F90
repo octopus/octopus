@@ -18,11 +18,9 @@
 #include "global.h"
 
 module hamiltonian
-use system
-use specie
+use external_pot
 use poisson
 use xc
-use lasers
 
 implicit none
 
@@ -31,13 +29,8 @@ type hamiltonian_type
   integer :: nspin
   integer :: ispin
 
-  integer :: np  ! number of points (duplicated in mesh)
-
   integer :: reltype ! type of relativistic correction to use
 
-  integer :: vpsl_space           ! How should the local potential be calculated
-  integer :: vnl_space            ! How should the nl    potential be calculated
-  integer :: nextra               ! extra points for the interpolation method(s)
   real(r8), pointer :: Vpsl(:)     => NULL() ! the external potential
   real(r8), pointer :: Vhartree(:) => NULL() ! the hartree potential
   real(r8), pointer :: Vxc(:,:)    => NULL() ! xc potential
@@ -49,26 +42,13 @@ type hamiltonian_type
   ! System under the independent particle approximation, or not.
   logical :: ip_app
 
-  ! should we include the classical point charges
-  integer :: classic_pot
-  real(r8), pointer :: Vclassic(:) => NULL()! potential created by classic point charges
-
-  type(xc_type) :: xc
-
-#ifdef HAVE_FFT
-  ! For the local pseudopotential in Fourier space...
-  type(dcf), pointer :: local_cf(:)   => NULL()
-  type(dcf), pointer :: rhocore_cf(:) => NULL() ! and for the core density
-#endif
+  type(epot_type) :: ep  ! handles the external potential
+  type(xc_type)   :: xc  ! handles the xc potential
 
   ! gauge
   integer :: gauge ! in which gauge shall we work in
                    ! 1 = length gauge
                    ! 2 = velocity gauge
-
-  ! lasers stuff
-  integer :: no_lasers ! number of laser pulses used
-  type(laser_type), pointer :: lasers(:) => NULL()
 
   ! absorbing boundaries
   integer  :: ab         ! do we have absorbing boundaries?
@@ -104,53 +84,20 @@ subroutine hamiltonian_init(h, sys)
   call push_sub('hamiltonian_init')
 
   ! Duplicate this two variables
-  h%ispin = sys%st%ispin
+  h%ispin         = sys%st%ispin
   h%spin_channels = sys%st%spin_channels
   h%nspin         = sys%st%nspin
-  h%np  = sys%m%np
 
   ! allocate potentials and density of the cores
-  allocate(h%Vpsl(h%np),              &
-           h%Vhartree(h%np),          &
-           h%Vxc(h%np, sys%st%nspin), &
-           h%Vhxc(h%np, sys%st%nspin))
+  allocate(h%Vpsl(sys%m%np),              &
+           h%Vhartree(sys%m%np),          &
+           h%Vxc(sys%m%np, sys%st%nspin), &
+           h%Vhxc(sys%m%np, sys%st%nspin))
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
   h%vpsl = M_ZERO; h%vhartree = M_ZERO; h%vxc = M_ZERO; h%Vhxc = M_ZERO
 
-  if(sys%ncatoms > 0) then
-    call oct_parse_int("ClassicPotential", 0, h%classic_pot)
-    if(h%classic_pot > 0) allocate(h%Vclassic(h%np))
-  end if
-
-  ! should we calculate the local pseudopotentials in Fourier space?
-  h%vpsl_space = REAL_SPACE
-  h%vnl_space  = REAL_SPACE
-#ifdef HAVE_FFT
-  call oct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, h%vpsl_space)
-#endif
-
-  select case(h%vpsl_space)
-    case(RECIPROCAL_SPACE)
-      message(1) = 'Info: Local Potential in Reciprocal Space.'
-    case(REAL_SPACE)
-      if (conf%periodic_dim==0) then
-        message(1) = 'Info: Local Potential in Real Space.'
-      else
-        message(1) = 'for periodic systems you must set LocalPotentialSpace = 1'
-        call write_fatal(1)
-      end if
-    case default
-      write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
-           "' is not a valid LocalPotentialSpace"
-      message(2) = '(LocalPotentialSpace = 0 | 1)'
-      call write_fatal(2)
-  end select
-  call write_info(1)
-
-#ifdef HAVE_FFT
-  if(h%vpsl_space == RECIPROCAL_SPACE) call h_local_fourier_init(sys%m, h, sys)
-#endif
+  call epot_init(h%ep, sys)
 
   call oct_parse_int("RelativisticCorrection", NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -204,16 +151,6 @@ subroutine hamiltonian_init(h, sys)
     call write_fatal(4)
   end if
 
-  ! lasers
-  call laser_init(sys%m, h%no_lasers, h%lasers)
-  if(h%no_lasers>0 ) then
-    message(1) = 'Info: Lasers'
-    call write_info(1)
-    if(conf%verbose > 20 .and. mpiv%node == 0) then
-      call laser_write_info(h%no_lasers, h%lasers, stdout)
-    end if
-  end if
-
   ! absorbing boundaries
   call oct_parse_int("AbsorbingBoundaries", NO_ABSORBING, h%ab)
   nullify(h%ab_pot)
@@ -261,8 +198,6 @@ subroutine hamiltonian_end(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(in) :: sys
   
-  integer :: i
-  
   call push_sub('hamiltonian_end')
 
   if(associated(h%Vpsl)) then
@@ -270,10 +205,7 @@ subroutine hamiltonian_end(h, sys)
     nullify(h%Vpsl, h%Vhartree, h%Vxc, h%Vhxc)
   end if
 
-  if(h%classic_pot > 0 .and. associated(h%Vclassic)) then
-    deallocate(h%Vclassic); nullify(h%Vclassic)
-  end if
-
+  call epot_end(h%ep, sys)
   if(.not.h%ip_app) then
     call poisson_end()
     call xc_end(h%xc)
@@ -282,19 +214,6 @@ subroutine hamiltonian_end(h, sys)
   if(associated(h%ab_pot)) then
     deallocate(h%ab_pot); nullify(h%ab_pot)
   end if
-
-  call laser_end(h%no_lasers, h%lasers)
-
-#ifdef HAVE_FFT
-  if(h%vpsl_space == RECIPROCAL_SPACE) then
-    do i = 1, sys%nspecies
-      call dcf_free(h%local_cf(i))
-      if(sys%nlcc) call dcf_free(h%rhocore_cf(i))
-    end do
-    deallocate(h%local_cf)
-    if(sys%nlcc) deallocate(h%rhocore_cf)
-  end if
-#endif
 
   call pop_sub()
 end subroutine hamiltonian_end
@@ -375,8 +294,8 @@ subroutine hamiltonian_output(h, m, dir, outp)
   if(outp%what(output_potential)) then
     call doutput_function(outp, dir, "v0", m, h%Vpsl, u)
 
-    if(h%classic_pot > 0) then
-      call doutput_function(outp, dir, "vc", m, h%Vclassic, u)
+    if(h%ep%classic_pot > 0) then
+      call doutput_function(outp, dir, "vc", m, h%ep%Vclassic, u)
     end if
 
     if(.not.h%ip_app) then
@@ -390,17 +309,13 @@ subroutine hamiltonian_output(h, m, dir, outp)
   call pop_sub()
 end subroutine hamiltonian_output
 
-#include "h_external_pot.F90"
-
 #include "undef.F90"
 #include "real.F90"
 #include "h_inc.F90"
-#include "h_forces.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "h_inc.F90"
-#include "h_forces.F90"
 
 #if defined(COMPLEX_WFNS)
 #include "h_so.F90"

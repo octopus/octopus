@@ -398,8 +398,7 @@ subroutine run_init()
     call units_init()
     call system_init(sys)
     call hamiltonian_init(h, sys)
-    if(h%classic_pot > 0) call generate_classic_pot(h, sys)
-    call generate_external_pot(h, sys)
+    call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
   endif
   
 end subroutine run_init

@@ -12,7 +12,7 @@ core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \
 	poisson.F90 out.F90 states.F90 xc.F90 systm.F90 mix.F90
 
-octopus_SOURCES = $(core_SRCS) lasers.F90 h.F90 \
+octopus_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
@@ -28,7 +28,7 @@ noinst_HEADERS = \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
 	specie1D.F90 specie3D.F90\
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 \
-	h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90 \
+	h_inc.F90 h_so.F90 \
 	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90\
 	states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
@@ -116,7 +116,8 @@ specie.o: specie1D.F90 specie3D.F90
 poisson.o: poisson1D.F90 poisson2D.F90 poisson3D.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90
 xc.o: xc_KLI_SIC.F90
-h.o: h_inc.F90 h_external_pot.F90 h_forces.F90 h_so.F90
+epot.o: epot_inc.F90
+h.o: h_inc.F90 h_so.F90
 eigen.o: eigen_cg2.F90 eigen_cg3.F90
 states.o: states_inc.F90 states_kpoints.F90
 pes.o: pes_rc.F90 pes_mask.F90

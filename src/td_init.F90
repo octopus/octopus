@@ -92,7 +92,7 @@ subroutine td_init(td, sys, m, st, h)
     message(2) = 'Atoms should not be allowed to move'
     call write_fatal(2)
   endif
-  call oct_parse_logical("TDOutputLaser", h%no_lasers>0, td%out_laser)
+  call oct_parse_logical("TDOutputLaser", h%ep%no_lasers>0, td%out_laser)
   call oct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
   call oct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
 
