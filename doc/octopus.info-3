@@ -1,0 +1,147 @@
+This is octopus.info, produced by makeinfo version 4.5 from
+octopus.texi.
+
+INFO-DIR-SECTION Individual utilities
+START-INFO-DIR-ENTRY
+* octopus: (octopus).           The octopus program.
+END-INFO-DIR-ENTRY
+
+This manual is for octopus 1.3, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
+
+File: octopus.info,  Node: Options Index,  Prev: Examples,  Up: Top
+
+Options Index
+*************
+
+* Menu:
+
+* ABHeight:                              Time Dependent.
+* AbsorbingBoundaries:                   Time Dependent.
+* ABWidth:                               Time Dependent.
+* AdjustCoordinates:                     Coordinates.
+* BoxShape:                              Mesh.
+* CalcPES_mask:                          Photo-electron spectrum.
+* CalcPES_rc:                            Photo-electron spectrum.
+* CalculationMode:                       Generalities.
+* CFunctional:                           Exchange and correlation.
+* ChooseStates:                          choose_st.
+* ChooseStatesFilename:                  choose_st.
+* ClassicPotential:                      Hamiltonian.
+* ConvAbsDens:                           SCF.
+* ConvAbsEv:                             SCF.
+* ConvRelDens:                           SCF.
+* ConvRelEnergy:                         SCF.
+* Coordinates:                           Coordinates.
+* DebugLevel:                            Generalities.
+* DerivativesSpace:                      Mesh.
+* Dimensions:                            Generalities.
+* Displacement:                          Varia.
+* DoubleFFTParameter:                    Mesh.
+* EigenSolver:                           SCF.
+* EigenSolverFinalTolerance:             SCF.
+* EigenSolverFinalToleranceIteration:    SCF.
+* EigenSolverInitTolerance:              SCF.
+* EigenSolverMaxIter:                    SCF.
+* ElectronicTemperature:                 States.
+* ExcessCharge:                          States.
+* ExtraStates:                           States.
+* FFTOptimize:                           Mesh.
+* GOMaxIter:                             Geometry optimization.
+* GOMethod:                              Geometry optimization.
+* GOStep:                                Geometry optimization.
+* GOTolerance:                           Geometry optimization.
+* HSPolarization:                        Spectrum calculations.
+* LCAOStart:                             SCF.
+* LocalPotentialSpace:                   Hamiltonian.
+* Lsize:                                 Mesh.
+* MainAxis:                              Coordinates.
+* MakeStates:                            make_st.
+* MaximumIter:                           SCF.
+* Mixing:                                SCF.
+* MixNumberSteps:                        SCF.
+* MoveIons:                              Time Dependent.
+* NonInteractingElectrons:               Hamiltonian.
+* NumberCG:                              SCF.
+* NumberKPoints:                         States.
+* Occupations:                           States.
+* OrderDerivatives:                      Mesh.
+* OutputAxisX:                           Function output for visualization.
+* OutputAxisY:                           Function output for visualization.
+* OutputAxisZ:                           Function output for visualization.
+* OutputDensity:                         Function output for visualization.
+* OutputDX:                              Function output for visualization.
+* OutputELF:                             Function output for visualization.
+* OutputEvery:                           Function output for visualization.
+* OutputGeometry:                        Function output for visualization.
+* OutputKSPotential:                     Function output for visualization.
+* OutputNETCDF:                          Function output for visualization.
+* OutputPlaneX:                          Function output for visualization.
+* OutputPlaneY:                          Function output for visualization.
+* OutputPlaneZ:                          Function output for visualization.
+* OutputWfs:                             Function output for visualization.
+* OutputWfsNumber:                       Function output for visualization.
+* PDBCoordinates:                        Coordinates.
+* PES_rc_points:                         Photo-electron spectrum.
+* PoissonSolver:                         Varia.
+* POLStaticField:                        Varia.
+* Radius:                                Mesh.
+* RandomVelocityTemp:                    Velocities.
+* RelativisticCorrection:                Hamiltonian.
+* SCFinLCAO:                             SCF.
+* Spacing:                               Mesh.
+* SpecDampFactor:                        Spectrum calculations.
+* SpecDampMode:                          Spectrum calculations.
+* SpecEndTime:                           Spectrum calculations.
+* SpecEnergyStep:                        Spectrum calculations.
+* Species:                               Species.
+* SpecMaxEnergy:                         Spectrum calculations.
+* SpecMinEnergy:                         Spectrum calculations.
+* SpecStartTime:                         Spectrum calculations.
+* SpecTransformMode:                     Spectrum calculations.
+* SpinComponents:                        States.
+* SystemName:                            Generalities.
+* TDDeltaStrength:                       Time Dependent.
+* TDDipoleLmax:                          Time Dependent.
+* TDEvolutionMethod:                     Time Dependent.
+* TDExponentialMethod:                   Time Dependent.
+* TDExpOrder:                            Time Dependent.
+* TDGauge:                               Time Dependent.
+* TDLanczosTol:                          Time Dependent.
+* TDLasers:                              Time Dependent.
+* TDMaximumIter:                         Time Dependent.
+* TDOutputAcceleration:                  Time Dependent.
+* TDOutputCoordinates:                   Time Dependent.
+* TDOutputElEnergy:                      Time Dependent.
+* TDOutputGSProjection:                  Time Dependent.
+* TDOutputLaser:                         Time Dependent.
+* TDOutputMultipoles:                    Time Dependent.
+* TDOutputOccAnalysis:                   Time Dependent.
+* TDPolarization:                        Time Dependent.
+* TDTimeStep:                            Time Dependent.
+* TypeOfMixing:                          SCF.
+* Units:                                 Generalities.
+* UnitsInput:                            Generalities.
+* UnitsOutput:                           Generalities.
+* UnoccConv:                             Unoccupied States.
+* UnoccMaximumIter:                      Unoccupied States.
+* UnoccNumberStates:                     Unoccupied States.
+* Velocities:                            Velocities.
+* Verbose:                               Generalities.
+* What2Mix:                              SCF.
+* XFunctional:                           Exchange and correlation.
+* XLength:                               Mesh.
+* XYZCoordinates:                        Coordinates.
+* XYZVelocities::                        Velocities.
+
+

@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.3 from
+This is octopus.info, produced by makeinfo version 4.5 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -6,6 +6,18 @@ START-INFO-DIR-ENTRY
 * octopus: (octopus).           The octopus program.
 END-INFO-DIR-ENTRY
 
+This manual is for octopus 1.3, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
 
 File: octopus.info,  Node: SCF,  Next: Unoccupied States,  Prev: Exchange and correlation,  Up: Input file options
 
@@ -126,38 +138,247 @@ File: octopus.info,  Node: Time Dependent,  Next: Photo-electron spectrum,  Prev
 Time Dependent
 --------------
 
-   * `TDMaximumIter' (integer, 1500): Number of time steps.
+   When `CalculationMode = 5,6', `octopus' performs the time propagation
+of the electronic orbitals and - if required - of the ionic positions.
+This latter task does not pose major algorithmical problems (the usual
+Verlet algorithms deal with that task); however the best way to
+propagate a Schro"dinger-like equation is still unclear. Due to this
+fact, we provide with a rather excessive selection of possibilities for
+that purpose. Before describing the set of variables necessary to
+specify the way in which the time evolution is to be performed, it is
+worth making a brief introduction to the problem.
 
-   * `TDTimeStep' (double, 0.07 a.u.): Time-step for the propagation.
+   We are concerned with a set of Schro"dinger-like equations for the
+electronic orbitals:
+
+   i{\partial psi_i \over \partial t} = H(t)\psi_i(t)\,,
+
+   \psi_i(t=0) = \psi_i^0\,.
+
+   Being the equation linear, one may formally define a linear
+"evolution" operator, which trasforms the initial vector into the
+solution at time T:
+
+   \psi_i(T) = U(T, 0)\psi_i^0
+
+   Moreover, there is a formal exact expression for the evolution
+operator:
+
+   \psi_i(T) = T\exp\lbrace -i\!\!\int_0^{T}d\tau H(\tau)\rbrace
+\psi_i^0\,.
+
+   where Texp is the time-ordered exponential. If the Hamiltonian
+conmutes with itself at different times, we can drop the time-ordering
+product, and leave a simple exponential.  If the Hamiltonian is
+time-independent, the solution is then simply written as:
+
+   \psi_i(T) = \exp\lbrace -iTH\rbrace \psi_i^0\,.
+
+   Unfortunately, this is not the case in general. We have to find an
+algorithm able to cope with time-dependent Hamiltonians, such as the
+self-consistent time-dependent Kohn-Sham operator.
+
+   The first step is to perform a time-discretization: the full
+propagation between 0 and T is decomposed as:
+
+   U(T,0) = \prod_{i=0}^{N-1}U(t_i+\delta t,t_i)\,,
+
+   where t_0=0, t_N=T, \delta t = T/N. So at each time step we are
+dealing with the problem of performing the short-time propagation:
+
+   \psi_i(t+\delta t) = U(t+\delta t, t)\psi_i(t) = T\exp\lbrace
+-i\!\!\int_{t}^{t+\delta t}\!\!\!\!\!\!\!\!\!d\tau\,H(\tau)\rbrace
+\psi(t)\,.
+
+   In this way, one can monitor the evolution in the interior of [0,t].
+In fact, the possibility of monitoring the evolution is generally a
+requirement; this requirement imposes a natural restriction on the
+maximum size of \delta t: if \omega_\rm max is the maximum frequency
+that we want to discern, \delta t should be no larger than \approx
+1/\omega_\rm max.  Below this \delta t_\rm max, we are free to choose
+\delta t considering performance reasons: Technically, the reason for
+the discretization is twofold: the time-dependence of H is alleviated,
+and the norm of the exponential argument is reduced (the norm increases
+linearly with \delta t).
+
+   Since we cannot drop the time-ordering product, the desired algorithm
+cannot be reduced, in principle, to the calculation of the action of
+the exponential of an operator over the initial vector.  Some
+algorithms tailored to approximate the evolution operator, in fact, do
+not even require to peform such operator exponentials.  Most of them,
+however, do rely on the calculation of one or more exponentials, such
+as the ones used by `octopus'. This is why in principle we need to
+specify two different issues: the "evolution method", and the
+"exponential method". In other words: we need an algorithm to
+approximate the evolution operator U(t+\delta t, t) - which will be
+specified by variable `TDEvolutionMethod' - and, if this algorithm
+requires it, we will also need an algorithm to approximate the
+exponential of a matrix operator \exp\lbrace A\rbrace - which will be
+specified by variable `TDExponentialMethod'.
+
+   * `TDMaximumIter' (integer, 1500): Number of time steps in which the
+     total integration time is divided; in previous notation, N.
+
+   * `TDTimeStep' (double, 0.07 a.u.): Time-step for the propagation;
+     in previous notation, \delta t.
+
+   * `TDExponentialMethod' (integer, 1): Method used to numerically
+     calculate the exponential of the Hamiltonian, a core part of the
+     full algorithm used to approximate the evolution operator,
+     specified through the variable `TDEvolutionMethod', described
+     below.
+
+        - `1': N-th order expansion of the exponential.
+
+          \exp (-i\delta t H) \approx \sum_{i=0}^k {(-i\delta
+          t)^i\over{i!}} H^i.
+
+          The order k is determined by variable `TDExpOder' (see below).
+          Some numerical considerations (by Jeff Giansiracusa and
+          George F. Bertsch; see
+          `http://www.phys.washington.edu/~bertsch/num3.ps') suggest
+          the 4th order as especially suitable and stable.
+
+        - `2': Lanczos approximation.
+
+          Allows for larger time-steps.  However, the larger the
+          time-step, the longer the computational time per time-step.
+          In certain cases, if the time-step is too large, the code
+          will emit a warning whenever it considers that the evolution
+          may not be properly proceeding - the Lanczos process did not
+          converge. The method consists in a Krylov subspace
+          approximation of the action of the exponential (see M.
+          Hochbruck and C. Lubich, SIAM J. Numer. Anal. *34*, 1911
+          (1997) for details).  Two more variables control the
+          performance of the method: the maximum dimension of this
+          subspace (controlled by variable `TDExpOrder'), and the
+          stopping criterium (controlled by variable `TDLanczosTol').
+          The smaller the stopping criterium, the more precisely the
+          exponential is calculated, but also the larger the dimension
+          of the Arnoldi subspace. If the maximum dimension allowed by
+          `TDExpOrder' is not enough to meet the criterium, the
+          above-mentioned warning is emitted.
+
+        - `3': Split-operator (SO).
+
+          It is important to distinguish between applying the split
+          operator method to calculate the exponential of the
+          Hamiltonian at a given time - which is what this variable is
+          referring to - from the split operator method as an algorithm
+          to approximate the full evolution operator U(t+\delta t, t),
+          and which will be described below as one of the possibilities
+          of the variable `TDEvolutionMethod'.  The equation that
+          describes the split operator scheme is well known:
+
+          \exp (-i \delta t H) \approx \exp (-i \delta t/2 T) \exp (-i
+          \delta t V) \exp (-i \delta t/2 T)\,.
+
+          Note that this is a "kinetic referenced SO", since the
+          kinetic term is sandwiched in the middle. This is so because
+          in `octopus', the states spend most of its time in
+          real-space; doing it "potential referenced" would imply 4
+          FFTs instead of 2.  This split-operator technique may be used
+          in combination with, for example, the exponential midpoint
+          rule as a means to approximate the evolution operator.  In
+          that case, the potential operator `V' that appears in the
+          equation would be calculated at time t+\delta t/2, that is,
+          in the middle of the time-step.  However, note that if the
+          split-operator method is invoked as a means to approximate
+          the evolution operator (`TDEvolutionMethod = 0'), a different
+          procedure is taken - it will be described below -, and in
+          fact the variable `TDExponentialMethod' has no effect at all.
+
+        - `4': Suzuki-Trotter (ST).
+
+          This is a higher-order SO based algorithm. See O. Sugino and
+          Y. Miyamoto, Phys. Rev. B *59*, 2579 (1999). Allows for
+          larger time-steps, but requires five times more time.
+
+          The considerations made above for the SO algorithm about the
+          distinction between using the method as a means to
+          approximate `U(t+\delta t)' or as a means to approximate the
+          exponential also apply here. Setting `TDEvolutionMethod = 1'
+          enforces the use of the ST as an algorithm to approximate the
+          full evolution operator, which is slightly different (see
+          below).
+
+        - `5': N-th order Chebyshev expansion.
+
+          In principle, the Chebyshev expansion of the exponential
+          represents it more accurately than the canonical expansion
+          (method 1). As in the latter case, `TDExpOrder' determines
+          the order of the expansion.
+
+          There exists a closed analytical form for the coefficients of
+          the exponential in terms of Chebyshev polynomials:
+
+          \exp \left( -i\delta t H \right) = \sum_{k=0}^{\infty}
+          (2-\delta_{k0})(-i)^{k} J_k(\delta t) T_k(H),
+
+          where J_k are the Bessel functions of the first kind, and H
+          has te be previously scaled to [-1,1].  See H. Tal-Ezer and
+          R. Kosloff, J. Chem. Phys. *81*, 3967 (1984); R. Kosloff,
+          Annu. Rev. Phys. Chem. *45*, 145 (1994); C. W. Clenshaw, MTAC
+          *9*, 118 (1955).
+
+
+   * `TDExpOrder' (integer, 4): For `TDExponentialMethod' equal `1' or
+     `5', the order to which the exponential is expanded. For the
+     Lanczos approximation, it is the maximum Lanczos-subspace
+     dimension.
+
+   * `TDLanczosTol' (real, 5e-4): An internal tolerance variable for
+     the Lanczos method. The smaller, the more precisely the
+     exponential is calculated, and also the bigger the dimension of
+     the Krylov subspace needed to perform the algorithm. One should
+     carefully make sure that this value is not too big, or else the
+     evolution will be wrong.
 
    * `TDEvolutionMethod' (integer, 2): Method used to perform the time
-     propagation. Authorised values are:
+     propagation. Authorised values are: [In the following \psi^n
+     represents the wavefunction at time t and \psi^n+1 the
+     wavefunction at time t+\delta t.]
 
-        - `0': Simply apply the exponential (expanded according to
-          `TDExponentialMethod') at mid-time, but without extrapolating
-          the Hamiltonian. This method is currently only of use when
-          propagating non-interacting electrons with the split-operator
-          method.
+        - `0': SPLIT OPERATOR (ST).
 
-        - `1': "Old-Style" method. One should check carefully the
-          time-step, and it only works with density based functionals.
-          It is quick per time step, but requires very small time-steps.
-          Deprecated in favour of method number 3, but still present in
-          the code for _historical_ reasons.  (See a printed version of
-          the manual for details)
+          This is one of the most traditional methods. It splits the
+          full Hamiltonian into a kinetic and a potential part,
+          performing the first in Fourier-space, and the latter in real
+          space. The necessary transformations are performed with the
+          FFT algorithm.
 
-        - `2': Method designed to enforce the time-reversal symmetry.
-          Better time steps. Default.  (See a printed version of the
-          manual for details)
+          \psi^{n+1} = \exp \lbrace - {i \over 2}\delta t T \rbrace
+                  \exp \lbrace -i\delta t V^* \rbrace
+          \exp \lbrace - {i \over 2}\delta t T \rbrace
 
-        - `3': A modification of previous method to make it faster.  It
-          is based on extrapolation of the time-dependent potentials.
-          It is faster by about 40%.  (See a printed version of the
-          manual for details)
+          Since those three exponentials may be calculated exactly, one
+          does not need to use any of the methods specified by variable
+          `TDExponentialMethod' to perform them.
 
-        - `4': Exponential midpoint rule. In principle, it should  also
-          respect the time-reversal symmetry.  (See a printed version
-          of the manual for details)
+          You may be wondering what is the difference between using
+          this ST, or setting `TDExponentialMethod' also to ST, and
+          employing the exponential midpoint rule, described below. The
+          key point is which Hamiltonian is split, or, more precisely,
+          which potential term - since the kinetic term does not depend
+          on time and is
+
+        - `1': Suzuki-Trotter (ST).
+
+        - `2': Enforced Time-Reversal Symmetry (ETRS).
+
+          Better time steps. Default.
+
+        - `3': Approximated Enforced Time-Reversal Symmetry (AETRS).
+
+          A modification of previous method to make it faster.  It is
+          based on extrapolation of the time-dependent potentials. It
+          is faster by about 40%.  (See a printed version of the manual
+          for details)
+
+        - `4': Exponential Midpoint Rule (EM).
+
+          In principle, it should  also respect the time-reversal
+          symmetry.  (See a printed version of the manual for details)
 
 
      (The methods which make use of extrapolation cannot be used safely
@@ -172,64 +393,7 @@ Time Dependent
      if you don't feel like testing, use the default choices and make
      sure the time step is small enough.
 
-   * `TDExponentialMethod' (integer, 1): Method used to numerically
-     calculate the exponential of the Hamiltonian, a core part of the
-     calculation in any of the previously described methods to perform
-     the evolution.
-
-        - `1': N-th order expansion of the exponential. The order is
-          determined by variable `TDExpOder' (see below).
-
-          Some numerical considerations (by Jeff Giansiracusa and
-          George F. Bertsch; see
-          `http://www.phys.washington.edu/~bertsch/num3.ps') suggest
-          the 4th order as especially suitable and stable.
-
-        - `2': Lanczos approximation. Allows for larger time-steps.
-          However, the larger the time-step, the longer the
-          computational time per time-step. In certain cases, if the
-          time-step is too large, the code will emit a warning whenever
-          it considers that the evolution may not be proberly
-          proceeding - the Lanczos process did not converge. The method
-          consists in a Krylov subspace approximation of the action of
-          the exponential (see M. Hochbruck and C. Lubich, SIAM J.
-          Numer. Anal. *34*, 1911 (1997) for details).  Two more
-          variables control the performance of the method: the dimension
-          of this subspace (controlled by variable `TDExpOrder'), and
-          the stopping criterium (controlled by variable
-          `TDLanczosTol').  The smaller the stopping criterium, the
-          more precisely the exponential is calculated, but also the
-          larger the dimension of the Arnoldi subspace. Time spent in
-          the calculation grows linearly with this dimension.
-
-        - `3': Split-operator.  This is a well known method. In our
-          real-space implementation, we do not find it specially
-          suitable (too many transformations from real to reciprocal
-          spaces).
-
-        - `4': Suzuki-Trotter. This is a higher-order split-operator
-          based method. See O. Sugino and Y. Miyamoto, Phys. Rev. B
-          *59*, 2579 (1999). Allows for larger time-steps, but requires
-          five times more time.
-
-        - `5': N-th order Chebyshev expansion. In principle, the
-          Chebyshev expansion of the exponential represents it more
-          accurately than the canonical expansion (method 1). As in the
-          latter case, `TDExpOrder' determines the order of the
-          expansion.  (See a printed version of the manual for details)
-          See H. Tal-Ezer and R. Kosloff, J. Chem. Phys. *81*, 3967
-          (1984); R. Kosloff, Annu. Rev. Phys. Chem. *45*, 145 (1994);
-          C. W. Clenshaw, MTAC *9*, 118 (1955).
-
-
-   * `TDExpOrder' (integer, 4): For `TDExponentialMethod' equal `1' or
-     `5', the order to which the exponential is expanded. For the
-     Lanczos approximation, it is the maximum Lanczos-subspace
-     dimension.
-
-   * `TDLanczosTol' (real, 1e-4): An internal tolerance variable for
-     the Lanczos method. The smaller, the more precisely the
-     exponential is calculated.
+   * `5': Magnus Expansion (M4).
 
    * `TDLasers' (block data): Each line of the block describes a laser
      pulse applied to the system.  The syntax is:
@@ -933,131 +1097,4 @@ able to play. Here it is (in AA):
    Follow now the steps of the previous example. Carbon and Hydrogen
 have a much harder pseudo-potential than Sodium, so you will probably
 have to use a tighter mesh. It also takes much more time...
-
-
-File: octopus.info,  Node: Options Index,  Prev: Examples,  Up: Top
-
-Options Index
-*************
-
-* Menu:
-
-* ABHeight:                              Time Dependent.
-* AbsorbingBoundaries:                   Time Dependent.
-* ABWidth:                               Time Dependent.
-* AdjustCoordinates:                     Coordinates.
-* BoxShape:                              Mesh.
-* CalcPES_mask:                          Photo-electron spectrum.
-* CalcPES_rc:                            Photo-electron spectrum.
-* CalculationMode:                       Generalities.
-* CFunctional:                           Exchange and correlation.
-* ChooseStates:                          choose_st.
-* ChooseStatesFilename:                  choose_st.
-* ClassicPotential:                      Hamiltonian.
-* ConvAbsDens:                           SCF.
-* ConvAbsEv:                             SCF.
-* ConvRelDens:                           SCF.
-* ConvRelEnergy:                         SCF.
-* Coordinates:                           Coordinates.
-* DebugLevel:                            Generalities.
-* DerivativesSpace:                      Mesh.
-* Dimensions:                            Generalities.
-* Displacement:                          Varia.
-* DoubleFFTParameter:                    Mesh.
-* EigenSolver:                           SCF.
-* EigenSolverFinalTolerance:             SCF.
-* EigenSolverFinalToleranceIteration:    SCF.
-* EigenSolverInitTolerance:              SCF.
-* EigenSolverMaxIter:                    SCF.
-* ElectronicTemperature:                 States.
-* ExcessCharge:                          States.
-* ExtraStates:                           States.
-* FFTOptimize:                           Mesh.
-* GOMaxIter:                             Geometry optimization.
-* GOMethod:                              Geometry optimization.
-* GOStep:                                Geometry optimization.
-* GOTolerance:                           Geometry optimization.
-* HSPolarization:                        Spectrum calculations.
-* LCAOStart:                             SCF.
-* LocalPotentialSpace:                   Hamiltonian.
-* Lsize:                                 Mesh.
-* MainAxis:                              Coordinates.
-* MakeStates:                            make_st.
-* MaximumIter:                           SCF.
-* Mixing:                                SCF.
-* MixNumberSteps:                        SCF.
-* MoveIons:                              Time Dependent.
-* NonInteractingElectrons:               Hamiltonian.
-* NumberCG:                              SCF.
-* NumberKPoints:                         States.
-* Occupations:                           States.
-* OrderDerivatives:                      Mesh.
-* OutputAxisX:                           Function output for visualization.
-* OutputAxisY:                           Function output for visualization.
-* OutputAxisZ:                           Function output for visualization.
-* OutputDensity:                         Function output for visualization.
-* OutputDX:                              Function output for visualization.
-* OutputELF:                             Function output for visualization.
-* OutputEvery:                           Function output for visualization.
-* OutputGeometry:                        Function output for visualization.
-* OutputKSPotential:                     Function output for visualization.
-* OutputNETCDF:                          Function output for visualization.
-* OutputPlaneX:                          Function output for visualization.
-* OutputPlaneY:                          Function output for visualization.
-* OutputPlaneZ:                          Function output for visualization.
-* OutputWfs:                             Function output for visualization.
-* OutputWfsNumber:                       Function output for visualization.
-* PDBCoordinates:                        Coordinates.
-* PES_rc_points:                         Photo-electron spectrum.
-* PoissonSolver:                         Varia.
-* POLStaticField:                        Varia.
-* Radius:                                Mesh.
-* RandomVelocityTemp:                    Velocities.
-* RelativisticCorrection:                Hamiltonian.
-* SCFinLCAO:                             SCF.
-* Spacing:                               Mesh.
-* SpecDampFactor:                        Spectrum calculations.
-* SpecDampMode:                          Spectrum calculations.
-* SpecEndTime:                           Spectrum calculations.
-* SpecEnergyStep:                        Spectrum calculations.
-* Species:                               Species.
-* SpecMaxEnergy:                         Spectrum calculations.
-* SpecMinEnergy:                         Spectrum calculations.
-* SpecStartTime:                         Spectrum calculations.
-* SpecTransformMode:                     Spectrum calculations.
-* SpinComponents:                        States.
-* SystemName:                            Generalities.
-* TDDeltaStrength:                       Time Dependent.
-* TDDipoleLmax:                          Time Dependent.
-* TDEvolutionMethod:                     Time Dependent.
-* TDExponentialMethod:                   Time Dependent.
-* TDExpOrder:                            Time Dependent.
-* TDGauge:                               Time Dependent.
-* TDLanczosTol:                          Time Dependent.
-* TDLasers:                              Time Dependent.
-* TDMaximumIter:                         Time Dependent.
-* TDOutputAcceleration:                  Time Dependent.
-* TDOutputCoordinates:                   Time Dependent.
-* TDOutputElEnergy:                      Time Dependent.
-* TDOutputGSProjection:                  Time Dependent.
-* TDOutputLaser:                         Time Dependent.
-* TDOutputMultipoles:                    Time Dependent.
-* TDOutputOccAnalysis:                   Time Dependent.
-* TDPolarization:                        Time Dependent.
-* TDTimeStep:                            Time Dependent.
-* TypeOfMixing:                          SCF.
-* Units:                                 Generalities.
-* UnitsInput:                            Generalities.
-* UnitsOutput:                           Generalities.
-* UnoccConv:                             Unoccupied States.
-* UnoccMaximumIter:                      Unoccupied States.
-* UnoccNumberStates:                     Unoccupied States.
-* Velocities:                            Velocities.
-* Verbose:                               Generalities.
-* What2Mix:                              SCF.
-* XFunctional:                           Exchange and correlation.
-* XLength:                               Mesh.
-* XYZCoordinates:                        Coordinates.
-* XYZVelocities::                        Velocities.
-
 
