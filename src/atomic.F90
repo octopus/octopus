@@ -269,7 +269,10 @@ contains
   ENDIF
 
   ! initialize xc functional
-  if(.not.GGA) then
+  if(GGA) then
+    call xc_gga_init(x_conf, XC_GGA_X_PBE, NSPIN)
+    call xc_gga_init(c_conf, XC_GGA_C_PBE, NSPIN)
+  else
     call xc_lda_x_init(x_conf, NSPIN, 3, IREL)
     if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
        AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
@@ -364,8 +367,8 @@ contains
 !    Find exchange and correlation energy densities and their 
 !    derivatives with respect to density and density gradient
      IF (GGA) THEN
-        CALL GGAXC( AUTHOR, IREL, NSPIN, D, GD,                               &
-                    EPSX, EPSC, DEXDD, DECDD, DEXDGD, DECDGD )
+       call xc_gga(x_conf, D(1), GD(1,1), EPSX, DEXDD(1), DEXDGD(1,1))
+       call xc_gga(c_conf, D(1), GD(1,1), EPSC, DECDD(1), DECDGD(1,1))
      ELSE
        call xc_lda(x_conf, D(1), EPSX, DEXDD(1))
        call xc_lda(c_conf, D(1), EPSC, DECDD(1))
@@ -420,7 +423,10 @@ contains
     end DO
   end DO
 
-  if(.not.GGA) then
+  if(GGA) then
+    call xc_gga_end(x_conf)
+    call xc_gga_end(c_conf)
+  else
     call xc_lda_end(x_conf)
     call xc_lda_end(c_conf)
   end if

@@ -15,13 +15,13 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
-  type(xc_type),     intent(IN)  :: xcs
-  type(mesh_type),   intent(IN)  :: m
-  type(f_der_type), intent(inout) :: f_der
-  type(states_type), intent(IN)  :: st
-  FLOAT,             intent(out) :: vxc(m%np, st%d%nspin), ex, ec
-  FLOAT,             intent(in)  :: ip, qtot
+subroutine xc_get_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
+  type(xc_type),     intent(IN)    :: xcs
+  type(mesh_type),   intent(IN)    :: m
+  type(f_der_type),  intent(inout) :: f_der
+  type(states_type), intent(IN)    :: st
+  FLOAT,             intent(out)   :: vxc(m%np, st%d%nspin), ex, ec
+  FLOAT,             intent(in)    :: ip, qtot
   
   FLOAT :: e, dpol, dtot, vpol, r
 
@@ -88,25 +88,24 @@ subroutine xc_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
     endif
 
     ! Calculate the potential/gradient density in local reference frame.
-    functl_loop: do ixc = 0, N_X_FUNCTL+N_C_FUNCTL-1
-      if(.not.btest(xcs%functl, ixc)) cycle
+    functl_loop: do ixc = 1, XC_GGA_N
+      if(.not.btest(xcs%gga_functl, ixc)) cycle
         
-      select case(ibset(0, ixc))
-      case(X_FUNC_GGA_PBE)
-        call pbex(0, spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
-      case(X_FUNC_GGA_PBER)
-        call pbex(1, spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
-      case(X_FUNC_GGA_LB94)
-        call mesh_r(m, i, r)
-        call lb94(spin_channels, locald, localgd, localdedd, &
-             r, ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
-        e = M_ZERO
-        vlocaldedgd1(:,:) = M_ZERO
-      case(C_FUNC_GGA_PBE)
-        call pbec(spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
-      end select
+      ! call xc library
+      call xc_gga(xcs%gga_conf(ixc), locald(1), localgd(1,1), &
+         e, localdedd(1), vlocaldedgd1(1,1))
+
+      !case(X_FUNC_GGA_LB94)
+      !call mesh_r(m, i, r)
+      !call lb94(spin_channels, locald, localgd, localdedd, &
+      !     r, ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
+      !e = M_ZERO
+      !vlocaldedgd1(:,:) = M_ZERO
+      !case(C_FUNC_GGA_PBE)
+      !  call pbec(spin_channels, locald, localgd, e, localdedd, vlocaldedgd1(:,:))
+      !end select
       
-      if(ixc < N_X_FUNCTL) then
+      if(ixc == XC_GGA_X_PBE-100) then
         ex = ex + sum(d(i,:)) * e * m%vol_pp(i)
       else
         ec = ec + sum(d(i,:)) * e * m%vol_pp(i)
@@ -142,15 +141,15 @@ subroutine xc_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   
   ! If LB94, we have to calculate the energy 
   ! Levy-Perdew relation (PRA 32, 2010 (1985))
-  if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-    do is = 1, st%d%nspin
-      call df_gradient(f_der, vxc(:, is), grhoplus)
-      do i = 1, m%np
-        ex = ex - d(i, is) * sum(m%x(i,:)*grhoplus(i,:)) * m%vol_pp(i)
-      end do
-    end do
-  end if
+  !if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
+  !  do is = 1, st%d%nspin
+  !    call df_gradient(f_der, vxc(:, is), grhoplus)
+  !    do i = 1, m%np
+  !      ex = ex - d(i, is) * sum(m%x(i,:)*grhoplus(i,:)) * m%vol_pp(i)
+  !    end do
+  !  end do
+  !end if
 
   deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus, vlocaldedgd, vlocaldedgd1)
   call pop_sub()
-end subroutine xc_gga
+end subroutine xc_get_gga

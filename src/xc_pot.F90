@@ -45,9 +45,9 @@ subroutine X(xc_pot) (xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
     if(btest(xcs%family, i)) then
       select case(ibset(0, i))
       case(XC_FAMILY_LDA)
-        call xc_get_lda (xcs, m, st, vxc, ex, ec)
+        call xc_get_lda(xcs, m, st, vxc, ex, ec)
       case(XC_FAMILY_GGA)
-        call xc_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
+        call xc_get_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
 !!$      case(XC_FAMILY_MGGA)
 !!$        call X(xc_mgga) (xcs%functl, xcs, m, nst, st%d%nspin, psi, occ, eigenval, &
 !!$             rho, vx, ex)

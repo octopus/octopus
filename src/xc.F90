@@ -100,6 +100,9 @@ type xc_type
 
   integer               :: lda_functl
   integer(POINTER_SIZE) :: lda_conf(XC_LDA_N)
+
+  integer               :: gga_functl
+  integer(POINTER_SIZE) :: gga_conf(XC_GGA_N)
 end type xc_type
 
 
@@ -165,6 +168,7 @@ subroutine xc_init(xcs, nlcc, spin_channels)
   xcs%functl = 0
 
   xcs%lda_functl = 0
+  xcs%gga_functl = 0
 
   ! set the appropriate flags
   call loct_parse_int('XFunctional', XC_LDA_X, func)
@@ -176,12 +180,11 @@ subroutine xc_init(xcs, nlcc, spin_channels)
     call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
     call xc_lda_x_init(xcs%lda_conf(XC_LDA_X), spin_channels, conf%dim, rel)
     
-!  case('PBE')
-!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-!    xcs%functl = ior(xcs%functl, X_FUNC_GGA_PBE)
-!  case('RPBE')
-!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-!    xcs%functl = ior(xcs%functl, X_FUNC_GGA_PBER)
+  case(XC_GGA_X_PBE)
+    xcs%family     = ior(xcs%family, XC_FAMILY_GGA)
+    xcs%gga_functl = ibset(xcs%gga_functl, func - 100)
+    call xc_gga_init(xcs%gga_conf(func - 100), func, spin_channels)
+
 !  case('LB94')
 !    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
 !    xcs%functl = ior(xcs%functl, X_FUNC_GGA_LB94)
@@ -209,9 +212,9 @@ subroutine xc_init(xcs, nlcc, spin_channels)
      XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
      XC_LDA_C_LYP, XC_LDA_C_AMGB)
     
-    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
+    xcs%family     = ior(xcs%family, XC_FAMILY_LDA)
+    xcs%lda_functl = ibset(xcs%lda_functl, func)
     if(func.ne.XC_LDA_C_XALPHA) then
-      xcs%lda_functl = ibset(xcs%lda_functl, func)
       call xc_lda_init(xcs%lda_conf(func), func, spin_channels)
     else
       call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
@@ -220,9 +223,11 @@ subroutine xc_init(xcs, nlcc, spin_channels)
       call xc_lda_c_xalpha_init(xcs%lda_conf(func), spin_channels, conf%dim, rel, alpha)
     end if
 
-!  case('PBE ')
-!    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
-!    xcs%functl = ior(xcs%functl, C_FUNC_GGA_PBE)
+  case(XC_GGA_C_PBE)
+    xcs%family     = ior(xcs%family, XC_FAMILY_GGA)
+    xcs%gga_functl = ibset(xcs%gga_functl, func - 100)
+    call xc_gga_init(xcs%gga_conf(func - 100), func, spin_channels)
+
 !  case('PKZB')
 !    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
 !    xcs%functl = ior(xcs%functl, C_FUNC_MGGA_PKZB)
