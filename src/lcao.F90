@@ -35,8 +35,8 @@ module lcao
 type lcao_type
   integer           :: mode
   integer           :: dim
-  real(r8), pointer :: psis(:,:,:)
-  real(r8), pointer :: hamilt(:,:), k_plus_psv(:,:,:), s(:,:,:)
+  R_TYPE , pointer :: psis(:,:,:)
+  R_TYPE , pointer :: hamilt(:,:), k_plus_psv(:,:,:), s(:,:,:)
   logical, pointer  :: atoml(:,:)
 end type
 
@@ -157,7 +157,7 @@ subroutine lcao_init(sys, h)
   integer :: norbs, i, a, ik, n1, i1, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
   integer, parameter :: orbs_local = 2
 
-  real(r8), allocatable :: psi1(:,:), psi2(:,:), hpsi(:,:)
+  R_TYPE, allocatable :: psi1(:,:), psi2(:,:), hpsi(:,:)
   real(r8) :: s
 
   real(r8) :: uVpsi
@@ -174,8 +174,8 @@ subroutine lcao_init(sys, h)
         lm_loop: do lm1 = -l1, l1
           d_loop: do d1 = 1, sys%st%dim
             call get_wf(sys, i1, l1, lm1, d1, psi1)
-            s = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi1(1:,:))
-            if(s < 0.1_r8) then
+            s = R_FUNC(states_dotp)(sys%m, sys%st%dim, psi1(1:,:), psi1(1:,:))
+            if(abs(s) < 0.1_r8) then
               lcao_data%atoml(i1, l1) = .false.
               norbs = norbs - (lm1 + l1)*sys%st%dim 
               cycle l_loop
@@ -236,12 +236,12 @@ subroutine lcao_init(sys, h)
               call R_FUNC(mesh_derivatives) (sys%m, psi1(:, d1), lapl=hpsi(:, d1))
               hpsi = -hpsi/2.0_r8
               hpsi(:, d1) = hpsi(:, d1) + h%vpsl*psi1(1:,d1)
-              call dvnlpsi(sys, psi1(:,:), hpsi)
+              call R_FUNC(vnlpsi)(sys, psi1(:,:), hpsi)
             case(MEM_INTENSIVE)
               call R_FUNC(mesh_derivatives) (sys%m, lcao_data%psis(:,d1,n1), lapl=hpsi(:, d1))
               hpsi = -hpsi/2.0_r8
               hpsi(:, d1) = hpsi(:, d1) + h%vpsl*lcao_data%psis(1:,d1,n1)
-              call dvnlpsi(sys, lcao_data%psis(:,:,n1), hpsi)
+              call R_FUNC(vnlpsi)(sys, lcao_data%psis(:,:,n1), hpsi)
             end select
 
             n2 = 1
@@ -253,11 +253,11 @@ subroutine lcao_init(sys, h)
                     select case(lcao_data%mode)
                     case(CPU_INTENSIVE)
                       call get_wf(sys, i2, l2, lm2, d2, psi2)
-                      lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
-                      lcao_data%k_plus_psv(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:, :))
+                      lcao_data%s(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
+                      lcao_data%k_plus_psv(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, psi2(1:, :))
                     case(MEM_INTENSIVE)
-                      lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, lcao_data%psis(1:,:,n1), lcao_data%psis(1:,:,n2))
-                      lcao_data%k_plus_psv(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, :, n2))
+                      lcao_data%s(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, lcao_data%psis(1:,:,n1), lcao_data%psis(1:,:,n2))
+                      lcao_data%k_plus_psv(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, :, n2))
                     end select
                     lcao_data%s(ik, n2, n1) = lcao_data%s(ik, n1, n2)
                     lcao_data%k_plus_psv(ik, n2, n1) = lcao_data%k_plus_psv(ik, n1, n2)
@@ -298,14 +298,14 @@ subroutine lcao_wf(sys, h)
 
   integer :: a, idim, i, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
-  real(r8), allocatable :: hpsi(:,:), psi1(:,:), psi2(:,:)
-  real(r8), allocatable :: s(:,:)
+  R_TYPE, allocatable :: hpsi(:,:), psi1(:,:), psi2(:,:)
+  R_TYPE, allocatable :: s(:,:)
   real(r8) :: uvpsi
 
   ! variables for dsyev (LAPACK)
-  character(len=1) :: jobz, uplo
   integer :: lwork, info
-  real(r8), allocatable :: work(:), w(:)
+  R_TYPE, allocatable :: work(:)
+  real(r8), allocatable :: rwork(:), w(:)
 
   sub_name = 'lcao_wf'; call push_sub()
 
@@ -344,11 +344,11 @@ subroutine lcao_wf(sys, h)
                     select case(lcao_data%mode)
                     case(MEM_INTENSIVE)
                       lcao_data%hamilt(n1, n2) = lcao_data%k_plus_psv(ik, n1, n2) + & 
-                                                 dstates_dotp(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, : ,n2))
+                                                 R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, : ,n2))
                     case(CPU_INTENSIVE)
                       call get_wf(sys, i2, l2, lm2, d2, psi2)
                       lcao_data%hamilt(n1, n2) = lcao_data%k_plus_psv(ik, n1, n2) + &
-                                                 dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
+                                                 R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, psi2(1:,:))
                     end select
 
                     lcao_data%hamilt(n2, n1) = lcao_data%hamilt(n1, n2)
@@ -383,19 +383,20 @@ subroutine lcao_wf(sys, h)
 !!$    enddo
 !!$    ! End of debugging
 
-    ! Setting variables for dsyev
-    jobz = 'v'
-    uplo = 'u'
+    ! Hamiltonian diagonalization
     lwork = 3*norbs - 1
-    allocate(work(lwork), w(norbs), s(norbs, norbs))
+    allocate(work(lwork), w(norbs), rwork(lwork), s(norbs, norbs))
     s(1:norbs, 1:norbs) = lcao_data%s(ik, 1:norbs, 1:norbs)
-
-    call dsygv(1, jobz, uplo, norbs, lcao_data%hamilt, norbs, s, norbs, w, work, lwork, info)
+#ifdef COMPLEX_WFNS
+    call zhegv (1, 'v', 'u', norbs, lcao_data%hamilt, norbs, s, norbs, w, work, lwork, rwork, info)
+#else
+    call dsygv (1, 'v', 'u', norbs, lcao_data%hamilt, norbs, s, norbs, w, work, lwork, info)
+#endif
     if(info.ne.0) then
-      write(message(1),'(a,i5)') 'LAPACK "dsygv" returned error code ', info
+      write(message(1),'(a,i5)') 'LAPACK "zhegv/dsygv" returned error code ', info
       call write_fatal(1)
     endif
-    deallocate(work, w, s)
+    deallocate(work, w, s, rwork)
 
     sys%st%R_FUNC(psi)(:,:,:, ik) = 0.0_r8
 
@@ -434,7 +435,7 @@ end subroutine lcao_wf
 subroutine get_wf(sys, i, l, lm, d, psi)
   type(system_type), intent(IN) :: sys
   integer, intent(in)   :: i, l, lm, d
-  real(r8), intent(out) :: psi(0:sys%m%np, sys%st%dim)
+  R_TYPE, intent(out) :: psi(0:sys%m%np, sys%st%dim)
     
   integer :: j, d2
   real(r8) :: x(3), a(3), r, p, ylm, g(3)

@@ -321,7 +321,6 @@ end function my_sign
 
 #include "xc_LDA.F90"
 #include "xc_GGA.F90"
-#include "xc_HJU.F90"
 !#include "xc_MGGA.F90"
 
 #include "undef.F90"
@@ -330,6 +329,8 @@ end function my_sign
 #include "xc_KLI.F90"
 #include "xc_KLI_x.F90"
 #include "xc_KLI_SIC.F90"
+#include "xc_HJU.F90"
+
 #include "undef.F90"
 
 #include "complex.F90"
@@ -337,6 +338,8 @@ end function my_sign
 #include "xc_KLI.F90"
 #include "xc_KLI_x.F90"
 #include "xc_KLI_SIC.F90"
+#include "xc_HJU.F90"
+
 #include "undef.F90"
 
 end module xc

@@ -124,7 +124,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
         b0 = R_FUNC(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
-        theta = atan(a0/(e0 - b0))/2.0_r8
+        theta = atan(R_REAL(a0/(e0 - b0)))/2.0_r8
         es(1) = ((e0-b0)*cos(2.0_r8*theta) + a0*sin(2.0_r8*theta) + e0 + b0) / 2.0_r8
         es(2) =(-(e0-b0)*cos(2.0_r8*theta) - a0*sin(2.0_r8*theta) + e0 + b0) / 2.0_r8
         

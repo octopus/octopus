@@ -36,7 +36,7 @@ program function_to_dx
   character(len=30) :: filename, str
   character(len=5)  :: nstr1, nstr2, nstr3
   integer :: ierr, i, j, iunit_data, iunit_header, norbitals, unocc_states
-  real(r8), pointer :: f(:)
+  R_TYPE, pointer :: f(:)
   type(system_type) :: sys
   type(orbital_type), allocatable :: orbital(:)
 
@@ -72,7 +72,7 @@ program function_to_dx
      call write_fatal(1)
   endif
 
-  str = C_string('DXOrbitalToPlot')
+  str = C_string("DXOrbitalToPlot")
   norbitals = oct_parse_block_n(trim(str))
   allocate(orbital(norbitals))
   if(norbitals > 0) then
@@ -88,15 +88,15 @@ program function_to_dx
        open(unit=iunit_header, file=filename, form='formatted')
        filename = trim(sys%sysname)+"."+trim(nstr1)+"."+trim(nstr2)+"."+trim(nstr3)+".dxdata"
        open(unit=iunit_data, file=filename, form='formatted')
-       call create_dx_file(iunit_data, filename, iunit_header, sys%m, &
-                           (sys%st%dpsi(1:sys%m%np, orbital(j)%spin, orbital(j)%n, orbital(j)%k))**2 )
+       call R_FUNC(create_dx_file) (iunit_data, filename, iunit_header, sys%m, &
+                           (sys%st%R_FUNC(psi)(1:sys%m%np, orbital(j)%spin, orbital(j)%n, orbital(j)%k))**2 )
        call io_close(iunit_data) ;call io_close(iunit_header)
        enddo
   else
     call io_assign(iunit_data); call io_assign(iunit_header)
     open(unit=iunit_data, file=trim(sys%sysname)+".dxdata", form='formatted')
     open(unit=iunit_header, file=trim(sys%sysname)+".general", form='formatted')
-    call create_dx_file(iunit_data, trim(sys%sysname)+".dxdata", &
+    call dcreate_dx_file(iunit_data, trim(sys%sysname)+".dxdata", &
                       iunit_header, sys%m, sys%st%rho(1:sys%m%np, 1) )
     call io_close(iunit_data) ;call io_close(iunit_header)
   endif

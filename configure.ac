@@ -31,6 +31,7 @@ AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel versio
 AC_ARG_ENABLE(1d, AC_HELP_STRING([--enable-1d], [Let us work in 1D]), ONE_D=1)
 AC_ARG_ENABLE(3d, AC_HELP_STRING([--enable-3d], [or, if you prefer, in 3D]), [THREE_D=1])
 AC_ARG_ENABLE(pol, AC_HELP_STRING([--enable-pol], [Polymers anyone?]), [POLYMERS=1])
+AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 
 # set program name
 PROGNAME="octopus"
@@ -50,9 +51,17 @@ fi
 AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
 AC_SUBST(PROGNAME)
 
+# complex wavefunctions
+if test "${COMPLEX_WFNS}"; then
+        AC_DEFINE(COMPLEX_WFNS, 1, [Code compiled for ground-state complex wavefunctions])
+        msg2="complex wave functions"
+fi
+
+
 echo "**********************************************"
 echo "***   $PROGNAME will be generated"
 echo "***       (for $msg)"
+echo "***       ($msg2)"
 echo "**********************************************"
 
 # who am i
