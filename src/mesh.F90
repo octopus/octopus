@@ -105,6 +105,9 @@ subroutine mesh_init(m, natoms, atom)
   
   ! only non-periodic directions are optimized
   m%fft_n(:)  = 2*m%nr(:) + 1
+  do i = 1, conf%periodic_dim
+    m%fft_n(i) = m%fft_n(i) - 1
+  end do
   do i = conf%periodic_dim+1, conf%dim ! always ask for an odd number
      if(m%fft_n(i).ne.1 .and. fft_optimize) call oct_fft_optimize(m%fft_n(i), 7, 1)
   end do
