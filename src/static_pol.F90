@@ -78,7 +78,7 @@ subroutine static_pol_run(scf, sys, h)
     call write_info(1)
 
     h%Vpsl = Vpsl_save
-    h%Vpsl = h%Vpsl - sys%m%Lxyz(i,:)*sys%m%h(i)*e_field
+    if(i>0) h%Vpsl = h%Vpsl - sys%m%Lxyz(i,:)*sys%m%h(i)*e_field
 
     call scf_run(scf, sys, h)
     
