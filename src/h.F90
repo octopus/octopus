@@ -164,8 +164,8 @@ subroutine hamiltonian_init(h, sys)
     call write_fatal(1)
   endif
   if(h%reltype == SPIN_ORBIT) then
-    message(1) = 'WARNING: Spin-Orbit coupling currently only works if only HGH-type pseudopotentials'
-    message(2) = 'are used. Visit us soon for more generality.'
+    message(1) = 'WARNING: Spin-Orbit coupling currently only works if only HGH-type'
+    message(2) = 'pseudopotentials are used. Visit us soon for more generality.'
     call write_warning(2)
   endif
 #else

@@ -190,7 +190,13 @@ subroutine lcao_init(sys, h)
            endif
       end do l_loop
   enddo atoms_loop
-  if(sys%st%ispin == 3) norbs = norbs * 2  
+
+  select case(sys%st%ispin)
+   case(1);
+   case(2); ! No need to multiply by two, since each spin-channel goes to a k-subspace.
+   case(3); norbs = norbs * 2
+  end select
+
   lcao_data%dim = norbs
   if(norbs < sys%st%nst) then
     write(message(1), '(a)') 'Internal bug: LCAO basis dimension, norbs, is smaller than'
@@ -201,107 +207,38 @@ subroutine lcao_init(sys, h)
   write(message(2), '(a)')    '      (not cosidering spin or k-points)'
   call write_info(2)
 
-  ! Gets the mode
-  call oct_parse_int(C_string("LCAOMode"), MEM_INTENSIVE, lcao_data%mode)
-  if(lcao_data%mode < MEM_INTENSIVE .or. lcao_data%mode > CPU_INTENSIVE) then
-    message(1) = "LCAOMode not valid"
-    message(2) = "LCAOMode = 0 (memory intensive) | 1 (cpu intensive)"
-  end if
+!!$  ! Gets the mode
+!!$  call oct_parse_int(C_string("LCAOMode"), MEM_INTENSIVE, lcao_data%mode)
+!!$  if(lcao_data%mode < MEM_INTENSIVE .or. lcao_data%mode > CPU_INTENSIVE) then
+!!$    message(1) = "LCAOMode not valid"
+!!$    message(2) = "LCAOMode = 0 (memory intensive) | 1 (cpu intensive)"
+!!$  end if
 
-  ! Gets the wave-functions
-  if(lcao_data%mode == MEM_INTENSIVE) then
-    allocate(lcao_data%psis(0:sys%m%np, sys%st%dim, norbs, sys%st%nik))
-    lcao_data%psis = 0._r8
-      do ik = 1, sys%st%nik
-         n1 = 1
-         do i1 = 1, sys%natoms
-            do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
-               if(.not. lcao_data%atoml(i1, l1)) cycle
-               do lm1 = -l1, l1
-                  do d1 = 1, sys%st%dim
-                     ispin = states_spin_channel(sys%st%ispin, ik, d1)
-                     call get_wf(sys, i1, l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
-                     n1 = n1 + 1
-                  end do
-               end do
-            end do
-         end do
-      end do
-  end if
+!!$  ! Gets the wave-functions
+!!$  if(lcao_data%mode == MEM_INTENSIVE) then
+  allocate(lcao_data%psis(0:sys%m%np, sys%st%dim, norbs, sys%st%nik))
+  lcao_data%psis = 0._r8
+  do ik = 1, sys%st%nik
+     n1 = 1
+     do i1 = 1, sys%natoms
+        do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
+           if(.not. lcao_data%atoml(i1, l1)) cycle
+           do lm1 = -l1, l1
+              do d1 = 1, sys%st%dim
+                 ispin = states_spin_channel(sys%st%ispin, ik, d1)
+                 call get_wf(sys, i1, l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
+                 n1 = n1 + 1
+              end do
+           end do
+        end do
+     end do
+  end do
+!!$  end if
 
   ! Allocation of variables
   allocate(lcao_data%hamilt    (sys%st%nik, norbs, norbs), &
            lcao_data%s         (sys%st%nik, norbs, norbs), &
            lcao_data%k_plus_psv(sys%st%nik, norbs, norbs))
-
-  !Fixes, once and for all, the overlap matrix and kinetic + pseudopotential matrixes..
-  if(lcao_data%mode == CPU_INTENSIVE)       &
-     allocate(psi1(0:sys%m%np, sys%st%dim), &
-              psi2(0:sys%m%np, sys%st%dim))
-  allocate(hpsi(sys%m%np, sys%st%dim))
-  hpsi = 0.0_r8
-  ik_loop : do ik = 1, sys%st%nik
-    n1 = 1
-    atoms1_loop: do i1 = 1, sys%natoms
-      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
-        if(.not. lcao_data%atoml(i1, l1))  cycle
-        lm1_loop: do lm1 = -l1, l1
-          d1_loop: do d1 = 1, sys%st%dim
-            ispin = states_spin_channel(sys%st%ispin, ik, d1)
-            select case(lcao_data%mode)
-            case(CPU_INTENSIVE)
-              psi1 = R_TOTYPE(0._r8)
-              call get_wf(sys, i1, l1, lm1, ispin, psi1(:, d1))
-              call R_FUNC(mesh_derivatives) (sys%m, psi1(:, d1), lapl=hpsi(:, d1))
-              hpsi = -hpsi/2.0_r8
-              hpsi(:, d1) = hpsi(:, d1) + h%vpsl*psi1(1:, d1)
-              call R_FUNC(vnlpsi)(sys, psi1(:, :), hpsi)
-            case(MEM_INTENSIVE)
-              call R_FUNC(mesh_derivatives) (sys%m, lcao_data%psis(:, d1, n1, ik), lapl=hpsi(:, d1))
-              hpsi = -hpsi/2.0_r8
-              hpsi(:, d1) = hpsi(:, d1) + h%vpsl*lcao_data%psis(1:, d1, n1, ik)
-              call R_FUNC(vnlpsi)(sys, lcao_data%psis(:, :, n1, ik), hpsi)
-            end select
-
-          n2 = 1
-          atoms2_loop: do i2 = 1, sys%natoms
-            l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max_occ
-              if(.not. lcao_data%atoml(i1, l1)) cycle
-              lm2_loop: do lm2 = -l2, l2
-                d2_loop: do d2 = 1, sys%st%dim
-                  psi2 = R_TOTYPE(0._r8)
-                  ispin = states_spin_channel(sys%st%ispin, ik, d2)
-                  select case(lcao_data%mode)
-                  case(CPU_INTENSIVE)
-                    call get_wf(sys, i2, l2, lm2, ispin, psi2(:, d2))
-                    lcao_data%s(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
-                    lcao_data%k_plus_psv(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, psi2(1:, :))
-                  case(MEM_INTENSIVE)
-                    lcao_data%s(ik, n1, n2) = &
-                        R_FUNC(states_dotp)(sys%m, sys%st%dim, lcao_data%psis(1:,:,n1, ik), &
-                                                                 lcao_data%psis(1:,:,n2, ik))
-                    lcao_data%k_plus_psv(ik, n1, n2) = &
-                          R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, :, n2, ik))
-                  end select
-                  lcao_data%s(ik, n2, n1) = lcao_data%s(ik, n1, n2)
-                  lcao_data%k_plus_psv(ik, n2, n1) = lcao_data%k_plus_psv(ik, n1, n2)
-
-                  n2 = n2 + 1
-                  if(n2 > n1) exit atoms2_loop
-                end do d2_loop
-              end do lm2_loop
-            end do l2_loop
-          end do atoms2_loop
-
-          n1 = n1 + 1
-          end do d1_loop
-
-        end do lm1_loop
-      end do l1_loop
-    end do atoms1_loop
-  enddo ik_loop
-  if(lcao_data%mode==1) deallocate(psi1, psi2)
-  deallocate(hpsi)
 
   call pop_sub()
 end subroutine lcao_init
@@ -323,7 +260,7 @@ subroutine lcao_wf(sys, h)
 
   integer :: a, idim, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
-  R_TYPE, allocatable :: hpsi(:,:), psi1(:,:), psi2(:,:)
+  R_TYPE, allocatable :: hpsi(:,:)
   R_TYPE, allocatable :: s(:,:)
   real(r8) :: uvpsi
 
@@ -337,81 +274,21 @@ subroutine lcao_wf(sys, h)
   norbs = lcao_data%dim
   mode  = lcao_data%mode
 
-  ! Allocation of variables
-  if(mode == 1) allocate(psi1(0:sys%m%np, sys%st%dim), psi2(0:sys%m%np, sys%st%dim))
-
-  ! Hamiltonian and overlap matrices, etc...
+  ! Hamiltonian and overlap matrices.
   allocate(hpsi(sys%m%np, sys%st%dim))
-
-  ik_loop : do ik = 1, sys%st%nik
-    n1 = 1
-    atoms1_loop: do i1 = 1, sys%natoms
-      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
-        if(.not.lcao_data%atoml(i1, l1)) cycle l1_loop
-        lm1_loop: do lm1 = -l1, l1
-          d1_loop: do d1 = 1, sys%st%dim
-            ispin = states_spin_channel(sys%st%ispin, ik, d1)
-            select case(lcao_data%mode)
-            case(MEM_INTENSIVE)
-              hpsi(:, d1) = h%vhartree*lcao_data%psis(1:, d1, n1, ik)
-              hpsi(:, d1) = hpsi(:, d1) + h%Vxc(:, ispin)*lcao_data%psis(1:, d1, n1, ik)
-            case(CPU_INTENSIVE)
-              call get_wf(sys, i1, l1, lm1, ispin, psi1(:, d1))
-              hpsi(:, d1) = h%vhartree*psi1(1:, d1)
-              hpsi(:, d1) = hpsi(:, d1) + h%Vxc(:, ispin)*psi1(1:, d1)
-            end select
-            
-          n2 = 1
-          atoms2_loop: do i2 = 1, sys%natoms
-            l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max_occ
-              if(.not.lcao_data%atoml(i2, l2)) cycle l2_loop
-              lm2_loop: do lm2 = -l2, l2
-                d2_loop: do d2 = 1, sys%st%dim
-                  select case(lcao_data%mode)
-                  case(MEM_INTENSIVE)
-                    lcao_data%hamilt(ik, n1, n2) = lcao_data%k_plus_psv(ik, n1, n2) + & 
-                                R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
-                  case(CPU_INTENSIVE)
-                    call get_wf(sys, i2, l2, lm2, d2, psi2)
-                    lcao_data%hamilt(ik, n1, n2) = lcao_data%k_plus_psv(ik, n1, n2) + &
-                                R_FUNC(states_dotp)(sys%m, sys%st%dim, hpsi, psi2(1:,:))
-                  end select
-
-                  lcao_data%hamilt(ik, n2, n1) = lcao_data%hamilt(ik, n1, n2)
-                end do d2_loop
-                n2 = n2 + 1
-                if(n2 > n1) exit atoms2_loop
-              end do lm2_loop
-            end do l2_loop
-          end do atoms2_loop
-
-          n1 = n1 + 1
-          end do d1_loop
-        end do lm1_loop
-      end do l1_loop
-    end do atoms1_loop
-
-  end do ik_loop
-
-!!$    ! For debugging, print out the hamiltonian and overlap matrixes...
-!!$    write(*,'(a)') '  LCAO debugging:'
-!!$    write(*,'(a)') '    Hamiltonian matrix:'
-!!$    do n1=1, norbs
-!!$       do n2=1, norbs
-!!$          write(*,'(4x,f12.6)', advance='no') lcao_data%hamilt(n1,n2)/units_out%energy%factor
-!!$       enddo
-!!$       write(*,*)
-!!$    enddo
-!!$    write(*,'(a)') '    Overlap matrix:'
-!!$    do n1=1, norbs
-!!$       do n2=1, norbs
-!!$          write(*,'(4x,f12.6)', advance='no') lcao_data%s(ik, n1,n2)
-!!$       enddo
-!!$       write(*,*)
-!!$    enddo
-!!$    ! End of debugging
-
-    ! Hamiltonian diagonalization
+  do ik = 1, sys%st%nik
+    do n1 = 1, lcao_data%dim
+       call R_FUNC(Hpsi)(h, sys, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+       do n2 = 1, lcao_data%dim
+              lcao_data%hamilt(ik, n1, n2) = &
+                        R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+                                            hpsi, lcao_data%psis(1:, : ,n2, ik))
+              lcao_data%s(ik, n1, n2) = &
+                        R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+                                            lcao_data%psis(1:, :, n1, ik), lcao_data%psis(1:, : ,n2, ik))
+       enddo
+    enddo
+  enddo
 
   do ik = 1, sys%st%nik
 
@@ -427,41 +304,21 @@ subroutine lcao_wf(sys, h)
       write(message(1),'(a,i5)') 'LAPACK "zhegv/dsygv" returned error code ', info
       call write_fatal(1)
     endif
+    sys%st%eigenval(1:sys%st%nst, ik) = w(1:sys%st%nst)
     deallocate(work, w, s, rwork)
-
-    sys%st%R_FUNC(psi)(:,:,:, ik) = 0.0_r8
-
-    n1 = 1
-    do i1 = 1, sys%natoms
-      do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
-        if(.not.lcao_data%atoml(i1, l1)) cycle
-        do lm1 = -l1, l1
+    sys%st%R_FUNC(psi)(:,:,:, ik) = R_TOTYPE(0.0_r8)
+    do n1 = 1, lcao_data%dim
+       do n2 = 1, sys%st%nst
           do d1 = 1, sys%st%dim
-            ispin = states_spin_channel(sys%st%ispin, ik, d1)
-            if(mode == 0) then
-              do n2 = 1, sys%st%nst
-                 sys%st%R_FUNC(psi) (:, d1, n2, ik) = sys%st%R_FUNC(psi) (:, d1, n2, ik) + &
-                   lcao_data%hamilt(ik, n1, n2)*lcao_data%psis(:, d1, n1, ik)
-              enddo
-            else
-              call get_wf(sys, i1, l1, lm1, ispin, psi1(:, d1))
-              do n2 = 1, sys%st%nst
-                 sys%st%R_FUNC(psi) (:, d1, n2, ik) = sys%st%R_FUNC(psi) (:, d1, n2, ik) + &
-                    lcao_data%hamilt(ik, n1, n2)*psi1(:, d1)
-              enddo
-            end if
-          n1 = n1 + 1
-          end do
-
-        end do
-      end do
-    end do
-
+            sys%st%R_FUNC(psi)(:, d1, n2, ik) = sys%st%R_FUNC(psi)(:, d1, n2, ik) + &
+              lcao_data%hamilt(ik, n1, n2) * lcao_data%psis(:, d1, n1, ik)
+          enddo
+       enddo
+    enddo
   end do
 
-  deallocate(hpsi); if(mode == 1) deallocate(psi1, psi2)
-
-  call pop_sub()
+  deallocate(hpsi)
+  call pop_sub(); return
 end subroutine lcao_wf
 
 subroutine get_wf(sys, i, l, lm, ispin, psi)
