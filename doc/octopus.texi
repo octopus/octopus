@@ -28,8 +28,8 @@ and print the results, provided the printed document
 carries a copying permission notice identical to this
 one except for the removal of this paragraph (this
 paragraph not being relevant to the printed manual).
-     
 @end ignore
+
 Permission is granted to copy and distribute modified
 versions of this manual under the conditions for
 verbatim copying, provided also that the section
@@ -52,24 +52,18 @@ translation approved by the Free Software Foundation.
 
 @c ***************TITLE PAGE AND COPYRIGHT*******************************
 @titlepage
-@c @sp 10
-@c @c The title is printed in a large font.
-@c @center @titlefont{@code{octopus} manual}
-@c @image{octosex,8cm}
-@c @center Male Hapalochlaena lunulata (top),
-@c @center and female Hapalochlaena lunulata (bottom).
-@c @center Photograph by Roy Caldwell.
-@c @c The following two commands start the copyright page.
+
 @title @code{octopus} manual
-@subtitle Electronic Structure, Molecular Dynamics and Recipes-Generator.
-@c @subtitle SECOND-SUBTITLE
+@subtitle Electronic Structure
+@subtitle Molecular Dynamics
+@subtitle Recipes-Generator
+@subtitle March 2002
 @sp 5
-@image{octosex,8cm}
+@image{octosex,8cm,}
 @center Male Hapalochlaena lunulata (top),
 @center and female Hapalochlaena lunulata (bottom).
 @center Photograph by Roy Caldwell.
 @author By Miguel A. L. Marques, Alberto Castro and Angel Rubio
-
 
 @page
 @vskip 0pt plus 1filll
@@ -143,45 +137,26 @@ translation approved by the Free Software Foundation.
 * Authors::                     
 * Introduction::                
 * Installation::                
-* Description of input options::  
+* The input file::              
 * A word about units::          
-* GNU General Public License::  
-* Concept Index::               
+* Variable Index::              
 
 @detailmenu
  --- The Detailed Node Listing ---
 
 Description of input options
 
+* The parser::                  
+* Input file options::          
+
+Input file options
+
 * Generalities::                
-* Describing the species::      
-* Describing the atoms::        
-* Describing the electrons::    
-* Mesh parameters::             
-* Self-consistent cycle::       
-* Time evolution::              
-* Varia::                       
-
-Generalities
-
-* Verbose::                     
-* SystemName::                  
-* CalculationMode::             
-* Units::                       
-
-Describing the species
-
-* NumberSpecies::               
 * Species::                     
-
-Describing the atoms
-
-* NumberAtoms::                 
-* PDBCoordinates::              
-* XYZCoordinates::              
 * Coordinates::                 
-* XYZVelocities::               
 * Velocities::                  
+* States::                      
+* xx::                          
 
 @end detailmenu
 @end menu
@@ -194,12 +169,6 @@ Describing the atoms
 
 
 @c ***************THE BODY OF THE DOCUMENT*******************************
-
-
-
-
-
-
 
 @c **********************************************************************
 @c ***************COPYING************************************************
@@ -240,12 +209,6 @@ Licenses that accompany it.
 @c **********************************************************************
 
 
-
-
-
-
-
-
 @c **********************************************************************
 @c ********************AUTHORS, COLLABORATORS AND ACKNOWLEDGEMENTS*******
 @c **********************************************************************
@@ -254,23 +217,20 @@ Licenses that accompany it.
 
 The main developing team of the first version of this program is
 made up of Miguel A. L. Marques and Angel Rubio, working at the Donostia
-International Physics Center (San Sebastia, Espanya), and Alberto
+International Physics Center (San Sebastian, Espa@~na), and Alberto
 Castro, who works at the University of Valladolid, Departamento de
 Fisica Teorica. The code is a major remake of a previous version written
 by the same team, and this one in turn was developed as an extension
 of a linear optical response code written by George F. Bertsch, K. Yabana
 and Angel Rubio.
+
+If you have some time free, and if you feel like taking a joy ride with
+FORTRAN 90, just drop us an @email{marques@@nautilus.fis.uc.pt, email}. You can
+also send us patches, comments, ideas, wishes, etc.
+
 @c **********************************************************************
 @c **********************************************************************
 @c **********************************************************************
-
-
-
-
-
-
-
-
 
 
 
@@ -283,7 +243,14 @@ and Angel Rubio.
 
      
 @code{octopus} @footnote{
-From latin @emph{octopus}, set of animals belonging to the...
+@emph{octopus}: Etymology: New Latin @emph{Octopod-}, @emph{Octopus}, 
+from Greek @emph{oktOpous}.
+Any of a genus (@emph{Octopus}) of cephalopod mollusks that have 
+eight muscular arms equipped with two rows of suckers; 
+broadly, any octopod excepting the paper nautilus.
+Something that resembles an octopus especially in having many 
+centrally directed branches.
+(taken from the Merryam-Webster's dictionary.)
 }
 is a program aimed at the ab initio virtual experimentation on 
 a hopefully ever increasing range of systems types. Its 
@@ -303,391 +270,544 @@ Pseudopotential approximation..
 
 
 
-
-
-
-
-
-
-
-
 @c **********************************************************************
 @c *************************INSTALLATION*********************************
 @c **********************************************************************
-@node Installation, Description of input options, Introduction, Top
+@node Installation, The input file, Introduction, Top
 @chapter Installation
 
+For the impatients, here goes the quickstart: 
+@example
+tar -cd octopus<-version>.tar.gz
+cd octopus-<version>
+./configure
+make
+make install
+@end example
 
-The code is written in standard Fortran 90, so you need a proper compiler.
-Any UN*X platform with an implementation of Fortran 90 should then
-be suitable to dive the @code{octopus}.
+This will probably @strong{not} work, so before giving up, just read
+the following paragraphs.
 
+The code is written in standard Fortran 90, with a couple of routines
+in C (and in bison, if we count the input parser). To build it
+you will need both a C compiler (@code{gcc} works just fine), and a
+Fortran 90 compiler. No free Fortran 90 compiler is available yet,
+so, if you want to chew the @code{octopus}, you will have either
+to help the @code{g95} project @uref{http://g95.sourceforge.net}
+or pay some money.
+
+Besides the compilers, you will still need
 @enumerate
+@item
+@code{make} :  Version 3.79 or higher of the GNU @code{make} 
+  should work, any other @emph{could} work, but maybe not.
+@item
+@code{cpp} : The C preprocessor is heavily used in @code{octopus}.
+  GNU @code{cpp} is just fine, but any @code{cpp} that accepts
+  the @code{-C} flag (preserve comments) should work just fine.
+@item
+FFTW : In principle @code{octopus} can live without FFTW, but he will
+  feel somehow weaker. Just grab this great library from @uref{http://www.fftw.org/}
+@item
+LAPACK/BLAS : Not heavily used, but required. If you are running Linux,
+there is a fair change they are already installed in your system. The same
+goes to the more heavyweight machines (alphas, IBMs, SGIs, etc). Otherwise,
+just grab the source from @uref{http://www.netlib.org}.
+@item
+GSL : Finally that someone had the nice idea of making a public scientific
+  library! GSL still needs to grow, but it is already quite useful and impressive.
+  @code{octopus} uses splines, complex numbers, special functions, etc. from GSL,
+  so it is a must! If you don't have it already installed in your system, you can
+  obtain FFTW from @uref{http://sources.redhat.com/gsl/}. You will need version 1.0 
+  or higher.
+@item
+MPI : If you want to run @code{octopus} in multi-tentacle (parallel) mode,
+  you will need an implementation of MPI. @code{mpich} 
+  (@code{http://www-unix.mcs.anl.gov/mpi/mpich/}) works just fine in our
+  Linux boxes.
+@end enumerate
 
-@item 
-Obtain the code gzipped-tarred file @code{octopus-version.tar.gz} (this
-you probably have already done). Code may be downloaded from its web
-page @code{www.tddft.org/octopus}. Uncompress it and untar it
-(@code{gzip -d octopus-version.tar.gz; tar -xvf octopus-version.tar}).
+First you should obtain the code gzipped-tarred file @code{octopus<-version>.tar.gz} 
+(this you probably have already done). The code is freely available, and
+can be downloaded from @uref{http://www.tddft.org/programs/octopus}. There exits
+a @code{cvs} server, but it currently does not have anonymous access. You
+can nevertheless browse the repository in 
+@uref{http://nautilus.fis.uc.pt/cgi-bin/cvsweb.cgi/marques/octopus/}. Uncompress
+and untar it (@code{gzip -cd octopus<-version>.tar.gz | tar -xvf -}).
 In the following, @code{OCTOPUS-HOME} denotes the home directory of
 octopus, created by the @code{tar} command.
 
+The @code{OCTOPUS-HOME} contains the following subdirectories:
+@itemize
 @item
+@code{doc} : The documentation of @code{octopus} in @emph{texinfo} format.
+@item
+@code{liboct} : Small C library that handles the interface to
+  GSL and the parsing of the input file. It also contains some assorted
+  routines that we didn't want to write in boring Fortran.
+@item
+@code{src} : Fortran 90 source files. Note that these have to be preprocessed
+  before being fed to the Fortran compiler, so do not be scared by
+  all the # directives.
+@code{samples} : Sample input files for @code{octopus}
+@end itemize
+
+Before configuring you can (should) setup a couple of options. Although
+the configure script tries to guess your system settings for you, we recommend 
+that you set explicitly the default Fortran 90 compiler and the compiler options. In
+@code{bash} you would tipically do:
+@example
+export F90=abf90
+export F90FLAGS="-YEXT_NAMES=LCS -YEXT_SFX=_"
+@end example
+If you are compiling in an alpha, or in some other system with proprietary
+LAPACK/BLAS support, you should also set the @code{LIB_LAPACK} variable:
+@example
+export LIB_LAPACK="-lcxml"
+@end example
+
+You can now run the configure sript (@code{./configure}). You can use
+a fair amount of options to spice (@code{octopus}) to your own taste.
+To obtain a full list just type @code{./configure --help}. Some 
+commonly used options include:
+@itemize
+@item
+@code{--prefix=PREFIX} : Change the base instalation dir of @code{octopus}
+  to @code{PREFIX}. The executable will be installed in @code{PREFIX/bin},
+  the libraries in @code{PREFIX/lib} and the documentation in @code{PREFIX/info}.
+@item
+@code{--with-fftw=DIR} : Instalation directory of the FFTW library.
+@item
+@code{--with-lapack=DIR} : Instalation directory of the LAPACK and
+  BLAS libraries.
+@item
+@code{--with-gsl=DIR} : Instalation directory of the GSL library. The
+  libraries are expected to be in @code{DIR/lib} and the include
+  files in @code{DIR/include}
+@item
+@code{--enable-1d} : Build the 1d version of @code{octopus}. This option
+  turns off @code{--enable-3d}, etc.
+@item
+@code{--enable-3d} : Build the 3d version of @code{octopus}. This is the
+  default behaviour.
+@end itemize
+
+Run @code{make}, and the @code{make install}. If everything went fine, you
+should now be able to taste @code{octopus}.
+
+The program has been tested in the following platforms:
+@itemize
+@item
+@code{i686-pc-linux-gnu} : with the @uref{http://www.absoft.com, Absoft}
+  compiler.
+@end itemize
+If you manage to compile/run @code{octopus} in a different platform,
+or with a different compiler, please let us know so we can update the
+list. Patches to solve compiler issues are also welcomed.
+
 Build the documentation in the format you prefer. Since you are reading
-this, you already have it in some format - you may build it in the
-format you prefer (dvi, html, pdf or info files) by moving into
-@code{OCTOPUS-HOME/doc} directory and typing @code{make dvi},
-@code{make html}, @code{make pdf} or @code{make info}. In the 
-latter case, the @code{octopus.info} file may be read by the @code{info}
+this, you already have it in some format. Due to the power of @code{texinfo},
+a series of formats are available, namely @code{dvi}, @code{html},
+@code{pdf} and @code{info}. You simply have to @code{cd} to @code{OCTOPUS-HOME/doc}
+and @code{make <format>}. The @code{info} file may be read by the @code{info}
 program by typing @code{info -f octopus.info}, or alternatively may
 be installed in your general @code{info} structure by typing 
-@code{make install-info}. You need to be root for doing this, and/or
-maybe some knowledge about how @code{info} works, to change the 
-appropriate variables in the @code{OCTOPUS-HOME/doc/Makefile}.
+@code{make install}.
 
-@item
-Some external prerequisites are needed; besides the compiler (no free
-Fortran 90 compiler is available yet!) all of them are freely available
-and open-source projects:
-
-  @enumerate
-
-  @item
-  Compilation is done through @code{Makefiles}, so an implementation of
-  @code{make} is needed; version 3.79 or higher of the GNU @code{make} 
-  should work, any other @emph{could} work, but maybe not.
-
-  @item
-  the FFTW@footnote{
-  @code{www.fftw.org}}
-  package libraries,
-  BLAS/LAPACK@footnote{
-  @code{www.netlib.org}}
-  libraries, and the GNU Scientific Library @code{gsl}@footnote{
-  @code{www.gnu.org}}. 
-  
-  @end enumerate
-
-@item
-The variables in the file @code{Make.arch} must be adapted to the computer,
-compiler, preprocessor, etc. @code{arch} must be the output to the
-"@code{uname -m}" command. Occasionally you may need to change variable
-definitions in the first lines of the @code{Makefile}.
-
-The variable @code{FORLIBS}, to be defined in @code{Make.arch}, contains
-all the libraries that must be linked with the rest of the code. It must
-contain, at least:
-
-@code{FORLIBS = -ldrfftw -ldfftw -lblas -llapack -lgslcblas -lgsl -loct}
-
-The @code{-loct} links the @code{liboct.a} library,
-which is compiled previous to the main code when issuing
-
-@item 
-Compilation is then done issuing the @code{make} command. At the moment,
-two options are possible: generating code to perform calculations in 3D and
-1D - 2D will be available some time.
-
-@end enumerate
 @c **********************************************************************
 @c **********************************************************************
 @c **********************************************************************
-
-
-
-
-
-
-
-
-
-
 
 
 
 @c **********************************************************************
 @c *******************DESCRIPTION OF INPUT OPTION************************
 @c **********************************************************************
-@node Description of input options, A word about units, Installation, Top
+@node The input file, A word about units, Installation, Top
 @c    node-name,     next,          previous,     up
 @chapter Description of input options
 
-The full description of the system to simulate on, and of the simulation
-to perform, is done in a file called "inp" that must be present in
-the directory where the @code{octopus} command is issued.
-The reading of the options is done through the @code{fdf} package,
-so the input format must follow its rules. The best thing to do
-is to follow the @code{inp} example in @code{OCTOPUS_HOME/samples}
- directory.
+@menu
+* The parser::                  
+* Input file options::          
+@end menu
+
+@node The parser, Input file options, The input file, The input file
+@section The parser
+
+All input options should be in a file called "@code{inp}", in the
+directory @code{octopus} is run from. For a fairly comprehensive
+example, just look at the file @code{OCTOPUS_HOME/samples/inp}
+
+At the begining of the program @code{liboct} reads in the @code{inp}
+file, parses it, and generates a list of variables that will be
+read by @code{octopus} (note that the input is case independent). 
+There are two kind of variables, scalar
+values (strings or numbers), and blocks (that you may view as
+matrices). A scalar variable @code{var} can be defined by:
+@example
+var = exp
+@end example
+@code{var} can contain any alphanumeric character plus "_", and 
+@code{exp} can be a quote delimited string, a number (integer,
+real, or complex), a variable name, or a mathematical expression. 
+In the expression all arithmetic operators are supported 
+("a+b", "a-b", "a*b", "a/b"; for exponenciation the C syntax
+"a^b" is used), and the following functions can be use:
+@itemize
+@item @code{sqrt(x)} : The square root of @code{x}.
+@item @code{exp(x)} : The exponential of @code{x}.
+@item @code{log(x)} or @code{ln(x)}: The natural logarith of @code{x}.
+@item @code{log10(x)} : Base 10 logarith of @code{x}.
+@item @code{sin(x)}, @code{cos(x)}, @code{tan(x)}, @code{cot(x)},
+  @code{sec(x)}, @code{csc(x)}: The sinus, cosinus, tangent, cotangent,
+  secant and cosecant of @code{x}.
+@item @code{asin(x)}, @code{acos(x)}, @code{atan(x)}, @code{acot(x)},
+  @code{asec(x)}, @code{acsc(x)}: The inverse (arc-) sinus, cosinus, tangent, cotangent,
+  secant and cosecant of @code{x}.
+@item @code{sinh(x)}, @code{cosh(x)}, @code{tanh(x)}, @code{coth(x)},
+  @code{sech(x)}, @code{csch(x)}: The hyperbolic sinus, cosinus, tangent, cotangent,
+  secant and cosecant of @code{x}.
+@item @code{asinh(x)}, @code{acosh(x)}, @code{atanh(x)}, @code{acoth(x)},
+  @code{asech(x)}, @code{acsch(x)}: The inverse hyperbolic sinus, cosinus, tangent, cotangent,
+  secant and cosecant of @code{x}.
+@end itemize
+You can also use any of the predefined variables:
+@itemize
+@item @code{pi} : 3.141592653589793, what else is there to say?
+@item @code{e} : The base of the natural logarithms.
+@item @code{false} or @code{f} or @code{no} : False in all its flavors. For the
+  curious, @code{false} is defined as 0.
+@item @code{true} or @code{t} or @code{yes} : The truthful companian of @code{false}. For the
+  curious, @code{true} is defined as 1.
+@end itemize
+
+Blocks are defined as a collection of values, organized in row and column format.
+The syntax is the following:
+@example
+%var
+  exp | exp | exp | ...
+  exp | exp | exp | ...
+  ...
+%
+@end example
+Rows in a block are separated by a newline, while columns are
+separated by the character "|". There may be any number of lines and any
+number of columns block. Note also that each lines can have a different
+number of columns.
+
+If @code{octopus} tries to read a variable that is not defined in the
+@code{inp} file, it automatically assigns to it a default value. All
+variables read are output to the file @code{out.oct}. If you are
+not sure of what the program is reading, just take a look at it.
+Everything following the character "#" until the end of the line
+is simply cast into oblivion.
+
+@node Input file options,  , The parser, The input file
+@section Input file options
+
+@code{octopus} has quite a few options, that we will subdivide in different groups.
+After the name of the option, its type and default value (when appliable)
+are given in parentesis.
 
 @menu
 * Generalities::                
-* Describing the species::      
-* Describing the atoms::        
-* Describing the electrons::    
-* Mesh parameters::             
-* Self-consistent cycle::       
-* Time evolution::              
-* Varia::                       
-@end menu
-
-@node Generalities, Describing the species, Description of input options, Description of input options
-@section Generalities
-
-
-
-@menu
-* Verbose::                     
-* SystemName::                  
-* CalculationMode::             
-* Units::                       
-@end menu
-
-@node Verbose, SystemName, Generalities, Generalities
-@subsection @code{Verbose}
-@cindex @code{Verbose}
-Integer number that sets the level of verbosity of the program:
-@itemize @bullet
-@item @code{>999} : Debug mode, maximum verbosity.
-@item @code{>20}  : Normal program info.
-@item @code{>0}   : Just warnings.and errors
-@item @code{<=0}  : Silent, only fatal errors.
-@end itemize
-@emph{Default: 30}
-
-
-@node SystemName, CalculationMode, Verbose, Generalities
-@subsection @code{SystemName}:
-@cindex @code{SystemName}
-A string of characters that is used to build the filenames 
-(@code{SystemName.restart}, @code{SystemName.mult}, etc).
-
-@emph{Default: sysname.}
-
-@node CalculationMode, Units, SystemName, Generalities
-@subsection @code{CalculationMode}:
-@cindex @code{CalculationMode}
-Integer number. It defines the type of simulation to perform. Options are:
-@itemize @bullet
-@item @code{1} : Start static calculation
-@item @code{2} : Resume static calculation
-@item @code{3} : calculate unocuppied states
-@item @code{4} : resume unocuppied states calculation
-@item @code{5} : start td
-@item @code{6} : resume td
-@item @code{7} : start static polarizability
-@item @code{8} : resume static polarizability
-@item @code{9} : perform Born-Oppenheimer MD
-@item @code{99} : prints out the "Pulpo a Feira" recipe
-@end itemize
-@emph{Default: 1.}
-
-@node Units,  , CalculationMode, Generalities
-@subsection @code{Units}:
-@cindex @code{Units}
-Atomic units seem to be the preferred system in the atomic and
-molecular physics community, despite the opinion of some of the authors
-of this program. Accordingly, atomic units may be used for describing
-input and output magnitudes. However, some people like using eV
-for energies and @AA{}  for lengths, and this defines a new units system
-(the @emph{convenient system}, in words of Prof. George W. Bertsch),
-which can also be used due to inheritance reasons. Thus the options 
-for this descriptor are:
-@itemize @bullet
-@item @code{a.u} : atomic units
-@item @code{eVA} : electron-volts/amstrongs
-@end itemize
-@emph{Default: a.u}
-
-@xref{A word about units}, for detailed information about units. Two other 
-input descriptors are possible: @code{UnitsInput}, and @code{UnitsOutput},
-if different system units are desired in input or output.
-@cindex @code{UnitsInput}
-@cindex @code{UnitsOutput}
-
-
-@node Describing the species, Describing the atoms, Generalities, Description of input options
-@section Describing the species
-
-A specie, in principle,is an ion (nucleus + core electrons) described
-through a pseudopotential. However, the code allows for jellium 
-calculation, in which case the species will be the full jellium
-distribution, and point charges - which in fact are no more than
-@code{rather small} jellium spheres.
-
-@menu
-* NumberSpecies::               
 * Species::                     
+* Coordinates::                 
+* Velocities::                  
+* States::                      
+* xx::                          
 @end menu
 
-@node NumberSpecies, Species, Describing the species, Describing the species
-@subsection @code{NumberSpecies}
-@cindex @code{NumberSpecies}
-Obvious meaning. 
+@node Generalities, Species, Input file options, Input file options
+@subsection Generalities
 
-@node Species,  , NumberSpecies, Describing the species
-@subsection @code{Species}
-@cindex @code{Species}
-It is a @code{fdf} block of data which contains the information
-about the species. Its format may be illustrated through an example:
-
-@example
-%block Species
-Na        23.0   11.   2    1
-jelli      8.0   8.0   5.0
-point      1.0   1.0   
-%endblock Species
-@end example
-
-In this case, we have three "species" present:
 @itemize @bullet
-@item A sodium, pseudopotential, labeled "@code{Na}", to be read
-from a pseudopotential file. Numbers following the label describe 
-succesively the weight, the nuclear charge, the maximum 
-@emph{l}-component of the pseudopotential to consider in the
-calculation, and the @emph{l}-component to consider as local.
+@item @vindex @code{Verbose}
+  @code{Verbose} (integer, 30) : 
+  Verbosity level of the program. The higher the
+  more verbose @code{octopus} is. Current levels are:
+  @itemize @minus
+    @item @code{verbose <=  0} : Silent mode. No output except fatal errors.
+    @item @code{verbose >   0} : Warnings only.
+    @item @code{verbose >  20} : Normal program info.
+    @item @code{verbose > 999} : Debug mode. Issues a message everytime the
+      program enters a (important) subroutine, and prints the time it spend upon return.
+  @end itemize
+
+@item @vindex @code{SystemName}
+  @code{SystemName} (string, 'system') :
+  A string that identifies the current run. This parameter is used 
+  to build the names of the files generated by @code{octopus}
+  (@code{SystemName.restart}, @code{SystemName.mult}, etc).
+
+@item @vindex @code{CalculationMode}
+  @code{CalculationMode} (integer, 1) :
+  It defines the type of simulation to perform. Options are:
+  @itemize @minus
+    @item @code{1} : Start static calculation.
+    @item @code{2} : Resume static calculation.
+    @item @code{3} : Calculate unocuppied states.
+    @item @code{4} : Resume calculation of unocuppied states.
+    @item @code{5} : Start time-dependent propagation.
+    @item @code{6} : Resume time-dependent propagation.
+    @item @code{7} : Start static polarizability calculation.
+    @item @code{8} : Resume static polarizability calculation.
+    @item @code{9} : Perform Born-Oppenheimer MD simulation
+    @item @code{99} : Prints out an octopus recipe
+  @end itemize
+
+@item @vindex @code{Units}
+@vindex @code{UnitsInput}
+@vindex @code{UnitsOutput}
+@code{Units} (string, 'a.u'):
+  Atomic units seem to be the preferred system in the atomic and
+  molecular physics community, despite the opinion of some of the authors
+  of this program. Accordingly, atomic units can be used both for
+  input and output. However, some people like using eV for energies and @AA{} 
+  for lengths. This other system of units (the @emph{convenient system}, 
+  in words of Prof. George W. Bertsch), can also be used. 
+  Valid options are:
+  @itemize @minus
+    @item @code{'a.u'} : atomic units
+    @item @code{'eVA'} : electron-volts/amstrongs
+  @end itemize
+
+  @xref{A word about units}, for detailed information about units. Two other 
+  input variables are possible: @code{UnitsInput}, and @code{UnitsOutput},
+  if different units are desired for input and output.
+
 @end itemize
 
+@node Species, Coordinates, Generalities, Input file options
+@subsection Species
 
+@itemize @bullet
+@item @vindex @code{Species}
+@code{Species} (block data) : 
+  A specie is by definition an ion (nucleus + core electrons) described
+  through a pseudopotential, or an external potential (until now,
+  only jellium spheres and point charges are implemented).
+  The format of this block is different for 1 or 3 dimensions, and
+  can be best understood through examples. In 1D, e.g.
+  @example
+    %Species
+      'H'       |  1.0079 | 2.0 |  1.0
+    %
+  @end example
+  This defines a species labeled '@code{H}' of weight @code{1.0079},
+  nuclear charge @code{2.0}, and valence charge @code{1.0}. The potential
+  used in 1D calculations is the soft-Coulomb potential Z/sqrt(x*x + 1).
+  In 3D, e.g.
+  @example
+    %Species
+      'O'       | 15.9994 | 8   |  1   | 1
+      'H'       |  1.0079 | 1   |  0   | 0
+      'jelli01' | 23.2    | 8.0 |  5.0
+      'point01' | 32.3    | 2.0   
+    %
+  @end example
+  In this case, we have 4 "species" present:
+  @itemize @minus
+  @item Oxygen labeled '@code{O}', to be read from a pseudopotential file
+    name @code{O.vps}. Numbers following the label describe 
+    succesively the weight, the nuclear charge, the maximum 
+    @emph{l}-component of the pseudopotential to consider in the
+    calculation, and the @emph{l}-component to consider as local.
+  @item Hydrogen defined in the same way as Oxygen.
+  @item All species whose label starts by 'jelli' are jellium spheres.
+    The other parameters are the weight, the nuclear charge, and the
+    valence charge of the sphere.
+  @item All species whose label starts by 'point' are point charges.
+    The other parameters are the weight and the nuclear charge. In
+    fact, point charges are implemented as @emph{rather small} jellium
+    spheres, with zero valence charge.
+  @end itemize
+@end itemize
 
+@node Coordinates, Velocities, Species, Input file options
+@subsection Coordinates
 
-@node Describing the atoms, Describing the electrons, Describing the species, Description of input options
-@section Describing the atoms
+@itemize @bullet
+@item @vindex @code{PDBCoordinates}
+@code{PDBCoordinates} (string, 'coords.pdb') :
+  Tries to read the atomic coordinates from the file @code{PDBCoordinates}.
+  The PDB (@uref{http://www.rcsb.org/pdb/,Protein Data Bank}) format is
+  quite complicated, and it goes well beyond the scope of this manual. You
+  can find a comprehensive description in 
+  @uref{http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html}.
+  From the plethora of instructions defined in the PDB standard, @code{octopus}
+  only reads 2, @code{ATOM} and @code{HETATOM}. From these fields, it reads:
+  @itemize @minus
+  @item columns 13-16 : The specie; in fact @code{octopus} only cares about the first
+    letter -- 'CA' and 'CB' will both refer to Carbon -- so elements whose
+    chemical symbol has more than one letter can not be represented in this way.
+    So, if you want to run mercury ('Hg') please use one of the other two methods
+    to input the atomic coordinates, @code{XYZCoordinates} or @code{Coordinates}.
+  @item columns 18-21 : The residue. If residue is 'QM', the atom is treated
+    in Quantum Mechanics, otherwise it is simply treated as an external classical
+    point charge. Its charge will be given by columns 61-65.
+  @item columns 31-54 : The cartesian coordinates. The Fortran format is
+    @code{'(3f8.3)'}.
+  @item columns 61-65 : Classical charge of the atom. The Fortran format is
+    @code{'(f6.2)'}.
+  @end itemize
 
-Atoms may be described in three ways: throuhg a PDB file, through a
-XYZ file, or within the @code{fdf inp} file. The program will attempt
-the three methods in that order.
+@item @vindex @code{XYZCoordinates}
+@code{XYZCoordinates} (string, 'coords.xyz') :
+  If @code{PDBCoordinates} is not present, reads the atomic coordinates
+  from the XYZ file @code{XYZCoordinates}. The XYZ format is very simple,
+  as can be seem by this example for the CO molecule (in @AA{}).
+  @example
+    2
+      CO molecule in equilibrium
+    C  -0.56415   0.0   0.0
+    O   0.56415   0.0   0.0
+  @end example
+  The first line of the file has an integer indicating the number of
+  atoms. The second can contain comments that are simply ignored by 
+  @code{octopus}. Then there follow one line per each atom containing
+  the chemical species and the cartesian coordinates of the atom.
 
-@menu
-* NumberAtoms::                 
-* PDBCoordinates::              
-* XYZCoordinates::              
-* Coordinates::                 
-* XYZVelocities::               
-* Velocities::                  
-@end menu
+@item @vindex @code{Coordinates}
+@code{Coordinates} (block data) :
+  If neither a @code{XYZCoordinates} or a @code{PDBCoordinates} was found,
+  @code{octopus} tries to read the coordinates for the atoms from the
+  block @code{Coordinates}. The format is quite straightforward:
+  @example
+    %Coordinates
+      'C' | -0.56415 | 0.0 | 0.0 | no
+      'O' |  0.56415 | 0.0 | 0.0 | no
+    %
+  @end example
+  The first line defines a Carbon atom at coordinates (@code{-0.56415},
+  @code{0.0}, @code{0.0}), that is @emph{not} allowed to move during
+  dynamical simulations. The second line has a similar meaning. This
+  block obviously defines a Carbon monoxide molecule, if the input
+  units are @AA{}.
 
-@node NumberAtoms, PDBCoordinates, Describing the atoms, Describing the atoms
-@subsection @code{NumberAtoms}
-@cindex @code{NumberAtoms}
-Obvious meaning. Bear in mind that an ``atom'' may also be a jellium sphere or 
-point charge.
+@item @vindex @code{AdjustCoordinates}
+@code{AdjustCoordinates} (logical, false) :
+  If true applies a translates the atom coordinates so that the
+  geometrical center of the molecule coincides with the zero of 
+  the mesh, and rotates them, fixing the largest dimension
+  of the molecule to the axis defined through @code{MainAxis}.
+  Very useful when handling large and elongated molecules -- try
+  it out!
 
-@emph{Default: 0}
+@item @vindex @code{MainAxis}
+@code{MainAxis} (block data) :
+  Defines the axis to be used if @code{AdjustCoordinates} is true.
+  If not set defaults to the z axis.
 
-@node PDBCoordinates, XYZCoordinates, NumberAtoms, Describing the atoms
-@subsection @code{PDBCoordinates}
-@cindex @code{PDBCoordinates}
-The name of a PDB file describing the atomic positions.
-If this is not the format to be used, this descriptor should not 
-be present in the @code{fdf} file.
+@item @vindex @code{OutputCoordinates}
+@code{OutputCoordinates} (logical, false) :
+  If true @code{octopus} outputs a XYZ file called 
+  '@code{SystemName}.xyz' containing the coordinates of the atoms
+  treated within Quantum Mechanics. If point charges were defined
+  in the PDB file (see @code{PDBCoordinates}), they will be output
+  in the file '@code{SystemName}_classical.xyz'.
+@end itemize
 
-@emph{Default: coords.pdb}
+@node Velocities, States, Coordinates, Input file options
+@subsection Velocities
 
-@node XYZCoordinates, Coordinates, PDBCoordinates, Describing the atoms
-@subsection @code{XYZCoordinates}
-@cindex @code{XYZCoordinates}
-The name of a XYZ file describing the atomic positions.
-If this is not the format to be used, this descriptor should not
-be present in the @code{fdf} file.
+@itemize @bullet
+@item @vindex @code{XYZVelocities} :
+@code{XYZVelocities} (string, 'velocities.xyz') :
+  @code{octopus} will try to read the starting coordinates of the atoms from the XYZ file 
+  @code{XYZVelocities}.
 
-@emph{Default: coords.xyz}
+@item @vindex @code{Velocities}
+@code{Velocities} (block data) :
+  If @code{XYZVelocities} is not present, @code{octopus} will try fetch the initial 
+  atomic velocities from this block. If this block is not present, @code{octopus}
+  will reset the initial velocities to zero. The format of this block can be
+  illustrated by this example:
+  @example
+    %Velocities
+      'C'  | -1.7 | 0.0 | 0.0
+      'O'  |  1.7 | 0.0 | 0.0
+    %
+  @end example
+  It describes one Carbon and one Oxygen moving at the relative
+  velocity of @code{3.4} velocity units.
+@end itemize
 
-@node Coordinates, XYZVelocities, XYZCoordinates, Describing the atoms
-@subsection @code{Coordinates}
-@cindex @code{Coordinates}
+@node States, xx, Velocities, Input file options
+@subsection States
 
-It is a @code{fdf} block of data which contains the information
-about the atom. It is used in absence of the @code{PDBCoordinates} 
-(@pxref{PDBCoordinates})  or
-@code{XYZCoordinates} 
-(@pxref{XYZCoordinates}) descriptor. Its format may be illustrated through an example:
+@itemize @bullet
+@item @vindex @code{SpinComponents}
+@code{SpinComponents} (integer, 1) :
+  Defines the spin mode @code{octopus} will run in. Valid modes are:
+  @itemize @minus
+    @item @code{1} : Spin-unpolarized calculation.
+    @item @code{2} : Spin-polarized calculation (collinear spin). This mode
+      will double the number of wavefunctions necessary for a spin-unpolarized 
+      calculation.
+    @item @code{4}: Non-collinear spin. This mode will double the number 
+      of wavefunctions necessary for a spin-unpolarized calculation, and each of
+      the wavefunctions will be a 2-spinor.
+  @end itemize
 
-@example
-%block Coordinates
-Na      0.0     0.0     1.7     .true.
-Na      0.0     0.0     -1.7    .true.
-%endblock Coordinates
-@end example
+@item @vindex @code{NumberKPoints}
+@code{NumberKPoints} (integer, 1) :
+  If @code{octopus} was compiled for periodic systems, the number of
+  @emph{k} points to use in the calculation. If @code{NumberKPoints = 1},
+  use only the Gamma point.
 
-The first fied is the label of the atom species, as it is specified in the block
-@code{Species} (@pxref{Species}). Three next numbers are the coordinates of
-the atom, in the units specified by @code{Units} (@pxref{Units}). Last field
-is @code{.true.} or @code{.false.} and fixes that particular atom if it is @code{.false.}
+@item @vindex @code{ExcessCharge}
+@code{NumberKPoints} (double, 1) :
+  The net charge of the system. A negative value means that we are adding 
+  electrons, while a positive value means we are taking electrons
+  away from the system.
 
+@item @vindex @code{EmptyStates}
+@code{EmptyStates} (integer, 1) :
+  How many unoccupied states to use in the ground-state
+  calculation. Note that this number is unrelated to @code{CalculationMode = 4}.
 
+@item @vindex @code{Occupations}
+@code{Occupations} (blockdata) :
+  The occupation numbers of the orbitals can be fixed through the use of this
+  variable. For example:
+  @example
+    %Occupations
+      2.0 | 2.0 | 2.0 | 2.0 | 2.0
+    %
+  @end example
+  would fix the occupations of the five states to @code{2.0}. There must be
+  as many columns as states in the calculation. If @code{SpinComponents = 2}
+  this block should contain two lines, one for each spin channel.
+  This variable is very useful when dealing with highly symmetric small systems
+  (like an open shell atom), for it allows us to fix the occupation numbers
+  of degenerate states in order to help @code{octopus} to converge.
+@end itemize
 
-@node XYZVelocities, Velocities, Coordinates, Describing the atoms
-@subsection @code{XYZVelocities}
-@cindex @code{XYZVelocities}
-The name of a XYZ file describing the atomic initial velocities.
-If they are not to be read from an XYZ file, this descriptor should not
-be present in the @code{fdf} file.
+@node xx,  , States, Input file options
+@subsection xx
 
-@emph{Default: vel.xyz}
-
-@node Velocities,  , XYZVelocities, Describing the atoms
-@subsection @code{Velocities}
-@cindex @code{Velocities}
-
-It is a @code{fdf} block of data which contains the initial velocities
-of the atoms. It is used in absence of the 
-@code{XYZVelocities} 
-(@pxref{XYZVelocities}) descriptor. Its format may be illustrated through an example:
-
-@example
-%block Coordinates
-Na      0.0     0.0     1.7
-Na      0.0     0.0     -1.7
-%endblock Coordinates
-@end example
-
-The first fied is the label of the atom species, as it is specified in the block
-@code{Species} (@pxref{Species}). Three next numbers are the velocities of
-the atom, in the units specified by @code{Units} (@pxref{Units}). 
-
-
-
-
-@node Describing the electrons, Mesh parameters, Describing the atoms, Description of input options
-@section Describing the electrons
-
-@node Mesh parameters, Self-consistent cycle, Describing the electrons, Description of input options
-@section Mesh parameters
+@itemize @bullet
+@end itemize
 
 The real-space mesh is an equally-spaced one, although the spacings maybe
 different for each direction. The shape of the simulation region may also
 be tuned to suit the geometric configuration of the system.
 
-@node Self-consistent cycle, Time evolution, Mesh parameters, Description of input options
-@section Self-consistent cycle
-
-
-@node Time evolution, Varia, Self-consistent cycle, Description of input options
-@section Time evolution
-
-@node Varia,  , Time evolution, Description of input options
-@section Varia
-
-@node A word about units, GNU General Public License, Description of input options, Top
+@node A word about units, Variable Index, The input file, Top
 @appendix A word about units
-
-@node GNU General Public License, Concept Index, A word about units, Top
-@appendix GNU General Public License
-
-@include GPL
-
 
 @c **********************************************************************
 
 
 
 @c ***************THE END OF THE DOCUMENT********************************
-@node    Concept Index,  , GNU General Public License, Top
+@node    Variable Index,  , A word about units, Top
 @c       node-name,    next, previous,     up
-@unnumbered Concept Index
+@unnumbered Variable Index
      
-@printindex cp
+@printindex vr
      
 @contents
 
