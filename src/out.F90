@@ -45,7 +45,6 @@ integer, parameter ::     &
      output_plane_x = 1,  &
      output_plane_y = 2,  &
      output_plane_z = 4,  &
-     output_xyz     = 8,  &
      output_dx      = 16
 
 contains
@@ -82,8 +81,6 @@ subroutine output_init(outp)
     if(l) outp%how = ior(outp%how, output_plane_y)
     call oct_parse_logical("OutputPlaneZ", .false., l)
     if(l) outp%how = ior(outp%how, output_plane_z)
-    call oct_parse_logical("OutputXYZ",    .false., l)
-    if(l) outp%how = ior(outp%how, output_xyz)
     call oct_parse_logical("OutputDX", .false., l)
     if(l) outp%how = ior(outp%how, output_dx)
 #endif
