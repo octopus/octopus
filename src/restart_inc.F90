@@ -180,6 +180,8 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
         filled(idim, ist, ik) = .true.
         ierr = ierr + 1
       end if
+    else
+      read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the occs file
     end if
   end do
 
