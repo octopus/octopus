@@ -26,134 +26,101 @@ module poisson_cg
   public :: poisson_cg1, &
             poisson_cg2
 
+  type(der_discr_type), pointer :: der_pointer
+  type(mesh_type),      pointer :: mesh_pointer
+
 contains
-  
+
+  subroutine op(x, y)
+    FLOAT, intent(in)  :: x(:)
+    FLOAT, intent(out) :: y(:)
+    integer :: i
+    call dderivatives_lapl(der_pointer, x, y)
+  end subroutine op  
 
   subroutine poisson_cg1(m, der, pot, rho)
-    type(mesh_type),      intent(in)    :: m
-    type(der_discr_type), intent(in)    :: der
+    type(mesh_type), target, intent(in)         :: m
+    type(der_discr_type), target, intent(in)    :: der
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
   
     integer, parameter :: ml = 4 ! maximum multipole moment to include
+    integer :: iter
+    FLOAT :: res
+    FLOAT, allocatable :: wk(:), lwk(:), zk(:), pk(:)
 
-    integer :: i, iter
-    FLOAT :: s1, s2, s3, ak, ck
-    FLOAT, allocatable :: zk(:), tk(:), pk(:), mult(:), wk(:), lwk(:)
-    
     call push_sub('poisson_cg')
 
-    allocate(zk(m%np), tk(m%np), pk(m%np)) ! for the cg
-    allocate(wk(m%np_tot), lwk(m%np_tot))
+    allocate(wk(m%np_tot), lwk(m%np_tot), zk(m%np), pk(m%np))
     
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
     call boundary_conditions(m, rho, ml, wk)
-    
     call dderivatives_lapl(der, wk, lwk, .true.)
     
-    zk(:) = -M_FOUR*M_PI*rho(:) ! this will be needed later
-    zk(:) = zk(:) - lwk(1:m%np)
+    zk(1:m%np) = -M_FOUR*M_PI*rho(1:m%np) - lwk(1:m%np)
     deallocate(wk, lwk) ! they are no longer needed
-    
+
+    der_pointer  => der
+    mesh_pointer => m
     pk = zk
-    s1 = dmf_nrm2(m, zk)**2
+    iter = 400
+    call conjugate_gradients(m%np, pk, zk, op, iter = iter, residue = res, threshold = CNST(1.0e-5))
+    if(res >= CNST(1.0e-5)) then
+       message(1) = 'Conjugate gradients Poisson solver did not converge.'
+       write(message(2), '(a,i8)')    '  Iter = ',iter
+       write(message(3), '(a,e14.6)') '  Res = ', res
+       call write_warning(3)
+    endif 
+    nullify(der_pointer, mesh_pointer)
+    pot = pot + pk
     
-    ! now we start the conjugate gradient cycles
-    iter = 0
-    do 
-      iter = iter + 1
-      call dderivatives_lapl(der, pk, tk)
-      
-      s2 = dmf_dotp(m, zk, tk)
-      ak = s1/s2
-      pot = pot + ak*pk
-      zk = zk - ak*tk
-      s3 = dmf_nrm2(m, zk)**2
-      
-      if(iter >= 400 .or. abs(s3) < CNST(1.0e-6)) exit
-      
-      ck = s3/s1
-      s1 = s3
-      pk = zk + ck*pk
-    end do
-    
-    if(iter >= 400) then
-      message(1) = "Poisson using conjugated gradients: Not converged!"
-      write(message(2),*) "iter = ", iter, " s3 = ", s3
-      call write_warning(2)
-    endif
-    
-    deallocate(zk, tk, pk)
-    
+    deallocate(zk, pk)
     call pop_sub()
   end subroutine poisson_cg1
 
   subroutine poisson_cg2(m, der, pot, rho)
     implicit none
-    type(mesh_type),      intent(in)    :: m
-    type(der_discr_type), intent(in)    :: der
+    type(mesh_type), target, intent(in)    :: m
+    type(der_discr_type), target, intent(in)    :: der
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
-  
-    integer, parameter :: ml = 4 ! maximum multipole moment to include
 
-    integer :: i, iter
-    FLOAT :: s1, s2, s3, ak, ck
-    FLOAT, allocatable :: zk(:), tk(:), pk(:), mult(:), wk(:), lwk(:)
-
+    integer :: unit, i, iter
+    integer, parameter :: ml = 3 ! maximum multipole moment to include
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
-    
+    FLOAT :: res
+
     call push_sub('poisson_cg')
 
-    allocate(zk(m%np), tk(m%np), pk(m%np)) ! for the cg
-    allocate(wk(m%np), lwk(m%np))
+    der_pointer  => der
+    mesh_pointer => m
+
     allocate(rho_corrected(m%np), vh_correction(m%np))
-
     call correct_rho(m, ml, rho, rho_corrected, vh_correction)
-
-    ! build initial guess for the potential
-    wk(1:m%np) = pot(1:m%np)
-    
-    call dderivatives_lapl(der, wk, lwk)
-    
-    zk(:) = -M_FOUR*M_PI*rho_corrected(:) ! this will be needed later
-    zk(:) = zk(:) - lwk(1:m%np)
-    deallocate(wk, lwk) ! they are no longer needed
-    
-    pk = zk
-    s1 = dmf_nrm2(m, zk)**2
-    
-    ! now we start the conjugate gradient cycles
-    iter = 0
-    do 
-      iter = iter + 1
-      call dderivatives_lapl(der, pk, tk)
-      
-      s2 = dmf_dotp(m, zk, tk)
-      ak = s1/s2
-      pot = pot + ak*pk
-      zk = zk - ak*tk
-      s3 = dmf_nrm2(m, zk)**2
-      
-      if(iter >= 400 .or. abs(s3) < CNST(1.0e-6)) exit
-      
-      ck = s3/s1
-      s1 = s3
-      pk = zk + ck*pk
-    end do
-    
-    if(iter >= 400) then
-      message(1) = "Poisson using conjugated gradients: Not converged!"
-      write(message(2),*) "iter = ", iter, " s3 = ", s3
-      call write_warning(2)
-    endif
-
+    rho_corrected = - M_FOUR*M_PI*rho_corrected
+    pot = pot - vh_correction
+!!$ ! This is the change of base, which for the moment is not done.
+!!$    do i = 1, m%np
+!!$       pot(i) = pot(i)/sqrt(m%vol_pp(i))
+!!$       rho_corrected(i) = rho_corrected(i)/sqrt(m%vol_pp(i))
+!!$    enddo
+    iter = 400
+    call conjugate_gradients(m%np, pot, rho_corrected, op, iter = iter, residue = res, threshold = CNST(1.0e-5))
+    if(res >= CNST(1.0e-5)) then
+       message(1) = 'Conjugate gradients Poisson solver did not converge.'
+       write(message(2), '(a,i8)')    '  Iter = ',iter
+       write(message(3), '(a,e14.6)') '  Res = ', res
+       call write_warning(3)
+    endif 
+!!$    do i = 1, m%np
+!!$       pot(i) = pot(i)*sqrt(m%vol_pp(i))
+!!$       rho_corrected(i) = rho_corrected(i)*sqrt(m%vol_pp(i))
+!!$    enddo
     pot = pot + vh_correction
-    
-    deallocate(zk, tk, pk)
+
+    nullify(der_pointer, mesh_pointer)
     deallocate(rho_corrected, vh_correction)
-    
     call pop_sub()
   end subroutine poisson_cg2
 
