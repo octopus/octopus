@@ -464,43 +464,45 @@ module vxc
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! /* Calculates the LDA corrected exchange suggested in PRA 49, 2421 (1994) */
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine lb94(nspin, dens, gdens, dexdd, r, ip)
+  subroutine lb94(nspin, dens, gdens, dexdd, r, ip, qtot, modified, beta, threshold)
     integer, intent(in)  :: nspin
     real(r8), intent(in) :: dens(nspin), gdens(3, nspin)
     real(r8), intent(out):: dexdd(nspin)!, dexdgd(3, nspin)
-    real(r8), intent(in) :: r, ip
+    real(r8), intent(in) :: r, ip, qtot, beta, threshold
+    logical, intent(in) :: modified
 
     integer  :: is
-    real(r8) :: alpha, gdm, gd(3, nspin), x, f, beta
-
-    ! Lower bounds of density and its gradient to avoid divisions by zero
-    real(r8), parameter :: DENMIN = 1.E-8_r8, GDMIN  = 1.E-8_r8
+    real(r8) :: alpha, gdm, gd(3, nspin), x, f, gamma
 
     ! First, get the LDA exchange potential.
     call exchng(0, nspin, dens, x, dexdd)
 
     ! If ip is zero, the alpha is set to 0.5. In this way, the boundary 
     ! condition is -1/r. Equivalently, if ip = 1/32, alpha is also 0.5
-    if(ip > DENMIN) then 
+    if(ip > M_ZERO) then 
       alpha = M_TWO*sqrt(M_TWO*ip)
+      gamma = qtot**M_THIRD/(M_TWO*alpha)
     else
       alpha = M_HALF
+      gamma = qtot**M_THIRD
     endif
 
-    ! This value is temporarily hard-coded, to the value recommended by LB.
-    beta = 0.05
+    if(.not.modified) then
+      gamma = M_ONE
+    endif
 
     do is = 1, nspin
-      ! If we are not in the boundary, r should be negative.
-      if( r > M_ZERO) then
-        dexdd(is) = dexdd(is) - M_ONE/ (r + M_THREE*log(M_TWO*alpha)/alpha)
-      else
-        gdm   = sqrt( gdens(1,is)**2 + gdens(2,is)**2 + gdens(3,is)**2 )
-        if(dens(is) >= DENMIN .and. gdm >=GDMIN) then
+      gdm   = sqrt( gdens(1,is)**2 + gdens(2,is)**2 + gdens(3,is)**2 )
+      !gdm = alpha*dens(is)
+      if(dens(is) >= threshold .and. gdm >=threshold) then
            x = gdm / dens(is)**(M_FOUR/M_THREE)
-           f = x**2/(M_ONE + M_THREE*beta*x*oct_asinh(x))
-           dexdd(is) = dexdd(is) - beta * dens(is)**M_THIRD * f
-        endif
+           f = -beta*dens(is)**M_THIRD*&
+                x**2/(M_ONE + M_THREE*beta*x*oct_asinh(gamma*x))
+           dexdd(is) = dexdd(is) + f !- beta * dens(is)**M_THIRD * f
+      elseif(r > M_ZERO .and. dens(is)<= threshold) then
+           f = r + (M_THREE/alpha)*log(2*gamma*alpha*qtot**(-M_THIRD))
+           !f = f + (qtot*exp(-alpha*r))**M_THIRD/(beta*alpha**2)
+           dexdd(is) = dexdd(is) - M_ONE/f
       endif
     enddo
 

@@ -94,6 +94,10 @@ character(len=14), parameter :: name_c(C_FUNC_END-C_FUNC_START+1) = (/ &
 type xc_type
   integer :: x_family, x_func, c_family, c_func
   logical :: nlcc ! repeated from system
+  ! For LB94 fine-tuning
+  logical  :: lb94_modified
+  real(r8) :: lb94_beta
+  real(r8) :: lb94_threshold
 end type xc_type
 
 real(r8), parameter :: small = 1e-5_r8
@@ -277,12 +281,16 @@ subroutine xc_init(xcs, nlcc)
     call write_fatal(2)
   end select
 
+  ! Extra parameters to fine-tune LB94 potential.
+  call oct_parse_double("LB94_beta", 0.05_r8, xcs%lb94_beta)
+  call oct_parse_double("LB94_threshold", 1.0e-6_r8, xcs%lb94_threshold)
+  call oct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
+
   call pop_sub()
 end subroutine xc_init
 
 subroutine xc_end(xcs)
   type(xc_type), intent(inout) :: xcs
-
   return
 end subroutine xc_end
 

@@ -15,13 +15,13 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip)
+subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip, qtot)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out)    :: vxc(m%np, st%nspin), ex, ec
-  real(r8), intent(in) :: ip
+  real(r8), intent(in) :: ip, qtot
 
   real(r8), allocatable :: vaux(:, :) 
 
@@ -46,7 +46,8 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip)
   case(XC_FAMILY_LDA)
     call R_FUNC(xc_lda) (xcs%x_func, xcs%nlcc, m, st, vxc, ex)
   case(XC_FAMILY_GGA)
-    call xc_gga(xcs%x_func, xcs%nlcc, m, st, vxc, ex, ip)
+    call xc_gga(xcs%x_func, xcs%nlcc, m, st, vxc, ex, &
+                ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vx, ex)
@@ -59,7 +60,8 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec, ip)
   case(XC_FAMILY_LDA)
     call R_FUNC(xc_lda) (xcs%c_func, xcs%nlcc, m, st, vaux, ec)
   case(XC_FAMILY_GGA)
-    call xc_gga(xcs%c_func, xcs%nlcc, m, st, vaux, ec, ip)
+    call xc_gga(xcs%c_func, xcs%nlcc, m, st, vaux, ec, &
+                ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
 !  case(XC_FAMILY_MGGA)
 !    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !        rho, vc, ec)

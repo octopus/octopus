@@ -15,14 +15,16 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_gga(func, nlcc, m, st, pot, energy, ip)
+subroutine xc_gga(func, nlcc, m, st, pot, energy, &
+                  ip, qtot, lb94_modified, lb94_beta, lb94_threshold)
   use liboct
   integer, intent(in) :: func
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
-  real(r8), intent(in) :: ip
+  real(r8), intent(in) :: ip, qtot, lb94_beta, lb94_threshold
+  logical, intent(in) :: lb94_modified
   
   real(r8) :: e, e_x, dvol, den(3), dpol, dtot, vpol, glob(4, 3), r
   real(r8), parameter :: tiny = 1.0e-12_r8
@@ -98,14 +100,9 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, ip)
     case(X_FUNC_GGA_PBER)
       call pbex(1, st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(X_FUNC_GGA_LB94)
-      ! The value of 1.5 bohrs is temporarily hard-coded.
-      call mesh_inborder(m, i, n, x, 1.5_r8)
-      if( n > 0 ) then
-        call mesh_r(m, i, r)
-      else
-        r  = -M_ONE
-      endif
-      call lb94(st%spin_channels, locald, localgd, localdedd, r, ip)
+      call mesh_r(m, i, r)
+      call lb94(st%spin_channels, locald, localgd, localdedd, &
+                r, ip, qtot, lb94_modified, lb94_beta, lb94_threshold)
            e = M_ZERO
            vlocaldedgd(:, i, :) = M_ZERO
     case(C_FUNC_GGA_PBE)
@@ -144,18 +141,16 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, ip)
 
   ! If LB94, we have to calculate the energy 
   ! Levy-Perdew relation (PRA 32, 2010 (1985))
-  ! WARNING: THIS HAS TO BE PUT BACK IN THE CODE, OR THE TOTAL ENERGY WILL BE WRONG.
-!!$  if(func == X_FUNC_GGA_LB94) then
-!!$    energy = 0._r8
-!!$    do is = 1, st%nspin
-!!$      call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
-!!$      do i = 1, m%np
-!!$        energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*gd(:, i, is))
-!!$      end do
-!!$    end do
-!!$    energy = - energy * m%vol_pp
-!!$  end if
-  energy = M_ZERO
+  if(func == X_FUNC_GGA_LB94) then
+    energy = 0._r8
+    do is = 1, st%nspin
+      call dmesh_derivatives(m, pot(:, is), grad=grhoplus)
+      do i = 1, m%np
+        energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*grhoplus(:, i))
+      end do
+    end do
+    energy = - energy * m%vol_pp
+  end if
 
   deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus, vlocaldedgd)
   call pop_sub()
