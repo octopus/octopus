@@ -118,15 +118,30 @@ contains
   end subroutine plane_z
 
   subroutine dx()
-    character(len=12) :: posxc, posyc, poszc, h1c, h2c, h3c
-    character(len=200) :: pwd, line, datafile
     integer :: ix, iy, iz
-    real(r8) :: pos
 
-    ! first write the block data
-    call io_assign(iunit)
-    datafile = trim(dir) + "/" + trim(fname) + ".dxdata"
-    open(iunit, file=trim(datafile), status='unknown')
+    open(iunit, file=trim(dir)+"/"+trim(fname)+".dx", status='unknown')
+    
+    write(iunit, '(a)') 'header = marker "Start data\n"'
+    write(iunit,'(a,i4,a,i4,a,i4)') 'grid = ', m%fft_n(1), ' x ', m%fft_n(2), ' x ', m%fft_n(3)
+    write(iunit,'(a)') 'format = ascii'
+    write(iunit,'(a)') 'interleaving = record'
+    write(iunit,'(a)') 'majority = row'
+    write(iunit,'(a)') 'field = field0'
+    write(iunit,'(a)') 'type = float'
+    write(iunit,'(a)') 'dependency = positions'
+    
+    write(iunit,'(a,6(a,f12.6))') 'positions = regular, regular, regular', &
+         ',', -(m%fft_n(1) - 1)/2 * m%h(1) / units_out%length%factor, &
+         ',', m%h(1) / units_out%length%factor, &
+         ',', -(m%fft_n(2) - 1)/2 * m%h(2) / units_out%length%factor, &
+         ',', m%h(2) / units_out%length%factor, &
+         ',', -(m%fft_n(3) - 1)/2 * m%h(3) / units_out%length%factor, &
+         ',', m%h(3) / units_out%length%factor
+
+    write(iunit, '(1x)')
+    write(iunit, '(a)') 'end'
+    write(iunit, '(a)') 'Start data'
     do ix = 1, m%fft_n(1)
       do iy = 1, m%fft_n(2)
         do iz = 1, m%fft_n(3)
@@ -134,44 +149,6 @@ contains
         end do
       end do
     end do
-    call io_close(iunit)
-    
-    ! get working directory
-    call clear_str(pwd); call oct_getcwd(pwd)
-    open(iunit, file=trim(dir)+"/"+trim(fname)+".general", status='unknown')
-    
-    write(line,'(a)')              'file = '+trim(pwd(1:len_trim(pwd)-1))+'/'+trim(datafile)
-    write(iunit,'(a)') trim(line)
-    write(line,'(a,i4,a,i4,a,i4)') 'grid = ', m%fft_n(1), ' x ', m%fft_n(2), ' x ', m%fft_n(3);
-    write(iunit,'(a)') trim(line)
-    write(line,'(a)')              'format = ascii'
-    write(iunit,'(a)') trim(line)
-    write(line,'(a)')              'interleaving = record'
-    write(iunit,'(a)') trim(line)
-    write(line,'(a)')              'majority = row'
-    write(iunit,'(a)') trim(line)
-    write(line,'(a)')              'field = field0'
-    write(iunit,'(a)') trim(line)
-    write(line,'(a)')              'type = float'
-    write(iunit,'(a)') trim(line)
-    write(line,'(a)')              'dependency = positions'
-    write(iunit,'(a)') trim(line)
-    
-    pos = -(m%fft_n(1) - 1)/2 * m%h(1); write(posxc,'(f12.6)') pos / units_out%length%factor
-    pos = -(m%fft_n(1) - 1)/2 * m%h(2); write(posyc,'(f12.6)') pos / units_out%length%factor
-    pos = -(m%fft_n(1) - 1)/2 * m%h(3); write(poszc,'(f12.6)') pos / units_out%length%factor
-    write(h1c,'(f12.6)') m%h(1) / units_out%length%factor
-    write(h2c,'(f12.6)') m%h(2) / units_out%length%factor
-    write(h3c,'(f12.6)') m%h(3) / units_out%length%factor
-    write(line,'(a)') &
-         'positions = regular, regular, regular, '+ &
-         posxc + ', ' + &
-         h1c   + ', ' + &
-         posyc + ', ' + &
-         h2c   + ', ' + &
-         poszc + ', ' + &
-         h3c
-    write(iunit,'(a)') trim(line)
     
     call io_close(iunit)
   end subroutine dx
