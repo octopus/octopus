@@ -20,7 +20,7 @@
 module output
   use oct_parser
   use units
-  use mesh
+  use functions
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif

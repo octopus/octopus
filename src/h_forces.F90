@@ -160,7 +160,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
           fw = M_z0
           call phase_factor(sys%m, db, atm%x, atm%spec%local_fw, fw)
           call dmesh_gradq(sys%m, fw, j, db)
-          call rfft_backward(h%fft, fw, fr)
+          call dfft_backward(h%fft, fw, fr)
           force = M_ZERO
           call dcube_to_mesh(sys%m, fr, force, db)
           do l = 1, sys%st%nspin

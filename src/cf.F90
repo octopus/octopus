@@ -17,24 +17,48 @@
 
 #include "global.h"
 
-module mesh_function
+module cube_function
   use global
   use mesh
-  use cube_function
-#ifdef HAVE_FFT
+#if defined(HAVE_FFT)
   use fft
 #endif
 
   implicit none
 
+  type dcf
+    integer :: n(3)   ! the linear dimensions of the cube
+
+    real(r8),    pointer :: RS(:,:,:)
+    complex(r8), pointer :: FS(:,:,:)
+
+#if defined(HAVE_FFT)
+    integer :: nx ! = n(1)/2 + 1, first dimension of the FS array
+    type(fft_type), pointer :: fft
+#endif
+  end type dcf
+
+  type zcf
+    integer :: n(3)   ! the linear dimensions of the cube
+
+    complex(r8), pointer :: RS(:,:,:)
+    complex(r8), pointer :: FS(:,:,:)
+
+#if defined(HAVE_FFT)
+    integer :: nx ! = n(1),  first dimension of the FS array
+    type(fft_type), pointer :: fft
+#endif
+  end type zcf
+
 contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "mf_inc.F90"
+#include "cf_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "mf_inc.F90"
+#include "cf_inc.F90"
 
-end module mesh_function
+end module cube_function
+  

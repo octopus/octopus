@@ -225,9 +225,9 @@ subroutine hartree_fft(h, m, pot, dist)
   
   ! Fourier transform the charge density
   
-  call rfft_forward (h%fft, f, gg)
+  call dfft_forward (h%fft, f, gg)
   gg = gg*h%ff
-  call rfft_backward(h%fft, gg, f)
+  call dfft_backward(h%fft, gg, f)
   
   do i = 1, m%np
     pot(i) = f(m%Lxyz(1, i) + c(1), m%Lxyz(2, i) + c(2), m%Lxyz(3, i) + c(3))

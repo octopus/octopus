@@ -179,6 +179,17 @@ subroutine global_end()
 
 end subroutine global_end
 
+! This subroutine is called by the assert macro
+#ifdef DEBUG
+subroutine assert_die(s, f, l)
+  character(len=*), intent(in) :: s, f
+  integer, intent(in) :: l
+  
+  write(stderr, '(3a,i5,3a)') 'Assertion "', trim(s), '" failed in line ', l, ' in file "', f, '"'
+  stop
+end subroutine assert_die
+#endif
+
 subroutine write_fatal(no_lines)
   integer, intent(in) :: no_lines
   integer :: i

@@ -68,6 +68,7 @@ subroutine system_init(s)
   call output_init(s%outp)
 
   call mesh_init(s%m, s%natoms, s%atom)
+  call functions_init(s%m)
 
   !  find total charge of the system
   s%val_charge = 0
@@ -99,6 +100,7 @@ subroutine system_end(s)
     call states_end(s%st)
     deallocate(s%st); nullify(s%st)
   end if
+  call functions_end()
   call mesh_end(s%m)
   call atom_end(s%natoms, s%atom, s%ncatoms, s%catom)
   call specie_end(s%nspecies, s%specie)

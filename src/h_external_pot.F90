@@ -55,7 +55,7 @@ subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
           end do
         end do
       end do
-      call rfft_forward(fft, fr, s(i)%local_fw)
+      call dfft_forward(fft, fr, s(i)%local_fw)
     else
       allocate(v(2:s(i)%ps%g%nrval))
       temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
@@ -100,7 +100,7 @@ subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
         end do
       end do
 
-      call rfft_forward(fft, fr, s(i)%rhocore_fw)
+      call dfft_forward(fft, fr, s(i)%rhocore_fw)
     end if
 
   end do
@@ -162,12 +162,12 @@ subroutine generate_external_pot(h, sys)
     allocate(fr(db(1), db(2), db(3)))
 
     ! first the potential
-    call rfft_backward(h%fft, fw, fr)
+    call dfft_backward(h%fft, fw, fr)
     call dcube_to_mesh(sys%m, fr, h%Vpsl, db)
       
     ! and the non-local core corrections
     if(sys%nlcc) then
-      call rfft_backward(h%fft, fwc, fr)
+      call dfft_backward(h%fft, fwc, fr)
       call dcube_to_mesh(sys%m, fr, sys%st%rho_core, db)
       deallocate(fwc)
     end if

@@ -183,14 +183,14 @@ contains
 
   ! these routines simply call fftw
   ! first the real to complex versions
-  subroutine rfft_forward(fft, r, c)
+  subroutine dfft_forward(fft, r, c)
     type(fft_type), intent(in) :: fft
     real(r8), intent(in)     :: r(:,:,:)
     complex(r8), intent(out) :: c(:,:,:)
     call dfftw_execute_dft_r2c(fft%planf, r, c)
-  end subroutine rfft_forward
+  end subroutine dfft_forward
 
-  subroutine rfft_backward(fft, c, r)
+  subroutine dfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
     complex(r8), intent(in) :: c(:,:,:)
     real(r8), intent(out)   :: r(:,:,:)
@@ -203,7 +203,7 @@ contains
     n = fft%n(1)*fft%n(2)*fft%n(3)
     call dscal(n, M_ONE/real(n, r8), r, 1)
 
-  end subroutine rfft_backward
+  end subroutine dfft_backward
 
   ! first the complex versions
   subroutine zfft_forward(fft, in, out)

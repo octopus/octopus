@@ -399,7 +399,7 @@ contains
       ! first term
       allocate(r(m%np), gr(3, m%np))
       r(1:m%np) = st%rho(1:m%np, is)/s
-      call dmf_gradient(m, r, gr)
+      call df_gradient(m, r, gr)
       do i = 1, m%np
         if(r(i) >= dmin) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
@@ -415,7 +415,7 @@ contains
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call R_FUNC(mf_gradient) (m, st%R_FUNC(psi)(:, idim, ist, ik), gpsi)
+            call R_FUNC(f_gradient) (m, st%R_FUNC(psi)(:, idim, ist, ik), gpsi)
             do i = 1, m%np
               if(r(i) >= dmin) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
@@ -605,7 +605,7 @@ subroutine R_FUNC(mesh_angular_momentum)(m, f, lf)
   integer :: i
 
   allocate(gf(3, m%np))
-  call R_FUNC(mf_gradient)(m, f, grad = gf)
+  call R_FUNC(f_gradient)(m, f, grad = gf)
 
   do i = 1, m%np
      call mesh_xyz(m, i, x)

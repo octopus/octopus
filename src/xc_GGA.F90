@@ -79,8 +79,8 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, &
     end select
   enddo
 
-  call dmf_gradient(m, rhoplus, grhoplus)
-  if(st%ispin > UNPOLARIZED) call dmf_gradient(m, rhominus, grhominus)
+  call df_gradient(m, rhoplus, grhoplus)
+  if(st%ispin > UNPOLARIZED) call df_gradient(m, rhominus, grhominus)
   energy = M_ZERO
   lpot = M_ZERO
 
@@ -144,7 +144,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy, &
   if(func == X_FUNC_GGA_LB94) then
     energy = 0._r8
     do is = 1, st%nspin
-      call dmf_gradient(m, pot(:, is), grhoplus)
+      call df_gradient(m, pot(:, is), grhoplus)
       do i = 1, m%np
         energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*grhoplus(:, i))
       end do

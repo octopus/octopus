@@ -24,6 +24,7 @@
 #endif
 
 #undef R_FUNC
+#undef X
 #undef R_TYPE
 #undef R_MPITYPE
 #undef R_ABS

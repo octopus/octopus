@@ -123,11 +123,7 @@ subroutine R_FUNC(mesh_rs2fs)(m, f, g)
   allocate(fr(n(1), n(2), n(3)))
   fr = R_TOTYPE(M_ZERO)
   call R_FUNC(mesh_to_cube) (m, f, fr, n)
-#ifdef R_TREAL
-  call rfft_forward(m%dfft, fr, g)
-#else
-  call zfft_forward(m%zfft, fr, g)
-#endif
+  call X(fft_forward)(m%X(fft), fr, g)
 
   deallocate(fr)
   call pop_sub()
@@ -152,11 +148,7 @@ subroutine R_FUNC(mesh_fs2rs)(m, g, f)
   call fft_getdim_real(m%dfft, n)
 
   allocate(fr(n(1), n(2), n(3)))   
-#ifdef R_TREAL
-  call rfft_backward(m%dfft, g, fr)
-#else
-  call zfft_backward(m%zfft, g, fr)
-#endif
+  call X(fft_backward)(m%X(fft), g, fr)
 
   f = R_TOTYPE(M_ZERO)
   call R_FUNC(cube_to_mesh) (m, fr, f, n)

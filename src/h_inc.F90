@@ -97,8 +97,8 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
     allocate(grad(3, m%np))
     k2 = sum(st%kpoints(:, ik)**2)
     do idim = 1, dim
-      call R_FUNC(mf_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
-      call R_FUNC(mf_gradient)  (m, psi(:, idim), grad(:, :))
+      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
+      call R_FUNC(f_gradient)  (m, psi(:, idim), grad(:, :))
       do i = 1, m%np
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
              + M_TWO*M_zI*sum(st%kpoints(:, ik)*grad(:, i)) &
@@ -114,7 +114,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   
   else
     do idim = 1, dim
-      call R_FUNC(mf_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
+      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
     end do
     call R_FUNC(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi, 1)
   end if
@@ -437,7 +437,7 @@ subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
       call laser_vector_field(h%no_lasers, h%lasers, t, f)
       allocate(grad(3, m%np))
       do idim = 1, st%dim
-        call R_FUNC(mf_gradient)(m, psi(:, idim), grad)
+        call R_FUNC(f_gradient)(m, psi(:, idim), grad)
         do k = 1, m%np
           hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
                sum(f**2)/2._r8 * psi(k, idim)
