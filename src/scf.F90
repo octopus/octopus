@@ -180,6 +180,7 @@ subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
   integer iunit, i
+  real(r8) :: diff(sys%st%nst, sys%st%nik)
 
   call oct_mkdir(C_string(trim(dir)))
   call io_assign(iunit)
