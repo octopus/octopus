@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.5 from
+This is octopus.info, produced by makeinfo version 4.4 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -21,61 +21,168 @@ Angel Rubio
 
 Indirect:
 octopus.info-1: 655
-octopus.info-2: 47867
-octopus.info-3: 92536
+octopus.info-2: 50305
+octopus.info-3: 100173
 
 Tag Table:
 (Indirect)
 Node: Top655
-Node: Copying2122
-Node: Authors3523
-Node: Introduction6702
-Node: Description of octopus6901
-Ref: Description of octopus-Footnote-19345
-Node: Time dependent density functional theory9738
-Ref: Time dependent density functional theory-Footnote-113497
-Ref: Time dependent density functional theory-Footnote-213729
-Ref: Time dependent density functional theory-Footnote-314031
-Ref: Time dependent density functional theory-Footnote-414187
-Ref: Time dependent density functional theory-Footnote-514371
-Node: Installation14447
-Node: Quick instructions14646
-Node: Long instructions15176
-Ref: Long instructions-Footnote-122168
-Node: Troubleshooting22683
-Node: The input file24631
-Node: The parser24841
-Node: Input file options27988
-Node: Generalities28613
-Node: Species31260
-Node: Coordinates34873
-Node: Velocities38743
-Node: Mesh39926
-Node: States42931
-Node: Hamiltonian45413
-Node: Exchange and correlation46563
-Node: SCF47867
-Node: Unoccupied States51800
-Node: Time Dependent52521
-Node: Photo-electron spectrum69683
-Node: Geometry optimization70665
-Node: Function output for visualization71420
-Node: Spectrum calculations75682
-Node: Varia77816
-Node: External utilities78627
-Node: strength-function79176
-Node: hs-from-mult79985
-Node: hs-from-acc80203
-Node: nbo2xyz80411
-Node: excitations80624
-Node: broad81161
-Node: make_st81492
-Node: choose_st82745
-Node: wf.net83476
-Node: Examples84845
-Node: Hello world85000
-Ref: Hello world-Footnote-191644
-Node: Benzene91728
-Node: Options Index92536
+Node: Copying4259
+Node: Authors5660
+Node: Introduction8879
+Node: Description of octopus9512
+Ref: Description of octopus-Footnote-111956
+Node: Time dependent density functional theory12349
+Ref: Time dependent density functional theory-Footnote-116108
+Ref: Time dependent density functional theory-Footnote-216340
+Ref: Time dependent density functional theory-Footnote-316642
+Ref: Time dependent density functional theory-Footnote-416798
+Ref: Time dependent density functional theory-Footnote-516982
+Node: Installation17053
+Node: Quick instructions17248
+Node: Long instructions17778
+Ref: Long instructions-Footnote-125877
+Node: Troubleshooting26392
+Node: The parser28311
+Node: Input file options31445
+Node: Generalities32061
+Node: SystemName32333
+Node: Dimensions32624
+Node: CalculationMode32925
+Node: Units33705
+Node: UnitsInput34398
+Node: UnitsOutput34737
+Node: Verbose35073
+Node: DebugLevel35645
+Node: Species Block35895
+Node: Species36068
+Node: Coordinates Description39333
+Node: PDBCoordinates39747
+Node: XYZCoordinates41219
+Node: Coordinates41986
+Node: XYZVelocities42975
+Node: Velocities43272
+Node: RandomVelocityTemp44041
+Node: Mesh44365
+Node: BoxShape44902
+Node: Radius45404
+Node: Lsize45632
+Node: ZLength45972
+Node: Spacing46182
+Node: DerivativesSpace46619
+Node: OrderDerivatives47230
+Node: DoubleFFTParameter47599
+Node: FFTOptimize48105
+Node: States48413
+Node: SpinComponents48645
+Node: NumberKPoints49259
+Node: ExcessCharge49711
+Node: ExtraStates50021
+Node: Occupations50305
+Node: ElectronicTemperature51254
+Node: Hamiltonian51580
+Node: NonInteractingElectrons51830
+Node: ClassicPotential52228
+Node: LocalPotentialSpace52564
+Node: RelativisticCorrection52994
+Node: Exchange and correlation53391
+Node: XFunctional53728
+Node: CFunctional54480
+Node: SCF55045
+Node: MaximumIter55592
+Node: ConvAbsDens55794
+Node: ConvRelDens56023
+Node: ConvAbsEnergy56252
+Node: ConvRelEnergy56491
+Node: LCAOStart56728
+Node: SCFinLCAO57117
+Node: EigenSolver57516
+Node: EigenSolverInitTolerance58391
+Node: EigenSolverFinalTolerance58655
+Node: EigenSolverFinalToleranceIteration58942
+Node: EigenSolverMaxIter59297
+Node: What2Mix59688
+Node: TypeOfMixing59949
+Node: Mixing60280
+Node: MixNumberSteps60559
+Node: Unoccupied States60794
+Node: UnoccNumberStates61119
+Node: UnoccMaximumIter61352
+Node: UnoccConv61705
+Node: Time Dependent61955
+Node: TDMaximumIter66350
+Node: TDTimeStep66620
+Node: TDExponentialMethod66866
+Node: TDExpOrder72102
+Node: TDLanczosTol72439
+Node: TDEvolutionMethod72917
+Node: TDLasers78653
+Node: TDGauge80062
+Node: TDDeltaStrength80312
+Node: TDPolarization80654
+Node: TDDipoleMax81221
+Node: TDOutputMultipoles81510
+Node: TDOutputCoordinates81883
+Node: TDOutputGSProjection82264
+Node: TDOutputAcceleration82727
+Node: TDOutputLaser83150
+Node: TDOutputElEnergy83417
+Node: TDOutputOccAnalysis83727
+Node: MoveIons84088
+Node: AbsorbingBoundaries84443
+Node: ABWidth84990
+Node: ABHeight85215
+Node: Geometry optimization85429
+Node: GOMethod85680
+Node: GOTolerance85957
+Node: GOMaxIter86255
+Node: GOStep86532
+Node: Function output for visualization86707
+Node: OutputKSPotential88120
+Node: OutputDensity88656
+Node: OutputWfs88957
+Node: OutputWfsNumber89389
+Node: OutputElf89730
+Node: OutputGeometry90046
+Node: OutputAxisX90503
+Node: OutputAxisY90807
+Node: OutputAxisZ91108
+Node: OutputPlaneX91410
+Node: OutputPlaneY91690
+Node: OutputPlaneZ91971
+Node: OutputDX92248
+Node: OutputNETCDF92638
+Node: OutputEvery93009
+Node: Spectrum calculations93282
+Node: SpecTransformNode93970
+Node: SpecDampMode94282
+Node: SpecDampFactor95066
+Node: SpecStartTime95353
+Node: SpecEndTime95631
+Node: SpecEnergyStep95905
+Node: SpecMinEnergy96117
+Node: SpecMaxEnergy96368
+Node: HSPolarization96622
+Node: Varia97104
+Node: PoissonSolver97272
+Node: POLStaticField97682
+Node: Displacement97966
+Node: External utilities98282
+Node: oct-sf98870
+Node: oct-rsf99641
+Node: oct-hs-mult99760
+Node: oct-hs-acc99964
+Node: oct-xyz-anim100173
+Node: oct-excite100399
+Node: oct-broad100942
+Node: oct-make-st101288
+Node: oct-choose-st102561
+Node: oct-center-geom103317
+Node: wf.net103501
+Node: Examples104876
+Node: Hello world105031
+Ref: Hello world-Footnote-1111675
+Node: Benzene111759
+Node: Options Index112567
 
 End Tag Table
