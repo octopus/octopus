@@ -1,6 +1,7 @@
 EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-excite oct-broad oct-ph oct-xyz-anim \
-	oct-choose-st oct-make-st oct-center-geom
+	oct-choose-st oct-make-st oct-center-geom \
+	oct-atoms-magnet
 
 bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
@@ -73,6 +74,9 @@ oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
+
+oct_atoms_magnet_SOURCES = $(core_SRCS) atoms_magnet.F90
+oct_atoms_magnet_LDADD = $(octopus_LDADD)
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
