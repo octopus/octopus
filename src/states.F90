@@ -27,6 +27,8 @@ use math
 use mesh
 use functions
 use output
+use crystal
+
 
 implicit none
 
@@ -116,41 +118,6 @@ subroutine states_init(st, m, val_charge, nlcc)
     write(message(1),'(a,i4,a)') "Input: '", st%d%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
     call write_fatal(2)
-  end if
-
-  if (conf%periodic_dim>0) then
-    if(loct_parse_block_n('NumberKPoints')<1) then
-      message(1) = 'Block "NumberKPoints" not found in input file.'
-      call write_fatal(1)
-    end if
-    st%d%nik_axis = 1
-    do i = 1, conf%periodic_dim
-      call loct_parse_block_int('NumberKPoints', 0, i-1, st%d%nik_axis(i))
-    end do    
-    if (any(st%d%nik_axis < 1)) then
-      message(1) = 'Input: NumberKPoints is not valid'
-      message(2) = '(NumberKPoints >= 1)'
-      call write_fatal(2)
-    end if
-    
-    select case(loct_parse_block_n('SelectKAxis'))
-    case(1)
-      do i = 1, conf%periodic_dim
-         call loct_parse_block_logical('SelectKAxis', 0, i-1, st%d%select_axis(i))
-      end do
-      do i=1, conf%periodic_dim
-         if (.not.st%d%select_axis(i)) then
-          write(message(1),'(a,i1,a)')'Info: K points in axis ',i,' are neglected'
-          call write_info(1) 
-          st%d%nik_axis(i) = 1
-         end if
-      end do
-    case default
-      st%d%select_axis=.true.
-    end select
-    st%d%nik=PRODUCT(st%d%nik_axis)
-  else
-    st%d%nik = 1
   end if
 
   call loct_parse_float('ExcessCharge', M_ZERO, excess_charge)
@@ -376,6 +343,14 @@ subroutine states_end(st)
     deallocate(st%zpsi); nullify(st%zpsi)
   end if
 
+  if(associated(st%d%kpoints)) then
+    deallocate(st%d%kpoints); nullify(st%d%kpoints)
+  end if
+
+  if(associated(st%d%kweights)) then
+    deallocate(st%d%kweights); nullify(st%d%kweights)
+  end if
+  
   call pop_sub()
 end subroutine states_end
 
