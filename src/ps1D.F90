@@ -29,14 +29,17 @@ public :: ps_type, ps_init, ps_end
 ! of the components are unnecessary.
 ! Some of the things should be simplified eventually...
 type ps_type
-  type(spline_type), pointer :: kb(:)   ! Kleynman-Bylander projectors
-  type(spline_type), pointer :: dkb(:)  ! derivatives of KB projectors
+  character(len=3) :: flavour
+
+  type(spline_type), pointer :: kb(:,:)   ! Kleynman-Bylander projectors
+  type(spline_type), pointer :: dkb(:,:)  ! derivatives of KB projectors
   type(spline_type), pointer :: Ur(:)   ! atomic wavefunctions
   type(spline_type), pointer :: vps(:)  ! pseudopotential
   type(spline_type) :: vlocal  ! local part
   type(spline_type) :: dvlocal ! derivative of the local part
   type(spline_type) :: core    ! core charge
 
+  integer :: kbc
   integer :: L_max ! maximum value of l to take
   integer :: L_loc ! which component to take as local
   character(len=4) :: icore
@@ -44,6 +47,7 @@ type ps_type
   real(r8) :: vlocal_origin ! local pseudopotential at the orginin
 
   real(r8), pointer :: dkbcos(:), dknrm(:) ! KB cosinus and norm
+  real(r8), pointer :: h(:,:,:)
 end type ps_type
 
 real(r8), parameter :: eps = 1.0e-8_r8

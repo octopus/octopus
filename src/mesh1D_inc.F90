@@ -182,11 +182,12 @@ contains
 
 end subroutine R_FUNC(mesh_derivatives)
 
-subroutine R_FUNC(mesh_write_function) (m, f, u, filename)
+subroutine R_FUNC(mesh_write_function) (m, f, u, filename, dummy)
   type(mesh_type), intent(IN)  :: m
   R_TYPE, intent(IN)           :: f(m%np)
   real(r8), intent(IN)         :: u
   character(len=*), intent(in) :: filename
+  character(len=2), intent(in), optional :: dummy ! Useless
 
   integer :: iunit, i
 

@@ -86,15 +86,15 @@ end subroutine specie_local_fourier_init
 
 #elif defined(ONE_D)
 
-subroutine specie_local_fourier_init(ns, s, m)
+subroutine specie_local_fourier_init(ns, s, m, dummy)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
+  logical, intent(in) :: dummy ! totaly useless.
 
-  integer :: i, j, ix, iy, iz, n, ixx !ixx(3)
-  real(r8) :: x, r, vl, r1 !x(3)
+  integer :: i, j, ix, iy, iz, n, ixx 
+  real(r8) :: x, r, vl, r1
   complex(r8) :: c
-  !real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
   real(r8), allocatable :: fr(:), dfr(:)
 
   sub_name = 'specie_local_fourier_init'; call push_sub()
