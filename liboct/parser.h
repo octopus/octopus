@@ -33,6 +33,7 @@ gsl_complex parse_complex(char *name, gsl_complex def);
 char *parse_string(char *name, char *def);
 
 int parse_block_n(char *name);
+int parse_block_cols(char *name, int l);
 int parse_block_int(char *name, int l, int col, int *r);
 int parse_block_double(char *name, int l, int col, double *r);
 int parse_block_complex(char *name, int l, int col, gsl_complex *r);

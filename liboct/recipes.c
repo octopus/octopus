@@ -49,7 +49,6 @@ void F90_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 	char *lang, dir[512];
 	struct dirent **namelist;
 	int i, n;
-	FILE *f;
 
 	/* get language */
 	lang = getenv("LANG");

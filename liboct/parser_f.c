@@ -187,7 +187,6 @@ void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 		 (STR_F_TYPE name, int *l, int *c, STR_F_TYPE res STR_ARG2)
 {
 	char *s, *name_c;
-	int len;
 
 	name_c = TO_C_STR1(name);
 	if(parse_block_string(name_c, *l, *c, &s) != 0)
