@@ -67,7 +67,7 @@ type mesh_type
   integer :: nr(2,3)  ! dimensions of the box where the points are contained
   integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
 
-  type(derivatives_type), pointer :: laplacian
+  type(derivatives_type) :: laplacian
   type(derivatives_type), pointer :: grad(:)
 
   real(r8) :: fft_alpha ! enlargement factor for double box
@@ -97,7 +97,7 @@ subroutine mesh_init(m, natoms, atom)
     call write_fatal(2)
   end if
 
-  nullify(m%laplacian, m%grad)
+  nullify(m%grad)
 
   call pop_sub()
 end subroutine mesh_init

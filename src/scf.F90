@@ -73,7 +73,7 @@ subroutine scf_init(scf, sys)
   call mix_init(scf%smix, sys%m, sys%st)
 
   ! now the eigen solver stuff
-  call eigen_solver_init(scf%eigens, sys%st)
+  call eigen_solver_init(scf%eigens, sys%st, sys%m)
 
   ! Should the calculation be restricted to LCAO subspace?
   call oct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
@@ -88,6 +88,7 @@ end subroutine scf_init
 subroutine scf_end(scf)
   type(scf_type), intent(inout) :: scf
 
+  call eigen_solver_end(scf%eigens)
   call mix_end(scf%smix)
 
   return

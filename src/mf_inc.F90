@@ -78,7 +78,6 @@ subroutine X(mf_laplacian) (m, f, lapl)
   R_TYPE, intent(out) :: lapl(m%np)
 
   integer :: k, nl
-  !type(der_lookup_type), pointer :: p
   type(lookup_type), pointer :: p
 
   call push_sub("mf_laplacian")
@@ -92,13 +91,33 @@ subroutine X(mf_laplacian) (m, f, lapl)
   call pop_sub()
 end subroutine X(mf_laplacian)
 
+!!! applies a low-frequency filter to a function in a mesh.
+subroutine X(mf_filter) (m, filter, f, filteredf)
+  type(mesh_type), intent(in) :: m
+  type(derivatives_type), intent(in) :: filter
+  R_TYPE, intent(in) :: f(m%np)
+  R_TYPE, intent(out) :: filteredf(m%np)
+
+  integer :: k, nl
+  type(lookup_type), pointer :: p
+
+  call push_sub("mf_filter")
+
+  do k = 1, m%np
+    p => filter%lookup(k)
+    nl = p%n
+    filteredf(k) = sum(p%w(1:nl)*f(p%i(1:nl)))
+  end do
+
+  call pop_sub()
+end subroutine X(mf_filter)
+
 subroutine X(mf_gradient) (m, f, grad)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(in) :: f(m%np)
   R_TYPE, intent(out) :: grad(conf%dim, m%np)
   
   integer :: j, k, ng(3)
-  !type(der_lookup_type), pointer :: p
   type(lookup_type), pointer :: p
 
   call push_sub("mf_gradient")
@@ -122,7 +141,6 @@ subroutine X(mf_divergence)(m, f, divf)
   R_TYPE, intent(out) :: divf(m%np)
 
   integer :: j, k, ng(3)
-  !type(der_lookup_type), pointer :: p
   type(lookup_type), pointer :: p
 
   call push_sub('mf_divergence')

@@ -254,7 +254,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         ! Preconditioning
         do idim = 1, st%dim
           call R_FUNC(copy) (np, av((idim-1)*np+1, d1 + 1), 1, aux(1, idim), 1)
-          call R_FUNC(low_frequency)(sys%m, aux(:, idim), v((idim-1)*sys%m%np+1, d1 + 1))
+          call X(mf_filter) (sys%m, filter, aux(:, idim), v((idim-1)*sys%m%np+1:idim*sys%m%np, d1+1))
         enddo
         
       enddo inner_loop
@@ -279,25 +279,6 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   call pop_sub()
   
 contains
-  ! WARNING: This is not currently working
-  subroutine R_FUNC(low_frequency) (m, f, lapl)
-    type(mesh_type), intent(IN) :: m
-    R_TYPE, intent(IN)  :: f(m%np)
-    R_TYPE, intent(out) :: lapl(1:m%np)
-    
-    integer :: k, nl
-    !  type(der_lookup_type), pointer :: p
-
-    !  call push_sub('low_frequency')
-    
-!!$  do k = 1, m%np
-!!$    p => m%der_lookup(k)
-!!$    nl = p%lapl_n
-!!$    lapl(k) = sum(p%lapl_w(1:nl)*f(p%lapl_i(1:nl)))
-!!$  end do
-    
-    !  call pop_sub()
-  end subroutine R_FUNC(low_frequency)  
 
   subroutine residual(hv, v, e, res, r)
     implicit none

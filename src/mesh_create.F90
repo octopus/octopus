@@ -290,40 +290,39 @@ contains
 
 end function in_mesh
 
-subroutine build_lookup_tables(m, order)
+subroutine derivatives_init_diff(m, order, laplacian, grad)
   type(mesh_type), intent(inout) :: m
   integer, intent(in) :: order
+  type(derivatives_type) :: laplacian
+  type(derivatives_type), pointer :: grad(:)
 
   real(r8), allocatable :: dgidfj(:) ! the coefficients for the gradient
-  real(r8), allocatable :: dlidfj(:) ! the coefficients for the laplacian  
-
+  real(r8), allocatable :: dlidfj(:) ! the coefficients for the laplacian
   integer :: i, j, ix(3), ik, in, nl, ng(3)
 
   call push_sub('build_lookup_tables')
 
-  allocate(m%grad(conf%dim), m%laplacian)
-  m%laplacian%norder = order
+  allocate(grad(conf%dim))!, laplacian)
+  laplacian%norder = order
   do j = 1, conf%dim
-    m%grad(j)%norder = order
+    grad(j)%norder = order
   enddo
 
   call derivatives_coeff()
 
-  allocate(m%laplacian%lookup(m%np))
+  allocate(laplacian%lookup(m%np))
   do j = 1, conf%dim
-     allocate(m%grad(j)%lookup(m%np))
+     allocate(grad(j)%lookup(m%np))
   enddo
 
   do i = 1, m%np
     ix(:) = m%Lxyz(:, i)
     
-    ! first we count the points (zero is triple counted, but we do not care for now ;)
-    ! nl counts the points for the laplacian and ng for the gradient
     nl = 0; ng = 0
     do j = 1, conf%dim
-      do ik = -m%laplacian%norder, m%laplacian%norder
+      do ik = -order, order
         ix(j) = ix(j) + ik
-        if(index(ix, sign(j, ik)) > 0) then
+        if(mesh_index(m, ix, sign(j, ik)) > 0) then
           nl    = nl    + 1
           ng(j) = ng(j) + 1
         end if
@@ -332,33 +331,32 @@ subroutine build_lookup_tables(m, order)
     end do
 
     ! allocate
-    m%laplacian%lookup(i)%n = nl
+    laplacian%lookup(i)%n = nl
     do j = 1, conf%dim
-       m%grad(j)%lookup(i)%n = ng(j)
+       grad(j)%lookup(i)%n = ng(j)
     enddo
     ng(1) = maxval(ng)
-    allocate(m%laplacian%lookup(i)%i(nl), m%laplacian%lookup(i)%w(nl))
+    allocate(laplacian%lookup(i)%i(nl), laplacian%lookup(i)%w(nl))
     do j = 1, conf%dim
-       allocate(m%grad(j)%lookup(i)%i(nl), m%grad(j)%lookup(i)%w(ng(1)))
+       allocate(grad(j)%lookup(i)%i(nl), grad(j)%lookup(i)%w(ng(1)))
     enddo
     
     ! fill in the table
     nl = 0; ng = 0
     do j = 1, conf%dim
-      !do ik = -d%norder, d%norder
-      do ik = -m%laplacian%norder, m%laplacian%norder
+      do ik = -order, order
         ix(j) = ix(j) + ik
         
-        in = index(ix, sign(j, ik))
+        in = mesh_index(m, ix, sign(j, ik))
         if(in > 0) then
           nl    = nl    + 1
           ng(j) = ng(j) + 1
           
-          m%laplacian%lookup(i)%i(nl) = in
-          m%laplacian%lookup(i)%w(nl) = dlidfj(abs(ik))/m%h(j)**2
+          laplacian%lookup(i)%i(nl) = in
+          laplacian%lookup(i)%w(nl) = dlidfj(abs(ik))/m%h(j)**2
           
-          m%grad(j)%lookup(i)%i(ng(j)) = in
-          m%grad(j)%lookup(i)%w(ng(j)) = dgidfj(ik)/m%h(j)
+          grad(j)%lookup(i)%i(ng(j)) = in
+          grad(j)%lookup(i)%w(ng(j)) = dgidfj(ik)/m%h(j)
           
         end if
         
@@ -366,7 +364,7 @@ subroutine build_lookup_tables(m, order)
       end do
     end do
     
-  end do
+  end do        
 
   deallocate(dlidfj,dgidfj)
   call pop_sub()
@@ -379,8 +377,7 @@ contains
     real(r8), allocatable :: cc(:,:,:)
 
     call push_sub('derivatives_coeff')
-    !k = d%norder
-    k = m%laplacian%norder
+    k = order
     if (k < 1) then
       write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
       message(2) = '(1 <= OrderDerivatives)'
@@ -407,9 +404,81 @@ contains
     call pop_sub()
   end subroutine derivatives_coeff
 
-  ! this function takes care of the boundary conditions
-  ! for a given x,y,z it returns the true index of the point
-  function index(ix_, dir)
+end subroutine derivatives_init_diff
+
+subroutine derivatives_init_filter(m, order, filter)
+  type(mesh_type), intent(in) :: m
+  integer, intent(in) :: order
+  type(derivatives_type) :: filter
+
+  real(r8), parameter :: alpha = M_HALF
+  real(r8), allocatable :: dfidfj(:) ! the coefficients for the filter
+  integer :: i, j, ix(3), ik, in, nf
+
+  call push_sub('derivatives_init_filter')
+
+  !allocate(filter)
+  filter%norder = order
+
+  allocate(dfidfj(-1:1))
+  dfidfj = alpha
+  dfidfj(-1) = M_HALF*(M_ONE-alpha)
+  dfidfj( 1) = M_HALF*(M_ONE-alpha)
+
+  allocate(filter%lookup(m%np))
+
+  do i = 1, m%np
+    ix(:) = m%Lxyz(:, i)
+    
+    nf = 0
+    do j = 1, conf%dim
+      do ik = -1, 1
+        ix(j) = ix(j) + ik
+        if(mesh_index(m, ix, sign(j, ik)) > 0) then
+          nf    = nf    + 1
+        end if
+        ix(j) = ix(j) - ik
+      end do
+    end do
+
+    ! allocate
+    filter%lookup(i)%n = nf
+    allocate(filter%lookup(i)%i(nf), filter%lookup(i)%w(nf))
+
+    ! fill in the table
+    nf = 0
+    do j = 1, conf%dim
+      do ik = -order, order
+        ix(j) = ix(j) + ik
+        in = mesh_index(m, ix, sign(j, ik))
+        if(in > 0) then
+          nf    = nf    + 1
+          filter%lookup(i)%i(nf) = in
+          filter%lookup(i)%w(nf) = dfidfj(ik)/conf%dim
+        end if
+        ix(j) = ix(j) - ik
+      end do
+    end do
+    
+  end do        
+
+  deallocate(dfidfj)
+  call pop_sub()
+end subroutine derivatives_init_filter
+
+subroutine derivatives_end(d)
+  type(derivatives_type), intent(inout) :: d
+  integer :: i
+  do i = 1, size(d%lookup)
+    deallocate(d%lookup(i)%i, d%lookup(i)%w)
+  end do
+  deallocate(d%lookup)
+end subroutine derivatives_end
+
+! this function takes care of the boundary conditions
+! for a given x,y,z it returns the true index of the point
+function mesh_index(m, ix_, dir) result(index)
+    type(mesh_type), intent(in) :: m
     integer :: index
     integer, intent(in) :: ix_(3), dir
 
@@ -445,29 +514,4 @@ contains
       end do
     end if
 
-  end function index
-
-end subroutine build_lookup_tables
-
-subroutine end_lookup_tables(m)
-  type(mesh_type), intent(inout) :: m
-
-  integer :: i, j
-
-  ASSERT(associated(m%laplacian))
-  ASSERT(associated(m%grad))
-
-  do i = 1, m%np
-    deallocate(m%laplacian%lookup(i)%i, m%laplacian%lookup(i)%w)
-  end do
-  deallocate(m%laplacian%lookup)
-  do j = 1, conf%dim
-    do i = 1, m%np
-      deallocate(m%grad(j)%lookup(i)%i, m%grad(j)%lookup(i)%w)
-    end do
-    deallocate(m%grad(j)%lookup)
-  end do
-  deallocate(m%laplacian); nullify(m%laplacian)
-  deallocate(m%grad); nullify(m%grad)
-
-end subroutine end_lookup_tables
+end function mesh_index

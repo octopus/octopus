@@ -45,9 +45,9 @@ contains
     ! setup mesh including ghost points
     allocate(cg_m_aux)
     cg_m_aux = m
-    nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%laplacian, cg_m_aux%grad)
+    nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%grad)
     call mesh_create_xyz(cg_m_aux, m%laplacian%norder)
-    call build_lookup_tables(cg_m_aux, m%laplacian%norder)
+    call derivatives_init_diff(cg_m_aux, m%laplacian%norder, cg_m_aux%laplacian, cg_m_aux%grad)
 
   end subroutine init_real
 

@@ -54,11 +54,14 @@ type(states_type), pointer      :: st_trlan
 type(system_type), pointer      :: sys_trlan
 #endif
 
+type(derivatives_type) :: filter
+
 contains
 
-subroutine eigen_solver_init(eigens, st)
+subroutine eigen_solver_init(eigens, st, m)
   type(eigen_solver_type), intent(out) :: eigens
   type(states_type), intent(in)        :: st
+  type(mesh_type), intent(in)          :: m
   
   call push_sub('eigen_solver_init')
 
@@ -72,6 +75,7 @@ subroutine eigen_solver_init(eigens, st)
 #endif
   case(RS_PLAN)
     message(1) = 'Info: Eigensolver type: Preconditioned Lanczos'
+    call derivatives_init_filter(m, 1, filter)
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -121,6 +125,15 @@ subroutine eigen_solver_init(eigens, st)
 
   call pop_sub(); return
 end subroutine eigen_solver_init
+
+subroutine eigen_solver_end(eigens)
+  type(eigen_solver_type), intent(inout) :: eigens
+  select case(eigens%es_type)
+  case(RS_PLAN)
+    call derivatives_end(filter)
+  end select
+  nullify(eigens%diff)
+end subroutine eigen_solver_end
 
 subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   type(eigen_solver_type), intent(inout) :: eigens

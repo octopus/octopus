@@ -75,11 +75,16 @@ subroutine poisson_init(m)
 end subroutine poisson_init
 
 subroutine poisson_end()
+  integer :: j
   call push_sub('poisson_end')
-
   select case(poisson_solver)
   case(1)
-    call end_lookup_tables(cg_m_aux)
+    call derivatives_end(cg_m_aux%laplacian)
+    do j = 1, conf%dim
+       call derivatives_end(cg_m_aux%grad(j))
+    enddo
+    deallocate(cg_m_aux%grad); nullify(cg_m_aux%grad)
+
     call mesh_end(cg_m_aux)
     deallocate(cg_m_aux); nullify(cg_m_aux)
 #ifdef HAVE_FFT
