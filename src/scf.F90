@@ -134,6 +134,8 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(IN)    :: outp
 
+  type(lcao_type) :: lcao_data
+
   integer :: iter, iunit, is, idim, np, nspin, dim
   FLOAT :: evsum_out, evsum_in
   FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
@@ -143,7 +145,13 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
   call push_sub('scf_run')
 
-  if(scf%lcao_restricted) call lcao_init(m, st, geo, h)
+  if(scf%lcao_restricted) then
+    call lcao_init(lcao_data, m, st, geo, h)
+    if(.not.lcao_data%state == 1) then
+      message(1) = 'Nothing to do'
+      call write_fatal(1)
+    end if
+  end if
 
   nspin = st%d%nspin
   dim = 1
@@ -167,7 +175,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   ! SCF cycle
   do iter = 1, scf%max_iter
     if(scf%lcao_restricted) then
-      call lcao_wf(m, st, h)
+      call lcao_wf(lcao_data, m, st, h)
     else
       call eigen_solver_run(scf%eigens, m, st, h, iter)
     endif
@@ -236,7 +244,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
       call write_info(1)
-      if(scf%lcao_restricted) call lcao_end
+      if(scf%lcao_restricted) call lcao_end(lcao_data)
       exit
     end if
 

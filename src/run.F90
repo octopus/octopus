@@ -87,11 +87,13 @@ integer, private, parameter :: &
 contains
 
 subroutine run()
-  type(td_type), pointer :: td
   integer :: i, ierr
   FLOAT :: x
   logical :: log
   character(len=100) :: filename
+
+  type(td_type), pointer :: td
+  type(lcao_type) :: lcao_data
 
   call push_sub('run')
 
@@ -165,18 +167,19 @@ subroutine run()
 
     case(I_LCAO)
       call loct_parse_logical("LCAOStart", .true., log)
-      do i = 1, sys%geo%nspecies
-          log = log .and. (.not.sys%geo%specie(i)%local)
-      enddo
       if(log) then
         message(1) = 'Info: Performing initial LCAO calculation.'
         call write_info(1)
 
-        call lcao_init(sys%m, sys%st, sys%geo, h)
-        call lcao_wf(sys%m, sys%st, h)
-        call lcao_end
-        call states_fermi(sys%st, sys%m)                         ! occupations
-        call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
+        call lcao_init(lcao_data, sys%m, sys%st, sys%geo, h)
+        if(lcao_data%state == 1) then
+          call lcao_wf(lcao_data, sys%m, sys%st, h)
+          call lcao_end(lcao_data)
+
+          call states_fermi(sys%st, sys%m)                         ! occupations
+          call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
+        end if
+
       end if
 
     case(I_SETUP_UNOCC)

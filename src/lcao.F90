@@ -31,35 +31,29 @@ module lcao
 
   implicit none
 
-  private
-  public :: lcao_init, lcao_wf, lcao_end
+  type lcao_type
+    integer           :: state ! 0 => non-initialized;
+                               ! 1 => initialized (k, s and v1 matrices filled)
 
-type lcao_type
-  !integer           :: mode
-  integer           :: state ! 0 => non-initialized;
-                             ! 1 => initialized (k, s and v1 matrices filled)
-  integer           :: dim
-  R_TYPE , pointer  :: psis(:, :, :, :)
-  ! hamilt stores the Hamiltonian in the LCAO subspace;
-  ! s is the overlap matrix;
-  ! k is the kinetic + spin orbit operator matrix;
-  ! v is the potential.
-  R_TYPE , pointer  :: hamilt(:, :, :), s(:, :, :), k(:, :, :), v(:, :, :)
-  logical, pointer  :: atoml(:,:)
-end type
+    integer           :: dim
+    R_TYPE , pointer  :: psis(:, :, :, :)
 
-type(lcao_type) :: lcao_data
+    R_TYPE,  pointer :: hamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
+    R_TYPE,  pointer :: s     (:, :, :) ! s is the overlap matrix;
+    R_TYPE,  pointer :: k     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
+    R_TYPE,  pointer :: v     (:, :, :) ! v is the potential.
 
-integer, parameter :: MEM_INTENSIVE = 0, &
-                      CPU_INTENSIVE = 1
+    logical, pointer  :: atoml(:,:)
+  end type lcao_type
 
 contains
 
-subroutine lcao_init(m, st, geo, h)
-  type(mesh_type),        intent(IN) :: m
-  type(states_type),      intent(IN) :: st
-  type(geometry_type),    intent(IN) :: geo
-  type(hamiltonian_type), intent(IN) :: h
+subroutine lcao_init(lcao_data, m, st, geo, h)
+  type(lcao_type),        intent(out) :: lcao_data
+  type(mesh_type),        intent(IN)  :: m
+  type(states_type),      intent(IN)  :: st
+  type(geometry_type),    intent(IN)  :: geo
+  type(hamiltonian_type), intent(IN)  :: h
 
   integer :: norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2
   integer, parameter :: orbs_local = 2
@@ -76,50 +70,54 @@ subroutine lcao_init(m, st, geo, h)
   lcao_data%atoml = .true.
   norbs = 0
   atoms_loop: do i1 = 1, geo%natoms
-    l_loop: do l1 = 1, geo%atom(i1)%spec%ps%conf%p
-      l = geo%atom(i1)%spec%ps%conf%l(l1)
-      if(sum(geo%atom(i1)%spec%ps%conf%occ(l1, :)).ne.M_ZERO) then
-        norbs = norbs + (2*l+1)
-      else
-        lcao_data%atoml(i1, l1) = .false.
-      endif
-    end do l_loop
+    if(geo%atom(i1)%spec%local) then
+      lcao_data%atoml(i1, :) = .false.
+    else
+      l_loop: do l1 = 1, geo%atom(i1)%spec%ps%conf%p
+        l = geo%atom(i1)%spec%ps%conf%l(l1)
+        if(sum(geo%atom(i1)%spec%ps%conf%occ(l1, :)).ne.M_ZERO) then
+          norbs = norbs + (2*l+1)
+        else
+          lcao_data%atoml(i1, l1) = .false.
+        endif
+      end do l_loop
+    end if
   end do atoms_loop
 
-  select case(st%d%ispin)
-  case(UNPOLARIZED);
-  case(SPIN_POLARIZED); ! No need to multiply by two, since each spin-channel goes to a k-subspace.
-  case(SPINORS); norbs = norbs * 2
-  end select
+  if(norbs < st%nst) then ! we do not have enough states
+    deallocate(lcao_data%atoml)
+    message(1) = 'Not enough basis functions to perform LCAO calculation'
+    call write_warning(1)
+    lcao_data%state = 0
+    return
+  end if
+
+  if(st%d%ispin == SPINORS) norbs = norbs * 2
 
   lcao_data%dim = norbs
-  if(norbs < st%nst) then
-    write(message(1), '(a)') 'Internal bug: LCAO basis dimension, norbs, is smaller than'
-    write(message(2), '(a)') 'number of required states.'
-    call write_fatal(2)
-  endif
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
   call write_info(1)
 
   allocate(lcao_data%psis(m%np, st%dim, norbs, st%nik))
   lcao_data%psis = M_ZERO
   do ik = 1, st%nik
-     n1 = 1
-     do i1 = 1, geo%natoms
-        do l1 = 1, geo%atom(i1)%spec%ps%conf%p
-           l = geo%atom(i1)%spec%ps%conf%l(l1)
-           if(.not. lcao_data%atoml(i1, l1)) cycle
-           do lm1 = -l, l
-              do d1 = 1, st%dim
-                 ispin = states_spin_channel(st%d%ispin, ik, d1)
-                 call atom_get_wf(m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
-                 n1 = n1 + 1
-              end do
-           end do
+    n1 = 1
+    do i1 = 1, geo%natoms
+      if(geo%atom(i1)%spec%local) cycle
+      do l1 = 1, geo%atom(i1)%spec%ps%conf%p
+        l = geo%atom(i1)%spec%ps%conf%l(l1)
+        if(.not. lcao_data%atoml(i1, l1)) cycle
+        do lm1 = -l, l
+          do d1 = 1, st%dim
+            ispin = states_spin_channel(st%d%ispin, ik, d1)
+            call atom_get_wf(m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
+            n1 = n1 + 1
+          end do
         end do
-     end do
+      end do
+    end do
   end do
-
+  
   ! Allocation of variables
   allocate(lcao_data%hamilt (norbs, norbs, st%nik), &
            lcao_data%s      (norbs, norbs, st%nik), &
@@ -154,11 +152,15 @@ subroutine lcao_init(m, st, geo, h)
   deallocate(hpsi)
 
   lcao_data%state = 1
-  call pop_sub(); return
+
+  call pop_sub()
 end subroutine lcao_init
 
-subroutine lcao_end
+subroutine lcao_end(lcao_data)
+  type(lcao_type), intent(inout) :: lcao_data
   call push_sub('lcao_end')
+
+  ASSERT(lcao_data%state == 1)
 
   if(associated(lcao_data%hamilt)) then
     deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%k, lcao_data%v)
@@ -169,7 +171,8 @@ subroutine lcao_end
   call pop_sub()
 end subroutine lcao_end
 
-subroutine lcao_wf(m, st, h)
+subroutine lcao_wf(lcao_data, m, st, h)
+  type(lcao_type),        intent(inout) :: lcao_data
   type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
@@ -181,7 +184,9 @@ subroutine lcao_wf(m, st, h)
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
 
+  ASSERT(lcao_data%state == 1)
   if(conf%dim.ne.3) return
+
   call push_sub('lcao_wf')
 
   norbs = lcao_data%dim
