@@ -308,10 +308,12 @@ int F90_FUNC_(print_file, PRINT_FILE)
   if (pf != NULL) {
     while(fgets(linea, MAXLINEA, pf) != NULL)
       fputs(linea, stdout);
-    fclose(pf); fflush(stdout); return 0;
-  }
-  else{
-    fflush(stdout); return 1;
+    fclose(pf); 
+    fflush(stdout); 
+    return 0;
+  }else{
+    fflush(stdout); 
+    return 1;
   }
 }
 
@@ -328,9 +330,9 @@ int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)
     while ((c = getc(pf)) != EOF) {
       if (c == '\n') i++;
     }
-    fclose(pf); return i;
-  }
-  else{
-    fclose(pf); return -1;
+    fclose(pf); 
+    return i;
+  }else{
+    return -1;
   }
 }

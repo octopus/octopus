@@ -28,9 +28,10 @@ program excitations
   implicit none
 
   type(system_type) :: sys
+  type(states_type), target :: st
+  type(hartree_type) :: hart
   integer :: ierr, n_occ, n_unocc, flags(32)
   character(len=100) :: ch
-  type(states_type), target :: st
 
   mpiv%node = 0
   mpiv%numprocs = 1
@@ -88,6 +89,9 @@ program excitations
   ! calculate resonances
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
-  call calc_petersilka(sys%st, sys%m, n_occ, n_unocc, flags, 'linear', 'petersilka')
+  ! initialize Hartree potential
+  call hartree_init(hart, sys%m)
+  call calc_petersilka(sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
+  call hartree_end(hart)
 
 end program excitations

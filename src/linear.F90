@@ -91,19 +91,17 @@ contains
 
   end subroutine calc_matrix_elem
 
-  subroutine calc_petersilka(st, m, n_occ, n_unocc, flags, dir, fname)
+  subroutine calc_petersilka(st, m, hart, n_occ, n_unocc, flags, dir, fname)
     type(states_type), intent(IN) :: st
     type(mesh_type), intent(inout) :: m
+    type(hartree_type), intent(inout) :: hart
     integer, intent(IN) :: n_occ, n_unocc, flags(32)
     character(len=*), intent(IN) :: dir, fname
 
-    type(hartree_type) :: hart
     integer :: iunit, i, is, j, js, ik
     real(r8) :: k, fxc
     real(r8), allocatable :: rho(:,:), pot(:)
 
-    ! initialize Hartree potential
-    call hartree_init(hart, m)
     allocate(rho(m%np, 1), pot(m%np))
 
     ! do not bother with errors
@@ -129,19 +127,20 @@ contains
         do i = 1, n_occ
           is = flags((i-1)/32 + 1)
           if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-            print *, i, j
             k = st%eigenval(j, 1) - st%eigenval(i, 1) 
 
             rho(:, 1) =  R_CONJ(st%R_FUNC(psi) (1:m%np, 1, i, 1)) * st%R_FUNC(psi) (1:m%np, 1, j, 1)
+            print *, i, j, sum(rho)*m%vol_pp
 
             ! first the Hartree part (only works for real wfs...)
+            pot = 0._r8
             call hartree_solve(hart, m, pot, rho)
-            k = k + sum(rho(:,1)*pot(:))*m%vol_pp
+            k = k + 2._r8*sum(rho(:,1)*pot(:))*m%vol_pp
 
             ! now we have fxc
             do ik = 1, m%np
               call fxc_LDA(st%rho(ik, 1), fxc)
-              k = k - rho(ik, 1)**2 * fxc * m%vol_pp
+              k = k + 2._r8*rho(ik, 1)**2 * fxc * m%vol_pp
             end do
             
             write(iunit, '(e17.10,1x)', advance='no') k / units_out%energy%factor
@@ -153,7 +152,6 @@ contains
     end do
 
     deallocate(rho, pot)
-    call hartree_end(hart)
 
   end subroutine calc_petersilka
 

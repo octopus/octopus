@@ -137,7 +137,7 @@ int F90_FUNC_(oct_geom_opt, OCT_GEOM_OPT)
 		if (status)
 			break;
 
-		//norm = (double)gsl_blas_dnrm2(s->gradient);
+		/* norm = (double)gsl_blas_dnrm2(s->gradient); */
 		norm = 0.;
 		for(i=0; i<s->gradient->size; i++)
 			norm += s->gradient->data[i] * s->gradient->data[i];
