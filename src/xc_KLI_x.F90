@@ -35,20 +35,20 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
 
   call getSpinFactor(nspin, socc, sfact)
 
-  allocate(pot(m%np))
   if(nst==1 .and. nspin==1) then
+    allocate(pot(m%np))
     call hartree_solve(hartr, m, pot, rho(:, 1:1))
     if(occ(1, 1) == 1.0_r8) then
-      vx(:, 1) = -pot(:); return
+      vx(:, 1) = -pot(:)
     elseif(occ(1, 1) == 2.0_r8) then
       vx(:, 1) = -0.5_r8*pot(:)
       Ex = 0.5_r8*dmesh_dotp(m, vx(:, 1), rho(:, 1))
-      deallocate(pot)
-      return
     else
       write(*,*) 'Warning in kli_x', occ(1, 1)
     endif
-  endif
+    deallocate(pot)
+    return    
+  end if
 
   allocate(u_xc(m%np, nst), u_bar_xc(nst))
 
@@ -64,16 +64,16 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
             allocate(rho_ij(1:m%np,1:1))
 
 #ifdef R_TREAL
-            !allocate(pot(m%np))
-            pot = 0._r8
+            allocate(pot(m%np))
+            pot = M_ZERO
 
             rho_ij(1:m%np, 1) = psi(1:m%np, i, is)*psi(1:m%np, j, is)
             call hartree_solve(hartr, m, pot, rho_ij(:, 1:1))
             deallocate(rho_ij)
-            do k=1, m%np
+            do k = 1, m%np
               u_xc(k, i) = u_xc(k, i) - occ(j,is)*socc*pot(k)*    &
-                  (psi(k,j,is)/(psi(k,i,is) + my_sign(psi(k,i,is))*denom_eps))
-
+                   (psi(k,j,is)/(psi(k,i,is) + my_sign(psi(k,i,is))*denom_eps))
+              
             end do
             deallocate(pot)
 #else
