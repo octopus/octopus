@@ -14,16 +14,6 @@ integer :: calc_mode
 ! run stack
 integer, private :: i_stack(100), instr
 integer, private, parameter :: &
-     I_SETUP_RPSI         =  1,  &
-     I_END_RPSI           =  2,  &
-     I_RANDOMIZE_RPSI     =  3,  &
-     I_LOAD_RPSI          =  4,  &
-     I_SETUP_HAMILTONIAN  =  5,  &
-     I_SCF                =  6,  &
-     I_LCAO               =  7,  &
-     I_PULPO              = 99
-
-integer, private, parameter :: &
      M_START_STATIC_CALC             = 1, &
      M_RESUME_STATIC_CALC            = 2, &
      M_CALCULATE_UNOCC_STATES        = 3, &
@@ -34,6 +24,16 @@ integer, private, parameter :: &
      M_RESUME_STATIC_POL             = 8, &
      M_BO_MD                         = 9, &
      M_PULPO_A_FEIRA                 = 99
+
+integer, private, parameter :: &
+     I_SETUP_RPSI         =  1,  &
+     I_END_RPSI           =  2,  &
+     I_RANDOMIZE_RPSI     =  3,  &
+     I_LOAD_RPSI          =  4,  &
+     I_SETUP_HAMILTONIAN  =  5,  &
+     I_SCF                =  6,  &
+     I_LCAO               =  7,  &
+     I_PULPO              = 99
 
 contains
 
@@ -73,6 +73,11 @@ subroutine run()
 
       call states_generate_random(sys%st, sys%m)
 
+    case(I_SETUP_HAMILTONIAN)
+      message(1) = 'Info: Setting up Hamiltonian'
+      call write_info(1)
+      call hamiltonian_setup(h, sys)
+        
     case(I_PULPO)
       call pulpo_print()
 

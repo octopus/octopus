@@ -6,12 +6,13 @@ use math
 use mesh
 use fft
 use hartree
+use states
 
 implicit none
 
 private
 public :: xc_type, xc_write_info, xc_init, &
-    xc_end!, dxc_pot, zxc_pot
+     xc_end, dxc_pot, zxc_pot
 
 integer, parameter ::     &
     XC_FAMILY_START= 0,    &
@@ -295,22 +296,21 @@ end function my_sign
 
 ! include the xc potentials
 
-#include "real.F90"
-!#include "xc_pot.F90"
-!#include "xc_KLI.F90"
-!#include "xc_KLI_x.F90"
-!#include "xc_KLI_SIC.F90"
-#include "undef.F90"
-
-#include "complex.F90"
-!#include "xc_pot.F90"
-!#include "xc_KLI.F90"
-!#include "xc_KLI_x.F90"
-!#include "xc_KLI_SIC.F90"
-#include "undef.F90"
-
 #include "xc_LDA.F90"
 #include "xc_GGA.F90"
 !#include "xc_MGGA.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "xc_pot.F90"
+!#include "xc_KLI.F90"
+!#include "xc_KLI_x.F90"
+!#include "xc_KLI_SIC.F90"
+#include "undef.F90"
+#include "complex.F90"
+#include "xc_pot.F90"
+!#include "xc_KLI.F90"
+!#include "xc_KLI_x.F90"
+!#include "xc_KLI_SIC.F90"
 
 end module xc

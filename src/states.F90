@@ -23,6 +23,10 @@ type states_type
 
   real(r8), pointer :: eigenval(:,:)
   real(r8), pointer :: occ(:,:)
+  real(r8) :: qtot    ! (-) The total charge in the system (used in Fermi)
+
+  real(r8) :: el_temp ! electronic temperature for the Fermi function
+  real(r8) :: ef      ! the fermi energy
 
   integer :: st_start, st_end ! needed for some parallel parts
 end type states_type
@@ -34,8 +38,8 @@ subroutine states_init(st, m, val_charge)
   type(mesh_type), intent(IN) :: m
   real(r8), intent(in) :: val_charge
 
-  real(r8) :: excess_charge
-  integer :: nempty
+  real(r8) :: excess_charge, r
+  integer :: nempty, i, j
 
   sub_name = 'states_init'; call push_sub()
 
@@ -85,6 +89,22 @@ subroutine states_init(st, m, val_charge)
   ! we now allocate some arrays
   allocate(st%rho(m%np, st%ispin), &
        st%occ(st%nst, st%nik), st%eigenval(st%nst, st%nik))
+
+  ! first guest for occupation...paramagnetic configuration
+  ! TODO: for polimers this has to be changed
+  r = 2.0_r8
+  if (st%ispin > 1) r = 1.0_r8
+  st%occ  = 0.0_r8
+  st%qtot = 0.0_r8
+  do j = 1, st%nst
+    do i = 1, st%nik
+      st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
+      st%qtot = st%qtot + st%occ(i, j)
+    end do
+  end do
+
+  ! read in fermi distribution temperature
+  st%el_temp = fdf_double('ElectronicTemperature', 0.0_r8)
 
   st%st_start = 1; st%st_end = st%nst
 
@@ -155,6 +175,83 @@ subroutine states_generate_random(st, m)
 
   call pop_sub()
 end subroutine states_generate_random
+
+subroutine states_fermi(st)
+  type(states_type), intent(inout) :: st
+
+! Local variables
+  integer :: ie, ik, iter
+  integer, parameter :: nitmax = 200
+  real(r8) :: drange, t, emin, emax, sumq
+  real(r8), parameter :: tol = 1.0e-10_r8
+  logical :: conv
+
+  sub_name = 'fermi'; call push_sub()
+
+! Initializations
+  emin = minval(st%eigenval)
+  emax = maxval(st%eigenval)
+
+  sumq = 2.0_r8*st%nst
+  t = max(st%el_temp, 1.0e-6_r8)
+  st%ef = emax
+
+  conv = .true.
+  if (abs(sumq - st%qtot) > tol) conv = .false.
+  if (conv) then ! all orbitals are full; nothing to be done
+     st%occ = 2.0_r8/max(2, st%ispin)
+
+     call pop_sub()
+     return
+  endif
+
+  if (sumq < st%qtot) then ! not enough states
+    message(1) = 'Fermi: Not enough states'
+    write(message(2),'(6x,a,f12.6,a,f12.6)')'(total charge = ', st%qtot, &
+        ' max charge = ', sumq
+    call write_fatal(2)
+  endif
+
+  drange = t*sqrt(-log(tol*.01_r8))
+
+  emin = emin - drange
+  emax = emax + drange
+
+  do iter = 1, nitmax
+    st%ef = 0.5_r8*(emin + emax)
+    sumq  = 0.0_r8
+
+    do ik = 1, st%nik
+      do ie =1, st%nst
+        sumq = sumq + stepf((st%eigenval(ie, ik) - st%ef)/t)/max(2, st%ispin)
+      end do
+    end do
+
+    conv = .true.
+    if(abs(sumq - st%qtot) > tol) conv = .false.
+    if(conv) exit
+    
+    if(sumq <= st%qtot ) emin = st%ef
+    if(sumq >= st%qtot ) emax = st%ef
+  end do
+  
+  if(iter == nitmax) then
+    message(1) = 'Fermi: did not converge'
+    call write_fatal(1)
+  end if
+
+  do ik = 1, st%nik
+    do ie = 1, st%nst
+      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/max(2, st%ispin)
+    end do
+  end do
+ 
+!  occ(1:19,1) = 2._r8; occ(20, 1) = 1.0
+
+  call pop_sub()
+  return
+end subroutine states_fermi
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -4,7 +4,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   type(states_type), intent(IN) :: st
   type(hartree_type), intent(inout) :: hart
   real(r8), intent(IN) :: rho_core(m%np)
-  real(r8), intent(out) :: vx(m%nl, nspin), vc(m%nl, nspin), ex, ec
+  real(r8), intent(out) :: vx(m%np, st%ispin), vc(m%np, st%ispin), ex, ec
 
   ! for fxc != vxc...
   ! fxc is always LDA!!!!
@@ -24,10 +24,10 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
 !    call xc_gga(xcs%x_func, xcs, m, st%ispin, st%rho, rho_core, vx, ex)
 #ifdef HAVE_LAPACK
 !  case(XC_FAMILY_MGGA)
-!    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, nspin, psi, occ, eigenval, &
+!    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%ispin, psi, occ, eigenval, &
 !        rho, rho_core, vx, ex)
 !  case(XC_FAMILY_KLI)
-!    call R_FUNC(xc_kli) (xcs%x_func, m, nspin, nst, occ, eigenval, &
+!    call R_FUNC(xc_kli) (xcs%x_func, m, st%ispin, nst, occ, eigenval, &
 !        psi, rho_core, hartr, vx, ex)
 #endif
   end select
@@ -40,10 +40,10 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
 !    call xc_gga(xcs%c_func, xcs, m, st%ispin, st%rho, rho_core, vc, ec)
 #ifdef HAVE_LAPACK
 !  case(XC_FAMILY_MGGA)
-!    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, nspin, psi, occ, eigenval, &
+!    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%ispin, psi, occ, eigenval, &
 !        rho, rho_core, vc, ec)
 !  case(XC_FAMILY_KLI)
-!    call R_FUNC(xc_kli) (xcs%c_func, m, nspin, nst, occ, eigenval, &
+!    call R_FUNC(xc_kli) (xcs%c_func, m, st%ispin, nst, occ, eigenval, &
 !        psi, rho_core, hartr, vc, ec)
 #endif
   end select
@@ -51,17 +51,17 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   ! Warning: For vxc != vxc
 !!$  if(first_time) then
 !!$    first_time = .false.
-!!$    allocate(save_vxc(m%nl, nspin))
+!!$    allocate(save_vxc(m%np, st%ispin))
 !!$    save_vxc = vx + vc
 !!$
 !!$    ! now, we get the LDA xc
 !!$    xcs%x_family = XC_FAMILY_LDA
 !!$    xcs%x_func   = X_FUNC_LDA_NREL
-!!$    call xc_lda(xcs%x_func, m, nspin, rho, rho_core, vx, ex)
+!!$    call xc_lda(xcs%x_func, m, st%ispin, rho, rho_core, vx, ex)
 !!$
 !!$    xcs%c_family = XC_FAMILY_LDA
 !!$    xcs%c_func   = C_FUNC_LDA_PZ
-!!$    call xc_lda(xcs%c_func, m, nspin, rho, rho_core, vc, ec)
+!!$    call xc_lda(xcs%c_func, m, st%ispin, rho, rho_core, vc, ec)
 !!$
 !!$    save_vxc = save_vxc - vx - vc
 !!$  end if
@@ -69,4 +69,4 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
 
   call pop_sub()
   return
-end subroutine xc_pot
+end subroutine R_FUNC(xc_pot)
