@@ -617,7 +617,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
           write(iunit, '(i4)', advance='no') j
           if (conf%periodic_dim>0) then 
             if(st%d%ispin == SPINORS) then
-              write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
+              write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
                    (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
               if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
             else
@@ -627,7 +627,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
             endif
           else
             if(st%d%ispin == SPINORS) then
-              write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
+              write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
                    st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
               if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
             else

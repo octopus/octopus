@@ -106,11 +106,11 @@ contains
     call pop_sub()
   end subroutine atom_get_wf
 
-  function atom_density(m, atom, spin_channels) result(rho)
+  subroutine atom_density(m, atom, spin_channels, rho)
     type(mesh_type), intent(IN) :: m
     type(atom_type), intent(IN) :: atom
     integer,         intent(in) :: spin_channels
-    FLOAT                       :: rho(m%np, spin_channels)
+    FLOAT, intent(inout)        :: rho(:, :) ! (m%np, spin_channels)
 
     integer :: opt, i, in_points, k, n
     FLOAT :: r
@@ -183,7 +183,7 @@ contains
       end do
     end select
 
-  end function atom_density
+  end subroutine atom_density
 
   ! builds a density which is the sum of the atomic densities
   subroutine system_guess_density(m, geo, qtot, nspin, spin_channels, rho)
@@ -214,8 +214,10 @@ contains
     rho = M_ZERO
     select case (gd_spin)
     case (1) ! Spin-unpolarized
+      allocate(atom_rho(m%np, 1))
       do ia = 1, geo%natoms
-        rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_density(m, geo%atom(ia), 1)
+      call atom_density(m, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
+      rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
       end do
       if (spin_channels == 2) then
         rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)
@@ -223,14 +225,16 @@ contains
       end if
 
     case (2) ! Spin-polarized
+      allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
-        rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_density(m, geo%atom(ia), 2)
+        call atom_density(m, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
+        rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
       end do
 
     case (3) ! Random oriented spins
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
-        atom_rho = atom_density(m, geo%atom(ia), 2)
+        call atom_density(m, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
@@ -258,7 +262,6 @@ contains
       end do
 
     case (4) ! User-defined
-      allocate(atom_rho(m%np, 2))
 
       if (loct_parse_block_n("GuessDensityAtomsMagnet") /= geo%natoms) then
         message(1) = "GuessDensityAtomsMagnet block is not defined "
@@ -266,8 +269,9 @@ contains
         call write_fatal(2)
       end if
 
+      allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
-        atom_rho = atom_density(m, geo%atom(ia), 2)
+        call atom_density(m, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
 
@@ -326,6 +330,7 @@ contains
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
     call write_info(1)
     
+    deallocate(atom_rho)
     call pop_sub()
   end subroutine system_guess_density
   
