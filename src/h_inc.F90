@@ -286,15 +286,15 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
   call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
   select case(h%ispin)
     case(UNPOLARIZED)
-      h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
+      h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
     case(SPIN_POLARIZED)
-      h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) + &
+      h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) + &
                         dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
     case(SPINORS)
-      h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) + &
+      h%epot = h%epot - dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1)) + &
                         dmesh_dotp(m, st%rho(:, 2), h%vxc(:, 2))
-      !h%epot = h%epot + M_TWO*zmesh_dotp(m, M_HALF*(st%rho(:, 2) + M_zI*st%rho(:, 3)), &
-      !                                              h%vxc(:, 3) - M_zI*h%vxc(:, 4))
+      h%epot = h%epot - M_TWO*zmesh_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
+                                            h%vxc(:, 3) - M_zI*h%vxc(:, 4))
 
   end select
 

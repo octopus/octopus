@@ -142,7 +142,7 @@ subroutine scf_run(scf, sys, h)
         (scf%conv_abs_ener > 0.0_r8 .and. scf%abs_ener <= scf%conv_abs_ener) .or. &
         (scf%conv_rel_ener > 0.0_r8 .and. scf%rel_ener <= scf%conv_rel_ener)
 
-    write(message(1), '(a,i4,a,e14.8,a,e14.8)') &
+    write(message(1), '(a,i4,a,e8.2,a,e8.2)') &
          'Info: iter = ', iter, ' abs_dens = ', scf%abs_dens, &
          ' abs_ener = ', scf%abs_ener
     write(message(2), '(a)') ''
