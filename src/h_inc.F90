@@ -385,9 +385,9 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
     end if
   case(SPINORS)
     hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%vpsl(:))*psi(:, 1) + &
-                 (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(:, 2)
+                 (h%vhxc(:, 3) + M_zI*h%vhxc(:, 4))*psi(:, 2)
     hpsi(:, 2) = hpsi(:, 2) + (h%vhxc(:, 2) + h%vpsl(:))*psi(:, 2) + &
-                 (h%vhxc(:, 3) + M_zI*h%vhxc(:, 4))*psi(:, 1)
+                 (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(:, 1)
   end select
 
   call pop_sub()
