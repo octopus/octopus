@@ -47,11 +47,11 @@ type ps_type
   type(loct_spline_type), pointer :: dkb(:, :)  ! derivatives of KB projectors
   type(loct_spline_type), pointer :: so_dkb(:, :)
   type(loct_spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
-  type(loct_spline_type) :: vlocal    ! local part
-  type(loct_spline_type) :: vl        ! local part (once again)
+  type(loct_spline_type) :: vl        ! local part
+  type(loct_spline_type) :: vlocalized ! The localized part of the local part :)
   type(loct_spline_type) :: vlocal_f  ! localized part of local potential 
                                       ! in Fourier space (for periodic)
-  type(loct_spline_type) :: dvlocal   ! derivative of the local part
+  type(loct_spline_type) :: dvl       ! derivative of the local part
   type(loct_spline_type) :: core      ! core charge
   type(logrid_type) :: g
 
@@ -66,7 +66,7 @@ type ps_type
 
   character(len=4) :: icore
   FLOAT :: rc_max
-  FLOAT :: vlocal_origin ! local pseudopotential at the orginin
+  FLOAT :: a_erf = M_TWO ! the a constant in erf(ar)/r
 
   FLOAT, pointer :: dknrm(:) ! KB norm
   FLOAT, pointer :: so_dknrm(:)
@@ -87,6 +87,8 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   type(tm_type)      :: pstm ! In case Troullier-Martins ps are used.
   type(hgh_type)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
 
+  FLOAT :: r
+  FLOAT, allocatable :: y(:)
   integer :: i, j, is
 
   call push_sub('ps_init')
@@ -169,9 +171,9 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   call loct_spline_init(ps%dkb)
   if(ps%so_l_max >= 0) call loct_spline_init(ps%so_kb)
   if(ps%so_l_max >= 0) call loct_spline_init(ps%so_dkb)
-  call loct_spline_init(ps%vlocal)
   call loct_spline_init(ps%vl)
-  call loct_spline_init(ps%dvlocal)
+  call loct_spline_init(ps%vlocalized)
+  call loct_spline_init(ps%dvl)
   call loct_spline_init(ps%core)
   if (conf%periodic_dim > 0) then
     call loct_spline_init(ps%vlocal_f)
@@ -187,6 +189,23 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     call hgh_end(psp)
   end select
 
+! Get the localized part of the pseudopotential.
+  ps%a_erf = CNST(2.0)
+  allocate(y(ps%g%nrval))
+  y(1) = loct_splint(ps%vl, CNST(0.0)) + ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
+  do i = 2, ps%g%nrval
+     r = ps%g%rofi(i)
+     y(i) = loct_splint(ps%vl, r) + ps%z_val*loct_erf(ps%a_erf*r)/r
+  enddo
+  call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, ps%vlocalized)
+
+  ! And take the Fourier transform
+  if (conf%periodic_dim > 0) then
+     call loct_spline_3dft(ps%vlocalized, ps%vlocal_f, CNST(50.0))
+     call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
+  endif
+
+  deallocate(y)
   call pop_sub()
 end subroutine ps_init
 
@@ -203,37 +222,26 @@ subroutine ps_derivatives(ps)
         call loct_spline_der(ps%so_kb(l, j), ps%so_dkb(l, j))
      enddo
   enddo
-  call loct_spline_der(ps%vlocal, ps%dvlocal)
+  call loct_spline_der(ps%vl, ps%dvl)
 end subroutine ps_derivatives
 
 subroutine ps_filter(ps, gmax)
   type(ps_type), intent(inout) :: ps
   FLOAT, intent(in) :: gmax
-  FLOAT, parameter :: alpha = CNST(2.0)
   integer :: i, l, k
-  type(loct_spline_type) :: vloc
   FLOAT :: r
   FLOAT, allocatable :: y(:)
 
   call push_sub('ps_filter')
 
-  ! Filter the local part.
-  call loct_spline_init(vloc)
-  allocate(y(ps%g%nrval))
-  y(1) = loct_splint(ps%vl, CNST(0.0)) + ps%z_val*(M_TWO/sqrt(M_PI))*alpha
-  do i = 2, ps%g%nrval
-     r = ps%g%rofi(i)
-     y(i) = loct_splint(ps%vl, r) + ps%z_val*loct_erf(alpha*r)/r
-  enddo
-  call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, vloc)
-  call loct_spline_filter(vloc, fs = (/ CNST(0.75)*gmax, CNST(18.0) /))
+  call loct_spline_filter(ps%vlocalized, fs = (/ CNST(0.75)*gmax, CNST(100.0) /) ) 
   call loct_spline_end(ps%vl)
-  y(1) = loct_splint(vloc, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*alpha
+  allocate(y(ps%g%nrval))
+  y(1) = loct_splint(ps%vlocalized, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
   do i = 2, ps%g%nrval
      r = ps%g%rofi(i)
-     y(i) = loct_splint(vloc, r) - ps%z_val*loct_erf(alpha*r)/r
+     y(i) = loct_splint(ps%vlocalized, r) - ps%z_val*loct_erf(ps%a_erf*r)/r
   enddo
-
   call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, ps%vl)
 
   do l = 0, ps%l_max
@@ -243,7 +251,8 @@ subroutine ps_filter(ps, gmax)
      enddo
   enddo
 
-  call loct_spline_end(vloc)
+  if(trim(ps%icore).ne.'nc') call loct_spline_filter(ps%core, fs = (/ CNST(0.75)*gmax, CNST(100.0) /) )
+
   deallocate(y)
   call pop_sub(); return
 end subroutine ps_filter
@@ -311,11 +320,11 @@ subroutine ps_debug(ps)
   enddo
 
   ! Local part.
-  call loct_spline_print(ps%vlocal, local_unit)
-  call loct_spline_print(ps%dvlocal, dlocal_unit)
+  call loct_spline_print(ps%vl, local_unit)
+  call loct_spline_print(ps%dvl, dlocal_unit)
   allocate(fw(1, 1))
   call loct_spline_init(fw(1, 1))
-  call loct_spline_3dft(ps%vlocal, fw(1, 1), gmax = gmax)
+  call loct_spline_3dft(ps%vlocalized, fw(1, 1), gmax = gmax)
   call loct_spline_print(fw(1, 1), localw_unit)
   call loct_spline_end(fw(1, 1))
   deallocate(fw)
@@ -378,9 +387,8 @@ subroutine ps_end(ps)
      call loct_spline_end(ps%so_dkb)
   endif
 
-  call loct_spline_end(ps%vlocal)
-  call loct_spline_end(ps%dvlocal)
   call loct_spline_end(ps%vl)
+  call loct_spline_end(ps%dvl)
   call loct_spline_end(ps%core)  
   if (conf%periodic_dim > 0) then
     call loct_spline_end(ps%vlocal_f)
@@ -452,9 +460,6 @@ subroutine tm_load(ps, pstm)
 
   ! now we fit the splines
   call get_splines_tm(pstm, ps)
-  if (conf%periodic_dim > 0) then
-    call get_splines_tm_fourier(pstm, ps)
-  end if
 
   ! Passes from Rydbergs to Hartrees.
   ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
@@ -536,15 +541,6 @@ subroutine get_splines_tm(psf, ps)
 
   ! Now the part corresponding to the local pseudopotential
   ! where the asymptotic part is substracted 
-  hato = M_ZERO
-  nrc = nint(log(psf%kbr(ps%L_max + 1)/psf%b + M_ONE)/psf%a) + 1
-  hato(2:psf%nrval) = psf%vlocal(2:psf%nrval)*psf%rofi(2:psf%nrval) + M_TWO*psf%zval
-  hato(1) = M_TWO*psf%zval
-  ! WARNING: Rydbergs -> Hartrees
-  hato = hato / M_TWO
-  call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
-  ps%vlocal_origin = psf%vlocal(1) / M_TWO
-
   hato = psf%vlocal/M_TWO
   call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vl)
 
@@ -584,44 +580,6 @@ subroutine get_splines_tm(psf, ps)
 
 end subroutine get_splines_tm
 
-
-
-subroutine get_splines_tm_fourier(psf,ps)
-  type(tm_type), intent(in) :: psf
-  type(ps_type), intent(inout) :: ps
-
-! the G spline is temporary calculated on psf%nrval values
-! with a |G| mesh of 0.1 
-! This should be thought more accurately.
-  real, parameter :: h = CNST(0.1)   ! mesh for the |G| values
-  real, parameter :: a_erf = M_TWO   ! see epot
-  FLOAT :: modg(psf%nrval), intg(psf%nrval)
-
-  integer :: i, j
-  FLOAT   :: d
-
-  call push_sub('get_splines_tm_fourier')
-
-  intg = M_ZERO
-  do i = 1, psf%nrval
-    modg(i) = (i-1)*h 
-    do j = 2, psf%nrval
-      d = (loct_splint(ps%vlocal, ps%g%rofi(j)) -    &
-           ps%Z_val*(M_ONE - loct_erf(a_erf*ps%g%rofi(j)))) * ps%g%drdi(j)
-
-      if(i == 1) then
-        d = d * ps%g%rofi(j)
-      else
-        d = d * sin(modg(i)*ps%g%rofi(j)) / modg(i)
-      end if
-      intg(i) = intg(i) + d
-    end do
-  end do
-
-  call loct_spline_fit(psf%nrval, modg, intg, ps%vlocal_f)
-
-end subroutine get_splines_tm_fourier
-
 subroutine get_splines_hgh(psp, ps)
   type(hgh_type), intent(IN)    :: psp
   type(ps_type),  intent(inout) :: ps
@@ -646,10 +604,7 @@ subroutine get_splines_hgh(psp, ps)
 
   ! Now the part corresponding to the local pseudopotential
   ! where the asymptotic part is substracted 
-  hato(2:psp%g%nrval) = psp%vlocal(2:psp%g%nrval)*psp%g%rofi(2:psp%g%nrval) + psp%z_val
-  hato(1) = psp%z_val
-  call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%vlocal)
-  ps%vlocal_origin = psp%vlocal(1)
+  call loct_spline_fit(psp%g%nrval, psp%g%rofi, psp%vlocal, ps%vl)
 
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function

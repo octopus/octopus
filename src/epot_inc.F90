@@ -106,7 +106,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   end do
   
   ! now comes the local part of the PP
-  if(ep%vpsl_space == 0) then ! Real space
+  if(conf%periodic_dim==0) then ! Real space
     call local_RS()
 #ifdef HAVE_FFT
   else ! Fourier space

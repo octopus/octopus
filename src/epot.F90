@@ -42,10 +42,6 @@ module external_pot
   end type nonlocal_op
 
   type epot_type
-    integer :: vpsl_space           ! How should the local potential be calculated
-    integer :: vnl_space            ! How should the nl    potential be calculated
-    integer :: nextra               ! extra points for the interpolation method(s)
-    
     integer :: classic_pot          ! How to include the classic charges
     FLOAT, pointer :: Vclassic(:)! We use it to store the potential of the classic charges
  
@@ -78,32 +74,8 @@ contains
     integer(POINTER_SIZE) :: blk
 
     ! should we calculate the local pseudopotentials in Fourier space?
-    ep%vpsl_space = REAL_SPACE
-    ep%vnl_space  = REAL_SPACE
-#ifdef HAVE_FFT
-    call loct_parse_int('LocalPotentialSpace', FOURIER_SPACE, ep%vpsl_space)
-#endif
-    
-    select case(ep%vpsl_space)
-    case(FOURIER_SPACE)
-      message(1) = 'Info: Local Potential in Reciprocal Space.'
-#ifdef HAVE_FFT
-      call epot_local_fourier_init(ep, m, geo)
-#endif
-    case(REAL_SPACE)
-      if (conf%periodic_dim == 0) then
-        message(1) = 'Info: Local Potential in Real Space.'
-      else
-        message(1) = 'for periodic systems you must set LocalPotentialSpace = 1'
-        call write_fatal(1)
-      end if
-    case default
-      write(message(1), '(a,i5,a)') "Input: '", ep%vpsl_space, &
-           "' is not a valid LocalPotentialSpace"
-      message(2) = '(LocalPotentialSpace = 0 | 1)'
-      call write_fatal(2)
-    end select
-    call write_info(1)
+    ! This depends on wether we have periodic dimensions or not
+    if(conf%periodic_dim>0) call epot_local_fourier_init(ep, m, geo)    
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
@@ -157,14 +129,15 @@ contains
 #ifdef HAVE_FFT
     integer :: i
 
-    if(ep%vpsl_space == FOURIER_SPACE) then
+    if(conf%periodic_dim>0) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
       end do
       deallocate(ep%local_cf)
       if(geo%nlcc) deallocate(ep%rhocore_cf)
-    end if
+    endif
+
 #endif
 
     if(ep%classic_pot > 0) then
@@ -261,27 +234,7 @@ contains
       
       if(geo%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
 
-      periodic: if (conf%periodic_dim==0) then
-        call dcf_alloc_RS(cf)                  ! allocate the cube in real space
-        
-        do iz = 1, db(3)
-          ixx(3) = iz - c(3)
-          do iy = 1, db(2)
-            ixx(2) = iy - c(2)
-            do ix = 1, db(1)
-              ixx(1) = ix - c(1)
-              
-              x(:) = m%h(:)*ixx(:)
-              cf%RS(ix, iy, iz) = specie_get_local(s, x)
-            end do
-          end do
-        end do
-        
-        call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
-        call dcf_RS2FS(cf)         ! Fourier transform
-        call dcf_free_RS(cf)       ! we do not need the real space any longer
-      else
-        call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
+      call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
 
         a_erf = M_TWO
         norm = M_FOUR*M_PI/m%vol_pp(1)
@@ -331,8 +284,6 @@ contains
           end do
         end do
         
-      end if periodic
-
       ! now we built the non-local core corrections in momentum space
       nlcc: if(s%nlcc) then
         call dcf_alloc_RS(ep%rhocore_cf(i))
@@ -379,7 +330,7 @@ contains
     geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == FOURIER_SPACE) then
+    if(conf%periodic_dim>0) then
       call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
@@ -430,7 +381,7 @@ contains
     end do
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == FOURIER_SPACE) then
+    if(conf%periodic_dim>0) then
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)
@@ -459,7 +410,7 @@ contains
       FLOAT :: x(3)
       
       call push_sub('build_local_part')
-      if(ep%vpsl_space == REAL_SPACE) then ! real space
+      if(conf%periodic_dim==0) then
         do i = 1, m%np
           call mesh_xyz(m, i, x)
           x = x - a%x
@@ -468,7 +419,6 @@ contains
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if
         end do
-        
 #ifdef HAVE_FFT
       else ! momentum space
         call cf_phase_factor(m, a%x, ep%local_cf(s%index), cf_loc)
@@ -576,7 +526,7 @@ contains
           if (r > s%ps%rc_max + m%h(1)) cycle
           x = x - a%x
           i_loop : do i = 1, ep%vnl(ivnl)%c
-                if(l .ne. s%ps%L_loc .and. ep%vnl_space == REAL_SPACE) then
+                if(l .ne. s%ps%L_loc) then
                   call specie_get_nl_part(s, x, l, lm, i, ep%vnl(ivnl)%uv(j, i), ep%vnl(ivnl)%duv(:, j, i))
                 end if
                 if(l>0 .and. s%ps%so_l_max>=0) then

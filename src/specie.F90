@@ -257,12 +257,6 @@ contains
       end if
       
     case(SPEC_PS_TM2, SPEC_PS_HGH)
-!!$      if(r >= r_small) then
-!!$        l = (loct_splint(s%ps%vlocal,  r) - s%Z_val)/r
-!!$        l = loct_splint(s%ps%vl, r)
-!!$      else
-!!$        l = s%ps%Vlocal_origin
-!!$      end if
         l = loct_splint(s%ps%vl, r)
     end select
 
@@ -308,10 +302,8 @@ contains
       end if
       
     case(SPEC_PS_TM2, SPEC_PS_HGH)
-      l1 = loct_splint(s%ps%vlocal, r)
-      l2 = loct_splint(s%ps%dvlocal, r)
-      
-      gv(:) = -(l2 - (l1 - s%Z_val)/r)/r**2 * x(:)
+        gv(:) = M_ZERO
+        if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
       
     end select
 
