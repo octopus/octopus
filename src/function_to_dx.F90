@@ -18,6 +18,7 @@
 #include "config_F90.h"
 
 program function_to_dx
+#ifdef THREE_D
   use global
   use liboct
   use states
@@ -62,9 +63,9 @@ program function_to_dx
   allocate(sys%st%dpsi(0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
   call oct_parse_str('SystemName', 'system', sysname)
-  filename = trim(sysname)//'.occ_restart'
+  filename = trim(sysname)+'.occ_restart'
 
-  if(dstates_load_restart(trim(sys%sysname)//".occ_restart", sys%m, sys%st)) then
+  if(dstates_load_restart(trim(sys%sysname)+".occ_restart", sys%m, sys%st)) then
      call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
   else
      message(1) = "Error opening restart file"
@@ -83,9 +84,9 @@ program function_to_dx
        write(nstr1,*) orbital(j)%n;    nstr1 = adjustl(nstr1)
        write(nstr2,*) orbital(j)%k;    nstr2 = adjustl(nstr2)
        write(nstr3,*) orbital(j)%spin; nstr3 = adjustl(nstr3)
-       filename = trim(sys%sysname)//"."//trim(nstr1)//"."//trim(nstr2)//"."//trim(nstr3)//".general"
+       filename = trim(sys%sysname)+"."+trim(nstr1)+"."+trim(nstr2)+"."+trim(nstr3)+".general"
        open(unit=iunit_header, file=filename, form='formatted')
-       filename = trim(sys%sysname)//"."//trim(nstr1)//"."//trim(nstr2)//"."//trim(nstr3)//".dxdata"
+       filename = trim(sys%sysname)+"."+trim(nstr1)+"."+trim(nstr2)+"."+trim(nstr3)+".dxdata"
        open(unit=iunit_data, file=filename, form='formatted')
        call create_dx_file(iunit_data, filename, iunit_header, sys%m, &
                            (sys%st%dpsi(1:sys%m%np, orbital(j)%spin, orbital(j)%n, orbital(j)%k))**2 )
@@ -93,12 +94,13 @@ program function_to_dx
        enddo
   else
     call io_assign(iunit_data); call io_assign(iunit_header)
-    open(unit=iunit_data, file=trim(sys%sysname)//".dxdata", form='formatted')
-    open(unit=iunit_header, file=trim(sys%sysname)//".general", form='formatted')
-    call create_dx_file(iunit_data, trim(sys%sysname)//".dxdata", &
+    open(unit=iunit_data, file=trim(sys%sysname)+".dxdata", form='formatted')
+    open(unit=iunit_header, file=trim(sys%sysname)+".general", form='formatted')
+    call create_dx_file(iunit_data, trim(sys%sysname)+".dxdata", &
                       iunit_header, sys%m, sys%st%rho(1:sys%m%np, 1) )
     call io_close(iunit_data) ;call io_close(iunit_header)
   endif
 
-  stop  
+  stop
+#endif
 end program function_to_dx

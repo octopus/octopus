@@ -57,10 +57,15 @@ end subroutine R_FUNC(cube_to_mesh)
 
 
 ! calculates the laplacian and the gradient of a function on the mesh
-subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad)
+subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
+  real(r8), intent(in), optional :: alpha
+
+  real(r8) :: alp = 1.0_r8
+
+  if(present(alpha)) alp = alpha
 
   select case(m%d%space)
   case(REAL_SPACE)
@@ -104,7 +109,7 @@ contains
 #else
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
-        call R_FUNC(scal)(n(1), R_TOTYPE(1.0_r8/n(1)), fr, 1)
+        call R_FUNC(scal)(n(1), R_TOTYPE(alp/n(1)), fr, 1)
         grad(i, :) = R_TOTYPE(0._r8)
         call R_FUNC(cube_to_mesh) (m, fr, grad(i, :))
       deallocate(fw2)
@@ -118,7 +123,7 @@ contains
 #else
       call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
-      call R_FUNC(scal)(n(1), R_TOTYPE(1.0_r8/n(1)), fr, 1)
+      call R_FUNC(scal)(n(1), R_TOTYPE(alp/n(1)), fr, 1)
       lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
     end if
@@ -136,7 +141,7 @@ contains
       den1 = f(k)
       den2 = f(k)
       if(present(lapl)) then
-        lapl(k) = (m%d%dlidfj(0)*f(k))*(1/m%h(1)**2)
+        lapl(k) = (m%d%dlidfj(0)*f(k))
       end if
       if(present(grad)) then
         grad(1, k) = m%d%dgidfj(0)*f(k)
@@ -162,7 +167,7 @@ contains
 #endif
     
         if(present(lapl)) then
-             lapl(k) = lapl(k) + m%d%dlidfj(in)*((den1(1)+den2(1))/m%h(1)**2)
+             lapl(k) = lapl(k) + m%d%dlidfj(in)*(den1(1)+den2(1))
         end if
         
         if(present(grad)) then
@@ -176,6 +181,9 @@ contains
          grad(1,:) = grad(1,:) / m%h(1)
          grad(2:3,:) = 0.0_r8
     end if
+    if(present(lapl)) then
+         lapl = lapl * alp / m%h(1)**2
+    endif
 
     return
   end subroutine rs_derivative

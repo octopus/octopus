@@ -18,6 +18,8 @@
 #include "config_F90.h"
 module dx
 
+#ifdef THREE_D
+
 use global
 use mesh
 use liboct
@@ -52,7 +54,7 @@ subroutine create_dx_file(data_unit, datafile, dxheader_unit, m, f)
        end do
     end do
 
-  write(line,'(a)')              'file = '//trim(pwd(1:len_trim(pwd)-1))//'/'//trim(datafile)
+  write(line,'(a)')              'file = '+trim(pwd(1:len_trim(pwd)-1))+'/'+trim(datafile)
      write(dxheader_unit,'(a)') trim(line)
   write(line,'(a,i4,a,i4,a,i4)') 'grid = ', m%fft_n(1), ' x ', m%fft_n(2), ' x ', m%fft_n(3);
      write(dxheader_unit,'(a)') trim(line)
@@ -75,16 +77,18 @@ subroutine create_dx_file(data_unit, datafile, dxheader_unit, m, f)
     write(h1c,'(f12.6)') m%h(1) / units_out%length%factor
     write(h2c,'(f12.6)') m%h(2) / units_out%length%factor
     write(h3c,'(f12.6)') m%h(3) / units_out%length%factor
-  write(line,'(a)')              'positions = regular, regular, regular, '// &
-                                 posxc // ', ' // &
-                                 h1c   // ', ' // &
-                                 posyc // ', ' // &
-                                 h2c   // ', ' // &
-                                 poszc // ', ' // &
+  write(line,'(a)')              'positions = regular, regular, regular, '+ &
+                                 posxc + ', ' + &
+                                 h1c   + ', ' + &
+                                 posyc + ', ' + &
+                                 h2c   + ', ' + &
+                                 poszc + ', ' + &
                                  h3c
      write(dxheader_unit,'(a)') trim(line)
 
 end subroutine create_dx_file
+
+#endif
 
 end module dx
 

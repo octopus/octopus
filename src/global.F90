@@ -89,6 +89,13 @@ character(len=70), parameter, private :: stars =  &
 character(len=68), parameter, private :: hyphens = &
     '--------------------------------------------------------------------'
 
+!!!!
+! Let us overload the + operator to concatenate strings. Thus the '//' operator
+! should be avoided because it confuses the C preprocessor.
+  interface operator ( + )
+    module procedure concatenate
+  end interface
+
 contains
 
 subroutine write_fatal(no_lines)
@@ -354,5 +361,11 @@ character(len=80) function str_center(s_in, l) result(s_out)
   end do
   
 end function str_center
+
+function concatenate(a, b)
+  character(len=*), intent(in) :: a, b
+  character(len=len(a)+len(b)) :: concatenate
+  concatenate = a//b
+end function concatenate
 
 end module global
