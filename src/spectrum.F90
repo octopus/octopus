@@ -58,7 +58,7 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
 
   ! load dipole from file
   allocate(dipole(0:time_steps, sf%nspin))
-  do i = 1, time_steps
+  do i = 0, time_steps
     read(iunit, *) j, dump, dipole(i,:)
     dipole(i,:) = dipole(i,:) * units_out%length%factor
   end do

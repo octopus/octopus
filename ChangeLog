@@ -1,3 +1,4 @@
 16/4/02 (marques)
+  - bug fix in spectrum.F90
   - MPI bug fixes
   - build bug fixes + configure.ac now uses GSL native configuration 

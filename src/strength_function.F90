@@ -16,7 +16,7 @@ program strength_function
     message(1) = "Error initializing liboct"
     call write_fatal(1)
   end if
-  conf%verbose = 30
+  call oct_parse_int(C_string("verbose"), 30, conf%verbose)
   call units_init()
 
   call oct_parse_str("SpecTransformMode", "sin", txt)
