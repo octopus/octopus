@@ -489,14 +489,8 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
       deallocate(rho_aux)
     end if
 
-    select case (h%d%ispin)
-    case(UNPOLARIZED)
-      h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree
-    case (SPIN_POLARIZED)
-      h%vhxc = h%vhxc + reshape(vhartree, (/m%np, 2/), vhartree)
-    case (SPINORS)
-      h%vhxc(:, 1:2) = h%vhxc(:, 1:2) + reshape(vhartree, (/m%np, 2/), vhartree)
-    end select
+    h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)
+    if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + vhartree
 
     ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
     ! this yields the correct formula epot = - int n (vxc + vH/2)
