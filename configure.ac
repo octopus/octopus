@@ -147,6 +147,7 @@ if test -z "${LIB_BLAS}"; then
   	AS_IF([test "$BLASDIR"], [LDFLAGS="${LDFLAGS} -L${BLASDIR} -L${BLASDIR}/lib"])
 
 		ACX_CHECK_FUNC([LIB_BLAS], [ddot])
+		ACX_CHECK_LIB([LIB_BLAS], [mkl_lapack64],  [ddot], [-lmkl_lapack64 -lmkl_lapack32 -lmkl -lguide], [], [-lmkl_lapack32 -lmkl -lguide])
 		ACX_CHECK_LIB([LIB_BLAS], [f77blas], [ddot], [-lf77blas -latlas], [], [-latlas])
 		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
 		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
@@ -182,6 +183,7 @@ if test -z "${LIB_LAPACK}"; then
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [mkl_lapack64], [dsygv], [-lmkl_lapack64 -lmkl_lapack32 -lmkl -lguide], [], [-lmkl_lapack32 -lmkl -lguide])
 		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
 
   	LDFLAGS="$save_ldflags"
