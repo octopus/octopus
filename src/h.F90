@@ -124,7 +124,12 @@ subroutine hamiltonian_init(h, sys)
     case(RECIPROCAL_SPACE)
       message(1) = 'Info: Local Potential in Reciprocal Space.'
     case(REAL_SPACE)
-      message(1) = 'Info: Local Potential in Real Space.'
+      if (conf%periodic_dim==0) then
+        message(1) = 'Info: Local Potential in Real Space.'
+      else
+        message(1) = 'for periodic systems you must set LocalPotentialSpace = 1'
+        call write_fatal(1)
+      end if
     case default
       write(message(1), '(a,i5,a)') "Input: '", h%vpsl_space, &
            "' is not a valid LocalPotentialSpace"
