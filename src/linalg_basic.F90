@@ -18,7 +18,6 @@
 #include "global.h"
 
 module lib_basic_alg
-  use global
   use blas
 
   implicit none

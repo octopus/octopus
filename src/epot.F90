@@ -279,7 +279,7 @@ contains
         call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
 
         a_erf = M_TWO
-        norm = cmplx(M_FOUR*M_PI/m%vol_pp)
+        norm = M_FOUR*M_PI/m%vol_pp
         temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
         cf%FS = M_Z0
         do ix = 1, cf%nx
