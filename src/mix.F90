@@ -156,20 +156,21 @@ subroutine calcdens(smix, st, np, rho)
 
   ! TODO: for polymers, do not forget to introduce integration factor
   ! in momentum space
+  rho = 0._r8
   do ik = 1, st%nik, sp
     do p  = 1, st%nst
       do i = 1, np
         ! spin-up density
-        rho(i, 1) = st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
+        rho(i, 1) = rho(i, 1) + st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
 
         ! spin-down density
         if(st%ispin == 2) then
-          rho(i, 2) = st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
+          rho(i, 2) = rho(i, 2) + st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
         end if
 
         ! off-diagonal densities
         if(st%ispin == 4) then
-          rho(i, 2) = st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
+          rho(i, 2) = rho(i, 2) + st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
 !          rho(i, 3) = st%occ(p, ik)*&
 !               st%R_FUNC(psi)(i, 1, p, ik)*R_CONJ(st%R_FUNC(psi)(i, 2, p, ik))
 !          rho(i, 4) = R_CONJ(rho(i, 3)) ! this is in principle not necessary!

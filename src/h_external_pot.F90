@@ -141,6 +141,7 @@ contains
 
     call build_local_part(m)
     call build_kb_sphere(m)
+    call build_nl_part(m)
 
   end subroutine from_pseudopotential
 
@@ -226,4 +227,82 @@ contains
 
   end subroutine build_kb_sphere
 
+  subroutine build_nl_part(m)
+    type(mesh_type), intent(IN) :: m
+
+    integer :: j, l, k, lm
+    real(r8) :: r, f, uVr0, duvr0, x(3), ylm, gylm(3)
+
+    j_loop: do j = 1, a%Mps
+      call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
+     
+      k = 1
+      l_loop: do l = 0, s%ps%L_max
+        if(l == s%ps%L_loc) then
+          k = k + (2*l + 1)
+          cycle l_loop
+        end if
+
+        uVr0  = splint(s%ps%kb(l), r)
+        duvr0 = splint(s%ps%dkb(l), r)
+        
+        lm_loop: do lm = -l , l
+          call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+
+          select case(l)
+          case(0)
+            if(r >= r_small) then
+              f = ylm*duvr0/r
+            else
+              f = 0.0_r8
+            end if
+            a%uv(j, k) = uvr0*ylm
+            a%duv(j, k, :) = f*x(:)
+          case(1)
+            a%uv(j, k) = uvr0 * ylm * r
+            a%duv(j, k, :) = duvr0*x(:)*ylm
+            select case(lm)
+            case(1)
+              a%duv(j, k, 2) = a%duv(j, k, 2) - 0.488602511903_r8*uvr0
+            case(2)
+              a%duv(j, k, 3) = a%duv(j, k, 3) + 0.488602511903_r8*uvr0
+            case(3)
+              a%duv(j, k, 1) = a%duv(j, k, 1) - 0.488602511903_r8*uvr0
+            end select
+          case default
+            if(r >= r_small) then
+              f = ylm * (duVr0 * r**(l-1) + uVr0 * l * r**(l-2))
+            else
+              f = 0._r8
+            end if
+            
+            a%uV(j, k) = uVr0 * Ylm * (r**l)
+            a%duV(j, k, :) = f*x(:) + uVr0*gYlm(:)*(r**l)
+          end select
+            
+          ! now for the uVus
+          a%uVu(k) = a%uVu(k) + a%uV(j, k)* &
+               splint(s%ps%Ur(l), r) * ylm * (r**l)
+
+          k = k + 1
+        end do lm_loop
+
+      end do l_loop
+    end do j_loop
+
+    ! now we finish calculating the uVus
+    
+    k = 1
+    do l = 0 , s%ps%L_max
+      do lm = -l , l
+        if(l.ne.s%ps%L_loc) then
+          ! uVu can be calculated exactly, or numerically
+          a%uVu(k) = s%ps%dkbcos(l)
+          !a%uVu(k) = sum(a%uV(:, k)*a%uV(:, k))/(a%uVu(k)*s%ps%dknrm(l))
+        end if
+        k = k + 1
+      end do
+    end do
+  end subroutine build_nl_part
+  
 end subroutine generate_external_pot

@@ -158,7 +158,6 @@ subroutine states_generate_random(st, m)
         call quickrnd(iseed, rnd)
         f = M_PI*(2*rnd - 1)
 #endif
-        a = 3.0_r8*a ! a bit larger...
         do i = 1, m%np
           call mesh_r(m, i, r, a=a)
 #ifdef COMPLEX_WFNS

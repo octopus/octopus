@@ -89,7 +89,6 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
         diff(p, ik) = R_FUNC(mesh_dp) (sys%m, tmp_wf, tmp_wf)
         deallocate(tmp_wf)
       end if
-
     enddo
   enddo
      

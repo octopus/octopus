@@ -170,8 +170,8 @@ subroutine ps_load(ps, filename, z, zval)
   call get_splines(psf, ps, rphi, rc)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Increase radius to get more precision, and final info
-  ps%rc_max = ps%rc_max * 1.5_r8
+! Increase radius a little, just in case, and final info
+  ps%rc_max = ps%rc_max * 1.1_r8
 
   call write_info_about_pseudo_4(stdout, ps, eigen)
 
@@ -416,11 +416,11 @@ subroutine get_asymptotic_radii(psf, ps, rc)
   real(r8)            :: dincv
 
   do l = 0, ps%L_max
-    do ir = psf%nrval,2,-1
+    do ir = psf%nrval, 2, -1
       if(l == ps%L_loc) then
-        dincv = abs(psf%vps(ir,l)*psf%rofi(ir) + 2.0_r8*psf%zval)
+        dincv = abs(psf%vps(ir, l)*psf%rofi(ir) + 2.0_r8*psf%zval)
       else
-        dincv = abs(psf%vps(ir,l) - psf%vps(ir, ps%L_loc))
+        dincv = abs(psf%vps(ir, l) - psf%vps(ir, ps%L_loc))
       endif
       if(dincv > eps) exit
     end do
@@ -537,11 +537,11 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vps(2:nrc, ps%L_loc))*rphi(2:nrc, l) &
          *ps%dknrm(l)/psf%rofi(2:nrc)**(l+1)
     hato(1) = hato(2)    
-    call spline_fit(nrc, psf%rofi, hato, ps%kb(l))
+    call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l))
 
 ! and now the derivatives...
     call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
-    call spline_fit(nrc, psf%rofi, derhato, ps%dkb(l))
+    call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l))
   end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -557,12 +557,12 @@ subroutine get_splines(psf, ps, rphi, rc)
   
   ! WARNING: Rydbergs -> Hartrees
   hato = hato / 2._r8
-  call spline_fit(nrc, psf%rofi, hato, ps%vlocal)
+  call spline_fit(psf%nrval, psf%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psf%vps(1, ps%L_loc)
 
 ! and the derivative now
   call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
-  call spline_fit(nrc, psf%rofi, derhato, ps%dvlocal)
+  call spline_fit(psf%nrval, psf%rofi, derhato, ps%dvlocal)
 
 ! and the non-local parts
   do l = 0 , ps%L_max
@@ -576,7 +576,7 @@ subroutine get_splines(psf, ps, rphi, rc)
     
     ! WARNING: Rydbergs -> Hartrees
     hato = hato / 2._r8
-    call spline_fit(nrc, psf%rofi, hato, ps%vps(l))
+    call spline_fit(psf%nrval, psf%rofi, hato, ps%vps(l))
   end do
 
 
@@ -595,7 +595,7 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato(2:nrc) = rphi(2:nrc, l)/psf%rofi(2:nrc)**(l + 1)
     hato(1) = hato(2)
 
-    call spline_fit(nrc, psf%rofi, hato, ps%Ur(l))
+    call spline_fit(psf%nrval, psf%rofi, hato, ps%Ur(l))
   end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -615,7 +615,7 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato(2:nrcore) = psf%chcore(2:nrcore)/(4.0d0*M_PI*psf%rofi(2:nrcore)**2)
     hato(1) = hato(2)
     nrc = nint(log(psf%rofi(ir +1)/psf%b + 1.0_r8)/psf%a) + 1
-    call spline_fit(nrc, psf%rofi, hato, ps%core)
+    call spline_fit(psf%nrval, psf%rofi, hato, ps%core)
   end if
 
 end subroutine get_splines
