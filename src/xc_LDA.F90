@@ -89,7 +89,7 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
 end subroutine xc_x_lda
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! LSD Perdew & Zunger, PRB 23, 5075 (1981)                                    !
+! LSD Perdew & Zunger, PRB 23, 5048 (1981)                                    !
 ! ********* INPUT ****************************************************        !
 ! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
 ! REAL*8  rho(NSPIN)  : Local (spin) density                                  !

@@ -92,8 +92,8 @@ YACC = @YACC@
 am__include = @am__include@
 am__quote = @am__quote@
 install_sh = @install_sh@
-bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc function-to-dx \
-	nbo2xyz
+bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
+	excitations function-to-dx nbo2xyz
 
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
@@ -141,13 +141,20 @@ hs_from_mult_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_fr
 hs_from_mult_LDADD = ../liboct/liboct.a @GSL_LIBS@
 hs_from_acc_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
 hs_from_acc_LDADD = ../liboct/liboct.a @GSL_LIBS@
-function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 out.F90 spectrum.F90 specie.F90 atom.F90 \
+function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 out.F90 spectrum.F90 \
+                         specie.F90 atom.F90 \
                          ps.F90 spline.F90 math.F90 fft.F90 mesh.F90 states.F90 systm.F90 \
                          tm.F90 hgh.F90 ps_kb.F90 ps_xc.F90 mix.F90 dx.F90 function_to_dx.F90
 
 function_to_dx_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
 nbo2xyz_LDADD = ../liboct/liboct.a @GSL_LIBS@
+excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
+                      fft.F90 ps_xc.F90 ps_kb.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
+                      atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
+                      linear.F90 excitations.F90
+
+excitations_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
@@ -160,10 +167,20 @@ EXTRA_PROGRAMS = octopus$(EXEEXT) octopus-mpi$(EXEEXT) \
 	octopus-1d$(EXEEXT) octopus-1d-mpi$(EXEEXT) \
 	octopus-pol$(EXEEXT) octopus-pol-mpi$(EXEEXT)
 bin_PROGRAMS = @PROGNAME@ strength-function$(EXEEXT) \
-	hs-from-mult$(EXEEXT) hs-from-acc$(EXEEXT) \
+	hs-from-mult$(EXEEXT) hs-from-acc$(EXEEXT) excitations$(EXEEXT) \
 	function-to-dx$(EXEEXT) nbo2xyz$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
+am_excitations_OBJECTS = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
+	units.$(OBJEXT) math.$(OBJEXT) spline.$(OBJEXT) fft.$(OBJEXT) \
+	ps_xc.$(OBJEXT) ps_kb.$(OBJEXT) tm.$(OBJEXT) hgh.$(OBJEXT) \
+	ps.$(OBJEXT) specie.$(OBJEXT) atom.$(OBJEXT) mesh.$(OBJEXT) \
+	hartree.$(OBJEXT) out.$(OBJEXT) states.$(OBJEXT) \
+	systm.$(OBJEXT) mix.$(OBJEXT) linear.$(OBJEXT) \
+	excitations.$(OBJEXT)
+excitations_OBJECTS = $(am_excitations_OBJECTS)
+excitations_DEPENDENCIES = ../liboct/liboct.a
+excitations_LDFLAGS =
 am_function_to_dx_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) \
 	liboct.$(OBJEXT) units.$(OBJEXT) out.$(OBJEXT) \
 	spectrum.$(OBJEXT) specie.$(OBJEXT) atom.$(OBJEXT) ps.$(OBJEXT) \
@@ -242,15 +259,16 @@ DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/liboct -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-DIST_SOURCES = $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) \
-	$(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) \
-	$(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) \
-	$(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) \
-	$(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
+DIST_SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) \
+	$(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) \
+	$(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) \
+	$(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) \
+	$(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) \
+	$(strength_function_SOURCES)
 HEADERS = $(noinst_HEADERS)
 
 DIST_COMMON = $(noinst_HEADERS) Makefile.am Makefile.in config.h.in
-SOURCES = $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
+SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(strength_function_SOURCES)
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -315,6 +333,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+excitations$(EXEEXT): $(excitations_OBJECTS) $(excitations_DEPENDENCIES) 
+	@rm -f excitations$(EXEEXT)
+	$(LINK) $(excitations_LDFLAGS) $(excitations_OBJECTS) $(excitations_LDADD) $(LIBS)
 function-to-dx$(EXEEXT): $(function_to_dx_OBJECTS) $(function_to_dx_DEPENDENCIES) 
 	@rm -f function-to-dx$(EXEEXT)
 	$(LINK) $(function_to_dx_LDFLAGS) $(function_to_dx_OBJECTS) $(function_to_dx_LDADD) $(LIBS)
