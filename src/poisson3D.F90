@@ -63,6 +63,7 @@ contains
     integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: temp(3), vec
     FLOAT :: gpar,gperp,gx,gz,r_c
+    FLOAT :: DELTA_R = CNST(1.0e-12)
 
     ! double the box to perform the fourier transforms
     call mesh_double_box(m, db)                 ! get dimensions of the double box
@@ -80,7 +81,7 @@ contains
                         trim(units_out%length%abbrev), '] = ',       &
                         r_c/units_out%length%factor
     call write_info(1)
-    if ( r_c > maxval(db(:)*m%h(:)/M_TWO) ) then
+    if ( r_c > maxval(db(:)*m%h(:)/M_TWO) + DELTA_R) then
       message(1) = 'Poisson cutoff radius is larger than cell size.'
       message(2) = 'You can see electrons in next cell(s).'
       call write_warning(2)
