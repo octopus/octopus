@@ -390,21 +390,6 @@ contains
     
     dim = st1%d%dim
 #if defined(HAVE_MPI)
-    
-    ! This code just builds an integer array, node, that assigns to each
-    ! state the process that holds it. If such a thing is ever needed for any other
-    ! purpose, maybe it should go to other place, more general (such as "st%node")
-    sn  = st1%nst/mpiv%numprocs
-    sn1 = sn + 1
-    r  = mod(st1%nst, mpiv%numprocs)
-    do j = 1, r
-      node((j-1)*sn1+1:j*sn1) = j - 1
-    end do
-    k = sn1*r
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    do j = 1, mpiv%numprocs - r
-      node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
-    enddo
 
     ! Each process sends the states in st2 to the rest of the processes.
     do i = st1%st_start, st1%st_end
@@ -419,7 +404,7 @@ contains
     ! Processes are received, and then the matrix elements are calculated.
     allocate(phi2(m%np, st1%d%dim))
     do j = 1, n
-      l = node(j)
+      l = st1%node(j)
       if(l.ne.mpiv%node) then
         call MPI_RECV(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, &
            l, j, MPI_COMM_WORLD, status, ierr)
@@ -436,7 +421,7 @@ contains
     ! should get the whole matrix)
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     do i = 1, n
-      k = node(i)
+      k = st1%node(i)
       do j = 1, n
         call MPI_BCAST(a(i, j), 1, R_MPITYPE, k, MPI_COMM_WORLD, ierr)
       enddo

@@ -132,7 +132,10 @@ subroutine mesh_write_info(m, unit)
   if(unit==stdout.and.conf%verbose<VERBOSE_NORMAL) return
 
   call push_sub('mesh_write_info')
-  
+
+  write(unit,'(/,a)') &
+    '**********************************************************************'
+  write(unit,'(a)') 'Mesh:'
   write(unit, '(a,a,1x)') '  Type = ', bs(m%box_shape)
 
   if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
@@ -175,6 +178,8 @@ subroutine mesh_write_info(m, unit)
     write(unit,'(a,f8.3)')'  k_z axis ', m%klat(3,3)*units_out%length%factor
   end if
 
+  write(unit,'(a,/)') &
+    '**********************************************************************'
 
   call pop_sub()
 end subroutine mesh_write_info

@@ -15,11 +15,12 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_get_vxc(xcs, m, f_der, st, vxc, ex, ec, ip, qtot, aux)
+subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot, aux)
   type(xc_type),        intent(in), target    :: xcs
   type(mesh_type),      intent(in)    :: m
   type(f_der_type),     intent(inout) :: f_der
-  type(states_type),    intent(in)    :: st
+  FLOAT, intent(in)                   :: rho(:, :)
+  integer, intent(in)                 :: ispin
   FLOAT,                intent(inout) :: vxc(:,:), ex, ec
   FLOAT,                intent(in)    :: ip, qtot
   logical, optional,    intent(in)    :: aux
@@ -28,7 +29,7 @@ subroutine xc_get_vxc(xcs, m, f_der, st, vxc, ex, ec, ip, qtot, aux)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
 
-  integer :: i, is, ixc, ispin, spin_channels
+  integer :: i, is, ixc, spin_channels
   FLOAT   :: e, dpol, dtot, vpol, r
   logical :: gga, mgga
 
@@ -54,7 +55,6 @@ subroutine xc_get_vxc(xcs, m, f_der, st, vxc, ex, ec, ip, qtot, aux)
   mgga          = any(functl(:)%family == XC_FAMILY_MGGA)
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
-  ispin         = st%d%ispin
 
                   call  lda_init()
   if(gga.or.mgga) call  gga_init()
@@ -146,10 +146,7 @@ contains
     ! get the density
     f = M_ONE/real(spin_channels, PRECISION)
     do i = 1, m%np
-      d(:) = st%rho(i, :)
-      
-      ! add the non-linear core corrections
-      if(xcs%nlcc) d(:) = d(:) + f*st%rho_core(i)
+      d(:) = rho(i, :)
       
       select case(ispin)
       case(UNPOLARIZED)
@@ -160,7 +157,7 @@ contains
       case(SPINORS)
         dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
-           M_FOUR*(st%rho(i, 3)**2 + st%rho(i, 4)**2))
+           M_FOUR*(rho(i, 3)**2 + rho(i, 4)**2))
         dens(i, 1) = max(M_HALF*(dtot + dpol), M_ZERO)
         dens(i, 2) = max(M_HALF*(dtot - dpol), M_ZERO)
       end select
@@ -184,20 +181,17 @@ contains
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
       do i = 1, m%np
-        d(:) = st%rho(i, :)
-      
-        ! add the non-linear core corrections
-        if(xcs%nlcc) d(:) = d(:) + f*st%rho_core(i)
+        d(:) = rho(i, :)
         
         dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
-           M_FOUR*(st%rho(i, 3)**2 + st%rho(i, 4)**2))
+           M_FOUR*(rho(i, 3)**2 + rho(i, 4)**2))
         vpol = (dedd(i, 1) - dedd(i, 2))*(d(1) - d(2))/(dpol + tiny)
         
         vxc(i, 1) = vxc(i, 1) + M_HALF*(dedd(i, 1) + dedd(i, 2) + vpol)
         vxc(i, 2) = vxc(i, 2) + M_HALF*(dedd(i, 1) + dedd(i, 2) - vpol)
-        vxc(i, 3) = vxc(i, 3) + (dedd(i, 1) - dedd(i, 2))*st%rho(i, 3)/(dpol + tiny)
-        vxc(i, 4) = vxc(i, 4) + (dedd(i, 1) - dedd(i, 2))*st%rho(i, 4)/(dpol + tiny)
+        vxc(i, 3) = vxc(i, 3) + (dedd(i, 1) - dedd(i, 2))*rho(i, 3)/(dpol + tiny)
+        vxc(i, 4) = vxc(i, 4) + (dedd(i, 1) - dedd(i, 2))*rho(i, 4)/(dpol + tiny)
       end do
     else
       vxc = vxc + dedd

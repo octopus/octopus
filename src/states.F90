@@ -60,6 +60,9 @@ public :: states_type, &
           dstates_mpdotp, zstates_mpdotp, &
           dstates_calculate_magnetization, zstates_calculate_magnetization, &
           dstates_calculate_angular, zstates_calculate_angular
+#if defined(HAVE_MPI)
+public :: states_nodes
+#endif
 
 
 type states_type
@@ -88,7 +91,7 @@ type states_type
   FLOAT :: ef      ! the fermi energy
 
   integer :: st_start, st_end ! needed for some parallel parts
-
+  integer, pointer :: node(:) ! To which node belongs each state.
 end type states_type
 
 type states_dim_type
@@ -816,6 +819,50 @@ subroutine calc_current_physical(m, f_der, st, j)
 
   call pop_sub()
 end subroutine calc_current_physical
+
+#ifdef HAVE_MPI
+subroutine states_nodes(st)
+  type(states_type),   intent(inout) :: st
+
+  integer :: sn, sn1, r, j, k, ierr, i, ii
+
+  allocate(st%node(st%nst))
+
+  if(st%nst < mpiv%numprocs) then
+    message(1) = "Have more processors than necessary"
+    write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."
+    call write_fatal(2)
+  end if
+
+  i = st%nst / mpiv%numprocs
+  ii = st%nst - i*mpiv%numprocs
+  if(ii > 0 .and. mpiv%node < ii) then
+      i = i + 1
+      st%st_start = mpiv%node*i + 1
+      st%st_end = st%st_start + i - 1
+  else
+      st%st_end = st%nst - (mpiv%numprocs - mpiv%node - 1)*i
+      st%st_start = st%st_end - i + 1
+  end if
+  call MPI_Barrier(MPI_COMM_WORLD, i)
+  write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", mpiv%node, " will propagate state ", &
+         st%st_start, " - ", st%st_end
+  call MPI_Barrier(MPI_COMM_WORLD, i)
+
+  sn  = st%nst/mpiv%numprocs
+  sn1 = sn + 1
+  r  = mod(st%nst, mpiv%numprocs)
+  do j = 1, r
+     st%node((j-1)*sn1+1:j*sn1) = j - 1
+  end do
+  k = sn1*r
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+  do j = 1, mpiv%numprocs - r
+     st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
+  enddo
+
+end subroutine states_nodes
+#endif
 
 #include "states_kpoints.F90"
 

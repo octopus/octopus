@@ -252,26 +252,7 @@ contains
 
     !
 #if defined(HAVE_MPI)
-    if(st%nst < mpiv%numprocs) then
-      message(1) = "Have more processors than necessary"
-      write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."
-      call write_fatal(2)
-    end if
-
-    i = st%nst / mpiv%numprocs
-    ii = st%nst - i*mpiv%numprocs
-    if(ii > 0 .and. mpiv%node < ii) then
-      i = i + 1
-      st%st_start = mpiv%node*i + 1
-      st%st_end = st%st_start + i - 1
-    else
-      st%st_end = st%nst - (mpiv%numprocs - mpiv%node - 1)*i
-      st%st_start = st%st_end - i + 1
-    end if
-    call MPI_Barrier(MPI_COMM_WORLD, i)
-    write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", mpiv%node, " will propagate state ", &
-         st%st_start, " - ", st%st_end
-    call MPI_Barrier(MPI_COMM_WORLD, i)
+    call states_nodes(st)
 #else
     st%st_start = 1
     st%st_end   = st%nst

@@ -475,7 +475,7 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   logical,      optional, intent(in)    :: calc_eigenval
 
   integer :: is, idim
-  FLOAT, allocatable :: rho_aux(:), vhartree(:), j_aux(:,:), ahartree(:,:)
+  FLOAT, allocatable :: rho_aux(:), vhartree(:), j_aux(:,:), ahartree(:,:), rho(:, :)
   CMPLX, allocatable :: ztmp1(:), ztmp2(:)
 
   ! next 2 lines are for an RPA calculation
@@ -563,7 +563,16 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   ! now we calculate the xc terms
   h%ex = M_ZERO
   h%ec = M_ZERO
-  call xc_get_vxc(h%xc, m, f_der, st, h%vhxc, h%ex, h%ec, -minval(st%eigenval(st%nst, :)), st%qtot)
+  allocate(rho(m%np, st%d%nspin))
+  if(associated(st%rho_core)) then
+     do is = 1, st%d%spin_channels
+        rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+     enddo
+  else
+     rho = st%rho
+  endif
+  call xc_get_vxc(h%xc, m, f_der, rho, st%d%ispin, h%vhxc, h%ex, h%ec, -minval(st%eigenval(st%nst, :)), st%qtot)
+  deallocate(rho)
 
   ! The OEP family has to handle specially
   call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)

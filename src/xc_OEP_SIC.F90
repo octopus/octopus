@@ -25,25 +25,23 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
   type(xc_oep_type), intent(inout) :: oep
   FLOAT,             intent(inout) :: vxc(:,:), ex, ec
 
-  integer  :: i
-  FLOAT :: ex2, ec2, edummy
-  FLOAT, allocatable :: vxc2(:, :)
-  FLOAT, pointer :: rho(:,:), rho_save(:,:)
+  integer  :: i, ierr
+  FLOAT :: ex2, ec2, ex_, ec_, edummy
+  FLOAT, allocatable :: vxc2(:, :), rho(:,:)
 
   call push_sub('oep_sic')
   
   allocate(rho(m%np, 2), Vxc2(m%np, 2))
   rho(:, 2) = M_ZERO
 
-  ! save real density
-  rho_save => st%rho;    st%rho => rho
-
   ! loop over states
-  do i = 1, st%nst
+  ex_ = M_ZERO
+  ec_ = M_ZERO
+  do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then ! we only need the occupied states
       ! get orbital density
-      st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
-      
+      rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
+     
       ! initialize before calling get_vxc
       vxc2 = M_ZERO
       ex2  = M_ZERO
@@ -51,10 +49,10 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(xcs, m, f_der, st, vxc2, ex2, ec2, edummy, edummy, aux = .true.) 
-      
-      ex = ex - oep%sfact*ex2
-      ec = ec - oep%sfact*ec2
+      call xc_get_vxc(xcs, m, f_der, rho, st%d%ispin, vxc2, ex2, ec2, edummy, edummy, aux = .true.) 
+
+      ex_ = ex_ - oep%sfact*ex2
+      ec_ = ec_ - oep%sfact*ec2
 
       oep%lxc(:, i) = oep%lxc(:, i) - &
          vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))      
@@ -63,7 +61,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       vxc2(:, 1) = M_ZERO
       call poisson_solve(m, f_der, vxc2(:, 1), rho(:, 1))
 
-      ex = ex - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
+      ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
          sum(vxc2(:, 2) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
 
       oep%lxc(:, i) = oep%lxc(:, i) - &
@@ -71,8 +69,16 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
     end if
   end do
 
-  st%rho => rho_save
-  deallocate(rho, Vxc2)
+#if defined(HAVE_MPI)
+  if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
+    call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr); ec_ = edummy
+    call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr); ex_ = edummy
+  endif
+#endif
 
+  ec = ec + ec_
+  ex = ex + ex_
+
+  deallocate(rho, Vxc2)
   call pop_sub()
 end subroutine X(oep_sic)

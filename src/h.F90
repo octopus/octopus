@@ -175,8 +175,6 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     call write_info(1)
     call poisson_init(m)
 
-    message(1) = "Info: Init exchange and correlation"
-    call write_info(1)
     call xc_init(h%xc, geo%nlcc, states_dim%spin_channels)
     if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(h%xc, stdout)
   end if

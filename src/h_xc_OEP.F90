@@ -35,7 +35,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
   
   type(xc_oep_type) :: oep
   FLOAT :: e
-  integer :: is, ist, ixc, ifunc
+  integer :: is, ist, ixc, ifunc, ierr
 
   if(xcs%oep_level.eq.XC_OEP_NONE) return
 
@@ -47,9 +47,14 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     call write_fatal(1)
   end if
 
+
   ! initialize oep structure
-  allocate(oep%eigen_type(st%nst), oep%eigen_index(st%nst))
-  allocate(oep%vxc(m%np), oep%lxc(m%np, st%nst), oep%uxc_bar(st%nst))
+  allocate(oep%eigen_type(st%nst))
+  allocate(oep%eigen_index(st%nst))
+  allocate(oep%lxc(m%np, st%st_start:st%st_end))
+  allocate(oep%uxc_bar(st%nst))
+  allocate(oep%vxc(m%np))
+  
 
   ! obtain the spin factors
   call xc_oep_SpinFactor(oep, st%d%nspin)
@@ -79,9 +84,17 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     call xc_oep_AnalizeEigen(oep, st, is)
 
     ! calculate uxc_bar for the occupied states
-    do ist = 1, st%nst
+    do ist = st%st_start, st%st_end
       oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%lxc(:, ist))*m%vol_pp(:))
     end do
+#if defined(HAVE_MPI)
+    if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
+      call mpi_barrier(mpi_comm_world, ierr)
+      do ist = 1, st%nst
+         call mpi_bcast(oep%uxc_bar(ist), 1, MPI_FLOAT, st%node(ist), MPI_COMM_WORLD, ierr)
+      enddo
+    endif
+#endif
     
     ! solve the KLI equation
     oep%vxc = M_ZERO
@@ -94,10 +107,8 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
 
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
-  
-  deallocate(oep%eigen_type, oep%eigen_index)
-  deallocate(oep%vxc, oep%lxc, oep%uxc_bar)
-  
+
+  deallocate(oep%eigen_type, oep%eigen_index, oep%vxc, oep%lxc, oep%uxc_bar)
   call pop_sub()
 end subroutine X(h_xc_OEP)
 

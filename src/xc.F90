@@ -104,7 +104,7 @@ contains
       end if
         
       if(xcs%oep_level.ne.XC_OEP_NONE) then
-        write(iunit, '(a)') 'The OEP equation will be handle at the level of:'
+        write(iunit, '(a)') 'The OEP equation will be handled at the level of:'
         select case(xcs%oep_level)
         case (XC_OEP_SLATER); write(iunit, '(a)') '    Slater approximation'
         case (XC_OEP_KLI);    write(iunit, '(a)') '    KLI approximation'
@@ -163,14 +163,16 @@ contains
     ! if OEP we need some extra variables
     if((xcs%sic_correction.ne.0).or.(any(xcs%functl(:)%family==XC_FAMILY_OEP))) then
 #if defined(HAVE_MPI)
-      message(1) = "OEP is not allowed with the code parallelized on orbitals..."
-      call write_fatal(1)
+      if(xcs%oep_level == XC_OEP_FULL) then
+        message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
+        call write_fatal(1)
+      endif
 #endif
 
       call loct_parse_int("OEP_level", XC_OEP_KLI, xcs%oep_level)
       if(xcs%oep_level<0.or.xcs%oep_level>XC_OEP_FULL) then
         message(1) = "OEP_level can only take the values:"
-        message(2) = "0 (Slater), 1 (KLI), 2 (CEDA), or 3 (full OEP)"
+        message(2) = "1 (Slater), 2 (KLI), 3 (CEDA), or 4 (full OEP)"
         call write_fatal(2)
       end if
       if(xcs%oep_level == XC_OEP_FULL) then
@@ -230,23 +232,43 @@ contains
     type(states_type), intent(in)  :: st
     integer,           intent(in)  :: is
     
-    integer  :: i
+    integer  :: i, ierr, k
     FLOAT :: max_eigen
-    
+
+    FLOAT, allocatable :: eigenval(:), occ(:)
+
+    allocate(eigenval(st%nst), occ(st%nst))
+    eigenval = M_ZERO; occ = M_ZERO
+
+    do i = st%st_start, st%st_end
+       eigenval(i) = st%eigenval(i, is)
+       occ(i) = st%occ(i, is)
+    enddo
+
+#if defined(HAVE_MPI)
+    if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
+      call mpi_barrier(mpi_comm_world, ierr)
+      do i = 1, st%nst
+         call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), MPI_COMM_WORLD, ierr)
+         call mpi_bcast(occ(i), 1, R_MPITYPE, st%node(i), MPI_COMM_WORLD, ierr)
+      enddo
+    endif
+#endif
+
     ! find out the top occupied state, to correct for the assymptotics
     ! of the potential
     max_eigen = CNST(-1e30)
     do i = 1, st%nst
-      if((st%occ(i, is) .gt. small).and.(st%eigenval(i, is).gt.max_eigen)) then
-        max_eigen = st%eigenval(i, is)
+      if((occ(i) .gt. small).and.(eigenval(i).gt.max_eigen)) then
+        max_eigen = eigenval(i)
       end if
     end do
     
     oep%eigen_n = 1
     do i = 1, st%nst
-      if(st%occ(i, is) .gt. small) then
+      if(occ(i) .gt. small) then
         ! criterium for degeneracy
-        if(abs(st%eigenval(i, is)-max_eigen).le.CNST(1e-3)) then
+        if(abs(eigenval(i)-max_eigen).le.CNST(1e-3)) then
           oep%eigen_type(i) = 2
         else
           oep%eigen_type(i) = 1
@@ -258,7 +280,8 @@ contains
       end if
     end do
     oep%eigen_n = oep%eigen_n - 1
-    
+
+    deallocate(eigenval, occ)
   end subroutine xc_oep_AnalizeEigen
   
 
