@@ -268,8 +268,10 @@ options include:
 should now be able to taste `octopus'.
 
    The program has been tested in the following platforms:
-   * `i686-pc-linux-gnu' : with the Absoft (http://www.absoft.com)
+   * `i686*-linux-gnu' : With the Absoft (http://www.absoft.com)
      compiler.
+
+   * `alphae*-linux-gnu' : With Compac's `fort' compiler.
    If you manage to compile/run `octopus' in a different platform or
 with a different compiler, please let us know so we can update the
 list. Patches to solve compiler issues are also welcomed.
@@ -613,14 +615,14 @@ tuned to suit the geometric configuration of the system.
 
    * `BoxShape' (integer, sphere) :   In a 3D calculation, it is the
      shape of the simulation box. The allowed   values are:
-        * `sphere' or `1': A sphere
+        - `sphere' or `1': A sphere
 
-        * `cilinder' or `2': A cilinder. The cilinder axis will be
+        - `cilinder' or `2': A cilinder. The cilinder axis will be
           in the z direction
 
-        * `minimum' or `3': Sum of spheres around each atom.
+        - `minimum' or `3': Sum of spheres around each atom.
 
-        * `parallelpiped' or `4': As the name indicates.
+        - `parallelpiped' or `4': As the name indicates.
 
    * `Radius' (double, 20.0 a.u.) or (block data) :   If `BoxShape !=
      parallelpiped' defines the radius of the   spheres or of the
@@ -856,9 +858,9 @@ convergence criteria is fulfilled.
 
    * `TypeOfMixing' (integer, 0) :   Selects the mixing procedure for
      the density during the SCF cycle. Possible   values are:
-        * `0' : Linear mixing.
+        - `0' : Linear mixing.
 
-        * `1' : Broyden mixing.
+        - `1' : Broyden mixing.
 
    * `Mixing' (double, 0.3) :   Determines the amount of the new
      density which is to be mixed   with the old density.
@@ -899,11 +901,11 @@ Time Dependent
 
    * `TDEvolutionMethod' (integer, 2) :   Method used to perform the
      time propagation. Authorized values are:
-        * `1' : Quick and dirty method. One should check carefully
+        - `1' : Quick and dirty method. One should check carefully
           the time-step, and it only works with density based
           functionals.
 
-        * `2' : Modified Krank-Nicholson method. Very stable method,
+        - `2' : Modified Krank-Nicholson method. Very stable method,
             but significatively slower than method `1'.
 
    * `TDTimeStep' (double, 0.07 a.u.) :   Time step for the propagation.
@@ -1009,17 +1011,17 @@ Born-Oppenheimer Dynamics
 
    * `MoveIons' (integer, 0) :   What kind of simulation to perform.
      Possible values are:
-        * `0' : Do not move the ions.
+        - `0' : Do not move the ions.
 
-        * `1' : Steepest descents.
+        - `1' : Steepest descents.
 
-        * `2' : Damped newtonian dymamics using Verlet.
+        - `2' : Damped newtonian dymamics using Verlet.
 
-        * `3' : Newtonian dynamics using Verlet.
+        - `3' : Newtonian dynamics using Verlet.
 
-        * `4' : Newtonian dynamics using velocity Verlet.
+        - `4' : Newtonian dynamics using velocity Verlet.
 
-        * `5' : Minimization using conjugated gradients.
+        - `5' : Minimization using conjugated gradients.
 
    * `BOnSteps' (integer, 1000) :   Number of time-steps to perform
      during the Born-Oppenheimer simulation.
@@ -1301,27 +1303,27 @@ Node: Authors3167
 Node: Introduction4052
 Ref: Introduction-Footnote-14695
 Node: Installation5088
-Node: The input file10886
-Node: The parser11109
-Node: Input file options14147
-Node: Generalities14727
-Node: Species16985
-Node: Coordinates18940
-Node: Velocities22766
-Node: Mesh23592
-Node: States25848
-Node: Hamiltonian28029
-Node: Exchange and correlation29554
-Node: SCF31492
-Node: Unoccupied States34393
-Node: Time Dependent35049
-Node: Photo-electron spectrum38700
-Node: Born-Oppenheimer Dynamics39508
-Node: Varia40553
-Node: Examples41693
-Node: Hello world41837
-Node: Benzene44983
-Node: A word about units46520
-Node: Options Index46663
+Node: The input file10943
+Node: The parser11166
+Node: Input file options14204
+Node: Generalities14784
+Node: Species17042
+Node: Coordinates18997
+Node: Velocities22823
+Node: Mesh23649
+Node: States25905
+Node: Hamiltonian28086
+Node: Exchange and correlation29611
+Node: SCF31549
+Node: Unoccupied States34450
+Node: Time Dependent35106
+Node: Photo-electron spectrum38757
+Node: Born-Oppenheimer Dynamics39565
+Node: Varia40610
+Node: Examples41750
+Node: Hello world41894
+Node: Benzene45040
+Node: A word about units46577
+Node: Options Index46720
 
 End Tag Table

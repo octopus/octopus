@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config_F90.h"
 
 #if defined(ONE_D)
 #  include "ps1D.F90"

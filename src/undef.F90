@@ -14,4 +14,4 @@
 #undef R_AIMAG
 #undef R_DOT
 #undef R_NRM2
-#undef REALORCOMPLEX
+#undef R_TOTYPE

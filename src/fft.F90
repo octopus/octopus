@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config_F90.h"
 
 #ifdef HAVE_FFTW
   module fft

@@ -1,6 +1,4 @@
-dnl
 dnl Check size of a pointer
-dnl
 AC_DEFUN(ACX_POINTER_SIZE,
 [AC_MSG_CHECKING([for the size of a pointer])
 AC_REQUIRE([AC_PROG_CC])
@@ -23,21 +21,42 @@ EOF
 	fi
 	ac_pointersize=`./pointertest.x`;
 	rm -f pointertest*
-	AC_DEFINE_UNQUOTED(POINTER_SIZE, ${ac_pointersize})
-	AC_MSG_RESULT(${ac_pointersize} "bytes")
+	AC_DEFINE_UNQUOTED(POINTER_SIZE, ${ac_pointersize}, [The size of a C pointer])
+	AC_MSG_RESULT([${ac_pointersize} bytes])
 fi
 ])
 
-dnl
 dnl Check f90 compiler
-dnl
 AC_DEFUN(ACX_PROG_F90,
-[AC_BEFORE([$0], [AC_PROG_CPP])dnl
+[
 if test -z "$F90"; then
   AC_CHECK_PROGS(F90, f90 xlf90)
-    test -z "$F90" && AC_MSG_ERROR([no acceptable Fortran 90 compiler found in \
-$PATH])
+    test -z "$F90" && AC_MSG_ERROR([no acceptable Fortran 90 compiler found in $PATH])
 fi
+
+dnl let us see if we know the fortran compiler
+if test -z "${F90FLAGS}"; then
+	case "${host}" in
+	i?86*linux*)
+		case "${F90}" in
+		pgf90*)
+  		F90FLAGS="-O2 -fast -Munroll -Mnoframe -Mdalign"
+		;;
+		abf90*)
+			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
+		;;
+		*)
+			F90FLAGS="-O"
+		esac
+	;;
+	alphaev*)
+		F90FLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
+		;;
+	*)
+		F90FLAGS="-O"
+	esac
+fi
+AC_SUBST(F90FLAGS)
 ])
 
 dnl
@@ -87,19 +106,19 @@ AC_MSG_RESULT($ac_f90_mangle_type)
 mangle_try=unknown
 case $ac_f90_mangle_type in
         lowercase)
-                AC_DEFINE(FORTRANIZE_LOWERCASE)
+                AC_DEFINE(FORTRANIZE_LOWERCASE, 1, [lc])
                 mangle_try=foo_bar_
                 ;;
         lowercase-underscore)
-                AC_DEFINE(FORTRANIZE_LOWERCASE_UNDERSCORE)
+                AC_DEFINE(FORTRANIZE_LOWERCASE_UNDERSCORE, 1, [lc_])
                 mangle_try=foo_bar__
                 ;;
         uppercase)
-                AC_DEFINE(FORTRANIZE_UPPERCASE)
+                AC_DEFINE(FORTRANIZE_UPPERCASE, 1, [uc])
                 mangle_try=FOO_BAR_
                 ;;
         uppercase-underscore)
-                AC_DEFINE(FORTRANIZE_UPPERCASE_UNDERSCORE)
+                AC_DEFINE(FORTRANIZE_UPPERCASE_UNDERSCORE, 1, [uc_])
                 mangle_try=FOO_BAR__
                 ;;
 esac
@@ -112,7 +131,7 @@ ac_save_LIBS="$LIBS"
 LIBS="mangle-func.o $F90LIBS $LIBS"
 AC_TRY_LINK(,$mangle_try();,
             [ac_f90_mangle_underscore=yes;
-             AC_DEFINE(FORTRANIZE_EXTRA_UNDERSCORE)],
+             AC_DEFINE(FORTRANIZE_EXTRA_UNDERSCORE, 1, [__])],
             [ac_f90_mangle_underscore=no])
 LIBS="$ac_save_LIBS"
 AC_LANG_RESTORE
@@ -120,17 +139,28 @@ rm -f mangle-func*
 AC_MSG_RESULT($ac_f90_mangle_underscore)
 ])
 
-dnl AC_LANG_FORTRAN90()
-AC_DEFUN(AC_LANG_FORTRAN90,
-[define([AC_LANG], [FORTRAN90])dnl
-ac_ext=f90
-ac_compile='${F90-f90} -c $F90FLAGS conftest.$ac_ext 1>&AC_FD_CC'
-ac_link='${F90-f90} -o conftest${ac_exeext} $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS 1>&AC_FD_CC'
-cross_compiling=$ac_cv_prog_f90_cross
+# AC_LANG(Fortran 90)
+# -------------------
+m4_define([AC_LANG(Fortran 90)],
+[ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&AS_MESSAGE_LOG_FD'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&AS_MESSAGE_LOG_FD'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
 ])
 
-dnl this would be much simpler if autoconf would
-dnl support fortran90
+
+# AC_LANG_FORTRAN90
+# -----------------
+AU_DEFUN([AC_LANG_FORTRAN90], [AC_LANG(Fortran 90)])
+
+
+# _AC_LANG_ABBREV(Fortran 90)
+# ---------------------------
+m4_define([_AC_LANG_ABBREV(Fortran 90)], [f90])
+
+
+# this would be much simpler if autoconf would
+# support fortran90
 AC_DEFUN(ACX_TRY_LINK_F90,
 [
 cat > conftest.f90 <<EOF

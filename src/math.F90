@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config_F90.h"
 
 ! This module is intended to contain "only mathematical" functions and        !
 !	procedures.                                                           !

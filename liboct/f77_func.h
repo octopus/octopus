@@ -45,17 +45,17 @@
 
 #ifdef FORTRANIZE_UPPERCASE
 #  ifdef FORTRANIZE_EXTRA_UNDERSCORE
-#    define F77_FUNC_(x,X) oct_ ## X ## _
+#    define F77_FUNC_(x,X) OCT_ ## X ## _
 #  else
-#    define F77_FUNC_(x,X) oct_ ## X
+#    define F77_FUNC_(x,X) OCT_ ## X
 #  endif
 #endif
 
 #ifdef FORTRANIZE_UPPERCASE_UNDERSCORE
 #  ifdef FORTRANIZE_EXTRA_UNDERSCORE
-#    define F77_FUNC_(x,X) oct_ ## X ## __
+#    define F77_FUNC_(x,X) OCT_ ## X ## __
 #  else
-#    define F77_FUNC_(x,X) oct_ ## X ## _
+#    define F77_FUNC_(x,X) OCT_ ## X ## _
 #  endif
 #endif
 

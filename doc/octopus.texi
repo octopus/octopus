@@ -315,7 +315,7 @@ In the following, @code{OCTOPUS-HOME} denotes the home directory of
 octopus, created by the @code{tar} command.
 
 The @code{OCTOPUS-HOME} contains the following subdirectories:
-@itemize
+@itemize @bullet
   @item @code{doc} : The documentation of @code{octopus} in @emph{texinfo} format.
   @item @code{liboct} : Small C library that handles the interface to
     GSL and the parsing of the input file. It also contains some assorted
@@ -344,7 +344,7 @@ You can now run the configure sript (@code{./configure}). You can use
 a fair amount of options to spice (@code{octopus}) to your own taste.
 To obtain a full list just type @code{./configure --help}. Some 
 commonly used options include:
-@itemize
+@itemize @bullet
 @item
 @code{--prefix=PREFIX} : Change the base instalation dir of @code{octopus}
   to @code{PREFIX}. The executable will be installed in @code{PREFIX/bin},
@@ -370,7 +370,7 @@ Run @code{make}, and then @code{make install}. If everything went fine, you
 should now be able to taste @code{octopus}.
 
 The program has been tested in the following platforms:
-@itemize
+@itemize @bullet
 @item @code{i686*-linux-gnu} : With the @uref{http://www.absoft.com, Absoft}
   compiler.
 @item @code{alphae*-linux-gnu} : With Compac's @code{fort} compiler.
@@ -421,7 +421,7 @@ real, or complex), a variable name, or a mathematical expression.
 In the expressions all arithmetic operators are supported 
 ("a+b", "a-b", "a*b", "a/b"; for exponenciation the C syntax
 "a^b" is used), and the following functions can be use:
-@itemize
+@itemize @bullet
 @item @code{sqrt(x)} : The square root of @code{x}.
 @item @code{exp(x)} : The exponential of @code{x}.
 @item @code{log(x)} or @code{ln(x)}: The natural logarith of @code{x}.
@@ -440,7 +440,7 @@ In the expressions all arithmetic operators are supported
   secant and cosecant of @code{x}.
 @end itemize
 You can also use any of the predefined variables:
-@itemize
+@itemize @bullet
 @item @code{pi} : 3.141592653589793, what else is there to say?
 @item @code{e} : The base of the natural logarithms.
 @item @code{false} or @code{f} or @code{no} : False in all its flavors. For the
@@ -727,7 +727,7 @@ are given in parentesis.
 @code{BoxShape} (integer, sphere) :
   In a 3D calculation, it is the shape of the simulation box. The allowed 
   values are:
-  @itemize
+  @itemize @minus
     @item @code{sphere} or @code{1}: A sphere
     @item @code{cilinder} or @code{2}: A cilinder. The cilinder axis will be 
       in the z direction
@@ -1027,7 +1027,7 @@ There are some more variables controlling the SCF cycle:
 @code{TypeOfMixing} (integer, 0) :
   Selects the mixing procedure for the density during the SCF cycle. Possible
   values are:
-  @itemize
+  @itemize @minus
     @item @code{0} : Linear mixing.
     @item @code{1} : Broyden mixing.
   @end itemize
@@ -1082,7 +1082,7 @@ if @code{TDOccupationalAnalysis == 1}.)
 @item @vindex @code{TDEvolutionMethod}
 @code{TDEvolutionMethod} (integer, 2) :
   Method used to perform the time propagation. Authorized values are:
-  @itemize
+  @itemize @minus
     @item @code{1} : Quick and dirty method. One should check carefully 
       the time-step, and it only works with density based functionals.
     @item @code{2} : Modified Krank-Nicholson method. Very stable method,
@@ -1222,7 +1222,7 @@ if @code{TDOccupationalAnalysis == 1}.)
 @item @vindex @code{MoveIons}
 @code{MoveIons} (integer, 0) :
   What kind of simulation to perform. Possible values are:
-  @itemize
+  @itemize @minus
     @item @code{0} : Do not move the ions.
     @item @code{1} : Steepest descents.
     @item @code{2} : Damped newtonian dymamics using Verlet.
@@ -1337,7 +1337,7 @@ Finally, you can safely ignore @code{out.oct}: it is an output from
 the liboct library, irrelevant in what concerns physics ;).
 
 @strong{Exercices} :
-@itemize
+@itemize @bullet
 @item Study how the total energy and eigenvalue of the sodium atom improve
   with the mesh spacing.
 

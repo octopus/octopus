@@ -1,4 +1,4 @@
-#include "config.h"
+#include "config_F90.h"
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! This module includes a set of subroutines needed by (and only by) init_kb   !
