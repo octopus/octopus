@@ -288,6 +288,14 @@ contains
                                               a%so_uv, a%so_duv, a%so_uvu, &
 					      a%so_luv, a%phases)
     
+    if (any(s%ps%rc_max + m%h(1)>=m%lsize)) then
+      message(1)='KB sphere is larger than the box size'
+      write(message(2),'(a,f12.6,a)')'  rc_max+h = ',s%ps%rc_max + m%h(1),' [b]'
+      write(message(3),'(a,3f12.4,a)')'  lsize    = ',m%lsize,' [b]'
+      message(4)='Please change pseudopotential'
+      call write_fatal(4)
+    end if
+    
     j = 0
     do k = 1, h%np
       do i=1,3**conf%periodic_dim
