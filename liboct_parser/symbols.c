@@ -26,6 +26,9 @@
 #include <gsl/gsl_complex_math.h>
 
 #include "symbols.h"
+#include "gsl_userdef.h"
+
+
 
 /* The symbol table: a chain of `struct symrec'.  */
 symrec *sym_table = (symrec *)0;
@@ -122,6 +125,10 @@ static struct init_fntc arith_fncts[] = {
 	{"asech", gsl_complex_arcsech},
 	{"acsch", gsl_complex_arccsch},
 	{"acoth", gsl_complex_arccoth},	
+ 
+/* user defined step function. this is not available in GSL, 
+   but use GSL namespacing and macros. */
+	{"step", gsl_complex_step_real},
 
 	{0, 0}
 };
