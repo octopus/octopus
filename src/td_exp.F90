@@ -290,6 +290,7 @@ contains
         call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
       
+      if(present(order)) order = 0
       call pop_sub()
     end subroutine suzuki
 #endif
