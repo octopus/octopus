@@ -233,9 +233,9 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           nconv = nconv + 1
           do j = i, 2, -1
             if (eigenval(j-1) <= eigenval(j)) exit
-            call dswap(1, eigenval(j-1), 1, eigenval(j), 1)
-            call dswap(1, res(j-1),  1, res(j),  1)
-            call X(swap)(n, eigenvec(1,j), 1, eigenvec(1,j-1), 1)
+            call lalg_swap(1, eigenval(j-1), 1, eigenval(j), 1)
+            call lalg_swap(1, res(j-1),  1, res(j),  1)
+            call lalg_swap(n, eigenvec(1,j), 1, eigenvec(1,j-1), 1)
           enddo
         enddo ordering
         

@@ -42,6 +42,19 @@ module lib_alg
   implicit none
   
   !--- BLAS interfaces ---!
+  interface lalg_swap
+    ! interchanges two vectors.
+    subroutine  DBLAS(swap) (n, dx, incx, dy, incy)
+      integer, intent(in)    :: n, incx, incy
+      FLOAT,   intent(inout) :: dx, dy ! dx(n), dy(n)
+    end subroutine DBLAS(swap)
+
+    subroutine  ZBLAS(swap) (n, dx, incx, dy, incy)
+      integer, intent(in)    :: n, incx, incy
+      CMPLX,   intent(inout) :: dx, dy ! dx(n), dy(n)
+    end subroutine ZBLAS(swap)
+  end interface
+
   interface lalg_scal
     ! scales a vector by a constant
     subroutine DBLAS(scal) (n, da, dx, incx)
