@@ -211,7 +211,11 @@ subroutine global_init_symbols()
   call loct_parse_putsym(     "polarized", 2)
   call loct_parse_putsym( "non_collinear", 3)
   call loct_parse_putsym(    "spin_orbit", 1) ! RelativisticCorrection
-  call loct_parse_putsym(            "cg", 0) ! EigenSolver
+  call loct_parse_putsym(       "fft_sph", 0) ! PoissonSolver
+  call loct_parse_putsym(       "fft_cyl", 1) ! PoissonSolver
+  call loct_parse_putsym(       "fft_pla", 2) ! PoissonSolver
+  call loct_parse_putsym(     "fft_nocut", 3) ! PoissonSolver
+  call loct_parse_putsym(            "cg", 4) ! PoissonSolver and EigenSolver
   call loct_parse_putsym(       "lanczos", 2)
   call loct_parse_putsym(       "density", 0) ! What2Mix
   call loct_parse_putsym(     "potential", 1)
