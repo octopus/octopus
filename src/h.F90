@@ -56,7 +56,7 @@ type hamiltonian_type
   logical :: ip_app
 
   ! should we include the classical point charges
-  logical :: classic_pot
+  integer :: classic_pot
   real(r8), pointer :: Vclassic(:)! potential created by classic point charges
 
   ! hartree potential structure
@@ -88,8 +88,8 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   if(sys%ncatoms > 0) then
-    call oct_parse_logical(C_string("ClassicPotential"), .false., h%classic_pot)
-    if(h%classic_pot) allocate(h%Vclassic(h%np))
+    call oct_parse_int(C_string("ClassicPotential"), 0, h%classic_pot)
+    if(h%classic_pot > 0) allocate(h%Vclassic(h%np))
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
@@ -168,7 +168,7 @@ subroutine hamiltonian_end(h)
     deallocate(h%zVxc_off); nullify(h%zVxc_off)
   end if
 
-  if(h%classic_pot .and. associated(h%Vclassic)) then
+  if(h%classic_pot > 0 .and. associated(h%Vclassic)) then
     deallocate(h%Vclassic); nullify(h%Vclassic)
   end if
 
@@ -241,7 +241,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
   if(outp%what(output_potential)) then
     call doutput_function(outp, dir, "v0", m, h%Vpsl, u)
 
-    if(h%classic_pot) then
+    if(h%classic_pot > 0) then
       call doutput_function(outp, dir, "vc", m, h%Vclassic, u)
     end if
 

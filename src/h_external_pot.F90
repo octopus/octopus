@@ -302,7 +302,7 @@ subroutine generate_external_pot(h, sys)
 #endif
   end if
 
-  if (h%classic_pot) then
+  if (h%classic_pot > 0) then
     h%Vpsl = h%Vpsl + h%Vclassic
   end if
 
@@ -502,7 +502,7 @@ subroutine generate_classic_pot(h, sys)
   type(system_type), intent(IN) :: sys
 
   integer i, ia
-  real(r8) :: r
+  real(r8) :: r, rc
 
   sub_name = 'generate_classic_pot'; call push_sub()
 
@@ -510,8 +510,22 @@ subroutine generate_classic_pot(h, sys)
   do ia = 1, sys%ncatoms
     do i = 1, sys%m%np
       call mesh_r(sys%m, i, r, a=sys%catom(ia)%x)
-      if(r < r_small) r = r_small
-      h%Vclassic(i) = h%Vclassic(i) - sys%catom(ia)%charge/r
+      select case(h%classic_pot)
+      case(1) ! point charge
+        if(r < r_small) r = r_small
+        h%Vclassic(i) = h%Vclassic(i) - sys%catom(ia)%charge/r
+      case(2) ! gaussion smeared charge
+        select case(sys%catom(ia)%label(1:1)) ! covalent radii
+        case('H')
+          rc = 0.4_r8*P_Ang
+        case('C') 
+          rc = 0.8_r8*P_Ang
+        case default
+          rc = 0.7_r8*P_Ang
+        end select
+        if(abs(r - rc) < r_small) r = rc + sign(r_small, r-rc)
+        h%Vclassic(i) = h%Vclassic(i) - sys%catom(ia)%charge*(r**4 - rc**4)/(r**5 - rc**5)
+      end select
     end do
   end do
 
