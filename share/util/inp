@@ -1,0 +1,82 @@
+verbose = 30
+SystemName = "C"
+CalculationMode = 1
+Units = "eVA"
+
+%Species
+  "C"  | 12.0107 | 6 | "tm2" | 1 | 1
+%
+
+%Coordinates
+"C" | 0 | 0 | 0 | no
+%
+
+BoxShape = 1
+Radius  = 5.5
+Spacing = 0.3
+DerivativesSpace = 0
+OrderDerivatives = 4
+DoubleFFTParameter = 2.0
+
+SpinComponents = 2
+NumberkPoints  = 1 
+ExcessCharge   = 0
+ExtraStates    = 2
+%Occupations
+1 | 2/3 | 2/3 | 2/3
+1 | 0   | 0   | 0
+%
+ElectronicTemperature = 0.0
+
+NonInteractingElectrons = no
+ClassicPotential = no
+LocalPotentialSpace = 0
+NonLocalPotentialSpace = 0
+GridRefinement = 0
+RelativisticCorrection = 0
+
+XFamily = "LDA"
+XFunctional = "NREL"
+CFamily = "LDA"
+CFunctional = "PZ81"
+
+MaximumIter = 200
+ConvAbsDens = 1e-5
+ConvRelDens = 0
+ConvAbsEnergy = 0
+ConvRelEnergy = 0
+
+LCAOStart = yes
+SCFinLCAO = no
+
+EigenSolver = 2
+EigenSolverInitTolerance = 5e-5
+EigenSolverFinalTolerance = 5e-5
+EigenSolverFinalToleranceIteration = 20		
+EigenSolverMaxIter = 50
+NuberCG = 3
+
+TypeOfMixing = 2
+Mixing = 0.3
+BroydenNumber = 3
+
+OutputKSPotential = no
+OutputDensity     = no
+OutputWfs         = yes
+OutputWfsNumber = "1-4"
+OutputELF         = no
+OutputGeometry    = no
+OutputWfsSqMod    = no
+
+OutputAxisX = no
+OutputAxisY = no
+OutputAxisZ = no
+OutputPlaneX = no
+OutputPlaneY = no
+OutputPlaneZ = no
+OutputDX = yes
+OutputEvery = 1000
+
+PoissonSolver = 3
+PolStaticField = 0.001
+RecipeLang = "en"
