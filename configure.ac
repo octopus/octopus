@@ -218,6 +218,9 @@ if test -z "${LIB_LAPACK}"; then
 		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [mkl_lapack], [dsygv], [-lmkl_lapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
+    dnl The following line uncaches lapack, so that it may be checked again.
+    unset ac_cv_lib_lapack_dsygv
+		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack -lg2c], [], [${LIB_BLAS} -lg2c])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [scs], [dsygv], [-lscs], [], [${LIB_BLAS}])
