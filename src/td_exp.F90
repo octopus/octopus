@@ -99,7 +99,7 @@ contains
     end if
   end subroutine td_exp_end
 
-  subroutine td_dtexp(te, sys, h, zpsi, ik, timestep, t, order)
+  subroutine td_exp_dt(te, sys, h, zpsi, ik, timestep, t, order)
     type(td_exp_type), intent(inout)   :: te
     type(hamiltonian_type), intent(in) :: h
     type(system_type), intent(in)      :: sys
@@ -295,6 +295,6 @@ contains
     end subroutine suzuki
 #endif
     
-  end subroutine td_dtexp
+  end subroutine td_exp_dt
 
 end module td_exp

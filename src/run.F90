@@ -270,7 +270,7 @@ subroutine run()
 
       write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
       if(zstates_load_restart(trim(filename), &
-           sys%m, sys%st, iter=td%iter, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))) then
+           sys%m, sys%st, iter=td%iter, v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))) then
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zhamiltonian_setup(h, sys%m, sys%st, sys)

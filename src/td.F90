@@ -18,16 +18,7 @@
 #include "global.h"
 
 module timedep
-use global
-use math
-use oct_parser
-use io
-use system
-use states
-use hamiltonian
-use mix
-use lasers
-use td_exp
+use td_rti
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use PES
 #endif
@@ -35,49 +26,36 @@ use PES
 implicit none
 
 type td_type
-  complex(r8), pointer :: zpsi(:,:,:) ! the complex wavefunctions
+  type(td_rti_type) :: tr             ! contains the details of the time evolution
+  real(r8)          :: dt             ! time step
+  integer           :: max_iter       ! maximum number of iterations to perform
+  integer           :: iter           ! the actual iteration
 
-  integer :: max_iter                 ! maximum number of iterations to perform
-  integer :: iter                     ! the actual iteration
+  integer           :: move_ions      ! how do we move the ions?
 
-  integer :: evolution_method         ! which evolution method to use
-  type(td_exp_type) :: te             ! how to apply the propagator (e^{-i H \Delta t})
-
-  real(r8) :: dt                      ! time step
-  integer  :: move_ions               ! how do we move the ions?
-
-  real(r8) :: delta_strength          ! strength of the delta excitation
-  real(r8), pointer :: pol(:)         ! direction of the polarization of the efield
-
-  integer :: lmax                     ! maximum multipole moment to write
+  real(r8)          :: pol(3)         ! the direction of the polarization of the field
+  integer           :: lmax           ! maximum multipole moment to output
 
   !variables controlling the output
-  logical :: out_multip               ! multipoles
-  logical :: out_coords               ! coordinates
-  logical :: out_gsp                  ! projection onto the ground state.
-  logical :: out_acc                  ! electronic acceleration
-  logical :: out_laser                ! laser field
-  logical :: out_energy               ! several components of the electronic energy
-  logical :: out_proj                 ! projection onto the GS KS eigenfunctions
-  logical :: out_angular              ! total angular momentum.
+  logical           :: out_multip     ! multipoles
+  logical           :: out_coords     ! coordinates
+  logical           :: out_gsp        ! projection onto the ground state.
+  logical           :: out_acc        ! electronic acceleration
+  logical           :: out_laser      ! laser field
+  logical           :: out_energy     ! several components of the electronic energy
+  logical           :: out_proj       ! projection onto the GS KS eigenfunctions
+  logical           :: out_angular    ! total angular momentum.
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   type(PES_type) :: PESv
 #endif
 
-  real(r8), pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
 end type td_type
 
   ! Parameters.
   integer, parameter :: STATIC_IONS     = 0,    &
                         NORMAL_VERLET   = 3,  &
                         VELOCITY_VERLET = 4
-
-  integer, parameter :: SIMPLE_EXP           = 0, &
-                        OLD_REVERSAL         = 1, &
-                        REVERSAL             = 2, &
-                        APP_REVERSAL         = 3, &
-                        EXPONENTIAL_MIDPOINT = 4
 
 contains
 
@@ -100,21 +78,21 @@ subroutine td_run(td, u_st, sys, h)
   if(mpiv%node==0) then
     write(filename, '(i3.3)') mpiv%node
     if(td%out_multip) &
-         call write_iter_init(out_multip, td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
+         call write_iter_init(out_multip,  td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
     if(td%out_angular) &
          call write_iter_init(out_angular, td%iter, td%dt/units_out%time%factor, "td.general/angular")
     if(td%out_coords) &
-         call write_iter_init(out_coords, td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
+         call write_iter_init(out_coords,  td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
     if(td%out_gsp) &
-         call write_iter_init(out_gsp,    td%iter, td%dt/units_out%time%factor, "td.general/gs_projection")
+         call write_iter_init(out_gsp,     td%iter, td%dt/units_out%time%factor, "td.general/gs_projection")
     if(td%out_acc) &
-         call write_iter_init(out_acc,    td%iter, td%dt/units_out%time%factor, "td.general/acceleration")
+         call write_iter_init(out_acc,     td%iter, td%dt/units_out%time%factor, "td.general/acceleration")
     if(td%out_laser) &
-         call write_iter_init(out_laser,  td%iter, td%dt/units_out%time%factor, "td.general/laser")
+         call write_iter_init(out_laser,   td%iter, td%dt/units_out%time%factor, "td.general/laser")
     if(td%out_energy) &
-         call write_iter_init(out_energy, td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
+         call write_iter_init(out_energy,  td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
     if(td%out_proj) &
-         call write_iter_init(out_proj,   td%iter, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
+         call write_iter_init(out_proj,    td%iter, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
   end if
 
   ! Calculate initial forces and kinetic energy
@@ -182,7 +160,7 @@ subroutine td_run(td, u_st, sys, h)
     endif
 
     ! time iterate wavefunctions
-    call td_rti(h, sys%m, sys%st, sys, td, i*td%dt)
+    call td_rti_dt(h, sys%m, sys%st, sys, td%tr, i*td%dt, td%dt)
 
     ! mask function?
     if(h%ab == MASK_ABSORBING) then
@@ -282,11 +260,7 @@ subroutine td_run(td, u_st, sys, h)
 contains
 
   subroutine td_run_zero_iter(m)
-    type(mesh_type), intent(IN) :: m
-
-    integer :: i, iunit
-    real(r8) :: x(conf%dim)
-    complex(r8) :: c
+    type(mesh_type), intent(in) :: m
 
     call push_sub('td_run_zero_iter')
 
@@ -297,43 +271,7 @@ contains
     if(td%out_angular) call td_write_angular(0)
     if(td%out_proj)    call td_write_proj(0)
 
-    ! we now apply the delta(0) impulse to the wf
-    if(td%delta_strength .ne. M_ZERO) then
-      write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', td%delta_strength
-      call write_info(1)
-      do i = 1, m%np
-        call mesh_xyz(m, i, x)
-        c = exp(M_zI * td%delta_strength * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
-        sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
-      end do
-    end if
-
-    select case(sys%st%ispin)
-    case(UNPOLARIZED, SPIN_POLARIZED)
-      do i = 1, sys%st%nspin
-         td%v_old(:, i, 2) = h%vhartree(:) + h%vxc(:, i)
-      enddo
-    case(SPINORS)
-      td%v_old(:, 1, 2) = h%vhartree(:) + h%vxc(:, 1)
-      td%v_old(:, 2, 2) = h%vhartree(:) + h%vxc(:, 2)
-      td%v_old(:, 3, 2) = h%vxc(:, 3)
-      td%v_old(:, 4, 2) = h%vxc(:, 4)
-    end select
-    td%v_old(:, :, 3) = td%v_old(:, :, 2)
-
-    ! And same thing for the ions. The formulas are:
-    ! If phi(0+) = e^(ikz)phi_0 (kick for the electrons, as done before,
-    ! we have applied an electrical field in the form E_0 delta(t),
-    ! being E_0 = - k \hbar / e,
-    ! and thus the kick for the nuclei is:
-    ! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
-    ! where M and Z are the ionic mass and charge, respectively.
-    if(td%move_ions > 0) then
-      do j = 1, sys%natoms
-          sys%atom(j)%v(1:conf%dim) = sys%atom(j)%v(1:conf%dim) - &
-            td%pol(1:conf%dim)*sys%atom(j)%spec%z_val*td%delta_strength / sys%atom(j)%spec%weight
-      enddo
-    endif
+    call apply_delta_field(m)
 
     ! create files for output and output headers
     if(td%out_coords) call td_write_nbo(0, sys%kinetic_energy, h%etot)    
@@ -342,8 +280,47 @@ contains
     if(td%out_energy) call td_write_el_energy(0)
     call td_write_data(0)
 
+    call td_rti_run_zero_iter(h, sys%st, td%tr)
+
     call pop_sub()
   end subroutine td_run_zero_iter
+
+  !!! Applies the delta function electric field E(t) = E_0 delta(t)
+  !!! where E_0 = - k \hbar / e
+  subroutine apply_delta_field(m)
+    type(mesh_type), intent(IN) :: m
+
+    integer     :: i
+    real(r8)    :: k, x(conf%dim)
+    complex(r8) :: c
+
+    !!! units are 1/length
+    call oct_parse_double("TDDeltaStrength", M_ZERO, k)
+    k = k / units_inp%length%factor
+    
+    !!! The wave-functions at time delta t read
+    !!! psi(delta t) = psi(t) exp(i k x)
+    if(k .ne. M_ZERO) then
+      write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k
+      call write_info(1)
+      do i = 1, m%np
+        call mesh_xyz(m, i, x)
+        c = exp(M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
+        sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
+      end do
+    end if
+
+    !!! the nuclei velocity will be changed by
+    !!! Delta v_z = ( Z*e*E_0 / M) = - ( Z*k*\hbar / M)
+    !!! where M and Z are the ionic mass and charge, respectively.
+    if(td%move_ions > 0) then
+      do i = 1, sys%natoms
+        sys%atom(i)%v(1:conf%dim) = sys%atom(i)%v(1:conf%dim) - &
+             k*td%pol(1:conf%dim)*sys%atom(i)%spec%z_val / sys%atom(i)%spec%weight
+      enddo
+    endif
+    
+  end subroutine apply_delta_field
 
   subroutine td_read_nbo() ! reads the pos and vel from coordinates file
     logical :: found
@@ -441,6 +418,5 @@ end subroutine td_run
 !!$end subroutine td_check_trotter
 
 #include "td_init.F90"
-#include "td_rti.F90"
 
 end module timedep

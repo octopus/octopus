@@ -24,7 +24,7 @@
     ! first resume file
     write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
     call zstates_write_restart(trim(filename), sys%m, sys%st, &
-         iter=iter, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
+         iter=iter, v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))
     
     ! calculate projection onto the ground state
     if(td%out_gsp) call td_write_gsp(iter)

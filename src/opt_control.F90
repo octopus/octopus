@@ -125,7 +125,7 @@ subroutine opt_control_run(td, sys, h)
   call output()
 
   ! clean up
-  td%v_old => v_old_i
+  td%tr%v_old => v_old_i
   nullify(h%lasers(1)%numerical)
   deallocate(v_old_f, laser_i, laser_f)
   call states_end(psi_f)
@@ -138,18 +138,18 @@ contains
     call update_field(iter-1, laser_i)
 
     ! psi_f
-    td%v_old => v_old_f
+    td%tr%v_old => v_old_f
     h%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
     call zhamiltonian_setup(h, sys%m, psi_f, sys)
-    call td_rti(h, sys%m, psi_f, sys, td, abs(iter*td%dt))
+    call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
-    td%v_old => v_old_i
+    td%tr%v_old => v_old_i
     h%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
     call zhamiltonian_setup(h, sys%m, psi_i, sys)
-    call td_rti(h, sys%m, psi_i, sys, td, abs(iter*td%dt))
+    call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter1
 
@@ -160,18 +160,18 @@ contains
     call update_field(iter+1, laser_f)
 
     ! psi_i
-    td%v_old => v_old_i
+    td%tr%v_old => v_old_i
     h%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
     call zhamiltonian_setup(h, sys%m, psi_i, sys)
-    call td_rti(h, sys%m, psi_i, sys, td, abs(iter*td%dt))
+    call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
-    td%v_old => v_old_f
+    td%tr%v_old => v_old_f
     h%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
     call zhamiltonian_setup(h, sys%m, psi_f, sys)
-    call td_rti(h, sys%m, psi_f, sys, td, abs(iter*td%dt))
+    call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter2
 
@@ -233,14 +233,14 @@ contains
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
     
     h%lasers(1)%numerical => laser_f
-    td%v_old => v_old_f
+    td%tr%v_old => v_old_f
 
     td%dt = -td%dt
     h%lasers(1)%dt = td%dt
     call oct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
-      call td_rti(h, sys%m, psi_f, sys, td, abs(i*td%dt))
+      call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(i*td%dt), abs(td%dt))
       ! update
       call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
       call zhamiltonian_setup(h, sys%m, psi_f, sys)
@@ -311,7 +311,7 @@ contains
 
     ! psi_i is initialized in system_init
     psi_i => sys%st
-    v_old_i => td%v_old
+    v_old_i => td%tr%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
     call states_init(psi_f, sys%m, sys%val_charge)

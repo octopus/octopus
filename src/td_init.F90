@@ -27,15 +27,7 @@ subroutine td_init(td, sys, m, st, h)
   call push_sub('td_init')
 
   td%iter = 0
-  allocate(td%pol(conf%dim))
 
-  call oct_parse_int("TDMaximumIter", 1500, td%max_iter)
-  if(td%max_iter < 1) then
-    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
-    message(2) = '(1 <= TDMaximumIter)'
-    call write_fatal(2)
-  end if
-  
   call oct_parse_double("TDTimeStep", 0.07_r8/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= 0._r8) then
@@ -43,21 +35,14 @@ subroutine td_init(td, sys, m, st, h)
     message(2) = '(0 < TDTimeStep)'
     call write_fatal(2)
   end if
-  
-  call oct_parse_int("TDEvolutionMethod", REVERSAL, td%evolution_method)
-  select case(td%evolution_method)
-    case(SIMPLE_EXP);           message(1) = 'Info: Evolution method:  Simple Exponential Method.'
-    case(OLD_REVERSAL);         message(1) = 'Info: Evolution method:  Old-Style.'
-    case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
-    case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
-    case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
-    case default
-     write(message(1), '(a,i6,a)') "Input: '", td%evolution_method, "' is not a valid TDEvolutionMethod"
-     message(2) = '(1 <= TDEvolutionMethod <= 4)'
-     call write_fatal(2)
-  end select
-  call write_info(1)
 
+  call oct_parse_int("TDMaximumIter", 1500, td%max_iter)
+  if(td%max_iter < 1) then
+    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
+    message(2) = '(1 <= TDMaximumIter)'
+    call write_fatal(2)
+  end if
+    
   call oct_parse_int("TDDipoleLmax", 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
@@ -65,16 +50,13 @@ subroutine td_init(td, sys, m, st, h)
     call write_fatal(2)
   end if
 
-  ! delta impulse used to calculate optical spectrum
-  ! units are 1/length
-  call oct_parse_double("TDDeltaStrength", 0._r8, td%delta_strength)
-  td%delta_strength = td%delta_strength / units_inp%length%factor
+  !!! read in the default direction for the polarization
+  td%pol(:) = M_ZERO
   if(oct_parse_isdef('TDPolarization') .ne. 0) then
     do i = 1, conf%dim
       call oct_parse_block_double('TDPolarization', 0, i-1, td%pol(i))
     end do
   else  !default along the x-direction
-    td%pol(:) = M_ZERO
     td%pol(1) = M_ONE
   endif
 
@@ -114,7 +96,7 @@ subroutine td_init(td, sys, m, st, h)
   call oct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
   call oct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
 
-  call td_exp_init(m, td%te)      ! initialize propagator
+  call td_rti_init(m, st, td%tr)
   call td_init_states()
 
   call pop_sub()
@@ -153,7 +135,6 @@ contains
 #endif
 
     ! allocate memory
-    allocate(td%v_old(m%np, st%nspin, 3))
     allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
   end subroutine td_init_states
 
@@ -164,17 +145,11 @@ subroutine td_end(td)
 
   call push_sub('td_end')
 
-  deallocate(td%pol)
-
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call PES_end(td%PESv)
 #endif
 
-  if(associated(td%v_old)) then
-    deallocate(td%v_old);  nullify(td%v_old)
-  end if
-
-  call td_exp_end(td%te)
+  call td_rti_end(td%tr)  ! clean the evolution method
 
   call pop_sub()
 end subroutine td_end
