@@ -91,11 +91,10 @@ contains
 
 subroutine run()
   type(td_type), pointer :: td
-  integer :: iunit
+  integer :: iunit, i
+  real(r8) :: x
   logical :: log
   character(len=100) :: filename
-
-  integer :: i
 
   sub_name = 'run'; call push_sub()
 
@@ -253,7 +252,11 @@ subroutine run()
       if(zstates_load_restart("tmp/restart.static", sys%m, sys%st)) then
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zhamiltonian_setup(h, sys%m, sys%st, sys)
-        call hamiltonian_span(h, minval(sys%m%h), minval(sys%st%eigenval(1,:)))
+        x = minval(sys%st%eigenval(sys%st%st_start, :))
+#ifdef HAVE_MPI
+        call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
+#endif
+        call hamiltonian_span(h, minval(sys%m%h), x)
         call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
       else
         i_stack(instr) = I_INIT_ZPSI
