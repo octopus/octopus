@@ -106,6 +106,11 @@ subroutine td_init(td, sys, m, st)
 
   ! harmonic spectrum or not
   call oct_parse_logical(C_string("TDWriteHarmonicSpectrum"), .false., td%harmonic_spectrum)
+  if(td%harmonic_spectrum) then
+    message(1) = 'Warning: The harmonic spectrum, calculated from Ehrenfest theorem, '
+    message(2) = '  is not yet well calculated if the ions move... Sorry!'
+    call write_warning(2)
+  endif
 
   ! should we move the ions during the simulation?
   call oct_parse_int(C_string("MoveIons"), 0, td%move_ions)

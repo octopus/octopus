@@ -94,7 +94,7 @@ subroutine td_run(td, u_st, sys, h)
   complex(r4), allocatable :: projections(:,:,:,:)
   character(len=100) :: filename
 
-  sub_name = 'systm_td'; call push_sub()
+  sub_name = 'td_run'; call push_sub()
 
   write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
   call write_info(1)
@@ -278,11 +278,13 @@ contains
 
   subroutine td_run_zero_iter(m)
     type(mesh_type), intent(IN) :: m
-    
+
     integer :: i, iunit
     real(r8) :: x(3), t_acc(3)
     complex(r8) :: c
     real(r8), allocatable :: dipole(:), multipole(:,:), pos(:,:), vel(:,:), for(:,:)
+
+    sub_name = 'td_run_zero_iter'; call push_sub()
 
     do i = 1, sys%st%nspin
       td%v_old1(:, i) = h%Vhartree(:) + h%Vxc(:, i)
@@ -300,7 +302,7 @@ contains
     end if
 
     ! create general subdir
-    call oct_mkdir("td.general")
+    call oct_mkdir(C_string("td.general"))
 
     ! output static dipole (iter 0)
     allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
@@ -352,7 +354,8 @@ contains
        call td_write_acc(iunit, 0, 0.0_r8, t_acc, header=.true.)
        call io_close(iunit)
     endif
-    
+
+    call push_sub(); return    
   end subroutine td_run_zero_iter
 
   subroutine td_write_data()
@@ -681,18 +684,25 @@ contains
     real(r8), intent(in)  :: t
     real(r8), intent(out) :: acc(3)
 
-    real(r8) :: field(3), x(3), r, &
+    real(r8) :: field(3), x(3), y(3), r, &
                 vl, dvl, d, charge
     real(r8), allocatable :: V(:), dV(:,:)
-    integer  :: j, k, is
+    complex(r8) :: uvpsi, p
+    integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj
+    type(atom_type), pointer :: atm
+
+    sub_name = 'td_calc_tacc'; call push_sub()
 
     acc(1:3) = 0.0_r8
 
-    ! Ionic acceleration
+    ! This should be the ionic acceleration, if it was implemented...
     if(td%move_ions > 0) then
-      do j=1, sys%natoms
-        acc(1:3) = acc(1:3) + sys%atom(j)%spec%z_val*sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
-      end do
+      message(1) = 'Error. If harmonic spectrum is to be calculated, moves should not move'
+      message(2) = '(In present version)'
+      call write_fatal(2)
+      !do j=1, sys%natoms
+      !  acc(1:3) = acc(1:3) + sys%atom(j)%spec%z_val*sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
+      !end do
     end if
 
     ! Gets the gradient of the external pot
@@ -709,14 +719,67 @@ contains
         acc(:) = acc - d * x(:)
       end do
     end do
-    
+
+   ! And now the non-local part...
+   ! this comes first to do the reduce...
+    x(1:3) = 0.0_r8
+    atm_loop: do i = 1, sys%natoms
+      atm => sys%atom(i)
+
+      if(atm%spec%local) cycle
+
+      ik_loop: do ik = 1, sys%st%nik
+        st_loop: do ist = sys%st%st_start, sys%st%st_end
+          dim_loop: do idim = 1, sys%st%dim
+            add_lm = 1
+            l_loop: do l = 0, atm%spec%ps%L_max
+              if(l == atm%spec%ps%L_loc) then
+                add_lm = add_lm + (2*l + 1)
+                cycle l_loop
+              end if
+
+              m_loop: do m = -l, l
+                do ii = 1, atm%spec%ps%kbc
+                do jj = 1, atm%spec%ps%kbc
+                   uVpsi = sum(atm%uV(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
+                           sys%st%zpsi(atm%Jxyz(:), idim, ist, ik)) * &
+                           sys%m%vol_pp**2 * atm%uVu(add_lm, ii, jj)
+
+                   do j = 1, 3
+                      p = sum(atm%duV(j, :, add_lm, jj) * R_CONJ(sys%st%zpsi (atm%Jxyz(:), idim, ist, ik)))
+                      x(j) = x(j) + 2._r8 * R_REAL(uvpsi*p)
+                   end do
+                end do
+                end do
+
+                add_lm = add_lm + 1
+              end do m_loop
+            end do l_loop
+
+          end do dim_loop
+        end do st_loop
+      end do ik_loop
+
+#if defined(HAVE_MPI) && defined(MPI_TD)
+      if(present(reduce) .and. reduce) then
+        call MPI_ALLREDUCE(x(1), y(1), 3, &
+             MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+        x = y
+      end if
+#endif
+
+    end do atm_loop
+
+    acc(1:3) = acc(1:3) - x(1:3)
+
     ! Adds the laser contribution
     if(td%no_lasers > 0) then
       call laser_field(td%no_lasers, td%lasers, t, field)
       charge = sum(sys%st%rho(:,:))*sys%m%vol_pp
       acc(1:3) = acc(1:3) - field(1:3)*charge
     end if
- 
+
+    call pop_sub(); return 
   end subroutine td_calc_tacc
 
 end subroutine td_run
