@@ -7,7 +7,7 @@ EXTRA_PROGRAMS = octopus octopus-mpi \
 
 octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 \
-	vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
+	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
 	atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 xc.F90 \
 	systm.F90 lasers.F90 h.F90 \
 	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
