@@ -249,7 +249,7 @@ subroutine generate_external_pot(h, sys)
   if(h%vpsl_space == 1) then
 #if defined(THREE_D)
     allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
-    fw = M_z0; fwc = M_z0
+    fw = M_z0
 #elif defined(ONE_D)
     allocate(fw(sys%m%hfft_n2)); fw = M_z0
 #endif
@@ -259,6 +259,7 @@ subroutine generate_external_pot(h, sys)
   if(sys%st%nlcc) then
     sys%st%rho_core = 0._r8
     allocate(fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
+    fwc = M_z0
   end if
 
   do ia = 1, sys%natoms
