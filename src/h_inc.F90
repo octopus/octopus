@@ -186,7 +186,9 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
               if (conf%periodic_dim==0) then
                 call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
               else
+#if defined(COMPLEX_WFNS)
                 call R_FUNC(axpy) (atm%mps, uvpsi, R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
+#endif
               end if
             end do
           end do
