@@ -320,7 +320,7 @@ contains
                  p2 = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, atm%zuv(:, add_lm, ikbc), 1)*m%vol_pp
                  ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*(-M_zI*dt)
                  uvpsi = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, lpsi(:), 1) * m%vol_pp* &
-                       (exp(ctemp) - (M_ONE, M_ZERO))/p2
+                       (exp(ctemp) - M_z1)/p2
                  call zaxpy (atm%mps, uvpsi, atm%zuv(:, add_lm, jkbc), 1, lHpsi(:), 1)
               end do
             end do

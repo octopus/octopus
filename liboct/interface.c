@@ -68,7 +68,7 @@ double F90_FUNC_(oct_erfc, OCT_ERFC)
 }
 
 /* error function (we use the one in gsl) */
-double F90_FUNC_(oct_erf, OCT_ERC)
+double F90_FUNC_(oct_erf, OCT_ERF)
 		 (double *x)
 {
 	return gsl_sf_erf(*x);
