@@ -26,6 +26,14 @@ module mesh_function
 
   implicit none
 
+  private
+  public :: dmf_integrate, zmf_integrate, &
+            dmf_dotp, zmf_dotp, &
+            dmf_nrm2, zmf_nrm2, &
+            dmf_moment, zmf_moment, &
+            dmf_random, zmf_random
+            
+
 contains
 
 #include "undef.F90"

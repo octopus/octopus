@@ -20,7 +20,10 @@
 module system
 use global
 use lib_oct_gsl_spline
+use lib_basic_alg
+use math
 use mesh
+use mesh_function
 use functions
 use specie
 use geometry

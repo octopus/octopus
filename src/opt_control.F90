@@ -22,13 +22,19 @@ use global
 use lib_oct
 use lib_oct_parser
 use io
+use geometry
+use mesh
 use states
+use system
 use restart
 use hamiltonian
 use timedep
 use td_rti
 
 implicit none
+
+private
+public :: opt_control_run
 
 contains
 

@@ -34,6 +34,9 @@ use scf
 
 implicit none
 
+private
+public :: static_pol_run
+
 contains
 
 integer function static_pol_run(sys, h, fromScratch) result(ierr)

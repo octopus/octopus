@@ -20,6 +20,9 @@ module pulpo
   use global
   use lib_oct
 
+  private
+  public :: pulpo_print
+
 contains
   subroutine pulpo_print()
     character(len=256) :: filename

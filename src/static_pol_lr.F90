@@ -32,6 +32,9 @@ module static_pol_lr
 
   implicit none
 
+  private
+  public :: static_pol_lr_run
+
 contains
 
   ! ---------------------------------------------------------

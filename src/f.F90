@@ -22,6 +22,7 @@ module functions
   use global
   use lib_oct_parser
   use lib_basic_alg
+  use mesh
   use mesh_function
   use cube_function
   use derivatives
@@ -31,7 +32,21 @@ module functions
 
   implicit none
 
-  integer, parameter ::     &
+  private
+  public  :: f_der_type, &
+             f_der_init, &
+             f_der_build, &
+             f_der_end, &
+             dmf2cf, zmf2cf, &
+             dcf2mf, zcf2mf, &
+             dcf_FS2mf, zcf_FS2mf, &
+             df_laplacian, zf_laplacian, &
+             df_gradient, zf_gradient, &
+             df_divergence, zf_divergence, &
+             df_angular_momentum, zf_angular_momentum, &
+             df_l2, zf_l2
+
+  integer, public, parameter ::     &
        REAL_SPACE = 0,      &
        FOURIER_SPACE = 1
 

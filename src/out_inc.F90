@@ -513,7 +513,7 @@ contains
     call X(cf_alloc_RS) (c)
     call X(mf2cf) (m, f, c)
 
-    filename = trim(dir) // "/" // trim(fname) // ".ncdf"
+    write(filename,'(a,a1,a,a5)') trim(dir), "/", trim(fname), ".ncdf"
     status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
     if(status.ne.NF90_NOERR) then
       ierr = 2

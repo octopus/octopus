@@ -30,6 +30,10 @@ use eigen_solver
 
 implicit none
 
+private
+public :: unocc_type, &
+          unocc_run
+
 type unocc_type
   integer  :: max_iter ! maximum number of iterations
   FLOAT :: conv     ! convergence criterium for the eigenvectors

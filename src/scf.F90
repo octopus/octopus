@@ -22,6 +22,9 @@ module scf
   use lib_oct_parser
   use units
   use geometry
+  use mesh
+  use mesh_function
+  use functions
   use states
   use output
   use restart

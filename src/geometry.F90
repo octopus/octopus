@@ -19,6 +19,7 @@
 
 module geometry
   use global
+  use units
   use lib_oct_parser
   use lib_oct
   use io

@@ -27,6 +27,20 @@ module math
 
   implicit none
 
+  private
+  public :: conjugate_gradients, &
+            quickrnd, &
+            stepf, &
+            grylmr, &
+            weights, &
+            cutoff0, &
+            cutoff1, &
+            cutoff2, &
+            dmatexp, zmatexp, &
+            dmatexp_polynomial, zmatexp_polynomial, &
+            dmatexp_scaleandsquare, zmatexp_scaleandsquare, &
+            dextrapolate, zextrapolate
+
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface conjugate_gradients
     module procedure sym_conjugate_gradients, bi_conjugate_gradients

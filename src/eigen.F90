@@ -25,12 +25,19 @@ module eigen_solver
   use io
   use nl_operator
   use stencil_star
+  use mesh_function
   use mesh
   use functions
   use states
   use hamiltonian
 
   implicit none
+
+  private
+  public :: eigen_solver_type, &
+            eigen_solver_init, &
+            eigen_solver_end, &
+            eigen_solver_run
 
   type eigen_solver_type
     integer :: es_type    ! which eigen solver to use

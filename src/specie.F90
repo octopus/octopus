@@ -28,7 +28,21 @@ use math
 
 implicit none
 
-integer, parameter :: &
+private
+public :: specie_init, &
+          specie_end, &
+          specie_type, &
+          specie_debug, &
+          specie_filter, &
+          specie_read, &
+          specie_get_local, &
+          specie_get_glocal, &
+          specie_get_local_fourier, &
+          specie_get_nl_part, &
+          specie_get_nlcc
+
+
+integer, public, parameter :: &
    SPEC_USDEF  = 1, &      ! user defined function
    SPEC_POINT  = 2, &      ! point charge: jellium sphere of radius 0.5 a.u.
    SPEC_JELLI  = 3, &      ! jellium sphere.

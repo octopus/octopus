@@ -27,6 +27,7 @@ use math
 use mesh
 use functions
 use mesh_function
+use cube_function
 use output
 use geometry
 use crystal

@@ -23,6 +23,7 @@ use lib_oct
 use lib_oct_parser
 use geometry
 use mesh
+use mesh_function
 use functions
 use states
 use output
@@ -37,6 +38,12 @@ use PES
 #endif
 
 implicit none
+
+private
+public :: td_type, &
+          td_run, &
+          td_init, &
+          td_end
 
 type td_type
   type(td_rti_type) :: tr             ! contains the details of the time evolution

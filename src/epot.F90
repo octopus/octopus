@@ -19,7 +19,11 @@
 
 module external_pot
   use global
+  use units
   use lib_oct_parser
+  use lib_oct_gsl_spline
+  use fft
+  use math
   use mesh
   use functions
 #ifdef HAVE_FFT

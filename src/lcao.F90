@@ -33,6 +33,12 @@ module lcao
 
   implicit none
 
+  private
+  public :: lcao_type, &
+            lcao_init, &
+            lcao_wf, &
+            lcao_end
+
   type lcao_type
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)

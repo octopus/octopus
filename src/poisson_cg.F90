@@ -18,8 +18,10 @@
 #include "global.h"
 
 module poisson_cg
+  use global
   use math
   use mesh
+  use derivatives
   use functions
 
   implicit none

@@ -24,6 +24,8 @@ module output
   use io
   use units
   use mesh
+  use mesh_function
+  use cube_function
   use functions
 #if defined(HAVE_NETCDF)
   use netcdf
@@ -165,8 +167,8 @@ subroutine ncdf_error(func, status, filename, ierr)
     integer, intent(out) :: ierr
 
     if(status .eq. NF90_NOERR) return
-    message(1) = "NETCDF error in function '" // trim(func) // "'"
-    message(2) = "(reading/writing "//trim(filename)//")"
+    write(message(1),'(3a)') "NETCDF error in function '" , trim(func) , "'"
+    write(message(2),'(3a)') "(reading/writing ", trim(filename) , ")"
     write(message(3), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
     call write_warning(3)
     ierr = 5

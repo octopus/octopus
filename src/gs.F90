@@ -22,10 +22,15 @@ module ground_state
   use system
   use hamiltonian
   use lcao
+  use states
   use restart
   use scf
 
   implicit none
+
+  private
+  public :: ground_state_run, &
+            ground_state_init
 
 contains
 

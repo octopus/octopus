@@ -28,6 +28,20 @@ module derivatives
 
   implicit none
 
+  private
+  public :: der_discr_type, &
+            derivatives_init, &
+            derivatives_end, &
+            derivatives_build, &
+            dderivatives_lapl, &
+            zderivatives_lapl, &
+            dderivatives_laplt, &
+            zderivatives_laplt, &
+            dderivatives_grad, &
+            zderivatives_grad, &
+            dderivatives_div, &
+            zderivatives_div
+
   type der_discr_type
     type(mesh_type), pointer :: m             ! pointer to the underlying mesh
     integer                  :: order         ! order of the discretization (value depends on stencil)

@@ -25,13 +25,20 @@ module xyz_file
 
   implicit none
 
-  integer, parameter :: &
+  private
+  public :: xyz_file_atom, &
+            xyz_file_info, &
+            xyz_file_init, &
+            xyz_file_end,  &
+            xyz_file_read
+
+  integer, public, parameter :: &
        XYZ_FILE_ERR = 0, &
        XYZ_FILE_PDB = 1, &
        XYZ_FILE_XYZ = 2, &
        XYZ_FILE_INP = 3
 
-  integer, parameter :: &
+  integer, public, parameter :: &
        XYZ_FLAGS_RESIDUE = 1, &
        XYZ_FLAGS_CHARGE  = 2, &
        XYZ_FLAGS_MOVE    = 4

@@ -21,6 +21,7 @@
 !!! methods defined in td_exp
 module td_exp_split
   use global
+  use fft
   use lib_basic_alg
   use cube_function
   use mesh_function
