@@ -268,6 +268,8 @@ Function output for visualization
 * OutputPlaneX::                
 * OutputPlaneY::                
 * OutputPlaneZ::                
+* OutputMeshIndex::                
+* OutputGnuplotMode::                
 * OutputDX::                    
 * OutputNETCDF::                
 * OutputEvery::                 
@@ -2865,6 +2867,8 @@ have the value zero in those files.
 * OutputPlaneX::                
 * OutputPlaneY::                
 * OutputPlaneZ::                
+* OutputMeshIndex::                
+* OutputGnuplotMode::                
 * OutputDX::                    
 * OutputNETCDF::                
 * OutputEvery::                 
@@ -2954,14 +2958,32 @@ to previous file names.
 A plane slice at @math{y=0} is printed. The string ``.y=0'' is appended
 to previous file names.
 
-@node OutputPlaneZ, OutputDX, OutputPlaneY, Function output for visualization
+@node OutputPlaneZ, OutputMeshIndex, OutputPlaneY, Function output for visualization
 @subsection @code{OutputPlaneZ} (logical, false)
 @vindex @code{OutputPlaneZ}
 
 A plane slice at @math{y=0} is printed. The string ``.z=0'' is appended to
 previous file names.
 
-@node OutputDX, OutputNETCDF, OutputPlaneZ, Function output for visualization
+@node OutputMeshIndex, OutputGnuplotMode, OutputPlaneZ, Function output for visualization
+@subsection @code{OutputMeshIndex} (logical, false)
+@vindex @code{OutputMeshIndex}
+
+Generates output files of a given quantity (Density, Wfs, ...) which include
+the internal numbering of mesh points. Since this mode produces large datafiles this is only 
+useful for small meshes and debugging purposes.
+The output can also be used to display the mesh directly. A gnuplot script for mesh vizualization
+can be found under @code{PREFIX/share/octopus/util/display_mesh_index.gp}
+
+@node OutputGnuplotMode, OutputDX, OutputMeshIndex, Function output for visualization
+@subsection @code{OutputGnuplotMode} (logical, false)
+@vindex @code{OutputGnuplotMode}
+
+If set to yes, extra newline characters will be inserted in the output of Plane(X,Y,Z). 
+This allows to contour the data in Gnuplot. Disturbing line connections of splot are also
+avoided in this way.
+
+@node OutputDX, OutputNETCDF, OutputGnuplotMode, Function output for visualization
 @subsection @code{OutputDX} (logical, false)
 @vindex @code{OutputDX}
 
