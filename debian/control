@@ -1,0 +1,16 @@
+Source: octopus
+Section: science
+Priority: optional
+Maintainer: Heiko Appel <appel@physik.fu-berlin.de>
+Build-Depends: debhelper (>> 3.0.0)
+Standards-Version: 3.5.2
+
+Package: octopus
+Architecture: i386
+Depends: ${shlibs:Depends}
+Description:   octopus - ab initio td electronic structure 
+ octopus is a program aimed at the ab initio virtual 
+ experimentation on electron/ion dynamics in external 
+ electromagnetic fields of arbitrary intensity, shape 
+ and frequency in a hopefully ever increasing range of 
+ systems types.
