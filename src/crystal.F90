@@ -283,7 +283,7 @@
        
        invers=invers/det
        
-     end subroutine inv3by3
+      end subroutine inv3by3
 
        subroutine vecprod(a,b,c)
        ! calculates vector product a x b = c

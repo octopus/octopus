@@ -525,7 +525,7 @@ subroutine get_splines_tm_fourier(psf,ps)
       if(i == 1) then
         d = d * ps%g%rofi(j)
       else
-        d = d * sin(modg(i)*ps%g%rofi(j))*modg(i)
+        d = d * sin(modg(i)*ps%g%rofi(j)) / modg(i)
       end if
       intg(i) = intg(i) + d
     end do

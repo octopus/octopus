@@ -193,7 +193,7 @@ contains
     integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3)
     FLOAT :: g(3), gpar, gperp, gx, gz, modg
-    FLOAT :: a_erf, r_0, temp(3), tmp1, tmp2, norm
+    FLOAT :: a_erf, r_0, temp(3), tmp, norm
     
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
@@ -294,42 +294,31 @@ contains
               x = temp(:)*ixx(:)
               modg = sqrt(sum((temp(:)*ixx(:))**2))
 
-              tmp1 = specie_get_local_fourier(s, x)
-              tmp2 = s%z_val*exp(-(modg/(2*a_erf))**2)     
-              
-              select case(vlocal_cutoff)
-              case(0)
-                if(modg == M_ZERO) then
-                  cf%FS(ix, iy, iz) = -r_0**2/M_TWO
-                else
-                  cf%FS(ix, iy, iz) = &
-                    (tmp1 - tmp2)*cutoff0(modg*r_0)/modg**2
-                end if
-              case(1)
-                gx = abs(temp(1)*ixx(1))
-                gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-               if(modg == M_ZERO) then
-                  cf%FS(ix, iy, iz) = M_ZERO
-                else
-                  cf%FS(ix, iy, iz) = &
-                    (tmp1 - tmp2)*cutoff1(gx*r_0,gperp*r_0)/modg**2
-                end if
-              case(2)
+              tmp = specie_get_local_fourier(s, x)
+              if(modg /= M_ZERO) then
+                tmp = tmp - s%z_val*exp(-(modg/(2*a_erf))**2)/modg**2
+                select case(vlocal_cutoff)
+                case(0) 
+                  cf%FS(ix, iy, iz) = tmp*cutoff0(modg*r_0)
+                case(1)
+                  gx = abs(temp(1)*ixx(1))
+                  gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
+                  cf%FS(ix, iy, iz) = tmp*cutoff1(gx*r_0, gperp*r_0)
+                case(2)
                   gz = abs(temp(3)*ixx(3))
                   gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                if(modg == M_ZERO) then
-                  cf%FS(ix, iy, iz) = M_ZERO
-                else
-                  cf%FS(ix, iy, iz) = &
-                    (tmp1 - tmp2)*cutoff2(gpar*r_0,gz*r_0)/modg**2
-                end if
-              case(3)
-                if(modg == M_ZERO) then
-                  cf%FS(ix, iy, iz) = tmp1
-                else
-                  cf%FS(ix, iy, iz) = (tmp1-tmp2)/modg**2
-                end if
-              end select
+                  cf%FS(ix, iy, iz) = tmp*cutoff2(gpar*r_0, gz*r_0)
+                case(3)
+                  cf%FS(ix, iy, iz) = tmp
+                end select
+              else
+                select case(vlocal_cutoff)
+                case(0)  ; cf%FS(ix, iy, iz) = -r_0**2/M_TWO
+                case(1,2); cf%FS(ix, iy, iz) = M_ZERO
+                case(3)  ; cf%FS(ix, iy, iz) = tmp
+                end select
+              end if
+              
  ! multiply by normalization factor and a phase shift to get the center of the box
               cf%FS(ix, iy, iz) = norm*                         &
                                   exp(M_PI*M_ZI*sum(ixx(:)))*   &
