@@ -90,7 +90,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 
   end do atm_loop
   
-  if(h%no_lasers>0) then
+  if(present(t).and.h%no_lasers>0) then
     call laser_field(h%no_lasers, h%lasers, t, x)
     do i = 1, sys%natoms
       if(sys%atom(i)%spec%local) cycle

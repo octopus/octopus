@@ -408,6 +408,15 @@ contains
         x2 = a(i)%x(:) - r2*x(:)
       end if
     end do
+    if(sum(x2**2) == M_ZERO) then ! linear molecule
+      if(x(1) == M_ZERO) then
+        x2(1) = x(1); x2(2) = -x(3); x2(3) = x(2)
+      else if(x(1) == M_ZERO) then
+        x2(2) = x(2); x2(1) = -x(3); x2(3) = x(1)
+      else
+        x2(3) = x(3); x2(1) = -x(2); x2(2) = x(1)
+      end if
+    end if
     x2 = x2/sqrt(sum(x2**2))
 
   end subroutine find_axis

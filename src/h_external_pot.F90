@@ -423,13 +423,8 @@ contains
               call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
               ylm = oct_ylm(x(1), x(2), x(3), l, lm)
               
-              if(r > 0._r8 .or. l>0) then ! 0**l crashes in osf
-                a%duVu(add_lm, 1, 1) = a%duVu(add_lm, 1, 1) + a%duV(j, add_lm, 1)* &
-                     splint(s%ps%ur(l, 1), r) * ylm * (r**l)
-              else
-                a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
-                     splint(s%ps%ur(l, 1), r)*ylm
-              endif
+              a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
+                   splint(s%ps%ur(l, 1), r)*ylm
             end do
             a%duVu(add_lm, 1, 1) = sum(a%duV(:, add_lm, 1)**2)/(a%duVu(add_lm, 1, 1)*s%ps%dknrm(l))
              if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8) then

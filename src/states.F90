@@ -27,8 +27,6 @@ use mesh
 
 implicit none
 
-! If you change everything in this structure, do not forget to
-! change states_dup
 type states_type
   integer :: dim           ! Dimension of the state (one or two for spinors)
   integer :: nst           ! Number of states in each irreducible subspace
@@ -243,29 +241,6 @@ subroutine states_end(st)
   call pop_sub()
 end subroutine states_end
 
-subroutine states_dup(i, o)
-  type(states_type), intent(IN) :: i
-  type(states_type), intent(out) :: o
-
-  o%dim   = i%dim
-  o%nst   = i%nst
-  o%nik   = i%nik
-  o%ispin = i%ispin
-  o%nspin = i%nspin
-
-  o%dpsi     => i%dpsi
-  o%zpsi     => i%zpsi
-  o%rho      => i%rho
-  o%eigenval => i%eigenval
-  o%occ      => i%occ
-
-  o%qtot     = i%qtot
-  o%el_temp  = i%el_temp
-  o%ef       = i%ef
-  o%st_start = i%st_start
-  o%st_end   = i%st_end
-end subroutine states_dup
-
 ! generate a hydrogen s-wavefunction around a random point
 subroutine states_generate_random(st, m, ist_start)
   type(states_type), intent(inout) :: st
@@ -426,7 +401,7 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   real(r8), intent(out) :: dipole(st%nspin), multipole((lmax + 1)**2, st%nspin)
 
   integer :: i, is, l, lm, add_lm
-  real(r8) :: x(3), r, ylm, mult, lixo(3)
+  real(r8) :: x(3), r, ylm, mult
 
   dipole = 0._r8
   do is = 1, st%nspin

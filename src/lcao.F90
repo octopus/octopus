@@ -139,7 +139,6 @@ contains
     integer :: i, l, is
     real(r8) :: r
     R_TYPE :: psi1, psi2
-
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
       do l = 0 , s%ps%L_max_occ
@@ -147,17 +146,17 @@ contains
           select case(sys%st%spin_channels)
           case(1)
             psi1 = splint(s%ps%Ur(l, 1), r)
-            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1*(r**(2*l))/(4*M_PI)  
+            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1 /(4*M_PI)  
           case(2)
-            psi1 = splint(s%ps%ur(l, 1), r)
-            psi2 = splint(s%ps%ur(l, 2), r)
-            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1) * psi1*psi1 * r**(2*l)/(4*M_PI)
-            rho(i, 2) = rho(i, 2) + s%ps%occ(l, 2) * psi2*psi2 * r**(2*l)/(4*M_PI)
+            psi1 = splint(s%ps%Ur(l, 1), r)
+            psi2 = splint(s%ps%Ur(l, 2), r)
+            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1) * psi1*psi1 /(4*M_PI)
+            rho(i, 2) = rho(i, 2) + s%ps%occ(l, 2) * psi2*psi2 /(4*M_PI)
           end select
         end if
       end do
     end do
-    
+
   end subroutine from_pseudopotential
 end subroutine lcao_dens
 
@@ -327,17 +326,16 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
   if(sys%atom(i)%spec%local) then
     ! add a couple of harmonic oscilator functions
   else
-    s => sys%atom(i)%spec%ps%ur(l, ispin)
+    s => sys%atom(i)%spec%ps%Ur(l, ispin)
+
     do j = 1, sys%m%np
       call mesh_r(sys%m, j, r, x=x, a=a)
       p = splint(s, r)
       ylm = oct_ylm(x(1), x(2), x(3), l, lm)
-      if(r > 0._r8) then
-        psi(j) = p * ylm * r**l
-      end if
+      psi(j) = p * ylm
     end do
   end if
-
+ 
   call pop_sub(); return    
 end subroutine get_wf
 

@@ -136,6 +136,9 @@ contains
   subroutine prop_iter1(iter)
     integer, intent(in) :: iter
 
+    ! new electric field
+    if(iter < td%max_iter) call update_field(iter, laser_i)
+
     ! psi_f
     td%v_old => v_old_f
     h%lasers(1)%numerical => laser_f
@@ -149,15 +152,15 @@ contains
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
     call zhamiltonian_setup(h, sys%m, psi_i, sys)
     call td_rti(h, sys%m, psi_i, sys, td, abs(iter*td%dt))
-
-    ! new electric field
-    if(iter < td%max_iter) call update_field(iter, laser_i)
 
   end subroutine prop_iter1
 
   subroutine prop_iter2(iter)
     integer, intent(in) :: iter
 
+    ! new electric field
+    if(iter > 0) call update_field(iter, laser_f)
+
     ! psi_i
     td%v_old => v_old_i
     h%lasers(1)%numerical => laser_i
@@ -171,9 +174,6 @@ contains
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
     call zhamiltonian_setup(h, sys%m, psi_f, sys)
     call td_rti(h, sys%m, psi_f, sys, td, abs(iter*td%dt))
-
-    ! new electric field
-    if(iter > 0) call update_field(iter, laser_f)
 
   end subroutine prop_iter2
 
@@ -305,8 +305,8 @@ contains
     h%lasers(1)%dt = td%dt
     allocate(laser_i(conf%dim, 0:2*td%max_iter), laser_f(conf%dim, 0:2*td%max_iter))
     laser_i = M_ZERO; 
-    laser_f = M_ZERO;
-    !laser_f = 1e-4_r8*exp(-((real(i)-real(td%max_iter)/M_THREE)*8._r8/real(td%max_iter))**2)
+    !laser_f = M_ZERO;
+    laser_f = 1e-4_r8*exp(-((real(i)-real(td%max_iter)/M_THREE)*8._r8/real(td%max_iter))**2)
     h%lasers(1)%numerical => laser_f
 
     ! read alpha from input

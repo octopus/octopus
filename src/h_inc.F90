@@ -56,10 +56,6 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   call R_FUNC(kinetic) (m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
   if(sys%nlpp) call R_FUNC(vnlpsi)  (m, st, sys, psi, Hpsi)
-  if(present(t)) then
-    call R_FUNC(vlasers)  (h, m, st, psi, Hpsi, t)
-    call R_FUNC(vborders) (h, m, st, psi, Hpsi)
-  endif
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -72,6 +68,11 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
     message(1) = 'Error: Internal.'
     call write_fatal(1)
   end select
+
+  if(present(t)) then
+    call R_FUNC(vlasers)  (h, m, st, psi, Hpsi, t)
+    call R_FUNC(vborders) (h, m, st, psi, Hpsi)
+  endif
 
   call pop_sub(); return
 end subroutine R_FUNC(Hpsi)

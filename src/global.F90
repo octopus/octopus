@@ -32,10 +32,11 @@ implicit none
 #endif
 
 type conf_type
-  integer :: verbose ! <= 0  -> silent, no output except fatal errors
-                     ! > 0   -> warning only
-                     ! > 20  -> normal program info
-                     ! > 999 -> debug
+  integer :: verbose     ! <= 0  -> silent, no output except fatal errors
+                         ! > 0   -> warning only
+                         ! > 20  -> normal program info
+                         ! > 999 -> debug
+  integer :: debug_level ! How much debug should print
   integer :: dim
 end type conf_type
 
@@ -111,6 +112,59 @@ character(len=68), parameter, private :: hyphens = &
   end interface
 
 contains
+
+subroutine global_init()
+  integer :: ierr
+
+#ifdef HAVE_MPI
+  call MPI_INIT(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, mpiv%node, ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, mpiv%numprocs, ierr)
+  write(stdout,'(a,i4,a,i4,a)') 'Process ', mpiv%node, ' of ', mpiv%numprocs, ' is alive'  
+#else
+  mpiv%node = 0
+  mpiv%numprocs = 1
+#endif
+
+  ! init some of the stuff
+  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
+  if(ierr .ne. 0) then
+    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
+    if(ierr .ne. 0) then
+      message(1) = "Error initializing liboct"
+      call write_fatal(1)
+    end if
+  end if
+  
+  call oct_parse_int(C_string('verbose'), 30, conf%verbose)
+  if(conf%verbose > 999 .and. mpiv%node == 0) then
+    call oct_parse_int(C_string('DebugLevel'), 3, conf%debug_level)
+    message(1) = 'Entering DEBUG mode'
+    call write_warning(1)
+  end if
+
+  ! Sets the dimensionaliy of the problem.
+  call oct_parse_int(C_string('Dimensions'), 3, conf%dim)
+  if(conf%dim<1 .or. conf%dim>3) then
+    message(1) = 'Dimensions must be either 1, 2, or 3'
+    call write_fatal(1)
+  end if
+  write(message(1), '(a,i1,a)') 'Octopus will run in ', conf%dim, ' dimension(s)'
+
+  ! create temporary dir (is always necessary)
+  call oct_mkdir(C_string("tmp"))
+
+end subroutine global_init
+
+subroutine global_end()
+  integer :: ierr
+
+#ifdef HAVE_MPI
+  call MPI_FINALIZE(ierr)
+#endif
+  call oct_parse_end()
+
+end subroutine global_end
 
 subroutine write_fatal(no_lines)
   integer, intent(in) :: no_lines
@@ -195,7 +249,7 @@ subroutine push_sub()
     sub_stack(no_sub_stack) = trim(sub_name)
     time_stack(no_sub_stack) = oct_clock()
 
-    if(conf%verbose > 999 .and. mpiv%node == 0) then
+    if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
       write(stdout,'(a)', advance='no') "* Debug: In: "
       do i = no_sub_stack-1, 1, -1
         write(stdout,'(a)', advance='no') "  "
@@ -211,7 +265,7 @@ subroutine pop_sub()
   integer i
 
   if(no_sub_stack > 0) then
-    if(conf%verbose > 999 .and. mpiv%node == 0) then
+    if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
  
       write(stdout,'(a)', advance='no') "* Debug: Out:"
       do i = no_sub_stack-1, 1, -1

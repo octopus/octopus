@@ -407,17 +407,17 @@ subroutine get_splines_tm(psf, ps)
   ! Define the table for the pseudo-wavefunction components (using splines)
   ! with a correct normalization function
   do is = 1, ps%ispin
-  do l = 0 , ps%L_max
-    nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
-    do ir = nrc+ 2, psf%nrval-2
-      if ( abs(psf%rphi(ir, l, 1+is)/psf%rofi(ir)**(l+1)) < eps ) exit
-    enddo
-    nrc = ir + 1
-    hato = 0.0_r8
-    hato(2:nrc) = psf%rphi(2:nrc, l, 1 + is)/psf%rofi(2:nrc)**(l + 1)
-    hato(1) = hato(2)
-    call spline_fit(psf%nrval, psf%rofi, hato, ps%Ur(l, is))
-  end do
+    do l = 0 , ps%L_max
+      nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
+      do ir = nrc+ 2, psf%nrval-2
+        if ( abs(psf%rphi(ir, l, 1+is)/psf%rofi(ir)) < eps ) exit
+      end do
+      nrc = ir + 1
+      hato = 0.0_r8
+      hato(2:nrc) = psf%rphi(2:nrc, l, 1 + is)/psf%rofi(2:nrc)
+      hato(1) = hato(2)
+      call spline_fit(psf%nrval, psf%rofi, hato, ps%Ur(l, is))
+    end do
   end do
 
   !  pseudo-core radius and Table with the pseudo-core data
@@ -487,11 +487,11 @@ subroutine get_splines_hgh(psp, ps)
   do l = 0 , ps%l_max_occ
     nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
     do ir = nrc+ 2, psp%g%nrval-2
-      if ( abs(psp%rphi(ir,l)/psp%g%rofi(ir)**(l+1)) < eps ) exit
+      if ( abs(psp%rphi(ir,l)/psp%g%rofi(ir)) < eps ) exit
     enddo
     nrc = ir + 1
     hato = 0.0_r8
-    hato(2:nrc) = psp%rphi(2:nrc, l)/psp%g%rofi(2:nrc)**(l + 1)
+    hato(2:nrc) = psp%rphi(2:nrc, l)/psp%g%rofi(2:nrc)
     hato(1) = hato(2)
     call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l, is))
   end do

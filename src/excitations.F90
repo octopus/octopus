@@ -50,29 +50,32 @@ program excitations
   call oct_parse_int(C_string("verbose"), 30, conf%verbose)
 
   ! This only works for three dimensions
-  conf%dim     = 3
+  call oct_parse_int(C_string('Dimensions'), 3, conf%dim)
+  if(conf%dim<1 .or. conf%dim>3) then
+    message(1) = 'Dimensions must be either 1, 2, or 3'
+    call write_fatal(1)
+  end if
+  write(message(1), '(a,i1,a)') 'Octupus will run in ', conf%dim, ' dimension(s)'
 
   ! Initialize stuff
   call units_init()
   call system_init(sys)
 
   ! how many states do we have?
-  call oct_parse_int(C_string("UnoccNumberStates"), 0, n_unocc)
-  call states_dup(sys%st, st)
   n_occ = sys%st%nst
-  st%nst = n_occ + n_unocc
-  st%st_end   = st%nst
+  call oct_parse_int(C_string("UnoccNumberStates"), 5, n_unocc)
+  call states_init(st, sys%m, sys%val_charge)
+  st%nst = n_unocc + n_occ
+  st%st_end = st%nst
   allocate(st%R_FUNC(psi) (0:sys%m%np, st%dim, st%nst, st%nik))
-  allocate(st%eigenval(st%nst, st%nik), st%occ(st%nst, st%nik), st%rho(sys%m%np, st%nspin))
-  st%occ = 0._r8
-  st%occ(1:n_occ,:) = sys%st%occ(1:n_occ,:)
-  call states_choose_kpoints(st, sys%m)
-  deallocate(sys%st)
-  sys%st => st
+  allocate(st%eigenval(st%nst, st%nik), st%occ(st%nst, st%nik))
+  st%eigenval = M_ZERO
+  st%occ      = M_ZERO
+  st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
+  call states_end(sys%st)
 
-  allocate(sys%st%R_FUNC(psi) (0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
-  if(R_FUNC(states_load_restart) ("tmp/restart.occ", sys%m, sys%st)) then
-    call R_FUNC(calcdens)(sys%st, sys%m%np, st%rho)
+  if(R_FUNC(states_load_restart) ("tmp/restart.occ", sys%m, st)) then
+    call R_FUNC(calcdens)(st, sys%m%np, st%rho)
   else
     message(1) = "Error opening 'restart.occ' file"
     call write_fatal(1)
@@ -89,18 +92,18 @@ program excitations
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
   call oct_parse_logical("LinEigenvalues", .true., l)
-  if(l) call calc_petersilka(0, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'eps-diff')
+  if(l) call calc_petersilka(0, st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'eps-diff')
   
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
   call oct_parse_logical("LinPetersilka", .true., l)
-  if(l) call calc_petersilka(1, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
+  if(l) call calc_petersilka(1, st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
 
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
   call oct_parse_logical("LinCasida", .true., l)
-  if(l)call calc_petersilka(2, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'casida')
+  if(l)call calc_petersilka(2, st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'casida')
 
   call hartree_end(hart)
 

@@ -714,7 +714,7 @@ else went wrong, please subscribe to @code{octopus-users} mailing list, and ask.
 @node The parser, Input file options, The input file, The input file
 @section The parser
 
-All input options should be in a file called '@code{inp}', in the
+All input options should be in a file called ``@code{inp}'', in the
 directory @code{octopus} is run from. Alternatively, if this file is not
 found, standard input is read. For a fairly comprehensive
 example, just look at the file @code{OCTOPUS_HOME/samples/inp}
@@ -778,7 +778,7 @@ number of columns.
 
 If @code{octopus} tries to read a variable that is not defined in the
 @code{inp} file, it automatically assigns to it a default value. All
-variables read are output to the file '@code{out.oct}'. If you are
+variables read are output to the file ``@code{out.oct}''. If you are
 not sure of what the program is reading, just take a look at it.
 Everything following the character ``#'' until the end of the line
 is considered a comment and is simply cast into oblivion.
@@ -896,7 +896,7 @@ can be best understood through examples.
   %
 @end example
 This defines a species labelled '@code{H}' of weight @code{1.0079},
-and valence charge @code{1}. This 'valence charge' is used to calculate
+and valence charge @code{1}. This ``valence charge'' is used to calculate
 the number of electrons present in the calculation: as many
 as indicated by the valence charges of the species, plus any extra charge
 specified by the user (@pxref{States}). Last field may be
@@ -1029,8 +1029,8 @@ a PDB file, a XYZ file, or else directly from the @code{inp} file.
   Defines the axis to be used if @code{AdjustCoordinates} is true.
   If not set defaults to the z axis.
 
-@item @vindex @code{OutputCoordinates}
-@code{OutputCoordinates} (logical, false):
+@item @vindex @code{OutputGeometry}
+@code{OutputGeometry} (logical, false):
   If true @code{octopus} outputs a XYZ file called 
   ``@code{SystemName}.xyz'' containing the coordinates of the atoms
   treated within Quantum Mechanics. If point charges were defined
@@ -1308,7 +1308,7 @@ And now comes the correlation variables:
 @item @code{CFamily == 'GGA'}: Generalised gradient approximations. 
   @itemize @minus
     @item @code{CFunctional == 'PBE'}: J.P.Perdew, K.Burke and M.Ernzerhof, 
-    	PRL @strong{77}, 3865 (1996)
+    	PRL @strong{77}, 3865 (1996).
   @end itemize
 @item @code{CFamily == 'KLI'}: Optimised effective potential method within
   the Krieger, Lee and Iafrate approximation.
@@ -1389,26 +1389,26 @@ available when method 0 is used.
 
 @item @vindex @code{EigenSolverInitTolerance}
 @code{EigenSolverInitTolerance} (double, 1.0e-10):
-When @code{EigenSolver == 0} is the initial tolerance for the eigenvectors.
+When @code{EigenSolver == 0} this is the initial tolerance for the eigenvectors.
 
 @item @vindex @code{EigenSolverFinalTolerance}
 @code{EigenSolverFinalTolerance} (double, 1.0e-14):
-When @code{EigenSolver == 0} is the final tolerance for the eigenvectors.
+When @code{EigenSolver == 0} this is the final tolerance for the eigenvectors.
 
 @item @vindex @code{EigenSolverFinalToleranceIteration}
 @code{EigenSolverFinalToleranceIteration} (integer, 7):
-When @code{EigenSolver == 0} determines how many interactions are needed 
+When @code{EigenSolver == 0}, determines how many interactions are needed 
 to go from @code{EigenSolverInitTolerance} to @code{EigenSolverFinalTolerance}.
 
 @item @vindex @code{EigenSolverMaxIter}
 @code{EigenSolverMaxIter} (integer, 25):
-When @code{EigenSolver == 0} determines the maximum number of iterations 
+When @code{EigenSolver == 0}, determines the maximum number of iterations 
 for the eigensolver --- that is, if this number is reached, the diagonalisation
 is stopped even if the desired tolerance was not achieved.
 
 @item @vindex @code{NumberCG}
 @code{NumberCG} (integer, 3):
-When @code{EigenSolver == 1} determines the number of conjugated gradient 
+When @code{EigenSolver == 1}, determines the number of conjugated gradient 
 steps per iteration.
 
 @item @vindex @code{TypeOfMixing}
@@ -1437,7 +1437,7 @@ Number of steps used by Broyden mixing to extrapolate the new density.
 @subsection Unoccupied States
 
 These variables are only used in @code{CalculationMode == 3, 4} (or in 5 and 6
-if @code{TDOccupationalAnalysis == 1}.)
+if @code{TDOccupationalAnalysis == 1}).
 @itemize @bullet
 
 @item @vindex @code{UnoccNumberStates}
@@ -1447,7 +1447,7 @@ if @code{TDOccupationalAnalysis == 1}.)
 @item @vindex @code{UnoccMaximumIter}
 @code{UnoccMaximumIter} (integer, 200):
   Maximum number of iterations while calculating the unoccupied states.
-  Note that this are @emph{not} SCF iterations, for the density and the 
+  Note that these are @emph{not} SCF iterations, for the density and the 
   Hamiltonian are not updated!
 
 @item @vindex @code{UnoccConv}
@@ -1487,7 +1487,7 @@ respect the time-reversal symmetry.
 
 @item @vindex @code{TDExponentialMethod}
 @code{TDExponentialMethod} (integer, 1):
-Method used to numerically calculate the exponential of the hamiltonian,
+Method used to numerically calculate the exponential of the Hamiltonian,
 a core part of the calculation in any of the previously described methods
 to perform the evolution.
   @itemize @minus
@@ -1519,7 +1519,7 @@ precise the exponential is calculated.
 
 @item @vindex @code{TDTimeStep}
 @code{TDTimeStep} (double, 0.07 a.u.):
-  Time step for the propagation.
+  Time-step for the propagation.
 
 @item @vindex @code{TDLasers}
 @code{TDLasers} (block data):
@@ -1543,7 +1543,7 @@ The possible values for @code{envelope} are:
     @item @code{3}: Ramp. In this case there is an extra parameter 
       @code{tau1}. @code{tau0} is the length of the constant part of the ramp,
       and @code{tau1} is the raising (decaying) time. @code{tau1} should be
-      an extra field after @code{t0}
+      an extra field after @code{t0}.
     @item @code{4}: Shape is read from a file.
   @end itemize
 
@@ -1564,7 +1564,7 @@ In which gauge to treat the laser. Options are:
 
 @item @vindex @code{TDOutputLaser}
 @code{TDOutputLaser} (logical, false):
-If @code{true}, @code{octopus} outputs the laser field to the file '@code{laser.out}'.
+If @code{true}, @code{octopus} outputs the laser field to the file ``@code{laser.out}''.
 
 @item @vindex @code{TDDeltaStrength}
 @code{TDDeltaStrength} (double, 0.0 a.u.)
@@ -1708,7 +1708,7 @@ where ``x'' stands for the iteration number at which each write is done.
 
 @item @vindex @code{OutputDensity}
 @code{OutputDensity} (logical, false)
- Prints out the density. Filename would be ``density-x'', where ``x'' stands for 
+ Prints out the density. Filename would be ``density-i'', where ``i'' stands for 
  the spin channel.
 
 @item @vindex @code{OutputWfs}
@@ -1783,12 +1783,12 @@ are described in section ``External utilities.'' Common options read by these ut
 @item @vindex @code{SpecDampMode}
 @code{SpecDampMode} (string, 'exp')
   A damping function may be applied to the input fuction before processing the Fourier
-  transform. This function may be an exponential or a polynomial: 'exp' or 'pol'. If
+  transform. This function may be an exponential or a polynomial: ``exp'' or ``pol''. If
   this variable is not present or has any other value, no damping function is applied.
 
 @item @vindex @code{SpecDampFactor}
 @code{SpecDampFactor} (real, 0.0)
-  If @code{SpecDampMode} is set to `exp', the damping parameter of the exponential
+  If @code{SpecDampMode} is set to ``exp'', the damping parameter of the exponential
   is fixed through this variable.
 
 @item @vindex @code{SpecStartTime}
@@ -1816,8 +1816,8 @@ are described in section ``External utilities.'' Common options read by these ut
 @item @vindex @code{HSPolarization}
 @code{HSPolarization} (string, 'z')
   For the utilities @code{hs-from-acc}, and @code{hs-from-mult}, the polarization
-  of the laser pulse must be specified. Valid values are 'x', 'y' and 'z' for 
-  lasers linearly polarized along the respective axis, or '+' or '-' for lasers 
+  of the laser pulse must be specified. Valid values are ``x'', ``y'' and ``z'' for 
+  lasers linearly polarized along the respective axis, or ``+'' or ``-'' for lasers 
   circularly polarized. See the description of @code{hs-from-acc} and @code{hs-from-mult}
   for more details.
 
@@ -1913,8 +1913,8 @@ columns: energy (in eV or a.u., depending on the units specified in @code{inp}),
 and dipole strength function (in 1/eV, or 1/a.u., idem).
 
 In the @code{inp} file, the user may set the @code{SpecTransformMode} -- this
-should be set to 'sin' for proper use --, the @code{SpecDampMode} -- recommended
-value is 'pol', which ensures fulfilling of the N-sum rule, 
+should be set to ``sin'' for proper use --, the @code{SpecDampMode} -- recommended
+value is ``pol'', which ensures fulfilling of the N-sum rule, 
 the @code{SpecStartTime}, the @code{SpecEndTime}, the @code{SpecEnergyStep}, 
 the @code{SpecMinEnergy} and the @code{SpecMaxEnergy}.
 
@@ -1954,7 +1954,7 @@ a movie in XYZ format. To do.
 
 As a first example, we will take a sodium atom.
 With your favourite text editor, create
-the following input 'inp'.
+the following input ``inp''.
 @example
   SystemName = 'Na'
   CalculationMode = 1
@@ -1971,8 +1971,8 @@ the following input 'inp'.
 
 
 This input file should be essentially self-explanatory. 
-Note that a Troullier-Martins pseudopotential file ('Na.vps', or 'Na.ascii') should
-be accesible to the program. A sample 'Na.ascii' may be found
+Note that a Troullier-Martins pseudopotential file (``Na.vps'', or ``Na.ascii'') should
+be accesible to the program. A sample ``Na.ascii'' may be found
 in @code{OCTOPUS-HOME/share/PP/TM2}. If @code{octopus} was installed
 (@code{make install} was issued after @code{make}), there should be no need
 to do anything -- the program should find it. Otherwise, you may as well place it
