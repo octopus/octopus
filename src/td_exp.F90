@@ -48,7 +48,7 @@ contains
     allocate(zpsi1(0:sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
     zfact = 1._r8
     zpsi1 = zpsi
-    do i = 1, order ! forth order method
+    do i = 1, order
       zfact = zfact*(-M_zI*timestep)/i
       call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
       zpsi(1:,:) = zpsi(1:,:) + zfact*hzpsi1(:,:)
@@ -320,7 +320,7 @@ contains
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: t, dt
 
-    integer :: j, ik, idim
+    integer :: j, idim
     real(r8) :: r, x(3), las(3)
 
     sub_name = 'local_part'; call push_sub()
