@@ -21,7 +21,7 @@
 !!! methods defined in td_exp
 module td_exp_split
   use global
-  use lib_alg
+  use lib_basic_alg
   use mesh
   use states
   use hamiltonian
@@ -198,11 +198,11 @@ contains
           do_m: do lm = -l*step, l*step, step
             do ikbc = kbc_start, kbc_end, step
               do jkbc = kbc_start, kbc_end, step
-                 p2 = lalg_dot(atm%mps, atm%zuv(1, add_lm, ikbc), 1, atm%zuv(1, add_lm, ikbc), 1)*m%vol_pp
+                 p2 = lalg_dot(atm%mps, atm%zuv(1, add_lm, ikbc), atm%zuv(1, add_lm, ikbc))*m%vol_pp
                  ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*factor
-                 uvpsi = lalg_dot(atm%mps, atm%zuv(1, add_lm, ikbc), 1, lpsi(1), 1) * m%vol_pp* &
+                 uvpsi = lalg_dot(atm%mps, atm%zuv(1, add_lm, ikbc), lpsi(1)) * m%vol_pp* &
                        (exp(ctemp) - M_z1)/p2
-                 call lalg_axpy(atm%mps, uvpsi, atm%zuv(1, add_lm, jkbc), 1, lHpsi(1), 1)
+                 call lalg_axpy(atm%mps, uvpsi, atm%zuv(1, add_lm, jkbc), lHpsi(1))
               end do
             end do
             add_lm = add_lm + step

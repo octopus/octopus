@@ -21,7 +21,7 @@ module linear
   use global
   use lib_oct
   use io
-  use lib_alg
+  use lib_adv_alg
   use mesh
   use poisson
   use states

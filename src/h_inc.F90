@@ -183,7 +183,7 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
     do idim = 1, dim
       call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
-    call lalg_scal(m%np*dim, R_TOTYPE(-M_HALF), Hpsi(1, 1), 1)
+    call lalg_scal(m%np*dim, R_TOTYPE(-M_HALF), Hpsi(1, 1))
   end if
 
 
@@ -254,14 +254,14 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, sys, ik)
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-              uvpsi = lalg_dot(atm%mps, atm%X(uv)(1, add_lm, ikbc), 1, lpsi(1), 1) * &
+              uvpsi = lalg_dot(atm%mps, atm%X(uv)(1, add_lm, ikbc), lpsi(1)) * &
                    m%vol_pp*atm%X(uvu)(add_lm, ikbc, jkbc) 
               if (conf%periodic_dim==0) then
-                call lalg_axpy(atm%mps, uvpsi, atm%X(uv)(1, add_lm, jkbc), 1, lHpsi(1), 1)
+                call lalg_axpy(atm%mps, uvpsi, atm%X(uv)(1, add_lm, jkbc), lHpsi(1))
               else
 #               ifdef R_TCOMPLEX
                   conj = R_CONJ(atm%phases(:,ik))*atm%X(uv)(:, add_lm, jkbc)
-                  call lalg_axpy(atm%mps, uvpsi, conj(1), 1, lHpsi(1), 1)
+                  call lalg_axpy(atm%mps, uvpsi, conj(1), lHpsi(1))
 #               else
                   message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
                   message(2) = "Reconfigure with --enable-complex, and remake"

@@ -22,7 +22,8 @@
 
 module math
   use global
-  use lib_alg
+  use lib_basic_alg
+  use lib_adv_alg
 
   implicit none
 

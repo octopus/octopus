@@ -61,7 +61,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
         y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
       end do
       
-      call dlinsyssolve(n, 1, Ma, y, x)
+      call lalg_linsyssolve(n, 1, Ma, y, x)
       deallocate(Ma, y)
       
       ! add contribution of low lying states

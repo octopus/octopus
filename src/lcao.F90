@@ -21,7 +21,8 @@ module lcao
   use global
   use lib_oct
   use lib_oct_gsl_spline
-  use lib_alg
+  use lib_basic_alg
+  use lib_adv_alg
   use mesh
   use hamiltonian
 
@@ -318,7 +319,7 @@ subroutine lcao_wf(sys, h)
   
   do ik = 1, sys%st%nik
     allocate(ev(norbs))
-    call X(geneigensolve) (norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
+    call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
          lcao_data%s(1:norbs, 1:norbs, ik), ev)
 
     sys%st%eigenval(1:sys%st%nst, ik) = ev(1:sys%st%nst)
@@ -328,12 +329,9 @@ subroutine lcao_wf(sys, h)
 
     ! Change of base
     call lalg_gemm('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
-                  R_TOTYPE(M_ONE),                                         &
-                  lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
-                  lcao_data%hamilt(1, 1, ik), norbs,                       &
-                  R_TOTYPE(M_ZERO),                                        &
-                  sys%st%X(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
- 
+                  R_TOTYPE(M_ONE), lcao_data%psis(1, 1, 1, ik), lcao_data%hamilt(1, 1, ik), &
+                  R_TOTYPE(M_ZERO),sys%st%X(psi)(1, 1, 1, ik))
+
    end do
 
   deallocate(hpsi)

@@ -20,7 +20,8 @@
 module xc
 use global
 use lib_oct_parser
-use lib_alg
+use lib_basic_alg
+use lib_adv_alg
 use mesh
 use poisson
 use states

@@ -21,7 +21,8 @@ module states
 use global
 use lib_oct_parser
 use io
-use lib_alg
+use lib_basic_alg
+use lib_adv_alg
 use math
 use mesh
 use functions

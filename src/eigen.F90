@@ -20,7 +20,8 @@
 module eigen_solver
   use global
   use lib_oct_parser
-  use lib_alg
+  use lib_basic_alg
+  use lib_adv_alg
   use io
   use states
   use mesh
@@ -209,7 +210,7 @@ subroutine eigen_diagon_subspace(st, sys, h)
       end do
     end do eigenfunction_loop
 
-    call X(eigensolve) (st%nst, h_subspace, vec, st%eigenval(:, ik))
+    call lalg_eigensolve(st%nst, h_subspace, vec, st%eigenval(:, ik))
 
     do i = 1, st%nst
       ! build new state

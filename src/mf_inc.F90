@@ -16,7 +16,6 @@
 !! 02111-1307, USA.
 
 !!!  integrates a function
-!!! (could not find BLAS routine to do it ;))
 function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
@@ -26,30 +25,20 @@ function X(mf_integrate) (m, f) result(d)
 end function X(mf_integrate)
 
 !!! this function returns the dot product between two vectors
-!!! if HAVE_BLAS is defined it uses the BLAS library
 R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f1(m%np), f2(m%np)
 
-#if defined(HAVE_BLAS)
-  dotp = lalg_dot(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
-#else
-  dotp = dot_product(R_CONJ(f1), f2)*m%vol_pp
-#endif
+  dotp = lalg_dot(m%np, f1(1),  f2(1))*m%vol_pp
 
 end function X(mf_dotp)
 
 !!! this function returns the norm of a vector
-!!! if HAVE_BLAS is defined it uses the BLAS library
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
 
-#if defined(HAVE_BLAS)
-  nrm2 = lalg_nrm2(m%np, f(1), 1)*sqrt(m%vol_pp)
-#else
-  nrm2 = sqrt(dot_product(f)*m%vol_pp)
-#endif
+  nrm2 = lalg_nrm2(m%np, f(1))*sqrt(m%vol_pp)
 
 end function X(mf_nrm2)
 

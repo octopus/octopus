@@ -20,7 +20,7 @@
 module mix
 use global
 use lib_oct_parser
-use lib_alg
+use lib_adv_alg
 
 implicit none
 
@@ -243,7 +243,7 @@ subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, d
   end do
 
   ! invert matrix beta
-  call dinvert(iter_used, beta)
+  call lalg_invert(iter_used, beta)
 
   do i = 1, iter_used
     work(i) = dot_product(df(:, i), f)
@@ -335,7 +335,7 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   end if
 
   ! invert matrix A
-  call dinvert(iter_used, a)
+  call lalg_invert(iter_used, a)
 
   ! compute new density
   vnew = vin

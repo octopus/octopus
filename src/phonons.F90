@@ -22,7 +22,7 @@ module phonons
   use lib_oct
   use lib_oct_parser
   use io
-  use lib_alg
+  use lib_adv_alg
   use external_pot
   use hamiltonian
   use states
@@ -150,7 +150,7 @@ contains
     call io_close(iunit)
 
     ! diagonalize DM
-    call deigensolve(ph%dim, ph%DM, ph%DM, ph%freq)
+    call lalg_eigensolve(ph%dim, ph%DM, ph%DM, ph%freq)
     
   end subroutine get_DM
 

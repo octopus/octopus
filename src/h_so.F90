@@ -41,32 +41,32 @@ subroutine zso (h, m, psi, hpsi, natoms, atom, dim, ik)
            do lm = -l, l
               do ikbc = 1, spec%ps%kbc
                  do jkbc = 1, spec%ps%kbc
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 1), 1, &
-                               tpsi(1, 1), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), 1, &
-                            tHpsi(1, 2), 1)
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 1), 1, &
-                               tpsi(1, 2), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), 1, &
-                            tHpsi(1, 1), 1)
+                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 1), &
+                               tpsi(1, 1))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                            tHpsi(1, 2))
+                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 1), &
+                               tpsi(1, 2))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                            tHpsi(1, 1))
  
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 2), 1, &
-                               tpsi(1, 1), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, M_zI*uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), 1, &
-                            tHpsi(1, 2), 1)
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 2), 1, &
-                               tpsi(1, 2), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, -M_zI*uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), 1, &
-                            tHpsi(1, 1), 1)
+                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 2), &
+                               tpsi(1, 1))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call lalg_axpy(atom(ia)%mps, M_zI*uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                            tHpsi(1, 2))
+                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 2), &
+                               tpsi(1, 2))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call lalg_axpy(atom(ia)%mps, -M_zI*uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                            tHpsi(1, 1))
 
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 3), 1, &
-                               tpsi(1, 1), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), 1, &
-                            tHpsi(1, 1), 1)
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 3), 1, &
-                               tpsi(1, 2), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, -uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), 1, &
-                            tHpsi(1, 2), 1)
+                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 3), &
+                               tpsi(1, 1))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                            tHpsi(1, 1))
+                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 3), &
+                               tpsi(1, 2))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call lalg_axpy(atom(ia)%mps, -uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                            tHpsi(1, 2))
                   enddo
               enddo
               add_lm = add_lm + 1

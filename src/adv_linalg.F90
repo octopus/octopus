@@ -1,4 +1,4 @@
-!! Copyright (C) 2002-2003 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -17,22 +17,38 @@
 
 #include "global.h"
 
-module mesh_function
+module lib_adv_alg
   use global
-  use lib_basic_alg
-  use mesh
-  use cube_function
 
   implicit none
 
+  interface lalg_geneigensolve
+    module procedure dgeneigensolve, zgeneigensolve
+  end interface
+
+  interface lalg_eigensolve
+    module procedure deigensolve, zeigensolve
+  end interface
+
+  interface lalg_det
+    module procedure ddet, zdet
+  end interface
+
+  interface lalg_invert
+    module procedure dinvert
+  end interface
+
+  interface lalg_linsyssolve
+    module procedure dlinsyssolve
+  end interface
+
+  private
+  public :: lalg_geneigensolve, lalg_eigensolve, lalg_det, lalg_invert, lalg_linsyssolve
+
 contains
 
-#include "undef.F90"
-#include "real.F90"
-#include "mf_inc.F90"
+#ifdef HAVE_LAPACK
+#include "adv_linalg_lapack.F90"
+#endif
 
-#include "undef.F90"
-#include "complex.F90"
-#include "mf_inc.F90"
-
-end module mesh_function
+end module lib_adv_alg

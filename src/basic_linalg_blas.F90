@@ -1,0 +1,299 @@
+#if defined(SINGLE_PRECISION)
+#  define DBLAS(x) s ## x
+#  define ZBLAS(x) c ## x
+#  define ZNRM2    scnrm2
+#else
+#  define DBLAS(x) d ## x
+#  define ZBLAS(x) z ## x
+#  define ZNRM2    dznrm2
+#endif
+
+! interchanges two vectors.
+subroutine d_swap(n, dx, dy)
+  integer, intent(in)    :: n
+  FLOAT,   intent(inout) :: dx, dy
+
+  interface
+    subroutine  DBLAS(swap) (n, dx, incx, dy, incy)
+      integer, intent(in)    :: n, incx, incy
+      FLOAT,   intent(inout) :: dx, dy ! dx(n), dy(n)
+    end subroutine DBLAS(swap)
+  end interface
+
+  call DBLAS(swap) (n, dx, 1, dy, 1)
+
+end subroutine d_swap
+
+subroutine z_swap(n, zx, zy)
+  integer, intent(in)    :: n
+  CMPLX,   intent(inout) :: zx, zy
+
+  interface
+    subroutine  ZBLAS(swap) (n, zx, incx, zy, incy)
+      integer, intent(in)    :: n, incx, incy
+      CMPLX,   intent(inout) :: zx, zy ! zx(n), zy(n)
+    end subroutine ZBLAS(swap)
+  end interface
+
+  call ZBLAS(swap) (n, zx, 1, zy, 1)
+
+end subroutine z_swap
+
+! scales a vector by a constant
+subroutine d_scal(n, da, dx)
+  integer, intent(in)    :: n
+  FLOAT,   intent(in)    :: da
+  FLOAT,   intent(inout) :: dx
+
+  interface
+    subroutine DBLAS(scal) (n, da, dx, incx)
+      integer, intent(in)    :: n, incx
+      FLOAT,   intent(in)    :: da
+      FLOAT,   intent(inout) :: dx ! dx(n)
+    end subroutine DBLAS(scal)
+  end interface
+
+  call DBLAS(scal) (n, da, dx, 1)
+
+end subroutine d_scal
+
+subroutine z_scal(n, za, zx)
+  integer, intent(in)    :: n
+  CMPLX,   intent(in)    :: za
+  CMPLX,   intent(inout) :: zx
+
+  interface
+    subroutine ZBLAS(scal) (n, za, zx, incx)
+      integer, intent(in)    :: n, incx
+      CMPLX,   intent(in)    :: za
+      CMPLX,   intent(inout) :: zx ! zx(n)
+    end subroutine ZBLAS(scal)
+  end interface
+
+  call ZBLAS(scal) (n, za, zx, 1)
+
+end subroutine z_scal
+
+! constant times a vector plus a vector
+subroutine d_axpy(n, da, dx, dy)
+  integer, intent(in)    :: n
+  FLOAT,   intent(in)    :: da, dx
+  FLOAT,   intent(inout) :: dy
+
+  interface
+    subroutine DBLAS(axpy) (n, da, dx, incx, dy, incy)
+      integer, intent(in)    :: n, incx, incy
+      FLOAT,   intent(in)    :: da, dx ! dx(n)
+      FLOAT,   intent(inout) :: dy     ! dy(n)
+    end subroutine DBLAS(axpy)
+  end interface
+
+  call DBLAS(axpy) (n, da, dx, 1, dy, 1)
+
+end subroutine d_axpy
+
+subroutine z_axpy(n, za, zx, zy)
+  integer, intent(in)    :: n
+  CMPLX,   intent(in)    :: za, zx
+  CMPLX,   intent(inout) :: zy
+
+  interface
+    subroutine ZBLAS(axpy) (n, za, zx, incx, zy, incy)
+      integer, intent(in)    :: n, incx, incy
+      CMPLX,   intent(in)    :: za, zx ! zx(n)
+      CMPLX,   intent(inout) :: zy     ! zy(n)
+    end subroutine ZBLAS(axpy)
+  end interface
+
+  call ZBLAS(axpy) (n, za, zx, 1, zy, 1)
+
+end subroutine z_axpy
+
+! forms the dot product of two vectors
+FLOAT function d_dot(n, dx, dy)
+  integer, intent(in) :: n
+  FLOAT,   intent(in) :: dx, dy
+
+  interface
+    FLOAT function DBLAS(dot) (n, dx, incx, dy, incy)
+      integer, intent(in) :: n, incx, incy
+      FLOAT,   intent(in) :: dx, dy ! dx(n), dy(n)
+    end function DBLAS(dot)
+  end interface
+
+  d_dot = DBLAS(dot) (n, dx, 1, dy, 1)
+
+end function d_dot
+
+CMPLX function z_dot(n, zx, zy)
+  integer, intent(in) :: n
+  CMPLX,   intent(in) :: zx, zy
+
+  interface
+    CMPLX function ZBLAS(dotc) (n, zx, incx, zy, incy)
+      integer, intent(in) :: n, incx, incy
+      CMPLX,   intent(in) :: zx, zy ! zx(n), zy(n)
+    end function ZBLAS(dotc)
+  end interface
+
+  z_dot = ZBLAS(dotc) (n, zx, 1, zy, 1)
+
+end function z_dot
+
+! returns the euclidean norm of a vector
+FLOAT function d_nrm2(n, dx)
+  integer, intent(in) :: n
+  FLOAT,   intent(in) :: dx
+
+  interface
+    FLOAT function DBLAS(nrm2) (n, dx, incx)
+      integer, intent(in) :: n, incx
+      FLOAT,   intent(in) :: dx ! dx(n)
+    end function DBLAS(nrm2)
+  end interface
+
+  d_nrm2 = DBLAS(nrm2) (n, dx, 1)
+
+end function d_nrm2
+
+FLOAT function dz_nrm2(n, zx)
+  integer, intent(in) :: n
+  CMPLX,   intent(in) :: zx
+
+  interface
+    FLOAT function ZNRM2 (n, zx, incx)
+      integer, intent(in) :: n, incx
+      CMPLX,   intent(in) :: zx ! zx(n)
+    end function ZNRM2
+  end interface
+
+  dz_nrm2 = ZNRM2 (n, zx, 1)
+
+end function dz_nrm2
+
+! copies a vector, x, to a vector, y
+subroutine d_copy(n, dx, dy)
+  integer, intent(in)  :: n
+  FLOAT,   intent(in)  :: dx
+  FLOAT,   intent(out) :: dy
+
+  interface
+    subroutine DBLAS(copy) (n, dx, incx, dy, incy)
+      integer, intent(in)  :: n, incx, incy
+      FLOAT,   intent(in)  :: dx ! dx(n)
+      FLOAT,   intent(out) :: dy ! dy(n)
+    end subroutine DBLAS(copy)
+  end interface
+
+  call DBLAS(copy) (n, dx, 1, dy, 1)
+
+end subroutine d_copy
+
+subroutine z_copy(n, zx, zy)
+  integer, intent(in)  :: n
+  CMPLX,   intent(in)  :: zx
+  CMPLX,   intent(out) :: zy
+
+  interface
+    subroutine ZBLAS(copy) (n, zx, incx, zy, incy)
+      integer,    intent(in)  :: n, incx, incy
+      CMPLX,      intent(in)  :: zx ! dz(n)
+      CMPLX,      intent(out) :: zy ! zy(n)
+    end subroutine ZBLAS(copy)
+  end interface
+
+  call ZBLAS(copy) (n, zx, 1, zy, 1)
+
+end subroutine z_copy
+
+! matrix-matrix multiplication plus matrix
+subroutine d_gemm(transa, transb, m, n, k, alpha, a, b, beta, c)
+  character(1), intent(in)    :: transa, transb
+  integer,      intent(in)    :: m, n, k
+  FLOAT,        intent(in)    :: alpha, beta
+  FLOAT,        intent(in)    :: a
+  FLOAT,        intent(in)    :: b
+  FLOAT,        intent(inout) :: c
+
+  interface
+    subroutine DBLAS(gemm) (transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: transa, transb
+      integer,      intent(in)    :: m, n, k, lda, ldb, ldc
+      FLOAT,        intent(in)    :: alpha, beta
+      FLOAT,        intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
+      FLOAT,        intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
+      FLOAT,        intent(inout) :: c ! c(ldc,n) 
+    end subroutine DBLAS(gemm)
+  end interface
+
+  call DBLAS(gemm) (transa, transb, m, n, k, alpha, a, m, b, k, beta, c, m)
+
+end subroutine d_gemm
+
+subroutine z_gemm(transa, transb, m, n, k, alpha, a, b, beta, c)
+  character(1), intent(in)    :: transa, transb
+  integer,      intent(in)    :: m, n, k
+  CMPLX,        intent(in)    :: alpha, beta
+  CMPLX,        intent(in)    :: a
+  CMPLX,        intent(in)    :: b
+  CMPLX,        intent(inout) :: c
+
+  interface
+    subroutine ZBLAS(gemm) (transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+      character(1), intent(in)    :: transa, transb
+      integer,      intent(in)    :: m, n, k, lda, ldb, ldc
+      CMPLX,        intent(in)    :: alpha, beta
+      CMPLX,        intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
+      CMPLX,        intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
+      CMPLX,        intent(inout) :: c ! c(ldc,n)
+    end subroutine ZBLAS(gemm)
+  end interface
+
+  call ZBLAS(gemm) (transa, transb, m, n, k, alpha, a, m, b, k, beta, c, m)
+
+end subroutine z_gemm
+ 
+! matrix-vector multiplication plus vector
+subroutine d_gemv(m, n, alpha, a, x, beta, y)
+  integer,      intent(in)    :: m, n
+  FLOAT,        intent(in)    :: alpha, beta
+  FLOAT,        intent(in)    :: a
+  FLOAT,        intent(in)    :: x
+  FLOAT,        intent(inout) :: y
+
+  interface
+    subroutine DBLAS(gemv) (trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: m, n, lda, incx, incy
+      FLOAT,        intent(in)    :: alpha, beta
+      FLOAT,        intent(in)    :: a ! a(lda,n)
+      FLOAT,        intent(in)    :: x ! x(:)
+      FLOAT,        intent(inout) :: y ! y(:)
+    end subroutine DBLAS(gemv)
+  end interface
+
+  call DBLAS(gemv) ('N', m, n, alpha, a, m, x, 1, beta, y, 1)
+
+end subroutine d_gemv
+
+subroutine z_gemv(m, n, alpha, a, x, beta, y)
+  integer,      intent(in)    :: m, n
+  CMPLX,        intent(in)    :: alpha, beta
+  CMPLX,        intent(in)    :: a
+  CMPLX,        intent(in)    :: x
+  CMPLX,        intent(inout) :: y
+
+  interface
+    subroutine ZBLAS(gemv) (trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
+      character(1), intent(in)    :: trans
+      integer,      intent(in)    :: m, n, lda, incx, incy
+      CMPLX,        intent(in)    :: alpha, beta
+      CMPLX,        intent(in)    :: a ! a(lda,n)
+      CMPLX,        intent(in)    :: x ! x(:)
+      CMPLX,        intent(inout) :: y ! y(:)
+    end subroutine ZBLAS(gemv)
+  end interface
+
+  call ZBLAS(gemv) ('N', m, n, alpha, a, m, x, 1, beta, y, 1)
+
+end subroutine z_gemv
