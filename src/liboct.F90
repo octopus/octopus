@@ -114,6 +114,9 @@ module liboct
       character(len=*), intent(in) :: pot
     end function oct_parse_potential
 
+    subroutine oct_mkdir(name)
+      character(len=*), intent(in) :: name
+    end subroutine oct_mkdir
   end interface
 
   private :: oct_parse_string, oct_parse_block_string

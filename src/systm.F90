@@ -15,12 +15,15 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "config_F90.h"
+
 module system
 use io
 use specie
 use atom
 use mesh
 use states
+use output
 
 implicit none
 
@@ -39,6 +42,8 @@ type system_type
 
   type(mesh_type) :: m
   type(states_type), pointer :: st
+
+  type(output_type) :: outp
 end type system_type
 
 contains

@@ -20,8 +20,11 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <string.h>
 #include <math.h>
+
 #include <gsl/gsl_sf_erf.h>
 #include <gsl/gsl_sf_gamma.h>
 #include <gsl/gsl_spline.h>
@@ -207,4 +210,10 @@ double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 	rmsym("r");
 
 	return GSL_REAL(c.value.c);
+}
+
+void F90_FUNC_(oct_mkdir, OCT_MKDIR)
+		 (char *name)
+{
+	mkdir(name, 0775);
 }

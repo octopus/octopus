@@ -229,12 +229,12 @@ end subroutine hamiltonian_energy
 
 #include "undef.F90"
 #include "real.F90"
-#include "hamiltonian_inc.F90"
+#include "h_inc.F90"
 #include "h_forces.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "hamiltonian_inc.F90"
+#include "h_inc.F90"
 #include "h_forces.F90"
 
 end module hamiltonian

@@ -1,3 +1,6 @@
+13/5/02 (marques)
+  - Rename hamiltonian* -> h*
+  - continuation of td simulation now uses .nbo file
 05/5/02 (marques)
   - Added a couple of .hgh files
   - Created Makefiles for HGH share directory
