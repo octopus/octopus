@@ -61,7 +61,7 @@ translation.
 @c @center Photograph by Roy Caldwell.
 @c @c The following two commands start the copyright page.
 @title @code{octopus} manual
-@c @subtitle SUBTITLE-IF-ANY
+@subtitle Electronic Structure, Molecular Dynamics and Recipes-Generator.
 @c @subtitle SECOND-SUBTITLE
 @sp 5
 @image{octosex,8cm}
@@ -114,6 +114,7 @@ encourages to put something over here.
 @menu
 * Copying::                     
 * Introduction::                
+* Compilation::                 
 * Description of input options::  
 * Concept Index::               
 
@@ -137,7 +138,7 @@ have not the right to copy, modify, etc, which you wouldn't want to do it
 anyhow.
 
 
-@node Introduction, Description of input options, Copying, Top
+@node Introduction, Compilation, Copying, Top
 @c    node-name,     next,          previous,     up
 @chapter Introduction
 
@@ -148,8 +149,32 @@ From latin @emph{octopus}, set of animals belonging to the...
 is a program aimed at the ab initio virtual experimentation on 
 a hopefully ever increasing range of systems types.
 
+@node Compilation, Description of input options, Introduction, Top
+@chapter Compilation
 
-@node Description of input options, Concept Index, Introduction, Top
+The variables in the file @code{Make.arch} must be adapted to the computer,
+compiler, preprocessor, etc. @code{arch} must be the output to the
+"@code{uname -m}" command. Occasionally you may need to change variable
+definitions in the first lines of the @code{Makefile}.
+
+The variable @code{FORLIBS}, to be defined in @code{Make.arch}, contains
+all the libraries that must be linked with the rest of the code. It must
+contain, at least:
+
+@code{FORLIBS = -ldrfftw -ldfftw -lblas -llapack -lgslcblas -lgsl -loct}
+
+That is, inclusion of the FFTW@footnote{
+@code{www.fftw.org}}
+package libraries, BLAS/LAPACK@footnote{
+@code{www.netlib.org}}
+libraries, and the GNU Scientific Library @code{gsl}@footnote{
+@code{www.gnu.org}}. All these libraries are GPLed and
+freely distributed. The @code{-loct} links the @code{liboct.a} library,
+which is compiled previous to the main code when issuing
+@code{make}.
+
+
+@node Description of input options, Concept Index, Compilation, Top
 @c    node-name,     next,          previous,     up
 @chapter Description of input options
 
@@ -193,6 +218,9 @@ Level of verbosity in the output.
 
 @section Mesh parameters
 
+The real-space mesh is an equally-spaced one, although the spacings maybe
+different for each direction. The shape of the simulation region may also
+be tuned to suit the geometric configuration of the system.
 
 @c **********************************************************************
 
