@@ -297,23 +297,28 @@ contains
         if (conf%periodic_dim>0) then
           if(ind1(1) == 0) then
             ind1(1) = m%Lxyz_inv(2*m%nr(1) + ix - in, iy, iz )
+! DEBUG
+            write(11,*)k,ix-in
+            write(11,*)k,2*m%nr(1) + ix - in
           end if
           if(ind2(1) == 0) then
-            ind1(1) = m%Lxyz_inv(ix + in - 2*m%nr(1), iy, iz)
+            ind2(1) = m%Lxyz_inv(ix + in - 2*m%nr(1), iy, iz)
+            write(11,*)k,ix+in
+            write(11,*)k,ix + in - 2*m%nr(1)
           end if
           if (conf%periodic_dim>1) then
             if(ind1(2) == 0) then
               ind1(2) = m%Lxyz_inv(ix, 2*m%nr(2) + iy - in, iz )
             end if
             if(ind2(2) == 0) then
-              ind1(2) = m%Lxyz_inv(ix, iy + in - 2*m%nr(2), iz)
+              ind2(2) = m%Lxyz_inv(ix, iy + in - 2*m%nr(2), iz)
             end if
             if (conf%periodic_dim>2) then
              if(ind1(3) == 0) then
                ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in )
              end if
              if(ind2(3) == 0) then
-               ind1(3) = m%Lxyz_inv(ix , iy, iz + in - 2*m%nr(3))
+               ind2(3) = m%Lxyz_inv(ix , iy, iz + in - 2*m%nr(3))
              end if
             end if
           end if
