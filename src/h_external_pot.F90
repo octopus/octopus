@@ -6,53 +6,51 @@ subroutine specie_local_fourier_init(ns, s, m)
   type(specie_type), pointer :: s(:)
   type(mesh_type), intent(IN) :: m
 
-  integer :: i, j, ix, iy, iz, n
-  real(r8) :: x(3), r, vl, dvl
+  integer :: i, j, ix, iy, iz, n, ixx(3)
+  real(r8) :: x(3), r, vl, r1
   complex(r8) :: c
   real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
 
   sub_name = 'specie_local_fourier_init'; call push_sub()
 
-  allocate(fr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3)), &
-       dfr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3), 3))
-  do i = 1, ns
+  allocate(fr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3)))
 
-    allocate(&
+  do i = 1, ns
+    allocate( &
          s(i)%local_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)), &
          s(i)%rhocore_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
 
     do ix = 1, m%fft_n2(1)
+      ixx(1) = ix - (m%fft_n2(1)/2 + 1)
       do iy = 1, m%fft_n2(2)
+        ixx(2) = iy - (m%fft_n2(2)/2 + 1)
         do iz = 1, m%fft_n2(3)
-          r = sqrt( ( m%h(1)*(ix - m%fft_n2(1)/2 - 1) )**2 + &
-                    ( m%h(2)*(iy - m%fft_n2(2)/2 - 1) )**2 + &
-                    ( m%h(3)*(iz - m%fft_n2(3)/2 - 1) )**2 )
+          ixx(3) = iz - (m%fft_n2(3)/2 + 1)
+          r = sqrt(sum((m%h(:)*ixx(:))**2))
           vl  = splint(s(i)%ps%vlocal,  r)
-          dvl = splint(s(i)%ps%dvlocal, r)
           if(r >= r_small) then
-            fr(ix, iy, iz)     = (vl - s(i)%Z_val)/r
-            dfr(ix, iy, iz, :) = x(:)*(dvl - (-s(i)%Z_val + vl)/r)/r**2
+            fr(ix, iy, iz) = (vl - s(i)%Z_val)/r
           else
             fr(ix, iy, iz) = s(i)%ps%vlocal_origin
-            dfr(ix, iy, iz, :) = 0._r8
           endif
         end do
       end do
     end do
+
     call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
 
     n = m%fft_n2(2)*m%fft_n2(3)*m%hfft_n2
     c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), 0.0_r8, r8)
-    call zscal(n,   c, s(i)%local_fw,  1)
+    call zscal(n, c, s(i)%local_fw,  1)
 
     if(s(i)%ps%icore /= 'nc  ') then
       fr = 0.0_r8
       do ix = 1, m%fft_n2(1)
         do iy = 1, m%fft_n2(2)
           do iz = 1, m%fft_n2(3)
-             r = sqrt( ( m%h(1)*(ix-m%fft_n2(1)/2-1) )**2 + &
-                       ( m%h(2)*(iy-m%fft_n2(2)/2-1) )**2 + &
-                       ( m%h(3)*(iz-m%fft_n2(3)/2-1) )**2 )
+             r = sqrt( ( m%h(1)*(ix - m%fft_n2(1)/2 - 1) )**2 + &
+                       ( m%h(2)*(iy - m%fft_n2(2)/2 - 1) )**2 + &
+                       ( m%h(3)*(iz - m%fft_n2(3)/2 - 1) )**2 )
             vl  = splint(s(i)%ps%core, r)
             fr(ix, iy, iz) = vl
           end do
@@ -63,7 +61,7 @@ subroutine specie_local_fourier_init(ns, s, m)
     end if
   end do
   
-  deallocate(fr, dfr)
+  deallocate(fr)
   call pop_sub()
 end subroutine specie_local_fourier_init
 
@@ -84,7 +82,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   specie_loop: do i = 1, ns
     ! first get the dimensions of the thing
     n(1:3) = 2*nint(s(i)%ps%rc_max/m%h(1:3)) + 5 ! this should be enough
-    hn = (n(1)-1)/2 + 1
+    hn = n(1)/2 + 1
     s(i)%nl_fft_n(1:3) = n(1:3)
     s(i)%nl_hfft_n = hn
 
@@ -94,8 +92,8 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
     call rfftw3d_f77_create_plan(s(i)%nl_planb, n(1), n(2), n(3), &
          fftw_backward, fftw_measure + fftw_threadsafe)    
 
-    n(1:3) = (n(1:3)-1)*(1 + nextra)+1
-    hn = (n(1)-1)/2 + 1
+    n(1:3) = (n(1:3) - 1)*(1 + nextra) + 1
+    hn = n(1)/2 + 1
 
     call rfftw3d_f77_create_plan(nl_planf, n(1), n(2), n(3), &
          fftw_forward, fftw_measure + fftw_threadsafe)
@@ -125,13 +123,13 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
             end do
           end do
         end do
-        c = cmplx(1._r8/(n(1)*n(2)*n(3)), 0.0_r8, r8)
-        call rfftwnd_f77_one_real_to_complex(nl_planf, fr(1,1,1), fw(1,1,1))
+        c = cmplx(1._r8/real(n(1)*n(2)*n(3)), 0.0_r8, r8)
+        call rfftwnd_f77_one_real_to_complex(nl_planf, fr, fw)
         call zscal(hn*n(2)*n(3), c, fw(1, 1, 1), 1)
 
         do j = 1, 3
-          call rfftwnd_f77_one_real_to_complex(nl_planf, dfr(1,1,1,j), dfw(1,1,1,j))
-          call zscal(hn*n(2)*n(3), c, dfw(1,1,1,j), 1)
+          call rfftwnd_f77_one_real_to_complex(nl_planf, dfr(1, 1, 1, j), dfw(1, 1, 1, j))
+          call zscal(hn*n(2)*n(3), c, dfw(1, 1, 1, j), 1)
         end do
 
         ! have to cut the high frequencies
@@ -351,12 +349,12 @@ contains
             if(l .ne. s%ps%L_loc) then
               call get_nl_part(s%ps, x, l, lm, a%uV(j, add_lm), a%duV(:, j, add_lm))
             end if
+
             add_lm = add_lm + 1
           end do lm_loop
         end do l_loop
       end do j_loop
-
-     else ! Fourier space
+    else ! Fourier space
       center(:) = nint(a%x(:)/m%h(:))
       x(:)  = a%x(:) - center(:)*m%h(:)
       
@@ -380,7 +378,7 @@ contains
           do j = 1, 3
             nl_fw = M_z0
             call phase_factor(m, s%nl_fft_n(1:3), x, s%nl_dfw(:,:,:, j, add_lm), nl_fw)
-            call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_dfr(1,1,1,j))
+            call rfftwnd_f77_one_complex_to_real(s%nl_planb, nl_fw, nl_dfr(1, 1, 1, j))
           end do
           
           j_loop2: do j = 1, a%Mps
@@ -391,7 +389,6 @@ contains
             
             a%uV(j, add_lm)     = nl_fr (ix, iy, iz)
             a%duV(:, j, add_lm) = nl_dfr(ix, iy, iz, :)
-
           end do j_loop2
 
           add_lm = add_lm + 1
@@ -399,7 +396,7 @@ contains
       end do l_loop2
       deallocate(nl_fw, nl_fr, nl_dfr)
     end if
-
+    
     ! and here we calculate the uVu
     a%uVu = 0._r8
     add_lm = 1
@@ -502,7 +499,7 @@ subroutine phase_factor(m, n, vec, inp, outp)
       do ix = 1, n(1)/2 + 1
         ixx = pad_feq(ix, n(1), .true.)
         outp(ix, iy, iz) = outp(ix, iy, iz) + &
-             exp( - (k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * inp(ix, iy, iz)
+             exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * inp(ix, iy, iz)
       end do
     end do
   end do

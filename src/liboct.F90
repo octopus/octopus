@@ -21,6 +21,11 @@ module liboct
       integer, intent(in) :: l, m
     end function oct_ylm
 
+    subroutine oct_fft_optimize(n, p, par)
+      integer, intent(inout) :: n
+      integer, intent(in) :: p, par
+    end subroutine oct_fft_optimize
+
     integer function oct_parse_init(file_in, file_out)
       character(len=*), intent(in)  :: file_in, file_out
     end function oct_parse_init

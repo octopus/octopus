@@ -107,8 +107,9 @@ subroutine mesh_init(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
   ! once again the overhead is small
-  do i=1, 3
-     m%fft_n(i)  = 2*m%nr(i) + 2
+  do i = 1, 3
+     m%fft_n(i)  = 2*m%nr(i) + 1
+     call oct_fft_optimize(m%fft_n(i), 7, 1) ! always ask for an odd number
   enddo
   m%hfft_n = m%fft_n(1)/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
@@ -122,7 +123,8 @@ subroutine mesh_init(m, natoms, atom)
   end if
 
   do i=1, 3
-     m%fft_n2(i)  = 2*nint(m%fft_alpha*m%nr(i)) + 2
+     m%fft_n2(i)  = 2*nint(m%fft_alpha*m%nr(i)) + 1
+     call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
   enddo
   ! I think this should be:
   !do i=1, 3

@@ -270,8 +270,6 @@ subroutine states_fermi(st)
     end do
   end do
  
-!  occ(1:19,1) = 2._r8; occ(20, 1) = 1.0
-
   call pop_sub()
   return
 end subroutine states_fermi

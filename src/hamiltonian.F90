@@ -82,22 +82,22 @@ subroutine hamiltonian_init(h, sys)
     call write_fatal(2)
   end if
 
-  call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
-  if(h%vpsl_space < 0) then
-    write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
-         "' is not a valid GridRefinement"
-    message(2) = '(GridRefinement >= 0)'
-    call write_fatal(2)
-  end if
-
   if(h%vpsl_space == 1) then
     call mesh_alloc_ffts(sys%m, 2)
     call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m)
   end if
 
   if(h%vnl_space == 1) then
+    call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
+    if(h%vpsl_space < 0) then
+      write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
+           "' is not a valid GridRefinement"
+      message(2) = '(GridRefinement >= 0)'
+      call write_fatal(2)
+    end if
+
     call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
-  end if  
+  end if
 
   ! Should we treat the particles as independent?
   call oct_parse_logical(C_string("NonInteractingElectrons"), .false., h%ip_app)

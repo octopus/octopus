@@ -115,9 +115,9 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
     do i = 1, sys%natoms
       atm => sys%atom(i)
       do j = 1, 3
-        call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, atm%spec%local_fw, fw1, j)
-        fw2 = M_z0
-        call phase_factor(sys%m, sys%m%fft_n2, atm%x, fw1, fw2)
+        fw1 = M_z0
+        call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
+        call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2, j)
 
         call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
         force = 0._r8

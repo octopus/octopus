@@ -145,7 +145,7 @@ contains
       call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
 
-      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)), fr(1,1,1), 1)
+      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)), fr, 1)
       lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
 

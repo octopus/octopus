@@ -43,21 +43,21 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
   sub_name = 'atom_init'; call push_sub()
 
-  if(oct_parse_isdef(C_string("PDBCoordinates")).ne.0 .and. conf%dim==3) then
-    call io_assign(iunit)
+  if(conf%dim == 3.and.oct_parse_isdef(C_string("PDBCoordinates")).ne.0) then
     call oct_parse_str('PDBCoordinates', 'coords.pdb', label)
-    open(iunit, status='unknown', file=trim(label))
 
+    call io_assign(iunit)
+    open(iunit, status='unknown', file=trim(label))
     call loadPDB(iunit)
-    
     close(iunit)
+
   else
     ! we now load the positions, either from the input, or from a file
-    if(oct_parse_isdef(C_string("XYZCoordinates")).ne.0 .and. conf%dim==3) then ! read a xyz file
-      call io_assign(iunit)
+    if(conf%dim == 3.and.oct_parse_isdef(C_string("XYZCoordinates")).ne.0) then ! read a xyz file
       call oct_parse_str('XYZCoordinates', 'coords.xyz', label)
+
+      call io_assign(iunit)
       open(iunit, status='unknown', file=trim(label))
-      
       read(iunit, *) natoms
       read(iunit) ! skip comment line
       allocate(a(natoms))
@@ -128,14 +128,6 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   call pop_sub()
 
 contains
-  subroutine loadXYZ(iunit)
-    integer, intent(in) :: iunit
-
-    character(len=20) :: label
-    integer :: i
-
-
-  end subroutine loadXYZ
 
   subroutine loadPDB(iunit)
     integer, intent(in) :: iunit

@@ -60,7 +60,7 @@
     integer :: pad_feq 
     
     if(mode) then      ! index to frequency number
-      if( i <= n/2 +1 ) then
+      if( i <= n/2 + 1 ) then
         pad_feq = i - 1
       else
         pad_feq = i - n -1
