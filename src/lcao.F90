@@ -347,10 +347,10 @@ subroutine lcao_wf(sys, h)
 !!$    end do
     ! Change of base
     call R_FUNC(gemm)('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
-                       M_ONE,                                                &
-                       lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,     &
-                       lcao_data%hamilt(1, 1, ik), norbs,                    &
-                       M_ZERO,                                               &
+                       R_TOTYPE(M_ONE),                                         &
+                       lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
+                       lcao_data%hamilt(1, 1, ik), norbs,                       &
+                       R_TOTYPE(M_ZERO),                                        &
                        sys%st%R_FUNC(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
  
    end do
