@@ -297,14 +297,9 @@ contains
         if (conf%periodic_dim>0) then
           if(ind1(1) == 0) then
             ind1(1) = m%Lxyz_inv(2*m%nr(1) + ix - in, iy, iz )
-! DEBUG
-            write(11,*)k,ix-in
-            write(11,*)k,2*m%nr(1) + ix - in
           end if
           if(ind2(1) == 0) then
             ind2(1) = m%Lxyz_inv(ix + in - 2*m%nr(1), iy, iz)
-            write(11,*)k,ix+in
-            write(11,*)k,ix + in - 2*m%nr(1)
           end if
           if (conf%periodic_dim>1) then
             if(ind1(2) == 0) then
