@@ -211,7 +211,7 @@ subroutine global_init_symbols()
   call loct_parse_putsym(     "polarized", 2)
   call loct_parse_putsym( "non_collinear", 3)
   call loct_parse_putsym(    "spin_orbit", 1) ! RelativisticCorrection
-  call loct_parse_putsym(       "fft_sph", 0) ! PoissonSolver
+  call loct_parse_putsym(           "fft", 0) ! PoissonSolver
   call loct_parse_putsym(       "fft_cyl", 1) ! PoissonSolver
   call loct_parse_putsym(       "fft_pla", 2) ! PoissonSolver
   call loct_parse_putsym(     "fft_nocut", 3) ! PoissonSolver
@@ -237,7 +237,6 @@ subroutine global_init_symbols()
   call loct_parse_putsym(          "sin2", 1) ! AbsorbingBoundaries
   call loct_parse_putsym(          "mask", 2)
   call loct_parse_putsym(         "steep", 1) ! GOMethod
-  call loct_parse_putsym(           "fft", 3) ! PoissonSolver (cg defined above)
   call loct_parse_putsym(   "unformatted", 1) ! RestartFileFormat
   call loct_parse_putsym(     "formatted", 2)
 
