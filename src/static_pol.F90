@@ -87,8 +87,9 @@ subroutine static_pol_run(scf, sys, h)
 
   do i = i_start, conf%dim
      do k = 1, 2
-        write(message(1), '(/,a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
-        call write_info(1)
+        write(message(1), '(a)')
+        write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
+        call write_info(2)
 
         h%vpsl = vpsl_save + (-1)**k*sys%m%lxyz(i, :)*sys%m%h(i)*e_field
 
