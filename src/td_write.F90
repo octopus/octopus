@@ -15,9 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_write_angular(out, sys, td, iter)
+subroutine td_write_angular(out, m, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(system_type), intent(in) :: sys
+  type(mesh_type),   intent(in) :: m
+  type(states_type), intent(in) :: st
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
 
@@ -26,7 +27,7 @@ subroutine td_write_angular(out, sys, td, iter)
   FLOAT :: angular(3)
 
   ! The angular momentum has to be calculated by all nodes...
-  call zstates_calculate_angular(sys%m, sys%st, angular)
+  call zstates_calculate_angular(m, st, angular)
 
   if(mpiv%node.ne.0) return ! only first node outputs
 
@@ -60,9 +61,11 @@ subroutine td_write_angular(out, sys, td, iter)
   
 end subroutine td_write_angular
 
-subroutine td_write_multipole(out, sys, td, iter)
+subroutine td_write_multipole(out, mesh, st, geo, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(system_type), intent(in) :: sys
+  type(mesh_type),   intent(in) :: mesh
+  type(states_type), intent(in) :: st
+  type(geometry_type), intent(in) :: geo
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
   
@@ -77,14 +80,14 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_clear(out)
     
     ! first line
-    write(aux, '(a10,i2,a8,i2)') '# nspin = ', sys%st%d%nspin, ' lmax = ', td%lmax
+    write(aux, '(a10,i2,a8,i2)') '# nspin = ', st%d%nspin, ' lmax = ', td%lmax
     call write_iter_string(out, aux)
     call write_iter_nl(out)
     
     ! second line -> columns name
     call write_iter_header_start(out)
 
-    do is = 1, sys%st%d%nspin
+    do is = 1, st%d%nspin
       write(aux, '(a,i1,a)') 'dipole(', is, ')'
       call write_iter_header(out, aux)
     end do
@@ -92,7 +95,7 @@ subroutine td_write_multipole(out, sys, td, iter)
       write(aux,'(a,i1,a)')  'n.dip.(', j,  ')'
       call write_iter_header(out, aux)
     enddo
-    do is = 1, sys%st%d%nspin
+    do is = 1, st%d%nspin
       do l = 0, td%lmax
         do m = -l, l
           write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
@@ -106,14 +109,14 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_string(out, '##########')
     call write_iter_header(out, '['+trim(units_out%time%abbrev)+']')
     
-    do is = 1, sys%st%d%nspin
+    do is = 1, st%d%nspin
       call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
     end do
     do j = 1, conf%dim
       call write_iter_header(out, '['+trim(units_out%length%abbrev)+']')
     enddo
 
-    do is = 1, sys%st%d%nspin
+    do is = 1, st%d%nspin
       do l = 0, td%lmax
         do m = -l, l
           select case(l)
@@ -131,18 +134,18 @@ subroutine td_write_multipole(out, sys, td, iter)
     call write_iter_nl(out)
   end if
     
-  allocate(dipole(sys%st%d%nspin), nuclear_dipole(conf%dim), multipole((td%lmax + 1)**2, sys%st%d%nspin))
-  call states_calculate_multipoles(sys%m, sys%st, td%pol, dipole, td%lmax, multipole)
-  call atom_dipole(sys%natoms, sys%atom, nuclear_dipole)
+  allocate(dipole(st%d%nspin), nuclear_dipole(conf%dim), multipole((td%lmax + 1)**2, st%d%nspin))
+  call states_calculate_multipoles(mesh, st, td%pol, dipole, td%lmax, multipole)
+  call geometry_dipole(geo, nuclear_dipole)
   
   call write_iter_start(out)
-  do is = 1, sys%st%d%nspin
+  do is = 1, st%d%nspin
     call write_iter_double(out, dipole(is)/units_out%length%factor, 1)
   end do
   do j = 1, conf%dim
     call write_iter_double(out, nuclear_dipole(j)/units_out%length%factor, 1)
   enddo
-  do is = 1, sys%st%d%nspin
+  do is = 1, st%d%nspin
     add_lm = 1
     do l = 0, td%lmax
       do m = -l, l
@@ -156,9 +159,9 @@ subroutine td_write_multipole(out, sys, td, iter)
   deallocate(dipole, nuclear_dipole, multipole)
 end subroutine td_write_multipole
 
-subroutine td_write_nbo(out, sys, td, iter, ke, pe)
+subroutine td_write_nbo(out, geo, td, iter, ke, pe)
   integer(POINTER_SIZE), intent(in) :: out
-  type(system_type), intent(in) :: sys
+  type(geometry_type), intent(in) :: geo
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
   FLOAT,          intent(in) :: ke, pe
@@ -178,19 +181,19 @@ subroutine td_write_nbo(out, sys, td, iter, ke, pe)
     call write_iter_header(out, 'Epot')
     call write_iter_header(out, 'Etot')
     
-    do i = 1, sys%natoms
+    do i = 1, geo%natoms
       do j = 1, conf%dim
         write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',', j, ')'
         call write_iter_header(out, aux)
       end do
     end do
-    do i = 1, sys%natoms
+    do i = 1, geo%natoms
       do j = 1, conf%dim
         write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
         call write_iter_header(out, aux)
       end do
     end do
-    do i = 1, sys%natoms
+    do i = 1, geo%natoms
       do j = 1, conf%dim
         write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
         call write_iter_header(out, aux)
@@ -214,22 +217,23 @@ subroutine td_write_nbo(out, sys, td, iter, ke, pe)
   call write_iter_double(out,     pe /units_out%energy%factor, 1)
   call write_iter_double(out, (ke+pe)/units_out%energy%factor, 1)
 
-  do i = 1, sys%natoms
-    call write_iter_double(out, sys%atom(i)%x(1:conf%dim)/units_out%length%factor,   conf%dim)
+  do i = 1, geo%natoms
+    call write_iter_double(out, geo%atom(i)%x(1:conf%dim)/units_out%length%factor,   conf%dim)
   end do
-  do i = 1, sys%natoms
-    call write_iter_double(out, sys%atom(i)%v(1:conf%dim)/units_out%velocity%factor, conf%dim)
+  do i = 1, geo%natoms
+    call write_iter_double(out, geo%atom(i)%v(1:conf%dim)/units_out%velocity%factor, conf%dim)
   end do
-  do i = 1, sys%natoms
-    call write_iter_double(out, sys%atom(i)%f(1:conf%dim)/units_out%force%factor,    conf%dim)
+  do i = 1, geo%natoms
+    call write_iter_double(out, geo%atom(i)%f(1:conf%dim)/units_out%force%factor,    conf%dim)
   end do
   call write_iter_nl(out)
   
 end subroutine td_write_nbo
 
-subroutine td_write_gsp(out, sys, td, iter)
+subroutine td_write_gsp(out, m, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(system_type), intent(in) :: sys
+  type(mesh_type),   intent(in) :: m
+  type(states_type), intent(in) :: st
   type(td_type),     intent(in) :: td
   integer,           intent(in) :: iter
 
@@ -238,7 +242,7 @@ subroutine td_write_gsp(out, sys, td, iter)
   call push_sub('td_write_gsp')
   
   ! all processors calculate the projection
-  call zstates_project_gs(sys%st, sys%m, gsp)
+  call zstates_project_gs(st, m, gsp)
   
   ! but only first node outputs
   if(mpiv%node.ne.0) return
@@ -269,9 +273,11 @@ subroutine td_write_gsp(out, sys, td, iter)
   call pop_sub()
 end subroutine td_write_gsp
 
-subroutine td_write_acc(out, sys, h, td, iter)
+subroutine td_write_acc(out, mesh, st, geo, h, td, iter)
   integer(POINTER_SIZE),  intent(in) :: out
-  type(system_type),      intent(inout) :: sys
+  type(mesh_type),   intent(in) :: mesh
+  type(states_type), intent(inout) :: st
+  type(geometry_type), intent(inout) :: geo
   type(hamiltonian_type), intent(in) :: h
   type(td_type),          intent(in) :: td
   integer,                intent(in) :: iter
@@ -422,9 +428,10 @@ subroutine td_write_el_energy(out, h, iter)
   
 end subroutine td_write_el_energy
 
-subroutine td_write_proj(out, sys, u_st, iter)
+subroutine td_write_proj(out, m, st, u_st, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(system_type), intent(in) :: sys
+  type(mesh_type),   intent(in) :: m
+  type(states_type), intent(in) :: st
   type(states_type), intent(in) :: u_st
   integer,           intent(in) :: iter
 
@@ -438,8 +445,8 @@ subroutine td_write_proj(out, sys, u_st, iter)
     
     ! first line -> column names
     call write_iter_header_start(out)
-    do ik = 1, sys%st%nik
-      do ist = 1, sys%st%nst
+    do ik = 1, st%nik
+      do ist = 1, st%nst
         do uist = 1, u_st%nst
           write(aux, '(i3,a,i3)') ist, ' -> ', uist
           call write_iter_header(out, 'Re {'//trim(aux)//'}')
@@ -450,12 +457,12 @@ subroutine td_write_proj(out, sys, u_st, iter)
     call write_iter_nl(out)
   endif
 
-  allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik))
-  call calc_projection(u_st, sys%st, sys%m, projections)
+  allocate(projections(u_st%nst, st%st_start:st%st_end, st%nik))
+  call calc_projection(u_st, st, m, projections)
 
   call write_iter_start(out)
-  do ik = 1, sys%st%nik
-    do ist = 1, sys%st%nst
+  do ik = 1, st%nik
+    do ist = 1, st%nst
       do uist = 1, u_st%nst
         call write_iter_double(out,  real(projections(uist, ist, ik)), 1)
         call write_iter_double(out, aimag(projections(uist, ist, ik)), 1)

@@ -22,6 +22,7 @@ module td_exp
   use lib_oct_parser
   use lib_basic_alg
   use math
+  use mesh
 #ifdef HAVE_FFT
   use cube_function
 #endif
@@ -105,17 +106,16 @@ contains
     end if
   end subroutine td_exp_end
 
-  !! WARNING: The "sys" stuff is unnecessary. Only mesh and h should be passed.
-  subroutine td_exp_dt(te, sys, h, zpsi, ik, timestep, t, order, vmagnus)
+  subroutine td_exp_dt(te, m, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type), intent(inout)   :: te
+    type(mesh_type),   intent(in)      :: m
     type(hamiltonian_type), intent(in) :: h
-    type(system_type), intent(in)      :: sys
     integer, intent(in) :: ik
-    CMPLX, intent(inout) :: zpsi(sys%m%np, sys%st%dim)
+    CMPLX, intent(inout) :: zpsi(m%np, h%d%dim)
     FLOAT, intent(in) :: timestep, t
     integer, optional, intent(out) :: order ! For the methods that rely on Hamiltonian-vector
                                             ! multiplication, the number of these.
-    FLOAT, intent(in), optional :: vmagnus(sys%m%np, sys%st%d%nspin, 2)
+    FLOAT, intent(in), optional :: vmagnus(m%np, h%d%nspin, 2)
 
     logical :: apply_magnus
 
@@ -144,11 +144,11 @@ contains
   contains
 
     subroutine operate(psi, oppsi)
-      CMPLX :: psi(sys%m%np, sys%st%dim), oppsi(sys%m%np, sys%st%dim)
+      CMPLX :: psi(m%np, h%d%dim), oppsi(m%np, h%d%dim)
       if(apply_magnus) then
-        call zmagnus(h, sys%m, psi, oppsi, ik, vmagnus)
+        call zmagnus(h, m, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, sys%m, psi, oppsi, ik, t)
+        call zHpsi(h, m, psi, oppsi, ik, t)
       endif
     end subroutine operate
 
@@ -159,14 +159,14 @@ contains
       
       call push_sub('fourth')
       
-      allocate(zpsi1(sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
+      allocate(zpsi1(m%np, h%d%dim), hzpsi1(m%np, h%d%dim))
       zfact = M_z1
-      call zlalg_copy(sys%m%np*sys%st%dim, zpsi(1, 1), zpsi1(1, 1))
+      call zlalg_copy(m%np*h%d%dim, zpsi(1, 1), zpsi1(1, 1))
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)
-        call zlalg_axpy(sys%m%np*sys%st%dim, zfact, hzpsi1(1, 1), zpsi(1, 1))
-        if(i .ne. te%exp_order) call zlalg_copy(sys%m%np*sys%st%dim, hzpsi1(1, 1), zpsi1(1, 1))
+        call zlalg_axpy(m%np*h%d%dim, zfact, hzpsi1(1, 1), zpsi(1, 1))
+        if(i .ne. te%exp_order) call zlalg_copy(m%np*h%d%dim, hzpsi1(1, 1), zpsi1(1, 1))
       end do
       deallocate(zpsi1, hzpsi1)
       
@@ -194,9 +194,9 @@ contains
       
       call push_sub('cheby')
       
-      allocate(zpsi1(sys%m%np, sys%st%dim, 0:2))
+      allocate(zpsi1(m%np, h%d%dim, 0:2))
       zpsi1 = M_z0
-      n = sys%m%np*sys%st%dim
+      n = m%np*h%d%dim
       do j = te%exp_order-1, 0, -1
         call zlalg_copy(n, zpsi1(1, 1, 1), zpsi1(1, 1, 2))
         call zlalg_copy(n, zpsi1(1, 1, 0), zpsi1(1, 1, 1))
@@ -224,34 +224,34 @@ contains
       
       call push_sub('lanczos')
       
-      np = sys%m%np*sys%st%dim
+      np = m%np*h%d%dim
       korder = te%exp_order
       tol = te%lanczos_tol
-      allocate(v(sys%m%np, sys%st%dim, korder), &
+      allocate(v(m%np, h%d%dim, korder), &
            hm(korder, korder),         &
            expo(korder, korder))
       
       ! Normalize input vector, and put it into v(:, :, 1)
-      nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi)
+      nrm = zstates_nrm2(m, h%d%dim, zpsi)
       v(:, :, 1) = zpsi(:, :)/nrm
       
       ! Operate on v(:, :, 1) and place it onto w.
       call operate(v(:, :, 1), zpsi)
-      alpha = zstates_dotp(sys%m, sys%st%dim, v(:, :, 1), zpsi)
+      alpha = zstates_dotp(m, h%d%dim, v(:, :, 1), zpsi)
       call zlalg_axpy(np, -M_z1*alpha, v(1, 1, 1), zpsi(1, 1))
       
       hm = M_z0; hm(1, 1) = alpha
-      beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
+      beta = zstates_nrm2(m, h%d%dim, zpsi)
       do n = 1, korder - 1
         v(:, :, n + 1) = zpsi(:, :)/beta
         hm(n+1, n) = beta
         call operate(v(:, :, n+1), zpsi)
-        hm(n    , n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n)    , zpsi)
-        hm(n + 1, n + 1) = zstates_dotp(sys%m, sys%st%dim, v(:, :, n + 1), zpsi)
+        hm(n    , n + 1) = zstates_dotp(m, h%d%dim, v(:, :, n)    , zpsi)
+        hm(n + 1, n + 1) = zstates_dotp(m, h%d%dim, v(:, :, n + 1), zpsi)
         call zlalg_gemv(np, 2, -M_z1, v(1, 1, n), hm(n, n + 1), M_z1, zpsi(1, 1))
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
         res = abs(beta*abs(expo(1, n+1)))
-        beta = zstates_nrm2(sys%m, sys%st%dim, zpsi)
+        beta = zstates_nrm2(m, h%d%dim, zpsi)
         if(beta < CNST(1.0e-12)) exit
         if(n>1 .and. res<tol) exit
       enddo
@@ -278,11 +278,11 @@ contains
         call write_fatal(1)
       endif
       
-      call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
-      if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*timestep/M_TWO, .true.)
-      call zexp_kinetic(sys%m, sys%st, h, zpsi, ik, te%cf, -M_zI*timestep)
-      if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*timestep/M_TWO, .false.)
-      call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*timestep/M_TWO, .true.)
+      call zexp_kinetic(m, h, zpsi, ik, te%cf, -M_zI*timestep)
+      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*timestep/M_TWO, .false.)
+      call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       
       if(present(order)) order = 0
       call pop_sub()
@@ -305,11 +305,11 @@ contains
       dt(1:5) = pp(1:5)*timestep
       
       do k = 1, 5
-        call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .true.)
-        call zexp_kinetic(sys%m, sys%st, h, zpsi, ik, te%cf, -M_zI*dt(k))
-        if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .false.)
-        call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .true.)
+        call zexp_kinetic(m, h, zpsi, ik, te%cf, -M_zI*dt(k))
+        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .false.)
+        call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
       
       if(present(order)) order = 0

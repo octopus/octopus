@@ -18,42 +18,43 @@
 #include "global.h"
 
 module scf
-use global
-use lib_oct_parser
-use units
-use states
-use hamiltonian
-use system
-use eigen_solver
-use mix
-use lcao
+  use global
+  use lib_oct_parser
+  use units
+  use geometry
+  use states
+  use hamiltonian
+  use eigen_solver
+  use mix
+  use lcao
 
-implicit none
+  implicit none
 
-integer, parameter :: MIXDENS = 0, &
-                      MIXPOT  = 1
+  integer, parameter :: MIXDENS = 0, &
+                        MIXPOT  = 1
 
-type scf_type  ! some variables used for the scf cycle
-  integer :: max_iter ! maximum number of scf iterations
-  FLOAT :: conv_abs_dens, conv_rel_dens, &
-       conv_abs_ev, conv_rel_ev ! several convergence criteria
-  
-  FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
+  type scf_type  ! some variables used for the scf cycle
+    integer :: max_iter ! maximum number of scf iterations
 
-  integer :: what2mix
+    FLOAT :: conv_abs_dens, conv_rel_dens, &
+             conv_abs_ev, conv_rel_ev         ! several convergence criteria
+    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
 
-  logical :: lcao_restricted
+    integer :: what2mix
 
-  type(mix_type) :: smix
-  type(eigen_solver_type) :: eigens
-end type scf_type
+    logical :: lcao_restricted
+
+    type(mix_type) :: smix
+    type(eigen_solver_type) :: eigens
+  end type scf_type
 
 contains
 
-subroutine scf_init(scf, sys, h)
-  type(scf_type), intent(inout) :: scf
-  type(system_type), intent(IN) :: sys
-  type(hamiltonian_type), intent(in) :: h
+subroutine scf_init(scf, m, st, h)
+  type(scf_type),         intent(inout) :: scf
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(in)    :: st
+  type(hamiltonian_type), intent(in)    :: h
 
   call push_sub('scf_init')
 
@@ -94,10 +95,10 @@ subroutine scf_init(scf, sys, h)
    call write_info(1)
 
   ! Handle mixing now...
-  call mix_init(scf%smix, sys%m%np, sys%st%d%nspin)
+  call mix_init(scf%smix, m%np, st%d%nspin)
 
   ! now the eigen solver stuff
-  call eigen_solver_init(scf%eigens, sys%st, sys%m)
+  call eigen_solver_init(scf%eigens, st, m)
 
   ! Should the calculation be restricted to LCAO subspace?
   call loct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
@@ -120,10 +121,13 @@ subroutine scf_end(scf)
   call pop_sub(); return
 end subroutine scf_end
 
-subroutine scf_run(scf, sys, h)
-  type(system_type), intent(inout) :: sys
+subroutine scf_run(scf, m, st, geo, h, outp)
+  type(scf_type),         intent(inout) :: scf
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(inout) :: st
+  type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
-  type(scf_type), intent(inout) :: scf
+  type(output_type),      intent(in)    :: outp
 
   integer :: iter, iunit, ik, ist, id, is
   FLOAT :: evsum_out, evsum_in
@@ -133,43 +137,43 @@ subroutine scf_run(scf, sys, h)
 
   call push_sub('scf_run')
 
-  if(scf%lcao_restricted) call lcao_init(sys, h)
+  if(scf%lcao_restricted) call lcao_init(m, st, geo, h)
 
-  allocate(rhoout(sys%m%np, sys%st%d%nspin), rhoin(sys%m%np, sys%st%d%nspin))
-  rhoin = sys%st%rho
+  allocate(rhoout(m%np, st%d%nspin), rhoin(m%np, st%d%nspin))
+  rhoin = st%rho
   if (scf%what2mix == MIXPOT) then
-     allocate(vout(sys%m%np, sys%st%d%nspin), vin(sys%m%np, sys%st%d%nspin))
+     allocate(vout(m%np, st%d%nspin), vin(m%np, st%d%nspin))
      vin = h%vhxc; vout = M_ZERO
   end if
-  evsum_in = states_eigenvalues_sum(sys%st)
+  evsum_in = states_eigenvalues_sum(st)
 
   ! SCF cycle
   do iter = 1, scf%max_iter
     if(scf%lcao_restricted) then
-      call lcao_wf(sys, h)
+      call lcao_wf(m, st, h)
     else
-      call eigen_solver_run(scf%eigens, sys%st, sys, h, iter)
+      call eigen_solver_run(scf%eigens, m, st, h, iter)
     endif
 
     ! occupations
-    call states_fermi(sys%st, sys%m)
+    call states_fermi(st, m)
 
     ! compute output density, potential (if needed) and eigenvalues sum
-    call X(calcdens)(sys%st, sys%m%np, rhoout)
+    call X(calcdens)(st, m%np, rhoout)
     if (scf%what2mix == MIXPOT) then
-       sys%st%rho = rhoout
-       call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
+       st%rho = rhoout
+       call X(h_calc_vhxc) (h, m, st)
        vout = h%vhxc
     end if
-    evsum_out = states_eigenvalues_sum(sys%st)
+    evsum_out = states_eigenvalues_sum(st)
 
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
-    do is = 1, sys%st%d%nspin
-       scf%abs_dens = scf%abs_dens + dmf_integrate(sys%m, (rhoin(:,is) - rhoout(:,is))**2)
+    do is = 1, st%d%nspin
+       scf%abs_dens = scf%abs_dens + dmf_integrate(m, (rhoin(:,is) - rhoout(:,is))**2)
     end do
     scf%abs_dens = sqrt(scf%abs_dens)
-    scf%rel_dens = scf%abs_dens / sys%st%qtot
+    scf%rel_dens = scf%abs_dens / st%qtot
     scf%abs_ev = abs(evsum_out - evsum_in)
     scf%rel_ev = scf%abs_ev / abs(evsum_out)
 
@@ -185,16 +189,16 @@ subroutine scf_run(scf, sys, h)
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, sys%m%np, sys%st%d%nspin, rhoin, rhoout, sys%st%rho)
-       call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
+       call mixing(scf%smix, iter, m%np, st%d%nspin, rhoin, rhoout, st%rho)
+       call X(h_calc_vhxc) (h, m, st)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, sys%m%np, sys%st%d%nspin, vin, vout, h%vhxc)
+       call mixing(scf%smix, iter, m%np, st%d%nspin, vin, vout, h%vhxc)
     end select
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) &
-         call X(states_write_restart)("tmp/restart.static", sys%m, sys%st)
+         call X(states_write_restart)("tmp/restart.static", m, st)
 
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
@@ -203,13 +207,13 @@ subroutine scf_run(scf, sys, h)
       exit
     end if
 
-    if(sys%outp%duringscf) then
-      call X(states_output) (sys%st, sys%m, "static", sys%outp)
-      call hamiltonian_output(h, sys%m, "static", sys%outp)
+    if(outp%duringscf) then
+      call X(states_output) (st, m, "static", outp)
+      call hamiltonian_output(h, m, "static", outp)
     endif
 
     ! save information for the next iteration
-    rhoin = sys%st%rho
+    rhoin = st%rho
     if (scf%what2mix == MIXPOT) vin = h%vhxc
     evsum_in = evsum_out
 
@@ -217,7 +221,7 @@ subroutine scf_run(scf, sys, h)
   end do
 
   if (scf%what2mix == MIXPOT) then
-     call X(h_calc_vhxc) (h, sys%m, sys%st, sys)
+     call X(h_calc_vhxc) (h, m, st)
      deallocate(vout, vin)
   end if
   deallocate(rhoout, rhoin)
@@ -228,19 +232,19 @@ subroutine scf_run(scf, sys, h)
   end if
 
   ! calculate forces
-  call X(epot_forces)(h%ep, sys)
+  call X(epot_forces)(h%ep, m, st, geo)
 
   ! output final information
   call scf_write_static("static", "info")
-  call X(states_output) (sys%st, sys%m, "static", sys%outp)
-  if(sys%outp%what(output_geometry)) &
-     call atom_write_xyz("static", "geometry", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
-  call hamiltonian_output(h, sys%m, "static", sys%outp)
+  call X(states_output) (st, m, "static", outp)
+  if(outp%what(output_geometry)) &
+     call atom_write_xyz("static", "geometry", geo)
+  call hamiltonian_output(h, m, "static", outp)
 
-  if (conf%periodic_dim>0.and.sys%st%nik>sys%st%d%nspin) then
+  if (conf%periodic_dim>0.and.st%nik>st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
-    call states_write_bands(iunit, sys%st%nst, sys%st)
+    call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
   end if
 
@@ -259,9 +263,9 @@ subroutine scf_write_iter
     write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
     write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
     call write_info(2)
-    call states_write_eigenvalues(stdout, sys%st%nst, sys%st, scf%eigens%diff)
+    call states_write_eigenvalues(stdout, st%nst, st, scf%eigens%diff)
   else
-    call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
+    call states_write_eigenvalues(stdout, st%nst, st)
   endif
   write(message(1),'(a)') '************'
   write(message(2),'(a)')
@@ -271,7 +275,7 @@ end subroutine scf_write_iter
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
-  FLOAT :: e_dip(conf%dim, sys%st%d%nspin), n_dip(conf%dim)
+  FLOAT :: e_dip(conf%dim, st%d%nspin), n_dip(conf%dim)
   FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
   integer :: iunit, i, j
 
@@ -280,15 +284,15 @@ subroutine scf_write_static(dir, fname)
   open(iunit, status='unknown', file=trim(dir)+"/"+trim(fname))
 
   ! mesh
-  write(iunit, '(a,a)') 'System name: ', sys%sysname
+  write(iunit, '(a,a)') 'System name: ', geo%sysname
   write(iunit, '(1x)')
 
   write(iunit, '(a)') 'Mesh:'
-  call mesh_write_info(sys%m, iunit)
+  call mesh_write_info(m, iunit)
   write(iunit,'(1x)')
   
   if (conf%periodic_dim > 0) then
-    call kpoints_write_info(sys%st,iunit)
+    call kpoints_write_info(st,iunit)
     write(iunit,'(1x)')
   end if
 
@@ -308,26 +312,26 @@ subroutine scf_write_static(dir, fname)
   end if
   write(iunit, '(1x)')
 
-  call states_write_eigenvalues(iunit, sys%st%nst, sys%st)
+  call states_write_eigenvalues(iunit, st%nst, st)
   write(iunit, '(1x)')
 
   write(iunit, '(a)') 'Energy:'
-  call hamiltonian_energy(h, sys%st, sys%eii, iunit)
+  call hamiltonian_energy(h, st, geo%eii, iunit)
   write(iunit, '(1x)')
 
-  if(sys%st%d%ispin > UNPOLARIZED) then
-    call write_magnet(iunit, sys%st)
+  if(st%d%ispin > UNPOLARIZED) then
+    call write_magnet(iunit, m, st)
   end if
 
   ! Next lines of code calculate the dipole of the molecule, summing the electronic and
   ! ionic contributions.
-                 call states_calculate_multipoles(sys%m, sys%st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
-  if(conf%dim>1) call states_calculate_multipoles(sys%m, sys%st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
-  if(conf%dim>2) call states_calculate_multipoles(sys%m, sys%st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
+                 call states_calculate_multipoles(m, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
+  if(conf%dim>1) call states_calculate_multipoles(m, st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
+  if(conf%dim>2) call states_calculate_multipoles(m, st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
   do j = 1, conf%dim
      e_dip(j, 1) = sum(e_dip(j, :))
   enddo
-  call atom_dipole(sys%natoms, sys%atom, n_dip)
+  call geometry_dipole(geo, n_dip)
   n_dip(:) = n_dip(:) - e_dip(:, 1)
   write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
   do j = 1, conf%dim
@@ -350,16 +354,17 @@ subroutine scf_write_static(dir, fname)
 
   write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
   write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-  do i = 1,sys%natoms
-    write(iunit,'(i4,a10,3f15.6)') i, trim(sys%atom(i)%spec%label), &
-         sys%atom(i)%f(:) / units_out%force%factor
+  do i = 1,geo%natoms
+    write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), &
+         geo%atom(i)%f(:) / units_out%force%factor
   end do
 
   call io_close(iunit)
 end subroutine scf_write_static
 
-subroutine write_magnet(iunit, st)
+subroutine write_magnet(iunit, mesh, st)
   integer, intent(in) :: iunit
+  type(mesh_type), intent(in) :: mesh
   type(states_type), intent(IN) :: st
   
   FLOAT :: m(3), sign
@@ -382,7 +387,7 @@ subroutine write_magnet(iunit, st)
     m = M_ZERO
     do ik = 1, st%nik
       do ist = 1, st%nst
-        do i = 1, sys%m%np
+        do i = 1, mesh%np
           c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
           m(1) = m(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
           m(2) = m(2) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
@@ -391,7 +396,7 @@ subroutine write_magnet(iunit, st)
         end do
       end do
     end do
-    m = m*sys%m%vol_pp
+    m = m*mesh%vol_pp
     write(iunit, '(a,f15.6)') ' mx = ', m(1)
     write(iunit, '(a,f15.6)') ' my = ', m(2)
     write(iunit, '(a,f15.6)') ' mz = ', m(3)

@@ -16,10 +16,10 @@
 !! 02111-1307, USA.
 
 ! CONJUGATE-GRADIENTS METHOD.
-subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, reorder)
-  type(states_type), intent(inout)   :: st
-  type(system_type), intent(IN)      :: sys
-  type(hamiltonian_type), intent(IN) :: h
+subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, reorder)
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(inout) :: st
+  type(hamiltonian_type), intent(in)    :: h
   FLOAT, intent(in)               :: tol
   integer, intent(inout)             :: niter
   integer, intent(out)               :: errorflag, converged
@@ -36,7 +36,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   call push_sub('eigen_solver_cg2')
 
-  np = sys%m%np
+  np = m%np
 
   if(present(reorder)) reord = reorder
   maxter = niter
@@ -52,15 +52,14 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
     eigenfunction_loop : do p = 1, st%nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(p, sys%m, st%dim, &
+      call X(states_gram_schmidt)(p, m, st%dim, &
            st%X(psi)(1:np, 1:st%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-!!$      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, p, ik) , h_psi, sys, ik)
-      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, p, ik) , h_psi, ik)
+      call X(Hpsi)(h, m, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(X(states_dotp) (sys%m, st%dim, st%X(psi)(1:,:, p, ik), h_psi))
+      st%eigenval(p, ik) = R_REAL(X(states_dotp) (m, st%dim, st%X(psi)(1:,:, p, ik), h_psi))
 
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter
@@ -71,24 +70,24 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         g = h_psi
         ppsi = st%X(psi)(:,:, p, ik)
         
-        es(1) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), g)
-        es(2) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
+        es(1) = X(states_dotp) (m, st%dim, st%X(psi)(:,:, p, ik), g)
+        es(2) = X(states_dotp) (m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
         
         ! Orthogonalize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
-          a0 = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, j, ik), g)
+          a0 = X(states_dotp) (m, st%dim, st%X(psi)(:,:, j, ik), g)
           g(:,:) = g(:,:) - a0 * st%X(psi)(:,:, j, ik)
         end do
         
-        if(iter .ne. 1) gg1 = X(states_dotp) (sys%m, st%dim, g, g0)
+        if(iter .ne. 1) gg1 = X(states_dotp) (m, st%dim, g, g0)
         
         ! Approximate inverse preconditioner...
         !call ipre(g, g0)
         g0 = g
         
-        gg = X(states_dotp) (sys%m, st%dim, g, g0)
+        gg = X(states_dotp) (m, st%dim, g, g0)
         
         ! Starting or following iterations...
         if(iter .eq. 1) then
@@ -106,13 +105,13 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         end if
         
         ! cg contains now the conjugate gradient
-        cg0 = X(states_nrm2) (sys%m, st%dim, cg(:,:))
-        call X(Hpsi) (h, sys%m, cg, ppsi, ik)
-
+        cg0 = X(states_nrm2) (m, st%dim, cg(:,:))
+        call X(Hpsi) (h, m, cg, ppsi, ik)
+        
         ! Line minimization.
-        a0 = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
+        a0 = X(states_dotp) (m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
         a0 = M_TWO * a0 / cg0
-        b0 = X(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
+        b0 = X(states_dotp) (m, st%dim, cg(1:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
@@ -133,7 +132,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         ! Calculate H|psi>
         h_psi = a0*h_psi + b0*ppsi
 
-        res = X(states_residue)(sys%m, st%dim, h_psi, st%eigenval(p, ik), &
+        res = X(states_residue)(m, st%dim, h_psi, st%eigenval(p, ik), &
              st%X(psi)(:, :, p, ik))
         ! Test convergence.
         if(res < tol) then

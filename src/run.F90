@@ -19,7 +19,6 @@
 
 module run_prog
 use global
-
 use lcao
 use states
 use external_pot
@@ -124,14 +123,14 @@ subroutine run()
       ! Warning: I think this is pretty useless, since the occupation are null.
       call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       ! this is certainly a better density
-      call lcao_dens(sys, sys%st%d%nspin, sys%st%rho)
+      call lcao_dens(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, sys%st%d%spin_channels,  &
+                     sys%st%rho)
 
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'
       call write_info(1)
 
-      if(X(states_load_restart)("tmp/restart.static", &
-           sys%m, sys%st)) then
+      if(X(states_load_restart)("tmp/restart.static", sys%m, sys%st)) then
         call states_fermi(sys%st, sys%m)
         call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
@@ -150,9 +149,9 @@ subroutine run()
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call X(h_calc_vhxc)(h, sys%m, sys%st, sys, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%m)                      ! occupations
-      call hamiltonian_energy(h, sys%st, sys%eii, -1)       ! total energy
+      call X(h_calc_vhxc)(h, sys%m, sys%st, calc_eigenval=.true.) ! get potentials
+      call states_fermi(sys%st, sys%m)                                    ! occupations
+      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)                  ! total energy
 
     case(I_SCF)
 #ifdef COMPLEX_WFNS
@@ -161,20 +160,22 @@ subroutine run()
       message(1) = 'Info: SCF using real wavefunctions.'
 #endif
       call write_info(1)
-      call scf_init(scfv, sys, h)
-      call scf_run(scfv, sys, h)
+
+      call scf_init(scfv, sys%m, sys%st, h)
+      call scf_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_LCAO)
       call loct_parse_logical("LCAOStart", .true., log)
-      do i = 1, sys%nspecies
-          log = log .and. (.not.sys%specie(i)%local)
+      do i = 1, sys%geo%nspecies
+          log = log .and. (.not.sys%geo%specie(i)%local)
       enddo
       if(log) then
         message(1) = 'Info: Performing initial LCAO calculation.'
         call write_info(1)
-        call lcao_init(sys, h)
-        call lcao_wf(sys, h)
+
+        call lcao_init(sys%m, sys%st, sys%geo, h)
+        call lcao_wf(sys%m, sys%st, h)
         call lcao_end
         call states_fermi(sys%st, sys%m)                         ! occupations
         call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
@@ -184,7 +185,7 @@ subroutine run()
       message(1) = 'Info: Initializing unoccupied states.'
       call write_info(1)
 
-      call unocc_init(unoccv, sys%m, sys%st, sys)
+      call unocc_init(unoccv, sys%m, sys%st, sys%val_charge)
       
     case(I_END_UNOCC)
       message(1) = 'Info: Finalizing unoccupied states.'
@@ -221,7 +222,7 @@ subroutine run()
       message(1) = 'Info: Calculation of unoccupied states.'
       call write_info(1)
 
-      call unocc_run(unoccv, sys, h)
+      call unocc_run(unoccv, sys%m, sys%st, h, sys%outp)
 
     case(I_SETUP_TD)
       message(1) = 'Info: Setting up TD.'
@@ -230,7 +231,7 @@ subroutine run()
       ! initialize structure
       allocate(td)
       ! this allocates zpsi
-      call td_init(td, sys, sys%m, sys%st, h)
+      call td_init(td, sys%m, sys%st, h, sys%outp)
 
     case(I_END_TD)
       message(1) = 'Info: Cleaning up TD.'
@@ -247,13 +248,13 @@ subroutine run()
       ! load zpsi from static file.
       if(zstates_load_restart("tmp/restart.static", sys%m, sys%st)) then
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%st, sys, calc_eigenval=.true.)
+        call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
 #ifdef HAVE_MPI
         call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
 #endif
         call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
-        call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
+        call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)
       else
         i_stack(instr) = I_INIT_ZPSI
         instr = instr + 1; i_stack(instr) = I_SETUP_TD
@@ -273,10 +274,10 @@ subroutine run()
            sys%m, sys%st, iter=td%iter, v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))) then
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%st, sys, calc_eigenval=.true.)
+        call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
         call hamiltonian_span(h, minval(sys%m%h), minval(sys%st%eigenval(1,:)))
-        call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
-        
+        call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)        
+
       else
         i_stack(instr) = I_INIT_ZPSI
         cycle program
@@ -286,7 +287,7 @@ subroutine run()
       message(1) = 'Info: Time-dependent simulation.'
       call write_info(1)
 
-      call td_run(td, unoccv%st, sys, h)
+      call td_run(td, unoccv%st, sys%m, sys%st, sys%geo, h, sys%outp)
 
     case(I_SETUP_OCC_AN)
 
@@ -321,31 +322,31 @@ subroutine run()
       message(1) = 'Info: Calculating static polarizability'
       call write_info(1)
 
-      call scf_init(scfv, sys, h)
-      call static_pol_run(scfv, sys, h)
+      call scf_init(scfv, sys%m, sys%st, h)
+      call static_pol_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_GEOM_OPT)
       message(1) = 'Info: Performing geometry optimization'
       call write_info(1)
 
-      call scf_init(scfv, sys, h)
-      call geom_opt_run(scfv, sys, h)
+      call scf_init(scfv, sys%m, sys%st, h)
+      call geom_opt_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_PHONONS)
       message(1) = 'Info: Calculating phonon frequencies'
       call write_info(1)
 
-      call scf_init(scfv, sys, h)
-      call phonons_run(scfv, sys, h)
+      call scf_init(scfv, sys%m, sys%st, h)
+      call phonons_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_OPT_CONTROL)
       message(1) = 'Info: Optimum control.'
       call write_info(1)
 
-      call opt_control_run(td, sys, h)
+      call opt_control_run(td, sys%m, sys%st, sys%val_charge, h, sys%outp)
 
     case(I_PULPO)
       call pulpo_print()
@@ -407,15 +408,15 @@ subroutine run_init()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
     call units_init()
     call system_init(sys)
-    call hamiltonian_init(h, sys)
-    call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
+    call hamiltonian_init(h, sys%m, sys%geo, sys%st%d)
+    call epot_generate(h%ep, sys%m, sys%st, sys%geo, h%vpsl, h%reltype)
   endif
-  
+
 end subroutine run_init
 
 subroutine run_end()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
-    call hamiltonian_end(h, sys)
+    call hamiltonian_end(h, sys%geo)
     call system_end(sys)
   endif
 

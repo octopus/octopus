@@ -20,11 +20,10 @@
 
 !!! This file has to be outside the module xc, for it requires the Hpsi
 
-subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
+subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
   type(xc_type),     intent(in)    :: xcs
   type(mesh_type),   intent(in)    :: m
   type(hamiltonian_type), intent(in) :: h
-  type(system_type), intent(in)    :: sys
   type(states_type), intent(inout) :: st
   FLOAT,          intent(inout) :: vxc(m%np, st%d%nspin), ex, ec
   

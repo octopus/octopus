@@ -15,12 +15,12 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_init(td, sys, m, st, h)
+subroutine td_init(td, m, st, h, outp)
   type(td_type), intent(out) :: td
-  type(system_type), intent(IN) :: sys
   type(mesh_type), intent(inout) :: m
   type(states_type), intent(inout) :: st
   type(hamiltonian_type), intent(IN) :: h
+  type(output_type), intent(in) :: outp
 
   integer :: i, iunit, dummy
 
@@ -63,7 +63,7 @@ subroutine td_init(td, sys, m, st, h)
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call loct_parse_int("AbsorbingBoundaries", 0, dummy)
-  call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
+  call PES_init(td%PESv, m, st, dummy, outp%iter)
 #endif
 
   ! should we move the ions during the simulation?

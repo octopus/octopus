@@ -23,10 +23,8 @@
 
 #define DELTA_R CNST(1e-12)
 
-subroutine mesh_create(m, natoms, atom, enlarge_)
+subroutine mesh_create(m, enlarge_)
   type(mesh_type), intent(inout) :: m
-  integer, intent(in), optional :: natoms
-  type(atom_type), pointer, optional :: atom(:)
   integer, intent(in), optional :: enlarge_
 
   ! some local stuff

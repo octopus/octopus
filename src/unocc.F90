@@ -23,7 +23,7 @@ use lib_oct_parser
 use lib_oct
 use mesh
 use states
-use system
+use hamiltonian
 use eigen_solver
 
 implicit none
@@ -37,11 +37,11 @@ end type unocc_type
 
 contains
 
-subroutine unocc_init(u, m, st, sys)
+subroutine unocc_init(u, m, st, val_charge)
   type(unocc_type), intent(out) :: u
   type(mesh_type), intent(IN)   :: m
   type(states_type), intent(IN) :: st
-  type(system_type), intent(IN) :: sys
+  FLOAT,             intent(IN) :: val_charge
 
   call push_sub('unocc_init')
 
@@ -57,7 +57,7 @@ subroutine unocc_init(u, m, st, sys)
 
   ! allocate states structure
   allocate(u%st)
-  call states_init(u%st, m, sys%val_charge)
+  call states_init(u%st, m, val_charge)
 
   call loct_parse_int("UnoccNumberStates", 5, u%st%nst)
   if(u%st%nst <= 0) then
@@ -77,7 +77,7 @@ subroutine unocc_init(u, m, st, sys)
 end subroutine unocc_init
 
 subroutine unocc_end(u)
-  type(unocc_type), intent(out) :: u
+  type(unocc_type), intent(inout) :: u
   
   if(associated(u%st)) then
     call states_end(u%st)
@@ -87,10 +87,12 @@ subroutine unocc_end(u)
 
 end subroutine unocc_end
 
-subroutine unocc_run(u, sys, h)
+subroutine unocc_run(u, m, st, h, outp)
   type(unocc_type), intent(inout) :: u
-  type(system_type), intent(inout) :: sys
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(in) :: st
   type(hamiltonian_type), intent(inout) :: h
+  type(output_type), intent(in) :: outp
 
   type(eigen_solver_type) :: eigens
   integer :: iunit
@@ -106,7 +108,7 @@ subroutine unocc_run(u, sys, h)
   eigens%es_maxiter     = u%max_iter
   allocate(eigens%diff(u%st%nst, u%st%nik))
 
-  call eigen_solver_run(eigens, u%st, sys, h, 1, converged)
+  call eigen_solver_run(eigens, m, u%st, h, 1, converged)
 
   ! write output file
   call io_assign(iunit)
@@ -122,7 +124,7 @@ subroutine unocc_run(u, sys, h)
   call states_write_eigenvalues(iunit, u%st%nst, u%st, eigens%diff)
   call io_close(iunit)
   
-  if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%d%nspin) then
+  if (conf%periodic_dim>0 .and. st%nik>st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
     call states_write_bands(iunit, u%st%nst, u%st)
@@ -130,10 +132,10 @@ subroutine unocc_run(u, sys, h)
   end if
 
   ! write restart information.
-  call X(states_write_restart)("tmp/restart.occ", sys%m, u%st) 
+  call X(states_write_restart)("tmp/restart.occ", m, u%st) 
 
   ! output wave-functions
-  call X(states_output) (u%st, sys%m, "static", sys%outp)
+  call X(states_output) (u%st, m, "static", outp)
 
   ! Deallocate eigens..
   deallocate(eigens%diff); nullify(eigens%diff)

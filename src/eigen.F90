@@ -23,10 +23,9 @@ module eigen_solver
   use lib_basic_alg
   use lib_adv_alg
   use io
-  use states
   use mesh
+  use states
   use hamiltonian
-  use system
 
   implicit none
 
@@ -55,9 +54,8 @@ module eigen_solver
 #ifdef HAVE_TRLAN
   integer                         :: ik_trlan
   type(hamiltonian_type), pointer :: h_trlan
-  type(mesh_type), pointer        :: m_trlan
-  type(states_type), pointer      :: st_trlan
-  type(system_type), pointer      :: sys_trlan
+  type(mesh_type),        pointer :: m_trlan
+  type(states_type),      pointer :: st_trlan
 #endif
 
   type(derivatives_type) :: filter
@@ -124,12 +122,12 @@ subroutine eigen_solver_init(eigens, st, m)
   endif
 
   nullify(eigens%diff)
-  allocate(eigens%diff(st%nst, st%nik))  
+  allocate(eigens%diff(st%nst, st%d%nik))
 
   eigens%converged = 0
   eigens%matvec    = 0
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine eigen_solver_init
 
 subroutine eigen_solver_end(eigens)
@@ -141,10 +139,10 @@ subroutine eigen_solver_end(eigens)
   nullify(eigens%diff)
 end subroutine eigen_solver_end
 
-subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
+subroutine eigen_solver_run(eigens, m, st, h, iter, conv)
   type(eigen_solver_type), intent(inout) :: eigens
-  type(states_type), intent(inout) :: st
-  type(system_type), intent(inout) :: sys
+  type(mesh_type),         intent(in) :: m
+  type(states_type),       intent(inout) :: st
   type(hamiltonian_type), intent(IN) :: h
   integer, intent(in) :: iter
   logical, intent(inout), optional :: conv
@@ -168,15 +166,15 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
 
   select case(eigens%es_type)
   case(RS_CG)
-    call eigen_solver_cg2(st, sys, h, &
-         tol, maxiter, eigens%converged, errorflag, eigens%diff)
+    call eigen_solver_cg2(m, st, h, tol, maxiter, &
+           eigens%converged, errorflag, eigens%diff)
 #ifdef HAVE_TRLAN
   case(RS_LANCZOS)
-    call eigen_solver_cg3(st, sys, h, &
-         tol, maxiter, eigens%converged, errorflag, eigens%diff)
+    call eigen_solver_cg3(m, st, h, tol, maxiter, &
+           eigens%converged, errorflag, eigens%diff)
 #endif
   case(RS_PLAN)
-    call eigen_solver_plan(st, sys, h, tol, maxiter, eigens%converged, eigens%diff)
+    call eigen_solver_plan(m, st, h, tol, maxiter, eigens%converged, eigens%diff)
   end select
 
   eigens%matvec = maxiter
@@ -187,25 +185,25 @@ end subroutine eigen_solver_run
 
 !!! This routine in principle diagonalises the hamiltonian in the
 !!! basis defined by st. It has not been tested, and it is not used now
-subroutine eigen_diagon_subspace(st, sys, h)
-  type(states_type), intent(inout)   :: st
-  type(system_type), intent(in)      :: sys
-  type(hamiltonian_type), intent(in) :: h
+subroutine eigen_diagon_subspace(m, st, h)
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(inout) :: st
+  type(hamiltonian_type), intent(in)    :: h
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer :: ik, i, j
 
   allocate(h_subspace(st%nst, st%nst), vec(st%nst, st%nst))
-  allocate(f(sys%m%np, st%dim, st%nst))
+  allocate(f(m%np, st%dim, st%nst))
 
   ik_loop: do ik = 1, st%nik
     f = st%X(psi)(:,:,:, ik)
 
     eigenfunction_loop : do i = 1, st%nst
-      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
+      call X(Hpsi)(h, m, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
       h_subspace(i, i) = st%eigenval(i, ik)
       do j = i, st%nst
-        h_subspace(i, j) = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
+        h_subspace(i, j) = X(states_dotp) (m, st%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
         h_subspace(j, i) = R_CONJ(h_subspace(i, j))
       end do
     end do eigenfunction_loop
@@ -220,7 +218,7 @@ subroutine eigen_diagon_subspace(st, sys, h)
       end do
       
       ! renormalize
-      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(sys%m, st%dim, st%X(psi)(:,:, i, ik))
+      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(m, st%dim, st%X(psi)(:,:, i, ik))
     end do
   end do ik_loop
 

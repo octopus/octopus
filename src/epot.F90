@@ -27,7 +27,9 @@ module external_pot
   use logrid
   use ps
   use specie
-  use system
+  use atom
+  use geometry
+  use states
   use lasers
 
   implicit none
@@ -65,9 +67,10 @@ module external_pot
 
 contains
 
-  subroutine epot_init(ep, sys)
-    type(epot_type),   intent(out) :: ep
-    type(system_type), intent(in)  :: sys
+  subroutine epot_init(ep, m, geo)
+    type(epot_type),     intent(out) :: ep
+    type(mesh_type),     intent(in)  :: m
+    type(geometry_type), intent(in)  :: geo
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ep%vpsl_space = REAL_SPACE
@@ -95,20 +98,20 @@ contains
     call write_info(1)
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == RECIPROCAL_SPACE) call epot_local_fourier_init(ep, sys%m, sys)
+    if(ep%vpsl_space == RECIPROCAL_SPACE) call epot_local_fourier_init(ep, m, geo)
 #endif
 
     ep%classic_pot = 0
-    if(sys%ncatoms > 0) then
+    if(geo%ncatoms > 0) then
       call loct_parse_int("ClassicPotential", 0, ep%classic_pot)
       if(ep%classic_pot > 0) then
-        allocate(ep%Vclassic(sys%m%np))
-        call epot_generate_classic(ep, sys%m, sys)
+        allocate(ep%Vclassic(m%np))
+        call epot_generate_classic(ep, m, geo)
       end if
     end if
 
     ! lasers
-    call laser_init(sys%m, ep%no_lasers, ep%lasers)
+    call laser_init(m, ep%no_lasers, ep%lasers)
     if(ep%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
@@ -118,25 +121,26 @@ contains
     end if
 
     ! Non local operators
-    ep%nvnl = atom_nvnl(sys%natoms, sys%atom)
+    ep%nvnl = geometry_nvnl(geo)
     nullify(ep%vnl)
     if(ep%nvnl>0) allocate(ep%vnl(ep%nvnl))
+
   end subroutine epot_init
 
-  subroutine epot_end(ep, sys)
+  subroutine epot_end(ep, geo)
     type(epot_type),   intent(inout) :: ep
-    type(system_type), intent(in)    :: sys
+    type(geometry_type), intent(in)    :: geo
 
 #ifdef HAVE_FFT
     integer :: i
 
     if(ep%vpsl_space == RECIPROCAL_SPACE) then
-      do i = 1, sys%nspecies
+      do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
-        if(sys%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
+        if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
       end do
       deallocate(ep%local_cf)
-      if(sys%nlcc) deallocate(ep%rhocore_cf)
+      if(geo%nlcc) deallocate(ep%rhocore_cf)
     end if
 #endif
 
@@ -157,10 +161,10 @@ contains
   end subroutine epot_end
 
 #ifdef HAVE_FFT
-  subroutine epot_local_fourier_init(ep, m, sys)
+  subroutine epot_local_fourier_init(ep, m, geo)
     type(epot_type),   intent(inout) :: ep
     type(mesh_type),   intent(in)    :: m
-    type(system_type), intent(in)    :: sys
+    type(geometry_type), intent(in)    :: geo
     
     integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3), modg, temp(3)
@@ -171,11 +175,11 @@ contains
     
     call push_sub('epot_local_fourier_init')
 
-    allocate(ep%local_cf(sys%nspecies))
-    if(sys%nlcc) allocate(ep%rhocore_cf(sys%nspecies))
+    allocate(ep%local_cf(geo%nspecies))
+    if(geo%nlcc) allocate(ep%rhocore_cf(geo%nspecies))
 
-    specie: do i = 1, sys%nspecies
-      s  => sys%specie(i)
+    specie: do i = 1, geo%nspecies
+      s  => geo%specie(i)
       cf => ep%local_cf(i)
       
       if(i == 1) then
@@ -188,7 +192,7 @@ contains
         call dcf_new_from(cf, ep%local_cf(1))   ! we can just copy from the first one
       end if
       
-      if(s%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
+      if(geo%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
 
       periodic: if (conf%periodic_dim==0) then
         call dcf_alloc_RS(cf)                  ! allocate the cube in real space
@@ -267,10 +271,11 @@ contains
   end subroutine epot_local_fourier_init
 #endif
 
-  subroutine epot_generate(ep, m, sys, Vpsl, reltype)
+  subroutine epot_generate(ep, m, st, geo, Vpsl, reltype)
     type(epot_type),   intent(inout) :: ep
     type(mesh_type),   intent(in)    :: m
-    type(system_type), intent(inout) :: sys
+    type(states_type), intent(inout) :: st
+    type(geometry_type), intent(inout) :: geo
     FLOAT,          pointer       :: Vpsl(:)
     integer,           intent(in)    :: reltype
 
@@ -283,7 +288,7 @@ contains
     call push_sub('generate_external_pot')
     
     ! first we assume that we need to recalculate the ion_ion energy
-    sys%eii = ion_ion_energy(sys%natoms, sys%atom)
+    geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
     if(ep%vpsl_space == RECIPROCAL_SPACE) then
@@ -291,7 +296,7 @@ contains
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
 
-      if(sys%nlcc) then
+      if(geo%nlcc) then
         call dcf_new_from(cf_nlcc, ep%local_cf(1)) ! at least one specie must exist
         call dcf_alloc_FS(cf_nlcc)
         cf_nlcc%FS = M_z0
@@ -301,16 +306,16 @@ contains
 
     ! Local.
     vpsl = M_ZERO
-    do ia = 1, sys%natoms
-      a => sys%atom(ia) ! shortcuts
+    do ia = 1, geo%natoms
+      a => geo%atom(ia) ! shortcuts
       s => a%spec
       call build_local_part()
     enddo
       
     ! Nonlocal part.
     i = 1
-    do ia = 1, sys%natoms
-      a => sys%atom(ia)
+    do ia = 1, geo%natoms
+      a => geo%atom(ia)
       s => a%spec
       if(s%local) cycle
       add_lm = 1
@@ -325,20 +330,20 @@ contains
     end do
 
     i = 1
-    do ia = 1, sys%natoms
-       a => sys%atom(ia)
+    do ia = 1, geo%natoms
+       a => geo%atom(ia)
        s => a%spec
        if(s%local) cycle
        add_lm = 1
        do l = 0, s%ps%l_max
           do lm = -l, l
-             allocate(ep%vnl(i)%phases(ep%vnl(i)%n, sys%st%d%nik))
+             allocate(ep%vnl(i)%phases(ep%vnl(i)%n, st%d%nik))
              if (conf%periodic_dim/=0) then
-                allocate(ep%vnl(i)%phases(ep%vnl(i)%n, sys%st%d%nik))
+                allocate(ep%vnl(i)%phases(ep%vnl(i)%n, st%d%nik))
                 do j = 1, ep%vnl(i)%n
                    call mesh_xyz(m, ep%vnl(i)%jxyz(j), x)
-                   do k=1, sys%st%d%nik
-                      ep%vnl(i)%phases(j, k) = exp(M_zI*sum(sys%st%d%kpoints(:, k)*x(:)))
+                   do k=1, st%d%nik
+                      ep%vnl(i)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
                    end do
                 end do
              end if
@@ -357,10 +362,10 @@ contains
       call dcf_free(cf_loc)
       
       ! and the non-local core corrections
-      if(sys%nlcc) then
+      if(geo%nlcc) then
         call dcf_alloc_RS(cf_nlcc)
         call dcf_FS2RS(cf_nlcc)
-        call dcf2mf(m, cf_nlcc, sys%st%rho_core)
+        call dcf2mf(m, cf_nlcc, st%rho_core)
         call dcf_free(cf_nlcc)
       end if
     end if
@@ -385,7 +390,7 @@ contains
           Vpsl(i) = Vpsl(i) + specie_get_local(s, x)
           
           if(s%nlcc) then
-            sys%st%rho_core(i) = sys%st%rho_core(i) + specie_get_nlcc(s, x)
+            st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if
         end do
         
@@ -400,7 +405,7 @@ contains
       
       call pop_sub()
     end subroutine build_local_part
-
+  
     ! Note: this should only build the spheres, as it says, not allocating the variables.
     ! I will change it later.
     subroutine build_kb_sphere(ivnl)
@@ -551,13 +556,13 @@ contains
       
       call pop_sub(); return
     end subroutine build_nl_part
-
+    
   end subroutine epot_generate
 
-  subroutine epot_generate_classic(ep, m, sys)
-    type(epot_type),   intent(inout) :: ep
-    type(mesh_type),   intent(in)    :: m
-    type(system_type), intent(IN)    :: sys
+  subroutine epot_generate_classic(ep, m, geo)
+    type(epot_type),     intent(inout) :: ep
+    type(mesh_type),     intent(in)    :: m
+    type(geometry_type), intent(in)    :: geo
     
     integer i, ia
     FLOAT :: r, rc
@@ -565,15 +570,15 @@ contains
     call push_sub('epot_generate_classic')
     
     ep%Vclassic = M_ZERO
-    do ia = 1, sys%ncatoms
+    do ia = 1, geo%ncatoms
       do i = 1, m%np
-        call mesh_r(m, i, r, a=sys%catom(ia)%x)
+        call mesh_r(m, i, r, a=geo%catom(ia)%x)
         select case(ep%classic_pot)
         case(1) ! point charge
           if(r < r_small) r = r_small
-          ep%Vclassic(i) = ep%Vclassic(i) - sys%catom(ia)%charge/r
+          ep%Vclassic(i) = ep%Vclassic(i) - geo%catom(ia)%charge/r
         case(2) ! gaussion smeared charge
-          select case(sys%catom(ia)%label(1:1)) ! covalent radii
+          select case(geo%catom(ia)%label(1:1)) ! covalent radii
           case('H')
             rc = CNST(0.4)*P_Ang
           case('C') 
@@ -582,7 +587,7 @@ contains
             rc = CNST(0.7)*P_Ang
           end select
           if(abs(r - rc) < r_small) r = rc + sign(r_small, r-rc)
-          ep%Vclassic(i) = ep%Vclassic(i) - sys%catom(ia)%charge*(r**4 - rc**4)/(r**5 - rc**5)
+          ep%Vclassic(i) = ep%Vclassic(i) - geo%catom(ia)%charge*(r**4 - rc**4)/(r**5 - rc**5)
         end select
       end do
     end do

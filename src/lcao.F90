@@ -24,6 +24,9 @@ module lcao
   use lib_basic_alg
   use lib_adv_alg
   use mesh
+  use specie
+  use atom
+  use geometry
   use hamiltonian
 
   implicit none
@@ -55,123 +58,11 @@ integer, parameter :: MEM_INTENSIVE = 0, &
 
 contains
 
-!builds a density which is the sum of the atomic densities
-subroutine lcao_dens(sys, nspin, rho)
-  type(system_type), intent(IN) :: sys
-  integer, intent(in) :: nspin
-  FLOAT, intent(out) :: rho(sys%m%np, nspin)
-  
-  integer :: ia, is
-  FLOAT :: r
-  type(specie_type), pointer :: s
-  type(atom_type),   pointer :: a
-
-  call push_sub('lcao_dens')
-  
-  rho = M_ZERO
-  do ia = 1, sys%natoms
-    a => sys%atom(ia) ! shortcuts
-    s => a%spec
-
-    if(conf%dim==1.or.conf%dim==2) then
-      call from_userdef(sys%m)
-    else
-      select case(s%label(1:5))
-      case('usdef')
-        call from_userdef(sys%m)
-      case('jelli', 'point')
-        call from_jellium(sys%m)
-      case default
-        call from_pseudopotential(sys%m)
-      end select
-    end if
-  end do
-
-  ! we now renormalize the density (necessary if we have a charged system)
-  r = M_ZERO
-  do is = 1, sys%st%d%spin_channels
-     r = r + dmf_integrate(sys%m, rho(:, is))
-  end do
-  write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
-  call write_info(1)
-  r = sys%st%qtot/r
-  rho = r*rho
-  r = M_ZERO
-  do is = 1, sys%st%d%spin_channels
-     r = r + dmf_integrate(sys%m, rho(:, is))
-  end do
-  write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
-  call write_info(1)
-
-  call pop_sub()
-contains
-  subroutine from_userdef(m)
-    type(mesh_type), intent(in) :: m
-
-    integer :: i
-
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      rho(i, 1) = rho(i, 1) + real(s%Z_val, PRECISION)/(m%np*m%vol_pp)
-    end do
-  end subroutine from_userdef
-
-  subroutine from_jellium(m)
-    type(mesh_type), intent(in) :: m
-
-    integer :: i, in_points
-    FLOAT :: r
-
-    in_points = 0
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      if(r <= s%jradius) then
-        in_points = in_points + 1
-      end if
-    end do
-    
-    if(in_points > 0) then
-      do i = 1, m%np
-        call mesh_r(m, i, r, a=a%x)
-        if(r <= s%jradius) then
-          rho(i, 1) = rho(i, 1) + real(s%Z_val, PRECISION)/(in_points*m%vol_pp)
-        end if
-      end do
-    end if
-  end subroutine from_jellium
-  
-  subroutine from_pseudopotential(m)
-    type(mesh_type), intent(in) :: m
-    
-    integer :: i, n, is
-    integer, save :: j = 1
-    FLOAT :: r
-    R_TYPE :: psi1, psi2
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      do n = 1, s%ps%conf%p
-        if(r >= r_small) then
-          select case(sys%st%d%spin_channels)
-          case(1)
-            psi1 = loct_splint(s%ps%Ur(n, 1), r)
-            rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)  
-          case(2)
-            ! This is still a bit weird, but let us see how it works...
-            psi1 = loct_splint(s%ps%Ur(n, 1), r)
-            rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
-            rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
-            j = j + 1
-          end select
-        end if
-      end do
-    end do
-
-  end subroutine from_pseudopotential
-end subroutine lcao_dens
-
-subroutine lcao_init(sys, h)
-  type(system_type), intent(IN)      :: sys
-  type(hamiltonian_type), intent(IN) :: h
+subroutine lcao_init(m, st, geo, h)
+  type(mesh_type),        intent(in) :: m
+  type(states_type),      intent(in) :: st
+  type(geometry_type),    intent(in) :: geo
+  type(hamiltonian_type), intent(in) :: h
 
   integer :: norbs, i, ispin, a, ik, n1, i1, l, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
   integer, parameter :: orbs_local = 2
@@ -187,13 +78,13 @@ subroutine lcao_init(sys, h)
   call push_sub('lcao_init')
 
   ! Counting
-  allocate(lcao_data%atoml(sys%natoms, 6))
+  allocate(lcao_data%atoml(geo%natoms, 6))
   lcao_data%atoml = .true.
   norbs = 0
-  atoms_loop: do i1 = 1, sys%natoms
-    l_loop: do l1 = 1, sys%atom(i1)%spec%ps%conf%p
-      l = sys%atom(i1)%spec%ps%conf%l(l1)
-      if(sum(sys%atom(i1)%spec%ps%conf%occ(l1, :)).ne.M_ZERO) then
+  atoms_loop: do i1 = 1, geo%natoms
+    l_loop: do l1 = 1, geo%atom(i1)%spec%ps%conf%p
+      l = geo%atom(i1)%spec%ps%conf%l(l1)
+      if(sum(geo%atom(i1)%spec%ps%conf%occ(l1, :)).ne.M_ZERO) then
         norbs = norbs + (2*l+1)
       else
         lcao_data%atoml(i1, l1) = .false.
@@ -201,14 +92,14 @@ subroutine lcao_init(sys, h)
     end do l_loop
   end do atoms_loop
 
-  select case(sys%st%d%ispin)
+  select case(st%d%ispin)
   case(UNPOLARIZED);
   case(SPIN_POLARIZED); ! No need to multiply by two, since each spin-channel goes to a k-subspace.
   case(SPINORS); norbs = norbs * 2
   end select
 
   lcao_data%dim = norbs
-  if(norbs < sys%st%nst) then
+  if(norbs < st%nst) then
     write(message(1), '(a)') 'Internal bug: LCAO basis dimension, norbs, is smaller than'
     write(message(2), '(a)') 'number of required states.'
     call write_fatal(2)
@@ -216,18 +107,18 @@ subroutine lcao_init(sys, h)
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
   call write_info(1)
 
-  allocate(lcao_data%psis(sys%m%np, sys%st%dim, norbs, sys%st%nik))
+  allocate(lcao_data%psis(m%np, st%dim, norbs, st%nik))
   lcao_data%psis = M_ZERO
-  do ik = 1, sys%st%nik
+  do ik = 1, st%nik
      n1 = 1
-     do i1 = 1, sys%natoms
-        do l1 = 1, sys%atom(i1)%spec%ps%conf%p
-           l = sys%atom(i1)%spec%ps%conf%l(l1)
+     do i1 = 1, geo%natoms
+        do l1 = 1, geo%atom(i1)%spec%ps%conf%p
+           l = geo%atom(i1)%spec%ps%conf%l(l1)
            if(.not. lcao_data%atoml(i1, l1)) cycle
            do lm1 = -l, l
-              do d1 = 1, sys%st%dim
-                 ispin = states_spin_channel(sys%st%d%ispin, ik, d1)
-                 call get_wf(sys, i1, l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
+              do d1 = 1, st%dim
+                 ispin = states_spin_channel(st%d%ispin, ik, d1)
+                 call atom_get_wf(m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
                  n1 = n1 + 1
               end do
            end do
@@ -236,34 +127,32 @@ subroutine lcao_init(sys, h)
   end do
 
   ! Allocation of variables
-  allocate(lcao_data%hamilt (norbs, norbs, sys%st%nik), &
-           lcao_data%s      (norbs, norbs, sys%st%nik), &
-           lcao_data%k      (norbs, norbs, sys%st%nik), &
-           lcao_data%v      (norbs, norbs, sys%st%nik))
+  allocate(lcao_data%hamilt (norbs, norbs, st%nik), &
+           lcao_data%s      (norbs, norbs, st%nik), &
+           lcao_data%k      (norbs, norbs, st%nik), &
+           lcao_data%v      (norbs, norbs, st%nik))
 
   ! Overlap and kinetic+so matrices.
-  allocate(hpsi(sys%m%np, sys%st%dim))
-  do ik = 1, sys%st%nik
+  allocate(hpsi(m%np, st%dim))
+  do ik = 1, st%nik
     do n1 = 1, lcao_data%dim
-      call X(kinetic) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      call X(kinetic) (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys%st%dim, ik)
-!!$        call zso (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys%natoms, sys%atom, sys%st%dim, ik)
+        call zso (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), st%dim, ik)
 #endif
       case default
         message(1) = 'Error: Internal.'
       call write_fatal(1)
-      end select 
+      end select
  
       do n2 = n1, lcao_data%dim
-        lcao_data%k(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
-             hpsi, lcao_data%psis(1:, : ,n2, ik))
-        lcao_data%s(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
-             lcao_data%psis(:, :, n1, ik), lcao_data%psis(:, : ,n2, ik))
+        lcao_data%k(n1, n2, ik) = X(states_dotp)(m, st%dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%s(n1, n2, ik) = X(states_dotp)(m, st%dim, lcao_data%psis(:, :, n1, ik), &
+                                                 lcao_data%psis(:, : ,n2, ik))
       end do
       
     end do
@@ -286,9 +175,10 @@ subroutine lcao_end
   call pop_sub()
 end subroutine lcao_end
 
-subroutine lcao_wf(sys, h)
-  type(system_type), intent(inout) :: sys
-  type(hamiltonian_type), intent(in) :: h
+subroutine lcao_wf(m, st, h)
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(inout) :: st
+  type(hamiltonian_type), intent(in)    :: h
 
   integer, parameter :: orbs_local = 2
 
@@ -302,74 +192,43 @@ subroutine lcao_wf(sys, h)
   call push_sub('lcao_wf')
 
   norbs = lcao_data%dim
-  np = sys%m%np
-  dim = sys%st%dim
-  nst = sys%st%nst
+  np = m%np
+  dim = st%dim
+  nst = st%nst
 
   ! Hamiltonian and overlap matrices.
-  allocate(hpsi(sys%m%np, sys%st%dim))
-  do ik = 1, sys%st%nik
+  allocate(hpsi(np, dim))
+  do ik = 1, st%nik
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
-      call X(vlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
-!!$      if(sys%nlpp) call X(vnlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys, ik)
-      if(sys%nlpp) call X(vnlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      call X(vlpsi) (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       do n2 = n1, lcao_data%dim
-        lcao_data%v(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
-                                                      hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
         lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
       end do
     end do
   end do
   
-  do ik = 1, sys%st%nik
+  do ik = 1, st%nik
     allocate(ev(norbs))
     call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
          lcao_data%s(1:norbs, 1:norbs, ik), ev)
 
-    sys%st%eigenval(1:sys%st%nst, ik) = ev(1:sys%st%nst)
+    st%eigenval(1:nst, ik) = ev(1:nst)
     deallocate(ev)
 
-    sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
+    st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
     call X(lalg_gemm)(np*dim, nst, norbs, R_TOTYPE(M_ONE), lcao_data%psis(1:np, 1:dim, 1:norbs, ik), &
                       lcao_data%hamilt(1:norbs, 1:nst, ik), &
-                      R_TOTYPE(M_ZERO),sys%st%X(psi)(1:np, 1:dim, 1:nst, ik))
+                      R_TOTYPE(M_ZERO),st%X(psi)(1:np, 1:dim, 1:nst, ik))
 
    end do
 
   deallocate(hpsi)
   call pop_sub()
 end subroutine lcao_wf
-
-subroutine get_wf(sys, i, l, lm, ispin, psi)
-  type(system_type), intent(IN) :: sys
-  integer, intent(in)   :: i, l, lm, ispin
-  R_TYPE, intent(out) :: psi(sys%m%np)
-    
-  integer :: j, d2, ll
-  FLOAT :: x(3), a(3), r, p, ylm, g(3)
-  type(loct_spline_type), pointer :: s
-
-  call push_sub('get_wf')
-    
-  a = sys%atom(i)%x
-  if(sys%atom(i)%spec%local) then
-    ! add a couple of harmonic oscilator functions
-  else
-    s => sys%atom(i)%spec%ps%Ur(l, ispin)
-
-    ll = sys%atom(i)%spec%ps%conf%l(l)
-    do j = 1, sys%m%np
-      call mesh_r(sys%m, j, r, x=x, a=a)
-      p = loct_splint(s, r)
-      ylm = loct_ylm(x(1), x(2), x(3), ll, lm)
-      psi(j) = p * ylm
-    end do
-  end if
- 
-  call pop_sub()
-end subroutine get_wf
 
 end module lcao

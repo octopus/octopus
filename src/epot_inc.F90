@@ -15,9 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine X(epot_forces) (ep, sys, t, reduce_)
+subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   type(epot_type),   intent(in)    :: ep
-  type(system_type), intent(inout) :: sys
+  type(mesh_type), intent(in) :: mesh
+  type(geometry_type), intent(inout) :: geo
+  type(states_type), intent(in) :: st
   FLOAT,          intent(in), optional :: t
   logical,           intent(in), optional :: reduce_
 
@@ -29,33 +31,34 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
 #if defined(HAVE_MPI) && defined(MPI_TD)
   FLOAT :: f(3)
   integer :: ierr
-#endif 
+#endif
   
   ! init to 0
-  do i = 1, sys%natoms
-    sys%atom(i)%f = M_ZERO
+  do i = 1, geo%natoms
+    geo%atom(i)%f = M_ZERO
   end do
 
+
   ivnl = 1
-  atm_loop: do i = 1, sys%natoms
-    atm => sys%atom(i)
+  atm_loop: do i = 1, geo%natoms
+    atm => geo%atom(i)
     if(atm%spec%local) cycle
 
     add_lm = add_lm + 1
     do l = 0, atm%spec%ps%l_max
        do m = -l, l
 
-          ik_loop: do ik = 1, sys%st%nik
-             st_loop: do ist = sys%st%st_start, sys%st%st_end
-                dim_loop: do idim = 1, sys%st%dim
+          ik_loop: do ik = 1, st%nik
+             st_loop: do ist = st%st_start, st%st_end
+                dim_loop: do idim = 1, st%dim
                    do ii = 1, ep%vnl(ivnl)%c
                       do jj = 1, ep%vnl(ivnl)%c
                          uvpsi = sum( ep%vnl(ivnl)%uv(:, ii) * &
-                                      sys%st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) ) * &
-                                 sys%st%occ(ist, ik) * sys%m%vol_pp**2 * ep%vnl(ivnl)%uvu(ii, jj)
+                                      st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) ) * &
+                                 st%occ(ist, ik) * mesh%vol_pp**2 * ep%vnl(ivnl)%uvu(ii, jj)
                          do j = 1, conf%dim
                             p = sum( ep%vnl(ivnl)%duv(j, :, jj) * &
-                                     R_CONJ(sys%st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik)) )
+                                     R_CONJ(st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik)) )
                             atm%f(j) = atm%f(j) + M_TWO * R_REAL(uvpsi * p)
                          end do
                       end do
@@ -71,8 +74,8 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
   end do atm_loop
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-  do i = 1, sys%natoms
-    atm => sys%atom(i)
+  do i = 1, geo%natoms
+    atm => geo%atom(i)
     if(atm%spec%local) cycle
     if(present(reduce_)) then
       if(reduce_) then
@@ -83,18 +86,18 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
     end if
   enddo
 #endif
-
+  
   ! Now the ion, ion force term
-  do i = 1, sys%natoms
-    zi = sys%atom(i)%spec%Z_val
-    do j = 1, sys%natoms
+  do i = 1, geo%natoms
+    zi = geo%atom(i)%spec%Z_val
+    do j = 1, geo%natoms
       if(i .ne. j) then
-        zj = sys%atom(j)%spec%Z_val
-        r = sqrt(sum((sys%atom(i)%x(1:conf%dim) - sys%atom(j)%x(1:conf%dim))**2))
+        zj = geo%atom(j)%spec%Z_val
+        r = sqrt(sum((geo%atom(i)%x(1:conf%dim) - geo%atom(j)%x(1:conf%dim))**2))
         d = zi * zj/r**3
         
-        sys%atom(i)%f(1:conf%dim) = sys%atom(i)%f(1:conf%dim) + &
-             d*(sys%atom(i)%x(1:conf%dim) - sys%atom(j)%x(1:conf%dim))
+        geo%atom(i)%f(1:conf%dim) = geo%atom(i)%f(1:conf%dim) + &
+             d*(geo%atom(i)%x(1:conf%dim) - geo%atom(j)%x(1:conf%dim))
       end if
     end do
   end do
@@ -110,9 +113,9 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
 
   if(present(t).and.ep%no_lasers>0) then
     call epot_laser_field(ep, t, x)
-    do i = 1, sys%natoms
-      sys%atom(i)%f(1:conf%dim) = sys%atom(i)%f(1:conf%dim) + &
-           sys%atom(i)%spec%Z_val * x(1:conf%dim)
+    do i = 1, geo%natoms
+      geo%atom(i)%f(1:conf%dim) = geo%atom(i)%f(1:conf%dim) + &
+           geo%atom(i)%spec%Z_val * x(1:conf%dim)
     end do
   end if
   
@@ -121,16 +124,16 @@ contains
     FLOAT :: r, x(3), d, gv(3)
     integer  :: ns
     
-    ns = min(2, sys%st%d%nspin)
+    ns = min(2, st%d%nspin)
     
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
-      do j = 1, sys%m%np
-        call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
+    do i = 1, geo%natoms
+      atm => geo%atom(i)
+      do j = 1, mesh%np
+        call mesh_r(mesh, j, r, x=x, a=atm%x)
         if(r < r_small) cycle
         
         call specie_get_glocal(atm%spec, x, gv)
-        d = sum(sys%st%rho(j, 1:ns))*sys%m%vol_pp
+        d = sum(st%rho(j, 1:ns))*mesh%vol_pp
         atm%f(:) = atm%f(:) - d*gv(:)
       end do
     end do
@@ -141,22 +144,22 @@ contains
     type(dcf) :: cf_for
     FLOAT, allocatable :: force(:)
     
-    allocate(force(sys%m%np))
+    allocate(force(mesh%np))
     call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist
     call dcf_alloc_FS(cf_for)
     call dcf_alloc_RS(cf_for)
     
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
+    do i = 1, geo%natoms
+      atm => geo%atom(i)
       do j = 1, conf%dim
         cf_for%FS = M_z0
-        call cf_phase_factor(sys%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
+        call cf_phase_factor(mesh, atm%x, ep%local_cf(atm%spec%index), cf_for)
         
-        call dcf_FS_grad(sys%m, cf_for, j)
+        call dcf_FS_grad(mesh, cf_for, j)
         call dcf_FS2RS(cf_for)
-        call dcf2mf(sys%m, cf_for, force)
-        do l = 1, sys%st%d%nspin
-          atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
+        call dcf2mf(mesh, cf_for, force)
+        do l = 1, st%d%nspin
+          atm%f(j) = atm%f(j) + sum(force(:)*st%rho(:, l))*mesh%vol_pp
         end do
       end do
     end do

@@ -15,18 +15,18 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, reorder)
+subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, reorder)
   use trl_info
   use trl_interface
 
-  type(states_type), target, intent(inout)   :: st
-  type(system_type), target, intent(IN)      :: sys
-  type(hamiltonian_type), target, intent(IN) :: h
+  type(mesh_type),        target, intent(in)    :: m
+  type(states_type),      target, intent(inout) :: st
+  type(hamiltonian_type), target, intent(in) :: h
   FLOAT, intent(in)               :: tol
-  integer, intent(inout)             :: niter
-  integer, intent(out)               :: errorflag, converged
+  integer, intent(inout)          :: niter
+  integer, intent(out)            :: errorflag, converged
   FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
-  logical, intent(in), optional      :: reorder
+  logical, intent(in), optional   :: reorder
 
   integer :: unit, i
   integer :: nrow, lohi, ned, maxlan, mev, lwrk
@@ -35,7 +35,7 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   call push_sub('eigen_solver_cg3')
 
-  nrow = (sys%m%np+1)*st%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
+  nrow = (m%np+1)*st%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
 
 !!$  allocate(evec(sys%m%np, st%dim, mev))
 
@@ -55,11 +55,9 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
      enddo
   enddo
 
-
-  h_trlan   => h
-  m_trlan   => sys%m
-  st_trlan  => st
-  sys_trlan => sys
+  h_trlan  => h
+  m_trlan  => m
+  st_trlan => st
 
   do ik_trlan = 1, st%nik
 !!$     do i = 1, st%nst
@@ -82,14 +80,14 @@ subroutine eigen_solver_cg3(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   enddo
 
-  call X(lalg_scal)(sys%m%np*st%dim*st%nst*st%nik, &
-       R_TOTYPE(1.0/sqrt(sys%m%vol_pp)), st%X(psi)(1,1,1,1), 1)
+  call X(lalg_scal)(m%np*st%dim*st%nst*st%nik, &
+       R_TOTYPE(1.0/sqrt(m%vol_pp)), st%X(psi)(1,1,1,1), 1)
 
   if(conf%verbose > 999) then
     call io_close(unit)
   endif
 
-  nullify(h_trlan, m_trlan, st_trlan, sys_trlan)
+  nullify(h_trlan, m_trlan, st_trlan)
   call pop_sub()
 end subroutine eigen_solver_cg3
 
@@ -101,8 +99,7 @@ subroutine op(nrow, ncol, xin, ldx, yout, ldy)
   integer :: i
 
   do i = 1, ncol
-     call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), sys_trlan, ik_trlan)
-!!$     call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), ik_trlan)
+     call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), ik_trlan)
   enddo
 
 end subroutine op

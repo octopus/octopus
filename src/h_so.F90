@@ -29,7 +29,6 @@ subroutine zso (h, m, psi, hpsi, dim, ik)
   CMPLX :: uvpsi
 
   call push_sub('zso')
-
   do ivnl = 1, h%ep%nvnl
      nlop => h%ep%vnl(ivnl)
      mps = nlop%n
@@ -66,12 +65,12 @@ subroutine zso (h, m, psi, hpsi, dim, ik)
                                tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
                      call zlalg_axpy(mps, -uvpsi/2, nlop%so_uv(1:mps, jkbc), &
                             tHpsi(1, 2))
-        enddo
-     enddo
+        end do
+     end do
      hpsi(nlop%jxyz(:), 1) = hpsi(nlop%jxyz(:), 1) + thpsi(:, 1)
      hpsi(nlop%jxyz(:), 2) = hpsi(nlop%jxyz(:), 2) + thpsi(:, 2)
      deallocate(tpsi, thpsi)
-  enddo
+  end do
 
   call pop_sub()
 end subroutine zso

@@ -22,7 +22,6 @@ use global
 use lib_oct_parser
 use units
 use math
-use atom
   
 implicit none
 
@@ -75,17 +74,15 @@ end type mesh_type
 
 contains
 
-subroutine mesh_init(m, natoms, atom)
+subroutine mesh_init(m)
   type(mesh_type), intent(inout) :: m
-  integer, intent(in), optional :: natoms
-  type(atom_type), pointer, optional :: atom(:)
 
   integer :: i, k, morder
   logical :: fft_optimize
 
   call push_sub('mesh_init')
 
-  call mesh_create(m, natoms, atom)
+  call mesh_create(m)
 
   call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
   if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then

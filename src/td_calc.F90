@@ -41,69 +41,69 @@
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
     ! Maybe we are forgetting something....
     x = M_ZERO
-    call zepot_forces(h%ep, sys)
-    do i = 1, sys%natoms
-      x = x - sys%atom(i)%f
+    call zepot_forces(h%ep, mesh, st, geo)
+    do i = 1, geo%natoms
+      x = x - geo%atom(i)%f
     enddo
     acc = x
     
     ! Adds the laser contribution : i<[V_laser, p]>
     if(h%ep%no_lasers > 0) then
       call epot_laser_field(h%ep, t, field)
-      acc(1:3) = acc(1:3) - sys%st%qtot*field(1:3)
+      acc(1:3) = acc(1:3) - st%qtot*field(1:3)
     end if
     
-    if(.not.sys%nlpp) then
+    if(h%ep%nvnl <= 0) then
       call pop_sub()
       return
     end if
 
     ! And now, i<[H,[V_nl,x]]>
     x = M_ZERO
-    allocate(hzpsi(sys%m%np, sys%st%dim), hhzpsi(3, sys%m%np))
+    allocate(hzpsi(mesh%np, st%d%dim), hhzpsi(3, mesh%np))
 
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
         
-        call zhpsi(h, sys%m, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
+        call zhpsi(h, mesh, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
         call epot_laser_field(h%ep, t, field)
-        do k = 1, sys%m%np
-          call mesh_xyz(sys%m, k, mesh_x)
-          hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)
+        do k = 1, mesh%np
+          call mesh_xyz(mesh, k, mesh_x)
+          hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * st%zpsi(k,:,ist,ik)
         end do
         
-        allocate(xzpsi(sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
+        allocate(xzpsi(mesh%np, st%d%dim, 3), vnl_xzpsi(mesh%np, st%d%dim))
         xzpsi = M_z0
-        do k = 1, sys%m%np
+        do k = 1, mesh%np
           do j = 1, conf%dim
-            xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
+            xzpsi(k, 1:st%d%dim, j) = mesh%Lxyz(j, k)*mesh%h(j) * st%zpsi(k, 1:st%d%dim, ist, ik)
           end do
         end do
          
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(h, sys%m, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim), ik)
+          call zvnlpsi(h, mesh, xzpsi(mesh%np, 1:st%d%dim, j), vnl_xzpsi(1:mesh%np, 1:st%d%dim), ik)
                
-          do idim = 1, sys%st%dim
-            x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmf_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
-                 vnl_xzpsi(1:sys%m%np, idim) )
+          do idim = 1, st%d%dim
+            x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(mesh, R_CONJ(hzpsi(1:mesh%np, idim)), &
+                 vnl_xzpsi(1:mesh%np, idim) )
           end do
         end do
            
         xzpsi = M_z0
-        do k = 1, sys%m%np
+        do k = 1, mesh%np
           do j = 1, conf%dim
-            xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * hzpsi(k, 1:sys%st%dim)
+            xzpsi(k, 1:st%d%dim, j) = mesh%Lxyz(j, k)*mesh%h(j) * hzpsi(k, 1:st%d%dim)
           end do
         end do
         
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(h, sys%m, xzpsi(sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim), ik)
-          do idim = 1, sys%st%dim
-            x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
-                  zmf_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
-                  vnl_xzpsi(1:sys%m%np, idim) )
+          call zvnlpsi(h, mesh, xzpsi(mesh%np, 1:st%d%dim, j), vnl_xzpsi(1:mesh%np, 1:st%d%dim), ik)
+          do idim = 1, st%d%dim
+            x(j) = x(j) + 2*st%occ(ist, ik)* &
+                  zmf_dotp(mesh, R_CONJ(st%zpsi(1:mesh%np, idim, ist, ik)), &
+                  vnl_xzpsi(1:mesh%np, idim) )
           end do
         end do
         deallocate(xzpsi, vnl_xzpsi)

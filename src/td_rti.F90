@@ -18,7 +18,10 @@
 #include "global.h"
 
 module td_rti
-  use mix
+  use global
+  use mesh
+  use states
+  use hamiltonian
   use td_exp
 
   implicit none
@@ -103,11 +106,10 @@ contains
     tr%v_old(:, :, 1) = h%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
-  subroutine td_rti_dt(h, m, st, sys, tr, t, dt)
+  subroutine td_rti_dt(h, m, st, tr, t, dt)
     type(hamiltonian_type), intent(inout) :: h
     type(mesh_type), intent(in) :: m
     type(states_type), intent(inout) :: st
-    type(system_type), intent(in) :: sys
     type(td_rti_type), intent(inout) :: tr
     FLOAT, intent(in) :: t, dt
 
@@ -143,7 +145,7 @@ contains
         tr%v_old(:, :, 3) = tr%v_old(:, :, 0)
 
         call zcalcdens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, st, sys)
+        call zh_calc_vhxc(h, m, st)
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
@@ -172,21 +174,21 @@ contains
       
       do ik = 1, st%nik
          do ist = 1, st%nst
-            call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
+            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
       call zcalcdens(st, m%np, st%rho, .true.)
-      call zh_calc_vhxc(h, m, st, sys)
+      call zh_calc_vhxc(h, m, st)
       do ik = 1, st%nik
          do ist = 1, st%nst
-            if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
-            call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
-            if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
+            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
+            call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
+            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
          enddo
       enddo
       do ik = 1, st%nik
          do ist = 1, st%nst
-            call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
+            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
 
@@ -212,11 +214,11 @@ contains
          call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
          do ik = 1, st%nik
             do ist = 1, st%nst
-               call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
-               if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
-               call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_zI*dtime(k))
-               if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .false.)
-               call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
+               call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_zI*dtime(k))
+               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .false.)
+               call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             enddo
          enddo
       enddo
@@ -241,12 +243,12 @@ contains
         ! propagate dt with H(t-dt)
         do ik = 1, st%nik
           do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
+            call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
           end do
         end do
         
         call zcalcdens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, st, sys)
+        call zh_calc_vhxc(h, m, st)
         
         st%zpsi = zpsi1
         deallocate(zpsi1)
@@ -258,7 +260,7 @@ contains
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
@@ -266,7 +268,7 @@ contains
       h%vhxc = vhxc_t2
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -281,14 +283,14 @@ contains
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-           call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+           call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -305,7 +307,7 @@ contains
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
+          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
         end do
       end do
       
@@ -355,7 +357,7 @@ contains
 
       do k = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, sys, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
+          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
                          vmagnus = tr%vmagnus)
         end do
       end do

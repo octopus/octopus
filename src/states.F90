@@ -95,10 +95,11 @@ subroutine states_null(st)
   nullify(st%d%kpoints, st%d%kweights)
 end subroutine states_null
 
-subroutine states_init(st, m, val_charge)
+subroutine states_init(st, m, val_charge, nlcc)
   type(states_type), intent(inout) :: st
   type(mesh_type), intent(IN) :: m
   FLOAT, intent(in) :: val_charge
+  logical, intent(in), optional :: nlcc
 
   FLOAT :: excess_charge, r
   integer :: nempty, i, j
@@ -196,7 +197,9 @@ subroutine states_init(st, m, val_charge)
   if(st%d%ispin == SPINORS) then
     allocate(st%mag(st%nst, st%d%nik, 2))
   end if
-
+  if (present(nlcc)) then
+    if(nlcc) allocate(st%rho_core(m%np))
+  end if
 
   str = "Occupations"
   occ_fix: if(loct_parse_isdef(str) .ne. 0) then
@@ -530,11 +533,17 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
 end subroutine states_calculate_multipoles
 
 ! function to calculate the eigenvalues sum using occupations as weights
-function states_eigenvalues_sum(st)
-  FLOAT :: states_eigenvalues_sum
+function states_eigenvalues_sum(st) result(e)
+  FLOAT :: e
   type(states_type), intent(in) :: st
 
-  states_eigenvalues_sum = sum(st%eigenval * st%occ)
+  integer :: ik
+
+  e = M_ZERO
+  do ik = 1, st%d%nik
+    e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
+         st%eigenval(st%st_start:st%st_end, ik))
+  end do
 
 end function states_eigenvalues_sum
 

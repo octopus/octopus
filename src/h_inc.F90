@@ -16,22 +16,22 @@
 !! 02111-1307, USA.
 
 ! calculates the eigenvalues of the real orbitals
-subroutine X(hamiltonian_eigenval)(h, st, sys)
+subroutine X(hamiltonian_eigenval)(h, m, st)
   type(hamiltonian_type), intent(IN) :: h
+  type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
-  type(system_type), intent(in) :: sys
 
   R_TYPE, allocatable :: Hpsi(:,:)
   R_TYPE :: e
   integer :: ik, ist
 
   call push_sub('hamiltonian_eigenval')
-  allocate(Hpsi(sys%m%np, st%dim))
+  allocate(Hpsi(m%np, st%d%dim))
 
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
-      call X(hpsi) (h, sys%m, st%X(psi)(:, :, ist, ik), hpsi, ik)
-      e = X(states_dotp)(sys%m, st%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
+      call X(hpsi) (h, m, st%X(psi)(:, :, ist, ik), hpsi, ik)
+      e = X(states_dotp)(m, st%d%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
   end do
@@ -52,7 +52,7 @@ subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
 
   call X(kinetic) (h, m, psi, hpsi, ik)
   call X(vlpsi)   (h, m, psi, hpsi, ik)
-  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, psi, hpsi, ik)
+  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, hpsi, ik)
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -94,7 +94,7 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
   call X(kinetic) (h, m, psi, hpsi, ik)
 
   auxpsi = hpsi
-  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, psi, auxpsi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
     hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
@@ -117,7 +117,7 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
     end if
   end select
   call X(kinetic) (h, m, auxpsi, aux2psi, ik)
-  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, auxpsi, aux2psi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, auxpsi, aux2psi, ik)
   hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
 
   do idim = 1, h%d%dim
@@ -134,7 +134,7 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
       hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
     end if
   end select
-  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, psi, Hpsi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, Hpsi, ik)
   call X(vborders) (h, m, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
@@ -351,11 +351,10 @@ subroutine X(vborders) (h, m, psi, hpsi)
   call pop_sub()
 end subroutine X(vborders)
 
-subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
+subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
   type(hamiltonian_type), intent(inout) :: h
   type(mesh_type),        intent(in)    :: m
   type(states_type),      intent(inout) :: st
-  type(system_type),      intent(in)    :: sys
   logical, intent(in), optional         :: calc_eigenval
 
   integer :: is
@@ -374,12 +373,12 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
     ! now we add the hartree contribution
     allocate(vhartree(m%np))
     vhartree = M_ZERO
-    if(st%d%spin_channels == 1) then
+    if(h%d%spin_channels == 1) then
       call poisson_solve(m, vhartree, st%rho(:, 1))
     else
       allocate(rho_aux(m%np))                    ! need an auxiliary array to
       rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
-      do is = 2, st%d%spin_channels
+      do is = 2, h%d%spin_channels
         rho_aux(:) = rho_aux(:) + st%rho(:, is)
       end do
       call poisson_solve(m, vhartree, rho_aux) ! solve the poisson equation
@@ -397,14 +396,14 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
 
     ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
     ! this yields the correct formula epot = - int n (vxc + vH/2)
-    do is = 1, st%d%spin_channels
+    do is = 1, h%d%spin_channels
       h%epot = h%epot + M_HALF*dmf_dotp(m, st%rho(:, is), vhartree)
     end do
     deallocate(vhartree)
 
     ! next 3 lines are for an RPA calculation
     !if(RPA_first) then
-    !  allocate(RPA_Vhxc(sys%m%np, sys%st%d%nspin))
+    !  allocate(RPA_Vhxc(m%np, h%d%nspin))
     !  RPA_Vhxc = h%vhxc
 
     ! now we calculate the xc terms
@@ -413,7 +412,7 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
 
     ! The OEP family has to handle specially
     if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
-      call X(h_xc_oep)(h%xc, m, h, sys, st, h%vhxc, h%ex, h%ec)
+      call X(h_xc_oep)(h%xc, m, h, st, h%vhxc, h%ex, h%ec)
     end if
 
     ! next 5 lines are for an RPA calculation
@@ -439,7 +438,7 @@ subroutine X(h_calc_vhxc)(h, m, st, sys, calc_eigenval)
   end if
 
   ! this, I think, belongs here
-  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, st, sys)
+  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, m, st)
 
   call pop_sub()
 end subroutine X(h_calc_vhxc)

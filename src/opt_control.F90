@@ -24,17 +24,20 @@ use lib_oct_parser
 use io
 use states
 use hamiltonian
-use system
 use timedep
+use td_rti
 
 implicit none
 
 contains
 
-subroutine opt_control_run(td, sys, h)
+subroutine opt_control_run(td, m, st, val_charge, h, outp)
   type(td_type), intent(inout) :: td
-  type(system_type), intent(inout) :: sys
+  type(mesh_type), intent(in)  :: m
+  type(states_type), intent(inout), target :: st
+  FLOAT,                   intent(in) :: val_charge
   type(hamiltonian_type), intent(inout) :: h
+  type(output_type), intent(in) :: outp
 
   type(states_type), pointer :: psi_i
   type(states_type)          :: psi_f
@@ -60,9 +63,9 @@ subroutine opt_control_run(td, sys, h)
 
     ! setup forward propagation
     call read_state(psi_i, "wf.initial")
-    call zcalcdens(psi_i, sys%m%np, psi_i%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_i, sys, calc_eigenval=.true.)
-    do i = 1, sys%st%d%nspin
+    call zcalcdens(psi_i, m%np, psi_i%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_i, calc_eigenval=.true.)
+    do i = 1, st%d%nspin
       v_old_i(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_i(:, :, 3) = v_old_i(:, :, 2)
@@ -86,9 +89,9 @@ subroutine opt_control_run(td, sys, h)
 
     ! setup backward propagation
     call read_state(psi_f, "wf.final")
-    call zcalcdens(psi_f, sys%m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_f, sys, calc_eigenval=.true.)
-    do i = 1, sys%st%d%nspin
+    call zcalcdens(psi_f, m%np, psi_f%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
+    do i = 1, st%d%nspin
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
@@ -139,16 +142,16 @@ contains
     ! psi_f
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
-    call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_f, sys, calc_eigenval=.true.)
-    call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(h, m, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
-    call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_i, sys, calc_eigenval=.true.)
-    call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zcalcdens(psi_i, m%np, st%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(h, m, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter1
 
@@ -161,16 +164,16 @@ contains
     ! psi_i
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
-    call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_i, sys, calc_eigenval=.true.)
-    call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zcalcdens(psi_i, m%np, st%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(h, m, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
-    call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_f, sys, calc_eigenval=.true.)
-    call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(h, m, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter2
 
@@ -183,21 +186,21 @@ contains
     integer :: ik, p, dim, i, j
 
     d1 = M_z0; d2 = M_z0
-    allocate(grad(3, sys%m%np))
+    allocate(grad(3, m%np))
     do ik = 1, psi_i%nik
       do p  = psi_i%st_start, psi_i%st_end
         do dim = 1, psi_i%dim
-          do i = 1, sys%m%np
+          do i = 1, m%np
             d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik)
             d2(1:conf%dim) = d2(1:conf%dim) + &
-                 conjg(psi_f%zpsi(i, dim, p, ik))*sys%m%Lxyz(1:conf%dim, i)*psi_i%zpsi(i, dim, p, ik)
+                 conjg(psi_f%zpsi(i, dim, p, ik))*m%Lxyz(1:conf%dim, i)*psi_i%zpsi(i, dim, p, ik)
           end do
         end do
       end do
     end do
 
-    d1 = d1*sys%m%vol_pp
-    d2(1:conf%dim) = -d2(1:conf%dim)*sys%m%h(1:conf%dim)*sys%m%vol_pp
+    d1 = d1*m%vol_pp
+    d2(1:conf%dim) = -d2(1:conf%dim)*m%h(1:conf%dim)*m%vol_pp
 
     l(2*iter, 1:conf%dim) = -aimag(d1*d2(1:conf%dim))/alpha
     functional = functional + sum(l(2*iter, 1:conf%dim)**2)*abs(td%dt)
@@ -222,11 +225,11 @@ contains
     call read_state(psi_f, "wf.final")
 
     ! setup the hamiltonian
-    call zcalcdens(psi_f, sys%m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(h, sys%m, psi_f, sys, calc_eigenval=.true.)
+    call zcalcdens(psi_f, m%np, psi_f%rho, reduce=.true.)
+    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
     
     ! setup start of the propagation
-    do i = 1, sys%st%d%nspin
+    do i = 1, st%d%nspin
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
@@ -239,10 +242,10 @@ contains
     call loct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
-      call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(i*td%dt), abs(td%dt))
+      call td_rti_dt(h, m, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
       ! update
-      call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
-      call zh_calc_vhxc(h, sys%m, psi_f, sys, calc_eigenval=.true.)
+      call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
+      call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
 
       call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
@@ -258,7 +261,7 @@ contains
     do ik = 1, psi_i%nik
       do p  = psi_i%st_start, psi_i%st_end
         ! WARNING gives garbage when calculated through zstates_dotp
-        overlap = abs(sum(conjg(psi_i%zpsi(1:,:, p, ik))*psi_f%zpsi(1:,:, p, ik))*sys%m%vol_pp)**2
+        overlap = abs(sum(conjg(psi_i%zpsi(1:,:, p, ik))*psi_f%zpsi(1:,:, p, ik))*m%vol_pp)**2
         functional = overlap - alpha*functional
         write(message(1), '(6x,i3,1x,i3,a,f16.10,a,f16.10)') ik, p, " => overlap:", overlap, "  functional: " , functional
         call write_info(1)
@@ -270,7 +273,7 @@ contains
     type(states_type), intent(out) :: st
     character(len=*), intent(in) :: filename
 
-    if(.not.zstates_load_restart("opt-control/"+trim(filename), sys%m, st)) then
+    if(.not.zstates_load_restart("opt-control/"+trim(filename), m, st)) then
       message(1) = "Could not read file 'opt-control/"+trim(filename)+"'"
       call write_fatal(1)
     end if
@@ -302,26 +305,26 @@ contains
     call io_close(iunit)
 
     ! should output wavefunctions ;)
-    call zstates_output(psi_i, sys%m, "opt-control", sys%outp)
+    call zstates_output(psi_i, m, "opt-control", outp)
   end subroutine output
 
   subroutine init()
     integer :: t
 
     ! psi_i is initialized in system_init
-    psi_i => sys%st
+    psi_i => st
     v_old_i => td%tr%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
-    call states_init(psi_f, sys%m, sys%val_charge)
-    if(sys%nlcc) then
-      allocate(psi_f%rho_core(sys%m%np))
-      psi_f%rho_core(sys%m%np) = psi_i%rho_core(sys%m%np)
+    call states_init(psi_f, m, val_charge)
+    if(h%ep%nvnl > 0) then
+      allocate(psi_f%rho_core(m%np))
+      psi_f%rho_core(m%np) = psi_i%rho_core(m%np)
     end if
     psi_f%st_start = psi_i%st_start
     psi_f%st_end = psi_i%st_end
-    allocate(psi_f%zpsi(sys%m%np, psi_f%dim, psi_f%st_start:psi_f%st_end, psi_f%nik))
-    allocate(v_old_f(sys%m%np, psi_f%nspin, 3))
+    allocate(psi_f%zpsi(m%np, psi_f%dim, psi_f%st_start:psi_f%st_end, psi_f%nik))
+    allocate(v_old_f(m%np, psi_f%nspin, 3))
     
     ! prepare the initial laser
     if(h%ep%no_lasers.ne.0) then

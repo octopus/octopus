@@ -24,9 +24,9 @@ module phonons
   use io
   use lib_adv_alg
   use external_pot
+  use geometry
   use hamiltonian
   use states
-  use system
   use scf
 
   implicit none
@@ -43,10 +43,13 @@ module phonons
 
 contains
 
-  subroutine phonons_run(scf, sys, h)
-    type(system_type), intent(inout) :: sys
+  subroutine phonons_run(scf, m, st, geo, h, outp)
+    type(scf_type),         intent(inout) :: scf
+    type(mesh_type),        intent(in)    :: m
+    type(states_type),      intent(inout) :: st
+    type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
-    type(scf_type), intent(inout) :: scf
+    type(output_type),      intent(in)    :: outp
     
     type(phonons_type) :: ph
     integer :: i, j, iunit
@@ -54,14 +57,14 @@ contains
     ! create directory for output
     call loct_mkdir('phonons')
 
-    ph%dim = sys%natoms*3
+    ph%dim = geo%natoms*3
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
     call loct_parse_float("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_DM(scf, sys, h, ph)
+    call get_DM(scf, m, st, geo, h, outp, ph)
 
     ! output phonon frequencies and eigenvectors
     call io_assign(iunit)
@@ -86,59 +89,62 @@ contains
     deallocate(ph%DM, ph%freq)
   end subroutine phonons_run
 
-  subroutine get_DM(scf, sys, h, ph)
-    type(system_type), intent(inout) :: sys
+  subroutine get_DM(scf, m, st, geo, h, outp, ph)
+    type(scf_type),         intent(inout) :: scf
+    type(mesh_type),        intent(in)    :: m
+    type(states_type),      intent(inout) :: st
+    type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
-    type(scf_type), intent(inout) :: scf
-    type(phonons_type), intent(inout) :: ph
+    type(output_type),      intent(in)    :: outp
+    type(phonons_type),     intent(inout) :: ph
 
     integer :: i, j, alpha, beta, n, iunit
     FLOAT :: energ
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
-    allocate(forces0(sys%natoms, 3), forces(sys%natoms, 3))
-    n = sys%natoms*3
+    allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))
+    n = geo%natoms*3
 
     call io_assign(iunit)
     open(iunit, file='phonons/DM', status='unknown')
 
-    do i = 1, sys%natoms
+    do i = 1, geo%natoms
       do alpha = 1, 3
         write(message(1), '(a,i3,a,i2)') 'Info: Moving atom ', i, ' in the direction ', alpha
         call write_info(1)
 
         ! move atom i in direction alpha by dist
-        sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) + ph%disp
+        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
 
         ! first force
-        call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
-        call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
-        call X(h_calc_vhxc) (h, sys%m, sys%st, sys, calc_eigenval=.true.)
-        call hamiltonian_energy (h, sys%st, sys%eii, -1)
-        call scf_run(scf, sys, h)
-        do j = 1, sys%natoms
-          forces0(j, :) = sys%atom(j)%f(:)
+        call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+        call X(calcdens) (st, m%np, st%rho)
+        call X(h_calc_vhxc) (h, m, st, calc_eigenval=.true.)
+        call hamiltonian_energy (h, st, geo%eii, -1)
+        call scf_run(scf, m, st, geo, h, outp)
+        do j = 1, geo%natoms
+          forces0(j, :) = geo%atom(j)%f(:)
         end do
 
-        sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) - M_TWO*ph%disp
+        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*ph%disp
 
         ! second force
-        call epot_generate(h%ep, sys%m, sys, h%Vpsl, h%reltype)
-        call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
-        call X(h_calc_vhxc) (h, sys%m, sys%st, sys, calc_eigenval=.true.)
-        call hamiltonian_energy(h, sys%st, sys%eii, -1)
-        call scf_run(scf, sys, h)
-        do j = 1, sys%natoms
-          forces(j, :) = sys%atom(j)%f(:)
+        call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+        call X(calcdens) (st, m%np, st%rho)
+        call X(h_calc_vhxc) (h, m, st, calc_eigenval=.true.)
+        call hamiltonian_energy(h, st, geo%eii, -1)
+        call scf_run(scf, m, st, geo, h, outp)
+        do j = 1, geo%natoms
+          forces(j, :) = geo%atom(j)%f(:)
         end do
 
-        sys%atom(i)%x(alpha) = sys%atom(i)%x(alpha) + ph%disp
+        geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
 
-        do j = 1, sys%natoms
+        do j = 1, geo%natoms
           do beta = 1, 3
             ph%DM(3*(i-1) + alpha, 3*(j-1) + beta) = &
                  (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
-                 * sqrt(sys%atom(i)%spec%weight*sys%atom(j)%spec%weight))
+                 * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
             write(iunit, '(es14.5)', advance='no') ph%DM(3*(i-1) + alpha, 3*(j-1) + beta)
           end do
         end do

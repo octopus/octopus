@@ -25,7 +25,6 @@ module td_exp_split
   use mesh
   use states
   use hamiltonian
-  use system
 
   implicit none
 
@@ -33,11 +32,10 @@ contains
 
   !!! Calculates psi = exp{factor*T} psi
   !!! where T is the kinetic energy operator
-  subroutine zexp_kinetic (m, st, h, psi, ik, cf, factor)
+  subroutine zexp_kinetic (m, h, psi, ik, cf, factor)
     type(mesh_type), intent(in) :: m
-    type(states_type), intent(in) :: st
     type(hamiltonian_type), intent(in) :: h
-    CMPLX, intent(inout) :: psi(m%np, st%dim)
+    CMPLX, intent(inout) :: psi(m%np, h%d%dim)
     integer, intent(in) :: ik
     type(zcf), intent(inout) :: cf
     CMPLX, intent(in) :: factor
@@ -64,7 +62,7 @@ contains
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
 
-    do idim = 1, st%dim
+    do idim = 1, h%d%dim
       call zmf2cf(m, psi(:, idim), cf)
       call zcf_RS2FS(cf)
 
@@ -93,26 +91,21 @@ contains
 
   !!! Calculates psi = exp{factor*V_KS(t)} psi
   !!! where V_KS is the Kohn-Sham potential
-  !!! WARNING: The "st" thing is completely unnecessary, and should be removed.
-  subroutine zexp_vlpsi (m, st, h, psi, ik, t, factor)
+  subroutine zexp_vlpsi (m, h, psi, ik, t, factor)
     type(mesh_type), intent(in) :: m
-    type(states_type), intent(in) :: st
     type(hamiltonian_type), intent(in) :: h
-    CMPLX, intent(inout) :: psi(m%np, st%dim)
+    CMPLX, intent(inout) :: psi(m%np, h%d%dim)
     integer, intent(in) :: ik
     FLOAT, intent(in) :: t
     CMPLX, intent(in) :: factor
 
-    integer :: is, idim, np, dim, k
+    integer :: is, idim, k
     FLOAT :: x(3), f(3)
     
     call push_sub('vlpsi')
     
     ! WARNING: spinors not yet supported.
-    np = m%np
-    dim = st%dim
-
-    select case(st%d%ispin)
+    select case(h%d%ispin)
     case(UNPOLARIZED)
       psi(:, 1) = exp(factor*(h%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
     case(SPIN_POLARIZED)
@@ -144,11 +137,10 @@ contains
 
   !!! calculates psi = exp{factor V_nlpp} psi
   !!! where V_nlpp is the non-local part of the pseudpotential
-  subroutine zexp_vnlpsi (m, st, h, psi, ik, factor, order)
+  subroutine zexp_vnlpsi (m, h, psi, ik, factor, order)
     type(mesh_type), intent(in) :: m
-    type(states_type), intent(in) :: st
     type(hamiltonian_type), intent(in) :: h
-    CMPLX, intent(inout) :: psi(m%np, st%dim)
+    CMPLX, intent(inout) :: psi(m%np, h%d%dim)
     integer, intent(in) :: ik
     CMPLX, intent(in) :: factor
     logical, intent(in) :: order
@@ -157,15 +149,13 @@ contains
          ivnl_start, ivnl_end, step, l_start, l_end, kbc_start, kbc_end, ivnl
     CMPLX :: uvpsi, p2, ctemp
     CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
-    type(atom_type), pointer :: atm
-    type(specie_type), pointer :: spec
 
     call push_sub('vnlpsi')
-    
-    allocate(initzpsi(m%np, 1:st%d%dim))
+
+    allocate(initzpsi(m%np, 1:h%d%dim))
     initzpsi = psi
 
-    dimension_loop: do idim = 1, st%d%dim
+    dimension_loop: do idim = 1, h%d%dim
 
     if(order) then
       step = 1;  ivnl_start = 1; ivnl_end = h%ep%nvnl
@@ -199,6 +189,7 @@ contains
     end do dimension_loop
 
     deallocate(initzpsi)
+
     call pop_sub()
   end subroutine zexp_vnlpsi
 

@@ -24,15 +24,14 @@
 !!
 !! We also implement the "smoothing" preconditioning described in that paper.
 
-subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
-  implicit none
-  type(states_type), target, intent(inout)   :: st
-  type(system_type), target, intent(IN)      :: sys
-  type(hamiltonian_type), target, intent(IN) :: hamilt
-  FLOAT, intent(in)               :: tol
-  integer, intent(inout)             :: niter
-  integer, intent(out)               :: converged
-  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
+subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
+  type(mesh_type),        target, intent(in)    :: m
+  type(states_type),      target, intent(inout) :: st
+  type(hamiltonian_type), target, intent(in)    :: hamilt
+  FLOAT,   intent(in)             :: tol
+  integer, intent(inout)          :: niter
+  integer, intent(out)            :: converged
+  FLOAT,   intent(out),  optional :: diff(1:st%nst,1:st%nik)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Local stuff
@@ -66,8 +65,8 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
 
   call push_sub('eigen_solver_blan')
   
-  n          = sys%m%np*st%dim
-  np         = sys%m%np
+  n          = m%np*st%dim
+  np         = m%np
   ned        = st%nst
   nec        = 0
   maxmatvecs = niter*st%nik*st%nst
@@ -81,7 +80,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
            tmp(krylov),           &
            h(krylov, krylov),     &
            hevec(krylov, krylov), &
-           aux(sys%m%np, st%dim))
+           aux(np, st%dim))
 
   knec  = 0 ! Initialize the total (including all irreps.) converged eigenvector counter.
   niter = 0 ! Initialize the total matrix-vector multiplication counter.
@@ -90,7 +89,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   k_points : do ik = 1, st%nik
     
     ! First of all, copy the initial estimates.
-    do i = 1, sys%st%nst
+    do i = 1, st%nst
       do idim = 1, st%dim
         call X(lalg_copy)(np, st%X(psi)(1:np, idim, i, ik), eigenvec((idim-1)*np+1, i))
       enddo
@@ -133,16 +132,16 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         ortho: do
           if(i>d2) exit ortho
           do ii = 1, nec
-            av(ii, d1 + 1) = X(states_dotp)(sys%m, st%dim, eigenvec(1, ii), v(1, i))
+            av(ii, d1 + 1) = X(states_dotp)(m, st%dim, eigenvec(1, ii), v(1, i))
             call X(lalg_axpy)(n, -av(ii, d1 + 1), eigenvec(1, ii), v(1, i))
           enddo
           do ii = 1, i - 1
-            av(ii, d1 + 1) = X(states_dotp)(sys%m, st%dim, v(1, ii), v(1, i))!/sys%m%vol_pp
+            av(ii, d1 + 1) = X(states_dotp)(m, st%dim, v(1, ii), v(1, i))!/sys%m%vol_pp
             call X(lalg_axpy)(n, -av(ii, d1 + 1), v(1, ii), v(1, i))
           enddo
-          x = X(states_nrm2)(sys%m, st%dim, v(1, i))
+          x = X(states_nrm2)(m, st%dim, v(1, i))
           if(x .le. eps) then
-            call X(states_random)(sys%m, v(1, i))
+            call X(states_random)(m, v(1, i))
           else
             call X(lalg_scal)(n, R_TOTYPE(M_ONE/x), v(1, i))
             i = i + 1
@@ -152,9 +151,9 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         !matrix-vector multiplication
         do i = 1, blk
           do idim = 1, st%dim
-            aux(1:sys%m%np, idim) = v((idim-1)*sys%m%np+1:idim*sys%m%np, d1 + i)
+            aux(1:np, idim) = v((idim-1)*np+1:idim*np, d1 + i)
           enddo
-          call X(Hpsi)(hamilt, sys%m, aux, av(1, d1 + i), ik)
+          call X(Hpsi)(hamilt, m, aux, av(1, d1 + i), ik)
         enddo
         matvec = matvec + blk
         
@@ -162,7 +161,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         ! part of  the matrix since it is symmetric (LAPACK routine only need the upper triangle)
         do i = d1 + 1, d2
           do ii = 1, i
-            h(ii, i) = X(states_dotp)(sys%m, st%dim, v(1, ii), av(1, i))
+            h(ii, i) = X(states_dotp)(m, st%dim, v(1, ii), av(1, i))
           enddo
         enddo
         
@@ -214,7 +213,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           ! Forms the first winsiz rows of H = V^T A V
           do i = 1, winsiz
             do ii = 1, i
-              h(ii, i) = X(states_dotp)(sys%m, st%dim, v(1, ii), av(1, i))
+              h(ii, i) = X(states_dotp)(m, st%dim, v(1, ii), av(1, i))
             enddo
           enddo
           
@@ -252,16 +251,16 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         ! Preconditioning
         do idim = 1, st%dim
           call X(lalg_copy)(np, av((idim-1)*np+1, d1 + 1), aux(1, idim))
-          call X(mf_filter) (sys%m, filter, aux(:, idim), v((idim-1)*np+1:idim*np, d1+1))
+          call X(mf_filter) (m, filter, aux(:, idim), v((idim-1)*np+1:idim*np, d1+1))
         enddo
         
       enddo inner_loop
       
     enddo outer_loop
     
-    do i = 1, sys%st%nst
+    do i = 1, st%nst
       do idim = 1, st%dim
-        call X(lalg_copy)(sys%m%np, eigenvec((idim-1)*np+1, i), st%X(psi)(1:np, idim, i, ik))
+        call X(lalg_copy)(m%np, eigenvec((idim-1)*np+1, i), st%X(psi)(1:np, idim, i, ik))
       enddo
       st%eigenval(i, ik) = eigenval(i)
       diff(i, ik) = res(i)
@@ -287,7 +286,7 @@ contains
     FLOAT, intent(out) :: r
     
     res(1:n) = hv(1:n) - e*v(1:n)
-    r = X(states_nrm2)(sys%m, st%dim, res)
+    r = X(states_nrm2)(m, st%dim, res)
     
   end subroutine residual
 

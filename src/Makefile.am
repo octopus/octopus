@@ -7,16 +7,16 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
-	specie.F90 atom.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \
-	poisson.F90 out.F90 states.F90 xc.F90 systm.F90 mix.F90
+	specie.F90 atom.F90 geometry.F90\
+	poisson.F90 out.F90 states.F90 xc.F90 mix.F90
 
 octopus_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 \
-	opt_control.F90 pulpo.F90 \
+	opt_control.F90 pulpo.F90 systm.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
@@ -53,7 +53,7 @@ oct_hs_mult_LDADD   = $(core_LIBS)
 oct_hs_acc_SOURCES  = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
 oct_hs_acc_LDADD    = $(core_LIBS)
 
-oct_excite_SOURCES = $(core_SRCS) linear.F90 excitations.F90
+oct_excite_SOURCES = $(core_SRCS) linear.F90 systm.F90 excitations.F90
 oct_excite_LDADD = $(octopus_LDADD)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
@@ -65,10 +65,10 @@ oct_broad_LDADD = $(core_LIBS)
 oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
 
-oct_choose_st_SOURCES = $(core_SRCS) choose_st.F90
+oct_choose_st_SOURCES = $(core_SRCS) systm.F90 choose_st.F90
 oct_choose_st_LDADD = $(octopus_LDADD)
 
-oct_make_st_SOURCES = $(core_SRCS) make_st.F90
+oct_make_st_SOURCES = $(core_SRCS) systm.F90 make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) centergeom.F90

@@ -23,17 +23,22 @@ use lib_oct_parser
 use lib_oct
 use io
 use hamiltonian
-use system
+use states
+use geometry
 use scf
 
 implicit none
 
 contains
 
-subroutine static_pol_run(scf, sys, h)
-  type(system_type), intent(inout) :: sys
+subroutine static_pol_run(scf, m, st, geo, h, outp)
+  type(scf_type),         intent(inout) :: scf
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(inout) :: st
+  type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
-  type(scf_type), intent(inout) :: scf
+  type(output_type),      intent(in)    :: outp
+
   
   integer :: iunit, ios, i_start, i, j, is, k
   FLOAT :: e_field
@@ -78,11 +83,11 @@ subroutine static_pol_run(scf, sys, h)
   endif
 
   ! Save local pseudopotential
-  allocate(Vpsl_save(sys%m%np))
+  allocate(Vpsl_save(m%np))
   Vpsl_save = h%Vpsl
 
   ! Allocate the trrho to the contain the trace of the density.
-  allocate(trrho(sys%m%np))
+  allocate(trrho(m%np))
     trrho = M_ZERO
 
   do i = i_start, conf%dim
@@ -91,18 +96,18 @@ subroutine static_pol_run(scf, sys, h)
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        h%vpsl = vpsl_save + (-1)**k*sys%m%lxyz(i, :)*sys%m%h(i)*e_field
+        h%vpsl = vpsl_save + (-1)**k*m%lxyz(i, :)*m%h(i)*e_field
 
-        call scf_run(scf, sys, h)
+        call scf_run(scf, m, st, geo, h, outp)
 
         trrho = M_ZERO
-        do is = 1, sys%st%d%spin_channels
-           trrho(:) = trrho(:) + sys%st%rho(:, is)
+        do is = 1, st%d%spin_channels
+           trrho(:) = trrho(:) + st%rho(:, is)
         enddo
 
         ! calculate dipole
         do j = 1, conf%dim
-           dipole(i, j, k) = dmf_moment(sys%m, trrho, j, 1)
+           dipole(i, j, k) = dmf_moment(m, trrho, j, 1)
         enddo
 
      enddo
@@ -140,7 +145,6 @@ subroutine static_pol_run(scf, sys, h)
   deallocate(Vpsl_save, trrho, dipole)
 
   call pop_sub()
-  return
 end subroutine static_pol_run
 
 end module static_pol

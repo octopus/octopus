@@ -24,6 +24,7 @@ program xyzanim
   use io
   use units
   use atom
+  use geometry
 
   implicit none
 
@@ -32,10 +33,7 @@ program xyzanim
   integer :: ierr, sampling, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
   FLOAT :: dump
 
-  type(atom_type), pointer :: atm(:)
-  type(atom_classical_type), pointer :: catm(:)
-  type(specie_type), pointer :: spec(:)
-
+  type(geometry_type) :: geo
 
   ! Initialize stuff
   call global_init()
@@ -53,7 +51,7 @@ program xyzanim
 
   ! how many do we have?
   str = "Species"
-  nspecies = loct_parse_block_n(str)
+  geo%nspecies = loct_parse_block_n(str)
   if (nspecies < 1) then
     message(1) = "Input: Species block not specified"
     message(2) = '% Species'
@@ -61,7 +59,7 @@ program xyzanim
     message(4) = '%'
     call write_fatal(4)    
   end if
-  allocate(spec(nspecies))
+  allocate(geo%specie(geo%nspecies))
 
   ! how often do we sample?
   call loct_parse_int('AnimationSampling', 100, sampling)
@@ -70,13 +68,13 @@ program xyzanim
     call write_fatal(1)
   end if
 
-  do i = 1, nspecies
-    call loct_parse_block_string(str, i-1, 0, spec(i)%label)
-    call loct_parse_block_float (str, i-1, 1, spec(i)%weight)
+  do i = 1, geo%nspecies
+    call loct_parse_block_string(str, i-1, 0, geo%specie(i)%label)
+    call loct_parse_block_float (str, i-1, 1, geo%specie(i)%weight)
   end do
 
-  ! Initializes the atom
-  call atom_init(natoms, atm, ncatoms, catm, nspecies, spec)
+  ! Initializes the atom system
+  call geometry_init(geo, no_species_init=.true.)
 
   ! Opens the nbo file
   call io_assign(nbo_unit)
@@ -93,7 +91,7 @@ program xyzanim
   ierr = 0
   do while(ierr == 0)
      read(unit = nbo_unit, iostat = ierr, fmt = *) iter, dump, dump, dump, dump, &
-         ((atm(i)%x(j), j = 1, 3), i = 1, natoms)
+         ((geo%atom(i)%x(j), j = 1, 3), i = 1, geo%natoms)
      if(mod(iter, sampling) == 0) then
        call write_xyz
      endif
@@ -109,10 +107,10 @@ subroutine write_xyz
   integer :: i
   
   ! xyz format, for easy plot in rasmol
-    write(xyz_unit, '(i4)') natoms
+    write(xyz_unit, '(i4)') geo%natoms
     write(xyz_unit, '(i10)') iter
     do i = 1, natoms
-      write(xyz_unit, '(6x,a,2x,3f12.6)') atm(i)%spec%label, atm(i)%x(:)/units_out%length%factor
+      write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%spec%label, geo%atom(i)%x(:)/units_out%length%factor
     end do
 
   return

@@ -22,11 +22,14 @@ use global
 use lib_oct_parser
 use lib_basic_alg
 use mesh
-use output
 use mesh_function
+use atom
+use geometry
+use states
 use external_pot
 use poisson
 use xc
+use output
 
 implicit none
 
@@ -60,7 +63,7 @@ type hamiltonian_type
   FLOAT :: ab_height  ! height of the absorbing boundary
   FLOAT, pointer :: ab_pot(:) ! where we store the ab potential
 
-  ! Spectral range.
+  ! Spectral range
   FLOAT :: spectral_middle_point
   FLOAT :: spectral_half_span
 
@@ -78,26 +81,28 @@ integer, parameter :: NO_ABSORBING        = 0, &
                       MASK_ABSORBING      = 2
 contains
 
-subroutine hamiltonian_init(h, sys)
-  type(hamiltonian_type), intent(out) :: h
-  type(system_type), intent(inout) :: sys
+subroutine hamiltonian_init(h, m, geo, states_dim)
+  type(hamiltonian_type), intent(out)   :: h
+  type(mesh_type),        intent(inout) :: m
+  type(geometry_type), intent(in)    :: geo
+  type(states_dim_type),  pointer       :: states_dim
 
   integer :: i, j, n
   FLOAT :: d(3), r, x(3)
 
   call push_sub('hamiltonian_init')
 
-  ! Hamiltonian must know about the dimensionality of sys%st%d
-  h%d => sys%st%d
+  ! Hamiltonian must know about the dimensionality of the states
+  h%d => states_dim
 
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
-  allocate(h%Vpsl(sys%m%np), h%Vhxc(sys%m%np, sys%st%d%nspin))
+  allocate(h%Vpsl(m%np), h%Vhxc(m%np, h%d%nspin))
   h%vpsl = M_ZERO
   h%Vhxc = M_ZERO
 
-  call epot_init(h%ep, sys)
+  call epot_init(h%ep, m, geo)
 
   call loct_parse_int("RelativisticCorrection", NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -134,8 +139,8 @@ subroutine hamiltonian_init(h, sys)
     call write_info(1)
   else
     ! initilize hartree and xc modules
-    call poisson_init(sys%m)
-    call xc_init(h%xc, sys%nlcc)
+    call poisson_init(m)
+    call xc_init(h%xc, geo%nlcc)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
@@ -166,10 +171,10 @@ subroutine hamiltonian_init(h, sys)
     end if
     
     ! generate boundary potential...
-    allocate(h%ab_pot(sys%m%np))
+    allocate(h%ab_pot(m%np))
     h%ab_pot = M_ZERO
-    do i = 1, sys%m%np
-         call mesh_inborder(sys%m, i, n, d, h%ab_width)
+    do i = 1, m%np
+         call mesh_inborder(m, i, n, d, h%ab_width)
          if(n>0) then
            do j = 1, n
               h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
@@ -194,10 +199,10 @@ subroutine hamiltonian_init(h, sys)
   call pop_sub()
 end subroutine hamiltonian_init
 
-subroutine hamiltonian_end(h, sys)
+subroutine hamiltonian_end(h, geo)
   type(hamiltonian_type), intent(inout) :: h
-  type(system_type), intent(in) :: sys
-  
+  type(geometry_type), intent(in) :: geo
+
   call push_sub('hamiltonian_end')
 
   if(associated(h%Vpsl)) then
@@ -205,7 +210,7 @@ subroutine hamiltonian_end(h, sys)
     nullify(h%Vpsl, h%Vhxc)
   end if
 
-  call epot_end(h%ep, sys)
+  call epot_end(h%ep, geo)
   if(.not.h%ip_app) then
     call poisson_end()
     call xc_end(h%xc)
@@ -232,7 +237,6 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   integer, intent(in) :: iunit
   logical, intent(in), optional :: reduce
 
-  integer :: ik
   FLOAT :: s, e
 #ifdef HAVE_MPI
   integer :: ierr
@@ -240,11 +244,8 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
 
   call push_sub('hamiltonian_energy')
 
-  e = 0
-  do ik = 1, st%nik
-    e = e + st%d%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
-         st%eigenval(st%st_start:st%st_end, ik))
-  end do
+  e = states_eigenvalues_sum(st)
+
 #ifdef HAVE_MPI
   if(present(reduce)) then
     if(reduce) then
@@ -254,10 +255,10 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
     end if
   end if
 #endif
-  
+
   h%etot = e + eii + h%epot + h%ex + h%ec
-  
-  if(iunit>0) then
+
+  if (iunit > 0) then
     write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', eii    / units_out%energy%factor
     write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e      / units_out%energy%factor
     write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot / units_out%energy%factor

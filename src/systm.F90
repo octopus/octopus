@@ -19,36 +19,18 @@
 
 module system
 use global
-use atom
 use mesh
-use specie
+use geometry
 use states
-use output
 
 implicit none
 
 type system_type
-  character(len=20) :: sysname ! the name of the system we are running
-
-  integer :: natoms
-  type(atom_type), pointer :: atom(:)
-  integer :: ncatoms  ! For QM+MM calculations
-  type(atom_classical_type), pointer :: catom(:)
-
-  FLOAT :: eii, kinetic_energy ! the ion-ion energy
-
-  integer :: nspecies
-  type(specie_type), pointer :: specie(:)
-  logical :: nlpp    ! is any species having non-local pp
-  logical :: nlcc    ! is any species having non-local core corrections?
-
-  ! the charge of the valence electrons (necessary to initialize states)
-  FLOAT :: val_charge 
-
-  type(mesh_type) :: m
-  type(states_type), pointer :: st
-
-  type(output_type) :: outp
+  FLOAT                      :: val_charge ! the charge of the valence electrons (necessary to initialize states)
+  type(mesh_type)            :: m          ! the mesh
+  type(geometry_type)        :: geo        ! the geometry
+  type(states_type), pointer :: st         ! the states
+  type(output_type)          :: outp
 end type system_type
 
 contains
@@ -60,33 +42,15 @@ subroutine system_init(s)
 
   call push_sub('system_init')
 
-  call loct_parse_string('SystemName', 'system', s%sysname)
-  s%nspecies = specie_init(s%specie)
-
-  call atom_init(s%natoms, s%atom, s%ncatoms, s%catom, s%nspecies, s%specie)
-
-  call output_init(s%outp)
-
-  call mesh_init(s%m, s%natoms, s%atom)
+  ! initialize the stuff related to the mesh
+  call mesh_init(s%m)
   call functions_init(s%m)
 
-  !  find total charge of the system
-  s%val_charge = 0
-  do i = 1, s%natoms
-    s%val_charge = s%val_charge - s%atom(i)%spec%Z_val
-  enddo
-
+  ! initialize the other stuff
+  call geometry_init(s%geo, s%val_charge)
   allocate(s%st)
-  call states_init(s%st, s%m, s%val_charge)
-
-  ! find out if we need non-local core corrections
-  s%nlcc = .false.
-  s%nlpp = .false.
-  do i = 1, s%nspecies
-    s%nlcc = (s%nlcc.or.s%specie(i)%nlcc)
-    s%nlpp = (s%nlcc.or.(.not.s%specie(i)%local))
-  end do
-  if(s%nlcc) allocate(s%st%rho_core(s%m%np))
+  call states_init(s%st, s%m, s%val_charge, s%geo%nlcc)
+  call output_init(s%outp)
 
   call pop_sub()
 end subroutine system_init
@@ -100,10 +64,9 @@ subroutine system_end(s)
     call states_end(s%st)
     deallocate(s%st); nullify(s%st)
   end if
+  call geometry_end(s%geo)
   call functions_end(s%m)
   call mesh_end(s%m)
-  call atom_end(s%natoms, s%atom, s%ncatoms, s%catom)
-  call specie_end(s%nspecies, s%specie)
 
   call pop_sub()
 end subroutine system_end
