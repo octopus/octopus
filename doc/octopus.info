@@ -1,0 +1,69 @@
+This is octopus.info, produced by makeinfo version 4.0b from
+octopus.texinfo.
+
+   The purpose of this info file is describing how to use the octopus
+program.
+
+   Copyright (C) not settled down yet.
+
+   Permission is granted to make and distribute verbatim copies of this
+manual provided the copyright notice and this permission notice are
+preserved on all copies.
+
+   Permission is granted to copy and distribute modified versions of
+this manual under the conditions for verbatim copying, provided also
+that the section entitled "Copying" is included exactly as in the
+original, and provided that the entire resulting derived work is
+distributed under the terms of a permission notice identical to this
+one.
+
+   Permission is granted to copy and distribute translations of this
+manual into another language, under the above conditions for modified
+versions, except that this permission notice may be stated in a
+translation.
+
+
+File: octopus.info,  Node: Top,  Next: Copying,  Up: (dir)
+
+* Menu:
+
+* Copying      :: Your Rights.
+* Introduction :: Brief and informative.
+* Concept Index::
+
+
+File: octopus.info,  Node: Copying,  Next: Introduction,  Prev: Top,  Up: Top
+
+Copying
+*******
+
+   We have not settled down yet the legal details of the code.
+Eventually it will be GPLed, but since the code is not working yet, you
+basically have not the right to copy, modify, etc, which you wouldn't
+want to do it anyhow.
+
+
+File: octopus.info,  Node: Introduction,  Next: Concept Index,  Prev: Copying,  Up: Top
+
+Introduction
+************
+
+   `octopus' is a program aimed at the ab initio virtual
+experimentation on a hopefully ever increasing range of systems types.
+
+
+File: octopus.info,  Node: Concept Index,  Prev: Introduction,  Up: Top
+
+Concept Index
+*************
+
+* Menu:
+
+
+Tag Table:
+Node: Top926
+Node: Copying1088
+Node: Introduction1414
+Node: Concept Index1661
+
+End Tag Table

@@ -1,0 +1,135 @@
+\input texinfo @c -*-texinfo-*- 
+@c %**start of header
+@setfilename octopus.info 
+@settitle Octopus Manual
+@c %**end of header
+
+
+@c ***************SUMMARY DESCRIPTION AND COPYRIGTH**********************
+@ifinfo
+The purpose of this info file is describing how to use
+the octopus program.
+
+Copyright @copyright{} not settled down yet.
+
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+@ignore
+Permission is granted to process this file through TeX
+and print the results, provided the printed document
+carries a copying permission notice identical to this
+one except for the removal of this paragraph (this
+paragraph not being relevant to the printed manual).
+     
+@end ignore
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying''
+is included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation.
+
+@end ifinfo
+@c **********************************************************************
+
+
+
+@c ***************TITLE PAGE AND COPYRIGHT*******************************
+@titlepage
+@sp 10
+@c The title is printed in a large font.
+@center @titlefont{@code{octopus} Manual}
+@image{octosex,8cm}
+Male Hapalochlaena lunulata (top),
+and female Hapalochlaena lunulata (bottom).
+Photograph by Roy Caldwell.
+@c The following two commands start the copyright page.
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} not settled down yet.
+
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+     
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the section
+entitled ``Copying''
+is included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+     
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation.
+@end titlepage
+@c **********************************************************************
+
+
+
+@c ***************TOP NODE AND MASTER MENU*******************************
+@node Top,        Copying,                , (dir)
+@c    Node name,  next         , previous , up
+
+@menu
+* Copying      :: Your Rights.
+* Introduction :: Brief and informative.
+* Concept Index:: 
+@end menu
+@c **********************************************************************
+
+
+
+
+
+
+@c ***************THE BODY OF THE DOCUMENT*******************************
+
+@node Copying,      Introduction,   Top,          Top
+@chapter Copying
+
+We have not settled down yet the legal details of the code. Eventually it
+will be GPLed, but since the code is not working yet, you basically
+have not the right to copy, modify, etc, which you wouldn't want to do it
+anyhow.
+
+
+@node Introduction, Concept Index,  Copying,      Top
+@c    node-name,     next,          previous,     up
+@chapter Introduction
+
+     
+@code{octopus} is a program aimed at the ab initio virtual experimentation on 
+a hopefully ever increasing range of systems types.
+
+
+
+@c **********************************************************************
+
+
+
+@c ***************THE END OF THE DOCUMENT********************************
+@node    Concept Index,    , Introduction, Top
+@c       node-name,    next, previous,     up
+@unnumbered Concept Index
+     
+@printindex cp
+     
+@contents
+
+@bye
+@c **********************************************************************
