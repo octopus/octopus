@@ -146,9 +146,9 @@ contains
           hm(nn, n + 1) = hh(nn)
        enddo
        if(h%ab .ne. 1) then
-         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep, hermitian = .true.)
+         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, 'hermitian')
        else
-         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep)
+         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, 'general')
        endif
        res = abs(beta*abs(expo(1, n+1)))
        beta = zstates_nrm2(sys%m, sys%st%dim, f)
@@ -378,63 +378,5 @@ contains
     call pop_sub()
   end subroutine local_part
 
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! /* Calculates exp(-M_zI*dt*in), and places it into out, where in and out
-  ! are order x order complex matrices. Optional argument hermitian should be
-  ! passed if in is hermitian.
-  !
-  ! Two ways to calculate the exponential of a (small) matrix: if it is
-  ! hermitian, by decomposing it into UDU(+), where D is diagonal and
-  ! U is unitary; U(+) is its hermitian conjugate. If it is not, I use the 
-  ! definition: power expansion (I think 10th order should be enough). Smarter 
-  ! methods could be used in this case: a Sch\"{u}r decomposition could be 
-  ! performed, (through LAPACK's zhseqr since input matrix is upper Heisenberg) 
-  ! and then apply Parlett's algorithm (B. N. Parlett, Lin. Alg. Appl. 14,
-  ! 117 (1976)) to calculate the exponential of a upper triangular matrix.
-  ! Probably this is not needed. */
-  subroutine mat_exp(order, in, out, dt, hermitian)
-    implicit none
-    integer, intent(in)           :: order
-    complex(r8), intent(in)       :: in(order, order)
-    complex(r8), intent(out)      :: out(order, order)
-    real(r8), intent(in)          :: dt
-    logical, intent(in), optional :: hermitian
-
-    complex(r8) :: aux(order, order), dd(order, order), zfact
-    integer ::  n, info, lwork
-    real(r8), allocatable :: w(:)
-    complex(r8), allocatable :: work(:), rwork(:)
-
-    if(present(hermitian)) then
-      aux = in
-      lwork = 4*order; allocate(work(lwork), rwork(lwork), w(order))
-      call zheev('v', 'u', order, aux, order, w, work, lwork, rwork, info)
-      if(info .ne. 0) then
-         write(message(1),'(a,i4)') 'Error: "info" parameter of z returned', info
-         call write_fatal(1)
-      endif
-      dd = M_z0
-      do n = 1, order
-         dd(n, n) = exp(-M_zI*dt*w(n))
-      enddo
-      out = matmul(dd, transpose(aux))
-      out = matmul(aux, out)
-      deallocate(work, w, rwork)
-    else
-      out = M_z0
-      do n = 1, order
-         out(n, n) = M_z1
-      enddo
-      zfact = M_z1
-      aux   = out
-      do n = 1, max(10, order)
-         aux = matmul(aux, in)
-         zfact = zfact*(-M_zI*dt)/n
-         out = out + zfact*aux
-      enddo
-    endif
-
-  end subroutine mat_exp
 
 end subroutine td_dtexp

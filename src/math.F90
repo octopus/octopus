@@ -27,7 +27,7 @@ module math
   implicit none
   
   private
-  public :: grylmr, weights, quickrnd, stepf, ddet, zdet
+  public :: grylmr, weights, quickrnd, stepf, ddet, zdet, mat_exp
 
 contains
 
@@ -341,5 +341,66 @@ complex(r8) function zdet(a, n)
 
 end function zdet
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! /* Calculates exp(factor*in), and places it into out, where in and out
+! are order x order complex matrices. First letter of the last argument,
+! "hermitian", should be 'h' or 'H' for hermitian matrices.
+!
+! Two ways to calculate the exponential of a (small) matrix: if it is
+! hermitian, by decomposing it into UDU(+), where D is diagonal and
+! U is unitary; U(+) is its hermitian conjugate. If it is not, I use the 
+! definition: power expansion (I think 10th order should be enough). Smarter 
+! methods could be used in this case: a Sch\"{u}r decomposition could be 
+! performed, (through LAPACK's zhseqr since input matrix is upper Heisenberg) 
+! and then apply Parlett's algorithm (B. N. Parlett, Lin. Alg. Appl. 14,
+! 117 (1976)) to calculate the exponential of a upper triangular matrix.
+! Probably this is not needed. */
+subroutine mat_exp(order, in, out, factor, hermitian)
+  implicit none
+  integer, intent(in)           :: order
+  complex(r8), intent(in)       :: in(order, order)
+  complex(r8), intent(out)      :: out(order, order)
+  complex(r8), intent(in)        :: factor
+  character(len=*), intent(in) :: hermitian
+
+  complex(r8) :: aux(order, order), dd(order, order), zfact
+  integer ::  n, info, lwork
+  real(r8), allocatable :: w(:)
+  complex(r8), allocatable :: work(:), rwork(:)
+
+
+  if(hermitian(1:1) == 'h' .or. hermitian(1:1)=='H') then
+    aux = in
+    lwork = 4*order; allocate(work(lwork), rwork(lwork), w(order))
+    call zheev('v', 'u', order, aux, order, w, work, lwork, rwork, info)
+    if(info .ne. 0) then
+       write(message(1),'(a,i4)') 'Error: "info" parameter of z returned', info
+       call write_fatal(1)
+    endif
+    dd = M_z0
+    do n = 1, order
+       dd(n, n) = exp(factor*w(n))
+    enddo
+    call zgemm('n', 'c', order, order, order, M_z1, dd,  order, aux, order, M_z0, out, order)
+    dd = out
+    call zgemm('n', 'n', order, order, order, M_z1, aux, order, dd,  order, M_z0, out, order) 
+    deallocate(work, w, rwork)
+  else
+    out = M_z0
+    do n = 1, order
+       out(n, n) = M_z1
+    enddo
+    zfact = M_z1
+    aux   = out
+    do n = 1, max(10, order)
+       dd = aux
+       call zgemm('n', 'n', order, order, order, M_z1, dd, order, in, order, M_z0, aux, order)
+       zfact = zfact*factor/n
+       out = out + zfact*aux
+    enddo
+  endif
+
+end subroutine mat_exp
 
 end module math
