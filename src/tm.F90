@@ -157,7 +157,7 @@ subroutine build_valconf(pstm)
     read(pstm%title, '('//char2//'(i1,a1,f5.2,10x))') &
          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), l = 1, pstm%npotd)
   case('isp')
-    read(pstm%title, '('//char2//'(i1,a1,f4.2,1x,f4,2,6x))') &
+    read(pstm%title, '('//char2//'(i1,a1,f4.2,1x,f4.2,6x))') &
          (pstm%conf%n(l), char1(l), pstm%conf%occ(l,1), pstm%conf%occ(l,2), l = 1, pstm%npotd)
   case('rel')
     read(pstm%title, '('//char2//'(i1,a1,f5.2,10x))') &
