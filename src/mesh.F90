@@ -67,33 +67,17 @@ type mesh_type
 
   type(geometry_type), pointer :: geo
 
+  logical :: use_curvlinear
+  type(curvlinear_type) :: cv
+
   FLOAT :: fft_alpha ! enlargement factor for double box
 
-  logical :: use_curvlinear
   FLOAT, pointer :: x(:,:)    ! the points
   FLOAT, pointer :: vol_pp(:) ! element of volume for integrations
 
 end type mesh_type
 
 contains
-
-subroutine curvlinear_test(m)
-  type(mesh_type),     intent(inout) :: m
-
-  integer :: i
-  FLOAT :: r, chi(3), x(3), J(3,3)
-
-!  do i = 35496, m%np
-  do i = 1, m%np
-    call mesh_xyz(m, i, x)
-    if(abs(x(1)) < 0.01) then
-      !call x_to_chi(m%geo, x, chi)
-      !call chi_to_x(m%geo, x, chi)
-      write(*,*) m%x(i,2), m%x(i,3)
-    end if
-  end do
-  stop
-end subroutine curvlinear_test
 
 ! finds the dimension of a box doubled in the non-periodic dimensions
 subroutine mesh_double_box(m, db)

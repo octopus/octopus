@@ -39,19 +39,20 @@ subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
 
   m%geo => geo            ! keep a pointer to the geometry
 
-  call read_misc()        ! miscellany stuff
-  call read_box()         ! parameters defining the simulation box
-  call read_spacing ()    ! parameters defining the (canonical) spacing
-  call build_lattice()    ! build lattice vectors
-  call adjust_nr()        ! find out the extension simulation box
+  call read_misc()          ! miscellany stuff
+  call read_box()           ! parameters defining the simulation box
+  call read_spacing ()      ! parameters defining the (canonical) spacing
+  call build_lattice()      ! build lattice vectors
+  call adjust_nr()          ! find out the extension simulation box
+
+  ! initialize curvlinear coordinates
+  m%use_curvlinear = curvlinear_init(m%nr(2,:)*m%h(:), m%cv)
 
   call pop_sub()
   
 contains
   subroutine read_misc()
 
-    call loct_parse_logical('UseCurvlinear', .false., m%use_curvlinear)
-    
     call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
     if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
       write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
@@ -386,11 +387,7 @@ subroutine mesh_create_xyz(m, enlarge)
       do iz = m%nr(1,3), m%nr(2,3)
         chi(3) = real(iz, PRECISION) * m%h(3)
 
-        if(m%use_curvlinear) then
-          call chi_to_x(m%geo, chi, x(:, ix, iy, iz))
-        else
-          x(:, ix, iy, iz) = chi
-        end if
+        call curvlinear_chi2x(m%cv, m%geo, chi, x(:, ix, iy, iz))
         
         if(in_mesh(m, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
       end do
@@ -455,10 +452,11 @@ subroutine mesh_create_xyz(m, enlarge)
 
   call pop_sub()
 contains
+
   ! calculate the volume of integration
   subroutine get_vol_pp()
     integer :: i
-    FLOAT :: f, chi(conf%dim), Jac(conf%dim, conf%dim)
+    FLOAT :: f, chi(conf%dim)
 
     f = M_ONE
     do i = 1, conf%dim
@@ -468,16 +466,14 @@ contains
     allocate(m%vol_pp(m%np))
     m%vol_pp(:) = f
 
-    if(m%use_curvlinear) then
-      do i = 1, m%np
-        call jacobian(m%geo, m%x(i,:), chi(:), Jac(:,:))
-        f = lalg_det(Jac, conf%dim)
-        m%vol_pp(i) = m%vol_pp(i)/f
-      end do
-    end if
+    do i = 1, m%np
+      chi(1:conf%dim) = m%Lxyz(i, 1:conf%dim)*m%h(1:conf%dim)
+      m%vol_pp(i) = m%vol_pp(i)*curvlinear_det_Jac(m%cv, m%geo, m%x(i,:), chi)
+    end do
   end subroutine get_vol_pp
 
 end subroutine mesh_create_xyz
+
 
 logical function in_mesh(m, x)
   type(mesh_type),     intent(IN) :: m
@@ -569,12 +565,6 @@ subroutine derivatives_init_filter(m, order, filter)
   deallocate(dfidfj)
   call pop_sub()
 end subroutine derivatives_init_filter
-
-!subroutine derivatives_end(d)
-!  type(derivatives_type), intent(inout) :: d
-!  integer :: i
-!  deallocate(d%i, d%w)
-!end subroutine derivatives_end
 
 ! this function takes care of the boundary conditions
 ! for a given x,y,z it returns the true index of the point

@@ -18,105 +18,106 @@
 #include "global.h"
 
 module curvlinear
+  use lib_oct_parser
   use geometry
+  use curv_gygi
+  use curv_briggs
+  use curv_modine
 
   implicit none
 
-!  private
-  public :: jacobian
+  type curvlinear_type
+    integer :: method
 
-  FLOAT, parameter :: alpha(3) = (/1.5, 0.5, 2.0/)
+    type(curv_gygi_type)   :: gygi
+    type(curv_briggs_type) :: briggs
+    type(curv_modine_type) :: modine
+  end type curvlinear_type
+
+  integer, parameter :: &
+     CURV_METHOD_UNIFORM = 1,  &
+     CURV_METHOD_GYGI    = 2,  &
+     CURV_METHOD_BRIGGS  = 3,  &
+     CURV_METHOD_MODINE  = 4
 
 contains
-  subroutine x_to_chi(geo, x, chi)
-    type(geometry_type), intent(in) :: geo
-    FLOAT, intent(in)  :: x(:)    ! x(conf%dim)
-    FLOAT, intent(out) :: chi(:)  ! chi(conf%dim)
-    
-    integer :: i
-    FLOAT :: r, f_alpha
 
-    chi = x
-    do i = 1, geo%natoms
-      r = max(sqrt(sum((x - geo%atom(i)%x)**2)), CNST(1e-6))
-      f_alpha = alpha(1)*alpha(2)/r*tanh(r/alpha(2))*exp(-(r/alpha(3))**2)
+  !-------------------------------------
+  logical function curvlinear_init(l, cv)
+    FLOAT,                 intent(in)  :: l(:)
+    type(curvlinear_type), intent(out) :: cv
 
-      chi = chi + (x - geo%atom(i)%x) * f_alpha
-    end do
-  end subroutine x_to_chi
+    call push_sub('curvlinear_init')
 
-  subroutine jacobian(geo, x, chi, J)
-    type(geometry_type), intent(in) :: geo
-    FLOAT, intent(in)  :: x(:)    ! x(conf%dim)
-    FLOAT, intent(out) :: chi(:)  ! chi(conf%dim)
-    FLOAT, intent(out) :: J(:,:)  ! J(conf%dim,conf%dim), the Jacobian
-
-    integer :: i, ix, iy
-    FLOAT :: r, f_alpha, df_alpha
-    FLOAT :: th, ex, ar
-
-    J(1:conf%dim,1:conf%dim) = M_ZERO
-    do ix = 1, conf%dim
-      J(ix, ix) = M_ONE
-      chi(ix)   = x(ix)
-    end do
-
-    do i = 1, geo%natoms
-      r = max(sqrt(sum((x - geo%atom(i)%x)**2)), CNST(1e-6))
-      
-      ar = alpha(1)*alpha(2)/r
-      th = tanh(r/alpha(2))
-      ex = exp(-(r/alpha(3))**2)
-      
-      f_alpha  = ar * th * ex
-      df_alpha = ar*(-th*ex/r + ex/(alpha(2)*cosh(r/alpha(2))**2) - th*M_TWO*r*ex/alpha(3)**2)
-      
-      do ix = 1, conf%dim
-        chi(ix) = chi(ix) + f_alpha*(x(ix)-geo%atom(i)%x(ix))
-        
-        J(ix, ix) = J(ix, ix) + f_alpha
-        do iy = 1, conf%dim
-          J(ix, iy) = J(ix, iy) + (x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy))/r * df_alpha
-        end do
-      end do
-    end do
-
-  end subroutine jacobian
-
-  subroutine chi_to_x(geo, chi, x)
-    type(geometry_type), intent(in) :: geo
-    FLOAT, intent(in)  :: chi(:)  ! chi(conf%dim)
-    FLOAT, intent(out) :: x(:)    ! x(conf%dim)
-    
-    integer :: iter
-    FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
-    logical :: conv
-  
-    allocate(f(conf%dim, 1), delta(conf%dim, 1), J(conf%dim, conf%dim), chi2(conf%dim))
-
-    x(1:conf%dim) = chi(1:conf%dim)
-    conv          = .false.
-
-    do iter = 1, 500
-      call jacobian(geo, x, chi2, J)
-      f(:,1) = chi(1:conf%dim) - chi2(:)
-
-      if(sum(f(:,1)**2) < CNST(1e-6)**2) then
-        conv = .true.
-        exit
-      end if
-
-      call lalg_linsyssolve(conf%dim, 1, J, f, delta)
-      x(1:conf%dim) = x(1:conf%dim) + delta(1:conf%dim, 1)
-    end do
-
-    if(.not.conv) then
-      message(1) = "Newton-Raphson method did not converge for point"
-      write(message(2), '(3es14.5)') x(1:conf%dim)
-      call write_warning(2)
+    call loct_parse_int('CurvMethod', CURV_METHOD_UNIFORM, cv%method)
+    if(cv%method<CURV_METHOD_UNIFORM.or.cv%method>CURV_METHOD_MODINE) then
+      write(message(1), '(a,i2,a)') 'Do not have a "CurvMethod = ', cv%method, '"'
+      call write_fatal(1)
     end if
 
-    deallocate(f, delta, J, chi2)
-  end subroutine chi_to_x
+    select case(cv%method)
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_init(cv%gygi)
+    case(CURV_METHOD_BRIGGS)
+      call curv_briggs_init(l, cv%briggs)
+    case(CURV_METHOD_MODINE)
+      call curv_modine_init(l, cv%modine)
+    end select
+
+    curvlinear_init = (cv%method.ne.CURV_METHOD_UNIFORM)
+
+    call pop_sub()
+  end function curvlinear_init
+
+
+  !-------------------------------------
+  subroutine curvlinear_chi2x(cv, geo, chi, x)
+    type(curvlinear_type), intent(in)  :: cv
+    type(geometry_type),   intent(in)  :: geo
+    FLOAT,                 intent(in)  :: chi(:)  ! chi(conf%dim)
+    FLOAT,                 intent(out) :: x(:)    ! x(conf%dim)
+
+    select case(cv%method)
+    case(CURV_METHOD_UNIFORM)
+      x(1:conf%dim) = chi(1:conf%dim)
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_chi2x(cv%gygi, geo, chi, x)
+    case(CURV_METHOD_BRIGGS)
+      call curv_briggs_chi2x(cv%briggs, geo, chi, x)
+    case(CURV_METHOD_MODINE)
+      call curv_modine_chi2x(cv%modine, geo, chi, x)
+    end select
+
+  end subroutine curvlinear_chi2x
+  
+
+  !-------------------------------------
+  FLOAT function curvlinear_det_Jac(cv, geo, x, chi) result(jdet)
+    type(curvlinear_type), intent(in)  :: cv
+    type(geometry_type),   intent(in)  :: geo
+    FLOAT,                 intent(in)  ::   x(:)  !   x(conf%dim)
+    FLOAT,                 intent(in)  :: chi(:)  ! chi(conf%dim)
+
+    FLOAT :: dummy(conf%dim), Jac(conf%dim, conf%dim)
+    integer :: i
+
+    select case(cv%method)
+    case(CURV_METHOD_UNIFORM)
+      jdet = M_ONE
+    case(CURV_METHOD_GYGI)
+      call curv_gygi_jacobian(cv%gygi, geo, x, dummy, Jac)
+      jdet = M_ONE/lalg_det(Jac, conf%dim)
+    case(CURV_METHOD_BRIGGS)
+      call curv_briggs_jacobian_inv(cv%briggs, geo, chi, Jac)
+      jdet = M_ONE
+      do i = 1, conf%dim
+        jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
+      end do
+    case(CURV_METHOD_MODINE)
+      call curv_modine_jacobian_inv(cv%modine, geo, chi, Jac)
+      jdet = M_ONE*lalg_det(Jac, conf%dim)
+    end select
+
+  end function curvlinear_det_Jac
 
 end module curvlinear
