@@ -226,7 +226,7 @@ subroutine generate_external_pot(h, sys)
   ! WARNING DEBUG
 !!$  integer :: j
 !!$  real(r8), allocatable :: f(:,:,:)
-
+  logical :: output_local
   integer :: i
 
   sub_name = 'generate_external_pot'; call push_sub()
@@ -298,7 +298,10 @@ subroutine generate_external_pot(h, sys)
 !!$    print *
 !!$  end do
 !!$  stop
-  
+
+  call oct_parse_logical(C_string("OutputLocalPotential"), .false., output_local)
+  if(output_local) call dwrite_mesh_function(sys%m, h%vpsl, trim(sys%sysname)//'.lpot')
+
   call pop_sub()
 contains
   !***************************************************

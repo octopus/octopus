@@ -225,3 +225,21 @@ contains
 
 end subroutine R_FUNC(mesh_derivatives)
 
+subroutine R_FUNC(write_mesh_function) (m, f, filename)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE, intent(IN)           :: f(m%np)
+  character(len=*), intent(in) :: filename
+
+  integer :: unit, i
+
+  call io_assign(unit)
+  open(unit=unit, file=trim(filename), form='formatted')
+  do i = 1, m%np
+     write(unit, '(f12.6, 3es20.12)') m%lx(i)*m%h(1)/units_out%length%factor, &
+                                      m%ly(i)*m%h(2)/units_out%length%factor, &
+                                      m%lz(i)*m%h(3)/units_out%length%factor, f(i)
+  enddo
+  call io_close(unit)
+
+end subroutine R_FUNC(write_mesh_function)
+
