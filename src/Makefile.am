@@ -2,7 +2,7 @@ EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-broad oct-ph oct-xyz-anim \
 	oct-make-st oct-center-geom
 
-bin_PROGRAMS = octopus oct-atoms-magnet @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
 check_PROGRAMS = oct-test
 
@@ -75,9 +75,6 @@ oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
-
-oct_atoms_magnet_SOURCES = $(core_SRCS) atoms_magnet.F90
-oct_atoms_magnet_LDADD = $(octopus_LDADD)
 
 oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 systm.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
@@ -206,4 +203,4 @@ xc.o : xc.F90 xc_OEP_SIC.F90 xc_OEP_x.F90 xc_KLI.F90 xc_pot.F90
 #phonon_spectrum.o : phonon_spectrum.F90 complex.F90 global.h units.o io.o global.o 
 #xyz_adjust.o : xyz_adjust.F90 complex.F90 global.h geometry.o 
 #centergeom.o : centergeom.F90 complex.F90 global.h xyz_adjust.o geometry.o units.o global.o 
-#atoms_magnet.o : atoms_magnet.F90 complex.F90 global.h restart.o states.o out.o geometry.o mf.o mesh.o units.o liboct.o liboct_parser.o global.o 
+
