@@ -144,6 +144,9 @@ module liboct
     real(8) function oct_clock()
     end function oct_clock
 
+    integer function oct_getmem()
+    end function oct_getmem
+
     integer function print_file(filename)
       character(len=*), intent(in) :: filename
     end function print_file

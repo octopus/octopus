@@ -208,7 +208,8 @@ subroutine pop_sub()
         write(stdout,'(a)', advance='no') "  "
       end do
       write(stdout,'(a)', advance='no') trim(sub_stack(no_sub_stack))
-      write(stdout, '(a,f10.3,a)') ' (', (oct_clock()-time_stack(no_sub_stack))/1e6, 's)'
+      write(stdout, '(a,f10.3,a,a,i9,a)') ' (', (oct_clock()-time_stack(no_sub_stack))/1e6, 's)', &
+                                          ' (', oct_getmem(), 'kb)'
       ! It seems in std C libraries the number of clock ticks per second is 1e6...
     end if
     no_sub_stack = no_sub_stack - 1
@@ -220,21 +221,6 @@ subroutine pop_sub()
   end if
 
 end subroutine pop_sub
-
-function elapsed_time()
-  real(r8) :: elapsed_time
-
-  character(len=8)  :: date
-  character(len=10) :: time
-  character(len=5) :: zone
-  integer :: values(8)
-
-  call date_and_time(date, time, zone, values)  
-
-  elapsed_time = values(8)/1000._r8 + (values(7) + &
-                 60*(values(6) + 60*(values(5))))
-
-end function elapsed_time
 
 ! returns true if a file named stop exists
 function clean_stop()

@@ -144,7 +144,7 @@ subroutine td_run(td, u_st, sys, h)
   td%iter = td%iter + 1
 
   ii = 1
-  etime = elapsed_time()
+  etime = oct_clock()
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
     ! Move the ions.
@@ -240,12 +240,12 @@ subroutine td_run(td, u_st, sys, h)
     end if
 
     ! write info
-    write(message(1), '(i7,1x,3f14.6)') i, &
+    write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
          i*td%dt       / units_out%time%factor, &
          h%etot        / units_out%energy%factor, &
-         elapsed_time() - etime
+         (oct_clock() - etime)/1e6
     call write_info(1)
-    etime = elapsed_time()
+    etime = oct_clock()
 
     ! write down data
     ii = ii + 1
