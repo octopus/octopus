@@ -86,7 +86,7 @@ oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 systm.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 opt_control.F90 \
-	fxc.F90 linear_response.F90 static_pol_lr.F90 pulpo.F90 \
+	linear_response.F90 static_pol_lr.F90 pulpo.F90 \
 	run.F90 oct_test.F90
 oct_test_LDADD = $(octopus_LDADD)
 
