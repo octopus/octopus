@@ -55,7 +55,7 @@ subroutine kpoints_write_info(st,iunit)
   integer, intent(IN) :: iunit
   
   
-  write(message(1),'(i4)') 'Number of K points in each direction = ',st%nik
+  write(message(1),'(a,i4)') 'Number of K points in each direction = ',st%nik
   call write_info(1,iunit)
 
 end subroutine kpoints_write_info
