@@ -96,13 +96,8 @@ subroutine unocc_run(u, scf, sys, h)
   integer :: iter, is, j, iunit
   logical :: finish, file_exists
   real(r8) :: tol, diff(u%st%nst, u%st%nik)
-  type(states_type), pointer :: tmp_st
 
   sub_name = 'unocc_scf'; call push_sub()
-
-  ! let us first set the sys%st structure
-  tmp_st => sys%st
-  sys%st => u%st
 
   iter_loop: do iter = 1, u%max_iter
     if(clean_stop()) exit
@@ -111,14 +106,14 @@ subroutine unocc_run(u, scf, sys, h)
     tol = maxval(diff)
 
     ! compute eigenvalues
-    call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
+    call R_FUNC(hamiltonian_eigenval) (h, u%st, sys) ! eigenvalues
 
     write(message(1), '(a,i5,a,f12.6)') 'Info: iter = ', iter, ' tol = ', tol
     call write_info(1)
-    !call states_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
+    !call states_write_eigenvalues(stdout, u%nst, u%st, diff)
     
     ! save restart information
-    call R_FUNC(states_write_restart)("restart.occ", sys%m, sys%st)
+    call R_FUNC(states_write_restart)("restart.occ", sys%m, u%st)
 
     finish = (u%conv > 0) .and. (tol <= u%conv)
     if(finish) then
@@ -143,14 +138,11 @@ subroutine unocc_run(u, scf, sys, h)
   end if
   write(iunit,'(a, e17.6)') 'Criterium = ', u%conv
   write(iunit,'(1x)')
-  call states_write_eigenvalues(iunit, sys%st%nst, sys%st, diff)
+  call states_write_eigenvalues(iunit, u%st%nst, u%st, diff)
   call io_close(iunit)
 
   ! output wave-functions
-  call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
-
-  ! we now put this back
-  sys%st => tmp_st
+  call R_FUNC(states_output) (u%st, sys%m, "static", sys%outp)
 
   call pop_sub()
 end subroutine unocc_run

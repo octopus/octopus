@@ -38,7 +38,10 @@ type laser_type
   real(r8) :: tau1   ! for the ramped shape, the length of the "ramping" intervals 
                      ! (tau0 will be the length of the constant interval)
 
-  type(spline_type) :: phase
+  real(r8), pointer :: numerical(:,:) ! when the laser is numerical
+  real(r8) :: dt
+
+  type(spline_type) :: phase      ! when reading a laser from a file
   type(spline_type) :: amplitude
 
   ! For the velocity gauge
@@ -172,10 +175,13 @@ subroutine laser_end(no_l, l)
   if(no_l <= 0) return
 
   do i = 1, no_l
-    if(l(i)%envelope == 10) then
-      call spline_end(l(i)%amplitude)
-      call spline_end(l(i)%phase)
-    end if
+    select case(l(i)%envelope)
+      case(10)
+        call spline_end(l(i)%amplitude)
+        call spline_end(l(i)%phase)
+      case(99)
+        deallocate(l(i)%numerical); nullify(l(i)%numerical)
+      end select
   end do
   
   deallocate(l); nullify(l)
@@ -226,6 +232,11 @@ subroutine laser_field(no_l, l, t, field)
 
   if(no_l .eq. 0) then
     field = 0._r8
+    return
+  end if
+
+  if(no_l == 1 .and. l(1)%envelope == 99) then
+    field(:) = l(i)%numerical(:, int(t/l(i)%dt))
     return
   end if
 

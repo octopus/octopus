@@ -268,7 +268,7 @@ subroutine lcao_wf(sys, h)
   allocate(hpsi(sys%m%np, sys%st%dim))
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
-       call R_FUNC(Hpsi)(h, sys, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+       call R_FUNC(Hpsi)(h, sys%m, sys%st, sys, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
        do n2 = 1, lcao_data%dim
               lcao_data%hamilt(ik, n1, n2) = &
                         R_FUNC(states_dotp)(sys%m, sys%st%dim, &

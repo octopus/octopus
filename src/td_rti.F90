@@ -15,21 +15,23 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_rti(h, sys, td, t)
-  type(system_type), intent(inout) :: sys
+subroutine td_rti(h, m, st, sys, td, t)
   type(hamiltonian_type), intent(inout) :: h
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(inout) :: st
+  type(system_type), intent(in) :: sys
   type(td_type), intent(inout) :: td
   real(r8), intent(in) :: t
 
   integer :: is  
   sub_name = 'td_rti'; call push_sub()
 
-!!$  call dcopy(sys%st%nspin*sys%m%np, td%v_old(1, 1, 2), 1, td%v_old(1, 1, 3), 1)
-!!$  call dcopy(sys%st%nspin*sys%m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
+!!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 2), 1, td%v_old(1, 1, 3), 1)
+!!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
   td%v_old(:, :, 3) = td%v_old(:, :, 2)
   td%v_old(:, :, 2) = td%v_old(:, :, 1)
-  do is = 1, sys%st%nspin
-     td%v_old(:, is, 1) = h%vhartree(:) + h%vxc(:, is)
+  do is = 1, st%nspin
+    td%v_old(:, is, 1) = h%vhartree(:) + h%vxc(:, is)
   enddo
   
   select case(td%evolution_method)
@@ -62,31 +64,31 @@ contains
     
     sub_name = 'td_rti1'; call push_sub()
 
-    allocate(aux(sys%m%np, sys%st%nspin))
+    allocate(aux(m%np, st%nspin))
 
-    call xpolate_pot(td%dt/2._r8, td%dt, sys%m%np, sys%st%nspin, &
+    call xpolate_pot(td%dt/2._r8, td%dt, m%np, st%nspin, &
                      td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
     
     h%VHartree = 0._r8; h%Vxc = aux
-    allocate(zpsi1(0:sys%m%np, sys%st%dim, sys%st%st_start:sys%st%st_end, sys%st%nik))
-    zpsi1 = sys%st%zpsi
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+    allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
+    zpsi1 = st%zpsi
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
       end do
     end do
-    sys%st%zpsi = zpsi1
+    st%zpsi = zpsi1
     deallocate(zpsi1)
     
-    call zcalcdens(sys%st, sys%m%np, aux, .true.)
-    sys%st%rho = (sys%st%rho +  aux) / 2.0_r8
+    call zcalcdens(st, m%np, aux, .true.)
+    st%rho = (st%rho +  aux) / 2.0_r8
     deallocate(aux)
     
-    call zhamiltonian_setup(h, sys)
+    call zhamiltonian_setup(h, m, st, sys)
     
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
       end do
     end do
     
@@ -100,39 +102,39 @@ contains
 
     sub_name = 'td_rti2'; call push_sub()
 
-    allocate(zpsi1(0:sys%m%np, sys%st%dim, sys%st%st_start:sys%st%st_end, sys%st%nik))
-    zpsi1 = sys%st%zpsi ! store zpsi
+    allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
+    zpsi1 = st%zpsi ! store zpsi
     
-    allocate(vhxc_t1(sys%m%np, sys%st%nspin))
-    do is = 1, sys%st%nspin ! store Vhxc
+    allocate(vhxc_t1(m%np, st%nspin))
+    do is = 1, st%nspin ! store Vhxc
       Vhxc_t1(:, is) = h%VHartree(:) + h%Vxc(:, is)
     end do
     
     ! propagate dt with H(t-dt)
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
       end do
     end do
     
-    call zcalcdens(sys%st, sys%m%np, sys%st%rho, .true.)
-    call zhamiltonian_setup(h, sys)
+    call zcalcdens(st, m%np, st%rho, .true.)
+    call zhamiltonian_setup(h, m, st, sys)
     
-    sys%st%zpsi = zpsi1
+    st%zpsi = zpsi1
     deallocate(zpsi1)
     
     ! store Vhxc at t
-    allocate(vhxc_t2(sys%m%np, sys%st%nspin))
-    do is = 1, sys%st%nspin
+    allocate(vhxc_t2(m%np, st%nspin))
+    do is = 1, st%nspin
       Vhxc_t2(:, is) = h%VHartree(:) + h%Vxc(:, is)
     end do
     
     ! propagate dt/2 with H(t-dt)
     h%Vhartree = 0._r8
     h%Vxc = Vhxc_t1
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
       end do
     end do
     
@@ -140,9 +142,9 @@ contains
     
     ! propagate dt/2 with H(t)
     h%Vxc = Vhxc_t2
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
       end do
     end do
     
@@ -157,24 +159,24 @@ contains
 
     sub_name = 'td_rti3'; call push_sub()
 
-    allocate(aux(sys%m%np, sys%st%nspin))
+    allocate(aux(m%np, st%nspin))
 
-    call xpolate_pot(td%dt, td%dt, sys%m%np, sys%st%nspin, &
+    call xpolate_pot(td%dt, td%dt, m%np, st%nspin, &
                      td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
     
     ! propagate dt/2 with H(t-dt)
     h%Vhartree = 0._r8
     h%vxc = td%v_old(:, :, 1)
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
       end do
     end do
     
     h%vxc = aux
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
       end do
     end do
  
@@ -187,13 +189,13 @@ contains
 
     sub_name = 'td_rti4'; call push_sub()
 
-    call xpolate_pot(td%dt/2._r8, td%dt, sys%m%np, sys%st%nspin, &
+    call xpolate_pot(td%dt/2._r8, td%dt, m%np, st%nspin, &
                      td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), h%vxc)
 
     h%vhartree = 0._r8
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        call td_dtexp(h, sys, td, ik, sys%st%zpsi(:,:, ist, ik), td%dt, t + td%dt/2._r8)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(h, sys, td, ik, st%zpsi(:,:, ist, ik), td%dt, t + td%dt/2._r8)
       end do
     end do
 

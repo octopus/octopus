@@ -55,7 +55,7 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
            st%R_FUNC(psi)(:,:, 1:p, ik), start = p)
 
       xk(1:np,:) = st%R_FUNC(psi)(1:np,:, p, ik)
-      call R_FUNC(Hpsi) (h, sys, ik, xk, hxk)
+      call R_FUNC(Hpsi) (h, sys%m, sys%st, sys, ik, xk, hxk)
 
       xkHxk      = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, xk(1:np,:), hxk))
       xkxk       = 1._r8
@@ -82,7 +82,7 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
         xkpk = R_FUNC(states_dotp) (sys%m, st%dim, xk(1:np,:), pk(1:np,:))
         pkpk = R_FUNC(states_nrm2) (sys%m, st%dim, pk(1:np,:))**2
         pkHxk= R_FUNC(states_dotp) (sys%m, st%dim, pk(1:np,:), hxk)
-        call R_FUNC(Hpsi) (h, sys, ik, pk, gk)
+        call R_FUNC(Hpsi) (h, sys%m, sys%st, sys, ik, pk, gk)
         pkHpk = R_FUNC(states_dotp) (sys%m, st%dim, pk(1:np,:), gk)
 
         Ak = pkHpk*xkpk - pkHxk*pkpk

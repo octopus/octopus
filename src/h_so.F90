@@ -15,12 +15,13 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine zso (h, sys, ik, psi, Hpsi)
+subroutine zso (h, m, natoms, atom, dim, ik, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h
-  type(system_type), intent(in) :: sys
-  integer, intent(in) :: ik
-  R_TYPE, intent(in) :: psi(0:sys%m%np, sys%st%dim)
-  R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
+  type(mesh_type), intent(in) :: m
+  integer, intent(in) :: dim, natoms, ik
+  type(atom_type), intent(in) :: atom(natoms)
+  R_TYPE, intent(in) :: psi(0:m%np, dim)
+  R_TYPE, intent(inout) :: Hpsi(m%np, dim)
 
   integer :: is, ia, i, j,  mps,add_lm, ikbc,jkbc, idim, l, lm 
   complex(r8), allocatable :: tpsi(:, :), tHpsi(:, :)
@@ -30,50 +31,50 @@ subroutine zso (h, sys, ik, psi, Hpsi)
 
   sub_name = 'zso'; call push_sub()
 
-  atm: do ia = 1, sys%natoms
-     spec => sys%atom(ia)%spec
-     allocate(tpsi(sys%atom(ia)%mps, 2), tHpsi(sys%atom(ia)%mps, 2))
-     tpsi(:, 1) = psi(sys%atom(ia)%jxyz(:), 1)
-     tpsi(:, 2) = psi(sys%atom(ia)%jxyz(:), 2)
+  atm: do ia = 1, natoms
+     spec => atom(ia)%spec
+     allocate(tpsi(atom(ia)%mps, 2), tHpsi(atom(ia)%mps, 2))
+     tpsi(:, 1) = psi(atom(ia)%jxyz(:), 1)
+     tpsi(:, 2) = psi(atom(ia)%jxyz(:), 2)
      tHpsi = M_z0
         add_lm = 1
         do l = 0, spec%ps%l_max
            do lm = -l, l
               do ikbc = 1, spec%ps%kbc
                  do jkbc = 1, spec%ps%kbc
-                     uvpsi = R_DOT(sys%atom(ia)%mps, sys%atom(ia)%so_luv(:, add_lm, ikbc, 1), 1, &
-                               tpsi(:, 1), 1)*sys%m%vol_pp*sys%atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call zaxpy(sys%atom(ia)%mps,       uvpsi/2, sys%atom(ia)%so_uv(:, add_lm, jkbc), 1, &
+                     uvpsi = R_DOT(atom(ia)%mps, atom(ia)%so_luv(:, add_lm, ikbc, 1), 1, &
+                               tpsi(:, 1), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call zaxpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(:, add_lm, jkbc), 1, &
                             tHpsi(:, 2), 1)
-                     uvpsi = R_DOT(sys%atom(ia)%mps, sys%atom(ia)%so_luv(:, add_lm, ikbc, 1), 1, &
-                               tpsi(:, 2), 1)*sys%m%vol_pp*sys%atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call zaxpy(sys%atom(ia)%mps,       uvpsi/2, sys%atom(ia)%so_uv(:, add_lm, jkbc), 1, &
+                     uvpsi = R_DOT(atom(ia)%mps, atom(ia)%so_luv(:, add_lm, ikbc, 1), 1, &
+                               tpsi(:, 2), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call zaxpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(:, add_lm, jkbc), 1, &
                             tHpsi(:, 1), 1)
  
-                     uvpsi = R_DOT(sys%atom(ia)%mps, sys%atom(ia)%so_luv(:, add_lm, ikbc, 2), 1, &
-                               tpsi(:, 1), 1)*sys%m%vol_pp*sys%atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call zaxpy(sys%atom(ia)%mps,   M_zI*uvpsi/2, sys%atom(ia)%so_uv(:, add_lm, jkbc), 1, &
+                     uvpsi = R_DOT(atom(ia)%mps, atom(ia)%so_luv(:, add_lm, ikbc, 2), 1, &
+                               tpsi(:, 1), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call zaxpy(atom(ia)%mps, M_zI*uvpsi/2, atom(ia)%so_uv(:, add_lm, jkbc), 1, &
                             tHpsi(:, 2), 1)
-                     uvpsi = R_DOT(sys%atom(ia)%mps, sys%atom(ia)%so_luv(:, add_lm, ikbc, 2), 1, &
-                               tpsi(:, 2), 1)*sys%m%vol_pp*sys%atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call zaxpy(sys%atom(ia)%mps,  -M_zI*uvpsi/2, sys%atom(ia)%so_uv(:, add_lm, jkbc), 1, &
+                     uvpsi = R_DOT(atom(ia)%mps, atom(ia)%so_luv(:, add_lm, ikbc, 2), 1, &
+                               tpsi(:, 2), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call zaxpy(atom(ia)%mps, -M_zI*uvpsi/2, atom(ia)%so_uv(:, add_lm, jkbc), 1, &
                             tHpsi(:, 1), 1)
 
-                     uvpsi = R_DOT(sys%atom(ia)%mps, sys%atom(ia)%so_luv(:, add_lm, ikbc, 3), 1, &
-                               tpsi(:, 1), 1)*sys%m%vol_pp*sys%atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call zaxpy(sys%atom(ia)%mps,       uvpsi/2, sys%atom(ia)%so_uv(:, add_lm, jkbc), 1, &
+                     uvpsi = R_DOT(atom(ia)%mps, atom(ia)%so_luv(:, add_lm, ikbc, 3), 1, &
+                               tpsi(:, 1), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call zaxpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(:, add_lm, jkbc), 1, &
                             tHpsi(:, 1), 1)
-                     uvpsi = R_DOT(sys%atom(ia)%mps, sys%atom(ia)%so_luv(:, add_lm, ikbc, 3), 1, &
-                               tpsi(:, 2), 1)*sys%m%vol_pp*sys%atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call zaxpy(sys%atom(ia)%mps,      -uvpsi/2, sys%atom(ia)%so_uv(:, add_lm, jkbc), 1, &
+                     uvpsi = R_DOT(atom(ia)%mps, atom(ia)%so_luv(:, add_lm, ikbc, 3), 1, &
+                               tpsi(:, 2), 1)*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
+                     call zaxpy(atom(ia)%mps, -uvpsi/2, atom(ia)%so_uv(:, add_lm, jkbc), 1, &
                             tHpsi(:, 2), 1)
                   enddo
               enddo
               add_lm = add_lm + 1
            enddo
         enddo
-        Hpsi(sys%atom(ia)%jxyz(:), 1) = Hpsi(sys%atom(ia)%jxyz(:), 1) + tHpsi(:, 1)
-        Hpsi(sys%atom(ia)%jxyz(:), 2) = Hpsi(sys%atom(ia)%jxyz(:), 2) + tHpsi(:, 2)
+        Hpsi(atom(ia)%jxyz(:), 1) = Hpsi(atom(ia)%jxyz(:), 1) + tHpsi(:, 1)
+        Hpsi(atom(ia)%jxyz(:), 2) = Hpsi(atom(ia)%jxyz(:), 2) + tHpsi(:, 2)
      deallocate(tpsi, tHpsi)
   end do atm
 

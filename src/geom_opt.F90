@@ -128,11 +128,8 @@ contains
 
       call generate_external_pot(h, sys)
       call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
-      call R_FUNC(hamiltonian_setup) (h, sys)
-  
-      ! update hamiltonian and eigenvalues (fermi is *not* called)
-      call R_FUNC(hamiltonian_eigenval) (h, sys,  1, sys%st%nst)
-      call hamiltonian_energy(h, sys, -1)
+      call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+      call hamiltonian_energy(h, sys%st, sys%eii, -1)
   
       ! do scf calculation
       call scf_run(scf, sys, h)

@@ -320,9 +320,10 @@ end subroutine hamiltonian_end
 ! This subroutine calculates the total energy of the system. Basically, it
 ! adds up the KS eigenvalues, and then it substracts the whatever double
 ! counts exist (see TDDFT theory for details).
-subroutine hamiltonian_energy(h, sys, iunit, reduce)
+subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   type(hamiltonian_type), intent(inout) :: h
-  type(system_type), intent(inout) :: sys
+  type(states_type), intent(in) :: st
+  real(r8), intent(in) :: eii
   integer, intent(in) :: iunit
   logical, intent(in), optional :: reduce
 
@@ -335,29 +336,29 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
   sub_name = 'hamiltonian_energy'; call push_sub()
 
   e = 0
-  do ik = 1, sys%st%nik
-    e = e + sys%st%kweights(ik) * sum(sys%st%occ(sys%st%st_start:sys%st%st_end, ik)* &
-         sys%st%eigenval(sys%st%st_start:sys%st%st_end, ik))
+  do ik = 1, st%nik
+    e = e + st%kweights(ik) * sum(st%occ(st%st_start:st%st_end, ik)* &
+         st%eigenval(st%st_start:st%st_end, ik))
   end do
 #ifdef HAVE_MPI
   if(present(reduce)) then
-  if(reduce) then
-    call MPI_ALLREDUCE(e, s, 1, &
-         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-    e = s
-  end if
+    if(reduce) then
+      call MPI_ALLREDUCE(e, s, 1, &
+           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+      e = s
+    end if
   end if
 #endif
   
-  h%etot = e + sys%eii + h%epot + h%ex + h%ec
+  h%etot = e + eii + h%epot + h%ex + h%ec
   
   if(iunit>0) then
-    write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', sys%eii / units_out%energy%factor
-    write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e       / units_out%energy%factor
-    write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot  / units_out%energy%factor
-    write(message(4), '(6x,a, f15.8)')'Exchange    = ', h%ex    / units_out%energy%factor
-    write(message(5), '(6x,a, f15.8)')'Correlation = ', h%ec    / units_out%energy%factor
-    write(message(6), '(6x,a, f15.8)')'Total       = ', h%etot  / units_out%energy%factor
+    write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', eii    / units_out%energy%factor
+    write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e      / units_out%energy%factor
+    write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot / units_out%energy%factor
+    write(message(4), '(6x,a, f15.8)')'Exchange    = ', h%ex   / units_out%energy%factor
+    write(message(5), '(6x,a, f15.8)')'Correlation = ', h%ec   / units_out%energy%factor
+    write(message(6), '(6x,a, f15.8)')'Total       = ', h%etot / units_out%energy%factor
     call write_info(6, iunit)
   end if
 

@@ -32,6 +32,7 @@ use timedep
 use static_pol
 use geom_opt
 use phonons
+use opt_control
 use pulpo
 
 implicit none
@@ -56,6 +57,7 @@ integer, private, parameter ::   &
      M_BO_MD               = 9,  &
      M_GEOM_OPT            = 10, &
      M_PHONONS             = 11, &
+     M_OPT_CONTROL         = 12, &
      M_PULPO_A_FEIRA       = 99
 
 integer, private, parameter :: &
@@ -82,6 +84,7 @@ integer, private, parameter :: &
      I_POL_SCF             = 31,  &
      I_GEOM_OPT            = 40,  &
      I_PHONONS             = 50,  &
+     I_OPT_CONTROL         = 60,  &
      I_PULPO               = 99
 
 contains
@@ -150,10 +153,9 @@ subroutine run()
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call R_FUNC(hamiltonian_setup)(h, sys)                    ! get potentials
-      call R_FUNC(hamiltonian_eigenval)(h, sys, 1, sys%st%nst) ! eigenvalues
-      call states_fermi(sys%st, sys%m)                         ! occupations
-      call hamiltonian_energy(h, sys, -1)               ! get the total energy
+      call R_FUNC(hamiltonian_setup)(h, sys%m, sys%st, sys) ! get potentials
+      call states_fermi(sys%st, sys%m)                      ! occupations
+      call hamiltonian_energy(h, sys%st, sys%eii, -1)       ! total energy
 
     case(I_SCF)
 #ifdef COMPLEX_WFNS
@@ -247,10 +249,9 @@ subroutine run()
       ! load zpsi from static file.
       if(zstates_load_restart("restart.static", sys%m, sys%st)) then
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zhamiltonian_setup(h, sys)
-        call zhamiltonian_eigenval (h, sys, sys%st%st_start, sys%st%st_end)
+        call zhamiltonian_setup(h, sys%m, sys%st, sys)
         call hamiltonian_span(h, minval(sys%m%h), minval(sys%st%eigenval(1,:)))
-        call hamiltonian_energy(h, sys, -1, reduce=.true.)        
+        call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
       else
         i_stack(instr) = I_INIT_ZPSI
         instr = instr + 1; i_stack(instr) = I_SETUP_TD
@@ -271,10 +272,9 @@ subroutine run()
 
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zhamiltonian_setup(h, sys)
-        call zhamiltonian_eigenval (h, sys, sys%st%st_start, sys%st%st_end)
+        call zhamiltonian_setup(h, sys%m, sys%st, sys)
         call hamiltonian_span(h, minval(sys%m%h), minval(sys%st%eigenval(1,:)))
-        call hamiltonian_energy(h, sys, -1, reduce=.true.)        
+        call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)        
         
       else
         i_stack(instr) = I_INIT_ZPSI
@@ -344,6 +344,12 @@ subroutine run()
       call phonons_run(scfv, sys, h)
       call scf_end(scfv)
 
+    case(I_OPT_CONTROL)
+      message(1) = 'Info: Optimum control.'
+      call write_info(1)
+
+      call opt_control_run(td, sys, h)
+
     case(I_PULPO)
       call pulpo_print()
 
@@ -364,7 +370,7 @@ subroutine run_init()
   ! initialize some stuff
 
   call oct_parse_int(C_string('CalculationMode'), 1, calc_mode)
-  if( (calc_mode < 1 .or. calc_mode > 11) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+  if( (calc_mode < 1 .or. calc_mode > 12) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = 1 <= start static calculation'
     message(3) = '                   = 2 <= resume static calculation'
@@ -376,8 +382,9 @@ subroutine run_init()
     message(9) = '                   = 8 <= resume static polarizability'
     message(10)= '                   = 9 <= perform Born-Oppenheimer MD'
     message(11)= '                   =10 <= perform geometry minimization'
-    message(12)= '                   =10 <= calculate phonon frequencies'
-    message(13)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
+    message(12)= '                   =11 <= calculate phonon frequencies'
+    message(13)= '                   =12 <= optimum control'
+    message(14)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
     call write_fatal(13)
   end if
 
@@ -476,6 +483,10 @@ subroutine define_run_modes()
     instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_OPT_CONTROL)
+    instr = instr + 1; i_stack(instr) = I_END_TD
+    instr = instr + 1; i_stack(instr) = I_OPT_CONTROL
+    instr = instr + 1; i_stack(instr) = I_SETUP_TD
   case(M_PULPO_A_FEIRA)
     instr = instr + 1; i_stack(instr) = I_PULPO
   end select

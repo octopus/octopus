@@ -116,25 +116,24 @@ subroutine scf_run(scf, sys, h)
       call eigen_solver_run(scf%eigens, sys, h, iter, diff)
     endif
 
-    ! compute eigenvalues
-    call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
-    call states_fermi(sys%st, sys%m)                         ! occupations
+    ! compute new density
+    call mix_dens(scf%smix, iter, sys%st, sys%m, scf%abs_dens)
+    scf%rel_dens = scf%abs_dens / sys%st%qtot
+
+    ! compute new potentials
+    call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+
+    ! occupations
+    call states_fermi(sys%st, sys%m)
 
     ! output eigenvalues
     call states_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
 
     ! now compute total energy
     old_etot = h%etot
-    call hamiltonian_energy(h, sys, -1)
+    call hamiltonian_energy(h, sys%st, sys%eii, -1)
     scf%abs_ener = abs(old_etot - h%etot)
     scf%rel_ener = scf%abs_ener / abs(h%etot)
-
-    ! compute new density
-    call mix_dens(scf%smix, iter, sys%st, sys%m, scf%abs_dens)
-    scf%rel_dens = scf%abs_dens / sys%st%qtot
-
-    ! compute new potentials
-    call R_FUNC(hamiltonian_setup) (h, sys)
 
     ! are we finished?
     finish = &
@@ -219,7 +218,7 @@ subroutine scf_write_static(dir, fname)
   write(iunit, '(1x)')
 
   write(iunit, '(a)') 'Energy:'
-  call hamiltonian_energy(h, sys, iunit)
+  call hamiltonian_energy(h, sys%st, sys%eii, iunit)
   write(iunit, '(1x)')
 
   if(sys%st%ispin > 1) then

@@ -50,7 +50,7 @@ contains
     zpsi1 = zpsi
     do i = 1, order ! forth order method
       zfact = zfact*(-M_zI*timestep)/i
-      call zHpsi(h, sys, ik, zpsi1, hzpsi1, t)
+      call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
       zpsi(1:,:) = zpsi(1:,:) + zfact*hzpsi1(:,:)
       if(i .ne. order) zpsi1(1:,:) = hzpsi1(:,:)
     end do
@@ -84,7 +84,7 @@ contains
     do j = order, 0, -1
        call zcopy((sys%m%np+1)*sys%st%dim, zpsi1(0, 1, 1), 1, zpsi1(0, 1, 2), 1)
        call zcopy((sys%m%np+1)*sys%st%dim, zpsi1(0, 1, 0), 1, zpsi1(0, 1, 1), 1)
-       call zhpsi(h, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)
+       call zhpsi(h, sys%m, sys%st, sys, ik, zpsi1(:, :, 1), zpsi1(1:, :, 0), t)
             zfact = 2*(-M_zI)**j*oct_bessel(j, h%spectral_half_span*timestep)
        call zaxpy((sys%m%np+1)*sys%st%dim, cmplx(-h%spectral_middle_point, 0.0_r8, r8), &
                                                                      zpsi1(0, 1, 1), 1, zpsi1(0, 1, 0), 1)
@@ -120,7 +120,7 @@ contains
     nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi(1:sys%m%np, 1:sys%st%dim))
     v(:, :, 1) = zpsi(:, :)/nrm
     ! Operate on v(:, :, 1) and place it onto w.
-    call zhpsi(h, sys, ik, v(0:sys%m%np, 1:sys%st%dim, 1), w(1:sys%m%np, 1:sys%st%dim), t)
+    call zhpsi(h, sys%m, sys%st, sys, ik, v(0:sys%m%np, 1:sys%st%dim, 1), w(1:sys%m%np, 1:sys%st%dim), t)
     alpha = zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1), w(:, :))
     f(:, :) = w(:, :) - alpha*v(1:sys%m%np, 1:sys%st%dim, 1)
     hm = M_z0; hm(1, 1) = alpha
@@ -128,7 +128,8 @@ contains
        beta = zstates_nrm2(sys%m, sys%st%dim, f)
        v(1:sys%m%np, 1:sys%st%dim, n + 1) = f(1:sys%m%np, 1:sys%st%dim)/beta
        hm(n+1, n) = beta
-       call zhpsi(h, sys, ik, v(0:sys%m%np, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
+       call zhpsi(h, sys%m, sys%st, sys, ik, &
+            v(0:sys%m%np, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
        hh = M_z0
        do nn = n, n + 1 ! Previous ones should be nil for hermitian hamiltonians.
           hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:, :, nn), w)

@@ -175,15 +175,14 @@ subroutine td_run(td, u_st, sys, h)
     endif
 
     ! time iterate wavefunctions
-    call td_rti(h, sys, td, i*td%dt)
+    call td_rti(h, sys%m, sys%st, sys, td, i*td%dt)
 
     ! update density
     call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call zhamiltonian_setup(h, sys)
-    call zhamiltonian_eigenval (h, sys, sys%st%st_start, sys%st%st_end) ! eigenvalues
-    call hamiltonian_energy(h, sys, -1, reduce=.true.)
+    call zhamiltonian_setup(h, sys%m, sys%st, sys)
+    call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)
 
     ! Recalculate forces, update velocities...
     if(td%move_ions > 0) then

@@ -63,7 +63,7 @@ subroutine mix_init(smix, m, st)
   sub_name = 'mix_init'; call push_sub()
   
   ! check input parameters
-  call oct_parse_int(C_string("TypeOfMixing"), 0, smix%type_of_mixing)
+  call oct_parse_int(C_string("TypeOfMixing"), 2, smix%type_of_mixing)
   if(smix%type_of_mixing == 1) then
     message(1) = 'Anderson mixing (TypeOfMixing = 1) currently not implemented)'
     call write_fatal(1)

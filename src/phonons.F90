@@ -112,9 +112,8 @@ contains
         ! first force
         call generate_external_pot(h, sys)
         call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
-        call R_FUNC(hamiltonian_setup) (h, sys)
-        call R_FUNC(hamiltonian_eigenval) (h, sys,  1, sys%st%nst)
-        call hamiltonian_energy (h, sys, -1)
+        call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+        call hamiltonian_energy (h, sys%st, sys%eii, -1)
         call scf_run(scf, sys, h)
         do j = 1, sys%natoms
           forces0(j, :) = sys%atom(j)%f(:)
@@ -125,9 +124,8 @@ contains
         ! second force
         call generate_external_pot(h, sys)
         call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
-        call R_FUNC(hamiltonian_setup) (h, sys)
-        call R_FUNC(hamiltonian_eigenval) (h, sys,  1, sys%st%nst)
-        call hamiltonian_energy (h, sys, -1)
+        call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
+        call hamiltonian_energy(h, sys%st, sys%eii, -1)
         call scf_run(scf, sys, h)
         do j = 1, sys%natoms
           forces(j, :) = sys%atom(j)%f(:)
