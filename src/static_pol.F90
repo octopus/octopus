@@ -54,7 +54,7 @@ subroutine static_pol_run(scf, sys, h)
 
   ! open restart file
   call io_assign(iunit)
-  open(iunit, file=trim(sys%sysname)//'.pol_restart', status='unknown')
+  open(iunit, file='restart.pol', status='unknown')
   do i_start = 0, 3
     read(iunit, fmt=*, iostat=ios) dipole(i_start, :, :)
     if(ios.ne.0) exit
@@ -106,7 +106,7 @@ subroutine static_pol_run(scf, sys, h)
 
     ! output dipole
     call io_assign(iunit)
-    open(iunit, file=trim(sys%sysname)//'.pol_restart', status='unknown')
+    open(iunit, file='restart.pol', status='unknown')
     do j = 0, i
       write(iunit, fmt=*) dipole(j, :, :)
     end do

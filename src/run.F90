@@ -127,7 +127,7 @@ subroutine run()
       message(1) = 'Info: Loading rpsi.'
       call write_info(1)
       
-      if(R_FUNC(states_load_restart)(trim(sys%sysname)//".restart", &
+      if(R_FUNC(states_load_restart)("restart.static", &
            sys%m, sys%st)) then
         call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
@@ -197,7 +197,7 @@ subroutine run()
       message(1) = 'Info: Loading unoccupied states.'
       call write_info(1)
 
-      if(.not.R_FUNC(states_load_restart)(trim(sys%sysname)//".occ_restart", &
+      if(.not.R_FUNC(states_load_restart)("restart.occ", &
            sys%m, unoccv%st)) then
         if(calc_mode .ne. M_RESUME_UNOCC_STATES) then
           i_stack(instr) = I_UNOCC_RUN
@@ -238,7 +238,7 @@ subroutine run()
       call write_info(1)
 
       ! load zpsi from static file.
-      if(zstates_load_restart(trim(sys%sysname)//".restart", sys%m, sys%st)) then
+      if(zstates_load_restart("restart.static", sys%m, sys%st)) then
         if(h%ispin == 3) then
           deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
           nullify(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
@@ -319,7 +319,7 @@ subroutine run()
       call write_info(1)
 
       call io_assign(iunit)
-      open(iunit, file=trim(sys%sysname)//'.pol_restart', status='unknown')
+      open(iunit, file='restart.pol', status='unknown')
       write(iunit, '(a)') ' '
       call io_close(iunit)
         

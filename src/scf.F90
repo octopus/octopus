@@ -136,7 +136,7 @@ subroutine scf_run(scf, sys, h)
     call R_FUNC(hamiltonian_setup) (h, sys)
 
     ! save restart information
-    call R_FUNC(states_write_restart)(trim(sys%sysname)//".restart", sys%m, sys%st)
+    call R_FUNC(states_write_restart)("restart.static", sys%m, sys%st)
 
     ! are we finished?
     finish = &

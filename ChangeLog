@@ -1,3 +1,6 @@
+04/6/02 (marques)
+  - Elf now seems to work (funny bug in derivatives fixed)
+  - Second step at rewritting the output systems (only td left)
 31/5/02 (marques)
   - Added new laser mode (read from file)
   - Started rewitting the output system (first attempt at elf)

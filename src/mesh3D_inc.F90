@@ -66,11 +66,13 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
   real(r8), intent(in), optional :: alpha
 
-  real(r8) :: alp = 1.0_r8
+  real(r8) :: alp
 
   sub_name = 'mesh_derivatives'; call push_sub()
   
+  alp = 1._r8
   if(present(alpha)) alp = alpha
+
   select case(m%d%space)
     case(REAL_SPACE)
       if(m%iso) then
@@ -300,54 +302,3 @@ contains
   end subroutine rs_derivative_iso
 
 end subroutine R_FUNC(mesh_derivatives)
-
-subroutine R_FUNC(mesh_write_function) (m, f, u, filename, subspace)
-  type(mesh_type), intent(IN)  :: m
-  R_TYPE, intent(IN)           :: f(m%np)
-  real(r8), intent(IN)         :: u
-  character(len=*), intent(in) :: filename
-  character(len=2), intent(in), optional :: subspace
-
-  integer :: iunit, i
-  character(len=2) :: subs = ''
-
-  if(present(subspace)) subs = subspace
-
-  call io_assign(iunit)
-  open(unit=iunit, file=trim(filename), form='formatted')
-  select case(subs)
-
-  case('x')
-    do i = 1, m%np
-       if(m%ly(i) == 0 .and. m%lz(i) == 0) &
-       write(iunit, '(f12.6, 3es20.12)') &
-         m%lx(i)*m%h(1)/units_out%length%factor, f(i)/u
-    end do
-
-  case('y')
-    do i = 1, m%np
-       if(m%lx(i) == 0 .and. m%lz(i) == 0) &
-       write(iunit, '(f12.6, 3es20.12)') &
-         m%ly(i)*m%h(1)/units_out%length%factor, f(i)/u
-    end do
-
-  case('z')
-    do i = 1, m%np
-       if(m%lx(i) == 0 .and. m%ly(i) == 0) &
-       write(iunit, '(f12.6, 3es20.12)') &
-         m%lz(i)*m%h(1)/units_out%length%factor, f(i)/u
-    end do
-
-  case default
-    do i = 1, m%np
-       write(iunit, '(f12.6, 3es20.12)') &
-         m%lx(i)*m%h(1)/units_out%length%factor, &
-         m%ly(i)*m%h(2)/units_out%length%factor, &
-         m%lz(i)*m%h(3)/units_out%length%factor, f(i)/u
-    end do
-
-  end select
-  call io_close(iunit)
-  
-end subroutine R_FUNC(mesh_write_function)
-

@@ -63,8 +63,9 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
   real(r8), intent(in), optional :: alpha
 
-  real(r8) :: alp = 1.0_r8
+  real(r8) :: alp
 
+  alp = 1._r8
   if(present(alpha)) alp = alpha
 
   select case(m%d%space)
@@ -189,22 +190,3 @@ contains
   end subroutine rs_derivative
 
 end subroutine R_FUNC(mesh_derivatives)
-
-subroutine R_FUNC(mesh_write_function) (m, f, u, filename, dummy)
-  type(mesh_type), intent(IN)  :: m
-  R_TYPE, intent(IN)           :: f(m%np)
-  real(r8), intent(IN)         :: u
-  character(len=*), intent(in) :: filename
-  character(len=2), intent(in), optional :: dummy ! Useless
-
-  integer :: iunit, i
-
-  call io_assign(iunit)
-  open(unit=iunit, file=trim(filename), form='formatted')
-  do i = 1, m%np
-     write(iunit, '(f12.6, es20.12)') &
-          m%lx(i)*m%h(1)/units_out%length%factor, f(i)/u
-  enddo
-  call io_close(iunit)
-
-end subroutine R_FUNC(mesh_write_function)

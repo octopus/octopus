@@ -118,7 +118,7 @@ subroutine unocc_run(u, scf, sys, h)
     !call states_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
     
     ! save restart information
-    call R_FUNC(states_write_restart)(trim(sys%sysname)//".occ_restart", sys%m, sys%st)
+    call R_FUNC(states_write_restart)("restart.occ", sys%m, sys%st)
 
     finish = (u%conv > 0) .and. (tol <= u%conv)
     if(finish) then
@@ -132,7 +132,9 @@ subroutine unocc_run(u, scf, sys, h)
 
   ! write output file
   call io_assign(iunit)
-  open(iunit, status='unknown', file=trim(sys%sysname)//'.occ')
+  call oct_mkdir(C_string("static"))
+  open(iunit, status='unknown', file='eigenvalues')
+
   if(.not.finish) then
     write(iunit, '(a, i4, a)') &
          'Occupation analysis SCF converged in ', iter, ' iterations.'
@@ -143,6 +145,9 @@ subroutine unocc_run(u, scf, sys, h)
   write(iunit,'(1x)')
   call states_write_eigenvalues(iunit, sys%st%nst, sys%st, diff)
   call io_close(iunit)
+
+  ! output wave-functions
+  call states_output(sys%st, sys%m, "static", sys%outp)
 
   ! we now put this back
   sys%st => tmp_st

@@ -493,21 +493,28 @@ subroutine states_output(st, m, dir, outp)
 
 contains
   subroutine elf()
-    real(r8) :: f
+    real(r8) :: f, d, s
     real(r8), allocatable :: c(:), r(:), gr(:,:)
     R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
+
+    ! single or double occupancy
+    if(st%nspin == 1) then
+      s = 2._r8
+    else
+      s = 1._r8
+    end if
 
     allocate(c(m%np))
     do_is: do is = 1, st%nspin
       ! first term
       allocate(r(0:m%np), gr(3, m%np))
-      r(:) = st%rho(1:, is)/st%nspin
+      r(1:m%np) = st%rho(1:m%np, is)/s
       r(0) = 0._r8
-      call dmesh_derivatives(m, r, grad=gr)
+      call dmesh_derivatives(m, r(0:m%np), grad=gr)
       do i = 1, m%np
         if(r(i) >= 1d-16) then
-          c(i) = -0.25_r8*sum(gr(:, i)**2)/r(i)
+          c(i) = -0.25_r8*sum(gr(1:3, i)**2)/r(i)
         end if
       end do
       deallocate(r, gr)
@@ -517,10 +524,10 @@ contains
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(:, idim, ist, ik), grad=gpsi)
+            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(0:m%np, idim, ist, ik), grad=gpsi)
             do i = 1, m%np
               if(R_ABS(st%R_FUNC(psi)(i, idim, ist, ik)) >= 1d-8) then
-                c(i) = c(i) + sum(gpsi(:, i)*R_CONJ(gpsi(:, i)))
+                c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:3, i)*R_CONJ(gpsi(1:3, i)))
               end if
             end do
           end do
@@ -528,9 +535,10 @@ contains
       end do
       deallocate(gpsi)
 
-      f = 3._r8/5._r8*(6*M_PI**2)**(2._r8/3._r8)
+      f = 3._r8/5._r8*(6._r8*M_PI**2)**(2._r8/3._r8)
       do i = 1, m%np
-        c(i) = 1._r8/(1._r8 + (c(i)/(f*(st%rho(i, is)/st%nspin)**(5._r8/3._r8)))**2)
+        d    = f*(st%rho(i, is)/s)**(5._r8/3._r8)
+        c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
       end do
 
       write(fname, '(a,i1)') 'elf-', is

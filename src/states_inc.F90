@@ -80,7 +80,8 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   sub_name = 'states_write_restart'; call push_sub()
 
   call io_assign(iunit)
-  open(iunit, status='unknown', file=trim(filename), form='unformatted')
+  call oct_mkdir(C_string("tmp"))
+  open(iunit, status='unknown', file = "tmp/"+trim(filename), form='unformatted')
     
 #ifdef R_TREAL
   mode = 0_i4
@@ -138,7 +139,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   end if
 
   call io_assign(iunit)
-  open(iunit, status='old', file=trim(filename), form='unformatted', err=998)
+  open(iunit, status='old', file="tmp/"+trim(filename), form='unformatted', err=998)
 
   read(iunit, err=999) ! mesh stuff is now skipped
   read(iunit, err=100) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
