@@ -4,8 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "f77_func.h"
-
 static char *disc[]={
   "DISCLAIMER: The authors do not guarantee that the "
   "implementation of this recipe leads to an eatable dish, for it is "
@@ -55,7 +53,7 @@ static char *en[]={
 #define NO_LANGS 2
 static char **rec[] = {disc,en,es};
 
-void F77_FUNC_(printrecipe, PRINTRECIPE)
+void F90_FUNC(oct_printrecipe, OCT_PRINTRECIPE)
 		 (int *lang)
 {
 	int i, j, n;

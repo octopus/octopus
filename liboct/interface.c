@@ -12,48 +12,48 @@
 
 /* Fortran does not have the asinh intrinsic, 
 	 so we use the one from libm.a */
-double F77_FUNC_(asinh, ASINH)
+double F90_FUNC_(oct_asinh, OCT_ASINH)
 		 (double *x)
 {
   return asinh(*x);
 }
 
 /* complementary error function (we use the one in gsl) */
-double F77_FUNC_(erfc, ERFC)
+double F90_FUNC_(oct_erfc, OCT_ERFC)
 		 (double *x)
 {
 	return gsl_sf_erfc(*x);
 }
 
 /* error function (we use the one in gsl) */
-double F77_FUNC_(erf, ERC)
+double F90_FUNC_(oct_erf, OCT_ERC)
 		 (double *x)
 {
 	return gsl_sf_erf(*x);
 }
 
-double F77_FUNC_(ylm, YLM)
+double F90_FUNC_(oct_ylm, OCT_YLM)
 		 (double *x, double *y, double *z, int *l, int *m)
 {
 	return ylm(*x, *y, *z, *l, *m);
 }
 
 /* from varia.c */
-void F77_FUNC_(fft_optimize, FFT_OPTIMIZE)
+void F90_FUNC_(oct_fft_optimize, OCT_FFT_OPTIMIZE)
 		 (int *n, int *p, int *par)
 {
 	fft_optimize(n, *p, *par);
 }
 
 /* Interface to the GSL interpolation functions */
-void F77_FUNC_(spline_end, SPLINE_END)
+void F90_FUNC_(oct_spline_end, OCT_SPLINE_END)
 		 (void **spl, void **acc)
 {
 	gsl_spline_free((gsl_spline *)(*spl));
 	gsl_interp_accel_free((gsl_interp_accel *)(*acc));
 }
 
-void F77_FUNC_(spline_fit, SPLINE_FIT)
+void F90_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
 		 (int *nrc, double *x, double *y, void **spl, void **acc)
 {
 	*acc = (void *)gsl_interp_accel_alloc();
@@ -62,50 +62,50 @@ void F77_FUNC_(spline_fit, SPLINE_FIT)
 	fflush(stdout);
 }
 
-double F77_FUNC_(spline_eval, SPLINE_EVAL)
+double F90_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
 		 (double *x, void **spl, void **acc)
 {
 	return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
 }
 
 /* Interface to the parsing routines */
-int F77_FUNC_(parse_init, PARSE_INIT)
+int F90_FUNC_(oct_parse_init, OCT_PARSE_INIT)
 		 (char *in, char *out)
 { 
 	return parse_init(in, out); 
 }
 
-void F77_FUNC_(parse_end, PARSE_END)
+void F90_FUNC_(oct_parse_end, OCT_PARSE_END)
 		 ()
 { 
 	parse_end(); 
 }
 
-int F77_FUNC_(parse_isdef, PARSE_ISDEF)
+int F90_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 		 (char *name)
 { 
 	return parse_isdef(name); 
 }
 
-void F77_FUNC_(parse_int, PARSE_INT)
+void F90_FUNC_(oct_parse_int, OCT_PARSE_INT)
 		 (char *name, int *def, int *res)
 { 
 	*res = parse_int(name, *def); 
 }
 
-void F77_FUNC_(parse_double, PARSE_DOUBLE)
+void F90_FUNC_(oct_parse_double, OCT_PARSE_DOUBLE)
 		 (char *name, double *def, double *res)
 {
 	*res = parse_double(name, *def); 
 }
 
-void F77_FUNC_(parse_complex, PARSE_COMPLEX)
+void F90_FUNC_(oct_parse_complex, OCT_PARSE_COMPLEX)
 		 (char *name, gsl_complex *def, gsl_complex *res)
 {
 	*res = parse_complex(name, *def); 
 }
 
-void F77_FUNC_(parse_string, PARSE_STRING)
+void F90_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 		 (char *name, char *def, char *res)
 {
 	char *c = parse_string(name, def);
@@ -119,34 +119,34 @@ static void parse_block_error(char *type, char *name, int l, int c){
 	exit(1);
 }
 
-int F77_FUNC_(parse_block_n, PARSE_BLOCK_N)
+int F90_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
 		 (char *name)
 {
 	return parse_block_n(name);
 }
 
-void F77_FUNC_(parse_block_int, PARSE_BLOCK_INT)
+void F90_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
 		 (char *name, int *l, int *c, int *res)
 {
 	if(parse_block_int(name, *l, *c, res) != 0)
 		parse_block_error("int", name, *l, *c);
 }
 
-void F77_FUNC_(parse_block_double, PARSE_BLOCK_DOUBLE)
+void F90_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
 		 (char *name, int *l, int *c, double *res)
 {
 	if(parse_block_double(name, *l, *c, res) != 0)
 		parse_block_error("double", name, *l, *c);
 }
 
-void F77_FUNC_(parse_block_complex, PARSE_BLOCK_COMPLEX)
+void F90_FUNC_(oct_parse_block_complex, OCT_PARSE_BLOCK_COMPLEX)
 		 (char *name, int *l, int *c, gsl_complex *res)
 {
 	if(parse_block_complex(name, *l, *c, res) != 0)
 		parse_block_error("complex", name, *l, *c);
 }
 
-void F77_FUNC_(parse_block_string, PARSE_BLOCK_STRING)
+void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 		 (char *name, int *l, int *c, char *res)
 {
 	char *s;
@@ -159,7 +159,7 @@ void F77_FUNC_(parse_block_string, PARSE_BLOCK_STRING)
 	}
 }
 
-double  F77_FUNC_(parse_potential, PARSE_POTENTIAL)
+double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 		 (double *x, double *y, double *z, double *r, char *pot)
 {
 	symrec *rec;

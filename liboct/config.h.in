@@ -8,20 +8,16 @@
 /* Define to 1 if using `alloca.c'. */
 #undef C_ALLOCA
 
-/* __ */
-#undef FORTRANIZE_EXTRA_UNDERSCORE
+/* Define to dummy `main' function (if any) required to link to the Fortran 90
+   libraries. */
+#undef F90_DUMMY_MAIN
 
-/* lc */
-#undef FORTRANIZE_LOWERCASE
+/* Define to a macro mangling the given C identifier (in lower and upper
+   case), which must not contain underscores, for linking with Fortran. */
+#undef F90_FUNC
 
-/* lc_ */
-#undef FORTRANIZE_LOWERCASE_UNDERSCORE
-
-/* uc */
-#undef FORTRANIZE_UPPERCASE
-
-/* uc_ */
-#undef FORTRANIZE_UPPERCASE_UNDERSCORE
+/* As F90_FUNC, but for C identifiers containing underscores. */
+#undef F90_FUNC_
 
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
@@ -57,6 +53,12 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* MPI library (www.mpich.org) */
+#undef HAVE_MPI
+
+/* Define to 1 if you have the <mpif.h> header file. */
+#undef HAVE_MPIF_H
+
 /* Define to 1 if you have the `sqrt' function. */
 #undef HAVE_SQRT
 
@@ -86,6 +88,12 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* have mpi Fortran header file */
+#undef MPI_H
+
+/* have mpi module */
+#undef MPI_MOD
 
 /* Code compiled for 1D systems */
 #undef ONE_D

@@ -45,13 +45,11 @@ integer, private, parameter :: &
      I_SETUP_HAMILTONIAN   =  5,  &
      I_SCF                 =  6,  &
      I_LCAO                =  7,  &
-
      I_SETUP_UNOCC         = 11,  &
      I_END_UNOCC           = 12,  &
      I_RANDOMIZE_UNOCC     = 13,  &
      I_LOAD_UNOCC          = 14,  &
      I_UNOCC_RUN           = 15,  &
-    
      I_SETUP_TD            = 21,  &
      I_END_TD              = 22,  &
      I_INIT_ZPSI           = 23,  &
@@ -59,10 +57,8 @@ integer, private, parameter :: &
      I_TD                  = 25,  &
      I_SETUP_OCC_AN        = 26,  &
      I_END_OCC_AN          = 27,  &
-
      I_START_POL           = 30,  &
      I_POL_SCF             = 31,  &
-
      I_PULPO               = 99
 
 contains

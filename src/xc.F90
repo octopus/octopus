@@ -22,7 +22,6 @@ integer, parameter ::     &
     XC_FAMILY_KLI  = 3,    &
     XC_FAMILY_MGGA = 4,    &
     XC_FAMILY_END  = 4,    &
-
     X_FUNC_START     = 10, &
     X_FUNC_ZER       = 10, &
     X_FUNC_LDA_REL   = 11, &
@@ -34,7 +33,6 @@ integer, parameter ::     &
     X_FUNC_KLI_X     = 17, &
     X_FUNC_KLI_SIC   = 18, &
     X_FUNC_END       = 18, &
-
     C_FUNC_START     = 48, &
     C_FUNC_ZER       = 48, &
     C_FUNC_LDA_RPA   = 49, &

@@ -81,7 +81,7 @@ subroutine write_fatal(no_lines)
   write(stdout, '(/,a,/,a)') stars, '*** Fatal Error (description follows)'
 #ifdef HAVE_MPI
   write(stdout, '(a,a)') '*', hyphens
-  write('(a,i4)') "* From node = ", mpiv%node
+  write(stdout, '(a,i4)') "* From node = ", mpiv%node
 #endif
   write(stdout, '(a,a)') '*', hyphens
   do i=1,no_lines
@@ -110,7 +110,7 @@ subroutine write_warning(no_lines)
   if(conf%verbose>0) then
     write(stdout, '(/,a)') '** Warning:'
 #ifdef HAVE_MPI
-    write('(a,i4)') "** From node = ", mpiv%node
+    write(stdout, '(a,i4)') "** From node = ", mpiv%node
 #endif
     do i=1,no_lines
       write(stdout, '(a,3x,a)') '**', trim(message(i))

@@ -615,25 +615,27 @@ contains
     acc(1:3) = 0.0_r8
 
     ! Ionic acceleration
-    do j=1, sys%natoms
-       acc(1:3) = acc(1:3) + sys%atom(j)%spec%z_val*sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
-    enddo
+    if(td%move_ions > 0) then
+      do j=1, sys%natoms
+        acc(1:3) = acc(1:3) + sys%atom(j)%spec%z_val*sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
+      end do
+    end if
 
     ! Gets the gradient of the external pot
-    do j=1, sys%natoms
-       do k=1, sys%m%np
-         call mesh_r(sys%m, k, r, x=x, a=sys%atom(j)%x)
-         if(r < r_small) cycle
-          
-         vl  = splint(sys%atom(j)%spec%ps%vlocal, r)
-         dvl = splint(sys%atom(j)%spec%ps%dvlocal, r)
-          
-         d = sum(sys%st%rho(k, :)) * sys%m%vol_pp* &
+    do j = 1, sys%natoms
+      do k = 1, sys%m%np
+        call mesh_r(sys%m, k, r, x=x, a=sys%atom(j)%x)
+        if(r < r_small) cycle
+        
+        vl  = splint(sys%atom(j)%spec%ps%vlocal, r)
+        dvl = splint(sys%atom(j)%spec%ps%dvlocal, r)
+        
+        d = sum(sys%st%rho(k, :)) * sys%m%vol_pp* &
                (dvl - (vl - sys%atom(j)%spec%Z_val)/r)/r**2
-         acc(:) = acc - d * x(:)
-       enddo
-    enddo
-
+        acc(:) = acc - d * x(:)
+      end do
+    end do
+    
     ! Adds the laser contribution
     call laser_field(td%no_lasers, td%lasers, t, field)
     charge = sum(sys%st%rho(:,:))*sys%m%vol_pp

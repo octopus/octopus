@@ -1,3 +1,6 @@
+! F90 function mangling
+#undef F90_FUNC
+
 ! Do we have FFTW
 #undef HAVE_FFTW
 
@@ -14,6 +17,10 @@
 ! Dimensionality of the system
 #undef ONE_D
 #undef THREE_D
+
+#undef HAVE_MPI
+#undef MPI_MOD
+#undef MPI_H
 
 #undef BOUNDARIES_ZERO_DERIVATIVE
 

@@ -130,7 +130,9 @@ contains
     if(td%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
-      if(conf%verbose > 20) call laser_write_info(td%no_lasers, td%lasers, stdout)
+      if(conf%verbose > 20 .and. mpiv%node == 0) then
+        call laser_write_info(td%no_lasers, td%lasers, stdout)
+      end if
       
       td%delta_strength = 0._r8 ! no delta impulse if lasers exist
       call oct_parse_logical(C_string("TDOutputLaser"), .false., td%output_laser)

@@ -914,6 +914,14 @@ ac_env_CPP_set=${CPP+set}
 ac_env_CPP_value=$CPP
 ac_cv_env_CPP_set=${CPP+set}
 ac_cv_env_CPP_value=$CPP
+ac_env_F90_set=${F90+set}
+ac_env_F90_value=$F90
+ac_cv_env_F90_set=${F90+set}
+ac_cv_env_F90_value=$F90
+ac_env_F90FLAGS_set=${F90FLAGS+set}
+ac_env_F90FLAGS_value=$F90FLAGS
+ac_cv_env_F90FLAGS_set=${F90FLAGS+set}
+ac_cv_env_F90FLAGS_value=$F90FLAGS
 
 #
 # Report the --help message.
@@ -995,14 +1003,15 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-mpi(=PATH)     compile paralel version
+  --enable-1d             Let us work in 1D
+  --enable-3d             or, if you prefer, in 3D
   --disable-dependency-tracking Speeds up one-time builds
   --enable-dependency-tracking  Do not reject slow dependency extractors
   --enable-shared=PKGS  build shared libraries default=no
   --enable-static=PKGS  build static libraries default=yes
   --enable-fast-install=PKGS  optimize for fast installation default=yes
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-1d             Let us work in 1D
-  --enable-3d             or, if you prefer, in 3D
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1010,6 +1019,7 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld default=no
   --with-pic              try to use only PIC/non-PIC objects default=use both
   --with-fftw=DIR         get it! (www.fftw.org)
+  --with-blas=DIR         get it! (www.netlib.org/blas)
   --with-lapack=DIR       get it! (http://www.netlib.org/lapack/)
   --with-gsl=DIR          get it! (http://sources.redhat.com/gsl/)
 
@@ -1021,6 +1031,8 @@ Some influential environment variables:
   CPPFLAGS    C/C++ preprocessor flags, e.g. -I<include dir> if you have
               headers in a nonstandard directory <include dir>
   CPP         C preprocessor
+  F90         Fortran 90 compiler command
+  F90FLAGS    Fortran 90 compiler flags
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -1831,6 +1843,46 @@ host_cpu=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
 host_vendor=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 host_os=`echo $ac_cv_host | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
 
+
+
+# Check whether --enable-mpi or --disable-mpi was given.
+if test "${enable_mpi+set}" = set; then
+  enableval="$enable_mpi"
+  MPIDIR=$enableval
+else
+  MPIDIR=no
+fi;
+# Check whether --enable-1d or --disable-1d was given.
+if test "${enable_1d+set}" = set; then
+  enableval="$enable_1d"
+  ONE_D=1
+fi;
+# Check whether --enable-3d or --disable-3d was given.
+if test "${enable_3d+set}" = set; then
+  enableval="$enable_3d"
+  THREE_D=1
+fi;
+
+# set program name
+PROGNAME="octopus"
+if test x"$MPIDIR" != x"no"; then
+  PROGNAME="$PROGNAME-mpi"
+fi
+
+if test "${ONE_D}"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define ONE_D 1
+_ACEOF
+
+	PROGNAME="$PROGNAME-1d"
+else
+
+cat >>confdefs.h <<\_ACEOF
+#define THREE_D 1
+_ACEOF
+
+fi
 
 
 # Checks for programs.
@@ -2734,206 +2786,6 @@ echo "${ECHO_T}$am_cv_CC_dependencies_compiler_type" >&6
 CCDEPMODE=depmode=$am_cv_CC_dependencies_compiler_type
 
 
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-echo "$as_me:$LINENO: checking how to run the C preprocessor" >&5
-echo $ECHO_N "checking how to run the C preprocessor... $ECHO_C" >&6
-# On Suns, sometimes $CPP names a directory.
-if test -n "$CPP" && test -d "$CPP"; then
-  CPP=
-fi
-if test -z "$CPP"; then
-  if test "${ac_cv_prog_CPP+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-      # Double quotes because CPP needs to be expanded
-    for CPP in "$CC -E" "$CC -E -traditional-cpp" "/lib/cpp"
-    do
-      ac_preproc_ok=false
-for ac_c_preproc_warn_flag in '' yes
-do
-  # Use a header file that comes with gcc, so configuring glibc
-  # with a fresh cross-compiler works.
-  # On the NeXT, cc -E runs the code through the compiler's parser,
-  # not just through cpp. "Syntax error" is here to catch this case.
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-#include <assert.h>
-                     Syntax error
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  egrep -v '^ *\+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  :
-else
-  echo "$as_me: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  # Broken: fails on valid input.
-continue
-fi
-rm -f conftest.err conftest.$ac_ext
-
-  # OK, works on sane cases.  Now check whether non-existent headers
-  # can be detected and how.
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-#include <ac_nonexistent.h>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  egrep -v '^ *\+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  # Broken: success on invalid input.
-continue
-else
-  echo "$as_me: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  # Passes both tests.
-ac_preproc_ok=:
-break
-fi
-rm -f conftest.err conftest.$ac_ext
-
-done
-# Because of `break', _AC_PREPROC_IFELSE's cleaning code was skipped.
-rm -f conftest.err conftest.$ac_ext
-if $ac_preproc_ok; then
-  break
-fi
-
-    done
-    ac_cv_prog_CPP=$CPP
-
-fi
-  CPP=$ac_cv_prog_CPP
-else
-  ac_cv_prog_CPP=$CPP
-fi
-echo "$as_me:$LINENO: result: $CPP" >&5
-echo "${ECHO_T}$CPP" >&6
-ac_preproc_ok=false
-for ac_c_preproc_warn_flag in '' yes
-do
-  # Use a header file that comes with gcc, so configuring glibc
-  # with a fresh cross-compiler works.
-  # On the NeXT, cc -E runs the code through the compiler's parser,
-  # not just through cpp. "Syntax error" is here to catch this case.
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-#include <assert.h>
-                     Syntax error
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  egrep -v '^ *\+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  :
-else
-  echo "$as_me: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  # Broken: fails on valid input.
-continue
-fi
-rm -f conftest.err conftest.$ac_ext
-
-  # OK, works on sane cases.  Now check whether non-existent headers
-  # can be detected and how.
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-#include <ac_nonexistent.h>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  egrep -v '^ *\+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  # Broken: success on invalid input.
-continue
-else
-  echo "$as_me: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  # Passes both tests.
-ac_preproc_ok=:
-break
-fi
-rm -f conftest.err conftest.$ac_ext
-
-done
-# Because of `break', _AC_PREPROC_IFELSE's cleaning code was skipped.
-rm -f conftest.err conftest.$ac_ext
-if $ac_preproc_ok; then
-  :
-else
-  { { echo "$as_me:$LINENO: error: C preprocessor \"$CPP\" fails sanity check" >&5
-echo "$as_me: error: C preprocessor \"$CPP\" fails sanity check" >&2;}
-   { (exit 1); exit 1; }; }
-fi
-
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
 # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
 # incompatible versions:
@@ -3173,87 +3025,207 @@ done
 test -n "$YACC" || YACC="yacc"
 
 
-if test -z "$F90"; then
-  for ac_prog in f90 ifc abf90 pgf90 xlf90
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
-if test "${ac_cv_prog_F90+set}" = set; then
+# Checks for header files.
+
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+echo "$as_me:$LINENO: checking how to run the C preprocessor" >&5
+echo $ECHO_N "checking how to run the C preprocessor... $ECHO_C" >&6
+# On Suns, sometimes $CPP names a directory.
+if test -n "$CPP" && test -d "$CPP"; then
+  CPP=
+fi
+if test -z "$CPP"; then
+  if test "${ac_cv_prog_CPP+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  if test -n "$F90"; then
-  ac_cv_prog_F90="$F90" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
+      # Double quotes because CPP needs to be expanded
+    for CPP in "$CC -E" "$CC -E -traditional-cpp" "/lib/cpp"
+    do
+      ac_preproc_ok=false
+for ac_c_preproc_warn_flag in '' yes
 do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_F90="$ac_prog"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
+  # Use a header file that comes with gcc, so configuring glibc
+  # with a fresh cross-compiler works.
+  # On the NeXT, cc -E runs the code through the compiler's parser,
+  # not just through cpp. "Syntax error" is here to catch this case.
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <assert.h>
+                     Syntax error
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
   fi
-done
-done
-
-fi
-fi
-F90=$ac_cv_prog_F90
-if test -n "$F90"; then
-  echo "$as_me:$LINENO: result: $F90" >&5
-echo "${ECHO_T}$F90" >&6
 else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  :
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  # Broken: fails on valid input.
+continue
+fi
+rm -f conftest.err conftest.$ac_ext
+
+  # OK, works on sane cases.  Now check whether non-existent headers
+  # can be detected and how.
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <ac_nonexistent.h>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  # Broken: success on invalid input.
+continue
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  # Passes both tests.
+ac_preproc_ok=:
+break
+fi
+rm -f conftest.err conftest.$ac_ext
+
+done
+# Because of `break', _AC_PREPROC_IFELSE's cleaning code was skipped.
+rm -f conftest.err conftest.$ac_ext
+if $ac_preproc_ok; then
+  break
 fi
 
-  test -n "$F90" && break
-done
+    done
+    ac_cv_prog_CPP=$CPP
 
-    test -z "$F90" && { { echo "$as_me:$LINENO: error: no acceptable Fortran 90 compiler found in $PATH" >&5
-echo "$as_me: error: no acceptable Fortran 90 compiler found in $PATH" >&2;}
+fi
+  CPP=$ac_cv_prog_CPP
+else
+  ac_cv_prog_CPP=$CPP
+fi
+echo "$as_me:$LINENO: result: $CPP" >&5
+echo "${ECHO_T}$CPP" >&6
+ac_preproc_ok=false
+for ac_c_preproc_warn_flag in '' yes
+do
+  # Use a header file that comes with gcc, so configuring glibc
+  # with a fresh cross-compiler works.
+  # On the NeXT, cc -E runs the code through the compiler's parser,
+  # not just through cpp. "Syntax error" is here to catch this case.
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <assert.h>
+                     Syntax error
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  :
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  # Broken: fails on valid input.
+continue
+fi
+rm -f conftest.err conftest.$ac_ext
+
+  # OK, works on sane cases.  Now check whether non-existent headers
+  # can be detected and how.
+  cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#include <ac_nonexistent.h>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_c_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  # Broken: success on invalid input.
+continue
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  # Passes both tests.
+ac_preproc_ok=:
+break
+fi
+rm -f conftest.err conftest.$ac_ext
+
+done
+# Because of `break', _AC_PREPROC_IFELSE's cleaning code was skipped.
+rm -f conftest.err conftest.$ac_ext
+if $ac_preproc_ok; then
+  :
+else
+  { { echo "$as_me:$LINENO: error: C preprocessor \"$CPP\" fails sanity check" >&5
+echo "$as_me: error: C preprocessor \"$CPP\" fails sanity check" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-if test -z "${F90FLAGS}"; then
-	case "${host}" in
-	i?86*linux*)
-		case "${F90}" in
-		pgf90*)
-  		F90FLAGS="-O2 -fast -Munroll -Mnoframe -Mdalign"
-		;;
-		abf90*)
-			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
-		;;
-		ifc*)
-			F90FLAGS="-O3 -nbs -lowercase"
-									cat >>confdefs.h <<\_ACEOF
-#define FORTRANIZE_LOWERCASE_UNDERSCORE 1
-_ACEOF
-
-		;;
-		*)
-			F90FLAGS="-O"
-		esac
-	;;
-	alphaev*)
-		F90FLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
-		;;
-	powerpc-ibm*)
-		F90FLAGS="-qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
-	  ;;
-	*)
-		F90FLAGS="-O"
-	esac
-fi
-
-
-
-# Checks for header files.
+ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # The Ultrix 4.2 mips builtin alloca declared by alloca.h only works
@@ -5478,7 +5450,7 @@ test "x$enable_libtool_lock" != xno && enable_libtool_lock=yes
 case $host in
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5481 "configure"' > conftest.$ac_ext
+  echo '#line 5453 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -6014,7 +5986,7 @@ chmod -w .
 save_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -o out/conftest2.$ac_objext"
 compiler_c_o=no
-if { (eval echo configure:6017: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
+if { (eval echo configure:5989: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>out/conftest.err; } && test -s out/conftest2.$ac_objext; then
   # The compiler can only warn and ignore the option if not recognized
   # So say no if there are warnings
   if test -s out/conftest.err; then
@@ -7807,7 +7779,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7810 "configure"
+#line 7782 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -7905,7 +7877,7 @@ else
     lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 7908 "configure"
+#line 7880 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -8630,37 +8602,279 @@ LIBTOOL='$(SHELL) $(top_builddir)/libtool'
 
 
 
+# unfortunately we are Fortran 90 guys
+if test x"$MPIDIR" != x"no"; then
+	if test -n "$ac_tool_prefix"; then
+  for ac_prog in mpif90
+  do
+    # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
+set dummy $ac_tool_prefix$ac_prog; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_prog_F90+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$F90"; then
+  ac_cv_prog_F90="$F90" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_F90="$ac_tool_prefix$ac_prog"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+fi
+fi
+F90=$ac_cv_prog_F90
+if test -n "$F90"; then
+  echo "$as_me:$LINENO: result: $F90" >&5
+echo "${ECHO_T}$F90" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+    test -n "$F90" && break
+  done
+fi
+if test -z "$F90"; then
+  ac_ct_F90=$F90
+  for ac_prog in mpif90
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_prog_ac_ct_F90+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$ac_ct_F90"; then
+  ac_cv_prog_ac_ct_F90="$ac_ct_F90" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_F90="$ac_prog"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+fi
+fi
+ac_ct_F90=$ac_cv_prog_ac_ct_F90
+if test -n "$ac_ct_F90"; then
+  echo "$as_me:$LINENO: result: $ac_ct_F90" >&5
+echo "${ECHO_T}$ac_ct_F90" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+  test -n "$ac_ct_F90" && break
+done
+
+  F90=$ac_ct_F90
+fi
+
+else
+	ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+if test -n "$ac_tool_prefix"; then
+  for ac_prog in f90 ifc ab90 xlf90 pgf90 epcf90 f95 fort xlf95 lf95 g95
+  do
+    # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
+set dummy $ac_tool_prefix$ac_prog; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_prog_F90+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$F90"; then
+  ac_cv_prog_F90="$F90" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_F90="$ac_tool_prefix$ac_prog"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+fi
+fi
+F90=$ac_cv_prog_F90
+if test -n "$F90"; then
+  echo "$as_me:$LINENO: result: $F90" >&5
+echo "${ECHO_T}$F90" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+    test -n "$F90" && break
+  done
+fi
+if test -z "$F90"; then
+  ac_ct_F90=$F90
+  for ac_prog in f90 ifc ab90 xlf90 pgf90 epcf90 f95 fort xlf95 lf95 g95
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
+if test "${ac_cv_prog_ac_ct_F90+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$ac_ct_F90"; then
+  ac_cv_prog_ac_ct_F90="$ac_ct_F90" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if $as_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_F90="$ac_prog"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+
+fi
+fi
+ac_ct_F90=$ac_cv_prog_ac_ct_F90
+if test -n "$ac_ct_F90"; then
+  echo "$as_me:$LINENO: result: $ac_ct_F90" >&5
+echo "${ECHO_T}$ac_ct_F90" >&6
+else
+  echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6
+fi
+
+  test -n "$ac_ct_F90" && break
+done
+
+  F90=$ac_ct_F90
+fi
 
 
+# Provide some information about the compiler.
+echo "$as_me:8786:" \
+     "checking for Fortran 90 compiler version" >&5
+ac_compiler=`set X $ac_compile; echo $2`
+{ (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
+  (eval $ac_compiler --version </dev/null >&5) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }
+{ (eval echo "$as_me:$LINENO: \"$ac_compiler -v </dev/null >&5\"") >&5
+  (eval $ac_compiler -v </dev/null >&5) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }
+{ (eval echo "$as_me:$LINENO: \"$ac_compiler -V </dev/null >&5\"") >&5
+  (eval $ac_compiler -V </dev/null >&5) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }
 
-echo "$as_me:$LINENO: checking how f90 mangles function names" >&5
-echo $ECHO_N "checking how f90 mangles function names... $ECHO_C" >&6
-cat > mangle-func.f90 <<EOF
-subroutine foobar()
-  return
-end subroutine foobar
-subroutine foo_bar()
-  return
-end subroutine foo_bar
-EOF
-ac_try='$F90 -c $F90FLAGS mangle-func.f90 1>&5'
-if { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+# If we don't use `.F' as extension, the preprocessor is not run on the
+# input file.
+ac_save_ext=$ac_ext
+ac_ext=F90
+echo "$as_me:$LINENO: checking whether we are using the GNU Fortran 90 compiler" >&5
+echo $ECHO_N "checking whether we are using the GNU Fortran 90 compiler... $ECHO_C" >&6
+if test "${ac_cv_f90_compiler_gnu+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+      program main
+#ifndef __GNUC__
+       choke me
+#endif
+
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  ac_try=""
+  (exit $ac_status); }; }; then
+  ac_compiler_gnu=yes
 else
-  echo "configure: failed program was:" >&5
-  cat mangle-func.f >&5
-  rm -f mangle-func*
-  { { echo "$as_me:$LINENO: error: failed to compile fortran test program" >&5
-echo "$as_me: error: failed to compile fortran test program" >&2;}
-   { (exit 1); exit 1; }; }
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_compiler_gnu=no
 fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+ac_cv_f90_compiler_gnu=$ac_compiler_gnu
 
-ac_f90_mangle_type=unknown
+fi
+echo "$as_me:$LINENO: result: $ac_cv_f90_compiler_gnu" >&5
+echo "${ECHO_T}$ac_cv_f90_compiler_gnu" >&6
+ac_ext=$ac_save_ext
+G90=`test $ac_compiler_gnu = yes && echo yes`
 
+
+
+if test -z "${F90FLAGS}"; then
+	case "${host}" in
+	i?86*linux*)
+		case "${F90}" in
+		pgf90*)
+  		F90FLAGS="$F90FLAGS -O2 -fast -Munroll -Mnoframe -Mdalign"
+		;;
+		abf90*)
+			F90FLAGS="$F90FLAGS -O -YEXT_NAMES=LCS -YEXT_SFX=_"
+		;;
+		ifc*)
+			F90FLAGS="$F90FLAGS -nbs -lowercase -align -zero -r16 -fpp1 -pad -unroll -tpp7 -O3 -rcd -xW"
+		;;
+		*)
+			F90FLAGS="$F90FLAGS -O"
+		esac
+	;;
+	alphaev*)
+		F90FLAGS="$F90FLAGS -align dcommons -fast -tune host -arch host -noautomatic"
+		;;
+	powerpc-ibm*)
+		F90FLAGS="$F90FLAGS -qsuffix=f=f90 -Q -O5 -qstrict -qtune=auto -qarch=auto -qhot -qipa"
+	  ;;
+	*)
+		F90FLAGS="$F90FLAGS -O"
+	esac
+fi
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -8668,273 +8882,709 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-ac_save_LIBS="$LIBS"
-LIBS="mangle-func.o $F90LIBS $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-
-#ifdef F77_DUMMY_MAIN
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-#endif
-int
-main ()
-{
-foobar();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_f90_mangle_type=lowercase
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-
-#ifdef F77_DUMMY_MAIN
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-#endif
-int
-main ()
-{
-foobar_();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_f90_mangle_type=lowercase-underscore
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-
-#ifdef F77_DUMMY_MAIN
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-#endif
-int
-main ()
-{
-FOOBAR();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_f90_mangle_type=uppercase
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-
-#ifdef F77_DUMMY_MAIN
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-#endif
-int
-main ()
-{
-FOOBAR_();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_f90_mangle_type=uppercase-underscore
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
 fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-LIBS="$ac_save_LIBS"
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-echo "$as_me:$LINENO: result: $ac_f90_mangle_type" >&5
-echo "${ECHO_T}$ac_f90_mangle_type" >&6
-
-mangle_try=unknown
-case $ac_f90_mangle_type in
-        lowercase)
-
-cat >>confdefs.h <<\_ACEOF
-#define FORTRANIZE_LOWERCASE 1
-_ACEOF
-
-                mangle_try=foo_bar_
-                ;;
-        lowercase-underscore)
-
-cat >>confdefs.h <<\_ACEOF
-#define FORTRANIZE_LOWERCASE_UNDERSCORE 1
-_ACEOF
-
-                mangle_try=foo_bar__
-                ;;
-        uppercase)
-
-cat >>confdefs.h <<\_ACEOF
-#define FORTRANIZE_UPPERCASE 1
-_ACEOF
-
-                mangle_try=FOO_BAR_
-                ;;
-        uppercase-underscore)
-
-cat >>confdefs.h <<\_ACEOF
-#define FORTRANIZE_UPPERCASE_UNDERSCORE 1
-_ACEOF
-
-                mangle_try=FOO_BAR__
-                ;;
-esac
-
-echo "$as_me:$LINENO: checking if f90 functions with an underscore get an extra underscore" >&5
-echo $ECHO_N "checking if f90 functions with an underscore get an extra underscore... $ECHO_C" >&6
+ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
 
 
 
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
+  # this should not be hardwired
+  CPP="/lib/cpp -C"
 
-ac_save_LIBS="$LIBS"
-LIBS="mangle-func.o $F90LIBS $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
 
-#ifdef F77_DUMMY_MAIN
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-#endif
-int
-main ()
-{
-$mangle_try();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_f90_mangle_underscore=yes;
-
-cat >>confdefs.h <<\_ACEOF
-#define FORTRANIZE_EXTRA_UNDERSCORE 1
-_ACEOF
-
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-ac_f90_mangle_underscore=no
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-LIBS="$ac_save_LIBS"
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-rm -f mangle-func*
-echo "$as_me:$LINENO: result: $ac_f90_mangle_underscore" >&5
-echo "${ECHO_T}$ac_f90_mangle_underscore" >&6
 
 ac_ext=f90
 ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
-ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS $F90LIBS>&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+echo "$as_me:$LINENO: checking how to get verbose linking output from $F90" >&5
+echo $ECHO_N "checking how to get verbose linking output from $F90... $ECHO_C" >&6
+if test "${ac_cv_prog_f90_v+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_prog_f90_v=
+# Try some options frequently used verbose output
+for ac_verb in -v -verbose --verbose -V -\#\#\#; do
+  ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+
+      end program main
+_ACEOF
+
+# Compile and link our simple test program by passing a flag (argument
+# 1 to this macro) to the Fortran 90 compiler in order to get
+# "verbose" output that we can then parse for the Fortran 90 linker
+# flags.
+ac_save_F90FLAGS=$F90FLAGS
+F90FLAGS="$F90FLAGS $ac_verb"
+(eval echo $as_me:8945: \"$ac_link\") >&5
+ac_f90_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
+echo "$ac_f90_v_output" >&5
+F90FLAGS=$ac_save_F90FLAGS
+
+rm -f conftest*
+ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+# If we are using xlf then replace all the commas with spaces.
+if echo $ac_f90_v_output | grep xlfentry >/dev/null 2>&1; then
+  ac_f90_v_output=`echo $ac_f90_v_output | sed 's/,/ /g'`
+fi
+
+# On HP/UX there is a line like: "LPATH is: /foo:/bar:/baz" where
+# /foo, /bar, and /baz are search directories for the Fortran linker.
+# Here, we change these into -L/foo -L/bar -L/baz (and put it first):
+ac_f90_v_output="`echo $ac_f90_v_output |
+	grep 'LPATH is:' |
+	sed 's,.*LPATH is\(: *[^ ]*\).*,\1,;s,: */, -L/,g'` $ac_f90_v_output"
+
+# If we are using Cray Fortran then delete quotes.
+# Use "\"" instead of '"' for font-lock-mode.
+# FIXME: a more general fix for quoted arguments with spaces?
+if echo $ac_f90_v_output | grep cft90 >/dev/null 2>&1; then
+  ac_f90_v_output=`echo $ac_f90_v_output | sed "s/\"//g"`
+fi
+  # look for -l* and *.a constructs in the output
+  for ac_arg in $ac_f90_v_output; do
+     case $ac_arg in
+        [\\/]*.a | ?:[\\/]*.a | -[lLRu]*)
+          ac_cv_prog_f90_v=$ac_verb
+          break 2 ;;
+     esac
+  done
+done
+if test -z "$ac_cv_prog_f90_v"; then
+   { echo "$as_me:$LINENO: WARNING: cannot determine how to obtain linking information from $F90" >&5
+echo "$as_me: WARNING: cannot determine how to obtain linking information from $F90" >&2;}
+fi
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+{ echo "$as_me:$LINENO: WARNING: compilation failed" >&5
+echo "$as_me: WARNING: compilation failed" >&2;}
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_prog_f90_v" >&5
+echo "${ECHO_T}$ac_cv_prog_f90_v" >&6
+echo "$as_me:$LINENO: checking for Fortran 90 libraries" >&5
+echo $ECHO_N "checking for Fortran 90 libraries... $ECHO_C" >&6
+if test "${ac_cv_flibs+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test "x$F90LIBS" != "x"; then
+  ac_cv_flibs="$F90LIBS" # Let the user override the test.
+else
+
+ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+
+      end program main
+_ACEOF
+
+# Compile and link our simple test program by passing a flag (argument
+# 1 to this macro) to the Fortran 90 compiler in order to get
+# "verbose" output that we can then parse for the Fortran 90 linker
+# flags.
+ac_save_F90FLAGS=$F90FLAGS
+F90FLAGS="$F90FLAGS $ac_cv_prog_f90_v"
+(eval echo $as_me:9024: \"$ac_link\") >&5
+ac_f90_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
+echo "$ac_f90_v_output" >&5
+F90FLAGS=$ac_save_F90FLAGS
+
+rm -f conftest*
+ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+# If we are using xlf then replace all the commas with spaces.
+if echo $ac_f90_v_output | grep xlfentry >/dev/null 2>&1; then
+  ac_f90_v_output=`echo $ac_f90_v_output | sed 's/,/ /g'`
+fi
+
+# On HP/UX there is a line like: "LPATH is: /foo:/bar:/baz" where
+# /foo, /bar, and /baz are search directories for the Fortran linker.
+# Here, we change these into -L/foo -L/bar -L/baz (and put it first):
+ac_f90_v_output="`echo $ac_f90_v_output |
+	grep 'LPATH is:' |
+	sed 's,.*LPATH is\(: *[^ ]*\).*,\1,;s,: */, -L/,g'` $ac_f90_v_output"
+
+# If we are using Cray Fortran then delete quotes.
+# Use "\"" instead of '"' for font-lock-mode.
+# FIXME: a more general fix for quoted arguments with spaces?
+if echo $ac_f90_v_output | grep cft90 >/dev/null 2>&1; then
+  ac_f90_v_output=`echo $ac_f90_v_output | sed "s/\"//g"`
+fi
+
+ac_cv_flibs=
+
+# Save positional arguments (if any)
+ac_save_positional="$@"
+
+set X $ac_f90_v_output
+while test $# != 1; do
+  shift
+  ac_arg=$1
+  case $ac_arg in
+        [\\/]*.a | ?:[\\/]*.a)
+            ac_exists=false
+  for ac_i in $ac_cv_f90libs; do
+    if test x"$ac_arg" = x"$ac_i"; then
+      ac_exists=true
+      break
+    fi
+  done
+
+  if test x"$ac_exists" = xtrue; then
+  :
+else
+  ac_cv_f90libs="$ac_cv_f90libs $ac_arg"
+fi
+
+          ;;
+        -bI:*)
+            ac_exists=false
+  for ac_i in $ac_cv_f90libs; do
+    if test x"$ac_arg" = x"$ac_i"; then
+      ac_exists=true
+      break
+    fi
+  done
+
+  if test x"$ac_exists" = xtrue; then
+  :
+else
+  if test "$ac_compiler_gnu" = yes; then
+  for ac_link_opt in $ac_arg; do
+    ac_cv_f90libs="$ac_cv_f90libs -Xlinker $ac_link_opt"
+  done
+else
+  ac_cv_f90libs="$ac_cv_f90libs $ac_arg"
+fi
+fi
+
+          ;;
+          # Ignore these flags.
+        -lang* | -lcrt0.o | -lc | -lgcc | -libmil | -LANG:=*)
+          ;;
+        -lkernel32)
+          test x"$CYGWIN" != xyes && ac_cv_f90libs="$ac_cv_f90libs $ac_arg"
+          ;;
+        -[LRuY])
+          # These flags, when seen by themselves, take an argument.
+          # We remove the space between option and argument and re-iterate
+          # unless we find an empty arg or a new option (starting with -)
+	  case $2 in
+             "" | -*);;
+             *)
+		ac_arg="$ac_arg$2"
+		shift; shift
+		set X $ac_arg "$@"
+		;;
+	  esac
+          ;;
+        -YP,*)
+          for ac_j in `echo $ac_arg | sed -e 's/-YP,/-L/;s/:/ -L/g'`; do
+              ac_exists=false
+  for ac_i in $ac_cv_f90libs; do
+    if test x"$ac_j" = x"$ac_i"; then
+      ac_exists=true
+      break
+    fi
+  done
+
+  if test x"$ac_exists" = xtrue; then
+  :
+else
+  ac_arg="$ac_arg $ac_j"
+                               ac_cv_f90libs="$ac_cv_f90libs $ac_j"
+fi
+
+          done
+          ;;
+				*.link) # necessary for the ifc compiler
+					ac_cv_f90libs="$ac_cv_f90libs $ac_arg"
+					;;
+				-lowercase) # necessary for the ifc compiler
+					;;
+        -[lLR]*)
+            ac_exists=false
+  for ac_i in $ac_cv_f90libs; do
+    if test x"$ac_arg" = x"$ac_i"; then
+      ac_exists=true
+      break
+    fi
+  done
+
+  if test x"$ac_exists" = xtrue; then
+  :
+else
+  ac_cv_f90libs="$ac_cv_f90libs $ac_arg"
+fi
+
+          ;;
+          # Ignore everything else.
+  esac
+done
+# restore positional arguments
+set X $ac_save_positional; shift
+
+# We only consider "LD_RUN_PATH" on Solaris systems.  If this is seen,
+# then we insist that the "run path" must be an absolute path (i.e. it
+# must begin with a "/").
+case `(uname -sr) 2>/dev/null` in
+   "SunOS 5"*)
+      ac_ld_run_path=`echo $ac_f90_v_output |
+                        sed -n 's,^.*LD_RUN_PATH *= *\(/[^ ]*\).*$,-R\1,p'`
+      test "x$ac_ld_run_path" != x &&
+        if test "$ac_compiler_gnu" = yes; then
+  for ac_link_opt in $ac_ld_run_path; do
+    ac_cv_f90libs="$ac_cv_f90libs -Xlinker $ac_link_opt"
+  done
+else
+  ac_cv_f90libs="$ac_cv_f90libs $ac_ld_run_path"
+fi
+      ;;
+esac
+fi # test "x$F90LIBS" = "x"
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_flibs" >&5
+echo "${ECHO_T}$ac_cv_flibs" >&6
+F90LIBS="$ac_cv_f90libs"
+
+ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+
+echo "$as_me:$LINENO: checking for dummy main to link with Fortran 90 libraries" >&5
+echo $ECHO_N "checking for dummy main to link with Fortran 90 libraries... $ECHO_C" >&6
+if test "${ac_cv_f90_dummy_main+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+ ac_f90_dm_save_LIBS=$LIBS
+ LIBS="$LIBS $F90LIBS"
+
+ # First, try linking without a dummy main:
+ cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_f90_dummy_main=none
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_f90_dummy_main=unknown
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+
+ if test $ac_cv_f90_dummy_main = unknown; then
+   for ac_func in MAIN__ MAIN_ __main MAIN _MAIN __MAIN main_ main__ _main; do
+     cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+#define F90_DUMMY_MAIN $ac_func
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_f90_dummy_main=$ac_func; break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+   done
+ fi
+ rm -f conftest*
+ LIBS=$ac_f90_dm_save_LIBS
+ ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_f90_dummy_main" >&5
+echo "${ECHO_T}$ac_cv_f90_dummy_main" >&6
+F90_DUMMY_MAIN=$ac_cv_f90_dummy_main
+if test "$F90_DUMMY_MAIN" != unknown; then
+  if test $F90_DUMMY_MAIN != none; then
+
+cat >>confdefs.h <<_ACEOF
+#define F90_DUMMY_MAIN $F90_DUMMY_MAIN
+_ACEOF
+
+fi
+else
+  { { echo "$as_me:$LINENO: error: linking to Fortran libraries from C fails" >&5
+echo "$as_me: error: linking to Fortran libraries from C fails" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+echo "$as_me:$LINENO: checking for Fortran 90 name-mangling scheme" >&5
+echo $ECHO_N "checking for Fortran 90 name-mangling scheme... $ECHO_C" >&6
+if test "${ac_cv_f90_mangling+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+cat >conftest.$ac_ext <<_ACEOF
+      subroutine foobar()
+      return
+      end subroutine foobar
+      subroutine foo_bar()
+      return
+      end subroutine foo_bar
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  mv conftest.$ac_objext cf90_test.$ac_objext
+
+  ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+  ac_save_LIBS=$LIBS
+  LIBS="cf90_test.$ac_objext $LIBS $F90LIBS"
+
+  ac_success=no
+  for ac_foobar in foobar FOOBAR; do
+    for ac_underscore in "" "_"; do
+      ac_func="$ac_foobar$ac_underscore"
+      cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+$ac_func ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_success=yes; break 2
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+    done
+  done
+
+  if test "$ac_success" = "yes"; then
+     case $ac_foobar in
+        foobar)
+           ac_case=lower
+           ac_foo_bar=foo_bar
+           ;;
+        FOOBAR)
+           ac_case=upper
+           ac_foo_bar=FOO_BAR
+           ;;
+     esac
+
+     ac_success_extra=no
+     for ac_extra in "" "_"; do
+        ac_func="$ac_foo_bar$ac_underscore$ac_extra"
+        cat >conftest.$ac_ext <<_ACEOF
+#line $LINENO "configure"
+#include "confdefs.h"
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+#ifdef F77_DUMMY_MAIN
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+#endif
+int
+main ()
+{
+$ac_func ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_success_extra=yes; break
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+     done
+
+     if test "$ac_success_extra" = "yes"; then
+	ac_cv_f90_mangling="$ac_case case"
+        if test -z "$ac_underscore"; then
+           ac_cv_f90_mangling="$ac_cv_f90_mangling, no underscore"
+	else
+           ac_cv_f90_mangling="$ac_cv_f90_mangling, underscore"
+        fi
+        if test -z "$ac_extra"; then
+           ac_cv_f90_mangling="$ac_cv_f90_mangling, no extra underscore"
+	else
+           ac_cv_f90_mangling="$ac_cv_f90_mangling, extra underscore"
+        fi
+      else
+	ac_cv_f90_mangling="unknown"
+      fi
+  else
+     ac_cv_f90_mangling="unknown"
+  fi
+
+  LIBS=$ac_save_LIBS
+  ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+  rm -f cf90_test* conftest*
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+ac_ext=f90
+ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f90_compiler_gnu
+
+fi
+echo "$as_me:$LINENO: result: $ac_cv_f90_mangling" >&5
+echo "${ECHO_T}$ac_cv_f90_mangling" >&6
+
+
+
+case $ac_cv_f90_mangling in
+  "lower case, no underscore, no extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) name
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) name
+_ACEOF
+ ;;
+  "lower case, no underscore, extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) name
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) name ## _
+_ACEOF
+ ;;
+  "lower case, underscore, no extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) name ## _
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) name ## _
+_ACEOF
+ ;;
+  "lower case, underscore, extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) name ## _
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) name ## __
+_ACEOF
+ ;;
+  "upper case, no underscore, no extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) NAME
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) NAME
+_ACEOF
+ ;;
+  "upper case, no underscore, extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) NAME
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) NAME ## _
+_ACEOF
+ ;;
+  "upper case, underscore, no extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) NAME ## _
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) NAME ## _
+_ACEOF
+ ;;
+  "upper case, underscore, extra underscore")
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC(name,NAME) NAME ## _
+_ACEOF
+
+          cat >>confdefs.h <<\_ACEOF
+#define F90_FUNC_(name,NAME) NAME ## __
+_ACEOF
+ ;;
+  *)
+          { echo "$as_me:$LINENO: WARNING: unknown Fortran 90 name-mangling scheme" >&5
+echo "$as_me: WARNING: unknown Fortran 90 name-mangling scheme" >&2;}
+          ;;
+esac
 
 
 lib_ok="ok"
 if test -z "${LIB_FFTW}"; then
-
 
 # Check whether --with-fftw or --without-fftw was given.
 if test "${with_fftw+set}" = set; then
@@ -8949,272 +9599,283 @@ fi;
 	else
 	  save_ldflags="$LDFLAGS"
   	if test "$FFTWDIR"; then
-    	LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"
-	  fi
+  LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"
+fi
 
-  	if test -z "${LIB_FFTW}"; then
-  		echo "$as_me:$LINENO: checking for fftw3d_f77_create_plan" >&5
+
+
+	if test -z "${LIB_FFTW}"; then
+		# the space in " " is needed.
+		echo "$as_me:$LINENO: checking for fftw3d_f77_create_plan" >&5
 echo $ECHO_N "checking for fftw3d_f77_create_plan... $ECHO_C" >&6
 if test "${ac_cv_func_fftw3d_f77_create_plan+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-
-cat > conftest.f90 <<EOF
-program main
-  call fftw3d_f77_create_plan()
-end program main
-EOF
+  cat >conftest.$ac_ext <<_ACEOF
+      program main
+call fftw3d_f77_create_plan
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_func_fftw3d_f77_create_plan=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_fftw3d_f77_create_plan=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_func_fftw3d_f77_create_plan=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_func_fftw3d_f77_create_plan=no
 fi
-rm -f conftest*
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi
-
-if eval "test \"`echo '$ac_cv_func_'fftw3d_f77_create_plan`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_func_fftw3d_f77_create_plan" >&5
+echo "${ECHO_T}$ac_cv_func_fftw3d_f77_create_plan" >&6
+if test $ac_cv_func_fftw3d_f77_create_plan = yes; then
   LIB_FFTW=" "
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-	  fi
-  	if test -z "${LIB_FFTW}"; then
-    	echo "$as_me:$LINENO: checking for fftw3d_f77_create_plan in -lfftw" >&5
+  fi
+
+
+	if test -z "${LIB_FFTW}"; then
+		echo "$as_me:$LINENO: checking for fftw3d_f77_create_plan in -lfftw" >&5
 echo $ECHO_N "checking for fftw3d_f77_create_plan in -lfftw... $ECHO_C" >&6
-ac_lib_var=`echo fftw'_'fftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
-if eval "test \"\${ac_cv_lib_$ac_lib_var+set}\" = set"; then
+if test "${ac_cv_lib_fftw_fftw3d_f77_create_plan+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_save_LIBS="$LIBS"
+  ac_check_lib_save_LIBS=$LIBS
 LIBS="-lfftw  $LIBS"
-
-cat > conftest.f90 <<EOF
-program main
-  call fftw3d_f77_create_plan()
-end program main
-EOF
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call fftw3d_f77_create_plan
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_fftw_fftw3d_f77_create_plan=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_fftw_fftw3d_f77_create_plan=no
 fi
-rm -f conftest*
-LIBS="$ac_save_LIBS"
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
 fi
-if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_lib_fftw_fftw3d_f77_create_plan" >&5
+echo "${ECHO_T}$ac_cv_lib_fftw_fftw3d_f77_create_plan" >&6
+if test $ac_cv_lib_fftw_fftw3d_f77_create_plan = yes; then
   LIB_FFTW="-lfftw"
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-	  fi
-  	if test -z "${LIB_FFTW}"; then
-    	echo "$as_me:$LINENO: checking for fftw3d_f77_create_plan in -ldfftw" >&5
+	fi
+
+
+	if test -z "${LIB_FFTW}"; then
+		echo "$as_me:$LINENO: checking for fftw3d_f77_create_plan in -ldfftw" >&5
 echo $ECHO_N "checking for fftw3d_f77_create_plan in -ldfftw... $ECHO_C" >&6
-ac_lib_var=`echo dfftw'_'fftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
-if eval "test \"\${ac_cv_lib_$ac_lib_var+set}\" = set"; then
+if test "${ac_cv_lib_dfftw_fftw3d_f77_create_plan+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_save_LIBS="$LIBS"
+  ac_check_lib_save_LIBS=$LIBS
 LIBS="-ldfftw  $LIBS"
-
-cat > conftest.f90 <<EOF
-program main
-  call fftw3d_f77_create_plan()
-end program main
-EOF
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call fftw3d_f77_create_plan
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_dfftw_fftw3d_f77_create_plan=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_dfftw_fftw3d_f77_create_plan=no
 fi
-rm -f conftest*
-LIBS="$ac_save_LIBS"
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
 fi
-if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_lib_dfftw_fftw3d_f77_create_plan" >&5
+echo "${ECHO_T}$ac_cv_lib_dfftw_fftw3d_f77_create_plan" >&6
+if test $ac_cv_lib_dfftw_fftw3d_f77_create_plan = yes; then
   LIB_FFTW="-ldfftw"
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-	  fi
-  	if test -z "${LIB_FFTW}"; then
-    	{ { echo "$as_me:$LINENO: error: couldn't find fftw library" >&5
+	fi
+
+		if test -z "${LIB_FFTW}"; then
+  { { echo "$as_me:$LINENO: error: couldn't find fftw library" >&5
 echo "$as_me: error: couldn't find fftw library" >&2;}
    { (exit 1); exit 1; }; }
-		fi
+fi
 
-			  if test -z "${LIB_RFFTW}"; then
-  		echo "$as_me:$LINENO: checking for rfftw3d_f77_create_plan" >&5
+
+
+	if test -z "${LIB_RFFTW}"; then
+		# the space in " " is needed.
+		echo "$as_me:$LINENO: checking for rfftw3d_f77_create_plan" >&5
 echo $ECHO_N "checking for rfftw3d_f77_create_plan... $ECHO_C" >&6
 if test "${ac_cv_func_rfftw3d_f77_create_plan+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-
-cat > conftest.f90 <<EOF
-program main
-  call rfftw3d_f77_create_plan()
-end program main
-EOF
+  cat >conftest.$ac_ext <<_ACEOF
+      program main
+call rfftw3d_f77_create_plan
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_func_rfftw3d_f77_create_plan=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_rfftw3d_f77_create_plan=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_func_rfftw3d_f77_create_plan=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_func_rfftw3d_f77_create_plan=no
 fi
-rm -f conftest*
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi
-
-if eval "test \"`echo '$ac_cv_func_'rfftw3d_f77_create_plan`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_func_rfftw3d_f77_create_plan" >&5
+echo "${ECHO_T}$ac_cv_func_rfftw3d_f77_create_plan" >&6
+if test $ac_cv_func_rfftw3d_f77_create_plan = yes; then
   LIB_RFFTW=" "
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-	  fi
-  	if test -z "${LIB_RFFTW}"; then
-    	echo "$as_me:$LINENO: checking for rfftw3d_f77_create_plan in -lrfftw" >&5
+  fi
+
+
+	if test -z "${LIB_RFFTW}"; then
+		echo "$as_me:$LINENO: checking for rfftw3d_f77_create_plan in -lrfftw" >&5
 echo $ECHO_N "checking for rfftw3d_f77_create_plan in -lrfftw... $ECHO_C" >&6
-ac_lib_var=`echo rfftw'_'rfftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
-if eval "test \"\${ac_cv_lib_$ac_lib_var+set}\" = set"; then
+if test "${ac_cv_lib_rfftw_rfftw3d_f77_create_plan+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_save_LIBS="$LIBS"
+  ac_check_lib_save_LIBS=$LIBS
 LIBS="-lrfftw "${LIB_FFTW}" $LIBS"
-
-cat > conftest.f90 <<EOF
-program main
-  call rfftw3d_f77_create_plan()
-end program main
-EOF
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call rfftw3d_f77_create_plan
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_rfftw_rfftw3d_f77_create_plan=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_rfftw_rfftw3d_f77_create_plan=no
 fi
-rm -f conftest*
-LIBS="$ac_save_LIBS"
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
 fi
-if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_lib_rfftw_rfftw3d_f77_create_plan" >&5
+echo "${ECHO_T}$ac_cv_lib_rfftw_rfftw3d_f77_create_plan" >&6
+if test $ac_cv_lib_rfftw_rfftw3d_f77_create_plan = yes; then
   LIB_RFFTW="-lrfftw"
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-	  fi
-  	if test -z "${LIB_RFFTW}"; then
-    	echo "$as_me:$LINENO: checking for rfftw3d_f77_create_plan in -ldrfftw" >&5
+	fi
+
+
+	if test -z "${LIB_RFFTW}"; then
+		echo "$as_me:$LINENO: checking for rfftw3d_f77_create_plan in -ldrfftw" >&5
 echo $ECHO_N "checking for rfftw3d_f77_create_plan in -ldrfftw... $ECHO_C" >&6
-ac_lib_var=`echo drfftw'_'rfftw3d_f77_create_plan | sed 'y%./+-%__p_%'`
-if eval "test \"\${ac_cv_lib_$ac_lib_var+set}\" = set"; then
+if test "${ac_cv_lib_drfftw_rfftw3d_f77_create_plan+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_save_LIBS="$LIBS"
+  ac_check_lib_save_LIBS=$LIBS
 LIBS="-ldrfftw "${LIB_FFTW}" $LIBS"
-
-cat > conftest.f90 <<EOF
-program main
-  call rfftw3d_f77_create_plan()
-end program main
-EOF
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call rfftw3d_f77_create_plan
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_drfftw_rfftw3d_f77_create_plan=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_drfftw_rfftw3d_f77_create_plan=no
 fi
-rm -f conftest*
-LIBS="$ac_save_LIBS"
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
 fi
-if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_lib_drfftw_rfftw3d_f77_create_plan" >&5
+echo "${ECHO_T}$ac_cv_lib_drfftw_rfftw3d_f77_create_plan" >&6
+if test $ac_cv_lib_drfftw_rfftw3d_f77_create_plan = yes; then
   LIB_RFFTW="-ldrfftw"
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-	  fi
-  	if test -z "${LIB_RFFTW}"; then
-    	{ { echo "$as_me:$LINENO: error: couldn't find rfftw library" >&5
+	fi
+
+		if test -z "${LIB_RFFTW}"; then
+  { { echo "$as_me:$LINENO: error: couldn't find rfftw library" >&5
 echo "$as_me: error: couldn't find rfftw library" >&2;}
    { (exit 1); exit 1; }; }
-		fi
+fi
+
 
   	LDFLAGS="$save_ldflags"
+		if test "$FFTWDIR"; then
+  LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"
+fi
 
-	  if test "$FFTWDIR"; then
-			LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"
-		fi
 	fi
 fi
 
@@ -9222,6 +9883,265 @@ if test "$lib_ok" = "ok"; then
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_FFTW 1
+_ACEOF
+
+
+fi
+
+
+lib_ok="ok"
+if test -z "${LIB_BLAS}"; then
+
+# Check whether --with-blas or --without-blas was given.
+if test "${with_blas+set}" = set; then
+  withval="$with_blas"
+  BLASDIR=$withval
+else
+  BLASDIR=""
+fi;
+
+	if test "$BLASDIR" = "no"; then
+		lib_ok="no"
+	else
+	  save_ldflags="$LDFLAGS"
+  	if test "$BLASDIR"; then
+  LDFLAGS="${LDFLAGS} -L${BLASDIR} -L${BLASDIR}/lib"
+fi
+
+
+
+	if test -z "${LIB_BLAS}"; then
+		# the space in " " is needed.
+		echo "$as_me:$LINENO: checking for ddot" >&5
+echo $ECHO_N "checking for ddot... $ECHO_C" >&6
+if test "${ac_cv_func_ddot+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+      program main
+call ddot
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_ddot=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_func_ddot=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_func_ddot" >&5
+echo "${ECHO_T}$ac_cv_func_ddot" >&6
+if test $ac_cv_func_ddot = yes; then
+  LIB_BLAS=" "
+fi
+
+  fi
+
+
+	if test -z "${LIB_BLAS}"; then
+		echo "$as_me:$LINENO: checking for ddot in -lf77blas" >&5
+echo $ECHO_N "checking for ddot in -lf77blas... $ECHO_C" >&6
+if test "${ac_cv_lib_f77blas_ddot+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lf77blas -latlas $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call ddot
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_f77blas_ddot=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_f77blas_ddot=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_f77blas_ddot" >&5
+echo "${ECHO_T}$ac_cv_lib_f77blas_ddot" >&6
+if test $ac_cv_lib_f77blas_ddot = yes; then
+  LIB_BLAS="-lf77blas -latlas"
+fi
+
+	fi
+
+
+	if test -z "${LIB_BLAS}"; then
+		echo "$as_me:$LINENO: checking for ddot in -lblas" >&5
+echo $ECHO_N "checking for ddot in -lblas... $ECHO_C" >&6
+if test "${ac_cv_lib_blas_ddot+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lblas  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call ddot
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_blas_ddot=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_blas_ddot=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_blas_ddot" >&5
+echo "${ECHO_T}$ac_cv_lib_blas_ddot" >&6
+if test $ac_cv_lib_blas_ddot = yes; then
+  LIB_BLAS="-lblas"
+fi
+
+	fi
+
+
+	if test -z "${LIB_BLAS}"; then
+		echo "$as_me:$LINENO: checking for ddot in -ldxml" >&5
+echo $ECHO_N "checking for ddot in -ldxml... $ECHO_C" >&6
+if test "${ac_cv_lib_dxml_ddot+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldxml  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call ddot
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_dxml_ddot=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_dxml_ddot=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_dxml_ddot" >&5
+echo "${ECHO_T}$ac_cv_lib_dxml_ddot" >&6
+if test $ac_cv_lib_dxml_ddot = yes; then
+  LIB_BLAS=""
+fi
+
+	fi
+
+
+	if test -z "${LIB_BLAS}"; then
+		echo "$as_me:$LINENO: checking for ddot in -lcxml" >&5
+echo $ECHO_N "checking for ddot in -lcxml... $ECHO_C" >&6
+if test "${ac_cv_lib_cxml_ddot+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcxml  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call ddot
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_cxml_ddot=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_cxml_ddot=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_cxml_ddot" >&5
+echo "${ECHO_T}$ac_cv_lib_cxml_ddot" >&6
+if test $ac_cv_lib_cxml_ddot = yes; then
+  LIB_BLAS=""
+fi
+
+	fi
+
+		if test -z "${LIB_BLAS}"; then
+  { { echo "$as_me:$LINENO: error: couldn't find blas library" >&5
+echo "$as_me: error: couldn't find blas library" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+  	LDFLAGS="$save_ldflags"
+
+		if test "$BLASDIR"; then
+  LIB_BLAS="-L${BLASDIR} -L${BLASDIR}/lib ${LIB_BLAS}"
+fi
+
+	fi
+fi
+
+if test "$lib_ok" = "ok"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_BLAS 1
 _ACEOF
 
 
@@ -9245,142 +10165,193 @@ fi;
 	else
   	save_ldflags="$LDFLAGS"
 	  if test "$LAPACKDIR"; then
-  	  LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"
-	  fi
+  LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"
+fi
 
-  	if test -z "${LIB_LAPACK}"; then
-	  	echo "$as_me:$LINENO: checking for dsygv" >&5
+
+
+	if test -z "${LIB_LAPACK}"; then
+		# the space in " " is needed.
+		echo "$as_me:$LINENO: checking for dsygv" >&5
 echo $ECHO_N "checking for dsygv... $ECHO_C" >&6
 if test "${ac_cv_func_dsygv+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-
-cat > conftest.f90 <<EOF
-program main
-  call dsygv()
-end program main
-EOF
+  cat >conftest.$ac_ext <<_ACEOF
+      program main
+call dsygv
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_func_dsygv=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_dsygv=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_func_dsygv=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_func_dsygv=no
 fi
-rm -f conftest*
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
 fi
-
-if eval "test \"`echo '$ac_cv_func_'dsygv`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
+echo "$as_me:$LINENO: result: $ac_cv_func_dsygv" >&5
+echo "${ECHO_T}$ac_cv_func_dsygv" >&6
+if test $ac_cv_func_dsygv = yes; then
   LIB_LAPACK=" "
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
 fi
 
-  	fi
-	  if test -z "${LIB_LAPACK}"; then
-  	  echo "$as_me:$LINENO: checking for dsygv in -llapack" >&5
+  fi
+
+
+	if test -z "${LIB_LAPACK}"; then
+		echo "$as_me:$LINENO: checking for dsygv in -llapack" >&5
 echo $ECHO_N "checking for dsygv in -llapack... $ECHO_C" >&6
-ac_lib_var=`echo lapack'_'dsygv | sed 'y%./+-%__p_%'`
-if eval "test \"\${ac_cv_lib_$ac_lib_var+set}\" = set"; then
+if test "${ac_cv_lib_lapack_dsygv+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_save_LIBS="$LIBS"
-LIBS="-llapack "-lblas" $LIBS"
-
-cat > conftest.f90 <<EOF
-program main
-  call dsygv()
-end program main
-EOF
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-llapack ${LIB_BLAS} $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call dsygv
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_lapack_dsygv=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_lapack_dsygv=no
 fi
-rm -f conftest*
-LIBS="$ac_save_LIBS"
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_lapack_dsygv" >&5
+echo "${ECHO_T}$ac_cv_lib_lapack_dsygv" >&6
+if test $ac_cv_lib_lapack_dsygv = yes; then
+  LIB_LAPACK="-llapack"
+fi
 
-fi
-if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
-  LIB_LAPACK="-llapack -lblas"
+	fi
+
+
+	if test -z "${LIB_LAPACK}"; then
+		echo "$as_me:$LINENO: checking for dsygv in -ldxml" >&5
+echo $ECHO_N "checking for dsygv in -ldxml... $ECHO_C" >&6
+if test "${ac_cv_lib_dxml_dsygv+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldxml ${LIB_BLAS} $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call dsygv
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_dxml_dsygv=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_dxml_dsygv=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_dxml_dsygv" >&5
+echo "${ECHO_T}$ac_cv_lib_dxml_dsygv" >&6
+if test $ac_cv_lib_dxml_dsygv = yes; then
+  LIB_LAPACK="-llapack"
 fi
 
-	  fi
-	  if test -z "${LIB_LAPACK}"; then     	  echo "$as_me:$LINENO: checking for dsygv in -lcxml" >&5
+	fi
+
+
+	if test -z "${LIB_LAPACK}"; then
+		echo "$as_me:$LINENO: checking for dsygv in -lcxml" >&5
 echo $ECHO_N "checking for dsygv in -lcxml... $ECHO_C" >&6
-ac_lib_var=`echo cxml'_'dsygv | sed 'y%./+-%__p_%'`
-if eval "test \"\${ac_cv_lib_$ac_lib_var+set}\" = set"; then
+if test "${ac_cv_lib_cxml_dsygv+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  ac_save_LIBS="$LIBS"
-LIBS="-lcxml  $LIBS"
-
-cat > conftest.f90 <<EOF
-program main
-  call dsygv()
-end program main
-EOF
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcxml ${LIB_BLAS} $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call dsygv
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
 if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && test -s conftest${ac_exeext}; then
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=yes"
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_cxml_dsygv=yes
 else
-  echo "configure: failed program was:" >&5
-  cat conftest.f90 >&5
-  rm -rf conftest*
-  eval "ac_cv_lib_$ac_lib_var=no"
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_cxml_dsygv=no
 fi
-rm -f conftest*
-LIBS="$ac_save_LIBS"
-
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
 fi
-if eval "test \"`echo '$ac_cv_lib_'$ac_lib_var`\" = yes"; then
-  echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6
-  LIB_LAPACK="-lcxml"
-else
-  echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6
+echo "$as_me:$LINENO: result: $ac_cv_lib_cxml_dsygv" >&5
+echo "${ECHO_T}$ac_cv_lib_cxml_dsygv" >&6
+if test $ac_cv_lib_cxml_dsygv = yes; then
+  LIB_LAPACK="-llapack"
 fi
 
-	  fi
-  	if test -z "${LIB_LAPACK}"; then
-    	{ { echo "$as_me:$LINENO: error: couldn't find lapack/blas library" >&5
-echo "$as_me: error: couldn't find lapack/blas library" >&2;}
+	fi
+
+		if test -z "${LIB_LAPACK}"; then
+  { { echo "$as_me:$LINENO: error: couldn't find lapack library" >&5
+echo "$as_me: error: couldn't find lapack library" >&2;}
    { (exit 1); exit 1; }; }
-		fi
+fi
+
 
   	LDFLAGS="$save_ldflags"
 
 	  if test "$LAPACKDIR"; then
-			LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"
-		fi
+  LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"
+fi
+
 	fi
 fi
 
@@ -9388,11 +10359,6 @@ if test "$lib_ok" = "ok"; then
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_LAPACK 1
-_ACEOF
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_BLAS 1
 _ACEOF
 
 
@@ -9420,13 +10386,18 @@ fi;
 		lib_ok="no"
 	else
 	  save_ldflags="$LDFLAGS"
-  	if test "$GSLDIR"; then
+		if test "$GSLDIR"; then
+
     	LDFLAGS="${LDFLAGS} -L${GSLDIR}/lib"
 			CPPFLAGS="${CPPFLAGS} -I${GSLDIR}/include"
-  	fi
 
-	  if test -z "${LIB_GSL}"; then
-  		echo "$as_me:$LINENO: checking for gsl_complex_sqrt" >&5
+fi
+
+
+
+	if test -z "${LIB_GSL}"; then
+		# the space in " -lm" is needed.
+		echo "$as_me:$LINENO: checking for gsl_complex_sqrt" >&5
 echo $ECHO_N "checking for gsl_complex_sqrt... $ECHO_C" >&6
 if test "${ac_cv_func_gsl_complex_sqrt+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -9491,12 +10462,14 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_func_gsl_complex_sqrt" >&5
 echo "${ECHO_T}$ac_cv_func_gsl_complex_sqrt" >&6
 if test $ac_cv_func_gsl_complex_sqrt = yes; then
-  LIB_GSL="-lm"
+  LIB_GSL=" -lm"
 fi
 
-	  fi
-  	if test -z "${LIB_GSL}"; then
-    	echo "$as_me:$LINENO: checking for gsl_complex_sqrt in -lgsl" >&5
+  fi
+
+
+	if test -z "${LIB_GSL}"; then
+		echo "$as_me:$LINENO: checking for gsl_complex_sqrt in -lgsl" >&5
 echo $ECHO_N "checking for gsl_complex_sqrt in -lgsl... $ECHO_C" >&6
 if test "${ac_cv_lib_gsl_gsl_complex_sqrt+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -9555,23 +10528,25 @@ if test $ac_cv_lib_gsl_gsl_complex_sqrt = yes; then
   LIB_GSL="-lgsl -lgslcblas -lm"
 fi
 
-	  fi
+	fi
+
   	if test -z "${LIB_GSL}"; then
-    	{ { echo "$as_me:$LINENO: error: couldn't find gsl library" >&5
+  { { echo "$as_me:$LINENO: error: couldn't find gsl library" >&5
 echo "$as_me: error: couldn't find gsl library" >&2;}
    { (exit 1); exit 1; }; }
-		fi
+fi
+
 
   	LDFLAGS="$save_ldflags"
-
 	  if test "$GSLDIR"; then
-  		LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"
-		fi
+  LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"
+fi
+
 	fi
 
 	ac_ext=f90
 ac_compile='$F90 -c $F90FLAGS conftest.$ac_ext >&5'
-ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS $F90LIBS>&5'
+ac_link='$F90 -o conftest$ac_exeext $F90FLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_f90_compiler_gnu
 
 fi
@@ -9585,43 +10560,283 @@ _ACEOF
 
 fi
 
-# Check whether --enable-1d or --disable-1d was given.
-if test "${enable_1d+set}" = set; then
-  enableval="$enable_1d"
-  ONE_D=1
-fi;
-# Check whether --enable-3d or --disable-3d was given.
-if test "${enable_3d+set}" = set; then
-  enableval="$enable_3d"
-  THREE_D=1
-fi;
-
-if test "${ONE_D}"; then
-
-cat >>confdefs.h <<\_ACEOF
-#define ONE_D 1
-_ACEOF
-
-	PROGNAME="octopus_1d"
-else
-
-cat >>confdefs.h <<\_ACEOF
-#define THREE_D 1
-_ACEOF
-
-	PROGNAME="octopus"
+if test x"$MPIDIR" != x"no"; then
+	if test -z "${LIB_MPI}"; then
+    save_ldflags="$LDFLAGS"
+   	if test "$MPIDIR"; then
+  LDFLAGS="${LDFLAGS} -L${MPIDIR} -L${MPIDIR}/lib"
 fi
 
+
+
+	if test -z "${LIB_MPI}"; then
+		# the space in " " is needed.
+		echo "$as_me:$LINENO: checking for MPI_INIT" >&5
+echo $ECHO_N "checking for MPI_INIT... $ECHO_C" >&6
+if test "${ac_cv_func_MPI_INIT+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+      program main
+call MPI_INIT
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_func_MPI_INIT=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_func_MPI_INIT=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: $ac_cv_func_MPI_INIT" >&5
+echo "${ECHO_T}$ac_cv_func_MPI_INIT" >&6
+if test $ac_cv_func_MPI_INIT = yes; then
+  LIB_MPI=" "
+fi
+
+  fi
+
+
+	if test -z "${LIB_MPI}"; then
+		echo "$as_me:$LINENO: checking for MPI_INIT in -lmpi" >&5
+echo $ECHO_N "checking for MPI_INIT in -lmpi... $ECHO_C" >&6
+if test "${ac_cv_lib_mpi_MPI_INIT+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmpi  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+      program main
+      call MPI_INIT
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_mpi_MPI_INIT=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_cv_lib_mpi_MPI_INIT=no
+fi
+rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_mpi_MPI_INIT" >&5
+echo "${ECHO_T}$ac_cv_lib_mpi_MPI_INIT" >&6
+if test $ac_cv_lib_mpi_MPI_INIT = yes; then
+  LIB_MPI="-lmpi"
+fi
+
+	fi
+
+		if test -z "${LIB_MPI}"; then
+  { { echo "$as_me:$LINENO: error: couldn't find mpi library" >&5
+echo "$as_me: error: couldn't find mpi library" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
+
+  	LDFLAGS="$save_ldflags"
+		if test "$MPIDIR"; then
+  LIB_MPI="-L${MPIDIR} -L${MPIDIR}/lib ${LIB_MPI}"
+fi
+
+  fi
+
+	# let us see if we have a mpi module
+	save_ldflags="$LDFLAGS"
+	if test "$LIB_MPI"; then
+  LDFLAGS="${LDFLAGS} -L${LIB_MPI}"
+fi
+
+	cat >conftest.$ac_ext <<_ACEOF
+      program main
+
+use mpi
+integer :: ierr
+call MPI_Init(ierr)
+
+      end program main
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  HAVE_MPI_MOD=1
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+HAVE_MPI_MOD=0
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+
+	if test "$HAVE_MPI_MOD" = 1; then
+
+cat >>confdefs.h <<\_ACEOF
+#define MPI_MOD 1
+_ACEOF
+
+	else
+
+for ac_header in mpif.h
+do
+as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+else
+  # Is the header compilable?
+echo "$as_me:$LINENO: checking $ac_header usability" >&5
+echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+         { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+cat conftest.$ac_ext >&5
+ac_header_compiler=no
+fi
+rm -f conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6
+
+# Is the header present?
+echo "$as_me:$LINENO: checking $ac_header presence" >&5
+echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+#include <$ac_header>
+_ACEOF
+if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
+  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
+  ac_status=$?
+  egrep -v '^ *\+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null; then
+  if test -s conftest.err; then
+    ac_cpp_err=$ac_f90_preproc_warn_flag
+  else
+    ac_cpp_err=
+  fi
+else
+  ac_cpp_err=yes
+fi
+if test -z "$ac_cpp_err"; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.$ac_ext
+echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc in
+  yes:no )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+  no:yes )
+    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
+esac
+echo "$as_me:$LINENO: checking for $ac_header" >&5
+echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
+if eval "test \"\${$as_ac_Header+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  eval "$as_ac_Header=$ac_header_preproc"
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
+
+fi
+if test `eval echo '${'$as_ac_Header'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+
+cat >>confdefs.h <<\_ACEOF
+#define MPI_H 1
+_ACEOF
+
+	fi
+
+	LDFLAGS="$save_ldflags"
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_MPI 1
+_ACEOF
+
+
+fi
 
 # This is certainly wrong, but I don't know
 # how to do it right
-LIBS="$LIBS $F90LIBS"
 LINK="$F90 $F90FLAGS $LDFLAGS -o $PROGNAME"
-
-
-if test -z "$F90CPP"; then
-	F90CPP="/lib/cpp"
-fi
 
 
 ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile"
@@ -10229,6 +11444,7 @@ s,@host@,$host,;t t
 s,@host_cpu@,$host_cpu,;t t
 s,@host_vendor@,$host_vendor,;t t
 s,@host_os@,$host_os,;t t
+s,@PROGNAME@,$PROGNAME,;t t
 s,@CC@,$CC,;t t
 s,@CFLAGS@,$CFLAGS,;t t
 s,@LDFLAGS@,$LDFLAGS,;t t
@@ -10243,22 +11459,24 @@ s,@AMDEP_TRUE@,$AMDEP_TRUE,;t t
 s,@AMDEP_FALSE@,$AMDEP_FALSE,;t t
 s,@AMDEPBACKSLASH@,$AMDEPBACKSLASH,;t t
 s,@CCDEPMODE@,$CCDEPMODE,;t t
-s,@CPP@,$CPP,;t t
 s,@LN_S@,$LN_S,;t t
 s,@RANLIB@,$RANLIB,;t t
 s,@ac_ct_RANLIB@,$ac_ct_RANLIB,;t t
 s,@YACC@,$YACC,;t t
-s,@F90@,$F90,;t t
-s,@F90FLAGS@,$F90FLAGS,;t t
 s,@ALLOCA@,$ALLOCA,;t t
+s,@CPP@,$CPP,;t t
 s,@ECHO@,$ECHO,;t t
 s,@LIBTOOL@,$LIBTOOL,;t t
+s,@F90@,$F90,;t t
+s,@ac_ct_F90@,$ac_ct_F90,;t t
+s,@F90FLAGS@,$F90FLAGS,;t t
+s,@F90LIBS@,$F90LIBS,;t t
 s,@LIB_FFTW@,$LIB_FFTW,;t t
+s,@LIB_BLAS@,$LIB_BLAS,;t t
 s,@LIB_LAPACK@,$LIB_LAPACK,;t t
 s,@LIB_GSL@,$LIB_GSL,;t t
-s,@PROGNAME@,$PROGNAME,;t t
+s,@LIB_MPI@,$LIB_MPI,;t t
 s,@LINK@,$LINK,;t t
-s,@F90CPP@,$F90CPP,;t t
 CEOF
 
 _ACEOF

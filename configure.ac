@@ -10,15 +10,29 @@ AC_PREFIX_DEFAULT($HOME)
 # who am i
 AC_CANONICAL_HOST
 
+AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), 
+	MPIDIR=$enableval, MPIDIR=no)
+AC_ARG_ENABLE(1d, AC_HELP_STRING([--enable-1d], [Let us work in 1D]), ONE_D=1)
+AC_ARG_ENABLE(3d, AC_HELP_STRING([--enable-3d], [or, if you prefer, in 3D]), [THREE_D=1])
+
+# set program name
+PROGNAME="octopus"
+AS_IF([test x"$MPIDIR" != x"no"], [PROGNAME="$PROGNAME-mpi"])
+if test "${ONE_D}"; then
+	AC_DEFINE(ONE_D,   1, [Code compiled for 1D systems])
+	PROGNAME="$PROGNAME-1d"
+else
+	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systmes])
+fi
+AC_SUBST(PROGNAME)
+
 # Checks for programs.
 AC_PROG_CC
-AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AC_PROG_YACC
-ACX_PROG_F90
 
 # Checks for header files.
 AC_FUNC_ALLOCA
@@ -40,14 +54,21 @@ ACX_POINTER_SIZE
 AC_DISABLE_SHARED
 AC_PROG_LIBTOOL
 
-dnl FORTRAN 90 checks
-ACX_F90_FUNC_MANGLE
+# unfortunately we are Fortran 90 guys
+if test x"$MPIDIR" != x"no"; then
+	AC_CHECK_TOOLS(F90, [mpif90])
+else
+	AC_PROG_F90
+fi
 AC_LANG_PUSH(Fortran 90)
+AC_LANG_PREPROC(Fortran 90)
+
+dnl how Fortran mangles function names
+AC_F90_WRAPPERS
 
 dnl tests for FFTW
 lib_ok="ok"
 if test -z "${LIB_FFTW}"; then
-
 	AC_ARG_WITH(fftw, 
 		AC_HELP_STRING([--with-fftw=DIR], [get it! (www.fftw.org)]), 
 		[FFTWDIR=$withval], [FFTWDIR=""])
@@ -56,42 +77,20 @@ if test -z "${LIB_FFTW}"; then
 		lib_ok="no"
 	else
 	  save_ldflags="$LDFLAGS"
-  	if test "$FFTWDIR"; then
-    	LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"
-	  fi
+  	AS_IF([test "$FFTWDIR"], [LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"])
 
-  	if test -z "${LIB_FFTW}"; then
-  		ACX_CHECK_FUNC_F90(fftw3d_f77_create_plan, [LIB_FFTW=" "])
-	  fi
-  	if test -z "${LIB_FFTW}"; then
-    	ACX_CHECK_LIB_F90(fftw, fftw3d_f77_create_plan, [LIB_FFTW="-lfftw"])
-	  fi
-  	if test -z "${LIB_FFTW}"; then
-    	ACX_CHECK_LIB_F90(dfftw, fftw3d_f77_create_plan, [LIB_FFTW="-ldfftw"])
-	  fi
-  	if test -z "${LIB_FFTW}"; then
-    	AC_MSG_ERROR([couldn't find fftw library])
-		fi
+		ACX_CHECK_FUNC([LIB_FFTW], [fftw3d_f77_create_plan])
+		ACX_CHECK_LIB([LIB_FFTW], [fftw],  [fftw3d_f77_create_plan], [-lfftw])
+		ACX_CHECK_LIB([LIB_FFTW], [dfftw], [fftw3d_f77_create_plan], [-ldfftw])
+		AS_IF([test -z "${LIB_FFTW}"], AC_MSG_ERROR([couldn't find fftw library]))
 	
-		dnl and now we check for rfftw
-	  if test -z "${LIB_RFFTW}"; then
-  		ACX_CHECK_FUNC_F90(rfftw3d_f77_create_plan, [LIB_RFFTW=" "], [], "${LIB_FFTW}")
-	  fi
-  	if test -z "${LIB_RFFTW}"; then
-    	ACX_CHECK_LIB_F90(rfftw, rfftw3d_f77_create_plan, [LIB_RFFTW="-lrfftw"], [], "${LIB_FFTW}")
-	  fi
-  	if test -z "${LIB_RFFTW}"; then
-    	ACX_CHECK_LIB_F90(drfftw, rfftw3d_f77_create_plan, [LIB_RFFTW="-ldrfftw"], [], "${LIB_FFTW}")
-	  fi
-  	if test -z "${LIB_RFFTW}"; then
-    	AC_MSG_ERROR([couldn't find rfftw library])
-		fi
+  	ACX_CHECK_FUNC([LIB_RFFTW], [rfftw3d_f77_create_plan], [], [], [${LIB_FFTW}])
+   	ACX_CHECK_LIB([LIB_RFFTW], [rfftw], [rfftw3d_f77_create_plan], [-lrfftw], [], ["${LIB_FFTW}"])
+   	ACX_CHECK_LIB([LIB_RFFTW], [drfftw], [rfftw3d_f77_create_plan], [-ldrfftw], [], ["${LIB_FFTW}"])
+		AS_IF([test -z "${LIB_RFFTW}"], AC_MSG_ERROR([couldn't find rfftw library]))
 	
   	LDFLAGS="$save_ldflags"
-
-	  if test "$FFTWDIR"; then
-			LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"
-		fi
+		AS_IF([test "$FFTWDIR"], [LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"])
 	fi
 fi
 
@@ -101,46 +100,65 @@ if test "$lib_ok" = "ok"; then
 fi
 
 
-dnl tests for BLAS/LAPACK
+dnl tests for BLAS
+lib_ok="ok"
+if test -z "${LIB_BLAS}"; then
+	AC_ARG_WITH(blas, 
+		AC_HELP_STRING([--with-blas=DIR], [get it! (www.netlib.org/blas)]), 
+			[BLASDIR=$withval], [BLASDIR=""])
+
+	if test "$BLASDIR" = "no"; then
+		lib_ok="no"
+	else
+	  save_ldflags="$LDFLAGS"
+  	AS_IF([test "$BLASDIR"], [LDFLAGS="${LDFLAGS} -L${BLASDIR} -L${BLASDIR}/lib"])
+
+		ACX_CHECK_FUNC([LIB_BLAS], [ddot])
+		ACX_CHECK_LIB([LIB_BLAS], [f77blas], [ddot], [-lf77blas -latlas], [], [-latlas])
+		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
+		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [])
+		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [])
+		AS_IF([test -z "${LIB_BLAS}"], AC_MSG_ERROR([couldn't find blas library]))
+
+  	LDFLAGS="$save_ldflags"
+
+		AS_IF([test "$BLASDIR"], [LIB_BLAS="-L${BLASDIR} -L${BLASDIR}/lib ${LIB_BLAS}"])
+	fi
+fi
+
+if test "$lib_ok" = "ok"; then
+	AC_DEFINE(HAVE_BLAS,   1, [Blas   Library (www.netlib.org)])
+	AC_SUBST(LIB_BLAS)
+fi
+
+
 lib_ok="ok"
 if test -z "${LIB_LAPACK}"; then
 
 	AC_ARG_WITH(lapack, 
 		AC_HELP_STRING([--with-lapack=DIR], [get it! (http://www.netlib.org/lapack/)]),
-		[LAPACKDIR=$withval], [LAPACKDIR=""])
+			[LAPACKDIR=$withval], [LAPACKDIR=""])
 
 	if test "$LAPACKDIR" = "no"; then
 		lib_ok="no"
 	else
   	save_ldflags="$LDFLAGS"
-	  if test "$LAPACKDIR"; then
-  	  LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"
-	  fi
+	  AS_IF([test "$LAPACKDIR"], [LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"])
 
-  	if test -z "${LIB_LAPACK}"; then
-	  	ACX_CHECK_FUNC_F90(dsygv, [LIB_LAPACK=" "])
-  	fi
-	  if test -z "${LIB_LAPACK}"; then
-  	  ACX_CHECK_LIB_F90(lapack, dsygv, [LIB_LAPACK="-llapack -lblas"], [], "-lblas")
-	  fi
-	  if test -z "${LIB_LAPACK}"; then   dnl for the alphas
-  	  ACX_CHECK_LIB_F90(cxml, dsygv, [LIB_LAPACK="-lcxml"])
-	  fi
-  	if test -z "${LIB_LAPACK}"; then
-    	AC_MSG_ERROR([couldn't find lapack/blas library])
-		fi
+		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-llapack], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-llapack], [], [${LIB_BLAS}])
+		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
 
   	LDFLAGS="$save_ldflags"
 
-	  if test "$LAPACKDIR"; then
-			LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"
-		fi
+	  AS_IF([test "$LAPACKDIR"], [LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"])
 	fi
 fi
 
 if test "$lib_ok" = "ok"; then
 	AC_DEFINE(HAVE_LAPACK, 1, [Lapack Library (www.netlib.org)])
-	AC_DEFINE(HAVE_BLAS,   1, [Blas   Library (www.netlib.org)])
 	AC_SUBST(LIB_LAPACK)
 fi
 
@@ -152,32 +170,23 @@ if test -z "${LIB_GSL}"; then
 
 	AC_ARG_WITH(gsl,
 		AC_HELP_STRING([--with-gsl=DIR], [get it! (http://sources.redhat.com/gsl/)]),
-		[GSLDIR=$withval], [GSLDIR=""])
+			[GSLDIR=$withval], [GSLDIR=""])
 
 	if test "$GSLDIR" = "no"; then
 		lib_ok="no"
 	else
 	  save_ldflags="$LDFLAGS"
-  	if test "$GSLDIR"; then
+		AS_IF([test "$GSLDIR"], [
     	LDFLAGS="${LDFLAGS} -L${GSLDIR}/lib"
 			CPPFLAGS="${CPPFLAGS} -I${GSLDIR}/include"
-  	fi
+		])
 
-	  if test -z "${LIB_GSL}"; then
-  		AC_CHECK_FUNC(gsl_complex_sqrt, [LIB_GSL="-lm"], [], [-lm])
-	  fi
-  	if test -z "${LIB_GSL}"; then
-    	AC_CHECK_LIB(gsl, gsl_complex_sqrt, [LIB_GSL="-lgsl -lgslcblas -lm"], [], [-lgslcblas -lm])
-	  fi
-  	if test -z "${LIB_GSL}"; then
-    	AC_MSG_ERROR([couldn't find gsl library])
-		fi
+		ACX_CHECK_FUNC([LIB_GSL], [gsl_complex_sqrt], [-lm], [], [-lm])
+	 	ACX_CHECK_LIB([LIB_GSL], [gsl], [gsl_complex_sqrt], [-lgsl -lgslcblas -lm], [], [-lgslcblas -lm])
+  	AS_IF([test -z "${LIB_GSL}"], [AC_MSG_ERROR([couldn't find gsl library])])
 
   	LDFLAGS="$save_ldflags"
-
-	  if test "$GSLDIR"; then
-  		LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"
-		fi
+	  AS_IF([test "$GSLDIR"], [LIB_GSL="-L${GSLDIR}/lib ${LIB_GSL}"])
 	fi
 
 	AC_LANG_POP(C)
@@ -188,31 +197,44 @@ if test "$lib_ok" = "ok"; then
 	AC_SUBST(LIB_GSL)
 fi
 
-dnl we can work in 1 and 3 dimensions
-AC_ARG_ENABLE(1d,
-	AC_HELP_STRING([--enable-1d], [Let us work in 1D]), ONE_D=1)
-AC_ARG_ENABLE(3d, 
-	AC_HELP_STRING([--enable-3d], [or, if you prefer, in 3D]), [THREE_D=1])
+if test x"$MPIDIR" != x"no"; then
+	if test -z "${LIB_MPI}"; then
+    save_ldflags="$LDFLAGS"
+   	AS_IF([test "$MPIDIR"], [LDFLAGS="${LDFLAGS} -L${MPIDIR} -L${MPIDIR}/lib"])
 
-if test "${ONE_D}"; then
-	AC_DEFINE(ONE_D,   1, [Code compiled for 1D systems])
-	PROGNAME="octopus_1d"
-else
-	AC_DEFINE(THREE_D, 1, [Code compiled for 3D systmes])
-	PROGNAME="octopus"
+  	ACX_CHECK_FUNC([LIB_MPI], [MPI_INIT])
+  	ACX_CHECK_LIB([LIB_MPI], [mpi],  [MPI_INIT], [-lmpi])
+		AS_IF([test -z "${LIB_MPI}"], AC_MSG_ERROR([couldn't find mpi library]))
+
+  	LDFLAGS="$save_ldflags"
+		AS_IF([test "$MPIDIR"], [LIB_MPI="-L${MPIDIR} -L${MPIDIR}/lib ${LIB_MPI}"])
+  fi
+	
+	# let us see if we have a mpi module
+	save_ldflags="$LDFLAGS"
+	AS_IF([test "$LIB_MPI"], [LDFLAGS="${LDFLAGS} -L${LIB_MPI}"])
+	_AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
+use mpi
+integer :: ierr
+call MPI_Init(ierr)
+])], [HAVE_MPI_MOD=1], [HAVE_MPI_MOD=0])
+
+	if test "$HAVE_MPI_MOD" = 1; then
+		AC_DEFINE(MPI_MOD, 1, [have mpi module])
+	else
+		AC_CHECK_HEADERS(mpif.h)
+		AC_DEFINE(MPI_H, 1, [have mpi Fortran header file])
+	fi
+
+	LDFLAGS="$save_ldflags"
+	AC_DEFINE(HAVE_MPI, 1, [MPI library (www.mpich.org)])
+	AC_SUBST(LIB_MPI)
 fi
-AC_SUBST(PROGNAME)
 
 # This is certainly wrong, but I don't know
 # how to do it right
-LIBS="$LIBS $F90LIBS"
 LINK="$F90 $F90FLAGS $LDFLAGS -o $PROGNAME"
 AC_SUBST(LINK)
-
-if test -z "$F90CPP"; then
-	F90CPP="/lib/cpp"
-fi
-AC_SUBST(F90CPP)
 
 AC_CONFIG_FILES([Makefile liboct/Makefile src/Makefile doc/Makefile])
 

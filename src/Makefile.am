@@ -1,5 +1,5 @@
 bin_PROGRAMS = @PROGNAME@
-EXTRA_PROGRAMS = octopus octopus_1d
+EXTRA_PROGRAMS = octopus octopus-1d octopus-mpi octopus-mpi-1d
 
 octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 ps_xc.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 \
@@ -19,17 +19,21 @@ noinst_HEADERS = \
 	td_init.F90 td_rti.F90 \
 	mix_inc.F90
 
-octopus_LDADD = ../liboct/liboct.a $(LIB_FFTW) $(LIB_LAPACK) $(LIB_GSL) 
+octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_GSL@
 
-octopus_1d_SOURCES = $(octopus_SOURCES)
-octopus_1d_LDADD   = $(octopus_LDADD)
+octopus_1d_SOURCES     = $(octopus_SOURCES)
+octopus_1d_LDADD       = $(octopus_LDADD)
+octopus_mpi_SOURCES    = $(octopus_SOURCES)
+octopus_mpi_LDADD      = $(octopus_LDADD)
+octopus_mpi_1d_SOURCES = $(octopus_SOURCES)
+octopus_mpi_1d_LDADD   = $(octopus_LDADD) @LIB_MPI@
 
-CLEANFILES = *~ *.bak *.mod *.il *.d work.* config_F90.h
+CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
 DISTCLEANFILES = Makefile.in
 
 .F90.o:
-	$(F90CPP) -C $< > $*.f90
-	$(F90) $(F90FLAGS)	-c -o $@ $*.f90
+	@CPP@ $< > $*.f90
+	@F90@ @F90FLAGS@ -c -o $@ $*.f90
 	@rm -f $*.f90
 
 global.F90: config_F90.h
