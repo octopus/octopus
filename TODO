@@ -1,9 +1,10 @@
 DONE mesh3D.F90  -> reintroduce vol_pp and change the rest accordingly
-hartree.F90 -> clean up derivatives/integerals in cg
-xc_lda.F90  -> handle ispin=4 properly (non-collinear spin)
 xc_KLI*     -> DOIT
 eigen*      -> sort out the eigen_solvers
 mix.F90     -> sort out the broyden/andersen mixing
+states_inc.F90 -> load/write_restart with netcdf
+LocalPotentialSpace = 1 only works with pseudopotentials, otherwise, it crashes!
+
 For polymers:
   change the occupancies in states_init, states_fermi
   add ks in states_init, Hpsi
@@ -12,5 +13,6 @@ For polymers:
   energy calculation in hamiltonian_energy
   change density calculation in calcdens
 For non-collinear magnetism
+  The off-diagonals of the density can be complex. Look in mix.F90
   handle ispin=4 properly in xc_LDA.F90
   check how the energy (epot) is calculated (hamiltonian_setup)
