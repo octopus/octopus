@@ -234,7 +234,7 @@ subroutine run()
       ! initialize structure
       allocate(td)
       ! this allocates zpsi
-      call td_init(td, sys, sys%m, sys%st)
+      call td_init(td, sys, sys%m, sys%st, h)
 
     case(I_END_TD)
       message(1) = 'Info: Cleaning up TD.'

@@ -15,11 +15,12 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine td_init(td, sys, m, st)
+subroutine td_init(td, sys, m, st, h)
   type(td_type), intent(out) :: td
   type(system_type), intent(IN) :: sys
   type(mesh_type), intent(inout) :: m
   type(states_type), intent(inout) :: st
+  type(hamiltonian_type), intent(IN) :: h
 
   integer :: i, iunit, dummy
 
@@ -111,20 +112,6 @@ subroutine td_init(td, sys, m, st)
   call oct_parse_int("AbsorbingBoundaries", 0, dummy)
   call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
 
-  ! occupational analysis stuff
-  call oct_parse_logical("TDOccupationalAnalysis", .false., td%occ_analysis)
-
-  ! harmonic spectrum or not
-  call oct_parse_logical("TDWriteHarmonicSpectrum", .false., td%harmonic_spectrum)
-  if(td%harmonic_spectrum) then
-    message(1) = 'Warning: The harmonic spectrum, calculated from Ehrenfest theorem, '
-    message(2) = '  is not yet well calculated if the ions move... Sorry!'
-    call write_warning(2)
-  endif
-
-  ! Ground state component..
-  call oct_parse_logical("TDWriteGScomponent", .false., td%gs_projection)
-
   ! should we move the ions during the simulation?
   call oct_parse_int("MoveIons", 0, td%move_ions)
   if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then
@@ -136,6 +123,26 @@ subroutine td_init(td, sys, m, st)
     call write_fatal(4)
   endif
   
+  ! occupational analysis stuff
+  call oct_parse_logical("TDOccupationalAnalysis", .false., td%occ_analysis)
+
+  ! Check what should be output
+  call oct_parse_logical("TDOutputMultipoles", .true., td%out_multip)
+  if(td%move_ions>0) then
+    call oct_parse_logical("TDOutputCoordinates", .true., td%out_coords)
+  else
+    td%out_coords = .false.
+  end if
+  call oct_parse_logical("TDOutputGSProjection", .false., td%out_gsp)
+  call oct_parse_logical("TDOutputAcceleration", .false., td%out_acc)
+  if(td%out_acc.and.td%move_ions>0) then
+    message(1) = 'Error. If harmonic spectrum is to be calculated'
+    message(2) = 'Atoms should not be allowed to move'
+    call write_fatal(2)
+  endif
+  call oct_parse_logical("TDOutputLaser", h%no_lasers>0, td%out_laser)
+  call oct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
+
   call td_init_states()
 
   call pop_sub(); return

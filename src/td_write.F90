@@ -15,271 +15,82 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-  subroutine td_write_data()
-    integer :: iunit, j, jj, ist, ik, uist
-    character(len=50) :: fmt
+  subroutine td_write_data(iter)
+    integer, intent(in) :: iter
+    character(len=50) :: filename
  
-    ! output multipoles
-    if(mpiv%node==0) then
-    call io_assign(iunit)
-    open(iunit, position='append', file="td.general/multipoles")
-    do j = 1, sys%outp%iter
-      jj = i - sys%outp%iter + j
-      call td_write_multipole(iunit, jj, jj*td%dt, &
-           dipole(:, j), multipole(:,:, j), .false.)
-    end do
-    call io_close(iunit)
-    endif
+      ! first resume file
+      write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
+      call zstates_write_restart(trim(filename), sys%m, sys%st, &
+           iter=iter, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
 
-    ! output the laser field
-    if(h%output_laser .and. mpiv%node==0) then
-      call io_assign(iunit)
-      open(iunit, position='append', file='td.general/laser')
-      do j = 1, sys%outp%iter
-        jj = i - sys%outp%iter + j
-        call td_write_laser(iunit, jj, jj*td%dt, .false.)
-      end do
-      call io_close(iunit)
-    end if
+      ! calculate projection onto the ground state
+      if(td%out_gsp) then
+        call zstates_project_gs(sys%st, sys%m, gsp)
+        call td_write_gsp(iter, gsp)
+      end if
 
-    ! and now we should output the projections
-    if(td%occ_analysis) then
-      write(fmt,'(i5)') 2*u_st%nst+1
-      fmt = '('+trim(adjustl(fmt))+'f14.8)'
-      call io_assign(iunit)
-      write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
-      open(iunit, position='append', file=filename)
-      do j = 1, sys%outp%iter
-        jj = i - sys%outp%iter + j
-        do ik = 1, sys%st%nik
-          do ist = 1, sys%st%nst
-            write(iunit, fmt) jj*td%dt, (projections(uist, ist, ik, j), uist = 1, u_st%nst)
-          end do
-        end do
-      end do
-      call io_close(iunit)
-    end if
+      if(mpiv%node==0) then
+        if(td%out_multip) call write_iter_flush(out_multip)
+        if(td%out_coords) call write_iter_flush(out_coords)
+        if(td%out_gsp)    call write_iter_flush(out_gsp)
+        if(td%out_acc)    call write_iter_flush(out_acc)
+        if(td%out_laser)  call write_iter_flush(out_laser)
+        if(td%out_energy) call write_iter_flush(out_energy)
+      end if
 
-    ! output positions, vels...
-    if(td%move_ions > 0 .and. mpiv%node==0) then
-    call io_assign(iunit)
-    open(iunit, position='append', file='td.general/coordinates')
-    do j = 1, sys%outp%iter
-       jj = i -sys%outp%iter + j
-       call td_write_nbo(iunit, jj, jj*td%dt, ke(j), pe(j), x(j, :, :), v(j, :, :), f(j, :, :), & 
-                         header=.false.)
-    enddo
-    call io_close(iunit)
-    endif
-
-    ! output electron acceleration if desired
-    if(td%harmonic_spectrum .and. mpiv%node==0) then
-       call io_assign(iunit)
-       open(iunit, position='append', file="td.general/acceleration")
-       do j = 1, sys%outp%iter
-          jj = i - sys%outp%iter + j
-          call td_write_acc(iunit, jj, jj*td%dt, tacc(j, 1:3), header=.false.)
-       enddo
-       call io_close(iunit)
-    endif
-
-    ! output the ground-state component if desired
-    if(td%gs_projection .and. mpiv%node==0) then
-       call io_assign(iunit)
-       open(iunit, position='append', file="td.general/gs_projection")
-       call td_write_gsp(iunit, i, i*td%dt, gsp, header=.false.)
-       call io_close(iunit)
-    endif
-
+      ! now write down the rest
+      write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+      call zstates_output(sys%st, sys%m, filename, sys%outp)
+      if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
+      call hamiltonian_output(h, sys%m, filename, sys%outp)
+            
 #ifndef DISABLE_PES
-    call PES_output(td%PESv, sys%m, sys%st, i, sys%outp%iter, td%dt)
+    call PES_output(td%PESv, sys%m, sys%st, iter, sys%outp%iter, td%dt)
 #endif
 
   end subroutine td_write_data
 
-  subroutine td_write_laser(iunit, iter, t, header)
-    integer, intent(in) :: iunit, iter
-    real(r8), intent(IN) :: t
-    logical, intent(in) :: header
-
-    integer :: i
-    real(r8) :: l_field(3), l_vector_field(3)
-    character(len=80) :: aux
-
-    ! TODO -> confirm these stupid units, especially for the vector field
-    if(header) then
-      ! first line
-      write(iunit, '(a7,e20.12,3a)') '# dt = ', td%dt/units_out%time%factor, &
-           "[", trim(units_out%time%abbrev), "]"
-
-      ! second line
-      write(iunit, '(a8,a20)', advance='no') '# Iter  ', str_center('t', 20)
-      do i = 1, 3
-        write(aux, '(a,i1,a)') 'E(', i, ')'
-        write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-      end do
-      do i = 1, 3
-        write(aux, '(a,i1,a)') 'A(', i, ')'
-        write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-      end do
-      write(iunit, '(1x)', advance='yes')
-
-      ! third line
-      write(iunit, '(a8,a20)', advance='no') '#       ', &
-           str_center('['+trim(units_out%time%abbrev)+']', 20)
-      aux = str_center('['+trim(units_out%energy%abbrev) + ' / ' + &
-           trim(units_inp%length%abbrev) + ']', 20)
-      write(iunit, '(3a20)', advance='no') aux, aux, aux
-      aux = str_center('[1/'+ trim(units_inp%length%abbrev) + ']', 20)
-      write(iunit, '(3a20)', advance='no') aux, aux, aux
-      write(iunit, '(1x)', advance='yes')
-    end if
-
-    call laser_field(h%no_lasers, h%lasers, t, l_field)
-    call laser_vector_field(h%no_lasers, h%lasers, t, l_vector_field)
-    write(iunit,'(i8,7es20.12)') iter, t/units_out%time%factor, &
-         l_field(1:3) * units_inp%length%factor / units_inp%energy%factor, &
-         l_vector_field(1:3) * units_inp%length%factor
-    
-  end subroutine td_write_laser
-
-  subroutine td_write_acc(iunit, iter, t, acc, header)
-    integer, intent(in)  :: iunit, iter
-    real(r8), intent(in) :: t, acc(3)
-    logical, intent(in)  :: header
-
-    ! first line: column names
-    if(header) then
-      ! first line -> column names
-      write(iunit, '(a8,4a20)') '# Iter  ', str_center('t', 20), str_center('Acc(1)', 20), &
-                                            str_center('Acc(2)', 20), str_center('Acc(3)', 20)
-      ! second line -> units
-      write(iunit, '(a8,2a20)') '#       ',                            &
-           str_center('['+trim(units_out%time%abbrev)+']', 20),         &
-           str_center('['+trim(units_out%acceleration%abbrev)+']', 20)
-    endif
-
-    write(iunit,'(i8,4es20.12)') iter, t/units_out%time%factor, acc/units_out%acceleration%factor
-    !write(iunit,'(i8,4es20.12)') iter, t/units_out%time%factor, acc/units_out%velocity%factor
-
-  end subroutine td_write_acc
-
-  subroutine td_write_gsp(iunit, iter, t, p, header)
-    integer, intent(in)  :: iunit, iter
-    real(r8), intent(in) :: t 
-    complex(r8), intent(in) :: p
-    logical, intent(in)  :: header
-
-    ! first line: column names
-    if(header) then
-      ! first line -> column names
-      write(iunit, '(a8,2a20)') '# Iter  ', str_center('t', 20), str_center('<Phi_gs|Phi(t)>', 20)
-
-      ! second line -> units
-      write(iunit, '(a8,a20)') '#       ',                            &
-           str_center('['+trim(units_out%time%abbrev)+']', 20)
-    endif
-
-    write(iunit,'(i8,3es20.12)') iter, t/units_out%time%factor, p
-
-  end subroutine td_write_gsp
-
-  subroutine td_write_nbo(iunit, iter, t, ke, pe, x, v, f, header)
-    integer, intent(in)  :: iunit, iter
-    real(r8), intent(in) :: t
-    logical, intent(in)  :: header
-    real(r8)             :: ke, pe, x(:, :), v(:, :), f(:, :)
-
-    integer :: i, j
-    character(len=50) :: aux
-
-    ! first line: column names
-    if(header) then
-      write(iunit, '(a8,4a20)', advance='no') '# Iter  ', str_center('t', 20), &
-           str_center('Ekin', 20), str_center('Epot', 20), str_center('Etot', 20)
-      do i=1, sys%natoms
-        do j=1, 3
-          write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',',j,')'
-          write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-        end do
-      end do
-      do i=1, sys%natoms
-        do j=1, 3
-          write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
-          write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-        enddo
-      end do
-      do i=1, sys%natoms
-        do j=1, 3
-          write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
-          write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-        end do
-      end do
-      write(iunit,'(1x)', advance='yes')
-      
-      ! second line: units
-      write(iunit,'(9a)') '#       ', &
-           'Energy in ',       trim(units_out%energy%abbrev),   &
-           ', Positions in ',  trim(units_out%length%abbrev),   &
-           ', Velocities in ', trim(units_out%velocity%abbrev), &
-           ', Forces in ',     trim(units_out%force%abbrev)
-    end if
-
-    write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
-    write(iunit, '(3es20.12)', advance='no') &
-        ke/units_out%energy%factor, &
-        pe/units_out%energy%factor, &
-        (ke + pe)/units_out%energy%factor
-    do i=1, sys%natoms
-       write(iunit, '(3es20.12)', advance='no') &
-         x(i, 1:3)/units_out%length%factor
-    enddo
-    do i=1, sys%natoms
-       write(iunit, '(3es20.12)', advance='no') &
-         v(i, 1:3)/units_out%velocity%factor
-    enddo
-    do i=1, sys%natoms
-       write(iunit, '(3es20.12)', advance='no') & 
-         f(i, 1:3)/units_out%force%factor
-    enddo
-    write(iunit, '(1x)', advance='yes')
-    
-  end subroutine td_write_nbo
-
-  subroutine td_write_multipole(iunit, iter, t, dipole, multipole, header)
-    integer, intent(in) :: iunit, iter
-    real(r8), intent(IN) :: t, dipole(sys%st%nspin), multipole((td%lmax+1)**2, sys%st%nspin)
-    logical, intent(in) :: header
+  subroutine td_write_multipole(iter)
+    integer, intent(in) :: iter
 
     integer :: is, l, m, add_lm
     character(len=50) :: aux
     
-    if(header) then
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_multip)
+
       ! first line
-      write(iunit, '(a10,i2,a8,i2)') '# nspin = ', sys%st%nspin, ' lmax = ', td%lmax
+      write(aux, '(a10,i2,a8,i2)') '# nspin = ', sys%st%nspin, ' lmax = ', td%lmax
+      call write_iter_string(out_multip, aux)
+      call write_iter_nl(out_multip)
 
       ! second line -> columns name
-      write(iunit, '(a8,a20)', advance='no') '# Iter  ', str_center('t', 20)
+      call write_iter_header_start(out_multip)
+
       do is = 1, sys%st%nspin
         write(aux, '(a,i1,a)') 'dipole(', is, ')'
-        write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+        call write_iter_header(out_multip, aux)
       end do
       do is = 1, sys%st%nspin
         do l = 0, td%lmax
           do m = -l, l
             write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
-            write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+            call write_iter_header(out_multip, aux)
           end do
         end do
       end do
-      write(iunit, '(1x)', advance='yes')
+      call write_iter_nl(out_multip)
 
       ! third line -> units
-      write(iunit, '(a8,a20)', advance='no') '#       ', &
-           str_center('['+trim(units_out%time%abbrev)+']', 20)
+      call write_iter_string(out_multip, '##########')
+      call write_iter_header(out_multip, '['+trim(units_out%time%abbrev)+']')
+
       do is = 1, sys%st%nspin
-        write(iunit, '(a20)', advance='no') &
-             str_center('['+trim(units_out%length%abbrev)+']', 20)
+        call write_iter_header(out_multip, '['+trim(units_out%length%abbrev)+']')
       end do
 
       do is = 1, sys%st%nspin
@@ -287,33 +98,269 @@
           do m = -l, l
             select case(l)
             case(0)
-              write(iunit, '(a20)', advance='no') ' '
+              call write_iter_header(out_multip, ' ')
             case(1)
-              write(iunit, '(a20)', advance='no') &
-                   str_center('['+trim(units_out%length%abbrev)+']', 20)
+              call write_iter_header(out_multip, '['+trim(units_out%length%abbrev)+']')
             case default
               write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
-              write(iunit, '(a20)', advance='no') str_center('['+trim(aux)+']', 20)
+              call write_iter_header(out_multip, '['+trim(aux)+']')
             end select
           end do
         end do
       end do
-      write(iunit, '(1x)', advance='yes')
+      call write_iter_nl(out_multip)
     end if
     
-    write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
+    call write_iter_start(out_multip)
     do is = 1, sys%st%nspin
-      write(iunit, '(es20.12)', advance='no') dipole(is)/units_out%length%factor
+      call write_iter_double(out_multip, dipole(is)/units_out%length%factor, 1)
     end do
     do is = 1, sys%st%nspin
       add_lm = 1
       do l = 0, td%lmax
         do m = -l, l
-          write(iunit, '(es20.12)', advance='no') multipole(add_lm, is)/units_out%length%factor**l
+          call write_iter_double(out_multip, multipole(add_lm, is)/units_out%length%factor**l, 1)
           add_lm = add_lm + 1
         end do
       end do
     end do
-    write(iunit, '(1x)', advance='yes')
+    call write_iter_nl(out_multip)
     
   end subroutine td_write_multipole
+
+  subroutine td_write_nbo(iter, ke, pe)
+    integer, intent(in) :: iter
+    real(r8),intent(in) :: ke, pe
+
+    integer :: i, j
+    character(len=50) :: aux
+
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_coords)
+
+      ! first line: column names
+      call write_iter_header_start(out_coords)
+      call write_iter_header(out_coords, 'Ekin')
+      call write_iter_header(out_coords, 'Epot')
+      call write_iter_header(out_coords, 'Etot')
+
+      do i = 1, sys%natoms
+        do j = 1, conf%dim
+          write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',', j, ')'
+          call write_iter_header(out_coords, aux)
+        end do
+      end do
+      do i = 1, sys%natoms
+        do j = 1, conf%dim
+          write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
+          call write_iter_header(out_coords, aux)
+        end do
+      end do
+      do i = 1, sys%natoms
+        do j = 1, conf%dim
+          write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
+          call write_iter_header(out_coords, aux)
+        end do
+      end do
+      call write_iter_nl(out_coords)
+      
+      ! second line: units
+      call write_iter_string(out_coords, '##########')
+      call write_iter_header(out_coords, '['+trim(units_out%time%abbrev)+']')
+      call write_iter_string(out_coords, &
+           'Energy in '      + trim(units_out%energy%abbrev)   +   &
+           ', Positions in ' + trim(units_out%length%abbrev)   +   &
+           ', Velocities in '+ trim(units_out%velocity%abbrev) + &
+           ', Forces in '    + trim(units_out%force%abbrev))
+      call write_iter_nl(out_coords)
+    end if
+
+    call write_iter_start(out_coords)
+    call write_iter_double(out_coords,     ke /units_out%energy%factor, 1)
+    call write_iter_double(out_coords,     pe /units_out%energy%factor, 1)
+    call write_iter_double(out_coords, (ke+pe)/units_out%energy%factor, 1)
+
+    do i = 1, sys%natoms
+      call write_iter_double(out_coords, sys%atom(i)%x(1:conf%dim)/units_out%length%factor,   conf%dim)
+    end do
+    do i = 1, sys%natoms
+      call write_iter_double(out_coords, sys%atom(i)%v(1:conf%dim)/units_out%velocity%factor, conf%dim)
+    end do
+    do i = 1, sys%natoms
+      call write_iter_double(out_coords, sys%atom(i)%f(1:conf%dim)/units_out%force%factor,    conf%dim)
+    end do
+    call write_iter_nl(out_coords)
+    
+  end subroutine td_write_nbo
+
+  subroutine td_write_gsp(iter, p)
+    integer, intent(in)  :: iter
+    complex(r8), intent(in) :: p
+
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_gsp)
+      
+      ! first line -> column names
+      call write_iter_header_start(out_gsp)
+      call write_iter_header(out_gsp, 'Re <Phi_gs|Phi(t)>')
+      call write_iter_header(out_gsp, 'Im <Phi_gs|Phi(t)>')
+      call write_iter_nl(out_gsp)
+
+      ! second line -> units
+      call write_iter_string(out_gsp, '##########')
+      call write_iter_header(out_gsp, '['+trim(units_out%time%abbrev)+']')
+      call write_iter_nl(out_gsp)
+    end if
+    
+    ! can not call write_iter_start, for the step is not 1
+    call write_iter_int(out_gsp, iter, 1)
+    call write_iter_double(out_gsp, iter*td%dt/units_out%time%factor,  1)
+    call write_iter_double(out_gsp, real(p),  1)
+    call write_iter_double(out_gsp, aimag(p), 1)
+    call write_iter_nl(out_gsp)
+
+  end subroutine td_write_gsp
+
+  subroutine td_write_acc(iter, acc)
+    integer, intent(in)  :: iter
+    real(r8), intent(in) :: acc(3)
+
+    integer :: i
+    character(len=7) :: aux
+
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_acc)
+
+      ! first line -> column names
+      call write_iter_header_start(out_acc)
+      do i = 1, conf%dim
+        write(aux, '(a4,i1,a1)') 'Acc(', i, ')'
+        call write_iter_header(out_acc, aux)
+      end do
+      call write_iter_nl(out_acc)
+
+      ! second line: units
+      call write_iter_string(out_acc, '##########')
+      call write_iter_header(out_acc, '['+trim(units_out%time%abbrev)+']')
+      do i = 1, conf%dim
+        call write_iter_header(out_acc, '['+trim(units_out%acceleration%abbrev)+']')
+      end do
+      call write_iter_nl(out_acc)
+    endif
+
+    call write_iter_start(out_acc)
+    call write_iter_double(out_acc, acc/units_out%acceleration%factor, conf%dim)
+    call write_iter_nl(out_acc)
+
+  end subroutine td_write_acc
+
+  subroutine td_write_laser(iter)
+    integer, intent(in) :: iter
+
+    integer :: i
+    real(r8) :: field(3)
+    character(len=80) :: aux
+
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    ! TODO -> confirm these stupid units, especially for the vector field
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_laser)
+
+      ! first line
+      write(aux, '(a7,e20.12,3a)') '# dt = ', td%dt/units_out%time%factor, &
+           " [", trim(units_out%time%abbrev), "]"
+      call write_iter_string(out_laser, aux)
+      call write_iter_nl(out_laser)
+
+      ! second line -> column names
+      call write_iter_header_start(out_laser)
+      do i = 1, conf%dim
+        write(aux, '(a,i1,a)') 'E(', i, ')'
+        call write_iter_header(out_laser, aux)
+      end do
+      do i = 1, conf%dim
+        write(aux, '(a,i1,a)') 'A(', i, ')'
+        call write_iter_header(out_laser, aux)
+      end do
+      call write_iter_nl(out_laser)
+
+      ! third line -> units
+      call write_iter_string(out_laser, '##########')
+      call write_iter_header(out_laser, '['+trim(units_out%time%abbrev)+']')
+
+      aux = '['+trim(units_out%energy%abbrev) + ' / ' + trim(units_inp%length%abbrev) + ']'
+      do i = 1, conf%dim
+        call write_iter_header(out_laser, aux)
+      end do
+
+      aux = '[1/'+ trim(units_inp%length%abbrev) + ']'
+      do i = 1, conf%dim
+        call write_iter_header(out_laser, aux)
+      end do
+      call write_iter_nl(out_laser)
+    end if
+
+    call write_iter_start(out_laser)
+
+    field = M_ZERO
+    call laser_field(h%no_lasers, h%lasers, iter*td%dt, field)
+    field = field * units_inp%length%factor / units_inp%energy%factor
+    call write_iter_double(out_laser, field, conf%dim)
+    
+    call laser_vector_field(h%no_lasers, h%lasers, iter*td%dt, field)
+    field = field  * units_inp%length%factor
+    call write_iter_double(out_laser, field, conf%dim)
+
+    call write_iter_nl(out_laser)
+
+  end subroutine td_write_laser
+    
+  subroutine td_write_el_energy(iter)
+    integer, intent(in)  :: iter
+
+    integer :: i
+
+    if(mpiv%node.ne.0) return ! only first node outputs
+
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out_energy)
+
+      ! first line -> column names
+      call write_iter_header_start(out_energy)
+      call write_iter_header(out_energy, 'Total')
+      call write_iter_header(out_energy, 'Ion-Ion')
+      call write_iter_header(out_energy, 'Exchange')
+      call write_iter_header(out_energy, 'Correlation')
+      call write_iter_header(out_energy, 'Potentials')      
+      call write_iter_nl(out_energy)
+
+      ! second line: units
+      call write_iter_string(out_energy, '##########')
+      call write_iter_header(out_energy, '['+trim(units_out%time%abbrev)+']')
+      do i = 1, 5
+        call write_iter_header(out_energy, '['+trim(units_out%energy%abbrev)+']')
+      end do
+      call write_iter_nl(out_energy)
+    endif
+
+    call write_iter_start(out_energy)
+    call write_iter_double(out_energy, h%etot/units_out%acceleration%factor, 1)
+    call write_iter_double(out_energy, h%eii /units_out%acceleration%factor, 1)
+    call write_iter_double(out_energy, h%ex  /units_out%acceleration%factor, 1)
+    call write_iter_double(out_energy, h%ec  /units_out%acceleration%factor, 1)
+    call write_iter_double(out_energy, h%epot/units_out%acceleration%factor, 1)
+    call write_iter_nl(out_energy)
+
+  end subroutine td_write_el_energy

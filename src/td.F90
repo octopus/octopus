@@ -51,11 +51,16 @@ type td_type
 
   integer :: lmax        ! maximum multipole moment to write
 
+  !!! WARNING: should this stay or should this go?
   logical :: occ_analysis ! do we perform occupational analysis?
 
-  logical :: harmonic_spectrum   ! write harmonic spectrum
-
-  logical :: gs_projection ! writes down the component of the ground state.
+  !variables controlling the output
+  logical :: out_multip  ! multipoles
+  logical :: out_coords  ! coordinates
+  logical :: out_gsp     ! projection onto the ground state.
+  logical :: out_acc     ! electronic acceleration
+  logical :: out_laser   ! laser field
+  logical :: out_energy  ! several components of the electronic energy
 
 #ifndef DISABLE_PES
   type(PES_type) :: PESv
@@ -90,27 +95,31 @@ subroutine td_run(td, u_st, sys, h)
   type(hamiltonian_type), intent(inout) :: h
 
   integer :: i, ii, j, idim, ist, ik
-  real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:), &
-                           x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:), tacc(:, :)
-  real(r8) :: etime
+  integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, out_laser, out_energy
+
+  real(r8), allocatable :: dipole(:), multipole(:,:)  ! stuff for calculating multipoles
+  real(r8), allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
+  real(r8) :: etime, tacc(3)
   complex(r8) :: gsp
-  complex(r8), allocatable :: projections(:,:,:,:)
   character(len=100) :: filename
 
   sub_name = 'td_run'; call push_sub()
   
-  allocate(dipole(sys%st%nspin, sys%outp%iter))
-  allocate(multipole((td%lmax + 1)**2, sys%st%nspin, sys%outp%iter))
-  if(td%move_ions > 0) then
-     allocate(x(sys%outp%iter, sys%natoms, conf%dim), v(sys%outp%iter, sys%natoms, conf%dim), &
-              f(sys%outp%iter, sys%natoms, conf%dim))
-     allocate(ke(sys%outp%iter), pe(sys%outp%iter))
-  endif
-  if(td%harmonic_spectrum) allocate(tacc(sys%outp%iter, conf%dim))
+  allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
 
-  ! occupational analysis stuff
-  if(td%occ_analysis) then
-    allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, sys%outp%iter))
+  if(mpiv%node==0) then
+    if(td%out_multip) &
+         call write_iter_init(out_multip, td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
+    if(td%out_coords) &
+         call write_iter_init(out_coords, td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
+    if(td%out_gsp) &
+         call write_iter_init(out_gsp,    td%iter, td%dt/units_out%time%factor, "td.general/gs_projection")
+    if(td%out_acc) &
+         call write_iter_init(out_acc,    td%iter, td%dt/units_out%time%factor, "td.general/acceleration")
+    if(td%out_laser) &
+         call write_iter_init(out_laser,  td%iter, td%dt/units_out%time%factor, "td.general/laser")
+    if(td%out_energy) &
+         call write_iter_init(out_energy, td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
   end if
 
   ! Calculate initial forces and kinetic energy
@@ -180,56 +189,6 @@ subroutine td_run(td, u_st, sys, h)
     ! time iterate wavefunctions
     call td_rti(h, sys%m, sys%st, sys, td, i*td%dt)
 
-    ! update density
-    call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-
-    ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call zhamiltonian_setup(h, sys%m, sys%st, sys)
-    call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)
-
-    ! Recalculate forces, update velocities...
-    if(td%move_ions > 0) then
-      pe(ii) = h%etot
-      if(td%move_ions == VELOCITY_VERLET) then
-        do j = 1, sys%natoms
-           f1(j, :) = sys%atom(j)%f(:)
-        enddo
-      endif
-      call zforces(h, sys, i*td%dt, reduce=.true.)
-      if(td%move_ions == VELOCITY_VERLET) then
-        do j = 1, sys%natoms
-           if(sys%atom(j)%move) then
-              sys%atom(j)%v(:) = sys%atom(j)%v(:) + &
-                                 td%dt/(2._r8*sys%atom(j)%spec%weight) * &
-                                 (f1(j, :) + sys%atom(j)%f(:))             
-           endif
-        enddo
-      endif
-      sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
-      ke(ii) = sys%kinetic_energy
-
-      ! store data
-      do j=1, sys%natoms
-        x(ii, j, 1:conf%dim) = sys%atom(j)%x(1:conf%dim)
-        v(ii, j, 1:conf%dim) = sys%atom(j)%v(1:conf%dim)
-        f(ii, j, 1:conf%dim) = sys%atom(j)%f(1:conf%dim)
-      end do
-    end if
-
-    ! If harmonic spectrum is desired, get the acceleration
-    if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:conf%dim), td%dt*i, reduce = .true.)
-
-    ! measuring
-    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
-         dipole(:,ii), multipole(:,:,ii))
-    if(td%occ_analysis) then
-      call calc_projection(u_st, sys%st, sys%m, projections(:, :, :, ii))
-    end if
-
-#ifndef DISABLE_PES
-    call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
-#endif
-
     ! mask function?
     if(h%ab == 2) then
       do ik = 1, sys%st%nik
@@ -242,6 +201,58 @@ subroutine td_run(td, u_st, sys, h)
       end do
     end if
 
+    ! update density
+    call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
+
+    ! update hamiltonian and eigenvalues (fermi is *not* called)
+    call zhamiltonian_setup(h, sys%m, sys%st, sys)
+    call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)
+
+    ! Recalculate forces, update velocities...
+    if(td%move_ions > 0) then
+      if(td%move_ions == VELOCITY_VERLET) then
+        do j = 1, sys%natoms
+          f1(j, :) = sys%atom(j)%f(:)
+        end do
+      end if
+      call zforces(h, sys, i*td%dt, reduce=.true.)
+      if(td%move_ions == VELOCITY_VERLET) then
+        do j = 1, sys%natoms
+          if(sys%atom(j)%move) then
+            sys%atom(j)%v(:) = sys%atom(j)%v(:) + &
+                 td%dt/(2._r8*sys%atom(j)%spec%weight) * &
+                 (f1(j, :) + sys%atom(j)%f(:))             
+          end if
+        end do
+      end if
+      sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
+    end if
+
+    ! output multipoles
+    if(td%out_multip) then
+      call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, dipole, multipole)
+      call td_write_multipole(i)
+    end if
+
+    ! output positions, vels, etc.
+    if(td%out_coords) call td_write_nbo(i, sys%kinetic_energy, h%etot)
+
+    ! If harmonic spectrum is desired, get the acceleration
+    if(td%out_acc) then
+      call td_calc_tacc(tacc, td%dt*i, reduce = .true.)
+      call td_write_acc(i, tacc)
+    end if
+
+    ! output laser field
+    if(td%out_laser) call td_write_laser(i)
+
+    ! output electronic energy
+    if(td%out_energy) call td_write_el_energy(i)
+    
+#ifndef DISABLE_PES
+    call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
+#endif
+
     ! write info
     write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
          i*td%dt       / units_out%time%factor, &
@@ -252,42 +263,34 @@ subroutine td_run(td, u_st, sys, h)
 
     ! write down data
     ii = ii + 1
-    save: if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
+    if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
       if(i == td%max_iter) sys%outp%iter = ii - 1
       ii = 1
 
-      ! first resume file
-      write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
-      call zstates_write_restart(trim(filename), sys%m, sys%st, &
-           iter=i, v1=td%v_old(:, :, 1), v2=td%v_old(:, :, 2))
-
-      if(td%gs_projection) call zstates_project_gs(sys%st, sys%m, gsp)
-
-      call td_write_data()
-
-      ! now write down the rest
-      write(filename, '(a,i7.7)') "td.", i  ! name of directory
-      call zstates_output(sys%st, sys%m, filename, sys%outp)
-      if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
-      call hamiltonian_output(h, sys%m, filename, sys%outp)
-      
-    end if save
+      call td_write_data(i)
+    end if
 
   end do
 
-  deallocate(dipole, multipole)
-  if(td%occ_analysis) then
-    deallocate(projections)
+  ! close all buffers
+  if(mpiv%node==0) then
+    if(td%out_multip) call write_iter_end(out_multip)
+    if(td%out_coords) call write_iter_end(out_coords)
+    if(td%out_gsp)    call write_iter_end(out_gsp)
+    if(td%out_acc)    call write_iter_end(out_acc)
+    if(td%out_laser)  call write_iter_end(out_laser)
+    if(td%out_energy) call write_iter_end(out_energy)
   end if
+
+  deallocate(dipole, multipole)
 contains
 
   subroutine td_run_zero_iter(m)
     type(mesh_type), intent(IN) :: m
 
     integer :: i, iunit
-    real(r8) :: x(conf%dim), t_acc(conf%dim)
+    real(r8) :: x(conf%dim)
     complex(r8) :: c
-    real(r8), allocatable :: dipole(:), multipole(:,:), pos(:,:), vel(:,:), for(:,:)
 
     sub_name = 'td_run_zero_iter'; call push_sub()
 
@@ -295,14 +298,10 @@ contains
     call oct_mkdir("td.general")
 
     ! output static dipole (iter 0)
-    allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
-    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
-         dipole, multipole)
-    call io_assign(iunit)
-    open(iunit, status='unknown', file='td.general/multipoles')
-    call td_write_multipole(iunit, 0, M_ZERO, dipole, multipole, .true.)
-    call io_close(iunit)
-    deallocate(dipole, multipole)
+    if(td%out_multip) then
+      call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, dipole, multipole)
+      call td_write_multipole(0)
+    end if
 
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. M_ZERO) then
@@ -342,54 +341,15 @@ contains
       enddo
     endif
 
-    ! output laser
-    if(h%output_laser) then
-      call io_assign(iunit)
-      open(unit=iunit, file='td.general/laser', status='unknown')
-      call td_write_laser(iunit, 0, 0._r8, .true.)
-      call io_close(iunit)
+    ! create files for output and output headers
+    if(td%out_coords) call td_write_nbo(0, sys%kinetic_energy, h%etot)    
+    if(td%out_acc) then
+      call td_calc_tacc(tacc, M_ZERO, reduce = .true.)
+      call td_write_acc(0, tacc)
     end if
-
-    ! output occupational analysis data
-    if(td%occ_analysis) then
-      call io_assign(iunit)
-      write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
-      open(iunit, status='unknown', file=filename)
-      write(iunit,'(a,4i5)') '#',sys%st%nik, sys%st%st_start, sys%st%st_end, u_st%nst
-      call io_close(iunit)
-    end if
-
-    ! output positions, velocities, forces...
-    if(td%move_ions > 0) then
-       call io_assign(iunit)
-       open(iunit, file='td.general/coordinates')
-       allocate(pos(sys%natoms, conf%dim), vel(sys%natoms, conf%dim), for(sys%natoms, conf%dim))
-       do j=1, sys%natoms
-          pos(j, 1:conf%dim) = sys%atom(j)%x(1:conf%dim)
-          vel(j, 1:conf%dim) = sys%atom(j)%v(1:conf%dim)
-          for(j, 1:conf%dim) = sys%atom(j)%f(1:conf%dim)
-       enddo
-       call td_write_nbo(iunit, 0, 0._r8, sys%kinetic_energy, h%etot, pos, vel, for, header = .true.)
-       call io_close(iunit)
-       deallocate(pos, vel, for)
-    endif
-
-    ! output harmonic spectrum
-    if(td%harmonic_spectrum) then
-       call io_assign(iunit)
-       open(iunit, file='td.general/acceleration')
-       call td_calc_tacc(t_acc, 0.0_r8, reduce = .true.)
-       call td_write_acc(iunit, 0, 0.0_r8, t_acc, header=.true.)
-       call io_close(iunit)
-    endif
-
-    ! output harmonic spectrum
-    if(td%gs_projection) then
-       call io_assign(iunit)
-       open(iunit, file='td.general/gs_projection')
-       call td_write_gsp(iunit, 0, 0.0_r8, M_z1, header=.true.)
-       call io_close(iunit)
-    endif
+    if(td%out_laser)  call td_write_laser(0)
+    if(td%out_energy) call td_write_el_energy(0)
+    call td_write_data(0)
 
     call pop_sub(); return    
   end subroutine td_run_zero_iter

@@ -21,6 +21,8 @@
 !
 ! d2<x>/dt2 = d<p>/dt + i<[H,[V_nl,x]]> = 
 !           = i<[V_l,p]> + i<[V_nl,p]> - E(t)N + i<[H,[V_nl,x]]>
+!
+! WARNING: This subroutine only works if ions are not allowed to move
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine td_calc_tacc(acc, t, reduce)
     implicit none
@@ -34,13 +36,6 @@
     type(atom_type), pointer :: atm
 
     sub_name = 'td_calc_tacc'; call push_sub()
-
-    ! This to make sure ions do not move...
-    if(td%move_ions > 0) then
-      message(1) = 'Error. If harmonic spectrum is to be calculated, moves should not move'
-      message(2) = '(In present version)'
-      call write_fatal(2)
-    end if
 
     ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.

@@ -69,7 +69,6 @@ type hamiltonian_type
 
   ! lasers stuff
   integer :: no_lasers ! number of laser pulses used
-  logical :: output_laser ! write laser field
   type(laser_type), pointer :: lasers(:)
 
   ! absorbing boundaries
@@ -223,12 +222,11 @@ subroutine hamiltonian_init(h, sys)
   ! lasers
   call laser_init(sys%m, h%no_lasers, h%lasers)
   if(h%no_lasers>0 ) then
-      message(1) = 'Info: Lasers'
-      call write_info(1)
-      if(conf%verbose > 20 .and. mpiv%node == 0) then
-        call laser_write_info(h%no_lasers, h%lasers, stdout)
-      end if
-      call oct_parse_logical("OutputLaser", .false., h%output_laser)  
+    message(1) = 'Info: Lasers'
+    call write_info(1)
+    if(conf%verbose > 20 .and. mpiv%node == 0) then
+      call laser_write_info(h%no_lasers, h%lasers, stdout)
+    end if
   end if
 
   ! absorbing boundaries
