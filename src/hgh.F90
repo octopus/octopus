@@ -596,48 +596,6 @@ subroutine calculate_valence_screening(psp, rhoval, ve)
   call pop_sub(); return
 end subroutine calculate_valence_screening
 
-function hgh_occs(label, lmax)
-  character(len=5), intent(in) :: label
-  integer, intent(in)          :: lmax
-  real(r8)                     :: hgh_occs(0:lmax)
-
-  select case(label)
-    case('H');  hgh_occs(0)   = 1
-    case('He'); hgh_occs(0)   = 2
-    case('Li'); hgh_occs(0:1) = (/ 1, 0 /)
-    case('Be'); hgh_occs(0:1) = (/ 2, 0 /)
-    case('B');  hgh_occs(0:1) = (/ 2, 1 /)
-    case('C');  hgh_occs(0:1) = (/ 2, 2 /)
-    case('N');  hgh_occs(0:1) = (/ 2, 3 /)
-    case('O');  hgh_occs(0:1) = (/ 2, 4 /)
-    case('F');  hgh_occs(0:1) = (/ 2, 5 /)
-    case('Ne'); hgh_occs(0:1) = (/ 2, 6 /)
-    case('Na'); hgh_occs(0:1) = (/ 1, 0 /)
-    case('Mg'); hgh_occs(0:1) = (/ 2, 0 /)
-    case('Al'); hgh_occs(0:1) = (/ 2, 1 /)
-    case('Si'); hgh_occs(0:1) = (/ 2, 2 /)
-    case('P');  hgh_occs(0:1) = (/ 2, 3 /)
-    case('S');  hgh_occs(0:1) = (/ 2, 4 /)
-    case('Cl'); hgh_occs(0:1) = (/ 2, 5 /)
-    case('Ar'); hgh_occs(0:1) = (/ 2, 6 /)
-    case('K');  hgh_occs(0:2) = (/ 1, 0, 0 /)
-    case('Ca'); hgh_occs(0:2) = (/ 2, 0, 0 /)
-    case('Sc'); hgh_occs(0:2) = (/ 2, 0, 1 /)
-    case('Ti'); hgh_occs(0:2) = (/ 2, 0, 2 /)
-    case('Au'); hgh_occs(0:2) = (/ 1, 0, 0 /)
-    case('Au_sc'); hgh_occs(0:2) = (/1, 0, 10 /)
-    case('Hg'); hgh_occs(0:2) = (/ 2, 0, 0 /)
-    case default
-    if(mpiv%node == 0) then
-      message(1) = 'Specie '//trim(label)//' not included in occupation-numbers data base.'
-      message(2) = 'Add it or complain to the lazy developer of this piece of code:'
-      message(3) = 'alberto.castro@tddft.org'
-      call write_fatal(3)
-    endif
-  end select
-
-end function hgh_occs
-
 subroutine hgh_debug(psp)
   type(hgh_type), intent(in) :: psp
 
