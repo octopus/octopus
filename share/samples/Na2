@@ -172,6 +172,8 @@ OutputAxisZ = no
 OutputPlaneX = no
 OutputPlaneY = no
 OutputPlaneZ = no
+OutputMeshIndex = no
+OutputGnuplotMode = no
 OutputDX = no
 OutputEvery = 10
 
