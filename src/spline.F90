@@ -211,6 +211,9 @@
 !       type(loct_spline_type), intent(in) :: spl [ or spl(:) or spl(:, :)]
 !       integer, intent(in) :: iunit
 !     end subroutine loct_spline_print
+!
+! [14] DERIVATE A FUNCTION:
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
 module lib_oct_gsl_spline
   use lib_oct
@@ -231,7 +234,8 @@ module lib_oct_gsl_spline
             loct_spline_besselft, & ! [10]
             loct_spline_cut,      & ! [11]
             loct_spline_filter,   & ! [12]
-            loct_spline_print       ! [13]
+            loct_spline_print,    & ! [13]
+            loct_spline_der
 
   ! the basic spline datatype
   type loct_spline_type
@@ -295,6 +299,11 @@ module lib_oct_gsl_spline
       real(8), intent(in) :: x
       integer(POINTER_SIZE), intent(in) :: spl, acc
     end function oct_spline_eval
+
+    real(8) function oct_spline_eval_der(x, spl, acc)
+      real(8), intent(in) :: x
+      integer(POINTER_SIZE), intent(in) :: spl, acc
+    end function oct_spline_eval_der
 
     integer function oct_spline_npoints(spl)
       integer(POINTER_SIZE), intent(in) :: spl
@@ -654,6 +663,31 @@ contains
     endif
 
   end subroutine loct_spline_filter_bessel
+
+  subroutine loct_spline_der(spl, dspl)
+    type(loct_spline_type), intent(in)    :: spl
+    type(loct_spline_type), intent(inout) :: dspl
+
+
+    integer :: npoints, i
+    real(8), allocatable :: x(:), y(:)
+
+    ! Use the grid of dspl if it is present, otherwise use the same one of spl.
+    if(dspl%spl == 0) then ! use the grid of spl
+      npoints = oct_spline_npoints(spl%spl)
+      allocate(x(npoints), y(npoints))
+      call oct_spline_x(spl%spl, x(1))
+    else ! use the grid of dspl
+      npoints = oct_spline_npoints(dspl%spl)
+      allocate(x(npoints), y(npoints))    
+      call oct_spline_x(dspl%spl, x(1))
+    endif
+    do i = 1, npoints
+       y(i) = oct_spline_eval_der(x(i), spl%spl, spl%acc)
+    enddo
+    call oct_spline_fit(npoints, x(1), y(1), dspl%spl, dspl%acc)
+
+  end subroutine loct_spline_der
 
   subroutine loct_spline_print_0(spl, iunit)
     type(loct_spline_type), intent(in) :: spl
