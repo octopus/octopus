@@ -74,12 +74,12 @@ subroutine poisson_init(m)
       message(5) = '                3 (fft no cutoff)          | '    
       message(6) = '                4 (conj grad)   '
       call write_fatal(6)
-      if (poisson_solver /= conf%periodic_dim) then
-        write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
-        write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
-        message(3) =                 'You know what you are doing, right?'
-        call write_warning(3)
-      end if
+    end if
+    if (poisson_solver /= conf%periodic_dim) then
+      write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
+      write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
+      message(3) =                 'You know what you are doing, right?'
+      call write_warning(3)
     end if
 #else
     poisson_solver = CG
