@@ -414,7 +414,7 @@ contains
     
     ! and here we calculate the uVu
     if(s%ps%flavour(1:2) == 'tm') then
-      a%duVu = 0._r8
+      a%duVu = M_ZERO
       add_lm = 1
       do l = 0, s%ps%L_max
         do lm = -l , l
@@ -422,27 +422,24 @@ contains
             do j = 1, a%Mps
               call mesh_r(m, a%Jxyz(j), r, x=x, a=a%x)
               ylm = oct_ylm(x(1), x(2), x(3), l, lm)
-              
               a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
-                   splint(s%ps%ur(l, 1), r)*ylm
+                                     splint(s%ps%ur(l, 1), r)*ylm*m%vol_pp
             end do
-            a%duVu(add_lm, 1, 1) = sum(a%duV(:, add_lm, 1)**2)/(a%duVu(add_lm, 1, 1)*s%ps%dknrm(l))
-             if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8) then
+            a%duvu(add_lm, 1, 1) = M_ONE/(a%duvu(add_lm, 1, 1)*s%ps%dknrm(l))
+            if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8 .and. s%ps%ispin==1) then
               write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                    add_lm
               write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%duVu(add_lm, 1, 1)
               message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
               call write_warning(3)
             end if
-            ! uVu can be calculated exactly, or numerically
+            ! uVu is in fact calculated in the logarithmic grid, previous stuff is a check.
             a%duvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
             a%so_uvu(add_lm, 1, 1) = s%ps%k(l, 1, 1)
           end if
-          
           add_lm = add_lm + 1
         end do
       end do
-
     else
       add_lm = 1
       do l = 0, s%ps%l_max
