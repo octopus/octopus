@@ -133,7 +133,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
     ! seems that some compilers do not initilize pointers
     ! so we do it explicitly
-    nullify(a(i)%Jxyz)
+    nullify(a(i)%Jxyz, a(i)%phases)
   end do
   do i = 1, ncatoms
     ca(i)%x = ca(i)%x * units_inp%length%factor
