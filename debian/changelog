@@ -1,5 +1,5 @@
-octopus (1.1-1) stable; urgency=low
+octopus (1.99devel-0) unstable; urgency=low
 
-  * Initial Release.
+  * Initial build of v1.99devel
 
- -- Miguel Marques <marques@tddft.org>  Wed, 05 Feb 2003 21:01:32 +0200
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Sat,  8 Jan 2005 01:00:26 +0100

@@ -2,3 +2,6 @@ usr/bin
 usr/info
 usr/share/octopus/PP/HGH
 usr/share/octopus/PP/TM2
+usr/share/octopus/util
+usr/share/octopus/recipes
+usr/share/octopus/samples

@@ -21,21 +21,112 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
 endif
 
-config.status: configure
+config.status: 
 	dh_testdir
-  # Add here commands to configure the package.
-	./autogen.sh
-	./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
-	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info \
-	LDFLAGS="-static $(LDFLAGS)" F90=ifc
+# Add here commands to configure the package.
+	aclocal-1.8
+	automake-1.8 --add-missing
+	autoconf
 
 build: build-stamp
 
 build-stamp:  config.status
 	dh_testdir
 
+# Since there is no usable open source f90 compiler (yet) we are hard-coding the configure process 
+# for commercial compilers. Once gcc4 and gfortran support are good enough this will be replaced.
+
+
+#
+# first we build the serial version
+#
+
+# Replace $(HOME) for custom builds if you have the corresponding libraries in a different place
+
+## NAGWare Fortran 95 compiler Release 5.0(363)"
+ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	FC=f95 \
+	CFLAGS="-static -Wall -O3" \
+	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
+	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+endif
+
+
+## Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
+ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+	echo "Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z"
+	FC=ifc \
+	LDFCFLAGS="-L/usr/lib -lpthread" \
+	FCFLAGS="-mp1 -prec_div -O3 -tpp7 -xW -static -I$(HOME)/opt/intel/include" \
+  CPPFLAGS="-I$(HOME)/opt/intel/include" \
+	CFLAGS="-static -Wall -O3" \
+	./configure  \
+	--with-blas="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lblas -L/usr/lib -lpthread" \
+	--with-lapack="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -llapack -L/usr/lib -lpthread" \
+	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
+	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
+		       -lnetcdf -L/usr/lib -lpthread" \
+	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+endif
+
   # Add here commands to compile the package.
 	$(MAKE)
+
+#  # Add here commands to install the package into debian/octopus.
+#	$(MAKE) install prefix=$(CURDIR)/debian/octopus/usr
+
+#  # inbetween we cleanup
+#	$(MAKE) distclean
+#
+##
+## next we build the parallel version and install only the octopus binary
+##
+#
+#
+### NAGWare Fortran 95 compiler Release 5.0(363)"
+#ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
+#	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+#	FC=$(HOME)/opt/nag/lam/bin/mpif77 \
+#	CFLAGS="-static -Wall -O3" \
+#	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
+#	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+#	--with-metis="-L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include -lmetis" \
+#	--enable-mpi --program-suffix="-mpi" \
+#	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+#	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+#endif
+#
+#
+### Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z
+#ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
+#	echo "Intel(R) Fortran Compiler for 32-bit applications, Version 7.1   Build 20031103Z"
+#	FC=$(HOME)/opt/intel/lam/bin/mpif77 \
+#	LDFCFLAGS="-L/usr/lib -lpthread -L$(HOME)/opt/intel/lam/lib" \
+#	FCFLAGS="-mp1 -prec_div -O3 -tpp7 -xW -static" \
+# CPPFLAGS="-I$(HOME)/opt/intel/include" \
+#	CFLAGS="-static -Wall -O3 -L$(HOME)/opt/intel/lam/lib" \
+#	./configure  \
+#	--with-blas="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lblas -L/usr/lib -lpthread" \
+#	--with-lapack="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -llapack -L/usr/lib -lpthread" \
+#	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
+#	--with-metis="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -I$(HOME)/opt/intel/include -L$(HOME)/opt/intel/lib -lmetis -L/usr/lib -lpthread" \
+#	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
+#		       -lnetcdf -L/usr/lib -lpthread" \
+#	--enable-mpi --program-suffix="-mpi" \
+#	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+#	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
+#endif
+#
+#  # Add here commands to compile the package.
+#	$(MAKE)
+#
+#  # Add here commands to install the package into debian/octopus.
+#	install -m 755 src/octopus $(CURDIR)/debian/octopus/usr/octopus-mpi
+
 
 	touch build-stamp
 
@@ -57,6 +148,7 @@ install: build
 	$(MAKE) install prefix=$(CURDIR)/debian/octopus/usr
 
 
+
 # Build architecture-independent files here.
 binary-indep: build install
 # We have nothing to do by default.
@@ -68,7 +160,7 @@ binary-arch: build install
 #	dh_installdebconf	
 	dh_installdocs
 	dh_installexamples
-	dh_installmenu
+#	dh_installmenu
 #	dh_installlogrotate
 #	dh_installemacsen
 #	dh_installpam
