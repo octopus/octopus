@@ -214,7 +214,7 @@ subroutine td_run(td, u_st, sys, h)
     end if
 
     ! If harmonic spectrum is desired, get the acceleration
-    if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:3), td%dt*i)
+    if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:3), td%dt*i, reduce = .true.)
 
     ! measuring
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
@@ -350,7 +350,7 @@ contains
     if(td%harmonic_spectrum) then
        call io_assign(iunit)
        open(iunit, file='td.general/acceleration')
-       call td_calc_tacc(t_acc, 0.0_r8)
+       call td_calc_tacc(t_acc, 0.0_r8, reduce = .true.)
        call td_write_acc(iunit, 0, 0.0_r8, t_acc, header=.true.)
        call io_close(iunit)
     endif
@@ -680,15 +680,16 @@ contains
     end do
   end subroutine td_calc_projection
 
-  subroutine td_calc_tacc(acc, t)
+  subroutine td_calc_tacc(acc, t, reduce)
     real(r8), intent(in)  :: t
     real(r8), intent(out) :: acc(3)
+    logical, intent(in), optional :: reduce
 
     real(r8) :: field(3), x(3), y(3), r, &
                 vl, dvl, d, charge
     real(r8), allocatable :: V(:), dV(:,:)
     complex(r8) :: uvpsi, p
-    integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj
+    integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj, ierr
     type(atom_type), pointer :: atm
 
     sub_name = 'td_calc_tacc'; call push_sub()

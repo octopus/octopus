@@ -318,7 +318,7 @@ subroutine calc_current(m, st, j)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
   ! reduce current (assumes memory is contiguous)
-  call MPI_ALLREDUCE(j(1, 1), aux(1, 1), np*st%nspin, &
+  call MPI_ALLREDUCE(j(1, 1), aux(1, 1), m%np*st%nspin, &
        MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
   j = aux
 #endif
