@@ -1,6 +1,9 @@
 /* FFTW library (www.fftw.org) */
 #undef HAVE_FFTW
 
+/* TRLan library (www.nersc.gov/research/SIMON/trlan.html) */
+#undef  HAVE_TRLAN
+
 /* Lapack Library (www.netlib.org) */
 #undef HAVE_LAPACK
 

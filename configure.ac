@@ -126,6 +126,34 @@ if test "$lib_ok" = "ok"; then
 	AC_SUBST(LIB_FFTW)
 fi
 
+dnl tests for trlan. Default behaviour will be *not* using it.
+lib_ok="no"
+if test -z "${LIB_TRLAN}"; then
+	AC_ARG_WITH(trlan, 
+		AC_HELP_STRING([--with-trlan=DIR], [get it! (www.trlan.org)]), 
+		[TRLANDIR=$withval], [TRLANDIR=""])
+
+	if test "$TRLANDIR" = "no"; then
+		lib_ok="no"
+	else
+		save_ldflags="$LDFLAGS"
+		AS_IF([test "$TRLANDIR"], [LDFLAGS="${LDFLAGS} -L${TRLANDIR} -L${TRLANDIR}/lib"])
+
+		AC_TRY_COMPILE([],[use trl_info],lib_ok="ok",lib_ok="no")
+	
+		LDFLAGS="$save_ldflags"
+		LIB_TRLAN="libtrlan.a"
+		#LIB_TRLAN="${LIB_TRLAN}"
+		AS_IF([test "$TRLANDIR"], [LIB_TRLAN="-L${TRLANDIR} -L${TRLANDIR}/lib ${TRLANDIR}/${LIB_TRLAN}"])
+	fi
+fi
+
+if test "$lib_ok" = "ok"; then
+	AC_DEFINE(HAVE_TRLAN, 1, [TRLAN library (www.nersc.gov/research/SIMON/trlan.html)])
+	AC_SUBST(LIB_TRLAN)
+else
+	AC_MSG_WARN([Will not use trlan])
+fi
 
 dnl tests for BLAS
 lib_ok="ok"

@@ -32,9 +32,22 @@ type eigen_solver_type
   real(r8) :: final_tol
   integer  :: final_tol_iter
   integer  :: es_maxiter  
+
 end type eigen_solver_type
 
-integer, parameter :: RS_CG = 0
+integer, parameter :: RS_CG      = 0
+#ifdef HAVE_TRLAN
+integer, parameter :: RS_LANCZOS = 1
+#endif
+
+  ! For the TRLan package
+#ifdef HAVE_TRLAN
+integer                         :: ik_trlan
+type(hamiltonian_type), pointer :: h_trlan
+type(mesh_type), pointer        :: m_trlan
+type(states_type), pointer      :: st_trlan
+type(system_type), pointer      :: sys_trlan
+#endif
 
 contains
 
@@ -43,48 +56,56 @@ subroutine eigen_solver_init(eigens)
   
   sub_name = 'eigen_solver_init'; call push_sub()
 
-  call oct_parse_int(C_string("EigenSolver"), 0, eigens%es_type)
-  if(eigens%es_type < RS_CG .or. eigens%es_type > RS_CG) then
+  call oct_parse_int(C_string("EigenSolver"), RS_CG, eigens%es_type)
+  select case(eigens%es_type)
+  case(RS_CG)
+    message(1) = 'Info: Eigensolver type: Real-space conjugate gradients'
+  case(RS_LANCZOS)
+    message(1) = 'Info: Eigensolver type: Lanczos algorithm (TRLan package)'
+  case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
     message(2) = '(0 <= EigenSolver <= 0)'
     call write_fatal(2)
-  endif
-  
-  select case (eigens%es_type)
-  case(RS_CG)
-    call oct_parse_double(C_string("EigenSolverInitTolerance"), 1.0e-10_r8, eigens%init_tol)
-    if(eigens%init_tol <= 0) then
+  end select
+  call write_info(1)
+
+  call oct_parse_double(C_string("EigenSolverInitTolerance"), 1.0e-10_r8, eigens%init_tol)
+  if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
       message(2) = '(EigenSolverInitTolerance >= 0)'
       call write_fatal(2)
-    endif
+  endif
 
-    call oct_parse_double(C_string("EigenSolverFinalTolerance"), 1.0e-14_r8, eigens%final_tol)
-    if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
+  call oct_parse_double(C_string("EigenSolverFinalTolerance"), 1.0e-14_r8, eigens%final_tol)
+  if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
       message(2) = '(EigenSolverInitTolerance >= 0 and '
       message(3) = ' EigenSolverFinalTolerance < EigenSolverInitTolerance)'
       call write_fatal(3)
-    endif
+  endif
 
-    call oct_parse_int(C_string("EigenSolverFinalToleranceIteration"), 7, eigens%final_tol_iter)
-    if(eigens%final_tol_iter <= 1) then
+  call oct_parse_int(C_string("EigenSolverFinalToleranceIteration"), 7, eigens%final_tol_iter)
+  if(eigens%final_tol_iter <= 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
            "' is not a valid EigenSolverFinalToleranceIter"
       message(2) = '(EigenSolverFinalToleranceIter > 1)'
       call write_fatal(2)
-    endif
+  endif
 
-    call oct_parse_int(C_string("EigenSolverMaxIter"), 25, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) then
+  call oct_parse_int(C_string("EigenSolverMaxIter"), 25, eigens%es_maxiter)
+  if(eigens%es_maxiter < 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &
            "' is not a valid EigenSolverMaxIter"
       message(3) = '(EigenSolverMaxIter >=1 )'
       call write_fatal(2)
-    endif
+  endif
+  
+  select case (eigens%es_type)
+  case(RS_LANCZOS)
+
   end select
   
   call pop_sub(); return
@@ -114,21 +135,31 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
   end if
 
   if(present(conv)) conv = .false.
+  maxiter = eigens%es_maxiter
+  converged = 0
+
+
   select case(eigens%es_type)
   case(RS_CG)
-    maxiter = eigens%es_maxiter
-    converged = 0
-
     call eigen_solver_cg2(st, sys, h, &
          tol, maxiter, converged, errorflag, diff)
-    write(message(1),'(a,i5)') 'Info: Converged = ',converged
-    call write_info(1)
-    if(present(conv).and. converged == st%nst) conv = .true.
+#ifdef HAVE_TRLAN
+  case(RS_LANCZOS)
+    call eigen_solver_cg3(st, sys, h, &
+         tol, maxiter, converged, errorflag, diff)
+#endif
   end select
+  write(message(1),'(a,i5)') 'Info: Converged = ',converged
+  write(message(2),'(a,i8)') 'Info: Matrix-Vector multiplications = ', maxiter
+  call write_info(2)
+  if(present(conv).and. converged == st%nst) conv = .true.
 
   call pop_sub(); return
 end subroutine eigen_solver_run
 
 #include "eigen_cg2.F90"
+#ifdef HAVE_TRLAN
+#include "eigen_cg3.F90"
+#endif
 
 end module eigen_solver

@@ -239,7 +239,6 @@ subroutine states_end(st)
   end if
 
   if(associated(st%kpoints)) then
-    deallocate(st%kpoints, st%kweights)
     nullify(st%kpoints, st%kweights)
   end if
 
