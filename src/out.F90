@@ -31,6 +31,7 @@ type output_type
   integer :: how    ! how to output
 
   integer :: iter   ! output every iter
+  logical :: duringscf
   
   integer :: wfs(32) ! which wfs to output
 end type output_type
@@ -109,6 +110,8 @@ subroutine output_init(outp)
   
   ! this is always needed in a time-dependent calculation
   call oct_parse_int("OutputEvery", 1000, outp%iter)
+
+  call oct_parse_logical("OutputDuringSCF", .false., outp%duringscf)
 end subroutine output_init
 
 #include "undef.F90"

@@ -28,7 +28,7 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   deallocate(c)
 
 contains
-#define MFORMAT    '(4f12.6)'
+#define MFORMAT    '(4e20.8)'
 #define MFMTHEADER '(a,a3,a12,a12,a12)'
 
   subroutine axis_x()

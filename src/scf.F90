@@ -149,6 +149,11 @@ subroutine scf_run(scf, sys, h)
       exit
     end if
 
+    if(sys%outp%duringscf) then
+      call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
+      call hamiltonian_output(h, sys%m, "static", sys%outp)
+    endif
+
     if(clean_stop()) exit
   end do
 
