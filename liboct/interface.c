@@ -103,7 +103,7 @@ char *to_c_str(STR_F_TYPE f, unsigned long l)
 	for(l--; l>=0; l--)                 // find length of fortran string
 		if(f[l] != ' ') break;
 	l++;                                // need space for th '\0'
-	c = (char *)calloc(l, sizeof(char)); // alloc c string
+	c = (char *)malloc((l+1)*sizeof(char)); // alloc c string
 	for(i=0; i<l; i++) c[i] = f[i];     // copy fortran string onto c string
 	c[i] = '\0';                        // add '\0' to the end of the c string
 	return c;
