@@ -73,10 +73,10 @@ subroutine states_init(st, m, val_charge)
   
   call oct_parse_double(C_string('ExcessCharge'), 0.0_r8, excess_charge)
 
-  call oct_parse_int(C_string('EmptyStates'), 0, nempty)
+  call oct_parse_int(C_string('ExtraStates'), 0, nempty)
   if (nempty < 0) then
-    write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid EmptyStates"
-    message(2) = '(0 <= EmptyStates)'
+    write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
+    message(2) = '(0 <= ExtraStates)'
     call write_fatal(2)
   end if
   
