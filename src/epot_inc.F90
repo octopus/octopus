@@ -163,6 +163,7 @@ contains
       end do
     end do
     
+    call dcf_free(cf_for)
     deallocate(force)
   end subroutine local_FS
 #endif

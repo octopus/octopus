@@ -55,9 +55,9 @@ subroutine scf_init(scf, sys, h)
   type(system_type), intent(IN) :: sys
   type(hamiltonian_type), intent(in) :: h
 
-  call push_sub('systm_scf_init')
+  call push_sub('scf_init')
 
-  call loct_parse_int   ("MaximumIter",        200, scf%max_iter)
+  call loct_parse_int  ("MaximumIter",        200, scf%max_iter)
   call loct_parse_float("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
   call loct_parse_float("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
   call loct_parse_float("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
@@ -112,10 +112,12 @@ end subroutine scf_init
 subroutine scf_end(scf)
   type(scf_type), intent(inout) :: scf
 
+  call push_sub('scf_end') 
+
   call eigen_solver_end(scf%eigens)
   call mix_end(scf%smix)
 
-  return
+  call pop_sub(); return
 end subroutine scf_end
 
 subroutine scf_run(scf, sys, h)
