@@ -297,6 +297,9 @@ call MPI_Init(ierr)
 	AC_DEFINE(HAVE_MPI, 1, [MPI library (www.mpich.org)])
   AC_DEFINE(MPI_TD, 1, [soon])
 	AC_SUBST(LIB_MPI)
+
+# TODO
+	AC_SUBST(LIB_METIS)
 fi
 
 # This is certainly wrong, but I don't know

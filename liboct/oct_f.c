@@ -29,7 +29,6 @@
 #include <math.h>
 #include <time.h>
 
-
 #include "string_f.h" /* fortran <-> c string compatibility issues */
 
 /* *********************** interface functions ********************** */
@@ -129,6 +128,19 @@ void F90_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
 {
 	progress_bar(*a, *max);
 }
+
+/* -------------------------- interface to METIS ----------------------------- */
+#if defined(HAVE_METIS)
+#include <metis/metis.h>
+
+void F90_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
+		 (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
+			int *edgecut, idxtype *epart, idxtype *npart)
+{
+	/* METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart); */
+	METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
+}
+#endif
 
 /* ------------------------------ some stuff  -------------------------------- */
 double F90_FUNC_(oct_clock, OCT_CLOCK)
