@@ -40,7 +40,7 @@ type states_dim_type
   integer :: ispin         ! * spin mode (unpolarized, spin polarized, spinors)
   integer :: nspin         ! * dimension of rho (1, 2 or 4)
   integer :: spin_channels ! * 1 or 2, wether spin is or not considered.
-  logical :: current       ! * If the current is to be considered or not
+  logical :: cdft          ! * Are we using Current-DFT or not?
   FLOAT, pointer :: kpoints(:,:) ! * obviously the kpoints
   FLOAT, pointer :: kweights(:)  ! * weights for the kpoint integrations
 end type states_dim_type
@@ -158,17 +158,17 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   end select
 
   ! current
-  call loct_parse_logical("CurrentDFT", .false., st%d%current)
+  call loct_parse_logical("CurrentDFT", .false., st%d%cdft)
 #ifdef COMPLEX_WFNS
-  if (st%d%current .and. st%d%ispin == SPINORS) then
+  if (st%d%cdft .and. st%d%ispin == SPINORS) then
     message(1) = "Sorry, Current DFT not working yet for spinors"
     call write_fatal(1)
-  elseif (st%d%current) then
+  elseif (st%d%cdft) then
     message(1) = "Info: Using Current DFT"
     call write_info(1)
   end if
 #else
-  if (st%d%current) then
+  if (st%d%cdft) then
     message(1) = "Cannot use Current DFT with an executable compiled"
     message(2) = "for real wavefunctions."
     call write_fatal(2)
@@ -185,7 +185,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   if(st%d%ispin == SPINORS) then
     allocate(st%mag(st%nst, st%d%nik, 2))
   end if
-  if (st%d%current) then
+  if (st%d%cdft) then
     allocate(st%j(conf%dim, m%np, st%d%nspin))
     st%j = M_ZERO
   end if
@@ -300,7 +300,7 @@ subroutine states_copy(stout, stin)
   stout%d%ispin = stin%d%ispin
   stout%d%nspin = stin%d%nspin
   stout%d%spin_channels = stin%d%spin_channels
-  stout%d%current = stin%d%current
+  stout%d%cdft = stin%d%cdft
   if(associated(stin%d%kpoints)) then
     allocate(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)))
     stout%d%kpoints = stin%d%kpoints
@@ -723,19 +723,19 @@ subroutine calc_projection(u_st, st, m, p)
 end subroutine calc_projection
 
 ! This routine (obviously) assumes complex wave-functions
-subroutine calc_current(m, st, j)
+subroutine calc_current_paramagnetic(m, st, jp)
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
-  FLOAT,             intent(out) :: j(conf%dim, m%np, st%d%nspin)
+  FLOAT,             intent(out) :: jp(conf%dim, m%np, st%d%nspin)
 
   integer :: ik, p, sp, k
-  CMPLX, allocatable :: aux(:,:)
+  CMPLX, allocatable :: grad(:,:)
 #if defined(HAVE_MPI) && defined(MPI_TD)
   integer :: ierr
   FLOAT, allocatable :: red(:,:,:)
 #endif
 
-  call push_sub('calc_current')
+  call push_sub('calc_current_paramagnetic')
   
   if(st%d%ispin == SPIN_POLARIZED) then
     sp = 2
@@ -743,54 +743,54 @@ subroutine calc_current(m, st, j)
     sp = 1
   end if
   
-  j = M_ZERO
-  allocate(aux(conf%dim, m%np))
+  jp = M_ZERO
+  allocate(grad(conf%dim, m%np))
   
   do ik = 1, st%nik, sp
     do p  = st%st_start, st%st_end
-      call zf_gradient(m, st%zpsi(:, 1, p, ik), aux)
+      call zf_gradient(m, st%zpsi(:, 1, p, ik), grad)
       
       ! spin-up density
       do k = 1, m%np
-        j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
-             * aimag(conjg(st%zpsi(k, 1, p, ik)) * aux(1:conf%dim, k))
+        jp(1:conf%dim, k, 1) = jp(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
+             * aimag(conjg(st%zpsi(k, 1, p, ik)) * grad(1:conf%dim, k))
       end do
-        
+
       ! spin-down density
       if(st%d%ispin == SPIN_POLARIZED) then
-        call zf_gradient(m, st%zpsi(:, 1, p, ik+1), aux)
+        call zf_gradient(m, st%zpsi(:, 1, p, ik+1), grad)
 
         do k = 1, m%np
-          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-             * aimag(conjg(st%zpsi(k, 1, p, ik+1)) * aux(1:conf%dim, k))
+          jp(1:conf%dim, k, 2) = jp(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
+             * aimag(conjg(st%zpsi(k, 1, p, ik+1)) * grad(1:conf%dim, k))
         end do
 
         ! WARNING: the next lines DO NOT work properly
       else if(st%d%ispin == SPINORS) then ! off-diagonal densities
-        call zf_gradient(m, st%zpsi(:, 2, p, ik), aux)
+        call zf_gradient(m, st%zpsi(:, 2, p, ik), grad)
 
         do k = 1, m%np
-          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
-               * aimag(conjg(st%zpsi(k, 2, p, ik)) * aux(1:conf%dim, k))
+          jp(1:conf%dim, k, 2) = jp(1:conf%dim, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
+               * aimag(conjg(st%zpsi(k, 2, p, ik)) * grad(1:conf%dim, k))
         end do
       end if
 
     end do
   end do
-  deallocate(aux)
+  deallocate(grad)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
   allocate(red(3, m%np, st%d%nspin))
-  call MPI_ALLREDUCE(j(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
+  call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
        MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-  j = red
+  jp = red
   deallocate(red)
 #endif
 
   call pop_sub()
-end subroutine calc_current
+end subroutine calc_current_paramagnetic
 
-subroutine calc_current2(m, st, j)
+subroutine calc_current_physical(m, st, j)
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
   FLOAT,             intent(out) :: j(conf%dim, m%np, st%d%nspin)
@@ -802,56 +802,16 @@ subroutine calc_current2(m, st, j)
   FLOAT, allocatable :: red(:,:,:)
 #endif
 
-  call push_sub('calc_current2')
+  call push_sub('calc_current_physical')
   
-  if(st%d%ispin == SPIN_POLARIZED) then
-    sp = 2
-  else
-    sp = 1
-  end if
-  
-  j = M_ZERO
-  allocate(grad(conf%dim, m%np))
-  
-  do ik = 1, st%nik, sp
-    do p  = st%st_start, st%st_end
-      call zf_gradient(m, st%zpsi(:, 1, p, ik), grad)
+  ! Paramagnetic contribution to the physical current
+  call calc_current_paramagnetic(m, st, j)
 
-      ! spin-up density
-      do k = 1, m%np
-        j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
-             * (real(st%zpsi(k, 1, p, ik))*aimag(grad(1:conf%dim, k)) &
-             - aimag(st%zpsi(k, 1, p, ik))*real(grad(1:conf%dim, k)))
-      end do
-        
-      ! spin-down density
-      if(st%d%ispin == SPIN_POLARIZED) then
-        call zf_gradient(m, st%zpsi(:, 1, p, ik+1), grad)
-
-        do k = 1, m%np
-          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-             * (real(st%zpsi(k, 1, p, ik+1))*aimag(grad(1:conf%dim, k)) &
-             - aimag(st%zpsi(k, 1, p, ik+1))*real(grad(1:conf%dim, k)))
-        end do
-
-      else if(st%d%ispin == SPINORS) then
-        ! not yet implemented
-      end if
-
-    end do
-  end do
-  deallocate(grad)
-
-#if defined(HAVE_MPI) && defined(MPI_TD)
-  allocate(red(3, m%np, st%d%nspin))
-  call MPI_ALLREDUCE(j(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
-       MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-  j = red
-  deallocate(red)
-#endif
+  ! TODO
+  ! Diamagnetic contribution to the physical current 
 
   call pop_sub()
-end subroutine calc_current2
+end subroutine calc_current_physical
 
 subroutine zstates_project_gs(st, m, p)
   type(states_type), intent(IN)  :: st

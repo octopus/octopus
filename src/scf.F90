@@ -99,7 +99,7 @@ subroutine scf_init(scf, m, st, h)
 
   ! Handle mixing now...
   np = st%d%nspin*m%np
-  if (h%d%current) np = np*(1 + conf%dim)
+  if (h%d%cdft) np = np*(1 + conf%dim)
   call mix_init(scf%smix, np)
 
   ! now the eigen solver stuff
@@ -155,18 +155,18 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
   nspin = st%d%nspin
   dim = 1
-  if (h%d%current) dim = 1 + conf%dim
+  if (h%d%cdft) dim = 1 + conf%dim
   np = dim*nspin*m%np
 
   allocate(rhoout(dim, m%np, nspin), rhoin(dim, m%np, nspin))
   rhoin(1, :, :) = st%rho; rhoout = M_ZERO
-  if (st%d%current) then
+  if (st%d%cdft) then
     rhoin(2:dim, :, :) = st%j
   end if
   if (scf%what2mix == MIXPOT) then
     allocate(vout(dim, m%np, nspin), vin(dim, m%np, nspin), vnew(dim, m%np, nspin))
     vin(1, :, :) = h%vhxc; vout = M_ZERO
-    if (st%d%current) vin(2:dim, :, :) = h%ahxc
+    if (st%d%cdft) vin(2:dim, :, :) = h%ahxc
   else
     allocate(rhonew(dim, m%np, nspin))
   end if
@@ -186,14 +186,14 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     ! compute output density, potential (if needed) and eigenvalues sum
     call X(calcdens)(st, m%np, st%rho)
     rhoout(1, :, :) = st%rho
-    if (h%d%current) then
-      call calc_current2(m, st, st%j)
+    if (h%d%cdft) then
+      call calc_current_physical(m, st, st%j)
       rhoout(2:dim, :, :) = st%j
     end if
     if (scf%what2mix == MIXPOT) then
       call X(h_calc_vhxc) (h, m, st)
       vout(1, :, :) = h%vhxc
-      if (h%d%current) vout(2:dim, :, :) = h%ahxc
+      if (h%d%cdft) vout(2:dim, :, :) = h%ahxc
     end if
     evsum_out = states_eigenvalues_sum(st)
 
@@ -228,13 +228,13 @@ subroutine scf_run(scf, m, st, geo, h, outp)
        ! mix input and output densities and compute new potential
        call mixing(scf%smix, iter, np, rhoin, rhoout, rhonew)
        st%rho = rhonew(1, :, :)
-       if (h%d%current) st%j = rhonew(2:dim, :, :)
+       if (h%d%cdft) st%j = rhonew(2:dim, :, :)
        call X(h_calc_vhxc) (h, m, st)
     case (MIXPOT)
        ! mix input and output potentials
        call mixing(scf%smix, iter, np, vin, vout, vnew)
        h%vhxc = vnew(1, :, :)
-       if (h%d%current) h%ahxc = vnew(2:dim, :, :)
+       if (h%d%cdft) h%ahxc = vnew(2:dim, :, :)
     end select
 
     ! save restart information
@@ -255,10 +255,10 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
     ! save information for the next iteration
     rhoin(1, :, :) = st%rho
-    if (h%d%current) rhoin(2:dim, :, :) = st%j
+    if (h%d%cdft) rhoin(2:dim, :, :) = st%j
     if (scf%what2mix == MIXPOT) then
       vin(1, :, :) = h%vhxc
-      if (h%d%current) vin(2:dim, :, :) = h%ahxc
+      if (h%d%cdft) vin(2:dim, :, :) = h%ahxc
     end if
     evsum_in = evsum_out
 
@@ -419,8 +419,8 @@ subroutine write_magnet(iunit, mesh, st)
   integer :: i, ik, ist
 
   write(iunit, '(a)') 'Magnetization:'
-  call X(states_calculate_magnetization)(mesh, st, m)
 
+  call X(states_calculate_magnetization)(mesh, st, m)
   if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
     write(iunit, '(a,f15.6)') ' mz = ', m(3)
     

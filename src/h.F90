@@ -102,7 +102,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   allocate(h%Vpsl(m%np), h%Vhxc(m%np, h%d%nspin))
   h%vpsl = M_ZERO
   h%Vhxc = M_ZERO
-  if (h%d%current) then
+  if (h%d%cdft) then
     allocate(h%ahxc(conf%dim, m%np, h%d%nspin))
     h%ahxc = M_ZERO
   else

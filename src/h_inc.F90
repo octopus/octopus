@@ -67,13 +67,13 @@ subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
   end select
 
   if(present(t)) then
-    if (h%d%current) then
+    if (h%d%cdft) then
       message(1) = "TDCDFT not yet implemented"
       call write_fatal(1)
     end if
     call X(vlasers)  (h, m, psi, hpsi, t)
     call X(vborders) (h, m, psi, hpsi)
-  elseif (h%d%current) then
+  elseif (h%d%cdft) then
     call X(current_extra_terms) (h, m, psi, hpsi, ik)
   end if
 
@@ -232,13 +232,13 @@ subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
   allocate(div(m%np))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-    call df_divergence(m, transpose(h%ahxc(:, :, 1)), div)
+    call df_divergence(m, h%ahxc(:, :, 1), div)
     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(1:, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-      call df_divergence(m, transpose(h%ahxc(:, :, 1)), div)
+      call df_divergence(m, h%ahxc(:, :, 1), div)
     else
-      call df_divergence(m, transpose(h%ahxc(:, :, 2)), div)
+      call df_divergence(m, h%ahxc(:, :, 2), div)
     end if
     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(1:, 1)
   case(SPINORS)
@@ -476,7 +476,7 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
     h%epot = M_ZERO
     h%vhxc = M_ZERO
-    if (h%d%current) h%ahxc = M_ZERO
+    if (h%d%cdft) h%ahxc = M_ZERO
 
     ! now we add the hartree contribution from the density
     allocate(vhartree(m%np))
@@ -510,7 +510,7 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
     deallocate(vhartree)
 
     ! now we add the hartree contribution from the current
-    if (h%d%current) then
+    if (h%d%cdft) then
       allocate(ahartree(conf%dim, m%np))
       ahartree = M_ZERO
       if(h%d%spin_channels == 1) then

@@ -199,7 +199,7 @@ end subroutine X(f_gradient)
 
 subroutine X(f_divergence) (m, f, divf)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(in) :: f(m%np, conf%dim)
+  R_TYPE, intent(in) :: f(conf%dim, m%np)
   R_TYPE, intent(out) :: divf(m%np)
 
   integer :: i
@@ -220,7 +220,7 @@ subroutine X(f_divergence) (m, f, divf)
     call X(cf_alloc_FS)(X(cf_der))     ! allocate cube in real space
 
     do i = 1, conf%dim
-      call X(mf2cf)(m, f(:, i), X(cf_der))     ! convert to cube
+      call X(mf2cf)(m, f(i, :), X(cf_der))     ! convert to cube
       call X(cf_RS2FS)(X(cf_der))        ! Fourier transform
       call X(cf_FS_grad)(m, X(cf_der), i)        ! gradient in reciprocal space
       call X(cf_FS2RS)(X(cf_der))                ! Fourier transform

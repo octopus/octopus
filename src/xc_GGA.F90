@@ -42,7 +42,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   allocate(d(m%np, st%d%nspin), lpot(m%np, spin_channels))
   allocate(rhoplus(m%np), rhominus(m%np))
   allocate(grhoplus(3, m%np), grhominus(3, m%np))
-  allocate(vlocaldedgd(m%np, 3, spin_channels), vlocaldedgd1(3, spin_channels))
+  allocate(vlocaldedgd(3, m%np, spin_channels), vlocaldedgd1(3, spin_channels))
 
   ! Store in local variables d the density matrix
   ! (in the global reference system).
@@ -111,7 +111,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
         ec = ec + sum(d(i,:)) * e * m%vol_pp
       end if
       lpot(i, :) = lpot(i, :) + localdedd(:)
-      vlocaldedgd(i,:,:) = vlocaldedgd(i,:,:) + vlocaldedgd1(:,:)
+      vlocaldedgd(:,i,:) = vlocaldedgd(:,i,:) + vlocaldedgd1(:,:)
       
     end do functl_loop
 

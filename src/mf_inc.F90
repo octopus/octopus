@@ -122,7 +122,7 @@ end subroutine X(mf_gradient)
 !!! Currently it only does so in real space.
 subroutine X(mf_divergence)(m, f, divf)
   type(mesh_type), intent(in) :: m
-  R_TYPE, intent(in)  :: f(m%np, conf%dim)
+  R_TYPE, intent(in)  :: f(conf%dim, m%np)
   R_TYPE, intent(out) :: divf(m%np)
 
   integer :: j, k, ng(3)
@@ -136,7 +136,7 @@ subroutine X(mf_divergence)(m, f, divf)
      do k = 1, m%np
         p => m%grad(j)%lookup(k)
         ng = p%n
-        divf(k) = divf(k) + sum(p%w(1:ng(j))*f(p%i(1:ng(j)), j))
+        divf(k) = divf(k) + sum(p%w(1:ng(j))*f(j, p%i(1:ng(j))))
      end do
   end do
 
