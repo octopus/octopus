@@ -106,6 +106,7 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
       end do
     end do
   else ! Fourier space
+#if defined(THREE_D)
     allocate( &
          fw1(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
          fw2(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
@@ -128,5 +129,6 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
       end do
     end do
     deallocate(fw1, fw2, fr, force)
+#endif
   end if
 end subroutine R_FUNC(forces)

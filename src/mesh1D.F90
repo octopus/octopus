@@ -105,7 +105,7 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh1D_create(m)
 
-  m%fft_n(1) = 2*m%nr(i) + 2; m%fft_n(2) = 0; m%fft_n(3) = 0
+  m%fft_n(1) = 2*m%nr(1) + 2; m%fft_n(2) = 0; m%fft_n(3) = 0
   m%hfft_n = m%fft_n(1)/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
 
@@ -150,13 +150,13 @@ subroutine mesh_alloc_ffts(m, i)
   sub_name = 'mesh_alloc_ffts'; call push_sub()
 
   if(i == 1 .and. m%dplanf == int(-1, POINTER_SIZE)) then
-    call rfftw_f77_create_plan(m%dplanf, m%fft_n(1), &
+    call rfftwnd_f77_create_plan(m%dplanf, 1, (/ m%fft_n(1) /), &
          fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)
-    call rfftw_f77_create_plan(m%dplanb, m%fft_n(1), &
+    call rfftwnd_f77_create_plan(m%dplanb, 1, (/ m%fft_n(1) /), &
          fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
-    call  fftw_f77_create_plan(m%zplanf, m%fft_n(1), &
+    call  fftwnd_f77_create_plan(m%zplanf, 1, (/ m%fft_n(1) /), &
          fftw_forward,  fftw_measure + fftw_threadsafe)
-    call  fftw_f77_create_plan(m%zplanb, m%fft_n(1), &
+    call  fftwnd_f77_create_plan(m%zplanb, 1, (/ m%fft_n(1) /), &
          fftw_backward, fftw_measure + fftw_threadsafe) 
   else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
     message(1) = "Info: FFTs used in a double box (for local potential)"
@@ -165,9 +165,9 @@ subroutine mesh_alloc_ffts(m, i)
     write(message(3), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
     call write_info(3)
 
-    call rfftw_f77_create_plan(m%dplanf2, m%fft_n2(1), &
+    call rfftwnd_f77_create_plan(m%dplanf2, 1, (/ m%fft_n2(1) /), &
          fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)
-    call rfftw_f77_create_plan(m%dplanb2, m%fft_n2(1),  &
+    call rfftwnd_f77_create_plan(m%dplanb2, 1, (/ m%fft_n2(1) /),  &
          fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
   end if
 
@@ -304,22 +304,20 @@ subroutine mesh_r(m, i, r, a, x)
   if(present(x)) x = xx
 end subroutine mesh_r
 
-subroutine mesh_gradient_in_FS(m, nx, n, f, grad, dir)
+subroutine mesh_gradient_in_FS(m, nx, n, f, grad)
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: nx, n(3), dir
-  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
-  complex(r8), intent(out) :: grad(nx, n(2), n(3))
+  integer, intent(in) :: nx, n(3)
+  complex(r8), intent(IN)  :: f   (nx)
+  complex(r8), intent(out) :: grad(nx)
 
-  real(r8) :: temp(3), g2
-  integer :: kx, ky, kz, ix, iy, iz
+  real(r8) :: temp, g2
+  integer :: kx,ix
   
-  temp(1) = (2.0_r8*M_Pi)/(n(1)*m%h(1)); temp(2) = 0.0_r8; temp(3) = 0.0_r8
-  kx = 0; ky = 0; kz = 0
-  iy = 0; iz = 0
+  temp = (2.0_r8*M_Pi)/(n(1)*m%h(1))
   do ix=1, nx
      kx = pad_feq(ix, n(1), .true.)
-     g2 = temp(1)*kx
-     grad(ix, iy, iz) = g2 * M_zI * f(ix, iy, iz)
+     g2 = temp*kx
+     grad(ix) = g2 * M_zI * f(ix)
   enddo
 
 end subroutine mesh_gradient_in_FS
@@ -327,19 +325,17 @@ end subroutine mesh_gradient_in_FS
 subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: nx, n(3)
-  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
-  complex(r8), intent(out) :: lapl(nx, n(2), n(3))
+  complex(r8), intent(IN)  :: f   (nx)
+  complex(r8), intent(out) :: lapl(nx)
 
-  real(r8) :: temp(3), g2
-  integer :: kx, ky, kz, ix, iy, iz
+  real(r8) :: temp, g2
+  integer :: kx, ix
   
-  temp(1) = (2.0_r8*M_Pi)/(n(1)*m%h(1)); temp(2) = 0.0_r8; temp(3) = 0.0_r8
-  kx = 0; ky = 0; kz = 0
-  iy = 0; iz = 0
+  temp = (2.0_r8*M_Pi)/(n(1)*m%h(1))
   do ix=1, nx
      kx = pad_feq(ix, n(1), .true.)
-     g2 = temp(1)**2*kx**2
-     lapl(ix, iy, iz) = - g2 * f(ix, iy, iz)
+     g2 = temp**2*kx**2
+     lapl(ix) = - g2 * f(ix)
   enddo  
 
 end subroutine mesh_laplacian_in_FS

@@ -203,6 +203,7 @@ subroutine generate_external_pot(h, sys)
     end select
   end do
 
+#if defined(THREE_D)
   if(h%vpsl_space == 1) then
     allocate(fr(sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)))
 
@@ -216,6 +217,7 @@ subroutine generate_external_pot(h, sys)
     
     deallocate(fw, fwc, fr)
   end if
+#endif
 
   if (h%classic_pot) then
     h%Vpsl = h%Vpsl + h%Vclassic
