@@ -230,6 +230,8 @@ subroutine global_init_symbols()
   call loct_parse_putsym(          "mask", 2)
   call loct_parse_putsym(         "steep", 1) ! GOMethod
   call loct_parse_putsym(           "fft", 3) ! PoissonSolver (cg defined above)
+  call loct_parse_putsym(   "unformatted", 1) ! RestartFileFormat
+  call loct_parse_putsym(     "formatted", 2)
 
 end subroutine global_init_symbols
 

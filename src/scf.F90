@@ -191,7 +191,7 @@ subroutine scf_run(scf, sys, h)
     end select
 
     ! save restart information
-    if(finish.or.(modulo(iter, 3) == 0).or.clean_stop()) &
+    if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) &
          call X(states_write_restart)("tmp/restart.static", sys%m, sys%st)
 
     if(finish) then

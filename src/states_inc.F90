@@ -186,23 +186,37 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   call push_sub('states_write_restart')
 
   call io_assign(iunit)
-  open(iunit, status='unknown', file=trim(filename), form='unformatted')
-    
+  if(st%restart_format == 1) then
+    open(iunit, status='unknown', file=trim(filename), form='unformatted')
+  else
+    open(iunit, status='unknown', file=trim(filename)+'.ascii', form='formatted')
+  end if
+
 #ifdef R_TREAL
   mode = 0_i4
 #else
   mode = 1_i4
 #endif
 
-  write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%xsize
-  write(iunit) int(m%np, i4), int(st%dim, i4), int(st%st_start, i4), &
-       int(st%st_end, i4), int(st%nik, i4), int(st%ispin, i4), mode
+  if(st%restart_format == 1) then
+    write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%xsize
+    write(iunit) int(m%np, i4), int(st%dim, i4), int(st%st_start, i4), &
+        int(st%st_end, i4), int(st%nik, i4), int(st%ispin, i4), mode
+  else
+    write(iunit,'(i12,7E23.14)') int(m%box_shape, i4), m%h, m%rsize, m%xsize
+    write(iunit,'(7i12)') int(m%np, i4), int(st%dim, i4), int(st%st_start, i4), &
+        int(st%st_end, i4), int(st%nik, i4), int(st%ispin, i4), mode
+  end if
 
   ! psi has to be written in parts, or segmentation fault in some machines
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
       do id = 1, st%dim
-        write(iunit) st%X(psi)(1:m%np, id, ist, ik)
+        if(st%restart_format == 1) then
+          write(iunit) st%X(psi)(1:m%np, id, ist, ik)
+        else
+          write(iunit,*) st%X(psi)(1:m%np, id, ist, ik)
+        end if
       end do
     end do
   end do
@@ -210,12 +224,20 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
   ! eigenvalues are also needed ;)
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
-      write(iunit) st%eigenval(ist, ik)
+      if(st%restart_format == 1) then
+        write(iunit) st%eigenval(ist, ik)
+      else
+        write(iunit,*) st%eigenval(ist, ik)
+      end if
     end do
   end do
 
   if(present(iter)) then
-    write(iunit) int(iter, i4), v1, v2
+    if(st%restart_format == 1) then
+      write(iunit) int(iter, i4), v1, v2
+    else
+      write(iunit,*) int(iter, i4), v1, v2
+    end if
   end if
   call io_close(iunit)
   
@@ -229,8 +251,10 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
   integer, intent(out), optional :: iter ! used in TD
   FLOAT, intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
-  integer :: iunit, ik, ist, id
+  integer :: iunit, ik, ist, id, restart_format
   integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
+  logical :: found
+  character(len=256) :: fname
   FLOAT :: e
   FLOAT, allocatable :: dpsi(:)
   CMPLX, allocatable :: zpsi(:)
@@ -238,24 +262,45 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
   call push_sub('states_load_restart')
   ok = .true.
 
-  if(conf%verbose > 20) then
-    write(stdout, '(3a)')"Info: Reading wavefunctions from file '", &
-         trim(filename), "'"
+  call io_assign(iunit)
+
+  ! check what kind of restart file we have
+  inquire(file=filename, exist=found)
+  if(found) then ! unformatted file
+    fname = trim(filename)
+    restart_format = 1
+    
+    open(iunit, status='old', file=trim(fname), form='unformatted', err=998)
+    read(iunit, err=999) ! mesh stuff is now skipped
+    read(iunit, err=100) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
+    go to 200
+
+    ! ugly thing to handle old restarts
+100 continue
+    backspace(iunit)
+    read(iunit, err=999) old_np, old_dim, old_start, old_end, old_nik, old_ispin
+    mode = -1 ! old restart file
+200 continue
+
+  else ! unformatted
+    inquire(file=trim(filename)+'.ascii', exist=found)
+    if(found) then ! unformatted file
+      fname = trim(filename)+'.ascii'
+      restart_format = 2
+
+      open(iunit, status='old', file=trim(fname), form='formatted', err=998)
+      read(iunit, *, err=999) ! mesh stuff is now skipped
+      read(iunit, *, err=999) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
+    else ! error
+      go to 999 ! one go to does not harm :)
+    end if
   end if
 
-  call io_assign(iunit)
-  open(iunit, status='old', file=trim(filename), form='unformatted', err=998)
-  read(iunit, err=999) ! mesh stuff is now skipped
-  read(iunit, err=100) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
-  go to 200
+  if(conf%verbose > 20) then
+    write(stdout, '(3a)') "Info: Reading wavefunctions from file '", &
+        trim(fname), "'"
+  end if
 
-  ! ugly thing to handle old restarts
-100 continue
-  backspace(iunit)
-  read(iunit, err=999) old_np, old_dim, old_start, old_end, old_nik, old_ispin
-  mode = -1 ! old restart file
-
-200 continue
   if(old_np.ne.m%np .or. old_dim.ne.st%dim .or. & ! different mesh, cannot read
        old_start.gt.st%st_start .or. old_end.lt.st%st_end .or. old_nik.ne.st%nik) then
     message(1) = 'Restart file has a different mesh!'
@@ -280,7 +325,11 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
       do ist = old_start, old_end
         do id = 1, st%dim
           imode: if(mode == 0 .or. mode == -1) then
-            read(iunit, err=999) dpsi(:)
+            if(st%restart_format == 1) then
+              read(iunit, err=999) dpsi(:)
+            else
+              read(iunit, *, err=999) dpsi(:)
+            end if
             if(ist >= st%st_start .and. ist <= st%st_end) then
 #             ifdef R_TREAL
                 st%dpsi(1:m%np, id, ist, ik) = dpsi(:)
@@ -314,7 +363,11 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
     else
       do ik = 1, st%nik
         do ist = old_start, old_end
-          read(iunit, err=999) e
+          if(st%restart_format == 1) then
+            read(iunit, err=999) e
+          else
+            read(iunit, *, err=999) e
+          end if
           if(ist >= st%st_start .and. ist <= st%st_end) then
             st%eigenval(ist, ik) = e
           end if
@@ -323,7 +376,11 @@ logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok
     end if
 
     if(present(iter)) then ! read the time-dependent stuff
-      read(iunit, err=999) ii, v1, v2
+      if(st%restart_format == 1) then
+        read(iunit, err=999) ii, v1, v2
+      else
+        read(iunit, *, err=999) ii, v1, v2
+      end if
       iter = int(ii)
     end if
   end if

@@ -64,6 +64,7 @@ type states_type
   FLOAT, pointer :: kpoints(:,:) ! obviously the kpoints
   FLOAT, pointer :: kweights(:)  ! weights for the kpoint integrations
 
+  integer :: restart_format  ! how the restart file is written
 end type states_type
 
 ! Parameters...
@@ -147,24 +148,6 @@ subroutine states_init(st, m, val_charge)
     call write_fatal(2)
   end if
   
-!!$  st%qtot = -(val_charge + excess_charge)
-!!$  st%nst  = int(st%qtot/M_TWO)
-!!$  if(st%nst*M_TWO < st%qtot) &
-!!$       st%nst = st%nst + 1
-!!$
-!!$  select case(st%ispin)
-!!$  case(UNPOLARIZED)
-!!$    st%dim = 1
-!!$    st%nst = st%nst + nempty
-!!$  case(SPIN_POLARIZED)
-!!$    st%dim = 1
-!!$    st%nst = st%nst + nempty
-!!$    st%nik = st%nik*2
-!!$  case(SPINORS)
-!!$    st%dim = 2
-!!$    st%nst = st%nst*2 + nempty
-!!$  end select
-
   st%qtot = -(val_charge + excess_charge)
 
   select case(st%ispin)
@@ -239,6 +222,15 @@ subroutine states_init(st, m, val_charge)
 
   st%st_start = 1; st%st_end = st%nst
   nullify(st%dpsi, st%zpsi, st%rho_core)
+
+  ! read restart format information
+  call loct_parse_int('RestartFileFormat', 1, st%restart_format)
+  if (st%restart_format < 1 .or. st%ispin > 2) then
+    write(message(1),'(a,i4,a)') "Input: '", st%restart_format,"' is not a valid RestartFileFormat"
+    message(2) = '(RestartFileFormat = unformatted | formatted)'
+    call write_fatal(2)
+  end if
+
 
   call pop_sub()
 end subroutine states_init
