@@ -218,13 +218,11 @@ contains
     CMPLX, intent(in) :: c(fft%n(1),fft%n(2),fft%n(3))
     FLOAT, intent(out)   :: r(fft%n(1),fft%n(2),fft%n(3))
 
-    integer :: n
-
     call rfftwnd_f77_one_complex_to_real(fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
-    n = fft%n(1)*fft%n(2)*fft%n(3)
-    call dlalg_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1))
+    call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
+       M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine dfft_backward
 
@@ -242,13 +240,11 @@ contains
     CMPLX, intent(in)  :: c(fft%n(1), fft%n(2), fft%n(3))
     CMPLX, intent(out) :: r(fft%n(1), fft%n(2), fft%n(3))
 
-    integer :: n
-
     call fftwnd_f77_one(fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
-    n = fft%n(1)*fft%n(2)*fft%n(3)
-    call zlalg_scal(n, M_z1/real(n, PRECISION), r(1, 1, 1))
+    call zlalg_scal(fft%n(1), fft%n(2), fft%n(3), &
+       M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine zfft_backward
 

@@ -136,8 +136,8 @@ end subroutine poisson3D_init
 
 subroutine poisson_cg(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  FLOAT, intent(inout) :: pot(m%np)
-  FLOAT, intent(in)    :: rho(m%np)
+  FLOAT, intent(inout) :: pot(:) ! pot(m%np)
+  FLOAT, intent(in)    :: rho(:) ! rho(m%np)
   
   integer, parameter :: ml = 4 ! maximum multipole moment to include
   FLOAT, parameter :: fpi = M_FOUR*M_PI
@@ -235,8 +235,10 @@ end subroutine poisson_cg
 #if defined(HAVE_FFT)
 subroutine poisson_fft(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  FLOAT, intent(out) :: pot(m%np)
-  FLOAT, intent(in)  :: rho(m%np)
+  FLOAT, intent(out) :: pot(:) ! pot(m%np)
+  FLOAT, intent(in)  :: rho(:) ! rho(m%np)
+
+  integer :: k
 
   call push_sub('poisson_fft')
 
@@ -245,7 +247,12 @@ subroutine poisson_fft(m, pot, rho)
 
   call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
   call dcf_RS2FS(fft_cf)             ! Fourier transform
-  fft_cf%FS = fft_cf%FS*fft_Coulb_FS ! multiply by the FS of the Coulomb interaction
+
+  ! multiply by the FS of the Coulomb interaction
+  ! this works around a bug in Intel ifort 8
+  do k = 1, fft_cf%n(3)
+    fft_cf%FS(:,:,k) = fft_cf%FS(:,:,k)*fft_Coulb_FS(:,:,k)
+  end do
 
   call dcf_FS2RS(fft_cf)             ! Fourier transform back
   call dcf2mf(m, fft_cf, pot)        ! put the density in a cube

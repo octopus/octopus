@@ -41,12 +41,12 @@ subroutine X(hamiltonian_eigenval)(h, m, st)
 end subroutine X(hamiltonian_eigenval)
 
 subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
-  type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: ik
-  R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(out) :: Hpsi(m%np, h%d%dim)
-  FLOAT, intent(in), optional :: t
+  type(hamiltonian_type), intent(IN)  :: h
+  type(mesh_type),        intent(IN)  :: m
+  integer,                intent(in)  :: ik
+  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  FLOAT, optional,        intent(in)  :: t
 
   call push_sub('Hpsi')
 
@@ -85,8 +85,8 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
   integer,                intent(in)  :: ik
-  R_TYPE,                 intent(IN)  :: psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out) :: Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   FLOAT,                  intent(IN)  :: vmagnus(m%np, h%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
@@ -151,8 +151,8 @@ end subroutine X(magnus)
 subroutine X(kinetic) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
-  R_TYPE,                 intent(IN)  :: psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out) :: hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer :: ik
 
   integer :: idim
@@ -188,7 +188,7 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
     do idim = 1, h%d%dim
       call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
-    call X(lalg_scal)(m%np*h%d%dim, R_TOTYPE(-M_HALF), Hpsi(1, 1))
+    call lalg_scal(m%np, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
   end if
 
 
@@ -196,11 +196,11 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
 end subroutine X(kinetic)
 
 subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
-  type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(out) :: hpsi(m%np, h%d%dim)
-  integer :: ik
+  type(hamiltonian_type), intent(IN)  :: h
+  type(mesh_type),        intent(IN)  :: m
+  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  integer,                intent(in)  :: ik
 
   integer :: idim, k, ispin
   FLOAT :: b(conf%dim), a(conf%dim), r(3)
@@ -308,10 +308,10 @@ end subroutine X(current_extra_terms)
 
 subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN)    :: h
-  integer,                intent(in)    :: ik
   type(mesh_type),        intent(IN)    :: m
-  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  integer,                intent(in)    :: ik
 
   integer :: idim, ikbc, jkbc, ivnl
   R_TYPE :: uVpsi
@@ -337,14 +337,14 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
       do ikbc = 1, nlop%c
         do jkbc = 1, nlop%c
           tmp   = R_TOTYPE(nlop%uv(:, ikbc))
-          uvpsi = X(lalg_dot)(nlop%n, tmp, lpsi) * m%vol_pp*nlop%uvu(ikbc, jkbc)
+          uvpsi = lalg_dot(nlop%n, tmp, lpsi)*m%vol_pp*nlop%uvu(ikbc, jkbc)
           if (conf%periodic_dim==0) then
             tmp = R_TOTYPE(nlop%uv(:, jkbc))
-            call X(lalg_axpy)(nlop%n, uvpsi, tmp, lHpsi)
+            call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
           else
 #           ifdef R_TCOMPLEX
               tmp = R_CONJ(nlop%phases(:, ik)*nlop%uv(:, jkbc))
-              call X(lalg_axpy)(nlop%n, uvpsi, tmp, lHpsi)
+              call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
 #           else
               message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
               message(2) = "Reconfigure with --enable-complex, and remake"
@@ -367,8 +367,8 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN)    :: h
   type(mesh_type),        intent(IN)    :: m
   integer,                intent(in)    :: ik
-  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   integer :: idim
 
@@ -396,8 +396,8 @@ end subroutine X(vlpsi)
 subroutine X(vlasers) (h, m, psi, hpsi, t)
   type(hamiltonian_type), intent(IN)    :: h
   type(mesh_type),        intent(IN)    :: m
-  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   FLOAT, intent(in) :: t
 
@@ -437,8 +437,8 @@ end subroutine X(vlasers)
 subroutine X(vborders) (h, m, psi, hpsi)
   type(hamiltonian_type), intent(IN)    :: h
   type(mesh_type),        intent(IN)    :: m
-  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   integer :: idim
 

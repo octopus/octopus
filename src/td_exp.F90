@@ -20,6 +20,7 @@
 module td_exp
   use global
   use lib_oct_parser
+  use blas
   use lib_basic_alg
   use math
   use mesh
@@ -164,12 +165,12 @@ contains
       
       allocate(zpsi1(m%np, h%d%dim), hzpsi1(m%np, h%d%dim))
       zfact = M_z1
-      call zlalg_copy(m%np*h%d%dim, zpsi(1, 1), zpsi1(1, 1))
+      call lalg_copy(m%np, h%d%dim, zpsi(:,:), zpsi1(:,:))
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)
-        call zlalg_axpy(m%np*h%d%dim, zfact, hzpsi1(1, 1), zpsi(1, 1))
-        if(i .ne. te%exp_order) call zlalg_copy(m%np*h%d%dim, hzpsi1(1, 1), zpsi1(1, 1))
+        call lalg_axpy(m%np, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
+        if(i .ne. te%exp_order) call lalg_copy(m%np, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
       end do
       deallocate(zpsi1, hzpsi1)
       
@@ -187,11 +188,11 @@ contains
       ! (University of Georgia) homepage: (www.math.uga.edu/~fglether):
       ! {twot := t + t; u0 := 0; u1 := 0;
       !  for k from n to 0 by -1 do
-      !   u2 := u1; u1 := u0;
-      !   u0 := twot*u1 - u2 + c[k];
+      !    u2 := u1; u1 := u0;
+      !    u0 := twot*u1 - u2 + c[k];
       !  od;
       !  ChebySum := 0.5*(u0 - u2);}
-      integer :: j, n
+      integer :: j
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
       
@@ -199,21 +200,22 @@ contains
       
       allocate(zpsi1(m%np, h%d%dim, 0:2))
       zpsi1 = M_z0
-      n = m%np*h%d%dim
       do j = te%exp_order-1, 0, -1
-        call zlalg_copy(n, zpsi1(1, 1, 1), zpsi1(1, 1, 2))
-        call zlalg_copy(n, zpsi1(1, 1, 0), zpsi1(1, 1, 1))
+        call lalg_copy(m%np, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
+        call lalg_copy(m%np, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
+
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
-        call zlalg_axpy(n, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
-             zpsi1(1, 1, 1), zpsi1(1, 1, 0))
-        call zlalg_scal(n, cmplx(1./h%spectral_half_span, M_ZERO, PRECISION), zpsi1(1, 1, 0))
-        call zlalg_scal(n, cmplx(M_TWO, M_ZERO, PRECISION),                   zpsi1(1, 1, 0))
-        call zlalg_axpy(n, zfact, zpsi(1, 1)                               ,  zpsi1(1, 1, 0))
-        call zlalg_axpy(n, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(1, 1, 2),  zpsi1(1, 1, 0))
+
+        call lalg_axpy(m%np, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+             zpsi1(:,:, 1), zpsi1(:,:, 0))
+        call lalg_scal(m%np, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
+        call lalg_axpy(m%np, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
+        call lalg_axpy(m%np, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
       end do
+
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      call zlalg_scal(n, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(1, 1))
+      call lalg_scal(m%np, h%d%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:,:))
       deallocate(zpsi1)
       
       if(present(order)) order = te%exp_order
@@ -222,7 +224,7 @@ contains
     
     subroutine lanczos
       integer ::  korder, n, np
-      CMPLX, allocatable :: hm(:, :), v(:, :, :), expo(:, :)
+      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:)
       FLOAT :: alpha, beta, res, tol, nrm
       
       call push_sub('lanczos')
@@ -235,26 +237,30 @@ contains
            expo(korder, korder))
       
       ! Normalize input vector, and put it into v(:, :, 1)
-      nrm = zstates_nrm2(m, h%d%dim, zpsi)
+      nrm = zstates_nrm2(m, h%d%dim, zpsi(:,:))
       v(:, :, 1) = zpsi(:, :)/nrm
       
       ! Operate on v(:, :, 1) and place it onto w.
       call operate(v(:, :, 1), zpsi)
       alpha = zstates_dotp(m, h%d%dim, v(:, :, 1), zpsi)
-      call zlalg_axpy(np, -M_z1*alpha, v(1, 1, 1), zpsi(1, 1))
+      call lalg_axpy(m%np, h%d%dim, -M_z1*alpha, v(:,:, 1), zpsi(:,:))
       
       hm = M_z0; hm(1, 1) = alpha
-      beta = zstates_nrm2(m, h%d%dim, zpsi)
+      beta = zstates_nrm2(m, h%d%dim, zpsi(:,:))
+
       do n = 1, korder - 1
-        v(:, :, n + 1) = zpsi(:, :)/beta
+        v(:,:, n + 1) = zpsi(:,:)/beta
         hm(n+1, n) = beta
-        call operate(v(:, :, n+1), zpsi)
-        hm(n    , n + 1) = zstates_dotp(m, h%d%dim, v(:, :, n)    , zpsi)
-        hm(n + 1, n + 1) = zstates_dotp(m, h%d%dim, v(:, :, n + 1), zpsi)
-        call zlalg_gemv(np, 2, -M_z1, v(1, 1, n), hm(n, n + 1), M_z1, zpsi(1, 1))
+        call operate(v(:,:, n+1), zpsi)
+
+        hm(n    , n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n)  , zpsi)
+        hm(n + 1, n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n+1), zpsi)
+        call lalg_gemv(np, 2, -M_z1, v(:,:, n), hm(n:, n + 1), M_z1, zpsi(:, 1))
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
+
         res = abs(beta*abs(expo(1, n+1)))
         beta = zstates_nrm2(m, h%d%dim, zpsi)
+
         if(beta < CNST(1.0e-12)) exit
         if(n>1 .and. res<tol) exit
       enddo
@@ -265,7 +271,7 @@ contains
       endif
       
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call zlalg_gemv(np, korder, M_z1*nrm, v(1, 1, 1), expo(1, 1), M_z0, zpsi(1, 1))
+      call blas_gemv('N', np, korder, M_z1*nrm, v(1,1,1), np, expo(1,1), 1, M_z0, zpsi(1,1), 1)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)

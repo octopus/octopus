@@ -75,12 +75,12 @@ end subroutine X(calcdens)
 
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
-  integer,         intent(in) :: nst, dim
-  type(mesh_type), intent(IN) :: m
-  R_TYPE,          intent(inout) :: psi(m%np, dim, nst)
-  integer,         intent(in), optional :: start
+  integer,           intent(in)    :: nst, dim
+  type(mesh_type),   intent(in)    :: m
+  R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np, dim, nst)
+  integer, optional, intent(in)    :: start
 
-  integer :: p, q, id, stst
+  integer :: p, q, stst
   FLOAT :: nrm2
   R_TYPE :: ss
 
@@ -92,36 +92,43 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
 
   do p = stst, nst
     do q = 1, p - 1
-      ss = X(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
-      do id = 1, dim
-        call X(lalg_axpy)(m%np, -ss, psi(1, id, q), psi(1, id, p))
-      end do
-    enddo
-    nrm2 = X(states_nrm2)(m, dim, psi(1:m%np, :, p))
-    ss = R_TOTYPE(M_ONE/nrm2)
-    do id = 1, dim
-      call X(lalg_scal)(m%np, ss, psi(1, id, p))
+      ss = X(states_dotp)(m, dim, psi(:,:, q), psi(:,:, p))
+      call lalg_axpy(m%np, dim, -ss, psi(:,:, q), psi(:,:, p))
     end do
+
+    nrm2 = X(states_nrm2)(m, dim, psi(:,:, p))
+    ss = R_TOTYPE(M_ONE/nrm2)
+    call lalg_scal(m%np, dim, ss, psi(:, :, p))
   end do
 
-  return
 end subroutine X(states_gram_schmidt)
 
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   integer,         intent(in) :: dim
-  R_TYPE,          intent(IN) :: f1(*), f2(*)
+  R_TYPE,          intent(IN) :: f1(:,:), f2(:,:)
 
-  dotp = X(lalg_dot)(m%np*dim, f1(1), f2(1))*m%vol_pp
+  integer :: i
+
+  dotp = R_TOTYPE(M_ZERO)
+  do i = 1, dim
+    dotp = dotp + X(mf_dotp)(m, f1(:,i), f2(:,i))
+  end do
 
 end function X(states_dotp)
 
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer,         intent(in) :: dim
-  R_TYPE,          intent(IN) :: f(*)
+  R_TYPE,          intent(IN) :: f(:,:)
 
-  nrm2 = X(lalg_nrm2)(m%np*dim, f(1))*sqrt(m%vol_pp)
+  integer :: i
+
+  nrm2 = M_ZERO
+  do i = 1, dim
+    nrm2 = nrm2 + X(mf_nrm2)(m, f(:,i))**2
+  end do
+  nrm2 = sqrt(nrm2)
 
 end function X(states_nrm2)
 

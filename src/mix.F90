@@ -222,8 +222,9 @@ end subroutine mix_broyden
 subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, dv)
   FLOAT,   intent(in)  :: alpha
   integer, intent(in)  :: np, iter_used
-  FLOAT,   intent(in)  :: vin(np), vout(np), f(np), df(np, iter_used), dv(np, iter_used)
-  FLOAT,   intent(out) :: vnew(np)
+  FLOAT,   intent(in)  :: vin(:), vout(:), f(:) ! (np)
+  FLOAT,   intent(in)  :: df(:,:), dv(:,:)      ! (np,iter_used)
+  FLOAT,   intent(out) :: vnew(:)               ! (np)
 
   FLOAT, parameter :: w0 = CNST(0.01)
 

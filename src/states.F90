@@ -497,10 +497,10 @@ end subroutine states_fermi
 subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   type(mesh_type),   intent(IN)  :: m
   type(states_type), intent(IN)  :: st
-  FLOAT,             intent(in)  :: pol(3)
-  FLOAT,             intent(out) :: dipole(st%d%nspin)
-  integer,           intent(in),  optional :: lmax
-  FLOAT,             intent(out), optional :: multipole(:, :) ! multipole((lmax + 1)**2, st%nspin)
+  FLOAT,             intent(in)  :: pol(:)          ! pol(3)
+  FLOAT,             intent(out) :: dipole(:)       ! dipole(st%d%nspin)
+  integer, optional, intent(in)  :: lmax
+  FLOAT,   optional, intent(out) :: multipole(:, :) ! multipole((lmax + 1)**2, st%nspin)
 
   integer :: i, is, l, lm, add_lm
   FLOAT :: x(3), r, ylm, mult

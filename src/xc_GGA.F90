@@ -46,13 +46,13 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
 
   ! Store in local variables d the density matrix
   ! (in the global reference system).
-  call dlalg_copy(m%np*st%d%nspin, st%rho(1:m%np, 1:st%d%nspin), d(1, 1))
+  call lalg_copy(m%np, st%d%nspin, st%rho(:,:), d(:,:))
 
   ! If the pseudo has non-local core corrections, add the core charge
   ! (to the diagonal of the density matrix)
   if(xcs%nlcc) then
     do is = 1, spin_channels
-      call dlalg_axpy(m%np, M_ONE/spin_channels, st%rho_core(1:m%np), d(1, is))
+      call lalg_axpy(m%np, M_ONE/spin_channels, st%rho_core(:), d(:, is))
     end do
   end if
 
@@ -121,7 +121,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   ! the gradient of the density.
   do is = 1, spin_channels
     call df_divergence(m, vlocaldedgd(:,:,is), rhoplus(:))
-    call dlalg_axpy(m%np, -M_ONE, rhoplus(1), lpot(1, is))
+    call lalg_axpy(m%np, -M_ONE, rhoplus(:), lpot(:, is))
   end do
       
   ! And now we rotate back (do not need the rotation matrix for this).

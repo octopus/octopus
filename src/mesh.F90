@@ -235,8 +235,8 @@ subroutine mesh_r(m, i, r, a, x)
   type(mesh_type), intent(IN)  :: m
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: r
-  FLOAT,           intent(in),  optional :: a(conf%dim)
-  FLOAT,           intent(out), optional :: x(conf%dim)
+  FLOAT,           intent(in),  optional :: a(:) ! a(conf%dim)
+  FLOAT,           intent(out), optional :: x(:) ! x(conf%dim)
 
   FLOAT :: xx(conf%dim)
 

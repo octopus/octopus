@@ -104,6 +104,7 @@ subroutine lcao_init(lcao_data, m, st, geo, h)
     n1 = 1
     do i1 = 1, geo%natoms
       if(geo%atom(i1)%spec%local) cycle
+
       do l1 = 1, geo%atom(i1)%spec%ps%conf%p
         l = geo%atom(i1)%spec%ps%conf%l(l1)
         if(.not. lcao_data%atoml(i1, l1)) cycle
@@ -199,8 +200,8 @@ subroutine lcao_wf(lcao_data, m, st, h)
   do ik = 1, st%nik
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
-      call X(vlpsi) (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
-      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      call X(vlpsi) (h, m, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
+      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
       do n2 = n1, lcao_data%dim
         lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
         lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
@@ -219,9 +220,11 @@ subroutine lcao_wf(lcao_data, m, st, h)
     st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
-    call X(lalg_gemm)(np*dim, nst, norbs, R_TOTYPE(M_ONE), lcao_data%psis(1:np, 1:dim, 1:norbs, ik), &
-                      lcao_data%hamilt(1:norbs, 1:nst, ik), &
-                      R_TOTYPE(M_ZERO),st%X(psi)(1:np, 1:dim, 1:nst, ik))
+    call blas_gemm('N', 'N', np*dim, nst, norbs, R_TOTYPE(M_ONE), &
+       lcao_data%psis(1,1,1, ik), np*dim, &
+       lcao_data%hamilt(1,1, ik), nst,    &
+       R_TOTYPE(M_ZERO), &
+       st%X(psi)(1,1,1, ik), np*dim)
 
    end do
 

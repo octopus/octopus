@@ -80,7 +80,7 @@ contains
     type(mesh_type), intent(IN)  :: m             ! the mesh in which the psi is defined
     type(atom_type), intent(IN)  :: atom          !
     integer,         intent(in)  :: l, lm, ispin  ! quantum numbers of psi
-    R_TYPE,          intent(out) :: psi(m%np)     ! the atomic wavefunction
+    R_TYPE,          intent(out) :: psi(:)        ! psi(m%np) the atomic wavefunction
     
     integer :: j, ll
     FLOAT :: x(3), a(3), r, p, ylm

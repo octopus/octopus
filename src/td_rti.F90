@@ -132,7 +132,7 @@ contains
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
-    call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
+    call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
 
     select case(tr%method)
     case(SPLIT_OPERATOR);       call td_rti0
@@ -223,7 +223,7 @@ contains
       time(5) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
 
       do k = 1, 5
-         call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
+         call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
          do ik = 1, st%nik
             do ist = 1, st%nst
                call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
@@ -314,7 +314,7 @@ contains
       call push_sub('td_rti4')
 
       if(.not.h%ip_app) then
-        call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
+        call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
       
       do ik = 1, st%nik
@@ -340,7 +340,7 @@ contains
 
       if(.not.h%ip_app) then
         do j = 1, 2
-           call dextrapolate(2, m%np*st%d%nspin, tr%v_old(:, :, 0:2), vaux(:, :, j), dt, time(j)-dt)
+           call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
         enddo
       else
         vaux = M_ZERO

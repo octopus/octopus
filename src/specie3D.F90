@@ -136,9 +136,9 @@ end function specie_get_nlcc
 
 subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
   type(specie_type), intent(IN)  :: s
-  FLOAT,             intent(in)  :: x(3)
+  FLOAT,             intent(in)  :: x(:)        ! (3)
   integer,           intent(in)  :: l, lm, i
-  FLOAT,             intent(out) :: uV, duV(3)
+  FLOAT,             intent(out) :: uV, duV(:)  ! (3)
   logical, optional, intent(in)  :: so
 
   FLOAT :: r, uVr0, duvr0, ylm, gylm(3)

@@ -12,9 +12,9 @@
 ! Here A and B are assumed to be symmetric and B is also positive definite.
 subroutine dgeneigensolve(n, a, b, e)
   integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(n, n)
-  FLOAT,   intent(in)    :: b(n, n)
-  FLOAT,   intent(out)   :: e(n)
+  FLOAT,   intent(inout) :: a(:,:)  ! a(n,n)
+  FLOAT,   intent(in)    :: b(:,:)  ! b(n,n)
+  FLOAT,   intent(out)   :: e(:)    ! e(n)
 
   interface
     subroutine DLAPACK(sygv) (itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
@@ -48,9 +48,9 @@ end subroutine dgeneigensolve
 ! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zgeneigensolve(n, a, b, e)
   integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n, n)
-  CMPLX,   intent(in)    :: b(n, n)
-  FLOAT,   intent(out)   :: e(n)
+  CMPLX,   intent(inout) :: a(:,:)  ! a(n,n)
+  CMPLX,   intent(in)    :: b(:,:)  ! b(n,n)
+  FLOAT,   intent(out)   :: e(:)    ! e(n)
 
   interface
     subroutine ZLAPACK(hegv) (itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
@@ -83,8 +83,9 @@ end subroutine zgeneigensolve
 ! computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
 subroutine deigensolve(n, a, b, e)
   integer, intent(in)  :: n
-  FLOAT,   intent(in)  :: a(n, n)
-  FLOAT,   intent(out) :: b(n, n), e(n)
+  FLOAT,   intent(in)  :: a(:,:)  ! a(n,n)
+  FLOAT,   intent(out) :: b(:,:)  ! b(n,n)
+  FLOAT,   intent(out) :: e(:)    ! e(n)
 
   interface
     subroutine DLAPACK(syev) (jobz, uplo, n, a, lda, w, work, lwork, info)
@@ -114,9 +115,9 @@ end subroutine deigensolve
 ! computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
 subroutine zeigensolve(n, a, b, e)
   integer, intent(in)  :: n
-  CMPLX,   intent(in)  :: a(n, n)
-  CMPLX,   intent(out) :: b(n, n)
-  FLOAT,   intent(out) :: e(n)
+  CMPLX,   intent(in)  :: a(:,:)  ! a(n,n)
+  CMPLX,   intent(out) :: b(:,:)  ! b(n,n)
+  FLOAT,   intent(out) :: e(:)    ! e(n)
 
   interface
     subroutine ZLAPACK(heev) (jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
@@ -148,7 +149,7 @@ end subroutine zeigensolve
 ! return the determinant of a general square matrix a of dimensions (n,n)
 FLOAT function ddet(a, n)
   integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(n, n)
+  FLOAT,   intent(inout) :: a(:,:)  ! a(n,n)
 
   interface
     subroutine DLAPACK(getrf) (m, n, a, lda, ipiv, info)
@@ -181,7 +182,7 @@ end function ddet
 ! return the determinant of a general square matrix a of dimensions (n,n)
 CMPLX function zdet(a, n)
   integer, intent(in)    :: n
-  CMPLX,   intent(inout) :: a(n, n)
+  CMPLX,   intent(inout) :: a(:,:)  ! a(n,n)
 
   interface
     subroutine ZLAPACK(getrf) (m, n, a, lda, ipiv, info)
@@ -214,7 +215,7 @@ end function zdet
 ! Invert a real symmetric square matrix a
 subroutine dinvert(n, a)
   integer, intent(in)    :: n
-  FLOAT,   intent(inout) :: a(n, n)
+  FLOAT,   intent(inout) :: a(:,:)  ! a(n,n)
 
   interface
     subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)

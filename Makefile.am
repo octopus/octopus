@@ -20,7 +20,7 @@
 
 SUBDIRS = liboct src doc share
 
-EXTRA_DIST = TODO build/*.m4 build/*.in debian/* samples/inp
+EXTRA_DIST = TODO build/*.m4 build/*.in debian/* samples/Na samples/bench-gs
 
 CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec

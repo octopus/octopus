@@ -191,7 +191,7 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   integer,          intent(in) :: how
   character(len=*), intent(in) :: dir, fname
   type(mesh_type),  intent(IN) :: m
-  R_TYPE,           intent(IN) :: f(m%np)
+  R_TYPE,           intent(IN) :: f(:)  ! f(m%np)
   FLOAT,            intent(in) :: u
   
   integer :: iunit, i

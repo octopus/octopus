@@ -6,7 +6,7 @@ EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 bin_PROGRAMS = octopus oct-excite @UTILITY_PROGRAMS@
 
 core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
-	linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
+	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \
@@ -36,7 +36,7 @@ noinst_HEADERS = \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
 	out_inc.F90 math_inc.F90\
-	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
+	linalg_basic_blas.F90 linalg_basic_blas_inc.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDF90FLAGS@
 octopus_LDADD = @LIBS_FFTW@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
@@ -124,5 +124,6 @@ td.o: td_init.F90 td_write.F90 td_calc.F90
 out.o: out_inc.F90
 math.o: math_inc.F90
 fft.o: fftw2.F90 fftw3.F90
+linalg_basic_blas.o: linalg_basic_blas_int.F90
 linalg_basic.o : linalg_basic_blas.F90 linalg_basic_int.F90
 linalg_adv.o : linalg_adv_lapack.F90

@@ -17,17 +17,8 @@
 
 #include "global.h"
 
-module lib_basic_alg
-  use global
-
-  implicit none
-
-contains
-
-#ifdef HAVE_BLAS
-#include "linalg_basic_blas.F90"
+#if defined(HAVE_BLAS)
+#  include "linalg_basic_blas.F90"
 #else
-#include "linalg_basic_int.F90"
+#  include "linalg_basic_int.F90"
 #endif
-
-end module lib_basic_alg

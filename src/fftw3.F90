@@ -218,13 +218,11 @@ contains
     CMPLX, intent(in) :: c(fft%n(1), fft%n(2), fft%n(3))
     FLOAT, intent(out)   :: r(fft%n(1), fft%n(2), fft%n(3))
 
-    integer :: n
-
     call DFFTW(execute_dft_c2r) (fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
-    n = fft%n(1)*fft%n(2)*fft%n(3)
-    call dlalg_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1))
+    call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
+       M_ONE/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), r)
 
   end subroutine dfft_backward
 
@@ -233,6 +231,7 @@ contains
     type(fft_type), intent(in) :: fft
     CMPLX, intent(in)  :: in(:,:,:)
     CMPLX, intent(out) :: out(:,:,:)
+
     call DFFTW(execute_dft) (fft%planf, in, out)
   end subroutine zfft_forward
 
@@ -241,13 +240,11 @@ contains
     CMPLX, intent(in)  :: in(fft%n(1), fft%n(2), fft%n(3))
     CMPLX, intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
 
-    integer :: n
-
     call DFFTW(execute_dft) (fft%planb, in, out)
 
     ! multiply by 1/(N1*N2*N2)
-    n = fft%n(1)*fft%n(2)*fft%n(3)
-    call zlalg_scal(n, M_z1/real(n, PRECISION), out(1, 1, 1))
+    call lalg_scal(fft%n(1), fft%n(2), fft%n(3), &
+       M_z1/real(fft%n(1)*fft%n(2)*fft%n(3), PRECISION), out)
 
   end subroutine zfft_backward
 

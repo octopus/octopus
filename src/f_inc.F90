@@ -110,10 +110,10 @@ end subroutine X(cf_FS2mf)
 
 ! Calculation of derivatives
 subroutine X(f_laplacian) (m, f, lapl, cutoff_)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(in) :: f(m%np)
-  R_TYPE, intent(out) :: lapl(m%np)
-  FLOAT, intent(in), optional :: cutoff_
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(in)  :: f(:)     ! f(m%np)
+  R_TYPE,          intent(out) :: lapl(:)  ! lapl(m%np)
+  FLOAT, optional, intent(in)  :: cutoff_
 
   FLOAT :: cutoff
 
@@ -151,11 +151,11 @@ subroutine X(f_laplacian) (m, f, lapl, cutoff_)
 end subroutine X(f_laplacian)
 
 subroutine X(f_gradient) (m, f, grad)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(in) :: f(m%np)
-  R_TYPE, intent(out) :: grad(conf%dim, m%np)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(in)  :: f(:)       ! f(m%np)
+  R_TYPE,          intent(out) :: grad(:,:)  ! grad(conf%dim, m%np)
 
-  integer :: i, n
+  integer :: i
 
   call push_sub("f_gradient")
 
@@ -179,9 +179,10 @@ subroutine X(f_gradient) (m, f, grad)
     call X(cf_alloc_RS)(X(cf_der))     ! allocate cube in real space
     call X(cf_alloc_FS)(X(cf_der))     ! allocate cube in Fourier space
 
-    n = X(cf_aux)%nx*X(cf_aux)%n(2)*X(cf_aux)%n(3)
     do i = 1, conf%dim
-      call zlalg_copy(n, X(cf_aux)%FS, X(cf_der)%FS)
+      call lalg_copy(X(cf_aux)%nx, X(cf_aux)%n(2), X(cf_aux)%n(3), &
+         X(cf_aux)%FS(:,:,:), X(cf_der)%FS(:,:,:))
+
       call X(cf_FS_grad)(m, X(cf_der), i)        ! gradient in reciprocal space
       call X(cf_FS2RS)(X(cf_der))                ! Fourier transform
       call X(cf2mf)(m, X(cf_der), grad(i, :))    ! convert to mesh
@@ -247,9 +248,9 @@ end subroutine X(f_divergence)
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).
 subroutine X(f_angular_momentum)(m, f, lf)
-  type(mesh_type), intent(IN)   :: m
-  R_TYPE,          intent(IN)   :: f(m%np)
-  R_TYPE,           intent(out) :: lf(3, m%np)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(IN)  :: f(:)     ! f(m%np)
+  R_TYPE,          intent(out) :: lf(:,:)  ! lf(3, m%np)
 
   R_TYPE, allocatable :: gf(:, :)
   FLOAT :: x(3)
@@ -265,8 +266,9 @@ subroutine X(f_angular_momentum)(m, f, lf)
      lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
   enddo
 #if defined(R_TCOMPLEX)
-  call X(lalg_scal)(3*m%np, -M_zI, lf(1, 1))
+  call lalg_scal(3, m%np, -M_zI, lf)
 #endif
+
   deallocate(gf)
 end subroutine X(f_angular_momentum)
 

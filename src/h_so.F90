@@ -38,39 +38,39 @@ subroutine zso (h, m, psi, hpsi, dim, ik)
      thpsi = M_z0
      do ikbc = 1, nlop%c
         do jkbc = 1, nlop%c
-                     ! WARNING: Not every efficient. Has to be changed, and checked.
-                     uvpsi = zlalg_dot(mps, nlop%so_luv(1:mps, ikbc, 1), &
-                               tpsi(1, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
-                     call zlalg_axpy(mps, uvpsi/2, nlop%so_uv(1:mps, jkbc), &
-                            tHpsi(1, 2))
-                     uvpsi = zlalg_dot(mps, nlop%so_luv(1:mps, ikbc, 1), &
-                               tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
-                     call zlalg_axpy(mps, uvpsi/2, nlop%so_uv(1:mps, jkbc), &
-                            tHpsi(1, 1))
+          ! WARNING: Not every efficient. Has to be changed, and checked.
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 1), &
+             tpsi(1, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          call lalg_axpy(mps, uvpsi/2, nlop%so_uv(:, jkbc), &
+             tHpsi(1, 2))
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 1), &
+             tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          call lalg_axpy(mps, uvpsi/2, nlop%so_uv(:, jkbc), &
+             tHpsi(1, 1))
  
-                     uvpsi = zlalg_dot(mps, nlop%so_luv(1:mps, ikbc, 2), &
-                               tpsi(1, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
-                     call zlalg_axpy(mps, M_zI*uvpsi/2, nlop%so_uv(1:mps, jkbc), &
-                            tHpsi(1, 2))
-                     uvpsi = zlalg_dot(mps, nlop%so_luv(1:mps, ikbc, 2), &
-                               tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
-                     call zlalg_axpy(mps, -M_zI*uvpsi/2, nlop%so_uv(1:mps, jkbc), &
-                            tHpsi(1, 1))
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 2), &
+             tpsi(1, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          call lalg_axpy(mps, M_zI*uvpsi/2, nlop%so_uv(:, jkbc), &
+             tHpsi(1, 2))
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 2), &
+             tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          call lalg_axpy(mps, -M_zI*uvpsi/2, nlop%so_uv(:, jkbc), &
+             tHpsi(1, 1))
 
-                     uvpsi = zlalg_dot(mps, nlop%so_luv(1:mps, ikbc, 3), &
-                               tpsi(1, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
-                     call zlalg_axpy(mps, uvpsi/2, nlop%so_uv(1:mps, jkbc), &
-                            tHpsi(1, 1))
-                     uvpsi = zlalg_dot(mps, nlop%so_luv(1:mps, ikbc, 3), &
-                               tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
-                     call zlalg_axpy(mps, -uvpsi/2, nlop%so_uv(1:mps, jkbc), &
-                            tHpsi(1, 2))
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 3), &
+             tpsi(1, 1))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          call lalg_axpy(mps, uvpsi/2, nlop%so_uv(:, jkbc), &
+             tHpsi(1, 1))
+          uvpsi = lalg_dot(mps, nlop%so_luv(:, ikbc, 3), &
+             tpsi(1, 2))*m%vol_pp*nlop%so_uvu(ikbc, jkbc)
+          call lalg_axpy(mps, -uvpsi/2, nlop%so_uv(:, jkbc), &
+             tHpsi(1, 2))
         end do
      end do
      hpsi(nlop%jxyz(:), 1) = hpsi(nlop%jxyz(:), 1) + thpsi(:, 1)
      hpsi(nlop%jxyz(:), 2) = hpsi(nlop%jxyz(:), 2) + thpsi(:, 2)
      deallocate(tpsi, thpsi)
-  end do
+   end do
 
   call pop_sub()
 end subroutine zso

@@ -112,10 +112,10 @@ subroutine poisson_end()
   return
 end subroutine poisson_end
 
-subroutine poisson_solve(m, pot, dist)
+subroutine poisson_solve(m, pot, rho)
   type(mesh_type), intent(IN) :: m
-  FLOAT, intent(inout) :: pot(m%np)
-  FLOAT, intent(IN)    :: dist(m%np)
+  FLOAT, intent(inout) :: pot(:)  ! pot(m%np)
+  FLOAT, intent(in)    :: rho(:)  ! rho(m%np)
 
   call push_sub('poisson_solve')
 
@@ -123,14 +123,14 @@ subroutine poisson_solve(m, pot, dist)
 
   select case(poisson_solver)
   case(-1)
-    call poisson1d_solve(m, pot, dist)
+    call poisson1d_solve(m, pot, rho)
   case(-2)
-    call poisson2d_solve(m, pot, dist)
+    call poisson2d_solve(m, pot, rho)
   case(CG)
-    call poisson_cg(m, pot, dist)
+    call poisson_cg(m, pot, rho)
 #ifdef HAVE_FFT
   case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
-    call poisson_fft(m, pot, dist)
+    call poisson_fft(m, pot, rho)
 #endif
   end select
 
