@@ -12,6 +12,19 @@ module lcao
 
   implicit none
 
+  private
+  public :: lcao_dens, lcao_init, lcao_wf, lcao_end
+
+type lcao_type
+  integer           :: mode
+  integer           :: dim
+  real(r8), pointer :: psis(:,:,:)
+  real(r8), pointer :: hamilt(:,:), s(:,:,:)
+  logical, pointer  :: atoml(:,:)
+end type
+
+type(lcao_type) :: lcao_data
+
 contains
 
 !builds a density which is the sum of the atomic densities
@@ -117,6 +130,124 @@ contains
   end subroutine from_pseudopotential
 end subroutine lcao_dens
 
+subroutine lcao_init(sys)
+  type(system_type), intent(IN) :: sys
+
+  integer :: norbs, i, ik, n1, i1, l1, lm1, d1, n2, i2, l2, lm2, d2
+  integer, parameter :: orbs_local = 2
+
+  real(r8), allocatable :: psi1(:,:), psi2(:,:)
+  real(r8) :: s
+
+  sub_name = 'lcao_init'; call push_sub
+
+  ! Counting -- remove the l-components which are essentially out of bounds.
+  allocate(lcao_data%atoml(sys%natoms, 0:3))
+  lcao_data%atoml = .true.
+  allocate(psi1(0:sys%m%np, sys%st%dim))
+  norbs = 0
+  atoms_loop: do i1 = 1, sys%natoms
+      l_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max
+        lm_loop: do lm1 = -l1, l1
+          d_loop: do d1 = 1, sys%st%dim
+            call get_wf(sys, i1, l1, lm1, d1, psi1)
+            s = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi1(1:,:))
+            if(s < 0.1_r8) then
+              lcao_data%atoml(i1, l1) = .false.
+              norbs = norbs - (lm1 + l1)*sys%st%dim 
+              cycle l_loop
+            endif
+            norbs = norbs + 1
+          end do d_loop
+        end do lm_loop
+      end do l_loop
+  enddo atoms_loop 
+  deallocate(psi1)
+  lcao_data%dim = norbs
+  if(conf%verbose >= 999) then
+    write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
+    call write_info(1)
+  endif
+
+  ! Gets the mode
+  call oct_parse_int(C_string("LCAOMode"), 0, lcao_data%mode)
+  if(lcao_data%mode < 0 .or. lcao_data%mode > 1) then
+    message(1) = "LCAOMode not valid"
+    message(2) = "LCAOMode = 0 (memory intensive) | 1 (cpu intensive)"
+  end if
+
+  ! Gets the wave-functions
+  if(lcao_data%mode == 0) then
+    allocate(lcao_data%psis(0:sys%m%np, sys%st%dim, norbs))
+    lcao_data%psis = 0._r8
+    n1 = 1
+    do i1 = 1, sys%natoms
+      do l1 = 0, sys%atom(i1)%spec%ps%L_max
+        if(.not. lcao_data%atoml(i1, l1)) cycle
+        do lm1 = -l1, l1
+          do d1 = 1, sys%st%dim
+            call get_wf(sys, i1, l1, lm1, d1, lcao_data%psis(:,:, n1))
+            n1 = n1 + 1
+          end do
+        end do
+      end do
+    end do
+  end if
+
+  ! Allocation of variables
+  allocate(lcao_data%hamilt(norbs, norbs), lcao_data%s(sys%st%nik, norbs, norbs))
+
+  !Fixes, once and for all, the overlap matrix.
+  if(lcao_data%mode == 1) allocate(psi1(0:sys%m%np, sys%st%dim), psi2(0:sys%m%np, sys%st%dim))
+  ik_loop : do ik = 1, sys%st%nik
+    n1 = 1
+    atoms1_loop: do i1 = 1, sys%natoms
+      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max
+        if(.not. lcao_data%atoml(i1, l1))  cycle
+        lm1_loop: do lm1 = -l1, l1
+          d1_loop: do d1 = 1, sys%st%dim
+            if(lcao_data%mode == 1) call get_wf(sys, i1, l1, lm1, d1, psi1)
+            
+            n2 = 1
+            atoms2_loop: do i2 = 1, sys%natoms
+              l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max
+                if(.not. lcao_data%atoml(i1, l1)) cycle
+                lm2_loop: do lm2 = -l2, l2
+                  d2_loop: do d2 = 1, sys%st%dim
+                    if(lcao_data%mode == 0) then
+                      lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, lcao_data%psis(1:,:,n1), lcao_data%psis(1:,:,n2))
+                    else
+                      call get_wf(sys, i2, l2, lm2, d2, psi2)
+                      lcao_data%s(ik, n1, n2) = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
+                    end if
+                    lcao_data%s(ik, n2, n1) = lcao_data%s(ik, n1, n2)
+
+                    n2 = n2 + 1
+                    if(n2 > n1) exit atoms2_loop
+                  end do d2_loop
+                end do lm2_loop
+              end do l2_loop
+            end do atoms2_loop
+
+            n1 = n1 + 1
+          end do d1_loop
+        end do lm1_loop
+      end do l1_loop
+    end do atoms1_loop
+  enddo ik_loop
+  if(lcao_data%mode==1) deallocate(psi1, psi2)
+
+  call pop_sub()
+end subroutine lcao_init
+
+subroutine lcao_end
+  sub_name = 'lcao_end'; call push_sub()
+
+  deallocate(lcao_data%psis, lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
+
+  call pop_sub()
+end subroutine lcao_end
+
 subroutine lcao_wf(sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(in) :: h
@@ -125,95 +256,54 @@ subroutine lcao_wf(sys, h)
 
   integer :: i, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
-  real(r8), allocatable :: hamilt(:,:), s(:,:)
-  real(r8), allocatable :: hpsi(:,:), psis(:,:,:), psi1(:,:), psi2(:,:)
+  real(r8), allocatable :: hpsi(:,:), psi1(:,:), psi2(:,:)
+  real(r8), allocatable :: s(:,:)
 
   ! variables for dsyev (LAPACK)
   character(len=1) :: jobz, uplo
   integer :: lwork, info
   real(r8), allocatable :: work(:), w(:)
 
-  ! Counting...
-  norbs = 0
-  do i = 1, sys%natoms
-    if(sys%atom(i)%spec%local) then
-      norbs = norbs + orbs_local
-    else
-      norbs  = norbs + (sys%atom(i)%spec%ps%L_max + 1)**2
-    end if
-  end do
-  if(sys%st%dim == 2) norbs = norbs*2 ! need twice the number of functions
-  write(message(1),'(6x,i5,a)') norbs, ' functions to diagonalize.'
-  call write_info(1)
+  sub_name = 'lcao_wf'; call push_sub()
 
-  call oct_parse_int(C_string("LCAOMode"), 0, mode)
-  if(mode < 0 .or. mode > 1) then
-    message(1) = "LCAOMode not valid"
-    message(2) = "LCAOMode = 0 (memory intensive) | 1 (cpu intensive)"
-  end if
+  norbs = lcao_data%dim
+  mode  = lcao_data%mode
 
   ! Allocation of variables
-  if(mode == 0) then
-    allocate(psis(0:sys%m%np, sys%st%dim, norbs))
-    psis = 0._r8
-    n1 = 1
-    do i1 = 1, sys%natoms
-      do l1 = 0, sys%atom(i1)%spec%ps%L_max
-        do lm1 = -l1, l1
-          do d1 = 1, sys%st%dim
-            call get_wf(i1, l1, lm1, d1, psis(:,:, n1))
-            n1 = n1 + 1
-          end do
-        end do
-      end do
-    end do
-  else
-    allocate(psi1(0:sys%m%np, sys%st%dim), psi2(0:sys%m%np, sys%st%dim))
-  end if
+  if(mode == 1) allocate(psi1(0:sys%m%np, sys%st%dim), psi2(0:sys%m%np, sys%st%dim))
 
   ! Hamiltonian and overlap matrices, etc...
   allocate(hpsi(sys%m%np, sys%st%dim))
-  allocate(hamilt(norbs, norbs), s(norbs, norbs))
-  hamilt = 0.0_r8; s = 0.0_r8
 
   ik_loop : do ik = 1, sys%st%nik
     n1 = 1
     atoms1_loop: do i1 = 1, sys%natoms
       l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max
+        if(.not.lcao_data%atoml(i1, l1)) cycle l1_loop
         lm1_loop: do lm1 = -l1, l1
           d1_loop: do d1 = 1, sys%st%dim
             if(mode == 0) then
-              call dhpsi(h, sys, ik, psis(:,:,n1), hpsi)
+              call dhpsi(h, sys, ik, lcao_data%psis(:,:,n1), hpsi)
             else
-              call get_wf(i1, l1, lm1, d1, psi1)
+              call get_wf(sys, i1, l1, lm1, d1, psi1)
               call dhpsi(h, sys, ik, psi1, hpsi)
             end if
             
             n2 = 1
             atoms2_loop: do i2 = 1, sys%natoms
               l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max
+                if(.not.lcao_data%atoml(i2, l2)) cycle l2_loop
                 lm2_loop: do lm2 = -l2, l2
                   d2_loop: do d2 = 1, sys%st%dim
                     if(mode == 0) then
-                      hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psis(1:,:,n2))
-                      s(n1, n2) = dstates_dotp(sys%m, sys%st%dim, psis(1:,:,n1), psis(1:,:,n2))
+                      lcao_data%hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, lcao_data%psis(1:,:,n2))
                     else
-                      call get_wf(i2, l2, lm2, d2, psi2)
-                      hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
-                      s(n1, n2) = dstates_dotp(sys%m, sys%st%dim, psi1(1:,:), psi2(1:,:))
+                      call get_wf(sys, i2, l2, lm2, d2, psi2)
+                      lcao_data%hamilt(n1, n2) = dstates_dotp(sys%m, sys%st%dim, hpsi, psi2(1:,:))
                     end if
                     
-                    hamilt(n2, n1) = hamilt(n1, n2)
-                    s(n2, n1) = s(n1, n2)
+                    lcao_data%hamilt(n2, n1) = lcao_data%hamilt(n1, n2)
 
-                    if(n1 == n2 .and. conf%verbose >= 999) then
-                      if(abs(s(n1, n2) - 1.0_r8) > 0.25_r8) then
-                        write(message(1),'(a,i4,a,i2,a,i2,a,a,f12.6)') &
-                             'Pseudo-wave function ', n1, ',', l1, ',', lm1,' out of box:', &
-                             '|Phi|^2 = ', s(n1, n2)
-                        call write_warning(1)
-                      end if
-                    end if
                     n2 = n2 + 1
                     if(n2 > n1) exit atoms2_loop
                   end do d2_loop
@@ -232,14 +322,14 @@ subroutine lcao_wf(sys, h)
 !!$    write(*,'(a)') '    Hamiltonian matrix:'
 !!$    do n1=1, norbs
 !!$       do n2=1, norbs
-!!$          write(*,'(4x,f12.6)', advance='no') hamilt(n1,n2)/units_out%energy%factor
+!!$          write(*,'(4x,f12.6)', advance='no') lcao_data%hamilt(n1,n2)/units_out%energy%factor
 !!$       enddo
 !!$       write(*,*)
 !!$    enddo
 !!$    write(*,'(a)') '    Overlap matrix:'
 !!$    do n1=1, norbs
 !!$       do n2=1, norbs
-!!$          write(*,'(4x,f12.6)', advance='no') s(n1,n2)
+!!$          write(*,'(4x,f12.6)', advance='no') lcao_data%s(ik, n1,n2)
 !!$       enddo
 !!$       write(*,*)
 !!$    enddo
@@ -250,8 +340,10 @@ subroutine lcao_wf(sys, h)
     uplo = 'u'
     lwork = 3*norbs - 1
     allocate(work(lwork), w(norbs))
+    allocate(s(norbs, norbs))
+    s(1:norbs, 1:norbs) = lcao_data%s(ik, 1:norbs, 1:norbs)
 
-    call dsygv(1, jobz, uplo, norbs, hamilt, norbs, s, norbs, w, work, lwork, info)
+    call dsygv(1, jobz, uplo, norbs, lcao_data%hamilt, norbs, s, norbs, w, work, lwork, info)
     if(info.ne.0) then
       write(message(1),'(a,i5)') 'LAPACK "dsygv" returned error code ', info
       call write_fatal(1)
@@ -263,18 +355,19 @@ subroutine lcao_wf(sys, h)
     n1 = 1
     do i1 = 1, sys%natoms
       do l1 = 0, sys%atom(i1)%spec%ps%L_max
+        if(.not.lcao_data%atoml(i1, l1)) cycle
         do lm1 = -l1, l1
           do d1 = 1, sys%st%dim
             if(mode == 0) then
               do n2 = 1, sys%st%nst
                  sys%st%R_FUNC(psi) (:,:, n2, ik) = sys%st%R_FUNC(psi) (:,:, n2, ik) + &
-                   hamilt(n1, n2)*psis(:,:,n1)
+                   lcao_data%hamilt(n1, n2)*lcao_data%psis(:,:,n1)
               enddo
             else
-              call get_wf(i1, l1, lm1, d1, psi1)
+              call get_wf(sys, i1, l1, lm1, d1, psi1)
               do n2 = 1, sys%st%nst
                  sys%st%R_FUNC(psi) (:,:, n2, ik) = sys%st%R_FUNC(psi) (:,:, n2, ik) + &
-                    hamilt(n1, n2)*psi1(:,:)
+                    lcao_data%hamilt(n1, n2)*psi1(:,:)
               enddo
             end if
 
@@ -286,50 +379,46 @@ subroutine lcao_wf(sys, h)
 
   enddo ik_loop
 
-  deallocate(hamilt, s, hpsi)
-  if(mode == 0) then
-    deallocate(psis)
+  deallocate(hpsi); if(mode == 1) deallocate(psi1, psi2)
+
+  call pop_sub()
+end subroutine lcao_wf
+
+subroutine get_wf(sys, i, l, lm, d, psi)
+  type(system_type), intent(IN) :: sys
+  integer, intent(in)   :: i, l, lm, d
+  real(r8), intent(out) :: psi(0:sys%m%np, sys%st%dim)
+    
+  integer :: j, d2
+  real(r8) :: x(3), a(3), r, p, ylm, g(3)
+  type(spline_type), pointer :: s
+    
+  a = sys%atom(i)%x
+
+  psi(0,:) = 0.0_r8
+  if(sys%atom(i)%spec%local) then
+    ! add a couple of harmonic oscilator functions
   else
-    deallocate(psi1, psi2)
+    s => sys%atom(i)%spec%ps%Ur(l)
+    do j = 1, sys%m%np
+      call mesh_r(sys%m, j, r, x=x, a=a)
+      p = splint(s, r)
+      ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+      if(r > 0._r8) then
+        psi(j, d) = p * ylm * r**l
+      end if
+    end do
   end if
 
-contains
-
-  subroutine get_wf(i, l, lm, d, psi)
-    integer, intent(in)   :: i, l, lm, d
-    real(r8), intent(out) :: psi(0:sys%m%np, sys%st%dim)
-    
-    integer :: j
-    real(r8) :: x(3), a(3), r, p, ylm, g(3)
-    type(spline_type), pointer :: s
-    
-    a = sys%atom(i)%x
-
-    psi(0,:) = 0.0_r8
-    if(sys%atom(i)%spec%local) then
-      ! add a couple of harmonic oscilator functions
+  ! if spin channels are mixed we have to be careful
+  if(sys%st%dim == 2) then
+    if(d == 1) then
+      psi(:, 2) = 0._r8
     else
-      s => sys%atom(i)%spec%ps%Ur(l)
-      do j = 1, sys%m%np
-        call mesh_r(sys%m, j, r, x=x, a=a)
-        p = splint(s, r)
-        ylm = oct_ylm(x(1), x(2), x(3), l, lm)
-        if(r > 0._r8) then
-          psi(j, d) = p * ylm * r**l
-        end if
-      end do
+      psi(:, 1) = 0._r8
     end if
-
-    ! if spin channels are mixed we have to be careful
-    if(sys%st%dim == 2) then
-      if(d2 == 1) then
-        psi(:, 2) = 0._r8
-      else
-        psi(:, 1) = 0._r8
-      end if
-    end if
+  end if
     
-  end subroutine get_wf
-end subroutine lcao_wf
+end subroutine get_wf
 
 end module lcao

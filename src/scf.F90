@@ -8,6 +8,7 @@ use states
 use hamiltonian
 use eigen_solver
 use mix
+use lcao
 
 implicit none
 
@@ -17,7 +18,9 @@ type scf_type  ! some variables used for the scf cycle
        conv_abs_ener, conv_rel_ener ! several convergence criteria
   
   real(r8) :: abs_dens, rel_dens, abs_ener, rel_ener
-  
+
+  logical :: lcao_restricted
+
   type(mix_type) :: smix
   type(eigen_solver_type) :: eigens
 end type scf_type
@@ -53,6 +56,13 @@ subroutine scf_init(scf, sys)
   ! now the eigen solver stuff
   call eigen_solver_init(scf%eigens)
 
+  ! Should the calculation be restricted to LCAO subspace?
+  call oct_parse_logical(C_string("SCFinLCAO"), .false., scf%lcao_restricted)
+  if(scf%lcao_restricted) then
+    message(1) = 'Info: SCF restricted to LCAO subspace'
+    call write_info(1)
+  endif
+
   call pop_sub()
   return
 end subroutine scf_init
@@ -76,10 +86,16 @@ subroutine scf_run(scf, sys, h)
 
   sub_name = 'scf_run'; call push_sub()
 
+  if(scf%lcao_restricted) call lcao_init(sys)
+
   do iter = 1, scf%max_iter
     if(clean_stop()) exit
 
-    call eigen_solver_run(scf%eigens, sys, h, iter, diff)
+    if(scf%lcao_restricted) then
+      call lcao_wf(sys, h)
+    else
+      call eigen_solver_run(scf%eigens, sys, h, iter, diff)
+    endif
 
     ! compute eigenvalues
     call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
@@ -119,6 +135,7 @@ subroutine scf_run(scf, sys, h)
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
       call write_info(1)
+      if(scf%lcao_restricted) call lcao_end
       exit
     end if
   end do
