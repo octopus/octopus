@@ -231,7 +231,7 @@ subroutine hamiltonian_end(h, sys)
 
   if(associated(h%kpoints)) then
     deallocate(h%kpoints); nullify(h%kpoints)
-  end if;1001
+  end if
 
   if(associated(h%kweights)) then
     deallocate(h%kweights); nullify(h%kweights)
