@@ -332,6 +332,11 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
     end do
     a(i, i) = ddot(np, df(1, i), 1, df(1, i), 1)
   end do
+  if (all(a < 1.0E-8)) then
+    ! residuals are too small. Do not mix.
+    vnew = vout
+    return
+  end if
 
   ! invert matrix A
   call dsyinvert(iter_used, iter_used, a)
