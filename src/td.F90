@@ -640,7 +640,7 @@ contains
     ! now the gradient of the Hartree + xc potential
     allocate(V(sys%m%np), dV(3, sys%m%np))
     do j = 1, sys%st%nspin
-      V(:) = sys%h%Vhartree(:) + sys%h%Vxc(:, j)
+      V(:) = h%Vhartree(:) + h%Vxc(:, j)
       call dmesh_derivatives(sys%m, V, grad=dV)
       do k = 1, sys%m%np
         acc(:) = acc(:) - dV(:, k) * sys%st%rho(k, j) * sys%m%vol_pp
