@@ -170,8 +170,8 @@ contains
       if(trim(lab)==trim(label)) then
         call read_from_default_file(iunit, read_data, s)
         exit default_file
-      endif
-    enddo default_file
+      end if
+    end do default_file
     call io_close(iunit)
 
     if(read_data == 0) then
@@ -183,9 +183,9 @@ contains
   end subroutine specie_read
 
   subroutine read_from_default_file(iunit, read_data, s)
-    integer, intent(in) :: iunit
-    integer, intent(inout) :: read_data
-    type(specie_type),     intent(inout) :: s
+    integer,           intent(in)    :: iunit
+    integer,           intent(inout) :: read_data
+    type(specie_type), intent(inout) :: s
 
     character(len=10) :: label
     FLOAT :: weight, z, def_h, def_rsize, alpha, beta, rcut, beta2
@@ -204,67 +204,23 @@ contains
     def_rsize = def_rsize * P_ANG
     ASSERT(trim(label) == trim(s%label))
 
-    select case(read_data)
-    case(0) ! The Species was not supplied in the block.
+    if(read_data == 0) then ! The Species was not supplied in the block.
       s%weight    = weight
       s%type      = type
-      s%z         = z
-      s%lmax      = lmax
-      s%lloc      = lloc
-      s%def_h     = def_h
-      s%def_rsize = def_rsize
+    end if
+    if(read_data < 4) s%z         = z
+    if(read_data < 5) s%lmax      = lmax
+    if(read_data < 6) s%lloc      = lloc
+    if(read_data < 7) s%def_h     = def_h
+    if(read_data < 8) s%def_rsize = def_rsize
+    if(read_data < 9) then
       s%alpha     = alpha
       s%beta      = beta
       s%rcut      = rcut
       s%beta2     = beta2
-    case(3)
-      s%z         = z
-      s%lmax      = lmax
-      s%lloc      = lloc
-      s%def_h     = def_h
-      s%def_rsize = def_rsize
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    case(4)
-      s%lmax      = lmax
-      s%lloc      = lloc
-      s%def_h     = def_h
-      s%def_rsize = def_rsize
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    case(5)
-      s%lloc      = lloc
-      s%def_h     = def_h
-      s%def_rsize = def_rsize
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    case(6)
-      s%def_h     = def_h
-      s%def_rsize = def_rsize
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    case(7)
-      s%def_rsize = def_rsize
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    case(8)
-      s%alpha     = alpha
-      s%beta      = beta
-      s%rcut      = rcut
-      s%beta2     = beta2
-    end select
-
+    end if
     read_data = 8
+
     call pop_sub()
   end subroutine read_from_default_file
 

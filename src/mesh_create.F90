@@ -156,6 +156,7 @@ contains
     case(SPHERE,CYLINDER,MINIMUM)
       call loct_parse_float('spacing', m%h(1), m%h(1))
       m%h(1:conf%dim) = m%h(1)
+
     case(PARALLELEPIPED)
       if(loct_parse_block('spacing', blk) == 0) then
         do i = 1, conf%dim
@@ -171,8 +172,8 @@ contains
         if(def_h > M_ZERO) then
           m%h(i) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", i, &
-               ") [", trim(units_out%length%abbrev), "] = ",                 &
-               m%h(i)/units_out%length%factor
+              ") [", trim(units_out%length%abbrev), "] = ",                 &
+              m%h(i)/units_out%length%factor
           call write_info(1)
         else
           message(1) = 'Either:'

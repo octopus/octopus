@@ -238,8 +238,8 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   def_rsize = -huge(PRECISION)
   do i = 1, geo%nspecies
     call specie_init(geo%specie(i), ispin)
-    def_h     = min(def_h,     geo%specie(j)%def_h)
-    def_rsize = max(def_rsize, geo%specie(j)%def_rsize)
+    def_h     = min(def_h,     geo%specie(i)%def_h)
+    def_rsize = max(def_rsize, geo%specie(i)%def_rsize)
   end do
 
   !  assign species and find total charge of the system
