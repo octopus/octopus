@@ -1866,6 +1866,11 @@ of the functions that characterise the system may be written to disk
 so that they may be analized. Files are written within ``static'' output directory
 after the self-consistent field, or within ``td.x'' directories, during evolution,
 where ``x'' stands for the iteration number at which each write is done.
+Note that if you wish to plot any function (@code{OutputKSPotential = yes}, etc.),
+at least one of the output formats should be enabled (@code{OutputPlaneX = yes},
+@code{OutputDX = yes}, @code{OutputNETCDF = yes}, etc.). [This is not necessary
+if you wish to plot the geometry (@code{OutputGeometry = yes})].
+
 @itemize @bullet
 
 @item @vindex @code{OutputKSPotential}

@@ -385,7 +385,12 @@ calculations, some of the functions that characterise the system may be
 written to disk so that they may be analized. Files are written within
 "static" output directory after the self-consistent field, or within
 "td.x" directories, during evolution, where "x" stands for the
-iteration number at which each write is done.
+iteration number at which each write is done.  Note that if you wish to
+plot any function (`OutputKSPotential = yes', etc.), at least one of
+the output formats should be enabled (`OutputPlaneX = yes', `OutputDX =
+yes', `OutputNETCDF = yes', etc.). [This is not necessary if you wish
+to plot the geometry (`OutputGeometry = yes')].
+
    * `OutputKSPotential' (logical, false)  Prints out Kohn-Sham
      potential, separated by parts. File names would be "v0" for  the
      local part, "vc" for the classical potential (if it exists), "vh"
