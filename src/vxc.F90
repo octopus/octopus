@@ -548,12 +548,13 @@ module vxc
                         e(0:2) = (/ CNST(1.0022),    CNST(0.4133),      CNST(1.424301) /), &
                         f(0:2) = (/ CNST(-0.02069),  CNST(0.0),         CNST(0.0) /), &
                         g(0:2) = (/ CNST(0.33997),   CNST(6.68467e-2),  CNST(0.0) /), &
-                        h(0:2) = (/ CNST(1.747e-2),  CNST(7.799e-4),    CNST(1.163099) /), &
-                        d(0:2) = -a(0:2)*h(0:2)
+                        h(0:2) = (/ CNST(1.747e-2),  CNST(7.799e-4),    CNST(1.163099) /)
+    FLOAT ::            d(0:2)
     FLOAT, parameter :: MINDEN = CNST(1e-15), &
                         beta = CNST(1.3386)
     FLOAT :: rs, dens, d1, d2, zeta, ex, ex0, vx(2), dd(2), ex6, calf, calfp, ax, decdrs, decdz
 
+    d(0:2) = -a(0:2)*h(0:2)
     ax = -M_FOUR/(M_THREE*M_PI*sqrt(M_TWO))
 
     ! Get the trace and the polarization of the density
