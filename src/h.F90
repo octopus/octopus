@@ -38,10 +38,10 @@ type hamiltonian_type
   integer :: vpsl_space           ! How should the local potential be calculated
   integer :: vnl_space            ! How should the nl    potential be calculated
   integer :: nextra               ! extra points for the interpolation method(s)
-  real(r8), pointer :: Vpsl(:)    ! the external potential
-  real(r8), pointer :: Vhartree(:)! the hartree potential
-  real(r8), pointer :: Vxc(:,:)   ! xc potential
-  real(r8), pointer :: Vhxc(:,:)  ! xc potential + hartree potential
+  real(r8), pointer :: Vpsl(:)     => NULL() ! the external potential
+  real(r8), pointer :: Vhartree(:) => NULL() ! the hartree potential
+  real(r8), pointer :: Vxc(:,:)    => NULL() ! xc potential
+  real(r8), pointer :: Vhxc(:,:)   => NULL() ! xc potential + hartree potential
 
   ! the energies (total, ion-ion, exchange, correlation)
   real(r8) :: etot, eii, ex, ec, epot
@@ -51,14 +51,14 @@ type hamiltonian_type
 
   ! should we include the classical point charges
   integer :: classic_pot
-  real(r8), pointer :: Vclassic(:)! potential created by classic point charges
+  real(r8), pointer :: Vclassic(:) => NULL()! potential created by classic point charges
 
   type(xc_type) :: xc
 
 #ifdef HAVE_FFT
   ! For the local pseudopotential in Fourier space...
-  type(dcf), pointer :: local_cf(:)
-  type(dcf), pointer :: rhocore_cf(:)  ! and for the core density
+  type(dcf), pointer :: local_cf(:)   => NULL()
+  type(dcf), pointer :: rhocore_cf(:) => NULL() ! and for the core density
 #endif
 
   ! gauge
@@ -68,7 +68,7 @@ type hamiltonian_type
 
   ! lasers stuff
   integer :: no_lasers ! number of laser pulses used
-  type(laser_type), pointer :: lasers(:)
+  type(laser_type), pointer :: lasers(:) => NULL()
 
   ! absorbing boundaries
   integer  :: ab         ! do we have absorbing boundaries?
@@ -380,11 +380,9 @@ subroutine hamiltonian_output(h, m, dir, outp)
     end if
 
     if(.not.h%ip_app) then
-      call doutput_function(outp, dir, "vh", m, h%Vhartree, u)
-
       do is = 1, min(h%ispin, 2)
-        write(fname, '(a,i1)') 'vxc-', is
-        call doutput_function(outp, dir, fname, m, h%Vxc(:, is), u)
+        write(fname, '(a,i1)') 'vhxc-', is
+        call doutput_function(outp, dir, fname, m, h%Vhxc(:, is), u)
       end do
     end if
   end if

@@ -125,7 +125,7 @@ contains
 
       call generate_external_pot(h, sys)
       call X(calcdens) (sys%st, sys%m%np, sys%st%rho)
-      call X(hamiltonian_setup) (h, sys%m, sys%st, sys)
+      call X(h_calc_vhxc) (h, sys%m, sys%st, sys=sys)
       call hamiltonian_energy(h, sys%st, sys%eii, -1)
   
       ! do scf calculation

@@ -317,85 +317,22 @@ subroutine X(vborders) (h, m, st, psi, Hpsi)
   call pop_sub()
 end subroutine X(vborders)
 
-subroutine X(hamiltonian_setup)(h, m, st, sys)
+subroutine X(h_calc_vhxc)(h, m, st, vhxc, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(mesh_type), intent(in) :: m
   type(states_type), intent(inout) :: st
+  real(r8), intent(out), optional :: vhxc(m%np, st%nspin)
   type(system_type), intent(in), optional :: sys
 
   integer :: is
-  real(r8), allocatable :: rho_aux(:)
-
-  call push_sub('hamiltonian_setup')
-
-  if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
-    if(st%spin_channels == 1) then
-      call poisson_solve(m, h%vhartree, st%rho(:, 1))
-    else
-      allocate(rho_aux(m%np))                    ! need an auxiliary array to
-      rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
-      do is = 2, st%spin_channels
-        rho_aux(:) = rho_aux(:) + st%rho(:, is)
-      end do
-      call poisson_solve(m, h%vhartree, rho_aux) ! solve the poisson equation
-      deallocate(rho_aux)
-    end if
-
-    h%epot = M_ZERO
-    do is = 1, st%spin_channels
-       h%epot = h%epot - M_HALF*dmf_dotp(m, st%rho(:, is), h%vhartree)
-    enddo
-
-    select case (h%ispin)
-    case(UNPOLARIZED)
-       h%vhxc(:,1) = h%vhartree
-    case (SPIN_POLARIZED)
-       h%vhxc = reshape(h%vhartree, (/m%np, 2/), h%vhartree)
-    case (SPINORS)
-       h%vhxc(:, 1:2) = reshape(h%vhartree, (/m%np, 2/), h%vhartree)
-       h%vhxc(:, 3:4) = M_ZERO
-    end select
-
-    call X(xc_pot)(h%xc, m, st, h%vxc, h%ex, h%ec, &
-                        -minval(st%eigenval(st%nst, :)), st%qtot)
-
-    select case(h%ispin)
-      case(UNPOLARIZED)
-        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1))
-      case(SPIN_POLARIZED)
-        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1)) &
-                        - dmf_dotp(m, st%rho(:, 2), h%vxc(:, 2))
-      case(SPINORS)
-        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1)) &
-                        - dmf_dotp(m, st%rho(:, 2), h%vxc(:, 2))
-        h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
-                                             h%vxc(:, 3) - M_zI* h%vxc(:, 4))
-    end select
-
-    h%vhxc = h%vhxc + h%vxc
-  endif
-
-  ! this, I think, belongs here
-  if(present(sys)) call X(hamiltonian_eigenval) (h, st, sys)
-
-  call pop_sub()
-end subroutine X(hamiltonian_setup)
-
-subroutine X(calcvhxc)(h, m, st, vhxc)
-  type(hamiltonian_type), intent(in) :: h
-  type(mesh_type), intent(in) :: m
-  type(states_type), intent(inout) :: st
-  real(r8), intent(out) :: vhxc(m%np, st%nspin)
-
-  integer :: is
   real(r8) :: exdum, ecdum
-  real(r8), allocatable :: rho_aux(:), vxc(:,:), vhartree(:)
+  real(r8), allocatable :: rho_aux(:), vxc(:,:), vhartree(:), vhxcdum(:, :)
   type(xc_type) :: xcdum
 
-  call push_sub('calcvhxc')
+  call push_sub('h_calc_vhxc')
 
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
-    allocate(vhartree(m%np))
+    allocate(vhartree(m%np), vhxcdum(m%np, h%nspin))
     vhartree = h%vhartree
     if(st%spin_channels == 1) then
       call poisson_solve(m, vhartree, st%rho(:, 1))
@@ -409,26 +346,56 @@ subroutine X(calcvhxc)(h, m, st, vhxc)
       deallocate(rho_aux)
     end if
 
-
     select case (h%ispin)
     case(UNPOLARIZED)
-       vhxc(:,1) = vhartree
+       vhxcdum(:,1) = vhartree
     case (SPIN_POLARIZED)
-       vhxc = reshape(vhartree, (/m%np, 2/), vhartree)
+       vhxcdum = reshape(vhartree, (/m%np, 2/), vhartree)
     case (SPINORS)
-       vhxc(:, 1:2) = reshape(vhartree, (/m%np, 2/), vhartree)
-       vhxc(:, 3:4) = M_ZERO
+       vhxcdum(:, 1:2) = reshape(vhartree, (/m%np, 2/), vhartree)
+       vhxcdum(:, 3:4) = M_ZERO
     end select
-    deallocate(vhartree)
 
     allocate(vxc(m%np, h%nspin)) ; vxc = M_ZERO
     xcdum = h%xc
     call X(xc_pot)(xcdum, m, st, vxc, exdum, ecdum, &
                         -minval(st%eigenval(st%nst, :)), st%qtot)
+    vhxcdum = vhxcdum + vxc
 
-    vhxc = vhxc + vxc
-    deallocate(vxc)
+    if (present(vhxc)) then
+      vhxc =  vhxcdum
+    else
+      h%vxc = vxc
+      h%vhartree = vhartree
+      h%vhxc = vhxcdum
+      h%xc = xcdum
+      h%ex = exdum
+      h%ec = exdum
+
+      h%epot = M_ZERO
+      do is = 1, st%spin_channels
+        h%epot = h%epot - M_HALF*dmf_dotp(m, st%rho(:, is), h%vhartree)
+      end do
+
+      select case(h%ispin)
+      case(UNPOLARIZED)
+        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1))
+      case(SPIN_POLARIZED)
+        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1)) &
+                        - dmf_dotp(m, st%rho(:, 2), h%vxc(:, 2))
+      case(SPINORS)
+        h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vxc(:, 1)) &
+                        - dmf_dotp(m, st%rho(:, 2), h%vxc(:, 2))
+        h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
+                                             h%vxc(:, 3) - M_zI* h%vxc(:, 4))
+      end select
+    end if
+
+    deallocate(vxc, vhartree, vhxcdum)
   endif
 
+  ! this, I think, belongs here
+  if(present(sys)) call X(hamiltonian_eigenval) (h, st, sys)
+
   call pop_sub()
-end subroutine X(calcvhxc)
+end subroutine X(h_calc_vhxc)

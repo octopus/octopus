@@ -54,7 +54,7 @@ subroutine opt_control_run(td, sys, h)
     ! setup forward propagation
     call read_state(psi_i, "wf.initial")
     call zcalcdens(psi_i, sys%m%np, psi_i%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_i, sys)
+    call zh_calc_vhxc(h, sys%m, psi_i, sys=sys)
     do i = 1, sys%st%nspin
       v_old_i(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
     end do
@@ -80,7 +80,7 @@ subroutine opt_control_run(td, sys, h)
     ! setup backward propagation
     call read_state(psi_f, "wf.final")
     call zcalcdens(psi_f, sys%m%np, psi_f%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_f, sys)
+    call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     do i = 1, sys%st%nspin
       v_old_f(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
     end do
@@ -133,14 +133,14 @@ contains
     td%tr%v_old => v_old_f
     h%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_f, sys)
+    call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
     td%tr%v_old => v_old_i
     h%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_i, sys)
+    call zh_calc_vhxc(h, sys%m, psi_i, sys=sys)
     call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter1
@@ -155,14 +155,14 @@ contains
     td%tr%v_old => v_old_i
     h%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, sys%m%np, sys%st%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_i, sys)
+    call zh_calc_vhxc(h, sys%m, psi_i, sys=sys)
     call td_rti_dt(h, sys%m, psi_i, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
     td%tr%v_old => v_old_f
     h%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_f, sys)
+    call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter2
@@ -216,7 +216,7 @@ contains
 
     ! setup the hamiltonian
     call zcalcdens(psi_f, sys%m%np, psi_f%rho, reduce=.true.)
-    call zhamiltonian_setup(h, sys%m, psi_f, sys)
+    call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     
     ! setup start of the propagation
     do i = 1, sys%st%nspin
@@ -235,7 +235,7 @@ contains
       call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(i*td%dt), abs(td%dt))
       ! update
       call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
-      call zhamiltonian_setup(h, sys%m, psi_f, sys)
+      call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
 
       call oct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
