@@ -326,7 +326,7 @@ subroutine mesh_alloc_ffts(m, i)
          fftw_backward, fftw_measure + fftw_threadsafe) 
   else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
     if (conf%periodic_dim == conf%dim) then
-      message(1)='system is fully periodic: ignoring DoubleFFTParameter'
+      message(1)='Info: System is fully periodic: ignoring DoubleFFTParameter'
       call write_info(1)
       write(message(1), '(6x,a,i4,a,i4,a,i4,a)') &
          'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
