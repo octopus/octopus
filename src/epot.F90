@@ -85,8 +85,11 @@ contains
     select case(ep%vpsl_space)
     case(RECIPROCAL_SPACE)
       message(1) = 'Info: Local Potential in Reciprocal Space.'
+#ifdef HAVE_FFT
+      call epot_local_fourier_init(ep, m, geo)
+#endif
     case(REAL_SPACE)
-      if (conf%periodic_dim==0) then
+      if (conf%periodic_dim == 0) then
         message(1) = 'Info: Local Potential in Real Space.'
       else
         message(1) = 'for periodic systems you must set LocalPotentialSpace = 1'
@@ -99,10 +102,6 @@ contains
       call write_fatal(2)
     end select
     call write_info(1)
-
-#ifdef HAVE_FFT
-    call epot_local_fourier_init(ep, m, geo)
-#endif
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
@@ -256,7 +255,6 @@ contains
       end if
       
       if(geo%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
-
 
       periodic: if (conf%periodic_dim==0) then
         call dcf_alloc_RS(cf)                  ! allocate the cube in real space
