@@ -372,7 +372,7 @@ contains
   ! WARNING some constants are probably wrong for 1 and 2D
   subroutine elf()
     real(r8) :: f, d, s
-    real(r8), allocatable :: c(:), r(:), gr(:,:)
+    real(r8), allocatable :: c(:), j(:,:), r(:), gr(:,:)
     R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
 
@@ -382,6 +382,11 @@ contains
     else
       s = 1._r8
     end if
+
+#if defined(R_TCOMPLEX)
+    allocate(j(m%np, st%nspin))
+    call calc_current(m, st, j)
+#endif
 
     allocate(c(m%np))
     do_is: do is = 1, st%nspin
@@ -393,6 +398,9 @@ contains
       do i = 1, m%np
         if(r(i) >= 1d-10) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
+#if defined(R_TCOMPLEX)
+          c(i) = c(i) - j(i, is)**2/(s*r(i))
+#endif
         end if
       end do
       deallocate(gr)
@@ -406,11 +414,6 @@ contains
             do i = 1, m%np
               if(R_ABS(st%R_FUNC(psi)(i, idim, ist, ik)) >= 1d-8) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
-
-#if defined(R_TCOMPLEX)
-                c(i) = c(i) - st%occ(ist, ik)/s* &
-                     sum(aimag(st%R_FUNC(psi)(i, idim, ist, ik)*conjg(gpsi(1:conf%dim, i)))**2)/r(i)
-#endif
               end if
             end do
           end do
@@ -434,6 +437,9 @@ contains
       call doutput_function(outp, dir, fname, m, c, 1._r8)
       
     end do do_is
+#if defined(R_TCOMPLEX)
+    deallocate(j)
+#endif
     deallocate(c)
 
   end subroutine elf

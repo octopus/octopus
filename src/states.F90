@@ -546,6 +546,61 @@ subroutine calc_projection(u_st, st, m, p)
   end do
 end subroutine calc_projection
 
+! This routine (obviously) assumes complex wave-functions
+subroutine calc_current(m, st, j)
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  real(r8), intent(out) :: j(m%np, st%nspin)
+  
+  integer :: ik, p, sp, ierr
+  complex(r8), allocatable :: aux(:,:)
+  
+  sub_name = 'calc_current'; call push_sub()
+  
+  if(st%ispin == 2) then
+    sp = 2
+  else
+    sp = 1
+  end if
+  
+  j = M_ZERO
+  allocate(aux(m%np, st%nspin))
+  
+  do ik = 1, st%nik, sp
+    do p  = st%st_start, st%st_end
+      call zmesh_derivatives(m, st%zpsi(0:m%np, 1, p, ik), aux(:, 1))
+      
+      ! spin-up density
+      j(1:m%np, 1) = j(1:m%np, 1) + st%kweights(ik)*st%occ(p, ik)  &
+           * aimag(st%zpsi(1:m%np, 1, p, ik) * conjg(aux(1:m%np, 1)))
+        
+      ! spin-down density
+      if(st%ispin == 2) then
+        call zmesh_derivatives(m, st%zpsi(0:m%np, 1, p, ik+1), aux(:, 2))
+        j(1:m%np, 2) = j(1:m%np, 2) + st%kweights(ik+1)*st%occ(p, ik+1) &
+             * aimag(st%zpsi(1:m%np, 1, p, ik+1) * conjg(aux(1:m%np, 2)))
+      end if
+        
+      ! off-diagonal densities
+      if(st%ispin == 3) then
+        call zmesh_derivatives(m, st%zpsi(0:m%np, 2, p, ik), aux(:, 2))
+        j(1:m%np, 2) = j(1:m%np, 2) + st%kweights(ik)*st%occ(p, ik) &
+             * aimag(st%zpsi(1:m%np, 2, p, ik) * conjg(aux(1:m%np, 2)))
+      end if
+    end do
+  end do
+
+#if defined(HAVE_MPI) && defined(MPI_TD)
+  ! reduce current (assumes memory is contiguous)
+  call MPI_ALLREDUCE(j(1, 1), aux(1, 1), m%np*st%nspin, &
+       MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+  j = aux
+#endif
+
+  deallocate(aux)
+  call pop_sub()
+end subroutine calc_current
+
 #include "states_kpoints.F90"
 
 #include "undef.F90"
