@@ -8,6 +8,13 @@ use atom
   
 implicit none
 
+  integer, parameter :: REAL_SPACE = 0, &
+                        RECIPROCAL_SPACE = 1
+
+  integer, parameter :: SPHERE = 0, &
+                        CILINDER = 1, &
+                        MINIMUM = 2
+
 type mesh_derivatives_type
   integer :: space ! 0 for FD, 1 for reciprocal-space
 
