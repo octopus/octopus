@@ -126,13 +126,15 @@ subroutine scf_run(scf, sys, h)
 
   integer :: iter, iunit, ik, ist, id, is
   real(r8) :: evsum_out, evsum_in
-  real(r8), dimension(sys%m%np, sys%st%nspin) :: rhoout, rhoin
-  real(r8), dimension(:,:), allocatable :: vout, vin
+  real(r8), allocatable :: rhoout(:,:), rhoin(:,:)
+  real(r8), allocatable :: vout(:,:), vin(:,:)
   logical :: finish
 
   call push_sub('scf_run')
 
   if(scf%lcao_restricted) call lcao_init(sys, h)
+
+  allocate(rhoout(sys%m%np, sys%st%nspin), rhoin(sys%m%np, sys%st%nspin))
   rhoin = sys%st%rho
   if (scf%what2mix == MIXPOT) then
      allocate(vout(sys%m%np, sys%st%nspin), vin(sys%m%np, sys%st%nspin))
@@ -216,6 +218,7 @@ subroutine scf_run(scf, sys, h)
      call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
      deallocate(vout, vin)
   end if
+  deallocate(rhoout, rhoin)
 
   if(.not.finish) then
     message(1) = 'SCF *not* converged!'
