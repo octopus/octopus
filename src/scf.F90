@@ -2,6 +2,7 @@
 
 module scf
 use system
+use states
 use hamiltonian
 use eigen_solver
 use mix
@@ -75,10 +76,6 @@ subroutine scf_run(sys, h)
   sub_name = 'scf_run'; call push_sub()
   call scf_init(scf, sys)
 
-!  sys%st%dpsi(1:,:,:,:) = 1._r8
-!  sys%m%h = 0.5_r8
-!  sys%m%vol_pp = sys%m%h**3
-
   do iter = 1, scf%max_iter
     if(clean_stop()) exit
 
@@ -105,23 +102,7 @@ subroutine scf_run(sys, h)
     call hamiltonian_setup(h, sys)
 
     ! save restart information
-    call io_assign(iunit)
-    open(iunit, status='unknown', file=trim(sys%sysname)//".restart", form='unformatted')
-    
-    write(iunit) sys%m%box_shape, sys%m%h, sys%m%rsize, sys%m%zsize
-    write(iunit) sys%m%np, sys%st%dim, 1, sys%st%nst, sys%st%nik, sys%st%ispin
-    do ik = 1, sys%st%nik
-      do ist = 1, sys%st%nst
-        do id = 1, sys%st%dim
-          write(iunit) sys%st%R_FUNC(psi)(1:sys%m%np, id, ist, ik)
-        end do
-      end do
-    end do
-    ! eigenvalues are also needed ;)
-    do ik = 1, sys%st%nik
-      write(iunit) sys%st%eigenval(:, ik)
-    end do
-    call io_close(iunit)
+    call R_FUNC(states_write_restart)(trim(sys%sysname)//".restart", sys%m, sys%st)
 
     ! are we finished?
     finish = &
@@ -204,5 +185,33 @@ subroutine scf_write_eigenvalues(iunit, nst, st, error)
   
 end subroutine scf_write_eigenvalues
 
+! TODO use netcdf
+subroutine scf_write_restart(filename, m, st)
+  character(len=*), intent(in) :: filename
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(in) :: st
+
+  integer :: iunit, ik, ist, id
+
+  call io_assign(iunit)
+  open(iunit, status='unknown', file=trim(filename), form='unformatted')
+    
+  write(iunit) m%box_shape, m%h, m%rsize, m%zsize
+  write(iunit) m%np, st%dim, 1, st%nst, st%nik, st%ispin
+  do ik = 1, st%nik
+    do ist = 1, st%nst
+      do id = 1, st%dim
+        write(iunit) st%R_FUNC(psi)(1:m%np, id, ist, ik)
+      end do
+    end do
+  end do
+  ! eigenvalues are also needed ;)
+  do ik = 1, st%nik
+    write(iunit) st%eigenval(:, ik)
+  end do
+
+  call io_close(iunit)
+
+end subroutine scf_write_restart
 
 end module scf

@@ -48,3 +48,73 @@ function R_FUNC(states_ddot)(m, dim, f1, f2)
 
   R_FUNC(states_ddot) = d
 end function R_FUNC(states_ddot)
+
+! TODO use netcdf
+subroutine R_FUNC(states_write_restart)(filename, m, st)
+  character(len=*), intent(in) :: filename
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(in) :: st
+
+  integer :: iunit, ik, ist, id
+
+  call io_assign(iunit)
+  open(iunit, status='unknown', file=trim(filename), form='unformatted')
+    
+  write(iunit) m%box_shape, m%h, m%rsize, m%zsize
+  write(iunit) m%np, st%dim, 1, st%nst, st%nik, st%ispin
+  write(iunit) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
+  ! eigenvalues are also needed ;)
+  write(iunit) st%eigenval(st%st_start:st%st_end, 1:st%nik)
+
+  call io_close(iunit)
+
+end subroutine R_FUNC(states_write_restart)
+
+logical function R_FUNC(states_load_restart)(filename, m, st) result(ok)
+  character(len=*), intent(in) :: filename
+  type(mesh_type), intent(in) :: m
+  type(states_type), intent(out) :: st
+
+  integer :: iunit, ik, ist, id, old_np, old_dim, old_start, old_end, old_nik
+
+  sub_name = 'systm_load_psi'; call push_sub()
+  ok = .true.
+
+  if(conf%verbose > 20) then
+    write(stdout, '(3a)')"Info: Reading wavefunctions from file '", &
+         trim(filename), "'"
+  end if
+
+  call io_assign(iunit)
+  open(iunit, status='old', file=trim(filename), form='unformatted', err=999)
+
+  read(iunit, err=999) ! mesh stuff is now skipped
+  read(iunit, err=999) old_np, old_dim, old_start, old_end, old_nik
+  
+  if(old_np.ne.m%np .or. old_dim.ne.st%dim .or. & ! different mesh, cannot read
+       old_start.ne.st%st_start .or. old_end.ne.st%st_end .or. old_nik.ne.st%nik) then
+    message(1) = 'Restart file has a different mesh!'
+    write(message(2), '(a,i6,a,i6,a)') '  m%np        = ', m%np,        ' != ', old_np, ' or'
+    write(message(3), '(a,i6,a,i6,a)') '  st%dim      = ', st%dim,      ' != ', old_dim, ' or'
+    write(message(4), '(a,i6,a,i6,a)') '  st%st_start = ', st%st_start, ' != ', old_start, ' or'
+    write(message(5), '(a,i6,a,i6,a)') '  st%st_end   = ', st%st_end,   ' != ', old_end, ' or'
+    write(message(6), '(a,i6,a,i6)')   '  st%nik      = ', st%nik,      ' != ', old_nik
+
+    call write_warning(6)
+    go to 999 ! one go to does not harm :)
+  else
+    st%R_FUNC(psi) = REALORCOMPLEX(0._r8)
+    read(iunit, err=999) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
+    read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%nik)
+  end if
+  
+  call io_close(iunit)
+  return
+
+999 continue
+  message(1) = 'Error reading from file '//trim(filename)//"'"
+  call write_warning(1)
+  ok = .false.
+  return
+
+end function R_FUNC(states_load_restart)

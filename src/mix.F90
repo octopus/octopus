@@ -113,7 +113,7 @@ subroutine mix_dens(smix, iter, st, m, dist)
   integer :: is, errorflag
     
   allocate(rhoout(m%np, st%ispin))
-  call calcdens(smix, st, m%np, rhoout)
+  call calcdens(st, m%np, rhoout)
 
   dist = 0._r8
   allocate(dummy(m%np))
@@ -140,8 +140,7 @@ subroutine mix_dens(smix, iter, st, m, dist)
 end subroutine mix_dens
 
 ! Calculates the new density out the wavefunctions and occupations...
-subroutine calcdens(smix, st, np, rho)
-  type(mix_type), intent(IN) :: smix
+subroutine calcdens(st, np, rho)
   type(states_type), intent(IN) :: st
   integer, intent(in) :: np
   real(r8), intent(out) :: rho(np, st%ispin)

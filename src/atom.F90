@@ -124,10 +124,27 @@ subroutine atom_end(na, a)
   integer, intent(in) :: na
   type(atom_type), pointer :: a(:)
 
+  call atom_dealloc(na, a)
+
   if(associated(a)) then ! sanity check
     deallocate(a); nullify(a)
   end if
 
 end subroutine atom_end
+
+subroutine atom_dealloc(na, a)
+  integer, intent(in) :: na
+  type(atom_type), pointer :: a(:)
+
+  integer :: ia
+
+  do ia = 1, na
+    if(associated(a(ia)%Jxyz)) then
+      deallocate(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%duV)
+      nullify(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%duV)
+    end if
+  end do
+
+end subroutine atom_dealloc
 
 end module atom

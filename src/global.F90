@@ -76,21 +76,21 @@ subroutine write_fatal(no_lines)
   integer, intent(in) :: no_lines
   integer :: i
 
+  write(stdout, '(/,a,/,a)') stars, '*** Fatal Error (description follows)'
 #ifdef HAVE_MPI
-  if(mpiv%node == 0) then
+  write(stdout, '(a,a)') '*', hyphens
+  write('(a,i4)') "* From node = ", mpiv%node
 #endif
-
-    write(stdout, '(/,a,/,a,a,/,a)') stars, '*** Fatal Error (description follows)'
-    write(stdout, '(a,a)') '*', hyphens
-    do i=1,no_lines
-      write(stdout, '(a,1x,a)') '*', trim(message(i))
-    end do
-    write(stdout, '(a,a)') '*', hyphens
-    write(stdout, '(a)', advance='no') '* Stack: '
-    do i=1,no_sub_stack
-      write(stdout, '(a,a)', advance='no') ' > ', trim(sub_stack(i))
-    end do
-    write(stdout, '(/,a,/)') stars
+  write(stdout, '(a,a)') '*', hyphens
+  do i=1,no_lines
+    write(stdout, '(a,1x,a)') '*', trim(message(i))
+  end do
+  write(stdout, '(a,a)') '*', hyphens
+  write(stdout, '(a)', advance='no') '* Stack: '
+  do i=1,no_sub_stack
+    write(stdout, '(a,a)', advance='no') ' > ', trim(sub_stack(i))
+  end do
+  write(stdout, '(/,a,/)') stars
 
 #ifdef HAVE_MPI
   end if
@@ -105,17 +105,18 @@ subroutine write_warning(no_lines)
   integer, intent(in) :: no_lines
   integer :: i
 
-#ifdef HAVE_MPI
-  if(mpiv%node .ne. 0) return
-#endif
+  ! this always writes from ALL nodes
 
   if(conf%verbose>0) then
     write(stdout, '(/,a)') '** Warning:'
+#ifdef HAVE_MPI
+    write('(a,i4)') "** From node = ", mpiv%node
+#endif
     do i=1,no_lines
       write(stdout, '(a,3x,a)') '**', trim(message(i))
     end do
   end if
-
+  
   return
 end subroutine write_warning
 

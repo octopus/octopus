@@ -3,6 +3,7 @@
 module run_prog
 use global
 use units
+use states
 use system
 use hamiltonian
 use lcao
@@ -79,11 +80,29 @@ subroutine run()
       ! well defined
       i = min(sys%st%ispin, 2)
       call lcao_dens(sys, i, sys%st%rho(:,i))
-      ! the off-diagonal densities are set to zero
-      if(sys%st%ispin > 2) then
-        sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
-      end if
 
+      ! the off-diagonal densities are set to zero
+      !if(sys%st%ispin > 2) then
+      !  sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
+      !end if
+
+    case(I_LOAD_RPSI)
+      message(1) = 'Info: Loading rpsi'
+      call write_info(1)
+      
+      if(R_FUNC(states_load_restart)(trim(sys%sysname)//".restart", &
+           sys%m, sys%st)) then
+        call calcdens(sys%st, sys%m%np, sys%st%rho)
+      else
+        ! run scf unless it is already in the stack
+        if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
+             calc_mode .ne. M_START_STATIC_POL .and. calc_mode .ne. M_RESUME_STATIC_POL) then
+          i_stack(instr) = I_SCF;               instr = instr + 1
+          i_stack(instr) = I_SETUP_HAMILTONIAN; instr = instr + 1
+        end if
+        i_stack(instr) = I_RANDOMIZE_RPSI
+        cycle program         
+      end if
     case(I_SETUP_HAMILTONIAN)
       message(1) = 'Info: Setting up Hamiltonian'
       call write_info(1)
