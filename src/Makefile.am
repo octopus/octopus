@@ -47,13 +47,13 @@ zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
 zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
 
 # now the utility programs
-oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 units.F90 spectrum.F90 strength_function.F90
+oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
 oct_sf_LDADD   = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 
-oct_hs_mult_SOURCES      = global.F90 io.F90 liboct_parser.F90 units.F90 spectrum.F90 hs_from_mult.F90
+oct_hs_mult_SOURCES      = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
 oct_hs_mult_LDADD        = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 
-oct_hs_acc_SOURCES       = global.F90 io.F90 liboct_parser.F90 units.F90 spectrum.F90 hs_from_acc.F90
+oct_hs_acc_SOURCES       = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
 oct_hs_acc_LDADD         = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 
 oct_excite_SOURCES = $(core_SRCS) linear.F90 excitations.F90
@@ -62,10 +62,10 @@ oct_excite_LDADD = $(octopus_LDADD)
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)
 
-oct_broad_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 broad.F90
+oct_broad_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 broad.F90
 oct_broad_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 
-oct_ph_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
+oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 oct_ph_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 
 oct_choose_st_SOURCES = $(core_SRCS) choose_st.F90
@@ -74,7 +74,7 @@ oct_choose_st_LDADD = $(octopus_LDADD)
 oct_make_st_SOURCES = $(core_SRCS) make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
 
-oct_center_geom_SOURCES = global.F90 io.F90 liboct_parser.F90 units.F90 atom.F90 centergeom.F90
+oct_center_geom_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 atom.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
 # cleaning
