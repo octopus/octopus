@@ -698,121 +698,73 @@ module vxc
     end function dgdrs
   end subroutine correlation_lda_3D_pw92
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !  Perdew-Zunger parameterization of Ceperley-Alder                           !
-  !  correlation. Ref: Perdew & Zunger, Phys. Rev. B 23 5075 (1981).            !
-  !  Adapted by J.M.Soler from routine velect of Froyen s                       !
-  !    pseudopotential generation program.                                      !
-  ! **** Input *****************************************************            !
-  ! INTEGER NSP     : spin-polarizations (1=>unpolarized, 2=>polarized)         !
-  ! REAL*8  DS(NSP) : total (nsp=1) or spin (nsp=2) electron density            !
-  ! **** Output *****************************************************           !
-  ! REAL*8  EC      : correlation energy density                                !
-  ! REAL*8  VC(NSP) : (spin-dependent) correlation potential                    !
-  ! **** Units *******************************************************          !
-  ! Densities in electrons/Bohr**3                                              !
-  ! Energies in Hartrees                                                        !
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine correlation_lda_3D_pz( NSP, DS, EC, VC )
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Correlation energy per-particle and potential of a HEG as parameterized by
+! Perdew & Zunger (Phys. Rev. B 23, 5048).
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#define eclow(i)  (gamma(i)/(M_ONE + beta1(i)*sqrs + beta2(i)*rs))
+#define echigh(i) (a(i)*rslog + b(i) + c(i)*rs*rslog + d(i)*rs)
+#define potlow(i) ((M_ONE + (CNST(7.0)/CNST(6.0))*beta1(i)*sqrs + (M_FOUR/M_THREE)*beta2(i)*rs) / \
+                  (M_ONE + beta1(i)*sqrs + beta2(i)*rs))
+#define pothigh(i) (a(i)*rslog + (b(i)-M_THIRD*a(i)) + M_TWO*c(i)*rs*rslog/M_THREE + \
+                   M_THIRD*(M_TWO*d(i)-c(i))*rs)
+  subroutine correlation_lda_3d_pz(nsp, ds, ec, vc)
     integer, intent(in)   :: nsp
     FLOAT, intent(in)  :: ds(nsp)
     FLOAT, intent(out) :: ec, vc(nsp)
 
-    FLOAT, parameter :: &
-        FIVE  = CNST(0.50    ), OPF   = CNST(1.50),    PNN  = CNST(.99    ), &
-        PTHREE= CNST( 0.30   ), PSEVF = CNST(0.750),   C0504= CNST(0.0504 ), &
-        C0254 = CNST( 0.02540), C014  = CNST(0.0140),  C0406= CNST(0.04060), &
-        C15P9 = CNST(15.90   ), C0666 = CNST(0.06660), C11P4= CNST(11.40  ), &
-        C045  = CNST( 0.0450 ), C7P8  = CNST(7.80),    C88  = CNST(0.880  ), C20P59 = CNST(20.5920), &
-        C3P52 = CNST( 3.520  ), C0311 = CNST(0.03110), C0014= CNST(0.00140), &
-        C0538 = CNST( 0.05380), C0096 = CNST(0.00960), C096 = CNST(0.0960 ), &
-        C0622 = CNST( 0.06220), C004  = CNST(0.0040),  C0232= CNST(0.02320), &
-        C1686 = CNST( 0.16860), C1P398= CNST(1.39810), C2611= CNST(0.26110), &
-        C2846 = CNST( 0.28460), C1P053= CNST(1.05290), C3334= CNST(0.33340)
+    FLOAT, parameter :: TFTM = CNST(0.519842099789746380 ), &
+                        FTRD = M_FOUR*M_THIRD
+    FLOAT, parameter :: gamma(1:2) = (/ -CNST(0.1423), -CNST(0.0843) /), &
+                        beta1(1:2) = (/  CNST(1.0529),  CNST(1.3981) /), &
+                        beta2(1:2) = (/  CNST(0.3334),  CNST(0.2611) /), &
+                        a(1:2)     = (/  CNST(0.0311),  CNST(0.015555) /), &
+                        b(1:2)     = (/ -CNST(0.048),  -CNST(0.0269) /), &
+                        c(1:2)     = (/  CNST(0.0020191519406228),  CNST(0.00069255121311694) /), &
+                        d(1:2)     = (/ -CNST(0.0116320663789130), -CNST(0.00480126353790614) /)
+    FLOAT :: dens, z, rs, sqrs, rslog, fz, fzp, ecp, vcp, ecu, vcu, x
 
-    ! Ceperly-Alder 'ca' constants. Internal energies in Rydbergs.
-    FLOAT, parameter :: &
-        CON1 = M_ONE/M_SIX,           CON2 = CNST(0.0080 )/M_THREE, &
-        CON3 = CNST(0.35020)/M_THREE, CON4 = CNST(0.05040)/M_THREE, &
-        CON5 = CNST(0.00280)/M_THREE, CON6 = CNST(0.19250)/M_THREE, &
-        CON7 = CNST(0.02060)/M_THREE, CON8 = CNST(9.78670)/M_SIX,   &
-        CON9 = CNST(1.0444 )/M_THREE, CON10= CNST(7.37030)/M_SIX,   &
-        CON11= CNST(1.33360)/M_THREE
+    call change(nsp, ds, dens, z)
+    if(dens.le.M_ZERO) then
+       ec = M_ZERO
+       vc = M_ZERO
+       return
+    endif
 
-    ! X-alpha parameter:
-    FLOAT, parameter :: ALP = M_TWOTHIRD
+    rs = (M_THREE / (M_FOUR*M_PI*dens) )**M_THIRD
+    sqrs = sqrt(rs)
+    rslog = log(rs)
 
-    ! Other variables converted into parameters by J.M.Soler
-    FLOAT, parameter :: TRD  = M_THIRD, FTRD = M_FOUR / M_THREE, &
-        TFTM = CNST(0.519842099789746380 ),  A0 = CNST(0.521061761197848080), &
-        CRS  = CNST(0.6203504908994000870), CXP = -M_THREE*ALP/(M_PI*A0),     &
-        CXF  = CNST(1.259921049894873190 )
+    if(rs>M_ONE) then
+       ec = eclow(1)
+       vc(1) = ec*potlow(1)
+    else
+       ec = echigh(1)
+       vc(1) = pothigh(1)
+    endif
 
-    FLOAT :: d1, d2, d, z, fz, fzp, rs, sqrs, te, be, ecp, vcp, ecf, vcf, rslog
-    integer :: isp
+    if(nsp==1) return
 
-    !      Find density and polarization
-    IF (NSP .EQ. 2) THEN
-     D1 = MAX(DS(1), M_ZERO)
-     D2 = MAX(DS(2), M_ZERO)
-     D = D1 + D2
-     IF (D .LE. M_ZERO) THEN
-        EC = M_ZERO
-        VC(1) = M_ZERO
-        VC(2) = M_ZERO
-        RETURN
-     ENDIF
-     Z = (D1 - D2) / D
-     FZ = ((1+Z)**FTRD+(1-Z)**FTRD-2)/TFTM
-     FZP = FTRD*((1+Z)**TRD-(1-Z)**TRD)/TFTM 
-    ELSE
-     D = DS(1)
-     IF (D .LE. M_ZERO) THEN
-        EC = M_ZERO
-        VC(1) = M_ZERO
-        RETURN
-     ENDIF
-     Z = M_ZERO
-     FZ = M_ZERO
-     FZP = M_ZERO
-    ENDIF
-    RS = CRS / D**TRD
+    fz = ((M_ONE+z)**FTRD+(M_ONE-z)**FTRD-M_TWO)/TFTM
+    fzp = FTRD*((M_ONE+z)**M_THIRD-(M_ONE-z)**M_THIRD)/TFTM 
+    ecu = ec
+    vcu = vc(1)
+    if(rs>M_ONE) then
+       ecp = eclow(2)
+       vcp = ecp*potlow(2)
+    else
+       ecp = echigh(2)
+       vcp = pothigh(2)
+    endif
+    ec = ecu + fz*(ecp-ecu)
+    x = vcu + fz*(vcp-vcu) - z*(ecp-ecu)*fzp
+    vc(1) = x + (ecp-ecu)*fzp
+    vc(2) = x - (ecp-ecu)*fzp
 
-    !      Correlation 
-    IF (RS .GT. M_ONE) THEN  
-      SQRS=SQRT(RS)
-      TE = M_ONE+CON10*SQRS+CON11*RS
-      BE = M_ONE+C1P053*SQRS+C3334*RS
-      ECP = -(C2846/BE)
-      VCP = ECP*TE/BE
-      TE = M_ONE+CON8*SQRS+CON9*RS
-      BE = M_ONE+C1P398*SQRS+C2611*RS
-      ECF = -(C1686/BE)
-      VCF = ECF*TE/BE
-    ELSE
-      RSLOG=LOG(RS)
-      ECP=(C0622+C004*RS)*RSLOG-C096-C0232*RS
-      VCP=(C0622+CON2*RS)*RSLOG-CON3-CON4*RS
-      ECF=(C0311+C0014*RS)*RSLOG-C0538-C0096*RS
-      VCF=(C0311+CON5*RS)*RSLOG-CON6-CON7*RS
-    ENDIF
-
-    !      Find up and down potentials
-    IF (NSP .EQ. 2) THEN
-      EC    = ECP + FZ*(ECF-ECP)
-      VC(1) = VCP + FZ*(VCF-VCP) + (1-Z)*FZP*(ECF-ECP)
-      VC(2) = VCP + FZ*(VCF-VCP) - (1+Z)*FZP*(ECF-ECP)
-    ELSE
-      EC    = ECP
-      VC(1) = VCP
-    ENDIF
-
-    !      Change from Rydbergs to Hartrees
-    EC = M_HALF * EC
-    do ISP = 1,NSP
-       VC(ISP) = M_HALF * VC(ISP)
-    end do
-
-  end subroutine correlation_lda_3D_pz 
+  end subroutine correlation_lda_3d_pz
+#undef eclow
+#undef echigh
+#undef potlow
+#undef pothigh
 
 end module vxc
