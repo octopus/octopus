@@ -66,6 +66,7 @@ subroutine mesh_create(m, enlarge_)
     call loct_parse_float('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     m%lsize(1) = m%rsize
+    m%lsize(2:3) = M_ZERO
   end if
   if(m%box_shape == CYLINDER) then
     call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
@@ -135,7 +136,7 @@ subroutine mesh_create(m, enlarge_)
   case(PARALLELEPIPED)
     m%nr(2, 1:conf%dim) = int((m%lsize(1:conf%dim)+DELTA_R)/m%h(1:conf%dim))
     do i = 1, conf%dim
-      if (mod(m%lsize(i),m%h(i)) /= M_ZERO) then
+      if (m%lsize(i)-m%nr(2,i)*m%h(i) > DELTA_R) then
         m%nr(2, i) = m%nr(2, i) + 1
         m%h(i) = m%lsize(i)/real(m%nr(2, i))
       end if
