@@ -473,12 +473,12 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
     sign = M_ONE
     temp = M_ZERO
     do ik = 1, st%nik
-      do ist = 1, st%nst
+      do ist = st%st_start, st%st_end
         temp(3) = temp(3) + sign*st%d%kweights(ik)*st%occ(ist, ik)
       end do
       sign = -sign
     end do
-    
+
   case(SPINORS) ! non-collinear
     temp = M_ZERO
     do ik = 1, st%nik
