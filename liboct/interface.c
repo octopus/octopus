@@ -311,7 +311,7 @@ int F90_FUNC_(print_file, PRINT_FILE)
     fclose(pf); fflush(stdout); return 0;
   }
   else{
-    fclose(pf); fflush(stdout); return 1;
+    fflush(stdout); return 1;
   }
 }
 
