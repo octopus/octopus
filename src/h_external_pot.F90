@@ -227,6 +227,7 @@ subroutine generate_external_pot(h, sys)
 !!$  integer :: j
 !!$  real(r8), allocatable :: f(:,:,:)
   logical :: output_local
+  character(len=2) :: output_local_subspace
   integer :: i
 
   sub_name = 'generate_external_pot'; call push_sub()
@@ -300,8 +301,9 @@ subroutine generate_external_pot(h, sys)
 !!$  stop
 
   call oct_parse_logical(C_string("OutputLocalPotential"), .false., output_local)
+  call oct_parse_string(C_string("OutputLocalPotentialSubspace"), "", output_local_subspace)
   if(output_local) call dmesh_write_function( &
-        sys%m, h%vpsl, units_out%energy%factor, trim(sys%sysname)//'.lpot')
+        sys%m, h%vpsl, units_out%energy%factor, trim(sys%sysname)//'.lpot', output_local_subspace)
 
   call pop_sub()
 contains
