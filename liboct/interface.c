@@ -42,25 +42,27 @@
 
 /* --------------------- Fortran to C string compatibility ---------------------- */
 #if defined(_CRAY)
-include <fortran.h>
+#include <fortran.h>
 
 #define STR_F_TYPE _fcd
 #define TO_C_STR1(s) to_c_str(s)
 #define TO_C_STR2(s) to_c_str(s)
 #define TO_C_STR3(s) to_c_str(s)
-#define TO_F_STR1(c, f) to_f_str(c, (_fcd) f)
-#define TO_F_STR2(c, f) to_f_str(c, (_fcd) f)
-#define TO_F_STR3(c, f) to_f_str(c, (_fcd) f)
+#define TO_F_STR1(c, f) to_f_str(c, f)
+#define TO_F_STR2(c, f) to_f_str(c, f)
+#define TO_F_STR3(c, f) to_f_str(c, f)
 #define STR_ARG1
 #define STR_ARG2
 #define STR_ARG3
 
 char *to_c_str(_fcd f)
 {
-	char *c;
+	char *c, *fc;
 	int slen;
 
-	slen = _fcdlen(f);
+	fc = _fcdtocp(f);
+	for(slen=_fcdlen(f)-1; slen>=0 && fc[slen]==' '; slen--);
+	slen++;
 	c = (char *)malloc(slen+1);
 	strncpy(c, _fcdtocp(f), slen);
 	c[slen] = '\0';
@@ -69,7 +71,16 @@ char *to_c_str(_fcd f)
 
 void to_f_str(char *c, _fcd f)
 {
-	f = _cptofcd(s, strlen(s));
+  char *fc;
+  int flen, clen, i;
+ 
+  flen = _fcdlen(f);
+  fc = _fcdtocp(f);
+  clen = strlen(c);
+  for(i=0; i<clen && i<flen; i++)
+    fc[i] = c[i];
+  for(; i<flen; i++)
+    fc[i] = ' ';
 }
 #else
 
@@ -113,11 +124,12 @@ int F90_FUNC_(oct_parse_init, OCT_PARSE_INIT)
 		 (STR_F_TYPE in, STR_F_TYPE out STR_ARG2)
 {
 	int r;
+	char *in_c, *out_c;
 
-	in  = TO_C_STR1(in);
-	out = TO_C_STR2(out);
-	r = parse_init(in, out); 
-	free(in); free(out);
+	in_c  = TO_C_STR1(in);
+	out_c = TO_C_STR2(out);
+	r = parse_init(in_c, out_c); 
+	free(in_c); free(out_c);
 
 	return r;
 }
@@ -132,10 +144,11 @@ int F90_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 		 (STR_F_TYPE name STR_ARG1)
 { 
 	int r;
+	char *name_c;
 
-	name = TO_C_STR1(name);
-	r = parse_isdef(name); 
-	free(name);
+	name_c = TO_C_STR1(name);
+	r = parse_isdef(name_c); 
+	free(name_c);
 
 	return r;
 }
@@ -143,37 +156,40 @@ int F90_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 void F90_FUNC_(oct_parse_int, OCT_PARSE_INT)
 		 (STR_F_TYPE name, int *def, int *res STR_ARG1)
 { 
-	name = TO_C_STR1(name);
-	*res = parse_int(name, *def);
-	free(name);
+	char *name_c;
+	name_c = TO_C_STR1(name);
+	*res = parse_int(name_c, *def);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_parse_double, OCT_PARSE_DOUBLE)
 		 (STR_F_TYPE name, double *def, double *res STR_ARG1)
 {
-	name = TO_C_STR1(name);
-	*res = parse_double(name, *def);
-	free(name);
+	char *name_c;
+	name_c = TO_C_STR1(name);
+	*res = parse_double(name_c, *def);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_parse_complex, OCT_PARSE_COMPLEX)
 		 (STR_F_TYPE name, gsl_complex *def, gsl_complex *res STR_ARG1)
 {
-	name = TO_C_STR1(name);
-	*res = parse_complex(name, *def);
-	free(name);
+	char *name_c;
+	name_c = TO_C_STR1(name);
+	*res = parse_complex(name_c, *def);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 		 (STR_F_TYPE name, STR_F_TYPE def, STR_F_TYPE res STR_ARG3)
 {
-	char *c;
+	char *c, *name_c, *def_c;
 
-	name = TO_C_STR1(name);      // convert string to c strings
-	def  = TO_C_STR2(def);
-	c = parse_string(name, def); 
+	name_c = TO_C_STR1(name);      // convert string to c strings
+	def_c  = TO_C_STR2(def);
+	c = parse_string(name_c, def_c); 
 	TO_F_STR3(c, res);           // convert string to fortran
-	free(name); free(def);       // this has to be *after* the to_f_str
+	free(name_c); free(def_c);       // this has to be *after* the to_f_str
                                // or we will have memory problems
 }
 
@@ -187,10 +203,11 @@ int F90_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
 		 (STR_F_TYPE name STR_ARG1)
 {
 	int r;
+	char *name_c;
 
-	name = TO_C_STR1(name);
-	r = parse_block_n(name);
-	free(name);
+	name_c = TO_C_STR1(name);
+	r = parse_block_n(name_c);
+	free(name_c);
 	
 	return r;
 }
@@ -198,43 +215,49 @@ int F90_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
 void F90_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
 		 (STR_F_TYPE name, int *l, int *c, int *res STR_ARG1)
 {
-	name = TO_C_STR1(name);
-	if(parse_block_int(name, *l, *c, res) != 0)
-		parse_block_error("int", name, *l, *c);
-	free(name);
+	char *name_c;
+
+	name_c = TO_C_STR1(name);
+	if(parse_block_int(name_c, *l, *c, res) != 0)
+		parse_block_error("int", name_c, *l, *c);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
 		 (STR_F_TYPE name, int *l, int *c, double *res STR_ARG1)
 {
-	name = TO_C_STR1(name);
-	if(parse_block_double(name, *l, *c, res) != 0)
-		parse_block_error("double", name, *l, *c);
-	free(name);
+	char *name_c;
+
+	name_c = TO_C_STR1(name);
+	if(parse_block_double(name_c, *l, *c, res) != 0)
+		parse_block_error("double", name_c, *l, *c);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_parse_block_complex, OCT_PARSE_BLOCK_COMPLEX)
 		 (STR_F_TYPE name, int *l, int *c, gsl_complex *res STR_ARG1)
 {
-	name = TO_C_STR1(name);
-	if(parse_block_complex(name, *l, *c, res) != 0)
-		parse_block_error("complex", name, *l, *c);
-	free(name);
+	char *name_c;
+
+	name_c = TO_C_STR1(name);
+	if(parse_block_complex(name_c, *l, *c, res) != 0)
+		parse_block_error("complex", name_c, *l, *c);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 		 (STR_F_TYPE name, int *l, int *c, STR_F_TYPE res STR_ARG2)
 {
-	char *s;
+	char *s, *name_c;
 	int len;
 
-	name = TO_C_STR1(name);
-	if(parse_block_string(name, *l, *c, &s) != 0)
-		parse_block_error("string", name, *l, *c);
+	name_c = TO_C_STR1(name);
+	if(parse_block_string(name_c, *l, *c, &s) != 0)
+		parse_block_error("string", name_c, *l, *c);
 	else{
 		TO_F_STR2(s, res);
 	}
-	free(name);
+	free(name_c);
 }
 
 double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
@@ -242,8 +265,9 @@ double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 {
 	symrec *rec;
 	parse_result c;
+	char *pot_c;
 
-	pot = TO_C_STR1(pot);
+	pot_c = TO_C_STR1(pot);
 
 	rec = putsym("x", S_CMPLX);
 	GSL_SET_COMPLEX(&rec->value.c, *x, 0);
@@ -254,9 +278,9 @@ double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 	rec = putsym("r", S_CMPLX);
 	GSL_SET_COMPLEX(&rec->value.c, *r, 0);
 
-	parse_exp(pot, &c);
+	parse_exp(pot_c, &c);
 
-	free(pot);  // clean up
+	free(pot_c);  // clean up
 	rmsym("x"); rmsym("y");	rmsym("z");	rmsym("r");
 
 	return GSL_REAL(c.value.c);
@@ -266,11 +290,12 @@ void F90_FUNC_(oct_mkdir, OCT_MKDIR)
 		 (STR_F_TYPE name STR_ARG1)
 {
 	struct stat buf;
+	char *name_c;
 
-	name = TO_C_STR1(name);
-	if(!*name || stat(name, &buf) == 0) return;
-	mkdir(name, 0775);
-	free(name);
+	name_c = TO_C_STR1(name);
+	if(!*name_c || stat(name_c, &buf) == 0) return;
+	mkdir(name_c, 0775);
+	free(name_c);
 }
 
 void F90_FUNC_(oct_getcwd, OCT_GETCWD)
@@ -287,9 +312,10 @@ void F90_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 		 (STR_F_TYPE str, int l[32] STR_ARG1)
 {
 	int i, i1, i2;
-	char c[20], *c1, *s = str;
+	char c[20], *c1, *str_c, *s;
 
-	str = TO_C_STR1(str);
+	str_c = TO_C_STR1(str);
+	s = str_c;
 
 	/* clear list */
 	for(i=0; i<32; i++)
@@ -318,7 +344,7 @@ void F90_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 		if(*s) s++;
 	}
 
-	free(str);
+	free(str_c);
 }
 
 /* ---------------------- Interface to GSL math functions ------------------------ */
@@ -349,7 +375,7 @@ double F90_FUNC_(oct_erfc, OCT_ERFC)
 }
 
 /* error function (we use the one in gsl) */
-double F90_FUNC_(oct_erf, OCT_ERC)
+double F90_FUNC_(oct_erf, OCT_ERF)
 		 (double *x)
 {
 	return gsl_sf_erf(*x);
@@ -444,10 +470,11 @@ int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)
 
   FILE *pf;
   int c, i;
+  char *name_c;
 
-	name = TO_C_STR1(name);
-  pf = fopen(name, "r");
-	free(name);
+	name_c = TO_C_STR1(name);
+  pf = fopen(name_c, "r");
+	free(name_c);
 
   if (pf != NULL) {
     i = 0;

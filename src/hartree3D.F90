@@ -88,7 +88,7 @@ subroutine hartree_cg(h, m, pot, dist)
   ml = 4
   allocate(zk(m%np), tk(m%np), pk(m%np))
   allocate(rholm((ml+1)**2))
-  rholm = 0.0_r8
+  rholm = M_ZERO
 
   ! calculate multipole moments till ml
   do i = 1, m%np
@@ -112,7 +112,7 @@ subroutine hartree_cg(h, m, pot, dist)
 
   allocate(wk(-m%nx(1):m%nx(1), -m%nx(2):m%nx(2), -m%nx(3):m%nx(3)))
 
-  wk = 0.0d0
+  wk = M_ZERO
   do i = 1, m%nk
     x(:) = m%kxyz(:, i)*m%h(:)
     r = sqrt(sum(x**2)) + 1e-50_r8
@@ -131,7 +131,7 @@ subroutine hartree_cg(h, m, pot, dist)
   enddo
 
   do i = 1, m%np
-    zk(i) = -4.0d0*M_Pi*sum(dist(i, :))
+    zk(i) = -M_FOUR*M_Pi*sum(dist(i, :))
     wk(m%Lxyz(1, i), m%Lxyz(2, i), m%Lxyz(3, i)) = pot(i)
   enddo 
 
@@ -148,7 +148,7 @@ subroutine hartree_cg(h, m, pot, dist)
     end do
   end do
 
-  wk = 0.d0
+  wk = M_ZERO
   pk = zk
   s1 = dmesh_nrm2(m, zk)**2
 
@@ -176,7 +176,7 @@ subroutine hartree_cg(h, m, pot, dist)
     zk = zk - ak*tk
     s3 = dmesh_nrm2(m, zk)**2
 
-    if(iter >= 400 .or. abs(s3) < 1.0E-5_r8) exit
+    if(iter >= 400 .or. abs(s3) < 1.0e-5_r8) exit
 
     ck = s3/s1
     s1 = s3

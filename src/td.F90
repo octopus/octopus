@@ -299,7 +299,7 @@ contains
          dipole, multipole)
     call io_assign(iunit)
     open(iunit, status='unknown', file='td.general/multipoles')
-    call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
+    call td_write_multipole(iunit, 0, M_ZERO, dipole, multipole, .true.)
     call io_close(iunit)
     deallocate(dipole, multipole)
 

@@ -69,7 +69,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
   real(r8), intent(out) :: ylm, grylm(3)
 
   integer, parameter :: lmaxd = 20
-  real(r8), parameter :: tiny=1.d-30, zero=0.0_r8, half=0.5_r8, one=1.0_r8, &
+  real(r8), parameter :: tiny=1.e-30_r8, zero=0.0_r8, half=0.5_r8, one=1.0_r8, &
        two=2.0_r8, three=3.0_r8, six=6.0_r8
   integer :: i, ilm0, l, m, mabs
   integer, save :: lmax = -1
