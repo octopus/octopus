@@ -202,26 +202,26 @@ subroutine td_run(td, u_st, sys, h)
     end if
 
     ! output multipoles
-    if(td%out_multip) call td_write_multipole(i)
+    if(td%out_multip) call td_write_multipole(out_multip, sys, td, i)
 
     ! output angular momentum
-    if(td%out_angular) call td_write_angular(i)
-
-    ! output positions, vels, etc.
-    if(td%out_coords) call td_write_nbo(i, sys%kinetic_energy, h%etot)
-
-    ! If harmonic spectrum is desired, get the acceleration
-    if(td%out_acc) call td_write_acc(i)
-
-    ! output laser field
-    if(td%out_laser) call td_write_laser(i)
-
-    ! output electronic energy
-    if(td%out_energy) call td_write_el_energy(i)
+    if(td%out_angular) call td_write_angular(out_angular, sys, td, i)
 
     ! output projections onto the GS KS eigenfunctions
-    if(td%out_proj) call td_write_proj(i)
+    if(td%out_proj) call td_write_proj(out_proj, sys, u_st, i)
     
+    ! output positions, vels, etc.
+    if(td%out_coords) call td_write_nbo(out_coords, sys, td, i, sys%kinetic_energy, h%etot)
+
+    ! If harmonic spectrum is desired, get the acceleration
+    if(td%out_acc) call td_write_acc(out_acc, sys, h, td, i)
+
+    ! output laser field
+    if(td%out_laser) call td_write_laser(out_laser, h, td, i)
+
+    ! output electronic energy
+    if(td%out_energy) call td_write_el_energy(out_energy, h, td, i)
+
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
     call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
 #endif
@@ -267,17 +267,17 @@ contains
     ! create general subdir
     call oct_mkdir("td.general")
 
-    if(td%out_multip)  call td_write_multipole(0)
-    if(td%out_angular) call td_write_angular(0)
-    if(td%out_proj)    call td_write_proj(0)
+    if(td%out_multip)  call td_write_multipole(out_multip, sys, td, 0)
+    if(td%out_angular) call td_write_angular(out_angular, sys, td, 0)
+    if(td%out_proj)    call td_write_proj(out_proj, sys, u_st, 0)
 
     call apply_delta_field(m)
 
     ! create files for output and output headers
-    if(td%out_coords) call td_write_nbo(0, sys%kinetic_energy, h%etot)    
-    if(td%out_acc)    call td_write_acc(0)
-    if(td%out_laser)  call td_write_laser(0)
-    if(td%out_energy) call td_write_el_energy(0)
+    if(td%out_coords) call td_write_nbo(out_coords, sys, td, 0, sys%kinetic_energy, h%etot)    
+    if(td%out_acc)    call td_write_acc(out_acc, sys, h, td, 0)
+    if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
+    if(td%out_energy) call td_write_el_energy(out_energy, h, td, 0)
     call td_write_data(0)
 
     call td_rti_run_zero_iter(h, sys%st, td%tr)
@@ -359,64 +359,48 @@ contains
     call io_close(iunit)
   end subroutine td_read_nbo
 
-#include "td_calc.F90"
-#include "td_write.F90"
+  subroutine td_write_data(iter)
+    integer, intent(in) :: iter
+
+    character(len=50) :: filename
+  
+    call push_sub('td_write_data')
+    
+    ! first resume file
+    write(filename, '(a,i3.3)') "tmp/restart.td.", mpiv%node
+    call zstates_write_restart(trim(filename), sys%m, sys%st, &
+         iter=iter, v1=td%tr%v_old(:, :, 1), v2=td%tr%v_old(:, :, 2))
+    
+    ! calculate projection onto the ground state
+    if(td%out_gsp) call td_write_gsp(out_gsp, sys, td, iter)
+    
+    if(mpiv%node==0) then
+      if(td%out_multip)  call write_iter_flush(out_multip)
+      if(td%out_angular) call write_iter_flush(out_angular)
+      if(td%out_coords)  call write_iter_flush(out_coords)
+      if(td%out_gsp)     call write_iter_flush(out_gsp)
+      if(td%out_acc)     call write_iter_flush(out_acc)
+      if(td%out_laser)   call write_iter_flush(out_laser)
+      if(td%out_energy)  call write_iter_flush(out_energy)
+    end if
+    
+    ! now write down the rest
+    write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+    call zstates_output(sys%st, sys%m, filename, sys%outp)
+    if(sys%outp%what(output_geometry)) &
+         call atom_write_xyz(filename, "geometry", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
+    call hamiltonian_output(h, sys%m, filename, sys%outp)
+    
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+    call PES_output(td%PESv, sys%m, sys%st, iter, sys%outp%iter, td%dt)
+#endif
+    
+    call pop_sub()
+  end subroutine td_write_data
 
 end subroutine td_run
 
-!!$subroutine td_check_trotter(td, sys, h)
-!!$  type(td_type), intent(inout)          :: td
-!!$  type(system_type), intent(in)         :: sys
-!!$  type(hamiltonian_type), intent(inout) :: h
-!!$
-!!$  integer :: unit, order, i, j, d
-!!$  complex(r8), allocatable :: expzpsi(:, :), goodzpsi(:, :), hzpsi(:, :)
-!!$  real(r8) :: res(8), dt
-!!$  complex(r8) :: r
-!!$
-!!$  call io_assign(unit)
-!!$  open(unit, file = 'td_check')
-!!$  close(unit)
-!!$
-!!$  allocate(expzpsi (sys%m%np, sys%st%dim), &
-!!$           goodzpsi(sys%m%np, sys%st%dim), &
-!!$           hzpsi   (sys%m%np, sys%st%dim))
-!!$
-!!$  d = sys%m%np*sys%st%dim
-!!$
-!!$  do i = -300, 100, 10
-!!$
-!!$     ! Calculate the "good" valee
-!!$
-!!$     dt = exp(real(i, r8)/100._r8 * log(10.0_r8))
-!!$     write(*, *) 'Calculating the "good" value...'
-!!$     call zcopy(d, sys%st%zpsi, 1, goodzpsi, 1)
-!!$     td%lanczos_tol = 1.0e-14_r8
-!!$     td%exp_order   = 20
-!!$     td%exp_method  = FOURTH_ORDER
-!!$     call td_dtexp(h, sys, td, 1, goodzpsi, dt, M_ZERO)
-!!$     !goodzpsi(:, :) = exp(-M_zI*dt*sys%st%eigenval(1, 1))*sys%st%zpsi(:, :, 1, 1)
-!!$     write(*, *) 'Done.'
-!!$
-!!$     !do j = 1, 8
-!!$       call zcopy(d, sys%st%zpsi, 1, expzpsi, 1)
-!!$       td%exp_order   = 15
-!!$       td%lanczos_tol = 1.0e-8_r8
-!!$       td%exp_method  = SUZUKI_TROTTER
-!!$       call td_dtexp(h, sys, td, 1, expzpsi, dt, M_ZERO, order = order)
-!!$       call zaxpy(d, -M_ONE, goodzpsi, 1, expzpsi, 1)
-!!$       res(1) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
-!!$     !enddo
-!!$       open(unit, file='td_check', position='append')
-!!$       write(unit, '(2es18.6, i5)') dt, res(1), order
-!!$       close(unit)
-!!$  end do
-!!$
-!!$  deallocate(expzpsi, goodzpsi)
-!!$  call io_close(unit)
-!!$  stop
-!!$end subroutine td_check_trotter
-
+#include "td_write.F90"
 #include "td_init.F90"
 
 end module timedep
