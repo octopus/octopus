@@ -177,7 +177,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
                R_TOTYPE(M_ZERO), eigenvec(1, nec + 1))
           call X(lalg_gemv)(n, d2, R_TOTYPE(M_ONE), av(1, 1), hevec(1, 1), &
                R_TOTYPE(M_ZERO), av(1, d2 + 1))
-          call residual(av(1:n, d2+1), eigenvec(1:n, nec+1), tmp(1), av(1:n, d2+1), res(nec+1))
+          call residual(n, av(1:n, d2+1), eigenvec(1:n, nec+1), tmp(1), av(1:n, d2+1), res(nec+1))
           
           ! If the first Ritz eigen-pair converged, compute all 
           ! Ritz vectors and the residual norms.
@@ -191,7 +191,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
                    R_TOTYPE(M_ZERO), v  (1, i)) 
             enddo
             do i = 2, winsiz
-              call residual(v(1, i), eigenvec(1, nec+i), tmp(i), av(1, i), res(nec+i))
+              call residual(n, v(1, i), eigenvec(1, nec+i), tmp(i), av(1, i), res(nec+i))
             enddo
           endif
           d1 = d2
@@ -207,7 +207,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
           do i = 1, winsiz
             av(:, i) = v(:, i)
             v(:, i) = eigenvec(:, nec + i)
-            call residual(av(1, i), v(1, i), tmp(i), av(1, winsiz+i), res(nec+i))
+            call residual(n, av(1, i), v(1, i), tmp(i), av(1, winsiz+i), res(nec+i))
           enddo
           
           ! Forms the first winsiz rows of H = V^T A V
@@ -277,12 +277,12 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
   
 contains
 
-  subroutine residual(hv, v, e, res, r)
-    implicit none
-    R_TYPE, intent(inout), dimension(n) :: hv
-    R_TYPE, intent(inout), dimension(n) :: v
+  subroutine residual(n, hv, v, e, res, r)
+    integer, intent(in) :: n
+    R_TYPE, intent(inout) :: hv(n)
+    R_TYPE, intent(inout) :: v(n)
     FLOAT, intent(in)  :: e
-    R_TYPE, intent(inout), dimension(n) :: res
+    R_TYPE, intent(inout) :: res(n)
     FLOAT, intent(out) :: r
     
     res(1:n) = hv(1:n) - e*v(1:n)
