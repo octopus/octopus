@@ -105,6 +105,7 @@ contains
     end if
   end subroutine td_exp_end
 
+  !! WARNING: The "sys" stuff is unnecessary. Only mesh and h should be passed.
   subroutine td_exp_dt(te, sys, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type), intent(inout)   :: te
     type(hamiltonian_type), intent(in) :: h
@@ -145,9 +146,9 @@ contains
     subroutine operate(psi, oppsi)
       CMPLX :: psi(sys%m%np, sys%st%dim), oppsi(sys%m%np, sys%st%dim)
       if(apply_magnus) then
-        call zmagnus(h, sys%m, psi, oppsi, sys, ik, vmagnus)
+        call zmagnus(h, sys%m, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, sys%m, psi, oppsi, sys, ik, t)
+        call zHpsi(h, sys%m, psi, oppsi, ik, t)
       endif
     end subroutine operate
 
@@ -278,9 +279,9 @@ contains
       endif
       
       call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
-      if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, sys, zpsi, ik, -M_zI*timestep/M_TWO, .true.)
+      if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*timestep/M_TWO, .true.)
       call zexp_kinetic(sys%m, sys%st, h, zpsi, ik, te%cf, -M_zI*timestep)
-      if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, sys, zpsi, ik, -M_zI*timestep/M_TWO, .false.)
+      if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*timestep/M_TWO, .false.)
       call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       
       if(present(order)) order = 0
@@ -305,9 +306,9 @@ contains
       
       do k = 1, 5
         call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, sys, zpsi, ik, -M_zI*dt(k)/M_TWO, .true.)
+        if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .true.)
         call zexp_kinetic(sys%m, sys%st, h, zpsi, ik, te%cf, -M_zI*dt(k))
-        if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, sys, zpsi, ik, -M_zI*dt(k)/M_TWO, .false.)
+        if(sys%nlpp) call zexp_vnlpsi (sys%m, sys%st, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .false.)
         call zexp_vlpsi (sys%m, sys%st, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
       

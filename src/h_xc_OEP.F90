@@ -88,7 +88,7 @@ subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
     ! solve the KLI equation
     oep%vxc = M_ZERO
     call X(xc_KLI_solve) (m, st, is, oep, xcs%oep_level)
-    if(xcs%oep_level == 2) call X(h_xc_oep_solve)(m, h, sys, st, is, vxc(:,is), oep)
+    if(xcs%oep_level == 2) call X(h_xc_oep_solve)(m, h, st, is, vxc(:,is), oep)
 
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
@@ -99,10 +99,9 @@ subroutine X(h_xc_oep)(xcs, m, h, sys, st, vxc, ex, ec)
   call pop_sub()
 end subroutine X(h_xc_OEP)
 
-subroutine X(h_xc_oep_solve) (m, h, sys, st, is, vxc, oep)
+subroutine X(h_xc_oep_solve) (m, h, st, is, vxc, oep)
   type(mesh_type),   intent(in)    :: m
   type(hamiltonian_type), intent(in) :: h
-  type(system_type), intent(in)    :: sys
   type(states_type), intent(in)    :: st
   integer,           intent(in)    :: is
   FLOAT,          intent(inout) :: vxc(m%np)
@@ -170,7 +169,7 @@ contains
     psi = psi - r*st%X(psi)(:, :, ist, is)
 
     ! Calculate starting gradient: |hpsi> = (H-eps_i)|psi> + b
-    call X(Hpsi)(h, m, psi, res, sys, 1)
+    call X(Hpsi)(h, m, psi, res, 1)
     res(:,1) = res(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
 
     ! orthogonalize direction to phi
@@ -182,7 +181,7 @@ contains
 
     iter_loop: do iter = 1, 50
       ! verify
-      call X(Hpsi)(h, m, psi, tmp, sys, 1)
+      call X(Hpsi)(h, m, psi, tmp, 1)
       tmp(:,1) = tmp(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
       if(X(states_nrm2)(m, st%dim, tmp).lt.1e-6_8) exit iter_loop
 
@@ -194,7 +193,7 @@ contains
         p  = -res + ek*p
       end if
 
-      call X(Hpsi)(h, m, p, z, sys, 1)
+      call X(Hpsi)(h, m, p, z, 1)
       z(:,1) = z(:,1) - st%eigenval(ist, 1)*p(:,1)
       r = X(states_dotp) (m, st%dim, z, st%X(psi)(:, :, ist, is))
       z = z - r*st%X(psi)(:, :, ist, is)

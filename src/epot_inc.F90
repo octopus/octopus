@@ -21,7 +21,7 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
   FLOAT,          intent(in), optional :: t
   logical,           intent(in), optional :: reduce_
 
-  integer :: i, j, l, m, add_lm, idim, ist, ik, ii, jj
+  integer :: i, j, l, m, add_lm, idim, ist, ik, ii, jj, ivnl
   FLOAT :: d, r, zi, zj, vl, dvl, x(3)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
@@ -36,45 +36,44 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
     sys%atom(i)%f = M_ZERO
   end do
 
-  ! the non-local contribution
-  ! this comes first to do the reduce...
+  ivnl = 1
   atm_loop: do i = 1, sys%natoms
     atm => sys%atom(i)
     if(atm%spec%local) cycle
+
+    add_lm = add_lm + 1
+    do l = 0, atm%spec%ps%l_max
+       do m = -l, l
+
+          ik_loop: do ik = 1, sys%st%nik
+             st_loop: do ist = sys%st%st_start, sys%st%st_end
+                dim_loop: do idim = 1, sys%st%dim
+                   do ii = 1, ep%vnl(ivnl)%c
+                      do jj = 1, ep%vnl(ivnl)%c
+                         uvpsi = sum( ep%vnl(ivnl)%uv(:, ii) * &
+                                      sys%st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) ) * &
+                                 sys%st%occ(ist, ik) * sys%m%vol_pp**2 * ep%vnl(ivnl)%uvu(ii, jj)
+                         do j = 1, conf%dim
+                            p = sum( ep%vnl(ivnl)%duv(j, :, jj) * &
+                                     R_CONJ(sys%st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik)) )
+                            atm%f(j) = atm%f(j) + M_TWO * R_REAL(uvpsi * p)
+                         end do
+                      end do
+                   end do
+                end do dim_loop
+             end do st_loop
+          end do ik_loop
+
+          ivnl = ivnl + 1
+       enddo
+    end do
     
-    ik_loop: do ik = 1, sys%st%nik
-      st_loop: do ist = sys%st%st_start, sys%st%st_end
-        dim_loop: do idim = 1, sys%st%dim
-          add_lm = 1
-          l_loop: do l = 0, atm%spec%ps%L_max
-            if(l == atm%spec%ps%L_loc) then
-              add_lm = add_lm + (2*l + 1)
-              cycle l_loop
-            end if
-            
-            m_loop: do m = -l, l
-              do ii = 1, atm%spec%ps%kbc
-                do jj = 1, atm%spec%ps%kbc
-                  uVpsi = sum(atm%X(uV)(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
-                       sys%st%X(psi)(atm%Jxyz(:), idim, ist, ik)) * &
-                       sys%m%vol_pp**2 * atm%X(uVu)(add_lm, ii, jj)
-                  
-                  do j = 1, 3
-                    p = sum(atm%X(duV)(j, :, add_lm, jj) * R_CONJ(sys%st%X(psi) (atm%Jxyz(:), idim, ist, ik)))
-                    atm%f(j) = atm%f(j) + M_TWO * R_REAL(uVpsi * p)
-                  end do
-                end do
-              end do
-              
-              add_lm = add_lm + 1
-            end do m_loop
-          end do l_loop
-          
-        end do dim_loop
-      end do st_loop
-    end do ik_loop
-    
+  end do atm_loop
+
 #if defined(HAVE_MPI) && defined(MPI_TD)
+  do i = 1, sys%natoms
+    atm => sys%atom(i)
+    if(atm%spec%local) cycle
     if(present(reduce_)) then
       if(reduce_) then
         call MPI_ALLREDUCE(atm%f(1), f(1), conf%dim, &
@@ -82,10 +81,9 @@ subroutine X(epot_forces) (ep, sys, t, reduce_)
         atm%f = f
       end if
     end if
+  enddo
 #endif
-    
-  end do atm_loop
-  
+
   ! Now the ion, ion force term
   do i = 1, sys%natoms
     zi = sys%atom(i)%spec%Z_val

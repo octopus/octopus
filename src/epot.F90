@@ -32,6 +32,14 @@ module external_pot
 
   implicit none
 
+  type nonlocal_op
+    integer :: n, c
+    integer, pointer :: jxyz(:)
+    FLOAT, pointer ::    uv(:, :),    duv(:, :, :),    uvu(:, :)
+    CMPLX, pointer :: so_uv(:, :), so_duv(:, :, :), so_uvu(:, :), so_luv(:, :, :)
+    CMPLX, pointer :: phases(:,:)    ! factors exp(ik*x)
+  end type nonlocal_op
+
   type epot_type
     integer :: vpsl_space           ! How should the local potential be calculated
     integer :: vnl_space            ! How should the nl    potential be calculated
@@ -49,6 +57,10 @@ module external_pot
     type(dcf), pointer :: local_cf(:)
     type(dcf), pointer :: rhocore_cf(:) ! and for the core density
 #endif
+
+    ! Nonlocal operators
+    integer :: nvnl
+    type(nonlocal_op), pointer :: vnl(:)
   end type epot_type
 
 contains
@@ -105,6 +117,10 @@ contains
       end if
     end if
 
+    ! Non local operators
+    ep%nvnl = atom_nvnl(sys%natoms, sys%atom)
+    nullify(ep%vnl)
+    if(ep%nvnl>0) allocate(ep%vnl(ep%nvnl))
   end subroutine epot_init
 
   subroutine epot_end(ep, sys)
@@ -132,6 +148,11 @@ contains
     end if
     
     call laser_end(ep%no_lasers, ep%lasers)
+
+    if(ep%nvnl>0) then
+        ASSERT(associated(ep%vnl))
+        deallocate(ep%vnl); nullify(ep%vnl)
+    endif
 
   end subroutine epot_end
 
@@ -253,7 +274,8 @@ contains
     FLOAT,          pointer       :: Vpsl(:)
     integer,           intent(in)    :: reltype
 
-    integer :: ia
+    integer :: ia, i, j, l, lm, add_lm, k
+    FLOAT :: x(conf%dim)
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
@@ -277,19 +299,54 @@ contains
     end if
 #endif
 
+    ! Local.
     vpsl = M_ZERO
     do ia = 1, sys%natoms
       a => sys%atom(ia) ! shortcuts
       s => a%spec
-    
       call build_local_part()
+    enddo
       
-      if(.not.s%local) then
-        call build_kb_sphere()
-        call build_nl_part()
-      end if
-      
+    ! Nonlocal part.
+    i = 1
+    do ia = 1, sys%natoms
+      a => sys%atom(ia)
+      s => a%spec
+      if(s%local) cycle
+      add_lm = 1
+      do l = 0, s%ps%l_max
+         do lm = -l, l
+            call build_kb_sphere(i)
+            call build_nl_part(i, l, lm, add_lm)
+            add_lm = add_lm + 1
+            i = i + 1
+         enddo
+      enddo
     end do
+
+    i = 1
+    do ia = 1, sys%natoms
+       a => sys%atom(ia)
+       s => a%spec
+       if(s%local) cycle
+       add_lm = 1
+       do l = 0, s%ps%l_max
+          do lm = -l, l
+             allocate(ep%vnl(i)%phases(ep%vnl(i)%n, sys%st%d%nik))
+             if (conf%periodic_dim/=0) then
+                allocate(ep%vnl(i)%phases(ep%vnl(i)%n, sys%st%d%nik))
+                do j = 1, ep%vnl(i)%n
+                   call mesh_xyz(m, ep%vnl(i)%jxyz(j), x)
+                   do k=1, sys%st%d%nik
+                      ep%vnl(i)%phases(j, k) = exp(M_zI*sum(sys%st%d%kpoints(:, k)*x(:)))
+                   end do
+                end do
+             end if
+             add_lm = add_lm + 1
+             i = i + 1
+          enddo
+       enddo
+    enddo
 
 #ifdef HAVE_FFT
     if(ep%vpsl_space == RECIPROCAL_SPACE) then
@@ -343,20 +400,16 @@ contains
       
       call pop_sub()
     end subroutine build_local_part
-  
-    subroutine build_kb_sphere()
+
+    ! Note: this should only build the spheres, as it says, not allocating the variables.
+    ! I will change it later.
+    subroutine build_kb_sphere(ivnl)
+      integer, intent(in) :: ivnl
       integer :: i, j, k
       FLOAT :: r, x(3)
       
       call push_sub('build_kb_sphere')
-      
-      ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
-      if(associated(a%jxyz)) deallocate(&
-           a%jxyz, a%duv,  a%dduv,  a%duvu,     &
-           a%zuv, a%zduv, a%zuvu,       &
-           a%so_uv, a%so_duv, a%so_uvu, &
-           a%so_luv)
-      if(conf%periodic_dim/=0 .and. associated(a%phases)) deallocate(a%phases)
+
       if (any(s%ps%rc_max + m%h(1)>=m%lsize(1:conf%periodic_dim))) then
         message(1)='KB sphere is larger than the box size'
         write(message(2),'(a,f12.6,a)')'  rc_max+h = ',s%ps%rc_max + m%h(1),' [b]'
@@ -373,19 +426,28 @@ contains
           exit
         end do
       end do
-      a%Mps = j
-      allocate(a%Jxyz(j), a%duV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
-           a%dduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%duVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
-      allocate(a%zuV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
-           a%zduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%zuVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
-      allocate(a%so_uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
-           a%so_duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%so_uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc), &
-           a%so_luv(j, (s%ps%L_max+1)**2, s%ps%kbc, 3))
-      
-      a%duv    = M_ZERO; a%dduV   = M_ZERO; a%duVu   = M_ZERO
-      a%zuv    = M_z0;   a%zduV   = M_z0;   a%zuVu   = M_z0
-      a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0; a%so_luv = M_z0
-      
+      ep%vnl(ivnl)%n = j
+      ep%vnl(ivnl)%c = s%ps%kbc
+
+      ! First, the "normal" non-local projectors
+      allocate(ep%vnl(ivnl)%jxyz(j), &
+               ep%vnl(ivnl)%uv(j, s%ps%kbc), &
+               ep%vnl(ivnl)%duv(3, j, s%ps%kbc), &
+               ep%vnl(ivnl)%uvu(s%ps%kbc, s%ps%kbc))
+      ep%vnl(ivnl)%uv  = M_ZERO
+      ep%vnl(ivnl)%duv = M_ZERO
+      ep%vnl(ivnl)%uvu = M_ZERO
+
+      ! Then, the spin-orbit projectors (Eventually I will change this).
+      allocate(ep%vnl(ivnl)%so_uv(j, s%ps%kbc), &
+               ep%vnl(ivnl)%so_duv(3, j, s%ps%kbc), &
+               ep%vnl(ivnl)%so_uvu(s%ps%kbc, s%ps%kbc), &
+               ep%vnl(ivnl)%so_luv(j, s%ps%kbc, 3))
+      ep%vnl(ivnl)%so_uv  = M_z0
+      ep%vnl(ivnl)%so_duv = M_z0
+      ep%vnl(ivnl)%so_uvu = M_z0
+      ep%vnl(ivnl)%so_luv = M_z0
+
       j = 0
       do k = 1, m%np
         do i = 1, 3**conf%periodic_dim
@@ -393,7 +455,7 @@ contains
           ! we enlarge slightly the mesh (good for the interpolation scheme)
           if(r > s%ps%rc_max + m%h(1)) cycle
           j = j + 1
-          a%Jxyz(j) = k
+          ep%vnl(ivnl)%jxyz(j) = k
           exit
         end do
       end do
@@ -401,118 +463,95 @@ contains
       call pop_sub()
     end subroutine build_kb_sphere
 
-    subroutine build_nl_part()
-      integer :: i, j, k, l, lm, n, add_lm, p, ix(3), center(3)
+    subroutine build_nl_part(ivnl, l, lm, add_lm)
+      integer, intent(in) :: ivnl, l, lm, add_lm
+
+      integer :: i, j, k, n, p, ix(3), center(3)
       FLOAT :: r, x(3), x_in(3), ylm
       FLOAT :: so_uv, so_duv(3)
       
-      call push_sub('build_nl_part')
+      call push_sub('build_nl_part_')
       
-      ! This loop is done always, for spin-orbit is, up to now, only done in real space.
-      ! If we want the nl part also in real space, it is read.
-      j_loop: do j = 1, a%Mps
-        call mesh_xyz(m, a%Jxyz(j), x_in)
-        k_loop: do k = 1, 3**conf%periodic_dim
+      j_loop: do j = 1, ep%vnl(ivnl)%n
+         call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x_in)
+         k_loop: do k = 1, 3**conf%periodic_dim
           x(:) = x_in(:) - m%shift(k,:)          
           r=sqrt(sum((x-a%x)*(x-a%x)))
           if (r > s%ps%rc_max + m%h(1)) cycle
           x = x - a%x
-          add_lm = 1
-          l_loop: do l = 0, s%ps%L_max
-            lm_loop: do lm = -l, l
-              i_loop : do i = 1, s%ps%kbc
+          i_loop : do i = 1, ep%vnl(ivnl)%c
                 if(l .ne. s%ps%L_loc .and. ep%vnl_space == REAL_SPACE) then
-                  call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
+                  call specie_get_nl_part(s, x, l, lm, i, ep%vnl(ivnl)%uv(j, i), ep%vnl(ivnl)%duv(:, j, i))
                 end if
                 if(l>0 .and. s%ps%so_l_max>=0) then
                   call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
-                  a%so_uv(j, add_lm, i) = so_uv
-                  a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
+                  ep%vnl(ivnl)%so_uv(j, i) = so_uv
+                  ep%vnl(ivnl)%so_duv(1:3, j, i) = so_duv(1:3)
                 endif
-              end do i_loop
-              add_lm = add_lm + 1
-            end do lm_loop
-          end do l_loop
-          exit
-        end do k_loop
+          end do i_loop
+         end do k_loop
       end do j_loop
       
       if(reltype == 1) then ! SPIN_ORBIT
-        do j = 1, a%mps
-          call mesh_xyz(m, a%Jxyz(j), x_in)
+        do j = 1, ep%vnl(ivnl)%n
+          call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x_in)
           do k = 1, 3**conf%periodic_dim
             x(:) = x_in(:) - m%shift(k,:)          
             r=sqrt(sum((x-a%x)*(x-a%x)))
             if (r > s%ps%rc_max + m%h(1)) cycle
             x = x - a%x
-            do add_lm = 1, (a%spec%ps%l_max+1)**2
-              a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 1) = &
-                   x(2)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc) - &
-                   x(3)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc)
-              a%so_luv(j, add_lm, 1:a%spec%ps%kbc, 2) = &
-                   x(3)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc) - &
-                   x(1)*a%so_duv(3, j, add_lm, 1:a%spec%ps%kbc)
-              a%so_luv(j, add_lm, 1:a%spec%ps%kbc , 3) = &
-                   x(1)*a%so_duv(2, j, add_lm, 1:a%spec%ps%kbc ) - &
-                   x(2)*a%so_duv(1, j, add_lm, 1:a%spec%ps%kbc )
-            enddo
+              ep%vnl(ivnl)%so_luv(j, 1:ep%vnl(ivnl)%c, 1) = &
+                   x(2)*ep%vnl(ivnl)%so_duv(3, j, 1:a%spec%ps%kbc) - &
+                   x(3)*ep%vnl(ivnl)%so_duv(2, j, 1:a%spec%ps%kbc)
+              ep%vnl(ivnl)%so_luv(j, 1:ep%vnl(ivnl)%c, 2) = &
+                   x(3)*ep%vnl(ivnl)%so_duv(1, j, 1:a%spec%ps%kbc) - &
+                   x(1)*ep%vnl(ivnl)%so_duv(3, j, 1:a%spec%ps%kbc)
+              ep%vnl(ivnl)%so_luv(j, 1:ep%vnl(ivnl)%c, 3) = &
+                   x(1)*ep%vnl(ivnl)%so_duv(2, j, 1:a%spec%ps%kbc ) - &
+                   x(2)*ep%vnl(ivnl)%so_duv(1, j, 1:a%spec%ps%kbc )
             exit
           enddo
         enddo
-        a%so_luv = -M_zI*a%so_luv
+        ep%vnl(ivnl)%so_luv = -M_zI*ep%vnl(ivnl)%so_luv
       endif
       
       ! and here we calculate the uVu
       if(s%ps%flavour(1:2) == 'tm') then
-        a%duVu = M_ZERO
-        add_lm = 1
-        do l = 0, s%ps%L_max
-          do lm = -l , l
+        ep%vnl(ivnl)%uvu = M_ZERO
             if(l .ne. s%ps%L_loc) then
-              do j = 1, a%Mps
-                call mesh_r(m, a%Jxyz(j), r, x=x_in, a=a%x)
+              do j = 1, ep%vnl(ivnl)%n
+                call mesh_r(m, ep%vnl(ivnl)%jxyz(j), r, x=x_in, a=a%x)
                 do k=1,3**conf%periodic_dim
                   x(:) = x_in(:) - m%shift(k,:)          
                   r=sqrt(sum(x*x))
                   if (r > s%ps%rc_max + m%h(1)) cycle
                   ylm = loct_ylm(x(1), x(2), x(3), l, lm)
-                  a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
-                       loct_splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
+                  ep%vnl(ivnl)%uvu(1, 1) = ep%vnl(ivnl)%uvu(1, 1) + ep%vnl(ivnl)%uv(j, 1) * &
+                                           loct_splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
                   exit
                 end do
               end do
-              a%duvu(add_lm, 1, 1) = M_ONE/(a%duvu(add_lm, 1, 1)*s%ps%dknrm(l))
-              if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > CNST(0.05) .and. s%ps%ispin==1) then
-                write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
-                     add_lm
-                write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%duVu(add_lm, 1, 1)
-                message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
-                call write_warning(3)
-              end if
-              ! uVu is in fact calculated in the logarithmic grid, previous stuff is a check.
-              a%duvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
+              ep%vnl(ivnl)%uvu(1, 1) = M_ONE/(ep%vnl(ivnl)%uvu(1, 1)*s%ps%dknrm(l))
+!!$ This check is temporarily gone. I will put it back.
+!!$              if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > CNST(0.05) .and. s%ps%ispin==1) then
+!!$                write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
+!!$                     add_lm
+!!$                write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%duVu(add_lm, 1, 1)
+!!$                message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
+!!$                call write_warning(3)
+!!$              end if
+!!$              ! uVu is in fact calculated in the logarithmic grid, previous stuff is a check.
+              ep%vnl(ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
             end if
-            a%so_uvu(add_lm, 1, 1) = s%ps%k(l, 1, 1)
-            add_lm = add_lm + 1
-          end do
-        end do
+        ep%vnl(ivnl)%so_uvu(1, 1) = s%ps%k(l, 1, 1)
       else
-        add_lm = 1
-        do l = 0, s%ps%l_max
-          do lm = -l, l
-            a%duvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
-            a%so_uvu(add_lm, 1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
-            add_lm = add_lm + 1
-          enddo
-        enddo
-        
+        ep%vnl(ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
+        ep%vnl(ivnl)%so_uvu(1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
       end if
       
-      a%zuv = cmplx(a%duv); a%zuvu = cmplx(a%duvu); a%zduv = cmplx(a%dduv)
-      
-      call pop_sub()
+      call pop_sub(); return
     end subroutine build_nl_part
-    
+
   end subroutine epot_generate
 
   subroutine epot_generate_classic(ep, m, sys)

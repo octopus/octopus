@@ -154,7 +154,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
           do idim = 1, st%dim
             aux(1:sys%m%np, idim) = v((idim-1)*sys%m%np+1:idim*sys%m%np, d1 + i)
           enddo
-          call X(Hpsi)(hamilt, sys%m, aux, av(1, d1 + i), sys, ik)
+          call X(Hpsi)(hamilt, sys%m, aux, av(1, d1 + i), ik)
         enddo
         matvec = matvec + blk
         

@@ -29,28 +29,8 @@ implicit none
 type atom_type
   character(len=10) :: label
   type(specie_type), pointer :: spec ! pointer to specie
-
   FLOAT :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
-
   logical :: move              ! should I move this atom in the optimization mode
-
-  ! the mesh around a given atom...
-  integer :: Mps
-  integer, pointer :: Jxyz(:)
-  FLOAT, pointer ::    pnts_ps,            &  ! # points in ps sphere
-                          duV(:,:,:),         &
-                          duVu(:,:,:),        &  ! the Kleinman Bylander projectors
-                          dduV(:,:,:,:)
-  ! This is for performance reasons.
-  CMPLX, pointer :: zpnts_ps,           & 
-                          zuV(:,:,:),         &
-                          zuVu(:,:,:),        &
-                          zduV(:,:,:,:)
-  CMPLX, pointer :: so_uv(:, :, :),     &
-                          so_uvu(:, :, :),    &
-                          so_duv(:, :, :, :), &
-                          so_luv(:, :, :, :)
-  CMPLX, pointer :: phases(:,:)    ! factors exp(ik*x)
 end type atom_type
 
 type atom_classical_type
@@ -134,10 +114,6 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   ! units conversion
   do i = 1, natoms
     a(i)%x = a(i)%x * units_inp%length%factor
-
-    ! seems that some compilers do not initilize pointers
-    ! so we do it explicitly
-    nullify(a(i)%Jxyz, a(i)%phases)
   end do
   do i = 1, ncatoms
     ca(i)%x = ca(i)%x * units_inp%length%factor
@@ -234,6 +210,27 @@ contains
 
 end subroutine atom_init
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Returns the number of non-local operator that should be defined.
+function atom_nvnl(natoms, a) result(res)
+  integer :: res
+  integer, intent(in) :: natoms
+  type(atom_type), pointer :: a(:)
+
+  type(specie_type), pointer :: s
+  integer :: ia
+
+  call push_sub('atom_nvnl')
+  res = 0
+  do ia = 1, natoms
+     s => a(ia)%spec
+     if(s%local) cycle
+     res = res + (s%ps%l_max+1)**2
+  enddo
+
+  call pop_sub(); return
+end function atom_nvnl
+
 subroutine loadPDB(iunit, natoms, a, ncatoms, ca)
   integer, intent(in) :: iunit
   integer, intent(inout) :: natoms, ncatoms
@@ -296,8 +293,6 @@ subroutine atom_end(na, a, nca, ca)
   type(atom_type), pointer :: a(:)
   type(atom_classical_type), pointer :: ca(:)
 
-  call atom_dealloc(na, a)
-
   if(associated(a)) then ! sanity check
     deallocate(a); nullify(a)
   end if
@@ -306,31 +301,6 @@ subroutine atom_end(na, a, nca, ca)
     deallocate(ca); nullify(ca)
   end if
 end subroutine atom_end
-
-subroutine atom_dealloc(na, a)
-  integer, intent(in) :: na
-  type(atom_type), pointer :: a(:)
-
-  integer :: ia
-
-  do ia = 1, na
-    if(associated(a(ia)%Jxyz)) then
-      deallocate(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%dduV, &
-                             a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zduV, &
-                             a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
-                             a(ia)%so_luv)
-      nullify(a(ia)%Jxyz, a(ia)%duV,    a(ia)%duVu,   a(ia)%duV, &
-                          a(ia)%zuV,    a(ia)%zuVu,   a(ia)%zuV, &
-                          a(ia)%so_uV,  a(ia)%so_uVu, a(ia)%so_duV, &
-                          a(ia)%so_luv)
-      if(conf%periodic_dim/=0 .and. associated(a(ia)%phases)) then
-        deallocate(a(ia)%phases)
-        nullify(a(ia)%phases)
-      end if
-    end if
-  end do
-
-end subroutine atom_dealloc
 
 subroutine atom_adjust(natoms, a, ncatoms, ca)
   integer, intent(in) :: natoms, ncatoms

@@ -56,7 +56,8 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
            st%X(psi)(1:np, 1:st%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, p, ik) , h_psi, sys, ik)
+!!$      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, p, ik) , h_psi, sys, ik)
+      call X(Hpsi)(h, sys%m, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
       st%eigenval(p, ik) = R_REAL(X(states_dotp) (sys%m, st%dim, st%X(psi)(1:,:, p, ik), h_psi))
@@ -106,8 +107,8 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         
         ! cg contains now the conjugate gradient
         cg0 = X(states_nrm2) (sys%m, st%dim, cg(:,:))
-        call X(Hpsi) (h, sys%m, cg, ppsi, sys, ik)
-        
+        call X(Hpsi) (h, sys%m, cg, ppsi, ik)
+
         ! Line minimization.
         a0 = X(states_dotp) (sys%m, st%dim, st%X(psi)(:,:, p, ik), ppsi)
         a0 = M_TWO * a0 / cg0

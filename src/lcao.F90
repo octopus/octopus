@@ -251,7 +251,8 @@ subroutine lcao_init(sys, h)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys%natoms, sys%atom, sys%st%dim, ik)
+        call zso (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys%st%dim, ik)
+!!$        call zso (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys%natoms, sys%atom, sys%st%dim, ik)
 #endif
       case default
         message(1) = 'Error: Internal.'
@@ -311,7 +312,8 @@ subroutine lcao_wf(sys, h)
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
       call X(vlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
-      if(sys%nlpp) call X(vnlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys, ik)
+!!$      if(sys%nlpp) call X(vnlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), sys, ik)
+      if(sys%nlpp) call X(vnlpsi) (h, sys%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       do n2 = n1, lcao_data%dim
         lcao_data%v(n1, n2, ik) = X(states_dotp)(sys%m, sys%st%dim, &
                                                       hpsi, lcao_data%psis(1:, : ,n2, ik))

@@ -102,6 +102,7 @@ subroutine op(nrow, ncol, xin, ldx, yout, ldy)
 
   do i = 1, ncol
      call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), sys_trlan, ik_trlan)
+!!$     call X(Hpsi) (h_trlan, m_trlan, xin(1:, i), yout(2:,i), ik_trlan)
   enddo
 
 end subroutine op

@@ -179,9 +179,9 @@ contains
       call zh_calc_vhxc(h, m, st, sys)
       do ik = 1, st%nik
          do ist = 1, st%nst
-            if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
+            if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
             call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
-            if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
+            if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
          enddo
       enddo
       do ik = 1, st%nik
@@ -213,9 +213,9 @@ contains
          do ik = 1, st%nik
             do ist = 1, st%nst
                call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
-               if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
+               if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
                call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_zI*dtime(k))
-               if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .false.)
+               if(sys%nlpp) call zexp_vnlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .false.)
                call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             enddo
          enddo

@@ -93,6 +93,7 @@ contains
 
   !!! Calculates psi = exp{factor*V_KS(t)} psi
   !!! where V_KS is the Kohn-Sham potential
+  !!! WARNING: The "st" thing is completely unnecessary, and should be removed.
   subroutine zexp_vlpsi (m, st, h, psi, ik, t, factor)
     type(mesh_type), intent(in) :: m
     type(states_type), intent(in) :: st
@@ -143,17 +144,17 @@ contains
 
   !!! calculates psi = exp{factor V_nlpp} psi
   !!! where V_nlpp is the non-local part of the pseudpotential
-  subroutine zexp_vnlpsi (m, st, sys, psi, ik, factor, order)
+  subroutine zexp_vnlpsi (m, st, h, psi, ik, factor, order)
     type(mesh_type), intent(in) :: m
     type(states_type), intent(in) :: st
-    type(system_type), intent(in) :: sys
+    type(hamiltonian_type), intent(in) :: h
     CMPLX, intent(inout) :: psi(m%np, st%dim)
     integer, intent(in) :: ik
     CMPLX, intent(in) :: factor
     logical, intent(in) :: order
 
     integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm, &
-         ia_start, ia_end, step, l_start, l_end, kbc_start, kbc_end
+         ivnl_start, ivnl_end, step, l_start, l_end, kbc_start, kbc_end, ivnl
     CMPLX :: uvpsi, p2, ctemp
     CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
     type(atom_type), pointer :: atm
@@ -161,57 +162,41 @@ contains
 
     call push_sub('vnlpsi')
     
-    if(order) then
-      step = 1;  ia_start = 1; ia_end = sys%natoms
-    else
-      step = -1; ia_start = sys%natoms; ia_end = 1
-    end if
-    
-    allocate(initzpsi(m%np, 1:sys%st%dim))
+    allocate(initzpsi(m%np, 1:st%d%dim))
     initzpsi = psi
 
-    do_atm: do ia = ia_start, ia_end, step
-      atm => sys%atom(ia)
-      spec => atm%spec
-      ! do we have a pseudopotential, or a local pot?
-      if(spec%local) cycle do_atm
+    dimension_loop: do idim = 1, st%d%dim
 
-      do_dim: do idim = 1, sys%st%dim
-        allocate(lpsi(atm%mps), lHpsi(atm%mps))
-        lpsi(:) = initzpsi(atm%jxyz(:), idim)
-        lHpsi(:) = M_z0
-        if(order) then
-          l_start   = 0; l_end   = spec%ps%L_max
-          kbc_start = 1; kbc_end = spec%ps%kbc
-          add_lm = 1
-        else
-          l_start   = spec%ps%L_max; l_end = 0
-          kbc_start = spec%ps%kbc; kbc_end = 1
-          add_lm = (spec%ps%L_max + 1)**2
-        end if
-        do_l: do l = l_start, l_end, step
-          if (l == spec%ps%L_loc) then
-            add_lm = add_lm + (2*l + 1)*step
-            cycle do_l
-          end if
+    if(order) then
+      step = 1;  ivnl_start = 1; ivnl_end = h%ep%nvnl
+    else
+      step = -1; ivnl_start = h%ep%nvnl; ivnl_end  = 1
+    endif
 
-          do_m: do lm = -l*step, l*step, step
-            do ikbc = kbc_start, kbc_end, step
-              do jkbc = kbc_start, kbc_end, step
-                 p2 = zlalg_dot(atm%mps, atm%zuv(1:atm%mps, add_lm, ikbc), atm%zuv(1:atm%mps, add_lm, ikbc))*m%vol_pp
-                 ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*factor
-                 uvpsi = zlalg_dot(atm%mps, atm%zuv(1:atm%mps, add_lm, ikbc), lpsi(1)) * m%vol_pp* &
-                       (exp(ctemp) - M_z1)/p2
-                 call zlalg_axpy(atm%mps, uvpsi, atm%zuv(1:atm%mps, add_lm, jkbc), lHpsi(1))
-              end do
-            end do
-            add_lm = add_lm + step
-          end do do_m
-        end do do_l
-        psi(atm%jxyz(:), idim) = psi(atm%jxyz(:), idim) + lhpsi(:)
-        deallocate(lpsi, lHpsi)
-      end do do_dim
-    end do do_atm
+    do ivnl = ivnl_start, ivnl_end, step
+       allocate(lpsi(h%ep%vnl(ivnl)%n), lhpsi(h%ep%vnl(ivnl)%n))
+       lpsi(:) = initzpsi(h%ep%vnl(ivnl)%jxyz(:), idim)
+       lhpsi(:) = M_z0
+
+       if(order) then
+          kbc_start = 1; kbc_end = h%ep%vnl(ivnl)%c
+       else
+          kbc_start = h%ep%vnl(ivnl)%c; kbc_end = 1
+       end if
+
+       do ikbc = kbc_start, kbc_end, step
+          do jkbc = kbc_start, kbc_end, step
+             p2 = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*h%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
+             ctemp = h%ep%vnl(ivnl)%uvu(ikbc, jkbc)*p2*factor
+             uvpsi = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
+             lhpsi(:) = lhpsi(:) + uvpsi*h%ep%vnl(ivnl)%uv(:, jkbc)
+          end do
+       end do
+
+       deallocate(lpsi, lhpsi)
+    enddo
+
+    end do dimension_loop
 
     deallocate(initzpsi)
     call pop_sub()

@@ -30,7 +30,7 @@ subroutine X(hamiltonian_eigenval)(h, st, sys)
 
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
-      call X(hpsi) (h, sys%m, st%X(psi)(:, :, ist, ik), hpsi, sys, ik)
+      call X(hpsi) (h, sys%m, st%X(psi)(:, :, ist, ik), hpsi, ik)
       e = X(states_dotp)(sys%m, st%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
@@ -40,10 +40,9 @@ subroutine X(hamiltonian_eigenval)(h, st, sys)
   call pop_sub()
 end subroutine X(hamiltonian_eigenval)
 
-subroutine X(Hpsi) (h, m, psi, hpsi, sys, ik, t)
+subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
-  type(system_type), intent(in) :: sys ! this is necessary due to the nl part of the PP
   integer, intent(in) :: ik
   R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, h%d%dim)
@@ -53,14 +52,14 @@ subroutine X(Hpsi) (h, m, psi, hpsi, sys, ik, t)
 
   call X(kinetic) (h, m, psi, hpsi, ik)
   call X(vlpsi)   (h, m, psi, hpsi, ik)
-  if(sys%nlpp) call X(vnlpsi)  (h, m, psi, hpsi, sys, ik)
+  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, psi, hpsi, ik)
 
   ! Relativistic corrections...
   select case(h%reltype)
   case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-    call zso (h, m, psi, hpsi, sys%natoms, sys%atom, h%d%dim, ik)
+    call zso (h, m, psi, hpsi, h%d%dim, ik)
 #endif
   case default
     message(1) = 'Error: Internal.'
@@ -76,10 +75,9 @@ subroutine X(Hpsi) (h, m, psi, hpsi, sys, ik, t)
 end subroutine X(Hpsi)
 
 #if defined(R_TCOMPLEX)
-subroutine X(magnus) (h, m, psi, hpsi, sys, ik, vmagnus)
+subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
   type(hamiltonian_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m
-  type(system_type), intent(in) :: sys ! this is necessary due to the nl part of the PP
   integer, intent(in) :: ik
   R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, h%d%dim)
@@ -96,7 +94,7 @@ subroutine X(magnus) (h, m, psi, hpsi, sys, ik, vmagnus)
   call X(kinetic) (h, m, psi, hpsi, ik)
 
   auxpsi = hpsi
-  if(sys%nlpp) call X(vnlpsi)  (h, m, psi, auxpsi, sys, ik)
+  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
     hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
@@ -119,7 +117,7 @@ subroutine X(magnus) (h, m, psi, hpsi, sys, ik, vmagnus)
     end if
   end select
   call X(kinetic) (h, m, auxpsi, aux2psi, ik)
-  if(sys%nlpp) call X(vnlpsi)  (h, m, auxpsi, aux2psi, sys, ik)
+  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, auxpsi, aux2psi, ik)
   hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
 
   do idim = 1, h%d%dim
@@ -136,7 +134,7 @@ subroutine X(magnus) (h, m, psi, hpsi, sys, ik, vmagnus)
       hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
     end if
   end select
-  if(sys%nlpp) call X(vnlpsi)  (h, m, psi, Hpsi, sys, ik)
+  if(h%ep%nvnl>0) call X(vnlpsi)  (h, m, psi, Hpsi, ik)
   call X(vborders) (h, m, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
@@ -190,78 +188,51 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
   call pop_sub()
 end subroutine X(kinetic)
 
-subroutine X(vnlpsi) (h, m, psi, hpsi, sys, ik)
+subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(in) :: h
   integer, intent(in) :: ik
   type(mesh_type), intent(IN) :: m
-  type(system_type), intent(IN) :: sys
   R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
 
-  integer :: i, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
+  integer :: i, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm, ivnl
   FLOAT :: x(conf%dim)
   R_TYPE :: phase
   R_TYPE :: uVpsi
   R_TYPE, allocatable :: lpsi(:), lHpsi(:)
-  type(atom_type), pointer :: atm
-  type(specie_type), pointer :: spec
+  type(nonlocal_op), pointer :: nlop
 #ifdef R_TCOMPLEX
   CMPLX, allocatable :: conj(:)
 #endif
 
   call push_sub('vnlpsi')
 
-  ! Ionic pseudopotential
-  do_atm: do ia = 1, sys%natoms
-    atm => sys%atom(ia)
-    spec => atm%spec
-    ! do we have a pseudopotential, or a local pot?
-    if(spec%local) cycle do_atm
-
-    ! calculate the phase factors exp(ik*x) 
-    ! they are necessary to get the correct periodicity 
-    ! for the nonlocal part of the pseudopotential
-    if (conf%periodic_dim/=0) then
-      !allocate(atm%phases(atm%mps,st%nik))
-      allocate(atm%phases(atm%mps,h%d%nik))
-      do i=1,atm%mps
-        call mesh_xyz(m, atm%jxyz(i), x)
-        do k=1, h%d%nik
-          atm%phases(i,k)=exp(M_zI*sum(h%d%kpoints(:,k)*x(:)))
-        end do
-      end do
-    end if
-
-#   ifdef R_TCOMPLEX
-      allocate(conj(atm%mps))
-#   endif
+  do ivnl = 1, h%ep%nvnl
+     nlop => h%ep%vnl(ivnl)
+#ifdef R_TCOMPLEX
+       allocate(conj(nlop%n))
+#endif
 
     do_dim: do idim = 1, h%d%dim
-      allocate(lpsi(atm%mps), lHpsi(atm%mps))
+      allocate(lpsi(nlop%n), lhpsi(nlop%n))
       if (conf%periodic_dim==0) then
-        lpsi(:) = psi(atm%jxyz(:), idim)
+        lpsi(:) = psi(nlop%jxyz(:), idim)
       else
-        lpsi(:) = atm%phases(:,ik)*psi(atm%jxyz(:), idim)
+        lpsi(:) = nlop%phases(:,ik)*psi(nlop%jxyz(:), idim)
       end if
       lHpsi(:) = M_z0
-      add_lm = 1
-      do_l: do l = 0, spec%ps%l_max
-        if (l == spec%ps%L_loc) then
-          add_lm = add_lm + (2*l + 1)
-          cycle do_l
-        end if
-        
-        do_m: do lm = -l, l
-          do ikbc = 1, spec%ps%kbc
-            do jkbc = 1, spec%ps%kbc
-              uvpsi = X(lalg_dot)(atm%mps, atm%X(uv)(1:atm%mps, add_lm, ikbc), lpsi) * &
-                   m%vol_pp*atm%X(uvu)(add_lm, ikbc, jkbc) 
+
+          do ikbc = 1, nlop%c
+            do jkbc = 1, nlop%c
+              ! WARNING: This is not very efficient. Has to be changed.
+              uvpsi = X(lalg_dot)(nlop%n, R_TOTYPE(nlop%uv(:, ikbc)), lpsi) * &
+                      m%vol_pp*nlop%uvu(ikbc, jkbc)
               if (conf%periodic_dim==0) then
-                call X(lalg_axpy)(atm%mps, uvpsi, atm%X(uv)(1:atm%mps, add_lm, jkbc), lHpsi(1))
+                call X(lalg_axpy)(nlop%n, uvpsi, R_TOTYPE(nlop%uv(1:nlop%n, jkbc)), lHpsi(1))
               else
 #               ifdef R_TCOMPLEX
-                  conj = R_CONJ(atm%phases(:,ik))*atm%X(uv)(:, add_lm, jkbc)
-                  call X(lalg_axpy)(atm%mps, uvpsi, conj(1), lHpsi(1))
+                  conj = R_CONJ(nlop%phases(:, ik)*nlop%uv(:, jkbc))
+                  call X(lalg_axpy)(nlop%n, uvpsi, conj(1), lHpsi(1))
 #               else
                   message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
                   message(2) = "Reconfigure with --enable-complex, and remake"
@@ -270,18 +241,15 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, sys, ik)
               end if
             end do
           end do
-          
-          add_lm = add_lm + 1
-        end do do_m
-      end do do_l
-      Hpsi(atm%jxyz(:), idim) = Hpsi(atm%jxyz(:), idim) + lHpsi(:)
-      deallocate(lpsi, lHpsi)
+           hpsi(nlop%jxyz(:), idim) = hpsi(nlop%jxyz(:), idim) + lhpsi(:)
+      deallocate(lpsi, lhpsi)
     end do do_dim
 
 #   ifdef R_TCOMPLEX
-      deallocate(conj)
+    deallocate(conj)
 #   endif
-  end do do_atm
+
+  end do 
 
   call pop_sub()
 end subroutine X(vnlpsi)
