@@ -124,10 +124,12 @@
     deallocate(xzpsi, hzpsi, hhzpsi, vnl_xzpsi)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-    if(present(reduce) .and. reduce) then
+    if(present(reduce)) then
+    if(reduce) then
        call MPI_ALLREDUCE(x(1), y(1), 3, &
                           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
        x = y
+    end if
     end if
 #endif
     acc = acc + x

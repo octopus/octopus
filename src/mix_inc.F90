@@ -71,12 +71,14 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
   ! reduce density (assumes memory is contiguous)
-  if(present(reduce) .and. reduce) then
+  if(present(reduce)) then
+  if(reduce) then
     allocate(reduce_rho(1:np, st%nspin))
     call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%nspin, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
     rho = reduce_rho
     deallocate(reduce_rho)
+  end if
   end if
 #endif
 

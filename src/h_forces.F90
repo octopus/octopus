@@ -81,10 +81,12 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
     end do ik_loop
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-    if(present(reduce) .and. reduce) then
+    if(present(reduce)) then
+    if(reduce) then
       call MPI_ALLREDUCE(atm%f(1), f(1), 3, &
            MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
       atm%f = f
+    end if
     end if
 #endif
 

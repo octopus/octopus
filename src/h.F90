@@ -340,10 +340,12 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
          sys%st%eigenval(sys%st%st_start:sys%st%st_end, ik))
   end do
 #ifdef HAVE_MPI
-  if(present(reduce) .and. reduce) then
+  if(present(reduce)) then
+  if(reduce) then
     call MPI_ALLREDUCE(e, s, 1, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
     e = s
+  end if
   end if
 #endif
   

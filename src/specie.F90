@@ -290,9 +290,14 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
   logical, optional, intent(in) :: so
 
   r = sqrt(sum(x**2))
-  if(present(so).and.so) then
-    uVr0  = splint(s%ps%so_kb(l, i), r)
-    duvr0 = splint(s%ps%so_dkb(l, i), r)
+  if(present(so)) then
+    if(so) then
+      uVr0  = splint(s%ps%so_kb(l, i), r)
+      duvr0 = splint(s%ps%so_dkb(l, i), r)
+    else
+      message(1) = 'Internal.'
+      call write_fatal(1)
+    endif
   else
     uVr0  = splint(s%ps%kb(l, i), r)
     duvr0 = splint(s%ps%dkb(l, i), r)
