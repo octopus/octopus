@@ -401,8 +401,9 @@ subroutine read_file_data_bin(unit, psf)
   integer, intent(in) :: unit
   type(tm_type), intent(inout) :: psf
   
-  integer  :: ndown, nup, l, ir
+  integer  :: ndown, nup, l, ir, i
   real(r8) :: r2
+  real(r8), allocatable :: aux(:)
 
   sub_name = 'read_file_data_bin'; call push_sub()
 
@@ -413,6 +414,7 @@ subroutine read_file_data_bin(unit, psf)
  
    ! fixes psf%nrval, to obtain an odd number.
   psf%nrval = psf%nr + mod((psf%nr + 1), 2)
+  allocate(aux(psf%nr))
 
   ! Allocates the varibales to psf%nrval:
   allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
@@ -420,36 +422,43 @@ subroutine read_file_data_bin(unit, psf)
 
   ! Reads the radial values, in bohrs
   !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
-  read(unit) psf%rofi(2:psf%nrval)
-  psf%rofi(1) = 0.0_r8
+  read(unit) (aux(i),i=1, psf%nr)
+  psf%rofi(1) = M_ZERO
+  do i = 2, psf%nrval
+     psf%rofi(i) = aux(i-1)
+  enddo
 
   ! Reads the pseudoptential functions, times r, in Rydberg*bohr.
   ! Inmediately afterwards, it is divided by r, so that its final units are Rydbergs
   do ndown = 1, psf%npotd
-    read(unit) l, psf%vps(2:psf%nrval, l)
-    if(l /= ndown-1) then
+    read(unit) l, (aux(i),i=1, psf%nr)
+    if(l /= ndown-1 .and. conf%verbose > 0) then
       message(1) = 'Unexpected angular momentum'
       message(2) = 'Pseudopotential should be ordered by increasing l'
       call write_warning(2)
     end if
-    psf%vps(2:psf%nrval,l) = psf%vps(2:psf%nrval,l)/psf%rofi(2:psf%nrval)
-    psf%vps(1,l) = psf%vps(2,l)
+    do i = 2, psf%nrval
+       psf%vps(i, l) = aux(i-1)/psf%rofi(i)
+    enddo
+    psf%vps(1, l) = psf%vps(2, l)
   end do
 
   ! Reads --or skips-- the "down" pseudopotentials.
   if(psf%irel=='rel') then
     do nup = 1, psf%npotu
-       write(*, *) 'Reading ', l
+       read(unit) l, (aux(i),i=1, psf%nr)
        if(l /= nup) then
          message(1) = 'Unexpected angular momentum'
          message(2) = 'Pseudopotential should be ordered by increasing l'
          call write_warning(2)
        end if
-       psf%vso(2:psf%nrval,l) = psf%vso(2:psf%nrval,l)/psf%rofi(2:psf%nrval)
+       do i = 2, psf%nrval
+          psf%vso(2:psf%nrval,l) = aux(i-1)/psf%rofi(i)
+       enddo
        psf%vso(1,l) = psf%vso(2,l)
     end do       
   else
-    psf%vso = 0.0_r8
+    psf%vso = M_ZERO
     do nup = 1, psf%npotu
        read(unit) l
     end do
@@ -458,17 +467,24 @@ subroutine read_file_data_bin(unit, psf)
   ! Reads the core correcction charge density, in bohr^(-3)
   !   chcore(1:nrval) : core-correction charge distribution
   r2 = psf%rofi(2)/(psf%rofi(3) - psf%rofi(2))
-  read(unit) (psf%chcore(ir), ir = 2, psf%nrval)
+  read(unit) (aux(i),i=1, psf%nr)
+  do i = 2, psf%nrval
+     psf%chcore(i) = aux(i-1)
+  enddo
   psf%chcore(1) = psf%chcore(2) - (psf%chcore(3) - psf%chcore(2))*r2
 
   ! Reads the pseudo-valence charge density, in bohr^(-3)
   !   rho_val(1:nrval) : pseudo-valence charge distribution
-  read(unit) (psf%rho_val(ir), ir = 2, psf%nrval)
+  read(unit) (aux(i),i=1, psf%nr)
+  do i = 2, psf%nrval
+     psf%rho_val(i) = aux(i-1)
+  enddo
   psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
 
   ! adjust units from Rydbergs -> Hartree
   ! psf%vps = psf%vps / 2._r8
 
+  deallocate(aux)
   call pop_sub(); return
 end subroutine read_file_data_bin
 
@@ -505,8 +521,10 @@ subroutine read_file_data_ascii(unit, psf)
   !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
   read(unit, 9040) aux_s
   read(unit, 9030) (aux(i),i=1, psf%nr)
-  psf%rofi(2:psf%nrval) = aux(1:psf%nr)
-  psf%rofi(1) = 0.0_r8
+  psf%rofi(1) = M_ZERO
+  do i = 2, psf%nrval
+     psf%rofi(i) = aux(i-1)
+  enddo
 
 8000 format(1x,i2)
 9030 format(4(g20.12))
@@ -522,7 +540,9 @@ subroutine read_file_data_ascii(unit, psf)
       message(2) = 'Pseudopotential should be ordered by increasing l'
       call write_warning(2)
     end if
-    psf%vps(2:psf%nrval, l) = aux(1:psf%nr)/psf%rofi(2:psf%nrval)
+    do i = 2, psf%nrval
+       psf%vps(i, l) = aux(i-1)/psf%rofi(i)
+    enddo
     psf%vps(1, l) = psf%vps(2, l)
   end do
 
@@ -537,11 +557,13 @@ subroutine read_file_data_ascii(unit, psf)
          message(2) = 'Pseudopotential should be ordered by increasing l'
          call write_warning(2)
        end if
-       psf%vso(2:psf%nrval, l) = aux(1:psf%nr)/psf%rofi(2:psf%nrval)
-       psf%vso(1, l) = psf%vps(2, l)
+       do i = 2, psf%nrval
+          psf%vso(i, l) = aux(i-1)/psf%rofi(i)
+       enddo
+       psf%vso(1, l) = psf%vso(2, l)
     end do       
   else
-    psf%vso = 0.0_r8
+    psf%vso = M_ZERO
     do nup = 1, psf%npotu
        read(unit, 9040) aux_s
        read(unit, 8000) l
@@ -554,7 +576,9 @@ subroutine read_file_data_ascii(unit, psf)
   r2 = psf%rofi(2)/(psf%rofi(3) - psf%rofi(2))
   read(unit, 9040) aux_s
   read(unit, 9030) (aux(i),i=1, psf%nr)
-  psf%chcore(2:psf%nrval) = aux(1:psf%nr)
+  do i = 2, psf%nrval
+     psf%chcore(i) = aux(i-1)
+  enddo
   psf%chcore(1) = psf%chcore(2) - (psf%chcore(3) - psf%chcore(2))*r2
 
   ! Reads the pseudo-valence charge density, in bohr^(-3)
@@ -562,7 +586,9 @@ subroutine read_file_data_ascii(unit, psf)
   !   rho_val(1:nrval) : pseudo-valence charge distribution
   read(unit, 9040) aux_s
   read(unit, 9030) (aux(i),i=1, psf%nr)
-  psf%rho_val(2:psf%nrval) = aux(1:psf%nr)
+  do i = 2, psf%nrval
+     psf%rho_val(i) = aux(i-1)
+  enddo
   psf%rho_val(1) = psf%rho_val(2) - (psf%rho_val(3) - psf%rho_val(2))*r2
 
   ! adjust units from Rydbergs -> Hartree
