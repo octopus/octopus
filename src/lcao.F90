@@ -177,7 +177,7 @@ subroutine lcao_init(sys, h)
   sub_name = 'lcao_init'; call push_sub
 
   ! Counting
-  allocate(lcao_data%atoml(sys%natoms, 0:3))
+  allocate(lcao_data%atoml(sys%natoms, 6))
   lcao_data%atoml = .true.
   norbs = 0
   atoms_loop: do i1 = 1, sys%natoms
