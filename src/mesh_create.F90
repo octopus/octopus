@@ -351,29 +351,6 @@ subroutine mesh_create_xyz(m, enlarge)
   x(:,:,:,:)        = M_ZERO
 
   ! We label 2 the points inside the mesh + enlargement
-  if(enlarge > 0) then
-    do ix = m%nr(1,1), m%nr(2,1)
-      do iy = m%nr(1,2), m%nr(2,2)
-        do iz = m%nr(1,3), m%nr(2,3)
-          
-          if(in_mesh(m, x(:, ix, iy, iz))) then
-            do i = -enlarge, 0 ! first include the points on the left
-              if(ix+i>=m%nr(1,1))                Lxyz_tmp(ix+i, iy, iz) = 2
-              if(iy+i>=m%nr(1,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
-              if(iz+i>=m%nr(1,3).and.conf%dim>2) Lxyz_tmp(ix, iy, iz+i) = 2
-            end do
-            do i = 1, enlarge ! and now on the right
-              if(ix+i<=m%nr(2,1))                Lxyz_tmp(ix+i, iy, iz) = 2
-              if(iy+i<=m%nr(2,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
-              if(iz+i<=m%nr(2,3).and.conf%dim>2) Lxyz_tmp(ix, iy, iz+i) = 2
-            end do
-          endif
-        end do
-      end do
-    end do
-  end if
-
-  ! we label 1 the points inside the mesh
   do ix = m%nr(1,1), m%nr(2,1)
     chi(1) = real(ix, PRECISION) * m%h(1)
 
@@ -382,19 +359,31 @@ subroutine mesh_create_xyz(m, enlarge)
 
       do iz = m%nr(1,3), m%nr(2,3)
         chi(3) = real(iz, PRECISION) * m%h(3)
-
-        call curvlinear_chi2x(m%cv, m%geo, chi, x(:, ix, iy, iz))
         
-        if(in_mesh(m, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
+        call curvlinear_chi2x(m%cv, m%geo, chi, x(:, ix, iy, iz))
+
+        if(in_mesh(m, x(:, ix, iy, iz))) then
+          do i = -enlarge, 0 ! first include the points on the left
+            if(ix+i>=m%nr(1,1))                Lxyz_tmp(ix+i, iy, iz) = 2
+            if(iy+i>=m%nr(1,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
+            if(iz+i>=m%nr(1,3).and.conf%dim>2) Lxyz_tmp(ix, iy, iz+i) = 2
+          end do
+          do i = 1, enlarge ! and now on the right
+            if(ix+i<=m%nr(2,1))                Lxyz_tmp(ix+i, iy, iz) = 2
+            if(iy+i<=m%nr(2,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
+            if(iz+i<=m%nr(2,3).and.conf%dim>2) Lxyz_tmp(ix, iy, iz+i) = 2
+          end do
+        endif
       end do
     end do
   end do
 
-  ! now, we count the number of internal points
+  ! we label 1 the points inside the mesh, and we count the points
   il = 0
   do ix = m%nr(1,1), m%nr(2,1)
     do iy = m%nr(1,2), m%nr(2,2)
       do iz = m%nr(1,3), m%nr(2,3)
+        if(in_mesh(m, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
         if(Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
       end do
     end do
@@ -549,6 +538,7 @@ function mesh_index(m, ix_, dir) result(index)
     end do
 
     if(index.ne.0) index = m%Lxyz_inv(ix(1), ix(2), ix(3))
+    print *, ix, index
 
     if(index==0.and.conf%boundary_zero_derivative) then
       do
@@ -557,5 +547,6 @@ function mesh_index(m, ix_, dir) result(index)
         ix(abs(dir)) = ix(abs(dir)) - sign(1, dir)
       end do
     end if
+    
 
 end function mesh_index

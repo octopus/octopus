@@ -181,7 +181,7 @@ subroutine poisson_cg(m, der, pot, rho)
   end do
   deallocate(rholm)
 
-  call dderivatives_lapl(der, wk, lwk, .true.)
+  call dderivatives_lapl(der, wk, lwk, .false.)
 
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed

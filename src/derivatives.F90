@@ -335,10 +335,15 @@ contains
     p_max = op(1)%np
     if(op(1)%const_w) p_max = 1
 
+
     do p = 1, p_max
+      print *, p, m%np, m%np_tot
+      print *, m%x(p, 1:conf%dim)
       mat(1,:) = M_ONE
       do i = 1, op(1)%n
         x(1:conf%dim) = m%x(p, 1:conf%dim) - m%x(op(1)%i(i, p), 1:conf%dim)
+        print *, m%Lxyz(op(1)%i(i, p), :)
+        print *, m%x(op(1)%i(i, p), 1:conf%dim)
 
         ! calculate powers
         do j = 1, conf%dim
