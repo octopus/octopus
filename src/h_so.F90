@@ -79,15 +79,12 @@ subroutine zso (h, sys, ik, psi, Hpsi)
 
     add_lm = 1
     l_loop: do l = 0, spec%ps%l_max
-       if (l == spec%ps%L_loc) then
-          add_lm = add_lm + (2*l + 1)
-          cycle l_loop
-       end if
        m_loop: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
              do jkbc = 1, spec%ps%kbc
-               uvpsi = sum(atm%uv(:, add_lm, ikbc)*psi(:))*sys%m%vol_pp*atm%uvuso(add_lm, ikbc, jkbc)
-               lHpsi(:) = lHpsi(:) + uvpsi * atm%uv(:, add_lm, jkbc)
+               uvpsi = R_DOT(atm%mps, atm%so_uv(:, add_lm, ikbc), 1, psi(:), 1) * &
+                       sys%m%vol_pp*atm%so_uvu(add_lm, ikbc, jkbc)
+               call zaxpy(atm%mps, uvpsi, atm%so_uv(:, add_lm, jkbc), 1, lHpsi(:), 1)
              end do
           end do
           add_lm = add_lm + 1

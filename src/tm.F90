@@ -37,13 +37,21 @@ type tm_type
   integer :: npotd, npotu, nr
   real(r8) :: b, a
   real(r8) :: zval
-  real(r8), pointer :: rofi(:), vps(:, :), vlocal(:), rphi(:, :,:), &
-                       eigen(:, :), chcore(:), rho_val(:), kbr(:)
+  real(r8), pointer :: rofi(:),      &
+                       vps(:, :),    &
+                       vso(:, :),    &
+                       vlocal(:),    &
+                       rphi(:, :,:), &
+                       eigen(:, :),  &
+                       chcore(:),    &
+                       rho_val(:),   &
+                       kbr(:)
 
   ! Other stuff
   integer :: nrval
   type(logrid_type) :: g
-  real(r8), pointer :: dkbcos(:), dknrm(:)
+  real(r8), pointer :: dkbcos(:), dknrm(:), &
+                       so_dkbcos(:), so_dknrm(:)
   real(r8), pointer :: occ(:, :)
   integer :: ispin
 end type tm_type
@@ -108,6 +116,8 @@ subroutine tm_init(pstm, filename, ispin)
            pstm%eigen(0:pstm%npotd-1, 3),            &
            pstm%dkbcos(0:pstm%npotd-1),              &
            pstm%dknrm(0:pstm%npotd-1),               &
+           pstm%so_dkbcos(1:pstm%npotu),             &
+           pstm%so_dknrm(1:pstm%npotu),              &
            pstm%kbr(0:pstm%npotd),                   &
            pstm%occ(0:pstm%npotd-1, ispin))
 
@@ -152,8 +162,8 @@ subroutine tm_end(pstm)
 
   sub_name = 'tm_end'; call push_sub()
 
-  deallocate(pstm%rofi, pstm%vps, pstm%chcore, pstm%rho_val, pstm%vlocal, &
-             pstm%rphi, pstm%eigen, pstm%dkbcos, pstm%dknrm, pstm%kbr)
+  deallocate(pstm%rofi, pstm%vps, pstm%vso, pstm%chcore, pstm%rho_val, pstm%vlocal, &
+             pstm%rphi, pstm%eigen, pstm%dkbcos, pstm%dknrm, pstm%so_dkbcos, pstm%so_dknrm, pstm%kbr)
   call kill_logrid(pstm%g)
 
   call pop_sub(); return
@@ -406,7 +416,16 @@ subroutine read_file_data_bin(unit, psf)
 
   ! Allocates the varibales to psf%nrval:
   allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
-       psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
+           psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
+  if(psf%irel=='rel') then
+    if(psf%npotu .ne. psf%npotd-1) then
+      message(1) = 'Number of "down" potentials in TM pseudo file should be equal to '
+      message(2) = 'number of "up" potentials minus 1. Check sanity of this file.'
+      call write_fatal(2)
+    else
+      allocate(psf%vso(psf%nrval, 1:psf%npotu))
+    endif
+  endif
 
   ! Reads the radial values, in bohrs
   !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
@@ -417,7 +436,7 @@ subroutine read_file_data_bin(unit, psf)
   ! Inmediately afterwards, it is divided by r, so that its final units are Rydbergs
   do ndown = 1, psf%npotd
     read(unit) l, psf%vps(2:psf%nrval, l)
-    if(l /= ndown-1 .and. conf%verbose > 0) then
+    if(l /= ndown-1) then
       message(1) = 'Unexpected angular momentum'
       message(2) = 'Pseudopotential should be ordered by increasing l'
       call write_warning(2)
@@ -426,10 +445,23 @@ subroutine read_file_data_bin(unit, psf)
     psf%vps(1,l) = psf%vps(2,l)
   end do
 
-  ! Skips the spin down wavefunctions.
-  do nup = 1, psf%npotu
-    read(unit) l
-  end do
+  ! Reads --or skips-- the "down" pseudopotentials.
+  if(psf%irel=='rel') then
+    do nup = 1, psf%npotu
+       write(*, *) 'Reading ', l
+       if(l /= nup) then
+         message(1) = 'Unexpected angular momentum'
+         message(2) = 'Pseudopotential should be ordered by increasing l'
+         call write_warning(2)
+       end if
+       psf%vso(2:psf%nrval,l) = psf%vso(2:psf%nrval,l)/psf%rofi(2:psf%nrval)
+       psf%vso(1,l) = psf%vso(2,l)
+    end do       
+  else
+    do nup = 1, psf%npotu
+       read(unit) l
+    end do
+  endif
 
   ! Reads the core correcction charge density, in bohr^(-3)
   !   chcore(1:nrval) : core-correction charge distribution
@@ -476,6 +508,15 @@ subroutine read_file_data_ascii(unit, psf)
   !   rho_val(1:nrval) : pseudo-valence charge distribution
   allocate(psf%rofi(psf%nrval), psf%vps(psf%nrval, 0:psf%npotd-1), &
        psf%chcore(1:psf%nrval), psf%rho_val(1:psf%nrval))
+  if(psf%irel=='rel') then
+    if(psf%npotu .ne. psf%npotd-1) then
+      message(1) = 'Number of "down" potentials in TM pseudo file should be equal to '
+      message(2) = 'number of "up" potentials minus 1. Check sanity of this file.'
+      call write_fatal(2)
+    else
+      allocate(psf%vso(psf%nrval, 1:psf%npotu))
+    endif
+  endif
 
   ! Reads the radial values, in bohrs
   !   rofi(1:nrval) : radial values ( rofi(i) = b*( exp(a*(i-1)) - 1 ) ) [bohr]
@@ -502,12 +543,27 @@ subroutine read_file_data_ascii(unit, psf)
     psf%vps(1, l) = psf%vps(2, l)
   end do
 
-  ! Skips the spin down wavefunctions.
-  do nup = 1, psf%npotu
-    read(unit, 9040) aux_s
-    read(unit, 8000) l
-    read(unit, 9030) (aux(i),i=1, psf%nr)
-  end do
+  ! Reads --or skips-- the "down" pseudopotentials.
+  if(psf%irel=='rel') then
+    do nup = 1, psf%npotu
+       read(unit, 9040) aux_s
+       read(unit, 8000) l
+       read(unit, 9030) (aux(i),i=1, psf%nr)
+       if(l /= nup) then
+         message(1) = 'Unexpected angular momentum'
+         message(2) = 'Pseudopotential should be ordered by increasing l'
+         call write_warning(2)
+       end if
+       psf%vso(2:psf%nrval, l) = aux(1:psf%nr)/psf%rofi(2:psf%nrval)
+       psf%vso(1, l) = psf%vps(2, l)
+    end do       
+  else
+    do nup = 1, psf%npotu
+       read(unit, 9040) aux_s
+       read(unit, 8000) l
+       read(unit, 9030) (aux(i),i=1, psf%nr)
+    end do
+  endif
 
   ! Reads the core correcction charge density, in bohr^(-3)
   !   chcore(1:nrval) : core-correction charge distribution
@@ -561,6 +617,18 @@ subroutine calculate_kb_cosines(pstm, lloc)
     pstm%dknrm(l) = 1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
   end do
 
+  do l = 1, pstm%npotu
+    dnrm = 0.0_r8
+    avgv = 0.0_r8
+    do ir = 2, pstm%g%nrval
+      vphi = pstm%vso(ir, l)*pstm%rphi(ir, l, 1)
+      dnrm = dnrm + vphi*vphi*pstm%g%drdi(ir)
+      avgv = avgv + vphi*pstm%rphi(ir, l, 1)*pstm%g%drdi(ir)
+    end do
+    pstm%so_dkbcos(l) = dnrm/(avgv + 1.0e-20_r8)
+    pstm%so_dknrm(l) =  1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
+  end do
+
   call pop_sub; return
 end subroutine calculate_kb_cosines
 
@@ -575,10 +643,7 @@ subroutine ghost_analysis(pstm, lmax)
   sub_name = 'ghost_analysis'; call push_sub()
 
   allocate(ve(pstm%nrval), s(pstm%nrval), hato(pstm%nrval), g(pstm%nrval), y(pstm%nrval), elocal(2, 0:lmax))
-! Calculation of the valence screening potential from the density:
-!       ve(1:nrval) is the hartree+xc potential created by the pseudo -
-!               valence charge distribution (everything in Rydberts, and bohrs)
-  !call calculate_valence_screening(pstm, ve, psf%rho)
+
   call calculate_valence_screening(pstm%rho_val, pstm%chcore, ve, pstm%g, 1, pstm%icorr, pstm%irel)
 
   s(2:pstm%nrval) = pstm%g%drdi(2:pstm%nrval)**2
@@ -632,13 +697,14 @@ subroutine get_cutoff_radii(pstm, lloc)
 
   integer             :: l, ir
   real(r8)            :: dincv, phi
+  real(r8), parameter :: threshold = 1.0e-8_r8
 
   sub_name = 'get_cutoff_radii'; call push_sub()
 
   ! local part ....
   do ir = pstm%g%nrval, 2, -1
     dincv = abs(pstm%vlocal(ir)*pstm%rofi(ir) + 2.0_r8*pstm%zval)
-    if(dincv > eps) exit
+    if(dincv > threshold) exit
   enddo
   pstm%kbr(pstm%npotd) = pstm%rofi(ir + 1)
   
@@ -651,7 +717,10 @@ subroutine get_cutoff_radii(pstm, lloc)
     do ir = pstm%g%nrval, 2, -1
       phi = (pstm%rphi(ir, l, 1)/pstm%rofi(ir))*pstm%dknrm(l)
       dincv = abs((pstm%vps(ir, l) - pstm%vlocal(ir))*phi)
-      if(dincv > eps) exit
+      if(dincv > threshold) exit
+      phi = (pstm%rphi(ir, l, 1)/pstm%rofi(ir))*pstm%dknrm(l)
+      dincv = abs((pstm%vso(ir, l))*phi)
+      if(dincv > threshold) exit
     enddo
     pstm%kbr(l) = pstm%rofi(ir + 1)
   end do
@@ -703,7 +772,7 @@ end subroutine get_local
 subroutine tm_debug(pstm)
   type(tm_type), intent(in) :: pstm
 
-  integer :: loc_unit, kbp_unit, dat_unit, wav_unit, i, l, is
+  integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
 
   sub_name = 'tm_debug'; call push_sub()
 
@@ -711,10 +780,12 @@ subroutine tm_debug(pstm)
   call oct_mkdir(C_string('pseudos/'+'tm2.'+trim(pstm%namatm)))
   call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
+  call io_assign(so_unit) ; call io_assign(so_unit)
   open(loc_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'local')
   open(dat_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'info')
   open(kbp_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'nonlocal')
   open(wav_unit, file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'wave')
+  open(so_unit,  file = 'pseudos/'+'tm2.'+trim(pstm%namatm)+'/'+'so')
 
   ! First of all, writes down the info.
   write(dat_unit,'(a,/)') pstm%namatm
@@ -743,6 +814,12 @@ subroutine tm_debug(pstm)
   write(dat_unit,'(4x,4e14.4)') pstm%dknrm(0:pstm%npotd-1)*2
   write(dat_unit,'(/,a)') 'KB cosines: '
   write(dat_unit,'(4x,4e14.6)') pstm%dkbcos(0:pstm%npotd-1)/2
+  if(pstm%irel=='rel') then
+    write(dat_unit,'(/,a)') 'SO-KB norms: '
+    write(dat_unit,'(4x,4e14.4)') pstm%so_dknrm(0:pstm%npotd-1)*2
+    write(dat_unit,'(/,a)') 'SO-KB cosines: '
+    write(dat_unit,'(4x,4e14.6)') pstm%so_dkbcos(0:pstm%npotd-1)/2
+  endif
 
   ! Now the local part
   do i = 1, pstm%g%nrval
@@ -751,17 +828,24 @@ subroutine tm_debug(pstm)
 
   ! Nonlocal components.
   do i = 1, pstm%g%nrval
-     write(kbp_unit,*) pstm%rofi(i), (pstm%vps(i, l)/2, l = 0, pstm%npotd-1)
+     write(kbp_unit,'(5es14.5)') pstm%rofi(i), (pstm%vps(i, l)/2, l = 0, pstm%npotd-1)
   enddo
+
+  if(pstm%irel=='rel') then
+    do i = 1, pstm%g%nrval
+       write(so_unit,'(5es14.5)') pstm%rofi(i), (pstm%vso(i, l)/2, l = 1, pstm%npotu)
+    enddo
+  endif
   
   ! Pseudo wave-functions
   do i = 1, pstm%nrval
-     write(wav_unit,*) pstm%rofi(i), (pstm%rphi(i, l, 1), l = 0, pstm%npotd-1)
+     write(wav_unit,'(5es14.5)') pstm%rofi(i), ((pstm%rphi(i, l, is), l = 0, pstm%npotd-1), is = 1, pstm%ispin)
   enddo
 
   ! Closes files and exits
   call io_close(loc_unit); call io_close(wav_unit)
   call io_close(dat_unit); call io_close(kbp_unit)
+  call io_close(so_unit)
 
   call pop_sub(); return
 end subroutine tm_debug

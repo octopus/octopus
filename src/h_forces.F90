@@ -63,12 +63,12 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
             m_loop: do m = -l, l
               do ii = 1, atm%spec%ps%kbc
               do jj = 1, atm%spec%ps%kbc
-                 uVpsi = sum(atm%uV(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
+                 uVpsi = sum(atm%R_FUNC(uV)(:, add_lm, ii) * sys%st%occ(ist, ik)  * &
                          sys%st%R_FUNC(psi)(atm%Jxyz(:), idim, ist, ik)) * &
-                         sys%m%vol_pp**2 * atm%uVu(add_lm, ii, jj)
+                         sys%m%vol_pp**2 * atm%R_FUNC(uVu)(add_lm, ii, jj)
 
                  do j = 1, 3
-                    p = sum(atm%duV(j, :, add_lm, jj) * R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik)))
+                    p = sum(atm%R_FUNC(duV)(j, :, add_lm, jj) * R_CONJ(sys%st%R_FUNC(psi) (atm%Jxyz(:), idim, ist, ik)))
                    atm%f(j) = atm%f(j) + 2._r8 * R_REAL(uVpsi * p)
                  end do
               end do

@@ -171,11 +171,11 @@ contains
           do ikbc = kbc_start, kbc_end, step
             do jkbc = kbc_start, kbc_end, step
 
-              uVpsi = sum(atm%uV(:, add_lm, ikbc)*sys%st%zpsi(atm%Jxyz(:), idim, ist, ik))*sys%m%vol_pp
-              ctemp = uVpsi * (exp(-M_zI*dt*atm%uVu(add_lm, ikbc, jkbc)) - 1.0_r8)
+              uVpsi = sum(atm%zuV(:, add_lm, ikbc)*sys%st%zpsi(atm%Jxyz(:), idim, ist, ik))*sys%m%vol_pp
+              ctemp = uVpsi * (exp(-M_zI*dt*atm%zuVu(add_lm, ikbc, jkbc)) - 1.0_r8)
           
               sys%st%zpsi(atm%Jxyz(:), idim, ist, ik) = sys%st%zpsi(atm%Jxyz(:), idim, ist, ik) + &
-                   ctemp * atm%uV(:, add_lm, jkbc)
+                   ctemp * atm%zuV(:, add_lm, jkbc)
             end do
           end do
           

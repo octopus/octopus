@@ -36,10 +36,18 @@ type atom_type
   ! the mesh around a given atom...
   integer :: Mps
   integer, pointer :: Jxyz(:)
-  real(r8), pointer :: pnts_ps, &  ! # points in ps sphere
-       uV(:,:,:), uVu(:,:,:),   &  ! the Kleinman Bylander projectors
-       duV(:,:,:,:),            &  ! the gradient of the projectors
-       uvuso(:, :, :)
+  real(r8), pointer ::    pnts_ps,            &  ! # points in ps sphere
+                          duV(:,:,:),         &
+                          duVu(:,:,:),        &  ! the Kleinman Bylander projectors
+                          dduV(:,:,:,:)
+  ! This is for performance reasons.
+  complex(r8), pointer :: zpnts_ps,           & 
+                          zuV(:,:,:),         &
+                          zuVu(:,:,:),        &
+                          zduV(:,:,:,:)
+  complex(r8), pointer :: so_uv(:, :, :),     &
+                          so_uvu(:, :, :),    &
+                          so_duv(:, :, :, :)
 end type atom_type
 
 type atom_classical_type
@@ -290,8 +298,12 @@ subroutine atom_dealloc(na, a)
 
   do ia = 1, na
     if(associated(a(ia)%Jxyz)) then
-      deallocate(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%uvuso, a(ia)%duV)
-      nullify(a(ia)%Jxyz, a(ia)%uV, a(ia)%uVu, a(ia)%uvuso, a(ia)%duV)
+      deallocate(a(ia)%Jxyz, a(ia)%duV,   a(ia)%duVu,   a(ia)%dduV, &
+                             a(ia)%zuV,   a(ia)%zuVu,   a(ia)%zduV, &
+                             a(ia)%so_uV, a(ia)%so_uVu, a(ia)%so_duV)
+      nullify(a(ia)%Jxyz, a(ia)%duV,   a(ia)%duVu,   a(ia)%duV, &
+                          a(ia)%zuV,   a(ia)%zuVu,   a(ia)%zuV, &
+                          a(ia)%so_uV, a(ia)%so_uVu, a(ia)%so_duV)
     end if
   end do
 

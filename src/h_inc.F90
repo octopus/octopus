@@ -127,7 +127,6 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
   do_atm: do ia = 1, sys%natoms
     atm => sys%atom(ia)
     spec => atm%spec
-
     ! do we have a pseudopotential, or a local pot?
     if(spec%local) cycle do_atm
 
@@ -145,8 +144,9 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-               uvpsi = sum(atm%uv(:, add_lm, ikbc)*lpsi(:))*sys%m%vol_pp*atm%uvu(add_lm, ikbc, jkbc) 
-               lHpsi(:) = lHpsi(:) + uvpsi*atm%uv(:, add_lm, jkbc)
+               uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(:, add_lm, ikbc), 1, lpsi(:), 1) * &
+                       sys%m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
+               call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
             end do
           end do
 
@@ -156,7 +156,6 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
       Hpsi(atm%jxyz(:), idim) = Hpsi(atm%jxyz(:), idim) + lHpsi(:)
       deallocate(lpsi, lHpsi)
     end do do_dim
-
   end do do_atm
 
   call pop_sub(); return

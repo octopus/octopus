@@ -28,7 +28,9 @@ type ps_type
   character(len=3) :: flavour
 
   type(spline_type), pointer :: kb(:, :)   ! Kleynman-Bylander projectors
+  type(spline_type), pointer :: so_kb(:, :)
   type(spline_type), pointer :: dkb(:, :)  ! derivatives of KB projectors
+  type(spline_type), pointer :: so_dkb(:, :)
   type(spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
   type(spline_type) :: vlocal  ! local part
   type(spline_type) :: dvlocal ! derivative of the local part
@@ -47,6 +49,7 @@ type ps_type
   real(r8) :: vlocal_origin ! local pseudopotential at the orginin
 
   real(r8), pointer :: dknrm(:) ! KB norm
+  real(r8), pointer :: so_dknrm(:)
   real(r8), pointer :: h(:,:,:), k(:, :, :)
 end type ps_type
 
@@ -102,17 +105,22 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   end select
 
 ! We allocate all the stuff
-  allocate(ps%kb   (0:ps%l_max, ps%kbc),         &
-           ps%dkb  (0:ps%l_max, ps%kbc),         &
-           ps%ur   (0:ps%L_max_occ, ps%ispin),   &
-           ps%dknrm(0:ps%L_max),                 &
-           ps%h    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
-           ps%k    (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
-           ps%occ  (0:ps%l_max_occ, ps%ispin))
+  allocate(ps%kb      (0:ps%l_max, ps%kbc),         &
+           ps%dkb     (0:ps%l_max, ps%kbc),         &
+           ps%so_kb   (0:ps%l_max, ps%kbc),         &
+           ps%so_dkb  (0:ps%l_max, ps%kbc),         &
+           ps%ur      (0:ps%L_max_occ, ps%ispin),   &
+           ps%dknrm   (0:ps%L_max),                 &
+           ps%so_dknrm(0:ps%l_max),                 &          
+           ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
+           ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
+           ps%occ     (0:ps%l_max_occ, ps%ispin))
   do i = 0, ps%L_max
      do j = 1, ps%kbc
         call spline_init(ps%kb(i, j))
         call spline_init(ps%dkb(i, j))
+        call spline_init(ps%so_kb(i, j))
+        call spline_init(ps%so_dkb(i, j))
      enddo
      do is = 1, ps%ispin
         call spline_init(ps%ur(i, is))
@@ -230,6 +238,8 @@ subroutine ps_end(ps)
      do j = 1, ps%kbc
         call spline_end(ps%kb(i, j))
         call spline_end(ps%dkb(i, j))
+        call spline_end(ps%so_kb(i, j))
+        call spline_end(ps%so_dkb(i, j))
      enddo
      do is = 1, ps%ispin
         call spline_end(ps%Ur(i, is))
@@ -240,7 +250,7 @@ subroutine ps_end(ps)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
 
-  deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k, ps%occ)
+  deallocate(ps%kb, ps%dkb, ps%so_kb, ps%so_dkb, ps%ur, ps%dknrm, ps%h, ps%k, ps%occ)
 
   call pop_sub()
 end subroutine ps_end
@@ -271,6 +281,9 @@ subroutine hgh_load(ps, psp)
 
   ! now we fit the splines
   call get_splines_hgh(psp, ps)
+  ps%so_kb = ps%kb
+  ps%so_dkb = ps%kb
+  ps%so_dknrm = ps%dknrm
 
   call pop_sub(); return
 end subroutine hgh_load
@@ -287,8 +300,10 @@ subroutine tm_load(ps, pstm)
   ps%z_val = pstm%zval
   ps%icore = pstm%icore
   ps%h(0:ps%l_max, 1, 1) = pstm%dkbcos(0:ps%l_max)
-  ps%k = 0.0_r8 !!!!WARNING!!!!
+  ps%k(1:ps%l_max, 1, 1) = pstm%so_dkbcos(1:ps%l_max)
+  ps%k(0, 1, 1) = 0.0_r8
   ps%dknrm (0:ps%l_max) = pstm%dknrm (0:ps%l_max)
+  ps%so_dknrm(1:ps%l_max) = pstm%so_dknrm(1:ps%l_max)
   ps%rc_max = maxval(pstm%kbr(0:ps%l_max)) * 1.1_r8
     ! Increasing radius a little, just in case.
 
@@ -300,6 +315,7 @@ subroutine tm_load(ps, pstm)
 
   ! Passes from Rydbergs to Hartrees.
   ps%h = ps%h / 2._r8; ps%dknrm = ps%dknrm * 2._r8
+  ps%k = ps%k / 2._r8; ps%so_dknrm = ps%so_dknrm * 2._r8
 
   call pop_sub(); return
 end subroutine tm_load
@@ -318,24 +334,31 @@ subroutine get_splines_tm(psf, ps)
 
   ! Interpolate the KB-projection functions
   do l = 0, ps%l_max
-    !if(l == ps%L_loc) cycle
-
-    hato = 0.0d0
+    hato = 0.0_r8
     nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vlocal(2:nrc))*psf%rphi(2:nrc, l, 1) * & 
                    ps%dknrm(l) / psf%rofi(2:nrc)
-    !hato(1) = hato(2)
     hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
     call spline_fit(psf%nrval, psf%rofi, hato, ps%kb(l, 1))
-
-    ! and now the derivatives...
     call derivate_in_log_grid(psf%g, hato, derhato)
     call spline_fit(psf%nrval, psf%rofi, derhato, ps%dkb(l, 1))
   end do
 
+  do l = 0, ps%l_max
+     hato = 0.0_r8
+     if(l>0 .and. psf%irel=='rel') then
+       nrc = nint(log(psf%kbr(l)/psf%b + 1.0_r8)/psf%a) + 1
+       hato(2:nrc) = (psf%vso(2:nrc, l))*psf%rphi(2:nrc, l, 1) * & 
+                     ps%so_dknrm(l) / psf%rofi(2:nrc)
+       hato(1) = hato(2) - ((hato(3)-hato(2))/(psf%rofi(3)-psf%rofi(2)))*psf%rofi(2)    
+     endif
+     call spline_fit(psf%nrval, psf%rofi, hato, ps%so_kb(l, 1))
+     call derivate_in_log_grid(psf%g, hato, derhato)
+     call spline_fit(psf%nrval, psf%rofi, derhato, ps%so_dkb(l, 1))
+  end do
+
   ! Now the part corresponding to the local pseudopotential
   ! where the asymptotic part is substracted 
-  !...local part...
   hato = 0.0_r8
   nrc = nint(log(psf%kbr(ps%L_max + 1)/psf%b + 1.0_r8)/psf%a) + 1
   hato(2:psf%nrval) = psf%vlocal(2:psf%nrval)*psf%rofi(2:psf%nrval) + 2.0_r8*psf%zval

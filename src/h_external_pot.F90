@@ -346,7 +346,9 @@ contains
     sub_name = 'build_kb_sphere'; call push_sub()
 
     ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
-    if(associated(a%jxyz)) deallocate(a%jxyz, a%uv, a%duv, a%uvu, a%uvuso)
+    if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,  &
+                                              a%zuv, a%zduv, a%zuvu,    &
+                                              a%so_uv, a%so_duv, a%so_uvu)
     
     j = 0
     do k = 1, h%np
@@ -354,12 +356,17 @@ contains
       if(r <= s%ps%rc_max + m%h(1)) j = j + 1
     end do
     a%Mps = j
-    allocate(a%Jxyz(j), a%uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
-         a%duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc), &
-         a%uvuso((s%ps%l_max+1)**2, s%ps%kbc, s%ps%kbc))
-    
-    a%uV  = 0.0_r8; a%duV = 0.0_r8; a%uVu = 0.0_r8; a%uvuso = 0.0_r8
-     
+    allocate(a%Jxyz(j), a%duV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
+         a%dduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%duVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
+    allocate(a%zuV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
+         a%zduV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%zuVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
+    allocate(a%so_uV(j, (s%ps%L_max+1)**2, s%ps%kbc), &
+         a%so_duV(3, j, (s%ps%L_max+1)**2, s%ps%kbc), a%so_uVu((s%ps%L_max+1)**2, s%ps%kbc, s%ps%kbc))
+
+    a%duv    = 0.0_r8; a%dduV   = 0.0_r8; a%duVu   = 0.0_r8
+    a%zuv    = M_z0;   a%zduV   = M_z0;   a%zuVu   = M_z0
+    a%so_uv  = M_z0;   a%so_duV = M_z0;   a%so_uvu = M_z0
+
     j = 0
     do k = 1, h%np
       call mesh_r(m, k, r, a=a%x)
@@ -380,10 +387,13 @@ contains
     real(r8) :: r, x(3), ylm
     complex(r8), allocatable :: nl_fw(:,:,:)
     real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
+    real(r8) :: so_uv, so_duv(3)
 
     sub_name = 'build_nl_part'; call push_sub()
-    if(h%vnl_space == 0) then
-      j_loop: do j = 1, a%Mps
+
+    ! This loop is done always, for spin-orbit is, up to now, only done in real space.
+    ! If we want the nl part also in real space, it is read.
+    j_loop: do j = 1, a%Mps
         call mesh_xyz(m, a%Jxyz(j), x)
         x = x - a%x
         
@@ -393,15 +403,20 @@ contains
             i_loop : do i = 1, s%ps%kbc
               if(l .ne. s%ps%L_loc) then
                 add_lm = l**2 + l + lm + 1
-                call specie_get_nl_part(s, x, l, lm, i, a%uV(j, add_lm, i), a%duV(:, j, add_lm, i))
+                if(h%vnl_space == REAL_SPACE) &
+                   call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
               end if
+              call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
+              a%so_uv(j, add_lm, i) = so_uv
+              a%so_duv(:, j, add_lm, i) = so_duv
 
             end do i_loop
             add_lm = add_lm + 1
           end do lm_loop
         end do l_loop
-      end do j_loop
-    else ! Fourier space
+    end do j_loop
+
+    if(h%vnl_space == RECIPROCAL_SPACE) then
       center(:) = nint(a%x(:)/m%h(:))
       x(:)  = a%x(:) - center(:)*m%h(:)
       
@@ -435,8 +450,8 @@ contains
             iy = m%Ly(p) - center(2) + s%nl_fft_n(2)/2 + 1
             iz = m%Lz(p) - center(3) + s%nl_fft_n(3)/2 + 1
             
-            a%uV(j, add_lm, i)     = nl_fr (ix, iy, iz)
-            a%duV(:, j, add_lm, i) = nl_dfr(ix, iy, iz, :)
+            a%duV(j, add_lm, i)     = nl_fr (ix, iy, iz)
+            a%dduV(:, j, add_lm, i) = nl_dfr(ix, iy, iz, :)
           end do j_loop2
 
         end do i_loop2
@@ -448,7 +463,7 @@ contains
     
     ! and here we calculate the uVu
     if(s%ps%flavour(1:2) == 'tm') then
-      a%uVu = 0._r8
+      a%duVu = 0._r8
       add_lm = 1
       do l = 0, s%ps%L_max
         do lm = -l , l
@@ -458,23 +473,24 @@ contains
               ylm = oct_ylm(x(1), x(2), x(3), l, lm)
               
               if(r > 0._r8 .or. l>0) then ! 0**l crashes in osf
-                a%uVu(add_lm, 1, 1) = a%uVu(add_lm, 1, 1) + a%uV(j, add_lm, 1)* &
+                a%duVu(add_lm, 1, 1) = a%duVu(add_lm, 1, 1) + a%duV(j, add_lm, 1)* &
                      splint(s%ps%ur(l, 1), r) * ylm * (r**l)
               else
-                a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)* &
+                a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
                      splint(s%ps%ur(l, 1), r)*ylm
               endif
             end do
-            a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
-             if(abs((a%uVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8) then
+            a%duVu(add_lm, 1, 1) = sum(a%duV(:, add_lm, 1)**2)/(a%duVu(add_lm, 1, 1)*s%ps%dknrm(l))
+             if(abs((a%duVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8) then
               write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                    add_lm
-              write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%uVu(add_lm, 1, 1)
+              write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%duVu(add_lm, 1, 1)
               message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
               call write_warning(3)
             end if
             ! uVu can be calculated exactly, or numerically
-            a%uvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
+            a%duvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
+            a%so_uvu(add_lm, 1, 1) = s%ps%k(l, 1, 1)
           end if
           
           add_lm = add_lm + 1
@@ -485,13 +501,15 @@ contains
       add_lm = 1
       do l = 0, s%ps%l_max
       do lm = -l, l
-         a%uvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
-         a%uvuso(add_lm, 1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
+         a%duvu(add_lm, 1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
+         a%so_uvu(add_lm, 1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
          add_lm = add_lm + 1
       enddo
       enddo
 
     end if
+
+    a%zuv = cmplx(a%duv); a%zuvu = cmplx(a%duvu); a%zduv = cmplx(a%dduv)
 
     call pop_sub(); return
   end subroutine build_nl_part

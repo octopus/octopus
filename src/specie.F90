@@ -280,17 +280,23 @@ real(r8) function specie_get_nlcc(s, x) result(l)
 
 end function specie_get_nlcc
 
-subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV)
+subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
   type(specie_type), intent(IN) :: s
   real(r8), intent(in) :: x(3)
   integer, intent(in) :: l, lm, i
   real(r8), intent(out) :: uV, duV(3)
   real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
   real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
+  logical, optional, intent(in) :: so
 
   r = sqrt(sum(x**2))
-  uVr0  = splint(s%ps%kb(l, i), r)
-  duvr0 = splint(s%ps%dkb(l, i), r)
+  if(present(so).and.so) then
+    uVr0  = splint(s%ps%so_kb(l, i), r)
+    duvr0 = splint(s%ps%so_dkb(l, i), r)
+  else
+    uVr0  = splint(s%ps%kb(l, i), r)
+    duvr0 = splint(s%ps%dkb(l, i), r)
+  endif
   call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
   uv = uvr0*ylm
   if(r >= r_small) then
