@@ -81,10 +81,11 @@ FLOAT, parameter :: M_HALF      = CNST(0.5)
 FLOAT, parameter :: M_THIRD     = M_ONE/M_THREE
 FLOAT, parameter :: M_TWOTHIRD  = M_TWO/M_THREE
 FLOAT, parameter :: M_FOURTH    = M_ONE/M_FOUR
-CMPLX, parameter :: M_z0        = (M_ZERO, M_ZERO)
-CMPLX, parameter :: M_z1        = (M_ONE,  M_ZERO)
-CMPLX, parameter :: M_z2I       = (M_ZERO, M_TWO)
-CMPLX, parameter :: M_zI        = (M_ZERO, M_ONE)
+CMPLX, parameter :: M_z0        = (CNST(0.0), CNST(0.0))
+CMPLX, parameter :: M_z1        = (CNST(1.0), CNST(0.0))
+CMPLX, parameter :: M_z2I       = (CNST(0.0), CNST(2.0))
+CMPLX, parameter :: M_zI        = (CNST(0.0), CNST(1.0))
+
 
 ! some physical constants
 FLOAT, parameter :: P_Ang =  M_ONE / CNST(0.529177)
