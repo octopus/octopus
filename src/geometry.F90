@@ -178,13 +178,10 @@ end subroutine geometry_init_xyz
 subroutine geometry_filter(geo, gmax)
   type(geometry_type), intent(inout) :: geo
   FLOAT, intent(in) :: gmax
-
   integer :: i
-
   do i = 1, geo%nspecies
      if(.not.geo%specie(i)%local) call specie_filter(geo%specie(i), gmax)
   enddo
-
 end subroutine geometry_filter
 
 subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
@@ -193,47 +190,36 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   FLOAT, optional, intent(out)   :: def_h_      ! the default mesh spacing
   FLOAT, optional, intent(out)   :: def_rsize_  ! the default size of the minimum box
 
-  type specie_list_type
-    character(len=10) :: label
-    integer :: location ! 1 <= Species block; 2 <= defaults file
-    integer :: line     ! in which line of the file the specie is defined
-    logical :: used
-  end type specie_list_type
-
   FLOAT :: val_charge, def_h, def_rsize
-  type(specie_list_type), allocatable :: spec_list(:)
-  integer :: i, j, n_spec, ispin
+  integer :: i, j, k, n_spec, ispin
   integer(POINTER_SIZE) :: blk
   logical :: ok
 
   call push_sub('geometry_init_species')
 
-  call read_species_label() ! which species do we know about
-
-  ! let us see which species that we are going to use
-  do i = 1, geo%natoms
-    ok = .false.
-    do j = 1, n_spec
-      if(trim(geo%atom(i)%label) == trim(spec_list(j)%label)) then
-        spec_list(j)%used = .true.
-        ok = .true.
-        exit
-      end if
-    end do
-    if(.not.ok) then
-      write(message(1),'(3a)') "Specie '", geo%atom(i)%label, "' was not found"
-      call write_fatal(1)
-    end if
-  end do
-
-  ! how many are they
+  ! First, count the species
   geo%nspecies = 0
-  do i = 1, n_spec
-    if(spec_list(i)%used) geo%nspecies = geo%nspecies + 1
-  end do
+  atoms1:  do i = 1, geo%natoms
+     do j = 1, i - 1
+        if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms1
+     enddo
+     geo%nspecies = geo%nspecies + 1
+  end do atoms1
 
-  ! we allocate the necessary memory
+  ! Allocate the species structure.
   allocate(geo%specie(geo%nspecies))
+  
+  ! Now, read the data.
+  k = 0
+  atoms2: do i = 1, geo%natoms
+     do j = 1, i - 1
+        if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms2
+     enddo
+     k = k + 1
+     geo%specie(k)%label = geo%atom(j)%label
+     geo%specie(k)%index = k
+     call specie_read(geo%specie(k), trim(geo%specie(k)%label))
+  enddo atoms2
 
   ! Reads the spin components. This is read here, as well as in states_init,
   ! to be able to pass it to the pseudopotential initializations subroutine.
@@ -244,24 +230,16 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
     call write_fatal(2)
   end if
   ispin = min(2, ispin)
-  
-  ! we now load the individual species
+
+  ! we now load the individual species, and find out the default mesh values.
   def_h     =  huge(PRECISION)
   def_rsize = -huge(PRECISION)
-  j = 0
-  do i = 1, n_spec
-    if(.not.spec_list(i)%used) cycle
-
-    j = j + 1
-    geo%specie(j)%label = spec_list(i)%label
-    geo%specie(j)%index = j
-    call specie_init(geo%specie(j), spec_list(i)%location, blk, spec_list(i)%line, ispin)
-
+  do i = 1, geo%nspecies
+    call specie_init(geo%specie(i), ispin)
+    if(conf%verbose>=VERBOSE_DEBUG) call specie_debug('debug', geo%specie(i))
     def_h     = min(def_h,     geo%specie(j)%def_h)
     def_rsize = max(def_rsize, geo%specie(j)%def_rsize)
   end do
-
-  if(blk.ne.int(0, POINTER_SIZE)) call loct_parse_block_end(blk)
 
   !  assign species and find total charge of the system
   val_charge = M_ZERO
@@ -288,59 +266,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   if(present(def_h_))      def_h_      = def_h
   if(present(def_rsize_))  def_rsize_  = def_rsize
 
-  ! clean up
-  deallocate(spec_list)
   call pop_sub()
-
-contains
-  subroutine read_species_label()
-    integer :: i, n_spec_def, n_spec_block
-    character(len=256) :: fname
-    integer :: iunit
-
-    write(fname, '(2a)') trim(conf%share), "/PP/defaults"
-
-    ! how many species do we have defined in defaults file
-    n_spec_def = max(0, loct_number_of_lines(fname))
-    if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
-
-    ! is the block Species defined
-    n_spec_block = 0
-    blk = int(0, POINTER_SIZE)
-    if(loct_parse_block("Species", blk) == 0) then
-      n_spec_block = loct_parse_block_n(blk)
-    end if
-
-    ! total number of species that we have available
-    n_spec = n_spec_def + n_spec_block
-    if(n_spec < 0) then
-      message(1) = "No species defined either in Specie block or in 'default' file"
-      call write_fatal(1)
-    end if
-    
-    ! now we load the species
-    allocate(spec_list(n_spec))
-    do i = 1, n_spec_block
-      call loct_parse_block_string(blk, i-1, 0, spec_list(i)%label)
-      spec_list(i)%location = 1
-      spec_list(i)%line = i
-      spec_list(i)%used = .false.
-    end do
-
-    if(n_spec_def < 1) return ! nothing else to do
-    call io_assign(iunit)
-    open(unit=iunit, file=fname, action='read')
-    read(iunit,*)
-    do i = n_spec_block+1, n_spec
-      read(iunit,*) spec_list(i)%label
-      spec_list(i)%location = 2
-      spec_list(i)%line = i - n_spec_block
-      spec_list(i)%used = .false.
-    end do
-    call io_close(iunit)
-
-  end subroutine read_species_label
-
 end subroutine geometry_init_species
 
 subroutine loadPDB(iunit, geo)

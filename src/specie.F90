@@ -59,9 +59,44 @@ type specie_type
 
   ! the default values for the spacing and atomic radius
   FLOAT :: def_rsize, def_h
+  integer :: lmax, lloc
 end type specie_type
 
 contains
+
+  subroutine specie_debug(dir, s)
+    character(len=*), intent(in)  :: dir
+    type(specie_type), intent(in) :: s
+
+    character(len=256) :: dirname
+    integer :: iunit
+
+    call push_sub('specie_debug')
+    call io_assign(iunit)
+
+    dirname = trim(dir)//'/'//trim(s%label)
+    call loct_mkdir(trim(dirname))
+
+    open(unit = iunit, file = trim(dirname)//'/info')
+
+    write(iunit, '(a,i3)')    'Index  = ', s%index
+    write(iunit, '(2a)')      'Label  = ', trim(s%label)
+    write(iunit, '(a,i3)')    'Type   = ', s%type
+    write(iunit, '(a,f15.2)') 'z      = ', s%z
+    write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
+    write(iunit, '(a,f15.2)') 'weight = ', s%weight
+    write(iunit, *)           'local  = ', s%local
+    write(iunit, '(2a)')      'usdef  = ', trim(s%user_def)
+    write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
+    write(iunit, *)           'nlcc   = ', s%nlcc
+    write(iunit, '(a,f15.2)') 'def_rsize = ', s%def_rsize
+    write(iunit, '(a,f15.2)') 'def_h = ', s%def_h
+    write(iunit, '(a,i3)')    'lmax  = ', s%lmax
+    write(iunit, '(a,i3)')    'lloc  = ', s%lloc
+
+    call io_close(iunit)
+    call pop_sub()
+  end subroutine specie_debug
 
   subroutine specie_filter(s, gmax)
     type(specie_type),     intent(inout) :: s
@@ -74,138 +109,221 @@ contains
     call pop_sub(); return
   end subroutine specie_filter
 
-  ! ---------------------------------------------------------
-  subroutine specie_init(s, location, blk, line, ispin)
+  subroutine specie_read(s, label)
     type(specie_type),     intent(inout) :: s
-    integer,               intent(in)    :: location, line, ispin
-    integer(POINTER_SIZE), intent(in)    :: blk
+    character(len=*), intent(in) :: label
 
-    integer :: lmax, lloc
+    character(len=256) :: fname
+    character(len=10) :: lab
+    integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
+    integer(POINTER_SIZE) :: blk
 
-    call push_sub('specie_init')
+    call push_sub('specie_read')
 
-    ! some defaults
     s%local     = .true.  ! a local potential
     s%nlcc      = .false. ! without non-local core corrections
     s%def_h     = -M_ONE  ! not defined
     s%def_rsize = -M_ONE  ! not defined
-  
-    ASSERT(location==1.or.location==2)
+    s%user_def  = ""
+    read_data   = 0
 
-    if(location == 1) then
-      call from_block()
-    else ! from default file
-      if(conf%dim==1.or.conf%dim==2) then
-        message(1) = "In 1 or 2 dimensions all species must be defined in the %Species block"
-        call write_fatal(1)
-      end if
-      
-      call from_default_file()
+    ! First, find out if there is a Species block.
+    n_spec_block = 0
+    blk = int(0, POINTER_SIZE)
+    if(loct_parse_block("Species", blk) == 0) then
+      n_spec_block = loct_parse_block_n(blk)
     end if
+
+    ! Find out if the seeked species is in the block
+    row = -1
+    block: do i = 1, n_spec_block
+       call loct_parse_block_string(blk, i-1, 0, lab)
+       if(trim(lab)==trim(label)) then
+         row = i - 1
+         exit block
+       endif
+    enddo block
+
+    ! Read whatever may be read from the block
+    if(row>=0) then
+       call read_from_block(blk, row, s, read_data)
+       call loct_parse_block_end(blk)
+    endif
+
+    ! Find out if the species is in the defaults file.
+    write(fname, '(2a)') trim(conf%share), "/PP/defaults"
+    n_spec_def = max(0, loct_number_of_lines(fname))
+    if(n_spec_def > 0) n_spec_def = n_spec_def - 1 ! First line is a comment
+    call io_assign(iunit)
+    open(unit=iunit, file=fname, action='read')
+    read(iunit,*)
+    default_file: do i = 1, n_spec_def
+      read(iunit,*) lab
+      if(trim(lab)==trim(label)) then
+        call read_from_default_file(iunit, read_data, s)
+        exit default_file
+      endif
+    enddo default_file
+    call io_close(iunit)
+
+    if(read_data == 0) then
+      message(1) = 'Species '//trim(label)//' not found.'
+      call write_fatal(1)
+    endif
+
+    call pop_sub()
+  end subroutine specie_read
+
+  subroutine read_from_default_file(iunit, read_data, s)
+    integer, intent(in) :: iunit
+    integer, intent(inout) :: read_data
+    type(specie_type),     intent(inout) :: s
+
+    character(len=10) :: label
+    FLOAT :: weight, z, def_h, def_rsize
+    integer :: lloc, lmax
+    integer :: type
+
+    call push_sub('read_from_default_file')
+
+    backspace(iunit)
+
+    ! If it is in the default file, it *has* to be a pseudopotential
+    s%local = .false.
+
+    read(iunit,*) label, weight, type, z, lmax, lloc, def_h, def_rsize
+    def_h     = def_h     * P_ANG  ! These units are always in Angstrom
+    def_rsize = def_rsize * P_ANG
+    ASSERT(trim(label) == trim(s%label))
+
+    select case(read_data)
+    case(0) ! The Species was not supplied in the block.
+      s%weight    = weight
+      s%type      = type
+      s%z         = z
+      s%lmax      = lmax
+      s%lloc      = lloc
+      s%def_h     = def_h
+      s%def_rsize = def_rsize
+    case(3)
+      s%z         = z
+      s%lmax      = lmax
+      s%lloc      = lloc
+      s%def_h     = def_h
+      s%def_rsize = def_rsize
+    case(4)
+      s%lmax      = lmax
+      s%lloc      = lloc
+      s%def_h     = def_h
+      s%def_rsize = def_rsize
+    case(5)
+      s%lloc      = lloc
+      s%def_h     = def_h
+      s%def_rsize = def_rsize
+    case(6)
+      s%def_h     = def_h
+      s%def_rsize = def_rsize
+    case(7)
+      s%def_rsize = def_rsize
+    end select
+
+    read_data = 8
+    call pop_sub()
+  end subroutine read_from_default_file
+
+  subroutine read_from_block(blk, row, s, read_data)
+    integer(POINTER_SIZE), intent(in) :: blk
+    integer, intent(in) :: row
+    type(specie_type),     intent(inout) :: s
+    integer, intent(out) :: read_data
+    integer :: j, n, lmax, lloc
+
+    call push_sub('read_from_block')
+
+    read_data = 0
+
+    call loct_parse_block_float (blk, row, 1, s%weight)
+    call loct_parse_block_int   (blk, row, 2, s%type)
       
+    select case(s%type)
+    case(SPEC_USDEF) ! user defined
+     call loct_parse_block_float (blk, row, 3, s%Z_val)
+     call loct_parse_block_string(blk, row, 4, s%user_def)
+     ! convert to C string
+     j = len(trim(s%user_def))
+     s%user_def(j+1:j+1) = achar(0) 
+     read_data = 5
+
+    case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
+     call loct_parse_block_float(blk, row, 3, s%Z)
+     s%jradius = M_HALF
+     s%Z_val = 0 
+     read_data = 4
+        
+    case(SPEC_JELLI)
+     call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
+     call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
+     s%jradius = units_inp%length%factor * s%jradius ! units conversion
+     s%Z_val = s%Z
+     read_data = 5
+      
+    case(SPEC_PS_TM2,SPEC_PS_HGH) ! a pseudopotential file
+     s%local = .false.
+     n = loct_parse_block_cols(blk, row)
+         
+     call loct_parse_block_float (blk, row, 3, s%Z)
+     lmax = 2 ! default
+     if(n>4) then
+        call loct_parse_block_int (blk, row, 4, s%lmax)
+        read_data = 5
+     endif
+     lloc = 0 ! default
+     if(n>5) then
+        call loct_parse_block_int (blk, row, 5, s%lloc)
+        read_data = 6
+     endif
+        
+     if(n>6) then
+       call loct_parse_block_float (blk, row, 6, s%def_h)
+       s%def_h = s%def_h * units_inp%length%factor
+       read_data = 7
+     end if
+        
+     if(n>7) then
+       call loct_parse_block_float (blk, row, 7, s%def_rsize)
+       s%def_rsize = s%def_rsize * units_inp%length%factor
+       read_data = 8
+     end if
+
+    case default
+      write(message(1), '(a,i2,a)') "Unknown pseudopotential type: '", s%type, "'"
+      call write_fatal(1)
+    end select
+
+    call pop_sub()
+  end subroutine read_from_block
+
+  subroutine specie_init(s, ispin)
+    type(specie_type), intent(inout) :: s
+    integer,           intent(in)    :: ispin
+
+    call push_sub('specie_init')
+
     ! masses are always in a.u.m, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
 
     ! if we are using non-local pseudopotentials, allocate structure
     if(.not.s%local) then
       allocate(s%ps) ! allocate structure
-      call ps_init(s%ps, s%label, s%type, s%Z, lmax, lloc, ispin)
+      call ps_init(s%ps, s%label, s%type, s%Z, s%lmax, s%lloc, ispin)
       call ps_derivatives(s%ps)
       if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps)
-      
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )
     end if
 
     call pop_sub()
-
-  contains
-    
-    subroutine from_block()
-      integer :: j, n
-
-      call loct_parse_block_float (blk, line-1, 1, s%weight)
-      call loct_parse_block_int   (blk, line-1, 2, s%type)
-      
-      select case(s%type)
-      case(SPEC_USDEF) ! user defined
-        call loct_parse_block_float (blk, line-1, 3, s%Z_val)
-        call loct_parse_block_string(blk, line-1, 4, s%user_def)
-        
-        ! convert to C string
-        j = len(trim(s%user_def))
-        s%user_def(j+1:j+1) = achar(0) 
-
-      case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
-        call loct_parse_block_float(blk, line-1, 3, s%Z)
-        s%jradius = M_HALF
-        s%Z_val = 0 
-        
-      case(SPEC_JELLI)
-        call loct_parse_block_float(blk, line-1, 3, s%Z)      ! charge of the jellium sphere
-        call loct_parse_block_float(blk, line-1, 4, s%jradius)! radius of the jellium sphere
-        s%jradius = units_inp%length%factor * s%jradius ! units conversion
-        s%Z_val = s%Z
-      
-      case(SPEC_PS_TM2,SPEC_PS_HGH) ! a pseudopotential file
-        s%local = .false.
-        n = loct_parse_block_cols(blk, line-1)
-        
-        call loct_parse_block_float (blk, line-1, 3, s%Z)
-        
-        lmax = 2 ! default
-        if(n>4) call loct_parse_block_int (blk, line-1, 4, lmax)
-        
-        lloc = 0 ! default
-        if(n>5) call loct_parse_block_int (blk, line-1, 5, lloc)
-        
-        if(n>6) then
-          call loct_parse_block_float (blk, line-1, 6, s%def_h)
-          s%def_h = s%def_h * units_inp%length%factor
-        end if
-        
-        if(n>7) then
-          call loct_parse_block_float (blk, line-1, 7, s%def_rsize)
-          s%def_rsize = s%def_rsize * units_inp%length%factor
-        end if
-
-      case default
-        write(message(1), '(a,i2,a)') "Unknown pseudopotential type: '", s%type, "'"
-        call write_fatal(1)
-
-      end select
-
-    end subroutine from_block
-
-    subroutine from_default_file()
-      integer :: i, iunit
-      character(len=256) :: fname
-      character(len=10)  :: label
-      
-      s%local = .false. ! we have a pseudo-potencial
-      
-      write(fname, '(2a)') trim(conf%share), "/PP/defaults"
-      call io_assign(iunit)
-      open(unit=iunit, file=fname, action='read')
-      
-      ! go to the right line of the file
-      do i = 1, line
-        read(iunit,*)
-      end do
-      
-      ! read information
-      read(iunit,*) label, s%weight, s%type, s%Z, lmax, lloc, s%def_h, s%def_rsize
-      s%def_h     = s%def_h     * P_ANG  ! These units are always in Angstrom
-      s%def_rsize = s%def_rsize * P_ANG
-      call io_close(iunit)
-
-      ! sanity check
-      ASSERT(trim(label) == trim(s%label))
-      
-    end subroutine from_default_file
- 
   end subroutine specie_init
-
 
   ! ---------------------------------------------------------
   subroutine specie_end(ns, s)
