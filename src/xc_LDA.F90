@@ -51,10 +51,11 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
       if(.not.btest(xcs%functl, ixc)) cycle
       ifunc = ibset(0, ixc)
       if(.not.( &
-           ifunc == X_FUNC_LDA_NREL.or. &
-           ifunc == X_FUNC_LDA_REL .or. &
-           ifunc == C_FUNC_LDA_PZ  .or. &
-           ifunc == C_FUNC_LDA_PW92)) cycle
+           ifunc == X_FUNC_LDA_NREL .or. &
+           ifunc == X_FUNC_LDA_REL  .or. &
+           ifunc == C_FUNC_LDA_PZ   .or. &
+           ifunc == C_FUNC_LDA_PW92 .or. &
+           ifunc == C_FUNC_LDA_ATTA) ) cycle
 
       select case(ifunc)
       case(X_FUNC_LDA_NREL)
@@ -64,7 +65,6 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
       case(C_FUNC_LDA_PZ)
         call correlation_lda_3D_pz(spin_channels, d, e, pd1)
       case(C_FUNC_LDA_PW92)
-!!$        call pw92c(spin_channels, d, e, pd1)
         call correlation_lda_3D_pw92(spin_channels, d, e, pd1)
       case(C_FUNC_LDA_ATTA)
         call correlation_lda_2D_atta(spin_channels, d, e, pd1)

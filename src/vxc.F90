@@ -534,6 +534,7 @@ module vxc
 ! gas in 2D, as parametrized by Attacalite et al.
 ! Refs: [1] C. Attacalite et al, Phys. Rev. Lett. 88, 256601 (2002) for 2D.
 !       [2] C. Attacalite, PhD thesis. 
+! Maybe it should be optimized for better perfomance.
   subroutine correlation_lda_2D_atta(nsp, ds, ec, vc)
     implicit none
     integer, intent(in) :: nsp
@@ -568,7 +569,7 @@ module vxc
     ! In unpolarized cases, expressions are fairly simple.
     if(nsp==1) then
       ec = alpha(0)
-      vc(1) = dalphadrs(0)
+      vc(1) = ec - M_HALF*rs*dalphadrs(0)
       return
     endif
 
@@ -591,10 +592,10 @@ module vxc
     decdrs = ax*calf*(M_ONE-exp(-beta*rs)*(M_ONE+beta*rs))/rs**2 + &
              dalphadrs(0) + dalphadrs(1)*zeta**2 + dalphadrs(2)*zeta**4
     ! Derivative of the correlation energy with respect to zeta (Eq.[2]C7)
-    decdz  = ax*(exp(-beta*rs)-M_ONE)*calfp/rs + M_TWO*alpha(1)*zeta + M_FOUR*alpha(2)*rs**3
+    decdz  = ax*(exp(-beta*rs)-M_ONE)*calfp/rs + M_TWO*alpha(1)*zeta + M_FOUR*alpha(2)*zeta**3
     ! And finally, the potentials (Eq.[2]C1)
     vc(1) = ec - M_HALF*rs*decdrs - (zeta-M_ONE)*decdz
-    vc(1) = ec - M_HALF*rs*decdrs - (zeta+M_ONE)*decdz
+    vc(2) = ec - M_HALF*rs*decdrs - (zeta+M_ONE)*decdz
 
     contains
     FLOAT function alpha(i) ! Eq.[1]4
@@ -608,7 +609,7 @@ module vxc
       efe  = e(i)*rs + f(i)*sqrt(rs)**3 + g(i)*rs**2 + h(i)*rs**3 ! Eq.[2]C5
       efep = e(i) + M_HALF*M_THREE*f(i)*sqrt(rs) + M_TWO*g(i)*rs + M_THREE*h(i)*rs**2 ! Eq. [2]C6
       lg = log(M_ONE + M_ONE/efe)
-      x  = ((b(i)+c(i)*rs**2+d(i)*rs**3)*efep)/(efe**2+efe)
+      x  = ((b(i)*rs+c(i)*rs**2+d(i)*rs**3)*efep)/(efe**2+efe)
       dalphadrs = (b(i) + M_TWO*c(i)*rs + M_THREE*d(i)*rs**2)*lg - x ! Eq.[2]C3
     end function dalphadrs
   end subroutine correlation_lda_2D_atta

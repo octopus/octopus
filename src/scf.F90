@@ -393,15 +393,17 @@ subroutine scf_write_static(dir, fname)
   enddo
   write(iunit,'(a)')
 
-  call X(states_calculate_angular)(m, st, angular, l2 = l2)
-  write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
-  do j = 1, conf%dim
-     write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
-  enddo
-  write(iunit,'(a)')
+  if(conf%dim==3) then
+    call X(states_calculate_angular)(m, st, angular, l2 = l2)
+    write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
+    do j = 1, conf%dim
+       write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
+    enddo
+    write(iunit,'(a)')
 
-  write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
-  write(iunit,'(a)')
+    write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
+    write(iunit,'(a)')
+  endif
 
   write(iunit, '(a)') 'Convergence:'
   write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
