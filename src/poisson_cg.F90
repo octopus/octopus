@@ -89,6 +89,74 @@ contains
     call pop_sub()
   end subroutine poisson_cg1
 
+  subroutine poisson_cg2(m, der, pot, rho)
+    implicit none
+    type(mesh_type),      intent(in)    :: m
+    type(der_discr_type), intent(in)    :: der
+    FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
+    FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
+  
+    integer, parameter :: ml = 4 ! maximum multipole moment to include
+
+    integer :: i, iter
+    FLOAT :: s1, s2, s3, ak, ck
+    FLOAT, allocatable :: zk(:), tk(:), pk(:), mult(:), wk(:), lwk(:)
+
+    FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
+    
+    call push_sub('poisson_cg')
+
+    allocate(zk(m%np), tk(m%np), pk(m%np)) ! for the cg
+    allocate(wk(m%np), lwk(m%np))
+    allocate(rho_corrected(m%np), vh_correction(m%np))
+
+    call correct_rho(m, ml, rho, rho_corrected, vh_correction)
+
+    ! build initial guess for the potential
+    wk(1:m%np) = pot(1:m%np)
+    
+    call dderivatives_lapl(der, wk, lwk)
+    
+    zk(:) = -M_FOUR*M_PI*rho_corrected(:) ! this will be needed later
+    zk(:) = zk(:) - lwk(1:m%np)
+    deallocate(wk, lwk) ! they are no longer needed
+    
+    pk = zk
+    s1 = dmf_nrm2(m, zk)**2
+    
+    ! now we start the conjugate gradient cycles
+    iter = 0
+    do 
+      iter = iter + 1
+      call dderivatives_lapl(der, pk, tk)
+      
+      s2 = dmf_dotp(m, zk, tk)
+      ak = s1/s2
+      pot = pot + ak*pk
+      zk = zk - ak*tk
+      s3 = dmf_nrm2(m, zk)**2
+      
+      if(iter >= 400 .or. abs(s3) < CNST(1.0e-6)) exit
+      
+      ck = s3/s1
+      s1 = s3
+      pk = zk + ck*pk
+    end do
+    
+    if(iter >= 400) then
+      message(1) = "Poisson using conjugated gradients: Not converged!"
+      write(message(2),*) "iter = ", iter, " s3 = ", s3
+      call write_warning(2)
+    endif
+
+    pot = pot + vh_correction
+    
+    deallocate(zk, tk, pk)
+    deallocate(rho_corrected, vh_correction)
+    
+    call pop_sub()
+  end subroutine poisson_cg2
+
   subroutine get_multipoles(m, rho, ml, mult)
     implicit none
     type(mesh_type), intent(in)  :: m
@@ -162,13 +230,8 @@ contains
     allocate(mult((ml+1)**2))
     call get_multipoles(m, rho, ml, mult)
 
-!!$    write(*, *) ''
-!!$    write(*, *) 'MULTIPOLES BEFORE THE CORRECTION:'
-!!$    write(*, *) mult(:)
-!!$    write(*, *) '*********************************'
-
-    rho_corrected(1:m%np) = rho(1:m%np)
-
+    rho_corrected = rho
+    vh_correction = M_ZERO
     alpha = M_TWO
     do i = 1, m%np
        call mesh_r(m, i, r, x = x)
@@ -180,21 +243,6 @@ contains
           do mm = -l, l
              ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
              rho_corrected(i) = rho_corrected(i) - mult(add_lm)*beta * r**l * exp(-(r/alpha)**2)*ylm
-             add_lm = add_lm + 1
-          enddo
-       enddo
-    enddo
-
-    vh_correction = M_ZERO
-    do i = 1, m%np
-       call mesh_r(m, i, r, x = x)
-       add_lm = 1
-       do l = 0, ml
-          lldfac = 1; do j = 1, 2*l+1, 2; lldfac = lldfac * j; enddo
-          beta = (2**(l+2))/( alpha**(2*l+3) * sqrt(M_PI) * lldfac )
-          gamma = ( sqrt(M_PI)*2**(l+3) ) / lldfac
-          do mm = -l, l
-             ylm  = loct_ylm(x(1), x(2), x(3), l, mm)
              if(r .ne. M_ZERO) then
                 vh_correction(i) = vh_correction(i) + mult(add_lm)*gamma * isubl( l, r/alpha) * ylm / r**(l+1)
              else
@@ -215,74 +263,5 @@ contains
 
   end subroutine correct_rho
 
-  subroutine poisson_cg2(m, der, pot, rho)
-    implicit none
-    type(mesh_type),      intent(in)    :: m
-    type(der_discr_type), intent(in)    :: der
-    FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
-    FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
-  
-!!$    integer, parameter :: ml = 4 ! maximum multipole moment to include
-    integer, parameter :: ml = 2
-
-    integer :: i, iter
-    FLOAT :: s1, s2, s3, ak, ck
-    FLOAT, allocatable :: zk(:), tk(:), pk(:), mult(:), wk(:), lwk(:)
-
-    FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
-    
-    call push_sub('poisson_cg')
-
-    allocate(zk(m%np), tk(m%np), pk(m%np)) ! for the cg
-    allocate(wk(m%np), lwk(m%np))
-    allocate(rho_corrected(m%np), vh_correction(m%np))
-
-    call correct_rho(m, ml, rho, rho_corrected, vh_correction)
-
-    ! build initial guess for the potential
-    wk(1:m%np) = pot(1:m%np)
-    
-    call dderivatives_lapl(der, wk, lwk)
-    
-    zk(:) = -M_FOUR*M_PI*rho_corrected(:) ! this will be needed later
-    zk(:) = zk(:) - lwk(1:m%np)
-    deallocate(wk, lwk) ! they are no longer needed
-    
-    pk = zk
-    s1 = dmf_nrm2(m, zk)**2
-    
-    ! now we start the conjugate gradient cycles
-    iter = 0
-    do 
-      iter = iter + 1
-      write(*, *) iter
-      call dderivatives_lapl(der, pk, tk)
-      
-      s2 = dmf_dotp(m, zk, tk)
-      ak = s1/s2
-      pot = pot + ak*pk
-      zk = zk - ak*tk
-      s3 = dmf_nrm2(m, zk)**2
-      
-      if(iter >= 400 .or. abs(s3) < CNST(1.0e-6)) exit
-      
-      ck = s3/s1
-      s1 = s3
-      pk = zk + ck*pk
-    end do
-    
-    if(iter >= 400) then
-      message(1) = "Poisson using conjugated gradients: Not converged!"
-      write(message(2),*) "iter = ", iter, " s3 = ", s3
-      call write_warning(2)
-    endif
-
-    pot = pot + vh_correction
-    
-    deallocate(zk, tk, pk)
-    deallocate(rho_corrected, vh_correction)
-    
-    call pop_sub()
-  end subroutine poisson_cg2
 
 end module poisson_cg
