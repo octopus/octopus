@@ -50,7 +50,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
     call io_assign(iunit)
     open(iunit, status='unknown', file=trim(label))
     call loadPDB(iunit)
-    close(iunit)
+    call io_close(iunit)
 
   else
     ! we now load the positions, either from the input, or from a file
@@ -69,7 +69,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
         a(i)%spec => s(get_specie(label))
       end do
 
-      close(iunit)
+      call io_close(iunit)
     else
       str = C_string("Coordinates")
       natoms = oct_parse_block_n(str)
@@ -153,7 +153,7 @@ contains
     natoms = 0
     ncatoms = 0
     do
-      read(iunit, '(a80)', err=990) record
+      read(iunit, '(a80)', err=990, end=990) record
       read(record, '(a6)') record_name
       if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
         read(record, '(17x,a3)') res
@@ -172,7 +172,7 @@ contains
     rewind(iunit)
     na = 1; nca = 1
     do
-      read(iunit, '(a80)', err=991) record
+      read(iunit, '(a80)', err=991, end=991) record
       read(record, '(a6)') record_name
       if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
         read(record, '(12x,a4,1x,a3)') atm, res
@@ -358,8 +358,10 @@ contains
     m1 = 0._r8; m1(1,1) = 1._r8; m1(2,2) = 1._r8; m1(3,3) = 1._r8
 
     ! rotate the to axis to the z axis
-    alpha = atan2(to(2), to(1))
-    call rotate_z(m1, alpha)
+    if(to(1).ne.0._r8 .and. to(2).ne.0._r8) then
+      alpha = atan2(to(2), to(1))
+      call rotate_z(m1, alpha)
+    end if
     alpha = atan2(sqrt(to(1)**2 + to(2)**2), to(3))
     call rotate_y(m1, -alpha)
 

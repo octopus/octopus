@@ -371,9 +371,9 @@ should now be able to taste @code{octopus}.
 
 The program has been tested in the following platforms:
 @itemize
-@item
-@code{i686-pc-linux-gnu} : with the @uref{http://www.absoft.com, Absoft}
+@item @code{i686*-linux-gnu} : With the @uref{http://www.absoft.com, Absoft}
   compiler.
+@item @code{alphae*-linux-gnu} : With Compac's @code{fort} compiler.
 @end itemize
 If you manage to compile/run @code{octopus} in a different platform
 or with a different compiler, please let us know so we can update the

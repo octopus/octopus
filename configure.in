@@ -56,8 +56,8 @@ if test -z "${F90FLAGS}"; then
 			F90FLAGS="-O"
 		esac
 	;;
-	osf*)
-		F90FLAGS="-O5 -align dcommons -tune host -arch host"
+	alphaev*)
+		F90FLAGS="-align dcommons -fast -tune host -arch host -noautomatic"
 		;;
 	*)
 		F90FLAGS="-O"
@@ -101,6 +101,7 @@ if test -z "${LIB_FFTW}"; then
     	ACX_CHECK_LIB_F90(fftw, fftw3d_f77_create_plan, [LIB_FFTW="-lfftw"])
 	  fi
   	if test -z "${LIB_FFTW}"; then
+			echo "oi"
     	ACX_CHECK_LIB_F90(dfftw, fftw3d_f77_create_plan, [LIB_FFTW="-ldfftw"])
 	  fi
   	if test -z "${LIB_FFTW}"; then
@@ -127,6 +128,8 @@ if test -z "${LIB_FFTW}"; then
 			LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW} ${LIB_RFFTW}"
 		fi
 	fi
+else
+	AC_DEFINE(HAVE_FFTW)
 fi
 AC_SUBST(LIB_FFTW)
 
@@ -149,6 +152,9 @@ if test -z "${LIB_LAPACK}"; then
 	  if test -z "${LIB_LAPACK}"; then
   	  ACX_CHECK_LIB_F90(lapack, dsygv, [LIB_LAPACK="-llapack -lblas"], [], "-lblas")
 	  fi
+	  if test -z "${LIB_LAPACK}"; then   dnl for the alphas
+  	  ACX_CHECK_LIB_F90(cxml, dsygv, [LIB_LAPACK="-lcxml"])
+	  fi
   	if test -z "${LIB_LAPACK}"; then
     	AC_MSG_ERROR(couldn't find lapack/blas library for --with-lapack)
 		fi
@@ -159,6 +165,9 @@ if test -z "${LIB_LAPACK}"; then
 			LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"
 		fi
 	fi
+else
+	AC_DEFINE(HAVE_LAPACK)
+	AC_DEFINE(HAVE_BLAS)
 fi
 AC_SUBST(LIB_LAPACK)
 
@@ -198,6 +207,8 @@ if test -z "${LIB_GSL}"; then
 
 	dnl reset the language
 	AC_LANG_RESTORE
+else
+	AC_DEFINE(HAVE_GSL)
 fi
 AC_SUBST(LIB_GSL)
 
