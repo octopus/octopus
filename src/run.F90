@@ -278,7 +278,11 @@ subroutine run()
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
-        call hamiltonian_span(h, minval(sys%m%h), minval(sys%st%eigenval(1,:)))
+        x = minval(sys%st%eigenval(sys%st%st_start, :))
+#ifdef HAVE_MPI
+        call MPI_BCAST(x, 1, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, i)
+#endif
+        call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
         call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)        
 
       else
