@@ -148,6 +148,7 @@ if test -z "${LIB_BLAS}"; then
 
 		ACX_CHECK_FUNC([LIB_BLAS], [ddot])
 		ACX_CHECK_LIB([LIB_BLAS], [mkl],  [ddot], [-lmkl], [], [-lmkl])
+		ACX_CHECK_LIB([LIB_BLAS], [mkl_def],  [ddot], [-lmkl_def -lguide -lpthread], [], [-lmkl_def -lguide -lpthread])
 		ACX_CHECK_LIB([LIB_BLAS], [f77blas], [ddot], [-lf77blas -latlas], [], [-latlas])
 		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
 		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
