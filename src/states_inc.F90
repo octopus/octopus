@@ -372,7 +372,7 @@ contains
   ! WARNING some constants are probably wrong for 1 and 2D
   subroutine elf()
     real(r8) :: f, d, s
-    real(r8), allocatable :: c(:), j(:,:), r(:), gr(:,:)
+    real(r8), allocatable :: c(:), j(:,:,:), r(:), gr(:,:)
     R_TYPE, allocatable :: gpsi(:,:)
     integer :: i, is, ik
 
@@ -384,7 +384,7 @@ contains
     end if
 
 #if defined(R_TCOMPLEX)
-    allocate(j(m%np, st%nspin))
+    allocate(j(3, m%np, st%nspin))
     call calc_current(m, st, j)
 #endif
 
@@ -399,20 +399,20 @@ contains
         if(r(i) >= 1d-10) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
 #if defined(R_TCOMPLEX)
-          c(i) = c(i) - j(i, is)**2/(s*r(i))
+          c(i) = c(i) - sum(j(1:conf%dim, i, is)**2)/(s*s*r(i))
 #endif
         end if
       end do
       deallocate(gr)
 
       ! now the second term
-      allocate(gpsi(3, 1:m%np))
+      allocate(gpsi(3, m%np))
       do ik = is, st%nik, st%nspin
         do ist = 1, st%nst
           do idim = 1, st%dim
-            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(0:m%np, idim, ist, ik), grad=gpsi)
+            call R_FUNC(mesh_derivatives) (m, st%R_FUNC(psi)(0:m%np, idim, ist, ik), grad=gpsi(:,:))
             do i = 1, m%np
-              if(R_ABS(st%R_FUNC(psi)(i, idim, ist, ik)) >= 1d-8) then
+              if(r(i) >= 1d-10) then
                 c(i) = c(i) + st%occ(ist, ik)/s*sum(gpsi(1:conf%dim, i)*R_CONJ(gpsi(1:conf%dim, i)))
               end if
             end do

@@ -197,7 +197,8 @@ contains
     pos(2,:) = real(m%h(:) / units_out%length%factor, r4)
 
     status = nf90_put_var(ncid, pos_id, pos(:,:))
-    status = nf90_put_var(ncid, data_id, c(:,:,:))
+    ! we have to transpose the matrix: stupid Fortran!
+    status = nf90_put_var(ncid, data_id, c, map=(/m%fft_n(1)*m%fft_n(2), m%fft_n(1), 1/))
 
     ! close
     status = nf90_close(ncid)

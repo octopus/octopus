@@ -444,58 +444,59 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   type(states_type), intent(IN) :: st
   real(r8), intent(in), optional :: error(nst, st%nik)
 
-  integer ik, j
-  real(r8) :: o(st%nik), oplus(st%nik), ominus(st%nik)
+  integer ik, j, ns, is
+  real(r8) :: o, oplus, ominus
 
   if(iunit==stdout.and.conf%verbose<=20) return
 
   message(1) = 'Eigenvalues ['//trim(units_out%energy%abbrev)//']'
   call write_info(1, iunit)
 
-
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
 #endif
 
-    
-    do j = 1, nst
-      if(j > st%nst) then
-        o = 0._r8
-        if(st%ispin == 3) oplus = 0._r8; ominus = 0._r8
-      else
-        o = st%occ(j, :)
-        if(st%ispin == 3) then 
-          oplus(1:st%nik)  = st%mag(j, 1:st%nik, 1)
-          ominus(1:st%nik) = st%mag(j, 1:st%nik, 2)
-        endif
+    ns = 1
+    if(st%nspin == 2) ns = 2
+
+    do ik = 1, st%nik, ns
+      if(st%nik > ns) then
+        write(iunit, '(3(a,f12.6),a)') 'k = (', st%kpoints(1, ik), ',', st%kpoints(2, ik), ',', st%kpoints(3, ik), ')'
       end if
       
-      do ik = 1, st%nik
-      write(iunit, '(a4)', advance='no') '#'
-      write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1,/)', advance='no') &
-           ' Eigenvalue', 'Occupation ', 'Error (', ik, ')'
-      write(iunit, '(i4)', advance='no') j
-      if(present(error)) then
-         if(st%ispin == 3) then
-            write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
-                  st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
-            write(iunit, '(a7,es7.1,a1/)', advance='no')'      (', error(j, ik), ')'
-         else
-            write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-                  st%eigenval(j, ik)/units_out%energy%factor, o(ik)
-            write(iunit, '(a7,es7.1,a1/)', advance='no')'      (', error(j, ik), ')'
-         endif
-      else
-         if(st%ispin == 3) then
-            write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3/)', advance='no') &
-                  st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
-         else
-            write(iunit, '(1x,f12.6,3x,f12.6/)', advance='no') &
-                  st%eigenval(j, ik)/units_out%energy%factor, o(ik)
-         endif
-      end if
+      do is = 1, ns
+        write(iunit, '(a4)', advance='no') '#'
+        write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
+             ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
       end do
       write(iunit, '(1x)', advance='yes')
+
+      do j = 1, nst
+        do is = 0, ns-1
+          if(j > st%nst) then
+            o = M_ZERO
+            if(st%ispin == 3) oplus = M_ZERO; ominus = M_ZERO
+          else
+            o = st%occ(j, ik+is)
+            if(st%ispin == 3) then 
+              oplus  = st%mag(j, ik+is, 1)
+              ominus = st%mag(j, ik+is, 2)
+            endif
+          end if
+      
+          write(iunit, '(i4)', advance='no') j
+          if(st%ispin == 3) then
+            write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
+                 st%eigenval(j, ik+is)/units_out%energy%factor, oplus, '/', ominus
+            if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
+          else
+            write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
+                 st%eigenval(j, ik)/units_out%energy%factor, o
+            if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+          endif
+        end do
+        write(iunit, '(1x)', advance='yes')
+      end do
     end do
 
 #ifdef HAVE_MPI
@@ -550,9 +551,9 @@ end subroutine calc_projection
 subroutine calc_current(m, st, j)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
-  real(r8), intent(out) :: j(m%np, st%nspin)
+  real(r8), intent(out) :: j(3, m%np, st%nspin)
   
-  integer :: ik, p, sp, ierr
+  integer :: ik, p, sp, ierr, k
   complex(r8), allocatable :: aux(:,:)
   
   sub_name = 'calc_current'; call push_sub()
@@ -564,29 +565,37 @@ subroutine calc_current(m, st, j)
   end if
   
   j = M_ZERO
-  allocate(aux(m%np, st%nspin))
+  allocate(aux(3, m%np))
   
   do ik = 1, st%nik, sp
     do p  = st%st_start, st%st_end
-      call zmesh_derivatives(m, st%zpsi(0:m%np, 1, p, ik), aux(:, 1))
+      call zmesh_derivatives(m, st%zpsi(0:m%np, 1, p, ik), grad=aux(:,:))
       
       ! spin-up density
-      j(1:m%np, 1) = j(1:m%np, 1) + st%kweights(ik)*st%occ(p, ik)  &
-           * aimag(st%zpsi(1:m%np, 1, p, ik) * conjg(aux(1:m%np, 1)))
+      do k = 1, m%np
+        j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%kweights(ik)*st%occ(p, ik)  &
+             * aimag(st%zpsi(k, 1, p, ik) * conjg(aux(1:conf%dim, k)))
+      end do
         
       ! spin-down density
       if(st%ispin == 2) then
-        call zmesh_derivatives(m, st%zpsi(0:m%np, 1, p, ik+1), aux(:, 2))
-        j(1:m%np, 2) = j(1:m%np, 2) + st%kweights(ik+1)*st%occ(p, ik+1) &
-             * aimag(st%zpsi(1:m%np, 1, p, ik+1) * conjg(aux(1:m%np, 2)))
+        call zmesh_derivatives(m, st%zpsi(0:m%np, 1, p, ik+1), aux(:,:))
+
+        do k = 1, m%np
+          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%kweights(ik+1)*st%occ(p, ik+1) &
+             * aimag(st%zpsi(k, 1, p, ik+1) * conjg(aux(1:conf%dim, k)))
+        end do
+
+        ! WARNING: the next lines DO NOT work properly
+      else if(st%ispin == 3) then ! off-diagonal densities
+        call zmesh_derivatives(m, st%zpsi(0:m%np, 2, p, ik), aux(:,:))
+
+        do k = 1, m%np
+          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%kweights(ik)*st%occ(p, ik) &
+               * aimag(st%zpsi(k, 2, p, ik) * conjg(aux(1:conf%dim, k)))
+        end do
       end if
-        
-      ! off-diagonal densities
-      if(st%ispin == 3) then
-        call zmesh_derivatives(m, st%zpsi(0:m%np, 2, p, ik), aux(:, 2))
-        j(1:m%np, 2) = j(1:m%np, 2) + st%kweights(ik)*st%occ(p, ik) &
-             * aimag(st%zpsi(1:m%np, 2, p, ik) * conjg(aux(1:m%np, 2)))
-      end if
+
     end do
   end do
 
