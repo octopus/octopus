@@ -62,6 +62,8 @@ contains
 
     ! check where to output files
     call loct_parse_string('WorkDir', '.', work_dir)
+    ! ... and if necessary create workdir (will not harm if work_dir is already there)
+    if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
   end subroutine io_init
 
