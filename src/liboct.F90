@@ -24,6 +24,7 @@ module lib_oct
   ! Define the which routines can be seen from the outside
   private
   public :: loct_gamma, loct_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
+  public :: loct_bessel_j0,loct_bessel_j1,loct_bessel_k0,loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
   public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
   public :: loct_mkdir, loct_rm, loct_print_file, loct_number_of_lines
@@ -46,6 +47,38 @@ module lib_oct
       real(8), intent(in)  :: x
     end function oct_bessel
     module procedure oct_bessel4
+  end interface
+
+  interface loct_bessel_j0
+    function oct_bessel_j0(x)
+      real(8) :: oct_bessel
+      real(8), intent(in)  :: x
+    end function oct_bessel_j0
+    module procedure oct_bessel_j04
+  end interface
+  
+  interface loct_bessel_j1
+    function oct_bessel_j1(x)
+      real(8) :: oct_bessel
+      real(8), intent(in)  :: x
+    end function oct_bessel_j1
+    module procedure oct_bessel_j14
+  end interface
+  
+  interface loct_bessel_k0
+    function oct_bessel_k0(x)
+      real(8) :: oct_bessel
+      real(8), intent(in)  :: x
+    end function oct_bessel_k0
+    module procedure oct_bessel_k04
+  end interface
+  
+ interface loct_bessel_k1
+    function oct_bessel_k1(x)
+      real(8) :: oct_bessel
+      real(8), intent(in)  :: x
+    end function oct_bessel_k1
+    module procedure oct_bessel_k14
   end interface
 
   interface loct_asinh
@@ -197,6 +230,30 @@ contains
     
     oct_bessel4 = real(oct_bessel(n, real(x, kind=8)), kind=4)
   end function oct_bessel4
+
+  real(4) function oct_bessel_j04(x)
+    real(4), intent(in)  :: x
+    
+    oct_bessel_j04 = real(oct_bessel_j0(real(x, kind=8)), kind=4)
+  end function oct_bessel_j04
+
+  real(4) function oct_bessel_j14(x)
+    real(4), intent(in)  :: x
+    
+    oct_bessel_j14 = real(oct_bessel_j1(real(x, kind=8)), kind=4)
+  end function oct_bessel_j14
+
+  real(4) function oct_bessel_k04(x)
+    real(4), intent(in)  :: x
+    
+    oct_bessel_k04 = real(oct_bessel_k0(real(x, kind=8)), kind=4)
+  end function oct_bessel_k04
+
+  real(4) function oct_bessel_k14(x)
+    real(4), intent(in)  :: x
+    
+    oct_bessel_k14 = real(oct_bessel_k1(real(x, kind=8)), kind=4)
+  end function oct_bessel_k14
 
   real(4) function oct_asinh4(x)
     real(4), intent(in) :: x
