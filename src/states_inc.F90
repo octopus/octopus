@@ -2,7 +2,9 @@
 subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(inout) :: psi(0:m%np, dim, nst)
+  ! possible bug in some alpha compilers
+  ! R_TYPE, intent(inout) :: psi(0:m%np, dim, nst) 
+  R_TYPE, intent(inout) :: psi(:, :, :)
   integer, intent(in), optional :: start
 
   integer :: p, q, id, stst
@@ -72,13 +74,24 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
 
   integer :: iunit, ik, ist, id
 
+  sub_name = 'states_write_restart'; call push_sub()
+
   call io_assign(iunit)
   open(iunit, status='unknown', file=trim(filename), form='unformatted')
     
   write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%zsize
   write(iunit) int(m%np, i4), int(st%dim, i4), 1_i4, &
        int(st%nst, i4), int(st%nik, i4), int(st%ispin, i4)
-  write(iunit) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
+
+  ! psi has to be written in parts, or segmentation fault in some machines
+  do ik = 1, st%nik
+    do ist = st%st_start, st%st_end
+      do id = 1, st%dim
+        write(iunit) st%R_FUNC(psi)(1:m%np, id, ist, ik)
+      end do
+    end do
+  end do
+
   ! eigenvalues are also needed ;)
   write(iunit) st%eigenval(st%st_start:st%st_end, 1:st%nik)
 
@@ -87,6 +100,7 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   end if
   call io_close(iunit)
   
+  call pop_sub()
 end subroutine R_FUNC(states_write_restart)
 
 logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
@@ -96,7 +110,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   integer, intent(out), optional :: iter ! used in TD
   real(r8), intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
-  integer :: iunit
+  integer :: iunit, ik, ist, id
   integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik
 
   sub_name = 'systm_load_psi'; call push_sub()
@@ -126,7 +140,14 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
     go to 999 ! one go to does not harm :)
   else
     st%R_FUNC(psi) = R_TOTYPE(0._r8)
-    read(iunit, err=999) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        do id = 1, st%dim
+          read(iunit, err=999) st%R_FUNC(psi)(1:m%np, id, ist, ik)
+        end do
+      end do
+    end do
+
     read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%nik)
 
     if(present(iter)) then ! read the time-dependent stuff

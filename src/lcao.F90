@@ -195,7 +195,7 @@ subroutine lcao_wf(sys, h)
 
                     if(n1 == n2 .and. conf%verbose >= 999) then
                       if(abs(s(n1, n2) - 1.0_r8) > 0.25_r8) then
-                        write(message(1),'(a,i2,a,i2,a,i2,a,a,f12.6)') &
+                        write(message(1),'(a,i4,a,i2,a,i2,a,a,f12.6)') &
                              'Pseudo-wave function ', n1, ',', l1, ',', lm1,' out of box:', &
                              '|Phi|^2 = ', s(n1, n2)
                         call write_warning(1)

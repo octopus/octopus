@@ -219,7 +219,7 @@ of a linear optical response code written by George F. Bertsch, K. Yabana
 and Angel Rubio.
 
 If you have some free time, and if you feel like taking a joy ride with
-FORTRAN 90, just drop us an @email{marques@@nautilus.fis.uc.pt, email}. You can
+FORTRAN 90, just drop us an @email{octopus@@tddft.org, email}. You can
 also send us patches, comments, ideas, wishes, etc.
 
 @c ********************* INTRODUCTION ***********************************

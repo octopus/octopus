@@ -8,6 +8,9 @@ use states
 use hamiltonian
 use mix
 use lasers
+#ifndef DISABLE_PES
+use PES
+#endif
 
 implicit none
 
@@ -47,12 +50,9 @@ type td_type
   ! occupational analysis
   logical :: occ_analysis ! do we perform occupational analysis?
 
-!#ifndef NO_PES
-!  logical :: calc_PES_rc    ! PES using rc method
-!  type(PES_rc_type) :: PES_rc
-!  logical :: calc_PES_mask  ! PES using mask method
-!  type(PES_mask_type) :: PES_mask
-!#endif
+#ifndef DISABLE_PES
+  type(PES_type) :: PESv
+#endif
 
   real(r8), pointer :: v_old1(:,:), v_old2(:,:)
   character(len=100) :: filename ! name of the continuation file
@@ -193,6 +193,10 @@ subroutine td_run(td, u_st, sys, h)
     if(td%occ_analysis) then
       call td_calc_projection(projections(:,:,:,ii))
     end if
+
+#ifndef DISABLE_PES
+    call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, td%ab_pot)
+#endif
 
     ! mask function?
     if(td%ab == 2) then
@@ -350,6 +354,10 @@ contains
       call io_close(iunit)
     end if
 
+#ifndef DISABLE_PES
+    call PES_output(td%PESv, sys%m, sys%st, i, td%save_iter, td%dt)
+#endif
+
   end subroutine td_write_data
 
   subroutine td_write_laser(iunit, iter, t, header)
@@ -412,31 +420,33 @@ contains
       write(iunit, '(a8,4a20)', advance='no') '# Iter  ', str_center('t', 20), &
            str_center('Ekin', 20), str_center('Epot', 20), str_center('Etot', 20)
       do i=1, sys%natoms
-      do j=1, 3
-         write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',',j,')'
-         write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-      enddo 
-      enddo
+        do j=1, 3
+          write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',',j,')'
+          write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+        end do
+      end do
       do i=1, sys%natoms
-      do j=1, 3
-         write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
-         write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-      enddo 
-      enddo
+        do j=1, 3
+          write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
+          write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+        enddo
+      end do
       do i=1, sys%natoms
-      do j=1, 3
-         write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
-         write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
-      enddo 
-      enddo
+        do j=1, 3
+          write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
+          write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+        end do
+      end do
       write(iunit,'(1x)', advance='yes')
-
+      
       ! second line: units
-      write(iunit,'(7a)') '#       ', 'Energy in ', trim(units_out%energy%abbrev),        &
-                                      ', Positions in ', trim(units_out%length%abbrev),   &
-                                      ', Velocities in ', trim(units_out%velocity%abbrev),&
-                                      ', Forces in', trim(units_out%force%abbrev)
-    endif
+      write(iunit,'(7a)') '#       ', &
+           'Energy in ',       trim(units_out%energy%abbrev),        &
+           ', Positions in ',  trim(units_out%length%abbrev),   &
+           ', Velocities in ', trim(units_out%velocity%abbrev),&
+           ', Forces in',      trim(units_out%force%abbrev)
+    end if
+
     write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
     write(iunit, '(3es20.12)', advance='no') &
         ke/units_out%energy%factor, &

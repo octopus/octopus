@@ -59,6 +59,7 @@ subroutine hamiltonian_init(h, sys)
   allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, h%ispin), h%rho_core(h%np))
   h%Vhartree = 0._r8
   h%Vxc = 0._r8
+  h%rho_core = 0._r8
 
   if(sys%ncatoms > 0) then
     call oct_parse_logical(C_string("ClassicPotential"), .false., h%classic_pot)

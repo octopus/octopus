@@ -43,7 +43,7 @@ dnl Check f90 compiler
 AC_DEFUN(ACX_PROG_F90,
 [
 if test -z "$F90"; then
-  AC_CHECK_PROGS(F90, f90 xlf90)
+  AC_CHECK_PROGS(F90, f90 abf90 xlf90)
     test -z "$F90" && AC_MSG_ERROR([no acceptable Fortran 90 compiler found in $PATH])
 fi
 

@@ -1,7 +1,7 @@
 subroutine td_init(td, sys, m, st)
   type(td_type), intent(out) :: td
   type(system_type), intent(IN) :: sys
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(inout) :: m
   type(states_type), intent(inout) :: st
 
   integer :: iunit
@@ -76,8 +76,8 @@ subroutine td_init(td, sys, m, st)
   ! now come the absorbing boundaries
   call td_init_ab()
 
-  ! now the photoelectron stuff (TODO)
-  !call td_init_PES()
+  ! now the photoelectron stuff
+  call PES_init(td%PESv, m, sys%st, td%ab, td%save_iter)
 
   ! occupational analysis stuff
   call oct_parse_logical(C_string("TDOccupationalAnalysis"), .false., td%occ_analysis)
@@ -227,11 +227,10 @@ subroutine td_end(td)
 
   sub_name = 'td_end'; call push_sub()
 
-! TODO PES
-!#ifndef NO_PES
-!  if(td%calc_PES_rc)   call PES_rc_end(td%PES_rc)
+#ifndef NO_PES
+  call PES_end(td%PESv)
 !  if(td%calc_PES_mask) call PES_mask_end(td%PES_mask)
-!#endif
+#endif
 
   if(td%evolution_method == 3) then ! split operator method
     deallocate(td%kin_2); nullify(td%kin_2)

@@ -1,0 +1,93 @@
+#include "config_F90.h"
+
+#ifndef DISABLE_PES
+module PES
+use global
+use liboct
+use io
+use mesh
+use states
+
+implicit none
+
+type PES_rc_type
+  integer :: npoints            ! how many points we store the wf
+  integer, pointer :: points(:) ! which points to use
+  character(len=30), pointer :: filenames(:) ! filenames
+  complex(r4), pointer :: wf(:,:,:,:,:)
+end type PES_rc_type
+
+type PES_mask_type
+  complex(r8), pointer :: k(:,:,:,:,:,:) ! masked wf in momentum space
+  real(r8),    pointer :: r(:,:,:,:,:)   ! summed masked density in real space
+end type PES_mask_type
+
+type PES_type
+  logical :: calc_rc
+  type(PES_rc_type)   :: rc
+
+  logical :: calc_mask
+  type(PES_mask_type) :: mask
+end type PES_type
+
+contains
+
+subroutine PES_init(p, m, st, ab, save_iter)
+  type(PES_TYPE), intent(out) :: p
+  type(mesh_type), intent(inout) :: m
+  type(states_type), intent(IN) :: st
+  integer, intent(in) :: ab, save_iter
+  call oct_parse_logical("CalcPES_rc", .false., p%calc_rc)
+  if(p%calc_rc) then
+    p%calc_rc = .true.
+    call PES_rc_init(p%rc, m, st, save_iter)
+  end if
+
+  p%calc_mask = .false.
+  ! have the mask, and we are working in the velocity gauge
+  if(ab == 2) then 
+    call oct_parse_logical("CalcPES_Mask", .false., p%calc_mask)
+    if(p%calc_mask) then
+      call PES_mask_init(p%mask, m, st)
+    end if
+  end if
+
+end subroutine PES_init
+
+subroutine PES_end(p)
+  type(PES_type), intent(inout) :: p
+
+  if(p%calc_rc)   call PES_rc_end  (p%rc)
+  if(p%calc_mask) call PES_mask_end(p%mask)
+
+end subroutine PES_end
+
+subroutine PES_doit(p, m, st, ii, dt, mask)
+  type(PES_type), intent(inout) :: p
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  real(r8), intent(in) :: dt, mask(m%np)
+  integer, intent(in) :: ii
+
+  if(p%calc_rc)   call PES_rc_doit  (p%rc, st, ii)
+  if(p%calc_mask) call PES_mask_doit(p%mask, m, st, dt, mask)
+
+end subroutine PES_doit
+
+subroutine PES_output(p, m, st, iter, save_iter, dt)
+  type(PES_type), intent(in) :: p
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  integer, intent(in) :: iter, save_iter
+  real(r8), intent(in) :: dt
+
+  if(p%calc_rc)   call PES_rc_output   (p%rc, st, iter, save_iter, dt)
+  if(p%calc_mask) call PES_mask_output (p%mask, m, st, "PES")
+
+end subroutine PES_output
+
+#include "pes_rc.F90"
+#include "pes_mask.F90"
+end module PES
+
+#endif

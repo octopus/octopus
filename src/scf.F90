@@ -99,7 +99,7 @@ subroutine scf_run(scf, sys, h)
     scf%rel_dens = scf%abs_dens / sys%st%qtot
 
     ! compute new potentials
-    call dhamiltonian_setup(h, sys)
+    call R_FUNC(hamiltonian_setup) (h, sys)
 
     ! save restart information
     call R_FUNC(states_write_restart)(trim(sys%sysname)//".restart", sys%m, sys%st)
@@ -205,34 +205,5 @@ subroutine scf_write_static()
 end subroutine scf_write_static
 
 end subroutine scf_run
-
-! TODO use netcdf
-subroutine scf_write_restart(filename, m, st)
-  character(len=*), intent(in) :: filename
-  type(mesh_type), intent(in) :: m
-  type(states_type), intent(in) :: st
-
-  integer :: iunit, ik, ist, id
-
-  call io_assign(iunit)
-  open(iunit, status='unknown', file=trim(filename), form='unformatted')
-    
-  write(iunit) m%box_shape, m%h, m%rsize, m%zsize
-  write(iunit) m%np, st%dim, 1, st%nst, st%nik, st%ispin
-  do ik = 1, st%nik
-    do ist = 1, st%nst
-      do id = 1, st%dim
-        write(iunit) st%R_FUNC(psi)(1:m%np, id, ist, ik)
-      end do
-    end do
-  end do
-  ! eigenvalues are also needed ;)
-  do ik = 1, st%nik
-    write(iunit) st%eigenval(:, ik)
-  end do
-
-  call io_close(iunit)
-
-end subroutine scf_write_restart
 
 end module scf

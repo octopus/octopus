@@ -95,8 +95,6 @@ subroutine write_fatal(no_lines)
   write(stdout, '(/,a,/)') stars
 
 #ifdef HAVE_MPI
-  end if
-
   call MPI_FINALIZE(i)
 #endif
 

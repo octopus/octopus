@@ -121,8 +121,8 @@ a linear optical response code written by George F. Bertsch, K. Yabana
 and Angel Rubio.
 
    If you have some free time, and if you feel like taking a joy ride
-with FORTRAN 90, just drop us an email <marques@nautilus.fis.uc.pt>.
-You can also send us patches, comments, ideas, wishes, etc.
+with FORTRAN 90, just drop us an email <octopus@tddft.org>. You can
+also send us patches, comments, ideas, wishes, etc.
 
 
 File: octopus.info,  Node: Introduction,  Next: Installation,  Prev: Authors,  Up: Top
@@ -1300,30 +1300,30 @@ Tag Table:
 Node: Top1124
 Node: Copying1765
 Node: Authors3167
-Node: Introduction4052
-Ref: Introduction-Footnote-14695
-Node: Installation5088
-Node: The input file10943
-Node: The parser11166
-Node: Input file options14204
-Node: Generalities14784
-Node: Species17042
-Node: Coordinates18997
-Node: Velocities22823
-Node: Mesh23649
-Node: States25905
-Node: Hamiltonian28086
-Node: Exchange and correlation29611
-Node: SCF31549
-Node: Unoccupied States34450
-Node: Time Dependent35106
-Node: Photo-electron spectrum38757
-Node: Born-Oppenheimer Dynamics39565
-Node: Varia40610
-Node: Examples41750
-Node: Hello world41894
-Node: Benzene45040
-Node: A word about units46577
-Node: Options Index46720
+Node: Introduction4043
+Ref: Introduction-Footnote-14686
+Node: Installation5079
+Node: The input file10934
+Node: The parser11157
+Node: Input file options14195
+Node: Generalities14775
+Node: Species17033
+Node: Coordinates18988
+Node: Velocities22814
+Node: Mesh23640
+Node: States25896
+Node: Hamiltonian28077
+Node: Exchange and correlation29602
+Node: SCF31540
+Node: Unoccupied States34441
+Node: Time Dependent35097
+Node: Photo-electron spectrum38748
+Node: Born-Oppenheimer Dynamics39556
+Node: Varia40601
+Node: Examples41741
+Node: Hello world41885
+Node: Benzene45031
+Node: A word about units46568
+Node: Options Index46711
 
 End Tag Table
