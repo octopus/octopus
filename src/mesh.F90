@@ -151,7 +151,7 @@ subroutine mesh_write_info(m, unit)
   write(message(4),'(a, i6)') '  # inner mesh = ', m%np
   call write_info(4, unit)
 
-  write(message(1),'(a,f9.3,a)') '  Grid Cutoff ['+trim(units_out%energy%abbrev)+'] = ', &
+  write(message(1),'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
                                  (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
   call write_info(1, unit)
       
