@@ -30,9 +30,17 @@ subroutine td_rti(h, m, st, sys, td, t)
 !!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
   td%v_old(:, :, 3) = td%v_old(:, :, 2)
   td%v_old(:, :, 2) = td%v_old(:, :, 1)
-  do is = 1, st%nspin
-    td%v_old(:, is, 1) = h%vhartree(:) + h%vxc(:, is)
-  enddo
+  select case(st%ispin)
+  case(UNPOLARIZED, SPIN_POLARIZED)
+    do is = 1, st%nspin
+       td%v_old(:, is, 1) = h%vhartree(:) + h%vxc(:, is)
+    enddo
+  case(SPINORS)
+     td%v_old(:, 1, 1) = h%vhartree(:) + h%vxc(:, 1)
+     td%v_old(:, 2, 1) = h%vhartree(:) + h%vxc(:, 2)
+     td%v_old(:, 3, 1) = h%vxc(:, 3)
+     td%v_old(:, 4, 1) = h%vxc(:, 4)
+  end select
   
   select case(td%evolution_method)
   case(OLD_REVERSAL)
@@ -106,9 +114,18 @@ contains
     zpsi1 = st%zpsi ! store zpsi
     
     allocate(vhxc_t1(m%np, st%nspin))
-    do is = 1, st%nspin ! store Vhxc
-      Vhxc_t1(:, is) = h%VHartree(:) + h%Vxc(:, is)
-    end do
+    select case(st%nspin)
+    case(1, 2)
+      do is = 1, st%nspin ! store Vhxc
+         Vhxc_t1(:, is) = h%VHartree(:) + h%Vxc(:, is)
+      end do
+    case(4)
+      do is = 1, 2 ! store Vhxc
+         Vhxc_t1(:, is) = h%VHartree(:) + h%Vxc(:, is)
+      end do
+      vhxc_t1(:, 3) = h%vxc(:, 3)
+      vhxc_t1(:, 4) = h%vxc(:, 4)
+    end select
     
     ! propagate dt with H(t-dt)
     do ik = 1, st%nik
@@ -125,9 +142,15 @@ contains
     
     ! store Vhxc at t
     allocate(vhxc_t2(m%np, st%nspin))
-    do is = 1, st%nspin
-      Vhxc_t2(:, is) = h%VHartree(:) + h%Vxc(:, is)
-    end do
+    select case(st%nspin)
+    case(1, 2)
+      do is = 1, 2
+         Vhxc_t2(:, is) = h%VHartree(:) + h%Vxc(:, is)
+      end do
+    case(4)
+     vhxc_t2(:, 3) = h%vxc(:, 3)
+     vhxc_t2(:, 4) = h%vxc(:, 4)
+    end select
     
     ! propagate dt/2 with H(t-dt)
     h%Vhartree = 0._r8
