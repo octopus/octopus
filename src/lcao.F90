@@ -32,7 +32,7 @@ module lcao
   implicit none
 
   private
-  public :: lcao_dens, lcao_init, lcao_wf, lcao_end
+  public :: lcao_init, lcao_wf, lcao_end
 
 type lcao_type
   !integer           :: mode
