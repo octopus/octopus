@@ -555,7 +555,7 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   ! now we calculate the xc terms
   h%ex = M_ZERO
   h%ec = M_ZERO
-  call xc_get_vxc(2, h%xc%functl, h%xc%nlcc, m, f_der, st, h%vhxc, h%ex, h%ec, &
+  call xc_get_vxc(h%xc%functl, h%xc, m, f_der, st, h%vhxc, h%ex, h%ec, &
      -minval(st%eigenval(st%nst, :)), st%qtot)
 
   ! The OEP family has to handle specially

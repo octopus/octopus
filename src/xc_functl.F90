@@ -87,6 +87,10 @@ contains
         call xc_gga_init(functl%conf, functl%info, functl%id, spin_channels)
       end if
       
+    case(XC_MGGA_X_TPSS)
+      functl%family = XC_FAMILY_MGGA
+      call xc_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
+
     case(XC_OEP_X)
       functl%family = XC_FAMILY_OEP
       
@@ -144,6 +148,10 @@ contains
       functl%family = XC_FAMILY_GGA
       call xc_gga_init(functl%conf, functl%info, functl%id, spin_channels)
       
+    case(XC_MGGA_C_TPSS)
+      functl%family = XC_FAMILY_MGGA
+      call xc_mgga_init(functl%conf, functl%info, functl%id, spin_channels)
+
     case default
       write(message(1), '(a,i3,a)') "'", functl%id, &
          "' is not a known correlation functional!"
@@ -159,8 +167,9 @@ contains
     type(xc_functl_type), intent(inout) :: functl
     
     select case(functl%family)
-    case(XC_FAMILY_LDA); call xc_lda_end(functl%conf)
-    case(XC_FAMILY_GGA); call xc_gga_end(functl%conf)
+    case(XC_FAMILY_LDA);  call xc_lda_end (functl%conf)
+    case(XC_FAMILY_GGA);  call xc_gga_end (functl%conf)
+    case(XC_FAMILY_MGGA); call xc_mgga_end(functl%conf)
     end select
 
   end subroutine xc_functl_end
@@ -172,9 +181,10 @@ contains
     integer,              intent(in) :: iunit
 
     character(len=120) :: s1, s2
-    integer(POINTER_SIZE) :: i
+    integer(POINTER_SIZE) :: i, j
     
-    if(functl%family==XC_FAMILY_LDA.or.functl%family==XC_FAMILY_GGA) then
+    if(functl%family==XC_FAMILY_LDA.or.functl%family==XC_FAMILY_GGA.or. &
+       functl%family==XC_FAMILY_MGGA) then
       ! we hapilly call the xc library
 
       i = xc_info_kind(functl%info)
@@ -191,11 +201,12 @@ contains
       call xc_info_family(functl%info, s2)
       write(iunit, '(4x,4a)') trim(s1), ' (', trim(s2), ')'
       
-      i = 0;
+      i = 0; j = 1
       call xc_info_ref(functl%info, i, s1)
       do while(i>=0)
-        write(iunit, '(4x,a,i1,2a)') '[', i, '] ', trim(s1)
+        write(iunit, '(4x,a,i1,2a)') '[', j, '] ', trim(s1)
         call xc_info_ref(functl%info, i, s1)
+        j = j + 1
       end do
       
     else if(functl%family==XC_FAMILY_OEP) then 

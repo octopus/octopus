@@ -15,8 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-!!! This routine calculates the SIC exchange functional. note that the LDA
-!!! part of the functional is already included by the LDA routines
+!!! This routine calculates the SIC exchange functional.
 subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
   type(xc_type),     intent(in)    :: xcs
   type(mesh_type),   intent(in)    :: m
@@ -50,7 +49,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(2, xcs%sic_aux, xcs%nlcc, m, f_der, st, vxc2, ex2, &
+      call xc_get_vxc(xcs%sic_aux, xcs, m, f_der, st, vxc2, ex2, &
          ec2, edummy, edummy)
       
       ex = ex - oep%sfact*ex2

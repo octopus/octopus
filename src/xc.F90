@@ -38,6 +38,10 @@ type xc_type
   integer              :: sic_correction
   type(xc_functl_type) :: sic_aux(2)
 
+  ! the meta-GGA can be implemented in two ways
+  integer :: mGGA_implementation  ! 1 => as a GGA like functional
+                                  ! 2 => using the OEP method
+
   ! for the OEP
   integer  :: oep_level  ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
   FLOAT    :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
@@ -114,6 +118,16 @@ contains
     call xc_functl_init_exchange   (xcs%functl(1), ispin, spin_channels)
     call xc_functl_init_correlation(xcs%functl(2), ispin, spin_channels)
     
+    if(any(xcs%functl(:)%family==XC_FAMILY_MGGA)) then
+      call loct_parse_int("MGGAimplementation", 1, xcs%mGGA_implementation)
+      if(xcs%mGGA_implementation.ne.1.and.xcs%mGGA_implementation.ne.2) then
+        message(1) = 'MGGAimplementation can only assume the values:'
+        message(2) = '  1 : GEA implementation'
+        message(3) = '  2 : OEP implementation'
+        call write_fatal(3)
+      end if
+    end if
+
     ! check for SIC
     xcs%sic_correction = 0
     if(any(xcs%functl(:)%family==XC_FAMILY_LDA) .or. &

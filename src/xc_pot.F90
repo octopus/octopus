@@ -15,10 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_get_vxc(nf, functl, nlcc, m, f_der, st, vxc, ex, ec, ip, qtot)
-  integer,              intent(in)    :: nf        ! how many functionals in array
-  type(xc_functl_type), intent(in)    :: functl(:) ! functl(nf)
-  logical,              intent(in)    :: nlcc
+subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
+  type(xc_functl_type), intent(in)    :: functl(:) ! functl(2)
+  type(xc_type),        intent(in)    :: xcs
   type(mesh_type),      intent(in)    :: m
   type(f_der_type),     intent(inout) :: f_der
   type(states_type),    intent(in)    :: st
@@ -27,49 +26,40 @@ subroutine xc_get_vxc(nf, functl, nlcc, m, f_der, st, vxc, ex, ec, ip, qtot)
   
   FLOAT, allocatable :: dens(:,:), dedd(:,:), l_dens(:), l_dedd(:)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
-
+  FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
 
   integer :: i, is, ixc, ispin, spin_channels
   FLOAT   :: e, dpol, dtot, vpol, r
-  logical :: gga
+  logical :: gga, mgga
 
-  ! is there anything to do
-  if(.not.(any(functl(:)%family==XC_FAMILY_LDA).or. &
-     any(functl(:)%family==XC_FAMILY_GGA))) return
+  ! is there anything to do ?
+  if(.not.( &
+     any(functl(:)%family==XC_FAMILY_LDA).or. &
+     any(functl(:)%family==XC_FAMILY_GGA).or. &
+     any(functl(:)%family==XC_FAMILY_MGGA) )) return
   
   ! really start
   call push_sub('xc_gga')
 
   ! initialize a couple of handy variables
   gga           = any(functl(:)%family == XC_FAMILY_GGA)
+  mgga          = any(functl(:)%family == XC_FAMILY_MGGA)
   spin_channels = functl(1)%spin_channels
   ispin         = functl(1)%ispin
   
-  allocate(dens(m%np, spin_channels), dedd(m%np, spin_channels))
-  allocate(l_dens(spin_channels), l_dedd(spin_channels))
-  dedd = M_ZERO
-
-  call get_dens()
-
-  if(gga) then
-    allocate(gdens(m%np, 3, spin_channels), dedgd(m%np, 3, spin_channels))
-    allocate(l_gdens(3, spin_channels), l_dedgd(3, spin_channels))
-    gdens = M_ZERO
-    dedgd = M_ZERO
-
-    do i = 1, spin_channels
-      call df_gradient(f_der, dens(:,i), gdens(:,:,i))
-    end do
-  end if
+                  call  lda_init()
+  if(gga.or.mgga) call  gga_init()
+  if(       mgga) call mgga_init()
 
   space_loop: do i = 1, m%np
 
     ! make a local copy with the correct memory order
-    l_dens (:) = dens (i, :)
-    if(gga) l_gdens(:,:) = gdens(i, :,:)
+             l_dens (:)   = dens (i, :)
+    if( gga) l_gdens(:,:) = gdens(i, :,:)
+    if(mgga) l_tau  (:)   = tau  (i, :)
     
     ! Calculate the potential/gradient density in local reference frame.
-    functl_loop: do ixc = 1, nf
+    functl_loop: do ixc = 1, 2
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
@@ -87,64 +77,68 @@ subroutine xc_get_vxc(nf, functl, nlcc, m, f_der, st, vxc, ex, ec, ip, qtot)
           call xc_gga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), &
              e, l_dedd(1), l_dedgd(1,1))
         end if
+        
+      case(XC_FAMILY_MGGA)
+        call xc_mgga(functl(ixc)%conf, l_dens(1), l_gdens(1,1), l_tau(1), &
+           e, l_dedd(1), l_dedgd(1,1), l_dedtau(1))
+        
       case default
         cycle
       end select
 
-      if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE) then
+      if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
+         functl(ixc)%id==XC_MGGA_X_TPSS) then
         ex = ex + sum(l_dens(:)) * e * m%vol_pp(i)
       else
         ec = ec + sum(l_dens(:)) * e * m%vol_pp(i)
       end if
 
+      ! store results
       dedd(i,:) = dedd(i,:) + l_dedd(:)
+
       if(functl(ixc)%family==XC_FAMILY_GGA) then
         dedgd(i,:,:) = dedgd(i,:,:) + l_dedgd(:,:)
       end if
+
+      if(functl(ixc)%family==XC_FAMILY_MGGA) then
+        dedtau(i,:) = dedtau(i,:) + l_dedtau(:)
+      end if
       
     end do functl_loop
-
   end do space_loop
 
-  ! We now add substract the divergence of the functional derivative of Exc with respect to
-  ! the gradient of the density.
-  !   Note: gdens is used as a temporary array
-  if(gga) then
-    do is = 1, spin_channels
-      call df_divergence(f_der, dedgd(:,:,is), gdens(:,1,is))
-      call lalg_axpy(m%np, -M_ONE, gdens(:,1,is), dedd(:, is))
-    end do
-  end if
-      
-  ! If LB94, we can calculate an approximation to the energy from 
-  ! Levy-Perdew relation (PRA 32, 2010 (1985))
-  if(functl(1)%id == XC_GGA_XC_LB) then
-    do is = 1, spin_channels
-      call df_gradient(f_der, dedd(:, is), gdens(:,:,is))
-      do i = 1, m%np
-        ex = ex - dens(i, is) * sum(m%x(i,:)*gdens(i,:,is)) * m%vol_pp(i)
-      end do
-    end do
-  end if
+  ! this has to be done in inverse order
+  if(       mgga) call mgga_process()
+  if(gga.or.mgga) call  gga_process()
+                  call  lda_process()
 
-  ! now rotate to get back vxc
-  call get_vxc()
+  ! clean up allocated memory
+                  call  lda_end()
+  if(gga.or.mgga) call  gga_end()
+  if(       mgga) call mgga_end()
 
-  deallocate(dens, dedd, l_dens, l_dedd)
-  if(gga) deallocate(gdens, dedgd, l_gdens, l_dedgd)
   call pop_sub()
 
 contains
-  subroutine get_dens()
+  ! Takes care of the initialization of the LDA part of the functionals
+  !   *) allocates dens(ity) and dedd, and their local variants
+  !   *) calculates the density taking into account nlcc and non-collinear spin
+  subroutine lda_init()
     integer :: i
     FLOAT   :: d(spin_channels), f, dtot, dpol
     
+    ! allocate some general arrays
+    allocate(dens(m%np, spin_channels), dedd(m%np, spin_channels))
+    allocate(l_dens(spin_channels), l_dedd(spin_channels))
+    dedd = M_ZERO
+
+    ! get the density
     f = M_ONE/real(spin_channels, PRECISION)
     do i = 1, m%np
       d(:) = st%rho(i, :)
       
       ! add the non-linear core corrections
-      if(nlcc) d(:) = d(:) + f*st%rho_core(i)
+      if(xcs%nlcc) d(:) = d(:) + f*st%rho_core(i)
       
       select case(ispin)
       case(UNPOLARIZED)
@@ -161,21 +155,28 @@ contains
       end select
     end do
     
-  end subroutine get_dens
+  end subroutine lda_init
 
 
-  ! rotate back (do not need the rotation matrix for this).
-  subroutine get_vxc()
+  ! deallocates variables allocated in lda_init
+  subroutine lda_end()
+    deallocate(dens, dedd, l_dens, l_dedd)
+  end subroutine lda_end
+
+  
+  ! calculates the LDA part of vxc, taking into account non-collinear spin
+  subroutine lda_process()
     integer :: i
     FLOAT :: d(spin_channels), f, dtot, dpol, vpol
 
     f = M_ONE/real(spin_channels, PRECISION)
     if(ispin == SPINORS) then
+      ! rotate back (do not need the rotation matrix for this).
       do i = 1, m%np
         d(:) = st%rho(i, :)
       
         ! add the non-linear core corrections
-        if(nlcc) d(:) = d(:) + f*st%rho_core(i)
+        if(xcs%nlcc) d(:) = d(:) + f*st%rho_core(i)
         
         dtot = d(1) + d(2)
         dpol = sqrt((d(1) - d(2))**2 + &
@@ -190,7 +191,149 @@ contains
     else
       vxc = vxc + dedd
     end if
+    
+  end subroutine lda_process
 
-  end subroutine get_vxc
+
+  ! initialize GGAs
+  !   *) allocates gradient of the density (gdens), dedgd, and its local variants
+  !   *) calculates the gradient of the density
+  subroutine gga_init()
+    ! allocate variables
+    allocate(gdens(m%np, 3, spin_channels), dedgd(m%np, 3, spin_channels))
+    allocate(l_gdens(3, spin_channels), l_dedgd(3, spin_channels))
+    gdens = M_ZERO
+    dedgd = M_ZERO
+
+    ! get gradient of the density
+    do i = 1, spin_channels
+      call df_gradient(f_der, dens(:,i), gdens(:,:,i))
+    end do
+  end subroutine gga_init
+
+
+  ! cleans up memory allocated in gga_init
+  subroutine gga_end()
+    deallocate(gdens, dedgd, l_gdens, l_dedgd)
+  end subroutine gga_end
+
+
+  ! calculates the GGA contribution to vxc
+  subroutine gga_process()
+    integer :: i, is
+    FLOAT, allocatable :: gf(:,:)
+
+    ! subtract the divergence of the functional derivative of Exc with respect to
+    ! the gradient of the density.
+    allocate(gf(m%np, 1))
+    do is = 1, spin_channels
+      call df_divergence(f_der, dedgd(:,:,is), gf(:,1))
+      call lalg_axpy(m%np, -M_ONE, gf(:,1), dedd(:, is))
+    end do
+    deallocate(gf)
+    
+    ! If LB94, we can calculate an approximation to the energy from 
+    ! Levy-Perdew relation PRA 32, 2010 (1985)
+    if(functl(1)%id == XC_GGA_XC_LB) then
+      allocate(gf(m%np, 3))
+
+      do is = 1, spin_channels
+        call df_gradient(f_der, dedd(:, is), gf(:,:))
+        do i = 1, m%np
+          ex = ex - dens(i, is) * sum(m%x(i,:)*gf(i,:)) * m%vol_pp(i)
+        end do
+      end do
+
+      deallocate(gf)
+    end if
+
+  end subroutine gga_process
+  
+
+  ! initialize meta-GGAs
+  !   *) allocate the kinetic energy density, dedtau, and local variants
+  !   *) calculates tau either from a GEA or from the orbitals
+  subroutine mgga_init()
+    integer :: i, is
+    FLOAT   :: f, d
+    FLOAT, allocatable :: n2dens(:)
+
+    allocate(tau(m%np, spin_channels), dedtau(m%np, spin_channels))
+    allocate(l_tau(spin_channels), l_dedtau(spin_channels))
+    tau    = M_ZERO
+    dedtau = M_ZERO
+
+    ASSERT(xcs%mGGA_implementation==1.or.xcs%mGGA_implementation==2)
+
+    ! calculate tau
+    select case(xcs%mGGA_implementation)
+    case (1)  ! GEA implementation
+      allocate(n2dens(m%np))
+      f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
+
+      do is = 1, spin_channels
+        call df_laplacian(f_der, dens(:,is), n2dens(:))
+
+        do i = 1, m%np
+          d          = max(dens(i, is), CNST(1e-14))
+          tau(i, is) = f * d**(M_FIVE/M_THREE) + &
+             sum(gdens(i, :, is)**2)/(CNST(72.0)*d) + &
+             n2dens(i)/M_SIX
+          tau(i, is) = max( tau(i,is), CNST(1e-14))
+        end do
+      end do
+      
+      deallocate(n2dens)
+
+    case(2) ! OEP implementation
+      stop 'not yet implemented'
+    end select
+
+  end subroutine mgga_init
+
+
+  ! clean up memory allocates in mgga_init
+  subroutine mgga_end()
+    deallocate(tau, dedtau, l_tau, l_dedtau)
+  end subroutine mgga_end
+
+
+  ! calculate the mgga contribution to vxc
+  subroutine mgga_process()
+    integer :: i, is
+    FLOAT   :: d, f
+    FLOAT, allocatable :: gf(:)
+
+    ASSERT(xcs%mGGA_implementation==1.or.xcs%mGGA_implementation==2)
+
+    ! calculate tau
+    select case(xcs%mGGA_implementation)
+      case (1) ! GEA implementation
+        f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
+        allocate(gf(m%np))
+
+        do is = 1, spin_channels
+          call df_laplacian(f_der, dedtau(:,is), gf(:))
+
+          do i = 1, m%np
+            d = max(dens(i, is), CNST(1e-14))
+            dedd(i, is) = dedd(i, is) + dedtau(i, is) * &
+               (f*d**M_TWOTHIRD - sum(gdens(i, :, is)**2)/(CNST(72.0)*d*d))
+
+            ! add the laplacian of the functional derivative of Exc with respect to tau
+            dedd(i, is) = dedd(i, is) + dedtau(i, is) * &
+               gf(i)/M_SIX
+
+            dedgd(i, :, is) = dedgd(i, :, is) + dedtau(i, is) * &
+               M_TWO*gdens(i, :, is)/(CNST(72.0)*d)
+          end do
+        end do
+       
+        deallocate(gf)
+
+      case (2) ! OEP implementation
+        stop 'not yet implemented'
+      end select
+  end subroutine mgga_process
 
 end subroutine xc_get_vxc

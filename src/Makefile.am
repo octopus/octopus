@@ -163,7 +163,7 @@ mesh.o : mesh.F90 mesh_create.F90 complex.F90 global.h linalg_adv.o curvlinear.o
 #out.o : out.F90 out_inc.F90 real.F90 undef.F90 complex.F90 global.h f.o mesh.o units.o io.o liboct_parser.o liboct.o global.o 
 #crystal.o : crystal.F90 complex.F90 global.h units.o io.o global.o 
 #states.o : states.F90 states_inc.F90 real.F90 undef.F90 states_kpoints.F90 complex.F90 global.h crystal.o geometry.o out.o mf.o f.o mesh.o math.o linalg_adv.o linalg_basic.o io.o liboct_parser.o global.o 
-#xc.o : xc.F90 xc_OEP_SIC.F90 xc_OEP_x.F90 xc_KLI.F90 xc_pot.F90 real.F90 undef.F90 xc_GGA.F90 xc_LDA.F90 complex.F90 global.h vxc.o states.o poisson.o mesh.o linalg_adv.o linalg_basic.o liboct_parser.o global.o 
+xc.o : xc.F90 xc_OEP_SIC.F90 xc_OEP_x.F90 xc_KLI.F90 xc_pot.F90
 #mix.o : mix.F90 complex.F90 global.h linalg_adv.o linalg_basic.o liboct_parser.o global.o 
 #restart.o : restart.F90 complex.F90 global.h out.o mesh.o states.o io.o global.o 
 #lasers.o : lasers.F90 complex.F90 global.h mesh.o spline.o liboct_parser.o io.o global.o 

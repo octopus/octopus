@@ -48,6 +48,7 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
   ! obtain the spin factors
   call xc_oep_SpinFactor(oep, st%d%nspin)
 
+  ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
     oep%lxc = M_ZERO
 
@@ -63,9 +64,8 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
       end select
     end do functl_loop
   
-    ! SIC is handled separately
+    ! SIC a la PZ is handled here
     if(xcs%sic_correction.ne.0) then
-      ! exchange correction
       call X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
     end if
     
@@ -80,6 +80,8 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     ! solve the KLI equation
     oep%vxc = M_ZERO
     call X(xc_KLI_solve) (m, st, is, oep, xcs%oep_level)
+
+    ! if asked, solve the full OEP equation
     if(xcs%oep_level == XC_OEP_FULL) then
       call X(h_xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
     end if

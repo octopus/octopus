@@ -38,8 +38,8 @@ module lib_xc
   integer, parameter ::     &
      XC_FAMILY_LDA  = 1,    &
      XC_FAMILY_GGA  = 2,    &
-     XC_FAMILY_OEP  = 3,    &
-     XC_FAMILY_MGGA = 4
+     XC_FAMILY_MGGA = 3,    &
+     XC_FAMILY_OEP  = 4
 
   ! the LDAs
   integer, parameter :: &
@@ -63,9 +63,14 @@ module lib_xc
      XC_GGA_C_PBE         = 102, &  ! Perdew, Burke & Ernzerhof correlation
      XC_GGA_XC_LB         = 103     ! van Leeuwen & Baerends
 
+  ! the meta-GGAs
+  integer, parameter :: &
+     XC_MGGA_X_TPSS       = 201, &  ! Perdew, Tao, Staroverov & Scuseria exchange
+     XC_MGGA_C_TPSS       = 202     ! Perdew, Tao, Staroverov & Scuseria correlation
+
   ! the OEP
   integer, parameter :: &
-     XC_OEP_X             = 201     ! Exact exchange
+     XC_OEP_X             = 301     ! Exact exchange
 
   ! info
   interface
@@ -93,6 +98,7 @@ module lib_xc
       character(len=*),      intent(out)   :: s
     end subroutine xc_info_refs
   end interface
+
 
   ! the LDAs
   interface
@@ -131,6 +137,7 @@ module lib_xc
       FLOAT,                 intent(in)  :: alpha  ! Ec = alpha Ex
     end subroutine xc_lda_c_xalpha_init
   end interface
+
 
   ! the GGAs
   interface
@@ -172,6 +179,33 @@ module lib_xc
       FLOAT,                 intent(in)  :: qtot  ! total charge
       FLOAT,                 intent(out) :: dedd
     end subroutine xc_gga_lb
+  end interface
+
+
+  ! the meta-GGAs
+  interface
+    subroutine xc_mgga_init(p, info, functional, nspin)
+      integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
+      integer,               intent(in)  :: functional
+      integer,               intent(in)  :: nspin
+    end subroutine xc_mgga_init
+
+    subroutine xc_mgga_end(p)
+      integer(POINTER_SIZE), intent(inout) :: p
+    end subroutine xc_mgga_end
+
+    subroutine xc_mgga(p, rho, grho, tau, e, dedd, dedgd, dedtau)
+      integer(POINTER_SIZE), intent(in)  :: p
+      FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
+      FLOAT,                 intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
+      FLOAT,                 intent(in)  :: tau   ! tau(nspin) the kinetic energy density
+      FLOAT,                 intent(out) :: e     ! the energy per unit particle
+      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy 
+                                                  ! in terms of the density
+      FLOAT,                 intent(out) :: dedgd ! in terms of the gradient of the density
+      FLOAT,                 intent(out) :: dedtau! and in terms of tau
+    end subroutine xc_mgga
   end interface
 
 end module lib_xc
