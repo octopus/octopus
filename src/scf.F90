@@ -99,12 +99,15 @@ subroutine scf_run(scf, sys, h)
   type(scf_type), intent(inout) :: scf
 
   integer :: iter, iunit, ik, ist, id
-  real(r8) :: old_etot, diff(sys%st%nst, sys%st%nik)
+  real(r8) :: old_etot
+  real(r8), allocatable :: diff(:, :)
   logical :: finish
 
   sub_name = 'scf_run'; call push_sub()
 
   if(scf%lcao_restricted) call lcao_init(sys, h)
+
+  allocate(diff(sys%st%nst, sys%st%nik))
 
   do iter = 1, scf%max_iter
     if(clean_stop()) exit
@@ -172,6 +175,7 @@ subroutine scf_run(scf, sys, h)
   if(sys%outp%what(output_geometry)) call system_write_xyz("static", "geometry", sys)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
 
+  deallocate(diff)
   call pop_sub()
 
 contains
@@ -180,7 +184,6 @@ subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
   integer iunit, i
-  real(r8) :: diff(sys%st%nst, sys%st%nik)
 
   call oct_mkdir(C_string(trim(dir)))
   call io_assign(iunit)
