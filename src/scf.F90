@@ -170,6 +170,13 @@ subroutine scf_run(scf, sys, h)
   if(sys%outp%what(output_geometry)) call system_write_xyz("static", "geometry", sys)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
 
+  if (conf%periodic_dim>0.and.sys%st%nik>sys%st%nspin) then
+    call io_assign(iunit)
+    open(iunit, status='unknown', file='static/bands.dat')
+    call states_write_bands(iunit, sys%st%nst, sys%st)
+    call io_close(iunit)
+  end if
+
   call pop_sub(); return
 contains
 
