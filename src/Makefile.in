@@ -145,7 +145,7 @@ function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 out.F90 spectrum
                          tm.F90 hgh.F90 ps_kb.F90 ps_xc.F90 mix.F90 dx.F90 function_to_dx.F90
 
 function_to_dx_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
-nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90 nbo2xyz_main.c
+nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
 nbo2xyz_LDADD = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning
@@ -184,8 +184,7 @@ hs_from_mult_OBJECTS = $(am_hs_from_mult_OBJECTS)
 hs_from_mult_DEPENDENCIES = ../liboct/liboct.a
 hs_from_mult_LDFLAGS =
 am_nbo2xyz_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) liboct.$(OBJEXT) \
-	units.$(OBJEXT) atom.$(OBJEXT) nbo2xyz.$(OBJEXT) \
-	nbo2xyz_main.$(OBJEXT)
+	units.$(OBJEXT) atom.$(OBJEXT) nbo2xyz.$(OBJEXT)
 nbo2xyz_OBJECTS = $(am_nbo2xyz_OBJECTS)
 nbo2xyz_DEPENDENCIES = ../liboct/liboct.a
 nbo2xyz_LDFLAGS =
@@ -242,15 +241,6 @@ DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/liboct -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-depcomp = $(SHELL) $(top_srcdir)/depcomp
-am__depfiles_maybe = depfiles
-@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/nbo2xyz_main.Po
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
-	$(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-CCLD = $(CC)
-CFLAGS = @CFLAGS@
 DIST_SOURCES = $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) \
 	$(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) \
 	$(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) \
@@ -265,7 +255,7 @@ all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .F90 .c .lo .o .obj
+.SUFFIXES: .F90 .o
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -363,30 +353,6 @@ mostlyclean-compile:
 
 distclean-compile:
 	-rm -f *.tab.c
-
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nbo2xyz_main.Po@am__quote@
-
-distclean-depend:
-	-rm -rf ./$(DEPDIR)
-
-.c.o:
-@AMDEP_TRUE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@	depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-	$(COMPILE) -c `test -f $< || echo '$(srcdir)/'`$<
-
-.c.obj:
-@AMDEP_TRUE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@	depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-	$(COMPILE) -c `cygpath -w $<`
-
-.c.lo:
-@AMDEP_TRUE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@	depfile='$(DEPDIR)/$*.Plo' tmpdepfile='$(DEPDIR)/$*.TPlo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-	$(LTCOMPILE) -c -o $@ `test -f $< || echo '$(srcdir)/'`$<
-CCDEPMODE = @CCDEPMODE@
 uninstall-info-am:
 
 ETAGS = etags
@@ -487,9 +453,8 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
 
-distclean-am: clean-am distclean-compile distclean-depend \
-	distclean-generic distclean-hdr distclean-libtool \
-	distclean-tags
+distclean-am: clean-am distclean-compile distclean-generic distclean-hdr \
+	distclean-libtool distclean-tags
 
 dvi: dvi-am
 
@@ -522,15 +487,15 @@ uninstall-am: uninstall-binPROGRAMS uninstall-info-am
 
 .PHONY: GTAGS all all-am check check-am clean clean-binPROGRAMS \
 	clean-generic clean-libtool distclean distclean-compile \
-	distclean-depend distclean-generic distclean-hdr \
-	distclean-libtool distclean-tags distdir dvi dvi-am info \
-	info-am install install-am install-binPROGRAMS install-data \
-	install-data-am install-exec install-exec-am install-info \
-	install-info-am install-man install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool tags uninstall \
-	uninstall-am uninstall-binPROGRAMS uninstall-info-am
+	distclean-generic distclean-hdr distclean-libtool \
+	distclean-tags distdir dvi dvi-am info info-am install \
+	install-am install-binPROGRAMS install-data install-data-am \
+	install-exec install-exec-am install-info install-info-am \
+	install-man install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool tags uninstall uninstall-am \
+	uninstall-binPROGRAMS uninstall-info-am
 
 
 # how to compile a F90 file :)
