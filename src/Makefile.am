@@ -26,7 +26,7 @@ noinst_HEADERS = \
 	states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_rti.F90 td_exp.F90 td_write.F90 td_calc.F90\
-	mix_inc.F90 out_inc.F90 dx_inc.F90
+	mix_inc.F90 out_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 
