@@ -19,6 +19,9 @@ type specie_type
   ! For the pseudopotential
   type(ps_type), pointer :: ps
 
+  ! For the local potential in Fourier space...
+  complex(r8), pointer :: local_fw(:,:,:)
+  complex(r8), pointer :: rhocore_fw(:,:,:)
 end type specie_type
 
 contains

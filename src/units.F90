@@ -62,24 +62,24 @@ subroutine units_init()
 
   call pop_sub()
 
-  contains
+contains
 
-    subroutine get_units(u, c)
-      type(unit_system_type), intent(out) :: u
-      character(len=3) :: c
-
-      select case(c)
-        case ("a.u")
-          call units_atomic(u)
-        case ("eVA")
-          call units_eV_Ang(u)
-        case default
-          message(1) = "Invalid unit specification: '"//c//"'"
-          message(2) = "Valid units are: 'a.u', 'eVA'"
-          call write_fatal(2)
-        end select
-    end subroutine get_units
-
+  subroutine get_units(u, c)
+    type(unit_system_type), intent(out) :: u
+    character(len=3) :: c
+    
+    select case(c)
+    case ("a.u")
+      call units_atomic(u)
+    case ("eVA")
+      call units_eV_Ang(u)
+    case default
+      message(1) = "Invalid unit specification: '"//c//"'"
+      message(2) = "Valid units are: 'a.u', 'eVA'"
+      call write_fatal(2)
+    end select
+  end subroutine get_units
+  
 end subroutine units_init
 
 ! these routines output the unit conversions factors, defined by

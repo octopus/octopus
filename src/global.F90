@@ -37,6 +37,7 @@ integer, parameter  ::  i2 = selected_int_kind(3)
 
 real(r8), parameter :: eps_r8 = epsilon(1._r8)
 real(r8), parameter :: inf_r8 = 10.0_r8 ** (12)
+real(r8), parameter :: r_small = 0.001_r8
 
 ! some mathematical constants
 real(r8), parameter    :: M_Pi=3.141592653589793_r8

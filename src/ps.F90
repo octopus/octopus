@@ -673,10 +673,10 @@ subroutine write_info_about_pseudo_1(unit, psf, ps, z)
   write(message(3),'(a,f8.3)') 'Z: ', z
   write(message(4),'(a,f7.3)')   'Valence charge: ', psf%zval
   write(message(5),'(a,i2)')   'Maximum L-component to consider: ', ps%L_max
-  write(message(7),'(a,i2)')   'Maximum L-component in file: ', psf%npotd - 1
-  write(message(8),'(a,i2)')   'L-component considered as local: ', ps%L_loc
-  write(message(9),'(a,a2)')   'Exchange/correlation used in generation: ', psf%icorr
-  call write_info(9, unit)
+  write(message(6),'(a,i2)')   'Maximum L-component in file: ', psf%npotd - 1
+  write(message(7),'(a,i2)')   'L-component considered as local: ', ps%L_loc
+  write(message(8),'(a,a2)')   'Exchange/correlation used in generation: ', psf%icorr
+  call write_info(8, unit)
   
   if(conf%verbose >= 999) then
     message(1) = '             Options:'

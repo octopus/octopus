@@ -1,11 +1,12 @@
 #include "config.h"
 
 module run_prog
-use system
+use hamiltonian
 
 implicit none
 
 type(system_type) :: sys
+type(hamiltonian_type) :: h
   
 contains
 
@@ -19,7 +20,9 @@ subroutine run()
   ! initialize some stuff
   call units_init()
   call system_init(sys)
+  call hamiltonian_init(h, sys%st%ispin, sys%m%np)
 
+  call system_end(sys)
   call pop_sub()
 end subroutine run
 

@@ -10,6 +10,13 @@ type atom_type
   type(specie_type), pointer :: spec ! pointer to specie
   real(r8) :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
   logical :: move              ! should I move this atom in the optimization mode
+
+  ! the mesh around a given atom...
+  integer :: Mps
+  integer, pointer :: Jxyz(:)
+  real(r8), pointer :: pnts_ps, &  ! # points in ps sphere
+       uV(:,:), uVu(:),         &  ! the Kleinman Bylander projectors
+       duV(:,:,:)                  ! the gradient of the projectors
 end type atom_type
 
 contains

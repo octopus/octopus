@@ -10,10 +10,11 @@ PROG_NAME = tddft.x
 #############################################################################
 
 F90MOD_SRC = fdf.F90 global.F90 units.F90 math.F90 spline.F90 \
-	kb.F90 ps.F90 specie.F90 atom.F90 systm.F90 run.F90
+        fft.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 mesh3D.F90 \
+        states.F90 systm.F90 hamiltonian.F90 run.F90
 F90MOD_OBJ= $(F90MOD_SRC:.F90=.o)
 
-SRCS_90 = xc_old.F90 main.F90
+SRCS_90 = ps_xc.F90 main.F90
 OBJS_90=$(SRCS_90:.F90=.o)
 
 SPECTRUM_SRC = global.F90 fdf.F90 spectrum.F90 calc_spectrum.F90
@@ -84,3 +85,4 @@ clean:
 ###############################################################################
 # Individual dependencies. Please update consistently...                      #
 ###############################################################################
+mesh3D.o: mesh3D_create.F90 mesh3D_inc.F90

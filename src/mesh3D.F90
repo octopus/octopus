@@ -1,0 +1,228 @@
+#include "config.h"
+
+module mesh
+use global
+use units
+use fft
+use atom
+  
+implicit none
+
+type mesh_derivatives_type
+  integer :: space ! 0 for FD, 1 for reciprocal-space
+
+  integer :: norder ! order on the discretization of the gradient/laplace operator
+  real(r8), pointer :: dgidfj(:) ! the coefficients for the gradient
+  real(r8), pointer :: dlidfj(:) ! the coefficients for the laplacian
+  
+end type mesh_derivatives_type
+
+type mesh_type
+  integer  :: box_shape ! 0->sphere, 1->cilinder, 2->sphere around each atom
+  real(r8) :: h         ! the (constant) spacing between the points
+  
+  real(r8) :: rsize     ! the radius of the sphere or of the cilinder
+  real(r8) :: zsize     ! the length of the cilinder in the z direction
+  
+  integer  :: np        ! number of points in inner mesh
+  
+  ! return x, y and z for each point
+  integer, pointer :: Lx(:), Ly(:), Lz(:)
+  ! return points # for each xyz
+  integer, pointer :: Lxyz_inv(:,:,:)
+
+  ! mesh elargement... this is currently only used in solving
+  ! the poisson equation with conjugated gradients...
+  integer :: nk        ! number of points in outer mesh
+  integer, pointer :: Kx(:), Ky(:), Kz(:)
+
+  ! some other vars
+  integer :: nr  ! number of points per radius inside
+  integer :: nx  ! the # of points in the whole radius
+                 ! (rsize/h) + norder
+
+  type(mesh_derivatives_type) :: d
+
+  integer :: fft_n, hfft_n ! we always want to perform FFTs ;)
+  integer(POINTER_SIZE) :: dplanf, dplanb, zplanf, zplanb
+end type mesh_type
+
+private
+public :: mesh_type, mesh_derivatives_type, mesh_init, mesh_end, &
+     dmesh_derivatives, zmesh_derivatives
+
+contains
+
+subroutine mesh_init(m, natoms, atom)
+  use math, only: weights
+
+  type(mesh_type), intent(inout) :: m
+  integer, intent(in), optional :: natoms
+  type(atom_type), pointer, optional :: atom(:)
+
+  integer :: i, j, k, morder
+  real(r8), allocatable :: cc(:,:,:)
+
+  sub_name = 'mesh_init'; call push_sub()
+
+  m%d%space = fdf_integer('DerivativesSpace', 0)
+  if(m%d%space < 0 .or. m%d%space > 1) then
+    write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
+         "' is not a valid DerivativesSpace"
+    message(2) = '(0 <= DerivativesSpace <=1)'
+    call write_fatal(2)
+  end if
+
+  ! order is very important
+  ! init rs -> create -> init fft
+  if(m%d%space == 0) then ! real space
+    message(1) = 'Info: Derivatives calculated in real-space'
+    call write_info(1)
+    
+    k = fdf_integer('OrderDerivatives', 4)
+    m%d%norder = k
+    if (k < 1) then
+      write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
+      message(2) = '(1 <= OrderDerivatives)'
+      call write_fatal(2)
+    end if
+    allocate(m%d%dlidfj(-k:k), m%d%dgidfj(-k:k))
+    morder = 2*k
+    allocate(cc(0:morder, 0:morder, 0:2))
+    call weights(2, morder, cc)
+    m%d%dgidfj(0) = cc(0, morder, 1)
+    m%d%dlidfj(0) = cc(0, morder, 2)
+    
+    j = 1
+    do i = 1, k
+      m%d%dgidfj(-i) = cc(j, morder, 1)
+      m%d%dlidfj(-i) = cc(j, morder, 2)
+      j = j + 1
+      m%d%dgidfj( i) = cc(j, morder, 1)
+      m%d%dlidfj( i) = cc(j, morder, 2)
+      j = j + 1
+    end do
+    deallocate(cc)
+  else
+    m%d%norder = 0
+    message(1) = 'Info: Derivatives calculated in reciprocal-space'
+    call write_info(1)
+  end if
+  
+  call mesh3D_create(m, natoms, atom)
+
+  m%fft_n  = 2*m%nr + 1
+  m%hfft_n = m%fft_n/2 + 1
+  call rfftw3d_f77_create_plan(m%dplanf, m%fft_n, m%fft_n, m%fft_n, &
+       fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)
+  call rfftw3d_f77_create_plan(m%dplanb, m%fft_n, m%fft_n, m%fft_n, &
+       fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
+  call  fftw3d_f77_create_plan(m%zplanf, m%fft_n, m%fft_n, m%fft_n, &
+       fftw_forward,  fftw_measure + fftw_threadsafe)
+  call  fftw3d_f77_create_plan(m%zplanb, m%fft_n, m%fft_n, m%fft_n, &
+       fftw_backward, fftw_measure + fftw_threadsafe) 
+
+  call pop_sub()
+end subroutine mesh_init
+
+! Deallocates what has to be deallocated ;)
+subroutine mesh_end(m)
+  type(mesh_type), intent(inout) :: m
+
+  sub_name = 'mesh_end'; call push_sub()
+
+  if(associated(m%Lx)) then
+    deallocate(m%Lx, m%Ly, m%Lz, m%Kx, m%Ky, m%Kz)
+    nullify(m%Lx, m%Ly, m%Lz, m%Kx, m%Ky, m%Kz)
+  end if
+  if(associated(m%Lxyz_inv)) then
+    deallocate(m%Lxyz_inv)
+    nullify(m%Lxyz_inv)
+  end if
+  if(m%d%space == 0 .and. associated(m%d%dgidfj)) then
+    deallocate(m%d%dgidfj, m%d%dlidfj)
+    nullify(m%d%dgidfj, m%d%dlidfj)
+  end if
+
+  call fftw_f77_destroy_plan(m%dplanb)
+  call fftw_f77_destroy_plan(m%dplanf)
+  call fftw_f77_destroy_plan(m%zplanb)
+  call fftw_f77_destroy_plan(m%zplanf)
+
+  call pop_sub()
+  return
+end subroutine mesh_end
+
+subroutine mesh_write_info(m, unit)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: unit
+
+  character(len=15), parameter :: bs(3) = (/ &
+      'sphere       ', &
+      'cilinder     ', &
+      'around nuclei'/)
+
+  sub_name = 'mesh_write_info'; call push_sub()
+
+  write(message(1), '(a,a,1x,3a,f7.3)') '  Type = ', bs(m%box_shape), &
+       ' Radius [', trim(units_out%length%abbrev), '] = ', m%rsize/units_out%length%factor
+  if(m%box_shape == 2) then
+    write(message(1), '(a,3a,f7.3)') trim(message(1)), ', zlength [', &
+         trim(units_out%length%abbrev), '] = ', m%zsize/units_out%length%factor
+  end if
+  write(message(2),'(3a, f6.3, 1x, 3a, f8.5)') &
+       '  Spacing [', trim(units_out%length%abbrev), '] = ', m%h/units_out%length%factor, &
+       '   volume/point [', trim(units_out%length%abbrev), '^3] = ', &
+       (m%h/units_out%length%factor)**3
+  write(message(3),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
+      '   # outer mesh = ', m%nk
+
+  call write_info(3, unit)
+
+  call pop_sub()
+  return
+end subroutine mesh_write_info
+
+subroutine mesh_to_cube(m, f_mesh, f_cube)
+  type(mesh_type), intent(IN) :: m
+  real(r8), intent(IN)  :: f_mesh(m%np)
+  real(r8), intent(out) :: f_cube(m%fft_n, m%fft_n, m%fft_n)
+  
+  integer :: i, ix, iy, iz
+  
+  do i = 1, m%np
+    ix = m%lx(i) + m%fft_n/2 + 1
+    iy = m%Ly(i) + m%fft_n/2 + 1
+    iz = m%Lz(i) + m%fft_n/2 + 1
+    f_cube(ix, iy, iz) = f_mesh(i)
+  end do
+  
+end subroutine mesh_to_cube
+
+subroutine cube_to_mesh(m, f_cube, f_mesh)
+  type(mesh_type), intent(IN) :: m
+  real(r8), intent(IN)  :: f_cube(m%fft_n, m%fft_n, m%fft_n)
+  real(r8), intent(out) :: f_mesh(m%np)
+  
+  integer :: i, ix, iy, iz
+
+  do i=1, m%np
+    ix = m%lx(i) + m%fft_n/2 + 1
+    iy = m%Ly(i) + m%fft_n/2 + 1
+    iz = m%Lz(i) + m%fft_n/2 + 1
+    f_mesh(i) = f_cube(ix, iy, iz) 
+  end do
+
+end subroutine cube_to_mesh
+
+#include "mesh3D_create.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "mesh3D_inc.F90"
+#include "undef.F90"
+#include "complex.F90"
+#include "mesh3D_inc.F90"
+#include "undef.F90"
+
+end module mesh

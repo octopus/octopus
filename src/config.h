@@ -4,6 +4,11 @@
 
 !#define COMPLEX_WFNS
 
-!#define NO_PES
 #define HAVE_FFTW
 #define HAVE_LAPACK
+
+#ifdef COMPLEX_WFNS
+#include "complex.F90"
+#else
+#include "real.F90"
+#endif
