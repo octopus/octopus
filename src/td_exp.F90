@@ -242,22 +242,22 @@ module td_exp
                hm(te%exp_order+1, te%exp_order+1), &
                expo(te%exp_order+1, te%exp_order+1))
       hm = M_z0; expo = M_z0
-      
+
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zstates_nrm2(m, h%d%dim, zpsi)
       v(:, :, 1) = zpsi(:, :)/beta
 
       ! This is the Lanczos loop...      
       do n = 1, te%exp_order
-        call operate(v(:,:, n), zpsi)
+        call operate(v(:,:, n), v(:, :, n+1))
         korder = n
 
         do k = max(1, n-1), n
-           hm(k, n) = zstates_dotp(m, h%d%dim, v(:, :, k), zpsi)
-           zpsi(:, :) = zpsi(:, :) - hm(k, n)*v(:, :, k)
+           hm(k, n) = zstates_dotp(m, h%d%dim, v(:, :, k), v(:, :, n+1))
+           call lalg_axpy(m%np, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         enddo
-        hm(n+1, n) = zstates_nrm2(m, h%d%dim, zpsi)
-        v(:, :, n+1) = zpsi(:, :)/real(hm(n+1, n), PRECISION)
+        hm(n+1, n) = zstates_nrm2(m, h%d%dim, v(:, :, n+1))
+        call lalg_scal(m%np, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
         call zgpadm(n, timestep, -M_zI*hm(1:n, 1:n), expo(1:n, 1:n), iflag)
 
         res = abs(hm(n+1, n)*abs(expo(1, n)))
