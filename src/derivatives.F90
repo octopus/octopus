@@ -40,7 +40,9 @@ module derivatives
             dderivatives_grad, &
             zderivatives_grad, &
             dderivatives_div, &
-            zderivatives_div
+            zderivatives_div, &
+            dderivatives_curl, &
+            zderivatives_curl
 
   type der_discr_type
     type(mesh_type), pointer :: m             ! pointer to the underlying mesh

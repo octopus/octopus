@@ -129,3 +129,55 @@
     deallocate(tmp)
     if(der%zero_bc) deallocate(fp)
   end subroutine X(derivatives_div)
+
+  ! ---------------------------------------------------------
+  subroutine X(derivatives_curl)(der, f, curl)
+    type(der_discr_type), intent(in)  :: der
+    R_TYPE, target,       intent(in)  :: f(:,:)    ! f(m%np, conf%dim)
+    R_TYPE,               intent(out) :: curl(:,:) ! curl(m%np, conf%dim)
+
+    R_TYPE, pointer     :: fp(:)
+    R_TYPE, allocatable :: tmp(:)
+    integer :: i
+
+    ASSERT(conf%dim == 3)
+
+    if(der%zero_bc) then
+      allocate(fp(der%m%np_tot))
+      fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+    end if
+    allocate(tmp(der%m%np))
+
+    curl(:,:) = R_TOTYPE(M_ZERO)
+
+    call get_f(1)
+    call X(nl_operator_operate) (der%grad(3), fp, tmp)
+    curl(:,2) = curl(:,2) + tmp(:)
+    call X(nl_operator_operate) (der%grad(2), fp, tmp)
+    curl(:,3) = curl(:,3) - tmp(:)
+
+    call get_f(2)
+    call X(nl_operator_operate) (der%grad(3), fp, tmp)
+    curl(:,1) = curl(:,1) - tmp(:)
+    call X(nl_operator_operate) (der%grad(1), fp, tmp)
+    curl(:,3) = curl(:,3) + tmp(:)
+
+    call get_f(3)
+    call X(nl_operator_operate) (der%grad(2), fp, tmp)
+    curl(:,1) = curl(:,1) + tmp(:)
+    call X(nl_operator_operate) (der%grad(1), fp, tmp)
+    curl(:,2) = curl(:,2) - tmp(:)
+
+    deallocate(tmp)
+    if(der%zero_bc) deallocate(fp)
+
+  contains
+    subroutine get_f(ii)
+      integer :: ii
+      if(der%zero_bc) then
+        fp(1:der%m%np) = f(1:der%m%np,ii)
+      else
+        fp => f(:,ii)
+      end if
+    end subroutine get_f
+  end subroutine X(derivatives_curl)

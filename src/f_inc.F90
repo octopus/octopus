@@ -261,6 +261,32 @@ subroutine X(f_divergence) (f_der, f, divf)
   call pop_sub()
 end subroutine X(f_divergence)
 
+! ---------------------------------------------------------
+subroutine X(f_curl) (f_der, f, curlf)
+  type(f_der_type), intent(inout) :: f_der
+  R_TYPE,           intent(in)    :: f(:,:)     ! f(m%np, conf%dim)
+  R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
+
+  integer :: i
+  R_TYPE, allocatable :: aux(:)
+
+  call push_sub("f_divergence")
+
+  ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
+
+  select case(f_der%space)
+  case(REAL_SPACE)
+    call X(derivatives_curl) (f_der%der_discr, f, curlf)
+
+#if defined(HAVE_FFT)
+  case(FOURIER_SPACE)
+    message(1) = "curl calculation in fourier space not yet implemented"
+    call write_fatal(1)
+#endif
+  end select
+
+  call pop_sub()
+end subroutine X(f_curl)
 
 ! ---------------------------------------------------------
 ! The action of the angular momentum operator (three spatial components).

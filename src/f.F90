@@ -43,6 +43,7 @@ module functions
              df_laplacian, zf_laplacian, &
              df_gradient, zf_gradient, &
              df_divergence, zf_divergence, &
+             df_curl, zf_curl, &
              df_angular_momentum, zf_angular_momentum, &
              df_l2, zf_l2
 
