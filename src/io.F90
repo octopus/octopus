@@ -17,50 +17,64 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 module io
-  use global
+  use lib_oct_parser
 
   implicit none
 
   integer, private, parameter :: min_lun=10, max_lun=99
-  integer, private, parameter :: nunits=max_lun-min_lun+1
-  integer, private   :: i, unit, lun, iostat
   
-  logical, private   :: lun_is_free(min_lun:max_lun)=.true.
-  logical, private   :: used, named, opened
+  logical, private   :: lun_is_free(min_lun:max_lun)
   
-  character(len=50), private :: filename
-  character(len=11), private :: form
+  ! the standard input and output
+  integer :: stderr
+  integer :: stdin
+  integer :: stdout
 
 contains
 
-  ! Next subroutines find or change the standard units...
-  subroutine io_seterr(unit)
-    integer, intent(inout) :: unit
+  ! ---------------------------------------------------------
+  subroutine io_init()
+    character(len=128) :: filename
 
-    stderr = unit
-  end subroutine io_seterr
+    lun_is_free(min_lun:max_lun)=.true.
 
-  subroutine io_setout(unit)
-    integer, intent(inout) :: unit
+    stdin = 5
 
-    stdout = unit
-  end subroutine io_setout
-
-  subroutine io_geterr(unit)
-    integer, intent(inout) :: unit
+    ! setup standard output
+    call loct_parse_string('stdout', '-', filename)
+    stdout = 6
+    if(trim(filename).ne.'-') then
+      close(stdout)
+      open(stdout, file=filename, status='unknown')
+    end if
     
-    unit = stderr
-  end subroutine io_geterr
+    ! setup standard error
+    call loct_parse_string('stderr', '-', filename)
+    stderr = 0
+    if(trim(filename).ne.'-') then
+      close(stderr)
+      open(stderr, file=filename, status='unknown')
+    end if
 
-  subroutine io_getout(unit)
-    integer, intent(inout) :: unit
-    
-    unit = stdout
-  end subroutine io_getout
+  end subroutine io_init
 
+
+  ! ---------------------------------------------------------
+  subroutine io_end()
+    if(stderr.ne.0) call io_close(stderr)
+    if(stdin .ne.5) call io_close(stdin)
+    if(stdout.ne.6) call io_close(stdout)
+  end subroutine io_end
+
+
+  ! ---------------------------------------------------------
   ! Logical unit management
+  ! ---------------------------------------------------------
   subroutine io_assign(lun)
-    integer, intent(INOUT) :: lun
+    integer, intent(out) :: lun
+
+    integer :: iostat
+    logical :: used
 
     ! Looks for a free unit and assigns it to lun
     do lun = min_lun, max_lun
@@ -71,67 +85,68 @@ contains
         if (.not. used) return
       end if
     end do
-    message(1) = 'No luns available in io_assign'
-    call write_fatal(1)
+    stop 'No luns available in io_assign'
 
   end subroutine io_assign
 
-  ! Useful to specify that one needs to use a particular unit number
-  ! For example, assume some legacy code expects to work with unit 15:
-  !
-  ! call io_reserve(15)   ! this call at the beginning of the program
-  ! ...
-  ! open(15,....)
-  subroutine io_reserve(lun)
-    integer, intent(INOUT) :: lun
 
-    inquire(unit=lun, opened=used, iostat=iostat)
-    if (iostat .ne. 0) used = .true.
-    if (used) then
-      write(message(1), '(a,i3,a)') &
-           'Cannot reserve unit', lun, '. Already connected!'
-      call write_fatal(1)
-    end if
-    if (lun .ge. min_lun .and. lun .le. max_lun) &
-         lun_is_free(lun) = .false.
-    
-  end subroutine io_reserve
-
+  ! ---------------------------------------------------------
   ! Use this routine instead of a simple close!!
+  ! ---------------------------------------------------------
   subroutine io_close(lun)
-    integer, intent(INOUT) :: lun
+    integer, intent(in) :: lun
 
     close(lun)
     if (lun .ge. min_lun .and. lun .le. max_lun) &
-         lun_is_free(lun) = .true.
+       lun_is_free(lun) = .true.
   end subroutine io_close
 
+
+  ! ---------------------------------------------------------
   ! Prints a list of the connected logical units and the names of
   ! the associated files
-  subroutine io_status
-    message(1) = '******** io_status ********'
-    call write_info(1)
+  ! ---------------------------------------------------------
+  subroutine io_status(iunit)
+    integer, intent(in) :: iunit
+
+    integer :: i, iostat
+    logical :: opened, named
+    character(len=50) :: filename
+    character(len=11) :: form
+
+    write(iunit, '(a)') '******** io_status ********'
     do i = 0, max_lun
-      inquire(i, opened=opened, named=named, name=filename,          &
-           form=form, iostat=iostat)
+      inquire(i, opened=opened, named=named, name=filename, form=form, iostat=iostat)
       if (iostat .eq. 0) then
         if (opened) then
-          if (named) then
-            write(message(1), 9000) i, form, filename
-          else
-            write(message(1), 9000) i, form, 'No name available'
-          end if
+          if(.not.named) filename = 'No name available'
+          write(iunit, '(i4,5x,a,5x,a)') i, form, filename
         end if
       else
-        write(message(1), 9000) i, 'Iostat error'
+        write(iunit, '(i4,5x,a)') i, 'Iostat error'
       end if
-      call write_info(1)
     enddo
-    message(1) = '********           ********'
-    call write_info(1)
-
-9000 format(i4,5x,a,5x,a)
+    write(iunit,'(a)') '********           ********'
     
   end subroutine io_status
+
+
+  ! ---------------------------------------------------------
+  subroutine io_dump_file(ounit, filename)
+    integer,          intent(in) :: ounit
+    character(len=*), intent(in) :: filename
+
+    integer :: iunit, err
+    character(len=80) :: s
+
+    call io_assign(iunit)
+    open(unit=iunit, file=filename, iostat=err, action='read', status='old')
+    do while(err == 0)
+      read(iunit, fmt='(a80)', iostat=err) s
+      if(err==0) write(ounit, '(a)') s
+    end do
+    call io_close(iunit)
+
+  end subroutine io_dump_file
 
 end module io

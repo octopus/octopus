@@ -18,7 +18,6 @@
 #include "global.h"
 
 module lib_oct
-
   implicit none
 
   ! Define the which routines can be seen from the outside
@@ -27,7 +26,7 @@ module lib_oct
   public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
   public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
-  public :: loct_mkdir, loct_rm, loct_print_file, loct_number_of_lines
+  public :: loct_mkdir, loct_rm, loct_number_of_lines
   public :: loct_fft_optimize, loct_wfs_list, loct_progress_bar, loct_printRecipe
   public :: write_iter_init, write_iter_clear, write_iter_flush, write_iter_end
   public :: write_iter_start, write_iter_string, write_iter_header_start, write_iter_header
@@ -241,12 +240,6 @@ module lib_oct
     end subroutine oct_rm
   end interface
 
-  interface loct_print_file
-    integer function print_file(filename)
-      character(len=*), intent(in) :: filename
-    end function print_file
-  end interface
-
   interface loct_number_of_lines
     integer function number_of_lines(filename)
       character(len=*), intent(in) :: filename
@@ -276,8 +269,9 @@ module lib_oct
   end interface
 
   interface loct_printRecipe
-    subroutine oct_printRecipe(dir)
-      character(len=*), intent(in) :: dir
+    subroutine oct_printRecipe(dir, filename)
+      character(len=*), intent(in)  :: dir
+      character(len=*), intent(out) :: filename
     end subroutine oct_printRecipe
   end interface
 

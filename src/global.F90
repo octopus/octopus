@@ -18,18 +18,18 @@
 #include "global.h"
 
 module global
-
-use lib_oct_parser
-use lib_oct
+  use lib_oct_parser
+  use lib_oct
+  use io
 
 #if defined(HAVE_MPI) && !defined(MPI_H)
-use mpi
+  use mpi
 #endif
 
-implicit none
+  implicit none
 
 #if defined(HAVE_MPI) && defined(MPI_H)
-#include "mpif.h"
+# include "mpif.h"
 #endif
 
 type conf_type
@@ -98,11 +98,6 @@ FLOAT, parameter :: P_Ry  =  CNST(13.6058)
 FLOAT, parameter :: P_Kb  =  CNST(3.166815104e-6)    ! Boltzmann constant in Ha/K
 FLOAT, parameter :: P_c   =  CNST(137.036)
 
-! the standard input and output
-integer :: stderr = 0
-integer :: stdin  = 5
-integer :: stdout = 6
-
 integer, parameter :: &
    VERBOSE_QUIET   = -9999, &
    VERBOSE_WARNING = 0,     &
@@ -152,7 +147,10 @@ subroutine global_init()
     call write_fatal(2)
   end if
 
+  ! read in default variables
   ierr = loct_parse_input(trim(conf%share)//'/variables')
+
+  ! setup standard input
   ierr = loct_parse_input('inp')
   if(ierr .ne. 0) then
     ierr = loct_parse_input("-")
@@ -163,6 +161,10 @@ subroutine global_init()
     end if
   end if
   
+  ! initialize input/output system
+  call io_init()
+
+  ! verbosity level
   call loct_parse_int('Verbose', VERBOSE_NORMAL, conf%verbose)
   if(conf%verbose > VERBOSE_DEBUG .and. mpiv%node == 0) then
     call loct_parse_int('DebugLevel', 3, conf%debug_level)
@@ -177,6 +179,7 @@ subroutine global_init()
     call write_fatal(1)
   end if
 
+  ! handle periodic directions
   call loct_parse_int('PeriodicDimensions', 0, conf%periodic_dim)
   if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
     message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
@@ -197,8 +200,9 @@ subroutine global_end()
   call MPI_FINALIZE(ierr)
 #endif
 
+  call io_end()
   call loct_parse_end()
-
+  
 end subroutine global_end
 
 ! This subroutine is called by the assert macro
@@ -216,23 +220,24 @@ subroutine write_fatal(no_lines)
   integer, intent(in) :: no_lines
   integer :: i
 
-  write(stdout, '(/,a,/,a)') stars, '*** Fatal Error (description follows)'
+  write(stderr, '(/,a,/,a)') stars, '*** Fatal Error (description follows)'
 #ifdef HAVE_MPI
-  write(stdout, '(a,a)') '*', hyphens
-  write(stdout, '(a,i4)') "* From node = ", mpiv%node
+  write(stderr, '(a,a)') '*', hyphens
+  write(stderr, '(a,i4)') "* From node = ", mpiv%node
 #endif
-  write(stdout, '(a,a)') '*', hyphens
+  write(stderr, '(a,a)') '*', hyphens
   do i=1,no_lines
-    write(stdout, '(a,1x,a)') '*', trim(message(i))
+    write(stderr, '(a,1x,a)') '*', trim(message(i))
   end do
-  write(stdout, '(a,a)') '*', hyphens
+  write(stderr, '(a,a)') '*', hyphens
 
 #ifdef DEBUG
-  write(stdout, '(a)', advance='no') '* Stack: '
+  write(stderr, '(a)', advance='no') '* Stack: '
   do i=1,no_sub_stack
-    write(stdout, '(a,a)', advance='no') ' > ', trim(sub_stack(i))
+    write(stderr, '(a,a)', advance='no') ' > ', trim(sub_stack(i))
   end do
-  write(stdout, '(/,a,/)') stars
+  write(stderr, '(/,a,/)') stars
+  call io_status(stderr)
 #endif
 
 #ifdef HAVE_MPI
@@ -249,12 +254,12 @@ subroutine write_warning(no_lines)
   ! this always writes from ALL nodes
 
   if(conf%verbose >= VERBOSE_WARNING) then
-    write(stdout, '(/,a)') '** Warning:'
+    write(stderr, '(/,a)') '** Warning:'
 #ifdef HAVE_MPI
-    write(stdout, '(a,i4)') "** From node = ", mpiv%node
+    write(stderr, '(a,i4)') "** From node = ", mpiv%node
 #endif
     do i=1,no_lines
-      write(stdout, '(a,3x,a)') '**', trim(message(i))
+      write(stderr, '(a,3x,a)') '**', trim(message(i))
     end do
   end if
   

@@ -31,9 +31,9 @@ program octopus
   ! Let us print our logo
   if(mpiv%node == 0) then
     ! Let us print our logo
-    if(conf%verbose > 20) ierr = loct_print_file(trim(trim(conf%share) // '/logo'))
+    if(conf%verbose >= VERBOSE_NORMAL) call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
 #ifdef DEBUG
-    if(conf%verbose > 999) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
+    if(conf%verbose >= VERBOSE_DEBUG) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
 #endif
   end if
 
@@ -45,10 +45,11 @@ program octopus
   call write_info(4)
 
   ! Let us print where we are running
-  if(conf%verbose > 20) then
-    call loct_sysname(message(1))
-    write(stdout, '(a)') str_center("The octopus is swimming in " // trim(message(1)), 70)
-  end if
+  call loct_sysname(message(1))
+  write(message(1), '(a)') str_center("The octopus is swimming in " // trim(message(1)), 70)
+  message(2) = ""
+  call write_info(2)
+
 #if defined(HAVE_MPI)
   call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif

@@ -46,7 +46,7 @@ int FC_FUNC_(print_file, PRINT_FILE)
 }
 
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
-		 (STR_F_TYPE _dir STR_ARG1)
+		 (STR_F_TYPE _dir, STR_F_TYPE filename STR_ARG2)
 {
   char *lang, *tmp, dir[512];
 	struct dirent **namelist;
@@ -99,14 +99,6 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 	for(i=0; i<n; i++)
 		free(namelist[i]);
 	free(namelist);
-	
-	/* output selected file */
-	FC_FUNC_(print_file, PRINT_FILE) (dir);
 
-	/* print disclaimer */
-	strcpy(dir, _dir);
-	strcat(dir, "/recipes/disclaimer.txt");
-	printf("\n\n");
-	FC_FUNC_(print_file, PRINT_FILE) (dir);
-	printf("\n");
+	TO_F_STR2(dir, filename);
 }
