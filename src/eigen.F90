@@ -32,12 +32,9 @@ type eigen_solver_type
   real(r8) :: final_tol
   integer  :: final_tol_iter
   integer  :: es_maxiter  
-
-  ! for old conjugated gradients (es_type = 1)
-  integer :: no_cg    ! # of conjugated gradients steps
 end type eigen_solver_type
 
-integer, parameter :: ES_NEW_CG = 0, ES_OLD_CG = 1
+integer, parameter :: RS_CG = 0
 
 contains
 
@@ -47,15 +44,15 @@ subroutine eigen_solver_init(eigens)
   sub_name = 'eigen_solver_init'; call push_sub()
 
   call oct_parse_int(C_string("EigenSolver"), 0, eigens%es_type)
-  if(eigens%es_type < 0 .or. eigens%es_type > 1) then
+  if(eigens%es_type < RS_CG .or. eigens%es_type > RS_CG) then
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
-    message(2) = '(0 <= EigenSolver <= 1)'
+    message(2) = '(0 <= EigenSolver <= 0)'
     call write_fatal(2)
   endif
   
   select case (eigens%es_type)
-  case(0)
+  case(RS_CG)
     call oct_parse_double(C_string("EigenSolverInitTolerance"), 1.0e-10_r8, eigens%init_tol)
     if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
@@ -88,16 +85,6 @@ subroutine eigen_solver_init(eigens)
       message(3) = '(EigenSolverMaxIter >=1 )'
       call write_fatal(2)
     endif
-
-  case(1)
-    call oct_parse_int(C_string("NumberCG"), 3, eigens%no_cg)
-    if(eigens%no_cg <= 0) then
-      write(message(1), '(a,i4,a)') "Input: '", eigens%no_cg, &
-           "' is not a valid NumberCG"
-      message(2) = '(0 < NumberCG)'
-      call write_fatal(2)
-    endif
-
   end select
   
   call pop_sub(); return
@@ -117,7 +104,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
 
   sub_name = 'eigen_solver_run'; call push_sub()
 
-  if(eigens%es_type .ne. ES_OLD_CG) then
+  if(eigens%es_type .eq. RS_CG) then
     if(iter < eigens%final_tol_iter) then
       tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
            eigens%init_tol
@@ -128,7 +115,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
 
   if(present(conv)) conv = .false.
   select case(eigens%es_type)
-  case(ES_NEW_CG)
+  case(RS_CG)
     maxiter = eigens%es_maxiter
     converged = 0
 
@@ -137,18 +124,11 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
     write(message(1),'(a,i5)') 'Info: Converged = ',converged
     call write_info(1)
     if(present(conv).and. converged == st%nst) conv = .true.
-  case(ES_OLD_CG)
-    call eigen_solver_cg1(eigens%no_cg, st, sys, h, diff)
-    do ik = 1, st%nik
-      call R_FUNC(states_gram_schmidt) (st%nst, sys%m, st%dim, &
-           st%R_FUNC(psi)(:,:,:, ik))
-    end do
   end select
 
   call pop_sub(); return
 end subroutine eigen_solver_run
 
-#include "eigen_cg1.F90"
 #include "eigen_cg2.F90"
 
 end module eigen_solver

@@ -97,7 +97,7 @@ subroutine unocc_run(u, sys, h)
   sub_name = 'unocc_run'; call push_sub()
 
   ! Initialize eigens (not necessary to call eigen_init)
-  eigens%es_type        = ES_NEW_CG
+  eigens%es_type        = RS_CG
   eigens%init_tol       = u%conv 
   eigens%final_tol      = u%conv
   eigens%final_tol_iter = 1
