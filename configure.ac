@@ -51,7 +51,7 @@ AC_CHECK_FUNCS([sqrt strcasecmp strdup tcgetpgrp])
 # Checks for size of pointer
 ACX_POINTER_SIZE
 
-# libtool files
+dnl libtool files
 AC_DISABLE_SHARED
 AC_PROG_LIBTOOL
 
@@ -61,30 +61,49 @@ dnl In particular, the code can be compile in single precision, mpi, using
 dnl complex wave-functions in the ground-state, and in debug mode.
 
 dnl these are the --enable possible in octopus
-AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]), MPIDIR=$enableval, MPIDIR=no)
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
 AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [octopus in debug mode]), [DEBUG=1])
 
+dnl the MPI has a special treatment
+AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]))
+case $enable_mpi in
+  yes) ;;
+  no | "") enable_mpi=no ;;
+  -* | */* | *.a | *.so | *.so.* | *.o)
+    LIBS_MPI="$enable_mpi"
+    enable_mpi=yes
+    ;;
+  *) 
+    LIBS_MPI="-l$enable_mpi"
+    enable_mpi=yes
+    ;;
+esac
+
 dnl try to find out what is the default FORTRAN 90 compiler
 dnl note that this has to be done after the AC_ARG_ENABLE(mpi...)
-if test x"$MPIDIR" != x"no"; then
-  AC_PROG_F90([],[MPI])
+if test x"$enable_mpi" = x"yes"; then
+  AC_PROG_FC([mpif90 mpf90 mpxlf90 mpxlf95 mpxlf_r],[Fortran 90])
 else
-  AC_PROG_F90
+  AC_PROG_FC([], Fortran 90)
 fi
-AC_LANG_PUSH(Fortran 90)
-AC_LANG_PREPROC(Fortran 90)
+if test x"$FC" = x; then
+  AC_MSG_ERROR([could not find Fortran 90 compiler])
+fi
+AC_LANG_PUSH(Fortran)
+AC_FC_SRCEXT(f90)
+
+dnl octopus needs the preprocessor. The result goes to FCCPP
+dnl this is a hack, and should be changed in the future
+AC_LANG_PREPROC
 
 dnl how Fortran mangles function names
-AC_F90_WRAPPERS
+AC_FC_WRAPPERS
 
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
-
-dnl MPI version
 MYEXT=""
-AS_IF([test x"$MPIDIR" != x"no"], [MYEXT="${MYEXT}_mpi"])
+AS_IF([test x"$enable_mpi" != x"no"], [MYEXT="${MYEXT}_mpi"])
 
 dnl complex wavefunctions for the ground-state
 if test "${COMPLEX_WFNS}"; then
@@ -114,7 +133,7 @@ dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
 
 dnl we only generate the utilities if single precision, cmplx, and mpi are off
-if test x"$MPIDIR" = x"no" -a -z "${COMPLEX_WFNS}" -a -z "${SINGLE_PRECISION}"; then
+if test x"$enable_mpi" = x"no" -a -z "${COMPLEX_WFNS}" -a -z "${SINGLE_PRECISION}"; then
   UTILITY_PROGRAMS='$(EXTRA_PROGRAMS)'
   msg="$msg + utilities"
 else
@@ -131,181 +150,31 @@ echo "**********************************************"
 dnl ===================================================================
 dnl now we search for libraries
 
-dnl FFT
-ACX_LIB_FFTW
+dnl check for BLAS
+ACX_BLAS([], AC_MSG_ERROR([could not find required blas library]))
 
-dnl tests for trlan. Default behavior will be *not* using it.   
-lib_ok="no"
-if test -z "${LIB_TRLAN}"; then
-	AC_ARG_WITH(trlan,
-  	          AC_HELP_STRING([--with-trlan=DIR], [get it! (www.nersc.gov/research/SIMON/trlan.html)]),
-              [TRLANDIR=$withval], [TRLANDIR=""])
-
-  if test "$TRLANDIR" = "no"; then
-  	lib_ok="no"
-  else
-  	save_ldflags="$LDFLAGS"
-    AS_IF([test "$TRLANDIR"], [LDFLAGS="${LDFLAGS} -L${TRLANDIR} -L${TRLANDIR}/lib"])
-
-    AC_TRY_COMPILE([],[use trl_info],lib_ok="ok",lib_ok="no")
-
-    LDFLAGS="$save_ldflags"
-    LIB_TRLAN="-ltrlan"
-    #LIB_TRLAN="${LIB_TRLAN}"
-    AS_IF([test "$TRLANDIR"], [LIB_TRLAN="-L${TRLANDIR} -L${TRLANDIR}/lib ${TRLANDIR}/${LIB_TRLAN}"])
-  fi
-fi
-
-if test "$lib_ok" = "ok"; then
-  AC_DEFINE(HAVE_TRLAN, 1, [TRLAN library (www.nersc.gov/research/SIMON/trlan.html)])
-  AC_SUBST(LIB_TRLAN)
-else
-  LIB_TRLAN=""
-  AC_MSG_WARN([Will not use trlan])
-fi
-
-dnl tests for BLAS
-lib_ok="ok"
-if test -z "${LIB_BLAS}"; then
-	AC_ARG_WITH(blas, 
-		AC_HELP_STRING([--with-blas=DIR], [get it! (www.netlib.org/blas)]), 
-			[BLASDIR=$withval], [BLASDIR=""])
-
-	if test "$BLASDIR" = "no"; then
-		lib_ok="no"
-	else
-	  save_ldflags="$LDFLAGS"
-  	AS_IF([test "$BLASDIR"], [LDFLAGS="${LDFLAGS} -L${BLASDIR} -L${BLASDIR}/lib"])
-
-		ACX_CHECK_FUNC([LIB_BLAS], [ddot])
-		ACX_CHECK_LIB([LIB_BLAS], [mkl],  [ddot], [-lmkl], [], [-lmkl])
-		ACX_CHECK_LIB([LIB_BLAS], [mkl_def],  [ddot], [-lmkl_def -lguide -lpthread], [], [-lmkl_def -lguide -lpthread])
-		ACX_CHECK_LIB([LIB_BLAS], [f77blas], [ddot], [-lf77blas -latlas], [], [-latlas])
-		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
-    dnl The following line uncaches blas, so that it may be checked again.
-    unset ac_cv_lib_blas_ddot
-		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas -lg2c], [], [-lg2c])
-		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
-		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [-lcxml])
-		ACX_CHECK_LIB([LIB_BLAS], [scs], [ddot], [-lscs])
-		AS_IF([test -z "${LIB_BLAS}"], AC_MSG_ERROR([couldn't find blas library]))
-
-  	LDFLAGS="$save_ldflags"
-
-		AS_IF([test "$BLASDIR"], [LIB_BLAS="-L${BLASDIR} -L${BLASDIR}/lib ${LIB_BLAS}"])
-	fi
-fi
-
-if test "$lib_ok" = "ok"; then
-	AC_DEFINE(HAVE_BLAS,   1, [Blas   Library (www.netlib.org)])
-	AC_SUBST(LIB_BLAS)
-fi
-
-
-lib_ok="ok"
-if test -z "${LIB_LAPACK}"; then
-
-	AC_ARG_WITH(lapack, 
-		AC_HELP_STRING([--with-lapack=DIR], [get it! (http://www.netlib.org/lapack/)]),
-			[LAPACKDIR=$withval], [LAPACKDIR=""])
-
-	if test "$LAPACKDIR" = "no"; then
-		lib_ok="no"
-	else
-  	save_ldflags="$LDFLAGS"
-	  AS_IF([test "$LAPACKDIR"], [LDFLAGS="$LDFLAGS -L$LAPACKDIR -L$LAPACKDIR/lib"])
-
-		ACX_CHECK_FUNC([LIB_LAPACK], [dsygv], [], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [mkl_lapack], [dsygv], [-lmkl_lapack], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
-    dnl The following line uncaches lapack, so that it may be checked again.
-    unset ac_cv_lib_lapack_dsygv
-		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack -lg2c], [], [${LIB_BLAS} -lg2c])
-		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [scs], [dsygv], [-lscs], [], [${LIB_BLAS}])
-		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
-
-  	LDFLAGS="$save_ldflags"
-
-	  AS_IF([test "$LAPACKDIR"], [LIB_LAPACK="-L${LAPACKDIR} -L${LAPACKDIR}/lib ${LIB_LAPACK}"])
-	fi
-fi
-
-if test "$lib_ok" = "ok"; then
-	AC_DEFINE(HAVE_LAPACK, 1, [Lapack Library (www.netlib.org)])
-	AC_SUBST(LIB_LAPACK)
-fi
+dnl check for LAPACK
+ACX_LAPACK([], AC_MSG_ERROR([could not find required lapack library]))
 
 dnl check for GSL
 AC_LANG_PUSH(C)
-AM_PATH_GSL([1.0])
-CFLAGS="$CFLAGS $GSL_CFLAGS"
-
-lib_ok="ok"
-if test -z "${LIB_NETCDF}"; then
-	AC_ARG_WITH(netcdf, 
-		AC_HELP_STRING([--with-netcdf=DIR], [optional (http://www.unidata.ucar.edu/packages/netcdf/)]),
-			[NETCDFDIR=$withval], [NETCDFDIR="no"])
-
-	if test "$NETCDFDIR" = "no"; then
-		lib_ok="no"
-	else
-  	save_ldflags="$LDFLAGS"
-	  AS_IF([test "$NETCDFDIR"], [LDFLAGS="$LDFLAGS -L$NETCDFDIR -L$NETCDFDIR/lib"])
-
-		ACX_CHECK_FUNC([LIB_NETCDF], [nc_create], [], [], [])
-		ACX_CHECK_LIB([LIB_NETCDF], [netcdf], [nc_create], [-lnetcdf], [], [])
-
-  	LDFLAGS="$save_ldflags"
-
-	  AS_IF([test "$NETCDFDIR"], [LIB_NETCDF="-L${NETCDFDIR} -L${NETCDFDIR}/lib ${LIB_NETCDF}"])
-	fi
-fi
-if test "$lib_ok" = "ok"; then
-	AC_DEFINE(HAVE_NETCDF, 1, [NetCDF Library (http://www.unidata.ucar.edu/packages/netcdf/)])
-	AC_SUBST(LIB_NETCDF)
-fi
-
+AM_PATH_GSL([1.0], 
+  [CFLAGS="$CFLAGS $GSL_CFLAGS"], 
+  AC_MSG_ERROR([could not find required gsl library]))
 AC_LANG_POP(C)
 
+dnl check for FFTW
+ACX_FFTW
 
-if test x"$MPIDIR" != x"no"; then
-	if test -z "${LIB_MPI}"; then
-    save_ldflags="$LDFLAGS"
-   	AS_IF([test "$MPIDIR"], [LDFLAGS="${LDFLAGS} -L${MPIDIR} -L${MPIDIR}/lib"])
+dnl check for TRLAN
+ACX_TRLAN
 
-  	ACX_CHECK_FUNC([LIB_MPI], [MPI_INIT])
-  	ACX_CHECK_LIB([LIB_MPI], [mpi],  [MPI_INIT], [-lmpi])
-		AS_IF([test -z "${LIB_MPI}"], AC_MSG_ERROR([couldn't find mpi library]))
+dnl check for NETCDF
+ACX_NETCDF
 
-  	LDFLAGS="$save_ldflags"
-		AS_IF([test "$MPIDIR"], [LIB_MPI="-L${MPIDIR} -L${MPIDIR}/lib ${LIB_MPI}"])
-  fi
-	
-	# let us see if we have a mpi module
-	save_ldflags="$LDFLAGS"
-	AS_IF([test "$LIB_MPI"], [LDFLAGS="${LDFLAGS} -L${LIB_MPI}"])
-	_AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [
-use mpi
-integer :: ierr
-call MPI_Init(ierr)
-])], [HAVE_MPI_MOD=1], [HAVE_MPI_MOD=0])
-
-	if test "$HAVE_MPI_MOD" = 1; then
-		AC_DEFINE(MPI_MOD, 1, [have mpi module])
-	else
-		AC_CHECK_HEADERS(mpif.h)
-		AC_DEFINE(MPI_H, 1, [have mpi Fortran header file])
-	fi
-
-	LDFLAGS="$save_ldflags"
-	AC_DEFINE(HAVE_MPI, 1, [MPI library (www.mpich.org)])
-  AC_DEFINE(MPI_TD, 1, [soon])
-	AC_SUBST(LIB_MPI)
-
-# TODO
-	AC_SUBST(LIB_METIS)
+dnl check for MPI
+if test x"$enable_mpi" != x"no"; then
+  ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
 fi
 
 # This is certainly wrong, but I don't know
