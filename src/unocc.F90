@@ -92,7 +92,6 @@ subroutine unocc_run(u, sys, h)
   type(eigen_solver_type) :: eigens
   integer :: iunit
   logical :: converged
-  real(r8) :: diff(u%st%nst, u%st%nik)
 
   sub_name = 'unocc_run'; call push_sub()
 
@@ -103,7 +102,7 @@ subroutine unocc_run(u, sys, h)
   eigens%final_tol_iter = 1
   eigens%es_maxiter     = u%max_iter
 
-  call eigen_solver_run(eigens, u%st, sys, h, 1, diff, converged)
+  call eigen_solver_run(eigens, u%st, sys, h, 1, converged)
   call R_FUNC(hamiltonian_eigenval) (h, u%st, sys)
 
   ! write output file
@@ -117,7 +116,7 @@ subroutine unocc_run(u, sys, h)
   end if
   write(iunit,'(a, e17.6)') 'Criterium = ', u%conv
   write(iunit,'(1x)')
-  call states_write_eigenvalues(iunit, u%st%nst, u%st, diff)
+  call states_write_eigenvalues(iunit, u%st%nst, u%st)
   call io_close(iunit)
 
   ! write restart information.

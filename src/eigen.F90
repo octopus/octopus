@@ -111,20 +111,22 @@ subroutine eigen_solver_init(eigens)
   call pop_sub(); return
 end subroutine eigen_solver_init
 
-subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
+subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   type(eigen_solver_type), intent(IN) :: eigens
   type(states_type), intent(inout) :: st
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(IN) :: h
   integer, intent(in) :: iter
-  real(r8), intent(out) :: diff(st%nst, st%nik)
   logical, intent(inout), optional :: conv
 
   integer :: ik, maxiter, converged, errorflag
   real(r8) :: tol
+  real(r8), allocatable :: diff(:, :)
 
   sub_name = 'eigen_solver_run'; call push_sub()
 
+  allocate(diff(st%nst, st%nik))
+  
   if(iter < eigens%final_tol_iter) then
       tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
            eigens%init_tol
@@ -152,8 +154,11 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, diff, conv)
   write(message(1),'(a,i5)') 'Info: Converged = ',converged
   write(message(2),'(a,i8)') 'Info: Matrix-Vector multiplications = ', maxiter
   call write_info(2)
+  call states_write_eigenvalues(stdout, st%nst, st, diff)
+
   if(present(conv).and. converged == st%nst*st%nik) conv = .true.
 
+  deallocate(diff)
   call pop_sub(); return
 end subroutine eigen_solver_run
 

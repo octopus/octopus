@@ -140,6 +140,21 @@ real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
   nrm2 = R_NRM2(m%np*dim, f, 1)*sqrt(m%vol_pp)
 end function R_FUNC(states_nrm2)
 
+real(r8) function R_FUNC(states_residue)(m, dim, hf, e, f, res) result(r)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: dim
+  R_TYPE, intent(IN), dimension(:, :) :: hf, f
+  real(r8), intent(in)  :: e
+  R_TYPE, intent(out), optional :: res(:, :)
+
+  if(present(res)) then
+    res = hf - e*f
+    r = R_FUNC(states_nrm2)(m, dim, res)
+  else
+    r = R_FUNC(states_nrm2)(m, dim, hf - e*f)
+  endif
+end function R_FUNC(states_residue)
+
 real(r8) function R_FUNC(states_nrm2q)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim

@@ -100,34 +100,28 @@ subroutine scf_run(scf, sys, h)
 
   integer :: iter, iunit, ik, ist, id
   real(r8) :: old_etot
-  real(r8), allocatable :: diff(:, :)
   logical :: finish
 
   sub_name = 'scf_run'; call push_sub()
 
   if(scf%lcao_restricted) call lcao_init(sys, h)
 
-  allocate(diff(sys%st%nst, sys%st%nik))
-
   do iter = 1, scf%max_iter
     if(scf%lcao_restricted) then
       call lcao_wf(sys, h)
     else
-      call eigen_solver_run(scf%eigens, sys%st, sys, h, iter, diff)
+      call eigen_solver_run(scf%eigens, sys%st, sys, h, iter)
     endif
+
+    ! occupations
+    call states_fermi(sys%st, sys%m)
 
     ! compute new density
     call mix_dens(scf%smix, iter, sys%st, sys%m, scf%abs_dens)
     scf%rel_dens = scf%abs_dens / sys%st%qtot
 
     ! compute new potentials
-    call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st, sys)
-
-    ! occupations
-    call states_fermi(sys%st, sys%m)
-
-    ! output eigenvalues
-    call states_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
+    call R_FUNC(hamiltonian_setup) (h, sys%m, sys%st)!, sys)
 
     ! now compute total energy
     old_etot = h%etot
@@ -176,9 +170,7 @@ subroutine scf_run(scf, sys, h)
   if(sys%outp%what(output_geometry)) call system_write_xyz("static", "geometry", sys)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
 
-  deallocate(diff)
-  call pop_sub()
-
+  call pop_sub(); return
 contains
 
 subroutine scf_write_static(dir, fname)
@@ -219,7 +211,7 @@ subroutine scf_write_static(dir, fname)
   end if
   write(iunit, '(1x)')
 
-  call states_write_eigenvalues(iunit, sys%st%nst, sys%st, diff)
+  call states_write_eigenvalues(iunit, sys%st%nst, sys%st)
   write(iunit, '(1x)')
 
   write(iunit, '(a)') 'Energy:'

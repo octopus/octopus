@@ -16,12 +16,6 @@
 !! 02111-1307, USA.
 
 ! CONJUGATE-GRADIENTS METHOD.
-!
-! Method-dependent parameters (optional):
-!
-! logical, intent(in), optional :: reorder
-!       This flag decides wether the eigenvectors/values are ordered before
-!       output. By default, they are.
 subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, reorder)
   type(states_type), intent(inout)   :: st
   type(system_type), intent(IN)      :: sys
@@ -33,10 +27,10 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
   logical, intent(in), optional      :: reorder
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
-       cg(:,:), ppsi(:,:), tmp_wf(:,:)
+       cg(:,:), ppsi(:,:)
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  real(r8) :: cg0, e0
+  real(r8) :: cg0, e0, res
   integer  :: ik, np, moved, p, j, iter, i, maxter
   logical  :: reord = .true.
 
@@ -57,10 +51,6 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%nik
     eigenfunction_loop : do p = 1, st%nst
-      if(present(diff)) then
-        allocate(tmp_wf(np, st%dim))
-        tmp_wf = st%R_FUNC(psi)(1:,:, p, ik)
-      end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, &
@@ -139,23 +129,23 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
         b0 = sin(theta)/cg0
         st%R_FUNC(psi)(:,:, p, ik) = a0*st%R_FUNC(psi)(:,:, p, ik) + b0*cg(:,:)
         
+        ! Calculate H|psi>
+        h_psi = a0*h_psi + b0*ppsi
+
+        res = R_FUNC(states_residue)(sys%m, st%dim, h_psi, st%eigenval(p, ik), &
+                                     st%R_FUNC(psi)(1:, :, p, ik))
         ! Test convergence.
-        if(abs(st%eigenval(p, ik) - e0) < tol) then
+        if(res < tol) then
           converged = converged + 1
           exit iter_loop
         end if
-        
-        ! Calculate H|psi>
-        h_psi = a0*h_psi + b0*ppsi
         
       end do iter_loop
 
       niter = niter + iter + 1
 
       if(present(diff)) then
-        tmp_wf = st%R_FUNC(psi)(1:np,:, p, ik) - tmp_wf
-        diff(p, ik) = R_FUNC(mesh_nrm2) (sys%m, tmp_wf)
-        deallocate(tmp_wf)
+        diff(p, ik) = res
       end if
 
       ! Reordering... (this should be improved)
