@@ -125,10 +125,6 @@ contains
 
           if (mpiv%node == 0) call loct_progress_bar(actual-1, max)
         end do
-
-        temp = st%eigenval(a, 1) - st%eigenval(i, 1)
-        mat(ia, :)  = sqrt(temp)*mat(ia, :)
-        mat(ia, ia) = temp**2 + mat(ia, ia)
       end do
 
 #ifdef HAVE_MPI
@@ -136,10 +132,22 @@ contains
       call MPI_ALLREDUCE(mat(1,1), mpi_mat(1,1), n_pairs**2, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)      
       mat = mpi_mat
+      deallocate(mpi_mat)
 #endif
 
       if (mpiv%node == 0)  then
         write(stdout, '(1x)')
+
+        ! complete the matrix
+        do ia = 1, n_pairs
+          i = pair_i(ia)
+          a = pair_a(ia)
+
+          temp = st%eigenval(a, 1) - st%eigenval(i, 1)
+
+          mat(ia, :)  = sqrt(temp)*mat(ia, :)
+          mat(ia, ia) = temp**2 + mat(ia, ia)
+        end do
 
         ! now we diagonalise the matrix
         call lalg_eigensolve(n_pairs, mat, mat, energies(:, 1))
