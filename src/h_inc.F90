@@ -220,7 +220,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
     end do
     
     allocate(v_aux(h%np, sys%st%nspin))
-    if(h%ispin == 3) then
+    if(h%noncollinear_spin) then
       allocate(v_aux2(h%np))
     else
       nullify(v_aux2)
