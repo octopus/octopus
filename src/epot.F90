@@ -363,7 +363,7 @@ contains
     FLOAT,               pointer       :: Vpsl(:)
     integer,             intent(in)    :: reltype
 
-    integer :: ia, i, l, lm, add_lm, k
+    integer :: ia, i, l, lm, add_lm, k, ierr
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
@@ -409,6 +409,7 @@ contains
             ! For each atom, the sphere is the same, so we just calculate it once.
             if(add_lm == 1) then
               k = i
+              deallocate(ep%vnl(i)%jxyz, stat = ierr)
               call build_kb_sphere(i)
             else
               ep%vnl(i)%n = ep%vnl(k)%n
@@ -709,7 +710,6 @@ contains
   ! type variabel, except for jxyz. This is not very elegant, but it helps with performance.
   subroutine nonlocal_op_kill(nlop)
     type(nonlocal_op) :: nlop
-    if(associated(nlop%jxyz)) nullify(nlop%jxyz)
     if(associated(nlop%uv)) then
       deallocate(nlop%uv, nlop%uvu, nlop%duv, &
                  nlop%so_uv, nlop%so_duv, nlop%so_luv, nlop%so_uvu)
