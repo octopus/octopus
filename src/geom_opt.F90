@@ -92,20 +92,20 @@ contains
     
   contains
     subroutine geo_init()
-      call oct_parse_int(C_string("GOMethod"), 1, geo%method)
+      call oct_parse_int("GOMethod", 1, geo%method)
       if(geo%method < 1 .or. geo%method >1) then
         message(1) = "'GOMethod' can only take the values:"
         message(2) = "   1 = Steepest descent"
         call write_fatal(2)
       end if
 
-      call oct_parse_double(C_string("GOTolerance"), 0.0001_r8/units_inp%force%factor, geo%tol)
+      call oct_parse_double("GOTolerance", 0.0001_r8/units_inp%force%factor, geo%tol)
       geo%tol = geo%tol*units_inp%force%factor
 
       ! WARNING: in some weird units
-      call oct_parse_double(C_string("GOStep"), 0.5_r8, geo%step)
+      call oct_parse_double("GOStep", 0.5_r8, geo%step)
 
-      call oct_parse_int(C_string("GOMaxIter"), 200, geo%max_iter)
+      call oct_parse_int("GOMaxIter", 200, geo%max_iter)
       if(geo%max_iter <= 0) then
         message(1) = "GoMaxIter has to be larger than 0"
         call write_fatal(1)

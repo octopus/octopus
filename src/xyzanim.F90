@@ -49,7 +49,7 @@ program xyzanim
   write(xyzfile, '(a)') 'movie.xyz'
 
   ! how many do we have?
-  str = C_string("Species")
+  str = "Species"
   nspecies = oct_parse_block_n(str)
   if (nspecies < 1) then
     message(1) = "Input: Species block not specified"
@@ -61,14 +61,14 @@ program xyzanim
   allocate(spec(nspecies))
 
   ! how often do we sample?
-  call oct_parse_int(C_string('AnimationSampling'), 100, sampling)
+  call oct_parse_int('AnimationSampling', 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)
   end if
 
   do i = 1, nspecies
-    call oct_parse_block_str(str, i-1, 0, spec(i)%label)
+    call oct_parse_block_string(str, i-1, 0, spec(i)%label)
     call oct_parse_block_double(str, i-1, 1, spec(i)%weight)
   end do
 

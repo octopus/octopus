@@ -56,7 +56,7 @@ subroutine hartree_init(h, m)
     message(1) = 'Info: Using direct integration method to solve poisson equation'
     call write_info(1)
   else
-    call oct_parse_int(C_string('PoissonSolver'), 3, h%solver)
+    call oct_parse_int('PoissonSolver', 3, h%solver)
     if(h%solver<1 .or. h%solver>3 ) then
       write(message(1), '(a,i2,a)') "Input: '", h%solver, &
            "' is not a valid PoissonSolver"

@@ -40,7 +40,7 @@ program choose_st
   deallocate(st1%rho, st1%occ, st1%eigenval)
 
   ! how many states do we have?
-  call oct_parse_int(C_string("UnoccNumberStates"), 5, n_unocc)
+  call oct_parse_int("UnoccNumberStates", 5, n_unocc)
 
   ! setup variables
   sys%st%nst = sys%st%nst + n_unocc
@@ -53,8 +53,8 @@ program choose_st
   endif
 
   ! which states to take into account
-  call oct_parse_str("ChooseStates", "1-1024", ch)
-  call oct_wfs_list(C_string(ch), flags)
+  call oct_parse_string("ChooseStates", "1-1024", ch)
+  call oct_wfs_list(ch, flags)
 
   ! create directory if it does not exist
   call oct_mkdir('opt-control')
@@ -79,7 +79,7 @@ program choose_st
     end if
   end do
 
-  call oct_parse_str("ChooseStatesFilename", "wf.initial", ch)
+  call oct_parse_string("ChooseStatesFilename", "wf.initial", ch)
   call R_FUNC(states_write_restart) ("opt-control/"+trim(ch), sys%m, st1)
 
   stop

@@ -46,7 +46,7 @@ program make_st
     call write_fatal(1)
   endif
 
-  str = C_string("MakeStates")
+  str = "MakeStates"
   n = oct_parse_block_n(str)
   do i = 1, n
     call oct_parse_block_int(str, i-1, 0, ik)

@@ -114,12 +114,12 @@ subroutine hamiltonian_init(h, sys)
   h%vpsl = M_ZERO; h%vhartree = M_ZERO; h%vxc = M_ZERO
 
   if(sys%ncatoms > 0) then
-    call oct_parse_int(C_string("ClassicPotential"), 0, h%classic_pot)
+    call oct_parse_int("ClassicPotential", 0, h%classic_pot)
     if(h%classic_pot > 0) allocate(h%Vclassic(h%np))
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
-  call oct_parse_int(C_string('LocalPotentialSpace'), RECIPROCAL_SPACE, h%vpsl_space)
+  call oct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, h%vpsl_space)
   select case(h%vpsl_space)
     case(RECIPROCAL_SPACE)
       message(1) = 'Info: Local Potential in Reciprocal Space.'
@@ -144,7 +144,7 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   if(conf%dim == 3) then ! non-local potentials only in 3D
-    call oct_parse_int(C_string('NonLocalPotentialSpace'), REAL_SPACE, h%vnl_space)
+    call oct_parse_int('NonLocalPotentialSpace', REAL_SPACE, h%vnl_space)
     if(h%vnl_space < 0 .or. h%vnl_space > 1) then
       write(message(1), '(a,i5,a)') "Input: '", h%vnl_space, &
            "' is not a valid NonLocalPotentialSpace"
@@ -153,7 +153,7 @@ subroutine hamiltonian_init(h, sys)
     end if
     
     if(h%vnl_space == RECIPROCAL_SPACE) then
-      call oct_parse_int(C_string('GridRefinement'), 3, h%nextra)
+      call oct_parse_int('GridRefinement', 3, h%nextra)
       if(h%nextra < 0) then
         write(message(1), '(a,i5,a)') "Input: '", h%nextra, &
              "' is not a valid GridRefinement"
@@ -165,7 +165,7 @@ subroutine hamiltonian_init(h, sys)
     end if
   end if
 
-  call oct_parse_int(C_string("RelativisticCorrection"), NOREL, h%reltype)
+  call oct_parse_int("RelativisticCorrection", NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
   select case(h%reltype)
     case(NOREL);      message(1) = 'Info: Rel. correction: No relativistic corrections.'
@@ -194,7 +194,7 @@ subroutine hamiltonian_init(h, sys)
 #endif
 
   ! Should we treat the particles as independent?
-  call oct_parse_logical(C_string("NonInteractingElectrons"), .false., h%ip_app)
+  call oct_parse_logical("NonInteractingElectrons", .false., h%ip_app)
   if(h%ip_app) then
     message(1) = 'Info: Treating the electrons as non-interacting'
     call write_info(1)
@@ -208,7 +208,7 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! gauge
-  call oct_parse_int(C_string("TDGauge"), 1, h%gauge)
+  call oct_parse_int("TDGauge", 1, h%gauge)
   if (h%gauge < 1 .or. h%gauge > 2) then
     write(message(1), '(a,i6,a)') "Input: '", h%gauge, "' is not a valid TDGauge"
     message(2) = 'Accepted values are:'
@@ -225,18 +225,18 @@ subroutine hamiltonian_init(h, sys)
       if(conf%verbose > 20 .and. mpiv%node == 0) then
         call laser_write_info(h%no_lasers, h%lasers, stdout)
       end if
-      call oct_parse_logical(C_string("OutputLaser"), .false., h%output_laser)  
+      call oct_parse_logical("OutputLaser", .false., h%output_laser)  
   end if
 
   ! absorbing boundaries
-  call oct_parse_int(C_string("AbsorbingBoundaries"), 0, h%ab)
+  call oct_parse_int("AbsorbingBoundaries", 0, h%ab)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.eq. 1 .or. h%ab.eq.2) then
-    call oct_parse_double(C_string("ABWidth"), 4._r8/units_inp%length%factor, h%ab_width)
+    call oct_parse_double("ABWidth", 4._r8/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
-      call oct_parse_double(C_string("ABHeight"), -0.2_r8/units_inp%energy%factor, h%ab_height)
+      call oct_parse_double("ABHeight", -0.2_r8/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
       h%ab_height = 1._r8

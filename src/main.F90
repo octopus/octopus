@@ -30,7 +30,7 @@ program octopus
 
   ! Let us print our logo
   if(conf%verbose > 20 .and. mpiv%node == 0) &
-       ierr = print_file(C_string(SHARE_OCTOPUS//'/logo'))
+       ierr = print_file(SHARE_OCTOPUS//'/logo')
 
   ! Let us print the version
   message(1) = ""
@@ -45,6 +45,9 @@ program octopus
        "Info: Calculation started on ", val(1), "/", val(2), "/", val(3), &
        " at ", val(5), ":", val(6), ":", val(7)
   call write_info(1)
+
+  ! create temporary dir (we will need it)
+  call oct_mkdir("tmp")
 
   ! now we really start
   call run()

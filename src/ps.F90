@@ -185,7 +185,7 @@ subroutine ps_debug(ps)
   sub_name = 'ps_debug'; call push_sub()
 
   ! Opens the files.
-  call oct_mkdir(C_string('pseudos/'+trim(ps%label)))
+  call oct_mkdir('pseudos/'+trim(ps%label))
   call io_assign(info_unit); call io_assign(local_unit)
   call io_assign(nonlocal_unit); call io_assign(wave_unit)
   call io_assign(so_unit)

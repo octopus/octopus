@@ -89,7 +89,7 @@ subroutine states_init(st, m, val_charge)
 
   call states_null(st)
 
-  call oct_parse_int(C_string('SpinComponents'), UNPOLARIZED, st%ispin)
+  call oct_parse_int('SpinComponents', UNPOLARIZED, st%ispin)
   if (st%ispin < UNPOLARIZED .or. st%ispin > SPINORS) then
     write(message(1),'(a,i4,a)') "Input: '", st%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
@@ -97,7 +97,7 @@ subroutine states_init(st, m, val_charge)
   end if
 
   if (conf%periodic_dim>0) then
-    call oct_parse_int(C_string('NumberKPoints'), 4, st%nik)
+    call oct_parse_int('NumberKPoints', 4, st%nik)
     if (st%nik < 1) then
       write(message(1),'(a,i4,a)') "Input: '", st%nik,"' is not a valid NumberKPoints"
       message(2) = '(NumberKPoints >= 1)'
@@ -111,7 +111,7 @@ subroutine states_init(st, m, val_charge)
     st%nik = 1
   end if
   
-  call oct_parse_double(C_string('ExcessCharge'), 0.0_r8, excess_charge)
+  call oct_parse_double('ExcessCharge', 0.0_r8, excess_charge)
 
   if(conf%periodic_dim>0) then
     i = 2 ! we take two extra states, just in case we have a metal
@@ -119,7 +119,7 @@ subroutine states_init(st, m, val_charge)
     i = 0 ! no extra states
   end if
 
-  call oct_parse_int(C_string('ExtraStates'), i, nempty)
+  call oct_parse_int('ExtraStates', i, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
     message(2) = '(0 <= ExtraStates)'
@@ -183,7 +183,7 @@ subroutine states_init(st, m, val_charge)
     allocate(st%mag(st%nst, st%nik, 2))
   end if
 
-  str = C_string("Occupations")
+  str = "Occupations"
   occ_fix: if(oct_parse_isdef(str) .ne. 0) then
     ! read in occupations
     st%fixed_occ = .true.
@@ -213,7 +213,7 @@ subroutine states_init(st, m, val_charge)
     end do
 
     ! read in fermi distribution temperature
-    call oct_parse_double(C_string('ElectronicTemperature'), 0.0_r8, st%el_temp)
+    call oct_parse_double('ElectronicTemperature', 0.0_r8, st%el_temp)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst

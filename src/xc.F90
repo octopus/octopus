@@ -135,10 +135,10 @@ subroutine xc_init(xcs, nlcc)
 
   xcs%nlcc = nlcc
 
-  call oct_parse_str('XFamily',     'LDA',  xfam)
-  call oct_parse_str('XFunctional', 'NREL', xfunc)
-  call oct_parse_str('CFamily',     'LDA',  cfam)
-  call oct_parse_str('CFunctional', 'PZ81', cfunc)
+  call oct_parse_string('XFamily',     'LDA',  xfam)
+  call oct_parse_string('XFunctional', 'NREL', xfunc)
+  call oct_parse_string('CFamily',     'LDA',  cfam)
+  call oct_parse_string('CFunctional', 'PZ81', cfunc)
 
   ! the exchange
   select case(xfam(1:3))

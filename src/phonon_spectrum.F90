@@ -41,7 +41,7 @@ program phonon_spectrum
   end if
 
   ! Counts the number of lines in the file ( 2 is the number of lines in the header)
-  time_steps = number_of_lines(C_string('td.general/coordinates')) - 2
+  time_steps = number_of_lines('td.general/coordinates') - 2
 
   ! Closes file and exits
   call io_close(iunit)

@@ -24,7 +24,7 @@ subroutine specie3D_init(nspecies, str, s)
 
   ! Reads the spin components. This is read here, as well as in states_init,
   ! to be able to pass it to the pseudopotential initializations subroutine.
-  call oct_parse_int(C_string('SpinComponents'), 1, ispin)
+  call oct_parse_int('SpinComponents', 1, ispin)
   if (ispin < 1 .or. ispin > 3) then
     write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
@@ -33,7 +33,7 @@ subroutine specie3D_init(nspecies, str, s)
   ispin = min(2, ispin)
   
   do i = 1, nspecies
-    call oct_parse_block_str(str, i-1, 0, s(i)%label)
+    call oct_parse_block_string(str, i-1, 0, s(i)%label)
     call oct_parse_block_double(str, i-1, 1, s(i)%weight)
     s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
     
@@ -60,7 +60,7 @@ subroutine specie3D_init(nspecies, str, s)
       s(i)%nlcc  = .false.
 
       call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
-      call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
+      call oct_parse_block_string(str, i-1, 3, s(i)%user_def)
       ! convert to C string
       j = len(trim(s(i)%user_def))
       s(i)%user_def(j+1:j+1) = achar(0) 
@@ -70,7 +70,7 @@ subroutine specie3D_init(nspecies, str, s)
 
       allocate(s(i)%ps) ! allocate structure
       call oct_parse_block_double(str, i-1, 2, s(i)%Z)
-      call oct_parse_block_str(str, i-1, 3, s(i)%ps_flavour)
+      call oct_parse_block_string(str, i-1, 3, s(i)%ps_flavour)
       call oct_parse_block_int(str, i-1, 4, lmax)
       call oct_parse_block_int(str, i-1, 5, lloc)
       call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, ispin)

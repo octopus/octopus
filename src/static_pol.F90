@@ -43,7 +43,7 @@ subroutine static_pol_run(scf, sys, h)
   sub_name = 'static_pol_run'; call push_sub()
 
   ! read in e_field value
-  call oct_parse_double(C_string('POLStaticField'), &
+  call oct_parse_double('POLStaticField', &
        0.001_r8/units_inp%energy%factor*units_inp%length%factor, e_field)
   e_field = e_field * units_inp%energy%factor / units_inp%length%factor
   if (e_field <= 0._r8) then
@@ -105,7 +105,7 @@ subroutine static_pol_run(scf, sys, h)
   deallocate(Vpsl_save)
 
   if(out_pol) then ! output pol file
-    call oct_mkdir(C_string("linear"))
+    call oct_mkdir("linear")
     call io_assign(iunit)
     open(iunit, file='linear/polarizability', status='unknown')
     write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &

@@ -60,7 +60,7 @@ subroutine system_init(s)
 
   sub_name = 'system_init'; call push_sub()
 
-  call oct_parse_str('SystemName', 'system', s%sysname)
+  call oct_parse_string('SystemName', 'system', s%sysname)
   s%nspecies = specie_init(s%specie)
 
   call atom_init(s%natoms, s%atom, s%ncatoms, s%catom, s%nspecies, s%specie)
@@ -117,7 +117,7 @@ subroutine system_write_xyz(dir, fname, s)
   if(mpiv%node == 0) then
 #endif
 
-    call oct_mkdir(C_string(trim(dir)))
+    call oct_mkdir(trim(dir))
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+'.xyz', status='unknown')

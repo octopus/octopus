@@ -27,7 +27,7 @@ contains
     message(1) = ''; message(2) = ''
     call write_info(2)
 
-    call oct_printRecipe(c_string(SHARE_OCTOPUS))
+    call oct_printRecipe(SHARE_OCTOPUS)
 
   end subroutine pulpo_print
 end module pulpo

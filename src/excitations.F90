@@ -41,7 +41,7 @@ program excitations
 
   ! how many states do we have?
   n_occ = sys%st%nst
-  call oct_parse_int(C_string("UnoccNumberStates"), 5, n_unocc)
+  call oct_parse_int("UnoccNumberStates", 5, n_unocc)
   call states_init(st, sys%m, sys%val_charge)
   st%nst = n_unocc + n_occ
   st%st_end = st%nst
@@ -60,8 +60,8 @@ program excitations
   endif
 
   ! which states to take into account
-  call oct_parse_str("ExciteStates", "1-1024", ch)
-  call oct_wfs_list(C_string(ch), flags)
+  call oct_parse_string("ExciteStates", "1-1024", ch)
+  call oct_wfs_list(ch, flags)
 
   ! initialize Hartree potential
   call hartree_init(hart, sys%m)

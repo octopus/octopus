@@ -375,7 +375,7 @@ end subroutine run
 subroutine run_init()
   ! initialize some stuff
 
-  call oct_parse_int(C_string('CalculationMode'), 1, calc_mode)
+  call oct_parse_int('CalculationMode', 1, calc_mode)
   if( (calc_mode < 1 .or. calc_mode > 12) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = 1 <= start static calculation'

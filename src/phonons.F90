@@ -46,12 +46,12 @@ contains
     integer :: i, j, iunit
 
     ! create directory for output
-    call oct_mkdir(C_string('phonons'))
+    call oct_mkdir('phonons')
 
     ph%dim = sys%natoms*3
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
-    call oct_parse_double(C_string("Displacement"), 0.01_r8/units_inp%length%factor, ph%disp)
+    call oct_parse_double("Displacement", 0.01_r8/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix

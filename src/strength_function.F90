@@ -31,7 +31,7 @@ program strength_function
   call global_init()
   call units_init()
 
-  call oct_parse_str("SpecTransformMode", "sin", txt)
+  call oct_parse_string("SpecTransformMode", "sin", txt)
   select case(txt(1:3))
   case('sin')
     sf%transform = 1
@@ -43,7 +43,7 @@ program strength_function
     call write_fatal(2)
   end select
   
-  call oct_parse_str("SpecDampMode", "exp", txt)
+  call oct_parse_string("SpecDampMode", "exp", txt)
   select case(txt(1:3))
   case('exp')
     sf%damp = 1
@@ -53,13 +53,13 @@ program strength_function
     sf%damp = 0
   end select
 
-  call oct_parse_double(C_string("SpecDampFactor"), 0.15_r8, sf%damp_factor)
-  call oct_parse_double(C_string("SpecStartTime"), 0._r8, s%start_time)
-  call oct_parse_double(C_string("SpecEndTime"), -1._r8, s%end_time)
-  call oct_parse_double(C_string("SpecEnergyStep"), 0.05_r8, s%energy_step)
-  call oct_parse_double(C_string("SpecMaxEnergy"), 20._r8, s%max_energy)
-  call oct_parse_double(C_string("SpecMinEnergy"), 0._r8, s%min_energy)
-  call oct_parse_double(C_string("TDDeltaStrength"), 0.05_r8, sf%delta_strength)
+  call oct_parse_double("SpecDampFactor", 0.15_r8, sf%damp_factor)
+  call oct_parse_double("SpecStartTime", 0._r8, s%start_time)
+  call oct_parse_double("SpecEndTime", -1._r8, s%end_time)
+  call oct_parse_double("SpecEnergyStep", 0.05_r8, s%energy_step)
+  call oct_parse_double("SpecMaxEnergy", 20._r8, s%max_energy)
+  call oct_parse_double("SpecMinEnergy", 0._r8, s%min_energy)
+  call oct_parse_double("TDDeltaStrength", 0.05_r8, sf%delta_strength)
 
   ! adjust units
   sf%damp_factor    = sf%damp_factor    / units_inp%time%factor

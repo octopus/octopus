@@ -291,7 +291,7 @@ contains
     sub_name = 'td_run_zero_iter'; call push_sub()
 
     ! create general subdir
-    call oct_mkdir(C_string("td.general"))
+    call oct_mkdir("td.general")
 
     ! output static dipole (iter 0)
     allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))

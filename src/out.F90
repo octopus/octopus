@@ -74,8 +74,8 @@ subroutine output_init(outp)
   end do
 
   if(outp%what(output_wfs)) then
-    call oct_parse_str("OutputWfsNumber", "1-1024", owf)
-    call oct_wfs_list(C_string(owf), outp%wfs)
+    call oct_parse_string("OutputWfsNumber", "1-1024", owf)
+    call oct_wfs_list(owf, outp%wfs)
   end if
 
   if(outp%what(output_something)) then
@@ -106,7 +106,7 @@ subroutine output_init(outp)
   end if
   
   ! this is always needed in a time-dependent calculation
-  call oct_parse_int(C_string("OutputEvery"), 1000, outp%iter)
+  call oct_parse_int("OutputEvery", 1000, outp%iter)
 end subroutine output_init
 
 #include "undef.F90"

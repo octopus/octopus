@@ -28,14 +28,14 @@ subroutine td_init(td, sys, m, st)
   td%iter = 0
   allocate(td%pol(conf%dim))
 
-  call oct_parse_int(C_string("TDMaximumIter"), 1500, td%max_iter)
+  call oct_parse_int("TDMaximumIter", 1500, td%max_iter)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
     message(2) = '(1 <= TDMaximumIter)'
     call write_fatal(2)
   end if
   
-  call oct_parse_double(C_string("TDTimeStep"), 0.07_r8/units_inp%time%factor, td%dt)
+  call oct_parse_double("TDTimeStep", 0.07_r8/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= 0._r8) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
@@ -43,7 +43,7 @@ subroutine td_init(td, sys, m, st)
     call write_fatal(2)
   end if
   
-  call oct_parse_int(C_string("TDEvolutionMethod"), REVERSAL, td%evolution_method)
+  call oct_parse_int("TDEvolutionMethod", REVERSAL, td%evolution_method)
   select case(td%evolution_method)
     case(SIMPLE_EXP);           message(1) = 'Info: Evolution method:  Simple Exponential Method.'
     case(OLD_REVERSAL);         message(1) = 'Info: Evolution method:  Old-Style.'
@@ -57,7 +57,7 @@ subroutine td_init(td, sys, m, st)
   end select
   call write_info(1)
 
-  call oct_parse_int(C_string("TDExponentialMethod"), FOURTH_ORDER, td%exp_method)
+  call oct_parse_int("TDExponentialMethod", FOURTH_ORDER, td%exp_method)
   select case(td%exp_method)
     case(FOURTH_ORDER);         message(1) = 'Info: Exponential method: 4th order expansion.'
     case(LANCZOS_EXPANSION);    message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
@@ -73,21 +73,21 @@ subroutine td_init(td, sys, m, st)
   end select
   call write_info(1)
 
-  call oct_parse_double(C_string("TDLanczosTol"), 5e-4_r8, td%lanczos_tol)
+  call oct_parse_double("TDLanczosTol", 5e-4_r8, td%lanczos_tol)
   if (td%lanczos_tol <= 0._r8) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%lanczos_tol, "' is not a valid TDLanczosTol"
     message(2) = '(0 < TDLanczosTol)'
     call write_fatal(2)
   end if
 
-  call oct_parse_int(C_string("TDExpOrder"), 4, td%exp_order)
+  call oct_parse_int("TDExpOrder", 4, td%exp_order)
   if (td%exp_order < 2) then
     write(message(1), '(a,i6,a)') "Input: '", td%exp_order, "' is not a valid TDExpOrder"
     message(2) = '(2 <= TDExpOrder)'
     call write_fatal(2)
   end if
 
-  call oct_parse_int(C_string("TDDipoleLmax"), 1, td%lmax)
+  call oct_parse_int("TDDipoleLmax", 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
     message(2) = '(0 <= TDDipoleLmax <= 4 )'
@@ -96,11 +96,11 @@ subroutine td_init(td, sys, m, st)
 
   ! delta impulse used to calculate optical spectrum
   ! units are 1/length
-  call oct_parse_double(C_string("TDDeltaStrength"), 0._r8, td%delta_strength)
+  call oct_parse_double("TDDeltaStrength", 0._r8, td%delta_strength)
   td%delta_strength = td%delta_strength / units_inp%length%factor
-  if(oct_parse_isdef(C_string('TDPolarization')) .ne. 0) then
+  if(oct_parse_isdef('TDPolarization') .ne. 0) then
     do i = 1, conf%dim
-      call oct_parse_block_double(C_string('TDPolarization'), 0, i-1, td%pol(i))
+      call oct_parse_block_double('TDPolarization', 0, i-1, td%pol(i))
     end do
   else  !default along the x-direction
     td%pol(:) = M_ZERO
@@ -108,14 +108,14 @@ subroutine td_init(td, sys, m, st)
   endif
 
   ! now the photoelectron stuff
-  call oct_parse_int(C_string("AbsorbingBoundaries"), 0, dummy)
+  call oct_parse_int("AbsorbingBoundaries", 0, dummy)
   call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
 
   ! occupational analysis stuff
-  call oct_parse_logical(C_string("TDOccupationalAnalysis"), .false., td%occ_analysis)
+  call oct_parse_logical("TDOccupationalAnalysis", .false., td%occ_analysis)
 
   ! harmonic spectrum or not
-  call oct_parse_logical(C_string("TDWriteHarmonicSpectrum"), .false., td%harmonic_spectrum)
+  call oct_parse_logical("TDWriteHarmonicSpectrum", .false., td%harmonic_spectrum)
   if(td%harmonic_spectrum) then
     message(1) = 'Warning: The harmonic spectrum, calculated from Ehrenfest theorem, '
     message(2) = '  is not yet well calculated if the ions move... Sorry!'
@@ -123,10 +123,10 @@ subroutine td_init(td, sys, m, st)
   endif
 
   ! Ground state component..
-  call oct_parse_logical(C_string("TDWriteGScomponent"), .false., td%gs_projection)
+  call oct_parse_logical("TDWriteGScomponent", .false., td%gs_projection)
 
   ! should we move the ions during the simulation?
-  call oct_parse_int(C_string("MoveIons"), 0, td%move_ions)
+  call oct_parse_int("MoveIons", 0, td%move_ions)
   if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then
     write(message(1),'(a,i4)') "Input: '", td%move_ions, &
          "' is not a valid MoveIons"

@@ -28,7 +28,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   message(1) = 'Info: Calculating PES using rc technique'
   call write_info(1)
 
-  str = C_string("PES_rc_points")
+  str = "PES_rc_points"
   v%npoints = oct_parse_block_n(str)
   if (v%npoints < 1) then
     message(1) = "Input: PES_rc_points block not specified"

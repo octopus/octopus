@@ -104,7 +104,7 @@ subroutine mesh_init(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
 
-  call oct_parse_logical(C_string("FFTOptimize"), .true., fft_optimize)
+  call oct_parse_logical("FFTOptimize", .true., fft_optimize)
   
   ! only non-periodic directions are optimized
   m%fft_n(:)  = 2*m%nr(:) + 1
@@ -120,7 +120,7 @@ subroutine mesh_init(m, natoms, atom)
   m%znpw = m%fft_n(1)*m%fft_n(2)*m%fft_n(3)
   m%vol_ppw = m%vol_pp/m%znpw
 
-  call oct_parse_double(C_string('DoubleFFTParameter'), 2.0_r8, m%fft_alpha)
+  call oct_parse_double('DoubleFFTParameter', 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
          "' is not a valid DoubleFFTParameter"
@@ -141,7 +141,7 @@ subroutine mesh_init(m, natoms, atom)
   m%hfft_n2 = m%fft_n2(1)/2 + 1
   m%dplanf2 = int(-1, POINTER_SIZE)
 
-  call oct_parse_int(C_string('DerivativesSpace'), REAL_SPACE, m%d%space)
+  call oct_parse_int('DerivativesSpace', REAL_SPACE, m%d%space)
   if(m%d%space < 0 .or. m%d%space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
          "' is not a valid DerivativesSpace"
@@ -282,7 +282,7 @@ subroutine mesh_init_derivatives_coeff(m)
   integer :: k, i, j, morder
   real(r8), allocatable :: cc(:,:,:)
 
-  call oct_parse_int(C_string('OrderDerivatives'), 4, k)
+  call oct_parse_int('OrderDerivatives', 4, k)
   m%d%norder = k
   if (k < 1) then
     write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"

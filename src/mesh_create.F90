@@ -34,7 +34,7 @@ subroutine mesh_create(m, natoms, atom)
   sub_name = 'mesh_create'; call push_sub()
   
   ! Read box shape.
-  call oct_parse_int(C_string('BoxShape'), SPHERE, m%box_shape)
+  call oct_parse_int('BoxShape', SPHERE, m%box_shape)
   if(m%box_shape<1 .or. m%box_shape>4) then
     write(message(1), '(a,i2,a)') "Input: '", m%box_shape, "' is not a valid BoxShape"
     message(2) = '(1 <= Box_Shape <= 4)'
@@ -78,22 +78,22 @@ subroutine mesh_create(m, natoms, atom)
 
   ! Read the box size.
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER .or. m%box_shape == MINIMUM) then
-    call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
+    call oct_parse_double('radius', 20.0_r8/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     m%lsize(1) = m%rsize
   end if
   if(m%box_shape == CYLINDER) then
-    call oct_parse_double(C_string('xlength'), 1.0_r8/units_inp%length%factor, m%xsize)
+    call oct_parse_double('xlength', 1.0_r8/units_inp%length%factor, m%xsize)
     m%xsize = m%xsize * units_inp%length%factor
     m%lsize(1) = m%xsize
   end if
   if(m%box_shape == PARALLELEPIPED) then
-    if(oct_parse_block_n(C_string('lsize'))<1) then
+    if(oct_parse_block_n('lsize')<1) then
       message(1) = 'Block "lsize" not found in input file.'
       call write_fatal(1)
     endif
     do i = 1, conf%dim
-      call oct_parse_block_double(C_string('lsize'), 0, i-1, m%lsize(i))
+      call oct_parse_block_double('lsize', 0, i-1, m%lsize(i))
     end do
     m%lsize = m%lsize*units_inp%length%factor
   end if
@@ -124,15 +124,15 @@ subroutine mesh_create(m, natoms, atom)
   m%h = M_ZERO
   select case(m%box_shape)
   case(SPHERE,CYLINDER,MINIMUM)
-    call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h(1))
+    call oct_parse_double('spacing', 0.6_r8/units_inp%length%factor, m%h(1))
     m%h(1:conf%dim) = m%h(1)
     m%iso = .true.
   case(PARALLELEPIPED)
-    if(oct_parse_block_n(C_string('spacing'))<1) then
+    if(oct_parse_block_n('spacing')<1) then
       m%h(1:3) = 0.6_r8/units_inp%length%factor
     else
       do i = 1, conf%dim
-         call oct_parse_block_double(C_string('spacing'), 0, i-1, m%h(i))
+         call oct_parse_block_double('spacing', 0, i-1, m%h(i))
       end do
     endif
     m%iso = .true.

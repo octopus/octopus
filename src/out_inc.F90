@@ -9,7 +9,7 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   R_TYPE, allocatable :: c(:,:,:)
 
   ! do not bother with errors
-  call oct_mkdir(C_string(trim(dir)))
+  call oct_mkdir(trim(dir))
 
   allocate(c(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
   c = R_TOTYPE(0._r8)

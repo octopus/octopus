@@ -42,8 +42,8 @@ subroutine unocc_init(u, m, st, sys)
 
   sub_name = 'unocc_init'; call push_sub()
 
-  call oct_parse_int(C_string("UnoccMaximumIter"), 200, u%max_iter)
-  call oct_parse_double(C_string("UnoccConv"), 1e-4_r8, u%conv)
+  call oct_parse_int("UnoccMaximumIter", 200, u%max_iter)
+  call oct_parse_double("UnoccConv", 1e-4_r8, u%conv)
   if(u%max_iter <= 0 .and. u%conv <= 0.0_r8) then
     message(1) = "Input: Not all occ convergence criteria can be <= 0"
     message(2) = "Please set one of the following:"
@@ -56,7 +56,7 @@ subroutine unocc_init(u, m, st, sys)
   allocate(u%st)
   call states_init(u%st, m, sys%val_charge)
 
-  call oct_parse_int(C_string("UnoccNumberStates"), 5, u%st%nst)
+  call oct_parse_int("UnoccNumberStates", 5, u%st%nst)
   if(u%st%nst <= 0) then
     message(1) = "Input: UnoccNumberStates must be > 0"
     call write_fatal(1)
@@ -107,7 +107,7 @@ subroutine unocc_run(u, sys, h)
 
   ! write output file
   call io_assign(iunit)
-  call oct_mkdir(C_string("static"))
+  call oct_mkdir("static")
   open(iunit, status='unknown', file='static/eigenvalues')
   if(converged) then
     write(iunit,'(a)') 'Occupation analysis converged.'

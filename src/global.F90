@@ -128,30 +128,30 @@ subroutine global_init()
 #endif
 
   ! init some of the stuff
-  ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
+  ierr = oct_parse_init('inp', 'out.oct')
   if(ierr .ne. 0) then
-    ierr = oct_parse_init(C_string("-"), C_string('out.oct'))
+    ierr = oct_parse_init("-", 'out.oct')
     if(ierr .ne. 0) then
       message(1) = "Error initializing liboct"
       call write_fatal(1)
     end if
   end if
   
-  call oct_parse_int(C_string('verbose'), 30, conf%verbose)
+  call oct_parse_int('verbose', 30, conf%verbose)
   if(conf%verbose > 999 .and. mpiv%node == 0) then
-    call oct_parse_int(C_string('DebugLevel'), 3, conf%debug_level)
+    call oct_parse_int('DebugLevel', 3, conf%debug_level)
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
   end if
 
   ! Sets the dimensionaliy of the problem.
-  call oct_parse_int(C_string('Dimensions'), 3, conf%dim)
+  call oct_parse_int('Dimensions', 3, conf%dim)
   if(conf%dim<1 .or. conf%dim>3) then
     message(1) = 'Dimensions must be either 1, 2, or 3'
     call write_fatal(1)
   end if
 
-  call oct_parse_int(C_string('PeriodicDimensions'), 0, conf%periodic_dim)
+  call oct_parse_int('PeriodicDimensions', 0, conf%periodic_dim)
   if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
     message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
     call write_fatal(1)
@@ -160,13 +160,6 @@ subroutine global_init()
     message(1) = 'PeriodicDimensions must be <= Dimensions'
     call write_fatal(1)
   end if
-!  if (conf%periodic_dim > 1 ) then
-!   message(1) = 'Periodic dimensions > 1 not implemented yet.'
-!   call write_fatal(1)
-!  endif
-
-  ! create temporary dir (is always necessary)
-  call oct_mkdir(C_string("tmp"))
 
 end subroutine global_init
 

@@ -57,7 +57,7 @@ subroutine eigen_solver_init(eigens)
   
   sub_name = 'eigen_solver_init'; call push_sub()
 
-  call oct_parse_int(C_string("EigenSolver"), RS_CG, eigens%es_type)
+  call oct_parse_int("EigenSolver", RS_CG, eigens%es_type)
   select case(eigens%es_type)
   case(RS_CG)
     message(1) = 'Info: Eigensolver type: Real-space conjugate gradients'
@@ -75,7 +75,7 @@ subroutine eigen_solver_init(eigens)
   end select
   call write_info(1)
 
-  call oct_parse_double(C_string("EigenSolverInitTolerance"), 1.0e-10_r8, eigens%init_tol)
+  call oct_parse_double("EigenSolverInitTolerance", 1.0e-10_r8, eigens%init_tol)
   if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -83,7 +83,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(2)
   endif
 
-  call oct_parse_double(C_string("EigenSolverFinalTolerance"), 1.0e-14_r8, eigens%final_tol)
+  call oct_parse_double("EigenSolverFinalTolerance", 1.0e-14_r8, eigens%final_tol)
   if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -92,7 +92,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(3)
   endif
 
-  call oct_parse_int(C_string("EigenSolverFinalToleranceIteration"), 7, eigens%final_tol_iter)
+  call oct_parse_int("EigenSolverFinalToleranceIteration", 7, eigens%final_tol_iter)
   if(eigens%final_tol_iter <= 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
            "' is not a valid EigenSolverFinalToleranceIter"
@@ -100,7 +100,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(2)
   endif
 
-  call oct_parse_int(C_string("EigenSolverMaxIter"), 25, eigens%es_maxiter)
+  call oct_parse_int("EigenSolverMaxIter", 25, eigens%es_maxiter)
   if(eigens%es_maxiter < 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &
            "' is not a valid EigenSolverMaxIter"

@@ -928,8 +928,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
   implicit real(r8) (a-h,o-z)
-  real(r8) h(n),s(n),y(n)
   integer :: i,n,nnode,knk
+  real(r8) :: h(n),s(n),y(n)
 
   y(n)=yn
   t=h(n)-e*s(n)
@@ -981,8 +981,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
 
   implicit real(r8) (a-h,o-z)
-  real(r8) h(knk),s(knk),y(knk)
   integer :: ncor,nnode,knk,i,nm4
+  real(r8) :: h(knk),s(knk),y(knk)
 
   y(1)=0.d0
   y(2)=y2

@@ -553,7 +553,7 @@ subroutine hgh_debug(psp)
   sub_name = 'hgh_debug'; call push_sub()
 
   ! Opens files.
-  call oct_mkdir(C_string('pseudos/'+'hgh.'+trim(psp%atom_name)))
+  call oct_mkdir('pseudos/'+'hgh.'+trim(psp%atom_name))
   call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
   open(hgh_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'hgh')

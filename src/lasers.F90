@@ -63,7 +63,7 @@ subroutine laser_init(m, no_l, l)
 
   sub_name = 'laser_init'; call push_sub()
 
-  str = C_string('TDLasers')
+  str = 'TDLasers'
   no_l = oct_parse_block_n(str)
   if(no_l > 0) then
     allocate(l(no_l))
@@ -128,7 +128,7 @@ contains
     l%tau0   = l%tau0 * units_inp%time%factor
 
     ! open file
-    call oct_parse_block_str(str, i-1, 7, filename)
+    call oct_parse_block_string(str, i-1, 7, filename)
     call io_assign(iunit)
     open(iunit, file=trim(filename), status='old', iostat=j)
     if(j.ne.0) then

@@ -51,11 +51,11 @@ subroutine scf_init(scf, sys)
 
   sub_name = 'systm_scf_init'; call push_sub()
 
-  call oct_parse_int(C_string("MaximumIter"), 200, scf%max_iter)
-  call oct_parse_double(C_string("ConvAbsDens"), 1e-5_r8, scf%conv_abs_dens)
-  call oct_parse_double(C_string("ConvRelDens"),   0._r8, scf%conv_rel_dens)
-  call oct_parse_double(C_string("ConvAbsEnergy"), 0._r8, scf%conv_abs_ener)
-  call oct_parse_double(C_string("ConvRelEnergy"), 0._r8, scf%conv_rel_ener)
+  call oct_parse_int("MaximumIter", 200, scf%max_iter)
+  call oct_parse_double("ConvAbsDens", 1e-5_r8, scf%conv_abs_dens)
+  call oct_parse_double("ConvRelDens",   0._r8, scf%conv_rel_dens)
+  call oct_parse_double("ConvAbsEnergy", 0._r8, scf%conv_abs_ener)
+  call oct_parse_double("ConvRelEnergy", 0._r8, scf%conv_rel_ener)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= 0.0_r8 .and. scf%conv_rel_dens <= 0.0_r8 .and. &
@@ -75,7 +75,7 @@ subroutine scf_init(scf, sys)
   call eigen_solver_init(scf%eigens)
 
   ! Should the calculation be restricted to LCAO subspace?
-  call oct_parse_logical(C_string("SCFinLCAO"), .false., scf%lcao_restricted)
+  call oct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
   if(scf%lcao_restricted) then
     message(1) = 'Info: SCF restricted to LCAO subspace'
     call write_info(1)
@@ -178,7 +178,7 @@ subroutine scf_write_static(dir, fname)
 
   integer :: iunit, i, j
 
-  call oct_mkdir(C_string(trim(dir)))
+  call oct_mkdir(trim(dir))
   call io_assign(iunit)
   open(iunit, status='unknown', file=trim(dir)+"/"+trim(fname))
 

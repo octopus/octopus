@@ -31,11 +31,11 @@ program hs_from_acc
   call global_init()
   call units_init()
 
-  call oct_parse_double(C_string("SpecStartTime"), 0._r8, s%start_time)
-  call oct_parse_double(C_string("SpecEndTime"), -1._r8, s%end_time)
-  call oct_parse_double(C_string("SpecEnergyStep"), 0.05_r8/units_inp%energy%factor, s%energy_step)
-  call oct_parse_double(C_string("SpecMinEnergy"), 0._r8, s%min_energy)
-  call oct_parse_double(C_string("SpecMaxEnergy"), 1._r8/units_inp%energy%factor, s%max_energy)
+  call oct_parse_double("SpecStartTime", 0._r8, s%start_time)
+  call oct_parse_double("SpecEndTime", -1._r8, s%end_time)
+  call oct_parse_double("SpecEnergyStep", 0.05_r8/units_inp%energy%factor, s%energy_step)
+  call oct_parse_double("SpecMinEnergy", 0._r8, s%min_energy)
+  call oct_parse_double("SpecMaxEnergy", 1._r8/units_inp%energy%factor, s%max_energy)
 
   ! adjust units
   s%start_time  = s%start_time  * units_inp%time%factor
@@ -44,7 +44,7 @@ program hs_from_acc
   s%min_energy  = s%min_energy  * units_inp%energy%factor
   s%max_energy  = s%max_energy  * units_inp%energy%factor
 
-  call oct_parse_str('HSPolarization', 'z', txt)
+  call oct_parse_string('HSPolarization', 'z', txt)
   sh%pol = txt(1:1)
   if(sh%pol.ne.'x' .and. sh%pol.ne.'y' .and. sh%pol.ne.'z' .and. &
        sh%pol.ne.'+' .and. sh%pol.ne.'-') then

@@ -39,7 +39,7 @@ contains
     integer :: iunit, n_pairs, i, a, ia
 
     ! output
-    call oct_mkdir(C_string(trim(dir)))
+    call oct_mkdir(trim(dir))
 
     ! get occupied/unoccupied pairs
     call fix_pairs()

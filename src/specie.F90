@@ -83,7 +83,7 @@ function specie_init(s)
   sub_name = 'specie_init'; call push_sub()
 
   ! how many do we have?
-  str = C_string("Species")
+  str = "Species"
   nspecies = oct_parse_block_n(str)
   if (nspecies < 1) then
     message(1) = "Input: Species block not specified"
@@ -96,7 +96,7 @@ function specie_init(s)
 
   ! Reads the spin components. This is read here, as well as in states_init,
   ! to be able to pass it to the pseudopotential initializations subroutine.
-  call oct_parse_int(C_string('SpinComponents'), 1, ispin)
+  call oct_parse_int('SpinComponents', 1, ispin)
   if (ispin < 1 .or. ispin > 3) then
     write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
