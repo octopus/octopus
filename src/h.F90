@@ -170,8 +170,16 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   else
     ! initilize hartree and xc modules
     call poisson_init(m)
-    call xc_init(h%xc, geo%nlcc, states_dim%ispin, states_dim%spin_channels)
-    if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(h%xc, stdout)
+    if(conf%dim == 1) then
+      message(1) = 'Error: Exchange and correlation not implemented for 1D.'
+      message(2) = 'Switch to NonInteractingElectrons = true in the input file.'
+      call write_fatal(2)
+    else
+      call xc_init(h%xc, geo%nlcc, states_dim%ispin, states_dim%spin_channels)
+      message(1) = "Info: Init exchange and correlation"
+      call write_info(1)
+    endif
+    if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
   end if
 
   ! gauge
