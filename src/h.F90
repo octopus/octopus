@@ -251,10 +251,10 @@ subroutine hamiltonian_init(h, sys)
         end if
         
       case(CYLINDER)
-        d = sqrt(x(1)**2 + x(2)**2) - (sys%m%rsize - h%ab_width)
+        d = sqrt(x(2)**2 + x(3)**2) - (sys%m%rsize - h%ab_width)
         if(d.gt.0._r8)  &
              h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
-        d = abs(x(3)) - (sys%m%zsize - h%ab_width)
+        d = abs(x(1)) - (sys%m%xsize - h%ab_width)
         if(d.gt.0._r8)  &
              h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
         
