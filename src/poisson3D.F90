@@ -161,9 +161,9 @@ subroutine poisson_cg(m, pot, rho)
     add_lm = 1
     do l = 0, ml
       if(l == 0) then 
-        s1 = r**l*rho(i)
+        s1 = r**l*rho(i)*m%vol_pp(i)
       else
-        s1 = rho(i)
+        s1 = rho(i)*m%vol_pp(i)
       end if
 
       do mm = -l, l
@@ -173,7 +173,7 @@ subroutine poisson_cg(m, pot, rho)
       end do
     end do
   end do
-  rholm = rholm*m%vol_pp
+  rholm = rholm
 
   ! build initial guess for the potential
   allocate(wk(cg_m_aux%np), lwk(cg_m_aux%np))
@@ -195,6 +195,12 @@ subroutine poisson_cg(m, pot, rho)
 
   call dmf_laplacian(cg_m_aux, wk, lwk)
 
+  !call dmf_laplacian(m, rho, lwk)
+  !do i = 1, m%np
+  !  if(m%x(1,i)==M_ZERO.and.m%x(2,i)==M_ZERO) print *, m%x(3,i), rho(i), lwk(i)
+  !end do
+  !stop
+      
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed
 

@@ -193,16 +193,13 @@ contains
       do p  = psi_i%st_start, psi_i%st_end
         do dim = 1, psi_i%dim
           do i = 1, m%np
-            d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik)
-            d2(1:conf%dim) = d2(1:conf%dim) + &
-                 conjg(psi_f%zpsi(i, dim, p, ik))*m%Lxyz(1:conf%dim, i)*psi_i%zpsi(i, dim, p, ik)
+            d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik) * m%vol_pp(i)
+            d2(1:conf%dim) = d2(1:conf%dim) - &
+               conjg(psi_f%zpsi(i, dim, p, ik))*m%x(1:conf%dim, i)*psi_i%zpsi(i, dim, p, ik) * m%vol_pp(i)
           end do
         end do
       end do
     end do
-
-    d1 = d1*m%vol_pp
-    d2(1:conf%dim) = -d2(1:conf%dim)*m%h(1:conf%dim)*m%vol_pp
 
     l(2*iter, 1:conf%dim) = -aimag(d1*d2(1:conf%dim))/alpha
     functional = functional + sum(l(2*iter, 1:conf%dim)**2)*abs(td%dt)
@@ -256,14 +253,14 @@ contains
   end subroutine prop_psi_f
 
   subroutine calc_overlap()
-    integer :: ik, p
+    integer :: ik, p, id
 
     message(1) = "Overlap between wavefunctions"
     call write_info(1)
     do ik = 1, psi_i%nik
       do p  = psi_i%st_start, psi_i%st_end
         ! WARNING gives garbage when calculated through zstates_dotp
-        overlap = abs(sum(conjg(psi_i%zpsi(1:,:, p, ik))*psi_f%zpsi(1:,:, p, ik))*m%vol_pp)**2
+        overlap = zstates_dotp(m, psi_i%dim, psi_i%zpsi(:,:, p, ik), psi_f%zpsi(:,:, p, ik))
         functional = overlap - alpha*functional
         write(message(1), '(6x,i3,1x,i3,a,f16.10,a,f16.10)') ik, p, " => overlap:", overlap, "  functional: " , functional
         call write_info(1)

@@ -336,8 +336,8 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
     
       do ikbc = 1, nlop%c
         do jkbc = 1, nlop%c
-          tmp   = R_TOTYPE(nlop%uv(:, ikbc))
-          uvpsi = lalg_dot(nlop%n, tmp, lpsi)*m%vol_pp*nlop%uvu(ikbc, jkbc)
+          tmp   = R_TOTYPE(nlop%uv(:, ikbc)*m%vol_pp(:))
+          uvpsi = lalg_dot(nlop%n, tmp, lpsi)*nlop%uvu(ikbc, jkbc)
           if (conf%periodic_dim==0) then
             tmp = R_TOTYPE(nlop%uv(:, jkbc))
             call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)

@@ -23,6 +23,8 @@ use lib_oct_parser
 use units
 use math
 use geometry
+use curvlinear
+use lib_adv_alg
   
 implicit none
 
@@ -64,37 +66,38 @@ type mesh_type
 
   type(derivatives_type)          :: lapl
   type(derivatives_type), pointer :: grad(:)
-!!$  logical :: der_default
+
   integer :: der_order
+
+  type(geometry_type), pointer :: geo
 
   FLOAT :: fft_alpha ! enlargement factor for double box
 
-  FLOAT :: vol_pp    ! element of volume for integrations
+  logical :: use_curvlinear
+  FLOAT, pointer :: x(:,:)    ! the points
+  FLOAT, pointer :: vol_pp(:) ! element of volume for integrations
+
 end type mesh_type
 
 contains
 
-subroutine mesh_init(m, geo, def_h, def_rsize)
+subroutine curvlinear_test(m)
   type(mesh_type),     intent(inout) :: m
-  type(geometry_type), intent(IN)    :: geo
-  FLOAT,               intent(in)    :: def_h, def_rsize
 
-  call push_sub('mesh_init')
+  integer :: i
+  FLOAT :: r, chi(3), x(3), J(3,3)
 
-  call mesh_create(m, geo, def_h, def_rsize)
-
-  call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
-  if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
-    write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
-         "' is not a valid DoubleFFTParameter"
-    message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
-    call write_fatal(2)
-  end if
-
-  nullify(m%grad)
-
-  call pop_sub()
-end subroutine mesh_init
+!  do i = 35496, m%np
+  do i = 1, m%np
+    call mesh_xyz(m, i, x)
+    if(abs(x(1)) < 0.01) then
+      !call x_to_chi(m%geo, x, chi)
+      !call chi_to_x(m%geo, x, chi)
+      write(*,*) m%x(2,i), m%x(3,i)
+    end if
+  end do
+  stop
+end subroutine curvlinear_test
 
 ! finds the dimension of a box doubled in the non-periodic dimensions
 subroutine mesh_double_box(m, db)
@@ -165,7 +168,7 @@ subroutine mesh_write_info(m, unit)
             m%h(2)/units_out%length%factor, ',',                     &
             m%h(3)/units_out%length%factor, ')',                     &
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ', &
-       m%vol_pp/units_out%length%factor**3
+       m%vol_pp(1)/units_out%length%factor**3
   write(message(4),'(a, i6)') '  # inner mesh = ', m%np
   call write_info(4, unit)
 
@@ -204,7 +207,7 @@ subroutine mesh_xyz(m, i, x)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: x(conf%dim)
 
-  x(1:conf%dim) = m%Lxyz(1:conf%dim, i)*m%h(1:conf%dim)
+  x(1:conf%dim) = m%x(1:conf%dim, i)
 end subroutine mesh_xyz
 
 subroutine mesh_x(m, i, x)
@@ -212,7 +215,7 @@ subroutine mesh_x(m, i, x)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: x
 
-  x = m%Lxyz(1, i)*m%h(1)
+  x = m%x(1, i)
 end subroutine mesh_x
 
 subroutine mesh_y(m, i, y)
@@ -220,7 +223,7 @@ subroutine mesh_y(m, i, y)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: y
 
-  y = m%Lxyz(2, i)*m%h(2)
+  y = m%x(2, i)
 end subroutine mesh_y
 
 subroutine mesh_z(m, i, z)
@@ -228,7 +231,7 @@ subroutine mesh_z(m, i, z)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: z
 
-  z = m%Lxyz(3, i)*m%h(3)
+  z = m%x(3, i)
 end subroutine mesh_z
 
 subroutine mesh_r(m, i, r, a, x)
@@ -240,7 +243,7 @@ subroutine mesh_r(m, i, r, a, x)
 
   FLOAT :: xx(conf%dim)
 
-  call mesh_xyz(m, i, xx)
+  xx(:) = m%x(:, i)
   if(present(a)) xx = xx - a
   r = sqrt(dot_product(xx, xx))
 
@@ -309,12 +312,11 @@ subroutine mesh_end(m)
   call push_sub('mesh_end')
 
   if(associated(m%Lxyz)) then
-    deallocate(m%Lxyz, m%Lxyz_inv)
-    nullify(m%Lxyz, m%Lxyz_inv)
+    deallocate(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
+    nullify(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
   end if
 
   call pop_sub()
-  return
 end subroutine mesh_end
 
 #include "mesh_create.F90"

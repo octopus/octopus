@@ -113,7 +113,7 @@ contains
     
     do ik = 1, sys%st%nik
       do ist = 1, sys%st%nst
-        nrm2 = sum(abs(sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik))**2)*sys%m%vol_pp
+        nrm2 = zstates_nrm2 (sys%m, sys%st%dim, sys%st%zpsi(:,:, ist, ik))
         sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik) = sys%st%zpsi(1:sys%m%np, 1:sys%st%dim, ist, ik)/ sqrt(nrm2)
       end do
     end do

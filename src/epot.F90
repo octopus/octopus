@@ -279,7 +279,7 @@ contains
         call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
 
         a_erf = M_TWO
-        norm = M_FOUR*M_PI/m%vol_pp
+        norm = M_FOUR*M_PI/m%vol_pp(1)
         temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
         cf%FS = M_Z0
         do ix = 1, cf%nx
@@ -612,13 +612,16 @@ contains
             if(l .ne. s%ps%L_loc) then
               do j = 1, ep%vnl(ivnl)%n
                 call mesh_r(m, ep%vnl(ivnl)%jxyz(j), r, x=x_in, a=a%x)
-                do k=1,3**conf%periodic_dim
+
+                do k = 1, 3**conf%periodic_dim
                   x(:) = x_in(:) - m%shift(k,:)          
-                  r=sqrt(sum(x*x))
+                  r    = sqrt(sum(x*x))
                   if (r > s%ps%rc_max + m%h(1)) cycle
+
                   ylm = loct_ylm(x(1), x(2), x(3), l, lm)
                   ep%vnl(ivnl)%uvu(1, 1) = ep%vnl(ivnl)%uvu(1, 1) + ep%vnl(ivnl)%uv(j, 1) * &
-                                           loct_splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
+                     loct_splint(s%ps%ur(l+1, 1), r) * ylm * &
+                     m%vol_pp(ep%vnl(ivnl)%jxyz(j))
                   exit
                 end do
               end do

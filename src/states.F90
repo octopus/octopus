@@ -372,12 +372,12 @@ subroutine states_generate_random(st, m, ist_start)
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
-         call X(mf_random)(m, st%X(psi)(1:m%np, id, ist, ik))
+        call X(mf_random)(m, st%X(psi)(1:m%np, id, ist, ik))
       end do
+      st%eigenval(ist, ik) = M_ZERO
     end do
-    call X(states_gram_schmidt)(st%nst, m, st%dim, st%X(psi)(1:,:,:,ik))
+    call X(states_gram_schmidt)(st%nst, m, st%dim, st%X(psi)(:,:,:,ik))
   end do
-  st%eigenval = M_ZERO
 
   call pop_sub()
 end subroutine states_generate_random
@@ -511,9 +511,9 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   do is = 1, st%d%nspin
     do i = 1, m%np
       call mesh_xyz(m, i, x)
-      dipole(is) = dipole(is) + st%rho(i, is)*sum(x*pol)
+      dipole(is) = dipole(is) + st%rho(i, is)*sum(x*pol)*m%vol_pp(i)
     end do
-    dipole(is) = dipole(is) * m%vol_pp
+    dipole(is) = dipole(is)
 
     if(present(lmax).and.present(multipole)) then
       add_lm = 1
@@ -522,14 +522,14 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
             mult = M_ZERO
             do i = 1, m%np
                call mesh_r(m, i, r, x=x)
-               ylm = loct_ylm(x(1), x(2), x(3), l, lm)
+               ylm = loct_ylm(x(1), x(2), x(3), l, lm) * m%vol_pp(i)
                if(l == 0) then
                  mult = mult + st%rho(i, is) * ylm
                else
                  mult = mult + st%rho(i, is) * ylm * r**l
                end if
             end do
-            multipole(add_lm, is) = mult * m%vol_pp
+            multipole(add_lm, is) = mult
             add_lm = add_lm + 1
          end do
       end do

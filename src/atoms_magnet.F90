@@ -31,9 +31,9 @@ program atoms_magnet
 
   implicit none
 
-  type(mesh_type)            :: m          ! the mesh
-  type(geometry_type)        :: geo        ! the geometry
-  type(states_type), pointer :: st         ! the states
+  type(mesh_type)               :: m          ! the mesh
+  type(geometry_type), pointer  :: geo        ! the geometry
+  type(states_type), pointer    :: st         ! the states
   integer :: ik, ist, i, ia, j, iunit, ierr
   CMPLX :: c
   FLOAT :: val_charge, def_h, def_rsize, mg(3), r, rmin, ri
@@ -42,6 +42,7 @@ program atoms_magnet
   call global_init()
   call units_init()
 
+  allocate(geo)
   call geometry_init_xyz(geo)
   call geometry_init_species(geo, val_charge, def_h, def_rsize)
   call mesh_init(m, geo, def_h, def_rsize)
@@ -92,7 +93,8 @@ program atoms_magnet
         do i = 1, m%np
           call mesh_r(m, i, ri, a=geo%atom(ia)%x)
           if (ri > r) cycle
-          c = st%zpsi(i, 1, ist, ik) * conjg(st%zpsi(i, 2, ist, ik))
+
+          c = st%zpsi(i, 1, ist, ik) * conjg(st%zpsi(i, 2, ist, ik)) * m%vol_pp(i)
           mg(1) = mg(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*real(c,PRECISION)
           mg(2) = mg(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*aimag(c)
           c = R_ABS(st%zpsi(i, 1, ist, ik))**2 - R_ABS(st%zpsi(i, 2, ist, ik))**2
@@ -100,7 +102,7 @@ program atoms_magnet
         end do
       end do
     end do
-    mg = mg*m%vol_pp
+    mg = mg
 
     write(iunit,'(i4,a10,3f15.6)') ia, trim(geo%atom(ia)%spec%label), mg(1), mg(2), mg(3)
   end do
@@ -113,5 +115,6 @@ program atoms_magnet
   end if
   call geometry_end(geo)
   call mesh_end(m)
+  deallocate(geo)
 
 end program atoms_magnet

@@ -58,7 +58,7 @@ subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
       oep%lxc(:, i) = oep%lxc(:, i) - (vx2(:, 1) + vx2(:,2))*R_CONJ(st%X(psi) (:, 1, i, is))
 
       ex = ex - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-           sum(vx2(:, 2)* R_ABS(st%X(psi)(:, 1, i, is))**2)*m%vol_pp
+           sum(vx2(:, 2)* R_ABS(st%X(psi)(:, 1, i, is))**2*m%vol_pp(:))
     end if
   end do
 

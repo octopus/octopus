@@ -25,6 +25,7 @@ module linear
   use io
   use lib_adv_alg
   use mesh
+  use mesh_function
   use poisson
   use states
 
@@ -234,12 +235,12 @@ contains
       !  first the Hartree part (only works for real wfs...)
       pot = M_ZERO
       call poisson_solve(m, pot, rho_j)
-      K_term = sum(rho_i(:)*pot(:))*m%vol_pp
+      K_term = dmf_dotp(m, rho_i(:), pot(:))
       
       ! now we have fxc
       do ik = 1, m%np
         call fxc_LDA(st%rho(ik, 1), fxc)
-        K_term = K_term + rho_i(ik)*rho_j(ik)*fxc*m%vol_pp
+        K_term = K_term + rho_i(ik)*rho_j(ik)*fxc*m%vol_pp(ik)
       end do
       
       deallocate(rho_i, rho_j, pot)
@@ -391,10 +392,8 @@ contains
       s = M_ZERO
       do k = 1, m%np
         call mesh_xyz(m, k, x)
-        s = s + x * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1)
+        s = s + x * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
       end do
-
-      s = s*m%vol_pp
       
     end subroutine dipole_matrix_elem
 

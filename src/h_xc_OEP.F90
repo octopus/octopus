@@ -83,7 +83,7 @@ subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
 
     ! calculate uxc_bar for the occupied states
     do ist = 1, st%nst
-      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%lxc(:, ist)))*m%vol_pp
+      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%lxc(:, ist))*m%vol_pp(:))
     end do
 
     ! solve the KLI equation
@@ -124,7 +124,7 @@ subroutine X(h_xc_oep_solve) (m, h, st, is, vxc, oep)
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:))*m%vol_pp
+      vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
       b(:) = (oep%vxc(:)*R_CONJ(st%X(psi)(:, 1, ist, is))  - oep%lxc(:, ist))  &
            - (vxc_bar - oep%uxc_bar(ist))*R_CONJ(st%X(psi)(:, 1, ist, is))
       
@@ -143,7 +143,7 @@ subroutine X(h_xc_oep_solve) (m, h, st, is, vxc, oep)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:))*m%vol_pp
+        vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
         oep%vxc(:) = oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist))
       end if
     end do

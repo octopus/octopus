@@ -106,9 +106,9 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
       end select
       
       if(ixc < N_X_FUNCTL) then
-        ex = ex + sum(d(i,:)) * e * m%vol_pp
+        ex = ex + sum(d(i,:)) * e * m%vol_pp(i)
       else
-        ec = ec + sum(d(i,:)) * e * m%vol_pp
+        ec = ec + sum(d(i,:)) * e * m%vol_pp(i)
       end if
       lpot(i, :) = lpot(i, :) + localdedd(:)
       vlocaldedgd(:,i,:) = vlocaldedgd(:,i,:) + vlocaldedgd1(:,:)
@@ -145,7 +145,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
     do is = 1, st%d%nspin
       call df_gradient(m, vxc(:, is), grhoplus)
       do i = 1, m%np
-        ex = ex - d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*grhoplus(:, i)) * m%vol_pp
+        ex = ex - d(i, is) * sum(m%x(:,i)*grhoplus(:, i)) * m%vol_pp(i)
       end do
     end do
   end if

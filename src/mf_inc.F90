@@ -18,10 +18,10 @@
 !!!  integrates a function
 function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: f(m%np)
-  R_TYPE :: d
+  R_TYPE,          intent(IN) :: f(:)  ! f(m%np)
+  R_TYPE                      :: d
 
-  d = sum(f(1:m%np))*m%vol_pp
+  d = sum(f(:)*m%vol_pp(:))
 end function X(mf_integrate)
 
 !!! this function returns the dot product between two vectors
@@ -29,7 +29,18 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f1(:), f2(:) ! f(m%np)
 
-  dotp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp
+  R_TYPE, allocatable :: l(:)
+
+  if(m%use_curvlinear) then
+
+    allocate(l(m%np))
+    l(:) = f1(:) * m%vol_pp(:)
+    dotp = lalg_dot(m%np, l(:),  f2(:))
+    deallocate(l)
+
+  else
+    dotp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
+  end if
 
 end function X(mf_dotp)
 
@@ -38,7 +49,11 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   R_TYPE,          intent(IN) :: f(:) ! f(m%np)
 
-  nrm2 = lalg_nrm2(m%np, f(:))*sqrt(m%vol_pp)
+  if(m%use_curvlinear) then
+    nrm2 = sqrt(X(mf_dotp) (m, f, f))
+  else
+    nrm2 = lalg_nrm2(m%np, f(:))*sqrt(m%vol_pp(1))
+  end if
 
 end function X(mf_nrm2)
 
@@ -49,7 +64,7 @@ function X(mf_moment) (m, f, i, n) result(r)
   integer,         intent(in) :: i, n
   R_TYPE                      :: r
 
-  r = sum(f(1:m%np)*m%Lxyz(i, 1:m%np)**n) * m%h(i)**n * m%vol_pp
+  r = sum(f(1:m%np)*m%x(i, 1:m%np)**n * m%vol_pp(1:m%np))
 end function X(mf_moment)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -62,13 +77,34 @@ subroutine X(mf_laplacian) (m, f, lapl)
   R_TYPE,          intent(in)  :: f(:)     ! f(m%np)
   R_TYPE,          intent(out) :: lapl(:)  ! lapl(m%np)
 
-  integer :: k, nl
+  integer :: j, k, nl
+  R_TYPE, allocatable :: l1(:,:), l2(:,:), t(:)
+
   call push_sub("mf_laplacian")
 
-  nl = m%lapl%n
-  do k = 1, m%np
-     lapl(k) = sum(m%lapl%w(1:nl, k)*f(m%lapl%i(1:nl, k)))
-  end do
+  if(m%use_curvlinear) then ! hack
+    allocate(l1(conf%dim, m%np), l2(conf%dim, m%np), t(m%np))
+    call X(mf_gradient) (m, f, l1)
+
+    lapl = R_TOTYPE(M_ZERO)
+    do j = 1, conf%dim
+      t(:) = l1(j, :)
+      call X(mf_gradient) (m, t, l2)
+      lapl = lapl + l2(j,:)
+
+!      do k = 1, m%np
+!        print '(i3,10f12.6)', k, m%x(1, k), f(k), t(k), l2(1,k)
+!      end do
+    end do
+    deallocate(l1, l2, t)
+
+!    stop
+  else
+    nl = m%lapl%n
+    do k = 1, m%np
+      lapl(k) = sum(m%lapl%w(1:nl, k)*f(m%lapl%i(1:nl, k)))
+    end do
+  end if
 
   call pop_sub()
 end subroutine X(mf_laplacian)
@@ -92,18 +128,27 @@ end subroutine X(mf_filter)
 
 subroutine X(mf_gradient) (m, f, grad)
   type(mesh_type), intent(IN)  :: m
-  R_TYPE,          intent(in)  :: f(:)       ! (m%np)
-  R_TYPE,          intent(out) :: grad(:,:)  ! (conf%dim, m%np)
+  R_TYPE,          intent(in)  :: f(:)       ! f(m%np)
+  R_TYPE,          intent(out) :: grad(:,:)  ! grad(conf%dim, m%np)
 
-  integer :: j, k, ng(3)
+  integer :: i, j, k, ng
+  FLOAT   :: chi(conf%dim), Jac(conf%dim,conf%dim)
+
   call push_sub("mf_gradient")
 
   do j = 1, conf%dim
-    ng(j) = m%grad(j)%n
+    ng = m%grad(j)%n
     do k = 1, m%np
-      grad(j, k) = sum(m%grad(j)%w(1:ng(j), k)*f(m%grad(j)%i(1:ng(j), k)))
+      grad(j, k) = sum(m%grad(j)%w(1:ng, k)*f(m%grad(j)%i(1:ng, k)))
     end do
   end do
+
+  if(m%use_curvlinear) then
+    do k = 1, m%np
+      call jacobian(m%geo, m%x(1:conf%dim,k), chi(:), Jac(:,:))
+      grad(1:conf%dim, k) = matmul(grad(1:conf%dim,k), Jac(:,:))
+    end do
+  end if
 
   call pop_sub()
 end subroutine X(mf_gradient)

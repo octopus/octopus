@@ -73,7 +73,7 @@ subroutine X(oep_x) (m, st, is, oep, ex)
 
       oep%lxc(:, i) = oep%lxc(:, i) + lx(:)
 
-      r = sum(R_REAL(st%X(psi)(:, 1, i, is) * lx(:)))*m%vol_pp
+      r = sum(R_REAL(st%X(psi)(:, 1, i, is) * lx(:))*m%vol_pp(:))
       ex = ex + M_HALF*oep%socc*oep%sfact*st%occ(i, is)*r
     end if
   end do

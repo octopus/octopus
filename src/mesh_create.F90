@@ -23,93 +23,79 @@
 
 #define DELTA_R CNST(1e-12)
 
-subroutine mesh_create(m, geo, def_h, def_rsize, enlarge_)
+subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
   type(mesh_type),     intent(inout) :: m
-  type(geometry_type), intent(IN)    :: geo
+  type(geometry_type), pointer       :: geo
   FLOAT,               intent(in)    :: def_h, def_rsize
   integer, optional,   intent(in)    :: enlarge_
 
   ! some local stuff
   integer :: i, ix, iy, iz, ii(3), enlarge
   
-  call push_sub('mesh_create')
+  call push_sub('mesh_init')
   
   enlarge = 0
   if(present(enlarge_)) enlarge = enlarge_
 
-  ! Read box shape.
-  call loct_parse_int('BoxShape', MINIMUM, m%box_shape)
-  if(m%box_shape<1 .or. m%box_shape>4) then
-    write(message(1), '(a,i2,a)') "Input: '", m%box_shape, "' is not a valid BoxShape"
-    message(2) = '(1 <= Box_Shape <= 4)'
-    call write_fatal(2)
-  end if
+  m%geo => geo            ! keep a pointer to the geometry
+
+  call read_misc()        ! miscellany stuff
+  call read_box()         ! parameters defining the simulation box
+  call read_spacing ()    ! parameters defining the (canonical) spacing
+  call build_lattice()    ! build lattice vectors
+  call adjust_nr()        ! find out the extension simulation box
+
+  nullify(m%grad)         ! Fortran links initialized pointers
   
-  select case(m%box_shape)
-  case(SPHERE,MINIMUM)
-    if(conf%dim>1 .and. conf%periodic_dim>0) then
-      message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
-      call write_fatal(1)
+  call pop_sub()
+  
+contains
+  subroutine read_misc()
+
+    call loct_parse_logical('UseCurvlinear', .false., m%use_curvlinear)
+    
+    call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
+    if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
+      write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
+         "' is not a valid DoubleFFTParameter"
+      message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
+      call write_fatal(2)
     end if
-  case(CYLINDER)
-    if (conf%dim>2 .and. &
-    ((conf%dim-conf%periodic_dim == 0) .or. (conf%dim-conf%periodic_dim == 1))) then
+    
+  end subroutine read_misc
+
+  subroutine read_box()
+    ! Read box shape.
+    call loct_parse_int('BoxShape', MINIMUM, m%box_shape)
+    if(m%box_shape<1 .or. m%box_shape>4) then
+      write(message(1), '(a,i2,a)') "Input: '", m%box_shape, "' is not a valid BoxShape"
+      message(2) = '(1 <= Box_Shape <= 4)'
+      call write_fatal(2)
+    end if
+    
+    select case(m%box_shape)
+    case(SPHERE,MINIMUM)
+      if(conf%dim>1 .and. conf%periodic_dim>0) then
+        message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
+        call write_fatal(1)
+      end if
+    case(CYLINDER)
+      if (conf%dim>2 .and. &
+         ((conf%dim-conf%periodic_dim == 0) .or. (conf%dim-conf%periodic_dim == 1))) then
         message(1) = 'Cylindrical mesh is not allowed for systems'
         message(2) = 'that are periodic in more than one dimension'
         call write_fatal(2)
-    end if
-  end select
-
-  ! ignore box_shape in 1D
-  if(conf%dim==1) m%box_shape=SPHERE
-
-  call read_box_size()
-  call read_spacing ()
-
-  ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
-  m%rlat = M_ZERO
-  m%klat = M_ZERO
-  do i = 1, conf%periodic_dim
-    m%rlat(i,i) = 2*m%lsize(i)
-    m%klat(i,i) = M_PI/m%lsize(i)
-  end do
- 
-  ! build shifts to nearest neighbour primitive cells
-  ii = (/0,-1,1/)
-  m%shift=M_ZERO
-  i = 1
-  do iz = 1, 3
-    do iy = 1, 3
-      do ix = 1, 3
-        m%shift(i,1)=ii(ix)*m%rlat(1,1)
-        m%shift(i,2)=ii(iy)*m%rlat(2,2)
-        m%shift(i,3)=ii(iz)*m%rlat(3,3)
-        i = i + 1
-      end do
-    end do
-  end do
-  
-  call adjust_nr()
-
-  ! calculate the volume of the unit cell
-  m%vol_pp = M_ONE
-  do i = 1, conf%dim
-    m%vol_pp = m%vol_pp*m%h(i)
-  end do
-
-  call mesh_create_xyz(m, geo, enlarge)
-  call mesh_write_info(m, stdout)
-
-  call pop_sub()
-
-contains
-  subroutine read_box_size()
+      end if
+    end select
+    
+    ! ignore box_shape in 1D
+    if(conf%dim==1) m%box_shape=SPHERE
 
     m%rsize = -M_ONE
     if(m%box_shape == MINIMUM.and.def_rsize>M_ZERO) m%rsize = def_rsize/units_inp%length%factor
 
     if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
-      call loct_parse_float('Radius', m%rsize, m%rsize)
+      call loct_parse_float('radius', m%rsize, m%rsize)
       if(m%rsize < 0) then
         message(1) = "Either:"
         message(2) = "   *) variable 'radius' is not defined"
@@ -122,20 +108,20 @@ contains
     end if
 
     if(m%box_shape == CYLINDER) then
-      call loct_parse_float('XLength', M_ONE/units_inp%length%factor, m%xsize)
+      call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
       m%xsize = m%xsize * units_inp%length%factor
       m%lsize(1) = m%xsize
       if(def_rsize>M_ZERO.and.conf%periodic_dim==0) call check_def(def_rsize, m%xsize, 'xlength')
     end if
 
     if(m%box_shape == PARALLELEPIPED) then
-      if(loct_parse_block_n('Lsize')<1) then
-        message(1) = 'Block "Lsize" not found in input file.'
+      if(loct_parse_block_n('lsize')<1) then
+        message(1) = 'Block "lsize" not found in input file.'
         call write_fatal(1)
       endif
       do i = 1, conf%dim
-        call loct_parse_block_float('Lsize', 0, i-1, m%lsize(i))
-        if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'Lsize')
+        call loct_parse_block_float('lsize', 0, i-1, m%lsize(i))
+        if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'lsize')
       end do
       m%lsize = m%lsize*units_inp%length%factor
     end if
@@ -150,7 +136,7 @@ contains
       m%lsize(2:3) = M_ZERO
     end select
     
-  end subroutine read_box_size
+  end subroutine read_box
 
   subroutine read_spacing()
     integer :: i
@@ -158,12 +144,12 @@ contains
     m%h = -M_ONE
     select case(m%box_shape)
     case(SPHERE,CYLINDER,MINIMUM)
-      call loct_parse_float('Spacing', m%h(1), m%h(1))
+      call loct_parse_float('spacing', m%h(1), m%h(1))
       m%h(1:conf%dim) = m%h(1)
     case(PARALLELEPIPED)
-      if(loct_parse_block_n('Spacing') >= 1) then
+      if(loct_parse_block_n('spacing') >= 1) then
         do i = 1, conf%dim
-          call loct_parse_block_float('Spacing', 0, i-1, m%h(i))
+          call loct_parse_block_float('spacing', 0, i-1, m%h(i))
         end do
       endif
     end select
@@ -179,13 +165,13 @@ contains
           call write_info(1)
         else
           message(1) = 'Either:'
-          message(2) = "   *) variable 'Spacing' is not defined"
-          message(3) = "   *) your input for 'Spacing' is negative"
+          message(2) = "   *) variable 'spacing' is not defined"
+          message(3) = "   *) your input for 'spacing' is negative"
           message(4) = "   *) I can't find a suitable default"
           call write_fatal(4)
         end if
       end if
-      if(def_rsize>M_ZERO) call check_def(m%h(i), def_rsize, 'Spacing')
+      if(def_rsize>M_ZERO) call check_def(m%h(i), def_rsize, 'spacing')
     end do
 
   end subroutine read_spacing
@@ -201,9 +187,37 @@ contains
     end if
   end subroutine check_def
 
+  subroutine build_lattice()
+    ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
+    m%rlat = M_ZERO
+    m%klat = M_ZERO
+    do i = 1, conf%periodic_dim
+      m%rlat(i,i) = 2*m%lsize(i)
+      m%klat(i,i) = M_PI/m%lsize(i)
+    end do
+    
+    ! build shifts to nearest neighbour primitive cells
+    ii = (/0,-1,1/)
+    m%shift=M_ZERO
+    i = 1
+    do iz = 1, 3
+      do iy = 1, 3
+        do ix = 1, 3
+          m%shift(i,1)=ii(ix)*m%rlat(1,1)
+          m%shift(i,2)=ii(iy)*m%rlat(2,2)
+          m%shift(i,3)=ii(iz)*m%rlat(3,3)
+          i = i + 1
+        end do
+      end do
+    end do
+
+  end subroutine build_lattice
+
   ! set nr and adjust the mesh so that:
   ! 1) the new grid exactly fills the box;
   ! 2) the new mesh is not larger than the user defined mesh.
+
+  ! WARNING: This has to be changed for curvlinear coordinates
   subroutine adjust_nr()
     integer :: i, j
     FLOAT   :: max_x(3);
@@ -241,7 +255,7 @@ contains
     m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
   end subroutine adjust_nr
 
-end subroutine mesh_create
+end subroutine mesh_init
 
 #if defined(HAVE_METIS)
 subroutine mesh_partition(m, Lxyz_tmp)
@@ -322,6 +336,8 @@ subroutine mesh_create_xyz(m, geo, enlarge)
 
   integer :: i, il, ix, iy, iz
   integer, pointer :: Lxyz_tmp(:,:,:)
+  FLOAT :: chi(3)
+  FLOAT, pointer :: x(:,:,:,:)
 
 ! enlarge mesh in the non-periodic dimensions
   do i = conf%periodic_dim+1, conf%dim
@@ -332,16 +348,19 @@ subroutine mesh_create_xyz(m, geo, enlarge)
   ! allocate the xyz arrays
   allocate(m%Lxyz_inv(m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
   allocate(  Lxyz_tmp(m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
+  allocate(       x(3,m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
+  
   m%Lxyz_inv(:,:,:) = 0
   Lxyz_tmp(:,:,:)   = 0
-    
+  x(:,:,:,:)        = M_ZERO
 
   ! We label 2 the points inside the mesh + enlargement
   if(enlarge > 0) then
     do ix = m%nr(1,1), m%nr(2,1)
       do iy = m%nr(1,2), m%nr(2,2)
         do iz = m%nr(1,3), m%nr(2,3)
-          if(in_mesh(m, geo, ix, iy, iz)) then
+          
+          if(in_mesh(m, geo, x(:, ix, iy, iz))) then
             do i = -enlarge, 0 ! first include the points on the left
               if(ix+i>=m%nr(1,1))                Lxyz_tmp(ix+i, iy, iz) = 2
               if(iy+i>=m%nr(1,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
@@ -360,9 +379,21 @@ subroutine mesh_create_xyz(m, geo, enlarge)
 
   ! we label 1 the points inside the mesh
   do ix = m%nr(1,1), m%nr(2,1)
+    chi(1) = real(ix, PRECISION) * m%h(1)
+
     do iy = m%nr(1,2), m%nr(2,2)
+      chi(2) = real(iy, PRECISION) * m%h(2)
+
       do iz = m%nr(1,3), m%nr(2,3)
-        if(in_mesh(m, geo, ix, iy, iz)) Lxyz_tmp(ix, iy, iz) = 1
+        chi(3) = real(iz, PRECISION) * m%h(3)
+
+        if(m%use_curvlinear) then
+          call chi_to_x(geo, chi, x(:, ix, iy, iz))
+        else
+          x(:, ix, iy, iz) = chi
+        end if
+        
+        if(in_mesh(m, geo, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
       end do
     end do
   end do
@@ -378,7 +409,7 @@ subroutine mesh_create_xyz(m, geo, enlarge)
   end do
   m%np = il
 
-  allocate(m%Lxyz(3, il))
+  allocate(m%Lxyz(3, m%np), m%x(3, m%np))
   il = 0
 
   ! first we fill the points in the inner mesh
@@ -391,6 +422,7 @@ subroutine mesh_create_xyz(m, geo, enlarge)
           m%Lxyz(2, il) = iy
           m%Lxyz(3, il) = iz
           m%Lxyz_inv(ix,iy,iz) = il
+          m%x(:, il) = x(:,ix,iy,iz)
         end if
       enddo
     enddo
@@ -407,44 +439,72 @@ subroutine mesh_create_xyz(m, geo, enlarge)
           m%Lxyz(2, il) = iy
           m%Lxyz(3, il) = iz
           m%Lxyz_inv(ix,iy,iz) = il
+          m%x(:, il) = x(:,ix,iy,iz)
         end if
       end do
     end do
   end do
+
+  call get_vol_pp()
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   call mesh_partition(m, Lxyz_tmp)
 #endif
 
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
+  deallocate(x)
+
+contains
+  ! calculate the volume of integration
+  subroutine get_vol_pp()
+    integer :: i
+    FLOAT :: f, chi(conf%dim), Jac(conf%dim, conf%dim)
+
+    f = M_ONE
+    do i = 1, conf%dim
+      f = f*m%h(i)
+    end do
+
+    allocate(m%vol_pp(m%np))
+    m%vol_pp(:) = f
+
+    if(m%use_curvlinear) then
+      do i = 1, m%np
+        call jacobian(m%geo, m%x(:,i), chi(:), Jac(:,:))
+        f = lalg_det(Jac, conf%dim)
+        m%vol_pp(i) = m%vol_pp(i)/f
+      end do
+    end if
+  end subroutine get_vol_pp
+
 end subroutine mesh_create_xyz
 
-logical function in_mesh(m, geo, ix, iy, iz)
+logical function in_mesh(m, geo, x)
   type(mesh_type),     intent(IN) :: m
   type(geometry_type), intent(IN) :: geo
-  integer,             intent(in) :: ix, iy, iz
+  FLOAT,               intent(in) :: x(:) ! x(3)
     
-
   select case(m%box_shape)
   case(SPHERE)
-    in_mesh = (sqrt(real(ix**2 + iy**2 + iz**2, PRECISION))*m%h(1) <= m%rsize+DELTA_R)
+    in_mesh = (sqrt(sum(x**2)) <= m%rsize+DELTA_R)
   case(CYLINDER)
     in_mesh = in_cylinder()
   case(MINIMUM)
     in_mesh = in_minimum()
   case(PARALLELEPIPED)
-    in_mesh = (ix >= m%nr(1,1).and.ix <= m%nr(2,1)).and. &
-         (iy >= m%nr(1,2).and.iy <= m%nr(2,2)).and.(iz >= m%nr(1,3).and.iz <= m%nr(2,3))
+    in_mesh =  &
+       (x(1) >= m%nr(1,1)*m%h(1).and.x(1) <= m%nr(2,1)*m%h(1)).and. &
+       (x(2) >= m%nr(1,2)*m%h(2).and.x(2) <= m%nr(2,2)*m%h(2)).and. &
+       (x(3) >= m%nr(1,3)*m%h(3).and.x(3) <= m%nr(2,3)*m%h(3))
   end select
 
 contains
 
   logical function in_cylinder()
-    FLOAT :: r, x
-    r = sqrt(real(iy**2 + iz**2, PRECISION))*m%h(1)
-    x = ix*m%h(1)
+    FLOAT :: r
+    r = sqrt(x(2)**2 + x(3)**2)
     
-    in_cylinder = (r<=m%rsize+DELTA_R .and. abs(x)<=m%xsize+DELTA_R)
+    in_cylinder = (r<=m%rsize+DELTA_R .and. abs(x(1))<=m%xsize+DELTA_R)
   end function in_cylinder
 
   logical function in_minimum()
@@ -453,14 +513,13 @@ contains
     
     in_minimum = .false.
     do i = 1, geo%natoms
-      r = sqrt((ix*m%h(1) - geo%atom(i)%x(1))**2 + (iy*m%h(1) - geo%atom(i)%x(2))**2 &
-           + (iz*m%h(1) - geo%atom(i)%x(3))**2)
+      r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
       if(r <= m%rsize+DELTA_R) then
         in_minimum = .true.
         exit
       end if
     end do
-
+    
   end function in_minimum
 end function in_mesh
 
@@ -512,11 +571,11 @@ subroutine derivatives_init_filter(m, order, filter)
   call pop_sub()
 end subroutine derivatives_init_filter
 
-subroutine derivatives_end(d)
-  type(derivatives_type), intent(inout) :: d
-  integer :: i
-  deallocate(d%i, d%w)
-end subroutine derivatives_end
+!subroutine derivatives_end(d)
+!  type(derivatives_type), intent(inout) :: d
+!  integer :: i
+!  deallocate(d%i, d%w)
+!end subroutine derivatives_end
 
 ! this function takes care of the boundary conditions
 ! for a given x,y,z it returns the true index of the point

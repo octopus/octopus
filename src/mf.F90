@@ -38,12 +38,14 @@ subroutine mf_add_der(m)
   ! Sets the order
   m%lapl%norder             = m%der_order
   m%grad(1:conf%dim)%norder = m%der_order
+
   ! Sets the number of points of the mesh
   m%lapl%np             = m%np
   m%grad(1:conf%dim)%np = m%np
-  ! Sets the number of points per point for the operator
-  m%lapl%n             = conf%dim*(2*m%der_order + 1)
+
+  ! Sets the number of points per point for the operators
   m%grad(1:conf%dim)%n = (2*m%der_order + 1)
+  m%lapl%n             = (2*m%der_order + 1)*conf%dim
 
   ! Now we can allocate
   allocate(m%lapl%i(m%lapl%n, m%lapl%np)); m%lapl%i = 1
@@ -61,12 +63,15 @@ end subroutine mf_add_der
 subroutine mf_end_der(m)
   type(mesh_type) :: m
   integer :: ierr, j
+
   call push_sub('mf_end')
+
   deallocate(m%lapl%i, m%lapl%w); nullify(m%lapl%i); nullify(m%lapl%w)
   do j = 1, conf%dim
      deallocate(m%grad(j)%i, m%grad(j)%w); nullify(m%grad(j)%i); nullify(m%grad(j)%w)
   enddo
   deallocate(m%grad); nullify(m%grad)
+
   call pop_sub()
 end subroutine mf_end_der
 
@@ -98,6 +103,7 @@ subroutine derivatives_init_diff(m, order)
           
           m%lapl%i(nl, i) = in
           m%lapl%w(nl, i) = dlidfj(abs(ik))/m%h(j)**2
+
           m%grad(j)%i(ng(j), i) = in
           m%grad(j)%w(ng(j), i) = dgidfj(ik)/m%h(j)
         end if

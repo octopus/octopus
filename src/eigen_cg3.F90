@@ -80,8 +80,10 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
 
   enddo
 
-  call lalg_scal(m%np, st%d%dim. st%nst, st%d%nik, R_TOTYPE(M_ONE/sqrt(m%vol_pp)), &
-     st%X(psi)(:,:,:,:))
+  ! WARNING - problem with vol_pp
+  stop 'Does not work'
+!  call lalg_scal(m%np, st%d%dim. st%nst, st%d%nik, R_TOTYPE(M_ONE/sqrt(m%vol_pp)), &
+!     st%X(psi)(:,:,:,:))
 
   if(conf%verbose > 999) then
     call io_close(unit)

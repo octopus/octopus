@@ -135,7 +135,8 @@ subroutine eigen_solver_end(eigens)
 
   select case(eigens%es_type)
   case(RS_PLAN)
-    call derivatives_end(filter)
+    !call derivatives_end(filter)
+    stop 'still does not work'
   end select
   nullify(eigens%diff)
 

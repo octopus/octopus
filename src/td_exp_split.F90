@@ -176,9 +176,10 @@ contains
 
        do ikbc = kbc_start, kbc_end, step
           do jkbc = kbc_start, kbc_end, step
-             p2 = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*h%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
+            stop 'does not work because of vol_pp'
+!             p2 = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*h%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
              ctemp = h%ep%vnl(ivnl)%uvu(ikbc, jkbc)*p2*factor
-             uvpsi = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
+!             uvpsi = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
              lhpsi(:) = lhpsi(:) + uvpsi*h%ep%vnl(ivnl)%uv(:, jkbc)
           end do
        end do

@@ -23,6 +23,7 @@ module functions
   use lib_basic_alg
   use mesh_function
   use cube_function
+  use derivatives
 #if defined(HAVE_FFT)
   use fft
 #endif
@@ -35,8 +36,10 @@ module functions
 
   integer, private :: derivatives_space
 
+  type(der_discr_type) :: f_der
+
 #if defined(HAVE_FFT)
-  type(dcf), private :: dcf_der, dcf_aux  ! these auxiliary variable are used to calculate
+  type(dcf), private :: dcf_der, dcf_aux  ! these auxiliary variables are used to calculate
   type(zcf), private :: zcf_der, zcf_aux  ! derivatives in fourier space
 #endif
 
@@ -63,8 +66,8 @@ contains
   if(derivatives_space == REAL_SPACE) then
     call loct_parse_int('OrderDerivatives', 4, norder)
     m%der_order   = norder
-    call mf_add_der(m)
 
+    call derivatives_init(f_der)
     message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
   else

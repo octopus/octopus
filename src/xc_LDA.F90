@@ -71,9 +71,9 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
       end select
 
       if(ixc < N_X_FUNCTL) then
-        ex = ex + sum(d(1:spin_channels)) * e * m%vol_pp
+        ex = ex + sum(d(1:spin_channels)) * e * m%vol_pp(i)
       else
-        ec = ec + sum(d(1:spin_channels)) * e * m%vol_pp
+        ec = ec + sum(d(1:spin_channels)) * e * m%vol_pp(i)
       end if
       pd = pd + pd1
     end do functl_loop

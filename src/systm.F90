@@ -26,11 +26,11 @@ use states
 implicit none
 
 type system_type
-  FLOAT                      :: val_charge ! the charge of the valence electrons (necessary to initialize states)
-  type(mesh_type)            :: m          ! the mesh
-  type(geometry_type)        :: geo        ! the geometry
-  type(states_type), pointer :: st         ! the states
-  type(output_type)          :: outp
+  FLOAT                        :: val_charge ! the charge of the valence electrons (necessary to initialize states)
+  type(mesh_type)              :: m          ! the mesh
+  type(geometry_type), pointer :: geo        ! the geometry
+  type(states_type),   pointer :: st         ! the states
+  type(output_type)            :: outp
 end type system_type
 
 contains
@@ -43,10 +43,15 @@ contains
     call push_sub('system_init')
     
     ! initialize the stuff related to the mesh
+    allocate(s%geo)
     call geometry_init_xyz(s%geo)
     call geometry_init_species(s%geo, s%val_charge, def_h, def_rsize)
+
     call mesh_init(s%m, s%geo, def_h, def_rsize)
     call functions_init(s%m)
+    call mesh_create_xyz(s%m, s%geo, 0)!enlarge)
+    call mf_add_der(s%m)
+    call mesh_write_info(s%m, stdout)
     
     ! initialize the other stuff
     allocate(s%st)
@@ -68,7 +73,8 @@ contains
     call geometry_end(s%geo)
     call functions_end(s%m)
     call mesh_end(s%m)
-    
+    deallocate(s%geo)
+
     call pop_sub()
   end subroutine system_end
 
@@ -139,8 +145,10 @@ contains
     ! build density...
     select case (opt)
     case (1) ! ...from userdef
-      rho(1:m%np, 1:spin_channels) = real(s%Z_val, PRECISION) &
-                                     /(m%np*m%vol_pp*real(spin_channels, PRECISION))
+      do i = 1, spin_channels
+        rho(1:m%np, i) = real(s%Z_val, PRECISION) /  &
+           (m%np*m%vol_pp(:)*real(spin_channels, PRECISION))
+      end do
     case (2) ! ...from jellium
       in_points = 0
       do i = 1, m%np
@@ -154,8 +162,8 @@ contains
         do i = 1, m%np
           call mesh_r(m, i, r, a=atom%x)
           if(r <= s%jradius) then
-            rho(i, 1:spin_channels) = real(s%z_val, PRECISION)/ &
-                                      (real(in_points*spin_channels, PRECISION)*m%vol_pp)
+            rho(i, 1:spin_channels) = real(s%z_val, PRECISION) /   &
+               (m%vol_pp(i)*real(in_points*spin_channels, PRECISION))
           end if
         end do
       end if
@@ -216,8 +224,8 @@ contains
     case (1) ! Spin-unpolarized
       allocate(atom_rho(m%np, 1))
       do ia = 1, geo%natoms
-      call atom_density(m, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
-      rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
+        call atom_density(m, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
+        rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
       end do
       if (spin_channels == 2) then
         rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)

@@ -78,7 +78,7 @@
         xzpsi = M_z0
         do k = 1, mesh%np
           do j = 1, conf%dim
-            xzpsi(k, 1:st%d%dim, j) = mesh%Lxyz(j, k)*mesh%h(j) * st%zpsi(k, 1:st%d%dim, ist, ik)
+            xzpsi(k, 1:st%d%dim, j) = mesh%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
           end do
         end do
          
@@ -95,7 +95,7 @@
         xzpsi = M_z0
         do k = 1, mesh%np
           do j = 1, conf%dim
-            xzpsi(k, 1:st%d%dim, j) = mesh%Lxyz(j, k)*mesh%h(j) * hzpsi(k, 1:st%d%dim)
+            xzpsi(k, 1:st%d%dim, j) = mesh%x(j, k) * hzpsi(k, 1:st%d%dim)
           end do
         end do
         

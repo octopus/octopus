@@ -40,7 +40,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
     allocate(v_bar_S(st%nst))
     do i = 1, st%nst
       if(st%occ(i, is) .gt. small) then
-        v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * oep%vxc(:))*m%vol_pp
+        v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * oep%vxc(:) * m%vol_pp(:))
       end if
     end do
     
@@ -53,7 +53,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
           Ma(i,j) = -sum(                                 &
                R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 * &
                R_ABS(st%X(psi)(:, 1, oep%eigen_index(j), is))**2 / &
-               rho_sigma(:))*m%vol_pp
+               rho_sigma(:)*m%vol_pp(:))
           Ma(j,i) = Ma(i,j)
         end do
         Ma(i,i) = 1 + Ma(i,i)

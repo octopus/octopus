@@ -45,29 +45,33 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     if(atm%spec%local) cycle
 
     do l = 0, atm%spec%ps%l_max
-       do m = -l, l
+      do m = -l, l
+        
+        ik_loop: do ik = 1, st%nik
+          st_loop: do ist = st%st_start, st%st_end
+            dim_loop: do idim = 1, st%dim
 
-          ik_loop: do ik = 1, st%nik
-             st_loop: do ist = st%st_start, st%st_end
-                dim_loop: do idim = 1, st%dim
-                   do ii = 1, ep%vnl(ivnl)%c
-                      do jj = 1, ep%vnl(ivnl)%c
-                         uvpsi = sum( ep%vnl(ivnl)%uv(:, ii) * &
-                                      st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) ) * &
-                                 st%occ(ist, ik) * mesh%vol_pp**2 * ep%vnl(ivnl)%uvu(ii, jj)
-                         do j = 1, conf%dim
-                            p = sum( ep%vnl(ivnl)%duv(j, :, jj) * &
-                                     R_CONJ(st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik)) )
-                            atm%f(j) = atm%f(j) + M_TWO * R_REAL(uvpsi * p)
-                         end do
-                      end do
-                   end do
-                end do dim_loop
-             end do st_loop
-          end do ik_loop
-
-          ivnl = ivnl + 1
-       enddo
+              do ii = 1, ep%vnl(ivnl)%c
+                do jj = 1, ep%vnl(ivnl)%c
+                  
+                  p = sum(ep%vnl(ivnl)%uv(:, ii) *  &
+                     st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) * mesh%vol_pp(ep%vnl(ivnl)%jxyz(:))**2)
+                  uvpsi =  st%occ(ist, ik) * p * ep%vnl(ivnl)%uvu(ii, jj)
+                  
+                  do j = 1, conf%dim
+                    p = sum( ep%vnl(ivnl)%duv(j, :, jj) * &
+                       R_CONJ(st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik)) )
+                    atm%f(j) = atm%f(j) + M_TWO * R_REAL(uvpsi * p)
+                  end do
+                end do
+              end do
+              
+            end do dim_loop
+          end do st_loop
+        end do ik_loop
+        
+        ivnl = ivnl + 1
+      end do
     end do
     
   end do atm_loop
@@ -132,7 +136,7 @@ contains
         if(r < r_small) cycle
         
         call specie_get_glocal(atm%spec, x, gv)
-        d = sum(st%rho(j, 1:ns))*mesh%vol_pp
+        d = sum(st%rho(j, 1:ns))*mesh%vol_pp(j)
         atm%f(:) = atm%f(:) - d*gv(:)
       end do
     end do
@@ -158,7 +162,7 @@ contains
         call dcf_FS2RS(cf_for)
         call dcf2mf(mesh, cf_for, force)
         do l = 1, st%d%nspin
-          atm%f(j) = atm%f(j) + sum(force(:)*st%rho(:, l))*mesh%vol_pp
+          atm%f(j) = atm%f(j) + sum(force(:)*st%rho(:, l)*mesh%vol_pp(:))
         end do
       end do
     end do

@@ -245,11 +245,18 @@ contains
 
     call io_assign(iunit)
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", status='unknown')
-    do ix = 1, c%n(1)
-       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
-       write(iunit, mformat) x, R_REAL(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u, &
-            R_AIMAG(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u
-    enddo
+    do ix = 1, m%np
+      if(m%Lxyz(2, ix)==0.and.m%Lxyz(3, ix)==0) then
+        call mesh_x(m, ix, x)
+        write(iunit, mformat) x, R_REAL(f(ix))/u, R_AIMAG(f(ix))/u
+      end if
+    end do
+
+!    do ix = 1, c%n(1)
+!       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
+!       write(iunit, mformat) x, R_REAL(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u, &
+!            R_AIMAG(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u
+!    end do
     call io_close(iunit)
   end subroutine axis_x
 
