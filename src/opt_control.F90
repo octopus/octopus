@@ -42,7 +42,7 @@ subroutine opt_control_run(td, sys, h)
   real(r8), pointer :: laser_i(:,:), laser_f(:,:)
 
   integer :: i, iunit, ctr_iter, ctr_iter_max
-  real(r8) :: eps, alpha, overlap, functional, old_functional
+  real(r8) :: eps, alpha, overlap, functional, old_functional, laser_init
   character(len=80) :: filename
 
   call init()
@@ -260,7 +260,7 @@ contains
         ! WARNING gives garbage when calculated through zstates_dotp
         overlap = abs(sum(conjg(psi_i%zpsi(1:,:, p, ik))*psi_f%zpsi(1:,:, p, ik))*sys%m%vol_pp)**2
         functional = overlap - alpha*functional
-        write(message(1), '(6x,i3,x,i3,a,2f16.10)') ik, p, " => ", overlap, functional
+        write(message(1), '(6x,i3,x,i3,a,f16.10,a,f16.10)') ik, p, " => overlap:", overlap, "  functional: " , functional
         call write_info(1)
       end do
     end do
@@ -333,10 +333,12 @@ contains
     h%lasers(1)%envelope = 99 ! internal type
     h%lasers(1)%dt = td%dt
     allocate(laser_i(conf%dim, 0:2*td%max_iter), laser_f(conf%dim, 0:2*td%max_iter))
-    laser_i = M_ZERO
-    laser_f = M_ZERO
 
     ! read parameters from input
+    ! we assume atomic units
+    call oct_parse_double(C_string("OptControlInitLaser"), M_ZERO, laser_init)
+    laser_i = laser_init
+    laser_f = laser_init
     call oct_parse_double(C_string("OptControlAlpha"), M_ONE, alpha)
     call oct_parse_double(C_string("OptControlEps"), 1e-3_r8, eps)
     call oct_parse_int(C_string("OptControlMaxIter"), 10, ctr_iter_max)
