@@ -50,16 +50,21 @@ integer, parameter :: &
      output_wfs_sqmod = 7, &   
      output_something = 8   ! this one should be the last
 
-integer, parameter ::      &
-     output_axis_x  =   1, &
-     output_axis_y  =   2, &
-     output_axis_z  =   4, &
-     output_plane_x =   8, &
-     output_plane_y =  16, &
-     output_plane_z =  32, &
-     output_dx      =  64, &
-     output_dx_cdf  = 128, &
-     output_single  = 32768
+integer, parameter, private ::        &
+     output_axis_x    =   1, &
+     output_axis_y    =   2, &
+     output_axis_z    =   4, &
+     output_plane_x   =   8, &
+     output_plane_y   =  16, &
+     output_plane_z   =  32, &
+     output_dx        =  64, &
+     output_dx_cdf    = 128, &
+     output_plain     = 256
+
+! doutput_kind => real variables; zoutput_kind => complex variables.
+integer, parameter, private :: &
+     doutput_kind =  1, &
+     zoutput_kind = -1
 
 contains
 
@@ -115,11 +120,6 @@ subroutine output_init(outp)
       end if
     end if
 
-    call loct_parse_logical("OutputSinglePrec", .true., l)
-    if(l) then
-      outp%how = ior(outp%how, output_single)
-    end if
-
   end if
   
   ! this is always needed in a time-dependent calculation
@@ -135,6 +135,7 @@ end subroutine output_init
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 integer function output_fill_how(where) result(how)
   character(len=*), intent(in) :: where
+  how = 0
   if(index(where, "AxisX").ne.0)  how = ior(how, output_axis_x)
   if(index(where, "AxisY").ne.0)  how = ior(how, output_axis_y)
   if(index(where, "AxisZ").ne.0)  how = ior(how, output_axis_z)
@@ -142,10 +143,26 @@ integer function output_fill_how(where) result(how)
   if(index(where, "PlaneY").ne.0) how = ior(how, output_plane_y)
   if(index(where, "PlaneZ").ne.0) how = ior(how, output_plane_z)
   if(index(where, "DX").ne.0)     how = ior(how, output_dx)
+  if(index(where, "Plain").ne.0)  how = ior(how, output_plain)
 #if defined(HAVE_NETCDF)
   if(index(where, "NETCDF").ne.0) how = ior(how, output_dx_cdf)
 #endif
 end function output_fill_how
+
+#if defined(HAVE_NETCDF)
+subroutine ncdf_error(func, status, ierr)
+    character(len=*), intent(in) :: func
+    integer, intent(in) :: status
+    integer, intent(out) :: ierr
+
+    if(status .eq. NF90_NOERR) return
+    message(1) = "NETCDF error in function '" // trim(func) // "'"
+    write(message(2), '(6x,a,a)')'Error code = ', trim(nf90_strerror(status))
+    ierr = 5
+    call write_warning(2)
+end subroutine ncdf_error
+#endif
+
 
 #include "undef.F90"
 #include "real.F90"

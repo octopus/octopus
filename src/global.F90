@@ -353,6 +353,21 @@ function clean_stop()
   return
 end function clean_stop
 
+! Given a path, it returns the extension (if it exists) of the file
+! (that is, the part of the name that comes after its last point)
+! If the filename does not have an extension, it returns the empty string.
+character(len=8) function get_extension(path) result(ext)
+  character(len = * ), intent(in)  :: path
+  integer :: i, j
+  i = index(path, ".", back = .true.)
+  j = index(path(i+1:), "/")
+  if(i.eq.0 .or. j.ne.0) then
+    ext = ""
+  else
+    ext = path(i+1:)
+  endif
+end function get_extension
+
 ! Upcases a string
 !  15-OCT-2000: First version, Fernando Nogueira
 SUBROUTINE upcase(str)

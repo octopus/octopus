@@ -120,3 +120,33 @@ subroutine X(mf_divergence)(m, f, divf)
 
   call pop_sub()
 end subroutine X(mf_divergence)
+
+!!! This subroutine generates a gaussian wave-function in a random
+!!! position in space
+subroutine X(mf_random)(m, f)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(out) :: f(:)
+
+  integer, save :: iseed = 123
+  integer :: i
+  FLOAT :: a(3), rnd, r
+
+  call push_sub('states_random')
+
+  call quickrnd(iseed, rnd)
+  a(1) = M_TWO*(2*rnd - 1)
+  call quickrnd(iseed, rnd)
+  a(2) = M_TWO*(2*rnd - 1)
+  call quickrnd(iseed, rnd)
+  a(3) = M_TWO*(2*rnd - 1)
+
+  do i = 1, m%np
+     call mesh_r(m, i, r, a=a)
+     f(i) = exp(-M_HALF*r*r)
+  end do
+
+  r = X(mf_nrm2)(m, f)
+  call X(lalg_scal)(m%np, R_TOTYPE(M_ONE/r), f) 
+
+  call pop_sub()
+end subroutine X(mf_random)

@@ -26,6 +26,7 @@ use lib_adv_alg
 use math
 use mesh
 use functions
+use mesh_function
 use output
 use geometry
 use crystal
@@ -371,7 +372,7 @@ subroutine states_generate_random(st, m, ist_start)
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
-         call X(states_random)(m, st%X(psi)(1:m%np, id, ist, ik))
+         call X(mf_random)(m, st%X(psi)(1:m%np, id, ist, ik))
       end do
     end do
     call X(states_gram_schmidt)(st%nst, m, st%dim, st%X(psi)(1:,:,:,ik))

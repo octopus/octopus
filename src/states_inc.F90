@@ -73,37 +73,6 @@ subroutine X(calcdens)(st, np, rho, reduce)
   return
 end subroutine X(calcdens)
 
-!!! This subroutine generates a gaussian wave-function in a random
-!!! position in space
-subroutine X(states_random)(m, f)
-  type(mesh_type), intent(IN)  :: m
-  R_TYPE,          intent(out) :: f(1:m%np)
-
-  integer, save :: iseed = 123
-  integer :: i
-  FLOAT :: a(3), rnd, r
-
-  call push_sub('states_random')
-
-  call quickrnd(iseed, rnd)
-  a(1) = M_TWO*(2*rnd - 1)
-  call quickrnd(iseed, rnd)
-  a(2) = M_TWO*(2*rnd - 1)
-  call quickrnd(iseed, rnd)
-  a(3) = M_TWO*(2*rnd - 1)
-
-  do i = 1, m%np
-     call mesh_r(m, i, r, a=a)
-     f(i) = exp(-M_HALF*r*r)
-  end do
-
-  r = X(mf_nrm2)(m, f)
-  call X(lalg_scal)(m%np, R_TOTYPE(M_ONE/r), f(1)) 
-
-  call pop_sub()
-end subroutine X(states_random)
-
-
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer,         intent(in) :: nst, dim

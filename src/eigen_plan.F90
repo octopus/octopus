@@ -141,7 +141,7 @@ subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
           enddo
           x = X(states_nrm2)(m, st%dim, v(1, i))
           if(x .le. eps) then
-            call X(states_random)(m, v(1, i))
+            call X(mf_random)(m, v(1:m%np, i))
           else
             call X(lalg_scal)(n, R_TOTYPE(M_ONE/x), v(1, i))
             i = i + 1
