@@ -118,7 +118,7 @@ module lib_oct_parser
   end interface
 
   interface loct_parse_block_cols
-    integer function oct_parse_block_cols(name, line)
+    integer function oct_parse_block_cols(blk, line)
       integer(POINTER_SIZE), intent(in) :: blk
       integer, intent(in) :: line
     end function oct_parse_block_cols
