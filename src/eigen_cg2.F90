@@ -172,7 +172,8 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
 
   ! Deallocation of variables
   deallocate(h_psi, g, g0, cg, ppsi)
-  
+
+  errorflag = 0
+ 
   call pop_sub()
-  return
 end subroutine eigen_solver_cg2

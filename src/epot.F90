@@ -24,6 +24,8 @@ module external_pot
 #ifdef HAVE_FFT
   use cube_function
 #endif
+  use logrid
+  use ps
   use specie
   use system
   use lasers
@@ -207,8 +209,9 @@ contains
                   v(j) = (sin(modg*s%ps%g%rofi(j))/(modg*s%ps%g%rofi(j)))*     &
                        s%ps%g%rofi(j)**2*(splint(s%ps%vlocal,s%ps%g%rofi(j)))
                 enddo
-                cf%FS(ix, iy, iz) = M_FOUR*M_PI*    &
-                     (sum(s%ps%g%drdi(2:s%ps%g%nrval)*v(2:s%ps%g%nrval))-s%ps%z_val/modg)
+                ! this line was not compiling in the intel compiler version 8.
+!                cf%FS(ix, iy, iz) = M_FOUR*M_PI*    &
+!                     (sum(s%ps%g%drdi(2:s%ps%g%nrval)*v(2:s%ps%g%nrval))-s%ps%z_val/modg)
               else
                 cf%FS(ix, iy, iz) = M_ZERO
               end if
