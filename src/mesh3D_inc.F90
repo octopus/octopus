@@ -28,9 +28,9 @@ subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube, t)
   
   integer :: i, ix, iy, iz, n(3)
 
-  n(1:3) = m%fft_n(1:3)/2+1
+  n(1:3) = m%fft_n(1:3)/2 + 1
   if(present(t)) then
-    if(t == 2) n(1:3) = m%fft_n2(1:3)/2+1
+    if(t == 2) n(1:3) = m%fft_n2(1:3)/2 + 1
   end if
  
   do i = 1, m%np
@@ -49,9 +49,9 @@ subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
 
   integer :: i, ix, iy, iz, n(3)
 
-  n(1:3) = m%fft_n(1:3)/2+1
+  n(1:3) = m%fft_n(1:3)/2 + 1
   if(present(t)) then
-    if(t == 2) n(1:3) = m%fft_n2(1:3)/2+1
+    if(t == 2) n(1:3) = m%fft_n2(1:3)/2 + 1
   end if
 
   do i = 1, m%np
@@ -99,7 +99,7 @@ contains
        n(i) = m%fft_n(i)
     enddo
 #ifdef R_TREAL
-    nx = n(1)/2+1
+    nx = n(1)/2 + 1
 #else
     nx = n(1)
 #endif
@@ -120,31 +120,36 @@ contains
       allocate(fw2(nx, n(2), n(3)))
       
       do i = 1, 3
-        call mesh_gradient_in_FS(m, fw1, nx, n, fw2, i)
+        call mesh_gradient_in_FS(m, nx, n, fw1, fw2, i)
 #ifdef R_TREAL
         call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
 #else
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
-        call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)**3), fr, 1)
-        grad(:, j) = R_TOTYPE(0._r8)
-        call R_FUNC(cube_to_mesh) (m, fr, grad(:, j))
+
+        call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)), fr, 1)
+        grad(:, i) = R_TOTYPE(0._r8)
+        call R_FUNC(cube_to_mesh) (m, fr, grad(:, i))
       end do
       
       deallocate(fw2)
     end if
     
     if(present(lapl)) then
-      call mesh_laplacian_in_FS(m, fw1, nx, n, fw2)
-#ifdef R_TREAL
-      call rfftwnd_f77_one_complex_to_real(m%dplanb, fw1, fr)
-#else
-      call fftwnd_f77_one(m%zplanb, fw1, fr)
-#endif
-      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)**3), fr, 1)
+      allocate(fw2(nx, n(2), n(3)))
 
+      call mesh_laplacian_in_FS(m, nx, n, fw1, fw2)
+#ifdef R_TREAL
+      call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2(1,1,1), fr(1,1,1))
+#else
+      call fftwnd_f77_one(m%zplanb, fw2, fr)
+#endif
+
+      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)), fr(1,1,1), 1)
       lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
+
+      deallocate(fw2)
     end if
     
     deallocate(fr, fw1)

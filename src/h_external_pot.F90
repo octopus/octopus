@@ -24,9 +24,9 @@ subroutine specie_local_fourier_init(ns, s, m)
     do ix = 1, m%fft_n2(1)
       do iy = 1, m%fft_n2(2)
         do iz = 1, m%fft_n2(3)
-          r = sqrt( ( m%h(1)*(ix-m%fft_n2(1)/2-1) )**2 + &
-                    ( m%h(2)*(iy-m%fft_n2(2)/2-1) )**2 + &
-                    ( m%h(3)*(iz-m%fft_n2(3)/2-1) )**2 )
+          r = sqrt( ( m%h(1)*(ix - m%fft_n2(1)/2 - 1) )**2 + &
+                    ( m%h(2)*(iy - m%fft_n2(2)/2 - 1) )**2 + &
+                    ( m%h(3)*(iz - m%fft_n2(3)/2 - 1) )**2 )
           vl  = splint(s(i)%ps%vlocal,  r)
           dvl = splint(s(i)%ps%dvlocal, r)
           if(r >= r_small) then

@@ -315,7 +315,7 @@ subroutine mesh_r(m, i, r, a, x)
   if(present(x)) x = xx
 end subroutine mesh_r
 
-subroutine mesh_gradient_in_FS(m, f, nx, n, grad, dir)
+subroutine mesh_gradient_in_FS(m, nx, n, f, grad, dir)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: nx, n(3), dir
   complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
@@ -342,11 +342,11 @@ subroutine mesh_gradient_in_FS(m, f, nx, n, grad, dir)
 
 end subroutine mesh_gradient_in_FS
 
-subroutine mesh_laplacian_in_FS(m, f, nx, n, lapl)
+subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: nx, n(3)
-  complex(r8), intent(IN)  :: f   (:,:,:)
-  complex(r8), intent(out) :: lapl(:,:,:)
+  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
+  complex(r8), intent(out) :: lapl(nx, n(2), n(3))
 
   real(r8) :: temp(3), g2
   integer :: kx, ky, kz, ix, iy, iz

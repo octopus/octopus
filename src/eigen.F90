@@ -56,7 +56,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(3)
     endif
 
-    call oct_parse_int(C_string("EigenSolverFinalToleranceIteration"), 20, eigens%final_tol_iter)
+    call oct_parse_int(C_string("EigenSolverFinalToleranceIteration"), 7, eigens%final_tol_iter)
     if(eigens%final_tol_iter <= 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
            "' is not a valid EigenSolverFinalToleranceIter"
