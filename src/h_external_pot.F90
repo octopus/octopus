@@ -42,17 +42,17 @@ subroutine h_local_fourier_init(m, h, sys)
     cf => h%local_cf(i)
 
     if(i == 1) then
-      call dcf_new(db, cf)                 ! initialize the cube
-      call dcf_fft_init(cf)                ! and initialize the ffts
-      db = cf%n
-      c(:) = db(:)/2 + 1                ! get center of double box
+      call dcf_new(db, cf)    ! initialize the cube
+      call dcf_fft_init(cf)   ! and initialize the ffts
+      db = cf%n               ! dimensions of the box may have been optimized, so get them
+      c(:) = db(:)/2 + 1      ! get center of double box
 
-      if(sys%nlcc) then                               ! if we have non-linear core corrections
+      if(sys%nlcc) then                      ! if we have non-linear core corrections
         call dcf_new(db, h%rhocore_cf(i))
         call dcf_fft_init(h%rhocore_cf(i))
       end if
     else
-      call dcf_new_from(cf, h%local_cf(1)) ! we can just copy from the first one
+      call dcf_new_from(cf, h%local_cf(1))   ! we can just copy from the first one
       if(sys%nlcc) call dcf_new_from(h%rhocore_cf(i), h%rhocore_cf(1))
     end if
 
