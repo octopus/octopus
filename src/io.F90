@@ -145,7 +145,7 @@ contains
     call io_assign(iunit)
     if(iunit<0) then
       if(die_) then
-        write(stderr, '(a') '*** IO Error: Too many files open'
+        write(stderr, '(a)') '*** IO Error: Too many files open'
         stop 'io_open'
       end if
       return
