@@ -17,14 +17,19 @@
 !! 02111-1307, USA.
 
   ! ---------------------------------------------------------
-  subroutine X(derivatives_lapl)(der, f, lapl)
+  subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
     type(der_discr_type), intent(in)  :: der
     R_TYPE, target,       intent(in)  :: f(:)     ! f(m%np)
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
-
+    logical, optional,    intent(in)  :: have_ghost_
+    
     R_TYPE, pointer :: fp(:)
+    logical :: have_ghost
 
-    if(der%zero_bc) then
+    have_ghost = .false.
+    if(present(have_ghost_)) have_ghost = have_ghost_
+
+    if(.not.have_ghost.and.der%zero_bc) then
       allocate(fp(der%m%np_tot))
       fp(1:der%m%np)              = f(1:der%m%np)
       fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
@@ -34,7 +39,7 @@
 
     call X(nl_operator_operate) (der%lapl, fp, lapl)
 
-    if(der%zero_bc) deallocate(fp)
+    if(.not.have_ghost.and.der%zero_bc) deallocate(fp)
   end subroutine X(derivatives_lapl)
 
 

@@ -485,14 +485,14 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
     allocate(vhartree(m%np))
     vhartree = M_ZERO
     if(h%d%spin_channels == 1) then
-      call poisson_solve(m, vhartree, st%rho(:, 1))
+      call poisson_solve(m, f_der, vhartree, st%rho(:, 1))
     else
       allocate(rho_aux(m%np))                    ! need an auxiliary array to
       rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
       do is = 2, h%d%spin_channels
         rho_aux(:) = rho_aux(:) + st%rho(:, is)
       end do
-      call poisson_solve(m, vhartree, rho_aux) ! solve the poisson equation
+      call poisson_solve(m, f_der, vhartree, rho_aux) ! solve the poisson equation
       deallocate(rho_aux)
     end if
 
@@ -512,7 +512,7 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
       ahartree = M_ZERO
       if(h%d%spin_channels == 1) then
         do idim = 1, conf%dim
-          call poisson_solve(m, ahartree(:, idim), st%j(:, idim, 1))
+          call poisson_solve(m, f_der, ahartree(:, idim), st%j(:, idim, 1))
         end do
       else
         allocate(j_aux(conf%dim, m%np))         ! need an auxiliary array to
@@ -521,7 +521,7 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
           j_aux(:,:) = j_aux(:,:) + st%j(:, :, is)
         end do
         do idim = 1, conf%dim
-          call poisson_solve(m, ahartree(:,idim), j_aux(:, idim)) ! solve the poisson equation
+          call poisson_solve(m, f_der, ahartree(:,idim), j_aux(:, idim)) ! solve the poisson equation
         end do
         deallocate(j_aux)
       end if

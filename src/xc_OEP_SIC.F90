@@ -17,9 +17,10 @@
 
 !!! This routine calculates the SIC exchange functional. note that the LDA
 !!! part of the functional is already included by the LDA routines
-subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
+subroutine X(oep_x_sic) (xcs, m, f_der, st, is, oep, ex)
   type(xc_type),     intent(IN)    :: xcs
   type(mesh_type),   intent(IN)    :: m
+  type(f_der_type),  intent(in)    :: f_der
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
@@ -54,7 +55,7 @@ subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
       ex = ex - oep%sfact*ex2
       
       vx2(:, 2) = M_ZERO
-      call poisson_solve(m, vx2(:, 2), rho(:, 1))
+      call poisson_solve(m, f_der, vx2(:, 2), rho(:, 1))
       oep%lxc(:, i) = oep%lxc(:, i) - (vx2(:, 1) + vx2(:,2))*R_CONJ(st%X(psi) (:, 1, i, is))
 
       ex = ex - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &

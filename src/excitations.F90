@@ -84,18 +84,18 @@ program excitations
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
   call loct_parse_logical("LinEigenvalues", .true., l)
-  if(l) call LR_el_excitations(0, st, sys%m, n_occ, n_unocc, flags, 'linear', 'eps-diff', from_scratch)
+  if(l) call LR_el_excitations(0, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'linear', 'eps-diff', from_scratch)
   
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
   call loct_parse_logical("LinPetersilka", .true., l)
-  if(l) call LR_el_excitations(1, st, sys%m, n_occ, n_unocc, flags, 'linear', 'petersilka', from_scratch)
+  if(l) call LR_el_excitations(1, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'linear', 'petersilka', from_scratch)
 
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
   call loct_parse_logical("LinCasida", .true., l)
-  if(l)call LR_el_excitations(2, st, sys%m, n_occ, n_unocc, flags, 'linear', 'casida', from_scratch)
+  if(l)call LR_el_excitations(2, st, sys%m, sys%f_der, n_occ, n_unocc, flags, 'linear', 'casida', from_scratch)
 
   call poisson_end()
   call global_end()

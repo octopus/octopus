@@ -33,7 +33,6 @@ subroutine poisson3D_init(m)
 #endif
     case(CG)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-      call init_real()
   end select
   call write_info(1)
 
@@ -44,16 +43,6 @@ subroutine poisson3D_init(m)
   call pop_sub()
 
 contains
-  subroutine init_real()
- 
-    ! setup mesh including ghost points
-    stop 'has to be changed'
-    !allocate(cg_m_aux)
-    !cg_m_aux = m
-    !nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv)
-    !call mesh_create_xyz(cg_m_aux, cg_m_aux%der_order)
-
-  end subroutine init_real
 
 #ifdef HAVE_FFT
   subroutine init_fft()
@@ -132,10 +121,11 @@ contains
 
 end subroutine poisson3D_init
 
-subroutine poisson_cg(m, pot, rho)
-  type(mesh_type), intent(IN) :: m
-  FLOAT, intent(inout) :: pot(:) ! pot(m%np)
-  FLOAT, intent(in)    :: rho(:) ! rho(m%np)
+subroutine poisson_cg(m, der, pot, rho)
+  type(mesh_type),      intent(in)    :: m
+  type(der_discr_type), intent(in)    :: der
+  FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
+  FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
   
   integer, parameter :: ml = 4 ! maximum multipole moment to include
   FLOAT, parameter :: fpi = M_FOUR*M_PI
@@ -174,10 +164,10 @@ subroutine poisson_cg(m, pot, rho)
   rholm = rholm
 
   ! build initial guess for the potential
-  allocate(wk(cg_m_aux%np), lwk(cg_m_aux%np))
+  allocate(wk(m%np_tot), lwk(m%np_tot))
   wk(1:m%np) = pot(1:m%np)
-  do i = cg_m_aux%np+1, cg_m_aux%np_tot ! boundary conditions
-    call mesh_r(cg_m_aux, i, r, x=x)
+  do i = m%np+1, m%np_tot ! boundary conditions
+    call mesh_r(m, i, r, x=x)
     
     add_lm = 1
     do l = 0, ml
@@ -191,8 +181,7 @@ subroutine poisson_cg(m, pot, rho)
   end do
   deallocate(rholm)
 
-  stop 'dmf_laplacian no longer exists!'
-  ! call dmf_laplacian(cg_m_aux, wk, lwk)
+  call dderivatives_lapl(der, wk, lwk, .true.)
 
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed
@@ -204,8 +193,7 @@ subroutine poisson_cg(m, pot, rho)
   iter = 0
   do 
     iter = iter + 1
-    stop 'do not forget this one'
-    !call dmf_laplacian(m, pk, tk)
+    call dderivatives_lapl(der, pk, tk)
 
     s2 = dmf_dotp(m, zk, tk)
     ak = s1/s2

@@ -34,10 +34,11 @@ module linear
 contains
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine LR_el_excitations(type, st, m, n_occ, n_unocc, flags, dir, fname, from_scratch)
+  subroutine LR_el_excitations(type, st, m, f_der, n_occ, n_unocc, flags, dir, fname, from_scratch)
     integer,           intent(in)    :: type         ! 1 => eps diff; 2 => petersilka; 3 => casida
     type(states_type), intent(IN)    :: st           ! the wave-functions
     type(mesh_type),   intent(inout) :: m            ! the mesh
+    type(f_der_type),  intent(in)    :: f_der
     integer,           intent(in)    :: n_occ, n_unocc ! number of occupied and unoccupied states
     integer,           intent(in)    :: flags(32)    ! which electron-hole pairs to take into account
     character(len=*),  intent(in)    :: dir, fname   ! directory and filename to write
@@ -234,7 +235,7 @@ contains
     
       !  first the Hartree part (only works for real wfs...)
       pot = M_ZERO
-      call poisson_solve(m, pot, rho_j)
+      call poisson_solve(m, f_der, pot, rho_j)
       K_term = dmf_dotp(m, rho_i(:), pot(:))
       
       ! now we have fxc

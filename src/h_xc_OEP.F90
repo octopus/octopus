@@ -64,10 +64,10 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
       e = M_ZERO
       select case(ifunc)
       case(X_FUNC_OEP_X)
-        call X(oep_x) (m, st, is, oep, e)
+        call X(oep_x) (m, f_der, st, is, oep, e)
         
       case(X_FUNC_OEP_SIC)
-        call X(oep_x_sic) (xcs, m, st, is, oep, e)
+        call X(oep_x_sic) (xcs, m, f_der, st, is, oep, e)
       case(C_FUNC_OEP_SIC)
         call X(oep_c_sic) (xcs, m, st, is, oep, e)
       end select

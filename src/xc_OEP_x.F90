@@ -15,8 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine X(oep_x) (m, st, is, oep, ex)
+subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   type(mesh_type),   intent(IN)    :: m
+  type(f_der_type),  intent(in)    :: f_der
   type(states_type), intent(IN)    :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
@@ -46,7 +47,7 @@ subroutine X(oep_x) (m, st, is, oep, ex)
           pot = M_ZERO
 
           rho_ij(:) = st%dpsi(:, 1, i, is)*st%dpsi(:, 1, j, is)
-          call poisson_solve(m, pot, rho_ij)
+          call poisson_solve(m, f_der, pot, rho_ij)
           deallocate(rho_ij)
           lx(:) = lx(:) - oep%socc*st%occ(j, is)*pot(:)*st%dpsi(:, 1, j, is)
           deallocate(pot)
@@ -57,11 +58,11 @@ subroutine X(oep_x) (m, st, is, oep, ex)
 
           rho_ij(:) = real(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is)) + &
                aimag(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is))
-          call poisson_solve(m, pot_r, rho_ij)
+          call poisson_solve(m, f_der, pot_r, rho_ij)
           ! and now the imaginary part
           rho_ij(:) = real(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is)) - &
                aimag(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is))
-          call poisson_solve(m, pot_i, rho_ij)
+          call poisson_solve(m, f_der, pot_i, rho_ij)
           deallocate(rho_ij)
           lx(:) = lx(:) - st%occ(j, is)*oep%socc* &
                (pot_r(:) + M_zI*pot_i(:))*conjg(st%zpsi(:, 1, j, is))

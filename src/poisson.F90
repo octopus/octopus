@@ -34,9 +34,6 @@ module poisson
 
   integer :: poisson_solver = -99
 
-  ! used by conjugated gradients (method 1)
-  type(mesh_type), pointer :: cg_m_aux
-
 #ifdef HAVE_FFT
   type(dcf) :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
@@ -95,9 +92,6 @@ subroutine poisson_end()
   call push_sub('poisson_end')
 
   select case(poisson_solver)
-  case(CG)
-    call mesh_end(cg_m_aux)
-    deallocate(cg_m_aux); nullify(cg_m_aux)
 #ifdef HAVE_FFT
   case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call dcf_free(fft_cf)
@@ -109,10 +103,11 @@ subroutine poisson_end()
   return
 end subroutine poisson_end
 
-subroutine poisson_solve(m, pot, rho)
-  type(mesh_type), intent(IN) :: m
-  FLOAT, intent(inout) :: pot(:)  ! pot(m%np)
-  FLOAT, intent(in)    :: rho(:)  ! rho(m%np)
+subroutine poisson_solve(m, f_der, pot, rho)
+  type(mesh_type),  intent(in)    :: m
+  type(f_der_type), intent(in)    :: f_der
+  FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
+  FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
 
   call push_sub('poisson_solve')
 
@@ -124,7 +119,7 @@ subroutine poisson_solve(m, pot, rho)
   case(-2)
     call poisson2d_solve(m, pot, rho)
   case(CG)
-    call poisson_cg(m, pot, rho)
+    call poisson_cg(m, f_der%der_discr, pot, rho)
 #ifdef HAVE_FFT
   case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call poisson_fft(m, pot, rho)
