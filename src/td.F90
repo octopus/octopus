@@ -66,8 +66,8 @@ subroutine td_run(td, u_st, sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
 
-  integer :: i, ii, idim, ist, ik
-  real(r8), allocatable :: dipole(:,:), multipole(:,:,:)
+  integer :: i, ii, j, idim, ist, ik
+  real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:)
   complex(r4), allocatable :: projections(:,:,:,:)
   character(len=100) :: proj_filename
 
@@ -78,6 +78,12 @@ subroutine td_run(td, u_st, sys, h)
   
   allocate(dipole(sys%st%nspin, td%save_iter))
   allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
+!!!!(Cas)
+  if(td%move_ions > 0) then
+     allocate(x(td%save_iter, sys%natoms, 3), v(td%save_iter, sys%natoms, 3), &
+              f(td%save_iter, sys%natoms, 3))
+  endif
+!!!!(EndCas)
 
   ! occupational analysis stuff
   if(td%occ_analysis) then
@@ -86,12 +92,27 @@ subroutine td_run(td, u_st, sys, h)
     allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, td%save_iter))
   end if
 
+  ! Calculate initial forces
+  if(td%move_ions > 0) call zforces(h, sys, td%iter*td%dt, &
+                                    td%no_lasers, td%lasers, reduce=.true.)
+
   if(td%iter == 0) call td_run_zero_iter(sys%m)
   td%iter = td%iter + 1
 
   ii = 1
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
+
+    if( td%move_ions > 0 ) then 
+
+      call td_move_ions(t = i*td%dt)
+
+      do j=1, sys%natoms
+         x(ii, j, 1:3) = sys%atom(j)%x(1:3)
+         v(ii, j, 1:3) = sys%atom(j)%v(1:3)
+         f(ii, j, 1:3) = sys%atom(j)%f(1:3)
+      enddo
+    endif
 
     ! time iterate wavefunctions
     call td_rti(sys, h, td, i*td%dt)
@@ -157,7 +178,7 @@ contains
     integer :: i, iunit
     real(r8) :: x(3)    
     complex(r8) :: c
-    real(r8), allocatable :: dipole(:), multipole(:,:)
+    real(r8), allocatable :: dipole(:), multipole(:,:), pos(:,:), vel(:,:), for(:,:)
     
     do i = 1, min(2, sys%st%ispin)
       td%v_old1(:, i) = h%Vhartree(:) + h%Vxc(:, i)
@@ -183,32 +204,47 @@ contains
     call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
     call io_close(iunit)
 
+    ! output laser
     if(td%output_laser) then
       call io_assign(iunit)
       open(unit=iunit, file='laser.out', status='unknown')
       call td_write_laser(iunit, 0, 0._r8, .true.)
       call io_close(iunit)
     end if
-    
+
+    ! output occupational analysis data
     if(td%occ_analysis) then
       call io_assign(iunit)
       open(iunit, form='unformatted', status='unknown', file=proj_filename)
       write(iunit) sys%st%nik, sys%st%st_start, sys%st%st_end, u_st%nst
       call io_close(iunit)
     end if
-    ! output initial positions and velocities
-!TODO
-!!$    if(td%move_ions > 0) then
-!!$      call io_assign(iunit)
-!!$      open(iunit, file=trim(sys%sysname)//'.nbo')
-!!$      write(iunit, trim(nbo_file_format)) 0.0_r8, ekin, sys%etot, sys%etot + ekin, &
-!!$           (sys%ion(j)%x, j=1, sys%nions),                    &
-!!$           (sys%ion(j)%v, j=1, sys%nions),                    &
-!!$           (forces(1:3, j), j=1, sys%nions)
-!!$      call io_close(iunit)
-!!$    end if
+
+    ! output positions, velocities, forces...
+!!!!(Cas)
+    if(td%move_ions > 0) then
+       call io_assign(iunit)
+       open(iunit, file=trim(sys%sysname)//'.nbo')
+       allocate(pos(sys%natoms, 3), vel(sys%natoms, 3), for(sys%natoms, 3))
+       do j=1, sys%natoms
+          pos(j, 1:3) = sys%atom(j)%x(1:3)
+          vel(j, 1:3) = sys%atom(j)%v(1:3)
+          for(j, 1:3) = sys%atom(j)%f(1:3)
+       enddo
+       call td_write_nbo(iunit, 0, 0._r8, pos, vel, for, header = .true.)
+       call io_close(iunit)
+    endif
+!!!!(EndCas)
     
   end subroutine td_run_zero_iter
+
+  subroutine td_move_ions(t)
+    real(r8), intent(in) :: t
+   
+    ! calculates the forces
+    !call zforces(h, sys, t, td%no_lasers, td%lasers, reduce=.true.)
+
+  end subroutine td_move_ions
 
   subroutine td_write_data()
     integer :: iunit, j, jj, ist, ik, uist
@@ -222,6 +258,18 @@ contains
            dipole(:, j), multipole(:,:, j), .false.)
     end do
     call io_close(iunit)
+
+    ! output positions, vels...
+    if(td%move_ions > 0) then
+    call io_assign(iunit)
+    open(iunit, position='append', file=trim(sys%sysname)//".nbo")
+    do j = 1, td%save_iter
+       jj = i -td%save_iter + j
+       call td_write_nbo(iunit, jj, jj*td%dt, x(j, :, :), v(j, :, :), f(j, :, :), & 
+                         header=.false.)
+    enddo
+    call io_close(iunit)
+    endif
 
     ! and now we should output the projections
     if(td%occ_analysis) then
@@ -295,6 +343,61 @@ contains
          l_vector_field(1:3) * units_inp%length%factor
     
   end subroutine td_write_laser
+
+  subroutine td_write_nbo(iunit, iter, t, x, v, f, header)
+    integer, intent(in)  :: iunit, iter
+    real(r8), intent(in) :: t
+    logical, intent(in)  :: header
+    real(r8)             :: x(:, :), v(:, :), f(:, :)
+
+    integer :: i, j
+    character(len=50) :: aux
+
+    ! first line: column names
+    if(header) then
+      write(iunit, '(a8,4a20)', advance='no') '# Iter  ', str_center('t', 20), &
+           str_center('Ekin', 20), str_center('Epot', 20), str_center('Etot', 20)
+      do i=1, sys%natoms
+      do j=1, 3
+         write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',',j,')'
+         write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+      enddo 
+      enddo
+      do i=1, sys%natoms
+      do j=1, 3
+         write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
+         write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+      enddo 
+      enddo
+      do i=1, sys%natoms
+      do j=1, 3
+         write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
+         write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+      enddo 
+      enddo
+      write(iunit,'(1x)', advance='yes')
+
+      ! second line: units
+    endif
+    write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
+    write(iunit, '(3es20.12)', advance='no') &
+        h%etot/units_out%energy%factor, h%etot/units_out%energy%factor, &
+        h%etot/units_out%energy%factor
+    do i=1, sys%natoms
+       write(iunit, '(3es20.12)', advance='no') &
+         x(i, 1:3)/units_out%length%factor
+    enddo
+    do i=1, sys%natoms
+       write(iunit, '(3es20.12)', advance='no') &
+         v(i, 1:3)/units_out%velocity%factor
+    enddo
+    do i=1, sys%natoms
+       write(iunit, '(3es20.12)', advance='no') & 
+         f(i, 1:3)*units_out%length%factor/units_out%energy%factor
+    enddo
+    write(iunit, '(1x)', advance='yes')
+    
+  end subroutine td_write_nbo
 
   subroutine td_write_multipole(iunit, iter, t, dipole, multipole, header)
     integer, intent(in) :: iunit, iter

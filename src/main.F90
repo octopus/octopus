@@ -1,39 +1,6 @@
 #include "config.h"
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! PROGRAM tddft
-! version 0.2 (Nov 19, 2000)
-! (almost completely rewritten since version 0.1)
-!
-! Authors:
-!
-!	Angel Rubio Secades,
-!		Profesor Titular de la Universidad de Valladolid.
-!		arubio@mileto.fam.cie.uva.es
-!	Antonio de Faria, corsario portugues
-!   marques@nautilus.fis.uc.pt
-!   ICQ# 69379003
-!	Alberto Castro Barrigon,
-!		Doctoral student, Departamento de Fisica Teorica de la
-!		Universidad de Valladolid.
-!		alberto@rhodas.fam.cie.uva.es
-!	George F. Bertsch,
-!	 	Physics Department and Institute for Nuclear Theory,
-!		University of Washington, Seattle.
-!		bertsch@phys.washington.edu
-!	K. Yabana,
-!		Graduate School of Science and Technology, Niigata University
-!		yabana@nt.sc.niigata-u.ac.jp
-!	Martin Garcia,
-!		Inst. for Theor. Phys., FU Berlin
-!		garcia@physic.fu-berlin.de
-!
-! See readme file for information about collaborators, credits, todos, and
-!	references.
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-program tddft
+program octopus
   use global
   use liboct
   use run_prog
@@ -125,7 +92,7 @@ program tddft
   
   call oct_parse_end()
   stop
-end program tddft
+end program octopus
 
 subroutine test()
   use global
