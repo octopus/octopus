@@ -194,7 +194,7 @@ subroutine generate_external_pot(h, sys)
     call dcube_to_mesh(sys%m, fr, h%vpsl, t=2)
     call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fwc, fr)
     call dcube_to_mesh(sys%m, fr, h%rho_core, 2)
-
+    
     deallocate(fw, fwc, fr)
   end if
 
@@ -314,7 +314,7 @@ contains
     j = 0
     do k = 1, h%np
       call mesh_r(m, k, r, a=a%x)
-      if(r <= s%ps%rc_max) j = j + 1
+      if(r <= s%ps%rc_max + m%h(1)) j = j + 1
     end do
     a%Mps = j
     
