@@ -28,7 +28,7 @@ use system
 use scf
 use unocc
 use static_pol
-use rsdfpt
+use static_pol_lr
 use geom_opt
 use phonons
 use opt_control
@@ -120,7 +120,7 @@ subroutine run()
       end if
 
     case(I_LR_STATIC_POL)
-      if(rsdfpt_run(sys, h, fromScratch(M_LR_STATIC_POL)).ne.0) then ! could not load wfs
+      if(static_pol_lr_run(sys, h, fromScratch(M_LR_STATIC_POL)).ne.0) then ! could not load wfs
         i_stack(instr) = I_LR_STATIC_POL;      instr = instr + 1
         i_stack(instr) = I_GS
         cycle program
@@ -223,6 +223,7 @@ subroutine run_init()
     message(4) = '    unocc       <= calculate unocuppied states'
     message(5) = '    td          <= time-dependent simulation'
     message(6) = '    pol         <= calculate static polarizability'
+    message(6) = '    pol_lr      <= calculate static polarizability from LR theory'
     message(7) = '    bo          <= perform Born-Oppenheimer MD'
     message(8) = '    geom        <= calculate phonon frequencies'
     message(9) = '    phonon      <= calculate phonon frequencies'

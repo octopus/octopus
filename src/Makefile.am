@@ -20,8 +20,8 @@ octopus_SOURCES = $(core_SRCS) \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 \
-	opt_control.F90 rsdfpt.F90 pulpo.F90 \
+	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 opt_control.F90 \
+	fxc.F90 linear_response.F90 static_pol_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
@@ -57,7 +57,7 @@ oct_hs_mult_LDADD   = $(core_LIBS)
 oct_hs_acc_SOURCES  = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
 oct_hs_acc_LDADD    = $(core_LIBS)
 
-oct_excite_SOURCES = $(core_SRCS) linear.F90 systm.F90 excitations.F90
+oct_excite_SOURCES = $(core_SRCS) linear.F90 lasers.F90 epot.F90 h.F90 systm.F90 excitations.F90
 oct_excite_LDADD = $(octopus_LDADD)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
@@ -69,7 +69,7 @@ oct_broad_LDADD = $(core_LIBS)
 oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
 
-oct_make_st_SOURCES = $(core_SRCS) systm.F90 make_st.F90
+oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 systm.F90 make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
