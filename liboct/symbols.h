@@ -37,7 +37,9 @@ extern symrec *sym_table;
 
 symrec *putsym (char *sym_name, symrec_type sym_type);
 symrec *getsym (char *sym_name);
+int rmsym (char *sym_name);
 void sym_init_table();
+void sym_clear_reserved();
 void sym_end_table();
 void sym_output_table();
 char *str_tolower(char *in);

@@ -88,6 +88,11 @@ module liboct
       character(len=*), intent(out):: res
     end subroutine oct_parse_block_string
 
+    real(8) function oct_parse_potential(x, y, z, r, pot)
+      real(8), intent(in) :: x, y, z, r
+      character(len=*), intent(in) :: pot
+    end function oct_parse_potential
+
   end interface
 
   private :: oct_parse_string, oct_parse_block_string

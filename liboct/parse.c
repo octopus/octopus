@@ -126,6 +126,8 @@ int parse_init(char *file_in, char *file_out)
 	if(f != stdin)
 		fclose(f);
 
+	sym_clear_reserved();
+
 	return 0;
 }
 

@@ -43,45 +43,21 @@ subroutine mesh3D_create(m, natoms, atom)
     m%h = m%h*units_inp%length%factor
   end select
   m%vol_pp = m%h(1)*m%h(2)*m%h(3)
-  if (minval(m%h)<0.01_r8 .or. maxval(m%h)>2.0_r8) then
-      write(err, '(a,f10.5,a,f10.5,a,f10.5,a)') '(',m%h(1),',',m%h(2),',',m%h(3),')'
-      message(1) = "Input: '"//trim(err)//"' is not a valid spacing"
-      message(2) = '(0.01 <= Spacing [b] <= 2)'
-      call write_fatal(2)
-  end if    
 
   ! Read the box size.
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER .or. m%box_shape == MINIMUM) then
     call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
-    if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
-      write(err, *) m%rsize
-      message(1) = "Input: '"//trim(err)//"' is not a valid radius"
-      message(2) = '(1 <= radius [b] <= 500)'
-      call write_fatal(2)
-    end if
   end if
   if(m%box_shape == CYLINDER) then
     call oct_parse_double(C_string('zlength'), 1.0_r8/units_inp%length%factor, m%zsize)
     m%zsize = m%zsize * units_inp%length%factor
-    if(m%zsize<1.0_r8 .or. m%zsize>500.0_r8) then
-      write(err, *) m%zsize
-      message(1) = "Input: '"//trim(err)//"' is not a valid zlength"
-      message(2) = '(1 <= zlength [b] <= 500)'
-      call write_fatal(2)
-    end if
   endif
   if(m%box_shape == PARALLELEPIPED) then
     call oct_parse_block_double(C_string('lsize'), 0, 0, m%lsize(1))
     call oct_parse_block_double(C_string('lsize'), 0, 1, m%lsize(2))
     call oct_parse_block_double(C_string('lsize'), 0, 2, m%lsize(3))
     m%lsize = m%lsize*units_inp%length%factor
-    if(minval(m%lsize)<1.0_r8 .or. maxval(m%lsize)>500.0_r8) then
-      write(err, '(a,f10.5,a,f10.5,a,f10.5,a)') '(',m%lsize(1),',',m%lsize(2),',',m%lsize(3),')'
-      message(1) = "Input: '"//trim(err)//"' is not a valid zlength"
-      message(2) = '(1 <= lsize [b] <= 500)'
-      call write_fatal(2)
-    end if
   endif
 
   ! set nr and nx

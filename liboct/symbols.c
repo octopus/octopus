@@ -40,7 +40,25 @@ symrec *getsym (char *sym_name)
 			 ptr = (symrec *)ptr->next)
 		if (strcasecmp(ptr->name,sym_name) == 0)
 			return ptr;
-	return NULL;
+	return (symrec *) 0;
+}
+
+int rmsym (char *sym_name)
+{
+	symrec *ptr, *prev;
+	for (prev = (symrec *) 0, ptr = sym_table; ptr != (symrec *) 0;
+			 prev = ptr, ptr = ptr->next)
+		if (strcasecmp(ptr->name,sym_name) == 0){
+			if(prev == (symrec *) 0)
+				sym_table = ptr->next;
+			else
+				prev->next = ptr->next;
+			free(ptr);
+
+			return 1;
+		}
+
+	return 0;
 }
 
 struct init_fntc{
@@ -100,6 +118,10 @@ static struct init_cnst arith_cnts[] = {
 	{0, 0}
 };
 
+static char *reserved_symbols[] = {
+	"x", "y", "z", "r", 0
+};
+
 void sym_init_table ()  /* puts arithmetic functions in table. */
 {
 	int i;
@@ -113,6 +135,14 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
 	for (i = 0; arith_cnts[i].fname != 0; i++){
 		ptr = putsym(arith_cnts[i].fname, S_CMPLX);
 		GSL_SET_COMPLEX(&ptr->value.c, arith_cnts[i].c, 0);
+	}
+}
+
+void sym_clear_reserved()
+{
+	int i;
+	for (i = 0; reserved_symbols[i] != 0; i++){
+		rmsym(reserved_symbols[i]);
 	}
 }
 

@@ -7,6 +7,7 @@
 #include <gsl/gsl_spline.h>
 
 #include "f77_func.h"
+#include "symbols.h"
 #include "liboct.h"
 
 /* Fortran does not have the asinh intrinsic, 
@@ -156,4 +157,30 @@ void F77_FUNC_(parse_block_string, PARSE_BLOCK_STRING)
 		strcpy(res, s);
 		res[strlen(res)] = ' ';
 	}
+}
+
+double  F77_FUNC_(parse_potential, PARSE_POTENTIAL)
+		 (double *x, double *y, double *z, double *r, char *pot)
+{
+	symrec *rec;
+	parse_result c;
+
+	rec = putsym("x", S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, *x, 0);
+	rec = putsym("y", S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, *y, 0);
+	rec = putsym("z", S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, *z, 0);
+	rec = putsym("r", S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, *r, 0);
+
+	parse_exp(pot, &c);
+	printf("%f %f %f\n", *r, *r**r, GSL_REAL(c.value.c));
+
+	rmsym("x");
+	rmsym("y");
+	rmsym("z");
+	rmsym("r");
+
+	return GSL_REAL(c.value.c);
 }

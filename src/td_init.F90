@@ -58,7 +58,8 @@ subroutine td_init(td, sys, m, st)
     call oct_parse_block_double(C_string('TDPolarization'), 0, 1, td%pol(2))
     call oct_parse_block_double(C_string('TDPolarization'), 0, 2, td%pol(3))
   else  !default along the z-direction
-    td%pol(:) = 0.0_r8
+    td%pol(1:2) = 0._r8
+    td%pol(3)   = 1._r8
   endif
 
   call oct_parse_int(C_string("TDGauge"), 1, td%gauge)

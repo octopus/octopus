@@ -134,7 +134,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   end if
 
   call io_assign(iunit)
-  open(iunit, status='old', file=trim(filename), form='unformatted', err=999)
+  open(iunit, status='old', file=trim(filename), form='unformatted', err=998)
 
   read(iunit, err=999) ! mesh stuff is now skipped
   read(iunit, err=100) old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
@@ -226,7 +226,8 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   call io_close(iunit)
   return
 
-999 continue
+999 call io_close(iunit)
+998 continue
   message(1) = 'Error reading from file '//trim(filename)//"'"
   call write_warning(1)
   ok = .false.

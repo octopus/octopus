@@ -16,6 +16,9 @@ type specie_type
   ! jellium stuff
   real(r8) :: jradius
 
+  ! for the user defined potential
+  character(len=1024) :: user_def
+
   ! For the pseudopotential
   type(ps_type), pointer :: ps
 
@@ -42,7 +45,7 @@ function specie_init(s)
   integer :: specie_init
   type(specie_type), pointer :: s(:)
 
-  integer :: nspecies, i, lmax, lloc
+  integer :: nspecies, i, j, lmax, lloc
   character(len=80) :: str
 
   sub_name = 'specie_init'; call push_sub()
@@ -80,6 +83,13 @@ function specie_init(s)
       s(i)%jradius = 0.5_r8
       s(i)%Z_val = 0 
       
+    case('usdef') ! user defined
+      s(i)%local = .true.
+      call oct_parse_block_str(str, i-1, 2, s(i)%user_def)
+      ! convert to C string
+      j = len(trim(s(i)%user_def))
+      s(i)%user_def(j+1:j+1) = achar(0) 
+
     case default ! a pseudopotential file
       s(i)%local = .false.
       allocate(s(i)%ps) ! allocate structure

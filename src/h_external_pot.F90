@@ -252,6 +252,8 @@ subroutine generate_external_pot(h, sys)
     select case(s%label(1:5))
     case('jelli', 'point')
       call from_jellium(sys%m)
+    case('usdef')
+      call from_user_def(sys%m)
     case default
       call from_pseudopotential(sys%m)
     end select
@@ -321,6 +323,19 @@ contains
     end do
     
   end subroutine from_jellium
+
+  subroutine from_user_def(m)
+    type(mesh_type), intent(in) :: m
+
+    integer :: i
+    real(r8) :: x(3), r
+
+    do i = 1, h%np
+      call mesh_r(m, i, r, x=x, a=a%x)
+      h%Vpsl(i) = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
+    end do
+    
+  end subroutine from_user_def
 
   !***************************************************
   !  pseudopotential stuff
