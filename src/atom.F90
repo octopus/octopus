@@ -80,7 +80,6 @@ contains
     FLOAT                       :: rho(m%np, spin_channels)
 
     integer :: opt, i, in_points, n
-    integer, save :: j = 1
     FLOAT :: r
     R_TYPE :: psi1
     type(specie_type), pointer :: s
@@ -138,11 +137,9 @@ contains
               psi1 = loct_splint(s%ps%Ur(n, 1), r)
               rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
             case(2)
-              ! This is still a bit weird, but let us see how it works...
               psi1 = loct_splint(s%ps%Ur(n, 1), r)
-              rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
-              rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
-              j = j + 1
+              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
+              rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
             end select
           end if
         end do

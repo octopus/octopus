@@ -402,23 +402,78 @@ subroutine cm_vel(geo, vel)
 end subroutine cm_vel
 
 ! builds a density which is the sum of the atomic densities
-subroutine lcao_dens(m, geo, qtot, nspin, spin_channels, rho)
+subroutine guess_density(m, geo, qtot, nspin, spin_channels, rho)
   type(mesh_type),     intent(in)  :: m
   type(geometry_type), intent(in)  :: geo
   FLOAT,               intent(in)  :: qtot  ! the total charge of the system
   integer,             intent(in)  :: nspin, spin_channels
   FLOAT,               intent(out) :: rho(m%np, nspin)
 
-  integer :: ia, is
-  FLOAT :: r
+  integer :: ia, is, gd_spin, i
+  integer, save :: iseed = 321
+  FLOAT :: r, rnd, phi, theta
+  FLOAT, allocatable :: atom_rho(:,:)
 
-  call push_sub('lcao_dens')
+  call push_sub('guess_density')
+
+  if (spin_channels == 1) then
+    gd_spin = 1
+  else
+    call loct_parse_int("GuessDensitySpin", 2, gd_spin)
+    if (gd_spin < 0 .or. gd_spin > 3) then
+      write(message(1),'(a,i1,a)') "Input: '",gd_spin ,"' is not a valid GuessDensitySpin"
+      message(2) = '(GuessDensitySpin = 1 | 2 | 3)'
+      call write_fatal(2)
+    end if
+  end if
 
   rho = M_ZERO
-  do ia = 1, geo%natoms
-    rho(1:m%np, 1:spin_channels) = rho(1:m%np, 1:spin_channels) &
-                                   + atom_density(m, geo%atom(ia), spin_channels)
-  end do
+  select case (gd_spin)
+  case (1) ! Spin-unpolarized
+    do ia = 1, geo%natoms
+      rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_density(m, geo%atom(ia), 1)
+    end do
+    if (spin_channels == 2) then
+      rho(1:m%np, 1) = M_HALF*rho(1:m%np, 1)
+      rho(1:m%np, 2) = rho(1:m%np, 1)
+    end if
+
+  case (2) ! Spin-polarized
+    do ia = 1, geo%natoms
+      rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_density(m, geo%atom(ia), 2)
+    end do
+
+  case (3) ! Random oriented spins
+    allocate(atom_rho(m%np, 2))
+    do ia = 1, geo%natoms
+      atom_rho = atom_density(m, geo%atom(ia), 2)
+
+      if (nspin == 2) then
+        call quickrnd(iseed, rnd)
+        rnd = rnd - M_HALF
+        if (rnd > M_ZERO) then
+          rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+        else
+          rho(1:m%np, 1) = rho(1:m%np, 1) + atom_rho(1:m%np, 2)
+          rho(1:m%np, 2) = rho(1:m%np, 2) + atom_rho(1:m%np, 1)
+        end if
+      elseif (nspin == 4) then
+        call quickrnd(iseed, phi)
+        call quickrnd(iseed, theta)
+        phi = phi*M_TWO*M_PI
+        theta = theta*M_PI
+        rho(1:m%np, 1) = rho(1:m%np, 1) + cos(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+                                        + sin(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+        rho(1:m%np, 2) = rho(1:m%np, 2) + sin(theta/M_TWO)**2*atom_rho(1:m%np, 1) &
+                                        + cos(theta/M_TWO)**2*atom_rho(1:m%np, 2)
+        rho(1:m%np, 3) = rho(1:m%np, 3) + cos(theta/M_TWO)*sin(theta/M_TWO)*cos(phi)* &
+                                          (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+        rho(1:m%np, 4) = rho(1:m%np, 4) - cos(theta/M_TWO)*sin(theta/M_TWO)*sin(phi)* &
+                                          (atom_rho(1:m%np, 1) - atom_rho(1:m%np, 2))
+      end if
+    end do
+
+  end select
 
   ! we now renormalize the density (necessary if we have a charged system)
   r = M_ZERO
@@ -438,7 +493,7 @@ subroutine lcao_dens(m, geo, qtot, nspin, spin_channels, rho)
 
   call pop_sub()
 
-end subroutine lcao_dens
+end subroutine guess_density
 
 subroutine atom_write_xyz(dir, fname, geo)
   character(len=*), intent(in)  :: dir, fname

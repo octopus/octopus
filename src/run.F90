@@ -123,8 +123,8 @@ subroutine run()
       ! Warning: I think this is pretty useless, since the occupation are null.
       call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       ! this is certainly a better density
-      call lcao_dens(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, sys%st%d%spin_channels,  &
-                     sys%st%rho)
+      call guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+                         sys%st%d%spin_channels, sys%st%rho)
 
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'
@@ -150,8 +150,8 @@ subroutine run()
       call write_info(1)
 
       call X(h_calc_vhxc)(h, sys%m, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%m)                                    ! occupations
-      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)                  ! total energy
+      call states_fermi(sys%st, sys%m)                            ! occupations
+      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
 
     case(I_SCF)
 #ifdef COMPLEX_WFNS
