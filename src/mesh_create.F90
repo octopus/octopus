@@ -95,7 +95,29 @@ subroutine mesh_create(m, natoms, atom)
     end do
     m%lsize = m%lsize*units_inp%length%factor
   end if
-
+  
+  ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
+  m%rlat = M_ZERO
+  m%klat = M_ZERO
+  do i = 1, conf%periodic_dim
+    m%rlat(i,i) = 2*m%lsize(i)
+    m%klat(i,i) = M_PI/m%lsize(i)
+  end do
+ 
+  !build shifts to nearest neighbour primitive cells
+  m%shift=M_ZERO
+  i=1
+  do iz = -1, 1
+    do iy = -1, 1
+      do ix = -1, 1
+        m%shift(i,1)=ix*m%rlat(1,1)
+        m%shift(i,2)=iy*m%rlat(2,2)
+        m%shift(i,3)=iz*m%rlat(3,3)
+        i = i + 1
+      end do
+    end do
+  end do
+  
   ! Read the grid spacing.
   m%h = M_ZERO
   select case(m%box_shape)
