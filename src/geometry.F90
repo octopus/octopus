@@ -94,7 +94,7 @@ subroutine geometry_init(geo, val_charge, no_species_init)
       read(iunit, *) ! skip comment line
       allocate(geo%atom(geo%natoms))
       nullify(geo%catom); geo%ncatoms = 0;
-      
+
       do i = 1, geo%natoms
         read(iunit,*) geo%atom(i)%label, geo%atom(i)%x(:)
         geo%atom(i)%move = .true.
@@ -404,42 +404,28 @@ end subroutine cm_vel
 
 ! builds a density which is the sum of the atomic densities
 subroutine lcao_dens(m, geo, qtot, nspin, spin_channels, rho)
-  type(mesh_type),        intent(in)  :: m
+  type(mesh_type),     intent(in)  :: m
   type(geometry_type), intent(in)  :: geo
-  FLOAT,                  intent(in)  :: qtot  ! the total charge of the system
-  integer,                intent(in)  :: nspin, spin_channels
-  FLOAT,                  intent(out) :: rho(m%np, nspin)
+  FLOAT,               intent(in)  :: qtot  ! the total charge of the system
+  integer,             intent(in)  :: nspin, spin_channels
+  FLOAT,               intent(out) :: rho(m%np, nspin)
 
   integer :: ia, is
   FLOAT :: r
-  type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
 
   call push_sub('lcao_dens')
 
   rho = M_ZERO
   do ia = 1, geo%natoms
-    a => geo%atom(ia) ! shortcuts
-    s => a%spec
-
-    if(conf%dim==1.or.conf%dim==2) then
-      call from_userdef(m)
-    else
-      select case(s%label(1:5))
-      case('usdef')
-        call from_userdef(m)
-      case('jelli', 'point')
-        call from_jellium(m)
-      case default
-        call from_pseudopotential(m)
-      end select
-    end if
+    rho(1:m%np, 1:spin_channels) = rho(1:m%np, 1:spin_channels) &
+                                   + atom_density(m, geo%atom(ia), spin_channels)
   end do
 
   ! we now renormalize the density (necessary if we have a charged system)
   r = M_ZERO
   do is = 1, spin_channels
-     r = r + dmf_integrate(m, rho(:, is))
+    r = r + dmf_integrate(m, rho(:, is))
   end do
   write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
   call write_info(1)
@@ -447,76 +433,13 @@ subroutine lcao_dens(m, geo, qtot, nspin, spin_channels, rho)
   rho = r*rho
   r = M_ZERO
   do is = 1, spin_channels
-     r = r + dmf_integrate(m, rho(:, is))
+    r = r + dmf_integrate(m, rho(:, is))
   end do
   write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
   call write_info(1)
 
   call pop_sub()
-contains
-  subroutine from_userdef(m)
-    type(mesh_type), intent(in) :: m
 
-    integer :: i
-
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      rho(i, 1) = rho(i, 1) + real(s%Z_val, PRECISION)/(m%np*m%vol_pp)
-    end do
-  end subroutine from_userdef
-
-  subroutine from_jellium(m)
-    type(mesh_type), intent(in) :: m
-
-    integer :: i, in_points
-    FLOAT :: r
-
-    in_points = 0
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      if(r <= s%jradius) then
-        in_points = in_points + 1
-      end if
-    end do
-    
-    if(in_points > 0) then
-      do i = 1, m%np
-        call mesh_r(m, i, r, a=a%x)
-        if(r <= s%jradius) then
-          rho(i, 1) = rho(i, 1) + real(s%z_val, PRECISION)/(real(in_points, PRECISION)*m%vol_pp)
-        end if
-      end do
-    end if
-  end subroutine from_jellium
-
-  subroutine from_pseudopotential(m)
-    type(mesh_type), intent(in) :: m
-    
-    integer :: i, n, is
-    integer, save :: j = 1
-    FLOAT :: r
-    R_TYPE :: psi1, psi2
-
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      do n = 1, s%ps%conf%p
-        if(r >= r_small) then
-          select case(spin_channels)
-          case(1)
-            psi1 = loct_splint(s%ps%Ur(n, 1), r)
-            rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)
-          case(2)
-            ! This is still a bit weird, but let us see how it works...
-            psi1 = loct_splint(s%ps%Ur(n, 1), r)
-            rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
-            rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
-            j = j + 1
-          end select
-        end if
-      end do
-    end do
-
-  end subroutine from_pseudopotential
 end subroutine lcao_dens
 
 subroutine atom_write_xyz(dir, fname, geo)

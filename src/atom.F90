@@ -73,4 +73,82 @@ contains
     call pop_sub()
   end subroutine atom_get_wf
 
+  function atom_density(m, atom, spin_channels) result(rho)
+    type(mesh_type), intent(in) :: m
+    type(atom_type), intent(in) :: atom
+    integer,         intent(in) :: spin_channels
+    FLOAT                       :: rho(m%np, spin_channels)
+
+    integer :: opt, i, in_points, n, is
+    integer, save :: j = 1
+    FLOAT :: r
+    R_TYPE :: psi1, psi2
+    type(specie_type), pointer :: s
+
+    ASSERT(spin_channels == 1 .or. spin_channels == 2)
+
+    s => atom%spec
+
+    ! select what kind of density we should build
+    if(conf%dim==3) then
+      select case(s%label(1:5))
+      case('usdef')
+        opt = 1
+      case('jelli', 'point')
+        opt = 2
+      case default
+        opt = 3
+      end select
+    else
+      opt = 1      
+    end if
+
+    ! build density...
+    select case (opt)
+    case (1) ! ...from userdef
+      rho(1:m%np, 1:spin_channels) = real(s%Z_val, PRECISION) &
+                                     /(m%np*m%vol_pp*real(spin_channels, PRECISION))
+    case (2) ! ...from jellium
+      in_points = 0
+      do i = 1, m%np
+        call mesh_r(m, i, r, a=atom%x)
+        if(r <= s%jradius) then
+          in_points = in_points + 1
+        end if
+      end do
+    
+      if(in_points > 0) then
+        do i = 1, m%np
+          call mesh_r(m, i, r, a=atom%x)
+          if(r <= s%jradius) then
+            rho(i, 1:spin_channels) = real(s%z_val, PRECISION)/ &
+                                      (real(in_points*spin_channels, PRECISION)*m%vol_pp)
+          end if
+        end do
+      end if
+
+    case (3) ! ...from pseudopotential
+      do i = 1, m%np
+        call mesh_r(m, i, r, a=atom%x)
+        do n = 1, s%ps%conf%p
+          if(r >= r_small) then
+            select case(spin_channels)
+            case(1)
+              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(M_FOUR*M_PI)
+            case(2)
+              ! This is still a bit weird, but let us see how it works...
+              psi1 = loct_splint(s%ps%Ur(n, 1), r)
+              rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
+              rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
+              j = j + 1
+            end select
+          end if
+        end do
+      end do
+
+    end select
+
+  end function atom_density
+
 end module atom
