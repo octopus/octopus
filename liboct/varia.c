@@ -108,13 +108,13 @@ void progress_bar(int actual, int max)
 	i = strlen(buf);
 	if(i<3) i=3;
 	sprintf(fmt, "\r[%%%dd/%%%dd]", i, i);
-	snprintf(buf, sizeof(buf), fmt, actual, max);
-	snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " %3d%%" , ratio);
+        sprintf(buf, fmt, actual, max);
+        sprintf(buf + strlen(buf), " %3d%%" , ratio);
 
 	barlength = getttywidth() - strlen(buf) - 16;
 	if (barlength > 0) {
 		i = barlength * ratio / 100;
-		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+                sprintf(buf + strlen(buf),
 						 "|%.*s%*s|", i,
 						 "*******************************************************"
 						 "*******************************************************"
@@ -131,21 +131,21 @@ void progress_bar(int actual, int max)
 	elapsed = now.tv_sec - start.tv_sec;
 	
 	if(elapsed < 0.0 || actual <= 0) {
-		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-						 "     --:-- ETA");
+	  sprintf(buf + strlen(buf),
+	    "     --:-- ETA");
 	}else{
 		remaining = (int)(max / (actual / elapsed) - elapsed);
 		if(remaining < 0) remaining = 0;
 
 		i = remaining / 3600;
 		if(i)
-			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-							 "%4d:", i);
+                  sprintf(buf + strlen(buf),
+		    "%4d:", i);
 		else
-			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
-							 "     ");
+                  sprintf(buf + strlen(buf),
+		    "     ");
 		i = remaining % 3600;
-		snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf),
+                  sprintf(buf + strlen(buf),
 						 "%02d:%02d%s", i / 60, i % 60,
 						 " ETA");
 	}
