@@ -137,8 +137,9 @@ void F90_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 		 (char *name, char *def, char *res)
 {
 	char *c = parse_string(name, def);
+	int len = strlen(c);
 	strcpy(res, c);
-	res[strlen(res)] = ' ';
+	res[len] = res[len + 1];
 }
 
 static void parse_block_error(char *type, char *name, int l, int c){
@@ -178,12 +179,14 @@ void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 		 (char *name, int *l, int *c, char *res)
 {
 	char *s;
+	int len;
 
 	if(parse_block_string(name, *l, *c, &s) != 0)
 		parse_block_error("string", name, *l, *c);
 	else{
+		len = strlen(s);
 		strcpy(res, s);
-		res[strlen(res)] = ' ';
+		res[len] = res[len + 1];
 	}
 }
 
