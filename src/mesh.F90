@@ -267,6 +267,15 @@ subroutine mesh_inborder(m, i, n, d, width)
 
 end subroutine mesh_inborder
 
+!/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! mesgh_gcutoff returns the "natural" band limitation of the grid m, in terms
+! of the maximum G vector. For a cubic regular grid of spacing h is M_PI/h.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
+FLOAT function mesh_gcutoff(m) result(gmax)
+   type(mesh_type), intent(in) :: m
+   gmax = M_PI/(maxval(m%h))
+end function mesh_gcutoff
+
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
 
