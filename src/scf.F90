@@ -209,12 +209,11 @@ subroutine scf_write_static()
       ' [',  trim(units_out%energy%abbrev), ']'
   write(iunit,'(1x)') 
 
-  write(iunit,'(5a)') 'Forces on the ions [', trim(units_out%energy%abbrev), &
-       "/", trim(units_out%length%abbrev), "]"
+  write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
   write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
   do i = 1,sys%natoms
     write(iunit,'(i4,a10,3f15.6)') i, trim(sys%atom(i)%spec%label), &
-         sys%atom(i)%f(:) * units_out%length%factor / units_out%energy%factor
+         sys%atom(i)%f(:) / units_out%force%factor
   end do
 
   call io_close(iunit)

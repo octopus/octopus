@@ -78,7 +78,7 @@ subroutine geom_opt_run(scf, sys, h)
 
   contains
     subroutine geo_init()
-      call oct_parse_int(C_string("GOMethod"), 4, geo%method)
+      call oct_parse_int(C_string("GOMethod"), 1, geo%method)
       if(geo%method < 1 .or. geo%method >4) then
         message(1) = "'GOMethod' can only take the values:"
         message(5) = "   1 = Steepest descent"
@@ -111,6 +111,7 @@ subroutine geom_calc_point(x, f, df)
   real(r8), intent(out) :: f, df(3*geo%sys%natoms)
 
   integer :: i
+  integer, save :: iter = 0
 
   do i = 0, geo%sys%natoms - 1
     geo%sys%atom(i+1)%x(1) = x(3*i + 1)
@@ -121,13 +122,12 @@ subroutine geom_calc_point(x, f, df)
 
   ! generate external potential
   call generate_external_pot(geo%h, geo%sys)
-  geo%sys%eii = ion_ion_energy(geo%sys%natoms, geo%sys%atom)
   
   ! setup hamiltonian
   call R_FUNC(calcdens) (geo%sys%st, geo%sys%m%np, geo%sys%st%rho)
+  call R_FUNC(hamiltonian_setup)    (geo%h, geo%sys)
   
   ! update hamiltonian and eigenvalues (fermi is *not* called)
-  call R_FUNC(hamiltonian_setup)    (geo%h, geo%sys)
   call R_FUNC(hamiltonian_eigenval) (geo%h, geo%sys,  1, geo%sys%st%nst)
   call hamiltonian_energy           (geo%h, geo%sys, -1)
   
@@ -141,7 +141,12 @@ subroutine geom_calc_point(x, f, df)
     df(3*i + 1) = - geo%sys%atom(i+1)%f(1)
     df(3*i + 2) = - geo%sys%atom(i+1)%f(2)
     df(3*i + 3) = - geo%sys%atom(i+1)%f(3)
-  end do  
+  end do
+
+  iter = iter + 1
+  write(message(1), '(a,i5,a,f16.10)') "Info: geom_opt iter = ", iter, &
+       " energy = ", f/units_out%energy%factor
+  call write_info(1)
 
 end subroutine geom_calc_point
 
