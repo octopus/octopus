@@ -178,11 +178,11 @@ contains
       call write_fatal(1)
     endif
 
-    call kinetic(sys%m, timestep/2._r8)
-    if(sys%nlpp) call non_local_pp(sys%m, timestep/2._r8, .true.)
-    call local_part(sys%m, t, timestep)
-    if(sys%nlpp) call non_local_pp(sys%m, timestep/2._r8, .false.)
-    call kinetic(sys%m, timestep/2._r8)
+    call local_part(sys%m, t, timestep/M_TWO)
+    if(sys%nlpp) call non_local_pp(sys%m, timestep/M_TWO, .true.)
+    call kinetic(sys%m, timestep)
+    if(sys%nlpp) call non_local_pp(sys%m, timestep/M_TWO, .false.)
+    call local_part(sys%m, t, timestep/M_TWO)
 
     call pop_sub(); return
   end subroutine split
@@ -207,11 +207,11 @@ contains
     dt(1:5) = pp(1:5)*timestep
 
     do k = 1, 5
-       call kinetic(sys%m, dt(k)/2._r8)
-       if(sys%nlpp) call non_local_pp(sys%m, dt(k)/2._r8, .true.)
-       call local_part(sys%m, t, dt(k))
-       if(sys%nlpp) call non_local_pp(sys%m, dt(k)/2._r8, .false.)
-       call kinetic(sys%m, dt(k)/2._r8)
+       call local_part(sys%m, t, dt(k)/M_TWO)
+       if(sys%nlpp) call non_local_pp(sys%m, dt(k)/M_TWO, .true.)
+       call kinetic(sys%m, dt(k))
+       if(sys%nlpp) call non_local_pp(sys%m, dt(k)/M_TWO, .false.)
+       call local_part(sys%m, t, dt(k)/M_TWO)
     end do
 
     call pop_sub(); return
@@ -314,7 +314,7 @@ contains
             cycle do_l
           end if
 
-          do_m: do lm = -l*l_start, l*l_end, step
+          do_m: do lm = -l*step, l*step, step
             do ikbc = kbc_start, kbc_end, step
               do jkbc = kbc_start, kbc_end, step
                  p2 = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, atm%zuv(:, add_lm, ikbc), 1)*m%vol_pp
