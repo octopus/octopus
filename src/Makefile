@@ -69,11 +69,11 @@ EXEEXT =
 F90 = f90
 F90CPP = /lib/cpp
 F90CPPFLAGS = -C
-F90FLAGS = -O -YEXT_NAMES=LCS -YEXT_SFX=_ -Rc -Rs -Rp
+F90FLAGS = -YEXT_NAMES=LCS -YEXT_SFX=_
 LIBTOOL = $(SHELL) $(top_builddir)/libtool
-LIB_FFTW = -L/home/nfs/marques/work/octopus.bak/lib/i686 -L/home/nfs/marques/work/octopus.bak/lib/i686/lib -ldfftw -ldrfftw
+LIB_FFTW = -L/home/nfs/marques -L/home/nfs/marques/lib -ldfftw -ldrfftw
 LIB_GSL = -lgsl -lgslcblas
-LIB_LAPACK = -L/home/nfs/marques/work/octopus.bak/lib/i686 -L/home/nfs/marques/work/octopus.bak/lib/i686/lib -llapack -lblas
+LIB_LAPACK = -L/home/nfs/marques -L/home/nfs/marques/lib -llapack -lblas
 LN_S = ln -s
 MAKEINFO = makeinfo
 OBJDUMP = @OBJDUMP@
@@ -106,7 +106,8 @@ EXTRA_octopus_SOURCES = \
 
 octopus_LDADD = $(LIB_FFTW) $(LIB_GSL) $(LIB_LAPACK) ../liboct/liboct.a
 
-CLEANFILES = *~ *.bak
+CLEANFILES = *~ *.bak *.mod
+DISTCLEANFILES = Makefile.in
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = ../liboct/config.h config.h
 CONFIG_CLEAN_FILES = 
@@ -388,6 +389,7 @@ clean-generic:
 distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
 	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 mostlyclean-am:  mostlyclean-hdr mostlyclean-binPROGRAMS \

@@ -32,6 +32,9 @@ ACX_POINTER_SIZE
 dnl FORTRAN 90 checks
 ACX_PROG_F90
 
+dnl libtool files
+AC_PROG_LIBTOOL
+
 dnl who am i
 AC_CANONICAL_HOST
 
@@ -47,7 +50,7 @@ if test -z "${F90FLAGS}"; then
   		F90FLAGS="-O2 -fast -Munroll -Mnoframe -Mdalign"
 		;;
 		abf90*)
-			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_ -Rc -Rs -Rp"
+			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
 		;;
 		*)
 			F90FLAGS="-O"
@@ -79,7 +82,6 @@ fi
 AM_PROG_LIBTOOL
 
 AC_PROG_INSTALL
-AC_PROG_RANLIB
 AC_PROG_YACC
 
 dnl define basic language

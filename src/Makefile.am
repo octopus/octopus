@@ -18,4 +18,5 @@ EXTRA_octopus_SOURCES = \
 
 octopus_LDADD = $(LIB_FFTW) $(LIB_GSL) $(LIB_LAPACK) ../liboct/liboct.a
 
-CLEANFILES = *~ *.bak
+CLEANFILES = *~ *.bak *.mod
+DISTCLEANFILES = Makefile.in

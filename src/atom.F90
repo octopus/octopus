@@ -40,6 +40,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
   integer :: iunit, i
   character(len=40) :: str, label
+  logical :: l
 
   sub_name = 'atom_init'; call push_sub()
 
@@ -65,7 +66,6 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       do i = 1, natoms
         read(iunit,*) label, a(i)%x(:)
         a(i)%move = .true.
-        a(i)%x(:) = units_inp%length%factor * a(i)%x(:) !units conversion
         a(i)%spec => s(get_specie(label))
       end do
 
@@ -88,11 +88,21 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
         call oct_parse_block_double (str, i-1, 1, a(i)%x(1))
         call oct_parse_block_double (str, i-1, 2, a(i)%x(2))
         call oct_parse_block_double (str, i-1, 3, a(i)%x(3))
-        a(i)%x = a(i)%x * units_inp%length%factor
         call oct_parse_block_logical(str, i-1, 4, a(i)%move)
       end do
     end if
   end if
+
+  ! units conversion
+  do i = 1, natoms
+    a(i)%x = a(i)%x * units_inp%length%factor
+  end do
+  do i = 1, ncatoms
+    ca(i)%x = ca(i)%x * units_inp%length%factor
+  end do
+  
+  call oct_parse_logical(C_string("AdjustCoordinates"), .false., l)
+  if(l) call atom_adjust(natoms, a , ncatoms, ca)
 
   ! we now load the velocities, either from the input, or from a file
   if(oct_parse_isdef(C_string("XYZVelocities")).ne.0 .and. conf%dim==3) then ! read a xyz file
@@ -236,5 +246,224 @@ subroutine atom_dealloc(na, a)
   end do
 
 end subroutine atom_dealloc
+
+subroutine atom_adjust(natoms, a, ncatoms, ca)
+  integer, intent(in) :: natoms, ncatoms
+  type(atom_type), pointer :: a(:)
+  type(atom_classical_type), pointer :: ca(:)
+
+  real(r8) :: center(3), from(3), from2(3), to(3)
+  character(len=20) :: str
+
+  ! is there something to do
+  if(natoms <= 1) return
+
+  ! recenter
+  call find_center(center)
+  call translate(-center)
+
+  ! get to axis
+  str = C_string("MainAxis")
+  if(oct_parse_isdef(str) .ne. 0) then
+    call oct_parse_block_double(str, 0, 0, to(1))
+    call oct_parse_block_double(str, 0, 1, to(2))
+    call oct_parse_block_double(str, 0, 2, to(3))
+  else
+    to(1) = 0._r8; to(2) = 0._r8; to(3) = 1._r8
+  end if
+  to = to / sqrt(sum(to**2))
+
+  ! rotate to main axis
+  call find_axis(from, from2)
+  call rotate(from, from2, to)
+
+  ! recenter
+  call find_center(center)
+  call translate(-center)
+  
+contains
+
+  subroutine find_center(x)
+    real(r8), intent(out) :: x(3)
+
+    real(r8) :: xmin(3), xmax(3)
+    integer  :: i, j
+
+    xmin =  1e10_r8
+    xmax = -1e10_r8
+    do i = 1, natoms
+      do j = 1, 3
+        if(a(i)%x(j) > xmax(j)) xmax(j) = a(i)%x(j)
+        if(a(i)%x(j) < xmin(j)) xmin(j) = a(i)%x(j)
+      end do
+    end do
+
+    x = (xmax + xmin)/2._r8
+  end subroutine find_center
+
+  subroutine translate(x)
+    real(r8), intent(in) :: x(3)
+
+    integer  :: i
+
+    do i = 1, natoms
+      a(i)%x(:) = a(i)%x(:) + x(:)
+    end do
+    do i = 1, ncatoms
+      ca(i)%x(:) = ca(i)%x(:) + x(:)
+    end do
+  end subroutine translate
+
+  subroutine find_axis(x, x2)
+    real(r8), intent(out) :: x(3), x2(3)
+
+    integer  :: i, j
+    real(r8) :: rmax, r, r2
+
+    ! first get the further apart atoms
+    rmax = -1e10_r8
+    do i = 1, natoms
+      do j = 1, natoms/2 + 1
+        r = sqrt(sum((a(i)%x-a(j)%x)**2))
+        if(r > rmax) then
+          rmax = r
+          x = a(i)%x - a(j)%x
+        end if
+      end do
+    end do
+    x  = x /sqrt(sum(x**2))
+
+    ! now let us find out what is the second most important axis
+    rmax = -1e10_r8
+    do i = 1, natoms
+      r2 = sum(x(:) * a(i)%x(:))
+      r = sqrt(sum((a(i)%x(:) - r2*x(:))**2))
+      if(r > rmax) then
+        rmax = r
+        x2 = a(i)%x(:) - r2*x(:)
+      end if
+    end do
+    x2 = x2/sqrt(sum(x2**2))
+
+  end subroutine find_axis
+
+  subroutine rotate(from, from2, to)
+    real(r8), intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
+
+    integer :: i
+    real(r8) :: m1(3,3), m2(3,3), m3(3,3), f2(3), per(3)
+    real(r8) :: alpha, r
+
+    ! initialize matrices
+    m1 = 0._r8; m1(1,1) = 1._r8; m1(2,2) = 1._r8; m1(3,3) = 1._r8
+
+    ! rotate the to axis to the z axis
+    alpha = atan2(to(2), to(1))
+    call rotate_z(m1, alpha)
+    alpha = atan2(sqrt(to(1)**2 + to(2)**2), to(3))
+    call rotate_y(m1, -alpha)
+
+    ! get perpendicular to z and from
+    f2 = matmul(m1, from)
+    per(1) = -f2(2)
+    per(2) =  f2(1)
+    per(3) = 0._r8
+    r = sqrt(sum(per**2))
+    if(r > 0._r8) then
+      per = per/r
+    else
+      per(2) = 1._r8
+    end if
+
+    ! rotate perpendicular axis to the y axis
+    m2 = 0._r8; m2(1,1) = 1._r8; m2(2,2) = 1._r8; m2(3,3) = 1._r8
+    alpha = atan2(per(1), per(2))
+    call rotate_z(m2, -alpha)
+
+    ! rotate from => to (around the y axis)
+    m3 = 0._r8; m3(1,1) = 1._r8; m3(2,2) = 1._r8; m3(3,3) = 1._r8
+    alpha = acos(sum(from*to))
+    call rotate_y(m3, -alpha)
+    
+    ! join matrices
+    m2 = matmul(transpose(m2), matmul(m3, m2))
+
+    ! rotate around the z axis to get the second axis
+    per = matmul(m2, matmul(m1, from2))
+    alpha = atan2(per(1), per(2))
+    call rotate_z(m2, -alpha) ! second axis is now y
+
+    ! get combined transformation
+    m1 = matmul(transpose(m1), matmul(m2, m1))
+
+    ! now transform the coordinates
+    do i = 1, natoms
+      a(i)%x = matmul(m1, a(i)%x)
+    end do
+
+    do i = 1, ncatoms
+      ca(i)%x = matmul(m1, ca(i)%x)
+    end do
+
+  end subroutine rotate
+
+  subroutine rotate_x(m, angle)
+    real(r8), intent(inout) :: m(3,3)
+    real(r8), intent(in) :: angle
+
+    real(r8) :: aux(3,3), ca, sa
+
+    ca = cos(angle)
+    sa = sin(angle)
+
+    aux = 0._r8
+    aux(1, 1) = 1._r8
+    aux(2, 2) = ca
+    aux(3, 3) = ca
+    aux(2, 3) = sa
+    aux(3, 2) = -sa
+
+    m = matmul(aux, m)
+  end subroutine rotate_x
+
+  subroutine rotate_y(m, angle)
+    real(r8), intent(inout) :: m(3,3)
+    real(r8), intent(in) :: angle
+
+    real(r8) :: aux(3,3), ca, sa
+
+    ca = cos(angle)
+    sa = sin(angle)
+
+    aux = 0._r8
+    aux(2, 2) = 1._r8
+    aux(1, 1) = ca
+    aux(3, 3) = ca
+    aux(1, 3) = sa
+    aux(3, 1) = -sa
+
+    m = matmul(aux, m)
+  end subroutine rotate_y
+
+  subroutine rotate_z(m, angle)
+    real(r8), intent(inout) :: m(3,3)
+    real(r8), intent(in) :: angle
+
+    real(r8) :: aux(3,3), ca, sa
+
+    ca = cos(angle)
+    sa = sin(angle)
+
+    aux = 0._r8
+    aux(3, 3) = 1._r8
+    aux(1, 1) = ca
+    aux(2, 2) = ca
+    aux(1, 2) = sa
+    aux(2, 1) = -sa
+
+    m = matmul(aux, m)
+  end subroutine rotate_z
+
+end subroutine atom_adjust
 
 end module atom

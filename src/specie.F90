@@ -1,3 +1,5 @@
+#include "config.h"
+
 module specie
 use global
 use units

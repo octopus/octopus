@@ -3,3 +3,4 @@
 SUBDIRS = doc liboct src
 
 CLEANFILES = *~ *.bak
+DISTCLEANFILES = Makefile.in

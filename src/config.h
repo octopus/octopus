@@ -13,8 +13,8 @@
 #define POINTER_SIZE 4
 
 ! Dimensionality of the system
-#define ONE_D 1
-! #undef THREE_D 
+! #undef ONE_D 
+#define THREE_D 1
 
 ! #undef BOUNDARIES_ZERO_DERIVATIVE 
 

@@ -105,7 +105,7 @@ subroutine kinetic_energy(sys)
   sys%kinetic_energy = 0.0_r8
   do i = 1, sys%natoms
      sys%kinetic_energy = sys%kinetic_energy + 0.5_r8*sys%atom(i)%spec%weight* &
-         (sys%atom(i)%v(1)**2 + sys%atom(i)%v(2)**2 + sys%atom(i)%v(3)**2)
+         sum(sys%atom(i)%v(:)**2)
   enddo
 
   call pop_sub()
@@ -127,7 +127,7 @@ subroutine geom_write_xyz(sys)
     write(iunit, '(1x)')
     do i = 1, sys%natoms
       write(iunit, '(6x,a,2x,3f12.6)') &
-           sys%atom(i)%spec%label, sys%atom(i)%x(:)
+           sys%atom(i)%spec%label, sys%atom(i)%x(:)/units_out%length%factor
     end do
     call io_close(iunit)
 
@@ -138,7 +138,8 @@ subroutine geom_write_xyz(sys)
       write(iunit, '(1x)')
       do i = 1, sys%ncatoms
         write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
-             sys%catom(i)%label(1:1), sys%catom(i)%x(:), " # ", sys%catom(i)%charge
+             sys%catom(i)%label(1:1), sys%catom(i)%x(:)/units_out%length%factor, &
+             " # ", sys%catom(i)%charge
       end do
       call io_close(iunit)
     end if
