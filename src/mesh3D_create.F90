@@ -17,14 +17,14 @@ subroutine mesh3D_create(m, natoms, atom)
 
   sub_name = 'mesh3D_create'; call push_sub()
 
-  m%box_shape = fdf_integer('Box_shape', 1)
+  m%box_shape = fdf_integer('Box_shape', SPHERE)
   if (m%box_shape>3 .or. m%box_shape<1) then
     write(err, *) m%box_shape
     message(1) = "Input: '"//trim(err)//"' is not a valid Box_Shape"
     message(2) = '(1 <= Box_Shape <= 3)'
     call write_fatal(2)
   end if
-  if(m%box_shape == 3 .and. (.not.present(natoms) .or. .not.present(atom))) then
+  if(m%box_shape == MINIMUM .and. (.not.present(natoms) .or. .not.present(atom))) then
     message(1) = "Internal Error"
     call write_fatal(1)
   endif
@@ -68,11 +68,11 @@ subroutine mesh3D_create(m, natoms, atom)
     do iy = -m%nr, m%nr
       do iz = -m%nr, m%nr
         select case(m%box_shape)
-        case(1)
+        case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
-        case(2)
+        case(CILINDER)
           b = in_cilinder(m, ix, iy, iz)
-        case(3)
+        case(MINIMUM)
           b = in_atom(m, ix, iy, iz, natoms, atom)
         end select
         
@@ -89,11 +89,11 @@ subroutine mesh3D_create(m, natoms, atom)
     do iy = -m%nr, m%nr
       do iz = -m%nr, m%nr
         select case(m%box_shape)
-        case(1)
+        case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
-        case(2)
+        case(CILINDER)
           b = in_cilinder(m, ix, iy, iz)
-        case(3)
+        case(MINIMUM)
           b = in_atom(m, ix, iy, iz, natoms, atom)
         end select
         

@@ -25,7 +25,7 @@ type mesh_derivatives_type
 end type mesh_derivatives_type
 
 type mesh_type
-  integer  :: box_shape ! 0->sphere, 1->cilinder, 2->sphere around each atom
+  integer  :: box_shape ! 1->sphere, 2->cilinder, 3->sphere around each atom
   real(r8) :: h         ! the (constant) spacing between the points
   
   real(r8) :: rsize     ! the radius of the sphere or of the cilinder
@@ -68,7 +68,7 @@ subroutine mesh_init(m, natoms, atom)
 
   sub_name = 'mesh_init'; call push_sub()
 
-  m%d%space = fdf_integer('DerivativesSpace', 0)
+  m%d%space = fdf_integer('DerivativesSpace', REAL_SPACE)
   if(m%d%space < 0 .or. m%d%space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", m%d%space, &
          "' is not a valid DerivativesSpace"
@@ -78,7 +78,7 @@ subroutine mesh_init(m, natoms, atom)
 
   ! order is very important
   ! init rs -> create -> init fft
-  if(m%d%space == 0) then ! real space
+  if(m%d%space == REAL_SPACE) then 
     message(1) = 'Info: Derivatives calculated in real-space'
   else
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
