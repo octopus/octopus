@@ -111,7 +111,7 @@ contains
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
-    call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 1:3), h%vhxc, dt, dt)
+    call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
 
     select case(tr%method)
     case(REVERSAL);             call td_rti2
