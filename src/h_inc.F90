@@ -474,115 +474,118 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   !FLOAT, save, pointer ::  RPA_Vhxc(:, :)
   !logical, save :: RPA_first = .true.
 
-  call push_sub('h_calc_vhxc')
-
-  if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
-    h%epot = M_ZERO
-    h%vhxc = M_ZERO
-    if (h%d%cdft) h%ahxc = M_ZERO
-
-    ! now we add the hartree contribution from the density
-    allocate(vhartree(m%np))
-    vhartree = M_ZERO
-    if(h%d%spin_channels == 1) then
-      call poisson_solve(m, f_der, vhartree, st%rho(:, 1))
-    else
-      allocate(rho_aux(m%np))                    ! need an auxiliary array to
-      rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
-      do is = 2, h%d%spin_channels
-        rho_aux(:) = rho_aux(:) + st%rho(:, is)
-      end do
-      call poisson_solve(m, f_der, vhartree, rho_aux) ! solve the poisson equation
-      deallocate(rho_aux)
-    end if
-
-    h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)
-    if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + vhartree
-
-    ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
-    ! this yields the correct formula epot = - int n (vxc + vH/2)
-    do is = 1, h%d%spin_channels
-      h%epot = h%epot + M_HALF*dmf_dotp(m, st%rho(:, is), vhartree)
-    end do
-    deallocate(vhartree)
-
-    ! now we add the hartree contribution from the current
-    if (h%d%cdft) then
-      allocate(ahartree(m%np, conf%dim))
-      ahartree = M_ZERO
-      if(h%d%spin_channels == 1) then
-        do idim = 1, conf%dim
-          call poisson_solve(m, f_der, ahartree(:, idim), st%j(:, idim, 1))
-        end do
-      else
-        allocate(j_aux(conf%dim, m%np))         ! need an auxiliary array to
-        j_aux(:,:) = st%j(:,:, 1)               ! calculate the total current
-        do is = 2, h%d%spin_channels
-          j_aux(:,:) = j_aux(:,:) + st%j(:, :, is)
-        end do
-        do idim = 1, conf%dim
-          call poisson_solve(m, f_der, ahartree(:,idim), j_aux(:, idim)) ! solve the poisson equation
-        end do
-        deallocate(j_aux)
-      end if
-
-      h%ahxc(:,:, 1) = h%ahxc(:,:, 1) + ahartree(:,:)
-      if(h%d%ispin > UNPOLARIZED) h%ahxc(:,:, 2) = h%ahxc(:,:, 2) + ahartree(:,:)
-
-      ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
-      ! this yields the correct formula epot = - int j.(axc + aH/2)
-      ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c. 
-      ! WARNING 2: axc is not yet implemented, so we will just add -1/2 int j.aH
-      do is = 1, h%d%spin_channels
-        do idim = 1, conf%dim
-          h%epot = h%epot - M_HALF*P_c*dmf_dotp(m, st%j(idim, :, is), ahartree(:, idim))
-        end do
-      end do
-
-      deallocate(ahartree)
-    end if
-
-    ! next 3 lines are for an RPA calculation
-    !if(RPA_first) then
-    !  allocate(RPA_Vhxc(m%np, h%d%nspin))
-    !  RPA_Vhxc = h%vhxc
-
-    ! now we calculate the xc terms
-    call X(xc_pot)(h%xc, m, f_der, st, h%vhxc, h%ex, h%ec, &
-         -minval(st%eigenval(st%nst, :)), st%qtot)
-
-    ! The OEP family has to handle specially
-    if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
-      call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)
-    end if
-
-    ! next 5 lines are for an RPA calculation
-    !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential
-    !  RPA_first = .false.
-    !else
-    !  h%vhxc = h%vhxc + RPA_Vhxc
-    !end if
-
-    select case(h%d%ispin)
-    case(UNPOLARIZED)
-      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1))
-    case(SPIN_POLARIZED)
-      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
-           - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
-    case(SPINORS)
-      h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
-           - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
-
-      allocate(ztmp1(m%np), ztmp2(m%np))
-      ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
-      ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)
-      ! WARNING missing real() ???
-      h%epot = h%epot - M_TWO*zmf_dotp(m, ztmp1, ztmp2)
-      deallocate(ztmp1, ztmp2)
-    end select
-
+  ! No Hartree or xc if independent electrons.
+  if(h%ip_app) then
+    if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, m, f_der, st)
+    return
   end if
 
+  call push_sub('h_calc_vhxc')
+
+  h%epot = M_ZERO
+  h%vhxc = M_ZERO
+  if (h%d%cdft) h%ahxc = M_ZERO
+  
+  ! now we add the hartree contribution from the density
+  allocate(vhartree(m%np))
+  vhartree = M_ZERO
+  if(h%d%spin_channels == 1) then
+    call poisson_solve(m, f_der, vhartree, st%rho(:, 1))
+  else
+    allocate(rho_aux(m%np))                    ! need an auxiliary array to
+    rho_aux(:) = st%rho(:, 1)                  ! calculate the total density
+    do is = 2, h%d%spin_channels
+      rho_aux(:) = rho_aux(:) + st%rho(:, is)
+    end do
+    call poisson_solve(m, f_der, vhartree, rho_aux) ! solve the poisson equation
+    deallocate(rho_aux)
+  end if
+  
+  h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)
+  if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + vhartree
+  
+  ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
+  ! this yields the correct formula epot = - int n (vxc + vH/2)
+  do is = 1, h%d%spin_channels
+    h%epot = h%epot + M_HALF*dmf_dotp(m, st%rho(:, is), vhartree)
+  end do
+  deallocate(vhartree)
+  
+  ! now we add the hartree contribution from the current
+  if (h%d%cdft) then
+    allocate(ahartree(m%np, conf%dim))
+    ahartree = M_ZERO
+    if(h%d%spin_channels == 1) then
+      do idim = 1, conf%dim
+        call poisson_solve(m, f_der, ahartree(:, idim), st%j(:, idim, 1))
+      end do
+    else
+      allocate(j_aux(conf%dim, m%np))         ! need an auxiliary array to
+      j_aux(:,:) = st%j(:,:, 1)               ! calculate the total current
+      do is = 2, h%d%spin_channels
+        j_aux(:,:) = j_aux(:,:) + st%j(:, :, is)
+      end do
+      do idim = 1, conf%dim
+        call poisson_solve(m, f_der, ahartree(:,idim), j_aux(:, idim)) ! solve the poisson equation
+      end do
+      deallocate(j_aux)
+    end if
+
+    h%ahxc(:,:, 1) = h%ahxc(:,:, 1) + ahartree(:,:)
+    if(h%d%ispin > UNPOLARIZED) h%ahxc(:,:, 2) = h%ahxc(:,:, 2) + ahartree(:,:)
+    
+    ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
+    ! this yields the correct formula epot = - int j.(axc + aH/2)
+    ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c. 
+    ! WARNING 2: axc is not yet implemented, so we will just add -1/2 int j.aH
+    do is = 1, h%d%spin_channels
+      do idim = 1, conf%dim
+        h%epot = h%epot - M_HALF*P_c*dmf_dotp(m, st%j(idim, :, is), ahartree(:, idim))
+      end do
+    end do
+    
+    deallocate(ahartree)
+  end if
+
+  ! next 3 lines are for an RPA calculation
+  !if(RPA_first) then
+  !  allocate(RPA_Vhxc(m%np, h%d%nspin))
+  !  RPA_Vhxc = h%vhxc
+  
+  ! now we calculate the xc terms
+  call xc_get_vxc(h%xc, m, f_der, st, h%vhxc, h%ex, h%ec, &
+     -minval(st%eigenval(st%nst, :)), st%qtot)
+  
+  ! The OEP family has to handle specially
+  if(any(h%xc%family==XC_FAMILY_OEP)) then
+    call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)
+  end if
+  
+  ! next 5 lines are for an RPA calculation
+  !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential
+  !  RPA_first = .false.
+  !else
+  !  h%vhxc = h%vhxc + RPA_Vhxc
+  !end if
+  
+  select case(h%d%ispin)
+  case(UNPOLARIZED)
+    h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1))
+  case(SPIN_POLARIZED)
+    h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
+       - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
+  case(SPINORS)
+    h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
+       - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
+    
+    allocate(ztmp1(m%np), ztmp2(m%np))
+    ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
+    ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)
+    ! WARNING missing real() ???
+    h%epot = h%epot - M_TWO*zmf_dotp(m, ztmp1, ztmp2)
+    deallocate(ztmp1, ztmp2)
+  end select
+  
   ! this, I think, belongs here
   if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, m, f_der, st)
 

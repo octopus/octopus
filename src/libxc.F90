@@ -28,6 +28,13 @@ module lib_xc
      XC_NON_RELATIVISTIC  =  0, &  ! Functional includes or not realtivistic
      XC_RELATIVISTIC      =  1     ! corrections. Only available in some functionals.
   
+  ! Families of xc functionals
+  integer, parameter ::     &
+     XC_FAMILY_LDA  = 1,    &
+     XC_FAMILY_GGA  = 2,    &
+     XC_FAMILY_OEP  = 3,    &
+     XC_FAMILY_MGGA = 4
+
   ! the LDAs
   integer, parameter :: &
      XC_LDA_X             =  1,  &  ! Exchange                  
@@ -42,15 +49,19 @@ module lib_xc
      XC_LDA_C_PW          = 10,  &  ! Perdew & Wang             
      XC_LDA_C_OB_PW       = 11,  &  ! Ortiz & Ballone (PW)      
      XC_LDA_C_LYP         = 12,  &  ! Lee, Yang, & Parr LDA     
-     XC_LDA_C_AMGB        = 13,  &  ! Attacalite et al
-     XC_LDA_N             = 13 - XC_LDA_X + 1
+     XC_LDA_C_AMGB        = 13      ! Attacalite et al
 
   ! the GGAs
   integer, parameter :: &
      XC_GGA_X_PBE         = 101, &  ! Perdew, Burke & Ernzerhof exchange
      XC_GGA_C_PBE         = 102, &  ! Perdew, Burke & Ernzerhof correlation
-     XC_GGA_XC_LB         = 103, &  ! van Leeuwen & Baerends
-     XC_GGA_N             = 103 - XC_GGA_X_PBE + 1
+     XC_GGA_XC_LB         = 103     ! van Leeuwen & Baerends
+
+  ! the OEP
+  integer, parameter :: &
+     XC_OEP_X             = 201, &  ! Exact exchange
+     XC_OEP_X_SIC         = 202, &  ! Selft-interaction corrected LDA
+     XC_OEP_C_SIC         = 203
 
   ! info
   interface

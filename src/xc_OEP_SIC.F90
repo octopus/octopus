@@ -41,8 +41,8 @@ subroutine X(oep_x_sic) (xcs, m, f_der, st, is, oep, ex)
   rho(:, 2) = M_ZERO
   
   xcs2 = xcs
-  xcs2%family = XC_FAMILY_LDA
-  xcs2%functl = X_FUNC_LDA_NREL
+  !xcs2%family = XC_FAMILY_LDA
+  !xcs2%functl = X_FUNC_LDA_NREL
   do i = 1, st%nst
     if(st%occ(i, is) .gt. small) then ! we only need the occupied states
       vx2 = M_ZERO
@@ -50,7 +50,7 @@ subroutine X(oep_x_sic) (xcs, m, f_der, st, is, oep, ex)
 
       st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
 
-      call xc_get_lda (xcs2, m, st, vx2, ex2, edummy)
+      !call xc_get_lda (xcs2, m, st, vx2, ex2, edummy)
 
       ex = ex - oep%sfact*ex2
       
@@ -93,8 +93,8 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
   rho(:, 2) = M_ZERO
   
   xcs2 = xcs
-  xcs2%family = XC_FAMILY_LDA
-  xcs2%functl = C_FUNC_LDA_PZ
+  !xcs2%family = XC_FAMILY_LDA
+  !xcs2%functl = C_FUNC_LDA_PZ
   do i = 1, st%nst
     if(st%occ(i, is) < small) cycle ! we only need the occupied states
 
@@ -103,7 +103,7 @@ subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
 
     st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
     
-    call xc_get_lda (xcs2, m, st, vc2, edummy, ec2)
+    !call xc_get_lda (xcs2, m, st, vc2, edummy, ec2)
     
     ec = ec - oep%sfact*ec2
     oep%lxc(:, i) = oep%lxc(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))

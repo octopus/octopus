@@ -53,32 +53,27 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     e       = M_ZERO
 
     ! get lxc
-    functl_loop: do ixc = 0, N_X_FUNCTL+N_C_FUNCTL-1
-      if(.not.btest(xcs%functl, ixc)) cycle
-      ifunc = ibset(0, ixc)
-      if(.not.( &
-           ifunc == X_FUNC_OEP_X    .or. &
-           ifunc == X_FUNC_OEP_SIC  .or. &
-           ifunc == C_FUNC_OEP_SIC)) cycle
-      
+    functl_loop: do ixc = 1, 2
+      if(xcs%family(ixc).ne.XC_FAMILY_OEP) cycle
+
       e = M_ZERO
-      select case(ifunc)
-      case(X_FUNC_OEP_X)
+      select case(xcs%functl(ixc))
+      case(XC_OEP_X)
         call X(oep_x) (m, f_der, st, is, oep, e)
         
-      case(X_FUNC_OEP_SIC)
+      case(XC_OEP_X_SIC)
         call X(oep_x_sic) (xcs, m, f_der, st, is, oep, e)
-      case(C_FUNC_OEP_SIC)
+      case(XC_OEP_C_SIC)
         call X(oep_c_sic) (xcs, m, st, is, oep, e)
       end select
-      
-      if(ixc < N_X_FUNCTL) then
+
+      if(ixc==XC_OEP_X_SIC.or.ixc==XC_OEP_X) then
         ex = ex + e
       else
         ec = ec + e
       end if
     end do functl_loop
-  
+    
     ! get the HOMO state
     call xc_oep_AnalizeEigen(oep, st, is)
 
@@ -86,20 +81,21 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     do ist = 1, st%nst
       oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%lxc(:, ist))*m%vol_pp(:))
     end do
-
+    
     ! solve the KLI equation
     oep%vxc = M_ZERO
     call X(xc_KLI_solve) (m, st, is, oep, xcs%oep_level)
     if(xcs%oep_level == 2) call X(h_xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
-
+    
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
-
+  
   deallocate(oep%eigen_type, oep%eigen_index)
   deallocate(oep%vxc, oep%lxc, oep%uxc_bar)
-
+  
   call pop_sub()
 end subroutine X(h_xc_OEP)
+
 
 subroutine X(h_xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   type(mesh_type),        intent(IN)    :: m
