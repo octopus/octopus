@@ -13,12 +13,12 @@
   - include GTH PPs [PRB 54, 1703 (1996)] 
   
 * 1D stuff
-  - identify common code between 1D and 3D (there is a lot in the mesh
+  DONE - identify common code between 1D and 3D (there is a lot in the mesh
     module), and put it in a common file in order to avoid duplication
   - general cleanup to simplify the code (too many ifdefs)
 
 * spin
-  - non-collinear magnetism
+  DONE - non-collinear magnetism
   - spin-orbit coupling (should be to add 10 lines in hpsi after the
     previous point is done)
   - check code in spin polarized systems (perhaps Al2)
@@ -45,7 +45,3 @@ For polymers:
   change boundary conditions in mesh3D_derivatives
   energy calculation in hamiltonian_energy
   change density calculation in calcdens
-For non-collinear magnetism
-  The off-diagonals of the density can be complex. Look in mix.F90
-  handle ispin=4 properly in xc_LDA.F90
-  check how the energy (epot) is calculated (hamiltonian_setup)

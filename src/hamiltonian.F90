@@ -17,7 +17,7 @@ type hamiltonian_type
   integer :: ispin ! How to handle spin (duplicated in states_type)
   integer :: np  ! number of points (duplicated in mesh)
 
-  integer :: soc ! spin-orbit coupling?
+  logical :: soc ! spin-orbit coupling for anyone?
 
   integer :: vpsl_space           ! How should the local potential be calculated
   integer :: vnl_space            ! How should the nl    potential be calculated
@@ -107,6 +107,14 @@ subroutine hamiltonian_init(h, sys)
 
     call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
   end if
+
+#ifdef COMPLEX_WFNS
+  call oct_parse_logical(C_string("NonInteractingElectrons"), .false., h%ip_app)
+  if(h%ip_app .and. h%ispin.ne.3) then
+    message(1) = "Spin-orbit coupling can only be included with SpinComponents = 3"
+    call write_fatal(1)
+  end if
+#endif
 
   ! Should we treat the particles as independent?
   call oct_parse_logical(C_string("NonInteractingElectrons"), .false., h%ip_app)

@@ -28,11 +28,14 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
   R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
   R_TYPE, intent(out) :: Hpsi(sys%m%np, sys%st%dim)
 
-  integer :: idim, np, dim, a, lm
+  integer :: is, idim, np, dim, a, lm
   R_TYPE :: uVpsi
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
   
+  ! for spin-orbit coupling
+  real(r8), allocatable :: Vtot(:), dVtot(:,:)
+
   !sub_name = 'Hpsi'; call push_sub()
 
   np = sys%m%np
@@ -82,6 +85,15 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
       end do
     end if
   enddo
+
+  ! spin-orbit coupling
+#if defined(COMPLEX_WFNS)
+  if(h%soc) then
+    allocate(Vtot(sys%m%np), dVtot(3, sys%m%np))
+    do 
+    deallocate(Vtot, dVtot)
+  end if
+#endif
 
   !call pop_sub()
 end subroutine R_FUNC(Hpsi)

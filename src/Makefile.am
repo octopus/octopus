@@ -5,7 +5,7 @@ octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 ps_xc.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 \
 	mesh.F90 hartree.F90 states.F90 xc.F90 systm.F90 lasers.F90 hamiltonian.F90 \
 	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
-	pes.F90 td.F90 run.F90 main.F90
+	geom_opt.F90 pes.F90 td.F90 run.F90 main.F90
 
 noinst_HEADERS = \
 	config_F90.h \

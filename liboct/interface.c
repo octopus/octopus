@@ -6,7 +6,6 @@
 #include <gsl/gsl_sf_erf.h>
 #include <gsl/gsl_spline.h>
 
-#include "f77_func.h"
 #include "symbols.h"
 #include "liboct.h"
 

@@ -141,10 +141,11 @@ contains
   end subroutine td_init_lasers
 
   subroutine td_init_ab()
-    integer :: i, dummy
+    integer :: i, j, dummy
     real(r8) :: d, r, x(3)
 
     call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
+    nullify(td%ab_pot)
     if(dummy .eq. 1 .or. dummy .eq. 2) then
       td%ab = dummy
       call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, td%ab_width)
@@ -163,32 +164,39 @@ contains
         call mesh_r(m, i, r, x=x)
         
         select case(m%box_shape)
-        case(1)
+        case(SPHERE)
           d = r - (m%rsize - td%ab_width)
           if(d.gt.0._r8) then
             td%ab_pot(i) = td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
-            !td%ab_pot(i) = 1._r8
           end if
         
-        case(2)
+#if defined(THREE_D)
+        case(CYLINDER)
           d = sqrt(x(1)**2 + x(2)**2) - (m%rsize - td%ab_width)
           if(d.gt.0._r8)  &
                td%ab_pot(i) = td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
           d = abs(x(3)) - (m%zsize - td%ab_width)
           if(d.gt.0._r8)  &
                td%ab_pot(i) = td%ab_pot(i) + td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
-          if(abs(td%ab_pot(i)) > abs(td%ab_height)) td%ab_pot(i) = td%ab_height
-        
+
+        case(PARALLELEPIPED)
+          do j = 1, 3
+            d = x(j) - (m%lsize(j)/2._r8 - td%ab_width)
+            if(d.gt.0._r8) then
+              td%ab_pot(i) = td%ab_pot(i) + td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
+            end if
+          end do
+#endif
+
         case default
           message(1) = "Absorbing boundaries are not implemented for"
           message(2) = "Box_shape = 3"
           call write_warning(2)
           exit pot
         end select
+
+        if(abs(td%ab_pot(i)) > abs(td%ab_height)) td%ab_pot(i) = td%ab_height
       end do pot
-      else
-        ! some compilers have problems passing unallocated
-        allocate(td%ab_pot(1))
     end if
   end subroutine td_init_ab
   

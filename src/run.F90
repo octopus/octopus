@@ -11,8 +11,9 @@ use hamiltonian
 use lcao
 use scf
 use unocc
-use static_pol
 use timedep
+use static_pol
+use geom_opt
 use pulpo
 
 implicit none
@@ -25,16 +26,17 @@ integer :: calc_mode
 
 ! run stack
 integer, private :: i_stack(100), instr
-integer, private, parameter :: &
-     M_START_STATIC_CALC   = 1, &
-     M_RESUME_STATIC_CALC  = 2, &
-     M_START_UNOCC_STATES  = 3, &
-     M_RESUME_UNOCC_STATES = 4, &
-     M_START_TD            = 5, &
-     M_RESUME_TD           = 6, &
-     M_START_STATIC_POL    = 7, &
-     M_RESUME_STATIC_POL   = 8, &
-     M_BO_MD               = 9, &
+integer, private, parameter ::   &
+     M_START_STATIC_CALC   = 1,  &
+     M_RESUME_STATIC_CALC  = 2,  &
+     M_START_UNOCC_STATES  = 3,  &
+     M_RESUME_UNOCC_STATES = 4,  &
+     M_START_TD            = 5,  &
+     M_RESUME_TD           = 6,  &
+     M_START_STATIC_POL    = 7,  &
+     M_RESUME_STATIC_POL   = 8,  &
+     M_BO_MD               = 9,  &
+     M_GEOM_OPT            = 10, &
      M_PULPO_A_FEIRA       = 99
 
 integer, private, parameter :: &
@@ -59,6 +61,7 @@ integer, private, parameter :: &
      I_END_OCC_AN          = 27,  &
      I_START_POL           = 30,  &
      I_POL_SCF             = 31,  &
+     I_GEOM_OPT            = 40,  &
      I_PULPO               = 99
 
 contains
@@ -309,6 +312,14 @@ subroutine run()
       call static_pol_run(scfv, sys, h)
       call scf_end(scfv)
 
+    case(I_GEOM_OPT)
+      message(1) = 'Info: Performing geometry optimization'
+      call write_info(1)
+
+      call scf_init(scfv, sys)
+      call geom_opt_run(scfv, sys, h)
+      call scf_end(scfv)
+
     case(I_PULPO)
       call pulpo_print()
 
@@ -329,7 +340,7 @@ subroutine run_init()
   ! initialize some stuff
 
   call oct_parse_int(C_string('CalculationMode'), 1, calc_mode)
-  if( (calc_mode < 1 .or. calc_mode > 9) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+  if( (calc_mode < 1 .or. calc_mode > 10) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = 1 <= start static calculation'
     message(3) = '                   = 2 <= resume static calculation'
@@ -340,8 +351,9 @@ subroutine run_init()
     message(8) = '                   = 7 <= start static polarizability'
     message(9) = '                   = 8 <= resume static polarizability'
     message(10)= '                   = 9 <= perform Born-Oppenheimer MD'
-    message(11)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
-    call write_fatal(11)
+    message(11)= '                   =10 <= perform geometry minimization'
+    message(12)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
+    call write_fatal(12)
   end if
 
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
@@ -424,6 +436,12 @@ subroutine define_run_modes()
   case(M_RESUME_STATIC_POL)
     instr = instr + 1; i_stack(instr) = I_END_RPSI
     instr = instr + 1; i_stack(instr) = I_POL_SCF
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_GEOM_OPT)
+    instr = instr + 1; i_stack(instr) = I_END_RPSI
+    instr = instr + 1; i_stack(instr) = I_GEOM_OPT
     instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI

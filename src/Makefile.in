@@ -97,7 +97,7 @@ octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 ps_xc.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 \
 	mesh.F90 hartree.F90 states.F90 xc.F90 systm.F90 lasers.F90 hamiltonian.F90 \
 	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
-	pes.F90 td.F90 run.F90 main.F90
+	geom_opt.F90 pes.F90 td.F90 run.F90 main.F90
 
 
 noinst_HEADERS = \
@@ -152,8 +152,8 @@ am_octopus_OBJECTS = global.$(OBJEXT) liboct.$(OBJEXT) io.$(OBJEXT) \
 	hartree.$(OBJEXT) states.$(OBJEXT) xc.$(OBJEXT) systm.$(OBJEXT) \
 	lasers.$(OBJEXT) hamiltonian.$(OBJEXT) eigen.$(OBJEXT) \
 	mix.$(OBJEXT) lcao.$(OBJEXT) scf.$(OBJEXT) unocc.$(OBJEXT) \
-	static_pol.$(OBJEXT) pes.$(OBJEXT) td.$(OBJEXT) run.$(OBJEXT) \
-	main.$(OBJEXT)
+	static_pol.$(OBJEXT) geom_opt.$(OBJEXT) pes.$(OBJEXT) \
+	td.$(OBJEXT) run.$(OBJEXT) main.$(OBJEXT)
 octopus_OBJECTS = $(am_octopus_OBJECTS)
 octopus_DEPENDENCIES = ../liboct/liboct.a
 octopus_LDFLAGS =
@@ -164,8 +164,8 @@ am__objects_1 = global.$(OBJEXT) liboct.$(OBJEXT) io.$(OBJEXT) \
 	hartree.$(OBJEXT) states.$(OBJEXT) xc.$(OBJEXT) systm.$(OBJEXT) \
 	lasers.$(OBJEXT) hamiltonian.$(OBJEXT) eigen.$(OBJEXT) \
 	mix.$(OBJEXT) lcao.$(OBJEXT) scf.$(OBJEXT) unocc.$(OBJEXT) \
-	static_pol.$(OBJEXT) pes.$(OBJEXT) td.$(OBJEXT) run.$(OBJEXT) \
-	main.$(OBJEXT)
+	static_pol.$(OBJEXT) geom_opt.$(OBJEXT) pes.$(OBJEXT) \
+	td.$(OBJEXT) run.$(OBJEXT) main.$(OBJEXT)
 am_octopus_1d_OBJECTS = $(am__objects_1)
 octopus_1d_OBJECTS = $(am_octopus_1d_OBJECTS)
 octopus_1d_DEPENDENCIES = ../liboct/liboct.a

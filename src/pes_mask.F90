@@ -42,6 +42,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   complex(r8), allocatable :: wf1(:,:,:), wf2(:,:,:)
   real(r8) :: temp(3), vec
 
+  ! propagate wave-function in momentum space
   temp(:) = 2.0_r8*M_PI/(m%fft_n(:)*m%h(:))
   do ix = 1, m%fft_n(1)
     ixx(1) = pad_feq(ix, m%fft_n(1), .true.)
@@ -103,8 +104,8 @@ subroutine PES_mask_output(v, m, st, file)
   integer :: p, ik, ii, ix, iy, iz, ixx(3), iunit
   character(len=100) :: fn
   
-  integer,  parameter :: n = 300, ar_n = 90
-  real(r8), parameter :: step = 0.2_r8
+  integer,  parameter :: n = 600, ar_n = 90
+  real(r8), parameter :: step = 0.005_r8
 
   allocate( &
        spis (n,    st%st_start:st%st_end, st%nik), &
@@ -114,7 +115,6 @@ subroutine PES_mask_output(v, m, st, file)
   npoints = 0;  ar_npoints = 0
   
   temp(:) = 2.0_r8*M_PI/(m%fft_n(:)*m%h(:))
-
   do ix = 1, m%fft_n(1)
     ixx(1) = pad_feq(ix, m%fft_n(1), .true.)
     do iy = 1, m%fft_n(2)
@@ -164,7 +164,7 @@ subroutine PES_mask_output(v, m, st, file)
       open(iunit, status='unknown', file=trim(fn))
       do ix = 1, n
         if(npoints(ix) > 0) then
-          write(iunit, *)  (ix-1)*step, spis(ix, p, ik), npoints(ix)
+          write(iunit, *)  (ix-1)*step/units_out%energy%factor, spis(ix, p, ik), npoints(ix)
         end if
       end do
       call io_close(iunit)
@@ -175,7 +175,7 @@ subroutine PES_mask_output(v, m, st, file)
   open(iunit, status='unknown', file=trim(fn))
   do ix = 1, n
     if(npoints(ix) > 0) then
-      write(iunit, *)  (ix-1)*step, sum(spis(ix, :, :)), npoints(ix)
+      write(iunit, *)  (ix-1)*step/units_out%energy%factor, sum(spis(ix, :, :)), npoints(ix)
     end if
   end do
   call io_close(iunit)
