@@ -18,6 +18,14 @@
 #include "global.h"
 
 module run_prog
+use global
+
+use lcao
+use states
+use external_pot
+use hamiltonian
+use system
+use scf
 use unocc
 use static_pol
 use geom_opt

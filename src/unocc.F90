@@ -18,6 +18,12 @@
 #include "global.h"
 
 module unocc
+use global
+use oct_parser
+use liboct
+use mesh
+use states
+use system
 use eigen_solver
 
 implicit none

@@ -18,6 +18,13 @@
 #include "global.h"
 
 module states
+use global
+use oct_parser
+use io
+use linalg
+use math
+use mesh
+use functions
 use output
 
 implicit none

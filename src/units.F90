@@ -37,6 +37,7 @@
 
 module units
 use global
+use oct_parser
 
 implicit none
 

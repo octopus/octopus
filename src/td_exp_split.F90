@@ -20,7 +20,12 @@
 !!! This module contains routines necessary to the split operator
 !!! methods defined in td_exp
 module td_exp_split
+  use global
+  use linalg
+  use mesh
+  use states
   use hamiltonian
+  use system
 
   implicit none
 

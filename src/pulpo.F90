@@ -17,6 +17,7 @@
 
 module pulpo
   use global
+  use liboct
 
 contains
   subroutine pulpo_print()

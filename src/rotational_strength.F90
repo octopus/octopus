@@ -18,7 +18,11 @@
 #include "global.h"
 
 program rotational_strength
+  use global
+  use oct_parser
+  use units
   use spectrum
+
   implicit none
 
 

@@ -18,6 +18,12 @@
 #include "global.h"
 
 module static_pol
+use global
+use oct_parser
+use liboct
+use io
+use hamiltonian
+use system
 use scf
 
 implicit none

@@ -18,6 +18,7 @@
 #include "global.h"
 
 module spectrum
+use global
 use io
 use units
 

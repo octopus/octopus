@@ -20,6 +20,9 @@
 program xyzanim
   use global
   use liboct
+  use oct_parser
+  use io
+  use units
   use atom
 
   implicit none

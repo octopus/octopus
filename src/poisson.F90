@@ -18,6 +18,13 @@
 #include "global.h"
 
 module poisson
+  use global
+  use oct_parser
+  use mesh
+#ifdef HAVE_FFT
+  use fft
+  use cube_function
+#endif
   use functions
 
   implicit none

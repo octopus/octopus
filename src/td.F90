@@ -18,6 +18,12 @@
 #include "global.h"
 
 module timedep
+use global
+use oct_parser
+use mesh
+use states
+use hamiltonian
+use system
 use td_rti
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use PES

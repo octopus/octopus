@@ -18,6 +18,8 @@
 #include "global.h"
 
 module ps
+use global
+use liboct
 use io
 use spline
 use logrid

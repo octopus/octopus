@@ -34,7 +34,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
 #if defined(HAVE_BLAS)
   dotp = la_dot(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
 #else
-  dotp = sum(R_CONJ(f1)*f2)*m%vol_pp
+  dotp = dot_product(R_CONJ(f1), f2)*m%vol_pp
 #endif
 
 end function X(mf_dotp)
@@ -48,7 +48,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
 #if defined(HAVE_BLAS)
   nrm2 = la_nrm2(m%np, f(1), 1)*sqrt(m%vol_pp)
 #else
-  nrm2 = sqrt(sum(R_CONJ(f)*f)*m%vol_pp)
+  nrm2 = sqrt(dot_product(f)*m%vol_pp)
 #endif
 
 end function X(mf_nrm2)

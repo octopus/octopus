@@ -18,7 +18,12 @@
 #include "global.h"
 
 module system
+use global
+use atom
+use mesh
+use specie
 use states
+use output
 
 implicit none
 

@@ -18,6 +18,13 @@
 #include "global.h"
 
 module td_exp
+  use global
+  use oct_parser
+  use linalg
+  use math
+#ifdef HAVE_FFT
+  use cube_function
+#endif
   use td_exp_split
   
   implicit none

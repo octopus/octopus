@@ -18,6 +18,12 @@
 #include "global.h"
 
 module scf
+use global
+use oct_parser
+use units
+use states
+use hamiltonian
+use system
 use eigen_solver
 use mix
 use lcao

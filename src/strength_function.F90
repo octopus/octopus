@@ -18,6 +18,9 @@
 #include "global.h"
 
 program strength_function
+  use global
+  use oct_parser
+  use units
   use spectrum
 
   integer :: ierr

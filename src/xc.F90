@@ -18,6 +18,10 @@
 #include "global.h"
 
 module xc
+use global
+use oct_parser
+use linalg
+use mesh
 use poisson
 use states
 use vxc
