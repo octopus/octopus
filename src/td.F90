@@ -286,6 +286,19 @@ contains
 
     sub_name = 'td_run_zero_iter'; call push_sub()
 
+    ! create general subdir
+    call oct_mkdir(C_string("td.general"))
+
+    ! output static dipole (iter 0)
+    allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
+    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
+         dipole, multipole)
+    call io_assign(iunit)
+    open(iunit, status='unknown', file='td.general/multipoles')
+    call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
+    call io_close(iunit)
+    deallocate(dipole, multipole)
+
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. M_ZERO) then
       write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', td%delta_strength
@@ -330,19 +343,6 @@ contains
             td%pol(1:conf%dim)*sys%atom(j)%spec%z_val*td%delta_strength / sys%atom(j)%spec%weight
       enddo
     endif
-
-    ! create general subdir
-    call oct_mkdir(C_string("td.general"))
-
-    ! output static dipole (iter 0)
-    allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
-    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
-         dipole, multipole)
-    call io_assign(iunit)
-    open(iunit, status='unknown', file='td.general/multipoles')
-    call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
-    call io_close(iunit)
-    deallocate(dipole, multipole)
 
     ! output laser
     if(h%output_laser) then
