@@ -256,11 +256,8 @@ subroutine hamiltonian_init(h, sys)
     h%cutoff = h%cutoff * units_inp%energy%factor
     write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
                                   h%cutoff/units_out%energy%factor, units_out%energy%abbrev
-    call write_info(1)
-  elseif(h%cutoff > M_ZERO) then
-    write(message(1),'(a)') 'Input file requests a cutoff for the kinetic operator;'
-    write(message(2),'(a)') 'however cannot be applied in real-space. Ignored.'
-    call write_warning(2)
+    write(message(2),'(a)')        '      (only if DerivativesSpace = 1 is set)'
+    call write_info(2)
   endif
 
   call pop_sub()

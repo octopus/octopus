@@ -24,6 +24,11 @@ use units
 
 implicit none
 
+integer, parameter :: SPECTRUM_DAMP_NONE       = 0, &
+                      SPECTRUM_DAMP_LORENTZIAN = 1, &
+                      SPECTRUM_DAMP_POLYNOMIAL = 2, &
+                      SPECTRUM_DAMP_GAUSSIAN   = 3
+
 type spec_type
   real(r8) :: start_time  ! start time for the transform
   real(r8) :: end_time    ! when to stop the transform
@@ -97,13 +102,15 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   do j = is, ie
      jj = j - is
       select case(sf%damp)
-      case(0)
+      case(SPECTRUM_DAMP_NONE)
         dumpa(j) = 1._r8
-      case(1)
+      case(SPECTRUM_DAMP_LORENTZIAN)
         dumpa(j)= exp(-jj*dt*sf%damp_factor)
-      case(2)
+      case(SPECTRUM_DAMP_POLYNOMIAL)
         dumpa(j) = 1.0 - 3.0*(real(jj)/ntiter)**2                          &
             + 2.0*(real(jj)/ntiter)**3
+      case(SPECTRUM_DAMP_GAUSSIAN)
+        dumpa(j)= exp(-(jj*dt)**2*sf%damp_factor**2)
       end select
   enddo
 

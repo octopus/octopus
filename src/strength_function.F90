@@ -46,11 +46,13 @@ program strength_function
   call oct_parse_string("SpecDampMode", "exp", txt)
   select case(txt(1:3))
   case('exp')
-    sf%damp = 1
+    sf%damp = SPECTRUM_DAMP_LORENTZIAN
   case('pol')
-    sf%damp = 2
+    sf%damp = SPECTRUM_DAMP_POLYNOMIAL
+  case('gau')
+    sf%damp = SPECTRUM_DAMP_GAUSSIAN
   case default
-    sf%damp = 0
+    sf%damp = SPECTRUM_DAMP_NONE
   end select
 
   call oct_parse_double("SpecDampFactor", 0.15_r8, sf%damp_factor)

@@ -97,7 +97,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
     allocate(grad(3, m%np))
     k2 = sum(st%kpoints(:, ik)**2)
     do idim = 1, dim
-      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
+      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
       call R_FUNC(f_gradient)  (m, psi(:, idim), grad(:, :))
       do i = 1, m%np
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
@@ -114,7 +114,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   
   else
     do idim = 1, dim
-      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = h%cutoff)
+      call R_FUNC(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
     call R_FUNC(scal)(m%np*dim, R_TOTYPE(-M_HALF), Hpsi, 1)
   end if
