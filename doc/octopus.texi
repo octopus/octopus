@@ -138,6 +138,7 @@ External utilities
 * nbo2xyz::                     
 * excitations::                 
 * broad::                       
+* make_st::                       
 
 Examples
 
@@ -1602,7 +1603,7 @@ $$
 @end tex
 
 Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
-see http://www.phys.washington.edu/~bertsch/num3.ps)
+see @uref{http://www.phys.washington.edu/~bertsch/num3.ps})
 suggest the 4th order as especially suitable and stable.
 
 @item @code{2}: Lanczos approximation. Allows for larger time-steps.
@@ -2145,13 +2146,54 @@ M. Casida (@code{LinCasida}). This utility requires that a calculation
 of unoccupied states (@code{CalculationMode} = 3, 4) has been done before,
 and it outputs the results to the sub-directory "linear".
 
-@node  broad,  , excitations, External utilities
+@node  broad,  make_st, excitations, External utilities
 @section @code{broad}
 
 Generates a spectrum by broadening the excitations obtained by the @code{excitations} 
 utility. The parameters of the spectrum can be set using the variables
 @code{LinBroadening}, @code{MinEnergy}, @code{MaxEnergy}, and @code{EnergyStep}.
 
+@node  make_st, , broad, External utilities
+@section @code{make_st}
+
+@code{make_st} reads @code{tmp/restart.static} and replaces some of the
+Kohn-Sham states by Gaussians wave packets. The states which should be replaced are given in the @code{%MakeStates} section in the @code{inp} file and written to @code{tmp/restart.static.new}. (You probably want to copy that file to @code{tmp/restart.static} and use then @code{CalculationMode=5} or @code{6}.)
+
+@vindex{MakeStates}
+@example
+%MakeStates
+  ik | ist | idim | type | sigma | x0 | k
+%
+@end example
+
+The first values stand for
+
+@itemize @bullet
+@item @math{ik}: The @math{k} point (or the spin, if @code{spin-components=2}) of the state
+@item @math{ist}: The state to be replaced
+@item @math{idim}: The component of the state (if the wave functions have more than one component, i.e. when @code{spin-components=3} is used).
+@item The @math{type} of the wave packet; currently only @code{1} (Gaussian) is available
+@end itemize
+
+The next items depend on the type chosen.
+For a Gaussian wave packet, defined as
+
+@ifnottex
+ psi(x) = 1/sigma sqrt(1/2pi) exp(ik(x-x0)) exp(-(x-x0)^2/(2 sigma^2)),
+@end ifnottex
+@tex
+$$
+ \psi_0(x) = {1\over \sqrt{2\pi}\sigma} {\rm e}^{{\rm i} k (x-x_0)}{\rm e}^{-{(x-x_0)^2\over 2\sigma^2}},
+$$
+@end tex
+
+they are:
+
+@itemize @bullet
+@item @math{\sigma} the width of the Gaussian
+@item @math{k}: the @strong{k} vector. In 3D use @code{k1|k2|k3}.
+@item @math{x_0}: the coordinate where the Gaussian is initially centred. In 3D use @code{x01|x02|x03}.
+@end itemize
 
 
 @c **********************************************************************
