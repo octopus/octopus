@@ -310,6 +310,7 @@ fi
 # how to do it right
 LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 AC_SUBST(LINK)
+AC_SUBST(LDF90FLAGS)
 
 AC_CONFIG_FILES([Makefile 
 	liboct/Makefile src/Makefile doc/Makefile

@@ -51,7 +51,8 @@ rm -rf $RPM_BUILD_ROOT
   F90FLAGS="-nbs -pc80 -pad -align -O3 -tpp6 -I/home/marques/include" \
   CFLAGS="-Wall -O2 -I/home/marques/include" \
   LDFLAGS="-L/home/marques/lib -L/opt/intel/mkl/lib/32" \
-  LIB_LAPACK="-static -lmkl_lapack"
+  LIB_LAPACK="-lmkl_lapack" \
+  LDF90FLAGS="-static -lpthread"
 
 make
 (cd doc; make octopus.ps; gzip octopus.ps)

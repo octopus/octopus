@@ -35,9 +35,7 @@ NonLocalPotentialSpace = 0
 GridRefinement = 0
 RelativisticCorrection = 0
 
-XFamily = "LDA"
-XFunctional = "NREL"
-CFamily = "LDA"
+XFunctional = "LDA"
 CFunctional = "PZ81"
 
 MaximumIter = 200
