@@ -147,7 +147,7 @@ subroutine global_init()
 
   ierr = loct_parse_input('inp')
   if(ierr .ne. 0) then
-    ierr = loct_parse_init("-")
+    ierr = loct_parse_input("-")
     if(ierr .ne. 0) then
       message(1) = "Error initializing liboct"
       message(2) = "Can not open input file or standard input!"
