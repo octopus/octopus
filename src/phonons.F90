@@ -18,6 +18,7 @@
 #include "global.h"
 
 module phonons
+  use linalg
   use scf
 
   implicit none
@@ -141,7 +142,7 @@ contains
     call io_close(iunit)
 
     ! diagonalize DM
-    call diagonalise(ph%dim, ph%DM, ph%DM, ph%freq)
+    call deigensolve(ph%dim, ph%DM, ph%DM, ph%freq)
     
   end subroutine get_DM
 

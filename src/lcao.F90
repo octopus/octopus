@@ -18,6 +18,7 @@
 #include "global.h"
 
 module lcao
+  use linalg
   use hamiltonian
 
   implicit none
@@ -282,19 +283,14 @@ end subroutine lcao_end
 subroutine lcao_wf(sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(in) :: h
-  
+
   integer, parameter :: orbs_local = 2
 
   integer :: a, idim, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
   R_TYPE, allocatable :: hpsi(:,:)
-  R_TYPE, allocatable :: s(:,:)
+  FLOAT, allocatable :: ev(:)
   FLOAT :: uvpsi
-
-  ! variables for dsyev (LAPACK)
-  integer :: lwork, info
-  R_TYPE, allocatable :: work(:)
-  FLOAT, allocatable :: rwork(:), w(:)
 
   if(conf%dim.ne.3) return
   call push_sub('lcao_wf')
@@ -317,21 +313,12 @@ subroutine lcao_wf(sys, h)
   end do
   
   do ik = 1, sys%st%nik
+    allocate(ev(norbs))
+    call X(geneigensolve) (norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &
+         lcao_data%s(1:norbs, 1:norbs, ik), ev)
 
-    lwork = 5*norbs
-    allocate(work(lwork), w(norbs), rwork(max(1,3*norbs-2)), s(norbs, norbs))
-    s(1:norbs, 1:norbs) = lcao_data%s(1:norbs, 1:norbs, ik)
-#ifdef COMPLEX_WFNS
-    call zhegv (1, 'v', 'u', norbs, lcao_data%hamilt(1, 1, ik), norbs, s(1, 1), norbs, w(1), work(1), lwork, rwork(1), info)
-#else
-    call dsygv (1, 'v', 'u', norbs, lcao_data%hamilt(1, 1, ik), norbs, s(1, 1), norbs, w(1), work(1), lwork, info)
-#endif
-    if(info.ne.0) then
-      write(message(1),'(a,i5)') 'LAPACK "zhegv/dsygv" returned error code ', info
-      call write_fatal(1)
-    endif
-    sys%st%eigenval(1:sys%st%nst, ik) = w(1:sys%st%nst)
-    deallocate(work, w, s, rwork)
+    sys%st%eigenval(1:sys%st%nst, ik) = ev(1:sys%st%nst)
+
     sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base

@@ -18,41 +18,42 @@
 #include "global.h"
 
 module eigen_solver
-use hamiltonian
+  use linalg
+  use hamiltonian
 
-implicit none
+  implicit none
 
-type eigen_solver_type
-  integer :: es_type    ! which eigen solver to use
+  type eigen_solver_type
+    integer :: es_type    ! which eigen solver to use
 
-  ! for new conjugated gradients (es_type = 0)
-  FLOAT :: init_tol
-  FLOAT :: final_tol
-  integer  :: final_tol_iter
-  integer  :: es_maxiter  
+    ! for new conjugated gradients (es_type = 0)
+    FLOAT :: init_tol
+    FLOAT :: final_tol
+    integer  :: final_tol_iter
+    integer  :: es_maxiter  
 
-  ! Stores information about how well it performed.
-  FLOAT, pointer :: diff(:, :)
-  integer           :: matvec
-  integer           :: converged
-end type eigen_solver_type
+    ! Stores information about how well it performed.
+    FLOAT, pointer :: diff(:, :)
+    integer           :: matvec
+    integer           :: converged
+  end type eigen_solver_type
 
-integer, parameter :: RS_CG      = 0
+  integer, parameter :: RS_CG      = 0
 #ifdef HAVE_TRLAN
-integer, parameter :: RS_LANCZOS = 1
+  integer, parameter :: RS_LANCZOS = 1
 #endif
-integer, parameter :: RS_PLAN    = 2
+  integer, parameter :: RS_PLAN    = 2
 
   ! For the TRLan package
 #ifdef HAVE_TRLAN
-integer                         :: ik_trlan
-type(hamiltonian_type), pointer :: h_trlan
-type(mesh_type), pointer        :: m_trlan
-type(states_type), pointer      :: st_trlan
-type(system_type), pointer      :: sys_trlan
+  integer                         :: ik_trlan
+  type(hamiltonian_type), pointer :: h_trlan
+  type(mesh_type), pointer        :: m_trlan
+  type(states_type), pointer      :: st_trlan
+  type(system_type), pointer      :: sys_trlan
 #endif
 
-type(derivatives_type) :: filter
+  type(derivatives_type) :: filter
 
 contains
 
@@ -202,7 +203,7 @@ subroutine eigen_diagon_subspace(st, sys, h)
       end do
     end do eigenfunction_loop
 
-    call X(iagonalise) (st%nst, h_subspace, vec, st%eigenval(:, ik))
+    call X(eigensolve) (st%nst, h_subspace, vec, st%eigenval(:, ik))
 
     do i = 1, st%nst
       ! build new state

@@ -186,7 +186,7 @@ subroutine X(matexp_decomposition)(order, in, out, factor)
   FLOAT, allocatable :: w(:)
 
   allocate(aux(order, order), dd(order, order), w(order))
-  call X(iagonalise) (order, in, aux, w)
+  call X(eigensolve) (order, in, aux, w)
 
   dd = M_z0
   do n = 1, order

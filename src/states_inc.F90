@@ -496,7 +496,6 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   type(states_type), intent(in) :: st1, st2
 
   R_TYPE, allocatable :: a(:, :)
-  R_TYPE :: det
 
   call push_sub('states_mpdotp')
 

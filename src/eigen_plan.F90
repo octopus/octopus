@@ -167,7 +167,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         enddo
         
         ! Diagonalization in the subspace, by using LAPACK.
-        call X(iagonalise)(d2, h(1:d2, 1:d2), hevec(1:d2, 1:d2), tmp(1:d2))
+        call X(eigensolve)(d2, h(1:d2, 1:d2), hevec(1:d2, 1:d2), tmp(1:d2))
         
         ! Store the Ritz values as approximate eigenvalues.
         call dcopy(winsiz, tmp(1), 1, eigenval(nec+1), 1)

@@ -243,7 +243,7 @@ subroutine broyden_extrapolation(alpha, np, vin, vout, vnew, iter_used, f, df, d
   end do
 
   ! invert matrix beta
-  call dsyinvert(iter_used, iter_used, beta)
+  call dinvert(iter_used, beta)
 
   do i = 1, iter_used
     work(i) = dot_product(df(:, i), f)
@@ -335,7 +335,7 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   end if
 
   ! invert matrix A
-  call dsyinvert(iter_used, iter_used, a)
+  call dinvert(iter_used, a)
 
   ! compute new density
   vnew = vin
