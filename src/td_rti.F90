@@ -71,11 +71,11 @@ contains
     complex(r8), allocatable :: zpsi1(:,:,:,:)
     
     sub_name = 'td_rti1'; call push_sub()
-
+    
     allocate(aux(m%np, st%nspin))
-
+    
     call xpolate_pot(td%dt/2._r8, td%dt, m%np, st%nspin, &
-                     td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
+         td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
     
     h%VHartree = 0._r8; h%Vxc = aux
     allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
@@ -114,18 +114,10 @@ contains
     zpsi1 = st%zpsi ! store zpsi
     
     allocate(vhxc_t1(m%np, st%nspin))
-    select case(st%nspin)
-    case(1, 2)
-      do is = 1, st%nspin ! store Vhxc
-         Vhxc_t1(:, is) = h%VHartree(:) + h%Vxc(:, is)
-      end do
-    case(4)
-      do is = 1, 2 ! store Vhxc
-         Vhxc_t1(:, is) = h%VHartree(:) + h%Vxc(:, is)
-      end do
-      vhxc_t1(:, 3) = h%vxc(:, 3)
-      vhxc_t1(:, 4) = h%vxc(:, 4)
-    end select
+    do is = 1, min(2,st%nspin)
+      Vhxc_t1(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
+    end do
+    if(st%nspin == 4) vhxc_t1(:, 3:4) = h%vxc(:, 3:4)
     
     ! propagate dt with H(t-dt)
     do ik = 1, st%nik
@@ -142,15 +134,10 @@ contains
     
     ! store Vhxc at t
     allocate(vhxc_t2(m%np, st%nspin))
-    select case(st%nspin)
-    case(1, 2)
-      do is = 1, 2
-         Vhxc_t2(:, is) = h%VHartree(:) + h%Vxc(:, is)
-      end do
-    case(4)
-     vhxc_t2(:, 3) = h%vxc(:, 3)
-     vhxc_t2(:, 4) = h%vxc(:, 4)
-    end select
+    do is = 1, min(2,st%nspin)
+      Vhxc_t2(1:m%np, is) = h%Vhartree(1:m%np) + h%Vxc(1:m%np, is)
+    end do
+    if(st%nspin == 4) vhxc_t2(:, 3:4) = h%vxc(:, 3:4)
     
     ! propagate dt/2 with H(t-dt)
     h%Vhartree = 0._r8
@@ -185,7 +172,7 @@ contains
     allocate(aux(m%np, st%nspin))
 
     call xpolate_pot(td%dt, td%dt, m%np, st%nspin, &
-                     td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
+         td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), aux)
     
     ! propagate dt/2 with H(t-dt)
     h%Vhartree = 0._r8
@@ -213,8 +200,8 @@ contains
     sub_name = 'td_rti4'; call push_sub()
 
     call xpolate_pot(td%dt/2._r8, td%dt, m%np, st%nspin, &
-                     td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), h%vxc)
-
+         td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), h%vxc)
+    
     h%vhartree = 0._r8
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
@@ -237,7 +224,7 @@ contains
     call daxpy(np*dim, (t/dt)*(3._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot0, 1, pot, 1)
     call daxpy(np*dim, (t/dt)*(-2._r8)      + (t**2/dt**2)*(-1._r8),      pot1, 1, pot, 1)
     call daxpy(np*dim, (t/dt)*(1._r8/2._r8) + (t**2/dt**2)*(1._r8/2._r8), pot2, 1, pot, 1)
-
+    
   end subroutine xpolate_pot
 
 end subroutine td_rti

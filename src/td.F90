@@ -292,10 +292,11 @@ contains
     td%v_old(:, :, 3) = td%v_old(:, :, 2)
 
     ! we now apply the delta(0) impulse to the wf
-    if(td%delta_strength .ne. 0._r8) then
+    print *, td%delta_strength
+    if(td%delta_strength .ne. M_ZERO) then
       do i = 1, m%np
         call mesh_xyz(m, i, x)
-        c = exp(M_zI * td%delta_strength * sum(x(:)*td%pol(:)))
+        c = exp(M_zI * td%delta_strength * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
 
         sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
       end do

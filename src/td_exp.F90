@@ -37,7 +37,7 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
 contains
 
   subroutine fourth
-    integer :: order = 4
+    integer :: order
     complex(r8) :: zfact
     complex(r8), allocatable :: zpsi1(:,:), hzpsi1(:,:)
     integer :: i
@@ -52,7 +52,7 @@ contains
       zfact = zfact*(-M_zI*timestep)/i
       call zHpsi(h, sys%m, sys%st, sys, ik, zpsi1, hzpsi1, t)
       zpsi(1:,:) = zpsi(1:,:) + zfact*hzpsi1(:,:)
-      if(i .ne. order) zpsi1(1:,:) = hzpsi1(:,:)
+      if(i .ne. order) zpsi1(1:,:) = hzpsi1(1:,:)
     end do
     deallocate(zpsi1, hzpsi1)
 
