@@ -317,7 +317,7 @@ contains
   subroutine scf_write_iter
     call push_sub('scf_write_iter')
     
-    write(message(1),'(a)') '************'
+    write(message(1),'(a)') stars
     write(message(2),'(a,i5)') 'SCF CYCLE ITER #',iter
     write(message(3),'(2(a,es9.2))') &
        ' abs_dens = ', scf%abs_dens, ' abs_ev = ', scf%abs_ev
@@ -332,7 +332,7 @@ contains
     else
       call states_write_eigenvalues(stdout, st%nst, st)
     endif
-    write(message(1),'(a)') '************'
+    write(message(1),'(a)') stars
     write(message(2),'(a)')
     call write_info(2)
 

@@ -43,13 +43,14 @@ end type unocc_type
 
 contains
 
+! ---------------------------------------------------------
 integer function unocc_run(sys, h, fromScratch) result(ierr)
   type(system_type),      intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
   logical,                intent(inout) :: fromScratch
 
   type(eigen_solver_type) :: eigens
-  integer :: max_iter, iunit, err
+  integer :: iter, max_iter, iunit, err
   FLOAT   :: conv
   logical :: converged
 
@@ -69,7 +70,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   if(fromScratch) then
     call X(restart_read) ("tmp/restart_gs", sys%st, sys%m, err)
-    if(err.ne.0) then
+    if(err < 0) then
       message(1) = "Could not load tmp/restart_gs: Starting from scratch"
       call write_warning(1)
 
@@ -79,26 +80,46 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
     end if
   end if
 
-  ! setup hamiltonian (PROBABLY THIS SHOULD NOT BE DONE)
-  call states_fermi(sys%st, sys%m)
-  call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
-  
-  ! setup Hamiltonian
+  ! Setup Hamiltonian
   message(1) = 'Info: Setting up Hamiltonian.'
   call write_info(1)
   
+  call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
   call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
-  call states_fermi(sys%st, sys%m)                            ! occupations
   call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
   
-  call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, 1, converged)
-  
+
+  message(1) = ''
+  message(2) = stars
+  message(3) = "Starting calculation of unoccupied states"
+  call write_info(3)
+
+  do iter = 1, max_iter
+    call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, iter, converged)
+
+    write(message(1), '(a,i4,a,g15.6)') "Iter = ", iter, ";  Error = ", maxval(sqrt(eigens%diff**2))
+    call write_info(1)
+
+    ! write restart information.
+    call X(restart_write)("tmp/restart_unocc", sys%st, sys%m, err)
+    if(err.ne.0) then
+      message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
+      call write_fatal(1)
+    end if
+
+    if(maxval(abs(eigens%diff)) < eigens%final_tol) exit
+  end do
+
+  message(1) = stars
+  message(2) = ''
+  call write_info(2)
+
   ! write output file
   call io_assign(iunit)
   call loct_mkdir("static")
   open(iunit, status='unknown', file='static/eigenvalues')
   if(converged) then
-    write(iunit,'(a)') 'All unoccupied stated converged.'
+    write(iunit,'(a)') 'All unoccupied states converged.'
   else
     write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
   end if
@@ -114,21 +135,15 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
     call io_close(iunit)
   end if
   
-  ! write restart information.
-  call X(restart_write)("tmp/restart_unocc", sys%st, sys%m, err)
-  if(err.ne.0) then
-    message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
-    call write_fatal(1)
-  end if
-  
   ! output wave-functions
   call X(states_output) (sys%st, sys%m, sys%f_der, "static", sys%outp)
 
   call end_()
 contains
 
+  ! ---------------------------------------------------------
   subroutine init_()
-    integer :: max_iter, nus
+    integer :: nus
     FLOAT :: conv
 
     call push_sub('unocc_run')
@@ -138,6 +153,9 @@ contains
       message(1) = "Input: NumberUnoccStates must be > 0"
       call write_fatal(1)
     end if
+
+    call loct_parse_int("MaximumIter", 20, max_iter)
+    if(max_iter <= 0) max_iter = huge(max_iter)
 
     ! fix states: THIS IS NOT OK
     sys%st%nst = sys%st%nst + nus
@@ -154,10 +172,11 @@ contains
     sys%st%occ      = M_ZERO
 
     ! now the eigen solver stuff
-    call eigen_solver_init(eigens, sys%st, sys%m, 200)
+    call eigen_solver_init(eigens, sys%st, sys%m, 50)
 
   end subroutine init_
 
+  ! ---------------------------------------------------------
   subroutine end_()
     deallocate(sys%st%X(psi))
     call eigen_solver_end(eigens)

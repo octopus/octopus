@@ -114,9 +114,9 @@ FLOAT, private          :: time_stack(50)
 integer, private           :: no_sub_stack = 0
 #endif
 
-character(len=70), parameter, private :: stars =  &
+character(len=70), parameter :: stars =  &
     '**********************************************************************'
-character(len=68), parameter, private :: hyphens = &
+character(len=68), parameter :: hyphens = &
     '--------------------------------------------------------------------'
 
 contains

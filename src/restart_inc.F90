@@ -233,6 +233,7 @@ contains
           call write_warning(1)
 
           call states_generate_random(st, m, ist, ist)
+          st%occ(ist, ik) = M_ZERO
         end do
       end do
     end do

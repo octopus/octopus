@@ -94,8 +94,7 @@ contains
 #ifdef HAVE_MPI
     if(mpiv%node == 0) then
 #endif
-      write(iunit,'(/,a)') &
-         '**********************************************************************'
+      write(iunit,'(/,a)') stars
       write(iunit,'(a)') " Exchange and correlation:"
       do i = 1, 2
         call xc_functl_write_info(xcs%functl(i), iunit)
@@ -114,8 +113,7 @@ contains
         case (XC_OEP_FULL);   write(iunit, '(a)') '    Full OEP'
         end select
       end if
-      write(iunit,'(a,/)') &
-         '**********************************************************************'
+      write(iunit,'(a,/)') stars
       
 #ifdef HAVE_MPI
     end if

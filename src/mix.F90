@@ -213,7 +213,7 @@ subroutine mixing_broyden(smix, dim, np, nspin, vin, vout, vnew, iter)
   smix%vin_old = vin
   smix%f_old   = f
 
-  ! extrapotate new vector
+  ! extrapolate new vector
   iter_used = min(iter - 1, smix%ns)
   call broyden_extrapolation(smix%alpha, dim, np, nspin, vin, vout, vnew, iter_used, f, &
      smix%df(1:dim, 1:np, 1:nspin, 1:iter_used), &

@@ -19,6 +19,7 @@
 
 module td_rti
   use global
+  use math
   use mesh
   use states
   use hamiltonian

@@ -133,8 +133,7 @@ subroutine mesh_write_info(m, unit)
 
   call push_sub('mesh_write_info')
 
-  write(unit,'(/,a)') &
-    '**********************************************************************'
+  write(unit,'(/,a)') stars
   write(unit,'(a)') 'Mesh:'
   write(unit, '(a,a,1x)') '  Type = ', bs(m%box_shape)
 
@@ -178,8 +177,7 @@ subroutine mesh_write_info(m, unit)
     write(unit,'(a,f8.3)')'  k_z axis ', m%klat(3,3)*units_out%length%factor
   end if
 
-  write(unit,'(a,/)') &
-    '**********************************************************************'
+  write(unit,'(a,/)') stars
 
   call pop_sub()
 end subroutine mesh_write_info
