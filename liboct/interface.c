@@ -314,3 +314,23 @@ int F90_FUNC_(print_file, PRINT_FILE)
     fclose(pf); fflush(stdout); return 1;
   }
 }
+
+int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)
+     (char *name)
+{
+
+  FILE *pf;
+  int c, i;
+
+  pf = fopen(name, "r");
+  if (pf != NULL) {
+    i = 0;
+    while ((c = getc(pf)) != EOF) {
+      if (c == '\n') i++;
+    }
+    fclose(pf); return i;
+  }
+  else{
+    fclose(pf); return -1;
+  }
+}

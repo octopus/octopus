@@ -148,6 +148,10 @@ module liboct
       character(len=*), intent(in) :: filename
     end function print_file
 
+    integer function number_of_lines(filename)
+      character(len=*), intent(in) :: filename
+    end function number_of_lines
+
   end interface
 
   private :: oct_parse_string, oct_parse_block_string
