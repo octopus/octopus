@@ -106,7 +106,7 @@ module lib_oct
 
   interface loct_incomplete_gamma
     function oct_incomplete_gamma(a, x)
-      real(8) :: oct_incomplete, gamma
+      real(8) :: oct_incomplete_gamma
       real(8), intent(in) :: a, x
     end function oct_incomplete_gamma
     module procedure oct_incomplete_gamma4
