@@ -610,6 +610,7 @@ contains
 
     real(r8) :: field(3), x(3), r, &
                 vl, dvl, d, charge
+    real(r8), allocatable :: V(:), dV(:,:)
     integer  :: j, k, is
 
     acc(1:3) = 0.0_r8
@@ -636,6 +637,17 @@ contains
       end do
     end do
     
+    ! now the gradient of the Hartree + xc potential
+    allocate(V(sys%m%np), dV(3, sys%m%np))
+    do j = 1, sys%st%nspin
+      V(:) = sys%h%Vhartree(:) + sys%h%Vxc(:, j)
+      call dmesh_derivatives(sys%m, V, grad=dV)
+      do k = 1, sys%m%np
+        acc(:) = acc(:) - dV(:, k) * sys%st%rho(k, j) * sys%m%vol_pp
+      end do
+    end do
+    deallocate(V, dV)
+
     ! Adds the laser contribution
     call laser_field(td%no_lasers, td%lasers, t, field)
     charge = sum(sys%st%rho(:,:))*sys%m%vol_pp
