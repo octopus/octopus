@@ -32,6 +32,12 @@ program octopus
   if(conf%verbose > 20 .and. mpiv%node == 0) &
        ierr = print_file(C_string(SHARE_OCTOPUS//'/logo'))
 
+  ! Let us print the version
+  message(1) = ""
+  message(2) = "    Running octopus, version " + OCTOPUS_VERSION
+  message(3) = ""
+  call write_info(3)
+
   ! print date
   call date_and_time(values=val)
   write(message(1),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
