@@ -61,18 +61,14 @@ type states_type
   real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
   real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
 
-  integer :: natoms
-  type(atom_type), pointer :: atom(:)
 end type states_type
 
 contains
 
-subroutine states_init(st, m, val_charge, natoms, atom)
+subroutine states_init(st, m, val_charge)
   type(states_type), intent(inout) :: st
   type(mesh_type), intent(IN) :: m
   real(r8), intent(in) :: val_charge
-  integer, intent(in) :: natoms
-  type(atom_type), intent(in), target :: atom(:)
 
   real(r8) :: excess_charge, r
   integer :: nempty, i, j
@@ -171,9 +167,6 @@ subroutine states_init(st, m, val_charge, natoms, atom)
 
   st%st_start = 1; st%st_end = st%nst
   nullify(st%dpsi, st%zpsi, st%rho_core)
-
-  st%natoms = natoms
-  st%atom => atom
 
   call pop_sub()
 end subroutine states_init

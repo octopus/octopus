@@ -117,6 +117,12 @@ subroutine td_run(td, u_st, sys, h)
 
   ! Calculate initial forces and kinetic energy
   if(td%move_ions > 0) then 
+    if(td%iter > 0) then
+      call td_read_nbo()
+      call generate_external_pot(h, sys)
+      sys%eii = ion_ion_energy(sys%natoms, sys%atom)
+    end if
+
     call zforces(h, sys, td%iter*td%dt, td%no_lasers, td%lasers, reduce=.true.)
     sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
     select case(td%move_ions)
@@ -163,11 +169,7 @@ subroutine td_run(td, u_st, sys, h)
              endif
           enddo
       end select
-      do j=1, sys%natoms
-         x(ii, j, 1:3) = sys%atom(j)%x(1:3)
-         v(ii, j, 1:3) = sys%atom(j)%v(1:3)
-         f(ii, j, 1:3) = sys%atom(j)%f(1:3)
-      enddo
+
       call generate_external_pot(h, sys)
       sys%eii = ion_ion_energy(sys%natoms, sys%atom)
     endif
@@ -203,7 +205,14 @@ subroutine td_run(td, u_st, sys, h)
       endif
       sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
       ke(ii) = sys%kinetic_energy
-    endif
+
+      ! store data
+      do j=1, sys%natoms
+        x(ii, j, 1:3) = sys%atom(j)%x(1:3)
+        v(ii, j, 1:3) = sys%atom(j)%v(1:3)
+        f(ii, j, 1:3) = sys%atom(j)%f(1:3)
+      end do
+    end if
 
     ! If harmonic spectrum is desired, get the acceleration
     if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:3), td%dt*i)
@@ -501,11 +510,11 @@ contains
       write(iunit,'(1x)', advance='yes')
       
       ! second line: units
-      write(iunit,'(7a)') '#       ', &
-           'Energy in ',       trim(units_out%energy%abbrev),        &
+      write(iunit,'(9a)') '#       ', &
+           'Energy in ',       trim(units_out%energy%abbrev),   &
            ', Positions in ',  trim(units_out%length%abbrev),   &
-           ', Velocities in ', trim(units_out%velocity%abbrev),&
-           ', Forces in',      trim(units_out%force%abbrev)
+           ', Velocities in ', trim(units_out%velocity%abbrev), &
+           ', Forces in ',     trim(units_out%force%abbrev)
     end if
 
     write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
@@ -523,11 +532,48 @@ contains
     enddo
     do i=1, sys%natoms
        write(iunit, '(3es20.12)', advance='no') & 
-         f(i, 1:3)*units_out%length%factor/units_out%energy%factor
+         f(i, 1:3)/units_out%force%factor
     enddo
     write(iunit, '(1x)', advance='yes')
     
   end subroutine td_write_nbo
+
+  subroutine td_read_nbo() ! reads the pos and vel from .nbo file
+    logical :: found
+    integer :: i, iunit
+
+    inquire(file=trim(sys%sysname)//'.nbo', exist=found)
+    if(.not.found) then
+      message(1) = "Could not open file '"//trim(sys%sysname)//".nbo'"
+      message(2) = "Starting simulation from initial geometry"
+      call write_warning(2)
+      return
+    end if
+    
+    call io_assign(iunit)
+    open(iunit, file=trim(sys%sysname)//'.nbo', status='old')
+
+    read(iunit, *); read(iunit, *) ! skip header
+    do i = 0, td%iter - 1
+      read(iunit, *) ! skip previous iterations... sorry, but no seek in Fortran
+    end do
+    read(iunit, '(88x)', advance='no') ! skip unrelevant information
+
+    do i = 1, sys%natoms
+      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%x(1:3)
+      sys%atom(i)%x(:) = sys%atom(i)%x(:) * units_out%length%factor
+    end do
+    do i = 1, sys%natoms
+      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%v(1:3)
+      sys%atom(i)%v(:) = sys%atom(i)%v(:) * units_out%velocity%factor
+    end do
+    do i = 1, sys%natoms
+      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%f(1:3)
+      sys%atom(i)%f(:) = sys%atom(i)%f(:) * units_out%force%factor
+    end do
+
+    call io_close(iunit)
+  end subroutine td_read_nbo
 
   subroutine td_write_multipole(iunit, iter, t, dipole, multipole, header)
     integer, intent(in) :: iunit, iter

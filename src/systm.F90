@@ -70,7 +70,7 @@ subroutine system_init(s)
   enddo
 
   allocate(s%st)
-  call states_init(s%st, s%m, val_charge, s%natoms, s%atom)
+  call states_init(s%st, s%m, val_charge)
 
   ! find out if we need non-local core corrections
   s%st%nlcc = .false.
