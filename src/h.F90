@@ -26,6 +26,7 @@ use functions
 use mesh
 use mesh_function
 use geometry
+use specie
 use states
 use external_pot
 use poisson
@@ -49,6 +50,9 @@ public :: hamiltonian_type,   &
           dkinetic, zkinetic, &
           dh_calc_vhxc,       &
           zh_calc_vhxc
+#ifdef COMPLEX_WFNS
+public :: zso
+#endif
 
 
 type hamiltonian_type
