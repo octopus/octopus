@@ -43,6 +43,7 @@ function specie_init(s)
   end if
   allocate(s(nspecies))
 
+
   if(fdf_block('Species', iunit) ) then
     do i = 1, nspecies
       read(iunit, '(a)') str ! read the complete line
@@ -64,11 +65,17 @@ function specie_init(s)
         s(i)%Z_val = 0 
         
       case default ! a pseudopotential file
+#ifndef ONE_D
         s(i)%local = .false.
         allocate(s(i)%ps) ! allocate structure
         read(str, *) s(i)%label, s(i)%weight, s(i)%Z, lmax, lloc
-        
         call ps_init(s(i)%ps, s(i)%label, s(i)%Z, lmax, lloc, s(i)%Z_val)
+#else
+        s(i)%local = .true.
+        allocate(s(i)%ps)
+        read(str, *) s(i)%label, s(i)%weight, s(i)%z, s(i)%z_val
+        call ps_init_1D(s(i)%ps, s(i)%label, s(i)%Z, s(i)%Z_val )
+#endif
       end select
 
       s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
@@ -101,7 +108,11 @@ subroutine specie_end(ns, s)
       if(s(i)%ps%icore /= 'nc  ' .and. associated(s(i)%rhocore_fw)) then
         deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
       end if
+#ifndef ONE_D
       call ps_end(s(i)%ps)
+#else
+      call ps_end_1D(s(i)%ps)
+#endif
     end if
 
     if(associated(s(i)%local_fw)) then

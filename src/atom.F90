@@ -8,7 +8,12 @@ implicit none
 
 type atom_type
   type(specie_type), pointer :: spec ! pointer to specie
+#ifndef ONE_D
   real(r8) :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
+#else
+  real(r8) :: x(1), v(1), f(1)
+#endif
+
   logical :: move              ! should I move this atom in the optimization mode
 
   ! the mesh around a given atom...
@@ -99,9 +104,9 @@ function atom_init(a, ns, s)
     read(iunit) ! skip comment line
     xyz = .true.
   else if(.not. fdf_block("AtomVelocities", iunit)) then
-    a(:)%v(1) = 0._r8
-    a(:)%v(2) = 0._r8
-    a(:)%v(3) = 0._r8
+    do i=1, natoms
+       a(i)%v(:) = 0._r8
+    enddo
 
     l = .false.
   end if

@@ -60,6 +60,13 @@ program tddft
     call write_warning(1)
   end if
 
+  ! Sets the dimensionaliy of the problem.
+#ifdef ONE_D
+  conf%dim=1
+#else
+  conf%dim=3
+#endif
+
   ! Let us print our logo
   ! it is damn hard to print ascii-art in FORTRAN ;((
   if(conf%verbose > 20 .and. mpiv%node == 0) then

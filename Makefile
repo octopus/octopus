@@ -18,7 +18,12 @@ SUBDIRS = $(EXEC_DIR) $(LIB_DIR)
 LIBOCT = $(LIB_DIR)/liboct.a
 TDDFTLIBS:= -L$(LIB_DIR) $(FORLIBS)
 export TDDFTLIBS
+ifeq ($(MAKECMDGOALS),1d)
+CPPFLAGS:=$(CPPFLAGS) -D POINTER_SIZE=$(POINTER_SIZE) -D ONE_D
+else
 CPPFLAGS:=$(CPPFLAGS) -D POINTER_SIZE=$(POINTER_SIZE)
+endif
+
 
 # Pseudopotential generation code
 ATOM      = $(EXEC_DIR)/atm.x
@@ -34,6 +39,9 @@ LASOLIB   = liblaso.a
 # don't change anything from now on
 all: dirs $(LIBOCT)
 	cd src && $(MAKE) all EXEC_DIR=$(EXEC_DIR)
+
+1d: dirs $(LIBOCT)
+	cd src && $(MAKE) 1d EXEC_DIR=$(EXEC_DIR)
 
 $(LIBOCT):
 	cd liboct && $(MAKE) all LIB_DIR=$(LIB_DIR)

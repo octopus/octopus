@@ -3,16 +3,28 @@
 #                         Makefile for TDDFT                                  #
 #                                                                             #
 ###############################################################################
+ifeq ($(MAKECMDGOALS),1d)
+PROG_NAME = 1doctopus.x
+else
 PROG_NAME = octopus.x
+endif
 
 #############################################################################
 # modules                                                                   # 
 #############################################################################
 
+ifeq ($(MAKECMDGOALS),1d)
+F90MOD_SRC = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 \
+        fft.F90 ps_kb.F90 ps1D.F90 specie.F90 atom.F90 mesh1D.F90 \
+	hartree.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
+	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90
+else
 F90MOD_SRC = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 \
         fft.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 mesh3D.F90 \
 	hartree.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
 	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90
+endif
+
 F90MOD_OBJ= $(F90MOD_SRC:.F90=.o)
 
 SRCS_90 = ps_xc.F90 main.F90
@@ -61,6 +73,8 @@ what:
 tddft: $(ALL_OBJS)
 	$(FC) $(LDFLAGS) $(ALL_OBJS) \
 	  $(TDDFTLIBS) -o $(EXEC_DIR)/$(PROG_NAME) 
+
+1d: tddft 
 
 spectrum: $(SPECTRUM_OBJ)
 	$(FC) $(LDFLAGS) $(SPECTRUM_OBJ) \
