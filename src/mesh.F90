@@ -201,6 +201,9 @@ subroutine mesh_write_info(m, unit)
   write(message(4),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
       '   # outer mesh = ', m%nk
   call write_info(4, unit)
+
+  write(message(1),'(a,f9.3,a)') '  Grid Cutoff ['+trim(units_out%energy%abbrev)+'] = ', &
+                                 (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
       
   if (conf%periodic_dim > 0) then
     write(message(1),'(1x)')

@@ -1016,6 +1016,24 @@ tuned to suit the geometric configuration of the system.
               %Spacing
                 spacingx | spacingy | spacingz
               %
+     In plane-wave codes, the quality of the calculations is determined
+     by the "cutoff" energy: the larger the cutoff, the better the
+     calculation. This cutoff is defined as the kinetic energy of the
+     higuest-frequency plane wave used in the calculation. The spacing
+     is the equivalent parameter for real-space calculations. We may
+     establish a correspondance between the two magnitudes, that is, a
+     real-space mesh has a "Grid Cutoff" (this value is given on output)
+     which is the cutoff of the corresponding FFT grid. On 1D
+     calculations, the plane-wave \rm G vectors have the values:
+
+     \rm G = 2\pi \over Nhj, j = -N/2, \dots N/2,
+
+     where h is the grid spacing.  The cutoff is then G_max^2/2 = \pi^2
+     \over 2h^2.  For higuer dimensionality, one has to put the
+     coarsest h. Note that in this case this value does not correspond
+     to the highest possible kinetic energy of the plane-waves, but to
+     the the higuest kinetic energy of the plane waves of pure x, y or
+     z directions.
 
    * `DerivativesSpace' (integer, real_space) Defines in which space
      gradients and the Laplacian are calculated. Allowed values are:
