@@ -544,11 +544,11 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
           write(iunit, '(i4)', advance='no') j
           if(st%ispin == 3) then
             write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
-                 st%eigenval(j, ik+is)/units_out%energy%factor, oplus, '/', ominus
+                 st%eigenval(j, ik)/units_out%energy%factor, oplus, '/', ominus
             if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
           else
             write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-                 st%eigenval(j, ik)/units_out%energy%factor, o
+                 st%eigenval(j, ik+is)/units_out%energy%factor, o
             if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
           endif
         end do
