@@ -24,7 +24,7 @@ subroutine nbo2xyz(sampling)
 
   implicit none
 
-  integer :: sampling
+  integer, intent(in) :: sampling
 
   character(len=80) :: sysname, str, nbofile, xyzfile
   integer :: ierr, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
@@ -33,7 +33,6 @@ subroutine nbo2xyz(sampling)
   type(atom_classical_type), pointer :: catm(:)
   type(specie_type), pointer :: spec(:)
 
-  write(*,*) 'step1'
   ! Opens and parses the inp file through the liboct
   ierr = oct_parse_init(C_string('inp'), C_string('out.oct'))
   if(ierr .ne. 0) then
@@ -41,7 +40,6 @@ subroutine nbo2xyz(sampling)
     call write_fatal(1)
   end if
   
-  write(*,*) 'step2'
   ! Finds out if we want to be verbose or not.
   call oct_parse_int(C_string('verbose'), 30, conf%verbose)
   if(conf%verbose >= 999 .and. mpiv%node == 0) then
@@ -52,14 +50,12 @@ subroutine nbo2xyz(sampling)
   ! Sets the dimensionaliy of the problem.
   conf%dim=3
 
-  write(*,*) 'step3'
   ! Fixes the units.
   call units_init()
 
   ! Gets the system name
   call oct_parse_str('SystemName', 'system', sysname)
 
-  write(*,*)'step4'
   ! Sets the filenames
   nbofile = trim(sysname)//'.nbo'
   xyzfile = trim(sysname)//'-movie.xyz'
@@ -76,13 +72,11 @@ subroutine nbo2xyz(sampling)
   end if
   allocate(spec(nspecies))
 
-  write(*,*) 'step5'
   do i = 1, nspecies
     call oct_parse_block_str(str, i-1, 0, spec(i)%label)
     call oct_parse_block_double(str, i-1, 1, spec(i)%weight)
   end do
 
-  write(*,*) 'step6'
   ! Initializes the atom
   call atom_init(natoms, atm, ncatoms, catm, nspecies, spec)
 
