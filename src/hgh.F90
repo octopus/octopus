@@ -44,6 +44,8 @@ type hgh_type
   real(r8)         :: h(0:3, 1:3, 1:3)
   real(r8)         :: k(0:3, 1:3, 1:3)
 
+  type(valconf)    :: conf
+
   integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
   integer          :: l_max_occ ! Maximum l-value of the occupied wavefunctions
   real(r8)         :: occ(0:3)  ! Occupations of the pseudo-wavefunctions
@@ -179,7 +181,7 @@ function load_params(unit, params)
   integer                         :: load_params ! 0 if success, 
                                                  ! 1 otherwise.
 
-  integer :: i, iostat, j, k
+  integer :: i, iostat, j, k, ierr, confunit, sc
   character(len=200) :: line
 
   sub_name = 'load_params'; call push_sub()
@@ -189,7 +191,7 @@ function load_params(unit, params)
   params%rc = 0.0_r8; params%h = 0.0_r8; params%k = 0.0_r8
 
   ! reads occupations from file
-  read(unit, *) params%occ(0:3)
+  !read(unit, *) params%occ(0:3)
 
   ! Reads the file in a hopefully smart way
   iostat = 1; j = 5
@@ -203,6 +205,16 @@ function load_params(unit, params)
     load_params = 1
     call pop_sub(); return
   endif
+
+  call io_assign(confunit)
+  open(confunit, file = SHARE_OCTOPUS+"/PP/HGH/"+"configurations")
+  sc = 0; if(index(params%atom_name,'_').ne.0) sc = 1
+  call get_valconf(confunit, params%atom_name(1:2), sc, params%conf, ierr)
+  if(ierr.ne.0) then
+    load_params = 1
+    call pop_sub(); return
+  endif
+  params%occ(0:3) = params%conf%occ(1:4)
 
   read(unit,'(a)', iostat = iostat) line
   if(iostat .ne. 0) then

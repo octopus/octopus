@@ -5,10 +5,90 @@
   use global
   use vxc
 
+  implicit none
+
   private
   public :: atomxc, vhrtre, egofv
-  
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Next stuff is for the "valence_conf" data type, made to handle atomic configurations.
+  public :: valconf, write_valconf, read_valconf, valconf_null, get_valconf, VALCONF_STRING_LENGTH
+  character(len=1), parameter :: spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
+  integer, parameter :: VALCONF_STRING_LENGTH = 80
+  type valconf
+    integer           :: z
+    character(len=2)  :: symbol
+    integer           :: type   ! 0 for the most normal valence configuration, 1 for semicore.
+    integer           :: p      ! number of orbitals.
+    integer           :: n(6)   ! n quantum number
+    integer           :: l(6)   ! l quantum number
+    real(r8)          :: occ(6) ! occupations of each level
+  end type
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
   contains
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Subroutines to write and read valence configurations.
+  subroutine valconf_null(c)
+    type(valconf) :: c
+    c%z = 0; c%symbol = ""; c%type = 0; c%p = 0; c%n = 0; c%l = 0; c%occ = M_ZERO
+  end subroutine valconf_null
+
+  subroutine write_valconf(c, s)
+    type(valconf), intent(in) :: c
+    character(len=VALCONF_STRING_LENGTH) :: s
+    integer :: j
+    write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
+         (c%n(j),spec_notation(c%l(j)),c%occ(j),',',j=1,c%p)
+  end subroutine write_valconf
+
+  subroutine read_valconf(s, c)
+    character(len=VALCONF_STRING_LENGTH), intent(in) :: s
+    type(valconf), intent(out) :: c
+    integer :: j
+    character(len=1) :: lvalues(1:6)
+    read (s,'(i2,1x,a2,i1,1x,i1,1x,6(i1,a1,f6.3,1x))') c%z, c%symbol, c%type, c%p,&
+         (c%n(j),lvalues(j),c%occ(j),j=1,c%p)
+    do j = 1, c%p
+       select case(lvalues(j))
+       case('s'); c%l(j) = 0
+       case('p'); c%l(j) = 1
+       case('d'); c%l(j) = 2
+       case('f'); c%l(j) = 3
+       case default; stop 'Error'
+       end select
+    enddo
+  end subroutine read_valconf
+
+  subroutine get_valconf(unit, symbol, type, c, ierr)
+    integer, intent(in) :: unit
+    character(len=*), intent(in) :: symbol
+    integer, intent(in) :: type
+    type(valconf), intent(out) :: c
+    integer, intent(out) :: ierr
+
+    character(len=2) :: symb
+    character(len=VALCONF_STRING_LENGTH) :: string
+    integer :: i, typ
+
+    ierr = 1
+    call valconf_null(c)
+    101 do
+      read(unit,'(3x,a2,i1)',err=101,end=102) symb, typ
+      if(symb==symbol .and. typ == type) exit
+    enddo
+    backspace(unit)
+    read(unit,'(a)') string
+    call read_valconf(string, c)
+    ierr = 0
+    102 return
+  end subroutine get_valconf
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Finds total exchange-correlation energy and potential for a                 !
