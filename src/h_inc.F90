@@ -55,7 +55,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
 
   call R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
-  if(sys%nlpp) call R_FUNC(vnlpsi)  (m, st, sys, psi, Hpsi)
+  if(sys%nlpp) call R_FUNC(vnlpsi)  (ik, m, st, sys, psi, Hpsi)
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -123,19 +123,22 @@ subroutine R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
   call pop_sub(); return
 end subroutine R_FUNC(kinetic)
 
-subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
+subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   type(system_type), intent(IN) :: sys
   R_TYPE, intent(IN) :: psi(0:m%np, st%dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, st%dim)
 
-  integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm
+  integer :: i, ik, is, idim, ia, ikbc, jkbc, k, l, lm, add_lm
+  real(r8) :: x(conf%dim)
+  R_TYPE :: phase
   R_TYPE :: uVpsi
   R_TYPE, allocatable :: lpsi(:), lHpsi(:)
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
   R_TYPE, external :: R_DOT
+  
 
   sub_name = 'vnlpsi'; call push_sub()
 
@@ -146,9 +149,26 @@ subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
     ! do we have a pseudopotential, or a local pot?
     if(spec%local) cycle do_atm
 
+    ! calculate the phase factors exp(ik*x) 
+    ! they are necessary to get the correct periodicity 
+    ! for the nonlocal part of the pseudopotential
+    if (conf%periodic_dim/=0) then
+      allocate(atm%phases(atm%mps,st%nik))
+      do i=1,atm%mps
+	call mesh_xyz(m, atm%jxyz(i), x)
+	do k=1,st%nik
+  	  atm%phases(i,k)=exp(M_zI*sum(st%kpoints(:,k)*x(:)))
+	end do
+      end do
+    end if
+
     do_dim: do idim = 1, st%dim
       allocate(lpsi(atm%mps), lHpsi(atm%mps))
-      lpsi(:) = psi(atm%jxyz(:), idim)
+      if (conf%periodic_dim==0) then
+        lpsi(:) = psi(atm%jxyz(:), idim)
+      else
+        lpsi(:) = atm%phases(:,ik)*psi(atm%jxyz(:), idim)
+      end if
       lHpsi(:) = M_z0
       add_lm = 1
       do_l: do l = 0, spec%ps%l_max
@@ -156,14 +176,18 @@ subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
           add_lm = add_lm + (2*l + 1)
           cycle do_l
         end if
-        
+        	
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-               uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(:, add_lm, ikbc), 1, lpsi(:), 1) * &
-                       m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
-               call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
-            end do
+	      uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(:, add_lm, ikbc), 1, lpsi(:), 1) * &
+              	      m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
+              if (conf%periodic_dim==0) then
+	        call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
+	      else
+	        call R_FUNC(axpy) (atm%mps, uvpsi, R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
+	      end if
+           end do
           end do
 
           add_lm = add_lm + 1
