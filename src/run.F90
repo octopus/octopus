@@ -3,6 +3,7 @@
 module run_prog
 use system
 use hamiltonian
+use pulpo
 
 implicit none
 
@@ -22,16 +23,17 @@ integer, private, parameter :: &
      I_LCAO               =  7,  &
      I_PULPO              = 99
 
-integer, private, parameter :: M_START_STATIC_CALC             = 1, &
-                               M_RESUME_STATIC_CALC            = 2, &
-                               M_CALCULATE_UNOCC_STATES        = 3, &
-                               M_RESUME_UNOCC_STATES           = 4, &
-                               M_START_TD                      = 5, &
-                               M_RESUME_TD                     = 6, &
-                               M_START_STATIC_POL              = 7, &
-                               M_RESUME_STATIC_POL             = 8, &
-                               M_BO_MD                         = 9, &
-                               M_PULPO_A_FEIRA                 = 99
+integer, private, parameter :: &
+     M_START_STATIC_CALC             = 1, &
+     M_RESUME_STATIC_CALC            = 2, &
+     M_CALCULATE_UNOCC_STATES        = 3, &
+     M_RESUME_UNOCC_STATES           = 4, &
+     M_START_TD                      = 5, &
+     M_RESUME_TD                     = 6, &
+     M_START_STATIC_POL              = 7, &
+     M_RESUME_STATIC_POL             = 8, &
+     M_BO_MD                         = 9, &
+     M_PULPO_A_FEIRA                 = 99
 
 contains
 
@@ -72,22 +74,7 @@ subroutine run()
       call states_generate_random(sys%st, sys%m)
 
     case(I_PULPO)
-      message(1) = ''
-      message(2) = 'PULPO A FEIRA:'
-      message(3) = ''
-      message(4) = 'Ingredientes: Para 4 personas - 2 kg. de pulpo  - 2 kg. de patatas '
-      message(5) = '- 100 grs. de pimentón picante - 100 grs. de sal gorda - aceite'
-      message(6) = ''
-      message(7) = 'Preparación: Se lava el pulpo en agua fría, se pone una olla de cobre'
-      message(8) = 'con agua al fuego y cuando rompa a hervir se coge el pulpo, se mete y '
-      message(9) = 'se saca del agua tres veces dejando que en cada intervalo vuelva a'
-      message(10) = 'hervir el agua. Se deja cocer el pulpo durante unos 20 minutos '
-      message(11) = 'retirándolo del fuego y dejándolo reposar durante 5 minutos. A'
-      message(12) = 'continuación, se quita del agua y se corta en trozos finos con '
-      message(13) = 'unas tijeras. Para servirlo se pone en unos platos de madera '
-      message(14)= 'condimentándolo por este orden: sal, pimentón, aceite y se añaden '
-      message(15)= 'unos cachelos (Patatas).'
-      call write_info(15)
+      call pulpo_print()
 
     case default
       write(message(1), '(a,i3,a)') "Instruction ", i_stack(instr), " not defined!"
