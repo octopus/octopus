@@ -88,6 +88,7 @@ subroutine mesh_init(m, natoms, atom)
   type(atom_type), pointer, optional :: atom(:)
 
   integer :: i, j, k, morder
+  logical :: fft_optimize
 
   sub_name = 'mesh_init'; call push_sub()
 
@@ -102,9 +103,10 @@ subroutine mesh_init(m, natoms, atom)
   j = 3
 #endif
 
+  call oct_parse_logical(C_string("FFTOptimize"), .true., fft_optimize)
   m%fft_n(:)  = 2*m%nr(:) + 1
-  do i = 1, j
-    if(m%fft_n(i).ne.1) call oct_fft_optimize(m%fft_n(i), 7, 1) ! always ask for an odd number
+  do i = 1, j ! always ask for an odd number
+     if(m%fft_n(i).ne.1 .and. fft_optimize) call oct_fft_optimize(m%fft_n(i), 7, 1)
   end do
   m%hfft_n = m%fft_n(1)/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
@@ -120,7 +122,7 @@ subroutine mesh_init(m, natoms, atom)
   m%fft_n2 = 1
   do i = 1, min(j, conf%dim)
     m%fft_n2(i) = 2*nint(m%fft_alpha*maxval(m%nr)) + 1
-    call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
+    if(fft_optimize) call oct_fft_optimize(m%fft_n2(i), 7, 1) ! always ask for an odd number
   end do
   do i = j+1, 3 ! for periodic systems
     m%fft_n2(i) = m%fft_n(i)

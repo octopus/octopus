@@ -124,29 +124,36 @@ contains
     alpha = zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1), w(:, :))
     f(:, :) = w(:, :) - alpha*v(1:sys%m%np, 1:sys%st%dim, 1)
     hm = M_z0; hm(1, 1) = alpha
+    beta = zstates_nrm2(sys%m, sys%st%dim, f)
     do n = 1, korder - 1
-       beta = zstates_nrm2(sys%m, sys%st%dim, f)
        v(1:sys%m%np, 1:sys%st%dim, n + 1) = f(1:sys%m%np, 1:sys%st%dim)/beta
        hm(n+1, n) = beta
        call zhpsi(h, sys%m, sys%st, sys, ik, &
             v(0:sys%m%np, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
        hh = M_z0
        do nn = n, n + 1 ! Previous ones should be nil for hermitian hamiltonians.
+       !do nn = 1, n + 1
           hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:, :, nn), w)
        enddo
        f = w - v(1:, :, n)*hh(n) - v(1:, :, n+1)*hh(n+1)
+       !f = w
+       !do nn = 1, n + 1
+       !   f = f - v(1:, :, nn)*hh(nn)
+       !enddo
        do nn = n, n + 1
           hm(nn, n+1) = hh(nn)
        enddo
+       !do nn = 1, n  + 1
+       !   hm(nn, n + 1) = hh(nn)
+       !enddo
        call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep)
        res = abs(beta*abs(expo(1, n+1)))
-       !write(*, *) n + 1, res
-       if(n>1 .and. res<tol) exit
+       beta = zstates_nrm2(sys%m, sys%st%dim, f)
+       if(res<tol .or. beta < 1.0e-12_r8) exit
     enddo
     order = min(korder, n + 1)
     !if(present(lanczos_order)) lanczos_order = order
-    !write(*, *) 'Order = ', order
-    if(res > tol) then
+    if(res > tol .and. beta > 1.0e-12_r8) then
       write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
       call write_warning(1)
     endif
@@ -255,18 +262,20 @@ contains
     call pop_sub(); return
   end subroutine kinetic
 
-  subroutine non_local_pp(m, dt, order)
+  subroutine non_local_pp (m, dt, order)
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: dt
     logical, intent(in) :: order
 
-    integer :: step, ia, ia_start, ia_end, l, l_start, l_end, lm, add_lm, idim
-    integer :: ikbc, jkbc, kbc_start, kbc_end
-    complex(r8) :: uVpsi, ctemp
+    integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm, &
+               ia_start, ia_end, step, l_start, l_end, kbc_start, kbc_end
+    complex(r8) :: uvpsi, p2, ctemp
+    complex(r8), allocatable :: lpsi(:), lhpsi(:), initzpsi(:, :)
     type(atom_type), pointer :: atm
     type(specie_type), pointer :: spec
+    complex(r8), external :: zdotc
 
-    sub_name = 'non_local_pp'; call push_sub()
+    sub_name = 'vnlpsi'; call push_sub()
 
     if(order) then
       step = 1;  ia_start = 1; ia_end = sys%natoms
@@ -274,46 +283,53 @@ contains
       step = -1; ia_start = sys%natoms; ia_end = 1
     end if
 
+    allocate(initzpsi(0:m%np, 1:sys%st%dim))
+    initzpsi = zpsi
+    ! Ionic pseudopotential
     do_atm: do ia = ia_start, ia_end, step
       atm => sys%atom(ia)
       spec => atm%spec
-
+      ! do we have a pseudopotential, or a local pot?
       if(spec%local) cycle do_atm
 
-      if(order) then
-        l_start   = 0; l_end   = spec%ps%L_max
-        kbc_start = 1; kbc_end = spec%ps%kbc
-        add_lm = 1
-      else
-        l_start   = spec%ps%L_max; l_end = 0
-        kbc_start = spec%ps%kbc; kbc_end = 1
-        add_lm = (spec%ps%L_max + 1)**2
-      end if
-
-      do_l: do l = l_start, l_end, step
-        if (l == spec%ps%L_loc) then
-          add_lm = add_lm + step*(2*l + 1)
-          cycle do_l
+      do_dim: do idim = 1, sys%st%dim
+        allocate(lpsi(atm%mps), lHpsi(atm%mps))
+        lpsi(:) = initzpsi(atm%jxyz(:), idim)
+        lHpsi(:) = M_z0
+        if(order) then
+          l_start   = 0; l_end   = spec%ps%L_max
+          kbc_start = 1; kbc_end = spec%ps%kbc
+          add_lm = 1
+        else
+          l_start   = spec%ps%L_max; l_end = 0
+          kbc_start = spec%ps%kbc; kbc_end = 1
+          add_lm = (spec%ps%L_max + 1)**2
         end if
+        do_l: do l = l_start, l_end, step
+          if (l == spec%ps%L_loc) then
+            add_lm = add_lm + (2*l + 1)*step
+            cycle do_l
+          end if
 
-        do_lm: do lm = -l*step, l*step, step
-          do ikbc = kbc_start, kbc_end, step
-            do jkbc = kbc_start, kbc_end, step
-              do idim = 1, sys%st%dim
-                 uVpsi = sum(atm%zuV(:, add_lm, ikbc)*zpsi(atm%Jxyz(:), idim))*sys%m%vol_pp
-                 ctemp = uVpsi * (exp(-M_zI*dt*atm%zuVu(add_lm, ikbc, jkbc)) - 1.0_r8)
-                 zpsi(atm%Jxyz(:), idim) = zpsi(atm%Jxyz(:), idim) + &
-                     ctemp * atm%zuV(:, add_lm, jkbc)
-              enddo
+          do_m: do lm = -l*l_start, l*l_end, step
+            do ikbc = kbc_start, kbc_end, step
+              do jkbc = kbc_start, kbc_end, step
+                 p2 = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, atm%zuv(:, add_lm, ikbc), 1)*m%vol_pp
+                 ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*(-M_zI*dt)
+                 uvpsi = zdotc(atm%mps, atm%zuv(:, add_lm, ikbc), 1, lpsi(:), 1) * m%vol_pp* &
+                       (exp(ctemp) - (M_ONE, M_ZERO))/p2
+                 call zaxpy (atm%mps, uvpsi, atm%zuv(:, add_lm, jkbc), 1, lHpsi(:), 1)
+              end do
             end do
-          end do
-
-          add_lm = add_lm + step
-        end do do_lm
-      end do do_l
-
+            add_lm = add_lm + step
+          end do do_m
+        end do do_l
+        zpsi(atm%jxyz(:), idim) = zpsi(atm%jxyz(:), idim) + lhpsi(:)
+        deallocate(lpsi, lHpsi)
+      end do do_dim
     end do do_atm
 
+    deallocate(initzpsi)
     call pop_sub(); return
   end subroutine non_local_pp
 

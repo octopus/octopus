@@ -302,19 +302,12 @@ contains
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. M_ZERO) then
       write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', td%delta_strength
-      write(message(2),'(a,f11.6)')  '      Ground-State energy    = ',h%etot
+      call write_info(1)
       do i = 1, m%np
         call mesh_xyz(m, i, x)
         c = exp(M_zI * td%delta_strength * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
         sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
       end do
-      ! update density
-      call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-      ! update hamiltonian and eigenvalues (fermi is *not* called)
-      call zhamiltonian_setup(h, sys%m, sys%st, sys)
-      call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)
-      write(message(3),'(a,f11.6)')  '      Initial energy         = ', h%etot
-      call write_info(3)
     end if
 
     select case(sys%st%ispin)
@@ -431,42 +424,49 @@ contains
 end subroutine td_run
 
 !!$subroutine td_check_trotter(td, sys, h)
-!!$  type(td_type), intent(in) :: td
-!!$  type(system_type), intent(in) :: sys
+!!$  type(td_type), intent(inout)          :: td
+!!$  type(system_type), intent(in)         :: sys
 !!$  type(hamiltonian_type), intent(inout) :: h
 !!$
-!!$  integer :: unit, order, i
+!!$  integer :: unit, order, i, j
 !!$  complex(r8), allocatable :: expzpsi(:, :), goodzpsi(:, :), hzpsi(:, :)
-!!$  real(r8) :: res(8)
+!!$  real(r8) :: res(8), dt
+!!$  complex(r8) :: r
 !!$
 !!$  call io_assign(unit)
 !!$  open(unit, file = 'td_check')
+!!$  close(unit)
 !!$
-!!$  allocate(expzpsi(0:sys%m%np, sys%st%dim), goodzpsi(0:sys%m%np, sys%st%dim), &
-!!$           hzpsi(sys%m%np, sys%st%dim))
-!!$  do i = 1, 5001, 25
+!!$  allocate(expzpsi (0:sys%m%np, sys%st%dim), &
+!!$           goodzpsi(0:sys%m%np, sys%st%dim), &
+!!$           hzpsi   (  sys%m%np, sys%st%dim))
+!!$
+!!$ do i = -300, 100, 10
+!!$
+!!$     ! Calculate the "good" valee
+!!$
+!!$     dt = exp(real(i, r8)/100._r8 * log(10.0_r8))
+!!$     write(*, *) 'Calculating the "good" value...'
 !!$     goodzpsi = sys%st%zpsi(:, :, 1, 1)
-!!$     call td_dtexp(h, sys, td, 1, goodzpsi, td%dt*i, 0.0_r8, &
-!!$                   exp_method = LANCZOS_EXPANSION, &
-!!$                   lanczos_tol = 10.0_r8**(-8),    &
-!!$                   expansion_order = 100)
+!!$     td%lanczos_tol = 1.0e-14_r8
+!!$     td%exp_order   = 64
+!!$     td%exp_method  = LANCZOS_EXPANSION
+!!$     call td_dtexp(h, sys, td, 1, goodzpsi, dt, 0.0_r8)
+!!$     !goodzpsi(:, :) = exp(-M_zI*dt*sys%st%eigenval(1, 1))*sys%st%zpsi(:, :, 1, 1)
+!!$     write(*, *) 'Done.'
 !!$
-!!$        expzpsi = sys%st%zpsi(:, :, 1, 1)
-!!$        call zhpsi(h, sys, 1, expzpsi, hzpsi)
-!!$        !write(*, *) zstates_dotp(sys%m, sys%st%dim, hzpsi, expzpsi(1:sys%m%np, 1:sys%st%dim)), &
-!!$        !           sys%st%eigenval(1, 1)
-!!$        call td_dtexp(h, sys, td, 1, expzpsi, td%dt*i, 0.0_r8, &
-!!$                      exp_method = CHEBYSHEV, &
-!!$        expzpsi = expzpsi - goodzpsi
-!!$        res(order) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
-!!$
-!!$        expzpsi = sys%st%zpsi(:, :, 1, 1)
-!!$        call td_dtexp(h, sys, td, 1, expzpsi, td%dt*i, 0.0_r8, &
-!!$                      exp_method = FOURTH_ORDER, &
-!!$                      expansion_order = 8)
-!!$        expzpsi = expzpsi - goodzpsi
-!!$        res(2) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
-!!$        write(unit,'(21es12.4)') td%dt*i, (res(order), order = 1,2)
+!!$     !do j = 1, 8
+!!$       expzpsi = sys%st%zpsi(:, :, 1, 1)
+!!$       td%exp_order   = 20
+!!$       td%lanczos_tol = 1.0e-4_r8
+!!$       td%exp_method  = SUZUKI_TROTTER
+!!$       call td_dtexp(h, sys, td, 1, expzpsi,  dt, 0.0_r8)
+!!$            expzpsi = expzpsi - goodzpsi
+!!$       res(1) = zstates_nrm2(sys%m, sys%st%dim, expzpsi(1:sys%m%np, 1:sys%st%dim))
+!!$     !enddo
+!!$       open(unit, file='td_check', position='append')
+!!$       write(unit, '(2es18.6, i5)') dt, res(1), order
+!!$       close(unit)
 !!$  end do
 !!$
 !!$  deallocate(expzpsi, goodzpsi)

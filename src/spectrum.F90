@@ -151,7 +151,7 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
     open(iunit, file=out_file, status='unknown')
     ! should output units, etc...
     do i = 0, sf%no_e
-      write(iunit,*) (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
+      write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
            sf%sp(i, :) * units_out%energy%factor
     end do
     call io_close(iunit)
@@ -253,7 +253,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
     open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
-      write(iunit,*) (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
+      write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
            sh%sp(i) * units_out%energy%factor
     end do
     call io_close(iunit)
@@ -315,7 +315,7 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
     open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
-      write(iunit,*) (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
+      write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
            sh%sp(i) * units_out%energy%factor
     end do
     call io_close(iunit)
