@@ -86,7 +86,7 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
      dipole(:, i) = dipole(:, i) - dipole(0, i)
   end do
 
-  sf%no_e = s%max_energy / s%energy_step
+  sf%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sf%sp(0:sf%no_e, sf%nspin))
   sf%sp = 0._r8
   sf%alpha = 0._r8; sf%alpha2 = 0._r8; sf%ewsum = 0._r8
@@ -107,9 +107,9 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
       
       select case(sf%transform)
       case(1)
-        x = sin(k*s%energy_step*jj*dt)
+        x = sin((k*s%energy_step + s%min_energy)*jj*dt)
       case(2)
-        x = cos(k*s%energy_step*jj*dt)
+        x = cos((k*s%energy_step + s%min_energy)*jj*dt)
       end select
 
       do isp = 1, sf%nspin
@@ -144,7 +144,7 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
     open(iunit, file=out_file, status='unknown')
     ! should output units, etc...
     do i = 0, sf%no_e
-      write(iunit,*) i*s%energy_step / units_out%energy%factor, &
+      write(iunit,*) (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
            sf%sp(i, :) * units_out%energy%factor
     end do
     call io_close(iunit)
@@ -152,16 +152,17 @@ subroutine spectrum_strength_function(sysname, out_file, s, sf, print_info)
 
   ! print some info
   if(print_info) then
-    write(message(1),'(a,i8)')    'Number of spin       = ', sf%nspin
-    write(message(2),'(a,i8)')    'Number of time steps = ', ntiter
-    write(message(3),'(a,i4)')    'SpecTransformMode    = ', sf%transform
-    write(message(4),'(a,i4)')    'SpecDampMode         = ', sf%damp
-    write(message(5),'(a,f10.4)') 'SpecDampFactor       = ', sf%damp_factor * units_out%time%factor
-    write(message(6),'(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
-    write(message(7),'(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(message(8),'(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
-    write(message(9),'(a,f10.4)') 'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
-    call write_info(9)
+    write(message(1), '(a,i8)')    'Number of spin       = ', sf%nspin
+    write(message(2), '(a,i8)')    'Number of time steps = ', ntiter
+    write(message(3), '(a,i4)')    'SpecTransformMode    = ', sf%transform
+    write(message(4), '(a,i4)')    'SpecDampMode         = ', sf%damp
+    write(message(5), '(a,f10.4)') 'SpecDampFactor       = ', sf%damp_factor * units_out%time%factor
+    write(message(6), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
+    write(message(7), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
+    write(message(8), '(a,f10.4)') 'SpecMinEnergy        = ', s%min_energy   / units_inp%energy%factor
+    write(message(9), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
+    write(message(10),'(a,f10.4)') 'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+    call write_info(10)
 
     message(1) = ""
     write(message(2),'(a,f16.6)') 'Electronic sum rule  = ', sf%ewsum
@@ -226,14 +227,14 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
   deallocate(ddipole)
 
   ! now we Fourier transform
-  sh%no_e = s%max_energy / s%energy_step
+  sh%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sh%sp(0:sh%no_e))
   sh%sp = 0._r8
   
   do i = 0, sh%no_e
     c = M_z0
     do j = is, ie
-      c = c + exp(M_zI*i*s%energy_step*j*dt)*dipole(j)
+      c = c + exp(M_zI*(i*s%energy_step + s%min_energy)*j*dt)*dipole(j)
     end do
     sh%sp(i) = abs(c)**2
   end do
@@ -245,7 +246,7 @@ subroutine spectrum_hs_from_mult(sysname, out_file, s, sh, print_info)
     open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
-      write(iunit,*) i*s%energy_step / units_out%energy%factor, &
+      write(iunit,*) (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
            sh%sp(i) * units_out%energy%factor
     end do
     call io_close(iunit)
@@ -288,14 +289,14 @@ subroutine spectrum_hs_from_acc(sysname, out_file, s, sh, print_info)
   end do
 
   ! now we Fourier transform
-  sh%no_e = s%max_energy / s%energy_step
+  sh%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sh%sp(0:sh%no_e))
   sh%sp = 0._r8
   
   do i = 0, sh%no_e
     c = M_z0
     do j = is, ie
-      c = c + exp(M_zI*i*s%energy_step*j*dt)*acc(j)
+      c = c + exp(M_zI*(i*s%energy_step + s%min_energy)*j*dt)*acc(j)
     end do
     sh%sp(i) = abs(c)**2
   end do
@@ -307,7 +308,7 @@ subroutine spectrum_hs_from_acc(sysname, out_file, s, sh, print_info)
     open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
-      write(iunit,*) i*s%energy_step / units_out%energy%factor, &
+      write(iunit,*) (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
            sh%sp(i) * units_out%energy%factor
     end do
     call io_close(iunit)
