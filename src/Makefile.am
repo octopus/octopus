@@ -47,7 +47,7 @@ function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 spe
                          ps.F90 spline.F90 math.F90 fft.F90 mesh.F90 states.F90 systm.F90 \
                          tm.F90 hgh.F90 ps_kb.F90 ps_xc.F90 mix.F90 dx.F90 function_to_dx.F90
 function_to_dx_LDADD   = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
-nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 specie.F90 nbo2xyz.F90
+nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
 nbo2xyz_LDADD   = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning

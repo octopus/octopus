@@ -145,7 +145,7 @@ function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 spe
                          tm.F90 hgh.F90 ps_kb.F90 ps_xc.F90 mix.F90 dx.F90 function_to_dx.F90
 
 function_to_dx_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
-nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 specie.F90 nbo2xyz.F90
+nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
 nbo2xyz_LDADD = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning
@@ -184,8 +184,7 @@ hs_from_mult_OBJECTS = $(am_hs_from_mult_OBJECTS)
 hs_from_mult_DEPENDENCIES = ../liboct/liboct.a
 hs_from_mult_LDFLAGS =
 am_nbo2xyz_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) liboct.$(OBJEXT) \
-	units.$(OBJEXT) atom.$(OBJEXT) specie.$(OBJEXT) \
-	nbo2xyz.$(OBJEXT)
+	units.$(OBJEXT) atom.$(OBJEXT) nbo2xyz.$(OBJEXT)
 nbo2xyz_OBJECTS = $(am_nbo2xyz_OBJECTS)
 nbo2xyz_DEPENDENCIES = ../liboct/liboct.a
 nbo2xyz_LDFLAGS =
