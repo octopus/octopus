@@ -23,7 +23,7 @@ use io
 use units
 use spline
 use logrid
-use kb
+use atomic
 
 #if defined(ONE_D)
 #  include "ps1D.F90"

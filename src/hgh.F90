@@ -23,7 +23,7 @@ use global
 use liboct
 use io
 use units
-use kb
+use atomic
 use logrid
 
 implicit none

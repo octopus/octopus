@@ -1,176 +1,269 @@
 #include "config_F90.h"
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! This module includes a set of subroutines needed by (and only by) init_kb   !
-! it should be rewritten (implicit none does not work!)                       !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  module kb
+  module atomic
 
   use global
+  use vxc
 
+  private
+  public :: atomxc, vhrtre, egofv
+  
   contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! subroutine to generate a smooth local pseudopotential,                      !
-! and its charge density.                                                     !
+! Finds total exchange-correlation energy and potential for a                 !
+! spherical electron density distribution.                                    !
+! This version implements the Local (spin) Density Approximation and          !
+! the Generalized-Gradient-Aproximation with the explicit mesh               !
+! functional method of White & Bird, PRB 50, 4954 (1994).                    !
+! Gradients are defined by numerical derivatives, using 2*NN+1 mesh         ! 
+!   points, where NN is a parameter defined below                             !
+! Coded by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.              !
+!                                                                             !
+! CHARACTER*(*) FUNCTL : Functional to be used:                               !
+!              LDA or LSD => Local (spin) Density Approximation           !
+!                     GGA => Generalized Gradient Corrections             !
+!                                Uppercase is optional                        !
+! CHARACTER*(*) AUTHOR : Parametrization desired:                             !
+!     CA or PZ => LSD Perdew & Zunger, PRB 23, 5075 (1981)                !
+!         PW92 => LSD Perdew & Wang, PRB, 45, 13244 (1992). This is       !
+!                     the local density limit of the next:                    !
+!          PBE => GGA Perdew, Burke & Ernzerhof, PRL 77, 3865 (1996)      !
+!                     Uppercase is optional                                   !
+! INTEGER IREL         : Relativistic exchange? (0=>no, 1=>yes)               !
+! INTEGER NR           : Number of radial mesh points                         !
+! INTEGER MAXR         : Physical first dimension of RMESH, DENS and VXC      !
+! REAL*8  RMESH(MAXR)  : Radial mesh points                                   !
+! INTEGER NSPIN        : NSPIN=1 => unpolarized; NSPIN=2 => polarized         !
+! REAL*8  DENS(MAXR,NSPIN) : Total (NSPIN=1) or spin (NSPIN=2) electron       !
+!                            density at mesh points                           !
+! ************************* OUTPUT **********************************         !
+! REAL*8  EX              : Total exchange energy                             !
+! REAL*8  EC              : Total correlation energy                          !
+! REAL*8  DX              : IntegralOf( rho * (eps_x - v_x) )                 !
+! REAL*8  DC              : IntegralOf( rho * (eps_c - v_c) )                 !
+! REAL*8  VXC(MAXR,NSPIN) : (Spin) exch-corr potential                        !
+! ************************ UNITS ************************************         !
+! Distances in atomic units (Bohr).                                           !
+! Densities in atomic units (electrons/Bohr**3)                               !
+! Energy unit depending of parameter EUNIT below                              !
+! ********* ROUTINES CALLED *****************************************         !
+! GGAXC, LDAXC                                                                !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  subroutine atomxc( FUNCTL, AUTHOR, IREL,                                    &
+                     NR, MAXR, RMESH, NSPIN, DENS,                            &
+                     EX, EC, DX, DC, VXC )
+  use global
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Argument types and dimensions                                               !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  implicit none
 
-  subroutine vps_loc(zval,nrval,a,b,rofi,drdi,s,rcmax,                 &
-                          rclocal,vlocal,nchloc,chlocal)
-!
-! subroutine to generate a smooth local pseudopotential and its charge density.
-!
+  character(len=*) :: FUNCTL, AUTHOR
+  integer :: IREL, MAXR, NR, NSPIN
+  real(r8) :: DENS(MAXR,NSPIN), RMESH(MAXR), VXC(MAXR,NSPIN)
+  real(r8) :: DC, DX, EC, EX
 
-       implicit none
-!
-! Arguments
-!
-       integer nrval, nchloc
-       real(r8) a, b, rclocal, rcmax, zval, rofi(nrval),vlocal(nrval),        &
-                chlocal(nrval),drdi(nrval),s(nrval) 
-!
-! Local variables
-!
-       integer ir, nrc
-       real(r8), parameter :: exp_range=120.d0 
-       real(r8) pi, qtot, vconst
-       real(r8) dev1, dev2, dev3, var1, var2, var3, v1, v2, v3, v4,         &
-                dm11, dm12,dm13,dm21,dm22,dm23,dm31,dm32,dm33,              &
-                g0, g1, g2, g3, g4, g5
-!
-       pi = 4.0d0*datan(1.0d0)
-!
-! We fit either an analytic function for the potential 
-!
-        write(6,'(/,2a)')'vps_local:',                                        &
-                         ' Fitted the Vlocal to v4*exp(v1*r^2+v2*r^3+v3*r^4)'
-!
-         nrc=nint(dlog(rcmax/b+1.0d0)/a) + 1 
-!
-         vconst = vlocal(nchloc+1)
-!
-! local potential is Vloc(r)=v4*exp(v1*r^2+v2*r^4+v3*r^6) inside rcmax and equal
-! to the all electron outside
-!                             fit upto third derivative at rcmax
-!
-         dev1 = ( - vlocal(nrc+2)/12.0d0                        &
-                  + 2.0d0/3.0d0*vlocal(nrc+1)                   &
-                  - 2.0d0/3.0d0*vlocal(nrc-1)                   &
-                  + vlocal(nrc-2)/12.0d0      )
-         dev2 = ( - vlocal(nrc+2)/12.0d0                        &
-                  + 4.0d0/3.0d0*vlocal(nrc+1)                   &
-                  - 5.0d0/2.0d0*vlocal(nrc)                     &
-                  + 4.0d0/3.0d0*vlocal(nrc-1)                   &
-                  - vlocal(nrc-2)/12.0d0      )
-         dev3 = ( - vlocal(nrc+3)/8.0d0                         &
-                  + vlocal(nrc+2)                               &
-                  - 13.0d0/8.0d0*vlocal(nrc+1)                  &
-                  + 13.0d0/8.0d0*vlocal(nrc-1)                  &
-                  - vlocal(nrc-2)                               &
-                  + vlocal(nrc-3)/8.0d0       )
-!
-         dev3=(dev3-3.0d0*a*dev2+2.0d0*a**2*dev1)/(drdi(nrc)**3)
-         dev2=(dev2 - a*dev1)/(drdi(nrc)**2)
-         dev1=dev1/drdi(nrc)
-!
-         var1 = dev1/vlocal(nrc)
-         var2 = dev2/vlocal(nrc) - var1**2
-         var3 = dev3/vlocal(nrc) - var1**3 - 2.0d0*var2*var1
-!
-         v3 = (var3*rofi(nrc)/3.0d0-var2+var1/rofi(nrc))              &
-              /(16.0d0*rofi(nrc)**4)
-         v2 = (var2-var1/rofi(nrc)-24.0d0*rofi(nrc)**4*v3)            &
-              /(8.0d0*rofi(nrc)**2)
-         v1 = (var1-4.0d0*v2*rofi(nrc)**3-6.0d0*v3*rofi(nrc)**5)      &
-              /(2.0d0*rofi(nrc))
-         v4=vlocal(nrc)/(exp((v1+v2*rofi(nrc)**2+v3*rofi(nrc)**4)*rofi(nrc)**2))
-!
-         vlocal(1:nrc) = v4*exp((v1+v2*rofi(1:nrc)**2+v3*rofi(1:nrc)**4)*     &
-                                 rofi(1:nrc)**2)
-!
-! Now we get the local pseudopotential charge
-!
-          qtot=0.d0
-          chlocal = 0.0d0
-          do ir=1,nchloc
-            if(ir > nrc) then
-               dev1 = ( - vlocal(ir+2)/12.0d0                        &
-                        + 2.0d0/3.0d0*vlocal(ir+1)                   &
-                        - 2.0d0/3.0d0*vlocal(ir-1)                   &
-                        + vlocal(ir-2)/12.0d0      )
-               dev2 = ( - vlocal(ir+2)/12.0d0                        &
-                        + 4.0d0/3.0d0*vlocal(ir+1)                   &
-                        - 5.0d0/2.0d0*vlocal(ir)                     &
-                        + 4.0d0/3.0d0*vlocal(ir-1)                   &
-                        - vlocal(ir-2)/12.0d0      )
-               dev2 = (dev2 - a*dev1)/(drdi(ir)**2)
-               dev1 = dev1/drdi(ir)
-               g3 = (2.0d0*dev1/rofi(ir) + dev2)
-            else
-              g0=v4*exp((v1+v2*rofi(ir)**2+v3*rofi(ir)**4)*rofi(ir)**2)
-              g1=(2.0d0*v1+4.0d0*v2*rofi(ir)**2+6.0d0*v3*rofi(ir)**4)
-              g2=(2.0d0*v1+12.0d0*v2*rofi(ir)**2+30.0d0*v3*rofi(ir)**4)
-              g3=(g2+g1*g1*rofi(ir)**2+2.0d0*g1)*g0
-            endif
-            chlocal(ir)= (-g3)/ (8.0d0*pi)
-            !write(8,*)rofi(ir),chlocal(ir)
-         enddo
-            dev1 = ( - chlocal(nrc+2)/12.0d0                        &
-                     + 2.0d0/3.0d0*chlocal(nrc+1)                   &
-                     - 2.0d0/3.0d0*chlocal(nrc-1)                   &
-                     + chlocal(nrc-2)/12.0d0      )
-            dev1=dev1/drdi(nrc)
-!
-! now we make the density going to zero at nchloc (also the 1st and 2nd 
-! derivatives) with a function g1*exp(-g0x)*(1+g2*x+g3*x^2+g4*x^3)
-!
-            g3 = 3.5d0/rofi(nchloc)**2 
-            g2 = -rofi(nchloc)*g3
-            g4 = -g3/(3.50d0*rofi(nchloc))
-! 
-            g0 = (- dev1/chlocal(nrc) +                                     &
-                 (g2+2.0d0*g3*rofi(nrc)+3.0d0*g4*rofi(nrc)**3)/           &
-                 (1.0d0+g2*rofi(nrc)+g3*rofi(nrc)**2+g4*rofi(nrc)**4) ) 
-            g1 = chlocal(nrc)/( exp(-g0*rofi(nrc)) *                      &
-                 (1.0d0+g2*rofi(nrc)+g3*rofi(nrc)**2+g4*rofi(nrc)**4) ) 
-!
-            qtot = 0.0d0
-            do ir =1, nrc
-              qtot = qtot  - (chlocal(ir)*4.0d0*pi)*rofi(ir)**2*drdi(ir)
-            enddo
-            do ir = nrc+1,nchloc
-             chlocal(ir)=g1*(1.0d0+g2*rofi(ir)+g3*rofi(ir)**2+g4*rofi(ir)**4)* &
-                             exp(-g0*rofi(ir))
-             qtot = qtot  - (chlocal(ir)*4.0d0*pi)*rofi(ir)**2*drdi(ir)
-            enddo
-!
-          chlocal(:) = zval*chlocal(:)/qtot
-!
-          qtot = chlocal(1)
-          chlocal(1)=chlocal(2)-(chlocal(3)-chlocal(2))*      &
-                     rofi(2)/(rofi(3)-rofi(2))
-          chlocal(2:nrval) = 4.0d0*pi*rofi(2:nrval)**2*chlocal(2:nrval)
-!cang          call vhrtre(chlocal,vlocal,rofi,drdi,s,nrval,a)
-          chlocal(2:nrval) = chlocal(2:nrval) / (4.0d0*pi*rofi(2:nrval)**2)
-          chlocal(1) = qtot 
-!          
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Internal parameters                                                         !
+! NN     : order of the numerical derivatives: the number of radial           !
+!          points used is 2*NN+1                                              !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  integer, parameter :: NN = 5
 
-  return
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Fix energy unit:  EUNIT=1.0 => Hartrees,                                    !
+!                   EUNIT=0.5 => Rydbergs,                                    !
+!                   EUNIT=0.03674903 => eV                                    !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  real(r8), parameter :: EUNIT = 0.5_r8
 
-  end subroutine vps_loc
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! DVMIN is added to differential of volume to avoid division by zero          !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  real(r8), parameter :: DVMIN = 1.0E-12
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Local variables and arrays                                                  !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  logical :: GGA 
+  integer :: IN, IN1, IN2, IR, IS, JN 
+  real(r8) :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             & 
+              DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
+              DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       & 
+              EPSC, EPSX, F1, F2, GD(3,NSPIN), PI
+  !external :: GGAXC, LDAXC 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Set GGA switch                                                              !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  IF ( FUNCTL.EQ.'LDA' .OR. FUNCTL.EQ.'lda' .OR.                              &
+       FUNCTL.EQ.'LSD' .OR. FUNCTL.EQ.'lsd' ) THEN
+     GGA = .FALSE.
+  ELSEIF ( FUNCTL.EQ.'GGA' .OR. FUNCTL.EQ.'gga') THEN
+     GGA = .TRUE.
+  ELSE
+     WRITE(6,*) 'atomxc: Unknown functional ', FUNCTL
+     STOP
+  ENDIF
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Initialize output                                                           !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  EX = 0
+  EC = 0
+  DX = 0
+  DC = 0
+  DO 20 IS = 1,NSPIN
+     DO 10 IR = 1,NR
+        VXC(IR,IS) = 0
+     10   CONTINUE
+  20 CONTINUE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Get number pi                                                               !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  PI = 4 * ATAN(1.0_r8)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Loop on mesh points                                                         !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  DO 140 IR = 1,NR
+
+!       Find interval of neighbour points to calculate derivatives
+     IN1 = MAX(  1, IR-NN ) - IR
+     IN2 = MIN( NR, IR+NN ) - IR
+
+!    Find weights of numerical derivation from Lagrange
+!    interpolation formula
+     DO 50 IN = IN1,IN2
+        IF (IN .EQ. 0) THEN
+           DGDM(IN) = 0
+           DO 30 JN = IN1,IN2
+              IF (JN.NE.0) DGDM(IN) = DGDM(IN) + 1.0_r8 / (0 - JN)
+           30 CONTINUE
+        ELSE
+           F1 = 1
+           F2 = 1
+           DO 40 JN = IN1,IN2
+              IF (JN.NE.IN .AND. JN.NE.0) F1 = F1 * (0  - JN)
+              IF (JN.NE.IN)               F2 = F2 * (IN - JN)
+           40 CONTINUE
+           DGDM(IN) = F1 / F2
+        ENDIF
+     50 CONTINUE
+
+!       Find dr/dmesh
+     DRDM = 0
+     DO 60 IN = IN1,IN2
+        DRDM = DRDM + RMESH(IR+IN) * DGDM(IN)
+     60 CONTINUE
+
+!       Find differential of volume. Use trapezoidal integration rule
+     DVOL = 4 * PI * RMESH(IR)**2 * DRDM
+!    DVMIN is a small number added to avoid a division by zero
+     DVOL = DVOL + DVMIN
+     IF (IR.EQ.1 .OR. IR.EQ.NR) DVOL = DVOL / 2
+     IF (GGA) AUX(IR) = DVOL
+
+!       Find the weights for the derivative d(gradF(i))/d(F(j)), of
+!       the gradient at point i with respect to the value at point j
+     IF (GGA) THEN
+        DO 80 IN = IN1,IN2
+           DGIDFJ(IN) = DGDM(IN) / DRDM
+        80 CONTINUE
+     ENDIF
+
+!    Find density and gradient of density at this point
+     DO 90 IS = 1,NSPIN
+        D(IS) = DENS(IR,IS)
+     90 CONTINUE
+     IF (GGA) THEN
+        DO 110 IS = 1,NSPIN
+           GD(1,IS) = 0
+           GD(2,IS) = 0
+           GD(3,IS) = 0
+           DO 100 IN = IN1,IN2
+              GD(3,IS) = GD(3,IS) + DGIDFJ(IN) * DENS(IR+IN,IS)
+           100 CONTINUE
+        110 CONTINUE
+     ENDIF
+
+!    Find exchange and correlation energy densities and their 
+!    derivatives with respect to density and density gradient
+     IF (GGA) THEN
+        CALL GGAXC( AUTHOR, IREL, NSPIN, D, GD,                               &
+                    EPSX, EPSC, DEXDD, DECDD, DEXDGD, DECDGD )
+     ELSE
+        CALL LDAXC( AUTHOR, IREL, NSPIN, D, EPSX, EPSC, DEXDD, DECDD )
+     ENDIF
+
+!       Add contributions to exchange-correlation energy and its
+!       derivatives with respect to density at all points
+     DO 130 IS = 1,NSPIN
+        EX = EX + DVOL * D(IS) * EPSX
+        EC = EC + DVOL * D(IS) * EPSC
+        DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
+        DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
+        IF (GGA) THEN
+            VXC(IR,IS) = VXC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
+            DO 120 IN = IN1,IN2
+               DX= DX - DVOL * DENS(IR+IN,IS) * DEXDGD(3,IS) * DGIDFJ(IN)
+               DC= DC - DVOL * DENS(IR+IN,IS) * DECDGD(3,IS) * DGIDFJ(IN)
+               VXC(IR+IN,IS) = VXC(IR+IN,IS) + DVOL *                         &
+                  (DEXDGD(3,IS) + DECDGD(3,IS)) * DGIDFJ(IN)
+            120 CONTINUE
+        ELSE
+            VXC(IR,IS) = DEXDD(IS) + DECDD(IS)
+        ENDIF
+     130 CONTINUE
+  140 CONTINUE
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Divide by volume element to obtain the potential (per electron)             !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  IF (GGA) THEN
+     DO 160 IS = 1,NSPIN
+        DO 150 IR = 1,NR
+           DVOL = AUX(IR)
+           VXC(IR,IS) = VXC(IR,IS) / DVOL
+        150 CONTINUE
+     160 CONTINUE
+  ENDIF
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Divide by energy unit                                                       !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  EX = EX / EUNIT
+  EC = EC / EUNIT
+  DX = DX / EUNIT
+  DC = DC / EUNIT
+  DO 180 IS = 1,NSPIN
+     DO 170 IR = 1,NR
+        VXC(IR,IS) = VXC(IR,IS) / EUNIT
+     170 CONTINUE
+  180 CONTINUE
+
+  end subroutine atomxc
 
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   VHRTRE CONSTRUCTS THE ELECTROSTATIC POTENTIAL DUE TO A SUPPLIED           !
 !   ELECTRON DENSITY.  THE NUMEROV METHOD IS USED TO INTEGRATE                !
-!   POISSONS EQN.                                                            !
+!   POISSONS EQN.                                                             !
 !                                                                             !
 !   DESCRIPTION OF ARGUMENTS:                                                 !
 !      RHO....4*PI*R**2 * THE ELECTRON DENSITY FOR WHICH WE CALCULATING       !
@@ -186,8 +279,6 @@
 !     SRDRDI.SQRT(DR/DI)                                                      !
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
 subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   real(r8), intent(IN), dimension(*) :: rho, r, drdi, srdrdi
   real(r8), intent(in) :: a
@@ -300,23 +391,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   return
   end subroutine vhrtre
 
-
-
-
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Next comes a set of subroutines to solve the readial schrodinger equation   !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-
-
-
-
-  subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !  egofv determines the eigenenergy and wavefunction corresponding            !
 !  to a particular l, principal quantum number and boundary condition.        !
@@ -335,7 +409,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  the individual energies are resolved by performing a fixed number          !
 !  of bisections after a given eigenvalue has been isolated                   ! 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+  subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
 
   implicit real(r8) (a-h,o-z)
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
@@ -471,12 +545,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   end subroutine egofv
-
-
-
-
-
-
 
 
   subroutine yofe(e,de,dr,rmax,h,s,y,nmax,l,ncor,nnode,z,a,b)
@@ -641,29 +709,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   end subroutine nrmlzg
 
 
-
-
-
-
   subroutine bcorgn(e,h,s,l,zdr,y2)
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   yofe integrates the radial schrodinger eqn using the numerov              !
-!   method.                                                                   !
-!   the arguments are defined as follows:                                     !
-!       e is the old energy(overwritten) by the new energy                    !
-!       de is the e change predicted to elim the kink in psi                  !
-!       dr is the log deriv (the boundary condition)                          !
-!       gpp = (h-es)g (all diagonal in i (radius) )                           !
-!       y is the numerov independent variable y = g - gpp/12                  !
-!       n is the number of radial mesh points                                 !
-!       l is the angular momentum                                             !
-!       nnode is 1 + the number of interior nodes in psi                      !
-!       z is the atomic number                                                !
-!       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
   implicit real(r8) (a-h,o-z)
   real(r8) h(*),s(*)
@@ -747,25 +793,6 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   subroutine numin(e,h,s,y,n,nnode,yn,g,gsg,x,knk)
 
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   yofe integrates the radial schrodinger eqn using the numerov              !
-!   method.                                                                   !
-!                                                                             !
-!   the arguments are defined as follows:                                     !
-!       e is the old energy(overwritten) by the new energy                    !
-!       de is the e change predicted to elim the kink in psi                  !
-!       dr is the log deriv (the boundary condition)                          !
-!       gpp = (h-es)g (all diagonal in i (radius) )                            !
-!       y is the numerov independent variable y = g - gpp/12                   !
-!       n is the number of radial mesh points                                 !
-!       l is the angular momentum                                             !
-!       nnode is 1 + the number of interior nodes in psi                      !
-!       z is the atomic number                                                !
-!       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
   implicit real(r8) (a-h,o-z)
   real(r8) h(n),s(n),y(n)
   integer :: i,n,nnode,knk
@@ -817,28 +844,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   end subroutine numin
 
 
-
-
   subroutine numout(e,h,s,y,ncor,knk,nnode,y2,g,gsg,x)
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!   yofe integrates the radial schrodinger eqn using the numerov              !
-!   method.                                                                   !
-!                                                                             ! 
-!   the arguments are defined as follows:                                     !
-!       e is the old energy(overwritten) by the new energy                    !
-!       de is the e change predicted to elim the kink in psi                  !
-!       dr is the log deriv (the boundary condition)                          !
-!       gpp = (h-es)g (all diagonal in i (radius) )                            !
-!       y is the numerov independent variable y = g - g/12                   !
-!       n is the number of radial mesh points                                 !
-!       l is the angular momentum                                             !
-!       nnode is 1 + the number of interior nodes in psi                      !
-!       z is the atomic number                                                !
-!       a and b specify the radial mesh r(i)=(exp(a*(i-1))-1)*b               !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
   implicit real(r8) (a-h,o-z)
   real(r8) h(knk),s(knk),y(knk)
@@ -857,13 +863,11 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   i=3
   nnode=0
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  begin the outward integrationby the numerov method                         !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
   nm4=knk-4
 1 xl=x
@@ -881,21 +885,12 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   if(xl*x.gt.0.d0) go to 1
 2 knk=i
 
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !                                                                             !
 !  the outward integration is now complete                                    !
 !                                                                             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
   return
-
   end subroutine numout
 
-
-
-
-
-  end module kb
-
+  end module atomic

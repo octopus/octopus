@@ -99,7 +99,7 @@ EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octop
 
 octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 \
-	ps_xc.F90 ps_kb.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
+	vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
 	atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 xc.F90 \
 	systm.F90 lasers.F90 h.F90 \
 	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
@@ -155,7 +155,7 @@ hs_from_acc_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_fro
 hs_from_acc_LDADD = ../liboct/liboct.a @GSL_LIBS@
 function_to_dx_SOURCES = global.F90 io.F90 liboct.F90 units.F90 out.F90 spectrum.F90 specie.F90 atom.F90 \
                          ps.F90 spline.F90 math.F90 fft.F90 mesh.F90 states.F90 systm.F90 logrid.F90\
-                         tm.F90 hgh.F90 ps_kb.F90 ps_xc.F90 mix.F90 dx.F90 function_to_dx.F90
+                         tm.F90 hgh.F90 atomic.F90 vxc.F90 mix.F90 dx.F90 function_to_dx.F90
 
 function_to_dx_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
 nbo2xyz_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 nbo2xyz.F90
@@ -163,7 +163,7 @@ nbo2xyz_LDADD = ../liboct/liboct.a @GSL_LIBS@
 phonon_spectrum_SOURCES = global.F90 io.F90 liboct.F90 units.F90 phonon_spectrum.F90
 phonon_spectrum_LDADD = ../liboct/liboct.a @GSL_LIBS@
 excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
-                      fft.F90 ps_xc.F90 ps_kb.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
+                      fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       linear.F90 excitations.F90
 
@@ -197,7 +197,7 @@ broad_DEPENDENCIES = ../liboct/liboct.a
 broad_LDFLAGS =
 am_excitations_OBJECTS = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
 	units.$(OBJEXT) math.$(OBJEXT) spline.$(OBJEXT) fft.$(OBJEXT) \
-	ps_xc.$(OBJEXT) ps_kb.$(OBJEXT) logrid.$(OBJEXT) tm.$(OBJEXT) \
+	vxc.$(OBJEXT) atomic.$(OBJEXT) logrid.$(OBJEXT) tm.$(OBJEXT) \
 	hgh.$(OBJEXT) ps.$(OBJEXT) specie.$(OBJEXT) atom.$(OBJEXT) \
 	mesh.$(OBJEXT) hartree.$(OBJEXT) out.$(OBJEXT) states.$(OBJEXT) \
 	systm.$(OBJEXT) mix.$(OBJEXT) linear.$(OBJEXT) \
@@ -210,7 +210,7 @@ am_function_to_dx_OBJECTS = global.$(OBJEXT) io.$(OBJEXT) \
 	spectrum.$(OBJEXT) specie.$(OBJEXT) atom.$(OBJEXT) ps.$(OBJEXT) \
 	spline.$(OBJEXT) math.$(OBJEXT) fft.$(OBJEXT) mesh.$(OBJEXT) \
 	states.$(OBJEXT) systm.$(OBJEXT) logrid.$(OBJEXT) tm.$(OBJEXT) \
-	hgh.$(OBJEXT) ps_kb.$(OBJEXT) ps_xc.$(OBJEXT) mix.$(OBJEXT) \
+	hgh.$(OBJEXT) atomic.$(OBJEXT) vxc.$(OBJEXT) mix.$(OBJEXT) \
 	dx.$(OBJEXT) function_to_dx.$(OBJEXT)
 function_to_dx_OBJECTS = $(am_function_to_dx_OBJECTS)
 function_to_dx_DEPENDENCIES = ../liboct/liboct.a
@@ -232,7 +232,7 @@ nbo2xyz_DEPENDENCIES = ../liboct/liboct.a
 nbo2xyz_LDFLAGS =
 am_octopus_OBJECTS = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
 	pulpo.$(OBJEXT) units.$(OBJEXT) math.$(OBJEXT) spline.$(OBJEXT) \
-	fft.$(OBJEXT) ps_xc.$(OBJEXT) ps_kb.$(OBJEXT) logrid.$(OBJEXT) \
+	fft.$(OBJEXT) vxc.$(OBJEXT) atomic.$(OBJEXT) logrid.$(OBJEXT) \
 	tm.$(OBJEXT) hgh.$(OBJEXT) ps.$(OBJEXT) specie.$(OBJEXT) \
 	atom.$(OBJEXT) mesh.$(OBJEXT) hartree.$(OBJEXT) out.$(OBJEXT) \
 	states.$(OBJEXT) xc.$(OBJEXT) systm.$(OBJEXT) lasers.$(OBJEXT) \
@@ -245,7 +245,7 @@ octopus_DEPENDENCIES = ../liboct/liboct.a
 octopus_LDFLAGS =
 am__objects_1 = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
 	pulpo.$(OBJEXT) units.$(OBJEXT) math.$(OBJEXT) spline.$(OBJEXT) \
-	fft.$(OBJEXT) ps_xc.$(OBJEXT) ps_kb.$(OBJEXT) logrid.$(OBJEXT) \
+	fft.$(OBJEXT) vxc.$(OBJEXT) atomic.$(OBJEXT) logrid.$(OBJEXT) \
 	tm.$(OBJEXT) hgh.$(OBJEXT) ps.$(OBJEXT) specie.$(OBJEXT) \
 	atom.$(OBJEXT) mesh.$(OBJEXT) hartree.$(OBJEXT) out.$(OBJEXT) \
 	states.$(OBJEXT) xc.$(OBJEXT) systm.$(OBJEXT) lasers.$(OBJEXT) \

@@ -310,9 +310,9 @@ end function my_sign
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Given nspin and rho(1:nspin), this function returns:
 !  d    = rho(1)
-!  mabs = |\vec{m}| = sqrt(rho(2)**2 + rho(3)**2 + rho(4)**2) if we have spinors,
-!                     abs(rho(2)) if we have only two componets
-!  z    = mabs/d
+!  z    = mabs/d, where:
+!       mabs = |\vec{m}| = sqrt(rho(2)**2 + rho(3)**2 + rho(4)**2) if we have spinors,
+!              rho(2) if we have only two componets
 !  fz   = ((1+z)**(4/3)+(1-z)**(4/3)-2)/(2**(4/3)-2)
 !  fzp  = dfz/dz
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

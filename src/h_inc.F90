@@ -269,17 +269,25 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
   if(h%ip_app) return
 
   call hartree_solve(h%hart, sys%m, h%vhartree, sys%st%rho(:, 1))
-  h%epot = - 0.5_r8*dmesh_dotp(sys%m, sys%st%rho(:, 1), h%vhartree)
+  h%epot = - HALF*dmesh_dotp(sys%m, sys%st%rho(:, 1), h%vhartree)
 
   call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%vxc, h%ex, h%ec)
-  h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, 1), h%vxc(:, 1))
   select case(h%ispin)
-  case(SPIN_POLARIZED)
-       h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 2), 0.5_r8*(h%vxc(:, 1)-h%vxc(:, 2)))
-  case(SPINORS)
-       h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 4), 0.5_r8*(h%vxc(:, 1)-h%vxc(:, 2)))
-       ! Warning: the non-diagonal term is missing.
-       !h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 2), h%vxc(:, 1, 2))
+    case(UNPOLARIZED)
+      h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 1), h%vxc(:, 1))
+    case(SPIN_POLARIZED)
+      h%epot = h%epot + dmesh_dotp(sys%m, HALF*(sys%st%rho(:, 1)+sys%st%rho(:, 2)), &
+                                          h%vxc(:, 1)) +                            &
+                        dmesh_dotp(sys%m, HALF*(sys%st%rho(:, 1)-sys%st%rho(:, 2)), &
+                                          h%vxc(:, 2))
+    case(SPINORS)
+      h%epot = h%epot + dmesh_dotp(sys%m, HALF*(sys%st%rho(:, 1)+sys%st%rho(:, 4)), &
+                                          h%vxc(:, 1))
+      h%epot = h%epot + dmesh_dotp(sys%m, HALF*(sys%st%rho(:, 1)-sys%st%rho(:, 4)), &
+                                          h%vxc(:, 2))
+      h%epot = h%epot + TWO*zmesh_dotp(sys%m, HALF*(sys%st%rho(:, 2) + M_zI*sys%st%rho(:, 3)), &
+                                                    h%vxc(:, 3) - M_zI*h%vxc(:, 4))
+
   end select
 
   call pop_sub(); return

@@ -28,16 +28,31 @@ subroutine xc_gga(func, m, st, pot, energy)
   sub_name = 'xc_gga'; call push_sub()
 
   allocate(d(0:m%np, st%nspin), gd(3, m%np, st%nspin))
+!!$  do is = 1, st%nspin
+!!$    d(0, is) = 0._r8
+!!$    d(1:m%np, is) = abs(st%rho(1:m%np, is))
+!!$
+!!$    if(st%nlcc) then ! non-linear core corrections
+!!$      d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%nspin
+!!$    end if
+!!$
+!!$    call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))
+!!$  end do
+  ! Temporary..
+  d(0, :) = ZERO
+  select case(st%nspin)
+  case(1)
+    d(1:m%np, 1) = abs(st%rho(1:m%np, 1))
+  case(2)
+    d(1:m%np, 1) = abs(HALF*(st%rho(1:m%np, 1)+st%rho(1:m%np, 2)))
+    d(1:m%np, 2) = abs(HALF*(st%rho(1:m%np, 1)-st%rho(1:m%np, 2)))
+  end select
   do is = 1, st%nspin
-    d(0, is) = 0._r8
-    d(1:m%np, is) = abs(st%rho(1:m%np, is))
-
     if(st%nlcc) then ! non-linear core corrections
-      d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%nspin
+      d(1:m%np, is) = d(1:m%np, is) + st%rho_core(1:m%np)/st%spin_channels
     end if
-
     call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))
-  end do
+  enddo
 
   energy = 0._r8
   do i = 1, m%np
@@ -272,7 +287,9 @@ subroutine xc_c_pbe(NSPIN, DENS, GDENS, EC, DECDD, DECDGD)
   GDMT = max( GDMIN, GDMT )
 
 ! Find local correlation energy and potential
-  call xc_c_pw92(2, D, VCUNIF, ECUNIF)
+! Cas:: WARNING. This has to be changed pretty soon...
+  !call xc_c_pw92(2, D, VCUNIF, ECUNIF)
+  call xc_c_pw92(2, (/ D(1)+D(2), D(1)-D(2) /), VCUNIF, ECUNIF)
 
 ! Find total correlation energy
   RS = ( 3 / (4*M_PI*DT) )**THD
@@ -350,7 +367,13 @@ subroutine xc_x_lb94(nspin, dens, gdens, ex, dexdd, dexdgd)
       FTHRD  = 4._r8/3._r8, BETA   = 0.05_r8
 
 ! first we add the LDA potential
-  call xc_x_lda( .false., nspin, dens, dexdd, ex)
+! CAS: WARNING. This has to be changed.
+  !call xc_x_lda( .false., nspin, dens, dexdd, ex)
+  if(nspin ==1) then
+    call xc_x_lda( .false., nspin, dens, dexdd, ex)
+  else
+    call xc_x_lda( .false., nspin, (/ dens(1)+dens(2), dens(1)-dens(2) /), dexdd, ex)
+  endif
 
 ! Translate density and its gradient to new variables
   if (nspin .eq. 1) then

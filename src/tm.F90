@@ -17,7 +17,7 @@
 
 module tm
 use global
-use kb
+use atomic
 use io
 use units
 use logrid

@@ -201,7 +201,7 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! Temporarily spinors and 4-component densities do not work unless LDA.
-  if(h%xc%x_family > 1 .or. h%xc%c_family > 1) then
+  if(h%ispin == SPINORS .and. (h%xc%x_family > 1 .or. h%xc%c_family > 1)) then
     message(1) = 'Currently the spinors only work well with LDA functionals.'
     call write_fatal(1)
   endif
