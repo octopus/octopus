@@ -65,9 +65,11 @@ subroutine hartree_init(h, m)
     end if
 
     if(conf%periodic_dim>0 .and. h%solver.ne.2) then
-      message(1) = "Sorry, but for periodic systemps only the fft method"
-      message(2) = "is available for solving the poisson equation"
-      call write_fatal(2)
+      message(1) = "For periodic systems we cannot use"
+      message(2) = "a spherical cutoff for the Poisson solver."
+      message(3) = "PoissonSolver = 2 will be used."
+      call write_warning(3)
+      h%solver = 2
     end if
 
     call hartree3D_init(h, m)
