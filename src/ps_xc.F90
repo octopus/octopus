@@ -273,7 +273,7 @@
   implicit real(r8) (A-H,O-Z)
   implicit integer (I-N)
 
-  PARAMETER (ZERO=0.0_r8,ONE=1.0_r8,PFIVE=.5_r8,OPF=1.5_r8,C014=0.014_r8)
+  PARAMETER (PFIVE=.5_r8,OPF=1.5_r8,C014=0.014_r8)
   DIMENSION DS(NSP), VX(NSP)
 
   PI=4*ATAN(ONE)
@@ -507,8 +507,8 @@
               EC, ECUNIF, EX, EXUNIF,                                         &
               F, F1, F2, F3, F4, FC, FX, FOUTHD,                              &
               GAMMA, GD(3,2), GDM(2), GDMIN, GDMS, GDMT, GDS, GDT(3),         &
-              H, HALF, KAPPA, KF, KFS, KS, MU, PHI, PI, RS, S,                &
-              T, THD, THRHLF, TWO, TWOTHD, VCUNIF(2), VXUNIF(2), ZETA
+              H, KAPPA, KF, KFS, KS, MU, PHI, PI, RS, S,                      &
+              T, THD, THRHLF, TWOTHD, VCUNIF(2), VXUNIF(2), ZETA
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
 
@@ -516,9 +516,9 @@
   PARAMETER ( GDMIN  = 1.E-12 )
 
 ! Fix some numerical parameters
-  PARAMETER ( FOUTHD=4.0_r8/3.0_r8, HALF=0.50_r8,                         &
+  PARAMETER ( FOUTHD=4.0_r8/3.0_r8,                         &
        THD=1.0_r8/3.0_r8, THRHLF=1.50_r8,                          &
-       TWO=2.0_r8, TWOTHD=2.0_r8/3.0_r8 )
+       TWOTHD=2.0_r8/3.0_r8 )
   
 ! Fix some more numerical constants
   PI = 4 * ATAN(1.0_r8)
@@ -680,14 +680,14 @@
   real(r8) :: A(0:2), ALPHA1(0:2), B, BETA(0:2,4), C,                         &
        DBDRS, DECDD(2), DECDRS, DECDZ, DENMIN, DFDZ,           &
        DGDRS(0:2), DCDRS, DRSDD, DTOT, DZDD(2),                &
-       F, FPP0, FOUTHD, G(0:2), HALF,                          &
+       F, FPP0, FOUTHD, G(0:2),                                &
        P(0:2), PI, RS, THD, THRHLF, ZETA
 
 ! Fix lower bound of density to avoid division by zero
   PARAMETER ( DENMIN = 1.E-12 )
 
 ! Fix some numerical constants
-  PARAMETER ( FOUTHD=4.0_r8/3.0_r8, HALF=0.50_r8,                             &
+  PARAMETER ( FOUTHD=4.0_r8/3.0_r8,                             &
        THD=1.0_r8/3.0_r8, THRHLF=1.50_r8 )
 
 ! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
@@ -828,7 +828,7 @@
 
   real(r8), dimension(NSP) :: DS,VX,VC
 
-  PARAMETER (ZERO=0.0_r8,ONE=1.0_r8,PFIVE=.50_r8,OPF=1.50_r8,PNN=.99_r8)
+  PARAMETER (PFIVE=.50_r8,OPF=1.50_r8,PNN=.99_r8)
   PARAMETER (PTHREE=0.30_r8,PSEVF=0.750_r8,C0504=0.0504_r8) 
   PARAMETER (C0254=0.02540_r8,C014=0.0140_r8,C0406=0.04060_r8)
   PARAMETER (C15P9=15.90_r8,C0666=0.06660_r8,C11P4=11.40_r8)
@@ -864,7 +864,6 @@
 
 !      Other variables converted into parameters by J.M.Soler
   PARAMETER ( PI   = 3.141592653589793120_r8 )
-  PARAMETER ( HALF = 0.50_r8 ) 
   PARAMETER ( TRD  = 1.0_r8 / 3.0_r8 ) 
   PARAMETER ( FTRD = 4.0_r8 / 3.0_r8 )
   PARAMETER ( TFTM = 0.519842099789746380_r8 )

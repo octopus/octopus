@@ -33,7 +33,10 @@ use lasers
 implicit none
 
 type hamiltonian_type
-  integer :: ispin ! How to handle spin (duplicated in states_type)
+  integer :: spin_channels ! How to handle spin (duplicated in states_type)
+  integer :: nspin
+  integer :: ispin
+
   integer :: np  ! number of points (duplicated in mesh)
 
   integer :: reltype ! type of relativistic correction to use
@@ -44,11 +47,6 @@ type hamiltonian_type
   real(r8), pointer :: Vpsl(:)    ! the external potential
   real(r8), pointer :: Vhartree(:)! the hartree potential
   real(r8), pointer :: Vxc(:,:)   ! xc potential
-
-  ! For non-collinear spin (ispin=3)
-  logical :: noncollinear_spin
-  real(r8), pointer :: dVxc_off(:)
-  complex(r8), pointer :: zVxc_off(:)
 
   ! the energies (total, ion-ion, exchange, correlation)
   real(r8) :: etot, eii, ex, ec, epot
@@ -103,22 +101,17 @@ subroutine hamiltonian_init(h, sys)
 
   ! Duplicate this two variables
   h%ispin = sys%st%ispin
+  h%spin_channels = sys%st%spin_channels
+  h%nspin         = sys%st%nspin
   h%np  = sys%m%np
 
   ! allocate potentials and density of the cores
-  allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, sys%st%nspin))
-  h%Vhartree = 0._r8; h%Vxc = 0._r8
-  call oct_parse_logical(C_string('NonCollinearSpin'), .false., h%noncollinear_spin)
-  if(h%noncollinear_spin .and. h%ispin .ne. 3) then
-    write(message(1),'(a)') 'SpinComponents must be set to 3 if NonCollinearSpin = .true.'
-    call write_fatal(1)
-  endif
-  if(h%noncollinear_spin) then
-    allocate(h%R_FUNC(Vxc_off) (h%np))
-    h%R_FUNC(Vxc_off) = R_TOTYPE(0._r8)
-  else
-    nullify(h%dVxc_off, h%zVxc_off)
-  end if
+  allocate(h%Vpsl(h%np),              &
+           h%Vhartree(h%np),          &
+           h%Vxc(h%np, sys%st%nspin))
+  ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
+  ! Im(vxc_12) = h%vxc(:, 4)
+  h%vpsl = ZERO; h%vhartree = ZERO; h%vxc = ZERO
 
   if(sys%ncatoms > 0) then
     call oct_parse_int(C_string("ClassicPotential"), 0, h%classic_pot)
@@ -201,11 +194,17 @@ subroutine hamiltonian_init(h, sys)
   else
     ! initilize hartree and xc modules
     call hartree_init(h%hart, sys%m)
-    call xc_init(h%xc, sys%m, h%noncollinear_spin)
+    call xc_init(h%xc)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
   end if
+
+  ! Temporarily spinors and 4-component densities do not work unless LDA.
+  if(h%xc%x_family > 1 .or. h%xc%c_family > 1) then
+    message(1) = 'Currently the spinors only work well with LDA functionals.'
+    call write_fatal(1)
+  endif
 
   ! gauge
   call oct_parse_int(C_string("TDGauge"), 1, h%gauge)
@@ -300,13 +299,6 @@ subroutine hamiltonian_end(h)
     nullify(h%Vpsl, h%Vhartree, h%Vxc)
   end if
 
-  if(h%ispin == 3 .and. associated(h%dVxc_off)) then
-    deallocate(h%dVxc_off); nullify(h%dVxc_off)
-  end if
-  if(h%ispin == 3 .and. associated(h%zVxc_off)) then
-    deallocate(h%zVxc_off); nullify(h%zVxc_off)
-  end if
-
   if(h%classic_pot > 0 .and. associated(h%Vclassic)) then
     deallocate(h%Vclassic); nullify(h%Vclassic)
   end if
@@ -367,8 +359,7 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
     call write_info(6, iunit)
   end if
 
-  call pop_sub()
-  return
+  call pop_sub(); return
 end subroutine hamiltonian_energy
 
 subroutine hamiltonian_span(h, delta, emin)

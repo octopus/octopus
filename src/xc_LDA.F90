@@ -24,39 +24,18 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
   real(r8), intent(inout) :: vx(1:nspin), ex
 
   real(r8), parameter :: &
-      ZERO=0.0_r8, ONE=1.0_r8, HALF=.5_r8, OPF=1.5_r8, C014=0.014_r8, &
+      HALF=.5_r8, OPF=1.5_r8, C014=0.014_r8, &
       TRD = ONE/3.0_r8, FTRD = 4.0_r8*TRD, ALP = 2.0_r8 * TRD, &
       TFTM = 0.519842099789746380_r8, A0   = 0.521061761197848080_r8, &
       CRS  = 0.6203504908994000870_r8, CXP  = (- 3.0_r8) * ALP / (M_PI*A0), &
       CXF  = 1.259921049894873190_r8
 
-  real(r8) :: d1, d2, d, z, fz, fzp, rs, vxp, exp, &
-      beta, sb, alb, vxf, exf
+  real(r8) :: d1, d2, d, z, fz, fzp, rs, vxp, exp, beta, sb, alb, vxf, exf, bxc, &
+              bin, vin, m(3)
 
-  if (nspin .eq. 2) then
-    d1 = max(rho(1), 0.0_r8)
-    d2 = max(rho(2), 0.0_r8)
-    d = d1 + d2
-    if (d .le. ZERO) then
-      vx(:) = 0.0_r8
-      ex    = 0.0_r8
-      return
-    endif
-    z = (d1 - d2) / d
-    fz = ((1+z)**FTRD+(1-z)**FTRD-2)/TFTM
-    fzp = FTRD*((1+z)**TRD-(1-z)**TRD)/TFTM 
-  else
-    d = rho(1)
-    if (d .le. ZERO) then
-      vx(1) = 0.0_r8
-      ex    = 0.0_r8
-      return
-    endif
-    z   = ZERO
-    fz  = ZERO
-    fzp = ZERO
+  if(.not.fzeta(nspin, rho, d, z, fz, fzp)) then
+    vx = ZERO; ex = ZERO; return
   endif
-
 
   rs = CRS / d**TRD
   vxp = CXP / rs
@@ -71,37 +50,20 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
   vxf = CXF * vxp
   exf = CXF * exp
 
-  ! Find up and down potentials
-  if (nspin .eq. 2) then
-    ex    = exp + fz*(exf-exp)
-    vx(1) = vxp + fz*(vxf-vxp) + (1-z)*fzp*(exf-exp)
-    vx(2) = vxp + fz*(vxf-vxp) - (1+z)*fzp*(exf-exp)
-  else
-    ex    = exp
-    vx(1) = vxp
-  endif
+  vin = vxp + fz*(vxf-vxp)-z*fzp*(exf-exp)
+  bin = fzp*(exf-exp)
+  if(nspin>2) m(1:3) = rho(2:4)
+  call xc_matrix(nspin, vin, bin, m, vx)
+  ex = exp + fz*(exf - exp)
 
   !Change from Rydbergs to Hartrees
   ex    = HALF * ex
   vx(:) = HALF * vx(:) 
-
   return
 end subroutine xc_x_lda
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! LSD Perdew & Zunger, PRB 23, 5048 (1981)                                    !
-! ********* INPUT ****************************************************        !
-! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
-! REAL*8  rho(NSPIN)  : Local (spin) density                                  !
-! ********* OUTPUT ***************************************************        !
-! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
-! REAL*8  EC        : Correlation energy density                              !
-! ********* UNITS ****************************************************        !
-! Densities in electrons per Bohr**3                                          ! 
-! Energies in Hartrees                                                        !
-! ********* ROUTINES CALLED ******************************************        !
-! None                                                                        !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! LSD Perdew & Zunger, PRB 23, 5048 (1981)
 subroutine xc_c_pz(nspin, rho, vc, ec)
   integer, intent(in) :: nspin
   real(r8), intent(IN) :: rho(nspin)
@@ -130,34 +92,13 @@ subroutine xc_c_pz(nspin, rho, vc, ec)
       CON10=7.37030_r8/6, CON11=1.33360_r8/3
 
   real(r8) :: d, d1, d2, z, fz, fzp, rs, sqrs, te, be, ecp, vcp, &
-      ecf, vcf, rslog
+      ecf, vcf, rslog, bcc, bin, vin, m(3)
 
-!      Find density and polarization
-  if (nspin .eq. 2) then
-    d1 = max(rho(1), 0.0_r8)
-    d2 = max(rho(2), 0.0_r8)
-    d = d1 + d2
-    if (d .le. ZERO) then
-      vc = 0.0_r8
-      ec = 0.0_r8
-      return
-    endif
-    z   = (d1 - d2) / d
-    fz  = ((1+z)**FTRD + (1-z)**FTRD - 2)/TFTM
-    fzp = FTRD*((1+z)**TRD - (1-z)**TRD)/TFTM 
-  else
-    d = rho(1)
-    if (d .le. ZERO) then
-      vc(1) = 0.0_r8
-      ec    = 0.0_r8
-      return
-    endif
-    z = ZERO
-    fz = ZERO
-    fzp = ZERO
+  if(.not.fzeta(nspin, rho, d, z, fz, fzp)) then
+    vc = ZERO; ec = ZERO; return
   endif
-  rs = CRS / d**TRD
 
+  rs = CRS / d**TRD
   if (rs .gt. ONE) then  
     sqrs = sqrt(rs)
     te   = ONE + CON10*sqrs  + CON11*rs
@@ -176,60 +117,40 @@ subroutine xc_c_pz(nspin, rho, vc, ec)
     vcf   = (C0311+CON5 *rs)*rslog - CON6  - CON7*rs
   endif
 
-  ! Find up and down potentials
-  ! The half is to convert from Rydbergs to Hartree
-  if (nspin .eq. 2) then
-    ec    = ecp + fz*(ecf-ecp)
-    vc(1) = vcp + fz*(vcf-vcp) + (1-z)*fzp*(ecf-ecp)
-    vc(2) = vcp + fz*(vcf-vcp) - (1+z)*fzp*(ecf-ecp)
-  else
-    ec    = ecp
-    vc(1) = vcp
-  endif
+  vin = vcp + fz*(vcf-vcp)-z*fzp*(ecf-ecp)
+  bin = fzp*(ecf-ecp)
+  if(nspin>2) m(1:3) = rho(2:4)
+  call xc_matrix(nspin, vin, bin, m, vc)
+  ec = ecp + fz*(ecf - ecp)
 
-  !Change from Rydbergs to Hartrees
+  !Change from Rydbergs to Hartrees (Yeah, the Good Old Rydbergs...)
   ec = HALF * ec
   vc = HALF * vc
-
   return
 end subroutine xc_c_pz
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Implements the Perdew-Wang 92 local correlation (beyond RPA).               !
-! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)                             !
-! Written by L.C.Balbas and J.M.Soler. Dec 96.  Version 0.5.                  !
-! ********* INPUT ****************************************************        !
-! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
-! REAL*8  DENS(NSPIN) : Local (spin) density                                  !
-! ********* OUTPUT ***************************************************        !
-! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
-! REAL*8  EC        : Correlation energy density                              !
-! ********* UNITS ****************************************************        !
-! Densities in electrons per Bohr**3                                          !
-! Energies in Hartrees                                                        !
-! ********* ROUTINES CALLED ******************************************        !
-! None                                                                        !
+! Implements the Perdew-Wang 92 local correlation (beyond RPA).
+! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)
+! Written by L.C.Balbas and J.M.Soler. Dec 96.  Version 0.5.
+!
+! Modified slightly later.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine xc_c_pw92( NSPIN, DENS, VC, EC)
-
   integer :: NSPIN
   real(r8) :: DENS(NSPIN), EC, VC(NSPIN)
-
   ! Internal variable declarations
   integer :: IG
   real(r8) :: A(0:2), ALPHA1(0:2), B, BETA(0:2,4), C,         &
       DBDRS, DECDD(2), DECDRS, DECDZ, DENMIN, DFDZ,           &
       DGDRS(0:2), DCDRS, DRSDD, DTOT, DZDD(2),                &
       F, FPP0, FOUTHD, G(0:2), HALF,                          &
-      P(0:2), RS, THD, THRHLF, ZETA
-
+      P(0:2), RS, THD, THRHLF, ZETA, bin, vin, m(3)
   ! Fix lower bound of density to avoid division by zero
   PARAMETER ( DENMIN = 1.E-12 )
-
   ! Fix some numerical constants
   PARAMETER ( FOUTHD=4.0_r8/3.0_r8, HALF=0.50_r8,             &
       THD=1.0_r8/3.0_r8, THRHLF=1.50_r8 )
-  
   ! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
   DATA P      / 1.00_r8,     1.00_r8,     1.00_r8     /
   DATA A      / 0.031091_r8, 0.015545_r8, 0.016887_r8 /
@@ -248,8 +169,12 @@ subroutine xc_c_pw92( NSPIN, DENS, VC, EC)
     DRSDD = (- RS) / DTOT / 3
     DZDD(1) = 0
   ELSE
-    DTOT = MAX( DENMIN, DENS(1)+DENS(2) )
-    ZETA = ( DENS(1) - DENS(2) ) / DTOT
+    DTOT = MAX(DENMIN, DENS(1))
+    IF (NSPIN .EQ. 2) THEN
+       ZETA = DENS(2) / DTOT
+    ELSE
+       ZETA = sqrt(DENS(2)**2+DENS(3)**2+DENS(4)**2)/DTOT
+    ENDIF
     RS = ( 3 / (4*M_PI*DTOT) )**THD
     DRSDD = (- RS) / DTOT / 3
     DZDD(1) =   1 / DTOT - ZETA / DTOT
@@ -258,7 +183,6 @@ subroutine xc_c_pw92( NSPIN, DENS, VC, EC)
 
   ! Find eps_c(rs,0)=G(0), eps_c(rs,1)=G(1) and -alpha_c(rs)=G(2)
   ! using eq.(10) of cited reference (Perdew & Wang, PRB, 45, 13244 (92))
-
   DO IG = 0,2
     B = BETA(IG,1) * RS**HALF   +                                            &
         BETA(IG,2) * RS         +                                            &
@@ -288,17 +212,11 @@ subroutine xc_c_pw92( NSPIN, DENS, VC, EC)
       (DGDRS(1)-DGDRS(0)) * F * ZETA**4
   DECDZ = (- G(2)) / FPP0 * ( DFDZ*(1-ZETA**4) - F*4*ZETA**3 ) +              &
       (G(1)-G(0)) * ( DFDZ*ZETA**4 + F*4*ZETA**3 )
-  
-  ! Find correlation potential
-  IF (NSPIN .EQ. 1) THEN
-    DECDD(1) = DECDRS * DRSDD
-    VC(1) = EC + DTOT * DECDD(1)
-  ELSE
-    DECDD(1) = DECDRS * DRSDD + DECDZ * DZDD(1)
-    DECDD(2) = DECDRS * DRSDD + DECDZ * DZDD(2)
-    VC(1) = EC + DTOT * DECDD(1)
-    VC(2) = EC + DTOT * DECDD(2)
-  ENDIF
+
+  vin = ec + dtot*decdrs*drsdd - zeta*decdz
+  bin = decdz
+  if(nspin>2) m(1:3) = dens(2:4)
+  call xc_matrix(nspin, vin, bin, m, vc)
   
   return
 end subroutine xc_c_pw92

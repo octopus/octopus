@@ -30,11 +30,12 @@ implicit none
 ! If you change everything in this structure, do not forget to
 ! change states_dup
 type states_type
-  integer :: dim ! Dimension of the state
-  integer :: nst ! Number of states in each irreducible subspace
-  integer :: nik ! Number of irreducible subspaces
-  integer :: ispin ! spin mode
-  integer :: nspin ! dimension of rho
+  integer :: dim           ! Dimension of the state (one or two for spinors)
+  integer :: nst           ! Number of states in each irreducible subspace
+  integer :: nik           ! Number of irreducible subspaces
+  integer :: ispin         ! spin mode (unpolarized, spin polarized, spinors)
+  integer :: nspin         ! dimension of rho (1, 2 or 4)
+  integer :: spin_channels ! 1 or 2, wether spin is or not considered.
 
   ! pointers to the wavefunctions
   real(r8), pointer :: dpsi(:,:,:,:)
@@ -42,8 +43,6 @@ type states_type
 
   ! the densities (after all we are doing DFT :)
   real(r8), pointer :: rho(:,:)
-  real(r8),    pointer :: drho_off(:) ! if ispin = 3, off diagonal part of the density
-  complex(r8), pointer :: zrho_off(:)
 
   logical :: nlcc  ! is any species having non-local core corrections?
   real(r8), pointer :: rho_core(:)! core charge for nl core corrections
@@ -62,8 +61,12 @@ type states_type
 
   real(r8), pointer :: kpoints(:,:) ! obviously the kpoints
   real(r8), pointer :: kweights(:)  ! weights for the kpoint integrations
-
 end type states_type
+
+! Parameters...
+integer, parameter :: UNPOLARIZED    = 1, &
+                      SPIN_POLARIZED = 2, &
+                      SPINORS        = 3
 
 contains
 
@@ -78,8 +81,8 @@ subroutine states_init(st, m, val_charge)
 
   sub_name = 'states_init'; call push_sub()
 
-  call oct_parse_int(C_string('SpinComponents'), 1, st%ispin)
-  if (st%ispin < 1 .or. st%ispin > 3) then
+  call oct_parse_int(C_string('SpinComponents'), UNPOLARIZED, st%ispin)
+  if (st%ispin < UNPOLARIZED .or. st%ispin > SPINORS) then
     write(message(1),'(a,i4,a)') "Input: '", st%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
     call write_fatal(2)
@@ -110,35 +113,61 @@ subroutine states_init(st, m, val_charge)
     call write_fatal(2)
   end if
   
+!!$  st%qtot = -(val_charge + excess_charge)
+!!$  st%nst  = int(st%qtot/2._r8)
+!!$  if(st%nst*2._r8 < st%qtot) &
+!!$       st%nst = st%nst + 1
+!!$
+!!$  select case(st%ispin)
+!!$  case(UNPOLARIZED)
+!!$    st%dim = 1
+!!$    st%nst = st%nst + nempty
+!!$  case(SPIN_POLARIZED)
+!!$    st%dim = 1
+!!$    st%nst = st%nst + nempty
+!!$    st%nik = st%nik*2
+!!$  case(SPINORS)
+!!$    st%dim = 2
+!!$    st%nst = st%nst*2 + nempty
+!!$  end select
+
   st%qtot = -(val_charge + excess_charge)
-  st%nst  = int(st%qtot/2._r8)
-  if(st%nst*2._r8 < st%qtot) &
-       st%nst = st%nst + 1
 
   select case(st%ispin)
-  case(1)
+  case(UNPOLARIZED)
     st%dim = 1
+    st%nst = int(st%qtot/2)
+    if(st%nst*2 < st%qtot) st%nst = st%nst + 1
     st%nst = st%nst + nempty
-  case(2)
+    st%nspin = 1
+    st%spin_channels = 1
+  case(SPIN_POLARIZED)
     st%dim = 1
+    st%nst = int(st%qtot/2)
+    if(st%nst*2 < st%qtot) st%nst = st%nst + 1
     st%nst = st%nst + nempty
     st%nik = st%nik*2
-  case(3)
+    st%nspin = 2
+    st%spin_channels = 2
+  case(SPINORS)
     st%dim = 2
-    st%nst = st%nst*2 + nempty
+    st%nst = int(st%qtot)
+    if(st%nst < st%qtot) st%nst = st%nst + 1
+    st%nst = st%nst + nempty
+    st%nspin = 4
+    st%spin_channels = 2
   end select
 
   ! For non-periodic systems this should just return the Gamma point
   call states_choose_kpoints(st, m)
 
   ! we now allocate some arrays
-  st%nspin = min(2, st%ispin)
+!!$  st%nspin = min(2, st%ispin)
   allocate(st%rho(m%np, st%nspin), &
-       st%occ(st%nst, st%nik), st%eigenval(st%nst, st%nik))
-  if(st%ispin == 3) then
+           st%occ(st%nst, st%nik), &
+           st%eigenval(st%nst, st%nik))
+  if(st%ispin == SPINORS) then
     allocate(st%mag(st%nst, st%nik, 2))
-    nullify(st%drho_off, st%zrho_off)
-    allocate(st%R_FUNC(rho_off) (m%np))
   end if
 
   str = C_string("Occupations")
@@ -155,7 +184,12 @@ subroutine states_init(st, m, val_charge)
     st%fixed_occ = .false.
 
     ! first guest for occupation...paramagnetic configuration
-    r = 2.0_r8 / st%nspin
+    if(st%ispin == UNPOLARIZED) then
+      r = 2._r8
+    else
+      r = 1._r8
+    endif
+!!$    r = 2.0_r8 / st%nspin
     st%occ  = 0.0_r8
     st%qtot = 0.0_r8
     do j = 1, st%nst
@@ -190,11 +224,8 @@ subroutine states_end(st)
     nullify(st%rho_core)
   end if
 
-  if(st%ispin==3 .and. associated(st%drho_off)) then
-    deallocate(st%drho_off, st%mag); nullify(st%drho_off, st%mag)
-  end if
-  if(st%ispin==3 .and. associated(st%zrho_off)) then
-    deallocate(st%zrho_off); nullify(st%zrho_off)
+  if(st%ispin==3 .and. associated(st%mag)) then
+    deallocate(st%mag); nullify(st%mag)
   end if
 
   if(associated(st%dpsi)) then
@@ -318,7 +349,7 @@ subroutine states_fermi(st, m)
   conv = .true.
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
-     st%occ = 2.0_r8/st%nspin
+     st%occ = 2.0_r8/st%spin_channels!st%nspin
      ! Calculate magnetizations...
      if(st%ispin == 3) then
        do ik = 1, st%nik
@@ -350,7 +381,7 @@ subroutine states_fermi(st, m)
 
     do ik = 1, st%nik
       do ie =1, st%nst
-        sumq = sumq + st%kweights(ik)/st%nspin * &
+        sumq = sumq + st%kweights(ik)/st%spin_channels * & !st%nspin * &
              stepf((st%eigenval(ie, ik) - st%ef)/t)
       end do
     end do
@@ -370,7 +401,7 @@ subroutine states_fermi(st, m)
 
   do ik = 1, st%nik
     do ie = 1, st%nst
-      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%nspin
+      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%spin_channels!st%nspin
     end do
   end do
 
@@ -449,8 +480,8 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 
     write(iunit, '(a4)', advance='no') '#'
     do ik = 1, st%nik
-      write(iunit, '(1x,a12,1x,a12,2x,a10,i1,a1)', advance='no') &
-           'Eigenvalue ', 'Occupation ', 'Error (', ik, ')'
+      write(iunit, '(1x,a12,3x,a12,2x,a10,i1,a1)', advance='no') &
+           ' Eigenvalue', 'Occupation ', 'Error (', ik, ')'
     end do
     write(iunit, '(1x)', advance='yes')
     
@@ -469,14 +500,14 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
       write(iunit, '(i4)', advance='no') j
       do ik = 1, st%nik
         if(st%ispin == 3) then
-          write(iunit, '(1x,f12.6,1x,f5.3,a1,f5.3)', advance='no') &
+          write(iunit, '(1x,f12.6,3x,f5.3,a1,f5.3)', advance='no') &
                st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
         else
-          write(iunit, '(1x,f12.6,1x,f12.6)', advance='no') &
+          write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
                st%eigenval(j, ik)/units_out%energy%factor, o(ik)
         endif
          if(present(error)) then
-          write(iunit, '(a2,f12.8,a1)', advance='no')' (', error(j, ik), ')'
+          write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
         end if
       end do
       write(iunit, '(1x)', advance='yes')

@@ -62,6 +62,15 @@ real(r8), parameter    :: M_Pi=3.141592653589793_r8
 complex(r8), parameter :: M_zI=(0.0_r8,1.0_r8)
 complex(r8), parameter :: M_z0=(0.0_r8,0.0_r8)
 complex(r8), parameter :: M_z1=(1.0_r8,0.0_r8)
+real(r8), parameter    :: ZERO   = 0._r8
+real(r8), parameter    :: ONE    = 1._r8
+real(r8), parameter    :: TWO    = 2._r8
+real(r8), parameter    :: THREE  = 3._r8
+real(r8), parameter    :: FOUR   = 4._r8
+real(r8), parameter    :: FIVE   = 5._r8
+real(r8), parameter    :: HALF   = 0.5_r8
+real(r8), parameter    :: THIRD  = ONE/THREE
+real(r8), parameter    :: FOURTH = ONE/FOUR
 
 ! some physical constants
 real(r8), parameter :: P_Ang =  1._r8 / 0.529177_r8

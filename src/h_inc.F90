@@ -182,24 +182,19 @@ subroutine R_FUNC(vlpsi) (h, sys, ik, psi, Hpsi)
     end do
 
     select case(sys%st%ispin)
-    case(1) ! dim = 1
-      Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
-    case(2) ! dim = 1
+    case(UNPOLARIZED)
+      hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 1)*psi(1:, 1)
+    case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
-      else ! spin up
-        Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 2)*psi(1:, 1)
-      end if
-    case(3) ! dim = 2
-      if(h%noncollinear_spin) then
-        Hpsi(:, 1) = Hpsi(:, 1) + &
-          h%Vxc(:, 1)*psi(1:, 1) + h%R_FUNC(Vxc_off)(:)*psi(1:, 2)
-        Hpsi(:, 2) = Hpsi(:, 2) + &
-          h%Vxc(:, 2)*psi(1:, 2) + R_CONJ(h%R_FUNC(Vxc_off)(:))*psi(1:, 1)
+        hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 1)*psi(1:, 1)
       else
-        Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
-        Hpsi(:, 2) = Hpsi(:, 2) + h%Vxc(:, 2)*psi(1:, 2)
-      endif
+        hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 2)*psi(1:, 1)
+      end if
+    case(SPINORS)
+      hpsi(:, 1) = hpsi(:, 1) + h%vxc(:, 1)*psi(1:, 1) + &
+                   (h%vxc(:, 3) - M_zI*h%vxc(:, 4))*psi(1:, 2)
+      hpsi(:, 2) = hpsi(:, 2) + h%vxc(:, 2)*psi(1:, 2) + &
+                   (h%vxc(:, 3) + M_zI*h%vxc(:, 4))*psi(1:, 1)
     end select
 
   call pop_sub(); return
@@ -268,41 +263,24 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(inout) :: sys
 
-  real(r8), allocatable :: v_aux(:,:)
-  R_TYPE, pointer :: v_aux2(:)
-  integer :: i
+  integer :: is
+  sub_name = 'hamiltonian_setup'; call push_sub()
 
-  h%epot = 0._r8 ! The energy coming from the potentials
+  if(h%ip_app) return
 
-  if(.not.h%ip_app) then
-    call hartree_solve(h%hart, sys%m, h%Vhartree, sys%st%rho)
-    do i = 1, sys%st%nspin
-      h%epot = h%epot - 0.5_r8*dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vhartree)
-    end do
-    
-    allocate(v_aux(h%np, sys%st%nspin))
-    if(h%noncollinear_spin) then
-      allocate(v_aux2(h%np))
-    else
-      nullify(v_aux2)
-    end if
+  call hartree_solve(h%hart, sys%m, h%vhartree, sys%st%rho(:, 1))
+  h%epot = - 0.5_r8*dmesh_dotp(sys%m, sys%st%rho(:, 1), h%vhartree)
 
-    call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, &
-         h%Vxc, v_aux, h%ex, h%ec, h%R_FUNC(Vxc_off),  v_aux2)
+  call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%vxc, h%ex, h%ec)
+  h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, 1), h%vxc(:, 1))
+  select case(h%ispin)
+  case(SPIN_POLARIZED)
+       h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 2), 0.5_r8*(h%vxc(:, 1)-h%vxc(:, 2)))
+  case(SPINORS)
+       h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 4), 0.5_r8*(h%vxc(:, 1)-h%vxc(:, 2)))
+       ! Warning: the non-diagonal term is missing.
+       !h%epot = h%epot + dmesh_dotp(sys%m, sys%st%rho(:, 2), h%vxc(:, 1, 2))
+  end select
 
-    h%Vxc = h%Vxc + v_aux
-    if(h%noncollinear_spin) then
-      h%R_FUNC(Vxc_off) = h%R_FUNC(Vxc_off) + v_aux2
-      deallocate(v_aux2); nullify(v_aux2)
-      h%epot = h%epot - sys%m%vol_pp*2._r8* &
-           sum(real(R_CONJ(sys%st%R_FUNC(rho_off)(:))*h%R_FUNC(Vxc_off)(:), r8))
-    end if
-
-    do i = 1, sys%st%nspin
-      h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
-    end do
-    deallocate(v_aux)
-    
-  end if
-
+  call pop_sub(); return
 end subroutine R_FUNC(hamiltonian_setup)

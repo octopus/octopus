@@ -63,7 +63,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
         write(message(1), '(a,i2,a,f14.6)') 'N(', is, ') = ', N_alpha
         call write_info(1)
 
-        call hartree_solve(hartr, m, Vx2(:, 1), st%rho(:, 1:1))
+        call hartree_solve(hartr, m, Vx2(:, 1), st%rho(:, 1))
         Ex2 = 0._r8
         do k = 1, m%np
           if((ia == 1.and.m%Lz(k)>=0).or.(ia == 2.and.m%Lz(k)<=0)) then

@@ -37,7 +37,7 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
 
   allocate(pot(m%np))
   if(nst==1 .and. nspin==1) then
-    call hartree_solve(hartr, m, pot, rho)
+    call hartree_solve(hartr, m, pot, rho(:, 1))
     if(occ(1, 1) == 1.0_r8) then
       vx(:, 1) = -pot(:); return
     elseif(occ(1, 1) == 2.0_r8) then
@@ -68,7 +68,7 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
             pot = 0._r8
 
             rho_ij(1:m%np, 1) = psi(1:m%np, i, is)*psi(1:m%np, j, is)
-            call hartree_solve(hartr, m, pot, rho_ij)
+            call hartree_solve(hartr, m, pot, rho_ij(:, 1))
             deallocate(rho_ij)
             do k=1, m%np
               u_xc(k, i) = u_xc(k, i) - occ(j,is)*socc*pot(k)*    &
@@ -83,11 +83,11 @@ subroutine R_FUNC(kli_x) (m, nspin, nst, occ, eigenval, psi, hartr, Vx, ex, rho)
 
             rho_ij(1:m%np, 1) = real(psi(1:m%np, i, is))*real(psi(1:m%np, j, is)) + &
                 aimag(psi(1:m%np, i, is))*aimag(psi(1:m%np, j, is))
-            call hartree_solve(hartr, m, pot_r, rho_ij(1:m%np, 1:1))
+            call hartree_solve(hartr, m, pot_r, rho_ij(1:m%np, 1))
             ! and now the imaginary part
             rho_ij(1:m%np, 1) = real(psi(1:m%np, i, is))*aimag(psi(1:m%np, j, is)) - &
                 aimag(psi(1:m%np, i, is))*real(psi(1:m%np, j, is))
-            call hartree_solve(hartr, m, pot_i, rho_ij(1:m%np, 1:1))
+            call hartree_solve(hartr, m, pot_i, rho_ij(1:m%np, 1))
             deallocate(rho_ij)
             do k=1, m%np
               u_xc(k, i) = u_xc(k, i) - occ(j,is)*socc*real((pot_r(k) + M_zI*pot_i(k))*  &

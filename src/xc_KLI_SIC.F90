@@ -62,7 +62,7 @@ subroutine R_FUNC(kli_x_sic) (m, st, psi, hartr, Vx, ex)
            u_xc(1:m%np, i) = - Vx2(1:m%np, 1)
            Ex = Ex - sfact*ex2
 
-           call hartree_solve(hartr, m, Vx2(:, 1), rho(:, 1:1))
+           call hartree_solve(hartr, m, Vx2(:, 1), rho(:, 1))
            u_xc(1:m%np, i) = u_xc(1:m%np, i) - Vx2(1:m%np, 1)
 
            u_bar_xc(i) = sum(u_xc(1:m%np, i) * R_ABS(psi(1:m%np, i, is))**2)*m%vol_pp

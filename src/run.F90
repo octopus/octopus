@@ -246,12 +246,6 @@ subroutine run()
 
       ! load zpsi from static file.
       if(zstates_load_restart("restart.static", sys%m, sys%st)) then
-        if(h%ispin == 3 .and. h%noncollinear_spin) then
-          deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
-          nullify(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
-          allocate(h%zVxc_off(sys%m%np), sys%st%zrho_off(sys%m%np))
-          h%zVxc_off = M_z0; sys%st%zrho_off = M_z0
-        end if
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zhamiltonian_setup(h, sys)
         call zhamiltonian_eigenval (h, sys, sys%st%st_start, sys%st%st_end)
@@ -274,13 +268,6 @@ subroutine run()
       write(filename, '(a,i3.3)') "restart.td.", mpiv%node
       if(zstates_load_restart(trim(filename), &
            sys%m, sys%st, iter=td%iter, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))) then
-
-        if(h%ispin == 3 .and. h%noncollinear_spin) then
-          deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
-          nullify(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
-          allocate(h%zVxc_off(sys%m%np), sys%st%zrho_off(sys%m%np))
-          h%zVxc_off = M_z0; sys%st%zrho_off = M_z0
-        end if
 
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)

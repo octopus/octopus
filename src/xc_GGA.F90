@@ -91,9 +91,7 @@ subroutine xc_gga(func, m, st, pot, energy)
     energy = - energy * m%vol_pp
   end if
 
-  call pop_sub()
-
-  return
+  call pop_sub(); return
 end subroutine xc_gga
 
 

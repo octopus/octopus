@@ -187,7 +187,7 @@ contains
     
      !  first the Hartree part (only works for real wfs...)
       pot = 0._r8
-      call hartree_solve(hart, m, pot, rho_j)
+      call hartree_solve(hart, m, pot, rho_j(:, 1))
       K_term = sum(rho_i(:,1)*pot(:))*m%vol_pp
       
       ! now we have fxc

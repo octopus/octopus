@@ -78,23 +78,14 @@ subroutine lcao_dens(sys, nspin, rho)
   end do
 
   ! we now renormalize the density (necessary if we have a charged system)
-  ! if spin polarized, we start with paramagnetic density
-  r = 0.0_r8
-  do is = 1, nspin
-     r = r + dmesh_integrate(sys%m, rho(:, is))
-  enddo
+  r = dmesh_integrate(sys%m, rho(:, 1))
   write(message(1),'(a,f13.6)')'Info: Unnormalized total charge = ', r
   call write_info(1)
-
   r = sys%st%qtot/r
   do is = 1, nspin
     rho(:, is) = r*rho(:, is)
   end do
-
-  r = 0.0_r8
-  do is = 1, nspin
-     r = r + dmesh_integrate(sys%m, rho(:, is))
-  enddo
+  r = dmesh_integrate(sys%m, rho(:, 1))
   write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', r
   call write_info(1)
 
@@ -141,23 +132,31 @@ contains
 
     integer :: i, l, is
     real(r8) :: r
-    R_TYPE :: psi
+    R_TYPE :: psi1, psi2
 
-    do is = 1, nspin 
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
 #if defined(THREE_D)
       do l = 0 , s%ps%L_max_occ
         if(r >= r_small) then
-          psi = splint(s%ps%Ur(l, is), r)
-          rho(i, is) = rho(i, is) + s%ps%occ(l, is)*psi*psi*(r**(2*l))/(4*M_PI)
+          select case(sys%st%spin_channels)
+          case(1)
+             psi1 = splint(s%ps%Ur(l, 1), r)
+             rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1*(r**(2*l))/(4*M_PI)
+          case(2)
+             psi1 = splint(s%ps%ur(l, 1), r)
+             psi2 = splint(s%ps%ur(l, 2), r)
+             rho(i, 1) = rho(i, 1) + (s%ps%occ(l, 1)*psi1*psi1 + s%ps%occ(l, 2)*psi2*psi2) * &
+                                     (r**(2*l))/(4*M_PI)
+             rho(i, sys%st%nspin) = rho(i, sys%st%nspin) + &
+                                    (s%ps%occ(l, 1)*psi1*psi1 - s%ps%occ(l, 2)*psi2*psi2) * &
+                                    (r**(2*l))/(4*M_PI)
+          end select          
         end if
       end do
 #elif defined(ONE_D)
       rho(i, 1) = rho(i, 1) + s%z_val*exp(-r**2)/sqrt(m_pi)
-      !call R_FUNC(calcdens)(sys%st, m%np, rho)
 #endif
-    end do
     end do
     
   end subroutine from_pseudopotential
