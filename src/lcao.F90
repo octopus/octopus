@@ -152,8 +152,8 @@ contains
           case(2)
             ! This is still a bit weird, but let us see how it works...
             psi1 = splint(s%ps%Ur(n, 1), r)
-            rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + M_HALF*s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
-            rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + M_HALF*s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
+            rho(i, mod(j,2)+1)   = rho(i, mod(j,2)+1)   + s%ps%conf%occ(n, 1)*psi1*psi1 / (M_FOUR*M_PI)
+            rho(i, mod(j+1,2)+1) = rho(i, mod(j+1,2)+1) + s%ps%conf%occ(n, 2)*psi1*psi1 / (M_FOUR*M_PI)
             j = j + 1
           end select
         end if
