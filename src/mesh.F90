@@ -22,6 +22,7 @@ use global
 use lib_oct_parser
 use units
 use math
+use geometry
   
 implicit none
 
@@ -74,12 +75,13 @@ end type mesh_type
 
 contains
 
-subroutine mesh_init(m)
-  type(mesh_type), intent(inout) :: m
+subroutine mesh_init(m,geo)
+  type(mesh_type),     intent(inout) :: m
+  type(geometry_type), intent(IN)    :: geo
 
   call push_sub('mesh_init')
 
-  call mesh_create(m)
+  call mesh_create(m, geo)
 
   call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
   if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
@@ -287,6 +289,9 @@ subroutine mesh_inborder(m, i, n, d, width)
       if(dd.gt.M_ZERO) then
         n = n + 1; d(n) = dd
       endif
+    case(MINIMUM)
+      message(1) = "Absorbing boundaries are not yet implemented for the 'minimum' box"
+      call write_fatal(1)
     case(PARALLELEPIPED)
       do j = 1, conf%dim
          dd = abs(x(j)) - (m%lsize(j) - width)

@@ -23,7 +23,6 @@ program xyzanim
   use lib_oct_parser
   use io
   use units
-  use atom
   use geometry
 
   implicit none

@@ -20,6 +20,7 @@
 module poisson
   use global
   use lib_oct_parser
+  use geometry
   use mesh
 #ifdef HAVE_FFT
   use fft
@@ -51,8 +52,9 @@ public :: poisson_init, poisson_solve, poisson_end
 
 contains
 
-subroutine poisson_init(m)
-  type(mesh_type), intent(inout) :: m
+subroutine poisson_init(m, geo)
+  type(mesh_type),     intent(inout) :: m
+  type(geometry_type), intent(IN)    :: geo
   
   if(poisson_solver.ne.-99) return ! already initialized
   
@@ -85,7 +87,7 @@ subroutine poisson_init(m)
     poisson_solver = CG
 #endif
 
-    call poisson3D_init(m)
+    call poisson3D_init(m, geo)
   end if
 end subroutine poisson_init
 

@@ -20,7 +20,6 @@
 module geom_opt
   use global
   use mesh
-  use atom
   use hamiltonian
   use geometry
   use states

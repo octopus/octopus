@@ -23,7 +23,6 @@ use lib_oct_parser
 use lib_basic_alg
 use mesh
 use mesh_function
-use atom
 use geometry
 use states
 use external_pot
@@ -147,7 +146,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     call write_info(1)
   else
     ! initilize hartree and xc modules
-    call poisson_init(m)
+    call poisson_init(m, geo)
     call xc_init(h%xc, geo%nlcc)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
@@ -182,14 +181,14 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     allocate(h%ab_pot(m%np))
     h%ab_pot = M_ZERO
     do i = 1, m%np
-         call mesh_inborder(m, i, n, d, h%ab_width)
-         if(n>0) then
-           do j = 1, n
-              h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
-           enddo
-         endif
-         if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
-    enddo
+      call mesh_inborder(m, i, n, d, h%ab_width)
+      if(n>0) then
+        do j = 1, n
+          h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
+        end do
+      end if
+      if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
+    end do
 
   end if absorbing_boundaries
   

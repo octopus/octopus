@@ -21,7 +21,6 @@ module timedep
 use global
 use lib_oct_parser
 use mesh
-use atom
 use states
 use hamiltonian
 use external_pot

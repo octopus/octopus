@@ -123,7 +123,7 @@ subroutine run()
       ! Warning: I think this is pretty useless, since the occupation are null.
       call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       ! this is certainly a better density
-      call guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
+      call system_guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
                          sys%st%d%spin_channels, sys%st%rho)
 
     case(I_LOAD_RPSI)

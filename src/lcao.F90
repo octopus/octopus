@@ -25,8 +25,8 @@ module lcao
   use lib_adv_alg
   use mesh
   use specie
-  use atom
   use geometry
+  use system
   use hamiltonian
 
   implicit none

@@ -27,7 +27,6 @@ module external_pot
   use logrid
   use ps
   use specie
-  use atom
   use geometry
   use states
   use lasers

@@ -8,16 +8,17 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
+	specie.F90 xyz_file.F90 geometry.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \
-	specie.F90 atom.F90 xyz_file.F90 geometry.F90 \
 	poisson.F90 out.F90 crystal.F90 states.F90 xc.F90 mix.F90
 
-octopus_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 \
+octopus_SOURCES = $(core_SRCS) \
+	lasers.F90 epot.F90 systm.F90 h.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 \
-	opt_control.F90 pulpo.F90 systm.F90 \
+	opt_control.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \

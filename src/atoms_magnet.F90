@@ -24,7 +24,6 @@ program atoms_magnet
   use units
   use mesh
   use mesh_function
-  use atom
   use geometry
   use output
   use states
@@ -41,9 +40,11 @@ program atoms_magnet
   ! Initialize stuff
   call global_init()
   call units_init()
-  call mesh_init(m)
+
   call geometry_init_xyz(geo)
+  call mesh_init(m, geo)
   call geometry_init_species(geo, val_charge)
+
   allocate(st)
   call states_init(st, m, val_charge, geo%nlcc)
   if (st%d%ispin /= SPINORS) then

@@ -15,8 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine poisson3D_init(m)
-  type(mesh_type), intent(inout) :: m
+subroutine poisson3D_init(m, geo)
+  type(mesh_type),     intent(inout) :: m
+  type(geometry_type), intent(IN)    :: geo ! this is needed to call mesh_create_xyz
 
 
   ASSERT(poisson_solver >= 0 .or. poisson_solver <= 4)
@@ -52,7 +53,7 @@ contains
     allocate(cg_m_aux)
     cg_m_aux = m
     nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%grad)
-    call mesh_create_xyz(cg_m_aux, m%laplacian%norder)
+    call mesh_create_xyz(cg_m_aux, geo, m%laplacian%norder)
     call derivatives_init_diff(cg_m_aux, m%laplacian%norder, cg_m_aux%laplacian, cg_m_aux%grad)
 
   end subroutine init_real

@@ -72,7 +72,7 @@ program excitations
   call loct_wfs_list(ch, flags)
 
   ! initialize Poisson solver
-  call poisson_init(sys%m)
+  call poisson_init(sys%m, sys%geo)
 
   ! calculate resonances
   message(1) = "Info: Eigenvalue differences"

@@ -23,9 +23,10 @@
 
 #define DELTA_R CNST(1e-12)
 
-subroutine mesh_create(m, enlarge_)
-  type(mesh_type), intent(inout) :: m
-  integer, intent(in), optional :: enlarge_
+subroutine mesh_create(m, geo, enlarge_)
+  type(mesh_type),     intent(inout) :: m
+  type(geometry_type), intent(IN)    :: geo
+  integer, optional,   intent(in)    :: enlarge_
 
   ! some local stuff
   integer :: i, ix, iy, iz, ii(3), enlarge
@@ -44,7 +45,7 @@ subroutine mesh_create(m, enlarge_)
   end if
   
   select case(m%box_shape)
-  case(SPHERE)
+  case(SPHERE,MINIMUM)
     if(conf%dim>1 .and. conf%periodic_dim>0) then
       message(1) = 'Spherical mesh is not allowed for periodic systems'
       call write_fatal(1)
@@ -62,7 +63,7 @@ subroutine mesh_create(m, enlarge_)
   if(conf%dim==1) m%box_shape=SPHERE
 
   ! Read the box size.
-  if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER) then
+  if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
     call loct_parse_float('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     m%lsize(1) = m%rsize
@@ -110,7 +111,7 @@ subroutine mesh_create(m, enlarge_)
   ! Read the grid spacing.
   m%h = M_ZERO
   select case(m%box_shape)
-  case(SPHERE,CYLINDER)
+  case(SPHERE,CYLINDER,MINIMUM)
     call loct_parse_float('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
     m%h(1:conf%dim) = m%h(1)
   case(PARALLELEPIPED)
@@ -124,42 +125,59 @@ subroutine mesh_create(m, enlarge_)
   end select
   m%h(1:conf%dim) = m%h(1:conf%dim)*units_inp%length%factor
 
-  ! set nr and adjust the mesh so that:
-  ! 1) the new grid exactly fills the box;
-  ! 2) the new mesh is not larger than the user defined mesh.
-  m%nr = 0
-  select case(m%box_shape)
-  case(SPHERE)
-    m%nr(2, 1:conf%dim) = int((m%rsize+DELTA_R)/m%h(1))
-  case(CYLINDER)
-    m%nr(2, 1:conf%dim) = max(int((m%rsize+DELTA_R)/m%h(1)), int((m%xsize+DELTA_R)/m%h(1)))
-  case(PARALLELEPIPED)
-    m%nr(2, 1:conf%dim) = int((m%lsize(1:conf%dim)+DELTA_R)/m%h(1:conf%dim))
-    do i = 1, conf%dim
-      if (m%lsize(i)-m%nr(2,i)*m%h(i) > DELTA_R) then
-        m%nr(2, i) = m%nr(2, i) + 1
-        m%h(i) = m%lsize(i)/real(m%nr(2, i))
-      end if
-    end do 
-  end select
-  m%nr(1,:) = -m%nr(2,:)
-
-  ! the last point is equivalent to the first one in periodic directions
-  do i = 1, conf%periodic_dim
-    m%nr(2, i) = m%nr(2, i) - 1
-  end do
-  m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
-
   m%vol_pp = M_ONE
   do i = 1, conf%dim
     m%vol_pp = m%vol_pp*m%h(i)
   end do
 
-  call mesh_create_xyz(m, enlarge)
+  call adjust_nr()
+  call mesh_create_xyz(m, geo, enlarge)
   call mesh_write_info(m, stdout)
 
   call pop_sub()
-  return
+
+contains
+  ! set nr and adjust the mesh so that:
+  ! 1) the new grid exactly fills the box;
+  ! 2) the new mesh is not larger than the user defined mesh.
+  subroutine adjust_nr()
+    integer :: i, j
+    FLOAT   :: max_x(3);
+
+    m%nr = 0
+    select case(m%box_shape)
+    case(SPHERE)
+      m%nr(2, 1:conf%dim) = int((m%rsize+DELTA_R)/m%h(1))
+    case(CYLINDER)
+      m%nr(2, 1:conf%dim) = max(int((m%rsize+DELTA_R)/m%h(1)), int((m%xsize+DELTA_R)/m%h(1)))
+    case(MINIMUM)
+      max_x = 0
+      do i = 1, geo%natoms
+        do j = 1, conf%dim
+          if(abs(geo%atom(i)%x(j)) > max_x(j)) max_x(j) = abs(geo%atom(i)%x(j))
+        end do
+      end do
+      max_x = max_x + m%rsize + DELTA_R
+      m%nr(2, 1:conf%dim) = int(max_x(1:conf%dim) / m%h(1))
+    case(PARALLELEPIPED)
+      m%nr(2, 1:conf%dim) = int((m%lsize(1:conf%dim)+DELTA_R)/m%h(1:conf%dim))
+      do i = 1, conf%dim
+        if (m%lsize(i)-m%nr(2,i)*m%h(i) > DELTA_R) then
+          m%nr(2, i) = m%nr(2, i) + 1
+          m%h(i) = m%lsize(i)/real(m%nr(2, i))
+        end if
+      end do
+    end select
+    m%nr(1,:) = -m%nr(2,:)
+    print *, m%nr
+    
+    ! the last point is equivalent to the first one in periodic directions
+    do i = 1, conf%periodic_dim
+      m%nr(2, i) = m%nr(2, i) - 1
+    end do
+    m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
+  end subroutine adjust_nr
+
 end subroutine mesh_create
 
 #if defined(HAVE_METIS)
@@ -234,9 +252,10 @@ subroutine mesh_partition(m, Lxyz_tmp)
 end subroutine mesh_partition
 #endif
 
-subroutine mesh_create_xyz(m, enlarge)
-  type(mesh_type), intent(inout) :: m
-  integer, intent(in) :: enlarge
+subroutine mesh_create_xyz(m, geo, enlarge)
+  type(mesh_type),     intent(inout) :: m
+  type(geometry_type), intent(IN)    :: geo
+  integer,             intent(in)    :: enlarge
 
   integer :: i, il, ix, iy, iz
   integer, pointer :: Lxyz_tmp(:,:,:)
@@ -259,7 +278,7 @@ subroutine mesh_create_xyz(m, enlarge)
     do ix = m%nr(1,1), m%nr(2,1)
       do iy = m%nr(1,2), m%nr(2,2)
         do iz = m%nr(1,3), m%nr(2,3)
-          if(in_mesh(m, ix, iy, iz)) then
+          if(in_mesh(m, geo, ix, iy, iz)) then
             do i = -enlarge, 0 ! first include the points on the left
               if(ix+i>=m%nr(1,1))                Lxyz_tmp(ix+i, iy, iz) = 2
               if(iy+i>=m%nr(1,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
@@ -280,7 +299,7 @@ subroutine mesh_create_xyz(m, enlarge)
   do ix = m%nr(1,1), m%nr(2,1)
     do iy = m%nr(1,2), m%nr(2,2)
       do iz = m%nr(1,3), m%nr(2,3)
-        if(in_mesh(m, ix, iy, iz)) Lxyz_tmp(ix, iy, iz) = 1
+        if(in_mesh(m, geo, ix, iy, iz)) Lxyz_tmp(ix, iy, iz) = 1
       end do
     end do
   end do
@@ -337,9 +356,10 @@ subroutine mesh_create_xyz(m, enlarge)
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
 end subroutine mesh_create_xyz
 
-logical function in_mesh(m, ix, iy, iz)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: ix, iy, iz
+logical function in_mesh(m, geo, ix, iy, iz)
+  type(mesh_type),     intent(IN) :: m
+  type(geometry_type), intent(IN) :: geo
+  integer,             intent(in) :: ix, iy, iz
     
 
   select case(m%box_shape)
@@ -347,6 +367,8 @@ logical function in_mesh(m, ix, iy, iz)
     in_mesh = (sqrt(real(ix**2 + iy**2 + iz**2, PRECISION))*m%h(1) <= m%rsize+DELTA_R)
   case(CYLINDER)
     in_mesh = in_cylinder()
+  case(MINIMUM)
+    in_mesh = in_minimum()
   case(PARALLELEPIPED)
     in_mesh = (ix >= m%nr(1,1).and.ix <= m%nr(2,1)).and. &
          (iy >= m%nr(1,2).and.iy <= m%nr(2,2)).and.(iz >= m%nr(1,3).and.iz <= m%nr(2,3))
@@ -355,13 +377,28 @@ logical function in_mesh(m, ix, iy, iz)
 contains
 
   logical function in_cylinder()
-    FLOAT r, x
+    FLOAT :: r, x
     r = sqrt(real(iy**2 + iz**2, PRECISION))*m%h(1)
     x = ix*m%h(1)
     
     in_cylinder = (r<=m%rsize+DELTA_R .and. abs(x)<=m%xsize+DELTA_R)
   end function in_cylinder
 
+  logical function in_minimum()
+    integer :: i
+    FLOAT   :: r
+    
+    in_minimum = .false.
+    do i = 1, geo%natoms
+      r = sqrt((ix*m%h(1) - geo%atom(i)%x(1))**2 + (iy*m%h(1) - geo%atom(i)%x(2))**2 &
+           + (iz*m%h(1) - geo%atom(i)%x(3))**2)
+      if(r <= m%rsize+DELTA_R) then
+        in_minimum = .true.
+        exit
+      end if
+    end do
+
+  end function in_minimum
 end function in_mesh
 
 subroutine derivatives_init_diff(m, order, laplacian, grad)
