@@ -20,6 +20,9 @@
 ! assumes that the box_shape, h, rsize/xsize of m are filled
 ! if norder is present, then set nk, Kx, Ky and Kz
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#define DELTA_R 1e-12_r8
+
 subroutine mesh_create(m, natoms, atom, enlarge_)
   type(mesh_type), intent(inout) :: m
   integer, intent(in), optional :: natoms
@@ -128,11 +131,11 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
   m%nr = 0
   select case(m%box_shape)
   case(SPHERE)
-    m%nr(2, 1:conf%dim) = int(m%rsize/m%h(1))
+    m%nr(2, 1:conf%dim) = int((m%rsize+DELTA_R)/m%h(1))
   case(CYLINDER)
-    m%nr(2, 1:conf%dim) = max(int(m%rsize/m%h(1)), int(m%xsize/m%h(1)))
+    m%nr(2, 1:conf%dim) = max(int((m%rsize+DELTA_R)/m%h(1)), int((m%xsize+DELTA_R)/m%h(1)))
   case(PARALLELEPIPED)
-    m%nr(2, 1:conf%dim) = int(m%lsize(1:conf%dim)/m%h(1:conf%dim))
+    m%nr(2, 1:conf%dim) = int((m%lsize(1:conf%dim)+DELTA_R)/m%h(1:conf%dim))
     do i = 1, conf%dim
       if (mod(m%lsize(i),m%h(i)) /= M_ZERO) then
         m%nr(2, i) = m%nr(2, i) + 1
@@ -262,8 +265,6 @@ subroutine mesh_create_xyz(m, enlarge)
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
 end subroutine mesh_create_xyz
 
-
-#define DELTA_R 1e-12_r8
 logical function in_mesh(m, ix, iy, iz)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: ix, iy, iz
