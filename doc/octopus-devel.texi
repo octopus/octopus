@@ -97,10 +97,29 @@ any later version published by the Free Software Foundation.
 * Authors::                     
 * Copying::                     
 * Introduction::                
+* xc::                          
+* xc_functl::                   
 * lib_xc::                      
 
 @detailmenu
  --- The Detailed Node Listing ---
+
+@code{xc}
+
+* type xc_type::                
+* subroutine xc_init::          
+* subroutine xc_write_info::    
+* subroutine xc_end::           
+* subroutine xc_get_vxc::       
+* OEP levels::                  
+
+@code{xc_functl}
+
+* type xc_functl_type::         
+* subroutine xc_functl_init_exchange::  
+* subroutine xc_functl_init_correlation::  
+* subroutine xc_functl_write_info::  
+* subroutine xc_functl_end::    
 
 @code{lib_xc}
 
@@ -183,8 +202,13 @@ Licenses that accompany it.
 @end cartouche
 
 
-@c ********************* INTRODUCTION ***********************************
-@node Introduction, lib_xc, Copying, Top
+
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@node Introduction, xc, Copying, Top
 @chapter Introduction
 
 
@@ -198,6 +222,22 @@ instead of removing the equations in the info files,
 they will show up as the TeX commands that produce them in the printed
 documentation]
 @end ifinfo
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -206,7 +246,507 @@ documentation]
 @c *******************************************************************************
 @c *******************************************************************************
 @c *******************************************************************************
-@node lib_xc,  , Introduction, Top
+@node xc, xc_functl, Introduction, Top
+@chapter @code{xc}
+
+
+The module @code{xc} takes care of @emph{most} of the problem of calculating
+the exchange and correlation potential and energy functionals. Unfortunately, it cannot
+handle all the problem, as it would be desirable, because the OEP functionals
+have to be handled within the @code{hamiltonian} module (to obtain an OEP functional
+one needs to apply the Hamiltonian). Since Fortran 90 is unable of handling circular
+dependencies, the obtention of OEP functionals (or the obtention of the SIC through
+the OEP method) is done in the @code{h_xc_oep} subroutine in the @code{hamiltonian}
+module. We can consider @code{h_xc_oep} to be within the @code{xc} module @emph{in spirit}.
+
+
+Note that @octopus does not distinguish, for the moment, between ground-state DFT
+xc functionals, and time-dependent DFT functionals. In other words, in all cases
+the @emph{adiabatic} approximation is assumed. In mathematical terms, we may 
+formalize this in the following way: let @math{n} be the time-dependent density,
+a function living in the four-dimensional space-time world.
+We will call @math{n_t(\vec{r}) = n(\vec{r}, t)}, the electronic density at time @math{t},
+a function in the three-dimensional space.
+An exchange and/or correlation @emph{energy} functional @math{E^{\alpha}} in ground state DFT may
+then be used to build an @emph{adiabatic} exchange and/or correlation @math{action}
+functional in the following way:
+@ifnottex
+@verbatim
+a
+@end verbatim
+@end ifnottex
+@tex
+$$
+A^{\alpha}[n] = \int_{t_0}^{t_f}{\rm d}\tau E^{\alpha}[n_\tau]\,,
+$$
+@end tex
+The time-dependent potential functional is then:
+@ifnottex
+@verbatim
+a
+@end verbatim
+@end ifnottex
+@tex
+$$ v^{\alpha}[n](\vec{r},t) \equiv { \delta A^{\alpha} \over \delta
+n(\vec{r}, t)} = { \delta E^{\alpha} \over \delta n_{t}(\vec{r}) } =
+v^{\alpha \rm (GS)}[n_t](\vec{r})\,.  $$
+@end tex
+We use the distinct notation @math{v^{\alpha}[n](\vec{r},t)} and
+@math{v^{\alpha \rm (GS)}[n_t](\vec{r})} to stress that the exchange and correlation
+potential in TDDFT -- the former -- and the exchange and correlation potential
+in  GS-DFT -- the latter -- are in principle two conceptually different objects, which
+coincide only thanks to the adiabatic approximation. This is the reason why
+we may actually only refer to the functionals in the GS-DFT context.
+
+We may classify the xc functionals contained in the @octopus code following
+John Perdew's Jacob's Ladder scheme:
+
+@enumerate
+@item LDA rung: A functional @math{\alpha} belonging to the LDA rung depends only on the
+electronic density (on the spin density in spin-polarized or spinors cases). Moreover, it
+has a @emph{local} dependency on the density, i.e.:
+@ifnottex
+@verbatim
+a
+@end verbatim
+@end ifnottex
+@tex
+$$
+E^{\alpha}_{\rm LDA} = E^{\alpha}_{\rm LDA}[n] = \int {\rm d}^3r f^{\alpha}_{\rm LDA}(n(\vec{r}))\,.
+$$
+@end tex
+
+The potential may be then derived by functional derivation:
+@ifnottex
+@verbatim
+a
+@end verbatim
+@end ifnottex
+@tex
+$$
+v^{\alpha}_{LDA}[n](\vec{r}) = 
+{\delta {E^{\alpha}_{\rm LDA}} \over {\delta n(\vec{r})}} 
+= {{{\rm d}f^{\alpha}_{\rm LDA} } \over {{\rm d}n }}(n(\vec{r}))\,.
+$$
+@end tex
+
+
+
+
+@item GGA rung: A functional @math{\alpha} belonging to the GGA rung depends on the
+electronic density, and also on its gradient. Moreover, it also has a @emph{local}
+dependency (yes, the GGA is also a local functional in this sense).
+@ifnottex
+@verbatim
+a
+@end verbatim
+@end ifnottex
+@tex
+$$
+E^{\rm \alpha (GGA)} = E^{\rm \alpha (GGA)}[n, \vec{\nabla}n] =
+\int {\rm d}^3r f^{\alpha}_{\rm GGA}(n(\vec{r}), \vec{\nabla}n(\vec{r}))\,.
+$$
+@end tex
+
+@item mGGA rung:
+
+@item OEP rung: This is the family of functionals which are defined
+in terms of the occupied Kohn-Sham orbitals, @math{\lbrace \varphi_i \rbrace_{i=1}^{N}}.
+These are in fact the only @emph{non-local} functionals. The name of the rung,
+OEP, stands for ``optimized-effective-potential'', the reason being that in general
+this is the method used to derive the potential from the energy functional
+(direct functional derivation is in this case not possible). A more suitable
+name would be orbital-dependent functionals.
+
+
+@end enumerate
+
+
+@menu
+* type xc_type::                
+* subroutine xc_init::          
+* subroutine xc_write_info::    
+* subroutine xc_end::           
+* subroutine xc_get_vxc::       
+* OEP levels::                  
+@end menu
+
+@node type xc_type, subroutine xc_init, xc, xc
+@section @code{type xc_type}
+
+@verbatim
+type(xc_functl_type) :: functl(2)
+integer              :: sic_correction
+type(xc_functl_type) :: sic_aux(2)
+integer              :: mGGA_implementation
+integer              :: oep_level
+FLOAT                :: oep_mixing
+logical              :: nlcc
+@end verbatim
+
+This data type holds all the necessary information to fully
+characterize the exchange and correlation functional used in an
+@code{octopus} calculation. Its componets are the following:
+
+@itemize
+
+@item @code{functl(2)}: The first element of this two-element array is the
+@code{xc_functl_type} structure that holds the information about
+the exchange functional; the second element holds the correlation functional.
+
+@item @code{sic_correction} determines wether self-interaction corrections (SIC)
+are to be applied or not. It only holds if any of the @code{functl} components
+is holding a functional of the @code{XC_FAMILY_LDA} or @code{XC_FAMILY_GGA} families
+(see @ref{type xc_functl_type}).
+
+The possible values are: 0 (do not apply SIC corrections), or anything else
+(do apply SIC corrections).
+
+@item @code{sic_aux(2)}: These are two @code{xc_functl_type} structures, which
+hold auxiliary exchange and correlation functionals, necessary to builid the
+SIC. [WARNING: I believe that this could be avouided]
+
+@item @code{mGGA_implementation}: The mGGA functional is in fact an orbital
+dependent functional. It may then also use the OEP formalism. The precise way
+in which the mGGA functional is implemented is then decided by this variable,
+which my take two values:
+
+@itemize
+@item @code{mGGA_implementation = 1}: GEA-like implementation.
+@item @code{mGGA_implementation = 2}: OEP-like implementation (not yet implemented).
+@end itemize
+
+@item @code{oep_level}: The optimized effective potential method is applied in 
+three cases: (i) in case a SIC is applied to a LDA or GGA functional; (ii) in
+case the exact exchange functional is requested; and (iii) in case the mGGA
+is to be implemented through the OEP (@code{mGGA_implementation = 2}). However,
+several possible choices are then possible to approximate (or calculate exactly)
+the OEP.  The options -- the values that the integer @code{oep_level} may take --
+are listed in @ref{OEP levels}.
+
+@item @code{oep_mixing}
+
+@item @code{nlcc}
+
+@end itemize
+
+
+
+@node subroutine xc_init, subroutine xc_write_info, type xc_type, xc
+@section @code{subroutine xc_init}
+
+@verbatim
+type(xc_type), intent(out) :: xcs
+logical,       intent(in)  :: nlcc
+integer,       intent(in)  :: spin_channels
+@end verbatim
+
+This subroutine initializes a @code{xc_type} variable, the @code{xcs} argument,
+maiinly by reading in variables from the input file. Two input arguments need, however,
+to be passed in: 
+
+@itemize
+
+@item @code{nlcc}, used to fill in @code{xc_type%nlcc} (see @ref{type xc_type}).
+
+@item @code{spin_channels}, which is needed to call @code{xc_functl_init_exchange}
+and @code{xc_functl_init_correlation} (see @code{xc_functl}). It should be equal to
+one if the calculations are unpolarized, and equal to two if the calculations are
+spin-polarized, or based in two-spinors.
+
+@end itemize
+
+This routine is in charge of calling @code{xc_functl_init_exchange}
+(see @ref{subroutine xc_functl_init_exchange}) and @code{xc_functl_init_correlation}
+(see @ref{subroutine xc_functl_init_correlation}).
+
+It also reads some extra variables, from the input file:
+@itemize
+@item @code{MGGAimplementation} : it is used to fill @code{xcs%mGGA_implementation}.
+@item @code{SICCorrection}: used to fill @code{xcs%sic_correction}.
+@item @code{OEP_level}: used to fill @code{xcs%oep_level}.
+@item @code{OEP_mixing}: used to fill @code{xcs%oep_mixing}.
+@end itemize
+
+
+@node subroutine xc_write_info, subroutine xc_end, subroutine xc_init, xc
+@section @code{subroutine xc_write_info}
+
+@verbatim
+type(xc_type), intent(in) :: xcs
+integer,       intent(in) :: iunit
+@end verbatim
+
+@node subroutine xc_end, subroutine xc_get_vxc, subroutine xc_write_info, xc
+@section @code{subroutine xc_end}
+
+@verbatim
+type(xc_type), intent(inout) :: xcs
+@end verbatim
+
+
+@node subroutine xc_get_vxc, OEP levels, subroutine xc_end, xc
+@section @code{subroutine xc_get_vxc}
+
+@verbatim
+type(xc_type),        intent(in)    :: xcs
+type(mesh_type),      intent(in)    :: m
+type(f_der_type),     intent(inout) :: f_der
+type(states_type),    intent(in)    :: st
+FLOAT,                intent(inout) :: vxc(:,:), ex, ec
+FLOAT,                intent(in)    :: ip, qtot
+[logical, optional,    intent(in)    :: aux]
+@end verbatim
+
+This routine fills the exchange and correlation potential
+@code{vxc} (as well as the exchange and correlation energies, @code{ex} and @code{ec}.
+It takes care of the ``simple'' functionals, i.e. LDA, GGA and mGGA;
+The SIC corrections to these functionals or the exact exchange OEP is handled
+in the @code{h_xc_OEP} subroutine, which should be called afte calling @code{xc_get_vxc}.
+
+
+
+The input variables are:
+
+@itemize
+@item @code{xcs}: This is the @code{xc_type} variable that holds all the information
+about the exchange and correlation functional. It should have been initialized previously
+by the @code{xc_init} subroutine.
+@item @code{m}: The mesh where all the system functions live.
+@item @code{f_der}: This is the @code{f_der_type} structure: the structure that knows how
+to do the derivatives. It is defined @code{inout} for technical reasons, but it should
+not change.
+@item @code{st}: The @code{states_type} structure that holds the density and the Kohn-Sham states.
+@item @code{ip}: The ionization potential of the system, or some reasonable estimation for it,
+necessary only in case the van Leeuween & Baerends potential is to be used.
+@item @code{qtot}: The total electron number of the system, also only necessary in case
+the van Leeuween & Baerends potential is to be used.
+@item @code{aux}: This is an optional flag:
+@itemize
+@item If it is passed, and it is set to @code{.true.}, the exchange and correlation functional
+used will be those held in @code{xcs%sic_aux}. This is done in order to calculate the
+self-interaction corrections.
+@item Otherwise, they will be those held in @code{xcs%functl}.
+@end itemize
+@item @code{vxc}, @code{ex}, @code{ec}: the values of these three variables on entry.
+is added to the calculated values.
+@end itemize
+
+The output variables are:
+@itemize
+@item @code{ex}: The exchange energy.
+@item @code{ec}: The correlation energy.
+@item @code{vxc(:, :)}: The dimension of this array are @code{(m%np, st%d%nspin)}. On output,
+it holds the exchange and correlation potential -- added to whatever it held before.
+@end itemize
+
+
+@node OEP levels,  , subroutine xc_get_vxc, xc
+@section OEP levels
+
+@itemize
+@item @code{XC_OEP_NONE = 0}
+@item @code{XC_OEP_SLATER = 1}
+@item @code{XC_OEP_KLI = 2}
+@item @code{XC_OEP_CEDA = 3}
+@item @code{XC_OEP_FULL = 4}
+@end itemize
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@node xc_functl, lib_xc, xc, Top
+@chapter @code{xc_functl}
+
+
+@menu
+* type xc_functl_type::         
+* subroutine xc_functl_init_exchange::  
+* subroutine xc_functl_init_correlation::  
+* subroutine xc_functl_write_info::  
+* subroutine xc_functl_end::    
+@end menu
+
+@node type xc_functl_type, subroutine xc_functl_init_exchange, xc_functl, xc_functl
+@section @code{xc_functl_type}
+
+@verbatim
+integer :: family
+integer :: id
+integer :: spin_channels
+integer(POINTER_SIZE) :: conf
+integer(POINTER_SIZE) :: info
+@end verbatim
+
+The integer @code{family} may take one of the four following families:
+@itemize
+@item @code{XC_FAMILY_LDA  = 1} => For LDA functionals.
+@item @code{XC_FAMILY_GGA  = 2} => For GGA functionals.
+@item @code{XC_FAMILY_MGGA = 3} => For MGGA functionals.
+@item @code{XC_FAMILY_OEP  = 4} => For OEP functionals (i.e. orbital dependent functionals).
+@end itemize
+
+This value is set in either the @code{xc_functl_init_exchange} and @code{xc_functl_init_correlation},
+depending on the functional requested, read from the input file, and which
+in turns sets the @code{id} integer identifier.
+
+The integer @code{id} is the identifier for the functional@footnote{Note that it does
+not fully identify the exchange and correlation functional -- SIC corrections
+can be added to, for example, one LDA functional. This possibility
+is handled in the @code{xc} module}. It may take the following values:
+
+@itemize
+@item For exchange funcionals:
+
+@itemize
+@item Within the @code{XC_FAMILY_LDA} family, any of the exchange functionals
+listed in @ref{LDA functionals}. In fact, only one: @code{XC_LDA_X}.
+@item Within the @code{XC_FAMILY_GGA} family, any of the exchange functionals
+listed in @ref{GGA functionals}.
+@item Within the @code{XC_FAMILY_MGGA} family, any of the exchange functionals
+listed in @ref{MGGA functionals}. In fact, only one: @code{XC_MGGA_X_TPSS}.
+@item Within the @code{XC_FAMILY_OEP} family, it may @code{XC_OEP_X = 301}, corresponding
+to the exact-exchange functional.
+@end itemize
+
+@item For correlation functionals:
+
+@itemize
+@item Within the @code{XC_FAMILY_LDA} family, any of the correlation functionals
+listed in @ref{LDA functionals}.
+@item Within the @code{XC_FAMILY_GGA} family, any of the correlation functionals
+listed in @ref{GGA functionals}.
+@item Within the @code{XC_FAMILY_MGGA} family, any of the correlation functionals
+listed in @ref{MGGA functionals}. In fact, only one: @code{XC_MGGA_C_TPSS}.
+@item Within the @code{XC_FAMILY_OEP} family, there is none.
+@end itemize
+
+@end itemize
+
+The @code{spin_channels} integer may be one, in case the calculation is of
+spin-unpolarized type (i.e. restricted to paired electrons in closed shells), or
+two, in case the calculation is spin-polarized, or it is a two-spinors like calculation.
+
+The @code{integer(POINTER_SIZE)} @code{conf} and @code{info} are the pointers needed
+to use the subroutines in the @code{lib_xc} module (see @ref{lib_xc}).
+
+
+
+@node subroutine xc_functl_init_exchange, subroutine xc_functl_init_correlation, type xc_functl_type, xc_functl
+@section @code{subroutine xc_functl_init_exchange}
+
+@verbatim
+type(xc_functl_type), intent(out) :: functl
+integer,              intent(in)  :: spin_channels
+@end verbatim
+
+This subroutine initializes one @code{xc_functl_type} structure (argument @code{functl}),
+so that it holds information about one exchange functional. Its only input
+is @code{spin_channels} -- which is used to fill in @code{functl%spin_channels}, 
+whereas the rest of the needed information is obtained through the input file.
+
+The input file variable @code{XFunctional} is read, and used to fill in
+@code{functl%id}. According to its value @code{functl%family} is then set by the code.
+The values given in the input file for @code{XFunctional} must then be any
+of the accepted values for @code{functl%id} -- in the exchange case.
+Some mnemonic variables are provided in the @code{SHARE/octopus/variables} directory.
+
+Besides filling the @code{xc_functl_type} structure @code{functl}, the main
+task of this subroutine is to call either @code{xc_lda_init}, @code{xc_gga_init}
+or @code{xc_mgga_init} in module @code{lib_xc} (see @ref{lib_xc}).
+
+@node subroutine xc_functl_init_correlation, subroutine xc_functl_write_info, subroutine xc_functl_init_exchange, xc_functl
+@section @code{subroutine xc_functl_init_correlation}
+
+@verbatim
+type(xc_functl_type), intent(out) :: functl
+integer,              intent(in)  :: spin_channels
+@end verbatim
+
+This subroutine initializes one @code{xc_functl_type} structure (argument @code{functl}),
+so that it holds information about one correlation functional. Its only input
+is @code{spin_channels} -- which is used to fill in @code{functl%spin_channels}, 
+whereas the rest of the needed information is obtained through the input file.
+
+The input file variable @code{CFunctional} is read, and used to fill in
+@code{functl%id}. According to its value @code{functl%family} is then set by the code.
+The values given in the input file for @code{CFunctional} must then be any
+of the accepted values for @code{functl%id} -- in the correlation case.
+Some mnemonic variables are provided in the @code{SHARE/octopus/variables} directory.
+
+Besides filling the @code{xc_functl_type} structure @code{functl}, the main
+task of this subroutine is to call either @code{xc_lda_init}, @code{xc_gga_init}
+or @code{xc_mgga_init} in module @code{lib_xc} (see @ref{lib_xc}).
+
+
+@node subroutine xc_functl_write_info, subroutine xc_functl_end, subroutine xc_functl_init_correlation, xc_functl
+@section subroutine xc_functl_write_info
+
+@verbatim
+type(xc_functl_type), intent(in) :: functl
+integer,              intent(in) :: iunit
+@end verbatim
+
+It outputs to the file opened in unit @code{iunit} information about the
+functional initialized in @code{functl}.
+
+
+@node subroutine xc_functl_end,  , subroutine xc_functl_write_info, xc_functl
+@section @code{subroutine xc_functl_end}
+
+@verbatim
+type(xc_functl_type), intent(inout) :: functl
+@end verbatim
+
+This subroutine does the necessary cleaning of a @code{xc_fucntl_type} variable
+that is not going to be used any more.
+
+
+
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@c *******************************************************************************
+@node lib_xc,  , xc_functl, Top
 @chapter @code{lib_xc}
 
 This module is in charge of providing the @emph{simple} functionals, i.e. the 

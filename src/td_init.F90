@@ -70,13 +70,20 @@ subroutine td_init(td, m, st, h, outp)
 
   ! should we move the ions during the simulation?
   call loct_parse_int("MoveIons", 0, td%move_ions)
-  if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then
-    write(message(1),'(a,i4)') "Input: '", td%move_ions, &
-         "' is not a valid MoveIons"
+  if( (td%move_ions .ne. STATIC_IONS) .and.   &
+      (td%move_ions .ne. NORMAL_VERLET) .and. &
+      (td%move_ions .ne. VELOCITY_VERLET) ) then
+    write(message(1),'(a,i4,a)') "Input: '", td%move_ions, "' is not a valid MoveIons"
     message(2) = '  MoveIons = 0 <= do not move'
     message(3) = '  MoveIons = 3 <= verlet'
     message(4) = '  MoveIons = 4 <= velocity verlet'
     call write_fatal(4)
+  endif
+  if( td%move_ions .eq. NORMAL_VERLET) then
+    write(message(1),'(a)') "Normal Verlet algorithm temporarily disabled."
+    write(message(2),'(a)') "Using Velocity Verlet (MoveIons = 4) instead."
+    call write_warning(2)
+    td%move_ions = VELOCITY_VERLET
   endif
   
   ! Check what should be output
