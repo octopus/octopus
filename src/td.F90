@@ -54,6 +54,7 @@ type td_type
 !#endif
 
   real(r8), pointer :: v_old1(:,:), v_old2(:,:)
+  character(len=100) :: filename ! name of the continuation file
 end type td_type
 
 contains
@@ -113,7 +114,7 @@ subroutine td_run(td, sys, h)
     end if
 
     ! write info
-    write(message(1), '(i7,1x,f14.5,f14.6,4e17.6)') i, &
+    write(message(1), '(i7,1x,f14.5,f14.6,4es17.6)') i, &
          i*td%dt       / units_out%time%factor, &
          h%etot        / units_out%energy%factor, &
          dipole(:, ii) / units_out%length%factor
@@ -126,7 +127,7 @@ subroutine td_run(td, sys, h)
       ii = 1
 
       ! first resume file
-      call zstates_write_restart(trim(sys%sysname)//".cont", sys%m, sys%st, &
+      call zstates_write_restart(trim(td%filename), sys%m, sys%st, &
            iter=i, v1=td%v_old1, v2=td%v_old2)
 
       if(mpiv%node == 0) call td_write_data()
@@ -173,8 +174,7 @@ contains
     if(td%output_laser) then
       call io_assign(iunit)
       open(unit=iunit, file='laser.out', status='unknown')
-      write(iunit, '(a,e17.10,3a)') '# dt = ', td%dt/units_out%time%factor, &
-           "[", trim(units_out%time%abbrev), "]"
+      call td_write_laser(iunit, 0, 0._r8, .true.)
       call io_close(iunit)
     end if
 
@@ -194,7 +194,6 @@ contains
 
   subroutine td_write_data()
     integer :: iunit, j, jj
-    real(r8) :: l_field(1:3), l_vector_field(1:3)
 
     ! output multipoles
     call io_assign(iunit)
@@ -212,15 +211,58 @@ contains
       open(iunit, position='append', file='laser.out')
       do j = 1, td%save_iter
         jj = i - td%save_iter + j
-        call laser_field(td%no_lasers, td%lasers, jj*td%dt, l_field)
-        call laser_vector_field(td%no_lasers, td%lasers, jj*td%dt, l_vector_field)
-        write(iunit,'(e17.10,6(1x,e17.10))') jj*td%dt, &
-             l_field(1:3), l_vector_field(1:3)
+        call td_write_laser(iunit, jj, jj*td%dt, .false.)
       end do
       call io_close(iunit)
     end if
 
   end subroutine td_write_data
+
+  subroutine td_write_laser(iunit, iter, t, header)
+    integer, intent(in) :: iunit, iter
+    real(r8), intent(IN) :: t
+    logical, intent(in) :: header
+
+    integer :: i
+    real(r8) :: l_field(1:3), l_vector_field(1:3)
+    character(len=20) :: aux
+
+    ! TODO -> confirm these stupid units, especially for the vector field
+    if(header) then
+      ! first line
+      write(iunit, '(a7,e20.12,3a)') '# dt = ', td%dt/units_out%time%factor, &
+           "[", trim(units_out%time%abbrev), "]"
+
+      ! second line
+      write(iunit, '(a8,a20)', advance='no') '# Iter  ', str_center('t', 20)
+      do i = 1, 3
+        write(aux, '(a,i1,a)') 'E(', i, ')'
+        write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+      end do
+      do i = 1, 3
+        write(aux, '(a,i1,a)') 'A(', i, ')'
+        write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+      end do
+      write(iunit, '(1x)', advance='yes')
+
+      ! third line
+      write(iunit, '(a8,a20)', advance='no') '#       ', &
+           str_center('['//trim(units_out%time%abbrev)//']', 20)
+      aux = str_center('['//trim(units_out%energy%abbrev) // ' / ' // &
+           trim(units_inp%length%abbrev) // ']', 20)
+      write(iunit, '(3a20)', advance='no') aux, aux, aux
+      aux = str_center('[1/'// trim(units_inp%length%abbrev) // ']', 20)
+      write(iunit, '(3a20)', advance='no') aux, aux, aux
+      write(iunit, '(1x)', advance='yes')
+    end if
+
+    call laser_field(td%no_lasers, td%lasers, t, l_field)
+    call laser_vector_field(td%no_lasers, td%lasers, t, l_vector_field)
+    write(iunit,'(i8,7es20.12)') iter, t/units_out%time%factor, &
+         l_field(1:3) * units_inp%length%factor / units_inp%energy%factor, &
+         l_vector_field(1:3) * units_inp%length%factor
+    
+  end subroutine td_write_laser
 
   subroutine td_write_multipole(iunit, iter, t, dipole, multipole, header)
     integer, intent(in) :: iunit, iter
@@ -278,16 +320,16 @@ contains
       
     end if
     
-    write(iunit, '(i8, e20.12)', advance='no') iter, t/units_out%time%factor
+    write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
     do is = 1, sys%st%nspin
-      write(iunit, '(e20.12)', advance='no') dipole(is)/units_out%length%factor
+      write(iunit, '(es20.12)', advance='no') dipole(is)/units_out%length%factor
     end do
     
     do is = 1, sys%st%nspin
       add_lm = 1
       do l = 0, td%lmax
         do m = -l, l
-          write(iunit, '(e20.12)', advance='no') multipole(add_lm, is)/units_out%length%factor**l
+          write(iunit, '(es20.12)', advance='no') multipole(add_lm, is)/units_out%length%factor**l
           add_lm = add_lm + 1
         end do
       end do

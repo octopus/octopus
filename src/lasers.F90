@@ -48,7 +48,7 @@ subroutine laser_init(m, no_l, l)
     end if
 
     do i = 1, no_l
-      ! This read *sucks*, becose FORTRAN *sucks*
+      ! This read *sucks*, because FORTRAN *sucks*
       ! I give up, if you know a better way, let me know.
       read(iunit,'(a)') c
       read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope
@@ -116,6 +116,8 @@ subroutine laser_write_info(no_l, l, iunit)
     write(iunit,'(3x,a,f10.4,5a)') 'Amplitude: ', &
          l(i)%A0/units_inp%energy%factor*units_inp%length%factor, &
          ' [', trim(units_inp%energy%abbrev), '/', trim(units_inp%length%abbrev), ']'
+    write(iunit, '(3x,a,es14.4,a)') 'Intensity: ', &
+         (l(i)%A0*5.14225e9_r8)**2*1.3272e-3_r8, " [W/cm^2]"
     write(iunit,'(3x,a,f10.4,3a)') 'Width:     ', l(i)%tau0/units_inp%time%factor, &
          ' [', trim(units_inp%time%abbrev), ']'
     write(iunit,'(3x,a,f10.4,3a)') 'Middle t:  ', l(i)%t0/units_inp%time%factor, &

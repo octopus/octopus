@@ -135,31 +135,6 @@ subroutine states_end(st)
   call pop_sub()
 end subroutine states_end
 
-! this funny routine duplicates one state_type structure
-subroutine states_dup(from, to)
-  type(states_type), intent(IN) :: from
-  type(states_type), intent(out) :: to
-
-  to%dim   = from%dim
-  to%nst   = from%nst
-  to%nik   = from%nik
-  to%ispin = from%ispin
-  to%nspin = from%nspin
-
-  ! now the pointers
-  to%dpsi     => from%dpsi
-  to%zpsi     => from%zpsi
-  to%rho      => from%rho
-  to%eigenval => from%eigenval
-  to%occ      => from%occ
-
-  to%qtot     = from%qtot
-  to%el_temp  = from%el_temp
-  to%ef       = from%ef
-  to%st_start = from%st_start
-  to%st_end   = from%st_end
-end subroutine states_dup
-
 ! generate a hydrogen s-wavefunction around a random point
 subroutine states_generate_random(st, m)
   type(states_type), intent(inout) :: st

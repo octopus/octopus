@@ -59,9 +59,9 @@ integer, private, parameter :: &
 contains
 
 subroutine run()
-  integer :: i
-  type(states_type), pointer :: st_aux
   type(td_type), pointer :: td
+  R_TYPE, pointer :: aux_psi(:,:,:,:)
+  integer :: i, aux_i1, aux_i2
 
   sub_name = 'run'; call push_sub()
 
@@ -144,40 +144,66 @@ subroutine run()
       message(1) = 'Info: Setting up TD.'
       call write_info(1)
 
-      ! store old states (st_aux will be deallocated in I_TD)
-      st_aux => sys%st 
-      nullify(sys%st)
-      allocate(sys%st)
-      call states_dup(st_aux, sys%st)
-      nullify(st_aux%rho, st_aux%eigenval, st_aux%occ)
-      nullify(sys%st%dpsi, sys%st%zpsi)
+      ! store old states
+      aux_psi => sys%st%R_FUNC(psi)
+      nullify(sys%st%R_FUNC(psi))
+      aux_i1 = sys%st%st_start
+      aux_i2 = sys%st%st_end
 
       ! initialize structure
       allocate(td)
-      call td_init(td, sys%m, sys%st)
+      ! this allocates zpsi
+      call td_init(td, sys, sys%m, sys%st)
 
     case(I_END_TD)
       message(1) = 'Info: Cleaning up TD.'
       call write_info(1)
 
-      ! zpsi will be deallocated normally in states_end
       call td_end(td)
       deallocate(td); nullify(td)
+      deallocate(sys%st%zpsi); nullify(sys%st%zpsi)
       
     case(I_INIT_ZPSI)
-      message(1) = 'Info: Initializing zpsi'
+      message(1) = 'Info: Initializing zpsi.'
       call write_info(1)
 
       do i = sys%st%st_start, sys%st%st_end
-        sys%st%zpsi(:,:, i,:) = st_aux%R_FUNC(psi)(:,:, i,:)
+        sys%st%zpsi(:,:, i,:) = aux_psi(:,:, i,:)
       end do
+      deallocate(aux_psi) ! clean up old wf
+      nullify(aux_psi)
+
+    case(I_LOAD_ZPSI)
+      message(1) = 'Info: Loading zpsi.'
+      call write_info(1)
+
+      if(zstates_load_restart(trim(td%filename), &
+           sys%m, sys%st, iter=td%iter, v1=td%v_old1, v2=td%v_old2)) then
+
+        !TODO -> ions
+
+        ! define density and hamiltonian
+        call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
+        call hamiltonian_setup(h, sys)
+        call zhamiltonian_eigenval (h, sys, 1, sys%st%nst)
+        call hamiltonian_energy(h, sys, -1, reduce=.true.)        
+        
+      else
+        ! reset variables
+        sys%st%st_start = aux_i1
+        sys%st%st_end   = aux_i2
+
+        i_stack(instr) = I_INIT_ZPSI
+        instr = instr + 1; i_stack(instr) = I_SETUP_TD
+        instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+        instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+        instr = instr + 1; i_stack(instr) = I_END_TD
+        cycle program
+      end if
+
     case(I_TD)
       message(1) = 'Info: Time-dependent simulation.'
       call write_info(1)
-
-      ! get rid of old states that may be lying around
-      call states_end(st_aux)
-      deallocate(st_aux); nullify(st_aux)
 
       call td_run(td, sys, h)
     case(I_PULPO)

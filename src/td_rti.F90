@@ -28,7 +28,7 @@ contains
     integer, parameter :: order = 4
 
     complex(r8) :: zfact
-    complex(r8), allocatable :: zpsi1(:), hzpsi1(:), lapl(:), grad(:,:)
+    complex(r8), allocatable :: zpsi1(:), hzpsi1(:), grad(:,:)
     real(r8) :: x(3), f(3)
     integer i, k, l
 
@@ -48,18 +48,18 @@ contains
           
           do k = 1, sys%m%np
             call mesh_xyz(sys%m, k, x)
-            hzpsi1(k) = hzpsi1(k) + zpsi1(k)*(sum(x*f))
+            hzpsi1(k) = hzpsi1(k) + sum(x*f) * zpsi1(k)
           end do
           
         case(2) ! velocity gauge
           call laser_vector_field(td%no_lasers, td%lasers, t, f)
-          allocate(lapl(sys%m%np), grad(3, sys%m%np))
-          call zmesh_derivatives(sys%m, zpsi1, lapl=lapl, grad=grad)
+          allocate(grad(3, sys%m%np))
+          call zmesh_derivatives(sys%m, zpsi1, grad=grad)
           do k = 1, sys%m%np
             hzpsi1(k) = hzpsi1(k) - M_zI * 2._r8 * sum(f(:)*grad(:, k)) + &
                  sum(f**2) * zpsi1(k)
           end do
-          deallocate(lapl, grad)
+          deallocate(grad)
         end select
       end if
       

@@ -183,14 +183,14 @@ subroutine scf_write_static()
   write(iunit,'(1x)')
 
   write(iunit, '(a)') 'Convergence:'
-  write(iunit, '(6x, a, e14.8,a,e14.8,a)') 'abs_dens = ', scf%abs_dens, &
+  write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
       ' (', scf%conv_abs_dens, ')'
-  write(iunit, '(6x, a, e14.8,a,e14.8,a)') 'rel_dens = ', scf%rel_dens, &
+  write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_dens = ', scf%rel_dens, &
       ' (', scf%conv_rel_dens, ')'
-  write(iunit, '(6x, a, e14.8,a,e14.8,4a)') 'abs_ener = ', scf%abs_ener, &
+  write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'abs_ener = ', scf%abs_ener, &
       ' (', scf%conv_abs_ener / units_out%energy%factor, ')', &
       ' [',  trim(units_out%energy%abbrev), ']'
-  write(iunit, '(6x, a, e14.8,a,e14.8,4a)') 'rel_ener = ', scf%rel_ener, &
+  write(iunit, '(6x, a, es14.8,a,es14.8,4a)') 'rel_ener = ', scf%rel_ener, &
       ' (', scf%conv_rel_ener / units_out%energy%factor, ')', &
       ' [',  trim(units_out%energy%abbrev), ']'
   write(iunit,'(1x)') 

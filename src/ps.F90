@@ -703,8 +703,8 @@ subroutine write_info_about_pseudo_1(unit, psf, ps, z)
   write(message(1),'(a,i2)')  'Pseudopotential functions for spin-up:   ', psf%npotu
   write(message(2),'(a,i2)')  'Pseudopotential functions for spin-down: ', psf%npotd
   write(message(3),'(a)')     'Radial grid parameters ( R(I) = B*[ EXP(A*(I-1)) -1 ] )'
-  write(message(4),'(a,e14.6)') '             A = ', psf%a
-  write(message(5),'(a,e14.6)') '             B = ', psf%b
+  write(message(4),'(a,es14.6)') '             A = ', psf%a
+  write(message(5),'(a,es14.6)') '             B = ', psf%b
   write(message(6),'(a,i5)')  'Number of radial points: ', psf%nr
   call write_info(6, unit)
   

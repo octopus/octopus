@@ -1,5 +1,6 @@
-subroutine td_init(td, m, st)
+subroutine td_init(td, sys, m, st)
   type(td_type), intent(out) :: td
+  type(system_type), intent(IN) :: sys
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
 
@@ -90,6 +91,10 @@ subroutine td_init(td, m, st)
   endif
   
   call td_init_states()
+
+  ! get name of continuation file
+  write(td%filename, '(a,a,i3.3,a)') trim(sys%sysname), &
+       '.', mpiv%node, '.cont'
 
 contains
   subroutine td_init_evolution_splitop()
