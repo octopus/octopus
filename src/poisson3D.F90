@@ -33,6 +33,8 @@ subroutine poisson3D_init(m)
 #endif
     case(CG)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
+    case(CG_CORRECTED)
+      message(1) = 'Info: Using corrected conjugated gradients method to solve poisson equation.'
   end select
   call write_info(1)
 

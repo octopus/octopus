@@ -19,8 +19,26 @@
 
 # This file should contain some kind of test for the octopus
 echo ""
+echo "=========================="
 echo "Running octopus test #2..."
 
-../src/oct-test
+cat<<EOF>inp
+%Species
+"ho" | 1.0 | usdef | 1 | "0.5*r^2"
+%
+%Coordinates
+"ho" | 0 | 0 | 0 | no
+%
+spacing = 0.23
+radius = 7.0
+BoxShape = sphere
+PoissonSolver = fft
+EOF
+../src/oct-test < inp
+output=$?
 
 echo "Finished octopus test #2."
+echo "========================="
+echo ""
+
+exit ${output}

@@ -24,6 +24,7 @@ fft_cyl          = 1 # PoissonSolver
 fft_pla          = 2 # PoissonSolver
 fft_nocut        = 3 # PoissonSolver
 cg               = 4 # PoissonSolver and EigenSolver
+cg_corrected     = 5 # PoissonSolver
 lanczos          = 2
 density          = 0 # What2Mix
 potential        = 1

@@ -45,7 +45,8 @@ module poisson
                         FFT_NOCUT     = 3
 #endif
 
-  integer, parameter :: CG            = 4
+  integer, parameter :: CG            = 4, &
+                        CG_CORRECTED  = 5
 
 public :: poisson_init, poisson_solve, poisson_end
 
@@ -65,24 +66,33 @@ subroutine poisson_init(m)
   else
 #ifdef HAVE_FFT
     call loct_parse_int('PoissonSolver', conf%periodic_dim, poisson_solver)
-    if(poisson_solver < 0 .or. poisson_solver > 4 ) then
+    if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
       write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
       message(2) = 'PoissonSolver = 0 (fft spherical cutoff)   | '
       message(3) = '                1 (fft cylindrical cutoff) | '
       message(4) = '                2 (fft planar cutoff)      | '
       message(5) = '                3 (fft no cutoff)          | '    
-      message(6) = '                4 (conj grad)   '
-      call write_fatal(6)
+      message(6) = '                4 (conj grad)              | '
+      message(7) = '                5 (corrected conj grad) '
+      call write_fatal(7)
     end if
-    if (poisson_solver /= conf%periodic_dim .and. poisson_solver /= CG) then
+    if (poisson_solver /= conf%periodic_dim .and. poisson_solver < CG) then
       write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
       write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
       message(3) =                 'You know what you are doing, right?'
       call write_warning(3)
     end if
 #else
-    poisson_solver = CG
+    call loct_parse_int('PoissonSolver', CG, poisson_solver)
+    if(poisson_solver < CG) then
+      write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
+           "' is not a valid PoissonSolver"
+      message(2) = 'PoissonSolver = 4 (conj grad)              | '
+      message(3) = '                5 (corrected conj grad) '
+      message(4) = '[The code was compiled without FFT support ' 
+      call write_fatal(3)
+    endif
 #endif
 
     call poisson3D_init(m)
@@ -121,6 +131,8 @@ subroutine poisson_solve(m, f_der, pot, rho)
     call poisson2d_solve(m, pot, rho)
   case(CG)
     call poisson_cg1(m, f_der%der_discr, pot, rho)
+  case(CG_CORRECTED)
+    call poisson_cg2(m, f_der%der_discr, pot, rho)
 #ifdef HAVE_FFT
   case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call poisson_fft(m, pot, rho)
