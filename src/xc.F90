@@ -55,8 +55,8 @@ integer, parameter ::     &
      X_FUNC_OEP_SIC   = ibset(0,  7), &
      C_FUNC_LDA_RPA   = ibset(0,  8), &
      C_FUNC_LDA_PZ    = ibset(0,  9), &
-     C_FUNC_LDA_ATTA  = ibset(0, 10), &
-     C_FUNC_LDA_PW92  = ibset(0, 11), &
+     C_FUNC_LDA_PW92  = ibset(0, 10), &
+     C_FUNC_LDA_ATTA  = ibset(0, 11), &
      C_FUNC_GGA_PBE   = ibset(0, 12), &
      C_FUNC_OEP_SIC   = ibset(0, 13), &
      C_FUNC_MGGA_PKZB = ibset(0, 14)

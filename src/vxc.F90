@@ -633,14 +633,16 @@ module vxc
 
     FLOAT :: d, d1, d2, z, ec0, ec1, alphac, rs, fz, fpz, &
              dec0drs, dec1drs, dalphacdrs, decdrs, decdz
-    FLOAT, parameter :: a(3)       = (/ CNST(0.031091), CNST(0.015545), CNST(0.016887) /), &
-                        alpha(3)   = (/ CNST(0.21370),  CNST(0.20548),  CNST(0.11125) /), &
-                        beta(4, 3) = (/ CNST(7.5957),   CNST(3.5876),   CNST(1.6382),  CNST(0.49294), &
-                                        CNST(14.1189),  CNST(6.1977),   CNST(3.3662),  CNST(0.62517), &
-                                        CNST(10.357),   CNST(3.6231),   CNST(0.88026), CNST(0.49671) /) 
+    FLOAT, parameter :: &
+       a(1:3)       = (/ CNST(0.031091), CNST(0.015545), CNST(0.016887) /), &
+       alpha(1:3)   = (/ CNST(0.21370),  CNST(0.20548),  CNST(0.11125) /), &
+       beta(1:4, 1:3) = reshape( (/ CNST(7.5957),   CNST(3.5876),   CNST(1.6382),  CNST(0.49294) ,  &
+                                    CNST(14.1189),  CNST(6.1977),   CNST(3.3662),  CNST(0.62517) ,  &
+                                    CNST(10.357),   CNST(3.6231),   CNST(0.88026), CNST(0.49671) /),&
+                                 (/4, 3/) )
     FLOAT, parameter :: MINDEN = CNST(1e-15), &
                         fzconst = CNST(1.92366105093154), & ! = 1/(2**(4/3)-2)
-                        fz20 = CNST(1.709921)
+                        fz20 = CNST(1.709921) ! (d^2f/dz^2)(z=0)
 
     select case(nsp)
     case(1) ! Spin - unpolarized

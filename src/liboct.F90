@@ -29,7 +29,72 @@ module lib_oct
   public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
   public :: loct_mkdir, loct_rm, loct_print_file, loct_number_of_lines
   public :: loct_fft_optimize, loct_wfs_list, loct_progress_bar, loct_printRecipe
-  
+  public :: write_iter_init, write_iter_clear, write_iter_flush, write_iter_end
+  public :: write_iter_start, write_iter_string, write_iter_header_start, write_iter_header
+  public :: write_iter_nl, write_iter_double, write_iter_int
+
+  ! ------------------------------------------------------------
+  ! write_iter functions
+  interface
+     subroutine write_iter_init(out,  iter, factor, file)
+       integer(POINTER_SIZE) :: out
+       integer               :: iter
+       FLOAT                 :: factor
+       character(len=*)      :: file
+     end subroutine write_iter_init
+     subroutine write_iter_clear(out)
+       integer(POINTER_SIZE) :: out
+     end subroutine write_iter_clear
+     subroutine write_iter_flush(out)
+       integer(POINTER_SIZE) :: out
+     end subroutine write_iter_flush
+     subroutine write_iter_end(out)
+       integer(POINTER_SIZE) :: out
+     end subroutine write_iter_end
+     subroutine write_iter_start(out)
+       integer(POINTER_SIZE) :: out
+     end subroutine write_iter_start
+     subroutine write_iter_string(out, string)
+       integer(POINTER_SIZE) :: out
+       character(len=*)      :: string
+     end subroutine write_iter_string
+     subroutine write_iter_header_start(out)
+       integer(POINTER_SIZE) :: out
+     end subroutine write_iter_header_start
+     subroutine write_iter_header(out, string)
+       integer(POINTER_SIZE) :: out
+       character(len=*)      :: string
+     end subroutine write_iter_header
+     subroutine write_iter_nl(out)
+       integer(POINTER_SIZE) :: out
+     end subroutine write_iter_nl
+  end interface
+
+  interface write_iter_double
+     subroutine write_iter_double_1(out, d, n)
+       integer(POINTER_SIZE) :: out
+       integer               :: n
+       FLOAT                 :: d
+     end subroutine write_iter_double_1
+     subroutine write_iter_double_n(out, d, n)
+       integer(POINTER_SIZE) :: out
+       integer               :: n
+       FLOAT                 :: d(n)
+     end subroutine write_iter_double_n
+  end interface write_iter_double
+  interface write_iter_int
+     subroutine write_iter_int_1(out, i, n)
+       integer(POINTER_SIZE) :: out
+       integer               :: n
+       integer               :: i
+     end subroutine write_iter_int_1
+     subroutine write_iter_int_n(out, i, n)
+       integer(POINTER_SIZE) :: out
+       integer               :: n
+       integer               :: i(n)
+     end subroutine write_iter_int_n
+  end interface
+
   ! ------------------------------------------------------------
   ! Special functions
   interface loct_gamma

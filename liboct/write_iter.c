@@ -126,7 +126,7 @@ void F90_FUNC_(write_iter_start, WRITE_ITER_START)
 	w->iter++;
 }
 
-void F90_FUNC_(write_iter_double, WRITE_ITER_DOUBLE)
+void F90_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 		 (void **v, double *d, int *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -139,7 +139,33 @@ void F90_FUNC_(write_iter_double, WRITE_ITER_DOUBLE)
 	}
 }
 
-void F90_FUNC_(write_iter_int, WRITE_ITER_INT)
+void F90_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
+		 (void **v, double *d, int *no)
+{
+	write_iter *w=(write_iter *)*v;
+	int i;
+
+	write_iter_realloc(w, (*no)*20);
+	for(i=0; i<*no; i++){
+		sprintf(w->buf+w->pos, "%20.12e", d[i]); 
+		w->pos += 20;
+	}
+}
+
+void F90_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
+		 (void **v, int *d, int *no)
+{
+	write_iter *w=(write_iter *)*v;
+	int i;
+
+	write_iter_realloc(w, (*no)*8);
+	for(i=0; i<*no; i++){
+		sprintf(w->buf+w->pos, "%8d", d[i]); 
+		w->pos += 8;
+	}
+}
+
+void F90_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
 		 (void **v, int *d, int *no)
 {
 	write_iter *w=(write_iter *)*v;
