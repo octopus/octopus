@@ -211,6 +211,32 @@ subroutine R_FUNC(mesh_random)(m, f)
 end subroutine R_FUNC(mesh_random)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Calculates the divergence of a vectorial function f.
+! Currently it only does so in real space.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(mesh_divergence)(m, f, divf)
+  type(mesh_type), intent(in) :: m
+  R_TYPE, intent(in)  :: f(3, m%np)
+  R_TYPE, intent(out) :: divf(m%np)
+
+  integer :: j, k, ng(3)
+  type(der_lookup_type), pointer :: p
+
+  call push_sub('mesh_divergence')
+
+  do k = 1, m%np
+     p => m%der_lookup(k)
+     ng = p%grad_n
+     divf(k) = M_ZERO
+     do j = 1, conf%dim
+        divf(k) = divf(k) + sum(p%grad_w(1:ng(j),j)*f(j, p%grad_i(1:ng(j), j)))
+     enddo
+  enddo
+
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_divergence)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! calculates the laplacian and the gradient of a function on the mesh.
 ! The optional argument "alpha" is a multiplicative factor (i.e. if the
 ! kinetic operator wants to be calculated, pass "alpha = -1/2" to the

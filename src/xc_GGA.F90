@@ -31,20 +31,21 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
                            lpot(:, :)
   real(r8), allocatable :: rhoplus(:), rhominus(:), mag(:) 
   real(r8), allocatable :: grhoplus(:, :), grhominus(:, :), gmag(:, :)
+  real(r8), allocatable :: vlocaldedgd(:, :, :)
 
   real(r8) :: locald(st%spin_channels), localgd(3, st%spin_channels), &
-              localdedd(st%spin_channels), localdedgd(3, st%spin_channels), &
+              localdedd(st%spin_channels), &
               localdedd_x(st%spin_channels), localdedgd_x(3, st%spin_channels)
-  !complex(r8), allocatable :: u(:, :, :)
 
   integer :: i, j, is, in, ic, ind(3), k
 
   call push_sub('xc_gga')
 
   allocate(d     (     m%np, st%nspin), &
-           lpot  (    0:m%np, st%spin_channels))
+           lpot  (     m%np, st%spin_channels))
   allocate(rhoplus(m%np), rhominus(m%np))
   allocate(grhoplus(3, m%np), grhominus(3, m%np))
+  allocate(vlocaldedgd(3, m%np, st%spin_channels))
 
   ! Store in local variables d the density matrix
   ! (in the global reference system).
@@ -91,39 +92,29 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     ! Calculate the potential/gradient density in local reference frame.
     select case(func)      
     case(X_FUNC_GGA_PBE)
-      call pbex(0, st%spin_channels, locald, localgd, e, localdedd, localdedgd)
+      call pbex(0, st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(X_FUNC_GGA_PBER)
-      call pbex(1, st%spin_channels, locald, localgd, e, localdedd, localdedgd)
+      call pbex(1, st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(X_FUNC_GGA_LB94)
-      call xc_x_lb94(st%spin_channels, locald, localgd, e, &
-                     localdedd, localdedgd) 
+      call xc_x_lb94(st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(C_FUNC_GGA_PBE)
-      call pbec(st%spin_channels, locald, localgd, e, localdedd, localdedgd)
+      call pbec(st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
     case(C_FUNC_GGA_PBEX)
       call pbex(1, st%spin_channels, locald, localgd, e_x, localdedd_x, localdedgd_x)
-      call pbec(st%spin_channels, locald, localgd, e, localdedd, localdedgd)
-      e = e + e_x; localdedd = localdedd + localdedd_x; localdedgd = localdedgd + localdedgd_x
+      call pbec(st%spin_channels, locald, localgd, e, localdedd, vlocaldedgd(:, i, :))
+      e = e + e_x; localdedd = localdedd + localdedd_x; vlocaldedgd(:, i, :) = vlocaldedgd(:, i, :) + localdedgd_x
     end select
 
     energy = energy + sum(d(i, :)) * e * m%vol_pp
-
     lpot(i, :) = lpot(i, :) + localdedd(:)
-    do in = -m%d%norder , m%d%norder
-       if(m%lxyz(1,i)+in<m%nr(1,1).or.m%lxyz(1,i)+in>m%nr(2,1)) cycle
-       ind(1) = m%Lxyz_inv(m%Lxyz(1,i)+in,m%Lxyz(2,i),m%Lxyz(3,i))
-       if(m%lxyz(2,i)+in<m%nr(1,2).or.m%lxyz(2,i)+in>m%nr(2,2)) cycle
-       ind(2) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i)+in,m%Lxyz(3,i))
-       if(m%lxyz(3,i)+in<m%nr(1,3).or.m%lxyz(3,i)+in>m%nr(2,3)) cycle
-       ind(3) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i),m%Lxyz(3,i)+in)
-       do ic = 1, 3
-          if(ind(ic) > 0) then
-            !loc(:) = localdedgd(ic, :)
-            lpot(ind(ic), :) = lpot(ind(ic), :) + localdedgd(ic, :) * m%d%dgidfj(in)/ m%h(ic)
-          end if
-       end do
-    end do
-
   end do space_loop
+
+  ! We now add substract the divergence of the functional derivative of fxc with respect to
+  ! the gradient of the density.
+  do is = 1, st%spin_channels
+     call dmesh_divergence(m, vlocaldedgd(:,:,is), rhoplus(:))
+     call daxpy(m%np, -M_ONE, rhoplus, 1, lpot(1, is), 1)
+  enddo
 
   ! And now we rotate back (do not need the rotation matrix for this).
   if(st%ispin == SPINORS) then
@@ -153,7 +144,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     energy = - energy * m%vol_pp
   end if
 
-  deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus)
+  deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus, vlocaldedgd)
   call pop_sub()
 end subroutine xc_gga
 
