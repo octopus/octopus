@@ -26,6 +26,7 @@ module poisson
   use cube_function
 #endif
   use functions
+  use math
 
   implicit none
   private
@@ -38,7 +39,13 @@ module poisson
 #ifdef HAVE_FFT
   type(dcf) :: fft_cf
   FLOAT, pointer :: fft_coulb_FS(:,:,:)
-#endif
+  integer, parameter :: FFT_SPH       = 0, &
+                        FFT_CYL       = 1, &
+                        FFT_PLA       = 2, &
+                        FFT_NOCUT     = 3
+ #endif
+
+  integer, parameter :: CG            = 4
 
 public :: poisson_init, poisson_solve, poisson_end
 
@@ -51,29 +58,31 @@ subroutine poisson_init(m)
   
   call push_sub('poisson_init')
   
-  if(conf%dim==1.or.conf%dim==2) then
+  if(conf%dim == 1 .or. conf%dim == 2) then
     poisson_solver = -conf%dim ! internal type
     message(1) = 'Info: Using direct integration method to solve poisson equation'
     call write_info(1)
   else
 #ifdef HAVE_FFT
-    call loct_parse_int('PoissonSolver', 3, poisson_solver)
-    if(poisson_solver<1 .or. poisson_solver>3 ) then
+    call loct_parse_int('PoissonSolver', conf%periodic_dim, poisson_solver)
+    if(poisson_solver < 0 .or. poisson_solver > 4 ) then
       write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
-      message(2) = 'PoissonSolver = 1(cg) | 2(fft) | 3(fft spherical cutoff)'
-      call write_fatal(2)
-    end if
-
-    if(conf%periodic_dim>0 .and. poisson_solver.ne.2) then
-      message(1) = "For periodic systems we cannot use"
-      message(2) = "a spherical cutoff for the Poisson solver."
-      message(3) = "PoissonSolver = 2 will be used."
-      call write_warning(3)
-      poisson_solver = 2
+      message(2) = 'PoissonSolver = 0 (fft spherical cutoff)   | '
+      message(3) = '                1 (fft cylindrical cutoff) | '
+      message(4) = '                2 (fft planar cutoff)      | '
+      message(5) = '                3 (fft no cutoff)          | '    
+      message(6) = '                4 (conj grad)   '
+      call write_fatal(6)
+      if (poisson_solver /= conf%periodic_dim) then
+        write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
+        write(message(2), '(a,i1,a)')'but Poisson Solver is set for ',poisson_solver,' dimensions.'
+        message(3) =                 'You know what you are doing, right?'
+        call write_warning(3)
+      end if
     end if
 #else
-    poisson_solver = 0
+    poisson_solver = CG
 #endif
 
     call poisson3D_init(m)
@@ -83,8 +92,9 @@ end subroutine poisson_init
 subroutine poisson_end()
   integer :: j
   call push_sub('poisson_end')
+
   select case(poisson_solver)
-  case(1)
+  case(CG)
     call derivatives_end(cg_m_aux%laplacian)
     do j = 1, conf%dim
        call derivatives_end(cg_m_aux%grad(j))
@@ -94,7 +104,7 @@ subroutine poisson_end()
     call mesh_end(cg_m_aux)
     deallocate(cg_m_aux); nullify(cg_m_aux)
 #ifdef HAVE_FFT
-  case(2,3)
+  case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call dcf_free(fft_cf)
     deallocate(fft_coulb_FS); nullify(fft_coulb_FS)
 #endif
@@ -118,10 +128,10 @@ subroutine poisson_solve(m, pot, dist)
     call poisson1d_solve(m, pot, dist)
   case(-2)
     call poisson2d_solve(m, pot, dist)
-  case(0)
+  case(CG)
     call poisson_cg(m, pot, dist)
 #ifdef HAVE_FFT
-  case(2,3)
+  case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
     call poisson_fft(m, pot, dist)
 #endif
   end select
