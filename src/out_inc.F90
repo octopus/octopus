@@ -24,6 +24,7 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   
   integer :: iunit, i
   type(X(cf)) :: c
+  character(len=20) :: mformat
 
   ! do not bother with errors
   call loct_mkdir(trim(dir))
@@ -31,6 +32,13 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   call X(cf_new) (m%l, c)
   call X(cf_alloc_RS) (c)
   call X(mf2cf) (m, f, c)
+
+  ! check if output is single precision or double precision
+  if(iand(how, output_single) .ne.0) then
+    mformat = '(4es15.6)'
+  else
+    mformat = '(4es23.14)'
+  end if
 
   if(iand(how, output_axis_x) .ne.0) call axis_x()
   if(iand(how, output_axis_y) .ne.0) call axis_y()
@@ -46,7 +54,6 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   call X(cf_free) (c)
 
 contains
-#define MFORMAT    '(4e20.8)'
 #define MFMTHEADER '(a,a3,a12,a12,a12)'
 
   subroutine axis_x()
@@ -57,7 +64,7 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".y=0,z=0", status='unknown')
     do ix = 1, c%n(1)
        x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
-       write(iunit, MFORMAT) x, R_REAL(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u, &
+       write(iunit, mformat) x, R_REAL(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u, &
             R_AIMAG(c%RS(ix, c%n(2)/2 + 1, c%n(3)/2 + 1))/u
     enddo
     call io_close(iunit)
@@ -71,7 +78,7 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,z=0", status='unknown')
     do iy = 1, c%n(2)
        y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
-       write(iunit, MFORMAT) y, R_REAL(c%RS(c%n(1)/2 + 1, iy, c%n(3)/2 + 1))/u, &
+       write(iunit, mformat) y, R_REAL(c%RS(c%n(1)/2 + 1, iy, c%n(3)/2 + 1))/u, &
             R_AIMAG(c%RS(c%n(1)/2 + 1, iy, c%n(3)/2 + 1))/u
     enddo
     call io_close(iunit)
@@ -85,7 +92,7 @@ contains
     open(iunit, file=trim(dir)+"/"+trim(fname)+".x=0,y=0", status='unknown')
     do iz = 1, c%n(3)
        z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
-       write(iunit, MFORMAT) z, R_REAL(c%RS(c%n(1)/2 + 1, c%n(2)/2 + 1, iz))/u, &
+       write(iunit, mformat) z, R_REAL(c%RS(c%n(1)/2 + 1, c%n(2)/2 + 1, iz))/u, &
             R_AIMAG(c%RS(c%n(1)/2 + 1, c%n(2)/2 + 1, iz))/u
     enddo
     call io_close(iunit)
@@ -102,7 +109,7 @@ contains
       y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
       do iz = 1, c%n(3)
         z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, MFORMAT) y, z, R_REAL(c%RS(c%n(1)/2 + 1, iy, iz))/u, &
+        write(iunit, mformat) y, z, R_REAL(c%RS(c%n(1)/2 + 1, iy, iz))/u, &
              R_AIMAG(c%RS(c%n(1)/2 + 1, iy, iz))/u
       end do
       write(iunit, '(1x)')
@@ -121,7 +128,7 @@ contains
       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
       do iz = 1, c%n(3)
         z = (iz - c%n(3)/2 - 1)*m%h(3)/units_out%length%factor
-        write(iunit, MFORMAT) x, z, R_REAL(c%RS(ix, c%n(2)/2 + 1, iz))/u, &
+        write(iunit, mformat) x, z, R_REAL(c%RS(ix, c%n(2)/2 + 1, iz))/u, &
              R_AIMAG(c%RS(ix, c%n(2)/2 + 1, iz))/u
       end do
       write(iunit, '(1x)')
@@ -140,7 +147,7 @@ contains
       x = (ix - c%n(1)/2 - 1)*m%h(1)/units_out%length%factor
       do iy = 1, c%n(2)
         y = (iy - c%n(2)/2 - 1)*m%h(2)/units_out%length%factor
-        write(iunit, MFORMAT) x, y, R_REAL(c%RS(ix, iy, c%n(3)/2 + 1))/u, &
+        write(iunit, mformat) x, y, R_REAL(c%RS(ix, iy, c%n(3)/2 + 1))/u, &
              R_AIMAG(c%RS(ix, iy, c%n(3)/2 + 1))/u
       end do
       write(iunit, '(1x)')
