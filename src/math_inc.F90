@@ -95,8 +95,8 @@ end subroutine X(matexp)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_polynomial)(order, in, out, factor, exporder)
   integer, intent(in)      :: order, exporder
-  R_TYPE, intent(in)  :: in(:, :)
-  R_TYPE, intent(out) :: out(:, :)
+  R_TYPE, intent(in)  :: in(order, order)
+  R_TYPE, intent(out) :: out(order, order)
   R_TYPE, intent(in)  :: factor 
 
   integer :: n
@@ -109,13 +109,13 @@ subroutine X(matexp_polynomial)(order, in, out, factor, exporder)
      out(n, n) = M_ONE
   enddo
   zfact = M_ONE
-  call lalg_copy(order**2, out(1, 1), aux(1, 1))
+  call X(lalg_copy)(order**2, out(1, 1), aux(1, 1))
   do n = 1, exporder
-     call lalg_copy(order**2, aux(1, 1), dd(1, 1))
-     call lalg_gemm('n', 'n', order, order, order, R_TOTYPE(M_ONE), dd(1, 1), &
+     call X(lalg_copy)(order**2, aux(1, 1), dd(1, 1))
+     call X(lalg_gemm)(order, order, order, R_TOTYPE(M_ONE), dd(1, 1), &
           in(1, 1), R_TOTYPE(M_ZERO), aux(1 ,1))
      zfact = zfact*factor/n
-     call lalg_axpy(order**2, zfact, aux(1, 1), out(1, 1))
+     call X(lalg_axpy)(order**2, zfact, aux(1, 1), out(1, 1))
   enddo
   deallocate(aux, dd)
 
@@ -138,8 +138,8 @@ end subroutine X(matexp_polynomial)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   integer, intent(in)  :: order
-  R_TYPE, intent(in)   :: in(:, :)
-  R_TYPE, intent(out)  :: out(:, :)
+  R_TYPE, intent(in)   :: in(order, order)
+  R_TYPE, intent(out)  :: out(order, order)
   R_TYPE, intent(in)   :: factor 
   FLOAT, intent(in) :: norm
 
@@ -153,8 +153,8 @@ subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   call X(matexp_polynomial)(order, in, out, factor/2**j, 12)
   
   do i = 1, j
-     call lalg_copy(order**2, out(1, 1), aux(1, 1))
-     call lalg_gemm('n', 'n', order, order, order, R_TOTYPE(M_ONE), aux(1, 1), &
+     call X(lalg_copy)(order**2, out(1, 1), aux(1, 1))
+     call X(lalg_gemm)(order, order, order, R_TOTYPE(M_ONE), aux(1, 1), &
           aux(1, 1), R_TOTYPE(M_ZERO), out(1, 1))
   enddo
 
@@ -182,21 +182,22 @@ subroutine X(matexp_decomposition)(order, in, out, factor)
 
   integer ::  n, info, lwork
   R_TYPE :: zfact
-  R_TYPE, allocatable :: aux(:,:), dd(:,:)
+  R_TYPE, allocatable :: aux(:,:), auxt(:,:), dd(:,:)
   FLOAT, allocatable :: w(:)
 
-  allocate(aux(order, order), dd(order, order), w(order))
+  allocate(aux(order, order), auxt(order, order), dd(order, order), w(order))
   call lalg_eigensolve(order, in, aux, w)
+  auxt = transpose(R_CONJ(aux))
 
   dd = M_z0
   do n = 1, order
      dd(n, n) = exp(factor*w(n))
   enddo
 
-  call lalg_gemm('n', 'c', order, order, order, R_TOTYPE(M_ONE), &
-       dd(1, 1),  aux(1, 1), R_TOTYPE(M_ZERO), out(1, 1))
-  call lalg_copy(order**2, out(1, 1), dd(1, 1))
-  call lalg_gemm('n', 'n', order, order, order, R_TOTYPE(M_ONE), &
+  call X(lalg_gemm)(order, order, order, R_TOTYPE(M_ONE), &
+       dd(1, 1),  auxt(1, 1), R_TOTYPE(M_ZERO), out(1, 1))
+  call X(lalg_copy)(order**2, out(1, 1), dd(1, 1))
+  call X(lalg_gemm)(order, order, order, R_TOTYPE(M_ONE), &
        aux(1, 1), dd(1, 1), R_TOTYPE(M_ZERO), out(1, 1)) 
 
   deallocate(aux, dd, w)
@@ -251,7 +252,7 @@ subroutine X(extrapolate)(order, n, v, vex, dt, t)
 
   vex(1:n) = R_TOTYPE(M_ZERO)
   do j = 0, order
-    call lalg_axpy(n, c(j), v(n*j+1), vex(1))
+    call X(lalg_axpy)(n, c(j), v(n*j+1), vex(1))
   enddo
 
   deallocate(c)

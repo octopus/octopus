@@ -29,7 +29,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f1(m%np), f2(m%np)
 
-  dotp = lalg_dot(m%np, f1(1),  f2(1))*m%vol_pp
+  dotp = X(lalg_dot)(m%np, f1(1),  f2(1))*m%vol_pp
 
 end function X(mf_dotp)
 
@@ -38,7 +38,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(m%np)
 
-  nrm2 = lalg_nrm2(m%np, f(1))*sqrt(m%vol_pp)
+  nrm2 = X(lalg_nrm2)(m%np, f(1))*sqrt(m%vol_pp)
 
 end function X(mf_nrm2)
 

@@ -206,8 +206,8 @@ contains
 
   subroutine dfft_backward(fft, c, r)
     type(fft_type), intent(in) :: fft
-    CMPLX, intent(in) :: c(:,:,:)
-    FLOAT, intent(out)   :: r(:,:,:)
+    CMPLX, intent(in) :: c(fft%n(1), fft%n(2), fft%n(3))
+    FLOAT, intent(out)   :: r(fft%n(1), fft%n(2), fft%n(3))
 
     integer :: n
 
@@ -215,7 +215,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call lalg_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1))
+    call dlalg_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1))
 
   end subroutine dfft_backward
 
@@ -229,8 +229,8 @@ contains
 
   subroutine zfft_backward(fft, in, out)
     type(fft_type), intent(in) :: fft
-    CMPLX, intent(in)  :: in(:,:,:)
-    CMPLX, intent(out) :: out(:,:,:)
+    CMPLX, intent(in)  :: in(fft%n(1), fft%n(2), fft%n(3))
+    CMPLX, intent(out) :: out(fft%n(1), fft%n(2), fft%n(3))
 
     integer :: n
 
@@ -238,7 +238,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call lalg_scal(n, M_z1/real(n, PRECISION), out(1, 1, 1))
+    call zlalg_scal(n, M_z1/real(n, PRECISION), out(1, 1, 1))
 
   end subroutine zfft_backward
 

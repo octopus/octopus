@@ -23,7 +23,7 @@ subroutine zso (h, m, psi, hpsi, natoms, atom, dim, ik)
   R_TYPE, intent(in) :: psi(m%np, dim)
   R_TYPE, intent(inout) :: Hpsi(m%np, dim)
 
-  integer :: is, ia, i, j,  mps,add_lm, ikbc,jkbc, idim, l, lm 
+  integer :: is, ia, i, j,  mps,add_lm, ikbc,jkbc, idim, l, lm
   CMPLX, allocatable :: tpsi(:, :), tHpsi(:, :)
   type(specie_type), pointer :: spec
   CMPLX :: uvpsi
@@ -32,7 +32,8 @@ subroutine zso (h, m, psi, hpsi, natoms, atom, dim, ik)
 
   atm: do ia = 1, natoms
      spec => atom(ia)%spec
-     allocate(tpsi(atom(ia)%mps, 2), tHpsi(atom(ia)%mps, 2))
+     mps = atom(ia)%mps
+     allocate(tpsi(mps, 2), tHpsi(mps, 2))
      tpsi(:, 1) = psi(atom(ia)%jxyz(:), 1)
      tpsi(:, 2) = psi(atom(ia)%jxyz(:), 2)
      tHpsi = M_z0
@@ -41,31 +42,31 @@ subroutine zso (h, m, psi, hpsi, natoms, atom, dim, ik)
            do lm = -l, l
               do ikbc = 1, spec%ps%kbc
                  do jkbc = 1, spec%ps%kbc
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 1), &
+                     uvpsi = zlalg_dot(mps, atom(ia)%so_luv(1:mps, add_lm, ikbc, 1), &
                                tpsi(1, 1))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                     call zlalg_axpy(mps, uvpsi/2, atom(ia)%so_uv(1:mps, add_lm, jkbc), &
                             tHpsi(1, 2))
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 1), &
+                     uvpsi = zlalg_dot(mps, atom(ia)%so_luv(1:mps, add_lm, ikbc, 1), &
                                tpsi(1, 2))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                     call zlalg_axpy(mps, uvpsi/2, atom(ia)%so_uv(1:mps, add_lm, jkbc), &
                             tHpsi(1, 1))
  
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 2), &
+                     uvpsi = zlalg_dot(mps, atom(ia)%so_luv(1:mps, add_lm, ikbc, 2), &
                                tpsi(1, 1))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, M_zI*uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                     call zlalg_axpy(mps, M_zI*uvpsi/2, atom(ia)%so_uv(1:mps, add_lm, jkbc), &
                             tHpsi(1, 2))
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 2), &
+                     uvpsi = zlalg_dot(mps, atom(ia)%so_luv(1:mps, add_lm, ikbc, 2), &
                                tpsi(1, 2))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, -M_zI*uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                     call zlalg_axpy(mps, -M_zI*uvpsi/2, atom(ia)%so_uv(1:mps, add_lm, jkbc), &
                             tHpsi(1, 1))
 
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 3), &
+                     uvpsi = zlalg_dot(mps, atom(ia)%so_luv(1:mps, add_lm, ikbc, 3), &
                                tpsi(1, 1))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                     call zlalg_axpy(mps, uvpsi/2, atom(ia)%so_uv(1:mps, add_lm, jkbc), &
                             tHpsi(1, 1))
-                     uvpsi = lalg_dot(atom(ia)%mps, atom(ia)%so_luv(1, add_lm, ikbc, 3), &
+                     uvpsi = zlalg_dot(mps, atom(ia)%so_luv(1:mps, add_lm, ikbc, 3), &
                                tpsi(1, 2))*m%vol_pp*atom(ia)%so_uvu(add_lm, ikbc, jkbc)
-                     call lalg_axpy(atom(ia)%mps, -uvpsi/2, atom(ia)%so_uv(1, add_lm, jkbc), &
+                     call zlalg_axpy(mps, -uvpsi/2, atom(ia)%so_uv(1:mps, add_lm, jkbc), &
                             tHpsi(1, 2))
                   enddo
               enddo

@@ -291,7 +291,7 @@ subroutine lcao_wf(sys, h)
 
   integer, parameter :: orbs_local = 2
 
-  integer :: a, idim, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
+  integer :: a, idim, np, dim, nst, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
   integer :: norbs, mode
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
@@ -301,6 +301,9 @@ subroutine lcao_wf(sys, h)
   call push_sub('lcao_wf')
 
   norbs = lcao_data%dim
+  np = sys%m%np
+  dim = sys%st%dim
+  nst = sys%st%nst
 
   ! Hamiltonian and overlap matrices.
   allocate(hpsi(sys%m%np, sys%st%dim))
@@ -328,9 +331,9 @@ subroutine lcao_wf(sys, h)
     sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
-    call lalg_gemm('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
-                  R_TOTYPE(M_ONE), lcao_data%psis(1, 1, 1, ik), lcao_data%hamilt(1, 1, ik), &
-                  R_TOTYPE(M_ZERO),sys%st%X(psi)(1, 1, 1, ik))
+    call X(lalg_gemm)(np*dim, nst, norbs, R_TOTYPE(M_ONE), lcao_data%psis(1:np, 1:dim, 1:norbs, ik), &
+                      lcao_data%hamilt(1:norbs, 1:nst, ik), &
+                      R_TOTYPE(M_ZERO),sys%st%X(psi)(1:np, 1:dim, 1:nst, ik))
 
    end do
 

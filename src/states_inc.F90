@@ -99,7 +99,7 @@ subroutine X(states_random)(m, f)
   end do
 
   r = X(mf_nrm2)(m, f)
-  call lalg_scal(m%np, R_TOTYPE(M_ONE/r), f(1)) 
+  call X(lalg_scal)(m%np, R_TOTYPE(M_ONE/r), f(1)) 
 
   call pop_sub()
 end subroutine X(states_random)
@@ -109,7 +109,7 @@ end subroutine X(states_random)
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(inout) :: psi(:, :, :)
+  R_TYPE, intent(inout) :: psi(m%np, dim, nst)
   integer, intent(in), optional :: start
 
   integer :: p, q, id, stst
@@ -126,13 +126,13 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
     do q = 1, p - 1
       ss = X(states_dotp)(m, dim, psi(1:m%np, :, q), psi(1:m%np, :, p))
       do id = 1, dim
-        call lalg_axpy(m%np, -ss, psi(1, id, q), psi(1, id, p))
+        call X(lalg_axpy)(m%np, -ss, psi(1, id, q), psi(1, id, p))
       end do
     enddo
     nrm2 = X(states_nrm2)(m, dim, psi(1:m%np, :, p))
     ss = R_TOTYPE(M_ONE/nrm2)
     do id = 1, dim
-      call lalg_scal(m%np, ss, psi(1, id, p))
+      call X(lalg_scal)(m%np, ss, psi(1, id, p))
     end do
   end do
 
@@ -144,7 +144,7 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f1, f2
 
-  dotp = lalg_dot(m%np*dim, f1(1), f2(1))*m%vol_pp
+  dotp = X(lalg_dot)(m%np*dim, f1(1), f2(1))*m%vol_pp
 
 end function X(states_dotp)
 
@@ -153,7 +153,7 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   integer, intent(in) :: dim
   R_TYPE, intent(IN), dimension(*) :: f
 
-  nrm2 = lalg_nrm2(m%np*dim, f(1))*sqrt(m%vol_pp)
+  nrm2 = X(lalg_nrm2)(m%np*dim, f(1))*sqrt(m%vol_pp)
 
 end function X(states_nrm2)
 
@@ -651,7 +651,7 @@ subroutine X(mesh_angular_momentum)(m, f, lf)
      lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
   enddo
 #if defined(R_TCOMPLEX)
-  call lalg_scal(3*m%np, -M_zI, lf(1, 1))
+  call X(lalg_scal)(3*m%np, -M_zI, lf(1, 1))
 #endif
   deallocate(gf)
 end subroutine X(mesh_angular_momentum)

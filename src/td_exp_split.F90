@@ -198,11 +198,11 @@ contains
           do_m: do lm = -l*step, l*step, step
             do ikbc = kbc_start, kbc_end, step
               do jkbc = kbc_start, kbc_end, step
-                 p2 = lalg_dot(atm%mps, atm%zuv(1, add_lm, ikbc), atm%zuv(1, add_lm, ikbc))*m%vol_pp
+                 p2 = zlalg_dot(atm%mps, atm%zuv(1:atm%mps, add_lm, ikbc), atm%zuv(1:atm%mps, add_lm, ikbc))*m%vol_pp
                  ctemp = atm%zuvu(add_lm, ikbc, jkbc)*p2*factor
-                 uvpsi = lalg_dot(atm%mps, atm%zuv(1, add_lm, ikbc), lpsi(1)) * m%vol_pp* &
+                 uvpsi = zlalg_dot(atm%mps, atm%zuv(1:atm%mps, add_lm, ikbc), lpsi(1)) * m%vol_pp* &
                        (exp(ctemp) - M_z1)/p2
-                 call lalg_axpy(atm%mps, uvpsi, atm%zuv(1, add_lm, jkbc), lHpsi(1))
+                 call zlalg_axpy(atm%mps, uvpsi, atm%zuv(1:atm%mps, add_lm, jkbc), lHpsi(1))
               end do
             end do
             add_lm = add_lm + step

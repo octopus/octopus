@@ -215,7 +215,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call lalg_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1))
+    call X(lalg_scal)(n, M_ONE/real(n, PRECISION), r(1, 1, 1))
 
   end subroutine dfft_backward
 

@@ -22,41 +22,6 @@ module lib_basic_alg
 
   implicit none
 
-  interface lalg_swap
-    module procedure d_swap, z_swap
-  end interface
-
-  interface lalg_scal
-    module procedure d_scal, z_scal
-  end interface
-    
-  interface lalg_axpy
-     module procedure d_axpy, z_axpy
-  end interface
-
-  interface lalg_dot
-     module procedure d_dot, z_dot
-  end interface
-
-  interface lalg_nrm2
-     module procedure d_nrm2, dz_nrm2
-  end interface
-
-  interface lalg_copy
-     module procedure d_copy, z_copy
-  end interface
-
-  interface lalg_gemm
-     module procedure d_gemm, z_gemm
-  end interface
-
-  interface lalg_gemv
-     module procedure d_gemv, z_gemv
-  end interface
-
-  private
-  public :: lalg_swap, lalg_scal, lalg_axpy, lalg_dot, lalg_nrm2, lalg_copy, lalg_gemm, lalg_gemv
-
 contains
 
 #ifdef HAVE_BLAS
