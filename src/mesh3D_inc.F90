@@ -75,11 +75,15 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
 
   select case(m%d%space)
     case(REAL_SPACE)
-      if(m%iso) then
-        call rs_derivative_iso()
+#if defined(POLYMERS) || defined(BOUNDARIES_ZERO_DERIVATIVE)
+      call rs_derivative()
+#else
+      if(m%iso .and. present(lapl) .and. (.not.present(grad)) ) then
+        call rs_lapl_fast()
       else
         call rs_derivative()
       endif
+#endif
     case(RECIPROCAL_SPACE)
       call fft_derivative()
   end select
@@ -231,74 +235,20 @@ contains
     return
   end subroutine rs_derivative
 
-  subroutine rs_derivative_iso()
-    R_TYPE :: den1(3), den2(3)
-    integer :: k, in, ind1(3), ind2(3), ix, iy, iz, i
+  subroutine rs_lapl_fast()
+    R_TYPE :: sd
+    integer :: k, in, ix, iy, iz, i
 
     do k = 1, m%np
-      ! first we add the 0 contribution
-      if(present(lapl)) then
-        lapl(k) = (m%d%dlidfj(0)*f(k))*3.0_r8
-      end if
-      if(present(grad)) then
-        grad(:, k) = m%d%dgidfj(0)*f(k)
-      end if
-
-      ix = m%Lx(k); iy = m%Ly(k); iz = m%Lz(k)
+      sd = (m%d%dlidfj(0)*f(k))*3.0_r8
       do in = 1, m%d%norder
-        ind1(1) = m%Lxyz_inv(ix-in, iy, iz)
-        ind1(2) = m%Lxyz_inv(ix, iy-in, iz)
-        ind1(3) = m%Lxyz_inv(ix, iy, iz-in)
-    
-        ind2(1) = m%Lxyz_inv(ix+in, iy, iz)
-        ind2(2) = m%Lxyz_inv(ix, iy+in, iz)
-        ind2(3) = m%Lxyz_inv(ix, iy, iz+in)
-
-#ifdef POLYMERS
-        ! cyclic boundary conditions in the z direction
-        if(ind1(3) == 0) then
-          ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in)
-        end if
-        if(ind2(3) == 0) then
-          ind1(3) = m%Lxyz_inv(ix, iy, iz + in - 2*m%nr(3))
-        end if
-#endif
-
-        ! If you prefer 0 wave functions at the boundary, uncomment the following
-        ! Just be careful with the LB94 xc potential, for it will probably not work!
-#ifndef BOUNDARIES_ZERO_DERIVATIVE
-        den1(:) = f(ind1(:))
-        den2(:) = f(ind2(:))
-#else
-        ! This also sets zero wavefunction
-        ! den1 = 0._r8; den2 = 0._r8
-
-        ! This peace of code changes the boundary conditions
-        ! to have 0 derivative at the boundary 
-        if(ind1(1) > 0)den1(1) = f(ind1(1))
-        if(ind1(2) > 0)den1(2) = f(ind1(2))
-        if(ind1(3) > 0)den1(3) = f(ind1(3))
-        
-        if(ind2(1) > 0)den2(1) = f(ind2(1))
-        if(ind2(2) > 0)den2(2) = f(ind2(2))
-        if(ind2(3) > 0)den2(3) = f(ind2(3))
-#endif
-    
-        if(present(lapl)) then
-          lapl(k) = lapl(k) + m%d%dlidfj(in)*(sum(den1(:))+sum(den2(:)))
-        end if
-        
-        if(present(grad)) then
-          grad(:, k) = grad(:, k) + m%d%dgidfj(-in)*den1(:) + m%d%dgidfj(in)*den2(:)
-        end if
-        
+        sd = sd + sum(f(m%ind(:, in, k)))*m%d%dlidfj(in)
       end do
+      lapl(k) = sd
     end do
-
-    if(present(grad)) grad = (alp/m%h(1))*grad
-    if(present(lapl)) lapl = (alp/m%h(1)**2)*lapl
+    call R_FUNC(scal) (m%np, alp/m%h(1)**2, lapl(1), 1)
 
     return
-  end subroutine rs_derivative_iso
+  end subroutine rs_lapl_fast
 
 end subroutine R_FUNC(mesh_derivatives)

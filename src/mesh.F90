@@ -60,6 +60,7 @@ type mesh_type
   integer, pointer :: Lx(:), Ly(:), Lz(:)
   ! return points # for each xyz
   integer, pointer :: Lxyz_inv(:,:,:)
+  integer, pointer :: ind(:, :, :)
 
   ! mesh elargement... this is currently only used in solving
   ! the poisson equation with conjugated gradients...
@@ -232,8 +233,8 @@ subroutine mesh_end(m)
     nullify(m%Lx, m%Ly, m%Lz, m%Kx, m%Ky, m%Kz)
   end if
   if(associated(m%Lxyz_inv)) then
-    deallocate(m%Lxyz_inv)
-    nullify(m%Lxyz_inv)
+    deallocate(m%Lxyz_inv, m%ind)
+    nullify(m%Lxyz_inv, m%ind)
   end if
   if(m%d%space == 0 .and. associated(m%d%dgidfj)) then
     deallocate(m%d%dgidfj, m%d%dlidfj)

@@ -180,6 +180,7 @@ subroutine mesh3D_create(m, natoms, atom)
 
   allocate(m%Lx(il), m%Ly(il), m%Lz(il))
   allocate(m%Kx(ik), m%Ky(ik), m%Kz(ik))
+  allocate(m%ind(6, m%d%norder, m%np))
 
   il=0
   ik=0
@@ -201,6 +202,18 @@ subroutine mesh3D_create(m, natoms, atom)
         endif
       enddo
     enddo
+  enddo
+
+  do il = 1, m%np
+     ix = m%Lx(il); iy = m%Ly(il); iz = m%Lz(il)
+     do ik = 1, m%d%norder
+        m%ind(1, ik, il) = m%Lxyz_inv(ix-ik, iy, iz)
+        m%ind(2, ik, il) = m%Lxyz_inv(ix, iy-ik, iz)
+        m%ind(3, ik, il) = m%Lxyz_inv(ix, iy, iz-ik)
+        m%ind(4, ik, il) = m%Lxyz_inv(ix+ik, iy, iz)
+        m%ind(5, ik, il) = m%Lxyz_inv(ix, iy+ik, iz)
+        m%ind(6, ik, il) = m%Lxyz_inv(ix, iy, iz+ik)
+     enddo
   enddo
 
   deallocate(Lxyz); nullify(Lxyz)

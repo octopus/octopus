@@ -272,12 +272,12 @@ contains
 
     subroutine matrix_elem(i, j, s)
       integer, intent(in) :: i, j
-      R_TYPE, intent(out) :: s(3)
+      real(r8), intent(out) :: s(3)
 
       real(r8) :: x(3)
       integer :: k
 
-      s = R_TOTYPE(0._r8)
+      s = 0._r8
       do k = 1, m%np
         call mesh_xyz(m, k, x)
         s = s + x * R_CONJ(st%R_FUNC(psi) (k, 1, i, 1)) * st%R_FUNC(psi) (k, 1, j, 1)
