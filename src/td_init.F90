@@ -83,6 +83,9 @@ subroutine td_init(td, sys, m, st)
   ! occupational analysis stuff
   call oct_parse_logical(C_string("TDOccupationalAnalysis"), .false., td%occ_analysis)
 
+  ! harmonic spectrum or not
+  call oct_parse_logical(C_string("TDWriteHarmonicSpectrum"), .false., td%harmonic_spectrum)
+
   ! should we move the ions during the simulation?
   call oct_parse_int(C_string("MoveIons"), 0, td%move_ions)
   if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then

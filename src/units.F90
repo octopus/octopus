@@ -25,7 +25,7 @@ implicit none
 
 type unit_type
   real(r8) :: factor
-  character(len=10) :: abbrev ! common abbreviation of the unit name
+  character(len=12) :: abbrev ! common abbreviation of the unit name
   character(len=50) :: name   ! common name
 end type unit_type
 
@@ -36,6 +36,7 @@ type unit_system_type
   type(unit_type) :: velocity
   type(unit_type) :: mass
   type(unit_type) :: force
+  type(unit_type) :: acceleration
 end type unit_system_type
 
 type(unit_system_type) :: units_inp, units_out
@@ -114,6 +115,10 @@ subroutine units_atomic(u)
   u%force%abbrev  = "H/b"
   u%force%name    = "Hartree/bohr"
   u%force%factor  = 1.0_r8
+
+  u%acceleration%abbrev = "bH(2pi/h)^2"
+  u%acceleration%name   = "bohr times (Hartree over h bar) squared"
+  u%acceleration%factor = 1._r8
 end subroutine units_atomic
 
 subroutine units_eV_Ang(u)
@@ -142,6 +147,10 @@ subroutine units_eV_Ang(u)
   u%force%abbrev  = "eV/A"
   u%force%name    = "electron volt/amstrong"
   u%force%factor  = u%length%factor/u%energy%factor
+
+  u%acceleration%abbrev = "AeV(2pi/h)^2"
+  u%acceleration%name   = "Angstrom times (electron volt over h bar) squared"
+  u%acceleration%factor = u%length%factor/u%time%factor**2
 end subroutine units_eV_Ang
 
 end module units

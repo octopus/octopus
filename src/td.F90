@@ -50,6 +50,9 @@ type td_type
   ! occupational analysis
   logical :: occ_analysis ! do we perform occupational analysis?
 
+  ! write harmonic spectrum
+  logical :: harmonic_spectrum
+
 #ifndef DISABLE_PES
   type(PES_type) :: PESv
 #endif
@@ -72,7 +75,7 @@ subroutine td_run(td, u_st, sys, h)
 
   integer :: i, ii, j, idim, ist, ik
   real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:), &
-                           x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:)
+                           x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:), tacc(:, :)
   complex(r4), allocatable :: projections(:,:,:,:)
   character(len=100) :: proj_filename
 
@@ -88,6 +91,7 @@ subroutine td_run(td, u_st, sys, h)
               f(td%save_iter, sys%natoms, 3))
      allocate(ke(td%save_iter), pe(td%save_iter))
   endif
+  if(td%harmonic_spectrum) allocate(tacc(td%save_iter, 3))
 
   ! occupational analysis stuff
   if(td%occ_analysis) then
@@ -173,7 +177,7 @@ subroutine td_run(td, u_st, sys, h)
            f1(j, :) = sys%atom(j)%f(:)
         enddo
       endif
-      call zforces(h, sys, td%iter*td%dt, td%no_lasers, td%lasers, reduce=.true.)
+      call zforces(h, sys, i*td%dt, td%no_lasers, td%lasers, reduce=.true.)
       if(td%move_ions == VELOCITY_VERLET) then
         do j = 1, sys%natoms
            if(sys%atom(j)%move) then
@@ -186,6 +190,9 @@ subroutine td_run(td, u_st, sys, h)
       sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
       ke(ii) = sys%kinetic_energy
     endif
+
+    ! If harmonic spectrum is desired, get the acceleration
+    if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:3), td%dt*i)
 
     ! measuring
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
@@ -242,15 +249,15 @@ contains
     type(mesh_type), intent(IN) :: m
     
     integer :: i, iunit
-    real(r8) :: x(3)    
+    real(r8) :: x(3), t_acc(3)
     complex(r8) :: c
     real(r8), allocatable :: dipole(:), multipole(:,:), pos(:,:), vel(:,:), for(:,:)
-    
+
     do i = 1, min(2, sys%st%ispin)
       td%v_old1(:, i) = h%Vhartree(:) + h%Vxc(:, i)
       td%v_old2(:, i) = td%v_old1(:, i)
     end do
-      
+
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. 0._r8) then
       do i = 1, m%np
@@ -301,6 +308,15 @@ contains
        call io_close(iunit)
        deallocate(pos, vel, for)
     endif
+
+    ! output harmonic spectrum
+    if(td%harmonic_spectrum) then
+       call io_assign(iunit)
+       open(iunit, file=trim(sys%sysname)//'.hst')
+       call td_calc_tacc(t_acc, 0.0_r8)
+       call td_write_hst(iunit, 0, 0.0_r8, t_acc, header=.true.)
+       call io_close(iunit)
+    endif
     
   end subroutine td_run_zero_iter
 
@@ -327,6 +343,17 @@ contains
                          header=.false.)
     enddo
     call io_close(iunit)
+    endif
+
+    ! output electron acceleration if desired
+    if(td%harmonic_spectrum) then
+       call io_assign(iunit)
+       open(iunit, position='append', file=trim(sys%sysname)//".hst")
+       do j = 1, td%save_iter
+          jj = i - td%save_iter + j
+          call td_write_hst(iunit, jj, jj*td%dt, tacc(j, 1:3), header=.false.)
+       enddo
+       call io_close(iunit)
     endif
 
     ! and now we should output the projections
@@ -405,6 +432,26 @@ contains
          l_vector_field(1:3) * units_inp%length%factor
     
   end subroutine td_write_laser
+
+  subroutine td_write_hst(iunit, iter, t, acc, header)
+    integer, intent(in)  :: iunit, iter
+    real(r8), intent(in) :: t, acc(3)
+    logical, intent(in)  :: header
+
+    ! first line: column names
+    if(header) then
+      ! first line -> column names
+      write(iunit, '(a8,4a20)') '# Iter  ', str_center('t', 20), str_center('Acc(1)', 20), &
+                                            str_center('Acc(2)', 20), str_center('Acc(3)', 20)
+      ! second line -> units
+      write(iunit, '(a8,2a20)') '#       ',                            &
+           str_center('['//trim(units_out%time%abbrev)//']', 20),         &
+           str_center('['//trim(units_out%acceleration%abbrev)//']', 20)
+    endif
+
+    write(iunit,'(i8,4es20.12)') iter, t/units_out%time%factor, acc/units_out%acceleration%factor
+
+  end subroutine td_write_hst
 
   subroutine td_write_nbo(iunit, iter, t, ke, pe, x, v, f, header)
     integer, intent(in)  :: iunit, iter
@@ -556,6 +603,45 @@ contains
       end do
     end do
   end subroutine td_calc_projection
+
+  subroutine td_calc_tacc(acc, t)
+    real(r8), intent(in)  :: t
+    real(r8), intent(out) :: acc(3)
+
+    real(r8) :: field(3), x(3), r, &
+                vl, dvl, d
+    integer  :: j, k, is
+
+    acc(1:3) = 0.0_r8
+
+    ! Ionic acceleration
+    !do j=1, sys%natoms
+    !   acc(1:3) = acc(1:3) + sys%atom(j)%f(1:3)/sys%atom(j)%spec%weight
+    !enddo
+
+    ! Gets the laser
+    call laser_field(td%no_lasers, td%lasers, t, field)
+    ! Gets the gradient of the external pot
+    do j=1, sys%natoms
+       do k=1, sys%m%np
+         call mesh_r(sys%m, k, r, x=x, a=sys%atom(j)%x)
+         if(r < r_small) cycle
+          
+         vl  = splint(sys%atom(j)%spec%ps%vlocal, r)
+         dvl = splint(sys%atom(j)%spec%ps%dvlocal, r)
+          
+         d = sum(sys%st%rho(k, :)) * sys%m%vol_pp* &
+               (dvl - (vl - sys%atom(j)%spec%Z_val)/r)/r**2
+         acc(:) = acc - d * x(:)
+       enddo
+    enddo
+
+    ! Gets the expectation value...
+    do k = 1, 3
+       acc(k) = acc(k) - field(k)*sum(sys%st%rho(:, :))*sys%m%vol_pp
+    enddo
+ 
+  end subroutine td_calc_tacc
 
 end subroutine td_run
 
