@@ -273,6 +273,11 @@ module lib_oct_gsl_spline
     module procedure loct_spline_print_2
   end interface
 
+  interface loct_spline_filter
+    module procedure loct_spline_filter_ft
+    module procedure loct_spline_filter_bessel
+  end interface
+
   ! These are interfaces to functions defined in oct_gsl_f.c, which  in turn
   ! take care of calling the GSL library.
   interface
@@ -608,7 +613,7 @@ contains
     deallocate(x, y)
   end subroutine loct_spline_cut
 
-  subroutine loct_spline_filter(spl, fs, rs)
+  subroutine loct_spline_filter_ft(spl, fs, rs)
     type(loct_spline_type), intent(inout) :: spl
     real(8), intent(in), optional :: fs(2)
     real(8), intent(in), optional :: rs(2)
@@ -627,7 +632,28 @@ contains
       call loct_spline_cut(spl, rs(1), rs(2))  
     endif
 
-  end subroutine loct_spline_filter
+  end subroutine loct_spline_filter_ft
+
+  subroutine loct_spline_filter_bessel(spl, l, fs, rs)
+    type(loct_spline_type), intent(inout) :: spl
+    integer, intent(in) :: l
+    real(8), intent(in), optional :: fs(2)
+    real(8), intent(in), optional :: rs(2)
+
+    type(loct_spline_type) :: splw
+
+    if(present(fs)) then
+      call loct_spline_init(splw)
+      call loct_spline_3dft(spl, splw, CNST(2.0)*fs(1))
+      call loct_spline_cut(splw, fs(1), fs(2))
+      call loct_spline_besselft(splw, spl, l)
+      call loct_spline_end(splw)
+    endif
+    if(present(rs)) then
+      call loct_spline_cut(spl, rs(1), rs(2))  
+    endif
+
+  end subroutine loct_spline_filter_bessel
 
   subroutine loct_spline_print_0(spl, iunit)
     type(loct_spline_type), intent(in) :: spl
