@@ -36,7 +36,7 @@ type hamiltonian_type
   integer :: ispin ! How to handle spin (duplicated in states_type)
   integer :: np  ! number of points (duplicated in mesh)
 
-  logical :: soc ! spin-orbit coupling for anyone?
+  integer :: reltype ! type of relativistic correction to use
 
   integer :: vpsl_space           ! How should the local potential be calculated
   integer :: vnl_space            ! How should the nl    potential be calculated
@@ -46,6 +46,7 @@ type hamiltonian_type
   real(r8), pointer :: Vxc(:,:)   ! xc potential
 
   ! For non-collinear spin (ispin=3)
+  logical :: noncollinear_spin
   real(r8), pointer :: dVxc_off(:)
   complex(r8), pointer :: zVxc_off(:)
 
@@ -65,6 +66,11 @@ type hamiltonian_type
 
 end type hamiltonian_type
 
+integer, parameter :: NOREL      = 0, &
+                      SPIN_ORBIT = 1, &
+                      APP_ZORA   = 2, &
+                      ZORA       = 3
+
 contains
 
 subroutine hamiltonian_init(h, sys)
@@ -80,7 +86,12 @@ subroutine hamiltonian_init(h, sys)
   ! allocate potentials and density of the cores
   allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, sys%st%nspin))
   h%Vhartree = 0._r8; h%Vxc = 0._r8
-  if(h%ispin == 3) then
+  call oct_parse_logical(C_string('NonCollinearSpin'), .false., h%noncollinear_spin)
+  if(h%noncollinear_spin .and. h%ispin .ne. 3) then
+    write(message(1),'(a)') 'SpinComponents must be set to 3 if NonCollinearSpin = .true.'
+    call write_fatal(1)
+  endif
+  if(h%noncollinear_spin) then
     allocate(h%R_FUNC(Vxc_off) (h%np))
     h%R_FUNC(Vxc_off) = R_TOTYPE(0._r8)
   else
@@ -132,12 +143,32 @@ subroutine hamiltonian_init(h, sys)
     call specie_nl_fourier_init(sys%nspecies, sys%specie, sys%m, h%nextra)
   end if
 
+  call oct_parse_int(C_string("RelativisticCorrection"), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
-  call oct_parse_logical(C_string("NonInteractingElectrons"), .false., h%ip_app)
-  if(h%ip_app .and. h%ispin.ne.3) then
-    message(1) = "Spin-orbit coupling can only be included with SpinComponents = 3"
+  select case(h%reltype)
+    case(NOREL);      message(1) = 'Info: Rel. correction: No relativistic corrections.'
+    case(SPIN_ORBIT); message(1) = 'Info: Rel. corrections: Spin-Orbit.'
+    case(APP_ZORA);   message(1) = 'Info: Rel. correction: Approximated ZORA.'
+    case(ZORA);       message(1) = 'Info: Rel. correction: ZORA.'
+    case default
+      message(1) = "Relativistic corrections must be: 0 (none),"
+      message(2) = "                                  1 (spin-orbit coupling)"
+      message(3) = "                                  2 (approximated ZORA)"
+      message(4) = "                                  3 (ZORA)"
+      call write_fatal(4)
+  end select
+  call write_info(1)
+  ! This is temporary...
+  if(h%reltype .ne. NOREL) then
+    message(1) = 'Error: Relativistic corrections not working yet'
     call write_fatal(1)
-  end if
+  endif
+#else
+  if(h%reltype .ne. NOREL) then
+    message(1) = "Cannot apply relativistic corrections with an executable compiled"
+    message(2) = "for real wavefunctions."
+    call write_fatal(2)
+  endif
 #endif
 
   ! Should we treat the particles as independent?
@@ -148,7 +179,7 @@ subroutine hamiltonian_init(h, sys)
   else
     ! initilize hartree and xc modules
     call hartree_init(h%hart, sys%m)
-    call xc_init(h%xc, sys%m, h%ispin)
+    call xc_init(h%xc, sys%m, h%noncollinear_spin)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
@@ -274,5 +305,6 @@ end subroutine hamiltonian_output
 #include "complex.F90"
 #include "h_inc.F90"
 #include "h_forces.F90"
+!#include "h_rel.F90"
 
 end module hamiltonian

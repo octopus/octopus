@@ -48,72 +48,44 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
   R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
   R_TYPE, intent(out) :: Hpsi(sys%m%np, sys%st%dim)
 
-  integer :: is, idim, np, dim, a, lm
-  R_TYPE :: uVpsi
-  type(atom_type), pointer :: atm
-  type(specie_type), pointer :: spec
-  
-  ! for spin-orbit coupling
-  real(r8), allocatable :: Vtot(:), dVtot(:,:)
+  sub_name = 'Hpsi'; call push_sub()
 
-  !sub_name = 'Hpsi'; call push_sub()
+  select case(h%reltype)
 
-  np = sys%m%np
-  dim = sys%st%dim
+  case(NOREL)
+    call R_FUNC(kinetic) (sys, psi, Hpsi)
+    call R_FUNC(vlpsi) (h, sys, ik, psi, Hpsi)
+    call R_FUNC(vnlpsi) (sys, psi, Hpsi)
+  case default
+    message(1) = 'Error: Internal.'
+    call write_fatal(1)
 
-  call kinetic_energy(sys%m)
-
-  ! Local potential
-  do idim = 1, dim
-    Hpsi(:, idim) = Hpsi(:, idim) + (h%Vpsl + h%Vhartree)*psi(1:,idim)
-  end do
-
-  select case(sys%st%ispin)
-  case(1) ! dim = 1
-    Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
-  case(2) ! dim = 1
-    if(modulo(ik+1, 2) == 0) then ! we have a spin down
-      Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
-    else ! spin up
-      Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 2)*psi(1:, 1)
-    end if
-  case(3) ! dim = 2
-    Hpsi(:, 1) = Hpsi(:, 1) + &
-         h%Vxc(:, 1)*psi(1:, 1) + h%R_FUNC(Vxc_off)(:)*psi(1:, 2)
-    Hpsi(:, 2) = Hpsi(:, 2) + &
-         h%Vxc(:, 2)*psi(1:, 2) + R_CONJ(h%R_FUNC(Vxc_off)(:))*psi(1:, 1)
   end select
 
-  ! Non-local part
-  call R_FUNC(vnlpsi) (sys, psi, Hpsi)
+  call pop_sub(); return
+end subroutine R_FUNC(Hpsi)
 
-  ! spin-orbit coupling
-#if defined(COMPLEX_WFNS)
-  if(h%soc) then
-    allocate(Vtot(sys%m%np), dVtot(3, sys%m%np))
-    deallocate(Vtot, dVtot)
-  end if
-#endif
+subroutine R_FUNC(kinetic) (sys, psi, Hpsi)
+  type(system_type), intent(IN) :: sys
+  R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
+  R_TYPE, intent(out) :: Hpsi(sys%m%np, sys%st%dim)
 
-  !call pop_sub()
+  integer :: idim, i, np, dim
 
-contains
-
-  subroutine kinetic_energy(m)
-    type(mesh_type), intent(IN) :: m
-
-    integer :: idim, i
+  sub_name = 'kinetic'; call push_sub()
+  np = sys%m%np
+  dim = sys%st%dim
 
 # if defined(POLYMERS)
     R_TYPE, allocatable :: grad(:,:)
     real(r8) :: k2
 
-    allocate(grad(3,m%np))
+    allocate(grad(3,sys%m%np))
     k2 = sum(sys%st%kpoints(:, ik)**2)/2._r8
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), grad=grad(:,:))
+      call R_FUNC(mesh_derivatives) (sys%m, psi(:, idim), lapl=Hpsi(:, idim), grad=grad(:,:))
 
-      do i = 1, m%np
+      do i = 1, sys%m%np
         Hpsi(i, idim) = Hpsi(i, idim) &
              + 2._r8*M_zI*sum(sys%st%kpoints(:, ik)*grad(:, i)) &
              - k2*psi(i, idim)
@@ -122,14 +94,13 @@ contains
     deallocate(grad)
 # else
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), &
+      call R_FUNC(mesh_derivatives) (sys%m, psi(:, idim), lapl=Hpsi(:, idim), &
                                      alpha = R_TOTYPE(-1.0_r8/2.0_r8) )
     end do
 #endif
 
-  end subroutine kinetic_energy
-
-end subroutine R_FUNC(Hpsi)
+  call pop_sub(); return
+end subroutine R_FUNC(kinetic)
 
 subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
   type(system_type), intent(IN) :: sys
@@ -140,7 +111,9 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
   R_TYPE :: uVpsi
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
-  
+
+  sub_name = 'vnlpsi'; call push_sub()
+
   ! Ionic pseudopotential
   do_atm: do ia = 1, sys%natoms
     atm => sys%atom(ia)
@@ -173,7 +146,50 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
     end do do_dim
   end do do_atm
 
+  call pop_sub(); return
 end subroutine R_FUNC(vnlpsi)
+
+subroutine R_FUNC(vlpsi) (h, sys, ik, psi, Hpsi)
+  type(hamiltonian_type), intent(in) :: h
+  type(system_type), intent(in) :: sys
+  integer, intent(in) :: ik
+  R_TYPE, intent(in) :: psi(0:sys%m%np, sys%st%dim)
+  R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
+
+  integer :: is, idim, np, dim
+
+  sub_name = 'vlpsi'; call push_sub()
+
+  np = sys%m%np
+  dim = sys%st%dim
+
+    do idim = 1, dim
+      Hpsi(:, idim) = Hpsi(:, idim) + (h%Vpsl + h%Vhartree)*psi(1:,idim)
+    end do
+
+    select case(sys%st%ispin)
+    case(1) ! dim = 1
+      Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
+    case(2) ! dim = 1
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
+      else ! spin up
+        Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 2)*psi(1:, 1)
+      end if
+    case(3) ! dim = 2
+      if(h%noncollinear_spin) then
+        Hpsi(:, 1) = Hpsi(:, 1) + &
+          h%Vxc(:, 1)*psi(1:, 1) + h%R_FUNC(Vxc_off)(:)*psi(1:, 2)
+        Hpsi(:, 2) = Hpsi(:, 2) + &
+          h%Vxc(:, 2)*psi(1:, 2) + R_CONJ(h%R_FUNC(Vxc_off)(:))*psi(1:, 1)
+      else
+        Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 1)*psi(1:, 1)
+        Hpsi(:, 2) = Hpsi(:, 2) + h%Vxc(:, 2)*psi(1:, 2)
+      endif
+    end select
+
+  call pop_sub(); return
+end subroutine R_FUNC(vlpsi)
 
 subroutine R_FUNC(hamiltonian_setup)(h, sys)
   type(hamiltonian_type), intent(inout) :: h
@@ -202,7 +218,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
          h%Vxc, v_aux, h%ex, h%ec, h%R_FUNC(Vxc_off),  v_aux2)
 
     h%Vxc = h%Vxc + v_aux
-    if(h%ispin == 3) then
+    if(h%noncollinear_spin) then
       h%R_FUNC(Vxc_off) = h%R_FUNC(Vxc_off) + v_aux2
       deallocate(v_aux2); nullify(v_aux2)
       h%epot = h%epot - sys%m%vol_pp*2._r8* &

@@ -32,7 +32,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vx, vc, ex, ec, vx_off, vc_off)
 
   vx = 0.0_r8; vc = 0.0_r8
   ex = 0.0_r8; ec = 0.0_r8
-  if(st%ispin == 3) then
+  if(xcs%noncollinear_spin) then
     vx_off = R_TOTYPE(0._r8)
     vc_off = R_TOTYPE(0._r8)
   end if
@@ -40,7 +40,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vx, vc, ex, ec, vx_off, vc_off)
   select case(xcs%x_family)
   case(XC_FAMILY_ZER)
   case(XC_FAMILY_LDA)
-    call R_FUNC(xc_lda) (xcs%x_func, m, st, vx, ex, vx_off)
+    call R_FUNC(xc_lda) (xcs%x_func, m, st, vx, ex, xcs%noncollinear_spin, vx_off)
   case(XC_FAMILY_GGA)
     call xc_gga(xcs%x_func, m, st, vx, ex)
 #ifdef HAVE_LAPACK
@@ -55,7 +55,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vx, vc, ex, ec, vx_off, vc_off)
   select case(xcs%c_family)
   case(XC_FAMILY_ZER)
   case(XC_FAMILY_LDA)
-    call R_FUNC(xc_lda) (xcs%c_func, m, st, vc, ec, vc_off)
+    call R_FUNC(xc_lda) (xcs%c_func, m, st, vc, ec, xcs%noncollinear_spin, vc_off)
   case(XC_FAMILY_GGA)
     call xc_gga(xcs%c_func, m, st, vc, ec)
 #ifdef HAVE_LAPACK
@@ -90,20 +90,23 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vx, vc, ex, ec, vx_off, vc_off)
   return
 end subroutine R_FUNC(xc_pot)
 
-subroutine R_FUNC(xc_lda) (func, m, st, pot, energy, pot_off)
+subroutine R_FUNC(xc_lda) (func, m, st, pot, energy, nc_spin, pot_off)
   integer, intent(in) :: func
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
+  logical, intent(in), optional :: nc_spin
   R_TYPE, pointer, optional :: pot_off(:)
 
   real(r8) :: d(st%nspin), p(st%nspin), d1, d2, e
   R_TYPE   :: ri, a(2,2)
   integer  :: i
 
+  sub_name = 'xc_lda'; call push_sub()
+
   energy = 0._r8
   do i = 1, m%np
-    if(st%ispin == 3) then
+    if(present(nc_spin).and.nc_spin) then
       ri = st%R_FUNC(rho_off)(i)
 
       if(R_ABS(ri) < 1e-8_r8) then
@@ -156,7 +159,7 @@ subroutine R_FUNC(xc_lda) (func, m, st, pot, energy, pot_off)
 
     energy = energy + sum(d) * e * m%vol_pp
 
-    if(st%ispin == 3) then ! rotate bak potential
+    if(present(nc_spin).and.nc_spin) then ! rotate bak potential
       pot(i, 1) = R_ABS(a(1,1))**2 * p(1) + R_ABS(a(1,2))**2 * p(2)
       pot(i, 2) = R_ABS(a(2,1))**2 * p(1) + R_ABS(a(2,2))**2 * p(2)
       pot_off(i) = a(1,1)*R_CONJ(a(2,1))*p(1) + a(1,2)*R_CONJ(a(2,2))*p(2)
@@ -165,5 +168,5 @@ subroutine R_FUNC(xc_lda) (func, m, st, pot, energy, pot_off)
     end if
   end do
 
-  return
+  call pop_sub(); return
 end subroutine R_FUNC(xc_lda)

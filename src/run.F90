@@ -149,7 +149,7 @@ subroutine run()
 
       call R_FUNC(hamiltonian_setup)(h, sys)                    ! get potentials
       call R_FUNC(hamiltonian_eigenval)(h, sys, 1, sys%st%nst) ! eigenvalues
-      call states_fermi(sys%st)                         ! occupations
+      call states_fermi(sys%st, sys%m)                         ! occupations
       call hamiltonian_energy(h, sys, -1)               ! get the total energy
 
     case(I_SCF)

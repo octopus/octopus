@@ -120,7 +120,7 @@ subroutine scf_run(scf, sys, h)
 
     ! compute eigenvalues
     call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
-    call states_fermi(sys%st)                         ! occupations
+    call states_fermi(sys%st, sys%m)                         ! occupations
 
     ! output eigenvalues
     call states_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
@@ -151,7 +151,8 @@ subroutine scf_run(scf, sys, h)
     write(message(1), '(a,i4,a,e14.8,a,e14.8)') &
          'Info: iter = ', iter, ' abs_dens = ', scf%abs_dens, &
          ' abs_ener = ', scf%abs_ener
-    call write_info(1)
+    write(message(2), '(a)') ''
+    call write_info(2)
 
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'

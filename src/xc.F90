@@ -91,6 +91,7 @@ character(len=14), parameter :: name_c(C_FUNC_END-C_FUNC_START+1) = (/ &
 
 type xc_type
   integer :: x_family, x_func, c_family, c_func
+  logical :: noncollinear_spin
 end type xc_type
 
 real(r8), parameter :: small = 1e-5_r8
@@ -114,6 +115,8 @@ subroutine xc_write_info(xcs, iunit)
          name_xc(xcs%c_family-XC_FAMILY_START+1)
     write(iunit, '(6x,a,a)') '            functional: ', &
          name_c(xcs%c_func-C_FUNC_START+1)
+    if(xcs%noncollinear_spin) &
+    write(iunit, '(6x,a)')   'Noncollinear XC'
 
 #ifdef HAVE_MPI
   end if
@@ -121,10 +124,10 @@ subroutine xc_write_info(xcs, iunit)
   return
 end subroutine xc_write_info
 
-subroutine xc_init(xcs, m, ispin)
+subroutine xc_init(xcs, m, nc_spin)
   type(xc_type), intent(out) :: xcs
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: ispin
+  logical, intent(in) :: nc_spin
 
   character(len=50) :: xfam, cfam, xfunc, cfunc
 
@@ -270,11 +273,14 @@ subroutine xc_init(xcs, m, ispin)
   end select
 
   ! can only do non-colinear spin within the LDA
-  if(ispin == 3 .and. ( &
+  if(nc_spin .and. ( &
        .not.(xcs%x_family == XC_FAMILY_ZER.or.xcs%x_family == XC_FAMILY_LDA) .or. &
        .not.(xcs%c_family == XC_FAMILY_ZER.or.xcs%c_family == XC_FAMILY_LDA))) then
     message(1) = "Can only handle non-colinear spin within the LDA!"
-  end if
+    xcs%noncollinear_spin = .true.
+  else
+    xcs%noncollinear_spin = .false.
+  endif
 
   call pop_sub()
   return

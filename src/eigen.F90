@@ -131,6 +131,8 @@ subroutine eigen_solver_run(eigens, sys, h, iter, diff)
 
     call eigen_solver_cg2(sys, h, sys%st, &
          tol, maxiter, converged, errorflag, diff)
+    write(message(1),'(a,i5)') 'Info: Converged = ',converged
+    call write_info(1)
   case(ES_OLD_CG)
     call eigen_solver_cg1(eigens%no_cg, sys, h, sys%st, diff)
     do ik = 1, sys%st%nik

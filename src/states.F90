@@ -51,6 +51,7 @@ type states_type
   real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
   logical           :: fixed_occ ! should the occupation numbers be fixed?
   real(r8), pointer :: occ(:,:)  ! the occupation numbers
+  real(r8), pointer :: mag(:, :, :)
 
   real(r8) :: qtot    ! (-) The total charge in the system (used in Fermi)
 
@@ -135,6 +136,7 @@ subroutine states_init(st, m, val_charge)
   allocate(st%rho(m%np, st%nspin), &
        st%occ(st%nst, st%nik), st%eigenval(st%nst, st%nik))
   if(st%ispin == 3) then
+    allocate(st%mag(st%nst, st%nik, 2))
     nullify(st%drho_off, st%zrho_off)
     allocate(st%R_FUNC(rho_off) (m%np))
   end if
@@ -162,7 +164,7 @@ subroutine states_init(st, m, val_charge)
         st%qtot = st%qtot + st%occ(j, i)
       end do
     end do
-    
+
     ! read in fermi distribution temperature
     call oct_parse_double(C_string('ElectronicTemperature'), 0.0_r8, st%el_temp)
   end if occ_fix
@@ -189,7 +191,7 @@ subroutine states_end(st)
   end if
 
   if(st%ispin==3 .and. associated(st%drho_off)) then
-    deallocate(st%drho_off); nullify(st%drho_off)
+    deallocate(st%drho_off, st%mag); nullify(st%drho_off, st%mag)
   end if
   if(st%ispin==3 .and. associated(st%zrho_off)) then
     deallocate(st%zrho_off); nullify(st%zrho_off)
@@ -273,8 +275,9 @@ subroutine states_generate_random(st, m, ist_start)
   call pop_sub()
 end subroutine states_generate_random
 
-subroutine states_fermi(st)
+subroutine states_fermi(st, m)
   type(states_type), intent(inout) :: st
+  type(mesh_type), intent(in) :: m
 
 ! Local variables
   integer :: ie, ik, iter
@@ -286,6 +289,15 @@ subroutine states_fermi(st)
   sub_name = 'fermi'; call push_sub()
 
   if(st%fixed_occ) then ! nothing to do
+     ! Calculate magnetizations...
+     if(st%ispin == 3) then
+       do ik = 1, st%nik
+         do ie = 1, st%nst
+            st%mag(ie, ik, 1) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+         enddo
+       enddo
+     endif
     call pop_sub()
     return
   end if
@@ -294,7 +306,12 @@ subroutine states_fermi(st)
   emin = minval(st%eigenval)
   emax = maxval(st%eigenval)
 
-  sumq = 2.0_r8*st%nst
+  if(st%ispin == 3) then
+     sumq = real(st%nst, r8)
+  else
+     sumq = 2.0_r8*st%nst
+  endif
+
   t = max(st%el_temp, 1.0e-6_r8)
   st%ef = emax
 
@@ -302,6 +319,15 @@ subroutine states_fermi(st)
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
      st%occ = 2.0_r8/st%nspin
+     ! Calculate magnetizations...
+     if(st%ispin == 3) then
+       do ik = 1, st%nik
+         do ie = 1, st%nst
+            st%mag(ie, ik, 1) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+            st%mag(ie, ik, 2) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+         enddo
+       enddo
+     endif
      call pop_sub()
      return
   endif
@@ -347,6 +373,16 @@ subroutine states_fermi(st)
       st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%nspin
     end do
   end do
+
+  ! Calculate magnetizations...
+  if(st%ispin == 3) then
+    do ik = 1, st%nik
+       do ie = 1, st%nst
+          st%mag(ie, ik, 1) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 1, ie, ik))**2 * st%occ(ie, ik)
+          st%mag(ie, ik, 2) = R_FUNC(mesh_nrm2) (m, st%R_FUNC(psi)(1:m%np, 2, ie, ik))**2 * st%occ(ie, ik)
+       enddo
+    enddo
+  endif
  
   call pop_sub()
   return
@@ -399,12 +435,13 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   real(r8), intent(in), optional :: error(nst, st%nik)
 
   integer ik, j
-  real(r8) :: o(st%nik)
+  real(r8) :: o(st%nik), oplus(st%nik), ominus(st%nik)
 
   if(iunit==stdout.and.conf%verbose<=20) return
 
   message(1) = 'Eigenvalues ['//trim(units_out%energy%abbrev)//']'
   call write_info(1, iunit)
+
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
@@ -420,15 +457,25 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
     do j = 1, nst
       if(j > st%nst) then
         o = 0._r8
+        if(st%ispin == 3) oplus = 0._r8; ominus = 0._r8
       else
         o = st%occ(j, :)
+        if(st%ispin == 3) then 
+          oplus(1:st%nik)  = st%mag(j, 1:st%nik, 1)
+          ominus(1:st%nik) = st%mag(j, 1:st%nik, 2)
+        endif
       end if
       
       write(iunit, '(i4)', advance='no') j
       do ik = 1, st%nik
-        write(iunit, '(1x,f12.6,1x,f12.6)', advance='no') &
-             st%eigenval(j, ik)/units_out%energy%factor, o(ik)
-        if(present(error)) then
+        if(st%ispin == 3) then
+          write(iunit, '(1x,f12.6,1x,f5.3,a2,f5.3)', advance='no') &
+               st%eigenval(j, ik)/units_out%energy%factor, oplus(ik), '/', ominus(ik)
+        else
+          write(iunit, '(1x,f12.6,1x,f12.6)', advance='no') &
+               st%eigenval(j, ik)/units_out%energy%factor, o(ik)
+        endif
+         if(present(error)) then
           write(iunit, '(a2,f12.8,a1)', advance='no')' (', error(j, ik), ')'
         end if
       end do
