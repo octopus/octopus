@@ -173,7 +173,7 @@ subroutine run()
     case(I_LCAO)
       call oct_parse_logical("LCAOStart", .true., log)
       do i = 1, sys%nspecies
-         log = log .and. (.not.sys%specie(i)%local)
+          log = log .and. (.not.sys%specie(i)%local)
       enddo
       if(log) then
         message(1) = 'Info: Performing LCAO calculation.'
@@ -225,15 +225,8 @@ subroutine run()
     case(I_UNOCC_RUN)
       message(1) = 'Info: Calculation of unoccupied states.'
       call write_info(1)
-      
-      call scf_init(scfv, sys)
-        scfv%eigens%es_type        = ES_NEW_CG
-        scfv%eigens%init_tol       = unoccv%conv 
-        scfv%eigens%final_tol      = unoccv%conv
-        scfv%eigens%final_tol_iter = 1
-        scfv%eigens%es_maxiter     = unoccv%max_iter
-      call unocc_run(unoccv, scfv, sys, h)
-      call scf_end(scfv)
+
+      call unocc_run(unoccv, sys, h)
 
     case(I_SETUP_TD)
       message(1) = 'Info: Setting up TD.'

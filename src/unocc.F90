@@ -21,7 +21,7 @@ module unocc
 use liboct
 use io
 use states
-use scf
+use eigen_solver
 
 implicit none
 
@@ -65,8 +65,8 @@ subroutine unocc_init(u, m, st, sys)
   ! setup variables
   u%st%nst = u%st%nst + st%nst
   u%st%st_end = u%st%nst
-  allocate(u%st%R_FUNC(psi) (0:m%np, st%dim, u%st%nst, st%nik))
-  allocate(u%st%eigenval(u%st%nst, st%nik), u%st%occ(u%st%nst, st%nik))
+  allocate(u%st%R_FUNC(psi) (0:m%np, u%st%dim, u%st%nst, u%st%nik))
+  allocate(u%st%eigenval(u%st%nst, u%st%nik), u%st%occ(u%st%nst, u%st%nik))
   u%st%eigenval = 0._r8
   u%st%occ      = 0._r8
 
@@ -84,30 +84,34 @@ subroutine unocc_end(u)
 
 end subroutine unocc_end
 
-subroutine unocc_run(u, scf, sys, h)
+subroutine unocc_run(u, sys, h)
   type(unocc_type), intent(inout) :: u
   type(system_type), intent(inout) :: sys
-  type(scf_type), intent(inout) :: scf
   type(hamiltonian_type), intent(inout) :: h
 
-  integer :: iter, is, j, iunit
-  logical :: finish, file_exists, converged
-  real(r8) :: tol, diff(u%st%nst, u%st%nik)
+  type(eigen_solver_type) :: eigens
+  integer :: iunit
+  logical :: converged
+  real(r8) :: diff(u%st%nst, u%st%nik)
 
-  sub_name = 'unocc_scf'; call push_sub()
+  sub_name = 'unocc_run'; call push_sub()
 
-  iter = 1
-  call eigen_solver_run(scf%eigens, u%st, sys, h, iter, diff, converged)
+  ! Initialize eigens (not necessary to call eigen_init)
+  eigens%es_type        = ES_NEW_CG
+  eigens%init_tol       = u%conv 
+  eigens%final_tol      = u%conv
+  eigens%final_tol_iter = 1
+  eigens%es_maxiter     = u%max_iter
 
-  ! compute eigenvalues
-  call R_FUNC(hamiltonian_eigenval) (h, u%st, sys) ! eigenvalues
+  call eigen_solver_run(eigens, u%st, sys, h, 1, diff, converged)
+  call R_FUNC(hamiltonian_eigenval) (h, u%st, sys)
 
   ! write output file
   call io_assign(iunit)
   call oct_mkdir(C_string("static"))
   open(iunit, status='unknown', file='eigenvalues')
   if(converged) then
-    write(iunit,'(a)') 'Occupation analysis SCF converged.'
+    write(iunit,'(a)') 'Occupation analysis converged.'
   else
     write(iunit,'(a)') 'Occupational analysis did *not* converge!'
   end if
