@@ -48,7 +48,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %configure \
   F90=ifc \
-  LDFLAGS="-static -L/home/marques/lib"
+  LDFLAGS="-L/home/marques/lib"
 
 make
 (cd doc; make octopus.ps; gzip octopus.ps)
@@ -63,6 +63,6 @@ rm -rf ${RPM_BUILD_ROOT}
 %files
 %defattr(-,root,root,0755)
 %doc README NEWS COPYING AUTHORS doc/octopus.ps.*
-%doc %{_infodir}/*
+%doc %{_infodir}/octopus*
 %{_bindir}/*
 %{_datadir}/octopus/*
