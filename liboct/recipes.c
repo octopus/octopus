@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "config.h"
 
@@ -55,7 +56,6 @@ static char **rec[] = {disc,en,es};
 void PROTO(printrecipe)(int *lang)
 {
 	int i, j, n;
-	time_t t;
 	char *s, c[NCOLS+5];
 
 	// initialize random numbers

@@ -1,6 +1,7 @@
 #include "config.h"
 
 module timedep
+use global
 use system
 use states
 use hamiltonian
@@ -62,7 +63,7 @@ subroutine td_run(td, sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
 
-  integer :: i, ii
+  integer :: i, ii, idim, ist, ik
   real(r8), allocatable :: dipole(:,:), multipole(:,:,:)
 
   sub_name = 'systm_td'; call push_sub()
@@ -94,12 +95,43 @@ subroutine td_run(td, sys, h)
     ! measuring
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
          dipole(:,ii), multipole(:,:,ii))
+    !TODO
+    !if(td%occ_analysis) then
+    !  call systm_td_calc_projection(sys, empty, td, projections(:,:,:,ii))
+    !end if
 
+    ! mask function?
+    if(td%ab == 2) then
+      do ik = 1, sys%st%nik
+        do ist = sys%st%st_start, sys%st%st_end
+          do idim = 1, sys%st%dim
+            sys%st%zpsi(1:sys%m%np, idim, ist, ik) = sys%st%zpsi(1:sys%m%np, idim, ist, ik) * &
+                 (1._r8 - td%ab_pot(1:sys%m%np))
+          end do
+        end do
+      end do
+    end if
+
+    ! write info
     write(message(1), '(i7,1x,f14.5,f14.6,4e17.6)') i, &
          i*td%dt       / units_out%time%factor, &
          h%etot        / units_out%energy%factor, &
          dipole(:, ii) / units_out%length%factor
     call write_info(1)
+
+    ! write down data
+    ii = ii + 1
+    save: if(ii==td%save_iter+1 .or. i == td%max_iter) then ! output
+      if(i == td%max_iter) td%save_iter = ii - 1
+      ii = 1
+
+      ! first resume file
+      call zstates_write_restart(trim(sys%sysname)//".cont", sys%m, sys%st, &
+           iter=i, v1=td%v_old1, v2=td%v_old2)
+
+      if(mpiv%node == 0) call td_write_data()
+    end if save
+
   end do
 
   deallocate(dipole, multipole)
@@ -141,11 +173,13 @@ contains
     if(td%output_laser) then
       call io_assign(iunit)
       open(unit=iunit, file='laser.out', status='unknown')
-      write(iunit, '(a,e17.10)') '# dt = ', td%dt
+      write(iunit, '(a,e17.10,3a)') '# dt = ', td%dt/units_out%time%factor, &
+           "[", trim(units_out%time%abbrev), "]"
       call io_close(iunit)
     end if
 
     ! output initial positions and velocities
+!TODO
 !!$    if(td%move_ions > 0) then
 !!$      call io_assign(iunit)
 !!$      open(iunit, file=trim(sys%sysname)//'.nbo')
@@ -158,50 +192,110 @@ contains
     
   end subroutine td_run_zero_iter
 
+  subroutine td_write_data()
+    integer :: iunit, j, jj
+    real(r8) :: l_field(1:3), l_vector_field(1:3)
+
+    ! output multipoles
+    call io_assign(iunit)
+    open(iunit, position='append', file=trim(sys%sysname)//".mult")
+    do j = 1, td%save_iter
+      jj = i - td%save_iter + j
+      call td_write_multipole(iunit, jj, jj*td%dt, &
+           dipole(:, j), multipole(:,:, j), .false.)
+    end do
+    call io_close(iunit)
+
+    ! output the laser field
+    if(td%output_laser) then
+      call io_assign(iunit)
+      open(iunit, position='append', file='laser.out')
+      do j = 1, td%save_iter
+        jj = i - td%save_iter + j
+        call laser_field(td%no_lasers, td%lasers, jj*td%dt, l_field)
+        call laser_vector_field(td%no_lasers, td%lasers, jj*td%dt, l_vector_field)
+        write(iunit,'(e17.10,6(1x,e17.10))') jj*td%dt, &
+             l_field(1:3), l_vector_field(1:3)
+      end do
+      call io_close(iunit)
+    end if
+
+  end subroutine td_write_data
+
   subroutine td_write_multipole(iunit, iter, t, dipole, multipole, header)
     integer, intent(in) :: iunit, iter
     real(r8), intent(IN) :: t, dipole(sys%st%nspin), multipole((td%lmax+1)**2, sys%st%nspin)
     logical, intent(in) :: header
 
     integer :: is, l, m, add_lm
+    character(len=50) :: aux
     
     if(header) then
+      ! first line
       write(iunit, '(a10,i2,a8,i2)') '# nspin = ', sys%st%nspin, ' lmax = ', td%lmax
-      write(iunit, '(a8, a20)', advance='no') 'Iter', 't [eV^-1]    '
+
+      ! second line -> columns name
+      write(iunit, '(a8,a20)', advance='no') '# Iter  ', str_center('t', 20)
       do is = 1, sys%st%nspin
-        write(iunit, '(a13,i1,a6)', advance='no') 'dipole(', is, ')     '
+        write(aux, '(a,i1,a)') 'dipole(', is, ')'
+        write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
       end do
       do is = 1, sys%st%nspin
         do l = 0, td%lmax
           do m = -l, l
-            write(iunit, '(a6,i2,a4,i2,a2,i1,a3)', advance='no') 'l=', l, ', m=', m, ' (', is,')   '
+            write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
+            write(iunit, '(a20)', advance='no') str_center(trim(aux), 20)
+          end do
+        end do
+      end do
+      write(iunit, '(1x)', advance='yes')
+
+      ! third line -> units
+      write(iunit, '(a8,a20)', advance='no') '#       ', &
+           str_center('['//trim(units_out%time%abbrev)//']', 20)
+      do is = 1, sys%st%nspin
+        write(iunit, '(a20)', advance='no') &
+             str_center('['//trim(units_out%length%abbrev)//']', 20)
+      end do
+      do is = 1, sys%st%nspin
+        do l = 0, td%lmax
+          do m = -l, l
+            select case(l)
+            case(0)
+              write(iunit, '(a20)', advance='no') ' '
+            case(1)
+              write(iunit, '(a20)', advance='no') &
+                   str_center('['//trim(units_out%length%abbrev)//']', 20)
+            case default
+              write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
+              write(iunit, '(a20)', advance='no') str_center('['//trim(aux)//']', 20)
+            end select
             add_lm = add_lm + 1
           end do
         end do
       end do
+      write(iunit, '(1x)', advance='yes')
+      
+    end if
     
-    write(iunit, '(1x)', advance='yes')
-  end if
-
-  write(iunit, '(i8, e20.12)', advance='no') iter, t
-  do is = 1, sys%st%nspin
-    write(iunit, '(e20.12)', advance='no') dipole(is)
-  end do
-
-  do is = 1, sys%st%nspin
-    add_lm = 1
-    do l = 0, td%lmax
-      do m = -l, l
-        write(iunit, '(e20.12)', advance='no') multipole(add_lm, is)
-        add_lm = add_lm + 1
+    write(iunit, '(i8, e20.12)', advance='no') iter, t/units_out%time%factor
+    do is = 1, sys%st%nspin
+      write(iunit, '(e20.12)', advance='no') dipole(is)/units_out%length%factor
+    end do
+    
+    do is = 1, sys%st%nspin
+      add_lm = 1
+      do l = 0, td%lmax
+        do m = -l, l
+          write(iunit, '(e20.12)', advance='no') multipole(add_lm, is)/units_out%length%factor**l
+          add_lm = add_lm + 1
+        end do
       end do
     end do
-  end do
-  write(iunit, '(1x)', advance='yes')
+    write(iunit, '(1x)', advance='yes')
+    
+  end subroutine td_write_multipole
 
-  return
-end subroutine td_write_multipole
-  
 end subroutine td_run
 
 #include "td_init.F90"

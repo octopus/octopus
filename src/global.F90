@@ -276,4 +276,30 @@ SUBROUTINE compact(str)
   
 END SUBROUTINE compact
 
+! puts space around string, so that it is centered
+character(len=100) function str_center(s_in, l) result(s_out)
+  character(len=*), intent(IN) :: s_in
+  integer, intent(in) :: l
+
+  integer :: pad, i, li
+
+  li = len(s_in)
+  if(l < li) then
+    s_out(1:l) = s_in(1:l)
+    return
+  end if
+  
+  pad = (l - li)/2
+
+  s_out = ""
+  do i = 1, pad
+    s_out(i:i) = " ";
+  end do
+  s_out(pad + 1:pad + li + 1) = s_in(1:li)
+  do i = pad + li + 1, l
+    s_out(i:i) = " ";
+  end do
+  
+end function str_center
+
 end module global

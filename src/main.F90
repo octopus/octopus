@@ -95,8 +95,8 @@ program tddft
   call write_info(1)
 
   ! now we really start
-!  call test()
-!  stop
+  !call test()
+  !stop
   call run()
 
   ! print date
@@ -115,14 +115,10 @@ end program tddft
 
 subroutine test()
   use global
-  use math
 
-  integer i, j, k
-  real(r8) :: x, y, z
+  character(len=100) :: c1, c2
 
-  do i = -200, 200
-    x = real(i)/200._r8*2
-!    call ylmr(0.1_r8, x, 0.1_r8, 2, 2, y)
-!    print *, x, y, oct_ylm(0.1_r8, x, 0.1_r8, 2, 2)
-  end do
+  c1 = 'ola'
+  write(*,'(a2,a7,a2)') 'aa', str_center(trim(c1), 7), 'aa'
+
 end subroutine test

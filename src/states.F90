@@ -279,7 +279,7 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   real(r8), intent(out) :: dipole(st%nspin), multipole((lmax + 1)**2, st%nspin)
 
   integer :: i, is, l, lm, add_lm
-  real(r8) :: x(3), r, ylm, mult
+  real(r8) :: x(3), r, ylm, mult, lixo(3)
 
   dipole = 0._r8
   do is = 1, st%nspin
@@ -301,10 +301,10 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
           if(l == 0) then
             mult = mult + st%rho(i, is) * ylm
           else
-            mult = mult + st%rho(i, is) * ylm*r**l
+            mult = mult + st%rho(i, is) * ylm * r**l
           end if
         end do
-        multipole(add_lm, is) = mult * sqrt(4._r8*M_PI) * m%vol_pp
+        multipole(add_lm, is) = mult * m%vol_pp
         add_lm = add_lm + 1
 
       end do

@@ -48,10 +48,11 @@ double PROTO(ylm)(double *x, double *y, double *z, int *l, int *m)
 	if(*l == 0)
 		return sph_cnsts[0];
 
+	r = sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
+
 	// if r=0, direction is undefined => make ylm=0 except for l=0
 	if(r == 0.) return 0.;
 
-	r = sqrt((*x)*(*x) + (*y)*(*y) + (*z)*(*z));
 	rx = (*x)/r; ry = (*y)/r; rz = (*z)/r;
 
 	switch(*l){

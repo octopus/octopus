@@ -50,10 +50,12 @@ function R_FUNC(states_ddot)(m, dim, f1, f2)
 end function R_FUNC(states_ddot)
 
 ! TODO use netcdf
-subroutine R_FUNC(states_write_restart)(filename, m, st)
+subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   character(len=*), intent(in) :: filename
   type(mesh_type), intent(in) :: m
   type(states_type), intent(in) :: st
+  integer, intent(in), optional :: iter ! used in TD
+  real(r8), intent(in), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
   integer :: iunit, ik, ist, id
 
@@ -66,14 +68,19 @@ subroutine R_FUNC(states_write_restart)(filename, m, st)
   ! eigenvalues are also needed ;)
   write(iunit) st%eigenval(st%st_start:st%st_end, 1:st%nik)
 
+  if(present(iter)) then
+    write(iunit) iter, v1, v2
+  end if
   call io_close(iunit)
 
 end subroutine R_FUNC(states_write_restart)
 
-logical function R_FUNC(states_load_restart)(filename, m, st) result(ok)
+logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
   character(len=*), intent(in) :: filename
   type(mesh_type), intent(in) :: m
-  type(states_type), intent(out) :: st
+  type(states_type), intent(inout) :: st
+  integer, intent(out), optional :: iter ! used in TD
+  real(r8), intent(out), optional :: v1(m%np, st%nspin), v2(m%np, st%nspin)
 
   integer :: iunit, ik, ist, id, old_np, old_dim, old_start, old_end, old_nik
 
@@ -106,6 +113,10 @@ logical function R_FUNC(states_load_restart)(filename, m, st) result(ok)
     st%R_FUNC(psi) = REALORCOMPLEX(0._r8)
     read(iunit, err=999) st%R_FUNC(psi)(1:m%np, 1:st%dim, st%st_start:st%st_end, 1:st%nik)
     read(iunit, err=999) st%eigenval(st%st_start:st%st_end, 1:st%nik)
+
+    if(present(iter)) then ! read the time-dependent stuff
+      read(iunit, err=999) iter, v1, v2
+    end if
   end if
   
   call io_close(iunit)
