@@ -51,7 +51,10 @@ type mesh_type
   
   real(r8) :: rsize     ! the radius of the sphere or of the cylinder
   real(r8) :: xsize     ! the length of the cylinder in the x direction
-  real(r8) :: lsize(3)  ! the lengths of the parallelepipeds in each direction.
+  real(r8) :: lsize(3)  ! half of the length of the parallelepiped in each direction.
+  real(r8) :: rlat(3,3)   ! lattice primitive vectors
+  real(r8) :: klat(3,3)   ! reciprocal lattice primitive vectors
+  real(r8) :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
   
   integer  :: np        ! number of points in inner mesh
   real(r8) :: vol_pp    ! element of volume for integrations
@@ -171,7 +174,7 @@ subroutine mesh_write_info(m, unit)
 
   sub_name = 'mesh_write_info'; call push_sub()
   
-  write(message(1), '(a,a,1x)') ' Type = ', bs(m%box_shape)
+  write(message(1), '(a,a,1x)') '  Type = ', bs(m%box_shape)
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER  .or. m%box_shape == MINIMUM) then
     write(message(2), '(3a,f7.3)') '  Radius  [', trim(units_out%length%abbrev), '] = ', &
                                    m%rsize/units_out%length%factor
@@ -196,8 +199,28 @@ subroutine mesh_write_info(m, unit)
        m%vol_pp/units_out%length%factor**3
   write(message(4),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
       '   # outer mesh = ', m%nk
-
   call write_info(4, unit)
+      
+  if (conf%periodic_dim > 0) then
+    write(message(1),'(1x)')
+    write(message(2),'(a,3a,a)')'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
+    write(message(3),'(a,f8.3)')'    x axis ', &
+                    m%rlat(1,1)/units_out%length%factor
+    write(message(4),'(a,f8.3)')'    y axis ', &
+                    m%rlat(2,2)/units_out%length%factor
+    write(message(5),'(a,f8.3)')'    z axis ', &
+                    m%rlat(3,3) /units_out%length%factor
+    write(message(6),'(a,3a,a)') 'Reciprocal Lattice Primitive Vectors [', &
+                    trim(units_out%length%abbrev), '^-1]'
+    write(message(7),'(a,f8.3)')'  k_x axis ', &
+                    m%klat(1,1)*units_out%length%factor
+    write(message(8),'(a,f8.3)')'  k_y axis ', &
+                    m%klat(2,2)*units_out%length%factor
+    write(message(9),'(a,f8.3)')'  k_z axis ', &
+                    m%klat(3,3)*units_out%length%factor
+  call write_info(9, unit)
+  end if
+
 
   call pop_sub()
   return
