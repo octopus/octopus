@@ -112,7 +112,7 @@ subroutine R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
 #endif
   
   else
-    d = R_TOTYPE(-1.0_r8/2.0_r8)
+    d = R_TOTYPE(-M_HALF)
     do idim = 1, dim
       call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), alpha=d )
     end do

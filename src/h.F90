@@ -81,6 +81,9 @@ type hamiltonian_type
   ! Spectral range.
   real(r8) :: spectral_middle_point
   real(r8) :: spectral_half_span
+
+  ! Kinetic Cutoff
+  real(r8) :: cutoff
 end type hamiltonian_type
 
 integer, parameter :: NOREL      = 0, &
@@ -283,6 +286,21 @@ subroutine hamiltonian_init(h, sys)
     
   end if absorbing_boundaries
   
+  ! Cutoff applied to the kinetic term. If derivatives are calculated in real space, this
+  ! parameter should not be specified in input file (does not make sense), or either be
+  ! non-positive.
+  call oct_parse_double("KineticCutoff", -M_ONE, h%cutoff)
+  h%cutoff = h%cutoff * units_inp%energy%factor
+  if(h%cutoff > M_ZERO .and. sys%m%d%space == RECIPROCAL_SPACE) then
+    write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&
+                                  h%cutoff/units_out%energy%factor, units_out%energy%abbrev
+    call write_info(1)
+  elseif(h%cutoff > M_ZERO) then
+    write(message(1),'(a)') 'Input file requests a cutoff for the kinetic operator;'
+    write(message(2),'(a)') 'however cannot be applied in real-space. Ignored.'
+    call write_warning(2)
+  endif
+
   call pop_sub(); return
 end subroutine hamiltonian_init
 

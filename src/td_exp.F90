@@ -222,6 +222,7 @@ contains
     real(r8), intent(in) :: dt
 
     complex(r8),allocatable :: fw(:)
+    real(r8) :: cutoff
     integer :: idim
 
     sub_name = 'kinetic'; call push_sub()
@@ -230,7 +231,7 @@ contains
     do idim = 1, sys%st%dim
        fw = M_z0
        call zmesh_rs2fs(m, zpsi(1, idim), fw)
-       call zmesh_explaplq(m, fw, dt)
+       call zmesh_explaplq(m, fw, dt, cutoff = h%cutoff)
        zpsi = M_z0
        call zmesh_fs2rs(m, fw, zpsi(1, idim))
     enddo

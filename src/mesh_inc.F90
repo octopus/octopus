@@ -219,19 +219,39 @@ subroutine R_FUNC(mesh_random)(m, f)
   call pop_sub(); return
 end subroutine R_FUNC(mesh_random)
 
-! calculates the laplacian and the gradient of a function on the mesh
-subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! calculates the laplacian and the gradient of a function on the mesh.
+! The optional argument "alpha" is a multiplicative factor (i.e. if the
+! kinetic operator wants to be calculated, pass "alpha = -1/2" to the
+! calculation of the laplacian.
+! If laplacian is calculated on Fourier space, an optional argument cutoff
+! may be passed, such that the calculation that is performed is 
+!-min(G^2,cutoff)*phi(G), instead of just -G^2*phi(G). 
+! In the case of receiving both alpha and cutoff, the cutoff is internally
+! multiplied by the absolute value of the inverse of alpha.
+! (Rationale: if we want to calculate min(G^2/2, E_cutoff), this is equal
+! to 1/2*min(G^2,2*E_cutoff)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
   R_TYPE, intent(in), optional :: alpha
+  real(r8), intent(in), optional :: cutoff
 
   R_TYPE :: alp
+  real(r8) :: lcutoff
 
   sub_name = 'mesh_derivatives'; call push_sub()
   
-  alp = R_TOTYPE(1._r8)
+  ! Fixes the multiplicative factor.
+  alp = R_TOTYPE(M_ONE)
   if(present(alpha)) alp = alpha
+
+  ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
+  lcutoff = -M_ONE
+  if(present(cutoff)) lcutoff = cutoff
+  if(alp.ne.M_z0) lcutoff = lcutoff*M_ONE/abs(alp)
 
   select case(m%d%space)
     case(REAL_SPACE)
@@ -267,7 +287,7 @@ contains
       end do
     end if
     if(present(lapl)) then
-      call R_FUNC(mesh_laplq)(m, fw)
+      call R_FUNC(mesh_laplq)(m, fw, cutoff = lcutoff)
       call R_FUNC(mesh_fs2rs)(m, fw, lapl, factor = alp)
     end if
     deallocate(fw)
