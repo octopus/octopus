@@ -368,7 +368,7 @@ subroutine X(states_output) (st, m, dir, outp)
 #endif
 
   if(outp%what(output_wfs)) then
-    do ist = 1, st%nst
+    do ist = st%st_start, st%st_end
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
         do ik = 1, st%nik
