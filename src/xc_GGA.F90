@@ -23,7 +23,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
   
-  real(r8) :: e, e_x, dvol, den(3), dpol, dtot, vpol, glob(4, 3), loc(2)
+  real(r8) :: e, e_x, dvol, den(3), dpol, dtot, vpol, glob(4, 3), loc(st%spin_channels)
   real(r8), parameter :: tiny = 1.0e-12_r8
 
   real(r8), allocatable :: d(:, :),    &
