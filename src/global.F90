@@ -19,8 +19,8 @@
 
 module global
 
-use oct_parser
-use liboct
+use lib_oct_parser
+use lib_oct
 
 #if defined(HAVE_MPI) && !defined(MPI_H)
 use mpi
@@ -134,30 +134,30 @@ subroutine global_init()
 #endif
 
   ! init some of the stuff
-  ierr = oct_parse_init('inp', 'out.oct')
+  ierr = loct_parse_init('inp', 'out.oct')
   if(ierr .ne. 0) then
-    ierr = oct_parse_init("-", 'out.oct')
+    ierr = loct_parse_init("-", 'out.oct')
     if(ierr .ne. 0) then
       message(1) = "Error initializing liboct"
       call write_fatal(1)
     end if
   end if
   
-  call oct_parse_int('verbose', 30, conf%verbose)
+  call loct_parse_int('verbose', 30, conf%verbose)
   if(conf%verbose > 999 .and. mpiv%node == 0) then
-    call oct_parse_int('DebugLevel', 3, conf%debug_level)
+    call loct_parse_int('DebugLevel', 3, conf%debug_level)
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
   end if
 
   ! Sets the dimensionaliy of the problem.
-  call oct_parse_int('Dimensions', 3, conf%dim)
+  call loct_parse_int('Dimensions', 3, conf%dim)
   if(conf%dim<1 .or. conf%dim>3) then
     message(1) = 'Dimensions must be either 1, 2, or 3'
     call write_fatal(1)
   end if
 
-  call oct_parse_int('PeriodicDimensions', 0, conf%periodic_dim)
+  call loct_parse_int('PeriodicDimensions', 0, conf%periodic_dim)
   if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
     message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
     call write_fatal(1)
@@ -167,7 +167,7 @@ subroutine global_init()
     call write_fatal(1)
   end if
 
-  call oct_parse_logical('BoundaryZeroDerivative', .false., conf%boundary_zero_derivative)
+  call loct_parse_logical('BoundaryZeroDerivative', .false., conf%boundary_zero_derivative)
 
 end subroutine global_init
 
@@ -177,7 +177,7 @@ subroutine global_end()
 #ifdef HAVE_MPI
   call MPI_FINALIZE(ierr)
 #endif
-  call oct_parse_end()
+  call loct_parse_end()
 
 end subroutine global_end
 
@@ -282,11 +282,11 @@ subroutine push_sub(sub_name)
     call write_fatal(1)
   else
     sub_stack(no_sub_stack) = trim(sub_name)
-    time_stack(no_sub_stack) = oct_clock()
+    time_stack(no_sub_stack) = loct_clock()
 
     if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
-      write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", oct_clock()/CNST(1e6), &
-           oct_getmem(), " | "
+      write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", loct_clock()/CNST(1e6), &
+           loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(stderr,'(a)', advance='no') "  "
       end do
@@ -305,8 +305,8 @@ subroutine pop_sub()
       
       ! It seems in std C libraries the number of clock ticks per second is 1e6...
       write(stderr,'(a,f10.3,i10, a)', advance='no') "* O ", &
-          (oct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
-          oct_getmem(), " | "
+          (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
+          loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
         write(stderr,'(a)', advance='no') "  "
       end do

@@ -19,8 +19,8 @@
 
 module unocc
 use global
-use oct_parser
-use liboct
+use lib_oct_parser
+use lib_oct
 use mesh
 use states
 use system
@@ -45,8 +45,8 @@ subroutine unocc_init(u, m, st, sys)
 
   call push_sub('unocc_init')
 
-  call oct_parse_int("UnoccMaximumIter", 200, u%max_iter)
-  call oct_parse_float("UnoccConv", CNST(1e-4), u%conv)
+  call loct_parse_int("UnoccMaximumIter", 200, u%max_iter)
+  call loct_parse_float("UnoccConv", CNST(1e-4), u%conv)
   if(u%max_iter <= 0 .and. u%conv <= M_ZERO) then
     message(1) = "Input: Not all occ convergence criteria can be <= 0"
     message(2) = "Please set one of the following:"
@@ -59,7 +59,7 @@ subroutine unocc_init(u, m, st, sys)
   allocate(u%st)
   call states_init(u%st, m, sys%val_charge)
 
-  call oct_parse_int("UnoccNumberStates", 5, u%st%nst)
+  call loct_parse_int("UnoccNumberStates", 5, u%st%nst)
   if(u%st%nst <= 0) then
     message(1) = "Input: UnoccNumberStates must be > 0"
     call write_fatal(1)
@@ -110,7 +110,7 @@ subroutine unocc_run(u, sys, h)
 
   ! write output file
   call io_assign(iunit)
-  call oct_mkdir("static")
+  call loct_mkdir("static")
   open(iunit, status='unknown', file='static/eigenvalues')
   if(converged) then
     write(iunit,'(a)') 'All unoccupied stated converged.'

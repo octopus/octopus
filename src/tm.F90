@@ -756,7 +756,7 @@ subroutine tm_debug(pstm)
   call push_sub('tm_debug')
 
   ! Opens files.
-  call oct_mkdir('pseudos/'+'tm2.'+trim(pstm%namatm))
+  call loct_mkdir('pseudos/'+'tm2.'+trim(pstm%namatm))
   call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
   call io_assign(so_unit) ; call io_assign(so_unit)

@@ -19,8 +19,8 @@
 
 module lcao
   use global
-  use liboct
-  use linalg
+  use lib_oct
+  use lib_alg
   use spline
   use mesh
   use hamiltonian
@@ -326,7 +326,7 @@ subroutine lcao_wf(sys, h)
     sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
-    call la_gemm('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
+    call lalg_gemm('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
                   R_TOTYPE(M_ONE),                                         &
                   lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,        &
                   lcao_data%hamilt(1, 1, ik), norbs,                       &
@@ -360,7 +360,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
     do j = 1, sys%m%np
       call mesh_r(sys%m, j, r, x=x, a=a)
       p = splint(s, r)
-      ylm = oct_ylm(x(1), x(2), x(3), ll, lm)
+      ylm = loct_ylm(x(1), x(2), x(3), ll, lm)
       psi(j) = p * ylm
     end do
   end if

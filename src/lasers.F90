@@ -20,7 +20,7 @@
 module lasers
 use global
 use io
-use oct_parser
+use lib_oct_parser
 use spline
 use mesh
 
@@ -64,26 +64,26 @@ subroutine laser_init(m, no_l, l)
   call push_sub('laser_init')
 
   str = 'TDLasers'
-  no_l = oct_parse_block_n(str)
+  no_l = loct_parse_block_n(str)
   if(no_l > 0) then
     allocate(l(no_l))
 
     do i = 1, no_l
-      call oct_parse_block_complex(str, i-1, 0, l(i)%pol(1))
-      call oct_parse_block_complex(str, i-1, 1, l(i)%pol(2))
-      call oct_parse_block_complex(str, i-1, 2, l(i)%pol(3))
-      call oct_parse_block_double (str, i-1, 3, l(i)%A0)
-      call oct_parse_block_double (str, i-1, 4, l(i)%omega0)
-      call oct_parse_block_int    (str, i-1, 5, l(i)%envelope)
+      call loct_parse_block_cmplx(str, i-1, 0, l(i)%pol(1))
+      call loct_parse_block_cmplx(str, i-1, 1, l(i)%pol(2))
+      call loct_parse_block_cmplx(str, i-1, 2, l(i)%pol(3))
+      call loct_parse_block_float(str, i-1, 3, l(i)%A0)
+      call loct_parse_block_float(str, i-1, 4, l(i)%omega0)
+      call loct_parse_block_int    (str, i-1, 5, l(i)%envelope)
 
       if(l(i)%envelope > 0.and.l(i)%envelope < 4) then
-        call oct_parse_block_double (str, i-1, 6, l(i)%tau0)
-        call oct_parse_block_double (str, i-1, 7, l(i)%t0)
+        call loct_parse_block_float(str, i-1, 6, l(i)%tau0)
+        call loct_parse_block_float(str, i-1, 7, l(i)%t0)
         l(i)%tau0 = l(i)%tau0 * units_inp%time%factor
         l(i)%t0   = l(i)%t0   * units_inp%time%factor
 
         if(l(i)%envelope == 3) then
-          call oct_parse_block_double (str, i-1, 8, l(i)%tau1)
+          call loct_parse_block_float(str, i-1, 8, l(i)%tau1)
           l(i)%tau1 = l(i)%tau1 * units_inp%time%factor ! adjust units
         end if
       else if(l(i)%envelope == 10) then ! read from file
@@ -124,11 +124,11 @@ contains
     FLOAT :: dummy
     FLOAT, allocatable :: t(:), am(:), ph(:)
 
-    call oct_parse_block_double(str, i-1, 6, l%tau0)
+    call loct_parse_block_float(str, i-1, 6, l%tau0)
     l%tau0   = l%tau0 * units_inp%time%factor
 
     ! open file
-    call oct_parse_block_string(str, i-1, 7, filename)
+    call loct_parse_block_string(str, i-1, 7, filename)
     call io_assign(iunit)
     open(iunit, file=trim(filename), status='old', iostat=j)
     if(j.ne.0) then

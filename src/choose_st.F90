@@ -19,8 +19,8 @@
 
 program choose_st
   use global
-  use oct_parser
-  use liboct
+  use lib_oct_parser
+  use lib_oct
   use units
   use states
   use system
@@ -42,7 +42,7 @@ program choose_st
   deallocate(st1%rho, st1%occ, st1%eigenval)
 
   ! how many states do we have?
-  call oct_parse_int("UnoccNumberStates", 5, n_unocc)
+  call loct_parse_int("UnoccNumberStates", 5, n_unocc)
 
   ! setup variables
   sys%st%nst = sys%st%nst + n_unocc
@@ -55,11 +55,11 @@ program choose_st
   endif
 
   ! which states to take into account
-  call oct_parse_string("ChooseStates", "1-1024", ch)
-  call oct_wfs_list(ch, flags)
+  call loct_parse_string("ChooseStates", "1-1024", ch)
+  call loct_wfs_list(ch, flags)
 
   ! create directory if it does not exist
-  call oct_mkdir('opt-control')
+  call loct_mkdir('opt-control')
 
   n_st = 0
   do i = 1, sys%st%nst
@@ -81,7 +81,7 @@ program choose_st
     end if
   end do
 
-  call oct_parse_string("ChooseStatesFilename", "wf.initial", ch)
+  call loct_parse_string("ChooseStatesFilename", "wf.initial", ch)
   call X(states_write_restart) ("opt-control/"+trim(ch), sys%m, st1)
 
   stop

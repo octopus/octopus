@@ -19,8 +19,8 @@
 
 module mix
 use global
-use oct_parser
-use linalg
+use lib_oct_parser
+use lib_alg
 
 implicit none
 
@@ -58,14 +58,14 @@ subroutine mix_init(smix, np, nc)
   call push_sub('mix_init')
 
   ! check input parameters
-  call oct_parse_int("TypeOfMixing", 2, smix%type_of_mixing)
+  call loct_parse_int("TypeOfMixing", 2, smix%type_of_mixing)
   if(smix%type_of_mixing < 0 .or. smix%type_of_mixing > 2) then
     message(1) = 'Type of mixing passed to mix_init not allowed'
     call write_fatal(1)
   end if
 
   if (smix%type_of_mixing == LINEAR .or. smix%type_of_mixing == BROYDEN) then
-    call oct_parse_float("Mixing", CNST(0.3), smix%alpha)
+    call loct_parse_float("Mixing", CNST(0.3), smix%alpha)
     if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) then
       write(message(1), '(a, f14.6,a)') "Input: '",smix%alpha,"' is not a valid Mixing"
       message(2) = '(0 < Mixing <= 1)'
@@ -74,7 +74,7 @@ subroutine mix_init(smix, np, nc)
   end if
 
   if (smix%type_of_mixing == GRPULAY .or. smix%type_of_mixing == BROYDEN) then
-    call oct_parse_int("MixNumberSteps", 3, smix%ns)
+    call loct_parse_int("MixNumberSteps", 3, smix%ns)
     if(smix%ns <= 1) then
       write(message(1), '(a, i4,a)') "Input: '", smix%ns, &
                      "' is not a valid MixNumberSteps"

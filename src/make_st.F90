@@ -20,7 +20,7 @@
 program make_st
   use global
   use units
-  use oct_parser
+  use lib_oct_parser
   use mesh
   use states
   use system
@@ -49,12 +49,12 @@ program make_st
   endif
 
   str = "MakeStates"
-  n = oct_parse_block_n(str)
+  n = loct_parse_block_n(str)
   do i = 1, n
-    call oct_parse_block_int(str, i-1, 0, ik)
-    call oct_parse_block_int(str, i-1, 1, ist)
-    call oct_parse_block_int(str, i-1, 2, idim)
-    call oct_parse_block_int(str, i-1, 3, type)
+    call loct_parse_block_int(str, i-1, 0, ik)
+    call loct_parse_block_int(str, i-1, 1, ist)
+    call loct_parse_block_int(str, i-1, 2, idim)
+    call loct_parse_block_int(str, i-1, 3, type)
     select case(type)
     case(1)
       call wf_gaussian(i-1)
@@ -76,18 +76,18 @@ contains
     
     ! read gaussian parameters
     x1 = M_ZERO; k = M_ZERO
-    call oct_parse_block_double(str, line, 4,  s)
+    call loct_parse_block_float(str, line, 4,  s)
     s = s * units_inp%length%factor
 
     j = 5
     do i = 1, conf%dim
-      call oct_parse_block_double(str, line, j,  x1(i))
+      call loct_parse_block_float(str, line, j,  x1(i))
       x1(i) = x1(i) * units_inp%length%factor
       j = j + 1
     end do
 
     do i = 1, conf%dim
-      call oct_parse_block_double(str, line, j,  k(i))
+      call loct_parse_block_float(str, line, j,  k(i))
       k(i) = k(i) / units_inp%length%factor
       j = j + 1
     end do

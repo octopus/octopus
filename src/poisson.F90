@@ -19,7 +19,7 @@
 
 module poisson
   use global
-  use oct_parser
+  use lib_oct_parser
   use mesh
 #ifdef HAVE_FFT
   use fft
@@ -57,7 +57,7 @@ subroutine poisson_init(m)
     call write_info(1)
   else
 #ifdef HAVE_FFT
-    call oct_parse_int('PoissonSolver', 3, poisson_solver)
+    call loct_parse_int('PoissonSolver', 3, poisson_solver)
     if(poisson_solver<1 .or. poisson_solver>3 ) then
       write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"

@@ -19,8 +19,8 @@
 
 module static_pol
 use global
-use oct_parser
-use liboct
+use lib_oct_parser
+use lib_oct
 use io
 use hamiltonian
 use system
@@ -43,7 +43,7 @@ subroutine static_pol_run(scf, sys, h)
   call push_sub('static_pol_run')
 
   ! read in e_field value
-  call oct_parse_float('POLStaticField', CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
+  call loct_parse_float('POLStaticField', CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
   e_field = e_field * units_inp%energy%factor / units_inp%length%factor
   if (e_field <= M_ZERO) then
     write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"
@@ -121,7 +121,7 @@ subroutine static_pol_run(scf, sys, h)
   call io_close(iunit)
 
   if(out_pol) then ! output pol file
-    call oct_mkdir("linear")
+    call loct_mkdir("linear")
     call io_assign(iunit)
     open(iunit, file='linear/polarizability', status='unknown')
     write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &

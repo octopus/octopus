@@ -19,7 +19,7 @@
 
 module functions
   use global
-  use oct_parser
+  use lib_oct_parser
   use mesh_function
   use cube_function
 
@@ -45,7 +45,7 @@ contains
     call push_sub('functions_init')
 
 #ifdef HAVE_FFT
-  call oct_parse_int('DerivativesSpace', REAL_SPACE, derivatives_space)
+  call loct_parse_int('DerivativesSpace', REAL_SPACE, derivatives_space)
   if(derivatives_space < 0 .or. derivatives_space > 1) then
     write(message(1), '(a,i5,a)') "Input: '", derivatives_space, &
          "' is not a valid DerivativesSpace"
@@ -57,7 +57,7 @@ contains
 #endif
 
   if(derivatives_space == REAL_SPACE) then
-    call oct_parse_int('OrderDerivatives', 4, norder)
+    call loct_parse_int('OrderDerivatives', 4, norder)
 
     call derivatives_init_diff(m, norder, m%laplacian, m%grad)
 

@@ -20,7 +20,7 @@
 module PES
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use global
-use oct_parser
+use lib_oct_parser
 use io
 use units
 use fft
@@ -58,7 +58,7 @@ subroutine PES_init(p, m, st, ab, save_iter)
   type(mesh_type), intent(inout) :: m
   type(states_type), intent(IN) :: st
   integer, intent(in) :: ab, save_iter
-  call oct_parse_logical("CalcPES_rc", .false., p%calc_rc)
+  call loct_parse_logical("CalcPES_rc", .false., p%calc_rc)
   if(p%calc_rc) then
     p%calc_rc = .true.
     call PES_rc_init(p%rc, m, st, save_iter)
@@ -67,7 +67,7 @@ subroutine PES_init(p, m, st, ab, save_iter)
   p%calc_mask = .false.
   ! have the mask, and we are working in the velocity gauge
   if(ab == 2) then 
-    call oct_parse_logical("CalcPES_Mask", .false., p%calc_mask)
+    call loct_parse_logical("CalcPES_Mask", .false., p%calc_mask)
     if(p%calc_mask) then
       call PES_mask_init(p%mask, m, st)
     end if

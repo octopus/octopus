@@ -19,8 +19,8 @@
 
 program xyzanim
   use global
-  use liboct
-  use oct_parser
+  use lib_oct
+  use lib_oct_parser
   use io
   use units
   use atom
@@ -53,7 +53,7 @@ program xyzanim
 
   ! how many do we have?
   str = "Species"
-  nspecies = oct_parse_block_n(str)
+  nspecies = loct_parse_block_n(str)
   if (nspecies < 1) then
     message(1) = "Input: Species block not specified"
     message(2) = '% Species'
@@ -64,15 +64,15 @@ program xyzanim
   allocate(spec(nspecies))
 
   ! how often do we sample?
-  call oct_parse_int('AnimationSampling', 100, sampling)
+  call loct_parse_int('AnimationSampling', 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)
   end if
 
   do i = 1, nspecies
-    call oct_parse_block_string(str, i-1, 0, spec(i)%label)
-    call oct_parse_block_double(str, i-1, 1, spec(i)%weight)
+    call loct_parse_block_string(str, i-1, 0, spec(i)%label)
+    call loct_parse_block_float (str, i-1, 1, spec(i)%weight)
   end do
 
   ! Initializes the atom

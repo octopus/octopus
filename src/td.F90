@@ -19,7 +19,7 @@
 
 module timedep
 use global
-use oct_parser
+use lib_oct_parser
 use mesh
 use states
 use hamiltonian
@@ -136,7 +136,7 @@ subroutine td_run(td, u_st, sys, h)
   call write_info(1)
 
   ii = 1
-  etime = oct_clock()
+  etime = loct_clock()
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
     ! Move the ions.
@@ -236,9 +236,9 @@ subroutine td_run(td, u_st, sys, h)
     write(message(1), '(i7,1x,2f14.6,f14.3, i10)') i, &
          i*td%dt       / units_out%time%factor, &
          h%etot        / units_out%energy%factor, &
-         (oct_clock() - etime)/1e6
+         (loct_clock() - etime)/1e6
     call write_info(1)
-    etime = oct_clock()
+    etime = loct_clock()
 
     ! write down data
     ii = ii + 1
@@ -271,7 +271,7 @@ contains
     call push_sub('td_run_zero_iter')
 
     ! create general subdir
-    call oct_mkdir("td.general")
+    call loct_mkdir("td.general")
 
     if(td%out_multip)  call td_write_multipole(out_multip, sys, td, 0)
     if(td%out_angular) call td_write_angular(out_angular, sys, td, 0)
@@ -301,7 +301,7 @@ contains
     CMPLX :: c
 
     !!! units are 1/length
-    call oct_parse_float("TDDeltaStrength", M_ZERO, k)
+    call loct_parse_float("TDDeltaStrength", M_ZERO, k)
     k = k / units_inp%length%factor
     
     !!! The wave-functions at time delta t read

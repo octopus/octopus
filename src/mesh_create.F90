@@ -38,7 +38,7 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
   if(present(enlarge_)) enlarge = enlarge_
 
   ! Read box shape.
-  call oct_parse_int('BoxShape', SPHERE, m%box_shape)
+  call loct_parse_int('BoxShape', SPHERE, m%box_shape)
   if(m%box_shape<1 .or. m%box_shape>4) then
     write(message(1), '(a,i2,a)') "Input: '", m%box_shape, "' is not a valid BoxShape"
     message(2) = '(1 <= Box_Shape <= 4)'
@@ -65,22 +65,22 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
 
   ! Read the box size.
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER) then
-    call oct_parse_float('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
+    call loct_parse_float('radius', CNST(20.0)/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     m%lsize(1) = m%rsize
   end if
   if(m%box_shape == CYLINDER) then
-    call oct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
+    call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
     m%xsize = m%xsize * units_inp%length%factor
     m%lsize(1) = m%xsize
   end if
   if(m%box_shape == PARALLELEPIPED) then
-    if(oct_parse_block_n('lsize')<1) then
+    if(loct_parse_block_n('lsize')<1) then
       message(1) = 'Block "lsize" not found in input file.'
       call write_fatal(1)
     endif
     do i = 1, conf%dim
-      call oct_parse_block_double('lsize', 0, i-1, m%lsize(i))
+      call loct_parse_block_float('lsize', 0, i-1, m%lsize(i))
     end do
     m%lsize = m%lsize*units_inp%length%factor
   end if
@@ -112,14 +112,14 @@ subroutine mesh_create(m, natoms, atom, enlarge_)
   m%h = M_ZERO
   select case(m%box_shape)
   case(SPHERE,CYLINDER)
-    call oct_parse_float('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
+    call loct_parse_float('spacing', CNST(0.6)/units_inp%length%factor, m%h(1))
     m%h(1:conf%dim) = m%h(1)
   case(PARALLELEPIPED)
-    if(oct_parse_block_n('spacing') < 1) then
+    if(loct_parse_block_n('spacing') < 1) then
       m%h(1:3) = CNST(0.6)/units_inp%length%factor
     else
       do i = 1, conf%dim
-         call oct_parse_block_double('spacing', 0, i-1, m%h(i))
+         call loct_parse_block_float('spacing', 0, i-1, m%h(i))
       end do
     endif
   end select

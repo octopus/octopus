@@ -19,7 +19,7 @@
 
 module mesh_function
   use global
-  use linalg
+  use lib_alg
   use mesh
   use cube_function
 

@@ -26,7 +26,7 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   type(X(cf)) :: c
 
   ! do not bother with errors
-  call oct_mkdir(trim(dir))
+  call loct_mkdir(trim(dir))
 
   call X(cf_new) (m%l, c)
   call X(cf_alloc_RS) (c)

@@ -19,7 +19,7 @@
 
 program rotational_strength
   use global
-  use oct_parser
+  use lib_oct_parser
   use units
   use spectrum
 
@@ -37,7 +37,7 @@ program rotational_strength
   call global_init()
   call units_init()
 
-  call oct_parse_string("SpecDampMode", "exp", txt)
+  call loct_parse_string("SpecDampMode", "exp", txt)
   select case(txt(1:3))
   case('exp')
     rsf%damp = SPECTRUM_DAMP_LORENTZIAN
@@ -49,18 +49,18 @@ program rotational_strength
     rsf%damp = SPECTRUM_DAMP_NONE
   end select
 
-  call oct_parse_float("SpecDampFactor",  CNST(0.15), rsf%damp_factor)
-  call oct_parse_float("SpecStartTime",   M_ZERO,       s%start_time)
-  call oct_parse_float("SpecEndTime",    -M_ONE,        s%end_time)
-  call oct_parse_float("SpecEnergyStep",  CNST(0.05),   s%energy_step)
-  call oct_parse_float("SpecMaxEnergy",   CNST(20.0),   s%max_energy)
-  call oct_parse_float("SpecMinEnergy",   M_ZERO,       s%min_energy)
-  call oct_parse_float("TDDeltaStrength", CNST(0.05), rsf%delta_strength)
+  call loct_parse_float("SpecDampFactor",  CNST(0.15), rsf%damp_factor)
+  call loct_parse_float("SpecStartTime",   M_ZERO,       s%start_time)
+  call loct_parse_float("SpecEndTime",    -M_ONE,        s%end_time)
+  call loct_parse_float("SpecEnergyStep",  CNST(0.05),   s%energy_step)
+  call loct_parse_float("SpecMaxEnergy",   CNST(20.0),   s%max_energy)
+  call loct_parse_float("SpecMinEnergy",   M_ZERO,       s%min_energy)
+  call loct_parse_float("TDDeltaStrength", CNST(0.05), rsf%delta_strength)
   !!! read in the default direction for the polarization
   rsf%pol(:) = M_ZERO
-  if(oct_parse_isdef('TDPolarization') .ne. 0) then
+  if(loct_parse_isdef('TDPolarization') .ne. 0) then
     do i = 1, conf%dim
-      call oct_parse_block_double('TDPolarization', 0, i-1, rsf%pol(i))
+      call loct_parse_block_float('TDPolarization', 0, i-1, rsf%pol(i))
     end do
   else  !default along the x-direction
     rsf%pol(1) = M_ONE

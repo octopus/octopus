@@ -308,7 +308,7 @@ function vlocalr_scalar(r, p)
      return
   endif
 
-  vlocalr_scalar = - (p%z_val/r)*oct_erf(r1/sqrt(M_TWO))   &
+  vlocalr_scalar = - (p%z_val/r)*loct_erf(r1/sqrt(M_TWO))   &
                    + exp( -M_HALF*r2 ) *    &
                    ( p%c(1) + p%c(2)*r2 + p%c(3)*r4 + p%c(4)*r6 )
 
@@ -353,7 +353,7 @@ function projectorr_scalar(r, p, i, l)
   FLOAT :: x, y, rr
 
   x = l + real(4*i-1, PRECISION)/M_TWO
-  y = oct_gamma(x); x = sqrt(y)
+  y = loct_gamma(x); x = sqrt(y)
   if(l==0 .and. i==1) then
     rr = M_ONE
   else
@@ -555,7 +555,7 @@ subroutine hgh_debug(psp)
   call push_sub('hgh_debug')
 
   ! Opens files.
-  call oct_mkdir('pseudos/'+'hgh.'+trim(psp%atom_name))
+  call loct_mkdir('pseudos/'+'hgh.'+trim(psp%atom_name))
   call io_assign(hgh_unit); call io_assign(loc_unit); call io_assign(wav_unit)
   call io_assign(dat_unit); call io_assign(kbp_unit)
   open(hgh_unit, file = 'pseudos/'+'hgh.'+trim(psp%atom_name)+'/'+'hgh')

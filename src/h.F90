@@ -19,8 +19,8 @@
 
 module hamiltonian
 use global
-use oct_parser
-use linalg
+use lib_oct_parser
+use lib_alg
 use mesh
 use output
 use mesh_function
@@ -119,7 +119,7 @@ subroutine hamiltonian_init(h, sys)
 
   call epot_init(h%ep, sys)
 
-  call oct_parse_int("RelativisticCorrection", NOREL, h%reltype)
+  call loct_parse_int("RelativisticCorrection", NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
   select case(h%reltype)
     case(NOREL);      message(1) = 'Info: Rel. correction: No relativistic corrections.'
@@ -148,7 +148,7 @@ subroutine hamiltonian_init(h, sys)
 #endif
 
   ! Should we treat the particles as independent?
-  call oct_parse_logical("NonInteractingElectrons", .false., h%ip_app)
+  call loct_parse_logical("NonInteractingElectrons", .false., h%ip_app)
   if(h%ip_app) then
     message(1) = 'Info: Treating the electrons as non-interacting'
     call write_info(1)
@@ -162,7 +162,7 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! gauge
-  call oct_parse_int("TDGauge", 1, h%gauge)
+  call loct_parse_int("TDGauge", 1, h%gauge)
   if (h%gauge < 1 .or. h%gauge > 2) then
     write(message(1), '(a,i6,a)') "Input: '", h%gauge, "' is not a valid TDGauge"
     message(2) = 'Accepted values are:'
@@ -172,14 +172,14 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! absorbing boundaries
-  call oct_parse_int("AbsorbingBoundaries", NO_ABSORBING, h%ab)
+  call loct_parse_int("AbsorbingBoundaries", NO_ABSORBING, h%ab)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
-    call oct_parse_float("ABWidth", M_FOUR/units_inp%length%factor, h%ab_width)
+    call loct_parse_float("ABWidth", M_FOUR/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
-      call oct_parse_float("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)
+      call loct_parse_float("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
       h%ab_height = M_ONE
@@ -202,7 +202,7 @@ subroutine hamiltonian_init(h, sys)
   
   ! Cutoff applied to the kinetic term.
   ! it is used *both* in the calculation of the derivatives and in the split operator method
-  call oct_parse_float("KineticCutoff", -M_ONE, h%cutoff)
+  call loct_parse_float("KineticCutoff", -M_ONE, h%cutoff)
   if(h%cutoff > M_ZERO) then
     h%cutoff = h%cutoff * units_inp%energy%factor
     write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&

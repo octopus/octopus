@@ -19,8 +19,8 @@
 
 program excitations
   use global
-  use oct_parser
-  use liboct
+  use lib_oct_parser
+  use lib_oct
 #ifdef HAVE_FFT
   use fft
 #endif
@@ -49,7 +49,7 @@ program excitations
 
   ! how many states do we have?
   n_occ = sys%st%nst
-  call oct_parse_int("UnoccNumberStates", 5, n_unocc)
+  call loct_parse_int("UnoccNumberStates", 5, n_unocc)
   call states_init(st, sys%m, sys%val_charge)
   st%nst = n_unocc + n_occ
   st%st_end = st%nst
@@ -68,8 +68,8 @@ program excitations
   endif
 
   ! which states to take into account
-  call oct_parse_string("ExciteStates", "1-1024", ch)
-  call oct_wfs_list(ch, flags)
+  call loct_parse_string("ExciteStates", "1-1024", ch)
+  call loct_wfs_list(ch, flags)
 
   ! initialize Poisson solver
   call poisson_init(sys%m)
@@ -77,18 +77,18 @@ program excitations
   ! calculate resonances
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
-  call oct_parse_logical("LinEigenvalues", .true., l)
+  call loct_parse_logical("LinEigenvalues", .true., l)
   if(l) call calc_petersilka(0, st, sys%m, n_occ, n_unocc, flags, 'linear', 'eps-diff')
   
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
-  call oct_parse_logical("LinPetersilka", .true., l)
+  call loct_parse_logical("LinPetersilka", .true., l)
   if(l) call calc_petersilka(1, st, sys%m, n_occ, n_unocc, flags, 'linear', 'petersilka')
 
   message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
-  call oct_parse_logical("LinCasida", .true., l)
+  call loct_parse_logical("LinCasida", .true., l)
   if(l)call calc_petersilka(2, st, sys%m, n_occ, n_unocc, flags, 'linear', 'casida')
 
   call poisson_end()

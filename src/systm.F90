@@ -60,7 +60,7 @@ subroutine system_init(s)
 
   call push_sub('system_init')
 
-  call oct_parse_string('SystemName', 'system', s%sysname)
+  call loct_parse_string('SystemName', 'system', s%sysname)
   s%nspecies = specie_init(s%specie)
 
   call atom_init(s%natoms, s%atom, s%ncatoms, s%catom, s%nspecies, s%specie)

@@ -1,7 +1,7 @@
 program centergeom
   use global
   use units
-  use oct_parser
+  use lib_oct_parser
   use atom
 
   integer :: natoms, ncatoms, iunit, i
@@ -12,14 +12,14 @@ program centergeom
   call global_init()
   call units_init()
 
-  if(oct_parse_isdef("PDBCoordinates").ne.0) then
-    call oct_parse_string('PDBCoordinates', 'coords.pdb', label)
+  if(loct_parse_isdef("PDBCoordinates").ne.0) then
+    call loct_parse_string('PDBCoordinates', 'coords.pdb', label)
     call io_assign(iunit)
     open(iunit, status='unknown', file=trim(label))
     call loadPDB(iunit, natoms, a, ncatoms, ca)
     call io_close(iunit)
-  elseif(oct_parse_isdef("XYZCoordinates").ne.0) then
-    call oct_parse_string('XYZCoordinates', 'coords.xyz', label)
+  elseif(loct_parse_isdef("XYZCoordinates").ne.0) then
+    call loct_parse_string('XYZCoordinates', 'coords.xyz', label)
     call io_assign(iunit)
     open(iunit, status='unknown', file=trim(label))
     read(iunit, *) natoms
@@ -33,7 +33,7 @@ program centergeom
     call io_close(iunit)
   else
     str = "Coordinates"
-    natoms = oct_parse_block_n(str)
+    natoms = loct_parse_block_n(str)
     if(natoms <= 0) then
       message(1) = "Input: Coordinates block not specified"
       message(2) = '% Coordinates'
@@ -45,11 +45,11 @@ program centergeom
     allocate(a(natoms))
     nullify(ca); ncatoms = 0
     do i = 1, natoms
-       call oct_parse_block_string(str, i-1, 0, a(i)%label)
-       call oct_parse_block_double (str, i-1, 1, a(i)%x(1))
-       call oct_parse_block_double (str, i-1, 2, a(i)%x(2))
-       call oct_parse_block_double (str, i-1, 3, a(i)%x(3))
-       call oct_parse_block_logical(str, i-1, 4, a(i)%move)
+       call loct_parse_block_string(str, i-1, 0, a(i)%label)
+       call loct_parse_block_float  (str, i-1, 1, a(i)%x(1))
+       call loct_parse_block_float  (str, i-1, 2, a(i)%x(2))
+       call loct_parse_block_float  (str, i-1, 3, a(i)%x(3))
+       call loct_parse_block_logical(str, i-1, 4, a(i)%move)
     end do
   endif
 

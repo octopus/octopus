@@ -19,7 +19,7 @@
 
 program octopus
   use global
-  use liboct
+  use lib_oct
   use run_prog
 
   implicit none
@@ -31,7 +31,7 @@ program octopus
   ! Let us print our logo
   if(mpiv%node == 0) then
     ! Let us print our logo
-    if(conf%verbose > 20) ierr = print_file(SHARE_OCTOPUS+'/logo')
+    if(conf%verbose > 20) ierr = loct_print_file(SHARE_OCTOPUS+'/logo')
 #ifdef DEBUG
     if(conf%verbose > 999) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
 #endif
@@ -46,7 +46,7 @@ program octopus
 
   ! Let us print where we are running
   if(conf%verbose > 20) then
-    call oct_sysname(message(1))
+    call loct_sysname(message(1))
     write(stdout, '(a)') str_center("The octopus is swimming in "+trim(message(1)), 70)
   end if
 #if defined(HAVE_MPI)
@@ -61,7 +61,7 @@ program octopus
   call write_info(1)
 
   ! create temporary dir (we will need it)
-  call oct_mkdir("tmp")
+  call loct_mkdir("tmp")
 
   ! now we really start
   call run()

@@ -17,7 +17,7 @@
 
 module pulpo
   use global
-  use liboct
+  use lib_oct
 
 contains
   subroutine pulpo_print()
@@ -27,7 +27,7 @@ contains
     message(1) = ''; message(2) = ''
     call write_info(2)
 
-    call oct_printRecipe(SHARE_OCTOPUS)
+    call loct_printRecipe(SHARE_OCTOPUS)
 
   end subroutine pulpo_print
 end module pulpo

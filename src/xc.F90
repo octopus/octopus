@@ -19,8 +19,8 @@
 
 module xc
 use global
-use oct_parser
-use linalg
+use lib_oct_parser
+use lib_alg
 use mesh
 use poisson
 use states
@@ -155,7 +155,7 @@ subroutine xc_init(xcs, nlcc)
   xcs%functl = 0
 
   ! set the appropriate flags
-  call oct_parse_string('XFunctional', 'LDA', func)
+  call loct_parse_string('XFunctional', 'LDA', func)
   select case(func(1:4))
   case('ZER ')
   case('LDA ')
@@ -189,7 +189,7 @@ subroutine xc_init(xcs, nlcc)
   end select
 
   ! now the correlation
-  call oct_parse_string('CFunctional', 'PZ81', func)
+  call loct_parse_string('CFunctional', 'PZ81', func)
   select case(func(1:4))
   case('ZER ')
   case('PZ81')
@@ -233,20 +233,20 @@ subroutine xc_init(xcs, nlcc)
 
   ! Extra parameters to fine-tune LB94 potential.
   if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
-    call oct_parse_float("LB94_beta", CNST(0.05), xcs%lb94_beta)
-    call oct_parse_float("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
-    call oct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
+    call loct_parse_float("LB94_beta", CNST(0.05), xcs%lb94_beta)
+    call loct_parse_float("LB94_threshold", CNST(1.0e-6), xcs%lb94_threshold)
+    call loct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
   end if
 
   if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
-    call oct_parse_int("OEP_level", 1, xcs%oep_level)
+    call loct_parse_int("OEP_level", 1, xcs%oep_level)
     if(xcs%oep_level<0.or.xcs%oep_level>2) then
       message(1) = "OEP_level can only take the values:"
       message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
       call write_fatal(2)
     end if
     if(xcs%oep_level == 2) then
-      call oct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
+      call loct_parse_float("OEP_mixing", M_ONE, xcs%oep_mixing)
     end if
 
   end if

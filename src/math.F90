@@ -22,7 +22,7 @@
 
 module math
   use global
-  use linalg
+  use lib_alg
 
   implicit none
 

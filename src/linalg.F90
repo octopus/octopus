@@ -36,13 +36,13 @@
 ! rank and dimensions of the arrays are indicated in front of the corresponding  !
 ! scalar arguments.                                                              !
 !--------------------------------------------------------------------------------!
-module linalg
+module lib_alg
   use global
 
   implicit none
   
   !--- BLAS interfaces ---!
-  interface la_scal
+  interface lalg_scal
     ! scales a vector by a constant
     subroutine DBLAS(scal) (n, da, dx, incx)
       integer, intent(in)    :: n, incx
@@ -58,7 +58,7 @@ module linalg
   end interface
     
   ! constant times a vector plus a vector
-  interface la_axpy
+  interface lalg_axpy
     subroutine DBLAS(axpy) (n, da, dx, incx, dy, incy)
       integer, intent(in)    :: n, incx, incy
       FLOAT,   intent(in)    :: da, dx ! dx(n)
@@ -73,7 +73,7 @@ module linalg
   end interface
 
   ! forms the dot product of two vectors
-  interface la_dot
+  interface lalg_dot
     FLOAT function DBLAS(dot) (n, dx, incx, dy, incy)
       integer, intent(in) :: n, incx, incy
       FLOAT,   intent(in) :: dx, dy ! dx(n), dy(n)
@@ -86,7 +86,7 @@ module linalg
   end interface
 
   ! returns the euclidean norm of a vector
-  interface la_nrm2
+  interface lalg_nrm2
     FLOAT function DBLAS(nrm2) (n, dx, incx)
       integer, intent(in) :: n, incx
       FLOAT,   intent(in) :: dx ! dx(n)
@@ -99,7 +99,7 @@ module linalg
   end interface
     
   ! matrix-matrix multiplication plus matrix
-  interface la_gemm
+  interface lalg_gemm
     subroutine DBLAS(gemm) (transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
       character(1), intent(in)    :: transa, transb
       integer,      intent(in)    :: m, n, k, lda, ldb, ldc
@@ -120,7 +120,7 @@ module linalg
   end interface
     
   ! matrix-vector multiplication plus vector
-  interface la_gemv
+  interface lalg_gemv
     subroutine DBLAS(gemv) (trans, m, n, alpha, a, lda, x, incx, beta, y, incy)
       character(1), intent(in)    :: trans
       integer,      intent(in)    :: m, n, lda, incx, incy
@@ -141,7 +141,7 @@ module linalg
   end interface
     
   ! copies a vector, x, to a vector, y
-  interface la_copy
+  interface lalg_copy
     subroutine DBLAS(copy) (n, dx, incx, dy, incy)
       integer, intent(in)  :: n, incx, incy
       FLOAT,   intent(in)  :: dx ! dx(n)
@@ -163,4 +163,4 @@ contains
 #include "linal_gsl.F90"
 #endif
 
-end module linalg
+end module lib_alg

@@ -17,90 +17,215 @@
 
 #include "global.h"
 
-module liboct
+module lib_oct
 
   implicit none
+
+  ! Define the which routines can be seen from the outside
+  private
+  public :: loct_gamma, loct_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
+  public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
+  public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
+  public :: loct_mkdir, loct_rm, loct_print_file, loct_number_of_lines
+  public :: loct_fft_optimize, loct_wfs_list, loct_progress_bar, loct_printRecipe
   
-  interface
-    FLOAT function oct_gamma(x)
-      FLOAT, intent(in) :: x
+  ! ------------------------------------------------------------
+  ! Special functions
+  interface loct_gamma
+    module procedure oct_gamma4
+
+    real(8) function oct_gamma(x)
+      real(8), intent(in) :: x
     end function oct_gamma
+  end interface
 
-    FLOAT function oct_bessel(n, x)
-      integer,  intent(in) :: n
-      FLOAT, intent(in)  :: x
+  interface loct_bessel
+    module procedure oct_bessel4
+
+    real(8) function oct_bessel(n, x)
+      integer, intent(in) :: n
+      real(8), intent(in)  :: x
     end function oct_bessel
-    
-    FLOAT function oct_asinh(x)
-      FLOAT, intent(in) :: x
+  end interface
+
+  interface loct_asinh
+    module procedure oct_asinh4
+
+    real(8) function oct_asinh(x)
+      real(8), intent(in) :: x
     end function oct_asinh
+  end interface
 
-    FLOAT function oct_erf(x)
-      FLOAT, intent(in) :: x
+  interface loct_erf
+    module procedure oct_erf4
+
+    real(8) function oct_erf(x)
+      real(8), intent(in) :: x
     end function oct_erf
+  end interface
 
-    FLOAT function oct_erfc(x)
-      FLOAT, intent(in) :: x
+  interface loct_erfc
+    module procedure oct_erfc4
+
+    real(8) function oct_erfc(x)
+      real(8), intent(in) :: x
     end function oct_erfc
+  end interface
 
-    FLOAT function oct_ylm(x, y, z, l, m)
-      FLOAT, intent(in) :: x, y, z
+  interface loct_ylm
+    module procedure oct_ylm4
+
+    real(8) function oct_ylm(x, y, z, l, m)
+      real(8), intent(in) :: x, y, z
       integer, intent(in) :: l, m
     end function oct_ylm
+  end interface
 
+  ! ------------------------------------------------------------
+  ! Functions to generate random numbers
+  interface loct_ran_init
+    subroutine oct_ran_init(r)
+      integer(POINTER_SIZE), intent(out) :: r
+    end subroutine oct_ran_init
+  end interface
+
+  interface loct_ran_end
+    subroutine oct_ran_end(r)
+      integer(POINTER_SIZE), intent(out) :: r
+    end subroutine oct_ran_end
+  end interface
+
+  interface loct_ran_gaussian
+    module procedure oct_ran_gaussian4
+
+    real(8) function oct_ran_gaussian(r, sigma)
+      integer(POINTER_SIZE), intent(in) :: r
+      real(8), intent(in) :: sigma
+    end function oct_ran_gaussian
+  end interface
+
+  ! ------------------------------------------------------------
+  ! System information (time, memory, sysname)
+  interface loct_clock
+    real(8) function oct_clock()
+    end function oct_clock
+  end interface
+
+  interface loct_getmem
+    integer function oct_getmem()
+    end function oct_getmem
+  end interface
+
+  interface loct_sysname
+    subroutine oct_sysname(name)
+      character(len=*), intent(out) :: name
+    end subroutine oct_sysname
+  end interface
+
+  interface loct_getcwd
+    subroutine oct_getcwd(name)
+      character(len=*), intent(out) :: name
+    end subroutine oct_getcwd
+  end interface
+
+  ! ------------------------------------------------------------
+  ! File handling
+  interface loct_mkdir
+    subroutine oct_mkdir(name)
+      character(len=*), intent(in) :: name
+    end subroutine oct_mkdir
+  end interface
+
+  interface loct_rm
+    subroutine oct_rm(name)
+      character(len=*), intent(in) :: name
+    end subroutine oct_rm
+  end interface
+
+  interface loct_print_file
+    integer function print_file(filename)
+      character(len=*), intent(in) :: filename
+    end function print_file
+  end interface
+
+  interface loct_number_of_lines
+    integer function number_of_lines(filename)
+      character(len=*), intent(in) :: filename
+    end function number_of_lines
+  end interface
+
+  ! ------------------------------------------------------------
+  ! Varia
+  interface loct_fft_optimize
     subroutine oct_fft_optimize(n, p, par)
       integer, intent(inout) :: n
       integer, intent(in) :: p, par
     end subroutine oct_fft_optimize
+  end interface
 
-    subroutine oct_mkdir(name)
-      character(len=*), intent(in) :: name
-    end subroutine oct_mkdir
-
-    subroutine oct_rm(name)
-      character(len=*), intent(in) :: name
-    end subroutine oct_rm
-    
-    subroutine oct_getcwd(name)
-      character(len=*), intent(out) :: name
-    end subroutine oct_getcwd
-
+  interface loct_wfs_list
     subroutine oct_wfs_list(str, l)
       character(len=*), intent(in) :: str
       integer, intent(out) :: l(32)
     end subroutine oct_wfs_list
-
-    FLOAT function oct_ran_gaussian(r, sigma)
-      integer(POINTER_SIZE), intent(in) :: r
-      FLOAT, intent(in) :: sigma
-    end function oct_ran_gaussian
-
-    subroutine oct_ran_init(r)
-      integer(POINTER_SIZE), intent(out) :: r
-    end subroutine oct_ran_init
-
-    subroutine oct_ran_end(r)
-      integer(POINTER_SIZE), intent(out) :: r
-    end subroutine oct_ran_end
-
-    FLOAT function oct_clock()
-    end function oct_clock
-
-    integer function oct_getmem()
-    end function oct_getmem
-
-    subroutine oct_sysname(name)
-      character(len=*), intent(out) :: name
-    end subroutine oct_sysname
-
-    integer function print_file(filename)
-      character(len=*), intent(in) :: filename
-    end function print_file
-
-    integer function number_of_lines(filename)
-      character(len=*), intent(in) :: filename
-    end function number_of_lines
-
   end interface
 
-end module liboct
+  interface loct_progress_bar
+    subroutine oct_progress_bar(a, max)
+      integer, intent(in) :: a, max
+    end subroutine oct_progress_bar
+  end interface
+
+  interface loct_printRecipe
+    subroutine oct_printRecipe(dir)
+      character(len=*), intent(in) :: dir
+    end subroutine oct_printRecipe
+  end interface
+
+contains
+  ! single precision version of the functions
+  real(4) function oct_gamma4(x)
+    real(4), intent(in) :: x
+
+    oct_gamma4 = real(oct_gamma(real(x, kind=8)), kind=4)
+  end function oct_gamma4
+  
+  real(4) function oct_bessel4(n, x)
+    integer, intent(in) :: n
+    real(4), intent(in)  :: x
+    
+    oct_bessel4 = real(oct_bessel(n, real(x, kind=8)), kind=4)
+  end function oct_bessel4
+
+  real(4) function oct_asinh4(x)
+    real(4), intent(in) :: x
+
+    oct_asinh4 = real(oct_asinh(real(x, kind=8)), kind=4)
+  end function oct_asinh4
+  
+  real(4) function oct_erf4(x)
+    real(4), intent(in)  :: x
+
+    oct_erf4 = real(oct_erf(real(x, kind=8)), kind=4)
+  end function oct_erf4
+
+  real(4) function oct_erfc4(x)
+    real(4), intent(in)  :: x
+
+    oct_erfc4 = real(oct_erfc(real(x, kind=8)), kind=4)
+  end function oct_erfc4
+
+  real(4) function oct_ylm4(x, y, z, l, m)
+    real(4), intent(in) :: x, y, z
+    integer, intent(in) :: l, m
+    
+    oct_ylm4 = real(oct_ylm(real(x, kind=8), real(x, kind=8), real(x, kind=8), l, m), kind=4)
+  end function oct_ylm4
+
+  real(4) function oct_ran_gaussian4(r, sigma)
+    integer(POINTER_SIZE), intent(in) :: r
+    real(4), intent(in) :: sigma
+
+    oct_ran_gaussian4 = real(oct_ran_gaussian(r, real(sigma, kind=8)), kind=4)
+  end function oct_ran_gaussian4
+end module lib_oct

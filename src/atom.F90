@@ -19,8 +19,8 @@
 
 module atom
 use global
-use oct_parser
-use liboct
+use lib_oct_parser
+use lib_oct
 use io
 use specie
 
@@ -77,8 +77,8 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
   call push_sub('atom_init')
 
-  if(conf%dim == 3.and.oct_parse_isdef("PDBCoordinates").ne.0) then
-    call oct_parse_string('PDBCoordinates', 'coords.pdb', label)
+  if(conf%dim == 3.and.loct_parse_isdef("PDBCoordinates").ne.0) then
+    call loct_parse_string('PDBCoordinates', 'coords.pdb', label)
 
     call io_assign(iunit)
     open(iunit, status='unknown', file=trim(label))
@@ -90,8 +90,8 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
   else
     ! we now load the positions, either from the input, or from a file
-    if(conf%dim == 3.and.oct_parse_isdef("XYZCoordinates").ne.0) then ! read a xyz file
-      call oct_parse_string('XYZCoordinates', 'coords.xyz', label)
+    if(conf%dim == 3.and.loct_parse_isdef("XYZCoordinates").ne.0) then ! read a xyz file
+      call loct_parse_string('XYZCoordinates', 'coords.xyz', label)
 
       call io_assign(iunit)
       open(iunit, status='unknown', file=trim(label))
@@ -109,7 +109,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       call io_close(iunit)
     else
       str = "Coordinates"
-      natoms = oct_parse_block_n(str)
+      natoms = loct_parse_block_n(str)
       if(natoms <= 0) then
         message(1) = "Input: Coordinates block not specified"
         message(2) = '% Coordinates'
@@ -121,12 +121,12 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       allocate(a(natoms))
       nullify(ca); ncatoms = 0
       do i = 1, natoms
-        call oct_parse_block_string(str, i-1, 0, a(i)%label)
+        call loct_parse_block_string (str, i-1, 0, a(i)%label)
         a(i)%spec => s(get_specie(a(i)%label))
-        call oct_parse_block_double (str, i-1, 1, a(i)%x(1))
-        call oct_parse_block_double (str, i-1, 2, a(i)%x(2))
-        call oct_parse_block_double (str, i-1, 3, a(i)%x(3))
-        call oct_parse_block_logical(str, i-1, 4, a(i)%move)
+        call loct_parse_block_float  (str, i-1, 1, a(i)%x(1))
+        call loct_parse_block_float  (str, i-1, 2, a(i)%x(2))
+        call loct_parse_block_float  (str, i-1, 3, a(i)%x(3))
+        call loct_parse_block_logical(str, i-1, 4, a(i)%move)
       end do
     end if
   end if
@@ -144,17 +144,17 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   end do
 
   ! we now load the velocities, either from the temperature, from the input, or from a file
-  if(oct_parse_isdef("RandomVelocityTemp").ne.0) then
+  if(loct_parse_isdef("RandomVelocityTemp").ne.0) then
     
-    call oct_ran_init(random_gen_pointer)
-    call oct_parse_float("RandomVelocityTemp", M_ZERO, temperature)
+    call loct_ran_init(random_gen_pointer)
+    call loct_parse_float("RandomVelocityTemp", M_ZERO, temperature)
     do i = 1, natoms
        sigma = sqrt( P_Kb*temperature / a(i)%spec%weight )
        do j = 1, 3
-          a(i)%v(j) = oct_ran_gaussian(random_gen_pointer, sigma)
+          a(i)%v(j) = loct_ran_gaussian(random_gen_pointer, sigma)
        enddo
     enddo
-    call oct_ran_end(random_gen_pointer)
+    call loct_ran_end(random_gen_pointer)
     kin1 = kinetic_energy(natoms, a)
     call cm_vel(natoms, a, x)
     do i = 1, natoms
@@ -176,9 +176,9 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
     write(message(4),'(a)')
     call write_info(4)
 
-  elseif(oct_parse_isdef("XYZVelocities").ne.0 .and. conf%dim==3) then ! read a xyz file
+  elseif(loct_parse_isdef("XYZVelocities").ne.0 .and. conf%dim==3) then ! read a xyz file
     call io_assign(iunit)
-    call oct_parse_string('XYZVelocities', 'velocities.xyz', label)
+    call loct_parse_string('XYZVelocities', 'velocities.xyz', label)
     open(iunit, status='unknown', file=trim(label))
       
     read(iunit, *)
@@ -192,11 +192,11 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
     call io_close(iunit)
   else 
     str = "Velocities"
-    if(oct_parse_isdef(str).ne.0) then
+    if(loct_parse_isdef(str).ne.0) then
       do i = 1, natoms
-        call oct_parse_block_double (str, i-1, 1, a(i)%v(1))
-        call oct_parse_block_double (str, i-1, 2, a(i)%v(2))
-        call oct_parse_block_double (str, i-1, 3, a(i)%v(3))
+        call loct_parse_block_float(str, i-1, 1, a(i)%v(1))
+        call loct_parse_block_float(str, i-1, 2, a(i)%v(2))
+        call loct_parse_block_float(str, i-1, 3, a(i)%v(3))
         a(i)%v = a(i)%v * units_inp%velocity%factor
       end do
     else
@@ -349,10 +349,10 @@ subroutine atom_adjust(natoms, a, ncatoms, ca)
 
   ! get to axis
   str = "MainAxis"
-  if(oct_parse_isdef(str) .ne. 0) then
-    call oct_parse_block_double(str, 0, 0, to(1))
-    call oct_parse_block_double(str, 0, 1, to(2))
-    call oct_parse_block_double(str, 0, 2, to(3))
+  if(loct_parse_isdef(str) .ne. 0) then
+    call loct_parse_block_float(str, 0, 0, to(1))
+    call loct_parse_block_float(str, 0, 1, to(2))
+    call loct_parse_block_float(str, 0, 2, to(3))
   else
     to(1) = M_ZERO; to(2) = M_ZERO; to(3) = M_ONE
   end if
@@ -643,7 +643,7 @@ subroutine atom_write_xyz(dir, fname, natoms, a, ncatoms, ca)
   if(mpiv%node == 0) then
 #endif
 
-    call oct_mkdir(trim(dir))
+    call loct_mkdir(trim(dir))
 
     call io_assign(iunit)
     open(iunit, file=trim(dir)+"/"+trim(fname)+'.xyz', status='unknown')

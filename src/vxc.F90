@@ -493,7 +493,7 @@ module vxc
       if(dens(is) >= threshold .and. gdm >=threshold) then
            x = gdm / dens(is)**(M_FOUR/M_THREE)
            f = -beta*dens(is)**M_THIRD*&
-                x**2/(M_ONE + M_THREE*beta*x*oct_asinh(gamma*x))
+                x**2/(M_ONE + M_THREE*beta*x*loct_asinh(gamma*x))
            dexdd(is) = dexdd(is) + f !- beta * dens(is)**M_THIRD * f
       elseif(r > M_ZERO .and. dens(is)<= threshold) then
            f = r + (M_THREE/alpha)*log(2*gamma*alpha*qtot**(-M_THIRD))

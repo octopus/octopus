@@ -19,9 +19,9 @@
 
 module states
 use global
-use oct_parser
+use lib_oct_parser
 use io
-use linalg
+use lib_alg
 use math
 use mesh
 use functions
@@ -94,7 +94,7 @@ subroutine states_init(st, m, val_charge)
 
   call states_null(st)
 
-  call oct_parse_int('SpinComponents', UNPOLARIZED, st%ispin)
+  call loct_parse_int('SpinComponents', UNPOLARIZED, st%ispin)
   if (st%ispin < UNPOLARIZED .or. st%ispin > SPINORS) then
     write(message(1),'(a,i4,a)') "Input: '", st%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
@@ -102,13 +102,13 @@ subroutine states_init(st, m, val_charge)
   end if
 
   if (conf%periodic_dim>0) then
-    if(oct_parse_block_n('NumberKPoints')<1) then
+    if(loct_parse_block_n('NumberKPoints')<1) then
       message(1) = 'Block "NumberKPoints" not found in input file.'
       call write_fatal(1)
     end if
     st%nik_axis = 1
     do i = 1, conf%periodic_dim
-      call oct_parse_block_int('NumberKPoints', 0, i-1, st%nik_axis(i))
+      call loct_parse_block_int('NumberKPoints', 0, i-1, st%nik_axis(i))
     end do    
     if (any(st%nik_axis < 1)) then
       message(1) = 'Input: NumberKPoints is not valid'
@@ -116,10 +116,10 @@ subroutine states_init(st, m, val_charge)
       call write_fatal(2)
     end if
     
-    select case(oct_parse_block_n('SelectKAxis'))
+    select case(loct_parse_block_n('SelectKAxis'))
     case(1)
       do i = 1, conf%periodic_dim
-         call oct_parse_block_logical('SelectKAxis', 0, i-1, st%select_axis(i))
+         call loct_parse_block_logical('SelectKAxis', 0, i-1, st%select_axis(i))
       end do
       do i=1, conf%periodic_dim
          if (.not.st%select_axis(i)) then
@@ -137,9 +137,9 @@ subroutine states_init(st, m, val_charge)
   end if
 
   
-  call oct_parse_float('ExcessCharge', M_ZERO, excess_charge)
+  call loct_parse_float('ExcessCharge', M_ZERO, excess_charge)
 
-  call oct_parse_int('ExtraStates', 0, nempty)
+  call loct_parse_int('ExtraStates', 0, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
     message(2) = '(0 <= ExtraStates)'
@@ -204,13 +204,13 @@ subroutine states_init(st, m, val_charge)
   end if
 
   str = "Occupations"
-  occ_fix: if(oct_parse_isdef(str) .ne. 0) then
+  occ_fix: if(loct_parse_isdef(str) .ne. 0) then
     ! read in occupations
     st%fixed_occ = .true.
 
     do i = 1, st%nik
       do j = 1, st%nst
-        call oct_parse_block_double(str, i-1, j-1, st%occ(j, i))
+        call loct_parse_block_float(str, i-1, j-1, st%occ(j, i))
       end do
     end do
   else
@@ -233,7 +233,7 @@ subroutine states_init(st, m, val_charge)
     end do
 
     ! read in fermi distribution temperature
-    call oct_parse_float('ElectronicTemperature', M_ZERO, st%el_temp)
+    call loct_parse_float('ElectronicTemperature', M_ZERO, st%el_temp)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
@@ -500,7 +500,7 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
 
         do i = 1, m%np
           call mesh_r(m, i, r, x=x)
-          ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+          ylm = loct_ylm(x(1), x(2), x(3), l, lm)
           if(l == 0) then
             mult = mult + st%rho(i, is) * ylm
           else

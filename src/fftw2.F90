@@ -17,7 +17,7 @@
 
 module fft
   use global
-  use linalg
+  use lib_alg
   
   implicit none
 
@@ -57,7 +57,7 @@ contains
   subroutine fft_all_init()
     integer :: i
 
-    call oct_parse_logical("FFTOptimize", .true., fft_optimize)
+    call loct_parse_logical("FFTOptimize", .true., fft_optimize)
     
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
@@ -87,7 +87,7 @@ contains
     ! optimize dimensions in non-periodic directions
     do i = conf%periodic_dim+1, conf%dim 
       if(n(i).ne.1 .and. fft_optimize) &
-           call oct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
     end do    
 
     ! find out if fft has already been allocated
@@ -206,7 +206,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call la_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1), 1)
+    call lalg_scal(n, M_ONE/real(n, PRECISION), r(1, 1, 1), 1)
 
   end subroutine dfft_backward
 
@@ -230,7 +230,7 @@ contains
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
-    call la_scal(n, M_z1/real(n, PRECISION), r(1, 1, 1), 1)
+    call lalg_scal(n, M_z1/real(n, PRECISION), r(1, 1, 1), 1)
 
   end subroutine zfft_backward
 

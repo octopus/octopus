@@ -19,8 +19,8 @@
 
 module opt_control
 use global
-use liboct
-use oct_parser
+use lib_oct
+use lib_oct_parser
 use io
 use states
 use hamiltonian
@@ -71,12 +71,12 @@ subroutine opt_control_run(td, sys, h)
       v_old_f(:,:,i) = v_old_f(:,:,1) ! this one comes from the previous propagation
     end do
 
-    call oct_progress_bar(-1, td%max_iter-1)
+    call loct_progress_bar(-1, td%max_iter-1)
     h%ep%lasers(1)%dt = td%dt
     functional = M_ZERO
     do i = 1, td%max_iter
       call prop_iter1(i)
-      call oct_progress_bar(i-1, td%max_iter-1)
+      call loct_progress_bar(i-1, td%max_iter-1)
     end do
     write(stdout, '(1x)')
 
@@ -108,13 +108,13 @@ subroutine opt_control_run(td, sys, h)
     message(1) = "Info: Propagating backward"
     call write_info(1)
 
-    call oct_progress_bar(-1, td%max_iter-1)
+    call loct_progress_bar(-1, td%max_iter-1)
     td%dt = -td%dt
     h%ep%lasers(1)%dt = td%dt
     functional = M_ZERO
     do i = td%max_iter-1, 0, -1
       call prop_iter2(i)
-      call oct_progress_bar(td%max_iter-1-i, td%max_iter-1)
+      call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
     td%dt = -td%dt
     write(stdout, '(1x)')
@@ -236,7 +236,7 @@ contains
 
     td%dt = -td%dt
     h%ep%lasers(1)%dt = td%dt
-    call oct_progress_bar(-1, td%max_iter-1)
+    call loct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
       call td_rti_dt(h, sys%m, psi_f, sys, td%tr, abs(i*td%dt), abs(td%dt))
@@ -244,7 +244,7 @@ contains
       call zcalcdens(psi_f, sys%m%np, sys%st%rho, reduce=.true.)
       call zh_calc_vhxc(h, sys%m, psi_f, sys, calc_eigenval=.true.)
 
-      call oct_progress_bar(td%max_iter-1-i, td%max_iter-1)
+      call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
     td%dt = -td%dt
     message(1) = ""; call write_info(1)
@@ -336,12 +336,12 @@ contains
 
     ! read parameters from input
     ! we assume atomic units
-    call oct_parse_float("OptControlInitLaser", M_ZERO, laser_init)
+    call loct_parse_float("OptControlInitLaser", M_ZERO, laser_init)
     laser_i = laser_init
     laser_f = laser_init
-    call oct_parse_float("OptControlAlpha", M_ONE, alpha)
-    call oct_parse_float("OptControlEps", CNST(1e-3), eps)
-    call oct_parse_int("OptControlMaxIter", 10, ctr_iter_max)
+    call loct_parse_float("OptControlAlpha", M_ONE, alpha)
+    call loct_parse_float("OptControlEps", CNST(1e-3), eps)
+    call loct_parse_int("OptControlMaxIter", 10, ctr_iter_max)
     if(ctr_iter_max < 0.and.eps<M_ZERO) then
       message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
       call write_fatal(1)

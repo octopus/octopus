@@ -19,10 +19,10 @@
 
 module phonons
   use global
-  use liboct
-  use oct_parser
+  use lib_oct
+  use lib_oct_parser
   use io
-  use linalg
+  use lib_alg
   use external_pot
   use hamiltonian
   use states
@@ -52,12 +52,12 @@ contains
     integer :: i, j, iunit
 
     ! create directory for output
-    call oct_mkdir('phonons')
+    call loct_mkdir('phonons')
 
     ph%dim = sys%natoms*3
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
-    call oct_parse_float("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
+    call loct_parse_float("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix

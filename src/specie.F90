@@ -19,7 +19,7 @@
 
 module specie
 use global
-use oct_parser
+use lib_oct_parser
 use units
 use ps
 use math
@@ -76,7 +76,7 @@ function specie_init(s)
 
   ! how many do we have?
   str = "Species"
-  nspecies = oct_parse_block_n(str)
+  nspecies = loct_parse_block_n(str)
   if (nspecies < 1) then
     message(1) = "Input: Species block not specified"
     message(2) = '% Species'
@@ -88,7 +88,7 @@ function specie_init(s)
 
   ! Reads the spin components. This is read here, as well as in states_init,
   ! to be able to pass it to the pseudopotential initializations subroutine.
-  call oct_parse_int('SpinComponents', 1, ispin)
+  call loct_parse_int('SpinComponents', 1, ispin)
   if (ispin < 1 .or. ispin > 3) then
     write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
@@ -142,7 +142,7 @@ FLOAT function specie_get_local(s, x) result(l)
   r = sqrt(sum(xx(:)**2))
 
   if(conf%dim.ne.3 .or. s%label(1:5)=='usdef') then
-    l = oct_parse_pot(xx(1), xx(2), xx(3), r, s%user_def)
+    l = loct_parse_potential(xx(1), xx(2), xx(3), r, s%user_def)
 
   else
     select case(s%label(1:5))
@@ -184,9 +184,9 @@ subroutine specie_get_glocal(s, x, gv)
     do i = 1, conf%dim
       xx(1:conf%dim) = x(1:conf%dim)
       xx(i) = xx(i) - Delta
-      l1 = oct_parse_pot(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+      l1 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
       xx(i) = xx(i) + M_TWO*Delta
-      l2 = oct_parse_pot(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+      l2 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
       gv(i) = (l2 - l1)/(M_TWO*Delta)
     end do
   else

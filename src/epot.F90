@@ -19,7 +19,7 @@
 
 module external_pot
   use global
-  use oct_parser
+  use lib_oct_parser
   use mesh
 #ifdef HAVE_FFT
   use cube_function
@@ -61,7 +61,7 @@ contains
     ep%vpsl_space = REAL_SPACE
     ep%vnl_space  = REAL_SPACE
 #ifdef HAVE_FFT
-    call oct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, ep%vpsl_space)
+    call loct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, ep%vpsl_space)
 #endif
     
     select case(ep%vpsl_space)
@@ -88,7 +88,7 @@ contains
 
     ep%classic_pot = 0
     if(sys%ncatoms > 0) then
-      call oct_parse_int("ClassicPotential", 0, ep%classic_pot)
+      call loct_parse_int("ClassicPotential", 0, ep%classic_pot)
       if(ep%classic_pot > 0) then
         allocate(ep%Vclassic(sys%m%np))
         call epot_generate_classic(ep, sys%m, sys)
@@ -478,7 +478,7 @@ contains
                   x(:) = x_in(:) - m%shift(k,:)          
                   r=sqrt(sum(x*x))
                   if (r > s%ps%rc_max + m%h(1)) cycle
-                  ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+                  ylm = loct_ylm(x(1), x(2), x(3), l, lm)
                   a%duvu(add_lm, 1, 1) = a%duvu(add_lm, 1, 1) + a%duv(j, add_lm, 1)* &
                        splint(s%ps%ur(l+1, 1), r)*ylm*m%vol_pp
                   exit

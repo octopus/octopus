@@ -20,7 +20,7 @@
 program hs_from_acc
   use global
   use units
-  use oct_parser
+  use lib_oct_parser
   use spectrum
 
   integer :: ierr
@@ -32,11 +32,11 @@ program hs_from_acc
   call global_init()
   call units_init()
 
-  call oct_parse_float("SpecStartTime",  M_ZERO, s%start_time)
-  call oct_parse_float("SpecEndTime",   -M_ONE,  s%end_time)
-  call oct_parse_float("SpecEnergyStep", CNST(0.05)/units_inp%energy%factor, s%energy_step)
-  call oct_parse_float("SpecMinEnergy",  M_ZERO, s%min_energy)
-  call oct_parse_float("SpecMaxEnergy",  M_ONE     /units_inp%energy%factor, s%max_energy)
+  call loct_parse_float("SpecStartTime",  M_ZERO, s%start_time)
+  call loct_parse_float("SpecEndTime",   -M_ONE,  s%end_time)
+  call loct_parse_float("SpecEnergyStep", CNST(0.05)/units_inp%energy%factor, s%energy_step)
+  call loct_parse_float("SpecMinEnergy",  M_ZERO, s%min_energy)
+  call loct_parse_float("SpecMaxEnergy",  M_ONE     /units_inp%energy%factor, s%max_energy)
 
   ! adjust units
   s%start_time  = s%start_time  * units_inp%time%factor
@@ -45,7 +45,7 @@ program hs_from_acc
   s%min_energy  = s%min_energy  * units_inp%energy%factor
   s%max_energy  = s%max_energy  * units_inp%energy%factor
 
-  call oct_parse_string('HSPolarization', 'z', txt)
+  call loct_parse_string('HSPolarization', 'z', txt)
   sh%pol = txt(1:1)
   if(sh%pol.ne.'x' .and. sh%pol.ne.'y' .and. sh%pol.ne.'z' .and. &
        sh%pol.ne.'+' .and. sh%pol.ne.'-') then

@@ -49,7 +49,7 @@ contains
     type(states_type), intent(in)    :: st
     type(td_rti_type), intent(inout) :: tr
 
-    call oct_parse_int("TDEvolutionMethod", REVERSAL, tr%method)
+    call loct_parse_int("TDEvolutionMethod", REVERSAL, tr%method)
     select case(tr%method)
     case(SPLIT_OPERATOR)
       call zcf_new(m%l, tr%cf)

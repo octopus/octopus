@@ -19,36 +19,41 @@
 
 module spline
 
-implicit none
+  implicit none
 
-type spline_type
-  integer(POINTER_SIZE) :: spl, acc
-end type spline_type
+  type spline_type
+    integer(POINTER_SIZE) :: spl, acc
+  end type spline_type
 
-integer, parameter :: ntbmax = 200
+  integer, parameter :: ntbmax = 200
 
-interface
-  subroutine oct_spline_init(nrc, spl, acc)
-    integer, intent(in) :: nrc
-    integer(POINTER_SIZE), intent(out) :: spl, acc
-  end subroutine oct_spline_init
+  interface loct_spline_init
+    subroutine oct_spline_init(nrc, spl, acc)
+      integer, intent(in) :: nrc
+      integer(POINTER_SIZE), intent(out) :: spl, acc
+    end subroutine oct_spline_init
+  end interface
 
-  subroutine oct_spline_end(spl, acc)
-    integer(POINTER_SIZE), intent(inout) :: spl, acc
-  end subroutine oct_spline_end
+  interface loct_spline_end
+    subroutine oct_spline_end(spl, acc)
+      integer(POINTER_SIZE), intent(inout) :: spl, acc
+    end subroutine oct_spline_end
+  end interface
 
-  subroutine oct_spline_fit(nrc, x, y, spl, acc)
-    integer, intent(in) :: nrc
-    FLOAT, intent(in) :: x, y
-    integer(POINTER_SIZE), intent(inout) :: spl, acc
-  end subroutine oct_spline_fit
+  interface loct_spline_fit
+    subroutine oct_spline_fit(nrc, x, y, spl, acc)
+      integer, intent(in) :: nrc
+      FLOAT, intent(in) :: x, y
+      integer(POINTER_SIZE), intent(inout) :: spl, acc
+    end subroutine oct_spline_fit
+  end interface
 
-  FLOAT function oct_spline_eval(x, spl, acc)
-    FLOAT, intent(in) :: x
-    integer(POINTER_SIZE), intent(in) :: spl, acc
-  end function oct_spline_eval
-
-end interface
+  interface loct_spline_eval
+    FLOAT function oct_spline_eval(x, spl, acc)
+      FLOAT, intent(in) :: x
+      integer(POINTER_SIZE), intent(in) :: spl, acc
+    end function oct_spline_eval
+  end interface
 
 contains
 
@@ -62,7 +67,7 @@ subroutine spline_end(spl)
   type(spline_type), intent(inout) :: spl
 
   if(spl%spl.ne.0 .and. spl%acc.ne.0) then
-    call oct_spline_end(spl%spl, spl%acc)
+    call loct_spline_end(spl%spl, spl%acc)
   end if
   spl%spl = 0; spl%acc = 0
 end subroutine spline_end
@@ -72,7 +77,7 @@ subroutine spline_fit(nrc, rofi, ffit, spl)
   FLOAT, intent(IN) :: ffit(nrc), rofi(nrc)
   type(spline_type), intent(out) :: spl
 
-  call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
+  call loct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
 
   return
 end subroutine spline_fit
@@ -83,7 +88,7 @@ function splint(spl, x)
   type(spline_type), intent(IN) :: spl
   FLOAT, intent(IN) :: x
   
-  splint = oct_spline_eval(x, spl%spl, spl%acc)
+  splint = loct_spline_eval(x, spl%spl, spl%acc)
 
   return
 end function splint

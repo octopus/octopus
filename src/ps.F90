@@ -19,7 +19,7 @@
 
 module ps
 use global
-use liboct
+use lib_oct
 use io
 use spline
 use logrid
@@ -83,7 +83,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   call push_sub('ps_init')
 
   ! Makes the directory for debugging.
-  if(conf%verbose>999) call oct_mkdir('pseudos')
+  if(conf%verbose>999) call loct_mkdir('pseudos')
 
   ! Sets the flavour, label, and number of spin channels.
   ps%flavour = flavour
@@ -201,7 +201,7 @@ subroutine ps_debug(ps)
   call push_sub('ps_debug')
 
   ! Opens the files.
-  call oct_mkdir('pseudos/'+trim(ps%label))
+  call loct_mkdir('pseudos/'+trim(ps%label))
   call io_assign(info_unit); call io_assign(local_unit)
   call io_assign(nonlocal_unit); call io_assign(wave_unit)
   call io_assign(so_unit)

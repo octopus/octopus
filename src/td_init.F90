@@ -28,7 +28,7 @@ subroutine td_init(td, sys, m, st, h)
 
   td%iter = 0
 
-  call oct_parse_float("TDTimeStep", CNST(0.07)/units_inp%time%factor, td%dt)
+  call loct_parse_float("TDTimeStep", CNST(0.07)/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= M_ZERO) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
@@ -36,14 +36,14 @@ subroutine td_init(td, sys, m, st, h)
     call write_fatal(2)
   end if
 
-  call oct_parse_int("TDMaximumIter", 1500, td%max_iter)
+  call loct_parse_int("TDMaximumIter", 1500, td%max_iter)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
     message(2) = '(1 <= TDMaximumIter)'
     call write_fatal(2)
   end if
     
-  call oct_parse_int("TDDipoleLmax", 1, td%lmax)
+  call loct_parse_int("TDDipoleLmax", 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
     message(2) = '(0 <= TDDipoleLmax <= 4 )'
@@ -52,9 +52,9 @@ subroutine td_init(td, sys, m, st, h)
 
   !!! read in the default direction for the polarization
   td%pol(:) = M_ZERO
-  if(oct_parse_isdef('TDPolarization') .ne. 0) then
+  if(loct_parse_isdef('TDPolarization') .ne. 0) then
     do i = 1, conf%dim
-      call oct_parse_block_double('TDPolarization', 0, i-1, td%pol(i))
+      call loct_parse_block_float('TDPolarization', 0, i-1, td%pol(i))
     end do
   else  !default along the x-direction
     td%pol(1) = M_ONE
@@ -62,12 +62,12 @@ subroutine td_init(td, sys, m, st, h)
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-  call oct_parse_int("AbsorbingBoundaries", 0, dummy)
+  call loct_parse_int("AbsorbingBoundaries", 0, dummy)
   call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
 #endif
 
   ! should we move the ions during the simulation?
-  call oct_parse_int("MoveIons", 0, td%move_ions)
+  call loct_parse_int("MoveIons", 0, td%move_ions)
   if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then
     write(message(1),'(a,i4)') "Input: '", td%move_ions, &
          "' is not a valid MoveIons"
@@ -78,23 +78,23 @@ subroutine td_init(td, sys, m, st, h)
   endif
   
   ! Check what should be output
-  call oct_parse_logical("TDOutputMultipoles", .true., td%out_multip)
+  call loct_parse_logical("TDOutputMultipoles", .true., td%out_multip)
   if(td%move_ions>0) then
-    call oct_parse_logical("TDOutputCoordinates", .true., td%out_coords)
+    call loct_parse_logical("TDOutputCoordinates", .true., td%out_coords)
   else
     td%out_coords = .false.
   end if
-  call oct_parse_logical("TDOutputAngularMomentum", .false., td%out_angular)
-  call oct_parse_logical("TDOutputGSProjection", .false., td%out_gsp)
-  call oct_parse_logical("TDOutputAcceleration", .false., td%out_acc)
+  call loct_parse_logical("TDOutputAngularMomentum", .false., td%out_angular)
+  call loct_parse_logical("TDOutputGSProjection", .false., td%out_gsp)
+  call loct_parse_logical("TDOutputAcceleration", .false., td%out_acc)
   if(td%out_acc.and.td%move_ions>0) then
     message(1) = 'Error. If harmonic spectrum is to be calculated'
     message(2) = 'Atoms should not be allowed to move'
     call write_fatal(2)
   endif
-  call oct_parse_logical("TDOutputLaser", h%ep%no_lasers>0, td%out_laser)
-  call oct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
-  call oct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
+  call loct_parse_logical("TDOutputLaser", h%ep%no_lasers>0, td%out_laser)
+  call loct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
+  call loct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
 
   call td_rti_init(m, st, td%tr)
   call td_init_states()

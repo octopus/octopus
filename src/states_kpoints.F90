@@ -36,7 +36,7 @@ subroutine states_choose_kpoints(st, m)
     return
   end if
 
-  call oct_parse_logical('CenterOfInversion', .false., coi)
+  call loct_parse_logical('CenterOfInversion', .false., coi)
   if (conf%periodic_dim>1) then
     message(1) = 'Symmetries for periodic_dim > 1 not implemented yet'
     message(2) = 'K points are generated for the bull BZ'

@@ -129,7 +129,7 @@ subroutine X(f_gradient) (m, f, grad)
 
     n = X(cf_aux)%nx*X(cf_aux)%n(2)*X(cf_aux)%n(3)
     do i = 1, conf%dim
-      call la_copy(n, X(cf_aux)%FS(1, 1, 1), 1, X(cf_der)%FS(1, 1, 1), 1)
+      call lalg_copy(n, X(cf_aux)%FS(1, 1, 1), 1, X(cf_der)%FS(1, 1, 1), 1)
       call X(cf_FS_grad)(m, X(cf_der), i)        ! gradient in reciprocal space
       call X(cf_FS2RS)(X(cf_der))                ! Fourier transform
       call X(cf2mf)(m, X(cf_der), grad(i, :))    ! convert to mesh

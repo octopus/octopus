@@ -47,7 +47,7 @@ contains
 
     integer :: i
     FLOAT, allocatable :: x(:)
-    !integer, external :: oct_geom_opt
+    !integer, external :: loct_geom_opt
     
     call push_sub('geom_opt_run')
     
@@ -89,20 +89,20 @@ contains
     
   contains
     subroutine geo_init()
-      call oct_parse_int("GOMethod", 1, geo%method)
+      call loct_parse_int("GOMethod", 1, geo%method)
       if(geo%method < 1 .or. geo%method >1) then
         message(1) = "'GOMethod' can only take the values:"
         message(2) = "   1 = Steepest descent"
         call write_fatal(2)
       end if
 
-      call oct_parse_float("GOTolerance", CNST(0.0001)/units_inp%force%factor, geo%tol)
+      call loct_parse_float("GOTolerance", CNST(0.0001)/units_inp%force%factor, geo%tol)
       geo%tol = geo%tol*units_inp%force%factor
 
       ! WARNING: in some weird units
-      call oct_parse_float("GOStep", M_HALF, geo%step)
+      call loct_parse_float("GOStep", M_HALF, geo%step)
 
-      call oct_parse_int("GOMaxIter", 200, geo%max_iter)
+      call loct_parse_int("GOMaxIter", 200, geo%max_iter)
       if(geo%max_iter <= 0) then
         message(1) = "GoMaxIter has to be larger than 0"
         call write_fatal(1)

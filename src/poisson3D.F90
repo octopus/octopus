@@ -134,7 +134,7 @@ subroutine poisson_cg(m, pot, rho)
       end if
 
       do mm = -l, l
-        sa = oct_ylm(x(1), x(2), x(3), l, mm)
+        sa = loct_ylm(x(1), x(2), x(3), l, mm)
         rholm(add_lm) = rholm(add_lm) + s1*sa
         add_lm = add_lm+1
       end do
@@ -152,7 +152,7 @@ subroutine poisson_cg(m, pot, rho)
     do l = 0, ml
       s1 = fpi/((M_TWO*l + M_ONE)*r**(l + 1))
       do mm = -l, l
-        sa = oct_ylm(x(1), x(2), x(3), l, mm)
+        sa = loct_ylm(x(1), x(2), x(3), l, mm)
         wk(i) = wk(i) +  sa * rholm(add_lm) * s1
         add_lm = add_lm+1
       end do

@@ -29,7 +29,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   call write_info(1)
 
   str = "PES_rc_points"
-  v%npoints = oct_parse_block_n(str)
+  v%npoints = loct_parse_block_n(str)
   if (v%npoints < 1) then
     message(1) = "Input: PES_rc_points block not specified"
     message(2) = '%PES_rc_points'
@@ -43,9 +43,9 @@ subroutine PES_rc_init(v, m, st, save_iter)
   do i = 1, v%npoints
     write(v%filenames(i), '(a,i2.2,a)') 'PES_rc.', i, '.out'
 
-    call oct_parse_block_double(str, i-1, 0, x(1))
-    call oct_parse_block_double(str, i-1, 1, x(2))
-    call oct_parse_block_double(str, i-1, 2, x(3))
+    call loct_parse_block_float(str, i-1, 0, x(1))
+    call loct_parse_block_float(str, i-1, 1, x(2))
+    call loct_parse_block_float(str, i-1, 2, x(3))
 
     ! adjust units
     x = x*units_inp%length%factor

@@ -19,7 +19,7 @@
 
 module scf
 use global
-use oct_parser
+use lib_oct_parser
 use units
 use states
 use hamiltonian
@@ -57,11 +57,11 @@ subroutine scf_init(scf, sys, h)
 
   call push_sub('systm_scf_init')
 
-  call oct_parse_int   ("MaximumIter",        200, scf%max_iter)
-  call oct_parse_float("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
-  call oct_parse_float("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
-  call oct_parse_float("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
-  call oct_parse_float("ConvRelEv",       M_ZERO, scf%conv_rel_ev)
+  call loct_parse_int   ("MaximumIter",        200, scf%max_iter)
+  call loct_parse_float("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
+  call loct_parse_float("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
+  call loct_parse_float("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
+  call loct_parse_float("ConvRelEv",       M_ZERO, scf%conv_rel_ev)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
@@ -74,7 +74,7 @@ subroutine scf_init(scf, sys, h)
 
   if(scf%max_iter <= 0) scf%max_iter = huge(scf%max_iter)
 
-  call oct_parse_int("What2Mix", 0, scf%what2mix)
+  call loct_parse_int("What2Mix", 0, scf%what2mix)
   select case (scf%what2mix)
   case (MIXDENS)
      message(1) = 'Info: SCF mixing the density.'
@@ -100,7 +100,7 @@ subroutine scf_init(scf, sys, h)
   call eigen_solver_init(scf%eigens, sys%st, sys%m)
 
   ! Should the calculation be restricted to LCAO subspace?
-  call oct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
+  call loct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
   if(scf%lcao_restricted) then
     message(1) = 'Info: SCF restricted to LCAO subspace'
     call write_info(1)
@@ -271,7 +271,7 @@ subroutine scf_write_static(dir, fname)
 
   integer :: iunit, i, j
 
-  call oct_mkdir(trim(dir))
+  call loct_mkdir(trim(dir))
   call io_assign(iunit)
   open(iunit, status='unknown', file=trim(dir)+"/"+trim(fname))
 

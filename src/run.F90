@@ -165,7 +165,7 @@ subroutine run()
       call scf_end(scfv)
 
     case(I_LCAO)
-      call oct_parse_logical("LCAOStart", .true., log)
+      call loct_parse_logical("LCAOStart", .true., log)
       do i = 1, sys%nspecies
           log = log .and. (.not.sys%specie(i)%local)
       enddo
@@ -314,7 +314,7 @@ subroutine run()
       ! just delete the pol file
       message(1) = 'Info: Starting static polarizability calculation'
       call write_info(1)
-      call oct_rm('tmp/restart.pol')
+      call loct_rm('tmp/restart.pol')
         
     case(I_POL_SCF)
       message(1) = 'Info: Calculating static polarizability'
@@ -365,7 +365,7 @@ end subroutine run
 subroutine run_init()
   ! initialize some stuff
 
-  call oct_parse_int('CalculationMode', 1, calc_mode)
+  call loct_parse_int('CalculationMode', 1, calc_mode)
   if( (calc_mode < 1 .or. calc_mode > 12) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = 1 <= start static calculation'

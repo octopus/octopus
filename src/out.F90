@@ -19,8 +19,8 @@
 
 module output
   use global
-  use liboct
-  use oct_parser
+  use lib_oct
+  use lib_oct_parser
   use io
   use units
   use mesh
@@ -68,12 +68,12 @@ subroutine output_init(outp)
   logical :: l
   character(len=80) :: owf
 
-  call oct_parse_logical("OutputKSPotential", .false., outp%what(output_potential))
-  call oct_parse_logical("OutputDensity",     .false., outp%what(output_density))
-  call oct_parse_logical("OutputWfs",         .false., outp%what(output_wfs))
-  call oct_parse_logical("OutputELF",         .false., outp%what(output_elf))
-  call oct_parse_logical("OutputGeometry",    .false., outp%what(output_geometry))
-  call oct_parse_logical("OutputWfsSqMod",    .false., outp%what(output_wfs_sqmod))
+  call loct_parse_logical("OutputKSPotential", .false., outp%what(output_potential))
+  call loct_parse_logical("OutputDensity",     .false., outp%what(output_density))
+  call loct_parse_logical("OutputWfs",         .false., outp%what(output_wfs))
+  call loct_parse_logical("OutputELF",         .false., outp%what(output_elf))
+  call loct_parse_logical("OutputGeometry",    .false., outp%what(output_geometry))
+  call loct_parse_logical("OutputWfsSqMod",    .false., outp%what(output_wfs_sqmod))
  
   outp%what(output_something) = .false.
   do i = 1, output_something - 1
@@ -81,30 +81,30 @@ subroutine output_init(outp)
   end do
 
   if(outp%what(output_wfs)) then
-    call oct_parse_string("OutputWfsNumber", "1-1024", owf)
-    call oct_wfs_list(owf, outp%wfs)
+    call loct_parse_string("OutputWfsNumber", "1-1024", owf)
+    call loct_wfs_list(owf, outp%wfs)
   end if
 
   if(outp%what(output_something)) then
     outp%how = 0
-    call oct_parse_logical("OutputAxisX", .false., l)
+    call loct_parse_logical("OutputAxisX", .false., l)
     if(l) outp%how = ior(outp%how, output_axis_x)
     if(conf%dim > 1) then
-      call oct_parse_logical("OutputAxisY", .false., l)
+      call loct_parse_logical("OutputAxisY", .false., l)
       if(l) outp%how = ior(outp%how, output_axis_y)
-      call oct_parse_logical("OutputPlaneZ", .false., l)
+      call loct_parse_logical("OutputPlaneZ", .false., l)
       if(l) outp%how = ior(outp%how, output_plane_z)
       if(conf%dim > 2) then
-        call oct_parse_logical("OutputAxisZ", .false., l)
+        call loct_parse_logical("OutputAxisZ", .false., l)
         if(l) outp%how = ior(outp%how, output_axis_z)
-        call oct_parse_logical("OutputPlaneX", .false., l)
+        call loct_parse_logical("OutputPlaneX", .false., l)
         if(l) outp%how = ior(outp%how, output_plane_x)
-        call oct_parse_logical("OutputPlaneY", .false., l)
+        call loct_parse_logical("OutputPlaneY", .false., l)
         if(l) outp%how = ior(outp%how, output_plane_y)
-        call oct_parse_logical("OutputDX", .false., l)
+        call loct_parse_logical("OutputDX", .false., l)
         if(l) outp%how = ior(outp%how, output_dx)
 #if defined(HAVE_NETCDF)
-        call oct_parse_logical("OutputNETCDF", .false., l)
+        call loct_parse_logical("OutputNETCDF", .false., l)
         if(l) outp%how = ior(outp%how, output_dx_cdf)
 #endif
       end if
@@ -113,9 +113,9 @@ subroutine output_init(outp)
   end if
   
   ! this is always needed in a time-dependent calculation
-  call oct_parse_int("OutputEvery", 1000, outp%iter)
+  call loct_parse_int("OutputEvery", 1000, outp%iter)
 
-  call oct_parse_logical("OutputDuringSCF", .false., outp%duringscf)
+  call loct_parse_logical("OutputDuringSCF", .false., outp%duringscf)
 end subroutine output_init
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

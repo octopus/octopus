@@ -19,7 +19,7 @@
 
 module mesh
 use global
-use oct_parser
+use lib_oct_parser
 use units
 use math
 use atom
@@ -87,7 +87,7 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_create(m, natoms, atom)
 
-  call oct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
+  call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
   if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
          "' is not a valid DoubleFFTParameter"
@@ -221,14 +221,14 @@ subroutine mesh_r(m, i, r, a, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
   FLOAT, intent(out) :: r
-  FLOAT, intent(in), optional :: a(conf%dim)
+  FLOAT, intent(in),  optional :: a(conf%dim)
   FLOAT, intent(out), optional :: x(conf%dim)
 
   FLOAT :: xx(conf%dim)
 
   call mesh_xyz(m, i, xx)
   if(present(a)) xx = xx - a
-  r = sqrt(dot_product(xx))
+  r = sqrt(dot_product(xx, xx))
 
   if(present(x)) x = xx
 end subroutine mesh_r

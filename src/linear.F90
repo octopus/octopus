@@ -19,9 +19,9 @@
 
 module linear
   use global
-  use liboct
+  use lib_oct
   use io
-  use linalg
+  use lib_alg
   use mesh
   use poisson
   use states
@@ -40,13 +40,13 @@ contains
     integer :: iunit, n_pairs, i, a, ia
 
     ! output
-    call oct_mkdir(trim(dir))
+    call loct_mkdir(trim(dir))
 
     ! get occupied/unoccupied pairs
     call fix_pairs()
     
     if(type == 0.or.type == 1) then ! eigenvalues or petersilka formula
-      call oct_progress_bar(-1, n_pairs) ! initialize bar
+      call loct_progress_bar(-1, n_pairs) ! initialize bar
 
       do ia = 1, n_pairs
         a = pair_a(ia)
@@ -61,7 +61,7 @@ contains
         energies(ia, 2:4) = M_TWO * (energies(ia, 2:4))**2 * &
              (st%eigenval(a, 1) - st%eigenval(i, 1))
 
-        call oct_progress_bar(ia-1, n_pairs-1)
+        call loct_progress_bar(ia-1, n_pairs-1)
       end do
 
     else if(type == 2) then ! solve full matrix
@@ -101,7 +101,7 @@ contains
 
       max = n_pairs*(1 + n_pairs)/2 - 1
       actual = 0
-      call oct_progress_bar(-1, max)
+      call loct_progress_bar(-1, max)
       do ia = 1, n_pairs
         i = pair_i(ia)
         a = pair_a(ia)
@@ -114,7 +114,7 @@ contains
           if(jb /= ia) mat(jb, ia) = mat(ia, jb) ! the matrix is symmetric
 
           actual = actual + 1
-          call oct_progress_bar(actual, max)
+          call loct_progress_bar(actual, max)
         end do
 
         temp = st%eigenval(a, 1) - st%eigenval(i, 1)
