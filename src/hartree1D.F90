@@ -1,8 +1,8 @@
 #include "config.h"
 
 module hartree
-use liboct
 use global
+use liboct
 use mesh
 use math
 #ifdef HAVE_FFTW
@@ -53,6 +53,54 @@ subroutine hartree_init(h, m)
   case(1)
     message(1) = 'Info: Using conjugated gradients method to solve poisson equation'
     call write_info(1)
+    
+!!$#ifdef HAVE_FFTW
+!!$  case(3) ! setup spherical ffts
+!!$    h%alpha = fdf_double('PoissonSolverParameter', 2.0_r8)
+!!$    if (h%alpha < 1.0_r8 .or. h%alpha > 3.0_r8 ) then
+!!$      write(message(1), '(a,f12.5,a)') "Input: '", h%alpha, &
+!!$           "' is not a valid PoissonSolverParameter"
+!!$      message(2) = '1.0 <= PoissonSolverParameter <= 3.0'
+!!$      call write_fatal(2)
+!!$    end if
+!!$
+!!$    h%nnx = nint(h%alpha*m%nr)
+!!$    h%n = 2*h%nnx
+!!$
+!!$    message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff'
+!!$    write(message(2), '(6x,a,i4,a,i4,a,i4,a)') 'box size = (', h%n, ',', h%n, ',',h%n,')'
+!!$    write(message(3), '(6x,a,f12.5)') 'alpha = ', h%alpha
+!!$    call write_info(3)
+!!$
+!!$    allocate(h%ff(h%n/2 + 1, h%n, h%n))
+!!$    h%ff = 0.0_r8
+!!$
+!!$    l = h%n*m%h
+!!$    r_0 = l/2.0_r8
+!!$    temp = 2.0_r8*M_PI/l
+!!$      
+!!$    do ix = 1, h%n/2 + 1
+!!$      do iy = 1, h%n
+!!$        do iz = 1, h%n
+!!$          ixx = pad_feq(ix, h%n, .true.)
+!!$          iyy = pad_feq(iy, h%n, .true.)
+!!$          izz = pad_feq(iz, h%n, .true.)
+!!$          vec = temp * sqrt(real(ixx**2 + iyy**2 + izz**2, r8) )
+!!$
+!!$          if(vec.ne.0.0_r8) then
+!!$            h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
+!!$          else
+!!$            h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+!!$          end if
+!!$        end do
+!!$      end do
+!!$    end do
+!!$      
+!!$    call rfftw3d_f77_create_plan(h%planf, h%n, h%n, h%n, &
+!!$         fftw_forward, fftw_measure + fftw_threadsafe)
+!!$    call rfftw3d_f77_create_plan(h%planb, h%n, h%n, h%n, &
+!!$         fftw_backward, fftw_measure + fftw_threadsafe)
+!!$#endif
   end select
 
   call pop_sub()
@@ -66,6 +114,14 @@ subroutine hartree_end(h)
 
   select case(h%solver)
   case(1)
+!!$#ifdef HAVE_FFTW
+!!$  case(3)
+!!$    if(associated(h%ff)) then ! has been allocated => destroy
+!!$      deallocate(h%ff); nullify(h%ff)
+!!$      call fftw_f77_destroy_plan(h%planb)
+!!$      call fftw_f77_destroy_plan(h%planf)
+!!$    end if
+!!$#endif
   end select
 
   call pop_sub()
@@ -83,6 +139,12 @@ subroutine hartree_solve(h, m, pot, dist)
   select case(h%solver)
   case(1)
     call hartree_cg(h, m, pot, dist)
+
+!!$#ifdef HAVE_FFTW
+!!$  case(3)
+!!$    call hartree_cut_sp(h, m, pot, dist)
+!!$#endif
+
   case default
     message(1) = "Hartree structure not initialized"
     call write_fatal(1)
@@ -219,5 +281,47 @@ subroutine hartree_cg(h, m, pot, dist)
   call pop_sub()
   return
 end subroutine hartree_cg
+
+!!$#ifdef HAVE_FFTW
+!!$subroutine hartree_cut_sp(h, m, pot, dist)
+!!$  type(hartree_type), intent(IN) :: h
+!!$  type(mesh_type), intent(IN) :: m
+!!$  real(r8), dimension(:), intent(out) :: pot
+!!$  real(r8), dimension(:,:), intent(IN) :: dist
+!!$
+!!$  integer i, ix, iy, iz
+!!$  real(r8), allocatable :: f(:,:,:)
+!!$  complex(r8), allocatable :: gg(:,:,:)
+!!$
+!!$  sub_name = 'hartree_cut_sp'; call push_sub()
+!!$
+!!$  allocate(f(h%n, h%n, h%n), gg(h%n/2 + 1, h%n, h%n))
+!!$  f = 0.0_8
+!!$
+!!$  do i = 1, m%np
+!!$     ix = m%Lx(i) + h%nnx + 1
+!!$     iy = m%Ly(i) + h%nnx + 1
+!!$     iz = m%Lz(i) + h%nnx + 1
+!!$     f(ix, iy, iz) = sum(dist(i,:))
+!!$  enddo
+!!$
+!!$! Fourier transform the charge density
+!!$  call rfft3d(f, gg, h%n, h%n, h%n, h%planf, fftw_forward)
+!!$  gg = gg*h%ff
+!!$  call rfft3d(f, gg, h%n, h%n, h%n, h%planb, fftw_backward)
+!!$
+!!$  do i = 1, m%np
+!!$     ix = m%Lx(i) + h%nnx + 1
+!!$     iy = m%Ly(i) + h%nnx + 1
+!!$     iz = m%Lz(i) + h%nnx + 1
+!!$     pot(i) = f(ix, iy, iz)
+!!$  enddo
+!!$
+!!$  deallocate(f, gg)
+!!$
+!!$  call pop_sub()
+!!$  return
+!!$end subroutine hartree_cut_sp
+!!$#endif
 
 end module hartree

@@ -44,6 +44,12 @@ subroutine hartree_init(h, m)
     message(2) = 'PoissonSolver = 1(cg) | 3(fft)'
     call write_fatal(2)
   end if
+  if(h%solver.eq.3 .and. m%box_shape.eq.4 ) then
+    write(message(1), '(a,i2,a)') "Input: '", h%solver, &
+         "' is not a valid PoissonSolver when parallelpiped box-shape is used."
+    message(2) = 'PoissonSolver = 1(cg)'
+    call write_fatal(2)
+  end if
 
   select case(h%solver)
   case(1)
@@ -55,20 +61,20 @@ subroutine hartree_init(h, m)
     message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff'
     call write_info(1)
 
-    allocate(h%ff(m%hfft_n2, m%fft_n2, m%fft_n2))
+    allocate(h%ff(m%hfft_n2, m%fft_n2(1), m%fft_n2(1)))
     h%ff = 0.0_r8
 
-    l = m%fft_n2*m%h
+    l = m%fft_n2(1)*m%h(1)
     r_0 = l/2.0_r8
     temp = 2.0_r8*M_PI/l
       
     do ix = 1, m%hfft_n2
-      do iy = 1, m%fft_n2
-        do iz = 1, m%fft_n2
-          ixx = pad_feq(ix, m%fft_n2, .true.)
-          iyy = pad_feq(iy, m%fft_n2, .true.)
-          izz = pad_feq(iz, m%fft_n2, .true.)
-          vec = temp * sqrt(real(ixx**2 + iyy**2 + izz**2, r8) )
+      do iy = 1, m%fft_n2(1)
+        do iz = 1, m%fft_n2(1)
+          ixx = pad_feq(ix, m%fft_n2(1), .true.)
+          iyy = pad_feq(iy, m%fft_n2(1), .true.)
+          izz = pad_feq(iz, m%fft_n2(1), .true.)
+          vec = temp*sqrt(real(ixx**2 + iyy**2 + izz**2, r8))
 
           if(vec.ne.0.0_r8) then
             h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
@@ -169,11 +175,11 @@ subroutine hartree_cg(h, m, pot, dist)
   end do
   rholm = rholm*m%vol_pp
 
-  allocate(wk(-m%nx:m%nx, -m%nx:m%nx, -m%nx:m%nx))
+  allocate(wk(-m%nx(1):m%nx(1), -m%nx(2):m%nx(2), -m%nx(3):m%nx(3)))
 
   wk = 0.0d0
   do i = 1, m%nk
-    x(1) = m%kx(i)*m%H; x(2) = m%ky(i)*m%H; x(3) = m%kz(i)*m%H
+    x(1) = m%kx(i)*m%H(1); x(2) = m%ky(i)*m%H(2); x(3) = m%kz(i)*m%H(3)
     r = sqrt(sum(x**2)) + 1e-50_r8
 
     add_lm = 1
@@ -198,12 +204,13 @@ subroutine hartree_cg(h, m, pot, dist)
   ! should not this call derivatives?
   do i = 1, m%np
     ix = m%Lx(i); iy = m%Ly(i); iz = m%Lz(i)
-    zk(i) = zk(i) - 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)/m%h**2
+    !zk(i) = zk(i) - 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)/m%h**2
+    zk(i) = zk(i) - m%d%dlidfj(0)*wk(ix,iy,iz)*(1/m%h(1)**2+1/m%h(2)**2+1/m%h(3)**2)
     do j = 1, m%d%norder
       zk(i) = zk(i) -  m%d%dlidfj(j)*(  &
-          wk(ix+j, iy, iz) + wk(ix-j, iy, iz) + &
-          wk(ix, iy+j, iz) + wk(ix, iy-j, iz) + &
-          wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h**2
+          (wk(ix+j, iy, iz) + wk(ix-j, iy, iz))/m%h(1)**2 + &
+          (wk(ix, iy+j, iz) + wk(ix, iy-j, iz))/m%h(2)**2 + &
+          (wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h(3)**2 )
     end do
   end do
 
@@ -220,14 +227,15 @@ subroutine hartree_cg(h, m, pot, dist)
     ! again the laplacian of wk -> tk
     do i = 1, m%np
       ix = m%Lx(i); iy = m%Ly(i); iz = m%Lz(i)
-      tk(i) = 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)
+      !tk(i) = 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)
+      tk(i) = m%d%dlidfj(0)*wk(ix,iy,iz)*(1/m%h(1)**2+1/m%h(2)**2+1/m%h(3)**2)
       do j = 1, m%d%norder
         tk(i) = tk(i) + m%d%dlidfj(j)*( &
-            wk(ix+j, iy, iz) + wk(ix-j, iy, iz) + &
-            wk(ix, iy+j, iz) + wk(ix, iy-j, iz) + &
-            wk(ix, iy, iz+j) + wk(ix, iy, iz-j))
+            (wk(ix+j, iy, iz) + wk(ix-j, iy, iz))/m%h(1)**2 + &
+            (wk(ix, iy+j, iz) + wk(ix, iy-j, iz))/m%h(2)**2 + &
+            (wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h(3)**2 )
       enddo
-      tk(i) = tk(i) /m%h**2
+      !tk(i) = tk(i) /m%h**2
     enddo
 
     s2 = dmesh_dotp(m, zk, tk)
@@ -271,7 +279,7 @@ subroutine hartree_cut_sp(h, m, pot, dist)
 
   sub_name = 'hartree_cut_sp'; call push_sub()
 
-  allocate(f(m%fft_n2, m%fft_n2, m%fft_n2), gg(m%hfft_n2, m%fft_n2, m%fft_n2))
+  allocate(f(m%fft_n2(1), m%fft_n2(1), m%fft_n2(1)), gg(m%hfft_n2, m%fft_n2(1), m%fft_n2(1)))
   f = 0.0_8
 
   do i = 1, m%np
@@ -282,9 +290,9 @@ subroutine hartree_cut_sp(h, m, pot, dist)
   enddo
 
 ! Fourier transform the charge density
-  call rfft3d(f, gg, m%fft_n2, m%fft_n2, m%fft_n2, m%dplanf2, fftw_forward)
+  call rfft3d(f, gg, m%fft_n2(1), m%fft_n2(1), m%fft_n2(1), m%dplanf2, fftw_forward)
   gg = gg*h%ff
-  call rfft3d(f, gg, m%fft_n2, m%fft_n2, m%fft_n2, m%dplanb2, fftw_backward)
+  call rfft3d(f, gg, m%fft_n2(1), m%fft_n2(1), m%fft_n2(1), m%dplanb2, fftw_backward)
 
   do i = 1, m%np
      ix = m%Lx(i) + m%hfft_n2

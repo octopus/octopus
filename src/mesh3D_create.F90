@@ -17,11 +17,12 @@ subroutine mesh3D_create(m, natoms, atom)
 
   sub_name = 'mesh3D_create'; call push_sub()
 
+  ! Read box shape.
   call oct_parse_int(C_string('Box_shape'), SPHERE, m%box_shape)
-  if (m%box_shape>3 .or. m%box_shape<1) then
+  if (m%box_shape>4 .or. m%box_shape<1) then
     write(err, *) m%box_shape
     message(1) = "Input: '"//trim(err)//"' is not a valid Box_Shape"
-    message(2) = '(1 <= Box_Shape <= 3)'
+    message(2) = '(1 <= Box_Shape <= 4)'
     call write_fatal(2)
   end if
   if(m%box_shape == MINIMUM .and. (.not.present(natoms) .or. .not.present(atom))) then
@@ -29,50 +30,87 @@ subroutine mesh3D_create(m, natoms, atom)
     call write_fatal(1)
   endif
 
-  call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h)
-  m%h = m%h * units_inp%length%factor
-  if (m%h<0.01_r8 .or. m%h>2.0_r8) then
-    write(err, *) m%h
-    message(1) = "Input: '"//trim(err)//"' is not a valid spacing"
-    message(2) = '(0.01 <= Spacing [b] <= 2)'
-    call write_fatal(2)
-  end if
-  m%vol_pp = m%h**3
+  ! Read the grid spacing.
+  select case(m%box_shape)
+  case(SPHERE, CILINDER, MINIMUM)
+    call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h(1))
+    m%h(1) = m%h(1)*units_inp%length%factor 
+    m%h(2) = m%h(1); m%h(3) = m%h(1)
+  case(PARALLELPIPED)
+    call oct_parse_block_double(C_string('spacing'), 0, 0, m%h(1))
+    call oct_parse_block_double(C_string('spacing'), 0, 1, m%h(2))
+    call oct_parse_block_double(C_string('spacing'), 0, 2, m%h(3))
+    m%h = m%h*units_inp%length%factor
+  end select
+  m%vol_pp = m%h(1)*m%h(2)*m%h(3)
+  if (minval(m%h)<0.01_r8 .or. maxval(m%h)>2.0_r8) then
+      write(err, '(a,f10.5,a,f10.5,a,f10.5,a)') '(',m%h(1),',',m%h(2),',',m%h(3),')'
+      message(1) = "Input: '"//trim(err)//"' is not a valid spacing"
+      message(2) = '(0.01 <= Spacing [b] <= 2)'
+      call write_fatal(2)
+  end if    
 
-  call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
-  m%rsize = m%rsize * units_inp%length%factor
-  if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
-    write(err, *) m%rsize
-    message(1) = "Input: '"//trim(err)//"' is not a valid radius"
-    message(2) = '(1 <= radius [b] <= 500)'
-    call write_fatal(2)
+  ! Read the box size.
+  if(m%box_shape == SPHERE .or. m%box_shape == CILINDER .or. m%box_shape == MINIMUM) then
+    call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
+    m%rsize = m%rsize * units_inp%length%factor
+    if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
+      write(err, *) m%rsize
+      message(1) = "Input: '"//trim(err)//"' is not a valid radius"
+      message(2) = '(1 <= radius [b] <= 500)'
+      call write_fatal(2)
+    end if
   end if
-
-  ! this is sometimes required, so we always read....
-  call oct_parse_double(C_string('zlength'), 1.0_r8/units_inp%length%factor, m%zsize)
-  m%zsize = m%zsize * units_inp%length%factor
-  if(m%zsize<1.0_r8 .or. m%zsize>500.0_r8) then
-    write(err, *) m%zsize
-    message(1) = "Input: '"//trim(err)//"' is not a valid zlength"
-    message(2) = '(1 <= zlength [b] <= 500)'
-    call write_fatal(2)
-  end if
+  if(m%box_shape == CILINDER) then
+    call oct_parse_double(C_string('zlength'), 1.0_r8/units_inp%length%factor, m%zsize)
+    m%zsize = m%zsize * units_inp%length%factor
+    if(m%zsize<1.0_r8 .or. m%zsize>500.0_r8) then
+      write(err, *) m%zsize
+      message(1) = "Input: '"//trim(err)//"' is not a valid zlength"
+      message(2) = '(1 <= zlength [b] <= 500)'
+      call write_fatal(2)
+    end if
+  endif
+  if(m%box_shape == PARALLELPIPED) then
+    call oct_parse_block_double(C_string('lsize'), 0, 0, m%lsize(1))
+    call oct_parse_block_double(C_string('lsize'), 0, 1, m%lsize(2))
+    call oct_parse_block_double(C_string('lsize'), 0, 2, m%lsize(3))
+    m%lsize = m%lsize*units_inp%length%factor
+    if(minval(m%lsize)<1.0_r8 .or. maxval(m%lsize)>500.0_r8) then
+      write(err, '(a,f10.5,a,f10.5,a,f10.5,a)') '(',m%lsize(1),',',m%lsize(2),',',m%lsize(3),')'
+      message(1) = "Input: '"//trim(err)//"' is not a valid zlength"
+      message(2) = '(1 <= lsize [b] <= 500)'
+      call write_fatal(2)
+    end if
+  endif
 
   ! set nr and nx
-  m%nr = max(int(m%rsize/m%h), int(m%zsize/m%h))
-  m%nx = m%nr + m%d%norder
+  select case(m%box_shape)
+  case(SPHERE)
+    m%nr(1:3) = int(m%rsize/m%h(1))
+  case(CILINDER)
+    m%nr(1:3) = max(int(m%rsize/m%h(1)), int(m%zsize/m%h(1)))
+  case(MINIMUM)
+    message(1) = 'MINIMUM cage not correctly implemented. Sorry.'
+    call write_fatal(1)
+  case(PARALLELPIPED)
+    do ix=1, 3
+       m%nr(ix) = int((m%lsize(ix)/2.0_r8)/m%h(ix))
+    enddo
+  end select
+  m%nx(1:3) = m%nr(1:3) + m%d%norder
 
   ! allocate the xyz arrays
-  allocate(m%Lxyz_inv(-m%Nx:m%Nx,-m%Nx:m%Nx,-m%Nx:m%Nx))
-  allocate(Lxyz(-m%Nx:m%Nx,-m%Nx:m%Nx,-m%Nx:m%Nx))
+  allocate(m%Lxyz_inv(-m%Nx(1):m%Nx(1),-m%Nx(2):m%Nx(2),-m%Nx(3):m%Nx(3)))
+  allocate(Lxyz(-m%Nx(1):m%Nx(1),-m%Nx(2):m%Nx(2),-m%Nx(3):m%Nx(3)))
   m%Lxyz_inv = 0
   Lxyz = 0
 
   ! We label 1 the points inside the inner mesh
   ! and 2 for the points in the outer mesh
-  do ix = -m%nr, m%nr
-    do iy = -m%nr, m%nr
-      do iz = -m%nr, m%nr
+  do ix = -m%nr(1), m%nr(1)
+    do iy = -m%nr(2), m%nr(2)
+      do iz = -m%nr(3), m%nr(3)
         select case(m%box_shape)
         case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
@@ -80,6 +118,8 @@ subroutine mesh3D_create(m, natoms, atom)
           b = in_cilinder(m, ix, iy, iz)
         case(MINIMUM)
           b = in_atom(m, ix, iy, iz, natoms, atom)
+        case(PARALLELPIPED)
+          b = .true.
         end select
         
         if(b) then
@@ -91,9 +131,9 @@ subroutine mesh3D_create(m, natoms, atom)
     enddo
   enddo
 
-  do ix = -m%nr, m%nr
-    do iy = -m%nr, m%nr
-      do iz = -m%nr, m%nr
+  do ix = -m%nr(1), m%nr(1)
+    do iy = -m%nr(2), m%nr(2)
+      do iz = -m%nr(3), m%nr(3)
         select case(m%box_shape)
         case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
@@ -101,6 +141,8 @@ subroutine mesh3D_create(m, natoms, atom)
           b = in_cilinder(m, ix, iy, iz)
         case(MINIMUM)
           b = in_atom(m, ix, iy, iz, natoms, atom)
+        case(PARALLELPIPED)
+          b = .true.
         end select
         
         if(b) then
@@ -113,9 +155,9 @@ subroutine mesh3D_create(m, natoms, atom)
   ! now, we count the number of internal and external points
   il=0
   ik=0
-  do ix = -m%Nx, m%Nx
-    do iy = -m%Nx, m%Nx
-      do iz = -m%Nx, m%Nx
+  do ix = -m%Nx(1), m%Nx(1)
+    do iy = -m%Nx(2), m%Nx(2)
+      do iz = -m%Nx(3), m%Nx(3)
         if(Lxyz(ix, iy, iz) == 1) il = il + 1
         if(Lxyz(ix, iy, iz) == 2) ik = ik + 1
       enddo
@@ -129,9 +171,9 @@ subroutine mesh3D_create(m, natoms, atom)
 
   il=0
   ik=0
-  do ix = -m%Nx, m%Nx
-    do iy = -m%Nx, m%Nx
-      do iz = -m%Nx, m%Nx
+  do ix = -m%Nx(1), m%Nx(1)
+    do iy = -m%Nx(2), m%Nx(2)
+      do iz = -m%Nx(3), m%Nx(3)
         if(Lxyz(ix,iy,iz) == 1) then
           il = il + 1
           m%Lx(il) = ix
@@ -151,8 +193,6 @@ subroutine mesh3D_create(m, natoms, atom)
 
   deallocate(Lxyz); nullify(Lxyz)
 
-  message(1) = "Info: Mesh parameters"
-  call write_info(1)
   call mesh_write_info(m, stdout)
 
   call pop_sub()
@@ -167,7 +207,7 @@ contains
     type(mesh_type), intent(IN) :: m
     integer, intent(in) :: ix, iy, iz
     
-    in_sphere = (sqrt(real(ix**2+iy**2+iz**2,r8))*m%H <= m%rsize)
+    in_sphere = (sqrt(real(ix**2+iy**2+iz**2,r8))*m%H(1) <= m%rsize)
     return
   end function in_sphere
   
@@ -176,8 +216,8 @@ contains
     integer, intent(in) :: ix, iy, iz
     
     real(r8) r, z
-    r = sqrt(real(ix**2+iy**2, r8))*m%h
-    z = iz*m%H
+    r = sqrt(real(ix**2+iy**2, r8))*m%h(1)
+    z = iz*m%H(3)
     
     in_cilinder = (r<=m%rsize .and. abs(z)<=m%zsize)
     return
@@ -194,8 +234,8 @@ contains
     
     in_atom = .false.
     do i = 1, natoms
-      r = sqrt((ix*m%H - atom(i)%x(1))**2 + (iy*m%H - atom(i)%x(2))**2&
-           + (iz*m%H - atom(i)%x(3))**2)
+      r = sqrt((ix*m%H(1) - atom(i)%x(1))**2 + (iy*m%H(1) - atom(i)%x(2))**2&
+           + (iz*m%H(1) - atom(i)%x(3))**2)
       if(r <= m%rsize) then
         in_atom = .true.
         exit
@@ -204,4 +244,5 @@ contains
 
     return
   end function in_atom
+
 end subroutine mesh3D_create

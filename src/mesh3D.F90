@@ -2,7 +2,6 @@
 
 module mesh
 use global
-use liboct
 use units
 use fft
 use atom
@@ -16,7 +15,8 @@ integer, parameter ::     &
 integer, parameter :: &
      SPHERE   = 1,    &
      CILINDER = 2,    &
-     MINIMUM  = 3
+     MINIMUM  = 3,    &
+     PARALLELPIPED = 4
 
 type mesh_derivatives_type
   integer :: space ! 0 for FD, 1 for reciprocal-space
@@ -28,11 +28,13 @@ type mesh_derivatives_type
 end type mesh_derivatives_type
 
 type mesh_type
-  integer  :: box_shape ! 1->sphere, 2->cilinder, 3->sphere around each atom
-  real(r8) :: h         ! the (constant) spacing between the points
+  integer  :: box_shape ! 1->sphere, 2->cilinder, 3->sphere around each atom,
+                        ! 4->parallelpiped (orthonormal, up to now).
+  real(r8) :: h(3)      ! the (constant) spacing between the points
   
   real(r8) :: rsize     ! the radius of the sphere or of the cilinder
   real(r8) :: zsize     ! the length of the cilinder in the z direction
+  real(r8) :: lsize(3)  ! the lengths of the parallelpipeds in each direction.
   
   integer  :: np        ! number of points in inner mesh
   real(r8) :: vol_pp    ! element of volume for integrations
@@ -48,16 +50,15 @@ type mesh_type
   integer, pointer :: Kx(:), Ky(:), Kz(:)
 
   ! some other vars
-  integer :: nr  ! number of points per radius inside
-  integer :: nx  ! the # of points in the whole radius
-                 ! (rsize/h) + norder
+  integer :: nr(3)  ! number of points per radius inside
+  integer :: nx(3)  ! the # of points in the whole radius
 
   type(mesh_derivatives_type) :: d
 
-  integer :: fft_n, hfft_n ! we always want to perform FFTs ;)
+  integer :: fft_n(3), hfft_n ! we always want to perform FFTs ;)
   integer(POINTER_SIZE) :: dplanf, dplanb, zplanf, zplanb
   real(r8) :: fft_alpha
-  integer :: fft_n2, hfft_n2
+  integer :: fft_n2(3), hfft_n2
   integer(POINTER_SIZE) :: dplanf2, dplanb2
 end type mesh_type
 
@@ -105,9 +106,11 @@ subroutine mesh_init(m, natoms, atom)
   call mesh3D_create(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
-  ! so we define the sizes of the cubes used
-  m%fft_n  = 2*m%nr + 2
-  m%hfft_n = m%fft_n/2 + 1
+  ! once again the overhead is small
+  do i=1, 3
+     m%fft_n(i)  = 2*m%nr(i) + 2
+  enddo
+  m%hfft_n = m%fft_n(1)/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
 
   call oct_parse_double(C_string('DoubleFFTParameter'), 2.0_r8, m%fft_alpha)
@@ -117,8 +120,16 @@ subroutine mesh_init(m, natoms, atom)
     message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
     call write_fatal(2)
   end if
-  m%fft_n2  = 2*nint(m%fft_alpha*m%nr) + 2
-  m%hfft_n2 = m%fft_n2/2 + 1
+
+  do i=1, 3
+     m%fft_n2(i)  = 2*nint(m%fft_alpha*m%nr(i)) + 2
+  enddo
+  ! I think this should be:
+  !do i=1, 3
+  !   m%fft_n2(i)  = 2*nint(m%fft_alpha*maxval(m%nr)) + 2
+  !enddo
+  ! But I will leave if for the moment.
+  m%hfft_n2 = m%fft_n2(1)/2 + 1
   m%dplanf2 = int(-1, POINTER_SIZE)
 
   call oct_parse_int(C_string('DerivativesSpace'), REAL_SPACE, m%d%space)
@@ -142,6 +153,7 @@ subroutine mesh_init(m, natoms, atom)
   call pop_sub()
 end subroutine mesh_init
 
+
 subroutine mesh_alloc_ffts(m, i)
   type(mesh_type), intent(inout) :: m
   integer, intent(in) :: i
@@ -149,28 +161,31 @@ subroutine mesh_alloc_ffts(m, i)
   sub_name = 'mesh_alloc_ffts'; call push_sub()
 
   if(i == 1 .and. m%dplanf == int(-1, POINTER_SIZE)) then
-    call rfftw3d_f77_create_plan(m%dplanf, m%fft_n, m%fft_n, m%fft_n, &
+    call rfftw3d_f77_create_plan(m%dplanf, m%fft_n(1), m%fft_n(2), m%fft_n(3), &
          fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)
-    call rfftw3d_f77_create_plan(m%dplanb, m%fft_n, m%fft_n, m%fft_n, &
+    call rfftw3d_f77_create_plan(m%dplanb, m%fft_n(1), m%fft_n(2), m%fft_n(3), &
          fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
-    call  fftw3d_f77_create_plan(m%zplanf, m%fft_n, m%fft_n, m%fft_n, &
+    call  fftw3d_f77_create_plan(m%zplanf, m%fft_n(1), m%fft_n(2), m%fft_n(3), &
          fftw_forward,  fftw_measure + fftw_threadsafe)
-    call  fftw3d_f77_create_plan(m%zplanb, m%fft_n, m%fft_n, m%fft_n, &
+    call  fftw3d_f77_create_plan(m%zplanb, m%fft_n(1), m%fft_n(2), m%fft_n(3), &
          fftw_backward, fftw_measure + fftw_threadsafe) 
   else if(i == 2 .and. m%dplanf2 == int(-1, POINTER_SIZE)) then
     message(1) = "Info: FFTs used in a double box (for poisson | local potential)"
-    write(message(2), '(6x,a,i4,a,i4,a,i4,a)') 'box size = (', m%fft_n2, ',', m%fft_n2, ',',m%fft_n2,')'
+    write(message(2), '(6x,a,i4,a,i4,a,i4,a)') &
+          'box size = (', m%fft_n2(1), ',', m%fft_n2(2), ',',m%fft_n2(3),')'
     write(message(3), '(6x,a,f12.5)') 'alpha = ', m%fft_alpha
     call write_info(3)
 
-    call rfftw3d_f77_create_plan(m%dplanf2, m%fft_n2, m%fft_n2, m%fft_n2, &
+    call rfftw3d_f77_create_plan(m%dplanf2, m%fft_n2(1), m%fft_n2(2), m%fft_n2(3), &
          fftw_forward, fftw_measure + fftw_threadsafe)
-    call rfftw3d_f77_create_plan(m%dplanb2, m%fft_n2, m%fft_n2, m%fft_n2, &
+    call rfftw3d_f77_create_plan(m%dplanb2, m%fft_n2(1), m%fft_n2(2), m%fft_n2(3), &
          fftw_backward, fftw_measure + fftw_threadsafe)
   end if
 
   call pop_sub()
 end subroutine mesh_alloc_ffts
+
+
 
 ! Deallocates what has to be deallocated ;)
 subroutine mesh_end(m)
@@ -218,16 +233,28 @@ subroutine mesh_write_info(m, unit)
 
   sub_name = 'mesh_write_info'; call push_sub()
 
-  write(message(1), '(a,a,1x,3a,f7.3)') '  Type = ', bs(m%box_shape), &
+  if(m%box_shape == SPHERE .or. m%box_shape == CILINDER  .or. m%box_shape == MINIMUM) then
+    write(message(1), '(a,a,1x,3a,f7.3)') '  Type = ', bs(m%box_shape), &
        ' Radius [', trim(units_out%length%abbrev), '] = ', m%rsize/units_out%length%factor
-  if(m%box_shape == 2) then
+  endif
+  if(m%box_shape == CILINDER) then
     write(message(1), '(a,3a,f7.3)') trim(message(1)), ', zlength [', &
          trim(units_out%length%abbrev), '] = ', m%zsize/units_out%length%factor
   end if
-  write(message(2),'(3a, f6.3, 1x, 3a, f8.5)') &
-       '  Spacing [', trim(units_out%length%abbrev), '] = ', m%h/units_out%length%factor, &
+  if(m%box_shape == PARALLELPIPED) then
+    write(message(1),'(3a, a, f6.3, a, f6.3, a, f6.3, a)') &
+       '  Lengths [', trim(units_out%length%abbrev), '] = ',         &
+       '(', m%lsize(1)/units_out%length%factor, ',',                     &
+            m%lsize(2)/units_out%length%factor, ',',                     &
+            m%lsize(3)/units_out%length%factor, ')'
+  endif
+  write(message(2),'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)') &
+       '  Spacing [', trim(units_out%length%abbrev), '] = ',         &
+       '(', m%h(1)/units_out%length%factor, ',',                     &
+            m%h(2)/units_out%length%factor, ',',                     &
+            m%h(3)/units_out%length%factor, ')',                     &
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ', &
-       (m%h/units_out%length%factor)**3
+       (m%h(1)*m%h(2)*m%h(3))/units_out%length%factor**3
   write(message(3),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
       '   # outer mesh = ', m%nk
 
@@ -243,9 +270,9 @@ subroutine mesh_xyz(m, i, x)
   integer, intent(in) :: i
   real(r8), intent(out) :: x(3)
 
-  x(1) = m%Lx(i)*m%H
-  x(2) = m%Ly(i)*m%H
-  x(3) = m%Lz(i)*m%H
+  x(1) = m%Lx(i)*m%H(1)
+  x(2) = m%Ly(i)*m%H(2)
+  x(3) = m%Lz(i)*m%H(3)
 end subroutine mesh_xyz
 
 subroutine mesh_x(m, i, x)
@@ -253,7 +280,7 @@ subroutine mesh_x(m, i, x)
   integer, intent(in) :: i
   real(r8), intent(out) :: x
 
-  x = m%Lx(i)*m%H
+  x = m%Lx(i)*m%H(1)
 end subroutine mesh_x
 
 subroutine mesh_y(m, i, y)
@@ -261,7 +288,7 @@ subroutine mesh_y(m, i, y)
   integer, intent(in) :: i
   real(r8), intent(out) :: y
 
-  y = m%Ly(i)*m%H
+  y = m%Ly(i)*m%H(2)
 end subroutine mesh_y
 
 subroutine mesh_z(m, i, z)
@@ -269,7 +296,7 @@ subroutine mesh_z(m, i, z)
   integer, intent(in) :: i
   real(r8), intent(out) :: z
 
-  z = m%Lz(i)*m%H
+  z = m%Lz(i)*m%H(3)
 end subroutine mesh_z
 
 subroutine mesh_r(m, i, r, a, x)

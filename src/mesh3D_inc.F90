@@ -23,41 +23,41 @@ end function R_FUNC(mesh_nrm2)
 subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube, t)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN)    :: f_mesh(m%np)
-  R_TYPE, intent(inout) :: f_cube(:,:,:)
+  R_TYPE, intent(inout) :: f_cube(:, :, :)
   integer, intent(in), optional :: t
   
-  integer :: i, ix, iy, iz, n
+  integer :: i, ix, iy, iz, n(3)
 
-  n = m%hfft_n
+  n(1:3) = m%fft_n(1:3)/2+1
   if(present(t)) then
-    if(t == 2) n = m%hfft_n2
+    if(t == 2) n(1:3) = m%fft_n2(1:3)/2+1
   end if
-  
+ 
   do i = 1, m%np
-    ix = m%lx(i) + n
-    iy = m%Ly(i) + n
-    iz = m%Lz(i) + n
+    ix = m%lx(i) + n(1)
+    iy = m%Ly(i) + n(2)
+    iz = m%Lz(i) + n(3)
     f_cube(ix, iy, iz) = f_cube(ix, iy, iz) + f_mesh(i)
   end do
 end subroutine R_FUNC(mesh_to_cube)
 
 subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)    :: f_cube(:,:,:)
+  R_TYPE, intent(IN)    :: f_cube(:, :, :)
   R_TYPE, intent(inout) :: f_mesh(m%np)
   integer, intent(in), optional :: t
-  
-  integer :: i, ix, iy, iz, n
 
-  n = m%hfft_n
+  integer :: i, ix, iy, iz, n(3)
+
+  n(1:3) = m%fft_n(1:3)/2+1
   if(present(t)) then
-    if(t == 2) n = m%hfft_n2
+    if(t == 2) n(1:3) = m%fft_n2(1:3)/2+1
   end if
 
   do i = 1, m%np
-    ix = m%lx(i) + n
-    iy = m%Ly(i) + n
-    iz = m%Lz(i) + n
+    ix = m%lx(i) + n(1)
+    iy = m%Ly(i) + n(2)
+    iz = m%Lz(i) + n(3)
     f_mesh(i) = f_mesh(i) + f_cube(ix, iy, iz) 
   end do
 end subroutine R_FUNC(cube_to_mesh)
@@ -93,17 +93,19 @@ contains
     R_TYPE, allocatable :: fr(:,:,:)
     complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
     
-    integer :: n, nx, i, j, ix, iy, iz, kx, ky, kz
-    real(r8) :: temp, g2
+    integer :: n(3), nx, i, j, ix, iy, iz, kx, ky, kz
+    real(r8) :: temp(3), g2
 
-    n = m%fft_n
+    do i=1, 3
+       n(i) = m%fft_n(i)
+    enddo
 #ifdef R_TREAL
-    nx = n/2+1
+    nx = n(1)/2+1
 #else
-    nx = n
+    nx = n(1)
 #endif
 
-    allocate(fr(n, n, n), fw1(nx, n, n))
+    allocate(fr(n(1), n(2), n(3)), fw1(nx, n(2), n(3)))
     fr = 0.0_r8; fw1 = R_TOTYPE(0._r8)
     call R_FUNC(mesh_to_cube) (m, f(1:), fr)
     
@@ -113,21 +115,24 @@ contains
     call fftwnd_f77_one(m%zplanf, fr, fw1)
 #endif
 
+! I am not sure that implementation of the gradient is correct;
+! should be checked.
     if(present(grad)) then
-      allocate(fw2(nx, n, n))
+      allocate(fw2(nx, n(2), n(3)))
       
-      temp = (2.0_r8*M_Pi)/(n*m%h)
+
       do i = 1, 3
+        temp(i) = (2.0_r8*M_Pi)/(n(i)*m%h(i))
         fw2 = (0._r8, 0._r8)
         kx = 0; ky = 0; kz = 0
-        do iz = 1, n
-          if(i == 3) kz = pad_feq(iz, n, .true.)
-          do iy = 1, n
-            if(i == 2) ky = pad_feq(iy, n, .true.)
+        do iz = 1, n(3)
+          if(i == 3) kz = pad_feq(iz, n(3), .true.)
+          do iy = 1, n(2)
+            if(i == 2) ky = pad_feq(iy, n(2), .true.)
             do ix = 1, nx
-              if(i == 1) kx = pad_feq(ix, n, .true.)
+              if(i == 1) kx = pad_feq(ix, n(1), .true.)
               
-              g2 = temp*real(kx + ky + kz, r8)
+              g2 = temp(1)*kx + temp(2)*ky + temp(3)*kz
               fw2(ix, iy, iz) = g2*M_zI*fw1(ix, iy, iz)
             end do
           end do
@@ -137,7 +142,7 @@ contains
 #else
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
-        call R_FUNC(scal)(n**3, R_TOTYPE(1.0_r8/real(n, r8)**3), fr, 1)
+        call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)**3), fr, 1)
         grad(:, j) = R_TOTYPE(0._r8)
         call R_FUNC(cube_to_mesh) (m, fr, grad(:, j))
       end do
@@ -146,15 +151,17 @@ contains
     end if
     
     if(present(lapl)) then
-      temp = ((2.0_r8*M_Pi)/(n*m%h))**2
-      do iz = 1, n
-        kz = pad_feq(iz, n, .true.)
-        do iy = 1, n
-          ky = pad_feq(iy, n, .true.)
+      do i=1, 3
+         temp(i) = ((2.0_r8*M_Pi)/(n(i)*m%h(i)))**2
+      enddo
+      do iz = 1, n(3)
+        kz = pad_feq(iz, n(3), .true.)
+        do iy = 1, n(2)
+          ky = pad_feq(iy, n(3), .true.)
           do ix = 1, nx
-            kx = pad_feq(ix, n, .true.)
+            kx = pad_feq(ix, n(1), .true.)
             
-            g2 = temp*real(kx**2 + ky**2 + kz**2, r8)
+            g2 = temp(1)*kx**2 + temp(2)*ky**2 + temp(3)*kz**2
             fw1(ix, iy, iz) = -g2*fw1(ix, iy, iz)
           end do
         end do
@@ -164,7 +171,7 @@ contains
 #else
       call fftwnd_f77_one(m%zplanb, fw1, fr)
 #endif
-      call R_FUNC(scal)(n**3, R_TOTYPE(1.0_r8/real(n, r8)**3), fr, 1)
+      call R_FUNC(scal)(n(1)*n(2)*n(3), R_TOTYPE(1.0_r8/real(n(1)*n(2)*n(3), r8)**3), fr, 1)
 
       lapl = R_TOTYPE(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
@@ -176,14 +183,14 @@ contains
 
   subroutine rs_derivative()
     R_TYPE :: den1(3), den2(3)
-    integer :: k, in, ind1(3), ind2(3), ix, iy, iz
+    integer :: k, in, ind1(3), ind2(3), ix, iy, iz, i
 
     do k = 1, m%np
       ! first we add the 0 contribution
       den1 = f(k)
       den2 = f(k)
       if(present(lapl)) then
-        lapl(k) = 3._r8*m%d%dlidfj(0)*f(k)
+        lapl(k) = (m%d%dlidfj(0)*f(k))*(1/m%h(1)**2+1/m%h(2)**2+1/m%h(3)**2)
       end if
       if(present(grad)) then
         grad(:, k) = m%d%dgidfj(0)*f(k)
@@ -220,7 +227,9 @@ contains
 #endif
     
         if(present(lapl)) then
-          lapl(k) = lapl(k) + m%d%dlidfj(in)*sum(den1(:)+den2(:))
+          do i = 1, 3
+             lapl(k) = lapl(k) + m%d%dlidfj(in)*((den1(i)+den2(i))/m%h(i)**2)
+          enddo
         end if
         
         if(present(grad)) then
@@ -230,12 +239,14 @@ contains
       end do
     end do
 
-    if(present(lapl)) then
-      lapl = lapl / (m%h**2)
-    end if
+    !if(present(lapl)) then
+    !  lapl = lapl !/ (m%h(1)**2)
+    !end if
 
     if(present(grad)) then
-      grad = grad / m%h
+      do i=1, 3
+         grad(i,:) = grad(i,:) / m%h(i)
+      enddo
     end if
 
     return

@@ -53,7 +53,7 @@ subroutine xc_gga(func, m, nspin, rho, rho_core, pot, energy)
         do ic = 1, 3
           if(ind(ic) > 0) then
             pot(ind(ic), is) = pot(ind(ic), is) + &
-                 dedgd(ic, is) * m%d%dgidfj(in)/ m%h
+                 dedgd(ic, is) * m%d%dgidfj(in)/ m%h(ic)
           end if
         end do
       end do
@@ -66,8 +66,8 @@ subroutine xc_gga(func, m, nspin, rho, rho_core, pot, energy)
     do is = 1, nspin
       call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
       do i = 1, m%np
-        energy = energy + d(i, is) * m%h * (  &
-             m%Lx(i)*gd(i, 1, is) + m%Ly(i)*gd(i, 2, is) + m%Lz(i)*gd(i, 3, is))
+        energy = energy + d(i, is) * (  &
+             m%Lx(i)*m%h(1)*gd(i, 1, is) + m%Ly(i)*m%h(2)*gd(i, 2, is) + m%Lz(i)*m%h(3)*gd(i, 3, is))
       end do
     end do
     energy = - energy * m%vol_pp

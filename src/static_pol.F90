@@ -64,11 +64,11 @@ subroutine static_pol_run(scf, sys, h)
 
     select case(i)
     case(1)
-      h%Vpsl = h%Vpsl - sys%m%Lx(:)*sys%m%h*e_field
+      h%Vpsl = h%Vpsl - sys%m%Lx(:)*sys%m%h(1)*e_field
     case(2)
-      h%Vpsl = h%Vpsl - sys%m%Ly(:)*sys%m%h*e_field
+      h%Vpsl = h%Vpsl - sys%m%Ly(:)*sys%m%h(2)*e_field
     case(3)
-      h%Vpsl = h%Vpsl - sys%m%Lz(:)*sys%m%h*e_field
+      h%Vpsl = h%Vpsl - sys%m%Lz(:)*sys%m%h(3)*e_field
     end select
 
     call scf_run(scf, sys, h)
@@ -78,11 +78,11 @@ subroutine static_pol_run(scf, sys, h)
       do j = 1, 3
         select case (j)
         case(1) 
-          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lx(:))*sys%m%H*sys%m%vol_pp
+          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lx(:))*sys%m%h(1)*sys%m%vol_pp
         case(2)
-          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Ly(:))*sys%m%H*sys%m%vol_pp
+          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Ly(:))*sys%m%h(2)*sys%m%vol_pp
         case(3)
-          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lz(:))*sys%m%H*sys%m%vol_pp
+          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lz(:))*sys%m%h(3)*sys%m%vol_pp
         end select
       end do
     end do

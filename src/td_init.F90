@@ -102,17 +102,17 @@ subroutine td_init(td, sys, m, st)
 contains
   subroutine td_init_evolution_splitop()
     integer :: ix, iy, iz, ixx, iyy, izz
-    real(r8) :: temp, vec
+    real(r8) :: temp(3), vec
 
-    allocate(td%kin_2(m%fft_n, m%fft_n, m%fft_n))
-    temp = 2.0_r8*M_PI/(m%fft_n*m%h)    
-    do ix = 1, m%fft_n
-      do iy = 1, m%fft_n
-        do iz = 1, m%fft_n
-          ixx = pad_feq(ix, m%fft_n, .true.)
-          iyy = pad_feq(iy, m%fft_n, .true.)
-          izz = pad_feq(iz, m%fft_n, .true.)
-          vec = temp**2 * real(ixx**2 + iyy**2 + izz**2, r8)/2._r8
+    allocate(td%kin_2(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
+    temp(1:3) = 2.0_r8*M_PI/(m%fft_n(1:3)*m%h(1:3))    
+    do ix = 1, m%fft_n(1)
+      ixx = pad_feq(ix, m%fft_n(1), .true.)
+      do iy = 1, m%fft_n(2)
+        iyy = pad_feq(iy, m%fft_n(2), .true.)
+        do iz = 1, m%fft_n(3)
+          izz = pad_feq(iz, m%fft_n(3), .true.)
+          vec = real(temp(1)**2*ixx**2 + temp(2)**2*iyy**2 + temp(3)**2*izz**2, r8)/2._r8
           
           td%kin_2(ix, iy, iz) = exp(- M_zI*td%dt/2._r8* vec)
         end do
