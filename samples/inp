@@ -9,6 +9,7 @@
 # 1. Generalities.
 ###############################################################################
 verbose = 30
+DebugLevel = 15
 SystemName = "Na2"
 CalculationMode = 1
 Units = "eVA"
@@ -19,7 +20,7 @@ Units = "eVA"
 # 2. Species.
 ###############################################################################
 %Species
-  "Na"  | 23.0 | 11 | "tm2" | 1 | 0
+  "Na"  | 23.0 | 11 | "tm2" | 0 | 0
 %
 
 ###############################################################################
@@ -31,11 +32,6 @@ Units = "eVA"
   "Na" | 0.0 | 0.0 | 1.7 | yes
   "Na" | 0.0 | 0.0 |-1.7 | yes
 %
-AdjustCoordinates = no
-%MainAxis
-0 | 0 | 1
-%
-OutputCoordinates = yes
 
 ###############################################################################
 # 4. Velocities.
@@ -73,7 +69,6 @@ NonInteractingElectrons = no
 ClassicPotential = no
 LocalPotentialSpace = 0
 NonLocalPotentialSpace = 0
-GridRefinement = 0
 
 ###############################################################################
 # 8. Exchange and Correlation.
@@ -98,7 +93,6 @@ EigenSolverInitTolerance = 1e-2
 EigenSolverFinalTolerance = 1e-5
 EigenSolverFinalToleranceIteration = 20		
 EigenSolverMaxIter = 25
-NuberCG = 3
 
 What2Mix = 1
 TypeOfMixing = 2
@@ -115,16 +109,24 @@ UnoccMaximumIter = 200
 ###############################################################################
 # 11. Time Dependent.
 ###############################################################################
-TDMaximumIter = 10000
-TDSaveIter    = 1000
-TDEvolutionMethod = 4
-TDTimeStep = 0.003
+T = 10
+dt = 0.001
+TDMaximumIter = T/dt
+TDEvolutionMethod = 3
+TDExponentialMethod = 1
+TDExpOrder = 4
+TDLanczosTol = 1e-5
+TDTimeStep = dt
 
-%TDLasers
-1 | 0 | 0 | 1 | 1.57 | 2 | 30 | 30
-%
-TDOutputLaser = yes
-TDGauge = 1 # length gauge assumed.
+intensity = 0.1
+omega = 1.57
+shape = 2
+tau = 30
+t0 = 30
+#%TDLasers
+#1 | 0 | 0 | intensity | omega | shape | tau | t0
+#%
+#TDGauge = 1 # length gauge assumed.
 
 TDDeltaStrength = 0.01
 %TDPolarization
@@ -135,6 +137,16 @@ AbsorbingBoundaries = 0
 ABWidth = 3.0
 ABHeight = -4.0
 
+TDOutputMultipoles = yes
+TDDipoleLMax = 1
+TDOutputLaser = no
+TDOutputCoordinates = yes
+TDOutputAngularMomentum = no
+TDOutputGSProjection = no
+TDOutputAcceleration = no
+TDOutputElEnergy = no
+TDOutputOccAnalysis = no
+
 TDDipoleLMax = 1
 
 MoveIons = 0
@@ -142,23 +154,14 @@ MoveIons = 0
 TDOccupationalAnalysis = no
 
 ###############################################################################
-# 12. Photo-electron spectrum.
-###############################################################################
-CalcPES_rc = no
-CalcPes_mask = no
-%PES_rc_points
-0 | 0 | 5
-%
-
-###############################################################################
-# 13. Geometry optimization.
+# 12. Geometry optimization.
 ###############################################################################
 GOMethod = 4
 GOTolerance = 0.01
 GOMaximumIter = 100
 
 ###############################################################################
-# 14. Function output for visualization.
+# 13. Function output for visualization.
 ###############################################################################
 OutputKSPotential = no
 OutputDensity     = no
@@ -176,7 +179,7 @@ OutputDX = no
 OutputEvery = 10
 
 ###############################################################################
-# 15. Spectrum calculations.
+# 14. Spectrum calculations.
 ###############################################################################
 SpecTransMode = "sin"
 SpecDampMode  = "exp"
@@ -190,7 +193,7 @@ HSPolarization = 'z'
 
 
 ###############################################################################
-# 16. Varia.
+# 15. Varia.
 ###############################################################################
 PoissonSolver = 3
 PolStaticField = 0.001
