@@ -343,8 +343,6 @@ subroutine tm_load(ps, pstm)
   ps%dknrm (0:ps%l_max) = pstm%dknrm (0:ps%l_max)
 
   if(ps%so_l_max >= 0) then
-    !ps%k(0:ps%so_l_max, 1, 1) = pstm%so_dkbcos(1:ps%so_l_max+1)
-    !ps%so_dknrm(0:ps%so_l_max) = pstm%so_dknrm(1:ps%so_l_max+1)
     ps%k(1:ps%so_l_max, 1, 1) = pstm%so_dkbcos(1:ps%so_l_max)
     ps%so_dknrm(1:ps%so_l_max) = pstm%so_dknrm(1:ps%so_l_max)
   end if
@@ -359,8 +357,12 @@ subroutine tm_load(ps, pstm)
   call get_splines_tm(pstm, ps)
 
   ! Passes from Rydbergs to Hartrees.
-  ps%h = ps%h / 2._r8; ps%dknrm = ps%dknrm * 2._r8
-  ps%k = ps%k / 2._r8; ps%so_dknrm = ps%so_dknrm * 2._r8
+  ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / 2._r8
+  ps%dknrm(0:ps%L_max)    = ps%dknrm(0:ps%L_max)    * 2._r8
+  if(ps%so_l_max >= 0) then
+    ps%k(0:ps%l_max,:,:)    = ps%k(0:ps%l_max,:,:)    / 2._r8
+    ps%so_dknrm(0:ps%L_max) = ps%so_dknrm(0:ps%L_max) * 2._r8
+  end if
 
   call pop_sub(); return
 end subroutine tm_load
