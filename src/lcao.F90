@@ -180,7 +180,7 @@ subroutine lcao_wf(lcao_data, m, st, h)
 
   integer, parameter :: orbs_local = 2
 
-  integer :: np, dim, nst, ik, n1, n2
+  integer :: np, dim, nst, ik, n1, n2, idim
   integer :: norbs
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
@@ -220,11 +220,14 @@ subroutine lcao_wf(lcao_data, m, st, h)
     st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
     ! Change of base
-    call blas_gemm('N', 'N', np*dim, nst, norbs, R_TOTYPE(M_ONE), &
-       lcao_data%psis(1,1,1, ik), np*dim, &
-       lcao_data%hamilt(1,1, ik), norbs,  &
-       R_TOTYPE(M_ZERO), &
-       st%X(psi)(1,1,1, ik), np*dim)
+    do n1 = 1, nst
+       do idim = 1, dim
+          do n2 = 1, norbs
+             call lalg_axpy(np, lcao_data%hamilt(n2, n1, ik), lcao_data%psis(:, idim, n2, ik), &
+                            st%X(psi)(:, idim, n1, ik))
+          enddo
+       enddo
+    enddo
 
    end do
 
@@ -233,3 +236,9 @@ subroutine lcao_wf(lcao_data, m, st, h)
 end subroutine lcao_wf
 
 end module lcao
+
+
+
+
+
+

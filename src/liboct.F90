@@ -81,7 +81,7 @@ module lib_oct
        integer               :: n
        FLOAT                 :: d(n)
      end subroutine write_iter_double_n
-  end interface write_iter_double
+  end interface
   interface write_iter_int
      subroutine write_iter_int_1(out, i, n)
        integer(POINTER_SIZE) :: out
