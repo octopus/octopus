@@ -39,21 +39,24 @@ type mix_type
 
   integer :: ns    ! number of steps used to extrapolate the new vector
 
-  FLOAT, pointer :: df(:,:,:)    , &
-                       dv(:,:,:)    , &
-                       f_old(:,:)   , &
-                       vin_old(:,:)
+  FLOAT, pointer :: df(:,:,:),  dv(:,:,:), f_old(:,:), vin_old(:,:)
 
   integer :: last_ipos
+
+  logical :: icomp
+  integer :: nc
+  FLOAT, pointer :: weights(:)
 end type mix_type
 
 contains
 
 ! Initialization...
-subroutine mix_init(smix, np, nc)
+subroutine mix_init(smix, np, nv)
   type(mix_type), intent(out) :: smix
   integer, intent(in) :: np
-  integer, intent(in) :: nc
+  integer, intent(in) :: nv
+
+  integer :: i
 
   call push_sub('mix_init')
 
@@ -81,6 +84,28 @@ subroutine mix_init(smix, np, nc)
       message(2) = '(1 < MixNumberSteps)'
       call write_fatal(2)
     end if
+
+    call loct_parse_logical("MixComponentsIndep", .true., smix%icomp)
+    if (smix%icomp) then
+      smix%nc = 1
+      allocate(smix%weights(1))
+      smix%weights = M_ONE
+
+    else
+      smix%nc = nv
+      allocate(smix%weights(smix%nc))
+      if(loct_parse_block_n("MixWeights") < 1) then
+        smix%weights = M_ONE
+      elseif(loct_parse_block_cols("MixWeights", 0) /= smix%nc) then
+        write(message(1), '(a, i4,a)') 'Input: Block "MixWeights" must have', smix%nc, &
+                                       " columns."
+        call write_fatal(1)
+      else
+        do i = 1,smix%nc
+          call loct_parse_block_float("MixWeights", 0, i-1, smix%weights(i))
+        end do
+      end if
+    end if
   end if
 
   select case (smix%type_of_mixing)
@@ -90,10 +115,13 @@ subroutine mix_init(smix, np, nc)
     write(message(3), '(a)') '      Good luck!'
     call write_info(3)
 
-    allocate(smix%df(np, smix%ns + 1, nc),&
-             smix%dv(np, smix%ns + 1, nc),&
-             smix%vin_old(np, nc),    &
-             smix%f_old(np, nc)        )
+    if (smix%icomp) then
+      allocate(smix%df(np, smix%ns + 1, nv), smix%vin_old(np, nv), &
+               smix%dv(np, smix%ns + 1, nv), smix%f_old  (np, nv)   )
+    else
+      allocate(smix%df(np*nv, smix%ns + 1, 1), smix%vin_old(np*nv, 1), &
+               smix%dv(np*nv, smix%ns + 1, 1), smix%f_old  (np*nv, 1)   )
+    end if
     smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
   case (BROYDEN)
@@ -102,10 +130,13 @@ subroutine mix_init(smix, np, nc)
     write(message(3), '(a)') '      Good luck!'
     call write_info(3)
 
-    allocate(smix%df(np, smix%ns, nc),&
-             smix%dv(np, smix%ns, nc),&
-             smix%vin_old(np, nc),    &
-             smix%f_old(np, nc)        )
+    if (smix%icomp) then
+      allocate(smix%df(np, smix%ns, nv), smix%vin_old(np, nv), &
+               smix%dv(np, smix%ns, nv), smix%f_old  (np, nv)   )
+    else
+      allocate(smix%df(np*nv, smix%ns, 1), smix%vin_old(np*nv, 1), &
+               smix%dv(np*nv, smix%ns, 1), smix%f_old  (np*nv, 1)   )
+    end if
     smix%df = M_ZERO; smix%dv = M_ZERO; smix%vin_old = M_ZERO; smix%f_old = M_ZERO
 
   end select
@@ -113,7 +144,6 @@ subroutine mix_init(smix, np, nc)
   smix%last_ipos = 0
 
   call pop_sub()
-  return
 end subroutine mix_init
 
 subroutine mix_end(smix)
@@ -121,6 +151,7 @@ subroutine mix_end(smix)
 
   call push_sub('mix_end')
 
+  if (associated(smix%weights)) deallocate(smix%weights)
   if (associated(smix%df))      deallocate(smix%df)
   if (associated(smix%dv))      deallocate(smix%dv)
   if (associated(smix%vin_old)) deallocate(smix%vin_old)
@@ -129,11 +160,14 @@ subroutine mix_end(smix)
   call pop_sub()
 end subroutine mix_end
 
-subroutine mixing(smix, iter, np, nc, vin, vout, vnew)
+subroutine mixing(smix, iter, np, nv, vin, vout, vnew)
   type(mix_type), intent(inout) :: smix
-  integer, intent(in)      :: iter, np, nc
-  FLOAT, dimension(np, nc), intent(in) :: vin, vout
-  FLOAT, dimension(np, nc), intent(out) :: vnew
+  integer, intent(in)      :: iter, np, nv
+  FLOAT, dimension(np, nv), intent(in) :: vin, vout
+  FLOAT, dimension(np, nv), intent(out) :: vnew
+
+  integer :: i
+  FLOAT, allocatable :: vint(:,:), voutt(:,:), vnewt(:,:)
 
   call push_sub('mixing')
 
@@ -144,40 +178,65 @@ subroutine mixing(smix, iter, np, nc, vin, vout, vnew)
 
   select case (smix%type_of_mixing)
   case (LINEAR)
-    call mix_linear(smix%alpha, np, nc, vin, vout, vnew)
+    call mix_linear(smix%alpha, np, nv, vin, vout, vnew)
 
-  case (BROYDEN)
-    call mix_broyden(smix, np, nc, vin, vout, vnew, iter)
+  case (BROYDEN, GRPULAY)
+    if (smix%icomp) then
+      select case(smix%type_of_mixing)
+      case (BROYDEN)
+        call mix_broyden(smix, np, nv, vin, vout, vnew, iter)
+      case (GRPULAY)
+        call mix_grpulay(smix, np, nv, vin, vout, vnew, iter)
+      end select
 
-  case (GRPULAY)
-    call mix_grpulay(smix, np, nc, vin, vout, vnew, iter)
+    else
+      ! Build total vectors
+      allocate(vint(np*nv, 1), voutt(np*nv, 1), vnewt(np*nv, 1))
+      do i = 1, nv
+        vint((i-1)*np+1:i*np, 1) = vin(:, i) * smix%weights(i)
+        voutt((i-1)*np+1:i*np, 1) = vout(:, i) * smix%weights(i)
+      end do
 
+      select case(smix%type_of_mixing)
+      case (BROYDEN)
+        call mix_broyden(smix, np*nv, 1, vint, voutt, vnewt, iter)
+      case (GRPULAY)
+        call mix_grpulay(smix, np*nv, 1, vint, voutt, vnewt, iter)
+      end select
+
+      ! recover vnew from vnewt
+      do i = 1, nv
+        vnew(:, i) = vnewt((i-1)*np+1:i*np, 1) / smix%weights(i)
+      end do
+      deallocate(vint, voutt, vnewt)
+
+    end if
   end select
 
   call pop_sub()
 end subroutine mixing
 
 ! Performs the linear mixing...
-subroutine mix_linear(alpha, np, nc, vin, vout, vnew)
+subroutine mix_linear(alpha, np, nv, vin, vout, vnew)
   FLOAT, intent(in) :: alpha
-  integer, intent(in) :: np, nc
-  FLOAT, dimension(np, nc), intent(in) :: vin, vout
-  FLOAT, dimension(np, nc), intent(out) :: vnew
+  integer, intent(in) :: np, nv
+  FLOAT, dimension(np, nv), intent(in) :: vin, vout
+  FLOAT, dimension(np, nv), intent(out) :: vnew
 
   vnew = vin*(M_ONE - alpha) + alpha*vout
 
 end subroutine mix_linear
 
 ! Broyden mixing...
-subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
+subroutine mix_broyden(smix, np, nv, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
-  integer, intent(in)     :: np, nc
+  integer, intent(in)     :: np, nv
   integer, intent(in)     :: iter
-  FLOAT, dimension(np, nc), intent(in)  :: vin, vout 
-  FLOAT, dimension(np, nc), intent(out) :: vnew
+  FLOAT, dimension(np, nv), intent(in)  :: vin, vout 
+  FLOAT, dimension(np, nv), intent(out) :: vnew
 
   integer :: i, ipos, iter_used
-  FLOAT :: gamma, f(np, nc)
+  FLOAT :: gamma, f(np, nv)
 
   f = vout - vin
   if(iter > 1) then
@@ -187,7 +246,7 @@ subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
     smix%df(:, ipos, :) = f - smix%f_old
     smix%dv(:, ipos, :) = vin - smix%vin_old
 
-    do i = 1,nc
+    do i = 1,nv
       gamma = sqrt(dot_product(smix%df(:, ipos, i), smix%df(:, ipos, i)))
       if(gamma > CNST(1e-8)) then
         gamma = M_ONE/gamma
@@ -206,7 +265,7 @@ subroutine mix_broyden(smix, np, nc, vin, vout, vnew, iter)
 
   ! extrapotate new vector
   iter_used = min(iter - 1, smix%ns)
-  do i = 1,nc
+  do i = 1,nv
     call broyden_extrapolation(smix%alpha, np, vin(:, i), vout(:, i), vnew(:, i), iter_used, &
                                f(:, i), smix%df(:, 1:iter_used, i), smix%dv(:, 1:iter_used, i))
   end do
@@ -265,15 +324,15 @@ end subroutine broyden_extrapolation
 
 
 ! Guaranteed-reduction Pulay
-subroutine mix_grpulay(smix, np, nc, vin, vout, vnew, iter)
+subroutine mix_grpulay(smix, np, nv, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
-  integer, intent(in)     :: np, nc
+  integer, intent(in)     :: np, nv
   integer, intent(in)     :: iter
-  FLOAT, dimension(np, nc), intent(in)  :: vin, vout 
-  FLOAT, dimension(np, nc), intent(out) :: vnew
+  FLOAT, dimension(np, nv), intent(in)  :: vin, vout 
+  FLOAT, dimension(np, nv), intent(out) :: vnew
 
   integer :: ipos, iter_used, i
-  FLOAT :: f(np, nc)
+  FLOAT :: f(np, nv)
 
   f = vout - vin
 
@@ -303,7 +362,7 @@ subroutine mix_grpulay(smix, np, nc, vin, vout, vnew, iter)
 
     ! extrapotate new vector
     iter_used = min(iter/2, smix%ns + 1)
-    do i = 1,nc
+    do i = 1, nv
       call pulay_extrapolation(np, vin(:, i), vout(:, i), vnew(:, i), iter_used, &
                                f(:, i), smix%df(:, 1:iter_used, i), smix%dv(:, 1:iter_used, i))
     end do
@@ -337,7 +396,7 @@ subroutine pulay_extrapolation(np, vin, vout, vnew, iter_used, f, df, dv)
   ! invert matrix A
   call lalg_invert(iter_used, a)
 
-  ! compute new density
+  ! compute new vector
   vnew = vin
   do i = 1,iter_used
     alpha = M_ZERO
