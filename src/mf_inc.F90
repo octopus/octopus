@@ -32,7 +32,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   R_TYPE, intent(IN) :: f1(m%np), f2(m%np)
 
 #if defined(HAVE_BLAS)
-!  R_TYPE, external :: R_DOT
+  real(r8), external :: ddot
 
   dotp = R_DOT(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
 #else

@@ -52,7 +52,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$        call R_FUNC(xc_mgga) (xcs%functl, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !!$             rho, vx, ex)
       case(XC_FAMILY_KLI)
-        !call R_FUNC(xc_kli) (xcs%functl, xcs%nlcc, m, st, vxc, ex)
+        call R_FUNC(xc_kli) (xcs, m, st, vxc, ex, ec)
       end select
     end if
   end do

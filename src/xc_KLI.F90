@@ -16,13 +16,16 @@
 !! 02111-1307, USA.
 
 #ifdef HAVE_LAPACK
-subroutine R_FUNC(xc_kli)(func, nlcc, m, st, pot, energy)
-  integer, intent(in) :: func
-  logical, intent(in) :: nlcc
-  type(mesh_type), intent(IN) :: m
+subroutine X(xc_kli)(xcs, m, st, vxc, ex, ec)
+  type(xc_type),     intent(in)    :: xcs
+  type(mesh_type),   intent(in)    :: m
   type(states_type), intent(inout) :: st
-  real(r8), intent(out) :: pot(m%np, st%nspin), energy
+  real(r8),          intent(out)   :: vxc(m%np, st%nspin), ex, ec
   
+  R_TYPE,   allocatable :: lxc(:,:)
+  real(r8) :: socc, sfact, e
+  integer :: is, ixc, ifunc
+
   call push_sub('xc_kli')
 
   ! this routine is only prepared for finite systems, and ispin = 1, 2
@@ -31,44 +34,65 @@ subroutine R_FUNC(xc_kli)(func, nlcc, m, st, pot, energy)
     call write_fatal(1)
   end if
 
-  select case(func)
-    case(X_FUNC_KLI_X)
-      call R_FUNC(kli_x) (m, st%nspin, st%nst, st%occ, st%eigenval, &
-           st%R_FUNC(psi) (:,1,:,:), pot, energy, st%rho)
+  call getSpinFactor(st%nspin, socc, sfact)
+  allocate(lxc(m%np, st%nst))
 
-    case(X_FUNC_KLI_SIC)
-      call R_FUNC(kli_x_sic) (nlcc, m, st, st%R_FUNC(psi) (:,1,:,:), pot, energy)
-    case(C_FUNC_KLI_SIC)
-      call R_FUNC(kli_c_sic) (nlcc, m, st, st%R_FUNC(psi) (:,1,:,:), pot, energy)
+  spin: do is = 1, min(st%nspin, 2)
+    lxc     = M_ZERO
+    e       = M_ZERO
 
-    case(X_FUNC_KLI_HJU)
-      call dkli_hju(m, st, nlcc, X_FUNC_LDA_NREL, pot, energy)
-    case(C_FUNC_KLI_HJU)
-      call dkli_hju(m, st, nlcc, C_FUNC_LDA_PZ,   pot, energy)
-  end select
+    ! get lxc
+    functl_loop: do ixc = 0, N_X_FUNCTL+N_C_FUNCTL-1
+      if(.not.btest(xcs%functl, ixc)) cycle
+      ifunc = ibset(0, ixc)
+      if(.not.( &
+           ifunc == X_FUNC_KLI_X    .or. &
+           ifunc == X_FUNC_KLI_SIC  .or. &
+           ifunc == C_FUNC_KLI_SIC)) cycle
+      
+      select case(ifunc)
+      case(X_FUNC_KLI_X)
+        call X(kli_x) (m, st, is, socc, sfact, lxc, e)
+        
+      case(X_FUNC_KLI_SIC)
+        call X(kli_x_sic) (xcs, m, st, is, socc, sfact, lxc, e)
+      case(C_FUNC_KLI_SIC)
+        call X(kli_c_sic) (xcs, m, st, is, socc, sfact, lxc, e)
+      end select
+      
+      if(ixc < N_X_FUNCTL) then
+        ex = ex + e
+      else
+        ec = ec + e
+      end if
+    end do functl_loop
+  
+    ! solve the KLI equation
+    call X(solve_KLI) (m, st, is, socc, lxc, vxc)
+
+  end do spin
+
+  deallocate(lxc)
 
   call pop_sub()
-  return
-end subroutine R_FUNC(xc_kli)
+end subroutine X(xc_kli)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Calculates the potential
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine R_FUNC(solve_KLI) (m, nspin, is, nst, socc, occ, eigenval, &
-    psi, u_xc, u_bar_xc, v_xc)
-  
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: nspin, is, nst
-  real(r8), intent(in) :: socc
-  real(r8), intent(IN) :: occ(nst, nspin), eigenval(nst, nspin), &
-      u_xc(m%np, nst), u_bar_xc(nst)
-  R_TYPE, intent(IN) :: psi(m%np, nst, nspin)
-  real(r8), intent(out) :: v_xc(m%np, nspin)
+subroutine X(solve_KLI) (m, st, is, socc, lxc, vxc_)
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: st
+  integer,           intent(in)  :: is
+  real(r8),          intent(in)  :: socc
+  R_TYPE,            intent(in)  :: lxc(m%np, st%nst)
+  real(r8),          intent(out) :: vxc_(m%np, st%nspin)
 
   integer i, j, k, eigen_n
+  real(r8), allocatable :: rho_sigma(:), vxc(:), v_bar_S(:)
   real(r8), allocatable :: Ma(:,:), x(:), y(:)
   integer,  allocatable :: eigen_type(:), eigen_index(:)
-  real(r8) :: max_eigen, rho_sigma(m%np), v_bar_S(nst)
+  real(r8) :: max_eigen, uxc_bar
 
   ! variables needed by LAPACK
   character(len=1) :: la_EQUED
@@ -78,34 +102,35 @@ subroutine R_FUNC(solve_KLI) (m, nspin, is, nst, socc, occ, eigenval, &
   integer :: info
 
   ! some intermediate quantities
-  ! v_xc contains the Slater part!
-  do k=1, m%np
-    rho_sigma(k) = sum(occ(:, is)*R_ABS(psi(k, :, is))**2)*socc
-    v_xc(k, is)  = sum(u_xc(k, :) * occ(:, is)*R_ABS(psi(k, :, is))**2)*socc &
-        /(rho_sigma(k) + denom_eps)
+  ! vxc contains the Slater part!
+  allocate(vxc(m%np), rho_sigma(m%np), v_bar_S(st%nst))
+  do k = 1, m%np
+    rho_sigma(k) = max(sum(socc*st%occ(:, is)*R_ABS(st%X(psi)(k, 1, :, is))**2), 1e-20_r8)
+    vxc(k)   = socc*sum(st%occ(:, is)*R_REAL(lxc(k, :)*st%X(psi)(k, 1, :, is))) &
+         /rho_sigma(k)
   end do
 
-  do i=1, NST
-    if(occ(i, is) .gt. small) then
-      v_bar_S(i) = sum(R_ABS(psi(1:m%np, i, is))**2 * v_xc(1:m%np, is))*m%vol_pp
+  do i = 1, st%nst
+    if(st%occ(i, is) .gt. small) then
+      v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * vxc(:))*m%vol_pp
     end if
   end do
 
   ! find out the top occupied state, to correct for the assymptotics
   ! of the potential
-  allocate(eigen_type(NST), eigen_index(NST))
+  allocate(eigen_type(st%nst), eigen_index(st%nst))
   max_eigen = -1e30_r8
-  do i=1, nst
-    if((occ(i, is) .gt. small).and.(eigenval(i,is).gt.max_eigen)) then
-      max_eigen = eigenval(i, is)
+  do i = 1, st%nst
+    if((st%occ(i, is) .gt. small).and.(st%eigenval(i, is).gt.max_eigen)) then
+      max_eigen = st%eigenval(i, is)
     end if
   end do
   
   eigen_n = 1
-  do i=1, nst
-    if(occ(i, is) .gt. small) then
+  do i = 1, st%nst
+    if(st%occ(i, is) .gt. small) then
       ! criterium for degeneracy
-      if(abs(eigenval(i,is)-max_eigen).le.1e-3_r8) then
+      if(abs(st%eigenval(i,is)-max_eigen).le.1e-3_r8) then
         eigen_type(i) = 2
       else
         eigen_type(i) = 1
@@ -125,13 +150,16 @@ subroutine R_FUNC(solve_KLI) (m, nspin, is, nst, socc, occ, eigenval, &
     do i=1,eigen_n
       do j=i,eigen_n
         Ma(i,j) = -sum(                                 &
-            R_ABS(psi(1:m%np, eigen_index(i), is))**2 * &
-            R_ABS(psi(1:m%np, eigen_index(j), is))**2 / &
-            (rho_sigma(1:m%np) + denom_eps))*m%vol_pp
+            R_ABS(st%X(psi)(:, 1, eigen_index(i), is))**2 * &
+            R_ABS(st%X(psi)(:, 1, eigen_index(j), is))**2 / &
+            rho_sigma(:))*m%vol_pp
         Ma(j,i) = Ma(i,j)
       end do
       Ma(i,i) = 1 + Ma(i,i)
-      y(i) = v_bar_S(eigen_index(i)) - u_bar_xc(eigen_index(i))
+
+      ! y(i) = v_bar_S - uxc_bar
+      uxc_bar = sum(R_REAL(st%X(psi)(:, 1, i, is) * lxc(:, i)))*m%vol_pp
+      y(i) = v_bar_S(eigen_index(i)) - uxc_bar
     end do
 
     ! setup lapack arrays
@@ -149,16 +177,19 @@ subroutine R_FUNC(solve_KLI) (m, nspin, is, nst, socc, occ, eigenval, &
     deallocate(Ma, y)
 
     ! add contribution of low lying states
-    do i=1, eigen_n
-      v_xc(1:m%np, is) = v_xc(1:m%np, is) + &
-          occ(eigen_index(i),is)*socc* x(i) *  &
-          (R_ABS(psi(1:m%np, eigen_index(i), is))**2 / (rho_sigma(1:m%np) + denom_eps))
+    do i = 1, eigen_n
+      vxc(:) = vxc(:) + &
+           socc*st%occ(eigen_index(i),is)* x(i) *  &
+           R_ABS(st%X(psi)(:, 1, eigen_index(i), is))**2 / rho_sigma(:)
     end do
     deallocate(x)
   end if
-  deallocate(eigen_type, eigen_index)
 
-  return
-end subroutine R_FUNC(solve_KLI)
+  vxc_(:,is) = vxc_(:,is) + vxc(:)
+
+  deallocate(eigen_type, eigen_index)
+  deallocate(vxc, rho_sigma, v_bar_S)
+
+end subroutine X(solve_KLI)
 
 #endif

@@ -32,8 +32,8 @@ public :: xc_type, xc_write_info, xc_init, &
 !!! new functionals
 integer, parameter ::     &
      N_XC_FAMILIES = 4,   &
-     N_X_FUNCTL    = 9,   &
-     N_C_FUNCTL    = 7
+     N_X_FUNCTL    = 8,   &
+     N_C_FUNCTL    = 6
 
 !!! Families of xc functionals
 integer, parameter ::     &
@@ -52,14 +52,12 @@ integer, parameter ::     &
      X_FUNC_MGGA_PKZB = ibset(0,  5), &
      X_FUNC_KLI_X     = ibset(0,  6), &
      X_FUNC_KLI_SIC   = ibset(0,  7), &
-     X_FUNC_KLI_HJU   = ibset(0,  8), &
-     C_FUNC_LDA_RPA   = ibset(0,  9), &
-     C_FUNC_LDA_PZ    = ibset(0, 10), &
-     C_FUNC_LDA_PW92  = ibset(0, 11), &
-     C_FUNC_GGA_PBE   = ibset(0, 12), &
-     C_FUNC_KLI_SIC   = ibset(0, 13), &
-     C_FUNC_KLI_HJU   = ibset(0, 14), &
-     C_FUNC_MGGA_PKZB = ibset(0, 15)
+     C_FUNC_LDA_RPA   = ibset(0,  8), &
+     C_FUNC_LDA_PZ    = ibset(0,  9), &
+     C_FUNC_LDA_PW92  = ibset(0, 10), &
+     C_FUNC_GGA_PBE   = ibset(0, 11), &
+     C_FUNC_KLI_SIC   = ibset(0, 12), &
+     C_FUNC_MGGA_PKZB = ibset(0, 13)
 
 
 character(len=4), parameter :: xc_name_families(N_XC_FAMILIES) =   &
@@ -75,13 +73,11 @@ character(len=20), parameter :: xc_name_functionals(N_X_FUNCTL+N_C_FUNCTL) = (/ 
      'MGGA - PKZB         ', &  ! X_FUNC_MGGA_PKZB
      'KLI  - EXX          ', &  ! X_FUNC_KLI_X
      'KLI  - SIC (LDA)    ', &  ! X_FUNC_KLI_SIC
-     'KLI  - SIC (HJU)    ', &  ! X_FUNC_KLI_HJU
      'LDA  - RPA          ', &  ! C_FUNC_LDA_RPA
      'LDA  - PZ81         ', &  ! C_FUNC_LDA_PZ
      'LDA  - PW92         ', &  ! C_FUNC_LDA_PW92
      'GGA  - PBE          ', &  ! C_FUNC_GGA_PBE
      'KLI  - SIC (LDA)    ', &  ! C_FUNC_KLI_SIC
-     'KLI  - SIC (HJU)    ', &  ! C_FUNC_KLI_HJU
      'MGGA - PKZB         '  &  ! C_FUNC_MGGA_PKZB
      /)
 
@@ -167,9 +163,6 @@ subroutine xc_init(xcs, nlcc)
   case('SIC ')
     xcs%family = ior(xcs%family, XC_FAMILY_KLI)
     xcs%functl = ior(xcs%functl, X_FUNC_KLI_SIC)
-  case('HJU ')
-    xcs%family = ior(xcs%family, XC_FAMILY_KLI)
-    xcs%functl = ior(xcs%functl, X_FUNC_KLI_HJU)
   case default
     write(message(1), '(a,a,a)') "'", trim(func), "' is not a known exchange functional!"
     message(2) = "Please check the manual for a list of possible values."
@@ -195,9 +188,6 @@ subroutine xc_init(xcs, nlcc)
   case('SIC ')
     xcs%family = ior(xcs%family, XC_FAMILY_KLI)
     xcs%functl = ior(xcs%functl, C_FUNC_KLI_SIC)
-  case('HJU ')
-    xcs%family = ior(xcs%family, XC_FAMILY_KLI)
-    xcs%functl = ior(xcs%functl, C_FUNC_KLI_HJU)
   case default
     write(message(1), '(a,a,a)') "'", trim(func), &
          "' is not a known correlation functional family!"
@@ -211,6 +201,16 @@ subroutine xc_init(xcs, nlcc)
     call write_fatal(1)
   end if
 #endif
+
+  ! the SIC potential has an LDA part, so let us add it
+  if(iand(xcs%functl, X_FUNC_KLI_SIC).ne.0) then
+    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
+    xcs%functl = ior(xcs%functl, X_FUNC_LDA_NREL)
+  end if
+  if(iand(xcs%functl, C_FUNC_KLI_SIC).ne.0) then
+    xcs%family = ior(xcs%family, XC_FAMILY_LDA)
+    xcs%functl = ior(xcs%functl, C_FUNC_LDA_PZ)
+  end if
 
   ! Extra parameters to fine-tune LB94 potential.
   if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
@@ -267,18 +267,16 @@ end function my_sign
 #include "undef.F90"
 #include "real.F90"
 #include "xc_pot.F90"
-!#include "xc_KLI.F90"
-!#include "xc_KLI_x.F90"
-!#include "xc_KLI_SIC.F90"
-!#include "xc_HJU.F90"
+#include "xc_KLI.F90"
+#include "xc_KLI_x.F90"
+#include "xc_KLI_SIC.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "xc_pot.F90"
-!#include "xc_KLI.F90"
-!#include "xc_KLI_x.F90"
-!#include "xc_KLI_SIC.F90"
-!#include "xc_HJU.F90"
+#include "xc_KLI.F90"
+#include "xc_KLI_x.F90"
+#include "xc_KLI_SIC.F90"
 
 #include "undef.F90"
 

@@ -22,8 +22,8 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
   real(r8),          intent(out) :: ex, ec, vxc(m%np, st%nspin)
   
   real(r8), allocatable :: d(:), p(:), pd(:), pd1(:)
-  real(r8) :: dtot, dpol, vpol, e, e1
-  integer  :: i, ixc, is
+  real(r8) :: dtot, dpol, vpol, e
+  integer  :: i, ixc, is, ifunc
 
   call push_sub('xc_lda')
 
@@ -40,27 +40,36 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
         d(is) = max(st%rho(i, is), M_ZERO)
       enddo
     endif
-    if(xcs%nlcc) then    
+    if(xcs%nlcc) then
       d(1:st%spin_channels) = d(1:st%spin_channels) + st%rho_core(i)/st%spin_channels
     end if
 
-    e  = M_ZERO
     pd = M_ZERO
     functl_loop: do ixc = 0, N_X_FUNCTL+N_C_FUNCTL-1
       if(.not.btest(xcs%functl, ixc)) cycle
+      ifunc = ibset(0, ixc)
+      if(.not.( &
+           ifunc == X_FUNC_LDA_NREL.or. &
+           ifunc == X_FUNC_LDA_REL .or. &
+           ifunc == C_FUNC_LDA_PZ  .or. &
+           ifunc == C_FUNC_LDA_PW92)) cycle
 
-      select case(ibset(0, ixc))
+      select case(ifunc)
       case(X_FUNC_LDA_NREL)
-        call exchng(0, st%spin_channels, d, e1, pd1)
+        call exchng(0, st%spin_channels, d, e, pd1)
       case(X_FUNC_LDA_REL)
-        call exchng(1, st%spin_channels, d, e1, pd1)
+        call exchng(1, st%spin_channels, d, e, pd1)
       case(C_FUNC_LDA_PZ)
-        call pzc(st%spin_channels, d, e1, pd1)
+        call pzc(st%spin_channels, d, e, pd1)
       case(C_FUNC_LDA_PW92)
-        call pw92c(st%spin_channels, d, e1, pd1)
+        call pw92c(st%spin_channels, d, e, pd1)
       end select
 
-      e  =  e +  e1
+      if(ixc < N_X_FUNCTL) then
+        ex = ex + sum(d(1:st%spin_channels)) * e * m%vol_pp
+      else
+        ec = ec + sum(d(1:st%spin_channels)) * e * m%vol_pp
+      end if
       pd = pd + pd1
     end do functl_loop
 
@@ -76,11 +85,6 @@ subroutine xc_lda (xcs, m, st, vxc, ex, ec)
       enddo
     endif
     
-    if(ixc < N_X_FUNCTL) then
-      ex = ex + sum(d(1:st%spin_channels)) * e * m%vol_pp
-    else
-      ec = ec + sum(d(1:st%spin_channels)) * e * m%vol_pp
-    end if
     vxc(i, :) = vxc(i, :) + p(:)
   end do
 

@@ -15,7 +15,7 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "config_F90.h"
+#include "global.h"
 
 module mix
 use global
@@ -201,13 +201,10 @@ subroutine mix_broyden(smix, np, nspin, vin, vout, vnew, iter, errorflag)
     do is = 1, nspin
       gamma = dnrm2(np, smix%df(1, is, ipos), 1)
       if(gamma > 1e-8_r8) then
-         gamma = 1.0_r8/gamma
-      else
-         gamma = 1.0_r8
+        gamma = M_ONE/gamma
+        call dscal (np, gamma, smix%df(1, is, ipos), 1)
+        call dscal (np, gamma, smix%dv(1, is, ipos), 1)
       endif
-      !gamma = 1._r8/DNRM2(np, smix%df(1, is, ipos), 1)
-      call dscal (np, gamma, smix%df(1, is, ipos), 1)
-      call dscal (np, gamma, smix%dv(1, is, ipos), 1)
     end do
   endif
     

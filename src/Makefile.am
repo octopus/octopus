@@ -6,7 +6,7 @@ EXTRA_PROGRAMS = octopus octopus-mpi \
 	zoctopus zoctopus-mpi
 
 core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
-	math.F90 spline.F90 fft.F90 \
+	linalg.F90 math.F90 spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 atom.F90 \
 	mesh.F90 cf.F90 mf.F90 f.F90 \

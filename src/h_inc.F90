@@ -192,7 +192,7 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
                 call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(1, add_lm, jkbc), 1, lHpsi(1), 1)
               else
 #               ifdef R_TCOMPLEX
-                 conj = R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc)
+                  conj = R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc)
                   call R_FUNC(axpy) (atm%mps, uvpsi, conj(1), 1, lHpsi(1), 1)
 #               else
                   message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
