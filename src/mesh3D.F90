@@ -119,7 +119,7 @@ subroutine mesh_init(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
   ! once again the overhead is small
-  m%fft_n  = 2*m%nr + 1
+  m%fft_n  = 2*m%nr + 2
   m%hfft_n = m%fft_n/2 + 1
   call rfftw3d_f77_create_plan(m%dplanf, m%fft_n, m%fft_n, m%fft_n, &
        fftw_real_to_complex + fftw_forward, fftw_measure + fftw_threadsafe)

@@ -75,13 +75,17 @@ subroutine scf_run(sys, h)
   sub_name = 'scf_run'; call push_sub()
   call scf_init(scf, sys)
 
+!  sys%st%dpsi(1:,:,:,:) = 1._r8
+!  sys%m%h = 0.5_r8
+!  sys%m%vol_pp = sys%m%h**3
+
   do iter = 1, scf%max_iter
     if(clean_stop()) exit
 
     call eigen_solver_run(scf%eigens, sys, h, iter, diff)
 
     ! compute eigenvalues
-    call dhamiltonian_eigenval(h, sys, 1, sys%st%nst) ! eigenvalues
+    call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
     call states_fermi(sys%st)                         ! occupations
 
     ! output eigenvalues
@@ -140,7 +144,6 @@ subroutine scf_run(sys, h)
 !                               non_local_forces=non_local_forces)
       exit
     end if
-
   end do
 
   if(.not.finish) then
@@ -166,7 +169,7 @@ subroutine scf_write_eigenvalues(iunit, nst, st, error)
 
   if(iunit==stdout.and.conf%verbose<=20) return
 
-  message(1) = 'Info: Eigenvalues ['//trim(units_out%mass%abbrev)//']'
+  message(1) = 'Info: Eigenvalues ['//trim(units_out%energy%abbrev)//']'
   call write_info(1, iunit)
 
 #ifdef HAVE_MPI
@@ -190,7 +193,7 @@ subroutine scf_write_eigenvalues(iunit, nst, st, error)
       write(iunit, '(i4)', advance='no') j
       do ik = 1, st%nik
         write(iunit, '(1x,f12.6,1x,f12.6,a2,f12.8,a1)', advance='no') &
-             st%eigenval(j, ik), o(ik), ' (', error(j, ik), ')'
+             st%eigenval(j, ik)/units_out%energy%factor, o(ik), ' (', error(j, ik), ')'
       end do
       write(iunit, '(1x)', advance='yes')
     end do

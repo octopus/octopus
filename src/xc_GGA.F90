@@ -350,7 +350,7 @@ subroutine xc_x_lb94(ispin, dens, gdens, ex, dexdd, dexdgd)
     
     if(d(is) >= DENMIN .and. gdm >=GDMIN) then
       x = gdm / d(is)**FTHRD
-      f = x**2/(1._r8 + 3._r8*BETA*x*asinh(x))
+      f = x**2/(1._r8 + 3._r8*BETA*x*oct_asinh(x))
       dexdd(is) = dexdd(is) - BETA * d(is)**THRD * f
     end if
   end do

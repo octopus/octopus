@@ -18,7 +18,8 @@ type hamiltonian_type
 
   integer :: vpsl_space           ! How should the local potential be calculated
   real(r8), pointer :: Vpsl(:)    ! the external potential
-  real(r8), pointer :: Vhxc(:,:)  ! Hartre+xc potential
+  real(r8), pointer :: Vhartree(:)! the external potential
+  real(r8), pointer :: Vxc(:,:)   ! xc potential
   real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
   ! the energies (total, ion-ion, exchange, correlation)
@@ -46,7 +47,9 @@ subroutine hamiltonian_init(h, sys)
   h%np  = sys%m%np
 
   ! allocate potentials and density of the cores
-  allocate(h%Vpsl(h%np), h%Vhxc(h%np, h%ispin), h%rho_core(h%np))
+  allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, h%ispin), h%rho_core(h%np))
+  h%Vhartree = 0._r8
+  h%Vxc = 0._r8
 
   ! should we calculate the local pseudopotentials in Fourier space?
   h%vpsl_space = fdf_integer('LocalPotentialSpace', 0)
@@ -81,8 +84,8 @@ subroutine hamiltonian_end(h)
   sub_name = 'hamiltonian_end'; call push_sub()
 
   if(associated(h%Vpsl)) then
-    deallocate(h%Vpsl, h%Vhxc)
-    nullify(h%Vpsl, h%Vhxc)
+    deallocate(h%Vpsl, h%Vhartree, h%Vxc)
+    nullify(h%Vpsl, h%Vhartree, h%Vxc)
   end if
 
   if(.not.h%ip_app) then
@@ -97,37 +100,29 @@ subroutine hamiltonian_setup(h, sys)
   type(hamiltonian_type), intent(inout) :: h
   type(system_type), intent(inout) :: sys
 
-  real(r8), allocatable :: v_aux1(:,:), v_aux2(:,:)
+  real(r8), allocatable :: v_aux(:,:)
   integer :: i, is
-
-  allocate(v_aux1(h%np, h%ispin), v_aux2(h%np, h%ispin))
 
   is = min(H%ispin, 2)
   h%epot = 0._r8 ! The energy coming from the potentials
 
-  do i = 1, is
-    h%Vhxc(:, i) = H%vpsl(:)
-  end do
-  if(is > 2) h%Vhxc(:, 2:) = 0._r8
-
   if(.not.h%ip_app) then
-    call hartree_solve(h%hart, sys%m, v_aux1(:,1), sys%st%rho)
+    call hartree_solve(h%hart, sys%m, h%Vhartree, sys%st%rho)
     do i = 1, is
-      h%Vhxc(:, i) = h%Vhxc(:, i) + v_aux1(:, 1)
-      h%epot = h%epot - 0.5_r8*dmesh_dp(sys%m, sys%st%rho(:, is), v_aux1(:, 1))
+      h%epot = h%epot - 0.5_r8*dmesh_dp(sys%m, sys%st%rho(:, is), h%Vhartree)
     end do
     
+    allocate(v_aux(h%np, h%ispin))
     call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%rho_core, &
-         v_aux1, v_aux2, h%ex, h%ec)
-    h%Vhxc = h%Vhxc + v_aux1 + v_aux2
+         h%Vxc, v_aux, h%ex, h%ec)
+    h%Vxc = h%Vxc + v_aux
     do i = 1, is
-      h%epot = h%epot - dmesh_dp(sys%m, sys%st%rho(:, is), v_aux1(:, is))
-      h%epot = h%epot - dmesh_dp(sys%m, sys%st%rho(:, is), v_aux2(:, is))
+      h%epot = h%epot - dmesh_dp(sys%m, sys%st%rho(:, is), h%Vxc(:, is))
     end do
+    deallocate(v_aux)
     
   end if
 
-  deallocate(v_aux1, v_aux2)
 
 end subroutine hamiltonian_setup
 

@@ -34,7 +34,7 @@ subroutine eigen_solver_cg1(ncg, sys, h, st, diff)
         tmp_wf(1:np,:) = psi(1:np,:, p, ik)
       end if
 
-      ! orthogonalize state p to all rpevious ones
+      ! orthogonalize state p to all previous ones
       call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, psi(:,:, 1:p, ik), start = p)
 
       xk(1:np,:) = psi(1:np,:, p, ik)

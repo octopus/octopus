@@ -87,7 +87,7 @@ subroutine hartree_init(h, m)
           if(vec.ne.0.0_r8) then
             h%ff(ix, iy, iz) = 4.0_r8*M_Pi*(1.0_8 - cos(vec*r_0)) / vec**2 
           else
-!            h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
+            h%ff(ix, iy, iz) = 2.0_r8*M_Pi*r_0**2 
           end if
         end do
       end do
@@ -154,18 +154,18 @@ end subroutine hartree_solve
 subroutine hartree_cg(h, m, pot, dist)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(IN) :: m
-  real(r8), dimension(:), intent(out) :: pot
+  real(r8), dimension(:), intent(inout) :: pot
   real(r8), dimension(:,:), intent(IN) :: dist
   
   integer :: i, ix, iy, iz, iter, a, j, imax, add_lm, l, mm, ml
   real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, xx, yy, zz, temp
-  real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), ylm(:), wk(:,:,:)
+  real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:,:,:)
 
   sub_name = 'hartree_cg'; call push_sub()
 
   ml = 4
   allocate(zk(m%np), tk(m%np), pk(m%np))
-  allocate(rholm((ml+1)**2) , ylm((ml+1)**2) )
+  allocate(rholm((ml+1)**2))
   rholm = 0.0_r8
 
   ! calculate multipole moments till ml
@@ -176,7 +176,7 @@ subroutine hartree_cg(h, m, pot, dist)
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
-        call ylmr(x(1), x(2), x(3), l, mm, sa)
+        sa = oct_ylm(x(1), x(2), x(3), l, mm)
         if(l == 0) then ! this avoids 0**0
           rholm(add_lm) = rholm(add_lm) + temp*sa
         else
@@ -190,26 +190,18 @@ subroutine hartree_cg(h, m, pot, dist)
 
   allocate(wk(-m%nx:m%nx, -m%nx:m%nx, -m%nx:m%nx))
 
-  ! what is this for???? seems not to be used
   wk = 0.0d0
   do i = 1, m%nk
     x(1) = m%kx(i)*m%H; x(2) = m%ky(i)*m%H; x(3) = m%kz(i)*m%H
-    r = sqrt(sum(x)**2) + 1e-50_r8
+    r = sqrt(sum(x**2)) + 1e-50_r8
 
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
-        call ylmr(x(1), x(2), x(3), l, mm, sa)
-        ylm(add_lm) = sa
-        add_lm = add_lm + 1
-      end do
-    end do
+        sa = oct_ylm(x(1), x(2), x(3), l, mm)
 
-    add_lm = 1
-    do l = 0, ml
-      do mm = -l, l
         wk(m%Kx(i), m%Ky(i), m%Kz(i)) = wk(m%Kx(i), m%Ky(i), m%Kz(i)) +   &
-            ylm(add_lm)* ((4.0_r8*M_Pi)/(2.0_r8*l + 1.0_r8)) *            &
+            sa * ((4.0_r8*M_Pi)/(2.0_r8*l + 1.0_r8)) *            &
             rholm(add_lm)/r**(l + 1)
         add_lm = add_lm+1
       enddo
@@ -267,7 +259,7 @@ subroutine hartree_cg(h, m, pot, dist)
 
     ck = s3/s1
     s1 = s3
-    pk = zk+ck*pk
+    pk = zk + ck*pk
 
   end do
 

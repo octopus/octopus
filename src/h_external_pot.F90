@@ -106,6 +106,7 @@ subroutine generate_external_pot(h, sys)
 !!$    end do
 !!$    print *
 !!$  end do
+!!$  stop
   
   call pop_sub()
 contains

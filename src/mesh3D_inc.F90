@@ -33,7 +33,7 @@ subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh)
   
   integer :: i, ix, iy, iz
 
-  do i=1, m%np
+  do i = 1, m%np
     ix = m%lx(i) + m%fft_n/2 + 1
     iy = m%Ly(i) + m%fft_n/2 + 1
     iz = m%Lz(i) + m%fft_n/2 + 1
@@ -83,8 +83,8 @@ contains
 #endif
 
     allocate(fr(n, n, n), fw1(nx, n, n))
-    fr = 0.0_r8
-    call R_FUNC(mesh_to_cube) (m, f, fr)
+    fr = 0.0_r8; fw1 = REALORCOMPLEX(0._r8)
+    call R_FUNC(mesh_to_cube) (m, f(1:), fr)
     
 #ifdef R_TREAL
     call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, fw1)
@@ -117,6 +117,7 @@ contains
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
         call R_FUNC(scal)(n**3, REALORCOMPLEX(1.0_r8/real(n, r8)**3), fr, 1)
+        grad(:, j) = REALORCOMPLEX(0._r8)
         call R_FUNC(cube_to_mesh) (m, fr, grad(:, j))
       end do
       
@@ -132,8 +133,8 @@ contains
           do ix = 1, nx
             kx = pad_feq(ix, n, .true.)
             
-            g2 = temp*(kx**2 + ky**2 + kz**2) 
-            fw1(ix,iy,iz) = -g2*fw1(ix,iy,iz)
+            g2 = temp*real(kx**2 + ky**2 + kz**2, r8)
+            fw1(ix, iy, iz) = -g2*fw1(ix, iy, iz)
           end do
         end do
       end do
@@ -143,6 +144,8 @@ contains
       call fftwnd_f77_one(m%zplanb, fw1, fr)
 #endif
       call R_FUNC(scal)(n**3, REALORCOMPLEX(1.0_r8/real(n, r8)**3), fr, 1)
+
+      lapl = REALORCOMPLEX(0._r8)
       call R_FUNC(cube_to_mesh) (m, fr, lapl)
     end if
     

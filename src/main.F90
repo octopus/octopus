@@ -46,7 +46,7 @@ program tddft
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, mpiv%node, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, mpiv%numprocs, ierr)
-  print *, 'Process ', mpiv%node, ' of ', mpiv%numprocs, ' is alive'  
+  write(stdout,'(a,i4,a,i4,a)') 'Process ', mpiv%node, ' of ', mpiv%numprocs, ' is alive'  
 #else
   mpiv%node = 0
   mpiv%numprocs = 1
@@ -95,6 +95,8 @@ program tddft
   call write_info(1)
 
   ! now we really start
+!  call test()
+!  stop
   call run()
 
   ! print date
@@ -110,3 +112,17 @@ program tddft
   
   stop
 end program tddft
+
+subroutine test()
+  use global
+  use math
+
+  integer i, j, k
+  real(r8) :: x, y, z
+
+  do i = -200, 200
+    x = real(i)/200._r8*2
+!    call ylmr(0.1_r8, x, 0.1_r8, 2, 2, y)
+!    print *, x, y, oct_ylm(0.1_r8, x, 0.1_r8, 2, 2)
+  end do
+end subroutine test

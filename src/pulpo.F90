@@ -14,9 +14,9 @@ contains
     call lowcase(lang)
     select case(lang)
     case('en')
-      call printRecipe(1)
+      call oct_printRecipe(1)
     case('es')
-      call printRecipe(2)
+      call oct_printRecipe(2)
     case default
       write(message(1), '(a,a,a)') "Language '", trim(lang), "' is not recognized"
       message(2) = "  RecipeLang = en | es"
@@ -24,7 +24,7 @@ contains
     end select
 
     ! DISCLAIMER
-    call printRecipe(0)
+    call oct_printRecipe(0)
 
   end subroutine pulpo_print
 end module pulpo

@@ -89,7 +89,7 @@ subroutine run()
       call write_info(1)
 
       call hamiltonian_setup(h, sys)                    ! get potentials
-      call dhamiltonian_eigenval(h, sys, 1, sys%st%nst) ! eigenvalues
+      call R_FUNC(hamiltonian_eigenval)(h, sys, 1, sys%st%nst) ! eigenvalues
       call states_fermi(sys%st)                         ! occupations
       call hamiltonian_energy(h, sys, -1)               ! get the total energy
 

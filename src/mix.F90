@@ -170,9 +170,9 @@ subroutine calcdens(smix, st, np, rho)
         ! off-diagonal densities
         if(st%ispin == 4) then
           rho(i, 2) = st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
-          rho(i, 3) = st%occ(p, ik)*&
-               st%R_FUNC(psi)(i, 1, p, ik)*R_CONJ(st%R_FUNC(psi)(i, 2, p, ik))
-          rho(i, 4) = R_CONJ(rho(i, 3)) ! this is in principle not necessary!
+!          rho(i, 3) = st%occ(p, ik)*&
+!               st%R_FUNC(psi)(i, 1, p, ik)*R_CONJ(st%R_FUNC(psi)(i, 2, p, ik))
+!          rho(i, 4) = R_CONJ(rho(i, 3)) ! this is in principle not necessary!
         end if
 
       end do

@@ -112,8 +112,8 @@ subroutine mesh3D_create(m, natoms, atom)
   do ix = -m%Nx, m%Nx
     do iy = -m%Nx, m%Nx
       do iz = -m%Nx, m%Nx
-        if(Lxyz(ix,iy,iz).eq.1) il = il + 1
-        if(Lxyz(ix,iy,iz).eq.2) ik = ik + 1
+        if(Lxyz(ix, iy, iz) == 1) il = il + 1
+        if(Lxyz(ix, iy, iz) == 2) ik = ik + 1
       enddo
     enddo
   enddo
@@ -128,14 +128,14 @@ subroutine mesh3D_create(m, natoms, atom)
   do ix = -m%Nx, m%Nx
     do iy = -m%Nx, m%Nx
       do iz = -m%Nx, m%Nx
-        if(Lxyz(ix,iy,iz).eq.1) then
+        if(Lxyz(ix,iy,iz) == 1) then
           il = il + 1
           m%Lx(il) = ix
           m%Ly(il) = iy
           m%Lz(il) = iz
           m%Lxyz_inv(ix,iy,iz) = il
         endif
-        if(Lxyz(ix,iy,iz).eq.2) then
+        if(Lxyz(ix,iy,iz) == 2) then
           ik = ik + 1
           m%Kx(ik) = ix
           m%Ky(ik) = iy

@@ -14,9 +14,9 @@ type ps_type
   type(spline_type), pointer :: dkb(:)  ! derivatives of KB projectors
   type(spline_type), pointer :: Ur(:)   ! atomic wavefunctions
   type(spline_type), pointer :: vps(:)  ! pseudopotential
-  type(spline_type), pointer :: vlocal  ! local part
-  type(spline_type), pointer :: dvlocal ! derivative of the local part
-  type(spline_type), pointer :: core    ! core charge
+  type(spline_type) :: vlocal  ! local part
+  type(spline_type) :: dvlocal ! derivative of the local part
+  type(spline_type) :: core    ! core charge
 
   integer :: L_max ! maximum value of l to take
   integer :: L_loc ! which component to take as local
@@ -59,15 +59,13 @@ subroutine ps_init(ps, label, z, lmax, lloc, zval)
   !First we allocate all the stuff
   allocate(ps%kb(0:ps%L_max), ps%dkb(0:ps%L_max), &
        ps%Ur(0:ps%L_max), ps%vps(0:ps%L_max))
-  
+
   do i = 0, ps%L_max
     call spline_init(ps%kb(i))
     call spline_init(ps%dkb(i))
     call spline_init(ps%Ur(i))
     call spline_init(ps%vps(i))
   end do
-
-  allocate(ps%vlocal, ps%dvlocal, ps%core)
   call spline_init(ps%vlocal)
   call spline_init(ps%dvlocal)
   call spline_init(ps%core)
@@ -102,7 +100,6 @@ subroutine ps_end(ps)
   call spline_end(ps%dvlocal)
   call spline_end(ps%core)  
 
-  deallocate(ps%vlocal, ps%dvlocal, ps%core)
   deallocate(ps%dkbcos, ps%dknrm)
   
   call pop_sub()
@@ -183,19 +180,10 @@ subroutine ps_load(ps, filename, z, zval)
 
 ! FIX UNITS (Should FIX instead kb.F90)
 ! Passing from Rydbergs -> Hartree
-  ps%vlocal%func = ps%vlocal%func / 2._r8
-  ps%vlocal%der2 = ps%vlocal%der2 / 2._r8
-  ps%dvlocal%func = ps%dvlocal%func / 2._r8
-  ps%dvlocal%der2 = ps%dvlocal%der2 / 2._r8
   ps%vlocal_origin = ps%vlocal_origin / 2._r8
 
   ps%dkbcos = ps%dkbcos / 2._r8
   ps%dknrm  = ps%dknrm  * 2._r8
-
-  do i = 1, ps%L_max
-    ps%vps(i)%func = ps%vps(i)%func / 2._r8
-    ps%vps(i)%der2 = ps%vps(i)%der2 / 2._r8
-  end do
 
   return
 end subroutine ps_load
@@ -351,17 +339,17 @@ subroutine solve_shroedinger(psf, ps, rphi, eigen)
     if(l == ps%L_loc) then
       ps%dkbcos(l) = 0.0_r8; ps%dknrm(l) = 0.0_r8
       cycle
-    endif
+    end if
     dnrm = 0.0_r8
     avgv = 0.0_r8
     do ir = 2, psf%nrval
       vphi = (psf%vps(ir, l) - psf%vps(ir, ps%L_loc))*rphi(ir, l)
       dnrm = dnrm + vphi*vphi*drdi(ir)
       avgv = avgv + vphi*rphi(ir, l)*drdi(ir)
-    enddo
+    end do
     ps%dkbcos(l) = dnrm/(avgv + 1.0e-20_r8)
     ps%dknrm(l) = 1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
-  enddo
+  end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Ghost analysis.
@@ -534,11 +522,10 @@ subroutine get_splines(psf, ps, rphi, rc)
   real(r8), intent(in) :: rphi(psf%nrval, 0:ps%L_max), rc(0:ps%L_max)
   
   integer :: l, nrc, ir, nrcore
-  real(r8) :: der1, dern, chc
+  real(r8) :: chc
   real(r8), allocatable :: hato(:), derhato(:)
 
   allocate(hato(psf%nrval), derhato(psf%nrval))
-  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
 ! Interpolate the KB-projection functions
 
@@ -549,16 +536,12 @@ subroutine get_splines(psf, ps, rphi, rc)
     nrc = nint(log(rc(l)/psf%b + 1.0_r8)/psf%a) + 1
     hato(2:nrc) = (psf%vps(2:nrc, l) - psf%vps(2:nrc, ps%L_loc))*rphi(2:nrc, l) &
          *ps%dknrm(l)/psf%rofi(2:nrc)**(l+1)
-    hato(1) = hato(2)
-    
-    der1 = 0.0_r8; dern = 1.0e50_r8
-    call fit_spline(hato, rc(l), psf%a, psf%b, psf%rofi, der1, dern, ps%kb(l))
+    hato(1) = hato(2)    
+    call spline_fit(nrc, psf%rofi, hato, ps%kb(l))
 
 ! and now the derivatives...
     call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
-    
-    der1 = 0.0_r8; dern = 1.0e50_r8
-    call fit_spline(derhato, rc(l), psf%a, psf%b, psf%rofi, der1, dern, ps%dkb(l))
+    call spline_fit(nrc, psf%rofi, derhato, ps%dkb(l))
   end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -571,15 +554,15 @@ subroutine get_splines(psf, ps, rphi, rc)
 
   hato(2:psf%nrval) = psf%vps(2:psf%nrval, ps%L_loc)*psf%rofi(2:psf%nrval) + 2.0_r8*psf%zval
   hato(1) = 2.0_r8*psf%zval
-  der1 = psf%vps(2, ps%L_loc); dern = 0.0_r8
   
-  call fit_spline(hato, rc(ps%L_max+1), psf%a, psf%b, psf%rofi, der1, dern, ps%vlocal)
+  ! WARNING: Rydbergs -> Hartrees
+  hato = hato / 2._r8
+  call spline_fit(nrc, psf%rofi, hato, ps%vlocal)
   ps%vlocal_origin = psf%vps(1, ps%L_loc)
 
 ! and the derivative now
   call derivate_in_log_grid(psf%a, psf%b, psf%nrval, hato, derhato)
-  der1 = 2.0_r8*hato(2); dern = 0.0_r8
-  call fit_spline(derhato, rc(ps%L_max+1), psf%a, psf%b, psf%rofi, der1, dern, ps%dvlocal)
+  call spline_fit(nrc, psf%rofi, derhato, ps%dvlocal)
 
 ! and the non-local parts
   do l = 0 , ps%L_max
@@ -590,9 +573,10 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato(2:psf%nrval) = (psf%vps(2:psf%nrval, l) - psf%vps(2:psf%nrval, ps%L_loc))*&
          psf%rofi(2:psf%nrval)
     hato(1) = 0.0_r8
-    der1 = psf%vps(2, l) - psf%vps(2, ps%L_loc);  dern = 1.0e50_r8
     
-    call fit_spline(hato, rc(l), psf%a, psf%b, psf%rofi, der1, dern, ps%vps(l))
+    ! WARNING: Rydbergs -> Hartrees
+    hato = hato / 2._r8
+    call spline_fit(nrc, psf%rofi, hato, ps%vps(l))
   end do
 
 
@@ -610,9 +594,8 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato = 0.0_r8
     hato(2:nrc) = rphi(2:nrc, l)/psf%rofi(2:nrc)**(l + 1)
     hato(1) = hato(2)
-    der1 = 0.0_r8;  dern = 1.0e50_r8
 
-    call fit_spline(hato, psf%rofi(nrc), psf%a, psf%b, psf%rofi, der1, dern, ps%Ur(l))
+    call spline_fit(nrc, psf%rofi, hato, ps%Ur(l))
   end do
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -631,9 +614,8 @@ subroutine get_splines(psf, ps, rphi, rc)
     hato = 0.0_r8
     hato(2:nrcore) = psf%chcore(2:nrcore)/(4.0d0*M_PI*psf%rofi(2:nrcore)**2)
     hato(1) = hato(2)
-    der1 = 0.0_r8; dern=1.0e50_r8
-    
-    call fit_spline(hato, psf%rofi(ir +1), psf%a, psf%b, psf%rofi, der1, dern, ps%core)
+    nrc = nint(log(psf%rofi(ir +1)/psf%b + 1.0_r8)/psf%a) + 1
+    call spline_fit(nrc, psf%rofi, hato, ps%core)
   end if
 
 end subroutine get_splines

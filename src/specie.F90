@@ -98,14 +98,14 @@ subroutine specie_end(ns, s)
 
   do i = 1, ns
     if(.not. s(i)%local .and. associated(s(i)%ps)) then
+      if(s(i)%ps%icore /= 'nc  ' .and. associated(s(i)%rhocore_fw)) then
+        deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
+      end if
       call ps_end(s(i)%ps)
     end if
 
     if(associated(s(i)%local_fw)) then
       deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
-    end if
-    if(s(i)%ps%icore /= 'nc  ' .and. associated(s(i)%rhocore_fw)) then
-      deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
     end if
   end do
 
