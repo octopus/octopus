@@ -32,11 +32,11 @@ subroutine mesh3D_create(m, natoms, atom)
 
   ! Read the grid spacing.
   select case(m%box_shape)
-  case(SPHERE, CILINDER, MINIMUM)
+  case(SPHERE, CYLINDER, MINIMUM)
     call oct_parse_double(C_string('spacing'), 0.6_r8/units_inp%length%factor, m%h(1))
     m%h(1) = m%h(1)*units_inp%length%factor 
     m%h(2) = m%h(1); m%h(3) = m%h(1)
-  case(PARALLELPIPED)
+  case(PARALLELEPIPED)
     call oct_parse_block_double(C_string('spacing'), 0, 0, m%h(1))
     call oct_parse_block_double(C_string('spacing'), 0, 1, m%h(2))
     call oct_parse_block_double(C_string('spacing'), 0, 2, m%h(3))
@@ -51,7 +51,7 @@ subroutine mesh3D_create(m, natoms, atom)
   end if    
 
   ! Read the box size.
-  if(m%box_shape == SPHERE .or. m%box_shape == CILINDER .or. m%box_shape == MINIMUM) then
+  if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER .or. m%box_shape == MINIMUM) then
     call oct_parse_double(C_string('radius'), 20.0_r8/units_inp%length%factor, m%rsize)
     m%rsize = m%rsize * units_inp%length%factor
     if (m%rsize<1.0_r8 .or. m%rsize>500.0_r8) then
@@ -61,7 +61,7 @@ subroutine mesh3D_create(m, natoms, atom)
       call write_fatal(2)
     end if
   end if
-  if(m%box_shape == CILINDER) then
+  if(m%box_shape == CYLINDER) then
     call oct_parse_double(C_string('zlength'), 1.0_r8/units_inp%length%factor, m%zsize)
     m%zsize = m%zsize * units_inp%length%factor
     if(m%zsize<1.0_r8 .or. m%zsize>500.0_r8) then
@@ -71,7 +71,7 @@ subroutine mesh3D_create(m, natoms, atom)
       call write_fatal(2)
     end if
   endif
-  if(m%box_shape == PARALLELPIPED) then
+  if(m%box_shape == PARALLELEPIPED) then
     call oct_parse_block_double(C_string('lsize'), 0, 0, m%lsize(1))
     call oct_parse_block_double(C_string('lsize'), 0, 1, m%lsize(2))
     call oct_parse_block_double(C_string('lsize'), 0, 2, m%lsize(3))
@@ -88,12 +88,12 @@ subroutine mesh3D_create(m, natoms, atom)
   select case(m%box_shape)
   case(SPHERE)
     m%nr(1:3) = int(m%rsize/m%h(1))
-  case(CILINDER)
+  case(CYLINDER)
     m%nr(1:3) = max(int(m%rsize/m%h(1)), int(m%zsize/m%h(1)))
   case(MINIMUM)
     message(1) = 'MINIMUM cage not correctly implemented. Sorry.'
     call write_fatal(1)
-  case(PARALLELPIPED)
+  case(PARALLELEPIPED)
     do ix=1, 3
        m%nr(ix) = int((m%lsize(ix)/2.0_r8)/m%h(ix))
     enddo
@@ -114,11 +114,11 @@ subroutine mesh3D_create(m, natoms, atom)
         select case(m%box_shape)
         case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
-        case(CILINDER)
-          b = in_cilinder(m, ix, iy, iz)
+        case(CYLINDER)
+          b = in_cylinder(m, ix, iy, iz)
         case(MINIMUM)
           b = in_atom(m, ix, iy, iz, natoms, atom)
-        case(PARALLELPIPED)
+        case(PARALLELEPIPED)
           b = .true.
         end select
         
@@ -137,11 +137,11 @@ subroutine mesh3D_create(m, natoms, atom)
         select case(m%box_shape)
         case(SPHERE)
           b = in_sphere(m, ix, iy, iz)
-        case(CILINDER)
-          b = in_cilinder(m, ix, iy, iz)
+        case(CYLINDER)
+          b = in_cylinder(m, ix, iy, iz)
         case(MINIMUM)
           b = in_atom(m, ix, iy, iz, natoms, atom)
-        case(PARALLELPIPED)
+        case(PARALLELEPIPED)
           b = .true.
         end select
         
@@ -201,7 +201,7 @@ subroutine mesh3D_create(m, natoms, atom)
 contains
 
   ! The three next functions are self-explanatory!
-  ! They check if a point is within the sphere, cilinder, 
+  ! They check if a point is within the sphere, cylinder, 
   ! or atomic spheres
   logical function in_sphere(m, ix, iy, iz)
     type(mesh_type), intent(IN) :: m
@@ -211,7 +211,7 @@ contains
     return
   end function in_sphere
   
-  logical function in_cilinder(m, ix, iy, iz)
+  logical function in_cylinder(m, ix, iy, iz)
     type(mesh_type), intent(IN) :: m
     integer, intent(in) :: ix, iy, iz
     
@@ -219,9 +219,9 @@ contains
     r = sqrt(real(ix**2+iy**2, r8))*m%h(1)
     z = iz*m%H(3)
     
-    in_cilinder = (r<=m%rsize .and. abs(z)<=m%zsize)
+    in_cylinder = (r<=m%rsize .and. abs(z)<=m%zsize)
     return
-  end function in_cilinder
+  end function in_cylinder
   
   logical function in_atom(m, ix, iy, iz, natoms, atom)
     type(mesh_type), intent(IN) :: m

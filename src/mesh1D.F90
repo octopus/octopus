@@ -12,9 +12,9 @@ integer, parameter ::     &
 
 integer, parameter :: &        ! Only SPHERE is permitted in ONE_D.
      SPHERE   = 1,    &
-     CILINDER = 2,    &
+     CYLINDER = 2,    &
      MINIMUM  = 3,    &
-     PARALLELPIPED = 4          
+     PARALLELEPIPED = 4          
 
 type mesh_derivatives_type
   integer :: space ! 0 for FD, 1 for reciprocal-space
@@ -28,13 +28,12 @@ end type mesh_derivatives_type
 ! The type is equal in 1D and in 3D, although in 1D most of the variables
 ! are not needed.
 type mesh_type
-  integer  :: box_shape ! 1->sphere, 2->cilinder, 3->sphere around each atom,
-                        ! 4->parallelpiped (orthonormal, up to now).
+  integer  :: box_shape ! 1->sphere
   real(r8) :: h(3)      ! the (constant) spacing between the points
   
-  real(r8) :: rsize     ! the radius of the sphere or of the cilinder
-  real(r8) :: zsize     ! the length of the cilinder in the z direction
-  real(r8) :: lsize(3)  ! the lengths of the parallelpipeds in each direction.
+  real(r8) :: rsize     ! the radius of the sphere or of the cylinder
+  real(r8) :: zsize     ! the length of the cylinder in the z direction
+  real(r8) :: lsize(3)  ! the lengths of the parallelepipeds in each direction.
   
   integer  :: np        ! number of points in inner mesh
   real(r8) :: vol_pp    ! element of volume for integrations
@@ -217,20 +216,20 @@ subroutine mesh_write_info(m, unit)
 
   character(len=15), parameter :: bs(3) = (/ &
       'sphere       ', &
-      'cilinder     ', &
+      'cylinder     ', &
       'around nuclei'/)
 
   sub_name = 'mesh_write_info'; call push_sub()
 
-  if(m%box_shape == SPHERE .or. m%box_shape == CILINDER  .or. m%box_shape == MINIMUM) then
+  if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER  .or. m%box_shape == MINIMUM) then
     write(message(1), '(a,a,1x,3a,f7.3)') '  Type = ', bs(m%box_shape), &
        ' Radius [', trim(units_out%length%abbrev), '] = ', m%rsize/units_out%length%factor
   endif
-  if(m%box_shape == CILINDER) then
+  if(m%box_shape == CYLINDER) then
     write(message(1), '(a,3a,f7.3)') trim(message(1)), ', zlength [', &
          trim(units_out%length%abbrev), '] = ', m%zsize/units_out%length%factor
   end if
-  if(m%box_shape == PARALLELPIPED) then
+  if(m%box_shape == PARALLELEPIPED) then
     write(message(1),'(3a, a, f6.3, a, f6.3, a, f6.3, a)') &
        '  Lengths [', trim(units_out%length%abbrev), '] = ',         &
        '(', m%lsize(1)/units_out%length%factor, ',',                     &
