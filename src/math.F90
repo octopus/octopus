@@ -27,6 +27,11 @@ module math
 
   implicit none
 
+  ! This common interface applies to the two procedures defined in math_cg_inc.F90
+  interface conjugate_gradients
+    module procedure sym_conjugate_gradients, bi_conjugate_gradients
+  end interface
+
 contains
 
 ! a simple congruent random number generator
@@ -335,6 +340,8 @@ end function cutoff2
 !  phaseshift = cmplx(nhalf)
 
 !end function phaseshift
+
+#include "math_cg_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"

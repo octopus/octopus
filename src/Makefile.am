@@ -40,7 +40,7 @@ noinst_HEADERS = \
 	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
-	out_inc.F90 math_inc.F90\
+	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a \
@@ -134,7 +134,7 @@ depend:
 #blas.o : blas.F90 complex.F90 global.h 
 #linalg_basic.o : linalg_basic.F90 linalg_basic_blas.F90 complex.F90 global.h blas.o 
 #linalg_adv.o : linalg_adv.F90 complex.F90 global.h global.o 
-#math.o : math.F90 real.F90 math_inc.F90 undef.F90 complex.F90 global.h linalg_adv.o linalg_basic.o global.o 
+#math.o : math.F90 real.F90 math_cg_inc.F90 math_inc.F90 undef.F90 complex.F90 global.h linalg_adv.o linalg_basic.o global.o 
 #spline.o : spline.F90 complex.F90 global.h 
 #fft.o : fft.F90 fftw3.F90 fftw2.F90 complex.F90 global.h linalg_basic.o global.o 
 #vxc.o : vxc.F90 complex.F90 global.h global.o 
