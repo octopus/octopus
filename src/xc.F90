@@ -24,10 +24,6 @@ use vxc
 
 implicit none
 
-private
-public :: xc_type, xc_write_info, xc_init, &
-     xc_end, dxc_pot, zxc_pot
-
 !!! This parameters have to be updated when implementing
 !!! new functionals
 integer, parameter ::     &
@@ -39,7 +35,7 @@ integer, parameter ::     &
 integer, parameter ::     &
      XC_FAMILY_LDA  = ibset(0, 0),    &
      XC_FAMILY_GGA  = ibset(0, 1),    &
-     XC_FAMILY_KLI  = ibset(0, 2),    &
+     XC_FAMILY_OEP  = ibset(0, 2),    &
      XC_FAMILY_MGGA = ibset(0, 3)
 
 !!! Functionals
@@ -50,18 +46,18 @@ integer, parameter ::     &
      X_FUNC_GGA_PBER  = ibset(0,  3), &
      X_FUNC_GGA_LB94  = ibset(0,  4), &
      X_FUNC_MGGA_PKZB = ibset(0,  5), &
-     X_FUNC_KLI_X     = ibset(0,  6), &
-     X_FUNC_KLI_SIC   = ibset(0,  7), &
+     X_FUNC_OEP_X     = ibset(0,  6), &
+     X_FUNC_OEP_SIC   = ibset(0,  7), &
      C_FUNC_LDA_RPA   = ibset(0,  8), &
      C_FUNC_LDA_PZ    = ibset(0,  9), &
      C_FUNC_LDA_PW92  = ibset(0, 10), &
      C_FUNC_GGA_PBE   = ibset(0, 11), &
-     C_FUNC_KLI_SIC   = ibset(0, 12), &
+     C_FUNC_OEP_SIC   = ibset(0, 12), &
      C_FUNC_MGGA_PKZB = ibset(0, 13)
 
 
 character(len=4), parameter :: xc_name_families(N_XC_FAMILIES) =   &
-     (/ 'LDA ', 'GGA ', 'KLI ', 'MGGA' /)
+     (/ 'LDA ', 'GGA ', 'OEP ', 'MGGA' /)
 
 !!! Exchange functionals should come before correlation functionals
 character(len=20), parameter :: xc_name_functionals(N_X_FUNCTL+N_C_FUNCTL) = (/ &
@@ -71,13 +67,13 @@ character(len=20), parameter :: xc_name_functionals(N_X_FUNCTL+N_C_FUNCTL) = (/ 
      'GGA  - PBE - relat. ', &  ! X_FUNC_GGA_PBER
      'GGA  - LB94         ', &  ! X_FUNC_GGA_LB94
      'MGGA - PKZB         ', &  ! X_FUNC_MGGA_PKZB
-     'KLI  - EXX          ', &  ! X_FUNC_KLI_X
-     'KLI  - SIC (LDA)    ', &  ! X_FUNC_KLI_SIC
+     'OEP  - EXX          ', &  ! X_FUNC_OEP_X
+     'OEP  - SIC (LDA)    ', &  ! X_FUNC_OEP_SIC
      'LDA  - RPA          ', &  ! C_FUNC_LDA_RPA
      'LDA  - PZ81         ', &  ! C_FUNC_LDA_PZ
      'LDA  - PW92         ', &  ! C_FUNC_LDA_PW92
      'GGA  - PBE          ', &  ! C_FUNC_GGA_PBE
-     'KLI  - SIC (LDA)    ', &  ! C_FUNC_KLI_SIC
+     'OEP  - SIC (LDA)    ', &  ! C_FUNC_OEP_SIC
      'MGGA - PKZB         '  &  ! C_FUNC_MGGA_PKZB
      /)
 
@@ -89,6 +85,9 @@ type xc_type
   logical  :: lb94_modified
   real(r8) :: lb94_beta
   real(r8) :: lb94_threshold
+
+  ! for the OEP
+  integer :: oep_level  ! 0 = Slater, 1 = KLI, 2 = full OEP
 end type xc_type
 
 real(r8), parameter :: small     = 1e-5_r8
@@ -117,10 +116,18 @@ subroutine xc_write_info(xcs, iunit)
       end if
     end do
 
+    if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
+      write(iunit, '(a)') 'The OEP equation will be handle of the level of:'
+      select case(xcs%oep_level)
+      case (0); write(iunit, '(a)') '      Slater approximation'
+      case (1); write(iunit, '(a)') '      KLI approximation'
+      case (2); write(iunit, '(a)') '      Full OEP'
+      end select
+    end if
+
 #ifdef HAVE_MPI
   end if
 #endif
-  return
 end subroutine xc_write_info
 
 subroutine xc_init(xcs, nlcc)
@@ -158,11 +165,11 @@ subroutine xc_init(xcs, nlcc)
     xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
     xcs%functl = ior(xcs%functl, X_FUNC_MGGA_PKZB)
   case('EXX ')
-    xcs%family = ior(xcs%family, XC_FAMILY_KLI)
-    xcs%functl = ior(xcs%functl, X_FUNC_KLI_X)
+    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
+    xcs%functl = ior(xcs%functl, X_FUNC_OEP_X)
   case('SIC ')
-    xcs%family = ior(xcs%family, XC_FAMILY_KLI)
-    xcs%functl = ior(xcs%functl, X_FUNC_KLI_SIC)
+    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
+    xcs%functl = ior(xcs%functl, X_FUNC_OEP_SIC)
   case default
     write(message(1), '(a,a,a)') "'", trim(func), "' is not a known exchange functional!"
     message(2) = "Please check the manual for a list of possible values."
@@ -186,28 +193,28 @@ subroutine xc_init(xcs, nlcc)
     xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
     xcs%functl = ior(xcs%functl, C_FUNC_MGGA_PKZB)
   case('SIC ')
-    xcs%family = ior(xcs%family, XC_FAMILY_KLI)
-    xcs%functl = ior(xcs%functl, C_FUNC_KLI_SIC)
+    xcs%family = ior(xcs%family, XC_FAMILY_OEP)
+    xcs%functl = ior(xcs%functl, C_FUNC_OEP_SIC)
   case default
     write(message(1), '(a,a,a)') "'", trim(func), &
          "' is not a known correlation functional family!"
-    message(2) = "(CFamily = ZER | LDA | GGA | KLI)"
+    message(2) = "(CFamily = ZER | LDA | GGA | OEP)"
     call write_fatal(2)
   end select
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-  if(btest(xcs%family, XC_FAMILY_KLI)) then
-    message(1) = "KLI is not allowed with MPI_TD!"
+  if(btest(xcs%family, XC_FAMILY_OEP)) then
+    message(1) = "OEP is not allowed with MPI_TD!"
     call write_fatal(1)
   end if
 #endif
 
   ! the SIC potential has an LDA part, so let us add it
-  if(iand(xcs%functl, X_FUNC_KLI_SIC).ne.0) then
+  if(iand(xcs%functl, X_FUNC_OEP_SIC).ne.0) then
     xcs%family = ior(xcs%family, XC_FAMILY_LDA)
     xcs%functl = ior(xcs%functl, X_FUNC_LDA_NREL)
   end if
-  if(iand(xcs%functl, C_FUNC_KLI_SIC).ne.0) then
+  if(iand(xcs%functl, C_FUNC_OEP_SIC).ne.0) then
     xcs%family = ior(xcs%family, XC_FAMILY_LDA)
     xcs%functl = ior(xcs%functl, C_FUNC_LDA_PZ)
   end if
@@ -217,6 +224,15 @@ subroutine xc_init(xcs, nlcc)
     call oct_parse_double("LB94_beta", 0.05_r8, xcs%lb94_beta)
     call oct_parse_double("LB94_threshold", 1.0e-6_r8, xcs%lb94_threshold)
     call oct_parse_logical("LB94_modified", .false., xcs%lb94_modified)
+  end if
+
+  if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
+    call oct_parse_int("OEP_level", 1, xcs%oep_level)
+    if(xcs%oep_level<0.or.xcs%oep_level>2) then
+      message(1) = "OEP_level can only take the values:"
+      message(2) = "0 (Slater), 1 (KLI), and 2 (full OEP)"
+      call write_fatal(2)
+    end if
   end if
 
   call pop_sub()
@@ -242,7 +258,7 @@ subroutine getSpinFactor(nspin, socc, sfact)
      socc  = 1.0_r8
      sfact = 1.0_r8
   case default
-     write(6,'(a,I2)') 'KLI: error cannot handle nspin=', nspin
+     write(6,'(a,I2)') 'OEP: error cannot handle nspin=', nspin
   end select
 end subroutine getSpinFactor
 
@@ -268,15 +284,15 @@ end function my_sign
 #include "real.F90"
 #include "xc_pot.F90"
 #include "xc_KLI.F90"
-#include "xc_KLI_x.F90"
-#include "xc_KLI_SIC.F90"
+#include "xc_OEP_x.F90"
+#include "xc_OEP_SIC.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "xc_pot.F90"
 #include "xc_KLI.F90"
-#include "xc_KLI_x.F90"
-#include "xc_KLI_SIC.F90"
+#include "xc_OEP_x.F90"
+#include "xc_OEP_SIC.F90"
 
 #include "undef.F90"
 

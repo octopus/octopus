@@ -405,6 +405,11 @@ subroutine X(h_calc_vhxc)(h, m, st, sys)
     call X(xc_pot)(h%xc, m, st, h%vhxc, h%ex, h%ec, &
          -minval(st%eigenval(st%nst, :)), st%qtot)
 
+    ! The OEP family has to handle specially
+    if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
+      call X(h_xc_oep)(h%xc, m, st, h%vhxc, h%ex, h%ec)
+    end if
+
     select case(h%ispin)
     case(UNPOLARIZED)
       h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1))

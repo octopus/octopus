@@ -308,10 +308,12 @@ end subroutine hamiltonian_output
 #include "undef.F90"
 #include "real.F90"
 #include "h_inc.F90"
+#include "h_xc_OEP.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "h_inc.F90"
+#include "h_xc_OEP.F90"
 
 #if defined(COMPLEX_WFNS)
 #include "h_so.F90"

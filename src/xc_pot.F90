@@ -42,6 +42,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   ec  = M_ZERO
 
   do i = 0, N_XC_FAMILIES - 1
+    ! The XC_FAMILY_OEP is handled separatly by h_calc_vhxc
     if(btest(xcs%family, i)) then
       select case(ibset(0, i))
       case(XC_FAMILY_LDA)
@@ -51,8 +52,6 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$      case(XC_FAMILY_MGGA)
 !!$        call X(xc_mgga) (xcs%functl, xcs, m, nst, st%nspin, psi, occ, eigenval, &
 !!$             rho, vx, ex)
-      case(XC_FAMILY_KLI)
-        call X(xc_kli) (xcs, m, st, vxc, ex, ec)
       end select
     end if
   end do
