@@ -149,7 +149,8 @@ contains
        call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep)
        res = abs(beta*abs(expo(1, n+1)))
        beta = zstates_nrm2(sys%m, sys%st%dim, f)
-       if(res<tol .or. beta < 1.0e-12_r8) exit
+       if(beta < 1.0e-12_r8) exit
+       if(n>1 .and. res<tol) exit
     enddo
     order = min(korder, n + 1)
     !if(present(lanczos_order)) lanczos_order = order
