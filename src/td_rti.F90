@@ -32,6 +32,8 @@ subroutine td_rti(sys, h, td, t)
   case(3) ! split operator
     call td_rti3(sys, h, td, t)
 #endif
+  case(4)
+    call td_rti4(sys%m, sys%st)
   end select
 
   call pop_sub()
@@ -212,9 +214,54 @@ contains
     end do
     
     deallocate(vhxc_t2)
-    
+
     call pop_sub(); return
   end subroutine td_rti2
+
+  subroutine td_rti4(m, st)
+    type(mesh_type), intent(inout) :: m
+    type(states_type), intent(inout) :: st
+    
+    integer is, ik, ist
+#if defined(HAVE_MPI) && defined(MPI_TD)
+    real(r8), allocatable :: reduce_rho(:,:) ! temporary to do MPI_reduce
+    integer :: ierr
+#endif
+
+    real(r8), allocatable :: aux(:,:)
+
+    sub_name = 'td_rti2'; call push_sub()
+
+    allocate(aux(m%np, st%nspin))
+    
+    do is = 1, sys%st%nspin
+      aux(:, is) = 1.875_r8*(h%VHartree(:) + h%Vxc(:, is)) &
+           -1.25_r8*td%v_old1(:, is) + 0.375_r8*td%v_old2(:, is)
+    end do
+    
+    td%v_old2 = td%v_old1
+    do is = 1, st%nspin
+      td%v_old1(:, is) = h%VHartree(:) + h%Vxc(:, is)
+    end do
+    
+    ! propagate dt/2 with H(t-dt)
+    h%Vhartree = 0._r8
+    h%vxc = td%v_old1
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t-td%dt)
+      end do
+    end do
+    
+    h%vxc = aux
+    do ik = 1, st%nik
+      do ist = st%st_start, st%st_end
+        call td_dtexp(ik, st%zpsi(:,:, ist, ik), td%dt/2._r8, t)
+      end do
+    end do
+    
+    call pop_sub(); return
+  end subroutine td_rti4
 
 end subroutine td_rti
 

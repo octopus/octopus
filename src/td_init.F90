@@ -50,14 +50,18 @@ subroutine td_init(td, sys, m, st)
   end if
   
   call oct_parse_int(C_string("TDEvolutionMethod"), 2, td%evolution_method)
-  if (td%evolution_method<1 .or. td%evolution_method>3) then
+  if (td%evolution_method<1 .or. td%evolution_method>4) then
     write(message(1), '(a,i6,a)') "Input: '", td%evolution_method, "' is not a valid TDEvolutionMethod"
-    message(2) = '(1 <= TDEvolutionMethod <= 3)'
+    message(2) = '(1 <= TDEvolutionMethod <= 4)'
     call write_fatal(2)
   end if
   if(td%evolution_method == 3) then
     call mesh_alloc_ffts(m, 1)
   end if
+  if(td%evolution_method == 4) then
+    write(message(1),'(a)') 'WARNING: TDEvolutionMethod = 4 is not reliable for orbital dependent XC'
+    call write_warning(1)
+  endif
 
   call oct_parse_int(C_string("TDDipoleLmax"), 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
