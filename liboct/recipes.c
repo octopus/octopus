@@ -26,6 +26,8 @@
 #include <dirent.h>
 #include <time.h>
 
+#include "string_f.h"
+
 int FC_FUNC_(print_file, PRINT_FILE)
      (char *name)
 {
@@ -44,9 +46,9 @@ int FC_FUNC_(print_file, PRINT_FILE)
 }
 
 void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
-		 (char *_dir)
+		 (char *_dir STR_ARG1)
 {
-	char *lang, dir[512];
+  char *lang, *tmp, dir[512];
 	struct dirent **namelist;
 	int i, n;
 
@@ -54,10 +56,14 @@ void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 	lang = getenv("LANG");
 	if(lang == NULL) lang = "en";
 
-	/* check out if lang dir exists */
-	strcpy(dir, _dir);
+	/* convert directory from Fortran to C string */
+	tmp = TO_C_STR1(_dir);
+	strcpy(dir, tmp);
+	free(tmp);
+
 	strcat(dir, "/recipes");
 
+	/* check out if lang dir exists */
 	n = scandir(dir, &namelist, 0, alphasort);
 	if (n < 0){
 		printf("Directory does not exist: %s", dir);
