@@ -1,6 +1,7 @@
 ! This subroutine should be in specie.F90, but due to the limitations
 ! of f90 to handle circular dependences it had to come here!
 
+#if defined(THREE_D)
 subroutine specie_local_fourier_init(ns, s, m)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
@@ -64,6 +65,51 @@ subroutine specie_local_fourier_init(ns, s, m)
   deallocate(fr)
   call pop_sub()
 end subroutine specie_local_fourier_init
+
+#elif defined(ONE_D)
+
+subroutine specie_local_fourier_init(ns, s, m)
+  integer, intent(in) :: ns
+  type(specie_type), pointer :: s(:)
+  type(mesh_type), intent(IN) :: m
+
+  integer :: i, j, ix, iy, iz, n, ixx !ixx(3)
+  real(r8) :: x, r, vl, r1 !x(3)
+  complex(r8) :: c
+  !real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
+  real(r8), allocatable :: fr(:), dfr(:)
+
+  sub_name = 'specie_local_fourier_init'; call push_sub()
+
+  !allocate(fr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3)))
+  allocate(fr(m%fft_n2(1)))
+
+  do i = 1, ns
+    allocate(s(i)%local_fw(m%hfft_n2))
+
+    do ix = 1, m%fft_n2(1)
+       ixx = ix - (m%fft_n2(1)/2 + 1)
+       r = abs(m%h(1)*ixx)
+       vl = splint(s(i)%ps%vlocal, r)
+       if(r >= r_small) then
+         fr(ix) = (vl -s(i)%z_val)/r
+       else
+         fr(ix) = s(i)%ps%vlocal_origin
+       endif
+    enddo
+
+    call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
+
+    n = m%hfft_n2
+    c  = cmplx(1.0_r8/(m%fft_n2(1)), 0.0_r8, r8)
+    call zscal(n, c, s(i)%local_fw,  1)
+  end do
+  
+  deallocate(fr)
+  call pop_sub()
+end subroutine specie_local_fourier_init
+
+#endif
 
 subroutine specie_nl_fourier_init(ns, s, m, nextra)
   integer, intent(in) :: ns, nextra
@@ -170,9 +216,13 @@ subroutine generate_external_pot(h, sys)
   integer :: ia
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
+#if defined(THREE_D)
   complex(r8), allocatable :: fw(:,:,:), fwc(:,:,:)
   real(r8), allocatable :: fr(:,:,:)
-
+#elif defined(ONE_D)
+  complex(r8), allocatable :: fw(:), fwc(:,:,:)
+  real(r8), allocatable :: fr(:)
+#endif
   ! WARNING DEBUG
 !!$  integer :: j
 !!$  real(r8), allocatable :: f(:,:,:)
@@ -185,9 +235,13 @@ subroutine generate_external_pot(h, sys)
   call ion_ion_energy(sys)
 
   if(h%vpsl_space == 1) then
+#if defined(THREE_D)
     allocate(fw(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)), &
          fwc(sys%m%hfft_n2, sys%m%fft_n2(2), sys%m%fft_n2(3)))
     fw = M_z0; fwc = M_z0
+#elif defined(ONE_D)
+    allocate(fw(sys%m%hfft_n2)); fw = M_z0
+#endif
   end if
 
   h%Vpsl  = 0._r8
@@ -203,8 +257,8 @@ subroutine generate_external_pot(h, sys)
     end select
   end do
 
-#if defined(THREE_D)
   if(h%vpsl_space == 1) then
+#if defined(THREE_D)
     allocate(fr(sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)))
 
     ! first the potential
@@ -216,8 +270,16 @@ subroutine generate_external_pot(h, sys)
     call dcube_to_mesh(sys%m, fr, h%rho_core, 2)
     
     deallocate(fw, fwc, fr)
-  end if
+#elif defined(ONE_D)
+    allocate(fr(sys%m%fft_n2(1)))
+
+    ! first the potential
+    call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
+    call dcube_to_mesh(sys%m, fr, h%Vpsl, t=2)
+    
+    deallocate(fw, fr)
 #endif
+  end if
 
   if (h%classic_pot) then
     h%Vpsl = h%Vpsl + h%Vclassic
@@ -487,31 +549,7 @@ subroutine get_nl_part(ps, x, l, lm, uV, duV)
 
 end subroutine get_nl_part
 
-! this actually adds to outp
-subroutine phase_factor(m, n, vec, inp, outp)
-  implicit none
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in)         :: n(3)
-  real(r8), intent(IN)        :: vec(3)
-  complex(r8), intent(IN)     :: inp (n(1)/2+1, n(2), n(3))
-  complex(r8), intent(inout)  :: outp(n(1)/2+1, n(2), n(3))
-  
-  complex(r8) :: k(3)
-  integer     :: ix, iy, iz, ixx, iyy, izz
-  
-  k(1:3) = M_zI * ((2.0_r8*M_Pi)/(n(1:3)*m%h(1:3)))
-  do iz = 1, n(3)
-    izz = pad_feq(iz, n(3), .true.)
-    do iy = 1, n(2)
-      iyy = pad_feq(iy, n(2), .true.)
-      do ix = 1, n(1)/2 + 1
-        ixx = pad_feq(ix, n(1), .true.)
-        outp(ix, iy, iz) = outp(ix, iy, iz) + &
-             exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * inp(ix, iy, iz)
-      end do
-    end do
-  end do
-end subroutine phase_factor
+
 
 subroutine generate_classic_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h

@@ -20,9 +20,15 @@ type specie_type
   type(ps_type), pointer :: ps
 
   ! For the local pseudopotential in Fourier space...
+#if defined(THREE_D)
   complex(r8), pointer :: &
        local_fw(:,:,:),    &  ! for the potential
        rhocore_fw(:,:,:)      ! for the core density
+#elif defined(ONE_D)
+  complex(r8), pointer :: &
+       local_fw(:),       &
+       rhocore_fw(:, :, :)
+#endif
 
   ! For the non-local pp in fourier space
   integer(POINTER_SIZE) :: nl_planb

@@ -368,6 +368,32 @@ subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
 
 end subroutine mesh_laplacian_in_FS
 
+! this actually adds to outp
+subroutine phase_factor(m, n, vec, inp, outp)
+  implicit none
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in)         :: n(3)
+  real(r8), intent(IN)        :: vec(3)
+  complex(r8), intent(IN)     :: inp (n(1)/2+1, n(2), n(3))
+  complex(r8), intent(inout)  :: outp(n(1)/2+1, n(2), n(3))
+  
+  complex(r8) :: k(3)
+  integer     :: ix, iy, iz, ixx, iyy, izz
+  
+  k(1:3) = M_zI * ((2.0_r8*M_Pi)/(n(1:3)*m%h(1:3)))
+  do iz = 1, n(3)
+    izz = pad_feq(iz, n(3), .true.)
+    do iy = 1, n(2)
+      iyy = pad_feq(iy, n(2), .true.)
+      do ix = 1, n(1)/2 + 1
+        ixx = pad_feq(ix, n(1), .true.)
+        outp(ix, iy, iz) = outp(ix, iy, iz) + &
+             exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * inp(ix, iy, iz)
+      end do
+    end do
+  end do
+end subroutine phase_factor
+
 #include "mesh3D_create.F90"
 
 #include "undef.F90"

@@ -10,8 +10,13 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
   real(r8) :: d, r, x(3), zi, zj, vl, dvl
   R_TYPE :: uVpsi
   type(atom_type), pointer :: atm
+#if defined(THREE_D)
   complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
   real(r8), allocatable :: fr(:,:,:), force(:)
+#elif defined(ONE_D)
+  complex(r8), allocatable :: fw1(:), fw2(:)
+  real(r8), allocatable :: fr(:), force(:)
+#endif
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
   real(r8) :: f(3)
@@ -127,6 +132,26 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
           atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
         end do
       end do
+    end do
+    deallocate(fw1, fw2, fr, force)
+#elif defined(ONE_D)
+    allocate( &
+         fw1(sys%m%hfft_n2), &
+         fw2(sys%m%hfft_n2), &
+         fr (sys%m%fft_n2(1)), &
+         force(sys%m%np))
+    
+    do i = 1, sys%natoms
+      atm => sys%atom(i)
+        fw1 = M_z0
+        call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
+        call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2)
+        call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
+        force = 0._r8
+        call dcube_to_mesh(sys%m, fr, force, t=2)
+        do l = 1, sys%st%nspin
+          atm%f(1) = atm%f(1) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
+        end do
     end do
     deallocate(fw1, fw2, fr, force)
 #endif
