@@ -1,7 +1,7 @@
 DONE mesh3D.F90  -> reintroduce vol_pp and change the rest accordingly
 xc_KLI*     -> DOIT
-eigen*      -> sort out the eigen_solvers
-mix.F90     -> sort out the broyden/andersen mixing
+DONE eigen*      -> sort out the eigen_solvers
+DONE mix.F90     -> sort out the broyden/andersen mixing
 states_inc.F90 -> load/write_restart with netcdf
 LocalPotentialSpace = 1 only works with pseudopotentials, otherwise, it crashes!
 
