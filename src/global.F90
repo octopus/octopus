@@ -316,7 +316,7 @@ subroutine push_sub(sub_name)
       write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", loct_clock()/CNST(1e6), &
            loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
-        write(stderr,'(a)', advance='no') "  "
+        write(stderr,'(a)', advance='no') "..|"
       end do
       write(stderr,'(a)') trim(sub_name)
     end if
@@ -336,7 +336,7 @@ subroutine pop_sub()
           (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
           loct_getmem(), " | "
       do i = no_sub_stack-1, 1, -1
-        write(stderr,'(a)', advance='no') "  "
+        write(stderr,'(a)', advance='no') "..|"
       end do
       write(stderr,'(a)') trim(sub_stack(no_sub_stack))
     end if
