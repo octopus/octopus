@@ -144,7 +144,7 @@ contains
       call write_info(1)
 
       call mix_init(lr%mixer, 1, sys%m%np, sys%st%d%nspin)
-      call get_response_e(sys, h, lr, i, M_ZERO)
+      call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO))
       call mix_end(lr%mixer)
       
       do j = 1, sys%m%np
