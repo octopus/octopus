@@ -28,8 +28,10 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
   select case(td%exp_method)
    case(FOURTH_ORDER);      call fourth
    case(LANCZOS_EXPANSION); call lanczos
+#ifdef HAVE_FFT
    case(SPLIT_OPERATOR);    call split
    case(SUZUKI_TROTTER);    call suzuki
+#endif
    case(CHEBYSHEV);         call cheby
   end select
 
@@ -171,6 +173,7 @@ contains
     call pop_sub()
   end subroutine lanczos
 
+#ifdef HAVE_FFT
   subroutine split
     call push_sub('split')
 
@@ -377,6 +380,6 @@ contains
 
     call pop_sub()
   end subroutine local_part
-
+#endif
 
 end subroutine td_dtexp

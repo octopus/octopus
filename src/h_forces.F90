@@ -114,8 +114,10 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
   ! now comes the local part of the PP
   if(h%vpsl_space == 0) then ! Real space
     call local_RS()
+#ifdef HAVE_FFT
   else ! Fourier space
     call local_FS()
+#endif
   end if
 
   call pop_sub()
@@ -141,6 +143,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
     end subroutine local_RS
 
     ! WARNING: this is still not working
+#ifdef HAVE_FFT
     subroutine local_FS()
       complex(r8), allocatable :: fw(:,:,:)
       real(r8), allocatable :: fr(:,:,:), force(:)
@@ -168,5 +171,6 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 
       deallocate(fw, fr, force)
     end subroutine local_FS
+#endif
 
 end subroutine R_FUNC(forces)

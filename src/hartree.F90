@@ -22,7 +22,7 @@ use global
 use oct_parser
 use mesh
 use math
-#ifdef HAVE_FFTW
+#ifdef HAVE_FFT
 use fft
 #endif
 implicit none
@@ -36,7 +36,7 @@ type hartree_type
   integer :: ncgiter
   type(mesh_type), pointer :: m_aux
 
-#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
+#ifdef HAVE_FFT
   ! used by the fft methods
   type(fft_type) :: fft
   real(r8), pointer :: ff(:, :, :)   
@@ -58,6 +58,7 @@ subroutine hartree_init(h, m)
     message(1) = 'Info: Using direct integration method to solve poisson equation'
     call write_info(1)
   else
+#ifdef HAVE_FFT
     call oct_parse_int('PoissonSolver', 3, h%solver)
     if(h%solver<1 .or. h%solver>3 ) then
       write(message(1), '(a,i2,a)') "Input: '", h%solver, &
@@ -73,6 +74,9 @@ subroutine hartree_init(h, m)
       call write_warning(3)
       h%solver = 2
     end if
+#else
+    h%solver = 1
+#endif
 
     call hartree3D_init(h, m)
   end if
@@ -88,7 +92,7 @@ subroutine hartree_end(h)
     nullify(h%m_aux%d) ! this is a copy from sys%m, so it should not be dealloated here
     call mesh_end(h%m_aux)
     deallocate(h%m_aux); nullify(h%m_aux)
-#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
+#ifdef HAVE_FFT
   case(2,3)
     call fft_end(h%fft)
     deallocate(h%ff); nullify(h%ff)
@@ -114,7 +118,7 @@ subroutine hartree_solve(h, m, pot, dist)
     call hartree2d_solve(h, m, pot, dist)
   case(1)
     call hartree_cg(h, m, pot, dist)
-#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
+#ifdef HAVE_FFT
   case(2,3)
     call hartree_fft(h, m, pot, dist)
 #endif

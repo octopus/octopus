@@ -24,7 +24,9 @@ use units
 use ps
 use spline
 use math
+#ifdef HAVE_FFT
 use fft
+#endif
 
 implicit none
 

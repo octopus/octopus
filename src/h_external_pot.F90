@@ -18,6 +18,7 @@
 ! This subroutine should be in specie.F90, but due to the limitations
 ! of f90 to handle circular dependences it had to come here!
 
+#ifdef HAVE_FFT
 subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
   integer, intent(in) :: ns
   type(specie_type), pointer :: s(:)
@@ -107,6 +108,7 @@ subroutine specie_local_fourier_init(ns, s, m, fft, nlcc)
   deallocate(fr)
   call pop_sub()
 end subroutine specie_local_fourier_init
+#endif
 
 subroutine generate_external_pot(h, sys)
   type(hamiltonian_type), intent(inout) :: h
@@ -124,6 +126,7 @@ subroutine generate_external_pot(h, sys)
   ! first we assume that we need to recalculate the ion_ion energy
   sys%eii = ion_ion_energy(sys%natoms, sys%atom)
 
+#ifdef HAVE_FFT
   if(h%vpsl_space == RECIPROCAL_SPACE) then
     call fft_getdim_real   (h%fft, db)  ! get dimensions of real array
     call fft_getdim_complex(h%fft, dbc) ! get dimensions of complex array
@@ -136,6 +139,7 @@ subroutine generate_external_pot(h, sys)
       fwc = M_z0
     end if
   end if
+#endif
 
   h%Vpsl = M_ZERO
   if(sys%nlcc) sys%st%rho_core = M_ZERO
@@ -153,6 +157,7 @@ subroutine generate_external_pot(h, sys)
 
   end do
 
+#ifdef HAVE_FFT
   if(h%vpsl_space == RECIPROCAL_SPACE) then
     allocate(fr(db(1), db(2), db(3)))
 
@@ -169,6 +174,7 @@ subroutine generate_external_pot(h, sys)
     
     deallocate(fw, fr)
   end if
+#endif
 
   if (h%classic_pot > 0) then
     h%Vpsl = h%Vpsl + h%Vclassic
@@ -195,11 +201,13 @@ contains
         end if
       end do
 
+#ifdef HAVE_FFT
     else ! momentum space
       call phase_factor(m, db, a%x, s%local_fw, fw)
       if(s%nlcc) then
         call phase_factor(m, db, a%x, s%rhocore_fw, fwc)
       end if
+#endif
     end if
 
     call pop_sub()

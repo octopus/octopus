@@ -21,7 +21,9 @@ module hamiltonian
 use global
 use oct_parser
 use spline
+#ifdef HAVE_FFT
 use fft
+#endif
 use units
 use output
 use system
@@ -63,7 +65,9 @@ type hamiltonian_type
   type(xc_type) :: xc
 
   ! fft used to calculate the external potential in FS
+#ifdef HAVE_FFT
   type(fft_type) :: fft
+#endif
 
   ! gauge
   integer :: gauge ! in which gauge shall we work in
@@ -124,7 +128,11 @@ subroutine hamiltonian_init(h, sys)
   end if
 
   ! should we calculate the local pseudopotentials in Fourier space?
+#ifdef HAVE_FFT
   call oct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, h%vpsl_space)
+#else
+  h%vpsl_space = REAL_SPACE
+#endif
   select case(h%vpsl_space)
     case(RECIPROCAL_SPACE)
       message(1) = 'Info: Local Potential in Reciprocal Space.'
@@ -143,11 +151,13 @@ subroutine hamiltonian_init(h, sys)
   end select
   call write_info(1)
 
+#ifdef HAVE_FFT
   if(h%vpsl_space == RECIPROCAL_SPACE) then
     call mesh_double_box(sys%m, db)
     call fft_init(db, fft_real, h%fft)
     call specie_local_fourier_init(sys%nspecies, sys%specie, sys%m, h%fft, sys%nlcc)
   end if
+#endif
 
   call oct_parse_int("RelativisticCorrection", NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -283,7 +293,9 @@ subroutine hamiltonian_end(h)
 
   call laser_end(h%no_lasers, h%lasers)
 
+#ifdef HAVE_FFT
   if(h%vpsl_space == RECIPROCAL_SPACE) call fft_end(h%fft)
+#endif
 
   call pop_sub()
 end subroutine hamiltonian_end

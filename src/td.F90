@@ -27,7 +27,7 @@ use states
 use hamiltonian
 use mix
 use lasers
-#ifndef DISABLE_PES
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use PES
 #endif
 
@@ -52,7 +52,9 @@ type td_type
 
   integer :: lmax        ! maximum multipole moment to write
 
+#ifdef HAVE_FFT
   type(fft_type) :: fft  ! for the split operator method
+#endif
 
   !variables controlling the output
   logical :: out_multip  ! multipoles
@@ -63,7 +65,7 @@ type td_type
   logical :: out_energy  ! several components of the electronic energy
   logical :: out_proj    ! projection onto the GS KS eigenfunctions
 
-#ifndef DISABLE_PES
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
   type(PES_type) :: PESv
 #endif
 
@@ -247,7 +249,7 @@ subroutine td_run(td, u_st, sys, h)
     ! output projections onto the GS KS eigenfunctions
     if(td%out_proj) call td_write_proj(i)
     
-#ifndef DISABLE_PES
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
     call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
 #endif
 

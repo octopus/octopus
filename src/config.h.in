@@ -1,8 +1,5 @@
-/* FFTW library (www.fftw.org), version 3 */
-#undef HAVE_FFTW3
-
-/* FFTW library (www.fftw.org) */
-#undef HAVE_FFTW
+/* FFT library to use (fftw2 | fftw3) */
+#undef HAVE_FFT
 
 /* TRLan library (www.nersc.gov/research/SIMON/trlan.html) */
 #undef  HAVE_TRLAN

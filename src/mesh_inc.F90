@@ -126,6 +126,7 @@ end function R_FUNC(mesh_integrate)
 ! The dimensions of g are different wether f is real or complex, because the
 ! FFT representation is different (FFTW scheme).
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#ifdef HAVE_FFT
 subroutine R_FUNC(mesh_rs2fs)(m, f, g)
   type(mesh_type), intent(in)  :: m
   R_TYPE, intent(in)       :: f(:)
@@ -181,6 +182,8 @@ subroutine R_FUNC(mesh_fs2rs)(m, g, f)
 
   call pop_sub()
 end subroutine R_FUNC(mesh_fs2rs)
+
+#endif
 
 subroutine R_FUNC(mesh_random)(m, f)
   type(mesh_type), intent(in) :: m
@@ -269,6 +272,7 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
     case(REAL_SPACE)
       call rs_derivative()
 
+#ifdef HAVE_FFT
     case(RECIPROCAL_SPACE)
       ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
       lcutoff = -M_ONE
@@ -276,11 +280,16 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
       if(alp.ne.M_z0) lcutoff = lcutoff*M_ONE/abs(alp)
 
       call fft_derivative()
+#endif
+    case default
+      message(1) = "Internal error in mesh_derivatives"
+      call write_fatal(1)
   end select
 
   call pop_sub()
 contains
 
+#ifdef HAVE_FFT
   subroutine fft_derivative()
     complex(r8), allocatable :: fw(:,:,:), fw2(:,:,:)
 
@@ -317,7 +326,8 @@ contains
 
     return
   end subroutine fft_derivative
-  
+#endif
+
   subroutine rs_derivative()
     integer :: j, k, nl, ng(3)
     type(der_lookup_type), pointer :: p
@@ -361,6 +371,7 @@ subroutine R_FUNC(low_frequency) (m, f, lapl)
 end subroutine R_FUNC(low_frequency)
 
 ! WARNING the next two functions need to be cleaned
+#ifdef HAVE_FFT
 subroutine R_FUNC(mesh_laplq)(m, f, n, cutoff)
   type(mesh_type), intent(in)    :: m
   complex(r8), dimension(*) :: f
@@ -438,3 +449,4 @@ subroutine R_FUNC(mesh_gradq)(m, f, j, n)
 
   call pop_sub()
 end subroutine R_FUNC(mesh_gradq)
+#endif

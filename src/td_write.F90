@@ -44,7 +44,7 @@
     if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
     call hamiltonian_output(h, sys%m, filename, sys%outp)
     
-#ifndef DISABLE_PES
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
     call PES_output(td%PESv, sys%m, sys%st, iter, sys%outp%iter, td%dt)
 #endif
 

@@ -17,8 +17,8 @@
 
 #include "config_F90.h"
 
-#ifndef DISABLE_PES
 module PES
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use global
 use units
 use oct_parser
@@ -110,6 +110,7 @@ end subroutine PES_output
 
 #include "pes_rc.F90"
 #include "pes_mask.F90"
-end module PES
 
 #endif
+end module PES
+

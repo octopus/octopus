@@ -99,75 +99,50 @@ AC_LANG_PREPROC(Fortran 90)
 dnl how Fortran mangles function names
 AC_F90_WRAPPERS
 
-dnl tests for FFTW3
-dnl Will use FFTW3 if present, otherwise it will revert to FFTW2.
-lib_ok="ok"
-if test -z "${LIB_FFTW3}"; then
-	AC_ARG_WITH(fftw3, AC_HELP_STRING([--with-fftw3=DIR], [get it! (www.fftw.org)]), 
-                    [FFTW3DIR=$withval], [FFTW3DIR=""])
-	if test "$FFTW3DIR" = "no"; then
-		lib_ok="no"
-	else
-		save_ldflags="$LDFLAGS"
-		AS_IF([test "$FFTW3DIR"], [LDFLAGS="${LDFLAGS} -L${FFTW3DIR} -L${FFTW3DIR}/lib"])
-		ACX_CHECK_FUNC([LIB_FFTW3], [dfftw_plan_dft_1d])
-		ACX_CHECK_LIB([LIB_FFTW3], [fftw3],  [dfftw_plan_dft_1d], [-lfftw3])
-		AS_IF([test -z "${LIB_FFTW3}"], AC_MSG_WARN([couldn't find fftw3 library]))
+dnl now we search for libraries
+dnl ===================================================================
 
-		LDFLAGS="$save_ldflags"
-		LIB_FFTW="${LIB_FFTW3}"
-		AS_IF([test "$FFTW3DIR"], [LIB_FFTW="-L${FFTW3DIR} -L${FFTW3DIR}/lib ${LIB_FFTW}"])
-	fi
-fi
+dnl FFT
+AC_ARG_ENABLE(fft, [  --enable-fft=ARG    enable fft support
+      ARG=no          (the same as --disable-fft) disable FFT support
+      ARG=fftw3       FFTW3 support through libfftw3 (default)
+      ARG=fftw2       FFTW2 support through libfftw],
+        [fft=$enableval], [fft=fftw3])
 
-if test "$lib_ok" = "ok"; then
-if test "${LIB_FFTW3}"; then
-	AC_DEFINE(HAVE_FFTW3, 1, [FFTW library (www.fftw.org)])
-	AC_SUBST(LIB_FFTW)
-fi
-fi
-
-dnl If FFTW3 was not found, variable ${LIB_FFTW3} should be empty, and FFTW2 will be searched.
-if test -z "${LIB_FFTW3}"; then
-
-dnl tests for FFTW
-lib_ok="ok"
-if test -z "${LIB_FFTW}"; then
-	AC_ARG_WITH(fftw, 
-		AC_HELP_STRING([--with-fftw=DIR], [get it! (www.fftw.org)]), 
-		[FFTWDIR=$withval], [FFTWDIR=""])
-
-	if test "$FFTWDIR" = "no"; then
-		lib_ok="no"
-	else
-	  save_ldflags="$LDFLAGS"
-  	AS_IF([test "$FFTWDIR"], [LDFLAGS="${LDFLAGS} -L${FFTWDIR} -L${FFTWDIR}/lib"])
-
-		ACX_CHECK_FUNC([LIB_FFTW], [fftw3d_f77_create_plan])
-		ACX_CHECK_LIB([LIB_FFTW], [fftw],  [fftw3d_f77_create_plan], [-lfftw])
-		ACX_CHECK_LIB([LIB_FFTW], [dfftw], [fftw3d_f77_create_plan], [-ldfftw])
-		AS_IF([test -z "${LIB_FFTW}"], AC_MSG_ERROR([couldn't find fftw library]))
+case "${fft}" in
+	fftw3*)
+		ACX_CHECK_FUNC([lib_fft], [dfftw_plan_dft_1d])
+		ACX_CHECK_LIB([lib_fft], [fftw3],  [dfftw_plan_dft_1d], [-lfftw3])
+		AS_IF([test -z "${lib_fft}"], AC_MSG_ERROR([could not find fftw3 library]))
+		fft=3
+		;;
+  fftw2*)
+		ACX_CHECK_FUNC([lib_fft], [fftw3d_f77_create_plan])
+		ACX_CHECK_LIB([lib_fft], [fftw],  [fftw3d_f77_create_plan], [-lfftw])
+		ACX_CHECK_LIB([lib_fft], [dfftw], [fftw3d_f77_create_plan], [-ldfftw])
+		AS_IF([test -z "${lib_fft}"], AC_MSG_ERROR([couldn't find fftw library]))
 	
-  	ACX_CHECK_FUNC([LIB_RFFTW], [rfftw3d_f77_create_plan], [], [], [${LIB_FFTW}])
-   	ACX_CHECK_LIB([LIB_RFFTW], [rfftw], [rfftw3d_f77_create_plan], [-lrfftw], [], ["${LIB_FFTW}"])
-   	ACX_CHECK_LIB([LIB_RFFTW], [drfftw], [rfftw3d_f77_create_plan], [-ldrfftw], [], ["${LIB_FFTW}"])
-		AS_IF([test -z "${LIB_RFFTW}"], AC_MSG_ERROR([couldn't find rfftw library]))
-	
-  	LDFLAGS="$save_ldflags"
-		LIB_FFTW="${LIB_FFTW} ${LIB_RFFTW}"
-		AS_IF([test "$FFTWDIR"], [LIB_FFTW="-L${FFTWDIR} -L${FFTWDIR}/lib ${LIB_FFTW}"])
-	fi
+  	ACX_CHECK_FUNC([lib_rfft], [rfftw3d_f77_create_plan], [], [], [${lib_fft}])
+   	ACX_CHECK_LIB([lib_rfft], [rfftw], [rfftw3d_f77_create_plan], [-lrfftw], [], [${lib_fft}])
+   	ACX_CHECK_LIB([lib_rfft], [drfftw], [rfftw3d_f77_create_plan], [-ldrfftw], [], [${lib_fft}])
+		AS_IF([test -z "${lib_rfft}"], AC_MSG_ERROR([couldn't find rfftw library]))
+
+		lib_fft="${lib_rfft} ${lib_fft}"
+		fft=2
+		;;
+  *)
+		fft=no
+		;;
+esac
+
+if test $fft = "no"; then
+	AC_MSG_WARN([Octopus will be compiled *without* fft support])
+else
+	AC_DEFINE_UNQUOTED(HAVE_FFT, $fft, [FFT library (fftw2 | fftw3)])
+	AC_SUBST(LIB_FFT, ${lib_fft})
 fi
 
-if test "$lib_ok" = "ok"; then
-	AC_DEFINE(HAVE_FFTW, 1, [FFTW library (www.fftw.org)])
-	AC_SUBST(LIB_FFTW)
-fi
-
-fi
-
-
-dnl tests for trlan. Default behaviour will be *not* using it.   
+dnl tests for trlan. Default behavior will be *not* using it.   
 lib_ok="no"
 if test -z "${LIB_TRLAN}"; then
 	AC_ARG_WITH(trlan,

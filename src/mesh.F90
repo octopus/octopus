@@ -20,7 +20,9 @@ module mesh
 use global
 use oct_parser
 use units
+#ifdef HAVE_FFT
 use fft
+#endif
 use atom
   
 implicit none
@@ -76,8 +78,10 @@ type mesh_type
 
   type(der_lookup_type), pointer :: der_lookup(:)   ! lookup tables for derivatives
   
+#ifdef HAVE_FFT
   type(fft_type) :: dfft, zfft ! to calculate derivatives using ffts
   real(r8) :: fft_alpha ! enlargement factor for double box
+#endif
 
   real(r8) :: vol_pp    ! element of volume for integrations
 end type mesh_type
@@ -100,6 +104,7 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_create(m, natoms, atom)
 
+#ifdef HAVE_FFT
   call oct_parse_double('DoubleFFTParameter', 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
     write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
@@ -115,15 +120,20 @@ subroutine mesh_init(m, natoms, atom)
     message(2) = '(0 <= DerivativesSpace <=1)'
     call write_fatal(2)
   end if
+#else
+  m%d%space = REAL_SPACE
+#endif
 
   ! order is very important
   ! init rs -> create -> init fft
   if(m%d%space == REAL_SPACE) then 
     message(1) = 'Info: Derivatives calculated in real-space'
+#ifdef HAVE_FFT
   else
     call fft_init(m%l, fft_real,    m%dfft)
     call fft_init(m%l, fft_complex, m%zfft)
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
+#endif
   end if
   call write_info(1)
 
@@ -131,6 +141,7 @@ subroutine mesh_init(m, natoms, atom)
 end subroutine mesh_init
 
 ! finds the dimension of a box doubled in the non-periodic dimensions
+#ifdef HAVE_FFT
 subroutine mesh_double_box(m, db)
   type(mesh_type), intent(in) :: m
   integer, intent(out) :: db(3)
@@ -146,6 +157,7 @@ subroutine mesh_double_box(m, db)
   end do
 
 end subroutine mesh_double_box
+#endif
 
 subroutine mesh_write_info(m, unit)
   type(mesh_type), intent(IN) :: m
@@ -350,6 +362,7 @@ subroutine mesh_init_derivatives_coeff(d)
 end subroutine mesh_init_derivatives_coeff
 
 ! this actually adds to outp
+#ifdef HAVE_FFT
 subroutine phase_factor(m, n, vec, inp, outp)
   implicit none
   type(mesh_type), intent(IN) :: m
@@ -375,6 +388,7 @@ subroutine phase_factor(m, n, vec, inp, outp)
     end do
   end do
 end subroutine phase_factor
+#endif
 
 ! Deallocates what has to be deallocated ;)
 subroutine mesh_end(m)

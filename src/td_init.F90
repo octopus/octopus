@@ -62,10 +62,12 @@ subroutine td_init(td, sys, m, st, h)
   select case(td%exp_method)
     case(FOURTH_ORDER);         message(1) = 'Info: Exponential method: 4th order expansion.'
     case(LANCZOS_EXPANSION);    message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
+#ifdef HAVE_FFT
     case(SPLIT_OPERATOR);       message(1) = 'Info: Exponential method: Split-Operator.'
       call fft_init(m%l, fft_complex, td%fft)
     case(SUZUKI_TROTTER);       message(1) = 'Info: Exponential method: Suzuki-Trotter.'
       call fft_init(m%l, fft_complex, td%fft)
+#endif
     case(CHEBYSHEV);            message(1) = 'Info: Exponential method: Chebyshev.'
     case default
      write(message(1), '(a,i6,a)') "Input: '", td%exp_method, "' is not a valid TDEvolutionMethod"
@@ -109,8 +111,10 @@ subroutine td_init(td, sys, m, st, h)
   endif
 
   ! now the photoelectron stuff
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call oct_parse_int("AbsorbingBoundaries", 0, dummy)
   call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
+#endif
 
   ! should we move the ions during the simulation?
   call oct_parse_int("MoveIons", 0, td%move_ions)
@@ -192,7 +196,7 @@ subroutine td_end(td)
 
   deallocate(td%pol)
 
-#ifndef NO_PES
+#if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call PES_end(td%PESv)
 #endif
 
@@ -200,9 +204,11 @@ subroutine td_end(td)
     deallocate(td%v_old);  nullify(td%v_old)
   end if
 
+#ifdef HAVE_FFT
   if(td%exp_method==SPLIT_OPERATOR.or.td%exp_method==SUZUKI_TROTTER) then
     call fft_end(td%fft)
   end if
+#endif
 
   call pop_sub()
 end subroutine td_end

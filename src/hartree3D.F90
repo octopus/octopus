@@ -24,6 +24,7 @@ subroutine hartree3D_init(h, m)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
       call write_info(1)
       call init_real()
+#ifdef HAVE_FFT
     case(2)
       message(1) = 'Info: Using FFTs to solve poisson equation.'
       call write_info(1)
@@ -32,6 +33,10 @@ subroutine hartree3D_init(h, m)
       message(1) = 'Info: Using FFTs to solve poisson equation with spherical cutoff.'
       call write_info(1)
       call init_fft()
+#endif
+    case default
+      message(1) = "Internal error in hartree3D_init"
+      call write_fatal(1)
   end select
 
   call pop_sub()
@@ -47,6 +52,7 @@ contains
     
   end subroutine init_real
 
+#ifdef HAVE_FFT
   subroutine init_fft()
     integer :: ix, iy, iz, ixx(3), db(3), dbc(3)
     real(r8) :: r_0, temp(3), vec
@@ -92,6 +98,7 @@ contains
     end do
 
   end subroutine init_fft
+#endif
 
 end subroutine hartree3D_init
 
@@ -192,7 +199,7 @@ subroutine hartree_cg(h, m, pot, dist)
   return
 end subroutine hartree_cg
 
-#if defined(HAVE_FFTW) || defined(HAVE_FFTW3)
+#if defined(HAVE_FFT)
 subroutine hartree_fft(h, m, pot, dist)
   type(hartree_type), intent(IN) :: h
   type(mesh_type), intent(IN) :: m

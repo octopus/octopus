@@ -15,6 +15,7 @@ octopus_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 pulpo.F90 units
 
 noinst_HEADERS = \
 	real.F90 complex.F90 undef.F90 mesh.F90 mesh_inc.F90 mesh_create.F90\
+	fftw2.F90	fftw3.F90 \
 	hartree1D.F90 hartree2D.F90 hartree3D.F90 \
 	specie1D.F90 specie3D.F90\
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 \
@@ -27,7 +28,7 @@ noinst_HEADERS = \
 	mix_inc.F90 out_inc.F90 math_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a \
-  @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@ 
+  @LIB_FFT@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@ 
 
 # this has to be repeated...
 octopus_mpi_SOURCES     = $(octopus_SOURCES)
