@@ -51,10 +51,41 @@ module lib_xc
      XC_GGA_C_PBE         = 102, &  ! Perdew, Burke & Ernzerhof correlation
      XC_GGA_N             = 102 - XC_GGA_X_PBE + 1
 
+  character(len=5), parameter :: xc_family(2) = &
+     (/ 'LDA  ', 'GGA  ' /)
+
+  ! info
+  interface
+    integer function xc_info_number(info)
+      integer(POINTER_SIZE), intent(in) :: info
+    end function xc_info_number
+
+    integer function xc_info_kind(info)
+      integer(POINTER_SIZE), intent(in) :: info
+    end function xc_info_kind
+
+    subroutine xc_info_name(info, s)
+      integer(POINTER_SIZE), intent(in)  :: info
+      character(len=*),      intent(out) :: s
+    end subroutine xc_info_name
+
+    subroutine xc_info_family(info, s)
+      integer(POINTER_SIZE), intent(in)  :: info
+      character(len=*),      intent(out) :: s
+    end subroutine xc_info_family
+
+    subroutine xc_info_refs(info, n, s)
+      integer(POINTER_SIZE), intent(in)    :: info
+      integer,               intent(inout) :: n
+      character(len=*),      intent(out)   :: s
+    end subroutine xc_info_refs
+  end interface
+
   ! the LDAs
   interface
-    subroutine xc_lda_init(p, functional, nspin)
+    subroutine xc_lda_init(p, info, functional, nspin)
       integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_lda_init
@@ -70,15 +101,17 @@ module lib_xc
       FLOAT,                 intent(out) :: v     ! v(nspin) the potential
     end subroutine xc_lda
 
-    subroutine xc_lda_x_init(p, nspin, dim, rel)
+    subroutine xc_lda_x_init(p, info, nspin, dim, rel)
       integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
       integer,               intent(in)  :: dim    ! 2 or 3 dimensions
       integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
     end subroutine xc_lda_x_init
     
-    subroutine xc_lda_c_xalpha_init(p, nspin, dim, rel, alpha)
+    subroutine xc_lda_c_xalpha_init(p, info, nspin, dim, rel, alpha)
       integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
       integer,               intent(in)  :: dim    ! 2 or 3 dimensions
       integer,               intent(in)  :: rel    ! XC_NON_RELATIVISTIC or XC_RELATIVISTIC
@@ -88,8 +121,9 @@ module lib_xc
 
   ! the GGAs
   interface
-    subroutine xc_gga_init(p, functional, nspin)
+    subroutine xc_gga_init(p, info, functional, nspin)
       integer(POINTER_SIZE), intent(out) :: p
+      integer(POINTER_SIZE), intent(out) :: info
       integer,               intent(in)  :: functional
       integer,               intent(in)  :: nspin
     end subroutine xc_gga_init

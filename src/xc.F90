@@ -103,6 +103,8 @@ type xc_type
 
   integer               :: gga_functl
   integer(POINTER_SIZE) :: gga_conf(XC_GGA_N)
+
+  integer(POINTER_SIZE) :: x_info, c_info
 end type xc_type
 
 
@@ -129,15 +131,10 @@ subroutine xc_write_info(xcs, iunit)
   if(mpiv%node == 0) then
 #endif
 
-!    do i = 0, N_X_FUNCTL+N_C_FUNCTL-1
-!      if(btest(xcs%functl, i)) then
-!       if(i < N_X_FUNCTL) then
-!         write(iunit, '(6x,a,a)') 'Exchange    : ', xc_name_functionals(i+1)
-!       else
-!          write(iunit, '(6x,a,a)') 'Correlation : ', xc_name_functionals(i+1)
-!       end if
-!     end if
-!   end do
+    write(iunit, '(2x,a)') 'Exchange'
+    call get_info(xcs%x_info)
+    write(iunit, '(2x,a)') 'Correlation'
+    call get_info(xcs%c_info)
 
     if(iand(xcs%family, XC_FAMILY_OEP).ne.0) then
       write(iunit, '(a)') 'The OEP equation will be handle at the level of:'
@@ -151,6 +148,26 @@ subroutine xc_write_info(xcs, iunit)
 #ifdef HAVE_MPI
   end if
 #endif
+
+contains
+  subroutine get_info(info)
+    integer(POINTER_SIZE), intent(in) :: info
+
+    character(len=120) :: s1, s2
+    integer :: i
+
+    call xc_info_name  (info, s1)
+    call xc_info_family(info, s2)
+    write(iunit, '(4x,4a)') trim(s1), ' (', trim(s2), ')'
+
+    i = 0;
+    call xc_info_ref(info, i, s1)
+    do while(i>=0)
+      write(iunit, '(4x,a,i1,2a)') '[', i, '] ', trim(s1)
+      call xc_info_ref(info, i, s1)
+    end do
+
+  end subroutine get_info
 end subroutine xc_write_info
 
 subroutine xc_init(xcs, nlcc, spin_channels)
@@ -158,7 +175,7 @@ subroutine xc_init(xcs, nlcc, spin_channels)
   logical, intent(in) :: nlcc
   integer, intent(in) :: spin_channels
 
-  integer :: func, rel
+  integer :: func, i, rel
   FLOAT :: alpha
 
   call push_sub('xc_init')
@@ -175,15 +192,19 @@ subroutine xc_init(xcs, nlcc, spin_channels)
   select case(func)
   case(0)
   case(XC_LDA_X)
+    i = func
     xcs%family = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%lda_functl = ibset(xcs%lda_functl, XC_LDA_X)
+    xcs%lda_functl = ibset(xcs%lda_functl, i)
     call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
-    call xc_lda_x_init(xcs%lda_conf(XC_LDA_X), spin_channels, conf%dim, rel)
+    call xc_lda_x_init(xcs%lda_conf(i), xcs%x_info, &
+       spin_channels, conf%dim, rel)
     
   case(XC_GGA_X_PBE)
+    i = func - 100;
     xcs%family     = ior(xcs%family, XC_FAMILY_GGA)
-    xcs%gga_functl = ibset(xcs%gga_functl, func - 100)
-    call xc_gga_init(xcs%gga_conf(func - 100), func, spin_channels)
+    xcs%gga_functl = ibset(xcs%gga_functl, i)
+    call xc_gga_init(xcs%gga_conf(i), xcs%x_info, &
+       func, spin_channels)
 
 !  case('LB94')
 !    xcs%family = ior(xcs%family, XC_FAMILY_GGA)
@@ -212,21 +233,25 @@ subroutine xc_init(xcs, nlcc, spin_channels)
      XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
      XC_LDA_C_LYP, XC_LDA_C_AMGB)
     
+    i = func
     xcs%family     = ior(xcs%family, XC_FAMILY_LDA)
-    xcs%lda_functl = ibset(xcs%lda_functl, func)
+    xcs%lda_functl = ibset(xcs%lda_functl, i)
     if(func.ne.XC_LDA_C_XALPHA) then
-      call xc_lda_init(xcs%lda_conf(func), func, spin_channels)
+      call xc_lda_init(xcs%lda_conf(i), xcs%c_info, &
+         func, spin_channels)
     else
       call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
       ! WARNING: check what is the most convenient default for alpha
       call loct_parse_float('Xalpha', -M_ONE/M_THREE, alpha) 
-      call xc_lda_c_xalpha_init(xcs%lda_conf(func), spin_channels, conf%dim, rel, alpha)
+      call xc_lda_c_xalpha_init(xcs%lda_conf(i), xcs%c_info, &
+         spin_channels, conf%dim, rel, alpha)
     end if
 
   case(XC_GGA_C_PBE)
+    i = func - 100
     xcs%family     = ior(xcs%family, XC_FAMILY_GGA)
-    xcs%gga_functl = ibset(xcs%gga_functl, func - 100)
-    call xc_gga_init(xcs%gga_conf(func - 100), func, spin_channels)
+    xcs%gga_functl = ibset(xcs%gga_functl, i)
+    call xc_gga_init(xcs%gga_conf(i), xcs%c_info, func, spin_channels)
 
 !  case('PKZB')
 !    xcs%family = ior(xcs%family, XC_FAMILY_MGGA)
