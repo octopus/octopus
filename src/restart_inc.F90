@@ -226,7 +226,7 @@ contains
 
   subroutine fill() ! Put random function in orbitals that could not be read.
     do ik = 1, st%d%nik
-      do ist = 1, st%nst
+      do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
           if(filled(idim, ist, ik)) cycle
           write(message(1),'(a,3i4)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
