@@ -473,14 +473,6 @@ subroutine states_fermi(st, m)
   return
 end subroutine states_fermi
 
-!DEBUG
-!subroutine fermi_level(st)
-!  type(states_type), intent(inout) :: st
-!  
-!  st%ef
-!
-!end subroutine fermi_level
-
 subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -538,10 +530,6 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   message(1) = 'Eigenvalues ['//trim(units_out%energy%abbrev)//']'
   call write_info(1, iunit)
   if (conf%periodic_dim>0) then 
-!DEBUG
-!    message(1) = 'Eigenvalues are relative to the Fermi energy'
-!    write(message(2),'(a,f12.6,a)')'Fermi energy =',st%ef,' ['//trim(units_out%energy%abbrev)//']'
-!   call write_info(2, iunit)
   end if
   if (st%nik > ns) then
     message(1) = 'Kpoints ['//trim(units_out%length%abbrev)//'^-1]'
@@ -588,8 +576,6 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
               if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik+is), ')'
             else
               write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
-!DEBUG
-!                   (st%eigenval(j, ik+is)-st%ef)/units_out%energy%factor, o
                     (st%eigenval(j, ik+is))/units_out%energy%factor, o
              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
             endif
@@ -634,18 +620,9 @@ subroutine states_write_bands(iunit, nst, st)
 #endif
       do j = 1, nst
         do ik = 1, st%nik, ns
-!DEBUG
-!          do is = 0, ns-1
-!          if(st%ispin == 3) then
-!
-!          else
             write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
             st%kpoints(:,ik)*units_out%length%factor,            &
-!DEBUG
-!            (st%eigenval(j, ik)-st%ef)/units_out%energy%factor
             (st%eigenval(j, ik))/units_out%energy%factor
-!          end if       
-!          end do
         end do
         write(iunit, '(a)')' '
       end do                 
