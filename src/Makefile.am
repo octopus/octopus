@@ -74,6 +74,10 @@ DISTCLEANFILES = Makefile.in dirs.h
 # how to compile a F90 file :)
 .F90.o:
 	@F90CPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' $< > $*.f90
+	@if [ "x@DEBUG@" == "x" ]; then \
+		cat $*.f90 | grep -v pop_sub | grep -v push_sub >$*.f91; \
+		mv -f $*.f91 $*.f90; \
+	fi
 	@F90@ @F90FLAGS@ -c -o $@ $*.f90
 	@rm -f $*.f90
 

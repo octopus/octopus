@@ -61,7 +61,7 @@ subroutine laser_init(m, no_l, l)
   real(r8) :: x, y, z
   character(len=80) :: str
 
-  sub_name = 'laser_init'; call push_sub()
+  call push_sub('laser_init')
 
   str = 'TDLasers'
   no_l = oct_parse_block_n(str)

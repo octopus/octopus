@@ -23,7 +23,7 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
   complex(r8), intent(inout) :: zpsi(0:sys%m%np, sys%st%dim)
   real(r8), intent(in) :: timestep, t
 
-  sub_name = 'td_dtexp'; call push_sub()
+  call push_sub('td_dtexp')
 
   select case(td%exp_method)
    case(FOURTH_ORDER);      call fourth
@@ -33,7 +33,7 @@ subroutine td_dtexp(h, sys, td, ik, zpsi, timestep, t)
    case(CHEBYSHEV);         call cheby
   end select
 
-  call pop_sub(); return
+  call pop_sub()
 contains
 
   subroutine fourth
@@ -42,7 +42,7 @@ contains
     complex(r8), allocatable :: zpsi1(:,:), hzpsi1(:,:)
     integer :: i
 
-    sub_name = 'fourth'; call push_sub()
+    call push_sub('fourth')
 
     order = td%exp_order
     allocate(zpsi1(0:sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
@@ -56,7 +56,7 @@ contains
     end do
     deallocate(zpsi1, hzpsi1)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine fourth
 
   subroutine cheby
@@ -76,7 +76,8 @@ contains
     integer :: order = 4, j
     complex(r8) :: zfact
     complex(r8), allocatable :: zpsi1(:,:,:)
-    sub_name = 'cheby'; call push_sub()
+
+    call push_sub('cheby')
     
     order = td%exp_order
     allocate(zpsi1(0:sys%m%np, sys%st%dim, 0:2))
@@ -97,7 +98,7 @@ contains
     call zscal((sys%m%np+1)*sys%st%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi, 1)
     deallocate(zpsi1)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine cheby
 
   subroutine lanczos
@@ -105,7 +106,7 @@ contains
     complex(r8), allocatable :: hm(:, :), v(:, :, :), w(:, :), f(:, :), hh(:), expo(:, :)
     real(r8) :: alpha, beta, res, tol, nrm
 
-    sub_name = 'lanczos'; call push_sub()
+    call push_sub('lanczos')
 
     korder = td%exp_order
     tol = td%lanczos_tol
@@ -167,11 +168,11 @@ contains
     enddo
 
     deallocate(v, w, f, hm, expo, hh)
-    call pop_sub(); return
+    call pop_sub()
   end subroutine lanczos
 
   subroutine split
-    sub_name = 'split'; call push_sub()
+    call push_sub('split')
 
     if(h%gauge == 2) then
       message(1) = 'Split operator does not work well if velocity gauge is used.'
@@ -184,14 +185,14 @@ contains
     if(sys%nlpp) call non_local_pp(sys%m, timestep/M_TWO, .false.)
     call local_part(sys%m, t, timestep/M_TWO)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine split
 
   subroutine suzuki
     real(r8) :: p, tim(5), tt, dt(5), pp(5)
     integer :: ist, k
 
-    sub_name = 'suzuki'; call push_sub()
+    call push_sub('suzuki')
 
     if(h%gauge == 2) then
       message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
@@ -214,7 +215,7 @@ contains
        call local_part(sys%m, t, dt(k)/M_TWO)
     end do
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine suzuki
 
   subroutine kinetic(m, dt)
@@ -225,7 +226,7 @@ contains
     real(r8) :: cutoff
     integer :: idim
 
-    sub_name = 'kinetic'; call push_sub()
+    call push_sub('kinetic')
 
     allocate(fw(m%znpw))
     do idim = 1, sys%st%dim
@@ -237,7 +238,7 @@ contains
     enddo
     deallocate(fw)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine kinetic
 
   subroutine non_local_pp (m, dt, order)
@@ -253,7 +254,7 @@ contains
     type(specie_type), pointer :: spec
     complex(r8), external :: zdotc
 
-    sub_name = 'vnlpsi'; call push_sub()
+    call push_sub('vnlpsi')
 
     if(order) then
       step = 1;  ia_start = 1; ia_end = sys%natoms
@@ -308,7 +309,7 @@ contains
     end do do_atm
 
     deallocate(initzpsi)
-    call pop_sub(); return
+    call pop_sub()
   end subroutine non_local_pp
 
   subroutine local_part(m, t, dt)
@@ -318,7 +319,7 @@ contains
     integer :: j, idim
     real(r8) :: r, x(3), las(3)
 
-    sub_name = 'local_part'; call push_sub()
+    call push_sub('local_part')
 
     if(h%no_lasers > 0 .and. h%gauge == 1) then
       call laser_field(h%no_lasers, h%lasers, t, las)
@@ -359,7 +360,7 @@ contains
       enddo
     end do
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine local_part
 
 

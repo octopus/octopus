@@ -29,7 +29,7 @@ subroutine zso (h, m, natoms, atom, dim, ik, psi, Hpsi)
   complex(r8) :: uvpsi
   R_TYPE, external :: R_DOT
 
-  sub_name = 'zso'; call push_sub()
+  call push_sub('zso')
 
   atm: do ia = 1, natoms
      spec => atom(ia)%spec
@@ -78,5 +78,5 @@ subroutine zso (h, m, natoms, atom, dim, ik, psi, Hpsi)
      deallocate(tpsi, tHpsi)
   end do atm
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine zso

@@ -29,8 +29,13 @@ program octopus
   call global_init()
 
   ! Let us print our logo
-  if(conf%verbose > 20 .and. mpiv%node == 0) &
-       ierr = print_file(SHARE_OCTOPUS+'/logo')
+  if(mpiv%node == 0) then
+    ! Let us print our logo
+    if(conf%verbose > 20) ierr = print_file(SHARE_OCTOPUS+'/logo')
+#ifdef DEBUG
+    if(conf%verbose > 999) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
+#endif
+  end if
 
   ! Let us print the version
   message(1) = ""

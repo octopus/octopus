@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_sf_erf.h>
@@ -214,30 +215,28 @@ double F90_FUNC_(oct_clock, OCT_CLOCK)
 int F90_FUNC_(oct_getmem, OCT_GETMEM)
      ()
 {
-  FILE *pf;
-  int pid, memory;
-  char inst[100];
-	char *s;
+#ifdef linux
+	static size_t pagesize = 0;
+	FILE *f;
+  int pid;
+	long mem;
+  char s[256];
    
-	sysname(&s);
-	if(!strcmp(s, "Linux")){
-		mkdir("tmp",0775);
-		if ( (pf = fopen("tmp/.tmp","w")) == NULL) return -1;
-		pid = getpid();
-		sprintf(inst, "ps -p %d -o rsz | tail -n 1 > tmp/.tmp 2> tmp/.tmp", pid );
-		if ( system(inst) != 0) return -1;
-		fclose(pf);
-		if ( (pf = fopen("tmp/.tmp","r")) == NULL) return -1;
-		if(fscanf(pf,"%d",&memory) < 1) return -1;
-		fclose(pf);
-		system("rm -f tmp/.tmp");
-		free(s);
-		return memory;
-	}else{
-		free(s);
-		return -1;
-	}
+	if(pagesize == 0)
+		pagesize = sysconf(_SC_PAGESIZE);
+
+	pid = getpid();
+	sprintf(s, "%s%d%s", "/proc/", pid, "/statm");
+	if((f = fopen(s, "r")) == NULL) return -1;
+	fscanf(f, "%lu", &mem);
+	fclose(f);
+
+	return (mem*pagesize) >> 10;
+#else
+	return -1;
+#endif
 }
+
 
 void F90_FUNC_(oct_sysname, OCT_SYSNAME)
 		 (STR_F_TYPE name STR_ARG1)

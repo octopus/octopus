@@ -131,7 +131,7 @@ subroutine xc_init(xcs, nlcc)
 
   character(len=50) :: xfam, cfam, xfunc, cfunc
 
-  sub_name = 'xc_init'; call push_sub()
+  call push_sub('xc_init')
 
   xcs%nlcc = nlcc
 
@@ -278,7 +278,7 @@ subroutine xc_init(xcs, nlcc)
     call write_fatal(2)
   end select
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine xc_init
 
 subroutine xc_end(xcs)

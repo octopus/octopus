@@ -26,7 +26,8 @@ subroutine hartree3D_init(h, m)
     case(1)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
       call write_info(1)
-      call pop_sub(); return
+      call pop_sub()
+      return
     case(2)
       message(1) = 'Info: Using FFTs to solve poisson equation.'
     case(3)
@@ -70,7 +71,7 @@ subroutine hartree3D_init(h, m)
   end do
   call mesh_alloc_ffts(m, 2)    
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hartree3D_init
 
 subroutine hartree_cg(h, m, pot, dist)
@@ -83,7 +84,7 @@ subroutine hartree_cg(h, m, pot, dist)
   real(r8) :: sa, x(3), r, s1, s2, s3, ak, ck, xx, yy, zz, temp
   real(r8), allocatable :: zk(:), tk(:), pk(:), rholm(:), wk(:,:,:)
 
-  sub_name = 'hartree_cg'; call push_sub()
+  call push_sub('hartree_cg')
 
   ml = 4
   allocate(zk(m%np), tk(m%np), pk(m%np))
@@ -209,7 +210,7 @@ subroutine hartree_fft(h, m, pot, dist)
   real(r8), allocatable :: f(:,:,:)
   complex(r8), allocatable :: gg(:,:,:)
 
-  sub_name = 'hartree_fft'; call push_sub()
+  call push_sub('hartree_fft')
 
   if(h%solver == 3) then
     s(:) = m%fft_n2(1)

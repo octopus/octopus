@@ -81,7 +81,7 @@ function specie_init(s)
 
   integer :: ispin
 
-  sub_name = 'specie_init'; call push_sub()
+  call push_sub('specie_init')
 
   ! how many do we have?
   str = "Species"
@@ -119,7 +119,7 @@ function specie_init(s)
 
   specie_init = nspecies
 
-  call pop_sub(); return
+  call pop_sub()
 end function specie_init
 
 subroutine specie_end(ns, s)
@@ -128,7 +128,7 @@ subroutine specie_end(ns, s)
 
   integer :: i
 
-  sub_name = 'specie_end'; call push_sub()
+  call push_sub('specie_end')
 
   do i = 1, ns
     if(s(i)%local) cycle

@@ -29,7 +29,7 @@ subroutine R_FUNC(calcdens)(st, np, rho, reduce)
   integer :: ierr
 #endif
 
-  sub_name = 'calc_dens'; call push_sub()
+  call push_sub('calc_dens')
 
   if(st%ispin == SPIN_POLARIZED) then
     sp = 2

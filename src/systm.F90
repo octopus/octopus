@@ -58,7 +58,7 @@ subroutine system_init(s)
 
   integer :: i
 
-  sub_name = 'system_init'; call push_sub()
+  call push_sub('system_init')
 
   call oct_parse_string('SystemName', 'system', s%sysname)
   s%nspecies = specie_init(s%specie)
@@ -93,7 +93,7 @@ end subroutine system_init
 subroutine system_end(s)
   type(system_type), intent(inout) :: s
 
-  sub_name = 'system_end'; call push_sub()
+  call push_sub('system_end')
 
   if(associated(s%st)) then
     call states_end(s%st)

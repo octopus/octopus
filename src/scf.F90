@@ -50,7 +50,7 @@ subroutine scf_init(scf, sys)
   type(scf_type), intent(inout) :: scf
   type(system_type), intent(IN) :: sys
 
-  sub_name = 'systm_scf_init'; call push_sub()
+  call push_sub('systm_scf_init')
 
   call oct_parse_int("MaximumIter", 200, scf%max_iter)
   call oct_parse_double("ConvAbsDens", 1e-5_r8, scf%conv_abs_dens)
@@ -103,7 +103,7 @@ subroutine scf_run(scf, sys, h)
   real(r8) :: old_etot
   logical :: finish
 
-  sub_name = 'scf_run'; call push_sub()
+  call push_sub('scf_run')
 
   if(scf%lcao_restricted) call lcao_init(sys, h)
 
@@ -178,7 +178,7 @@ subroutine scf_run(scf, sys, h)
     call io_close(iunit)
   end if
 
-  call pop_sub(); return
+  call pop_sub()
 contains
 
 subroutine scf_write_static(dir, fname)

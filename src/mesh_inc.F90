@@ -136,7 +136,7 @@ subroutine R_FUNC(mesh_rs2fs)(m, f, g)
 
   R_TYPE, allocatable :: fr(:, :, :)
 
-  sub_name = 'mesh_rs2fs'; call push_sub()
+  call push_sub('mesh_rs2fs')
 
   allocate(fr(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
   fr = R_TOTYPE(M_ZERO)
@@ -148,7 +148,7 @@ subroutine R_FUNC(mesh_rs2fs)(m, f, g)
 #endif
 
   deallocate(fr)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(mesh_rs2fs)
 
 
@@ -169,7 +169,7 @@ subroutine R_FUNC(mesh_fs2rs)(m, g, f, factor)
   complex(r8), allocatable :: g_aux(:)
   allocate(g_aux(m%R_FUNC(npw)))
   g_aux(1:m%R_FUNC(npw)) = g(1:m%R_FUNC(npw))
-  sub_name = 'mesh_fs2rs'; call push_sub()
+  call push_sub('mesh_fs2rs')
 
   fac = M_z1
   if(present(factor)) fac = factor
@@ -188,7 +188,7 @@ subroutine R_FUNC(mesh_fs2rs)(m, g, f, factor)
   deallocate(fr)
   g(1:m%R_FUNC(npw)) = g_aux(1:m%R_FUNC(npw))
   deallocate(g_aux)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(mesh_fs2rs)
 
 subroutine R_FUNC(mesh_random)(m, f)
@@ -199,7 +199,7 @@ subroutine R_FUNC(mesh_random)(m, f)
   integer :: i
   real(r8) :: a(3), rnd, r
 
-  sub_name = 'mesh_random'; call push_sub()
+  call push_sub('mesh_random')
 
   call quickrnd(iseed, rnd)
   a(1) = 2.0_r8*(2*rnd - 1)
@@ -216,7 +216,7 @@ subroutine R_FUNC(mesh_random)(m, f)
   r = R_FUNC(mesh_nrm2)(m, f)
   call R_FUNC(scal)(m%np, R_TOTYPE(M_ONE/r), f, 1) 
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(mesh_random)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -242,7 +242,7 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
   R_TYPE :: alp
   real(r8) :: lcutoff
 
-  sub_name = 'mesh_derivatives'; call push_sub()
+  call push_sub('mesh_derivatives')
   
   ! Fixes the multiplicative factor.
   alp = R_TOTYPE(M_ONE)
@@ -268,7 +268,7 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha, cutoff)
       call fft_derivative()
   end select
 
-  call pop_sub(); return
+  call pop_sub()
 contains
 
   subroutine fft_derivative()
@@ -404,7 +404,6 @@ contains
       enddo
     end if
     
-    return
   end subroutine rs_derivative
 
 end subroutine R_FUNC(mesh_derivatives)
@@ -414,11 +413,14 @@ subroutine R_FUNC(low_frequency) (m, f, lapl)
   R_TYPE, intent(IN)  :: f(0:m%np)
   R_TYPE, intent(out) :: lapl(1:m%np)
   integer :: k
-  sub_name = 'low_frequency'; call push_sub()
+
+  call push_sub('low_frequency')
+
   do k = 1, m%np
      lapl(k) = f(k)/M_TWO + sum(f(m%ind(1:2*conf%dim, 1, k)))/(M_FOUR*conf%dim)
   end do
-  call pop_sub(); return
+
+  call pop_sub()
 end subroutine R_FUNC(low_frequency)
 
 subroutine R_FUNC(mesh_laplq)(m, f, cutoff)
@@ -429,7 +431,7 @@ subroutine R_FUNC(mesh_laplq)(m, f, cutoff)
   real(r8) :: lcutoff, temp(3), g2
   integer :: i, k(3), ix, iy, iz, nx
 
-  sub_name = 'mesh_laplq'; call push_sub()
+  call push_sub('mesh_laplq')
 
   lcutoff = 1e10_r8
   if(present(cutoff)) then
@@ -460,7 +462,7 @@ subroutine R_FUNC(mesh_laplq)(m, f, cutoff)
      enddo
   enddo
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(mesh_laplq)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -479,7 +481,7 @@ subroutine R_FUNC(mesh_explaplq)(m, f, dt, cutoff)
   real(r8) :: lcutoff, temp(3), g2
   integer :: i, k(3), ix, iy, iz, nx
 
-  sub_name = 'mesh_laplq'; call push_sub()
+  call push_sub('mesh_laplq')
 
   lcutoff = 1e10_r8
   if(present(cutoff)) then
@@ -510,7 +512,7 @@ subroutine R_FUNC(mesh_explaplq)(m, f, dt, cutoff)
      enddo
   enddo
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(mesh_explaplq)
 
 subroutine R_FUNC(mesh_gradq)(m, f, j, t)
@@ -522,7 +524,7 @@ subroutine R_FUNC(mesh_gradq)(m, f, j, t)
   real(r8) :: lcutoff, temp(3), g2
   integer :: i, k(3), n(3), ix, iy, iz, nx
 
-  sub_name = 'mesh_gradq'; call push_sub()
+  call push_sub('mesh_gradq')
 
   n = m%fft_n
   if(present(t)) then
@@ -551,5 +553,5 @@ subroutine R_FUNC(mesh_gradq)(m, f, j, t)
     end do
   end do
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(mesh_gradq)

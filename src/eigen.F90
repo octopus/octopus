@@ -56,7 +56,7 @@ contains
 subroutine eigen_solver_init(eigens)
   type(eigen_solver_type), intent(out) :: eigens
   
-  sub_name = 'eigen_solver_init'; call push_sub()
+  call push_sub('eigen_solver_init')
 
   call oct_parse_int("EigenSolver", RS_CG, eigens%es_type)
   select case(eigens%es_type)
@@ -109,7 +109,7 @@ subroutine eigen_solver_init(eigens)
       call write_fatal(2)
   endif
   
-  call pop_sub(); return
+  call pop_sub()
 end subroutine eigen_solver_init
 
 subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
@@ -124,9 +124,9 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   real(r8) :: tol
   real(r8), allocatable :: diff(:, :)
 
-  sub_name = 'eigen_solver_run'; call push_sub()
+  call push_sub('eigen_solver_run')
 
-  allocate(diff(st%nst, st%nik)); diff = 1.0_r8
+  allocate(diff(st%nst, st%nik)); diff = M_ONE
   
   if(iter < eigens%final_tol_iter) then
       tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
@@ -160,7 +160,7 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   if(present(conv).and. converged == st%nst*st%nik) conv = .true.
 
   deallocate(diff)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine eigen_solver_run
 
 #include "eigen_cg2.F90"

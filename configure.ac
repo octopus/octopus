@@ -28,6 +28,7 @@ AC_PREFIX_DEFAULT($HOME)
 # what should I build?
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [compile paralel version]), MPIDIR=$enableval, MPIDIR=no)
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [Compile octopus in debug mode]), [DEBUG=1])
 
 # set program name
 PROGNAME="octopus"
@@ -42,6 +43,12 @@ if test "${COMPLEX_WFNS}"; then
 else
   msg="real wave functions"
 fi
+
+if test "${DEBUG}"; then
+	AC_DEFINE(DEBUG, 1, [Code compiled in debug mode])
+  msg="$msg, debug mode"
+fi
+AC_SUBST(DEBUG)
 
 
 echo "**********************************************"
@@ -126,35 +133,6 @@ if test "$lib_ok" = "ok"; then
 	AC_SUBST(LIB_FFTW)
 fi
 
-dnl tests for trlan. Default behaviour will be *not* using it.
-lib_ok="no"
-if test -z "${LIB_TRLAN}"; then
-	AC_ARG_WITH(trlan, 
-		AC_HELP_STRING([--with-trlan=DIR], [get it! (www.trlan.org)]), 
-		[TRLANDIR=$withval], [TRLANDIR=""])
-
-	if test "$TRLANDIR" = "no"; then
-		lib_ok="no"
-	else
-		save_ldflags="$LDFLAGS"
-		AS_IF([test "$TRLANDIR"], [LDFLAGS="${LDFLAGS} -L${TRLANDIR} -L${TRLANDIR}/lib"])
-
-		AC_TRY_COMPILE([],[use trl_info],lib_ok="ok",lib_ok="no")
-	
-		LDFLAGS="$save_ldflags"
-		LIB_TRLAN="libtrlan.a"
-		#LIB_TRLAN="${LIB_TRLAN}"
-		AS_IF([test "$TRLANDIR"], [LIB_TRLAN="-L${TRLANDIR} -L${TRLANDIR}/lib ${TRLANDIR}/${LIB_TRLAN}"])
-	fi
-fi
-
-if test "$lib_ok" = "ok"; then
-	AC_DEFINE(HAVE_TRLAN, 1, [TRLAN library (www.nersc.gov/research/SIMON/trlan.html)])
-	AC_SUBST(LIB_TRLAN)
-else
-	LIB_TRLAN=""
-	AC_MSG_WARN([Will not use trlan])
-fi
 
 dnl tests for BLAS
 lib_ok="ok"
@@ -176,7 +154,6 @@ if test -z "${LIB_BLAS}"; then
 		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
 		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
 		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [-lcxml])
-		ACX_CHECK_LIB([LIB_BLAS], [scs], [ddot], [-lscs])
 		AS_IF([test -z "${LIB_BLAS}"], AC_MSG_ERROR([couldn't find blas library]))
 
   	LDFLAGS="$save_ldflags"
@@ -209,7 +186,6 @@ if test -z "${LIB_LAPACK}"; then
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
-		ACX_CHECK_LIB([LIB_LAPACK], [scs], [dsygv], [-lscs], [], [${LIB_BLAS}])
 		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
 
   	LDFLAGS="$save_ldflags"

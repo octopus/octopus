@@ -40,7 +40,7 @@ subroutine static_pol_run(scf, sys, h)
   real(r8) :: dipole(0:conf%dim, conf%dim, sys%st%nspin)
   logical :: out_pol
 
-  sub_name = 'static_pol_run'; call push_sub()
+  call push_sub('static_pol_run')
 
   ! read in e_field value
   call oct_parse_double('POLStaticField', &

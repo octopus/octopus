@@ -66,7 +66,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   real(r8), parameter :: eps    = 1e-15_r8
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  sub_name = 'eigen_solver_blan'; call push_sub()
+  call push_sub('eigen_solver_blan')
   
   n          = sys%m%np*st%dim
   np         = sys%m%np
@@ -279,7 +279,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
   
   converged = knec
   deallocate(eigenval, eigenvec, res,  v, av, tmp, h, hevec, aux)
-  call pop_sub(); return
+  call pop_sub()
   
 contains
   

@@ -61,7 +61,7 @@ subroutine mix_init(smix, m, st)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
 
-  sub_name = 'mix_init'; call push_sub()
+  call push_sub('mix_init')
   
   ! check input parameters
   call oct_parse_int("TypeOfMixing", 2, smix%type_of_mixing)
@@ -107,7 +107,7 @@ end subroutine mix_init
 subroutine mix_end(smix)
   type(mix_type), intent(inout) :: smix
 
-  sub_name = 'mix_end'; call push_sub()
+  call push_sub('mix_end')
 
   if(smix%type_of_mixing == BROYDEN) then
     if(associated(smix%df)) then
@@ -129,7 +129,7 @@ subroutine mix_dens(smix, iter, st, m, dist)
   real(r8), allocatable :: rhoout(:,:), dummy(:)
   integer :: is, errorflag
     
-  sub_name = 'mix_dens'; call push_sub()
+  call push_sub('mix_dens')
 
   allocate(rhoout(m%np, st%nspin))
   call R_FUNC(calcdens)(st, m%np, rhoout)

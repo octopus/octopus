@@ -24,7 +24,7 @@ subroutine td_rti(h, m, st, sys, td, t)
   real(r8), intent(in) :: t
 
   integer :: is  
-  sub_name = 'td_rti'; call push_sub()
+  call push_sub('td_rti')
 
 !!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 2), 1, td%v_old(1, 1, 3), 1)
 !!$  call dcopy(st%nspin*m%np, td%v_old(1, 1, 1), 1, td%v_old(1, 1, 2), 1)
@@ -63,7 +63,7 @@ subroutine td_rti(h, m, st, sys, td, t)
     call td_rti0
   end select
 
-  call pop_sub(); return
+  call pop_sub()
 contains
 
   subroutine td_rti0
@@ -82,7 +82,7 @@ contains
     real(r8), allocatable :: aux(:,:)
     complex(r8), allocatable :: zpsi1(:,:,:,:)
     
-    sub_name = 'td_rti1'; call push_sub()
+    call push_sub('td_rti1')
     
     allocate(aux(m%np, st%nspin))
     
@@ -112,7 +112,7 @@ contains
       end do
     end do
     
-    call pop_sub(); return
+    call pop_sub()
   end subroutine td_rti1
 
   subroutine td_rti2
@@ -120,7 +120,7 @@ contains
     complex(r8), allocatable :: zpsi1(:,:,:,:)
     integer is, ik, ist
 
-    sub_name = 'td_rti2'; call push_sub()
+    call push_sub('td_rti2')
 
     if(.not.h%ip_app) then
       allocate(zpsi1(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
@@ -178,14 +178,14 @@ contains
     
     if(.not.h%ip_app) deallocate(vhxc_t2)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine td_rti2
 
   subroutine td_rti3
     integer is, ik, ist
     real(r8), allocatable :: aux(:,:)
 
-    sub_name = 'td_rti3'; call push_sub()
+    call push_sub('td_rti3')
 
     if(.not.h%ip_app) then
       allocate(aux(m%np, st%nspin))
@@ -213,13 +213,13 @@ contains
  
     if(.not.h%ip_app) deallocate(aux)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine td_rti3
 
   subroutine td_rti4
     integer :: ist, ik
 
-    sub_name = 'td_rti4'; call push_sub()
+    call push_sub('td_rti4')
 
     call xpolate_pot(td%dt/2._r8, td%dt, m%np, st%nspin, &
          td%v_old(:, :, 3), td%v_old(:, :, 2), td%v_old(:, :, 1), h%vxc)
@@ -231,7 +231,7 @@ contains
       end do
     end do
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine td_rti4
 
   subroutine xpolate_pot(t, dt, np, dim, pot2, pot1, pot0, pot)

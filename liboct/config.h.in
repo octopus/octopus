@@ -11,6 +11,9 @@
 /* Define to 1 if using `alloca.c'. */
 #undef C_ALLOCA
 
+/* Code compiled in debug mode */
+#undef DEBUG
+
 /* Define to dummy `main' function (if any) required to link to the Fortran 90
    libraries. */
 #undef F90_DUMMY_MAIN
@@ -155,4 +158,4 @@
 #undef const
 
 /* Define to rpl_malloc if the replacement function should be used. */
-/* #undef malloc */
+#undef malloc

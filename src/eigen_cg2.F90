@@ -34,7 +34,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
   integer  :: ik, np, moved, p, j, iter, i, maxter
   logical  :: reord = .true.
 
-  sub_name = 'eigen_solver_cg2'; call push_sub()
+  call push_sub('eigen_solver_cg2')
 
   np = sys%m%np
 

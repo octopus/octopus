@@ -95,12 +95,14 @@ integer :: stdout = 6
 
 ! some variables to be used everywhere
 character(len=80), dimension(20) :: message ! to be output by fatal, warning
-character(len=40) :: sub_name ! the sub name to be used by push/pop_sub
 
 ! some private variables to this module
+#ifdef DEBUG
 character(len=40), private :: sub_stack(50)
 real(r8), private          :: time_stack(50)
 integer, private           :: no_sub_stack = 0
+#endif
+
 character(len=70), parameter, private :: stars =  &
     '**********************************************************************'
 character(len=68), parameter, private :: hyphens = &
@@ -188,11 +190,14 @@ subroutine write_fatal(no_lines)
     write(stdout, '(a,1x,a)') '*', trim(message(i))
   end do
   write(stdout, '(a,a)') '*', hyphens
+
+#ifdef DEBUG
   write(stdout, '(a)', advance='no') '* Stack: '
   do i=1,no_sub_stack
     write(stdout, '(a,a)', advance='no') ' > ', trim(sub_stack(i))
   end do
   write(stdout, '(/,a,/)') stars
+#endif
 
 #ifdef HAVE_MPI
   call MPI_FINALIZE(i)
@@ -240,16 +245,18 @@ subroutine write_info(no_lines, iunit, verbose_limit)
   if(conf%verbose>20) then
     do i = 1, no_lines
       if(.not.present(verbose_limit)) then
-          write(iu, '(a)') trim(message(i))
-      elseif(conf%verbose>verbose_limit) then
-          write(iu, '(a)') trim(message(i))
+        write(iu, '(a)') trim(message(i))
+      else if(conf%verbose>verbose_limit) then
+        write(iu, '(a)') trim(message(i))
       endif
     enddo
   end if
   return
 end subroutine write_info
 
-subroutine push_sub()
+#ifdef DEBUG
+subroutine push_sub(sub_name)
+  character(len=*), intent(in) :: sub_name
   integer i
 
   no_sub_stack = no_sub_stack + 1
@@ -262,11 +269,11 @@ subroutine push_sub()
     time_stack(no_sub_stack) = oct_clock()
 
     if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
-      write(stdout,'(a)', advance='no') "* Debug: In: "
+      write(stderr,'(a,20x,a)', advance='no') "* I ", " | "
       do i = no_sub_stack-1, 1, -1
-        write(stdout,'(a)', advance='no') "  "
+        write(stderr,'(a)', advance='no') "  "
       end do
-      write(stdout,'(a)') trim(sub_name)
+      write(stderr,'(a)') trim(sub_name)
     end if
   end if
 
@@ -279,14 +286,13 @@ subroutine pop_sub()
   if(no_sub_stack > 0) then
     if(conf%verbose > 999 .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
  
-      write(stdout,'(a)', advance='no') "* Debug: Out:"
-      do i = no_sub_stack-1, 1, -1
-        write(stdout,'(a)', advance='no') "  "
-      end do
-      write(stdout,'(a)', advance='no') trim(sub_stack(no_sub_stack))
-      write(stdout, '(a,f10.3,a,a,i9,a)') ' (', (oct_clock()-time_stack(no_sub_stack))/1e6, 's)', &
-                                          ' (', oct_getmem(), 'kb)'
       ! It seems in std C libraries the number of clock ticks per second is 1e6...
+      write(stderr,'(a,f10.3,i10, a)', advance='no') "* O ", (oct_clock()-time_stack(no_sub_stack))/1e6_r8, &
+           oct_getmem(), " | "
+      do i = no_sub_stack-1, 1, -1
+        write(stderr,'(a)', advance='no') "  "
+      end do
+      write(stderr,'(a)') trim(sub_stack(no_sub_stack))
     end if
     no_sub_stack = no_sub_stack - 1
   else
@@ -297,6 +303,7 @@ subroutine pop_sub()
   end if
 
 end subroutine pop_sub
+#endif
 
 ! returns true if a file named stop exists
 function clean_stop()

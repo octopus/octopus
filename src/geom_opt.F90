@@ -52,7 +52,7 @@ contains
     real(r8), allocatable :: x(:)
     !integer, external :: oct_geom_opt
     
-    sub_name = 'geom_opt_run'; call push_sub()
+    call push_sub('geom_opt_run')
     
     call geo_init()
 

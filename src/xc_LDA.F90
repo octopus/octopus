@@ -26,7 +26,7 @@ subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
   real(r8), parameter :: tiny = 1.0e-12_r8
   integer  :: i, is
 
-  sub_name = 'xc_lda'; call push_sub()
+  call push_sub('xc_lda')
 
   energy = M_ZERO
   do i = 1, m%np
@@ -71,5 +71,5 @@ subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
     pot(i, :) = p(:)
   end do
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(xc_lda)

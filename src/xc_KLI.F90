@@ -24,7 +24,7 @@ subroutine R_FUNC(xc_kli)(func, nlcc, m, st, hartr, pot, energy)
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
   
-  sub_name = 'xc_kli'; call push_sub()
+  call push_sub('xc_kli')
 
   ! this routine is only prepared for finite systems, and ispin = 1, 2
   if(st%ispin > 2 .or. st%nik>st%ispin) then

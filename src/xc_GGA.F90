@@ -39,7 +39,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
 
   integer :: i, j, is, in, ic, ind(3), k
 
-  sub_name = 'xc_gga'; call push_sub()
+  call push_sub('xc_gga')
 
   allocate(d     (     m%np, st%nspin), &
            lpot  (     m%np, st%spin_channels))
@@ -151,7 +151,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
   end if
 
   deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine xc_gga
 
 subroutine xc_x_lb94(nspin, dens, gdens, ex, dexdd, dexdgd)

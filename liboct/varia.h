@@ -22,5 +22,6 @@
 
 void fft_optimize(int *n, int p, int par);
 void progress_bar(int actual, int max);
+void sysname(char **c);
 
 #endif

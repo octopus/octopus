@@ -35,7 +35,7 @@
     integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj, ierr
     type(atom_type), pointer :: atm
 
-    sub_name = 'td_calc_tacc'; call push_sub()
+    call push_sub('td_calc_tacc')
 
     ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
@@ -124,7 +124,7 @@
 #endif
    acc = acc + x
    
-   call pop_sub(); return 
+   call pop_sub()
  end subroutine td_calc_tacc
  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -150,7 +150,7 @@
 !!$    integer  :: j, k, is, i, ik, ist, idim, add_lm, l, m, ii, jj, ierr
 !!$    complex(r8), allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
 !!$
-!!$    sub_name = 'td_calc_vel1'; call push_sub()
+!!$    call push_sub('td_calc_vel1')
 !!$
 !!$    x = 0.0_r8
 !!$    ! This calculates <p>
@@ -206,7 +206,7 @@
 !!$    acc = x
 !!$    deallocate(xzpsi, vnl_xzpsi)
 !!$
-!!$    call pop_sub(); return
+!!$    call pop_sub()
 !!$  end subroutine td_calc_vel1
 
 
@@ -224,7 +224,7 @@
 !!$    complex(r8) :: p
 !!$    complex(r8), allocatable :: xzpsi(:,:,:), hzpsi(:,:)
 !!$
-!!$    sub_name = 'td_calc_tacc'; call push_sub()
+!!$    call push_sub('td_calc_tacc')
 !!$
 !!$    x = 0.0_r8
 !!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), hzpsi(sys%m%np, sys%st%dim))
@@ -268,7 +268,7 @@
 !!$#endif
 !!$    acc = x
 !!$
-!!$    call pop_sub(); return
+!!$    call pop_sub()
 !!$  end subroutine td_calc_vel2
 
 
@@ -287,7 +287,7 @@
 !!$
 !!$    complex(r8), allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:)
 !!$
-!!$    sub_name = 'td_calc_tacc'; call push_sub()
+!!$    call push_sub('td_calc_tacc')
 !!$
 !!$    x = 0.0_r8
 !!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), hzpsi(0:sys%m%np, sys%st%dim), hhzpsi(0:sys%m%np, sys%st%dim))
@@ -349,7 +349,7 @@
 !!$    acc = x
 !!$    deallocate(xzpsi, hzpsi, hhzpsi)
 !!$
-!!$    call pop_sub(); return
+!!$    call pop_sub()
 !!$  end subroutine td_calc_tacc1
 
 
@@ -366,7 +366,7 @@
 !!$    integer  :: j, k, is, i, ik, ist, idim, ierr
 !!$    complex(r8), allocatable :: hzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), hhzpsi(:,:)
 !!$
-!!$    sub_name = 'td_calc_tacc'; call push_sub()
+!!$    call push_sub('td_calc_tacc')
 !!$
 !!$    x = 0.0_r8
 !!$    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim), &
@@ -434,5 +434,5 @@
 !!$#endif
 !!$    acc = x
 !!$
-!!$    call pop_sub(); return
+!!$    call pop_sub()
 !!$  end subroutine td_calc_tacc2

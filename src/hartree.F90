@@ -49,7 +49,7 @@ subroutine hartree_init(h, m)
   type(hartree_type), intent(inout) :: h
   type(mesh_type), intent(inout) :: m
   
-  sub_name = 'hartree_init'; call push_sub()
+  call push_sub('hartree_init')
   
   if(conf%dim==1.or.conf%dim==2) then
     h%solver = -conf%dim ! internal type
@@ -79,7 +79,7 @@ end subroutine hartree_init
 subroutine hartree_end(h)
   type(hartree_type), intent(inout) :: h
 
-  sub_name = 'hartree_end'; call push_sub()
+  call push_sub('hartree_end')
 
   select case(h%solver)
   case(1)
@@ -101,7 +101,7 @@ subroutine hartree_solve(h, m, pot, dist)
   real(r8), dimension(:), intent(inout) :: pot
   real(r8), dimension(:, :), intent(IN) :: dist
 
-  sub_name = 'hartree_solve'; call push_sub()
+  call push_sub('hartree_solve')
 
   select case(h%solver)
   case(-1)

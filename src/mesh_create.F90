@@ -31,7 +31,7 @@ subroutine mesh_create(m, natoms, atom)
   integer, pointer :: Lxyz_tmp(:,:,:)
   logical :: b
   
-  sub_name = 'mesh_create'; call push_sub()
+  call push_sub('mesh_create')
   
   ! Read box shape.
   call oct_parse_int('BoxShape', SPHERE, m%box_shape)

@@ -64,7 +64,7 @@ subroutine units_init()
   character(len=10) :: c
   character(len=3) :: cinp, cout
 
-  sub_name = 'units_init'; call push_sub()
+  call push_sub('units_init')
 
   if(oct_parse_isdef("Units").ne.0) then
     call oct_parse_string("Units", "a.u", c)

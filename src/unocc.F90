@@ -40,7 +40,7 @@ subroutine unocc_init(u, m, st, sys)
   type(states_type), intent(IN) :: st
   type(system_type), intent(IN) :: sys
 
-  sub_name = 'unocc_init'; call push_sub()
+  call push_sub('unocc_init')
 
   call oct_parse_int("UnoccMaximumIter", 200, u%max_iter)
   call oct_parse_double("UnoccConv", 1e-4_r8, u%conv)
@@ -70,7 +70,7 @@ subroutine unocc_init(u, m, st, sys)
   u%st%eigenval = 0._r8
   u%st%occ      = 0._r8
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine unocc_init
 
 subroutine unocc_end(u)
@@ -93,7 +93,7 @@ subroutine unocc_run(u, sys, h)
   integer :: iunit
   logical :: converged
 
-  sub_name = 'unocc_run'; call push_sub()
+  call push_sub('unocc_run')
 
   ! Initialize eigens (not necessary to call eigen_init)
   eigens%es_type        = RS_CG
@@ -132,7 +132,7 @@ subroutine unocc_run(u, sys, h)
   ! output wave-functions
   call R_FUNC(states_output) (u%st, sys%m, "static", sys%outp)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine unocc_run
 
 end module unocc

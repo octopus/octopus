@@ -88,7 +88,7 @@ subroutine states_init(st, m, val_charge)
   integer :: nempty, i, j
   character(len=80) :: str
 
-  sub_name = 'states_init'; call push_sub()
+  call push_sub('states_init')
 
   call states_null(st)
 
@@ -300,7 +300,7 @@ end subroutine states_copy
 subroutine states_end(st)
   type(states_type), intent(inout) :: st
   
-  sub_name = 'states_end'; call push_sub()
+  call push_sub('states_end')
 
   if(associated(st%rho)) then
     deallocate(st%rho, st%occ, st%eigenval)
@@ -341,7 +341,7 @@ subroutine states_generate_random(st, m, ist_start)
   integer :: ist, ik, id, i, ist_s
   real(r8) :: a(3), rnd, r
 
-  sub_name = 'states_generate_random'; call push_sub()
+  call push_sub('states_generate_random')
 
   ist_s = 1
   if(present(ist_start)) ist_s = ist_start
@@ -357,7 +357,7 @@ subroutine states_generate_random(st, m, ist_start)
   end do
   st%eigenval = M_ZERO
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine states_generate_random
 
 subroutine states_fermi(st, m)
@@ -371,7 +371,7 @@ subroutine states_fermi(st, m)
   real(r8), parameter :: tol = 1.0e-10_r8
   logical :: conv
 
-  sub_name = 'fermi'; call push_sub()
+  call push_sub('fermi')
 
   if(st%fixed_occ) then ! nothing to do
      ! Calculate magnetizations...
@@ -688,7 +688,7 @@ subroutine calc_current(m, st, j)
   real(r8), allocatable :: red(:,:,:)
 #endif
 
-  sub_name = 'calc_current'; call push_sub()
+  call push_sub('calc_current')
   
   if(st%ispin == 2) then
     sp = 2
@@ -750,7 +750,7 @@ subroutine zstates_project_gs(st, m, p)
 
   type(states_type) :: stgs
 
-  sub_name = 'zstates_project_gs'; call push_sub()
+  call push_sub('zstates_project_gs')
 
   stgs = st
   if(.not.zstates_load_restart("tmp/restart.static", m, stgs)) then
@@ -760,7 +760,7 @@ subroutine zstates_project_gs(st, m, p)
   p = zstates_mpdotp(m, 1, stgs, st)
 
   call states_end(stgs)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine zstates_project_gs
 
 #include "states_kpoints.F90"

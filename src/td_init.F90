@@ -24,7 +24,7 @@ subroutine td_init(td, sys, m, st, h)
 
   integer :: i, iunit, dummy
 
-  sub_name = 'td_init'; call push_sub()
+  call push_sub('td_init')
 
   td%iter = 0
   allocate(td%pol(conf%dim))
@@ -143,7 +143,7 @@ subroutine td_init(td, sys, m, st, h)
 
   call td_init_states()
 
-  call pop_sub(); return
+  call pop_sub()
 contains
   
   subroutine td_init_states()
@@ -188,7 +188,7 @@ end subroutine td_init
 subroutine td_end(td)
   type(td_type), intent(inout) :: td
 
-  sub_name = 'td_end'; call push_sub()
+  call push_sub('td_end')
 
   deallocate(td%pol)
 
@@ -200,5 +200,5 @@ subroutine td_end(td)
     deallocate(td%v_old);  nullify(td%v_old)
   end if
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine td_end

@@ -38,3 +38,6 @@
 #else
 #include "real.F90"
 #endif
+
+/* Code compiled in debug mode */
+#undef DEBUG

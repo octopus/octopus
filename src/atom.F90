@@ -74,7 +74,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   logical :: l
   real(r8) :: temperature, sigma, x(3), kin1, kin2
 
-  sub_name = 'atom_init'; call push_sub()
+  call push_sub('atom_init')
 
   if(conf%dim == 3.and.oct_parse_isdef("PDBCoordinates").ne.0) then
     call oct_parse_string('PDBCoordinates', 'coords.pdb', label)

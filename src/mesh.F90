@@ -97,7 +97,7 @@ subroutine mesh_init(m, natoms, atom)
   integer :: i, k, morder
   logical :: fft_optimize
 
-  sub_name = 'mesh_init'; call push_sub()
+  call push_sub('mesh_init')
 
   call mesh_init_derivatives_coeff(m)
   
@@ -173,7 +173,7 @@ subroutine mesh_write_info(m, unit)
       'around nuclei ', &
       'parallelepiped'/)
 
-  sub_name = 'mesh_write_info'; call push_sub()
+  call push_sub('mesh_write_info')
   
   write(message(1), '(a,a,1x)') '  Type = ', bs(m%box_shape)
   if(m%box_shape == SPHERE .or. m%box_shape == CYLINDER  .or. m%box_shape == MINIMUM) then
@@ -318,7 +318,7 @@ subroutine mesh_alloc_ffts(m, i)
   type(mesh_type), intent(inout) :: m
   integer, intent(in) :: i
 
-  sub_name = 'mesh_alloc_ffts'; call push_sub()
+  call push_sub('mesh_alloc_ffts')
 
   if(i == 1 .and. m%dplanf == int(-1, POINTER_SIZE)) then
     call rfftwnd_f77_create_plan(m%dplanf, conf%dim, m%fft_n, &
@@ -386,7 +386,7 @@ end subroutine phase_factor
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
 
-  sub_name = 'mesh_end'; call push_sub()
+  call push_sub('mesh_end')
 
   if(associated(m%Lxyz)) then
     deallocate(m%Lxyz, m%Kxyz)

@@ -76,7 +76,7 @@ subroutine hgh_init(psp, filename, ispin)
   logical :: found
   character(len=256) :: filename2
 
-  sub_name = 'hgh_init'; call push_sub()
+  call push_sub('hgh_init')
 
   filename2 = filename+'.hgh'
   inquire(file=filename2, exist=found)
@@ -126,19 +126,19 @@ subroutine hgh_init(psp, filename, ispin)
            psp%eigen(psp%conf%p))
            psp%rphi = M_ZERO; psp%eigen = M_ZERO
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hgh_init
 
 subroutine hgh_end(psp)
   type(hgh_type), intent(inout) :: psp
 
-  sub_name = 'hgh_end'; call push_sub()
+  call push_sub('hgh_end')
 
   deallocate(psp%vlocal, psp%rphi, psp%eigen)
   if(associated(psp%kb)) deallocate(psp%kb, psp%kbr)
   call kill_logrid(psp%g)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hgh_end
 
 subroutine hgh_process(psp)
@@ -146,7 +146,7 @@ subroutine hgh_process(psp)
 
   integer :: l, i
 
-  sub_name = 'hgh_process'; call push_sub()
+  call push_sub('hgh_process')
 
 ! Fixes the local potential
   psp%vlocal(1:psp%g%nrval) = vlocalr(psp%g%rofi, psp)
@@ -165,7 +165,7 @@ subroutine hgh_process(psp)
 ! Define the KB-projector cut-off radii
   call get_cutoff_radii(psp)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hgh_process
 
 function load_params(unit, params)
@@ -177,7 +177,7 @@ function load_params(unit, params)
   integer :: i, iostat, j, k, ierr, confunit, sc
   character(len=VALCONF_STRING_LENGTH) :: line
 
-  sub_name = 'load_params'; call push_sub()
+  call push_sub('load_params')
 
   ! Set initially everything to zero.
   params%c(1:4) = 0.0_r8; params%rlocal = 0.0_r8;
@@ -197,13 +197,13 @@ function load_params(unit, params)
   if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
   if( iostat.ne.0 ) then
     load_params = 1
-    call pop_sub(); return
+    call pop_sub()
   endif
 
   read(unit,'(a)', iostat = iostat) line
   if(iostat .ne. 0) then
     load_params = 0
-    call pop_sub(); return
+    call pop_sub()
   endif
   iostat = 1; j = 4
   do while((iostat .ne. 0) .and. (j > 0))
@@ -212,7 +212,7 @@ function load_params(unit, params)
   enddo
   if(j < 0) then
     load_params = 2
-    call pop_sub(); return
+    call pop_sub()
   endif
 
   kloop: do k = 1, 3
@@ -264,7 +264,7 @@ function load_params(unit, params)
   enddo
 
   load_params = 0
-  call pop_sub(); return
+  call pop_sub()
 end function load_params
 
 subroutine get_cutoff_radii(psp)
@@ -274,7 +274,7 @@ subroutine get_cutoff_radii(psp)
   real(r8) :: dincv, tmp
   real(r8), parameter :: threshold = 1.0e-4_r8
 
-  sub_name = 'get_cutoff_radii_psp'; call push_sub()
+  call push_sub('get_cutoff_radii_psp')
 
   do l = 0, psp%l_max
     tmp = 0.0_r8
@@ -288,7 +288,7 @@ subroutine get_cutoff_radii(psp)
     enddo
   end do
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine get_cutoff_radii
 
 ! Local pseudopotential, both in real and reciprocal space.
@@ -442,7 +442,7 @@ subroutine solve_schroedinger(psp)
   real(r8), allocatable :: s(:), hato(:), g(:), y(:), prev(:, :), rho(:, :), ve(:, :)
   real(r8), parameter :: tol = 1.0e-4_r8
 
-  sub_name = 'solve_schroedinger'; call push_sub()
+  call push_sub('solve_schroedinger')
 
   ! Allocations...
   allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval, 1), &
@@ -542,7 +542,7 @@ subroutine solve_schroedinger(psp)
   ! Deallocations.
   deallocate(s, hato, g, y, rho, prev)
 
-  call pop_sub; return
+  call pop_sub()
 end subroutine solve_schroedinger
 
 subroutine hgh_debug(psp)
@@ -550,7 +550,7 @@ subroutine hgh_debug(psp)
 
   integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
 
-  sub_name = 'hgh_debug'; call push_sub()
+  call push_sub('hgh_debug')
 
   ! Opens files.
   call oct_mkdir('pseudos/'+'hgh.'+trim(psp%atom_name))
@@ -598,7 +598,7 @@ subroutine hgh_debug(psp)
   call io_close(hgh_unit); call io_close(loc_unit); call io_close(wav_unit)
   call io_close(dat_unit); call io_close(kbp_unit)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hgh_debug
 
 end module hgh

@@ -72,7 +72,7 @@ subroutine tm_init(pstm, filename, ispin)
   logical :: found
   real(r8) :: x, y
 
-  sub_name = 'ps_tm_read_file'; call push_sub()
+  call push_sub('ps_tm_read_file')
 
   ! Sets the spin components
   pstm%ispin = ispin
@@ -133,7 +133,7 @@ subroutine tm_init(pstm, filename, ispin)
      endif
   enddo
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine tm_init
 
 subroutine build_valconf(pstm)
@@ -142,7 +142,7 @@ subroutine build_valconf(pstm)
   character(len=1) :: char1(6), char2
   integer :: l
 
-  sub_name = 'build_valconf'; call push_sub()
+  call push_sub('build_valconf')
 
   call valconf_null(pstm%conf)
   pstm%conf%symbol = pstm%namatm
@@ -173,26 +173,26 @@ subroutine build_valconf(pstm)
      end select
   enddo
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine build_valconf
 
 subroutine tm_end(pstm)
   type(tm_type), intent(inout) :: pstm
 
-  sub_name = 'tm_end'; call push_sub()
+  call push_sub('tm_end')
 
   deallocate(pstm%rofi, pstm%vps, pstm%vso, pstm%chcore, pstm%rho_val, pstm%vlocal, &
              pstm%rphi, pstm%eigen, pstm%dkbcos, pstm%dknrm, pstm%so_dkbcos, pstm%so_dknrm, pstm%kbr)
   call kill_logrid(pstm%g)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine tm_end
 
 subroutine tm_process(pstm, lmax, lloc)
   type(tm_type), intent(inout) :: pstm
   integer, intent(in) :: lmax, lloc
 
-  sub_name = 'tm_process'; call push_sub()
+  call push_sub('tm_process')
 
 ! get the pseudoatomic eigenfunctions
   call solve_schroedinger(pstm)
@@ -209,7 +209,7 @@ subroutine tm_process(pstm, lmax, lloc)
 ! Define the KB-projector cut-off radii
   call get_cutoff_radii(pstm, lloc)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine tm_process
 
 subroutine solve_schroedinger(psf)
@@ -221,7 +221,7 @@ subroutine solve_schroedinger(psf)
   real(r8), allocatable :: s(:), ve(:, :), hato(:), g(:), y(:), rho(:, :), prev(:, :)
   real(r8), parameter :: tol = 1.0e-10_r8
 
-  sub_name = 'solve_schroedinger'; call push_sub()
+  call push_sub('solve_schroedinger')
 
   ! Let us be a bit informative.
   message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '+psf%namatm+'....'
@@ -353,7 +353,7 @@ subroutine solve_schroedinger(psf)
   message(1) = '      Done.'; call write_info(1)
   deallocate(s, ve, hato, g, y)
 
-  call pop_sub; return
+  call pop_sub()
 end subroutine solve_schroedinger
 
 subroutine read_file_data_bin(unit, psf)
@@ -364,7 +364,7 @@ subroutine read_file_data_bin(unit, psf)
   real(r8) :: r2
   real(r8), allocatable :: aux(:)
 
-  sub_name = 'read_file_data_bin'; call push_sub()
+  call push_sub('read_file_data_bin')
 
   ! Reads the header line of the file, with general info about the ps.
   read(unit) psf%namatm, psf%icorr, psf%irel, psf%icore,     &
@@ -444,7 +444,7 @@ subroutine read_file_data_bin(unit, psf)
   ! psf%vps = psf%vps / 2._r8
 
   deallocate(aux)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine read_file_data_bin
 
 subroutine read_file_data_ascii(unit, psf)
@@ -456,7 +456,7 @@ subroutine read_file_data_ascii(unit, psf)
   real(r8), allocatable :: aux(:)
   character(len=70) :: aux_s
 
-  sub_name = 'read_file_data_ascii'; call push_sub()
+  call push_sub('read_file_data_ascii')
 
   ! Reads the header line of the file, with general info about the ps.
   read(unit, 9000) psf%namatm, psf%icorr, psf%irel, psf%icore
@@ -553,7 +553,7 @@ subroutine read_file_data_ascii(unit, psf)
   ! adjust units from Rydbergs -> Hartree
   ! psf%vps = psf%vps / 2._r8
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine read_file_data_ascii
 
 subroutine calculate_kb_cosines(pstm, lloc)
@@ -563,7 +563,7 @@ subroutine calculate_kb_cosines(pstm, lloc)
   integer :: ir, l
   real(r8) :: dnrm, avgv, vphi
 
-  sub_name = 'calculate_kb_cosines'; call push_sub()
+  call push_sub('calculate_kb_cosines')
 
 ! KB-cosines and KB-norms:
 !       dkbcos(0:spec%ps_lmax) stores the KB "cosines:"
@@ -598,7 +598,7 @@ subroutine calculate_kb_cosines(pstm, lloc)
     pstm%so_dknrm(l) =  1.0_r8/(sqrt(dnrm) + 1.0e-20_r8)
   end do
 
-  call pop_sub; return
+  call pop_sub()
 end subroutine calculate_kb_cosines
 
 subroutine ghost_analysis(pstm, lmax)
@@ -610,7 +610,7 @@ subroutine ghost_analysis(pstm, lmax)
   real(r8) :: vtot, a2b4, z, e, dr, rmax, dnrm, avgv
   real(r8), allocatable :: ve(:), s(:), hato(:), g(:), y(:), elocal(:,:)
 
-  sub_name = 'ghost_analysis'; call push_sub()
+  call push_sub('ghost_analysis')
 
   allocate(ve(pstm%nrval), s(pstm%nrval), hato(pstm%nrval), g(pstm%nrval), y(pstm%nrval), elocal(2, 0:lmax))
 
@@ -663,7 +663,7 @@ subroutine ghost_analysis(pstm, lmax)
 
   deallocate(hato, g, y, elocal, s, ve)
 
-  call pop_sub; return
+  call pop_sub()
 end subroutine ghost_analysis
 
 subroutine get_cutoff_radii(pstm, lloc)
@@ -674,7 +674,7 @@ subroutine get_cutoff_radii(pstm, lloc)
   real(r8)            :: dincv, phi
   real(r8), parameter :: threshold = 1.0e-6_r8
 
-  sub_name = 'get_cutoff_radii'; call push_sub()
+  call push_sub('get_cutoff_radii')
 
   ! local part ....
   do ir = pstm%g%nrval, 2, -1
@@ -702,7 +702,7 @@ subroutine get_cutoff_radii(pstm, lloc)
     pstm%kbr(l) = pstm%rofi(ir + 1)
   end do
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine get_cutoff_radii
 
 subroutine get_local(psf, l_loc, rcore)
@@ -714,7 +714,7 @@ subroutine get_local(psf, l_loc, rcore)
   real(r8) :: a, b, qtot
   real(r8), allocatable :: rho(:)
 
-  sub_name = 'get_local'; call push_sub()
+  call push_sub('get_local')
 
   allocate(psf%vlocal(psf%nrval))
   if(l_loc >= 0) then
@@ -751,7 +751,7 @@ subroutine tm_debug(pstm)
 
   integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
 
-  sub_name = 'tm_debug'; call push_sub()
+  call push_sub('tm_debug')
 
   ! Opens files.
   call oct_mkdir('pseudos/'+'tm2.'+trim(pstm%namatm))
@@ -824,7 +824,7 @@ subroutine tm_debug(pstm)
   call io_close(dat_unit); call io_close(kbp_unit)
   call io_close(so_unit)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine tm_debug
 
 end module

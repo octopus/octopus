@@ -24,7 +24,7 @@ subroutine hartree2D_solve(h, m, pot, dist)
   integer  :: i, ip, j, jp
   real(r8) :: x(2), y(2)
 
-  sub_name = 'hartree2D_solve'; call push_sub()
+  call push_sub('hartree2D_solve')
 
   pot = M_ZERO
   do i = 1, m%np
@@ -40,5 +40,5 @@ subroutine hartree2D_solve(h, m, pot, dist)
     pot(i) = pot(i)*m%vol_pp
   end do
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hartree2D_solve

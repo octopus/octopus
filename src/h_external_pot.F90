@@ -29,7 +29,7 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
   real(r8), allocatable :: fr(:,:,:), v(:)
   complex(r8) :: c
 
-  sub_name = 'specie_local_fourier_init'; call push_sub()
+  call push_sub('specie_local_fourier_init')
 
   allocate(fr(m%fft_n2(1),  m%fft_n2(2), m%fft_n2(3)))
 
@@ -119,7 +119,7 @@ subroutine specie_nl_fourier_init(ns, s, m, nextra)
   real(r8), allocatable :: fr(:,:,:), dfr(:,:,:,:)
   complex(r8), allocatable :: fw(:,:,:), dfw(:,:,:,:)
 
-  sub_name = 'specie_nl_fourier_init'; call push_sub()
+  call push_sub('specie_nl_fourier_init')
   
   specie_loop: do i = 1, ns
     ! first get the dimensions of the thing
@@ -216,7 +216,8 @@ subroutine generate_external_pot(h, sys)
   real(r8), allocatable :: fr(:,:,:)
   complex(r8), allocatable :: fw(:,:,:)
   complex(r8), allocatable :: fwc(:,:,:) ! for the nl core corrections
-  sub_name = 'generate_external_pot'; call push_sub()
+
+  call push_sub('generate_external_pot')
 
   ! first we assume that we need to recalculate the ion_ion energy
   sys%eii = ion_ion_energy(sys%natoms, sys%atom)
@@ -276,7 +277,7 @@ contains
     integer :: i
     real(r8) :: x(3), r
 
-    sub_name = 'build_local_part'; call push_sub()
+    call push_sub('build_local_part')
     if(h%vpsl_space == REAL_SPACE) then ! real space
       do i = 1, h%np
         call mesh_xyz(m, i, x)
@@ -295,7 +296,7 @@ contains
       end if
     end if
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine build_local_part
 
   subroutine build_kb_sphere(m)
@@ -304,7 +305,7 @@ contains
     integer :: i, j, k
     real(r8) :: r, x(3)
 
-    sub_name = 'build_kb_sphere'; call push_sub()
+    call push_sub('build_kb_sphere')
 
     ! This is for the ions movement; probably it is not too elegant, I will rethink it later.
     if(associated(a%jxyz)) deallocate(a%jxyz, a%duv,  a%dduv,  a%duvu,     &
@@ -354,7 +355,7 @@ contains
         end do
       end do
 
-   call pop_sub(); return
+   call pop_sub()
   end subroutine build_kb_sphere
 
   subroutine build_nl_part(m)
@@ -366,7 +367,7 @@ contains
     real(r8), allocatable :: nl_fr(:,:,:), nl_dfr(:,:,:,:)
     real(r8) :: so_uv, so_duv(3)
 
-    sub_name = 'build_nl_part'; call push_sub()
+    call push_sub('build_nl_part')
 
     ! This loop is done always, for spin-orbit is, up to now, only done in real space.
     ! If we want the nl part also in real space, it is read.
@@ -513,7 +514,7 @@ contains
 
     a%zuv = cmplx(a%duv); a%zuvu = cmplx(a%duvu); a%zduv = cmplx(a%dduv)
 
-    call pop_sub(); return
+    call pop_sub()
   end subroutine build_nl_part
 
 end subroutine generate_external_pot
@@ -525,7 +526,7 @@ subroutine generate_classic_pot(h, sys)
   integer i, ia
   real(r8) :: r, rc
 
-  sub_name = 'generate_classic_pot'; call push_sub()
+  call push_sub('generate_classic_pot')
 
   h%Vclassic = 0._r8
   do ia = 1, sys%ncatoms

@@ -96,7 +96,7 @@ subroutine run()
   logical :: log
   character(len=100) :: filename
 
-  sub_name = 'run'; call push_sub()
+  call push_sub('run')
 
   call run_init()
 

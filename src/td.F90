@@ -100,7 +100,7 @@ subroutine td_run(td, u_st, sys, h)
   real(r8) :: etime
   character(len=100) :: filename
 
-  sub_name = 'td_run'; call push_sub()
+  call push_sub('td_run')
   
   if(mpiv%node==0) then
     write(filename, '(i3.3)') mpiv%node
@@ -287,7 +287,7 @@ contains
     real(r8) :: x(conf%dim)
     complex(r8) :: c
 
-    sub_name = 'td_run_zero_iter'; call push_sub()
+    call push_sub('td_run_zero_iter')
 
     ! create general subdir
     call oct_mkdir("td.general")
@@ -340,7 +340,7 @@ contains
     if(td%out_energy) call td_write_el_energy(0)
     call td_write_data(0)
 
-    call pop_sub(); return    
+    call pop_sub()
   end subroutine td_run_zero_iter
 
   subroutine td_read_nbo() ! reads the pos and vel from coordinates file

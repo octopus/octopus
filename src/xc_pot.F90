@@ -29,7 +29,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
 !!$  real(r8), allocatable, save :: save_vxc(:,:)
 !!$  logical, save :: first_time = .true.
 
-  sub_name = 'xc_pot'; call push_sub()
+  call push_sub('xc_pot')
 
   allocate(vaux(m%np, st%nspin))
   vxc = M_ZERO; vaux = M_ZERO
@@ -83,5 +83,5 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hartr, vxc, ex, ec)
 !!$  vx = vx + save_vxc
 
   deallocate(vaux)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(xc_pot)

@@ -180,7 +180,7 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   integer :: iunit, ik, ist, id
   integer(i4) :: mode
 
-  sub_name = 'states_write_restart'; call push_sub()
+  call push_sub('states_write_restart')
 
   call io_assign(iunit)
   open(iunit, status='unknown', file=trim(filename), form='unformatted')
@@ -232,7 +232,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   real(r8), allocatable :: dpsi(:)
   complex(r8), allocatable :: zpsi(:)
 
-  sub_name = 'states_load_restart'; call push_sub()
+  call push_sub('states_load_restart')
   ok = .true.
 
   if(conf%verbose > 20) then
@@ -496,7 +496,7 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
   R_TYPE, allocatable :: a(:, :)
   R_TYPE :: det
 
-  sub_name = 'states_mpdotp'; call push_sub()
+  call push_sub('states_mpdotp')
 
   allocate(a(st1%nst, st1%nst))
 
@@ -514,7 +514,7 @@ R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
   end select
 
   deallocate(a)
-  call pop_sub(); return
+  call pop_sub()
   contains
 
     subroutine R_FUNC(calculate_matrix)(m, ik, st1, st2, n, a)

@@ -25,7 +25,7 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, st, sys)
   R_TYPE :: e
   integer :: ik, ist
 
-  sub_name = 'hamiltonian_eigenval'; call push_sub()
+  call push_sub('hamiltonian_eigenval')
   allocate(Hpsi(sys%m%np, st%dim))
 
   do ik = 1, st%nik
@@ -37,7 +37,7 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, st, sys)
   end do
 
   deallocate(Hpsi)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(hamiltonian_eigenval)
 
 subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
@@ -50,7 +50,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
   real(r8), intent(in), optional :: t
 
-  sub_name = 'Hpsi'; call push_sub()
+  call push_sub('Hpsi')
 
   call R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
@@ -73,7 +73,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
     call R_FUNC(vborders) (h, m, st, psi, Hpsi)
   endif
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(Hpsi)
 
 subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
@@ -89,7 +89,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   integer :: idim, i, np, dim
   R_TYPE :: d
 
-  sub_name = 'kinetic'; call push_sub()
+  call push_sub('kinetic')
   np = m%np
   dim = st%dim
 
@@ -120,7 +120,7 @@ subroutine R_FUNC(kinetic) (h, ik, m, st, psi, Hpsi)
   end if
 
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(kinetic)
 
 subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
@@ -140,7 +140,7 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
   R_TYPE, external :: R_DOT
   
 
-  sub_name = 'vnlpsi'; call push_sub()
+  call push_sub('vnlpsi')
 
   ! Ionic pseudopotential
   do_atm: do ia = 1, sys%natoms
@@ -198,7 +198,7 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
     end do do_dim
   end do do_atm
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(vnlpsi)
 
 subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
@@ -211,7 +211,7 @@ subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
 
   integer :: is, idim, np, dim
 
-  sub_name = 'vlpsi'; call push_sub()
+  call push_sub('vlpsi')
 
   np = m%np
   dim = st%dim
@@ -236,7 +236,7 @@ subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
                    (h%vxc(:, 3) + M_zI*h%vxc(:, 4))*psi(1:, 1)
     end select
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(vlpsi)
 
 subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
@@ -251,33 +251,33 @@ subroutine R_FUNC(vlasers) (h, m, st, psi, Hpsi, t)
   real(r8) :: x(3), f(3)
   R_TYPE, allocatable :: grad(:,:)
 
-  sub_name = 'vlasers'; call push_sub()
+  call push_sub('vlasers')
 
-    if(h%no_lasers > 0) then
-      select case(h%gauge)
-      case(1) ! length gauge
-        call laser_field(h%no_lasers, h%lasers, t, f)
-
+  if(h%no_lasers > 0) then
+    select case(h%gauge)
+    case(1) ! length gauge
+      call laser_field(h%no_lasers, h%lasers, t, f)
+      
+      do k = 1, m%np
+        call mesh_xyz(m, k, x)
+        hpsi(k,:) = hpsi(k,:) + sum(x*f) * psi(k,:)
+      end do
+      
+    case(2) ! velocity gauge
+      call laser_vector_field(h%no_lasers, h%lasers, t, f)
+      allocate(grad(3, m%np))
+      do idim = 1, st%dim
+        call R_FUNC(mesh_derivatives)(m, psi(:, idim), grad=grad)
         do k = 1, m%np
-          call mesh_xyz(m, k, x)
-          hpsi(k,:) = hpsi(k,:) + sum(x*f) * psi(k,:)
+          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
+               sum(f**2)/2._r8 * psi(k, idim)
         end do
-
-      case(2) ! velocity gauge
-        call laser_vector_field(h%no_lasers, h%lasers, t, f)
-        allocate(grad(3, m%np))
-        do idim = 1, st%dim
-           call R_FUNC(mesh_derivatives)(m, psi(:, idim), grad=grad)
-           do k = 1, m%np
-             hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
-                  sum(f**2)/2._r8 * psi(k, idim)
-           end do
-        end do
-        deallocate(grad)
-      end select
-    end if
-
-  call pop_sub(); return
+      end do
+      deallocate(grad)
+    end select
+  end if
+  
+  call pop_sub()
 end subroutine R_FUNC(vlasers)
 
 subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
@@ -289,7 +289,7 @@ subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
 
   integer :: idim
 
-  sub_name = 'vborders'; call push_sub()
+  call push_sub('vborders')
 
   if(h%ab .eq. 1) then
     do idim = 1, st%dim
@@ -297,7 +297,7 @@ subroutine R_FUNC(vborders) (h, m, st, psi, Hpsi)
     end do
   end if
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(vborders)
 
 subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
@@ -308,7 +308,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
 
   integer :: is
 
-  sub_name = 'hamiltonian_setup'; call push_sub()
+  call push_sub('hamiltonian_setup')
 
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
     call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1:st%spin_channels))
@@ -335,5 +335,5 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
   ! this, I think, belongs here
   if(present(sys)) call R_FUNC(hamiltonian_eigenval) (h, st, sys)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine R_FUNC(hamiltonian_setup)

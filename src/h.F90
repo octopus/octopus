@@ -99,7 +99,7 @@ subroutine hamiltonian_init(h, sys)
   integer :: i, j
   real(r8) :: d, r, x(3)
 
-  sub_name = 'hamiltonian_init'; call push_sub()
+  call push_sub('hamiltonian_init')
 
   ! Duplicate this two variables
   h%ispin = sys%st%ispin
@@ -299,13 +299,13 @@ subroutine hamiltonian_init(h, sys)
     call write_warning(2)
   endif
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hamiltonian_init
 
 subroutine hamiltonian_end(h)
   type(hamiltonian_type) :: h
 
-  sub_name = 'hamiltonian_end'; call push_sub()
+  call push_sub('hamiltonian_end')
 
   if(associated(h%Vpsl)) then
     deallocate(h%Vpsl, h%Vhartree, h%Vxc)
@@ -327,7 +327,7 @@ subroutine hamiltonian_end(h)
 
   call laser_end(h%no_lasers, h%lasers)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hamiltonian_end
 
 ! This subroutine calculates the total energy of the system. Basically, it
@@ -346,7 +346,7 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   integer :: ierr
 #endif 
 
-  sub_name = 'hamiltonian_energy'; call push_sub()
+  call push_sub('hamiltonian_energy')
 
   e = 0
   do ik = 1, st%nik
@@ -375,18 +375,19 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
     call write_info(6, iunit)
   end if
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hamiltonian_energy
 
 subroutine hamiltonian_span(h, delta, emin)
   type(hamiltonian_type), intent(inout) :: h
   real(r8), intent(in) :: delta, emin
-  sub_name = 'hamiltonian_span'; call push_sub()
+
+  call push_sub('hamiltonian_span')
 
   h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/2._r8
   h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/2._r8
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hamiltonian_span
 
 subroutine hamiltonian_output(h, m, dir, outp)
@@ -398,7 +399,8 @@ subroutine hamiltonian_output(h, m, dir, outp)
   integer :: is
   character(len=80) :: fname  
   real(r8) :: u
-  sub_name = 'hamiltonian_output'; call push_sub()
+
+  call push_sub('hamiltonian_output')
 
   u = units_out%energy%factor
   if(outp%what(output_potential)) then
@@ -418,7 +420,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
     end if
   end if
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hamiltonian_output
 
 #include "h_external_pot.F90"

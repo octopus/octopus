@@ -59,7 +59,7 @@ subroutine lcao_dens(sys, nspin, rho)
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
 
-  sub_name = 'lcao_dens'; call push_sub()
+  call push_sub('lcao_dens')
   
   rho = M_ZERO
   do ia = 1, sys%natoms
@@ -174,7 +174,7 @@ subroutine lcao_init(sys, h)
 
   if(conf%dim.ne.3) return
 
-  sub_name = 'lcao_init'; call push_sub
+  call push_sub('lcao_init')
 
   ! Counting
   allocate(lcao_data%atoml(sys%natoms, 6))
@@ -234,7 +234,7 @@ subroutine lcao_init(sys, h)
 end subroutine lcao_init
 
 subroutine lcao_end
-  sub_name = 'lcao_end'; call push_sub()
+  call push_sub('lcao_end')
 
   if(conf%dim==3) then
     if(lcao_data%mode==MEM_INTENSIVE) deallocate(lcao_data%psis)
@@ -262,7 +262,7 @@ subroutine lcao_wf(sys, h)
   real(r8), allocatable :: rwork(:), w(:)
 
   if(conf%dim.ne.3) return
-  sub_name = 'lcao_wf'; call push_sub()
+  call push_sub('lcao_wf')
 
   norbs = lcao_data%dim
   mode  = lcao_data%mode
@@ -309,7 +309,7 @@ subroutine lcao_wf(sys, h)
    end do
 
   deallocate(hpsi)
-  call pop_sub(); return
+  call pop_sub()
 end subroutine lcao_wf
 
 subroutine get_wf(sys, i, l, lm, ispin, psi)
@@ -321,7 +321,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
   real(r8) :: x(3), a(3), r, p, ylm, g(3)
   type(spline_type), pointer :: s
 
-  sub_name = 'get_wf'; call push_sub()
+  call push_sub('get_wf')
     
   a = sys%atom(i)%x
   psi(0) = 0.0_r8
@@ -339,7 +339,7 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
     end do
   end if
  
-  call pop_sub(); return    
+  call pop_sub()
 end subroutine get_wf
 
 end module lcao

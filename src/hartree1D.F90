@@ -24,7 +24,7 @@ subroutine hartree1D_solve(h, m, pot, dist)
   integer  :: i, j
   real(r8) :: x, y
 
-  sub_name = 'hartree1D_solve'; call push_sub()
+  call push_sub('hartree1D_solve')
 
   do i=1, m%np
      pot(i) = 0.0_r8
@@ -36,5 +36,5 @@ subroutine hartree1D_solve(h, m, pot, dist)
      pot(i) = pot(i)*m%vol_pp
   enddo
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hartree1D_solve

@@ -96,7 +96,7 @@ contains
     real(r8), allocatable :: vxc(:, :), ve(:, :), rho(:, :)
     real(r8) :: r2, ex, ec, dx, dc
 
-    sub_name = 'atomhxc'; call push_sub()
+    call push_sub('atomhxc')
 
     allocate(ve(g%nrval, nspin), vxc(g%nrval, nspin), rho(g%nrval, nspin))
              ve = M_ZERO; vxc = M_ZERO; rho = M_ZERO
@@ -141,7 +141,7 @@ contains
     v = ve + vxc
 
     deallocate(ve, vxc, rho)
-    call pop_sub(); return
+    call pop_sub()
   end subroutine atomhxc
 
 

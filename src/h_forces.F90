@@ -31,7 +31,7 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
   integer :: ierr
 #endif 
 
-  sub_name = 'forces'; call push_sub()
+  call push_sub('forces')
 
   ! init to 0
   do i = 1, sys%natoms

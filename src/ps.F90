@@ -80,7 +80,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 
   integer :: i, j, is
 
-  sub_name = 'ps_init'; call push_sub()
+  call push_sub('ps_init')
 
   ! Makes the directory for debugging.
   if(conf%verbose>999) call oct_mkdir('pseudos')
@@ -198,7 +198,7 @@ subroutine ps_debug(ps)
                        i, j, k, l, is
   real(r8)          :: r
 
-  sub_name = 'ps_debug'; call push_sub()
+  call push_sub('ps_debug')
 
   ! Opens the files.
   call oct_mkdir('pseudos/'+trim(ps%label))
@@ -280,7 +280,7 @@ subroutine ps_debug(ps)
   call io_close(nonlocal_unit); call io_close(wave_unit)
   call io_close(so_unit)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine ps_debug
 
 subroutine ps_end(ps)
@@ -288,7 +288,7 @@ subroutine ps_end(ps)
 
   integer :: i, j, is
 
-  sub_name = 'ps_end'; call push_sub()
+  call push_sub('ps_end')
 
   if(.not. associated(ps%kb)) return
 
@@ -319,7 +319,7 @@ subroutine ps_end(ps)
   deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
   if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine ps_end
 
 subroutine hgh_load(ps, psp)
@@ -329,7 +329,7 @@ subroutine hgh_load(ps, psp)
   integer :: l, ll
   real(r8) :: x
 
-  sub_name = 'hgh_load'; call push_sub()
+  call push_sub('hgh_load')
 
   ! Fixes some components of ps, read in psf
   ps%z_val = psp%z_val
@@ -356,7 +356,7 @@ subroutine hgh_load(ps, psp)
   call get_splines_hgh(psp, ps)
   ps%so_dknrm = ps%dknrm
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine hgh_load
 
 subroutine tm_load(ps, pstm)
@@ -365,7 +365,7 @@ subroutine tm_load(ps, pstm)
 
   integer :: l
 
-  sub_name = 'tm_load'; call push_sub()
+  call push_sub('tm_load')
 
   ! Fixes some components of ps, read in pstm
   ps%z_val = pstm%zval
@@ -392,7 +392,7 @@ subroutine tm_load(ps, pstm)
     ps%so_dknrm(0:ps%L_max) = ps%so_dknrm(0:ps%L_max) * 2._r8
   end if
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine tm_load
 
 subroutine get_splines_tm(psf, ps)
@@ -403,7 +403,7 @@ subroutine get_splines_tm(psf, ps)
   real(r8) :: chc
   real(r8), allocatable :: hato(:), derhato(:)
 
-  sub_name = 'get_splines_tm'; call push_sub()
+  call push_sub('get_splines_tm')
 
   allocate(hato(psf%nrval), derhato(psf%nrval))
 
@@ -485,7 +485,7 @@ subroutine get_splines_tm(psf, ps)
 
   deallocate(hato, derhato)
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine get_splines_tm
 
 subroutine get_splines_hgh(psp, ps)
@@ -496,7 +496,7 @@ subroutine get_splines_hgh(psp, ps)
   real(r8) :: chc
   real(r8), allocatable :: hato(:), derhato(:)
 
-  sub_name = 'get_splines_hgh'; call push_sub()
+  call push_sub('get_splines_hgh')
 
   allocate(hato(psp%g%nrval), derhato(psp%g%nrval))
 
@@ -535,7 +535,7 @@ subroutine get_splines_hgh(psp, ps)
   end do
   end do
 
-  call pop_sub(); return
+  call pop_sub()
 end subroutine get_splines_hgh
 
 end module ps
