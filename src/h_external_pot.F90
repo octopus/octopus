@@ -17,7 +17,8 @@ subroutine specie_local_fourier_init(ns, s, m)
   allocate(fr(m%fft_n2,  m%fft_n2, m%fft_n2))
   do i = 1, ns
 
-    allocate(s(i)%local_fw(m%hfft_n2, m%fft_n2, m%fft_n2))
+    allocate(s(i)%local_fw(m%hfft_n2, m%fft_n2, m%fft_n2), &
+         s(i)%rhocore_fw(m%hfft_n2, m%fft_n2, m%fft_n2))
     fr = 0.0_r8
     do ix = 1, m%fft_n2
       do iy = 1, m%fft_n2

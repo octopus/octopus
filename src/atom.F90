@@ -81,7 +81,9 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
         message(2) = '(1 <= NumberAtoms)'
         call write_fatal(2)
       end if
-      
+
+      allocate(a(natoms))
+
       call loadXYZ(iunit, .false.)
     end if
   end if

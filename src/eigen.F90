@@ -20,6 +20,8 @@ type eigen_solver_type
   integer :: no_cg    ! # of conjugated gradients steps
 end type eigen_solver_type
 
+integer, parameter :: ES_NEW_CG = 0, ES_OLD_CG = 1
+
 contains
 
 subroutine eigen_solver_init(eigens)
@@ -96,7 +98,7 @@ subroutine eigen_solver_run(eigens, sys, h, iter, diff)
 
   sub_name = 'eigen_solver_run'; call push_sub()
 
-  if(eigens%es_type .ne. 0) then
+  if(eigens%es_type .ne. ES_OLD_CG) then
     if(iter < eigens%final_tol_iter) then
       tol = (eigens%final_tol - eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
            eigens%init_tol
@@ -106,13 +108,13 @@ subroutine eigen_solver_run(eigens, sys, h, iter, diff)
   end if
 
   select case(eigens%es_type)
-  case(0)
+  case(ES_NEW_CG)
     maxiter = eigens%es_maxiter
     converged = 0
 
     call eigen_solver_cg2(sys, h, sys%st, &
          tol, maxiter, converged, errorflag, diff)
-  case(1)
+  case(ES_OLD_CG)
     call eigen_solver_cg1(eigens%no_cg, sys, h, sys%st, diff)
     do ik = 1, sys%st%nik
       call R_FUNC(states_gram_schmidt) (sys%st%nst, sys%m, sys%st%dim, &
