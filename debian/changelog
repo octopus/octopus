@@ -1,3 +1,10 @@
+octopus (1.99devel-1) unstable; urgency=low
+
+  * enable debug mode
+    add build depends 
+
+ -- Heiko Appel <appel@cluster.physik.fu-berlin.de>  Wed,  2 Feb 2005 02:32:22 +0100
+
 octopus (1.99devel-0) unstable; urgency=low
 
   * Initial build of v1.99devel
