@@ -153,7 +153,7 @@ subroutine mix_linear(smix, np, nspin, vin, vout, vnew)
 
   vnew = vin
   call dscal(np*nspin, 1.0_r8 - smix%alpha, vnew, 1)
-  call daxpy(np*nspin, smix%alpha, vnew, 1, vnew, 1)
+  call daxpy(np*nspin, smix%alpha, vout, 1, vnew, 1)
 
   return
 end subroutine mix_linear
