@@ -391,7 +391,7 @@ contains
       r(0) = 0._r8
       call dmesh_derivatives(m, r(0:m%np), grad=gr)
       do i = 1, m%np
-        if(r(i) >= 1d-16) then
+        if(r(i) >= 1d-10) then
           c(i) = -0.25_r8*sum(gr(1:conf%dim, i)**2)/r(i)
         end if
       end do
@@ -420,8 +420,11 @@ contains
       
       f = 3._r8/5._r8*(6._r8*M_PI**2)**(2._r8/3._r8)
       do i = 1, m%np
-        d    = f*r(i)**(5._r8/3._r8)
-        c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
+        if(r(i) >= 1d-10) then
+          d    = f*r(i)**(5._r8/3._r8)
+          c(i) = 1._r8/(1._r8 + (c(i)/d)**2)
+        else
+          c(i) = M_ZERO
       end do
       
       deallocate(r)
