@@ -25,13 +25,12 @@
 ! WARNING: This subroutine only works if ions are not allowed to move
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine td_calc_tacc(acc, t, reduce)
-    implicit none
-    FLOAT, intent(in)  :: t
-    FLOAT, intent(out) :: acc(3)
-    logical, intent(in), optional :: reduce
+    FLOAT,             intent(in)  :: t
+    FLOAT,             intent(out) :: acc(3)
+    logical, optional, intent(in)  :: reduce
 
     FLOAT :: field(3), x(3), mesh_x(3)
-    CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
+    CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
     integer  :: j, k, i, ik, ist, idim
 #if defined(HAVE_MPI)
     integer :: ierr
@@ -63,7 +62,7 @@
 
     ! And now, i<[H,[V_nl,x]]>
     x = M_ZERO
-    allocate(hzpsi(mesh%np, st%d%dim), hhzpsi(3, mesh%np))
+    allocate(hzpsi(mesh%np, st%d%dim), hhzpsi(3, mesh%np), conj(mesh%np))
 
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
@@ -88,8 +87,8 @@
           call zvnlpsi(h, mesh, xzpsi(mesh%np, 1:st%d%dim, j), vnl_xzpsi(1:mesh%np, 1:st%d%dim), ik)
                
           do idim = 1, st%d%dim
-            x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(mesh, R_CONJ(hzpsi(1:mesh%np, idim)), &
-                 vnl_xzpsi(1:mesh%np, idim) )
+            conj = R_CONJ(hzpsi(:, idim))
+            x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(mesh, conj, vnl_xzpsi(:, idim) )
           end do
         end do
            
@@ -104,16 +103,16 @@
           vnl_xzpsi = M_z0
           call zvnlpsi(h, mesh, xzpsi(mesh%np, 1:st%d%dim, j), vnl_xzpsi(1:mesh%np, 1:st%d%dim), ik)
           do idim = 1, st%d%dim
+            conj = R_CONJ(st%zpsi(:, idim, ist, ik))
             x(j) = x(j) + 2*st%occ(ist, ik)* &
-                  zmf_dotp(mesh, R_CONJ(st%zpsi(1:mesh%np, idim, ist, ik)), &
-                  vnl_xzpsi(1:mesh%np, idim) )
+                  zmf_dotp(mesh, conj, vnl_xzpsi(:, idim) )
           end do
         end do
         deallocate(xzpsi, vnl_xzpsi)
        
      end do
    end do
-   deallocate(hzpsi, hhzpsi)
+   deallocate(hzpsi, hhzpsi, conj)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
    if(present(reduce)) then

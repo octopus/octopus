@@ -37,9 +37,9 @@ module external_pot
   type nonlocal_op
     integer :: n, c
     integer, pointer :: jxyz(:)
-    FLOAT, pointer ::    uv(:, :),    duv(:, :, :),    uvu(:, :)
-    CMPLX, pointer :: so_uv(:, :), so_duv(:, :, :), so_uvu(:, :), so_luv(:, :, :)
-    CMPLX, pointer :: phases(:,:)    ! factors exp(ik*x)
+    FLOAT,   pointer ::    uv(:, :),    duv(:, :, :),    uvu(:, :)
+    CMPLX,   pointer :: so_uv(:, :), so_duv(:, :, :), so_uvu(:, :), so_luv(:, :, :)
+    CMPLX,   pointer :: phases(:,:)    ! factors exp(ik*x)
   end type nonlocal_op
 
   type epot_type
@@ -67,12 +67,10 @@ module external_pot
 
 contains
 
-
-
   subroutine epot_init(ep, m, geo)
     type(epot_type),     intent(out) :: ep
-    type(mesh_type),     intent(in)  :: m
-    type(geometry_type), intent(in)  :: geo
+    type(mesh_type),     intent(IN)  :: m
+    type(geometry_type), intent(IN)  :: geo
     integer :: i
 
     ! should we calculate the local pseudopotentials in Fourier space?
@@ -137,8 +135,8 @@ contains
   end subroutine epot_init
 
   subroutine epot_end(ep, geo)
-    type(epot_type),   intent(inout) :: ep
-    type(geometry_type), intent(in)    :: geo
+    type(epot_type),     intent(inout) :: ep
+    type(geometry_type), intent(IN)    :: geo
 
 #ifdef HAVE_FFT
     integer :: i
@@ -171,9 +169,9 @@ contains
 
 #ifdef HAVE_FFT
   subroutine epot_local_fourier_init(ep, m, geo)
-    type(epot_type),   intent(inout) :: ep
-    type(mesh_type),   intent(in)    :: m
-    type(geometry_type), intent(in)    :: geo
+    type(epot_type),     intent(inout) :: ep
+    type(mesh_type),     intent(IN)    :: m
+    type(geometry_type), intent(IN)    :: geo
     
     integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3), modg, temp(3)
@@ -282,7 +280,7 @@ contains
 
   subroutine epot_generate(ep, m, st, geo, Vpsl, reltype)
     type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(in)    :: m
+    type(mesh_type),     intent(IN)    :: m
     type(states_type),   intent(inout) :: st
     type(geometry_type), intent(inout) :: geo
     FLOAT,               pointer       :: Vpsl(:)
@@ -418,7 +416,7 @@ contains
       end if
       j = 0
       do k = 1, m%np
-        do i=1,3**conf%periodic_dim
+        do i = 1,3**conf%periodic_dim
           call mesh_r(m, k, r, a=a%x+m%shift(i,:))
           if(r > s%ps%rc_max + m%h(1)) cycle
           j = j + 1
@@ -580,8 +578,8 @@ contains
 
   subroutine epot_generate_classic(ep, m, geo)
     type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(in)    :: m
-    type(geometry_type), intent(in)    :: geo
+    type(mesh_type),     intent(IN)    :: m
+    type(geometry_type), intent(IN)    :: geo
     
     integer i, ia
     FLOAT :: r, rc
@@ -615,17 +613,17 @@ contains
   end subroutine epot_generate_classic
 
   subroutine epot_laser_field(ep, t, field)
-    type(epot_type), intent(in) :: ep
-    FLOAT,         intent(in)  :: t
-    FLOAT,         intent(out) :: field(conf%dim)
+    type(epot_type), intent(IN) :: ep
+    FLOAT,           intent(in)  :: t
+    FLOAT,           intent(out) :: field(conf%dim)
 
     call laser_field(ep%no_lasers, ep%lasers, t, field)
   end subroutine epot_laser_field
 
   subroutine epot_laser_vector_field(ep, t, field)
-    type(epot_type), intent(in) :: ep
-    FLOAT,         intent(in)  :: t
-    FLOAT,         intent(out) :: field(conf%dim)
+    type(epot_type), intent(IN) :: ep
+    FLOAT,           intent(in)  :: t
+    FLOAT,           intent(out) :: field(conf%dim)
 
     call laser_vector_field(ep%no_lasers, ep%lasers, t, field)
   end subroutine epot_laser_vector_field

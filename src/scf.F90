@@ -52,9 +52,9 @@ contains
 
 subroutine scf_init(scf, m, st, h)
   type(scf_type),         intent(inout) :: scf
-  type(mesh_type),        intent(in)    :: m
-  type(states_type),      intent(in)    :: st
-  type(hamiltonian_type), intent(in)    :: h
+  type(mesh_type),        intent(IN)    :: m
+  type(states_type),      intent(IN)    :: st
+  type(hamiltonian_type), intent(IN)    :: h
 
   call push_sub('scf_init')
 
@@ -123,16 +123,17 @@ end subroutine scf_end
 
 subroutine scf_run(scf, m, st, geo, h, outp)
   type(scf_type),         intent(inout) :: scf
-  type(mesh_type),        intent(in)    :: m
+  type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
-  type(output_type),      intent(in)    :: outp
+  type(output_type),      intent(IN)    :: outp
 
   integer :: iter, iunit, is
   FLOAT :: evsum_out, evsum_in
   FLOAT, allocatable :: rhoout(:,:), rhoin(:,:)
   FLOAT, allocatable :: vout(:,:), vin(:,:)
+  FLOAT, allocatable :: tmp(:)
   logical :: finish
 
   call push_sub('scf_run')
@@ -169,9 +170,13 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
+    allocate(tmp(m%np))
     do is = 1, st%d%nspin
-       scf%abs_dens = scf%abs_dens + dmf_integrate(m, (rhoin(:,is) - rhoout(:,is))**2)
+      tmp = (rhoin(:,is) - rhoout(:,is))**2
+      scf%abs_dens = scf%abs_dens + dmf_integrate(m, tmp)
     end do
+    deallocate(tmp)
+
     scf%abs_dens = sqrt(scf%abs_dens)
     scf%rel_dens = scf%abs_dens / st%qtot
     scf%abs_ev = abs(evsum_out - evsum_in)
@@ -363,8 +368,8 @@ subroutine scf_write_static(dir, fname)
 end subroutine scf_write_static
 
 subroutine write_magnet(iunit, mesh, st)
-  integer, intent(in) :: iunit
-  type(mesh_type), intent(in) :: mesh
+  integer,           intent(in) :: iunit
+  type(mesh_type),   intent(IN) :: mesh
   type(states_type), intent(IN) :: st
   
   FLOAT :: m(3), sign

@@ -59,10 +59,10 @@ integer, parameter :: MEM_INTENSIVE = 0, &
 contains
 
 subroutine lcao_init(m, st, geo, h)
-  type(mesh_type),        intent(in) :: m
-  type(states_type),      intent(in) :: st
-  type(geometry_type),    intent(in) :: geo
-  type(hamiltonian_type), intent(in) :: h
+  type(mesh_type),        intent(IN) :: m
+  type(states_type),      intent(IN) :: st
+  type(geometry_type),    intent(IN) :: geo
+  type(hamiltonian_type), intent(IN) :: h
 
   integer :: norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2
   integer, parameter :: orbs_local = 2
@@ -173,9 +173,9 @@ subroutine lcao_end
 end subroutine lcao_end
 
 subroutine lcao_wf(m, st, h)
-  type(mesh_type),        intent(in)    :: m
+  type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(IN)    :: h
 
   integer, parameter :: orbs_local = 2
 

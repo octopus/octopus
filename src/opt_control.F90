@@ -32,12 +32,12 @@ implicit none
 contains
 
 subroutine opt_control_run(td, m, st, val_charge, h, outp)
-  type(td_type), intent(inout) :: td
-  type(mesh_type), intent(in)  :: m
-  type(states_type), intent(inout), target :: st
-  FLOAT,                   intent(in) :: val_charge
-  type(hamiltonian_type), intent(inout) :: h
-  type(output_type), intent(in) :: outp
+  type(td_type),             intent(inout) :: td
+  type(mesh_type),           intent(IN)    :: m
+  type(states_type), target, intent(inout) :: st
+  FLOAT,                     intent(in)    :: val_charge
+  type(hamiltonian_type),    intent(inout) :: h
+  type(output_type),         intent(IN)    :: outp
 
   type(states_type), pointer :: psi_i
   type(states_type)          :: psi_f
@@ -178,8 +178,8 @@ contains
   end subroutine prop_iter2
 
   subroutine update_field(iter, l)
-    integer, intent(in) :: iter
-    FLOAT, intent(inout) :: l(0:2*td%max_iter, conf%dim)
+    integer, intent(in)    :: iter
+    FLOAT,   intent(inout) :: l(0:2*td%max_iter, conf%dim)
 
     CMPLX, allocatable :: grad(:,:)
     CMPLX :: d1, d2(conf%dim)
@@ -271,7 +271,7 @@ contains
 
   subroutine read_state(st, filename)
     type(states_type), intent(out) :: st
-    character(len=*), intent(in) :: filename
+    character(len=*),  intent(in)  :: filename
 
     if(.not.zstates_load_restart("opt-control/" // trim(filename), m, st)) then
       message(1) = "Could not read file 'opt-control/" // trim(filename) // "'"
@@ -281,7 +281,7 @@ contains
 
   subroutine write_field(filename, las)
     character(len=*), intent(in) :: filename
-    FLOAT, intent(in) :: las(1:conf%dim,0:2*td%max_iter)
+    FLOAT,            intent(IN) :: las(1:conf%dim,0:2*td%max_iter)
 
     integer :: i, iunit
 

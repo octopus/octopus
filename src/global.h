@@ -24,6 +24,7 @@
   if(.not.(expr)) call assert_die (__STRING(expr), __FILE__, __LINE__)
 #else
 #  define ASSERT(expr)
+!!#  define IN inout
 #endif
 
 #if defined(SINGLE_PRECISION)
@@ -46,4 +47,3 @@
 #else
 #  include "real.F90"
 #endif
-

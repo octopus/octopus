@@ -17,9 +17,9 @@
 
 ! calculates the eigenvalues of the real orbitals
 subroutine X(hamiltonian_eigenval)(h, m, st)
-  type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type), intent(in) :: m
-  type(states_type), intent(inout) :: st
+  type(hamiltonian_type), intent(IN)    :: h
+  type(mesh_type),        intent(IN)    :: m
+  type(states_type),      intent(inout) :: st
 
   R_TYPE, allocatable :: Hpsi(:,:)
   R_TYPE :: e
@@ -76,12 +76,12 @@ end subroutine X(Hpsi)
 
 #if defined(R_TCOMPLEX)
 subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: ik
-  R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(out) :: Hpsi(m%np, h%d%dim)
-  FLOAT, intent(in) :: vmagnus(m%np, h%d%nspin, 2)
+  type(hamiltonian_type), intent(IN)  :: h
+  type(mesh_type),        intent(IN)  :: m
+  integer,                intent(in)  :: ik
+  R_TYPE,                 intent(IN)  :: psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out) :: Hpsi(m%np, h%d%dim)
+  FLOAT,                  intent(IN)  :: vmagnus(m%np, h%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim
@@ -143,10 +143,10 @@ end subroutine X(magnus)
 #endif
 
 subroutine X(kinetic) (h, m, psi, hpsi, ik)
-  type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(out) :: hpsi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(IN)  :: h
+  type(mesh_type),        intent(IN)  :: m
+  R_TYPE,                 intent(IN)  :: psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out) :: hpsi(m%np, h%d%dim)
   integer :: ik
 
   integer :: idim, np, dim
@@ -192,28 +192,24 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
 end subroutine X(kinetic)
 
 subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
-  type(hamiltonian_type), intent(in) :: h
-  integer, intent(in) :: ik
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(IN)    :: h
+  integer,                intent(in)    :: ik
+  type(mesh_type),        intent(IN)    :: m
+  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
 
   integer :: idim, ikbc, jkbc, ivnl
   R_TYPE :: uVpsi
   R_TYPE, allocatable :: lpsi(:), lHpsi(:)
   type(nonlocal_op), pointer :: nlop
-#ifdef R_TCOMPLEX
-  CMPLX, allocatable :: conj(:)
-#endif
+  R_TYPE, allocatable :: tmp(:)
 
   call push_sub('vnlpsi')
 
   do ivnl = 1, h%ep%nvnl
-     nlop => h%ep%vnl(ivnl)
-#ifdef R_TCOMPLEX
-       allocate(conj(nlop%n))
-#endif
-
+    nlop => h%ep%vnl(ivnl)
+    allocate(tmp(nlop%n))
+    
     do_dim: do idim = 1, h%d%dim
       allocate(lpsi(nlop%n), lhpsi(nlop%n))
       if (conf%periodic_dim==0) then
@@ -222,45 +218,42 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
         lpsi(:) = nlop%phases(:,ik)*psi(nlop%jxyz(:), idim)
       end if
       lHpsi(:) = M_z0
-
-          do ikbc = 1, nlop%c
-            do jkbc = 1, nlop%c
-              ! WARNING: This is not very efficient. Has to be changed.
-              uvpsi = X(lalg_dot)(nlop%n, R_TOTYPE(nlop%uv(:, ikbc)), lpsi) * &
-                      m%vol_pp*nlop%uvu(ikbc, jkbc)
-              if (conf%periodic_dim==0) then
-                call X(lalg_axpy)(nlop%n, uvpsi, R_TOTYPE(nlop%uv(1:nlop%n, jkbc)), lHpsi(1))
-              else
-#               ifdef R_TCOMPLEX
-                  conj = R_CONJ(nlop%phases(:, ik)*nlop%uv(:, jkbc))
-                  call X(lalg_axpy)(nlop%n, uvpsi, conj(1), lHpsi(1))
-#               else
-                  message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
-                  message(2) = "Reconfigure with --enable-complex, and remake"
-                  call write_fatal(2)
-#               endif
-              end if
-            end do
-          end do
-           hpsi(nlop%jxyz(:), idim) = hpsi(nlop%jxyz(:), idim) + lhpsi(:)
+      
+      do ikbc = 1, nlop%c
+        do jkbc = 1, nlop%c
+          tmp   = R_TOTYPE(nlop%uv(:, ikbc))
+          uvpsi = X(lalg_dot)(nlop%n, tmp, lpsi) * m%vol_pp*nlop%uvu(ikbc, jkbc)
+          if (conf%periodic_dim==0) then
+            tmp = R_TOTYPE(nlop%uv(:, jkbc))
+            call X(lalg_axpy)(nlop%n, uvpsi, tmp, lHpsi)
+          else
+#           ifdef R_TCOMPLEX
+              tmp = R_CONJ(nlop%phases(:, ik)*nlop%uv(:, jkbc))
+              call X(lalg_axpy)(nlop%n, uvpsi, tmp, lHpsi)
+#           else
+              message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
+              message(2) = "Reconfigure with --enable-complex, and remake"
+              call write_fatal(2)
+#           endif
+          end if
+        end do
+      end do
+      hpsi(nlop%jxyz(:), idim) = hpsi(nlop%jxyz(:), idim) + lhpsi(:)
       deallocate(lpsi, lhpsi)
     end do do_dim
-
-#   ifdef R_TCOMPLEX
-    deallocate(conj)
-#   endif
-
-  end do 
+    
+    deallocate(tmp)
+  end do
 
   call pop_sub()
 end subroutine X(vnlpsi)
 
 subroutine X(vlpsi) (h, m, psi, hpsi, ik)
-  type(hamiltonian_type), intent(in) :: h
-  type(mesh_type), intent(in) :: m
-  integer, intent(in) :: ik
-  R_TYPE, intent(in) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(IN)    :: h
+  type(mesh_type),        intent(IN)    :: m
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
 
   integer :: idim, np, dim
 
@@ -293,10 +286,10 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 end subroutine X(vlpsi)
 
 subroutine X(vlasers) (h, m, psi, hpsi, t)
-  type(hamiltonian_type), intent(in) :: h
-  type(mesh_type), intent(in) :: m
-  R_TYPE, intent(in) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(IN)    :: h
+  type(mesh_type),        intent(IN)    :: m
+  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
 
   FLOAT, intent(in) :: t
 
@@ -334,10 +327,10 @@ subroutine X(vlasers) (h, m, psi, hpsi, t)
 end subroutine X(vlasers)
 
 subroutine X(vborders) (h, m, psi, hpsi)
-  type(hamiltonian_type), intent(in) :: h
-  type(mesh_type), intent(in) :: m
-  R_TYPE, intent(in) :: psi(m%np, h%d%dim)
-  R_TYPE, intent(inout) :: Hpsi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(IN)    :: h
+  type(mesh_type),        intent(IN)    :: m
+  R_TYPE,                 intent(IN)    :: psi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(m%np, h%d%dim)
 
   integer :: idim
 
@@ -354,12 +347,13 @@ end subroutine X(vborders)
 
 subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
   type(hamiltonian_type), intent(inout) :: h
-  type(mesh_type),        intent(in)    :: m
+  type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
-  logical, intent(in), optional         :: calc_eigenval
+  logical,      optional, intent(in)    :: calc_eigenval
 
   integer :: is
   FLOAT, allocatable :: rho_aux(:), vhartree(:)
+  CMPLX, allocatable :: ztmp1(:), ztmp2(:)
 
   ! next 2 lines are for an RPA calculation
   !FLOAT, save, pointer ::  RPA_Vhxc(:, :)
@@ -432,8 +426,13 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
     case(SPINORS)
       h%epot = h%epot - dmf_dotp(m, st%rho(:, 1), h%vhxc(:, 1)) &
            - dmf_dotp(m, st%rho(:, 2), h%vhxc(:, 2))
-      h%epot = h%epot - M_TWO*zmf_dotp(m, st%rho(:, 3) + M_zI*st%rho(:, 4), &
-           h%vhxc(:, 3) - M_zI* h%vhxc(:, 4))
+
+      allocate(ztmp1(m%np), ztmp2(m%np))
+      ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
+      ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)
+      ! WARNING missing real() ???
+      h%epot = h%epot - M_TWO*zmf_dotp(m, ztmp1, ztmp2)
+      deallocate(ztmp1, ztmp2)
     end select
 
   end if

@@ -477,8 +477,8 @@ end subroutine str_trim
 
 ! puts space around string, so that it is centered
 character(len=80) function str_center(s_in, l) result(s_out)
-  character(len=*), intent(IN) :: s_in
-  integer, intent(in) :: l
+  character(len=*), intent(in) :: s_in
+  integer,          intent(in) :: l
 
   integer :: pad, i, li
 

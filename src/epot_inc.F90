@@ -16,12 +16,12 @@
 !! 02111-1307, USA.
 
 subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
-  type(epot_type),   intent(in)    :: ep
-  type(mesh_type), intent(in) :: mesh
+  type(epot_type),     intent(IN)    :: ep
+  type(mesh_type),     intent(IN)    :: mesh
   type(geometry_type), intent(inout) :: geo
-  type(states_type), intent(in) :: st
-  FLOAT,          intent(in), optional :: t
-  logical,           intent(in), optional :: reduce_
+  type(states_type),   intent(IN)    :: st
+  FLOAT,     optional, intent(in)    :: t
+  logical,   optional, intent(in)    :: reduce_
 
   integer :: i, j, l, m, idim, ist, ik, ii, jj, ivnl
   FLOAT :: d, r, zi, zj, x(3)

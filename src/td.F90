@@ -67,11 +67,11 @@ end type td_type
 contains
 
 subroutine td_run(td, u_st, m, st, geo, h, outp)
-  type(td_type), intent(inout) :: td
-  type(states_type), intent(IN) :: u_st
-  type(mesh_type), intent(in) :: m
-  type(states_type), intent(inout) :: st
-  type(geometry_type), intent(inout) :: geo
+  type(td_type),          intent(inout) :: td
+  type(states_type),      intent(IN)    :: u_st
+  type(mesh_type),        intent(IN)    :: m
+  type(states_type),      intent(inout) :: st
+  type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(inout) :: outp
 
@@ -132,7 +132,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     end select
   endif
 
-  if(td%iter == 0) call td_run_zero_iter(m)
+  if(td%iter == 0) call td_run_zero_iter()
   !call td_check_trotter(td, sys, h)
   td%iter = td%iter + 1
 
@@ -269,8 +269,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
 
 contains
 
-  subroutine td_run_zero_iter(m)
-    type(mesh_type), intent(in) :: m
+  subroutine td_run_zero_iter()
 
     call push_sub('td_run_zero_iter')
 
@@ -281,7 +280,7 @@ contains
     if(td%out_angular) call td_write_angular(out_angular, m, st, td, 0)
     if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
 
-    call apply_delta_field(m)
+    call apply_delta_field()
 
     ! create files for output and output headers
     if(td%out_coords) call td_write_nbo(out_coords, geo, td, 0, geo%kinetic_energy, h%etot)    
@@ -297,9 +296,7 @@ contains
 
   !!! Applies the delta function electric field E(t) = E_0 delta(t)
   !!! where E_0 = - k \hbar / e
-  subroutine apply_delta_field(m)
-    type(mesh_type), intent(IN) :: m
-
+  subroutine apply_delta_field()
     integer :: i, mode
     FLOAT   :: k, x(conf%dim)
     CMPLX   :: c(2), kick

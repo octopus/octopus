@@ -38,10 +38,10 @@ end type unocc_type
 contains
 
 subroutine unocc_init(u, m, st, val_charge)
-  type(unocc_type), intent(out) :: u
-  type(mesh_type), intent(IN)   :: m
-  type(states_type), intent(IN) :: st
-  FLOAT,             intent(IN) :: val_charge
+  type(unocc_type),  intent(out) :: u
+  type(mesh_type),   intent(IN)  :: m
+  type(states_type), intent(IN)  :: st
+  FLOAT,             intent(in)  :: val_charge
 
   call push_sub('unocc_init')
 
@@ -92,11 +92,11 @@ subroutine unocc_end(u)
 end subroutine unocc_end
 
 subroutine unocc_run(u, m, st, h, outp)
-  type(unocc_type), intent(inout) :: u
-  type(mesh_type), intent(in) :: m
-  type(states_type), intent(in) :: st
+  type(unocc_type),       intent(inout) :: u
+  type(mesh_type),        intent(IN)    :: m
+  type(states_type),      intent(IN)    :: st
   type(hamiltonian_type), intent(inout) :: h
-  type(output_type), intent(in) :: outp
+  type(output_type),      intent(IN)    :: outp
 
   type(eigen_solver_type) :: eigens
   integer :: iunit

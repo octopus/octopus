@@ -44,10 +44,10 @@ module atom
 contains
 
   subroutine atom_get_wf(m, atom, l, lm, ispin, psi)
-    type(mesh_type),        intent(in)    :: m
-    type(atom_type), intent(in)    :: atom
-    integer, intent(in)   :: l, lm, ispin
-    R_TYPE, intent(out) :: psi(m%np)
+    type(mesh_type), intent(IN)  :: m
+    type(atom_type), intent(IN)  :: atom
+    integer,         intent(in)  :: l, lm, ispin
+    R_TYPE,          intent(out) :: psi(m%np)
     
     integer :: j, ll
     FLOAT :: x(3), a(3), r, p, ylm
@@ -74,8 +74,8 @@ contains
   end subroutine atom_get_wf
 
   function atom_density(m, atom, spin_channels) result(rho)
-    type(mesh_type), intent(in) :: m
-    type(atom_type), intent(in) :: atom
+    type(mesh_type), intent(IN) :: m
+    type(atom_type), intent(IN) :: atom
     integer,         intent(in) :: spin_channels
     FLOAT                       :: rho(m%np, spin_channels)
 

@@ -17,14 +17,14 @@
 
 ! Calculates the new density out the wavefunctions and occupations...
 subroutine X(calcdens)(st, np, rho, reduce)
-  type(states_type), intent(in) :: st
-  integer, intent(in) :: np
-  FLOAT, intent(out) :: rho(np, st%d%nspin)
-  logical, intent(in), optional :: reduce
+  type(states_type), intent(IN)  :: st
+  integer,           intent(in)  :: np
+  FLOAT,             intent(out) :: rho(np, st%d%nspin)
+  logical,           intent(in), optional :: reduce
 
   integer :: i, ik, p, sp
 #ifdef HAVE_MPI
-  FLOAT, allocatable :: reduce_rho(:,:)
+  FLOAT,  allocatable :: reduce_rho(:,:)
   R_TYPE, allocatable :: reduce_rho_off(:)
   integer :: ierr
 #endif
@@ -60,13 +60,13 @@ subroutine X(calcdens)(st, np, rho, reduce)
 #if defined(HAVE_MPI) && defined(MPI_TD)
   ! reduce density (assumes memory is contiguous)
   if(present(reduce)) then
-  if(reduce) then
-    allocate(reduce_rho(1:np, st%d%nspin))
-    call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
-         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-    rho = reduce_rho
-    deallocate(reduce_rho)
-  end if
+    if(reduce) then
+      allocate(reduce_rho(1:np, st%d%nspin))
+      call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
+           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+      rho = reduce_rho
+      deallocate(reduce_rho)
+    end if
   end if
 #endif
 
@@ -77,8 +77,8 @@ end subroutine X(calcdens)
 !!! This subroutine generates a gaussian wave-function in a random
 !!! position in space
 subroutine X(states_random)(m, f)
-  type(mesh_type), intent(in) :: m
-  R_TYPE, intent(out) :: f(1:m%np)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(out) :: f(1:m%np)
 
   integer, save :: iseed = 123
   integer :: i
@@ -107,10 +107,10 @@ end subroutine X(states_random)
 
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
-  integer, intent(in) :: nst, dim
+  integer,         intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(inout) :: psi(m%np, dim, nst)
-  integer, intent(in), optional :: start
+  R_TYPE,          intent(inout) :: psi(m%np, dim, nst)
+  integer,         intent(in), optional :: start
 
   integer :: p, q, id, stst
   FLOAT :: nrm2
@@ -141,8 +141,8 @@ end subroutine X(states_gram_schmidt)
 
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: dim
-  R_TYPE, intent(IN), dimension(*) :: f1, f2
+  integer,         intent(in) :: dim
+  R_TYPE,          intent(IN) :: f1(*), f2(*)
 
   dotp = X(lalg_dot)(m%np*dim, f1(1), f2(1))*m%vol_pp
 
@@ -150,35 +150,35 @@ end function X(states_dotp)
 
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: dim
-  R_TYPE, intent(IN), dimension(*) :: f
+  integer,         intent(in) :: dim
+  R_TYPE,          intent(IN) :: f(*)
 
   nrm2 = X(lalg_nrm2)(m%np*dim, f(1))*sqrt(m%vol_pp)
 
 end function X(states_nrm2)
 
-FLOAT function X(states_residue)(m, dim, hf, e, f, res) result(r)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: dim
-  R_TYPE, intent(IN), dimension(:, :) :: hf, f
-  FLOAT, intent(in)  :: e
-  R_TYPE, intent(out), optional :: res(:, :)
+FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
+  type(mesh_type),   intent(IN)  :: m
+  integer,           intent(in)  :: dim
+  R_TYPE,            intent(IN)  :: hf(:,:), f(:,:)
+  FLOAT,             intent(in)  :: e
 
-  if(present(res)) then
-    res = hf - e*f
-    r = X(states_nrm2)(m, dim, res)
-  else
-    r = X(states_nrm2)(m, dim, hf - e*f)
-  endif
+  R_TYPE, allocatable :: res(:,:)
+
+  allocate(res(m%np, dim))
+  res = hf - e*f
+  r = X(states_nrm2)(m, dim, res)
+  deallocate(res)
+
 end function X(states_residue)
 
 ! TODO use netcdf
 subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
-  character(len=*), intent(in) :: filename
-  type(mesh_type), intent(in) :: m
-  type(states_type), intent(in) :: st
-  integer, intent(in), optional :: iter ! used in TD
-  FLOAT, intent(in), optional :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
+  character(len=*),  intent(in) :: filename
+  type(mesh_type),   intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  integer, optional, intent(in) :: iter ! used in TD
+  FLOAT,   optional, intent(IN) :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
 
   integer :: iunit, ik, ist, id
   integer(i4) :: mode
@@ -245,11 +245,11 @@ subroutine X(states_write_restart)(filename, m, st, iter, v1, v2)
 end subroutine X(states_write_restart)
 
 logical function X(states_load_restart)(filename, m, st, iter, v1, v2) result(ok)
-  character(len=*), intent(in) :: filename
-  type(mesh_type), intent(in) :: m
+  character(len=*),  intent(in)    :: filename
+  type(mesh_type),   intent(IN)    :: m
   type(states_type), intent(inout) :: st
-  integer, intent(out), optional :: iter ! used in TD
-  FLOAT, intent(out), optional :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
+  integer, optional, intent(out)   :: iter ! used in TD
+  FLOAT,   optional, intent(out)   :: v1(m%np, st%d%nspin), v2(m%np, st%d%nspin)
 
   integer :: iunit, ik, ist, id, restart_format
   integer(i4) :: ii, old_np, old_dim, old_start, old_end, old_nik, old_ispin, mode
@@ -401,13 +401,14 @@ end function X(states_load_restart)
 
 subroutine X(states_output) (st, m, dir, outp)
   type(states_type), intent(IN) :: st
-  type(mesh_type), intent(IN) :: m
-  character(len=*), intent(IN) :: dir
+  type(mesh_type),   intent(IN) :: m
+  character(len=*),  intent(in) :: dir
   type(output_type), intent(IN) :: outp
 
   integer :: ik, ist, idim, is
   character(len=80) :: fname
   FLOAT :: u
+  FLOAT, allocatable :: dtmp(:)
 
   u = M_ONE/units_out%length%factor**conf%dim
 
@@ -440,18 +441,20 @@ subroutine X(states_output) (st, m, dir, outp)
   end if
 
   if(outp%what(output_wfs_sqmod)) then
+    allocate(dtmp(m%np))
     do ist = 1, st%nst
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
         do ik = 1, st%d%nik
           do idim = 1, st%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
-            call doutput_function (outp%how, dir, fname, m, &
-                 abs(st%X(psi) (1:, idim, ist, ik))**2, sqrt(u))
+            dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
+            call doutput_function (outp%how, dir, fname, m, dtmp, u)
           end do
         end do
       end if
     end do
+    deallocate(dtmp)
   end if
   
   if(conf%dim==3.and.outp%what(output_elf)) then
@@ -550,10 +553,9 @@ end subroutine X(states_output)
 !  occupation is null (this can be problem, and will have to be cared about.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
-  implicit none
-  type(mesh_type), intent(in) :: m
-  integer, intent(in) :: ik
-  type(states_type), intent(in) :: st1, st2
+  type(mesh_type),   intent(IN) :: m
+  integer,           intent(in) :: ik
+  type(states_type), intent(IN) :: st1, st2
 
   R_TYPE, allocatable :: a(:, :)
 
@@ -579,12 +581,11 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   contains
 
     subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
-      implicit none
-      type(mesh_type), intent(in) :: m
-      integer, intent(in) :: ik
-      type(states_type), intent(in) :: st1, st2
-      integer, intent(in) :: n
-      R_TYPE :: a(n, n)
+      type(mesh_type),   intent(IN)  :: m
+      integer,           intent(in)  :: ik
+      type(states_type), intent(IN)  :: st1, st2
+      integer,           intent(in)  :: n
+      R_TYPE,            intent(out) :: a(n, n)
 
       integer :: i, j, dim
 #if defined(HAVE_MPI) && defined(MPI_TD)
@@ -662,9 +663,9 @@ end function X(states_mpdotp)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine X(states_calculate_angular)(m, st, angular)
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  FLOAT, intent(out) :: angular(3)
+  type(mesh_type),   intent(IN)  :: m
+  type(states_type), intent(IN)  :: st
+  FLOAT,             intent(out) :: angular(3)
 
   FLOAT :: temp(3)
   R_TYPE, allocatable :: lpsi(:, :)
@@ -697,9 +698,9 @@ subroutine X(states_calculate_angular)(m, st, angular)
 end subroutine X(states_calculate_angular)
 
 subroutine X(mesh_angular_momentum)(m, f, lf)
-  type(mesh_type), intent(in) :: m
-  R_TYPE, intent(in)  :: f(m%np)
-  R_TYPE, intent(out) :: lf(3, m%np)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(IN)  :: f(m%np)
+  R_TYPE,          intent(out) :: lf(3, m%np)
 
   R_TYPE, allocatable :: gf(:, :)
   FLOAT :: x(3)

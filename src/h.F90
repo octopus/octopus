@@ -84,7 +84,7 @@ contains
 subroutine hamiltonian_init(h, m, geo, states_dim)
   type(hamiltonian_type), intent(out)   :: h
   type(mesh_type),        intent(inout) :: m
-  type(geometry_type), intent(in)    :: geo
+  type(geometry_type),    intent(IN)    :: geo
   type(states_dim_type),  pointer       :: states_dim
 
   integer :: i, j, n
@@ -201,7 +201,7 @@ end subroutine hamiltonian_init
 
 subroutine hamiltonian_end(h, geo)
   type(hamiltonian_type), intent(inout) :: h
-  type(geometry_type), intent(in) :: geo
+  type(geometry_type),    intent(IN)    :: geo
 
   call push_sub('hamiltonian_end')
 
@@ -232,10 +232,10 @@ end subroutine hamiltonian_end
 ! counts exist (see TDDFT theory for details).
 subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   type(hamiltonian_type), intent(inout) :: h
-  type(states_type), intent(in) :: st
-  FLOAT, intent(in) :: eii
-  integer, intent(in) :: iunit
-  logical, intent(in), optional :: reduce
+  type(states_type),      intent(IN)    :: st
+  FLOAT,                  intent(in)    :: eii
+  integer,                intent(in)    :: iunit
+  logical,      optional, intent(in)    :: reduce
 
   FLOAT :: e
 #ifdef HAVE_MPI
@@ -274,7 +274,7 @@ end subroutine hamiltonian_energy
 
 subroutine hamiltonian_span(h, delta, emin)
   type(hamiltonian_type), intent(inout) :: h
-  FLOAT, intent(in) :: delta, emin
+  FLOAT,                  intent(in)    :: delta, emin
 
   call push_sub('hamiltonian_span')
 
@@ -286,9 +286,9 @@ end subroutine hamiltonian_span
 
 subroutine hamiltonian_output(h, m, dir, outp)
   type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type), intent(IN) :: m
-  character(len=*), intent(IN) :: dir
-  type(output_type), intent(IN) :: outp
+  type(mesh_type),        intent(IN) :: m
+  character(len=*),       intent(in) :: dir
+  type(output_type),      intent(IN) :: outp
 
   integer :: is
   character(len=80) :: fname  

@@ -48,8 +48,8 @@ module td_rti
   
 contains
   subroutine td_rti_init(m, st, tr)
-    type(mesh_type),   intent(in)    :: m
-    type(states_type), intent(in)    :: st
+    type(mesh_type),   intent(IN)    :: m
+    type(states_type), intent(IN)    :: st
     type(td_rti_type), intent(inout) :: tr
 
     call loct_parse_int("TDEvolutionMethod", REVERSAL, tr%method)
@@ -99,8 +99,9 @@ contains
   end subroutine td_rti_end
 
   subroutine td_rti_run_zero_iter(h, tr)
-    type(hamiltonian_type), intent(in) :: h
-    type(td_rti_type), intent(inout) :: tr
+    type(hamiltonian_type), intent(IN)    :: h
+    type(td_rti_type),      intent(inout) :: tr
+
     tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
@@ -108,15 +109,17 @@ contains
 
   subroutine td_rti_dt(h, m, st, tr, t, dt)
     type(hamiltonian_type), intent(inout) :: h
-    type(mesh_type), intent(in) :: m
-    type(states_type), intent(inout) :: st
-    type(td_rti_type), intent(inout) :: tr
-    FLOAT, intent(in) :: t, dt
+    type(mesh_type),        intent(IN)    :: m
+    type(states_type),      intent(inout) :: st
+    type(td_rti_type),      intent(inout) :: tr
+    FLOAT,                  intent(in)    :: t, dt
 
     integer :: is
+    FLOAT   :: d, d_max
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
-    
+    FLOAT, allocatable :: dtmp(:)
+
     call push_sub('td_rti')
 
     self_consistent = .false.
@@ -149,7 +152,16 @@ contains
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
-        if( maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%d%nspin) /)) < scf_threshold) exit
+        d_max = M_ZERO
+        allocate(dtmp(m%np))
+        do is = 1, st%d%nspin
+          dtmp = tr%v_old(:, is, 3) - tr%v_old(:, is, 0)
+          d    = dmf_nrm2(m, dtmp)
+          if(d > d_max) d_max = d
+        end do
+        deallocate(dtmp)
+
+        if(d_max < scf_threshold) exit
 
         st%zpsi = zpsi1
         select case(tr%method)

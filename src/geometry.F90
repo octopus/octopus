@@ -51,8 +51,8 @@ contains
 
 subroutine geometry_init(geo, val_charge, no_species_init)
   type(geometry_type), intent(inout) :: geo
-  FLOAT, intent(out), optional :: val_charge
-  logical, intent(in), optional :: no_species_init
+  FLOAT,               intent(out), optional :: val_charge
+  logical,             intent(in),  optional :: no_species_init
 
   integer :: iunit, i, j
   integer(POINTER_SIZE) :: random_gen_pointer
@@ -239,7 +239,7 @@ contains
 end subroutine geometry_init
 
 subroutine loadPDB(iunit, geo)
-  integer, intent(in) :: iunit
+  integer,             intent(in)    :: iunit
   type(geometry_type), intent(inout) :: geo
  
   character(len=80) :: record
@@ -311,8 +311,8 @@ end subroutine geometry_end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Returns the number of non-local operator that should be defined.
 function geometry_nvnl(geo) result(res)
-  integer :: res
-  type(geometry_type), intent(in) :: geo
+  type(geometry_type), intent(IN) :: geo
+  integer                         :: res
 
   type(specie_type), pointer :: s
   integer :: ia
@@ -329,7 +329,7 @@ function geometry_nvnl(geo) result(res)
 end function geometry_nvnl
 
 FLOAT function ion_ion_energy(geo)
-  type(geometry_type), intent(in) :: geo
+  type(geometry_type), intent(IN) :: geo
   
   FLOAT :: r
   integer :: i, j
@@ -346,7 +346,7 @@ FLOAT function ion_ion_energy(geo)
 end function ion_ion_energy
 
 FLOAT function kinetic_energy(geo)
-  type(geometry_type), intent(in) :: geo
+  type(geometry_type), intent(IN) :: geo
 
   integer :: i
 
@@ -359,8 +359,8 @@ FLOAT function kinetic_energy(geo)
 end function kinetic_energy
 
 subroutine geometry_dipole(geo, dipole)
-  type(geometry_type), intent(in) :: geo
-  FLOAT, intent(out) :: dipole(3)
+  type(geometry_type), intent(IN)  :: geo
+  FLOAT,               intent(out) :: dipole(3)
 
   integer :: i
 
@@ -372,8 +372,8 @@ subroutine geometry_dipole(geo, dipole)
 end subroutine geometry_dipole
 
 subroutine cm_pos(geo, pos)
-  type(geometry_type), intent(in) :: geo
-  FLOAT, intent(out) :: pos(3)
+  type(geometry_type), intent(IN)  :: geo
+  FLOAT,               intent(out) :: pos(3)
 
   FLOAT :: m
   integer :: i
@@ -387,8 +387,8 @@ subroutine cm_pos(geo, pos)
 end subroutine cm_pos
 
 subroutine cm_vel(geo, vel)
-  type(geometry_type), intent(in) :: geo
-  FLOAT, intent(out) :: vel(3)
+  type(geometry_type), intent(IN)  :: geo
+  FLOAT,               intent(out) :: vel(3)
 
   FLOAT :: m
   integer :: i
@@ -403,8 +403,8 @@ end subroutine cm_vel
 
 ! builds a density which is the sum of the atomic densities
 subroutine guess_density(m, geo, qtot, nspin, spin_channels, rho)
-  type(mesh_type),     intent(in)  :: m
-  type(geometry_type), intent(in)  :: geo
+  type(mesh_type),     intent(IN)  :: m
+  type(geometry_type), intent(IN)  :: geo
   FLOAT,               intent(in)  :: qtot  ! the total charge of the system
   integer,             intent(in)  :: nspin, spin_channels
   FLOAT,               intent(out) :: rho(m%np, nspin)
@@ -496,8 +496,8 @@ subroutine guess_density(m, geo, qtot, nspin, spin_channels, rho)
 end subroutine guess_density
 
 subroutine atom_write_xyz(dir, fname, geo)
-  character(len=*), intent(in)  :: dir, fname
-  type(geometry_type), intent(in) :: geo
+  character(len=*),    intent(in) :: dir, fname
+  type(geometry_type), intent(IN) :: geo
   
   integer i, iunit
   

@@ -47,7 +47,7 @@ module td_exp
 contains
 
   subroutine td_exp_init(m, te)
-    type(mesh_type), intent(in) :: m
+    type(mesh_type),   intent(IN) :: m
     type(td_exp_type), intent(out) :: te
 
     call loct_parse_int("TDExponentialMethod", FOURTH_ORDER, te%exp_method)
@@ -107,15 +107,15 @@ contains
   end subroutine td_exp_end
 
   subroutine td_exp_dt(te, m, h, zpsi, ik, timestep, t, order, vmagnus)
-    type(td_exp_type), intent(inout)   :: te
-    type(mesh_type),   intent(in)      :: m
-    type(hamiltonian_type), intent(in) :: h
-    integer, intent(in) :: ik
-    CMPLX, intent(inout) :: zpsi(m%np, h%d%dim)
-    FLOAT, intent(in) :: timestep, t
-    integer, optional, intent(out) :: order ! For the methods that rely on Hamiltonian-vector
-                                            ! multiplication, the number of these.
-    FLOAT, intent(in), optional :: vmagnus(m%np, h%d%nspin, 2)
+    type(td_exp_type),      intent(inout)   :: te
+    type(mesh_type),        intent(IN)      :: m
+    type(hamiltonian_type), intent(IN)      :: h
+    integer,                intent(in)      :: ik
+    CMPLX,                  intent(inout)   :: zpsi(m%np, h%d%dim)
+    FLOAT,                  intent(in)      :: timestep, t
+    integer,      optional, intent(out)     :: order ! For the methods that rely on Hamiltonian-vector
+                                                     ! multiplication, the number of these.
+    FLOAT,        optional, intent(IN)      :: vmagnus(m%np, h%d%nspin, 2)
 
     logical :: apply_magnus
 
@@ -144,12 +144,15 @@ contains
   contains
 
     subroutine operate(psi, oppsi)
-      CMPLX :: psi(m%np, h%d%dim), oppsi(m%np, h%d%dim)
+      CMPLX, intent(IN)    :: psi(m%np, h%d%dim)
+      CMPLX, intent(inout) :: oppsi(m%np, h%d%dim)
+
       if(apply_magnus) then
         call zmagnus(h, m, psi, oppsi, ik, vmagnus)
       else
         call zHpsi(h, m, psi, oppsi, ik, t)
       endif
+
     end subroutine operate
 
     subroutine fourth

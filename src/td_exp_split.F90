@@ -33,12 +33,12 @@ contains
   !!! Calculates psi = exp{factor*T} psi
   !!! where T is the kinetic energy operator
   subroutine zexp_kinetic (m, h, psi, ik, cf, factor)
-    type(mesh_type), intent(in) :: m
-    type(hamiltonian_type), intent(in) :: h
-    CMPLX, intent(inout) :: psi(m%np, h%d%dim)
-    integer, intent(in) :: ik
-    type(zcf), intent(inout) :: cf
-    CMPLX, intent(in) :: factor
+    type(mesh_type),        intent(IN) :: m
+    type(hamiltonian_type), intent(IN) :: h
+    CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
+    integer,                intent(in) :: ik
+    type(zcf),              intent(inout) :: cf
+    CMPLX,                  intent(in) :: factor
     
     integer :: ix, iy, iz, k(3), idim
     FLOAT :: cutoff, temp(3), g2
@@ -92,12 +92,12 @@ contains
   !!! Calculates psi = exp{factor*V_KS(t)} psi
   !!! where V_KS is the Kohn-Sham potential
   subroutine zexp_vlpsi (m, h, psi, ik, t, factor)
-    type(mesh_type), intent(in) :: m
-    type(hamiltonian_type), intent(in) :: h
-    CMPLX, intent(inout) :: psi(m%np, h%d%dim)
-    integer, intent(in) :: ik
-    FLOAT, intent(in) :: t
-    CMPLX, intent(in) :: factor
+    type(mesh_type),        intent(IN)    :: m
+    type(hamiltonian_type), intent(IN)    :: h
+    CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
+    integer,                intent(in)    :: ik
+    FLOAT,                  intent(in)    :: t
+    CMPLX,                  intent(in)    :: factor
 
     integer :: k
     FLOAT :: x(3), f(3)
@@ -138,12 +138,12 @@ contains
   !!! calculates psi = exp{factor V_nlpp} psi
   !!! where V_nlpp is the non-local part of the pseudpotential
   subroutine zexp_vnlpsi (m, h, psi, ik, factor, order)
-    type(mesh_type), intent(in) :: m
-    type(hamiltonian_type), intent(in) :: h
-    CMPLX, intent(inout) :: psi(m%np, h%d%dim)
-    integer, intent(in) :: ik
-    CMPLX, intent(in) :: factor
-    logical, intent(in) :: order
+    type(mesh_type),        intent(IN) :: m
+    type(hamiltonian_type), intent(IN) :: h
+    CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
+    integer,                intent(in) :: ik
+    CMPLX,                  intent(in) :: factor
+    logical,                intent(in) :: order
 
     integer :: idim, ikbc, jkbc, &
          ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl

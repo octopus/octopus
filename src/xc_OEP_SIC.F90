@@ -18,12 +18,12 @@
 !!! This routine calculates the SIC exchange functional. note that the LDA
 !!! part of the functional is already included by the LDA routines
 subroutine X(oep_x_sic) (xcs, m, st, is, oep, ex)
-  type(xc_type),     intent(in)    :: xcs
-  type(mesh_type),   intent(in)    :: m
+  type(xc_type),     intent(IN)    :: xcs
+  type(mesh_type),   intent(IN)    :: m
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  FLOAT,          intent(out)   :: ex
+  FLOAT,             intent(out)   :: ex
 
   integer  :: i, i1, i2
   FLOAT :: ex2, edummy

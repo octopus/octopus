@@ -33,11 +33,11 @@ contains
 
 subroutine static_pol_run(scf, m, st, geo, h, outp)
   type(scf_type),         intent(inout) :: scf
-  type(mesh_type),        intent(in)    :: m
+  type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
-  type(output_type),      intent(in)    :: outp
+  type(output_type),      intent(IN)    :: outp
 
   
   integer :: iunit, ios, i_start, i, j, is, k

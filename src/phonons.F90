@@ -45,11 +45,11 @@ contains
 
   subroutine phonons_run(scf, m, st, geo, h, outp)
     type(scf_type),         intent(inout) :: scf
-    type(mesh_type),        intent(in)    :: m
+    type(mesh_type),        intent(IN)    :: m
     type(states_type),      intent(inout) :: st
     type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
-    type(output_type),      intent(in)    :: outp
+    type(output_type),      intent(IN)    :: outp
     
     type(phonons_type) :: ph
     integer :: i, j, iunit
@@ -91,11 +91,11 @@ contains
 
   subroutine get_DM(scf, m, st, geo, h, outp, ph)
     type(scf_type),         intent(inout) :: scf
-    type(mesh_type),        intent(in)    :: m
+    type(mesh_type),        intent(IN)    :: m
     type(states_type),      intent(inout) :: st
     type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
-    type(output_type),      intent(in)    :: outp
+    type(output_type),      intent(IN)    :: outp
     type(phonons_type),     intent(inout) :: ph
 
     integer :: i, j, alpha, beta, n, iunit

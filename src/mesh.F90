@@ -96,8 +96,8 @@ end subroutine mesh_init
 
 ! finds the dimension of a box doubled in the non-periodic dimensions
 subroutine mesh_double_box(m, db)
-  type(mesh_type), intent(in) :: m
-  integer, intent(out) :: db(3)
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(out) :: db(3)
 
   integer :: i
 
@@ -113,7 +113,7 @@ end subroutine mesh_double_box
 
 subroutine mesh_write_info(m, unit)
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: unit
+  integer,         intent(in) :: unit
 
   character(len=15), parameter :: bs(4) = (/ &
       'sphere        ', &
@@ -180,43 +180,43 @@ end subroutine mesh_write_info
 
 ! subroutines to get xyzr
 subroutine mesh_xyz(m, i, x)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: i
-  FLOAT, intent(out) :: x(conf%dim)
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(in)  :: i
+  FLOAT,           intent(out) :: x(conf%dim)
 
   x(1:conf%dim) = m%Lxyz(1:conf%dim, i)*m%h(1:conf%dim)
 end subroutine mesh_xyz
 
 subroutine mesh_x(m, i, x)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: i
-  FLOAT, intent(out) :: x
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(in)  :: i
+  FLOAT,           intent(out) :: x
 
   x = m%Lxyz(1, i)*m%h(1)
 end subroutine mesh_x
 
 subroutine mesh_y(m, i, y)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: i
-  FLOAT, intent(out) :: y
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(in)  :: i
+  FLOAT,           intent(out) :: y
 
   y = m%Lxyz(2, i)*m%h(2)
 end subroutine mesh_y
 
 subroutine mesh_z(m, i, z)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: i
-  FLOAT, intent(out) :: z
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(in)  :: i
+  FLOAT,           intent(out) :: z
 
   z = m%Lxyz(3, i)*m%h(3)
 end subroutine mesh_z
 
 subroutine mesh_r(m, i, r, a, x)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: i
-  FLOAT, intent(out) :: r
-  FLOAT, intent(in),  optional :: a(conf%dim)
-  FLOAT, intent(out), optional :: x(conf%dim)
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(in)  :: i
+  FLOAT,           intent(out) :: r
+  FLOAT,           intent(in),  optional :: a(conf%dim)
+  FLOAT,           intent(out), optional :: x(conf%dim)
 
   FLOAT :: xx(conf%dim)
 
@@ -243,11 +243,11 @@ end subroutine mesh_r
 ! So, if n>0, the point is in the border.  */
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine mesh_inborder(m, i, n, d, width)
-  type(mesh_type), intent(in) :: m
-  integer, intent(in)   :: i
-  FLOAT, intent(in)  :: width
-  integer, intent(out)  :: n
-  FLOAT, intent(out) :: d(3)
+  type(mesh_type), intent(IN)  :: m
+  integer,         intent(in)  :: i
+  FLOAT,           intent(in)  :: width
+  integer,         intent(out) :: n
+  FLOAT,           intent(out) :: d(3)
 
   integer :: j
   FLOAT :: x(3), r, dd

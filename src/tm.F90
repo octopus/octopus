@@ -64,9 +64,9 @@ FLOAT, parameter :: eps = CNST(1.0e-8)
 contains
 
 subroutine tm_init(pstm, filename, ispin)
-  type(tm_type), intent(inout) :: pstm
-  character(len=*), intent(in) :: filename
-  integer, intent(in)          :: ispin
+  type(tm_type),    intent(inout) :: pstm
+  character(len=*), intent(in)    :: filename
+  integer,          intent(in)    :: ispin
 
   character(len=256) :: filename2
   integer :: iunit, l, n
@@ -193,7 +193,7 @@ end subroutine tm_end
 
 subroutine tm_process(pstm, lmax, lloc)
   type(tm_type), intent(inout) :: pstm
-  integer, intent(in) :: lmax, lloc
+  integer,       intent(in)    :: lmax, lloc
 
   call push_sub('tm_process')
 
@@ -361,7 +361,7 @@ subroutine solve_schroedinger(psf)
 end subroutine solve_schroedinger
 
 subroutine read_file_data_bin(unit, psf)
-  integer, intent(in) :: unit
+  integer,       intent(in)    :: unit
   type(tm_type), intent(inout) :: psf
   
   integer  :: ndown, nup, l, i
@@ -452,7 +452,7 @@ subroutine read_file_data_bin(unit, psf)
 end subroutine read_file_data_bin
 
 subroutine read_file_data_ascii(unit, psf)
-  integer, intent(in) :: unit
+  integer,       intent(in)    :: unit
   type(tm_type), intent(inout) :: psf
   
   integer  :: ndown, nup, i, l
@@ -562,7 +562,7 @@ end subroutine read_file_data_ascii
 
 subroutine calculate_kb_cosines(pstm, lloc)
   type(tm_type), intent(inout) :: pstm
-  integer, intent(in)          :: lloc
+  integer,       intent(in)    :: lloc
 
   integer :: ir, l
   FLOAT :: dnrm, avgv, vphi
@@ -606,8 +606,8 @@ subroutine calculate_kb_cosines(pstm, lloc)
 end subroutine calculate_kb_cosines
 
 subroutine ghost_analysis(pstm, lmax)
-  type(tm_type), intent(in) :: pstm
-  integer, intent(in)       :: lmax
+  type(tm_type), intent(IN) :: pstm
+  integer,       intent(in) :: lmax
 
   character(len=3) :: functl
   integer :: ir, l, nnode, nprin, ighost, irel
@@ -672,7 +672,7 @@ end subroutine ghost_analysis
 
 subroutine get_cutoff_radii(pstm, lloc)
   type(tm_type), intent(inout) :: pstm
-  integer, intent(in)          :: lloc
+  integer,       intent(in)    :: lloc
 
   integer             :: l, ir
   FLOAT            :: dincv, phi
@@ -711,8 +711,8 @@ end subroutine get_cutoff_radii
 
 subroutine get_local(psf, l_loc, rcore)
   type(tm_type), intent(inout) :: psf
-  integer, intent(in)          :: l_loc
-  FLOAT, intent(in)         :: rcore
+  integer,       intent(in)    :: l_loc
+  FLOAT,         intent(in)    :: rcore
 
   integer :: ir
   FLOAT :: a, b, qtot
@@ -739,9 +739,9 @@ subroutine get_local(psf, l_loc, rcore)
       rho(ir) = M_FOUR * M_Pi * rho(ir) * psf%rofi(ir)**2
     end do
     qtot = sum(rho(2:psf%nrval)*psf%g%drdi(2:psf%nrval))
-    rho(:) = rho(:)*(psf%zval/qtot)
+    rho(:) = - rho(:)*(psf%zval/qtot)
 
-    call vhrtre(-rho, psf%vlocal, psf%rofi, psf%g%drdi, psf%g%s, psf%g%nrval, psf%g%a)
+    call vhrtre(rho, psf%vlocal, psf%rofi, psf%g%drdi, psf%g%s, psf%g%nrval, psf%g%a)
     psf%vlocal(1) = psf%vlocal(2)
 
     deallocate(rho)
@@ -751,7 +751,7 @@ subroutine get_local(psf, l_loc, rcore)
 end subroutine get_local
 
 subroutine tm_debug(pstm)
-  type(tm_type), intent(in) :: pstm
+  type(tm_type), intent(IN) :: pstm
 
   integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
   character(len=30) :: dir

@@ -16,11 +16,11 @@
 !! 02111-1307, USA.
 
 subroutine X(oep_x) (m, st, is, oep, ex)
-  type(mesh_type),   intent(in)    :: m
-  type(states_type), intent(in)    :: st
+  type(mesh_type),   intent(IN)    :: m
+  type(states_type), intent(IN)    :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  FLOAT,          intent(out)   :: ex
+  FLOAT,             intent(out)   :: ex
 
   integer :: i, j
   FLOAT :: r

@@ -25,13 +25,13 @@
 !! We also implement the "smoothing" preconditioning described in that paper.
 
 subroutine eigen_solver_plan(m, st, hamilt, tol, niter, converged, diff)
-  type(mesh_type),        target, intent(in)    :: m
+  type(mesh_type),        target, intent(IN)    :: m
   type(states_type),      target, intent(inout) :: st
-  type(hamiltonian_type), target, intent(in)    :: hamilt
-  FLOAT,   intent(in)             :: tol
-  integer, intent(inout)          :: niter
-  integer, intent(out)            :: converged
-  FLOAT,   intent(out),  optional :: diff(1:st%nst,1:st%nik)
+  type(hamiltonian_type), target, intent(IN)    :: hamilt
+  FLOAT,                          intent(in)    :: tol
+  integer,                        intent(inout) :: niter
+  integer,                        intent(out)   :: converged
+  FLOAT,                optional, intent(out)   :: diff(1:st%nst,1:st%nik)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Local stuff

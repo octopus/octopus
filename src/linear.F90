@@ -30,10 +30,10 @@ module linear
 
 contains
   subroutine calc_petersilka(type, st, m, n_occ, n_unocc, flags, dir, fname)
-    type(states_type), intent(IN) :: st
-    type(mesh_type), intent(inout) :: m
-    integer, intent(IN) :: type, n_occ, n_unocc, flags(32)
-    character(len=*), intent(IN) :: dir, fname
+    type(states_type), intent(IN)    :: st
+    type(mesh_type),   intent(inout) :: m
+    integer,           intent(in)    :: type, n_occ, n_unocc, flags(32)
+    character(len=*),  intent(in)    :: dir, fname
 
     integer, allocatable :: pair_i(:), pair_a(:)
     FLOAT, allocatable :: energies(:,:)

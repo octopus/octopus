@@ -17,10 +17,10 @@
 
 subroutine td_write_angular(out, m, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),   intent(in) :: m
-  type(states_type), intent(in) :: st
-  type(td_type),     intent(in) :: td
-  integer,           intent(in) :: iter
+  type(mesh_type),       intent(IN) :: m
+  type(states_type),     intent(IN) :: st
+  type(td_type),         intent(IN) :: td
+  integer,               intent(in) :: iter
 
   character(len=130) :: aux
   FLOAT :: angular(3)
@@ -61,12 +61,12 @@ subroutine td_write_angular(out, m, st, td, iter)
 end subroutine td_write_angular
 
 subroutine td_write_multipole(out, mesh, st, geo, td, iter)
-  integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),   intent(in) :: mesh
-  type(states_type), intent(in) :: st
-  type(geometry_type), intent(in) :: geo
-  type(td_type),     intent(in) :: td
-  integer,           intent(in) :: iter
+  integer(POINTER_SIZE), intent(IN) :: out
+  type(mesh_type),       intent(IN) :: mesh
+  type(states_type),     intent(IN) :: st
+  type(geometry_type),   intent(IN) :: geo
+  type(td_type),         intent(IN) :: td
+  integer,               intent(in) :: iter
   
   integer :: is, j, l, m, add_lm
   character(len=50) :: aux
@@ -159,11 +159,11 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
 end subroutine td_write_multipole
 
 subroutine td_write_nbo(out, geo, td, iter, ke, pe)
-  integer(POINTER_SIZE), intent(in) :: out
-  type(geometry_type), intent(in) :: geo
-  type(td_type),     intent(in) :: td
-  integer,           intent(in) :: iter
-  FLOAT,          intent(in) :: ke, pe
+  integer(POINTER_SIZE), intent(IN) :: out
+  type(geometry_type),   intent(IN) :: geo
+  type(td_type),         intent(IN) :: td
+  integer,               intent(in) :: iter
+  FLOAT,                 intent(in) :: ke, pe
 
   integer :: i, j
   character(len=50) :: aux
@@ -231,10 +231,10 @@ end subroutine td_write_nbo
 
 subroutine td_write_gsp(out, m, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),   intent(in) :: m
-  type(states_type), intent(in) :: st
-  type(td_type),     intent(in) :: td
-  integer,           intent(in) :: iter
+  type(mesh_type),       intent(IN) :: m
+  type(states_type),     intent(IN) :: st
+  type(td_type),         intent(IN) :: td
+  integer,               intent(in) :: iter
 
   CMPLX :: gsp
   
@@ -273,13 +273,13 @@ subroutine td_write_gsp(out, m, st, td, iter)
 end subroutine td_write_gsp
 
 subroutine td_write_acc(out, mesh, st, geo, h, td, iter)
-  integer(POINTER_SIZE),  intent(in) :: out
-  type(mesh_type),   intent(in) :: mesh
-  type(states_type), intent(inout) :: st
-  type(geometry_type), intent(inout) :: geo
-  type(hamiltonian_type), intent(in) :: h
-  type(td_type),          intent(in) :: td
-  integer,                intent(in) :: iter
+  integer(POINTER_SIZE),  intent(IN)    :: out
+  type(mesh_type),        intent(IN)    :: mesh
+  type(states_type),      intent(inout) :: st
+  type(geometry_type),    intent(inout) :: geo
+  type(hamiltonian_type), intent(IN)    :: h
+  type(td_type),          intent(IN)    :: td
+  integer,                intent(in)    :: iter
 
   integer :: i
   character(len=7) :: aux
@@ -321,10 +321,10 @@ contains
 end subroutine td_write_acc
 
 subroutine td_write_laser(out, h, td, iter)
-  integer(POINTER_SIZE), intent(in) :: out
-  type(hamiltonian_type), intent(in) :: h
-  type(td_type),     intent(in) :: td
-  integer,           intent(in) :: iter
+  integer(POINTER_SIZE),  intent(in) :: out
+  type(hamiltonian_type), intent(IN) :: h
+  type(td_type),          intent(IN) :: td
+  integer,                intent(in) :: iter
 
   integer :: i
   FLOAT :: field(3)
@@ -387,9 +387,9 @@ subroutine td_write_laser(out, h, td, iter)
 end subroutine td_write_laser
     
 subroutine td_write_el_energy(out, h, iter)
-  integer(POINTER_SIZE), intent(in) :: out
-  type(hamiltonian_type), intent(in) :: h
-  integer,           intent(in) :: iter
+  integer(POINTER_SIZE),  intent(in) :: out
+  type(hamiltonian_type), intent(IN) :: h
+  integer,                intent(in) :: iter
 
   integer :: i
   
@@ -429,10 +429,10 @@ end subroutine td_write_el_energy
 
 subroutine td_write_proj(out, m, st, u_st, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),   intent(in) :: m
-  type(states_type), intent(in) :: st
-  type(states_type), intent(in) :: u_st
-  integer,           intent(in) :: iter
+  type(mesh_type),       intent(IN) :: m
+  type(states_type),     intent(IN) :: st
+  type(states_type),     intent(IN) :: u_st
+  integer,               intent(in) :: iter
 
   CMPLX, allocatable :: projections(:,:,:)
   character(len=20) :: aux

@@ -16,9 +16,9 @@
 !! 02111-1307, USA.
 
 subroutine PES_rc_init(v, m, st, save_iter)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type),   intent(IN) :: m
   type(states_type), intent(IN) :: st
-  integer, intent(in) :: save_iter
+  integer,           intent(in) :: save_iter
   type(PES_rc_type), intent(out) :: v
 
   character(len=80) :: str
@@ -68,7 +68,7 @@ end subroutine PES_rc_end
 subroutine PES_rc_doit(v, st, ii)
   type(PES_rc_type), intent(inout) :: v
   type(states_type), intent(IN) :: st
-  integer, intent(in) :: ii
+  integer,           intent(in) :: ii
 
   integer :: ix, ik, p, idim
 
@@ -85,10 +85,10 @@ subroutine PES_rc_doit(v, st, ii)
 end subroutine PES_rc_doit
 
 subroutine PES_rc_output(v, st, iter, save_iter, dt)
-  type(PES_rc_type), intent(in) :: v
+  type(PES_rc_type), intent(IN) :: v
   type(states_type), intent(IN) :: st
-  integer, intent(in) :: iter, save_iter
-  FLOAT, intent(in) :: dt
+  integer,           intent(in) :: iter, save_iter
+  FLOAT,             intent(in) :: dt
   
   integer :: ix, iunit, j, jj, ik, p, idim
 

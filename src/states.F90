@@ -97,9 +97,9 @@ end subroutine states_null
 
 subroutine states_init(st, m, val_charge, nlcc)
   type(states_type), intent(inout) :: st
-  type(mesh_type), intent(IN) :: m
-  FLOAT, intent(in) :: val_charge
-  logical, intent(in), optional :: nlcc
+  type(mesh_type),   intent(IN)    :: m
+  FLOAT,             intent(in)    :: val_charge
+  logical,           intent(in), optional :: nlcc
 
   FLOAT :: excess_charge, r
   integer :: nempty, i, j
@@ -255,8 +255,8 @@ subroutine states_init(st, m, val_charge, nlcc)
 end subroutine states_init
 
 subroutine states_copy(stout, stin)
-  type(states_type), intent(in)   :: stin
-  type(states_type), intent(out)  :: stout
+  type(states_type), intent(in)  :: stin
+  type(states_type), intent(out) :: stout
 
   call states_null(stout)
 
@@ -348,8 +348,8 @@ end subroutine states_end
 ! generate a hydrogen s-wavefunction around a random point
 subroutine states_generate_random(st, m, ist_start)
   type(states_type), intent(inout) :: st
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in), optional :: ist_start
+  type(mesh_type),   intent(IN)    :: m
+  integer,           intent(in), optional :: ist_start
 
   integer :: ist, ik, id, ist_s
 
@@ -373,7 +373,7 @@ end subroutine states_generate_random
 
 subroutine states_fermi(st, m)
   type(states_type), intent(inout) :: st
-  type(mesh_type), intent(in) :: m
+  type(mesh_type),   intent(IN)    :: m
 
 ! Local variables
   integer :: ie, ik, iter
@@ -484,13 +484,12 @@ subroutine states_fermi(st, m)
 end subroutine states_fermi
 
 subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  FLOAT, intent(in) :: pol(3)
-  FLOAT, intent(out) :: dipole(st%d%nspin)
-  integer, intent(in), optional :: lmax
-  !FLOAT, intent(out), optional :: multipole((lmax + 1)**2, st%nspin)
-  FLOAT, intent(out), optional :: multipole(:, :)
+  type(mesh_type),   intent(IN)  :: m
+  type(states_type), intent(IN)  :: st
+  FLOAT,             intent(in)  :: pol(3)
+  FLOAT,             intent(out) :: dipole(st%d%nspin)
+  integer,           intent(in),  optional :: lmax
+  FLOAT,             intent(out), optional :: multipole(:, :) ! multipole((lmax + 1)**2, st%nspin)
 
   integer :: i, is, l, lm, add_lm
   FLOAT :: x(3), r, ylm, mult
@@ -532,8 +531,8 @@ end subroutine states_calculate_multipoles
 
 ! function to calculate the eigenvalues sum using occupations as weights
 function states_eigenvalues_sum(st) result(e)
-  FLOAT :: e
-  type(states_type), intent(in) :: st
+  type(states_type), intent(IN) :: st
+  FLOAT                         :: e
 
   integer :: ik
 
@@ -546,9 +545,9 @@ function states_eigenvalues_sum(st) result(e)
 end function states_eigenvalues_sum
 
 subroutine states_write_eigenvalues(iunit, nst, st, error)
-  integer, intent(in) :: iunit, nst
+  integer,           intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st
-  FLOAT, intent(in), optional :: error(nst, st%nik)
+  FLOAT,             intent(IN), optional :: error(nst, st%nik)
 
   integer ik, j, ns, is
   FLOAT :: o, oplus, ominus
@@ -638,7 +637,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 end subroutine states_write_eigenvalues
 
 subroutine states_write_bands(iunit, nst, st)
-  integer, intent(in) :: iunit, nst
+  integer,           intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st
 
   integer ik, j, ns, pd
@@ -694,28 +693,31 @@ end function
 ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine calc_projection(u_st, st, m, p)
-  type(states_type), intent(in) :: u_st, st
-  type(mesh_type),   intent(in) :: m
-  CMPLX, intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%nik)
+  type(states_type), intent(IN)  :: u_st, st
+  type(mesh_type),   intent(IN)  :: m
+  CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%nik)
 
   integer :: uist, ist, ik
+  CMPLX, allocatable :: tmp(:,:)
 
+  allocate(tmp(m%np, st%dim))
   do ik = 1, st%nik
      do ist = st%st_start, st%st_end
         do uist = 1, u_st%nst
-          p(uist, ist, ik) = zstates_dotp( m, st%dim,          &
-              cmplx(u_st%X(psi)(:, :, uist, ik), kind=PRECISION) , &
-              st%zpsi(:, :, ist, ik) )
+          tmp = cmplx(u_st%X(psi)(:, :, uist, ik), kind=PRECISION)
+          p(uist, ist, ik) = zstates_dotp(m, st%dim, tmp, st%zpsi(:, :, ist, ik) )
         end do
      end do
   end do
+  deallocate(tmp)
+
 end subroutine calc_projection
 
 ! This routine (obviously) assumes complex wave-functions
 subroutine calc_current(m, st, j)
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  FLOAT, intent(out) :: j(3, m%np, st%d%nspin)
+  type(mesh_type),   intent(IN)  :: m
+  type(states_type), intent(IN)  :: st
+  FLOAT,             intent(out) :: j(3, m%np, st%d%nspin)
   
   integer :: ik, p, sp, k
   CMPLX, allocatable :: aux(:,:)
@@ -780,9 +782,9 @@ subroutine calc_current(m, st, j)
 end subroutine calc_current
 
 subroutine zstates_project_gs(st, m, p)
-  type(states_type), intent(in) :: st
-  type(mesh_type), intent(in)   :: m
-  CMPLX, intent(out) :: p
+  type(states_type), intent(IN)  :: st
+  type(mesh_type),   intent(IN)  :: m
+  CMPLX,             intent(out) :: p
 
   type(states_type) :: stgs
 

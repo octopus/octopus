@@ -63,7 +63,7 @@ contains
 
   subroutine valconf_copy(cout, cin)
     type(valconf), intent(out) :: cout
-    type(valconf), intent(in)  :: cin
+    type(valconf), intent(IN)  :: cin
     cout%z      = cin%z
     cout%symbol = cin%symbol
     cout%type   = cin%type
@@ -74,7 +74,7 @@ contains
   end subroutine valconf_copy
 
   subroutine write_valconf(c, s)
-    type(valconf), intent(in) :: c
+    type(valconf), intent(IN) :: c
     character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
@@ -100,12 +100,12 @@ contains
   end subroutine read_valconf
 
   subroutine atomhxc(functl, irel, g, nspin, dens, v, extra)
-    character(len=*), intent(in)   :: functl
-    integer, intent(in)            :: irel, nspin
-    type(logrid_type), intent(in)  :: g
-    FLOAT, intent(in)           :: dens(g%nrval, nspin)
-    FLOAT, intent(out)          :: v(g%nrval, nspin)
-    FLOAT, intent(in), optional :: extra(g%nrval)
+    character(len=*),  intent(in)  :: functl
+    integer,           intent(in)  :: irel, nspin
+    type(logrid_type), intent(IN)  :: g
+    FLOAT,             intent(IN)  :: dens(g%nrval, nspin)
+    FLOAT,             intent(out) :: v(g%nrval, nspin)
+    FLOAT,             intent(IN), optional :: extra(g%nrval)
 
     character(len=5) :: xcfunc, xcauth
     integer :: is, ir
@@ -425,10 +425,10 @@ contains
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
-  FLOAT, intent(IN), dimension(*) :: rho, r, drdi, srdrdi
-  FLOAT, intent(in) :: a
-  FLOAT, intent(out), dimension(*) :: v
-  integer, intent(in) :: nr
+  FLOAT,   intent(IN)  :: rho(*), r(*), drdi(*), srdrdi(*)
+  FLOAT,   intent(in)  :: a
+  FLOAT,   intent(out) :: v(*)
+  integer, intent(in)  :: nr
 
   FLOAT :: x,y,q,a2by4,ybyq,qbyy,qpartc,v0,qt,dz,t,beta,dv
   integer :: nrm1,nrm2,ir

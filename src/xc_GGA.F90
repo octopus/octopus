@@ -16,11 +16,11 @@
 !! 02111-1307, USA.
 
 subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
-  type(xc_type),     intent(in)  :: xcs
-  type(mesh_type),   intent(in)  :: m
-  type(states_type), intent(in)  :: st
-  FLOAT,          intent(out) :: vxc(m%np, st%d%nspin), ex, ec
-  FLOAT,          intent(in)  :: ip, qtot
+  type(xc_type),     intent(IN)  :: xcs
+  type(mesh_type),   intent(IN)  :: m
+  type(states_type), intent(IN)  :: st
+  FLOAT,             intent(out) :: vxc(m%np, st%d%nspin), ex, ec
+  FLOAT,             intent(in)  :: ip, qtot
   
   FLOAT :: e, dpol, dtot, vpol, r
 

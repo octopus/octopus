@@ -77,7 +77,8 @@ end subroutine zlalg_scal
 ! constant times a vector plus a vector
 subroutine dlalg_axpy(n, da, dx, dy)
   integer, intent(in)    :: n
-  FLOAT,   intent(in)    :: da, dx(*)
+  FLOAT,   intent(in)    :: da
+  FLOAT,   intent(IN)    :: dx(*)
   FLOAT,   intent(inout) :: dy(*)
 
   interface
@@ -94,7 +95,8 @@ end subroutine dlalg_axpy
 
 subroutine zlalg_axpy(n, za, zx, zy)
   integer, intent(in)    :: n
-  CMPLX,   intent(in)    :: za, zx(*)
+  CMPLX,   intent(in)    :: za
+  CMPLX,   intent(IN)    :: zx(*)
   CMPLX,   intent(inout) :: zy(*)
 
   interface
@@ -112,7 +114,7 @@ end subroutine zlalg_axpy
 ! forms the dot product of two vectors
 FLOAT function dlalg_dot(n, dx, dy)
   integer, intent(in) :: n
-  FLOAT,   intent(in) :: dx(*), dy(*)
+  FLOAT,   intent(IN) :: dx(*), dy(*)
 
   interface
     FLOAT function DBLAS(dot) (n, dx, incx, dy, incy)
@@ -127,7 +129,7 @@ end function dlalg_dot
 
 CMPLX function zlalg_dot(n, zx, zy)
   integer, intent(in) :: n
-  CMPLX,   intent(in) :: zx(*), zy(*)
+  CMPLX,   intent(IN) :: zx(*), zy(*)
 
   interface
     CMPLX function ZBLAS(dotc) (n, zx, incx, zy, incy)
@@ -143,7 +145,7 @@ end function zlalg_dot
 ! returns the euclidean norm of a vector
 FLOAT function dlalg_nrm2(n, dx)
   integer, intent(in) :: n
-  FLOAT,   intent(in) :: dx(*)
+  FLOAT,   intent(IN) :: dx(*)
 
   interface
     FLOAT function DBLAS(nrm2) (n, dx, incx)
@@ -158,7 +160,7 @@ end function dlalg_nrm2
 
 FLOAT function zlalg_nrm2(n, zx)
   integer, intent(in) :: n
-  CMPLX,   intent(in) :: zx(*)
+  CMPLX,   intent(IN) :: zx(*)
 
   interface
     FLOAT function ZNRM2 (n, zx, incx)
@@ -174,7 +176,7 @@ end function zlalg_nrm2
 ! copies a vector, x, to a vector, y
 subroutine dlalg_copy(n, dx, dy)
   integer, intent(in)  :: n
-  FLOAT,   intent(in)  :: dx(*)
+  FLOAT,   intent(IN)  :: dx(*)
   FLOAT,   intent(out) :: dy(*)
 
   interface
@@ -191,7 +193,7 @@ end subroutine dlalg_copy
 
 subroutine zlalg_copy(n, zx, zy)
   integer, intent(in)  :: n
-  CMPLX,   intent(in)  :: zx(*)
+  CMPLX,   intent(IN)  :: zx(*)
   CMPLX,   intent(out) :: zy(*)
 
   interface
@@ -210,8 +212,8 @@ end subroutine zlalg_copy
 subroutine dlalg_gemm(m, n, k, alpha, a, b, beta, c)
   integer,      intent(in)    :: m, n, k
   FLOAT,        intent(in)    :: alpha, beta
-  FLOAT,        intent(in)    :: a(*)
-  FLOAT,        intent(in)    :: b(*)
+  FLOAT,        intent(IN)    :: a(*)
+  FLOAT,        intent(IN)    :: b(*)
   FLOAT,        intent(inout) :: c(*)
 
   interface
@@ -232,8 +234,8 @@ end subroutine dlalg_gemm
 subroutine zlalg_gemm(m, n, k, alpha, a, b, beta, c)
   integer,      intent(in)    :: m, n, k
   CMPLX,        intent(in)    :: alpha, beta
-  CMPLX,        intent(in)    :: a(*)
-  CMPLX,        intent(in)    :: b(*)
+  CMPLX,        intent(IN)    :: a(*)
+  CMPLX,        intent(IN)    :: b(*)
   CMPLX,        intent(inout) :: c(*)
 
   interface
@@ -255,8 +257,8 @@ end subroutine zlalg_gemm
 subroutine dlalg_gemv(m, n, alpha, a, x, beta, y)
   integer,      intent(in)    :: m, n
   FLOAT,        intent(in)    :: alpha, beta
-  FLOAT,        intent(in)    :: a(*)
-  FLOAT,        intent(in)    :: x(*)
+  FLOAT,        intent(IN)    :: a(*)
+  FLOAT,        intent(IN)    :: x(*)
   FLOAT,        intent(inout) :: y(*)
 
   interface
@@ -277,8 +279,8 @@ end subroutine dlalg_gemv
 subroutine zlalg_gemv(m, n, alpha, a, x, beta, y)
   integer,      intent(in)    :: m, n
   CMPLX,        intent(in)    :: alpha, beta
-  CMPLX,        intent(in)    :: a(*)
-  CMPLX,        intent(in)    :: x(*)
+  CMPLX,        intent(IN)    :: a(*)
+  CMPLX,        intent(IN)    :: x(*)
   CMPLX,        intent(inout) :: y(*)
 
   interface

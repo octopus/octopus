@@ -16,9 +16,9 @@
 !! 02111-1307, USA.
 
 subroutine PES_mask_init(v, m, st)
-  type(PES_mask_type), intent(out) :: v
-  type(mesh_type), intent(inout) :: m
-  type(states_type), intent(IN) :: st
+  type(PES_mask_type), intent(out)   :: v
+  type(mesh_type),     intent(inout) :: m
+  type(states_type),   intent(IN)    :: st
 
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
@@ -49,10 +49,10 @@ end subroutine PES_mask_end
 
 subroutine PES_mask_doit(v, m, st, dt, mask)
   type(PES_mask_type), intent(inout) :: v
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  FLOAT, intent(IN) :: dt
-  FLOAT, pointer :: mask(:)
+  type(mesh_type),     intent(IN)    :: m
+  type(states_type),   intent(IN)    :: st
+  FLOAT,               intent(in)    :: dt
+  FLOAT,               pointer       :: mask(:)
 
   integer :: j, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
   CMPLX, allocatable :: wf1(:,:,:), wf2(:,:,:)
@@ -108,9 +108,9 @@ end subroutine PES_mask_doit
 
 subroutine PES_mask_output(v, m, st, file)
   type(PES_mask_type), intent(IN) :: v
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  character(len=*), intent(in) :: file
+  type(mesh_type),     intent(IN) :: m
+  type(states_type),   intent(IN) :: st
+  character(len=*),    intent(in) :: file
 
   FLOAT, allocatable :: spis(:,:,:), arpis(:,:,:)
   FLOAT :: vec, temp(3)

@@ -64,8 +64,8 @@ contains
 
 subroutine eigen_solver_init(eigens, st, m)
   type(eigen_solver_type), intent(out) :: eigens
-  type(states_type), intent(in)        :: st
-  type(mesh_type), intent(in)          :: m
+  type(states_type),       intent(IN)  :: st
+  type(mesh_type),         intent(IN)  :: m
   
   call push_sub('eigen_solver_init')
 
@@ -132,20 +132,22 @@ end subroutine eigen_solver_init
 
 subroutine eigen_solver_end(eigens)
   type(eigen_solver_type), intent(inout) :: eigens
+
   select case(eigens%es_type)
   case(RS_PLAN)
     call derivatives_end(filter)
   end select
   nullify(eigens%diff)
+
 end subroutine eigen_solver_end
 
 subroutine eigen_solver_run(eigens, m, st, h, iter, conv)
   type(eigen_solver_type), intent(inout) :: eigens
-  type(mesh_type),         intent(in) :: m
+  type(mesh_type),         intent(IN)    :: m
   type(states_type),       intent(inout) :: st
-  type(hamiltonian_type), intent(IN) :: h
-  integer, intent(in) :: iter
-  logical, intent(inout), optional :: conv
+  type(hamiltonian_type),  intent(IN)    :: h
+  integer,                 intent(in)    :: iter
+  logical,       optional, intent(inout) :: conv
 
   integer :: maxiter, errorflag
   FLOAT :: tol
@@ -186,9 +188,9 @@ end subroutine eigen_solver_run
 !!! This routine in principle diagonalises the hamiltonian in the
 !!! basis defined by st. It has not been tested, and it is not used now
 subroutine eigen_diagon_subspace(m, st, h)
-  type(mesh_type),        intent(in)    :: m
+  type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(IN)    :: h
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer :: ik, i, j

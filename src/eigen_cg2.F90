@@ -17,14 +17,14 @@
 
 ! CONJUGATE-GRADIENTS METHOD.
 subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, reorder)
-  type(mesh_type),        intent(in)    :: m
+  type(mesh_type),        intent(IN)    :: m
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(in)    :: h
-  FLOAT, intent(in)               :: tol
-  integer, intent(inout)             :: niter
-  integer, intent(out)               :: errorflag, converged
-  FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%nik)
-  logical, intent(in), optional      :: reorder
+  type(hamiltonian_type), intent(IN)    :: h
+  FLOAT,                  intent(in)    :: tol
+  integer,                intent(inout) :: niter
+  integer,                intent(out)   :: errorflag, converged
+  FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%nik)
+  logical,      optional, intent(in)    :: reorder
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
        cg(:,:), ppsi(:,:)

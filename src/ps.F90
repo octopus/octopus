@@ -69,11 +69,11 @@ FLOAT, parameter :: eps = CNST(1.0e-8)
 contains
 
 subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
-  type(ps_type), intent(out) :: ps
-  character(len=10), intent(in) :: label
-  character(len=3),  intent(in) :: flavour
-  integer, intent(in) :: lmax, lloc, ispin
-  FLOAT, intent(in) :: z
+  type(ps_type),     intent(out) :: ps
+  character(len=10), intent(in)  :: label
+  character(len=3),  intent(in)  :: flavour
+  integer,           intent(in)  :: lmax, lloc, ispin
+  FLOAT,             intent(in)  :: z
 
   type(tm_type)      :: pstm ! In case Troullier-Martins ps are used.
   type(hgh_type)     :: psp  ! In case Hartwigsen-Goedecker-Hutter ps are used.
@@ -187,7 +187,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 end subroutine ps_init
 
 subroutine ps_debug(ps)
-  type(ps_type), intent(in) :: ps
+  type(ps_type), intent(IN) :: ps
 
   ! I think I can hardcode these two numbers.
   integer, parameter  :: npoints = 20001
@@ -325,8 +325,8 @@ subroutine ps_end(ps)
 end subroutine ps_end
 
 subroutine hgh_load(ps, psp)
-  type(ps_type), intent(inout)      :: ps
-  type(hgh_type), intent(inout)     :: psp
+  type(ps_type),  intent(inout) :: ps
+  type(hgh_type), intent(inout) :: psp
 
   integer :: l, ll
   FLOAT :: x
@@ -396,7 +396,7 @@ subroutine tm_load(ps, pstm)
 end subroutine tm_load
 
 subroutine get_splines_tm(psf, ps)
-  type(tm_type), intent(in) :: psf
+  type(tm_type), intent(IN)    :: psf
   type(ps_type), intent(inout) :: ps
   
   integer :: is, l, ll, nrc, ir, nrcore
@@ -489,8 +489,8 @@ subroutine get_splines_tm(psf, ps)
 end subroutine get_splines_tm
 
 subroutine get_splines_hgh(psp, ps)
-  type(hgh_type), intent(in)   :: psp
-  type(ps_type), intent(inout) :: ps
+  type(hgh_type), intent(IN)    :: psp
+  type(ps_type),  intent(inout) :: ps
 
   integer :: l, is, nrc, j
   FLOAT, allocatable :: hato(:), derhato(:)
@@ -501,17 +501,17 @@ subroutine get_splines_hgh(psp, ps)
 
   ! Interpolate the KB-projection functions
   do l = 0, psp%l_max
-  do j = 1, 3
-    hato = M_ZERO
-    nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
-    hato(1:nrc) = psp%kb(1:nrc, l, j)
-    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
-    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
-    ! and now the derivatives...
-    call derivate_in_log_grid(psp%g, hato, derhato)
-    call loct_spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
-    call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_dkb(l, j))
-  end do
+    do j = 1, 3
+      hato = M_ZERO
+      nrc = nint(log(psp%kbr(l)/psp%g%b + M_ONE)/psp%g%a) + 1
+      hato(1:nrc) = psp%kb(1:nrc, l, j)
+      call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
+      call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
+      ! and now the derivatives...
+      call derivate_in_log_grid(psp%g, hato, derhato)
+      call loct_spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
+      call loct_spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_dkb(l, j))
+    end do
   end do
 
   ! Now the part corresponding to the local pseudopotential

@@ -54,10 +54,11 @@ end type PES_type
 contains
 
 subroutine PES_init(p, m, st, ab, save_iter)
-  type(PES_TYPE), intent(out) :: p
-  type(mesh_type), intent(inout) :: m
-  type(states_type), intent(IN) :: st
-  integer, intent(in) :: ab, save_iter
+  type(PES_TYPE),    intent(out)   :: p
+  type(mesh_type),   intent(inout) :: m
+  type(states_type), intent(IN)    :: st
+  integer,           intent(in)    :: ab, save_iter
+
   call loct_parse_logical("CalcPES_rc", .false., p%calc_rc)
   if(p%calc_rc) then
     p%calc_rc = .true.
@@ -84,12 +85,12 @@ subroutine PES_end(p)
 end subroutine PES_end
 
 subroutine PES_doit(p, m, st, ii, dt, mask)
-  type(PES_type), intent(inout) :: p
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  FLOAT, intent(in) :: dt
-  FLOAT, pointer :: mask(:)
-  integer, intent(in) :: ii
+  type(PES_type),    intent(inout) :: p
+  type(mesh_type),   intent(IN)    :: m
+  type(states_type), intent(IN)    :: st
+  FLOAT,             intent(in)    :: dt
+  FLOAT,             pointer       :: mask(:)
+  integer,           intent(in)    :: ii
 
   if(p%calc_rc)   call PES_rc_doit  (p%rc, st, ii)
   if(p%calc_mask) call PES_mask_doit(p%mask, m, st, dt, mask)
@@ -97,11 +98,11 @@ subroutine PES_doit(p, m, st, ii, dt, mask)
 end subroutine PES_doit
 
 subroutine PES_output(p, m, st, iter, save_iter, dt)
-  type(PES_type), intent(in) :: p
-  type(mesh_type), intent(IN) :: m
+  type(PES_type),    intent(IN) :: p
+  type(mesh_type),   intent(IN) :: m
   type(states_type), intent(IN) :: st
-  integer, intent(in) :: iter, save_iter
-  FLOAT, intent(in) :: dt
+  integer,           intent(in) :: iter, save_iter
+  FLOAT,             intent(in) :: dt
 
   if(p%calc_rc)   call PES_rc_output   (p%rc, st, iter, save_iter, dt)
   if(p%calc_mask) call PES_mask_output (p%mask, m, st, "PES")

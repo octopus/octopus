@@ -21,11 +21,12 @@
 !!! This file has to be outside the module xc, for it requires the Hpsi
 
 subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
-  type(xc_type),     intent(in)    :: xcs
-  type(mesh_type),   intent(in)    :: m
-  type(hamiltonian_type), intent(in) :: h
-  type(states_type), intent(inout) :: st
-  FLOAT,          intent(inout) :: vxc(m%np, st%d%nspin), ex, ec
+  type(xc_type),          intent(IN)    :: xcs
+  type(mesh_type),        intent(IN)    :: m
+  type(hamiltonian_type), intent(IN)    :: h
+  type(states_type),      intent(inout) :: st
+  FLOAT,                  intent(inout) :: vxc(m%np, st%d%nspin)
+  FLOAT,                  intent(inout) :: ex, ec
   
   type(xc_oep_type) :: oep
   FLOAT :: e
@@ -100,12 +101,12 @@ subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
 end subroutine X(h_xc_OEP)
 
 subroutine X(h_xc_oep_solve) (m, h, st, is, vxc, oep)
-  type(mesh_type),   intent(in)    :: m
-  type(hamiltonian_type), intent(in) :: h
-  type(states_type), intent(in)    :: st
-  integer,           intent(in)    :: is
-  FLOAT,          intent(inout) :: vxc(m%np)
-  type(xc_oep_type), intent(inout) :: oep
+  type(mesh_type),        intent(IN)    :: m
+  type(hamiltonian_type), intent(IN)    :: h
+  type(states_type),      intent(IN)    :: st
+  integer,                intent(in)    :: is
+  FLOAT,                  intent(inout) :: vxc(m%np)
+  type(xc_oep_type),      intent(inout) :: oep
 
   integer :: iter, ist
   FLOAT :: vxc_bar

@@ -42,12 +42,12 @@
 !         1. */
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp) (order, in, out, factor, norm, method)
-  integer, intent(in)            :: order
-  R_TYPE, intent(in)        :: in(order, order)
-  R_TYPE, intent(out)       :: out(order, order)
-  R_TYPE, intent(in)        :: factor
-  FLOAT, intent(in), optional :: norm
-  integer, intent(in), optional  :: method
+  integer, intent(in)           :: order
+  R_TYPE,  intent(IN)           :: in(order, order)
+  R_TYPE,  intent(out)          :: out(order, order)
+  R_TYPE,  intent(in)           :: factor
+  FLOAT,   intent(in), optional :: norm
+  integer, intent(in), optional :: method
 
   integer, parameter :: SCALEANDSQUARE = 1, &
                         DECOMPOSITION  = 2
@@ -94,10 +94,10 @@ end subroutine X(matexp)
 ! exporder : the order of the Taylor expansion to be used. */ 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_polynomial)(order, in, out, factor, exporder)
-  integer, intent(in)      :: order, exporder
-  R_TYPE, intent(in)  :: in(order, order)
-  R_TYPE, intent(out) :: out(order, order)
-  R_TYPE, intent(in)  :: factor 
+  integer, intent(in)  :: order, exporder
+  R_TYPE,  intent(IN)  :: in(order, order)
+  R_TYPE,  intent(out) :: out(order, order)
+  R_TYPE,  intent(in)  :: factor 
 
   integer :: n
   R_TYPE :: zfact
@@ -138,10 +138,10 @@ end subroutine X(matexp_polynomial)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   integer, intent(in)  :: order
-  R_TYPE, intent(in)   :: in(order, order)
-  R_TYPE, intent(out)  :: out(order, order)
-  R_TYPE, intent(in)   :: factor 
-  FLOAT, intent(in) :: norm
+  R_TYPE,  intent(IN)  :: in(order, order)
+  R_TYPE,  intent(out) :: out(order, order)
+  R_TYPE,  intent(in)  :: factor 
+  FLOAT,   intent(in)  :: norm
 
   integer :: i, j
   R_TYPE, allocatable :: aux(:, :)
@@ -176,7 +176,7 @@ end subroutine X(matexp_scaleandsquare)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_decomposition)(order, in, out, factor)
   integer, intent(in)  :: order
-  R_TYPE,  intent(in)  :: in(order, order)
+  R_TYPE,  intent(IN)  :: in(order, order)
   R_TYPE,  intent(out) :: out(order, order)
   R_TYPE,  intent(in)  :: factor
 
@@ -214,9 +214,9 @@ end subroutine X(matexp_decomposition)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(extrapolate)(order, n, v, vex, dt, t)
   integer, intent(in)  :: order, n
-  R_TYPE, intent(in)   :: v(*)
-  R_TYPE, intent(out)  :: vex(*)
-  FLOAT, intent(in) :: dt, t
+  R_TYPE,  intent(IN)  :: v(*)
+  R_TYPE,  intent(out) :: vex(*)
+  FLOAT,   intent(in)  :: dt, t
 
   integer :: j
   FLOAT :: x
