@@ -37,6 +37,7 @@ type states_dim_type
   integer :: ispin         ! * spin mode (unpolarized, spin polarized, spinors)
   integer :: nspin         ! * dimension of rho (1, 2 or 4)
   integer :: spin_channels ! * 1 or 2, wether spin is or not considered.
+  logical :: current       ! * If the current is to be considered or not
   logical :: select_axis(3)! * which axes are used fo k points
   FLOAT, pointer :: kpoints(:,:) ! * obviously the kpoints
   FLOAT, pointer :: kweights(:)  ! * weights for the kpoint integrations
@@ -57,8 +58,9 @@ type states_type
   FLOAT, pointer :: dpsi(:,:,:,:)
   CMPLX, pointer :: zpsi(:,:,:,:)
 
-  ! the densities (after all we are doing DFT :)
+  ! the densities and currents (after all we are doing DFT :)
   FLOAT, pointer :: rho(:,:)
+  FLOAT, pointer :: j(:,:,:)
 
   FLOAT, pointer :: rho_core(:)! core charge for nl core corrections
 
@@ -90,7 +92,7 @@ contains
 
 subroutine states_null(st)
   type(states_type) :: st
-  nullify(st%dpsi, st%zpsi, st%rho, st%rho_core, st%eigenval, st%occ, st%mag)
+  nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag)
   nullify(st%d); allocate(st%d)
   nullify(st%d%kpoints, st%d%kweights)
 end subroutine states_null
@@ -150,7 +152,7 @@ subroutine states_init(st, m, val_charge, nlcc)
   else
     st%d%nik = 1
   end if
-  
+
   call loct_parse_float('ExcessCharge', M_ZERO, excess_charge)
 
   call loct_parse_int('ExtraStates', 0, nempty)
@@ -187,6 +189,24 @@ subroutine states_init(st, m, val_charge, nlcc)
     st%d%spin_channels = 2
   end select
 
+  ! current
+  call loct_parse_logical("CurrentDFT", .false., st%d%current)
+#ifdef COMPLEX_WFNS
+  if (st%d%current .and. st%d%ispin == SPINORS) then
+    message(1) = "Sorry, Current DFT not working yet for spinors"
+    call write_fatal(1)
+  else
+    message(1) = "Info: Using Current DFT"
+    call write_info(1)
+  end if
+#else
+  if (st%d%current) then
+    message(1) = "Cannot use Current DFT with an executable compiled"
+    message(2) = "for real wavefunctions."
+    call write_fatal(2)
+  end if
+#endif
+
   ! For non-periodic systems this should just return the Gamma point
   call states_choose_kpoints(st, m)
 
@@ -196,6 +216,10 @@ subroutine states_init(st, m, val_charge, nlcc)
            st%eigenval(st%nst, st%d%nik))
   if(st%d%ispin == SPINORS) then
     allocate(st%mag(st%nst, st%d%nik, 2))
+  end if
+  if (st%d%current) then
+    allocate(st%j(conf%dim, m%np, st%d%nspin))
+    st%j = M_ZERO
   end if
   if (present(nlcc)) then
     if(nlcc) allocate(st%rho_core(m%np))
@@ -281,6 +305,10 @@ subroutine states_copy(stout, stin)
     allocate(stout%rho(size(stin%rho, 1), size(stin%rho, 2)))
     stout%rho = stin%rho
   endif
+  if(associated(stin%j)) then
+    allocate(stout%j(size(stin%j, 1), size(stin%j, 2), size(stin%j, 3)))
+    stout%j = stin%j
+  endif
   if(associated(stin%rho_core)) then
     allocate(stout%rho_core(size(stin%rho_core, 1)))
     stout%rho_core = stin%rho_core
@@ -304,6 +332,7 @@ subroutine states_copy(stout, stin)
   stout%d%ispin = stin%d%ispin
   stout%d%nspin = stin%d%nspin
   stout%d%spin_channels = stin%d%spin_channels
+  stout%d%current = stin%d%current
   stout%d%select_axis(:) = stin%d%select_axis(:)
   if(associated(stin%d%kpoints)) then
     allocate(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)))
@@ -323,6 +352,11 @@ subroutine states_end(st)
   if(associated(st%rho)) then
     deallocate(st%rho, st%occ, st%eigenval)
     nullify   (st%rho, st%occ, st%eigenval)
+  end if
+
+  if(associated(st%j)) then
+    deallocate(st%j)
+    nullify(st%j)
   end if
 
   if(associated(st%rho_core)) then
@@ -715,10 +749,10 @@ end subroutine calc_projection
 
 ! This routine (obviously) assumes complex wave-functions
 subroutine calc_current(m, st, j)
-  type(mesh_type),   intent(IN)  :: m
-  type(states_type), intent(IN)  :: st
-  FLOAT,             intent(out) :: j(3, m%np, st%d%nspin)
-  
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: st
+  FLOAT,             intent(out) :: j(conf%dim, m%np, st%d%nspin)
+
   integer :: ik, p, sp, k
   CMPLX, allocatable :: aux(:,:)
 #if defined(HAVE_MPI) && defined(MPI_TD)
@@ -780,6 +814,69 @@ subroutine calc_current(m, st, j)
 
   call pop_sub()
 end subroutine calc_current
+
+subroutine calc_current2(m, st, j)
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: st
+  FLOAT,             intent(out) :: j(conf%dim, m%np, st%d%nspin)
+
+  integer :: ik, p, sp, k
+  CMPLX, allocatable :: grad(:,:)
+#if defined(HAVE_MPI) && defined(MPI_TD)
+  integer :: ierr
+  FLOAT, allocatable :: red(:,:,:)
+#endif
+
+  call push_sub('calc_current2')
+  
+  if(st%d%ispin == SPIN_POLARIZED) then
+    sp = 2
+  else
+    sp = 1
+  end if
+  
+  j = M_ZERO
+  allocate(grad(conf%dim, m%np))
+  
+  do ik = 1, st%nik, sp
+    do p  = st%st_start, st%st_end
+      call zf_gradient(m, st%zpsi(:, 1, p, ik), grad)
+
+      ! spin-up density
+      do k = 1, m%np
+        j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
+             * (real(st%zpsi(k, 1, p, ik))*aimag(grad(1:conf%dim, k)) &
+             - aimag(st%zpsi(k, 1, p, ik))*real(grad(1:conf%dim, k)))
+      end do
+        
+      ! spin-down density
+      if(st%d%ispin == SPIN_POLARIZED) then
+        call zf_gradient(m, st%zpsi(:, 1, p, ik+1), grad)
+
+        do k = 1, m%np
+          j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
+             * (real(st%zpsi(k, 1, p, ik+1))*aimag(grad(1:conf%dim, k)) &
+             - aimag(st%zpsi(k, 1, p, ik+1))*real(grad(1:conf%dim, k)))
+        end do
+
+      else if(st%d%ispin == SPINORS) then
+        ! not yet implemented
+      end if
+
+    end do
+  end do
+  deallocate(grad)
+
+#if defined(HAVE_MPI) && defined(MPI_TD)
+  allocate(red(3, m%np, st%d%nspin))
+  call MPI_ALLREDUCE(j(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
+       MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+  j = red
+  deallocate(red)
+#endif
+
+  call pop_sub()
+end subroutine calc_current2
 
 subroutine zstates_project_gs(st, m, p)
   type(states_type), intent(IN)  :: st

@@ -56,6 +56,8 @@ subroutine scf_init(scf, m, st, h)
   type(states_type),      intent(IN)    :: st
   type(hamiltonian_type), intent(IN)    :: h
 
+  integer :: np
+
   call push_sub('scf_init')
 
   call loct_parse_int  ("MaximumIter",        200, scf%max_iter)
@@ -87,15 +89,17 @@ subroutine scf_init(scf, m, st, h)
         message(1) = 'Info: SCF mixing the potential.'
      end if
   case default
-      write(message(1), '(a,i5,a)') "Input: '", scf%what2mix, &
-           "' is not a valid option for What2Mix"
-      message(2) = '(What2Mix = 0 | 1)'
-      call write_fatal(2)
-   end select
-   call write_info(1)
+    write(message(1), '(a,i5,a)') "Input: '", scf%what2mix, &
+         "' is not a valid option for What2Mix"
+    message(2) = '(What2Mix = 0 | 1)'
+    call write_fatal(2)
+  end select
+  call write_info(1)
 
   ! Handle mixing now...
-  call mix_init(scf%smix, m%np, st%d%nspin)
+  np = st%d%nspin*m%np
+  if (h%d%current) np = np*(1 + conf%dim)
+  call mix_init(scf%smix, np)
 
   ! now the eigen solver stuff
   call eigen_solver_init(scf%eigens, st, m)
@@ -129,10 +133,10 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(IN)    :: outp
 
-  integer :: iter, iunit, is
+  integer :: iter, iunit, is, idim, np, nspin, dim
   FLOAT :: evsum_out, evsum_in
-  FLOAT, allocatable :: rhoout(:,:), rhoin(:,:)
-  FLOAT, allocatable :: vout(:,:), vin(:,:)
+  FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:), rhonew(:,:,:)
+  FLOAT, allocatable :: vout(:,:,:), vin(:,:,:), vnew(:,:,:)
   FLOAT, allocatable :: tmp(:)
   logical :: finish
 
@@ -140,11 +144,22 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
   if(scf%lcao_restricted) call lcao_init(m, st, geo, h)
 
-  allocate(rhoout(m%np, st%d%nspin), rhoin(m%np, st%d%nspin))
-  rhoin = st%rho
+  nspin = st%d%nspin
+  dim = 1
+  if (h%d%current) dim = 1 + conf%dim
+  np = dim*nspin*m%np
+
+  allocate(rhoout(dim, m%np, nspin), rhoin(dim, m%np, nspin))
+  rhoin(1, :, :) = st%rho; rhoout = M_ZERO
+  if (st%d%current) then
+    rhoin(2:dim, :, :) = st%j
+  end if
   if (scf%what2mix == MIXPOT) then
-     allocate(vout(m%np, st%d%nspin), vin(m%np, st%d%nspin))
-     vin = h%vhxc; vout = M_ZERO
+    allocate(vout(dim, m%np, nspin), vin(dim, m%np, nspin), vnew(dim, m%np, nspin))
+    vin(1, :, :) = h%vhxc; vout = M_ZERO
+    if (st%d%current) vin(2:dim, :, :) = h%ahxc
+  else
+    allocate(rhonew(dim, m%np, nspin))
   end if
   evsum_in = states_eigenvalues_sum(st)
 
@@ -160,20 +175,27 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     call states_fermi(st, m)
 
     ! compute output density, potential (if needed) and eigenvalues sum
-    call X(calcdens)(st, m%np, rhoout)
+    call X(calcdens)(st, m%np, st%rho)
+    rhoout(1, :, :) = st%rho
+    if (h%d%current) then
+      call calc_current2(m, st, st%j)
+      rhoout(2:dim, :, :) = st%j
+    end if
     if (scf%what2mix == MIXPOT) then
-       st%rho = rhoout
-       call X(h_calc_vhxc) (h, m, st)
-       vout = h%vhxc
+      call X(h_calc_vhxc) (h, m, st)
+      vout(1, :, :) = h%vhxc
+      if (h%d%current) vout(2:dim, :, :) = h%ahxc
     end if
     evsum_out = states_eigenvalues_sum(st)
 
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
     allocate(tmp(m%np))
-    do is = 1, st%d%nspin
-      tmp = (rhoin(:,is) - rhoout(:,is))**2
-      scf%abs_dens = scf%abs_dens + dmf_integrate(m, tmp)
+    do is = 1, nspin
+      do idim = 1, dim
+        tmp = (rhoin(idim, :, is) - rhoout(idim, :, is))**2
+        scf%abs_dens = scf%abs_dens + dmf_integrate(m, tmp)
+      end do
     end do
     deallocate(tmp)
 
@@ -191,14 +213,19 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
     call scf_write_iter
 
+    ! mixing
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, m%np, st%d%nspin, rhoin, rhoout, st%rho)
+       call mixing(scf%smix, iter, np, rhoin, rhoout, rhonew)
+       st%rho = rhonew(1, :, :)
+       if (h%d%current) st%j = rhonew(2:dim, :, :)
        call X(h_calc_vhxc) (h, m, st)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, m%np, st%d%nspin, vin, vout, h%vhxc)
+       call mixing(scf%smix, iter, np, vin, vout, vnew)
+       h%vhxc = vnew(1, :, :)
+       if (h%d%current) h%ahxc = vnew(2:dim, :, :)
     end select
 
     ! save restart information
@@ -218,16 +245,22 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     endif
 
     ! save information for the next iteration
-    rhoin = st%rho
-    if (scf%what2mix == MIXPOT) vin = h%vhxc
+    rhoin(1, :, :) = st%rho
+    if (h%d%current) rhoin(2:dim, :, :) = st%j
+    if (scf%what2mix == MIXPOT) then
+      vin(1, :, :) = h%vhxc
+      if (h%d%current) vin(2:dim, :, :) = h%ahxc
+    end if
     evsum_in = evsum_out
 
     if(clean_stop()) exit
   end do
 
   if (scf%what2mix == MIXPOT) then
-     call X(h_calc_vhxc) (h, m, st)
-     deallocate(vout, vin)
+    call X(h_calc_vhxc) (h, m, st)
+    deallocate(vout, vin, vnew)
+  else
+    deallocate(rhonew)
   end if
   deallocate(rhoout, rhoin)
 

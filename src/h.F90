@@ -42,6 +42,7 @@ type hamiltonian_type
 
   FLOAT, pointer :: Vpsl(:)     ! the external potential
   FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
+  FLOAT, pointer :: ahxc(:,:,:) ! xc vector-potential + hartree vector-potential divided by c
 
   ! the energies (total, ion-ion, exchange, correlation)
   FLOAT :: etot, eii, ex, ec, epot
@@ -54,8 +55,6 @@ type hamiltonian_type
 
   ! gauge
   integer :: gauge ! in which gauge shall we work in
-                   ! 1 = length gauge
-                   ! 2 = velocity gauge
 
   ! absorbing boundaries
   integer  :: ab         ! do we have absorbing boundaries?
@@ -79,12 +78,15 @@ integer, parameter :: NOREL      = 0, &
 integer, parameter :: NO_ABSORBING        = 0, &
                       IMAGINARY_ABSORBING = 1, &
                       MASK_ABSORBING      = 2
+
+integer, parameter :: LENGTH = 1, &
+                      VELOCITY = 2
 contains
 
 subroutine hamiltonian_init(h, m, geo, states_dim)
   type(hamiltonian_type), intent(out)   :: h
   type(mesh_type),        intent(inout) :: m
-  type(geometry_type),    intent(IN)    :: geo
+  type(geometry_type),    intent(in)    :: geo
   type(states_dim_type),  pointer       :: states_dim
 
   integer :: i, j, n
@@ -101,6 +103,12 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   allocate(h%Vpsl(m%np), h%Vhxc(m%np, h%d%nspin))
   h%vpsl = M_ZERO
   h%Vhxc = M_ZERO
+  if (h%d%current) then
+    allocate(h%ahxc(conf%dim, m%np, h%d%nspin))
+    h%ahxc = M_ZERO
+  else
+    nullify(h%ahxc)  
+  end if
 
   call epot_init(h%ep, m, geo)
 
@@ -147,7 +155,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   end if
 
   ! gauge
-  call loct_parse_int("TDGauge", 1, h%gauge)
+  call loct_parse_int("TDGauge", LENGTH, h%gauge)
   if (h%gauge < 1 .or. h%gauge > 2) then
     write(message(1), '(a,i6,a)') "Input: '", h%gauge, "' is not a valid TDGauge"
     message(2) = 'Accepted values are:'

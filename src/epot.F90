@@ -53,7 +53,10 @@ module external_pot
     ! lasers stuff
     integer :: no_lasers ! number of laser pulses used
     type(laser_type), pointer :: lasers(:)
-   
+
+    ! static magnetic field
+    FLOAT, pointer :: b(:)
+
 #ifdef HAVE_FFT
     ! For the local pseudopotential in Fourier space...
     type(dcf), pointer :: local_cf(:)
@@ -121,6 +124,16 @@ contains
       end if
     end if
 
+    ! static magnetic field
+    nullify(ep%b)
+    select case(loct_parse_block_n("StaticMagneticField"))
+    case (1)
+      allocate(ep%b(conf%dim))
+      do i = 1, conf%dim
+        call loct_parse_block_float("StaticMagneticField", 0, i-1, ep%b(i))
+      end do
+    end select
+
     ! Non local operators
     ep%nvnl = geometry_nvnl(geo)
     nullify(ep%vnl)
@@ -159,6 +172,10 @@ contains
     end if
     
     call laser_end(ep%no_lasers, ep%lasers)
+
+    if(associated(ep%b)) then
+      deallocate(ep%b)
+    end if
 
     if(ep%nvnl>0) then
         ASSERT(associated(ep%vnl))

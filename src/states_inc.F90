@@ -41,18 +41,17 @@ subroutine X(calcdens)(st, np, rho, reduce)
   do ik = 1, st%d%nik, sp
     do p  = st%st_start, st%st_end
       do i = 1, np
-           rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 1, p, ik))**2
-         select case(st%d%ispin)
-         case(SPIN_POLARIZED)
-           rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%X(psi)(i, 1, p, ik+1))**2
-         case(SPINORS)
-           rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 2, p, ik))**2
-           rho(i, 3) = rho(i, 3) + st%d%kweights(ik)*st%occ(p, ik)  * &
-                       R_REAL (st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
-           rho(i, 4) = rho(i, 4) + st%d%kweights(ik)*st%occ(p, ik)  * &
-                       R_AIMAG(st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
-
-         end select
+        rho(i, 1) = rho(i, 1) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 1, p, ik))**2
+        select case(st%d%ispin)
+        case(SPIN_POLARIZED)
+          rho(i, 2) = rho(i, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1)*R_ABS(st%X(psi)(i, 1, p, ik+1))**2
+        case(SPINORS)
+          rho(i, 2) = rho(i, 2) + st%d%kweights(ik)  *st%occ(p, ik)  *R_ABS(st%X(psi)(i, 2, p, ik))**2
+          rho(i, 3) = rho(i, 3) + st%d%kweights(ik)*st%occ(p, ik)  * &
+                      R_REAL (st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
+          rho(i, 4) = rho(i, 4) + st%d%kweights(ik)*st%occ(p, ik)  * &
+                      R_AIMAG(st%X(psi)(i, 1, p, ik) * R_CONJ(st%X(psi)(i, 2, p, ik)))
+        end select
       end do
     end do
   end do

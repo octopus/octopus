@@ -205,7 +205,7 @@ subroutine X(f_divergence) (m, f, divf)
   integer :: i
   R_TYPE, allocatable :: aux(:)
 
-  call push_sub("f_gradient")
+  call push_sub("f_divergence")
 
   ASSERT(derivatives_space==REAL_SPACE.or.derivatives_space==RECIPROCAL_SPACE)
 
