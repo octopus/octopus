@@ -778,7 +778,7 @@ subroutine calc_current(m, st, j)
       ! spin-up density
       do k = 1, m%np
         j(1:conf%dim, k, 1) = j(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
-             * aimag(st%zpsi(k, 1, p, ik) * conjg(aux(1:conf%dim, k)))
+             * aimag(conjg(st%zpsi(k, 1, p, ik)) * aux(1:conf%dim, k))
       end do
         
       ! spin-down density
@@ -787,7 +787,7 @@ subroutine calc_current(m, st, j)
 
         do k = 1, m%np
           j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-             * aimag(st%zpsi(k, 1, p, ik+1) * conjg(aux(1:conf%dim, k)))
+             * aimag(conjg(st%zpsi(k, 1, p, ik+1)) * aux(1:conf%dim, k))
         end do
 
         ! WARNING: the next lines DO NOT work properly
@@ -796,7 +796,7 @@ subroutine calc_current(m, st, j)
 
         do k = 1, m%np
           j(1:conf%dim, k, 2) = j(1:conf%dim, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
-               * aimag(st%zpsi(k, 2, p, ik) * conjg(aux(1:conf%dim, k)))
+               * aimag(conjg(st%zpsi(k, 2, p, ik)) * aux(1:conf%dim, k))
         end do
       end if
 
