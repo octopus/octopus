@@ -19,6 +19,7 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, sys, st_start, st_end)
     end do
   end do
 
+  deallocate(Hpsi)
   call pop_sub()
   return
 end subroutine R_FUNC(hamiltonian_eigenval)
