@@ -112,6 +112,11 @@ subroutine output_init(outp)
   call oct_parse_logical("OutputDuringSCF", .false., outp%duringscf)
 end subroutine output_init
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Use this function to quickly plot functions for debugging purposes:
+! call doutput_function(output_fill_how("AxisX_and_PlaneX_and_DX", &
+!                       ".", "func", m, func, M_ONE)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 integer function output_fill_how(where) result(how)
   character(len=*), intent(in) :: where
   if(index(where, "AxisX").ne.0)  how = ior(how, output_axis_x)
