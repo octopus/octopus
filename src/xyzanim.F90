@@ -29,7 +29,7 @@ program xyzanim
   implicit none
 
   character(len=80) :: str, nbofile, xyzfile
-  integer :: ierr, sampling, natoms, nspecies, i, nbo_unit, xyz_unit, iter, j
+  integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j
   FLOAT :: dump
 
   type(geometry_type) :: geo
@@ -51,7 +51,7 @@ program xyzanim
   ! how many do we have?
   str = "Species"
   geo%nspecies = loct_parse_block_n(str)
-  if (nspecies < 1) then
+  if (geo%nspecies < 1) then
     message(1) = "Input: Species block not specified"
     message(2) = '% Species'
     message(3) = '   specie <params>'
@@ -108,7 +108,7 @@ subroutine write_xyz
   ! xyz format, for easy plot in rasmol
     write(xyz_unit, '(i4)') geo%natoms
     write(xyz_unit, '(i10)') iter
-    do i = 1, natoms
+    do i = 1, geo%natoms
       write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%spec%label, geo%atom(i)%x(:)/units_out%length%factor
     end do
 
