@@ -219,7 +219,7 @@ contains
     real(4), intent(in) :: x, y, z
     integer, intent(in) :: l, m
     
-    oct_ylm4 = real(oct_ylm(real(x, kind=8), real(x, kind=8), real(x, kind=8), l, m), kind=4)
+    oct_ylm4 = real(oct_ylm(real(x, kind=8), real(y, kind=8), real(z, kind=8), l, m), kind=4)
   end function oct_ylm4
 
   real(4) function oct_ran_gaussian4(r, sigma)
