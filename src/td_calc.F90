@@ -15,21 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-  subroutine td_calc_projection(p)
-    complex(r4), intent(out) :: p(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik)
-
-    integer :: uist, uik, ist, ik
-
-    do ik = 1, sys%st%nik
-      do ist = sys%st%st_start, sys%st%st_end
-        do uist = 1, u_st%nst
-          p(uist, ist, ik) = cmplx(sum(sys%st%zpsi(1:sys%m%np,:, ist, ik)* &
-               u_st%R_FUNC(psi) (1:sys%m%np,:, uist, ik)), kind=r4)*sys%m%vol_pp
-        end do
-      end do
-    end do
-  end subroutine td_calc_projection
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Electronic acceleration (to calculate harmonic spectrum...)
 ! It is calculated as:

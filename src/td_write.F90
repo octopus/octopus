@@ -17,8 +17,10 @@
 
   subroutine td_write_data()
     integer :: iunit, j, jj, ist, ik, uist
-
+    character(len=50) :: fmt
+ 
     ! output multipoles
+    if(mpiv%node==0) then
     call io_assign(iunit)
     open(iunit, position='append', file="td.general/multipoles")
     do j = 1, td%save_iter
@@ -27,9 +29,10 @@
            dipole(:, j), multipole(:,:, j), .false.)
     end do
     call io_close(iunit)
+    endif
 
     ! output the laser field
-    if(h%output_laser) then
+    if(h%output_laser .and. mpiv%node==0) then
       call io_assign(iunit)
       open(iunit, position='append', file='td.general/laser')
       do j = 1, td%save_iter
@@ -41,13 +44,16 @@
 
     ! and now we should output the projections
     if(td%occ_analysis) then
+      write(fmt,'(i5)') 2*u_st%nst+1
+      write(fmt,'(a)') '('//trim(adjustl(fmt))//'f14.8)'
       call io_assign(iunit)
       write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
-      open(iunit, form='unformatted', position='append', file=filename)
+      open(iunit, position='append', file=filename)
       do j = 1, td%save_iter
+        jj = i - td%save_iter + j
         do ik = 1, sys%st%nik
-          do ist = 1, sys%st%st_start, sys%st%st_end
-            write(iunit) (projections(uist, ist, ik, j), uist = 1, u_st%nst)
+          do ist = 1, sys%st%nst
+            write(iunit, fmt) jj*td%dt, (projections(uist, ist, ik, j), uist = 1, u_st%nst)
           end do
         end do
       end do
@@ -55,7 +61,7 @@
     end if
 
     ! output positions, vels...
-    if(td%move_ions > 0) then
+    if(td%move_ions > 0 .and. mpiv%node==0) then
     call io_assign(iunit)
     open(iunit, position='append', file='td.general/coordinates')
     do j = 1, td%save_iter
@@ -67,7 +73,7 @@
     endif
 
     ! output electron acceleration if desired
-    if(td%harmonic_spectrum) then
+    if(td%harmonic_spectrum .and. mpiv%node==0) then
        call io_assign(iunit)
        open(iunit, position='append', file="td.general/acceleration")
        do j = 1, td%save_iter

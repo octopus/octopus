@@ -91,7 +91,7 @@ subroutine td_run(td, u_st, sys, h)
   real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:), &
                            x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:), tacc(:, :)
   real(r8) :: etime
-  complex(r4), allocatable :: projections(:,:,:,:)
+  complex(r8), allocatable :: projections(:,:,:,:)
   character(len=100) :: filename
 
   sub_name = 'td_run'; call push_sub()
@@ -220,7 +220,7 @@ subroutine td_run(td, u_st, sys, h)
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
          dipole(:,ii), multipole(:,:,ii))
     if(td%occ_analysis) then
-      call td_calc_projection(projections(:,:,:,ii))
+      call calc_projection(u_st, sys%st, sys%m, projections(:, :, :, ii))
     end if
 
 #ifndef DISABLE_PES
@@ -258,7 +258,7 @@ subroutine td_run(td, u_st, sys, h)
       call zstates_write_restart(trim(filename), sys%m, sys%st, &
            iter=i, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))
 
-      if(mpiv%node == 0) call td_write_data()
+      call td_write_data()
 
       ! now write down the rest
       write(filename, '(a,i7.7)') "td.", i  ! name of directory
@@ -349,8 +349,8 @@ contains
     if(td%occ_analysis) then
       call io_assign(iunit)
       write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
-      open(iunit, form='unformatted', status='unknown', file=filename)
-      write(iunit) sys%st%nik, sys%st%st_start, sys%st%st_end, u_st%nst
+      open(iunit, status='unknown', file=filename)
+      write(iunit,'(a,4i5)') '#',sys%st%nik, sys%st%st_start, sys%st%st_end, u_st%nst
       call io_close(iunit)
     end if
 
