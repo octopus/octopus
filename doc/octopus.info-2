@@ -1,0 +1,1041 @@
+This is octopus.info, produced by makeinfo version 4.5 from
+octopus.texi.
+
+INFO-DIR-SECTION Individual utilities
+START-INFO-DIR-ENTRY
+* octopus: (octopus).           The octopus program.
+END-INFO-DIR-ENTRY
+
+This manual is for octopus 1.1, a first principles, electronic
+structure, excited states, time-dependent density functional theory
+program.
+
+   Copyright (C) 2002, 2003 Miguel A. L. Marques, Alberto Castro and
+Angel Rubio
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.1 or any later version published by the Free Software
+     Foundation.
+   
+
+File: octopus.info,  Node: SCF,  Next: Unoccupied States,  Prev: Exchange and correlation,  Up: Input file options
+
+SCF
+---
+
+   The self consistent procedure will stop when the first of the
+convergence criteria is fulfilled.
+   * `MaximumIter' (integer, 200): Maximum number of SCF iterations.
+     `0' means unlimited.
+
+   * `ConvAbsDens' (double, 1e-5): Absolute convergence of the density.
+     `0' means do not use this criterion.
+
+   * `ConvRelDens' (double, 0.0): Relative convergence of the density.
+     `0' means do not use this criterion.
+
+   * `ConvAbsEnergy' (double, 0.0): Absolute convergence of the total
+     energy. `0' means do not use this criterion.
+
+   * `ConvRelEnergy' (double, 0.0): Relative convergence of the total
+     energy. `0' means do not use this criterion.
+
+   There are some more variables controlling the SCF cycle:
+   * `LCAOStart' (logical, true): Before starting a SCF calculation,
+     performs a LCAO calculation. These should provide `octopus' with a
+     good set of initial wave-functions, and help the convergence of
+     the SCF cycle.  (Up to current version, only a minimal basis set
+     used.)
+
+   * `SCFinLCAO' (logical, false): Performs all the SCF cycle
+     restricting the calculation to the LCAO subspace.  This may be
+     useful for systems with convergence problems (first do a
+     calculation within the LCAO subspace, then restart from that point
+     for an unrestricted calculation).
+
+   * `EigenSolver' (integer, 0): At each SCF cycle step, a
+     diagonalisation of the Hamiltonian is performed.  This variable
+     chooses the eigensolver used to diagonalise the Kohn-Sham
+     Hamiltonian.  Possible values are:
+        - `0': Conjugated Gradients method I.
+
+        - `1': Conjugated Gradients method II.
+     Method I should be better. Look up the source to know what the
+     differences are.
+
+     In both cases, for the first iterations of the cycle there is no
+     need to perform a very precise diagonalisation. Because of this,
+     we may define a varying tolerance, so that at the first iteration
+     a given small tolerance is achieved, and then this tolerance is
+     linearly increased until a given iteration, after which a maximum
+     tolerance is always asked.  Next variables take care of this
+     process. This possiblity is only available when method 0 is used.
+
+   * `EigenSolverInitTolerance' (double, 1.0e-10): When `EigenSolver ==
+     0' this is the initial tolerance for the eigenvectors.
+
+   * `EigenSolverFinalTolerance' (double, 1.0e-14): When `EigenSolver
+     == 0' this is the final tolerance for the eigenvectors.
+
+   * `EigenSolverFinalToleranceIteration' (integer, 7): When
+     `EigenSolver == 0', determines how many interactions are needed to
+     go from `EigenSolverInitTolerance' to `EigenSolverFinalTolerance'.
+
+   * `EigenSolverMaxIter' (integer, 25): When `EigenSolver == 0',
+     determines the maximum number of iterations for the eigensolver --
+     that is, if this number is reached, the diagonalisation is stopped
+     even if the desired tolerance was not achieved.
+
+   * `NumberCG' (integer, 3): When `EigenSolver == 1', determines the
+     number of conjugated gradient steps per iteration.
+
+   * `TypeOfMixing' (integer, 2): Selects the mixing procedure for the
+     density during the SCF cycle. Possible values are:
+        - `0': Linear mixing.
+
+        - `1': Reserved for Anderson-Pulay mixing; currently not
+          implemented.
+
+        - `2': Broyden mixing.
+
+   * `Mixing' (double, 0.3): Determines the amount of the new density
+     which is to be mixed with the old density.
+
+   * `BroydenNumber' (integer, 3): Number of steps used by Broyden
+     mixing to extrapolate the new density.
+
+
+
+File: octopus.info,  Node: Unoccupied States,  Next: Time Dependent,  Prev: SCF,  Up: Input file options
+
+Unoccupied States
+-----------------
+
+   These variables are only used in `CalculationMode == 3, 4' (or in 5
+and 6 if `TDOccupationalAnalysis == 1').
+   * `UnoccNumberStates' (integer, 5):   How many unoccupied states to
+     compute.
+
+   * `UnoccMaximumIter' (integer, 200):   Maximum number of iterations
+     while calculating the unoccupied states.    Note that these are
+     _not_ SCF iterations, for the density and the   Hamiltonian are
+     not updated!
+
+   * `UnoccConv' (double, 1e-4):   Absolute convergence in the
+     eigenvectors. So don't try to put it too   good or else you won't
+     converge.
+
+
+File: octopus.info,  Node: Time Dependent,  Next: Photo-electron spectrum,  Prev: Unoccupied States,  Up: Input file options
+
+Time Dependent
+--------------
+
+   * `TDMaximumIter' (integer, 1500): Number of time steps.
+
+   * `TDTimeStep' (double, 0.07 a.u.): Time-step for the propagation.
+
+   * `TDEvolutionMethod' (integer, 2): Method used to perform the time
+     propagation. Authorised values are:
+
+        - `0': Simply apply the exponential (expanded according to
+          `TDExponentialMethod') at mid-time, but without extrapolating
+          the Hamiltonian. This method is currently only of use when
+          propagating non-interacting electrons with the split-operator
+          method.
+
+        - `1': "Old-Style" method. One should check carefully the
+          time-step, and it only works with density based functionals.
+          It is quick per time step, but requires very small time-steps.
+          Deprecated in favour of method number 3, but still present in
+          the code for _historical_ reasons.  (See a printed version of
+          the manual for details)
+
+        - `2': Method designed to enforce the time-reversal symmetry.
+          Better time steps. Default.  (See a printed version of the
+          manual for details)
+
+        - `3': A modification of previous method to make it faster.  It
+          is based on extrapolation of the time-dependent potentials.
+          It is faster by about 40%.  (See a printed version of the
+          manual for details)
+
+        - `4': Exponential midpoint rule. In principle, it should  also
+          respect the time-reversal symmetry.  (See a printed version
+          of the manual for details)
+
+
+     (The methods which make use of extrapolation cannot be used safely
+     the first two iterations, and so method number 2 is used for those
+     iterations).
+
+     This proliferation of methods (which also affects the
+     exponentiation of the Hamiltonian, see below) may look as
+     excessive; The reason for it is that the propagation algorithm is
+     currently a topic of active development. We hope that in the
+     future the optimal scheme is clearly identified. In the mean time,
+     if you don't feel like testing, use the default choices and make
+     sure the time step is small enough.
+
+   * `TDExponentialMethod' (integer, 1): Method used to numerically
+     calculate the exponential of the Hamiltonian, a core part of the
+     calculation in any of the previously described methods to perform
+     the evolution.
+
+        - `1': N-th order expansion of the exponential. The order is
+          determined by variable `TDExpOder' (see below).
+
+          Some numerical considerations (by Jeff Giansiracusa and
+          George F. Bertsch; see
+          `http://www.phys.washington.edu/~bertsch/num3.ps') suggest
+          the 4th order as especially suitable and stable.
+
+        - `2': Lanczos approximation. Allows for larger time-steps.
+          However, the larger the time-step, the longer the
+          computational time per time-step. In certain cases, if the
+          time-step is too large, the code will emit a warning whenever
+          it considers that the evolution may not be proberly
+          proceeding - the Lanczos process did not converge. The method
+          consists in a Krylov subspace approximation of the action of
+          the exponential (see M. Hochbruck and C. Lubich, SIAM J.
+          Numer. Anal. *34*, 1911 (1997) for details).  Two more
+          variables control the performance of the method: the dimension
+          of this subspace (controlled by variable `TDExpOrder'), and
+          the stopping criterium (controlled by variable
+          `TDLanczosTol').  The smaller the stopping criterium, the
+          more precisely the exponential is calculated, but also the
+          larger the dimension of the Arnoldi subspace. Time spent in
+          the calculation grows linearly with this dimension.
+
+        - `3': Split-operator.  This is a well known method. In our
+          real-space implementation, we do not find it specially
+          suitable (too many transformations from real to reciprocal
+          spaces).
+
+        - `4': Suzuki-Trotter. This is a higher-order split-operator
+          based method. See O. Sugino and Y. Miyamoto, Phys. Rev. B
+          *59*, 2579 (1999). Allows for larger time-steps, but requires
+          five times more time.
+
+        - `5': N-th order Chebyshev expansion. In principle, the
+          Chebyshev expansion of the exponential represents it more
+          accurately than the canonical expansion (method 1). As in the
+          latter case, `TDExpOrder' determines the order of the
+          expansion.  (See a printed version of the manual for details)
+          See H. Tal-Ezer and R. Kosloff, J. Chem. Phys. *81*, 3967
+          (1984); R. Kosloff, Annu. Rev. Phys. Chem. *45*, 145 (1994);
+          C. W. Clenshaw, MTAC *9*, 118 (1955).
+
+
+   * `TDExpOrder' (integer, 4): For `TDExponentialMethod' equal `1' or
+     `5', the order to which the exponential is expanded. For the
+     Lanczos approximation, it is the maximum Lanczos-subspace
+     dimension.
+
+   * `TDLanczosTol' (real, 1e-4): An internal tolerance variable for
+     the Lanczos method. The smaller, the more precisely the
+     exponential is calculated.
+
+   * `TDLasers' (block data): Each line of the block describes a laser
+     pulse applied to the system.  The syntax is:
+              %TDLasers
+                polx | poly | polz | A0 | omega0 | envelope | tau0 | t0
+              %
+     where `pol' is the (complex) polarisation of the laser field, `A0'
+     the amplitude, `envelope' the envelope function, `t0' the middle
+     (maximum) of the pulse and `omega0' the frequency of the pulse.
+     The meaning of `tau0' depends on the envelope function.  The
+     possible values for `envelope' are:
+
+        - `1': Gaussian envelope. `tau0' is the standard deviation of
+          the pulse.
+
+        - `2': Cosinoidal envelope. `tau0' is half the total length of
+          the pulse.
+
+        - `3': Ramp. In this case there is an extra parameter `tau1'.
+          `tau0' is the length of the constant part of the ramp, and
+          `tau1' is the raising (decaying) time. `tau1' should be an
+          extra field after `t0'.
+
+        - `4': Shape is read from a file.
+
+     If `envelope=4', the `t0' parameter is substituted by a string that
+     determines the name of the file. The format of this file should be
+     three columns of real numbers: time, field and phase. Atomic units
+     are assumed. The values for the laser field that the program will
+     use are interpolated / extrapolated from this numerically defined
+     function.
+
+   * `TDGauge' (integer, 0): In which gauge to treat the laser. Options
+     are:
+        - `1': Length gauge.
+
+        - `2': Velocity gauge.
+
+   * `TDDeltaStrength' (double, 0.0 a.u.)  When no laser is applied, a
+     delta (in time) electric field with strength `TDDeltaStrength' is
+     applied. This is used to calculate the linear optical spectra.
+
+   * `TDPolarization' (block data) The (real) polarisation of the delta
+     electric field. The format of the block is:
+              %TDPolarization
+                polx | poly | polz
+              %
+     In order to calculate dichroism the polarisation has to be
+     generalized to complex. Also some input/output and the
+     `strength-function' utility have to be changed. It is a nice
+     little project if someone is interested in getting into `octopus'.
+
+   * `TDDipoleLmax' (integer , 1): Maximum multi-pole of the density
+     output to the file `td.general/multipoles' during a time-dependent
+     simulation.
+
+   * `TDOccupationalAnalysis' (logical, false): If true, outputs the
+     projections of the time-dependent Kohn-Sham wave-functions onto
+     the static (zero time) wave-functions to the file
+     `td.general/projections'.
+
+   * `TDWriteHarmonicSpectrum' (logical, false): When _true_ outputs
+     the acceleration, calculated from Ehrenfest theorem, in the file
+     `td.general/acceleration'. This file can then be processed by the
+     utility "hs-from-acc" in order to obtain the harmonic spectrum.
+
+   * `MoveIons' (integer, 0): What kind of simulation to perform.
+     Possible values are:
+        - `0': Do not move the ions.
+
+        - `3': Newtonian dynamics using Verlet.
+
+        - `4': Newtonian dynamics using velocity Verlet.
+
+   * `AbsorbingBoundaries' (integer, 0): To improve the quality of the
+     spectra by avoiding the formation of standing density waves, one
+     can make the boundaries of the simulation box absorbing. The
+     possible values for this parameter are:
+        - `0': No absorbing boundaries.
+
+        - `1': A sin^2 imaginary potential is added at the boundaries.
+
+        - `2': A mask is applied to the wave-functions at the
+          boundaries.
+
+   * `ABWidth' (real, 0.4 a.u.): Width of the region used to apply the
+     absorbing boundaries.
+
+   * `ABHeight' (real, -0.2 a.u.): When `AbsorbingBoundaries == 1', is
+     the height of the imaginary potential.
+
+
+
+File: octopus.info,  Node: Photo-electron spectrum,  Next: Geometry optimization,  Prev: Time Dependent,  Up: Input file options
+
+Photo-electron spectrum
+-----------------------
+
+   * `CalcPES_rc' (logical, false):   If `true', store the wave
+     functions in specific points in order to calculate the
+     photo-electron spectrum in a point far in the box as proposed in
+     A. Pohl, P.-G. Reinhard, and E. Suraud Phys. Rev. Lett. *84*, 5090
+     (2000).
+
+   * `PES_rc_points' (block data):   List of points where to calculate
+     the photo-electron spectrum a la Suraud.    The exact syntax is:
+              %TDPES_rc_points
+                x1 | y1 | z1
+              %
+
+   * `CalcPES_mask' (logical, false)   If `true', calculate the
+     photo-electron spectrum using the mask method   (M. Marques, D.
+     Varsano, H. Appel, E.K.U. Gross and A. Rubio to be submitted).
+     In order for this to work, masking boundaries are necessary
+     (`AbsorbingBoundaries == 2').
+
+
+
+File: octopus.info,  Node: Geometry optimization,  Next: Function output for visualization,  Prev: Photo-electron spectrum,  Up: Input file options
+
+Geometry optimization
+---------------------
+
+   * `GOMethod' (integer, 1)   Method by which the minimization is
+     performed. The only possible value is   `1' (simple steepest
+     descent).
+
+   * `GOTolerance' (real, 0.0001)   Convergence criterium to stop the
+     minimization. In units of force; minimization   is stopped when
+     all forces on ions are smaller.
+
+   * `GOMaxIter' (integer, 200)   Even if previous convergence
+     criterium is not satisfied, minimization will stop   after this
+     number of iterations.
+
+   * `GOStep' (double, 0.5)   Initial step for the geometry optimizer.
+
+
+
+File: octopus.info,  Node: Function output for visualization,  Next: Spectrum calculations,  Prev: Geometry optimization,  Up: Input file options
+
+Function output for visualization
+---------------------------------
+
+   Every given number of time iterations, or after ground-state
+calculations, some of the functions that characterise the system may be
+written to disk so that they may be analized. Files are written within
+"static" output directory after the self-consistent field, or within
+"td.x" directories, during evolution, where "x" stands for the
+iteration number at which each write is done.
+   * `OutputKSPotential' (logical, false)  Prints out Kohn-Sham
+     potential, separated by parts. File names would be "v0" for  the
+     local part, "vc" for the classical potential (if it exists), "vh"
+     for the  Hartree potential, and "vxc-x" for each of the exchange
+     and correlation potentials  of a give spin channel, where "x"
+     stands for the spin channel.
+
+   * `OutputDensity' (logical, false)  Prints out the density. The
+     output file is called "density-i", where "i" stands for  the spin
+     channel.
+
+   * `OutputWfs' (logical, false)  Prints out wave-functions. Which
+     wavefunctions are to be printed is specified  by the variable
+     `OutputWfsNumber' - see below. The output file is called
+     "wf-k-p-i", where k stands for the _k_ number, p for the state, and
+     i for the spin channel.
+
+   * `OutputWfsNumber' (string, "1-1024")   Which wavefunctions to
+     print, in list form, i.e., "1-5" to print the first   five states,
+     "2,3" to print the second and the third state, etc.
+
+   * `OutputELF' (logical, false)   Prints out the electron
+     localization function, ELF. The output file is called   "elf-i",
+     where i stands for the spin channel.
+
+   * `OutputGeometry' (logical, false):   If true `octopus' outputs a
+     XYZ file called   "geometry.xyz" containing the coordinates of the
+     atoms   treated within Quantum Mechanics. If point charges were
+     defined   in the PDB file (see `PDBCoordinates'), they will be
+     output   in the file "geometry_classical.xyz".
+
+
+   How are they printed? This is controlled by the next set of
+variables:
+
+   * `OutputAxisX' (logical, false)   The values of the function on the
+     x axis are printed. The string ".y=0,z=0" is appended   to
+     previous file names.
+
+   * `OutputAxisY' (logical, false)   The values of the function on the
+     y axis are printed. The string ".x=0,z=0" is appended   to
+     previous file names.
+
+   * `OutputAxisZ' (logical, false)   The values of the function on the
+     z axis are printed. The string ".x=0,y=0" is appended   to
+     previous file names.
+
+   * `OutputPlaneX' (logical, false) A plane slice at x=0 is printed.
+     The string ".x=0" is appended to previous file names.
+
+   * `OutputPlaneY' (logical, false) A plane slice at y=0 is printed.
+     The string ".y=0" is appended to previous file names.
+
+   * `OutputPlaneZ' (logical, false) A plane slice at y=0 is printed.
+     The string ".z=0" is appended to previous file names.
+
+   * `OutputDX' (logical, false) For printing all the three dimensional
+     information, the open source program visualization tool OpenDX
+     (`http://www.opendx.org/') is used. The string ".dx" is appended
+     to previous file names.  *Note wf.net::.
+
+   * `OutputNETCDF' (logical, false) Outputs in NetCDF
+     (`http://www.unidata.ucar.edu/packages/netcdf/') format. This file
+     can then be read, for example, by OpenDX. The string ".ncdf" is
+     appended to previous file names.
+
+
+   The output is saved when the iteration number is a multiple of the
+`OutputEvery' variable.
+
+   * `OutputEvery' (integer, 1000)
+
+   In a time-dependent simulation it is also possible to output the
+laser field using:
+   * `OutputLaser' (logical, false): If `true', `octopus' outputs the
+     laser field to the file "`td.general/laser'".
+
+
+File: octopus.info,  Node: Spectrum calculations,  Next: Varia,  Prev: Function output for visualization,  Up: Input file options
+
+Spectrum calculations
+---------------------
+
+   Once `octopus' has been run, results must be analyzed somehow. The
+most common thing is to Fourier-transform something to calculate
+spectra. This may be done through some utilities (`strength-function',
+`hs-from-mult', `hs-from-acc' which are described in section "External
+utilities." Common options read by these utilities are:
+   * `SpecTransformMode' (string, 'sin')   What kind of Fourier
+     transform is calculated. 'sin' and 'cos' are the valid options,
+     with obvious meanings.
+
+   * `SpecDampMode' (string, 'exp')   A damping function may be applied
+     to the input fuction before processing the Fourier   transform.
+     This function may be an exponential or a polynomial: "exp" or
+     "pol". If   this variable is not present or has any other value,
+     no damping function is applied.
+
+   * `SpecDampFactor' (real, 0.0)   If `SpecDampMode' is set to "exp",
+     the damping parameter of the exponential   is fixed through this
+     variable.
+
+   * `SpecStartTime' (real, 0.0)   Processing is done for the given
+     function in a time-window that starts at the   value of this
+     variable.
+
+   * `SpecEndTime' (real, -1.0)   Processing is done for the given
+     function in a time-window that ends at the   value of this
+     variable.
+
+   * `SpecEnergyStep' (real, 0.05)   Sampling rate for the spectrum.
+
+   * `SpecMinEnergy' (real, 0.0)   The Fourier transform is calculated
+     for energies bigger than this value.
+
+   * `SpecMaxEnergy' (real, 20.0)   The Fourier transform is calculated
+     for energies smaller than this value.
+
+   * `HSPolarization' (string, 'z')   For the utilities `hs-from-acc',
+     and `hs-from-mult', the polarization   of the laser pulse must be
+     specified. Valid values are "x", "y" and "z" for   lasers linearly
+     polarized along the respective axis, or "+" or "-" for lasers
+     circularly polarized. See the description of `hs-from-acc' and
+     `hs-from-mult'   for more details.
+
+
+
+File: octopus.info,  Node: Varia,  Prev: Spectrum calculations,  Up: Input file options
+
+Varia
+-----
+
+   * `PoissonSolver' (integer, 3):   In 3D defines which method to use
+     in order to solve the Poisson equation.    Allowed values are:
+        - `1': Conjugated gradient method.
+
+        - `3': FFTs with spherical cutoff.
+       The value of variable `DoubleFFTParameter' is used in case `3'
+     method   is used.
+
+   * `POLStaticField' (double, 0.001 a.u.):   Magnitude of the static
+     field used to calculate the static polarizability   in
+     `CalculationMode = 7, 8'.
+
+   * `Displacement' (double, 0.01 a.u.):   When calculating phonon
+     properties (`CalculationMode = 11') `Displacement'   controls how
+     much the atoms are to be moved in order to calculate the dynamical
+     matrix.
+
+
+
+File: octopus.info,  Node: External utilities,  Next: Examples,  Prev: The input file,  Up: Top
+
+External utilities
+******************
+
+   A few small programs are generated along with `octopus', for the
+purpose of post-processing the generated information. These utilities
+should all be run from the directory where `octopus' was run, so that
+it may see the `inp' file, and the directories created by it.
+
+* Menu:
+
+* strength-function::
+* hs-from-mult::
+* hs-from-acc::
+* nbo2xyz::
+* excitations::
+* broad::
+* make_st::
+* choose_st::
+* wf.net::
+
+
+File: octopus.info,  Node: strength-function,  Next: hs-from-mult,  Prev: External utilities,  Up: External utilities
+
+`strength-function'
+===================
+
+   This utility generates the dipole strength function of the given
+system.  Its main input is the `td.general/multipoles' file. Output is
+written to a file called `spectrum'. This file is made of two columns:
+energy (in eV or a.u., depending on the units specified in `inp'), and
+dipole strength function (in 1/eV, or 1/a.u., idem).
+
+   In the `inp' file, the user may set the `SpecTransformMode' - this
+should be set to "sin" for proper use -, the `SpecDampMode' -
+recommended value is "pol", which ensures fulfilling of the N-sum rule,
+the `SpecStartTime', the `SpecEndTime', the `SpecEnergyStep', the
+`SpecMinEnergy' and the `SpecMaxEnergy'.
+
+
+File: octopus.info,  Node: hs-from-mult,  Next: hs-from-acc,  Prev: strength-function,  Up: External utilities
+
+`hs-from-acc'
+=============
+
+   Calculates the harmonic spectrum, out of the acceleration file. To
+do.
+
+
+File: octopus.info,  Node: hs-from-acc,  Next: nbo2xyz,  Prev: hs-from-mult,  Up: External utilities
+
+`hs-from-mult'
+==============
+
+   Calculates the harmonic spectrum, out of the multipoles file. To do.
+
+
+File: octopus.info,  Node: nbo2xyz,  Next: excitations,  Prev: hs-from-acc,  Up: External utilities
+
+`nbo2xyz'
+=========
+
+   Reads out the `td.general/coordinates' file, and makes a movie in
+XYZ format. To do.
+
+
+File: octopus.info,  Node: excitations,  Next: broad,  Prev: nbo2xyz,  Up: External utilities
+
+`excitations'
+=============
+
+   Calculates the excitation spectrum within linear response. This
+utility can output just the difference of eigenvalues by setting
+`LinEigenvalues', the excitations using M. Petersilka formula
+(`LinPetersilka'), or M. Casida (`LinCasida'). This utility requires
+that a calculation of unoccupied states (`CalculationMode' = 3, 4) has
+been done before, and it outputs the results to the sub-directory
+"linear".
+
+
+File: octopus.info,  Node: broad,  Next: make_st,  Prev: excitations,  Up: External utilities
+
+`broad'
+=======
+
+   Generates a spectrum by broadening the excitations obtained by the
+`excitations' utility. The parameters of the spectrum can be set using
+the variables `LinBroadening', `MinEnergy', `MaxEnergy', and
+`EnergyStep'.
+
+
+File: octopus.info,  Node: make_st,  Next: choose_st,  Prev: broad,  Up: External utilities
+
+`make_st'
+=========
+
+   `make_st' reads `tmp/restart.static' and replaces some of the
+Kohn-Sham states by Gaussians wave packets. The states which should be
+replaced are given in the `%MakeStates' section in the `inp' file and
+written to `tmp/restart.static.new'. (You probably want to copy that
+file to `tmp/restart.static' and use then `CalculationMode=5' or `6'.)
+
+     %MakeStates
+       ik | ist | idim | type | sigma | x0 | k
+     %
+
+   The first values stand for
+
+   * ik: The k point (or the spin, if `spin-components=2') of the state
+
+   * ist: The state to be replaced
+
+   * idim: The component of the state (if the wave functions have more
+     than one component, i.e. when `spin-components=3' is used).
+
+   * The type of the wave packet; currently only `1' (Gaussian) is
+     available
+
+   The next items depend on the type chosen.  For a Gaussian wave
+packet, defined as
+
+   psi(x) = 1/sigma sqrt(1/2pi) exp(ik(x-x0)) exp(-(x-x0)^2/(2
+sigma^2)),
+
+   they are:
+
+   * \sigma the width of the Gaussian
+
+   * k: the *k* vector. In 3D use `k1|k2|k3'.
+
+   * x_0: the coordinate where the Gaussian is initially centred. In 3D
+     use `x01|x02|x03'.
+
+
+File: octopus.info,  Node: choose_st,  Next: wf.net,  Prev: make_st,  Up: External utilities
+
+`choose_st'
+===========
+
+   `choose_st' is used to choose the states used for optimum control
+(`CalculationMode=12'). You probably want to calculate unoccuppied
+states (`CalculationMode=12') first since `choose_st' reads
+`tmp/restart.static' and writes the choosen states to the `opt-control'
+sub-directory. The following parameters are read from the `inp'ut file:
+
+   * `ChooseStates' (integer, 1-4024):   The states which should be
+     written.
+
+   * `ChooseStatesFilename' (string, 'wf.initial'):   The file name to
+     which the state(s) should be written.    For optimum control you
+     only need 'wf.initial' and 'wf.final'.
+
+
+File: octopus.info,  Node: wf.net,  Prev: choose_st,  Up: External utilities
+
+`wf.net'
+========
+
+   This is an OpenDX network, aimed at the visualization of
+wave-functions.  To be able to use it, you need to have properly
+installed the OpenDX program (get it at opendx.org), as well as the
+Chemistry extensions obtainable at the Cornell Theory Center
+(http://www.tc.cornell.edu/Services/Vis/dx/index.asp).  Once these are
+working, you may follow a small tutorial on `wf.net' by following next
+steps:
+
+   o Place in a directory the program wf.net, the (needed) auxiliary
+     file wf.cfg, and the sample inp file that can all be found in
+     `OCTOPUS-HOME'/util.
+
+   o Run `octopus'. The inp file used prescribes the calculation of the
+     C atom in its ground state, in spin-polarized mode. It also
+     prescribes that the wave-functions should be written in "dx"
+     format. At the end, these should be written in subdirectory
+     "static": wf-00x-00y-1.dx, where x runs from 1 to 2 (spin quantum
+     number) and y runs from 1 to 4 (wave-function index).
+
+   o Run the OpenDX program. Click on "Run Visual Programs" on the DX
+     main menu, and select the program `wf.net'. The program will be
+     executed, and several windows should open. One of them should be
+     called "Application Comment". It contains a small tutorial. Follow
+     it from now on.
+
+
+
+File: octopus.info,  Node: Examples,  Next: Options Index,  Prev: External utilities,  Up: Top
+
+Examples
+********
+
+* Menu:
+
+* Hello world::
+* Benzene::
+
+
+File: octopus.info,  Node: Hello world,  Next: Benzene,  Prev: Examples,  Up: Examples
+
+Hello world
+-----------
+
+   As a first example, we will take a sodium atom.  With your favourite
+text editor, create the following input "inp".
+       SystemName = 'Na'
+       CalculationMode = 1
+       %Species
+         'Na' | 22.989768 | 11 | "tm2" | 0 | 0
+       %
+       %Coordinates
+         'Na' | 0.0 | 0.0 | 0.0 | no
+       %
+       Radius = 12.0
+       Spacing = .6
+       TypeOfMixing = 2
+
+   This input file should be essentially self-explanatory.  Note that a
+Troullier-Martins pseudopotential file ("Na.vps", or "Na.ascii") should
+be accesible to the program. A sample "Na.ascii" may be found in
+`OCTOPUS-HOME/share/PP/TM2'. If `octopus' was installed (`make install'
+was issued after `make'), there should be no need to do anything - the
+program should find it. Otherwise, you may as well place it in the
+working directory.  Then run `octopus' - for example, do `octopus > out
+', so that the output is stored in "out" file. If everything goes OK,
+"out" should look like (1):
+                         Running octopus, version 1.1
+                  (build time - Fri Mar 14 14:23:49 CET 2003)
+     
+     Info: Calculation started on 2003/03/17 at 03:49:56
+     Info: Reading pseudopotential from file:
+           '/home/marques/share/octopus/PP/TM2/Na.ascii'
+           Calculating atomic pseudo-eigenfunctions for specie Na....
+           Done.
+     Info: l =  0 component used as local potential
+       Type = sphere           Radius [b] =  12.000
+       Spacing [b] = ( 0.600, 0.600, 0.600)    volume/point [b^3] =  0.21600
+       # inner mesh =  33401   # outer mesh =  18896
+     Info: Derivatives calculated in real-space
+     Info: Local Potential in Reciprocal Space.
+     Info: FFTs used in a double box (for poisson | local potential)
+           box size = (  81,  81,  81)
+           alpha =      2.00000
+     Info: Using FFTs to solve poisson equation with spherical cutoff.
+     Info: Exchange and correlation
+           Exchange    family    : LDA
+                       functional: non-relativistic
+           Correlation family    : LDA
+                       functional: Perdew-Zunger
+     Info: Allocating rpsi.
+     Info: Random generating starting wavefunctions.
+     Info: Unnormalized total charge =      0.998807
+     Info: Renormalized total charge =      1.000000
+     Info: Setting up Hamiltonian.
+     Info: Performing LCAO calculation.
+     Info: LCAO basis dimension:      1
+           (not considering spin or k-points)
+     Eigenvalues [H]
+        #   Eigenvalue    Occupation      Error (1)
+        1    -0.102098       1.000000
+     Info: SCF using real wavefunctions.
+     Info: Broyden mixing used. It can (i) boost your convergence,
+           (ii) do nothing special, or (iii) totally screw up the run.
+           Good luck!
+     Info: Converged =     0
+     Eigenvalues [H]
+        #   Eigenvalue    Occupation      Error (1)
+        1    -0.102975       1.000000      (2.8E-02)
+     Info: iter =    1 abs_dens = 0.53E-03 abs_ener = 0.60E+00
+     
+     Info: Converged =     0
+     Eigenvalues [H]
+        #   Eigenvalue    Occupation      Error (1)
+        1    -0.102477       1.000000      (1.4E-03)
+     Info: iter =    2 abs_dens = 0.43E-03 abs_ener = 0.65E-05
+     
+     Info: Converged =     1
+     Eigenvalues [H]
+        #   Eigenvalue    Occupation      Error (1)
+        1    -0.102419       1.000000      (5.1E-04)
+     Info: iter =    3 abs_dens = 0.39E-04 abs_ener = 0.20E-06
+     
+     Info: Converged =     1
+     Eigenvalues [H]
+        #   Eigenvalue    Occupation      Error (1)
+        1    -0.102436       1.000000      (8.5E-05)
+     Info: iter =    4 abs_dens = 0.24E-04 abs_ener = 0.52E-08
+     
+     Info: Converged =     1
+     Eigenvalues [H]
+        #   Eigenvalue    Occupation      Error (1)
+        1    -0.102437       1.000000      (1.5E-06)
+     Info: iter =    5 abs_dens = 0.14E-05 abs_ener = 0.36E-10
+     
+     Info: SCF converged in    5 iterations
+     Info: Deallocating rpsi.
+     Info: Calculation ended on 2003/03/17 at 03:50:04
+   Take now a look at the working directory. It should include the
+following files:
+     -rw-rw-r--    1 user  group       177 Jul 10 12:29 inp
+     -rw-rw-r--    1 user  group      4186 Jul 10 12:35 out
+     -rw-rw-r--    1 user  group      1626 Jul 10 12:35 out.oct
+     drwxrwxr-x    2 user  group      4096 Jul 10 12:35 static
+     drwxrwxr-x    2 user  group      4096 Jul 10 12:35 tmp
+
+   Besides the initial file (`inp') and the `out' file, two new
+directories appear. In `static', you will find the file `info', with
+information about the static calculation (it should be hopefully
+self-explanatory, otherwise please complain to the authors).  In `tmp',
+you will find the `restart.static', a binary file containg restart
+information about the ground-state, which is used if, for example, you
+want to start a time-dependent calculation afterwards.  Finally, you
+can safely ignore `out.oct': it is an output from the liboct library,
+irrelevant for what concerns physics ;).
+
+   *Exercises*:
+   * Study how the total energy and eigenvalue of the sodium atom
+     improve   with the mesh spacing.
+
+   * Calculate the static polarizability of the sodium atom
+     (`CalculationMode = 7').    Two new files will be generated:
+     `restart.pol' that can be used to resume   the polarizability
+     calculation, and `Na.pol' that contains the static polarizability
+     tensor. Note that this calculation overwrites
+     `tmp/restart.static', so that   what now is there is the ground
+     state for the system _with_ an external static   electrical field
+     applied. Delete it since it is useless.
+
+   * Calculate a few unoccupied states (`CalculationMode = 3'). The
+     eigenspectrum   will be in the file `eigenvalues'. Why don't we
+     find a Rydberg series in the   eigenspectrum?
+
+   * Repeat the previous calculation with PBE, LB94, and exact exchange.
+      Don't forget to *move* the file `tmp/restart.static' when
+     switching   between exchange-correlation functionals.
+
+   * Perform a time-dependent evolution (`CalculationMode = 5'), to
+     calculate   the optical spectrum of the Na atom. Use a
+     `TDDeltaStrength = 0.05', polarised   in the `x' direction. The
+     multipole moments of the density are output to   the file
+     `td.general/multipoles'. You can process this file with the utility
+      `strength-function' to obtain the optical spectrum.    If you
+     have computer time to waste, re-run the time-dependent
+     simulation for some other xc choices.
+
+
+   ---------- Footnotes ----------
+
+   (1) Before this output, a beautiful octopus ascii-art picture may be
+printed...
+
+
+File: octopus.info,  Node: Benzene,  Prev: Hello world,  Up: Examples
+
+Benzene
+-------
+
+   Well, the sodium atom is a bit too trivial. Let's try something
+harder: benzene.  you will just need the geometry for benzene to be
+able to play. Here it is (in AA):
+      C  0.000  1.396  0.000
+      C  1.209  0.698  0.000
+      C  1.209 -0.698  0.000
+      C  0.000 -1.396  0.000
+      C -1.209 -0.698  0.000
+      C -1.209  0.698  0.000
+      H  0.000  2.479  0.000
+      H  2.147  1.240  0.000
+      H  2.147 -1.240  0.000
+      H  0.000 -2.479  0.000
+      H -2.147 -1.240  0.000
+      H -2.147  1.240  0.000
+
+   Follow now the steps of the previous example. Carbon and Hydrogen
+have a much harder pseudo-potential than Sodium, so you will probably
+have to use a tighter mesh. It also takes much more time...
+
+
+File: octopus.info,  Node: Options Index,  Prev: Examples,  Up: Top
+
+Options Index
+*************
+
+* Menu:
+
+* ABHeight:                              Time Dependent.
+* AbsorbingBoundaries:                   Time Dependent.
+* ABWidth:                               Time Dependent.
+* AdjustCoordinates:                     Coordinates.
+* BoxShape:                              Mesh.
+* BroydenNumber:                         SCF.
+* CalcPES_mask:                          Photo-electron spectrum.
+* CalcPES_rc:                            Photo-electron spectrum.
+* CalculationMode:                       Generalities.
+* CFamily:                               Exchange and correlation.
+* CFunctional:                           Exchange and correlation.
+* ChooseStates:                          choose_st.
+* ChooseStatesFilename:                  choose_st.
+* ClassicPotential:                      Hamiltonian.
+* ConvAbsDens:                           SCF.
+* ConvAbsEnergy:                         SCF.
+* ConvRelDens:                           SCF.
+* ConvRelEnergy:                         SCF.
+* Coordinates:                           Coordinates.
+* DebugLevel:                            Generalities.
+* DerivativesSpace:                      Mesh.
+* Dimensions:                            Generalities.
+* Displacement:                          Varia.
+* DoubleFFTParameter:                    Mesh.
+* EigenSolver:                           SCF.
+* EigenSolverFinalTolerance:             SCF.
+* EigenSolverFinalToleranceIteration:    SCF.
+* EigenSolverInitTolerance:              SCF.
+* EigenSolverMaxIter:                    SCF.
+* ElectronicTemperature:                 States.
+* ExcessCharge:                          States.
+* ExtraStates:                           States.
+* FFTOptimize:                           Mesh.
+* GOMaxIter:                             Geometry optimization.
+* GOMethod:                              Geometry optimization.
+* GOStep:                                Geometry optimization.
+* GOTolerance:                           Geometry optimization.
+* GridRefinement:                        Hamiltonian.
+* HSPolarization:                        Spectrum calculations.
+* LCAOStart:                             SCF.
+* LocalPotentialSpace:                   Hamiltonian.
+* Lsize:                                 Mesh.
+* MainAxis:                              Coordinates.
+* MakeStates:                            make_st.
+* MaximumIter:                           SCF.
+* Mixing:                                SCF.
+* MoveIons:                              Time Dependent.
+* NonInteractingElectrons:               Hamiltonian.
+* NonLocalPotentialSpace:                Hamiltonian.
+* NumberCG:                              SCF.
+* NumberKPoints:                         States.
+* Occupations:                           States.
+* OrderDerivatives:                      Mesh.
+* OutputAxisX:                           Function output for visualization.
+* OutputAxisY:                           Function output for visualization.
+* OutputAxisZ:                           Function output for visualization.
+* OutputDensity:                         Function output for visualization.
+* OutputDX:                              Function output for visualization.
+* OutputELF:                             Function output for visualization.
+* OutputEvery:                           Function output for visualization.
+* OutputGeometry:                        Function output for visualization.
+* OutputKSPotential:                     Function output for visualization.
+* OutputLaser:                           Function output for visualization.
+* OutputNETCDF:                          Function output for visualization.
+* OutputPlaneX:                          Function output for visualization.
+* OutputPlaneY:                          Function output for visualization.
+* OutputPlaneZ:                          Function output for visualization.
+* OutputWfs:                             Function output for visualization.
+* OutputWfsNumber:                       Function output for visualization.
+* PDBCoordinates:                        Coordinates.
+* PES_rc_points:                         Photo-electron spectrum.
+* PoissonSolver:                         Varia.
+* POLStaticField:                        Varia.
+* Radius:                                Mesh.
+* RandomVelocityTemp:                    Velocities.
+* RelativisticCorrection:                Hamiltonian.
+* SCFinLCAO:                             SCF.
+* Spacing:                               Mesh.
+* SpecDampFactor:                        Spectrum calculations.
+* SpecDampMode:                          Spectrum calculations.
+* SpecEndTime:                           Spectrum calculations.
+* SpecEnergyStep:                        Spectrum calculations.
+* Species:                               Species.
+* SpecMaxEnergy:                         Spectrum calculations.
+* SpecMinEnergy:                         Spectrum calculations.
+* SpecStartTime:                         Spectrum calculations.
+* SpecTransformMode:                     Spectrum calculations.
+* SpinComponents:                        States.
+* SystemName:                            Generalities.
+* TDDeltaStrength:                       Time Dependent.
+* TDDipoleLmax:                          Time Dependent.
+* TDEvolutionMethod:                     Time Dependent.
+* TDExponentialMethod:                   Time Dependent.
+* TDExpOrder:                            Time Dependent.
+* TDGauge:                               Time Dependent.
+* TDLanczosTol:                          Time Dependent.
+* TDLasers:                              Time Dependent.
+* TDMaximumIter:                         Time Dependent.
+* TDOccupationalAnalysis:                Time Dependent.
+* TDPolarization:                        Time Dependent.
+* TDTimeStep:                            Time Dependent.
+* TDWriteHarmonicSpectrum:               Time Dependent.
+* TypeOfMixing:                          SCF.
+* Units:                                 Generalities.
+* UnitsInput:                            Generalities.
+* UnitsOutput:                           Generalities.
+* UnoccConv:                             Unoccupied States.
+* UnoccMaximumIter:                      Unoccupied States.
+* UnoccNumberStates:                     Unoccupied States.
+* Velocities:                            Velocities.
+* Verbose:                               Generalities.
+* XFamily:                               Exchange and correlation.
+* XFunctional:                           Exchange and correlation.
+* XYZCoordinates:                        Coordinates.
+* XYZVelocities::                        Velocities.
+* ZLength:                               Mesh.
+
+

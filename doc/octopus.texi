@@ -1945,7 +1945,7 @@ previous file names.
 @code{OutputDX} (logical, false)
 For printing all the three dimensional information, the open source program
 visualization tool OpenDX (@uref{http://www.opendx.org/}) is used. The string
-``.dx'' is appended to previous file names. 
+``.dx'' is appended to previous file names.  @xref{wf.net}.
 
 @item @vindex @code{OutputNETCDF}
 @code{OutputNETCDF} (logical, false)
