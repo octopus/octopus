@@ -24,6 +24,7 @@ program atoms_magnet
   use units
   use mesh
   use mesh_function
+  use functions
   use geometry
   use output
   use states
@@ -31,11 +32,12 @@ program atoms_magnet
 
   implicit none
 
-  type(mesh_type)               :: m          ! the mesh
+  type(mesh_type), pointer      :: m          ! the mesh
+  type(f_der_type)              :: f_der      ! manages the calculation of derivatives of functions
   type(geometry_type), pointer  :: geo        ! the geometry
   type(states_type), pointer    :: st         ! the states
   integer :: ik, ist, i, ia, j, iunit, err
-  CMPLX :: c
+  R_TYPE :: c
   FLOAT :: val_charge, def_h, def_rsize, mg(3), r, rmin, ri
 
   ! Initialize stuff
@@ -45,15 +47,20 @@ program atoms_magnet
   allocate(geo)
   call geometry_init_xyz(geo)
   call geometry_init_species(geo, val_charge, def_h, def_rsize)
+  allocate(m)
   call mesh_init(m, geo, def_h, def_rsize)
+  call f_der_init(m, f_der)
+  call mesh_create_xyz(m, f_der%n_ghost(1))
+  call f_der_build(f_der)
+  call mesh_write_info(m, stdout)
 
   allocate(st)
   call states_init(st, m, geo, val_charge, geo%nlcc)
-  if (st%d%ispin /= SPINORS) then
-    message(1) = "You can only use this utility with spinors"
+  if (st%d%ispin == UNPOLARIZED) then
+    message(1) = "You cannot use this utility with spin-unpolarized calculations"
     call write_fatal(1)
   end if
-  allocate(st%zpsi(m%np, st%dim, st%nst, st%nik))
+  allocate(st%X(psi)(m%np, st%dim, st%nst, st%nik))
 
   ! load information
   call X(restart_read)("tmp/restart_gs", st, m, err)
@@ -80,10 +87,14 @@ program atoms_magnet
   ! open file for output
   call io_assign(iunit)
   open(iunit, status='unknown', file="atoms_magnet")
-
   write(iunit, '(a)') geo%sysname
   write(iunit,'(/a)') "Magnetization"
-  write(iunit,'(a,7x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
+  select case (st%d%ispin)
+  case (SPIN_POLARIZED)
+    write(iunit,'(a,7x,13x,a)') ' Ion','mx'
+  case (SPINORS)
+    write(iunit,'(a,7x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
+  end select
 
   ! compute the local magnetization around each atom 
   do ia = 1, geo%natoms
@@ -93,18 +104,31 @@ program atoms_magnet
         do i = 1, m%np
           call mesh_r(m, i, ri, a=geo%atom(ia)%x)
           if (ri > r) cycle
-
-          c = st%zpsi(i, 1, ist, ik) * conjg(st%zpsi(i, 2, ist, ik)) * m%vol_pp(i)
-          mg(1) = mg(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*real(c,PRECISION)
-          mg(2) = mg(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*aimag(c)
-          c = R_ABS(st%zpsi(i, 1, ist, ik))**2 - R_ABS(st%zpsi(i, 2, ist, ik))**2
-          mg(3) = mg(3) + st%d%kweights(ik)*st%occ(ist, ik)* real(c,PRECISION)
+          select case (st%d%ispin)
+          case (SPIN_POLARIZED)
+            c = R_CONJ(st%X(psi)(i, 1, ist, ik)) * st%X(psi)(i, 1, ist, ik) * m%vol_pp(i)
+            if(modulo(ik+1, 2) == 0) then
+              mg(1) = mg(1) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+            else
+              mg(1) = mg(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+            end if
+          case (SPINORS)
+            c = st%X(psi)(i, 1, ist, ik) * R_CONJ(st%X(psi)(i, 2, ist, ik)) * m%vol_pp(i)
+            mg(1) = mg(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+            mg(2) = mg(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
+            c = R_ABS(st%X(psi)(i, 1, ist, ik))**2 - R_ABS(st%X(psi)(i, 2, ist, ik))**2 * m%vol_pp(i)
+            mg(3) = mg(3) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
+          end select
         end do
       end do
     end do
-    mg = mg
 
-    write(iunit,'(i4,a10,3f15.6)') ia, trim(geo%atom(ia)%spec%label), mg(1), mg(2), mg(3)
+    select case (st%d%ispin)
+    case (SPIN_POLARIZED)
+      write(iunit,'(i4,a10,f15.6)') ia, trim(geo%atom(ia)%spec%label), mg(1)
+    case (SPINORS)
+      write(iunit,'(i4,a10,3f15.6)') ia, trim(geo%atom(ia)%spec%label), mg(1), mg(2), mg(3)
+    end select
   end do
 
   ! end stuff

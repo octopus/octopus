@@ -1,9 +1,8 @@
 EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-broad oct-ph oct-xyz-anim \
-	oct-make-st oct-center-geom \
-	oct-atoms-magnet
+	oct-make-st oct-center-geom
 
-bin_PROGRAMS = octopus oct-excite @UTILITY_PROGRAMS@
+bin_PROGRAMS = octopus oct-excite oct-atoms-magnet @UTILITY_PROGRAMS@
 
 check_PROGRAMS = oct-test
 
