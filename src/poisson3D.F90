@@ -19,7 +19,7 @@ subroutine poisson3D_init(m)
   type(mesh_type),     intent(inout) :: m
   integer :: maxl
   FLOAT   :: threshold
-  ASSERT(poisson_solver >= FFT_SPHERE .or. poisson_solver <= CG_CORRECTED)
+  ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= CG_CORRECTED)
 
   select case(poisson_solver)
 #ifdef HAVE_FFT

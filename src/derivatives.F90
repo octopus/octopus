@@ -39,6 +39,8 @@ module derivatives
                                               ! op(conf%dim+1) => laplacian
     type(nl_operator_type), pointer :: lapl   ! these are just shortcuts for op
     type(nl_operator_type), pointer :: grad(:)
+
+    type(nl_operator_type) :: laplt ! The transponse of the Laplacian.
   end type der_discr_type
 
   integer, parameter ::    &
@@ -248,6 +250,7 @@ contains
         deallocate(polynomials, rhs)
       end select
 
+
     else ! we have the explicit coefficients
 
       ! get laplacian
@@ -263,10 +266,16 @@ contains
         call stencil_star_coeff_grad(der%m%h(i), der%order, der%grad(i))
       end do
     end if
-    
-    call pop_sub()
 
+    if(der%m%use_curvlinear) then
+       call nl_operator_transpose(der%lapl, der%laplt)
+    else
+       der%laplt = der%lapl
+    endif
+
+    call pop_sub()
   contains
+
     subroutine get_rhs_lapl(rhs)
       FLOAT, intent(out) :: rhs(:)
 

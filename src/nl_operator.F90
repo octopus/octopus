@@ -22,32 +22,23 @@ module nl_operator
 
   implicit none
 
-  private
-  public :: nl_operator_type,      &
-            nl_operator_init,      &
-            nl_operator_build,     &
-            dnl_operator_operate,   &
-            znl_operator_operate,  &
-            nl_operator_end,       &
-            nl_operator_transpose, &
-            nl_operator_write
-
-  interface assignment
-    module procedure nl_operator_equal
-  end interface
-
   type nl_operator_type
     integer          :: n         ! number of points in discrete operator
     integer          :: np        ! number of points in mesh
     integer, pointer :: stencil(:,:)
 
     integer, pointer :: i(:,:)    ! index of the points
-    FLOAT,   pointer :: w(:,:)    ! weights
+    FLOAT,   pointer :: w(:,:)    ! weightsp
 
     logical          :: const_w   ! are the weights independent of i
   end type nl_operator_type
 
+  interface assignment (=)
+    module procedure nl_operator_equal
+  end interface
+
 contains
+
 
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, n)
@@ -68,9 +59,15 @@ contains
     type(nl_operator_type), intent(in)  :: opi
     call nl_operator_init(opo, opi%n)
     opo%np = opi%np
-    opo%stencil = opi%stencil
-    allocate(opo%i(size(opi%i, 1), size(opi%i, 2)))
-    allocate(opo%w(size(opi%w, 1), size(opi%w, 2)))
+    opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
+!!$    allocate(opo%i(size(opi%i, 1), size(opi%i, 2)))
+!!$    allocate(opo%w(size(opi%w, 1), size(opi%w, 2)))
+    allocate(opo%i(opi%n, opi%np))
+    if(opi%const_w) then
+      allocate(opo%w(opi%n, 1))
+    else
+      allocate(opo%w(opi%n, opi%np))
+    endif
     opo%i = opi%i
     opo%w = opi%w
     opo%const_w = opi%const_w
@@ -121,8 +118,8 @@ contains
     integer :: np, i, j, index, l, k
 
     np = op%np
-!!$    opt = op
-    call nl_operator_equal(opt, op)
+    opt = op
+    !call nl_operator_equal(opt, op)
     opt%w = M_ZERO
     do i = 1, op%np
        do j = 1, op%n
@@ -131,7 +128,11 @@ contains
              do l = 1, op%n
                 k = op%i(l, index)
                 if(k==i) then
-                   opt%w(j, i) = op%w(l, index)
+                   if(.not.op%const_w) then
+                      opt%w(j, i) = op%w(l, index)
+                   else
+                      opt%w(j, 1) = op%w(l, 1)
+                   endif
                 endif
              enddo
           endif
@@ -146,13 +147,15 @@ contains
     type(nl_operator_type), intent(in) :: op
     FLOAT, intent(out)                 :: a(:, :)
 
-    integer :: i, j, index
+    integer :: i, j, k, index
 
+    k = 1
     do i = 1, op%np
+       if(.not.op%const_w) k = i
        do j = 1, op%n
           index = op%i(j, i)
           if(index<=op%np) then
-            a(i, index) = op%w(j, i)
+            a(i, index) = op%w(j, k)
           endif
        enddo
     enddo
@@ -195,13 +198,39 @@ contains
 
     do i = 1, op%np
        do j = 1, op%np - 1
-          write(unit, fmt = '(f12.6)', advance ='no') a(i, j)
+          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
        enddo
-       write(unit, fmt = '(f12.6)') a(i, op%np)
+       write(unit, fmt = '(f9.4)') a(i, op%np)
     enddo
 
     deallocate(a)
   end subroutine nl_operator_write
+
+
+  subroutine nl_operatorT_write(op, unit)
+    type(nl_operator_type), intent(in) :: op
+    integer, intent(in)                  :: unit
+
+    integer :: i, j
+    FLOAT, allocatable :: a(:, :)
+    character(len=50) :: fmt
+
+    allocate(a(op%np, op%np))
+    a = M_ZERO
+
+    call nl_operator_op_to_matrix(op, a)
+
+    do i = 1, op%np
+       do j = 1, op%np - 1
+!!$          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
+          write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
+       enddo
+!!$       write(unit, fmt = '(f9.4)') a(i, op%np)
+       write(unit, fmt = '(f9.4)') a(op%np, i)
+    enddo
+
+    deallocate(a)
+  end subroutine nl_operatorT_write
 
 
   ! ---------------------------------------------------------

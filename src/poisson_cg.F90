@@ -131,23 +131,23 @@ contains
     call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
-!!$ ! This is the change of base, which for the moment is not done.
-!!$    do i = 1, m%np
-!!$       pot(i) = pot(i)/sqrt(m%vol_pp(i))
-!!$       rho_corrected(i) = rho_corrected(i)/sqrt(m%vol_pp(i))
-!!$    enddo
+ ! This is the change of base, which for the moment is not done.
+    do i = 1, m%np
+       pot(i) = pot(i)*sqrt(m%vol_pp(i))
+       rho_corrected(i) = rho_corrected(i)*sqrt(m%vol_pp(i))
+    enddo
     iter = 400
-    call conjugate_gradients(m%np, pot, rho_corrected, op, iter = iter, residue = res, threshold = threshold)
+    call conjugate_gradients(m%np, pot, rho_corrected, op, opt, &
+                             iter = iter, residue = res, threshold = threshold)
     if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
        write(message(3), '(a,e14.6)') '  Res = ', res
        call write_warning(3)
     endif 
-!!$    do i = 1, m%np
-!!$       pot(i) = pot(i)*sqrt(m%vol_pp(i))
-!!$       rho_corrected(i) = rho_corrected(i)*sqrt(m%vol_pp(i))
-!!$    enddo
+    do i = 1, m%np
+       pot(i) = pot(i)/sqrt(m%vol_pp(i))
+    enddo
     pot = pot + vh_correction
 
     nullify(der_pointer, mesh_pointer)
@@ -244,8 +244,33 @@ contains
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
     integer :: i
-    call dderivatives_lapl(der_pointer, x, y)
+    FLOAT, allocatable :: u(:)
+    allocate(u(mesh_pointer%np))
+    do i = 1, mesh_pointer%np
+       u(i) = x(i)/sqrt(mesh_pointer%vol_pp(i))
+    enddo
+    call dderivatives_lapl(der_pointer, u, y)
+    do i = 1, mesh_pointer%np
+       y(i) = y(i)*sqrt(mesh_pointer%vol_pp(i))
+    enddo
+    deallocate(u)
   end subroutine op
+
+  subroutine opt(x, y)
+    FLOAT, intent(in)  :: x(:)
+    FLOAT, intent(out) :: y(:)
+    integer :: i
+    FLOAT, allocatable :: u(:)
+    allocate(u(mesh_pointer%np))
+    do i = 1, mesh_pointer%np
+       u(i) = x(i)*sqrt(mesh_pointer%vol_pp(i))
+    enddo
+    call dderivatives_laplt(der_pointer, u, y)
+    do i = 1, mesh_pointer%np
+       y(i) = y(i)/sqrt(mesh_pointer%vol_pp(i))
+    enddo
+    deallocate(u)
+  end subroutine opt
 
   subroutine build_phi(m)
     type(mesh_type), intent(in) :: m

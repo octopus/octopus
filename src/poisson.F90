@@ -95,6 +95,11 @@ subroutine poisson_init(m)
     endif
 #endif
 
+    if(m%use_curvlinear .and. (poisson_solver .ne. CG_CORRECTED) ) then
+      message(1) = 'If curvilinear coordinates are used, then the only working'
+      message(2) = 'Poisson solver is 5 ("corrected conjugate gradients")'
+      call write_fatal(2)
+    endif
     call poisson3D_init(m)
   end if
 end subroutine poisson_init
