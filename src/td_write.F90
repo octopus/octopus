@@ -34,7 +34,12 @@ subroutine td_write_angular(out, sys, td, iter)
     !empty file
     call write_iter_clear(out)
 
-    !first line -> columns name
+    !fist line -> now unused.
+    write(aux, '(a)') '#'
+    call write_iter_string(out, aux)
+    call write_iter_nl(out)
+
+    !second line -> columns name
     call write_iter_header_start(out)
     write(aux, '(a2,18x)') 'Lx'
     call write_iter_header(out, aux)
@@ -42,6 +47,10 @@ subroutine td_write_angular(out, sys, td, iter)
     call write_iter_header(out, aux)
     write(aux, '(a2,18x)') 'Lz'
     call write_iter_header(out, aux)
+    call write_iter_nl(out)
+
+    !third line -> should hold the units. Now unused (assumes atomic units)
+    call write_iter_string(out, '##########')
     call write_iter_nl(out)
   endif
 

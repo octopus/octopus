@@ -57,16 +57,10 @@ contains
   ! initialize the table
   subroutine fft_all_init()
     integer :: i
-
     call oct_parse_logical("FFTOptimize", .true., fft_optimize)
-    
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
     end do
-
-    write(message(1), '(a)') "Using FFTW version 3. Still in experimental state."
-    call write_warning(1)
-
   end subroutine fft_all_init
 
   ! delete all plans

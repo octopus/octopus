@@ -52,6 +52,19 @@ type spec_sf
   real(r8) :: alpha2 ! Polariz. (F.T.)
 end type spec_sf
 
+! For the rotational strength function
+type spec_rsf
+  ! input
+  integer  :: damp             ! Damp type (none, exp or pol)
+  real(r8) :: damp_factor      ! factor used in damping
+  real(r8) :: delta_strength   ! strength of the delta perturbation
+  real(r8) :: pol(3)           ! Direction of the perturbation
+
+  ! output
+  integer :: no_e
+  complex(r8), pointer :: sp(:) ! do not forget to deallocate this
+end type spec_rsf
+
 type spec_sh
   ! input
   character :: pol
@@ -186,6 +199,99 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   return
 end subroutine spectrum_strength_function
+
+subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
+  character(len=*), intent(in) :: out_file
+  type(spec_type), intent(inout) :: s
+  type(spec_rsf), intent(inout) :: rsf
+  logical, intent(in) :: print_info
+
+  integer :: iunit, i, is, ie, &
+      ntiter, j, jj, k, isp, time_steps
+  real(r8) :: dump, dt, x
+  complex(r8) :: z
+  real(r8), allocatable :: dumpa(:)
+  real(r8), allocatable :: angular(:, :)
+
+  call spectrum_file_info("td.general/angular", iunit, time_steps, dt, i)
+  call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
+
+  ! load dipole from file
+  allocate(angular(0:time_steps, 3))
+  do i = 0, time_steps
+    read(iunit, *) j, dump, angular(i, 1:3)
+    !dipole(i,:) = dipole(i,:) * units_out%length%factor
+  end do
+  call io_close(iunit)
+
+  ! subtract static dipole
+  do i = 1, 3
+     angular(:, i) = angular(:, i) - angular(0, i)
+  end do
+
+  rsf%no_e = (s%max_energy - s%min_energy) / s%energy_step
+  allocate(rsf%sp(0:rsf%no_e))
+  rsf%sp = M_z0
+
+  ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
+  allocate(dumpa(is:ie))
+  do j = is, ie
+     jj = j - is
+      select case(rsf%damp)
+      case(SPECTRUM_DAMP_NONE)
+        dumpa(j) = 1._r8
+      case(SPECTRUM_DAMP_LORENTZIAN)
+        dumpa(j)= exp(-jj*dt*rsf%damp_factor)
+      case(SPECTRUM_DAMP_POLYNOMIAL)
+        dumpa(j) = 1.0 - 3.0*(real(jj)/ntiter)**2                          &
+            + 2.0*(real(jj)/ntiter)**3
+      case(SPECTRUM_DAMP_GAUSSIAN)
+        dumpa(j)= exp(-(jj*dt)**2*rsf%damp_factor**2)
+      end select
+  enddo
+
+  do k = 0, rsf%no_e
+    do j = is, ie
+      
+      jj = j - is
+
+      z = exp(M_zI*(k*s%energy_step + s%min_energy)*jj*dt)
+      rsf%sp(k) = rsf%sp(k) + z*dumpa(j)*sum(angular(j, :)*rsf%pol(:))
+
+    end do
+    rsf%sp(k) = rsf%sp(k)*dt
+
+  end do
+
+  deallocate(angular, dumpa)
+
+  ! output
+  if(trim(out_file) .ne. '-') then
+    call io_assign(iunit)
+    open(iunit, file=out_file, status='unknown')
+    ! should output units, etc...
+    do i = 0, rsf%no_e
+      write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
+           rsf%sp(i) * (units_out%length%factor)**3
+    end do
+    call io_close(iunit)
+  end if
+
+  ! print some info
+  if(print_info) then
+    write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
+    write(message(2), '(a,i4)')    'SpecDampMode         = ', rsf%damp
+    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', rsf%damp_factor * units_out%time%factor
+    write(message(4), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
+    write(message(5), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
+    write(message(6), '(a,f10.4)') 'SpecMinEnergy        = ', s%min_energy   / units_inp%energy%factor
+    write(message(7), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
+    write(message(8),'(a,f10.4)')  'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+    call write_info(8)
+  end if
+
+  return
+end subroutine spectrum_rotatory_strength
 
 subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
   character(len=*), intent(in) :: out_file
@@ -328,6 +434,56 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
   end if
 
 end subroutine spectrum_hs_from_acc
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Finds out some information about file "file", supposed to contain time
+! dependent output information (e.g., multipoles, angular, coordinates, acc,...
+! It opens the file for reading, assigning it unit "iunit".
+! In principle, it should substitute both spectrum_mult_info and
+! spectrum_acc_info.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
+  character(len=*), intent(in) :: file
+  integer, intent(out) :: iunit, n, time_steps
+  real(r8), intent(out) :: dt
+
+  integer :: ierr, i, j
+  real(r8) :: t1, t2, dummy
+
+  open(iunit, file=file, status='old', iostat=i)
+  if(i.ne.0) then
+    write(message(1),'(2a)') "Could not open ",trim(adjustl(file))
+    write(message(2),'(a,i4,a)') "[iostat =",i,"]"
+    call write_fatal(2)
+  endif
+
+  ! First line may contain some informative integer n (or not...)
+  read(iunit,'(10x,i2)', iostat = i) n
+  if(i.ne.0) n = 0
+
+  ! Skip header.
+  read(iunit,*); read(iunit,*)
+
+  ! count number of time_steps
+  time_steps = 0
+  do
+    read(iunit, *, end=100) j, dummy
+    time_steps = time_steps + 1
+    if(time_steps == 1) t1 = dummy
+    if(time_steps == 2) t2 = dummy
+  end do
+100 continue
+  dt = (t2 - t1) * units_out%time%factor ! units_out is OK
+  time_steps = time_steps - 1
+  
+  if(time_steps < 3) then
+    write(message(1),'(a,a,a)') "Empty ",trim(adjustl(file)),"?"
+    call write_fatal(1)
+  end if
+
+  rewind(iunit)
+  read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
+end subroutine spectrum_file_info
 
 subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
   integer, intent(out) :: iunit, nspin, time_steps

@@ -1,4 +1,4 @@
-bin_PROGRAMS = @PROGNAME@ oct-sf oct-hs-mult oct-hs-acc \
+bin_PROGRAMS = @PROGNAME@ oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-excite oct-broad oct-ph oct-xyz-anim \
 	oct-choose-st oct-make-st oct-center-geom
 
@@ -49,6 +49,9 @@ zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
 # now the utility programs
 oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
 oct_sf_LDADD   = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
+
+oct_rsf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 rotational_strength.F90
+oct_rsf_LDADD   = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 
 oct_hs_mult_SOURCES      = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
 oct_hs_mult_LDADD        = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
