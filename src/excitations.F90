@@ -32,6 +32,7 @@ program excitations
   type(hartree_type) :: hart
   integer :: ierr, n_occ, n_unocc, flags(32)
   character(len=100) :: ch
+  logical :: l
 
   mpiv%node = 0
   mpiv%numprocs = 1
@@ -87,15 +88,19 @@ program excitations
   ! calculate resonances
   message(1) = "Info: Eigenvalue differences"
   call write_info(1)
-  call calc_petersilka(0, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'eps-diff')
+  call oct_parse_logical("LinEigenvalues", .true., l)
+  if(l) call calc_petersilka(0, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'eps-diff')
+  
 
   message(1) = "Info: Calculating resonance energies a la Petersilka"
   call write_info(1)
-  call calc_petersilka(1, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
+  call oct_parse_logical("LinPetersilka", .true., l)
+  if(l) call calc_petersilka(1, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'petersilka')
 
-  message(1) = "Info: Calculating resonance energies a la matrix"
+  message(1) = "Info: Calculating resonance energies a la Casida"
   call write_info(1)
-  call calc_petersilka(2, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'full')
+  call oct_parse_logical("LinCasida", .true., l)
+  if(l)call calc_petersilka(2, sys%st, sys%m, hart, n_occ, n_unocc, flags, 'linear', 'full')
 
   call hartree_end(hart)
 

@@ -93,7 +93,7 @@ am__include = @am__include@
 am__quote = @am__quote@
 install_sh = @install_sh@
 bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
-	excitations function-to-dx phonon-spectrum nbo2xyz
+	excitations broad function-to-dx phonon-spectrum nbo2xyz
 
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
@@ -156,6 +156,8 @@ excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90
                       linear.F90 excitations.F90
 
 excitations_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
+broad_SOURCES = liboct.F90 global.F90 io.F90 units.F90 broad.F90
+broad_LDADD = ../liboct/liboct.a @GSL_LIBS@
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
@@ -169,10 +171,15 @@ EXTRA_PROGRAMS = octopus$(EXEEXT) octopus-mpi$(EXEEXT) \
 	octopus-pol$(EXEEXT) octopus-pol-mpi$(EXEEXT)
 bin_PROGRAMS = @PROGNAME@ strength-function$(EXEEXT) \
 	hs-from-mult$(EXEEXT) hs-from-acc$(EXEEXT) excitations$(EXEEXT) \
-	function-to-dx$(EXEEXT) phonon-spectrum$(EXEEXT) \
+	broad$(EXEEXT) function-to-dx$(EXEEXT) phonon-spectrum$(EXEEXT) \
 	nbo2xyz$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
+am_broad_OBJECTS = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
+	units.$(OBJEXT) broad.$(OBJEXT)
+broad_OBJECTS = $(am_broad_OBJECTS)
+broad_DEPENDENCIES = ../liboct/liboct.a
+broad_LDFLAGS =
 am_excitations_OBJECTS = liboct.$(OBJEXT) global.$(OBJEXT) io.$(OBJEXT) \
 	units.$(OBJEXT) math.$(OBJEXT) spline.$(OBJEXT) fft.$(OBJEXT) \
 	ps_xc.$(OBJEXT) ps_kb.$(OBJEXT) logrid.$(OBJEXT) tm.$(OBJEXT) \
@@ -268,16 +275,17 @@ DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/liboct -I.
 CPPFLAGS = @CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
-DIST_SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) \
-	$(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) \
-	$(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) \
-	$(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) \
-	$(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) \
-	$(phonon_spectrum_SOURCES) $(strength_function_SOURCES)
+DIST_SOURCES = $(broad_SOURCES) $(excitations_SOURCES) \
+	$(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) \
+	$(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) \
+	$(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) \
+	$(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) \
+	$(octopus_pol_mpi_SOURCES) $(phonon_spectrum_SOURCES) \
+	$(strength_function_SOURCES)
 HEADERS = $(noinst_HEADERS)
 
 DIST_COMMON = $(noinst_HEADERS) Makefile.am Makefile.in config.h.in
-SOURCES = $(excitations_SOURCES) $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(phonon_spectrum_SOURCES) $(strength_function_SOURCES)
+SOURCES = $(broad_SOURCES) $(excitations_SOURCES) $(function_to_dx_SOURCES) $(hs_from_acc_SOURCES) $(hs_from_mult_SOURCES) $(nbo2xyz_SOURCES) $(octopus_SOURCES) $(octopus_1d_SOURCES) $(octopus_1d_mpi_SOURCES) $(octopus_mpi_SOURCES) $(octopus_pol_SOURCES) $(octopus_pol_mpi_SOURCES) $(phonon_spectrum_SOURCES) $(strength_function_SOURCES)
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -342,6 +350,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+broad$(EXEEXT): $(broad_OBJECTS) $(broad_DEPENDENCIES) 
+	@rm -f broad$(EXEEXT)
+	$(LINK) $(broad_LDFLAGS) $(broad_OBJECTS) $(broad_LDADD) $(LIBS)
 excitations$(EXEEXT): $(excitations_OBJECTS) $(excitations_DEPENDENCIES) 
 	@rm -f excitations$(EXEEXT)
 	$(LINK) $(excitations_LDFLAGS) $(excitations_OBJECTS) $(excitations_LDADD) $(LIBS)

@@ -48,7 +48,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %configure \
   F90=ifc \
-  LDFLAGS="-static -L/usr/local/intel/mkl/lib/32/ -L/home/marques/lib -L/home/marques/lib/ifc"
+  LDFLAGS="-static -L/usr/local/intel/mkl-5.2/mkl/lib/32/ -L/home/marques/lib"
 
 make
 (cd doc; make octopus.ps; gzip octopus.ps)
