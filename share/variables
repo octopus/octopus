@@ -54,6 +54,10 @@ netcdf           = 2
 stencil_star     = 1 # DerivativesStencil
 stencil_var      = 2
 stencil_cube     = 3
+curv_uniform     = 1
+curv_gygi        = 2
+curv_briggs      = 3
+curv_modine      = 4
 
 #  symbols for oct-center-geom
 inertia          = 1  
