@@ -16,7 +16,7 @@ core_SRCS = liboct_parser.F90 io.F90 liboct.F90 global.F90 units.F90 \
 	poisson.F90 out.F90 crystal.F90 states.F90 xc.F90 mix.F90 restart.F90
 
 octopus_SOURCES = $(core_SRCS) \
-	lasers.F90 epot.F90 systm.F90 h.F90 \
+	lasers.F90 epot.F90 h.F90 systm.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
