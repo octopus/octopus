@@ -322,6 +322,7 @@ subroutine lcao_wf(sys, h)
          lcao_data%s(1:norbs, 1:norbs, ik), ev)
 
     sys%st%eigenval(1:sys%st%nst, ik) = ev(1:sys%st%nst)
+    deallocate(ev)
 
     sys%st%X(psi)(:,:,:, ik) = R_TOTYPE(M_ZERO)
 
