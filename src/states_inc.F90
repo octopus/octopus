@@ -250,7 +250,7 @@ subroutine R_FUNC(states_output) (st, m, dir, outp)
 
 #if defined(ONE_D)
   u = 1._r8/units_out%length%factor
-#elseif defined(THREE_D)
+#elif defined(THREE_D)
   u = 1._r8/units_out%length%factor**3
 #endif
 
