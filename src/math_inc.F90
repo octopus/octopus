@@ -1,0 +1,207 @@
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! /* Calculates exp(factor*in), and places it into out, where in and out
+! are order x order matrices. Useful only for small matrices.
+!
+! It uses two methods; (i) decomposition of A=in into U(+)DU [where U is 
+! unitary and D is diagonal] for hermitian matrices, and making use of the
+! identity exp(A) = U(+)exp(D)exp(U), and (ii) polynomial expansion after
+! proper scaling and squaring. This is simple minded, but probably enough
+! for the cases octopus needs. I have learnt from C. Moler and C. Van Loan,
+! SIAM Rev. 45, 3 (2003).
+!
+! This subroutine is just a driver to select the method, by calling
+! zmatexp_scaleandsquare or zmatexp_decomposition.
+!
+! order : the order of the matrix.
+! in    : input matrix.
+! out   : output matrix, out = exp(factor*in) if subroutine.
+! factor: the factor to multiply in before exponentiation.
+! norm  : (optional) The euclidean norm of the matrix, or at least a reasonable
+!         approximation. It is only needed by the scale and square method. If
+!         this argument is not passed, the estimation sum(abs(in(:, :))) will
+!         be used.
+! method: on input, should be 1 for the scale and square method, and 2 for the
+!         decomposition method. If this argument is not passed, it defaults to
+!         1. */
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(matexp) (order, in, out, factor, norm, method)
+  integer, intent(in)            :: order
+  R_TYPE, intent(in)        :: in(order, order)
+  R_TYPE, intent(out)       :: out(order, order)
+  R_TYPE, intent(in)        :: factor
+  real(r8), intent(in), optional :: norm
+  integer, intent(in), optional  :: method
+
+  integer, parameter :: SCALEANDSQUARE = 1, &
+                        DECOMPOSITION  = 2
+  integer :: lmethod
+  real(r8) :: lnorm
+
+  lmethod = SCALEANDSQUARE
+  if(present(method)) lmethod = method
+
+  select case(lmethod)
+  case(SCALEANDSQUARE)
+     if(present(norm)) then
+        lnorm = abs(factor)*norm
+     else
+        lnorm = abs(factor)*sum(abs(in(:, :)))
+     endif
+     if(lnorm <= M_ZERO) then
+        write(message(1),'(a)') 'Internal [matexp]: invalid "norm" variable value'
+        call write_fatal(1)
+     endif
+     call R_FUNC(matexp_scaleandsquare)(order, in, out, factor, lnorm)
+  case(DECOMPOSITION)
+     call R_FUNC(matexp_decomposition)(order, in, out, factor)
+  case default
+    write(message(1),'(a,i5,a)') 'Internal [matexp]: "method" input argument,', lmethod,', not valid.'
+    call write_fatal(1)
+  end select
+
+end subroutine R_FUNC(matexp)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! /* Calculates exp(factor*in), and places it into out, where in and out
+! are order x order complex matrices. Useful only for small matrices.
+!
+! It just computes the Taylor expansion approximation to the exponential,
+! up to order exporder. This is very unreliable and ineffective as soon as
+! the norm of the matrix is not very small. So it should be used only after
+! proper scaling and squaring.
+!
+! order    : the order of the matrix.
+! in       : input matrix.
+! out      : output matrix, out = exp(factor*in) if subroutine.
+! factor   : the factor to multiply in before exponentiation.
+! exporder : the order of the Taylor expansion to be used. */ 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(matexp_polynomial)(order, in, out, factor, exporder)
+  integer, intent(in)      :: order, exporder
+  R_TYPE, intent(in)  :: in(:, :)
+  R_TYPE, intent(out) :: out(:, :)
+  R_TYPE, intent(in)  :: factor 
+
+  integer :: n
+  R_TYPE :: zfact
+  R_TYPE, allocatable :: aux(:, :), dd(:, :)
+
+  allocate(aux(order, order), dd(order, order))
+  out = R_TOTYPE(M_ZERO)
+  do n = 1, order
+     out(n, n) = M_ONE
+  enddo
+  zfact = M_ONE
+  call R_FUNC(copy) (order**2, out, 1, aux, 1)
+  do n = 1, exporder
+     call R_FUNC(copy) (order**2, aux, 1, dd, 1)
+     call R_FUNC(gemm) ('n', 'n', order, order, order, M_z1, dd, order, in, order, M_z0, aux, order)
+     zfact = zfact*factor/n
+     call R_FUNC(axpy)(order**2, zfact, aux, 1, out, 1)
+  enddo
+  deallocate(aux, dd)
+
+end subroutine R_FUNC(matexp_polynomial)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! /* Calculates exp(factor*in), and places it into out, where in and out
+! are order x order matrices. Useful only for small matrices.
+!
+! It uses the scale and square method (see C. Moler and C. Van Loan, SIAM Rev.
+! 45, 3 (2003). The exponentiation of the scaled matrix is done through a
+! 12th order Taylor expansion, via zmatexp_polynomial.
+!
+! order : the order of the matrix.
+! in    : input matrix.
+! out   : output matrix, out = exp(factor*in) if subroutine.
+! factor: the factor to multiply in before exponentiation.
+! norm  : (optional) The euclidean norm of the matrix, (times factor), 
+!         or at least a reasonable approximation */
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(matexp_scaleandsquare)(order, in, out, factor, norm)
+  integer, intent(in)  :: order
+  R_TYPE, intent(in)   :: in(:, :)
+  R_TYPE, intent(out)  :: out(:, :)
+  R_TYPE, intent(in)   :: factor 
+  real(r8), intent(in) :: norm
+
+  integer :: i, j
+  R_TYPE, allocatable :: aux(:, :)
+
+  j = int(log(norm)/log(2._r8))+1
+	
+  allocate(aux(order, order))
+
+  call R_FUNC(matexp_polynomial)(order, in, aux, factor/2**j, 12)
+
+  do i = 1, j
+     call R_FUNC(gemm)('n', 'n', order, order, order, M_z1, aux, order, aux, order, M_z0, out, order)
+     call R_FUNC(copy)(order**2, out, 1, aux, 1)
+  enddo
+
+  deallocate(aux)  
+end subroutine R_FUNC(matexp_scaleandsquare)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! /* Calculates exp(factor*in), and places it into out, where in and out
+! are order x order complex matrices. Useful only for small *hermitian* matrices.
+!
+! It makes a decomposition of A=in into A = U(+)DU [where U is 
+! unitary and D is diagonal] and makes use of the
+! identity exp(A) = U(+)exp(D)exp(U). This is only meaningful if A is hermitian.
+!
+! order : the order of the matrix.
+! in    : input matrix.
+! out   : output matrix, out = exp(factor*in) if subroutine.
+! factor: the factor to multiply in before exponentiation. */
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(matexp_decomposition)(order, in, out, factor)
+  integer, intent(in)           :: order
+  R_TYPE, intent(in)       :: in(order, order)
+  R_TYPE, intent(out)      :: out(order, order)
+  R_TYPE, intent(in)        :: factor
+
+  R_TYPE :: aux(order, order), dd(order, order), zfact
+  integer ::  n, info, lwork
+  real(r8), allocatable :: w(:)
+  complex(r8), allocatable :: work(:), rwork(:)
+
+  call R_FUNC(copy)(order**2, in, 1, aux, 1)
+  lwork = 4*order
+  allocate(work(lwork), rwork(lwork), w(order))
+#if defined(R_TCOMPLEX)
+  call zheev('v', 'u', order, aux, order, w, work, lwork, rwork, info)
+#else	
+  call dsyev('v', 'u', order, aux, order, w, work, lwork, info)
+#endif
+  if(info .ne. 0) then
+     write(message(1),'(a,i4)') 'Internal: "info" parameter of z returned', info
+     call write_fatal(1)
+  endif
+  dd = M_z0
+  do n = 1, order
+     dd(n, n) = exp(factor*w(n))
+  enddo
+  call R_FUNC(gemm)('n', 'c', order, order, order, M_z1, dd,  order, aux, order, M_z0, out, order)
+  call R_FUNC(copy)(order**2, out, 1, dd, 1)
+  call R_FUNC(gemm)('n', 'n', order, order, order, M_z1, aux, order, dd,  order, M_z0, out, order) 
+  deallocate(work, w, rwork)
+
+end subroutine R_FUNC(matexp_decomposition)
