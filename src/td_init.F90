@@ -100,42 +100,8 @@ subroutine td_init(td, m, st, h, outp)
   call loct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
 
   call td_rti_init(m, st, td%tr)
-  call td_init_states()
 
   call pop_sub()
-contains
-  
-  subroutine td_init_states()
-#if defined(HAVE_MPI)
-    integer :: i, ix
-
-    if(st%nst < mpiv%numprocs) then
-      message(1) = "Have more processors than necessary"
-      write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."
-      call write_fatal(2)
-    end if
-
-    i = st%nst / mpiv%numprocs
-    ix = st%nst - i*mpiv%numprocs
-    if(ix > 0 .and. mpiv%node < ix) then
-      i = i + 1
-      st%st_start = mpiv%node*i + 1
-      st%st_end = st%st_start + i - 1
-    else
-      st%st_end = st%nst - (mpiv%numprocs - mpiv%node - 1)*i
-      st%st_start = st%st_end - i + 1
-    end if
-    call MPI_Barrier(MPI_COMM_WORLD, i)
-    write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", mpiv%node, " will propagate state ", &
-         st%st_start, " - ", st%st_end
-    call MPI_Barrier(MPI_COMM_WORLD, i)
-  
-#else
-    st%st_start = 1
-    st%st_end   = st%nst
-#endif
-
-  end subroutine td_init_states
 
 end subroutine td_init
 
