@@ -115,7 +115,7 @@ module lib_oct
 
   interface loct_sph_bessel
     function oct_sph_bessel(l, x)
-      real(8) :: oct_bessel
+      real(8) :: oct_sph_bessel
       integer, intent(in) :: l
       real(8), intent(in)  :: x
     end function oct_sph_bessel
