@@ -502,11 +502,11 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
 
   call push_sub('states_calculate_multipoles')
 
-  dipole = M_ZERO
+  dipole(1:st%d%nspin) = M_ZERO
   do is = 1, st%d%nspin
     do i = 1, m%np
       call mesh_xyz(m, i, x)
-      dipole(is) = dipole(is) + st%rho(i, is)*sum(x*pol)*m%vol_pp(i)
+      dipole(is) = dipole(is) + st%rho(i, is)*sum(x(1:conf%dim)*pol(1:conf%dim))*m%vol_pp(i)
     end do
     dipole(is) = dipole(is)
 

@@ -19,7 +19,7 @@
 m4_include([build/acx.m4])
 m4_include([build/acx_blas.m4])
 m4_include([build/acx_lapack.m4])
-m4_include([build/acx_fftw.m4])
+m4_include([build/acx_fft.m4])
 m4_include([build/acx_trlan.m4])
 m4_include([build/acx_netcdf.m4])
 m4_include([build/acx_mpi.m4])

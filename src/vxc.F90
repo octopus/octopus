@@ -15,19 +15,20 @@ module vxc
     FLOAT, intent(in)   :: ds(nsp)
     FLOAT, intent(out)  :: d, z
     FLOAT :: d1, d2
+
+    ASSERT(nsp==1.or.nsp==2)
+
+    z = M_ZERO
     select case(nsp)
     case(1) ! Spin - unpolarized
-       d = max(M_ZERO, ds(1))
-       z = M_ZERO
+      d = max(M_ZERO, ds(1))
     case(2) ! Spin-polarized
-       d1 = max(M_ZERO, ds(1))
-       d2 = max(M_ZERO, ds(2))
-       d = d1 + d2
-       z = (d1-d2)/(d1+d2)
-    case default
-       message(1) = 'Wrong "nsp" argument passed to change'
-       call write_fatal(1)
+      d1 = max(M_ZERO, ds(1))
+      d2 = max(M_ZERO, ds(2))
+      d = d1 + d2
+      if(d > M_ZERO) z = (d1-d2)/d
     end select
+
   end subroutine change
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

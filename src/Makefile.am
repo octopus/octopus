@@ -41,7 +41,7 @@ noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDFCFLAGS@
-octopus_LDADD = @LIBS_FFTW@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
+octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS)
 
 # now the utility programs

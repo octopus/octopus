@@ -167,8 +167,8 @@ AM_PATH_GSL([1.0],
   AC_MSG_ERROR([could not find required gsl library]))
 AC_LANG_POP(C)
 
-dnl check for FFTW
-ACX_FFTW
+dnl check for FFT
+ACX_FFT
 
 dnl check for TRLAN
 ACX_TRLAN
