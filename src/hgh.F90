@@ -157,7 +157,7 @@ subroutine hgh_process(psp)
 ! And the projectors
   do l = 0, psp%l_max
      do i = 1, 3
-        psp%kb(1:psp%g%nrval, l, i) = projectorr(psp%g%rofi, psp, i, l)
+       psp%kb(1:psp%g%nrval, l, i) = projectorr(psp%g%rofi, psp, i, l)
      enddo
   enddo
 
@@ -355,12 +355,17 @@ function projectorr_scalar(r, p, i, l)
   integer, intent(in)            :: i, l
   real(r8)                       :: projectorr_scalar
 
-  real(r8) :: x, y
+  real(r8) :: x, y, rr
 
   x = l + real(4*i-1, r8)/2
   y = oct_gamma(x); x = sqrt(y)
+  if(l==0 .and. i==1) then
+    rr = 1._r8
+  else
+    rr = r ** (l + 2*(i-1))
+  endif
  
-  projectorr_scalar = sqrt(2.0_r8) * r ** (l + 2*(i-1)) * exp(-r**2/(2.0_r8*p%rc(l)**2)) / &
+  projectorr_scalar = sqrt(2.0_r8) * rr * exp(-r**2/(2.0_r8*p%rc(l)**2)) / &
               (  p%rc(l)**(l + real(4*i-1,r8)/2) * x )  
 
 end function projectorr_scalar
@@ -492,7 +497,7 @@ subroutine solve_schroedinger(psp)
       end do
       hato(1) = hato(2)
       nnode = 1; nprin = l + 1
-      if(iter == 0) then
+      if(iter == 1) then
          e = -((psp%z_val/dble(nprin))**2); z = psp%z_val
       else
          e = psp%eigen(l); z = psp%z_val
@@ -508,7 +513,7 @@ subroutine solve_schroedinger(psp)
     do l = 0, psp%l_max_occ
        rho = rho + psp%occ(l)*psp%rphi(1:psp%g%nrval, l)**2
     enddo
-    if(iter>0) rho = 0.5*rho + 0.5*prev
+    if(iter>1) rho = 0.5*rho + 0.5*prev
     diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval)-prev(2:psp%g%nrval))**2))
     !if(conf%verbose>20 .and. mpiv%node == 0) then
     !  write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
