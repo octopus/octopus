@@ -67,14 +67,12 @@ ElectronicTemperature = 0.0
 ###############################################################################
 NonInteractingElectrons = no
 ClassicPotential = no
-LocalPotentialSpace = fourier_space
-NonLocalPotentialSpace = real_space
 
 ###############################################################################
 # 8. Exchange and Correlation.
 ###############################################################################
-XFunctional = "LDA"
-CFunctional = "PZ81"
+XFunctional = lda_x
+CFunctional = lda_c_pz
 
 ###############################################################################
 # 9. SCF
@@ -86,7 +84,6 @@ ConvAbsEv = 0
 ConvRelEv = 0
 
 LCAOStart = yes
-SCFinLCAO = no
 
 EigenSolver = cg
 EigenSolverInitTolerance = 1e-2
