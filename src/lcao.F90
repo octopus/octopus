@@ -281,7 +281,7 @@ subroutine lcao_wf(sys, h)
   
   do ik = 1, sys%st%nik
 
-    lwork = 3*norbs - 1
+    lwork = 5*norbs
     allocate(work(lwork), w(norbs), rwork(lwork), s(norbs, norbs))
     s(1:norbs, 1:norbs) = lcao_data%s(ik, 1:norbs, 1:norbs)
 #ifdef COMPLEX_WFNS
