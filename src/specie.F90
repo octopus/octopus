@@ -31,7 +31,7 @@ implicit none
 type specie_type
   integer :: index                ! just a counter
 
-  character(len=10) :: label      ! Identifier for the species:
+  character(len=15) :: label      ! Identifier for the species:
                                   ! "jelli" : jellium sphere.
                                   ! "point" : jellium sphere of radius 0.5 a.u.
                                   ! "usdef" : user defined function

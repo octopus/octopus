@@ -36,7 +36,7 @@ module xyz_file
        XYZ_FLAGS_MOVE    = 4
 
   type xyz_file_atom
-    character(len=3) :: label    ! stuff that is always known
+    character(len=15) :: label    ! stuff that is always known
     FLOAT            :: x(3)
 
     FLOAT            :: charge   ! stuff specific to PDB files
