@@ -118,6 +118,13 @@ subroutine unocc_run(u, sys, h)
   write(iunit,'(1x)')
   call states_write_eigenvalues(iunit, u%st%nst, u%st)
   call io_close(iunit)
+  
+  if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%nspin) then
+    call io_assign(iunit)
+    open(iunit, status='unknown', file='static/bands.dat')
+    call states_write_bands(iunit, u%st%nst, u%st)
+    call io_close(iunit)
+  end if
 
   ! write restart information.
   call R_FUNC(states_write_restart)("tmp/restart.occ", sys%m, u%st) 
