@@ -176,6 +176,7 @@ if test -z "${LIB_BLAS}"; then
 		ACX_CHECK_LIB([LIB_BLAS], [blas], [ddot], [-lblas])
 		ACX_CHECK_LIB([LIB_BLAS], [dxml], [ddot], [-ldxml])
 		ACX_CHECK_LIB([LIB_BLAS], [cxml], [ddot], [-lcxml])
+		ACX_CHECK_LIB([LIB_BLAS], [scs], [ddot], [-lscs])
 		AS_IF([test -z "${LIB_BLAS}"], AC_MSG_ERROR([couldn't find blas library]))
 
   	LDFLAGS="$save_ldflags"
@@ -208,6 +209,7 @@ if test -z "${LIB_LAPACK}"; then
 		ACX_CHECK_LIB([LIB_LAPACK], [lapack], [dsygv], [-llapack], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [dxml], [dsygv], [-ldxml], [], [${LIB_BLAS}])
 		ACX_CHECK_LIB([LIB_LAPACK], [cxml], [dsygv], [-lcxml], [], [${LIB_BLAS}])
+		ACX_CHECK_LIB([LIB_LAPACK], [scs], [dsygv], [-lscs], [], [${LIB_BLAS}])
 		AS_IF([test -z "${LIB_LAPACK}"], [AC_MSG_ERROR([couldn't find lapack library])])
 
   	LDFLAGS="$save_ldflags"

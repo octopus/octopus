@@ -94,7 +94,7 @@ contains
     case ("eVA")
       call units_eV_Ang(u)
     case default
-      message(1) = "Invalid unit specification: '"//trim(c)//"'"
+      message(1) = "Invalid unit specification: '"+trim(c)+"'"
       message(2) = "Valid units are: 'a.u', 'eVA'"
       call write_fatal(2)
     end select

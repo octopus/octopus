@@ -78,7 +78,7 @@ subroutine tm_init(pstm, filename, ispin)
   pstm%ispin = ispin
 
   ! Find out where the hell the file is.
-  filename2 = trim(filename)//'.vps'
+  filename2 = trim(filename)+'.vps'
   inquire(file=filename2, exist=found)
   message(1) = "Info: Reading pseudopotential from file:"
   if(found) then
@@ -90,13 +90,13 @@ subroutine tm_init(pstm, filename, ispin)
     call read_file_data_bin(iunit, pstm)
     call io_close(iunit)
   else
-    filename2 = trim(filename)//'.ascii'
+    filename2 = trim(filename)+'.ascii'
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      filename2 = SHARE_OCTOPUS//"/PP/TM2/"//trim(filename)//".ascii"
+      filename2 = SHARE_OCTOPUS+"/PP/TM2/"+trim(filename)+".ascii"
       inquire(file=filename2, exist=found)
       if(.not.found) then
-        message(1) = "Pseudopotential file '"//trim(filename)//"{.vps|.ascii}' not found"
+        message(1) = "Pseudopotential file '"+trim(filename)+"{.vps|.ascii}' not found"
         call write_fatal(1)
       end if
     end if
@@ -224,7 +224,7 @@ subroutine solve_schroedinger(psf)
   sub_name = 'solve_schroedinger'; call push_sub()
 
   ! Let us be a bit informative.
-  message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '//psf%namatm//'....'
+  message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '+psf%namatm+'....'
   call write_info(1)
 
   ! Allocation.

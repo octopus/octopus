@@ -78,13 +78,13 @@ subroutine hgh_init(psp, filename, ispin)
 
   sub_name = 'hgh_init'; call push_sub()
 
-  filename2 = filename//'.hgh'
+  filename2 = filename+'.hgh'
   inquire(file=filename2, exist=found)
   if(.not.found) then
-    filename2 = SHARE_OCTOPUS//"/PP/HGH/"//filename//".hgh"
+    filename2 = SHARE_OCTOPUS+"/PP/HGH/"+filename+".hgh"
     inquire(file=filename2, exist=found)
     if(.not.found) then
-      message(1) = "Pseudopotential file '"//trim(filename)//".hgh' not found!"
+      message(1) = "Pseudopotential file '"+trim(filename)+".hgh' not found!"
       call write_fatal(1)
     end if
   end if
@@ -456,7 +456,7 @@ subroutine solve_schroedinger(psp)
 
   ! Let us be a bit informative.
   if(conf%verbose > 20 .and. mpiv%node == 0) then
-    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '//psp%atom_name//'....'
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie '+psp%atom_name+'....'
     call write_info(1)
   endif
 

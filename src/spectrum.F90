@@ -250,7 +250,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
   ! output
   if(trim(out_file) .ne. '-') then
     call io_assign(iunit)
-    open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
+    open(iunit, file=trim(out_file)+"."+trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
       write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
@@ -312,7 +312,7 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
   ! output
   if(trim(out_file) .ne. '-') then
     call io_assign(iunit)
-    open(iunit, file=trim(out_file)//"."//trim(sh%pol), status='unknown')
+    open(iunit, file=trim(out_file)+"."+trim(sh%pol), status='unknown')
     ! should output units, etc...
     do i = 0, sh%no_e
       write(iunit,'(5e15.6)') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &

@@ -331,7 +331,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
 
 999 call io_close(iunit)
 998 continue
-  message(1) = 'Error reading from file '//trim(filename)//"'"
+  message(1) = 'Error reading from file '+trim(filename)+"'"
   call write_warning(1)
   ok = .false.
   call pop_sub()

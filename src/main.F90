@@ -30,7 +30,7 @@ program octopus
 
   ! Let us print our logo
   if(conf%verbose > 20 .and. mpiv%node == 0) &
-       ierr = print_file(SHARE_OCTOPUS//'/logo')
+       ierr = print_file(SHARE_OCTOPUS+'/logo')
 
   ! Let us print the version
   message(1) = ""
@@ -41,7 +41,7 @@ program octopus
 
   ! Let us print where we are running
   call oct_sysname(message(2))
-  write(message(1),'(a)') "The octopus is swimming on a "+trim(message(2))+" system."
+  message(1) = "The octopus is swimming on a "+trim(message(2))+" system."
   message(1) = str_center(trim(message(1)),70)
   write(message(2),'(a)')
   call write_info(2)

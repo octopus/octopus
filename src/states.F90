@@ -527,12 +527,12 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
   ns = 1
   if(st%nspin == 2) ns = 2
 
-  message(1) = 'Eigenvalues ['//trim(units_out%energy%abbrev)//']'
+  message(1) = 'Eigenvalues ['+trim(units_out%energy%abbrev)+']'
   call write_info(1, iunit)
   if (conf%periodic_dim>0) then 
   end if
   if (st%nik > ns) then
-    message(1) = 'Kpoints ['//trim(units_out%length%abbrev)//'^-1]'
+    message(1) = 'Kpoints ['+trim(units_out%length%abbrev)+'^-1]'
     call write_info(1, iunit)
   end if
 

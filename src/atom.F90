@@ -278,7 +278,7 @@ contains
     end do
     
     if(.not. l) then
-      message(1) = "Specie '"//trim(label)//"' not found"
+      message(1) = "Specie '"+trim(label)+"' not found"
       call write_fatal(1)
     end if
     

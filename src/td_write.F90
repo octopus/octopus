@@ -45,7 +45,7 @@
     ! and now we should output the projections
     if(td%occ_analysis) then
       write(fmt,'(i5)') 2*u_st%nst+1
-      write(fmt,'(a)') '('//trim(adjustl(fmt))//'f14.8)'
+      fmt = '('+trim(adjustl(fmt))+'f14.8)'
       call io_assign(iunit)
       write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
       open(iunit, position='append', file=filename)
@@ -126,11 +126,11 @@
 
       ! third line
       write(iunit, '(a8,a20)', advance='no') '#       ', &
-           str_center('['//trim(units_out%time%abbrev)//']', 20)
-      aux = str_center('['//trim(units_out%energy%abbrev) // ' / ' // &
-           trim(units_inp%length%abbrev) // ']', 20)
+           str_center('['+trim(units_out%time%abbrev)+']', 20)
+      aux = str_center('['+trim(units_out%energy%abbrev) + ' / ' + &
+           trim(units_inp%length%abbrev) + ']', 20)
       write(iunit, '(3a20)', advance='no') aux, aux, aux
-      aux = str_center('[1/'// trim(units_inp%length%abbrev) // ']', 20)
+      aux = str_center('[1/'+ trim(units_inp%length%abbrev) + ']', 20)
       write(iunit, '(3a20)', advance='no') aux, aux, aux
       write(iunit, '(1x)', advance='yes')
     end if
@@ -155,8 +155,8 @@
                                             str_center('Acc(2)', 20), str_center('Acc(3)', 20)
       ! second line -> units
       write(iunit, '(a8,2a20)') '#       ',                            &
-           str_center('['//trim(units_out%time%abbrev)//']', 20),         &
-           str_center('['//trim(units_out%acceleration%abbrev)//']', 20)
+           str_center('['+trim(units_out%time%abbrev)+']', 20),         &
+           str_center('['+trim(units_out%acceleration%abbrev)+']', 20)
     endif
 
     write(iunit,'(i8,4es20.12)') iter, t/units_out%time%factor, acc/units_out%acceleration%factor
@@ -177,7 +177,7 @@
 
       ! second line -> units
       write(iunit, '(a8,a20)') '#       ',                            &
-           str_center('['//trim(units_out%time%abbrev)//']', 20)
+           str_center('['+trim(units_out%time%abbrev)+']', 20)
     endif
 
     write(iunit,'(i8,3es20.12)') iter, t/units_out%time%factor, p
@@ -276,10 +276,10 @@
 
       ! third line -> units
       write(iunit, '(a8,a20)', advance='no') '#       ', &
-           str_center('['//trim(units_out%time%abbrev)//']', 20)
+           str_center('['+trim(units_out%time%abbrev)+']', 20)
       do is = 1, sys%st%nspin
         write(iunit, '(a20)', advance='no') &
-             str_center('['//trim(units_out%length%abbrev)//']', 20)
+             str_center('['+trim(units_out%length%abbrev)+']', 20)
       end do
 
       do is = 1, sys%st%nspin
@@ -290,10 +290,10 @@
               write(iunit, '(a20)', advance='no') ' '
             case(1)
               write(iunit, '(a20)', advance='no') &
-                   str_center('['//trim(units_out%length%abbrev)//']', 20)
+                   str_center('['+trim(units_out%length%abbrev)+']', 20)
             case default
               write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
-              write(iunit, '(a20)', advance='no') str_center('['//trim(aux)//']', 20)
+              write(iunit, '(a20)', advance='no') str_center('['+trim(aux)+']', 20)
             end select
           end do
         end do
