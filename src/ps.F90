@@ -97,7 +97,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
     ps%l_max_occ = ps%l_max
     ps%l_loc = lloc
-    ps%so_l_max = min(pstm%npotu - 1, lmax) ! is this the corect value?
+    ps%so_l_max = min(pstm%npotd - 1, lmax) ! is this the corect value?
     ps%z = z
     call tm_process(pstm, lmax, lloc)
     if(conf%verbose > 999) call tm_debug(pstm)
@@ -268,7 +268,6 @@ subroutine ps_end(ps)
       call spline_end(ps%Ur(i, is))
     enddo
   end do
-  
   do i = 0, ps%so_L_max
     do j = 1, ps%kbc
       call spline_end(ps%so_kb(i, j))
@@ -282,7 +281,7 @@ subroutine ps_end(ps)
 
   deallocate(ps%kb, ps%dkb, ps%so_kb, ps%so_dkb, ps%ur, ps%dknrm, ps%h, ps%k, ps%occ)
 
-  call pop_sub()
+  call pop_sub(); return
 end subroutine ps_end
 
 subroutine hgh_load(ps, psp)
@@ -311,8 +310,6 @@ subroutine hgh_load(ps, psp)
 
   ! now we fit the splines
   call get_splines_hgh(psp, ps)
-  ps%so_kb = ps%kb
-  ps%so_dkb = ps%kb
   ps%so_dknrm = ps%dknrm
 
   call pop_sub(); return
@@ -464,9 +461,11 @@ subroutine get_splines_hgh(psp, ps)
     nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
     hato(1:nrc) = psp%kb(1:nrc, l, j)
     call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%kb(l, j))
+    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_kb(l, j))
     ! and now the derivatives...
     call derivate_in_log_grid(psp%g, hato, derhato)
     call spline_fit(psp%g%nrval, psp%g%rofi, derhato, ps%dkb(l, j))
+    call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%so_dkb(l, j))
   end do
   end do
 

@@ -57,11 +57,11 @@ subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
     end select
 
     if (st%ispin==SPINORS) then
-       vpol  = (p(1)-p(2)) * (d(1)-d(2)) / (dpol+tiny)
+       vpol  = (pd(1)-pd(2)) * (st%rho(i, 1)-st%rho(i, 2)) / (dpol+tiny)
        p(1) = M_HALF * ( pd(1) + pd(2) + vpol )
        p(2) = M_HALF * ( pd(1) + pd(2) - vpol )
-       p(3) = (pd(1)-pd(2)) * d(3) / (dpol+tiny)
-       p(4) = (pd(1)-pd(2)) * d(4) / (dpol+tiny)
+       p(3) = (pd(1)-pd(2)) * st%rho(i, 3) / (dpol+tiny)
+       p(4) = (pd(1)-pd(2)) * st%rho(i, 4) / (dpol+tiny)
     else
        do is = 1, st%nspin
           p(is) = pd(is)
