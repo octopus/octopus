@@ -191,8 +191,8 @@ SCF
 * MaximumIter::                 
 * ConvAbsDens::                 
 * ConvRelDens::                 
-* ConvAbsEv::               
-* ConvRelEv::               
+* ConvAbsEv::                   
+* ConvRelEv::                   
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -223,8 +223,8 @@ Time Dependent
 * TDGauge::                     
 * TDDeltaStrength::             
 * TDPolarization::              
-* TDDipoleMax::                 
 * TDOutputMultipoles::          
+* TDDipoleMax::                 
 * TDOutputCoordinates::         
 * TDOutputGSProjection::        
 * TDOutputAcceleration::        
@@ -1602,8 +1602,8 @@ criteria is fulfilled.
 * MaximumIter::                 
 * ConvAbsDens::                 
 * ConvRelDens::                 
-* ConvAbsEv::               
-* ConvRelEv::               
+* ConvAbsEv::                   
+* ConvRelEv::                   
 * LCAOStart::                   
 * SCFinLCAO::                   
 * EigenSolver::                 
@@ -1931,8 +1931,8 @@ operator @math{\exp\lbrace A\rbrace} -- which will be specified by variable
 * TDGauge::                     
 * TDDeltaStrength::             
 * TDPolarization::              
-* TDDipoleMax::                 
 * TDOutputMultipoles::          
+* TDDipoleMax::                 
 * TDOutputCoordinates::         
 * TDOutputGSProjection::        
 * TDOutputAcceleration::        
@@ -2330,7 +2330,7 @@ When no laser is applied, a delta (in time) electric field with
 strength @code{TDDeltaStrength} is applied. This is used to calculate
 the linear optical spectra.
 
-@node TDPolarization, TDDipoleMax, TDDeltaStrength, Time Dependent
+@node TDPolarization, TDOutputMultipoles, TDDeltaStrength, Time Dependent
 @subsection @code{TDPolarization} (block data)
 @vindex @code{TDPolarization}
 
@@ -2346,21 +2346,21 @@ complex. Also some input/output and the @code{strength-function} utility have
 to be changed. It is a nice little project if someone is interested in
 getting into @code{octopus}.
 
-@node TDDipoleMax, TDOutputMultipoles, TDPolarization, Time Dependent
-@subsection @code{TDDipoleLmax} (integer , 1)
-@vindex @code{TDDipoleLmax}
-
-Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
-during a time-dependent simulation.
-
-@node TDOutputMultipoles, TDOutputCoordinates, TDDipoleMax, Time Dependent
+@node TDOutputMultipoles, TDDipoleMax, TDPolarization, Time Dependent
 @subsection @code{TDOutputMultipoles} (logical, true)
 @vindex @code{TDOutputMultipoles}
 
 If true, outputs the multipole moments of the density to the file @code{td.general/multipoles}.
 This is required to, e.g., calculate optical absorption spectra of finite systems.
 
-@node TDOutputCoordinates, TDOutputGSProjection, TDOutputMultipoles, Time Dependent
+@node TDDipoleMax, TDOutputCoordinates, TDOutputMultipoles, Time Dependent
+@subsection @code{TDDipoleLmax} (integer , 1)
+@vindex @code{TDDipoleLmax}
+
+Maximum multi-pole of the density output to the file @code{td.general/multipoles} 
+during a time-dependent simulation.
+
+@node TDOutputCoordinates, TDOutputGSProjection, TDDipoleMax, Time Dependent
 @subsection @code{TDOutputCoordinates} (logical, @code{MoveIons} > 0 )
 @vindex @code{TDOutputCoordinates}
 

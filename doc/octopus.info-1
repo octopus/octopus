@@ -172,8 +172,8 @@ Time Dependent
 * TDGauge::
 * TDDeltaStrength::
 * TDPolarization::
-* TDDipoleMax::
 * TDOutputMultipoles::
+* TDDipoleMax::
 * TDOutputCoordinates::
 * TDOutputGSProjection::
 * TDOutputAcceleration::

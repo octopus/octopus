@@ -506,8 +506,8 @@ TDExponentialMethod::).
 * TDGauge::
 * TDDeltaStrength::
 * TDPolarization::
-* TDDipoleMax::
 * TDOutputMultipoles::
+* TDDipoleMax::
 * TDOutputCoordinates::
 * TDOutputGSProjection::
 * TDOutputAcceleration::
@@ -846,7 +846,7 @@ strength `TDDeltaStrength' is applied. This is used to calculate the
 linear optical spectra.
 
 
-File: octopus.info,  Node: TDPolarization,  Next: TDDipoleMax,  Prev: TDDeltaStrength,  Up: Time Dependent
+File: octopus.info,  Node: TDPolarization,  Next: TDOutputMultipoles,  Prev: TDDeltaStrength,  Up: Time Dependent
 
 `TDPolarization' (block data)
 -----------------------------
@@ -862,16 +862,7 @@ generalized to complex. Also some input/output and the
 project if someone is interested in getting into `octopus'.
 
 
-File: octopus.info,  Node: TDDipoleMax,  Next: TDOutputMultipoles,  Prev: TDPolarization,  Up: Time Dependent
-
-`TDDipoleLmax' (integer , 1)
-----------------------------
-
-   Maximum multi-pole of the density output to the file
-`td.general/multipoles' during a time-dependent simulation.
-
-
-File: octopus.info,  Node: TDOutputMultipoles,  Next: TDOutputCoordinates,  Prev: TDDipoleMax,  Up: Time Dependent
+File: octopus.info,  Node: TDOutputMultipoles,  Next: TDDipoleMax,  Prev: TDPolarization,  Up: Time Dependent
 
 `TDOutputMultipoles' (logical, true)
 ------------------------------------
@@ -881,7 +872,16 @@ File: octopus.info,  Node: TDOutputMultipoles,  Next: TDOutputCoordinates,  Prev
 absorption spectra of finite systems.
 
 
-File: octopus.info,  Node: TDOutputCoordinates,  Next: TDOutputGSProjection,  Prev: TDOutputMultipoles,  Up: Time Dependent
+File: octopus.info,  Node: TDDipoleMax,  Next: TDOutputCoordinates,  Prev: TDOutputMultipoles,  Up: Time Dependent
+
+`TDDipoleLmax' (integer , 1)
+----------------------------
+
+   Maximum multi-pole of the density output to the file
+`td.general/multipoles' during a time-dependent simulation.
+
+
+File: octopus.info,  Node: TDOutputCoordinates,  Next: TDOutputGSProjection,  Prev: TDDipoleMax,  Up: Time Dependent
 
 `TDOutputCoordinates' (logical, `MoveIons' > 0 )
 ------------------------------------------------
