@@ -125,7 +125,7 @@ int F90_FUNC_(oct_geom_opt, OCT_GEOM_OPT)
 		break;
 	}
 		
-  gsl_multimin_fdfminimizer_set (s, &my_func, vx, 0.01, *tol);
+  gsl_multimin_fdfminimizer_set (s, &my_func, vx, *tol*10, *tol);
 
 	printf("Info: Using %s minimiser\n", gsl_multimin_fdfminimizer_name(s));
 	fflush(stdout);

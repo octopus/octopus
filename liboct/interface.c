@@ -336,3 +336,9 @@ int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)
     return -1;
   }
 }
+
+void F90_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
+		 (int *a, int *max)
+{
+	progress_bar(*a, *max);
+}
