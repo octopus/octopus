@@ -1,6 +1,6 @@
 #include "config.h"
 
-module laser
+module lasers
 use fdf
 use global
 use units
@@ -34,7 +34,7 @@ subroutine laser_init(m, no_l, l)
 
   integer :: i, k, iunit
   real(r8) :: x, y, z
-  character(len=256) :: c, c1
+  character(len=256) :: c
 
   sub_name = 'laser_init'; call push_sub()
 
@@ -48,14 +48,18 @@ subroutine laser_init(m, no_l, l)
     end if
 
     do i = 1, no_l
+      ! This read *sucks*, becose FORTRAN *sucks*
+      ! I give up, if you know a better way, let me know.
       read(iunit,'(a)') c
-      read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope, c1
+      read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope
 
       if(l(i)%envelope == 3) then
-        read(c1, *) l(i)%tau0, l(i)%t0, l(i)%omega0, l(i)%tau1
+        read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope, &
+             l(i)%tau0, l(i)%t0, l(i)%omega0, l(i)%tau1
         l(i)%tau1 = l(i)%tau1 * units_inp%time%factor ! adjust units
       else
-        read(c1, *) l(i)%tau0, l(i)%t0, l(i)%omega0
+        read(c, *) l(i)%pol(:), l(i)%A0, l(i)%envelope,&
+             l(i)%tau0, l(i)%t0, l(i)%omega0
       end if
 
       ! Adjust units of common variables
@@ -105,8 +109,8 @@ subroutine laser_write_info(no_l, l, iunit)
   do i = 1, no_l
     write(iunit,'(i2,a)') i,':'
     write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
-         '(', real(l(i)%pol(1)), ',', aimag(l(i)%pol(1)), ')', &
-         '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), ')', &
+         '(', real(l(i)%pol(1)), ',', aimag(l(i)%pol(1)), '), ', &
+         '(', real(l(i)%pol(2)), ',', aimag(l(i)%pol(2)), '), ', &
          '(', real(l(i)%pol(3)), ',', aimag(l(i)%pol(3)), ')'
     write(iunit,'(3x,a,i2)')    'Envelope:     ', l(i)%envelope
     write(iunit,'(3x,a,f10.4,5a)') 'Amplitude: ', &
@@ -254,4 +258,4 @@ subroutine laser_vector_amplitude(no_l, l, t, amp)
   return
 end subroutine laser_vector_amplitude
 
-end module laser
+end module lasers

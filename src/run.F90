@@ -96,8 +96,7 @@ subroutine run()
       call states_generate_random(sys%st, sys%m)
       ! we will need some starting density in order to have the hamiltonian
       ! well defined
-      i = min(sys%st%ispin, 2)
-      call lcao_dens(sys, i, sys%st%rho(:,i))
+      call lcao_dens(sys, sys%st%nspin, sys%st%rho)
 
       ! TODO: non-collinear spin
       ! the off-diagonal densities are set to zero
@@ -169,8 +168,9 @@ subroutine run()
       message(1) = 'Info: Initializing zpsi'
       call write_info(1)
 
-      sys%st%zpsi(:,:,sys%st%st_start:sys%st%st_end,:) = &
-           st_aux%R_FUNC(psi)(:,:,sys%st%st_start:sys%st%st_end,:)
+      do i = sys%st%st_start, sys%st%st_end
+        sys%st%zpsi(:,:, i,:) = st_aux%R_FUNC(psi)(:,:, i,:)
+      end do
     case(I_TD)
       message(1) = 'Info: Time-dependent simulation.'
       call write_info(1)

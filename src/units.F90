@@ -32,6 +32,7 @@ end type unit_type
 type unit_system_type
   type(unit_type) :: length
   type(unit_type) :: energy
+  type(unit_type) :: time
   type(unit_type) :: velocity
   type(unit_type) :: mass
 end type unit_system_type
@@ -74,7 +75,7 @@ contains
     case ("eVA")
       call units_eV_Ang(u)
     case default
-      message(1) = "Invalid unit specification: '"//c//"'"
+      message(1) = "Invalid unit specification: '"//trim(c)//"'"
       message(2) = "Valid units are: 'a.u', 'eVA'"
       call write_fatal(2)
     end select
@@ -83,8 +84,8 @@ contains
 end subroutine units_init
 
 ! these routines output the unit conversions factors, defined by
-! [a.u.] = <input>/u.unit
-! <output> = [a.u.]*u.unit
+! [a.u.] = <input>*u.unit
+! <output> = [a.u.]/u.unit
 
 subroutine units_atomic(u)
   type(unit_system_type), intent(out) :: u
@@ -94,8 +95,12 @@ subroutine units_atomic(u)
   u%length%factor = 1._r8
 
   u%energy%abbrev = "H"
-  u%energy%name   = "hartree"
+  u%energy%name   = "Hartree"
   u%energy%factor = 1._r8
+
+  u%time%abbrev = "hbar/H"
+  u%time%name   = "hbar/Hartree"
+  u%time%factor = 1._r8/u%energy%factor
 
   u%velocity%abbrev = "b H (2 pi/h)"
   u%velocity%name   = "bohr times Hartree over h bar"
@@ -116,6 +121,10 @@ subroutine units_eV_Ang(u)
   u%energy%abbrev = "eV"
   u%energy%name   = "electron volt"
   u%energy%factor = 1._r8/(2._r8*P_Ry)   ! 1 a.u. = 27.2 eV
+
+  u%time%abbrev = "hbar/eV"
+  u%time%name   = "hbar/electron volt"
+  u%time%factor = 1._r8/u%energy%factor
 
   u%velocity%abbrev = "A eV (2 pi/h)"
   u%velocity%name   = "Angstrom times electron volts over h bar"

@@ -4,6 +4,7 @@ module hamiltonian
 use global
 use spline
 use fft
+use units
 use system
 use hartree
 use xc
@@ -101,23 +102,22 @@ subroutine hamiltonian_setup(h, sys)
   type(system_type), intent(inout) :: sys
 
   real(r8), allocatable :: v_aux(:,:)
-  integer :: i, is
+  integer :: i
 
-  is = min(H%ispin, 2)
   h%epot = 0._r8 ! The energy coming from the potentials
 
   if(.not.h%ip_app) then
     call hartree_solve(h%hart, sys%m, h%Vhartree, sys%st%rho)
-    do i = 1, is
-      h%epot = h%epot - 0.5_r8*dmesh_dp(sys%m, sys%st%rho(:, is), h%Vhartree)
+    do i = 1, sys%st%nspin
+      h%epot = h%epot - 0.5_r8*dmesh_dp(sys%m, sys%st%rho(:, i), h%Vhartree)
     end do
     
-    allocate(v_aux(h%np, h%ispin))
+    allocate(v_aux(h%np, sys%st%nspin))
     call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%rho_core, &
          h%Vxc, v_aux, h%ex, h%ec)
     h%Vxc = h%Vxc + v_aux
-    do i = 1, is
-      h%epot = h%epot - dmesh_dp(sys%m, sys%st%rho(:, is), h%Vxc(:, is))
+    do i = 1, sys%st%nspin
+      h%epot = h%epot - dmesh_dp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
     end do
     deallocate(v_aux)
     
@@ -141,7 +141,7 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
   integer :: ierr
 #endif 
 
-  sub_name = 'tenergy'; call push_sub()
+  sub_name = 'hamiltonian_energy'; call push_sub()
 
   e = sum(sys%st%occ(sys%st%st_start:sys%st%st_end, :)*&
        sys%st%eigenval(sys%st%st_start:sys%st%st_end, :))
@@ -153,15 +153,15 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
   end if
 #endif
   
-  h%etot = h%etot + sys%eii + h%epot + h%ex + h%ec
+  h%etot = e + sys%eii + h%epot + h%ex + h%ec
   
   if(iunit>0) then
-    write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', sys%eii
-    write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e
-    write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot
-    write(message(4), '(6x,a, f15.8)')'Exchange    = ', h%ex
-    write(message(5), '(6x,a, f15.8)')'Correlation = ', h%ec
-    write(message(6), '(6x,a, f15.8)')'Total       = ', h%etot
+    write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', sys%eii / units_out%energy%factor
+    write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e       / units_out%energy%factor
+    write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot  / units_out%energy%factor
+    write(message(4), '(6x,a, f15.8)')'Exchange    = ', h%ex    / units_out%energy%factor
+    write(message(5), '(6x,a, f15.8)')'Correlation = ', h%ec    / units_out%energy%factor
+    write(message(6), '(6x,a, f15.8)')'Total       = ', h%etot  / units_out%energy%factor
     call write_info(6, iunit)
   end if
 
@@ -174,6 +174,7 @@ end subroutine hamiltonian_energy
 #include "undef.F90"
 #include "real.F90"
 #include "hamiltonian_inc.F90"
+
 #include "undef.F90"
 #include "complex.F90"
 #include "hamiltonian_inc.F90"

@@ -91,5 +91,5 @@ xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90
 hamiltonian.o: hamiltonian_inc.F90 h_external_pot.F90
 eigen.o: eigen_cg1.F90
 states.o: states_inc.F90
-td.o: td_init.F90
+td.o: td_init.F90 td_rti.F90
 mix.o: mix_inc.F90

@@ -1,14 +1,13 @@
-subroutine xc_lda(func, m, ispin, rho, rho_core, pot, energy)
+subroutine xc_lda(func, m, ispin, nspin, rho, rho_core, pot, energy)
   type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: func, ispin
-  real(r8), intent(IN) :: rho(m%np, ispin), rho_core(m%np)
-  real(r8), intent(out) :: pot(m%np, ispin), energy
+  integer, intent(in) :: func, ispin, nspin
+  real(r8), intent(IN) :: rho(m%np, nspin), rho_core(m%np)
+  real(r8), intent(out) :: pot(m%np, nspin), energy
 
-  real(r8) :: d(ispin), p(ispin), e
-  integer :: i, is
+  real(r8) :: d(nspin), p(nspin), e
+  integer :: i
 
   energy = 0._r8
-  is = max(ispin, 2)
   do i = 1, m%np
     if(ispin == 4) then
       ! rotate to principle axis
@@ -17,25 +16,25 @@ subroutine xc_lda(func, m, ispin, rho, rho_core, pot, energy)
     end if
 
     ! always add core corrections
-    d(1:is) = d(1:is) + rho_core(i)/is
+    d(:) = d(:) + rho_core(i)/nspin
 
     select case(func)
       
     case(X_FUNC_LDA_NREL)
-      call xc_x_lda(.false., ispin, d(1:is), p(1:is), e) 
+      call xc_x_lda(.false., nspin, d, p, e) 
       
     case(X_FUNC_LDA_REL)
-      call xc_x_lda(.true.,  ispin, d(1:is), p(1:is), e) 
+      call xc_x_lda(.true.,  nspin, d, p, e) 
       
     case(C_FUNC_LDA_PZ)
-      call xc_c_pz(ispin, d(1:is), p(1:is), e)
+      call xc_c_pz(nspin, d, p, e)
       
     case(C_FUNC_LDA_PW92)
-      call xc_c_pw92(ispin, d(1:is), p(1:is), e)
+      call xc_c_pw92(nspin, d, p, e)
 
     end select
 
-    energy = energy + sum(d(1:is)) * e * m%vol_pp
+    energy = energy + sum(d) * e * m%vol_pp
 
     if(ispin == 4) then
       ! rotate bak potential
@@ -49,11 +48,11 @@ end subroutine xc_lda
 
 ! Return LDA exchange energy and potential
 ! density, potential and energy in a.u.
-subroutine xc_x_lda(rel, ispin, rho, vx, ex)
+subroutine xc_x_lda(rel, nspin, rho, vx, ex)
   logical, intent(in) :: rel
-  integer, intent(in) :: ispin
-  real(r8), intent(IN) :: rho(1:ispin)
-  real(r8), intent(inout) :: vx(1:ispin), ex
+  integer, intent(in) :: nspin
+  real(r8), intent(IN) :: rho(1:nspin)
+  real(r8), intent(inout) :: vx(1:nspin), ex
 
   real(r8), parameter :: &
       ZERO=0.0_r8, ONE=1.0_r8, HALF=.5_r8, OPF=1.5_r8, C014=0.014_r8, &
@@ -65,7 +64,7 @@ subroutine xc_x_lda(rel, ispin, rho, vx, ex)
   real(r8) :: d1, d2, d, z, fz, fzp, rs, vxp, exp, &
       beta, sb, alb, vxf, exf
 
-  if (ispin .eq. 2) then
+  if (nspin .eq. 2) then
     d1 = max(rho(1), 0.0_r8)
     d2 = max(rho(2), 0.0_r8)
     d = d1 + d2
@@ -104,7 +103,7 @@ subroutine xc_x_lda(rel, ispin, rho, vx, ex)
   exf = CXF * exp
 
   ! Find up and down potentials
-  if (ispin .eq. 2) then
+  if (nspin .eq. 2) then
     ex    = exp + fz*(exf-exp)
     vx(1) = vxp + fz*(vxf-vxp) + (1-z)*fzp*(exf-exp)
     vx(2) = vxp + fz*(vxf-vxp) - (1+z)*fzp*(exf-exp)
@@ -123,10 +122,10 @@ end subroutine xc_x_lda
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! LSD Perdew & Zunger, PRB 23, 5075 (1981)                                    !
 ! ********* INPUT ****************************************************        !
-! INTEGER ISPIN       : Number of spin polarizations (1 or 2)                 !
-! REAL*8  rho(ISPIN)  : Local (spin) density                                  !
+! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
+! REAL*8  rho(NSPIN)  : Local (spin) density                                  !
 ! ********* OUTPUT ***************************************************        !
-! REAL*8  VC(ISPIN) : Correlation (spin) potential                            !
+! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
 ! REAL*8  EC        : Correlation energy density                              !
 ! ********* UNITS ****************************************************        !
 ! Densities in electrons per Bohr**3                                          ! 
@@ -134,10 +133,10 @@ end subroutine xc_x_lda
 ! ********* ROUTINES CALLED ******************************************        !
 ! None                                                                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine xc_c_pz(ispin, rho, vc, ec)
-  integer, intent(in) :: ispin
-  real(r8), intent(IN) :: rho(ispin)
-  real(r8), intent(inout) :: vc(ispin), ec
+subroutine xc_c_pz(nspin, rho, vc, ec)
+  integer, intent(in) :: nspin
+  real(r8), intent(IN) :: rho(nspin)
+  real(r8), intent(inout) :: vc(nspin), ec
 
 !      X-alpha parameter:
   real(r8), parameter :: ALP = 2.0_r8 / 3.0_r8
@@ -165,7 +164,7 @@ subroutine xc_c_pz(ispin, rho, vc, ec)
       ecf, vcf, rslog
 
 !      Find density and polarization
-  if (ispin .eq. 2) then
+  if (nspin .eq. 2) then
     d1 = max(rho(1), 0.0_r8)
     d2 = max(rho(2), 0.0_r8)
     d = d1 + d2
@@ -210,7 +209,7 @@ subroutine xc_c_pz(ispin, rho, vc, ec)
 
   ! Find up and down potentials
   ! The half is to convert from Rydbergs to Hartree
-  if (ispin .eq. 2) then
+  if (nspin .eq. 2) then
     ec    = ecp + fz*(ecf-ecp)
     vc(1) = vcp + fz*(vcf-vcp) + (1-z)*fzp*(ecf-ecp)
     vc(2) = vcp + fz*(vcf-vcp) - (1+z)*fzp*(ecf-ecp)
@@ -231,10 +230,10 @@ end subroutine xc_c_pz
 ! Ref: J.P.Perdew & Y.Wang, PRB, 45, 13244 (1992)                             !
 ! Written by L.C.Balbas and J.M.Soler. Dec 96.  Version 0.5.                  !
 ! ********* INPUT ****************************************************        !
-! INTEGER ISPIN       : Number of spin polarizations (1 or 2)                 !
-! REAL*8  DENS(ISPIN) : Local (spin) density                                  !
+! INTEGER NSPIN       : Number of spin polarizations (1 or 2)                 !
+! REAL*8  DENS(NSPIN) : Local (spin) density                                  !
 ! ********* OUTPUT ***************************************************        !
-! REAL*8  VC(ISPIN) : Correlation (spin) potential                            !
+! REAL*8  VC(NSPIN) : Correlation (spin) potential                            !
 ! REAL*8  EC        : Correlation energy density                              !
 ! ********* UNITS ****************************************************        !
 ! Densities in electrons per Bohr**3                                          !
@@ -242,10 +241,10 @@ end subroutine xc_c_pz
 ! ********* ROUTINES CALLED ******************************************        !
 ! None                                                                        !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine xc_c_pw92( ISPIN, DENS, VC, EC)
+subroutine xc_c_pw92( NSPIN, DENS, VC, EC)
 
-  integer :: ISPIN
-  real(r8) :: DENS(ISPIN), EC, VC(ISPIN)
+  integer :: NSPIN
+  real(r8) :: DENS(NSPIN), EC, VC(NSPIN)
 
   ! Internal variable declarations
   integer :: IG
@@ -272,7 +271,7 @@ subroutine xc_c_pw92( ISPIN, DENS, VC, EC)
       0.49294_r8,  0.62517_r8,  0.49671_r8 /    
 
   ! Find rs and zeta
-  IF (ISPIN .EQ. 1) THEN
+  IF (NSPIN .EQ. 1) THEN
     DTOT = MAX( DENMIN, DENS(1) )
     ZETA = 0
     RS = ( 3 / (4*M_PI*DTOT) )**THD
@@ -322,7 +321,7 @@ subroutine xc_c_pw92( ISPIN, DENS, VC, EC)
       (G(1)-G(0)) * ( DFDZ*ZETA**4 + F*4*ZETA**3 )
   
   ! Find correlation potential
-  IF (ISPIN .EQ. 1) THEN
+  IF (NSPIN .EQ. 1) THEN
     DECDD(1) = DECDRS * DRSDD
     VC(1) = EC + DTOT * DECDD(1)
   ELSE

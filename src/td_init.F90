@@ -23,7 +23,7 @@ subroutine td_init(td, m, st)
     call write_fatal(2)
   end if
 
-  td%dt = fdf_double("TDTimeStep", 0.0001_r8/units_inp%time%factor)*units_inp%time%factor
+  td%dt = fdf_double("TDTimeStep", 0.001_r8/units_inp%time%factor)*units_inp%time%factor
   if (td%dt <= 0._r8) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
     message(2) = '(0 < TDTimeStep)'
@@ -113,12 +113,12 @@ contains
   end subroutine td_init_evolution_splitop
 
   subroutine td_init_lasers()
-    !call laser_init(sys%m, td%no_lasers, td%lasers)
+    call laser_init(m, td%no_lasers, td%lasers)
     td%output_laser = .false.
     if(td%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
-      !if(conf%verbose > 20) call laser_write_info(td%no_lasers, td%lasers, stdout)
+      if(conf%verbose > 20) call laser_write_info(td%no_lasers, td%lasers, stdout)
       
       td%delta_strength = 0._r8 ! no delta impulse if lasers exist
       dummy = fdf_integer("TDOutputLaser", 0_i4)
@@ -134,13 +134,15 @@ contains
     dummy = fdf_integer("TDAbsorbingBoundaries", 0_i4)
     if(dummy .eq. 1 .or. dummy .eq. 2) then
       td%ab = dummy
-      td%ab_width  = fdf_double("TDABWidth", 2._r8)
+      td%ab_width  = fdf_double("TDABWidth", &
+           4._r8/units_inp%length%factor)*units_inp%length%factor
       if(td%ab == 1) then
-        td%ab_height = fdf_double("TDABHeight", -5._r8)
+        td%ab_height = fdf_double("TDABHeight", &
+             -0.2_r8/units_inp%energy%factor)*units_inp%energy%factor
       else
         td%ab_height = 1._r8
       end if
-    
+
       ! generate boundary potential...
       allocate(td%ab_pot(m%np))
       td%ab_pot = 0._r8
@@ -207,9 +209,8 @@ contains
 #endif
 
     ! allocate memory
-    i = min(st%ispin, 2)
-    allocate(td%v_old1(m%np, i), td%v_old2(m%np, i))
-    allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
+    allocate(td%v_old1(m%np, st%nspin), td%v_old2(m%np, st%nspin))
+    allocate(st%zpsi(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
   end subroutine td_init_states
 
 end subroutine td_init
@@ -238,7 +239,7 @@ subroutine td_end(td)
     deallocate(td%v_old2); nullify(td%v_old2)
   end if
 
-!  call laser_end(td%no_lasers, td%lasers)
+  call laser_end(td%no_lasers, td%lasers)
 
   call pop_sub()
 end subroutine td_end

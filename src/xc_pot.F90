@@ -4,7 +4,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   type(states_type), intent(IN) :: st
   type(hartree_type), intent(inout) :: hart
   real(r8), intent(IN) :: rho_core(m%np)
-  real(r8), intent(out) :: vx(m%np, st%ispin), vc(m%np, st%ispin), ex, ec
+  real(r8), intent(out) :: vx(m%np, st%nspin), vc(m%np, st%nspin), ex, ec
 
   ! for fxc != vxc...
   ! fxc is always LDA!!!!
@@ -19,7 +19,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   select case(xcs%x_family)
   case(XC_FAMILY_ZER)
   case(XC_FAMILY_LDA)
-    call xc_lda(xcs%x_func, m, st%ispin, st%rho, rho_core, vx, ex)
+    call xc_lda(xcs%x_func, m, st%ispin, st%nspin, st%rho, rho_core, vx, ex)
   case(XC_FAMILY_GGA)
 !    call xc_gga(xcs%x_func, xcs, m, st%ispin, st%rho, rho_core, vx, ex)
 #ifdef HAVE_LAPACK
@@ -35,7 +35,7 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, hart, rho_core, vx, vc, ex, ec)
   select case(xcs%c_family)
   case(XC_FAMILY_ZER)
   case(XC_FAMILY_LDA)
-    call xc_lda(xcs%c_func, m, st%ispin, st%rho, rho_core, vc, ec)
+    call xc_lda(xcs%c_func, m, st%ispin, st%nspin, st%rho, rho_core, vc, ec)
   case(XC_FAMILY_GGA)
 !    call xc_gga(xcs%c_func, xcs, m, st%ispin, st%rho, rho_core, vc, ec)
 #ifdef HAVE_LAPACK

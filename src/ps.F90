@@ -271,7 +271,7 @@ subroutine solve_shroedinger(psf, ps, rphi, eigen)
 ! Calculation of the valence screening potential from the density:
 !       ve(1:nrval) is the hartree+xc potential created by the pseudo -
 !               valence charge distribution.
-   
+
   call calculate_valence_screening(psf, ps, drdi, s, ve)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -5,6 +5,7 @@ use system
 use states
 use hamiltonian
 use mix
+use lasers
 
 implicit none
 
@@ -33,7 +34,7 @@ type td_type
   ! lasers stuff
   integer :: no_lasers ! number of laser pulses used
   logical :: output_laser ! write laser field
-  !type(laser_type), pointer :: lasers(:)
+  type(laser_type), pointer :: lasers(:)
 
   ! absorbing boundaries
   integer  :: ab         ! do we have absorbing boundaries?
@@ -62,6 +63,7 @@ subroutine td_run(td, sys, h)
   type(hamiltonian_type), intent(inout) :: h
 
   integer :: i, ii
+  real(r8), allocatable :: dipole(:,:), multipole(:,:,:)
 
   sub_name = 'systm_td'; call push_sub()
 
@@ -71,36 +73,45 @@ subroutine td_run(td, sys, h)
   write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Dipole(is) '
   call write_info(1)
   
+  allocate(dipole(sys%st%nspin, td%save_iter))
+  allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
+
   ii = 1
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
 
     ! time iterate wavefunctions
-    !call systm_td_rti(sys, td, i*td%dt)
+    call td_rti(sys, h, td, i*td%dt)
 
     ! update density
     call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
     call hamiltonian_setup(h, sys)
-    call R_FUNC(hamiltonian_eigenval) (h, sys, 1, sys%st%nst) ! eigenvalues
+    call zhamiltonian_eigenval (h, sys, 1, sys%st%nst) ! eigenvalues
     call hamiltonian_energy(h, sys, -1, reduce=.true.)
 
     ! measuring
-    !call systm_td_calc_multipoles(sys, td, dipole(:,ii), td%lmax, multipole(:,:,ii))
+    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
+         dipole(:,ii), multipole(:,:,ii))
 
-    !write(message(1), '(i7,1x,f14.5,f14.6,4e17.6)') i, i*td%dt, sys%etot, dipole(:, ii)
-    !call write_info(1)
+    write(message(1), '(i7,1x,f14.5,f14.6,4e17.6)') i, &
+         i*td%dt       / units_out%time%factor, &
+         h%etot        / units_out%energy%factor, &
+         dipole(:, ii) / units_out%length%factor
+    call write_info(1)
   end do
 
+  deallocate(dipole, multipole)
 contains
 
   subroutine td_run_zero_iter(m)
     type(mesh_type), intent(IN) :: m
 
     integer :: i, iunit
-    real(r8) :: x(3)
+    real(r8) :: x(3)    
     complex(r8) :: c
+    real(r8), allocatable :: dipole(:), multipole(:,:)
     
     do i = 1, min(2, sys%st%ispin)
       td%v_old1(:, i) = h%Vhartree(:) + h%Vxc(:, i)
@@ -118,14 +129,14 @@ contains
     end if
 
     ! output static dipole (iter 0)
-!!$    call td_calc_multipoles(sys, td, &
-!!$         td%static_dipole, td%lmax, td%static_multipole)
-!!$    call io_assign(iunit)
-!!$    output information like the total number of l/spin, etc
-!!$    open(iunit, status='unknown', file=sys%files%multipole_td)
-!!$    call systm_td_write_multipole(iunit, td%lmax, sys%nspin, 0_i4, 0._r8, &
-!!$        td%static_dipole, td%static_multipole, .true.)
-!!$    call io_close(iunit)
+    
+    allocate(dipole(sys%st%nspin), multipole((td%lmax + 1)**2, sys%st%nspin))
+    call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
+         dipole, multipole)
+    call io_assign(iunit)
+    open(iunit, status='unknown', file=trim(sys%sysname)//'.mult')
+    call td_write_multipole(iunit, 0_i4, 0._r8, dipole, multipole, .true.)
+    call io_close(iunit)
 
     if(td%output_laser) then
       call io_assign(iunit)
@@ -147,8 +158,53 @@ contains
     
   end subroutine td_run_zero_iter
 
+  subroutine td_write_multipole(iunit, iter, t, dipole, multipole, header)
+    integer, intent(in) :: iunit, iter
+    real(r8), intent(IN) :: t, dipole(sys%st%nspin), multipole((td%lmax+1)**2, sys%st%nspin)
+    logical, intent(in) :: header
+
+    integer :: is, l, m, add_lm
+    
+    if(header) then
+      write(iunit, '(a10,i2,a8,i2)') '# nspin = ', sys%st%nspin, ' lmax = ', td%lmax
+      write(iunit, '(a8, a20)', advance='no') 'Iter', 't [eV^-1]    '
+      do is = 1, sys%st%nspin
+        write(iunit, '(a13,i1,a6)', advance='no') 'dipole(', is, ')     '
+      end do
+      do is = 1, sys%st%nspin
+        do l = 0, td%lmax
+          do m = -l, l
+            write(iunit, '(a6,i2,a4,i2,a2,i1,a3)', advance='no') 'l=', l, ', m=', m, ' (', is,')   '
+            add_lm = add_lm + 1
+          end do
+        end do
+      end do
+    
+    write(iunit, '(1x)', advance='yes')
+  end if
+
+  write(iunit, '(i8, e20.12)', advance='no') iter, t
+  do is = 1, sys%st%nspin
+    write(iunit, '(e20.12)', advance='no') dipole(is)
+  end do
+
+  do is = 1, sys%st%nspin
+    add_lm = 1
+    do l = 0, td%lmax
+      do m = -l, l
+        write(iunit, '(e20.12)', advance='no') multipole(add_lm, is)
+        add_lm = add_lm + 1
+      end do
+    end do
+  end do
+  write(iunit, '(1x)', advance='yes')
+
+  return
+end subroutine td_write_multipole
+  
 end subroutine td_run
 
 #include "td_init.F90"
+#include "td_rti.F90"
 
 end module timedep

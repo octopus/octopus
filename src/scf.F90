@@ -1,6 +1,7 @@
 #include "config.h"
 
 module scf
+use units
 use system
 use states
 use hamiltonian
@@ -31,8 +32,8 @@ subroutine scf_init(scf, sys)
   scf%max_iter = fdf_integer("MaximumIter", 200)
   scf%conv_abs_dens = fdf_double("ConvAbsDens", 1e-5_r8)
   scf%conv_rel_dens = fdf_double("ConvRelDens", 0.0_r8)
-  scf%conv_abs_ener = fdf_double("ConvAbsEnergy", 0.0_r8)
-  scf%conv_rel_ener = fdf_double("ConvRelEnergy", 0.0_r8)
+  scf%conv_abs_ener = fdf_double("ConvAbsEnergy", 0.0_r8) * units_inp%energy%factor
+  scf%conv_rel_ener = fdf_double("ConvRelEnergy", 0.0_r8) * units_inp%energy%factor
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= 0.0_r8 .and. scf%conv_rel_dens <= 0.0_r8 .and. &
@@ -86,7 +87,7 @@ subroutine scf_run(sys, h)
     call states_fermi(sys%st)                         ! occupations
 
     ! output eigenvalues
-    call scf_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
+    call states_write_eigenvalues(stdout, sys%st%nst, sys%st, diff)
 
     ! now compute total energy
     old_etot = h%etot
@@ -133,57 +134,84 @@ subroutine scf_run(sys, h)
   end if
 
   ! output final information
-!  call  systm_write_scf(sys, scf, iter, diff, finish, ion_ion_forces, local_forces, & 
-!                        non_local_forces)
+  call  scf_write_static()
 
   call scf_end(scf)
   call pop_sub()
-end subroutine scf_run
 
-subroutine scf_write_eigenvalues(iunit, nst, st, error)
-  integer, intent(in) :: iunit, nst
-  type(states_type), intent(IN) :: st
-  real(r8), intent(in) :: error(nst, st%nik)
+contains
 
-  integer ik, j
-  real(r8) :: o(st%nik)
+subroutine scf_write_static()
+  integer iunit, i
 
-  if(iunit==stdout.and.conf%verbose<=20) return
+  call io_assign(iunit)
+  open(iunit, status='unknown', file=trim(sys%sysname)//'.static')
 
-  message(1) = 'Info: Eigenvalues ['//trim(units_out%energy%abbrev)//']'
-  call write_info(1, iunit)
+  ! mesh
+  write(iunit, '(a,a)') 'System name: ', sys%sysname
+  write(iunit, '(1x)')
 
-#ifdef HAVE_MPI
-  if(mpiv%node == 0) then
-#endif
+  write(iunit, '(a)') 'Mesh:'
+  call mesh_write_info(sys%m, iunit)
+  write(iunit,'(1x)')
 
-    write(iunit, '(a4)', advance='no') '#'
-    do ik = 1, st%nik
-      write(iunit, '(1x,a12,1x,a12,2x,a10,i1,a1)', advance='no') &
-           'Eigenvalue ', 'Occupation ', 'Error (', ik, ')'
-    end do
-    write(iunit, '(1x)', advance='yes')
-    
-    do j = 1, nst
-      if(j > st%nst) then
-        o = 0._r8
-      else
-        o = st%occ(j, :)
-      end if
-      
-      write(iunit, '(i4)', advance='no') j
-      do ik = 1, st%nik
-        write(iunit, '(1x,f12.6,1x,f12.6,a2,f12.8,a1)', advance='no') &
-             st%eigenval(j, ik)/units_out%energy%factor, o(ik), ' (', error(j, ik), ')'
-      end do
-      write(iunit, '(1x)', advance='yes')
-    end do
+  !write(iunit, '(a)') 'Geometry [A]:'
+  !call write_geom_info(sys, iunit)
+  !write(iunit,'(1x)')
 
-#ifdef HAVE_MPI
+  if(.not. h%ip_app) then
+    write(iunit, '(a)') 'Exchange and correlation functionals:'
+    call xc_write_info(h%xc, iunit)
+  else
+    write(iunit, '(a)') 'Independent Particles'
   end if
-#endif
-  
-end subroutine scf_write_eigenvalues
+  write(iunit,'(1x)')
+
+  ! scf information
+  if(finish) then
+    write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
+  else
+    write(iunit, '(a)') 'SCF *not* converged!'
+  end if
+  write(iunit,'(1x)')
+
+  call states_write_eigenvalues(iunit, sys%st%nst, sys%st, diff)
+  write(iunit,'(1x)')
+
+  write(iunit, '(a)') 'Energy [eV]:'
+  call hamiltonian_energy(h, sys, iunit)
+  write(iunit,'(1x)')
+
+  write(iunit, '(a)') 'Convergence:'
+  write(iunit, '(6x, a, e14.8,a,e14.8,a)') 'abs_dens = ', scf%abs_dens, &
+      ' (', scf%conv_abs_dens, ')'
+  write(iunit, '(6x, a, e14.8,a,e14.8,a)') 'rel_dens = ', scf%rel_dens, &
+      ' (', scf%conv_rel_dens, ')'
+  write(iunit, '(6x, a, e14.8,a,e14.8,4a)') 'abs_ener = ', scf%abs_ener, &
+      ' (', scf%conv_abs_ener / units_out%energy%factor, ')', &
+      ' [',  trim(units_out%energy%abbrev), ']'
+  write(iunit, '(6x, a, e14.8,a,e14.8,4a)') 'rel_ener = ', scf%rel_ener, &
+      ' (', scf%conv_rel_ener / units_out%energy%factor, ')', &
+      ' [',  trim(units_out%energy%abbrev), ']'
+  write(iunit,'(1x)') 
+
+! TODO
+!  write(iunit,'(a)') 'Forces on the ions [eV/A]'
+!  write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
+!  do i=1,sys%nions
+!     write(iunit,'(i4,a,3f15.6)') i,'  ion-ion:',ion_ion_forces(1:3,i)
+!     write(iunit,'(4x,a,3f15.6)')   ' nonlocal:',non_local_forces(1:3,i)
+!     write(iunit,'(4x,a,3f15.6)')   '    local:',local_forces(1:3,i)
+!     write(iunit,'(4x,a,3f15.6)')   '    total:',ion_ion_forces(1:3,i) + &
+!                                                 non_local_forces(1:3,i) + &
+!                                                 local_forces(1:3,i)
+!  enddo
+
+  call io_close(iunit)
+  return
+end subroutine scf_write_static
+
+end subroutine scf_run
 
 ! TODO use netcdf
 subroutine scf_write_restart(filename, m, st)

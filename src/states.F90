@@ -13,6 +13,7 @@ type states_type
   integer :: nst ! Number of states in each irreducible subspace
   integer :: nik ! Number of irreducible subspaces
   integer :: ispin ! spin mode
+  integer :: nspin ! dimension of rho
 
   ! pointers to the wavefunctions
   real(r8), pointer :: dpsi(:,:,:,:)
@@ -87,7 +88,8 @@ subroutine states_init(st, m, val_charge)
   end select
 
   ! we now allocate some arrays
-  allocate(st%rho(m%np, st%ispin), &
+  st%nspin = min(2, st%ispin)
+  allocate(st%rho(m%np, st%nspin), &
        st%occ(st%nst, st%nik), st%eigenval(st%nst, st%nik))
 
   ! first guest for occupation...paramagnetic configuration
@@ -142,6 +144,7 @@ subroutine states_dup(from, to)
   to%nst   = from%nst
   to%nik   = from%nik
   to%ispin = from%ispin
+  to%nspin = from%nspin
 
   ! now the pointers
   to%dpsi     => from%dpsi
@@ -164,7 +167,7 @@ subroutine states_generate_random(st, m)
 
   integer, save :: iseed = 123
   integer :: ist, ik, id, i
-  real(r8) :: a(3), rnd, f, r
+  real(r8) :: a(3), rnd, r
 
   sub_name = 'states_generate_random'; call push_sub()
 
@@ -178,17 +181,10 @@ subroutine states_generate_random(st, m)
         a(2) = 2.0_r8*(2*rnd - 1)
         call quickrnd(iseed, rnd)
         a(3) = 2.0_r8*(2*rnd - 1)
-#ifdef COMPLEX_WFNS
-        call quickrnd(iseed, rnd)
-        f = M_PI*(2*rnd - 1)
-#endif
+
         do i = 1, m%np
           call mesh_r(m, i, r, a=a)
-#ifdef COMPLEX_WFNS
-          st%R_FUNC(psi)(i, id, ist, ik) = exp(-0.5_r8*r*r + M_zI*f)
-#else
           st%R_FUNC(psi)(i, id, ist, ik) = exp(-0.5_r8*r*r)
-#endif
         end do
       end do
     end do
@@ -275,6 +271,94 @@ subroutine states_fermi(st)
   return
 end subroutine states_fermi
 
+subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  integer, intent(in) :: lmax
+  real(r8), intent(in) :: pol(3)
+  real(r8), intent(out) :: dipole(st%nspin), multipole((lmax + 1)**2, st%nspin)
+
+  integer :: i, is, l, lm, add_lm
+  real(r8) :: x(3), r, ylm, mult
+
+  dipole = 0._r8
+  do is = 1, st%nspin
+    do i = 1, m%np
+      call mesh_xyz(m, i, x)
+      dipole(is) = dipole(is) + st%rho(i, is)*sum(x*pol)
+    end do
+    dipole(is) = dipole(is) * m%vol_pp
+
+
+    add_lm = 1
+    do l = 0, lmax
+      do lm = -l, l
+        mult = 0._r8
+
+        do i = 1, m%np
+          call mesh_r(m, i, r, x=x)
+          ylm = oct_ylm(x(1), x(2), x(3), l, lm)
+          if(l == 0) then
+            mult = mult + st%rho(i, is) * ylm
+          else
+            mult = mult + st%rho(i, is) * ylm*r**l
+          end if
+        end do
+        multipole(add_lm, is) = mult * sqrt(4._r8*M_PI) * m%vol_pp
+        add_lm = add_lm + 1
+
+      end do
+    end do
+  end do
+end subroutine states_calculate_multipoles
+
+subroutine states_write_eigenvalues(iunit, nst, st, error)
+  integer, intent(in) :: iunit, nst
+  type(states_type), intent(IN) :: st
+  real(r8), intent(in), optional :: error(nst, st%nik)
+
+  integer ik, j
+  real(r8) :: o(st%nik)
+
+  if(iunit==stdout.and.conf%verbose<=20) return
+
+  message(1) = 'Eigenvalues ['//trim(units_out%energy%abbrev)//']'
+  call write_info(1, iunit)
+
+#ifdef HAVE_MPI
+  if(mpiv%node == 0) then
+#endif
+
+    write(iunit, '(a4)', advance='no') '#'
+    do ik = 1, st%nik
+      write(iunit, '(1x,a12,1x,a12,2x,a10,i1,a1)', advance='no') &
+           'Eigenvalue ', 'Occupation ', 'Error (', ik, ')'
+    end do
+    write(iunit, '(1x)', advance='yes')
+    
+    do j = 1, nst
+      if(j > st%nst) then
+        o = 0._r8
+      else
+        o = st%occ(j, :)
+      end if
+      
+      write(iunit, '(i4)', advance='no') j
+      do ik = 1, st%nik
+        write(iunit, '(1x,f12.6,1x,f12.6)', advance='no') &
+             st%eigenval(j, ik)/units_out%energy%factor, o(ik)
+        if(present(error)) then
+          write(iunit, '(a2,f12.8,a1)', advance='no')' (', error(j, ik), ')'
+        end if
+      end do
+      write(iunit, '(1x)', advance='yes')
+    end do
+
+#ifdef HAVE_MPI
+  end if
+#endif
+  
+end subroutine states_write_eigenvalues
 
 #include "undef.F90"
 #include "real.F90"

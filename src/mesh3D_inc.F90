@@ -6,7 +6,7 @@ function R_FUNC(mesh_dp)(m, f1, f2)
   R_TYPE :: R_FUNC(mesh_dp)
   R_TYPE, external :: R_DOT
   
-  R_FUNC(mesh_dp) = R_DOT(m%np, f1(1:m%np), 1,  f2(1:m%np), 1)*m%vol_pp
+  R_FUNC(mesh_dp) = R_DOT(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
 end function R_FUNC(mesh_dp)
 
 ! Conversion subroutines
