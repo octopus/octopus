@@ -75,7 +75,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
   enddo
 
   call dmesh_derivatives(m, rhoplus(:),  grad=grhoplus(:, :))
-  call dmesh_derivatives(m, rhominus(:), grad=grhominus(:, :))
+  if(st%ispin > UNPOLARIZED) call dmesh_derivatives(m, rhominus(:), grad=grhominus(:, :))
 
   energy = M_ZERO
   lpot = M_ZERO
