@@ -101,27 +101,22 @@ subroutine unocc_run(u, sys, h)
   eigens%final_tol      = u%conv
   eigens%final_tol_iter = 1
   eigens%es_maxiter     = u%max_iter
-  if(associated(eigens%diff)) then
-    deallocate(eigens%diff)
-  endif
-  nullify(eigens%diff)
   allocate(eigens%diff(u%st%nst, u%st%nik))
 
   call eigen_solver_run(eigens, u%st, sys, h, 1, converged)
-  call R_FUNC(hamiltonian_eigenval) (h, u%st, sys)
 
   ! write output file
   call io_assign(iunit)
   call oct_mkdir("static")
   open(iunit, status='unknown', file='static/eigenvalues')
   if(converged) then
-    write(iunit,'(a)') 'Occupation analysis converged.'
+    write(iunit,'(a)') 'All unoccupied stated converged.'
   else
-    write(iunit,'(a)') 'Occupational analysis did *not* converge!'
+    write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
   end if
   write(iunit,'(a, e17.6)') 'Criterium = ', u%conv
   write(iunit,'(1x)')
-  call states_write_eigenvalues(iunit, u%st%nst, u%st)
+  call states_write_eigenvalues(iunit, u%st%nst, u%st, eigens%diff)
   call io_close(iunit)
   
   if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%nspin) then
@@ -136,6 +131,9 @@ subroutine unocc_run(u, sys, h)
 
   ! output wave-functions
   call R_FUNC(states_output) (u%st, sys%m, "static", sys%outp)
+
+  ! Deallocate eigens..
+  deallocate(eigens%diff); nullify(eigens%diff)
 
   call pop_sub()
 end subroutine unocc_run

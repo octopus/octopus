@@ -131,13 +131,10 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   integer, intent(in) :: iter
   logical, intent(inout), optional :: conv
 
-  integer :: ik, maxiter, converged, errorflag
+  integer :: ik, maxiter, errorflag
   real(r8) :: tol
-  real(r8), allocatable :: diff(:, :)
 
   call push_sub('eigen_solver_run')
-
-  allocate(diff(st%nst, st%nik)); diff = M_ONE
   
   if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
@@ -165,9 +162,8 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
   end select
 
   eigens%matvec = maxiter
-  if(present(conv).and. converged == st%nst*st%nik) conv = .true.
+  if(present(conv).and. eigens%converged == st%nst*st%nik) conv = .true.
 
-  deallocate(diff)
   call pop_sub()
 end subroutine eigen_solver_run
 
