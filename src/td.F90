@@ -54,6 +54,8 @@ type td_type
 
   logical :: harmonic_spectrum   ! write harmonic spectrum
 
+  logical :: gs_projection ! writes down the component of the ground state.
+
 #ifndef DISABLE_PES
   type(PES_type) :: PESv
 #endif
@@ -90,6 +92,7 @@ subroutine td_run(td, u_st, sys, h)
   real(r8), allocatable :: dipole(:,:), multipole(:,:,:), x(:,:,:), v(:,:,:), f(:,:,:), &
                            x1(:,:), x2(:,:), f1(:,:), ke(:), pe(:), tacc(:, :)
   real(r8) :: etime
+  complex(r8) :: gsp
   complex(r8), allocatable :: projections(:,:,:,:)
   character(len=100) :: filename
 
@@ -257,6 +260,8 @@ subroutine td_run(td, u_st, sys, h)
       call zstates_write_restart(trim(filename), sys%m, sys%st, &
            iter=i, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))
 
+      if(td%gs_projection) call zstates_project_gs(sys%st, sys%m, gsp)
+
       call td_write_data()
 
       ! now write down the rest
@@ -374,6 +379,14 @@ contains
        open(iunit, file='td.general/acceleration')
        call td_calc_tacc(t_acc, 0.0_r8, reduce = .true.)
        call td_write_acc(iunit, 0, 0.0_r8, t_acc, header=.true.)
+       call io_close(iunit)
+    endif
+
+    ! output harmonic spectrum
+    if(td%gs_projection) then
+       call io_assign(iunit)
+       open(iunit, file='td.general/gs_projection')
+       call td_write_gsp(iunit, 0, 0.0_r8, M_z1, header=.true.)
        call io_close(iunit)
     endif
 

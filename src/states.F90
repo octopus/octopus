@@ -65,7 +65,16 @@ integer, parameter :: UNPOLARIZED    = 1, &
                       SPIN_POLARIZED = 2, &
                       SPINORS        = 3
 
+interface assignment (=)
+  module procedure states_copy
+end interface
+
 contains
+
+subroutine states_null(st)
+  type(states_type) :: st
+  nullify(st%dpsi, st%zpsi, st%rho, st%rho_core, st%eigenval, st%occ, st%mag, st%kpoints, st%kweights)
+end subroutine states_null
 
 subroutine states_init(st, m, val_charge)
   type(states_type), intent(inout) :: st
@@ -77,6 +86,8 @@ subroutine states_init(st, m, val_charge)
   character(len=80) :: str
 
   sub_name = 'states_init'; call push_sub()
+
+  call states_null(st)
 
   call oct_parse_int(C_string('SpinComponents'), UNPOLARIZED, st%ispin)
   if (st%ispin < UNPOLARIZED .or. st%ispin > SPINORS) then
@@ -210,6 +221,63 @@ subroutine states_init(st, m, val_charge)
 
   call pop_sub()
 end subroutine states_init
+
+subroutine states_copy(stout, stin)
+  type(states_type), intent(in)   :: stin
+  type(states_type), intent(out)  :: stout
+
+  call states_null(stout)
+
+  stout%dim           = stin%dim
+  stout%nst           = stin%nst
+  stout%nik           = stin%nik
+  stout%ispin         = stin%ispin
+  stout%nspin         = stin%nspin
+  stout%spin_channels = stin%spin_channels
+  stout%qtot = stin%qtot
+  stout%el_temp = stin%el_temp
+  stout%ef = stin%ef
+  stout%st_start = stin%st_start
+  stout%st_end = stin%st_end
+  if(associated(stin%dpsi)) then
+    allocate(stout%dpsi(0:size(stin%dpsi, 1)-1, stin%dim, stin%st_start:stin%st_end, stin%nik))
+    stout%dpsi = stin%dpsi
+  endif
+  if(associated(stin%zpsi)) then
+    allocate(stout%zpsi(0:size(stin%zpsi, 1)-1, stin%dim, stin%st_start:stin%st_end, stin%nik))
+    stout%zpsi = stin%zpsi
+  endif
+  if(associated(stin%rho)) then
+    allocate(stout%rho(size(stin%rho, 1), size(stin%rho, 2)))
+    stout%rho = stin%rho
+  endif
+  if(associated(stin%rho_core)) then
+    allocate(stout%rho_core(size(stin%rho_core, 1)))
+    stout%rho_core = stin%rho_core
+  endif
+  if(associated(stin%eigenval)) then
+    allocate(stout%eigenval(stin%st_start:stin%st_end, stin%nik))
+    stout%eigenval = stin%eigenval
+  endif
+  stout%fixed_occ = stin%fixed_occ
+  if(associated(stin%occ)) then
+    allocate(stout%occ(size(stin%occ, 1), size(stin%occ, 2)))
+    stout%occ = stin%occ
+  endif
+  if(associated(stin%mag)) then
+    allocate(stout%mag(size(stin%mag, 1), size(stin%mag, 2), size(stin%mag, 3)))
+    stout%mag = stin%mag
+  endif
+  if(associated(stin%kpoints)) then
+    allocate(stout%kpoints(size(stin%kpoints, 1), size(stin%kpoints, 2)))
+    stout%kpoints = stin%kpoints
+  endif
+  if(associated(stin%kweights)) then
+    allocate(stout%kweights(size(stin%kweights, 1)))
+    stout%kweights = stin%kweights
+  endif
+
+end subroutine states_copy
 
 subroutine states_end(st)
   type(states_type), intent(inout) :: st
@@ -602,6 +670,26 @@ subroutine calc_current(m, st, j)
 
   call pop_sub()
 end subroutine calc_current
+
+subroutine zstates_project_gs(st, m, p)
+  type(states_type), intent(in) :: st
+  type(mesh_type), intent(in)   :: m
+  complex(r8), intent(out) :: p
+
+  type(states_type) :: stgs
+
+  sub_name = 'zstates_project_gs'; call push_sub()
+
+  stgs = st
+  if(.not.zstates_load_restart("tmp/restart.static", m, stgs)) then
+    message(1) = 'Error loading GS in zstates_project_gs'
+    call write_fatal(1)
+  endif
+  p = zstates_mpdotp(m, 1, stgs, st)
+
+  call states_end(stgs)
+  call pop_sub(); return
+end subroutine zstates_project_gs
 
 #include "states_kpoints.F90"
 

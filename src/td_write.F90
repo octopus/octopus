@@ -83,6 +83,14 @@
        call io_close(iunit)
     endif
 
+    ! output the ground-state component if desired
+    if(td%gs_projection .and. mpiv%node==0) then
+       call io_assign(iunit)
+       open(iunit, position='append', file="td.general/gs_projection")
+       call td_write_gsp(iunit, i, i*td%dt, gsp, header=.false.)
+       call io_close(iunit)
+    endif
+
 #ifndef DISABLE_PES
     call PES_output(td%PESv, sys%m, sys%st, i, sys%outp%iter, td%dt)
 #endif
@@ -155,6 +163,26 @@
     !write(iunit,'(i8,4es20.12)') iter, t/units_out%time%factor, acc/units_out%velocity%factor
 
   end subroutine td_write_acc
+
+  subroutine td_write_gsp(iunit, iter, t, p, header)
+    integer, intent(in)  :: iunit, iter
+    real(r8), intent(in) :: t 
+    complex(r8), intent(in) :: p
+    logical, intent(in)  :: header
+
+    ! first line: column names
+    if(header) then
+      ! first line -> column names
+      write(iunit, '(a8,2a20)') '# Iter  ', str_center('t', 20), str_center('<Phi_gs|Phi(t)>', 20)
+
+      ! second line -> units
+      write(iunit, '(a8,a20)') '#       ',                            &
+           str_center('['//trim(units_out%time%abbrev)//']', 20)
+    endif
+
+    write(iunit,'(i8,3es20.12)') iter, t/units_out%time%factor, p
+
+  end subroutine td_write_gsp
 
   subroutine td_write_nbo(iunit, iter, t, ke, pe, x, v, f, header)
     integer, intent(in)  :: iunit, iter
@@ -253,6 +281,7 @@
         write(iunit, '(a20)', advance='no') &
              str_center('['//trim(units_out%length%abbrev)//']', 20)
       end do
+
       do is = 1, sys%st%nspin
         do l = 0, td%lmax
           do m = -l, l
@@ -266,19 +295,16 @@
               write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
               write(iunit, '(a20)', advance='no') str_center('['//trim(aux)//']', 20)
             end select
-            add_lm = add_lm + 1
           end do
         end do
       end do
       write(iunit, '(1x)', advance='yes')
-      
     end if
     
     write(iunit, '(i8, es20.12)', advance='no') iter, t/units_out%time%factor
     do is = 1, sys%st%nspin
       write(iunit, '(es20.12)', advance='no') dipole(is)/units_out%length%factor
     end do
-    
     do is = 1, sys%st%nspin
       add_lm = 1
       do l = 0, td%lmax

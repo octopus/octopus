@@ -459,3 +459,125 @@ contains
 
   end subroutine elf
 end subroutine R_FUNC(states_output)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Returns the dot product of two many-body states st1 and st2, for a given
+! irreducible subspace (k-point) ik.
+! Warning: it does not do any check on the "conformance" of the two states.
+!  (maybe a subroutine should be written for that purpose...)
+! Warning: it disregards completely the occupation number problem.
+!  This is not important, unless the occupations are different in the
+!  two states (this is not the case for the moment), or if any of the
+!  occupation is null (this can be problem, and will have to be cared about.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+R_TYPE function R_FUNC(states_mpdotp)(m, ik, st1, st2) result(dotp)
+  implicit none
+  type(mesh_type), intent(in) :: m
+  integer, intent(in) :: ik
+  type(states_type), intent(in) :: st1, st2
+
+  R_TYPE, allocatable :: a(:, :)
+  R_TYPE :: det
+
+  sub_name = 'states_mpdotp'; call push_sub()
+
+  allocate(a(st1%nst, st1%nst))
+
+  call R_FUNC(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
+  dotp = R_FUNC(det)(a, st1%nst)
+
+  select case(st1%ispin)
+   case(UNPOLARIZED)
+     dotp = dotp**2
+   case(SPIN_POLARIZED)
+     ! We assume that ik is an odd number (maybe this should be checked. So one
+     ! spin component is ik and another spin component is ik + 1.
+     call R_FUNC(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
+     dotp = dotp*R_FUNC(det)(a, st1%nst)
+  end select
+
+  deallocate(a)
+  call pop_sub(); return
+  contains
+
+    subroutine R_FUNC(calculate_matrix)(m, ik, st1, st2, n, a)
+      implicit none
+      type(mesh_type), intent(in) :: m
+      integer, intent(in) :: ik
+      type(states_type), intent(in) :: st1, st2
+      integer, intent(in) :: n
+      R_TYPE :: a(n, n)
+
+      R_TYPE, allocatable :: phi2(:, :)
+      integer :: i, j, k, l, r, sn, sn1, ierr, dim
+#if defined(HAVE_MPI) && defined(MPI_TD)
+      integer :: status(MPI_STATUS_SIZE)
+      integer :: request, node(st1%nst)
+#endif
+
+      dim = st1%dim
+#if defined(HAVE_MPI) && defined(MPI_TD)
+
+      ! This code just builds an integer array, node, that assigns to each
+      ! state the process that holds it. If such a thing is ever needed for any other
+      ! purpose, maybe it should go to other place, more general (such as "st%node")
+      sn  = st1%nst/mpiv%numprocs
+      sn1 = sn + 1
+      r  = mod(st1%nst, mpiv%numprocs)
+      do j = 1, r
+         node((j-1)*sn1+1:j*sn1) = j - 1
+      enddo
+      k = sn1*r
+      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+      do j = 1, mpiv%numprocs - r
+         node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
+      enddo
+
+      ! Each process sends the states in st2 to the rest of the processes.
+      do i = st1%st_start, st1%st_end
+         do j = 0, mpiv%numprocs-1
+            if(mpiv%node.ne.j) then
+               call MPI_ISEND(st2%R_FUNC(psi)(0, 1, i, ik), st1%dim*(m%np+1), MPI_DOUBLE_COMPLEX, &
+                              j, i, MPI_COMM_WORLD, request, ierr)
+            endif
+         enddo
+      enddo
+
+      ! Processes are received, and then the matrix elements are calculated.
+      allocate(phi2(0:m%np, st1%dim))
+      do j = 1, n
+         l = node(j)
+         if(l.ne.mpiv%node) then
+            call MPI_RECV(phi2(0, 1), st1%dim*(m%np+1), MPI_DOUBLE_COMPLEX, &
+                          l, j, MPI_COMM_WORLD, status, ierr)
+         else
+            phi2(:, :) = st2%R_FUNC(psi)(:, :, j, ik)
+         endif
+         do i = st1%st_start, st1%st_end
+            a(i, j) = R_FUNC(states_dotp)(m, dim, st1%R_FUNC(psi)(1:, :, i, ik), &
+                                                phi2(1:, :))
+         enddo
+      enddo
+      deallocate(phi2)
+
+      ! Each process holds some lines of the matrix. So it is broadcasted (All processes
+      ! should get the whole matrix)
+      call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+      do i = 1, n
+         k = node(i)
+         do j = 1, n
+            call MPI_BCAST(a(i, j), 1, MPI_DOUBLE_COMPLEX, k, MPI_COMM_WORLD, ierr)
+         enddo
+      enddo
+#else
+      do i = 1, n
+         do j = 1, n
+            a(i, j) = R_FUNC(states_dotp)(m, dim, st1%R_FUNC(psi)(1:, :, i, ik), &
+                                                  st2%R_FUNC(psi)(1:, :, j, ik))
+         enddo
+      enddo
+#endif
+    end subroutine R_FUNC(calculate_matrix)
+
+end function R_FUNC(states_mpdotp)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
