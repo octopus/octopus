@@ -6,4 +6,4 @@ all: $(OBJ)
 	$(AR) cr $(LIB_DIR)/liboct.a $(OBJ)
 
 clean:
-	rm -f *.~ *.o
+	rm -f *~ *.o
