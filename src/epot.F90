@@ -117,7 +117,7 @@ contains
     if(ep%vpsl_space == RECIPROCAL_SPACE) then
       do i = 1, sys%nspecies
         call dcf_free(ep%local_cf(i))
-        if(sys%nlcc) call dcf_free(ep%rhocore_cf(i))
+        if(sys%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
       end do
       deallocate(ep%local_cf)
       if(sys%nlcc) deallocate(ep%rhocore_cf)
@@ -148,9 +148,10 @@ contains
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
     
-    call push_sub('specie_local_fourier_init')
+    call push_sub('epot_local_fourier_init')
 
     allocate(ep%local_cf(sys%nspecies))
+    if(sys%nlcc) allocate(ep%rhocore_cf(sys%nspecies))
 
     specie: do i = 1, sys%nspecies
       s  => sys%specie(i)
@@ -162,16 +163,12 @@ contains
         call dcf_fft_init(cf)   ! and initialize the ffts
         db = cf%n               ! dimensions of the box may have been optimized, so get them
         c(:) = db(:)/2 + 1      ! get center of double box
-        
-        if(sys%nlcc) then                      ! if we have non-linear core corrections
-          call dcf_new(db, ep%rhocore_cf(i))
-          call dcf_fft_init(ep%rhocore_cf(i))
-        end if
       else
         call dcf_new_from(cf, ep%local_cf(1))   ! we can just copy from the first one
-        if(sys%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%rhocore_cf(1))
       end if
       
+      if(s%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
+
       periodic: if (conf%periodic_dim==0) then
         call dcf_alloc_RS(cf)                  ! allocate the cube in real space
         
@@ -223,7 +220,7 @@ contains
       end if periodic
     
       ! now we built the non-local core corrections in momentum space
-      nlcc: if(sys%nlcc) then
+      nlcc: if(s%nlcc) then
         call dcf_alloc_RS(ep%rhocore_cf(i))
         
         do ix = 1, db(1)
@@ -234,7 +231,7 @@ contains
               ixx(3) = iz - c(3)
               
               x(:) = m%h(:)*ixx(:)
-              if(sys%nlcc) ep%rhocore_cf(i)%RS(ix, iy, iz) = specie_get_nlcc(s, x)
+              ep%rhocore_cf(i)%RS(ix, iy, iz) = specie_get_nlcc(s, x)
             end do
           end do
         end do
@@ -273,7 +270,7 @@ contains
       cf_loc%FS = M_z0
 
       if(sys%nlcc) then
-        call dcf_new_from(cf_nlcc, ep%rhocore_cf(1)) ! at least one specie must exist
+        call dcf_new_from(cf_nlcc, ep%local_cf(1)) ! at least one specie must exist
         call dcf_alloc_FS(cf_nlcc)
         cf_nlcc%FS = M_z0
       end if
