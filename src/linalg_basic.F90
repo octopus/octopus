@@ -107,28 +107,28 @@ module lib_basic_alg
     module procedure dot_2
     module procedure dot_3
     module procedure dot_4
-  end interface lalg_dot
+  end interface
 
   interface lalg_nrm2
     module procedure nrm2_1
     module procedure nrm2_2
     module procedure nrm2_3
     module procedure nrm2_4
-  end interface lalg_nrm2
+  end interface
 
   interface lalg_gemm
     module procedure gemm_1
     module procedure gemm_2
     module procedure gemm_3
     module procedure gemm_4
-  end interface lalg_gemm
+  end interface
 
   interface lalg_gemv
     module procedure gemv_1
     module procedure gemv_2
     module procedure gemv_3
     module procedure gemv_4
-  end interface lalg_gemv
+  end interface
 
 contains
 

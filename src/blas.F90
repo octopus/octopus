@@ -49,7 +49,7 @@ module blas
       integer,    intent(in)    :: n, incx, incy
       complex(8), intent(inout) :: dx, dy ! dx(n), dy(n)
     end subroutine zswap
-  end interface blas_swap
+  end interface
 
   ! ----------------- scal ------------------
   interface blas_scal
@@ -76,7 +76,7 @@ module blas
       complex(8), intent(in)    :: da
       complex(8), intent(inout) :: dx ! dx(n)
     end subroutine zscal
-  end interface blas_scal
+  end interface
 
   ! ----------------- axpy ------------------
   interface blas_axpy
@@ -103,7 +103,7 @@ module blas
       complex(8), intent(in)    :: da, dx ! dx(n)
       complex(8), intent(inout) :: dy     ! dy(n)
     end subroutine zaxpy
-  end interface blas_axpy
+  end interface
 
   ! ----------------- copy ------------------
   interface blas_copy
@@ -130,7 +130,7 @@ module blas
       complex(8), intent(in)  :: dx ! dx(n)
       complex(8), intent(out) :: dy ! dy(n)
     end subroutine zcopy
-  end interface blas_copy
+  end interface
 
   ! ----------------- dot  ------------------
   interface blas_dot
@@ -153,7 +153,7 @@ module blas
       integer,    intent(in) :: n, incx, incy
       complex(8), intent(in) :: dx, dy ! dx(n), dy(n)
     end function zdotc
-  end interface blas_dot
+  end interface
 
   ! ----------------- nrm2 ------------------
   interface blas_nrm2
@@ -176,7 +176,7 @@ module blas
       integer,    intent(in) :: n, incx
       complex(8), intent(in) :: dx ! dx(n)
     end function dznrm2
-  end interface blas_nrm2
+  end interface
 
   ! ------------------------------------------------------------------
   ! BLAS level II
@@ -219,7 +219,7 @@ module blas
       complex(8),   intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
       complex(8),   intent(inout) :: c ! c(ldc,n) 
     end subroutine zgemm
-  end interface blas_gemm
+  end interface
 
   ! ----------------- gemv ------------------
   interface blas_gemv
@@ -258,6 +258,6 @@ module blas
       complex(8),   intent(in)    :: x ! x(:)
       complex(8),   intent(inout) :: y ! y(:)
     end subroutine zgemv
-  end interface blas_gemv
+  end interface
 
 end module blas
