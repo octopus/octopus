@@ -56,7 +56,7 @@ contains
   subroutine lanczos_expansion
     integer ::  korder, is, n, nn, i, info, order
     complex(r8), allocatable :: hm(:, :), v(:, :, :), w(:, :), f(:, :), hh(:), expo(:, :)
-    real(r8) :: alpha, beta, beta0, res, tol
+    real(r8) :: alpha, beta, res, tol
 
     sub_name = 'td_lanczos'; call push_sub()
 
@@ -70,22 +70,26 @@ contains
              expo(korder, korder),      &
              hh(korder))
 
-    beta   = zstates_nrm2(sys%m, sys%st%dim, zpsi(1:, :))
-    beta0 = beta
-    v(:, :, 1) = zpsi(:, :)/beta
-    call zscal(2*sys%m%np, R_TOTYPE(1/beta), v, 1)
-    call zhpsi(h, sys, ik, zpsi(:, :), w(:, :), t)
-    alpha = zstates_dotp(sys%m, sys%st%dim, v(1:, :, 1), w(:, :))
-    f(:, :) = w(:, :) - alpha*v(1:, :, 1)
+    ! Lanczos Procedure.
+
+    ! Normalize input vector, and put it into v(:, :, 1)
+    call zcopy(sys%m%np*sys%st%dim+2, zpsi(:, :), 1, v(:, :, 1), 1)
+    beta   = zstates_nrm2(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1))
+    call zscal(sys%m%np*sys%st%dim+2, cmplx(1/beta, 0.0_r8, r8), v(:, :, 1), 1)
+    ! Operate on v(:, :, 1) and place it onto w.
+    call zhpsi(h, sys, ik, v(:, :, 1), w(:, :), t)
+    alpha = zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1), w(:, :))
+    f(:, :) = w(:, :) - alpha*v(1:sys%m%np, 1:sys%st%dim, 1)
     hm(1, 1) = alpha
     do n = 1, korder - 1
        beta = zstates_nrm2(sys%m, sys%st%dim, f)
-       v(1:, :, n + 1) = f(:, :)/beta
-       call zstates_gram_schmidt(n+1, sys%m, sys%st%dim, v)
+       v(1:sys%m%np, 1:sys%st%dim, n + 1) = f(:, :)/beta
+       ! Check orthogonality
+       !call zstates_gram_schmidt(n+1, sys%m, sys%st%dim, v, start = n)
        hm(n+1, n) = beta
        call zhpsi(h, sys, ik, v(:, :, n+1), w(:, :), t)
        do nn = 1, n + 1
-          hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:, :, nn), w(:, :))
+          hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, nn), w(:, :))
        enddo
        do is = 1, sys%st%dim
           do i = 1, sys%m%np
@@ -107,7 +111,8 @@ contains
     endif
 
     hh(1:order) = expo(1, 1:order) * &
-                  zstates_dotp(sys%m, sys%st%dim, v(1:, :, 1), zpsi(1:, :))
+                  zstates_dotp(sys%m, sys%st%dim, v(1:sys%m%np, 1:sys%st%dim, 1), &
+                                                  zpsi(1:sys%m%np, 1:sys%st%dim))
     do is = 1, sys%st%dim
        do i = 1, sys%m%np
           zpsi(i, is) = sum(v(i, is, 1:order)*hh(1:order))

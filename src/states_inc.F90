@@ -54,16 +54,20 @@ R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
   integer, intent(in) :: dim
   R_TYPE, intent(IN) :: f1(1:m%np, dim), f2(1:m%np, dim)
   R_TYPE :: R_FUNC(states_ddot)
+  R_TYPE, external :: R_DOT
 
-  dotp = sum(R_CONJ(f1)*f2)*m%vol_pp
+  !dotp = sum(R_CONJ(f1)*f2)*m%vol_pp
+  dotp = R_DOT(m%np*dim, f1, 1, f2, 1)*m%vol_pp
 end function R_FUNC(states_dotp)
 
 real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: dim
   R_TYPE, intent(IN) :: f(1:m%np, dim)
+  R_TYPE, external :: R_NRM2
 
   nrm2 = sqrt(sum(R_CONJ(f)*f)*m%vol_pp)
+  !nrm2 = R_NRM2(m%np*dim, f, 1)*m%vol_pp
 end function R_FUNC(states_nrm2)
 
 ! TODO use netcdf
