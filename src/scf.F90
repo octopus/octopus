@@ -168,7 +168,8 @@ subroutine scf_run(scf, sys, h)
   ! output final information
   call scf_write_static("static", "info")
   call R_FUNC(states_output) (sys%st, sys%m, "static", sys%outp)
-  if(sys%outp%what(output_geometry)) call system_write_xyz("static", "geometry", sys)
+  if(sys%outp%what(output_geometry)) &
+     call atom_write_xyz("static", "geometry", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
   call hamiltonian_output(h, sys%m, "static", sys%outp)
 
   if (conf%periodic_dim>0.and.sys%st%nik>sys%st%nspin) then

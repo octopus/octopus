@@ -41,7 +41,8 @@
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
     call zstates_output(sys%st, sys%m, filename, sys%outp)
-    if(sys%outp%what(output_geometry)) call system_write_xyz(filename, "geometry", sys)
+    if(sys%outp%what(output_geometry)) &
+         call atom_write_xyz(filename, "geometry", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
     call hamiltonian_output(h, sys%m, filename, sys%outp)
     
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)

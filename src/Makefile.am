@@ -1,6 +1,6 @@
 bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
 	excitations broad phonon-spectrum xyzanim \
-	choose_st make_st
+	choose_st make_st oct-centergeom
 
 EXTRA_PROGRAMS = octopus octopus-mpi \
 	zoctopus zoctopus-mpi
@@ -67,6 +67,8 @@ make_st_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       make_st.F90
 make_st_LDADD = $(octopus_LDADD)
+oct_centergeom_SOURCES = global.F90 io.F90 liboct_parser.F90 units.F90 atom.F90 centergeom.F90
+oct_centergeom_LDADD = $(octopus_LDADD)
 
 # cleaning
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h

@@ -27,6 +27,7 @@ use specie
 implicit none
 
 type atom_type
+  character(len=10) :: label
   type(specie_type), pointer :: spec ! pointer to specie
 
   real(r8) :: x(3), v(3), f(3) ! position/velocity/force of atom in real space
@@ -81,7 +82,10 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
     call io_assign(iunit)
     open(iunit, status='unknown', file=trim(label))
-    call loadPDB(iunit)
+    call loadPDB(iunit, natoms, a, ncatoms, ca)
+    do i = 1, natoms
+       a(i)%spec => s(get_specie(a(i)%label))
+    enddo
     call io_close(iunit)
 
   else
@@ -97,9 +101,9 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       nullify(ca); ncatoms = 0;
       
       do i = 1, natoms
-        read(iunit,*) label, a(i)%x(:)
+        read(iunit,*) a(i)%label, a(i)%x(:)
         a(i)%move = .true.
-        a(i)%spec => s(get_specie(label))
+        a(i)%spec => s(get_specie(a(i)%label))
       end do
 
       call io_close(iunit)
@@ -117,8 +121,8 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       allocate(a(natoms))
       nullify(ca); ncatoms = 0
       do i = 1, natoms
-        call oct_parse_block_string(str, i-1, 0, label)
-        a(i)%spec => s(get_specie(label))
+        call oct_parse_block_string(str, i-1, 0, a(i)%label)
+        a(i)%spec => s(get_specie(a(i)%label))
         call oct_parse_block_double (str, i-1, 1, a(i)%x(1))
         call oct_parse_block_double (str, i-1, 2, a(i)%x(2))
         call oct_parse_block_double (str, i-1, 3, a(i)%x(3))
@@ -138,9 +142,6 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
   do i = 1, ncatoms
     ca(i)%x = ca(i)%x * units_inp%length%factor
   end do
-  
-  call oct_parse_logical("AdjustCoordinates", .false., l)
-  if(l) call atom_adjust(natoms, a , ncatoms, ca)
 
   ! we now load the velocities, either from the temperature, from the input, or from a file
   if(oct_parse_isdef("RandomVelocityTemp").ne.0) then
@@ -209,59 +210,6 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
 
 contains
 
-  subroutine loadPDB(iunit)
-    integer, intent(in) :: iunit
-
-    character(len=80) :: record
-    character(len=6) :: record_name
-    character(len=4) :: atm
-    character(len=3) :: res
-    integer :: na, nca
-
-    ! First count number of atoms
-    rewind(iunit)
-    natoms = 0
-    ncatoms = 0
-    do
-      read(iunit, '(a80)', err=990, end=990) record
-      read(record, '(a6)') record_name
-      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
-        read(record, '(17x,a3)') res
-        if(trim(res) == 'QM') then
-          natoms = natoms + 1
-        else
-          ncatoms = ncatoms + 1
-        end if
-      end if      
-    end do
-990 continue
-
-    allocate(a(natoms), ca(ncatoms))
-
-    ! read in the data
-    rewind(iunit)
-    na = 1; nca = 1
-    do
-      read(iunit, '(a80)', err=991, end=991) record
-      read(record, '(a6)') record_name
-      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
-        read(record, '(12x,a4,1x,a3)') atm, res
-        call str_trim(atm)
-        if(trim(res) == 'QM') then
-          read(record, '(30x,3f8.3)') a(na)%x
-          a(na)%spec => s(get_specie(atm(1:1)))
-          na = na + 1
-        else
-          ca(nca)%label = atm
-          read(record, '(30x,3f8.3,6x,f6.2)') ca(nca)%x, ca(nca)%charge
-          nca = nca + 1
-        end if
-      end if      
-    end do
-991 continue
-
-  end subroutine loadPDB
-
   integer function get_specie(label)
     character(len=*) :: label
 
@@ -285,6 +233,63 @@ contains
   end function get_specie
 
 end subroutine atom_init
+
+subroutine loadPDB(iunit, natoms, a, ncatoms, ca)
+  integer, intent(in) :: iunit
+  integer, intent(inout) :: natoms, ncatoms
+  type(atom_type), pointer :: a(:)
+  type(atom_classical_type), pointer :: ca(:)
+ 
+  character(len=80) :: record
+  character(len=6) :: record_name
+  character(len=4) :: atm
+  character(len=3) :: res
+  integer :: na, nca
+
+    ! First count number of atoms
+    rewind(iunit)
+    natoms = 0
+    ncatoms = 0
+    do
+      read(iunit, '(a80)', err=990, end=990) record
+      read(record, '(a6)') record_name
+      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
+        read(record, '(17x,a3)') res
+        if(trim(res) == 'QM') then
+          natoms = natoms + 1
+        else
+          ncatoms = ncatoms + 1
+        end if
+      end if      
+    end do
+990 continue
+
+  allocate(a(natoms), ca(ncatoms))
+
+  ! read in the data
+  rewind(iunit)
+  na = 1; nca = 1
+  do
+      read(iunit, '(a80)', err=991, end=991) record
+      read(record, '(a6)') record_name
+      if(trim(record_name) == 'ATOM' .or. trim(record_name) == 'HETATOM') then
+        read(record, '(12x,a4,1x,a3)') atm, res
+        call str_trim(atm)
+        if(trim(res) == 'QM') then
+          read(record, '(30x,3f8.3)') a(na)%x
+          !a(na)%spec => s(get_specie(atm(1:1)))
+          a(na)%label = atm(1:1)
+          na = na + 1
+        else
+          ca(nca)%label = atm
+          read(record, '(30x,3f8.3,6x,f6.2)') ca(nca)%x, ca(nca)%charge
+          nca = nca + 1
+        end if
+      end if      
+    end do
+991 continue
+
+end subroutine loadPDB
 
 subroutine atom_end(na, a, nca, ca)
   integer, intent(in) :: na, nca
@@ -625,5 +630,48 @@ subroutine cm_vel(natoms, atom, vel)
   enddo
   vel = vel/m
 end subroutine cm_vel
+
+subroutine atom_write_xyz(dir, fname, natoms, a, ncatoms, ca)
+  character(len=*), intent(in)  :: dir, fname
+  integer, intent(in) :: natoms, ncatoms
+  type(atom_type), pointer :: a(:)
+  type(atom_classical_type), pointer :: ca(:)
+
+  integer i, iunit
+  
+#ifdef HAVE_MPI
+  if(mpiv%node == 0) then
+#endif
+
+    call oct_mkdir(trim(dir))
+
+    call io_assign(iunit)
+    open(iunit, file=trim(dir)+"/"+trim(fname)+'.xyz', status='unknown')
+    write(iunit, '(i4)') natoms
+    write(iunit, '(1x)')
+    do i = 1, natoms
+      write(iunit, '(6x,a,2x,3f12.6)') a(i)%label, a(i)%x(:)/units_out%length%factor
+    end do
+    call io_close(iunit)
+    
+    if(ncatoms > 0) then
+      call io_assign(iunit)
+      open(iunit, file=trim(dir)+"/"+trim(fname)+'_classical.xyz', status='unknown')
+      write(iunit, '(i4)') ncatoms
+      write(iunit, '(1x)')
+      do i = 1, ncatoms
+        write(iunit, '(6x,a1,2x,3f12.6,a,f12.6)') &
+             ca(i)%label(1:1), ca(i)%x(:)/units_out%length%factor, &
+             " # ", ca(i)%charge
+      end do
+      call io_close(iunit)
+    end if
+
+#ifdef HAVE_MPI
+  end if
+#endif
+  
+  return
+end subroutine atom_write_xyz
 
 end module atom

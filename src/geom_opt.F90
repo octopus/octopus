@@ -83,7 +83,7 @@ contains
       sys%atom(i+1)%x(2) = x(3*i + 2)
       sys%atom(i+1)%x(3) = x(3*i + 3)
     end do
-    call system_write_xyz(".", "min", sys)
+    call atom_write_xyz(".", "min", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
     
     deallocate(x)
     
@@ -124,7 +124,7 @@ contains
         sys%atom(i+1)%x(2) = x(3*i + 2)
         sys%atom(i+1)%x(3) = x(3*i + 3)
       end do
-      call system_write_xyz(".", "work-min", sys)
+      call atom_write_xyz(".", "work-min", sys%natoms, sys%atom, sys%ncatoms, sys%catom)
 
       call generate_external_pot(h, sys)
       call R_FUNC(calcdens) (sys%st, sys%m%np, sys%st%rho)
