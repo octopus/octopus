@@ -69,8 +69,23 @@ R_TYPE function R_FUNC(mesh_dotp)(m, f1, f2) result(dotp)
   dotp = R_DOT(m%np, f1(1), 1,  f2(1), 1)*m%vol_pp
 end function R_FUNC(mesh_dotp)
 
-! this functions returns the norm of a vector
-! it uses BLAS
+complex(r8) function R_FUNC(mesh_dotpq)(m, f1, f2) result(dotpq)
+  type(mesh_type), intent(IN) :: m
+  complex(r8), intent(IN), dimension(*) :: f1, f2
+  complex(r8), external :: zdotc
+
+#ifdef R_TREAL
+  complex(r8) :: z
+  ! Wish I had commented this?
+  z = zdotc(m%R_FUNC(npw), f1(1), 1, f2(1), 1)
+  dotpq = z + conjg(z) - zdotc(m%fft_n(2)*m%fft_n(3), f1(1), m%hfft_n, f2(1), m%hfft_n)
+  dotpq = dotpq*m%vol_ppw
+#else
+  dotpq = zdotc(m%R_FUNC(npw), f1(1), 1,  f2(1), 1)*m%vol_ppw
+#endif
+
+end function R_FUNC(mesh_dotpq)
+
 real(r8) function R_FUNC(mesh_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(1:m%np)
@@ -79,16 +94,102 @@ real(r8) function R_FUNC(mesh_nrm2)(m, f) result(nrm2)
   nrm2 = R_NRM2(m%np, f, 1)*sqrt(m%vol_pp)
 end function R_FUNC(mesh_nrm2)
 
+real(r8) function R_FUNC(mesh_nrm2q)(m, f) result(nrm2)
+  type(mesh_type), intent(IN) :: m
+  complex(r8), intent(IN), dimension(*) :: f
+  real(r8), external :: dznrm2
+
+#ifdef R_TREAL
+  nrm2 = sqrt(R_FUNC(mesh_dotpq)(m, f, f))
+#else
+  nrm2 = dznrm2(m%R_FUNC(npw), f, 1)*sqrt(m%vol_ppw)
+#endif
+end function R_FUNC(mesh_nrm2q)
+
 ! integrates a function on the mesh (could not find BLAS routine to do it ;))
 function R_FUNC(mesh_integrate) (m, f)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(1:m%np)
-
   R_TYPE :: R_FUNC(mesh_integrate)
-
   R_FUNC(mesh_integrate) = sum(f(1:m%np))*m%vol_pp
-
 end function R_FUNC(mesh_integrate)
+
+function R_FUNC(mesh_integrateq) (m, f)
+  type(mesh_type), intent(IN) :: m
+  complex(r8), intent(IN), dimension(*) :: f
+  R_TYPE :: R_FUNC(mesh_integrateq)
+  R_FUNC(mesh_integrateq) = f(1)*m%vol_pp
+end function R_FUNC(mesh_integrateq)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Outputs in g the FS representation of a function represented in the real-
+! space mesh, f. So this function has to be taken first from the "mesh" to the
+! "cube" (parallelpiped-type mesh), and then FFTed to Fourier space.
+!
+! The dimensions of g are different wether f is real or complex, because the
+! FFT representation is different (FFTW scheme).
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(mesh_rs2fs)(m, f, g)
+  type(mesh_type), intent(in)  :: m
+  R_TYPE, intent(in), dimension(*)       :: f
+  complex(r8), intent(out), dimension(*) :: g
+
+  R_TYPE, allocatable :: fr(:, :, :)
+
+  sub_name = 'mesh_rs2fs'; call push_sub()
+
+  allocate(fr(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
+  fr = R_TOTYPE(M_ZERO)
+  call R_FUNC(mesh_to_cube) (m, f, fr)
+#ifdef R_TREAL
+  call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, g)
+#else
+  call fftwnd_f77_one(m%zplanf, fr, g)
+#endif
+
+  deallocate(fr)
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_rs2fs)
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! The opposite of mesh_rs2fs.
+! NB: If FFTOptimize = .true., these subroutines are not the exact inverse of
+!     each other!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(mesh_fs2rs)(m, g, f, factor)
+  type(mesh_type), intent(in)  :: m
+  complex(r8), intent(inout), dimension(*) :: g
+  R_TYPE, intent(out), dimension(*)     :: f
+  R_TYPE, intent(in), optional :: factor
+
+  R_TYPE, allocatable :: fr(:, :, :)
+  R_TYPE :: fac
+
+  complex(r8), allocatable :: g_aux(:)
+  allocate(g_aux(m%R_FUNC(npw)))
+  g_aux(1:m%R_FUNC(npw)) = g(1:m%R_FUNC(npw))
+  sub_name = 'mesh_fs2rs'; call push_sub()
+
+  fac = M_z1
+  if(present(factor)) fac = factor
+  allocate(fr(m%fft_n(1), m%fft_n(2), m%fft_n(3)))   
+#ifdef R_TREAL
+  call rfftwnd_f77_one_complex_to_real(m%dplanb, g, fr)
+#else
+  call fftwnd_f77_one(m%zplanb, g, fr)
+#endif
+
+  call R_FUNC(scal)(m%fft_n(1)*m%fft_n(2)*m%fft_n(3), &
+              fac/(m%fft_n(1)*m%fft_n(2)*m%fft_n(3)), fr, 1)
+  f(1:m%np) = R_TOTYPE(M_ZERO)
+  call R_FUNC(cube_to_mesh) (m, fr, f)
+
+  deallocate(fr)
+  g(1:m%R_FUNC(npw)) = g_aux(1:m%R_FUNC(npw))
+  deallocate(g_aux)
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_fs2rs)
 
 ! calculates the laplacian and the gradient of a function on the mesh
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
@@ -123,7 +224,6 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
 contains
 
   subroutine fft_derivative()
-    R_TYPE, allocatable :: fr(:,:,:)
     complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
     
     integer :: n(3), nx, i, j
@@ -134,56 +234,21 @@ contains
 #else
     nx = n(1)
 #endif
-    
-    allocate(fr(n(1), n(2), n(3)), fw1(nx, n(2), n(3)))
-    fr = 0.0_r8; fw1 = R_TOTYPE(0._r8)
-    call R_FUNC(mesh_to_cube) (m, f(1:), fr)
-    
-#ifdef R_TREAL
-    call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, fw1)
-#else
-    call fftwnd_f77_one(m%zplanf, fr, fw1)
-#endif
 
-! I am not sure that implementation of the gradient is correct;
-! should be checked.
+    allocate(fw1(nx, n(2), n(3)), fw2(nx, n(2), n(3)))
+    call R_FUNC(mesh_rs2fs)(m, f(1:), fw1)
     if(present(grad)) then
-      allocate(fw2(nx, n(2), n(3)))
-      
       do i = 1, 3
         call mesh_gradient_in_FS(m, nx, n, fw1, fw2, i)
-#ifdef R_TREAL
-        call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
-#else
-        call fftwnd_f77_one(m%zplanb, fw2, fr)
-#endif
-
-        call R_FUNC(scal)(n(1)*n(2)*n(3), alp/(n(1)*n(2)*n(3)), fr, 1)
-        grad(i, :) = R_TOTYPE(0._r8)
-        call R_FUNC(cube_to_mesh) (m, fr, grad(i, :))
+        call R_FUNC(mesh_fs2rs)(m, fw2, grad(i, :), factor = alp)
       end do
-      
-      deallocate(fw2)
     end if
-    
     if(present(lapl)) then
-      allocate(fw2(nx, n(2), n(3)))
-      
       call mesh_laplacian_in_FS(m, nx, n, fw1, fw2)
-#ifdef R_TREAL
-      call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
-#else
-      call fftwnd_f77_one(m%zplanb, fw2, fr)
-#endif
-      
-      call R_FUNC(scal)(n(1)*n(2)*n(3), alp/(n(1)*n(2)*n(3)), fr, 1)
-      lapl = R_TOTYPE(0._r8)
-      call R_FUNC(cube_to_mesh) (m, fr, lapl)
-      
-      deallocate(fw2)
+      call R_FUNC(mesh_fs2rs)(m, fw2, lapl, factor = alp)
     end if
     
-    deallocate(fr, fw1)
+    deallocate(fw1, fw2)
     return
   end subroutine fft_derivative
   

@@ -55,6 +55,9 @@ type mesh_type
   
   integer  :: np        ! number of points in inner mesh
   real(r8) :: vol_pp    ! element of volume for integrations
+
+  integer  :: dnpw, znpw  ! number of plane waves for Fourier space representation.
+  real(r8) :: vol_ppw     ! The volume in reciprocal space
   
   ! return x, y and z for each point
   integer, pointer :: Lxyz(:,:)
@@ -110,6 +113,9 @@ subroutine mesh_init(m, natoms, atom)
   end do
   m%hfft_n = m%fft_n(1)/2 + 1
   m%dplanf = int(-1, POINTER_SIZE)
+  m%dnpw = m%hfft_n*m%fft_n(2)*m%fft_n(3)
+  m%znpw = m%fft_n(1)*m%fft_n(2)*m%fft_n(3)
+  m%vol_ppw = m%vol_pp/m%znpw
 
   call oct_parse_double(C_string('DoubleFFTParameter'), 2.0_r8, m%fft_alpha)
   if (m%fft_alpha < 1.0_r8 .or. m%fft_alpha > 3.0_r8 ) then
@@ -144,9 +150,9 @@ subroutine mesh_init(m, natoms, atom)
   if(m%d%space == REAL_SPACE) then 
     message(1) = 'Info: Derivatives calculated in real-space'
   else
-    call mesh_alloc_ffts(m, 1)
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
   end if
+  call mesh_alloc_ffts(m, 1)
   call write_info(1)
 
   call pop_sub()
@@ -371,7 +377,7 @@ subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
 
   real(r8) :: temp(3), g2
   integer :: k(3), ix, iy, iz
-  
+
   temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
 
   do iz = 1, n(3)
