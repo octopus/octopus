@@ -51,6 +51,9 @@ unformatted      = 1 # RestartFileFormat
 formatted        = 2
 plain            = 1
 netcdf           = 2
+stencil_star     = 1 # DerivativesStencil
+stencil_var      = 2
+stencil_cube     = 3
 
 #  symbols for oct-center-geom
 inertia          = 1  
