@@ -100,7 +100,7 @@ subroutine ps_load(ps, z, zval, pot)
 
   integer :: npotd, npotu, nr
   real(r8) :: b, a
-  real(r8), pointer :: rofi(:), vps(:,:)
+  real(r8), pointer :: rofi(:), vps(:)
   integer :: nrval
 
   nr = 1001;
@@ -110,19 +110,19 @@ subroutine ps_load(ps, z, zval, pot)
 
   ps%icore = 'nc'
 
-  allocate(rofi(nrval), vps(nrval,0:0))
+  allocate(rofi(nrval), vps(nrval))
 
   do ir = 1, nrval
      rofi(ir) = b*( exp( a*(ir-1) ) - 1 )
-     vps(ir, 0) = oct_parse_potential(0.0_r8, 0.0_r8, 0.0_r8, rofi(ir), pot)
+     vps(ir) = oct_parse_potential(0.0_r8, 0.0_r8, 0.0_r8, rofi(ir), pot)
   enddo
 
   allocate(hato(nrval), derhato(nrval))
 
   hato = 0.0_r8
-  hato(1:nrval) = vps(1:nrval,0)*rofi(1:nrval)  + zval
+  hato(1:nrval) = vps(1:nrval)*rofi(1:nrval)  + zval
   call spline_fit(nrval, rofi, hato, ps%vlocal)
-  ps%vlocal_origin = vps(1, 0)
+  ps%vlocal_origin = vps(1)
 
   call derivate_in_log_grid(a, b, nrval, hato, derhato)
   call spline_fit(nrval, rofi, derhato, ps%dvlocal)

@@ -60,79 +60,89 @@
     ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
     ! Maybe we are forgetting something....
-    x = 0.0_r8
+    x = M_ZERO
     call zforces(h, sys)
     do i = 1, sys%natoms
-       x = x - sys%atom(i)%f
+      x = x - sys%atom(i)%f
     enddo
     acc = x
-
+    
     ! Adds the laser contribution : i<[V_laser, p]>
     if(h%no_lasers > 0) then
       call laser_field(h%no_lasers, h%lasers, t, field)
       acc(1:3) = acc(1:3) - sys%st%qtot*field(1:3)
     end if
-
+    
     ! And now, i<[H,[V_nl,x]]>
     x = 0.0_r8
-    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim), &
-             hzpsi(sys%m%np, sys%st%dim), hhzpsi(3, sys%m%np) )
+    allocate(hzpsi(sys%m%np, sys%st%dim), hhzpsi(3, sys%m%np))
+
+#if defined(THREE_D)
+    allocate(xzpsi(0:sys%m%np, sys%st%dim, 3), vnl_xzpsi(sys%m%np, sys%st%dim))
+#endif
+
     do ik = 1, sys%st%nik
        do ist = sys%st%st_start, sys%st%st_end
+         
+         call zhpsi(h, sys%m, sys%st, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:))
+         call laser_field(h%no_lasers, h%lasers, t, field)
+         do k = 1, sys%m%np
+           call mesh_xyz(sys%m, k, mesh_x)
+           hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)
+         end do
+         
+#if defined(THREE_D)
+         xzpsi = M_z0
+         do k = 1, sys%m%np
+           do j = 1, conf%dim
+             xzpsi(k, 1:sys%st%dim, j) = sys%m%Lxyz(j, k)*sys%m%h(j) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
+           end do
+         enddo
 
-            call zhpsi(h, sys%m, sys%st, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:))
-            call laser_field(h%no_lasers, h%lasers, t, field)
-            do k = 1, sys%m%np
-              call mesh_xyz(sys%m, k, mesh_x)
-              hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)
-            end do
+         do j = 1, conf%dim
+           vnl_xzpsi = M_z0
+           call zvnlpsi(sys%m, sys%st, sys, &
+                xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+           do idim = 1, sys%st%dim
+             x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
+                  vnl_xzpsi(1:sys%m%np, idim) )
+           enddo
+         enddo
 
-            xzpsi = (0.0_r8, 0.0_r8)
-            do k = 1, sys%m%np
-               xzpsi(k, 1:sys%st%dim, 1) = sys%m%lx(k)*sys%m%h(1) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
-               xzpsi(k, 1:sys%st%dim, 2) = sys%m%ly(k)*sys%m%h(2) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
-               xzpsi(k, 1:sys%st%dim, 3) = sys%m%lz(k)*sys%m%h(3) * sys%st%zpsi(k, 1:sys%st%dim, ist, ik)
-            enddo
+         xzpsi = M_z0
+         do k = 1, sys%m%np
+           do j = 1, conf%dim
+             xzpsi(k, 1:sys%st%dim, j) = sys%m%lxyz(j, k)*sys%m%h(j) * hzpsi(k, 1:sys%st%dim)
+           end do
+         enddo
 
-            do j = 1, 3
-               vnl_xzpsi = (0.0_r8, 0.0_r8)
-               call zvnlpsi(sys%m, sys%st, sys, &
-                    xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
-               do idim = 1, sys%st%dim
-                  x(j) = x(j) - 2*sys%st%occ(ist, ik)*zmesh_dotp(sys%m, R_CONJ(hzpsi(1:sys%m%np, idim)), &
-                                                                   vnl_xzpsi(1:sys%m%np, idim) )
-               enddo
-            enddo
+         do j = 1, conf%dim
+           vnl_xzpsi = M_z0
+           call zvnlpsi(sys%m, sys%st, sys, &
+                xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
+           do idim = 1, sys%st%dim
+             x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
+                  zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
+                  vnl_xzpsi(1:sys%m%np, idim) )
+           end do
+         end do
+#endif
+         
+       end do
+     end do
+    deallocate(hzpsi, hhzpsi)
 
-            xzpsi = (0.0_r8, 0.0_r8)
-            do k = 1, sys%m%np
-               xzpsi(k, 1:sys%st%dim, 1) = sys%m%lx(k)*sys%m%h(1) * hzpsi(k, 1:sys%st%dim)
-               xzpsi(k, 1:sys%st%dim, 2) = sys%m%ly(k)*sys%m%h(2) * hzpsi(k, 1:sys%st%dim)
-               xzpsi(k, 1:sys%st%dim, 3) = sys%m%lz(k)*sys%m%h(3) * hzpsi(k, 1:sys%st%dim)
-            enddo
-
-            do j = 1, 3
-               vnl_xzpsi = (0.0_r8, 0.0_r8)
-               call zvnlpsi(sys%m, sys%st, sys, &
-                    xzpsi(0:sys%m%np, 1:sys%st%dim, j), vnl_xzpsi(1:sys%m%np, 1:sys%st%dim))
-               do idim = 1, sys%st%dim
-                  x(j) = x(j) + 2*sys%st%occ(ist, ik)* &
-                       zmesh_dotp(sys%m, R_CONJ(sys%st%zpsi(1:sys%m%np, idim, ist, ik)), &
-                       vnl_xzpsi(1:sys%m%np, idim) )
-               enddo
-            enddo
-
-        enddo
-    enddo
-    deallocate(xzpsi, hzpsi, hhzpsi, vnl_xzpsi)
+#if defined(THREE_D)
+    deallocate(xzpsi, vnl_xzpsi)
+#endif
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
     if(present(reduce)) then
-    if(reduce) then
-       call MPI_ALLREDUCE(x(1), y(1), 3, &
-                          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
-       x = y
-    end if
+      if(reduce) then
+        call MPI_ALLREDUCE(x(1), y(1), conf%dim, &
+             MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+        x = y
+      end if
     end if
 #endif
     acc = acc + x

@@ -26,7 +26,7 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_init_derivatives_coeff(m)
 
-  call mesh1D_create(m)
+  call mesh_create(m)
 
   m%fft_n(1) = 2*m%nr(1) + 2; m%fft_n(2) = 0; m%fft_n(3) = 0
   m%hfft_n = m%fft_n(1)/2 + 1
@@ -152,6 +152,3 @@ subroutine phase_factor(m, n, vec, inp, outp)
   end do
 
 end subroutine phase_factor
-
-#include "mesh1D_create.F90"
-

@@ -46,8 +46,8 @@ type td_type
   real(r8) :: dt            ! time step
   integer  :: move_ions     ! how do we move the ions?
 
-  real(r8) :: delta_strength ! strength of the delta excitation
-  real(r8) :: pol(3)         ! direction of the polarization of the efield
+  real(r8) :: delta_strength  ! strength of the delta excitation
+  real(r8), pointer :: pol(:) ! direction of the polarization of the efield
 
   integer :: lmax        ! maximum multipole moment to write
 
@@ -102,11 +102,11 @@ subroutine td_run(td, u_st, sys, h)
   allocate(dipole(sys%st%nspin, td%save_iter))
   allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
   if(td%move_ions > 0) then
-     allocate(x(td%save_iter, sys%natoms, 3), v(td%save_iter, sys%natoms, 3), &
-              f(td%save_iter, sys%natoms, 3))
+     allocate(x(td%save_iter, sys%natoms, conf%dim), v(td%save_iter, sys%natoms, conf%dim), &
+              f(td%save_iter, sys%natoms, conf%dim))
      allocate(ke(td%save_iter), pe(td%save_iter))
   endif
-  if(td%harmonic_spectrum) allocate(tacc(td%save_iter, 3))
+  if(td%harmonic_spectrum) allocate(tacc(td%save_iter, conf%dim))
 
   ! occupational analysis stuff
   if(td%occ_analysis) then
@@ -125,7 +125,7 @@ subroutine td_run(td, u_st, sys, h)
     sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
     select case(td%move_ions)
       case(NORMAL_VERLET)
-        allocate(x1(sys%natoms, 3), x2(sys%natoms, 3))
+        allocate(x1(sys%natoms, conf%dim), x2(sys%natoms, conf%dim))
         do j = 1, sys%natoms
            if(sys%atom(j)%move) then
              x1(j, :) = sys%atom(j)%x(:) - td%dt*sys%atom(j)%v(:) + &
@@ -136,7 +136,7 @@ subroutine td_run(td, u_st, sys, h)
            endif
         enddo
       case(VELOCITY_VERLET)
-        allocate(f1(sys%natoms, 3))
+        allocate(f1(sys%natoms, conf%dim))
     end select
   endif
 
@@ -207,14 +207,14 @@ subroutine td_run(td, u_st, sys, h)
 
       ! store data
       do j=1, sys%natoms
-        x(ii, j, 1:3) = sys%atom(j)%x(1:3)
-        v(ii, j, 1:3) = sys%atom(j)%v(1:3)
-        f(ii, j, 1:3) = sys%atom(j)%f(1:3)
+        x(ii, j, 1:conf%dim) = sys%atom(j)%x(1:conf%dim)
+        v(ii, j, 1:conf%dim) = sys%atom(j)%v(1:conf%dim)
+        f(ii, j, 1:conf%dim) = sys%atom(j)%f(1:conf%dim)
       end do
     end if
 
     ! If harmonic spectrum is desired, get the acceleration
-    if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:3), td%dt*i, reduce = .true.)
+    if(td%harmonic_spectrum) call td_calc_tacc(tacc(ii, 1:conf%dim), td%dt*i, reduce = .true.)
 
     ! measuring
     call states_calculate_multipoles(sys%m, sys%st, td%pol, td%lmax, &
@@ -280,7 +280,7 @@ contains
     type(mesh_type), intent(IN) :: m
 
     integer :: i, iunit
-    real(r8) :: x(3), t_acc(3)
+    real(r8) :: x(conf%dim), t_acc(conf%dim)
     complex(r8) :: c
     real(r8), allocatable :: dipole(:), multipole(:,:), pos(:,:), vel(:,:), for(:,:)
 
@@ -310,8 +310,8 @@ contains
     ! where M and Z are the ionic mass and charge, respectively.
     if(td%move_ions > 0) then
       do j = 1, sys%natoms
-          sys%atom(j)%v(1:3) = sys%atom(j)%v(1:3) - &
-            td%pol(1:3)*sys%atom(j)%spec%z_val*td%delta_strength / sys%atom(j)%spec%weight
+          sys%atom(j)%v(1:conf%dim) = sys%atom(j)%v(1:conf%dim) - &
+            td%pol(1:conf%dim)*sys%atom(j)%spec%z_val*td%delta_strength / sys%atom(j)%spec%weight
       enddo
     endif
 
@@ -349,11 +349,11 @@ contains
     if(td%move_ions > 0) then
        call io_assign(iunit)
        open(iunit, file='td.general/coordinates')
-       allocate(pos(sys%natoms, 3), vel(sys%natoms, 3), for(sys%natoms, 3))
+       allocate(pos(sys%natoms, conf%dim), vel(sys%natoms, conf%dim), for(sys%natoms, conf%dim))
        do j=1, sys%natoms
-          pos(j, 1:3) = sys%atom(j)%x(1:3)
-          vel(j, 1:3) = sys%atom(j)%v(1:3)
-          for(j, 1:3) = sys%atom(j)%f(1:3)
+          pos(j, 1:conf%dim) = sys%atom(j)%x(1:conf%dim)
+          vel(j, 1:conf%dim) = sys%atom(j)%v(1:conf%dim)
+          for(j, 1:conf%dim) = sys%atom(j)%f(1:conf%dim)
        enddo
        call td_write_nbo(iunit, 0, 0._r8, sys%kinetic_energy, h%etot, pos, vel, for, header = .true.)
        call io_close(iunit)
@@ -369,7 +369,7 @@ contains
        call io_close(iunit)
     endif
 
-    call push_sub(); return    
+    call pop_sub(); return    
   end subroutine td_run_zero_iter
 
   subroutine td_read_nbo() ! reads the pos and vel from coordinates file
@@ -394,15 +394,15 @@ contains
     read(iunit, '(88x)', advance='no') ! skip unrelevant information
 
     do i = 1, sys%natoms
-      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%x(1:3)
+      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%x(1:conf%dim)
       sys%atom(i)%x(:) = sys%atom(i)%x(:) * units_out%length%factor
     end do
     do i = 1, sys%natoms
-      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%v(1:3)
+      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%v(1:conf%dim)
       sys%atom(i)%v(:) = sys%atom(i)%v(:) * units_out%velocity%factor
     end do
     do i = 1, sys%natoms
-      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%f(1:3)
+      read(iunit, '(3es20.12)', advance='no') sys%atom(i)%f(1:conf%dim)
       sys%atom(i)%f(:) = sys%atom(i)%f(:) * units_out%force%factor
     end do
 

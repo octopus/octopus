@@ -15,50 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-! Conversion subroutines
-! they actually add, do not forget it
-subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube, t)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)    :: f_mesh(m%np)
-  R_TYPE, intent(inout) :: f_cube(:, :, :)
-  integer, intent(in), optional :: t
-  
-  integer :: i, ix, iy, iz, n(3)
-
-  n(1:3) = m%fft_n(1:3)/2 + 1
-  if(present(t)) then
-    if(t == 2) n(1:3) = m%fft_n2(1:3)/2 + 1
-  end if
- 
-  do i = 1, m%np
-    ix = m%lx(i) + n(1)
-    iy = m%Ly(i) + n(2)
-    iz = m%Lz(i) + n(3)
-    f_cube(ix, iy, iz) = f_cube(ix, iy, iz) + f_mesh(i)
-  end do
-end subroutine R_FUNC(mesh_to_cube)
-
-subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)    :: f_cube(:, :, :)
-  R_TYPE, intent(inout) :: f_mesh(m%np)
-  integer, intent(in), optional :: t
-
-  integer :: i, ix, iy, iz, n(3)
-
-  n(1:3) = m%fft_n(1:3)/2 + 1
-  if(present(t)) then
-    if(t == 2) n(1:3) = m%fft_n2(1:3)/2 + 1
-  end if
-
-  do i = 1, m%np
-    ix = m%lx(i) + n(1)
-    iy = m%Ly(i) + n(2)
-    iz = m%Lz(i) + n(3)
-    f_mesh(i) = f_mesh(i) + f_cube(ix, iy, iz) 
-  end do
-end subroutine R_FUNC(cube_to_mesh)
-
 ! calculates the laplacian and the gradient of a function on the mesh
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   type(mesh_type), intent(IN) :: m
@@ -170,7 +126,7 @@ contains
         grad(:, k) = m%d%dgidfj(0)*f(k)
       end if
 
-      ix = m%Lx(k); iy = m%Ly(k); iz = m%Lz(k)
+      ix = m%Lxyz(1, k); iy = m%Lxyz(2, k); iz = m%Lxyz(3, k)
       do in = 1, m%d%norder
         ind1(1) = m%Lxyz_inv(ix-in, iy, iz)
         ind1(2) = m%Lxyz_inv(ix, iy-in, iz)

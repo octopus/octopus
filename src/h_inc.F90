@@ -55,7 +55,9 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
 
   call R_FUNC(kinetic) (m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
+#if defined(THREE_D)
   call R_FUNC(vnlpsi)  (m, st, sys, psi, Hpsi)
+#endif
   if(present(t)) then
     call R_FUNC(vlasers)  (h, m, st, psi, Hpsi, t)
     call R_FUNC(vborders) (h, m, st, psi, Hpsi)
@@ -83,6 +85,7 @@ subroutine R_FUNC(kinetic) (m, st, psi, Hpsi)
   R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
 
   integer :: idim, i, np, dim
+  R_TYPE :: d
 
   sub_name = 'kinetic'; call push_sub()
   np = m%np
@@ -105,15 +108,16 @@ subroutine R_FUNC(kinetic) (m, st, psi, Hpsi)
     end do
     deallocate(grad)
 # else
+    d = R_TOTYPE(-1.0_r8/2.0_r8)
     do idim = 1, dim
-      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), &
-                                     alpha = R_TOTYPE(-1.0_r8/2.0_r8) )
+      call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), alpha=d )
     end do
 #endif
 
   call pop_sub(); return
 end subroutine R_FUNC(kinetic)
 
+#if defined(THREE_D)
 subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -167,6 +171,7 @@ subroutine R_FUNC(vnlpsi) (m, st, sys, psi, Hpsi)
 
   call pop_sub(); return
 end subroutine R_FUNC(vnlpsi)
+#endif
 
 subroutine R_FUNC(vlpsi) (h, m, st, ik, psi, Hpsi)
   type(hamiltonian_type), intent(in) :: h
@@ -274,28 +279,29 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
   type(system_type), intent(in), optional :: sys
 
   integer :: is
-  sub_name = 'hamiltonian_setup'; call push_sub()
 
   if(h%ip_app) return
 
+  sub_name = 'hamiltonian_setup'; call push_sub()
+
   call hartree_solve(h%hart, m, h%vhartree, st%rho(:, 1))
-  h%epot = - HALF*dmesh_dotp(m, st%rho(:, 1), h%vhartree)
+  h%epot = - M_HALF*dmesh_dotp(m, st%rho(:, 1), h%vhartree)
 
   call R_FUNC(xc_pot)(h%xc, m, st, h%hart, h%vxc, h%ex, h%ec)
   select case(h%ispin)
     case(UNPOLARIZED)
       h%epot = h%epot + dmesh_dotp(m, st%rho(:, 1), h%vxc(:, 1))
     case(SPIN_POLARIZED)
-      h%epot = h%epot + dmesh_dotp(m, HALF*(st%rho(:, 1)+st%rho(:, 2)), &
+      h%epot = h%epot + dmesh_dotp(m, M_HALF*(st%rho(:, 1)+st%rho(:, 2)), &
                                           h%vxc(:, 1)) +                            &
-                        dmesh_dotp(m, HALF*(st%rho(:, 1)-st%rho(:, 2)), &
+                        dmesh_dotp(m, M_HALF*(st%rho(:, 1)-st%rho(:, 2)), &
                                           h%vxc(:, 2))
     case(SPINORS)
-      h%epot = h%epot + dmesh_dotp(m, HALF*(st%rho(:, 1)+st%rho(:, 4)), &
+      h%epot = h%epot + dmesh_dotp(m, M_HALF*(st%rho(:, 1)+st%rho(:, 4)), &
                                           h%vxc(:, 1))
-      h%epot = h%epot + dmesh_dotp(m, HALF*(st%rho(:, 1)-st%rho(:, 4)), &
+      h%epot = h%epot + dmesh_dotp(m, M_HALF*(st%rho(:, 1)-st%rho(:, 4)), &
                                           h%vxc(:, 2))
-      h%epot = h%epot + TWO*zmesh_dotp(m, HALF*(st%rho(:, 2) + M_zI*st%rho(:, 3)), &
+      h%epot = h%epot + M_TWO*zmesh_dotp(m, M_HALF*(st%rho(:, 2) + M_zI*st%rho(:, 3)), &
                                                     h%vxc(:, 3) - M_zI*h%vxc(:, 4))
 
   end select

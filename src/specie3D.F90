@@ -1,0 +1,220 @@
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+!! 02111-1307, USA.
+
+subroutine specie_init_dim(nspecies, str, s)
+  integer, intent(in) :: nspecies
+  character(len=*), intent(in) :: str
+  type(specie_type), pointer :: s(:)
+
+  integer :: i, j, lmax, lloc, ispin
+
+  ! Reads the spin components. This is read here, as well as in states_init,
+  ! to be able to pass it to the pseudopotential initializations subroutine.
+  call oct_parse_int(C_string('SpinComponents'), 1, ispin)
+  if (ispin < 1 .or. ispin > 3) then
+    write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
+    message(2) = '(SpinComponents = 1 | 2 | 3)'
+    call write_fatal(2)
+  end if
+  ispin = min(2, ispin)
+  
+  do i = 1, nspecies
+    call oct_parse_block_str(str, i-1, 0, s(i)%label)
+    call oct_parse_block_double(str, i-1, 1, s(i)%weight)
+    s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
+    
+    select case(s(i)%label(1:5))
+    case('jelli')
+      s(i)%local = .true.  ! we only have a local part
+      s(i)%nlcc  = .false. ! no non-local core corrections
+
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z)      ! charge of the jellium sphere
+      call oct_parse_block_double(str, i-1, 3, s(i)%jradius)! radius of the jellium sphere
+      s(i)%jradius = units_inp%length%factor * s(i)%jradius ! units conversion
+      s(i)%Z_val = s(i)%Z
+      
+    case('point') ! this is treated as a jellium with radius 0.5
+      s(i)%local = .true.
+      s(i)%nlcc  = .false.
+
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
+      s(i)%jradius = 0.5_r8
+      s(i)%Z_val = 0 
+      
+    case('usdef') ! user defined
+      s(i)%local = .true.
+      s(i)%nlcc  = .false.
+
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
+      call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
+      ! convert to C string
+      j = len(trim(s(i)%user_def))
+      s(i)%user_def(j+1:j+1) = achar(0) 
+
+    case default ! a pseudopotential file
+      s(i)%local = .false.
+
+      allocate(s(i)%ps) ! allocate structure
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
+      call oct_parse_block_str(str, i-1, 3, s(i)%ps_flavour)
+      call oct_parse_block_int(str, i-1, 4, lmax)
+      call oct_parse_block_int(str, i-1, 5, lloc)
+      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, ispin)
+      if(conf%verbose>999) call ps_debug(s(i)%ps)
+
+      s(i)%z_val = s(i)%ps%z_val
+      s(i)%nl_planb= int(-1, POINTER_SIZE)
+      s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
+
+    end select
+  end do
+end subroutine specie_init_dim
+
+subroutine specie_end(ns, s)
+  integer, intent(in) :: ns
+  type(specie_type), pointer :: s(:)
+
+  integer :: i
+
+  sub_name = 'specie_end'; call push_sub()
+
+  do i = 1, ns
+    if(s(i)%local) cycle
+
+    if(associated(s(i)%ps)) then
+      if(s(i)%nlcc.and.associated(s(i)%rhocore_fw)) then
+        deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
+      end if
+      call ps_end(s(i)%ps)
+    end if
+
+    if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
+      call fftw_f77_destroy_plan(s(i)%nl_planb)
+      deallocate(s(i)%nl_fw, s(i)%nl_dfw)
+      nullify(s(i)%nl_fw, s(i)%nl_dfw)
+    end if
+
+    if(associated(s(i)%local_fw)) then
+      deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
+    end if
+    
+  end do
+  
+  if(associated(s)) then ! sanity check
+    deallocate(s); nullify(s)
+  end if
+
+  call pop_sub()
+  return
+end subroutine specie_end
+
+real(r8) function specie_get_local(s, x) result(l)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(conf%dim)
+
+  real(r8) :: a1, a2, Rb2 ! for jellium
+  real(r8) :: r
+
+  r = sqrt(sum(x**2))
+
+  select case(s%label(1:5))
+  case('jelli', 'point')
+    a1 = s%Z/(2._r8*s%jradius**3)
+    a2 = s%Z/s%jradius
+    Rb2= s%jradius**2
+    
+    if(r <= s%jradius) then
+      l = (a1*(r*r - Rb2) - a2)
+    else
+      l = - s%Z/r
+    end if
+
+  case('usdef')
+    l = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
+
+  case default
+    if(r >= r_small) then
+      l = (splint(s%ps%vlocal,  r) - s%Z_val)/r
+    else
+      l = s%ps%Vlocal_origin
+    end if
+  end select
+
+end function specie_get_local
+
+real(r8) function specie_get_nlcc(s, x) result(l)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(3)
+
+  real(r8) :: r
+  r = sqrt(sum(x**2))
+
+  select case(s%label(1:5))
+  case('jelli', 'point', 'usdef')
+    message(1) = "Internal error in 'specie_get_nlcc'."
+    message(2) = "Please submit a bug report!"
+    call write_fatal(2)
+
+  case default
+    l = splint(s%ps%core, r)
+  end select
+
+end function specie_get_nlcc
+
+subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(3)
+  integer, intent(in) :: l, lm, i
+  real(r8), intent(out) :: uV, duV(3)
+  real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
+  real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
+  logical, optional, intent(in) :: so
+
+  r = sqrt(sum(x**2))
+  if(present(so)) then
+    if(so) then
+      uVr0  = splint(s%ps%so_kb(l, i), r)
+      duvr0 = splint(s%ps%so_dkb(l, i), r)
+    else
+      message(1) = 'Internal.'
+      call write_fatal(1)
+    endif
+  else
+    uVr0  = splint(s%ps%kb(l, i), r)
+    duvr0 = splint(s%ps%dkb(l, i), r)
+  endif
+  call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
+  uv = uvr0*ylm
+  if(r >= r_small) then
+    duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
+  else
+    if(l == 1) then
+      duv = 0.0_r8
+      if(lm == -1) then
+        duv(2) = -ylmconst * duvr0
+      else if(lm == 0) then
+        duv(3) =  ylmconst * duvr0
+      else if(lm == 1) then
+        duv(1) = -ylmconst * duvr0
+      end if
+    else
+      duv = 0.0_r8
+    end if
+  end if
+
+end subroutine specie_get_nl_part
+

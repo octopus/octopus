@@ -57,7 +57,7 @@ type mesh_type
   real(r8) :: vol_pp    ! element of volume for integrations
   
   ! return x, y and z for each point
-  integer, pointer :: Lx(:), Ly(:), Lz(:)
+  integer, pointer :: Lxyz(:,:)
   ! return points # for each xyz
   integer, pointer :: Lxyz_inv(:,:,:)
   integer, pointer :: ind(:, :, :)
@@ -65,7 +65,7 @@ type mesh_type
   ! mesh elargement... this is currently only used in solving
   ! the poisson equation with conjugated gradients...
   integer :: nk        ! number of points in outer mesh
-  integer, pointer :: Kx(:), Ky(:), Kz(:)
+  integer, pointer :: Kxyz(:,:)
 
   ! some other vars
   integer :: nr(3)  ! number of points per radius inside
@@ -87,6 +87,7 @@ contains
 #elif defined(THREE_D)
 #  include "mesh3D.F90"
 #endif
+#include "mesh_create.F90"
 #include "undef.F90"
 #include "real.F90"
 #include "mesh_inc.F90"
@@ -127,7 +128,7 @@ subroutine mesh_write_info(m, unit)
             m%h(2)/units_out%length%factor, ',',                     &
             m%h(3)/units_out%length%factor, ')',                     &
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ', &
-       (m%h(1)*m%h(2)*m%h(3))/units_out%length%factor**3
+       m%vol_pp/units_out%length%factor**3
   write(message(3),'(a, i6, a, i6)') '  # inner mesh = ', m%np, &
       '   # outer mesh = ', m%nk
 
@@ -141,11 +142,9 @@ end subroutine mesh_write_info
 subroutine mesh_xyz(m, i, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
-  real(r8), intent(out) :: x(3)
+  real(r8), intent(out) :: x(conf%dim)
 
-  x(1) = m%Lx(i)*m%H(1)
-  x(2) = m%Ly(i)*m%H(2)
-  x(3) = m%Lz(i)*m%H(3)
+  x(:) = m%Lxyz(:, i)*m%h(:)
 end subroutine mesh_xyz
 
 subroutine mesh_x(m, i, x)
@@ -153,7 +152,7 @@ subroutine mesh_x(m, i, x)
   integer, intent(in) :: i
   real(r8), intent(out) :: x
 
-  x = m%Lx(i)*m%H(1)
+  x = m%Lxyz(1, i)*m%h(1)
 end subroutine mesh_x
 
 subroutine mesh_y(m, i, y)
@@ -161,7 +160,7 @@ subroutine mesh_y(m, i, y)
   integer, intent(in) :: i
   real(r8), intent(out) :: y
 
-  y = m%Ly(i)*m%H(2)
+  y = m%Lxyz(2, i)*m%h(2)
 end subroutine mesh_y
 
 subroutine mesh_z(m, i, z)
@@ -169,21 +168,21 @@ subroutine mesh_z(m, i, z)
   integer, intent(in) :: i
   real(r8), intent(out) :: z
 
-  z = m%Lz(i)*m%H(3)
+  z = m%Lxyz(3, i)*m%h(3)
 end subroutine mesh_z
 
 subroutine mesh_r(m, i, r, a, x)
   type(mesh_type), intent(IN) :: m
   integer, intent(in) :: i
   real(r8), intent(out) :: r
-  real(r8), intent(in), optional :: a(3)
-  real(r8), intent(out), optional :: x(3)
+  real(r8), intent(in), optional :: a(conf%dim)
+  real(r8), intent(out), optional :: x(conf%dim)
 
-  real(r8) :: xx(3)
+  real(r8) :: xx(conf%dim)
 
   call mesh_xyz(m, i, xx)
   if(present(a)) xx = xx - a
-  r = sqrt(xx(1)**2 + xx(2)**2 + xx(3)**2)
+  r = sqrt(sum(xx(:)**2))
 
   if(present(x)) x = xx
 end subroutine mesh_r
@@ -228,9 +227,9 @@ subroutine mesh_end(m)
 
   sub_name = 'mesh_end'; call push_sub()
 
-  if(associated(m%Lx)) then
-    deallocate(m%Lx, m%Ly, m%Lz, m%Kx, m%Ky, m%Kz)
-    nullify(m%Lx, m%Ly, m%Lz, m%Kx, m%Ky, m%Kz)
+  if(associated(m%Lxyz)) then
+    deallocate(m%Lxyz, m%Kxyz)
+    nullify(m%Lxyz, m%Kxyz)
   end if
   if(associated(m%Lxyz_inv)) then
     deallocate(m%Lxyz_inv, m%ind)

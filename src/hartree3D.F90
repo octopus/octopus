@@ -226,15 +226,15 @@ subroutine hartree_cg(h, m, pot, dist)
 
   wk = 0.0d0
   do i = 1, m%nk
-    x(1) = m%kx(i)*m%H(1); x(2) = m%ky(i)*m%H(2); x(3) = m%kz(i)*m%H(3)
+    x(:) = m%kxyz(:, i)*m%h(:)
     r = sqrt(sum(x**2)) + 1e-50_r8
 
     add_lm = 1
     do l = 0, ml
       do mm = -l, l
         sa = oct_ylm(x(1), x(2), x(3), l, mm)
-
-        wk(m%Kx(i), m%Ky(i), m%Kz(i)) = wk(m%Kx(i), m%Ky(i), m%Kz(i)) +   &
+        ix = m%Kxyz(1,i); iy = m%Kxyz(2,i); iz = m%Kxyz(3,i)
+        wk(ix, iy, iz) = wk(ix, iy, iz) +   &
             sa * ((4.0_r8*M_Pi)/(2.0_r8*l + 1.0_r8)) *            &
             rholm(add_lm)/r**(l + 1)
         add_lm = add_lm+1
@@ -244,15 +244,14 @@ subroutine hartree_cg(h, m, pot, dist)
 
   do i = 1, m%np
     zk(i) = -4.0d0*M_Pi*dist(i)
-    wk(m%Lx(i), m%Ly(i), m%Lz(i)) = pot(i)
+    wk(m%Lxyz(1, i), m%Lxyz(2, i), m%Lxyz(3, i)) = pot(i)
   enddo 
 
   ! I think this just calculates the laplacian of pot(i) -> zk?
   ! should not this call derivatives?
   do i = 1, m%np
-    ix = m%Lx(i); iy = m%Ly(i); iz = m%Lz(i)
-    !zk(i) = zk(i) - 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)/m%h**2
-    zk(i) = zk(i) - m%d%dlidfj(0)*wk(ix,iy,iz)*(1/m%h(1)**2+1/m%h(2)**2+1/m%h(3)**2)
+    ix = m%Lxyz(1, i); iy = m%Lxyz(2, i); iz = m%Lxyz(3, i)
+    zk(i) = zk(i) - m%d%dlidfj(0)*wk(ix,iy,iz)*sum(1/m%h(:)**2)
     do j = 1, m%d%norder
       zk(i) = zk(i) -  m%d%dlidfj(j)*(  &
           (wk(ix+j, iy, iz) + wk(ix-j, iy, iz))/m%h(1)**2 + &
@@ -269,20 +268,18 @@ subroutine hartree_cg(h, m, pot, dist)
   do 
     iter = iter + 1
     do i = 1, m%np
-      wk(m%Lx(i), m%Ly(i), m%Lz(i)) = pk(i)
+      wk(m%Lxyz(1, i), m%Lxyz(2, i), m%Lxyz(3, i)) = pk(i)
     enddo
     ! again the laplacian of wk -> tk
     do i = 1, m%np
-      ix = m%Lx(i); iy = m%Ly(i); iz = m%Lz(i)
-      !tk(i) = 3.0_r8*m%d%dlidfj(0)*wk(ix, iy, iz)
-      tk(i) = m%d%dlidfj(0)*wk(ix,iy,iz)*(1/m%h(1)**2+1/m%h(2)**2+1/m%h(3)**2)
+      ix = m%Lxyz(1, i); iy = m%Lxyz(2, i); iz = m%Lxyz(3, i)
+      tk(i) = m%d%dlidfj(0)*wk(ix,iy,iz)*sum(1/m%h(:)**2)
       do j = 1, m%d%norder
         tk(i) = tk(i) + m%d%dlidfj(j)*( &
             (wk(ix+j, iy, iz) + wk(ix-j, iy, iz))/m%h(1)**2 + &
             (wk(ix, iy+j, iz) + wk(ix, iy-j, iz))/m%h(2)**2 + &
             (wk(ix, iy, iz+j) + wk(ix, iy, iz-j))/m%h(3)**2 )
       enddo
-      !tk(i) = tk(i) /m%h**2
     enddo
 
     s2 = dmesh_dotp(m, zk, tk)
@@ -320,7 +317,7 @@ subroutine hartree_fft(h, m, pot, dist)
   real(r8), dimension(:), intent(out) :: pot
   real(r8), dimension(:), intent(IN) :: dist
 
-  integer :: i, ix, iy, iz, s(3), c(3)
+  integer :: i, s(3), c(3)
   real(r8), allocatable :: f(:,:,:)
   complex(r8), allocatable :: gg(:,:,:)
 
@@ -337,10 +334,7 @@ subroutine hartree_fft(h, m, pot, dist)
   f = 0.0_8
   
   do i = 1, m%np
-    ix = m%Lx(i) + c(1)
-    iy = m%Ly(i) + c(2)
-    iz = m%Lz(i) + c(3)
-    f(ix, iy, iz) = dist(i)
+    f(m%Lxyz(1, i)+c(1), m%Lxyz(2, i)+c(2), m%Lxyz(3, i)+c(3)) = dist(i)
   end do
   
   ! Fourier transform the charge density
@@ -349,10 +343,7 @@ subroutine hartree_fft(h, m, pot, dist)
   call rfft3d(f, gg, s(1), s(2), s(3), m%dplanb2, fftw_backward)
   
   do i = 1, m%np
-    ix = m%Lx(i) + c(1)
-    iy = m%Ly(i) + c(2)
-    iz = m%Lz(i) + c(3)
-    pot(i) = f(ix, iy, iz)
+    pot(i) = f(m%Lxyz(1, i) + c(1), m%Lxyz(2, i) + c(2), m%Lxyz(3, i) + c(3))
   end do
 
   deallocate(f, gg)

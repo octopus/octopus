@@ -135,8 +135,8 @@ contains
   subroutine update_field(iter)
     integer, intent(in) :: iter
 
-    complex(r8) :: d1, d2(3)
-    integer :: ik, p, dim, i
+    complex(r8) :: d1, d2(conf%dim)
+    integer :: ik, p, dim, i, j
 
     d1 = M_z0
     d2 = M_z0
@@ -145,9 +145,7 @@ contains
         do dim = 1, psi_i%nik
           do i = 1, sys%m%np
             d1    = d1    + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik)
-            d2(1) = d2(1) + psi_i%zpsi(i, dim, p, ik)*sys%m%Lx(i)*conjg(psi_f%zpsi(i, dim, p, ik))
-            d2(2) = d2(2) + psi_i%zpsi(i, dim, p, ik)*sys%m%Ly(i)*conjg(psi_f%zpsi(i, dim, p, ik))
-            d2(3) = d2(3) + psi_i%zpsi(i, dim, p, ik)*sys%m%Lz(i)*conjg(psi_f%zpsi(i, dim, p, ik))
+            d2(:) = d2(:) + psi_i%zpsi(i, dim, p, ik)*sys%m%Lxyz(:,i)*conjg(psi_f%zpsi(i, dim, p, ik))
           end do
         end do
       end do

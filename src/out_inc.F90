@@ -11,30 +11,19 @@ subroutine R_FUNC(output_function) (outp, dir, fname, m, f, u)
   ! do not bother with errors
   call oct_mkdir(C_string(trim(dir)))
 
-#if defined(ONE_D)
-  call io_assign(iunit)
-  open(iunit, file=trim(dir)+"/"+trim(fname)+".dat", status='unknown')
-  do i = 1, m%np
-    write(iunit, *) m%lx(i)/units_out%length%factor, f(i)/u
-  end do
-  call io_close(i)
-
-#elif defined(THREE_D)
-
   allocate(c(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
   c = R_TOTYPE(0._r8)
   call R_FUNC(mesh_to_cube) (m, f, c)
 
   if(iand(outp%how, output_axis_x).ne.0) call axis_x()
-  if(iand(outp%how, output_axis_y).ne.0) call axis_y()
-  if(iand(outp%how, output_axis_z).ne.0) call axis_z()
-  if(iand(outp%how, output_plane_x).ne.0) call plane_x()
-  if(iand(outp%how, output_plane_y).ne.0) call plane_y()
-  if(iand(outp%how, output_plane_z).ne.0) call plane_z()
+  if(conf%dim > 1.and.iand(outp%how, output_axis_y).ne.0) call axis_y()
+  if(conf%dim > 2.and.iand(outp%how, output_axis_z).ne.0) call axis_z()
+  if(conf%dim > 2.and.iand(outp%how, output_plane_x).ne.0) call plane_x()
+  if(conf%dim > 2.and.iand(outp%how, output_plane_y).ne.0) call plane_y()
+  if(conf%dim > 1.and.iand(outp%how, output_plane_z).ne.0) call plane_z()
   if(iand(outp%how, output_dx     ).ne.0) call dx()
 
   deallocate(c)
-#endif
 
 contains
 

@@ -21,11 +21,12 @@ subroutine td_init(td, sys, m, st)
   type(mesh_type), intent(inout) :: m
   type(states_type), intent(inout) :: st
 
-  integer :: iunit, dummy
+  integer :: i, iunit, dummy
 
   sub_name = 'td_init'; call push_sub()
 
   td%iter = 0
+  allocate(td%pol(conf%dim))
 
   call oct_parse_int(C_string("TDMaximumIter"), 1500, td%max_iter)
   if(td%max_iter < 1) then
@@ -104,12 +105,12 @@ subroutine td_init(td, sys, m, st)
   call oct_parse_double(C_string("TDDeltaStrength"), 0._r8, td%delta_strength)
   td%delta_strength = td%delta_strength / units_inp%length%factor
   if(oct_parse_isdef(C_string('TDPolarization')) .ne. 0) then
-    call oct_parse_block_double(C_string('TDPolarization'), 0, 0, td%pol(1))
-    call oct_parse_block_double(C_string('TDPolarization'), 0, 1, td%pol(2))
-    call oct_parse_block_double(C_string('TDPolarization'), 0, 2, td%pol(3))
-  else  !default along the z-direction
-    td%pol(1:2) = 0._r8
-    td%pol(3)   = 1._r8
+    do i = 1, conf%dim
+      call oct_parse_block_double(C_string('TDPolarization'), 0, i-1, td%pol(i))
+    end do
+  else  !default along the x-direction
+    td%pol(:) = M_ZERO
+    td%pol(1) = M_ONE
   endif
 
   ! now the photoelectron stuff
@@ -186,6 +187,8 @@ subroutine td_end(td)
   type(td_type), intent(inout) :: td
 
   sub_name = 'td_end'; call push_sub()
+
+  deallocate(td%pol)
 
 #ifndef NO_PES
   call PES_end(td%PESv)

@@ -24,8 +24,8 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
   real(r8), intent(inout) :: vx(1:nspin), ex
 
   real(r8), parameter :: &
-      HALF=.5_r8, OPF=1.5_r8, C014=0.014_r8, &
-      TRD = ONE/3.0_r8, FTRD = 4.0_r8*TRD, ALP = 2.0_r8 * TRD, &
+      OPF=1.5_r8, C014=0.014_r8, &
+      TRD = M_ONE/3.0_r8, FTRD = 4.0_r8*TRD, ALP = 2.0_r8 * TRD, &
       TFTM = 0.519842099789746380_r8, A0   = 0.521061761197848080_r8, &
       CRS  = 0.6203504908994000870_r8, CXP  = (- 3.0_r8) * ALP / (M_PI*A0), &
       CXF  = 1.259921049894873190_r8
@@ -34,7 +34,7 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
               bin, vin, m(3)
 
   if(.not.fzeta(nspin, rho, d, z, fz, fzp)) then
-    vx = ZERO; ex = ZERO; return
+    vx = M_ZERO; ex = M_ZERO; return
   endif
 
   rs = CRS / d**TRD
@@ -44,8 +44,8 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
     beta = C014/rs
     sb = sqrt(1 + beta*beta)
     alb = log(beta + sb)
-    vxp = vxp * (-HALF + OPF * alb / (beta*sb))
-    exp = exp * (ONE - OPF*((beta*sb-alb)/beta**2)**2) 
+    vxp = vxp * (-M_HALF + OPF * alb / (beta*sb))
+    exp = exp * (M_ONE - OPF*((beta*sb-alb)/beta**2)**2) 
   endif
   vxf = CXF * vxp
   exf = CXF * exp
@@ -57,8 +57,8 @@ subroutine xc_x_lda(rel, nspin, rho, vx, ex)
   ex = exp + fz*(exf - exp)
 
   !Change from Rydbergs to Hartrees
-  ex    = HALF * ex
-  vx(:) = HALF * vx(:) 
+  ex    = M_HALF * ex
+  vx(:) = M_HALF * vx(:) 
   return
 end subroutine xc_x_lda
 
@@ -77,7 +77,6 @@ subroutine xc_c_pz(nspin, rho, vc, ec)
        A0   = 0.521061761197848080_r8, CRS = 0.6203504908994000870_r8
 
   real(r8), parameter :: &
-      ZERO=0.0_r8,      HALF = 0.5_r8, ONE = 1.0_r8, &
       C0311=0.03110_r8, C0014=0.00140_r8, &
       C0538=0.05380_r8, C0096=0.00960_r8, C096=0.0960_r8, &
       C0622=0.06220_r8, C004=0.0040_r8, C0232=0.02320_r8, &
@@ -95,18 +94,18 @@ subroutine xc_c_pz(nspin, rho, vc, ec)
       ecf, vcf, rslog, bcc, bin, vin, m(3)
 
   if(.not.fzeta(nspin, rho, d, z, fz, fzp)) then
-    vc = ZERO; ec = ZERO; return
+    vc = M_ZERO; ec = M_ZERO; return
   endif
 
   rs = CRS / d**TRD
-  if (rs .gt. ONE) then  
+  if (rs .gt. M_ONE) then  
     sqrs = sqrt(rs)
-    te   = ONE + CON10*sqrs  + CON11*rs
-    be   = ONE + C1P053*sqrs + C3334*rs
+    te   = M_ONE + CON10*sqrs  + CON11*rs
+    be   = M_ONE + C1P053*sqrs + C3334*rs
     ecp  = -(C2846/be)
     vcp  = ecp*te/be
-    te   = ONE + CON8*sqrs   + CON9*rs
-    be   = ONE + C1P398*sqrs + C2611*rs
+    te   = M_ONE + CON8*sqrs   + CON9*rs
+    be   = M_ONE + C1P398*sqrs + C2611*rs
     ecf  = -(C1686/be)
     vcf  = ecf*te/be
   else
@@ -124,8 +123,8 @@ subroutine xc_c_pz(nspin, rho, vc, ec)
   ec = ecp + fz*(ecf - ecp)
 
   !Change from Rydbergs to Hartrees (Yeah, the Good Old Rydbergs...)
-  ec = HALF * ec
-  vc = HALF * vc
+  ec = M_HALF * ec
+  vc = M_HALF * vc
   return
 end subroutine xc_c_pz
 

@@ -15,6 +15,50 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+! Conversion subroutines (they actually add, do not forget it)
+! They also work, in principle, for 1 and 2D
+subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube, t)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN)    :: f_mesh(m%np)
+  R_TYPE, intent(inout) :: f_cube(:, :, :)
+  integer, intent(in), optional :: t
+  
+  integer :: i, ix, iy, iz, n(3)
+
+  n(1:3) = m%fft_n(1:3)/2 + 1
+  if(present(t)) then
+    if(t == 2) n(1:3) = m%fft_n2(1:3)/2 + 1
+  end if
+ 
+  do i = 1, m%np
+    ix = m%Lxyz(1, i) + n(1)
+    iy = m%Lxyz(2, i) + n(2)
+    iz = m%Lxyz(3, i) + n(3)
+    f_cube(ix, iy, iz) = f_cube(ix, iy, iz) + f_mesh(i)
+  end do
+end subroutine R_FUNC(mesh_to_cube)
+
+subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN)    :: f_cube(:, :, :)
+  R_TYPE, intent(inout) :: f_mesh(m%np)
+  integer, intent(in), optional :: t
+
+  integer :: i, ix, iy, iz, n(3)
+
+  n(1:3) = m%fft_n(1:3)/2 + 1
+  if(present(t)) then
+    if(t == 2) n(1:3) = m%fft_n2(1:3)/2 + 1
+  end if
+
+  do i = 1, m%np
+    ix = m%Lxyz(1, i) + n(1)
+    iy = m%Lxyz(2, i) + n(2)
+    iz = m%Lxyz(3, i) + n(3)
+    f_mesh(i) = f_mesh(i) + f_cube(ix, iy, iz) 
+  end do
+end subroutine R_FUNC(cube_to_mesh)
+
 ! this functions returns the dot product between two vectors
 ! it uses BLAS
 R_TYPE function R_FUNC(mesh_dotp)(m, f1, f2) result(dotp)

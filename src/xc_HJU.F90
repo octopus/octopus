@@ -43,10 +43,10 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
 
       st%rho(:, 1) = 0._r8
       do k = 1, m%np
-        if((ia == 1.and.m%Lz(k)>0).or.(ia == 2.and.m%Lz(k)<0)) then
+        if((ia == 1.and.m%Lxyz(3, k)>0).or.(ia == 2.and.m%Lxyz(3, k)<0)) then
           st%rho(k, 1) = rho(k, is)
         end if
-        if(m%Lz(k) == 0) st%rho(k, 1) = 0.5_r8*rho(k, is)
+        if(m%Lxyz(3, k) == 0) st%rho(k, 1) = 0.5_r8*rho(k, is)
       end do
       N_alpha = dmesh_integrate(m, st%rho(:, 1))
 
@@ -66,7 +66,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
         call hartree_solve(hartr, m, Vx2(:, 1), st%rho(:, 1))
         Ex2 = 0._r8
         do k = 1, m%np
-          if((ia == 1.and.m%Lz(k)>=0).or.(ia == 2.and.m%Lz(k)<=0)) then
+          if((ia == 1.and.m%Lxyz(3, k)>=0).or.(ia == 2.and.m%Lxyz(3, k)<=0)) then
             Vx(k, is) = Vx(k, is) - N_alpha*Vx2(k, 1)
             Ex2 = Ex2 + Vx2(k, 1)*st%rho(k, 1)
           end if

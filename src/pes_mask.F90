@@ -20,9 +20,6 @@ subroutine PES_mask_init(v, m, st)
   type(mesh_type), intent(inout) :: m
   type(states_type), intent(IN) :: st
 
-  real(r8) :: temp, vec
-  integer :: ix, iy, iz, ixx, iyy, izz
-
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
       
@@ -56,7 +53,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
   real(r8), intent(IN) :: dt
   real(r8), pointer :: mask(:)
 
-  integer :: j, idim, ist, ik, ix, iy, iz, ixx(3)
+  integer :: j, idim, ist, ik, ix, iy, iz, ix3(3), ixx(3)
   complex(r8), allocatable :: wf1(:,:,:), wf2(:,:,:)
   real(r8) :: temp(3), vec
 
@@ -70,7 +67,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
         ixx(3) = pad_feq(iz, m%fft_n(3), .true.)
 
         vec = sum((temp(:) * ixx(:))**2) / 2._r8
-        v%k(ix, iy, iz,:,:,:) = v%k(ix, iy, iz,:,:,:)*exp( -M_zI*dt*vec)
+        v%k(ix, iy, iz,:,:,:) = v%k(ix, iy, iz,:,:,:)*exp(-M_zI*dt*vec)
       enddo
     enddo
   enddo
@@ -86,10 +83,8 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
         wf1 = M_z0
 
         do j = 1, m%np
-          ix = m%Lx(j) + m%fft_n(1)/2 + 1
-          iy = m%Ly(j) + m%fft_n(2)/2 + 1
-          iz = m%Lz(j) + m%fft_n(3)/2 + 1
-          wf1(ix, iy, iz) = mask(j)*st%zpsi(j, idim, ist, ik)
+          ix3(:) = m%Lxyz(:,j) + m%fft_n(:)/2 + 1
+          wf1(ix3(1), ix3(2), ix3(3)) = mask(j)*st%zpsi(j, idim, ist, ik)
         end do
 
         ! and add to our density (sum for idim, also)

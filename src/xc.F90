@@ -322,38 +322,42 @@ function fzeta(nspin, rho, d, z, fz, fzp)
   real(r8), intent(out) :: d, z, fz, fzp
   logical fzeta
 
-  real(r8) :: mabs, FTRD, TFTM
-  FTRD= FOUR*THIRD; TFTM = TWO**(FOUR/THREE) - TWO
+  real(r8) :: mabs, TFTM, FTRD
+
+  FTRD= M_FOUR*M_THIRD
+  TFTM = M_TWO**(M_FOUR/M_THREE) - M_TWO
 
   d = rho(1)
-  if (d .le. ZERO) then
-     fzeta = .false.; return
-  endif
+  if (d .le. M_ZERO) then
+    fzeta = .false.
+    return
+  end if
 
   select case(nspin)
   case(1)
-    z   = ZERO
-    fz  = ZERO
-    fzp = ZERO
+    z   = M_ZERO
+    fz  = M_ZERO
+    fzp = M_ZERO
   case(2)
     mabs = rho(2)
     z = mabs/d
-    if (abs(z) > ONE) then
+    if (abs(z) > M_ONE) then
       fzeta = .false.; return
     endif
     fz = ((1+z)**FTRD+(1-z)**FTRD-2)/TFTM
-    fzp = FTRD*((1+z)**THIRD-(1-z)**THIRD)/TFTM 
+    fzp = FTRD*((1+z)**M_THIRD-(1-z)**M_THIRD)/TFTM 
   case(4)
     mabs = sqrt(rho(2)**2+rho(3)**2+rho(4)**2)
     z = mabs/d
-    if (z > ONE) then
+    if (z > M_ONE) then
       fzeta = .false.; return
     endif
     fz = ((1+z)**FTRD+(1-z)**FTRD-2)/TFTM
-    fzp = FTRD*((1+z)**THIRD-(1-z)**THIRD)/TFTM 
+    fzp = FTRD*((1+z)**M_THIRD-(1-z)**M_THIRD)/TFTM 
   end select
 
-  fzeta = .true.;return
+  fzeta = .true.
+  return
 end function fzeta
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -397,7 +401,7 @@ subroutine xc_matrix(nspin, vin, bin, m, v)
       v(3) =        bin*m(1)/mabs
       v(4) =        bin*m(2)/mabs
     else
-      v(3:4) = ZERO
+      v(3:4) = M_ZERO
     endif
   end select
   return

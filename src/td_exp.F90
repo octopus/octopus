@@ -169,9 +169,17 @@ contains
     endif
 
     call kinetic(sys%m, timestep/2._r8)
+
+#if defined(THREE_D)
     call non_local_pp(sys%m, timestep/2._r8, .true.)
+#endif
+
     call local_part(sys%m, t, timestep)
+
+#if defined(THREE_D)
     call non_local_pp(sys%m, timestep/2._r8, .false.)
+#endif
+
     call kinetic(sys%m, timestep/2._r8)
 
     call pop_sub(); return
@@ -198,9 +206,13 @@ contains
 
     do k = 1, 5
        call kinetic(sys%m, dt(k)/2._r8)
+#if defined(THREE_D)
        call non_local_pp(sys%m, dt(k)/2._r8, .true.)
+#endif
        call local_part(sys%m, t, dt(k))
+#if defined(THREE_D)
        call non_local_pp(sys%m, dt(k)/2._r8, .false.)
+#endif
        call kinetic(sys%m, dt(k)/2._r8)
     end do
 
@@ -254,6 +266,7 @@ contains
     call pop_sub(); return
   end subroutine kinetic
 
+#if defined(THREE_D)
   subroutine non_local_pp(m, dt, order)
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: dt
@@ -315,6 +328,7 @@ contains
 
     call pop_sub(); return
   end subroutine non_local_pp
+#endif
 
   subroutine local_part(m, t, dt)
     type(mesh_type), intent(IN) :: m

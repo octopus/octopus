@@ -29,11 +29,10 @@ module vxc
   PARAMETER (PFIVE=.5_r8,OPF=1.5_r8,C014=0.014_r8)
   DIMENSION DS(NSP), VX(NSP)
 
-  PI=4*ATAN(ONE)
   TRD = ONE/3
   FTRD = 4*TRD
   TFTM = 2**FTRD-2
-  A0 = (4/(9*PI))**TRD
+  A0 = (4/(9*M_PI))**TRD
 
 !      X-alpha parameter:       
   ALP = 2 * TRD
@@ -62,8 +61,8 @@ module vxc
      FZ = ZERO
      FZP = ZERO
   ENDIF
-  RS = (3 / (4*PI*D) )**TRD
-  VXP = -(3*ALP/(2*PI*A0*RS))
+  RS = (3 / (4*M_PI*D) )**TRD
+  VXP = -(3*ALP/(2*M_PI*A0*RS))
   EXP = 3*VXP/4
   IF (IREL .EQ. 1) THEN
      BETA = C014/RS
@@ -258,35 +257,29 @@ module vxc
               DHDD, DHDGD, DKFDD, DKSDD, DPDD, DPDZ, DRSDD,                   &
               DS(2), DSDD, DSDGD, DT, DTDD, DTDGD, DZDD(2),                   &
               EC, ECUNIF, EX, EXUNIF,                                         &
-              F, F1, F2, F3, F4, FC, FX, FOUTHD,                              &
+              F, F1, F2, F3, F4, FC, FX,                                      &
               GAMMA, GD(3,2), GDM(2), GDMIN, GDMS, GDMT, GDS, GDT(3),         &
-              H, KAPPA, KF, KFS, KS, MU, PHI, PI, RS, S,                      &
-              T, THD, THRHLF, TWOTHD, VCUNIF(2), VXUNIF(2), ZETA
+              H, KAPPA, KF, KFS, KS, MU, PHI, RS, S,                          &
+              T, VCUNIF(2), VXUNIF(2), ZETA
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
 
   PARAMETER ( DENMIN = 1.E-12 )
   PARAMETER ( GDMIN  = 1.E-12 )
 
-! Fix some numerical parameters
-  PARAMETER ( FOUTHD=4.0_r8/3.0_r8,                         &
-       THD=1.0_r8/3.0_r8, THRHLF=1.50_r8,                          &
-       TWOTHD=2.0_r8/3.0_r8 )
-  
 ! Fix some more numerical constants
-  PI = 4 * ATAN(1.0_r8)
   BETA = 0.066725_r8
-  GAMMA = (1 - LOG(TWO)) / PI**2
-  MU = BETA * PI**2 / 3
+  GAMMA = (1 - LOG(M_TWO)) / M_PI**2
+  MU = BETA * M_PI**2 / M_THREE
   KAPPA = 0.8040_r8
 
 ! Translate density and its gradient to new variables
   IF (NSPIN .EQ. 1) THEN
-     D(1) = HALF * DENS(1)
+     D(1) = M_HALF * DENS(1)
      D(2) = D(1)
      DT = MAX( DENMIN, DENS(1) )
-     DO 10 IX = 1,3
-        GD(IX,1) = HALF * GDENS(IX,1)
+     DO 10 IX = 1, 3
+        GD(IX,1) = M_HALF * GDENS(IX,1)
         GD(IX,2) = GD(IX,1)
         GDT(IX) = GDENS(IX,1)
      10 CONTINUE
@@ -294,110 +287,110 @@ module vxc
      D(1) = DENS(1)
      D(2) = DENS(2)
      DT = MAX( DENMIN, DENS(1)+DENS(2) )
-     DO 20 IX = 1,3
-        GD(IX,1) = GDENS(IX,1)
-        GD(IX,2) = GDENS(IX,2)
-        GDT(IX) = GDENS(IX,1) + GDENS(IX,2)
-     20 CONTINUE
+     do IX = 1, 3
+       GD(IX,1) = GDENS(IX,1)
+       GD(IX,2) = GDENS(IX,2)
+       GDT(IX) = GDENS(IX,1) + GDENS(IX,2)
+     end do
   ENDIF
   GDM(1) = SQRT( GD(1,1)**2 + GD(2,1)**2 + GD(3,1)**2 )
   GDM(2) = SQRT( GD(1,2)**2 + GD(2,2)**2 + GD(3,2)**2 )
   GDMT   = SQRT( GDT(1)**2  + GDT(2)**2  + GDT(3)**2  )
-  GDMT = MAX( GDMIN, GDMT )
+  GDMT   = MAX( GDMIN, GDMT )
 
 ! Find local correlation energy and potential
   CALL PW92C( 2, D, ECUNIF, VCUNIF )
 
 ! Find total correlation energy
-  RS = ( 3 / (4*PI*DT) )**THD
-  KF = (3 * PI**2 * DT)**THD
-  KS = SQRT( 4 * KF / PI )
+  RS = (M_THREE / (4*M_PI*DT) )**M_THIRD
+  KF = (M_THREE * M_PI**2 * DT)**M_THIRD
+  KS = sqrt( M_FOUR * KF / M_PI )
   ZETA = ( D(1) - D(2) ) / DT
-  ZETA = MAX( -1.0_r8+DENMIN, ZETA )
-  ZETA = MIN(  1.0_r8-DENMIN, ZETA )
-  PHI = HALF * ( (1+ZETA)**TWOTHD + (1-ZETA)**TWOTHD )
-  T = GDMT / (2 * PHI * KS * DT)
+  ZETA = MAX( -M_ONE + DENMIN, ZETA )
+  ZETA = MIN(  M_ONE - DENMIN, ZETA )
+  PHI = M_HALF * ( (M_ONE + ZETA)**M_TWOTHIRD + (M_ONE - ZETA)**M_TWOTHIRD )
+  T = GDMT / (M_TWO * PHI * KS * DT)
   F1 = ECUNIF / GAMMA / PHI**3
   F2 = EXP(-F1)
   A = BETA / GAMMA / (F2-1)
   F3 = T**2 + A * T**4
-  F4 = BETA/GAMMA * F3 / (1 + A*F3)
-  H = GAMMA * PHI**3 * LOG( 1 + F4 )
+  F4 = BETA/GAMMA * F3 / (M_ONE + A*F3)
+  H = GAMMA * PHI**3 * LOG( M_ONE + F4 )
   FC = ECUNIF + H
 
 
 ! Find correlation energy derivatives
-  DRSDD = - (THD * RS / DT)
-  DKFDD =   THD * KF / DT
-  DKSDD = HALF * KS * DKFDD / KF
+  DRSDD = - (M_THIRD * RS / DT)
+  DKFDD =    M_THIRD * KF / DT
+  DKSDD = M_HALF * KS * DKFDD / KF
   DZDD(1) =   1 / DT - ZETA / DT
   DZDD(2) = - (1 / DT) - ZETA / DT
-  DPDZ = HALF * TWOTHD * ( 1/(1+ZETA)**THD - 1/(1-ZETA)**THD )
-  DO 40 IS = 1,2
-     DECUDD = ( VCUNIF(IS) - ECUNIF ) / DT
-     DPDD = DPDZ * DZDD(IS)
-     DTDD = (- T) * ( DPDD/PHI + DKSDD/KS + 1/DT )
-     DF1DD = F1 * ( DECUDD/ECUNIF - 3*DPDD/PHI )
-     DF2DD = (- F2) * DF1DD
-     DADD = (- A) * DF2DD / (F2-1)
-     DF3DD = (2*T + 4*A*T**3) * DTDD + DADD * T**4
-     DF4DD = F4 * ( DF3DD/F3 - (DADD*F3+A*DF3DD)/(1+A*F3) )
-     DHDD = 3 * H * DPDD / PHI
-     DHDD = DHDD + GAMMA * PHI**3 * DF4DD / (1+F4)
-     DFCDD(IS) = VCUNIF(IS) + H + DT * DHDD
+  DPDZ = M_HALF * M_TWOTHIRD * ( 1/(1+ZETA)**M_THIRD - 1/(1-ZETA)**M_THIRD )
+  do IS = 1,2
+    DECUDD = ( VCUNIF(IS) - ECUNIF ) / DT
+    DPDD = DPDZ * DZDD(IS)
+    DTDD = (- T) * ( DPDD/PHI + DKSDD/KS + 1/DT )
+    DF1DD = F1 * ( DECUDD/ECUNIF - 3*DPDD/PHI )
+    DF2DD = (- F2) * DF1DD
+    DADD = (- A) * DF2DD / (F2-1)
+    DF3DD = (2*T + 4*A*T**3) * DTDD + DADD * T**4
+    DF4DD = F4 * ( DF3DD/F3 - (DADD*F3+A*DF3DD)/(1+A*F3) )
+    DHDD = 3 * H * DPDD / PHI
+    DHDD = DHDD + GAMMA * PHI**3 * DF4DD / (1+F4)
+    DFCDD(IS) = VCUNIF(IS) + H + DT * DHDD
 
-     DO 30 IX = 1,3
-        DTDGD = (T / GDMT) * GDT(IX) / GDMT
-        DF3DGD = DTDGD * ( 2 * T + 4 * A * T**3 )
-        DF4DGD = F4 * DF3DGD * ( 1/F3 - A/(1+A*F3) ) 
-        DHDGD = GAMMA * PHI**3 * DF4DGD / (1+F4)
-        DFCDGD(IX,IS) = DT * DHDGD
-     30 CONTINUE
-  40 CONTINUE
+    do IX = 1,3
+      DTDGD = (T / GDMT) * GDT(IX) / GDMT
+      DF3DGD = DTDGD * ( 2 * T + 4 * A * T**3 )
+      DF4DGD = F4 * DF3DGD * ( 1/F3 - A/(1+A*F3) ) 
+      DHDGD = GAMMA * PHI**3 * DF4DGD / (1+F4)
+      DFCDGD(IX,IS) = DT * DHDGD
+    end do
+  end do
 
 ! Find exchange energy and potential
   FX = 0
-  DO 60 IS = 1,2
-     DS(IS)   = MAX( DENMIN, 2 * D(IS) )
-     GDMS = MAX( GDMIN, 2 * GDM(IS) )
-     KFS = (3 * PI**2 * DS(IS))**THD
-     S = GDMS / (2 * KFS * DS(IS))
-     F1 = 1 + MU * S**2 / KAPPA
-     F = 1 + KAPPA - KAPPA / F1
-
-!       Note nspin=1 in call to exchng...
-
-     CALL EXCHNG( IREL, 1, DS(IS), EXUNIF, VXUNIF(IS) )
-     FX = FX + DS(IS) * EXUNIF * F
-
-     DKFDD = THD * KFS / DS(IS)
-     DSDD = S * ( -(DKFDD/KFS) - 1/DS(IS) )
-     DF1DD = 2 * (F1-1) * DSDD / S
-     DFDD = KAPPA * DF1DD / F1**2
-     DFXDD(IS) = VXUNIF(IS) * F + DS(IS) * EXUNIF * DFDD
-
-     DO 50 IX = 1,3
-        GDS = 2 * GD(IX,IS)
-        DSDGD = (S / GDMS) * GDS / GDMS
-        DF1DGD = 2 * MU * S * DSDGD / KAPPA
-        DFDGD = KAPPA * DF1DGD / F1**2
-        DFXDGD(IX,IS) = DS(IS) * EXUNIF * DFDGD
-     50 CONTINUE
-  60 CONTINUE
-  FX = HALF * FX / DT
+  do IS = 1,2
+    DS(IS)   = MAX( DENMIN, 2 * D(IS) )
+    GDMS = MAX( GDMIN, 2 * GDM(IS) )
+    KFS = (3 * M_PI**2 * DS(IS))**M_THIRD
+    S = GDMS / (2 * KFS * DS(IS))
+    F1 = 1 + MU * S**2 / KAPPA
+    F = 1 + KAPPA - KAPPA / F1
+    
+    !Note nspin=1 in call to exchng...
+    
+    CALL EXCHNG( IREL, 1, DS(IS), EXUNIF, VXUNIF(IS) )
+    FX = FX + DS(IS) * EXUNIF * F
+    
+    DKFDD = M_THIRD * KFS / DS(IS)
+    DSDD = S * ( -(DKFDD/KFS) - 1/DS(IS) )
+    DF1DD = 2 * (F1-1) * DSDD / S
+    DFDD = KAPPA * DF1DD / F1**2
+    DFXDD(IS) = VXUNIF(IS) * F + DS(IS) * EXUNIF * DFDD
+    
+    do IX = 1, 3
+      GDS = M_TWO * GD(IX,IS)
+      DSDGD = (S / GDMS) * GDS / GDMS
+      DF1DGD = M_TWO * MU * S * DSDGD / KAPPA
+      DFDGD = KAPPA * DF1DGD / F1**2
+      DFXDGD(IX,IS) = DS(IS) * EXUNIF * DFDGD
+    end do
+  end do
+  FX = M_HALF * FX / DT
 
 ! Set output arguments
   EX = FX
   EC = FC
-  DO 90 IS = 1,NSPIN
-     DEXDD(IS) = DFXDD(IS)
-     DECDD(IS) = DFCDD(IS)
-     DO 80 IX = 1,3
-        DEXDGD(IX,IS) = DFXDGD(IX,IS)
-        DECDGD(IX,IS) = DFCDGD(IX,IS)
-     80 CONTINUE
-  90 CONTINUE
-
+  do IS = 1,NSPIN
+    DEXDD(IS) = DFXDD(IS)
+    DECDD(IS) = DFCDD(IS)
+    do IX = 1,3
+      DEXDGD(IX,IS) = DFXDGD(IX,IS)
+      DECDGD(IX,IS) = DFCDGD(IX,IS)
+    end do
+  end do
+  
   end subroutine pbexc
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -434,14 +427,13 @@ module vxc
        DBDRS, DECDD(2), DECDRS, DECDZ, DENMIN, DFDZ,           &
        DGDRS(0:2), DCDRS, DRSDD, DTOT, DZDD(2),                &
        F, FPP0, FOUTHD, G(0:2),                                &
-       P(0:2), PI, RS, THD, THRHLF, ZETA
+       P(0:2), RS, THRHLF, ZETA
 
 ! Fix lower bound of density to avoid division by zero
   PARAMETER ( DENMIN = 1.E-12 )
 
 ! Fix some numerical constants
-  PARAMETER ( FOUTHD=4.0_r8/3.0_r8,                             &
-       THD=1.0_r8/3.0_r8, THRHLF=1.50_r8 )
+  PARAMETER ( FOUTHD=4.0_r8/3.0_r8, THRHLF=1.50_r8 )
 
 ! Parameters from Table I of Perdew & Wang, PRB, 45, 13244 (92)
   DATA P      / 1.00_r8,     1.00_r8,     1.00_r8     /
@@ -453,18 +445,17 @@ module vxc
                 0.49294_r8,  0.62517_r8,  0.49671_r8 /    
 
 ! Find rs and zeta
-  PI = 4 * ATAN(1.0_r8)
   IF (NSPIN .EQ. 1) THEN
      DTOT = MAX( DENMIN, DENS(1) )
      ZETA = 0
-     RS = ( 3 / (4*PI*DTOT) )**THD
+     RS = ( 3 / (4*M_PI*DTOT) )**M_THIRD
 !      Find derivatives dRs/dDens and dZeta/dDens
      DRSDD = (- RS) / DTOT / 3
      DZDD(1) = 0
   ELSE
      DTOT = MAX( DENMIN, DENS(1)+DENS(2) )
      ZETA = ( DENS(1) - DENS(2) ) / DTOT
-     RS = ( 3 / (4*PI*DTOT) )**THD
+     RS = ( 3 / (4*M_PI*DTOT) )**M_THIRD
      DRSDD = (- RS) / DTOT / 3
      DZDD(1) =   1 / DTOT - ZETA / DTOT
      DZDD(2) = - (1 / DTOT) - (ZETA / DTOT)
@@ -474,13 +465,13 @@ module vxc
 ! using eq.(10) of cited reference (Perdew & Wang, PRB, 45, 13244 (92))
 
   DO 20 IG = 0,2
-     B = BETA(IG,1) * RS**HALF   +                                            &
+     B = BETA(IG,1) * RS**M_HALF   +                                            &
          BETA(IG,2) * RS         +                                            &
          BETA(IG,3) * RS**THRHLF +                                            &
          BETA(IG,4) * RS**(P(IG)+1)
-     DBDRS = BETA(IG,1) * HALF      / RS**HALF +                              &
+     DBDRS = BETA(IG,1) * M_HALF      / RS**M_HALF +                              &
          BETA(IG,2)                         +                                 &
-         BETA(IG,3) * THRHLF    * RS**HALF +                                  &
+         BETA(IG,3) * THRHLF    * RS**M_HALF +                                  &
          BETA(IG,4) * (P(IG)+1) * RS**P(IG)
      C = 1 + 1 / (2 * A(IG) * B)
      DCDRS = - ( (C-1) * DBDRS / B )
@@ -493,7 +484,7 @@ module vxc
   C = 1 / (2**FOUTHD - 2)
   FPP0 = 8 * C / 9
   F = ( (1+ZETA)**FOUTHD + (1-ZETA)**FOUTHD - 2 ) * C
-  DFDZ = FOUTHD * ( (1+ZETA)**THD - (1-ZETA)**THD ) * C
+  DFDZ = FOUTHD * ( (1+ZETA)**M_THIRD - (1-ZETA)**M_THIRD ) * C
 
 ! Find eps_c(rs,zeta) from eq.(8)
   EC = G(0) - G(2) * F / FPP0 * (1-ZETA**4) +                                 &
@@ -616,13 +607,12 @@ module vxc
   PARAMETER ( ALP = 2.0_r8 / 3.0_r8 )
 
 !      Other variables converted into parameters by J.M.Soler
-  PARAMETER ( PI   = 3.141592653589793120_r8 )
   PARAMETER ( TRD  = 1.0_r8 / 3.0_r8 ) 
   PARAMETER ( FTRD = 4.0_r8 / 3.0_r8 )
   PARAMETER ( TFTM = 0.519842099789746380_r8 )
   PARAMETER ( A0   = 0.521061761197848080_r8 )
   PARAMETER ( CRS  = 0.6203504908994000870_r8 )
-  PARAMETER ( CXP  = (- 3.0_r8) * ALP / (PI*A0) )
+  PARAMETER ( CXP  = (- 3.0_r8) * ALP / (M_PI*A0) )
   PARAMETER ( CXF  = 1.259921049894873190_r8 )
 
 !      Find density and polarization
@@ -705,13 +695,12 @@ module vxc
   ENDIF
 
 !      Change from Rydbergs to Hartrees
-  EX = HALF * EX
-  EC = HALF * EC
-  DO 10 ISP = 1,NSP
-     VX(ISP) = HALF * VX(ISP)
-     VC(ISP) = HALF * VC(ISP)
-  10  CONTINUE
-
+  EX = M_HALF * EX
+  EC = M_HALF * EC
+  do ISP = 1,NSP
+    VX(ISP) = M_HALF * VX(ISP)
+    VC(ISP) = M_HALF * VC(ISP)
+  end do
 
   end subroutine pzxc 
 

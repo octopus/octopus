@@ -78,29 +78,14 @@ subroutine static_pol_run(scf, sys, h)
     call write_info(1)
 
     h%Vpsl = Vpsl_save
-
-    select case(i)
-    case(1)
-      h%Vpsl = h%Vpsl - sys%m%Lx(:)*sys%m%h(1)*e_field
-    case(2)
-      h%Vpsl = h%Vpsl - sys%m%Ly(:)*sys%m%h(2)*e_field
-    case(3)
-      h%Vpsl = h%Vpsl - sys%m%Lz(:)*sys%m%h(3)*e_field
-    end select
+    h%Vpsl = h%Vpsl - sys%m%Lxyz(i,:)*sys%m%h(i)*e_field
 
     call scf_run(scf, sys, h)
     
     ! calculate dipole
     do is = 1, sys%st%nspin
       do j = 1, 3
-        select case (j)
-        case(1) 
-          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lx(:))*sys%m%h(1)*sys%m%vol_pp
-        case(2)
-          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Ly(:))*sys%m%h(2)*sys%m%vol_pp
-        case(3)
-          dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lz(:))*sys%m%h(3)*sys%m%vol_pp
-        end select
+        dipole(i, j, is) = sum(sys%st%rho(:, is)*sys%m%Lxyz(j,:))*sys%m%h(j)*sys%m%vol_pp
       end do
     end do
 

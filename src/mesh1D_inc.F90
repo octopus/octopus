@@ -15,128 +15,27 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-! Conversion subroutines
-! they actually add, do not forget it
-subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube, t)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)    :: f_mesh(m%np)
-  R_TYPE, intent(inout) :: f_cube(:)
-  integer, intent(in), optional :: t
-  
-  integer :: i, ix, n
-
-  n = m%fft_n(1)/2+1
-  if(present(t)) then
-    if(t == 2) n = m%fft_n2(1)/2+1
-  end if
- 
-  do i = 1, m%np
-    ix = m%lx(i) + n
-    f_cube(ix) = f_cube(ix) + f_mesh(i)
-  end do
-end subroutine R_FUNC(mesh_to_cube)
-
-subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh, t)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN)    :: f_cube(:)
-  R_TYPE, intent(inout) :: f_mesh(m%np)
-  integer, intent(in), optional :: t
-
-  integer :: i, ix, iy, iz, n
-
-  n = m%fft_n(1)/2+1
-  if(present(t)) then
-    if(t == 2) n = m%fft_n2(1)/2+1
-  end if
-
-  do i = 1, m%np
-    ix = m%lx(i) + n
-    f_mesh(i) = f_mesh(i) + f_cube(ix) 
-  end do
-end subroutine R_FUNC(cube_to_mesh)
-
-
 ! calculates the laplacian and the gradient of a function on the mesh
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)
   R_TYPE, intent(out), optional:: lapl(1:m%np), grad(3, 1:m%np)
-  real(r8), intent(in), optional :: alpha
+  R_TYPE, intent(in), optional :: alpha
 
   real(r8) :: alp
 
   alp = 1._r8
   if(present(alpha)) alp = alpha
 
-  select case(m%d%space)
-  case(REAL_SPACE)
-    call rs_derivative()
-  case(RECIPROCAL_SPACE)
-    call fft_derivative()
-  end select
+  call rs_derivative()
 
   return
 contains
 
-  subroutine fft_derivative()
-    R_TYPE, allocatable :: fr(:)
-    complex(r8), allocatable :: fw1(:), fw2(:)
-    
-    integer :: n(3), nx, i, j, ix, iy, iz, kx, ky, kz
-    real(r8) :: temp(3), g2
-
-    n(1) = m%fft_n(1); n(2) = 0; n(3) = 0
-#ifdef R_TREAL
-    nx = n(1)/2+1
-#else
-    nx = n(1)
-#endif
-
-    allocate(fr(n(1)), fw1(nx))
-    fr = R_TOTYPE(0.0_r8); fw1 = R_TOTYPE(0.0_r8)
-    call R_FUNC(mesh_to_cube) (m, f(1:), fr)
-    
-#ifdef R_TREAL
-    call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, fw1)
-#else
-    call fftwnd_f77_one(m%zplanf, fr, fw1)
-#endif
-
-    if(present(grad)) then
-      allocate(fw2(nx))
-        call mesh_gradient_in_FS(m, nx, n, fw1, fw2)
-#ifdef R_TREAL
-        call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
-#else
-        call fftwnd_f77_one(m%zplanb, fw2, fr)
-#endif
-        call R_FUNC(scal)(n(1), R_TOTYPE(alp/n(1)), fr, 1)
-        grad(i, :) = R_TOTYPE(0._r8)
-        call R_FUNC(cube_to_mesh) (m, fr, grad(i, :))
-      deallocate(fw2)
-    end if
-    
-    if(present(lapl)) then
-      allocate(fw2(nx))
-      call mesh_laplacian_in_FS(m, nx, n, fw1, fw2)
-#ifdef R_TREAL
-      call rfftwnd_f77_one_complex_to_real(m%dplanb, fw2, fr)
-#else
-      call fftwnd_f77_one(m%zplanb, fw2, fr)
-#endif
-      call R_FUNC(scal)(n(1), R_TOTYPE(alp/n(1)), fr, 1)
-      lapl = R_TOTYPE(0._r8)
-      call R_FUNC(cube_to_mesh) (m, fr, lapl)
-    end if
-    
-    deallocate(fr, fw1)
-    return
-  end subroutine fft_derivative
-
   subroutine rs_derivative()
     R_TYPE :: den1(3), den2(3)
     integer :: k, in, ind1(3), ind2(3), ix, iy, iz, i
-
+    
     do k = 1, m%np
       ! first we add the 0 contribution
       den1 = f(k)
@@ -147,12 +46,12 @@ contains
       if(present(grad)) then
         grad(1, k) = m%d%dgidfj(0)*f(k)
       end if
-
-      ix = m%Lx(k)
+      
+      ix = m%Lxyz(1, k)
       do in = 1, m%d%norder
         ind1(1) = m%Lxyz_inv(ix-in, 0, 0)
         ind2(1) = m%Lxyz_inv(ix+in, 0, 0)
-
+        
         ! If you prefer 0 wave functions at the boundary, uncomment the following
         ! Just be careful with the LB94 xc potential, for it will probably not work!
 #ifndef BOUNDARIES_ZERO_DERIVATIVE

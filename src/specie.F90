@@ -45,31 +45,28 @@ type specie_type
 
   logical           :: nlcc       ! true if we have non-local core corrections
 
-  ! jellium stuff
-  real(r8) :: jradius
-
   ! for the user defined potential
   character(len=1024) :: user_def
+
+#if defined(THREE_D)
+  ! jellium stuff
+  real(r8) :: jradius
 
   ! For the pseudopotential
   character(len=3) :: ps_flavour
   type(ps_type), pointer :: ps
 
   ! For the local pseudopotential in Fourier space...
-#if defined(THREE_D)
   complex(r8), pointer :: &
        local_fw(:,:,:),    &  ! for the potential
        rhocore_fw(:,:,:)      ! for the core density
-#elif defined(ONE_D)
-  complex(r8), pointer :: &
-       local_fw(:),       &
-       rhocore_fw(:, :, :)
-#endif
 
   ! For the non-local pp in fourier space
   integer(POINTER_SIZE) :: nl_planb
   integer :: nl_fft_n(3), nl_hfft_n
   complex(r8), pointer :: nl_fw(:,:,:,:,:), nl_dfw(:,:,:,:,:,:)
+#endif
+
 end type specie_type
 
 contains
@@ -107,224 +104,18 @@ function specie_init(s)
   end if
   ispin = min(2, ispin)
 
-  do i = 1, nspecies
-    call oct_parse_block_str(str, i-1, 0, s(i)%label)
-    call oct_parse_block_double(str, i-1, 1, s(i)%weight)
-
-#if defined(THREE_D)
-    select case(s(i)%label(1:5))
-    case('jelli')
-      s(i)%local = .true.  ! we only have a local part
-      s(i)%nlcc  = .false. ! no non-local core corrections
-
-      ! s(i)%Z       = the charge of the jellium sphere
-      ! s(i)%jradius = the radius of the jellium sphere
-      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
-      call oct_parse_block_double(str, i-1, 3, s(i)%jradius)
-      s(i)%jradius = units_inp%length%factor * s(i)%jradius ! units conversion
-      s(i)%Z_val = s(i)%Z
-      
-    case('point') ! this is treated as a jellium with radius 0.5
-      s(i)%local = .true.
-      s(i)%nlcc  = .false.
-
-      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
-      s(i)%jradius = 0.5_r8
-      s(i)%Z_val = 0 
-      
-    case('usdef') ! user defined
-      s(i)%local = .true.
-      s(i)%nlcc  = .false.
-
-      call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
-      call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
-      ! convert to C string
-      j = len(trim(s(i)%user_def))
-      s(i)%user_def(j+1:j+1) = achar(0) 
-
-    case default ! a pseudopotential file
-      s(i)%local = .false.
-
-      allocate(s(i)%ps) ! allocate structure
-      call oct_parse_block_double(str, i-1, 2, s(i)%Z)
-      call oct_parse_block_str(str, i-1, 3, s(i)%ps_flavour)
-      call oct_parse_block_int(str, i-1, 4, lmax)
-      call oct_parse_block_int(str, i-1, 5, lloc)
-      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, ispin)
-      if(conf%verbose>999) call ps_debug(s(i)%ps)
-
-      s(i)%z_val = s(i)%ps%z_val
-      s(i)%nl_planb= int(-1, POINTER_SIZE)
-      s(i)%nlcc = (s(i)%ps%icore /= 'nc  ' )
-
-    end select
-
-#elif defined(ONE_D)
-    s(i)%local = .true. ! In 1D, potential has to be local.
-    select case(s(i)%label(1:5))
-    case('usdef') ! user defined
-      call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
-      call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
-      ! convert to C string
-      j = len(trim(s(i)%user_def))
-      s(i)%user_def(j+1:j+1) = achar(0) 
-    case default ! built by the program
-      allocate(s(i)%ps)
-      call oct_parse_block_double(str, i-1, 2, s(i)%z)
-      call oct_parse_block_double(str, i-1, 3, s(i)%z_val)
-      call oct_parse_block_str   (str, i-1, 4, s(i)%user_def)
-      s(i)%user_def = C_string(s(i)%user_def) 
-      call ps_init(s(i)%ps, s(i)%label, s(i)%Z, s(i)%Z_val, s(i)%user_def)
-    end select
-#endif
-
-    s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion
-    
-  end do
+  ! call dimension specific routines
+  call specie_init_dim(nspecies, str, s)
 
   specie_init = nspecies
 
-  call pop_sub()
-  return
+  call pop_sub(); return
 end function specie_init
 
-subroutine specie_end(ns, s)
-  integer, intent(in) :: ns
-  type(specie_type), pointer :: s(:)
-
-  integer :: i
-
-  sub_name = 'specie_end'; call push_sub()
-
-  species: do i = 1, ns
-
-    nlocal: if(.not. s(i)%local) then
-      if(associated(s(i)%ps)) then
-        if(s(i)%nlcc.and.associated(s(i)%rhocore_fw)) then
-          deallocate(s(i)%rhocore_fw); nullify(s(i)%rhocore_fw)
-        end if
-        call ps_end(s(i)%ps)
-      end if
-
-      if(s(i)%nl_planb.ne. int(-1, POINTER_SIZE)) then
-        call fftw_f77_destroy_plan(s(i)%nl_planb)
-        deallocate(s(i)%nl_fw, s(i)%nl_dfw)
-        nullify(s(i)%nl_fw, s(i)%nl_dfw)
-      end if
-    end if nlocal
-
-    if(associated(s(i)%local_fw)) then
-      deallocate(s(i)%local_fw); nullify(s(i)%local_fw)
-    end if
-
-  end do species
-  
-  if(associated(s)) then ! sanity check
-    deallocate(s); nullify(s)
-  end if
-
-  call pop_sub()
-  return
-end subroutine specie_end
-
-real(r8) function specie_get_local(s, x) result(l)
-  type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(3)
-
-  real(r8) :: a1, a2, Rb2 ! for jellium
-  real(r8) :: r
-
-  r = sqrt(sum(x**2))
-
-  select case(s%label(1:5))
-  case('jelli', 'point')
-    a1 = s%Z/(2._r8*s%jradius**3)
-    a2 = s%Z/s%jradius
-    Rb2= s%jradius**2
-    
-    if(r <= s%jradius) then
-      l = (a1*(r*r - Rb2) - a2)
-    else
-      l = - s%Z/r
-    end if
-
-  case('usdef')
-    l = oct_parse_potential(x(1), x(2), x(3), r, s%user_def)
-
-  case default
-    if(r >= r_small) then
-      l = (splint(s%ps%vlocal,  r) - s%Z_val)/r
-    else
-      l = s%ps%Vlocal_origin
-    end if
-  end select
-
-end function specie_get_local
-
-real(r8) function specie_get_nlcc(s, x) result(l)
-  type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(3)
-
-  real(r8) :: r
-  r = sqrt(sum(x**2))
-
-  select case(s%label(1:5))
-  case('jelli', 'point', 'usdef')
-    message(1) = "Internal error in 'specie_get_nlcc'."
-    message(2) = "Please submit a bug report!"
-    call write_fatal(2)
-
-  case default
-    l = splint(s%ps%core, r)
-  end select
-
-end function specie_get_nlcc
-
-subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
-  type(specie_type), intent(IN) :: s
-  real(r8), intent(in) :: x(3)
-  integer, intent(in) :: l, lm, i
-  real(r8), intent(out) :: uV, duV(3)
-  real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
-  real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
-  logical, optional, intent(in) :: so
-
-  r = sqrt(sum(x**2))
-  if(present(so)) then
-    if(so) then
-      uVr0  = splint(s%ps%so_kb(l, i), r)
-      duvr0 = splint(s%ps%so_dkb(l, i), r)
-    else
-      message(1) = 'Internal.'
-      call write_fatal(1)
-    endif
-  else
-    uVr0  = splint(s%ps%kb(l, i), r)
-    duvr0 = splint(s%ps%dkb(l, i), r)
-  endif
-  call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
-  uv = uvr0*ylm
-  if(r >= r_small) then
-    duv(:) = duvr0 * ylm * x(:)/r + uvr0 * gylm(:)
-  else
-    !!! WARNING
-    if(l==1) then
-      duv = 0.0_r8
-      if(lm==-1) then
-        duv(2) = - ylmconst * duvr0
-      elseif(lm==0) then
-        duv(3) =   ylmconst * duvr0
-      elseif(lm==1) then
-        duv(1) = - ylmconst * duvr0
-      endif
-    else
-     duv = 0.0_r8
-    endif
-    ! This was before
-    !duv(:) = 0.0_r8
-    !!!ENDOFWARNING
-  endif
-
-end subroutine specie_get_nl_part
+#if defined(ONE_D) || defined(TWO_D)
+#  include "specie1D.F90"
+#elif defined(THREE_D)
+#  include "specie3D.F90"
+#endif
 
 end module specie

@@ -68,12 +68,14 @@ subroutine lcao_dens(sys, nspin, rho)
     s => a%spec
     
     select case(s%label(1:5))
-    case('jelli', 'point')
-      call from_jellium(sys%m, rho(:, 1))
     case('usdef')
       call from_userdef(sys%m, rho(:, 1))
+#if defined(THREE_D)
+    case('jelli', 'point')
+      call from_jellium(sys%m, rho(:, 1))
     case default
       call from_pseudopotential(sys%m)
+#endif
     end select
   end do
 
@@ -91,6 +93,19 @@ subroutine lcao_dens(sys, nspin, rho)
 
   call pop_sub()
 contains
+  subroutine from_userdef(m, rho)
+    type(mesh_type), intent(in) :: m
+    real(r8), intent(inout) :: rho(m%np)
+
+    integer :: i
+
+    do i = 1, m%np
+      call mesh_r(m, i, r, a=a%x)
+      rho(i) = rho(i) + real(s%Z_val, r8)/(m%np*m%vol_pp)
+    end do
+  end subroutine from_userdef
+
+#if defined(THREE_D)
   subroutine from_jellium(m, rho)
     type(mesh_type), intent(in) :: m
     real(r8), intent(inout) :: rho(m%np)
@@ -115,57 +130,43 @@ contains
     end if
   end subroutine from_jellium
   
-  subroutine from_userdef(m, rho)
-    type(mesh_type), intent(in) :: m
-    real(r8), intent(inout) :: rho(m%np)
-
-    integer :: i
-
-    do i = 1, m%np
-      call mesh_r(m, i, r, a=a%x)
-      rho(i) = rho(i) + real(s%Z_val, r8)/(m%np*m%vol_pp)
-    end do
-  end subroutine from_userdef
-
   subroutine from_pseudopotential(m)
     type(mesh_type), intent(in) :: m
-
+    
     integer :: i, l, is
     real(r8) :: r
     R_TYPE :: psi1, psi2
 
     do i = 1, m%np
       call mesh_r(m, i, r, a=a%x)
-#if defined(THREE_D)
       do l = 0 , s%ps%L_max_occ
         if(r >= r_small) then
           select case(sys%st%spin_channels)
           case(1)
-             psi1 = splint(s%ps%Ur(l, 1), r)
-             rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1*(r**(2*l))/(4*M_PI)
+            psi1 = splint(s%ps%Ur(l, 1), r)
+            rho(i, 1) = rho(i, 1) + s%ps%occ(l, 1)*psi1*psi1*(r**(2*l))/(4*M_PI)
           case(2)
-             psi1 = splint(s%ps%ur(l, 1), r)
-             psi2 = splint(s%ps%ur(l, 2), r)
-             rho(i, 1) = rho(i, 1) + (s%ps%occ(l, 1)*psi1*psi1 + s%ps%occ(l, 2)*psi2*psi2) * &
-                                     (r**(2*l))/(4*M_PI)
-             rho(i, sys%st%nspin) = rho(i, sys%st%nspin) + &
-                                    (s%ps%occ(l, 1)*psi1*psi1 - s%ps%occ(l, 2)*psi2*psi2) * &
-                                    (r**(2*l))/(4*M_PI)
-          end select          
+            psi1 = splint(s%ps%ur(l, 1), r)
+            psi2 = splint(s%ps%ur(l, 2), r)
+            rho(i, 1) = rho(i, 1) + (s%ps%occ(l, 1)*psi1*psi1 + s%ps%occ(l, 2)*psi2*psi2) * &
+                 (r**(2*l))/(4*M_PI)
+            rho(i, sys%st%nspin) = rho(i, sys%st%nspin) + &
+                 (s%ps%occ(l, 1)*psi1*psi1 - s%ps%occ(l, 2)*psi2*psi2) * &
+                 (r**(2*l))/(4*M_PI)
+          end select
         end if
       end do
-#elif defined(ONE_D)
-      rho(i, 1) = rho(i, 1) + s%z_val*exp(-r**2)/sqrt(m_pi)
-#endif
     end do
     
   end subroutine from_pseudopotential
+#endif
 end subroutine lcao_dens
 
 subroutine lcao_init(sys, h)
   type(system_type), intent(IN)      :: sys
   type(hamiltonian_type), intent(IN) :: h
 
+#if defined(THREE_D)
   integer :: norbs, i, ispin, a, ik, n1, i1, l1, lm, lm1, d1, n2, i2, l2, lm2, d2
   integer, parameter :: orbs_local = 2
 
@@ -181,14 +182,14 @@ subroutine lcao_init(sys, h)
   lcao_data%atoml = .true.
   norbs = 0
   atoms_loop: do i1 = 1, sys%natoms
-      l_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
-           if(sum(sys%atom(i1)%spec%ps%occ(l1, :)).ne.0.0_r8) then
-              norbs = norbs + (2*l1+1)
-           else
-              lcao_data%atoml(i1, l1) = .false.
-           endif
-      end do l_loop
-  enddo atoms_loop
+    l_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
+      if(sum(sys%atom(i1)%spec%ps%occ(l1, :)).ne.0.0_r8) then
+        norbs = norbs + (2*l1+1)
+      else
+        lcao_data%atoml(i1, l1) = .false.
+      endif
+    end do l_loop
+  end do atoms_loop
 
   select case(sys%st%ispin)
    case(1);
@@ -223,7 +224,6 @@ subroutine lcao_init(sys, h)
         end do
      end do
   end do
-!!$  end if
 
   ! Allocation of variables
   allocate(lcao_data%hamilt    (sys%st%nik, norbs, norbs), &
@@ -231,13 +231,16 @@ subroutine lcao_init(sys, h)
            lcao_data%k_plus_psv(sys%st%nik, norbs, norbs))
 
   call pop_sub()
+#endif
 end subroutine lcao_init
 
 subroutine lcao_end
   sub_name = 'lcao_end'; call push_sub()
 
+#if defined(THREE_D)
   if(lcao_data%mode == MEM_INTENSIVE) deallocate(lcao_data%psis)
   deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
+#endif
 
   call pop_sub()
 end subroutine lcao_end
@@ -246,6 +249,7 @@ subroutine lcao_wf(sys, h)
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(in) :: h
   
+#if defined(THREE_D)
   integer, parameter :: orbs_local = 2
 
   integer :: a, idim, i, ispin, lm, ik, n1, n2, i1, i2, l1, l2, lm1, lm2, d1, d2
@@ -268,18 +272,16 @@ subroutine lcao_wf(sys, h)
   allocate(hpsi(sys%m%np, sys%st%dim))
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
-       call R_FUNC(Hpsi)(h, sys%m, sys%st, sys, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
-       do n2 = 1, lcao_data%dim
-              lcao_data%hamilt(ik, n1, n2) = &
-                        R_FUNC(states_dotp)(sys%m, sys%st%dim, &
-                                            hpsi, lcao_data%psis(1:, : ,n2, ik))
-              lcao_data%s(ik, n1, n2) = &
-                        R_FUNC(states_dotp)(sys%m, sys%st%dim, &
-                                            lcao_data%psis(1:, :, n1, ik), lcao_data%psis(1:, : ,n2, ik))
-       enddo
-    enddo
-  enddo
-
+      call R_FUNC(Hpsi)(h, sys%m, sys%st, sys, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      do n2 = 1, lcao_data%dim
+        lcao_data%hamilt(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+             hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%s(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+             lcao_data%psis(1:, :, n1, ik), lcao_data%psis(1:, : ,n2, ik))
+      end do
+    end do
+  end do
+  
   do ik = 1, sys%st%nik
 
     lwork = 3*norbs - 1
@@ -299,18 +301,20 @@ subroutine lcao_wf(sys, h)
     sys%st%R_FUNC(psi)(:,:,:, ik) = R_TOTYPE(0.0_r8)
     do n1 = 1, lcao_data%dim
        do n2 = 1, sys%st%nst
-          do d1 = 1, sys%st%dim
-            sys%st%R_FUNC(psi)(:, d1, n2, ik) = sys%st%R_FUNC(psi)(:, d1, n2, ik) + &
-              lcao_data%hamilt(ik, n1, n2) * lcao_data%psis(:, d1, n1, ik)
-          enddo
-       enddo
-    enddo
-  end do
+         do d1 = 1, sys%st%dim
+           sys%st%R_FUNC(psi)(:, d1, n2, ik) = sys%st%R_FUNC(psi)(:, d1, n2, ik) + &
+                lcao_data%hamilt(ik, n1, n2) * lcao_data%psis(:, d1, n1, ik)
+         end do
+       end do
+     end do
+   end do
 
   deallocate(hpsi)
   call pop_sub(); return
+#endif
 end subroutine lcao_wf
 
+#if defined(THREE_D)
 subroutine get_wf(sys, i, l, lm, ispin, psi)
   type(system_type), intent(IN) :: sys
   integer, intent(in)   :: i, l, lm, ispin
@@ -340,5 +344,5 @@ subroutine get_wf(sys, i, l, lm, ispin, psi)
 
   call pop_sub(); return    
 end subroutine get_wf
-
+#endif
 end module lcao

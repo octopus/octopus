@@ -184,7 +184,7 @@ contains
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
-  integer iunit, i
+  integer iunit, i, j
 
   call oct_mkdir(C_string(trim(dir)))
   call io_assign(iunit)
@@ -228,12 +228,10 @@ subroutine scf_write_static(dir, fname)
   do i = 1, sys%st%nspin
     write(iunit, '(a, i1, 4a)') 'Dipole (', i, ')', &
          ' [', trim(units_out%length%abbrev), ']:'
-    write(iunit, '(6x, a, es17.8)') 'x = ', &
-         sum(sys%m%Lx(:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(1) / units_out%length%factor
-    write(iunit, '(6x, a, es17.8)') 'y = ', &
-         sum(sys%m%Ly(:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(2) / units_out%length%factor
-    write(iunit, '(6x, a, es17.8)') 'z = ', &
-         sum(sys%m%Lz(:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(3) / units_out%length%factor
+    do j = 1, conf%dim
+      write(iunit, '(6x,a,i1,a,es17.8)') '<x', j, '> = ', &
+           sum(sys%m%Lxyz(j,:)*sys%st%rho(:,i))*sys%m%vol_pp*sys%m%h(j) / units_out%length%factor
+    end do
     write(iunit, '(1x)')
   end do
 

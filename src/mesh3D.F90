@@ -26,7 +26,7 @@ subroutine mesh_init(m, natoms, atom)
 
   call mesh_init_derivatives_coeff(m)
   
-  call mesh3D_create(m, natoms, atom)
+  call mesh_create(m, natoms, atom)
 
   ! we will probably need ffts in a lot of places
 #ifdef POLYMERS
@@ -191,7 +191,4 @@ subroutine phase_factor(m, n, vec, inp, outp)
     end do
   end do
 end subroutine phase_factor
-
-#include "mesh3D_create.F90"
-
 

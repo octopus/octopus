@@ -39,13 +39,13 @@ subroutine xc_gga(func, m, st, pot, energy)
 !!$    call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))
 !!$  end do
   ! Temporary..
-  d(0, :) = ZERO
+  d(0, :) = M_ZERO
   select case(st%nspin)
   case(1)
     d(1:m%np, 1) = abs(st%rho(1:m%np, 1))
   case(2)
-    d(1:m%np, 1) = abs(HALF*(st%rho(1:m%np, 1)+st%rho(1:m%np, 2)))
-    d(1:m%np, 2) = abs(HALF*(st%rho(1:m%np, 1)-st%rho(1:m%np, 2)))
+    d(1:m%np, 1) = abs(M_HALF*(st%rho(1:m%np, 1)+st%rho(1:m%np, 2)))
+    d(1:m%np, 2) = abs(M_HALF*(st%rho(1:m%np, 1)-st%rho(1:m%np, 2)))
   end select
   do is = 1, st%nspin
     if(st%nlcc) then ! non-linear core corrections
@@ -72,9 +72,9 @@ subroutine xc_gga(func, m, st, pot, energy)
       pot(i, is) = pot(i, is) + dedd(is)
 
       do in = -m%d%norder , m%d%norder
-        ind(1) = m%Lxyz_inv(m%Lx(i)+in,m%Ly(i),m%Lz(i))
-        ind(2) = m%Lxyz_inv(m%Lx(i),m%Ly(i)+in,m%Lz(i))
-        ind(3) = m%Lxyz_inv(m%Lx(i),m%Ly(i),m%Lz(i)+in)
+        ind(1) = m%Lxyz_inv(m%Lxyz(1,i)+in,m%Lxyz(2,i),m%Lxyz(3,i))
+        ind(2) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i)+in,m%Lxyz(3,i))
+        ind(3) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i),m%Lxyz(3,i)+in)
 
 #ifndef BOUNDARIES_ZERO_DERIVATIVE
         den = 0.0_r8
@@ -99,8 +99,7 @@ subroutine xc_gga(func, m, st, pot, energy)
     do is = 1, st%nspin
       call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
       do i = 1, m%np
-        energy = energy + d(i, is) * (  &
-             m%Lx(i)*m%h(1)*gd(i, 1, is) + m%Ly(i)*m%h(2)*gd(i, 2, is) + m%Lz(i)*m%h(3)*gd(i, 3, is))
+        energy = energy + d(i, is) * sum(m%Lxyz(:,i)*m%h(:)*gd(i, :, is))
       end do
     end do
     energy = - energy * m%vol_pp
@@ -161,19 +160,16 @@ subroutine xc_x_pbe(IREL, NSPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
 
 ! Lower bounds of density and its gradient to avoid divisions by zero
 ! plus some numerical constants
-  real(r8), parameter :: &
-      DENMIN = 1.E-12_r8, GDMIN  = 1.E-12_r8,          &
-      HALF=0.50_r8, THD=1.0_r8/3.0_r8, THRHLF=1.50_r8, &
-      TWO=2.0_r8, BETA = 0.066725_r8,                  &
-      MU = BETA * M_PI**2 / 3, KAPPA = 0.8040_r8
+  real(r8), parameter :: DENMIN = 1.E-12_r8, GDMIN  = 1.E-12_r8,   &
+      BETA = 0.066725_r8, MU = BETA * M_PI**2 / 3, KAPPA = 0.8040_r8
 
 ! Translate density and its gradient to new variables
   if (NSPIN .eq. 1) then
-    D(1) = HALF * DENS(1)
+    D(1) = M_HALF * DENS(1)
     D(2) = D(1)
     DT = max( DENMIN, DENS(1) )
     do IX = 1,3
-      GD(IX,1) = HALF * GDENS(IX,1)
+      GD(IX,1) = M_HALF * GDENS(IX,1)
       GD(IX,2) = GD(IX,1)
       GDT(IX) = GDENS(IX,1)
     end do
@@ -197,7 +193,7 @@ subroutine xc_x_pbe(IREL, NSPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
   do IS = 1,2
     DS(IS)   = max( DENMIN, 2 * D(IS) )
     GDMS = max( GDMIN, 2 * GDM(IS) )
-    KFS = (3 * M_PI**2 * DS(IS))**THD
+    KFS = (3 * M_PI**2 * DS(IS))**M_THIRD
     S = GDMS / (2 * KFS * DS(IS))
     F1 = 1 + MU * S**2 / KAPPA
     F = 1 + KAPPA - KAPPA / F1
@@ -207,21 +203,21 @@ subroutine xc_x_pbe(IREL, NSPIN, DENS, GDENS, EX, DEXDD, DEXDGD)
     call xc_x_lda( IREL, 1_i4, DS(is:is), VXUNIF(is:is), EXUNIF )
     FX = FX + DS(IS) * EXUNIF * F
     
-    DKFDD = THD * KFS / DS(IS)
+    DKFDD = M_THIRD * KFS / DS(IS)
     DSDD = S * ( -(DKFDD/KFS) - 1/DS(IS) )
-    DF1DD = 2 * (F1-1) * DSDD / S
+    DF1DD = M_TWO * (F1-1) * DSDD / S
     DFDD = KAPPA * DF1DD / F1**2
     DFXDD(IS) = VXUNIF(IS) * F + DS(IS) * EXUNIF * DFDD
     
-    do IX = 1,3
-      GDS = 2 * GD(IX,IS)
+    do IX = 1, 3
+      GDS = M_TWO * GD(IX,IS)
       DSDGD = (S / GDMS) * GDS / GDMS
-      DF1DGD = 2 * MU * S * DSDGD / KAPPA
+      DF1DGD = M_TWO * MU * S * DSDGD / KAPPA
       DFDGD = KAPPA * DF1DGD / F1**2
       DFXDGD(IX,IS) = DS(IS) * EXUNIF * DFDGD
     end do
   end do
-  FX = HALF * FX / DT
+  FX = M_HALF * FX / DT
 
   ! Set output arguments
   EX = FX
@@ -255,7 +251,7 @@ subroutine xc_c_pbe(NSPIN, DENS, GDENS, EC, DECDD, DECDGD)
 
   real(r8), parameter :: &
       DENMIN = 1.E-12, GDMIN  = 1.E-12,        &
-      FOUTHD=4.0_r8/3.0_r8, HALF=0.50_r8,      &
+      FOUTHD=4.0_r8/3.0_r8,       &
       THD=1.0_r8/3.0_r8, TWOTHD=2.0_r8/3.0_r8, &
       BETA = 0.066725_r8
   
@@ -263,11 +259,11 @@ subroutine xc_c_pbe(NSPIN, DENS, GDENS, EC, DECDD, DECDGD)
 
 ! Translate density and its gradient to new variables
   if (NSPIN .eq. 1) then
-    D(1) = HALF * DENS(1)
+    D(1) = M_HALF * DENS(1)
     D(2) = D(1)
     DT = max( DENMIN, DENS(1) )
     do IX = 1,3
-      GD(IX,1) = HALF * GDENS(IX,1)
+      GD(IX,1) = M_HALF * GDENS(IX,1)
       GD(IX,2) = GD(IX,1)
       GDT(IX) = GDENS(IX,1)
     end do
@@ -298,7 +294,7 @@ subroutine xc_c_pbe(NSPIN, DENS, GDENS, EC, DECDD, DECDGD)
   ZETA = ( D(1) - D(2) ) / DT
   ZETA = max( -1.0_r8+DENMIN, ZETA )
   ZETA = min(  1.0_r8-DENMIN, ZETA )
-  PHI = HALF * ( (1+ZETA)**TWOTHD + (1-ZETA)**TWOTHD )
+  PHI = M_HALF * ( (1+ZETA)**TWOTHD + (1-ZETA)**TWOTHD )
   T = GDMT / (2 * PHI * KS * DT)
   F1 = ECUNIF / GAMMA / PHI**3
   F2 = exp(-F1)
@@ -312,10 +308,10 @@ subroutine xc_c_pbe(NSPIN, DENS, GDENS, EC, DECDD, DECDGD)
 ! Find correlation energy derivatives
   DRSDD = - (THD * RS / DT)
   DKFDD =   THD * KF / DT
-  DKSDD = HALF * KS * DKFDD / KF
+  DKSDD = M_HALF * KS * DKFDD / KF
   DZDD(1) =   1 / DT - ZETA / DT
   DZDD(2) = - (1 / DT) - ZETA / DT
-  DPDZ = HALF * TWOTHD * ( 1/(1+ZETA)**THD - 1/(1-ZETA)**THD )
+  DPDZ = M_HALF * TWOTHD * ( 1/(1+ZETA)**THD - 1/(1-ZETA)**THD )
   do IS = 1,2
      DECUDD = ( VCUNIF(IS) - ECUNIF ) / DT
      DPDD = DPDZ * DZDD(IS)
@@ -363,7 +359,7 @@ subroutine xc_x_lb94(nspin, dens, gdens, ex, dexdd, dexdgd)
 ! plus some numerical constants
   real(r8), parameter :: &
       DENMIN = 1.E-20_r8,    GDMIN  = 1.E-20_r8,          &
-      HALF   = 0.5_r8,      THRD   = 1._r8/3._r8,        &
+      THRD   = 1._r8/3._r8,        &
       FTHRD  = 4._r8/3._r8, BETA   = 0.05_r8
 
 ! first we add the LDA potential
@@ -377,8 +373,8 @@ subroutine xc_x_lb94(nspin, dens, gdens, ex, dexdd, dexdgd)
 
 ! Translate density and its gradient to new variables
   if (nspin .eq. 1) then
-    d(1)     = dens(1) * HALF
-    gd(:, 1) = gdens(:, 1) * HALF
+    d(1)     = dens(1) * M_HALF
+    gd(:, 1) = gdens(:, 1) * M_HALF
   else
     d  = dens
     gd = gdens
