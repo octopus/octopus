@@ -15,11 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-use io
-use units
-use spline
-use kb
-
 implicit none
 
 private

@@ -24,6 +24,7 @@ use liboct
 use io
 use units
 use kb
+use logrid
 
 implicit none
 
@@ -35,7 +36,6 @@ public  :: ps_st_params,          & ! Data types
            projectorr,            &
            projectorg,            &
            ps_ghg_read_file,      &
-           hgh_debug,             &
            solve_schroedinger_hgh
 
 ! Next data type contains:
@@ -60,6 +60,7 @@ type ps_st_params
 
   real(r8), pointer :: vlocal(:) ! Local potential
   real(r8), pointer :: kb(:,:,:) ! KB projectors
+  real(r8), pointer :: kbr(:)    ! KB radii
 
   ! Pseudo wave functions and pseudo eigenvalues
   real(r8), pointer :: rphi(:,:), eigen(:)
@@ -121,6 +122,8 @@ subroutine ps_ghg_read_file(psp, filename)
      psp%l_max = psp%l_max + 1
   end do
   psp%l_max = psp%l_max - 1
+
+  allocate(psp%kbr(0:psp%l_max+1))
 
   call pop_sub(); return
 end subroutine ps_ghg_read_file
@@ -366,28 +369,6 @@ function projectorg(g, p, i, l)
   end select
 
 end function projectorg
-
-subroutine hgh_debug(psp, filename)
-  type(ps_st_params), intent(in) :: psp
-  character(len=*)               :: filename
-
-  integer :: iunit, ir, i, l
-
-  call io_assign(iunit)
-  open(unit=iunit, file=trim(filename)//'.hgh.debug')
-
-  do ir = 1, psp%nrval
-    write(iunit, *) &
-         psp%rofi(ir) / units_out%length%factor, &
-         psp%vlocal(ir) / units_out%energy%factor, &
-         ( psp%kb(ir, l, 1), l = 0, psp%l_max), &
-         ( psp%kb(ir, l, 2), l = 0, psp%l_max), &
-         ( psp%kb(ir, l, 2), l = 0, psp%l_max)
-  end do
-
-  call io_close(iunit)
-
-end subroutine hgh_debug
 
 subroutine solve_schroedinger_hgh(psp, lmax)
   type(ps_st_params), intent(inout) :: psp

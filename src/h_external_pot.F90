@@ -461,19 +461,19 @@ contains
                 a%uVu(add_lm, 1, 1) = a%uVu(add_lm, 1, 1) + a%uV(j, add_lm, 1)* &
                      splint(s%ps%Ur(l), r) * ylm * (r**l)
               else
-                a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)*splint(s%ps%ur(l), r)*ylm
+                a%uvu(add_lm, 1, 1) = a%uvu(add_lm, 1, 1) + a%uv(j, add_lm, 1)* &
+                     splint(s%ps%ur(l), r)*ylm
               endif
             end do
             a%uVu(add_lm, 1, 1) = sum(a%uV(:, add_lm, 1)**2)/(a%uVu(add_lm, 1, 1)*s%ps%dknrm(l))
-            if(abs((a%uVu(add_lm, 1, 1) - s%ps%dkbcos(l))/s%ps%dkbcos(l)) > 0.05_r8) then
+             if(abs((a%uVu(add_lm, 1, 1) - s%ps%h(l,1,1))/s%ps%h(l,1,1)) > 0.05_r8) then
               write(message(1), '(a,i4)') "Low precision in the calculation of the uVu for lm = ", &
                    add_lm
-              write(message(2), '(f14.6,a,f14.6)') s%ps%dkbcos(l), ' .ne. ', a%uVu(add_lm, 1, 1)
+              write(message(2), '(f14.6,a,f14.6)') s%ps%h(l,1,1), ' .ne. ', a%uVu(add_lm, 1, 1)
               message(3) = "Please consider decreasing the spacing, or changing pseudopotential"
               call write_warning(3)
             end if
             ! uVu can be calculated exactly, or numerically
-            !a%uVu(add_lm) = s%ps%dkbcos(l)
             a%uvu(add_lm, 1, 1) = s%ps%h(l, 1, 1)
           end if
           

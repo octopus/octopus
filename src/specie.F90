@@ -27,11 +27,23 @@ use math
 implicit none
 
 type specie_type
-  character(len=10) :: label
-  real(r8) :: Z, Z_val
-  real(r8) :: weight
-  logical :: local   ! true if the potential is local
-  logical :: nlcc    ! true if we have non-local core corrections
+  character(len=10) :: label      ! Identifier for the species:
+                                  ! "jelli" : jellium sphere.
+                                  ! "point" : jellium sphere of radius 0.5 a.u.
+                                  ! "usdef" : user defined function
+                                  ! other   : a pseudopotential.
+
+  real(r8)          :: z          ! charge of the species. 
+
+  real(r8)          :: z_val      ! valence charge of the species -- the total charge
+                                  ! minus the core charge in the case of the pseudopotentials.
+
+  real(r8)          :: weight     ! mass, in atomic mass units (=! atomic units of mass)
+
+  logical           :: local      ! true if the potential is local, which in this case means
+                                  ! it is *not* a pseudopotential.
+
+  logical           :: nlcc       ! true if we have non-local core corrections
 
   ! jellium stuff
   real(r8) :: jradius
@@ -68,7 +80,6 @@ function specie_init(s)
 
   integer :: nspecies, i, j, lmax, lloc
   character(len=80) :: str
-  logical :: log
 
   sub_name = 'specie_init'; call push_sub()
 
@@ -119,7 +130,7 @@ function specie_init(s)
       j = len(trim(s(i)%user_def))
       s(i)%user_def(j+1:j+1) = achar(0) 
 
-    case default ! a pseudopotential file8
+    case default ! a pseudopotential file
       s(i)%local = .false.
 
       allocate(s(i)%ps) ! allocate structure
@@ -127,8 +138,8 @@ function specie_init(s)
       call oct_parse_block_str(str, i-1, 3, s(i)%ps_flavour)
       call oct_parse_block_int(str, i-1, 4, lmax)
       call oct_parse_block_int(str, i-1, 5, lloc)
-      call oct_parse_logical(C_string("DebugPseudo"), .false., log)
-      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc, log)
+      call ps_init(s(i)%ps, s(i)%label, s(i)%ps_flavour, s(i)%Z, lmax, lloc)
+      if(conf%verbose>999) call ps_debug(s(i)%ps)
 
       s(i)%z_val = s(i)%ps%z_val
       s(i)%nl_planb= int(-1, POINTER_SIZE)
@@ -261,7 +272,6 @@ subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV)
   real(r8), intent(in) :: x(3)
   integer, intent(in) :: l, lm, i
   real(r8), intent(out) :: uV, duV(3)
-
   real(r8) :: r, f, uVr0, duvr0, ylm, gylm(3)
   real(r8), parameter :: ylmconst = 0.488602511902920_r8 !  = sqr(3/(4*pi))
 
