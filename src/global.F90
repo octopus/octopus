@@ -128,6 +128,7 @@ subroutine global_init()
   call MPI_COMM_RANK(MPI_COMM_WORLD, mpiv%node, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, mpiv%numprocs, ierr)
   write(stdout,'(a,i4,a,i4,a)') 'Process ', mpiv%node, ' of ', mpiv%numprocs, ' is alive'  
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 #else
   mpiv%node = 0
   mpiv%numprocs = 1

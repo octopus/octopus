@@ -322,7 +322,7 @@ end subroutine scf_write_iter
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname
 
-  FLOAT :: e_dip(conf%dim, st%d%nspin), n_dip(conf%dim)
+  FLOAT :: e_dip(conf%dim, st%d%nspin), n_dip(conf%dim), angular(3), l2
   FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
   integer :: iunit, i, j
 
@@ -385,6 +385,16 @@ subroutine scf_write_static(dir, fname)
      write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
                                                                     n_dip(j)*ATOMIC_TO_DEBYE
   enddo
+  write(iunit,'(a)')
+
+  call X(states_calculate_angular)(m, st, angular, l2 = l2)
+  write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
+  do j = 1, conf%dim
+     write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
+  enddo
+  write(iunit,'(a)')
+
+  write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
   write(iunit,'(a)')
 
   write(iunit, '(a)') 'Convergence:'

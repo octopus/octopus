@@ -241,3 +241,64 @@ subroutine X(f_divergence) (m, f, divf)
 
   call pop_sub()
 end subroutine X(f_divergence)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! The action of the angular momentum operator (three spatial components).
+! In case of real functions, it does not include the -i prefactor
+! (L = -i r ^ nabla).
+subroutine X(f_angular_momentum)(m, f, lf)
+  type(mesh_type), intent(IN)   :: m
+  R_TYPE,          intent(IN)   :: f(m%np)
+  R_TYPE,           intent(out) :: lf(3, m%np)
+
+  R_TYPE, allocatable :: gf(:, :)
+  FLOAT :: x(3)
+  integer :: i
+
+  allocate(gf(3, m%np))
+  call X(f_gradient)(m, f, grad = gf)
+
+  do i = 1, m%np
+     call mesh_xyz(m, i, x)
+     lf(1, i) = (x(2)*gf(3, i)-x(3)*gf(2, i))
+     lf(2, i) = (x(3)*gf(1, i)-x(1)*gf(3, i))
+     lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
+  enddo
+#if defined(R_TCOMPLEX)
+  call X(lalg_scal)(3*m%np, -M_zI, lf(1, 1))
+#endif
+  deallocate(gf)
+end subroutine X(f_angular_momentum)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Square of the angular momentum L. This has to be very much improved if
+! accuracy is needed.
+subroutine X(f_l2)(m, f, l2f)
+  type(mesh_type), intent(IN)  :: m
+  R_TYPE,          intent(IN)  :: f(:)
+  R_TYPE,          intent(out) :: l2f(:)
+
+  R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)
+  integer :: i, j
+
+  allocate(gf(conf%dim, m%np), ggf(conf%dim, conf%dim, m%np))
+  call X(f_angular_momentum)(m, f, gf)
+  do j = 1, conf%dim
+     call X(f_angular_momentum)(m, gf(j, 1:m%np), ggf(j, 1:conf%dim, 1:m%np))
+  enddo
+
+  do i = 1, m%np
+     l2f(i) = M_ZERO
+     do j = 1, conf%dim
+        l2f(i) = l2f(i) + ggf(j, j, i)
+     enddo
+  enddo
+
+! In case of real functions, since the angular momentum calculations
+! lack a (-i) prefactor, we must add a (-1) factor
+#if defined(R_TREAL)
+  l2f = - l2f
+#endif
+  deallocate(gf, ggf)
+end subroutine X(f_l2)
+

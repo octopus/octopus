@@ -31,7 +31,7 @@ program octopus
   ! Let us print our logo
   if(mpiv%node == 0) then
     ! Let us print our logo
-    if(conf%verbose > 20) ierr = loct_print_file(trim(conf%share) // '/logo')
+    if(conf%verbose > 20) ierr = loct_print_file(trim(trim(conf%share) // '/logo'))
 #ifdef DEBUG
     if(conf%verbose > 999) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
 #endif

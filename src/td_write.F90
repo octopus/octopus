@@ -77,6 +77,7 @@ subroutine td_write_angular(out, m, st, td, iter)
   type(td_type),         intent(IN) :: td
   integer,               intent(in) :: iter
 
+  integer :: ierr
   character(len=130) :: aux
   FLOAT :: angular(3)
 
@@ -85,37 +86,37 @@ subroutine td_write_angular(out, m, st, td, iter)
   ! The angular momentum has to be calculated by all nodes...
   call zstates_calculate_angular(m, st, angular)
 
-  if(mpiv%node.ne.0) then ! only first node outputs
-    call pop_sub; return
-  end if
+  if(mpiv%node == 0) then ! Only first node outputs
 
-  if(iter ==0) then
-    !empty file
-    call write_iter_clear(out)
+    if(iter ==0) then
+      !empty file
+      call write_iter_clear(out)
 
-    !fist line -> now unused.
-    write(aux, '(a)') '#'
-    call write_iter_string(out, aux)
+      !fist line -> now unused.
+      write(aux, '(a)') '#'
+      call write_iter_string(out, aux)
+      call write_iter_nl(out)
+
+      !second line -> columns name
+      call write_iter_header_start(out)
+      write(aux, '(a2,18x)') 'Lx'
+      call write_iter_header(out, aux)
+      write(aux, '(a2,18x)') 'Ly'
+      call write_iter_header(out, aux)
+      write(aux, '(a2,18x)') 'Lz'
+      call write_iter_header(out, aux)
+      call write_iter_nl(out)
+
+      !third line -> should hold the units. Now unused (assumes atomic units)
+      call write_iter_string(out, '##########')
+      call write_iter_nl(out)
+    endif
+
+    call write_iter_start(out)
+    call write_iter_double(out, angular(1:3), 3)
     call write_iter_nl(out)
 
-    !second line -> columns name
-    call write_iter_header_start(out)
-    write(aux, '(a2,18x)') 'Lx'
-    call write_iter_header(out, aux)
-    write(aux, '(a2,18x)') 'Ly'
-    call write_iter_header(out, aux)
-    write(aux, '(a2,18x)') 'Lz'
-    call write_iter_header(out, aux)
-    call write_iter_nl(out)
-
-    !third line -> should hold the units. Now unused (assumes atomic units)
-    call write_iter_string(out, '##########')
-    call write_iter_nl(out)
   endif
-
-  call write_iter_start(out)
-  call write_iter_double(out, angular(1:3), 3)
-  call write_iter_nl(out)
   
   call pop_sub()
 end subroutine td_write_angular

@@ -747,12 +747,13 @@ subroutine X(states_calculate_magnetization)(m, st, mag)
   call pop_sub()
 end subroutine X(states_calculate_magnetization)
 
-subroutine X(states_calculate_angular)(m, st, angular)
+subroutine X(states_calculate_angular)(m, st, angular, l2)
   type(mesh_type),   intent(IN)  :: m
   type(states_type), intent(IN)  :: st
   FLOAT,             intent(out) :: angular(3)
+  FLOAT, optional,   intent(out) :: l2
 
-  FLOAT :: temp(3)
+  FLOAT :: temp(3), ltemp
   R_TYPE, allocatable :: lpsi(:, :)
   integer :: idim, ik, j
 #if defined(HAVE_MPI)
@@ -761,15 +762,24 @@ subroutine X(states_calculate_angular)(m, st, angular)
 
   call push_sub('states_calculate_angular')
 
-  temp = M_ZERO
+
+  temp = M_ZERO; ltemp = M_ZERO
   allocate(lpsi(conf%dim, m%np))
   do ik = 1, st%d%nik
      do j  = st%st_start, st%st_end
         do idim = 1, st%dim
-           call X(mesh_angular_momentum)(m, st%X(psi)(:, idim, j, ik), lpsi)
+#if defined(R_TREAL)
+           temp = M_ZERO ! The expectation value of L of *any* real function is null
+#else
+           call X(f_angular_momentum)(m, st%X(psi)(:, idim, j, ik), lpsi)
            temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(1, :))
            temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(2, :))
            temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(3, :))
+#endif
+           if(present(l2)) then
+              call X(f_l2)(m, st%X(psi)(:, idim, j, ik), lpsi(1, :))
+              ltemp = ltemp + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(1, :))
+           endif
         enddo
      enddo
   enddo
@@ -777,35 +787,13 @@ subroutine X(states_calculate_angular)(m, st, angular)
 #if defined(HAVE_MPI) && defined(MPI_TD)
     call MPI_ALLREDUCE(temp, angular, 3, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
+    if(present(l2)) &
+    call MPI_ALLREDUCE(ltemp, l2, 1, &
+         MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
 #else
   angular = temp
+  if(present(l2)) l2 = ltemp
 #endif
-
   deallocate(lpsi)
-
   call pop_sub()
 end subroutine X(states_calculate_angular)
-
-subroutine X(mesh_angular_momentum)(m, f, lf)
-  type(mesh_type), intent(IN)  :: m
-  R_TYPE,          intent(IN)  :: f(m%np)
-  R_TYPE,          intent(out) :: lf(3, m%np)
-
-  R_TYPE, allocatable :: gf(:, :)
-  FLOAT :: x(3)
-  integer :: i
-
-  allocate(gf(3, m%np))
-  call X(f_gradient)(m, f, grad = gf)
-
-  do i = 1, m%np
-     call mesh_xyz(m, i, x)
-     lf(1, i) = (x(2)*gf(3, i)-x(3)*gf(2, i))
-     lf(2, i) = (x(3)*gf(1, i)-x(1)*gf(3, i))
-     lf(3, i) = (x(1)*gf(2, i)-x(2)*gf(1 ,i))
-  enddo
-#if defined(R_TCOMPLEX)
-  call X(lalg_scal)(3*m%np, -M_zI, lf(1, 1))
-#endif
-  deallocate(gf)
-end subroutine X(mesh_angular_momentum)
