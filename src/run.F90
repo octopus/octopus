@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -21,8 +22,6 @@ module run_prog
 use global
 use units
 use fft
-use lcao
-use states
 use restart
 use external_pot
 use hamiltonian

@@ -125,7 +125,7 @@ contains
     type(td_rti_type),      intent(inout) :: tr
     FLOAT,                  intent(in)    :: t, dt
 
-    integer :: is
+    integer :: is, iter
     FLOAT   :: d, d_max
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
@@ -155,7 +155,7 @@ contains
     end select
 
     if(self_consistent) then
-      do
+      do iter = 1, 3
         call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
         call zcalcdens(st, m%np, st%rho, .true.)

@@ -45,7 +45,53 @@ module td_exp
                                  LANCZOS_EXPANSION  = 2, &
                                  FOURTH_ORDER       = 3, &
                                  CHEBYSHEV          = 4
-contains
+
+
+  type(hamiltonian_type), pointer :: h_p
+  type(mesh_type), pointer :: m_p
+  type(f_der_type), pointer :: f_der_p
+  integer :: ik_p
+  FLOAT :: t_p
+
+  contains
+
+  ! The next three routines permit to define and pass the matvec 
+  ! operation needed by the expokit Lanczos algorithms
+  ! in expokit_inc.F90 file (ZGEXPV or ZHEXPV). It is a rather ugly
+  ! scheme, but I do not know how to make it better for the moment --
+  ! specially the stupid copying.
+  subroutine matvec_init(mesh, ham, f_der, ik_point, time)
+    type(mesh_type), target, intent(in)   :: mesh
+    type(hamiltonian_type), target, intent(in) :: ham
+    type(f_der_type), target, intent(in)  :: f_der
+    integer, intent(in) :: ik_point
+    FLOAT, intent(in) :: time
+    h_p     => ham
+    m_p     => mesh
+    f_der_p => f_der
+    ik_p    =  ik_point
+    t_p     =  time
+  end subroutine matvec_init
+
+  subroutine matvec_kill
+    nullify(h_p); nullify(m_p); nullify(f_der_p)
+  end subroutine matvec_kill
+
+  subroutine matvec(x, y)
+    CMPLX, intent(in)  :: x(*)
+    CMPLX, intent(out) :: y(*)
+    CMPLX, allocatable :: psi(:, :), hpsi(:, :)
+    integer :: is
+    allocate(psi(m_p%np, h_p%d%dim), hpsi(m_p%np, h_p%d%dim))
+    do is = 1, h_p%d%dim
+       psi(1:m_p%np, is) = x( (is-1)*m_p%np+1 : is*m_p%np )
+    enddo
+    call zhpsi (h_p, m_p, f_der_p, psi, hpsi, ik_p, t_p)
+    do is = 1, h_p%d%dim
+       y( (is-1)*m_p%np+1 : is*m_p%np ) = -M_zI * hpsi(1:m_p%np, is)
+    enddo
+    deallocate(psi, hpsi)
+  end subroutine matvec
 
   subroutine td_exp_init(m, te)
     type(mesh_type),   intent(IN) :: m
@@ -224,63 +270,29 @@ contains
     end subroutine cheby
     
     subroutine lanczos
-      integer ::  korder, n, np
-      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:)
-      FLOAT :: alpha, beta, res, tol, nrm
-      
-      call push_sub('lanczos')
-      
-      np = m%np*h%d%dim
-      korder = te%exp_order
-      tol = te%lanczos_tol
-      allocate(v(m%np, h%d%dim, korder), &
-           hm(korder, korder),         &
-           expo(korder, korder))
-      
-      ! Normalize input vector, and put it into v(:, :, 1)
-      nrm = zstates_nrm2(m, h%d%dim, zpsi(:,:))
-      v(:, :, 1) = zpsi(:, :)/nrm
-      
-      ! Operate on v(:, :, 1) and place it onto w.
-      call operate(v(:, :, 1), zpsi)
-      alpha = zstates_dotp(m, h%d%dim, v(:, :, 1), zpsi)
-      call lalg_axpy(m%np, h%d%dim, -M_z1*alpha, v(:,:, 1), zpsi(:,:))
-      
-      hm = M_z0; hm(1, 1) = alpha
-      beta = zstates_nrm2(m, h%d%dim, zpsi(:,:))
+      integer :: n, b, ideg, lwsp, liwsp, itrace, iflag
+      FLOAT :: anorm
+      CMPLX, allocatable :: wsp(:), expzpsi(:, :)
+      integer, allocatable :: iwsp(:)
 
-      do n = 1, korder - 1
-        v(:,:, n + 1) = zpsi(:,:)/beta
-        hm(n+1, n) = beta
-        call operate(v(:,:, n+1), zpsi)
+      n = m%np*h%d%dim
+      b = te%exp_order
+      anorm = CNST(1.0)
+      ideg = 6
+      lwsp = n*(b+1)+n+(b+2)**2+4*(b+2)**2+ideg+1
+      liwsp = b+2
+      itrace = 0
+      allocate(iwsp(liwsp), wsp(lwsp), expzpsi(m%np, h%d%dim))
 
-        hm(n    , n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n)  , zpsi)
-        hm(n + 1, n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n+1), zpsi)
-        ! WARNING: does not compile
-        stop 'change me'
-        !call lalg_gemv(m%np, h%d%dim, 2, -M_z1, v(:, :, n:n+1), hm(n:n+1, n+1), M_z1, zpsi)
-        call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
+      call matvec_init(m, h, f_der, ik, t)
+      call zgexpv( n, b, timestep, zpsi, expzpsi, &
+                   te%lanczos_tol, anorm, wsp, lwsp, iwsp, liwsp, matvec, itrace, iflag)
+      call matvec_kill()
 
-        res = abs(beta*abs(expo(1, n+1)))
-        beta = zstates_nrm2(m, h%d%dim, zpsi)
+      zpsi = expzpsi
+      if(present(order)) order = iwsp(1)
+      deallocate(iwsp, wsp, expzpsi)
 
-        if(beta < CNST(1.0e-12)) exit
-        if(n>1 .and. res<tol) exit
-      enddo
-      korder = min(korder, n + 1)
-      if(res > tol .and. beta > CNST(1.0e-12)) then
-        write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
-        call write_warning(1)
-      endif
-      
-      ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      ! WARNING: does not compile
-      stop 'change me'
-      !call lalg_gemv(m%np, h%d%dim, korder, M_z1*nrm, v, expo(1:korder, 1), M_z0, zpsi)
-      
-      if(present(order)) order = korder
-      deallocate(v, hm, expo)
-      call pop_sub()
     end subroutine lanczos
 
 #if defined(HAVE_FFT)

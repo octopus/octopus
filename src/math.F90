@@ -36,10 +36,8 @@ module math
             cutoff0, &
             cutoff1, &
             cutoff2, &
-            dmatexp, zmatexp, &
-            dmatexp_polynomial, zmatexp_polynomial, &
-            dmatexp_scaleandsquare, zmatexp_scaleandsquare, &
-            dextrapolate, zextrapolate
+            dextrapolate, zextrapolate, &
+            zgexpv, zhexpv, zgpadm
 
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface conjugate_gradients
@@ -356,6 +354,7 @@ end function cutoff2
 !end function phaseshift
 
 #include "math_cg_inc.F90"
+#include "expokit_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
