@@ -150,7 +150,8 @@ subroutine scf_run(scf, sys, h)
     call X(calcdens)(sys%st, sys%m%np, rhoout)
     if (scf%what2mix == MIXPOT) then
        sys%st%rho = rhoout
-       call X(h_calc_vhxc) (h, sys%m, sys%st, vout)
+       call X(h_calc_vhxc) (h, sys%m, sys%st)
+       vout = h%vhxc
     end if
     evsum_out = states_eigenvalues_sum(sys%st)
 

@@ -32,8 +32,6 @@ type hamiltonian_type
   integer :: reltype ! type of relativistic correction to use
 
   real(r8), pointer :: Vpsl(:)     => NULL() ! the external potential
-  real(r8), pointer :: Vhartree(:) => NULL() ! the hartree potential
-  real(r8), pointer :: Vxc(:,:)    => NULL() ! xc potential
   real(r8), pointer :: Vhxc(:,:)   => NULL() ! xc potential + hartree potential
 
   ! the energies (total, ion-ion, exchange, correlation)
@@ -89,13 +87,11 @@ subroutine hamiltonian_init(h, sys)
   h%nspin         = sys%st%nspin
 
   ! allocate potentials and density of the cores
-  allocate(h%Vpsl(sys%m%np),              &
-           h%Vhartree(sys%m%np),          &
-           h%Vxc(sys%m%np, sys%st%nspin), &
-           h%Vhxc(sys%m%np, sys%st%nspin))
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
-  h%vpsl = M_ZERO; h%vhartree = M_ZERO; h%vxc = M_ZERO; h%Vhxc = M_ZERO
+  allocate(h%Vpsl(sys%m%np), h%Vhxc(sys%m%np, sys%st%nspin))
+  h%vpsl = M_ZERO
+  h%Vhxc = M_ZERO
 
   call epot_init(h%ep, sys)
 
@@ -201,8 +197,8 @@ subroutine hamiltonian_end(h, sys)
   call push_sub('hamiltonian_end')
 
   if(associated(h%Vpsl)) then
-    deallocate(h%Vpsl, h%Vhartree, h%Vxc, h%Vhxc)
-    nullify(h%Vpsl, h%Vhartree, h%Vxc, h%Vhxc)
+    deallocate(h%Vpsl, h%Vhxc)
+    nullify(h%Vpsl, h%Vhxc)
   end if
 
   call epot_end(h%ep, sys)

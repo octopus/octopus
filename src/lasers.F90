@@ -223,10 +223,10 @@ subroutine laser_write_info(no_l, l, iunit)
 end subroutine laser_write_info
 
 subroutine laser_field(no_l, l, t, field)
-  integer, intent(in) :: no_l
-  type(laser_type), intent(IN) :: l(no_l)
-  real(r8), intent(in) :: t
-  real(r8), intent(out) :: field(conf%dim)
+  integer,          intent(in)  :: no_l
+  type(laser_type), intent(in)  :: l(no_l)
+  real(r8),         intent(in)  :: t
+  real(r8),         intent(out) :: field(conf%dim)
 
   complex(r8), allocatable :: amp(:)
   integer :: i

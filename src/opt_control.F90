@@ -56,7 +56,7 @@ subroutine opt_control_run(td, sys, h)
     call zcalcdens(psi_i, sys%m%np, psi_i%rho, reduce=.true.)
     call zh_calc_vhxc(h, sys%m, psi_i, sys=sys)
     do i = 1, sys%st%nspin
-      v_old_i(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
+      v_old_i(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_i(:, :, 3) = v_old_i(:, :, 2)
     
@@ -82,7 +82,7 @@ subroutine opt_control_run(td, sys, h)
     call zcalcdens(psi_f, sys%m%np, psi_f%rho, reduce=.true.)
     call zh_calc_vhxc(h, sys%m, psi_f, sys=sys)
     do i = 1, sys%st%nspin
-      v_old_f(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
+      v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
     
@@ -220,7 +220,7 @@ contains
     
     ! setup start of the propagation
     do i = 1, sys%st%nspin
-      v_old_f(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
+      v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
     
