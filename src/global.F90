@@ -92,7 +92,7 @@ integer :: stdin  = 5
 integer :: stdout = 6
 
 ! some variables to be used everywhere
-character(len=75), dimension(20) :: message ! to be output by fatal, warning
+character(len=80), dimension(20) :: message ! to be output by fatal, warning
 character(len=40) :: sub_name ! the sub name to be used by push/pop_sub
 
 ! some private variables to this module

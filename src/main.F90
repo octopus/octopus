@@ -34,9 +34,10 @@ program octopus
 
   ! Let us print the version
   message(1) = ""
-  message(2) = "    Running octopus, version " + OCTOPUS_VERSION
-  message(3) = ""
-  call write_info(3)
+  message(2) = str_center(trim("Running octopus, version " + OCTOPUS_VERSION), 70)
+  message(3) = str_center(trim("(build time - " + BUILD_TIME + ")"), 70)
+  message(4) = ""
+  call write_info(4)
 
   ! print date
   call date_and_time(values=val)

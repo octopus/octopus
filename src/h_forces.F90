@@ -25,8 +25,6 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
   real(r8) :: d, r, x(3), zi, zj, vl, dvl
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
-  complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
-  real(r8), allocatable :: fr(:,:,:), force(:)
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
   real(r8) :: f(3)
@@ -93,7 +91,6 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
   if(present(t).and.h%no_lasers>0) then
     call laser_field(h%no_lasers, h%lasers, t, x)
     do i = 1, sys%natoms
-      if(sys%atom(i)%spec%local) cycle
       sys%atom(i)%f(1:conf%dim) = sys%atom(i)%f(1:conf%dim) + &
            sys%atom(i)%spec%Z_val * x(1:conf%dim)
     end do
@@ -101,7 +98,6 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 
   ! first the ion, ion force term
   do i = 1, sys%natoms
-    if(sys%atom(i)%spec%local) cycle
     zi = sys%atom(i)%spec%Z_val
     do j = 1, sys%natoms
       if(i .ne. j) then
@@ -117,49 +113,58 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
 
   ! now comes the local part of the PP
   if(h%vpsl_space == 0) then ! Real space
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
-      if(sys%atom(i)%spec%local) cycle  
-      do j = 1, sys%m%np
-        call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
-        if(r < r_small) cycle
-
-        ! WARNING have to fix this
-        if(conf%dim == 3) then
-          vl  = splint(atm%spec%ps%vlocal, r)
-          dvl = splint(atm%spec%ps%dvlocal, r)
-        
-          d = sum(sys%st%rho(j, :)) * sys%m%vol_pp* &
-               (dvl - (vl - atm%spec%Z_val)/r)/r**2
-          atm%f(:) = atm%f(:) + d * x(:)
-        end if
-      end do
-    end do
+    call local_RS()
   else ! Fourier space
-    allocate( &
-         fw1(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         fw2(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         fr (sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-         force(sys%m%np))
-    
-    do i = 1, sys%natoms
-      atm => sys%atom(i)
-      if(sys%atom(i)%spec%local) cycle
-      do j = 1, conf%dim
-        fw1 = M_z0
-        call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
-        call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2, j)
-        
-        call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
-        force = 0._r8
-        call dcube_to_mesh(sys%m, fr, force, t=2)
-        do l = 1, sys%st%nspin
-          atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
-        end do
-      end do
-    end do
-    deallocate(fw1, fw2, fr, force)
+    call local_FS()
   end if
 
   call pop_sub()
+
+  contains
+    subroutine local_RS()
+      real(r8) :: r, x(3), d, gv(3)
+      integer  :: ns
+
+      ns = min(2, sys%st%nspin)
+
+      do i = 1, sys%natoms
+        atm => sys%atom(i)
+        do j = 1, sys%m%np
+          call mesh_r(sys%m, j, r, x=x, a=sys%atom(i)%x)
+          if(r < r_small) cycle
+
+          call specie_get_glocal(atm%spec, x, gv)
+          d = sum(sys%st%rho(j, 1:ns))*sys%m%vol_pp
+          atm%f(:) = atm%f(:) - d*gv(:)
+        end do
+      end do
+    end subroutine local_RS
+
+    subroutine local_FS()
+      complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
+      real(r8), allocatable :: fr(:,:,:), force(:)
+
+      allocate( &
+           fw1(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+           fw2(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+           fr (sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+           force(sys%m%np))
+    
+      do i = 1, sys%natoms
+        atm => sys%atom(i)
+        do j = 1, conf%dim
+          fw1 = M_z0
+          call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
+          call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2, j)
+          
+          call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
+          force = 0._r8
+          call dcube_to_mesh(sys%m, fr, force, t=2)
+          do l = 1, sys%st%nspin
+            atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
+          end do
+        end do
+      end do
+      deallocate(fw1, fw2, fr, force)
+    end subroutine local_FS
 end subroutine R_FUNC(forces)

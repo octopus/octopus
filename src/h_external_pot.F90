@@ -51,8 +51,8 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
 
     call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
     
-    n = m%fft_n2(2)*m%fft_n2(3)*m%hfft_n2
-    c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), 0.0_r8, r8)
+    n = m%hfft_n2*m%fft_n2(2)*m%fft_n2(3)
+    c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), M_ZERO, r8)
     call zscal(n, c, s(i)%local_fw,  1)
     
     ! now we built the non-local core corrections in momentum space

@@ -88,18 +88,10 @@ real(r8) function specie_get_nlcc(s, x) result(l)
   type(specie_type), intent(IN) :: s
   real(r8), intent(in) :: x(3)
 
-  real(r8) :: r
-  r = sqrt(sum(x**2))
-
-  select case(s%label(1:5))
-  case('jelli', 'point', 'usdef')
-    message(1) = "Internal error in 'specie_get_nlcc'."
-    message(2) = "Please submit a bug report!"
-    call write_fatal(2)
-
-  case default
-    l = splint(s%ps%core, r)
-  end select
+  ! only for 3D pseudopotentials, please
+  if(conf%dim==3.and.(s%label(1:5).ne.'jelli'.and.s%label(1:5).ne.'point'.and.s%label(1:5).ne.'usdef')) then
+    l = splint(s%ps%core, sqrt(sum(x**2)))
+  end if
 
 end function specie_get_nlcc
 

@@ -192,6 +192,52 @@ real(r8) function specie_get_local(s, x) result(l)
 
 end function specie_get_local
 
+! returns the gradient of the external potential
+subroutine specie_get_glocal(s, x, gv)
+  type(specie_type), intent(IN) :: s
+  real(r8), intent(in) :: x(conf%dim)
+  real(r8), intent(out) :: gv(conf%dim)
+
+  real(r8), parameter :: Delta = 1e-4_r8
+  real(r8) :: xx(3), r, vl, dvl, l1, l2
+  integer :: i
+
+  gv = M_ZERO
+  if(conf%dim.ne.3 .or. s%label(1:5)=='usdef') then
+    xx = M_ZERO
+    do i = 1, conf%dim
+      xx(1:conf%dim) = x(1:conf%dim)
+      xx(i) = xx(i) - Delta
+      l1 = oct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+      xx(i) = xx(i) + M_TWO*Delta
+      l2 = oct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+      gv(i) = (l2 - l1)/(M_TWO*Delta)
+    end do
+  else
+    xx(:) = x(:)
+    r = sqrt(sum(xx(:)**2))
+
+    select case(s%label(1:5))
+    case('jelli', 'point')
+      l1 = s%Z/(2._r8*s%jradius**3)
+      
+      if(r <= s%jradius) then
+        gv(:) = l1*x(:)
+      else
+        gv(:) = s%Z*x(:)/r**3
+      end if
+
+    case default
+      l1 = splint(s%ps%vlocal, r)
+      l2 = splint(s%ps%dvlocal, r)
+      
+      gv(:) = -(l2 - (l1 - s%Z_val)/r)/r**2 * x(:)
+      
+    end select
+  end if
+
+end subroutine specie_get_glocal
+
 #include "specie1D.F90"
 #include "specie3D.F90"
 
