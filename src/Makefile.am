@@ -2,8 +2,10 @@ bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
 octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
-	spline.F90 fft.F90 ps_xc.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 \
-	mesh.F90 hartree.F90 states.F90 xc.F90 systm.F90 lasers.F90 hamiltonian.F90 \
+	spline.F90 fft.F90 \
+	ps_xc.F90 ps_kb.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
+	atom.F90 mesh.F90 hartree.F90 states.F90 xc.F90 \
+	systm.F90 lasers.F90 hamiltonian.F90 \
 	eigen.F90 mix.F90 lcao.F90 scf.F90 unocc.F90 static_pol.F90 \
 	geom_opt.F90 pes.F90 td.F90 run.F90 main.F90
 
@@ -16,7 +18,7 @@ noinst_HEADERS = \
 	eigen_cg1.F90 eigen_cg2.F90 \
 	states_inc.F90 states_kpoints.F90\
 	pes_rc.F90 pes_mask.F90 \
-	td_init.F90 td_rti.F90 \
+	td_init.F90 td_rti.F90 td_rti3.F90\
 	mix_inc.F90
 
 octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @GSL_LIBS@
@@ -69,5 +71,5 @@ hamiltonian.o: hamiltonian_inc.F90 h_external_pot.F90 h_forces.F90
 eigen.o: eigen_cg1.F90 eigen_cg2.F90
 states.o: states_inc.F90
 pes.o: pes_rc.F90 pes_mask.F90
-td.o: td_init.F90 td_rti.F90
+td.o: td_init.F90 td_rti.F90 td_rti3.F90
 mix.o: mix_inc.F90

@@ -55,8 +55,8 @@ subroutine td_init(td, sys, m, st)
     message(2) = '(1 <= TDEvolutionMethod <= 3)'
     call write_fatal(2)
   end if
-  if(td%evolution_method == 3) then ! split operator method
-    call td_init_evolution_splitop()
+  if(td%evolution_method == 3) then
+    call mesh_alloc_ffts(m, 1)
   end if
 
   call oct_parse_int(C_string("TDDipoleLmax"), 1, td%lmax)
@@ -121,26 +121,6 @@ subroutine td_init(td, sys, m, st)
        '.', mpiv%node, '.cont'
 
 contains
-  subroutine td_init_evolution_splitop()
-    integer :: ix, iy, iz, ixx, iyy, izz
-    real(r8) :: temp(3), vec
-
-    allocate(td%kin_2(m%fft_n(1), m%fft_n(2), m%fft_n(3)))
-    temp(1:3) = 2.0_r8*M_PI/(m%fft_n(1:3)*m%h(1:3))    
-    do ix = 1, m%fft_n(1)
-      ixx = pad_feq(ix, m%fft_n(1), .true.)
-      do iy = 1, m%fft_n(2)
-        iyy = pad_feq(iy, m%fft_n(2), .true.)
-        do iz = 1, m%fft_n(3)
-          izz = pad_feq(iz, m%fft_n(3), .true.)
-          vec = real(temp(1)**2*ixx**2 + temp(2)**2*iyy**2 + temp(3)**2*izz**2, r8)/2._r8
-          
-          td%kin_2(ix, iy, iz) = exp(- M_zI*td%dt/2._r8* vec)
-        end do
-      end do
-    end do
-  end subroutine td_init_evolution_splitop
-
   subroutine td_init_lasers()
     call laser_init(m, td%no_lasers, td%lasers)
     td%output_laser = .false.
@@ -263,12 +243,7 @@ subroutine td_end(td)
 
 #ifndef NO_PES
   call PES_end(td%PESv)
-!  if(td%calc_PES_mask) call PES_mask_end(td%PES_mask)
 #endif
-
-  if(td%evolution_method == 3) then ! split operator method
-    deallocate(td%kin_2); nullify(td%kin_2)
-  end if
 
   if(associated(td%ab_pot)) then
     deallocate(td%ab_pot); nullify(td%ab_pot)

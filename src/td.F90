@@ -42,8 +42,6 @@ type td_type
   real(r8) :: dt            ! time step
   integer  :: move_ions     ! how do we move the ions?
 
-  complex(r8), pointer :: kin_2(:,:,:) ! for split operator
-
   real(r8) :: delta_strength ! strength of the delta excitation
   real(r8) :: pol(3)         ! direction of the polarization of the efield
 
@@ -144,7 +142,6 @@ subroutine td_run(td, u_st, sys, h)
   ii = 1
   do i = td%iter, td%max_iter
     if(clean_stop()) exit
-
     ! Move the ions.
     if( td%move_ions > 0 ) then
       select case(td%move_ions)
@@ -655,9 +652,11 @@ contains
     end do
     
     ! Adds the laser contribution
-    call laser_field(td%no_lasers, td%lasers, t, field)
-    charge = sum(sys%st%rho(:,:))*sys%m%vol_pp
-    acc(1:3) = acc(1:3) - field(1:3)*charge
+    if(td%no_lasers > 0) then
+      call laser_field(td%no_lasers, td%lasers, t, field)
+      charge = sum(sys%st%rho(:,:))*sys%m%vol_pp
+      acc(1:3) = acc(1:3) - field(1:3)*charge
+    end if
  
   end subroutine td_calc_tacc
 

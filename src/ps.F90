@@ -16,8 +16,6 @@
 !! 02111-1307, USA.
 
 #include "config_F90.h"
-#include "tm.F90"
-#include "hgh.F90"
 
 module ps
 

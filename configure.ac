@@ -244,7 +244,7 @@ AC_SUBST(LINK)
 
 AC_CONFIG_FILES([Makefile 
 	liboct/Makefile src/Makefile doc/Makefile 
-	share/Makefile share/PP/Makefile share/PP/TM2/Makefile
+	share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile
 	build/octopus.spec
 ])
 

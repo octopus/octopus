@@ -1,3 +1,20 @@
+05/5/02 (marques)
+  - Created Makefiles for HGH share directory
+  - Added split-operator propagator (do *not* use with velocity gauge)
+03/5/02 (acastro)
+  - Goedecker pseudopotentials added. Some comments:
+    * LCAO calculations don't work properly, because the Goedecker
+      pseudoeigenfunctions are badly calculated. It can be fixed, but
+      it will take time.
+    * The files ps3D.F90, tm.F90 and hgh.F90 are still a mess, but they
+      are on their way of looking nice. Need some work.
+    * The pseudopotential files for Goedecker may be obtained from their
+      paper, just copying 10 or 12 numbers, in the same format they use in their
+      paper. Those files should
+      go into the share directory, as Miguel did for the TM2 ps. Question: do
+      I just have to add a "HGH" directory to share/PP, and it is done?
+    * The "Species" input format changed (one more field to specify "tm"
+      or "hgh"). I will change the manual.
 28/4/02 (marques)
   - Added GPL header to (almost) all files
   - Added share directory to put pseudopotentials
