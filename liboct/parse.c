@@ -84,7 +84,7 @@ int parse_init(char *file_out)
 
 int parse_input(char *file_in)
 {
-        FILE *f;
+	FILE *f;
 	char *s;
 	int c, length = 0;
 
@@ -99,7 +99,6 @@ int parse_input(char *file_in)
 	/* we now read in the file and parse */
 	length = 40;
 	s = (char *)malloc(length + 1);
-
 	do{
 		c = parse_get_line(f, &s, &length);
 		if(*s){
@@ -155,12 +154,13 @@ int parse_input(char *file_in)
 	if(f != stdin)
 		fclose(f);
 
+	sym_clear_reserved();
+
 	return 0;
 }
 
 void parse_end()
 {
-	sym_clear_reserved();
 	sym_end_table();
 	fprintf(fout, "# Octopus parser ended\n");
 	if(fout != stdout)
