@@ -36,28 +36,11 @@ program xyzanim
   ! Initialize stuff
   call global_init()
   call units_init()
-
-  if(units_out%length%name .ne. 'Angstrom') then
-    message(1) = 'Output in atomic units. Set UnitsOutput="eVA" if you want it in angstroms'
-    call write_warning(1)
-  endif
   if(conf%verbose<999) conf%verbose = -1
 
   ! Sets the filenames
   write(nbofile, '(a)') 'td.general/coordinates'
   write(xyzfile, '(a)') 'movie.xyz'
-
-  ! how many do we have?
-  str = "Species"
-  geo%nspecies = loct_parse_block_n(str)
-  if (geo%nspecies < 1) then
-    message(1) = "Input: Species block not specified"
-    message(2) = '% Species'
-    message(3) = '   specie <params>'
-    message(4) = '%'
-    call write_fatal(4)    
-  end if
-  allocate(geo%specie(geo%nspecies))
 
   ! how often do we sample?
   call loct_parse_int('AnimationSampling', 100, sampling)
@@ -65,11 +48,6 @@ program xyzanim
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call write_fatal(1)
   end if
-
-  do i = 1, geo%nspecies
-    call loct_parse_block_string(str, i-1, 0, geo%specie(i)%label)
-    call loct_parse_block_float (str, i-1, 1, geo%specie(i)%weight)
-  end do
 
   ! Initializes the atom system
   call geometry_init_xyz(geo)
@@ -100,16 +78,13 @@ program xyzanim
 contains
 
   subroutine write_xyz
-    
     integer :: i
-    
     ! xyz format
     write(xyz_unit, '(i4)') geo%natoms
     write(xyz_unit, '(i10)') iter
     do i = 1, geo%natoms
-      write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%spec%label, geo%atom(i)%x(:)/units_out%length%factor
+      write(xyz_unit, '(6x,a,2x,3f12.6)') geo%atom(i)%label, geo%atom(i)%x(:)
     end do
-  
   end subroutine write_xyz
 
 end program xyzanim
