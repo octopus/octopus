@@ -549,8 +549,13 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
       
       do is = 1, ns
         write(iunit, '(a4)', advance='no') '#st'
-        write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
+        if(present(error)) then
+          write(iunit, '(1x,a12,3x,a12,2x,a10,i3,a1)', advance='no') &
              ' Eigenvalue', 'Occupation ', 'Error (', is, ')'
+        else
+          write(iunit, '(1x,a12,3x,a12,2x)', advance='no') &
+             ' Eigenvalue', 'Occupation '
+        endif
       end do
       write(iunit, '(1x)', advance='yes')
 

@@ -33,11 +33,19 @@ module lcao
   public :: lcao_dens, lcao_init, lcao_wf, lcao_end
 
 type lcao_type
-  integer           :: mode
+  !integer           :: mode
+  integer           :: state ! 0 => non-initialized;
+                             ! 1 => initialized (k, s and v1 matrices filled)
   integer           :: dim
   R_TYPE , pointer  :: psis(:, :, :, :)
+  ! hamilt stores the Hamiltonian in the LCAO subspace;
+  ! s is the overlap matrix;
+  ! k is the kinetic + spin orbit operator matrix;
+  ! v is the potential.
   R_TYPE , pointer  :: hamilt    (:, :, :), &
-                       s         (:, :, :)
+                       s         (:, :, :), &
+                       k         (:, :, :), &
+                       v         (:, :, :)
   logical, pointer  :: atoml(:,:)
 end type
 
@@ -148,10 +156,10 @@ contains
             psi1 = splint(s%ps%Ur(n, 1), r)
             rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1)*psi1*psi1 /(4*M_PI)  
           case(2)
+            ! We will build a spin-unpolarized density, also for spin-polarized calculations.
             psi1 = splint(s%ps%Ur(n, 1), r)
-            psi2 = splint(s%ps%Ur(n, 2), r)
-            rho(i, 1) = rho(i, 1) + s%ps%conf%occ(n, 1) * psi1*psi1 /(4*M_PI)
-            rho(i, 2) = rho(i, 2) + s%ps%conf%occ(n, 2) * psi2*psi2 /(4*M_PI)
+            rho(i, 1) = rho(i, 1) + M_HALF*sum(s%ps%conf%occ(n, :))*psi1*psi1 / (M_FOUR*M_PI)
+            rho(i, 2) = rho(i, 1)
           end select
         end if
       end do
@@ -173,6 +181,7 @@ subroutine lcao_init(sys, h)
   real(r8) :: uVpsi
 
   if(conf%dim.ne.3) return
+  if(lcao_data%state == 1) return
 
   call push_sub('lcao_init')
 
@@ -192,7 +201,7 @@ subroutine lcao_init(sys, h)
   end do atoms_loop
 
   select case(sys%st%ispin)
-   case(1);
+  case(1);
    case(2); ! No need to multiply by two, since each spin-channel goes to a k-subspace.
    case(3); norbs = norbs * 2
   end select
@@ -204,8 +213,7 @@ subroutine lcao_init(sys, h)
     call write_fatal(2)
   endif
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
-  write(message(2), '(a)')    '      (not considering spin or k-points)'
-  call write_info(2)
+  call write_info(1)
 
   allocate(lcao_data%psis(sys%m%np, sys%st%dim, norbs, sys%st%nik))
   lcao_data%psis = 0._r8
@@ -227,20 +235,52 @@ subroutine lcao_init(sys, h)
   end do
 
   ! Allocation of variables
-  allocate(lcao_data%hamilt    (sys%st%nik, norbs, norbs), &
-           lcao_data%s         (sys%st%nik, norbs, norbs))
+  allocate(lcao_data%hamilt (norbs, norbs, sys%st%nik), &
+           lcao_data%s      (norbs, norbs, sys%st%nik), &
+           lcao_data%k      (norbs, norbs, sys%st%nik), &
+           lcao_data%v      (norbs, norbs, sys%st%nik))
 
-  call pop_sub()
+  ! Overlap and kinetic+so matrices.
+  allocate(hpsi(sys%m%np, sys%st%dim))
+  do ik = 1, sys%st%nik
+    do n1 = 1, lcao_data%dim
+      call R_FUNC(kinetic) (h, ik, sys%m, sys%st, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      ! Relativistic corrections...
+      select case(h%reltype)
+      case(NOREL)
+#if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
+      case(SPIN_ORBIT)
+        call zso (h, sys%m, sys%natoms, sys%atom, sys%st%dim, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+#endif
+      case default
+        message(1) = 'Error: Internal.'
+      call write_fatal(1)
+      end select 
+ 
+      do n2 = n1, lcao_data%dim
+        lcao_data%k(n1, n2, ik) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+                                                      hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%s(n1, n2, ik) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+                                                      lcao_data%psis(:, :, n1, ik), lcao_data%psis(:, : ,n2, ik))
+      end do
+      
+    end do
+  end do
+  deallocate(hpsi)
+
+  lcao_data%state = 1
+  call pop_sub(); return
 end subroutine lcao_init
 
 subroutine lcao_end
   call push_sub('lcao_end')
 
-  if(conf%dim==3) then
-    if(lcao_data%mode==MEM_INTENSIVE) deallocate(lcao_data%psis)
-    deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%atoml)
-  end if
+  if(associated(lcao_data%hamilt)) then
+    deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%k, lcao_data%v)
+  endif
+  if(associated(lcao_data%psis)) deallocate(lcao_data%psis)
 
+  lcao_data%state = 0  
   call pop_sub()
 end subroutine lcao_end
 
@@ -265,18 +305,18 @@ subroutine lcao_wf(sys, h)
   call push_sub('lcao_wf')
 
   norbs = lcao_data%dim
-  mode  = lcao_data%mode
 
   ! Hamiltonian and overlap matrices.
   allocate(hpsi(sys%m%np, sys%st%dim))
   do ik = 1, sys%st%nik
     do n1 = 1, lcao_data%dim
-      call R_FUNC(Hpsi)(h, sys%m, sys%st, sys, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
-      do n2 = 1, lcao_data%dim
-        lcao_data%hamilt(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
-             hpsi, lcao_data%psis(1:, : ,n2, ik))
-        lcao_data%s(ik, n1, n2) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
-             lcao_data%psis(1:, :, n1, ik), lcao_data%psis(1:, : ,n2, ik))
+      hpsi = M_ZERO
+      call R_FUNC(vlpsi)   (h, sys%m, sys%st, ik, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      if(sys%nlpp) call R_FUNC(vnlpsi)  (ik, sys%m, sys%st, sys, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+      do n2 = n1, lcao_data%dim
+        lcao_data%v(n1, n2, ik) = R_FUNC(states_dotp)(sys%m, sys%st%dim, &
+                                                      hpsi, lcao_data%psis(1:, : ,n2, ik))
+        lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
       end do
     end do
   end do
@@ -285,11 +325,11 @@ subroutine lcao_wf(sys, h)
 
     lwork = 5*norbs
     allocate(work(lwork), w(norbs), rwork(lwork), s(norbs, norbs))
-    s(1:norbs, 1:norbs) = lcao_data%s(ik, 1:norbs, 1:norbs)
+    s(1:norbs, 1:norbs) = lcao_data%s(1:norbs, 1:norbs, ik)
 #ifdef COMPLEX_WFNS
-    call zhegv (1, 'v', 'u', norbs, lcao_data%hamilt(ik, :, :), norbs, s, norbs, w, work, lwork, rwork, info)
+    call zhegv (1, 'v', 'u', norbs, lcao_data%hamilt(:, :, ik), norbs, s, norbs, w, work, lwork, rwork, info)
 #else
-    call dsygv (1, 'v', 'u', norbs, lcao_data%hamilt(ik, :, :), norbs, s, norbs, w, work, lwork, info)
+    call dsygv (1, 'v', 'u', norbs, lcao_data%hamilt(:, :, ik), norbs, s, norbs, w, work, lwork, info)
 #endif
     if(info.ne.0) then
       write(message(1),'(a,i5)') 'LAPACK "zhegv/dsygv" returned error code ', info
@@ -298,14 +338,21 @@ subroutine lcao_wf(sys, h)
     sys%st%eigenval(1:sys%st%nst, ik) = w(1:sys%st%nst)
     deallocate(work, w, s, rwork)
     sys%st%R_FUNC(psi)(:,:,:, ik) = R_TOTYPE(0.0_r8)
-    do n1 = 1, lcao_data%dim
-       do n2 = 1, sys%st%nst
-         do d1 = 1, sys%st%dim
-           sys%st%R_FUNC(psi)(:, d1, n2, ik) = sys%st%R_FUNC(psi)(:, d1, n2, ik) + &
-                lcao_data%hamilt(ik, n1, n2) * lcao_data%psis(:, d1, n1, ik)
-         end do
-       end do
-     end do
+!!$    do n1 = 1, lcao_data%dim
+!!$       do n2 = 1, sys%st%nst
+!!$          call R_FUNC(axpy)(sys%m%np*sys%st%dim, lcao_data%hamilt(n1, n2, ik), &
+!!$                            lcao_data%psis    (1, 1, n1, ik), 1,           & 
+!!$                            sys%st%R_FUNC(psi)(1, 1, n2, ik), 1)
+!!$       end do
+!!$    end do
+    ! Change of base
+    call R_FUNC(gemm)('N', 'N', sys%m%np*sys%st%dim, sys%st%nst, lcao_data%dim, &
+                       M_ONE,                                                &
+                       lcao_data%psis(1, 1, 1, ik), sys%m%np*sys%st%dim,     &
+                       lcao_data%hamilt(1, 1, ik), norbs,                    &
+                       M_ZERO,                                               &
+                       sys%st%R_FUNC(psi)(1, 1, 1, ik), sys%m%np*sys%st%dim)
+ 
    end do
 
   deallocate(hpsi)

@@ -34,6 +34,10 @@ type eigen_solver_type
   integer  :: final_tol_iter
   integer  :: es_maxiter  
 
+  ! Stores information about how well it performed.
+  real(r8), pointer :: diff(:, :)
+  integer           :: matvec
+  integer           :: converged
 end type eigen_solver_type
 
 integer, parameter :: RS_CG      = 0
@@ -53,8 +57,9 @@ type(system_type), pointer      :: sys_trlan
 
 contains
 
-subroutine eigen_solver_init(eigens)
+subroutine eigen_solver_init(eigens, st)
   type(eigen_solver_type), intent(out) :: eigens
+  type(states_type), intent(in)        :: st
   
   call push_sub('eigen_solver_init')
 
@@ -108,12 +113,18 @@ subroutine eigen_solver_init(eigens)
       message(3) = '(EigenSolverMaxIter >=1 )'
       call write_fatal(2)
   endif
-  
-  call pop_sub()
+
+  nullify(eigens%diff)
+  allocate(eigens%diff(st%nst, st%nik))  
+
+  eigens%converged = 0
+  eigens%matvec    = 0
+
+  call pop_sub(); return
 end subroutine eigen_solver_init
 
 subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
-  type(eigen_solver_type), intent(IN) :: eigens
+  type(eigen_solver_type), intent(inout) :: eigens
   type(states_type), intent(inout) :: st
   type(system_type), intent(inout) :: sys
   type(hamiltonian_type), intent(IN) :: h
@@ -137,26 +148,22 @@ subroutine eigen_solver_run(eigens, st, sys, h, iter, conv)
 
   if(present(conv)) conv = .false.
   maxiter = eigens%es_maxiter
-  converged = 0
-
+  eigens%converged = 0
 
   select case(eigens%es_type)
   case(RS_CG)
     call eigen_solver_cg2(st, sys, h, &
-         tol, maxiter, converged, errorflag, diff)
+         tol, maxiter, eigens%converged, errorflag, eigens%diff)
 #ifdef HAVE_TRLAN
   case(RS_LANCZOS)
     call eigen_solver_cg3(st, sys, h, &
-         tol, maxiter, converged, errorflag, diff)
+         tol, maxiter, eigens%converged, errorflag, eigens%diff)
 #endif
   case(RS_PLAN)
-    call eigen_solver_plan(st, sys, h, tol, maxiter, converged, diff)
+    call eigen_solver_plan(st, sys, h, tol, maxiter, eigens%converged, eigens%diff)
   end select
-  write(message(1),'(a,i5)') 'Info: Converged = ',converged
-  write(message(2),'(a,i8)') 'Info: Matrix-Vector multiplications = ', maxiter
-  call write_info(2)
-  call states_write_eigenvalues(stdout, st%nst, st, diff)
 
+  eigens%matvec = maxiter
   if(present(conv).and. converged == st%nst*st%nik) conv = .true.
 
   deallocate(diff)

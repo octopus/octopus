@@ -73,7 +73,7 @@ subroutine scf_init(scf, sys)
   call mix_init(scf%smix, sys%m, sys%st)
 
   ! now the eigen solver stuff
-  call eigen_solver_init(scf%eigens)
+  call eigen_solver_init(scf%eigens, sys%st)
 
   ! Should the calculation be restricted to LCAO subspace?
   call oct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
@@ -82,8 +82,7 @@ subroutine scf_init(scf, sys)
     call write_info(1)
   endif
 
-  call pop_sub()
-  return
+  call pop_sub(); return
 end subroutine scf_init
 
 subroutine scf_end(scf)
@@ -132,16 +131,12 @@ subroutine scf_run(scf, sys, h)
 
     ! are we finished?
     finish = &
-        (scf%conv_abs_dens > 0.0_r8 .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
-        (scf%conv_rel_dens > 0.0_r8 .and. scf%rel_dens <= scf%conv_rel_dens) .or. &
-        (scf%conv_abs_ener > 0.0_r8 .and. scf%abs_ener <= scf%conv_abs_ener) .or. &
-        (scf%conv_rel_ener > 0.0_r8 .and. scf%rel_ener <= scf%conv_rel_ener)
+        (scf%conv_abs_dens > M_ZERO .and. scf%abs_dens <= scf%conv_abs_dens) .or. &
+        (scf%conv_rel_dens > M_ZERO .and. scf%rel_dens <= scf%conv_rel_dens) .or. &
+        (scf%conv_abs_ener > M_ZERO .and. scf%abs_ener <= scf%conv_abs_ener) .or. &
+        (scf%conv_rel_ener > M_ZERO .and. scf%rel_ener <= scf%conv_rel_ener)
 
-    write(message(1), '(a,i4,a,e8.2,a,e8.2)') &
-         'Info: iter = ', iter, ' abs_dens = ', scf%abs_dens, &
-         ' abs_ener = ', scf%abs_ener
-    write(message(2), '(a)') ''
-    call write_info(2)
+    call scf_write_iter
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.clean_stop()) &
@@ -180,6 +175,27 @@ subroutine scf_run(scf, sys, h)
 
   call pop_sub()
 contains
+
+subroutine scf_write_iter
+  write(message(1),'(a)') '************'
+  write(message(2),'(a,i5)') 'SCF CYCLE ITER #',iter
+  write(message(3),'(2(a,es9.2))') &
+         ' abs_dens = ', scf%abs_dens, ' abs_ener = ', scf%abs_ener
+  write(message(4),'(2(a,es9.2))') &
+         ' rel_dens = ', scf%rel_dens, ' rel_ener = ', scf%rel_ener
+  call write_info(4)
+  if(.not.scf%lcao_restricted) then
+    write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
+    write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
+    call write_info(2)
+    call states_write_eigenvalues(stdout, sys%st%nst, sys%st, scf%eigens%diff)
+  else
+    call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
+  endif
+  write(message(1),'(a)') '************'
+  write(message(2),'(a)')
+  call write_info(2)
+end subroutine scf_write_iter
 
 subroutine scf_write_static(dir, fname)
   character(len=*), intent(in) :: dir, fname

@@ -171,7 +171,7 @@ subroutine run()
           log = log .and. (.not.sys%specie(i)%local)
       enddo
       if(log) then
-        message(1) = 'Info: Performing LCAO calculation.'
+        message(1) = 'Info: Performing initial LCAO calculation.'
         call write_info(1)
         call lcao_init(sys, h)
         call lcao_wf(sys, h)
