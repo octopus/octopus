@@ -5,7 +5,7 @@ INSTALL-INFO=/sbin/install-info
 all: dvi html info
 
 dvi:
-	texi2dvi octopus.texinfo
+	texi2dvi --texinfo=@afourpaper octopus.texinfo
 
 html:
 	texi2html octopus.texinfo
@@ -23,7 +23,7 @@ uninstall-info:
 	rm /usr/share/info/octopus.info.gz
 
 clean:
-	@rm -f *.aux *.fn *.log *.tp *.cp *.pg *.vr *.ky *.ps *.toc *~
+	@rm -f *.aux *.fn *.log *.tp *.cp *.pg *.vr *.ky *.ps *.toc *~ *.cps
 
 cleanall:
 	@make clean

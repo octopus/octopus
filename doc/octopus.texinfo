@@ -95,8 +95,10 @@ translation.
 
 @iftex
 @headings off
-@evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
-@oddheading  @image{octosex,1.75cm} @| @thischapter  @| @thispage{} 
+@c @evenheading @thispage{}            @| @thistitle @| @image{octosex,1.7cm}
+@c @oddheading  @image{octosex,1.75cm} @| @thischapter  @| @thispage{} 
+@evenheading @thispage{}            @| @thistitle @|
+@oddheading  @| @thischapter  @| @thispage{} 
 @end iftex
 
 
@@ -116,8 +118,23 @@ encourages to put something over here.
 * Introduction::                
 * Compilation::                 
 * Description of input options::  
+* Units::                       
 * Concept Index::               
 
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Description of input options
+
+* Generalities::                
+* Describing the species::      
+* Describing the atoms::        
+* Describing the electrons::    
+* Mesh parameters::             
+* Self-consistent cycle::       
+* Time evolution::              
+
+@end detailmenu
 @end menu
 
 @c **********************************************************************
@@ -147,7 +164,17 @@ anyhow.
 From latin @emph{octopus}, set of animals belonging to the...
 }
 is a program aimed at the ab initio virtual experimentation on 
-a hopefully ever increasing range of systems types.
+a hopefully ever increasing range of systems types. Its 
+main characteristics are:
+
+@itemize @bullet
+@item Electrons are describe quantum-mechanically within the
+Density-Functional Theory (DFT), in its time-dependent form (TDDFT)
+when doing simulations in time. Nuclei are described classically
+as point particles. 
+@item Electron-nucleus interaction is described within the
+Pseudopotential approximation..
+@end itemize
 
 @node Compilation, Description of input options, Introduction, Top
 @chapter Compilation
@@ -174,20 +201,48 @@ which is compiled previous to the main code when issuing
 @code{make}.
 
 
-@node Description of input options, Concept Index, Compilation, Top
+@node Description of input options, Units, Compilation, Top
 @c    node-name,     next,          previous,     up
 @chapter Description of input options
 
 The full description of the system to simulate on, and of the simulation
 to perform, is done in a file called "inp" that must be present in
 the directory where the @code{octopus} command is issued.
+The reading of the options is done through the @code{fdf} package,
+so the input format must follow its rules. The best thing to do
+is to follow the @code{inp} example in @code{OCTOPUS_HOME/samples}
+ directory.
 
+@menu
+* Generalities::                
+* Describing the species::      
+* Describing the atoms::        
+* Describing the electrons::    
+* Mesh parameters::             
+* Self-consistent cycle::       
+* Time evolution::              
+@end menu
+
+@node Generalities, Describing the species, Description of input options, Description of input options
 @section Generalities
+
+
+@subsection @code{Verbose}
+@cindex @code{Verbose}
+Integer number that sets the level of verbosity of the program:
+@itemize @bullet
+@item @code{>999} : Debug mode, maximum verbosity.
+@item @code{>20}  : Normal program info.
+@item @code{>0}   : Just warnings.and errors
+@item @code{<=0}  : Silent, only fatal errors.
+@end itemize
+@emph{Default: 30}
 
 @subsection @code{SystemName}:
 @cindex @code{SystemName}
 A string of characters that is used to build the filenames 
 (@code{SystemName.restart}, @code{SystemName.mult}, etc).
+
 @emph{Default: sysname.}
 
 @subsection @code{CalculationMode}:
@@ -207,27 +262,122 @@ Integer number. It defines the type of simulation to perform. Options are:
 @end itemize
 @emph{Default: 1.}
 
-@subsection @code{Verbose}:
-Level of verbosity in the output.
+@subsection @code{Units}:
+@cindex @code{Units}
+Atomic units seem to be the preferred system in the atomic and
+molecular physics community, despite the opinion of some of the authors
+of this program. Accordingly, atomic units may be used for describing
+input and output magnitudes. However, some people like using eV
+for energies and @AA{}  for lengths, and this defines a new units system
+(the @emph{convenient system}, in words of Prof. George W. Bertsch),
+which can also be used due to inheritance reasons. Thus the options 
+for this descriptor are:
+@itemize @bullet
+@item @code{a.u} : atomic units
+@item @code{eVA} : electron-volts/amstrongs
+@end itemize
+@emph{Default: a.u}
 
+@xref{Units} for detailed information about units. Two other 
+input descriptors are possible: @code{UnitsInput}, and @code{UnitsOutput},
+if different system units are desired in input or output.
+@cindex @code{UnitsInput}
+@cindex @code{UnitsOutput}
+
+
+@node Describing the species, Describing the atoms, Generalities, Description of input options
 @section Describing the species
 
+A specie, in principle,is an ion (nucleus + core electrons) described
+through a pseudopotential. However, the code allows for jellium 
+calculation, in which case the species will be the full jellium
+distribution, and point charges - which in fact are no more than
+@code{rather small} jellium spheres.
+
+@subsection @code{NumberSpecies}
+@cindex @code{NumberSpecies}
+Obvious meaning. 
+
+@subsection @code{Species}
+@cindex @code{Species}
+It is a @code{fdf} block of data which contains the information
+about the species. Its format may be illustrated through an example:
+
+@example
+%block Species
+Na        23.0   11.   2    1
+jelli      8.0   8.0   5.0
+point      1.0   1.0   
+%endblock Species
+@end example
+
+In this case, we have three "species" present:
+@itemize @bullet
+@item A sodium, pseudopotential, labeled "@code{Na}", to be read
+from a pseudopotential file. Numbers following the label describe 
+succesively the weight, the nuclear charge, the maximum 
+@emph{l}-component of the pseudopotential to consider in the
+calculation, and the @emph{l}-component to consider as local.
+@end itemize
+
+
+
+@node Describing the atoms, Describing the electrons, Describing the species, Description of input options
 @section Describing the atoms
 
+Atoms may be described in three ways: throuhg a PDB file, through a
+XYZ file, or within the @code{fdf inp} file. The program will attempt
+the three methods in that order.
+
+@subsection @code{PDBCoordinates}
+@cindex @code{PDBCoordinates}
+The name of a PDB file describing the atomic positions.
+If this is not the format to be used, this descriptor should not 
+be present in the @code{fdf} file.
+
+@emph{Default: coords.pdb}
+
+@subsection @code{XYZCoordinates}
+@cindex @code{XYZCoordinates}
+The name of a XYZ file describing the atomic positions.
+If this is not the format to be used, this descriptor should not
+be present in the @code{fdf} file.
+
+@emph{Default: coords.xyz}
+
+
+
+@node Describing the electrons, Mesh parameters, Describing the atoms, Description of input options
 @section Describing the electrons
 
+@node Mesh parameters, Self-consistent cycle, Describing the electrons, Description of input options
 @section Mesh parameters
 
 The real-space mesh is an equally-spaced one, although the spacings maybe
 different for each direction. The shape of the simulation region may also
 be tuned to suit the geometric configuration of the system.
 
+@node Self-consistent cycle, Time evolution, Mesh parameters, Description of input options
+@section Self-consistent cycle
+
+
+@node Time evolution,  , Self-consistent cycle, Description of input options
+@section Time evolution
+
+@node Varia, Units, Description of input options, Top
+
+
+@node Units, Concept Index, Description of input options, Top
+@appendix Units
+
+By default, input and output options are describe in atomic units.
+
 @c **********************************************************************
 
 
 
 @c ***************THE END OF THE DOCUMENT********************************
-@node    Concept Index,  , Description of input options, Top
+@node    Concept Index,  , Units, Top
 @c       node-name,    next, previous,     up
 @unnumbered Concept Index
      
