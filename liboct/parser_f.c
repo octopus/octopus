@@ -107,18 +107,18 @@ void F90_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 {
 	char *c, *name_c, *def_c;
 
-	name_c = TO_C_STR1(name);      // convert string to c strings
+	name_c = TO_C_STR1(name);      /* convert string to c strings */
 	def_c  = TO_C_STR2(def);
 	c = parse_string(name_c, def_c); 
-	TO_F_STR3(c, res);           // convert string to fortran
-	free(name_c); free(def_c);       // this has to be *after* the to_f_str
-                               // or we will have memory problems
+	TO_F_STR3(c, res);             /* convert string to fortran */
+	free(name_c); free(def_c);     /* this has to be *after* the to_f_str
+                                          or we will have memory problems */
 }
 
 static void parse_block_error(char *type, char *name, int l, int c){
-	fprintf(stderr, "Error: block \"%s\" does not contain a %s in line %d and col %d\n",
-					name, type, l, c);
-	//exit(1);
+  fprintf(stderr, "Error: block \"%s\" does not contain a %s in line %d and col %d\n",
+	  name, type, l, c);
+  /* exit(1); */
 }
 
 int F90_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
@@ -218,7 +218,7 @@ double  F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 
 	parse_exp(pot_c, &c);
 
-	free(pot_c);  // clean up
+	free(pot_c);  /* clean up */
 	rmsym("x"); rmsym("y");	rmsym("z");	rmsym("r");
 
 	return GSL_REAL(c.value.c);
