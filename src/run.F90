@@ -120,9 +120,10 @@ subroutine run()
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'
       call write_info(1)
-      
+
       if(X(states_load_restart)("tmp/restart.static", &
            sys%m, sys%st)) then
+        call states_fermi(sys%st, sys%m)
         call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
         ! run scf unless it is already in the stack
@@ -467,30 +468,30 @@ subroutine define_run_modes()
     instr = instr + 1; i_stack(instr) = I_TD
     instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
     instr = instr + 1; i_stack(instr) = I_LOAD_ZPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_TD    
+    instr = instr + 1; i_stack(instr) = I_SETUP_TD
   case(M_START_STATIC_POL)
     instr = instr + 1; i_stack(instr) = I_END_RPSI
     instr = instr + 1; i_stack(instr) = I_POL_SCF
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
     instr = instr + 1; i_stack(instr) = I_START_POL
   case(M_RESUME_STATIC_POL)
     instr = instr + 1; i_stack(instr) = I_END_RPSI
     instr = instr + 1; i_stack(instr) = I_POL_SCF
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
   case(M_GEOM_OPT)
     instr = instr + 1; i_stack(instr) = I_END_RPSI
     instr = instr + 1; i_stack(instr) = I_GEOM_OPT
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
   case(M_PHONONS)
     instr = instr + 1; i_stack(instr) = I_END_RPSI
     instr = instr + 1; i_stack(instr) = I_PHONONS
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
   case(M_OPT_CONTROL)
