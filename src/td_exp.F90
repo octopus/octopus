@@ -256,7 +256,9 @@ contains
 
         hm(n    , n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n)  , zpsi)
         hm(n + 1, n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n+1), zpsi)
-        call lalg_gemv(m%np, h%d%dim, 2, -M_z1, v(:, :, n:n+1), hm(n:n+1, n+1), M_z1, zpsi)
+        ! WARNING: does not compile
+        stop 'change me'
+        !call lalg_gemv(m%np, h%d%dim, 2, -M_z1, v(:, :, n:n+1), hm(n:n+1, n+1), M_z1, zpsi)
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
 
         res = abs(beta*abs(expo(1, n+1)))
@@ -272,7 +274,9 @@ contains
       endif
       
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(m%np, h%d%dim, korder, M_z1*nrm, v, expo(1:korder, 1), M_z0, zpsi)
+      ! WARNING: does not compile
+      stop 'change me'
+      !call lalg_gemv(m%np, h%d%dim, korder, M_z1*nrm, v, expo(1:korder, 1), M_z0, zpsi)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)
