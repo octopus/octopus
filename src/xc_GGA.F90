@@ -43,17 +43,13 @@ subroutine xc_gga(func, m, st, pot, energy)
   do i = 1, m%np
     select case(func)      
     case(X_FUNC_GGA_PBE)
-      call xc_x_pbe(.false., st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
-      
+      call xc_x_pbe(.false., st%nspin, d(i, :), gd(1:3,i,1:st%nspin), e, dedd, dedgd) 
     case(X_FUNC_GGA_PBER)
-      call xc_x_pbe(.true.,  st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
-
+      call xc_x_pbe(.true.,  st%nspin, d(i, :), gd(1:3,i,1:st%nspin), e, dedd, dedgd) 
     case(X_FUNC_GGA_LB94)
-      call xc_x_lb94(st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
-      
+      call xc_x_lb94(st%nspin, d(i, :), gd(1:3,i,1:st%nspin), e, dedd, dedgd) 
     case(C_FUNC_GGA_PBE)
-      call xc_c_pbe(st%nspin, d(i, :), gd(i,:,:), e, dedd, dedgd) 
-      
+      call xc_c_pbe(st%nspin, d(i, :), gd(1:3,i,1:st%nspin), e, dedd, dedgd) 
     end select
     energy = energy + sum(d(i, :)) * e * m%vol_pp
 
