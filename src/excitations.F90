@@ -78,7 +78,7 @@ program excitations
   call poisson_init(sys%m, sys%geo)
 
   ! should we start from scratch, or use restart file
-  call loct_parse_logical("fromScratch", .false., from_scratch)
+  call loct_parse_logical("FromScratch", .false., from_scratch)
 
   ! calculate resonances
   message(1) = "Info: Eigenvalue differences"

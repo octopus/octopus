@@ -168,7 +168,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
-    call loct_parse_float("ABWidth", M_FOUR/units_inp%length%factor, h%ab_width)
+    call loct_parse_float("ABWidth", CNST(0.4)/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
       call loct_parse_float("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)

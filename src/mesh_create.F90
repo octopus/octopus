@@ -109,7 +109,7 @@ contains
     if(m%box_shape == MINIMUM.and.def_rsize>M_ZERO) m%rsize = def_rsize/units_inp%length%factor
 
     if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
-      call loct_parse_float('radius', m%rsize, m%rsize)
+      call loct_parse_float('Radius', m%rsize, m%rsize)
       if(m%rsize < 0) then
         message(1) = "Either:"
         message(2) = "   *) variable 'radius' is not defined"
@@ -122,20 +122,20 @@ contains
     end if
 
     if(m%box_shape == CYLINDER) then
-      call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
+      call loct_parse_float('XLength', M_ONE/units_inp%length%factor, m%xsize)
       m%xsize = m%xsize * units_inp%length%factor
       m%lsize(1) = m%xsize
       if(def_rsize>M_ZERO.and.conf%periodic_dim==0) call check_def(def_rsize, m%xsize, 'xlength')
     end if
 
     if(m%box_shape == PARALLELEPIPED) then
-      if(loct_parse_block_n('lsize')<1) then
-        message(1) = 'Block "lsize" not found in input file.'
+      if(loct_parse_block_n('Lsize')<1) then
+        message(1) = 'Block "Lsize" not found in input file.'
         call write_fatal(1)
       endif
       do i = 1, conf%dim
-        call loct_parse_block_float('lsize', 0, i-1, m%lsize(i))
-        if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'lsize')
+        call loct_parse_block_float('Lsize', 0, i-1, m%lsize(i))
+        if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, m%lsize(i), 'Lsize')
       end do
       m%lsize = m%lsize*units_inp%length%factor
     end if
@@ -158,12 +158,12 @@ contains
     m%h = -M_ONE
     select case(m%box_shape)
     case(SPHERE,CYLINDER,MINIMUM)
-      call loct_parse_float('spacing', m%h(1), m%h(1))
+      call loct_parse_float('Spacing', m%h(1), m%h(1))
       m%h(1:conf%dim) = m%h(1)
     case(PARALLELEPIPED)
-      if(loct_parse_block_n('spacing') >= 1) then
+      if(loct_parse_block_n('Spacing') >= 1) then
         do i = 1, conf%dim
-          call loct_parse_block_float('spacing', 0, i-1, m%h(i))
+          call loct_parse_block_float('Spacing', 0, i-1, m%h(i))
         end do
       endif
     end select
@@ -179,13 +179,13 @@ contains
           call write_info(1)
         else
           message(1) = 'Either:'
-          message(2) = "   *) variable 'spacing' is not defined"
-          message(3) = "   *) your input for 'spacing' is negative"
+          message(2) = "   *) variable 'Spacing' is not defined"
+          message(3) = "   *) your input for 'Spacing' is negative"
           message(4) = "   *) I can't find a suitable default"
           call write_fatal(4)
         end if
       end if
-      if(def_rsize>M_ZERO) call check_def(m%h(i), def_rsize, 'spacing')
+      if(def_rsize>M_ZERO) call check_def(m%h(i), def_rsize, 'Spacing')
     end do
 
   end subroutine read_spacing

@@ -157,7 +157,7 @@ subroutine global_init()
     end if
   end if
   
-  call loct_parse_int('verbose', 30, conf%verbose)
+  call loct_parse_int('Verbose', 30, conf%verbose)
   if(conf%verbose > 999 .and. mpiv%node == 0) then
     call loct_parse_int('DebugLevel', 3, conf%debug_level)
     message(1) = 'Entering DEBUG mode'

@@ -94,6 +94,7 @@ San Sebasti@'an (Spain), Valladolid (Spain), Berlin (Germany).
 * Installation::                
 * The parser::                  
 * Input file options::          
+* Undocumented Variables::      
 * External utilities::          
 * Examples::                    
 * Options Index::               
@@ -290,7 +291,6 @@ External utilities
 * oct-excite::                  
 * oct-broad::                   
 * oct-make-st::                 
-* oct-choose-st::               
 * oct-center-geom::             
 * wf.net::                      
 
@@ -758,11 +758,11 @@ all the # directives.
 
 Before configuring you can (should) setup a couple of options. Although
 the configure script tries to guess your system settings for you, we recommend 
-that you set explicitly the default Fortran 90 compiler and the compiler options. 
+that you set explicitly the default Fortran compiler and the compiler options. 
 For example, in @code{bash} you would typically do:
 @example
-export F90=abf90
-export F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
+export FC=abf90
+export FCFLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
 @end example
 if you are using the Absoft Fortran 90 compiler on a linux machine.
 Also, if you have some of the required libraries in some unusual directories,
@@ -772,7 +772,7 @@ these directories may be placed in the variable @code{LDFLAGS} (e.g.,
 The configuration script will try to find out which compiler you are using.
 Unfortunately, and due to the nature of the primitive language that @code{octopus}
 is programmed in, the automatic test fails very often. Often it is better to set
-the variable @code{F90FLAGS} by hand. These are some of the options reported to work:
+the variable @code{FCFLAGS} by hand. These are some of the options reported to work:
 @table @samp
   @item intel ifc (PIV)
   @code{-u -zero -fpp1 -nbs -i_dynamic -pc80 -pad -align  -unroll -O3 -r8 -ip -tpp7 -xW}
@@ -797,8 +797,8 @@ You can now run the configure script (@code{./configure}).
 If you downloaded the cvs version, you will not find the @code{configure} script. 
 In order to compile the development version you will first have to run the GNU autotools.
 This may be done by executing the script @code{./autogen.sh}. 
-Note that you need to have working versions of the @code{automake} (1.7.3), 
-@code{autoconf} (2.57) and @code{libtool} (1.4.3) programs (the versions we 
+Note that you need to have working versions of the @code{automake} (1.8.5), 
+@code{autoconf} (2.59) and @code{libtool} (1.5.6) programs (the versions we 
 currently use are between parentheses). Note that the @code{autogen.sh} script will likely fail if
 you have (much) older versions of the autotools.
 }
@@ -813,18 +813,19 @@ to @code{PREFIX}. The executable will be installed in @code{PREFIX/bin},
 the libraries in @code{PREFIX/lib} and the documentation in @code{PREFIX/info}.
 @code{PREFIX} defaults to the home directory of the user who runs @code{configure}.
 @item
-@code{--enable-fft=fftw2}: Instruct the @code{configure} script to use the @sc{fftw}
+@code{--with-fft=fftw2}: Instruct the @code{configure} script to use the @sc{fftw}
 library, and specifically to use the @sc{fftw} version 2. You may also
-set @code{--enable-fft=fftw3} or even @code{--disable-fft}.
+set @code{--with-fft=fftw3} or even @code{--disable-fft}.
 @item
-@code{--with-lapack=DIR}: Installation directory of the @sc{lapack} and
-@sc{blas} libraries.
+@code{--with-lapack=<lib>}: @sc{lapack} library
 @item
 @code{--with-gsl-prefix=DIR}: Installation directory of the GSL library. The
 libraries are expected to be in @code{DIR/lib} and the include
 files in @code{DIR/include}. The value of @code{DIR} is usually found by
 issuing the command @code{gsl-config --prefix}. (If the GSL library is
 installed, the program @code{gsl-config} should be somewhere.)
+@item
+@code{--with-netcdf=<lib>}: @sc{netcdf} library. This is a recommended library.
 @item
 @code{--enable-mpi}: Builds the parallel version (MPI) of @code{octopus}.
 @item
@@ -855,13 +856,16 @@ The program has been tested in the following platforms:
 @item @code{alphae*}: both in Linux and in OSF/1 with Compaq's @code{fort} compiler.
 @item @code{powerpc-ibm-aix4.3.3.0}: with native @code{xlf90} compiler.
 @item @code{cray}: with native f90 compiler.
+@item @code{opteron}: with NAG, PGI, and ABSOFT compilers.
+@item @code{SGI}: with native compiler.
 @end itemize
 If you manage to compile/run @code{octopus} on a different platform
 or with a different compiler, please let us know so we can update the
 list. Patches to solve compiler issues are also welcomed.
 
 Build the documentation in the format you prefer. Since you are reading
-this, you already have it in some format. Due to the power of @code{texinfo},
+this, you already have it in some format (but maybe not the correct version). 
+Due to the power of @code{texinfo},
 a series of formats are available, namely @code{dvi}, @code{html},
 @code{pdf} and @code{info}. The @code{octopus.texi} source code of this
 document is in the @code{OCTOPUS-HOME/doc} directory.
@@ -884,7 +888,7 @@ compile the code. So, what went wrong?
 lapack in lowercase) to the configure script? If your libraries are
 installed in a non-standard directory (like @code{/opt/lapack}), you will
 have to pass the script the location of the library (in this example,
-you could try @code{./configure --with-lapack=/opt/lapack}.
+you could try @code{./configure --with-lapack='-L/opt/lapack -llapack'}.
 
 @item If you are working on an alpha station, do not forget that the @code{CXML}
 library includes @code{BLAS} and @code{LAPACK}, so it can be used by
@@ -990,7 +994,7 @@ is considered a comment and is simply cast into oblivion.
 
 
 
-@node Input file options, External utilities, The parser, Top
+@node Input file options, Undocumented Variables, The parser, Top
 @chapter Input file options
 
 @code{octopus} has quite a few options, that we will subdivide in different groups.
@@ -1036,8 +1040,8 @@ are given in parenthesis.
 @subsection @code{SystemName} (string, 'system')
 @vindex @code{SystemName}
 
-A string that identifies the current run. This parameter is used 
-to build the names of some files generated by @code{octopus}.
+A string that identifies the current run. This parameter is seldomly used, but
+it is sometimes useful to have in the input file.
    
 @node Dimensions, CalculationMode, SystemName, Generalities
 @subsection @code{Dimensions} (integer, 3)
@@ -1047,24 +1051,24 @@ to build the names of some files generated by @code{octopus}.
 variable. Note that not all options may be available in all cases.
 
 @node CalculationMode, Units, Dimensions, Generalities
-@subsection @code{CalculationMode} (integer, 1)
+@subsection @code{CalculationMode} (integer, gs_start)
 @vindex @code{CalculationMode}
 
 It defines the type of simulation to perform. Options are:
   @itemize @minus
-    @item @code{gs_start} or @code{1}: Start static calculation.
-    @item @code{gs} or @code{2}: Resume static calculation.
-    @item @code{unocc_start} or @code{3}: Calculate unoccuppied states.
-    @item @code{unocc} or @code{4}: Resume calculation of unoccupied states.
-    @item @code{td_start} or @code{5}: Start time-dependent propagation.
-    @item @code{td} or @code{6}: Resume time-dependent propagation.
-    @item @code{pol_start} or @code{7}: Start static polarizability calculation.
-    @item @code{pol} or @code{8}: Resume static polarizability calculation.
+    @item @code{gs_start}: Start static calculation.
+    @item @code{gs}: Resume static calculation.
+    @item @code{unocc_start}: Calculate unoccuppied states.
+    @item @code{unocc}: Resume calculation of unoccupied states.
+    @item @code{td_start}: Start time-dependent propagation.
+    @item @code{td}: Resume time-dependent propagation.
+    @item @code{pol_start}: Start static polarizability calculation.
+    @item @code{pol}: Resume static polarizability calculation.
     @c @item @code{9}: Perform Born-Oppenheimer MD simulation.
-    @item @code{geom} or @code{10}: Perform geometry minimization.
-    @item @code{phonon} or @code{11}: Calculates the phonon spectrum of the system.
-    @item @code{opt_control} or @code{12}: @emph{Optimum control} mode (experimental).
-    @item @code{recipe} or @code{99}: Print out an octopus recipe.
+    @item @code{geom}: Perform geometry minimization.
+    @item @code{phonon}: Calculates the phonon spectrum of the system.
+    @item @code{opt_control}: @emph{Optimum control} mode (experimental).
+    @item @code{recipe}: Print out an octopus recipe.
   @end itemize
 
 @node Units, UnitsInput, CalculationMode, Generalities
@@ -1107,10 +1111,10 @@ files will be written in eV and @AA{}.
 Verbosity level of the program. The higher, the
 more verbose @code{octopus} is. Current levels are:
 @itemize @minus
-@item @code{verbose <=  0}: Silent mode. No output except fatal errors.
-@item @code{verbose >   0}: Warnings only.
-@item @code{verbose >  20}: Normal program info.
-@item @code{verbose > 999}: Debug mode. Issues a message to standard error 
+@item @code{Verbose <=  0}: Silent mode. No output except fatal errors.
+@item @code{Verbose >   0}: Warnings only.
+@item @code{Verbose >  20}: Normal program info.
+@item @code{Verbose > 999}: Debug mode. Issues a message to standard error 
 every time the  program enters an (important) subroutine, and 
 prints the time it spend upon return.
 @end itemize
@@ -1193,11 +1197,15 @@ is the 'valence charge', used to calculate the number of electrons.
 Finally, the potential itself is defined by the fourth argument.
 Use any of the @code{x}, @code{y}, @code{z} or @code{r} variables
 to define the potential.
+@end itemize
 
-Note that additional pseudopotentials can be downloaded from the
+Note that some common pseudopotentials are distributed with the code in the
+directory @code{OCTOPUS-HOME/share/PP/}. To use this pseudopotentials you are
+not required to define them explicitly in the @code{Species} block, as defaults 
+are provided by the program (you can override these defaults in any case). 
+Additional pseudopotentials can be downloaded from the 
 @uref{http://www.tddft.org/programs/octopus/pseudo.php, @code{octopus} homepage}.
 
-@end itemize
 @end itemize
 
 
@@ -1286,7 +1294,7 @@ possible to fix @emph{all} atoms using the @code{MoveIons} directive.
 
 
 @node XYZVelocities, Velocities, Coordinates, Coordinates Description
-@subsection @code{Velocities} (string, 'velocities.xyz')
+@subsection @code{XYZVelocities} (string, 'velocities.xyz')
 @vindex @code{XYZVelocities}
 
 @code{octopus} will try to read the starting velocities of the atoms from the XYZ file 
@@ -1343,17 +1351,17 @@ be tuned to suit the geometric configuration of the system.
 @end menu
 
 @node BoxShape, Radius, Mesh, Mesh
-@subsection @code{BoxShape} (integer, sphere)
+@subsection @code{BoxShape} (integer, minimum)
 @vindex @code{BoxShape}
 
 It is the shape of the simulation box. The allowed 
 values are:
   @itemize @minus
-    @item @code{sphere} or @code{1}: A sphere
-    @item @code{cylinder} or @code{2}: A cylinder. The cylinder axis will be 
+    @item @code{sphere}: A sphere
+    @item @code{cylinder}: A cylinder. The cylinder axis will be 
 in the z direction
-    @item @code{minimum} or @code{3}: Sum of spheres around each atom.
-    @item @code{parallelepiped} or @code{4}: As the name indicates.
+    @item @code{minimum}: Sum of spheres around each atom.
+    @item @code{parallelepiped}: As the name indicates.
   @end itemize
 For a 1D calculation, it would obviously always be a 1D ``sphere''.
 
@@ -1402,10 +1410,10 @@ is assumed to be a block of the form:
 
 Defines in which space gradients and the Laplacian are calculated. Allowed values are:
   @itemize @minus
-    @item @code{real_space} or @code{0}: Derivatives are calculated in real-space
+    @item @code{real_space}: Derivatives are calculated in real-space
       using finite differences. The order of the derivative can be set with
       @code{OrderDerivatives}.
-    @item @code{fourier_space} or @code{1}: Derivatives are calculated in
+    @item @code{fourier_space}: Derivatives are calculated in
       reciprocal space. Obviously this case implies cyclic boundary conditions,
       so be careful.
   @end itemize
@@ -1456,11 +1464,11 @@ the split-operator, or Suzuki-Trotter propagators, this option should be turned 
 
 Defines the spin mode @code{octopus} will run in. Valid modes are:
   @itemize @minus
-    @item @code{unpolarized} or @code{1}: Spin-unpolarised calculation.
-    @item @code{polarized} or @code{2}: Spin-polarised calculation (collinear spin). This mode
+    @item @code{unpolarized}: Spin-unpolarised calculation.
+    @item @code{polarized}: Spin-polarised calculation (collinear spin). This mode
 will double the number of wave-functions necessary for a spin-unpolarised 
 calculation.
-    @item @code{non_collinear} or @code{3}: Non-collinear spin. This mode will double the number 
+    @item @code{non_collinear}: Non-collinear spin. This mode will double the number 
 of wave-functions necessary for a spin-unpolarised calculation, and each of
 the wave-functions will be a 2-spinor.
   @end itemize
@@ -1484,7 +1492,7 @@ electrons, while a positive value means we are taking electrons
 from the system.
 
 @node ExtraStates, Occupations, ExcessCharge, States
-@subsection @code{ExtraStates} (integer, 1)
+@subsection @code{ExtraStates} (integer, 0)
 @vindex @code{ExtraStates}
 
 How many unoccupied states to use in the ground-state
@@ -1677,7 +1685,7 @@ Relative convergence of the eigenvalues. @code{0} means do
 not use this criterion.
 
 @node GuessDensitySpin, LCAOStart, ConvRelEv, SCF
-@subsection @code{GuessDensitySpin} (integer, 2)
+@subsection @code{GuessDensitySpin} (integer, polarized)
 @vindex @code{GuessDensitySpin}
 
 The guess density for the SCF cycle is just the sum of all the atomic densities.
@@ -1685,9 +1693,9 @@ When performing spin-polarized or non-collinear spin calculations this option se
 the spin-polarization of the guess density.
 Possible values are:
   @itemize @minus
-    @item @code{1}: Spin-unpolarized
-    @item @code{2}: Spin-polarized
-    @item @code{3}: Non-collinear
+    @item @code{unpolarized}: Spin-unpolarized
+    @item @code{polarized}: Spin-polarized
+    @item @code{non_collinear}: Non-collinear
   @end itemize
 
 @node LCAOStart, SCFinLCAO, GuessDensitySpin, SCF
@@ -1709,15 +1717,15 @@ calculation within the LCAO subspace, then restart from that point for
 an unrestricted calculation).
 
 @node EigenSolver, EigenSolverInitTolerance, SCFinLCAO, SCF
-@subsection @code{EigenSolver} (integer, 0):
+@subsection @code{EigenSolver} (integer, cg):
 @vindex @code{EigenSolver}
 
 At each SCF cycle step, a diagonalisation of the Hamiltonian is performed.
 This variable chooses the eigensolver used to diagonalise the Kohn-Sham Hamiltonian.
 Possible values are:
   @itemize @minus
-    @item @code{cg} or @code{0}: Conjugated Gradients method.
-    @item @code{lanczos} or @code{2}: Block-Lanczos method.
+    @item @code{cg}: Conjugated Gradients method.
+    @item @code{lanczos}: Block-Lanczos method.
   @end itemize
 Look up the source to know what the differences are.
 
@@ -1729,13 +1737,13 @@ until a given iteration, after which a maximum tolerance is always asked.
 Next variables take care of this process. 
 
 @node EigenSolverInitTolerance, EigenSolverFinalTolerance, EigenSolver, SCF
-@subsection @code{EigenSolverInitTolerance} (double, 1.0e-3)
+@subsection @code{EigenSolverInitTolerance} (double, 1.0e-10)
 @vindex @code{EigenSolverInitTolerance}
 
 This is the initial tolerance for the eigenvectors. 
 
 @node EigenSolverFinalTolerance, EigenSolverFinalToleranceIteration, EigenSolverInitTolerance, SCF
-@subsection @code{EigenSolverFinalTolerance} (double, 1.0e-5)
+@subsection @code{EigenSolverFinalTolerance} (double, 1.0e-14)
 @vindex @code{EigenSolverFinalTolerance}
 
 This is the final tolerance for the eigenvectors.
@@ -1756,26 +1764,26 @@ for the eigensolver (per state) --- that is, if this number is reached, the diag
 is stopped even if the desired tolerance was not achieved.
 
 @node What2Mix, TypeOfMixing, EigenSolverMaxIter, SCF
-@subsection @code{What2Mix} (integer, 0)
+@subsection @code{What2Mix} (integer, density)
 @vindex @code{What2Mix}
 
 Selects what should be mixed during the SCF cycle. Possible
 values are:
   @itemize @minus
-    @item @code{density} or @code{0}: Density
-    @item @code{potential} or @code{1}: Potential
+    @item @code{density}: Density
+    @item @code{potential}: Potential
   @end itemize
 
 @node TypeOfMixing, Mixing, What2Mix, SCF
-@subsection @code{TypeOfMixing} (integer, 2)
+@subsection @code{TypeOfMixing} (integer, broyden)
 @vindex @code{TypeOfMixing}
 
 Selects the mixing procedure to be used during the SCF cycle. Possible
 values are:
   @itemize @minus
-    @item @code{linear} or @code{0}: Linear mixing.
-    @item @code{gr_pulay} or @code{1}: Guaranteed-reduction Pulay (GR-Pulay).
-    @item @code{broyden} or @code{2}: Broyden mixing.
+    @item @code{linear}: Linear mixing.
+    @item @code{gr_pulay}: Guaranteed-reduction Pulay (GR-Pulay).
+    @item @code{broyden}: Broyden mixing.
   @end itemize
 
 @node Mixing, MixNumberSteps, TypeOfMixing, SCF
@@ -1798,7 +1806,7 @@ density/potential.
 @node Unoccupied States, Time Dependent, SCF, Input file options
 @section Unoccupied States
 
-These variables are only used in @code{CalculationMode == 3, 4} (or in 5 and 6
+These variables are only used in @code{CalculationMode == unocc, unocc_start} (or in @code{td} and @code{td_start}
 if @code{TDOccupationalAnalysis == 1}).
 
 
@@ -1835,7 +1843,7 @@ good or else you won't converge.
 @section Time Dependent
 
 
-When @code{CalculationMode = 5,6}, @code{octopus} performs the time propagation
+When @code{CalculationMode = (td | td_start)}, the code performs the time propagation
 of the electronic orbitals and -- if required -- of the ionic positions. This latter
 task does not pose major algorithmical problems (the usual Verlet algorithms deal
 with that task); however the best way to propagate a Schr@"odinger-like equation
@@ -1999,7 +2007,7 @@ Time-step for the propagation;
 in previous notation, @math{\delta t}.
 
 @node TDExponentialMethod, TDExpOrder, TDTimeStep, Time Dependent
-@subsection @code{TDExponentialMethod} (integer, 3)
+@subsection @code{TDExponentialMethod} (integer, standard)
 @vindex @code{TDExponentialMethod}
 
 Method used to numerically calculate the exponential of the Hamiltonian,
@@ -2011,7 +2019,7 @@ by this variable.
 
 @itemize @minus
 
-@item @code{split} or @code{0}: Split-operator (SO).
+@item @code{split}: Split-operator (SO).
 
 It is important to distinguish between applying the split operator method
 to calculate the exponential of the Hamiltonian at a given time -- which
@@ -2043,7 +2051,7 @@ the evolution operator (@code{TDEvolutionMethod = 0}), a different procedure is 
 will be described below --, and in fact the variable @code{TDExponentialMethod} has no
 effect at all.
 
-@item @code{suzuki-trotter} or @code{1}: Suzuki-Trotter (ST). 
+@item @code{suzuki-trotter}: Suzuki-Trotter (ST). 
 
 This is a higher-order SO based algorithm. See O. Sugino and Y. Miyamoto,
 Phys. Rev. B @strong{59}, 2579 (1999). Allows for larger time-steps,
@@ -2055,7 +2063,7 @@ means to approximate the exponential also apply here. Setting @code{TDEvolutionM
 enforces the use of the ST as an algorithm to approximate the full evolution operator,
 which is slightly different (see below).
 
-@item @code{lanczos} or @code{2}: Lanczos approximation (LAN).
+@item @code{lanczos}: Lanczos approximation (LAN).
 
 Allows for larger time-steps.
 However, the larger the time-step, the longer the computational time per time-step. 
@@ -2072,7 +2080,7 @@ is calculated, but also the larger the dimension of the Arnoldi
 subspace. If the maximum dimension allowed by @code{TDExpOrder} is not
 enough to meet the criterium, the above-mentioned warning is emitted.
 
-@item @code{standard} or @code{3}: N-th order standard expansion of the exponential (STD). 
+@item @code{standard}: N-th order standard expansion of the exponential (STD). 
 
 This method amounts to a straightforward application of the definition of
 the exponential of an operator, in terms of it Taylor expansion.
@@ -2092,7 +2100,7 @@ Some numerical considerations (by Jeff Giansiracusa and George F. Bertsch;
 see @uref{http://www.phys.washington.edu/~bertsch/num3.ps})
 suggest the 4th order as especially suitable and stable.
 
-@item @code{chebyshev} or @code{4}: N-th order Chebyshev expansion (CHEB). 
+@item @code{chebyshev}: N-th order Chebyshev expansion (CHEB). 
 
 In principle, the Chebyshev expansion
 of the exponential represents it more accurately than the canonical or standard expansion. 
@@ -2140,7 +2148,7 @@ make sure that this value is not too big, or else the evolution will be
 wrong.
 
 @node TDEvolutionMethod, TDLasers, TDLanczosTol, Time Dependent
-@subsection @code{TDEvolutionMethod} (integer, 2)
+@subsection @code{TDEvolutionMethod} (integer, etrs)
 @vindex @code{TDEvolutionMethod}
 
 This variable determines which algorithm will be used to approximate
@@ -2167,7 +2175,7 @@ the extrapolation is not reliable.
 
 @itemize @bullet
 
-@item @code{split} or @code{0}: Split Operator (SO). 
+@item @code{split}: Split Operator (SO). 
 
 This is one of the most traditional methods. It splits the full Hamiltonian
 into a kinetic and a potential part, performing the first in Fourier-space,
@@ -2206,7 +2214,7 @@ same that the one that we would have by making use of the Exponential Midpoint R
 exponential of the Hamiltonian, and a full self-consistent procedure.
 
 
-@item @code{suzuki-trotter} or @code{1}: Suzuki-Trotter (ST).
+@item @code{suzuki-trotter} Suzuki-Trotter (ST).
 
 This is the generalization of the Suzuki-Trotter algorithm, described
 as one of the choices of the @code{TDExponentialMethod} (@pxref{TDExponentialMethod}),
@@ -2215,7 +2223,7 @@ Phys. Rev. B @strong{59}, 2579 (1999), for details.
 
 It requires of Hamiltonian extrapolations.
 
-@item @code{etrs} or @code{2}: Enforced Time-Reversal Symmetry (ETRS).
+@item @code{etrs}: Enforced Time-Reversal Symmetry (ETRS).
 
 The idea is to make use of the time-reversal symmetry from the beginning:
 
@@ -2250,7 +2258,7 @@ But we need to know @math{H_{n+1}}, which can only be known exactly through the 
 @math{H_{n+1} = H[\psi^{*}_{n+1}]}. Thus no extrapolation is performed in this case.
 
 
-@item @code{aetrs} or @code{3}: Approximated Enforced Time-Reversal Symmetry (AETRS).
+@item @code{aetrs}: Approximated Enforced Time-Reversal Symmetry (AETRS).
 
 A modification of previous method to make it faster.
 It is based on extrapolation of the time-dependent potentials. It is faster
@@ -2260,7 +2268,7 @@ The only difference is the procedure to estimate @math{H_{n+1}}: in this case
 it is extrapolated trough a second-order polynomial by making use of the
 Hamiltonian at time @math{t-2\delta t}, @math{t-\delta t} and @math{t}.
 
-@item @code{exp_mid} or @code{4}: Exponential Midpoint Rule (EM).
+@item @code{exp_mid}: Exponential Midpoint Rule (EM).
 
 This is maybe the simplest method, but is is very well grounded theretically:
 it is unitary (if the exponential is performed correctly) and preserves
@@ -2278,7 +2286,7 @@ U_@{\rm EM@}(t+\delta t, t) = \exp \left( -i\delta t H_@{t+\delta t/2@}\right)\,
 @end ifnottex
 
 
-@item @code{magnus} or @code{5}: Magnus Expansion (M4).
+@item @code{magnus}: Magnus Expansion (M4).
 This is the most sophisticated approach. It is a fourth order scheme (feature
 that shares with the ST scheme; the other schemes are in principle second order).
 It is tailored for making use of very large time steps, or equivalently,
@@ -2352,13 +2360,13 @@ that the program will use are interpolated / extrapolated from this numerically
 defined function.
 
 @node TDGauge, TDDeltaStrength, TDLasers, Time Dependent
-@subsection @code{TDGauge} (integer, 0)
+@subsection @code{TDGauge} (integer, length)
 @vindex @code{TDGauge}
 
 In which gauge to treat the laser. Options are:
 @itemize @minus
-    @item @code{length} or @code{1}: Length gauge.
-    @item @code{velocity} or @code{2}: Velocity gauge.
+    @item @code{length}: Length gauge.
+    @item @code{velocity}: Velocity gauge.
 @end itemize
 
 @node TDDeltaStrength, TDPolarization, TDGauge, Time Dependent
@@ -2445,27 +2453,27 @@ wave-functions onto the static (zero time) wave-functions to the
 file @code{td.general/projections.XXX}.
 
 @node MoveIons, AbsorbingBoundaries, TDOutputOccAnalysis, Time Dependent
-@subsection @code{MoveIons} (integer, 0)
+@subsection @code{MoveIons} (integer, no)
 @vindex @code{MoveIons}
 
 What kind of simulation to perform. Possible values are:
 @itemize @minus
-@item @code{no} or @code{0}: Do not move the ions.
-@item @code{verlet} or @code{3}: Newtonian dynamics using Verlet.
-@item @code{vel_verlet} or @code{4}: Newtonian dynamics using velocity Verlet.
+@item @code{no}: Do not move the ions.
+@item @code{verlet}: Newtonian dynamics using Verlet.
+@item @code{vel_verlet}: Newtonian dynamics using velocity Verlet.
 @end itemize
 
 @node AbsorbingBoundaries, ABWidth, MoveIons, Time Dependent
-@subsection @code{AbsorbingBoundaries} (integer, 0)
+@subsection @code{AbsorbingBoundaries} (integer, no)
 @vindex @code{AbsorbingBoundaries}
 
 To improve the quality of the spectra by avoiding the formation of 
 standing density waves, one can make the boundaries of the simulation 
 box absorbing. The possible values for this parameter are:
   @itemize @minus
-    @item @code{no} or @code{0}: No absorbing boundaries.
-    @item @code{sin2} or @code{1}: A sin@math{^2} imaginary potential is added at the boundaries.
-    @item @code{mask} or @code{2}: A mask is applied to the wave-functions at the boundaries.
+    @item @code{no}: No absorbing boundaries.
+    @item @code{sin2}: A sin@math{^2} imaginary potential is added at the boundaries.
+    @item @code{mask}: A mask is applied to the wave-functions at the boundaries.
   @end itemize
 
 @node ABWidth, ABHeight, AbsorbingBoundaries, Time Dependent
@@ -2478,7 +2486,7 @@ Width of the region used to apply the absorbing boundaries.
 @subsection @code{ABHeight} (real, -0.2 a.u.)
 @vindex @code{ABHeight}
 
-When @code{AbsorbingBoundaries == 1}, is the height of the imaginary 
+When @code{AbsorbingBoundaries == sin2}, is the height of the imaginary 
 potential.
 
 
@@ -2531,7 +2539,7 @@ potential.
 @end menu
 
 @node GOMethod, GOTolerance, Geometry optimization, Geometry optimization
-@subsection @code{GOMethod} (integer, 1)
+@subsection @code{GOMethod} (integer, steep)
 @vindex @code{GOMethod}
 
   Method by which the minimization is performed. The only possible value is
@@ -2871,10 +2879,8 @@ When calculating phonon properties (@code{CalculationMode = 11}) @code{Displacem
 controls how much the atoms are to be moved in order to calculate the dynamical matrix.
 
 
-
-
 @c **********************************************************************
-@node External utilities, Examples, Input file options, Top
+@node External utilities, Examples, Undocumented Variables, Top
 @chapter External utilities
 
 A few small programs are generated along with @code{octopus}, for the
@@ -2891,7 +2897,6 @@ it may see the @code{inp} file, and the directories created by it.
 * oct-excite::                  
 * oct-broad::                   
 * oct-make-st::                 
-* oct-choose-st::               
 * oct-center-geom::             
 * wf.net::                      
 @end menu
@@ -2937,17 +2942,19 @@ Calculates the excitation spectrum within linear response. This utility can
 output just the difference of eigenvalues by setting @code{LinEigenvalues},
 the excitations using M. Petersilka formula (@code{LinPetersilka}), or
 M. Casida (@code{LinCasida}). This utility requires that a calculation
-of unoccupied states (@code{CalculationMode} = 3, 4) has been done before,
-and it outputs the results to the sub-directory "linear".
+of unoccupied states (@code{CalculationMode} = unocc) has been done before,
+and it outputs the results to the sub-directory "linear". The states entering
+the calculation can be chosen with the variable @code{ExciteStates} 
+(@pxref{OutputWfsNumber})
 
 @node  oct-broad, oct-make-st, oct-excite, External utilities
 @section @code{oct-broad}
 
-Generates a spectrum by broadening the excitations obtained by the @code{excitations} 
+Generates a spectrum by broadening the excitations obtained by the @code{oct-excite} 
 utility. The parameters of the spectrum can be set using the variables
-@code{LinBroadening}, @code{MinEnergy}, @code{MaxEnergy}, and @code{EnergyStep}.
+@code{LinBroadening}, @code{LinMinEnergy}, @code{LinMaxEnergy}, and @code{LinEnergyStep}.
 
-@node  oct-make-st, oct-choose-st, oct-broad, External utilities
+@node  oct-make-st, oct-center-geom, oct-broad, External utilities
 @section @code{oct-make-st}
 
 @code{make_st} reads @code{tmp/restart.static} and replaces some of the
@@ -2993,24 +3000,7 @@ they are:
 @end itemize
 
 
-@node  oct-choose-st, oct-center-geom, oct-make-st, External utilities
-@section @code{oct-choose-st}
-
-@code{choose_st} is used to choose the states used for optimum control (@code{CalculationMode=12}). You probably want to calculate unoccuppied states (@code{CalculationMode=12}) first since @code{choose_st} reads @code{tmp/restart.static} and writes the choosen states to the @code{opt-control} sub-directory. The following parameters are read from the @code{inp}ut file:
-
-@itemize @bullet
-
-@item @vindex @code{ChooseStates}
-@code{ChooseStates} (integer, 1-4024):
-  The states which should be written.
-
-@item @vindex @code{ChooseStatesFilename}
-@code{ChooseStatesFilename} (string, 'wf.initial'):
-  The file name to which the state(s) should be written.
-  For optimum control you only need 'wf.initial' and 'wf.final'.
-@end itemize
-
-@node oct-center-geom, wf.net, oct-choose-st, External utilities
+@node oct-center-geom, wf.net, oct-make-st, External utilities
 @section @code{oct-center-geom}
 
 This utility centers and aligns the coordinates of the molecule. It reads the
@@ -3071,6 +3061,71 @@ and select the program @code{wf.net}. The program will be executed, and several 
 should open. One of them should be called ``Application Comment''. It contains
 a small tutorial. Follow it from now on.
 
+@end itemize
+
+@c **********************************************************************
+@node Undocumented Variables, External utilities, Input file options, Top
+@chapter Undocumented Variables
+
+If you want to use these variables you will have to go to the code to find out what they 
+do. If you do it, please take the time to write a short description and send a patch of the
+manual to us ;) BTW, some of this variables describe things that may not work, or are under
+developments, so don't blame us...
+@itemize o
+@item
+  AnimationSampling
+@item
+  AxisType
+@item
+  BoundaryZeroDerivative
+@item
+  CenterOfInversion
+@item
+  CurrentDFT
+@item
+  GuessDensityAtomsMagnet
+@item
+  KineticCutoff
+@item
+  LB94_beta
+@item
+  LB94_modified
+@item
+  LB94_threshold
+@item
+  OEP_level
+@item
+  OEP_mixing
+@item
+  OptControlAlpha
+@item
+  OptControlEps
+@item
+  OptControlInitLaser
+@item
+  OptControlMaxIter
+@item
+  OutputDuringSCF
+@item
+  OutputELF_FS
+@item
+  OutputWfsSqMod
+@item
+  PeriodicDimensions
+@item
+  RestartFileFormat
+@item
+  ShifKPoints
+@item
+  StaticMagneticField
+@item
+  TDDeltaStrengthMode
+@item
+  TDOutputSpin
+@item
+  VlocalCutoff
+@item 
+  FromScratch
 @end itemize
 
 @c **********************************************************************
