@@ -207,10 +207,10 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
 
   select case(m%d%space)
     case(REAL_SPACE)
-#if defined(POLYMERS) || defined(BOUNDARIES_ZERO_DERIVATIVE)
+#if defined(BOUNDARIES_ZERO_DERIVATIVE)
       call rs_derivative()
 #else
-      if(m%iso .and. present(lapl) .and. (.not.present(grad)) ) then
+      if(m%iso .and. present(lapl) .and. (.not.present(grad)) .and. conf%periodic_dim==0 ) then
         call rs_lapl_fast()
       else
         call rs_derivative()
@@ -293,16 +293,31 @@ contains
           end if
         end if
         
-        ! WARNING: change polymers to x direction
-#if defined(POLYMERS)
-        ! cyclic boundary conditions in the z direction
-        if(ind1(3) == 0) then
-          ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in)
+        ! cyclic boundary conditions in the periodic direction(s)
+        if (conf%periodic_dim>0) then
+          if(ind1(1) == 0) then
+            ind1(1) = m%Lxyz_inv(2*m%nr(1) + ix - in, iy, iz )
+          end if
+          if(ind2(1) == 0) then
+            ind1(1) = m%Lxyz_inv(ix + in - 2*m%nr(1), iy, iz)
+          end if
+          if (conf%periodic_dim>1) then
+            if(ind1(2) == 0) then
+              ind1(2) = m%Lxyz_inv(ix, 2*m%nr(2) + iy - in, iz )
+            end if
+            if(ind2(2) == 0) then
+              ind1(2) = m%Lxyz_inv(ix, iy + in - 2*m%nr(2), iz)
+            end if
+            if (conf%periodic_dim>2) then
+             if(ind1(3) == 0) then
+               ind1(3) = m%Lxyz_inv(ix, iy, 2*m%nr(3) + iz - in )
+             end if
+             if(ind2(3) == 0) then
+               ind1(3) = m%Lxyz_inv(ix , iy, iz + in - 2*m%nr(3))
+             end if
+            end if
+          end if
         end if
-        if(ind2(3) == 0) then
-          ind1(3) = m%Lxyz_inv(ix, iy, iz + in - 2*m%nr(3))
-        end if
-#endif
         
         ! If you prefer 0 wave functions at the boundary, uncomment the following
         ! Just be careful with the LB94 xc potential, for it will probably not work!
@@ -315,10 +330,14 @@ contains
         
         ! This peace of code changes the boundary conditions
         ! to have 0 derivative at the boundary
-        do i = 1, conf%dim
+        do i = conf%periodic_dim+1, conf%dim
           if(ind1(i) > 0)den1(i) = f(ind1(i))
           if(ind2(i) > 0)den2(i) = f(ind2(i))
         end do
+        if (conf%periodic_dim>0)
+        message(1) = "Zero boundary conditions are not allowed in the periodic direction(s)"
+        write(message(2),'(6x,a,i1,a,i1)'),"Zero boundary applied only in directions from ",conf%periodic_dim+1,' to ',conf%dim
+        call write_warning(2)
 #endif
         
         if(present(lapl)) then
