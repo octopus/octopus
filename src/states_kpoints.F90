@@ -31,6 +31,8 @@ subroutine states_choose_kpoints(d, m, geo)
   FLOAT, allocatable :: coorat(:,:,:)   ! coorat(i,j,k) is the k-th component (lattice coordinates) 
                                         ! of the position of the j-th atom of type i.
   FLOAT, allocatable :: kp(:,:),kw(:)
+
+  call push_sub('states_choose_kpoints')
   
   ! if not periodic just return the Gamma point
   if (conf%periodic_dim == 0) then
@@ -50,7 +52,7 @@ subroutine states_choose_kpoints(d, m, geo)
     return
   end if
 
-  if(loct_parse_block('NumberKPoints', blk) < 0) then
+  if(loct_parse_block('NumberKPoints', blk) .ne. 0) then
     message(1) = 'Block "NumberKPoints" not found in input file.'
     call write_fatal(1)
   end if
@@ -67,14 +69,14 @@ subroutine states_choose_kpoints(d, m, geo)
   end if
   nkmax = PRODUCT(d%nik_axis)
 
-  if(loct_parse_block('ShiftKPoints', blk) < 0) then
+  if(loct_parse_block('ShiftKPoints', blk) .ne. 0) then
     kshifts = M_ZERO
   else
     do i = 1, conf%periodic_dim
       call loct_parse_block_float(blk, 0, i-1, kshifts(i))
     end do
+    call loct_parse_block_end(blk)
   end if
-  call loct_parse_block_end(blk)
 
   if (conf%periodic_dim == 1) then
     call loct_parse_int('CenterOfInversion', 0, coi)
@@ -142,6 +144,7 @@ subroutine states_choose_kpoints(d, m, geo)
   deallocate(natom, coorat)
   deallocate(kp, kw)
 
+  call pop_sub()
 end subroutine states_choose_kpoints
 
 subroutine kpoints_write_info(d,iunit)
