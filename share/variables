@@ -58,6 +58,11 @@ curv_uniform     = 1
 curv_gygi        = 2
 curv_briggs      = 3
 curv_modine      = 4
+tm2              = 100
+hgh              = 101
+ps_tm2           = 100
+ps_hgh           = 101
+
 
 #  symbols for oct-center-geom
 inertia          = 1  
