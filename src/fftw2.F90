@@ -15,6 +15,15 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
+#include "global.h"
+
+! Note: in fftw2, the routines in single and double precision have the 
+! same name. From the manual: 
+!   "To work in single precision rather than double precision, #define the 
+!   symbol FFTW_ENABLE_FLOAT in fftw.h and then recompile the library. On 
+!   Unix systems, you can instead use configure --enable-float at installation 
+!   time"
+
 module fft
   use global
   use lib_alg
@@ -189,7 +198,7 @@ contains
   ! first the real to complex versions
   subroutine dfft_forward(fft, r, c)
     type(fft_type), intent(in) :: fft
-    FLOAT, intent(in)     :: r(:,:,:)
+    FLOAT, intent(in)  :: r(:,:,:)
     CMPLX, intent(out) :: c(:,:,:)
 
     call rfftwnd_f77_one_real_to_complex(fft%planf, r, c)

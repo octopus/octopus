@@ -17,6 +17,12 @@
 
 #include "global.h"
 
+#if defined(SINGLE_PRECISION)
+#  define DFFTW(x) sfftw_ ## x
+#else
+#  define DFFTW(x) dfftw_ ## x
+#endif
+
 module fft
   use global
   use lib_alg
@@ -72,8 +78,8 @@ contains
 
     do i = 1, FFT_MAX
       if(fft_refs(i).ne.NULL) then
-        call dfftw_destroy_plan(fft_array(i)%planf)
-        call dfftw_destroy_plan(fft_array(i)%planb)
+        call DFFTW(destroy_plan) (fft_array(i)%planf)
+        call DFFTW(destroy_plan) (fft_array(i)%planb)
         fft_refs(i) = NULL
       end if
     end do
@@ -123,13 +129,13 @@ contains
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
       allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
-      call dfftw_plan_dft_r2c_3d(fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
-      call dfftw_plan_dft_c2r_3d(fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
+      call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
+      call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
       deallocate(rin, cout)
     else
       allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
-      call dfftw_plan_dft_3d(fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
-      call dfftw_plan_dft_3d(fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
+      call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
+      call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
       deallocate(cin, cout)
     end if
     fft = fft_array(j)
@@ -165,8 +171,8 @@ contains
         fft_refs(i) = fft_refs(i) - 1
       else
         fft_refs(i) = NULL
-        call dfftw_destroy_plan(fft_array(i)%planf)
-        call dfftw_destroy_plan(fft_array(i)%planb)
+        call DFFTW(destroy_plan) (fft_array(i)%planf)
+        call DFFTW(destroy_plan) (fft_array(i)%planb)
         write(message(1), '(a,i4,a,i4,a,i4,a,i2)') "Info: FFT deallocated from slot ", i
         call write_info(1)
       end if
@@ -195,7 +201,7 @@ contains
     type(fft_type), intent(in) :: fft
     FLOAT, intent(in)     :: r(:,:,:)
     CMPLX, intent(out) :: c(:,:,:)
-    call dfftw_execute_dft_r2c(fft%planf, r, c)
+    call DFFTW(execute_dft_r2c) (fft%planf, r, c)
   end subroutine dfft_forward
 
   subroutine dfft_backward(fft, c, r)
@@ -205,7 +211,7 @@ contains
 
     integer :: n
 
-    call dfftw_execute_dft_c2r(fft%planb, c, r)
+    call DFFTW(execute_dft_c2r) (fft%planb, c, r)
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
@@ -218,7 +224,7 @@ contains
     type(fft_type), intent(in) :: fft
     CMPLX, intent(in)  :: in(:,:,:)
     CMPLX, intent(out) :: out(:,:,:)
-    call dfftw_execute_dft(fft%planf, in, out)
+    call DFFTW(execute_dft) (fft%planf, in, out)
   end subroutine zfft_forward
 
   subroutine zfft_backward(fft, in, out)
@@ -228,7 +234,7 @@ contains
 
     integer :: n
 
-    call dfftw_execute_dft(fft%planb, in, out)
+    call DFFTW(execute_dft) (fft%planb, in, out)
 
     ! multiply by 1/(N1*N2*N2)
     n = fft%n(1)*fft%n(2)*fft%n(3)
