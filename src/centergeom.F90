@@ -5,6 +5,8 @@ program centergeom
   use atom
   use geometry
 
+  implicit none
+
   integer :: iunit, i
   character(len=80) :: label, str
   type(geometry_type) :: geo
@@ -33,8 +35,8 @@ program centergeom
     call io_close(iunit)
   else
     str = "Coordinates"
-    natoms = loct_parse_block_n(str)
-    if(natoms <= 0) then
+    geo%natoms = loct_parse_block_n(str)
+    if(geo%natoms <= 0) then
       message(1) = "Input: Coordinates block not specified"
       message(2) = '% Coordinates'
       message(3) = '  specie  x  y  z  move'
