@@ -342,10 +342,11 @@ contains
               if(l .ne. s%ps%L_loc .and. h%vnl_space == REAL_SPACE) then
                  call specie_get_nl_part(s, x, l, lm, i, a%duV(j, add_lm, i), a%dduV(:, j, add_lm, i))
               end if
-              call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
-              a%so_uv(j, add_lm, i) = so_uv
-              a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
-
+              if(l>0 .and. s%ps%so_l_max>=0) then
+                 call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
+                 a%so_uv(j, add_lm, i) = so_uv
+                 a%so_duv(1:3, j, add_lm, i) = so_duv(1:3)
+              endif
             end do i_loop
             add_lm = add_lm + 1
           end do lm_loop
