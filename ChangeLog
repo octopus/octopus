@@ -1,0 +1,3 @@
+16/4/02 (marques)
+  - MPI bug fixes
+  - build bug fixes + configure.ac now uses GSL native configuration 

@@ -1,0 +1,14 @@
+For the inpatients, here goes the quick-start: 
+
+gzip -cd octopus<-version>.tar.gz | tar xvf -
+cd octopus-<version>
+./configure
+make
+make install
+
+This will probably *not* work, so before giving up, just check:
+
+./configure --help 
+
+for a list of options you may want to set, and read the manual (in the doc 
+directory).
