@@ -20,7 +20,7 @@
 /* --------------------- Fortran to C string compatibility ---------------------- */
 
 #include "string_f.h"
-#include "stdlib.h"
+#include <stdlib.h>
 
 #if defined(_CRAY)
 
