@@ -111,6 +111,11 @@ function specie_init(s)
     call specie3D_init(nspecies, str, s)
   end if
 
+  ! Nullify all the pointers for sanity.
+  do i = 1, nspecies
+     nullify(s(i)%local_fw, s(i)%rhocore_fw, s(i)%nl_fw, s(i)%nl_dfw)
+  enddo
+
   specie_init = nspecies
 
   call pop_sub(); return
