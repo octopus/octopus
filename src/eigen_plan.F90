@@ -34,11 +34,11 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
   FLOAT,                          intent(in)    :: tol
   integer,                        intent(inout) :: niter
   integer,                        intent(out)   :: converged
-  FLOAT,                optional, intent(out)   :: diff(1:st%nst,1:st%nik)
+  FLOAT,                optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Local stuff
-  integer :: n          ! Dimension of the problem.
+!  integer :: n          ! Dimension of the problem.
   integer :: ned        ! Number of smallest eigenpairs desired
   integer :: nec        ! number of eigen-pairs converged, if initially
                         ! nec > 0, the first nec elements of eigenval, res and
@@ -47,56 +47,58 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
   integer :: maxmatvecs ! Maximum number of matrix-vectors applications allowed.
                         ! On exit reset to actual number of MATVECs used
   integer :: me         ! array size of eigenval, res and number of columns in eigenvec.
-  FLOAT, allocatable :: eigenval(:)  ! The eigenvalues
+  FLOAT,  allocatable :: eigenval(:)     ! The eigenvalues
   R_TYPE, allocatable :: eigenvec(:,:,:) ! The eigenvectors
-  FLOAT, allocatable :: res(:)       ! The residuals
+  FLOAT,  allocatable :: res(:)          ! The residuals
   R_TYPE, allocatable :: v(:,:,:)        ! The Krylov subspace basis vectors
   R_TYPE, allocatable :: av(:,:,:)       ! Workspace: W = A V
-  FLOAT, allocatable :: tmp(:)       ! Workspace.
-  R_TYPE, allocatable :: h(:, :)        ! Projection of the hamiltonian onto Krylov subspace.
-  R_TYPE, allocatable :: hevec(:, :)
-  R_TYPE, allocatable :: aux(:, :)
-  
+  FLOAT,  allocatable :: tmp(:)          ! Workspace.
+  R_TYPE, allocatable :: h(:,:)          ! Projection of the hamiltonian onto Krylov subspace.
+  R_TYPE, allocatable :: hevec(:,:)
+  R_TYPE, allocatable :: aux(:,:)
+
   integer  :: blk, i, ii, idim, dim, j, d1, d2, matvec, nconv, ik, knec, np
   FLOAT :: x
 
   ! Some hard coded parameters.
-  integer, parameter  :: winsiz = 5 ! window size, number of eigenvalues computed simultaneously
+  integer, parameter  :: winsiz = 5  ! window size, number of eigenvalues computed simultaneously
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
-  FLOAT, parameter :: eps    = CNST(1e-15)
+  FLOAT,   parameter  :: eps    = CNST(1e-15)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   call push_sub('eigen_solver_plan')
   
-  n          = m%np*st%d%dim
+!  n          = m%np*st%d%dim
   dim        = st%d%dim
   np         = m%np
   ned        = st%nst
   nec        = 0
-  maxmatvecs = niter*st%nik*st%nst
+  maxmatvecs = niter*st%d%nik*st%nst
   me         = ned + winsiz - 1
   
-  allocate(eigenval(me),          &
-           eigenvec(np, dim, me),       &
-           res(me),               &
-           v(np, dim, krylov),          &
-           av(np, dim, krylov),         &
-           tmp(krylov),           &
-           h(krylov, krylov),     &
-           hevec(krylov, krylov), &
+  !Allocate memory
+  allocate(eigenval(me),        eigenvec(np, dim, me), &
+           res(me),             v(np, dim, krylov),    &
+           av(np, dim, krylov), tmp(krylov),           &
+           h(krylov, krylov),   hevec(krylov, krylov), &
            aux(np, dim))
+  eigenval = M_ZERO;           eigenvec = R_TOTYPE(M_ZERO)
+  res      = M_ZERO;           v        = R_TOTYPE(M_ZERO) 
+  av       = R_TOTYPE(M_ZERO); tmp      = M_ZERO
+  h        = R_TOTYPE(M_ZERO); hevec    = R_TOTYPE(M_ZERO)
+  aux      = R_TOTYPE(M_ZERO)
 
   knec  = 0 ! Initialize the total (including all irreps.) converged eigenvector counter.
   niter = 0 ! Initialize the total matrix-vector multiplication counter.
 
   ! Main loop: runs over the irreducible subspaces.
-  k_points : do ik = 1, st%nik
+  k_points : do ik = 1, st%d%nik
 
     ! First of all, copy the initial estimates.
     do i = 1, st%nst
-      call lalg_copy(np, dim, st%X(psi)(:,:, i, ik), eigenvec(:,:,i))
+      call lalg_copy(np, dim, st%X(psi)(:, :, i, ik), eigenvec(:, :, i))
       eigenval(i) = st%eigenval(i, ik)
-    enddo
+    end do
 
     ! Initialization of counters...
     matvec = 0 ! Set the matrix-multiplication counter to zero.
@@ -110,8 +112,8 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
     ! Beginning of the outer loop; start/restart
     outer_loop : do
       
-      if(nec>=ned)           exit outer_loop ! :)   Already converged!
-      if(matvec>=maxmatvecs) exit outer_loop ! :(   Maximum number of mat-vec operation surpassed...
+      if(nec >= ned)           exit outer_loop ! :)   Already converged!
+      if(matvec >= maxmatvecs) exit outer_loop ! :(   Maximum number of mat-vec operation surpassed...
       
       if (d1.le.winsiz) then !start from beginning
         blk = winsiz
@@ -121,7 +123,7 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
 
       !copy next set of Ritz vector/initial guesses to V
       do i = 1, winsiz
-        call lalg_copy(np, dim, eigenvec(:, :, nec+i), v(:,:,i))
+        call lalg_copy(np, dim, eigenvec(:, :, nec+i), v(:, :, i))
       end do
 
       ! Beginning of the inner loop.
@@ -154,9 +156,7 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
 
         !matrix-vector multiplication
         do i = 1, blk
-          do idim = 1, dim
-            aux(1:np, idim) = v(1:np, idim, d1 + i)
-          enddo
+          call lalg_copy(np, dim, v(:, :, d1 + i), aux)
           av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
           call X(Hpsi)(hamilt, m, f_der, aux, av(:, :, d1 + i), ik)
         enddo
@@ -174,45 +174,45 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
         call lalg_eigensolve(d2, h(1:d2, 1:d2), hevec(1:d2, 1:d2), tmp(1:d2))
 
         ! Store the Ritz values as approximate eigenvalues.
-        call lalg_copy(winsiz, tmp(:), eigenval(nec+1:nec+winsiz))
+        call lalg_copy(winsiz, tmp, eigenval(nec+1:nec+winsiz))
 
         if ( d2+1.le.krylov .and. matvec.lt.maxmatvecs) then
           ! In this case, compute only the lowest Ritz eigenpair.
-          call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), v(1:np, 1:dim ,1:d2), hevec(1:d2, 1), &
-             R_TOTYPE(M_ZERO), eigenvec(1:np, 1:dim, nec + 1))
-          call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(1:np, 1:dim,1:d2), hevec(1:d2, 1), &
-             R_TOTYPE(M_ZERO), av(1:np, 1:dim, d2 + 1))
-          call residual(np, dim, av(1:np, 1:dim, d2+1), eigenvec(1:np, 1:dim, nec+1), tmp(1), av(1:np, 1:dim, d2+1), res(nec+1))
+          call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, 1), &
+                         R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
+          call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
+                         R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
+          call residual(np, dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
           ! If the first Ritz eigen-pair converged, compute all 
           ! Ritz vectors and the residual norms.
           if(res(nec+1)<tol) then
             do i = 2, winsiz
-              call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), v(1:np, 1:dim, 1:d2), hevec(1:d2, i), &
-                 R_TOTYPE(M_ZERO), eigenvec(1:np, 1:dim, nec+i))
+              call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
+                             R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
             end do
             do i = 2, winsiz
-              call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(1:np, 1:dim, 1:d2), hevec(1:d2, i), &
-                 R_TOTYPE(M_ZERO), v  (1:np, 1:dim, i)) 
+              call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
+                             R_TOTYPE(M_ZERO), v  (:, :, i)) 
             enddo
             do i = 2, winsiz
-              call residual(np, dim, v(1:np, 1:dim, i), eigenvec(1:np, 1:dim, nec+i), tmp(i), av(1:np, 1:dim, i), res(nec+i))
+              call residual(np, dim, v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))
             enddo
           endif
           d1 = d2
         else
           do i = 1, winsiz
-            call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), v(1:np, 1:dim, 1:d2), hevec(1:d2, i), &
-                 R_TOTYPE(M_ZERO), eigenvec(1:np, 1:dim, nec+i))
+            call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), v(:, :, 1:d2), hevec(1:d2, i), &
+                           R_TOTYPE(M_ZERO), eigenvec(:, :, nec+i))
           enddo
           do i = 1, winsiz
-            call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(1:np, 1:dim,1:d2), hevec(1:d2, i), &
-                 R_TOTYPE(M_ZERO), v(1:np, 1:dim, i))
+            call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
+                           R_TOTYPE(M_ZERO), v(:, :, i))
           enddo
           do i = 1, winsiz
-            av(:, :, i) = v(:, :, i)
-            v(:, :, i) = eigenvec(:, :, nec + i)
-            call residual(np, dim, av(1:np, 1:dim, i), v(1:np, 1:dim, i), tmp(i), av(1:np, 1:dim, winsiz+i), res(nec+i))
+            call lalg_copy(np, dim, v(:, :, i), av(:, :, i))
+            call lalg_copy(np, dim, eigenvec(:, :, nec + i), v(:, :, i))
+            call residual(np, dim, av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
           enddo
 
           ! Forms the first winsiz rows of H = V^T A V
@@ -231,7 +231,7 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
         ! compares its eigenvalue to the previous one, swapping them if
         ! necessary.
         nconv = 0
-        ordering: do i = nec + 1, nec+winsiz-1
+        ordering: do i = nec + 1, nec + winsiz - 1
           if(res(i) >= tol) exit ordering
           nconv = nconv + 1
           do j = i, 2, -1
@@ -269,24 +269,24 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
 
     knec = knec + nec
     niter = niter + matvec
-    
+
   enddo k_points
-  
+
   converged = knec
   deallocate(eigenval, eigenvec, res,  v, av, tmp, h, hevec, aux)
   call pop_sub()
-  
+
 contains
 
   subroutine residual(np, dim, hv, v, e, res, r)
-    integer, intent(in) :: np, dim
-    R_TYPE, intent(inout) :: hv(:,:)
-    R_TYPE, intent(inout) :: v(:,:)
-    FLOAT, intent(in)  :: e
-    R_TYPE, intent(inout) :: res(:,:)
-    FLOAT, intent(out) :: r
-    
-    res(1:np, 1:dim) = hv(1:np, 1:dim) - e*v(1:np, 1:dim)
+    integer, intent(in)    :: np, dim
+    R_TYPE,  intent(inout) :: hv(:,:)
+    R_TYPE,  intent(inout) :: v(:,:)
+    FLOAT,   intent(in)    :: e
+    R_TYPE,  intent(inout) :: res(:,:)
+    FLOAT,   intent(out)   :: r
+
+    res = hv - e*v
     r = X(states_nrm2)(m, dim, res)
 
   end subroutine residual
