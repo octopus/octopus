@@ -86,7 +86,6 @@ integer function td_run(sys, h, fromScratch) result(ierr)
   FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
   FLOAT :: etime
 
-  ierr = 0
   call init_()
   ierr = init_wfs()
   if(ierr.ne.0) then
@@ -94,7 +93,6 @@ integer function td_run(sys, h, fromScratch) result(ierr)
     return
   end if
 
-  call td_init(td, sys%m, sys%st, h, sys%outp)
   call init_iter_output()
 
   ! Calculate initial forces and kinetic energy
@@ -236,9 +234,6 @@ integer function td_run(sys, h, fromScratch) result(ierr)
 contains
 
   subroutine init_()
-    integer :: max_iter, nus
-    FLOAT :: conv
-
     call push_sub('td_run')
 
     ! some shortcuts
@@ -276,7 +271,18 @@ contains
     ! allocate memory
     allocate(st%zpsi(sys%m%np, st%dim, st%st_start:st%st_end, st%nik))
 
+    !
+    call td_init(td, sys%m, sys%st, h, sys%outp)
+
   end subroutine init_
+
+  subroutine end_()
+    ! free memory
+    deallocate(sys%st%zpsi)
+    call td_end(td)
+
+    call pop_sub()
+  end subroutine end_
 
   integer function init_wfs() result(ierr)
     integer :: i, is, err
@@ -285,7 +291,7 @@ contains
 
     ierr = 0
     if(.not.fromScratch) then
-      call zrestart_read("tmp/restart_td", sys%st, sys%m, err)
+      call zrestart_read("tmp/restart_td", sys%st, sys%m, err, td%iter)
       if(err.ne.0) then
         message(1) = "Could not load tmp/restart_td: Starting from scratch"
         call write_warning(1)
@@ -299,7 +305,7 @@ contains
             call dinput_function(filename, m, td%tr%v_old(1:m%np, is, i), ierr)
           end do
         end do
-        
+
       end if
     end if
 
@@ -323,14 +329,6 @@ contains
     end if
 
   end function init_wfs
-
-  subroutine end_()
-    ! free memory
-    deallocate(sys%st%zpsi)
-
-    call pop_sub()
-  end subroutine end_
-
 
   ! initialize buffers for output
   subroutine init_iter_output()
