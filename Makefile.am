@@ -26,6 +26,7 @@ CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec
 
 RPM_DIR = /usr/src/redhat
+DEB_DIR = /usr/src/debian
 
 rpm: dist
 	cp -f $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES/
@@ -36,4 +37,13 @@ rpm: dist
 	@echo "  RPMs are built, and are located under:"
 	@echo "       $(RPM_DIR)/RPMS/i386"
 	@echo "       $(RPM_DIR)/SRPMS"
+	@echo "-------------------------------------------------------------"
+
+deb: dist
+	cvs-buildpackage -rfakeroot
+	scp $(DEB_DIR)/i386/octopus/octopus*.deb \
+		marques@nautilus.fis.uc.pt:/server/www/tddft.org/programs/octopus/download/
+	@echo "-------------------------------------------------------------"
+	@echo "  debs are built, and are located under:"
+	@echo "       $(DEB_DIR)/i386/octopus"
 	@echo "-------------------------------------------------------------"
