@@ -54,7 +54,7 @@ subroutine eigen_solver_cg2(st, sys, h, tol, niter, converged, errorflag, diff, 
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, &
-           st%R_FUNC(psi)(0:np, 1:st%dim, 1:p, ik), start=p)
+           st%R_FUNC(psi)(1:np, 1:st%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call R_FUNC(Hpsi)(h, sys%m, st, sys, ik, st%R_FUNC(psi)(:,:, p, ik) , h_psi)

@@ -353,7 +353,7 @@ subroutine states_generate_random(st, m, ist_start)
          call R_FUNC(mesh_random)(m, st%R_FUNC(psi)(1:m%np, id, ist, ik))
       end do
     end do
-    call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(:,:,:,ik))
+    call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(1:,:,:,ik))
   end do
   st%eigenval = M_ZERO
 
