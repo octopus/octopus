@@ -56,8 +56,8 @@ contains
           allocate(grad(3, sys%m%np))
           call zmesh_derivatives(sys%m, zpsi1, grad=grad)
           do k = 1, sys%m%np
-            hzpsi1(k) = hzpsi1(k) - M_zI * 2._r8 * sum(f(:)*grad(:, k)) + &
-                 sum(f**2) * zpsi1(k)
+            hzpsi1(k) = hzpsi1(k) - M_zI * sum(f(:)*grad(:, k)) + &
+                 sum(f**2)/2._r8 * zpsi1(k)
           end do
           deallocate(grad)
         end select
