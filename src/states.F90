@@ -225,6 +225,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
 
     ! read in fermi distribution temperature
     call loct_parse_float('ElectronicTemperature', M_ZERO, st%el_temp)
+    st%el_temp = st%el_temp * units_inp%energy%factor
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
