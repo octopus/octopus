@@ -67,6 +67,7 @@ program strength_function
   call oct_parse_double(C_string("SpecEndTime"), -1._r8, s%end_time)
   call oct_parse_double(C_string("SpecEnergyStep"), 0.05_r8, s%energy_step)
   call oct_parse_double(C_string("SpecMaxEnergy"), 20._r8, s%max_energy)
+  call oct_parse_double(C_string("SpecMinEnergy"), 0._r8, s%min_energy)
   call oct_parse_double(C_string("TDDeltaStrength"), 0.05_r8, sf%delta_strength)
 
   ! adjust units
