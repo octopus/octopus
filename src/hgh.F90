@@ -197,13 +197,13 @@ function load_params(unit, params)
   if(j<1) read(line, *, iostat=iostat) params%atom_name, params%z_val, params%rlocal
   if( iostat.ne.0 ) then
     load_params = 1
-    call pop_sub()
+    call pop_sub(); return
   endif
 
   read(unit,'(a)', iostat = iostat) line
   if(iostat .ne. 0) then
     load_params = 0
-    call pop_sub()
+    call pop_sub(); return
   endif
   iostat = 1; j = 4
   do while((iostat .ne. 0) .and. (j > 0))
@@ -212,7 +212,7 @@ function load_params(unit, params)
   enddo
   if(j < 0) then
     load_params = 2
-    call pop_sub()
+    call pop_sub(); return
   endif
 
   kloop: do k = 1, 3
