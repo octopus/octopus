@@ -38,56 +38,31 @@ implicit none
 
 type(system_type) :: sys
 type(hamiltonian_type) :: h
-type(scf_type) :: scfv
-type(unocc_type) :: unoccv
 integer :: calc_mode
 
 ! run stack
 integer, private :: i_stack(100), instr
 integer, private, parameter ::   &
-     M_START_UNOCC_STATES  = 3,  &
-     M_RESUME_UNOCC_STATES = 4,  &
-     M_START_TD            = 5,  &
-     M_RESUME_TD           = 6,  &
-     M_START_STATIC_POL    = 7,  &
-     M_RESUME_STATIC_POL   = 8,  &
-     M_BO_MD               = 9,  &
-     M_GEOM_OPT            = 10, &
-     M_PHONONS             = 11, &
-     M_OPT_CONTROL         = 12, &
-     M_PULPO_A_FEIRA       = 99, &
-     M_MGS                 = 101, &
-     M_MUNOCC              = 102
+     M_GS                 = 1, &
+     M_UNOCC              = 2, &
+     M_TD                 = 3, &
+     M_STATIC_POL         = 4, &
+     M_GEOM_OPT           = 5, &
+     M_PHONONS            = 6, &
+     M_OPT_CONTROL        = 7, &
+     M_BO_MD              = 8, &
+     M_PULPO_A_FEIRA      = 99
 
 integer, private, parameter :: &
-     I_SETUP_RPSI          =  1,  &
-     I_END_RPSI            =  2,  &
-     I_RANDOMIZE_RPSI      =  3,  &
-     I_LOAD_RPSI           =  4,  &
-     I_SETUP_HAMILTONIAN   =  5,  &
-     I_SCF                 =  6,  &
-     I_LCAO                =  7,  &
-     I_SETUP_UNOCC         = 11,  &
-     I_END_UNOCC           = 12,  &
-     I_RANDOMIZE_UNOCC     = 13,  &
-     I_LOAD_UNOCC          = 14,  &
-     I_UNOCC_RUN           = 15,  &
-     I_SETUP_TD            = 21,  &
-     I_END_TD              = 22,  &
-     I_INIT_ZPSI           = 23,  &
-     I_LOAD_ZPSI           = 24,  &
-     I_TD                  = 25,  &
-     I_SETUP_OCC_AN        = 26,  &
-     I_END_OCC_AN          = 27,  &
-     I_START_POL           = 30,  &
-     I_POL_SCF             = 31,  &
-     I_GEOM_OPT            = 40,  &
-     I_PHONONS             = 50,  &
-     I_OPT_CONTROL         = 60,  &
-     I_PULPO               = 99,  &
-     I_MGS_INIT            = 101, &
-     I_MGS                 = 102, &
-     I_MUNOCC              = 103
+     I_GS_INIT            = 100, &
+     I_GS                 = 101, &
+     I_UNOCC              = 102, &
+     I_TD                 = 103, &
+     I_STATIC_POL         = 104, &
+     I_GEOM_OPT           = 105, &
+     I_PHONONS            = 106, &
+     I_OPT_CONTROL        = 107, &
+     I_PULPO              = 999
 
 contains
 
@@ -97,10 +72,7 @@ subroutine run()
   logical :: log
   character(len=100) :: filename
 
-  type(td_type), pointer :: td
-  type(lcao_type) :: lcao_data
-
-  logical :: fromScratch(M_MGS:I_MUNOCC)
+  logical :: fromScratch(M_GS:M_OPT_CONTROL)
 
   call push_sub('run')
 
@@ -113,215 +85,56 @@ subroutine run()
     if(instr <= 0) exit program
 
     select case(i_stack(instr))
-    case(I_MGS_INIT)
+    case(I_GS_INIT)
       call ground_state_init(sys, h)
 
-    case(I_MGS)
-      if(.not.ground_state_run(sys, h)) then ! could not load wfs
-        i_stack(instr) = I_MGS;      instr = instr + 1
-        i_stack(instr) = I_MGS_INIT
+    case(I_GS)
+      if(ground_state_run(sys, h).ne.0) then ! could not load wfs
+        i_stack(instr) = I_GS;      instr = instr + 1
+        i_stack(instr) = I_GS_INIT
         cycle program
       end if
 
-    case(I_MUNOCC)
-      if(.not.unocc_run(sys, h, fromScratch(M_MUNOCC))) then
-        i_stack(instr) = I_MUNOCC;    instr = instr + 1
-        i_stack(instr) = I_MGS
-        cycle program
-      end if
-
-
-    case(I_SETUP_RPSI)
-      message(1) = 'Info: Allocating rpsi.'
-      call write_info(1)
-      allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
-
-    case(I_END_RPSI)
-      message(1) = 'Info: Deallocating rpsi.'
-      call write_info(1)
-      deallocate(sys%st%X(psi), stat = ierr); nullify(sys%st%X(psi))
-
-    case(I_RANDOMIZE_RPSI)
-      message(1) = 'Info: Random generating starting wavefunctions.'
-      call write_info(1)
-
-      ! wave functions are simply random gaussians
-      call states_generate_random(sys%st, sys%m)
-      ! this is certainly a better density
-      call system_guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-                         sys%st%d%spin_channels, sys%st%rho)
-
-    case(I_LOAD_RPSI)
-      message(1) = 'Info: Loading rpsi.'
-      call write_info(1)
-
-      call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
-      if(ierr<=0) then ! Fatal error are flagged by ierr > 0
-        call states_fermi(sys%st, sys%m)
-        call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
-      else
-        ! run scf unless it is already in the stack
-!        if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
-!             calc_mode .ne. M_START_STATIC_POL .and. calc_mode .ne. M_RESUME_STATIC_POL) then
-!          i_stack(instr) = I_SCF;               instr = instr + 1
-!          i_stack(instr) = I_LCAO;              instr = instr + 1
-!          i_stack(instr) = I_SETUP_HAMILTONIAN; instr = instr + 1
-!        end if
-        i_stack(instr) = I_RANDOMIZE_RPSI
-        cycle program         
-      end if
-
-    case(I_SETUP_HAMILTONIAN)
-      message(1) = 'Info: Setting up Hamiltonian.'
-      call write_info(1)
-
-      call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%m)                            ! occupations
-      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
-
-    case(I_SCF)
-#ifdef COMPLEX_WFNS
-      message(1) = 'Info: SCF using complex wavefunctions.'
-#else
-      message(1) = 'Info: SCF using real wavefunctions.'
-#endif
-      call write_info(1)
-
-      call scf_init(scfv, sys%m, sys%st, h)
-      call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
-      call scf_end(scfv)
-
-    case(I_SETUP_TD)
-      message(1) = 'Info: Setting up TD.'
-      call write_info(1)
-
-      ! initialize structure
-      allocate(td)
-      ! this allocates zpsi
-      call td_init(td, sys%m, sys%st, h, sys%outp)
-
-    case(I_END_TD)
-      message(1) = 'Info: Cleaning up TD.'
-      call write_info(1)
-
-      call td_end(td)
-      deallocate(td); nullify(td)
-      deallocate(sys%st%zpsi); nullify(sys%st%zpsi)
-      
-    case(I_INIT_ZPSI)
-      message(1) = 'Info: Initializing zpsi.'
-      call write_info(1)
-
-      ! load zpsi from static file.
-      call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
-      if(ierr.eq.0) then ! In this case, we require strict perfect reading....
-        call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
-        x = minval(sys%st%eigenval(sys%st%st_start, :))
-#ifdef HAVE_MPI
-        call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
-#endif
-        call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
-        call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)
-      else
-        i_stack(instr) = I_INIT_ZPSI
-        instr = instr + 1; i_stack(instr) = I_SETUP_TD
-        instr = instr + 1; i_stack(instr) = I_END_RPSI
-        instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-        instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-        instr = instr + 1; i_stack(instr) = I_END_TD
-        cycle program
-      end if
-
-    case(I_LOAD_ZPSI)
-      message(1) = 'Info: Loading zpsi.'
-      call write_info(1)
-
-      call restart_load("tmp/restart_td", sys%st, sys%m, ierr, &
-                        iter = td%iter, nvprev = 2, vprev = td%tr%v_old(1:sys%m%np, 1:sys%st%d%nspin, 1:2))
-      if(ierr<=0) then
-        ! define density and hamiltonian
-        call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
-        x = minval(sys%st%eigenval(sys%st%st_start, :))
-#ifdef HAVE_MPI
-        call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
-#endif
-        call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
-        call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)        
-
-      else
-        write(message(1),'(a,i3)') 'Error loading zpsi -- Error code = ',ierr
-        write(message(2),'(a)')    'Wavefunctions will be initialized, but maybe the restart is useless'
-        call write_warning(2)
-        i_stack(instr) = I_INIT_ZPSI
+    case(I_UNOCC)
+      if(unocc_run(sys, h, fromScratch(M_UNOCC)).ne.0) then
+        i_stack(instr) = I_UNOCC;    instr = instr + 1
+        i_stack(instr) = I_GS
         cycle program
       end if
 
     case(I_TD)
-      message(1) = 'Info: Time-dependent simulation.'
-      call write_info(1)
-
-      call td_run(td, unoccv%st, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
-
-    case(I_SETUP_OCC_AN)
-
-      if(td%out_proj) then
-        message(1) = 'Info: Seting up occupational analysis.'
-        call write_info(1)
-        instr = instr - 1
-        call m_load_unocc()
+      if(td_run(sys, h, fromScratch(M_TD)).ne.0) then
+        i_stack(instr) = I_TD;    instr = instr + 1
+        i_stack(instr) = I_GS
         cycle program
-      else
-        allocate(unoccv%st) ! Otherwise td_run crashes
       end if
 
-    case(I_END_OCC_AN)
-      message(1) = 'Info: Cleaning up occupational analysis.'
-      call write_info(1)
-
-      if(td%out_proj) then
-        i_stack(instr) = I_END_UNOCC
+    case(I_STATIC_POL)
+      if(static_pol_run(sys, h, fromScratch(M_STATIC_POL)).ne.0) then ! could not load wfs
+        i_stack(instr) = I_STATIC_POL;      instr = instr + 1
+        i_stack(instr) = I_GS_INIT
         cycle program
-      else
-        deallocate(unoccv%st)
       end if
-
-    case(I_START_POL)
-      ! just delete the pol file
-      message(1) = 'Info: Starting static polarizability calculation'
-      call write_info(1)
-      call loct_rm('tmp/restart.pol')
-        
-    case(I_POL_SCF)
-      message(1) = 'Info: Calculating static polarizability'
-      call write_info(1)
-
-      call scf_init(scfv, sys%m, sys%st, h)
-      call static_pol_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
-      call scf_end(scfv)
 
     case(I_GEOM_OPT)
-      message(1) = 'Info: Performing geometry optimization'
-      call write_info(1)
-
-      call scf_init(scfv, sys%m, sys%st, h)
-      call geom_opt_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
-      call scf_end(scfv)
+      if(geom_opt_run(sys, h).ne.0) then ! could not load wfs
+        i_stack(instr) = I_GEOM_OPT;      instr = instr + 1
+        i_stack(instr) = I_GS_INIT
+        cycle program
+      end if
 
     case(I_PHONONS)
-      message(1) = 'Info: Calculating phonon frequencies'
-      call write_info(1)
-
-      call scf_init(scfv, sys%m, sys%st, h)
-      call phonons_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
-      call scf_end(scfv)
+      if(phonons_run(sys, h).ne.0) then ! could not load wfs
+        i_stack(instr) = I_PHONONS;      instr = instr + 1
+        i_stack(instr) = I_GS_INIT
+        cycle program
+      end if
 
     case(I_OPT_CONTROL)
       message(1) = 'Info: Optimum control.'
       call write_info(1)
 
-      call opt_control_run(td, sys%m, sys%f_der, sys%geo, sys%st, sys%val_charge, h, sys%outp)
+      ierr = opt_control_run(sys, h)
 
     case(I_PULPO)
       call pulpo_print()
@@ -335,7 +148,6 @@ subroutine run()
   end do program
       
   call run_end()
-
   call pop_sub()
 
 contains
@@ -344,61 +156,40 @@ contains
     logical :: fS
 
     call loct_parse_logical("fromScratch", .false., fS)
-    fromScratch(M_MGS:I_MUNOCC) = .false.
+    fromScratch(:) = .false.
 
     select case(calc_mode)
-    case(M_MGS)
-      fromScratch(M_MGS) = fS
-      if(fS) instr = instr + 1; i_stack(instr) = I_MGS_INIT
-      instr = instr + 1; i_stack(instr) = I_MGS
+    case(M_GS)
+      fromScratch(M_GS) = fS
+      instr = instr + 1; i_stack(instr) = I_GS
+      if(fS) then
+        instr = instr + 1; i_stack(instr) = I_GS_INIT
+      end if
 
-    case(M_MUNOCC)
-      fromScratch(M_MUNOCC) = fS
-      instr = instr + 1; i_stack(instr) = I_MUNOCC
+    case(M_UNOCC)
+      fromScratch(M_UNOCC) = fS
+      instr = instr + 1; i_stack(instr) = I_UNOCC
 
-    case(M_START_TD)
-      instr = instr + 1; i_stack(instr) = I_END_TD
-      instr = instr + 1; i_stack(instr) = I_END_OCC_AN
+    case(M_TD)
+      fromScratch(M_TD) = fS
       instr = instr + 1; i_stack(instr) = I_TD
-      instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
-      instr = instr + 1; i_stack(instr) = I_INIT_ZPSI
-      instr = instr + 1; i_stack(instr) = I_SETUP_TD
-    case(M_RESUME_TD)
-      instr = instr + 1; i_stack(instr) = I_END_TD
-      instr = instr + 1; i_stack(instr) = I_END_OCC_AN
-      instr = instr + 1; i_stack(instr) = I_TD
-      instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
-      instr = instr + 1; i_stack(instr) = I_LOAD_ZPSI
-      instr = instr + 1; i_stack(instr) = I_SETUP_TD
-    case(M_START_STATIC_POL)
-      instr = instr + 1; i_stack(instr) = I_END_RPSI
-      instr = instr + 1; i_stack(instr) = I_POL_SCF
-      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-      instr = instr + 1; i_stack(instr) = I_START_POL
-    case(M_RESUME_STATIC_POL)
-      instr = instr + 1; i_stack(instr) = I_END_RPSI
-      instr = instr + 1; i_stack(instr) = I_POL_SCF
-      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+
+    case(M_STATIC_POL)
+      fromScratch(M_STATIC_POL) = fS
+      instr = instr + 1; i_stack(instr) = I_STATIC_POL
+
     case(M_GEOM_OPT)
-      instr = instr + 1; i_stack(instr) = I_END_RPSI
+      fromScratch(M_GEOM_OPT) = fS
       instr = instr + 1; i_stack(instr) = I_GEOM_OPT
-      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+
     case(M_PHONONS)
-      instr = instr + 1; i_stack(instr) = I_END_RPSI
+      fromScratch(M_PHONONS) = fS
       instr = instr + 1; i_stack(instr) = I_PHONONS
-      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+
     case(M_OPT_CONTROL)
-      instr = instr + 1; i_stack(instr) = I_END_TD
+      fromScratch(M_OPT_CONTROL) = fS
       instr = instr + 1; i_stack(instr) = I_OPT_CONTROL
-      instr = instr + 1; i_stack(instr) = I_SETUP_TD
+
     case(M_PULPO_A_FEIRA)
       instr = instr + 1; i_stack(instr) = I_PULPO
   end select
@@ -411,23 +202,20 @@ subroutine run_init()
   ! initialize some stuff
 
   call loct_parse_int('CalculationMode', 1, calc_mode)
-!  if( (calc_mode < 1 .or. calc_mode > 12) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
-!    write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
-!    message(2) = '  Calculation Mode = 1 <= start static calculation'
-!    message(3) = '                   = 2 <= resume static calculation'
-!    message(4) = '                   = 3 <= calculate unocuppied states'
-!    message(5) = '                   = 4 <= resume unocuppied states calculation'
-!    message(6) = '                   = 5 <= start td'
-!    message(7) = '                   = 6 <= resume td'
-!    message(8) = '                   = 7 <= start static polarizability'
-!    message(9) = '                   = 8 <= resume static polarizability'
-!    message(10)= '                   = 9 <= perform Born-Oppenheimer MD'
-!    message(11)= '                   =10 <= perform geometry minimization'
-!    message(12)= '                   =11 <= calculate phonon frequencies'
-!    message(13)= '                   =12 <= optimum control'
-!    message(14)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
-!    call write_fatal(13)
-!  end if
+  if( (calc_mode < 1 .or. calc_mode > 8) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+    write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
+    message(2) = '  Calculation Mode = '
+    message(3) = '    gs          <= ground-state calculation'
+    message(4) = '    unocc       <= calculate unocuppied states'
+    message(5) = '    td          <= time-dependent simulation'
+    message(6) = '    pol         <= calculate static polarizability'
+    message(7) = '    bo          <= perform Born-Oppenheimer MD'
+    message(8) = '    geom        <= calculate phonon frequencies'
+    message(9) = '    phonon      <= calculate phonon frequencies'
+    message(10)= '    opt_control <= optimum control'
+    message(11)= '    recipe      <= prints out the "Pulpo a Feira" recipe'
+    call write_fatal(11)
+  end if
 
   ! print dimension info
   write(message(1), '(a,i1,a)') 'Info: Octopus will run in ', conf%dim, ' dimension(s)'
@@ -455,6 +243,8 @@ subroutine run_init()
     call epot_generate(h%ep, sys%m, sys%st, sys%geo, h%vpsl, h%reltype)
   endif
 
+  call restart_init()
+
 end subroutine run_init
 
 subroutine run_end()
@@ -468,16 +258,5 @@ subroutine run_end()
 #endif
 
 end subroutine run_end
-
-subroutine m_load_unocc()
-  instr = instr + 1; i_stack(instr) = I_END_RPSI
-  instr = instr + 1; i_stack(instr) = I_LOAD_UNOCC   
-  instr = instr + 1; i_stack(instr) = I_SETUP_UNOCC
-  instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
-  instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-  instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-
-  return
-end subroutine m_load_unocc
 
 end module run_prog

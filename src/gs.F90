@@ -29,15 +29,14 @@ module ground_state
 contains
 
   ! ---------------------------------------------------------
-  logical function ground_state_run(sys, h)
+  integer function ground_state_run(sys, h) result(ierr)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
 
-    integer :: ierr
     type(scf_type)        :: scfv
 
     call push_sub('ground_state_run')
-    ground_state_run = .true.
+    ierr = 0
 
     ! allocate wfs
     allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
@@ -46,22 +45,16 @@ contains
     message(1) = 'Info: Loading wave-functions'
     call write_info(1)
 
-    call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
-    if(ierr > 0) then ! Fatal error are flagged by ierr > 0
+    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
-      ground_state_run = .false.
+      ierr = 1
     else
-      call states_fermi(sys%st, sys%m)
-      call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
-
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
-      call states_fermi(sys%st, sys%m)                            ! occupations
-      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+      call X(system_h_setup) (sys, h)
     
       ! run self consistency
 #ifdef COMPLEX_WFNS
@@ -77,7 +70,7 @@ contains
     end if
 
     ! clean up
-    deallocate(sys%st%X(psi), stat = ierr); nullify(sys%st%X(psi))
+    deallocate(sys%st%X(psi)); nullify(sys%st%X(psi))
     call pop_sub()
   end function ground_state_run
 
@@ -126,7 +119,10 @@ contains
     end if
     
     ! write wave-functions to disk
-    call restart_write("tmp/restart_gs", sys%st, sys%m, ierr)
+    if(X(restart_write)("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+      message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
+      call write_fatal(1)
+    end if
 
     ! clean up
     deallocate(sys%st%X(psi), stat = ierr)

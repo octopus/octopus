@@ -135,8 +135,6 @@ contains
     st%st_end   = st%nst
 #endif
 
-    ! allocate memory
-    allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
   end subroutine td_init_states
 
 end subroutine td_init

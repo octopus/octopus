@@ -278,7 +278,7 @@ contains
       end do
       
       ! propagate dt/2 with H(t)
-      h%vhxc = vhxc_t2
+      if(.not.h%ip_app) h%vhxc = vhxc_t2
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)

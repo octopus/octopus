@@ -43,29 +43,42 @@ module phonons
 
 contains
 
-  subroutine phonons_run(scf, m, f_der, st, geo, h, outp)
-    type(scf_type),         intent(inout) :: scf
-    type(mesh_type),        intent(IN)    :: m
-    type(f_der_type),       intent(inout) :: f_der
-    type(states_type),      intent(inout) :: st
-    type(geometry_type),    intent(inout) :: geo
+  integer function phonons_run(sys, h) result(ierr)
+    type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
-    type(output_type),      intent(IN)    :: outp
-    
+
     type(phonons_type) :: ph
     integer :: i, j, iunit
+
+    ierr = 0
+    call init_()
+
+    ! load wave-functions
+    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+      message(1) = "Could not load wave-functions: Starting from scratch"
+      call write_warning(1)
+      
+      ierr = 1
+      call end_()
+      return
+    end if
+    
+    ! setup Hamiltonian
+    message(1) = 'Info: Setting up Hamiltonian.'
+    call write_info(1)
+    call X(system_h_setup) (sys, h)
 
     ! create directory for output
     call loct_mkdir('phonons')
 
-    ph%dim = geo%natoms*3
+    ph%dim = sys%geo%natoms*conf%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
     call loct_parse_float("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_DM(scf, m, f_der, st, geo, h, outp, ph)
+    call get_DM(sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp, ph)
 
     ! output phonon frequencies and eigenvectors
     call io_assign(iunit)
@@ -88,10 +101,26 @@ contains
     call io_close(iunit)
 
     deallocate(ph%DM, ph%freq)
-  end subroutine phonons_run
+    call end_()
 
-  subroutine get_DM(scf, m, f_der, st, geo, h, outp, ph)
-    type(scf_type),         intent(inout) :: scf
+  contains
+    subroutine init_()
+      call push_sub('phonons_run')
+
+      ! allocate wfs
+      allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+    end subroutine init_
+
+
+    subroutine end_()
+      deallocate(sys%st%X(psi))
+      
+      call pop_sub()
+    end subroutine end_    
+
+  end function phonons_run
+
+  subroutine get_DM(m, f_der, st, geo, h, outp, ph)
     type(mesh_type),        intent(IN)    :: m
     type(f_der_type),       intent(inout) :: f_der
     type(states_type),      intent(inout) :: st
@@ -100,17 +129,20 @@ contains
     type(output_type),      intent(IN)    :: outp
     type(phonons_type),     intent(inout) :: ph
 
+    type(scf_type) :: scf
     integer :: i, j, alpha, beta, n, iunit
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
+    call scf_init(scf, m, st, h)
     allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))
-    n = geo%natoms*3
+    forces = M_ZERO; forces0 = M_ZERO
+    n = geo%natoms*conf%dim
 
     call io_assign(iunit)
     open(iunit, file='phonons/DM', status='unknown')
 
     do i = 1, geo%natoms
-      do alpha = 1, 3
+      do alpha = 1, conf%dim
         write(message(1), '(a,i3,a,i2)') 'Info: Moving atom ', i, ' in the direction ', alpha
         call write_info(1)
 
@@ -142,11 +174,11 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
 
         do j = 1, geo%natoms
-          do beta = 1, 3
-            ph%DM(3*(i-1) + alpha, 3*(j-1) + beta) = &
+          do beta = 1, conf%dim
+            ph%DM(conf%dim*(i-1) + alpha, conf%dim*(j-1) + beta) = &
                  (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
                  * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
-            write(iunit, '(es14.5)', advance='no') ph%DM(3*(i-1) + alpha, 3*(j-1) + beta)
+            write(iunit, '(es14.5)', advance='no') ph%DM(conf%dim*(i-1) + alpha, conf%dim*(j-1) + beta)
           end do
         end do
         write(iunit, '(1x)')
@@ -154,6 +186,7 @@ contains
       end do
     end do
     deallocate(forces0, forces)
+    call scf_end(scf)
     call io_close(iunit)
 
     ! diagonalize DM

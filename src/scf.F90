@@ -238,12 +238,11 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
-         call restart_write("tmp/restart_gs", st, m, ierr)
-         if(ierr.ne.0) then
-           write(message(1),'(a,i5)') 'Failed attempt to write restart states file. Error code = ',ierr
-           call write_warning(1)
-         endif
-    endif
+      if(X(restart_write) ("tmp/restart_gs", st, m, iter).ne.st%nst) then
+        message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
+        call write_fatal(1)
+      end if
+    end if
 
     if(finish) then
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'

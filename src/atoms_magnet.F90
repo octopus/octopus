@@ -34,7 +34,7 @@ program atoms_magnet
   type(mesh_type)               :: m          ! the mesh
   type(geometry_type), pointer  :: geo        ! the geometry
   type(states_type), pointer    :: st         ! the states
-  integer :: ik, ist, i, ia, j, iunit, ierr
+  integer :: ik, ist, i, ia, j, iunit
   CMPLX :: c
   FLOAT :: val_charge, def_h, def_rsize, mg(3), r, rmin, ri
 
@@ -56,8 +56,7 @@ program atoms_magnet
   allocate(st%zpsi(m%np, st%dim, st%nst, st%nik))
 
   ! load information
-  call restart_load("tmp/restart_gs", st, m, ierr)
-  if(ierr .ne. 0) then
+  if(X(restart_read)("tmp/restart_gs", st, m).ne.0) then
     message(1) = "Error opening states in 'tmp/restart_gs'"
     call write_fatal(1)
   end if

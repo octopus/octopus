@@ -43,24 +43,40 @@ module geom_opt
 
 contains
 
-  subroutine geom_opt_run(scf, m, f_der, st, geo, h, outp)
-    type(scf_type),         intent(inout) :: scf
-    type(mesh_type),        intent(IN)    :: m
-    type(f_der_type),       intent(inout) :: f_der
-    type(states_type),      intent(inout) :: st
-    type(geometry_type),    intent(inout) :: geo
+  integer function geom_opt_run(sys, h) result(ierr)
+    type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
-    type(output_type),      intent(IN)    :: outp
+
+    type(scf_type)             :: scfv
+    type(mesh_type),     pointer :: m    ! shortcuts
+    type(states_type),   pointer :: st
+    type(geometry_type), pointer :: geo
     
     type(geom_opt_type) :: g_opt
-
+    
     integer :: i
     FLOAT, allocatable :: x(:)
-    !integer, external :: loct_geom_opt
     
-    call push_sub('geom_opt_run')
- 
-    call geo_init()
+    ierr = 0
+    call init_()
+
+    ! load wave-functions
+    if(X(restart_read) ("tmp/restart_gs", sys%st, sys%m).ne.sys%st%nst) then
+      message(1) = "Could not load wave-functions: Starting from scratch"
+      call write_warning(1)
+      
+      ierr = 1
+      call end_()
+      return
+    end if
+    print *, "ola"
+    
+    ! setup Hamiltonian
+    message(1) = 'Info: Setting up Hamiltonian.'
+    call write_info(1)
+    call X(system_h_setup) (sys, h)
+
+    call scf_init(scfv, sys%m, sys%st, h)
 
     allocate(x(3*geo%natoms))
     do i = 0, geo%natoms - 1
@@ -93,11 +109,21 @@ contains
     
     deallocate(x)
     
-    call pop_sub()
-    return
-    
+    call scf_end(scfv)
+    call end_()
+
   contains
-    subroutine geo_init()
+    subroutine init_()
+      call push_sub('geom_opt_run')
+
+      ! allocate wfs
+      allocate(sys%st%X(psi)(sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+
+      ! shortcuts
+      m   => sys%m
+      st  => sys%st
+      geo => sys%geo
+
       call loct_parse_int("GOMethod", 1, g_opt%method)
       if(g_opt%method < 1 .or. g_opt%method >1) then
         message(1) = "'GOMethod' can only take the values:"
@@ -117,7 +143,15 @@ contains
         call write_fatal(1)
       end if
 
-    end subroutine geo_init
+    end subroutine init_
+
+
+    subroutine end_()
+      deallocate(sys%st%X(psi))
+      
+      call pop_sub()
+    end subroutine end_
+
 
     subroutine geom_calc_point(x, f, df)
       FLOAT, intent(IN)  :: x(3*geo%natoms)
@@ -134,11 +168,11 @@ contains
 
       call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
       call X(calcdens) (st, m%np, st%rho)
-      call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
+      call X(h_calc_vhxc) (h, m, sys%f_der, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
   
       ! do scf calculation
-      call scf_run(scf, m, f_der, st, geo, h, outp)
+      call scf_run(scfv, m, sys%f_der, st, geo, h, sys%outp)
 
       ! store results
       f = h%etot
@@ -203,5 +237,5 @@ contains
       deallocate(x1, df, df1)
     end function steepest_descents
 
-  end subroutine geom_opt_run
+  end function geom_opt_run
 end module geom_opt

@@ -19,6 +19,7 @@
 
 module stencil_cube
   use global
+  use nl_operator
 
   implicit none
 

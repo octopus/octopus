@@ -91,14 +91,22 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine io_free(lun)
+    integer, intent(in) :: lun
+
+    if (lun .ge. min_lun .and. lun .le. max_lun) &
+       lun_is_free(lun) = .true.
+  end subroutine io_free
+
+
+  ! ---------------------------------------------------------
   ! Use this routine instead of a simple close!!
   ! ---------------------------------------------------------
   subroutine io_close(lun)
     integer, intent(in) :: lun
 
     close(lun)
-    if (lun .ge. min_lun .and. lun .le. max_lun) &
-       lun_is_free(lun) = .true.
+    call io_free(lun)
   end subroutine io_close
 
 

@@ -79,7 +79,6 @@ type states_type
 
   integer :: st_start, st_end ! needed for some parallel parts
 
-  integer :: restart_format  ! how the restart file is written
 end type states_type
 
 ! Parameters...
@@ -238,14 +237,6 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   st%dim   = st%d%dim
   st%nik   = st%d%nik
   st%nspin = st%d%nspin
-
-  ! read restart format information
-  call loct_parse_int('RestartFileFormat', 1, st%restart_format)
-  if (st%restart_format < 1 .or. st%restart_format > 2) then
-    write(message(1),'(a,i4,a)') "Input: '", st%restart_format,"' is not a valid RestartFileFormat"
-    message(2) = '(RestartFileFormat = plain | netcdf)'
-    call write_fatal(2)
-  end if
 
   call pop_sub()
 end subroutine states_init

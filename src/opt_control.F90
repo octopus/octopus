@@ -32,15 +32,14 @@ implicit none
 
 contains
 
-subroutine opt_control_run(td, m, f_der, geo, st, val_charge, h, outp)
-  type(td_type),             intent(inout) :: td
-  type(mesh_type),           intent(IN)    :: m
-  type(f_der_type),          intent(inout) :: f_der
-  type(states_type), target, intent(inout) :: st
-  type(geometry_type),       intent(in)    :: geo
-  FLOAT,                     intent(in)    :: val_charge
-  type(hamiltonian_type),    intent(inout) :: h
-  type(output_type),         intent(IN)    :: outp
+integer function opt_control_run(sys, h) result(ierr)
+  type(system_type),      intent(inout) :: sys
+  type(hamiltonian_type), intent(inout) :: h
+
+  type(td_type)                :: td
+  type(mesh_type),     pointer :: m   ! some shortcuts
+  type(states_type),   pointer :: st
+  type(geometry_type), pointer :: geo  
 
   type(states_type), pointer :: psi_i
   type(states_type)          :: psi_f
@@ -51,7 +50,8 @@ subroutine opt_control_run(td, m, f_der, geo, st, val_charge, h, outp)
   FLOAT :: eps, alpha, overlap, functional, old_functional, laser_init
   character(len=80) :: filename
 
-  call init()
+  ierr = 0
+  call init_()
 
   ! first propagate psi_f to ti
   call prop_psi_f()
@@ -67,7 +67,7 @@ subroutine opt_control_run(td, m, f_der, geo, st, val_charge, h, outp)
     ! setup forward propagation
     call read_state(psi_i, "wf.initial")
     call zcalcdens(psi_i, m%np, psi_i%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_i, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, sys%f_der, psi_i, calc_eigenval=.true.)
     do i = 1, st%d%nspin
       v_old_i(:, i, 2) = h%vhxc(:, i)
     end do
@@ -93,7 +93,7 @@ subroutine opt_control_run(td, m, f_der, geo, st, val_charge, h, outp)
     ! setup backward propagation
     call read_state(psi_f, "wf.final")
     call zcalcdens(psi_f, m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, sys%f_der, psi_f, calc_eigenval=.true.)
     do i = 1, st%d%nspin
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
@@ -134,6 +134,7 @@ subroutine opt_control_run(td, m, f_der, geo, st, val_charge, h, outp)
   nullify(h%ep%lasers(1)%numerical)
   deallocate(v_old_f, laser_i, laser_f)
   call states_end(psi_f)
+  call end_()
 
 contains
   subroutine prop_iter1(iter)
@@ -146,15 +147,15 @@ contains
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
-    call td_rti_dt(h, m, f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, sys%f_der, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(h, m, sys%f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_i, calc_eigenval=.true.)
-    call td_rti_dt(h, m, f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, sys%f_der, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(h, m, sys%f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter1
 
@@ -168,15 +169,15 @@ contains
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_i, calc_eigenval=.true.)
-    call td_rti_dt(h, m, f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, sys%f_der, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(h, m, sys%f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
-    call td_rti_dt(h, m, f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, sys%f_der, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(h, m, sys%f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter2
 
@@ -224,7 +225,7 @@ contains
 
     ! setup the hamiltonian
     call zcalcdens(psi_f, m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, sys%f_der, psi_f, calc_eigenval=.true.)
     
     ! setup start of the propagation
     do i = 1, st%d%nspin
@@ -240,10 +241,10 @@ contains
     call loct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
-      call td_rti_dt(h, m, f_der, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
+      call td_rti_dt(h, m, sys%f_der, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
       ! update
       call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
-      call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
+      call zh_calc_vhxc(h, m, sys%f_der, psi_f, calc_eigenval=.true.)
 
       call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
@@ -270,9 +271,8 @@ contains
   subroutine read_state(st, filename)
     type(states_type), intent(out) :: st
     character(len=*),  intent(in)  :: filename
-    integer :: ierr
-    call restart_load("opt-control/"//trim(filename), st, m, ierr)
-    if(ierr.ne.0) then
+
+    if(zrestart_read("opt-control/"//trim(filename), st, m).ne.st%nst) then
       message(1) = "Unsuccesfull read of states in 'opt-control/" // trim(filename) // "'"
       call write_fatal(1)
     end if
@@ -304,16 +304,26 @@ contains
     call io_close(iunit)
 
     ! should output wavefunctions ;)
-    call zstates_output(psi_i, m, f_der, "opt-control", outp)
+    call zstates_output(psi_i, m, sys%f_der, "opt-control", sys%outp)
   end subroutine output
 
-  subroutine init()
+  subroutine init_()
+    call td_init(td, sys%m, sys%st, h, sys%outp)
+
+    ! some shortcuts
+    m   => sys%m
+    st  => sys%st
+    geo => sys%geo
+    
+    ! allocate memory
+    allocate(st%zpsi(sys%m%np, st%dim, st%st_start:st%st_end, st%nik))
+
     ! psi_i is initialized in system_init
     psi_i => st
     v_old_i => td%tr%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
-    call states_init(psi_f, m, geo, val_charge)
+    call states_init(psi_f, m, geo, sys%val_charge)
     if(h%ep%nvnl > 0) then
       allocate(psi_f%rho_core(m%np))
       psi_f%rho_core(m%np) = psi_i%rho_core(m%np)
@@ -349,8 +359,12 @@ contains
 
     if(ctr_iter_max < 0) ctr_iter_max = huge(ctr_iter_max)
 
-  end subroutine init
+  end subroutine init_
 
-end subroutine opt_control_run
+  subroutine end_()
+    call td_end(td)
+  end subroutine end_
+
+end function opt_control_run
 
 end module opt_control

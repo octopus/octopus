@@ -22,6 +22,7 @@ use global
 use mesh
 use geometry
 use states
+use hamiltonian
 
 implicit none
 
@@ -341,4 +342,37 @@ contains
     call pop_sub()
   end subroutine system_guess_density
   
+
+  subroutine dsystem_h_setup(sys, h)
+    type(system_type),      intent(inout) :: sys
+    type(hamiltonian_type), intent(inout) :: h
+    
+    call push_sub("hamiltonian_setup")
+    
+    call states_fermi(sys%st, sys%m)
+    call dcalcdens(sys%st, sys%m%np, sys%st%rho)
+    
+    call dh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call states_fermi(sys%st, sys%m)                            ! occupations
+    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+    
+    call pop_sub()
+  end subroutine dsystem_h_setup
+
+
+  subroutine zsystem_h_setup(sys, h)
+    type(system_type),      intent(inout) :: sys
+    type(hamiltonian_type), intent(inout) :: h
+    
+    call push_sub("hamiltonian_setup")
+    
+    call states_fermi(sys%st, sys%m)
+    call zcalcdens(sys%st, sys%m%np, sys%st%rho)
+    
+    call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call states_fermi(sys%st, sys%m)                            ! occupations
+    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+    
+    call pop_sub()
+  end subroutine zsystem_h_setup
 end module system

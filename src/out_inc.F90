@@ -15,16 +15,16 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-!/*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! ---------------------------------------------------------
 ! Reads a function from file filename, and puts it into f. The input file
 ! may be a "plain" file (no extension), or a netcdf file ".ncdf" extension.
 ! On output, ierr signals how everything went:
 ! ierr > 0 => Error. The function f was not read:
-!             1 : illegal filename (must have no extension, or ".ncdf" extension.
-!             2 : file could not be succesfully opened.
-!             3 : file opened, but error reading.
-!             4 : The number of points/mesh dimensions do not coincide. 
-!             5 : NetCDF error (one or several warnings are emitted)
+!              1 : illegal filename (must have no extension, or ".ncdf" extension.
+!              2 : file could not be succesfully opened.
+!              3 : file opened, but error reading.
+!              4 : The number of points/mesh dimensions do not coincide. 
+!              5 : NetCDF error (one or several warnings are emitted)
 ! ierr = 0 => Success.
 ! ierr < 0 => Success, but some kind of type conversion was necessary. The
 !             of ierr is then:
@@ -32,12 +32,11 @@
 !             -2 : function in file is complex, sp.
 !             -3 : function in file is real, dp.
 !             -4 : function in file is complex, dp.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
-subroutine X(input_function)(filename, m, f, ierr)
+! ---------------------------------------------------------
+integer function X(input_function)(filename, m, f) result(ierr)
   character(len=*), intent(in)  :: filename
   type(mesh_type),  intent(in)  :: m
   R_TYPE,           intent(out) :: f(:)
-  integer, intent(out)          :: ierr
 
   integer :: iunit, i, function_kind, file_kind
   type(X(cf)) :: c
@@ -51,87 +50,121 @@ subroutine X(input_function)(filename, m, f, ierr)
 
   select case(trim(get_extension(filename)))
   case("")
-    call plain()
+    ierr = plain()
+
 #if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
     call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
     call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
-    call dx_cdf()
+    ierr = dx_cdf()
     c%RS = re%RS + M_zI*im%RS
     call X(cf2mf) (m, c, f)
     call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
 #else
     call X(cf_new)(m%l, c)
     call X(cf_alloc_RS)(c)
-    call dx_cdf()
+    ierr = dx_cdf()
     call X(cf2mf) (m, c, f)
     call X(cf_free)(c)
 #endif
 #endif
+
   case default
     ierr = 1
   end select
 
-  contains
+contains
 
-  subroutine plain
-    integer :: file_np
+
+  ! ---------------------------------------------------------
+  integer function plain() result(ierr)
+    integer                 :: file_np
     real(4),    allocatable :: rs(:)
     real(8),    allocatable :: rd(:)
     complex(4), allocatable :: cs(:)
     complex(8), allocatable :: cd(:)
+
     call io_assign(iunit)
     open(unit = iunit, file = trim(filename), &
-         status = 'old', action = 'read', form = 'unformatted', iostat = i)
-      if(i.ne.0) then; ierr = 2; return; endif
-    read(unit = iunit, iostat = i) file_kind, file_np
-      if(i.ne.0) then; ierr = 3; return; endif
-      if(file_np .ne. m%np) then; ierr = 4; return; endif
-    if(file_kind == function_kind) then
-      read(unit = iunit) f(1:m%np)
-    else ! Adequate conversions....
-      select case(file_kind)
-        case(doutput_kind*4) ! Real, single precision
-          allocate(rs(m%np))
-          read(unit = iunit) rs(1:m%np)
-          f = rs
-          deallocate(rs)
-          ierr = -1          
-        case(zoutput_kind*4) ! Complex, single precision
-          allocate(cs(m%np))
-          read(unit = iunit) cs(1:m%np)
-          f = cs
-          deallocate(cs)
-          ierr = -2
-        case(doutput_kind*8) ! Real, double precision
-          allocate(rd(m%np))
-          read(unit = iunit) rd(1:m%np)
-          f = rd
-          deallocate(rd)
-          ierr = -3
-        case(zoutput_kind*8) ! Complex, double precision
-          allocate(cd(m%np))
-          read(unit = iunit) cd(1:m%np)
-          f = cd
-          deallocate(cd)
-          ierr = -4
-        case default
-      end select
-    endif
-    call io_close(iunit)
-  end subroutine plain
+       status = 'old', action = 'read', form = 'unformatted', iostat = i)
+    
+    if(i.ne.0) then
+      ierr = 2
+    else
 
+      read(unit = iunit, iostat = i) file_kind, file_np
+      if(i.ne.0) then
+        ierr = 3
+      else if (file_np .ne. m%np) then
+        ierr = 4
+      end if
+
+      if(ierr==0) then
+        if(file_kind == function_kind) then
+          read(unit = iunit) f(1:m%np)
+
+        else ! Adequate conversions....
+          select case(file_kind)
+          case(doutput_kind*4) ! Real, single precision
+            allocate(rs(m%np))
+            read(unit = iunit) rs(1:m%np)
+            f = rs
+            deallocate(rs)
+            ierr = -1
+
+          case(zoutput_kind*4) ! Complex, single precision
+            allocate(cs(m%np))
+            read(unit = iunit) cs(1:m%np)
+            f = cs
+            deallocate(cs)
+            ierr = -2
+
+          case(doutput_kind*8) ! Real, double precision
+            allocate(rd(m%np))
+            read(unit = iunit) rd(1:m%np)
+            f = rd
+            deallocate(rd)
+            ierr = -3
+
+          case(zoutput_kind*8) ! Complex, double precision
+            allocate(cd(m%np))
+            read(unit = iunit) cd(1:m%np)
+            f = cd
+            deallocate(cd)
+            ierr = -4
+
+          end select
+        end if
+      end if
+
+      call io_close(iunit)
+    end if
+  end function plain
+
+
+  ! ---------------------------------------------------------
 #if defined(HAVE_NETCDF)
-! I define this macro in order to call ncdf_error every time.
-#define NCDFCALL(x, y) status = x y; call ncdf_error(#x, status, filename, ierr)
-  subroutine dx_cdf()
+
+  ! I define this macro in order to call ncdf_error every time.
+#define NCDFCALL(x, y) \
+  if(status == NF90_NOERR) then ; \
+    status = x y; \
+    call ncdf_error(#x, status, filename, ierr); \
+  end if
+
+  ! ---------------------------------------------------------
+  integer function dx_cdf() result(ierr)
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
                dim_data_id(3), dim_pos_id(2), ndim(3), xtype
     real(r4) :: pos(2, 3)
     logical :: function_is_complex = .false.
 
-    NCDFCALL(nf90_open, (trim(filename), NF90_WRITE, ncid))
+    status = nf90_open(trim(filename), NF90_WRITE, ncid)
+    if(status.ne.NF90_NOERR) then
+      ierr = 2
+      return
+    end if
 
     !Inquire about dimensions
     NCDFCALL(nf90_inq_dimid, (ncid, "dim_1", dim_data_id(1)))
@@ -153,6 +186,7 @@ subroutine X(input_function)(filename, m, f, ierr)
     else
        file_kind = 1
     endif
+    status = 0
        
     NCDFCALL(nf90_inquire_variable, (ncid, data_id, xtype = xtype))
 
@@ -179,15 +213,17 @@ subroutine X(input_function)(filename, m, f, ierr)
     NCDFCALL(nf90_get_var, (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /)))
 #endif
 
-    NCDFCALL(nf90_close, (ncid))
-  end subroutine dx_cdf
+    status = nf90_close(ncid)
+  end function dx_cdf
 
-#undef NCDFCALL
 #endif
 
-end subroutine X(input_function)
 
-subroutine X(output_function) (how, dir, fname, m, f, u)
+end function X(input_function)
+
+
+! ---------------------------------------------------------
+integer function X(output_function) (how, dir, fname, m, f, u) result(ierr)
   integer,          intent(in) :: how
   character(len=*), intent(in) :: dir, fname
   type(mesh_type),  intent(IN) :: m
@@ -200,9 +236,6 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
   ! do not bother with errors
   call loct_mkdir(trim(dir))
 
-  if(iand(how, output_plain) .ne.0) call plain()
-  if(how==output_plain) return ! Return if no other output is needed.
-
 ! Define the format; check if code is single precision or double precision
 #if defined(SINGLE_PRECISION)
     mformat    = '(4es15.6)'
@@ -212,113 +245,164 @@ subroutine X(output_function) (how, dir, fname, m, f, u)
     mfmtheader = '(a,a10,3a23)'
 #endif
 
-  if(iand(how, output_axis_x) .ne.0) call axis_x()
-  if(iand(how, output_axis_y) .ne.0) call axis_y()
-  if(iand(how, output_axis_z) .ne.0) call axis_z()
-  if(iand(how, output_plane_x).ne.0) call plane_x()
-  if(iand(how, output_plane_y).ne.0) call plane_y()
-  if(iand(how, output_plane_z).ne.0) call plane_z()
+  if(iand(how, output_plain)  .ne.0) ierr = plain()
+  if(iand(how, output_axis_x) .ne.0) ierr = axis_x()
+  if(iand(how, output_axis_y) .ne.0) ierr = axis_y()
+  if(iand(how, output_axis_z) .ne.0) ierr = axis_z()
+  if(iand(how, output_plane_x).ne.0) ierr = plane_x()
+  if(iand(how, output_plane_y).ne.0) ierr = plane_y()
+  if(iand(how, output_plane_z).ne.0) ierr = plane_z()
   if(iand(how, output_dx)     .ne.0) call dx()
 #if defined(HAVE_NETCDF)
-  if(iand(how, output_dx_cdf) .ne.0) call dx_cdf()
+  if(iand(how, output_dx_cdf) .ne.0) ierr = dx_cdf()
 #endif
 
 contains
 
-  subroutine plain()
+  ! ---------------------------------------------------------
+  integer function plain() result(ierr)
     integer :: iunit
 
     call io_assign(iunit)
-    open (unit = iunit, file = trim(dir) // "/" // trim(fname), status = 'unknown', form = 'unformatted')
-    write(unit = iunit) X(output_kind)*kind(f(1)), m%np
-    write(unit = iunit) f(1:m%np)
-    call io_close(iunit)
-  end subroutine plain
+    open (unit = iunit, file = trim(dir) // "/" // trim(fname), &
+       status='unknown', form='unformatted', iostat=ierr)
 
-  subroutine axis_x()
+    if(ierr==0) then
+      write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np
+      write(unit=iunit, iostat=ierr) f(1:m%np)
+      call io_close(iunit)
+    end if
+
+  end function plain
+
+
+  ! ---------------------------------------------------------
+  integer function axis_x() result(ierr)
     integer :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", status='unknown')
-    write(iunit, mfmtheader) '#', 'x', 'Re', 'Im'
-    do i = 1, m%np
-      if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-  end subroutine axis_x
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", &
+       status='unknown', iostat=ierr)
 
-  subroutine axis_y()
+    if(ierr == 0) then
+      write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
+      do i = 1, m%np
+        if(ierr==0.and.m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        end if
+      end do
+      call io_close(iunit)
+    end if
+
+  end function axis_x
+
+
+  ! ---------------------------------------------------------
+  integer function axis_y() result(ierr)
     integer :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,z=0", status='unknown')
-    write(iunit, mfmtheader) '#', 'y', 'Re', 'Im'
-    do i = 1, m%np
-      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-  end subroutine axis_y
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,z=0", &
+       status='unknown', iostat=ierr)
 
-  subroutine axis_z()
+    if(ierr == 0) then
+      write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
+      do i = 1, m%np
+        if(ierr==0.and.m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        end if
+      end do
+      call io_close(iunit)
+    end if
+
+  end function axis_y
+
+
+  ! ---------------------------------------------------------
+  integer function axis_z() result(ierr)
     integer :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,y=0", status='unknown')
-    write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
-    do i = 1, m%np
-      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
-        write(iunit, mformat) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-  end subroutine axis_z
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0,y=0", &
+       status='unknown', iostat=ierr)
 
-  subroutine plane_x()
+    if(ierr == 0) then
+      write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
+      do i = 1, m%np
+        if(ierr==0.and.m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        end if
+      end do
+      call io_close(iunit)
+    end if
+
+  end function axis_z
+
+
+  ! ---------------------------------------------------------
+  integer function plane_x() result(ierr)
     integer  :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0", status='unknown')
-    write(iunit, mfmtheader) '#', 'x', 'y', 'Re', 'Im'
-    do i = 1, m%np
-      if(m%Lxyz(i,1)==0) then
-        write(iunit, mformat) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-  end subroutine plane_x
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".x=0", &
+       status='unknown', iostat=ierr)
 
-  subroutine plane_y()
+    if(ierr == 0) then
+      write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
+      do i = 1, m%np
+        if(ierr==0.and.m%Lxyz(i,1)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        end if
+      end do
+      call io_close(iunit)
+    end if
+
+  end function plane_x
+
+
+  ! ---------------------------------------------------------
+   integer function plane_y() result(ierr)
     integer  :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", status='unknown')
-    write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
-    do i = 1, m%np
-      if(m%Lxyz(i,2)==0) then
-        write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-  end subroutine plane_y
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0", &
+       status='unknown', iostat=ierr)
 
-  subroutine plane_z()
+    if(ierr == 0) then
+      write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
+      do i = 1, m%np
+        if(ierr==0.and.m%Lxyz(i,2)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        end if
+      end do
+      call io_close(iunit)
+    end if
+    
+  end function plane_y
+
+
+  ! ---------------------------------------------------------
+  integer function plane_z() result(ierr)
     integer  :: iunit, i
 
     call io_assign(iunit)
-    open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", status='unknown')
-    write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
-    do i = 1, m%np
-      if(m%Lxyz(i,3)==0) then
-        write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-      end if
-    end do
-    call io_close(iunit)
-  end subroutine plane_z
+    open(iunit, file=trim(dir) // "/" // trim(fname) // ".z=0", &
+       status='unknown', iostat=ierr)
 
+    if(ierr == 0) then
+      write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
+      do i = 1, m%np
+        if(ierr==0.and.m%Lxyz(i,3)==0) then
+          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        end if
+      end do
+      call io_close(iunit)
+    end if
+    
+  end function plane_z
+
+
+  ! ---------------------------------------------------------
   subroutine dx()
     integer :: iunit, ix, iy, iz
     FLOAT :: offset(3)
@@ -375,14 +459,16 @@ contains
 
   end subroutine dx
 
+
 #if defined(HAVE_NETCDF)
-! I define this macro in order to call ncdf_error every time.
-#define NCDFCALL(x, y) status = x y; call ncdf_error(#x, status, filename, ierr)
-  subroutine dx_cdf()
+  ! ---------------------------------------------------------
+  integer function dx_cdf() result(ierr)
     character(len=200) :: filename
-    integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2), ierr
+    integer :: ncid, status, data_id, data_im_id, pos_id, dim_data_id(3), dim_pos_id(2)
     real(r4) :: pos(2, 3)
     type(X(cf)) :: c
+
+    ierr = 0
 
     ! put values in a nice cube
     call X(cf_new) (m%l, c)
@@ -390,7 +476,11 @@ contains
     call X(mf2cf) (m, f, c)
 
     filename = trim(dir) // "/" // trim(fname) // ".ncdf"
-    NCDFCALL(nf90_create, (trim(filename), NF90_CLOBBER, ncid))
+    status = nf90_create(trim(filename), NF90_CLOBBER, ncid)
+    if(status.ne.NF90_NOERR) then
+      ierr = 2
+      return
+    end if
 
     ! dimensions
     NCDFCALL(nf90_def_dim, (ncid, "dim_1", c%n(1), dim_data_id(1)))
@@ -439,12 +529,12 @@ contains
 #endif
 
     ! close
-    NCDFCALL(nf90_close, (ncid))
+    status = nf90_close(ncid)
     call X(cf_free) (c)
 
-  end subroutine dx_cdf
+  end function dx_cdf
 
 #undef NCDFCALL
 #endif
 
-end subroutine X(output_function)
+end function X(output_function)

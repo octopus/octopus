@@ -26,6 +26,7 @@ use states
 use restart
 use hamiltonian
 use external_pot
+use system
 use td_rti
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
 use PES
@@ -68,15 +69,15 @@ end type td_type
 
 contains
 
-subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
-  type(td_type),          intent(inout) :: td
-  type(states_type),      intent(IN)    :: u_st
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
-  type(states_type),      intent(inout) :: st
-  type(geometry_type),    intent(inout) :: geo
+integer function td_run(sys, h, fromScratch) result(ierr)
+  type(system_type),      intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
-  type(output_type),      intent(inout) :: outp
+  logical,                intent(inout) :: fromScratch
+
+  type(td_type)                :: td
+  type(mesh_type),     pointer :: m   ! some shortcuts
+  type(states_type),   pointer :: st
+  type(geometry_type), pointer :: geo
 
   integer :: i, ii, j, idim, ist, ik
   integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
@@ -84,31 +85,18 @@ subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
 
   FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
   FLOAT :: etime
-  character(len=100) :: filename
 
-  call push_sub('td_run')
-  
-  if(mpiv%node==0) then
-    write(filename, '(i3.3)') mpiv%node
-    if(td%out_multip) &
-         call write_iter_init(out_multip,  td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
-    if(td%out_angular) &
-         call write_iter_init(out_angular, td%iter, td%dt/units_out%time%factor, "td.general/angular")
-    if(td%out_spin) &
-         call write_iter_init(out_spin,    td%iter, td%dt/units_out%time%factor, "td.general/spin")
-    if(td%out_coords) &
-         call write_iter_init(out_coords,  td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
-    if(td%out_gsp) &
-         call write_iter_init(out_gsp,     td%iter, td%dt/units_out%time%factor, "td.general/gs_projection")
-    if(td%out_acc) &
-         call write_iter_init(out_acc,     td%iter, td%dt/units_out%time%factor, "td.general/acceleration")
-    if(td%out_laser) &
-         call write_iter_init(out_laser,   td%iter, td%dt/units_out%time%factor, "td.general/laser")
-    if(td%out_energy) &
-         call write_iter_init(out_energy,  td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
-    if(td%out_proj) &
-         call write_iter_init(out_proj,    td%iter, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
+
+  ierr = 0
+  call init_()
+  ierr = init_wfs()
+  if(ierr.ne.0) then
+    call end_()
+    return
   end if
+
+  call td_init(td, sys%m, sys%st, h, sys%outp)
+  call init_iter_output()
 
   ! Calculate initial forces and kinetic energy
   if(td%move_ions > 0) then
@@ -177,7 +165,7 @@ subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
     endif
 
     ! time iterate wavefunctions
-    call td_rti_dt(h, m, f_der, st, td%tr, i*td%dt, td%dt)
+    call td_rti_dt(h, m, sys%f_der, st, td%tr, i*td%dt, td%dt)
 
     ! mask function?
     if(h%ab == MASK_ABSORBING) then
@@ -195,7 +183,7 @@ subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
     call zcalcdens(st, m%np, st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call zh_calc_vhxc(h, m, f_der, st, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, sys%f_der, st, calc_eigenval=.true.)
     call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
 
     ! Recalculate forces, update velocities...
@@ -218,29 +206,7 @@ subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
       geo%kinetic_energy = kinetic_energy(geo)
     end if
 
-    ! output multipoles
-    if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
-
-    ! output angular momentum
-    if(td%out_angular) call td_write_angular(out_angular, m, f_der, st, td, i)
-
-    ! output spin
-    if(td%out_spin) call td_write_spin(out_spin, m, st, td, i)
-
-    ! output projections onto the GS KS eigenfunctions
-    if(td%out_proj) call td_write_proj(out_proj, m, st, u_st, i)
-    
-    ! output positions, vels, etc.
-    if(td%out_coords) call td_write_nbo(out_coords, geo, td, i, geo%kinetic_energy, h%etot)
-
-    ! If harmonic spectrum is desired, get the acceleration
-    if(td%out_acc) call td_write_acc(out_acc, m, f_der, st, geo, h, td, i)
-
-    ! output laser field
-    if(td%out_laser) call td_write_laser(out_laser, h, td, i)
-
-    ! output electronic energy
-    if(td%out_energy) call td_write_el_energy(out_energy, h, i)
+    call iter_output()
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
     call PES_doit(td%PESv, m, st, ii, td%dt, h%ab_pot)
@@ -256,8 +222,8 @@ subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
 
     ! write down data
     ii = ii + 1
-    if(ii==outp%iter+1 .or. i == td%max_iter) then ! output
-      if(i == td%max_iter) outp%iter = ii - 1
+    if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
+      if(i == td%max_iter) sys%outp%iter = ii - 1
       ii = 1
 
       call td_write_data(i)
@@ -265,20 +231,154 @@ subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
 
   end do
 
-  ! close all buffers
-  if(mpiv%node==0) then
-    if(td%out_multip)  call write_iter_end(out_multip)
-    if(td%out_angular) call write_iter_end(out_angular)
-    if(td%out_spin)    call write_iter_end(out_spin)
-    if(td%out_coords)  call write_iter_end(out_coords)
-    if(td%out_gsp)     call write_iter_end(out_gsp)
-    if(td%out_acc)     call write_iter_end(out_acc)
-    if(td%out_laser)   call write_iter_end(out_laser)
-    if(td%out_energy)  call write_iter_end(out_energy)
-    if(td%out_proj)    call write_iter_end(out_proj)
-  end if
+  call end_iter_output()
+  call end_()
 
 contains
+
+  subroutine init_()
+    integer :: max_iter, nus
+    FLOAT :: conv
+
+    call push_sub('td_run')
+
+    ! some shortcuts
+    m   => sys%m
+    st  => sys%st
+    geo => sys%geo
+    
+    ! allocate memory
+    allocate(st%zpsi(sys%m%np, st%dim, st%st_start:st%st_end, st%nik))
+
+  end subroutine init_
+
+
+  integer function init_wfs() result(ierr)
+    integer :: i, is
+    character(len=50) :: filename
+    FLOAT :: x
+
+    ierr = 0
+    if(.not.fromScratch) then
+      if(zrestart_read("tmp/restart_td", sys%st, sys%m) < 0) then
+        message(1) = "Could not load tmp/restart_td: Starting from scratch"
+        call write_warning(1)
+        
+        fromScratch = .true.
+      else
+        ! read potential from previous interactions
+        do i = 1, 2
+          do is = 1, st%d%nspin
+            write(filename,'(a,i2.2,i3.3)') 'tmp/restart_td/vprev_', i, is
+            ierr = dinput_function(filename, m, td%tr%v_old(1:m%np, is, i))
+          end do
+        end do
+        
+      end if
+    end if
+
+    if(fromScratch) then
+      if(zrestart_read ("tmp/restart_gs", sys%st, sys%m) < 0) then
+        message(1) = "Could not load tmp/restart_gs: Starting from scratch"
+        call write_warning(1)
+        
+        ierr = 1
+      end if
+    end if
+
+    if(ierr==0) then
+      x = minval(sys%st%eigenval(sys%st%st_start, :))
+#ifdef HAVE_MPI
+      call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
+#endif
+      call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
+      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)
+    end if
+
+  end function init_wfs
+
+  subroutine end_()
+    ! free memory
+    deallocate(sys%st%zpsi)
+
+    call pop_sub()
+  end subroutine end_
+
+
+  ! initialize buffers for output
+  subroutine init_iter_output()
+    character(len=100) :: filename
+
+    if(mpiv%node==0) then
+      if(td%out_multip) &
+         call write_iter_init(out_multip,  td%iter, td%dt/units_out%time%factor, "td.general/multipoles")
+      if(td%out_angular) &
+         call write_iter_init(out_angular, td%iter, td%dt/units_out%time%factor, "td.general/angular")
+      if(td%out_spin) &
+         call write_iter_init(out_spin,    td%iter, td%dt/units_out%time%factor, "td.general/spin")
+      if(td%out_coords) &
+         call write_iter_init(out_coords,  td%iter, td%dt/units_out%time%factor, "td.general/coordinates")
+      if(td%out_gsp) &
+         call write_iter_init(out_gsp,     td%iter, td%dt/units_out%time%factor, "td.general/gs_projection")
+      if(td%out_acc) &
+         call write_iter_init(out_acc,     td%iter, td%dt/units_out%time%factor, "td.general/acceleration")
+      if(td%out_laser) &
+         call write_iter_init(out_laser,   td%iter, td%dt/units_out%time%factor, "td.general/laser")
+      if(td%out_energy) &
+         call write_iter_init(out_energy,  td%iter, td%dt/units_out%time%factor, "td.general/el_energy")
+    end if
+
+    if(td%out_proj) then
+      write(filename, '(i3.3)') mpiv%node
+      call write_iter_init(out_proj,    td%iter, td%dt/units_out%time%factor, "td.general/projections."//trim(filename))
+    end if
+
+  end subroutine init_iter_output
+
+
+  subroutine end_iter_output()
+    ! close all buffers
+    if(mpiv%node==0) then
+      if(td%out_multip)  call write_iter_end(out_multip)
+      if(td%out_angular) call write_iter_end(out_angular)
+      if(td%out_spin)    call write_iter_end(out_spin)
+      if(td%out_coords)  call write_iter_end(out_coords)
+      if(td%out_gsp)     call write_iter_end(out_gsp)
+      if(td%out_acc)     call write_iter_end(out_acc)
+      if(td%out_laser)   call write_iter_end(out_laser)
+      if(td%out_energy)  call write_iter_end(out_energy)
+    end if
+    if(td%out_proj)    call write_iter_end(out_proj)
+    
+  end subroutine end_iter_output
+
+
+  subroutine iter_output()
+    ! output multipoles
+    if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
+
+    ! output angular momentum
+    if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, td, i)
+
+    ! output spin
+    if(td%out_spin) call td_write_spin(out_spin, m, st, td, i)
+    
+    ! output projections onto the GS KS eigenfunctions
+!!$    if(td%out_proj) call td_write_proj(out_proj, m, st, u_st, i)
+    
+    ! output positions, vels, etc.
+    if(td%out_coords) call td_write_nbo(out_coords, geo, td, i, geo%kinetic_energy, h%etot)
+    
+    ! If harmonic spectrum is desired, get the acceleration
+    if(td%out_acc) call td_write_acc(out_acc, m, sys%f_der, st, geo, h, td, i)
+    
+    ! output laser field
+    if(td%out_laser) call td_write_laser(out_laser, h, td, i)
+    
+    ! output electronic energy
+    if(td%out_energy) call td_write_el_energy(out_energy, h, i)
+  end subroutine iter_output
+
 
   subroutine td_run_zero_iter()
 
@@ -288,15 +388,15 @@ contains
     call loct_mkdir("td.general")
 
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
-    if(td%out_angular) call td_write_angular(out_angular, m, f_der, st, td, 0)
+    if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, td, 0)
     if(td%out_spin)    call td_write_spin(out_spin, m, st, td, 0)
-    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
+!!$    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
 
     call apply_delta_field()
 
     ! create files for output and output headers
     if(td%out_coords) call td_write_nbo(out_coords, geo, td, 0, geo%kinetic_energy, h%etot)    
-    if(td%out_acc)    call td_write_acc(out_acc, m, f_der, st, geo, h, td, 0)
+    if(td%out_acc)    call td_write_acc(out_acc, m, sys%f_der, st, geo, h, td, 0)
     if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
     if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
 
@@ -430,19 +530,25 @@ contains
   subroutine td_write_data(iter)
     integer, intent(in) :: iter
 
-    integer :: ierr
+    integer :: i, is, ierr
     character(len=50) :: filename
   
     call push_sub('td_write_data')
     
-    ! first resume file
-    call restart_write("tmp/restart_td", st, m, ierr, &
-                       iter = iter, nvprev = 2, vprev = td%tr%v_old(1:m%np, 1:st%d%nspin, 1:2))
-    if(ierr.ne.0) then
-      write(message(1),'(a,i3)') 'Unsuccesful write of restart information. Error code = ',ierr
-      call write_warning(1)
-    endif 
-    
+    ! first write resume file
+    if(zrestart_write("tmp/restart_td", st, m, iter).ne.(st%st_end-st%st_start+1)) then
+      message(1) = 'Unsuccesfull write of "tmp/restart_td"'
+      call write_fatal(1)
+    end if
+      
+    ! write potential from previous interactions
+    do i = 1, 2
+      do is = 1, st%d%nspin
+        write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
+        ierr = doutput_function(restart_format, "tmp/restart_td", filename, m, td%tr%v_old(1:m%np, is, i), M_ONE)
+      end do
+    end do
+
     ! calculate projection onto the ground state
     if(td%out_gsp) call td_write_gsp(out_gsp, m, st, td, iter)
     
@@ -459,19 +565,19 @@ contains
     
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call zstates_output(st, m, f_der, filename, outp)
-    if(outp%what(output_geometry)) &
+    call zstates_output(st, m, sys%f_der, filename, sys%outp)
+    if(sys%outp%what(output_geometry)) &
          call atom_write_xyz(filename, "geometry", geo)
-    call hamiltonian_output(h, m, filename, outp)
+    call hamiltonian_output(h, m, filename, sys%outp)
     
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-    call PES_output(td%PESv, m, st, iter, outp%iter, td%dt)
+    call PES_output(td%PESv, m, st, iter, sys%outp%iter, td%dt)
 #endif
     
     call pop_sub()
   end subroutine td_write_data
 
-end subroutine td_run
+end function td_run
 
 #include "td_write.F90"
 #include "td_init.F90"
