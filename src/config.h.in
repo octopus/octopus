@@ -13,6 +13,9 @@
 /* TRLan library (www.nersc.gov/research/SIMON/trlan.html) */
 #undef  HAVE_TRLAN
 
+/* Defined if you have METIS library. */
+#undef HAVE_METIS
+
 /* Lapack Library (www.netlib.org) */
 #undef HAVE_LAPACK
 

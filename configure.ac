@@ -16,7 +16,7 @@
 ## 02111-1307, USA.
 ##
 
-AC_INIT(Octopus, 1.4a, marques@nautilus.fis.uc.pt, octopus)
+AC_INIT(Octopus, 1.99devel, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 
@@ -179,6 +179,10 @@ ACX_NETCDF
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
+
+	AC_LANG_PUSH(C)
+  ACX_METIS([], AC_MSG_WARN([octopus will not be able to use mesh partitioning]))
+	AC_LANG_POP(C)
 fi
 
 # This is certainly wrong, but I don't know
