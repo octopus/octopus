@@ -631,7 +631,7 @@ module vxc
     FLOAT, intent(in)   :: ds(nsp)
     FLOAT, intent(out)  :: ec, vc(nsp)
 
-    FLOAT :: d, d1, d2, z, ec0, ec1, alphac, rs, fz, fpz, &
+    FLOAT :: d, z, ec0, ec1, alphac, rs, fz, fpz, &
              dec0drs, dec1drs, dalphacdrs, decdrs, decdz
     FLOAT, parameter :: &
        a(1:3)       = (/ CNST(0.031091), CNST(0.015545), CNST(0.016887) /), &
@@ -640,29 +640,19 @@ module vxc
                                     CNST(14.1189),  CNST(6.1977),   CNST(3.3662),  CNST(0.62517) ,  &
                                     CNST(10.357),   CNST(3.6231),   CNST(0.88026), CNST(0.49671) /),&
                                  (/4, 3/) )
-    FLOAT, parameter :: MINDEN = CNST(1e-15), &
+    FLOAT, parameter :: MINDEN = CNST(1e-12), &
                         fzconst = CNST(1.92366105093154), & ! = 1/(2**(4/3)-2)
                         fz20 = CNST(1.709921) ! (d^2f/dz^2)(z=0)
 
     select case(nsp)
     case(1) ! Spin - unpolarized
-       d = max(M_ZERO, ds(1))
-       if(d < MINDEN) then
-         ec = M_ZERO; vc(1) = M_ZERO
-         return
-       endif
+       d = max(MINDEN, ds(1))
        z   = M_ZERO
        fz  = M_ZERO 
        fpz = M_ZERO
     case(2) ! Spin-polarized
-       d1 = max(M_ZERO, ds(1))
-       d2 = max(M_ZERO, ds(2))
-       d = d1 + d2
-       if(d < MINDEN) then
-          ec = M_ZERO; vc(1:2) = M_ZERO
-          return
-       endif
-       z   = (d1-d2)/(d1+d2)
+       d  = max(MINDEN, ds(1)+ds(2))
+       z = (ds(1)-ds(2))/d
        fz  = fzconst*((M_ONE+z)**(M_FOUR/M_THREE) + (M_ONE-z)**(M_FOUR/M_THREE) - M_TWO)
        fpz = fzconst*(M_FOUR/M_THREE)*((M_ONE+z)**(M_ONE/M_THREE) - (M_ONE-z)**(M_ONE/M_THREE))
     case default
