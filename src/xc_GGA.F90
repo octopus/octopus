@@ -16,13 +16,14 @@
 !! 02111-1307, USA.
 
 subroutine xc_gga(func, nlcc, m, st, pot, energy)
+  use liboct
   integer, intent(in) :: func
   logical, intent(in) :: nlcc
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
   
-  real(r8) :: e, dvol, den(3), dpol, dtot, vpol, glob(4), loc(2)
+  real(r8) :: e, e_x, dvol, den(3), dpol, dtot, vpol, glob(4, 3), loc(2)
   real(r8), parameter :: tiny = 1.0e-12_r8
 
   real(r8), allocatable :: d(:, :),    &
@@ -30,15 +31,18 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
                            lpot(:, :)
 
   real(r8) :: locald(st%spin_channels), localgd(3, st%spin_channels), &
-              localdedd(st%spin_channels), localdedgd(3, st%spin_channels)
+              localdedd(st%spin_channels), localdedgd(3, st%spin_channels), &
+              localdedd_x(st%spin_channels), localdedgd_x(3, st%spin_channels)
+  complex(r8), allocatable :: u(:, :, :)
 
-  integer :: i, is, in, ic, ind(3)
+  integer :: i, is, in, ic, ind(3), k
 
   sub_name = 'xc_gga'; call push_sub()
 
   allocate(d     (   0:m%np, st%nspin), &
            gd    (3,   m%np, st%nspin), &
-           lpot  (     m%np, st%spin_channels))
+           lpot  (     m%np, st%spin_channels), &
+           u     (2, 2, m%np))
 
   ! Store in local variables d the density matrix
   ! (in the global reference system).
@@ -60,6 +64,15 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     call dmesh_derivatives(m, d(:, is), grad=gd(:,:, is))
   enddo
 
+  ! Build the rotation matrix u: By doing u*g*transpose[u*], it takes the
+  ! operator g to the reference frame where the density is diagonal (in
+  ! particular, u*d*transpose[u*] is a diagonal matrix).
+  if(st%ispin == SPINORS) then
+    do i = 1, m%np
+       call rot_matrix(u(:, :, i), d(i, :))
+    enddo
+  endif
+
   energy = M_ZERO
   lpot = M_ZERO
   space_loop: do i = 1, m%np
@@ -79,7 +92,7 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     ! Now we rotate the gradient. For this purpose, we do need the rotation matrix.
     if(st%ispin == SPINORS) then
       do ic = 1, 3
-         call to_local(gd(ic, i, :), localgd(ic, :), d(i, :))
+         call to_local(gd(ic, i, :), localgd(ic, :), u(:, :, i))
       enddo
     else
       localgd(1:3, 1:st%spin_channels) = gd(1:3, i, 1:st%spin_channels)
@@ -96,19 +109,27 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
                      localdedd, localdedgd) 
     case(C_FUNC_GGA_PBE)
       call pbec(st%spin_channels, locald, localgd, e, localdedd, localdedgd)
+    case(C_FUNC_GGA_PBEX)
+      call pbex(1, st%spin_channels, locald, localgd, e_x, localdedd_x, localdedgd_x)
+      call pbec(st%spin_channels, locald, localgd, e, localdedd, localdedgd)
+      e = e + e_x; localdedd = localdedd + localdedd_x; localdedgd = localdedgd + localdedgd_x
     end select
     energy = energy + sum(d(i, :)) * e * m%vol_pp
 
-      lpot(i, :) = lpot(i, :) + localdedd(:)
-      do in = -m%d%norder , m%d%norder
-        ind(1) = m%Lxyz_inv(m%Lxyz(1,i)+in,m%Lxyz(2,i),m%Lxyz(3,i))
-        ind(2) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i)+in,m%Lxyz(3,i))
-        ind(3) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i),m%Lxyz(3,i)+in)
-        do ic = 1, 3
+    lpot(i, :) = lpot(i, :) + localdedd(:)
+    if(st%ispin==SPINORS) then
+      call to_global(localdedgd(1, :), glob(:, 1), u(:, :, i))
+      call to_global(localdedgd(2, :), glob(:, 2), u(:, :, i))
+      call to_global(localdedgd(3, :), glob(:, 3), u(:, :, i))
+    endif
+    do in = -m%d%norder , m%d%norder
+       ind(1) = m%Lxyz_inv(m%Lxyz(1,i)+in,m%Lxyz(2,i),m%Lxyz(3,i))
+       ind(2) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i)+in,m%Lxyz(3,i))
+       ind(3) = m%Lxyz_inv(m%Lxyz(1,i),m%Lxyz(2,i),m%Lxyz(3,i)+in)
+       do ic = 1, 3
           if(ind(ic) > 0) then
             if(st%ispin == SPINORS) then
-               call to_global(localdedgd(ic, :), glob, d(i, :))
-               call to_local (glob,             loc,  d(ind(ic), :))
+               call to_local (glob(:, ic),             loc,  u(:, :, ind(ic)))
             else
                loc(:) = localdedgd(ic, :)
             endif
@@ -116,12 +137,12 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
                lpot(ind(ic), is) = lpot(ind(ic), is) + loc(is) * m%d%dgidfj(in)/ m%h(ic)
             enddo
           end if
-        end do
-      end do
+       end do
+    end do
 
   end do space_loop
 
-  ! And now we rotate back.
+  ! And now we rotate back (do not need the rotation matrix for this).
   if(st%ispin == SPINORS) then
     do i = 1, m%np
        dtot = d(i, 1) + d(i, 2)
@@ -136,8 +157,9 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     pot = lpot
   endif
 
-  if(func == X_FUNC_GGA_LB94) then ! we have to calculate the energy
-    ! Levy-Perdew relation (PRA 32, 2010 (1985))
+  ! If LB94, we have to calculate the energy 
+  ! Levy-Perdew relation (PRA 32, 2010 (1985))
+  if(func == X_FUNC_GGA_LB94) then
     energy = 0._r8
     do is = 1, st%nspin
       call dmesh_derivatives(m, pot(:, is), grad=gd(:, :, is))
@@ -148,107 +170,68 @@ subroutine xc_gga(func, nlcc, m, st, pot, energy)
     energy = - energy * m%vol_pp
   end if
 
-  deallocate(d, gd, lpot)
+  deallocate(d, gd, lpot, u)
   call pop_sub(); return
   contains
 
-  ! This subroutine projects a 2x2 hemitian matrix (density or potential in spin space
-  ! to the reference frame where the density (entry "dens") is diagonal. Of course
-  ! the input "global" need not be diagonal, but nondiagonal terms are ignored.
-  ! A 2x2 hermitian matrix x is represented by a real 4-vector, xx(1) = x(1, 1),
-  ! xx(2) = x(2, 2), xx(3) = Re(x(1,2)), xx(4) = Im(x(1,2)).
-  subroutine to_local(global, local, dens)
+
+  subroutine rot_matrix(u, dens)
+    complex(r8), intent(out) :: u(2, 2)
+    real(r8), intent(in)     :: dens(4)
+
+    real(r8)    ::phi, theta, absrho12
+
+    absrho12 = sqrt(dens(3)**2+dens(4)**2)
+    if(absrho12<tiny) then
+      phi = M_ZERO
+    else
+      phi   = -atan(dens(4)/dens(3))
+    endif
+    if(absrho12<tiny) then
+      theta = M_ZERO
+    elseif(abs(real(dens(1)-dens(2)))<tiny) then
+      theta = M_PI/2
+    else
+      theta =  atan(M_TWO*absrho12/(dens(1)-dens(2)))
+    endif
+    u(1, 1) =  cos(M_HALF*theta)*exp( M_zI*M_HALF*phi)
+    u(1, 2) =  sin(M_HALF*theta)*exp(-M_zI*M_HALF*phi)
+    u(2, 1) = -sin(M_HALF*theta)*exp( M_zI*M_HALF*phi)
+    u(2, 2) =  cos(M_HALF*theta)*exp(-M_zI*M_HALF*phi)
+
+  end subroutine rot_matrix
+
+  ! local = u*global*transpose[u*]
+  subroutine to_local(global, local, u)
     implicit none
     real(r8), intent(in)  :: global(4)
     real(r8), intent(out) :: local (2)
-    real(r8), intent(in)  :: dens(4)
+    complex(r8), intent(in) :: u(2,2)
 
-    real(r8), parameter :: tiny = 1.0e-12_r8
-    real(r8) :: phi, theta
-    complex(r8) :: rho(2, 2), u(2, 2), ut(2, 2), b(2, 2), aux(2, 2), g(2, 2)
+    complex(r8) :: g12, g21
 
-    ! Builds the density matrix
-    rho(1, 1) = dens(1)
-    rho(2, 2) = dens(2)
-    rho(1, 2) = dens(3) + M_zI*dens(4)
-    rho(2, 1) = dens(3) - M_zI*dens(4)
-
-    g(1, 1) = global(1)
-    g(2, 2) = global(2)
-    g(1, 2) = global(3) + M_zI*global(4)
-    g(2, 1) = global(3) - M_zI*global(4)
-
-    if(abs(rho(1, 2))<tiny) then
-      phi = M_ZERO
-    else
-      phi   = -atan(aimag(rho(1, 2))/real(rho(1, 2)))
-    endif
-    if(abs(rho(1,2))<tiny) then
-      theta = M_ZERO
-    elseif(abs(real(dens(1)-dens(2)))<tiny) then
-      theta = M_PI/2
-    else
-      theta =  atan(M_TWO*abs(rho(1, 2))/(real(rho(1,1))-real(rho(2,2))))
-    endif
-
-    u(1, 1) =  cos(M_HALF*theta)*exp( M_zI*M_HALF*phi)
-    u(1, 2) =  sin(M_HALF*theta)*exp(-M_zI*M_HALF*phi)
-    u(2, 1) = -sin(M_HALF*theta)*exp( M_zI*M_HALF*phi)
-    u(2, 2) =  cos(M_HALF*theta)*exp(-M_zI*M_HALF*phi)
-
-    aux = matmul(u, matmul(g, transpose(conjg(u))))
-
-    local(1) = aux(1, 1)
-    local(2) = aux(2, 2)
-    
+    g12 = global(3) + M_zI*global(4)
+    g21 = conjg(g12)
+    local(1) = (u(1,1)*global(1) + u(1,2)*g21   )*conjg(u(1,1)) + &
+               (u(1,1)*g12    + u(1,2)*global(2))*conjg(u(1,2))
+    local(2) = (u(2,1)*global(1) + u(2,2)*g21   )*conjg(u(2,1)) + &
+               (u(2,1)*g12    + u(2,2)*global(2))*conjg(u(2,2))
   end subroutine to_local
 
-  subroutine to_global(local, global, dens)
+  ! global = transpose[u*]*local*u
+  subroutine to_global(local, global, u)
     implicit none
     real(r8), intent(out) :: global(4)
     real(r8), intent(in)  :: local (2)
-    real(r8), intent(in)  :: dens(4)
+    complex(r8), intent(in) :: u(2,2)
 
-    real(r8), parameter :: tiny = 1.0e-12_r8
-    real(r8) :: phi, theta
-    complex(r8) :: rho(2, 2), u(2, 2), ut(2, 2), b(2, 2), aux(2, 2), g(2, 2)
+    complex(r8) :: g12
 
-    ! Builds the density matrix
-    rho(1, 1) = dens(1)
-    rho(2, 2) = dens(2)
-    rho(1, 2) = dens(3) + M_zI*dens(4)
-    rho(2, 1) = dens(3) - M_zI*dens(4)
-
-    g(1, 1) = local(1)
-    g(2, 2) = local(2)
-    g(1, 2) = (M_ZERO, M_ZERO)
-    g(2, 1) = (M_ZERO, M_ZERO)
-
-    if(abs(rho(1, 2))<tiny) then
-      phi = M_ZERO
-    else
-      phi   = -atan(aimag(rho(1, 2))/real(rho(1, 2)))
-    endif
-    if(abs(rho(1,2))<tiny) then
-      theta = M_ZERO
-    elseif(abs(real(dens(1)-dens(2)))<tiny) then
-      theta = M_PI/2
-    else
-      theta =  atan(M_TWO*abs(rho(1, 2))/(real(rho(1,1))-real(rho(2,2))))
-    endif
-
-    u(1, 1) =  cos(M_HALF*theta)*exp( M_zI*M_HALF*phi)
-    u(1, 2) =  sin(M_HALF*theta)*exp(-M_zI*M_HALF*phi)
-    u(2, 1) = -sin(M_HALF*theta)*exp( M_zI*M_HALF*phi)
-    u(2, 2) =  cos(M_HALF*theta)*exp(-M_zI*M_HALF*phi)
-
-    aux = matmul(transpose(conjg(u)), matmul(g, u))
-
-    global(1) = aux(1, 1)
-    global(2) = aux(2, 2)
-    global(3) = real (aux(1, 2))
-    global(4) = aimag(aux(1, 2))
-    
+    global(1) = local(1)*abs(u(1,1))**2 + local(2)*abs(u(2,1))**2
+    global(2) = local(1)*abs(u(1,2))**2 + local(2)*abs(u(2,2))**2
+    g12 = local(1)*conjg(u(1,1))*u(1,2)
+    global(3) = real(g12)
+    global(4) = aimag(g12)
   end subroutine to_global
 
 end subroutine xc_gga

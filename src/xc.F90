@@ -61,7 +61,8 @@ integer, parameter ::     &
     C_FUNC_KLI_SIC   = 53, &
     C_FUNC_KLI_HJU   = 54, &
     C_FUNC_MGGA_PKZB = 55, &
-    C_FUNC_END       = 55
+    C_FUNC_GGA_PBEX  = 56, &
+    C_FUNC_END       = 56
 
 character(len=4), parameter :: name_xc(XC_FAMILY_END-XC_FAMILY_START+1) = (/ &
     'None', &
@@ -88,7 +89,8 @@ character(len=14), parameter :: name_c(C_FUNC_END-C_FUNC_START+1) = (/ &
     'PBE           ', &
     'SIC (LDA)     ', &
     'SIC (HJU)     ', &
-    'PKZB          ' /)
+    'PKZB          ', &
+    'PBE+X         '/)
 
 type xc_type
   integer :: x_family, x_func, c_family, c_func
@@ -233,6 +235,10 @@ subroutine xc_init(xcs, nlcc)
     select case(cfunc(1:3))
     case('PBE')
       xcs%c_func = C_FUNC_GGA_PBE
+    case('PBX')
+      xcs%c_func    = C_FUNC_GGA_PBEX
+      xcs%x_family  = XC_FAMILY_ZER
+      xcs%x_func    = X_FUNC_ZER
     case default
       write(message(1), '(a,a,a)') "'", trim(cfunc), &
           "' is not a known correlation GGA functional!"
