@@ -50,7 +50,7 @@ xyzanim_LDADD   = $(octopus_LDADD)
 phonon_spectrum_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 phonon_spectrum_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
 excitations_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
-                      fft.F90 vxc.F90 atomic.F90 vxc.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
+                      fft.F90 atomic.F90 vxc.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       linear.F90 excitations.F90
 excitations_LDADD = $(octopus_LDADD)
