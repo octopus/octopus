@@ -112,7 +112,8 @@ subroutine X(matexp_polynomial)(order, in, out, factor, exporder)
   call X(copy) (order**2, out(1, 1), 1, aux(1, 1), 1)
   do n = 1, exporder
      call X(copy) (order**2, aux(1, 1), 1, dd(1, 1), 1)
-     call X(gemm) ('n', 'n', order, order, order, R_TOTYPE(M_ONE), dd(1, 1), order, in(1, 1), order, R_TOTYPE(M_ZERO), aux(1 ,1), order)
+     call X(gemm) ('n', 'n', order, order, order, R_TOTYPE(M_ONE), dd(1, 1), &
+                   order, in(1, 1), order, R_TOTYPE(M_ZERO), aux(1 ,1), order)
      zfact = zfact*factor/n
      call X(axpy)(order**2, zfact, aux(1, 1), 1, out(1, 1), 1)
   enddo
@@ -153,7 +154,8 @@ subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   
   do i = 1, j
      call X(copy)(order**2, out(1, 1), 1, aux(1, 1), 1)
-     call X(gemm)('n', 'n', order, order, order, R_TOTYPE(M_ONE), aux(1, 1), order, aux(1, 1), order, R_TOTYPE(M_ZERO), out(1, 1), order)
+     call X(gemm)('n', 'n', order, order, order, R_TOTYPE(M_ONE), aux(1, 1), &
+                   order, aux(1, 1), order, R_TOTYPE(M_ZERO), out(1, 1), order)
   enddo
 
   deallocate(aux)  
