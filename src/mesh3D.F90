@@ -47,10 +47,6 @@ type mesh_type
   integer(POINTER_SIZE) :: dplanf, dplanb, zplanf, zplanb
 end type mesh_type
 
-private
-public :: mesh_type, mesh_derivatives_type, mesh_init, mesh_end, &
-     dmesh_derivatives, zmesh_derivatives
-
 contains
 
 subroutine mesh_init(m, natoms, atom)
@@ -183,37 +179,56 @@ subroutine mesh_write_info(m, unit)
   return
 end subroutine mesh_write_info
 
-subroutine mesh_to_cube(m, f_mesh, f_cube)
+! subroutines to get xyzr
+subroutine mesh_xyz(m, i, x)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(IN)  :: f_mesh(m%np)
-  real(r8), intent(out) :: f_cube(m%fft_n, m%fft_n, m%fft_n)
-  
-  integer :: i, ix, iy, iz
-  
-  do i = 1, m%np
-    ix = m%lx(i) + m%fft_n/2 + 1
-    iy = m%Ly(i) + m%fft_n/2 + 1
-    iz = m%Lz(i) + m%fft_n/2 + 1
-    f_cube(ix, iy, iz) = f_mesh(i)
-  end do
-  
-end subroutine mesh_to_cube
+  integer, intent(in) :: i
+  real(r8), intent(out) :: x(3)
 
-subroutine cube_to_mesh(m, f_cube, f_mesh)
+  x(1) = m%Lx(i)*m%H
+  x(2) = m%Ly(i)*m%H
+  x(3) = m%Lz(i)*m%H
+end subroutine mesh_xyz
+
+subroutine mesh_x(m, i, x)
   type(mesh_type), intent(IN) :: m
-  real(r8), intent(IN)  :: f_cube(m%fft_n, m%fft_n, m%fft_n)
-  real(r8), intent(out) :: f_mesh(m%np)
-  
-  integer :: i, ix, iy, iz
+  integer, intent(in) :: i
+  real(r8), intent(out) :: x
 
-  do i=1, m%np
-    ix = m%lx(i) + m%fft_n/2 + 1
-    iy = m%Ly(i) + m%fft_n/2 + 1
-    iz = m%Lz(i) + m%fft_n/2 + 1
-    f_mesh(i) = f_cube(ix, iy, iz) 
-  end do
+  x = m%Lx(i)*m%H
+end subroutine mesh_x
 
-end subroutine cube_to_mesh
+subroutine mesh_y(m, i, y)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: i
+  real(r8), intent(out) :: y
+
+  y = m%Ly(i)*m%H
+end subroutine mesh_y
+
+subroutine mesh_z(m, i, z)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: i
+  real(r8), intent(out) :: z
+
+  z = m%Lz(i)*m%H
+end subroutine mesh_z
+
+subroutine mesh_r(m, i, a, r, x)
+  type(mesh_type), intent(IN) :: m
+  integer, intent(in) :: i
+  real(r8), intent(in) :: a(3)
+  real(r8), intent(out) :: r
+  real(r8), intent(out), optional :: x(3)
+
+  real(r8) :: xx(3)
+
+  call mesh_xyz(m, i, xx)
+  xx = xx - a
+  r = sqrt(xx(1)**2 + xx(2)**2 + xx(3)**2)
+
+  if(present(x)) x = xx
+end subroutine mesh_r
 
 #include "mesh3D_create.F90"
 

@@ -42,6 +42,7 @@ real(r8), parameter :: r_small = 0.001_r8
 ! some mathematical constants
 real(r8), parameter    :: M_Pi=3.141592653589793_r8
 complex(r8), parameter :: M_zI=(0.0_r8,1.0_r8)
+complex(r8), parameter :: M_z0=(0.0_r8,0.0_r8)
 complex(r8), parameter :: M_z1=(1.0_r8,0.0_r8)
 
 ! some physical constants

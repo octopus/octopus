@@ -9,6 +9,38 @@ function R_FUNC(mesh_dp)(m, f1, f2)
   R_FUNC(mesh_dp) = R_DOT(m%np, f1(1:m%np), 1,  f2(1:m%np), 1)*m%H**3
 end function R_FUNC(mesh_dp)
 
+! Conversion subroutines
+! they actually add, do not forget it
+subroutine R_FUNC(mesh_to_cube) (m, f_mesh, f_cube)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN)    :: f_mesh(m%np)
+  R_TYPE, intent(inout) :: f_cube(m%fft_n, m%fft_n, m%fft_n)
+  
+  integer :: i, ix, iy, iz
+  
+  do i = 1, m%np
+    ix = m%lx(i) + m%fft_n/2 + 1
+    iy = m%Ly(i) + m%fft_n/2 + 1
+    iz = m%Lz(i) + m%fft_n/2 + 1
+    f_cube(ix, iy, iz) = f_cube(ix, iy, iz) + f_mesh(i)
+  end do
+end subroutine R_FUNC(mesh_to_cube)
+
+subroutine R_FUNC(cube_to_mesh) (m, f_cube, f_mesh)
+  type(mesh_type), intent(IN) :: m
+  R_TYPE, intent(IN)    :: f_cube(m%fft_n, m%fft_n, m%fft_n)
+  R_TYPE, intent(inout) :: f_mesh(m%np)
+  
+  integer :: i, ix, iy, iz
+
+  do i=1, m%np
+    ix = m%lx(i) + m%fft_n/2 + 1
+    iy = m%Ly(i) + m%fft_n/2 + 1
+    iz = m%Lz(i) + m%fft_n/2 + 1
+    f_mesh(i) = f_mesh(i) + f_cube(ix, iy, iz) 
+  end do
+end subroutine R_FUNC(cube_to_mesh)
+
 subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad)
   type(mesh_type), intent(IN) :: m
   R_TYPE, intent(IN) :: f(0:m%np)
@@ -40,12 +72,7 @@ contains
 
     allocate(fr(n, n, n), fw1(nx, n, n))
     fr = 0.0_r8
-    do j = 1, m%np
-      ix = m%lx(j) + n/2 + 1
-      iy = m%ly(j) + n/2 + 1
-      iz = m%lz(j) + n/2 + 1
-      fr(ix, iy, iz) = f(j)
-    end do
+    call R_FUNC(mesh_to_cube) (m, f, fr)
     
 #ifdef R_TREAL
     call rfftwnd_f77_one_real_to_complex(m%dplanf, fr, fw1)
@@ -78,13 +105,7 @@ contains
         call fftwnd_f77_one(m%zplanb, fw2, fr)
 #endif
         call R_FUNC(scal)(n**3, REALORCOMPLEX(1.0_r8/real(n, r8)**3), fr, 1)
-        
-        do j = 1, m%np
-          ix = m%lx(j) + n/2 + 1
-          iy = m%ly(j) + n/2 + 1
-          iz = m%lz(j) + n/2 + 1
-          grad(i, j) = fr(ix, iy, iz)
-        end do
+        call R_FUNC(cube_to_mesh) (m, fr, grad(:, j))
       end do
       
       deallocate(fw2)
@@ -110,13 +131,7 @@ contains
       call fftwnd_f77_one(m%zplanb, fw1, fr)
 #endif
       call R_FUNC(scal)(n**3, REALORCOMPLEX(1.0_r8/real(n, r8)**3), fr, 1)
-      
-      do j = 1, m%np
-        ix = m%lx(j) + n/2 + 1
-        iy = m%ly(j) + n/2 + 1
-        iz = m%lz(j) + n/2 + 1
-        lapl(j) = fr(ix, iy, iz)
-      enddo
+      call R_FUNC(cube_to_mesh) (m, fr, lapl)
     end if
     
     deallocate(fr, fw1)

@@ -14,7 +14,6 @@ type hamiltonian_type
 
   integer :: vpsl_space           ! How should the local potential be calculated
   real(r8), pointer :: Vpsl(:)    ! the external potential
-  real(r8), pointer :: dVpsl(:,:) ! gradient of the external potential (used for force calculation)
   real(r8), pointer :: Vhxc(:,:)  ! Hartre+xc potential
   real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
@@ -35,7 +34,7 @@ subroutine hamiltonian_init(h, ispin, np)
   h%ispin = ispin
   h%np  = np
 
-  allocate(h%Vpsl(np), h%dVpsl(np, 3), h%rho_core(np))
+  allocate(h%Vpsl(np), h%rho_core(np))
   if(ispin == 1) then
     allocate(h%Vhxc(np, 1))
   else
@@ -56,8 +55,8 @@ subroutine hamiltonian_end(h)
   type(hamiltonian_type) :: h
 
   if(associated(h%Vpsl)) then
-    deallocate(h%Vpsl, h%dVpsl, h%Vhxc)
-    nullify(h%Vpsl, h%dVpsl, h%Vhxc)
+    deallocate(h%Vpsl, h%Vhxc)
+    nullify(h%Vpsl, h%Vhxc)
   end if
 end subroutine hamiltonian_end
 
@@ -68,6 +67,14 @@ subroutine generate_external_pot(h, sys)
   integer :: ia
   type(specie_type), pointer :: s
   type(atom_type),   pointer :: a
+  complex(r8), allocatable :: fw(:,:,:), fwc(:,:,:)
+  real(r8), allocatable :: fr(:,:,:)
+
+  if(h%vpsl_space == 1) then
+    allocate(fw(sys%m%hfft_n, sys%m%fft_n, sys%m%fft_n), &
+         fwc(sys%m%hfft_n, sys%m%fft_n, sys%m%fft_n))
+    fw = M_z0; fwc = M_z0
+  end if
 
   h%Vpsl = 0._r8
   do ia = 1, sys%natoms
@@ -82,6 +89,15 @@ subroutine generate_external_pot(h, sys)
     end select
   end do
   
+  if(h%vpsl_space == 1) then
+    allocate(fr(sys%m%fft_n, sys%m%fft_n, sys%m%fft_n))
+    call rfftwnd_f77_one_complex_to_real(sys%m%zplanb, fw, fr)
+    call dcube_to_mesh(sys%m, fr, h%vpsl)
+    call rfftwnd_f77_one_complex_to_real(sys%m%zplanb, fwc, fr)
+    call dcube_to_mesh(sys%m, fr, h%rho_core)
+
+    deallocate(fw, fwc, fr)
+  end if
 contains
   !***************************************************
   !  jellium stuff
@@ -90,19 +106,15 @@ contains
     type(mesh_type), intent(in) :: m
 
     integer :: i
-    real(r8) :: a1, a2, Rb2, x, y, z, r2, r
+    real(r8) :: a1, a2, Rb2, r
 
     a1 = s%Z/(2._r8*s%jradius**3)
     a2 = s%Z/s%jradius
     Rb2= s%jradius**2
     do i = 1, h%np
-      x = m%Lx(i)*m%H - a%x(1)
-      y = m%Ly(i)*m%H - a%x(2)
-      z = m%Lz(i)*m%H - a%x(3)
-      r2= x**2 + y**2 + z**2
-      r = sqrt(r2)
+      call mesh_r(m, i, a%x, r)
       if(r <= s%jradius) then
-        h%Vpsl(i) = h%Vpsl(i) + (a1*(r2 - Rb2) - a2) * P_E2
+        h%Vpsl(i) = h%Vpsl(i) + (a1*(r*r - Rb2) - a2) * P_E2
       else
         h%Vpsl(i) = h%Vpsl(i) - s%Z/r * P_E2
       end if
@@ -121,12 +133,13 @@ contains
 
   end subroutine from_pseudopotential
 
+  ! this actually adds to outp
   subroutine phase_factor(m, vec, inp, outp)
     implicit none
     type(mesh_type), intent(IN) :: m
     real(r8), intent(IN)        :: vec(3)
     complex(r8), intent(IN)     :: inp(m%hfft_n, m%fft_n, m%fft_n)
-    complex(r8), intent(out)    :: outp(m%hfft_n, m%fft_n, m%fft_n)
+    complex(r8), intent(inout)  :: outp(m%hfft_n, m%fft_n, m%fft_n)
     
     complex(r8) :: k
     integer     :: ix, iy, iz, ixx, iyy, izz
@@ -138,28 +151,22 @@ contains
         iyy = pad_feq(iy, m%fft_n, .true.)
         do ix = 1, m%hfft_n
           ixx = pad_feq(ix, m%fft_n, .true.)
-          outp(ix, iy, iz) = exp( k * (vec(1)*ixx + vec(2)*iyy + vec(3)*izz) ) * &
-               inp(ix, iy, iz)
+          outp(ix, iy, iz) = outp(ix, iy, iz) + &
+               exp( k * (vec(1)*ixx + vec(2)*iyy + vec(3)*izz) ) * inp(ix, iy, iz)
         end do
       end do
     end do
-    
   end subroutine phase_factor
 
   subroutine build_local_part(m)
     type(mesh_type), intent(in) :: m
 
     integer :: i
-    real(r8) :: x, y, z, r, vl
-    real(r8), allocatable :: fr(:,:,:)
-    complex(r8), allocatable :: fw(:,:,:)
+    real(r8) :: r, vl
 
     if(h%vpsl_space == 0) then
       do i = 1, m%np
-        x = m%Lx(i)*m%H - a%x(1)
-        y = m%Ly(i)*m%H - a%x(2)
-        z = m%Lz(i)*m%H - a%x(3)
-        r = sqrt(x**2 + y**2 + z**2)
+        call mesh_r(m, i, a%x, r)
         vl  = splint(s%ps%vlocal, r)
         if(r >= r_small) then
           h%Vpsl(i) = h%Vpsl(i) + (vl - s%Z_val)/r
@@ -171,16 +178,10 @@ contains
         end if
       end do
     else
-      allocate(fw(m%hfft_n, m%fft_n, m%fft_n), fr(m%fft_n, m%fft_n, m%fft_n))
       call phase_factor(m, a%x, s%local_fw, fw)
-      call rfftwnd_f77_one_complex_to_real(m%zplanb, fw, fr)
-!      vpsl = vpsl + f_in_mesh(m, fr)
       if(s%ps%icore /= 'nc  ') then
-        call phase_factor(m, a%x, s%rhocore_fw, fw)
-        call rfftwnd_f77_one_complex_to_real(m%zplanb, fw, fr)
-!        rho_core = rho_core + f_in_mesh(m, fr)
-      endif
-      deallocate(fw, fr)
+        call phase_factor(m, a%x, s%rhocore_fw, fwc)
+      end if
     end if
 
   end subroutine build_local_part
@@ -193,8 +194,7 @@ contains
     
     j = 0
     do k = 1, h%np
-      r = sqrt((m%Lx(k)*m%H - a%x(1))**2 + (m%Ly(k)*m%H - a%x(2))**2 +  &
-           (m%Lz(k)*m%H - a%x(3))**2 )
+      call mesh_r(m, k, a%x, r)
       if(r < s%ps%rc_max) j = j + 1
     end do
     a%Mps = j
@@ -206,8 +206,7 @@ contains
     
     j = 0
     do k = 1, h%np
-      r = sqrt((m%Lx(k)*m%H - a%x(1))**2 + (m%Ly(k)*m%H - a%x(2))**2 +  &
-           (m%Lz(k)*m%H - a%x(3))**2 )
+      call mesh_r(m, k, a%x, r)
       if(r < s%ps%rc_max) then
         j = j + 1
         a%Jxyz(j) = k
