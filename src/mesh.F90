@@ -381,60 +381,6 @@ subroutine phase_factor(m, n, vec, inp, outp)
   end do
 end subroutine phase_factor
 
-subroutine mesh_gradient_in_FS(m, nx, n, f, grad, dir)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: nx, n(3), dir
-  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
-  complex(r8), intent(out) :: grad(nx, n(2), n(3))
-
-  real(r8) :: temp(3), g2
-  integer :: k(3), ix, iy, iz
-  
-  k = 0
-  temp = M_ZERO
-  temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
-
-  do iz = 1, n(3)
-    if(dir == 3) k(3) = pad_feq(iz, n(3), .true.)
-    do iy = 1, n(2)
-      if(dir == 2) k(2) = pad_feq(iy, n(2), .true.)
-      do ix = 1, nx
-        if(dir == 1) k(1) = pad_feq(ix, n(1), .true.)
-        
-        g2 = sum(temp(1:conf%dim)*k(1:conf%dim))
-        grad(ix, iy, iz) = g2 * M_zI * f(ix, iy, iz)
-      end do
-    end do
-  end do
-
-end subroutine mesh_gradient_in_FS
-
-subroutine mesh_laplacian_in_FS(m, nx, n, f, lapl)
-  type(mesh_type), intent(IN) :: m
-  integer, intent(in) :: nx, n(3)
-  complex(r8), intent(IN)  :: f   (nx, n(2), n(3))
-  complex(r8), intent(out) :: lapl(nx, n(2), n(3))
-
-  real(r8) :: temp(3), g2
-  integer :: k(3), ix, iy, iz
-  
-  temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
-
-  do iz = 1, n(3)
-    k(3) = pad_feq(iz, n(3), .true.)
-    do iy = 1, n(2)
-      k(2) = pad_feq(iy, n(2), .true.)
-      do ix = 1, nx
-        k(1) = pad_feq(ix, n(1), .true.)
-        
-        g2 = sum((temp(1:conf%dim)*k(1:conf%dim))**2)
-        lapl(ix, iy, iz) = - g2 * f(ix, iy, iz)
-      end do
-    end do
-  end do
-
-end subroutine mesh_laplacian_in_FS
-
 ! Deallocates what has to be deallocated ;)
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m

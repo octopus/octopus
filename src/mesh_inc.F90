@@ -252,31 +252,27 @@ subroutine R_FUNC(mesh_derivatives) (m, f, lapl, grad, alpha)
 contains
 
   subroutine fft_derivative()
-    complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
-    
-    integer :: n(3), nx, i, j
+    complex(r8), allocatable :: fw(:), fw2(:)
 
-    n(:) = m%fft_n(:)
-#ifdef R_TREAL
-    nx = m%hfft_n
-#else
-    nx = n(1)
-#endif
+    integer :: i
 
-    allocate(fw1(nx, n(2), n(3)), fw2(nx, n(2), n(3)))
-    call R_FUNC(mesh_rs2fs)(m, f(1:), fw1)
+    allocate(fw(m%R_FUNC(npw)))
+    if(present(grad)) allocate(fw2(m%R_FUNC(npw)))
+    call R_FUNC(mesh_rs2fs)(m, f(1), fw(1))
     if(present(grad)) then
       do i = 1, 3
-        call mesh_gradient_in_FS(m, nx, n, fw1, fw2, i)
+        call R_FUNC(copy)(m%R_FUNC(npw), fw, 1, fw2, 1)
+        call R_FUNC(mesh_gradq)(m, fw2, i)
         call R_FUNC(mesh_fs2rs)(m, fw2, grad(i, :), factor = alp)
       end do
     end if
     if(present(lapl)) then
-      call mesh_laplacian_in_FS(m, nx, n, fw1, fw2)
-      call R_FUNC(mesh_fs2rs)(m, fw2, lapl, factor = alp)
+      call R_FUNC(mesh_laplq)(m, fw)
+      call R_FUNC(mesh_fs2rs)(m, fw, lapl, factor = alp)
     end if
-    
-    deallocate(fw1, fw2)
+    deallocate(fw)
+    if(present(grad)) deallocate(fw2)
+
     return
   end subroutine fft_derivative
   
@@ -404,3 +400,86 @@ subroutine R_FUNC(low_frequency) (m, f, lapl)
   end do
   call pop_sub(); return
 end subroutine R_FUNC(low_frequency)
+
+subroutine R_FUNC(mesh_laplq)(m, f, cutoff)
+  type(mesh_type), intent(in)    :: m
+  complex(r8), dimension(*) :: f
+  real(r8), intent(in), optional :: cutoff
+
+  real(r8) :: lcutoff, temp(3), g2
+  integer :: i, k(3), ix, iy, iz, nx
+
+  sub_name = 'mesh_laplq'; call push_sub()
+
+  lcutoff = 1e10_r8
+  if(present(cutoff)) then
+     if(cutoff>M_ZERO) then
+       lcutoff = cutoff
+     endif
+  endif
+
+  nx = m%fft_n(1)
+#if defined(R_TREAL)
+  nx = m%fft_n(1)/2+1
+#endif
+
+  temp = M_ZERO
+  temp(1:conf%dim) = (2.0_r8*M_Pi)/(m%fft_n(1:conf%dim)*m%h(1:conf%dim))
+
+  i = 0
+  do iz = 1, m%fft_n(3)
+     k(3) = pad_feq(iz, m%fft_n(3), .true.)
+     do iy = 1, m%fft_n(2)
+        k(2) = pad_feq(iy, m%fft_n(2), .true.)
+        do ix = 1, nx
+           k(1) = pad_feq(ix, m%fft_n(1), .true.)
+           g2 = min(lcutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2))
+           i = i + 1
+           f(i) = - g2*f(i)
+        enddo
+     enddo
+  enddo
+
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_laplq)
+
+subroutine R_FUNC(mesh_gradq)(m, f, j, t)
+  type(mesh_type), intent(in) :: m
+  complex(r8), dimension(*)   :: f
+  integer, intent(in) :: j
+  integer, intent(in), optional :: t
+
+  real(r8) :: lcutoff, temp(3), g2
+  integer :: i, k(3), n(3), ix, iy, iz, nx
+
+  sub_name = 'mesh_gradq'; call push_sub()
+
+  n = m%fft_n
+  if(present(t)) then
+    if(t==2) n = m%fft_n2
+  endif
+
+  nx = n(1)
+#if defined(R_TREAL)
+  nx = n(1)/2+1
+#endif
+
+  temp = M_ZERO
+  temp(1:conf%dim) = (2.0_r8*M_Pi)/(n(1:conf%dim)*m%h(1:conf%dim))
+  i = 0
+  k = 0
+  do iz = 1, n(3)
+    if(j == 3) k(3) = pad_feq(iz, n(3), .true.)
+    do iy = 1, n(2)
+      if(j == 2) k(2) = pad_feq(iy, n(2), .true.)
+      do ix = 1, nx
+        if(j == 1) k(1) = pad_feq(ix, n(1), .true.)
+        g2 = sum(temp(1:conf%dim)*k(1:conf%dim))
+        i = i + 1
+        f(i) = g2 * M_zI * f(i)
+      end do
+    end do
+  end do
+
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_gradq)

@@ -141,30 +141,32 @@ subroutine R_FUNC(forces) (h, sys, t, reduce)
     end subroutine local_RS
 
     subroutine local_FS()
-      complex(r8), allocatable :: fw1(:,:,:), fw2(:,:,:)
+      complex(r8), allocatable :: fw(:)
       real(r8), allocatable :: fr(:,:,:), force(:)
+      integer :: npw2
 
-      allocate( &
-           fw1(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-           fw2(sys%m%hfft_n2,   sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-           fr (sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
-           force(sys%m%np))
-    
+      npw2 = (sys%m%fft_n2(1)/2+1)*sys%m%fft_n2(2)*sys%m%fft_n2(3)
+ 
+      allocate(fw(npw2),                                        &
+               fr(sys%m%fft_n2(1), sys%m%fft_n2(2), sys%m%fft_n2(3)), &
+               force(sys%m%np))
+
       do i = 1, sys%natoms
         atm => sys%atom(i)
         do j = 1, conf%dim
-          fw1 = M_z0
-          call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw1)
-          call mesh_gradient_in_FS(sys%m, sys%m%hfft_n2, sys%m%fft_n2, fw1, fw2, j)
-          
-          call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw2, fr)
-          force = 0._r8
+          fw = M_z0
+          call phase_factor(sys%m, sys%m%fft_n2, atm%x, atm%spec%local_fw, fw)
+          call dmesh_gradq(sys%m, fw, j, t = 2)
+          call rfftwnd_f77_one_complex_to_real(sys%m%dplanb2, fw, fr)
+          force = M_ZERO
           call dcube_to_mesh(sys%m, fr, force, t=2)
           do l = 1, sys%st%nspin
             atm%f(j) = atm%f(j) + sum(force(:)*sys%st%rho(:, l))*sys%m%vol_pp
           end do
         end do
       end do
-      deallocate(fw1, fw2, fr, force)
+
+      deallocate(fw, fr, force)
     end subroutine local_FS
+
 end subroutine R_FUNC(forces)
