@@ -136,7 +136,7 @@ contains
       call mesh_r(m, i, r, a=a%x)
       zval = s%Z_val
 #if defined(THREE_D)
-      do l = 0 , s%ps%L_max
+      do l = 0 , s%ps%L_max_occ
         if(r >= r_small) then
           psi = splint(s%ps%Ur(l), r)
           zel = min(zval, 2.0_r8*(2*l+1))
@@ -173,7 +173,7 @@ subroutine lcao_init(sys, h)
   allocate(psi1(0:sys%m%np, sys%st%dim))
   norbs = 0
   atoms_loop: do i1 = 1, sys%natoms
-      l_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max
+      l_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
         lm_loop: do lm1 = -l1, l1
           d_loop: do d1 = 1, sys%st%dim
             call get_wf(sys, i1, l1, lm1, d1, psi1)
@@ -206,7 +206,7 @@ subroutine lcao_init(sys, h)
     lcao_data%psis = 0._r8
     n1 = 1
     do i1 = 1, sys%natoms
-      do l1 = 0, sys%atom(i1)%spec%ps%L_max
+      do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
         if(.not. lcao_data%atoml(i1, l1)) cycle
         do lm1 = -l1, l1
           do d1 = 1, sys%st%dim
@@ -229,7 +229,7 @@ subroutine lcao_init(sys, h)
   ik_loop : do ik = 1, sys%st%nik
     n1 = 1
     atoms1_loop: do i1 = 1, sys%natoms
-      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max
+      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
         if(.not. lcao_data%atoml(i1, l1))  cycle
         lm1_loop: do lm1 = -l1, l1
           d1_loop: do d1 = 1, sys%st%dim
@@ -249,7 +249,7 @@ subroutine lcao_init(sys, h)
 
             n2 = 1
             atoms2_loop: do i2 = 1, sys%natoms
-              l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max
+              l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max_occ
                 if(.not. lcao_data%atoml(i1, l1)) cycle
                 lm2_loop: do lm2 = -l2, l2
                   d2_loop: do d2 = 1, sys%st%dim
@@ -324,7 +324,7 @@ subroutine lcao_wf(sys, h)
   ik_loop : do ik = 1, sys%st%nik
     n1 = 1
     atoms1_loop: do i1 = 1, sys%natoms
-      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max
+      l1_loop: do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
         if(.not.lcao_data%atoml(i1, l1)) cycle l1_loop
         lm1_loop: do lm1 = -l1, l1
           d1_loop: do d1 = 1, sys%st%dim
@@ -340,7 +340,7 @@ subroutine lcao_wf(sys, h)
             
             n2 = 1
             atoms2_loop: do i2 = 1, sys%natoms
-              l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max
+              l2_loop: do l2 = 0, sys%atom(i2)%spec%ps%L_max_occ
                 if(.not.lcao_data%atoml(i2, l2)) cycle l2_loop
                 lm2_loop: do lm2 = -l2, l2
                   d2_loop: do d2 = 1, sys%st%dim
@@ -405,7 +405,7 @@ subroutine lcao_wf(sys, h)
 
     n1 = 1
     do i1 = 1, sys%natoms
-      do l1 = 0, sys%atom(i1)%spec%ps%L_max
+      do l1 = 0, sys%atom(i1)%spec%ps%L_max_occ
         if(.not.lcao_data%atoml(i1, l1)) cycle
         do lm1 = -l1, l1
           do d1 = 1, sys%st%dim

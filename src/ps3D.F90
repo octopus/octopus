@@ -37,8 +37,9 @@ type ps_type
 
   integer  :: kbc  ! Number of KB components (1 for TM ps, 3 for HGH)
   real(r8) :: z, z_val
-  integer :: L_max ! maximum value of l to take
-  integer :: L_loc ! which component to take as local
+  integer :: l_max ! maximum value of l to take
+  integer :: l_loc ! which component to take as local
+  integer :: l_max_occ ! maximum l-component which has non-null atomic occupation numbers
   character(len=4) :: icore
   real(r8) :: rc_max
   real(r8) :: vlocal_origin ! local pseudopotential at the orginin
@@ -75,6 +76,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
     call tm_init(pstm, trim(label))
     ps%kbc = 1
     ps%L_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
+    ps%l_max_occ = ps%l_max
     ps%l_loc = lloc
     ps%z = z
     call tm_process(pstm, lmax, lloc)
@@ -83,6 +85,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
     call hgh_init(psp, trim(label))
     ps%kbc = 3
     ps%l_max = psp%l_max
+    ps%l_max_occ = max(psp%l_max, 0)
     ps%l_loc = -1
     ps%z = z
     call hgh_process(psp)
@@ -93,7 +96,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc)
   end select
 
 ! We allocate all the stuff
-  allocate(ps%kb(0:ps%l_max, ps%kbc), ps%dkb(0:ps%l_max, ps%kbc), ps%Ur(0:ps%L_max))
+  allocate(ps%kb(0:ps%l_max, ps%kbc), ps%dkb(0:ps%l_max, ps%kbc), ps%Ur(0:ps%L_max_occ))
   allocate(ps%dknrm(0:ps%L_max), ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc))
   do i = 0, ps%L_max
      do j = 1, ps%kbc
@@ -184,7 +187,7 @@ subroutine ps_debug(ps)
   do i = 1, npoints
      r = (i-1)*grid
      write(wave_unit, '('//trim(fm)//'e14.6)') &
-           r, (splint(ps%ur(l), r), l = 0, ps%l_max)
+           r, (splint(ps%ur(l), r), l = 0, ps%l_max_occ)
   enddo
 
   ! Closes files and exits
@@ -360,7 +363,7 @@ subroutine get_splines_hgh(psp, ps)
   allocate(hato(psp%g%nrval), derhato(psp%g%nrval))
 
 ! Interpolate the KB-projection functions
-  do l = 0, ps%l_max
+  do l = 0, psp%l_max
   do j = 1, 3
     hato = 0.0_r8
     nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
@@ -390,17 +393,15 @@ subroutine get_splines_hgh(psp, ps)
 
 ! Define the table for the pseudo-wavefunction components (using splines)
 ! with a correct normalization function
-  do l = 0 , ps%L_max
+  do l = 0 , ps%l_max_occ
     nrc = nint(log(psp%kbr(l)/psp%g%b + 1.0_r8)/psp%g%a) + 1
     do ir = nrc+ 2, psp%g%nrval-2
       if ( abs(psp%rphi(ir,l)/psp%g%rofi(ir)**(l+1)) < eps ) exit
     enddo
     nrc = ir + 1
-
     hato = 0.0_r8
     hato(2:nrc) = psp%rphi(2:nrc, l)/psp%g%rofi(2:nrc)**(l + 1)
     hato(1) = hato(2)
-
     call spline_fit(psp%g%nrval, psp%g%rofi, hato, ps%Ur(l))
   end do
 

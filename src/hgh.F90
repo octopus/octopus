@@ -44,7 +44,8 @@ type hgh_type
   real(r8)         :: h(0:3, 1:3, 1:3)
   real(r8)         :: k(0:3, 1:3, 1:3)
 
-  integer          :: l_max ! Maximum l
+  integer          :: l_max     ! Maximum l for the Kleinmann-Bylander component.
+  integer          :: l_max_occ ! Maximum l-value of the occupied wavefunctions
 
   ! Logarithmic grid parameters
   type(logrid_type) :: g
@@ -107,6 +108,10 @@ subroutine hgh_init(psp, filename)
   end do
   psp%l_max = psp%l_max - 1
 
+  ! Fixes psp%l_max_occ. It is equal to l_max, except for H and He, where
+  ! l_max = -1 (no nonlocal components).
+  psp%l_max_occ = max(0, psp%l_max)
+
   ! Initializes the logarithmic grid. Parameters are hard-coded.
        psp%g%a = 1.25e-2_r8; psp%g%b = 4.0e-4_r8
        psp%g%nrval = 1001
@@ -118,7 +123,7 @@ subroutine hgh_init(psp, filename)
   if(psp%l_max >= 0) then
     allocate(psp%kb(1:psp%g%nrval, 0:psp%l_max, 1:3))    
   endif
-  allocate(psp%rphi(psp%g%nrval, 0:max(psp%l_max,0)), psp%eigen(0:max(psp%l_max,0)))
+  allocate(psp%rphi(psp%g%nrval, 0:psp%l_max_occ), psp%eigen(0:psp%l_max_occ))
   psp%vlocal = 0.0_r8; psp%kb = 0.0_r8; psp%rphi = 0.0_r8
 
   call pop_sub(); return
@@ -209,7 +214,7 @@ subroutine hgh_debug(psp)
 
   ! And the pseudo-wavefunctions.
   do i = 1, psp%g%nrval
-     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 0, max(0, psp%l_max))
+     write(wav_unit, *) psp%g%rofi(i), (psp%rphi(i, l), l = 0, psp%l_max_occ)
   enddo
 
   ! Closes files and exits
@@ -496,7 +501,7 @@ subroutine solve_schroedinger(psp)
 
   ! Allocations...
   allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval), &
-           rho(psp%g%nrval), ve(psp%g%nrval), occs(0:max(0,psp%l_max)))
+           rho(psp%g%nrval), ve(psp%g%nrval), occs(0:psp%l_max_occ))
   hato = 0.0_r8; g = 0.0_r8;  y = 0.0_r8; rho = 0.0_r8; ve = 0.0_r8
 
   ! Calculation of the pseudo-wave functions.
@@ -514,7 +519,7 @@ subroutine solve_schroedinger(psp)
   self_consistent: do while( diff > tol )
     prev = rho
     iter = iter + 1
-    do l = 0, max(0, psp%l_max)
+    do l = 0, psp%l_max_occ
       do ir = 2, psp%g%nrval
         vtot = 2*psp%vlocal(ir) + ve(ir) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
         nonl = 0.0_r8
@@ -546,9 +551,9 @@ subroutine solve_schroedinger(psp)
       psp%rphi(2:psp%g%nrval, l) = g(2:psp%g%nrval) * sqrt(psp%g%drdi(2:psp%g%nrval))
       psp%rphi(1, l) = psp%rphi(2, l)
     end do
-    occs = hgh_occs(psp%atom_name(1:2), max(0,psp%l_max))
+    occs = hgh_occs(psp%atom_name(1:2), psp%l_max_occ)
     rho = 0.0_r8
-    do l = 0, max(0,psp%l_max)
+    do l = 0, psp%l_max_occ
        rho = rho + occs(l)*psp%rphi(1:psp%g%nrval, l)**2
     enddo
     !if(iter>0) rho = 0.5*rho + 0.5*prev
@@ -567,7 +572,7 @@ subroutine solve_schroedinger(psp)
   endif
 
   !  checking normalization of the calculated wave functions
-  do l = 0, psp%l_max
+  do l = 0, psp%l_max_occ
     e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, l)**2))
     e = abs(e - 1.0d0)
     if (e > 1.0d-5 .and. conf%verbose > 0) then
