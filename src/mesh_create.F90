@@ -89,13 +89,14 @@ subroutine mesh_create(m, geo, def_h, def_rsize, enlarge_)
     end do
   end do
   
+  call adjust_nr()
+
   ! calculate the volume of the unit cell
   m%vol_pp = M_ONE
   do i = 1, conf%dim
     m%vol_pp = m%vol_pp*m%h(i)
   end do
 
-  call adjust_nr()
   call mesh_create_xyz(m, geo, enlarge)
   call mesh_write_info(m, stdout)
 
