@@ -17,18 +17,17 @@
 
 #include "config_F90.h"
 
-subroutine nbo2xyz(sampling)
+program nbo2xyz
   use global
   use liboct
   use atom
 
   implicit none
 
-  integer, intent(in) :: sampling
-
   character(len=80) :: sysname, str, nbofile, xyzfile
-  integer :: ierr, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
+  integer :: ierr, sampling, natoms, ncatoms, nspecies, i, nbo_unit, xyz_unit, iter, j
   real(r8) :: dump
+
   type(atom_type), pointer :: atm(:)
   type(atom_classical_type), pointer :: catm(:)
   type(specie_type), pointer :: spec(:)
@@ -71,6 +70,13 @@ subroutine nbo2xyz(sampling)
     call write_fatal(4)    
   end if
   allocate(spec(nspecies))
+
+  ! how often do we sample?
+  call oct_parse_int(C_string('nbo2xyz-sampling'), 100, sampling)
+  if(conf%verbose < 1 .and. mpiv%node == 0) then
+    message(1) = 'Sampling rate (nbo2xyz-sampling) should be bigger than 0'
+    call write_fatal(1)
+  end if
 
   do i = 1, nspecies
     call oct_parse_block_str(str, i-1, 0, spec(i)%label)
@@ -121,4 +127,4 @@ subroutine write_xyz
   return
 end subroutine write_xyz
 
-end subroutine nbo2xyz
+end program nbo2xyz
