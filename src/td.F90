@@ -253,7 +253,7 @@ contains
     complex(r8) :: c
     real(r8), allocatable :: dipole(:), multipole(:,:), pos(:,:), vel(:,:), for(:,:)
 
-    do i = 1, min(2, sys%st%ispin)
+    do i = 1, sys%st%nspin
       td%v_old1(:, i) = h%Vhartree(:) + h%Vxc(:, i)
       td%v_old2(:, i) = td%v_old1(:, i)
     end do
@@ -312,9 +312,9 @@ contains
     ! output harmonic spectrum
     if(td%harmonic_spectrum) then
        call io_assign(iunit)
-       open(iunit, file=trim(sys%sysname)//'.hst')
+       open(iunit, file=trim(sys%sysname)//'.acc')
        call td_calc_tacc(t_acc, 0.0_r8)
-       call td_write_hst(iunit, 0, 0.0_r8, t_acc, header=.true.)
+       call td_write_acc(iunit, 0, 0.0_r8, t_acc, header=.true.)
        call io_close(iunit)
     endif
     
@@ -348,10 +348,10 @@ contains
     ! output electron acceleration if desired
     if(td%harmonic_spectrum) then
        call io_assign(iunit)
-       open(iunit, position='append', file=trim(sys%sysname)//".hst")
+       open(iunit, position='append', file=trim(sys%sysname)//".acc")
        do j = 1, td%save_iter
           jj = i - td%save_iter + j
-          call td_write_hst(iunit, jj, jj*td%dt, tacc(j, 1:3), header=.false.)
+          call td_write_acc(iunit, jj, jj*td%dt, tacc(j, 1:3), header=.false.)
        enddo
        call io_close(iunit)
     endif
@@ -433,7 +433,7 @@ contains
     
   end subroutine td_write_laser
 
-  subroutine td_write_hst(iunit, iter, t, acc, header)
+  subroutine td_write_acc(iunit, iter, t, acc, header)
     integer, intent(in)  :: iunit, iter
     real(r8), intent(in) :: t, acc(3)
     logical, intent(in)  :: header
@@ -451,7 +451,7 @@ contains
 
     write(iunit,'(i8,4es20.12)') iter, t/units_out%time%factor, acc/units_out%acceleration%factor
 
-  end subroutine td_write_hst
+  end subroutine td_write_acc
 
   subroutine td_write_nbo(iunit, iter, t, ke, pe, x, v, f, header)
     integer, intent(in)  :: iunit, iter
@@ -636,21 +636,7 @@ contains
         acc(:) = acc - d * x(:)
       end do
     end do
-
-!!$!   NOT NEEDED!   
-!!$    ! now the gradient of the Hartree + xc potential
-!!$    if(.not. h%ip_app) then
-!!$    allocate(V(sys%m%np), dV(3, sys%m%np))
-!!$    do j = 1, sys%st%nspin
-!!$      V(:) = h%Vhartree(:) + h%Vxc(:, j)
-!!$      call dmesh_derivatives(sys%m, V, grad=dV)
-!!$      do k = 1, sys%m%np
-!!$        acc(:) = acc(:) - dV(:, k) * sys%st%rho(k, j) * sys%m%vol_pp
-!!$      end do
-!!$    end do
-!!$    deallocate(V, dV)
-!!$    endif
-
+    
     ! Adds the laser contribution
     call laser_field(td%no_lasers, td%lasers, t, field)
     charge = sum(sys%st%rho(:,:))*sys%m%vol_pp

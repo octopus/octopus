@@ -1,6 +1,7 @@
 #define R_TCOMPLEX 1
 #define R_FUNC(x) z ## x
 #define R_TYPE complex(r8)
+#define R_MPITYPE MPI_DOUBLE_COMPLEX
 #define R_ABS(x) abs(x)
 #define R_CONJ(x) conjg(x)
 #define R_REAL(x) real(x, r8)

@@ -384,7 +384,7 @@
 ! *********** OUTPUT ***********************************************          !
 ! REAL*8 EPSX, EPSC : Exchange and correlation energy densities               !
 ! REAL*8 VX(NSPIN), VC(NSPIN) : Exchange and correlation potentials,          !
-!                               defined as dExc/dD(ispin)                     !
+!                               defined as dExc/dD(nspin)                     !
 ! *********** UNITS ************************************************          !
 ! Lengths in Bohr, energies in Hartrees                                       !
 ! ******************************************************************          !
@@ -430,8 +430,8 @@
   ENDIF
 
   IF (NSPIN .EQ. 4) THEN
-!       Find dE/dD(ispin) = dE/dDup * dDup/dD(ispin) +
-!                           dE/dDdown * dDown/dD(ispin)
+!       Find dE/dD(nspin) = dE/dDup * dDup/dD(nspin) +
+!                           dE/dDdown * dDown/dD(nspin)
      VPOL  = (VXD(1)-VXD(2)) * (D(1)-D(2)) / (DPOL+TINY)
      VX(1) = 0.50_r8 * ( VXD(1) + VXD(2) + VPOL )
      VX(2) = 0.50_r8 * ( VXD(1) + VXD(2) - VPOL )
@@ -465,19 +465,19 @@
 ! REAL*8  EX             : Exchange energy density                            !
 ! REAL*8  EC             : Correlation energy density                         !
 ! REAL*8  DEXDD(NSPIN)   : Partial derivative                                 !
-!                           d(DensTot*Ex)/dDens(ispin),                       !
-!                           where DensTot = Sum_ispin( DENS(ispin) )          !
+!                           d(DensTot*Ex)/dDens(nspin),                       !
+!                           where DensTot = Sum_nspin( DENS(nspin) )          !
 !                           For a constant density, this is the               !
 !                          exchange potential                                 !
 ! REAL*8  DECDD(NSPIN)   : Partial derivative                                 !
-!                           d(DensTot*Ec)/dDens(ispin),                       !
-!                           where DensTot = Sum_ispin( DENS(ispin) )          !
+!                           d(DensTot*Ec)/dDens(nspin),                       !
+!                           where DensTot = Sum_nspin( DENS(nspin) )          !
 !                          For a constant density, this is the                !
 !                          correlation potential                              !
 ! REAL*8  DEXDGD(3,NSPIN): Partial derivative                                 !
-!                           d(DensTot*Ex)/d(GradDens(i,ispin))                !
+!                           d(DensTot*Ex)/d(GradDens(i,nspin))                !
 ! REAL*8  DECDGD(3,NSPIN): Partial derivative                                 !
-!                           d(DensTot*Ec)/d(GradDens(i,ispin))                !
+!                           d(DensTot*Ec)/d(GradDens(i,nspin))                !
 ! ********* UNITS ****************************************************        !
 ! Lengths in Bohr                                                             !
 ! Densities in electrons per Bohr**3                                          !

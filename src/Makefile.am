@@ -1,4 +1,4 @@
-bin_PROGRAMS = @PROGNAME@
+bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult
 EXTRA_PROGRAMS = octopus octopus-1d octopus-mpi octopus-mpi-1d
 
 octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
@@ -8,7 +8,8 @@ octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	pes.F90 td.F90 run.F90 main.F90
 
 noinst_HEADERS = \
-	real.F90 complex.F90 undef.F90 \
+	config_F90.h \
+	real.F90 complex.F90 undef.F90 mesh.F90 mesh_inc.F90\
 	mesh1D.F90 mesh1D_create.F90 mesh1D_inc.F90 ps1D.F90 hartree1D.F90 \
 	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90 ps3D.F90 hartree3D.F90 \
 	xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90 \
@@ -28,6 +29,11 @@ octopus_mpi_LDADD      = $(octopus_LDADD)
 octopus_mpi_1d_SOURCES = $(octopus_SOURCES)
 octopus_mpi_1d_LDADD   = $(octopus_LDADD) @LIB_MPI@
 
+strength_function_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
+strength_function_LDADD   = ../liboct/liboct.a @LIB_GSL@
+hs_from_mult_SOURCES      = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
+hs_from_mult_LDADD        = ../liboct/liboct.a @LIB_GSL@
+
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* config_F90.h
 DISTCLEANFILES = Makefile.in
 
@@ -43,7 +49,7 @@ config_F90.h: config.h
 	(cd ../liboct; $(MAKE))
 
 mesh.o: mesh1D.F90 mesh1D_create.F90 mesh1D_inc.F90 \
-	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90
+	mesh3D.F90 mesh3D_create.F90 mesh3D_inc.F90 mesh_inc.F90
 ps.o: ps1D.F90 ps3D.F90
 hartree.o: hartree1D.F90 hartree3D.F90
 xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90 xc_KLI.F90 xc_KLI_x.F90 xc_KLI_SIC.F90

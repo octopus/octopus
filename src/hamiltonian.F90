@@ -27,6 +27,10 @@ type hamiltonian_type
   real(r8), pointer :: Vxc(:,:)   ! xc potential
   real(r8), pointer :: rho_core(:)! core charge for nl core corrections
 
+  ! For non-collinear spin (ispin=3)
+  real(r8), pointer :: dVxc_off(:)
+  complex(r8), pointer :: zVxc_off(:)
+
   ! the energies (total, ion-ion, exchange, correlation)
   real(r8) :: etot, eii, ex, ec, epot
 
@@ -56,10 +60,14 @@ subroutine hamiltonian_init(h, sys)
   h%np  = sys%m%np
 
   ! allocate potentials and density of the cores
-  allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, h%ispin), h%rho_core(h%np))
-  h%Vhartree = 0._r8
-  h%Vxc = 0._r8
-  h%rho_core = 0._r8
+  allocate(h%Vpsl(h%np), h%Vhartree(h%np), h%Vxc(h%np, sys%st%nspin), h%rho_core(h%np))
+  h%Vhartree = 0._r8; h%Vxc = 0._r8; h%rho_core = 0._r8
+  if(h%ispin == 3) then
+    allocate(h%R_FUNC(Vxc_off) (h%np))
+    h%R_FUNC(Vxc_off) = R_TOTYPE(0._r8)
+  else
+    nullify(h%dVxc_off, h%zVxc_off)
+  end if
 
   if(sys%ncatoms > 0) then
     call oct_parse_logical(C_string("ClassicPotential"), .false., h%classic_pot)
@@ -125,6 +133,13 @@ subroutine hamiltonian_end(h)
   if(associated(h%Vpsl)) then
     deallocate(h%Vpsl, h%Vhartree, h%Vxc)
     nullify(h%Vpsl, h%Vhartree, h%Vxc)
+  end if
+
+  if(h%ispin == 3 .and. associated(h%dVxc_off)) then
+    deallocate(h%dVxc_off); nullify(h%dVxc_off)
+  end if
+  if(h%ispin == 3 .and. associated(h%zVxc_off)) then
+    deallocate(h%zVxc_off); nullify(h%zVxc_off)
   end if
 
   if(h%classic_pot .and. associated(h%Vclassic)) then

@@ -8,6 +8,7 @@
 
 #undef R_FUNC
 #undef R_TYPE
+#undef R_MPITYPE
 #undef R_ABS
 #undef R_CONJ
 #undef R_REAL

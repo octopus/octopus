@@ -24,6 +24,8 @@ type states_type
 
   ! the density (after all we are doing DFT :)
   real(r8), pointer :: rho(:,:)
+  real(r8),    pointer :: drho_off(:) ! if ispin = 3, off diagonal part of the density
+  complex(r8), pointer :: zrho_off(:)
 
   real(r8), pointer :: eigenval(:,:) ! obviously the eigenvalues
 
@@ -52,9 +54,9 @@ subroutine states_init(st, m, val_charge)
   sub_name = 'states_init'; call push_sub()
 
   call oct_parse_int(C_string('SpinComponents'), 1, st%ispin)
-  if (st%ispin /= 1 .and. st%ispin /= 2 .and. st%ispin /= 4) then
+  if (st%ispin < 1 .or. st%ispin > 3) then
     write(message(1),'(a,i4,a)') "Input: '", st%ispin,"' is not a valid SpinComponents"
-    message(2) = '(SpinComponents = 1 | 2 | 4)'
+    message(2) = '(SpinComponents = 1 | 2 | 3)'
     call write_fatal(2)
   end if
 
@@ -90,15 +92,19 @@ subroutine states_init(st, m, val_charge)
   case(2)
     st%dim = 1
     st%nik = st%nik*2
-  case(4)
+  case(3)
     st%dim = 2
-    st%nik = st%nik*2
+    st%nst = st%nst*2
   end select
 
   ! we now allocate some arrays
   st%nspin = min(2, st%ispin)
   allocate(st%rho(m%np, st%nspin), &
        st%occ(st%nst, st%nik), st%eigenval(st%nst, st%nik))
+  if(st%ispin == 3) then
+    nullify(st%drho_off, st%zrho_off)
+    allocate(st%R_FUNC(rho_off) (m%np))
+  end if
 
   str = C_string("Occupations")
   occ_fix: if(oct_parse_isdef(str) .ne. 0) then
@@ -115,8 +121,7 @@ subroutine states_init(st, m, val_charge)
 
     ! first guest for occupation...paramagnetic configuration
     ! TODO: for polimers this has to be changed
-    r = 2.0_r8
-    if (st%ispin > 1) r = 1.0_r8
+    r = 2.0_r8 / st%nspin
     st%occ  = 0.0_r8
     st%qtot = 0.0_r8
     do j = 1, st%nst
@@ -142,9 +147,15 @@ subroutine states_end(st)
   sub_name = 'states_end'; call push_sub()
 
   if(associated(st%rho)) then
-    deallocate(st%rho); nullify(st%rho)
-    deallocate(st%occ); nullify(st%occ)
-    deallocate(st%eigenval); nullify(st%eigenval)
+    deallocate(st%rho, st%occ, st%eigenval)
+    nullify   (st%rho, st%occ, st%eigenval)
+  end if
+
+  if(st%ispin==3 .and. associated(st%drho_off)) then
+    deallocate(st%drho_off); nullify(st%drho_off)
+  end if
+  if(st%ispin==3 .and. associated(st%zrho_off)) then
+    deallocate(st%zrho_off); nullify(st%zrho_off)
   end if
 
   if(associated(st%dpsi)) then
@@ -196,7 +207,7 @@ subroutine states_generate_random(st, m, ist_start)
   ist_s = 1
   if(present(ist_start)) ist_s = ist_start
 
-  st%dpsi(0, :, :, :) = 0.0_r8
+  st%R_FUNC(psi) (0, :, :, :) = 0.0_r8
   do ik = 1, st%nik
     do ist = ist_s, st%nst
       do id = 1, st%dim
@@ -248,7 +259,7 @@ subroutine states_fermi(st)
   conv = .true.
   if (abs(sumq - st%qtot) > tol) conv = .false.
   if (conv) then ! all orbitals are full; nothing to be done
-     st%occ = 2.0_r8/min(2, st%ispin)
+     st%occ = 2.0_r8/st%nspin
 
      call pop_sub()
      return
@@ -272,7 +283,7 @@ subroutine states_fermi(st)
 
     do ik = 1, st%nik
       do ie =1, st%nst
-        sumq = sumq + stepf((st%eigenval(ie, ik) - st%ef)/t)/min(2, st%ispin)
+        sumq = sumq + stepf((st%eigenval(ie, ik) - st%ef)/t)/st%nspin
       end do
     end do
 
@@ -291,7 +302,7 @@ subroutine states_fermi(st)
 
   do ik = 1, st%nik
     do ie = 1, st%nst
-      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/min(2, st%ispin)
+      st%occ(ie, ik) = stepf((st%eigenval(ie, ik) - st%ef)/t)/st%nspin
     end do
   end do
  

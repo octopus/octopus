@@ -2,7 +2,7 @@
 subroutine R_FUNC(xc_kli)(func, m, st, rho_core, hartr, pot, energy)
   integer, intent(in) :: func
   type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
+  type(states_type), intent(inout) :: st
   real(r8), intent(IN) :: rho_core(m%np)
   type(hartree_type), intent(inout) :: hartr
   real(r8), intent(out) :: pot(m%np, st%nspin), energy
@@ -20,11 +20,11 @@ subroutine R_FUNC(xc_kli)(func, m, st, rho_core, hartr, pot, energy)
       call R_FUNC(kli_x) (m, st%nspin, st%nst, st%occ, st%eigenval, &
            st%R_FUNC(psi) (0:,1,:,:), hartr, pot, energy, st%rho)
     case(X_FUNC_KLI_SIC)
-      call R_FUNC(kli_x_sic) (m, st%nspin, st%nst, st%occ, st%eigenval, &
-           st%R_FUNC(psi) (0:,1,:,:), rho_core, hartr, pot, energy)
+      call R_FUNC(kli_x_sic) (m, st, st%R_FUNC(psi) (0:,1,:,:), &
+           rho_core, hartr, pot, energy)
     case(C_FUNC_KLI_SIC)
-      call R_FUNC(kli_c_sic) (m, st%nspin, st%nst, st%occ, st%eigenval, &
-           st%R_FUNC(psi) (0:,1,:,:), rho_core, hartr, pot, energy)
+      call R_FUNC(kli_c_sic) (m, st, st%R_FUNC(psi) (0:,1,:,:), &
+           rho_core, hartr, pot, energy)
   end select
 
   call pop_sub()

@@ -38,13 +38,7 @@ R_TYPE function R_FUNC(states_dotp)(m, dim, f1, f2) result(dotp)
   R_TYPE, intent(IN) :: f1(1:m%np, dim), f2(1:m%np, dim)
   R_TYPE :: R_FUNC(states_ddot)
 
-  integer :: i
-
-  dotp = R_TOTYPE(0._r8)
-  do i = 1, dim
-    dotp = dotp + R_FUNC(mesh_dotp)(m, f1, f2)
-  end do
-
+  dotp = sum(R_CONJ(f1)*f2)*m%vol_pp
 end function R_FUNC(states_dotp)
 
 real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
@@ -52,14 +46,7 @@ real(r8) function R_FUNC(states_nrm2)(m, dim, f) result(nrm2)
   integer, intent(in) :: dim
   R_TYPE, intent(IN) :: f(1:m%np, dim)
 
-  integer :: i
-
-  nrm2 = 0._r8
-  do i = 1, dim
-    nrm2 = nrm2 + R_FUNC(mesh_nrm2)(m, f)**2
-  end do
-
-  nrm2 = sqrt(nrm2)
+  nrm2 = sqrt(sum(R_CONJ(f)*f)*m%vol_pp)
 end function R_FUNC(states_nrm2)
 
 ! TODO use netcdf
@@ -224,6 +211,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   end if
   
   call io_close(iunit)
+  call pop_sub()
   return
 
 999 call io_close(iunit)
@@ -231,6 +219,7 @@ logical function R_FUNC(states_load_restart)(filename, m, st, iter, v1, v2) resu
   message(1) = 'Error reading from file '//trim(filename)//"'"
   call write_warning(1)
   ok = .false.
+  call pop_sub()
   return
 
 end function R_FUNC(states_load_restart)

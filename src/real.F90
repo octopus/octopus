@@ -1,6 +1,7 @@
 #define R_TREAL 1
 #define R_FUNC(x) d ## x
 #define R_TYPE real(r8)
+#define R_MPITYPE MPI_DOUBLE_PRECISION
 #define R_ABS(x) abs(x)
 #define R_CONJ(x) (x)
 #define R_REAL(x) (x)

@@ -119,7 +119,7 @@ contains
     character(len=*), intent(in)  :: name, def
     character(len=*), intent(out) :: res
 
-    res = ""
+    call clear_str(res)
     call oct_parse_string(C_string(name), C_string(def), res)
   end subroutine oct_parse_str
 
@@ -143,7 +143,7 @@ contains
     character(len=80) :: name1
 
     name1 = C_string(name)
-    res = ""
+    call clear_str(res)
     call oct_parse_block_string(name1, l, c, res)
   end subroutine oct_parse_block_str
 
@@ -154,9 +154,18 @@ contains
     integer :: i
     
     i = len(trim(si))
-    so = ""
+    call clear_str(so)
     so(1:i) = si(1:i)
     so(i+1:i+1) = achar(0)
   end function C_string
+
+  subroutine clear_str(str)
+    character(len=*), intent(out) :: str
+
+    integer :: i
+    do i = 1, len(str)
+      str(i:i) = " "
+    end do
+  end subroutine clear_str
 
 end module liboct

@@ -244,9 +244,9 @@ subroutine xc_init(xcs, m, ispin)
     call write_fatal(2)
   end select
 
-  ! can only do non-colinear spin with LDA
-  if(ispin == 4 .and. &
-       (.not.(xcs%x_family == XC_FAMILY_ZER.or.xcs%x_family == XC_FAMILY_LDA) .or. &
+  ! can only do non-colinear spin within the LDA
+  if(ispin == 3 .and. ( &
+       .not.(xcs%x_family == XC_FAMILY_ZER.or.xcs%x_family == XC_FAMILY_LDA) .or. &
        .not.(xcs%c_family == XC_FAMILY_ZER.or.xcs%c_family == XC_FAMILY_LDA))) then
     message(1) = "Can only handle non-colinear spin within the LDA!"
   end if

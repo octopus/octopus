@@ -59,11 +59,11 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
     else ! spin down
       Hpsi(:, 1) = Hpsi(:, 1) + h%Vxc(:, 2)*psi(1:, 1)
     end if
-  case(4) ! dim = 2  ---- WARNING: not tested!!!
+  case(3) ! dim = 2
     Hpsi(:, 1) = Hpsi(:, 1) + &
-         h%Vxc(:, 1)*psi(1:, 1) + h%Vxc(:, 3)*psi(1:, 2)
+         h%Vxc(:, 1)*psi(1:, 1) + h%R_FUNC(Vxc_off)(:)*psi(1:, 2)
     Hpsi(:, 2) = Hpsi(:, 2) + &
-         h%Vxc(:, 2)*psi(1:, 2) + h%Vxc(:, 4)*psi(1:, 1)
+         h%Vxc(:, 2)*psi(1:, 2) + R_CONJ(h%R_FUNC(Vxc_off)(:))*psi(1:, 1)
   end select
 
   ! Ionic pseudopotential
@@ -83,6 +83,7 @@ subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
     end if
   enddo
 
+  !call pop_sub()
 end subroutine R_FUNC(Hpsi)
 
 subroutine R_FUNC(hamiltonian_setup)(h, sys)
@@ -90,6 +91,7 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
   type(system_type), intent(inout) :: sys
 
   real(r8), allocatable :: v_aux(:,:)
+  R_TYPE, pointer :: v_aux2(:)
   integer :: i
 
   h%epot = 0._r8 ! The energy coming from the potentials
@@ -101,9 +103,23 @@ subroutine R_FUNC(hamiltonian_setup)(h, sys)
     end do
     
     allocate(v_aux(h%np, sys%st%nspin))
+    if(h%ispin == 3) then
+      allocate(v_aux2(h%np))
+    else
+      nullify(v_aux2)
+    end if
+
     call R_FUNC(xc_pot)(h%xc, sys%m, sys%st, h%hart, h%rho_core, &
-         h%Vxc, v_aux, h%ex, h%ec)
+         h%Vxc, v_aux, h%ex, h%ec, h%R_FUNC(Vxc_off),  v_aux2)
+
     h%Vxc = h%Vxc + v_aux
+    if(h%ispin == 3) then
+      h%R_FUNC(Vxc_off) = h%R_FUNC(Vxc_off) + v_aux2
+      deallocate(v_aux2); nullify(v_aux2)
+      h%epot = h%epot - sys%m%vol_pp*2._r8* &
+           sum(real(R_CONJ(sys%st%R_FUNC(rho_off)(:))*h%R_FUNC(Vxc_off)(:), r8))
+    end if
+
     do i = 1, sys%st%nspin
       h%epot = h%epot - dmesh_dotp(sys%m, sys%st%rho(:, i), h%Vxc(:, i))
     end do

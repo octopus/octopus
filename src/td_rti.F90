@@ -22,17 +22,17 @@ contains
 
   subroutine td_dtexp(ik, zpsi, timestep, t)
     integer, intent(in) :: ik
-    complex(r8), intent(inout) :: zpsi(0:sys%m%np)
+    complex(r8), intent(inout) :: zpsi(0:sys%m%np, sys%st%dim)
     real(r8), intent(in) :: timestep, t
 
     integer, parameter :: order = 4
 
     complex(r8) :: zfact
-    complex(r8), allocatable :: zpsi1(:), hzpsi1(:), grad(:,:)
+    complex(r8), allocatable :: zpsi1(:,:), hzpsi1(:,:), grad(:,:)
     real(r8) :: x(3), f(3)
-    integer i, k, l
+    integer i, k, idim
 
-    allocate(zpsi1(0:sys%m%np), hzpsi1(sys%m%np))
+    allocate(zpsi1(0:sys%m%np, sys%st%dim), hzpsi1(sys%m%np, sys%st%dim))
 
     zfact = 1._r8
     zpsi1 = zpsi
@@ -48,16 +48,18 @@ contains
           
           do k = 1, sys%m%np
             call mesh_xyz(sys%m, k, x)
-            hzpsi1(k) = hzpsi1(k) + sum(x*f) * zpsi1(k)
+            hzpsi1(k,:) = hzpsi1(k,:) + sum(x*f) * zpsi1(k,:)
           end do
           
         case(2) ! velocity gauge
           call laser_vector_field(td%no_lasers, td%lasers, t, f)
           allocate(grad(3, sys%m%np))
-          call zmesh_derivatives(sys%m, zpsi1, grad=grad)
-          do k = 1, sys%m%np
-            hzpsi1(k) = hzpsi1(k) - M_zI * sum(f(:)*grad(:, k)) + &
-                 sum(f**2)/2._r8 * zpsi1(k)
+          do idim = 1, sys%st%dim
+            call zmesh_derivatives(sys%m, zpsi1(:, idim), grad=grad)
+            do k = 1, sys%m%np
+              hzpsi1(k, idim) = hzpsi1(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
+                   sum(f**2)/2._r8 * zpsi1(k, idim)
+            end do
           end do
           deallocate(grad)
         end select
@@ -65,12 +67,14 @@ contains
       
       ! absorbing potential
       if(td%ab .eq. 1) then
-        hzpsi1 = hzpsi1 + M_zI*td%ab_pot(:)*zpsi1(1:)
+        do idim = 1, sys%st%dim
+          hzpsi1(:, idim) = hzpsi1(:, idim) + M_zI*td%ab_pot(:)*zpsi1(1:, idim)
+        end do
       end if
       
-      zpsi(1:) = zpsi(1:) + zfact*hzpsi1(:)
+      zpsi(1:,:) = zpsi(1:,:) + zfact*hzpsi1(:,:)
       
-      if(i .ne. order) zpsi1(1:) = hzpsi1(:)
+      if(i .ne. order) zpsi1(1:,:) = hzpsi1(:,:)
     end do
     
     deallocate(zpsi1, hzpsi1)
@@ -103,7 +107,7 @@ contains
     zpsi1 = st%zpsi
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(ik, st%zpsi(:, :, ist, ik), td%dt, t-td%dt)
+        call td_dtexp(ik, st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
       end do
     end do
     st%zpsi = zpsi1
@@ -117,7 +121,7 @@ contains
     
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
-        call td_dtexp(ik, sys%st%zpsi(:, :, ist, ik), td%dt, t-td%dt)
+        call td_dtexp(ik, sys%st%zpsi(:,:, ist, ik), td%dt, t-td%dt)
       end do
     end do
     

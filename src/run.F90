@@ -65,7 +65,7 @@ contains
 
 subroutine run()
   type(td_type), pointer :: td
-  integer :: i, iunit
+  integer :: iunit
   logical :: log
 
   sub_name = 'run'; call push_sub()
@@ -99,14 +99,9 @@ subroutine run()
 
       ! wave functions are simply random gaussians
       call states_generate_random(sys%st, sys%m)
-      ! we will need some starting density in order to define the hamiltonian
+      call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
+      ! this is certainly a better density
       call lcao_dens(sys, sys%st%nspin, sys%st%rho)
-
-      ! TODO: non-collinear spin
-      ! the off-diagonal densities are set to zero
-      !if(sys%st%ispin > 2) then
-      !  sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
-      !end if
 
     case(I_LOAD_RPSI)
       message(1) = 'Info: Loading rpsi.'
@@ -222,6 +217,12 @@ subroutine run()
 
       ! load zpsi from static file.
       if(zstates_load_restart(trim(sys%sysname)//".restart", sys%m, sys%st)) then
+        if(h%ispin == 3) then
+          deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
+          nullify(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
+          allocate(h%zVxc_off(sys%m%np), sys%st%zrho_off(sys%m%np))
+          h%zVxc_off = M_z0; sys%st%zrho_off = M_z0
+        end if
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
         call zhamiltonian_setup(h, sys)
         call zhamiltonian_eigenval (h, sys, 1, sys%st%nst)
@@ -242,6 +243,13 @@ subroutine run()
 
       if(zstates_load_restart(trim(td%filename), &
            sys%m, sys%st, iter=td%iter, v1=td%v_old1, v2=td%v_old2)) then
+
+        if(h%ispin == 3) then
+          deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
+          nullify(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))
+          allocate(h%zVxc_off(sys%m%np), sys%st%zrho_off(sys%m%np))
+          h%zVxc_off = M_z0; sys%st%zrho_off = M_z0
+        end if
 
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
