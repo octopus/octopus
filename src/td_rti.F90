@@ -147,7 +147,7 @@ contains
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
-        write(*, *) maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /))
+        !write(*, *) maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /))
         if( maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /)) < scf_threshold) exit
 
         st%zpsi = zpsi1
