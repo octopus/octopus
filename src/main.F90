@@ -73,12 +73,12 @@ program octopus
        " at ", val(5), ":", val(6), ":", val(7)
   call write_info(1)
 
-  call global_end()
-
 #if defined(HAVE_MPI)
   ! wait for all processors to finish
   call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
+
+  call global_end()
 
   stop
 end program octopus
