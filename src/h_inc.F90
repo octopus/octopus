@@ -53,7 +53,7 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
 
   sub_name = 'Hpsi'; call push_sub()
 
-  call R_FUNC(kinetic) (m, st, psi, Hpsi)
+  call R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
   call R_FUNC(vlpsi)   (h, m, st, ik, psi, Hpsi)
   if(sys%nlpp) call R_FUNC(vnlpsi)  (m, st, sys, psi, Hpsi)
 
@@ -77,11 +77,14 @@ subroutine R_FUNC(Hpsi) (h, m, st, sys, ik, psi, Hpsi, t)
   call pop_sub(); return
 end subroutine R_FUNC(Hpsi)
 
-subroutine R_FUNC(kinetic) (m, st, psi, Hpsi)
+subroutine R_FUNC(kinetic) (ik, m, st, psi, Hpsi)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
   R_TYPE, intent(IN) :: psi(0:m%np, st%dim)
   R_TYPE, intent(out) :: Hpsi(m%np, st%dim)
+  integer :: ik
+  R_TYPE, allocatable :: grad(:,:)
+  real(r8) :: k2
 
   integer :: idim, i, np, dim
   R_TYPE :: d
@@ -90,28 +93,32 @@ subroutine R_FUNC(kinetic) (m, st, psi, Hpsi)
   np = m%np
   dim = st%dim
 
-# if defined(POLYMERS)
-    R_TYPE, allocatable :: grad(:,:)
-    real(r8) :: k2
-
+  if(conf%periodic_dim>0) then
+#if defined(COMPLEX_WFNS)
     allocate(grad(3, m%np))
-    k2 = sum(st%kpoints(:, ik)**2)/2._r8
+    k2 = sum(st%kpoints(:, ik)**2)
     do idim = 1, dim
       call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), grad=grad(:,:))
-
       do i = 1, m%np
-        Hpsi(i, idim) = Hpsi(i, idim) &
-             + 2._r8*M_zI*sum(st%kpoints(:, ik)*grad(:, i)) &
-             - k2*psi(i, idim)
+        Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
+             + M_TWO*M_zI*sum(st%kpoints(:, ik)*grad(:, i)) &
+             - k2*psi(i, idim))
       end do
     end do
     deallocate(grad)
-# else
+#else
+    message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
+    message(2) = "Reconfigure with --enable-complex, and remake"
+    call write_fatal(2)
+#endif
+  
+  else
     d = R_TOTYPE(-1.0_r8/2.0_r8)
     do idim = 1, dim
       call R_FUNC(mesh_derivatives) (m, psi(:, idim), lapl=Hpsi(:, idim), alpha=d )
     end do
-#endif
+  end if
+
 
   call pop_sub(); return
 end subroutine R_FUNC(kinetic)
