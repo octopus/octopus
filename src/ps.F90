@@ -42,6 +42,8 @@ type ps_type
   type(loct_spline_type), pointer :: so_dkb(:, :)
   type(loct_spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
   type(loct_spline_type) :: vlocal  ! local part
+  type(loct_spline_type) :: vlocal_f  ! localized part of local potential 
+                                      ! in Fourier space (for periodic)
   type(loct_spline_type) :: dvlocal ! derivative of the local part
   type(loct_spline_type) :: core    ! core charge
   type(logrid_type) :: g
@@ -172,6 +174,9 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   call loct_spline_init(ps%vlocal)
   call loct_spline_init(ps%dvlocal)
   call loct_spline_init(ps%core)
+  if (conf%periodic_dim > 0) then
+    call loct_spline_init(ps%vlocal_f)
+  end if 
 
 ! Now we load the necessary information.
   select case(flavour(1:2))
@@ -317,6 +322,9 @@ subroutine ps_end(ps)
   call loct_spline_end(ps%vlocal)
   call loct_spline_end(ps%dvlocal)
   call loct_spline_end(ps%core)  
+  if (conf%periodic_dim > 0) then
+    call loct_spline_end(ps%vlocal_f)
+  end if 
 
   deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
   if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)
@@ -383,6 +391,9 @@ subroutine tm_load(ps, pstm)
 
   ! now we fit the splines
   call get_splines_tm(pstm, ps)
+  if (conf%periodic_dim > 0) then
+    call get_splines_tm_fourier(pstm, ps)
+  end if
 
   ! Passes from Rydbergs to Hartrees.
   ps%h(0:ps%l_max,:,:)    = ps%h(0:ps%l_max,:,:)    / M_TWO
@@ -487,6 +498,42 @@ subroutine get_splines_tm(psf, ps)
 
   call pop_sub()
 end subroutine get_splines_tm
+
+subroutine get_splines_tm_fourier(psf,ps)
+  type(tm_type), intent(in) :: psf
+  type(ps_type), intent(inout) :: ps
+
+! the G spline is temporary calculated on psf%nrval values
+! with a |G| mesh of 0.1 
+! This should be thought more accurately.
+  real, parameter :: h = CNST(0.1)   ! mesh for the |G| values
+  real, parameter :: a_erf = M_TWO   ! see epot
+  FLOAT :: modg(psf%nrval), int(psf%nrval)
+
+  integer :: i,j
+
+  call push_sub('get_splines_tm')
+
+  int = M_ZERO
+  do j = 2, psf%nrval
+    int(1) = int(1) +  &
+            (loct_splint(ps%vlocal,ps%g%rofi(j)) -    &
+             ps%Z_val*(M_ONE - loct_erf(a_erf*ps%g%rofi(j))))*   &
+             ps%g%rofi(j)*ps%g%drdi(j)
+
+  end do
+  do i = 2, psf%nrval
+    modg(i) = (i-1)*h 
+    do j = 2, psf%nrval
+      int(i) = int(i) +  &
+              (loct_splint(ps%vlocal,ps%g%rofi(j)) -  &
+               ps%Z_val*(M_ONE - loct_erf(a_erf*ps%g%rofi(j))))*   &
+               sin(modg(i)*ps%g%rofi(j))*modg(i)*ps%g%drdi(j)
+    end do
+  end do
+  call loct_spline_fit(psf%nrval, modg, int, ps%vlocal_f)
+
+end subroutine get_splines_tm_fourier
 
 subroutine get_splines_hgh(psp, ps)
   type(hgh_type), intent(IN)    :: psp
