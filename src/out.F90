@@ -96,9 +96,10 @@ subroutine output_init(outp)
       end if
     end if
 
-    call oct_parse_int(C_string("OutputEvery"), 1000, outp%iter)
   end if
   
+  ! this is always needed in a time-dependent calculation
+  call oct_parse_int(C_string("OutputEvery"), 1000, outp%iter)
 end subroutine output_init
 
 #include "undef.F90"

@@ -35,13 +35,6 @@ subroutine td_init(td, sys, m, st)
     call write_fatal(2)
   end if
   
-  call oct_parse_int(C_string("TDSaveIter"), 100, td%save_iter)
-  if (td%save_iter < 0 .or. td%save_iter>td%max_iter) then
-    write(message(1), '(a,i6,a)') "Input: '", td%save_iter, "' is not a valid TDSaveIter"
-    message(2) = '(0 <= TDSaveIter <= TDMaximumIter)'
-    call write_fatal(2)
-  end if
-
   call oct_parse_double(C_string("TDTimeStep"), 0.07_r8/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= 0._r8) then
@@ -116,7 +109,7 @@ subroutine td_init(td, sys, m, st)
 
   ! now the photoelectron stuff
   call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
-  call PES_init(td%PESv, m, sys%st, dummy, td%save_iter)
+  call PES_init(td%PESv, m, sys%st, dummy, sys%outp%iter)
 
   ! occupational analysis stuff
   call oct_parse_logical(C_string("TDOccupationalAnalysis"), .false., td%occ_analysis)

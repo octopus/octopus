@@ -109,7 +109,7 @@ subroutine unocc_run(u, sys, h)
   ! write output file
   call io_assign(iunit)
   call oct_mkdir(C_string("static"))
-  open(iunit, status='unknown', file='eigenvalues')
+  open(iunit, status='unknown', file='static/eigenvalues')
   if(converged) then
     write(iunit,'(a)') 'Occupation analysis converged.'
   else

@@ -23,8 +23,8 @@
     if(mpiv%node==0) then
     call io_assign(iunit)
     open(iunit, position='append', file="td.general/multipoles")
-    do j = 1, td%save_iter
-      jj = i - td%save_iter + j
+    do j = 1, sys%outp%iter
+      jj = i - sys%outp%iter + j
       call td_write_multipole(iunit, jj, jj*td%dt, &
            dipole(:, j), multipole(:,:, j), .false.)
     end do
@@ -35,8 +35,8 @@
     if(h%output_laser .and. mpiv%node==0) then
       call io_assign(iunit)
       open(iunit, position='append', file='td.general/laser')
-      do j = 1, td%save_iter
-        jj = i - td%save_iter + j
+      do j = 1, sys%outp%iter
+        jj = i - sys%outp%iter + j
         call td_write_laser(iunit, jj, jj*td%dt, .false.)
       end do
       call io_close(iunit)
@@ -49,8 +49,8 @@
       call io_assign(iunit)
       write(filename, '(a,i3.3)') 'td.general/projections.', mpiv%node
       open(iunit, position='append', file=filename)
-      do j = 1, td%save_iter
-        jj = i - td%save_iter + j
+      do j = 1, sys%outp%iter
+        jj = i - sys%outp%iter + j
         do ik = 1, sys%st%nik
           do ist = 1, sys%st%nst
             write(iunit, fmt) jj*td%dt, (projections(uist, ist, ik, j), uist = 1, u_st%nst)
@@ -64,8 +64,8 @@
     if(td%move_ions > 0 .and. mpiv%node==0) then
     call io_assign(iunit)
     open(iunit, position='append', file='td.general/coordinates')
-    do j = 1, td%save_iter
-       jj = i -td%save_iter + j
+    do j = 1, sys%outp%iter
+       jj = i -sys%outp%iter + j
        call td_write_nbo(iunit, jj, jj*td%dt, ke(j), pe(j), x(j, :, :), v(j, :, :), f(j, :, :), & 
                          header=.false.)
     enddo
@@ -76,15 +76,15 @@
     if(td%harmonic_spectrum .and. mpiv%node==0) then
        call io_assign(iunit)
        open(iunit, position='append', file="td.general/acceleration")
-       do j = 1, td%save_iter
-          jj = i - td%save_iter + j
+       do j = 1, sys%outp%iter
+          jj = i - sys%outp%iter + j
           call td_write_acc(iunit, jj, jj*td%dt, tacc(j, 1:3), header=.false.)
        enddo
        call io_close(iunit)
     endif
 
 #ifndef DISABLE_PES
-    call PES_output(td%PESv, sys%m, sys%st, i, td%save_iter, td%dt)
+    call PES_output(td%PESv, sys%m, sys%st, i, sys%outp%iter, td%dt)
 #endif
 
   end subroutine td_write_data

@@ -35,7 +35,6 @@ type td_type
   complex(r8), pointer :: zpsi(:,:,:) ! the complex wavefunctions
 
   integer :: max_iter  ! maximum number of iterations to perform
-  integer :: save_iter ! save every save_iter iterations
   integer :: iter      ! the actual iteration
 
   integer :: evolution_method ! which evolution method to use
@@ -96,18 +95,18 @@ subroutine td_run(td, u_st, sys, h)
 
   sub_name = 'td_run'; call push_sub()
   
-  allocate(dipole(sys%st%nspin, td%save_iter))
-  allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
+  allocate(dipole(sys%st%nspin, sys%outp%iter))
+  allocate(multipole((td%lmax + 1)**2, sys%st%nspin, sys%outp%iter))
   if(td%move_ions > 0) then
-     allocate(x(td%save_iter, sys%natoms, conf%dim), v(td%save_iter, sys%natoms, conf%dim), &
-              f(td%save_iter, sys%natoms, conf%dim))
-     allocate(ke(td%save_iter), pe(td%save_iter))
+     allocate(x(sys%outp%iter, sys%natoms, conf%dim), v(sys%outp%iter, sys%natoms, conf%dim), &
+              f(sys%outp%iter, sys%natoms, conf%dim))
+     allocate(ke(sys%outp%iter), pe(sys%outp%iter))
   endif
-  if(td%harmonic_spectrum) allocate(tacc(td%save_iter, conf%dim))
+  if(td%harmonic_spectrum) allocate(tacc(sys%outp%iter, conf%dim))
 
   ! occupational analysis stuff
   if(td%occ_analysis) then
-    allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, td%save_iter))
+    allocate(projections(u_st%nst, sys%st%st_start:sys%st%st_end, sys%st%nik, sys%outp%iter))
   end if
 
   ! Calculate initial forces and kinetic energy
@@ -249,8 +248,8 @@ subroutine td_run(td, u_st, sys, h)
 
     ! write down data
     ii = ii + 1
-    save: if(ii==td%save_iter+1 .or. i == td%max_iter) then ! output
-      if(i == td%max_iter) td%save_iter = ii - 1
+    save: if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
+      if(i == td%max_iter) sys%outp%iter = ii - 1
       ii = 1
 
       ! first resume file
