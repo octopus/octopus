@@ -27,8 +27,7 @@ module math
   implicit none
   
   private
-  public :: grylmr, weights, quickrnd, stepf
-  
+  public :: grylmr, weights, quickrnd, stepf, ddet, zdet
 
 contains
 
@@ -294,5 +293,53 @@ subroutine weights(N, M, cc)
   end do
 
 end subroutine weights
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! ddet and zdet return the determinant of a square matrix a of dimensions (n,n)
+! (ddet for real and zdet for complex numbers)
+real(r8) function ddet(a, n)
+  integer, intent(in) :: n
+  real(r8) :: a(n, n)
+
+  integer :: i, info, ipiv(n)
+
+  call dgetrf(n, n, a, n, ipiv, info)
+  if(info < 0) then
+    write(message(1),'(a,i4)') 'In states_mpdotp, LAPACK dgetrf returned error code ',info
+    call write_fatal(1)
+  endif
+  ddet = M_ONE
+  do i = 1, n
+     ddet = ddet*a(i, i)
+     if(ipiv(i).ne.i) then
+       ipiv(ipiv(i)) = ipiv(i)
+       ddet = -ddet
+     endif
+  enddo
+
+end function ddet
+
+complex(r8) function zdet(a, n)
+  integer, intent(in) :: n
+  complex(r8) :: a(n, n)
+
+  integer :: info, i, ipiv(n)
+
+  call zgetrf(n, n, a, n, ipiv, info)
+  if(info < 0) then
+    write(message(1),'(a,i4)') 'In states_mpdotp, LAPACK zgetrf returned error code ',info
+    call write_fatal(1)
+  endif
+  zdet = M_z1
+  do i = 1, n
+     zdet = zdet*a(i, i)
+     if(ipiv(i).ne.i) then
+       ipiv(ipiv(i)) = ipiv(i)
+       zdet = -zdet
+     endif
+  enddo
+
+end function zdet
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module math
