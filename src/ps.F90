@@ -32,28 +32,34 @@ implicit none
 private
 public :: ps_type, ps_init, ps_debug, ps_end
 
+integer, parameter, public :: &
+   PS_TM2 = 100, &
+   PS_HGH = 101
+
+character(len=3), parameter  :: ps_name(PS_TM2:PS_HGH) = (/"tm2", "hgh"/)
+
 type ps_type
   character(len=10) :: label
-  character(len=3) :: flavour
+  integer           :: flavour
 
   type(loct_spline_type), pointer :: kb(:, :)   ! Kleynman-Bylander projectors
   type(loct_spline_type), pointer :: so_kb(:, :)
   type(loct_spline_type), pointer :: dkb(:, :)  ! derivatives of KB projectors
   type(loct_spline_type), pointer :: so_dkb(:, :)
   type(loct_spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
-  type(loct_spline_type) :: vlocal  ! local part
+  type(loct_spline_type) :: vlocal    ! local part
   type(loct_spline_type) :: vlocal_f  ! localized part of local potential 
                                       ! in Fourier space (for periodic)
-  type(loct_spline_type) :: dvlocal ! derivative of the local part
-  type(loct_spline_type) :: core    ! core charge
+  type(loct_spline_type) :: dvlocal   ! derivative of the local part
+  type(loct_spline_type) :: core      ! core charge
   type(logrid_type) :: g
 
-  integer  :: ispin ! Consider spin (ispin = 2) or not (ispin = 1)
-  integer  :: kbc  ! Number of KB components (1 for TM ps, 3 for HGH)
-  FLOAT :: z, z_val
-  integer :: l_max ! maximum value of l to take
-  integer :: l_loc ! which component to take as local
-  integer :: so_l_max ! obvious meaning ;)
+  integer  :: ispin    ! Consider spin (ispin = 2) or not (ispin = 1)
+  integer  :: kbc      ! Number of KB components (1 for TM ps, 3 for HGH)
+  FLOAT    :: z, z_val
+  integer  :: l_max    ! maximum value of l to take
+  integer  :: l_loc    ! which component to take as local
+  integer  :: so_l_max ! obvious meaning ;)
 
   type(valconf) :: conf
 
@@ -73,7 +79,7 @@ contains
 subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   type(ps_type),     intent(out) :: ps
   character(len=10), intent(in)  :: label
-  character(len=3),  intent(in)  :: flavour
+  integer         ,  intent(in)  :: flavour
   integer,           intent(in)  :: lmax, lloc, ispin
   FLOAT,             intent(in)  :: z
 
@@ -93,8 +99,10 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   ps%ispin   = ispin
 
   ! Initialization and processing.
-  select case(flavour(1:2))
-  case('tm')
+  ASSERT(flavour==PS_TM2.or.flavour==PS_HGH)
+
+  select case(flavour)
+  case(PS_TM2)
     call tm_init(pstm, trim(label), ispin)
     ps%l_max = min(pstm%npotd - 1, lmax)   ! Maybe the file has not enough components.
     call valconf_copy(ps%conf, pstm%conf)
@@ -104,9 +112,9 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%l_loc = lloc
     if(ps%l_max == 0) ps%l_loc = 0 ! Vanderbilt is not acceptable if ps%l_max == 0.
     if(pstm%npotu==0) then
-       ps%so_l_max = -1
+      ps%so_l_max = -1
     else
-       ps%so_l_max = min(pstm%npotu, ps%l_max)
+      ps%so_l_max = min(pstm%npotu, ps%l_max)
     endif
     ps%z = z
     call tm_process(pstm, lmax, ps%l_loc)
@@ -117,7 +125,8 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%g%rofi = pstm%g%rofi
     ps%g%drdi = pstm%g%drdi
     if(conf%verbose > 999) call tm_debug(pstm)
-  case('hg')
+
+  case(PS_HGH)
     call hgh_init(psp, trim(label), ispin)
     call valconf_copy(ps%conf, psp%conf)
     ps%kbc = 3
@@ -133,22 +142,21 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%g%rofi = psp%g%rofi
     ps%g%drdi = psp%g%drdi
     if(conf%verbose > 999) call hgh_debug(psp)
-  case default
-    message(1) = "Unknown pseudopotential type: '" // trim(flavour) // "'"
-    call write_fatal(1)
+
   end select
 
 ! We allocate all the stuff
   allocate(ps%kb      (0:ps%l_max, ps%kbc),         &
            ps%dkb     (0:ps%l_max, ps%kbc),         &
-           ps%ur      (ps%conf%p, ps%ispin),   &
+           ps%ur      (ps%conf%p, ps%ispin),        &
            ps%dknrm   (0:ps%L_max),                 &
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))!, &
-           !ps%dknrm = M_ZERO; ps%h = M_ZERO; ps%k = M_ZERO!; ps%occ = M_ZERO
-           ps%dknrm   (0:ps%L_max) = M_ZERO
-           ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
-           ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
+  
+  ps%dknrm   (0:ps%L_max) = M_ZERO
+  ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
+  ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
+
   if(ps%so_l_max >= 0) then
     allocate(ps%so_kb (0:ps%l_max, ps%kbc), &
              ps%so_dkb(0:ps%l_max, ps%kbc), &
@@ -179,11 +187,11 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   end if 
 
 ! Now we load the necessary information.
-  select case(flavour(1:2))
-  case('tm')
+  select case(flavour)
+  case(PS_TM2)
     call tm_load(ps, pstm)
     call tm_end(pstm)
-  case('hg')
+  case(PS_HGH)
     call hgh_load(ps, psp)
     call hgh_end(psp)
   end select
@@ -202,7 +210,7 @@ subroutine ps_debug(ps)
   character(len=30) :: dir
   integer           :: info_unit, local_unit, nonlocal_unit, wave_unit, so_unit, &
                        i, j, k, l, is
-  FLOAT          :: r
+  FLOAT             :: r
 
   call push_sub('ps_debug')
 
@@ -220,8 +228,8 @@ subroutine ps_debug(ps)
 
   ! Writes down the info.
   write(info_unit,'(a,/)')      ps%label
-  write(info_unit,'(a,a,/)')    'Flavour : ',ps%flavour
-  write(info_unit,'(a,f6.3)')   'z       : ',ps%z
+  write(info_unit,'(a,a,/)')    'Flavour : ', ps_name(ps%flavour)
+  write(info_unit,'(a,f6.3)')   'z       : ', ps%z
   write(info_unit,'(a,f6.3,/)') 'zval    : ', ps%z_val
   write(info_unit,'(a,i4)')     'lmax    : ', ps%l_max
   write(info_unit,'(a,i4)')     'lloc    : ', ps%l_loc

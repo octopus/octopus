@@ -607,7 +607,7 @@ contains
       endif
       
       ! and here we calculate the uVu
-      if(s%ps%flavour(1:2) == 'tm') then
+      if(s%ps%flavour == PS_TM2) then
         ep%vnl(ivnl)%uvu(:, :) = M_ZERO
             if(l .ne. s%ps%L_loc) then
               do j = 1, ep%vnl(ivnl)%n

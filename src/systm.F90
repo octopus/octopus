@@ -124,7 +124,7 @@ contains
     integer,         intent(in) :: spin_channels
     FLOAT, intent(inout)        :: rho(:, :) ! (m%np, spin_channels)
 
-    integer :: opt, i, in_points, k, n
+    integer :: i, in_points, k, n
     FLOAT :: r
     R_TYPE :: psi1, psi2
     type(specie_type), pointer :: s
@@ -132,30 +132,17 @@ contains
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
     s => atom%spec
-
-    ! select what kind of density we should build
-    if(conf%dim==3) then
-      select case(s%label(1:5))
-      case('usdef')
-        opt = 1
-      case('jelli', 'point')
-        opt = 2
-      case default
-        opt = 3
-      end select
-    else
-      opt = 1
-    end if
-
     rho = M_ZERO
+
     ! build density...
-    select case (opt)
-    case (1) ! ...from userdef
+    select case (s%type)
+    case (SPEC_USDEF) ! ...from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = real(s%Z_val, PRECISION) /  &
            (m%np*m%vol_pp(:)*real(spin_channels, PRECISION))
       end do
-    case (2) ! ...from jellium
+
+    case (SPEC_POINT, SPEC_JELLI) ! ...from jellium
       in_points = 0
       do i = 1, m%np
         call mesh_r(m, i, r, a=atom%x)
@@ -174,7 +161,7 @@ contains
         end do
       end if
 
-    case (3) ! ...from pseudopotential
+    case (SPEC_PS_TM2,SPEC_PS_HGH) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
       do k = 1, 3**conf%periodic_dim
         do i = 1, m%np
