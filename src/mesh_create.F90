@@ -430,7 +430,7 @@ subroutine mesh_create_xyz(m, enlarge)
                 if(  &
                    ix+i>=m%nr(1,1).and.ix+i<=m%nr(2,1).and. &
                    iy+j>=m%nr(1,2).and.iy+j<=m%nr(2,2).and. &
-                   iz+k>=m%nr(1,2).and.iz+k<=m%nr(2,3)) Lxyz_tmp(ix+i, iy+j, iz+k) = 2
+                   iz+k>=m%nr(1,3).and.iz+k<=m%nr(2,3)) Lxyz_tmp(ix+i, iy+j, iz+k) = 2
               end do
             end do
           end do
@@ -557,7 +557,7 @@ contains
     in_minimum = .false.
     do i = 1, m%geo%natoms
       r = sqrt(sum((x(:) - m%geo%atom(i)%x(:))**2))
-      if(r <= m%rsize+DELTA_R) then
+      if(r<=m%rsize+DELTA_R) then
         in_minimum = .true.
         exit
       end if
@@ -586,7 +586,6 @@ function mesh_index(m, ix_, dir) result(index)
       if(ix(i) < m%nr(1, i)) then       ! first look left
         if(i <= conf%periodic_dim) then ! fold point
           ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i))
-!          ix(i) = ix(i) - 2*m%nr(1, i)
         else
           ix(i) = m%nr(1, i)
           index = 0
@@ -594,7 +593,6 @@ function mesh_index(m, ix_, dir) result(index)
       else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
         if(i <= conf%periodic_dim) then
           ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i))
-!          ix(i) = ix(i) + 2*m%nr(1, i)
         else
           ix(i) = m%nr(2, i)
           index = 0
@@ -612,5 +610,4 @@ function mesh_index(m, ix_, dir) result(index)
       end do
     end if
     
-
 end function mesh_index
