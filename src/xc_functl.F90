@@ -160,8 +160,7 @@ contains
         call xc_lda_init(functl%conf, functl%info, functl%id, spin_channels)
       else
         call loct_parse_int('LDAX', XC_NON_RELATIVISTIC, rel)
-        ! WARNING: check what is the most convenient default for alpha
-        call loct_parse_float('Xalpha', -M_ONE/M_THREE, alpha) 
+        call loct_parse_float('Xalpha', M_ONE, alpha) 
         call xc_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
            spin_channels, conf%dim, rel, alpha)
       end if
