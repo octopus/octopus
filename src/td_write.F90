@@ -28,7 +28,9 @@ subroutine td_write_spin(out, m, st, td, iter)
   call push_sub('td_write_spin')
 
   ! The spin has to be calculated by all nodes...
-  call zstates_calculate_spin(m, st, spin)
+  ! The expectation value of the spin operator is half the magnetization value
+  call zstates_calculate_magnetization(m, st, spin)
+  spin = M_HALF*spin
 
   if(mpiv%node.ne.0) then ! only first node outputs
     call pop_sub(); return

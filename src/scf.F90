@@ -419,8 +419,7 @@ subroutine write_magnet(iunit, mesh, st)
   integer :: i, ik, ist
 
   write(iunit, '(a)') 'Magnetization:'
-  call X(states_calculate_spin)(mesh, st, m)
-  m = M_TWO*m
+  call X(states_calculate_magnetization)(mesh, st, m)
 
   if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
     write(iunit, '(a,f15.6)') ' mz = ', m(3)

@@ -695,10 +695,10 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 end function X(states_mpdotp)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(states_calculate_spin)(m, st, spin)
+subroutine X(states_calculate_magnetization)(m, st, mag)
   type(mesh_type),   intent(in)  :: m
   type(states_type), intent(in)  :: st
-  FLOAT,             intent(out) :: spin(3)
+  FLOAT,             intent(out) :: mag(3)
 
   integer :: ik, ist, i
   FLOAT :: sign, temp(3)
@@ -707,7 +707,7 @@ subroutine X(states_calculate_spin)(m, st, spin)
   integer :: ierr
 #endif
 
-  call push_sub('states_calculate_spin')
+  call push_sub('states_calculate_magnetization')
 
   select case(st%d%ispin)
   case(SPIN_POLARIZED) ! collinear spin
@@ -719,7 +719,6 @@ subroutine X(states_calculate_spin)(m, st, spin)
       end do
       sign = -sign
     end do
-    temp = M_HALF*temp
     
   case(SPINORS) ! non-collinear
     temp = M_ZERO
@@ -727,10 +726,10 @@ subroutine X(states_calculate_spin)(m, st, spin)
       do ist = 1, st%nst
         do i = 1, m%np
           c = R_CONJ(st%X(psi) (i, 1, ist, ik)) * st%X(psi) (i, 2, ist, ik)
-          temp(1) = temp(1) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
-          temp(2) = temp(2) - st%d%kweights(ik)*st%occ(ist, ik)* R_AIMAG(c)
+          temp(1) = temp(1) + st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_REAL(c)
+          temp(2) = temp(2) - st%d%kweights(ik)*st%occ(ist, ik)* M_TWO*R_AIMAG(c)
           c = R_ABS(st%X(psi) (i, 1, ist, ik))**2 - R_ABS(st%X(psi) (i, 2, ist, ik))**2
-          temp(3) = temp(3) + st%d%kweights(ik)*st%occ(ist, ik)* M_HALF*R_REAL(c)
+          temp(3) = temp(3) + st%d%kweights(ik)*st%occ(ist, ik)* R_REAL(c)
         end do
       end do
     end do
@@ -739,14 +738,14 @@ subroutine X(states_calculate_spin)(m, st, spin)
   end select
 
 #if defined(HAVE_MPI) && defined(MPI_TD)
-    call MPI_ALLREDUCE(temp, spin, 3, &
+    call MPI_ALLREDUCE(temp, mag, 3, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
 #else
-  spin = temp
+  mag = temp
 #endif
 
   call pop_sub()
-end subroutine X(states_calculate_spin)
+end subroutine X(states_calculate_magnetization)
 
 subroutine X(states_calculate_angular)(m, st, angular)
   type(mesh_type),   intent(IN)  :: m
