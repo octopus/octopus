@@ -221,47 +221,21 @@ contains
     type(mesh_type), intent(IN) :: m
     real(r8), intent(in) :: dt
 
-    integer :: ix, iy, iz, ixx(3), idim
-    real(r8) :: vec, temp(3)
-    complex(r8), allocatable :: wf_r(:,:,:), wf_k(:,:,:)
+    complex(r8),allocatable :: fw(:)
+    integer :: idim
 
     sub_name = 'kinetic'; call push_sub()
 
-    temp = M_ZERO
-    temp(1:conf%dim) = 2.0_r8*M_PI/(sys%m%fft_n(1:conf%dim)*sys%m%h(1:conf%dim))
-
-    allocate(&
-         wf_r(sys%m%fft_n(1), sys%m%fft_n(2), sys%m%fft_n(3)), &
-         wf_k(sys%m%fft_n(1), sys%m%fft_n(2), sys%m%fft_n(3))  &
-         )
-
+    allocate(fw(m%znpw))
     do idim = 1, sys%st%dim
-
-       wf_r = M_z0
-       call zmesh_to_cube(sys%m, zpsi(1:,idim), wf_r)
-       call fftwnd_f77_one(sys%m%zplanf, wf_r, wf_k)
-
-       do ix = 1, m%fft_n(1)
-          ixx(1) = pad_feq(ix, m%fft_n(1), .true.)
-          do iy = 1, m%fft_n(2)
-             ixx(2) = pad_feq(iy, m%fft_n(2), .true.)
-             do iz = 1, m%fft_n(3)
-                ixx(3) = pad_feq(iz, m%fft_n(3), .true.)
-                vec = sum((temp(:)*ixx(:))**2)/M_TWO
-                wf_k(ix, iy, iz) = exp(- M_zI*dt*vec) * wf_k(ix, iy, iz)
-             end do
-          end do
-       end do
-
-       call fftwnd_f77_one(sys%m%zplanb, wf_k, wf_r)
-       wf_r = wf_r/real(sys%m%fft_n(1)*sys%m%fft_n(2)*sys%m%fft_n(3), r8)
-
-       zpsi(1:,idim)= M_z0
-       call zcube_to_mesh(sys%m, wf_r, zpsi(1:,idim))
-
+       fw = M_z0
+       call zmesh_rs2fs(m, zpsi(1, idim), fw)
+       call zmesh_explaplq(m, fw, dt)
+       zpsi = M_z0
+       call zmesh_fs2rs(m, fw, zpsi(1, idim))
     enddo
+    deallocate(fw)
 
-    deallocate(wf_r, wf_k)
     call pop_sub(); return
   end subroutine kinetic
 

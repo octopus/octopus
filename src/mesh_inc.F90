@@ -443,6 +443,56 @@ subroutine R_FUNC(mesh_laplq)(m, f, cutoff)
   call pop_sub(); return
 end subroutine R_FUNC(mesh_laplq)
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! It calculates exp{M_zI*dt*nabla^2/2}[f], for f defined in Fourier space.
+! Note that this is equivalent to exp{-M_zI*dt*K}[f], being K the kinetic
+! operator.
+! A cutoff may be introduced, so that what really is calculated is
+! exp{-M_zI*dt*min(G^2/2, cutoff)}*f(G)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine R_FUNC(mesh_explaplq)(m, f, dt, cutoff)
+  type(mesh_type), intent(in)    :: m
+  complex(r8), dimension(*) :: f
+  real(r8), intent(in) :: dt
+  real(r8), intent(in), optional :: cutoff
+
+  real(r8) :: lcutoff, temp(3), g2
+  integer :: i, k(3), ix, iy, iz, nx
+
+  sub_name = 'mesh_laplq'; call push_sub()
+
+  lcutoff = 1e10_r8
+  if(present(cutoff)) then
+     if(cutoff>M_ZERO) then
+       lcutoff = cutoff
+     endif
+  endif
+
+  nx = m%fft_n(1)
+#if defined(R_TREAL)
+  nx = m%fft_n(1)/2+1
+#endif
+
+  temp = M_ZERO
+  temp(1:conf%dim) = (2.0_r8*M_Pi)/(m%fft_n(1:conf%dim)*m%h(1:conf%dim))
+
+  i = 0
+  do iz = 1, m%fft_n(3)
+     k(3) = pad_feq(iz, m%fft_n(3), .true.)
+     do iy = 1, m%fft_n(2)
+        k(2) = pad_feq(iy, m%fft_n(2), .true.)
+        do ix = 1, nx
+           k(1) = pad_feq(ix, m%fft_n(1), .true.)
+           g2 = min(lcutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2)/M_TWO)
+           i = i + 1
+           f(i) = exp(-M_zI*dt*g2)*f(i)
+        enddo
+     enddo
+  enddo
+
+  call pop_sub(); return
+end subroutine R_FUNC(mesh_explaplq)
+
 subroutine R_FUNC(mesh_gradq)(m, f, j, t)
   type(mesh_type), intent(in) :: m
   complex(r8), dimension(*)   :: f
