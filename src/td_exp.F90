@@ -101,7 +101,7 @@ contains
   end subroutine cheby
 
   subroutine lanczos
-    integer ::  korder, is, n, nn, i, info, order
+    integer ::  korder, is, n, nn, i, info, order, j
     complex(r8), allocatable :: hm(:, :), v(:, :, :), w(:, :), f(:, :), hh(:), expo(:, :)
     real(r8) :: alpha, beta, res, tol, nrm
 
@@ -117,6 +117,7 @@ contains
              hh(korder))
     v(0, :, :) = M_z0
 
+    j = 1    
     ! Normalize input vector, and put it into v(:, :, 1)
     nrm = zstates_nrm2(sys%m, sys%st%dim, zpsi(1:sys%m%np, 1:sys%st%dim))
     v(:, :, 1) = zpsi(:, :)/nrm
@@ -127,27 +128,27 @@ contains
     hm = M_z0; hm(1, 1) = alpha
     beta = zstates_nrm2(sys%m, sys%st%dim, f)
     do n = 1, korder - 1
+       if(h%ab.ne.1) j = n
        v(1:sys%m%np, 1:sys%st%dim, n + 1) = f(1:sys%m%np, 1:sys%st%dim)/beta
        hm(n+1, n) = beta
        call zhpsi(h, sys%m, sys%st, sys, ik, &
             v(0:sys%m%np, 1:sys%st%dim, n+1), w(1:sys%m%np, 1:sys%st%dim), t)
        hh = M_z0
-       do nn = n, n + 1 ! Previous ones should be nil for hermitian hamiltonians.
-       !do nn = 1, n + 1
+       do nn = j, n + 1
           hh(nn) = zstates_dotp(sys%m, sys%st%dim, v(1:, :, nn), w)
        enddo
-       f = w - v(1:, :, n)*hh(n) - v(1:, :, n+1)*hh(n+1)
-       !f = w
-       !do nn = 1, n + 1
-       !   f = f - v(1:, :, nn)*hh(nn)
-       !enddo
-       do nn = n, n + 1
-          hm(nn, n+1) = hh(nn)
+       f = w
+       do nn = j, n + 1
+          f = f - v(1:, :, nn)*hh(nn)
        enddo
-       !do nn = 1, n  + 1
-       !   hm(nn, n + 1) = hh(nn)
-       !enddo
-       call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep)
+       do nn = j, n  + 1
+          hm(nn, n + 1) = hh(nn)
+       enddo
+       if(h%ab .ne. 1) then
+         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep, hermitian = .true.)
+       else
+         call mat_exp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), timestep)
+       endif
        res = abs(beta*abs(expo(1, n+1)))
        beta = zstates_nrm2(sys%m, sys%st%dim, f)
        if(beta < 1.0e-12_r8) exit
@@ -162,7 +163,7 @@ contains
 
     zpsi = M_z0
     do nn = 1, order
-       call zaxpy((sys%m%np+1)*sys%st%dim, nrm*expo(1, nn), v(0, 1, nn), 1, zpsi, 1)
+       call zaxpy((sys%m%np+1)*sys%st%dim, nrm*expo(nn, 1), v(0, 1, nn), 1, zpsi, 1)
     enddo
 
     deallocate(v, w, f, hm, expo, hh)
@@ -386,36 +387,62 @@ contains
     call pop_sub(); return
   end subroutine local_part
 
-  subroutine mat_exp(order, in, out, dt)
-    implicit none
-    integer, intent(in)      :: order
-    complex(r8), intent(in)     :: in(order, order)
-    complex(r8), intent(out) :: out(order, order)
-    real(r8), intent(in)     :: dt
 
-    complex(r8) :: aux(order, order), b(order, order)
-    complex(r8) :: q(order, order), dd(order, order)
-    integer ::  n, nn, i, info, lwork
-    real(r8), allocatable :: dsygv_w(:)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! /* Calculates exp(-M_zI*dt*in), and places it into out, where in and out
+  ! are order x order complex matrices. Optional argument hermitian should be
+  ! passed if in is hermitian.
+  !
+  ! Two ways to calculate the exponential of a (small) matrix: if it is
+  ! hermitian, by decomposing it into UDU(+), where D is diagonal and
+  ! U is unitary; U(+) is its hermitian conjugate. If it is not, I use the 
+  ! definition: power expansion (I think 10th order should be enough). Smarter 
+  ! methods could be used in this case: a Sch\"{u}r decomposition could be 
+  ! performed, (through LAPACK's zhseqr since input matrix is upper Heisenberg) 
+  ! and then apply Parlett's algorithm (B. N. Parlett, Lin. Alg. Appl. 14,
+  ! 117 (1976)) to calculate the exponential of a upper triangular matrix.
+  ! Probably this is not needed. */
+  subroutine mat_exp(order, in, out, dt, hermitian)
+    implicit none
+    integer, intent(in)           :: order
+    complex(r8), intent(in)       :: in(order, order)
+    complex(r8), intent(out)      :: out(order, order)
+    real(r8), intent(in)          :: dt
+    logical, intent(in), optional :: hermitian
+
+    complex(r8) :: aux(order, order), dd(order, order), zfact
+    integer ::  n, info, lwork
+    real(r8), allocatable :: w(:)
     complex(r8), allocatable :: work(:), rwork(:)
 
-    aux = in; b = 0.0_r8
-    do n = 1, order
-       b(n, n) = 1._r8
-    enddo
-    lwork = 3*order; allocate(work(lwork), rwork(lwork), dsygv_w(order))
-    call zhegv(1, 'v', 'u', order, aux, order, b, order, dsygv_w, work, lwork, rwork, info)
-    if(info .ne. 0) then
-       write(message(1),'(a,i4)') 'Error: "info" parameter of zpttrf returned', info
-       call write_fatal(1)
+    if(present(hermitian)) then
+      aux = in
+      lwork = 4*order; allocate(work(lwork), rwork(lwork), w(order))
+      call zheev('v', 'u', order, aux, order, w, work, lwork, rwork, info)
+      if(info .ne. 0) then
+         write(message(1),'(a,i4)') 'Error: "info" parameter of z returned', info
+         call write_fatal(1)
+      endif
+      dd = M_z0
+      do n = 1, order
+         dd(n, n) = exp(-M_zI*dt*w(n))
+      enddo
+      out = matmul(dd, transpose(aux))
+      out = matmul(aux, out)
+      deallocate(work, w, rwork)
+    else
+      out = M_z0
+      do n = 1, order
+         out(n, n) = M_z1
+      enddo
+      zfact = M_z1
+      aux   = out
+      do n = 1, max(10, order)
+         aux = matmul(aux, in)
+         zfact = zfact*(-M_zI*dt)/n
+         out = out + zfact*aux
+      enddo
     endif
-    q = aux; dd = M_z0
-    do n = 1, order
-       dd(n, n) = exp(-M_zI*dt*dsygv_w(n))
-    enddo
-    out = matmul(dd, transpose(q))
-    out = matmul(q, out)
-    deallocate(work, dsygv_w)
 
   end subroutine mat_exp
 
