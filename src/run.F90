@@ -136,6 +136,7 @@ subroutine run()
         if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
              calc_mode .ne. M_START_STATIC_POL .and. calc_mode .ne. M_RESUME_STATIC_POL) then
           i_stack(instr) = I_SCF;               instr = instr + 1
+          i_stack(instr) = I_LCAO;              instr = instr + 1
           i_stack(instr) = I_SETUP_HAMILTONIAN; instr = instr + 1
         end if
         i_stack(instr) = I_RANDOMIZE_RPSI
