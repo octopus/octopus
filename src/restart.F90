@@ -173,6 +173,7 @@ subroutine restart_load(dir, st, m, ierr, iter, nvprev, vprev)
   if(present(iter)) then
     read(unit = iunit, fmt = *) filename, filename, iter
   endif
+
   if(present(vprev)) then
      do i = 1, nvprev
         do is = 1, st%d%nspin
@@ -200,19 +201,22 @@ subroutine restart_load(dir, st, m, ierr, iter, nvprev, vprev)
   call io_close(iunit)
   call pop_sub()
 
-  contains
+contains
 
   subroutine fill() ! Put random function in orbitals that could not be read.
-     do ik = 1, st%d%nik
-        do ist = 1, st%nst
-           do idim = 1, st%d%dim
-              if(filled(idim, ist, ik)) cycle
-              write(message(1),'(a,3i4)') 'Randomizing wavefunction: #dim, #ist #ik = ', idim, ist, ik
-              call write_warning(1)
-           enddo
-        enddo
-     enddo
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        do idim = 1, st%d%dim
+          if(filled(idim, ist, ik)) cycle
+          write(message(1),'(a,3i4)') 'Randomizing wavefunction: #dim, #ist, #ik = ', idim, ist, ik
+          call write_warning(1)
+
+          call states_generate_random(st, m, ist, ist)
+        end do
+      end do
+    end do
   end subroutine fill
+
   logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
     if(idim > st%d%dim .or. idim < 1 .or.   &
        ist  > st%nst   .or. ist  < 1 .or.   &
@@ -222,6 +226,7 @@ subroutine restart_load(dir, st, m, ierr, iter, nvprev, vprev)
       index_is_wrong = .false.
     endif
   end function index_is_wrong
+
 end subroutine restart_load
 
 

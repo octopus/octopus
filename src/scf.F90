@@ -100,7 +100,7 @@ subroutine scf_init(scf, m, st, h)
   call mix_init(scf%smix, 1, m%np, st%d%nspin)
 
   ! now the eigen solver stuff
-  call eigen_solver_init(scf%eigens, st, m)
+  call eigen_solver_init(scf%eigens, st, m, 25)
 
   ! Should the calculation be restricted to LCAO subspace?
   call loct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)

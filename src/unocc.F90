@@ -23,6 +23,7 @@ use lib_oct_parser
 use lib_oct
 use mesh
 use states
+use system
 use restart
 use hamiltonian
 use eigen_solver
@@ -38,85 +39,55 @@ end type unocc_type
 
 contains
 
-subroutine unocc_init(u, m, geo, st, val_charge)
-  type(unocc_type),    intent(out) :: u
-  type(mesh_type),     intent(IN)  :: m
-  type(geometry_type), intent(IN)  :: geo
-  type(states_type),   intent(IN)  :: st
-  FLOAT,               intent(in)  :: val_charge
-
-  call push_sub('unocc_init')
-
-  call loct_parse_int("UnoccMaximumIter", 200, u%max_iter)
-  call loct_parse_float("UnoccConv", CNST(1e-4), u%conv)
-  if(u%max_iter <= 0 .and. u%conv <= M_ZERO) then
-    message(1) = "Input: Not all occ convergence criteria can be <= 0"
-    message(2) = "Please set one of the following:"
-    message(3) = "UnoccMaximumIter | UnoccConv"
-    call write_fatal(3)
-  end if
-  if(u%max_iter <= 0) u%max_iter = huge(u%max_iter)
-
-  ! allocate states structure
-  allocate(u%st)
-  call states_init(u%st, m, geo, val_charge)
-
-  call loct_parse_int("UnoccNumberStates", 5, u%st%nst)
-  if(u%st%nst <= 0) then
-    message(1) = "Input: UnoccNumberStates must be > 0"
-    call write_fatal(1)
-  end if
-
-  ! setup variables
-  u%st%nst = u%st%nst + st%nst
-  u%st%st_end = u%st%nst
-  allocate(u%st%X(psi) (m%np, u%st%dim, u%st%nst, u%st%nik))
-  allocate(u%st%eigenval(u%st%nst, u%st%nik), u%st%occ(u%st%nst, u%st%nik))
-  if(u%st%d%ispin == SPINORS) then
-    allocate(u%st%mag(u%st%nst, u%st%d%nik, 2))
-    u%st%mag = M_ZERO
-  end if
-  u%st%eigenval = M_ZERO
-  u%st%occ      = M_ZERO
-
-  call pop_sub()
-end subroutine unocc_init
-
-subroutine unocc_end(u)
-  type(unocc_type), intent(inout) :: u
-  
-  if(associated(u%st)) then
-    call states_end(u%st)
-    deallocate(u%st)
-    nullify   (u%st)
-  end if
-
-end subroutine unocc_end
-
-subroutine unocc_run(u, m, f_der, st, h, outp)
-  type(unocc_type),       intent(inout) :: u
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
-  type(states_type),      intent(IN)    :: st
+logical function unocc_run(sys, h, fromScratch)
+  type(system_type),      intent(inout) :: sys
   type(hamiltonian_type), intent(inout) :: h
-  type(output_type),      intent(IN)    :: outp
+  logical,                intent(inout) :: fromScratch
 
   type(eigen_solver_type) :: eigens
-  integer :: iunit, ierr
+  integer :: max_iter, iunit, ierr
+  FLOAT   :: conv
   logical :: converged
 
-  call push_sub('unocc_run')
+  unocc_run = .true.
+  call init_()
 
-  ! Initialize eigens (not necessary to call eigen_init)
-  eigens%es_type        = RS_CG
-  eigens%init_tol       = u%conv 
-  eigens%final_tol      = u%conv
-  eigens%final_tol_iter = 1
-  eigens%es_maxiter     = u%max_iter
-  allocate(eigens%diff(u%st%nst, u%st%nik))
+  if(.not.fromScratch) then
+    call restart_load("tmp/restart_unocc", sys%st, sys%m, ierr)
+    if(ierr > 0) then ! Fatal error are flagged by ierr > 0
+      message(1) = "Could not load tmp/restart_unocc: Starting from scratch"
+      call write_warning(1)
 
-  call eigen_solver_run(eigens, m, f_der, u%st, h, 1, converged)
+      fromScratch = .true.
+    end if
+  end if
 
+  if(fromScratch) then
+    call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
+    if(ierr > 0) then ! Fatal error are flagged by ierr > 0
+      message(1) = "Could not load tmp/restart_gs: Starting from scratch"
+      call write_warning(1)
+
+      unocc_run = .false.
+      call end_()
+      return
+    end if
+  end if
+
+  ! setup hamiltonian (PROBABLY THIS SHOULD NOT BE DONE)
+  call states_fermi(sys%st, sys%m)
+  call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
+  
+  ! setup Hamiltonian
+  message(1) = 'Info: Setting up Hamiltonian.'
+  call write_info(1)
+  
+  call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+  call states_fermi(sys%st, sys%m)                            ! occupations
+  call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+  
+  call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, 1, converged)
+  
   ! write output file
   call io_assign(iunit)
   call loct_mkdir("static")
@@ -126,28 +97,64 @@ subroutine unocc_run(u, m, f_der, st, h, outp)
   else
     write(iunit,'(a)') 'Some of the unoccupied states are not fully converged!'
   end if
-  write(iunit,'(a, e17.6)') 'Criterium = ', u%conv
+  write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
   write(iunit,'(1x)')
-  call states_write_eigenvalues(iunit, u%st%nst, u%st, eigens%diff)
+  call states_write_eigenvalues(iunit, sys%st%nst, sys%st, eigens%diff)
   call io_close(iunit)
   
-  if (conf%periodic_dim>0 .and. st%nik>st%d%nspin) then
+  if (conf%periodic_dim>0 .and. sys%st%nik>sys%st%d%nspin) then
     call io_assign(iunit)
     open(iunit, status='unknown', file='static/bands.dat')
-    call states_write_bands(iunit, u%st%nst, u%st)
+    call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if
-
+  
   ! write restart information.
-  call restart_write("tmp/restart_occ", u%st, m, ierr)
-
+  call restart_write("tmp/restart_unocc", sys%st, sys%m, ierr)
+  
   ! output wave-functions
-  call X(states_output) (u%st, m, f_der, "static", outp)
+  call X(states_output) (sys%st, sys%m, sys%f_der, "static", sys%outp)
 
-  ! Deallocate eigens..
-  deallocate(eigens%diff); nullify(eigens%diff)
+  call end_()
+contains
 
-  call pop_sub()
-end subroutine unocc_run
+  subroutine init_()
+    integer :: max_iter, nus
+    FLOAT :: conv
+
+    call push_sub('unocc_run')
+
+    call loct_parse_int("NumberUnoccStates", 5, nus)
+    if(nus <= 0) then
+      message(1) = "Input: NumberUnoccStates must be > 0"
+      call write_fatal(1)
+    end if
+
+    ! fix states: THIS IS NOT OK
+    sys%st%nst = sys%st%nst + nus
+    sys%st%st_end = sys%st%nst
+
+    deallocate(sys%st%eigenval, sys%st%occ)
+    allocate(sys%st%X(psi) (sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
+    allocate(sys%st%eigenval(sys%st%nst, sys%st%nik), sys%st%occ(sys%st%nst, sys%st%nik))
+    if(sys%st%d%ispin == SPINORS) then
+      allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
+      sys%st%mag = M_ZERO
+    end if
+    sys%st%eigenval = huge(PRECISION)
+    sys%st%occ      = M_ZERO
+
+    ! now the eigen solver stuff
+    call eigen_solver_init(eigens, sys%st, sys%m, 200)
+  end subroutine init_
+
+  subroutine end_()
+    deallocate(sys%st%X(psi))
+    call eigen_solver_end(eigens)
+
+    call pop_sub()
+  end subroutine end_
+  
+end function unocc_run
 
 end module unocc

@@ -31,6 +31,7 @@ use static_pol
 use geom_opt
 use phonons
 use opt_control
+use ground_state
 use pulpo
 
 implicit none
@@ -44,8 +45,6 @@ integer :: calc_mode
 ! run stack
 integer, private :: i_stack(100), instr
 integer, private, parameter ::   &
-     M_START_STATIC_CALC   = 1,  &
-     M_RESUME_STATIC_CALC  = 2,  &
      M_START_UNOCC_STATES  = 3,  &
      M_RESUME_UNOCC_STATES = 4,  &
      M_START_TD            = 5,  &
@@ -56,7 +55,9 @@ integer, private, parameter ::   &
      M_GEOM_OPT            = 10, &
      M_PHONONS             = 11, &
      M_OPT_CONTROL         = 12, &
-     M_PULPO_A_FEIRA       = 99
+     M_PULPO_A_FEIRA       = 99, &
+     M_MGS                 = 101, &
+     M_MUNOCC              = 102
 
 integer, private, parameter :: &
      I_SETUP_RPSI          =  1,  &
@@ -83,7 +84,10 @@ integer, private, parameter :: &
      I_GEOM_OPT            = 40,  &
      I_PHONONS             = 50,  &
      I_OPT_CONTROL         = 60,  &
-     I_PULPO               = 99
+     I_PULPO               = 99,  &
+     I_MGS_INIT            = 101, &
+     I_MGS                 = 102, &
+     I_MUNOCC              = 103
 
 contains
 
@@ -96,6 +100,8 @@ subroutine run()
   type(td_type), pointer :: td
   type(lcao_type) :: lcao_data
 
+  logical :: fromScratch(M_MGS:I_MUNOCC)
+
   call push_sub('run')
 
   call run_init()
@@ -107,6 +113,24 @@ subroutine run()
     if(instr <= 0) exit program
 
     select case(i_stack(instr))
+    case(I_MGS_INIT)
+      call ground_state_init(sys, h)
+
+    case(I_MGS)
+      if(.not.ground_state_run(sys, h)) then ! could not load wfs
+        i_stack(instr) = I_MGS;      instr = instr + 1
+        i_stack(instr) = I_MGS_INIT
+        cycle program
+      end if
+
+    case(I_MUNOCC)
+      if(.not.unocc_run(sys, h, fromScratch(M_MUNOCC))) then
+        i_stack(instr) = I_MUNOCC;    instr = instr + 1
+        i_stack(instr) = I_MGS
+        cycle program
+      end if
+
+
     case(I_SETUP_RPSI)
       message(1) = 'Info: Allocating rpsi.'
       call write_info(1)
@@ -137,12 +161,12 @@ subroutine run()
         call X(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
         ! run scf unless it is already in the stack
-        if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
-             calc_mode .ne. M_START_STATIC_POL .and. calc_mode .ne. M_RESUME_STATIC_POL) then
-          i_stack(instr) = I_SCF;               instr = instr + 1
-          i_stack(instr) = I_LCAO;              instr = instr + 1
-          i_stack(instr) = I_SETUP_HAMILTONIAN; instr = instr + 1
-        end if
+!        if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
+!             calc_mode .ne. M_START_STATIC_POL .and. calc_mode .ne. M_RESUME_STATIC_POL) then
+!          i_stack(instr) = I_SCF;               instr = instr + 1
+!          i_stack(instr) = I_LCAO;              instr = instr + 1
+!          i_stack(instr) = I_SETUP_HAMILTONIAN; instr = instr + 1
+!        end if
         i_stack(instr) = I_RANDOMIZE_RPSI
         cycle program         
       end if
@@ -166,71 +190,6 @@ subroutine run()
       call scf_init(scfv, sys%m, sys%st, h)
       call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
-
-    case(I_LCAO)
-      call loct_parse_logical("LCAOStart", .true., log)
-      if(log) then
-        message(1) = 'Info: Performing initial LCAO calculation.'
-        call write_info(1)
-
-        call lcao_init(lcao_data, sys%m, sys%f_der, sys%st, sys%geo, h)
-        if(lcao_data%state == 1) then
-          call lcao_wf(lcao_data, sys%m, sys%st, h)
-          call lcao_end(lcao_data)
-
-          call states_fermi(sys%st, sys%m)                         ! occupations
-          call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
-        end if
-
-      end if
-
-    case(I_SETUP_UNOCC)
-      message(1) = 'Info: Initializing unoccupied states.'
-      call write_info(1)
-
-      call unocc_init(unoccv, sys%m, sys%geo, sys%st, sys%val_charge)
-      
-    case(I_END_UNOCC)
-      message(1) = 'Info: Finalizing unoccupied states.'
-      call write_info(1)
-
-      call unocc_end(unoccv)
-      
-    case(I_RANDOMIZE_UNOCC)
-      message(1) = 'Info: Generating starting unoccupied states.'
-      call write_info(1)
-      
-      ! first copy the occupied states
-      unoccv%st%X(psi)(:,:,1:sys%st%nst,:) = sys%st%X(psi)(:,:,1:sys%st%nst,:)
-      unoccv%st%occ(1:sys%st%nst,:) = sys%st%occ(1:sys%st%nst,:)
-      if(unoccv%st%d%ispin == SPINORS) then
-        unoccv%st%mag(1:sys%st%nst, 1:sys%st%d%nik, 1:2) = sys%st%mag(1:sys%st%nst, 1:sys%st%d%nik, 1:2)
-      endif
-      
-      h%d =>  unoccv%st%d     ! not to lose the kpoints
-      call states_end(sys%st) ! to save memory
-
-      call states_generate_random(unoccv%st, sys%m, sys%st%nst+1)
-
-    case(I_LOAD_UNOCC)
-      message(1) = 'Info: Loading unoccupied states.'
-      call write_info(1)
-
-      call restart_load("tmp/restart_unocc", unoccv%st, sys%m, ierr)
-      if(ierr>0) then
-        if(calc_mode .ne. M_RESUME_UNOCC_STATES) then
-          i_stack(instr) = I_UNOCC_RUN
-          instr = instr + 1
-        end if
-        i_stack(instr) = I_RANDOMIZE_UNOCC
-        cycle program 
-      end if
-      
-    case(I_UNOCC_RUN)
-      message(1) = 'Info: Calculation of unoccupied states.'
-      call write_info(1)
-
-      call unocc_run(unoccv, sys%m, sys%f_der, sys%st, h, sys%outp)
 
     case(I_SETUP_TD)
       message(1) = 'Info: Setting up TD.'
@@ -378,29 +337,97 @@ subroutine run()
   call run_end()
 
   call pop_sub()
+
+contains
+
+  subroutine define_run_modes()
+    logical :: fS
+
+    call loct_parse_logical("fromScratch", .false., fS)
+    fromScratch(M_MGS:I_MUNOCC) = .false.
+
+    select case(calc_mode)
+    case(M_MGS)
+      fromScratch(M_MGS) = fS
+      if(fS) instr = instr + 1; i_stack(instr) = I_MGS_INIT
+      instr = instr + 1; i_stack(instr) = I_MGS
+
+    case(M_MUNOCC)
+      fromScratch(M_MUNOCC) = fS
+      instr = instr + 1; i_stack(instr) = I_MUNOCC
+
+    case(M_START_TD)
+      instr = instr + 1; i_stack(instr) = I_END_TD
+      instr = instr + 1; i_stack(instr) = I_END_OCC_AN
+      instr = instr + 1; i_stack(instr) = I_TD
+      instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
+      instr = instr + 1; i_stack(instr) = I_INIT_ZPSI
+      instr = instr + 1; i_stack(instr) = I_SETUP_TD
+    case(M_RESUME_TD)
+      instr = instr + 1; i_stack(instr) = I_END_TD
+      instr = instr + 1; i_stack(instr) = I_END_OCC_AN
+      instr = instr + 1; i_stack(instr) = I_TD
+      instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
+      instr = instr + 1; i_stack(instr) = I_LOAD_ZPSI
+      instr = instr + 1; i_stack(instr) = I_SETUP_TD
+    case(M_START_STATIC_POL)
+      instr = instr + 1; i_stack(instr) = I_END_RPSI
+      instr = instr + 1; i_stack(instr) = I_POL_SCF
+      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
+      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+      instr = instr + 1; i_stack(instr) = I_START_POL
+    case(M_RESUME_STATIC_POL)
+      instr = instr + 1; i_stack(instr) = I_END_RPSI
+      instr = instr + 1; i_stack(instr) = I_POL_SCF
+      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
+      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+    case(M_GEOM_OPT)
+      instr = instr + 1; i_stack(instr) = I_END_RPSI
+      instr = instr + 1; i_stack(instr) = I_GEOM_OPT
+      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
+      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+    case(M_PHONONS)
+      instr = instr + 1; i_stack(instr) = I_END_RPSI
+      instr = instr + 1; i_stack(instr) = I_PHONONS
+      instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
+      instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+      instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+    case(M_OPT_CONTROL)
+      instr = instr + 1; i_stack(instr) = I_END_TD
+      instr = instr + 1; i_stack(instr) = I_OPT_CONTROL
+      instr = instr + 1; i_stack(instr) = I_SETUP_TD
+    case(M_PULPO_A_FEIRA)
+      instr = instr + 1; i_stack(instr) = I_PULPO
+  end select
+
+end subroutine define_run_modes
+
 end subroutine run
 
 subroutine run_init()
   ! initialize some stuff
 
   call loct_parse_int('CalculationMode', 1, calc_mode)
-  if( (calc_mode < 1 .or. calc_mode > 12) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
-    write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
-    message(2) = '  Calculation Mode = 1 <= start static calculation'
-    message(3) = '                   = 2 <= resume static calculation'
-    message(4) = '                   = 3 <= calculate unocuppied states'
-    message(5) = '                   = 4 <= resume unocuppied states calculation'
-    message(6) = '                   = 5 <= start td'
-    message(7) = '                   = 6 <= resume td'
-    message(8) = '                   = 7 <= start static polarizability'
-    message(9) = '                   = 8 <= resume static polarizability'
-    message(10)= '                   = 9 <= perform Born-Oppenheimer MD'
-    message(11)= '                   =10 <= perform geometry minimization'
-    message(12)= '                   =11 <= calculate phonon frequencies'
-    message(13)= '                   =12 <= optimum control'
-    message(14)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
-    call write_fatal(13)
-  end if
+!  if( (calc_mode < 1 .or. calc_mode > 12) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+!    write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
+!    message(2) = '  Calculation Mode = 1 <= start static calculation'
+!    message(3) = '                   = 2 <= resume static calculation'
+!    message(4) = '                   = 3 <= calculate unocuppied states'
+!    message(5) = '                   = 4 <= resume unocuppied states calculation'
+!    message(6) = '                   = 5 <= start td'
+!    message(7) = '                   = 6 <= resume td'
+!    message(8) = '                   = 7 <= start static polarizability'
+!    message(9) = '                   = 8 <= resume static polarizability'
+!    message(10)= '                   = 9 <= perform Born-Oppenheimer MD'
+!    message(11)= '                   =10 <= perform geometry minimization'
+!    message(12)= '                   =11 <= calculate phonon frequencies'
+!    message(13)= '                   =12 <= optimum control'
+!    message(14)= '                   =99 <= prints out the "Pulpo a Feira" recipe'
+!    call write_fatal(13)
+!  end if
 
   ! print dimension info
   write(message(1), '(a,i1,a)') 'Info: Octopus will run in ', conf%dim, ' dimension(s)'
@@ -452,82 +479,5 @@ subroutine m_load_unocc()
 
   return
 end subroutine m_load_unocc
-
-subroutine define_run_modes()
-  select case(calc_mode)
-  case(M_START_STATIC_CALC)
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_SCF
-    instr = instr + 1; i_stack(instr) = I_LCAO
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
-    instr = instr + 1; i_stack(instr) = I_RANDOMIZE_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-  case(M_RESUME_STATIC_CALC)
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_SCF
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
-    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-  case(M_START_UNOCC_STATES)
-    instr = instr + 1; i_stack(instr) = I_END_UNOCC
-    instr = instr + 1; i_stack(instr) = I_UNOCC_RUN
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_RANDOMIZE_UNOCC
-    instr = instr + 1; i_stack(instr) = I_SETUP_UNOCC
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-  case(M_RESUME_UNOCC_STATES)
-    instr = instr + 1; i_stack(instr) = I_END_UNOCC
-    instr = instr + 1; i_stack(instr) = I_UNOCC_RUN
-    call m_load_unocc()
-  case(M_START_TD)
-    instr = instr + 1; i_stack(instr) = I_END_TD
-    instr = instr + 1; i_stack(instr) = I_END_OCC_AN
-    instr = instr + 1; i_stack(instr) = I_TD
-    instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
-    instr = instr + 1; i_stack(instr) = I_INIT_ZPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_TD
-  case(M_RESUME_TD)
-    instr = instr + 1; i_stack(instr) = I_END_TD
-    instr = instr + 1; i_stack(instr) = I_END_OCC_AN
-    instr = instr + 1; i_stack(instr) = I_TD
-    instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
-    instr = instr + 1; i_stack(instr) = I_LOAD_ZPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_TD
-  case(M_START_STATIC_POL)
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_POL_SCF
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-    instr = instr + 1; i_stack(instr) = I_START_POL
-  case(M_RESUME_STATIC_POL)
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_POL_SCF
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-  case(M_GEOM_OPT)
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_GEOM_OPT
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-  case(M_PHONONS)
-    instr = instr + 1; i_stack(instr) = I_END_RPSI
-    instr = instr + 1; i_stack(instr) = I_PHONONS
-    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN
-    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
-    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
-  case(M_OPT_CONTROL)
-    instr = instr + 1; i_stack(instr) = I_END_TD
-    instr = instr + 1; i_stack(instr) = I_OPT_CONTROL
-    instr = instr + 1; i_stack(instr) = I_SETUP_TD
-  case(M_PULPO_A_FEIRA)
-    instr = instr + 1; i_stack(instr) = I_PULPO
-  end select
-
-end subroutine define_run_modes
 
 end module run_prog

@@ -60,7 +60,7 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
       call X(Hpsi)(h, m, f_der, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(X(states_dotp) (m, st%dim, st%X(psi)(1:,:, p, ik), h_psi))
+      st%eigenval(p, ik) = R_REAL(X(states_dotp) (m, st%dim, st%X(psi)(:,:, p, ik), h_psi))
 
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter

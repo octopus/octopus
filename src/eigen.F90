@@ -64,10 +64,11 @@ module eigen_solver
 
 contains
 
-subroutine eigen_solver_init(eigens, st, m)
+subroutine eigen_solver_init(eigens, st, m, max_iter_default)
   type(eigen_solver_type), intent(out) :: eigens
-  type(states_type),       intent(IN)  :: st
-  type(mesh_type),         intent(IN)  :: m
+  type(states_type),       intent(in)  :: st
+  type(mesh_type),         intent(in)  :: m
+  integer,                 intent(in)  :: max_iter_default
   
   call push_sub('eigen_solver_init')
 
@@ -90,7 +91,7 @@ subroutine eigen_solver_init(eigens, st, m)
   end select
   call write_info(1)
 
-  call loct_parse_float("EigenSolverInitTolerance", CNST(1.0e-10), eigens%init_tol)
+  call loct_parse_float("EigenSolverInitTolerance", CNST(1.0e-6), eigens%init_tol)
   if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -98,7 +99,7 @@ subroutine eigen_solver_init(eigens, st, m)
       call write_fatal(2)
   endif
 
-  call loct_parse_float("EigenSolverFinalTolerance", CNST(1.0e-14), eigens%final_tol)
+  call loct_parse_float("EigenSolverFinalTolerance", CNST(1.0e-6), eigens%final_tol)
   if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -115,7 +116,7 @@ subroutine eigen_solver_init(eigens, st, m)
       call write_fatal(2)
   endif
 
-  call loct_parse_int("EigenSolverMaxIter", 25, eigens%es_maxiter)
+  call loct_parse_int("EigenSolverMaxIter", max_iter_default, eigens%es_maxiter)
   if(eigens%es_maxiter < 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &
            "' is not a valid EigenSolverMaxIter"
@@ -155,7 +156,8 @@ subroutine eigen_solver_end(eigens)
   case(RS_PLAN)
     call nl_operator_end(filter)
   end select
-  nullify(eigens%diff)
+
+  deallocate(eigens%diff); nullify(eigens%diff)
 
 end subroutine eigen_solver_end
 

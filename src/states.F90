@@ -94,11 +94,13 @@ end interface
 contains
 
 subroutine states_null(st)
-  type(states_type) :: st
+  type(states_type), intent(out) :: st
+
   nullify(st%dpsi, st%zpsi, st%rho, st%j, st%rho_core, st%eigenval, st%occ, st%mag)
   nullify(st%d); allocate(st%d)
   nullify(st%d%kpoints, st%d%kweights)
 end subroutine states_null
+
 
 subroutine states_init(st, m, geo, val_charge, nlcc)
   type(states_type),   intent(inout) :: st
@@ -357,22 +359,24 @@ subroutine states_end(st)
 end subroutine states_end
 
 ! generate a hydrogen s-wavefunction around a random point
-subroutine states_generate_random(st, m, ist_start)
+subroutine states_generate_random(st, m, ist_start_, ist_end_)
   type(states_type), intent(inout) :: st
   type(mesh_type),   intent(IN)    :: m
-  integer,           intent(in), optional :: ist_start
+  integer, optional, intent(in)    :: ist_start_, ist_end_
 
-  integer :: ist, ik, id, ist_s
+  integer :: ist, ik, id, ist_start, ist_end
 
   call push_sub('states_generate_random')
 
-  ist_s = 1
-  if(present(ist_start)) ist_s = ist_start
+  ist_start = 1
+  if(present(ist_start_)) ist_start = ist_start_
+  ist_end = st%nst
+  if(present(ist_end_)) ist_end = ist_end_
 
   do ik = 1, st%nik
-    do ist = ist_s, st%nst
+    do ist = ist_start, ist_end
       do id = 1, st%dim
-        call X(mf_random)(m, st%X(psi)(1:m%np, id, ist, ik))
+        call X(mf_random)(m, st%X(psi)(:, id, ist, ik))
       end do
       st%eigenval(ist, ik) = M_ZERO
     end do
