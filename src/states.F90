@@ -40,7 +40,6 @@ type states_dim_type
   integer :: nspin         ! * dimension of rho (1, 2 or 4)
   integer :: spin_channels ! * 1 or 2, wether spin is or not considered.
   logical :: current       ! * If the current is to be considered or not
-  logical :: select_axis(3)! * which axes are used fo k points
   FLOAT, pointer :: kpoints(:,:) ! * obviously the kpoints
   FLOAT, pointer :: kweights(:)  ! * weights for the kpoint integrations
 end type states_dim_type
@@ -300,7 +299,6 @@ subroutine states_copy(stout, stin)
   stout%d%nspin = stin%d%nspin
   stout%d%spin_channels = stin%d%spin_channels
   stout%d%current = stin%d%current
-  stout%d%select_axis(:) = stin%d%select_axis(:)
   if(associated(stin%d%kpoints)) then
     allocate(stout%d%kpoints(size(stin%d%kpoints, 1), size(stin%d%kpoints, 2)))
     stout%d%kpoints = stin%d%kpoints
