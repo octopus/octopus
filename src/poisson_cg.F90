@@ -95,7 +95,7 @@ contains
     mesh_pointer => m
     pk = zk
     iter = 400
-    call conjugate_gradients(m%np, pk, zk, op, iter = iter, residue = res, threshold = threshold)
+    call dconjugate_gradients(m%np, pk, zk, op, iter, res, threshold)
     if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
@@ -135,8 +135,8 @@ contains
        rho_corrected(i) = rho_corrected(i)*sqrt(m%vol_pp(i))
     enddo
     iter = 400
-    call conjugate_gradients(m%np, pot, rho_corrected, op, opt, &
-                             iter = iter, residue = res, threshold = threshold)
+    call dconjugate_gradients(m%np, pot, rho_corrected, op, opt, &
+                             iter, res, threshold)
     if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
