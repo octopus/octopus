@@ -35,8 +35,9 @@ noinst_HEADERS = \
 	xc_pot.F90 xc_fxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
 	epot_inc.F90 \
 	h_inc.F90 h_xc_OEP.F90 h_so.F90 \
-	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90\
-	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90\
+	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90 \
+	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
+	linear_reponse_inc.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 expokit_inc.F90 math_inc.F90 \
