@@ -43,9 +43,10 @@ module geom_opt
 
 contains
 
-  subroutine geom_opt_run(scf, m, st, geo, h, outp)
+  subroutine geom_opt_run(scf, m, f_der, st, geo, h, outp)
     type(scf_type),         intent(inout) :: scf
     type(mesh_type),        intent(IN)    :: m
+    type(f_der_type),       intent(inout) :: f_der
     type(states_type),      intent(inout) :: st
     type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
@@ -133,11 +134,11 @@ contains
 
       call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
       call X(calcdens) (st, m%np, st%rho)
-      call X(h_calc_vhxc) (h, m, st, calc_eigenval=.true.)
+      call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
   
       ! do scf calculation
-      call scf_run(scf, m, st, geo, h, outp)
+      call scf_run(scf, m, f_der, st, geo, h, outp)
 
       ! store results
       f = h%etot

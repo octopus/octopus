@@ -187,7 +187,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
     allocate(st%mag(st%nst, st%d%nik, 2))
   end if
   if (st%d%cdft) then
-    allocate(st%j(conf%dim, m%np, st%d%nspin))
+    allocate(st%j(m%np, conf%dim, st%d%nspin))
     st%j = M_ZERO
   end if
   if (present(nlcc)) then
@@ -580,13 +580,13 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
 #endif
-
+    
     do ik = 1, st%nik, ns
       if(st%nik > ns) then
         write(iunit, '(a,i4,3(a,f12.6),a)') '#k =',ik,', k = (',  &
-        st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
-        st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
-        st%d%kpoints(3, ik)*units_out%length%factor, ')'
+           st%d%kpoints(1, ik)*units_out%length%factor, ',',           &
+           st%d%kpoints(2, ik)*units_out%length%factor, ',',           &
+           st%d%kpoints(3, ik)*units_out%length%factor, ')'
       end if
       
       do is = 1, ns
@@ -651,27 +651,27 @@ subroutine states_write_bands(iunit, nst, st)
   integer,           intent(in) :: iunit, nst
   type(states_type), intent(IN) :: st
 
-  integer ik, j, ns, pd
+  integer ik, j, ns
 
   if(iunit==stdout.and.conf%verbose<=20) return
   
   ! shortcuts
-  pd = conf%periodic_dim
   ns = 1
   if(st%d%nspin == 2) ns = 2
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
 #endif
-      do j = 1, nst
-        do ik = 1, st%nik, ns
-            write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
-            st%d%kpoints(:,ik)*units_out%length%factor,            &
-            (st%eigenval(j, ik))/units_out%energy%factor
-        end do
-        write(iunit, '(a)')' '
-      end do                 
-                 
+
+    do j = 1, nst
+      do ik = 1, st%nik, ns
+        write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
+           st%d%kpoints(:,ik)*units_out%length%factor,            &
+           (st%eigenval(j, ik))/units_out%energy%factor
+      end do
+      write(iunit, '(a)')' '
+    end do
+    
 #ifdef HAVE_MPI
   end if
 #endif
@@ -679,30 +679,28 @@ subroutine states_write_bands(iunit, nst, st)
 end subroutine states_write_bands
 
 
+! ---------------------------------------------------------
 integer function states_spin_channel(ispin, ik, dim)
   integer, intent(in) :: ispin, ik, dim
 
-  if( ispin < UNPOLARIZED .or. ispin> SPINORS .or. &
-      ik<0 .or.                   &
-      dim<1 .or. dim>2 .or.       &
-      (ispin.ne.3 .and. dim==2)) then
-      message(1) = 'Internal bug: Unacceptable entry in states_spin_channel function'
-      call write_fatal(1)
-  else
-    select case(ispin)
-      case(1); states_spin_channel = 1
-      case(2); states_spin_channel = mod(ik+1, 2)+1
-      case(3); states_spin_channel = dim
-      case default; states_spin_channel = -1
-    end select
-  endif
+  ASSERT(ispin >= UNPOLARIZED .or. ispin <= SPINORS)
+  ASSERT(ik > 0)
+  ASSERT(dim==1 .or. dim==2)
+  ASSERT(.not.(ispin.ne.3 .and. dim==2))
 
-end function
+  select case(ispin)
+  case(1); states_spin_channel = 1
+  case(2); states_spin_channel = mod(ik+1, 2)+1
+  case(3); states_spin_channel = dim
+  case default; states_spin_channel = -1
+  end select
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+end function states_spin_channel
+
+! ---------------------------------------------------------
 ! This subroutine calculates:
 ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! ---------------------------------------------------------
 subroutine calc_projection(u_st, st, m, p)
   type(states_type), intent(IN)  :: u_st, st
   type(mesh_type),   intent(IN)  :: m
@@ -725,10 +723,11 @@ subroutine calc_projection(u_st, st, m, p)
 end subroutine calc_projection
 
 ! This routine (obviously) assumes complex wave-functions
-subroutine calc_current_paramagnetic(m, st, jp)
-  type(mesh_type),   intent(in)  :: m
-  type(states_type), intent(in)  :: st
-  FLOAT,             intent(out) :: jp(conf%dim, m%np, st%d%nspin)
+subroutine calc_current_paramagnetic(m, f_der, st, jp)
+  type(mesh_type),   intent(in)    :: m
+  type(f_der_type),  intent(inout) :: f_der
+  type(states_type), intent(in)    :: st
+  FLOAT,             intent(out)   :: jp(:,:,:)  ! (m%np, conf%dim, st%d%nspin)
 
   integer :: ik, p, sp, k
   CMPLX, allocatable :: grad(:,:)
@@ -746,34 +745,34 @@ subroutine calc_current_paramagnetic(m, st, jp)
   end if
   
   jp = M_ZERO
-  allocate(grad(conf%dim, m%np))
+  allocate(grad(m%np, conf%dim))
   
   do ik = 1, st%nik, sp
     do p  = st%st_start, st%st_end
-      call zf_gradient(m, st%zpsi(:, 1, p, ik), grad)
+      call zf_gradient(f_der, st%zpsi(:, 1, p, ik), grad)
       
       ! spin-up density
-      do k = 1, m%np
-        jp(1:conf%dim, k, 1) = jp(1:conf%dim, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
-             * aimag(conjg(st%zpsi(k, 1, p, ik)) * grad(1:conf%dim, k))
+      do k = 1, conf%dim
+        jp(:, k, 1) = jp(:, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
+           * aimag(conjg(st%zpsi(:, 1, p, ik)) * grad(:, k))
       end do
 
       ! spin-down density
       if(st%d%ispin == SPIN_POLARIZED) then
-        call zf_gradient(m, st%zpsi(:, 1, p, ik+1), grad)
-
-        do k = 1, m%np
-          jp(1:conf%dim, k, 2) = jp(1:conf%dim, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
-             * aimag(conjg(st%zpsi(k, 1, p, ik+1)) * grad(1:conf%dim, k))
+        call zf_gradient(f_der, st%zpsi(:, 1, p, ik+1), grad)
+        
+        do k = 1, conf%dim
+          jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
+             * aimag(conjg(st%zpsi(:, 1, p, ik+1)) * grad(:, k))
         end do
 
         ! WARNING: the next lines DO NOT work properly
       else if(st%d%ispin == SPINORS) then ! off-diagonal densities
-        call zf_gradient(m, st%zpsi(:, 2, p, ik), grad)
+        call zf_gradient(f_der, st%zpsi(:, 2, p, ik), grad)
 
-        do k = 1, m%np
-          jp(1:conf%dim, k, 2) = jp(1:conf%dim, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
-               * aimag(conjg(st%zpsi(k, 2, p, ik)) * grad(1:conf%dim, k))
+        do k = 1, conf%dim
+          jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
+             * aimag(conjg(st%zpsi(:, 2, p, ik)) * grad(:, k))
         end do
       end if
 
@@ -782,8 +781,8 @@ subroutine calc_current_paramagnetic(m, st, jp)
   deallocate(grad)
 
 #if defined(HAVE_MPI)
-  allocate(red(3, m%np, st%d%nspin))
-  call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), 3*m%np*st%d%nspin, &
+  allocate(red(m%np, conf%dim, st%d%nspin))
+  call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), conf%dim*m%np*st%d%nspin, &
        MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
   jp = red
   deallocate(red)
@@ -792,22 +791,16 @@ subroutine calc_current_paramagnetic(m, st, jp)
   call pop_sub()
 end subroutine calc_current_paramagnetic
 
-subroutine calc_current_physical(m, st, j)
-  type(mesh_type),   intent(in)  :: m
-  type(states_type), intent(in)  :: st
-  FLOAT,             intent(out) :: j(conf%dim, m%np, st%d%nspin)
-
-  integer :: ik, p, sp, k
-  CMPLX, allocatable :: grad(:,:)
-#if defined(HAVE_MPI)
-  integer :: ierr
-  FLOAT, allocatable :: red(:,:,:)
-#endif
+subroutine calc_current_physical(m, f_der, st, j)
+  type(mesh_type),     intent(in)    :: m
+  type(f_der_type),    intent(inout) :: f_der
+  type(states_type),   intent(in)    :: st
+  FLOAT,               intent(out)   :: j(:,:,:)   ! j(m%np, conf%dim, st%d%nspin)
 
   call push_sub('calc_current_physical')
   
   ! Paramagnetic contribution to the physical current
-  call calc_current_paramagnetic(m, st, j)
+  call calc_current_paramagnetic(m, f_der, st, j)
 
   ! TODO
   ! Diamagnetic contribution to the physical current 

@@ -142,9 +142,10 @@ subroutine eigen_solver_end(eigens)
 
 end subroutine eigen_solver_end
 
-subroutine eigen_solver_run(eigens, m, st, h, iter, conv)
+subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
   type(eigen_solver_type), intent(inout) :: eigens
   type(mesh_type),         intent(IN)    :: m
+  type(f_der_type),        intent(inout) :: f_der
   type(states_type),       intent(inout) :: st
   type(hamiltonian_type),  intent(IN)    :: h
   integer,                 intent(in)    :: iter
@@ -169,7 +170,7 @@ subroutine eigen_solver_run(eigens, m, st, h, iter, conv)
 
   select case(eigens%es_type)
   case(RS_CG)
-    call eigen_solver_cg2(m, st, h, tol, maxiter, &
+    call eigen_solver_cg2(m, f_der, st, h, tol, maxiter, &
            eigens%converged, errorflag, eigens%diff)
 #ifdef HAVE_TRLAN
   case(RS_LANCZOS)
@@ -188,8 +189,9 @@ end subroutine eigen_solver_run
 
 !!! This routine in principle diagonalises the hamiltonian in the
 !!! basis defined by st. It has not been tested, and it is not used now
-subroutine eigen_diagon_subspace(m, st, h)
+subroutine eigen_diagon_subspace(m, f_der, st, h)
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
 
@@ -203,7 +205,7 @@ subroutine eigen_diagon_subspace(m, st, h)
     f = st%X(psi)(:,:,:, ik)
 
     eigenfunction_loop : do i = 1, st%nst
-      call X(Hpsi)(h, m, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
+      call X(Hpsi)(h, m, f_der, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
       h_subspace(i, i) = st%eigenval(i, ik)
       do j = i, st%nst
         h_subspace(i, j) = X(states_dotp) (m, st%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))

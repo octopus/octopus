@@ -15,9 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
+subroutine xc_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   type(xc_type),     intent(IN)  :: xcs
   type(mesh_type),   intent(IN)  :: m
+  type(f_der_type), intent(inout) :: f_der
   type(states_type), intent(IN)  :: st
   FLOAT,             intent(out) :: vxc(m%np, st%d%nspin), ex, ec
   FLOAT,             intent(in)  :: ip, qtot
@@ -41,8 +42,8 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
 
   allocate(d(m%np, st%d%nspin), lpot(m%np, spin_channels))
   allocate(rhoplus(m%np), rhominus(m%np))
-  allocate(grhoplus(3, m%np), grhominus(3, m%np))
-  allocate(vlocaldedgd(3, m%np, spin_channels), vlocaldedgd1(3, spin_channels))
+  allocate(grhoplus(m%np, 3), grhominus(m%np, 3))
+  allocate(vlocaldedgd(m%np, 3, spin_channels), vlocaldedgd1(3, spin_channels))
 
   ! Store in local variables d the density matrix
   ! (in the global reference system).
@@ -56,7 +57,6 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
     end do
   end if
 
-  grhoplus = M_ZERO; grhominus = M_ZERO
   do i = 1, m%np
     select case(st%d%ispin)
     case(UNPOLARIZED)
@@ -72,18 +72,19 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
     end select
   enddo
 
-  call df_gradient(m, rhoplus, grhoplus)
-  if(st%d%ispin > UNPOLARIZED) call df_gradient(m, rhominus, grhominus)
+  grhoplus = M_ZERO; grhominus = M_ZERO
+  call df_gradient(f_der, rhoplus, grhoplus)
+  if(st%d%ispin > UNPOLARIZED) call df_gradient(f_der, rhominus, grhominus)
 
   lpot        = M_ZERO
   vlocaldedgd = M_ZERO
   space_loop: do i = 1, m%np
-        
+
     locald(1) = rhoplus(i)
-    localgd(1:3, 1) = grhoplus(1:3, i)
+    localgd(1:3, 1) = grhoplus(i, 1:3)
     if(st%d%ispin > UNPOLARIZED) then
       locald(2) = rhominus(i)
-      localgd(1:3, 2) = grhominus(1:3, i)
+      localgd(1:3, 2) = grhominus(i, 1:3)
     endif
 
     ! Calculate the potential/gradient density in local reference frame.
@@ -111,7 +112,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
         ec = ec + sum(d(i,:)) * e * m%vol_pp(i)
       end if
       lpot(i, :) = lpot(i, :) + localdedd(:)
-      vlocaldedgd(:,i,:) = vlocaldedgd(:,i,:) + vlocaldedgd1(:,:)
+      vlocaldedgd(i,:,:) = vlocaldedgd(i,:,:) + vlocaldedgd1(:,:)
       
     end do functl_loop
 
@@ -120,7 +121,7 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   ! We now add substract the divergence of the functional derivative of fxc with respect to
   ! the gradient of the density.
   do is = 1, spin_channels
-    call df_divergence(m, vlocaldedgd(:,:,is), rhoplus(:))
+    call df_divergence(f_der, vlocaldedgd(:,:,is), rhoplus(:))
     call lalg_axpy(m%np, -M_ONE, rhoplus(:), lpot(:, is))
   end do
       
@@ -143,9 +144,9 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   ! Levy-Perdew relation (PRA 32, 2010 (1985))
   if(iand(xcs%functl, X_FUNC_GGA_LB94).ne.0) then
     do is = 1, st%d%nspin
-      call df_gradient(m, vxc(:, is), grhoplus)
+      call df_gradient(f_der, vxc(:, is), grhoplus)
       do i = 1, m%np
-        ex = ex - d(i, is) * sum(m%x(:,i)*grhoplus(:, i)) * m%vol_pp(i)
+        ex = ex - d(i, is) * sum(m%x(i,:)*grhoplus(i,:)) * m%vol_pp(i)
       end do
     end do
   end if
@@ -153,4 +154,3 @@ subroutine xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
   deallocate(d, lpot, rhoplus, rhominus, grhoplus, grhominus, vlocaldedgd, vlocaldedgd1)
   call pop_sub()
 end subroutine xc_gga
-

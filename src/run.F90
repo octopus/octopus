@@ -151,7 +151,7 @@ subroutine run()
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
-      call X(h_calc_vhxc)(h, sys%m, sys%st, calc_eigenval=.true.) ! get potentials
+      call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
       call states_fermi(sys%st, sys%m)                            ! occupations
       call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
 
@@ -164,7 +164,7 @@ subroutine run()
       call write_info(1)
 
       call scf_init(scfv, sys%m, sys%st, h)
-      call scf_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
+      call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_LCAO)
@@ -173,7 +173,7 @@ subroutine run()
         message(1) = 'Info: Performing initial LCAO calculation.'
         call write_info(1)
 
-        call lcao_init(lcao_data, sys%m, sys%st, sys%geo, h)
+        call lcao_init(lcao_data, sys%m, sys%f_der, sys%st, sys%geo, h)
         if(lcao_data%state == 1) then
           call lcao_wf(lcao_data, sys%m, sys%st, h)
           call lcao_end(lcao_data)
@@ -230,7 +230,7 @@ subroutine run()
       message(1) = 'Info: Calculation of unoccupied states.'
       call write_info(1)
 
-      call unocc_run(unoccv, sys%m, sys%st, h, sys%outp)
+      call unocc_run(unoccv, sys%m, sys%f_der, sys%st, h, sys%outp)
 
     case(I_SETUP_TD)
       message(1) = 'Info: Setting up TD.'
@@ -257,7 +257,7 @@ subroutine run()
       call restart_load("tmp/restart_gs", sys%st, sys%m, ierr)
       if(ierr.eq.0) then ! In this case, we require strict perfect reading....
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
+        call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
 #ifdef HAVE_MPI
         call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
@@ -283,7 +283,7 @@ subroutine run()
       if(ierr<=0) then
         ! define density and hamiltonian
         call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
-        call zh_calc_vhxc(h, sys%m, sys%st, calc_eigenval=.true.)
+        call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
         x = minval(sys%st%eigenval(sys%st%st_start, :))
 #ifdef HAVE_MPI
         call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
@@ -303,7 +303,7 @@ subroutine run()
       message(1) = 'Info: Time-dependent simulation.'
       call write_info(1)
 
-      call td_run(td, unoccv%st, sys%m, sys%st, sys%geo, h, sys%outp)
+      call td_run(td, unoccv%st, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
 
     case(I_SETUP_OCC_AN)
 
@@ -339,7 +339,7 @@ subroutine run()
       call write_info(1)
 
       call scf_init(scfv, sys%m, sys%st, h)
-      call static_pol_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
+      call static_pol_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_GEOM_OPT)
@@ -347,7 +347,7 @@ subroutine run()
       call write_info(1)
 
       call scf_init(scfv, sys%m, sys%st, h)
-      call geom_opt_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
+      call geom_opt_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_PHONONS)
@@ -355,14 +355,14 @@ subroutine run()
       call write_info(1)
 
       call scf_init(scfv, sys%m, sys%st, h)
-      call phonons_run(scfv, sys%m, sys%st, sys%geo, h, sys%outp)
+      call phonons_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
       call scf_end(scfv)
 
     case(I_OPT_CONTROL)
       message(1) = 'Info: Optimum control.'
       call write_info(1)
 
-      call opt_control_run(td, sys%m, sys%geo, sys%st, sys%val_charge, h, sys%outp)
+      call opt_control_run(td, sys%m, sys%f_der, sys%geo, sys%st, sys%val_charge, h, sys%outp)
 
     case(I_PULPO)
       call pulpo_print()

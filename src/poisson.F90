@@ -53,9 +53,8 @@ public :: poisson_init, poisson_solve, poisson_end
 
 contains
 
-subroutine poisson_init(m, geo)
+subroutine poisson_init(m)
   type(mesh_type),     intent(inout) :: m
-  type(geometry_type), intent(IN)    :: geo
   
   if(poisson_solver.ne.-99) return ! already initialized
   
@@ -88,17 +87,15 @@ subroutine poisson_init(m, geo)
     poisson_solver = CG
 #endif
 
-    call poisson3D_init(m, geo)
+    call poisson3D_init(m)
   end if
 end subroutine poisson_init
 
 subroutine poisson_end()
-  integer :: j
   call push_sub('poisson_end')
 
   select case(poisson_solver)
   case(CG)
-    call mf_end_der(cg_m_aux)
     call mesh_end(cg_m_aux)
     deallocate(cg_m_aux); nullify(cg_m_aux)
 #ifdef HAVE_FFT

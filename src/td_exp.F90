@@ -107,9 +107,10 @@ contains
     end if
   end subroutine td_exp_end
 
-  subroutine td_exp_dt(te, m, h, zpsi, ik, timestep, t, order, vmagnus)
+  subroutine td_exp_dt(te, m, f_der, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type),      intent(inout)   :: te
     type(mesh_type),        intent(IN)      :: m
+    type(f_der_type),       intent(inout) :: f_der
     type(hamiltonian_type), intent(IN)      :: h
     integer,                intent(in)      :: ik
     CMPLX,                  intent(inout)   :: zpsi(:, :)
@@ -149,9 +150,9 @@ contains
       CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then
-        call zmagnus(h, m, psi, oppsi, ik, vmagnus)
+        call zmagnus(h, m, f_der, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, m, psi, oppsi, ik, t)
+        call zHpsi(h, m, f_der, psi, oppsi, ik, t)
       endif
 
     end subroutine operate

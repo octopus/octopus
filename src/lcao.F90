@@ -48,9 +48,10 @@ module lcao
 
 contains
 
-subroutine lcao_init(lcao_data, m, st, geo, h)
+subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
   type(lcao_type),        intent(out) :: lcao_data
   type(mesh_type),        intent(IN)  :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(IN)  :: st
   type(geometry_type),    intent(IN)  :: geo
   type(hamiltonian_type), intent(IN)  :: h
@@ -129,7 +130,7 @@ subroutine lcao_init(lcao_data, m, st, geo, h)
   allocate(hpsi(m%np, st%dim))
   do ik = 1, st%nik
     do n1 = 1, lcao_data%dim
-      call X(kinetic) (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      call X(kinetic) (h, m, f_der, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)

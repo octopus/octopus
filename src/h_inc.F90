@@ -16,9 +16,10 @@
 !! 02111-1307, USA.
 
 ! calculates the eigenvalues of the real orbitals
-subroutine X(hamiltonian_eigenval)(h, m, st)
+subroutine X(hamiltonian_eigenval)(h, m, f_der, st)
   type(hamiltonian_type), intent(IN)    :: h
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
 
   R_TYPE, allocatable :: Hpsi(:,:)
@@ -30,7 +31,7 @@ subroutine X(hamiltonian_eigenval)(h, m, st)
 
   do ik = 1, st%nik
     do ist = st%st_start, st%st_end
-      call X(hpsi) (h, m, st%X(psi)(:, :, ist, ik), hpsi, ik)
+      call X(hpsi) (h, m, f_der, st%X(psi)(:, :, ist, ik), hpsi, ik)
       e = X(states_dotp)(m, st%d%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
@@ -40,9 +41,10 @@ subroutine X(hamiltonian_eigenval)(h, m, st)
   call pop_sub()
 end subroutine X(hamiltonian_eigenval)
 
-subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
+subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
+  type(f_der_type),       intent(inout) :: f_der
   integer,                intent(in)  :: ik
   R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
@@ -50,7 +52,7 @@ subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
 
   call push_sub('Hpsi')
 
-  call X(kinetic) (h, m, psi, hpsi, ik)
+  call X(kinetic) (h, m, f_der, psi, hpsi, ik)
   call X(vlpsi)   (h, m, psi, hpsi, ik)
   if(h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, hpsi, ik)
 
@@ -71,19 +73,20 @@ subroutine X(Hpsi) (h, m, psi, hpsi, ik, t)
       message(1) = "TDCDFT not yet implemented"
       call write_fatal(1)
     end if
-    call X(vlasers)  (h, m, psi, hpsi, t)
+    call X(vlasers)  (h, m, f_der, psi, hpsi, t)
     call X(vborders) (h, m, psi, hpsi)
   elseif (h%d%cdft) then
-    call X(current_extra_terms) (h, m, psi, hpsi, ik)
+    call X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
   end if
 
   call pop_sub()
 end subroutine X(Hpsi)
 
 #if defined(R_TCOMPLEX)
-subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
+subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
+  type(f_der_type),       intent(inout) :: f_der
   integer,                intent(in)  :: ik
   R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
@@ -97,7 +100,7 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
 
   allocate(auxpsi(m%np, h%d%dim), aux2psi(m%np, h%d%dim))
 
-  call X(kinetic) (h, m, psi, hpsi, ik)
+  call X(kinetic) (h, m, f_der, psi, hpsi, ik)
 
   auxpsi = hpsi
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, auxpsi, ik)
@@ -122,7 +125,7 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
       auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
     end if
   end select
-  call X(kinetic) (h, m, auxpsi, aux2psi, ik)
+  call X(kinetic) (h, m, f_der, auxpsi, aux2psi, ik)
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, auxpsi, aux2psi, ik)
   hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
 
@@ -148,9 +151,10 @@ subroutine X(magnus) (h, m, psi, hpsi, ik, vmagnus)
 end subroutine X(magnus)
 #endif
 
-subroutine X(kinetic) (h, m, psi, hpsi, ik)
+subroutine X(kinetic) (h, m, f_der, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
+  type(f_der_type),       intent(inout) :: f_der
   R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer :: ik
@@ -166,14 +170,14 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
 
   if(conf%periodic_dim>0) then
 #if defined(COMPLEX_WFNS)
-    allocate(grad(3, m%np))
+    allocate(grad(m%np, conf%dim))
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
       call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
       call X(f_gradient)  (m, psi(:, idim), grad(:, :))
       do i = 1, m%np
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
-             + M_TWO*M_zI*sum(h%d%kpoints(:, ik)*grad(:, i)) &
+             + M_TWO*M_zI*sum(h%d%kpoints(:, ik)*grad(i, :)) &
              - k2*psi(i, idim))
       end do
     end do
@@ -186,7 +190,7 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
   
   else
     do idim = 1, h%d%dim
-      call X(f_laplacian) (m, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_laplacian) (f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
     call lalg_scal(m%np, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
   end if
@@ -195,9 +199,10 @@ subroutine X(kinetic) (h, m, psi, hpsi, ik)
   call pop_sub()
 end subroutine X(kinetic)
 
-subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
+subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
   type(hamiltonian_type), intent(IN)  :: h
   type(mesh_type),        intent(IN)  :: m
+  type(f_der_type),       intent(inout) :: f_der
   R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)  :: ik
@@ -217,12 +222,12 @@ subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
   do idim = 1, conf%dim
     select case(h%d%ispin)
     case(UNPOLARIZED)
-      hpsi(:, 1) = hpsi(:, 1) + h%ahxc(idim, :, 1)*h%ahxc(idim, :, 1)*psi(1:, 1)
+      hpsi(:, 1) = hpsi(:, 1) + h%ahxc(:, idim, 1)*h%ahxc(:, idim, 1)*psi(:, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(:, 1) = hpsi(:, 1) + h%ahxc(idim, :, 1)*h%ahxc(idim, :, 1)*psi(1:, 1)
+        hpsi(:, 1) = hpsi(:, 1) + h%ahxc(:, idim, 1)*h%ahxc(:, idim, 1)*psi(:, 1)
       else
-        hpsi(:, 1) = hpsi(:, 1) + h%ahxc(idim, :, 2)*h%ahxc(idim, :, 2)*psi(1:, 1)
+        hpsi(:, 1) = hpsi(:, 1) + h%ahxc(:, idim, 2)*h%ahxc(:, idim, 2)*psi(:, 1)
       end if
     case (SPINORS)
       ! not implemented yet
@@ -232,13 +237,13 @@ subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
   allocate(div(m%np))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-    call df_divergence(m, h%ahxc(:, :, 1), div)
+    call df_divergence(f_der, h%ahxc(:, :, 1), div)
     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(1:, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-      call df_divergence(m, h%ahxc(:, :, 1), div)
+      call df_divergence(f_der, h%ahxc(:, :, 1), div)
     else
-      call df_divergence(m, h%ahxc(:, :, 2), div)
+      call df_divergence(f_der, h%ahxc(:, :, 2), div)
     end if
     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(1:, 1)
   case(SPINORS)
@@ -246,20 +251,20 @@ subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
   end select
   deallocate(div)
 
-  allocate(grad(3, m%np))
+  allocate(grad(m%np, conf%dim))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-    call X(f_gradient)(m, psi(:, 1), grad)
+    call X(f_gradient)(f_der, psi(:, 1), grad)
     do k = 1, m%np
-      hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(:, k, 1), grad(:, k)) 
+      hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k,:, 1), grad(k, :)) 
     end do
   case(SPIN_POLARIZED)
-    call X(f_gradient)(m, psi(:, 1), grad)
+    call X(f_gradient)(f_der, psi(:, 1), grad)
     do k = 1, m%np
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(:, k, 1), grad(:, k))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 1), grad(k, :))
       else
-        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(:, k, 2), grad(:, k))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 2), grad(k, :))
       end if
     end do
   case(SPINORS)
@@ -275,12 +280,12 @@ subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
 
       select case(h%d%ispin)
       case(UNPOLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(a, h%ahxc(:, k, 1))*psi(k, 1)
+        hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(a, h%ahxc(k, :, 1))*psi(k, 1)
       case(SPIN_POLARIZED)
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(a, h%ahxc(:, k, 1))*psi(k, 1)
+          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(a, h%ahxc(k, :, 1))*psi(k, 1)
         else
-          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(a, h%ahxc(:, k, 2))*psi(k, 1)
+          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(a, h%ahxc(k, :, 2))*psi(k, 1)
         end if
       case (SPINORS)
         ! not implemented yet
@@ -288,12 +293,12 @@ subroutine X(current_extra_terms) (h, m, psi, hpsi, ik)
 
       select case(h%d%ispin)
       case(UNPOLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a, grad(:, k))
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a, grad(k, :))
       case(SPIN_POLARIZED)
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a, h%ahxc(:, k, 1))*psi(k, 1)
+          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a, h%ahxc(k, :, 1))*psi(k, 1)
         else
-          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a, h%ahxc(:, k, 2))*psi(k, 1)
+          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(a, h%ahxc(k, :, 2))*psi(k, 1)
         end if
       case (SPINORS)
         ! not implemented yet
@@ -393,9 +398,10 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   call pop_sub()
 end subroutine X(vlpsi)
 
-subroutine X(vlasers) (h, m, psi, hpsi, t)
+subroutine X(vlasers) (h, m, f_der, psi, hpsi, t)
   type(hamiltonian_type), intent(IN)    :: h
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
@@ -419,11 +425,11 @@ subroutine X(vlasers) (h, m, psi, hpsi, t)
 
     case(2) ! velocity gauge
       call epot_laser_vector_field(h%ep, t, f)
-      allocate(grad(3, m%np))
+      allocate(grad(m%np, conf%dim))
       do idim = 1, h%d%dim
-        call X(f_gradient)(m, psi(:, idim), grad)
+        call X(f_gradient)(f_der, psi(:, idim), grad)
         do k = 1, m%np
-          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
+          hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(k,:)) + &
                sum(f**2)/M_TWO * psi(k, idim)
         end do
       end do
@@ -453,9 +459,10 @@ subroutine X(vborders) (h, m, psi, hpsi)
   call pop_sub()
 end subroutine X(vborders)
 
-subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
+subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   type(hamiltonian_type), intent(inout) :: h
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   logical,      optional, intent(in)    :: calc_eigenval
 
@@ -501,32 +508,26 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
 
     ! now we add the hartree contribution from the current
     if (h%d%cdft) then
-      allocate(ahartree(conf%dim, m%np))
+      allocate(ahartree(m%np, conf%dim))
       ahartree = M_ZERO
       if(h%d%spin_channels == 1) then
         do idim = 1, conf%dim
-          call poisson_solve(m, ahartree(idim, :), st%j(idim, :, 1))
+          call poisson_solve(m, ahartree(:, idim), st%j(:, idim, 1))
         end do
       else
         allocate(j_aux(conf%dim, m%np))         ! need an auxiliary array to
-        j_aux(:,:) = st%j(:, :, 1)              ! calculate the total current
+        j_aux(:,:) = st%j(:,:, 1)               ! calculate the total current
         do is = 2, h%d%spin_channels
           j_aux(:,:) = j_aux(:,:) + st%j(:, :, is)
         end do
         do idim = 1, conf%dim
-          call poisson_solve(m, ahartree(idim, :), j_aux(idim, :)) ! solve the poisson equation
+          call poisson_solve(m, ahartree(:,idim), j_aux(:, idim)) ! solve the poisson equation
         end do
         deallocate(j_aux)
       end if
 
-      select case (h%d%ispin)
-      case(UNPOLARIZED)
-        h%ahxc(:, :, 1) = h%ahxc(:, :, 1) + ahartree(:, :)
-      case (SPIN_POLARIZED)
-        h%ahxc = h%ahxc + reshape(ahartree, (/conf%dim, m%np, 2/), ahartree)
-      case (SPINORS)
-        h%ahxc(:, :, 1:2) = h%ahxc(:, :, 1:2) + reshape(ahartree, (/conf%dim, m%np, 2/), ahartree)
-      end select
+      h%ahxc(:,:, 1) = h%ahxc(:,:, 1) + ahartree(:,:)
+      if(h%d%ispin > UNPOLARIZED) h%ahxc(:,:, 2) = h%ahxc(:,:, 2) + ahartree(:,:)
 
       ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
       ! this yields the correct formula epot = - int j.(axc + aH/2)
@@ -534,7 +535,7 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
       ! WARNING 2: axc is not yet implemented, so we will just add -1/2 int j.aH
       do is = 1, h%d%spin_channels
         do idim = 1, conf%dim
-          h%epot = h%epot - M_HALF*P_c*dmf_dotp(m, st%j(idim, :, is), ahartree(idim, :))
+          h%epot = h%epot - M_HALF*P_c*dmf_dotp(m, st%j(idim, :, is), ahartree(:, idim))
         end do
       end do
 
@@ -547,12 +548,12 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
     !  RPA_Vhxc = h%vhxc
 
     ! now we calculate the xc terms
-    call X(xc_pot)(h%xc, m, st, h%vhxc, h%ex, h%ec, &
+    call X(xc_pot)(h%xc, m, f_der, st, h%vhxc, h%ex, h%ec, &
          -minval(st%eigenval(st%nst, :)), st%qtot)
 
     ! The OEP family has to handle specially
     if(iand(h%xc%family, XC_FAMILY_OEP).ne.0) then
-      call X(h_xc_oep)(h%xc, m, h, st, h%vhxc, h%ex, h%ec)
+      call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)
     end if
 
     ! next 5 lines are for an RPA calculation
@@ -583,7 +584,7 @@ subroutine X(h_calc_vhxc)(h, m, st, calc_eigenval)
   end if
 
   ! this, I think, belongs here
-  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, m, st)
+  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, m, f_der, st)
 
   call pop_sub()
 end subroutine X(h_calc_vhxc)

@@ -70,9 +70,10 @@ subroutine td_write_spin(out, m, st, td, iter)
   call pop_sub()
 end subroutine td_write_spin
 
-subroutine td_write_angular(out, m, st, td, iter)
+subroutine td_write_angular(out, m, f_der, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(IN) :: m
+  type(f_der_type),      intent(inout) :: f_der
   type(states_type),     intent(IN) :: st
   type(td_type),         intent(IN) :: td
   integer,               intent(in) :: iter
@@ -84,7 +85,7 @@ subroutine td_write_angular(out, m, st, td, iter)
   call push_sub('td_write_angular')
 
   ! The angular momentum has to be calculated by all nodes...
-  call zstates_calculate_angular(m, st, angular)
+  call zstates_calculate_angular(m, f_der, st, angular)
 
   if(mpiv%node == 0) then ! Only first node outputs
 
@@ -345,9 +346,10 @@ subroutine td_write_gsp(out, m, st, td, iter)
   call pop_sub()
 end subroutine td_write_gsp
 
-subroutine td_write_acc(out, mesh, st, geo, h, td, iter)
+subroutine td_write_acc(out, mesh, f_der, st, geo, h, td, iter)
   integer(POINTER_SIZE),  intent(IN)    :: out
   type(mesh_type),        intent(IN)    :: mesh
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(IN)    :: h

@@ -93,9 +93,10 @@ subroutine unocc_end(u)
 
 end subroutine unocc_end
 
-subroutine unocc_run(u, m, st, h, outp)
+subroutine unocc_run(u, m, f_der, st, h, outp)
   type(unocc_type),       intent(inout) :: u
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(IN)    :: st
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(IN)    :: outp
@@ -114,7 +115,7 @@ subroutine unocc_run(u, m, st, h, outp)
   eigens%es_maxiter     = u%max_iter
   allocate(eigens%diff(u%st%nst, u%st%nik))
 
-  call eigen_solver_run(eigens, m, u%st, h, 1, converged)
+  call eigen_solver_run(eigens, m, f_der, u%st, h, 1, converged)
 
   ! write output file
   call io_assign(iunit)
@@ -141,7 +142,7 @@ subroutine unocc_run(u, m, st, h, outp)
   call restart_write("tmp/restart_occ", u%st, m, ierr)
 
   ! output wave-functions
-  call X(states_output) (u%st, m, "static", outp)
+  call X(states_output) (u%st, m, f_der, "static", outp)
 
   ! Deallocate eigens..
   deallocate(eigens%diff); nullify(eigens%diff)

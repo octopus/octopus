@@ -31,9 +31,10 @@ implicit none
 
 contains
 
-subroutine static_pol_run(scf, m, st, geo, h, outp)
+subroutine static_pol_run(scf, m, f_der, st, geo, h, outp)
   type(scf_type),         intent(inout) :: scf
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
@@ -96,9 +97,9 @@ subroutine static_pol_run(scf, m, st, geo, h, outp)
         write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
         call write_info(2)
 
-        h%vpsl = vpsl_save + (-1)**k*m%x(i, :)*e_field
+        h%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
 
-        call scf_run(scf, m, st, geo, h, outp)
+        call scf_run(scf, m, f_der, st, geo, h, outp)
 
         trrho = M_ZERO
         do is = 1, st%d%spin_channels

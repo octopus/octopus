@@ -20,9 +20,10 @@
 
 !!! This file has to be outside the module xc, for it requires the Hpsi
 
-subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
+subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
   type(xc_type),          intent(IN)    :: xcs
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(hamiltonian_type), intent(IN)    :: h
   type(states_type),      intent(inout) :: st
   FLOAT,                  intent(inout) :: vxc(m%np, st%d%nspin)
@@ -89,7 +90,7 @@ subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
     ! solve the KLI equation
     oep%vxc = M_ZERO
     call X(xc_KLI_solve) (m, st, is, oep, xcs%oep_level)
-    if(xcs%oep_level == 2) call X(h_xc_oep_solve)(m, h, st, is, vxc(:,is), oep)
+    if(xcs%oep_level == 2) call X(h_xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
 
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
@@ -100,8 +101,9 @@ subroutine X(h_xc_oep)(xcs, m, h, st, vxc, ex, ec)
   call pop_sub()
 end subroutine X(h_xc_OEP)
 
-subroutine X(h_xc_oep_solve) (m, h, st, is, vxc, oep)
+subroutine X(h_xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(hamiltonian_type), intent(IN)    :: h
   type(states_type),      intent(IN)    :: st
   integer,                intent(in)    :: is
@@ -170,7 +172,7 @@ contains
     psi = psi - r*st%X(psi)(:, :, ist, is)
 
     ! Calculate starting gradient: |hpsi> = (H-eps_i)|psi> + b
-    call X(Hpsi)(h, m, psi, res, 1)
+    call X(Hpsi)(h, m, f_der, psi, res, 1)
     res(:,1) = res(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
 
     ! orthogonalize direction to phi
@@ -182,7 +184,7 @@ contains
 
     iter_loop: do iter = 1, 50
       ! verify
-      call X(Hpsi)(h, m, psi, tmp, 1)
+      call X(Hpsi)(h, m, f_der, psi, tmp, 1)
       tmp(:,1) = tmp(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
       if(X(states_nrm2)(m, st%dim, tmp).lt.1e-6_8) exit iter_loop
 
@@ -194,7 +196,7 @@ contains
         p  = -res + ek*p
       end if
 
-      call X(Hpsi)(h, m, p, z, 1)
+      call X(Hpsi)(h, m, f_der, p, z, 1)
       z(:,1) = z(:,1) - st%eigenval(ist, 1)*p(:,1)
       r = X(states_dotp) (m, st%dim, z, st%X(psi)(:, :, ist, is))
       z = z - r*st%X(psi)(:, :, ist, is)

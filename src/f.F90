@@ -32,76 +32,118 @@ module functions
 
   integer, parameter ::     &
        REAL_SPACE = 0,      &
-       RECIPROCAL_SPACE = 1
+       FOURIER_SPACE = 1
 
-  integer, private :: derivatives_space
+  type f_der_type
+    type(mesh_type), pointer :: m            ! a pointer to mesh
 
-  type(der_discr_type) :: f_der
+    integer                  :: space        ! derivatives calculated in real or fourier space
 
+    ! derivatives in real space
+    integer                  :: n_ghost(3)   ! ghost points to add in each dimension
+    type(der_discr_type)     :: der_discr    ! discretization of the derivatives
+
+    ! derivatives in fourier space
 #if defined(HAVE_FFT)
-  type(dcf), private :: dcf_der, dcf_aux  ! these auxiliary variables are used to calculate
-  type(zcf), private :: zcf_der, zcf_aux  ! derivatives in fourier space
+    type(dcf) :: dcf_der, dcf_aux            ! auxiliary variables
+    type(zcf) :: zcf_der, zcf_aux            ! derivatives in fourier space
 #endif
+  end type f_der_type
 
 contains
 
-  subroutine functions_init(m)
-    type(mesh_type), intent(inout) :: m
+  ! ---------------------------------------------------------
+  subroutine f_der_init(m, f_der)
+    type(mesh_type),     pointer     :: m
+    type(f_der_type), intent(out) :: f_der
+
     integer :: norder, j
 
-    call push_sub('functions_init')
+    call push_sub('f_der_init')
+
+    f_der%m => m ! keep a working pointer to the underlying mesh
 
 #ifdef HAVE_FFT
-  call loct_parse_int('DerivativesSpace', REAL_SPACE, derivatives_space)
-  if(derivatives_space < 0 .or. derivatives_space > 1) then
-    write(message(1), '(a,i5,a)') "Input: '", derivatives_space, &
+    call loct_parse_int('DerivativesSpace', REAL_SPACE, f_der%space)
+    if((f_der%space.ne.REAL_SPACE).and.(f_der%space.ne.FOURIER_SPACE)) then
+      write(message(1), '(a,i5,a)') "Input: '", f_der%space, &
          "' is not a valid DerivativesSpace"
-    message(2) = '(0 <= DerivativesSpace <=1)'
-    call write_fatal(2)
-  end if
+      message(2) = '(DerivativesSpace = real_space | fourier_space)'
+      call write_fatal(2)
+    end if
 #else
-  derivatives_space = REAL_SPACE
+    f_der%space = REAL_SPACE
 #endif
-
-  if(derivatives_space == REAL_SPACE) then
-    call loct_parse_int('OrderDerivatives', 4, norder)
-    m%der_order   = norder
-
-    call derivatives_init(f_der)
-    message(1) = 'Info: Derivatives calculated in real-space'
-#if defined(HAVE_FFT)
-  else
-    call dcf_new(m%l, dcf_der)
-    call dcf_fft_init(dcf_der)
-    call dcf_new_from(dcf_aux, dcf_der)
-
-    call zcf_new(m%l, zcf_der)
-    call zcf_fft_init(zcf_der)
-    call zcf_new_from(zcf_aux, zcf_der)
     
-    message(1) = 'Info: Derivatives calculated in reciprocal-space'
-#endif
-  end if
-
-  call write_info(1)
-
-  call pop_sub()
-end subroutine functions_init
-
-subroutine functions_end(m)
-  type(mesh_type), intent(inout) :: m
-  integer :: j
-  if(derivatives_space == REAL_SPACE) then
-    call mf_end_der(m)
+    if(f_der%space == REAL_SPACE) then
+      call derivatives_init(m, f_der%der_discr, f_der%n_ghost)
+      message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
-  else
-    call dcf_free(dcf_der)
-    call zcf_free(zcf_der)
-    call dcf_free(dcf_aux)
-    call zcf_free(zcf_aux)
+    else
+      if(f_der%m%use_curvlinear) then
+        message(1) = "When using curvilinear coordinates you must use"
+        message(2) = "DerivativesSpace = real_space"
+        call write_fatal(2)
+      end if
+
+      message(1) = 'Info: Derivatives calculated in reciprocal-space'
 #endif
-  end if
-end subroutine functions_end
+    end if
+
+    call write_info(1)
+    
+    call pop_sub()
+  end subroutine f_der_init
+
+
+  ! ---------------------------------------------------------
+  subroutine f_der_build(f_der)
+    type(f_der_type), intent(inout) :: f_der
+    
+    call push_sub('f_der_build')
+
+    if(f_der%space == REAL_SPACE) then
+      call derivatives_build(f_der%der_discr)
+#if defined(HAVE_FFT)
+    else
+      call dcf_new(f_der%m%l, f_der%dcf_der)
+      call dcf_fft_init(f_der%dcf_der)
+      call dcf_new_from(f_der%dcf_aux, f_der%dcf_der)
+      
+      call zcf_new(f_der%m%l, f_der%zcf_der)
+      call zcf_fft_init(f_der%zcf_der)
+      call zcf_new_from(f_der%zcf_aux, f_der%zcf_der)
+#endif
+    end if
+
+    call pop_sub()
+  end subroutine f_der_build
+
+
+  ! ---------------------------------------------------------
+  subroutine f_der_end(f_der)
+    type(f_der_type), intent(inout) :: f_der
+
+    ASSERT(associated(f_der%m))
+    ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
+
+    call push_sub('f_der_end')
+
+    if(f_der%space == REAL_SPACE) then
+      call derivatives_end(f_der%der_discr)
+#if defined(HAVE_FFT)
+    else
+      call dcf_free(f_der%dcf_der)
+      call zcf_free(f_der%zcf_der)
+      call dcf_free(f_der%dcf_aux)
+      call zcf_free(f_der%zcf_aux)
+#endif
+    end if
+
+    nullify(f_der%m)
+
+    call pop_sub()
+  end subroutine f_der_end
 
 #include "undef.F90"
 #include "real.F90"

@@ -15,10 +15,8 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine poisson3D_init(m, geo)
+subroutine poisson3D_init(m)
   type(mesh_type),     intent(inout) :: m
-  type(geometry_type), intent(IN)    :: geo ! this is needed to call mesh_create_xyz
-
 
   ASSERT(poisson_solver >= 0 .or. poisson_solver <= 4)
 
@@ -49,11 +47,11 @@ contains
   subroutine init_real()
  
     ! setup mesh including ghost points
-    allocate(cg_m_aux)
-    cg_m_aux = m
-    nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv, cg_m_aux%grad)
-    call mesh_create_xyz(cg_m_aux, geo, cg_m_aux%der_order)
-    call mf_add_der(cg_m_aux)
+    stop 'has to be changed'
+    !allocate(cg_m_aux)
+    !cg_m_aux = m
+    !nullify(cg_m_aux%lxyz, cg_m_aux%lxyz_inv)
+    !call mesh_create_xyz(cg_m_aux, cg_m_aux%der_order)
 
   end subroutine init_real
 
@@ -178,7 +176,7 @@ subroutine poisson_cg(m, pot, rho)
   ! build initial guess for the potential
   allocate(wk(cg_m_aux%np), lwk(cg_m_aux%np))
   wk(1:m%np) = pot(1:m%np)
-  do i = cg_m_aux%np_in+1, cg_m_aux%np ! boundary conditions
+  do i = cg_m_aux%np+1, cg_m_aux%np_tot ! boundary conditions
     call mesh_r(cg_m_aux, i, r, x=x)
     
     add_lm = 1
@@ -193,14 +191,9 @@ subroutine poisson_cg(m, pot, rho)
   end do
   deallocate(rholm)
 
-  call dmf_laplacian(cg_m_aux, wk, lwk)
+  stop 'dmf_laplacian no longer exists!'
+  ! call dmf_laplacian(cg_m_aux, wk, lwk)
 
-  !call dmf_laplacian(m, rho, lwk)
-  !do i = 1, m%np
-  !  if(m%x(1,i)==M_ZERO.and.m%x(2,i)==M_ZERO) print *, m%x(3,i), rho(i), lwk(i)
-  !end do
-  !stop
-      
   zk(:) = zk(:) - lwk(1:m%np)
   deallocate(wk, lwk) ! they are no longer needed
 
@@ -211,7 +204,8 @@ subroutine poisson_cg(m, pot, rho)
   iter = 0
   do 
     iter = iter + 1
-    call dmf_laplacian(m, pk, tk)
+    stop 'do not forget this one'
+    !call dmf_laplacian(m, pk, tk)
 
     s2 = dmf_dotp(m, zk, tk)
     ak = s1/s2

@@ -32,9 +32,10 @@ implicit none
 
 contains
 
-subroutine opt_control_run(td, m, geo, st, val_charge, h, outp)
+subroutine opt_control_run(td, m, f_der, geo, st, val_charge, h, outp)
   type(td_type),             intent(inout) :: td
   type(mesh_type),           intent(IN)    :: m
+  type(f_der_type),          intent(inout) :: f_der
   type(states_type), target, intent(inout) :: st
   type(geometry_type),       intent(in)    :: geo
   FLOAT,                     intent(in)    :: val_charge
@@ -66,7 +67,7 @@ subroutine opt_control_run(td, m, geo, st, val_charge, h, outp)
     ! setup forward propagation
     call read_state(psi_i, "wf.initial")
     call zcalcdens(psi_i, m%np, psi_i%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_i, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, f_der, psi_i, calc_eigenval=.true.)
     do i = 1, st%d%nspin
       v_old_i(:, i, 2) = h%vhxc(:, i)
     end do
@@ -92,7 +93,7 @@ subroutine opt_control_run(td, m, geo, st, val_charge, h, outp)
     ! setup backward propagation
     call read_state(psi_f, "wf.final")
     call zcalcdens(psi_f, m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
     do i = 1, st%d%nspin
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
@@ -145,15 +146,15 @@ contains
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
-    call td_rti_dt(h, m, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(h, m, f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_i, calc_eigenval=.true.)
-    call td_rti_dt(h, m, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, f_der, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(h, m, f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter1
 
@@ -167,15 +168,15 @@ contains
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
     call zcalcdens(psi_i, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_i, calc_eigenval=.true.)
-    call td_rti_dt(h, m, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, f_der, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(h, m, f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
     call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
-    call td_rti_dt(h, m, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(h, m, f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter2
 
@@ -183,19 +184,17 @@ contains
     integer, intent(in)    :: iter
     FLOAT,   intent(inout) :: l(0:2*td%max_iter, conf%dim)
 
-    CMPLX, allocatable :: grad(:,:)
     CMPLX :: d1, d2(conf%dim)
     integer :: ik, p, dim, i
 
     d1 = M_z0; d2 = M_z0
-    allocate(grad(3, m%np))
     do ik = 1, psi_i%nik
       do p  = psi_i%st_start, psi_i%st_end
         do dim = 1, psi_i%dim
           do i = 1, m%np
             d1 = d1 + conjg(psi_i%zpsi(i, dim, p, ik))*psi_f%zpsi(i, dim, p, ik) * m%vol_pp(i)
             d2(1:conf%dim) = d2(1:conf%dim) - &
-               conjg(psi_f%zpsi(i, dim, p, ik))*m%x(1:conf%dim, i)*psi_i%zpsi(i, dim, p, ik) * m%vol_pp(i)
+               conjg(psi_f%zpsi(i, dim, p, ik))*m%x(i, 1:conf%dim)*psi_i%zpsi(i, dim, p, ik) * m%vol_pp(i)
           end do
         end do
       end do
@@ -225,7 +224,7 @@ contains
 
     ! setup the hamiltonian
     call zcalcdens(psi_f, m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
     
     ! setup start of the propagation
     do i = 1, st%d%nspin
@@ -241,10 +240,10 @@ contains
     call loct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
-      call td_rti_dt(h, m, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
+      call td_rti_dt(h, m, f_der, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
       ! update
       call zcalcdens(psi_f, m%np, st%rho, reduce=.true.)
-      call zh_calc_vhxc(h, m, psi_f, calc_eigenval=.true.)
+      call zh_calc_vhxc(h, m, f_der, psi_f, calc_eigenval=.true.)
 
       call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
@@ -305,7 +304,7 @@ contains
     call io_close(iunit)
 
     ! should output wavefunctions ;)
-    call zstates_output(psi_i, m, "opt-control", outp)
+    call zstates_output(psi_i, m, f_der, "opt-control", outp)
   end subroutine output
 
   subroutine init()

@@ -64,50 +64,9 @@ function X(mf_moment) (m, f, i, n) result(r)
   integer,         intent(in) :: i, n
   R_TYPE                      :: r
 
-  r = sum(f(1:m%np)*m%x(i, 1:m%np)**n * m%vol_pp(1:m%np))
+  r = sum(f(:)*m%x(:,i)**n * m%vol_pp(:))
 end function X(mf_moment)
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! The following set of subroutines calculates derivatives
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!!! calculates the laplacian of a function on the mesh.
-subroutine X(mf_laplacian) (m, f, lapl)
-  type(mesh_type), intent(in)  :: m
-  R_TYPE,          intent(in)  :: f(:)     ! f(m%np)
-  R_TYPE,          intent(out) :: lapl(:)  ! lapl(m%np)
-
-  integer :: j, k, nl
-  R_TYPE, allocatable :: l1(:,:), l2(:,:), t(:)
-
-  call push_sub("mf_laplacian")
-
-  if(m%use_curvlinear) then ! hack
-    allocate(l1(conf%dim, m%np), l2(conf%dim, m%np), t(m%np))
-    call X(mf_gradient) (m, f, l1)
-
-    lapl = R_TOTYPE(M_ZERO)
-    do j = 1, conf%dim
-      t(:) = l1(j, :)
-      call X(mf_gradient) (m, t, l2)
-      lapl = lapl + l2(j,:)
-
-!      do k = 1, m%np
-!        print '(i3,10f12.6)', k, m%x(1, k), f(k), t(k), l2(1,k)
-!      end do
-    end do
-    deallocate(l1, l2, t)
-
-!    stop
-  else
-    nl = m%lapl%n
-    do k = 1, m%np
-      lapl(k) = sum(m%lapl%w(1:nl, k)*f(m%lapl%i(1:nl, k)))
-    end do
-  end if
-
-  call pop_sub()
-end subroutine X(mf_laplacian)
 
 !!! applies a low-frequency filter to a function in a mesh.
 subroutine X(mf_filter) (m, filter, f, filteredf)
@@ -125,54 +84,6 @@ subroutine X(mf_filter) (m, filter, f, filteredf)
 
   call pop_sub()
 end subroutine X(mf_filter)
-
-subroutine X(mf_gradient) (m, f, grad)
-  type(mesh_type), intent(IN)  :: m
-  R_TYPE,          intent(in)  :: f(:)       ! f(m%np)
-  R_TYPE,          intent(out) :: grad(:,:)  ! grad(conf%dim, m%np)
-
-  integer :: i, j, k, ng
-  FLOAT   :: chi(conf%dim), Jac(conf%dim,conf%dim)
-
-  call push_sub("mf_gradient")
-
-  do j = 1, conf%dim
-    ng = m%grad(j)%n
-    do k = 1, m%np
-      grad(j, k) = sum(m%grad(j)%w(1:ng, k)*f(m%grad(j)%i(1:ng, k)))
-    end do
-  end do
-
-  if(m%use_curvlinear) then
-    do k = 1, m%np
-      call jacobian(m%geo, m%x(1:conf%dim,k), chi(:), Jac(:,:))
-      grad(1:conf%dim, k) = matmul(grad(1:conf%dim,k), Jac(:,:))
-    end do
-  end if
-
-  call pop_sub()
-end subroutine X(mf_gradient)
-
-!!! Calculates the divergence of a vectorial function f.
-!!! Currently it only does so in real space.
-subroutine X(mf_divergence)(m, f, divf)
-  type(mesh_type), intent(in)  :: m
-  R_TYPE,          intent(in)  :: f(:,:)   ! (conf%dim, m%np)
-  R_TYPE,          intent(out) :: divf(:)  ! (m%np)
-
-  integer :: j, k, ng(3)
-  call push_sub('mf_divergence')
-
-  divf = R_TOTYPE(M_ZERO)
-  do j = 1, conf%dim
-     ng(j) = m%grad(j)%n
-     do k = 1, m%np
-        divf(k) = divf(k) + sum(m%grad(j)%w(1:ng(j), k)*f(j, m%grad(j)%i(1:ng(j), k)))
-     end do
-  end do
-
-  call pop_sub()
-end subroutine X(mf_divergence)
 
 !!! This subroutine generates a gaussian wave-function in a random
 !!! position in space

@@ -45,8 +45,6 @@ subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
   call build_lattice()    ! build lattice vectors
   call adjust_nr()        ! find out the extension simulation box
 
-  nullify(m%grad)         ! Fortran links initialized pointers
-  
   call pop_sub()
   
 contains
@@ -329,15 +327,16 @@ subroutine mesh_partition(m, Lxyz_tmp)
 end subroutine mesh_partition
 #endif
 
-subroutine mesh_create_xyz(m, geo, enlarge)
+subroutine mesh_create_xyz(m, enlarge)
   type(mesh_type),     intent(inout) :: m
-  type(geometry_type), intent(IN)    :: geo
   integer,             intent(in)    :: enlarge
 
   integer :: i, il, ix, iy, iz
   integer, pointer :: Lxyz_tmp(:,:,:)
   FLOAT :: chi(3)
   FLOAT, pointer :: x(:,:,:,:)
+
+  call push_sub('mesh_create_xyz')
 
 ! enlarge mesh in the non-periodic dimensions
   do i = conf%periodic_dim+1, conf%dim
@@ -360,7 +359,7 @@ subroutine mesh_create_xyz(m, geo, enlarge)
       do iy = m%nr(1,2), m%nr(2,2)
         do iz = m%nr(1,3), m%nr(2,3)
           
-          if(in_mesh(m, geo, x(:, ix, iy, iz))) then
+          if(in_mesh(m, x(:, ix, iy, iz))) then
             do i = -enlarge, 0 ! first include the points on the left
               if(ix+i>=m%nr(1,1))                Lxyz_tmp(ix+i, iy, iz) = 2
               if(iy+i>=m%nr(1,2).and.conf%dim>1) Lxyz_tmp(ix, iy+i, iz) = 2
@@ -388,12 +387,12 @@ subroutine mesh_create_xyz(m, geo, enlarge)
         chi(3) = real(iz, PRECISION) * m%h(3)
 
         if(m%use_curvlinear) then
-          call chi_to_x(geo, chi, x(:, ix, iy, iz))
+          call chi_to_x(m%geo, chi, x(:, ix, iy, iz))
         else
           x(:, ix, iy, iz) = chi
         end if
         
-        if(in_mesh(m, geo, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
+        if(in_mesh(m, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
       end do
     end do
   end do
@@ -407,9 +406,9 @@ subroutine mesh_create_xyz(m, geo, enlarge)
       end do
     end do
   end do
-  m%np = il
+  m%np_tot = il
 
-  allocate(m%Lxyz(3, m%np), m%x(3, m%np))
+  allocate(m%Lxyz(m%np_tot, 3), m%x(m%np_tot, 3))
   il = 0
 
   ! first we fill the points in the inner mesh
@@ -418,16 +417,16 @@ subroutine mesh_create_xyz(m, geo, enlarge)
       do iz = m%nr(1,3), m%nr(2,3)
         if(Lxyz_tmp(ix, iy, iz) == 1) then
           il = il + 1
-          m%Lxyz(1, il) = ix
-          m%Lxyz(2, il) = iy
-          m%Lxyz(3, il) = iz
+          m%Lxyz(il, 1) = ix
+          m%Lxyz(il, 2) = iy
+          m%Lxyz(il, 3) = iz
           m%Lxyz_inv(ix,iy,iz) = il
-          m%x(:, il) = x(:,ix,iy,iz)
+          m%x(il,:) = x(:,ix,iy,iz)
         end if
       enddo
     enddo
   enddo
-  m%np_in = il
+  m%np = il
 
   ! and now the points from the enlargement
   do ix = m%nr(1,1), m%nr(2,1)
@@ -435,11 +434,11 @@ subroutine mesh_create_xyz(m, geo, enlarge)
       do iz = m%nr(1,3), m%nr(2,3)
         if(Lxyz_tmp(ix, iy, iz) == 2) then
           il = il + 1
-          m%Lxyz(1, il) = ix
-          m%Lxyz(2, il) = iy
-          m%Lxyz(3, il) = iz
+          m%Lxyz(il, 1) = ix
+          m%Lxyz(il, 2) = iy
+          m%Lxyz(il, 3) = iz
           m%Lxyz_inv(ix,iy,iz) = il
-          m%x(:, il) = x(:,ix,iy,iz)
+          m%x(il,:) = x(:,ix,iy,iz)
         end if
       end do
     end do
@@ -454,6 +453,7 @@ subroutine mesh_create_xyz(m, geo, enlarge)
   deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
   deallocate(x)
 
+  call pop_sub()
 contains
   ! calculate the volume of integration
   subroutine get_vol_pp()
@@ -470,7 +470,7 @@ contains
 
     if(m%use_curvlinear) then
       do i = 1, m%np
-        call jacobian(m%geo, m%x(:,i), chi(:), Jac(:,:))
+        call jacobian(m%geo, m%x(i,:), chi(:), Jac(:,:))
         f = lalg_det(Jac, conf%dim)
         m%vol_pp(i) = m%vol_pp(i)/f
       end do
@@ -479,9 +479,8 @@ contains
 
 end subroutine mesh_create_xyz
 
-logical function in_mesh(m, geo, x)
+logical function in_mesh(m, x)
   type(mesh_type),     intent(IN) :: m
-  type(geometry_type), intent(IN) :: geo
   FLOAT,               intent(in) :: x(:) ! x(3)
     
   select case(m%box_shape)
@@ -512,8 +511,8 @@ contains
     FLOAT   :: r
     
     in_minimum = .false.
-    do i = 1, geo%natoms
-      r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
+    do i = 1, m%geo%natoms
+      r = sqrt(sum((x(:) - m%geo%atom(i)%x(:))**2))
       if(r <= m%rsize+DELTA_R) then
         in_minimum = .true.
         exit
@@ -548,7 +547,7 @@ subroutine derivatives_init_filter(m, order, filter)
   filter%w = M_ZERO
 
   do i = 1, m%np
-    ix(:) = m%Lxyz(:, i)
+    ix(:) = m%Lxyz(i,:)
     
     ! fill in the table
     nf = 0
@@ -579,14 +578,18 @@ end subroutine derivatives_init_filter
 
 ! this function takes care of the boundary conditions
 ! for a given x,y,z it returns the true index of the point
+
+! WARNING: have to get rid of dir, otherwise will not work
 function mesh_index(m, ix_, dir) result(index)
     type(mesh_type), intent(in) :: m
     integer :: index
-    integer, intent(in) :: ix_(3), dir
+    integer, intent(in) :: ix_(:), dir
 
-    integer :: i, ix(3)
+    integer :: i, ix(3)  ! ix has to go until 3, not conf%dim
 
-    ix = ix_ ! make a local copy that we can change
+    ix = 0
+    ix(1:conf%dim) = ix_(1:conf%dim) ! make a local copy that we can change
+
     index = 1
     do i = 1, conf%dim
       if(ix(i) < m%nr(1, i)) then       ! first look left

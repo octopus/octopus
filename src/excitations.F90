@@ -75,7 +75,7 @@ program excitations
   call loct_wfs_list(ch, flags)
 
   ! initialize Poisson solver
-  call poisson_init(sys%m, sys%geo)
+  call poisson_init(sys%m)
 
   ! should we start from scratch, or use restart file
   call loct_parse_logical("FromScratch", .false., from_scratch)

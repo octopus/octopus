@@ -79,11 +79,11 @@ contains
     ep%vpsl_space = REAL_SPACE
     ep%vnl_space  = REAL_SPACE
 #ifdef HAVE_FFT
-    call loct_parse_int('LocalPotentialSpace', RECIPROCAL_SPACE, ep%vpsl_space)
+    call loct_parse_int('LocalPotentialSpace', FOURIER_SPACE, ep%vpsl_space)
 #endif
     
     select case(ep%vpsl_space)
-    case(RECIPROCAL_SPACE)
+    case(FOURIER_SPACE)
       message(1) = 'Info: Local Potential in Reciprocal Space.'
 #ifdef HAVE_FFT
       call epot_local_fourier_init(ep, m, geo)
@@ -152,7 +152,7 @@ contains
 #ifdef HAVE_FFT
     integer :: i
 
-    if(ep%vpsl_space == RECIPROCAL_SPACE) then
+    if(ep%vpsl_space == FOURIER_SPACE) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
@@ -374,7 +374,7 @@ contains
     geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == RECIPROCAL_SPACE) then
+    if(ep%vpsl_space == FOURIER_SPACE) then
       call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
@@ -425,7 +425,7 @@ contains
     end do
 
 #ifdef HAVE_FFT
-    if(ep%vpsl_space == RECIPROCAL_SPACE) then
+    if(ep%vpsl_space == FOURIER_SPACE) then
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)

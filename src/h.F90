@@ -103,7 +103,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   h%vpsl = M_ZERO
   h%Vhxc = M_ZERO
   if (h%d%cdft) then
-    allocate(h%ahxc(conf%dim, m%np, h%d%nspin))
+    allocate(h%ahxc(m%np, conf%dim, h%d%nspin))
     h%ahxc = M_ZERO
   else
     nullify(h%ahxc)  
@@ -146,7 +146,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     call write_info(1)
   else
     ! initilize hartree and xc modules
-    call poisson_init(m, geo)
+    call poisson_init(m)
     call xc_init(h%xc, geo%nlcc)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)

@@ -43,9 +43,10 @@ module phonons
 
 contains
 
-  subroutine phonons_run(scf, m, st, geo, h, outp)
+  subroutine phonons_run(scf, m, f_der, st, geo, h, outp)
     type(scf_type),         intent(inout) :: scf
     type(mesh_type),        intent(IN)    :: m
+    type(f_der_type),       intent(inout) :: f_der
     type(states_type),      intent(inout) :: st
     type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
@@ -64,7 +65,7 @@ contains
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_DM(scf, m, st, geo, h, outp, ph)
+    call get_DM(scf, m, f_der, st, geo, h, outp, ph)
 
     ! output phonon frequencies and eigenvectors
     call io_assign(iunit)
@@ -89,9 +90,10 @@ contains
     deallocate(ph%DM, ph%freq)
   end subroutine phonons_run
 
-  subroutine get_DM(scf, m, st, geo, h, outp, ph)
+  subroutine get_DM(scf, m, f_der, st, geo, h, outp, ph)
     type(scf_type),         intent(inout) :: scf
     type(mesh_type),        intent(IN)    :: m
+    type(f_der_type),       intent(inout) :: f_der
     type(states_type),      intent(inout) :: st
     type(geometry_type),    intent(inout) :: geo
     type(hamiltonian_type), intent(inout) :: h
@@ -118,9 +120,9 @@ contains
         ! first force
         call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
         call X(calcdens) (st, m%np, st%rho)
-        call X(h_calc_vhxc) (h, m, st, calc_eigenval=.true.)
+        call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, st, geo%eii, -1)
-        call scf_run(scf, m, st, geo, h, outp)
+        call scf_run(scf, m, f_der, st, geo, h, outp)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
         end do
@@ -130,9 +132,9 @@ contains
         ! second force
         call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
         call X(calcdens) (st, m%np, st%rho)
-        call X(h_calc_vhxc) (h, m, st, calc_eigenval=.true.)
+        call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, st, geo%eii, -1)
-        call scf_run(scf, m, st, geo, h, outp)
+        call scf_run(scf, m, f_der, st, geo, h, outp)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)
         end do

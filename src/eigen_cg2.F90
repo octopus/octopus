@@ -16,8 +16,9 @@
 !! 02111-1307, USA.
 
 ! CONJUGATE-GRADIENTS METHOD.
-subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, reorder)
+subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, diff, reorder)
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
   FLOAT,                  intent(in)    :: tol
@@ -56,7 +57,7 @@ subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, re
            st%X(psi)(1:np, 1:st%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, m, st%X(psi)(:,:, p, ik) , h_psi, ik)
+      call X(Hpsi)(h, m, f_der, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
       st%eigenval(p, ik) = R_REAL(X(states_dotp) (m, st%dim, st%X(psi)(1:,:, p, ik), h_psi))
@@ -106,7 +107,7 @@ subroutine eigen_solver_cg2(m, st, h, tol, niter, converged, errorflag, diff, re
         
         ! cg contains now the conjugate gradient
         cg0 = X(states_nrm2) (m, st%dim, cg(:,:))
-        call X(Hpsi) (h, m, cg, ppsi, ik)
+        call X(Hpsi) (h, m, f_der, cg, ppsi, ik)
         
         ! Line minimization.
         a0 = X(states_dotp) (m, st%dim, st%X(psi)(:,:, p, ik), ppsi)

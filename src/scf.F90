@@ -123,9 +123,10 @@ subroutine scf_end(scf)
   call pop_sub(); return
 end subroutine scf_end
 
-subroutine scf_run(scf, m, st, geo, h, outp)
+subroutine scf_run(scf, m, f_der, st, geo, h, outp)
   type(scf_type),         intent(inout) :: scf
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
@@ -143,7 +144,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   call push_sub('scf_run')
 
   if(scf%lcao_restricted) then
-    call lcao_init(lcao_data, m, st, geo, h)
+    call lcao_init(lcao_data, m, f_der, st, geo, h)
     if(.not.lcao_data%state == 1) then
       message(1) = 'Nothing to do'
       call write_fatal(1)
@@ -164,7 +165,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   if (scf%what2mix == MIXPOT) then
     allocate(vout(dim, m%np, nspin), vin(dim, m%np, nspin), vnew(dim, m%np, nspin))
     vin(1, :, :) = h%vhxc; vout = M_ZERO
-    if (st%d%cdft) vin(2:dim, :, :) = h%ahxc
+    if (st%d%cdft) vin(:, 2:dim, :) = h%ahxc(:,:,:)
   else
     allocate(rhonew(dim, m%np, nspin))
   end if
@@ -175,7 +176,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     if(scf%lcao_restricted) then
       call lcao_wf(lcao_data, m, st, h)
     else
-      call eigen_solver_run(scf%eigens, m, st, h, iter)
+      call eigen_solver_run(scf%eigens, m, f_der, st, h, iter)
     endif
 
     ! occupations
@@ -185,13 +186,13 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     call X(calcdens)(st, m%np, st%rho)
     rhoout(1, :, :) = st%rho
     if (h%d%cdft) then
-      call calc_current_physical(m, st, st%j)
+      call calc_current_physical(m, f_der, st, st%j)
       rhoout(2:dim, :, :) = st%j
     end if
     if (scf%what2mix == MIXPOT) then
-      call X(h_calc_vhxc) (h, m, st)
+      call X(h_calc_vhxc) (h, m, f_der, st)
       vout(1, :, :) = h%vhxc
-      if (h%d%cdft) vout(2:dim, :, :) = h%ahxc
+      if (h%d%cdft) vout(:, 2:dim, :) = h%ahxc(:,:,:)
     end if
     evsum_out = states_eigenvalues_sum(st)
 
@@ -227,12 +228,12 @@ subroutine scf_run(scf, m, st, geo, h, outp)
        call mixing(scf%smix, iter, dim, m%np, nspin, rhoin, rhoout, rhonew)
        st%rho = rhonew(1, :, :)
        if (h%d%cdft) st%j = rhonew(2:dim, :, :)
-       call X(h_calc_vhxc) (h, m, st)
+       call X(h_calc_vhxc) (h, m, f_der, st)
     case (MIXPOT)
        ! mix input and output potentials
        call mixing(scf%smix, iter, dim, m%np, nspin, vin, vout, vnew)
        h%vhxc = vnew(1, :, :)
-       if (h%d%cdft) h%ahxc = vnew(2:dim, :, :)
+       if (h%d%cdft) h%ahxc(:,:,:) = vnew(:,2:dim,:)
     end select
 
     ! save restart information
@@ -252,7 +253,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     end if
 
     if(outp%duringscf) then
-      call X(states_output) (st, m, "static", outp)
+      call X(states_output) (st, m, f_der, "static", outp)
       call hamiltonian_output(h, m, "static", outp)
     endif
 
@@ -261,7 +262,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
     if (h%d%cdft) rhoin(2:dim, :, :) = st%j
     if (scf%what2mix == MIXPOT) then
       vin(1, :, :) = h%vhxc
-      if (h%d%cdft) vin(2:dim, :, :) = h%ahxc
+      if (h%d%cdft) vin(:,2:dim,:) = h%ahxc(:,:,:)
     end if
     evsum_in = evsum_out
 
@@ -269,7 +270,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
   end do
 
   if (scf%what2mix == MIXPOT) then
-    call X(h_calc_vhxc) (h, m, st)
+    call X(h_calc_vhxc) (h, m, f_der, st)
     deallocate(vout, vin, vnew)
   else
     deallocate(rhonew)
@@ -286,7 +287,7 @@ subroutine scf_run(scf, m, st, geo, h, outp)
 
   ! output final information
   call scf_write_static("static", "info")
-  call X(states_output) (st, m, "static", outp)
+  call X(states_output) (st, m, f_der, "static", outp)
   if(outp%what(output_geometry)) &
      call atom_write_xyz("static", "geometry", geo)
   call hamiltonian_output(h, m, "static", outp)
@@ -391,7 +392,7 @@ subroutine scf_write_static(dir, fname)
   write(iunit,'(a)')
 
   if(conf%dim==3) then
-    call X(states_calculate_angular)(m, st, angular, l2 = l2)
+    call X(states_calculate_angular)(m, f_der, st, angular, l2 = l2)
     write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
     do j = 1, conf%dim
        write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)

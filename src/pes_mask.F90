@@ -84,7 +84,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
         wf1 = M_z0
 
         do j = 1, m%np
-          ix3(:) = m%Lxyz(:,j) + m%l(:)/2 + 1
+          ix3(:) = m%Lxyz(j,:) + m%l(:)/2 + 1
           wf1(ix3(1), ix3(2), ix3(3)) = mask(j)*st%zpsi(j, idim, ist, ik)
         end do
 

@@ -67,7 +67,7 @@
     do ik = 1, st%nik
       do ist = st%st_start, st%st_end
         
-        call zhpsi(h, mesh, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
+        call zhpsi(h, mesh, f_der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
         call epot_laser_field(h%ep, t, field)
         do k = 1, mesh%np
           call mesh_xyz(mesh, k, mesh_x)

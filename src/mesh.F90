@@ -54,8 +54,8 @@ type mesh_type
   FLOAT :: klat(3,3)   ! reciprocal lattice primitive vectors
   FLOAT :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
   
-  integer  :: np        ! number of points in mesh
-  integer  :: np_in     ! number of points without the enlargement
+  integer  :: np         ! number of points in mesh
+  integer  :: np_tot     ! total number of points including ghost points
 
   integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
   integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
@@ -63,11 +63,6 @@ type mesh_type
   ! some other vars
   integer :: nr(2,3)  ! dimensions of the box where the points are contained
   integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
-
-  type(derivatives_type)          :: lapl
-  type(derivatives_type), pointer :: grad(:)
-
-  integer :: der_order
 
   type(geometry_type), pointer :: geo
 
@@ -93,7 +88,7 @@ subroutine curvlinear_test(m)
     if(abs(x(1)) < 0.01) then
       !call x_to_chi(m%geo, x, chi)
       !call chi_to_x(m%geo, x, chi)
-      write(*,*) m%x(2,i), m%x(3,i)
+      write(*,*) m%x(i,2), m%x(i,3)
     end if
   end do
   stop
@@ -207,7 +202,7 @@ subroutine mesh_xyz(m, i, x)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: x(conf%dim)
 
-  x(1:conf%dim) = m%x(1:conf%dim, i)
+  x(1:conf%dim) = m%x(i, 1:conf%dim)
 end subroutine mesh_xyz
 
 subroutine mesh_x(m, i, x)
@@ -215,7 +210,7 @@ subroutine mesh_x(m, i, x)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: x
 
-  x = m%x(1, i)
+  x = m%x(i, 1)
 end subroutine mesh_x
 
 subroutine mesh_y(m, i, y)
@@ -223,7 +218,7 @@ subroutine mesh_y(m, i, y)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: y
 
-  y = m%x(2, i)
+  y = m%x(i, 2)
 end subroutine mesh_y
 
 subroutine mesh_z(m, i, z)
@@ -231,7 +226,7 @@ subroutine mesh_z(m, i, z)
   integer,         intent(in)  :: i
   FLOAT,           intent(out) :: z
 
-  z = m%x(3, i)
+  z = m%x(i, 3)
 end subroutine mesh_z
 
 subroutine mesh_r(m, i, r, a, x)
@@ -243,7 +238,7 @@ subroutine mesh_r(m, i, r, a, x)
 
   FLOAT :: xx(conf%dim)
 
-  xx(:) = m%x(:, i)
+  xx(:) = m%x(i,:)
   if(present(a)) xx = xx - a
   r = sqrt(dot_product(xx, xx))
 

@@ -27,10 +27,11 @@ implicit none
 
 type system_type
   FLOAT                        :: val_charge ! the charge of the valence electrons (necessary to initialize states)
-  type(mesh_type)              :: m          ! the mesh
+  type(mesh_type),     pointer :: m          ! the mesh
+  type(f_der_type)             :: f_der      ! manages the calculation of derivatives of functions
   type(geometry_type), pointer :: geo        ! the geometry
   type(states_type),   pointer :: st         ! the states
-  type(output_type)            :: outp
+  type(output_type)            :: outp       ! the output
 end type system_type
 
 contains
@@ -47,10 +48,12 @@ contains
     call geometry_init_xyz(s%geo)
     call geometry_init_species(s%geo, s%val_charge, def_h, def_rsize)
 
+    allocate(s%m)
     call mesh_init(s%m, s%geo, def_h, def_rsize)
-    call functions_init(s%m)
-    call mesh_create_xyz(s%m, s%geo, 0)!enlarge)
-    call mf_add_der(s%m)
+    call f_der_init(s%m, s%f_der)
+    call mesh_create_xyz(s%m, s%f_der%n_ghost(1)) ! WARNING: should be an array
+    call f_der_build(s%f_der)
+
     call mesh_write_info(s%m, stdout)
     
     ! initialize the other stuff
@@ -71,9 +74,12 @@ contains
       deallocate(s%st); nullify(s%st)
     end if
     call geometry_end(s%geo)
-    call functions_end(s%m)
+    call f_der_end(s%f_der)
+
     call mesh_end(s%m)
-    deallocate(s%geo)
+    deallocate(s%m); nullify(s%m)
+
+    deallocate(s%geo); nullify(s%geo)
 
     call pop_sub()
   end subroutine system_end

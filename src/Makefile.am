@@ -9,7 +9,8 @@ core_SRCS = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \
-	curvlinear.F90 mesh.F90 derivatives.F90 cf.F90 mf.F90 f.F90 \
+	curvlinear.F90 mesh.F90 nl_operator.F90 derivatives.F90 \
+	cf.F90 mf.F90 f.F90 \
 	poisson.F90 out.F90 crystal.F90 states.F90 xc.F90 mix.F90 restart.F90
 
 octopus_SOURCES = $(core_SRCS) \
@@ -38,7 +39,7 @@ noinst_HEADERS = \
 	out_inc.F90 math_inc.F90\
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
-core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDF90FLAGS@
+core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@ @LDFCFLAGS@
 octopus_LDADD = @LIBS_FFTW@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS)
 
@@ -108,6 +109,7 @@ config_F90.h: config.h
 
 # dependencies. Please update consistently
 mesh.o: mesh_create.F90
+derivatives.o: derivatives_inc.F90
 cf.o: cf_inc.F90
 mf.o: mf_inc.F90
 f.o: f_inc.F90

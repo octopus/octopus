@@ -37,12 +37,13 @@ module td_rti
     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_rti_type
 
-  integer, parameter, private :: SPLIT_OPERATOR       = 0, &
-                                 SUZUKI_TROTTER       = 1, &
-                                 REVERSAL             = 2, &
-                                 APP_REVERSAL         = 3, &
-                                 EXPONENTIAL_MIDPOINT = 4, &
-                                 MAGNUS               = 5 
+  integer, parameter, private :: &
+     SPLIT_OPERATOR       = 0,   &
+     SUZUKI_TROTTER       = 1,   &
+     REVERSAL             = 2,   &
+     APP_REVERSAL         = 3,   &
+     EXPONENTIAL_MIDPOINT = 4,   &
+     MAGNUS               = 5 
 
   FLOAT, parameter, private :: scf_threshold = CNST(1.0e-3)
   
@@ -106,9 +107,10 @@ contains
     tr%v_old(:, :, 1) = h%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
-  subroutine td_rti_dt(h, m, st, tr, t, dt)
+  subroutine td_rti_dt(h, m, f_der, st, tr, t, dt)
     type(hamiltonian_type), intent(inout) :: h
     type(mesh_type),        intent(IN)    :: m
+    type(f_der_type),       intent(inout) :: f_der
     type(states_type),      intent(inout) :: st
     type(td_rti_type),      intent(inout) :: tr
     FLOAT,                  intent(in)    :: t, dt
@@ -147,7 +149,7 @@ contains
         call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
         call zcalcdens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, st)
+        call zh_calc_vhxc(h, m, f_der, st)
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
@@ -189,7 +191,7 @@ contains
          enddo
       enddo
       call zcalcdens(st, m%np, st%rho, .true.)
-      call zh_calc_vhxc(h, m, st)
+      call zh_calc_vhxc(h, m, f_der, st)
       do ik = 1, st%nik
          do ist = 1, st%nst
             if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
@@ -254,12 +256,12 @@ contains
         ! propagate dt with H(t-dt)
         do ik = 1, st%nik
           do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
+            call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
           end do
         end do
         
         call zcalcdens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, st)
+        call zh_calc_vhxc(h, m, f_der, st)
         
         st%zpsi = zpsi1
         deallocate(zpsi1)
@@ -271,7 +273,7 @@ contains
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
@@ -279,7 +281,7 @@ contains
       h%vhxc = vhxc_t2
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -294,14 +296,14 @@ contains
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-           call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -318,7 +320,7 @@ contains
       
       do ik = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
+          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
         end do
       end do
       
@@ -368,7 +370,7 @@ contains
 
       do k = 1, st%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
+          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
                          vmagnus = tr%vmagnus)
         end do
       end do

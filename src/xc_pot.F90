@@ -15,9 +15,10 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
+subroutine X(xc_pot) (xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
+  type(f_der_type), intent(inout) :: f_der
   type(states_type), intent(inout) :: st
   FLOAT, intent(out)    :: vxc(m%np, st%d%nspin), ex, ec
   FLOAT, intent(in) :: ip, qtot
@@ -46,7 +47,7 @@ subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
       case(XC_FAMILY_LDA)
         call xc_lda (xcs, m, st, vxc, ex, ec)
       case(XC_FAMILY_GGA)
-        call xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
+        call xc_gga(xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
 !!$      case(XC_FAMILY_MGGA)
 !!$        call X(xc_mgga) (xcs%functl, xcs, m, nst, st%d%nspin, psi, occ, eigenval, &
 !!$             rho, vx, ex)

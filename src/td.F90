@@ -68,10 +68,11 @@ end type td_type
 
 contains
 
-subroutine td_run(td, u_st, m, st, geo, h, outp)
+subroutine td_run(td, u_st, m, f_der, st, geo, h, outp)
   type(td_type),          intent(inout) :: td
   type(states_type),      intent(IN)    :: u_st
   type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(inout) :: h
@@ -176,7 +177,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     endif
 
     ! time iterate wavefunctions
-    call td_rti_dt(h, m, st, td%tr, i*td%dt, td%dt)
+    call td_rti_dt(h, m, f_der, st, td%tr, i*td%dt, td%dt)
 
     ! mask function?
     if(h%ab == MASK_ABSORBING) then
@@ -194,7 +195,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     call zcalcdens(st, m%np, st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call zh_calc_vhxc(h, m, st, calc_eigenval=.true.)
+    call zh_calc_vhxc(h, m, f_der, st, calc_eigenval=.true.)
     call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
 
     ! Recalculate forces, update velocities...
@@ -221,7 +222,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
 
     ! output angular momentum
-    if(td%out_angular) call td_write_angular(out_angular, m, st, td, i)
+    if(td%out_angular) call td_write_angular(out_angular, m, f_der, st, td, i)
 
     ! output spin
     if(td%out_spin) call td_write_spin(out_spin, m, st, td, i)
@@ -233,7 +234,7 @@ subroutine td_run(td, u_st, m, st, geo, h, outp)
     if(td%out_coords) call td_write_nbo(out_coords, geo, td, i, geo%kinetic_energy, h%etot)
 
     ! If harmonic spectrum is desired, get the acceleration
-    if(td%out_acc) call td_write_acc(out_acc, m, st, geo, h, td, i)
+    if(td%out_acc) call td_write_acc(out_acc, m, f_der, st, geo, h, td, i)
 
     ! output laser field
     if(td%out_laser) call td_write_laser(out_laser, h, td, i)
@@ -287,7 +288,7 @@ contains
     call loct_mkdir("td.general")
 
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
-    if(td%out_angular) call td_write_angular(out_angular, m, st, td, 0)
+    if(td%out_angular) call td_write_angular(out_angular, m, f_der, st, td, 0)
     if(td%out_spin)    call td_write_spin(out_spin, m, st, td, 0)
     if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
 
@@ -295,7 +296,7 @@ contains
 
     ! create files for output and output headers
     if(td%out_coords) call td_write_nbo(out_coords, geo, td, 0, geo%kinetic_energy, h%etot)    
-    if(td%out_acc)    call td_write_acc(out_acc, m, st, geo, h, td, 0)
+    if(td%out_acc)    call td_write_acc(out_acc, m, f_der, st, geo, h, td, 0)
     if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
     if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
 
@@ -458,7 +459,7 @@ contains
     
     ! now write down the rest
     write(filename, '(a,i7.7)') "td.", iter  ! name of directory
-    call zstates_output(st, m, filename, outp)
+    call zstates_output(st, m, f_der, filename, outp)
     if(outp%what(output_geometry)) &
          call atom_write_xyz(filename, "geometry", geo)
     call hamiltonian_output(h, m, filename, outp)

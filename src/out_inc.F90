@@ -246,7 +246,7 @@ contains
     call io_assign(iunit)
     open(iunit, file=trim(dir) // "/" // trim(fname) // ".y=0,z=0", status='unknown')
     do ix = 1, m%np
-      if(m%Lxyz(2, ix)==0.and.m%Lxyz(3, ix)==0) then
+      if(m%Lxyz(ix, 2)==0.and.m%Lxyz(ix, 3)==0) then
         call mesh_x(m, ix, x)
         write(iunit, mformat) x, R_REAL(f(ix))/u, R_AIMAG(f(ix))/u
       end if
