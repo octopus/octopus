@@ -101,6 +101,11 @@ subroutine unocc_run(u, sys, h)
   eigens%final_tol      = u%conv
   eigens%final_tol_iter = 1
   eigens%es_maxiter     = u%max_iter
+  if(associated(eigens%diff)) then
+    deallocate(eigens%diff)
+  endif
+  nullify(eigens%diff)
+  allocate(eigens%diff(u%st%nst, u%st%nik))
 
   call eigen_solver_run(eigens, u%st, sys, h, 1, converged)
   call R_FUNC(hamiltonian_eigenval) (h, u%st, sys)
