@@ -17,7 +17,7 @@ type system_type
   type(specie_type), pointer :: specie(:)
 
   type(mesh_type) :: m
-  type(states_type) :: st
+  type(states_type), pointer :: st
 end type system_type
 
 contains
@@ -41,6 +41,7 @@ subroutine system_init(s)
     val_charge = val_charge - s%atom(i)%spec%Z_val
   enddo
 
+  allocate(s%st)
   call states_init(s%st, s%m, val_charge)
 
   call pop_sub()
@@ -51,7 +52,10 @@ subroutine system_end(s)
 
   sub_name = 'system_end'; call push_sub()
 
-  call states_end(s%st)
+  if(associated(s%st)) then
+    call states_end(s%st)
+    deallocate(s%st); nullify(s%st)
+  end if
   call mesh_end(s%m)
   call atom_end(s%natoms, s%atom)
   call specie_end(s%nspecies, s%specie)

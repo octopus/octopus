@@ -1,0 +1,244 @@
+subroutine td_init(td, m, st)
+  type(td_type), intent(out) :: td
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(inout) :: st
+
+  integer :: dummy, iunit
+
+  sub_name = 'td_init'; call push_sub()
+
+  td%iter = 0
+
+  td%max_iter = fdf_integer("TDMaximumIter", 1500)
+  if(td%max_iter < 1) then
+    write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
+    message(2) = '(1 <= TDMaximumIter)'
+    call write_fatal(2)
+  end if
+  
+  td%save_iter = fdf_integer("TDSaveIter", 100)
+  if (td%save_iter < 0 .or. td%save_iter>td%max_iter) then
+    write(message(1), '(a,i6,a)') "Input: '", td%save_iter, "' is not a valid TDSaveIter"
+    message(2) = '(0 <= TDSaveIter <= TDMaximumIter)'
+    call write_fatal(2)
+  end if
+
+  td%dt = fdf_double("TDTimeStep", 0.0001_r8/units_inp%time%factor)*units_inp%time%factor
+  if (td%dt <= 0._r8) then
+    write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
+    message(2) = '(0 < TDTimeStep)'
+    call write_fatal(2)
+  end if
+  
+  td%evolution_method = fdf_integer("TDEvolutionMethod", 2)
+  if (td%evolution_method<1 .or. td%evolution_method>3) then
+    write(message(1), '(a,i6,a)') "Input: '", td%evolution_method, "' is not a valid TDEvolutionMethod"
+    message(2) = '(1 <= TDEvolutionMethod <= 3)'
+    call write_fatal(2)
+  end if
+  if(td%evolution_method == 3) then ! split operator method
+    call td_init_evolution_splitop()
+  end if
+
+  td%lmax = fdf_integer("TDDipoleLmax", 1);
+  if (td%lmax < 0 .or. td%lmax > 4) then
+    write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
+    message(2) = '(0 <= TDDipoleLmax <= 4 )'
+    call write_fatal(2)
+  end if
+
+  ! delta impulse used to calculate optical spectrum
+  ! units are 1/length
+  td%delta_strength = fdf_double("TDDeltaStrength", 0._r8)/units_inp%length%factor
+  if(fdf_block('TDPolarization', iunit)) then
+    read(iunit,*) td%pol(1), td%pol(2), td%pol(3)
+  else  !default along the z-direction
+    td%pol(1) = 0.0_r8; td%pol(2) = 0.0_r8; td%pol(3) = 1.0_r8
+  endif
+
+  td%gauge = fdf_integer("TDGauge", 1);
+  if (td%gauge < 1 .or. td%gauge > 2) then
+    write(message(1), '(a,i6,a)') "Input: '", td%gauge, "' is not a valid TDGauge"
+    message(2) = 'Accepted values are:'
+    message(3) = '   1 = length gauge'
+    message(4) = '   2 = velocity gauge'
+    call write_fatal(4)
+  end if  
+
+  ! now the lasers
+  call td_init_lasers()
+
+  ! now come the absorbing boundaries
+  call td_init_ab()
+
+  ! now the photoelectron stuff (TODO)
+  !call td_init_PES()
+
+  ! occupational analysis stuff
+  dummy = fdf_integer("TDOccupationalAnalysis", 0_i4)
+  td%occ_analysis = (dummy .ne. 0)
+
+  ! should we move the ions during the simulation?
+  td%move_ions = fdf_integer("MoveIons", 0)
+  if(td%move_ions.ne.0 .and. td%move_ions<3 .and. td%move_ions>4) then
+    write(message(1),'(a,i4)') "Input: '", td%move_ions, &
+         "' is not a valid MoveIons"
+    message(2) = '  MoveIons = 0 <= do not move'
+    message(3) = '  MoveIons = 3 <= verlet'
+    message(4) = '  MoveIons = 4 <= velocity verlet'
+    call write_fatal(4)
+  endif
+  
+  call td_init_states()
+
+contains
+  subroutine td_init_evolution_splitop()
+    integer :: ix, iy, iz, ixx, iyy, izz
+    real(r8) :: temp, vec
+
+    allocate(td%kin_2(m%fft_n, m%fft_n, m%fft_n))
+    temp = 2.0_r8*M_PI/(m%fft_n*m%h)    
+    do ix = 1, m%fft_n
+      do iy = 1, m%fft_n
+        do iz = 1, m%fft_n
+          ixx = pad_feq(ix, m%fft_n, .true.)
+          iyy = pad_feq(iy, m%fft_n, .true.)
+          izz = pad_feq(iz, m%fft_n, .true.)
+          vec = temp**2 * real(ixx**2 + iyy**2 + izz**2, r8)/2._r8
+          
+          td%kin_2(ix, iy, iz) = exp(- M_zI*td%dt/2._r8* vec)
+        end do
+      end do
+    end do
+  end subroutine td_init_evolution_splitop
+
+  subroutine td_init_lasers()
+    !call laser_init(sys%m, td%no_lasers, td%lasers)
+    td%output_laser = .false.
+    if(td%no_lasers>0 ) then
+      message(1) = 'Info: Lasers'
+      call write_info(1)
+      !if(conf%verbose > 20) call laser_write_info(td%no_lasers, td%lasers, stdout)
+      
+      td%delta_strength = 0._r8 ! no delta impulse if lasers exist
+      dummy = fdf_integer("TDOutputLaser", 0_i4)
+      if(dummy .ne. 0) td%output_laser = .true.
+    end if
+
+  end subroutine td_init_lasers
+
+  subroutine td_init_ab()
+    integer :: i, dummy
+    real(r8) :: d, r, x(3)
+
+    dummy = fdf_integer("TDAbsorbingBoundaries", 0_i4)
+    if(dummy .eq. 1 .or. dummy .eq. 2) then
+      td%ab = dummy
+      td%ab_width  = fdf_double("TDABWidth", 2._r8)
+      if(td%ab == 1) then
+        td%ab_height = fdf_double("TDABHeight", -5._r8)
+      else
+        td%ab_height = 1._r8
+      end if
+    
+      ! generate boundary potential...
+      allocate(td%ab_pot(m%np))
+      td%ab_pot = 0._r8
+      pot: do i = 1, m%np
+        call mesh_r(m, i, r, x=x)
+        
+        select case(m%box_shape)
+        case(1)
+          d = r - (m%rsize - td%ab_width)
+          if(d.gt.0._r8) then
+            td%ab_pot(i) = td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
+            !td%ab_pot(i) = 1._r8
+          end if
+        
+        case(2)
+          d = sqrt(x(1)**2 + x(2)**2) - (m%rsize - td%ab_width)
+          if(d.gt.0._r8)  &
+               td%ab_pot(i) = td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
+          d = abs(x(3)) - (m%zsize - td%ab_width)
+          if(d.gt.0._r8)  &
+               td%ab_pot(i) = td%ab_pot(i) + td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
+          if(abs(td%ab_pot(i)) > abs(td%ab_height)) td%ab_pot(i) = td%ab_height
+        
+        case default
+          message(1) = "Absorbing boundaries are not implemented for"
+          message(2) = "Box_shape = 3"
+          call write_warning(2)
+          exit pot
+        end select
+      end do pot
+    end if
+  end subroutine td_init_ab
+  
+  subroutine td_init_states()
+    integer :: i, ix
+
+    ! MPI stuff
+#if defined(HAVE_MPI) && defined(MPI_TD)
+    if(st%nst < mpiv%numprocs) then
+      message(1) = "Have more processors than necessary"
+      write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."
+      call write_fatal(2)
+    end if
+
+    i = st%nst / mpiv%numprocs
+    ix = st%nst - i*mpiv%numprocs
+    if(ix > 0 .and. mpiv%node < ix) then
+      i = i + 1
+      st%st_start = mpiv%node*i + 1
+      st%st_end = st%st_start + i - 1
+    else
+      st%st_end = st%nst - (mpiv%numprocs - mpiv%node - 1)*i
+      st%st_start = st%st_end - i + 1
+    end if
+    write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", mpiv%node, " will propagate state ", &
+         st%st_start, " - ", st%st_end
+
+    ! syncronize to get the output properly
+    call MPI_Barrier(MPI_COMM_WORLD, i)
+  
+#else
+    st%st_start = 1
+    st%st_end   = st%nst
+#endif
+
+    ! allocate memory
+    i = min(st%ispin, 2)
+    allocate(td%v_old1(m%np, i), td%v_old2(m%np, i))
+    allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
+  end subroutine td_init_states
+
+end subroutine td_init
+
+subroutine td_end(td)
+  type(td_type), intent(inout) :: td
+
+  sub_name = 'td_end'; call push_sub()
+
+! TODO PES
+!#ifndef NO_PES
+!  if(td%calc_PES_rc)   call PES_rc_end(td%PES_rc)
+!  if(td%calc_PES_mask) call PES_mask_end(td%PES_mask)
+!#endif
+
+  if(td%evolution_method == 3) then ! split operator method
+    deallocate(td%kin_2); nullify(td%kin_2)
+  end if
+
+  if(td%ab>0 .and. associated(td%ab_pot)) then
+    deallocate(td%ab_pot); nullify(td%ab_pot)
+  end if
+
+  if(associated(td%v_old1)) then
+    deallocate(td%v_old1); nullify(td%v_old1)
+    deallocate(td%v_old2); nullify(td%v_old2)
+  end if
+
+!  call laser_end(td%no_lasers, td%lasers)
+
+  call pop_sub()
+end subroutine td_end

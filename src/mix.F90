@@ -1,13 +1,5 @@
 #include "config.h"
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!                                                                             !
-! Module mixing 0.2 (25/06/2001)                                              !
-!                                                                             !
-! Performs linear, Broyden or (not yet) Anderson-Pulay mixing  of the         !
-!       densities.                                                            !
-!                                                                             !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 module mix
 use global
 use fdf
@@ -17,7 +9,7 @@ use states
 implicit none
 
 private
-public :: mix_type, mix_init, mix_end, mix_dens, calcdens
+public :: mix_type, mix_init, mix_end, mix_dens, dcalcdens, zcalcdens
 
 integer, parameter :: LINEAR   = 0, &
                       ANDERSON = 1, &
@@ -88,7 +80,6 @@ subroutine mix_init(smix, m, st)
 
   return
 end subroutine mix_init
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine mix_end(smix)
   type(mix_type), intent(inout) :: smix
@@ -100,7 +91,6 @@ subroutine mix_end(smix)
     end if
   end if
 end subroutine mix_end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine mix_dens(smix, iter, st, m, dist)
   type(mix_type), intent(inout) :: smix
@@ -113,7 +103,7 @@ subroutine mix_dens(smix, iter, st, m, dist)
   integer :: is, errorflag
     
   allocate(rhoout(m%np, st%ispin))
-  call calcdens(st, m%np, rhoout)
+  call R_FUNC(calcdens)(st, m%np, rhoout)
 
   dist = 0._r8
   allocate(dummy(m%np))
@@ -139,48 +129,6 @@ subroutine mix_dens(smix, iter, st, m, dist)
     
 end subroutine mix_dens
 
-! Calculates the new density out the wavefunctions and occupations...
-subroutine calcdens(st, np, rho)
-  type(states_type), intent(IN) :: st
-  integer, intent(in) :: np
-  real(r8), intent(out) :: rho(np, st%ispin)
-
-  integer :: i, ik, p, sp
-
-  if(st%ispin == 2) then
-    sp = 2
-  else
-    sp = 1
-  end if
-
-  ! TODO: for polymers, do not forget to introduce integration factor
-  ! in momentum space
-  rho = 0._r8
-  do ik = 1, st%nik, sp
-    do p  = 1, st%nst
-      do i = 1, np
-        ! spin-up density
-        rho(i, 1) = rho(i, 1) + st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik))**2
-
-        ! spin-down density
-        if(st%ispin == 2) then
-          rho(i, 2) = rho(i, 2) + st%occ(p, ik+1)*R_ABS(st%R_FUNC(psi)(i, 1, p, ik+1))**2
-        end if
-
-        ! off-diagonal densities
-        if(st%ispin == 4) then
-          rho(i, 2) = rho(i, 2) + st%occ(p, ik)*R_ABS(st%R_FUNC(psi)(i, 2, p, ik))**2
-!          rho(i, 3) = st%occ(p, ik)*&
-!               st%R_FUNC(psi)(i, 1, p, ik)*R_CONJ(st%R_FUNC(psi)(i, 2, p, ik))
-!          rho(i, 4) = R_CONJ(rho(i, 3)) ! this is in principle not necessary!
-        end if
-
-      end do
-    end do
-  end do
-
-  return
-end subroutine calcdens
 
 ! Performs the linear mixing...
 subroutine mix_linear(smix, np, ispin, rho, rhoout)
@@ -194,8 +142,6 @@ subroutine mix_linear(smix, np, ispin, rho, rhoout)
 
   return
 end subroutine mix_linear
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 
 !!$!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -488,7 +434,13 @@ end subroutine mix_linear
 !!$  end subroutine mix_broyden
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
-  end module mix
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#include "undef.F90"
+#include "real.F90"
+#include "mix_inc.F90"
 
 #include "undef.F90"
+#include "complex.F90"
+#include "mix_inc.F90"
+#include "undef.F90"
+
+end module mix

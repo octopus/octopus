@@ -8,6 +8,7 @@ use system
 use hamiltonian
 use lcao
 use scf
+use timedep
 use pulpo
 
 implicit none
@@ -38,12 +39,29 @@ integer, private, parameter :: &
      I_SETUP_HAMILTONIAN  =  5,  &
      I_SCF                =  6,  &
      I_LCAO               =  7,  &
+
+     I_SETUP_OCC_RPSI     = 11,  &
+     I_END_OCC_RPSI       = 12,  &
+     I_RANDOMIZE_OCC_RPSI = 13,  &
+     I_LOAD_OCC_RPSI      = 14,  &
+     I_OCC_SCF            = 15,  &
+    
+     I_SETUP_TD           = 21,  &
+     I_END_TD             = 22,  &
+     I_INIT_ZPSI          = 23,  &
+     I_LOAD_ZPSI          = 24,  &
+     I_TD                 = 25,  &
+     I_SETUP_OCC_AN       = 26,  &
+     I_END_OCC_AN         = 27,  &
+
      I_PULPO              = 99
 
 contains
 
 subroutine run()
   integer :: i
+  type(states_type), pointer :: st_aux
+  type(td_type), pointer :: td
 
   sub_name = 'run'; call push_sub()
 
@@ -57,13 +75,13 @@ subroutine run()
 
     select case(i_stack(instr))
     case(I_SETUP_RPSI)
-      message(1) = 'Info: Allocating rpsi'
+      message(1) = 'Info: Allocating rpsi.'
       call write_info(1)
         
       allocate(sys%st%R_FUNC(psi)(0:sys%m%np, sys%st%dim, sys%st%nst, sys%st%nik))
 
     case(I_END_RPSI)
-      message(1) = 'Info: Deallocating rpsi'
+      message(1) = 'Info: Deallocating rpsi.'
       call write_info(1)
 
       if(associated(sys%st%R_FUNC(psi))) then
@@ -71,7 +89,7 @@ subroutine run()
       end if
 
     case(I_RANDOMIZE_RPSI)
-      message(1) = 'Info: Random generating starting wavefunctions'
+      message(1) = 'Info: Random generating starting wavefunctions.'
       call write_info(1)
 
       ! wave functions are simply random gaussians
@@ -81,18 +99,19 @@ subroutine run()
       i = min(sys%st%ispin, 2)
       call lcao_dens(sys, i, sys%st%rho(:,i))
 
+      ! TODO: non-collinear spin
       ! the off-diagonal densities are set to zero
       !if(sys%st%ispin > 2) then
       !  sys%st%rho(:,i+1:sys%st%ispin) = 0._r8
       !end if
 
     case(I_LOAD_RPSI)
-      message(1) = 'Info: Loading rpsi'
+      message(1) = 'Info: Loading rpsi.'
       call write_info(1)
       
       if(R_FUNC(states_load_restart)(trim(sys%sysname)//".restart", &
            sys%m, sys%st)) then
-        call calcdens(sys%st, sys%m%np, sys%st%rho)
+        call R_FUNC(calcdens)(sys%st, sys%m%np, sys%st%rho)
       else
         ! run scf unless it is already in the stack
         if(calc_mode .ne. M_RESUME_STATIC_CALC .and. &
@@ -103,8 +122,9 @@ subroutine run()
         i_stack(instr) = I_RANDOMIZE_RPSI
         cycle program         
       end if
+
     case(I_SETUP_HAMILTONIAN)
-      message(1) = 'Info: Setting up Hamiltonian'
+      message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
 
       call hamiltonian_setup(h, sys)                    ! get potentials
@@ -114,13 +134,52 @@ subroutine run()
 
     case(I_SCF)
 #ifdef COMPLEX_WFNS
-      message(1) = 'Info: SCF using complex wavefunctions'
+      message(1) = 'Info: SCF using complex wavefunctions.'
 #else
-      message(1) = 'Info: SCF using real wavefunctions'
+      message(1) = 'Info: SCF using real wavefunctions.'
 #endif
       call write_info(1)
       call scf_run(sys, h)
 
+    case(I_SETUP_TD)
+      message(1) = 'Info: Setting up TD.'
+      call write_info(1)
+
+      ! store old states (st_aux will be deallocated in I_TD)
+      st_aux => sys%st 
+      nullify(sys%st)
+      allocate(sys%st)
+      call states_dup(st_aux, sys%st)
+      nullify(st_aux%rho, st_aux%eigenval, st_aux%occ)
+      nullify(sys%st%dpsi, sys%st%zpsi)
+
+      ! initialize structure
+      allocate(td)
+      call td_init(td, sys%m, sys%st)
+
+    case(I_END_TD)
+      message(1) = 'Info: Cleaning up TD.'
+      call write_info(1)
+
+      ! zpsi will be deallocated normally in states_end
+      call td_end(td)
+      deallocate(td); nullify(td)
+      
+    case(I_INIT_ZPSI)
+      message(1) = 'Info: Initializing zpsi'
+      call write_info(1)
+
+      sys%st%zpsi(:,:,sys%st%st_start:sys%st%st_end,:) = &
+           st_aux%R_FUNC(psi)(:,:,sys%st%st_start:sys%st%st_end,:)
+    case(I_TD)
+      message(1) = 'Info: Time-dependent simulation.'
+      call write_info(1)
+
+      ! get rid of old states that may be lying around
+      call states_end(st_aux)
+      deallocate(st_aux); nullify(st_aux)
+
+      call td_run(td, sys, h)
     case(I_PULPO)
       call pulpo_print()
 
@@ -132,7 +191,6 @@ subroutine run()
     instr = instr - 1
   end do program
       
-
   call run_end()
 
   call pop_sub()
@@ -188,6 +246,23 @@ subroutine define_run_modes()
     instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
     instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
     instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_START_TD)
+    instr = instr + 1; i_stack(instr) = I_END_TD
+    instr = instr + 1; i_stack(instr) = I_END_OCC_AN
+    instr = instr + 1; i_stack(instr) = I_TD
+    instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
+    instr = instr + 1; i_stack(instr) = I_INIT_ZPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_TD
+    instr = instr + 1; i_stack(instr) = I_SETUP_HAMILTONIAN    
+    instr = instr + 1; i_stack(instr) = I_LOAD_RPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_RPSI
+  case(M_RESUME_TD)
+    instr = instr + 1; i_stack(instr) = I_END_TD
+    instr = instr + 1; i_stack(instr) = I_END_OCC_AN
+    instr = instr + 1; i_stack(instr) = I_TD
+    instr = instr + 1; i_stack(instr) = I_SETUP_OCC_AN
+    instr = instr + 1; i_stack(instr) = I_LOAD_ZPSI
+    instr = instr + 1; i_stack(instr) = I_SETUP_TD    
   case(M_PULPO_A_FEIRA)
     instr = instr + 1; i_stack(instr) = I_PULPO
   end select

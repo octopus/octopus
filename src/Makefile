@@ -12,7 +12,7 @@ PROG_NAME = octopus.x
 F90MOD_SRC = fdf.F90 global.F90 pulpo.F90 units.F90 math.F90 spline.F90 \
         fft.F90 ps_kb.F90 ps.F90 specie.F90 atom.F90 mesh3D.F90 \
 	hartree.F90 states.F90 xc.F90 systm.F90 hamiltonian.F90 \
-	lcao.F90 eigen.F90 mix.F90 scf.F90 run.F90
+	lcao.F90 eigen.F90 mix.F90 scf.F90 lasers.F90 td.F90 run.F90
 F90MOD_OBJ= $(F90MOD_SRC:.F90=.o)
 
 SRCS_90 = ps_xc.F90 main.F90
@@ -91,3 +91,5 @@ xc.o: xc_pot.F90 xc_LDA.F90 xc_GGA.F90
 hamiltonian.o: hamiltonian_inc.F90 h_external_pot.F90
 eigen.o: eigen_cg1.F90
 states.o: states_inc.F90
+td.o: td_init.F90
+mix.o: mix_inc.F90

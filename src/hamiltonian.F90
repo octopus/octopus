@@ -137,7 +137,7 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
 
   integer :: ik
   real(r8) :: s, e
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#ifdef HAVE_MPI
   integer :: ierr
 #endif 
 
@@ -145,7 +145,7 @@ subroutine hamiltonian_energy(h, sys, iunit, reduce)
 
   e = sum(sys%st%occ(sys%st%st_start:sys%st%st_end, :)*&
        sys%st%eigenval(sys%st%st_start:sys%st%st_end, :))
-#if defined(HAVE_MPI) && defined(MPI_TD)
+#ifdef HAVE_MPI
   if(present(reduce) .and. reduce) then
     call MPI_ALLREDUCE(e, s, 1, &
          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
