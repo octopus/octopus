@@ -307,8 +307,6 @@ subroutine R_FUNC(hamiltonian_setup)(h, m, st, sys)
 
   integer :: is
 
-  if(h%ip_app) return
-
   sub_name = 'hamiltonian_setup'; call push_sub()
 
   if(.not. h%ip_app) then ! No Hartree or xc if independent electrons.
