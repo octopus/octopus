@@ -103,11 +103,21 @@ function specie_init(s)
 
 #elif defined(ONE_D)
     s(i)%local = .true. ! In 1D, potential has to be local.
-    allocate(s(i)%ps)
-    call oct_parse_block_double(str, i-1, 2, s(i)%z)
-    call oct_parse_block_double(str, i-1, 3, s(i)%z_val)
-    call ps_init(s(i)%ps, s(i)%label, s(i)%Z, s(i)%Z_val)
-
+    select case(s(i)%label(1:5))
+    case('usdef') ! user defined
+      call oct_parse_block_double(str, i-1, 2, s(i)%Z_val)
+      call oct_parse_block_str   (str, i-1, 3, s(i)%user_def)
+      ! convert to C string
+      j = len(trim(s(i)%user_def))
+      s(i)%user_def(j+1:j+1) = achar(0) 
+    case default ! built by the program
+      allocate(s(i)%ps)
+      call oct_parse_block_double(str, i-1, 2, s(i)%z)
+      call oct_parse_block_double(str, i-1, 3, s(i)%z_val)
+      call oct_parse_block_str   (str, i-1, 4, s(i)%user_def)
+      s(i)%user_def = C_string(s(i)%user_def) 
+      call ps_init(s(i)%ps, s(i)%label, s(i)%Z, s(i)%Z_val, s(i)%user_def)
+    end select
 #endif
 
     s(i)%weight =  units_inp%mass%factor * s(i)%weight ! units conversion

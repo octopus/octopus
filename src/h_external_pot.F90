@@ -300,7 +300,8 @@ subroutine generate_external_pot(h, sys)
 !!$  stop
 
   call oct_parse_logical(C_string("OutputLocalPotential"), .false., output_local)
-  if(output_local) call dwrite_mesh_function(sys%m, h%vpsl, trim(sys%sysname)//'.lpot')
+  if(output_local) call dwrite_mesh_function( &
+        sys%m, h%vpsl / units_out%energy%factor, trim(sys%sysname)//'.lpot')
 
   call pop_sub()
 contains

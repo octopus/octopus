@@ -1,4 +1,3 @@
-module ps
 use io
 use units
 use spline
@@ -719,27 +718,6 @@ subroutine get_splines(psf, ps, rphi, rc)
 
 end subroutine get_splines
 
-subroutine derivate_in_log_grid(a, b, nrval, f, dfdr)
-  real(r8), intent(in) :: a, b
-  integer,  intent(in) :: nrval
-  real(r8), intent(IN) :: f(nrval)
-  real(r8), intent(out) :: dfdr(nrval)
-
-  real(r8) :: x,y
-  integer :: i
-
-  x = 1.0_r8 - exp(-2*a)
-  y = 1.0_r8 - exp(-a)
-
-  dfdr(1) = (1/(y*b))*exp(-a)*(f(2)-f(1))  
-  do i = 2, nrval-1
-    dfdr(i) = (1/(x*b))*exp(-i*a)*(f(i+1)-f(i-1))
-  enddo
-  dfdr(nrval) = (1/(y*b))*exp(-(nrval-1)*a)*(f(nrval)-f(nrval-1))
-
-  return
-end subroutine derivate_in_log_grid
-
 !---------------------------- Output ------------------------------------
 subroutine write_info_about_pseudo_1(unit, psf, ps, z)
   integer, intent(in) :: unit
@@ -857,4 +835,4 @@ subroutine write_info_about_pseudo_4(unit, ps, eigen)
   return
 end subroutine write_info_about_pseudo_4
 
-end module ps
+
