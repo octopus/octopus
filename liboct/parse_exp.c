@@ -54,6 +54,8 @@ int get_real(char *s, double *d)
 
 int yylex (){
 	int c;
+	static char *symbuf = 0;
+	static int length = 0;
      
 	/* Ignore whitespace, get first nonwhite character.  */
 	while ((c = par_string[par_pos++]) == ' ' || c == '\t');
@@ -71,8 +73,6 @@ int yylex (){
 	/* Char starts an identifier => read the name.       */
 	if (isalpha (c) || c == '\'' || c == '\"'){
 		symrec *s;
-		static char *symbuf = 0;
-		static int length = 0;
 		char startc = c;
 		int i;
 		

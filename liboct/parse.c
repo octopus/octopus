@@ -15,13 +15,13 @@ static char *str_trim(char *in)
 
 	for(c=s; isspace(*c); c++);
 	for(; *c != '\0'; *s++=*c++);
-	for(s--; isspace(*s) || *s == '\n'; s--);
+	for(s--; isspace(*s); s--);
 	*(s+1) = '\0';
 
 	return in;
 }
 
-static char parse_get_line(FILE *f, char *s, int *length)
+static char parse_get_line(FILE *f, char **s, int *length)
 {
 	int i;
 	char c;
@@ -34,14 +34,14 @@ static char parse_get_line(FILE *f, char *s, int *length)
 		else if(c != EOF){
 			if (i == *length - 1){
 				*length *= 2;
-				s = (char *)realloc(s, *length + 1);
+				*s = (char *)realloc(*s, *length + 1);
 			}
-			s[i++] = c;
+			(*s)[i++] = c;
 		}
 	}while(c != EOF && c != '\n');
-	s[i] = '\0';
+	(*s)[i] = '\0';
 	
-	str_trim(s);
+	str_trim(*s);
 	return c;
 }
 
@@ -73,7 +73,7 @@ int parse_init(char *file_in, char *file_out)
 	length = 40;
 	s = (char *)malloc(length + 1);
 	do{
-		c = parse_get_line(f, s, &length);
+		c = parse_get_line(f, &s, &length);
 		if(*s){
 			if(*s == '%'){ // we have a block
 				*s = ' ';
@@ -81,7 +81,7 @@ int parse_init(char *file_in, char *file_out)
 				if(getsym(s) != NULL){ // error
 					fprintf(stderr, "%s \"%s\" %s", "Block", s, "already defined");
 					do{ // skip block
-						c = parse_get_line(f, s, &length);
+						c = parse_get_line(f, &s, &length);
 					}while(c != EOF && *s != '%');
 				}else{ // parse block
 					symrec *rec;
@@ -90,7 +90,7 @@ int parse_init(char *file_in, char *file_out)
 					rec->value.block->n = 0;
 					rec->value.block->lines = NULL;
 					do{
-						c = parse_get_line(f, s, &length);
+						c = parse_get_line(f, &s, &length);
 						if(*s && *s != '%'){
 							char *s1, *tok;
 							int l, col;
