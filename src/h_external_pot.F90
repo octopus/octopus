@@ -25,8 +25,8 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
   logical, intent(in) :: nlcc
 
   integer :: i, j, ix, iy, iz, n, ixx(3)
-  real(r8) :: x(3), g(3), g2
-  real(r8), allocatable :: fr(:,:,:)
+  real(r8) :: x(3), g(3), g2, modklat
+  real(r8), allocatable :: fr(:,:,:), v(:)
   complex(r8) :: c
 
   sub_name = 'specie_local_fourier_init'; call push_sub()
@@ -36,24 +36,39 @@ subroutine specie_local_fourier_init(ns, s, m, nlcc)
   do i = 1, ns
     allocate(s(i)%local_fw(m%hfft_n2, m%fft_n2(2), m%fft_n2(3)))
 
-    do ix = 1, m%fft_n2(1)
-      ixx(1) = ix - (m%fft_n2(1)/2 + 1)
-      do iy = 1, m%fft_n2(2)
-        ixx(2) = iy - (m%fft_n2(2)/2 + 1)
-        do iz = 1, m%fft_n2(3)
-          ixx(3) = iz - (m%fft_n2(3)/2 + 1)
+    if (conf%periodic_dim==0) then
+      do ix = 1, m%fft_n2(1)
+	ixx(1) = ix - (m%fft_n2(1)/2 + 1)
+	do iy = 1, m%fft_n2(2)
+          ixx(2) = iy - (m%fft_n2(2)/2 + 1)
+          do iz = 1, m%fft_n2(3)
+            ixx(3) = iz - (m%fft_n2(3)/2 + 1)
 
-          x(:) = m%h(:)*ixx(:)
-          fr(ix, iy, iz) = specie_get_local(s(i), x)
-        end do
+            x(:) = m%h(:)*ixx(:)
+            fr(ix, iy, iz) = specie_get_local(s(i), x)
+          end do
+	end do
       end do
-    end do
-
-    call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
-    
-    n = m%hfft_n2*m%fft_n2(2)*m%fft_n2(3)
-    c  = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), M_ZERO, r8)
-    call zscal(n, c, s(i)%local_fw,  1)
+      call rfftwnd_f77_one_real_to_complex(m%dplanf2, fr, s(i)%local_fw)
+      n = m%hfft_n2*m%fft_n2(2)*m%fft_n2(3)
+      c = cmplx(1.0_r8/(m%fft_n2(1)*m%fft_n2(2)*m%fft_n2(3)), M_ZERO, r8)
+      call zscal(n, c, s(i)%local_fw,  1)
+    else
+       allocate(v(2:s(i)%ps%g%nrval))
+       do ix = 1, m%fft_n2(1)
+	 do iy = 1, m%fft_n2(2)
+           do iz = 1, m%fft_n2(3)
+	     modklat = sqrt(ix*m%klat(1,1)+iy*m%klat(2,2)+iz*m%klat(3,3))
+	     do j = 2, s(i)%ps%g%nrval
+	        v(j) = (sin(modklat*s(i)%ps%g%rofi(j))/(modklat*s(i)%ps%g%rofi(j)))*     &
+		        s(i)%ps%g%rofi(j)**2*(splint(s(i)%ps%vlocal,s(i)%ps%g%rofi(j)))
+	     enddo
+	     s(i)%local_fw(ix, iy, iz) = sqrt(M_TWO/M_PI)*(sum(s(i)%ps%g%drdi(:)*v(:))-s(i)%ps%z/modklat)
+           end do
+	 end do
+       end do
+       deallocate(v)
+    end if
     
     ! now we built the non-local core corrections in momentum space
     if(nlcc) then
@@ -288,7 +303,7 @@ contains
                                               a%so_uv, a%so_duv, a%so_uvu, &
 					      a%so_luv, a%phases)
     
-    if (any(s%ps%rc_max + m%h(1)>=m%lsize)) then
+    if (any(s%ps%rc_max + m%h(1)>=m%lsize(1:conf%periodic_dim))) then
       message(1)='KB sphere is larger than the box size'
       write(message(2),'(a,f12.6,a)')'  rc_max+h = ',s%ps%rc_max + m%h(1),' [b]'
       write(message(3),'(a,3f12.4,a)')'  lsize    = ',m%lsize,' [b]'
