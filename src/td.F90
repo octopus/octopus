@@ -95,9 +95,6 @@ subroutine td_run(td, u_st, sys, h)
   character(len=100) :: filename
 
   sub_name = 'td_run'; call push_sub()
-
-  write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
-  call write_info(1)
   
   allocate(dipole(sys%st%nspin, td%save_iter))
   allocate(multipole((td%lmax + 1)**2, sys%st%nspin, td%save_iter))
@@ -143,6 +140,9 @@ subroutine td_run(td, u_st, sys, h)
   if(td%iter == 0) call td_run_zero_iter(sys%m)
   !call td_check_trotter(td, sys, h)
   td%iter = td%iter + 1
+
+  write(message(1), '(a7,1x,a14,a14,a17)') 'Iter ', 'Time ', 'Energy ', 'Elapsed Time '
+  call write_info(1)
 
   ii = 1
   etime = oct_clock()
@@ -286,6 +286,24 @@ contains
 
     sub_name = 'td_run_zero_iter'; call push_sub()
 
+    ! we now apply the delta(0) impulse to the wf
+    if(td%delta_strength .ne. M_ZERO) then
+      write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', td%delta_strength
+      write(message(2),'(a,f11.6)')  '      Ground-State energy    = ',h%etot
+      do i = 1, m%np
+        call mesh_xyz(m, i, x)
+        c = exp(M_zI * td%delta_strength * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
+        sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
+      end do
+      ! update density
+      call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
+      ! update hamiltonian and eigenvalues (fermi is *not* called)
+      call zhamiltonian_setup(h, sys%m, sys%st, sys)
+      call hamiltonian_energy(h, sys%st, sys%eii, -1, reduce=.true.)
+      write(message(3),'(a,f11.6)')  '      Initial energy         = ', h%etot
+      call write_info(3)
+    end if
+
     select case(sys%st%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       do i = 1, sys%st%nspin
@@ -297,18 +315,7 @@ contains
       td%v_old(:, 3, 2) = h%vxc(:, 3)
       td%v_old(:, 4, 2) = h%vxc(:, 4)
     end select
-    td%v_old(:, :, 3) = td%v_old(:, :, 1)
-
-    ! we now apply the delta(0) impulse to the wf
-    print *, td%delta_strength
-    if(td%delta_strength .ne. M_ZERO) then
-      do i = 1, m%np
-        call mesh_xyz(m, i, x)
-        c = exp(M_zI * td%delta_strength * sum(x(1:conf%dim)*td%pol(1:conf%dim)))
-
-        sys%st%zpsi(i,:,:,:) = c * sys%st%zpsi(i,:,:,:)
-      end do
-    end if
+    td%v_old(:, :, 3) = td%v_old(:, :, 2)
 
     ! And same thing for the ions. The formulas are:
     ! If phi(0+) = e^(ikz)phi_0 (kick for the electrons, as done before,
