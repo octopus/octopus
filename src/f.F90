@@ -71,8 +71,9 @@ contains
     call zcf_new_from(zcf_aux, zcf_der)
     
     message(1) = 'Info: Derivatives calculated in reciprocal-space'
-  end if
 #endif
+  end if
+
   call write_info(1)
 
   call pop_sub()
