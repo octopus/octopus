@@ -15,14 +15,15 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
+subroutine X(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
   type(xc_type), intent(inout) :: xcs
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(inout) :: st
   real(r8), intent(out)    :: vxc(m%np, st%nspin), ex, ec
   real(r8), intent(in) :: ip, qtot
 
-  real(r8), allocatable :: vaux(:, :) 
+  integer :: i
+  real(r8) :: e_aux
 
   ! for fxc != vxc...
   ! fxc is always LDA!!!!
@@ -30,45 +31,31 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$  logical, save :: first_time = .true.
 
   call push_sub('xc_pot')
-
+  
   ! "ip" variable is only meaningfull if LB94 potential is to be used. Should
   ! bear the opposite of the value of the last eigenvalue ( = ionization potential)
   ! If "self-consistent" LB94 is not to be used, should be 1/32
   ! ip = M_ONE/32.0_r8
   
-  allocate(vaux(m%np, st%nspin))
-  vxc = M_ZERO; vaux = M_ZERO
-  ex  = M_ZERO; ec = M_ZERO
+  vxc = M_ZERO
+  ex  = M_ZERO
+  ec  = M_ZERO
 
-  select case(xcs%x_family)
-  case(XC_FAMILY_ZER)
-  case(XC_FAMILY_LDA)
-    call R_FUNC(xc_lda) (xcs%x_func, xcs%nlcc, m, st, vxc, ex)
-  case(XC_FAMILY_GGA)
-    call xc_gga(xcs%x_func, xcs%nlcc, m, st, vxc, ex, &
-                ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
-!  case(XC_FAMILY_MGGA)
-!    call R_FUNC(xc_mgga) (xcs%x_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
-!        rho, vx, ex)
-  case(XC_FAMILY_KLI)
-    call R_FUNC(xc_kli) (xcs%x_func, xcs%nlcc, m, st, vxc, ex)
-  end select
-
-  select case(xcs%c_family)
-  case(XC_FAMILY_ZER)
-  case(XC_FAMILY_LDA)
-    call R_FUNC(xc_lda) (xcs%c_func, xcs%nlcc, m, st, vaux, ec)
-  case(XC_FAMILY_GGA)
-    call xc_gga(xcs%c_func, xcs%nlcc, m, st, vaux, ec, &
-                ip, qtot, xcs%lb94_modified, xcs%lb94_beta, xcs%lb94_threshold)
-!  case(XC_FAMILY_MGGA)
-!    call R_FUNC(xc_mgga) (xcs%c_func, xcs, m, nst, st%nspin, psi, occ, eigenval, &
-!        rho, vc, ec)
-  case(XC_FAMILY_KLI)
-    call R_FUNC(xc_kli) (xcs%c_func, xcs%nlcc, m, st, vaux, ec)
-  end select
-
-  vxc = vxc + vaux
+  do i = 0, N_XC_FAMILIES - 1
+    if(btest(xcs%family, i)) then
+      select case(ibset(0, i))
+      case(XC_FAMILY_LDA)
+        call xc_lda (xcs, m, st, vxc, ex, ec)
+      case(XC_FAMILY_GGA)
+        call xc_gga(xcs, m, st, vxc, ex, ec, ip, qtot)
+!!$      case(XC_FAMILY_MGGA)
+!!$        call R_FUNC(xc_mgga) (xcs%functl, xcs, m, nst, st%nspin, psi, occ, eigenval, &
+!!$             rho, vx, ex)
+      case(XC_FAMILY_KLI)
+        !call R_FUNC(xc_kli) (xcs%functl, xcs%nlcc, m, st, vxc, ex)
+      end select
+    end if
+  end do
 
   ! Warning: For vxc != vxc
 !!$  if(first_time) then
@@ -89,6 +76,5 @@ subroutine R_FUNC(xc_pot) (xcs, m, st, vxc, ex, ec, ip, qtot)
 !!$  end if
 !!$  vx = vx + save_vxc
 
-  deallocate(vaux)
   call pop_sub()
 end subroutine R_FUNC(xc_pot)

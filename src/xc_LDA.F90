@@ -15,61 +15,76 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(xc_lda) (func, nlcc, m, st, pot, energy)
-  integer, intent(in) :: func
-  logical, intent(in) :: nlcc
-  type(mesh_type), intent(IN) :: m
-  type(states_type), intent(IN) :: st
-  real(r8), intent(out) :: energy, pot(m%np, st%nspin)
-
-  real(r8) :: d(st%spin_channels), dtot, dpol, vpol, p(st%nspin), pd(st%spin_channels), e
-  real(r8), parameter :: tiny = 1.0e-12_r8
-  integer  :: i, is
+subroutine xc_lda (xcs, m, st, vxc, ex, ec)
+  type(xc_type),     intent(in)  :: xcs
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: st
+  real(r8),          intent(out) :: ex, ec, vxc(m%np, st%nspin)
+  
+  real(r8), allocatable :: d(:), p(:), pd(:), pd1(:)
+  real(r8) :: dtot, dpol, vpol, e, e1
+  integer  :: i, ixc, is
 
   call push_sub('xc_lda')
 
-  energy = M_ZERO
+  allocate(d(st%spin_channels), p(st%nspin), pd(st%spin_channels), pd1(st%spin_channels))
+
   do i = 1, m%np
     if(st%ispin==SPINORS) then
-     dtot = st%rho(i, 1) + st%rho(i, 2)
-     dpol = sqrt( (st%rho(i, 1)-st%rho(i, 2))**2 + M_FOUR*(st%rho(i, 3)**2+st%rho(i, 4)**2) )
-     d(1) = max(M_HALF * ( dtot + dpol ), M_ZERO)
-     d(2) = max(M_HALF * ( dtot - dpol ), M_ZERO)
+      dtot = st%rho(i, 1) + st%rho(i, 2)
+      dpol = sqrt( (st%rho(i, 1)-st%rho(i, 2))**2 + M_FOUR*(st%rho(i, 3)**2+st%rho(i, 4)**2) )
+      d(1) = max(M_HALF * ( dtot + dpol ), M_ZERO)
+      d(2) = max(M_HALF * ( dtot - dpol ), M_ZERO)
     else
-     do is = 1, st%spin_channels
+      do is = 1, st%spin_channels
         d(is) = max(st%rho(i, is), M_ZERO)
-     enddo
+      enddo
     endif
-    if(nlcc) then    
+    if(xcs%nlcc) then    
       d(1:st%spin_channels) = d(1:st%spin_channels) + st%rho_core(i)/st%spin_channels
     end if
 
-    select case(func)
-    case(X_FUNC_LDA_NREL)
-      call exchng(0, st%spin_channels, d, e, pd)
-    case(X_FUNC_LDA_REL)
-      call exchng(1, st%spin_channels, d, e, pd) 
-    case(C_FUNC_LDA_PZ)
-      call pzc(st%spin_channels, d, e, pd)
-    case(C_FUNC_LDA_PW92)
-      call pw92c(st%spin_channels, d, e, pd)
-    end select
+    e  = M_ZERO
+    pd = M_ZERO
+    functl_loop: do ixc = 0, N_X_FUNCTL+N_C_FUNCTL-1
+      if(.not.btest(xcs%functl, ixc)) cycle
+
+      select case(ibset(0, ixc))
+      case(X_FUNC_LDA_NREL)
+        call exchng(0, st%spin_channels, d, e1, pd1)
+      case(X_FUNC_LDA_REL)
+        call exchng(1, st%spin_channels, d, e1, pd1)
+      case(C_FUNC_LDA_PZ)
+        call pzc(st%spin_channels, d, e1, pd1)
+      case(C_FUNC_LDA_PW92)
+        call pw92c(st%spin_channels, d, e1, pd1)
+      end select
+
+      e  =  e +  e1
+      pd = pd + pd1
+    end do functl_loop
 
     if (st%ispin==SPINORS) then
-       vpol  = (pd(1)-pd(2)) * (st%rho(i, 1)-st%rho(i, 2)) / (dpol+tiny)
-       p(1) = M_HALF * ( pd(1) + pd(2) + vpol )
-       p(2) = M_HALF * ( pd(1) + pd(2) - vpol )
-       p(3) = (pd(1)-pd(2)) * st%rho(i, 3) / (dpol+tiny)
-       p(4) = (pd(1)-pd(2)) * st%rho(i, 4) / (dpol+tiny)
+      vpol  = (pd(1)-pd(2)) * (st%rho(i, 1)-st%rho(i, 2)) / (dpol+tiny)
+      p(1) = M_HALF * ( pd(1) + pd(2) + vpol )
+      p(2) = M_HALF * ( pd(1) + pd(2) - vpol )
+      p(3) = (pd(1)-pd(2)) * st%rho(i, 3) / (dpol+tiny)
+      p(4) = (pd(1)-pd(2)) * st%rho(i, 4) / (dpol+tiny)
     else
-       do is = 1, st%nspin
-          p(is) = pd(is)
-       enddo
+      do is = 1, st%nspin
+        p(is) = pd(is)
+      enddo
     endif
-
-    energy = energy + sum(d(1:st%spin_channels)) * e * m%vol_pp
-    pot(i, :) = p(:)
+    
+    if(ixc < N_X_FUNCTL) then
+      ex = ex + sum(d(1:st%spin_channels)) * e * m%vol_pp
+    else
+      ec = ec + sum(d(1:st%spin_channels)) * e * m%vol_pp
+    end if
+    vxc(i, :) = vxc(i, :) + p(:)
   end do
 
+  deallocate(d, p, pd, pd1)
+
   call pop_sub()
-end subroutine R_FUNC(xc_lda)
+end subroutine xc_lda
