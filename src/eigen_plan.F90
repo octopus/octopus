@@ -254,7 +254,7 @@ subroutine eigen_solver_plan(st, sys, hamilt, tol, niter, converged, diff)
         
         ! Preconditioning
         do idim = 1, st%dim
-          aux(1:n, idim) = av((idim-1)*sys%m%np+1:idim*sys%m%np, d1 + 1)
+          call R_FUNC(copy) (np, av((idim-1)*np+1, d1 + 1), 1, aux(1, idim), 1)
           aux(0, idim) = R_TOTYPE(M_ZERO)
           call R_FUNC(low_frequency)(sys%m, aux(:, idim), v((idim-1)*sys%m%np+1, d1 + 1))
         enddo

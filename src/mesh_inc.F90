@@ -397,8 +397,8 @@ end subroutine R_FUNC(mesh_derivatives)
 ! calculates the laplacian and the gradient of a function on the mesh
 subroutine R_FUNC(low_frequency) (m, f, lapl)
   type(mesh_type), intent(IN) :: m
-  R_TYPE, intent(IN) :: f(0:m%np)
-  R_TYPE, intent(out), optional:: lapl(1:m%np)
+  R_TYPE, intent(IN)  :: f(0:m%np)
+  R_TYPE, intent(out) :: lapl(1:m%np)
 
   integer :: k, in, ix, iy, iz, i, ind(6)
 
