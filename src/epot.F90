@@ -84,6 +84,8 @@ contains
     integer :: i
     integer(POINTER_SIZE) :: blk
 
+    call push_sub('epot_init')
+
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
     if(conf%periodic_dim>0) call epot_local_fourier_init(ep, m, geo)    
@@ -131,6 +133,7 @@ contains
        end do
     endif
 
+    call pop_sub()
   end subroutine epot_init
 
   subroutine epot_end(ep, geo)

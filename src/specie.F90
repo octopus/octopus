@@ -357,6 +357,8 @@ contains
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(3), r
 
+    call push_sub('func_specie_get_local')
+
     xx = M_ZERO
     xx(1:conf%dim) = x(:)
     r = sqrt(sum(xx(:)**2))
@@ -380,6 +382,7 @@ contains
         l = loct_splint(s%ps%vl, r)
     end select
 
+    call pop_sub()
   end function specie_get_local
 
 
@@ -394,7 +397,9 @@ contains
     FLOAT, parameter :: Delta = CNST(1e-4)
     FLOAT :: xx(3), r, l1, l2
     integer :: i
-    
+   
+    call push_sub('sub_specie_get_local')
+ 
     gv = M_ZERO
     xx = M_ZERO
     
@@ -427,6 +432,7 @@ contains
       
     end select
 
+    call pop_sub()
   end subroutine specie_get_glocal
 
 
