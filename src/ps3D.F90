@@ -366,7 +366,7 @@ subroutine calculate_valence_screening(psf, ps, drdi, s, ve)
   real(r8), intent(IN)  :: drdi(psf%nrval), s(psf%nrval)
   real(r8), intent(out) :: ve(psf%nrval)
 
-  character(len=3) :: xcfunc, xcauth
+  character(len=5) :: xcfunc, xcauth
   integer          :: irelt
   real(r8)         :: e_x, e_c, dx, dc, r2
   real(r8), allocatable :: v_xc(:,:), auxrho(:)

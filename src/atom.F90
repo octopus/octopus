@@ -60,7 +60,7 @@ subroutine atom_init(natoms, a, ncatoms, ca, ns, s)
       call io_assign(iunit)
       open(iunit, status='unknown', file=trim(label))
       read(iunit, *) natoms
-      read(iunit) ! skip comment line
+      read(iunit, *) ! skip comment line
       allocate(a(natoms))
       
       do i = 1, natoms

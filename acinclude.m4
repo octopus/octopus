@@ -30,7 +30,7 @@ dnl Check f90 compiler
 AC_DEFUN(ACX_PROG_F90,
 [
 if test -z "$F90"; then
-  AC_CHECK_PROGS(F90, [f90 abf90 pgf90 ifc xlf90])
+  AC_CHECK_PROGS(F90, [f90 ifc abf90 pgf90 xlf90])
     test -z "$F90" && AC_MSG_ERROR([no acceptable Fortran 90 compiler found in $PATH])
 fi
 
@@ -43,10 +43,13 @@ if test -z "${F90FLAGS}"; then
   		F90FLAGS="-O2 -fast -Munroll -Mnoframe -Mdalign"
 		;;
 		abf90*)
-			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_"
+			F90FLAGS="-O -YEXT_NAMES=LCS -YEXT_SFX=_ -trap=ALL"
 		;;
 		ifc*)
-			F90FLAGS="-O3 -lowercase -us"
+			F90FLAGS="-O3 -nbs -lowercase"
+			dnl link may fail with these flags
+			dnl but we already know the answer ;)
+			AC_DEFINE(FORTRANIZE_LOWERCASE_UNDERSCORE, 1, [])
 		;;
 		*)
 			F90FLAGS="-O"

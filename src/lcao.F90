@@ -278,7 +278,6 @@ contains
       s => sys%atom(i)%spec%ps%Ur(l)
       do j = 1, sys%m%np
         call mesh_r(sys%m, j, r, x=x, a=a)
-        r = r/2._r8 ! enlarge wfs ??????
         p = splint(s, r)
         ylm = oct_ylm(x(1), x(2), x(3), l, lm)
         if(r > 0._r8) then
