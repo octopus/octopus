@@ -157,7 +157,7 @@ if test -z "${LIB_TRLAN}"; then
     AC_TRY_COMPILE([],[use trl_info],lib_ok="ok",lib_ok="no")
 
     LDFLAGS="$save_ldflags"
-    LIB_TRLAN="libtrlan.a"
+    LIB_TRLAN="-ltrlan"
     #LIB_TRLAN="${LIB_TRLAN}"
     AS_IF([test "$TRLANDIR"], [LIB_TRLAN="-L${TRLANDIR} -L${TRLANDIR}/lib ${TRLANDIR}/${LIB_TRLAN}"])
   fi
