@@ -17,18 +17,13 @@ type specie_type
   ! For the pseudopotential
   type(ps_type), pointer :: ps
 
-#ifndef ONE_D
   ! For the local pseudopotential in Fourier space...
   complex(r8), pointer :: local_fw(:,:,:), rhocore_fw(:,:,:)
 
   ! For the non-local pp in fourier space
   integer(POINTER_SIZE) :: nl_planf, nl_planb
-  integer :: nl_fft_n, nl_hfft_n
+  integer :: nl_fft_n(3), nl_hfft_n
   complex(r8), pointer :: nl_fw(:,:,:,:)
-#else
-  complex(r8), pointer :: local_fw(:)
-  complex(r8), pointer :: rhocore_fw(:)
-#endif
 end type specie_type
 
 contains
