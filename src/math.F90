@@ -28,7 +28,10 @@ module math
   implicit none
 
   private
-  public :: conjugate_gradients, &
+  public :: dconjugate_gradients, &
+            zconjugate_gradients, &
+            ddot_product, &
+            zdot_product, &
             quickrnd, &
             stepf, &
             grylmr, &
@@ -41,8 +44,12 @@ module math
             zgexpv, zgpadm
 
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
-  interface conjugate_gradients
-    module procedure sym_conjugate_gradients, bi_conjugate_gradients
+  interface dconjugate_gradients
+    module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
+  end interface
+
+  interface zconjugate_gradients
+    module procedure zsym_conjugate_gradients, zbi_conjugate_gradients
   end interface
 
 contains
@@ -359,6 +366,17 @@ FLOAT function besselint(x) result(y)
   y = CNST(4.0)*M_PI*y
 end function
 
+FLOAT function ddot_product(a, b) result(r)
+  FLOAT, intent(in) :: a(:), b(:)
+  r = dot_product(a, b)
+end function ddot_product
+
+CMPLX function zdot_product(a, b) result(r)
+  CMPLX, intent(in) :: a(:), b(:)
+  r = sum(conjg(a(:))*b(:))
+end function zdot_product
+
+
 !function phaseshift(perdim, ix)
 !  FLOAT, intent(in) ::  perdim, ix(3)
 !  CMPLX :: phaseshift
@@ -374,8 +392,16 @@ end function
 
 !end function phaseshift
 
-#include "math_cg_inc.F90"
+
 #include "expokit_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "math_cg_inc.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "math_cg_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
