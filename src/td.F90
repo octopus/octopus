@@ -269,16 +269,16 @@ contains
 #endif
 
     ! allocate memory
-    allocate(st%zpsi(sys%m%np, st%dim, st%st_start:st%st_end, st%nik))
+    allocate(st%zpsi(m%np, st%dim, st%st_start:st%st_end, st%nik))
 
     !
-    call td_init(td, sys%m, sys%st, h, sys%outp)
+    call td_init(td, m, st, h, sys%outp)
 
   end subroutine init_
 
   subroutine end_()
     ! free memory
-    deallocate(sys%st%zpsi)
+    deallocate(st%zpsi)
     call td_end(td)
 
     call pop_sub()
@@ -291,7 +291,7 @@ contains
 
     ierr = 0
     if(.not.fromScratch) then
-      call zrestart_read("tmp/restart_td", sys%st, sys%m, err, td%iter)
+      call zrestart_read("tmp/restart_td", st, m, err, td%iter)
       if(err.ne.0) then
         message(1) = "Could not load tmp/restart_td: Starting from scratch"
         call write_warning(1)
@@ -310,7 +310,7 @@ contains
     end if
 
     if(fromScratch) then
-      call zrestart_read ("tmp/restart_gs", sys%st, sys%m, ierr)
+      call zrestart_read ("tmp/restart_gs", st, m, ierr)
       if(ierr.ne.0) then
         message(1) = "Could not load tmp/restart_gs: Starting from scratch"
         call write_warning(1)
@@ -320,12 +320,14 @@ contains
     end if
 
     if(ierr==0) then
-      x = minval(sys%st%eigenval(sys%st%st_start, :))
+      call zcalcdens(st, m%np, st%rho, reduce=.true.)
+      call zh_calc_vhxc(h, m, sys%f_der, st, calc_eigenval=.true.)
+      x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
       call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
 #endif
-      call hamiltonian_span(h, minval(sys%m%h(1:conf%dim)), x)
-      call hamiltonian_energy(h, sys%st, sys%geo%eii, -1, reduce=.true.)
+      call hamiltonian_span(h, minval(m%h(1:conf%dim)), x)
+      call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
     end if
 
   end function init_wfs
