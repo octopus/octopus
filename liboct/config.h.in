@@ -14,16 +14,19 @@
 /* octopus compiled in debug mode */
 #undef DEBUG
 
-/* Define to dummy `main' function (if any) required to link to the Fortran 90
+/* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
-#undef F90_DUMMY_MAIN
+#undef FC_DUMMY_MAIN
+
+/* Define if F77 and FC dummy `main' functions are identical. */
+#undef FC_DUMMY_MAIN_EQ_F77
 
 /* Define to a macro mangling the given C identifier (in lower and upper
    case), which must not contain underscores, for linking with Fortran. */
-#undef F90_FUNC
+#undef FC_FUNC
 
-/* As F90_FUNC, but for C identifiers containing underscores. */
-#undef F90_FUNC_
+/* As FC_FUNC, but for C identifiers containing underscores. */
+#undef FC_FUNC_
 
 /* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
@@ -32,7 +35,7 @@
    */
 #undef HAVE_ALLOCA_H
 
-/* Blas Library (www.netlib.org) */
+/* Define if you have a BLAS library. */
 #undef HAVE_BLAS
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
@@ -44,7 +47,7 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Lapack Library (www.netlib.org) */
+/* Defined if you have LAPACK library. */
 #undef HAVE_LAPACK
 
 /* Define to 1 if you have the <malloc.h> header file. */
@@ -53,13 +56,10 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* MPI library (www.mpich.org) */
+/* Defined if you have MPI library. */
 #undef HAVE_MPI
 
-/* Define to 1 if you have the <mpif.h> header file. */
-#undef HAVE_MPIF_H
-
-/* NetCDF Library (http://www.unidata.ucar.edu/packages/netcdf/) */
+/* Defined if you have NETCDF library. */
 #undef HAVE_NETCDF
 
 /* Define to 1 if you have the `sqrt' function. */
@@ -92,7 +92,7 @@
 /* Define to 1 if you have the `tcgetpgrp' function. */
 #undef HAVE_TCGETPGRP
 
-/* TRLAN library (www.nersc.gov/research/SIMON/trlan.html) */
+/* Defined if you have TRLAN library. */
 #undef HAVE_TRLAN
 
 /* Define to 1 if you have the <unistd.h> header file. */
@@ -103,9 +103,6 @@
 
 /* have mpi module */
 #undef MPI_MOD
-
-/* soon */
-#undef MPI_TD
 
 /* Name of package */
 #undef PACKAGE
@@ -142,9 +139,9 @@
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
    automatically deduced at run-time.
-        STACK_DIRECTION > 0 => grows toward higher addresses
-        STACK_DIRECTION < 0 => grows toward lower addresses
-        STACK_DIRECTION = 0 => direction of growth unknown */
+	STACK_DIRECTION > 0 => grows toward higher addresses
+	STACK_DIRECTION < 0 => grows toward lower addresses
+	STACK_DIRECTION = 0 => direction of growth unknown */
 #undef STACK_DIRECTION
 
 /* Define to 1 if you have the ANSI C header files. */

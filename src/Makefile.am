@@ -39,7 +39,7 @@ noinst_HEADERS = \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
 core_LIBS = ../liboct/liboct.a ../liboct/liboct_parser.a @LIB_METIS@ @GSL_LIBS@ @LDF90FLAGS@
-octopus_LDADD = @LIB_FFT@ @LIB_TRLAN@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ \
+octopus_LDADD = @LIB_FFT@ @LIB_TRLAN@ @LAPACK_LIBS@ @BLAS_LIBS@ @LIB_NETCDF@ \
 	@LIB_MPI@ $(core_LIBS)
 
 # now the utility programs
@@ -85,20 +85,20 @@ DISTCLEANFILES = Makefile.in dirs.h
 
 # how to compile a F90 file :)
 .F90.o:
-	@F90CPP@ $< > $*.f90
+	@FCCPP@ $< > $*.f90
 	@if [ "x@DEBUG@" = "x" ]; then \
 		cat $*.f90 | grep -v pop_sub | grep -v push_sub >$*.f91; \
 		mv -f $*.f91 $*.f90; \
 	fi
-	@F90@ @F90FLAGS@ -c -o $@ $*.f90
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*.f90
 	@rm -f $*.f90
 
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)
 global.o: global.F90
-	@F90CPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
+	@FCCPP@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' $< > $*.f90
-	@F90@ @F90FLAGS@ -c -o $@ $*.f90
+	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*.f90
 	@rm -f $*.f90
 
 # how to generate config_F90.h

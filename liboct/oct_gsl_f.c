@@ -38,56 +38,56 @@
 
 
 /* Mathematical Functions */
-double F90_FUNC_(oct_asinh, OCT_ASINH)
+double FC_FUNC_(oct_asinh, OCT_ASINH)
 		 (double *x)
 {
   return gsl_asinh(*x);
 }
 
 /* Special Functions */
-double F90_FUNC_(oct_gamma, OCT_GAMMA)
+double FC_FUNC_(oct_gamma, OCT_GAMMA)
 		 (double *x)
 {
   return gsl_sf_gamma(*x);
 }
 
-double F90_FUNC_(oct_bessel, OCT_BESSEL)
+double FC_FUNC_(oct_bessel, OCT_BESSEL)
      (int *n, double *x)
 {
   return gsl_sf_bessel_Jn(*n, *x);
 }
 
-double F90_FUNC_(oct_bessel_j0, OCT_BESSEL_J0)
+double FC_FUNC_(oct_bessel_j0, OCT_BESSEL_J0)
      (double *x)
 {
   return gsl_sf_bessel_J0(*x);
 }
 
-double F90_FUNC_(oct_bessel_j1, OCT_BESSEL_J1)
+double FC_FUNC_(oct_bessel_j1, OCT_BESSEL_J1)
      (double *x)
 {
   return gsl_sf_bessel_J1(*x);
 }
 
-double F90_FUNC_(oct_bessel_k0, OCT_BESSEL_K0)
+double FC_FUNC_(oct_bessel_k0, OCT_BESSEL_K0)
      (double *x)
 {
   return gsl_sf_bessel_K0(*x);
 }
 
-double F90_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
+double FC_FUNC_(oct_bessel_k1, OCT_BESSEL_K1)
      (double *x)
 {
   return gsl_sf_bessel_K1(*x);
 }
 
-double F90_FUNC_(oct_erfc, OCT_ERFC)
+double FC_FUNC_(oct_erfc, OCT_ERFC)
 		 (double *x)
 {
 	return gsl_sf_erfc(*x);
 }
 
-double F90_FUNC_(oct_erf, OCT_ERF)
+double FC_FUNC_(oct_erf, OCT_ERF)
 		 (double *x)
 {
 	return gsl_sf_erf(*x);
@@ -104,14 +104,14 @@ double F90_FUNC_(oct_erf, OCT_ERF)
 
 
 /* Random Number Generation */
-void F90_FUNC_(oct_ran_init, OCT_RAN_INIT)
+void FC_FUNC_(oct_ran_init, OCT_RAN_INIT)
      (gsl_rng **r)
 {
   gsl_rng_env_setup();
   *r = gsl_rng_alloc(gsl_rng_default);
 }
 
-void F90_FUNC_(oct_ran_end, OCT_RAN_END)
+void FC_FUNC_(oct_ran_end, OCT_RAN_END)
      (gsl_rng **r)
 {
   gsl_rng_free(*r);
@@ -119,7 +119,7 @@ void F90_FUNC_(oct_ran_end, OCT_RAN_END)
 
 
 /* Random Number Distributions */ 
-double F90_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
+double FC_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
 		(gsl_rng **r, double *sigma)
 {
   return gsl_ran_gaussian(*r, *sigma);
@@ -127,14 +127,14 @@ double F90_FUNC_(oct_ran_gaussian, OCT_RAN_GAUSSIAN)
 
 
 /* Interpolation */
-void F90_FUNC_(oct_spline_end, OCT_SPLINE_END)
+void FC_FUNC_(oct_spline_end, OCT_SPLINE_END)
 		 (void **spl, void **acc)
 {
 	gsl_spline_free((gsl_spline *)(*spl));
 	gsl_interp_accel_free((gsl_interp_accel *)(*acc));
 }
 
-void F90_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
+void FC_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
 		 (int *nrc, double *x, double *y, void **spl, void **acc)
 {
 	*acc = (void *)gsl_interp_accel_alloc();
@@ -143,7 +143,7 @@ void F90_FUNC_(oct_spline_fit, OCT_SPLINE_FIT)
 	fflush(stdout);
 }
 
-double F90_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
+double FC_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
 		 (double *x, void **spl, void **acc)
 {
 	return gsl_spline_eval((gsl_spline *)(*spl), *x, (gsl_interp_accel *)(*acc));
@@ -152,7 +152,7 @@ double F90_FUNC_(oct_spline_eval, OCT_SPLINE_EVAL)
 
 /* Chebyshev Approximations */
 /*
-void F90_FUNC_(oct_chebyshev_coeffs, OCT_CHEBYSHEV_COEFFS)
+void FC_FUNC_(oct_chebyshev_coeffs, OCT_CHEBYSHEV_COEFFS)
      (gsl_complex *coeffs, int *order)
 {
   int i;

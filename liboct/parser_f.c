@@ -35,7 +35,7 @@
 /* --------------------- Interface to the parsing routines ---------------------- */
 
 /* Initialization of the library */
-int F90_FUNC_(oct_parse_init, OCT_PARSE_INIT)
+int FC_FUNC_(oct_parse_init, OCT_PARSE_INIT)
 		 (STR_F_TYPE s STR_ARG1)
 {
 	int r;
@@ -48,7 +48,7 @@ int F90_FUNC_(oct_parse_init, OCT_PARSE_INIT)
 	return r;
 }
 
-void F90_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
+void FC_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
 		 (STR_F_TYPE s, int *i  STR_ARG1)
 {
 	char *s_c = TO_C_STR1(s);
@@ -56,7 +56,7 @@ void F90_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
 	free(s_c);
 }
 
-void F90_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
+void FC_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
 		 (STR_F_TYPE s, double *d STR_ARG1)
 {
 	char *s_c = TO_C_STR1(s);
@@ -64,7 +64,7 @@ void F90_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
 	free(s_c);
 }
 
-void F90_FUNC_(oct_parse_putsym_complex, OCT_PARSE_PUTSYM_COMPLEX)
+void FC_FUNC_(oct_parse_putsym_complex, OCT_PARSE_PUTSYM_COMPLEX)
 		 (STR_F_TYPE s, gsl_complex *c STR_ARG1)
 {
 	char *s_c = TO_C_STR1(s);
@@ -72,7 +72,7 @@ void F90_FUNC_(oct_parse_putsym_complex, OCT_PARSE_PUTSYM_COMPLEX)
 	free(s_c);
 }
 
-int F90_FUNC_(oct_parse_input, OCT_PARSE_INIT)
+int FC_FUNC_(oct_parse_input, OCT_PARSE_INIT)
 		 (STR_F_TYPE s STR_ARG1)
 {
 	int r;
@@ -85,14 +85,14 @@ int F90_FUNC_(oct_parse_input, OCT_PARSE_INIT)
 	return r;
 }
 
-void F90_FUNC_(oct_parse_end, OCT_PARSE_END)
+void FC_FUNC_(oct_parse_end, OCT_PARSE_END)
 		 ()
 {
 	parse_end(); 
 }
 
 /* Parser functions */
-int F90_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
+int FC_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 		 (STR_F_TYPE name STR_ARG1)
 { 
 	int r;
@@ -105,7 +105,7 @@ int F90_FUNC_(oct_parse_isdef, OCT_PARSE_ISDEF)
 	return r;
 }
 
-void F90_FUNC_(oct_parse_int, OCT_PARSE_INT)
+void FC_FUNC_(oct_parse_int, OCT_PARSE_INT)
 		 (STR_F_TYPE name, int *def, int *res STR_ARG1)
 { 
 	char *name_c;
@@ -114,7 +114,7 @@ void F90_FUNC_(oct_parse_int, OCT_PARSE_INT)
 	free(name_c);
 }
 
-void F90_FUNC_(oct_parse_double, OCT_PARSE_DOUBLE)
+void FC_FUNC_(oct_parse_double, OCT_PARSE_DOUBLE)
 		 (STR_F_TYPE name, double *def, double *res STR_ARG1)
 {
 	char *name_c;
@@ -123,7 +123,7 @@ void F90_FUNC_(oct_parse_double, OCT_PARSE_DOUBLE)
 	free(name_c);
 }
 
-void F90_FUNC_(oct_parse_complex, OCT_PARSE_COMPLEX)
+void FC_FUNC_(oct_parse_complex, OCT_PARSE_COMPLEX)
 		 (STR_F_TYPE name, gsl_complex *def, gsl_complex *res STR_ARG1)
 {
 	char *name_c;
@@ -132,7 +132,7 @@ void F90_FUNC_(oct_parse_complex, OCT_PARSE_COMPLEX)
 	free(name_c);
 }
 
-void F90_FUNC_(oct_parse_string, OCT_PARSE_STRING)
+void FC_FUNC_(oct_parse_string, OCT_PARSE_STRING)
 		 (STR_F_TYPE name, STR_F_TYPE def, STR_F_TYPE res STR_ARG3)
 {
 	char *c, *name_c, *def_c;
@@ -151,7 +151,7 @@ static void parse_block_error(char *type, char *name, int l, int c){
   /* exit(1); */
 }
 
-int F90_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
+int FC_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
 		 (STR_F_TYPE name STR_ARG1)
 {
 	int r;
@@ -164,7 +164,7 @@ int F90_FUNC_(oct_parse_block_n, OCT_PARSE_BLOCK_N)
 	return r;
 }
 
-int F90_FUNC_(oct_parse_block_cols, OCT_PARSE_BLOCK_COLS)
+int FC_FUNC_(oct_parse_block_cols, OCT_PARSE_BLOCK_COLS)
 		 (STR_F_TYPE name, int *l STR_ARG1)
 {
 	int r;
@@ -177,7 +177,7 @@ int F90_FUNC_(oct_parse_block_cols, OCT_PARSE_BLOCK_COLS)
 	return r;
 }
 
-int F90_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
+int FC_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
 		 (STR_F_TYPE name, int *l, int *c, int *res STR_ARG1)
 {
 	char *name_c;
@@ -191,7 +191,7 @@ int F90_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
 		
 }
 
-void F90_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
+void FC_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
 		 (STR_F_TYPE name, int *l, int *c, double *res STR_ARG1)
 {
 	char *name_c;
@@ -202,7 +202,7 @@ void F90_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
 	free(name_c);
 }
 
-void F90_FUNC_(oct_parse_block_complex, OCT_PARSE_BLOCK_COMPLEX)
+void FC_FUNC_(oct_parse_block_complex, OCT_PARSE_BLOCK_COMPLEX)
 		 (STR_F_TYPE name, int *l, int *c, gsl_complex *res STR_ARG1)
 {
 	char *name_c;
@@ -213,7 +213,7 @@ void F90_FUNC_(oct_parse_block_complex, OCT_PARSE_BLOCK_COMPLEX)
 	free(name_c);
 }
 
-void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
+void FC_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 		 (STR_F_TYPE name, int *l, int *c, STR_F_TYPE res STR_ARG2)
 {
 	char *s, *name_c;
@@ -227,7 +227,7 @@ void F90_FUNC_(oct_parse_block_string, OCT_PARSE_BLOCK_STRING)
 	free(name_c);
 }
 
-double F90_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
+double FC_FUNC_(oct_parse_potential, OCT_PARSE_POTENTIAL)
 		 (double *x, double *y, double *z, double *r, STR_F_TYPE pot STR_ARG1)
 {
 	symrec *rec;

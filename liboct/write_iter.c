@@ -63,7 +63,7 @@ void write_iter_header_work(write_iter *w, char *s)
 }
 
 /* Functions called from FORTRAN */
-void F90_FUNC_(write_iter_init, WRITE_ITER_INIT)
+void FC_FUNC_(write_iter_init, WRITE_ITER_INIT)
 		 (void **v, int *i, double *d, STR_F_TYPE fname STR_ARG1)
 {
 	write_iter *w;
@@ -77,7 +77,7 @@ void F90_FUNC_(write_iter_init, WRITE_ITER_INIT)
 	*v = w;
 }
 
-void F90_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
+void FC_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
 {
 	write_iter *w=*v;
 
@@ -87,7 +87,7 @@ void F90_FUNC_(write_iter_clear, WRITE_ITER_CLEAR)(void **v)
 	}
 }
 
-void F90_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
+void FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
 {
 	int fd;
 	write_iter *w=*v;
@@ -105,19 +105,19 @@ void F90_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(void **v)
 	w->pos = 0;
 }
 
-void F90_FUNC_(write_iter_end, WRITE_ITER_END)
+void FC_FUNC_(write_iter_end, WRITE_ITER_END)
 		 (void **v)
 {
 	write_iter *w=*v;
 
-	F90_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(v);
+	FC_FUNC_(write_iter_flush, WRITE_ITER_FLUSH)(v);
 
 	free(w->filename);
 	if(w->buf) free(w->buf);
 	free(w);
 }
 
-void F90_FUNC_(write_iter_start, WRITE_ITER_START)
+void FC_FUNC_(write_iter_start, WRITE_ITER_START)
 		 (void **v)
 {
 	write_iter *w=(write_iter *)*v;
@@ -126,7 +126,7 @@ void F90_FUNC_(write_iter_start, WRITE_ITER_START)
 	w->iter++;
 }
 
-void F90_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
+void FC_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 		 (void **v, double *d, int *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -139,7 +139,7 @@ void F90_FUNC_(write_iter_double_1, WRITE_ITER_DOUBLE_1)
 	}
 }
 
-void F90_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
+void FC_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
 		 (void **v, double *d, int *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -152,7 +152,7 @@ void F90_FUNC_(write_iter_double_n, WRITE_ITER_DOUBLE_N)
 	}
 }
 
-void F90_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
+void FC_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
 		 (void **v, int *d, int *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -165,7 +165,7 @@ void F90_FUNC_(write_iter_int_1, WRITE_ITER_INT_1)
 	}
 }
 
-void F90_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
+void FC_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
 		 (void **v, int *d, int *no)
 {
 	write_iter *w=(write_iter *)*v;
@@ -178,7 +178,7 @@ void F90_FUNC_(write_iter_int_n, WRITE_ITER_INT_N)
 	}
 }
 
-void F90_FUNC_(write_iter_string, WRITE_ITER_STRING)
+void FC_FUNC_(write_iter_string, WRITE_ITER_STRING)
 		 (void **v, STR_F_TYPE s STR_ARG1)
 {
 	char *c;
@@ -188,7 +188,7 @@ void F90_FUNC_(write_iter_string, WRITE_ITER_STRING)
 	free(c);
 }
 
-void F90_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
+void FC_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
 		 (void **v)
 {
 	write_iter *w=(write_iter *)*v;
@@ -197,7 +197,7 @@ void F90_FUNC_(write_iter_header_start, WRITE_ITER_HEADER_START)
 	write_iter_header_work(w, "t");
 }
 
-void F90_FUNC_(write_iter_header, WRITE_ITER_HEADER)
+void FC_FUNC_(write_iter_header, WRITE_ITER_HEADER)
 		 (void **v, STR_F_TYPE s STR_ARG1)
 {
 	char *c;
@@ -206,7 +206,7 @@ void F90_FUNC_(write_iter_header, WRITE_ITER_HEADER)
 	free(c);
 }
 
-void F90_FUNC_(write_iter_nl, WRITE_ITER_NL)
+void FC_FUNC_(write_iter_nl, WRITE_ITER_NL)
 		 (void **v)
 {
 	write_iter_string_work((write_iter *)*v, "\n");

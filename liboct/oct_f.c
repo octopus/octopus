@@ -33,7 +33,7 @@
 
 /* *********************** interface functions ********************** */
 
-void F90_FUNC_(oct_mkdir, OCT_MKDIR)
+void FC_FUNC_(oct_mkdir, OCT_MKDIR)
 		 (STR_F_TYPE name STR_ARG1)
 {
 	struct stat buf;
@@ -45,7 +45,7 @@ void F90_FUNC_(oct_mkdir, OCT_MKDIR)
 	free(name_c);
 }
 
-void F90_FUNC_(oct_rm, OCT_RM)
+void FC_FUNC_(oct_rm, OCT_RM)
      (STR_F_TYPE name STR_ARG1)
 {
   char *name_c;
@@ -55,7 +55,7 @@ void F90_FUNC_(oct_rm, OCT_RM)
   free(name_c);
 }
 
-void F90_FUNC_(oct_getcwd, OCT_GETCWD)
+void FC_FUNC_(oct_getcwd, OCT_GETCWD)
 		 (STR_F_TYPE name STR_ARG1)
 {
 	char s[256];
@@ -65,7 +65,7 @@ void F90_FUNC_(oct_getcwd, OCT_GETCWD)
 
 /* this function gets a string of the form '1-12, 34' and fills
 	 array l with the 1 if the number is in the list, or 0 otherwise */
-void F90_FUNC_(oct_wfs_list, OCT_WFS_LIST)
+void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 		 (STR_F_TYPE str, int l[32] STR_ARG1)
 {
 	int i, i1, i2;
@@ -108,7 +108,7 @@ void F90_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 /* from ylm.c */
 double ylm(double x, double y, double z, int l, int m);
 
-double F90_FUNC_(oct_ylm, OCT_YLM)
+double FC_FUNC_(oct_ylm, OCT_YLM)
 		 (double *x, double *y, double *z, int *l, int *m)
 {
 	return ylm(*x, *y, *z, *l, *m);
@@ -117,13 +117,13 @@ double F90_FUNC_(oct_ylm, OCT_YLM)
 /* ------------------------------ from varia.c ------------------------------- */
 #include "varia.h"
 
-void F90_FUNC_(oct_fft_optimize, OCT_FFT_OPTIMIZE)
+void FC_FUNC_(oct_fft_optimize, OCT_FFT_OPTIMIZE)
 		 (int *n, int *p, int *par)
 {
 	fft_optimize(n, *p, *par);
 }
 
-void F90_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
+void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
 		 (int *a, int *max)
 {
 	progress_bar(*a, *max);
@@ -133,7 +133,7 @@ void F90_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
 #if defined(HAVE_METIS)
 #include <metis/metis.h>
 
-void F90_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
+void FC_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
 		 (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
 			int *edgecut, idxtype *epart, idxtype *npart)
 {
@@ -143,14 +143,14 @@ void F90_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
 #endif
 
 /* ------------------------------ some stuff  -------------------------------- */
-double F90_FUNC_(oct_clock, OCT_CLOCK)
+double FC_FUNC_(oct_clock, OCT_CLOCK)
        ()
 {
   return (double) clock();
 }
 
 /* this function is *not* portable. Should get rid of this! */
-int F90_FUNC_(oct_getmem, OCT_GETMEM)
+int FC_FUNC_(oct_getmem, OCT_GETMEM)
      ()
 {
 #ifdef linux
@@ -176,7 +176,7 @@ int F90_FUNC_(oct_getmem, OCT_GETMEM)
 }
 
 
-void F90_FUNC_(oct_sysname, OCT_SYSNAME)
+void FC_FUNC_(oct_sysname, OCT_SYSNAME)
 		 (STR_F_TYPE name STR_ARG1)
 {
 	char *name_c;
@@ -187,7 +187,7 @@ void F90_FUNC_(oct_sysname, OCT_SYSNAME)
 	free(name_c);
 }
 
-int F90_FUNC_(number_of_lines, NUMBER_OF_LINES)
+int FC_FUNC_(number_of_lines, NUMBER_OF_LINES)
      (STR_F_TYPE name STR_ARG1)
 {
 

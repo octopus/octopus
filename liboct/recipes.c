@@ -26,7 +26,7 @@
 #include <dirent.h>
 #include <time.h>
 
-int F90_FUNC_(print_file, PRINT_FILE)
+int FC_FUNC_(print_file, PRINT_FILE)
      (char *name)
 {
   FILE *pf;
@@ -43,7 +43,7 @@ int F90_FUNC_(print_file, PRINT_FILE)
 	return 0;
 }
 
-void F90_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
+void FC_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 		 (char *_dir)
 {
 	char *lang, dir[512];
@@ -95,12 +95,12 @@ void F90_FUNC_(oct_printrecipe, OCT_PRINTRECIPE)
 	free(namelist);
 	
 	/* output selected file */
-	F90_FUNC_(print_file, PRINT_FILE) (dir);
+	FC_FUNC_(print_file, PRINT_FILE) (dir);
 
 	/* print disclaimer */
 	strcpy(dir, _dir);
 	strcat(dir, "/recipes/disclaimer.txt");
 	printf("\n\n");
-	F90_FUNC_(print_file, PRINT_FILE) (dir);
+	FC_FUNC_(print_file, PRINT_FILE) (dir);
 	printf("\n");
 }
