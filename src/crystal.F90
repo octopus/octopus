@@ -247,7 +247,7 @@
       integer :: ipvt(3)
       FLOAT :: det(2)
 
-      call dinv33(mat,tmp,determinant)
+      call inv3by3(mat,tmp,determinant)
      
       mat = tmp
 
@@ -255,7 +255,7 @@
 
       end subroutine invers
 
-       subroutine dinv33(matrix,invers,det)
+       subroutine inv3by3(matrix,invers,det)
        ! Inverts 3X3 matrix
        
        implicit none
@@ -269,12 +269,12 @@
        
        det = DOT_PRODUCT(matrix(1:3,1),invers(1:3,1))
        
-       if (det == 0.d0) then
+       if (det == M_ZERO) then
          message(1) = 'CRYSTAL: Matrix with null determinant'
          write(message(2),'(3f12.5)') matrix(1,:)
          write(message(3),'(3f12.5)') matrix(2,:)
          write(message(4),'(3f12.5)') matrix(3,:) 
-         call write_fatal(2)
+         call write_fatal(4)
          return
        endif
        
@@ -283,14 +283,14 @@
        
        invers=invers/det
        
-     end subroutine dinv33
+     end subroutine inv3by3
 
        subroutine vecprod(a,b,c)
        ! calculates vector product a x b = c
        
        implicit none
-       FLOAT,intent( in) :: a(3),b(3)
-       FLOAT,intent(out) :: c(3)
+       FLOAT, intent(in)  :: a(3),b(3)
+       FLOAT, intent(out) :: c(3)
 
        c(1) = a(2)*b(3) - a(3)*b(2)
        c(2) = a(3)*b(1) - a(1)*b(3)
