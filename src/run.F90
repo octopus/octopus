@@ -203,6 +203,8 @@ subroutine run()
       if(unoccv%st%d%ispin == SPINORS) then
         unoccv%st%mag(1:sys%st%nst, 1:sys%st%d%nik, 1:2) = sys%st%mag(1:sys%st%nst, 1:sys%st%d%nik, 1:2)
       endif
+      
+      h%d =>  unoccv%st%d     ! not to lose the kpoints
       call states_end(sys%st) ! to save memory
 
       call states_generate_random(unoccv%st, sys%m, sys%st%nst+1)
