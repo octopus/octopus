@@ -151,7 +151,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
 
         ! first force
-        call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+        call epot_generate(h%ep, m, st, geo, h%reltype)
         call X(calcdens) (st, m%np, st%rho)
         call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, st, geo%eii, -1)
@@ -163,7 +163,7 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) - M_TWO*ph%disp
 
         ! second force
-        call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+        call epot_generate(h%ep, m, st, geo, h%reltype)
         call X(calcdens) (st, m%np, st%rho)
         call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, st, geo%eii, -1)

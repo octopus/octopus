@@ -27,6 +27,15 @@ use mesh
 
 implicit none
 
+private
+public :: laser_type,         &
+          laser_init,         &
+          laser_end,          &
+          laser_write_info,   &
+          laser_field,        &
+          laser_vector_field
+          
+
 type laser_type
   CMPLX :: pol(3) ! the polarization of the laser
   FLOAT :: A0     ! the initial amplitude of the laser
@@ -229,13 +238,13 @@ end subroutine laser_write_info
 subroutine laser_field(no_l, l, t, field)
   integer,          intent(in)  :: no_l
   type(laser_type), intent(in)  :: l(no_l)
-  FLOAT,         intent(in)  :: t
-  FLOAT,         intent(out) :: field(conf%dim)
+  FLOAT,            intent(in)  :: t
+  FLOAT,            intent(out) :: field(conf%dim)
 
   CMPLX, allocatable :: amp(:)
   integer :: i
 
-  if(no_l .eq. 0) then
+  if(no_l == 0) then
     field(1:conf%dim) = M_ZERO
     return
   end if
@@ -253,15 +262,14 @@ subroutine laser_field(no_l, l, t, field)
     deallocate(amp)
   end if
 
-  return
 end subroutine laser_field
 
 !returns the laser vector field A
 subroutine laser_vector_field(no_l, l, t, field)
-  integer, intent(in) :: no_l
-  type(laser_type), intent(IN) :: l(no_l)
-  FLOAT, intent(in) :: t
-  FLOAT, intent(out) :: field(conf%dim)
+  integer,          intent(in)  :: no_l
+  type(laser_type), intent(in)  :: l(no_l)
+  FLOAT,            intent(in)  :: t
+  FLOAT,            intent(out) :: field(conf%dim)
 
   CMPLX, allocatable :: amp(:)
   integer :: i
@@ -274,7 +282,6 @@ subroutine laser_vector_field(no_l, l, t, field)
   end do
   deallocate(amp)
 
-  return
 end subroutine laser_vector_field
 
 ! The following routines have to be changed in order to add more

@@ -22,7 +22,6 @@ module td_rti
   use mesh
   use states
   use hamiltonian
-  use lasers
   use external_pot
   use td_exp
 
@@ -39,7 +38,7 @@ module td_rti
     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_rti_type
 
-  integer, parameter, private :: &
+  integer, parameter :: &
      SPLIT_OPERATOR       = 0,   &
      SUZUKI_TROTTER       = 1,   &
      REVERSAL             = 2,   &
@@ -47,8 +46,16 @@ module td_rti
      EXPONENTIAL_MIDPOINT = 4,   &
      MAGNUS               = 5 
 
-  FLOAT, parameter, private :: scf_threshold = CNST(1.0e-3)
-  
+  FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
+
+  private
+  public :: td_rti_type,          &
+            td_rti_init,          &
+            td_rti_end,           &
+            td_rti_run_zero_iter, &
+            td_rti_dt
+
+
 contains
   subroutine td_rti_init(m, st, tr)
     type(mesh_type),   intent(IN)    :: m
@@ -331,7 +338,7 @@ contains
 
     subroutine td_rti5
       integer :: j, is, ist, k
-      FLOAT :: time(2), x(3), f(3)
+      FLOAT :: time(2), x(3), v
       FLOAT, allocatable :: vaux(:, :, :)
 
       call push_sub('td_rti5')
@@ -353,11 +360,11 @@ contains
         if(h%ep%no_lasers > 0) then
           select case(h%gauge)
           case(1) ! length gauge
-            call laser_field(h%ep%no_lasers, h%ep%lasers, t-dt+time(j), f)
             do k = 1, m%np
                call mesh_xyz(m, k, x)
+               call epot_laser_scalar_pot(h%ep, x, t-dt+time(j), v)
                do is = 1, st%d%spin_channels
-                  vaux(k, is, j) = vaux(k, is, j) + sum(x*f)
+                  vaux(k, is, j) = vaux(k, is, j) + v
                enddo
             end do
           case(2) ! velocity gauge

@@ -57,7 +57,6 @@ type hamiltonian_type
 
   integer :: reltype ! type of relativistic correction to use
 
-  FLOAT, pointer :: Vpsl(:)     ! the external potential
   FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
   FLOAT, pointer :: ahxc(:,:,:) ! xc vector-potential + hartree vector-potential divided by c
 
@@ -122,8 +121,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
-  allocate(h%Vpsl(m%np), h%Vhxc(m%np, h%d%nspin))
-  h%vpsl = M_ZERO
+  allocate(h%Vhxc(m%np, h%d%nspin))
   h%Vhxc = M_ZERO
   if (h%d%cdft) then
     allocate(h%ahxc(m%np, conf%dim, h%d%nspin))
@@ -132,7 +130,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
     nullify(h%ahxc)  
   end if
 
-  call epot_init(h%ep, m, geo)
+  call epot_init(h%ep, m, h%d%ispin, geo)
 
   call loct_parse_int("RelativisticCorrection", NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -238,9 +236,9 @@ subroutine hamiltonian_end(h, geo)
 
   call push_sub('hamiltonian_end')
 
-  if(associated(h%Vpsl)) then
-    deallocate(h%Vpsl, h%Vhxc)
-    nullify(h%Vpsl, h%Vhxc)
+  if(associated(h%vhxc)) then
+    deallocate(h%vhxc)
+    nullify(h%vhxc)
   end if
 
   call epot_end(h%ep, geo)
@@ -333,7 +331,7 @@ subroutine hamiltonian_output(h, m, dir, outp)
 
   u = units_out%energy%factor
   if(outp%what(output_potential)) then
-    call doutput_function(outp%how, dir, "v0", m, h%Vpsl, u, err)
+    call doutput_function(outp%how, dir, "v0", m, h%ep%vpsl, u, err)
 
     if(h%ep%classic_pot > 0) then
       call doutput_function(outp%how, dir, "vc", m, h%ep%Vclassic, u, err)

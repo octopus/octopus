@@ -98,7 +98,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
 
   ! Save local pseudopotential
   allocate(Vpsl_save(m%np))
-  Vpsl_save = h%Vpsl
+  Vpsl_save = h%ep%Vpsl
 
   ! Allocate the trrho to the contain the trace of the density.
   allocate(trrho(m%np))
@@ -111,7 +111,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
       write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
       call write_info(2)
       
-      h%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
+      h%ep%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
       
       call scf_run(scfv, m, sys%f_der, st, sys%geo, h, sys%outp)
       

@@ -257,7 +257,7 @@ subroutine run_init()
     call units_init()
     call system_init(sys)
     call hamiltonian_init(h, sys%m, sys%geo, sys%st%d)
-    call epot_generate(h%ep, sys%m, sys%st, sys%geo, h%vpsl, h%reltype)
+    call epot_generate(h%ep, sys%m, sys%st, sys%geo, h%reltype)
   endif
 
   call restart_init()

@@ -115,12 +115,14 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   end if
 
   if(present(t).and.ep%no_lasers>0) then
-    call epot_laser_field(ep, t, x)
+    call laser_field(ep%no_lasers, ep%lasers, t, x)
     do i = 1, geo%natoms
       geo%atom(i)%f(1:conf%dim) = geo%atom(i)%f(1:conf%dim) + &
            geo%atom(i)%spec%Z_val * x(1:conf%dim)
     end do
   end if
+
+  !TODO: forces due to the magnetic fields (static and time-dependent)
   
 contains
   subroutine local_RS()

@@ -104,19 +104,19 @@ contains
     CMPLX,                  intent(in)    :: factor
 
     integer :: k
-    FLOAT :: x(3), f(3)
+    FLOAT :: x(3), v
     
     call push_sub('vlpsi')
     
     ! WARNING: spinors not yet supported.
     select case(h%d%ispin)
     case(UNPOLARIZED)
-      psi(:, 1) = exp(factor*(h%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
+      psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
     case(SPIN_POLARIZED)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(:, 1) = exp(factor*(h%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
+        psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
       else
-        psi(:, 1) = exp(factor*(h%vpsl(:)+h%vhxc(:, 2)))*psi(:, 1)
+        psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 2)))*psi(:, 1)
       end if
     case(SPINORS)
       message(1) = 'Internal error in exp_vlpsi'
@@ -124,15 +124,15 @@ contains
     end select
     
     if(h%ep%no_lasers > 0) then
-      if(h%gauge.ne.1) then  ! only length gauge is supported
+      if(h%gauge /= 1) then  ! only length gauge is supported
         message(1) = "Only the length gauge is supported in exp_vlpsi"
         call write_fatal(1)
       end if
 
-      call epot_laser_field(h%ep, t, f)
       do k = 1, m%np
         call mesh_xyz(m, k, x)
-        psi(k,:) = exp(factor*sum(x*f)) * psi(k,:)
+        call epot_laser_scalar_pot(h%ep, x, t, v)
+        psi(k,:) = exp(factor*v) * psi(k,:)
       end do
     end if
     

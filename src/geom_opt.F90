@@ -167,7 +167,7 @@ contains
       end do
       call atom_write_xyz(".", "work-min", geo)
 
-      call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+      call epot_generate(h%ep, m, st, geo, h%reltype)
       call X(calcdens) (st, m%np, st%rho)
       call X(h_calc_vhxc) (h, m, sys%f_der, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)

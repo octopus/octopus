@@ -25,6 +25,7 @@ use geometry
 use mesh
 use states
 use restart
+use lasers
 use hamiltonian
 use external_pot
 use system
@@ -99,7 +100,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
   if(td%move_ions > 0) then
     if(td%iter > 0) then
       call td_read_nbo()
-      call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+      call epot_generate(h%ep, m, st, geo, h%reltype)
       geo%eii = ion_ion_energy(geo)
       h%eii = geo%eii
     end if
@@ -156,7 +157,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
           enddo
       end select
 
-      call epot_generate(h%ep, m, st, geo, h%Vpsl, h%reltype)
+      call epot_generate(h%ep, m, st, geo, h%reltype)
       geo%eii = ion_ion_energy(geo)
       h%eii = geo%eii
     endif

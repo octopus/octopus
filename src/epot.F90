@@ -35,13 +35,14 @@ module external_pot
   implicit none
 
   private
-  public :: nonlocal_op,             &
-            epot_type,               &
-            epot_init,               &
-            epot_end,                &
-            epot_generate,           &
-            epot_laser_field,        &
-            epot_laser_vector_field, &
+  public :: nonlocal_op,            &
+            epot_type,              &
+            epot_init,              &
+            epot_end,               &
+            epot_generate,          &
+            epot_laser_scalar_pot,  &
+            epot_laser_field,       &
+            epot_laser_vector_pot,  &
             depot_forces, zepot_forces
 
   type nonlocal_op
@@ -53,42 +54,48 @@ module external_pot
   end type nonlocal_op
 
   type epot_type
-    integer :: classic_pot          ! How to include the classic charges
-    FLOAT, pointer :: Vclassic(:)! We use it to store the potential of the classic charges
+    !Classic charges:
+    integer :: classic_pot        ! How to include the classic charges
+    FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
  
-    ! lasers stuff
-    integer :: no_lasers ! number of laser pulses used
-    type(laser_type), pointer :: lasers(:)
-
-    ! static magnetic field
-    FLOAT, pointer :: b(:)
-
+    !Ions
+    FLOAT, pointer :: vpsl(:)            ! the local part of the pseudopotentials
 #ifdef HAVE_FFT
-    ! For the local pseudopotential in Fourier space...
-    type(dcf), pointer :: local_cf(:)
-    type(dcf), pointer :: rhocore_cf(:) ! and for the core density
+    type(dcf), pointer :: local_cf(:)    ! for the local pseudopotential in Fourier space
+    type(dcf), pointer :: rhocore_cf(:)  ! and for the core density
 #endif
+    integer :: nvnl                      ! number of nonlocal operators
+    type(nonlocal_op), pointer :: vnl(:) ! nonlocal operators
 
-    ! Nonlocal operators
-    integer :: nvnl
-    type(nonlocal_op), pointer :: vnl(:)
+    !External e-m fields
+    integer :: no_lasers                   ! number of laser pulses used
+    type(laser_type), pointer :: lasers(:) ! lasers stuff
+    FLOAT, pointer :: b(:)                 ! static magnetic field
+    FLOAT, pointer :: a(:,:)               ! static vector potential
+
   end type epot_type
 
 contains
 
-  subroutine epot_init(ep, m, geo)
+  subroutine epot_init(ep, m, ispin, geo)
     type(epot_type),     intent(out) :: ep
-    type(mesh_type),     intent(IN)  :: m
-    type(geometry_type), intent(IN)  :: geo
+    type(mesh_type),     intent(in)  :: m
+    integer,             intent(in)  :: ispin
+    type(geometry_type), intent(in)  :: geo
 
     integer :: i
     integer(POINTER_SIZE) :: blk
+    FLOAT, allocatable :: x(:)
 
     call push_sub('epot_init')
 
+    !Local part of the pseudopotentials
+    allocate(ep%vpsl(m%np))
+    ep%vpsl = M_ZERO
+
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
-    if(conf%periodic_dim>0) call epot_local_fourier_init(ep, m, geo)    
+    if(conf%periodic_dim>0) call epot_local_fourier_init(ep, m, geo)
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
@@ -109,17 +116,44 @@ contains
       end if
     end if
 
-    ! static magnetic field
-    nullify(ep%b)
+    ! static magnetic fields
+    nullify(ep%b, ep%a)
     if(loct_parse_block("StaticMagneticField", blk)==0) then
       select case(loct_parse_block_n(blk))
       case (1)
-        allocate(ep%b(conf%dim))
-        do i = 1, conf%dim
-          call loct_parse_block_float(blk, 0, i-1, ep%b(i))
-        end do
+        select case (conf%dim)
+        case (1)
+        case (2)
+          if (loct_parse_block_cols(blk, 0) /= 1) then
+            message(1) = "When performing 2D calculations, the external magnetic field can only have one component,"
+            message(2) = "corresponding to the direction perpendicular to the plane."
+            call write_fatal(2)
+          else
+            allocate(ep%b(1))
+            call loct_parse_block_float(blk, 0, 0, ep%b(1))
+          end if
+        case (3)
+          allocate(ep%b(3))
+          do i = 1, 3
+            call loct_parse_block_float(blk, 0, i-1, ep%b(i))
+          end do
+        end select
       end select
       call loct_parse_block_end(blk)
+
+      !Compute the vector potential
+      allocate(ep%a(m%np, conf%dim), x(conf%dim))
+      do i = 1, m%np
+        call mesh_xyz(m, i, x)
+        select case (conf%dim)
+        case (2)
+          ep%a(i, :) = -M_HALF*(/x(2)*ep%b(1), x(1)*ep%b(1)/)
+        case (3)
+          ep%a(i, :) = -M_HALF*(/x(2)*ep%b(3) - x(3)*ep%b(2), x(3)*ep%b(1) - x(1)*ep%b(3), x(1)*ep%b(2) - x(2)*ep%b(1)/)
+        end select
+      end do
+      deallocate(x)
+
     end if
 
     ! Non local operators
@@ -154,6 +188,11 @@ contains
 
 #endif
 
+    if(associated(ep%vpsl)) then
+      deallocate(ep%vpsl)
+      nullify(ep%vpsl)
+    end if
+
     if(ep%classic_pot > 0) then
       ep%classic_pot = 0
       ASSERT(associated(ep%Vclassic)) ! sanity check
@@ -165,6 +204,9 @@ contains
 
     if(associated(ep%b)) then
       deallocate(ep%b)
+    end if
+    if(associated(ep%a)) then
+      deallocate(ep%a)
     end if
 
     if(ep%nvnl>0) then
@@ -325,12 +367,11 @@ contains
   end subroutine epot_local_fourier_init
 #endif
 
-  subroutine epot_generate(ep, m, st, geo, Vpsl, reltype)
+  subroutine epot_generate(ep, m, st, geo, reltype)
     type(epot_type),     intent(inout) :: ep
     type(mesh_type),     intent(IN)    :: m
     type(states_type),   intent(inout) :: st
     type(geometry_type), intent(inout) :: geo
-    FLOAT,               pointer       :: Vpsl(:)
     integer,             intent(in)    :: reltype
 
     integer :: ia, i, l, lm, add_lm, k, ierr
@@ -358,7 +399,7 @@ contains
 #endif
 
     ! Local.
-    vpsl = M_ZERO
+    ep%vpsl = M_ZERO
     do ia = 1, geo%natoms
       a => geo%atom(ia) ! shortcuts
       s => a%spec
@@ -399,7 +440,7 @@ contains
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)
-      call dcf2mf(m, cf_loc, Vpsl)
+      call dcf2mf(m, cf_loc, ep%vpsl)
       call dcf_free(cf_loc)
       
       ! and the non-local core corrections
@@ -413,7 +454,7 @@ contains
 #endif
 
     if (ep%classic_pot > 0) then
-      Vpsl(1:m%np) = Vpsl(1:m%np) + ep%Vclassic(1:m%np)
+      ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
     end if
     
     call pop_sub()
@@ -428,7 +469,7 @@ contains
         do i = 1, m%np
           call mesh_xyz(m, i, x)
           x = x - a%x
-          Vpsl(i) = Vpsl(i) + specie_get_local(s, x)
+          ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x)
           if(s%nlcc) then
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
           end if
@@ -662,21 +703,39 @@ contains
     call pop_sub()
   end subroutine epot_generate_classic
 
-  subroutine epot_laser_field(ep, t, field)
-    type(epot_type), intent(IN) :: ep
+  subroutine epot_laser_scalar_pot(ep, x, t, v)
+    type(epot_type), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
-    FLOAT,           intent(out) :: field(conf%dim)
+    FLOAT,           intent(in)  :: x(conf%dim)
+    FLOAT,           intent(out) :: v
 
-    call laser_field(ep%no_lasers, ep%lasers, t, field)
+    FLOAT, allocatable :: e(:)
+
+    allocate(e(conf%dim))
+    call laser_field(ep%no_lasers, ep%lasers, t, e)
+    v = sum(e*x)
+    deallocate(e)
+
+  end subroutine epot_laser_scalar_pot
+
+  subroutine epot_laser_vector_pot(ep, x, t, a)
+    type(epot_type), intent(in)  :: ep
+    FLOAT,           intent(in)  :: t
+    FLOAT,           intent(in)  :: x(conf%dim)
+    FLOAT,           intent(out) :: a(conf%dim)
+
+    call laser_vector_field(ep%no_lasers, ep%lasers, t, a)
+
+  end subroutine epot_laser_vector_pot
+
+  subroutine epot_laser_field(ep, t, e)
+    type(epot_type), intent(in)  :: ep
+    FLOAT,           intent(in)  :: t
+    FLOAT,           intent(out) :: e(conf%dim)
+
+    call laser_field(ep%no_lasers, ep%lasers, t, e)
+
   end subroutine epot_laser_field
-
-  subroutine epot_laser_vector_field(ep, t, field)
-    type(epot_type), intent(IN) :: ep
-    FLOAT,           intent(in)  :: t
-    FLOAT,           intent(out) :: field(conf%dim)
-
-    call laser_vector_field(ep%no_lasers, ep%lasers, t, field)
-  end subroutine epot_laser_vector_field
 
   ! This subroutine deallocates (if associated) every component of a nonlocal operator
   ! type variabel, except for jxyz. This is not very elegant, but it helps with performance.

@@ -449,11 +449,12 @@ subroutine td_write_laser(out, h, td, iter)
   call write_iter_start(out)
   
   field = M_ZERO
-  call epot_laser_field(h%ep, iter*td%dt, field)
+
+  call laser_field(h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
   field = field * units_inp%length%factor / units_inp%energy%factor
   call write_iter_double(out, field, conf%dim)
   
-  call epot_laser_vector_field(h%ep, iter*td%dt, field)
+  call laser_vector_field(h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
   field = field  * units_inp%length%factor
   call write_iter_double(out, field, conf%dim)
   
@@ -480,7 +481,7 @@ subroutine td_write_el_energy(out, h, iter)
     call write_iter_header(out, 'Ion-Ion')
     call write_iter_header(out, 'Exchange')
     call write_iter_header(out, 'Correlation')
-    call write_iter_header(out, 'Potentials')      
+    call write_iter_header(out, 'Potentials')
     call write_iter_nl(out)
 
     ! second line: units
