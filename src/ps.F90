@@ -202,29 +202,39 @@ end subroutine ps_init
 subroutine ps_debug(ps)
   type(ps_type), intent(IN) :: ps
 
-  ! I think I can hardcode these two numbers.
-  integer, parameter  :: npoints = 20001
-  FLOAT, parameter :: grid = CNST(0.01)
+  ! We will plot also some Fourier transforms.
+  type(loct_spline_type), allocatable :: fw(:, :)
+  FLOAT, parameter :: gmax = CNST(40.0)
 
-  character(len=4)  :: fm
   character(len=30) :: dir
-  integer           :: info_unit, local_unit, nonlocal_unit, wave_unit, so_unit, &
-                       i, j, k, l, is
-  FLOAT             :: r
+  integer  :: info_unit                            ! A text file with some basic data.
+  integer  :: local_unit, dlocal_unit, localw_unit ! The local part, derivative, and FT.
+  integer  :: nl_unit, dnl_unit, nlw_unit          ! Nonlocal part
+  integer  :: wave_unit                            ! pseudowavefunctions
+  integer  :: so_unit, dso_unit, sow_unit          ! The spin-orbit non-local terms.
+  integer  :: i, j, k, l, is
 
   call push_sub('ps_debug')
 
   ! Opens the files.
   dir = 'pseudos/'//trim(ps%label)
   call loct_mkdir(trim(dir))
-  call io_assign(info_unit); call io_assign(local_unit)
-  call io_assign(nonlocal_unit); call io_assign(wave_unit)
-  call io_assign(so_unit)
+
+  call io_assign(local_unit); call io_assign(dlocal_unit); call io_assign(localw_unit)
+  call io_assign(nl_unit)   ; call io_assign(dnl_unit)   ; call io_assign(nlw_unit)
+  call io_assign(so_unit)   ; call io_assign(dso_unit)   ; call io_assign(sow_unit)
+  call io_assign(info_unit) ;  call io_assign(wave_unit)
   open(    info_unit, file=trim(dir)//'/info')
   open(   local_unit, file=trim(dir)//'/local')
-  open(nonlocal_unit, file=trim(dir)//'/nonlocal')
-  open(    wave_unit, file=trim(dir)//'/wave')
+  open(  dlocal_unit, file=trim(dir)//'/local_derivative')
+  open(  localw_unit, file=trim(dir)//'/local_ft')
+  open(      nl_unit, file=trim(dir)//'/nonlocal')
+  open(     dnl_unit, file=trim(dir)//'/nonlocal_derivative')
+  open(     nlw_unit, file=trim(dir)//'/nonlocal_ft')
   open(      so_unit, file=trim(dir)//'/so')
+  open(     dso_unit, file=trim(dir)//'/so_derivative')
+  open(     sow_unit, file=trim(dir)//'/so_ft')
+  open(    wave_unit, file=trim(dir)//'/wavefunctions')
 
   ! Writes down the info.
   write(info_unit,'(a,/)')      ps%label
@@ -252,50 +262,54 @@ subroutine ps_debug(ps)
   enddo
 
   ! Local part.
-  do i=1, npoints
-     r = (i-1)*grid
-     if(r >= r_small) then
-       write(local_unit, *) r, (loct_splint(ps%vlocal,  r) - ps%z_val)/r, &
-           (loct_splint(ps%dvlocal, r)*r - (loct_splint(ps%vlocal, r)-ps%z_val))/r**2
-     else
-       write(local_unit, *) r, ps%vlocal_origin, M_ZERO
-     end if
-  enddo
+  call loct_spline_print(ps%vlocal, local_unit)
+  call loct_spline_print(ps%dvlocal, dlocal_unit)
+  allocate(fw(1, 1))
+  call loct_spline_init(fw(1, 1))
+  call loct_spline_3dft(ps%vlocal, fw(1, 1), gmax = gmax)
+  call loct_spline_print(fw(1, 1), localw_unit)
+  call loct_spline_end(fw(1, 1))
+  deallocate(fw)
 
   ! Kleinman-Bylander projectors
-  write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
-  do i =1, npoints
-     r = (i-1)*grid 
-     write(nonlocal_unit, '('//trim(fm)//'f16.8)') r, &
-           ( (loct_splint(ps% kb(k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
-           ( (loct_splint(ps%dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
+  call loct_spline_print(ps%kb, nl_unit)
+  call loct_spline_print(ps%dkb, dnl_unit)
+  allocate(fw(0:ps%l_max, 1:ps%kbc))
+  call loct_spline_init(fw)
+  do k = 0, ps%l_max
+     do j = 1, ps%kbc
+        call loct_spline_3dft(ps%kb(k, j), fw(k, j), gmax = gmax)
+     enddo
   enddo
+  call loct_spline_print(fw, nlw_unit)
+  call loct_spline_end(fw)
+  deallocate(fw)
 
   ! Spin-Orbit projectors
-  if(ps%so_l_max>=0) then
-    write(fm,'(i4)') 2*ps%kbc*(ps%l_max+1) + 1; fm = adjustl(fm)
-    do i =1, npoints
-      r = (i-1)*grid 
-      write(so_unit, '('//trim(fm)//'f16.8)') r, &
-           ( (loct_splint(ps%so_kb (k, j), r), j=1, ps%kbc), k=0, ps%l_max), &
-           ( (loct_splint(ps%so_dkb(k, j), r), j=1, ps%kbc), k=0, ps%l_max)
+  if(ps%so_l_max >= 0) then
+    call loct_spline_print(ps%so_kb, so_unit)
+    call loct_spline_print(ps%so_dkb, dso_unit)
+    allocate(fw(0:ps%so_l_max, 1:ps%kbc))
+    call loct_spline_init(fw)
+    do k = 0, ps%so_l_max
+       do j = 1, ps%kbc
+          call loct_spline_3dft(ps%so_kb(k, j), fw(k, j), gmax = gmax)
+       enddo
     enddo
+    call loct_spline_print(fw, sow_unit)
+    call loct_spline_end(fw)
+    deallocate(fw)
   endif
 
   ! Pseudo-wavefunctions
-  write(fm,'(i4)') ps%ispin*(ps%l_max+1)+1; fm = adjustl(fm)
-  do i = 1, npoints
-     r = (i-1)*grid
-     write(wave_unit, '('//trim(fm)//'f16.8)') &
-           r, ((loct_splint(ps%ur(l, is), r), l = 1, ps%conf%p), is = 1, ps%ispin)
-  enddo
+  call loct_spline_print(ps%ur, wave_unit)
 
   ! Closes files and exits
-  call io_close(info_unit); call io_close(local_unit)
-  call io_close(nonlocal_unit); call io_close(wave_unit)
-  call io_close(so_unit)
-
-  call pop_sub()
+  call io_close(local_unit); call io_close(dlocal_unit); call io_close(localw_unit)
+  call io_close(nl_unit)   ; call io_close(dnl_unit)   ; call io_assign(nlw_unit)
+  call io_assign(so_unit)   ; call io_assign(dso_unit)   ; call io_assign(sow_unit)
+  call io_assign(info_unit) ;  call io_assign(wave_unit)
+  call pop_sub(); return
 end subroutine ps_debug
 
 subroutine ps_end(ps)
@@ -307,24 +321,29 @@ subroutine ps_end(ps)
 
   if(.not. associated(ps%kb)) return
 
-  do i = 0, ps%L_max
-    do j = 1, ps%kbc
-      call loct_spline_end(ps%kb(i, j))
-      call loct_spline_end(ps%dkb(i, j))
-    enddo
-  end do
-  do i = 1, ps%conf%p
-    do is = 1, ps%ispin
-      call loct_spline_end(ps%Ur(i, is))
-    enddo
-  enddo
+!!$  do i = 0, ps%L_max
+!!$    do j = 1, ps%kbc
+!!$      call loct_spline_end(ps%kb(i, j))
+!!$      call loct_spline_end(ps%dkb(i, j))
+!!$    enddo
+!!$  end do
+  call loct_spline_end(ps%kb)
+  call loct_spline_end(ps%dkb)
+!!$  do i = 1, ps%conf%p
+!!$    do is = 1, ps%ispin
+!!$      call loct_spline_end(ps%Ur(i, is))
+!!$    enddo
+!!$  enddo
+  call loct_spline_end(ps%ur)
   if(ps%so_l_max>=0) then
-  do i = 0, ps%so_L_max
-    do j = 1, ps%kbc
-      call loct_spline_end(ps%so_kb(i, j))
-      call loct_spline_end(ps%so_dkb(i, j))
-    end do
-  end do
+!!$  do i = 0, ps%so_L_max
+!!$    do j = 1, ps%kbc
+!!$      call loct_spline_end(ps%so_kb(i, j))
+!!$      call loct_spline_end(ps%so_dkb(i, j))
+!!$    end do
+!!$  end do
+     call loct_spline_end(ps%so_kb)
+     call loct_spline_end(ps%so_dkb)
   endif
 
   call loct_spline_end(ps%vlocal)
