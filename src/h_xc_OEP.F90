@@ -50,29 +50,24 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
 
   spin: do is = 1, min(st%d%nspin, 2)
     oep%lxc = M_ZERO
-    e       = M_ZERO
 
     ! get lxc
     functl_loop: do ixc = 1, 2
-      if(xcs%family(ixc).ne.XC_FAMILY_OEP) cycle
+      if(xcs%functl(ixc)%family.ne.XC_FAMILY_OEP) cycle
 
       e = M_ZERO
-      select case(xcs%functl(ixc))
+      select case(xcs%functl(ixc)%id)
       case(XC_OEP_X)
         call X(oep_x) (m, f_der, st, is, oep, e)
-        
-      case(XC_OEP_X_SIC)
-        call X(oep_x_sic) (xcs, m, f_der, st, is, oep, e)
-      case(XC_OEP_C_SIC)
-        call X(oep_c_sic) (xcs, m, st, is, oep, e)
-      end select
-
-      if(ixc==XC_OEP_X_SIC.or.ixc==XC_OEP_X) then
         ex = ex + e
-      else
-        ec = ec + e
-      end if
+      end select
     end do functl_loop
+  
+    ! SIC is handled separately
+    if(xcs%sic_correction.ne.0) then
+      ! exchange correction
+      call X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
+    end if
     
     ! get the HOMO state
     call xc_oep_AnalizeEigen(oep, st, is)
@@ -85,8 +80,10 @@ subroutine X(h_xc_oep)(xcs, m, f_der, h, st, vxc, ex, ec)
     ! solve the KLI equation
     oep%vxc = M_ZERO
     call X(xc_KLI_solve) (m, st, is, oep, xcs%oep_level)
-    if(xcs%oep_level == 2) call X(h_xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
-    
+    if(xcs%oep_level == XC_OEP_FULL) then
+      call X(h_xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
+    end if
+
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
   

@@ -17,101 +17,61 @@
 
 !!! This routine calculates the SIC exchange functional. note that the LDA
 !!! part of the functional is already included by the LDA routines
-subroutine X(oep_x_sic) (xcs, m, f_der, st, is, oep, ex)
-  type(xc_type),     intent(IN)    :: xcs
-  type(mesh_type),   intent(IN)    :: m
-  type(f_der_type),  intent(in)    :: f_der
+subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
+  type(xc_type),     intent(in)    :: xcs
+  type(mesh_type),   intent(in)    :: m
+  type(f_der_type),  intent(inout) :: f_der
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  FLOAT,             intent(out)   :: ex
+  FLOAT,             intent(inout) :: vxc(:,:), ex, ec
 
-  integer  :: i, i1, i2
-  FLOAT :: ex2, edummy
-  FLOAT, allocatable :: vx2(:, :)
+  integer  :: i
+  FLOAT :: ex2, ec2, edummy
+  FLOAT, allocatable :: vxc2(:, :)
   FLOAT, pointer :: rho(:,:), rho_save(:,:)
-  type(xc_type) :: xcs2
+  
+  allocate(rho(m%np, 2), Vxc2(m%np, 2))
+  rho(:, 2) = M_ZERO
 
-  allocate(rho(m%np, 2), Vx2(m%np, 2))
-  i1 = st%d%spin_channels; st%d%spin_channels = 2
-  i2 = st%d%nspin;         st%d%nspin         = 2
+  ! save real density
   rho_save => st%rho;    st%rho => rho
 
-! calculate the u_sij using poissons equation
-  rho(:, 2) = M_ZERO
-  
-  xcs2 = xcs
-  !xcs2%family = XC_FAMILY_LDA
-  !xcs2%functl = X_FUNC_LDA_NREL
+  ! loop over states
   do i = 1, st%nst
     if(st%occ(i, is) .gt. small) then ! we only need the occupied states
-      vx2 = M_ZERO
-      ex2 = M_ZERO
-
+      ! get orbital density
       st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
-
-      !call xc_get_lda (xcs2, m, st, vx2, ex2, edummy)
-
-      ex = ex - oep%sfact*ex2
       
-      vx2(:, 2) = M_ZERO
-      call poisson_solve(m, f_der, vx2(:, 2), rho(:, 1))
-      oep%lxc(:, i) = oep%lxc(:, i) - (vx2(:, 1) + vx2(:,2))*R_CONJ(st%X(psi) (:, 1, i, is))
+      ! initialize before calling get_vxc
+      vxc2 = M_ZERO
+      ex2  = M_ZERO
+      ec2  = M_ZERO
+      
+      ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
+      edummy = M_ZERO
+      call xc_get_vxc(2, xcs%sic_aux, xcs%nlcc, m, f_der, st, vxc2, ex2, &
+         ec2, edummy, edummy)
+      
+      ex = ex - oep%sfact*ex2
+      ec = ec - oep%sfact*ec2
+
+      oep%lxc(:, i) = oep%lxc(:, i) - &
+         vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))      
+      
+      ! calculate the Hartree contribution using poissons equation
+      vxc2(:, 1) = M_ZERO
+      call poisson_solve(m, f_der, vxc2(:, 1), rho(:, 1))
 
       ex = ex - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-           sum(vx2(:, 2)* R_ABS(st%X(psi)(:, 1, i, is))**2*m%vol_pp(:))
+         sum(vxc2(:, 2) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
+
+      oep%lxc(:, i) = oep%lxc(:, i) - &
+         vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
     end if
   end do
 
-  st%d%spin_channels = i1
-  st%d%nspin         = i2    
   st%rho => rho_save
-  deallocate(rho, Vx2)
+  deallocate(rho, Vxc2)
 
-end subroutine X(oep_x_sic)
-
-subroutine X(oep_c_sic) (xcs, m, st, is, oep, ec)
-  type(xc_type),     intent(in)    :: xcs
-  type(mesh_type),   intent(in)    :: m
-  type(states_type), intent(inout) :: st
-  integer,           intent(in)    :: is
-  type(xc_oep_type), intent(inout) :: oep
-  FLOAT,          intent(out)   :: ec
-
-  integer  :: i, i1, i2
-  FLOAT :: ec2, edummy
-  FLOAT, allocatable :: vc2(:, :)
-  FLOAT, pointer :: rho(:,:), rho_save(:,:)
-  type(xc_type) :: xcs2
-
-  allocate(rho(m%np, 2), Vc2(m%np, 2))
-  i1 = st%d%spin_channels; st%d%spin_channels = 2
-  i2 = st%d%nspin;         st%d%nspin         = 2
-  rho_save => st%rho;    st%rho => rho
-
-! calculate the u_sij using poissons equation
-  rho(:, 2) = M_ZERO
-  
-  xcs2 = xcs
-  !xcs2%family = XC_FAMILY_LDA
-  !xcs2%functl = C_FUNC_LDA_PZ
-  do i = 1, st%nst
-    if(st%occ(i, is) < small) cycle ! we only need the occupied states
-
-    vc2 = M_ZERO
-    ec2 = M_ZERO
-
-    st%rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
-    
-    !call xc_get_lda (xcs2, m, st, vc2, edummy, ec2)
-    
-    ec = ec - oep%sfact*ec2
-    oep%lxc(:, i) = oep%lxc(:, i) - vc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
-  end do
-
-  st%d%spin_channels = i1
-  st%d%nspin         = i2    
-  st%rho => rho_save
-  deallocate(rho, Vc2)
-
-end subroutine X(oep_c_sic)
+end subroutine X(oep_sic)

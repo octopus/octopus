@@ -152,7 +152,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   else
     ! initilize hartree and xc modules
     call poisson_init(m)
-    call xc_init(h%xc, geo%nlcc, states_dim%spin_channels)
+    call xc_init(h%xc, geo%nlcc, states_dim%ispin, states_dim%spin_channels)
     message(1) = "Info: Exchange and correlation"
     call write_info(1)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)

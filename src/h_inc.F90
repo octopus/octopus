@@ -553,11 +553,13 @@ subroutine X(h_calc_vhxc)(h, m, f_der, st, calc_eigenval)
   !  RPA_Vhxc = h%vhxc
   
   ! now we calculate the xc terms
-  call xc_get_vxc(h%xc, m, f_der, st, h%vhxc, h%ex, h%ec, &
+  h%ex = M_ZERO
+  h%ec = M_ZERO
+  call xc_get_vxc(2, h%xc%functl, h%xc%nlcc, m, f_der, st, h%vhxc, h%ex, h%ec, &
      -minval(st%eigenval(st%nst, :)), st%qtot)
-  
+
   ! The OEP family has to handle specially
-  if(any(h%xc%family==XC_FAMILY_OEP)) then
+  if(h%xc%oep_level.ne.XC_OEP_NONE) then
     call X(h_xc_oep)(h%xc, m, f_der, h, st, h%vhxc, h%ex, h%ec)
   end if
   

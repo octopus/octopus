@@ -37,47 +37,51 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 
   do i = 1, st%nst
     lx = R_TOTYPE(M_ZERO)
-    if(st%occ(i, is) .gt. small) then ! we only need the occupied states
-      do j = 1, st%nst
-        if(st%occ(j, is) .gt. small) then
-          allocate(rho_ij(1:m%np))
-
+    if(st%occ(i, is) .le. small) cycle ! we only need the occupied states
+    
+    do j = 1, st%nst
+      if(st%occ(j, is) .le. small) cycle
+      allocate(rho_ij(1:m%np))
+      
 #ifdef R_TREAL
-          allocate(pot(m%np))
-          pot = M_ZERO
+      allocate(pot(m%np))
+      pot = M_ZERO
+      
+      rho_ij(:) = st%dpsi(:, 1, i, is)*st%dpsi(:, 1, j, is)
+      call poisson_solve(m, f_der, pot, rho_ij)
+      deallocate(rho_ij)
 
-          rho_ij(:) = st%dpsi(:, 1, i, is)*st%dpsi(:, 1, j, is)
-          call poisson_solve(m, f_der, pot, rho_ij)
-          deallocate(rho_ij)
-          lx(:) = lx(:) - oep%socc*st%occ(j, is)*pot(:)*st%dpsi(:, 1, j, is)
-          deallocate(pot)
+      lx(:) = lx(:) - oep%socc*st%occ(j, is)*pot(:)*st%dpsi(:, 1, j, is)
+
+      deallocate(pot)
 #else
-          allocate(pot_r(m%np), pot_i(m%np))
-          pot_r = M_ZERO
-          pot_i = M_ZERO
+      allocate(pot_r(m%np), pot_i(m%np))
+      pot_r = M_ZERO
+      pot_i = M_ZERO
+      
+      rho_ij(:) = real(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is)) + &
+         aimag(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is))
+      call poisson_solve(m, f_der, pot_r, rho_ij)
+      ! and now the imaginary part
+      rho_ij(:) = real(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is)) - &
+         aimag(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is))
+      call poisson_solve(m, f_der, pot_i, rho_ij)
+      deallocate(rho_ij)
 
-          rho_ij(:) = real(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is)) + &
-               aimag(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is))
-          call poisson_solve(m, f_der, pot_r, rho_ij)
-          ! and now the imaginary part
-          rho_ij(:) = real(st%zpsi(:, 1, i, is))*aimag(st%zpsi(:, 1, j, is)) - &
-               aimag(st%zpsi(:, 1, i, is))*real(st%zpsi(:, 1, j, is))
-          call poisson_solve(m, f_der, pot_i, rho_ij)
-          deallocate(rho_ij)
-          lx(:) = lx(:) - st%occ(j, is)*oep%socc* &
-               (pot_r(:) + M_zI*pot_i(:))*conjg(st%zpsi(:, 1, j, is))
-          deallocate(pot_r, pot_i)
+      lx(:) = lx(:) - st%occ(j, is)*oep%socc* &
+         (pot_r(:) + M_zI*pot_i(:))*conjg(st%zpsi(:, 1, j, is))
+
+      deallocate(pot_r, pot_i)
 #endif
             
-        end if
-      end do
+    end do
 
-      oep%lxc(:, i) = oep%lxc(:, i) + lx(:)
-
-      r = sum(R_REAL(st%X(psi)(:, 1, i, is) * lx(:))*m%vol_pp(:))
-      ex = ex + M_HALF*oep%socc*oep%sfact*st%occ(i, is)*r
-    end if
+    oep%lxc(:, i) = oep%lxc(:, i) + lx(:)
+    
+    r = sum(R_REAL(st%X(psi)(:, 1, i, is) * lx(:))*m%vol_pp(:))
+    ex = ex + M_HALF*oep%socc*oep%sfact*st%occ(i, is)*r
   end do
-  
+
   deallocate(lx)
+
 end subroutine X(oep_x)

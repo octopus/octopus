@@ -30,52 +30,54 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   allocate(rho_sigma(m%np))
   do i = 1, m%np
     rho_sigma(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
-    oep%vxc(i)       = oep%socc* &
-         sum(st%occ(:, is)*R_REAL(oep%lxc(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
+    oep%vxc(i)   = oep%socc* &
+       sum(st%occ(:, is)*R_REAL(oep%lxc(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
   end do
 
-  n = oep%eigen_n
-  slater_approx: if(oep_level > 0) then
+  if(oep_level == XC_OEP_SLATER) then
+    deallocate(rho_sigma)
+    return
+  end if
 
-    allocate(v_bar_S(st%nst))
-    do i = 1, st%nst
-      if(st%occ(i, is) .gt. small) then
-        v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * oep%vxc(:) * m%vol_pp(:))
-      end if
+  n = oep%eigen_n
+
+  allocate(v_bar_S(st%nst))
+  do i = 1, st%nst
+    if(st%occ(i, is) .gt. small) then
+      v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * oep%vxc(:) * m%vol_pp(:))
+    end if
+  end do
+    
+  if(n > 0) then ! there is more than one state, so solve linear equation
+    allocate(x(n, 1))
+    x = M_ZERO
+    allocate(Ma(n, n), y(n, 1))
+    do i = 1, n
+      do j = i, n
+        Ma(i,j) = -sum(                                 &
+           R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 * &
+           R_ABS(st%X(psi)(:, 1, oep%eigen_index(j), is))**2 / &
+           rho_sigma(:)*m%vol_pp(:))
+        Ma(j,i) = Ma(i,j)
+      end do
+      Ma(i,i) = 1 + Ma(i,i)
+      
+      y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
     end do
     
-    if(n > 0) then ! there is more than one state, so solve linear equation
-      allocate(x(n, 1))
-      x = M_ZERO
-      allocate(Ma(n, n), y(n, 1))
-      do i = 1, n
-        do j = i, n
-          Ma(i,j) = -sum(                                 &
-               R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 * &
-               R_ABS(st%X(psi)(:, 1, oep%eigen_index(j), is))**2 / &
-               rho_sigma(:)*m%vol_pp(:))
-          Ma(j,i) = Ma(i,j)
-        end do
-        Ma(i,i) = 1 + Ma(i,i)
-        
-        y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
-      end do
-      
-      call lalg_linsyssolve(n, 1, Ma, y, x)
-      deallocate(Ma, y)
-      
-      ! add contribution of low lying states
-      do i = 1, n
-        oep%vxc(:) = oep%vxc(:) + &
-             oep%socc*st%occ(oep%eigen_index(i),is)* x(i,1) *  &
-             R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 / rho_sigma(:)
-      end do
-      deallocate(x)
-    end if
+    call lalg_linsyssolve(n, 1, Ma, y, x)
+    deallocate(Ma, y)
     
-    deallocate(v_bar_S)
-  end if slater_approx
-
+    ! add contribution of low lying states
+    do i = 1, n
+      oep%vxc(:) = oep%vxc(:) + &
+         oep%socc*st%occ(oep%eigen_index(i),is)* x(i,1) *  &
+         R_ABS(st%X(psi)(:, 1, oep%eigen_index(i), is))**2 / rho_sigma(:)
+    end do
+    deallocate(x)
+  end if
+    
+  deallocate(v_bar_S)
   deallocate(rho_sigma)
-
+  
 end subroutine X(xc_KLI_solve)

@@ -28,6 +28,12 @@ module lib_xc
      XC_NON_RELATIVISTIC  =  0, &  ! Functional includes or not realtivistic
      XC_RELATIVISTIC      =  1     ! corrections. Only available in some functionals.
   
+  ! Kinds
+  integer, parameter :: &
+     XC_EXCHANGE             = 0,  &
+     XC_CORRELATION          = 1,  &
+     XC_EXCHANGE_CORRELATION = 2 
+
   ! Families of xc functionals
   integer, parameter ::     &
      XC_FAMILY_LDA  = 1,    &
