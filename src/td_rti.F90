@@ -101,9 +101,8 @@ contains
   subroutine td_rti_run_zero_iter(h, tr)
     type(hamiltonian_type), intent(IN)    :: h
     type(td_rti_type),      intent(inout) :: tr
-
     tr%v_old(:, :, 2) = h%vhxc(:, :)
-    tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
+    tr%v_old(:, :, 3) = h%vhxc(:, :)
     tr%v_old(:, :, 1) = h%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
@@ -129,9 +128,9 @@ contains
        zpsi1 = st%zpsi
     endif
 
-    tr%v_old(:, :, 3) = tr%v_old(:, :, 2)
-    tr%v_old(:, :, 2) = tr%v_old(:, :, 1)
-    tr%v_old(:, :, 1) = h%vhxc(:, :)
+    call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
+    call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
+    call lalg_copy(m%np, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
     call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
 
     select case(tr%method)
@@ -145,7 +144,7 @@ contains
 
     if(self_consistent) then
       do
-        tr%v_old(:, :, 3) = tr%v_old(:, :, 0)
+        call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
         call zcalcdens(st, m%np, st%rho, .true.)
         call zh_calc_vhxc(h, m, st)

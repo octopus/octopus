@@ -112,7 +112,7 @@ contains
     type(mesh_type),        intent(IN)      :: m
     type(hamiltonian_type), intent(IN)      :: h
     integer,                intent(in)      :: ik
-    CMPLX,                  intent(inout)   :: zpsi(m%np, h%d%dim)
+    CMPLX,                  intent(inout)   :: zpsi(:, :)
     FLOAT,                  intent(in)      :: timestep, t
     integer,      optional, intent(out)     :: order ! For the methods that rely on Hamiltonian-vector
                                                      ! multiplication, the number of these.
@@ -145,8 +145,8 @@ contains
   contains
 
     subroutine operate(psi, oppsi)
-      CMPLX, intent(IN)    :: psi(m%np, h%d%dim)
-      CMPLX, intent(inout) :: oppsi(m%np, h%d%dim)
+      CMPLX, intent(IN)    :: psi(:, :)
+      CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then
         call zmagnus(h, m, psi, oppsi, ik, vmagnus)
@@ -255,7 +255,7 @@ contains
 
         hm(n    , n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n)  , zpsi)
         hm(n + 1, n + 1) = zstates_dotp(m, h%d%dim, v(:,:, n+1), zpsi)
-        call lalg_gemv(np, 2, -M_z1, v(:,:, n), hm(n:, n + 1), M_z1, zpsi(:, 1))
+        call lalg_gemv(m%np, h%d%dim, 2, -M_z1, v(:, :, n:n+1), hm(n:n+1, n+1), M_z1, zpsi)
         call zmatexp(n+1, hm(1:n+1, 1:n+1), expo(1:n+1, 1:n+1), -M_zI*timestep, method = 2)
 
         res = abs(beta*abs(expo(1, n+1)))
@@ -271,7 +271,7 @@ contains
       endif
       
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call blas_gemv('N', np, korder, M_z1*nrm, v(1,1,1), np, expo(1,1), 1, M_z0, zpsi(1,1), 1)
+      call lalg_gemv(m%np, h%d%dim, korder, M_z1*nrm, v, expo(1:korder, 1), M_z0, zpsi)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)

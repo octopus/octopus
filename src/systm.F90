@@ -191,7 +191,7 @@ contains
     type(geometry_type), intent(IN)  :: geo
     FLOAT,               intent(in)  :: qtot  ! the total charge of the system
     integer,             intent(in)  :: nspin, spin_channels
-    FLOAT,               intent(out) :: rho(m%np, nspin)
+    FLOAT,               intent(out) :: rho(:, :)
     
     integer :: ia, is, gd_spin, i
     integer, save :: iseed = 321
@@ -228,7 +228,7 @@ contains
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
         call atom_density(m, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
-        rho(1:m%np, 1:2) = rho(1:m%np, 1:2) + atom_rho(1:m%np, 1:2)
+        call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
       end do
 
     case (3) ! Random oriented spins
