@@ -30,12 +30,16 @@ module td_rti
 
     real(r8), pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
     real(r8), pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
+
+    type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_rti_type
 
-  integer, parameter :: REVERSAL             = 2, &
-                        APP_REVERSAL         = 3, &
-                        EXPONENTIAL_MIDPOINT = 4, &
-                        MAGNUS               = 5 
+  integer, parameter, private :: SPLIT_OPERATOR       = 0, &
+                                 SUZUKI_TROTTER       = 1, &
+                                 REVERSAL             = 2, &
+                                 APP_REVERSAL         = 3, &
+                                 EXPONENTIAL_MIDPOINT = 4, &
+                                 MAGNUS               = 5 
 
   real(r8), parameter, private :: scf_threshold = 1.0e-3_r8
   
@@ -47,6 +51,14 @@ contains
 
     call oct_parse_int("TDEvolutionMethod", REVERSAL, tr%method)
     select case(tr%method)
+    case(SPLIT_OPERATOR)
+      call zcf_new(m%l, tr%cf)
+      call zcf_fft_init(tr%cf)
+                                message(1) = 'Info: Evolution method:  Split-Operator'
+    case(SUZUKI_TROTTER)
+      call zcf_new(m%l, tr%cf)
+      call zcf_fft_init(tr%cf)
+                                message(1) = 'Info: Evolution method:  Suzuki-Trotter'
     case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
@@ -54,7 +66,7 @@ contains
        allocate(tr%vmagnus(m%np, st%nspin, 2))
     case default
       write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
-      message(2) = '(2 <= TDEvolutionMethod <= 4)'
+      message(2) = '(0 <= TDEvolutionMethod <= 5)'
       call write_fatal(2)
     end select
     call write_info(1)
@@ -74,6 +86,10 @@ contains
     if(tr%method == MAGNUS) then
       ASSERT(associated(tr%vmagnus))
       deallocate(tr%vmagnus); nullify(tr%vmagnus)
+    endif
+
+    if(tr%method == SUZUKI_TROTTER .or. tr%method == SPLIT_OPERATOR) then
+      call zcf_free(tr%cf)
     endif
 
     call td_exp_end(tr%te)       ! clean propagator method
@@ -114,6 +130,8 @@ contains
     call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
 
     select case(tr%method)
+    case(SPLIT_OPERATOR);       call td_rti0
+    case(SUZUKI_TROTTER);       call td_rti1
     case(REVERSAL);             call td_rti2
     case(APP_REVERSAL);         call td_rti3
     case(EXPONENTIAL_MIDPOINT); call td_rti4
@@ -129,10 +147,13 @@ contains
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
+        write(*, *) maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /))
         if( maxval((/ (dmf_nrm2(m, tr%v_old(:, is, 3)-tr%v_old(:, is, 0)),is=1,st%nspin) /)) < scf_threshold) exit
 
         st%zpsi = zpsi1
         select case(tr%method)
+         case(SPLIT_OPERATOR);       call td_rti0
+         case(SUZUKI_TROTTER);       call td_rti1
          case(REVERSAL);             call td_rti2
          case(APP_REVERSAL);         call td_rti3
          case(EXPONENTIAL_MIDPOINT); call td_rti4
@@ -144,6 +165,65 @@ contains
 
     call pop_sub()
   contains
+
+    ! Split operator.
+    subroutine td_rti0
+      integer :: ik, ist
+      call push_sub('td_rti0')
+      
+      do ik = 1, st%nik
+         do ist = 1, st%nst
+            call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
+         enddo
+      enddo
+      call zcalcdens(st, m%np, st%rho, .true.)
+      call zh_calc_vhxc(h, m, st, sys)
+      do ik = 1, st%nik
+         do ist = 1, st%nst
+            if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
+            call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
+            if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
+         enddo
+      enddo
+      do ik = 1, st%nik
+         do ist = 1, st%nst
+            call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
+         enddo
+      enddo
+
+      call pop_sub()
+    end subroutine td_rti0
+
+    ! Suzuki-Trotter.
+    subroutine td_rti1
+      real(r8) :: p, pp(5), time(5), dtime(5)
+      integer :: ik, ist, k
+      call push_sub('td_rti1')
+
+      p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
+      pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
+      dtime = pp*dt
+      time(1) = t-dt+pp(1)/M_TWO*dt
+      time(2) = t-dt+(pp(1)+pp(2)/M_TWO)*dt
+      time(3) = t-dt+(pp(1)+pp(2)+pp(3)/M_TWO)*dt
+      time(4) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)/M_TWO)*dt
+      time(5) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
+
+      do k = 1, 5
+         call dextrapolate(2, m%np*st%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
+         do ik = 1, st%nik
+            do ist = 1, st%nst
+               call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
+               call zexp_kinetic(m, st, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_zI*dtime(k))
+               if(sys%nlpp) call zexp_vnlpsi (m, st, sys, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .false.)
+               call zexp_vlpsi (m, st, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+            enddo
+         enddo
+      enddo
+
+      call pop_sub()
+    end subroutine td_rti1
 
     subroutine td_rti2
       real(r8), allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)

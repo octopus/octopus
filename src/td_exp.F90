@@ -31,11 +31,11 @@ module td_exp
     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_exp_type
 
-  integer, parameter :: FOURTH_ORDER       = 1, &
-                        LANCZOS_EXPANSION  = 2, &
-                        SPLIT_OPERATOR     = 3, &
-                        SUZUKI_TROTTER     = 4, &
-                        CHEBYSHEV          = 5
+  integer, parameter, private :: FOURTH_ORDER       = 1, &
+                                 LANCZOS_EXPANSION  = 2, &
+                                 SPLIT_OPERATOR     = 3, &
+                                 SUZUKI_TROTTER     = 4, &
+                                 CHEBYSHEV          = 5
 
 contains
 
