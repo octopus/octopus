@@ -23,7 +23,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   FLOAT,          intent(in), optional :: t
   logical,           intent(in), optional :: reduce_
 
-  integer :: i, j, l, m, add_lm, idim, ist, ik, ii, jj, ivnl
+  integer :: i, j, l, m, idim, ist, ik, ii, jj, ivnl
   FLOAT :: d, r, zi, zj, vl, dvl, x(3)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
@@ -44,7 +44,6 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     atm => geo%atom(i)
     if(atm%spec%local) cycle
 
-    add_lm = add_lm + 1
     do l = 0, atm%spec%ps%l_max
        do m = -l, l
 

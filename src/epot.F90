@@ -67,10 +67,13 @@ module external_pot
 
 contains
 
+
+
   subroutine epot_init(ep, m, geo)
     type(epot_type),     intent(out) :: ep
     type(mesh_type),     intent(in)  :: m
     type(geometry_type), intent(in)  :: geo
+    integer :: i
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ep%vpsl_space = REAL_SPACE
@@ -123,7 +126,13 @@ contains
     ! Non local operators
     ep%nvnl = geometry_nvnl(geo)
     nullify(ep%vnl)
-    if(ep%nvnl>0) allocate(ep%vnl(ep%nvnl))
+    if(ep%nvnl>0) then
+       allocate(ep%vnl(ep%nvnl))
+       do i = 1, ep%nvnl
+          nullify(ep%vnl(i)%jxyz, ep%vnl(i)%uv, ep%vnl(i)%uvu, ep%vnl(i)%duv, &
+                  ep%vnl(i)%so_uv, ep%vnl(i)%so_duv, ep%vnl(i)%so_luv, ep%vnl(i)%so_uvu)
+       end do
+    endif
 
   end subroutine epot_init
 
@@ -329,6 +338,8 @@ contains
       enddo
     end do
 
+    ! Build the phases...
+    if(conf%periodic_dim/=0) then
     i = 1
     do ia = 1, geo%natoms
        a => geo%atom(ia)
@@ -338,7 +349,6 @@ contains
        do l = 0, s%ps%l_max
           do lm = -l, l
              allocate(ep%vnl(i)%phases(ep%vnl(i)%n, st%d%nik))
-             if (conf%periodic_dim/=0) then
                 allocate(ep%vnl(i)%phases(ep%vnl(i)%n, st%d%nik))
                 do j = 1, ep%vnl(i)%n
                    call mesh_xyz(m, ep%vnl(i)%jxyz(j), x)
@@ -346,12 +356,12 @@ contains
                       ep%vnl(i)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
                    end do
                 end do
-             end if
              add_lm = add_lm + 1
              i = i + 1
           enddo
        enddo
     enddo
+    endif
 
 #ifdef HAVE_FFT
     if(ep%vpsl_space == RECIPROCAL_SPACE) then
@@ -434,24 +444,26 @@ contains
       ep%vnl(ivnl)%n = j
       ep%vnl(ivnl)%c = s%ps%kbc
 
+      call nonlocal_op_kill(ep%vnl(ivnl))
+
       ! First, the "normal" non-local projectors
       allocate(ep%vnl(ivnl)%jxyz(j), &
                ep%vnl(ivnl)%uv(j, s%ps%kbc), &
                ep%vnl(ivnl)%duv(3, j, s%ps%kbc), &
                ep%vnl(ivnl)%uvu(s%ps%kbc, s%ps%kbc))
-      ep%vnl(ivnl)%uv  = M_ZERO
-      ep%vnl(ivnl)%duv = M_ZERO
-      ep%vnl(ivnl)%uvu = M_ZERO
+      ep%vnl(ivnl)%uv(:,:)     = M_ZERO
+      ep%vnl(ivnl)%duv(:,:, :) = M_ZERO
+      ep%vnl(ivnl)%uvu(:, :)   = M_ZERO
 
       ! Then, the spin-orbit projectors (Eventually I will change this).
       allocate(ep%vnl(ivnl)%so_uv(j, s%ps%kbc), &
                ep%vnl(ivnl)%so_duv(3, j, s%ps%kbc), &
                ep%vnl(ivnl)%so_uvu(s%ps%kbc, s%ps%kbc), &
                ep%vnl(ivnl)%so_luv(j, s%ps%kbc, 3))
-      ep%vnl(ivnl)%so_uv  = M_z0
-      ep%vnl(ivnl)%so_duv = M_z0
-      ep%vnl(ivnl)%so_uvu = M_z0
-      ep%vnl(ivnl)%so_luv = M_z0
+      ep%vnl(ivnl)%so_uv(:, :)     = M_z0
+      ep%vnl(ivnl)%so_duv(:, :, :) = M_z0
+      ep%vnl(ivnl)%so_uvu(: , :)   = M_z0
+      ep%vnl(ivnl)%so_luv(:, :, :) = M_z0
 
       j = 0
       do k = 1, m%np
@@ -475,7 +487,7 @@ contains
       FLOAT :: r, x(3), x_in(3), ylm
       FLOAT :: so_uv, so_duv(3)
       
-      call push_sub('build_nl_part_')
+      call push_sub('build_nl_part')
       
       j_loop: do j = 1, ep%vnl(ivnl)%n
          call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x_in)
@@ -522,7 +534,7 @@ contains
       
       ! and here we calculate the uVu
       if(s%ps%flavour(1:2) == 'tm') then
-        ep%vnl(ivnl)%uvu = M_ZERO
+        ep%vnl(ivnl)%uvu(:, :) = M_ZERO
             if(l .ne. s%ps%L_loc) then
               do j = 1, ep%vnl(ivnl)%n
                 call mesh_r(m, ep%vnl(ivnl)%jxyz(j), r, x=x_in, a=a%x)
@@ -611,7 +623,14 @@ contains
     call laser_vector_field(ep%no_lasers, ep%lasers, t, field)
   end subroutine epot_laser_vector_field
 
-
+  subroutine nonlocal_op_kill(nlop)
+    type(nonlocal_op) :: nlop
+    if(associated(nlop%jxyz)) then
+      deallocate(nlop%jxyz, nlop%uv, nlop%uvu, nlop%duv, &
+                 nlop%so_uv, nlop%so_duv, nlop%so_luv, nlop%so_uvu)
+      if(conf%periodic_dim/=0) deallocate(nlop%phases)
+    endif
+  end subroutine nonlocal_op_kill
 
 #include "undef.F90"
 #include "real.F90"
