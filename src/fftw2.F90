@@ -17,12 +17,12 @@
 
 #include "global.h"
 
-! Note: in fftw2, the routines in single and double precision have the 
+! /* Note: in fftw2, the routines in single and double precision have the 
 ! same name. From the manual: 
 !   "To work in single precision rather than double precision, #define the 
 !   symbol FFTW_ENABLE_FLOAT in fftw.h and then recompile the library. On 
 !   Unix systems, you can instead use configure --enable-float at installation 
-!   time"
+!   time" */
 
 module fft
   use global
