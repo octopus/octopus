@@ -29,6 +29,7 @@ type mesh_type
   real(r8) :: h         ! the (constant) spacing between the points
   
   real(r8) :: rsize     ! the radius of the sphere
+  real(r8) :: zsize     ! the length of the cilinder in the z direction
   
   integer  :: np        ! number of points in inner mesh
   real(r8) :: vol_pp    ! element of volume for integrations

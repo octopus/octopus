@@ -136,6 +136,9 @@ subroutine states_end(st)
 end subroutine states_end
 
 ! generate a hydrogen s-wavefunction around a random point
+
+#ifndef ONE_D
+
 subroutine states_generate_random(st, m)
   type(states_type), intent(inout) :: st
   type(mesh_type), intent(IN) :: m
@@ -169,6 +172,41 @@ subroutine states_generate_random(st, m)
 
   call pop_sub()
 end subroutine states_generate_random
+
+#else
+
+subroutine states_generate_random(st, m)
+  type(states_type), intent(inout) :: st
+  type(mesh_type), intent(IN) :: m
+
+  integer, save :: iseed = 123
+  integer :: ist, ik, id, i
+  real(r8) :: a, rnd, r
+
+  sub_name = 'states_generate_random'; call push_sub()
+
+  st%dpsi(0, :, :, :) = 0.0_r8
+  do ik = 1, st%nik
+    do ist = 1, st%nst
+      do id = 1, st%dim
+        call quickrnd(iseed, rnd)
+        a = 2.0_r8*(2*rnd - 1)
+
+        do i = 1, m%np
+          call mesh_r(m, i, r, a=a)
+          st%R_FUNC(psi)(i, id, ist, ik) = exp(-0.5_r8*r*r)
+        end do
+      end do
+    end do
+    call R_FUNC(states_gram_schmidt)(st%nst, m, st%dim, st%R_FUNC(psi)(:,:,:,ik))
+  end do
+  st%eigenval = 0._r8
+
+  call pop_sub()
+end subroutine states_generate_random
+
+#endif
+
 
 subroutine states_fermi(st)
   type(states_type), intent(inout) :: st
@@ -246,6 +284,9 @@ subroutine states_fermi(st)
   return
 end subroutine states_fermi
 
+
+#ifndef ONE_D
+
 subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
   type(mesh_type), intent(IN) :: m
   type(states_type), intent(IN) :: st
@@ -286,6 +327,44 @@ subroutine states_calculate_multipoles(m, st, pol, lmax, dipole, multipole)
     end do
   end do
 end subroutine states_calculate_multipoles
+
+#else
+
+subroutine states_calculate_multipoles(m, st, lmax, dipole, multipole)
+  type(mesh_type), intent(IN) :: m
+  type(states_type), intent(IN) :: st
+  integer, intent(in) :: lmax
+  real(r8), intent(out) :: dipole(st%nspin), multipole(lmax + 1, st%nspin)
+
+  integer :: i, is, l
+  real(r8) :: x, r, ylm, mult, lixo(3)
+
+  dipole = 0._r8
+  do is = 1, st%nspin
+    do i = 1, m%np
+      call mesh_x(m, i, x)
+      dipole(is) = dipole(is) + st%rho(i, is)*x
+    end do
+    dipole(is) = dipole(is) * m%vol_pp
+
+
+
+    do l = 0, lmax
+        mult = 0._r8
+
+        do i = 1, m%np
+          call mesh_r(m, i, r, x=x)
+            mult = mult + st%rho(i, is) * r**l
+        end do
+        multipole(l, is) = mult * m%vol_pp
+
+    end do
+
+  end do
+end subroutine states_calculate_multipoles
+
+#endif
+
 
 subroutine states_write_eigenvalues(iunit, nst, st, error)
   integer, intent(in) :: iunit, nst

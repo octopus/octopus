@@ -7,7 +7,7 @@ use kb
 implicit none
 
 private
-public :: ps_type, ps_init_1D, ps_end_1D
+public :: ps_type, ps_init, ps_end
 
 type ps_type
   type(spline_type), pointer :: kb(:)   ! Kleynman-Bylander projectors
@@ -42,7 +42,7 @@ end type ps_file
 real(r8), parameter :: eps = 1.0e-8_r8
 contains
 
-subroutine ps_init_1D(ps, label, z, zval)
+subroutine ps_init(ps, label, z, zval)
   type(ps_type), intent(inout) :: ps
   character(len=*), intent(in) :: label
   real(r8), intent(inout) :: z
@@ -62,9 +62,9 @@ subroutine ps_init_1D(ps, label, z, zval)
   call ps_load(ps, z, zval)
 
   call pop_sub()
-end subroutine ps_init_1D
+end subroutine ps_init
 
-subroutine ps_end_1D(ps)
+subroutine ps_end(ps)
   type(ps_type), intent(inout) :: ps
 
   integer :: i
@@ -78,7 +78,7 @@ subroutine ps_end_1D(ps)
   call spline_end(ps%core)  
   
   call pop_sub()
-end subroutine ps_end_1D
+end subroutine ps_end
 
 
 subroutine ps_load(ps, z, zval)
