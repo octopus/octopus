@@ -176,7 +176,7 @@ subroutine R_FUNC(states_write_restart)(filename, m, st, iter, v1, v2)
   mode = 1_i4
 #endif
 
-  write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%zsize
+  write(iunit) int(m%box_shape, i4), m%h, m%rsize, m%xsize
   write(iunit) int(m%np, i4), int(st%dim, i4), int(st%st_start, i4), &
        int(st%st_end, i4), int(st%nik, i4), int(st%ispin, i4), mode
 
