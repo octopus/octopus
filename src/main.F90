@@ -95,8 +95,6 @@ program octopus
   call write_info(1)
 
   ! now we really start
-  !call test()
-  !stop
   call run()
 
   ! print date
@@ -113,13 +111,3 @@ program octopus
   call oct_parse_end()
   stop
 end program octopus
-
-subroutine test()
-  use global
-
-  character(len=100) :: c1, c2
-
-  c1 = 'ola'
-  write(*,'(a2,a7,a2)') 'aa', str_center(trim(c1), 7), 'aa'
-
-end subroutine test

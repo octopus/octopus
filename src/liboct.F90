@@ -18,7 +18,6 @@
 #include "config_F90.h"
 
 module liboct
-  use global
 
   implicit none
   
@@ -141,6 +140,9 @@ module liboct
     subroutine oct_ran_end(r)
       integer(POINTER_SIZE), intent(out) :: r
     end subroutine oct_ran_end
+
+    real(8) function oct_clock()
+    end function oct_clock
   end interface
 
   private :: oct_parse_string, oct_parse_block_string

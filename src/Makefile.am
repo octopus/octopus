@@ -2,7 +2,7 @@ bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc function-to
 	nbo2xyz
 EXTRA_PROGRAMS = octopus octopus-mpi octopus-1d octopus-1d-mpi octopus-pol octopus-pol-mpi
 
-octopus_SOURCES = global.F90 liboct.F90 io.F90 pulpo.F90 units.F90 math.F90 \
+octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 \
 	ps_xc.F90 ps_kb.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
 	atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 xc.F90 \
@@ -63,6 +63,7 @@ DISTCLEANFILES = Makefile.in dirs.h
 	@rm -f $*.f90
 
 # how to generate config_F90.h
+liboct.F90: config_F90.h
 global.F90: config_F90.h
 config_F90.h: config.h
 	sed 's%/\*%!%g; s%\*/%%g' config.h >config_F90.h

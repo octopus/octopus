@@ -19,6 +19,8 @@
 
 module global
 
+use liboct
+
 #if defined(HAVE_MPI) && !defined(MPI_H)
 use mpi
 #endif
@@ -180,7 +182,7 @@ subroutine push_sub()
     call write_fatal(1)
   else
     sub_stack(no_sub_stack) = trim(sub_name)
-    time_stack(no_sub_stack) = elapsed_time()
+    time_stack(no_sub_stack) = oct_clock()
 
     if(conf%verbose > 999 .and. mpiv%node == 0) then
       write(stdout,'(a)', advance='no') "* Debug: In: "
@@ -196,18 +198,17 @@ end subroutine push_sub
 
 subroutine pop_sub()
   integer i
-  real(r8) :: t
 
   if(no_sub_stack > 0) then
     if(conf%verbose > 999 .and. mpiv%node == 0) then
-      t = elapsed_time()
  
       write(stdout,'(a)', advance='no') "* Debug: Out:"
       do i = no_sub_stack-1, 1, -1
         write(stdout,'(a)', advance='no') "  "
       end do
       write(stdout,'(a)', advance='no') trim(sub_stack(no_sub_stack))
-      write(stdout, '(a,f10.3,a)') ' (', t-time_stack(no_sub_stack), 's)'
+      write(stdout, '(a,f10.3,a)') ' (', (oct_clock()-time_stack(no_sub_stack))/1e6, 's)'
+      ! It seems in std C libraries the number of clock ticks per second is 1e6...
     end if
     no_sub_stack = no_sub_stack - 1
   else
