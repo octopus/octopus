@@ -290,13 +290,22 @@ contains
 
 end function in_mesh
 
-subroutine lookup_table(m, d)
+subroutine build_lookup_tables(m)
   type(mesh_type), intent(inout) :: m
-  type(mesh_derivatives_type), intent(in) :: d
+
+  real(r8), allocatable :: dgidfj(:) ! the coefficients for the gradient
+  real(r8), allocatable :: dlidfj(:) ! the coefficients for the laplacian  
 
   integer :: i, j, ix(3), ik, in, nl, ng(3)
-  
-  allocate(m%der_lookup(m%np))
+
+  call push_sub('build_lookup_tables')
+
+  call derivatives_coeff
+
+  allocate(m%laplacian%lookup(m%np))
+  do j = 1, conf%dim
+     allocate(m%grad(j)%lookup(m%np))
+  enddo
 
   do i = 1, m%np
     ix(:) = m%Lxyz(:, i)
@@ -305,7 +314,7 @@ subroutine lookup_table(m, d)
     ! nl counts the points for the laplacian and ng for the gradient
     nl = 0; ng = 0
     do j = 1, conf%dim
-      do ik = -d%norder, d%norder
+      do ik = -m%laplacian%norder, m%laplacian%norder
         ix(j) = ix(j) + ik
         if(index(ix, sign(j, ik)) > 0) then
           nl    = nl    + 1
@@ -316,16 +325,21 @@ subroutine lookup_table(m, d)
     end do
 
     ! allocate
-    m%der_lookup(i)%lapl_n = nl
-    m%der_lookup(i)%grad_n = ng
+    m%laplacian%lookup(i)%n = nl
+    do j = 1, conf%dim
+       m%grad(j)%lookup(i)%n = ng(j)
+    enddo
     ng(1) = maxval(ng)
-    allocate(m%der_lookup(i)%lapl_i(nl), m%der_lookup(i)%grad_i(ng(1), 1:conf%dim))
-    allocate(m%der_lookup(i)%lapl_w(nl), m%der_lookup(i)%grad_w(ng(1), 1:conf%dim))
+    allocate(m%laplacian%lookup(i)%i(nl), m%laplacian%lookup(i)%w(nl))
+    do j = 1, conf%dim
+       allocate(m%grad(j)%lookup(i)%i(nl), m%grad(j)%lookup(i)%w(ng(1)))
+    enddo
     
     ! fill in the table
     nl = 0; ng = 0
     do j = 1, conf%dim
-      do ik = -d%norder, d%norder
+      !do ik = -d%norder, d%norder
+      do ik = -m%laplacian%norder, m%laplacian%norder
         ix(j) = ix(j) + ik
         
         in = index(ix, sign(j, ik))
@@ -333,11 +347,11 @@ subroutine lookup_table(m, d)
           nl    = nl    + 1
           ng(j) = ng(j) + 1
           
-          m%der_lookup(i)%lapl_i(nl) = in
-          m%der_lookup(i)%lapl_w(nl) = d%dlidfj(abs(ik))/m%h(j)**2
+          m%laplacian%lookup(i)%i(nl) = in
+          m%laplacian%lookup(i)%w(nl) = dlidfj(abs(ik))/m%h(j)**2
           
-          m%der_lookup(i)%grad_i(ng(j), j) = in
-          m%der_lookup(i)%grad_w(ng(j), j) = d%dgidfj(ik)/m%h(j)
+          m%grad(j)%lookup(i)%i(ng(j)) = in
+          m%grad(j)%lookup(i)%w(ng(j)) = dgidfj(ik)/m%h(j)
           
         end if
         
@@ -346,8 +360,45 @@ subroutine lookup_table(m, d)
     end do
     
   end do
-  
+
+  deallocate(dlidfj,dgidfj)
+  call pop_sub()
 contains
+
+  subroutine derivatives_coeff
+    use math, only: weights
+
+    integer :: k, i, j, morder
+    real(r8), allocatable :: cc(:,:,:)
+
+    call push_sub('derivatives_coeff')
+    !k = d%norder
+    k = m%laplacian%norder
+    if (k < 1) then
+      write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
+      message(2) = '(1 <= OrderDerivatives)'
+      call write_fatal(2)
+    end if
+    allocate(dlidfj(-k:k), dgidfj(-k:k))
+    morder = 2*k
+    allocate(cc(0:morder, 0:morder, 0:2))
+    call weights(2, morder, cc)
+    dgidfj(0) = cc(0, morder, 1)
+    dlidfj(0) = cc(0, morder, 2)
+  
+    j = 1
+    do i = 1, k
+      dgidfj(-i) = cc(j, morder, 1)
+      dlidfj(-i) = cc(j, morder, 2)
+      j = j + 1
+      dgidfj( i) = cc(j, morder, 1)
+      dlidfj( i) = cc(j, morder, 2)
+      j = j + 1
+    end do
+    deallocate(cc)
+
+    call pop_sub()
+  end subroutine derivatives_coeff
 
   ! this function takes care of the boundary conditions
   ! for a given x,y,z it returns the true index of the point
@@ -389,4 +440,4 @@ contains
 
   end function index
 
-end subroutine lookup_table
+end subroutine build_lookup_tables

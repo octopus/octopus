@@ -89,7 +89,7 @@ subroutine hartree_end(h)
 
   select case(h%solver)
   case(1)
-    nullify(h%m_aux%d) ! this is a copy from sys%m, so it should not be dealloated here
+    nullify(h%m_aux%laplacian, h%m_aux%grad)
     call mesh_end(h%m_aux)
     deallocate(h%m_aux); nullify(h%m_aux)
 #ifdef HAVE_FFT

@@ -38,6 +38,9 @@ contains
 
   subroutine functions_init(m)
     type(mesh_type), intent(inout) :: m
+    integer :: j, norder
+
+    call push_sub('functions_init')
 
 #ifdef HAVE_FFT
   call oct_parse_int('DerivativesSpace', REAL_SPACE, derivatives_space)
@@ -52,10 +55,14 @@ contains
 #endif
 
   if(derivatives_space == REAL_SPACE) then
-    allocate(m%d)
-    call oct_parse_int('OrderDerivatives', 4, m%d%norder)
-    call mesh_init_derivatives_coeff(m%d)  ! initialize the coefficients
-    call lookup_table(m, m%d)              ! and now create the lookup table
+    call oct_parse_int('OrderDerivatives', 4, norder)
+
+    allocate(m%grad(conf%dim), m%laplacian)
+    m%laplacian%norder = norder
+    do j = 1, conf%dim
+       m%grad(j)%norder = norder
+    enddo
+    call build_lookup_tables(m)
 
     message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
@@ -73,23 +80,26 @@ contains
 #endif
   call write_info(1)
 
+  call pop_sub()
 end subroutine functions_init
 
 subroutine functions_end(m)
   type(mesh_type), intent(inout) :: m
-  integer :: i
+  integer :: i, j
   
   if(derivatives_space == REAL_SPACE) then
-    deallocate(m%d%dgidfj, m%d%dlidfj)
-    nullify(m%d%dgidfj, m%d%dlidfj)
-    deallocate(m%d); nullify(m%d)
-
-    do i = 1, m%np
-      deallocate(m%der_lookup(i)%lapl_i, m%der_lookup(i)%grad_i)
-      deallocate(m%der_lookup(i)%lapl_w, m%der_lookup(i)%grad_w)
-    end do
-    deallocate(m%der_lookup)
-    nullify(m%der_lookup)
+     do i = 1, m%np
+        deallocate(m%laplacian%lookup(i)%i, m%laplacian%lookup(i)%w)
+     enddo
+     deallocate(m%laplacian%lookup)
+     do j = 1, conf%dim
+        do i = 1, m%np
+           deallocate(m%grad(j)%lookup(i)%i, m%grad(j)%lookup(i)%w)
+        enddo
+        deallocate(m%grad(j)%lookup)
+     enddo
+     deallocate(m%laplacian); nullify(m%laplacian)
+     deallocate(m%grad); nullify(m%grad)
     
 #if defined(HAVE_FFT)
   else

@@ -78,14 +78,15 @@ subroutine X(mf_laplacian) (m, f, lapl)
   R_TYPE, intent(out) :: lapl(m%np)
 
   integer :: k, nl
-  type(der_lookup_type), pointer :: p
+  !type(der_lookup_type), pointer :: p
+  type(lookup_type), pointer :: p
 
   call push_sub("mf_laplacian")
     
   do k = 1, m%np
-    p => m%der_lookup(k)
-    nl = p%lapl_n
-    lapl(k) = sum(p%lapl_w(1:nl)*f(p%lapl_i(1:nl)))
+    p => m%laplacian%lookup(k)
+    nl = p%n
+    lapl(k) = sum(p%w(1:nl)*f(p%i(1:nl)))
   end do
 
   call pop_sub()
@@ -97,15 +98,16 @@ subroutine X(mf_gradient) (m, f, grad)
   R_TYPE, intent(out) :: grad(conf%dim, m%np)
   
   integer :: j, k, ng(3)
-  type(der_lookup_type), pointer :: p
+  !type(der_lookup_type), pointer :: p
+  type(lookup_type), pointer :: p
 
   call push_sub("mf_gradient")
     
   do k = 1, m%np
-    p => m%der_lookup(k)
-    ng = p%grad_n
     do j = 1, conf%dim
-      grad(j, k) = sum(p%grad_w(1:ng(j),j)*f(p%grad_i(1:ng(j),j)))
+       p => m%grad(j)%lookup(k)
+       ng = p%n
+       grad(j, k) = sum(p%w(1:ng(j))*f(p%i(1:ng(j))))
     end do
   end do
 
@@ -120,17 +122,19 @@ subroutine X(mf_divergence)(m, f, divf)
   R_TYPE, intent(out) :: divf(m%np)
 
   integer :: j, k, ng(3)
-  type(der_lookup_type), pointer :: p
+  !type(der_lookup_type), pointer :: p
+  type(lookup_type), pointer :: p
 
   call push_sub('mf_divergence')
 
-  do k = 1, m%np
-    p => m%der_lookup(k)
-    ng = p%grad_n
-    divf(k) = M_ZERO
-    do j = 1, conf%dim
-      divf(k) = divf(k) + sum(p%grad_w(1:ng(j),j)*f(p%grad_i(1:ng(j), j), j))
-    end do
+  divf = R_TOTYPE(M_ZERO)
+
+  do j = 1, conf%dim
+     do k = 1, m%np
+        p => m%grad(j)%lookup(k)
+        ng = p%n
+        divf(k) = divf(k) + sum(p%w(1:ng(j))*f(p%i(1:ng(j)), j))
+     end do
   end do
 
   call pop_sub()

@@ -47,8 +47,8 @@ contains
     ! setup mesh including ghost points
     allocate(h%m_aux)
     h%m_aux = m
-    nullify(h%m_aux%Lxyz, h%m_aux%Lxyz_inv,  h%m_aux%der_lookup)
-    call mesh_create_xyz(h%m_aux, m%d%norder)
+    nullify(h%m_aux%lxyz, h%m_aux%lxyz_inv, h%m_aux%laplacian, h%m_aux%grad)
+    call mesh_create_xyz(h%m_aux, m%laplacian%norder)
     
   end subroutine init_real
 

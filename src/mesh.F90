@@ -34,17 +34,16 @@ integer, parameter :: &
      MINIMUM  = 3,    &
      PARALLELEPIPED = 4
 
-type der_lookup_type
-  integer :: lapl_n, grad_n(3)
-  integer,  pointer :: lapl_i(:), grad_i(:,:)
-  real(r8), pointer :: lapl_w(:), grad_w(:,:)
-end type der_lookup_type
+type lookup_type
+  integer :: n
+  integer, pointer :: i(:)
+  real(r8), pointer :: w(:)
+end type lookup_type
 
-type mesh_derivatives_type
-  integer :: norder ! order on the discretization of the gradient/laplace operator
-  real(r8), pointer :: dgidfj(:) ! the coefficients for the gradient
-  real(r8), pointer :: dlidfj(:) ! the coefficients for the laplacian  
-end type mesh_derivatives_type
+type derivatives_type
+  integer :: norder
+  type(lookup_type), pointer :: lookup(:)
+end type derivatives_type
 
 type mesh_type
   integer  :: box_shape ! 1->sphere, 2->cylinder, 3->sphere around each atom,
@@ -68,10 +67,9 @@ type mesh_type
   integer :: nr(2,3)  ! dimensions of the box where the points are contained
   integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
 
-  type(mesh_derivatives_type), pointer :: d
+  type(derivatives_type), pointer :: laplacian
+  type(derivatives_type), pointer :: grad(:)
 
-  type(der_lookup_type), pointer :: der_lookup(:)   ! lookup tables for derivatives
-  
   real(r8) :: fft_alpha ! enlargement factor for double box
 
   real(r8) :: vol_pp    ! element of volume for integrations
@@ -288,40 +286,6 @@ subroutine mesh_inborder(m, i, n, d, width)
 
 end subroutine mesh_inborder
 
-subroutine mesh_init_derivatives_coeff(d)
-  use math, only: weights
-  type(mesh_derivatives_type), intent(inout) :: d
-
-  integer :: k, i, j, morder
-  real(r8), allocatable :: cc(:,:,:)
-
-  k = d%norder
-  if (k < 1) then
-    write(message(1), '(a,i4,a)') "Input: '", k, "' is not a valid OrderDerivatives"
-    message(2) = '(1 <= OrderDerivatives)'
-    call write_fatal(2)
-  end if
-  allocate(d%dlidfj(-k:k), d%dgidfj(-k:k))
-  morder = 2*k
-  allocate(cc(0:morder, 0:morder, 0:2))
-  call weights(2, morder, cc)
-  d%dgidfj(0) = cc(0, morder, 1)
-  d%dlidfj(0) = cc(0, morder, 2)
-  
-  j = 1
-  do i = 1, k
-    d%dgidfj(-i) = cc(j, morder, 1)
-    d%dlidfj(-i) = cc(j, morder, 2)
-    j = j + 1
-    d%dgidfj( i) = cc(j, morder, 1)
-    d%dlidfj( i) = cc(j, morder, 2)
-    j = j + 1
-  end do
-  deallocate(cc)
-
-end subroutine mesh_init_derivatives_coeff
-
-! Deallocates what has to be deallocated ;)
 subroutine mesh_end(m)
   type(mesh_type), intent(inout) :: m
 
