@@ -18,6 +18,7 @@
 #include "config_F90.h"
 module mesh
 use global
+use oct_parser
 use units
 use fft
 use atom

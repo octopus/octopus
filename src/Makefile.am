@@ -5,7 +5,7 @@ bin_PROGRAMS = @PROGNAME@ strength-function hs-from-mult hs-from-acc \
 EXTRA_PROGRAMS = octopus octopus-mpi \
 	zoctopus zoctopus-mpi
 
-octopus_SOURCES = liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
+octopus_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 pulpo.F90 units.F90 math.F90 \
 	spline.F90 fft.F90 \
 	vxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
 	atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 xc.F90 \
@@ -26,8 +26,8 @@ noinst_HEADERS = \
 	td_init.F90 td_rti.F90 td_exp.F90 td_write.F90 td_calc.F90\
 	mix_inc.F90 out_inc.F90
 
-octopus_LDADD = ../liboct/liboct.a @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ \
-  @LIB_NETCDF@ @GSL_LIBS@ 
+octopus_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a \
+  @LIB_FFTW@ @LIB_LAPACK@ @LIB_BLAS@ @LIB_NETCDF@ @GSL_LIBS@ 
 
 # this has to be repeated...
 octopus_mpi_SOURCES     = $(octopus_SOURCES)
@@ -38,30 +38,30 @@ zoctopus_mpi_SOURCES     = $(octopus_SOURCES)
 zoctopus_mpi_LDADD       = $(octopus_mpi_LDADD)
 
 # now the utility programs
-strength_function_SOURCES = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
-strength_function_LDADD   = ../liboct/liboct.a @GSL_LIBS@
-hs_from_mult_SOURCES      = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
-hs_from_mult_LDADD        = ../liboct/liboct.a @GSL_LIBS@
-hs_from_acc_SOURCES       = global.F90 io.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
-hs_from_acc_LDADD         = ../liboct/liboct.a @GSL_LIBS@
-xyzanim_SOURCES = global.F90 io.F90 liboct.F90 units.F90 atom.F90 specie.F90 ps.F90 math.F90 \
+strength_function_SOURCES = global.F90 io.F90 liboct_parser.F90 units.F90 spectrum.F90 strength_function.F90
+strength_function_LDADD   = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
+hs_from_mult_SOURCES      = global.F90 io.F90 liboct_parser.F90 units.F90 spectrum.F90 hs_from_mult.F90
+hs_from_mult_LDADD        = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
+hs_from_acc_SOURCES       = global.F90 io.F90 liboct_parser.F90 units.F90 spectrum.F90 hs_from_acc.F90
+hs_from_acc_LDADD         = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
+xyzanim_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 atom.F90 specie.F90 ps.F90 math.F90 \
                   spline.F90 logrid.F90 atomic.F90 vxc.F90 tm.F90 hgh.F90 fft.F90 xyzanim.F90
 xyzanim_LDADD   = $(octopus_LDADD)
-phonon_spectrum_SOURCES = global.F90 io.F90 liboct.F90 units.F90 phonon_spectrum.F90
-phonon_spectrum_LDADD = ../liboct/liboct.a @GSL_LIBS@
-excitations_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
+phonon_spectrum_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
+phonon_spectrum_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
+excitations_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 vxc.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       linear.F90 excitations.F90
 excitations_LDADD = $(octopus_LDADD)
-broad_SOURCES = liboct.F90 global.F90 io.F90 units.F90 broad.F90
-broad_LDADD = ../liboct/liboct.a @GSL_LIBS@
-choose_st_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
+broad_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 broad.F90
+broad_LDADD = ../liboct/liboct.a ../liboct/liboct_parser.a @GSL_LIBS@
+choose_st_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       choose_st.F90
 choose_st_LDADD = $(octopus_LDADD)
-make_st_SOURCES = liboct.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
+make_st_SOURCES = liboct_parser.F90 global.F90 io.F90 units.F90 math.F90 spline.F90 \
                       fft.F90 vxc.F90 atomic.F90 logrid.F90 tm.F90 hgh.F90 ps.F90 specie.F90 \
                       atom.F90 mesh.F90 hartree.F90 out.F90 states.F90 systm.F90 mix.F90 \
                       make_st.F90
@@ -86,7 +86,7 @@ main.o: main.F90
 	@rm -f $*.f90
 
 # how to generate config_F90.h
-liboct.F90: config_F90.h
+liboct_parser.F90: config_F90.h
 global.F90: config_F90.h
 config_F90.h: config.h
 	sed 's%/\*%!%g; s%\*/%%g' config.h >config_F90.h

@@ -19,6 +19,7 @@
 
 module eigen_solver
 use global
+use oct_parser
 use hamiltonian
 use states
 

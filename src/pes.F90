@@ -21,7 +21,7 @@
 module PES
 use global
 use units
-use liboct
+use oct_parser
 use io
 use mesh
 use states

@@ -1,6 +1,6 @@
 #include "config_F90.h"
 
-  module atomic
+module atomic
 
   use global
   use vxc
@@ -22,6 +22,7 @@
             VALCONF_STRING_LENGTH
   character(len=1), parameter :: spec_notation(0:3) = (/ 's', 'p', 'd', 'f' /)
   integer, parameter :: VALCONF_STRING_LENGTH = 80
+
   type valconf
     integer           :: z
     character(len=2)  :: symbol
@@ -34,7 +35,7 @@
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  contains
+contains
 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

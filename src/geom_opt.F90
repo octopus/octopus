@@ -18,7 +18,7 @@
 #include "config_F90.h"
 
 module geom_opt
-  use liboct
+  use oct_parser
   use system
   use hamiltonian
   use scf

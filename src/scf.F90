@@ -18,6 +18,7 @@
 #include "config_F90.h"
 
 module scf
+use oct_parser
 use io
 use units
 use output

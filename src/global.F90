@@ -19,6 +19,7 @@
 
 module global
 
+use oct_parser
 use liboct
 
 #if defined(HAVE_MPI) && !defined(MPI_H)

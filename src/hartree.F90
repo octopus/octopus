@@ -19,7 +19,7 @@
 
 module hartree
 use global
-use liboct
+use oct_parser
 use mesh
 use math
 #ifdef HAVE_FFTW

@@ -18,7 +18,7 @@
 #include "config_F90.h"
 
 module output
-  use liboct
+  use oct_parser
   use units
   use mesh
 #if defined(HAVE_NETCDF)

@@ -19,6 +19,7 @@
 
 module specie
 use global
+use oct_parser
 use units
 use ps
 use spline

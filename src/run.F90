@@ -19,7 +19,7 @@
 
 module run_prog
 use global
-use liboct
+use oct_parser
 use io
 use units
 use states

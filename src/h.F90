@@ -19,7 +19,7 @@
 
 module hamiltonian
 use global
-use liboct
+use oct_parser
 use spline
 use fft
 use units

@@ -18,7 +18,7 @@
 #include "config_F90.h"
 
 module unocc
-use liboct
+use oct_parser
 use io
 use states
 use eigen_solver

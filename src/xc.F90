@@ -18,7 +18,7 @@
 #include "config_F90.h"
 
 module xc
-use liboct
+use oct_parser
 use math
 use mesh
 use fft

@@ -18,7 +18,6 @@
 #include "config_F90.h"
 
 module spline
-use global
 
 implicit none
 
@@ -33,18 +32,22 @@ interface
     integer, intent(in) :: nrc
     integer(POINTER_SIZE), intent(out) :: spl, acc
   end subroutine oct_spline_init
+
   subroutine oct_spline_end(spl, acc)
     integer(POINTER_SIZE), intent(inout) :: spl, acc
   end subroutine oct_spline_end
+
   subroutine oct_spline_fit(nrc, x, y, spl, acc)
     integer, intent(in) :: nrc
     real(8), intent(in) :: x, y
     integer(POINTER_SIZE), intent(inout) :: spl, acc
   end subroutine oct_spline_fit
+
   real(8) function oct_spline_eval(x, spl, acc)
     real(8), intent(in) :: x
     integer(POINTER_SIZE), intent(in) :: spl, acc
   end function oct_spline_eval
+
 end interface
 
 contains
@@ -66,7 +69,7 @@ end subroutine spline_end
 
 subroutine spline_fit(nrc, rofi, ffit, spl)
   integer, intent(in) :: nrc
-  real(r8), intent(IN) :: ffit(nrc), rofi(nrc)
+  real(8), intent(IN) :: ffit(nrc), rofi(nrc)
   type(spline_type), intent(out) :: spl
 
   call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
@@ -75,10 +78,10 @@ subroutine spline_fit(nrc, rofi, ffit, spl)
 end subroutine spline_fit
 
 function splint(spl, x)
-  real(r8) :: splint
+  real(8) :: splint
 
   type(spline_type), intent(IN) :: spl
-  real(r8), intent(IN) :: x
+  real(8), intent(IN) :: x
   
   splint = oct_spline_eval(x, spl%spl, spl%acc)
 

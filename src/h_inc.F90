@@ -155,10 +155,10 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
     if (conf%periodic_dim/=0) then
       allocate(atm%phases(atm%mps,st%nik))
       do i=1,atm%mps
-	call mesh_xyz(m, atm%jxyz(i), x)
-	do k=1,st%nik
-  	  atm%phases(i,k)=exp(M_zI*sum(st%kpoints(:,k)*x(:)))
-	end do
+        call mesh_xyz(m, atm%jxyz(i), x)
+        do k=1,st%nik
+          atm%phases(i,k)=exp(M_zI*sum(st%kpoints(:,k)*x(:)))
+        end do
       end do
     end if
 
@@ -176,20 +176,20 @@ subroutine R_FUNC(vnlpsi) (ik, m, st, sys, psi, Hpsi)
           add_lm = add_lm + (2*l + 1)
           cycle do_l
         end if
-        	
+        
         do_m: do lm = -l, l
           do ikbc = 1, spec%ps%kbc
             do jkbc = 1, spec%ps%kbc
-	      uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(:, add_lm, ikbc), 1, lpsi(:), 1) * &
-              	      m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
+              uvpsi = R_DOT(atm%mps, atm%R_FUNC(uv)(:, add_lm, ikbc), 1, lpsi(:), 1) * &
+                   m%vol_pp*atm%R_FUNC(uvu)(add_lm, ikbc, jkbc) 
               if (conf%periodic_dim==0) then
-	        call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
-	      else
-	        call R_FUNC(axpy) (atm%mps, uvpsi, R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
-	      end if
-           end do
+                call R_FUNC(axpy) (atm%mps, uvpsi, atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
+              else
+                call R_FUNC(axpy) (atm%mps, uvpsi, R_CONJ(atm%phases(:,ik))*atm%R_FUNC(uv)(:, add_lm, jkbc), 1, lHpsi(:), 1)
+              end if
+            end do
           end do
-
+          
           add_lm = add_lm + 1
         end do do_m
       end do do_l
