@@ -43,8 +43,8 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp) (order, in, out, factor, norm, method)
   integer, intent(in)           :: order
-  R_TYPE,  intent(IN)           :: in(order, order)
-  R_TYPE,  intent(out)          :: out(order, order)
+  R_TYPE,  intent(IN)           :: in(:, :)
+  R_TYPE,  intent(out)          :: out(:, :)
   R_TYPE,  intent(in)           :: factor
   FLOAT,   intent(in), optional :: norm
   integer, intent(in), optional :: method
@@ -95,8 +95,8 @@ end subroutine X(matexp)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_polynomial)(order, in, out, factor, exporder)
   integer, intent(in)  :: order, exporder
-  R_TYPE,  intent(IN)  :: in(order, order)
-  R_TYPE,  intent(out) :: out(order, order)
+  R_TYPE,  intent(IN)  :: in(:, :)
+  R_TYPE,  intent(out) :: out(:, :)
   R_TYPE,  intent(in)  :: factor 
 
   integer :: n
@@ -140,8 +140,8 @@ end subroutine X(matexp_polynomial)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_scaleandsquare)(order, in, out, factor, norm)
   integer, intent(in)  :: order
-  R_TYPE,  intent(IN)  :: in(order, order)
-  R_TYPE,  intent(out) :: out(order, order)
+  R_TYPE,  intent(IN)  :: in(:, :)
+  R_TYPE,  intent(out) :: out(:, :)
   R_TYPE,  intent(in)  :: factor 
   FLOAT,   intent(in)  :: norm
 
@@ -178,8 +178,8 @@ end subroutine X(matexp_scaleandsquare)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(matexp_decomposition)(order, in, out, factor)
   integer, intent(in)  :: order
-  R_TYPE,  intent(IN)  :: in(order, order)
-  R_TYPE,  intent(out) :: out(order, order)
+  R_TYPE,  intent(IN)  :: in(:, :)
+  R_TYPE,  intent(out) :: out(:, :)
   R_TYPE,  intent(in)  :: factor
 
   integer ::  n
