@@ -2,9 +2,7 @@
 subroutine R_FUNC(states_gram_schmidt)(nst, m, dim, psi, start)
   integer, intent(in) :: nst, dim
   type(mesh_type), intent(IN) :: m
-  ! possible bug in some alpha compilers
-  ! R_TYPE, intent(inout) :: psi(0:m%np, dim, nst) 
-  R_TYPE, intent(inout) :: psi(:, :, :)
+  R_TYPE, intent(inout) :: psi(0:m%np, dim, nst) 
   integer, intent(in), optional :: start
 
   integer :: p, q, id, stst

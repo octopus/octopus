@@ -180,6 +180,9 @@ contains
           exit pot
         end select
       end do pot
+      else
+        ! some compilers have problems passing unallocated
+        allocate(td%ab_pot(1))
     end if
   end subroutine td_init_ab
   
@@ -236,7 +239,7 @@ subroutine td_end(td)
     deallocate(td%kin_2); nullify(td%kin_2)
   end if
 
-  if(td%ab>0 .and. associated(td%ab_pot)) then
+  if(associated(td%ab_pot)) then
     deallocate(td%ab_pot); nullify(td%ab_pot)
   end if
 

@@ -17,15 +17,15 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
        cg(:,:), ppsi(:,:), tmp_wf(:,:)
-  R_TYPE, pointer :: psi(:,:,:,:)
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   real(r8) :: cg0, e0
   integer  :: ik, np, moved, p, j, iter, i, maxter
   logical  :: reord = .true.
 
+  sub_name = 'eigen_solver_cg2'; call push_sub()
+
   np = sys%m%np
-  psi => st%R_FUNC(psi)
 
   if(present(reorder)) reord = reorder
   maxter = niter
@@ -42,17 +42,19 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
     eigenfunction_loop : do p = 1, st%nst
       if(present(diff)) then
         allocate(tmp_wf(np, st%dim))
-        tmp_wf = psi(1:,:, p, ik)
+        tmp_wf = st%R_FUNC(psi)(1:,:, p, ik)
       end if
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, psi(:,:, 1:p, ik), start=p)
+      call R_FUNC(states_gram_schmidt)(p, sys%m, st%dim, &
+           st%R_FUNC(psi)(:,:, 1:p, ik), start=p)
       
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call R_FUNC(Hpsi)(h, sys, ik, psi(:,:, p, ik) , h_psi)
+      call R_FUNC(Hpsi)(h, sys, ik, st%R_FUNC(psi)(:,:, p, ik) , h_psi)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, psi(1:,:, p, ik), h_psi))
+      st%eigenval(p, ik) = R_REAL(R_FUNC(states_dotp) (sys%m, st%dim, 
+           st%R_FUNC(psi)(1:,:, p, ik), h_psi))
 
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter
@@ -61,17 +63,17 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
         !call pre(hpsi%val   , g%val   ) 
         !call pre(psi(m)%val , ppsi%val)
         g = h_psi
-        ppsi = psi(1:,:, p, ik)
+        ppsi = st%R_FUNC(psi)(1:,:, p, ik)
         
-        es(1) = R_FUNC(states_dotp) (sys%m, st%dim, psi(1:,:, p, ik), g)
-        es(2) = R_FUNC(states_dotp) (sys%m, st%dim, psi(1:,:, p, ik), ppsi)
+        es(1) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), g)
+        es(2) = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
         
         ! Orthogonolize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
-          a0 = R_FUNC(states_dotp) (sys%m, st%dim, psi(1:,:, j, ik), g)
-          g(:,:) = g(:,:) - a0 * psi(1:,:, j, ik)
+          a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, j, ik), g)
+          g(:,:) = g(:,:) - a0 * st%R_FUNC(psi)(1:,:, j, ik)
         end do
         
         if(iter .ne. 1) gg1 = R_FUNC(states_dotp) (sys%m, st%dim, g, g0)
@@ -93,7 +95,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
           cg = gamma*cg
           cg(1:,:) = cg(1:,:) + g(:,:)
           norma = gamma*cg0*sin(theta)
-          cg(1:,:) = cg(1:,:) - norma * psi(1:,:, p, ik)
+          cg(1:,:) = cg(1:,:) - norma * st%R_FUNC(psi)(1:,:, p, ik)
         end if
         
         ! cg contains now the conjugate gradient
@@ -101,7 +103,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
         call R_FUNC(Hpsi) (h, sys, ik, cg, ppsi)
         
         ! Minimization.
-        a0 = R_FUNC(states_dotp) (sys%m, st%dim, psi(1:,:, p, ik), ppsi)
+        a0 = R_FUNC(states_dotp) (sys%m, st%dim, st%R_FUNC(psi)(1:,:, p, ik), ppsi)
         a0 = 2.0_r8 * a0 / cg0
         b0 = R_FUNC(states_dotp) (sys%m, st%dim, cg(1:,:), ppsi)
         b0 = b0/cg0**2
@@ -119,7 +121,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
         ! Upgrade psi...
         a0 = cos(theta)
         b0 = sin(theta)/cg0
-        psi(:,:, p, ik) = a0*psi(:,:, p, ik) + b0*cg(:,:)
+        st%R_FUNC(psi)(:,:, p, ik) = a0*st%R_FUNC(psi)(:,:, p, ik) + b0*cg(:,:)
         
         ! Test convergence.
         if(abs(st%eigenval(p, ik) - e0) < tol) then
@@ -135,7 +137,7 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
       niter = niter + iter + 1
 
       if(present(diff)) then
-        tmp_wf = psi(1:np,:, p, ik) - tmp_wf
+        tmp_wf = st%R_FUNC(psi)(1:np,:, p, ik) - tmp_wf
         diff(p, ik) = R_FUNC(mesh_nrm2) (sys%m, tmp_wf)
         deallocate(tmp_wf)
       end if
@@ -149,13 +151,13 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
           i = i + 1
           moved = moved + 1
           e0 = st%eigenval(p, ik)
-          cg = psi(:,:, p, ik)
+          cg = st%R_FUNC(psi)(:,:, p, ik)
           do j = p, i + 1 , -1
             st%eigenval(j, ik) = st%eigenval(j-1, ik)
-            psi(:,:, j, ik) = psi(:,:, j-1, ik)
+            st%R_FUNC(psi)(:,:, j, ik) = st%R_FUNC(psi)(:,:, j-1, ik)
           end do
           st%eigenval(i, ik) = e0
-          psi(:,:, i, ik) = cg
+          st%R_FUNC(psi)(:,:, i, ik) = cg
         end if
       end if
       ! End of reordering
@@ -165,5 +167,6 @@ subroutine eigen_solver_cg2(sys, h, st, tol, niter, converged, errorflag, diff, 
   ! Deallocation of variables
   deallocate(h_psi, g, g0, cg, ppsi)
   
+  call pop_sub()
   return
 end subroutine eigen_solver_cg2

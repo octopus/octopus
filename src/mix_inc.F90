@@ -2,7 +2,7 @@
 subroutine R_FUNC(calcdens)(st, np, rho, reduce)
   type(states_type), intent(IN) :: st
   integer, intent(in) :: np
-  real(r8), intent(out) :: rho(np, st%ispin)
+  real(r8), intent(out) :: rho(np, st%nspin)
   logical, intent(in), optional :: reduce
 
   integer :: i, ik, p, sp

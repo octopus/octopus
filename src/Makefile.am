@@ -24,7 +24,7 @@ octopus_LDADD = ../liboct/liboct.a $(LIB_FFTW) $(LIB_LAPACK) $(LIB_GSL)
 octopus_1d_SOURCES = $(octopus_SOURCES)
 octopus_1d_LDADD   = $(octopus_LDADD)
 
-CLEANFILES = *~ *.bak *.mod config_F90.h
+CLEANFILES = *~ *.bak *.mod *.il *.d work.* config_F90.h
 DISTCLEANFILES = Makefile.in
 
 .F90.o:

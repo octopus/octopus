@@ -219,7 +219,7 @@ subroutine PES_mask_output(v, m, st, file)
         ! angle resolved
         if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then
           vec = atan2(real(ixx(2), r8), real(ixx(1), r8))
-          ii  = nint(vec*(ar_n-1)/M_PI) + 1
+          ii  = nint(abs(vec)*(ar_n-1)/M_PI) + 1
           if(ii <= ar_n) then ! should always be true
             do ik = 1, st%nik
               do p = st%st_start, st%st_end
@@ -262,4 +262,5 @@ subroutine PES_mask_output(v, m, st, file)
   
   deallocate(spis, arpis)
   deallocate(npoints, ar_npoints)
+
 end subroutine PES_mask_output
