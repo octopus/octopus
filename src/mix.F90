@@ -266,7 +266,7 @@ subroutine mix_broyden(nspin, np, smix, vin, vout, iter, errorflag)
     call daxpy(np, smix%alpha, vout(1, is), 1, vin(1, is), 1)
   
     do i = 1, iter_used
-      gamma = 0.d0
+      gamma = M_ZERO
       do j = 1, iter_used
         gamma = gamma + beta(j, i)*w(j)*work(j)
       end do

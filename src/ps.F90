@@ -461,7 +461,7 @@ subroutine get_splines_tm(psf, ps)
       end if
     end do
     hato = 0.0_r8
-    hato(2:nrcore) = psf%chcore(2:nrcore)/(4.0d0*M_PI*psf%rofi(2:nrcore)**2)
+    hato(2:nrcore) = psf%chcore(2:nrcore)/(M_FOUR*M_PI*psf%rofi(2:nrcore)**2)
     hato(1) = hato(2)
     nrc = nint(log(psf%rofi(ir +1)/psf%b + 1.0_r8)/psf%a) + 1
     call spline_fit(psf%nrval, psf%rofi, hato, ps%core)

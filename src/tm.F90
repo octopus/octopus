@@ -286,8 +286,8 @@ subroutine solve_schroedinger(psf)
   !  checking normalization of the calculated wave functions
   do l = 0, psf%npotd-1! ps%L_max
     e = sqrt(sum(psf%g%drdi(2:psf%nrval)*psf%rphi(2:psf%nrval, l, 1)**2))
-    e = abs(e - 1.0d0)
-    if (e > 1.0d-5 .and. conf%verbose > 0) then
+    e = abs(e - M_ONE)
+    if (e > 1.0e-5_r8 .and. conf%verbose > 0) then
       write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
       write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
       call write_warning(2)
@@ -646,11 +646,11 @@ subroutine ghost_analysis(pstm, lmax)
 ! Ghost analysis
   do l = 0, lmax
     ighost = -1
-    if(pstm%dkbcos(l) > 0.0d0) then
+    if(pstm%dkbcos(l) > M_ZERO) then
       if(pstm%eigen(l, 1) > elocal(2, l)) then
         ighost = 1
       end if
-    else if(pstm%dkbcos(l) < 0d0) then
+    else if(pstm%dkbcos(l) < M_ZERO) then
       if(pstm%eigen(l, 1) > elocal(1, l)) then
         ighost = 1
       end if

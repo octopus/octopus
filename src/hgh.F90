@@ -528,8 +528,8 @@ subroutine solve_schroedinger(psp)
   !do l = 0, psp%l_max_occ
   do n = 1, psp%conf%p
     e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
-    e = abs(e - 1.0d0)
-    if (e > 1.0d-5 .and. conf%verbose > 0) then
+    e = abs(e - M_ONE)
+    if (e > 1.0e-5_r8 .and. conf%verbose > 0) then
       write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
       write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
       call write_warning(2)

@@ -148,8 +148,8 @@
 ! Finds total exchange-correlation energy and potential for a                 !
 ! spherical electron density distribution.                                    !
 ! This version implements the Local (spin) Density Approximation and          !
-! the Generalized-Gradient-Aproximation with the explicit mesh               !
-! functional method of White & Bird, PRB 50, 4954 (1994).                    !
+! the Generalized-Gradient-Aproximation with the explicit mesh                !
+! functional method of White & Bird, PRB 50, 4954 (1994).                     !
 ! Gradients are defined by numerical derivatives, using 2*NN+1 mesh         ! 
 !   points, where NN is a parameter defined below                             !
 ! Coded by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.              !
@@ -452,7 +452,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   end do
   DZ = DRDI(NR)*RHO(NR)
 
-  QT = (QT + QT + DZ)*0.50d0
+  QT = (QT + QT + DZ)*M_HALF
   V0 = (V0 + V0 + DZ/R(NR))
   V(1) = 2.0_r8*V0
 
@@ -550,7 +550,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   real(r8),dimension(*) ::h,s,g,y
 
-  data tol   /1.d-5/
+  data tol   /1.e-5_r8/
   ncor=nprin-l-1
   n1=nnode
   n2=nnode-1
@@ -569,8 +569,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  del = 5.d-1
-  de  = 0.d0
+  del = M_HALF
+  de  = M_ZERO
   niter = 0
 1 niter = niter + 1
   if(niter.gt.40) go to 3
@@ -630,7 +630,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   if(n2.ge.nnode) go to 1
-  del=del*2.d0
+  del=del*M_TWO
   e2=e1+del
   go to 1
 !  too many nodes; set e2 and n2
@@ -649,7 +649,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   if(n1.lt.nnode) go to 1
-  del=del*2.d0
+  del=del*M_TWO
   e1=e2-del
   go to 1
 
@@ -664,10 +664,10 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-6 g(1) = 0.d0
+6 g(1) = M_ZERO
   do 7 i=2,n
   t=h(i)-e*s(i)
-  g(i)=y(i)/(1.d0-t/12.d0)
+  g(i)=y(i)/(M_ONE-t/12._r8)
 7 continue
   call nrmlzg(g,s,n)
   return
@@ -709,8 +709,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   zdr = z*a*b
   n=nmax
-8 if( h(n)-e*s(n) .lt. 1.d0 ) go to 9
-  y(n)=0.d0
+8 if( h(n)-e*s(n) .lt. M_ONE ) go to 9
+  y(n)=M_ZERO
   n=n-1
   go to 8
 9 continue
@@ -739,8 +739,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
-  yn=0.d0
-  if(n.lt.nmax .or. dabs(dr).gt.1.d3) go to 7
+  yn = M_ZERO
+  if(n.lt.nmax .or. dabs(dr).gt.1.e3_r8) go to 7
   call bcrmax(e,dr,rmax,h,s,n,yn,a,b)
 
 
@@ -770,7 +770,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   t=h(knk)-e*s(knk)
   de=g*(x+xin+t*g)/gsg
   nnode=nnode+nndin
-  if(de.lt.0.d0) nnode=nnode+1
+  if(de.lt.M_ZERO) nnode=nnode+1
   do 6 i=knk,n
   y(i) = y(i)*ratio
 6 continue
@@ -817,22 +817,22 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   if (mod(n,2).ne.1) write(6,*) ' nrmlzg: n should be odd. n =',n
-  norm = 0.d0
+  norm = M_ZERO
   nm1 = n - 1
   do 2 i = 2,nm1,2
   norm=norm + g(i)*s(i)*g(i)
 2 continue
-  norm = norm * 2.d0
+  norm = norm * M_TWO
   nm2  = n - 2
   do 3 i = 3,nm2,2
   norm=norm + g(i)*s(i)*g(i)
 3 continue
-  norm = norm * 2.d0
+  norm = norm * M_TWO
   nm2  = n - 2
   do 4 i = 1,n,nm1
   norm=norm + g(i)*s(i)*g(i)
 4 continue
-  norm = norm/3.d0
+  norm = norm/M_THREE
   srnrm = dsqrt(norm)
   do 5 i=1,n
   g(i) = g(i)/srnrm
@@ -857,7 +857,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
 
   t2=h(2)-e*s(2)
-  d2=-((24.d0+10.d0*t2)/(12.d0-t2))
+  d2=-((24._r8+10._r8*t2)/(12._r8-t2))
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -874,16 +874,16 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   if(l.ge.2) goto 3
   if(l.gt.0) goto 1
-  c0=zdr/6.d0
-  c0=c0/(1.d0-0.75*zdr)
+  c0=zdr/6._r8
+  c0=c0/(M_ONE-0.75*zdr)
   go to 2
-1 c0=1.d0/12.d0
-  c0=(-c0)*8.d0/3.d0
-2 c1=c0*(12.d0+13.d0*t2)/(12.d0-t2)
+1 c0=M_ONE/12._r8
+  c0=(-c0)*8._r8/M_THREE
+2 c1=c0*(12._r8+13._r8*t2)/(12._r8-t2)
   t3=h(3)-e*s(3)
-  c2=(-5.d-1)*c0*(24.d0-t3)/(12.d0-t3)
-  d2=(d2-c1)/(1.d0-c2)
-3 y2=(-1.d0)/d2
+  c2=(-M_HALF)*c0*(24._r8-t3)/(12._r8-t3)
+  d2=(d2-c1)/(M_ONE-c2)
+3 y2=(-M_ONE)/d2
   return
 
   end subroutine bcorgn
@@ -907,16 +907,16 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   tnm1=h(n-1)-e*s(n-1)
   tn  =h(n  )-e*s(n  )
   tnp1=h(n+1)-e*s(n+1)
-  beta=1.d0+b/rmax
-  dg=a*beta*(dr+1.d0-5.d-1/beta)
+  beta=M_ONE+b/rmax
+  dg=a*beta*(dr+M_ONE-M_HALF/beta)
 
 
-  c2=24.d0*dg/(12.d0-tn)
-  dn=-((24.d0+10.d0*tn)/(12.d0-tn))
+  c2=24._r8*dg/(12._r8-tn)
+  dn=-((24._r8+10._r8*tn)/(12._r8-tn))
 
-  c1= (1.d0-tnm1/6.d0)/(1.d0-tnm1/12.d0)
-  c3=-((1.d0-tnp1/6.d0)/(1.d0-tnp1/12.d0))
-  yn=-((1.d0-c1/c3)/(dn-c2/c3))
+  c1= (M_ONE-tnm1/6._r8)/(M_ONE-tnm1/12._r8)
+  c3=-((M_ONE-tnp1/6._r8)/(M_ONE-tnp1/12._r8))
+  yn=-((M_ONE-c1/c3)/(dn-c2/c3))
 
 
   return
@@ -933,12 +933,12 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   y(n)=yn
   t=h(n)-e*s(n)
-  g=y(n)/(1.d0-t/12.d0)
+  g=y(n)/(M_ONE-t/12._r8)
   gsg=g*s(n)*g
   i=n-1
-  y(i)=1.d0
+  y(i)=M_ONE
   t=h(i)-e*s(i)
-  g=y(i)/(1.d0-t/12.d0)
+  g=y(i)/(M_ONE-t/12._r8)
   gsg=gsg+g*s(i)*g
   x=y(i)-y(n)
   nnode=0
@@ -954,9 +954,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 1 x=x+t*g
   i=i-1
   y(i)=y(i+1)+x
-  if( y(i)*y(i+1) .lt. 0.d0) nnode=nnode+1
+  if( y(i)*y(i+1) .lt. M_ZERO) nnode=nnode+1
   t=h(i)-e*s(i)
-  g=y(i)/(1.d0-t/12.d0)
+  g=y(i)/(M_ONE-t/12._r8)
   gsg=gsg+g*s(i)*g
   if(i.gt.knk) go to 1
 
@@ -984,14 +984,14 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: ncor,nnode,knk,i,nm4
   real(r8) :: h(knk),s(knk),y(knk)
 
-  y(1)=0.d0
+  y(1)=M_ZERO
   y(2)=y2
   t=h(2)-e*s(2)
-  g=y(2)/(1.d0-t/12.d0)
+  g=y(2)/(M_ONE-t/12._r8)
   gsg=g*s(2)*g
-  y(3)=1.d0
+  y(3)=M_ONE
   t=h(3)-e*s(3)
-  g=y(3)/(1.d0-t/12.d0)
+  g=y(3)/(M_ONE-t/12._r8)
   gsg=gsg+g*s(3)*g
   x=y(3)-y(2)
   i=3
@@ -1010,13 +1010,13 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   y(i)=y(i-1)+x
 !     write(6,300) i,y(i),x,t,h(i),s(i)
 !300  format(i5,5d14.5)
-  if( y(i)*y(i-1) .lt. 0.d0) nnode=nnode+1
+  if( y(i)*y(i-1) .lt. M_ZERO) nnode=nnode+1
   t=h(i)-e*s(i)
-  g=y(i)/(1.d0-t/12.d0)
+  g=y(i)/(M_ONE-t/12._r8)
   gsg=gsg+g*s(i)*g
   if(i.eq.nm4) go to 2
   if(nnode.lt.ncor) go to 1
-  if(xl*x.gt.0.d0) go to 1
+  if(xl*x.gt.M_ZERO) go to 1
 2 knk=i
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
