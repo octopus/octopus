@@ -153,7 +153,11 @@ int parse_int(char *name, int def)
 
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_CMPLX){
-		ret = (int)(GSL_REAL(ptr->value.c) + 0.5);
+		if(GSL_REAL(ptr->value.c) > 0)
+			ret = (int)(GSL_REAL(ptr->value.c) + 0.5);
+		else
+			ret = -(int)(-GSL_REAL(ptr->value.c) + 0.5);
+
 		fprintf(fout, "%s = %d\n", name, ret);
 	}else{
 		ret = def;
