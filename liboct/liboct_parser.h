@@ -51,4 +51,8 @@ typedef struct parse_result{
 
 int parse_exp(char *exp, parse_result *t);
 
+void parse_putsym_int(char *s, int i);
+void parse_putsym_double(char *s, double d);
+void parse_putsym_complex(char *s, gsl_complex c);
+
 #endif

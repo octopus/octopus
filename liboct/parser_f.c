@@ -28,17 +28,8 @@
 #include <string.h>
 #include <math.h>
 
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_sf_erf.h>
-#include <gsl/gsl_sf_gamma.h>
-#include <gsl/gsl_sf_bessel.h>
-#include <gsl/gsl_chebyshev.h>
-#include <gsl/gsl_spline.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-
 #include "symbols.h"
-#include "parser.h"
+#include "liboct_parser.h"
 #include "string_f.h"
 
 /* --------------------- Interface to the parsing routines ---------------------- */
@@ -60,24 +51,24 @@ int F90_FUNC_(oct_parse_init, OCT_PARSE_INIT)
 void F90_FUNC_(oct_parse_putsym_int, OCT_PARSE_PUTSYM_INT)
 		 (STR_F_TYPE s, int *i  STR_ARG1)
 {
-	symrec *rec;
-	char *s_c;
-
-	s_c = TO_C_STR1(s);
-	rec =  putsym(s_c, S_CMPLX);
-	GSL_SET_COMPLEX(&rec->value.c, (double)(*i), 0);
+	char *s_c = TO_C_STR1(s);
+	parse_putsym_int(s_c, *i);
 	free(s_c);
 }
 
 void F90_FUNC_(oct_parse_putsym_double, OCT_PARSE_PUTSYM_DOUBLE)
 		 (STR_F_TYPE s, double *d STR_ARG1)
 {
-	symrec *rec;
-	char *s_c;
+	char *s_c = TO_C_STR1(s);
+	parse_putsym_double(s_c, *d);
+	free(s_c);
+}
 
-	s_c = TO_C_STR1(s);
-	rec =  putsym(s_c, S_CMPLX);
-	GSL_SET_COMPLEX(&rec->value.c, *d, 0);
+void F90_FUNC_(oct_parse_putsym_complex, OCT_PARSE_PUTSYM_COMPLEX)
+		 (STR_F_TYPE s, gsl_complex *c STR_ARG1)
+{
+	char *s_c = TO_C_STR1(s);
+	parse_putsym_complex(s_c, *c);
 	free(s_c);
 }
 

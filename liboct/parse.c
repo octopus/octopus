@@ -23,7 +23,7 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "parser.h"
+#include "liboct_parser.h"
 #include "symbols.h"
 
 static FILE *fout;
@@ -334,4 +334,23 @@ int parse_block_string(char *name, int l, int col, char **r)
 		return 0;
 	}else
 		return o;
+}
+
+
+void parse_putsym_int(char *s, int i)
+{
+	symrec *rec = putsym(s, S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, (double)i, 0);
+}
+
+void parse_putsym_double(char *s, double d)
+{
+	symrec *rec =  putsym(s, S_CMPLX);
+	GSL_SET_COMPLEX(&rec->value.c, d, 0);
+}
+
+void parse_putsym_complex(char *s, gsl_complex c)
+{
+	symrec *rec =  putsym(s, S_CMPLX);
+  rec->value.c = c;	
 }
