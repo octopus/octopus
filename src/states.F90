@@ -117,14 +117,14 @@ subroutine states_init(st, m, val_charge)
     select case(oct_parse_block_n('SelectKAxis'))
     case(1)
       do i = 1, conf%periodic_dim
-	call oct_parse_block_logical('SelectKAxis', 0, i-1, st%select_axis(i))
+         call oct_parse_block_logical('SelectKAxis', 0, i-1, st%select_axis(i))
       end do
       do i=1, conf%periodic_dim
-	if (.not.st%select_axis(i)) then
-	  write(message(1),'(a,i1,a)')'Info: K points in axis ',i,' are neglected'
-	  call write_info(1) 
-	  st%nik_axis(i)=1
-	end if
+         if (.not.st%select_axis(i)) then
+          write(message(1),'(a,i1,a)')'Info: K points in axis ',i,' are neglected'
+          call write_info(1) 
+          st%nik_axis(i)=1
+         end if
       end do
     case default
       st%select_axis=.true.
