@@ -34,14 +34,8 @@ subroutine mesh1D_create(m)!, natoms, atom)
 
   sub_name = 'mesh3D_create'; call push_sub()
 
-  ! Read box shape.
-  call oct_parse_int(C_string('BoxShape'), SPHERE, m%box_shape)
-  if (m%box_shape>1 .or. m%box_shape<1) then
-    write(err, *) m%box_shape
-    message(1) = "Input: '"//trim(err)//"' is not a valid BoxShape"
-    message(2) = '(1 <= Box_Shape <= 1)'
-    call write_fatal(2)
-  end if
+  ! Always a "sphere".
+  m%box_shape = 1
 
   call oct_parse_double(C_string('spacing'),0.6_r8/units_inp%length%factor, m%h(1))
   m%h(1) = m%h(1)*units_inp%length%factor
