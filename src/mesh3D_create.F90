@@ -18,7 +18,7 @@ subroutine mesh3D_create(m, natoms, atom)
   sub_name = 'mesh3D_create'; call push_sub()
 
   ! Read box shape.
-  call oct_parse_int(C_string('Box_shape'), SPHERE, m%box_shape)
+  call oct_parse_int(C_string('Box_Shape'), SPHERE, m%box_shape)
   if (m%box_shape>4 .or. m%box_shape<1) then
     write(err, *) m%box_shape
     message(1) = "Input: '"//trim(err)//"' is not a valid Box_Shape"
