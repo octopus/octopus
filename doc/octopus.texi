@@ -52,6 +52,7 @@ translation approved by the Free Software Foundation.
 @title @code{octopus} manual
 @subtitle Electronic Structure
 @subtitle Molecular Dynamics
+@subtitle Excited-State Dynamics
 @subtitle Recipes-Generator
 @subtitle March 2002
 @sp 5
@@ -60,6 +61,7 @@ translation approved by the Free Software Foundation.
 @center and female Hapalochlaena lunulata (bottom).
 @center Photograph by Roy Caldwell.
 @author By Miguel A. L. Marques, Alberto Castro and Angel Rubio
+@center at Donostia International Physics Center (DIPC), San Sebasti@'an/Donostia, Spain
 
 @page
 @vskip 0pt plus 1filll
@@ -209,18 +211,60 @@ Licenses that accompany it.
 @node Authors, Introduction, Copying, Top
 @chapter Authors, Collaborators and Acknowledgements.
 
-The main developing team of the first version of this program is
-made up of Miguel A. L. Marques and Angel Rubio, working at the Donostia
-International Physics Center (San Sebastian, Espa@~na), and Alberto
+The main developing team of this program is composed by of 
+Miguel A. L. Marques and Angel Rubio, working at the Donostia
+International Physics Center and Department of Materials Science
+UPV/EHU (San Sebastian, Espa@~na), and Alberto
 Castro, who works at the University of Valladolid, Departamento de
-Fisica Teorica. The code is a major remake of a previous version written
-by the same team, and this one in turn was developed as an extension
-of a linear optical response code written by George F. Bertsch, K. Yabana
-and Angel Rubio.
+Fisica Teorica (Valladolid, Espa@~na).
+
+@code{Octopus} is based on a nuclear-physics code written by
+George F. Bertsch, K. Yabana to perform real-time dynamics in
+clusters (Phys Rev B @strong{54}, 4484 (1996))
+and on a condensed matter real-space plane-wave based code written 
+by A. Rubio, X. Blase and S.G. Louie 
+(Phys. Rev. Lett. @strong{77}, 247 (1996)). 
+The code was atfterwards extended to handled periodic systems by  
+G.F. Bertsch, J.I. Iwata, A. Rubio, and K. Yabana
+(Phys. Rev. B, @strong{62}, 7998 (2000)). Contemporanely there was
+a major rewrite of the original cluster code to handle a vast majority 
+of finite systems. At this point the cluster code was
+named tddft.x.
+
+This version was consequently enhaced and beautified by A. Castro 
+(at the time Ph.D. student of A. Rubio), originating a fairly imponent 15,000 
+lines of FORTRAN 90/77. In the year 2000, M. Marques (aka Hyllios, 
+aka António de Faria, corsário português), joins the A. Rubio group 
+in Valladolid as a postdoc. Having to use TDDFT for his work, and being 
+petulant enough to think he could structure the code better than his 
+predecessors, starts a major rewrite of the code together with A. Castro, 
+finishing version 0.2 of TDDFT. But things were still not perfect: due to 
+their limited experience in FORTRAN 90, and due to the inadequacity of this 
+language for anything beyond a HELLO WORLD program, several parts of the code 
+were still clumsy. Also the idea of GPLing the almost 20,000 lines arose 
+during an alcoholic evening. So after several weeks of frantic coding and 
+after getting rid of the Numerical Recipes code that still lingered around, 
+@code{Octopus} was born.
+
+The present released version has been completely rewritten and keeps
+very little relation to the old version (even input and output files) and has
+been enhaced with major new flags to perform various excited-state
+dynamics in finite and extended sytems (one-dimensional periodic
+chains). The code will be updated frequently and new versions can 
+be found @uref{http://www.tddft.org/programs/octopus, here}.
+
+The main features of the present version are described in detail in the
+following article
+M.L. Marques, A. Castro, A. Rubio .....
+Computer Physics Communications  (2002).  Updated references as well
+as results obtained with octpus will be posted regularly in the octopus
+web page. If you find the code useful for you research we would appreciete
+if you give reference to this work and previous ones.
 
 If you have some free time, and if you feel like taking a joy ride with
 FORTRAN 90, just drop us an @email{octopus@@tddft.org, email}. You can
-also send us patches, comments, ideas, wishes, etc.
+also send us patches, comments, ideas, wishes, etc. They will be included
+in new releases of octopus.  
 
 @c ********************* INTRODUCTION ***********************************
 @node Introduction, Installation, Authors, Top
@@ -237,17 +281,44 @@ Something that resembles an octopus especially in having many
 centrally directed branches.
 (taken from the Merryam-Webster's dictionary.)
 }
-is a program aimed at the ab initio virtual experimentation on 
+is a program aimed at the ab initio virtual experimentation on
+electron/ion dynamics in external electromagnited fields of arbitrary
+intensity, shape and frequency in  
 a hopefully ever increasing range of systems types. Its 
 main characteristics are:
 
 @itemize @bullet
 @item Electrons are describe quantum-mechanically within the
-  Density-Functional Theory (DFT), in its time-dependent form (TDDFT)
-  when doing simulations in time. Nuclei are described classically
-  as point particles. 
+  Density-Functional Theory (DFT) for the ground-state whereas the
+ excitation spectra is computed in its time-dependent form (TDDFT)
+  by performing simulations in time.  
 @item Electron-nucleus interaction is described within the
-  Pseudopotential approximation..
+  Pseudopotential approximation.  Nuclei are described classically
+  as point particles. 
+@item Wavefunctions are expanded in a real-space grid. The kinetic
+energy operator is computed with a high-order finite difference method.
+FFT are used in part os the calculations. (Scaling N$^2$ in the dynamical
+part). Time and grid spacing are related by imposing stable time-evolution.
+@item Forces on the ions are computed through the Ehrenfest theorem. 
+Extension to quantum mechanical nuclear dynamics is in progress.
+@item Allows for spin-polarized calculations as well as 
+Non-collinear magnetism and Spin-orbit effects (Pauli-Dirac equation).
+@item Computes photoelectron (energy and angle resolved)
+and photabsorption spectra for different polarized external electromagnetic
+fields. Linear response calculations are a simple case of this
+general time-evolution procedure (see below).
+@item Includes non-linear electronic effects: high-harmonic generation,
+interaction with a laser pulse of arbitrary intensity. For the time being
+only time- and spatialy-dependent electric fields are included, in the future
+magnetic fields will be incorporated.
+@item Reads different geometry files including protein-data-base (PDB) for
+biological calcalations (interaction of biomolecules with electromagnetic
+fields).
+@item It allows the calculation of one-dimensional potentials, using for
+example the soft-coulomb potential or any other given as input.
+@item Laser-pulse optimization using genetic algorithms (to be done).
+@item Utilities to analyse the computed spectra and files.
+@item A very effective and easy-to-use parser to handle the input file.
 @end itemize
 
 @c *************************INSTALLATION*********************************
@@ -1153,7 +1224,7 @@ if @code{TDOccupationalAnalysis == 1}.)
   box absorbing. The possible values for this parameter are:
   @itemize @minus
     @item @code{0} : No absorbing boundaries.
-    @item @code{1} : A sin^2 imaginary potential is added at the boundaries.
+    @item @code{1} : A sin@math{^2} imaginary potential is added at the boundaries.
     @item @code{2} : A mask is applied to the wavefunctions at the boundaries.
   @end itemize
 
@@ -1193,8 +1264,8 @@ if @code{TDOccupationalAnalysis == 1}.)
 
 @item @vindex @code{TDCalcPES_rc}
 @code{TDCalcPES_rc} (logical, false) :
-  If @code{true}, store the wave functions in specific points in order to calculate 
-  the photo-electron spectrum a la Suraud.
+  If @code{true}, store the wave functions in specific points in order to calculate the photo-electron spectrum in a point far in the box as proposed in A. Pohl, P.-G. Reinhard, and E. Suraud Phys. Rev. Lett. @strong{84}, 5090 (2000).
+
 
 @item @vindex @code{TDPES_rc_points}
 @code{TDPES_rc_points} (block data) :
@@ -1208,7 +1279,8 @@ if @code{TDOccupationalAnalysis == 1}.)
 
 @item @vindex @code{TDCalcPES_mask}
 @code{TDCalcPES_mask} (logical, false)
-  If @code{true}, calculate the photo-electron spectrum using the mask method. 
+  If @code{true}, calculate the photo-electron spectrum using the mask method
+  (M. Marques, D. Varsano, H. Appel, E.K.U. Gross and A. Rubio to be submited). 
   In order for this to work, masking boundaries are necessary 
   (@code{TDAbsorbingBoundaries == 2}).
 
