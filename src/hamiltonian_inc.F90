@@ -136,39 +136,43 @@ subroutine R_FUNC(vnlpsi) (sys, psi, Hpsi)
   R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
   R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
 
-  integer :: is, idim, np, dim, a, lm, i, j, l, m
+  integer :: is, idim, ia, ikbc, jkbc, l, lm, add_lm
   R_TYPE :: uVpsi
   type(atom_type), pointer :: atm
   type(specie_type), pointer :: spec
   
-  np = sys%m%np
-  dim = sys%st%dim
-
   ! Ionic pseudopotential
-  do a = 1, sys%natoms
-    atm => sys%atom(a)
+  do_atm: do ia = 1, sys%natoms
+    atm => sys%atom(ia)
     spec => atm%spec
 
     ! do we have a pseudopotential, or a local pot?
-    if(.not.spec%local) then
-      do idim = 1, dim
-        lm = 1
-        do l = 0, spec%ps%l_max
-           do m = -l, l
-              do i = 1, spec%ps%kbc
-              do j = 1, spec%ps%kbc
-                 uVpsi = sum(atm%uV(:, lm, i)*psi(atm%Jxyz(:), idim))*sys%m%vol_pp * atm%uVu(lm, i, j)
-                 Hpsi(atm%Jxyz(:), idim) = Hpsi(atm%Jxyz(:), idim) + uVpsi*atm%uV(:, lm, j)
-              end do
-              end do
-              lm = lm + 1
-           end do
-        end do
-      end do
-    end if
-  enddo
+    if(spec%local) cycle do_atm
 
-  !call pop_sub()
+    do_dim: do idim = 1, sys%st%dim
+      add_lm = 1
+      do_l: do l = 0, spec%ps%l_max
+        if (l == spec%ps%L_loc) then
+          add_lm = add_lm + (2*l + 1)
+          cycle do_l
+        end if
+        
+        do_m: do lm = -l, l
+          do ikbc = 1, spec%ps%kbc
+            do jkbc = 1, spec%ps%kbc
+              uVpsi = sum(atm%uV(:, add_lm, ikbc)*psi(atm%Jxyz(:), idim))*sys%m%vol_pp * &
+                   atm%uVu(add_lm, ikbc, jkbc)
+              Hpsi(atm%Jxyz(:), idim) = Hpsi(atm%Jxyz(:), idim) + uVpsi*atm%uV(:, add_lm, jkbc)
+            end do
+          end do
+
+          add_lm = add_lm + 1
+        end do do_m
+      end do do_l
+
+    end do do_dim
+  end do do_atm
+
 end subroutine R_FUNC(vnlpsi)
 
 subroutine R_FUNC(hamiltonian_setup)(h, sys)

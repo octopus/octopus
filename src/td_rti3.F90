@@ -134,6 +134,7 @@ contains
     logical, intent(in) :: order
 
     integer :: step, ia, ia_start, ia_end, l, l_start, l_end, lm, add_lm
+    integer :: ikbc, jkbc, kbc_start, kbc_end
     complex(r8) :: uVpsi, ctemp
     type(atom_type), pointer :: atm
     type(specie_type), pointer :: spec
@@ -151,9 +152,13 @@ contains
       if(spec%local) cycle do_atm
       
       if(order) then
-        l_start = 0; l_end = spec%ps%L_max; add_lm = 1
+        l_start   = 0; l_end   = spec%ps%L_max
+        kbc_start = 1; kbc_end = spec%ps%kbc
+        add_lm = 1
       else
-        l_start = spec%ps%L_max; l_end = 0; add_lm = (spec%ps%L_max + 1)**2
+        l_start   = spec%ps%L_max; l_end = 0
+        kbc_start = spec%ps%kbc; kbc_end = 1
+        add_lm = (spec%ps%L_max + 1)**2
       end if
 
       do_l: do l = l_start, l_end, step
@@ -163,11 +168,16 @@ contains
         end if
 
         do_lm: do lm = -l*step, l*step, step
-          uVpsi = sum(atm%uV(:, add_lm)*sys%st%zpsi(atm%Jxyz(:), idim, ist, ik))*sys%m%vol_pp
-          ctemp = uVpsi * (exp(-M_zI*dt*atm%uVu(add_lm)) - 1.0_r8)
+          do ikbc = kbc_start, kbc_end, step
+            do jkbc = kbc_start, kbc_end, step
+
+              uVpsi = sum(atm%uV(:, add_lm, ikbc)*sys%st%zpsi(atm%Jxyz(:), idim, ist, ik))*sys%m%vol_pp
+              ctemp = uVpsi * (exp(-M_zI*dt*atm%uVu(add_lm, ikbc, jkbc)) - 1.0_r8)
           
-          sys%st%zpsi(atm%Jxyz(:), idim, ist, ik) = sys%st%zpsi(atm%Jxyz(:), idim, ist, ik) + &
-               ctemp * atm%uV(:, add_lm)
+              sys%st%zpsi(atm%Jxyz(:), idim, ist, ik) = sys%st%zpsi(atm%Jxyz(:), idim, ist, ik) + &
+                   ctemp * atm%uV(:, add_lm, jkbc)
+            end do
+          end do
           
           add_lm = add_lm + step
         end do do_lm

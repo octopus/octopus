@@ -28,10 +28,8 @@ use kb
 implicit none
 
 private
-public  :: &! DATA TYPES:
-           ps_st_params,          &
-           &! PROCEDURES:
-           load_params,           &
+public  :: ps_st_params,          & ! Data types
+           load_params,           & ! Procedures
            vlocalr,               &
            vlocalg,               &
            projectorr,            &
@@ -40,28 +38,30 @@ public  :: &! DATA TYPES:
            hgh_debug,             &
            solve_schroedinger_hgh
 
-! Next data type contains (a) the pseudopotential parameters, as read from a *.hgh file,
-! (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
+! Next data type contains:
+!   (a) the pseudopotential parameters, as read from a *.hgh file,
+!   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
 type ps_st_params
-! HGH parameters.
+  ! HGH parameters.
   character(len=2) :: atom_name
   integer          :: z_val
   real(r8)         :: rlocal
   real(r8)         :: rc(0:3)
   real(r8)         :: c(1:4)
   real(r8)         :: h(0:3, 1:3, 1:3)
-  real(r8)         :: k(1:3, 1:3, 1:3)
-! Maximum l
-  integer          :: l_max
-! Logarithmic grid parameters
+  real(r8)         :: k(0:3, 1:3, 1:3)
+
+  integer          :: l_max ! Maximum l
+
+  ! Logarithmic grid parameters
   real(r8)         :: a, b
   integer          :: nrval
   real(r8), pointer :: s(:), drdi(:), rofi(:)
-! Local potential
-  real(r8), pointer :: vlocal(:)
-! KB projectors
-  real(r8), pointer :: kb(:,:,:)
-! Pseudo wave functions, pseudo eigenvalues...
+
+  real(r8), pointer :: vlocal(:) ! Local potential
+  real(r8), pointer :: kb(:,:,:) ! KB projectors
+
+  ! Pseudo wave functions and pseudo eigenvalues
   real(r8), pointer :: rphi(:,:), eigen(:)
 end type ps_st_params
 
@@ -190,25 +190,25 @@ function load_params(unit, params)
   enddo kloop
 
 ! Fill in the rest of the parameters matrices...
-  params%h(0, 1, 2) = - (1.0_r8/2.0_r8) * sqrt(3.0_r8/5.0_r8) * params%h(0, 2, 2)
-  params%h(0, 1, 3) = (1.0_r8/2.0_r8) * sqrt(5.0_r8/21.0_r8) * params%h(0, 3, 3)
-  params%h(0, 2, 3) = - (1.0_r8/2.0_r8) * sqrt(100.0_r8/63.0_r8) * params%h(0, 3, 3)
-  params%h(1, 1, 2) = - (1.0_r8/2.0_r8) * sqrt(5.0_r8/7.0_r8) * params%h(1, 2, 2)
-  params%h(1, 1, 3) = (1.0_r8/6.0_r8) * sqrt(35.0_r8/11.0_r8) * params%h(1, 3, 3)
+  params%h(0, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(3.0_r8/5.0_r8)       * params%h(0, 2, 2)
+  params%h(0, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(5.0_r8/21.0_r8)      * params%h(0, 3, 3)
+  params%h(0, 2, 3) = -(1.0_r8/2.0_r8) * sqrt(100.0_r8/63.0_r8)    * params%h(0, 3, 3)
+  params%h(1, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(5.0_r8/7.0_r8)       * params%h(1, 2, 2)
+  params%h(1, 1, 3) =  (1.0_r8/6.0_r8) * sqrt(35.0_r8/11.0_r8)     * params%h(1, 3, 3)
   params%h(1, 2, 3) = -(1.0_r8/6.0_r8) * (14.0_r8 / sqrt(11.0_r8)) * params%h(1, 3, 3)
-  params%h(2, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(7.0_r8/9.0_r8) * params%h(2, 2, 2)
-  params%h(2, 1, 3) = (1.0_r8/2.0_r8) * sqrt(63.0_r8/143.0_r8) * params%h(2, 3, 3)
-  params%h(2, 2, 3) = -(1.0_r8/2.0_r8) * (18.0_r8/sqrt(143.0_r8)) * params%h(2, 3, 3)
+  params%h(2, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(7.0_r8/9.0_r8)       * params%h(2, 2, 2)
+  params%h(2, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(63.0_r8/143.0_r8)    * params%h(2, 3, 3)
+  params%h(2, 2, 3) = -(1.0_r8/2.0_r8) * (18.0_r8/sqrt(143.0_r8))  * params%h(2, 3, 3)
 
-  params%k(0, 1, 2) = - (1.0_r8/2.0_r8) * sqrt(3.0_r8/5.0_r8) * params%k(0, 2, 2)
-  params%k(0, 1, 3) = (1.0_r8/2.0_r8) * sqrt(5.0_r8/21.0_r8) * params%k(0, 3, 3)
-  params%k(0, 2, 3) = - (1.0_r8/2.0_r8) * sqrt(100.0_r8/63.0_r8) * params%k(0, 3, 3)
-  params%k(1, 1, 2) = - (1.0_r8/2.0_r8) * sqrt(5.0_r8/7.0_r8) * params%k(1, 2, 2)
-  params%k(1, 1, 3) = (1.0_r8/6.0_r8) * sqrt(35.0_r8/11.0_r8) * params%k(1, 3, 3)
+  params%k(0, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(3.0_r8/5.0_r8)       * params%k(0, 2, 2)
+  params%k(0, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(5.0_r8/21.0_r8)      * params%k(0, 3, 3)
+  params%k(0, 2, 3) = -(1.0_r8/2.0_r8) * sqrt(100.0_r8/63.0_r8)    * params%k(0, 3, 3)
+  params%k(1, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(5.0_r8/7.0_r8)       * params%k(1, 2, 2)
+  params%k(1, 1, 3) =  (1.0_r8/6.0_r8) * sqrt(35.0_r8/11.0_r8)     * params%k(1, 3, 3)
   params%k(1, 2, 3) = -(1.0_r8/6.0_r8) * (14.0_r8 / sqrt(11.0_r8)) * params%k(1, 3, 3)
-  params%k(2, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(7.0_r8/9.0_r8) * params%k(2, 2, 2)
-  params%k(2, 1, 3) = (1.0_r8/2.0_r8) * sqrt(63.0_r8/143.0_r8) * params%k(2, 3, 3)
-  params%k(2, 2, 3) = -(1.0_r8/2.0_r8) * (18.0_r8/sqrt(143.0_r8)) * params%k(2, 3, 3)
+  params%k(2, 1, 2) = -(1.0_r8/2.0_r8) * sqrt(7.0_r8/9.0_r8)       * params%k(2, 2, 2)
+  params%k(2, 1, 3) =  (1.0_r8/2.0_r8) * sqrt(63.0_r8/143.0_r8)    * params%k(2, 3, 3)
+  params%k(2, 2, 3) = -(1.0_r8/2.0_r8) * (18.0_r8/sqrt(143.0_r8))  * params%k(2, 3, 3)
 
 ! Parameters are symmetric.
   do k = 0, 3
@@ -261,7 +261,7 @@ function vlocalr_vector(r, p)
   integer :: i
 
   allocate(vlocalr_vector(size(r)))
-  do i=1, size(r)
+  do i = 1, size(r)
      vlocalr_vector(i) = vlocalr_scalar(r(i), p)
   enddo
 
@@ -325,52 +325,47 @@ function projectorg(g, p, i, l)
 
   pif = M_Pi**(5.0_r8/4.0_r8)
 
+  ex = exp( (1.0_r8/2.0_r8)*(g*p%rc(l))**2 )
+
   select case(l)
   case(0)
-
-    ex = exp( (1.0_r8/2.0_r8)*(g*p%rc(0))**2 )
     select case(i)
     case(1)
       projectorg = ( 4.0_r8*sqrt(2.0_r8*p%rc(0)**3)*pif ) / ex
     case(2)
       projectorg = ( sqrt(8.0_r8*2*p%rc(0)**3/15.0_r8)*pif * &
-                     (3.0_r8 - (g*p%rc(0))**2) ) / ex
+           (3.0_r8 - (g*p%rc(0))**2) ) / ex
     case(3)
       projectorg = ( 16.0_r8*sqrt(2.0_r8*p%rc(0)**3/105.0_r8) * pif * &
-                     (15.0_r8 - 10.0_r8*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (3.0_r8*ex)
+           (15.0_r8 - 10.0_r8*g**2*p%rc(0)**2 + g**4*p%rc(0)**2) ) / (3.0_r8*ex)
     end select
 
   case(1)
-
-    ex = exp( (1.0_r8/2.0_r8)*(g*p%rc(1))**2 )
     select case(i)
     case(1)
       projectorg = ( 8.0_r8*sqrt(p%rc(1)**5/3.0_r8)*pif*g ) / ex
     case(2)
       projectorg = ( 16.0_r8*sqrt(p%rc(1)**5/105.0_r8)* pif * g * & 
-                     ( 5.0_r8 - (g*p%rc(1))**2 ) ) / ex
+           ( 5.0_r8 - (g*p%rc(1))**2 ) ) / ex
     case(3)
       projectorg = ( 32.0_r8*sqrt(p%rc(1)**5/1155.0_r8)* pif * g * &
-                     ( 35.0_r8 - 14.0_r8*g**2*p%rc(1)**2 + (g*p%rc(1))**4 ) ) / &
-                   (3.0_r8*ex)
+           ( 35.0_r8 - 14.0_r8*g**2*p%rc(1)**2 + (g*p%rc(1))**4 ) ) / &
+           (3.0_r8*ex)
     end select
 
   case(2)
-
-    ex = exp( (1.0_r8/2.0_r8)*(g*p%rc(2))**2 )
     select case(i)
     case(1)
       projectorg = ( 8.0_r8 * sqrt(2.0_r8*p%rc(2)**7/15.0_r8) * pif * g**2 ) / ex
     case(2)
       projectorg = ( 16.0_r8 * sqrt(2.0_r8*p%rc(2)**7/105.0_r8) * pif * g**2 * &
-                     (7.0_r8 - g**2*p%rc(2)**2) ) / (3.0_r8*ex)
+           (7.0_r8 - g**2*p%rc(2)**2) ) / (3.0_r8*ex)
     case(3)
       projectorg = 0.0_r8 ! ??
     end select
-
-   case(3)
-
-    !!! This should be checked. Probably will not be needed in an near future...
+    
+  case(3)    
+    ! This should be checked. Probably will not be needed in an near future...
   end select
 
 end function projectorg
@@ -384,13 +379,14 @@ subroutine hgh_debug(psp, filename)
   call io_assign(iunit)
   open(unit=iunit, file=trim(filename)//'.hgh.debug')
 
-   do ir = 1, psp%nrval
-      write(iunit, *) psp%rofi(ir) / units_out%length%factor, &
-                      psp%vlocal(ir) / units_out%energy%factor, &
-                      ( psp%kb(ir, l, 1), l = 0, psp%l_max), &
-                      ( psp%kb(ir, l, 2), l = 0, psp%l_max), &
-                      ( psp%kb(ir, l, 2), l = 0, psp%l_max)
-   end do
+  do ir = 1, psp%nrval
+    write(iunit, *) &
+         psp%rofi(ir) / units_out%length%factor, &
+         psp%vlocal(ir) / units_out%energy%factor, &
+         ( psp%kb(ir, l, 1), l = 0, psp%l_max), &
+         ( psp%kb(ir, l, 2), l = 0, psp%l_max), &
+         ( psp%kb(ir, l, 2), l = 0, psp%l_max)
+  end do
 
   call io_close(iunit)
 
@@ -399,23 +395,24 @@ end subroutine hgh_debug
 subroutine solve_schroedinger_hgh(psp, lmax)
   type(ps_st_params), intent(inout) :: psp
   integer, intent(in)               :: lmax
-
+  
   integer :: ir, l, nnode, nprin
   real(r8) :: rpb, ea, vtot, r2, e, z, dr, rmax, f, dsq, a2b4
   real(r8), allocatable :: s(:), hato(:), g(:), y(:)
-
+  
   sub_name = 'solve_schroedinger_hgh'; call push_sub()
 
-! Allocations...
+  ! Allocations...
   allocate(s(psp%nrval), hato(psp%nrval))
 
-! Calculation of the pseudo-wave functions.
+  ! Calculation of the pseudo-wave functions.
   s(2:psp%nrval) = psp%drdi(2:psp%nrval)*psp%drdi(2:psp%nrval)
   s(1) = s(2)
   a2b4 = 0.25_r8*psp%a**2
+
   allocate(g(psp%nrval), y(psp%nrval))
   g = 0.0_r8;  y = 0.0_r8
-
+  
   do l = 0, lmax
     do ir = 2, psp%nrval
       vtot = psp%vlocal(ir) + dble(l*(l + 1))/(psp%rofi(ir)**2)
