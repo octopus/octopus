@@ -11267,7 +11267,7 @@ fi
 LINK="$F90 $F90FLAGS $LDFLAGS -o \$@"
 
 
-ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile build/octopus.spec"
+ac_config_files="$ac_config_files Makefile liboct/Makefile src/Makefile doc/Makefile faq/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile build/octopus.spec"
 
 
 cat >confcache <<\_ACEOF
@@ -11762,6 +11762,7 @@ do
   "liboct/Makefile" ) CONFIG_FILES="$CONFIG_FILES liboct/Makefile" ;;
   "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
   "doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
+  "faq/Makefile" ) CONFIG_FILES="$CONFIG_FILES faq/Makefile" ;;
   "share/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/Makefile" ;;
   "share/PP/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/PP/Makefile" ;;
   "share/PP/TM2/Makefile" ) CONFIG_FILES="$CONFIG_FILES share/PP/TM2/Makefile" ;;
