@@ -1,14 +1,11 @@
-gs_start         = 1
-gs               = 2
-unocc_start      = 3
-unocc            = 4
-td_start         = 5
-td               = 6
-pol_start        = 7
-pol              = 8
-geom             = 10
-phonon           = 11
-opt_control      = 12
+gs               = 1
+unocc            = 2
+td               = 3
+pol              = 4
+geom             = 5
+phonons          = 6
+opt_control      = 7
+bo               = 98
 recipe           = 99
 sphere           = 1 # BoxShape
 cylinder         = 2
@@ -54,15 +51,23 @@ netcdf           = 2
 stencil_star     = 1 # DerivativesStencil
 stencil_var      = 2
 stencil_cube     = 3
-curv_uniform     = 1
+curv_uniform     = 1 # 
 curv_gygi        = 2
 curv_briggs      = 3
 curv_modine      = 4
+<<<<<<< variables
+usdef            = 1 # Species block (type)
+point            = 2
+jelli            = 3
+ps_tm2           = 100
+ps_hgh           = 101
+=======
 tm2              = 100
 hgh              = 101
 ps_tm2           = 100
 ps_hgh           = 101
 
+>>>>>>> 1.5
 
 #  symbols for oct-center-geom
 inertia          = 1  
