@@ -1443,23 +1443,42 @@ if @code{TDOccupationalAnalysis == 1}.)
 
 @item @vindex @code{TDMaximumIter}
 @code{TDMaximumIter} (integer, 1500) :
-  Number of time steps.
+Number of time steps.
 
 @item @vindex @code{TDSaveIter}
 @code{TDSaveIter} (integer, 100) :
-  Output stuff every @code{TDSaveIter} steps.
+Output stuff every @code{TDSaveIter} steps.
 
 @item @vindex @code{TDEvolutionMethod}
-@code{TDEvolutionMethod} (integer, 2) :
-  Method used to perform the time propagation. Authorised values are:
+@code{TDEvolutionMethod} (integer, 3) :
+Method used to perform the time propagation. Authorised values are:
   @itemize @minus
-    @item @code{1} : Quick and dirty method. One should check carefully 
-      the time-step, and it only works with density based functionals.
-    @item @code{2} : Modified Krank-Nicholson method. Very stable method,
-      but significantly slower than method @code{1}.
-    @item @code{3} : split-operator method.
-    @item @code{4} : a quicker version of @code{2}; check carefully that it
-      yields the same results for a given time step.
+    @item @code{1} : ``Old-Style'' method. One should check carefully 
+the time-step, and it only works with density based functionals.
+It is quick per time step, but allows for very small time-steps.
+    @item @code{2} : Method designed to enforce the time-reversal symmetry. 
+Better time steps. Default.
+    @item @code{3} : A modification of previous method to make it faster.
+It is based on extrapolation of the time dependent potentials. Due to some
+unknown problems, currently being investigated, it is not the default method.
+    @item @code{4} : Exponential midpoint rule. In principle, it should  also
+respect the time-reversal symmetry.
+  @end itemize
+
+@item @vindex @code{TDExponentialMethod}
+@code{TDExponentialMethod} (integer, 1) :
+Method used to numerically calculate the exponential of the hamiltonian,
+a core part of the calculation in any of the previously described methods
+to perform the evolution.
+  @itemize @minus
+    @item @code{1} : Fourth order expansion of the exponential.
+    @item @code{2} : Lanczos approximation. Allows for larger time-steps.
+However, the larger the time-step, the longer the time per time-step. In
+certain cases, if the time-step is too large, the code will emit a warning
+whenever it considers that the evolution may not be proberly proceeding --
+the Lanczos process did not converge. This possibility is still somehow
+experimental.
+    @item @code{3} : Split-operator.
   @end itemize
 
 @item @vindex @code{TDTimeStep}

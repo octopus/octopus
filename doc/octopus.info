@@ -1,4 +1,4 @@
-This is octopus.info, produced by makeinfo version 4.0b from
+This is octopus.info, produced by makeinfo version 4.2 from
 octopus.texi.
 
 INFO-DIR-SECTION Individual utilities
@@ -29,56 +29,56 @@ translation approved by the Free Software Foundation.
 
 
 Indirect:
-octopus.info-1: 1124
-octopus.info-2: 48665
+octopus.info-1: 1123
+octopus.info-2: 48664
 
 Tag Table:
 (Indirect)
-Node: Top1124
-Node: Copying2099
-Node: Authors3501
-Node: Introduction6606
-Node: Description of octopus6805
-Ref: Description of octopus-Footnote-19320
-Node: Time dependent density functional theory9713
-Ref: Time dependent density functional theory-Footnote-111345
-Ref: Time dependent density functional theory-Footnote-211577
-Ref: Time dependent density functional theory-Footnote-311879
-Ref: Time dependent density functional theory-Footnote-412035
-Ref: Time dependent density functional theory-Footnote-512219
-Node: Installation12295
-Node: Quick instructions12494
-Node: Long instructions12913
-Node: Troubleshooting19516
-Node: The input file21463
-Node: The parser21673
-Node: Input file options24760
-Node: Generalities25385
-Node: Species27693
-Node: Coordinates30442
-Node: Velocities34630
-Node: Mesh35594
-Node: States38325
-Node: Hamiltonian40896
-Node: Exchange and correlation42558
-Node: SCF44499
-Node: Unoccupied States47942
-Node: Time Dependent48665
-Node: Photo-electron spectrum53343
-Node: Geometry optimization54329
-Node: Function output for visualization55246
-Node: Spectrum calculations58161
-Node: Varia60293
-Node: External utilities61059
-Node: strength-function61564
-Node: hs-from-mult62451
-Node: hs-from-acc62669
-Node: function-to-dx62884
-Node: nbo2xyz63092
-Node: Examples63288
-Node: Hello world63443
-Ref: Hello world-Footnote-170593
-Node: Benzene70677
-Node: Options Index71485
+Node: Top1123
+Node: Copying2098
+Node: Authors3500
+Node: Introduction6605
+Node: Description of octopus6804
+Ref: Description of octopus-Footnote-19319
+Node: Time dependent density functional theory9712
+Ref: Time dependent density functional theory-Footnote-111344
+Ref: Time dependent density functional theory-Footnote-211576
+Ref: Time dependent density functional theory-Footnote-311878
+Ref: Time dependent density functional theory-Footnote-412034
+Ref: Time dependent density functional theory-Footnote-512218
+Node: Installation12294
+Node: Quick instructions12493
+Node: Long instructions12912
+Node: Troubleshooting19515
+Node: The input file21462
+Node: The parser21672
+Node: Input file options24759
+Node: Generalities25384
+Node: Species27692
+Node: Coordinates30441
+Node: Velocities34629
+Node: Mesh35593
+Node: States38324
+Node: Hamiltonian40895
+Node: Exchange and correlation42557
+Node: SCF44498
+Node: Unoccupied States47941
+Node: Time Dependent48664
+Node: Photo-electron spectrum54363
+Node: Geometry optimization55349
+Node: Function output for visualization56266
+Node: Spectrum calculations59181
+Node: Varia61313
+Node: External utilities62079
+Node: strength-function62584
+Node: hs-from-mult63471
+Node: hs-from-acc63689
+Node: function-to-dx63904
+Node: nbo2xyz64112
+Node: Examples64308
+Node: Hello world64463
+Ref: Hello world-Footnote-171613
+Node: Benzene71697
+Node: Options Index72505
 
 End Tag Table

@@ -41,32 +41,34 @@ subroutine R_FUNC(hamiltonian_eigenval)(h, sys, st_start, st_end)
   return
 end subroutine R_FUNC(hamiltonian_eigenval)
 
-subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi)
+subroutine R_FUNC(Hpsi) (h, sys, ik, psi, Hpsi, t)
   type(hamiltonian_type), intent(IN) :: h
   type(system_type), intent(IN) :: sys
   integer, intent(in) :: ik
   R_TYPE, intent(IN) :: psi(0:sys%m%np, sys%st%dim)
   R_TYPE, intent(out) :: Hpsi(sys%m%np, sys%st%dim)
+  real(r8), intent(in), optional :: t
 
   sub_name = 'Hpsi'; call push_sub()
 
-  select case(h%reltype)
+  call R_FUNC(kinetic) (sys, psi, Hpsi)
+  call R_FUNC(vlpsi)   (h, sys, ik, psi, Hpsi)
+  call R_FUNC(vnlpsi)  (sys, psi, Hpsi)
+  if(present(t)) then
+    call R_FUNC(vlasers)  (h, sys, psi, Hpsi, t)
+    call R_FUNC(vborders) (h, sys, psi, Hpsi)
+  endif
 
+  ! Relativistic corrections...
+  select case(h%reltype)
   case(NOREL)
-    call R_FUNC(kinetic) (sys, psi, Hpsi)
-    call R_FUNC(vlpsi)   (h, sys, ik, psi, Hpsi)
-    call R_FUNC(vnlpsi)  (sys, psi, Hpsi)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-    call zkinetic (sys, psi, Hpsi)
-    call zvlpsi   (h, sys, ik, psi, Hpsi)
-    call zvnlpsi  (sys, psi, Hpsi)
     call zso      (h, sys, ik, psi, Hpsi)
 #endif
   case default
     message(1) = 'Error: Internal.'
     call write_fatal(1)
-
   end select
 
   call pop_sub(); return
@@ -202,6 +204,65 @@ subroutine R_FUNC(vlpsi) (h, sys, ik, psi, Hpsi)
 
   call pop_sub(); return
 end subroutine R_FUNC(vlpsi)
+
+subroutine R_FUNC(vlasers) (h, sys, psi, Hpsi, t)
+  type(hamiltonian_type), intent(in) :: h
+  type(system_type), intent(in) :: sys
+  R_TYPE, intent(in) :: psi(0:sys%m%np, sys%st%dim)
+  R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
+  real(r8), intent(in) :: t
+
+  integer :: is, i, k, idim, np, dim
+  real(r8) :: x(3), f(3)
+  R_TYPE, allocatable :: grad(:,:)
+
+  sub_name = 'vlasers'; call push_sub()
+
+    if(h%no_lasers > 0) then
+      select case(h%gauge)
+      case(1) ! length gauge
+        call laser_field(h%no_lasers, h%lasers, t, f)
+
+        do k = 1, sys%m%np
+          call mesh_xyz(sys%m, k, x)
+          hpsi(k,:) = hpsi(k,:) + sum(x*f) * psi(k,:)
+        end do
+
+      case(2) ! velocity gauge
+        call laser_vector_field(h%no_lasers, h%lasers, t, f)
+        allocate(grad(3, sys%m%np))
+        do idim = 1, sys%st%dim
+           call R_FUNC(mesh_derivatives)(sys%m, psi(:, idim), grad=grad)
+           do k = 1, sys%m%np
+             hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(f(:)*grad(:, k)) + &
+                  sum(f**2)/2._r8 * psi(k, idim)
+           end do
+        end do
+        deallocate(grad)
+      end select
+    end if
+
+  call pop_sub(); return
+end subroutine R_FUNC(vlasers)
+
+subroutine R_FUNC(vborders) (h, sys, psi, Hpsi)
+  type(hamiltonian_type), intent(in) :: h
+  type(system_type), intent(in) :: sys
+  R_TYPE, intent(in) :: psi(0:sys%m%np, sys%st%dim)
+  R_TYPE, intent(inout) :: Hpsi(sys%m%np, sys%st%dim)
+
+  integer :: idim
+
+  sub_name = 'vborders'; call push_sub()
+
+  if(h%ab .eq. 1) then
+    do idim = 1, sys%st%dim
+       hpsi(:, idim) = hpsi(:, idim) + M_zI*h%ab_pot(:)*psi(1:, idim)
+    end do
+  end if
+
+  call pop_sub(); return
+end subroutine R_FUNC(vborders)
 
 subroutine R_FUNC(hamiltonian_setup)(h, sys)
   type(hamiltonian_type), intent(inout) :: h

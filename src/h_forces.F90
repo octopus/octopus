@@ -15,11 +15,9 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
+subroutine R_FUNC(forces) (h, sys, t, reduce)
   type(hamiltonian_type), intent(IN) :: h
   type(system_type), intent(inout) :: sys
-  integer, intent(in), optional :: no_lasers
-  type(laser_type), intent(IN),optional :: lasers(:)
   real(r8), intent(in), optional :: t
   logical, intent(in), optional :: reduce
 
@@ -92,13 +90,11 @@ subroutine R_FUNC(forces) (h, sys, t, no_lasers, lasers, reduce)
 
   end do atm_loop
   
-  if(present(no_lasers) .and. present(lasers)) then
-    if(no_lasers>0) then
-      call laser_field(no_lasers, lasers, t, x)
-      do i = 1, sys%natoms
-        sys%atom(i)%f(:) = sys%atom(i)%f(:) + sys%atom(i)%spec%Z_val * x(:)
-      end do
-    end if
+  if(h%no_lasers>0) then
+    call laser_field(h%no_lasers, h%lasers, t, x)
+    do i = 1, sys%natoms
+       sys%atom(i)%f(:) = sys%atom(i)%f(:) + sys%atom(i)%spec%Z_val * x(:)
+    end do
   end if
 
   ! first the ion, ion force term

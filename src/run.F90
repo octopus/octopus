@@ -272,7 +272,7 @@ subroutine run()
 
       write(filename, '(a,i3.3)') "restart.td.", mpiv%node
       if(zstates_load_restart(trim(filename), &
-           sys%m, sys%st, iter=td%iter, v1=td%v_old1, v2=td%v_old2)) then
+           sys%m, sys%st, iter=td%iter, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))) then
 
         if(h%ispin == 3 .and. h%noncollinear_spin) then
           deallocate(h%R_FUNC(Vxc_off), sys%st%R_FUNC(rho_off))

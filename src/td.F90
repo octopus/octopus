@@ -37,7 +37,11 @@ type td_type
   integer :: max_iter  ! maximum number of iterations to perform
   integer :: save_iter ! save every save_iter iterations
   integer :: iter      ! the actual iteration
+
   integer :: evolution_method ! which evolution method to use
+  integer :: exp_method       ! which method is used to apply the exponential
+  real(r8) :: lanczos_tol
+  integer  :: lanczos_max
 
   real(r8) :: dt            ! time step
   integer  :: move_ions     ! how do we move the ions?
@@ -47,37 +51,30 @@ type td_type
 
   integer :: lmax        ! maximum multipole moment to write
 
-  integer :: gauge ! in which gauge shall we work in
-                   ! 1 = length gauge
-                   ! 2 = velocity gauge
-
-  ! lasers stuff
-  integer :: no_lasers ! number of laser pulses used
-  logical :: output_laser ! write laser field
-  type(laser_type), pointer :: lasers(:)
-
-  ! absorbing boundaries
-  integer  :: ab         ! do we have absorbing boundaries?
-  real(r8) :: ab_width   ! width of the absorbing boundary
-  real(r8) :: ab_height  ! height of the absorbing boundary
-  real(r8), pointer :: ab_pot(:) ! where we store the ab potential
-
-  ! occupational analysis
   logical :: occ_analysis ! do we perform occupational analysis?
 
-  ! write harmonic spectrum
-  logical :: harmonic_spectrum
+  logical :: harmonic_spectrum   ! write harmonic spectrum
 
 #ifndef DISABLE_PES
   type(PES_type) :: PESv
 #endif
 
-  real(r8), pointer :: v_old1(:,:), v_old2(:,:)
+  real(r8), pointer :: v_old(:, :, :)
 end type td_type
 
-  integer, parameter :: STATIC_IONS = 0,    &
-                        NORMAL_VERLET = 3,  &
+  ! Parameters.
+  integer, parameter :: STATIC_IONS     = 0,    &
+                        NORMAL_VERLET   = 3,  &
                         VELOCITY_VERLET = 4
+
+  integer, parameter :: OLD_REVERSAL         = 1, &
+                        REVERSAL             = 2, &
+                        APP_REVERSAL         = 3, &
+                        EXPONENTIAL_MIDPOINT = 4
+
+  integer, parameter :: FOURTH_ORDER       = 1, &
+                        LANCZOS_EXPANSION  = 2, &
+                        SPLIT_OPERATOR     = 3
 
 contains
 
@@ -121,7 +118,7 @@ subroutine td_run(td, u_st, sys, h)
       sys%eii = ion_ion_energy(sys%natoms, sys%atom)
     end if
 
-    call zforces(h, sys, td%iter*td%dt, td%no_lasers, td%lasers, reduce=.true.)
+    call zforces(h, sys, td%iter*td%dt, reduce=.true.)
     sys%kinetic_energy = kinetic_energy(sys%natoms, sys%atom)
     select case(td%move_ions)
       case(NORMAL_VERLET)
@@ -174,7 +171,7 @@ subroutine td_run(td, u_st, sys, h)
     endif
 
     ! time iterate wavefunctions
-    call td_rti(sys, h, td, i*td%dt)
+    call td_rti(h, sys, td, i*td%dt)
 
     ! update density
     call zcalcdens(sys%st, sys%m%np, sys%st%rho, reduce=.true.)
@@ -192,7 +189,7 @@ subroutine td_run(td, u_st, sys, h)
            f1(j, :) = sys%atom(j)%f(:)
         enddo
       endif
-      call zforces(h, sys, i*td%dt, td%no_lasers, td%lasers, reduce=.true.)
+      call zforces(h, sys, i*td%dt, reduce=.true.)
       if(td%move_ions == VELOCITY_VERLET) then
         do j = 1, sys%natoms
            if(sys%atom(j)%move) then
@@ -224,16 +221,16 @@ subroutine td_run(td, u_st, sys, h)
     end if
 
 #ifndef DISABLE_PES
-    call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, td%ab_pot)
+    call PES_doit(td%PESv, sys%m, sys%st, ii, td%dt, h%ab_pot)
 #endif
 
     ! mask function?
-    if(td%ab == 2) then
+    if(h%ab == 2) then
       do ik = 1, sys%st%nik
         do ist = sys%st%st_start, sys%st%st_end
           do idim = 1, sys%st%dim
             sys%st%zpsi(1:sys%m%np, idim, ist, ik) = sys%st%zpsi(1:sys%m%np, idim, ist, ik) * &
-                 (1._r8 - td%ab_pot(1:sys%m%np))
+                 (1._r8 - h%ab_pot(1:sys%m%np))
           end do
         end do
       end do
@@ -256,7 +253,7 @@ subroutine td_run(td, u_st, sys, h)
       ! first resume file
       write(filename, '(a,i3.3)') "restart.td.", mpiv%node
       call zstates_write_restart(trim(filename), sys%m, sys%st, &
-           iter=i, v1=td%v_old1, v2=td%v_old2)
+           iter=i, v1=td%v_old(:, :, 2), v2=td%v_old(:, :, 3))
 
       if(mpiv%node == 0) call td_write_data()
 
@@ -287,9 +284,9 @@ contains
     sub_name = 'td_run_zero_iter'; call push_sub()
 
     do i = 1, sys%st%nspin
-      td%v_old1(:, i) = h%Vhartree(:) + h%Vxc(:, i)
-      td%v_old2(:, i) = td%v_old1(:, i)
+      td%v_old(:, i, 2) = h%Vhartree(:) + h%Vxc(:, i)
     end do
+    td%v_old(:, :, 3) = td%v_old(:, :, 2)
 
     ! we now apply the delta(0) impulse to the wf
     if(td%delta_strength .ne. 0._r8) then
@@ -329,7 +326,7 @@ contains
     deallocate(dipole, multipole)
 
     ! output laser
-    if(td%output_laser) then
+    if(h%output_laser) then
       call io_assign(iunit)
       open(unit=iunit, file='td.general/laser', status='unknown')
       call td_write_laser(iunit, 0, 0._r8, .true.)
@@ -416,5 +413,6 @@ end subroutine td_run
 
 #include "td_init.F90"
 #include "td_rti.F90"
+#include "td_exp.F90"
 
 end module timedep

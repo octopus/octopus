@@ -21,7 +21,7 @@ subroutine td_init(td, sys, m, st)
   type(mesh_type), intent(inout) :: m
   type(states_type), intent(inout) :: st
 
-  integer :: iunit
+  integer :: iunit, dummy
 
   sub_name = 'td_init'; call push_sub()
 
@@ -49,19 +49,45 @@ subroutine td_init(td, sys, m, st)
     call write_fatal(2)
   end if
   
-  call oct_parse_int(C_string("TDEvolutionMethod"), 2, td%evolution_method)
-  if (td%evolution_method<1 .or. td%evolution_method>4) then
-    write(message(1), '(a,i6,a)') "Input: '", td%evolution_method, "' is not a valid TDEvolutionMethod"
-    message(2) = '(1 <= TDEvolutionMethod <= 4)'
+  call oct_parse_int(C_string("TDEvolutionMethod"), REVERSAL, td%evolution_method)
+  select case(td%evolution_method)
+    case(OLD_REVERSAL);         message(1) = 'Info: Evolution method:  Old-Style.'
+    case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
+    case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
+    case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
+    case default
+     write(message(1), '(a,i6,a)') "Input: '", td%evolution_method, "' is not a valid TDEvolutionMethod"
+     message(2) = '(1 <= TDEvolutionMethod <= 4)'
+     call write_fatal(2)
+  end select
+  call write_info(1)
+
+  call oct_parse_int(C_string("TDExponentialMethod"), FOURTH_ORDER, td%exp_method)
+  select case(td%exp_method)
+    case(FOURTH_ORDER);         message(1) = 'Info: Exponential method: 4th order expansion.'
+    case(LANCZOS_EXPANSION);    message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
+    case(SPLIT_OPERATOR);       message(1) = 'Info: Exponential method: Split-Operator.'
+     call mesh_alloc_ffts(m, 1)
+    case default
+     write(message(1), '(a,i6,a)') "Input: '", td%exp_method, "' is not a valid TDEvolutionMethod"
+     message(2) = '(1 <= TDExponentialMethod <= 3)'
+     call write_fatal(2)
+  end select
+  call write_info(1)
+
+  call oct_parse_double(C_string("TDLanczosTol"), 1e-4_r8, td%lanczos_tol)
+  if (td%lanczos_tol <= 0._r8) then
+    write(message(1),'(a,f14.6,a)') "Input: '", td%lanczos_tol, "' is not a valid TDLanczosTol"
+    message(2) = '(0 < TDLanczosTol)'
     call write_fatal(2)
   end if
-  if(td%evolution_method == 3) then
-    call mesh_alloc_ffts(m, 1)
+
+  call oct_parse_int(C_string("TDLanczosMax"), 10, td%lanczos_max)
+  if (td%lanczos_max < 2) then
+    write(message(1), '(a,i6,a)') "Input: '", td%lanczos_max, "' is not a valid TDLanczosMax"
+    message(2) = '(3 <= TDLanczosMax)'
+    call write_fatal(2)
   end if
-  if(td%evolution_method == 4) then
-    write(message(1),'(a)') 'WARNING: TDEvolutionMethod = 4 is not reliable for orbital dependent XC'
-    call write_warning(1)
-  endif
 
   call oct_parse_int(C_string("TDDipoleLmax"), 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
@@ -83,23 +109,9 @@ subroutine td_init(td, sys, m, st)
     td%pol(3)   = 1._r8
   endif
 
-  call oct_parse_int(C_string("TDGauge"), 1, td%gauge)
-  if (td%gauge < 1 .or. td%gauge > 2) then
-    write(message(1), '(a,i6,a)') "Input: '", td%gauge, "' is not a valid TDGauge"
-    message(2) = 'Accepted values are:'
-    message(3) = '   1 = length gauge'
-    message(4) = '   2 = velocity gauge'
-    call write_fatal(4)
-  end if  
-
-  ! now the lasers
-  call td_init_lasers()
-
-  ! now come the absorbing boundaries
-  call td_init_ab()
-
   ! now the photoelectron stuff
-  call PES_init(td%PESv, m, sys%st, td%ab, td%save_iter)
+  call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
+  call PES_init(td%PESv, m, sys%st, dummy, td%save_iter)
 
   ! occupational analysis stuff
   call oct_parse_logical(C_string("TDOccupationalAnalysis"), .false., td%occ_analysis)
@@ -125,82 +137,8 @@ subroutine td_init(td, sys, m, st)
   
   call td_init_states()
 
+  call pop_sub(); return
 contains
-  subroutine td_init_lasers()
-    call laser_init(m, td%no_lasers, td%lasers)
-    td%output_laser = .false.
-    if(td%no_lasers>0 ) then
-      message(1) = 'Info: Lasers'
-      call write_info(1)
-      if(conf%verbose > 20 .and. mpiv%node == 0) then
-        call laser_write_info(td%no_lasers, td%lasers, stdout)
-      end if
-      
-      td%delta_strength = 0._r8 ! no delta impulse if lasers exist
-      call oct_parse_logical(C_string("TDOutputLaser"), .false., td%output_laser)
-    end if
-
-  end subroutine td_init_lasers
-
-  subroutine td_init_ab()
-    integer :: i, j, dummy
-    real(r8) :: d, r, x(3)
-
-    call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
-    nullify(td%ab_pot)
-    if(dummy .eq. 1 .or. dummy .eq. 2) then
-      td%ab = dummy
-      call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, td%ab_width)
-      td%ab_width  = td%ab_width * units_inp%length%factor
-      if(td%ab == 1) then
-        call oct_parse_double(C_string("TDABHeight"), -0.2_r8/units_inp%energy%factor, td%ab_height)
-        td%ab_height = td%ab_height * units_inp%energy%factor
-      else
-        td%ab_height = 1._r8
-      end if
-
-      ! generate boundary potential...
-      allocate(td%ab_pot(m%np))
-      td%ab_pot = 0._r8
-      pot: do i = 1, m%np
-        call mesh_r(m, i, r, x=x)
-        
-        select case(m%box_shape)
-        case(SPHERE)
-          d = r - (m%rsize - td%ab_width)
-          if(d.gt.0._r8) then
-            td%ab_pot(i) = td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
-          end if
-        
-#if defined(THREE_D)
-        case(CYLINDER)
-          d = sqrt(x(1)**2 + x(2)**2) - (m%rsize - td%ab_width)
-          if(d.gt.0._r8)  &
-               td%ab_pot(i) = td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
-          d = abs(x(3)) - (m%zsize - td%ab_width)
-          if(d.gt.0._r8)  &
-               td%ab_pot(i) = td%ab_pot(i) + td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
-
-        case(PARALLELEPIPED)
-          do j = 1, 3
-            d = x(j) - (m%lsize(j)/2._r8 - td%ab_width)
-            if(d.gt.0._r8) then
-              td%ab_pot(i) = td%ab_pot(i) + td%ab_height * sin(d*M_PI/(2._r8*td%ab_width))**2
-            end if
-          end do
-#endif
-
-        case default
-          message(1) = "Absorbing boundaries are not implemented for"
-          message(2) = "Box_shape = 3"
-          call write_warning(2)
-          exit pot
-        end select
-
-        if(abs(td%ab_pot(i)) > abs(td%ab_height)) td%ab_pot(i) = td%ab_height
-      end do pot
-    end if
-  end subroutine td_init_ab
   
   subroutine td_init_states()
     integer :: i, ix
@@ -235,7 +173,7 @@ contains
 #endif
 
     ! allocate memory
-    allocate(td%v_old1(m%np, st%nspin), td%v_old2(m%np, st%nspin))
+    allocate(td%v_old(m%np, st%nspin, 3))
     allocate(st%zpsi(0:m%np, st%dim, st%st_start:st%st_end, st%nik))
   end subroutine td_init_states
 
@@ -250,16 +188,9 @@ subroutine td_end(td)
   call PES_end(td%PESv)
 #endif
 
-  if(associated(td%ab_pot)) then
-    deallocate(td%ab_pot); nullify(td%ab_pot)
+  if(associated(td%v_old)) then
+    deallocate(td%v_old);  nullify(td%v_old)
   end if
 
-  if(associated(td%v_old1)) then
-    deallocate(td%v_old1); nullify(td%v_old1)
-    deallocate(td%v_old2); nullify(td%v_old2)
-  end if
-
-  call laser_end(td%no_lasers, td%lasers)
-
-  call pop_sub()
+  call pop_sub(); return
 end subroutine td_end

@@ -29,7 +29,7 @@
     call io_close(iunit)
 
     ! output the laser field
-    if(td%output_laser) then
+    if(h%output_laser) then
       call io_assign(iunit)
       open(iunit, position='append', file='td.general/laser')
       do j = 1, td%save_iter
@@ -121,8 +121,8 @@
       write(iunit, '(1x)', advance='yes')
     end if
 
-    call laser_field(td%no_lasers, td%lasers, t, l_field)
-    call laser_vector_field(td%no_lasers, td%lasers, t, l_vector_field)
+    call laser_field(h%no_lasers, h%lasers, t, l_field)
+    call laser_vector_field(h%no_lasers, h%lasers, t, l_vector_field)
     write(iunit,'(i8,7es20.12)') iter, t/units_out%time%factor, &
          l_field(1:3) * units_inp%length%factor / units_inp%energy%factor, &
          l_vector_field(1:3) * units_inp%length%factor

@@ -68,8 +68,8 @@
     acc = x
 
     ! Adds the laser contribution : i<[V_laser, p]>
-    if(td%no_lasers > 0) then
-      call laser_field(td%no_lasers, td%lasers, t, field)
+    if(h%no_lasers > 0) then
+      call laser_field(h%no_lasers, h%lasers, t, field)
       acc(1:3) = acc(1:3) - sys%st%qtot*field(1:3)
     end if
 
@@ -81,7 +81,7 @@
        do ist = sys%st%st_start, sys%st%st_end
 
             call zhpsi(h, sys, ik, sys%st%zpsi(:, :, ist, ik), hzpsi(:,:))
-            call laser_field(td%no_lasers, td%lasers, t, field)
+            call laser_field(h%no_lasers, h%lasers, t, field)
             do k = 1, sys%m%np
               call mesh_xyz(sys%m, k, mesh_x)
               hzpsi(k,:) = hzpsi(k,:) + sum(mesh_x*field) * sys%st%zpsi(k,:,ist,ik)

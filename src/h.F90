@@ -64,6 +64,22 @@ type hamiltonian_type
   type(hartree_type) :: hart
   type(xc_type) :: xc
 
+  ! gauge
+  integer :: gauge ! in which gauge shall we work in
+                   ! 1 = length gauge
+                   ! 2 = velocity gauge
+
+  ! lasers stuff
+  integer :: no_lasers ! number of laser pulses used
+  logical :: output_laser ! write laser field
+  type(laser_type), pointer :: lasers(:)
+
+  ! absorbing boundaries
+  integer  :: ab         ! do we have absorbing boundaries?
+  real(r8) :: ab_width   ! width of the absorbing boundary
+  real(r8) :: ab_height  ! height of the absorbing boundary
+  real(r8), pointer :: ab_pot(:) ! where we store the ab potential
+
 end type hamiltonian_type
 
 integer, parameter :: NOREL      = 0, &
@@ -76,6 +92,9 @@ contains
 subroutine hamiltonian_init(h, sys)
   type(hamiltonian_type), intent(out) :: h
   type(system_type), intent(inout) :: sys
+
+  integer :: i, j, dummy
+  real(r8) :: d, r, x(3)
 
   sub_name = 'hamiltonian_init'; call push_sub()
 
@@ -185,7 +204,87 @@ subroutine hamiltonian_init(h, sys)
     if(conf%verbose > 20) call xc_write_info(h%xc, stdout)
   end if
 
-  call pop_sub()
+  ! gauge
+  call oct_parse_int(C_string("TDGauge"), 1, h%gauge)
+  if (h%gauge < 1 .or. h%gauge > 2) then
+    write(message(1), '(a,i6,a)') "Input: '", h%gauge, "' is not a valid TDGauge"
+    message(2) = 'Accepted values are:'
+    message(3) = '   1 = length gauge'
+    message(4) = '   2 = velocity gauge'
+    call write_fatal(4)
+  end if
+
+  ! lasers
+  call laser_init(sys%m, h%no_lasers, h%lasers)
+  if(h%no_lasers>0 ) then
+      message(1) = 'Info: Lasers'
+      call write_info(1)
+      if(conf%verbose > 20 .and. mpiv%node == 0) then
+        call laser_write_info(h%no_lasers, h%lasers, stdout)
+      end if
+      call oct_parse_logical(C_string("TDOutputLaser"), .false., h%output_laser)  
+  end if
+
+  ! absorbing boundaries
+  call oct_parse_int(C_string("TDAbsorbingBoundaries"), 0, dummy)
+  nullify(h%ab_pot)
+
+  absorbing_boundaries: if(dummy .eq. 1 .or. dummy .eq. 2) then
+
+  h%ab = dummy
+  call oct_parse_double(C_string("TDABWidth"), 4._r8/units_inp%length%factor, h%ab_width)
+  h%ab_width  = h%ab_width * units_inp%length%factor
+  if(h%ab == 1) then
+    call oct_parse_double(C_string("TDABHeight"), -0.2_r8/units_inp%energy%factor, h%ab_height)
+    h%ab_height = h%ab_height * units_inp%energy%factor
+  else
+    h%ab_height = 1._r8
+  end if
+
+ ! generate boundary potential...
+  allocate(h%ab_pot(sys%m%np))
+  h%ab_pot = 0._r8
+  pot: do i = 1, sys%m%np
+     call mesh_r(sys%m, i, r, x=x)
+
+     select case(sys%m%box_shape)
+     case(SPHERE)
+          d = r - (sys%m%rsize - h%ab_width)
+          if(d.gt.0._r8) then
+            h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+          end if
+
+#if defined(THREE_D)
+     case(CYLINDER)
+          d = sqrt(x(1)**2 + x(2)**2) - (sys%m%rsize - h%ab_width)
+          if(d.gt.0._r8)  &
+               h%ab_pot(i) = h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+          d = abs(x(3)) - (sys%m%zsize - h%ab_width)
+          if(d.gt.0._r8)  &
+               h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+
+     case(PARALLELEPIPED)
+          do j = 1, 3
+            d = x(j) - (sys%m%lsize(j)/2._r8 - h%ab_width)
+            if(d.gt.0._r8) then
+              h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d*M_PI/(2._r8*h%ab_width))**2
+            end if
+          end do
+#endif
+
+     case default
+          message(1) = "Absorbing boundaries are not implemented for"
+          message(2) = "Box_shape = 3"
+          call write_warning(2)
+          exit pot
+     end select
+
+     if(abs(h%ab_pot(i)) > abs(h%ab_height)) h%ab_pot(i) = h%ab_height
+  end do pot
+
+  end if absorbing_boundaries
+
+  call pop_sub(); return
 end subroutine hamiltonian_init
 
 subroutine hamiltonian_end(h)
@@ -214,7 +313,13 @@ subroutine hamiltonian_end(h)
     call xc_end(h%xc)
   end if
 
-  call pop_sub()
+  if(associated(h%ab_pot)) then
+    deallocate(h%ab_pot); nullify(h%ab_pot)
+  end if
+
+  call laser_end(h%no_lasers, h%lasers)
+
+  call pop_sub(); return
 end subroutine hamiltonian_end
 
 ! This subroutine calculates the total energy of the system. Basically, it
