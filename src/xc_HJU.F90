@@ -25,7 +25,7 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
   real(r8), intent(out) :: Vx(m%np, st%nspin), ex
 
   integer :: ia, is, i, k, i1, i2
-  real(r8) :: ex2
+  real(r8) :: ex2, N_alpha
 
   real(r8), allocatable :: rho2(:,:), Vx2(:, :)
   real(r8), allocatable, target :: rho(:,:)
@@ -36,7 +36,8 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
   ! first we get the true density
   do is = 1, st%nspin
      do k = 1, m%np
-        rho(k, is) = sum(st%occ(:, is)*R_ABS(st%R_FUNC(psi) (k, 1, :, is))**2)
+        !rho(k, is) = sum(st%occ(:, is)*R_ABS(st%R_FUNC(psi) (k, 1, :, is))**2)
+       rho(k, is) = st%rho(k, is)
      end do
   end do
 
@@ -53,29 +54,31 @@ subroutine R_FUNC(kli_hju) (m, st, hartr, type, Vx, ex)
 
       rho2(:, 1) = 0._r8
       do k = 1, m%np
-        if((ia == 1.and.m%Lz(k)>=0).or.(ia == 2.and.m%Lz(k)<0)) then
+        if((ia == 1.and.m%Lz(k)>0).or.(ia == 2.and.m%Lz(k)<0)) then
           rho2(k, 1) = rho(k, is)
         end if
+        if(m%Lz(k) == 0) rho2(k, 1) = 0.5_r8*rho(k, is)
       end do
+      N_alpha = dmesh_integrate(m, rho2(:, 1))
 
       ! first the lda term
       Vx2 = 0.0_r8; Ex2 = 0.0_r8
       call R_FUNC(xc_lda) (type, m, st, Vx2, ex2)
       
       ! The LDA is local, so we can just add the whole array
-      Vx(1:m%np, is) = Vx(1:m%np, is) - Vx2(1:m%np, 1)
-      Ex = Ex - ex2
+      Vx(1:m%np, is) = Vx(1:m%np, is) - N_alpha*Vx2(1:m%np, 1)
+      Ex = Ex - N_alpha*ex2
       
       ! should we add the SI Hartree correction?
       if(type == X_FUNC_LDA_NREL) then
         call hartree_solve(hartr, m, Vx2(:, 1), rho(:, 1:1))
         do k = 1, m%np
-          if((ia == 1.and.m%Lz(k)>=0).or.(ia == 2.and.m%Lz(k)<0)) then
-            Vx(k, is) = Vx(k, is) - Vx2(k, 1)
+          if((ia == 1.and.m%Lz(k)>=0).or.(ia == 2.and.m%Lz(k)<=0)) then
+            Vx(k, is) = Vx(k, is) - N_alpha*Vx2(k, 1)
           end if
         end do
         
-        Ex = Ex - 0.5_r8*sum(Vx2(1:m%np, 1)*rho2(1:m%np, 1))*m%vol_pp
+        Ex = Ex - 0.5_r8*N_alpha*sum(Vx2(1:m%np, 1)*rho2(1:m%np, 1))*m%vol_pp
       end if
 
     end do

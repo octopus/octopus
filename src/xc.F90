@@ -58,8 +58,8 @@ integer, parameter ::     &
     C_FUNC_LDA_PW92  = 51, &
     C_FUNC_GGA_PBE   = 52, &
     C_FUNC_KLI_SIC   = 53, &
-    C_FUNC_MGGA_PKZB = 54, &
-    C_FUNC_KLI_HJU   = 55, &
+    C_FUNC_KLI_HJU   = 54, &
+    C_FUNC_MGGA_PKZB = 55, &
     C_FUNC_END       = 55
 
 character(len=4), parameter :: name_xc(XC_FAMILY_END-XC_FAMILY_START+1) = (/ &
