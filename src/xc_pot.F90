@@ -54,9 +54,9 @@ subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
   space_loop: do i = 1, m%np
 
     ! make a local copy with the correct memory order
-             l_dens (:)   = dens (i, :)
-    if( gga) l_gdens(:,:) = gdens(i, :,:)
-    if(mgga) l_tau  (:)   = tau  (i, :)
+                     l_dens (:)   = dens (i, :)
+    if( gga.or.mgga) l_gdens(:,:) = gdens(i, :,:)
+    if(        mgga) l_tau  (:)   = tau  (i, :)
     
     ! Calculate the potential/gradient density in local reference frame.
     functl_loop: do ixc = 1, 2
@@ -101,7 +101,8 @@ subroutine xc_get_vxc(functl, xcs, m, f_der, st, vxc, ex, ec, ip, qtot)
       end if
 
       if(functl(ixc)%family==XC_FAMILY_MGGA) then
-        dedtau(i,:) = dedtau(i,:) + l_dedtau(:)
+        dedgd (i,:,:) = dedgd (i,:,:) + l_dedgd(:,:)
+        dedtau(i,:)   = dedtau(i,:)   + l_dedtau(:)
       end if
       
     end do functl_loop
@@ -279,7 +280,6 @@ contains
           tau(i, is) = f * d**(M_FIVE/M_THREE) + &
              sum(gdens(i, :, is)**2)/(CNST(72.0)*d) + &
              n2dens(i)/M_SIX
-          tau(i, is) = max( tau(i,is), CNST(1e-14))
         end do
       end do
       
