@@ -413,7 +413,8 @@ contains
             else
               ep%vnl(i)%n = ep%vnl(k)%n
               ep%vnl(i)%c = ep%vnl(k)%c
-              ep%vnl(i)%jxyz => ep%vnl(k)%jxyz
+              allocate(ep%vnl(i)%jxyz(ep%vnl(i)%n))
+              ep%vnl(i)%jxyz = ep%vnl(k)%jxyz
             endif
             call allocate_nl_part(i)
             call build_nl_part(i, l, lm, add_lm)

@@ -264,10 +264,11 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   end if
 #endif
 
-  h%etot = e + eii + h%epot + h%ex + h%ec
+  h%eii    = eii
+  h%etot   = e + eii + h%epot + h%ex + h%ec
 
   if (iunit > 0) then
-    write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', eii    / units_out%energy%factor
+    write(message(1), '(6x,a, f15.8)')'Ion-ion     = ', h%eii  / units_out%energy%factor
     write(message(2), '(6x,a, f15.8)')'Eigenvalues = ', e      / units_out%energy%factor
     write(message(3), '(6x,a, f15.8)')'Potentials  = ', h%epot / units_out%energy%factor
     write(message(4), '(6x,a, f15.8)')'Exchange    = ', h%ex   / units_out%energy%factor
