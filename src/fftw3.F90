@@ -15,8 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "global.h"
-
 #if defined(SINGLE_PRECISION)
 #  define DFFTW(x) sfftw_ ## x
 #else

@@ -25,6 +25,7 @@ use mesh
 use states
 use system
 use restart
+use v_ks
 use hamiltonian
 use eigen_solver
 
@@ -87,7 +88,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call write_info(1)
   
   call X(states_calc_dens)(sys%st, sys%m%np, sys%st%rho)
-  call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+  call X(h_calc_vhxc)(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
   call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
   
 

@@ -37,8 +37,7 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc, aux)
   end if
 
   ! is there anything to do? (only LDA by now)
-  if(.not.( &
-     any(functl(:)%family==XC_FAMILY_LDA) )) return
+  if(iand(xcs%family, XC_FAMILY_LDA) == 0) return
   
   ! really start
   call push_sub('xc_get_vxc')

@@ -456,7 +456,7 @@ contains
       else
         rho = st%rho
       endif
-      call xc_get_fxc(h%xc, m, rho, st%d%ispin, fxc)
+      call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
       K_term = K_term + sum(rho_i(:)*rho_j(:)*fxc(:,1,1)*m%vol_pp(:))
 

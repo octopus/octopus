@@ -1,4 +1,4 @@
-!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ module scf
   use states
   use output
   use restart
+  use v_ks
   use hamiltonian
   use external_pot 
   use xc
@@ -147,12 +148,13 @@ subroutine scf_end(scf)
   call pop_sub()
 end subroutine scf_end
 
-subroutine scf_run(scf, m, f_der, st, geo, h, outp)
+subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   type(scf_type),         intent(inout) :: scf
   type(mesh_type),        intent(IN)    :: m
   type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(geometry_type),    intent(inout) :: geo
+  type(v_ks_type),        intent(inout) :: ks
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(IN)    :: outp
 
@@ -214,7 +216,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
       rhoout(:, 2:dim, :) = st%j
     end if
     if (scf%what2mix == MIXPOT) then
-      call X(h_calc_vhxc) (h, m, f_der, st)
+      call X(h_calc_vhxc) (ks, h, m, f_der, st)
       vout(:, 1, :) = h%vhxc
       if (h%d%cdft) vout(:, 2:dim, :) = h%ahxc(:,:,:)
     end if
@@ -252,7 +254,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
        call mixing(scf%smix, iter, m%np, dim, nspin, rhoin, rhoout, rhonew)
        st%rho = rhonew(:, 1, :)
        if (h%d%cdft) st%j = rhonew(:, 2:dim, :)
-       call X(h_calc_vhxc) (h, m, f_der, st)
+       call X(h_calc_vhxc) (ks, h, m, f_der, st)
     case (MIXPOT)
        ! mix input and output potentials
        call mixing(scf%smix, iter, m%np, dim, nspin, vin, vout, vnew)
@@ -294,7 +296,7 @@ subroutine scf_run(scf, m, f_der, st, geo, h, outp)
   end do
 
   if (scf%what2mix == MIXPOT) then
-    call X(h_calc_vhxc) (h, m, f_der, st)
+    call X(h_calc_vhxc) (ks, h, m, f_der, st)
     deallocate(vout, vin, vnew)
   else
     deallocate(rhonew)
@@ -382,7 +384,7 @@ contains
     
     if(.not. h%ip_app) then
       write(iunit, '(a)') 'Exchange and correlation functionals:'
-      call xc_write_info(h%xc, iunit)
+      call v_ks_write_info(ks, iunit)
     else
       write(iunit, '(a)') 'Independent Particles'
     end if

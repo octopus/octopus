@@ -26,6 +26,7 @@ module td_rti
   use functions
   use mesh_function
   use states
+  use v_ks
   use hamiltonian
   use external_pot
   use td_exp
@@ -122,7 +123,8 @@ contains
     tr%v_old(:, :, 1) = h%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
-  subroutine td_rti_dt(h, m, f_der, st, tr, t, dt)
+  subroutine td_rti_dt(ks, h, m, f_der, st, tr, t, dt)
+    type(v_ks_type),        intent(inout) :: ks
     type(hamiltonian_type), intent(inout) :: h
     type(mesh_type),        intent(IN)    :: m
     type(f_der_type),       intent(inout) :: f_der
@@ -164,7 +166,7 @@ contains
         call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
         call zstates_calc_dens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, f_der, st)
+        call zh_calc_vhxc(ks, h, m, f_der, st)
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
@@ -206,7 +208,7 @@ contains
          enddo
       enddo
       call zstates_calc_dens(st, m%np, st%rho, .true.)
-      call zh_calc_vhxc(h, m, f_der, st)
+      call zh_calc_vhxc(ks, h, m, f_der, st)
       do ik = 1, st%d%nik
          do ist = 1, st%nst
             if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
@@ -276,7 +278,7 @@ contains
         end do
         
         call zstates_calc_dens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(h, m, f_der, st)
+        call zh_calc_vhxc(ks, h, m, f_der, st)
         
         st%zpsi = zpsi1
         deallocate(zpsi1)

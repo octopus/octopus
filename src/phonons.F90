@@ -29,6 +29,7 @@ module phonons
   use output
   use external_pot
   use geometry
+  use v_ks
   use hamiltonian
   use states
   use system
@@ -85,7 +86,7 @@ contains
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_DM(sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp, ph)
+    call get_DM(sys%m, sys%f_der, sys%st, sys%geo, sys%ks, h, sys%outp, ph)
 
     ! output phonon frequencies and eigenvectors
     iunit = io_open('phonons/freq')
@@ -125,11 +126,12 @@ contains
 
   end function phonons_run
 
-  subroutine get_DM(m, f_der, st, geo, h, outp, ph)
+  subroutine get_DM(m, f_der, st, geo, ks, h, outp, ph)
     type(mesh_type),        intent(IN)    :: m
     type(f_der_type),       intent(inout) :: f_der
     type(states_type),      intent(inout) :: st
     type(geometry_type),    intent(inout) :: geo
+    type(v_ks_type),        intent(inout) :: ks
     type(hamiltonian_type), intent(inout) :: h
     type(output_type),      intent(IN)    :: outp
     type(phonons_type),     intent(inout) :: ph
@@ -157,9 +159,9 @@ contains
         ! first force
         call epot_generate(h%ep, m, st, geo, h%reltype)
         call X(states_calc_dens) (st, m%np, st%rho)
-        call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
+        call X(h_calc_vhxc) (ks, h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, st, geo%eii, -1)
-        call scf_run(scf, m, f_der, st, geo, h, outp)
+        call scf_run(scf, m, f_der, st, geo, ks, h, outp)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
         end do
@@ -169,9 +171,9 @@ contains
         ! second force
         call epot_generate(h%ep, m, st, geo, h%reltype)
         call X(states_calc_dens) (st, m%np, st%rho)
-        call X(h_calc_vhxc) (h, m, f_der, st, calc_eigenval=.true.)
+        call X(h_calc_vhxc) (ks, h, m, f_der, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, st, geo%eii, -1)
-        call scf_run(scf, m, f_der, st, geo, h, outp)
+        call scf_run(scf, m, f_der, st, geo, ks, h, outp)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)
         end do

@@ -273,7 +273,7 @@ subroutine run_init()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
     call units_init()
     call system_init(sys)
-    call hamiltonian_init(h, sys%m, sys%geo, sys%st%d)
+    call hamiltonian_init(h, sys%m, sys%geo, sys%st%d, sys%ks%ip_app)
     call epot_generate(h%ep, sys%m, sys%st, sys%geo, h%reltype)
   endif
 

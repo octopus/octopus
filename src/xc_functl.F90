@@ -31,13 +31,6 @@ module xc_functl
             xc_functl_end,              &
             xc_functl_write_info
 
-  ! Families of xc functionals
-  integer, public, parameter ::     &
-     XC_FAMILY_LDA  = 1,    &
-     XC_FAMILY_GGA  = 2,    &
-     XC_FAMILY_MGGA = 3,    &
-     XC_FAMILY_LCA  = 4,    &
-     XC_FAMILY_OEP  = 5
 
   ! This adds to the constants defined in lib_xc. But since in that module
   ! the OEP functionals are not included, it is better to put it here.

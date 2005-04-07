@@ -116,7 +116,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
       
       h%ep%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
       
-      call scf_run(scfv, m, sys%f_der, st, sys%geo, h, sys%outp)
+      call scf_run(scfv, m, sys%f_der, st, sys%geo, sys%ks, h, sys%outp)
       
       trrho = M_ZERO
       do is = 1, st%d%spin_channels

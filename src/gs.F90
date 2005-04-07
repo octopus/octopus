@@ -21,6 +21,7 @@ module ground_state
   use global
   use system
   use hamiltonian
+  use v_ks
   use lcao
   use states
   use restart
@@ -71,7 +72,7 @@ contains
       call write_info(1)
 
       call scf_init(scfv, sys%m, sys%st, sys%geo, h)
-      call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, h, sys%outp)
+      call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, sys%ks, h, sys%outp)
       call scf_end(scfv)
     end if
 
@@ -107,7 +108,7 @@ contains
 
     call loct_parse_logical("LCAOStart", .true., lcao_start)
     if(lcao_start) then
-      call X(h_calc_vhxc)(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
+      call X(h_calc_vhxc)(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
 
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)

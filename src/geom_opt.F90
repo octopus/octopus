@@ -22,6 +22,7 @@ module geom_opt
   use units
   use mesh
   use external_pot
+  use v_ks
   use hamiltonian
   use geometry
   use states
@@ -74,7 +75,6 @@ contains
       call end_()
       return
     end if
-    print *, "ola"
     
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
@@ -173,11 +173,11 @@ contains
 
       call epot_generate(h%ep, m, st, geo, h%reltype)
       call X(states_calc_dens) (st, m%np, st%rho)
-      call X(h_calc_vhxc) (h, m, sys%f_der, st, calc_eigenval=.true.)
+      call X(h_calc_vhxc) (sys%ks, h, m, sys%f_der, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
   
       ! do scf calculation
-      call scf_run(scfv, m, sys%f_der, st, geo, h, sys%outp)
+      call scf_run(scfv, m, sys%f_der, st, geo, sys%ks, h, sys%outp)
 
       ! store results
       f = h%etot

@@ -28,6 +28,7 @@ use functions
 use specie
 use geometry
 use states
+use v_ks
 use hamiltonian
 use output
 
@@ -46,10 +47,12 @@ public :: system_type,          &
 
 type system_type
   FLOAT                        :: val_charge ! the charge of the valence electrons (necessary to initialize states)
+
   type(mesh_type),     pointer :: m          ! the mesh
   type(f_der_type)             :: f_der      ! manages the calculation of derivatives of functions
   type(geometry_type), pointer :: geo        ! the geometry
   type(states_type),   pointer :: st         ! the states
+  type(v_ks_type)              :: ks         ! the Kohn-Sham potentials
   type(output_type)            :: outp       ! the output
 end type system_type
 
@@ -91,6 +94,8 @@ contains
     call states_init(s%st, s%m, s%geo, s%val_charge, s%geo%nlcc)
     call output_init(s%outp)
     
+    call v_ks_init(s%ks, s%m, s%geo, s%st%d)
+    
     call pop_sub()
   end subroutine system_init
 
@@ -99,6 +104,8 @@ contains
     
     call push_sub('system_end')
     
+    call v_ks_end(s%ks)
+
     if(associated(s%st)) then
       call states_end(s%st)
       deallocate(s%st); nullify(s%st)
@@ -388,7 +395,7 @@ contains
     call states_fermi(sys%st, sys%m)
     call dstates_calc_dens(sys%st, sys%m%np, sys%st%rho)
     
-    call dh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call dh_calc_vhxc(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%m)                            ! occupations
     call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
     
@@ -405,7 +412,7 @@ contains
     call states_fermi(sys%st, sys%m)
     call zstates_calc_dens(sys%st, sys%m%np, sys%st%rho)
     
-    call zh_calc_vhxc(h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call zh_calc_vhxc(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%m)                            ! occupations
     call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
     

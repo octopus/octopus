@@ -15,8 +15,6 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-#include "global.h"
-
 ! /* Note: in fftw2, the routines in single and double precision have the 
 ! same name. From the manual: 
 !   "To work in single precision rather than double precision, #define the 

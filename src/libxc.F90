@@ -37,6 +37,14 @@ module lib_xc
             xc_mgga, &
             xc_mgga_end
 
+  ! Families of xc functionals
+  integer, public, parameter ::     &
+     XC_FAMILY_LDA  =  1,    &
+     XC_FAMILY_GGA  =  2,    &
+     XC_FAMILY_MGGA =  4,    &
+     XC_FAMILY_LCA  =  8,    &
+     XC_FAMILY_OEP  = 16
+
   integer, public, parameter :: &
      XC_UNPOLARIZED       =  1, &  ! Spin unpolarized
      XC_POLARIZED         =  2     ! Spin polarized
@@ -240,11 +248,11 @@ module lib_xc
     subroutine xc_lca(p, rho, v, e, dedd, dedv)
       integer(POINTER_SIZE), intent(in)  :: p
       FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
-      FLOAT,                 intent(in)  :: v     ! v(3,nspin) the voticity
+      FLOAT,                 intent(in)  :: v     ! v(3,nspin) the vorticity
       FLOAT,                 intent(out) :: e     ! the energy per unit particle
       FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy 
                                                   ! in terms of the density
-      FLOAT,                 intent(out) :: dedv  ! in terms of the vorticity
+      FLOAT,                 intent(out) :: dedv  ! and in terms of the vorticity
     end subroutine xc_lca
   end interface
 

@@ -29,8 +29,6 @@ use geometry
 use specie
 use states
 use external_pot
-use poisson
-use xc
 use output
 
 implicit none
@@ -42,13 +40,13 @@ public :: hamiltonian_type,   &
           hamiltonian_energy, &
           hamiltonian_output, &
           hamiltonian_span,   &
+          dhamiltonian_eigenval, zhamiltonian_eigenval, &
           dhpsi, zhpsi,       &
           dvlpsi, zvlpsi,     &
           dvnlpsi, zvnlpsi,   &
           dmagnus, zmagnus,   &
-          dkinetic, zkinetic, &
-          dh_calc_vhxc,       &
-          zh_calc_vhxc
+          dkinetic, zkinetic
+
 #ifdef COMPLEX_WFNS
 public :: zso
 #endif
@@ -67,11 +65,10 @@ type hamiltonian_type
   ! the energies (total, ion-ion, exchange, correlation)
   FLOAT :: etot, eii, ex, ec, exc_j, epot
 
-  ! System under the independent particle approximation, or not.
-  logical :: ip_app
+  logical :: ip_app   ! independent particle approximation, or not.
+                      ! copied from sys%ks
 
   type(epot_type) :: ep  ! handles the external potential
-  type(xc_type)   :: xc  ! handles the xc potential
 
   ! gauge
   integer :: gauge ! in which gauge shall we work in
@@ -110,18 +107,20 @@ integer, public, parameter :: LENGTH = 1, &
                               VELOCITY = 2
 contains
 
-subroutine hamiltonian_init(h, m, geo, states_dim)
+subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
   type(hamiltonian_type), intent(out)   :: h
   type(mesh_type),        intent(inout) :: m
   type(geometry_type),    intent(in)    :: geo
   type(states_dim_type),  pointer       :: states_dim
+  logical,                intent(in)    :: ip_app
 
   integer :: i, j, n
   FLOAT :: d(3)
 
   call push_sub('hamiltonian_init')
 
-  ! Hamiltonian must know about the dimensionality of the states
+  ! make a couple of local copies
+  h%ip_app = ip_app
   h%d => states_dim
 
   ! initialize variables
@@ -175,28 +174,13 @@ subroutine hamiltonian_init(h, m, geo, states_dim)
   endif
 #endif
 
-  ! Should we treat the particles as independent?
-  call loct_parse_logical("NonInteractingElectrons", .false., h%ip_app)
-  if(h%ip_app) then
-    message(1) = 'Info: Treating the electrons as non-interacting'
-    call write_info(1)
-  else
-    ! initilize hartree and xc modules
-    message(1) = "Info: Init Hartree"
-    call write_info(1)
-    call poisson_init(m)
-
-    call xc_init(h%xc, geo%nlcc, states_dim%spin_channels, h%d%cdft)
-    if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(h%xc, stdout)
-  end if
-
   !Are we going to use the effective-mass model?
   call loct_parse_logical("EffectiveMassModel", .false., h%em_app)
   if (h%em_app) then
     !Get the ratios
     call loct_parse_float("ElectronMassRatio",    CNST(0.067), h%m_ratio)
-    call loct_parse_float("GyromagneticRatio",    CNST(0.44),   h%g_ratio)
-    call loct_parse_float("DielectricConstRatio", CNST(12.4),   h%e_ratio)
+    call loct_parse_float("GyromagneticRatio",    CNST(0.44),  h%g_ratio)
+    call loct_parse_float("DielectricConstRatio", CNST(12.4),  h%e_ratio)
   else
     h%m_ratio = M_ZERO; h%g_ratio = M_ZERO; h%e_ratio = M_ZERO
   end if
@@ -266,10 +250,6 @@ subroutine hamiltonian_end(h, geo)
   end if
 
   call epot_end(h%ep, geo)
-  if(.not.h%ip_app) then
-    call poisson_end()
-    call xc_end(h%xc)
-  end if
 
   if(associated(h%ab_pot)) then
     deallocate(h%ab_pot); nullify(h%ab_pot)
@@ -375,12 +355,10 @@ end subroutine hamiltonian_output
 #include "undef.F90"
 #include "real.F90"
 #include "h_inc.F90"
-#include "h_xc_OEP.F90"
 
 #include "undef.F90"
 #include "complex.F90"
 #include "h_inc.F90"
-#include "h_xc_OEP.F90"
 
 #if defined(COMPLEX_WFNS)
 #include "h_so.F90"

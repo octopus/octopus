@@ -18,7 +18,7 @@ core_SRCS = liboct_parser.F90 liboct.F90 io.F90 string.F90 global.F90 units.F90 
 	out.F90 crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 restart.F90
 
 octopus_SOURCES = $(core_SRCS) \
-	lasers.F90 epot.F90 h.F90 systm.F90 \
+	lasers.F90 epot.F90 h.F90 xc_OEP.F90 v_ks.F90 systm.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
@@ -32,9 +32,9 @@ noinst_HEADERS = \
 	fftw2.F90 fftw3.F90 \
 	mesh_create.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
 	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
-	xc_pot.F90 xc_fxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
+	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
 	epot_inc.F90 \
-	h_inc.F90 h_xc_OEP.F90 h_so.F90 \
+	v_ks_inc.F90 xc_OEP_inc.F90 h_inc.F90 h_so.F90 \
 	eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90 \
 	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	linear_response_inc.F90 \
@@ -70,13 +70,13 @@ oct_broad_LDADD = $(core_LIBS)
 oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
 
-oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 systm.F90 make_st.F90
+oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 xc_OEP.F90 v_ks.F90 systm.F90 make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90
 oct_center_geom_LDADD = $(octopus_LDADD)
 
-oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 systm.F90 \
+oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 v_ks.F90 systm.F90 \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
@@ -128,79 +128,87 @@ depend:
 	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_sf_SOURCES) $(oct_rsf_SOURCES) $(oct_hs_mult_SOURCES) $(oct_hs_acc_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
 
 
-# Dependencies. 
-linear_response.o: linear_response_inc.F90
-#liboct_parser.o : liboct_parser.F90 complex.F90 global.h 
-#io.o : io.F90 liboct_parser.o 
-#liboct.o : liboct.F90 complex.F90 global.h 
-#global.o : global.F90 complex.F90 global.h io.o liboct.o liboct_parser.o 
-#units.o : units.F90 complex.F90 global.h liboct_parser.o global.o 
-#blas.o : blas.F90 complex.F90 global.h 
-#linalg_basic.o : linalg_basic.F90 linalg_basic_blas.F90 complex.F90 global.h blas.o 
-#linalg_adv.o : linalg_adv.F90 complex.F90 global.h global.o 
-#math.o : math.F90 real.F90 math_cg_inc.F90 math_inc.F90 undef.F90 complex.F90 global.h linalg_adv.o linalg_basic.o global.o 
-#spline.o : spline.F90 complex.F90 global.h 
-#fft.o : fft.F90 fftw3.F90 fftw2.F90 complex.F90 global.h linalg_basic.o global.o 
-#vxc.o : vxc.F90 complex.F90 global.h global.o 
-#logrid.o : logrid.F90 complex.F90 global.h global.o 
-#atomic.o : atomic.F90 complex.F90 global.h logrid.o vxc.o global.o 
-#tm.o : tm.F90 complex.F90 global.h logrid.o io.o atomic.o global.o 
-#hgh.o : hgh.F90 complex.F90 global.h logrid.o atomic.o io.o global.o 
-#ps.o : ps.F90 complex.F90 global.h hgh.o tm.o atomic.o logrid.o spline.o io.o liboct.o global.o 
-#specie.o : specie.F90 complex.F90 global.h math.o ps.o units.o io.o spline.o liboct_parser.o global.o 
-#xyz_file.o : xyz_file.F90 complex.F90 global.h units.o io.o liboct_parser.o 
-#geometry.o : geometry.F90 complex.F90 global.h xyz_file.o specie.o io.o liboct.o liboct_parser.o global.o 
-#curv_gygi.o : curv_gygi.F90 complex.F90 global.h linalg_adv.o geometry.o liboct_parser.o 
-#curv_briggs.o : curv_briggs.F90 complex.F90 global.h linalg_adv.o geometry.o liboct_parser.o 
-#curv_modine.o : curv_modine.F90 complex.F90 global.h linalg_adv.o geometry.o liboct_parser.o 
-#curvlinear.o : curvlinear.F90 complex.F90 global.h curv_modine.o curv_briggs.o curv_gygi.o geometry.o liboct_parser.o 
-mesh.o : mesh.F90 mesh_create.F90 complex.F90 global.h linalg_adv.o curvlinear.o geometry.o math.o units.o liboct_parser.o global.o 
-#nl_operator.o : nl_operator.F90 complex.F90 global.h mesh.o 
-#stencil_star.o : stencil_star.F90 complex.F90 global.h nl_operator.o math.o global.o 
-#stencil_variational.o : stencil_variational.F90 complex.F90 global.h nl_operator.o global.o 
-#stencil_cube.o : stencil_cube.F90 complex.F90 global.h global.o 
-#derivatives.o : derivatives.F90 derivatives_inc.F90 real.F90 undef.F90 complex.F90 global.h stencil_cube.o stencil_variational.o stencil_star.o nl_operator.o mesh.o global.o 
-#cf.o : cf.F90 cf_inc.F90 real.F90 undef.F90 complex.F90 global.h fft.o mesh.o global.o 
-#mf.o : mf.F90 mf_inc.F90 real.F90 undef.F90 complex.F90 global.h cf.o mesh.o linalg_basic.o global.o 
-#f.o : f.F90 f_inc.F90 real.F90 undef.F90 complex.F90 global.h fft.o derivatives.o cf.o mf.o linalg_basic.o liboct_parser.o global.o 
-#poisson.o : poisson.F90 poisson3D.F90 poisson2D.F90 poisson1D.F90 complex.F90 global.h math.o f.o mesh.o geometry.o liboct_parser.o global.o 
-#out.o : out.F90 out_inc.F90 real.F90 undef.F90 complex.F90 global.h f.o mesh.o units.o io.o liboct_parser.o liboct.o global.o 
-#crystal.o : crystal.F90 complex.F90 global.h units.o io.o global.o 
-#states.o : states.F90 states_inc.F90 real.F90 undef.F90 states_kpoints.F90 complex.F90 global.h crystal.o geometry.o out.o mf.o f.o mesh.o math.o linalg_adv.o linalg_basic.o io.o liboct_parser.o global.o 
-xc.o : xc.F90 xc_OEP_SIC.F90 xc_OEP_x.F90 xc_KLI.F90 xc_pot.F90
-#mix.o : mix.F90 complex.F90 global.h linalg_adv.o linalg_basic.o liboct_parser.o global.o 
-#restart.o : restart.F90 complex.F90 global.h out.o mesh.o states.o io.o global.o 
-#lasers.o : lasers.F90 complex.F90 global.h mesh.o spline.o liboct_parser.o io.o global.o 
-#epot.o : epot.F90 epot_inc.F90 real.F90 undef.F90 complex.F90 global.h lasers.o states.o geometry.o specie.o ps.o logrid.o mesh.o liboct_parser.o global.o 
-#systm.o : systm.F90 complex.F90 global.h states.o geometry.o mesh.o global.o 
-#h.o : h.F90 h_so.F90 h_xc_OEP.F90 h_inc.F90 real.F90 undef.F90 complex.F90 global.h out.o xc.o poisson.o epot.o states.o geometry.o mf.o mesh.o linalg_basic.o liboct_parser.o global.o 
-#eigen.o : eigen.F90 eigen_plan.F90 eigen_cg2.F90 complex.F90 global.h h.o states.o mesh.o stencil_star.o nl_operator.o io.o linalg_adv.o linalg_basic.o liboct_parser.o global.o 
-#lcao.o : lcao.F90 complex.F90 global.h h.o systm.o geometry.o specie.o mesh.o linalg_adv.o linalg_basic.o spline.o liboct.o global.o 
-#pes.o : pes.F90 pes_mask.F90 pes_rc.F90 complex.F90 global.h states.o mesh.o fft.o units.o io.o liboct_parser.o global.o 
-#scf.o : scf.F90 complex.F90 global.h lcao.o mix.o eigen.o h.o restart.o states.o geometry.o units.o liboct_parser.o global.o 
-#gs.o : gs.F90 complex.F90 global.h scf.o lcao.o h.o systm.o global.o 
-#unocc.o : unocc.F90 complex.F90 global.h eigen.o h.o restart.o systm.o states.o mesh.o liboct.o liboct_parser.o global.o 
-#static_pol.o : static_pol.F90 complex.F90 global.h scf.o geometry.o states.o h.o io.o liboct.o liboct_parser.o global.o 
-#geom_opt.o : geom_opt.F90 complex.F90 global.h scf.o states.o geometry.o h.o mesh.o global.o 
-#phonons.o : phonons.F90 complex.F90 global.h scf.o states.o h.o geometry.o epot.o linalg_adv.o io.o liboct_parser.o liboct.o global.o 
-#td_exp_split.o : td_exp_split.F90 complex.F90 global.h h.o states.o mesh.o linalg_basic.o global.o 
-#td_exp.o : td_exp.F90 complex.F90 global.h td_exp_split.o mesh.o math.o linalg_basic.o blas.o liboct_parser.o global.o 
-#td_rti.o : td_rti.F90 complex.F90 global.h td_exp.o h.o states.o mesh.o global.o 
-#td.o : td.F90 td_init.F90 td_calc.F90 td_write.F90 complex.F90 global.h pes.o td_rti.o epot.o h.o restart.o states.o mesh.o liboct_parser.o liboct.o global.o 
-#opt_control.o : opt_control.F90 complex.F90 global.h td_rti.o td.o h.o restart.o states.o io.o liboct_parser.o liboct.o global.o 
-#pulpo.o : pulpo.F90 liboct.o global.o io.o 
-#run.o : run.F90 complex.F90 global.h pulpo.o gs.o opt_control.o phonons.o geom_opt.o static_pol.o unocc.o scf.o systm.o h.o epot.o restart.o states.o lcao.o global.o 
-#main.o : main.F90 complex.F90 global.h run.o liboct.o global.o 
-#spectrum.o : spectrum.F90 complex.F90 global.h units.o io.o global.o 
-#strength_function.o : strength_function.F90 complex.F90 global.h spectrum.o units.o liboct_parser.o global.o 
-#rotational_strength.o : rotational_strength.F90 complex.F90 global.h spectrum.o units.o liboct_parser.o global.o 
-#hs_from_mult.o : hs_from_mult.F90 complex.F90 global.h spectrum.o liboct_parser.o units.o global.o 
-#hs_from_acc.o : hs_from_acc.F90 complex.F90 global.h spectrum.o liboct_parser.o units.o global.o 
-#linear.o : linear.F90 complex.F90 global.h states.o poisson.o mf.o mesh.o linalg_adv.o io.o liboct.o global.o 
-#excitations.o : excitations.F90 complex.F90 global.h linear.o systm.o restart.o states.o liboct.o liboct_parser.o global.o 
-#xyzanim.o : xyzanim.F90 complex.F90 global.h geometry.o units.o io.o liboct_parser.o liboct.o global.o 
-#broad.o : broad.F90 complex.F90 global.h liboct_parser.o units.o io.o global.o 
-#phonon_spectrum.o : phonon_spectrum.F90 complex.F90 global.h units.o io.o global.o 
-#xyz_adjust.o : xyz_adjust.F90 complex.F90 global.h geometry.o 
-#centergeom.o : centergeom.F90 complex.F90 global.h xyz_adjust.o geometry.o units.o global.o 
+# Dependencies (only includes taken into account)
+atomic.o: global.h
+blas.o: global.h
+broad.o: global.h
+casida.o: global.h
+centergeom.o: global.h
+cf.o: global.h cf_inc.F90
+crystal.o: global.h
+curv_briggs.o: global.h
+curv_gygi.o: global.h
+curvlinear.o: global.h
+curv_modine.o: global.h
+derivatives.o: global.h derivatives_inc.F90
+eigen.o: global.h eigen_cg2.F90 eigen_cg3.F90 eigen_plan.F90
+epot.o: global.h epot_inc.F90 epot_inc.F90
+f.o: global.h f_inc.F90
+fft.o: global.h fftw2.F90 fftw3.F90
+geometry.o: global.h
+geom_opt.o: global.h
+global.o: global.h
+gs.o: global.h
+h.o: global.h h_inc.F90 h_so.F90
+hgh.o: global.h
+hs_from_acc.o: global.h
+hs_from_mult.o: global.h
+lasers.o: global.h
+lcao.o: global.h
+liboct.o: global.h
+liboct_parser.o: global.h
+libxc.o: global.h
+linalg_adv.o: global.h linalg_adv_lapack.F90
+linalg_basic.o: global.h linalg_basic_blas.F90 linalg_basic_int.F90
+linear_response.o: global.h linear_response_inc.F90
+logrid.o: global.h
+main.o: global.h
+make_st.o: global.h
+math.o: global.h expokit_inc.F90 math_cg_inc.F90 math_inc.F90
+mesh.o: global.h mesh_create.F90
+mf.o: global.h mf_inc.F90
+mix.o: global.h
+nl_operator.o: global.h
+oct_test.o: global.h
+opt_control.o: global.h
+out.o: global.h out_inc.F90
+pes.o: global.h pes_rc.F90 pes_mask.F90
+phonons.o: global.h
+phonon_spectrum.o: global.h
+poisson_cg.o: global.h
+poisson_corrections.o: global.h
+poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90
+ps.o: global.h
+restart.o: global.h restart_inc.F90
+rotational_strength.o: global.h
+run.o: global.h
+scf.o: global.h
+specie.o: global.h
+spectrum.o: global.h
+spline.o: global.h
+states.o: global.h states_kpoints.F90 states_inc.F90
+static_pol.o: global.h
+static_pol_lr.o: global.h
+stencil_cube.o: global.h
+stencil_star.o: global.h
+stencil_variational.o: global.h
+strength_function.o: global.h
+systm.o: global.h
+td_exp.o: global.h
+td_exp_split.o: global.h
+td.o: global.h td_write.F90 td_init.F90
+td_rti.o: global.h
+td_write.o: td_calc.F90
+tm.o: global.h
+units.o: global.h
+unocc.o: global.h
+v_ks.o: global.h v_ks_inc.F90
+xc.o: global.h xc_vxc.F90 xc_axc.F90 xc_fxc.F90
+xc_functl.o: global.h
+xc_OEP.o: global.h xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 xc_OEP_inc.F90
+xyz_adjust.o: global.h
+xyzanim.o: global.h
+xyz_file.o: global.h
+
+
 

@@ -70,7 +70,7 @@ contains
     fromScratch = .true.
 
     call X(lr_init) (sys%st, sys%m, lr)
-    call lr_build_fxc(sys%m, sys%st, h%xc, lr%dl_Vxc)
+    call lr_build_fxc(sys%m, sys%st, sys%ks%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
     call X(lr_end) (lr)

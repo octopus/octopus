@@ -29,6 +29,7 @@ use states
 use output
 use restart
 use lasers
+use v_ks
 use hamiltonian
 use external_pot
 use system
@@ -180,7 +181,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
     endif
 
     ! time iterate wavefunctions
-    call td_rti_dt(h, m, sys%f_der, st, td%tr, i*td%dt, td%dt)
+    call td_rti_dt(sys%ks, h, m, sys%f_der, st, td%tr, i*td%dt, td%dt)
 
     ! mask function?
     if(h%ab == MASK_ABSORBING) then
@@ -198,7 +199,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
     call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
 
     ! update hamiltonian and eigenvalues (fermi is *not* called)
-    call zh_calc_vhxc(h, m, sys%f_der, st, calc_eigenval=.true.)
+    call zh_calc_vhxc(sys%ks, h, m, sys%f_der, st, calc_eigenval=.true.)
     call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
 
     ! Recalculate forces, update velocities...
@@ -318,7 +319,7 @@ contains
 
     if(ierr==0) then
       call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
-      call zh_calc_vhxc(h, m, sys%f_der, st, calc_eigenval=.true.)
+      call zh_calc_vhxc(sys%ks, h, m, sys%f_der, st, calc_eigenval=.true.)
       x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
       call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
