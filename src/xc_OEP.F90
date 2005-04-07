@@ -30,6 +30,7 @@ module xc_OEP
   use poisson
   use hamiltonian
   use linear_response
+  use output
 
   implicit none
 
@@ -49,12 +50,13 @@ module xc_OEP
      XC_OEP_FULL   = 4     ! half implemented
 
   type xc_oep_type
-    integer :: oep_level  ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
-    FLOAT   :: oep_mixing ! how much of the function S(r) to add to vxc in every iteration
+    integer       :: level   ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
+    FLOAT         :: mixing  ! how much of the function S(r) to add to vxc in every iteration
+    type(lr_type) :: lr      ! to solve the equation H psi = b
     
     ! do we want to use a SIC corrected functional
     integer :: sic_correction
-    
+
     integer          :: eigen_n
     integer, pointer :: eigen_type(:), eigen_index(:)
     FLOAT            :: socc, sfact
@@ -70,9 +72,9 @@ contains
 
   ! -----------------------------------------------------------
   subroutine xc_oep_init(oep, family, d)
-    type(xc_oep_type), intent(out) :: oep
-    integer,           intent(in)  :: family
-    type(states_dim_type), intent(in) :: d
+    type(xc_oep_type),     intent(out) :: oep
+    integer,               intent(in)  :: family
+    type(states_dim_type), intent(in)  :: d
 
     ! check for SIC
     oep%sic_correction = 0
@@ -84,20 +86,20 @@ contains
     ! if OEP we need some extra variables
     if((oep%sic_correction.ne.0).or.(iand(family, XC_FAMILY_OEP).ne.0)) then
 #if defined(HAVE_MPI)
-      if(oep%oep_level == XC_OEP_FULL) then
+      if(oep%level == XC_OEP_FULL) then
         message(1) = "Full OEP is not allowed with the code parallelized on orbitals..."
         call write_fatal(1)
       endif
 #endif
 
-      call loct_parse_int("OEP_level", XC_OEP_KLI, oep%oep_level)
-      if(oep%oep_level<0.or.oep%oep_level>XC_OEP_FULL) then
+      call loct_parse_int("OEP_level", XC_OEP_KLI, oep%level)
+      if(oep%level<0.or.oep%level>XC_OEP_FULL) then
         message(1) = "OEP_level can only take the values:"
         message(2) = "1 (Slater), 2 (KLI), 3 (CEDA), or 4 (full OEP)"
         call write_fatal(2)
       end if
-      if(oep%oep_level == XC_OEP_FULL) then
-        call loct_parse_float("OEP_mixing", M_ONE, oep%oep_mixing)
+      if(oep%level == XC_OEP_FULL) then
+        call loct_parse_float("OEP_mixing", M_ONE, oep%mixing)
       end if
       
       ! this routine is only prepared for finite systems, and ispin = 1, 2
@@ -109,8 +111,10 @@ contains
       ! obtain the spin factors
       call xc_oep_SpinFactor(oep, d%nspin)
 
+      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr)
+
     else
-      oep%oep_level = XC_OEP_NONE
+      oep%level = XC_OEP_NONE
     end if
     
   end subroutine xc_oep_init
@@ -125,15 +129,16 @@ contains
       write(iunit, '(2x,a)') 'Self-interaction corrections according to Perdew-Zunger'
     end if
         
-    if(oep%oep_level.ne.XC_OEP_NONE) then
+    if(oep%level.ne.XC_OEP_NONE) then
       write(iunit, '(a)') 'The OEP equation will be handled at the level of:'
-      select case(oep%oep_level)
+      select case(oep%level)
       case (XC_OEP_SLATER); write(iunit, '(a)') '    Slater approximation'
       case (XC_OEP_KLI);    write(iunit, '(a)') '    KLI approximation'
       case (XC_OEP_CEDA);   write(iunit, '(a)') '    CEDA approximation'
       case (XC_OEP_FULL);   write(iunit, '(a)') '    Full OEP'
       end select
     end if
+
   end subroutine xc_oep_write_info
 
 

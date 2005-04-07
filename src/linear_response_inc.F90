@@ -17,14 +17,10 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_init) (st, m, lr)
+subroutine X(lr_alloc) (st, m, lr)
   type(states_type), intent(in)  :: st
   type(mesh_type),   intent(in)  :: m
   type(lr_type),     intent(out) :: lr
-    
-  ! read some parameters from the input file
-  call loct_parse_float("ConvAbsDens", CNST(1e-5), lr%conv_abs_dens)
-  call loct_parse_int("MaximumIter", 50, lr%max_iter)
 
   lr%abs_dens = M_ZERO
   lr%iter     = 0
@@ -35,11 +31,11 @@ subroutine X(lr_init) (st, m, lr)
   allocate(lr%X(dl_Vhar)(m%np))
   allocate(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin))
 
-end subroutine X(lr_init)
+end subroutine X(lr_alloc)
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_end) (lr)
+subroutine X(lr_dealloc) (lr)
   type(lr_type), intent(inout) :: lr
   
   ASSERT(associated(lr%X(dl_rho)))
@@ -47,7 +43,30 @@ subroutine X(lr_end) (lr)
   deallocate(lr%X(dl_rho), lr%X(dl_psi), lr%X(dl_Vhar), lr%dl_Vxc)
   nullify   (lr%X(dl_rho), lr%X(dl_psi), lr%X(dl_Vhar), lr%dl_Vxc)
 
-end subroutine X(lr_end)
+end subroutine X(lr_dealloc)
+
+
+! ---------------------------------------------------------
+subroutine X(lr_orth_vector) (m, st, v, ik)
+  type(mesh_type),        intent(in)    :: m
+  type(states_type),      intent(in)    :: st
+  R_TYPE,                 intent(inout) :: v(:,:)
+  integer,                intent(in)    :: ik
+  
+  R_TYPE  :: scalp
+  integer :: ist
+  
+  call push_sub('lr_orth_vector')
+  
+  do ist = 1, st%nst
+    if(st%occ(ist, ik) > M_ZERO) then
+      scalp = X(states_dotp)(m, st%d%dim, v, st%X(psi)(:,:, ist, ik))
+      v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
+    end if
+  end do
+  
+  call pop_sub()
+end subroutine X(lr_orth_vector)
 
 
 ! ---------------------------------------------------------
@@ -114,7 +133,7 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(inout) :: x(:,:)   ! x(m%np, d%dim)
   R_TYPE,                 intent(in)    :: y(:,:)   ! y(m%np, d%dim)
-  R_TYPE,                 intent(in)    :: omega
+  R_TYPE, optional,       intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
   R_TYPE  :: alpha, beta, gamma
@@ -124,10 +143,11 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
   call push_sub('lr_solve_HXeY')
   
   allocate(r(m%np, d%dim), p(m%np, d%dim), Hp(m%np, d%dim))
-    
+
   ! Initial residue
   call X(Hpsi)(h, m, f_der, x, Hp, ik)
-  r(:,:) = y(:,:) - (Hp(:,:) + omega*x(:,:))
+  r(:,:) = y(:,:) - Hp(:,:)
+  if(present(omega)) r(:,:) = r(:,:) - omega*x(:,:)
    
   ! Initial search direction
   p(:,:) = r(:,:)
@@ -135,20 +155,22 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
   conv_last = .false.
   do iter = 1, lr%max_iter
     gamma = X(states_dotp) (m, d%dim, r, r)
-      
+    print *, sqrt(abs(gamma)), lr%conv_abs_dens
+
     ! we require more precision here than for the density
     conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
     if(conv.and.conv_last) exit
     conv_last = conv
 
     call X(Hpsi)(h, m, f_der, p, Hp, ik)
-    Hp(:,:) = Hp(:,:) + omega*p(:,:)
+    if(present(omega)) Hp(:,:) = Hp(:,:) + omega*p(:,:)
 
     alpha = gamma/ X(states_dotp) (m, d%dim, p, Hp)
     r(:,:) = r(:,:) - alpha*Hp(:,:)
     x(:,:) = x(:,:) + alpha* p(:,:)
+    
     beta = X(states_dotp) (m, d%dim, r, r)/gamma
-    p(:,:) = r(:,:) + beta*p
+    p(:,:) = r(:,:) + beta*p(:,:)
   end do
 
   lr%iter     = iter
@@ -157,4 +179,3 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
   
   call pop_sub()
 end subroutine X(lr_solve_HXeY)
-

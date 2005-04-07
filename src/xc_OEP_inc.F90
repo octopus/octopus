@@ -30,7 +30,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   type(xc_type),          intent(in)    :: xcs
   type(mesh_type),        intent(in)    :: m
   type(f_der_type),       intent(inout) :: f_der
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(inout) :: st
   FLOAT,                  intent(inout) :: vxc(m%np, st%d%nspin)
   FLOAT,                  intent(inout) :: ex, ec
@@ -38,7 +38,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   FLOAT :: e
   integer :: is, ist, ixc, ifunc, ierr
 
-  if(oep%oep_level.eq.XC_OEP_NONE) return
+  if(oep%level == XC_OEP_NONE) return
 
   call push_sub('h_xc_oep')
 
@@ -48,6 +48,9 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   allocate(oep%X(lxc)(m%np, st%st_start:st%st_end))
   allocate(oep%uxc_bar(st%nst))
   allocate(oep%vxc(m%np))
+
+  ! allocate linear response structure
+  call X(lr_alloc)(st, m, oep%lr)
   
   ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
@@ -77,6 +80,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
     do ist = st%st_start, st%st_end
       oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%X(lxc)(:, ist))*m%vol_pp(:))
     end do
+
 #if defined(HAVE_MPI)
     if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
       call mpi_barrier(mpi_comm_world, ierr)
@@ -88,17 +92,19 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
     
     ! solve the KLI equation
     oep%vxc = M_ZERO
-    call X(xc_KLI_solve) (m, st, is, oep, oep%oep_level)
+    call X(xc_KLI_solve) (m, st, is, oep)
 
     ! if asked, solve the full OEP equation
-    if(oep%oep_level == XC_OEP_FULL) then
+    if(oep%level == XC_OEP_FULL) then
       call X(xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
     end if
 
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
 
+  call X(lr_dealloc)(oep%lr)
   deallocate(oep%eigen_type, oep%eigen_index, oep%vxc, oep%X(lxc), oep%uxc_bar)
+
   call pop_sub()
 end subroutine X(xc_OEP_calc)
 
@@ -106,44 +112,49 @@ end subroutine X(xc_OEP_calc)
 subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   type(mesh_type),        intent(IN)    :: m
   type(f_der_type),       intent(inout) :: f_der
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(IN)    :: st
   integer,                intent(in)    :: is
   FLOAT,                  intent(inout) :: vxc(m%np)
   type(xc_oep_type),      intent(inout) :: oep
 
-  integer :: iter, ist
+  integer :: iter, ist, ierr, lixo
   FLOAT :: vxc_bar
   FLOAT, allocatable :: s(:), vxc_old(:)
-  R_TYPE, allocatable :: b(:), psi(:,:)
+  R_TYPE, allocatable :: b(:,:), psi(:,:,:)
 
-  allocate(b(m%np), s(m%np), psi(m%np, 1), vxc_old(m%np))
+  allocate(b(m%np, 1), s(m%np), psi(m%np, 1, st%nst), vxc_old(m%np))
 
   vxc_old = vxc(:)
-  do iter = 1, 30
-    ! fix xc potential (needed for Hpsi)
-    vxc(:) = vxc_old(:) + oep%vxc(:)
+  lixo = output_fill_how("AxisX_AxisY_AxisZ_PlaneZ_Gnuplot")
+
+  ! fix xc potential (needed for Hpsi)
+  vxc(:) = vxc_old(:) + oep%vxc(:)
+  psi(:,:,:) = M_ZERO
+  do iter = 1, 10
 
     ! iteration ver all states
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
       vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
-      b(:) = (oep%vxc(:)*R_CONJ(st%X(psi)(:, 1, ist, is))  - oep%X(lxc)(:, ist))  &
-           - (vxc_bar - oep%uxc_bar(ist))*R_CONJ(st%X(psi)(:, 1, ist, is))
-      
+      b(:,1) =  -(oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(:, 1, ist, is)) &
+         + oep%X(lxc)(:, ist)
+
       ! initialize psi to something
       !call X(states_random)(m, psi(:,1))
-      psi(:,1) = b(:)
+      call X(lr_orth_vector) (m, st, b, is)
       
       ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call get_psi()
-      
+      call X(lr_solve_HXeY) (oep%lr, h, m, f_der, st%d, is, psi(:,:,ist), b, &
+         R_TOTYPE(-st%eigenval(ist, is)))
+      call X(lr_orth_vector) (m, st, psi(:,:,ist), is)
+
       ! calculate this funny function s
-      s(:) = s(:) + M_TWO*R_REAL(psi(:,1)*st%X(psi)(:, 1, ist, is))
+      s(:) = s(:) + M_TWO*R_REAL(psi(:,1,ist)*st%X(psi)(:, 1, ist, is))
     end do
-    print *, iter, "s = ", dmf_nrm2(m, s)
-    oep%vxc(:) = oep%vxc(:) + M_TWO*s(:)
+
+    oep%vxc(:) = oep%vxc(:) + oep%mixing*s(:)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
@@ -152,63 +163,11 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
       end if
     end do
 
+    print *, iter, "s = ", oep%mixing*maxval(abs(s))
+    if(oep%mixing*maxval(abs(s)) < oep%lr%conv_abs_dens) exit
   end do
 
   vxc(:) = vxc_old(:)
   deallocate(b, s, psi, vxc_old)
 
-contains
-  ! This subroutine uses conjugated gradients to solve the linear equation
-  ! (H - eps_i) psi_i = b_i, with psi_i orthogonal to psi_{KS i}
-  ! as in H.R. Schwarz, "Numerische Mathematik", pag. 603
-  ! Thanks to Heiko Appel for the initial code
-  subroutine get_psi()
-    integer :: iter
-    R_TYPE, allocatable :: res(:,:), p(:,:), x(:,:), z(:,:), tmp(:,:)
-    R_TYPE :: r, ek, qk, spold
-    
-    allocate(res(m%np, 1), p(m%np, 1), x(m%np, 1), z(m%np, 1), tmp(m%np, 1))
-    
-    ! Orthogonalize starting psi to phi
-    r = X(states_dotp) (m, st%d%dim, psi, st%X(psi)(:, :, ist, is))
-    psi = psi - r*st%X(psi)(:, :, ist, is)
-
-    ! Calculate starting gradient: |hpsi> = (H-eps_i)|psi> + b
-    call X(Hpsi)(h, m, f_der, psi, res, 1)
-    res(:,1) = res(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
-
-    ! orthogonalize direction to phi
-    r = X(states_dotp) (m, st%d%dim, res, st%X(psi)(:, :, ist, is))
-    res = res - r*st%X(psi)(:, :, ist, is)
-
-    p = -res
-    spold = X(states_nrm2)(m, st%d%dim, res)**2
-
-    iter_loop: do iter = 1, 50
-      ! verify
-      call X(Hpsi)(h, m, f_der, psi, tmp, 1)
-      tmp(:,1) = tmp(:,1) - st%eigenval(ist, 1)*psi(:,1) + b(:)
-      if(X(states_nrm2)(m, st%d%dim, tmp).lt.1e-6_8) exit iter_loop
-
-      if(iter > 1) then
-        r = X(states_nrm2)(m, st%d%dim, res)**2
-        ek = r/spold
-        spold = r
-
-        p  = -res + ek*p
-      end if
-
-      call X(Hpsi)(h, m, f_der, p, z, 1)
-      z(:,1) = z(:,1) - st%eigenval(ist, 1)*p(:,1)
-      r = X(states_dotp) (m, st%d%dim, z, st%X(psi)(:, :, ist, is))
-      z = z - r*st%X(psi)(:, :, ist, is)
-
-      qk    = spold/X(states_dotp)(m, st%d%dim, p, z)
-      psi   = psi + qk*p
-      res   = res + qk*z
-
-    end do iter_loop
-
-    deallocate(res, p, x, z, tmp)
-  end subroutine get_psi
 end subroutine X(xc_oep_solve)

@@ -69,11 +69,12 @@ contains
     !  if(X(restart_read) ('tmp/restart_lr_static_pol', sys%st, sys%m).ne.0) then
     fromScratch = .true.
 
-    call X(lr_init) (sys%st, sys%m, lr)
+    call lr_init(lr)
+    call X(lr_alloc) (sys%st, sys%m, lr)
     call lr_build_fxc(sys%m, sys%st, sys%ks%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
-    call X(lr_end) (lr)
+    call X(lr_dealloc) (lr)
 
     call end_()
 
@@ -209,7 +210,7 @@ contains
             end do
             Y(:,1) = -Y(:,1)*st%X(psi)(:, 1, ist, ik)
             
-            call lr_orth_vector(m, st, Y, ik)
+            call X(lr_orth_vector)(m, st, Y, ik)
             
             iter_max = 50
             call X(lr_solve_HXeY) (lr, h, sys%m, sys%f_der, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &

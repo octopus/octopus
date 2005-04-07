@@ -76,19 +76,14 @@ contains
         write(iunit,'(a)') " Current-dependent exchange and correlation:"
         call xc_functl_write_info(xcs%j_functl, iunit)
 
-        if (iand(xcs%family, XC_FAMILY_LCA) .ne. 0) then
-          message(1) = " Auxiliary exchange and correlation functionals:"
-          call write_info(1)
-          do i = 1, 2
-            call xc_functl_write_info(xcs%j_functl, iunit)
-          end do
-        end if
-      else
-        write(iunit,'(a)') " Exchange and correlation:"
-        do i = 1, 2
-          call xc_functl_write_info(xcs%functl(i, 1), iunit)
-        end do
+        if (iand(xcs%family, XC_FAMILY_LCA) == 0) return
       end if
+
+      write(iunit,'(a)') " Exchange and correlation:"
+      do i = 1, 2
+        call xc_functl_write_info(xcs%functl(i, 1), iunit)
+      end do
+
       write(iunit,'(a,/)') stars
 
 #ifdef HAVE_MPI

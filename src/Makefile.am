@@ -70,7 +70,8 @@ oct_broad_LDADD = $(core_LIBS)
 oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
 
-oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 xc_OEP.F90 v_ks.F90 systm.F90 make_st.F90
+oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 linear_response.F90 \
+	xc_OEP.F90 v_ks.F90 systm.F90 make_st.F90
 oct_make_st_LDADD = $(octopus_LDADD)
 
 oct_center_geom_SOURCES = $(core_SRCS) xyz_adjust.F90 centergeom.F90

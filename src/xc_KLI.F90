@@ -15,11 +15,11 @@
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
 
-subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
+subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(mesh_type),   intent(in)    :: m
   type(states_type), intent(in)    :: st
+  integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  integer,           intent(in)    :: oep_level, is
 
 #if defined(HAVE_MPI)
   integer :: status(MPI_STATUS_SIZE)
@@ -62,7 +62,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep, oep_level)
   enddo
 #endif
 
-  if(oep_level == XC_OEP_SLATER) then
+  if(oep%level == XC_OEP_SLATER) then
     deallocate(rho_sigma)
     return
   end if

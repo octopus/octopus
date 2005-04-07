@@ -288,7 +288,6 @@ subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
   if(iand(how, output_plane_x)   .ne.0) call plane_x()
   if(iand(how, output_plane_y)   .ne.0) call plane_y()
   if(iand(how, output_plane_z)   .ne.0) call plane_z()
-  if(iand(how, output_plane_z)   .ne.0) call plane_z()
   if(iand(how, output_mesh_index).ne.0) call out_mesh_index()
   if(iand(how, output_dx)        .ne.0) call dx()
 #if defined(HAVE_NETCDF)
@@ -351,7 +350,7 @@ contains
 
     write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
     do i = 1, m%np
-      if(ierr==0.and.m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
+      if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
         write(iunit, mformat) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
@@ -366,21 +365,21 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write')
 
-    write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
+    write(iunit, mfmtheader) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x(1,2)
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(gnuplot_mode) write(iunit, mformat)
     
     do i = 1, m%np
-       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 2)) then
-          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-          x0 = m%x(i, 2)
-       endif
-       if(ierr == 0.and.m%Lxyz(i,1)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-       end if
+      if(gnuplot_mode.and.x0 /= m%x(i, 2)) then
+        write(iunit, mformat)      ! write extra lines for gnuplot grid mode
+        x0 = m%x(i, 2)
+      end if
+      if(m%Lxyz(i,1)==0) then
+        write(iunit, mformat) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
     end do
     
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(gnuplot_mode) write(iunit, mformat)
     call io_close(iunit)
     
   end subroutine plane_x
@@ -394,19 +393,19 @@ contains
 
     write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
     x0 = m%x(1,1)
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(gnuplot_mode) write(iunit, mformat)
     
     do i = 1, m%np
-       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
-          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-          x0 = m%x(i, 1)
-       endif
-       if(ierr == 0.and.m%Lxyz(i,2)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-       end if
+      if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
+        write(iunit, mformat)      ! write extra lines for gnuplot grid mode
+        x0 = m%x(i, 1)
+      end if
+      if(m%Lxyz(i,2)==0) then
+        write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
     end do
     
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(gnuplot_mode) write(iunit, mformat)
     call io_close(iunit)
     
   end subroutine plane_y
@@ -420,20 +419,20 @@ contains
 
     write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x(1,1)
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(gnuplot_mode) write(iunit, mformat)
     
     do i = 1, m%np
-       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
-          write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-          x0 = m%x(i, 1)
-       endif
+      if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
+        write(iunit, mformat)      ! write extra lines for gnuplot grid mode
+        x0 = m%x(i, 1)
+      end if
        
-       if(ierr == 0.and.m%Lxyz(i,3)==0) then
-          write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
-       end if
+      if(m%Lxyz(i,3) == 0) then
+        write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+      end if
     end do
     
-    if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
+    if(gnuplot_mode) write(iunit, mformat)
     call io_close(iunit)
     
   end subroutine plane_z

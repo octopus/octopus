@@ -52,6 +52,16 @@ module linear_response
 contains
 
   ! ---------------------------------------------------------
+  subroutine lr_init(lr)
+    type(lr_type), intent(out) :: lr
+
+    ! read some parameters from the input file
+    call loct_parse_float("ConvAbsDens", CNST(1e-5), lr%conv_abs_dens)
+    call loct_parse_int("MaximumIter", 50, lr%max_iter)    
+  end subroutine lr_init
+
+
+  ! ---------------------------------------------------------
   subroutine lr_build_fxc(m, st, xcs, fxc)
     type(mesh_type),   intent(in)  :: m
     type(states_type), intent(in)  :: st
@@ -93,7 +103,7 @@ contains
     do ik = 1, st%d%nspin
       do ist = 1, st%nst 
         if(st%occ(ist, ik) > M_ZERO) then  
-          call lr_orth_vector(m, st, lr%X(dl_psi)(:,:, ist, ik), ik) 
+          call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik) 
         endif
       end do
     end do
@@ -101,28 +111,6 @@ contains
     call pop_sub()
   end subroutine lr_orth_response
 
-  
-  ! ---------------------------------------------------------
-  subroutine lr_orth_vector(m, st, v, ik)
-    type(mesh_type),        intent(in)    :: m
-    type(states_type),      intent(in)    :: st
-    R_TYPE,                 intent(inout) :: v(:,:)
-    integer,                intent(in)    :: ik
-    
-    R_TYPE  :: scalp
-    integer :: ist
-
-    call push_sub('lr_orth_vector')
-    
-    do ist = 1, st%nst
-      if(st%occ(ist, ik) > M_ZERO) then
-        scalp = X(states_dotp)(m, st%d%dim, v, st%X(psi)(:,:, ist, ik))
-        v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
-      end if
-    end do
-
-    call pop_sub()
-  end subroutine lr_orth_vector
 
 #include "undef.F90"
 #include "real.F90"
