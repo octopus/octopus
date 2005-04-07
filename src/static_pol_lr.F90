@@ -212,7 +212,7 @@ contains
             call lr_orth_vector(m, st, Y, ik)
             
             iter_max = 50
-            call X(lr_solve_HXeY) (lr, sys, h, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
+            call X(lr_solve_HXeY) (lr, h, sys%m, sys%f_der, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
                -sys%st%eigenval(ist, ik) + real(sigma, PRECISION)*omega)
 
             print *, lr%iter, sum(lr%X(dl_psi)(:,1, ist, ik)**2*sys%m%vol_pp(:))

@@ -74,7 +74,7 @@ contains
       call poisson_init(m)
 
       call xc_init(ks%xc, geo%nlcc, d%spin_channels, d%cdft)
-      call xc_oep_init(h%oep, h%xc%family, d)
+      call xc_oep_init(ks%oep, ks%xc%family, d)
 
       if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(ks%xc, stdout)
     end if

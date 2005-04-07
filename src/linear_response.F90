@@ -22,9 +22,9 @@ module linear_response
   use mesh
   use states
   use mix
-  use system
   use hamiltonian
   use xc
+  use functions
 
   implicit none
 

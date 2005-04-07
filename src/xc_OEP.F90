@@ -29,12 +29,14 @@ module xc_OEP
   use mesh_function
   use poisson
   use hamiltonian
+  use linear_response
 
   implicit none
 
   private
   public ::                        &
      xc_oep_type,                  &
+     xc_oep_init,                  &
      xc_oep_write_info,            &
      dxc_oep_calc, zxc_oep_calc
 
