@@ -112,7 +112,10 @@ gga_c_pbe    = 102
 mgga_x_tpss  = 201
 mgga_c_tpss  = 202
 
-oep_x        = 301
+lca_omc      = 301
+lca_lch      = 302
+
+oep_x        = 401
 
 oep_none     = 0
 oep_slater   = 1
