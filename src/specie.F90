@@ -325,6 +325,9 @@ contains
        call loct_parse_block_float (blk, row, 10, s%rcut)
        call loct_parse_block_float (blk, row, 11, s%beta2)
        read_data = 10
+     else
+       ! Reasonable defaults
+       s%alpha = CNST(0.7); s%beta = CNST(18.0); s%rcut = CNST(2.5); s%beta2 = CNST(0.4)
      endif
 
     case default
