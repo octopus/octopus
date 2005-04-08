@@ -221,7 +221,7 @@ subroutine ps_getradius(ps)
         do i = 2000, 1, -1
            r = dx*(i-1)
            y = loct_splint(ps%kb(l, j), r)
-           if(y > threshold) exit
+           if(abs(y) > threshold) exit
         enddo
         ps%rc_max = max(ps%rc_max, r)        
      enddo
@@ -231,7 +231,7 @@ subroutine ps_getradius(ps)
         do i = 2000, 1, -1
            r = dx*(i-1)
            y = loct_splint(ps%so_kb(l, j), r)
-           if(y > threshold) exit
+           if(abs(y) > threshold) exit
         enddo
         ps%rc_max = max(ps%rc_max, r)        
      enddo
