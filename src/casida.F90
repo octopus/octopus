@@ -70,6 +70,10 @@ contains
     character(len=100) :: ch
     logical :: l
 
+
+    message(1) = 'Info: Starting linear response calculation.'
+    call write_info(1)
+
     ierr = 0
     call init_()
 
@@ -97,7 +101,11 @@ contains
       message(1) = "Inconsistency between variable 'NumberUnoccStates' and file"
       message(2) = "  'tmp/restart_unocc/occs'"
       call write_fatal(2)
-    end if
+    else
+      write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
+      write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
+      call write_info(2)
+    endif
     
 
     ! setup Hamiltonian
@@ -108,8 +116,10 @@ contains
     ! which states to take into account
     call loct_parse_string("ExciteStates", "1-1024", ch)
     call loct_wfs_list(ch, cas%wfn_flags)
+    write(message(1),'(a,a)') "Info: States that form the basis: ",trim(ch)
+    Call Write_info(1)
 
-    ! initialize structure
+    ! Initialize structure
     call casida_type_init(cas)
 
     if(fromScratch) call loct_rm('tmp/restart_casida')
@@ -201,6 +211,7 @@ contains
     do a = cas%n_occ+1, cas%n_occ + cas%n_unocc
       as = cas%wfn_flags((a-1)/32 + 1)
       if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+        message(1) = " "
         do i = 1, cas%n_occ
           is = cas%wfn_flags((i-1)/32 + 1)
           if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
