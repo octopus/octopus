@@ -384,7 +384,7 @@ contains
       allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
       call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
          MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)      
-      mat = mpi_mat
+      cas%mat = mpi_mat
       deallocate(mpi_mat)
 #endif
       
