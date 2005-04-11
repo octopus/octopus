@@ -67,6 +67,7 @@ module scf
 
 contains
 
+! ---------------------------------------------------------
 subroutine scf_init(scf, m, st, geo, h)
   type(scf_type),         intent(inout) :: scf
   type(mesh_type),        intent(in)    :: m
@@ -137,6 +138,8 @@ subroutine scf_init(scf, m, st, geo, h)
   call pop_sub()
 end subroutine scf_init
 
+
+! ---------------------------------------------------------
 subroutine scf_end(scf)
   type(scf_type), intent(inout) :: scf
 
@@ -148,6 +151,8 @@ subroutine scf_end(scf)
   call pop_sub()
 end subroutine scf_end
 
+
+! ---------------------------------------------------------
 subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   type(scf_type),         intent(inout) :: scf
   type(mesh_type),        intent(IN)    :: m
@@ -325,17 +330,20 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   end if
 
   call pop_sub()
+
 contains
 
+
+  ! ---------------------------------------------------------
   subroutine scf_write_iter
     call push_sub('scf_write_iter')
     
     write(message(1),'(a)') stars
     write(message(2),'(a,i5)') 'SCF CYCLE ITER #',iter
-    write(message(3),'(2(a,es9.2))') &
-       ' abs_dens = ', scf%abs_dens, ' abs_ev = ', scf%abs_ev
-    write(message(4),'(2(a,es9.2))') &
-       ' rel_dens = ', scf%rel_dens, ' rel_ev = ', scf%rel_ev
+    write(message(3),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
+       ' abs_ev   = ', scf%abs_ev/units_out%energy%factor, ' rel_ev   = ', scf%rel_ev
+    write(message(4),'(23x,2(a,es9.2))') &
+       ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
     call write_info(4)
     if(.not.scf%lcao_restricted) then
       write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
@@ -357,6 +365,8 @@ contains
     call pop_sub()
   end subroutine scf_write_iter
 
+  
+  ! ---------------------------------------------------------
   subroutine scf_write_static(dir, fname)
     character(len=*), intent(in) :: dir, fname
     
@@ -462,6 +472,8 @@ contains
     call pop_sub()
   end subroutine scf_write_static
 
+
+  ! ---------------------------------------------------------
   subroutine write_magnetic_moments(iunit, m, st)
     integer,           intent(in) :: iunit
     type(mesh_type),   intent(in) :: m
