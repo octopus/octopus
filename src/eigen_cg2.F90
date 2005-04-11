@@ -16,16 +16,18 @@
 !! 02111-1307, USA.
 
 ! CONJUGATE-GRADIENTS METHOD.
-subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, diff, reorder)
+subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, diff, reorder, verbose)
   type(mesh_type),        intent(IN)    :: m
   type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
-  integer,                intent(out)   :: errorflag, converged
+  integer,                intent(out)   :: errorflag
+  integer,                intent(inout) :: converged
   FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
   logical,      optional, intent(in)    :: reorder
+  logical,      optional, intent(in)    :: verbose
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:), &
        cg(:,:), ppsi(:,:)
@@ -33,16 +35,26 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
   integer  :: ik, np, moved, p, j, iter, i, maxter
-  logical  :: reord = .true.
+  logical  :: reord = .true., verbose_
 
   call push_sub('eigen_solver_cg2')
+
+  verbose_ = .false.; if(present(verbose)) verbose_ = verbose
+  if(verbose_) then
+    message(1) = " "
+    message(2) = stars
+    message(3) = "Diagonalization with the conjugate gradients algorithm."
+    write(message(4),'(a,e8.2)') '  Tolerance: ',tol
+    write(message(5),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
+    message(6) = ""
+    call write_info(6)
+  endif
 
   np = m%np
 
   if(present(reorder)) reord = reorder
   maxter = niter
   niter = 0
-  converged = 0
   moved = 0
 
   allocate(h_psi(np, st%d%dim), g(np, st%d%dim), g0(np, st%d%dim), &
@@ -50,7 +62,11 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
-    eigenfunction_loop : do p = 1, st%nst
+    eigenfunction_loop : do p = converged + 1, st%nst
+
+      if(verbose_) then
+        write(message(2),'(a,i4,a)') 'Eigenstate # ',p,':'
+      endif
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call X(states_gram_schmidt)(p, m, st%d%dim, &
@@ -148,6 +164,15 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
         
       end do iter_loop
 
+      if(verbose_) then
+        if(res<tol) then
+          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
+        else
+          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
+        endif
+        call write_info(1)
+      endif
+
       niter = niter + iter + 1
 
       if(present(diff)) then
@@ -180,6 +205,12 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
   deallocate(h_psi, g, g0, cg, ppsi)
 
   errorflag = 0
+
+  if(verbose_) then
+    message(1) = stars
+    message(2) = " "
+    call write_info(2)
+  endif
  
   call pop_sub()
 end subroutine eigen_solver_cg2

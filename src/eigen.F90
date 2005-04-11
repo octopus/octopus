@@ -171,7 +171,7 @@ end subroutine eigen_solver_end
 
 
 ! ---------------------------------------------------------
-subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
+subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
   type(eigen_solver_type), intent(inout) :: eigens
   type(mesh_type),         intent(IN)    :: m
   type(f_der_type),        intent(inout) :: f_der
@@ -179,11 +179,15 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
   type(hamiltonian_type),  intent(IN)    :: h
   integer,                 intent(in)    :: iter
   logical,       optional, intent(inout) :: conv
+  logical,       optional, intent(in)    :: verbose
 
+  logical :: verbose_
   integer :: maxiter, errorflag
   FLOAT :: tol
 
   call push_sub('eigen_solver_run')
+
+  verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   
   if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
@@ -195,12 +199,12 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv)
 
   if(present(conv)) conv = .false.
   maxiter = eigens%es_maxiter
-  eigens%converged = 0
+!!$  eigens%converged = 0
 
   select case(eigens%es_type)
   case(RS_CG)
     call eigen_solver_cg2(m, f_der, st, h, tol, maxiter, &
-           eigens%converged, errorflag, eigens%diff)
+           eigens%converged, errorflag, eigens%diff, verbose = verbose_)
 #ifdef HAVE_TRLAN
   case(RS_LANCZOS)
     call eigen_solver_cg3(m, st, h, tol, maxiter, &

@@ -207,6 +207,7 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
     if(scf%lcao_restricted) then
       call lcao_wf(lcao_data, m, st, h)
     else
+      scf%eigens%converged = 0
       call eigen_solver_run(scf%eigens, m, f_der, st, h, iter)
     endif
 

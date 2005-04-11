@@ -36,9 +36,7 @@ public :: unocc_type, &
           unocc_run
 
 type unocc_type
-  integer  :: max_iter ! maximum number of iterations
   FLOAT :: conv     ! convergence criterium for the eigenvectors
-
   type(states_type), pointer :: st
 end type unocc_type
 
@@ -51,8 +49,9 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   logical,                intent(inout) :: fromScratch
 
   type(eigen_solver_type) :: eigens
-  integer :: iter, max_iter, iunit, err
+  integer :: iunit, err, ik, p
   FLOAT   :: conv
+  R_TYPE, allocatable :: h_psi(:,:)
   logical :: converged
 
   ierr = 0
@@ -91,31 +90,29 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call X(h_calc_vhxc)(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
   call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
   
+  message(1) = "Info: Starting calculation of unoccupied states"
+  call write_info(1)
 
-  message(1) = ''
-  message(2) = stars
-  message(3) = "Starting calculation of unoccupied states"
-  call write_info(3)
+  ! First, get the residues of the occupied states.
+  ! These are assumed to be converged; otherwise one should do a SCF calculation.
+  allocate(h_psi(sys%m%np, h%d%dim))
+  do ik = 1, sys%st%d%nik
+     do p = 1, eigens%converged
+        call X(Hpsi)(h, sys%m, sys%f_der, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
+        eigens%diff(p, ik) = X(states_residue)(sys%m, sys%st%d%dim, h_psi, sys%st%eigenval(p, ik), &
+             sys%st%X(psi)(:, :, p, ik))
+     enddo
+  enddo
+  deallocate(h_psi)
 
-  do iter = 1, max_iter
-    call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, iter, converged)
+  call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, 1, converged, verbose = .true.)
 
-    write(message(1), '(a,i4,a,g15.6)') "Iter = ", iter, ";  Error = ", maxval(sqrt(eigens%diff**2))
-    call write_info(1)
-
-    ! write restart information.
-    call X(restart_write) ('tmp/restart_unocc', sys%st, sys%m, err)
-    if(err.ne.0) then
-      message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
-      call write_fatal(1)
-    end if
-
-    if(maxval(abs(eigens%diff)) < eigens%final_tol) exit
-  end do
-
-  message(1) = stars
-  message(2) = ''
-  call write_info(2)
+  ! write restart information.
+  call X(restart_write) ('tmp/restart_unocc', sys%st, sys%m, err)
+  if(err.ne.0) then
+    message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
+    call write_fatal(1)
+  end if
 
   ! write output file
   call io_mkdir('static')
@@ -156,9 +153,6 @@ contains
       call write_fatal(1)
     end if
 
-    call loct_parse_int("MaximumIter", 20, max_iter)
-    if(max_iter <= 0) max_iter = huge(max_iter)
-
     ! fix states: THIS IS NOT OK
     sys%st%nst = sys%st%nst + nus
     sys%st%st_end = sys%st%nst
@@ -175,6 +169,11 @@ contains
 
     ! now the eigen solver stuff
     call eigen_solver_init(eigens, sys%st, sys%m, 50)
+
+    ! Having initial and final tolerance does not make sense in this case:
+    eigens%init_tol       = eigens%final_tol
+    eigens%final_tol_iter = 2
+    eigens%converged      = sys%st%nst - nus
 
   end subroutine init_
 
