@@ -52,6 +52,9 @@ module derivatives
     integer                  :: boundaries(3) ! bounday conditions
     logical                  :: zero_bc
 
+    FLOAT :: lapl_cutoff ! If the so-called variational discretization is used, this controls a
+                         ! possible filter on the Laplacian.
+
     type(nl_operator_type), pointer :: op(:)  ! op(1:conf%dim) => gradient
                                               ! op(conf%dim+1) => laplacian
     type(nl_operator_type), pointer :: lapl   ! these are just shortcuts for op
@@ -89,6 +92,9 @@ contains
       write(message(1), '(a,i2,a)') 'DerivativesStencil = "', der%stencil_type, '" is unknown to octopus'
       call write_fatal(1)
     end if
+    if(der%stencil_type == DER_VARIATIONAL) then
+       call loct_parse_float('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+    endif
 
     call loct_parse_int('DerivativesOrder', 4, der%order)
 
@@ -275,7 +281,7 @@ contains
       case(DER_STAR)  
         call stencil_star_coeff_lapl(der%m%h, der%order, der%lapl)
       case(DER_VARIATIONAL)
-        call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl)
+        call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
       end select
 
       ! get gradient (we use the same both for star and variational)

@@ -23,6 +23,16 @@ module nl_operator
 
   implicit none
 
+  private
+  public :: nl_operator_type, &
+            nl_operator_init, &
+            nl_operator_equal, &
+            nl_operator_build, &
+            nl_operator_transpose, &
+            dnl_operator_operate, &
+            znl_operator_operate, &
+            nl_operator_end
+
   type nl_operator_type
     integer          :: n         ! number of points in discrete operator
     integer          :: np        ! number of points in mesh

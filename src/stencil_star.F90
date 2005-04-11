@@ -24,6 +24,16 @@ module stencil_star
 
   implicit none
 
+  private
+  public :: stencil_star_size_lapl, & 
+            stencil_star_get_lapl, &
+            stencil_star_polynomials_lapl, &
+            stencil_star_coeff_lapl, &
+            stencil_star_size_grad, &
+            stencil_star_get_grad, &
+            stencil_star_polynomials_grad, &
+            stencil_star_coeff_grad
+
 contains
 
   ! ---------------------------------------------------------
