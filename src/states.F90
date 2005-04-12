@@ -323,6 +323,10 @@ subroutine states_copy(stout, stin)
     allocate(stout%d%kweights(size(stin%d%kpoints, 1)))
     stout%d%kweights = stin%d%kweights
   endif
+  if(associated(stin%node)) then
+    allocate(stout%node(size(stin%node)))
+    stout%node = stin%node
+  endif
 end subroutine states_copy
 
 subroutine states_end(st)

@@ -375,33 +375,30 @@ subroutine td_write_gsp(out, m, st, td, iter)
   gsp = zstates_mpdotp(m, 1, stgs, st)
   call states_end(stgs)
 
-  ! but only first node outputs
-  if(mpiv%node.ne.0) then
-    call pop_sub; return
-  end if
-  
-  if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out)
+  if(mpiv%node .eq. 0) then
+    if(iter == 0) then
+      ! empty file
+      call write_iter_clear(out)
     
-    ! first line -> column names
-    call write_iter_header_start(out)
-    call write_iter_header(out, 'Re <Phi_gs|Phi(t)>')
-    call write_iter_header(out, 'Im <Phi_gs|Phi(t)>')
+      ! first line -> column names
+      call write_iter_header_start(out)
+      call write_iter_header(out, 'Re <Phi_gs|Phi(t)>')
+      call write_iter_header(out, 'Im <Phi_gs|Phi(t)>')
+      call write_iter_nl(out)
+    
+      ! second line -> units
+      call write_iter_string(out, '##########')
+      call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_nl(out)
+    end if
+    
+    ! can not call write_iter_start, for the step is not 1
+    call write_iter_int(out, iter, 1)
+    call write_iter_double(out, iter*td%dt/units_out%time%factor,  1)
+    call write_iter_double(out, real(gsp),  1)
+    call write_iter_double(out, aimag(gsp), 1)
     call write_iter_nl(out)
-    
-    ! second line -> units
-    call write_iter_string(out, '##########')
-    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
-    call write_iter_nl(out)
-  end if
-    
-  ! can not call write_iter_start, for the step is not 1
-  call write_iter_int(out, iter, 1)
-  call write_iter_double(out, iter*td%dt/units_out%time%factor,  1)
-  call write_iter_double(out, real(gsp),  1)
-  call write_iter_double(out, aimag(gsp), 1)
-  call write_iter_nl(out)
+  endif
   
   call pop_sub()
 end subroutine td_write_gsp

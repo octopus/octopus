@@ -390,13 +390,13 @@ contains
     
     dim = st1%d%dim
 #if defined(HAVE_MPI)
-
+    call mpi_barrier(mpi_comm_world, ierr)
     ! Each process sends the states in st2 to the rest of the processes.
     do i = st1%st_start, st1%st_end
       do j = 0, mpiv%numprocs-1
         if(mpiv%node.ne.j) then
-          call MPI_ISEND(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
-             j, i, MPI_COMM_WORLD, request, ierr)
+          call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
+             j, i, mpi_comm_world, request, ierr)
         end if
       end do
     end do
@@ -406,8 +406,8 @@ contains
     do j = 1, n
       l = st1%node(j)
       if(l.ne.mpiv%node) then
-        call MPI_RECV(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, &
-           l, j, MPI_COMM_WORLD, status, ierr)
+           call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, mpi_comm_world, request, ierr)
+           call mpi_wait(request, status, ierr)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
       end if
@@ -434,6 +434,7 @@ contains
       end do
     end do
 #endif
+
   end subroutine X(calculate_matrix)
 
 end function X(states_mpdotp)
