@@ -366,8 +366,8 @@ subroutine td_write_gsp(out, m, st, td, iter)
   call push_sub('td_write_gsp')
 
   ! all processors calculate the projection
-  stgs = st
-  call X(restart_read) ('tmp/restart_gs', stgs, m, ierr)
+  call states_copy(stgs, st)
+  call zrestart_read ('tmp/restart_gs', stgs, m, ierr)
   if(ierr.ne.0) then
     message(1) = 'Error loading GS in zstates_project_gs'
     call write_fatal(1)
