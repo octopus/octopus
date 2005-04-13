@@ -58,7 +58,85 @@ contains
     ! read some parameters from the input file
     call loct_parse_float("ConvAbsDens", CNST(1e-5), lr%conv_abs_dens)
     call loct_parse_int("MaximumIter", 50, lr%max_iter)    
+
+    nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
+    nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
   end subroutine lr_init
+
+
+  ! ---------------------------------------------------------
+  integer function dlr_alloc_psi(st, m, lr) result(r)
+    type(states_type), intent(in)  :: st
+    type(mesh_type),   intent(in)  :: m
+    type(lr_type),     intent(out) :: lr
+
+    r =  1
+    if(associated(lr%ddl_psi)) return ! do nothing
+
+    allocate(lr%ddl_psi(m%np, st%d%dim, st%nst, st%d%nspin))
+    
+    if(associated(lr%zdl_psi)) then
+      r = 2
+      lr%ddl_psi = real(lr%zdl_psi, PRECISION)
+      deallocate(lr%zdl_psi)
+      nullify(lr%zdl_psi)
+    else
+      r = -1
+      lr%ddl_psi = M_ZERO
+    end if
+
+  end function dlr_alloc_psi
+
+
+  ! ---------------------------------------------------------
+  integer function zlr_alloc_psi(st, m, lr) result(r)
+    type(states_type), intent(in)  :: st
+    type(mesh_type),   intent(in)  :: m
+    type(lr_type),     intent(out) :: lr
+
+    r =  1
+    if(associated(lr%zdl_psi)) return ! do nothing
+
+    allocate(lr%zdl_psi(m%np, st%d%dim, st%nst, st%d%nspin))
+    
+    if(associated(lr%ddl_psi)) then
+      r = 2
+      lr%zdl_psi = lr%ddl_psi
+      deallocate(lr%ddl_psi)
+      nullify(lr%ddl_psi)
+    else
+      r = -1
+      lr%zdl_psi = M_z0
+    end if
+
+  end function zlr_alloc_psi
+
+
+  ! ---------------------------------------------------------
+  subroutine lr_dealloc(lr)
+    type(lr_type), intent(inout) :: lr
+  
+    if(associated(lr%ddl_rho)) then
+      deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
+      nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
+    end if
+
+    if(associated(lr%zdl_rho)) then
+      deallocate(lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
+      nullify   (lr%zdl_rho, lr%zdl_Vhar, lr%dl_Vxc)
+    end if
+
+    if(associated(lr%ddl_psi)) then
+      deallocate(lr%ddl_psi)
+      nullify   (lr%ddl_psi)
+    end if
+
+    if(associated(lr%zdl_psi)) then
+      deallocate(lr%zdl_psi)
+      nullify   (lr%zdl_psi)
+    end if
+
+  end subroutine lr_dealloc
 
 
   ! ---------------------------------------------------------

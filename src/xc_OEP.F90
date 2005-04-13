@@ -116,8 +116,16 @@ contains
     else
       oep%level = XC_OEP_NONE
     end if
-    
+
   end subroutine xc_oep_init
+
+
+  ! -----------------------------------------------------------
+  subroutine xc_oep_end(oep)
+    type(xc_oep_type), intent(inout) :: oep
+
+    if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
+  end subroutine xc_oep_end
 
   
   ! -----------------------------------------------------------

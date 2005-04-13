@@ -17,7 +17,7 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(lr_alloc) (st, m, lr)
+subroutine X(lr_alloc_fHxc) (st, m, lr)
   type(states_type), intent(in)  :: st
   type(mesh_type),   intent(in)  :: m
   type(lr_type),     intent(out) :: lr
@@ -27,23 +27,10 @@ subroutine X(lr_alloc) (st, m, lr)
     
   ! allocate variables
   allocate(lr%X(dl_rho)(m%np, st%d%nspin))
-  allocate(lr%X(dl_psi)(m%np, st%d%dim, st%nst, st%d%nspin))
   allocate(lr%X(dl_Vhar)(m%np))
   allocate(lr%dl_Vxc(m%np, st%d%nspin, st%d%nspin))
 
-end subroutine X(lr_alloc)
-
-
-! ---------------------------------------------------------
-subroutine X(lr_dealloc) (lr)
-  type(lr_type), intent(inout) :: lr
-  
-  ASSERT(associated(lr%X(dl_rho)))
-
-  deallocate(lr%X(dl_rho), lr%X(dl_psi), lr%X(dl_Vhar), lr%dl_Vxc)
-  nullify   (lr%X(dl_rho), lr%X(dl_psi), lr%X(dl_Vhar), lr%dl_Vxc)
-
-end subroutine X(lr_dealloc)
+end subroutine X(lr_alloc_fHxc)
 
 
 ! ---------------------------------------------------------

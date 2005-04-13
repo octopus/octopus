@@ -70,11 +70,12 @@ contains
     fromScratch = .true.
 
     call lr_init(lr)
-    call X(lr_alloc) (sys%st, sys%m, lr)
+    call X(lr_alloc_fHxc) (sys%st, sys%m, lr)
+    err = X(lr_alloc_psi) (sys%st, sys%m, lr)
     call lr_build_fxc(sys%m, sys%st, sys%ks%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
-    call X(lr_dealloc) (lr)
+    call lr_dealloc(lr)
 
     call end_()
 

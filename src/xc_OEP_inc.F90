@@ -49,9 +49,6 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   allocate(oep%uxc_bar(st%nst))
   allocate(oep%vxc(m%np))
 
-  ! allocate linear response structure
-  call X(lr_alloc)(st, m, oep%lr)
-  
   ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
     oep%X(lxc) = M_ZERO
@@ -102,7 +99,6 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
 
-  call X(lr_dealloc)(oep%lr)
   deallocate(oep%eigen_type, oep%eigen_index, oep%vxc, oep%X(lxc), oep%uxc_bar)
 
   call pop_sub()
@@ -121,16 +117,17 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   integer :: iter, ist, ierr, lixo
   FLOAT :: vxc_bar
   FLOAT, allocatable :: s(:), vxc_old(:)
-  R_TYPE, allocatable :: b(:,:), psi(:,:,:)
+  R_TYPE, allocatable :: b(:,:)
 
-  allocate(b(m%np, 1), s(m%np), psi(m%np, 1, st%nst), vxc_old(m%np))
+  allocate(b(m%np, 1), s(m%np), vxc_old(m%np))
 
   vxc_old = vxc(:)
   lixo = output_fill_how("AxisX_AxisY_AxisZ_PlaneZ_Gnuplot")
 
+  ierr = X(lr_alloc_psi) (st, m, oep%lr)
+
   ! fix xc potential (needed for Hpsi)
   vxc(:) = vxc_old(:) + oep%vxc(:)
-  psi(:,:,:) = M_ZERO
   do iter = 1, 10
 
     ! iteration ver all states
@@ -142,16 +139,15 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
          + oep%X(lxc)(:, ist)
 
       ! initialize psi to something
-      !call X(states_random)(m, psi(:,1))
       call X(lr_orth_vector) (m, st, b, is)
       
       ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call X(lr_solve_HXeY) (oep%lr, h, m, f_der, st%d, is, psi(:,:,ist), b, &
+      call X(lr_solve_HXeY) (oep%lr, h, m, f_der, st%d, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
          R_TOTYPE(-st%eigenval(ist, is)))
-      call X(lr_orth_vector) (m, st, psi(:,:,ist), is)
+      call X(lr_orth_vector) (m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
 
       ! calculate this funny function s
-      s(:) = s(:) + M_TWO*R_REAL(psi(:,1,ist)*st%X(psi)(:, 1, ist, is))
+      s(:) = s(:) + M_TWO*R_REAL(oep%lr%X(dl_psi)(:, 1, ist, is)*st%X(psi)(:, 1, ist, is))
     end do
 
     oep%vxc(:) = oep%vxc(:) + oep%mixing*s(:)
@@ -168,6 +164,6 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   end do
 
   vxc(:) = vxc_old(:)
-  deallocate(b, s, psi, vxc_old)
+  deallocate(b, s, vxc_old)
 
 end subroutine X(xc_oep_solve)
