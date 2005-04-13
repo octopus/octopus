@@ -170,15 +170,13 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
       cycle
     end if
 
+    read(unit=iunit2, iostat=i, fmt=*) st%occ(ist,ik), char, st%eigenval(ist, ik)
     if(ist >= st%st_start .and. ist <= st%st_end) then
-      read(unit=iunit2, iostat=i, fmt=*) st%occ(ist,ik), char, st%eigenval(ist, ik)
       call X(restart_read_function) (dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
       if(err <= 0) then
         filled(idim, ist, ik) = .true.
         ierr = ierr + 1
       end if
-    else
-      read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the occs file
     end if
   end do
 

@@ -479,7 +479,16 @@ contains
     !!! psi(delta t) = psi(t) exp(i k x)
     if(k .ne. M_ZERO) then
       write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k
-      call write_info(1)
+      select case (mode)
+      case (0)
+        message(2) = "Info: Delta kick mode: Density mode"
+      case (1)
+        message(2) = "Info: Delta kick mode: Spin mode"
+      case (2)
+        message(2) = "Info: Delta kick mode: Density + Spin modes"
+      case (3)
+      end select
+      call write_info(2)
       do i = 1, m%np
         call mesh_xyz(m, i, x)
         kick = M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim))
@@ -581,19 +590,21 @@ contains
     end if
       
     ! write potential from previous interactions
-    do i = 1, 2
-      do is = 1, st%d%nspin
-        write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
+    if(mpiv%node==0) then
+      do i = 1, 2
+        do is = 1, st%d%nspin
+          write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
+          
+          call doutput_function(restart_format, "tmp/restart_td", &
+               filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
 
-        call doutput_function(restart_format, "tmp/restart_td", &
-           filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
-
-        if(ierr.ne.0) then
-          write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
-          call write_fatal(1)
-        end if
+          if(ierr.ne.0) then
+            write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
+            call write_fatal(1)
+          end if
+        end do
       end do
-    end do
+    end if
 
     ! calculate projection onto the ground state
     if(td%out_gsp) call td_write_gsp(out_gsp, m, st, td, iter)
