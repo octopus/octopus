@@ -111,7 +111,7 @@ contains
       ! obtain the spin factors
       call xc_oep_SpinFactor(oep, d%nspin)
 
-      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr)
+      if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, "OEP")
 
     else
       oep%level = XC_OEP_NONE
@@ -218,7 +218,7 @@ contains
         else
           oep%eigen_type(i) = 1
           oep%eigen_index(oep%eigen_n) = i
-          oep%eigen_n = oep%eigen_n +1
+          oep%eigen_n = oep%eigen_n + 1
         end if
       else
         oep%eigen_type(i) = 0

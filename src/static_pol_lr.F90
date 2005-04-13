@@ -69,7 +69,7 @@ contains
     !  if(X(restart_read) ('tmp/restart_lr_static_pol', sys%st, sys%m).ne.0) then
     fromScratch = .true.
 
-    call lr_init(lr)
+    call lr_init(lr, "SP")
     call X(lr_alloc_fHxc) (sys%st, sys%m, lr)
     err = X(lr_alloc_psi) (sys%st, sys%m, lr)
     call lr_build_fxc(sys%m, sys%st, sys%ks%xc, lr%dl_Vxc)

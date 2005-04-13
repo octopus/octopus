@@ -47,7 +47,7 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   
   do ist = 1, st%nst
     if(st%occ(ist, ik) > M_ZERO) then
-      scalp = X(states_dotp)(m, st%d%dim, v, st%X(psi)(:,:, ist, ik))
+      scalp = X(states_dotp)(m, st%d%dim, st%X(psi)(:,:, ist, ik), v)
       v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
     end if
   end do
@@ -142,7 +142,6 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
   conv_last = .false.
   do iter = 1, lr%max_iter
     gamma = X(states_dotp) (m, d%dim, r, r)
-    print *, sqrt(abs(gamma)), lr%conv_abs_dens
 
     ! we require more precision here than for the density
     conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)

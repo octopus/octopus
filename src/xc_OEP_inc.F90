@@ -126,24 +126,38 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
 
   ierr = X(lr_alloc_psi) (st, m, oep%lr)
 
+  if(ierr<0) then
+    print *, "FIRST TIME***********************"
+  else
+    
+  end if
+
+  do ist = 1, st%nst
+    call X(lr_orth_vector) (m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
+    print *, ist, sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:)), &
+        oep%uxc_bar(ist)
+  end do
+
   ! fix xc potential (needed for Hpsi)
   vxc(:) = vxc_old(:) + oep%vxc(:)
-  do iter = 1, 10
 
+  do iter = 1, 10
     ! iteration ver all states
     s = M_ZERO
     do ist = 1, st%nst
+      !print *, ist, sum(oep%lr%X(dl_psi)(:,1, ist, is)*m%vol_pp)
+
       ! evaluate right-hand side
       vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
       b(:,1) =  -(oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(:, 1, ist, is)) &
          + oep%X(lxc)(:, ist)
 
-      ! initialize psi to something
       call X(lr_orth_vector) (m, st, b, is)
       
       ! and we now solve the equation [h-eps_i] psi_i = b_i
       call X(lr_solve_HXeY) (oep%lr, h, m, f_der, st%d, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
          R_TOTYPE(-st%eigenval(ist, is)))
+
       call X(lr_orth_vector) (m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
 
       ! calculate this funny function s
@@ -160,7 +174,7 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
     end do
 
     print *, iter, "s = ", oep%mixing*maxval(abs(s))
-    if(oep%mixing*maxval(abs(s)) < oep%lr%conv_abs_dens) exit
+    if(maxval(abs(s)) < oep%lr%conv_abs_dens) exit
   end do
 
   vxc(:) = vxc_old(:)
