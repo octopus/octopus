@@ -228,6 +228,9 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
     end if
     evsum_out = states_eigenvalues_sum(st)
 
+    ! recalculate total energy
+    call hamiltonian_energy(h, st, geo%eii, 0)
+
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
     allocate(tmp(m%np))
