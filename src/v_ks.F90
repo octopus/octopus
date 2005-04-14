@@ -75,10 +75,10 @@ contains
 
       call xc_init(ks%xc, geo%nlcc, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
-
+      
       call xc_oep_init(ks%oep, ks%xc_family, m, d)
 
-      if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(ks%xc, stdout)
+      if(conf%verbose >= VERBOSE_NORMAL) call v_ks_write_info(ks, stdout)
     end if
 
     call pop_sub()
@@ -109,10 +109,20 @@ contains
 
     call push_sub('v_ks_write_info');
 
-    call xc_write_info(ks%xc, iunit)
-    if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
-      call xc_oep_write_info(ks%oep, iunit)
+#ifdef HAVE_MPI
+    if(mpiv%node == 0) then
+#endif
+      write(iunit,'(/,a)') stars
+      call xc_write_info(ks%xc, iunit)
+      if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
+        write(iunit, '(1x)')
+        call xc_oep_write_info(ks%oep, iunit)
+      end if
+      write(iunit,'(a,/)') stars
+
+#ifdef HAVE_MPI
     end if
+#endif
 
     call pop_sub()
   end subroutine v_ks_write_info

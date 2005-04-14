@@ -68,27 +68,18 @@ contains
     
     integer :: i
     
-#ifdef HAVE_MPI
-    if(mpiv%node == 0) then
-#endif
-      write(iunit,'(/,a)') stars
-      if (xcs%cdft) then
-        write(iunit,'(a)') " Current-dependent exchange and correlation:"
-        call xc_functl_write_info(xcs%j_functl, iunit)
+    if (xcs%cdft) then
+      write(iunit,'(a)') " Current-dependent exchange and correlation:"
+      call xc_functl_write_info(xcs%j_functl, iunit)
 
-        if (iand(xcs%family, XC_FAMILY_LCA) == 0) return
-      end if
-
-      write(iunit,'(a)') " Exchange and correlation:"
-      do i = 1, 2
-        call xc_functl_write_info(xcs%functl(i, 1), iunit)
-      end do
-
-      write(iunit,'(a,/)') stars
-
-#ifdef HAVE_MPI
+      if (iand(xcs%family, XC_FAMILY_LCA) == 0) return
     end if
-#endif
+    
+    write(iunit,'(a)') " Exchange and correlation:"
+    do i = 1, 2
+      call xc_functl_write_info(xcs%functl(i, 1), iunit)
+    end do
+
   end subroutine xc_write_info
 
   subroutine xc_init(xcs, nlcc, spin_channels, cdft)

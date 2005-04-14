@@ -148,11 +148,11 @@ contains
     integer,           intent(in) :: iunit
 
     if(oep%sic_correction.ne.0) then
-      write(iunit, '(2x,a)') 'Self-interaction corrections according to Perdew-Zunger'
+      write(iunit, '(2x,a,/)') 'Self-interaction corrections according to Perdew-Zunger'
     end if
         
     if(oep%level.ne.XC_OEP_NONE) then
-      write(iunit, '(a)') 'The OEP equation will be handled at the level of:'
+      write(iunit, '(2x,a)') 'The OEP equation will be handled at the level of:'
       select case(oep%level)
       case (XC_OEP_SLATER); write(iunit, '(a)') '    Slater approximation'
       case (XC_OEP_KLI);    write(iunit, '(a)') '    KLI approximation'
