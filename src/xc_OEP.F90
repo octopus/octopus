@@ -133,8 +133,11 @@ contains
   subroutine xc_oep_end(oep)
     type(xc_oep_type), intent(inout) :: oep
 
-    if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
-    deallocate(oep%vxc); nullify(oep%vxc)
+    if(oep%level.ne.XC_OEP_NONE) then
+      deallocate(oep%vxc); nullify(oep%vxc)
+
+      if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
+    end if
 
   end subroutine xc_oep_end
 
