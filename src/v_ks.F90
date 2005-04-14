@@ -74,7 +74,9 @@ contains
       call poisson_init(m)
 
       call xc_init(ks%xc, geo%nlcc, d%spin_channels, d%cdft)
-      call xc_oep_init(ks%oep, ks%xc%family, d)
+      ks%xc_family = ks%xc%family
+
+      call xc_oep_init(ks%oep, ks%xc_family, m, d)
 
       if(conf%verbose >= VERBOSE_NORMAL) call xc_write_info(ks%xc, stdout)
     end if
@@ -90,7 +92,9 @@ contains
     call push_sub('v_ks_end');
 
     if(.not.ks%ip_app) then
+      call xc_oep_end(ks%oep)
       call xc_end(ks%xc)
+
       call poisson_end()
     end if
 

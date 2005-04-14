@@ -37,6 +37,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   
   FLOAT :: e
   integer :: is, ist, ixc, ifunc, ierr
+  logical, save :: first = .true.
 
   if(oep%level == XC_OEP_NONE) return
 
@@ -47,7 +48,6 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   allocate(oep%eigen_index(st%nst))
   allocate(oep%X(lxc)(m%np, st%st_start:st%st_end))
   allocate(oep%uxc_bar(st%nst))
-  allocate(oep%vxc(m%np))
 
   ! this part handles the (pure) orbital functionals
   spin: do is = 1, min(st%d%nspin, 2)
@@ -88,8 +88,12 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
 #endif
     
     ! solve the KLI equation
-    oep%vxc = M_ZERO
-    call X(xc_KLI_solve) (m, st, is, oep)
+    if(oep%level.ne.XC_OEP_FULL.or.first) then
+      first = .false.
+
+      oep%vxc = M_ZERO
+      call X(xc_KLI_solve) (m, st, is, oep)
+    end if
 
     ! if asked, solve the full OEP equation
     if(oep%level == XC_OEP_FULL) then
@@ -99,7 +103,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
   end do spin
 
-  deallocate(oep%eigen_type, oep%eigen_index, oep%vxc, oep%X(lxc), oep%uxc_bar)
+  deallocate(oep%eigen_type, oep%eigen_index, oep%X(lxc), oep%uxc_bar)
 
   call pop_sub()
 end subroutine X(xc_OEP_calc)
@@ -114,39 +118,27 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   FLOAT,                  intent(inout) :: vxc(m%np)
   type(xc_oep_type),      intent(inout) :: oep
 
-  integer :: iter, ist, ierr, lixo
-  FLOAT :: vxc_bar
+  integer :: iter, ist, ierr
+  FLOAT :: vxc_bar, f
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)
 
   allocate(b(m%np, 1), s(m%np), vxc_old(m%np))
 
   vxc_old = vxc(:)
-  lixo = output_fill_how("AxisX_AxisY_AxisZ_PlaneZ_Gnuplot")
 
   ierr = X(lr_alloc_psi) (st, m, oep%lr)
-
-  if(ierr<0) then
-    print *, "FIRST TIME***********************"
-  else
-    
-  end if
-
   do ist = 1, st%nst
     call X(lr_orth_vector) (m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
-    print *, ist, sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:)), &
-        oep%uxc_bar(ist)
   end do
 
   ! fix xc potential (needed for Hpsi)
   vxc(:) = vxc_old(:) + oep%vxc(:)
 
   do iter = 1, 10
-    ! iteration ver all states
+    ! iteration over all states
     s = M_ZERO
     do ist = 1, st%nst
-      !print *, ist, sum(oep%lr%X(dl_psi)(:,1, ist, is)*m%vol_pp)
-
       ! evaluate right-hand side
       vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
       b(:,1) =  -(oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(:, 1, ist, is)) &
@@ -173,9 +165,13 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
       end if
     end do
 
-    print *, iter, "s = ", oep%mixing*maxval(abs(s))
-    if(maxval(abs(s)) < oep%lr%conv_abs_dens) exit
+    f = dmf_nrm2(m, s)
+    if(f < oep%lr%conv_abs_dens) exit
   end do
+
+  write(message(1), '(a,i4,a,es14.6)') "Info: After ", iter, " iterations, the OEP converged to ", f
+  message(2) = ''
+  call write_info(2)
 
   vxc(:) = vxc_old(:)
   deallocate(b, s, vxc_old)

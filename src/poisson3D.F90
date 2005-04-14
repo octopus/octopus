@@ -22,11 +22,11 @@ subroutine poisson3D_init(m)
   select case(poisson_solver)
 #ifdef HAVE_FFT
     case(FFT_SPH)
-      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation .'
+      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation.'
     case(FFT_CYL)
-      message(1) = 'Info: Using FFTs with cylindrical cutoff to solve Poisson equation .'
+      message(1) = 'Info: Using FFTs with cylindrical cutoff to solve Poisson equation.'
     case(FFT_PLA)
-      message(1) = 'Info: Using FFTs with planar cutoff to solve Poisson equation .'
+      message(1) = 'Info: Using FFTs with planar cutoff to solve Poisson equation.'
     case(FFT_NOCUT)
       message(1) = 'Info: Using FFTs without cutoff to solve Poisson equation.'
     case(FFT_CORRECTED)

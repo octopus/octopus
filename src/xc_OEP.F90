@@ -38,6 +38,7 @@ module xc_OEP
   public ::                        &
      xc_oep_type,                  &
      xc_oep_init,                  &
+     xc_oep_end,                   &
      xc_oep_write_info,            &
      dxc_oep_calc, zxc_oep_calc
 
@@ -71,9 +72,10 @@ contains
 
 
   ! -----------------------------------------------------------
-  subroutine xc_oep_init(oep, family, d)
+  subroutine xc_oep_init(oep, family, m, d)
     type(xc_oep_type),     intent(out) :: oep
     integer,               intent(in)  :: family
+    type(mesh_type),       intent(in)  :: m
     type(states_dim_type), intent(in)  :: d
 
     ! check for SIC
@@ -111,7 +113,14 @@ contains
       ! obtain the spin factors
       call xc_oep_SpinFactor(oep, d%nspin)
 
+      ! This variable will keep vxc across iterations
+      allocate(oep%vxc(m%np))
+
+      ! when performing full OEP, we need to solve a linear equation
       if(oep%level == XC_OEP_FULL) call lr_init(oep%lr, "OEP")
+
+      ! the linear equation has to be more converged if we are to attain the required precision
+      !oep%lr%conv_abs_dens = oep%lr%conv_abs_dens / (oep%mixing)
 
     else
       oep%level = XC_OEP_NONE
@@ -125,6 +134,8 @@ contains
     type(xc_oep_type), intent(inout) :: oep
 
     if(oep%level == XC_OEP_FULL) call lr_dealloc(oep%lr)
+    deallocate(oep%vxc); nullify(oep%vxc)
+
   end subroutine xc_oep_end
 
   

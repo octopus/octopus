@@ -22,7 +22,7 @@ subroutine poisson2D_init(m)
   select case(poisson_solver)
 #ifdef HAVE_FFT
     case(FFT_SPH)
-      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation .'
+      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation.'
 #endif
     case(DIRECT_SUM_2D)
       message(1) = 'Info: Using direct sum method to solve poisson equation.'
