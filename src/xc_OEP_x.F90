@@ -46,13 +46,13 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
       ! lx will the be used to get the energy
       r = M_ONE
       if(i.ne.j) r = M_TWO
-      lx(:) = lx(:) - r*oep%socc*st%occ(j, is)*F_ij(:)*st%X(psi)(:, 1, j, is)
+      lx(:) = lx(:) - r*oep%socc*st%occ(j, is)*F_ij(:)*R_CONJ(st%X(psi)(:, 1, j, is))
 
       oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - &
-         oep%socc*st%occ(j, is)*st%X(psi)(:, 1, j, is)*F_ij(:)
+         oep%socc*st%occ(j, is)*F_ij(:)*R_CONJ(st%X(psi)(:, 1, j, is))
       if(i.ne.j) then
         oep%X(lxc)(:, j) = oep%X(lxc)(:, j) - &
-           oep%socc*st%occ(i, is)*st%X(psi)(:, 1, i, is)*R_CONJ(F_ij(:))
+           oep%socc*st%occ(i, is)*R_CONJ(F_ij(:))*R_CONJ(st%X(psi)(:, 1, i, is))
       end if
     end do
 
@@ -61,5 +61,6 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   end do
 
   deallocate(lx, F_ij, rho_ij)
+
   call pop_sub()
 end subroutine X(oep_x)
