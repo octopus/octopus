@@ -62,7 +62,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       call dpoisson_solve(m, f_der, vxc2(:, 1), rho(:, 1))
 
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-         sum(vxc2(:, 2) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
+         sum(vxc2(:, 1) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
 
       oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
     end if
