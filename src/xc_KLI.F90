@@ -38,7 +38,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #if defined(HAVE_MPI)
   allocate(d(m%np))
   do i = 1, m%np
-    d(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
+    d(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) * &
+                   R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
   enddo
   if(st%st_end - st%st_start + 1 < st%nst) then
     call mpi_allreduce(d(1), rho_sigma(1), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
@@ -46,7 +47,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     rho_sigma = d
   endif
   do i = 1, m%np
-     d(i)   = oep%socc * sum(st%occ(:, is)*R_REAL(oep%X(lxc)(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
+     d(i)   = oep%socc * sum(st%occ(st%st_start:st%st_end, is) * &
+                         R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
   enddo
   if(st%st_end - st%st_start + 1 < st%nst) then
     call mpi_allreduce(d(1), oep%vxc(1), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
@@ -56,7 +58,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   deallocate(d)
 #else
   do i = 1, m%np
-    rho_sigma(i) = max(sum(oep%socc*st%occ(:, is)*R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
+    rho_sigma(i) = max(sum(oep%socc*st%occ(:, is) * R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
     oep%vxc(i)   = oep%socc* &
        sum(st%occ(:, is)*R_REAL(oep%X(lxc)(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
   enddo
@@ -189,7 +191,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         if(mpiv%node.eq.0) then
            if(st%node(oep%eigen_index(i)).ne.0) then
               call mpi_irecv(occ, 1, MPI_FLOAT, st%node(oep%eigen_index(i)), &
-                             i, MPI_COMM_WORLD, status, ierr)
+                             i, MPI_COMM_WORLD, request, ierr)
               call mpi_wait(request, status, ierr)
            else
               occ = st%occ(oep%eigen_index(i), is)
