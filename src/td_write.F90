@@ -242,7 +242,7 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
         do m = -l, l
           select case(l)
           case(0)
-            call write_iter_header(out, ' ')
+            call write_iter_header(out, '-')
           case(1)
             call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
           case default
