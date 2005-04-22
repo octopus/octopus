@@ -531,7 +531,6 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
       call mesh_xyz(m, i, x)
       dipole(is) = dipole(is) + st%rho(i, is)*sum(x(1:conf%dim)*pol(1:conf%dim))*m%vol_pp(i)
     end do
-    dipole(is) = dipole(is)
 
     if(present(lmax).and.present(multipole)) then
       add_lm = 1
