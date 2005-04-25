@@ -259,13 +259,7 @@ contains
     st  => sys%st
     geo => sys%geo
 
-    !
-#if defined(HAVE_MPI)
-    call states_nodes(st)
-#else
-    st%st_start = 1
-    st%st_end   = st%nst
-#endif
+    call states_distribute_nodes(st)
 
     ! allocate memory
     allocate(st%zpsi(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))

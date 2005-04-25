@@ -61,11 +61,8 @@ public :: states_type, &
           dstates_residue, zstates_residue, &
           dstates_output, zstates_output, &
           dstates_mpdotp, zstates_mpdotp, &
-          dstates_calc_angular, zstates_calc_angular
-#if defined(HAVE_MPI)
-public :: states_nodes
-#endif
-
+          dstates_calc_angular, zstates_calc_angular, &
+          states_distribute_nodes
 
 type states_type
 
@@ -258,6 +255,9 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   end if occ_fix
 
   st%st_start = 1; st%st_end = st%nst
+  allocate(st%node(st%nst))
+  st%node(:) = 0
+
   nullify(st%dpsi, st%zpsi)
 
   call pop_sub()
@@ -335,8 +335,8 @@ subroutine states_end(st)
   call push_sub('states_end')
 
   if(associated(st%rho)) then
-    deallocate(st%rho, st%occ, st%eigenval)
-    nullify   (st%rho, st%occ, st%eigenval)
+    deallocate(st%rho, st%occ, st%eigenval, st%node)
+    nullify   (st%rho, st%occ, st%eigenval, st%node)
   end if
 
   if(associated(st%j)) then
@@ -882,6 +882,8 @@ subroutine calc_paramagnetic_current(m, f_der, st, jp)
   call pop_sub()
 end subroutine calc_paramagnetic_current
 
+
+! -----------------------------------------------------------
 subroutine states_calc_physical_current(m, f_der, st, j)
   type(mesh_type),     intent(in)    :: m
   type(f_der_type),    intent(inout) :: f_der
@@ -899,14 +901,14 @@ subroutine states_calc_physical_current(m, f_der, st, j)
   call pop_sub()
 end subroutine states_calc_physical_current
 
-#ifdef HAVE_MPI
-subroutine states_nodes(st)
+
+! -----------------------------------------------------------
+subroutine states_distribute_nodes(st)
   type(states_type),   intent(inout) :: st
 
   integer :: sn, sn1, r, j, k, ierr, i, ii
 
-  allocate(st%node(st%nst))
-
+#if defined(HAVE_MPI)
   if(st%nst < mpiv%numprocs) then
     message(1) = "Have more processors than necessary"
     write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."
@@ -938,10 +940,15 @@ subroutine states_nodes(st)
   call MPI_BARRIER(MPI_COMM_WORLD, ierr)
   do j = 1, mpiv%numprocs - r
      st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
-  enddo
+  end do
 
-end subroutine states_nodes
+#else
+  st%node(:)  = 0
+  st%st_start = 1
+  st%st_end   = st%nst
 #endif
+
+end subroutine states_distribute_nodes
 
 #include "states_kpoints.F90"
 
