@@ -167,7 +167,7 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    iunit = io_open(out_file)
+    iunit = io_open(out_file, action='write')
 
     ! should output units, etc...
     do i = 0, sf%no_e
@@ -268,7 +268,7 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    iunit = io_open(out_file)
+    iunit = io_open(out_file, action='write')
 
     ! should output units, etc...
     do i = 0, rsf%no_e
@@ -362,7 +362,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    iunit = io_open(trim(out_file) // "." // trim(sh%pol))
+    iunit = io_open(trim(out_file) // "." // trim(sh%pol), action='write')
 
     ! should output units, etc...
     do i = 0, sh%no_e
@@ -424,7 +424,7 @@ subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
 
   ! output
   if(trim(out_file) .ne. '-') then
-    iunit = io_open(trim(out_file) // "." // trim(sh%pol))
+    iunit = io_open(trim(out_file) // "." // trim(sh%pol), action='write')
 
     ! should output units, etc...
     do i = 0, sh%no_e
@@ -451,7 +451,7 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   integer :: i, j
   FLOAT :: t1, t2, dummy
 
-  iunit = io_open(file, status='old')
+  iunit = io_open(file, action='read', status='old')
 
   ! First line may contain some informative integer n (or not...)
   read(iunit,'(10x,i2)', iostat = i) n
@@ -490,9 +490,9 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
 
   ! open files
   call io_assign(iunit)
-  iunit = io_open('multipoles', status='old', die=.false.)
+  iunit = io_open('multipoles', action='read', status='old', die=.false.)
   if(iunit < 0) then
-    iunit = io_open('td.general/multipoles', status='old')
+    iunit = io_open('td.general/multipoles', action='read', status='old')
   end if
   
   ! read in dipole
@@ -529,9 +529,9 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   FLOAT :: t1, t2, dummy
 
   ! open files
-  iunit = io_open('acceleration', status='old', die=.false.)
+  iunit = io_open('acceleration', action='read', status='old', die=.false.)
   if(iunit < 0) then
-    iunit = io_open('td.general/acceleration', status='old')
+    iunit = io_open('td.general/acceleration', action='read', status='old')
   endif
   
   ! read in dipole

@@ -31,7 +31,7 @@ program phonon_spectrum
   call units_init()
 
   ! Opens the coordinates files.
-  iunit = io_open('td.general/coordinates', status='old', action='read')
+  iunit = io_open('td.general/coordinates', action='read', status='old')
 
   ! Closes file and exits
   call io_close(iunit)

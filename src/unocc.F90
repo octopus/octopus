@@ -116,7 +116,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   ! write output file
   call io_mkdir('static')
-  iunit = io_open('static/eigenvalues')
+  iunit = io_open('static/eigenvalues', action='write')
 
   if(converged) then
     write(iunit,'(a)') 'All unoccupied states converged.'
@@ -129,7 +129,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call io_close(iunit)
   
   if (conf%periodic_dim>0 .and. sys%st%d%nik>sys%st%d%nspin) then
-    iunit = io_open('static/bands.dat')
+    iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if

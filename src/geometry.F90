@@ -527,7 +527,7 @@ subroutine atom_write_xyz(dir, fname, geo)
 #endif
 
     call io_mkdir(dir)
-    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz')
+    iunit = io_open(trim(dir)//'/'//trim(fname)//'.xyz', action='write')
 
     write(iunit, '(i4)') geo%natoms
     write(iunit, '(1x)')
@@ -537,7 +537,7 @@ subroutine atom_write_xyz(dir, fname, geo)
     call io_close(iunit)
     
     if(geo%ncatoms > 0) then
-      iunit = io_open(trim(dir)//'/'//trim(fname))
+      iunit = io_open(trim(dir)//'/'//trim(fname), action='write')
       write(iunit, '(i4)') geo%ncatoms
       write(iunit, '(1x)')
       do i = 1, geo%ncatoms

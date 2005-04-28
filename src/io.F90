@@ -123,9 +123,9 @@ contains
   
 
   ! ---------------------------------------------------------
-  integer function io_open(file, status, form, action, position, die) result(iunit)
-    character(len=*), intent(in) :: file
-    character(len=*), intent(in), optional :: status, form, action, position
+  integer function io_open(file, action, status, form, position, die) result(iunit)
+    character(len=*), intent(in) :: file, action
+    character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
 
     character(len=20)  :: status_, form_, action_, position_
@@ -137,8 +137,6 @@ contains
     if(present(status  )) status_   = status
     form_   = 'formatted'
     if(present(form    )) form_     = form
-    action_ = 'readwrite'
-    if(present(action  )) action_   = action
     position_ = 'asis'
     if(present(position)) position_ = position
     die_    = .true.

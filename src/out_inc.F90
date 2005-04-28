@@ -87,7 +87,7 @@ contains
     complex(8), allocatable :: cd(:)
 
     call io_assign(iunit)
-    iunit = io_open(filename, status='old', action='read', form='unformatted', die=.false.)
+    iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false.)
     
     if(iunit< 0) then
       ierr = 2
@@ -299,7 +299,7 @@ contains
   subroutine plain()
     integer :: iunit
 
-    iunit = io_open(trim(dir)//'/'//trim(fname), form='unformatted', action='write')
+    iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted')
 
     write(unit=iunit) X(output_kind)*kind(f(1)), m%np
     write(unit=iunit) f(1:m%np)

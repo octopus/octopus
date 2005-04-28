@@ -95,7 +95,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
 
   if(iter == 1) then
     do ix = 1, v%npoints
-      iunit = io_open(v%filenames(ix))
+      iunit = io_open(v%filenames(ix), action='write')
       write(iunit, '(a7,f17.6,3a)') &
            '# dt = ', dt/units_inp%time%factor, ' [', trim(units_inp%time%abbrev), ']'
       write(iunit, '(a3,14x)', advance='no') '# t'
@@ -114,7 +114,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
 
   do ix = 1, v%npoints
     call io_assign(iunit)
-    iunit= io_open(v%filenames(ix), position='append')
+    iunit= io_open(v%filenames(ix), action='write', position='append')
     do j = 1, save_iter
       jj = iter - save_iter + j
       write(iunit, '(e17.10)', advance='no') jj*dt/units_inp%time%factor

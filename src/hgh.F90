@@ -93,7 +93,7 @@ subroutine hgh_init(psp, filename, ispin)
   write(message(2), '(6x,3a)') "'", trim(filename2), "'"
   call write_info(2)
 
-  iunit = io_open(filename2, form='formatted', status='old')
+  iunit = io_open(filename2, action='read', form='formatted', status='old')
   i = load_params(iunit, psp)
   if(i .ne. 0) then
     message(1) = 'Error reading hgh file!'
@@ -561,11 +561,11 @@ subroutine hgh_debug(psp, dir)
   ! Open files.
   dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
   call io_mkdir(dir)
-  hgh_unit = io_open(trim(dirname)//'/hgh')
-  loc_unit = io_open(trim(dirname)//'/local')
-  dat_unit = io_open(trim(dirname)//'/info')
-  kbp_unit = io_open(trim(dirname)//'/nonlocal')
-  wav_unit = io_open(trim(dirname)//'/wave')
+  hgh_unit = io_open(trim(dirname)//'/hgh', action='write')
+  loc_unit = io_open(trim(dirname)//'/local', action='write')
+  dat_unit = io_open(trim(dirname)//'/info', action='write')
+  kbp_unit = io_open(trim(dirname)//'/nonlocal', action='write')
+  wav_unit = io_open(trim(dirname)//'/wave', action='write')
 
   ! Writes down the input file, to be checked agains SHARE_OCTOPUS/PP/HGH/ATOM_NAME.hgh
   write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)

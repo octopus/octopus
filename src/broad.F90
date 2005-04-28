@@ -87,7 +87,7 @@ contains
     allocate(s(4,n))
     s = M_ZERO
 
-    iunit = io_open(trim(dir)//"/"// fname, status='old')
+    iunit = io_open(trim(dir)//"/"// fname, action='read', status='old')
 
     read(iunit, *) ! skip header
     do
@@ -107,7 +107,7 @@ contains
     call io_close(iunit)
       
     ! print spectra
-    iunit = io_open(trim(dir)//"/spectrum."//fname)
+    iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, n
       w = b%min_energy + real(j1-1, PRECISION)*b%energy_step
       write(iunit, '(5es14.6)') w/units_inp%energy%factor, s(:, j1)*units_inp%energy%factor

@@ -538,7 +538,7 @@ contains
     logical :: found
     integer :: i, iunit
 
-    iunit = io_open('td.general/coordinates', status='old', die=.false.)
+    iunit = io_open('td.general/coordinates', action='read', status='old', die=.false.)
     if(iunit < 0) then
       message(1) = "Could not open file 'td.general/coordinates'"
       message(2) = "Starting simulation from initial geometry"

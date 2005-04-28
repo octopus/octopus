@@ -77,7 +77,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   dipole = M_ZERO
 
   if(.not.fromScratch) then
-    iunit = io_open('tmp/restart.pol', status='old', action='read', die=.false.)
+    iunit = io_open('tmp/restart.pol', action='read', status='old', die=.false.)
     if(iunit > 0) then
       ! Finds out how many dipoles have already been written.
       rewind(iunit)
@@ -143,7 +143,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
 
   if(out_pol) then ! output pol file
     call io_mkdir('linear')
-    iunit = io_open('linear/polarizability')
+    iunit = io_open('linear/polarizability', action='write')
     write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
        trim(units_out%length%abbrev)
     if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim

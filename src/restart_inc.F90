@@ -200,13 +200,13 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
 contains
 
   subroutine open_files
-    iunit  = io_open(trim(dir)//'/wfns',  status='old', die=.false.)
+    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false.)
     if(iunit < 0) then
       ierr = -1
       return
     end if
 
-    iunit2 = io_open(trim(dir)//'/occs',  status='old', die=.false.)
+    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false.)
     if(iunit2 < 0) then
       call io_close(iunit)
       ierr = -1

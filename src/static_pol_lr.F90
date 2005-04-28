@@ -105,7 +105,7 @@ contains
       FLOAT :: msp
       call io_mkdir('linear')
 
-      iunit = io_open('linear/polarizability_lr')
+      iunit = io_open('linear/polarizability_lr', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
          trim(units_out%length%abbrev)
       if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim

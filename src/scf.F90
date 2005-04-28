@@ -328,7 +328,7 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   call hamiltonian_output(h, m, "static", outp)
 
   if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
-    iunit = io_open('static/bands.dat')
+    iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
   end if
@@ -381,7 +381,7 @@ contains
     call push_sub('scf_write_static') 
 
     call io_mkdir(dir)
-    iunit = io_open(trim(dir) // "/" // trim(fname))
+    iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
     
     ! mesh
     write(iunit, '(a,a)') 'System name: ', geo%sysname

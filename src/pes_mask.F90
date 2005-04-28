@@ -174,7 +174,7 @@ subroutine PES_mask_output(v, m, st, file)
   do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_power.', ik, '.',p
-      iunit = io_open(fn)
+      iunit = io_open(fn, action='write')
 
       do ix = 1, n
         if(npoints(ix) > 0) then
@@ -186,7 +186,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   write(fn, '(a,a)') trim(file), '_power.sum'
-  iunit = io_open(fn)
+  iunit = io_open(fn, action='write')
 
   do ix = 1, n
     if(npoints(ix) > 0) then
@@ -199,7 +199,7 @@ subroutine PES_mask_output(v, m, st, file)
   do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar.', ik, '.', p
-      iunit = io_open(fn)
+      iunit = io_open(fn, action='write')
 
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
@@ -212,7 +212,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   write(fn, '(a,a)') trim(file), '_ar.sum'
-  iunit = io_open(fn)
+  iunit = io_open(fn, action='write')
 
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
@@ -254,7 +254,7 @@ subroutine PES_mask_output(v, m, st, file)
   do ik = 1, st%d%nik
     do p = st%st_start, st%st_end
       write(fn, '(a,a,i1.1,a,i2.2)') trim(file), '_ar_r.', ik, '.', p
-      iunit = io_open(fn)
+      iunit = io_open(fn, action='write')
 
       do ix = 1, ar_n
         if(ar_npoints(ix) > 0) then
@@ -267,7 +267,7 @@ subroutine PES_mask_output(v, m, st, file)
   end do
 
   write(fn, '(a,a)') trim(file), '_ar_r.sum'
-  iunit = io_open(fn)
+  iunit = io_open(fn, action='write')
   do ix = 1, ar_n
     if(ar_npoints(ix) > 0) then
       write(iunit, *)  (ix-1)*CNST(180.0)/real(ar_n-1, PRECISION), &

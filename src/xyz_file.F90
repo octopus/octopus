@@ -103,7 +103,7 @@ contains
 
       call loct_parse_string('PDB'//trim(what), 'coords.pdb', str)
       
-      iunit = io_open(str)
+      iunit = io_open(str, action='read')
       call xyz_file_read_PDB(iunit, gf)
       call io_close(iunit)
 
@@ -111,7 +111,7 @@ contains
       gf%file_type = XYZ_FILE_XYZ
       call loct_parse_string('XYZ'//trim(what), 'coords.xyz', str)
 
-      iunit = io_open(str)
+      iunit = io_open(str, action='read')
       read(iunit, *) gf%n
       read(iunit, *) ! skip comment line
 

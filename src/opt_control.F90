@@ -294,7 +294,7 @@ contains
 
     integer :: i, iunit
 
-    iunit = io_open(filename)
+    iunit = io_open(filename, action='write')
     do i = 0, 2*td%max_iter
       write(iunit, '(4es20.12)') i*td%dt/M_TWO, las(:, i)
     end do
@@ -305,7 +305,7 @@ contains
   subroutine output()
     integer :: iunit
 
-    iunit = io_open('opt-control/info')
+    iunit = io_open('opt-control/info', action='write')
     write(iunit, '(a,i4)')    'Iterations = ', ctr_iter
     write(iunit, '(a,f14.8)') 'Overlap    = ', overlap
     write(iunit, '(a,f14.8)') 'Functional = ', functional

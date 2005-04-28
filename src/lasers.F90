@@ -138,7 +138,7 @@ contains
 
     ! open file
     call loct_parse_block_string(blk, i-1, 7, filename)
-    iunit = io_open(filename, status='old')
+    iunit = io_open(filename, action='read', status='old')
 
     ! count lines in file
     lines = 0

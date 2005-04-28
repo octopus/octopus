@@ -96,7 +96,7 @@ contains
     dirname = trim(dir)//'/'//trim(s%label)
     call io_mkdir(dirname)
 
-    iunit = io_open(trim(dirname)//'/info')
+    iunit = io_open(trim(dirname)//'/info', action='write')
 
     write(iunit, '(a,i3)')    'Index  = ', s%index
     write(iunit, '(2a)')      'Label  = ', trim(s%label)
