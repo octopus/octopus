@@ -128,7 +128,7 @@ contains
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
 
-    character(len=20)  :: status_, form_, action_, position_
+    character(len=20)  :: status_, form_, position_
     character(len=512) :: file_
     logical            :: die_
     integer            :: iostat
@@ -158,14 +158,14 @@ contains
     end if
 
     open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
-       action=trim(action_), position=trim(position_), iostat=iostat)
+       action=trim(action), position=trim(position_), iostat=iostat)
 
     if(iostat.ne.0) then
       call io_free(iunit)
       iunit = -1
       if(die_) then
         write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
-           '" for action="', trim(action_), '"'
+           '" for action="', trim(action), '"'
         stop 'io_open'
       end if
     end if
