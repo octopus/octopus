@@ -21,11 +21,12 @@
 man_MANS = run_regression.pl.1
 bin_SCRIPTS = run_regression.pl
 
+rlog=regression_test.out
 
 regression_test:
-	@echo; find . -name *.test -print -exec run_regression.pl -f \{\}  \; | tee regression_test.out
-	@echo -e "\033[32;1mPassed: `grep OK regression.out | wc -l` / `grep '\[ ' regression_test.out | wc -l` \033[0m"
-	@echo -e "\033[31;1mFailed: `grep FAIL regression.out | wc -l` / `grep '\[ ' regression_test.out | wc -l` \033[0m"
+	@echo; find . -name *.test -print -exec run_regression.pl -f \{\}  \; | tee $(rlog)
+	@echo -e "\033[32;1mPassed: `grep OK $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
+	@echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 
 clean:
 	-rm -rf /tmp/tmp.*
