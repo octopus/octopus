@@ -199,7 +199,7 @@ AC_CONFIG_FILES([Makefile
 	doc/pdf/Makefile share/Makefile share/PP/Makefile share/PP/TM2/Makefile share/PP/HGH/Makefile
 	share/recipes/Makefile share/recipes/en/Makefile share/recipes/es/Makefile 
 	share/recipes/it/Makefile share/util/Makefile share/samples/Makefile
-	build/octopus.spec tests/Makefile
+	build/octopus.spec testsuite/Makefile
 ])
 
 AC_OUTPUT

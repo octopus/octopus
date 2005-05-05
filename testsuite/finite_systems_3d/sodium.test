@@ -1,0 +1,24 @@
+Test    : Sodium
+Author  : Appel
+Date    : 04.05.05
+Arch    : Linux miraculix 2.6.11.6-acpi-up #1 Thu Apr 7 15:01:29 CEST 2005 i686 GNU/Linux
+Release : 
+
+
+INP
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+  "Na" | 0 | 0 | -1.54
+  "Na" | 0 | 0 |  1.54
+%
+EOF
+
+RUN
+
+# add your own matches 
+#
+# Examples (of course you have to uncomment the lines :)
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679 
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d* 

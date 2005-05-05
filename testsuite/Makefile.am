@@ -18,5 +18,20 @@
 ## 02111-1307, USA.
 ##
 
-TESTS = test1.sh test2.sh
+man_MANS = run_regression.pl.1
+bin_SCRIPTS = run_regression.pl
 
+
+regression_test:
+	@echo; find . -name *.test -print -exec run_regression.pl -f \{\}  \; | tee regression_test.out
+	@echo -e "\033[32;1mPassed: `grep OK regression.out | wc -l` / `grep '\[ ' regression_test.out | wc -l` \033[0m"
+	@echo -e "\033[31;1mFailed: `grep FAIL regression.out | wc -l` / `grep '\[ ' regression_test.out | wc -l` \033[0m"
+
+clean:
+	-rm -rf /tmp/tmp.*
+
+run_regression.pl.1: run_regression.pl.pod
+	pod2man -c "Octopus Documentation" -s 1 run_regression.pl.pod > run_regression.pl.1
+
+
+.PHONY: regression clean 
