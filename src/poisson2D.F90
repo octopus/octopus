@@ -56,7 +56,7 @@ contains
     db = fft_cf%n               ! dimensions may have been optimized
 
 
-    call loct_parse_float('PoissonCutoffRadius',&
+    call loct_parse_float(check_inp('PoissonCutoffRadius'),&
            maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &

@@ -43,7 +43,7 @@ subroutine restart_init
   integer :: i
   
   ! read restart format information
-  call loct_parse_int('RestartFileFormat', RESTART_PLAIN, i)
+  call loct_parse_int(check_inp('RestartFileFormat'), RESTART_PLAIN, i)
   if (i<RESTART_PLAIN .or. i>RESTART_NETCDF) then
     write(message(1),'(a,i4,a)') "Input: '", i,"' is not a valid RestartFileFormat"
     message(2) = '(RestartFileFormat = plain | netcdf)'

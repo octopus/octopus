@@ -62,7 +62,7 @@ contains
     call push_sub('v_ks_init');
 
     ! Should we treat the particles as independent?
-    call loct_parse_logical("NonInteractingElectrons", .false., ks%ip_app)
+    call loct_parse_logical(check_inp('NonInteractingElectrons'), .false., ks%ip_app)
     if(ks%ip_app) then
       message(1) = 'Info: Treating the electrons as non-interacting'
       call write_info(1)

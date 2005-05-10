@@ -80,11 +80,11 @@ subroutine scf_init(scf, m, st, geo, h)
 
   call push_sub('scf_init')
 
-  call loct_parse_int  ("MaximumIter",        200, scf%max_iter)
-  call loct_parse_float("ConvAbsDens", CNST(1e-5), scf%conv_abs_dens)
-  call loct_parse_float("ConvRelDens",     M_ZERO, scf%conv_rel_dens)
-  call loct_parse_float("ConvAbsEv",       M_ZERO, scf%conv_abs_ev)
-  call loct_parse_float("ConvRelEv",       M_ZERO, scf%conv_rel_ev)
+  call loct_parse_int  (check_inp('MaximumIter'),        200, scf%max_iter)
+  call loct_parse_float(check_inp('ConvAbsDens'), CNST(1e-5), scf%conv_abs_dens)
+  call loct_parse_float(check_inp('ConvRelDens'),     M_ZERO, scf%conv_rel_dens)
+  call loct_parse_float(check_inp('ConvAbsEv'),       M_ZERO, scf%conv_abs_ev)
+  call loct_parse_float(check_inp('ConvRelEv'),       M_ZERO, scf%conv_rel_ev)
 
   if(scf%max_iter <= 0 .and. &
       scf%conv_abs_dens <= M_ZERO .and. scf%conv_rel_dens <= M_ZERO .and. &
@@ -97,7 +97,7 @@ subroutine scf_init(scf, m, st, geo, h)
 
   if(scf%max_iter <= 0) scf%max_iter = huge(scf%max_iter)
 
-  call loct_parse_int("What2Mix", 0, scf%what2mix)
+  call loct_parse_int(check_inp('What2Mix'), 0, scf%what2mix)
   select case (scf%what2mix)
   case (MIXDENS)
      message(1) = 'Info: SCF mixing the density.'
@@ -125,14 +125,14 @@ subroutine scf_init(scf, m, st, geo, h)
   call eigen_solver_init(scf%eigens, st, m, 25)
 
   ! Should the calculation be restricted to LCAO subspace?
-  call loct_parse_logical("SCFinLCAO", .false., scf%lcao_restricted)
+  call loct_parse_logical(check_inp('SCFinLCAO'), .false., scf%lcao_restricted)
   if(scf%lcao_restricted) then
     message(1) = 'Info: SCF restricted to LCAO subspace'
     call write_info(1)
   endif
 
   call geometry_min_distance(geo, rmin)
-  call loct_parse_float("LocalMagneticMomentsSphereRadius", rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
+  call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
   scf%lmm_r = scf%lmm_r * units_inp%length%factor
 
   call pop_sub()
@@ -273,9 +273,9 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
-      call X(restart_write) ('tmp/restart_gs', st, m, err, iter=iter)
+      call X(restart_write) (trim(tmpdir)//'restart_gs', st, m, err, iter=iter)
       if(err.ne.0) then
-        message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
+        message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
         call write_fatal(1)
       end if
     end if
@@ -288,8 +288,8 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
     end if
 
     if(outp%duringscf) then
-      call X(states_output) (st, m, f_der, "static", outp)
-      call hamiltonian_output(h, m, "static", outp)
+      call X(states_output) (st, m, f_der, trim(current_label)//"static", outp)
+      call hamiltonian_output(h, m, trim(current_label)//"static", outp)
     endif
 
     ! save information for the next iteration
@@ -321,14 +321,14 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   call X(epot_forces)(h%ep, m, st, geo)
 
   ! output final information
-  call scf_write_static("static", "info")
-  call X(states_output) (st, m, f_der, "static", outp)
+  call scf_write_static(trim(current_label)//"static", "info")
+  call X(states_output) (st, m, f_der, trim(current_label)//"static", outp)
   if(outp%what(output_geometry)) &
-     call atom_write_xyz("static", "geometry", geo)
-  call hamiltonian_output(h, m, "static", outp)
+     call atom_write_xyz(trim(current_label)//"static", "geometry", geo)
+  call hamiltonian_output(h, m, trim(current_label)//"static", outp)
 
   if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
-    iunit = io_open('static/bands.dat', action='write')
+    iunit = io_open(trim(current_label)//'static/bands.dat', action='write')
     call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
   end if

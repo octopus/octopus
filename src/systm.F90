@@ -81,12 +81,12 @@ contains
     call mesh_write_info(s%m, stdout)
 
     ! do we want to filter out the external potentials, or not.
-    call loct_parse_logical("FilterPotentials", .false., filter)
+    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
     if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%m))
 
     ! Now that we are really done with initializing the geometry, print debugging information.
     if(conf%verbose>=VERBOSE_DEBUG) then
-       call geometry_debug(s%geo, 'debug')
+       call geometry_debug(s%geo, trim(current_label)//'debug')
     endif
     
     ! initialize the other stuff
@@ -241,7 +241,7 @@ contains
     if (spin_channels == 1) then
       gmd_opt = 1
     else
-      call loct_parse_int("GuessMagnetDensity", 2, gmd_opt)
+      call loct_parse_int(check_inp('GuessMagnetDensity'), 2, gmd_opt)
       if (gmd_opt < 1 .or. gmd_opt > 4) then
         write(message(1),'(a,i1,a)') "Input: '",gmd_opt ,"' is not a valid GuessMagnetDensity"
         message(2) = '(GuessMagnetDensity = 1 | 2 | 3 | 4)'
@@ -301,7 +301,7 @@ contains
 
     case (4) ! User-defined
 
-      if(loct_parse_block("AtomsMagnetDirection", blk) < 0) then
+      if(loct_parse_block(check_inp('AtomsMagnetDirection'), blk) < 0) then
         message(1) = "AtomsMagnetDirection block is not defined "
         call write_fatal(1)
       end if

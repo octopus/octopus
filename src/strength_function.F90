@@ -31,7 +31,7 @@ program strength_function
   call global_init()
   call units_init()
 
-  call loct_parse_string("SpecTransformMode", "sin", txt)
+  call loct_parse_string(check_inp('SpecTransformMode'), "sin", txt)
   select case(txt(1:3))
   case('sin')
     sf%transform = 1
@@ -43,7 +43,7 @@ program strength_function
     call write_fatal(2)
   end select
   
-  call loct_parse_string("SpecDampMode", "exp", txt)
+  call loct_parse_string(check_inp('SpecDampMode'), "exp", txt)
   select case(txt(1:3))
   case('exp')
     sf%damp = SPECTRUM_DAMP_LORENTZIAN
@@ -55,13 +55,13 @@ program strength_function
     sf%damp = SPECTRUM_DAMP_NONE
   end select
 
-  call loct_parse_float("SpecDampFactor", CNST(0.15), sf%damp_factor)
-  call loct_parse_float("SpecStartTime",  M_ZERO,      s%start_time)
-  call loct_parse_float("SpecEndTime",   -M_ONE,       s%end_time)
-  call loct_parse_float("SpecEnergyStep", CNST(0.05),  s%energy_step)
-  call loct_parse_float("SpecMaxEnergy",  CNST(20.0),  s%max_energy)
-  call loct_parse_float("SpecMinEnergy",  M_ZERO,      s%min_energy)
-  call loct_parse_float("TDDeltaStrength",CNST(0.05), sf%delta_strength)
+  call loct_parse_float(check_inp('SpecDampFactor'), CNST(0.15), sf%damp_factor)
+  call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,      s%start_time)
+  call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,       s%end_time)
+  call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.05),  s%energy_step)
+  call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0),  s%max_energy)
+  call loct_parse_float(check_inp('SpecMinEnergy'),  M_ZERO,      s%min_energy)
+  call loct_parse_float(check_inp('TDDeltaStrength'),CNST(0.05), sf%delta_strength)
 
   ! adjust units
   sf%damp_factor    = sf%damp_factor    / units_inp%time%factor

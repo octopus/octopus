@@ -80,7 +80,7 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
   
   call push_sub('eigen_solver_init')
 
-  call loct_parse_int("EigenSolver", RS_CG, eigens%es_type)
+  call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
   select case(eigens%es_type)
   case(RS_CG)
     message(1) = 'Info: Eigensolver type: Real-space conjugate gradients'
@@ -99,7 +99,7 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
   end select
   call write_info(1)
 
-  call loct_parse_float("EigenSolverInitTolerance", CNST(1.0e-6), eigens%init_tol)
+  call loct_parse_float(check_inp('EigenSolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
   if(eigens%init_tol <= 0) then
       write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -107,7 +107,7 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
       call write_fatal(2)
   endif
 
-  call loct_parse_float("EigenSolverFinalTolerance", CNST(1.0e-6), eigens%final_tol)
+  call loct_parse_float(check_inp('EigenSolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
   if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
       write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
@@ -116,7 +116,7 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
       call write_fatal(3)
   endif
 
-  call loct_parse_int("EigenSolverFinalToleranceIteration", 7, eigens%final_tol_iter)
+  call loct_parse_int(check_inp('EigenSolverFinalToleranceIteration'), 7, eigens%final_tol_iter)
   if(eigens%final_tol_iter <= 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%final_tol_iter, &
            "' is not a valid EigenSolverFinalToleranceIter"
@@ -124,7 +124,7 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
       call write_fatal(2)
   endif
 
-  call loct_parse_int("EigenSolverMaxIter", max_iter_default, eigens%es_maxiter)
+  call loct_parse_int(check_inp('EigenSolverMaxIter'), max_iter_default, eigens%es_maxiter)
   if(eigens%es_maxiter < 1) then
       write(message(1),'(a,i5,a)') "Input: '", eigens%es_maxiter, &
            "' is not a valid EigenSolverMaxIter"

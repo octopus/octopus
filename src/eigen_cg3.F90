@@ -43,7 +43,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
 
   if(conf%verbose > 999) then
     call io_assign(unit)
-    call trl_set_debug(info, msglvl = 10, iou = unit, file = 'tmp/trlan_log_')
+    call trl_set_debug(info, msglvl = 10, iou = unit, file = trim(tmpdir)//'trlan_log_')
   endif
 
   call trl_set_iguess(info, nec = 0, iguess = 1)

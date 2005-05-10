@@ -283,9 +283,9 @@ contains
 
     ierr = 0
     if(.not.fromScratch) then
-      call zrestart_read('tmp/restart_td', st, m, err, td%iter)
+      call zrestart_read(trim(tmpdir)//'restart_td', st, m, err, td%iter)
       if(err.ne.0) then
-        message(1) = "Could not load tmp/restart_td: Starting from scratch"
+        message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
         call write_warning(1)
         
         fromScratch = .true.
@@ -293,7 +293,7 @@ contains
         ! read potential from previous interactions
         do i = 1, 2
           do is = 1, st%d%nspin
-            write(filename,'(a,i2.2,i3.3)') 'tmp/restart_td/vprev_', i, is
+            write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'restart_td/vprev_', i, is
             call dinput_function(filename, m, td%tr%v_old(1:m%np, is, i), ierr)
           end do
         end do
@@ -302,9 +302,9 @@ contains
     end if
 
     if(fromScratch) then
-      call zrestart_read('tmp/restart_gs', st, m, ierr)
+      call zrestart_read(trim(tmpdir)//'restart_gs', st, m, ierr)
       if(ierr.ne.0) then
-        message(1) = "Could not load tmp/restart_gs: Starting from scratch"
+        message(1) = "Could not load '"//trim(tmpdir)//"restart_gs': Starting from scratch"
         call write_warning(1)
 
         ierr = 1
@@ -452,9 +452,9 @@ contains
     call push_sub('apply_delta_field')
 
     !!! units are 1/length
-    call loct_parse_float("TDDeltaStrength", M_ZERO, k)
+    call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k)
     k = k / units_inp%length%factor
-    call loct_parse_int("TDDeltaStrengthMode", 0, mode)
+    call loct_parse_int(check_inp('TDDeltaStrengthMode'), 0, mode)
     select case (mode)
     case (0)
     case (1:2)
@@ -577,9 +577,9 @@ contains
     call push_sub('td_write_data')
     
     ! first write resume file
-    call zrestart_write("tmp/restart_td", st, m, ierr, iter)
+    call zrestart_write(trim(tmpdir)//'restart_td', st, m, ierr, iter)
     if(ierr.ne.0) then
-      message(1) = 'Unsuccesfull write of "tmp/restart_td"'
+      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_td"'
       call write_fatal(1)
     end if
       
@@ -589,7 +589,7 @@ contains
         do is = 1, st%d%nspin
           write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
           
-          call doutput_function(restart_format, "tmp/restart_td", &
+          call doutput_function(restart_format, trim(tmpdir)//"restart_td", &
                filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
 
           if(ierr.ne.0) then

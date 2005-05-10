@@ -59,7 +59,7 @@ subroutine PES_init(p, m, st, ab, save_iter)
   type(states_type), intent(IN)    :: st
   integer,           intent(in)    :: ab, save_iter
 
-  call loct_parse_logical("CalcPES_rc", .false., p%calc_rc)
+  call loct_parse_logical(check_inp('CalcPES_rc'), .false., p%calc_rc)
   if(p%calc_rc) then
     p%calc_rc = .true.
     call PES_rc_init(p%rc, m, st, save_iter)
@@ -68,7 +68,7 @@ subroutine PES_init(p, m, st, ab, save_iter)
   p%calc_mask = .false.
   ! have the mask, and we are working in the velocity gauge
   if(ab == 2) then 
-    call loct_parse_logical("CalcPES_Mask", .false., p%calc_mask)
+    call loct_parse_logical(check_inp('CalcPES_Mask'), .false., p%calc_mask)
     if(p%calc_mask) then
       call PES_mask_init(p%mask, m, st)
     end if

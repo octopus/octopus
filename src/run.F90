@@ -47,22 +47,23 @@ public :: run_init, &
 
 type(system_type) :: sys
 type(hamiltonian_type) :: h
-integer :: calc_mode
+
 
 ! run stack
 integer, private :: i_stack(100), instr
 integer, private, parameter ::   &
-     M_GS                 = 1, &
-     M_UNOCC              = 2, &
-     M_TD                 = 3, &
-     M_STATIC_POL         = 4, &
-     M_GEOM_OPT           = 5, &
-     M_PHONONS            = 6, &
-     M_OPT_CONTROL        = 7, &
-     M_LR_STATIC_POL      = 8, &
-     M_CASIDA             = 9, &
-     M_BO_MD              = 98,&
-     M_PULPO_A_FEIRA      = 99
+     M_GS                 =  1, &
+     M_UNOCC              =  2, &
+     M_TD                 =  3, &
+     M_STATIC_POL         =  4, &
+     M_GEOM_OPT           =  5, &
+     M_PHONONS            =  6, &
+     M_OPT_CONTROL        =  7, &
+     M_LR_STATIC_POL      =  8, &
+     M_CASIDA             =  9, &
+     M_BO_MD              = 98, &
+     M_PULPO_A_FEIRA      = 99, &
+     M_MULTI_SUBSYSTEM    = multi_subsys_mode
 
 integer, private, parameter :: &
      I_GS_INIT            = 100, &
@@ -179,7 +180,7 @@ contains
   subroutine define_run_modes()
     logical :: fS
 
-    call loct_parse_logical("fromScratch", .false., fS)
+    call loct_parse_logical(check_inp('fromScratch'), .false., fS)
     fromScratch(:) = .false.
 
     select case(calc_mode)
@@ -233,7 +234,7 @@ end subroutine run
 subroutine run_init()
   ! initialize some stuff
 
-  call loct_parse_int('CalculationMode', 1, calc_mode)
+  
   if( (calc_mode < 1 .or. calc_mode > 10) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = '

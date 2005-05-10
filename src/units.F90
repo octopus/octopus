@@ -75,14 +75,14 @@ subroutine units_init()
 
   call push_sub('units_init')
 
-  if(loct_parse_isdef("Units").ne.0) then
-    call loct_parse_string("Units", "a.u", c)
+  if(loct_parse_isdef(check_inp('Units')).ne.0) then
+    call loct_parse_string(check_inp('Units'), "a.u", c)
     cinp = c(1:3)
     cout = c(1:3)
   else
-    call loct_parse_string("UnitsInput", "a.u", c)
+    call loct_parse_string(check_inp('UnitsInput'), "a.u", c)
     cinp = c(1:3)
-    call loct_parse_string("UnitsOutput", "a.u", c)
+    call loct_parse_string(check_inp('UnitsOutput'), "a.u", c)
     cout = c(1:3)
   end if
 

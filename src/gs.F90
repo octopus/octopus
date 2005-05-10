@@ -52,7 +52,7 @@ contains
     message(1) = 'Info: Loading wave-functions'
     call write_info(1)
 
-    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, ierr)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -106,7 +106,7 @@ contains
     call system_guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
        sys%st%d%spin_channels, sys%st%rho)      
 
-    call loct_parse_logical("LCAOStart", .true., lcao_start)
+    call loct_parse_logical(check_inp('LCAOStart'), .true., lcao_start)
     if(lcao_start) then
       call X(h_calc_vhxc)(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
 
@@ -124,10 +124,10 @@ contains
       end if
     end if
    
-        ! write wave-functions to disk
-    call X(restart_write)("tmp/restart_gs", sys%st, sys%m, err)
+    ! write wave-functions to disk
+    call X(restart_write)(trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
     if(err.ne.0) then
-      message(1) = 'Unsuccesfull write of "tmp/restart_gs"'
+      message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
       call write_fatal(1)
     end if
 

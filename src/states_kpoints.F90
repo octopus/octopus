@@ -52,7 +52,7 @@ subroutine states_choose_kpoints(d, m, geo)
     return
   end if
 
-  if(loct_parse_block('NumberKPoints', blk) .ne. 0) then
+  if(loct_parse_block(check_inp('NumberKPoints'), blk) .ne. 0) then
     message(1) = 'Block "NumberKPoints" not found in input file.'
     call write_fatal(1)
   end if
@@ -69,7 +69,7 @@ subroutine states_choose_kpoints(d, m, geo)
   end if
   nkmax = PRODUCT(d%nik_axis)
 
-  if(loct_parse_block('ShiftKPoints', blk) .ne. 0) then
+  if(loct_parse_block(check_inp('ShiftKPoints'), blk) .ne. 0) then
     kshifts = M_ZERO
   else
     do i = 1, conf%periodic_dim
@@ -79,7 +79,7 @@ subroutine states_choose_kpoints(d, m, geo)
   end if
 
   if (conf%periodic_dim == 1) then
-    call loct_parse_int('CenterOfInversion', 0, coi)
+    call loct_parse_int(check_inp('CenterOfInversion'), 0, coi)
     d%nik = d%nik_axis(1)/(1 + coi) + 1
     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))
     d%kpoints     = M_ZERO

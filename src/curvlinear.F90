@@ -49,7 +49,7 @@ contains
 
     call push_sub('curvlinear_init')
 
-    call loct_parse_int('CurvMethod', CURV_METHOD_UNIFORM, cv%method)
+    call loct_parse_int(check_inp('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
     if(cv%method<CURV_METHOD_UNIFORM.or.cv%method>CURV_METHOD_MODINE) then
       write(message(1), '(a,i2,a)') 'Do not have a "CurvMethod = ', cv%method, '"'
       call write_fatal(1)

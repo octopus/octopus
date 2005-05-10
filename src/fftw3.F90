@@ -64,7 +64,7 @@ contains
   ! initialize the table
   subroutine fft_all_init()
     integer :: i
-    call loct_parse_logical("FFTOptimize", .true., fft_optimize)
+    call loct_parse_logical(check_inp('FFTOptimize'), .true., fft_optimize)
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
     end do

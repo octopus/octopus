@@ -66,7 +66,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -129,20 +129,20 @@ contains
       st  => sys%st
       geo => sys%geo
 
-      call loct_parse_int("GOMethod", 1, g_opt%method)
+      call loct_parse_int(check_inp('GOMethod'), 1, g_opt%method)
       if(g_opt%method < 1 .or. g_opt%method >1) then
         message(1) = "'GOMethod' can only take the values:"
         message(2) = "   1 = Steepest descent"
         call write_fatal(2)
       end if
 
-      call loct_parse_float("GOTolerance", CNST(0.0001)/units_inp%force%factor, g_opt%tol)
+      call loct_parse_float(check_inp('GOTolerance'), CNST(0.0001)/units_inp%force%factor, g_opt%tol)
       g_opt%tol = g_opt%tol*units_inp%force%factor
 
       ! WARNING: in some weird units
-      call loct_parse_float("GOStep", M_HALF, g_opt%step)
+      call loct_parse_float(check_inp('GOStep'), M_HALF, g_opt%step)
 
-      call loct_parse_int("GOMaxIter", 200, g_opt%max_iter)
+      call loct_parse_int(check_inp('GOMaxIter'), 200, g_opt%max_iter)
       if(g_opt%max_iter <= 0) then
         message(1) = "GoMaxIter has to be larger than 0"
         call write_fatal(1)

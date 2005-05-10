@@ -37,10 +37,10 @@ program broad
   call units_init()
 
   ! broadening to use
-  call loct_parse_float("LinBroadening", CNST(0.02)/units_inp%energy%factor, b%b)
-  call loct_parse_float("LinEnergyStep",  CNST(0.01)/units_inp%energy%factor, b%energy_step)
-  call loct_parse_float("LinMinEnergy",   M_ZERO, b%min_energy)
-  call loct_parse_float("LinMaxEnergy",   M_ONE/units_inp%energy%factor, b%max_energy)
+  call loct_parse_float(check_inp('LinBroadening'), CNST(0.02)/units_inp%energy%factor, b%b)
+  call loct_parse_float(check_inp('LinEnergyStep'),  CNST(0.01)/units_inp%energy%factor, b%energy_step)
+  call loct_parse_float(check_inp('LinMinEnergy'),   M_ZERO, b%min_energy)
+  call loct_parse_float(check_inp('LinMaxEnergy'),   M_ONE/units_inp%energy%factor, b%max_energy)
 
   b%b = b%b * units_inp%energy%factor
   b%energy_step = b%energy_step * units_inp%energy%factor
@@ -51,21 +51,21 @@ program broad
   message(1) = "Info: Broadening spectra"
   call write_info(1)
 
-  call loct_parse_logical("LinEigenvalues", .true., l)
+  call loct_parse_logical(check_inp('LinEigenvalues'), .true., l)
   if(l) then
     message(1) = "      Eigenvalues"
     call write_info(1)
     call calc_broad(b, 'linear', 'eps-diff', .true.)
   end if
 
-  call loct_parse_logical("LinPetersilka", .true., l)
+  call loct_parse_logical(check_inp('LinPetersilka'), .true., l)
   if(l) then
     message(1) = "      Petersilka"
     call write_info(1)
     call calc_broad(b, 'linear', 'petersilka', .true.)
   end if
 
-  call loct_parse_logical("LinCasida", .true., l)
+  call loct_parse_logical(check_inp('LinCasida'), .true., l)
   if(l) then
     message(1) = "      Casida"
     call write_info(1)

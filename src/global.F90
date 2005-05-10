@@ -104,13 +104,23 @@ integer, parameter :: &
    VERBOSE_NORMAL  = 30,    &
    VERBOSE_DEBUG   = 999
 
+integer :: calc_mode
+
 ! some variables to be used everywhere
 character(len=256), dimension(20) :: message ! to be output by fatal, warning
+
+! variables to treat multi subsytems
+character(len=32), allocatable :: subsys_label(:)
+integer,           allocatable :: subsys_runmode(:), subsys_run_order(:)
+integer, parameter             :: multi_subsys_mode = 1000
+integer                        :: current_subsystem = 1
+integer                        :: no_syslabels, no_subsys_runmodes
+character(len=32)              :: current_label, tmpdir
 
 ! some private variables to this module
 #ifdef DEBUG
 character(len=40), private :: sub_stack(50)
-FLOAT, private          :: time_stack(50)
+FLOAT, private             :: time_stack(50)
 integer, private           :: no_sub_stack = 0
 #endif
 
@@ -160,27 +170,36 @@ subroutine global_init()
       call write_fatal(2)
     end if
   end if
-  
+
   ! initialize input/output system
   call io_init()
 
+  ! need to find out calc_mode already here since some of the variables here (e.g.
+  ! periodic dimensions) can be different for the subsystems
+  call loct_parse_int('CalculationMode', 1, calc_mode)
+  if(calc_mode == multi_subsys_mode) then
+     call read_system_labels()
+  else
+     call init_default_system_labels()
+  endif
+
   ! verbosity level
-  call loct_parse_int('Verbose', VERBOSE_NORMAL, conf%verbose)
+  call loct_parse_int(check_inp('Verbose'), VERBOSE_NORMAL, conf%verbose)
   if(conf%verbose > VERBOSE_DEBUG .and. mpiv%node == 0) then
-    call loct_parse_int('DebugLevel', 3, conf%debug_level)
+    call loct_parse_int(check_inp('DebugLevel'), 3, conf%debug_level)
     message(1) = 'Entering DEBUG mode'
     call write_warning(1)
   end if
 
   ! Sets the dimensionaliy of the problem.
-  call loct_parse_int('Dimensions', 3, conf%dim)
+  call loct_parse_int(check_inp('Dimensions'), 3, conf%dim)
   if(conf%dim<1 .or. conf%dim>3) then
     message(1) = 'Dimensions must be either 1, 2, or 3'
     call write_fatal(1)
   end if
 
   ! handle periodic directions
-  call loct_parse_int('PeriodicDimensions', 0, conf%periodic_dim)
+  call loct_parse_int(check_inp('PeriodicDimensions'), 0, conf%periodic_dim)
   if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
     message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
     call write_fatal(1)
@@ -190,7 +209,7 @@ subroutine global_init()
     call write_fatal(1)
   end if
 
-  call loct_parse_logical('BoundaryZeroDerivative', .false., conf%boundary_zero_derivative)
+  call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
 
 end subroutine global_init
 
@@ -357,6 +376,87 @@ subroutine pop_sub()
 end subroutine pop_sub
 #endif
 
+
+subroutine read_system_labels()
+  integer               :: i
+  integer(POINTER_SIZE) :: blk
+
+  ! first we read the required information from the input file
+  ! and prompt the user for possible errors in the input
+
+  ! find out how many subsystem we want to treat ...
+  if(loct_parse_block('SystemLabels', blk) == 0) then
+     no_syslabels = loct_parse_block_cols(blk,0)
+  else
+     message(1) = "Could not find block SystemLabels in the input file."
+     message(2) = "This block is mandatory for run mode MultiSubsystem."
+     call write_fatal(2)
+  endif
+  
+  allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
+  allocate(subsys_run_order(no_syslabels))
+  
+  ! ... and how the user would like to call them.
+  do i = 1, no_syslabels
+     call loct_parse_block_string(blk, 0, i-1, subsys_label(i))
+  enddo
+  call loct_parse_block_end(blk)
+  
+  !  now we check what we have to run in the respective subsystem
+  if(loct_parse_block('SystemRunModes', blk) == 0) then
+     no_subsys_runmodes = loct_parse_block_cols(blk,0)
+  else
+     message(1) = "Could not find block SystemRunModes in the input file."
+     message(2) = "This block is mandatory for run mode MultiSubsystem."
+     call write_fatal(2)
+  endif
+  
+  if(no_subsys_runmodes/=no_syslabels) then
+     message(1) = "The blocks SystemLabels and SystemRunModes do not have"
+     message(2) = "the same size. Please correct your input file."
+     call write_fatal(1)
+  endif
+  
+  do i = 1, no_subsys_runmodes
+     call loct_parse_block_int(blk, 0, i-1, subsys_runmode(i))
+  enddo
+  call loct_parse_block_end(blk)
+  
+  
+  ! ... and in which order 
+  if(loct_parse_block('SystemRunOrder', blk) == 0) then
+     no_subsys_runmodes = loct_parse_block_cols(blk,0)
+  else
+     message(1) = "Could not find block SystemRunOrder in the input file."
+     message(2) = "This block is mandatory for run mode MultiSubsystem."
+     call write_fatal(2)
+  endif
+  
+  if(no_subsys_runmodes/=no_syslabels) then
+     message(1) = "The blocks SystemLabels and SystemRunOrder do not have"
+     message(2) = "the same size. Please correct your input file."
+     call write_fatal(1)
+  endif
+  
+  do i = 1, no_subsys_runmodes
+     call loct_parse_block_int(blk, 0, i-1, subsys_run_order(i))
+  enddo
+  call loct_parse_block_end(blk)
+  
+end subroutine read_system_labels
+
+subroutine init_default_system_labels()
+  
+  no_syslabels = 1
+  allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
+  allocate(subsys_run_order(no_syslabels))
+  current_subsystem = 1
+  subsys_label(current_subsystem) = ""
+  subsys_runmode(current_subsystem) = calc_mode
+  subsys_run_order(current_subsystem) = 1
+
+end subroutine init_default_system_labels
+
 ! returns true if a file named stop exists
 function clean_stop()
   logical clean_stop, file_exists
@@ -373,6 +473,23 @@ function clean_stop()
   return
 end function clean_stop
 
+character(len=64) function check_inp(variable) result(var_name)
+  character(len = * ),           intent(in)  :: variable
+!  character(len = * ), optional, intent(in)  :: prefix
+  character(len = 64)                        :: composite_name
+
+  composite_name = trim(subsys_label(current_subsystem))//trim(variable)
+
+  if(loct_parse_isdef(composite_name).ne.0) then
+!    composite name has been defined in the input file
+     var_name = composite_name
+  else
+!    could not find composite name in the input; 
+!    will use bare variable name
+     var_name = variable
+  endif
+
+end function check_inp
 
 ! Given a path, it returns the extension (if it exists) of the file
 ! (that is, the part of the name that comes after its last point)

@@ -61,7 +61,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -82,7 +82,7 @@ contains
     ph%dim = sys%geo%natoms*conf%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
-    call loct_parse_float("Displacement", CNST(0.01)/units_inp%length%factor, ph%disp)
+    call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix

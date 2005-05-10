@@ -103,7 +103,7 @@ contains
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
-      call loct_parse_int("ClassicPotential", 0, ep%classic_pot)
+      call loct_parse_int(check_inp('ClassicPotential'), 0, ep%classic_pot)
       if(ep%classic_pot > 0) then
         allocate(ep%Vclassic(m%np))
         call epot_generate_classic(ep, m, geo)
@@ -122,7 +122,7 @@ contains
 
     ! static magnetic fields
     nullify(ep%b, ep%a)
-    if(loct_parse_block("StaticMagneticField", blk)==0) then
+    if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
       select case(loct_parse_block_n(blk))
       case (1)
         select case (conf%dim)
@@ -237,7 +237,7 @@ contains
     
     call push_sub('epot_local_fourier_init')
 
-    call loct_parse_int('VlocalCutoff', conf%periodic_dim , vlocal_cutoff)
+    call loct_parse_int(check_inp('VlocalCutoff'), conf%periodic_dim , vlocal_cutoff)
     if (vlocal_cutoff /= conf%periodic_dim) then
       write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
       write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ',vlocal_cutoff,' dimensions.'
@@ -280,7 +280,7 @@ contains
         if (vlocal_cutoff == 3) then
           r_0 = M_ZERO
         else
-          call loct_parse_float('VlocalCutoffRadius',&
+          call loct_parse_float(check_inp('VlocalCutoffRadius'),&
                maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_0)
           r_0 = r_0*units_inp%length%factor
           write(message(1),'(3a,f12.6)')'Info: Vlocal Cutoff Radius [',  &

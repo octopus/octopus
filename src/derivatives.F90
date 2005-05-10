@@ -87,16 +87,16 @@ contains
 
     der%m => m    ! make a pointer to the underlying mesh
 
-    call loct_parse_int('DerivativesStencil', DER_STAR, der%stencil_type)
+    call loct_parse_int(check_inp('DerivativesStencil'), DER_STAR, der%stencil_type)
     if(der%stencil_type<DER_STAR.or.der%stencil_type>DER_CUBE) then
       write(message(1), '(a,i2,a)') 'DerivativesStencil = "', der%stencil_type, '" is unknown to octopus'
       call write_fatal(1)
     end if
     if(der%stencil_type == DER_VARIATIONAL) then
-       call loct_parse_float('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+       call loct_parse_float(check_inp('DerivativesLaplacianFilter'), M_ONE, der%lapl_cutoff)
     endif
 
-    call loct_parse_int('DerivativesOrder', 4, der%order)
+    call loct_parse_int(check_inp('DerivativesOrder'), 4, der%order)
 
     ! construct lapl and grad structures
     allocate(der%op(conf%dim + 1))
@@ -107,7 +107,7 @@ contains
     call derivatives_get_stencil_grad(der)
 
     ! find out the bounday conditions
-    call loct_parse_int('DerivativesBoundaries', DER_BC_ZERO_F, i)
+    call loct_parse_int(check_inp('DerivativesBoundaries'), DER_BC_ZERO_F, i)
     if((i.ne.DER_BC_ZERO_F).and.(i.ne.DER_BC_ZERO_DF)) then
       write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to octopus'
       call write_fatal(1)
@@ -279,6 +279,7 @@ contains
       ! get laplacian
       select case(der%stencil_type)
       case(DER_STAR)  
+         write(*,*) 'der%m%h',der%m%h
         call stencil_star_coeff_lapl(der%m%h, der%order, der%lapl)
       case(DER_VARIATIONAL)
         call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)

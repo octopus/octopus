@@ -28,7 +28,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
   message(1) = 'Info: Calculating PES using rc technique'
   call write_info(1)
 
-  if (loct_parse_block("PES_rc_points", blk) < 0) then
+  if (loct_parse_block(check_inp('PES_rc_points'), blk) < 0) then
     message(1) = "Input: PES_rc_points block not specified"
     message(2) = '%PES_rc_points'
     message(3) = '   x | y | z'

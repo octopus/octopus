@@ -270,8 +270,9 @@ subroutine weights(N, M, cc)
 
   integer :: i, j, k, mn
   FLOAT :: c1, c2, c3, c4, c5, xi
-  FLOAT :: x(0:M)
+  FLOAT, allocatable :: x(:)
 
+  allocate(x(0:M))
   ! grid-points for one-side finite-difference formulas on an equi.spaced grid
   ! x(:) = (/(i,i=0,M)/) 
 
@@ -292,7 +293,7 @@ subroutine weights(N, M, cc)
     c2 = M_ONE
     c5 = c4
     c4 = x(j) - xi
-    
+ 
     do k = 0, j - 1
       c3 = x(j) - x(k)
       c2 = c2*c3
@@ -313,6 +314,8 @@ subroutine weights(N, M, cc)
 
     c1 = c2
   end do
+
+  deallocate(x)
 
 end subroutine weights
 

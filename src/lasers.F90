@@ -73,7 +73,7 @@ subroutine laser_init(m, no_l, l)
   call push_sub('laser_init')
 
   no_l = 0
-  if(loct_parse_block('TDLasers', blk) == 0) then
+  if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
     no_l = loct_parse_block_n(blk)
     allocate(l(no_l))
 

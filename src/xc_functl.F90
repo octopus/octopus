@@ -72,7 +72,7 @@ contains
     if (.not.cdft) return
 
     ! read input
-    call loct_parse_int('JFunctional', XC_LCA_OMC, functl%id)
+    call loct_parse_int(check_inp('JFunctional'), XC_LCA_OMC, functl%id)
 
     ! initialize
     select case(functl%id)
@@ -104,7 +104,7 @@ contains
     call xc_functl_init(functl, spin_channels)
 
     ! read input
-    call loct_parse_int('XFunctional', XC_LDA_X, functl%id)
+    call loct_parse_int(check_inp('XFunctional'), XC_LDA_X, functl%id)
 
     ! initialize
     select case(functl%id)
@@ -119,8 +119,8 @@ contains
       functl%family = XC_FAMILY_GGA
       
       if(functl%id == XC_GGA_XC_LB) then
-        call loct_parse_int  ("LB94_modified", 0, j)
-        call loct_parse_float("LB94_threshold", CNST(1.0e-6), alpha)
+        call loct_parse_int  (check_inp('LB94_modified'), 0, j)
+        call loct_parse_float(check_inp('LB94_threshold'), CNST(1.0e-6), alpha)
         call xc_gga_init(functl%conf, functl%info, functl%id, &
            spin_channels, j, alpha)
       else
@@ -155,7 +155,7 @@ contains
     call xc_functl_init(functl, spin_channels)
 
     ! read input
-    call loct_parse_int('CFunctional', XC_LDA_C_PZ, functl%id)
+    call loct_parse_int(check_inp('CFunctional'), XC_LDA_C_PZ, functl%id)
 
     ! initialize
     select case(functl%id)
@@ -175,7 +175,7 @@ contains
       if(functl%id.ne.XC_LDA_C_XALPHA) then
         call xc_lda_init(functl%conf, functl%info, functl%id, spin_channels)
       else
-        call loct_parse_float('Xalpha', M_ONE, alpha) 
+        call loct_parse_float(check_inp('Xalpha'), M_ONE, alpha) 
         call xc_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
            spin_channels, conf%dim, alpha)
       end if

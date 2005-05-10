@@ -57,7 +57,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   call init_()
  
   ! load wave-functions
-  call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
+  call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
   if(err.ne.0) then
     message(1) = "Could not load wave-functions: Starting from scratch"
     call write_warning(1)
@@ -77,7 +77,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   dipole = M_ZERO
 
   if(.not.fromScratch) then
-    iunit = io_open('tmp/restart.pol', action='read', status='old', die=.false.)
+    iunit = io_open(trim(tmpdir)//'restart.pol', action='read', status='old', die=.false.)
     if(iunit > 0) then
       ! Finds out how many dipoles have already been written.
       rewind(iunit)
@@ -94,7 +94,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   end if
 
   if(fromScratch) then
-    iunit = io_open('tmp/restart.pol', action='write')
+    iunit = io_open(trim(tmpdir)//'restart.pol', action='write')
     call io_close(iunit)
     i_start = 1
   end if
@@ -131,7 +131,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
     end do
 
     ! Writes down the dipole to the file
-    iunit = io_open('tmp/restart.pol', action='write', status='old', position='append')
+    iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
     write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, conf%dim), k = 1, 2)
     call io_close(iunit)
     
@@ -173,7 +173,7 @@ contains
     st => sys%st
  
     ! read in e_field value
-    call loct_parse_float('POLStaticField', CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
+    call loct_parse_float(check_inp('POLStaticField'), CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
     e_field = e_field * units_inp%energy%factor / units_inp%length%factor
     if (e_field <= M_ZERO) then
       write(message(1), '(a,e14.6,a)') "Input: '", e_field, "' is not a valid POLStaticField"

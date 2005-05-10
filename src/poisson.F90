@@ -87,7 +87,7 @@ contains
     !-----------------------------------------------------------------
     subroutine init_2D()
 #if defined(HAVE_FFT)
-      call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
+      call loct_parse_int(check_inp('PoissonSolver'), conf%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
         write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
@@ -115,7 +115,7 @@ contains
     !-----------------------------------------------------------------
     subroutine init_3D()
 #ifdef HAVE_FFT
-      call loct_parse_int("PoissonSolver", conf%periodic_dim, poisson_solver)
+      call loct_parse_int(check_inp('PoissonSolver'), conf%periodic_dim, poisson_solver)
       if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
         write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"
@@ -137,7 +137,7 @@ contains
         call write_warning(3)
       end if
 #else
-      call loct_parse_int('PoissonSolver', CG, poisson_solver)
+      call loct_parse_int(check_inp('PoissonSolver'), CG, poisson_solver)
       if(poisson_solver < CG) then
         write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
            "' is not a valid PoissonSolver"

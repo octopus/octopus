@@ -354,12 +354,12 @@ contains
 
     ! read parameters from input
     ! we assume atomic units
-    call loct_parse_float("OptControlInitLaser", M_ZERO, laser_init)
+    call loct_parse_float(check_inp('OptControlInitLaser'), M_ZERO, laser_init)
     laser_i = laser_init
     laser_f = laser_init
-    call loct_parse_float("OptControlAlpha", M_ONE, alpha)
-    call loct_parse_float("OptControlEps", CNST(1e-3), eps)
-    call loct_parse_int("OptControlMaxIter", 10, ctr_iter_max)
+    call loct_parse_float(check_inp('OptControlAlpha'), M_ONE, alpha)
+    call loct_parse_float(check_inp('OptControlEps'), CNST(1e-3), eps)
+    call loct_parse_int(check_inp('OptControlMaxIter'), 10, ctr_iter_max)
     if(ctr_iter_max < 0.and.eps<M_ZERO) then
       message(1) = "OptControlMaxIter and OptControlEps can not be both <0"
       call write_fatal(1)

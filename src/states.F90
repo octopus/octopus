@@ -140,16 +140,16 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
 
   call states_null(st)
 
-  call loct_parse_int('SpinComponents', UNPOLARIZED, st%d%ispin)
+  call loct_parse_int(check_inp('SpinComponents'), UNPOLARIZED, st%d%ispin)
   if (st%d%ispin < UNPOLARIZED .or. st%d%ispin > SPINORS) then
     write(message(1),'(a,i4,a)') "Input: '", st%d%ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'
     call write_fatal(2)
   end if
 
-  call loct_parse_float('ExcessCharge', M_ZERO, excess_charge)
+  call loct_parse_float(check_inp('ExcessCharge'), M_ZERO, excess_charge)
 
-  call loct_parse_int('ExtraStates', 0, nempty)
+  call loct_parse_int(check_inp('ExtraStates'), 0, nempty)
   if (nempty < 0) then
     write(message(1), '(a,i5,a)') "Input: '", nempty, "' is not a valid ExtraStates"
     message(2) = '(0 <= ExtraStates)'
@@ -184,7 +184,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   end select
 
   ! current
-  call loct_parse_logical("CurrentDFT", .false., st%d%cdft)
+  call loct_parse_logical(check_inp('CurrentDFT'), .false., st%d%cdft)
 #ifdef COMPLEX_WFNS
   if (st%d%cdft .and. st%d%ispin == SPINORS) then
     message(1) = "Sorry, Current DFT not working yet for spinors"
@@ -219,7 +219,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
     if(nlcc) allocate(st%rho_core(m%np))
   end if
 
-  occ_fix: if(loct_parse_block("Occupations", blk)==0) then
+  occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
     ! read in occupations
     st%fixed_occ = .true.
 
@@ -250,7 +250,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
     end do
 
     ! read in fermi distribution temperature
-    call loct_parse_float('ElectronicTemperature', M_ZERO, st%el_temp)
+    call loct_parse_float(check_inp('ElectronicTemperature'), M_ZERO, st%el_temp)
     st%el_temp = st%el_temp * units_inp%energy%factor
   end if occ_fix
 

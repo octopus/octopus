@@ -41,9 +41,9 @@ contains
   subroutine curv_gygi_init(cv)
     type(curv_gygi_type), intent(out) :: cv
 
-    call loct_parse_float('CurvGygiA', M_ONE, cv%A)
-    call loct_parse_float('CurvGygiAlpha', M_TWO/units_inp%length%factor, cv%alpha)
-    call loct_parse_float('CurvGygiBeta',  M_TWO/units_inp%length%factor, cv%beta)
+    call loct_parse_float(check_inp('CurvGygiA'), M_ONE, cv%A)
+    call loct_parse_float(check_inp('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
+    call loct_parse_float(check_inp('CurvGygiBeta'),  M_TWO/units_inp%length%factor, cv%beta)
     
     cv%alpha = cv%alpha*units_inp%length%factor
     cv%beta  = cv%beta *units_inp%length%factor

@@ -31,11 +31,11 @@ program hs_from_mult
   call global_init()
   call units_init()
 
-  call loct_parse_float("SpecStartTime",  M_ZERO,     s%start_time)
-  call loct_parse_float("SpecEndTime",   -M_ONE,      s%end_time)
-  call loct_parse_float("SpecEnergyStep", CNST(0.05), s%energy_step)
-  call loct_parse_float("SpecMinEnergy",  M_ZERO,     s%min_energy)
-  call loct_parse_float("SpecMaxEnergy",  CNST(20.0), s%max_energy)
+  call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,     s%start_time)
+  call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,      s%end_time)
+  call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.05), s%energy_step)
+  call loct_parse_float(check_inp('SpecMinEnergy'),  M_ZERO,     s%min_energy)
+  call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0), s%max_energy)
 
   ! adjust units
   s%start_time  = s%start_time  * units_inp%time%factor
@@ -44,7 +44,7 @@ program hs_from_mult
   s%min_energy  = s%min_energy  * units_inp%energy%factor
   s%max_energy  = s%max_energy  * units_inp%energy%factor
 
-  call loct_parse_string('HSPolarization', 'z', txt)
+  call loct_parse_string(check_inp('HSPolarization'), 'z', txt)
   sh%pol = txt(1:1)
   if(sh%pol.ne.'x' .and. sh%pol.ne.'y' .and. sh%pol.ne.'z' .and. &
        sh%pol.ne.'+' .and. sh%pol.ne.'-') then

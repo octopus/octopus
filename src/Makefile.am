@@ -91,7 +91,7 @@ CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc* config_F90.h
 DISTCLEANFILES = Makefile.in dirs.h
 
 # ctags
-CTAGS=ctags-exuberant
+CTAGS=ctags-exuberant -e
 
 # how to compile a F90 file :)
 .F90.o:

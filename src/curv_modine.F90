@@ -48,8 +48,8 @@ contains
     FLOAT,                  intent(in)  :: l(:)  ! l(1:conf%dim)
     type(curv_modine_type), intent(out) :: cv
 
-    call loct_parse_float('CurvModineXBar', M_ONE/M_THREE, cv%xbar)
-    call loct_parse_float('CurvModineJBar', M_HALF, cv%Jbar)
+    call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
+    call loct_parse_float(check_inp('CurvModineJBar'), M_HALF, cv%Jbar)
     
     cv%L = M_ZERO
     cv%L(1:conf%dim) = l(1:conf%dim)/ cv%Jbar
@@ -59,8 +59,8 @@ contains
       call write_fatal(1)
     end if
 
-    call loct_parse_float('CurvModineJlocal', CNST(0.5), cv%Jlocal)
-    call loct_parse_float('CurvModineJrange', M_TWO/units_inp%length%factor, cv%Jrange)
+    call loct_parse_float(check_inp('CurvModineJlocal'), CNST(0.5), cv%Jlocal)
+    call loct_parse_float(check_inp('CurvModineJrange'), M_TWO/units_inp%length%factor, cv%Jrange)
     
     if(cv%Jlocal<M_ZERO.or.cv%Jlocal>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'

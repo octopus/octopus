@@ -160,7 +160,7 @@ contains
     ! First, find out if there is a Species block.
     n_spec_block = 0
     blk = int(0, POINTER_SIZE)
-    if(loct_parse_block("Species", blk) == 0) then
+    if(loct_parse_block(check_inp('Species'), blk) == 0) then
       n_spec_block = loct_parse_block_n(blk)
     end if
 

@@ -57,9 +57,9 @@ contains
     character(len=*), intent(in)  :: prefix
 
     ! read some parameters from the input file
-    call loct_parse_float(trim(prefix)//"ConvAbsDens", &
+    call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
         CNST(1e-5), lr%conv_abs_dens)
-    call loct_parse_int  (trim(prefix)//"MaximumIter", 50, lr%max_iter)    
+    call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 50, lr%max_iter)    
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
     nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)

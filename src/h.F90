@@ -142,7 +142,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
 
   call epot_init(h%ep, m, h%d%ispin, geo)
 
-  call loct_parse_int("RelativisticCorrection", NOREL, h%reltype)
+  call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
   select case(h%reltype)
     case(NOREL);      message(1) = 'Info: Rel. correction: No relativistic corrections.'
@@ -175,18 +175,18 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
 #endif
 
   !Are we going to use the effective-mass model?
-  call loct_parse_logical("EffectiveMassModel", .false., h%em_app)
+  call loct_parse_logical(check_inp('EffectiveMassModel'), .false., h%em_app)
   if (h%em_app) then
     !Get the ratios
-    call loct_parse_float("ElectronMassRatio",    CNST(0.067), h%m_ratio)
-    call loct_parse_float("GyromagneticRatio",    CNST(0.44),  h%g_ratio)
-    call loct_parse_float("DielectricConstRatio", CNST(12.4),  h%e_ratio)
+    call loct_parse_float(check_inp('ElectronMassRatio'),    CNST(0.067), h%m_ratio)
+    call loct_parse_float(check_inp('GyromagneticRatio'),    CNST(0.44),  h%g_ratio)
+    call loct_parse_float(check_inp('DielectricConstRatio'), CNST(12.4),  h%e_ratio)
   else
     h%m_ratio = M_ZERO; h%g_ratio = M_ZERO; h%e_ratio = M_ZERO
   end if
 
   ! gauge
-  call loct_parse_int("TDGauge", LENGTH, h%gauge)
+  call loct_parse_int(check_inp('TDGauge'), LENGTH, h%gauge)
   if (h%gauge < 1 .or. h%gauge > 2) then
     write(message(1), '(a,i6,a)') "Input: '", h%gauge, "' is not a valid TDGauge"
     message(2) = 'Accepted values are:'
@@ -196,14 +196,14 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
   end if
 
   ! absorbing boundaries
-  call loct_parse_int("AbsorbingBoundaries", NO_ABSORBING, h%ab)
+  call loct_parse_int(check_inp('AbsorbingBoundaries'), NO_ABSORBING, h%ab)
   nullify(h%ab_pot)
 
   absorbing_boundaries: if(h%ab.ne.NO_ABSORBING) then
-    call loct_parse_float("ABWidth", CNST(0.4)/units_inp%length%factor, h%ab_width)
+    call loct_parse_float(check_inp('ABWidth'), CNST(0.4)/units_inp%length%factor, h%ab_width)
     h%ab_width  = h%ab_width * units_inp%length%factor
     if(h%ab == 1) then
-      call loct_parse_float("ABHeight", -CNST(0.2)/units_inp%energy%factor, h%ab_height)
+      call loct_parse_float(check_inp('ABHeight'), -CNST(0.2)/units_inp%energy%factor, h%ab_height)
       h%ab_height = h%ab_height * units_inp%energy%factor
     else
       h%ab_height = M_ONE
@@ -226,7 +226,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
   
   ! Cutoff applied to the kinetic term.
   ! it is used *both* in the calculation of the derivatives and in the split operator method
-  call loct_parse_float("KineticCutoff", -M_ONE, h%cutoff)
+  call loct_parse_float(check_inp('KineticCutoff'), -M_ONE, h%cutoff)
   if(h%cutoff > M_ZERO) then
     h%cutoff = h%cutoff * units_inp%energy%factor
     write(message(1),'(a,f7.2,a)') 'Info: The kinetic operator will have a cutoff of',&

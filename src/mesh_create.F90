@@ -55,7 +55,7 @@ subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
 contains
   subroutine read_misc()
 
-    call loct_parse_float('DoubleFFTParameter', M_TWO, m%fft_alpha)
+    call loct_parse_float(check_inp('DoubleFFTParameter'), M_TWO, m%fft_alpha)
     if (m%fft_alpha < M_ONE .or. m%fft_alpha > M_THREE ) then
       write(message(1), '(a,f12.5,a)') "Input: '", m%fft_alpha, &
          "' is not a valid DoubleFFTParameter"
@@ -69,7 +69,7 @@ contains
     integer(POINTER_SIZE) :: blk
 
     ! Read box shape.
-    call loct_parse_int('BoxShape', MINIMUM, m%box_shape)
+    call loct_parse_int(check_inp('BoxShape'), MINIMUM, m%box_shape)
     if(m%box_shape<1 .or. m%box_shape>4) then
       write(message(1), '(a,i2,a)') "Input: '", m%box_shape, "' is not a valid BoxShape"
       message(2) = '(1 <= Box_Shape <= 4)'
@@ -98,7 +98,7 @@ contains
     if(m%box_shape == MINIMUM.and.def_rsize>M_ZERO) m%rsize = def_rsize/units_inp%length%factor
 
     if(m%box_shape == SPHERE.or.m%box_shape == CYLINDER.or.m%box_shape == MINIMUM) then
-      call loct_parse_float('radius', m%rsize, m%rsize)
+      call loct_parse_float(check_inp('radius'), m%rsize, m%rsize)
       if(m%rsize < 0) then
         message(1) = "Either:"
         message(2) = "   *) variable 'radius' is not defined"
@@ -111,7 +111,7 @@ contains
     end if
 
     if(m%box_shape == CYLINDER) then
-      call loct_parse_float('xlength', M_ONE/units_inp%length%factor, m%xsize)
+      call loct_parse_float(check_inp('xlength'), M_ONE/units_inp%length%factor, m%xsize)
       m%xsize = m%xsize * units_inp%length%factor
       m%lsize(1) = m%xsize
       if(def_rsize>M_ZERO.and.conf%periodic_dim==0) call check_def(def_rsize, m%xsize, 'xlength')
@@ -120,7 +120,7 @@ contains
     m%lsize = -M_ONE
     if(m%box_shape == PARALLELEPIPED) then
       
-      if(loct_parse_block('lsize', blk) == 0) then
+      if(loct_parse_block(check_inp('lsize'), blk) == 0) then
         if(loct_parse_block_cols(blk,0) < conf%dim) then
             message(1) = 'Size of Block "lsize" does not match number of dimensions'
             call write_fatal(1)
@@ -161,11 +161,11 @@ contains
     m%h = -M_ONE
     select case(m%box_shape)
     case(SPHERE,CYLINDER,MINIMUM)
-      call loct_parse_float('spacing', m%h(1), m%h(1))
+      call loct_parse_float(check_inp('spacing'), m%h(1), m%h(1))
       m%h(1:conf%dim) = m%h(1)
 
     case(PARALLELEPIPED)
-      if(loct_parse_block('spacing', blk) == 0) then
+      if(loct_parse_block(check_inp('spacing'), blk) == 0) then
         do i = 1, conf%dim
           call loct_parse_block_float(blk, 0, i-1, m%h(i))
         end do
@@ -205,7 +205,7 @@ contains
     m%box_offset = M_ZERO
     select case(m%box_shape)
     case(PARALLELEPIPED)
-      if(loct_parse_block('BoxOffset', blk) == 0) then
+      if(loct_parse_block(check_inp('BoxOffset'), blk) == 0) then
         do i = 1, conf%dim
           call loct_parse_block_float(blk, 0, i-1, m%box_offset(i))
         end do

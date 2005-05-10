@@ -34,12 +34,12 @@ subroutine poisson3D_init(m)
 #endif
     case(CG)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-      call loct_parse_int('PoissonSolverCGMaxMultipole', 4, maxl)
-      call loct_parse_float('PoissonSolverCGThreshold', CNST(1.0e-5), threshold)
+      call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
+      call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
       call poisson_cg1_init(m, maxl, threshold)
     case(CG_CORRECTED)
-      call loct_parse_int('PoissonSolverCGMaxMultipole', 4, maxl)
-      call loct_parse_float('PoissonSolverCGThreshold', CNST(1.0e-5), threshold)
+      call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
+      call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
       message(1) = 'Info: Using corrected conjugated gradients method to solve poisson equation.'
       call poisson_cg2_init(m, maxl, threshold)
   end select
@@ -49,7 +49,7 @@ subroutine poisson3D_init(m)
   if (poisson_solver <= FFT_CORRECTED) call init_fft()
 
   if (poisson_solver == FFT_CORRECTED) then
-    call loct_parse_int('PoissonSolverCGMaxMultipole', 2, maxl)
+    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 2, maxl)
     call build_aux(m)
     call build_phi(m)
   endif
@@ -80,7 +80,7 @@ contains
     db = fft_cf%n               ! dimensions may have been optimized
 
   if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
-    call loct_parse_float('PoissonCutoffRadius',&
+    call loct_parse_float(check_inp('PoissonCutoffRadius'),&
            maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
     r_c = r_c*units_inp%length%factor
     write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &

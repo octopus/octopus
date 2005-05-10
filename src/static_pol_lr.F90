@@ -50,7 +50,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions in pol_lr_run: Starting from scratch"
       call write_warning(1)
@@ -66,7 +66,7 @@ contains
     call X(system_h_setup) (sys, h)
     
     !if(.not.fromScratch) then ! try to load delta_psi
-    !  if(X(restart_read) ('tmp/restart_lr_static_pol', sys%st, sys%m).ne.0) then
+    !  if(X(restart_read) (trim(tmpdir)//'restart_lr_static_pol', sys%st, sys%m).ne.0) then
     fromScratch = .true.
 
     call lr_init(lr, "SP")

@@ -88,13 +88,13 @@ subroutine output_init(outp)
   logical :: l
   character(len=80) :: owf
 
-  call loct_parse_logical("OutputKSPotential", .false., outp%what(output_potential))
-  call loct_parse_logical("OutputDensity",     .false., outp%what(output_density))
-  call loct_parse_logical("OutputWfs",         .false., outp%what(output_wfs))
-  call loct_parse_logical("OutputELF",         .false., outp%what(output_elf))
-  call loct_parse_logical("OutputELF_FS",      .false., outp%what(output_elf_FS))
-  call loct_parse_logical("OutputGeometry",    .false., outp%what(output_geometry))
-  call loct_parse_logical("OutputWfsSqMod",    .false., outp%what(output_wfs_sqmod))
+  call loct_parse_logical(check_inp('OutputKSPotential'), .false., outp%what(output_potential))
+  call loct_parse_logical(check_inp('OutputDensity'),     .false., outp%what(output_density))
+  call loct_parse_logical(check_inp('OutputWfs'),         .false., outp%what(output_wfs))
+  call loct_parse_logical(check_inp('OutputELF'),         .false., outp%what(output_elf))
+  call loct_parse_logical(check_inp('OutputELF_FS'),      .false., outp%what(output_elf_FS))
+  call loct_parse_logical(check_inp('OutputGeometry'),    .false., outp%what(output_geometry))
+  call loct_parse_logical(check_inp('OutputWfsSqMod'),    .false., outp%what(output_wfs_sqmod))
  
   outp%what(output_something) = .false.
   do i = 1, output_something - 1
@@ -102,34 +102,34 @@ subroutine output_init(outp)
   end do
 
   if(outp%what(output_wfs)) then
-    call loct_parse_string("OutputWfsNumber", "1-1024", owf)
+    call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", owf)
     call loct_wfs_list(owf, outp%wfs)
   end if
 
   if(outp%what(output_something)) then
     outp%how = 0
-    call loct_parse_logical("OutputMeshIndex", .false., l)
+    call loct_parse_logical(check_inp('OutputMeshIndex'), .false., l)
     if(l) outp%how = ior(outp%how, output_mesh_index)
-    call loct_parse_logical("OutputAxisX", .false., l)
+    call loct_parse_logical(check_inp('OutputAxisX'), .false., l)
     if(l) outp%how = ior(outp%how, output_axis_x)
     if(conf%dim > 1) then
-      call loct_parse_logical("OutputAxisY", .false., l)
+      call loct_parse_logical(check_inp('OutputAxisY'), .false., l)
       if(l) outp%how = ior(outp%how, output_axis_y)
-      call loct_parse_logical("OutputPlaneZ", .false., l)
+      call loct_parse_logical(check_inp('OutputPlaneZ'), .false., l)
       if(l) outp%how = ior(outp%how, output_plane_z)
-      call loct_parse_logical("OutputGnuplotMode", .false., l)
+      call loct_parse_logical(check_inp('OutputGnuplotMode'), .false., l)
       if(l) outp%how = ior(outp%how, output_gnuplot)
       if(conf%dim > 2) then
-        call loct_parse_logical("OutputAxisZ", .false., l)
+        call loct_parse_logical(check_inp('OutputAxisZ'), .false., l)
         if(l) outp%how = ior(outp%how, output_axis_z)
-        call loct_parse_logical("OutputPlaneX", .false., l)
+        call loct_parse_logical(check_inp('OutputPlaneX'), .false., l)
         if(l) outp%how = ior(outp%how, output_plane_x)
-        call loct_parse_logical("OutputPlaneY", .false., l)
+        call loct_parse_logical(check_inp('OutputPlaneY'), .false., l)
         if(l) outp%how = ior(outp%how, output_plane_y)
-        call loct_parse_logical("OutputDX", .false., l)
+        call loct_parse_logical(check_inp('OutputDX'), .false., l)
         if(l) outp%how = ior(outp%how, output_dx)
 #if defined(HAVE_NETCDF)
-        call loct_parse_logical("OutputNETCDF", .false., l)
+        call loct_parse_logical(check_inp('OutputNETCDF'), .false., l)
         if(l) then
           outp%how = ior(outp%how, output_dx_cdf)
         end if
@@ -140,9 +140,9 @@ subroutine output_init(outp)
   end if
   
   ! this is always needed in a time-dependent calculation
-  call loct_parse_int("OutputEvery", 1000, outp%iter)
+  call loct_parse_int(check_inp('OutputEvery'), 1000, outp%iter)
 
-  call loct_parse_logical("OutputDuringSCF", .false., outp%duringscf)
+  call loct_parse_logical(check_inp('OutputDuringSCF'), .false., outp%duringscf)
 end subroutine output_init
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

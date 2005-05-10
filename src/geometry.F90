@@ -98,7 +98,7 @@ subroutine geometry_init_xyz(geo)
   call push_sub('geometry_init_xyz')
 
   ! get the name of the system
-  call loct_parse_string('SystemName', 'system', geo%sysname)
+  call loct_parse_string(check_inp('SystemName'), 'system', geo%sysname)
 
   ! load positions of the atoms
   call xyz_file_init(xyz)
@@ -158,9 +158,9 @@ subroutine geometry_init_vel(geo)
   call push_sub('geometry_init_vel')
 
   ! we now load the velocities, either from the temperature, from the input, or from a file
-  if(loct_parse_isdef("RandomVelocityTemp").ne.0) then
+  if(loct_parse_isdef(check_inp('RandomVelocityTemp')).ne.0) then
     call loct_ran_init(random_gen_pointer)
-    call loct_parse_float("RandomVelocityTemp", M_ZERO, temperature)
+    call loct_parse_float(check_inp('RandomVelocityTemp'), M_ZERO, temperature)
     do i = 1, geo%natoms
       sigma = sqrt( P_Kb*temperature / geo%atom(i)%spec%weight )
       do j = 1, 3
@@ -266,7 +266,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
 
   ! Reads the spin components. This is read here, as well as in states_init,
   ! to be able to pass it to the pseudopotential initializations subroutine.
-  call loct_parse_int('SpinComponents', 1, ispin)
+  call loct_parse_int(check_inp('SpinComponents'), 1, ispin)
   if (ispin < 1 .or. ispin > 3) then
     write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
     message(2) = '(SpinComponents = 1 | 2 | 3)'

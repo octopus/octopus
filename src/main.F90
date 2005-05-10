@@ -25,7 +25,7 @@ program octopus
 
   implicit none
 
-  integer :: ierr, val(8)
+  integer :: ierr, ns, val(8)
 
   call global_init()
 
@@ -64,16 +64,23 @@ program octopus
   message(2) = ""
   call write_info(2)
 
-  ! create temporary dir (we will need it)
-  call io_mkdir('tmp')
+  do ns = 1,no_syslabels
+     ! set system label
+     current_label = trim(subsys_label(subsys_run_order(ns)))
+     tmpdir = trim(current_label)//'tmp/'
+     calc_mode = subsys_runmode(subsys_run_order(ns))
 
-  ! create debug directory if in debugging mode
-  if(conf%verbose>=VERBOSE_DEBUG) call io_mkdir('debug')
-
-  ! now we really start
-  call run_init()
-  call run()
-  call run_end()
+     ! create temporary dir (we will need it)
+     call io_mkdir(tmpdir)
+     
+     ! create debug directory if in debugging mode
+     if(conf%verbose>=VERBOSE_DEBUG) call io_mkdir(trim(current_label)//'debug')
+     
+     ! now we really start
+     call run_init()
+     call run()
+     call run_end()
+  enddo
 
   ! print date
   call date_and_time(values=val)

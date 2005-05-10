@@ -45,7 +45,7 @@ contains
     if(geo%natoms <= 1) return
   
     ! get to axis
-    if(loct_parse_block("MainAxis", blk)==0) then
+    if(loct_parse_block(check_inp('MainAxis'), blk)==0) then
       call loct_parse_block_float(blk, 0, 0, to(1))
       call loct_parse_block_float(blk, 0, 1, to(2))
       call loct_parse_block_float(blk, 0, 2, to(3))
@@ -55,7 +55,7 @@ contains
     end if
     to = to / sqrt(sum(to**2))
     
-    call loct_parse_int("AxisType", INERTIA, axis_type)
+    call loct_parse_int(check_inp('AxisType'), INERTIA, axis_type)
 
     select case(axis_type)
     case(INERTIA, PSEUDO)

@@ -20,6 +20,8 @@ subroutine X(cf_new)(n, cf)
   integer, intent(in) :: n(3)
   type(X(cf)), intent(out) :: cf
 
+  call push_sub('cf_new')
+
   ASSERT(all(n>0))
 
   nullify(cf%RS)
@@ -29,12 +31,14 @@ subroutine X(cf_new)(n, cf)
 #if defined(HAVE_FFT)
   nullify(cf%fft)
 #endif
+  call pop_sub()
 end subroutine X(cf_new)
 
 subroutine X(cf_new_from)(cf, cf_i)
   type(X(cf)), intent(out) :: cf
   type(X(cf)), intent( in) :: cf_i
 
+  call push_sub('cf_new_from')
   ASSERT(all(cf_i%n>0))
 
   nullify(cf%RS)
@@ -50,45 +54,61 @@ subroutine X(cf_new_from)(cf, cf_i)
     nullify(cf%fft)
   end if
 #endif
+  call pop_sub()
 end subroutine X(cf_new_from)
 
 subroutine X(cf_alloc_RS)(cf)
   type(X(cf)), intent(inout) :: cf
 
+  call push_sub('cf_alloc_RS')
+
   ASSERT(.not.associated(cf%RS))
   allocate(cf%RS(cf%n(1), cf%n(2), cf%n(3)))
+
+  call pop_sub()
 end subroutine X(cf_alloc_RS)
 
 subroutine X(cf_free_RS)(cf)
   type(X(cf)), intent(inout) :: cf
 
+  call push_sub('cf_free_RS')
+
   ASSERT(associated(cf%RS))
   deallocate(cf%RS)
   nullify(cf%RS)
+
+  call pop_sub()
 end subroutine X(cf_free_RS)
 
 #if defined(HAVE_FFT)
 subroutine X(cf_alloc_FS)(cf)
   type(X(cf)), intent(inout) :: cf
 
+  call push_sub('cf_alloc_FS')
   ASSERT(.not.associated(cf%FS))
   ASSERT(associated(cf%fft))
 
   allocate(cf%FS(cf%nx, cf%n(2), cf%n(3)))
+
+  call pop_sub()
 end subroutine X(cf_alloc_FS)
 
 subroutine X(cf_free_FS)(cf)
   type(X(cf)), intent(inout) :: cf
 
+  call push_sub('cf_free_FS')
   ASSERT(associated(cf%FS))
   deallocate(cf%FS)
   nullify(cf%FS)
+
+  call pop_sub()
 end subroutine X(cf_free_FS)
 #endif
 
 subroutine X(cf_free)(cf)
   type(X(cf)), intent(inout) :: cf
 
+  call push_sub('cf_free')
   if(associated(cf%RS)) then
     deallocate(cf%RS)
     nullify(cf%RS)
@@ -107,6 +127,7 @@ subroutine X(cf_free)(cf)
   end if
 #endif
 
+  call pop_sub()
 end subroutine X(cf_free)
 
 #if defined(HAVE_FFT)
@@ -115,6 +136,7 @@ end subroutine X(cf_free)
 subroutine X(cf_fft_init)(cf)
   type(X(cf)), intent(inout)  :: cf
 
+  call push_sub('cf_fft_init')
   ASSERT(.not.associated(cf%fft))
   ASSERT(.not.associated(cf%RS))
   ASSERT(.not.associated(cf%FS))
@@ -128,6 +150,7 @@ subroutine X(cf_fft_init)(cf)
   cf%nx = cf%n(1)
 #endif
 
+  call pop_sub()
 end subroutine X(cf_fft_init)
 
 !!! The next routines convert the function between real space and fourier space

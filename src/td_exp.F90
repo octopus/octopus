@@ -58,7 +58,7 @@ module td_exp
     type(mesh_type),   intent(IN) :: m
     type(td_exp_type), intent(out) :: te
 
-    call loct_parse_int("TDExponentialMethod", FOURTH_ORDER, te%exp_method)
+    call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
     select case(te%exp_method)
     case(FOURTH_ORDER)
       message(1) = 'Info: Exponential method: 4th order expansion.'
@@ -67,7 +67,7 @@ module td_exp
       message(1) = 'Info: Exponential method: Chebyshev.'
 
     case(LANCZOS_EXPANSION)
-      call loct_parse_float("TDLanczosTol", CNST(1e-5), te%lanczos_tol)
+      call loct_parse_float(check_inp('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
       if (te%lanczos_tol <= M_ZERO) then
         write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
         message(2) = '(0 < TDLanczosTol)'
@@ -91,7 +91,7 @@ module td_exp
     call write_info(1)
     
     if(te%exp_method==FOURTH_ORDER.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
-      call loct_parse_int("TDExpOrder", 4, te%exp_order)
+      call loct_parse_int(check_inp('TDExpOrder'), 4, te%exp_order)
       if (te%exp_order < 2) then
         write(message(1), '(a,i6,a)') "Input: '", te%exp_order, "' is not a valid TDExpOrder"
         message(2) = '(2 <= TDExpOrder)'

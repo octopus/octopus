@@ -81,7 +81,7 @@ contains
     f_der%m => m ! keep a working pointer to the underlying mesh
 
 #ifdef HAVE_FFT
-    call loct_parse_int('DerivativesSpace', REAL_SPACE, f_der%space)
+    call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
     if((f_der%space.ne.REAL_SPACE).and.(f_der%space.ne.FOURIER_SPACE)) then
       write(message(1), '(a,i5,a)') "Input: '", f_der%space, &
          "' is not a valid DerivativesSpace"

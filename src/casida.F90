@@ -77,9 +77,9 @@ contains
     ierr = 0
     call init_()
 
-    call X(restart_read) ('tmp/restart_unocc', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%m, err)
     if(err.ne.0) then
-      message(1) = "Could not read wave-functions from 'tmp/restart_unocc'"
+      message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_unocc"'
       call write_warning(1)
       
       ierr = 1
@@ -99,7 +99,7 @@ contains
     end do
     if(n.ne.cas%n_unocc) then
       message(1) = "Inconsistency between variable 'NumberUnoccStates' and file"
-      message(2) = "  'tmp/restart_unocc/occs'"
+      message(2) = "'"//trim(tmpdir)//"restart_unocc/occs'"
       call write_fatal(2)
     else
       write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
@@ -114,7 +114,7 @@ contains
     call X(system_h_setup) (sys, h)
 
     ! which states to take into account
-    call loct_parse_string("ExciteStates", "1-1024", ch)
+    call loct_parse_string(check_inp('ExciteStates'), "1-1024", ch)
     call loct_wfs_list(ch, cas%wfn_flags)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(ch)
     Call Write_info(1)
@@ -122,10 +122,10 @@ contains
     ! Initialize structure
     call casida_type_init(cas)
 
-    if(fromScratch) call loct_rm('tmp/restart_casida')
+    if(fromScratch) call loct_rm(trim(tmpdir)//'restart_casida')
 
     ! calculate resonances
-    call loct_parse_logical("CasEigenvalues", .true., l)
+    call loct_parse_logical(check_inp('CasEigenvalues'), .true., l)
     if(l) then
       message(1) = "Info: Eigenvalue differences"
       call write_info(1)
@@ -136,7 +136,7 @@ contains
     end if
   
 
-    call loct_parse_logical("CasPetersilka", .true., l)
+    call loct_parse_logical(check_inp('CasPetersilka'), .true., l)
     if(l) then
       message(1) = "Info: Calculating resonance energies a la Petersilka"
       call write_info(1)
@@ -146,7 +146,7 @@ contains
       call casida_write(cas, 'petersilka')
     end if
 
-    call loct_parse_logical("LinCasida", .true., l)
+    call loct_parse_logical(check_inp('LinCasida'), .true., l)
     if(l) then
       message(1) = "Info: Calculating resonance energies a la Casida"
       call write_info(1)
@@ -165,7 +165,7 @@ contains
 
       call push_sub('casida_run')
 
-      call loct_parse_int("NumberUnoccStates", 5, cas%n_unocc)
+      call loct_parse_int(check_inp('NumberUnoccStates'), 5, cas%n_unocc)
       if(cas%n_unocc <= 0) then
         message(1) = "Input: NumberUnoccStates must be > 0"
         call write_fatal(1)
@@ -309,7 +309,7 @@ contains
       call loct_progress_bar(-1, cas%n_pairs-1)
 
       ! file to save matrix elements
-      iunit = io_open('tmp/restart_casida', action='write', position='append')
+      iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
       
       do ia = 1, cas%n_pairs
         a = cas%pair_a(ia)
@@ -395,7 +395,7 @@ contains
       write(stdout, '(1x)')
 
       ! complete the matrix and output the restart file
-      iunit = io_open('tmp/restart_casida', action='write', position='append')
+      iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
       do ia = 1, cas%n_pairs
         i = cas%pair_i(ia)
         a = cas%pair_a(ia)
@@ -481,7 +481,7 @@ contains
       integer :: ia, jb
       FLOAT   :: val
       
-      iunit = io_open('tmp/restart_casida', action='read', status='old', die=.false.)
+      iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false.)
       err = min(iunit, 0)
 
       do while(err .eq. 0)

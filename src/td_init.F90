@@ -32,7 +32,7 @@ subroutine td_init(td, m, st, geo, h, outp)
 
   td%iter = 0
 
-  call loct_parse_float("TDTimeStep", CNST(0.07)/units_inp%time%factor, td%dt)
+  call loct_parse_float(check_inp('TDTimeStep'), CNST(0.07)/units_inp%time%factor, td%dt)
   td%dt = td%dt * units_inp%time%factor
   if (td%dt <= M_ZERO) then
     write(message(1),'(a,f14.6,a)') "Input: '", td%dt, "' is not a valid TDTimeStep"
@@ -40,14 +40,14 @@ subroutine td_init(td, m, st, geo, h, outp)
     call write_fatal(2)
   end if
 
-  call loct_parse_int("TDMaximumIter", 1500, td%max_iter)
+  call loct_parse_int(check_inp('TDMaximumIter'), 1500, td%max_iter)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
     message(2) = '(1 <= TDMaximumIter)'
     call write_fatal(2)
   end if
     
-  call loct_parse_int("TDDipoleLmax", 1, td%lmax)
+  call loct_parse_int(check_inp('TDDipoleLmax'), 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
     message(2) = '(0 <= TDDipoleLmax <= 4 )'
@@ -56,7 +56,7 @@ subroutine td_init(td, m, st, geo, h, outp)
 
   !!! read in the default direction for the polarization
   td%pol(:) = M_ZERO
-  if(loct_parse_block('TDPolarization', blk)==0) then
+  if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
     do i = 1, conf%dim
       call loct_parse_block_float(blk, 0, i-1, td%pol(i))
     end do
@@ -67,12 +67,12 @@ subroutine td_init(td, m, st, geo, h, outp)
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-  call loct_parse_int("AbsorbingBoundaries", 0, dummy)
+  call loct_parse_int(check_inp('AbsorbingBoundaries'), 0, dummy)
   call PES_init(td%PESv, m, st, dummy, outp%iter)
 #endif
 
   ! should we move the ions during the simulation?
-  call loct_parse_int("MoveIons", 0, td%move_ions)
+  call loct_parse_int(check_inp('MoveIons'), 0, td%move_ions)
   if( (td%move_ions .ne. STATIC_IONS) .and.   &
       (td%move_ions .ne. NORMAL_VERLET) .and. &
       (td%move_ions .ne. VELOCITY_VERLET) ) then
@@ -90,30 +90,30 @@ subroutine td_init(td, m, st, geo, h, outp)
   endif
   
   ! Check what should be output
-  call loct_parse_logical("TDOutputMultipoles", .true., td%out_multip)
+  call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., td%out_multip)
   if(td%move_ions>0) then
-    call loct_parse_logical("TDOutputCoordinates", .true., td%out_coords)
+    call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., td%out_coords)
   else
     td%out_coords = .false.
   end if
-  call loct_parse_logical("TDOutputAngularMomentum", .false., td%out_angular)
-  call loct_parse_logical("TDOutputSpin", .false., td%out_spin)
-  call loct_parse_logical("TDOutputGSProjection", .false., td%out_gsp)
-  call loct_parse_logical("TDOutputAcceleration", .false., td%out_acc)
+  call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., td%out_angular)
+  call loct_parse_logical(check_inp('TDOutputSpin'), .false., td%out_spin)
+  call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., td%out_gsp)
+  call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., td%out_acc)
   if(td%out_acc.and.td%move_ions>0) then
     message(1) = 'Error. If harmonic spectrum is to be calculated'
     message(2) = 'Atoms should not be allowed to move'
     call write_fatal(2)
   endif
-  call loct_parse_logical("TDOutputLaser", h%ep%no_lasers>0, td%out_laser)
-  call loct_parse_logical("TDOutputElEnergy", .false., td%out_energy)
-  call loct_parse_logical("TDOutputOccAnalysis", .false., td%out_proj)
-  call loct_parse_logical("TDOutputLocalMagneticMoments", .false., td%out_magnets)
+  call loct_parse_logical(check_inp('TDOutputLaser'), h%ep%no_lasers>0, td%out_laser)
+  call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., td%out_energy)
+  call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., td%out_proj)
+  call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., td%out_magnets)
   call geometry_min_distance(geo, rmin)
-  call loct_parse_float("LocalMagneticMomentsSphereRadius", rmin*M_HALF/units_inp%length%factor, td%lmm_r)
+  call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, td%lmm_r)
   td%lmm_r = td%lmm_r * units_inp%length%factor
 
-  call loct_parse_int("TDFastEpotGeneration", 1, td%epot_regenerate)
+  call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1
 
   call td_rti_init(m, st, td%tr)

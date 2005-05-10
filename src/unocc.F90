@@ -59,9 +59,9 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   if(.not.fromScratch) then
     ! not all states will be read, that is the reason for the <0 instead of .ne.0
-    call X(restart_read) ('tmp/restart_unocc', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%m, err)
     if(err < 0) then
-      message(1) = "Could not load tmp/restart_unocc: Starting from scratch"
+      message(1) = 'Could not load "'//trim(tmpdir)//'restart_unocc": Starting from scratch'
       call write_warning(1)
 
       fromScratch = .true.
@@ -69,16 +69,16 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
 
   if(fromScratch) then
-    call X(restart_read) ('tmp/restart_gs', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
     if(err < 0) then
-      message(1) = "Could not load tmp/restart_gs: Starting from scratch"
+      message(1) = "Could not load '"//trim(tmpdir)//"restart_gs: Starting from scratch'"
       call write_warning(1)
 
       ierr = 1
       call end_()
       return
     end if
-    message(1) = "Loaded wave-functions from 'tmp/restart_gs'"
+    message(1) = "Loaded wave-functions from '"//trim(tmpdir)//"restart_gs'"
     call write_info(1)
   end if
 
@@ -108,15 +108,15 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, 1, converged, verbose = .true.)
 
   ! write restart information.
-  call X(restart_write) ('tmp/restart_unocc', sys%st, sys%m, err)
+  call X(restart_write) (trim(tmpdir)//'restart_unocc', sys%st, sys%m, err)
   if(err.ne.0) then
-    message(1) = 'Unsuccesfull write of "tmp/restart_unocc"'
+    message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_unocc"'
     call write_fatal(1)
   end if
 
   ! write output file
   call io_mkdir('static')
-  iunit = io_open('static/eigenvalues', action='write')
+  iunit = io_open(trim(current_label)//'static/eigenvalues', action='write')
 
   if(converged) then
     write(iunit,'(a)') 'All unoccupied states converged.'
@@ -129,7 +129,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call io_close(iunit)
   
   if (conf%periodic_dim>0 .and. sys%st%d%nik>sys%st%d%nspin) then
-    iunit = io_open('static/bands.dat', action='write')
+    iunit = io_open(trim(current_label)//'static/bands.dat', action='write')
     call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if
@@ -147,7 +147,7 @@ contains
 
     call push_sub('unocc_run')
 
-    call loct_parse_int("NumberUnoccStates", 5, nus)
+    call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
     if(nus <= 0) then
       message(1) = "Input: NumberUnoccStates must be > 0"
       call write_fatal(1)

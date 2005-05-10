@@ -96,20 +96,20 @@ contains
 
     call push_sub('xyz_file_read')
 
-    if(loct_parse_isdef('PDB'//trim(what)).ne.0) then
+    if(loct_parse_isdef(check_inp('PDB'//trim(what))).ne.0) then
       gf%file_type = XYZ_FILE_PDB
       gf%flags = ior(gf%flags, XYZ_FLAGS_RESIDUE)
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
-      call loct_parse_string('PDB'//trim(what), 'coords.pdb', str)
+      call loct_parse_string(check_inp('PDB'//trim(what)), 'coords.pdb', str)
       
       iunit = io_open(str, action='read')
       call xyz_file_read_PDB(iunit, gf)
       call io_close(iunit)
 
-    else if(loct_parse_isdef('XYZ'//trim(what)).ne.0) then ! read a xyz file
+    else if(loct_parse_isdef(check_inp('XYZ'//trim(what))).ne.0) then ! read a xyz file
       gf%file_type = XYZ_FILE_XYZ
-      call loct_parse_string('XYZ'//trim(what), 'coords.xyz', str)
+      call loct_parse_string(check_inp('XYZ'//trim(what)), 'coords.xyz', str)
 
       iunit = io_open(str, action='read')
       read(iunit, *) gf%n
@@ -123,7 +123,7 @@ contains
 
       call io_close(iunit)
 
-    else if(loct_parse_block(trim(what), blk) == 0) then
+    else if(loct_parse_block(check_inp(trim(what)), blk) == 0) then
       gf%n = loct_parse_block_n(blk)
 
       gf%file_type = XYZ_FILE_INP

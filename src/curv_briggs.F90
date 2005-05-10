@@ -46,7 +46,7 @@ contains
     cv%L = M_ZERO
     cv%L(1:conf%dim) = l(1:conf%dim)
 
-    call loct_parse_float('CurvBriggsBeta', M_HALF, cv%beta)
+    call loct_parse_float(check_inp('CurvBriggsBeta'), M_HALF, cv%beta)
     
     if(cv%beta<M_ZERO.or.cv%beta>M_ONE) then
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'

@@ -118,7 +118,7 @@ contains
       end if
 
       if(iand(xcs%family, XC_FAMILY_MGGA).ne.0) then
-        call loct_parse_int("MGGAimplementation", 1, xcs%mGGA_implementation)
+        call loct_parse_int(check_inp('MGGAimplementation'), 1, xcs%mGGA_implementation)
         if(xcs%mGGA_implementation.ne.1.and.xcs%mGGA_implementation.ne.2) then
           message(1) = 'MGGAimplementation can only assume the values:'
           message(2) = '  1 : GEA implementation'

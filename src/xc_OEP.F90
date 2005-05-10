@@ -82,7 +82,7 @@ contains
     oep%sic_correction = 0
     if(iand(family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
       
-      call loct_parse_int("SICCorrection", 0, oep%sic_correction)
+      call loct_parse_int(check_inp('SICCorrection'), 0, oep%sic_correction)
     end if
     
     ! if OEP we need some extra variables
@@ -94,14 +94,14 @@ contains
       endif
 #endif
 
-      call loct_parse_int("OEP_level", XC_OEP_KLI, oep%level)
+      call loct_parse_int(check_inp('OEP_level'), XC_OEP_KLI, oep%level)
       if(oep%level<0.or.oep%level>XC_OEP_FULL) then
         message(1) = "OEP_level can only take the values:"
         message(2) = "1 (Slater), 2 (KLI), 3 (CEDA), or 4 (full OEP)"
         call write_fatal(2)
       end if
       if(oep%level == XC_OEP_FULL) then
-        call loct_parse_float("OEP_mixing", M_ONE, oep%mixing)
+        call loct_parse_float(check_inp('OEP_mixing'), M_ONE, oep%mixing)
       end if
       
       ! this routine is only prepared for finite systems, and ispin = 1, 2
