@@ -46,6 +46,7 @@ Author  : $author
 Date    : $date
 Arch    : $arch
 Release :
+Enabled : Yes
 
 INP
 CalculationMode = gs
@@ -73,6 +74,7 @@ EndOfTemplate
 
 }
 
+if (not @ARGV) { usage; }
 
 getopts("nvhe:c:f:d:ip");
 
@@ -83,13 +85,13 @@ chomp($workdir);
 # Handle options
 $opt_h && usage;
 $opt_c && create_template;
-if($opt_d) { $workdir = $opt_d; }
-print "Using workdir    : $workdir \n";
+if($opt_d)  { $workdir = $opt_d; }
+if(!$opt_i) { print "Using workdir    : $workdir \n" };
 
 $octopus_exe = "octopus";
-if($opt_e) { $octopus_exe = $opt_e; };
+if($opt_e)  { $octopus_exe = $opt_e; };
 die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "");
-print "Using executable : $octopus_exe \n\n";
+if(!$opt_i) { print "Using executable : $octopus_exe \n"; }
 
 system ("rm -rf $workdir");
 mkdir $workdir;
@@ -105,7 +107,7 @@ while ($_ = <TESTSUITE>) {
  if ( $_ =~ /Test\s*:\s*(.*)\s*$/) {
   %test = ();
   $test{"name"} = $1;
-  print "\033[34m$test{'name'} \033[0m \n";
+  if(!$opt_i) { print "\033[34m $test{\"name\"} \033[0m \n"; }
  }
 
  if ( $_ =~ /Author\s*:\s*(.*)\s*$/) {
@@ -123,48 +125,65 @@ while ($_ = <TESTSUITE>) {
   $test{"release"} = $1;
  }
 
- # generating input file for test run
- if ( $_ =~ /^INP/) {
-   $test{"inp"} = 1;
-   open(INP,">$workdir/inp");
-   while ( ($_ = <TESTSUITE>) ) {
-     last if ( $_ =~ /^EOF/ );
-     print INP $_;
-     if ($opt_i) { print STDOUT $_; }
-
-   }
-   close(INP);
+ if ( $_ =~ /Enabled\s*:\s*(.*)\s*$/) {
+  %test = ();
+  $enabled = $1;
+  $enabled =~ s/^\s*//;
+  $enabled =~ s/\s*$//;
+  $test{"enabled"} = $enabled;
  }
 
- if ( $_ =~ /^RUN/) {
-   die "inp not defined" if !$test{"inp"};
-   if (!$opt_n) {
-     print "\nStarting test run ...\n";
-     system("cd $workdir; $octopus_exe < inp &> out"); 
-     print "Finished test run.\n"; }
-   else {
-     print "cd $workdir; $octopus_exe < inp &> out \n";
+ # Running this regression test if it is enabled
+ if ( $enabled eq "Yes" ) {
+
+   # generating input file for test run
+   if ( $_ =~ /^INP/) {
+     $test{"inp"} = 1;
+     open(INP,">$workdir/inp");
+     while ( ($_ = <TESTSUITE>) ) {
+       last if ( $_ =~ /^EOF/ );
+       print INP $_;
+       if ($opt_i) { print STDOUT $_; }
+
+     }
+     close(INP);
    }
-   $test{"run"} = 1;
- }
 
- if ( $_ =~ /^Match/ && !$opt_n) {
-   ($match, $name, $pre_command , $regexp) = split(/\;/,$_);
-   if ($opt_v) { print "$pre_command \n"; }
-   if ($opt_v) { print "$regexp \n"; }
-   $regexp =~ s/^\s*//;
-   $regexp =~ s/\s*$//;
-   $lineout = `cd $workdir; $pre_command`;
-
-
-   if ( $lineout =~ /$regexp/ ) {
-     print "$name: \t [ \033[32m  OK  \033[0m ] \n";
-   } else {
-     print "$name: \t [ \033[31m FAIL \033[0m ] \n";
+   if ( $_ =~ /^RUN/) {
+     die "inp not defined" if !$test{"inp"};
+     if (!$opt_n) {
+       print "\nStarting test run ...\n";
+       system("cd $workdir; $octopus_exe < inp &> out");
+       print "Finished test run.\n"; }
+     else {
+       if(!$opt_i) { print "cd $workdir; $octopus_exe < inp &> out \n"; }
+     }
+     $test{"run"} = 1;
    }
- }
+
+   if ( $_ =~ /^Match/ && !$opt_n) {
+     ($match, $name, $pre_command , $regexp) = split(/\;/,$_);
+     if ($opt_v) { print "$pre_command \n"; }
+     if ($opt_v) { print "$regexp \n"; }
+     $regexp =~ s/^\s*//;
+     $regexp =~ s/\s*$//;
+     $lineout = `cd $workdir; $pre_command`;
+
+
+     if ( $lineout =~ /$regexp/ ) {
+       print "$name: \t [ \033[32m  OK  \033[0m ] \n";
+     } else {
+       print "$name: \t [ \033[31m FAIL \033[0m ] \n";
+     }
+   }
+
+ } else {
+   if ( $_ =~ /^RUN/) { print " skipping test\n"; }
+   }
 }
 
-print "\n\n\n";
+
+if (!$opt_i) { print "\n\n\n"; }
 if (!$opt_p) { system ("rm -rf $workdir"); }
+
 

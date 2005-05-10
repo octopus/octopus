@@ -20,6 +20,8 @@
 
 man_MANS = run_regression.pl.1
 bin_SCRIPTS = run_regression.pl
+sharedir = $(pkgdatadir)/testsuite
+dist_share_DATA = finite_systems_*/*.test
 
 rlog=regression_test.out
 
@@ -29,7 +31,7 @@ regression_test:
 	@echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 
 clean:
-	-rm -rf /tmp/tmp.*
+	-rm -rf /tmp/tmp.* $(rlog)
 
 run_regression.pl.1: run_regression.pl.pod
 	pod2man -c "Octopus Documentation" -s 1 run_regression.pl.pod > run_regression.pl.1
