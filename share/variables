@@ -9,6 +9,7 @@ pol_lr           = 8
 casida           = 9
 bo               = 98
 recipe           = 99
+multi_subsystem  = 1000
 silent_mode      = -1000
 warning_mode     = 1
 normal_mode      = 30
