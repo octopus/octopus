@@ -14,7 +14,7 @@ fromScratch = yes
 %
 
 %Coordinates
-  "Helium1D"	0.00	0.00	0.00	no
+  "Helium1D" | 0.00 | 0.00 | 0.00
 %
 
 Radius  = 12.0

@@ -88,8 +88,16 @@ $opt_c && create_template;
 if($opt_d)  { $workdir = $opt_d; }
 if(!$opt_i) { print "Using workdir    : $workdir \n" };
 
-$octopus_exe = "octopus";
-if($opt_e)  { $octopus_exe = $opt_e; };
+if($opt_e)  { $octopus_exe = $opt_e; }
+else{
+  $octopus_exe =        "octopus";
+  $octopus_exe = "../src/octopus"       if( -x "../src/octopus");
+  $octopus_exe = "../src/octopus_debug" if( -x "../src/octopus_debug");
+}
+if($octopus_exe !~ /^\//){
+  $octopus_exe = $ENV{PWD}."/$octopus_exe";
+}
+
 die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "");
 if(!$opt_i) { print "Using executable : $octopus_exe \n"; }
 
@@ -162,7 +170,10 @@ while ($_ = <TESTSUITE>) {
    }
 
    if ( $_ =~ /^Match/ && !$opt_n) {
-     ($match, $name, $pre_command , $regexp) = split(/\;/,$_);
+     ($match, $name, $pre_command, $regexp) = split(/\;/,$_);
+
+     die "have to run before matching" if !$test{"run"};
+
      if ($opt_v) { print "$pre_command \n"; }
      if ($opt_v) { print "$regexp \n"; }
      $regexp =~ s/^\s*//;
@@ -179,11 +190,9 @@ while ($_ = <TESTSUITE>) {
 
  } else {
    if ( $_ =~ /^RUN/) { print " skipping test\n"; }
-   }
+ }
 }
 
 
 if (!$opt_i) { print "\n\n\n"; }
 if (!$opt_p) { system ("rm -rf $workdir"); }
-
-

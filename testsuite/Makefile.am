@@ -26,7 +26,7 @@ dist_share_DATA = finite_systems_*/*.test
 rlog=regression_test.out
 
 regression_test:
-	@echo; find . -name *.test -print -exec run_regression.pl -f \{\}  \; | tee $(rlog)
+	@echo; find . -name *.test -print -exec ./run_regression.pl -f \{\}  \; | tee $(rlog)
 	@echo -e "\033[32;1mPassed: `grep OK $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 	@echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 
