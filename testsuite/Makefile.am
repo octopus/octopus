@@ -25,8 +25,9 @@ dist_share_DATA = finite_systems_*/*.test
 
 rlog=regression_test.out
 
+check: regression_test
 regression_test:
-	@echo; find . -name *.test -print -exec ./run_regression.pl -f \{\}  \; | tee $(rlog)
+	@echo; find . -name *.test -print -exec ./run_regression.pl -e $(PWD)/../src/octopus$(EXEEXT) -f \{\}  \; | tee $(rlog)
 	@echo -e "\033[32;1mPassed: `grep OK $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 	@echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 
@@ -37,4 +38,4 @@ run_regression.pl.1: run_regression.pl.pod
 	pod2man -c "Octopus Documentation" -s 1 run_regression.pl.pod > run_regression.pl.1
 
 
-.PHONY: regression clean 
+.PHONY: regression_tests check clean 
