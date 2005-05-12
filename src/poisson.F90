@@ -173,6 +173,7 @@ contains
     case(CG_CORRECTED)
       call poisson_cg2_end()
     end select
+    poisson_solver = -99
     
     call pop_sub()
   end subroutine poisson_end
