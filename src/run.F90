@@ -236,6 +236,27 @@ end subroutine run
 subroutine run_init()
   ! initialize some stuff
 
+
+  ! Sets the dimensionaliy of the problem.
+  call loct_parse_int(check_inp('Dimensions'), 3, conf%dim)
+  if(conf%dim<1 .or. conf%dim>3) then
+    message(1) = 'Dimensions must be either 1, 2, or 3'
+    call write_fatal(1)
+  end if
+
+  ! handle periodic directions
+  call loct_parse_int(check_inp('PeriodicDimensions'), 0, conf%periodic_dim)
+  if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
+    message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
+    call write_fatal(1)
+  endif
+  if(conf%periodic_dim > conf%dim) then
+    message(1) = 'PeriodicDimensions must be <= Dimensions'
+    call write_fatal(1)
+  end if
+
+  call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
+
   ! do we treat only userdefined species
   call loct_parse_logical(check_inp('OnlyUserDef'), .false., conf%only_user_def)
   
