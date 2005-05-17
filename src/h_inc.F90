@@ -344,7 +344,7 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
     
       do ikbc = 1, nlop%c
         do jkbc = 1, nlop%c
-          tmp   = R_TOTYPE(nlop%uv(:, ikbc)*m%vol_pp(:))
+          tmp   = R_TOTYPE(nlop%uv(:, ikbc)*m%vol_pp(nlop%jxyz(:)))
           uvpsi = lalg_dot(nlop%n, tmp, lpsi)*nlop%uvu(ikbc, jkbc)
           if (conf%periodic_dim==0) then
             tmp = R_TOTYPE(nlop%uv(:, jkbc))
