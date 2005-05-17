@@ -28,18 +28,18 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   integer :: i, j, ist, jst, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)
   FLOAT :: r
-  R_TYPE, pointer     :: wf_ist(:), send_buffer(:)
+  R_TYPE, allocatable     :: wf_ist(:), send_buffer(:)
   R_TYPE, allocatable :: rho_ij(:), F_ij(:)
 #if defined(HAVE_MPI)
   R_TYPE, pointer :: recv_buffer(:)
-  integer :: ierr, req, status
+  integer :: ierr, req, stat(MPI_STATUS_SIZE)
 #endif
 
   ! Note: we assume that st%occ is known in all nodes
 
   call push_sub('oep_x')
 
-  allocate(F_ij(m%np), rho_ij(m%np), send_buffer(m%np))
+  allocate(F_ij(m%np), rho_ij(m%np), send_buffer(m%np), wf_ist(m%np))
 
 #if defined(HAVE_MPI)
   allocate(recv_buffer(m%np))
@@ -70,7 +70,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
         recv_stack(ist_r) = j
         ist_r = ist_r + 1
       end if
-      if(st%node(j) == mpiv%node) then
+      if(node_to.ne.-1 .and. st%node(j) == mpiv%node) then
         send_stack(ist_s) = j
         ist_s = ist_s + 1
       end if
@@ -78,77 +78,75 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 
     ! now we do a loop over all states
     ist_r = 0
-    if(node_fr <0) ist_r = st%nst + 1
+    if(node_fr < 0) ist_r = st%nst + 1
     ist_s = 0
     if(node_to < 0) ist_s = st%nst + 1
     do
       ! send wave-function
       if(ist_s <= st%nst) ist_s = ist_s  + 1
 
-#if defined(HAVE_MPI)          
+#if defined(HAVE_MPI)
       if((send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
-        call MPI_ISend(st%X(psi)(:, 1, send_stack(ist_s), is), m%np, R_MPITYPE, &
+        call MPI_ISend(st%X(psi)(1, 1, send_stack(ist_s), is), m%np, R_MPITYPE, &
             node_to, send_stack(ist_s), MPI_COMM_WORLD, req, ierr)
       end if
 #endif
-
       ! receive wave-function
       if(ist_r <= st%nst) ist_r = ist_r  + 1
 
       if(recv_stack(ist_r) > 0) then
         if(node_fr == mpiv%node) then
-          wf_ist => st%X(psi)(:, 1, recv_stack(ist_r), is)
+          wf_ist(1:m%np) = st%X(psi)(1:m%np, 1, recv_stack(ist_r), is)
 #if defined(HAVE_MPI)
         else
           call MPI_Recv(recv_buffer(:), m%np, R_MPITYPE, &
-              node_fr, recv_stack(ist_r), MPI_COMM_WORLD, status, ierr)
-          wf_ist => recv_buffer(:)
+              node_fr, recv_stack(ist_r), MPI_COMM_WORLD, stat(:), ierr)
+          wf_ist(1:m%np) = recv_buffer(1:m%np)
 #endif
         end if
 
         ! calculate stuff
         ist = recv_stack(ist_r)
-        send_buffer(:) = R_TOTYPE(M_ZERO)
+        send_buffer(1:m%np) = R_TOTYPE(M_ZERO)
         do jst = st%st_start, st%st_end
           if((st%node(ist) == mpiv%node).and.(jst < ist)) cycle
           if((st%occ(ist, is).le.small).or.(st%occ(jst, is).le.small)) cycle
 
-          rho_ij(:) = R_CONJ(wf_ist(:))*st%X(psi)(:, 1, jst, is)
-          F_ij = R_TOTYPE(M_ZERO)
+          rho_ij(1:m%np) = R_CONJ(wf_ist(1:m%np))*st%X(psi)(1:m%np, 1, jst, is)
+          F_ij(1:m%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(m, f_der, F_ij, rho_ij)
 
-          send_buffer(:) = send_buffer(:) + &
-              oep%socc*st%occ(jst, is)*F_ij(:)*R_CONJ(st%X(psi)(:, 1, jst, is))
+          send_buffer(1:m%np) = send_buffer(1:m%np) + &
+              oep%socc*st%occ(jst, is)*F_ij(1:m%np)*R_CONJ(st%X(psi)(1:m%np, 1, jst, is))
 
           if(ist.ne.jst) then
-            oep%X(lxc)(:, jst) = oep%X(lxc)(:, jst) - &
-                oep%socc * st%occ(ist, is) * R_CONJ(F_ij(:)*wf_ist(:))
+            oep%X(lxc)(1:m%np, jst) = oep%X(lxc)(1:m%np, jst) - &
+                oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:m%np)*wf_ist(1:m%np))
           end if
 
           r = M_ONE
           if(ist.ne.jst) r = M_TWO
           ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-              sum(R_REAL(wf_ist(:) * F_ij(:) * R_CONJ(st%X(psi)(:, 1, jst, is))) * m%vol_pp(:))
+              sum(R_REAL(wf_ist(1:m%np) * F_ij(1:m%np) * R_CONJ(st%X(psi)(1:m%np, 1, jst, is))) * m%vol_pp(1:m%np))
         end do
-
         if(st%node(ist) == mpiv%node) then
-          oep%X(lxc)(:, ist) = oep%X(lxc)(:, ist) - send_buffer(:)
+          oep%X(lxc)(1:m%np, ist) = oep%X(lxc)(1:m%np, ist) - send_buffer(1:m%np)
 #if defined(HAVE_MPI)
         else
           call MPI_ISend(send_buffer(:), m%np, R_MPITYPE, &
-              node_fr, 999+ist, MPI_COMM_WORLD, req, ierr)
+              node_fr, ist, MPI_COMM_WORLD, req, ierr)
 #endif
         end if
         
       end if
 
 #if defined(HAVE_MPI)
-      if((send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
-        call MPI_Recv(send_buffer(:), m%np, R_MPITYPE, &
-            node_to, 999+send_stack(ist_s), MPI_COMM_WORLD, status, ierr)
+      if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
+        call MPI_Recv(recv_buffer(:), m%np, R_MPITYPE, &
+            node_to, send_stack(ist_s), MPI_COMM_WORLD, stat(:), ierr)
 
-        oep%X(lxc)(:, send_stack(ist_s)) = oep%X(lxc)(:, send_stack(ist_s)) - &
-            send_buffer(:)
+        oep%X(lxc)(1:m%np, send_stack(ist_s)) = oep%X(lxc)(1:m%np, recv_stack(ist_s)) - &
+            send_buffer(1:m%np)
       end if
 #endif
 
@@ -165,7 +163,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 #endif
 
   deallocate(recv_stack, send_stack)
-  deallocate(F_ij, rho_ij, send_buffer)
+  deallocate(F_ij, rho_ij, send_buffer, wf_ist)
 
   call pop_sub()
 
