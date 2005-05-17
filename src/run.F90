@@ -34,6 +34,7 @@ use unocc
 use static_pol
 use static_pol_lr
 use casida
+use wave_matching
 use geom_opt
 use phonons
 use opt_control
@@ -63,6 +64,7 @@ integer, private, parameter ::   &
      M_OPT_CONTROL        =  7, &
      M_LR_STATIC_POL      =  8, &
      M_CASIDA             =  9, &
+     M_WAVE_MATCHING      = 10, &
      M_BO_MD              = 98, &
      M_PULPO_A_FEIRA      = 99, &
      M_MULTI_SUBSYSTEM    = multi_subsys_mode
@@ -78,6 +80,7 @@ integer, private, parameter :: &
      I_OPT_CONTROL        = 107, &
      I_LR_STATIC_POL      = 108, &
      I_CASIDA             = 109, &
+     I_WAVE_MATCHING      = 110, &
      I_PULPO              = 999
 
 contains
@@ -88,7 +91,7 @@ subroutine run()
   logical :: log
   character(len=100) :: filename
 
-  logical :: fromScratch(M_GS:M_CASIDA)
+  logical :: fromScratch(M_GS:M_WAVE_MATCHING)
 
   call push_sub('run')
 
@@ -164,6 +167,9 @@ subroutine run()
         cycle program
       end if
 
+    case(I_WAVE_MATCHING)
+      ierr = wave_matching_run(sys, h)
+
     case(I_PULPO)
       call pulpo_print()
 
@@ -225,6 +231,10 @@ contains
       fromScratch(M_CASIDA) = fS
       instr = instr + 1; i_stack(instr) = I_CASIDA
 
+    case(M_WAVE_MATCHING)
+      fromScratch(M_WAVE_MATCHING) = fS
+      instr = instr + 1; i_stack(instr) = I_WAVE_MATCHING
+
     case(M_PULPO_A_FEIRA)
       instr = instr + 1; i_stack(instr) = I_PULPO
   end select
@@ -259,22 +269,25 @@ subroutine run_init()
 
   ! do we treat only userdefined species
   call loct_parse_logical(check_inp('OnlyUserDef'), .false., conf%only_user_def)
+
+
   
-  if( (calc_mode < 1 .or. calc_mode > 10) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
+  if( (calc_mode < 1 .or. calc_mode > 11) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
     message(2) = '  Calculation Mode = '
-    message(3) = '    gs          <= ground-state calculation'
-    message(4) = '    unocc       <= calculate unocuppied states'
-    message(5) = '    td          <= time-dependent simulation'
-    message(6) = '    pol         <= calculate static polarizability'
-    message(6) = '    pol_lr      <= calculate static polarizability from LR theory'
-    message(7) = '    bo          <= perform Born-Oppenheimer MD'
-    message(8) = '    geom        <= geometry optimization'
-    message(9) = '    phonon      <= calculate phonon frequencies'
-    message(10)= '    opt_control <= optimum control'
-    message(11)= '    casida      <= calculate excitation a la Marc Casida'
-    message(12)= '    recipe      <= prints out the "Pulpo a Feira" recipe'
-    call write_fatal(12)
+    message(3) = '    gs            <= ground-state calculation'
+    message(4) = '    unocc         <= calculate unocuppied states'
+    message(5) = '    td            <= time-dependent simulation'
+    message(6) = '    pol           <= calculate static polarizability'
+    message(6) = '    pol_lr        <= calculate static polarizability from LR theory'
+    message(7) = '    bo            <= perform Born-Oppenheimer MD'
+    message(8) = '    geom          <= geometry optimization'
+    message(9) = '    phonon        <= calculate phonon frequencies'
+    message(10)= '    opt_control   <= optimum control'
+    message(11)= '    casida        <= calculate excitation a la Marc Casida'
+    message(12)= '    wave_matching <= calculate states via wave matching'
+    message(13)= '    recipe        <= prints out the "Pulpo a Feira" recipe'
+    call write_fatal(13)
   end if
 
   write(message(1), '(a,i2)')   'Info: Calculation Mode = ', calc_mode
