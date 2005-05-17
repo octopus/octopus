@@ -34,6 +34,8 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   FLOAT :: f(3)
   integer :: ierr
 #endif
+
+  call push_sub('epot_forces')
   
   ! init to 0
   do i = 1, geo%natoms
@@ -109,7 +111,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   end do
   
   ! now comes the local part of the PP
-  if(conf%periodic_dim==0) then ! Real space
+  if(conf%periodic_dim==0.or.conf%only_user_def) then ! Real space
     call local_RS()
 #ifdef HAVE_FFT
   else ! Fourier space
@@ -126,6 +128,8 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   end if
 
   !TODO: forces due to the magnetic fields (static and time-dependent)
+
+  call pop_sub()
   
 contains
   subroutine local_RS()

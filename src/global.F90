@@ -48,6 +48,7 @@ type conf_type
   integer :: periodic_dim
   integer :: dim
   logical :: boundary_zero_derivative
+  logical :: only_user_def
 end type conf_type
 
 type mpi_type

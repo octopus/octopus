@@ -236,6 +236,8 @@ end subroutine run
 subroutine run_init()
   ! initialize some stuff
 
+  ! do we treat only userdefined species
+  call loct_parse_logical(check_inp('OnlyUserDef'), .false., conf%only_user_def)
   
   if( (calc_mode < 1 .or. calc_mode > 10) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
     write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"

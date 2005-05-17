@@ -101,7 +101,7 @@ contains
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
-    if(conf%periodic_dim>0) call epot_local_fourier_init(ep, m, geo)
+    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) call epot_local_fourier_init(ep, m, geo)
 
     ep%classic_pot = 0
     if(geo%ncatoms > 0) then
@@ -183,7 +183,7 @@ contains
 #ifdef HAVE_FFT
     integer :: i
 
-    if(conf%periodic_dim>0) then
+    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
@@ -396,7 +396,7 @@ contains
     geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
-    if(conf%periodic_dim>0) then
+    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) then
       call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
@@ -455,7 +455,7 @@ contains
     end do
 
 #ifdef HAVE_FFT
-    if(conf%periodic_dim>0) then
+    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) then
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)
@@ -484,7 +484,7 @@ contains
       FLOAT :: x(3)
       
       call push_sub('build_local_part')
-      if(conf%periodic_dim==0) then
+      if(conf%periodic_dim==0.or.conf%only_user_def) then
         do i = 1, m%np
           call mesh_xyz(m, i, x)
           x = x - a%x
