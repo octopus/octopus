@@ -148,6 +148,14 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
     message(2) = '(SpinComponents = 1 | 2 | 3)'
     call write_fatal(2)
   end if
+#ifdef COMPLEX_WFNS
+#else
+  if(st%d%ispin == 3) then
+    message(1) = "Cannot use spinors with an executable compiled for real wavefunctions."
+    call write_fatal(1)
+  endif
+#endif
+
 
   call loct_parse_float(check_inp('ExcessCharge'), M_ZERO, excess_charge)
 
