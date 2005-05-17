@@ -6,3 +6,4 @@ config_F90.h
 debug static tmp
 inp out.oct
 stamp*
+Makefile.local
