@@ -96,6 +96,9 @@ DISTCLEANFILES = Makefile.in dirs.h
 # ctags
 CTAGS=ctags-exuberant -e
 
+# if it exists include user defined Makefile.local (which is not included in the octopus package)
+-include Makefile.local
+
 # how to compile a F90 file :)
 .F90.o:
 	@FCCPP@ @CPPFLAGS@ $< > $*_oct.f90
