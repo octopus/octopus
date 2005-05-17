@@ -97,6 +97,7 @@ integer function td_run(sys, h, fromScratch) result(ierr)
   type(states_type),   pointer :: st
   type(geometry_type), pointer :: geo
 
+  logical :: stopping
   integer :: i, ii, j, idim, ist, ik
   integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
        out_laser, out_energy, out_proj, out_angular, out_spin, out_magnets
@@ -148,9 +149,10 @@ integer function td_run(sys, h, fromScratch) result(ierr)
   call write_info(1)
 
   ii = 1
+  stopping = .false.
   etime = loct_clock()
   do i = td%iter, td%max_iter
-    if(clean_stop()) exit
+   if(clean_stop()) stopping = .true.
     ! Move the ions.
     if( td%move_ions > 0 ) then
       select case(td%move_ions)
@@ -240,12 +242,13 @@ integer function td_run(sys, h, fromScratch) result(ierr)
 
     ! write down data
     ii = ii + 1
-    if(ii==sys%outp%iter+1 .or. i == td%max_iter) then ! output
+    if(ii==sys%outp%iter+1 .or. i == td%max_iter .or. stopping) then ! output
       if(i == td%max_iter) sys%outp%iter = ii - 1
       ii = 1
       call td_write_data(i)
     end if
 
+    if (stopping) exit
   end do
 
   call end_iter_output()
