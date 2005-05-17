@@ -1,3 +1,5 @@
+# $Id$
+
 noinst_LIBRARIES = liboct_parser.a
 
 liboct_parser_a_SOURCES = symbols.c parse.c parse_exp.c string_f.c parser_f.c gsl_userdef.c

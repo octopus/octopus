@@ -14,6 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
+!!
+!! $Id$
 
 subroutine PES_rc_init(v, m, st, save_iter)
   type(mesh_type),   intent(IN) :: m

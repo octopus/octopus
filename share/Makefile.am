@@ -1,3 +1,5 @@
+# $Id$
+
 SUBDIRS = PP recipes util samples
 
 sharedir = $(pkgdatadir)

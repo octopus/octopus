@@ -14,6 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
+!!
+!! $Id$
 
 subroutine xc_get_vxc_and_axc(xcs, m, f_der, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
   type(xc_type), target, intent(in)    :: xcs

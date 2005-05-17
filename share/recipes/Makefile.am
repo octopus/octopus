@@ -1,3 +1,5 @@
+# $Id$
+
 SUBDIRS = en es it
 
 tm2dir = $(pkgdatadir)/recipes

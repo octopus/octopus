@@ -1,3 +1,5 @@
+# $Id$
+
 SUBDIRS = TM2 HGH
 
 ppdir = $(pkgdatadir)/PP

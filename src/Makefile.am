@@ -1,3 +1,5 @@
+# $Id$
+
 EXTRA_PROGRAMS = oct-sf oct-rsf oct-hs-mult oct-hs-acc \
 	oct-broad oct-ph oct-xyz-anim \
 	oct-make-st oct-center-geom

@@ -17,6 +17,7 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
+## $Id$
 
 man_MANS = run_regression.pl.1
 bin_SCRIPTS = run_regression.pl

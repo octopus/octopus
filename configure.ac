@@ -15,6 +15,7 @@
 ## Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 ## 02111-1307, USA.
 ##
+## $Id$
 
 AC_INIT(Octopus, 1.99devel, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])

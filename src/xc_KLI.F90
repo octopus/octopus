@@ -14,6 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
+!!
+!! $Id$
 
 subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(mesh_type),   intent(in)    :: m

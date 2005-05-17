@@ -14,6 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 !! 02111-1307, USA.
+!!
+!! $Id$
 
 subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, reorder)
   use trl_info

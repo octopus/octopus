@@ -1,3 +1,5 @@
+# $Id$
+
 noinst_LIBRARIES = liboct.a
 
 liboct_a_SOURCES = recipes.c ylm.c varia.c oct_f.c oct_gsl_f.c write_iter.c
