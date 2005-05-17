@@ -274,7 +274,7 @@
          write(message(2),'(3f12.5)') matrix(1,:)
          write(message(3),'(3f12.5)') matrix(2,:)
          write(message(4),'(3f12.5)') matrix(3,:) 
-         call write_fatal(4)
+         call write_warning(4)
          return
        endif
        
