@@ -212,7 +212,7 @@ subroutine solve_schroedinger(psf)
   type(tm_type), intent(inout) :: psf
 
   character(len=3) :: functl
-  integer :: iter, ir, is, l, nnode, nprin, irel
+  integer :: iter, ir, is, l, nnode, nprin !, irel
   FLOAT :: vtot, diff, a2b4
   FLOAT, allocatable :: ve(:, :), rho(:, :), prev(:, :)
   FLOAT, parameter :: tol = CNST(1.0e-10)

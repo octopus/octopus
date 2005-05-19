@@ -38,7 +38,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
   FLOAT,                  intent(inout) :: ex, ec
   
   FLOAT :: e
-  integer :: is, ist, ixc, ifunc, ierr
+  integer :: is, ist, ixc, ierr
   logical, save :: first = .true.
 
   if(oep%level == XC_OEP_NONE) return

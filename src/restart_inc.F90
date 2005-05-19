@@ -63,7 +63,7 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
   integer,           intent(out) :: ierr
   integer, optional, intent(in)  :: iter
 
-  integer :: iunit, iunit2, err, ik, ist, idim, i, is
+  integer :: iunit, iunit2, err, ik, ist, idim, i
   character(len=10) :: filename
 
   call push_sub('restart_write')
@@ -136,8 +136,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   integer,           intent(out)   :: ierr
   integer, optional, intent(out)   :: iter
 
-  integer :: iunit, iunit2, err, ik, ist, idim, i, is
-  character(len=50) :: blockname
+  integer :: iunit, iunit2, err, ik, ist, idim, i
   character(len=12) :: filename
   character(len=1) :: char
   logical, allocatable :: filled(:, :, :)

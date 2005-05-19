@@ -65,7 +65,7 @@ subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
   case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-    call zso (h, m, psi, hpsi, h%d%dim, ik)
+    call zso (h, m, psi, hpsi)
 #endif
   case default
     message(1) = 'Error: Internal.'
@@ -217,7 +217,7 @@ subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
 
-  integer :: idim, k, ispin
+  integer :: idim, k
   FLOAT, allocatable :: div(:)
   R_TYPE, allocatable :: grad(:,:)
 
@@ -380,7 +380,6 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
-  integer :: idim
   R_TYPE, allocatable :: lhpsi(:,:)
 
   call push_sub('vlpsi')

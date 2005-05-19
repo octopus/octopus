@@ -17,18 +17,16 @@
 !!
 !! $Id$
 
-subroutine xc_get_fxc(xcs, m, rho, ispin, fxc, aux)
+subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   type(xc_type), target, intent(in)    :: xcs
   type(mesh_type),       intent(in)    :: m
   FLOAT, intent(in)                    :: rho(:, :)
   integer, intent(in)                  :: ispin
   FLOAT,                 intent(inout) :: fxc(:,:,:)
-  logical, optional,     intent(in)    :: aux
   
   FLOAT, allocatable :: dens(:,:), dedd(:,:,:), l_dens(:), l_dedd(:,:)
 
-  integer :: i, is, ixc, spin_channels
-  FLOAT   :: e, dpol, dtot, vpol, r
+  integer :: i, ixc, spin_channels
 
   type(xc_functl_type), pointer :: functl(:)
 
@@ -119,8 +117,6 @@ contains
   
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
-    integer :: i
-    FLOAT :: d(spin_channels), f, dtot, dpol, vpol
 
     fxc = fxc + dedd
   end subroutine lda_process

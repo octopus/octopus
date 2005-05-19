@@ -90,9 +90,7 @@ contains
     integer,       intent(in)  :: spin_channels
     logical,       intent(in)  :: cdft
     
-    integer :: func, i, j, rel
-    integer(POINTER_SIZE) :: info_dummy
-    FLOAT :: alpha
+    integer :: i
     
     call push_sub('xc_init')
     

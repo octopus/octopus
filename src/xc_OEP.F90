@@ -193,7 +193,7 @@ contains
     type(states_type), intent(in)    :: st
     integer,           intent(in)    :: is
     
-    integer  :: i, ierr, k
+    integer  :: i, ierr
     FLOAT :: max_eigen
 
     FLOAT, allocatable :: eigenval(:), occ(:)

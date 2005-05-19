@@ -30,8 +30,8 @@ subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
   FLOAT, allocatable :: gdens(:,:,:), dedgd(:,:,:), l_gdens(:,:), l_dedgd(:,:)
   FLOAT, allocatable :: tau(:,:), dedtau(:,:), l_tau(:), l_dedtau(:)
 
-  integer :: i, is, ixc, spin_channels
-  FLOAT   :: e, dpol, dtot, vpol, r
+  integer :: i, ixc, spin_channels
+  FLOAT   :: e, r
   logical :: gga, mgga
 
   type(xc_functl_type), pointer :: functl(:)

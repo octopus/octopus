@@ -76,8 +76,6 @@ contains
     type(mesh_type),     pointer     :: m
     type(f_der_type), intent(out) :: f_der
 
-    integer :: norder, j
-
     call push_sub('f_der_init')
 
     f_der%m => m ! keep a working pointer to the underlying mesh

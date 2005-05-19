@@ -236,9 +236,7 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   FLOAT, optional, intent(out)   :: def_rsize_  ! the default size of the minimum box
 
   FLOAT :: val_charge, def_h, def_rsize
-  integer :: i, j, k, n_spec, ispin
-  integer(POINTER_SIZE) :: blk
-  logical :: ok
+  integer :: i, j, k, ispin
 
   call push_sub('geometry_init_species')
 

@@ -21,8 +21,9 @@
       FLOAT, private :: b(3,3)    ! reciprocal lattice vectors
       FLOAT, private :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
 
-      FLOAT, private :: volume_check, xdum
-      integer, private ::  i, j, k, l, m, ierr
+!      FLOAT, private :: volume_check, xdum
+!      integer, private :: m, ierr
+      integer, private ::  i, j, k, l
 
       FLOAT :: tnpi(3), xmt(3,3)
       character(len=1) :: i1(3)
@@ -55,13 +56,10 @@
 ! Local
 
       integer  :: ipr, invers_no, jabs, jcar, neg
-      FLOAT :: volume_check, scale, celvol, ek, ek1, ek2
+      FLOAT :: volume_check, celvol, ek, ek1, ek2
       FLOAT :: a1(3),a2(3),a3(3),am(3),      &
                        b1(3), b2(3), b3(3), ba(3),   &
-                       rktran(3), rktran_inv(3) ,    &
                        rkcar(3),rkmod(3,4)
-      character(len=1) :: np
-      logical :: vol_input
 
 
 !  now only for cubic crystls..will be made general later on
@@ -244,9 +242,6 @@
 
       FLOAT :: mat(3,3), tmp(3,3), determinant
 
-      integer :: ipvt(3)
-      FLOAT :: det(2)
-
       call inv3by3(mat,tmp,determinant)
      
       mat = tmp
@@ -316,9 +311,8 @@
       FLOAT :: rk(3,*), w(*)
 
 !     .. Local Scalars ..
-      FLOAT :: dw, dx, dy, dz, xdum
-      integer i, im, ip, irk, j, jm, jp, k, kdel, km, kp, l, n
-      character tmny_kpnts*80, wkarr_ovfw*80
+      FLOAT :: dw, dx, dy, dz
+      integer i, j, k, l, n
       logical need_gw
 
 !     .. Local Arrays ..
@@ -504,7 +498,7 @@
 !     ..
 !     .. Local Scalars ..
       FLOAT :: xdum
-      integer :: i, ihg, ind, ipm, j, k, l, li, m, na, nat, ierr
+      integer :: i, ihg, ind, ipm, j, k, l, li, m, na, nat !,ierr
 !     ..
 !     .. Local Arrays ..
       FLOAT :: b(3,3), r(49,3,3), r1(3,3), rlat(48,3,3)
@@ -518,7 +512,7 @@
       character :: id(48)*10
 !     ..
 !     .. Intrinsic Functions ..
-      intrinsic :: int, mod
+!      intrinsic :: int, mod
 !     ..
       ipm = 0
 
@@ -690,7 +684,7 @@
       integer :: mult(48,48), nerr(48)
 !     ..
 !     .. Local Scalars ..
-      FLOAT :: ttest, xdum
+      FLOAT :: ttest
       integer :: i, im, itest, j, k, l, m, maxerr
       character(len=80) ::  not_a_grp
 !     ..
@@ -698,7 +692,7 @@
       integer :: mtest(3,3)
 !     ..
 !     .. Intrinsic Functions ..
-      intrinsic :: abs, atan, dble
+      intrinsic :: abs, dble !, atan
 !     ..
 !     .. Common blocks ..
       common mult, nerr
@@ -873,13 +867,14 @@
       FLOAT :: tnp(48,3)
       character :: id(48)*10
 !
-      integer :: i,j, oper, ierr, ipt
-      logical :: proper, nonsym(48)
-      FLOAT :: det, trace, te, tt
-      integer :: iv1(3)
-      FLOAT :: a(3,3), z(3,3), wr(3), wi(3), fv1(3)
-      FLOAT :: t(3), e(3), canon_t(3)
-      FLOAT :: rdot
+      integer :: i,j, oper
+      logical :: proper
+      FLOAT :: det, trace
+      FLOAT :: a(3,3)
+!      FLOAT :: wr(3), wi(3), fv1(3), te, tt, e(3), z(3,3), canon_t(3), rdot
+!      logical :: nonsym(48)
+!      integer :: ierr, ipt, iv1(3)
+      FLOAT :: t(3)
       character(len=2) :: axes(-2:2)
 !
       data axes / 'C2', 'C3', 'C4', 'C6', 'E ' /

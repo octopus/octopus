@@ -228,7 +228,6 @@ contains
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
-    logical :: const_w    
     integer :: i
 
     call push_sub('derivatives_build')

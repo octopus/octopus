@@ -39,11 +39,10 @@ contains
 
   !!! Calculates psi = exp{factor*T} psi
   !!! where T is the kinetic energy operator
-  subroutine zexp_kinetic (m, h, psi, ik, cf, factor)
+  subroutine zexp_kinetic (m, h, psi, cf, factor)
     type(mesh_type),        intent(IN) :: m
     type(hamiltonian_type), intent(IN) :: h
     CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
-    integer,                intent(in) :: ik
     type(zcf),              intent(inout) :: cf
     CMPLX,                  intent(in) :: factor
     
@@ -144,11 +143,10 @@ contains
 
   !!! calculates psi = exp{factor V_nlpp} psi
   !!! where V_nlpp is the non-local part of the pseudpotential
-  subroutine zexp_vnlpsi (m, h, psi, ik, factor, order)
+  subroutine zexp_vnlpsi (m, h, psi, factor, order)
     type(mesh_type),        intent(IN) :: m
     type(hamiltonian_type), intent(IN) :: h
     CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
-    integer,                intent(in) :: ik
     CMPLX,                  intent(in) :: factor
     logical,                intent(in) :: order
 

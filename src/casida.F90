@@ -133,7 +133,7 @@ contains
       call write_info(1)
 
       cas%type = CASIDA_EPS_DIFF
-      call casida_work(sys, h, cas)
+      call casida_work(sys, cas)
       call casida_write(cas, 'eps-diff')
     end if
   
@@ -144,7 +144,7 @@ contains
       call write_info(1)
 
       cas%type = CASIDA_PETERSILKA
-      call casida_work(sys, h, cas)
+      call casida_work(sys, cas)
       call casida_write(cas, 'petersilka')
     end if
 
@@ -154,7 +154,7 @@ contains
       call write_info(1)
       
       cas%type = CASIDA_CASIDA
-      call casida_work(sys, h, cas)
+      call casida_work(sys, cas)
       call casida_write(cas, 'casida')
     end if
 
@@ -264,9 +264,8 @@ contains
 
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine casida_work(sys, h, cas)
+  subroutine casida_work(sys, cas)
     type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
     type(casida_type),      intent(inout) :: cas
 
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
@@ -445,8 +444,7 @@ contains
       FLOAT :: K_term
       integer, intent(in) :: i, j, a, b
     
-      integer :: is, ik
-      FLOAT :: ffxc
+      integer :: is
       FLOAT, allocatable :: rho(:, :), fxc(:,:,:), rho_i(:), rho_j(:), pot(:)
 
       allocate(rho_i(m%np), rho_j(m%np), pot(m%np))

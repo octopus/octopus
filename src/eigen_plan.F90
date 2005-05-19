@@ -184,7 +184,7 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
                          R_TOTYPE(M_ZERO), eigenvec(:, :, nec + 1))
           call lalg_gemv(np, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, 1), &
                          R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
-          call residual(np, dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
+          call residual(dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
           ! If the first Ritz eigen-pair converged, compute all 
           ! Ritz vectors and the residual norms.
@@ -198,7 +198,7 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
                              R_TOTYPE(M_ZERO), v  (:, :, i)) 
             enddo
             do i = 2, winsiz
-              call residual(np, dim, v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))
+              call residual(dim, v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))
             enddo
           endif
           d1 = d2
@@ -214,7 +214,7 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
           do i = 1, winsiz
             call lalg_copy(np, dim, v(:, :, i), av(:, :, i))
             call lalg_copy(np, dim, eigenvec(:, :, nec + i), v(:, :, i))
-            call residual(np, dim, av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
+            call residual(dim, av(:, :, i), v(:, :, i), tmp(i), av(:, :, winsiz+i), res(nec+i))
           enddo
 
           ! Forms the first winsiz rows of H = V^T A V
@@ -280,8 +280,8 @@ subroutine eigen_solver_plan(m, f_der, st, hamilt, tol, niter, converged, diff)
 
 contains
 
-  subroutine residual(np, dim, hv, v, e, res, r)
-    integer, intent(in)    :: np, dim
+  subroutine residual(dim, hv, v, e, res, r)
+    integer, intent(in)    :: dim
     R_TYPE,  intent(inout) :: hv(:,:)
     R_TYPE,  intent(inout) :: v(:,:)
     FLOAT,   intent(in)    :: e

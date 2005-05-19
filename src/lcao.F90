@@ -146,7 +146,7 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :), st%d%dim, ik)
+        call zso (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
 #endif
       case default
         message(1) = 'Error: Internal.'

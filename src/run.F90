@@ -86,10 +86,7 @@ integer, private, parameter :: &
 contains
 
 subroutine run()
-  integer :: i, ierr
-  FLOAT :: x
-  logical :: log
-  character(len=100) :: filename
+  integer :: ierr
 
   logical :: fromScratch(M_GS:M_WAVE_MATCHING)
 

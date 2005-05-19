@@ -277,7 +277,7 @@ contains
     call dcf_FS2RS(fft_cf)             ! Fourier transform back
     if(present(average_to_zero)) then
       if(average_to_zero) then
-        average = cf_surface_average(m, fft_cf)
+        average = cf_surface_average(fft_cf)
         fft_cf%RS = fft_cf%RS - average
       end if
     end if

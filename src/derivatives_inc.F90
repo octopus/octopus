@@ -1,4 +1,3 @@
-
 !! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -28,7 +27,6 @@
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
     logical, optional,    intent(in)  :: have_ghost_
     
-    integer :: i
     R_TYPE, pointer :: fp(:)
     logical :: have_ghost
 
@@ -55,7 +53,6 @@
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
     logical, optional,    intent(in)  :: have_ghost_
     
-    integer :: i
     R_TYPE, pointer :: fp(:)
     logical :: have_ghost
 
@@ -140,7 +137,6 @@
 
     R_TYPE, pointer     :: fp(:)
     R_TYPE, allocatable :: tmp(:)
-    integer :: i
 
     ASSERT(conf%dim == 3)
 

@@ -40,9 +40,8 @@ contains
 
 #ifdef HAVE_FFT
   subroutine init_fft()
-    integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), vec
-    FLOAT :: gpar,gperp,gx,gz,r_c
+    integer :: ix, iy, ixx(3), db(3)
+    FLOAT :: temp(3), vec, r_c
     FLOAT :: DELTA_R = CNST(1.0e-12)
 
     ! double the box to perform the fourier transforms

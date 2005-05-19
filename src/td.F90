@@ -394,10 +394,10 @@ contains
     if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
 
     ! output angular momentum
-    if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, td, i)
+    if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, i)
 
     ! output spin
-    if(td%out_spin) call td_write_spin(out_spin, m, st, td, i)
+    if(td%out_spin) call td_write_spin(out_spin, m, st, i)
 
     ! output atoms magnetization
     if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, i)
@@ -427,8 +427,8 @@ contains
     call io_mkdir('td.general')
 
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
-    if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, td, 0)
-    if(td%out_spin)    call td_write_spin(out_spin, m, st, td, 0)
+    if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, 0)
+    if(td%out_spin)    call td_write_spin(out_spin, m, st, 0)
     if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, 0)
 !!$    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
 
@@ -540,7 +540,6 @@ contains
   end subroutine apply_delta_field
 
   subroutine td_read_nbo() ! reads the pos and vel from coordinates file
-    logical :: found
     integer :: i, iunit
 
     iunit = io_open('td.general/coordinates', action='read', status='old', die=.false.)

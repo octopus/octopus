@@ -269,9 +269,6 @@ subroutine X(f_curl) (f_der, f, curlf)
   R_TYPE,           intent(in)    :: f(:,:)     ! f(m%np, conf%dim)
   R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
 
-  integer :: i
-  R_TYPE, allocatable :: aux(:)
-
   call push_sub("f_curl")
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)

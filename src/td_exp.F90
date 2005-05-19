@@ -235,7 +235,7 @@ module td_exp
     subroutine lanczos
       integer ::  korder, n, k, iflag
       CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:)
-      FLOAT :: beta, res, tol, nrm
+      FLOAT :: beta, res, tol !, nrm
 
       call push_sub('lanczos')
       
@@ -292,9 +292,9 @@ module td_exp
       endif
       
       call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
-      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*timestep/M_TWO, .true.)
-      call zexp_kinetic(m, h, zpsi, ik, te%cf, -M_zI*timestep)
-      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*timestep/M_TWO, .false.)
+      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*timestep/M_TWO, .true.)
+      call zexp_kinetic(m, h, zpsi, te%cf, -M_zI*timestep)
+      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*timestep/M_TWO, .false.)
       call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       
       if(present(order)) order = 0
@@ -318,9 +318,9 @@ module td_exp
       
       do k = 1, 5
         call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .true.)
-        call zexp_kinetic(m, h, zpsi, ik, te%cf, -M_zI*dt(k))
-        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, ik, -M_zI*dt(k)/M_TWO, .false.)
+        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
+        call zexp_kinetic(m, h, zpsi, te%cf, -M_zI*dt(k))
+        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
         call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
       

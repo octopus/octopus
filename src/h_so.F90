@@ -17,17 +17,15 @@
 !!
 !! $Id$
 
-subroutine zso (h, m, psi, hpsi, dim, ik)
+subroutine zso (h, m, psi, hpsi)
   type(hamiltonian_type), intent(in) :: h
   type(mesh_type), intent(in) :: m
-  integer, intent(in) :: dim, ik
   R_TYPE, intent(in) :: psi(:, :)
   R_TYPE, intent(inout) :: Hpsi(:, :)
 
   type(nonlocal_op), pointer :: nlop
-  integer :: is, ia, i, j,  mps,add_lm, ikbc,jkbc, idim, l, lm, ivnl
+  integer :: mps, add_lm, ikbc,jkbc, ivnl
   CMPLX, allocatable :: tpsi(:, :), tHpsi(:, :)
-  type(specie_type), pointer :: spec
   CMPLX :: uvpsi
 
   call push_sub('zso')

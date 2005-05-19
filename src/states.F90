@@ -916,9 +916,9 @@ end subroutine states_calc_physical_current
 subroutine states_distribute_nodes(st)
   type(states_type),   intent(inout) :: st
 
+#if defined(HAVE_MPI)
   integer :: sn, sn1, r, j, k, ierr, i, ii
 
-#if defined(HAVE_MPI)
   if(st%nst < mpiv%numprocs) then
     message(1) = "Have more processors than necessary"
     write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."

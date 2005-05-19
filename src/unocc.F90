@@ -52,7 +52,6 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   type(eigen_solver_type) :: eigens
   integer :: iunit, err, ik, p
-  FLOAT   :: conv
   R_TYPE, allocatable :: h_psi(:,:)
   logical :: converged
 
@@ -145,7 +144,6 @@ contains
   ! ---------------------------------------------------------
   subroutine init_()
     integer :: nus
-    FLOAT :: conv
 
     call push_sub('unocc_run')
 

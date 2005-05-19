@@ -206,21 +206,21 @@ contains
       
       do ik = 1, st%d%nik
          do ist = 1, st%nst
-            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
+            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
       call zstates_calc_dens(st, m%np, st%rho, .true.)
       call zh_calc_vhxc(ks, h, m, f_der, st)
       do ik = 1, st%d%nik
          do ist = 1, st%nst
-            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .true.)
+            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
             call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
-            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dt, .false.)
+            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
          enddo
       enddo
       do ik = 1, st%d%nik
          do ist = 1, st%nst
-            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_HALF*M_zI*dt)
+            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
 
@@ -247,9 +247,9 @@ contains
          do ik = 1, st%d%nik
             do ist = 1, st%nst
                call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
-               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .true.)
-               call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), ik, tr%cf, -M_zI*dtime(k))
-               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), ik, -M_zI*dtime(k)/M_TWO, .false.)
+               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
+               call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
+               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
                call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             enddo
          enddo

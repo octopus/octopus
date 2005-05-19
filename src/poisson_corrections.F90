@@ -58,7 +58,7 @@ module poisson_corrections
     FLOAT,           intent(out) :: vh_correction(:)
 
     integer :: i, add_lm, l, mm, lldfac, j
-    FLOAT   :: x(3), r, s1, sa, ylm, beta, alpha, r2
+    FLOAT   :: alpha, r2
     FLOAT, allocatable :: mult(:)
     FLOAT, allocatable :: betal(:)
 
@@ -159,7 +159,7 @@ module poisson_corrections
     type(mesh_type), intent(in) :: m
 
     FLOAT :: ylm, r, x(3)
-    integer :: i, l, add_lm, lldfac, j, mm
+    integer :: i, l, add_lm, mm
 
     allocate(aux((maxl+1)**2, m%np))
     do i = 1, m%np

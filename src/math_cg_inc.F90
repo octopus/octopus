@@ -144,7 +144,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, iter, residue, threshold
   
   R_TYPE, allocatable :: r(:), rr(:), ax(:), p(:), pp(:), ap(:), atp(:)
   FLOAT :: alpha, beta, gamma, err, threshold_
-  integer :: max_iter, i
+  integer :: max_iter
   
   call push_sub('bi_conjugate_gradients')
   

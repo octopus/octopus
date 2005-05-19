@@ -17,11 +17,10 @@
 !!
 !! $Id$
 
-subroutine td_write_spin(out, m, st, td, iter)
+subroutine td_write_spin(out, m, st, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
-  type(td_type),         intent(in) :: td
   integer,               intent(in) :: iter
 
   character(len=130) :: aux
@@ -132,15 +131,13 @@ subroutine td_write_local_magnetic_moments(out, m, st, geo, td, iter)
   call pop_sub()
 end subroutine td_write_local_magnetic_moments
 
-subroutine td_write_angular(out, m, f_der, st, td, iter)
+subroutine td_write_angular(out, m, f_der, st, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(IN) :: m
   type(f_der_type),      intent(inout) :: f_der
   type(states_type),     intent(IN) :: st
-  type(td_type),         intent(IN) :: td
   integer,               intent(in) :: iter
 
-  integer :: ierr
   character(len=130) :: aux
   FLOAT :: angular(3)
 

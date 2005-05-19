@@ -29,7 +29,6 @@ subroutine X(states_calc_dens)(st, np, rho, reduce)
 
 #ifdef HAVE_MPI
   FLOAT,  allocatable :: reduce_rho(:,:)
-  R_TYPE, allocatable :: reduce_rho_off(:)
   integer :: ierr
 #endif
 
@@ -385,9 +384,9 @@ contains
     integer :: i, j, dim
 #if defined(HAVE_MPI)
     R_TYPE, allocatable :: phi2(:, :)
-    integer :: k, l, r, sn, sn1, ierr
+    integer :: k, l, ierr
     integer :: status(MPI_STATUS_SIZE)
-    integer :: request, node(st1%nst)
+    integer :: request
 #endif
     
     dim = st1%d%dim
@@ -453,7 +452,7 @@ subroutine X(states_calc_angular)(m, f_der, st, angular, l2)
   R_TYPE, allocatable :: lpsi(:, :)
   integer :: idim, ik, j
 #if defined(HAVE_MPI)
-  integer :: i, ierr
+  integer :: ierr
 #endif
 
   call push_sub('states_calc_angular')

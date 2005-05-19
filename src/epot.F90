@@ -229,9 +229,9 @@ contains
     type(geometry_type), intent(IN)    :: geo
     
     integer :: vlocal_cutoff
-    integer :: i, j, ix, iy, iz, ixx(3), db(3), c(3)
+    integer :: i, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3)
-    FLOAT :: g(3), gpar, gperp, gx, gz, modg
+    FLOAT :: gpar, gperp, gx, gz, modg
     FLOAT :: a_erf, r_0, temp(3), tmp, norm
     
     type(specie_type), pointer :: s ! shortcuts

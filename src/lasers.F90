@@ -65,7 +65,7 @@ end type laser_type
 contains
 
 subroutine laser_init(m, no_l, l)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(in) :: m
   integer, intent(out) :: no_l
   type(laser_type), pointer :: l(:)
 

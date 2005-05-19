@@ -73,8 +73,7 @@ contains
 
   ! This function calculates the surface average of any function.
   ! WARNING: Some more careful testing should be done on this.
-  FLOAT function cf_surface_average(m, cf) result(x)
-    type(mesh_type), intent(in) :: m
+  FLOAT function cf_surface_average(cf) result(x)
     type(dcf), intent(in)       :: cf
 
     integer ix, iy, iz, npoints

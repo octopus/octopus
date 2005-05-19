@@ -262,7 +262,7 @@ contains
   end subroutine prop_psi_f
 
   subroutine calc_overlap()
-    integer :: ik, p, id
+    integer :: ik, p
 
     message(1) = "Overlap between wavefunctions"
     call write_info(1)
@@ -280,8 +280,6 @@ contains
   subroutine read_state(st, filename)
     type(states_type), intent(out) :: st
     character(len=*),  intent(in)  :: filename
-
-    integer :: ier
 
     call zrestart_read('opt-control/'//trim(filename), st, m, ierr)
     if(ierr.ne.0) then

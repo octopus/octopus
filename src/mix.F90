@@ -182,7 +182,7 @@ subroutine mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
 
-  integer :: i, ipos, iter_used
+  integer :: ipos, iter_used
   FLOAT :: gamma
   FLOAT, allocatable :: f(:, :, :)
 
@@ -237,7 +237,7 @@ subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vout, vnew, iter_used, 
 
   FLOAT, parameter :: w0 = CNST(0.01)
 
-  integer  :: i, j, ispin, id2
+  integer  :: i, j
   FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used)
 
   if (iter_used == 0) then
@@ -292,7 +292,7 @@ subroutine mixing_grpulay(smix, d1, d2, d3, vin, vout, vnew, iter)
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
 
-  integer :: ipos, iter_used, i
+  integer :: ipos, iter_used
   FLOAT, allocatable :: f(:, :, :)
 
   allocate(f(d1, d2, d3))

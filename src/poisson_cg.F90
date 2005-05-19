@@ -118,7 +118,7 @@ contains
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
 
-    integer :: unit, i, iter
+    integer :: i, iter
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT :: res
 

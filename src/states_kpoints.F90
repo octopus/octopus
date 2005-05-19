@@ -22,7 +22,7 @@ subroutine states_choose_kpoints(d, m, geo)
   type(mesh_type),       intent(IN)  :: m
   type(geometry_type),   intent(IN)  :: geo
 
-  integer  :: coi, i, ik, jk, kk, j, k, nkmax, skip
+  integer  :: coi, i, nkmax
   integer(POINTER_SIZE) :: blk
   FLOAT :: total_weight, kmax
   

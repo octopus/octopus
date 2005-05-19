@@ -91,7 +91,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
 
   FLOAT :: r
   FLOAT, allocatable :: y(:)
-  integer :: i, j, is
+  integer :: i
 
   call push_sub('ps_init')
 
@@ -308,7 +308,7 @@ subroutine ps_debug(ps, dir)
   integer  :: nl_unit, dnl_unit, nlw_unit          ! Nonlocal part
   integer  :: wave_unit                            ! pseudowavefunctions
   integer  :: so_unit, dso_unit, sow_unit          ! The spin-orbit non-local terms.
-  integer  :: i, j, k, l, is
+  integer  :: j, k, l
 
   call push_sub('ps_debug')
 
@@ -405,8 +405,6 @@ end subroutine ps_debug
 
 subroutine ps_end(ps)
   type(ps_type), intent(inout) :: ps
-
-  integer :: i, j, is
 
   call push_sub('ps_end')
 
