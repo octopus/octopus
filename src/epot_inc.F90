@@ -127,6 +127,13 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
     end do
   end if
 
+  if(associated(ep%e)) then
+    do i = 1, geo%natoms
+      geo%atom(i)%f(1:conf%dim) = geo%atom(i)%f(1:conf%dim) + &
+           geo%atom(i)%spec%Z_val * ep%e(1:conf%dim)
+    end do
+  end if
+
   !TODO: forces due to the magnetic fields (static and time-dependent)
 
   call pop_sub()

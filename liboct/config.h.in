@@ -41,6 +41,9 @@
 /* FFT library (fftw2 | fftw3) */
 #undef HAVE_FFT
 
+/* Define to 1 if you have the `flush' function. */
+#undef HAVE_FLUSH
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 

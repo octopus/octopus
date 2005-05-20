@@ -76,6 +76,8 @@ module external_pot
     !External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
     type(laser_type), pointer :: lasers(:) ! lasers stuff
+    FLOAT, pointer :: e(:)                 ! static electric field
+    FLOAT, pointer :: v(:)                 ! static scalar potential
     FLOAT, pointer :: b(:)                 ! static magnetic field
     FLOAT, pointer :: a(:,:)               ! static vector potential
 
@@ -122,7 +124,27 @@ contains
       end if
     end if
 
-    ! static magnetic fields
+    ! static electric field
+    nullify(ep%e, ep%v)
+    if(loct_parse_block(check_inp('StaticElectricField'), blk)==0) then
+      select case(loct_parse_block_n(blk))
+      case (1)
+        do i = 1, conf%dim
+          call loct_parse_block_float(blk, 0, i-1, ep%e(i))
+        end do
+      end select
+      call loct_parse_block_end(blk)
+
+      !Compute the scalar potential
+      allocate(ep%v(m%np), x(conf%dim))
+      do i = 1, m%np
+        call mesh_xyz(m, i, x)
+        ep%v(i) = sum(x*ep%e)
+      end do
+      deallocate(x)
+    end if
+
+    ! static magnetic field
     nullify(ep%b, ep%a)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
       select case(loct_parse_block_n(blk))
@@ -207,7 +229,12 @@ contains
     end if
     
     call laser_end(ep%no_lasers, ep%lasers)
-
+    if(associated(ep%e)) then
+      deallocate(ep%e)
+    end if
+    if(associated(ep%v)) then
+      deallocate(ep%v)
+    end if
     if(associated(ep%b)) then
       deallocate(ep%b)
     end if

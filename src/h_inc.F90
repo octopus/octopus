@@ -380,6 +380,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
+  integer :: idim
   R_TYPE, allocatable :: lhpsi(:,:)
 
   call push_sub('vlpsi')
@@ -399,6 +400,12 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
     hpsi(:, 2) = hpsi(:, 2) + (h%vhxc(:, 2) + h%ep%vpsl(:))*psi(:, 2) + &
                  (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(:, 1)
   end select
+
+  if (associated(h%ep%e)) then
+    do idim = 1, h%d%dim
+      hpsi(:, idim) = hpsi(:, idim) + h%ep%v*psi(:, idim)
+    end do
+  end if
 
   if (associated(h%ep%b)) then
     allocate(lhpsi(m%np, h%d%dim))
