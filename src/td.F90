@@ -540,9 +540,11 @@ contains
   end subroutine apply_delta_field
 
   subroutine td_read_nbo() ! reads the pos and vel from coordinates file
-    integer :: i, iunit
+    integer :: i, iunit, record_length
 
-    iunit = io_open('td.general/coordinates', action='read', status='old', die=.false.)
+    record_length = 100 + 3*geo%natoms*3*20
+    call io_assign(iunit)
+    open(unit = iunit, file = 'td.general/coordinates', action='read', status='old', recl = record_length)
     if(iunit < 0) then
       message(1) = "Could not open file 'td.general/coordinates'"
       message(2) = "Starting simulation from initial geometry"
