@@ -1,9 +1,10 @@
-Test    : Spinors
-Author  : Micael Oliveira
-Date    : 16.05.05
-Arch    : Linux pseudopod.fisica 2.6.10-1.770_FC3 #1 Thu Feb 24 14:00:06 EST 2005 i686 i686 i386 GNU/Linux
-Release : 
-Enabled : Yes
+Test     : Spinors
+Author   : Micael Oliveira
+Date     : 16.05.05
+Arch     : Linux pseudopod.fisica 2.6.10-1.770_FC3 #1 Thu Feb 24 14:00:06 EST 2005 i686 i686 i386 GNU/Linux
+Release  : 1.99devel
+Programs : octopus_cmplx
+Enabled  : Yes
 
 INP
 CalculationMode = gs

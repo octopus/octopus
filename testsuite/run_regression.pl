@@ -41,12 +41,13 @@ sub create_template {
   open(TEMPLATE, ">".$opt_c );
 
   print TEMPLATE <<EndOfTemplate;
-Test    :
-Author  : $author
-Date    : $date
-Arch    : $arch
-Release :
-Enabled : Yes
+Test     :
+Author   : $author
+Date     : $date
+Arch     : $arch
+Release  :
+Programs : octopus; octopus_cmplx
+Enabled  : Yes
 
 INP
 CalculationMode = gs
@@ -101,6 +102,11 @@ if($octopus_exe !~ /^\//){
 die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "");
 if(!$opt_i) { print "Using executable : $octopus_exe \n"; }
 
+chomp($octopus_exe);
+
+$octopus_base = `basename $octopus_exe`;
+chomp($octopus_base);
+
 system ("rm -rf $workdir");
 mkdir $workdir;
 
@@ -133,6 +139,17 @@ while ($_ = <TESTSUITE>) {
   $test{"release"} = $1;
  }
 
+ if ( $_ =~ /Programs\s*:\s*(.*)\s*$/) {
+  $valid=1;
+  foreach my $program (split(/;/,$1)) {
+    $program =~ s/^\s*//;
+    $program =~ s/\s*$//;
+    $valid = $program cmp $octopus_base;
+    last if ( ! $valid );
+  }
+  die "Test \033[31mnot valid\033[0m for executable: $octopus_exe" if ( $valid );
+ }
+
  if ( $_ =~ /Enabled\s*:\s*(.*)\s*$/) {
   %test = ();
   $enabled = $1;
@@ -140,6 +157,7 @@ while ($_ = <TESTSUITE>) {
   $enabled =~ s/\s*$//;
   $test{"enabled"} = $enabled;
  }
+
 
  # Running this regression test if it is enabled
  if ( $enabled eq "Yes" ) {
@@ -162,6 +180,7 @@ while ($_ = <TESTSUITE>) {
      if (!$opt_n) {
        print "\nStarting test run ...\n";
        system("cd $workdir; $octopus_exe < inp &> out");
+       system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
        print "Finished test run.\n"; }
      else {
        if(!$opt_i) { print "cd $workdir; $octopus_exe < inp &> out \n"; }
