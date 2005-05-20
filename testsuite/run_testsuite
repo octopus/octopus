@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# $Id$
+
+
+# Define octopus executables
+octopus_exe="octopus octopus_cmplx"
+
+# Paths
+prefix=/usr
+testsuite=$prefix/share/octopus/testsuite
+
+
+# Usage
+function usage() {
+    cat <<EOF
+
+ Copyright (C) 2005 by Heiko Appel
+
+Usage: run_testsuite [options]
+    
+     -h            this message
+     -n            dry run mode (show what would be executed)
+     -f            run full testsuite
+     -p            installation prefix [default: /usr]
+     -m address    mail report to address
+
+Report bugs to <appel@physik.fu-berlin.de>.
+EOF
+ exit 0;
+}
+
+
+# Dry run ...
+
+function CMD {
+    [ "$DRY_RUN" -o "$VERBOSE" ] && echo -e "\033[32m$@\033[0m";
+    [ ! "$DRY_RUN" ] && eval "$@";
+}
+
+
+# Run all tests
+
+function run_full_suite() {
+
+for x in $octopus_exe; do
+    for y in $(find $testsuite -name "*.test"); do
+        CMD $prefix/bin/run_regression.pl -p -e $prefix/bin/$x -f $y | tee ${x}-`basename $y`
+    echo
+    done
+done
+
+}
+
+
+# Send report via mail
+
+function mail_report() {
+
+echo >> build-stamp
+
+for x in $octopus_exe; do
+    for y in $(find $testsuite -name "*.test"); do
+	failed_tests=$(grep FAIL ${x}-`basename $y` | wc -l) 
+	tmp=`basename $y`
+	echo "Checking for failed tests: ${x}-${tmp}"
+	if [ $failed_tests -gt 0 ]; then
+	    echo "Found: $failed_tests"
+	    echo "Mailing report to: $mailaddr"
+            cat ${x}-$tmp | mutt -s "[run_testsuite] daily report" -i build-stamp $mailaddr
+	fi
+    done
+done
+
+}
+
+
+# show usage info if no args at all
+[ "$#" -eq 0 ] && usage;
+
+while getopts "hnfp:m:" opt ; do
+    case "$opt" in
+        h) usage ;;
+        n) ECHO="echo"; DRY_RUN="yes";; 
+        p) prefix="$OPTARG" ;;
+	f) run_full_suite ;;
+	m) mailaddr="$OPTARG"; mail_report $mailaddr ;; 
+        ?) echo "Error parsing arguments"; exit 1 ;;
+    esac
+done
+shift $(( OPTIND - 1 ))

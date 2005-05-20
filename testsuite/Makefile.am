@@ -20,7 +20,7 @@
 ## $Id$
 
 man_MANS = run_regression.pl.1
-bin_SCRIPTS = run_regression.pl
+bin_SCRIPTS = run_regression.pl run_testsuite
 sharedir = $(pkgdatadir)/testsuite
 dist_share_DATA = finite_systems_*/*.test
 
@@ -39,4 +39,4 @@ run_regression.pl.1: run_regression.pl.pod
 	pod2man -c "Octopus Documentation" -s 1 run_regression.pl.pod > run_regression.pl.1
 
 
-.PHONY: regression_tests check clean 
+.PHONY: regression_test check clean 
