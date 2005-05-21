@@ -19,24 +19,24 @@
 ##
 ## $Id$
 
-man_MANS = run_regression.pl.1
-bin_SCRIPTS = run_regression.pl run_testsuite
+man_MANS = oct-run_regression_test.pl.1
+bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 sharedir = $(pkgdatadir)/testsuite
 dist_share_DATA = finite_systems_*/*.test
 
-rlog=regression_test.out
+rlog=oct-regression_test.out
 
 check: regression_test
 regression_test:
-	@echo; find . -name *.test -print -exec ./run_regression.pl -e $(PWD)/../src/octopus$(EXEEXT) -f \{\}  \; | tee $(rlog)
+	@echo; find . -name *.test -print -exec ./oct-run_regression_test.pl -e $(PWD)/../src/octopus$(EXEEXT) -f \{\}  \; | tee $(rlog)
 	@echo -e "\033[32;1mPassed: `grep OK $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 	@echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
 
 clean:
 	-rm -rf /tmp/tmp.* $(rlog)
 
-run_regression.pl.1: run_regression.pl.pod
-	pod2man -c "Octopus Documentation" -s 1 run_regression.pl.pod > run_regression.pl.1
+oct-run_regression_test.pl.1: oct-run_regression_test.pl.pod
+	pod2man -c "Octopus Documentation" -s 1 oct-run_regression_test.pl.pod > oct-run_regression_test.pl.1
 
 
 .PHONY: regression_test check clean 
