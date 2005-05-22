@@ -17,7 +17,7 @@ function usage() {
 
  Copyright (C) 2005 by Heiko Appel
 
-Usage: run_testsuite [options]
+Usage: oct-run_testsuite [options]
     
      -h            this message
      -n            dry run mode (show what would be executed)
@@ -45,8 +45,7 @@ function run_full_suite() {
 
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test"); do
-        CMD $prefix/bin/run_regression.pl -p -e $prefix/bin/$x -f $y | tee ${x}-`basename $y`
-    echo
+        CMD $prefix/bin/oct-run_regression_test.pl -p -e $prefix/bin/$x -f $y | tee ${x}-`basename $y`
     done
 done
 
@@ -57,6 +56,10 @@ done
 
 function mail_report() {
 
+echo >> build-stamp
+uname -a >> build-stamp
+cat /proc/cpuinfo | grep 'model name' | awk -F: '{print "\t" $2}' >> build-stamp
+cat /proc/meminfo | grep MemTotal >> build-stamp
 echo >> build-stamp
 
 for x in $octopus_exe; do

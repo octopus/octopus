@@ -11,7 +11,7 @@ sub usage {
 
  Copyright (C) 2005 by Heiko Appel
 
-Usage: run_regression.pl [options]
+Usage: oct-run_regression_test.pl [options]
 
     -n        dry-run
     -v        verbose
@@ -87,7 +87,6 @@ chomp($workdir);
 $opt_h && usage;
 $opt_c && create_template;
 if($opt_d)  { $workdir = $opt_d; }
-if(!$opt_i) { print "Using workdir    : $workdir \n" };
 
 if($opt_e)  { $octopus_exe = $opt_e; }
 else{
@@ -100,7 +99,7 @@ if($octopus_exe !~ /^\//){
 }
 
 die "could not find executable: $octopus_exe \n" if (`which $octopus_exe` eq "");
-if(!$opt_i) { print "Using executable : $octopus_exe \n"; }
+
 
 chomp($octopus_exe);
 
@@ -121,7 +120,12 @@ while ($_ = <TESTSUITE>) {
  if ( $_ =~ /Test\s*:\s*(.*)\s*$/) {
   %test = ();
   $test{"name"} = $1;
-  if(!$opt_i) { print "\033[34m $test{\"name\"} \033[0m \n"; }
+  if(!$opt_i) {
+    print "\033[34m ***** $test{\"name\"} ***** \033[0m \n\n";
+    print "Using workdir    : $workdir \n";
+    print "Using executable : $octopus_exe \n";
+    print "Using test file  : $opt_f \n";
+  }
  }
 
  if ( $_ =~ /Author\s*:\s*(.*)\s*$/) {
@@ -147,7 +151,11 @@ while ($_ = <TESTSUITE>) {
     $valid = $program cmp $octopus_base;
     last if ( ! $valid );
   }
-  die "Test \033[31mnot valid\033[0m for executable: $octopus_exe" if ( $valid );
+  if ( $valid ) {
+    print "\n$opt_f \033[31mnot valid\033[0m for executable: $octopus_exe\n";
+    print "Skipping ... \n\n";
+    exit 1;
+  }
  }
 
  if ( $_ =~ /Enabled\s*:\s*(.*)\s*$/) {
@@ -181,7 +189,7 @@ while ($_ = <TESTSUITE>) {
        print "\nStarting test run ...\n";
        system("cd $workdir; $octopus_exe < inp &> out");
        system("grep -B2 -A5 'Running octopus' $workdir/out > build-stamp");
-       print "Finished test run.\n"; }
+       print "Finished test run.\n\n"; }
      else {
        if(!$opt_i) { print "cd $workdir; $octopus_exe < inp &> out \n"; }
      }
