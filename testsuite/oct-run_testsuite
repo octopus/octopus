@@ -58,7 +58,7 @@ function mail_report() {
 
 echo >> build-stamp
 uname -a >> build-stamp
-cat /proc/cpuinfo | grep 'model name' | awk -F: '{print "\t" $2}' >> build-stamp
+cat /proc/cpuinfo | grep 'model name' | awk -F: '{print $2}' >> build-stamp
 cat /proc/meminfo | grep MemTotal >> build-stamp
 echo >> build-stamp
 
@@ -70,7 +70,7 @@ for x in $octopus_exe; do
 	if [ $failed_tests -gt 0 ]; then
 	    echo "Found: $failed_tests"
 	    echo "Mailing report to: $mailaddr"
-            cat ${x}-$tmp | mutt -s "[run_testsuite] daily report" -i build-stamp $mailaddr
+            cat ${x}-$tmp | mutt -s "[oct-run_testsuite] daily report" -i build-stamp $mailaddr
 	fi
     done
 done
