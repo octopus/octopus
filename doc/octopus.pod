@@ -1,0 +1,33 @@
+=head1 NAME
+
+octopus - Ab-Initio TD Electronic Structure
+
+=head1 SYNOPSIS
+
+=over
+
+=item B<octopus> < inp
+
+=back
+
+=head1 DESCRIPTION
+
+Octopus is a program aimed at the ab initio virtual
+experimentation on electron/ion dynamics in external
+electromagnetic fields of arbitrary intensity, shape
+and frequency in a hopefully ever increasing range of
+systems types.
+
+=head1 SEE ALSO
+
+=over
+
+/usr/share/octopus/doc/tutorial.pdf - Octopus Tutorial
+
+octopus-faq.info, octopus.info, octopus-devel.info
+
+=back
+
+=head1 AUTHOR
+
+Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
