@@ -101,6 +101,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* compiler supports long lines */
+#undef LONG_LINES
+
 /* have mpi Fortran header file */
 #undef MPI_H
 

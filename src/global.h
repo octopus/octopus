@@ -21,7 +21,7 @@
 
 #define __STRING(x)     #x
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(LONG_LINES)
 #  define ASSERT(expr) \
   if(.not.(expr)) call assert_die (__STRING(expr), __FILE__, __LINE__)
 #else

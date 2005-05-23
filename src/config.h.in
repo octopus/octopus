@@ -41,3 +41,6 @@
 
 /* Define to 1 if you have the 'flush' function. */
 #undef HAVE_FLUSH
+
+/* Define to 1 if the compiler allows for long lines
+#undef LONG_LINES

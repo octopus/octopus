@@ -106,6 +106,9 @@ LIBS="${FCEXTRALIBS} $FCLIBS"
 dnl some functions we may need
 AC_CHECK_FUNCS([flush])
 
+dnl check wether we have or not a compiler that allows for very long lines...
+ACX_LONG_FORTRAN_LINES
+
 dnl ============================================================================
 dnl find what is the extension of the programs supposed to be
 MYEXT=""
