@@ -25,7 +25,7 @@
 #include <gsl/gsl_complex.h>
 #include "symbols.h"
 
-int parse_init(char *file_out);
+int parse_init(char *file_out, int *mpiv_node);
 int parse_input(char *file_in);
 void parse_end();
 

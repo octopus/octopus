@@ -29,6 +29,7 @@
 #include "liboct_parser.h"
 
 static FILE *fout;
+static int  disable_write;
 
 #define ROUND(x) ((x)<0 ? (int)(x-0.5) : (int)(x+0.5)) 
 
@@ -67,20 +68,26 @@ static int parse_get_line(FILE *f, char **s, int *length)
 	return c;
 }
 
-int parse_init(char *file_out)
+int parse_init(char *file_out, int *mpiv_node)
 {
-	sym_init_table();
+        sym_init_table();
 
-	if(strcmp(file_out, "-") == 0)
-		fout = stdout;
-	else{
-		fout = fopen(file_out, "w");
-		if(!fout)
-			return -1; /* error opening file */
-		setvbuf(fout, NULL, _IONBF, 0);
+	/* only enable writes for node 0 */
+	disable_write = *mpiv_node;
+
+	if(!disable_write) {
+		if(strcmp(file_out, "-") == 0)
+			fout = stdout;
+		else {
+			fout = fopen(file_out, "w");
+			if(!fout)
+				return -1; /* error opening file */
+			setvbuf(fout, NULL, _IONBF, 0);
+		}
+		fprintf(fout, "# Octopus parser started\n");
 	}
-	fprintf(fout, "# Octopus parser started\n");
-
+	
+	
 	return 0;
 }
 
@@ -89,15 +96,15 @@ int parse_input(char *file_in)
 	FILE *f;
 	char *s;
 	int c, length = 0;
-
+	
 	if(strcmp(file_in, "-") == 0)
 		f = stdin;
 	else
 		f = fopen(file_in, "r");
-
+	
 	if(!f)
 		return -1; /* error opening file */
-
+	
 	/* we now read in the file and parse */
 	length = 40;
 	s = (char *)malloc(length + 1);
@@ -123,7 +130,7 @@ int parse_input(char *file_in)
 						if(*s && *s != '%'){
 							char *s1, *tok;
 							int l, col;
-
+							
 							l = rec->value.block->n;
 							rec->value.block->n++;
 							rec->value.block->lines = (sym_block_line *)
@@ -164,9 +171,11 @@ int parse_input(char *file_in)
 void parse_end()
 {
 	sym_end_table();
-	fprintf(fout, "# Octopus parser ended\n");
-	if(fout != stdout)
-		fclose(fout);
+	if(!disable_write) {
+		fprintf(fout, "# Octopus parser ended\n");
+		if(fout != stdout)
+			fclose(fout);
+	}
 }
 
 int parse_isdef(char *name)
@@ -184,10 +193,14 @@ int parse_int(char *name, int def)
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_CMPLX){
 		ret = ROUND(GSL_REAL(ptr->value.c));
-		fprintf(fout, "%s = %d\n", name, ret);
+		if(!disable_write) {
+			fprintf(fout, "%s = %d\n", name, ret);
+		}
 	}else{
 		ret = def;
-		fprintf(fout, "%s = %d\t\t# default\n", name, ret);
+		if(!disable_write) {
+			fprintf(fout, "%s = %d\t\t# default\n", name, ret);
+		}
 	}
 	return ret;
 }
@@ -200,10 +213,14 @@ double parse_double(char *name, double def)
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_CMPLX){
 		ret = GSL_REAL(ptr->value.c);
-		fprintf(fout, "%s = %g\n", name, ret);
+		if(!disable_write) {
+			fprintf(fout, "%s = %g\n", name, ret);
+		}
 	}else{
 		ret = def;
-		fprintf(fout, "%s = %g\t\t# default\n", name, ret);
+		if(!disable_write) {
+			fprintf(fout, "%s = %g\t\t# default\n", name, ret);
+		}
 	}
 	return ret;
 }
@@ -216,10 +233,14 @@ gsl_complex parse_complex(char *name, gsl_complex def)
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_CMPLX){
 		ret = ptr->value.c;
-		fprintf(fout, "%s = (%g, %g)\n", name, GSL_REAL(ret), GSL_IMAG(ret));
+		if(!disable_write) {
+			fprintf(fout, "%s = (%g, %g)\n", name, GSL_REAL(ret), GSL_IMAG(ret));
+		}
 	}else{
 		ret = def;
-		fprintf(fout, "%s = (%g, %g)\t\t# default\n", name, GSL_REAL(ret), GSL_IMAG(ret));
+		if(!disable_write) {
+			fprintf(fout, "%s = (%g, %g)\t\t# default\n", name, GSL_REAL(ret), GSL_IMAG(ret));
+		}
 	}
 	return ret;
 }
@@ -232,10 +253,14 @@ char *parse_string(char *name, char *def)
 	ptr = getsym(name);	
 	if(ptr && ptr->type == S_STR){
 		ret = ptr->value.str;
-		fprintf(fout, "%s = \"%s\"\n", name, ret);
+		if(!disable_write) {
+			fprintf(fout, "%s = \"%s\"\n", name, ret);
+		}
 	}else{
 		ret = def;
-		fprintf(fout, "%s = \"%s\"\t\t# default\n", name, ret);
+		if(!disable_write) {
+			fprintf(fout, "%s = \"%s\"\t\t# default\n", name, ret);
+		}
 	}
 	return ret;
 }
@@ -247,7 +272,9 @@ int parse_block (char *name, sym_block **blk)
 	ptr = getsym(name);
 	if(ptr && ptr->type == S_BLOCK){
 		*blk = ptr->value.block;
-		fprintf(fout, "Opened block '%s'\n", name);
+		if(!disable_write) {
+			fprintf(fout, "Opened block '%s'\n", name);
+		}
 		return 0;
 	}else{
 		*blk = NULL;
@@ -258,7 +285,9 @@ int parse_block (char *name, sym_block **blk)
 int parse_block_end (sym_block **blk)
 {
 	*blk = NULL;
-	fprintf(fout, "Closed block\n");
+	if(!disable_write) {
+		fprintf(fout, "Closed block\n");
+	}
 	return 0;
 }
 
@@ -295,7 +324,9 @@ int parse_block_int(sym_block *blk, int l, int col, int *r)
 
 	if(o == 0 && pr.type == PR_CMPLX){
 		*r = ROUND(GSL_REAL(pr.value.c));
-		fprintf(fout, "  (%d, %d) = %d\n", l, col, *r);
+		if(!disable_write) {
+			fprintf(fout, "  (%d, %d) = %d\n", l, col, *r);
+		}
 		return 0;
 	}else
 		return o;
@@ -310,7 +341,9 @@ int parse_block_double(sym_block *blk, int l, int col, double *r)
 
 	if(o == 0 && pr.type == PR_CMPLX){
 		*r = GSL_REAL(pr.value.c);
-		fprintf(fout, "  (%d, %d) = %g\n", l, col, *r);
+		if(!disable_write) {
+			fprintf(fout, "  (%d, %d) = %g\n", l, col, *r);
+		}
 		return 0;
 	}else
 		return o;
@@ -325,7 +358,9 @@ int parse_block_complex(sym_block *blk, int l, int col, gsl_complex *r)
 
 	if(o == 0 && pr.type == PR_CMPLX){
 		*r = pr.value.c;
-		fprintf(fout, "  (%d, %d) = (%g,%g)\n", l, col, GSL_REAL(*r), GSL_IMAG(*r));
+		if(!disable_write) {
+			fprintf(fout, "  (%d, %d) = (%g,%g)\n", l, col, GSL_REAL(*r), GSL_IMAG(*r));
+		}
 		return 0;
 	}else
 		return o;
@@ -340,7 +375,9 @@ int parse_block_string(sym_block *blk, int l, int col, char **r)
 
 	if(o == 0 && pr.type == PR_STR){
 		*r = pr.value.s;
-		fprintf(fout, "  (%d, %d) = \"%s\"\n", l, col, *r);
+		if(!disable_write) {
+			fprintf(fout, "  (%d, %d) = \"%s\"\n", l, col, *r);
+		}
 		return 0;
 	}else
 		return o;

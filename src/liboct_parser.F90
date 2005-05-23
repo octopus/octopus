@@ -33,8 +33,9 @@ module lib_oct_parser
   public :: loct_parse_potential
   
   interface loct_parse_init
-    integer function oct_parse_init(file_out)
+    integer function oct_parse_init(file_out, mpiv_node)
       character(len=*), intent(in)  :: file_out
+      integer, intent(in) :: mpiv_node
     end function oct_parse_init
   end interface
 

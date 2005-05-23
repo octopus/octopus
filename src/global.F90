@@ -153,7 +153,7 @@ subroutine global_init()
   conf%version    = OCTOPUS_VERSION
 
   ! initialize the parser
-  ierr = loct_parse_init('out.oct')
+  ierr = loct_parse_init('out.oct', mpiv%node)
   if(ierr .ne. 0) then
     message(1) = "Error initializing liboct"
     message(2) = "Do you have write permissions in this directory?"
