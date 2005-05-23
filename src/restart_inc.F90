@@ -70,17 +70,17 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
 
   ASSERT(associated(st%X(psi)))
 
-  call io_mkdir(dir)
-
   ierr = 0
   if(mpiv%node==0) then
-    iunit = io_open(trim(dir)//'/wfns', action='write')
-    write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
-    write(iunit,'(a)') '%Wavefunctions'
+     call io_mkdir(dir)
 
-    iunit2 = io_open(trim(dir)//'/occs', action='write')
-    write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]'
-    write(iunit2,'(a)') '%Occupations_Eigenvalues'
+     iunit = io_open(trim(dir)//'/wfns', action='write')
+     write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
+     write(iunit,'(a)') '%Wavefunctions'
+     
+     iunit2 = io_open(trim(dir)//'/occs', action='write')
+     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]'
+     write(iunit2,'(a)') '%Occupations_Eigenvalues'
   end if
 
   i = 1
@@ -94,7 +94,7 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
           write(unit=iunit2, fmt=*) st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
         end if
         
-        if(st%st_start <= ist .and. st%st_end >= ist) then
+        if(st%st_start <= ist .and. st%st_end >= ist .and. mpiv%node==0) then
           call X(restart_write_function)(dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
           if(err == 0) ierr = ierr + 1
         end if

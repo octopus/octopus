@@ -95,7 +95,12 @@ contains
 
     call push_sub('specie_debug')
 
+#ifdef HAVE_MPI
+    if(mpiv%node .ne. 0) return
+#endif
+
     dirname = trim(dir)//'/'//trim(s%label)
+
     call io_mkdir(dirname)
 
     iunit = io_open(trim(dirname)//'/info', action='write')
