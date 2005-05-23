@@ -22,8 +22,8 @@
 #define __STRING(x)     #x
 
 #if defined(DEBUG)
-#  define ASSERT(expr) 
-!!#  define IN inout
+#  define ASSERT(expr) \
+  if(.not.(expr)) call assert_die (__STRING(expr), __FILE__, __LINE__)
 #else
 #  define ASSERT(expr)
 !!#  define IN inout
