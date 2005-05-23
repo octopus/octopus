@@ -40,13 +40,13 @@
 /* Initialization of the library                             */
 /* --------------------------------------------------------- */
 int FC_FUNC_(oct_parse_init, OCT_PARSE_INIT)
-     (STR_F_TYPE s STR_ARG1)
+  (STR_F_TYPE s, int *dont_write STR_ARG1)
 {
   int r;
   char *s_c;
   
   s_c  = TO_C_STR1(s);
-  r = parse_init(s_c); 
+  r = parse_init(s_c, dont_write); 
   free(s_c);
   
   return r;
