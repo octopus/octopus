@@ -280,8 +280,7 @@ contains
       ! get laplacian
       select case(der%stencil_type)
       case(DER_STAR)  
-         write(*,*) 'der%m%h',der%m%h
-        call stencil_star_coeff_lapl(der%m%h, der%order, der%lapl)
+        call stencil_star_coeff_lapl(der%m%h(1:conf%dim), der%order, der%lapl)
       case(DER_VARIATIONAL)
         call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
       end select
