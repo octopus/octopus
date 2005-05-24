@@ -17,6 +17,23 @@
 !!
 !! $Id$
 
+
+!------------------------------------------------------------
+! The paralellization of this routine is done in the following way:
+! We have to calculate the sum 
+!    lxc = sum_{j>i) l_ij
+! where the states i and j are divided in blocks and scattered among 
+! the processors. Each processor will calculate a sub-block of the 
+! matrix l_ij. Examples of the partitioning (for 3 and 4 blocks/processors)
+!
+! (1  2  1)    (1  2  3  1)
+! (   2  3)    (   2  3  4)
+! (      3)    (      3  4)
+!              (         4)
+!
+!  where the numbers indicate the processor that will do the work
+!------------------------------------------------------------
+
 subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   type(mesh_type),   intent(IN)    :: m
   type(f_der_type),  intent(in)    :: f_der
@@ -28,7 +45,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   integer :: i, j, ist, jst, i_max, node_to, node_fr, ist_s, ist_r
   integer, allocatable :: recv_stack(:), send_stack(:)
   FLOAT :: r
-  R_TYPE, allocatable     :: wf_ist(:), send_buffer(:)
+  R_TYPE, pointer     :: wf_ist(:), send_buffer(:)
   R_TYPE, allocatable :: rho_ij(:), F_ij(:)
 #if defined(HAVE_MPI)
   R_TYPE, pointer :: recv_buffer(:)
@@ -39,13 +56,15 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 
   call push_sub('oep_x')
 
-  allocate(F_ij(m%np), rho_ij(m%np), send_buffer(m%np), wf_ist(m%np))
+  allocate(F_ij(m%np), rho_ij(m%np), send_buffer(m%np))
 
 #if defined(HAVE_MPI)
   allocate(recv_buffer(m%np))
 #endif
 
+  ! This is the maximum number of blocks for each processor
   i_max = int((mpiv%numprocs + 2)/2) - 1
+
   allocate(recv_stack(st%nst+1), send_stack(st%nst+1))
   do i = 0, i_max
     ! node where to send the wavefunctions
@@ -62,7 +81,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
       node_fr = -1
     end if
 
-    ! build receive and send stacks
+    ! check which wave-functions we have to send/recv, and put them in a stack
     recv_stack(:) = -1; ist_r = 1
     send_stack(:) = -1; ist_s = 1
     do j = 1, st%nst
@@ -82,30 +101,34 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
     ist_s = 0
     if(node_to < 0) ist_s = st%nst + 1
     do
-      ! send wave-function
+      ! increment send counter
       if(ist_s <= st%nst) ist_s = ist_s  + 1
 
 #if defined(HAVE_MPI)
+      ! send wave-function
       if((send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
         call MPI_ISend(st%X(psi)(1, 1, send_stack(ist_s), is), m%np, R_MPITYPE, &
             node_to, send_stack(ist_s), MPI_COMM_WORLD, req, ierr)
       end if
 #endif
-      ! receive wave-function
+
+      ! increment receive counter
       if(ist_r <= st%nst) ist_r = ist_r  + 1
 
       if(recv_stack(ist_r) > 0) then
+
+        ! receive wave-function
         if(node_fr == mpiv%node) then
-          wf_ist(1:m%np) = st%X(psi)(1:m%np, 1, recv_stack(ist_r), is)
+          wf_ist => st%X(psi)(1:m%np, 1, recv_stack(ist_r), is)
 #if defined(HAVE_MPI)
         else
           call MPI_Recv(recv_buffer(:), m%np, R_MPITYPE, &
               node_fr, recv_stack(ist_r), MPI_COMM_WORLD, stat(:), ierr)
-          wf_ist(1:m%np) = recv_buffer(1:m%np)
+          wf_ist => recv_buffer(1:m%np)
 #endif
         end if
 
-        ! calculate stuff
+        ! this is where we calculate the elements of the matrix
         ist = recv_stack(ist_r)
         send_buffer(1:m%np) = R_TOTYPE(M_ZERO)
         do jst = st%st_start, st%st_end
@@ -116,23 +139,32 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
           F_ij(1:m%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(m, f_der, F_ij, rho_ij)
 
+          ! this quantity has to be added to oep%X(lxc)(1:m%np, ist)
           send_buffer(1:m%np) = send_buffer(1:m%np) + &
               oep%socc*st%occ(jst, is)*F_ij(1:m%np)*R_CONJ(st%X(psi)(1:m%np, 1, jst, is))
 
+          ! if off-diagonal, then there is another contribution
+          ! not that the wf jst is always in this node
           if(ist.ne.jst) then
             oep%X(lxc)(1:m%np, jst) = oep%X(lxc)(1:m%np, jst) - &
                 oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:m%np)*wf_ist(1:m%np))
           end if
 
+          ! get the contribution (ist, jst) to the exchange energy
           r = M_ONE
           if(ist.ne.jst) r = M_TWO
+          
           ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
               sum(R_REAL(wf_ist(1:m%np) * F_ij(1:m%np) * R_CONJ(st%X(psi)(1:m%np, 1, jst, is))) * m%vol_pp(1:m%np))
         end do
+
         if(st%node(ist) == mpiv%node) then
+          ! either add the contribution ist
           oep%X(lxc)(1:m%np, ist) = oep%X(lxc)(1:m%np, ist) - send_buffer(1:m%np)
+
 #if defined(HAVE_MPI)
         else
+          ! or send it to the node that has wf ist
           call MPI_ISend(send_buffer(:), m%np, R_MPITYPE, &
               node_fr, ist, MPI_COMM_WORLD, req, ierr)
 #endif
@@ -141,21 +173,25 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
       end if
 
 #if defined(HAVE_MPI)
+      ! now we have to receive the contribution to lxc from the node to
+      ! which we sent the wave-function ist
       if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
         call MPI_Recv(recv_buffer(:), m%np, R_MPITYPE, &
             node_to, send_stack(ist_s), MPI_COMM_WORLD, stat(:), ierr)
 
-        oep%X(lxc)(1:m%np, send_stack(ist_s)) = oep%X(lxc)(1:m%np, recv_stack(ist_s)) - &
-            send_buffer(1:m%np)
+        oep%X(lxc)(1:m%np, send_stack(ist_s)) = oep%X(lxc)(1:m%np, send_stack(ist_s)) - &
+            recv_buffer(1:m%np)
+
       end if
 #endif
 
+      ! all done?
       if((send_stack(ist_s) < 0).and.(recv_stack(ist_r) < 0)) exit
     end do
   end do
 
 #if defined(HAVE_MPI)
-  call MPI_Barrier(MPI_COMM_WORLD, ierr)
+  ! sum all contributions to the exchange energy
   call MPI_Allreduce(ex, r, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
   ex = r
 
@@ -163,7 +199,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 #endif
 
   deallocate(recv_stack, send_stack)
-  deallocate(F_ij, rho_ij, send_buffer, wf_ist)
+  deallocate(F_ij, rho_ij, send_buffer)
 
   call pop_sub()
 
