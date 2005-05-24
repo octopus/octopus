@@ -28,6 +28,7 @@ program octopus
   implicit none
 
   integer :: ierr, ns, val(8)
+  character(len=256) :: sys_name
 
   call global_init()
 
@@ -56,8 +57,8 @@ program octopus
      call write_info(4)
      
      ! Let us print where we are running
-     call loct_sysname(message(1))
-     write(message(1), '(a)') str_center("The octopus is swimming in " // trim(message(1)), 70)
+     call loct_sysname(sys_name)
+     write(message(1), '(a)') str_center("The octopus is swimming in " // trim(sys_name), 70)
      message(2) = ""
      call write_info(2)
 
