@@ -76,40 +76,23 @@ tm2              = 100
 hgh              = 101
 
 # symbols for libxc
-x_lda            = 1    # Exchange
-c_wigner         = 2    # Wigner parametrization
-c_rpa            = 3    # Random Phase Approximation
-c_hl             = 4    # Hedin & Lundqvist
-c_gl             = 5    # Gunnarson & Lundqvist
-c_xalpha         = 6    # Slater's Xalpha
-c_vwn            = 7    # Vosko, Wilk, & Nussair
-c_pz             = 8    # Perdew & Zunger
-c_ob_pz          = 9    # Ortiz & Ballone (PZ)
-c_pw             = 10   # Perdew & Wang
-c_ob_pw          = 11   # Ortiz & Ballone (PW)
-c_lyp            = 12   # Lee, Yang, & Parr LDA
-c_amgb           = 13   # Attacalite et al
-x_pbe            = 101  # Perdew, Burke & Ernzerhof exchange
-c_pbe            = 102  # Perdew, Burke & Ernzerhof correlation
-xc_lb            = 103  # van Leeuwen & Baerends
+lda_x        = 1        # Exchange
+lda_c_wigner = 2        # Wigner parametrization
+lda_c_rpa    = 3        # Random Phase Approximation
+lda_c_hl     = 4        # Hedin & Lundqvist
+lda_c_gl     = 5        # Gunnarson & Lundqvist
+lda_c_xalpha = 6        # Slater's Xalpha
+lda_c_vwn    = 7        # Vosko, Wilk, & Nussair
+lda_c_pz     = 8        # Perdew & Zunger
+lda_c_ob_pz  = 9        # Ortiz & Ballone (PZ)
+lda_c_pw     = 10       # Perdew & Wang
+lda_c_ob_pw  = 11       # Ortiz & Ballone (PW)
+lda_c_lyp    = 12       # Lee, Yang, & Parr LDA
+lda_c_amgb   = 13       # Attacalite et al
 
-lda_x        = 1
-lda_c_wigner = 2
-lda_c_rpa    = 3
-lda_c_hl     = 4
-lda_c_gl     = 5
-lda_c_xalpha = 6
-lda_c_vwn    = 7
-lda_c_pz     = 8
-lda_c_ob_pz  = 9
-lda_c_pw     = 10
-lda_c_ob_pw  = 11
-lda_c_lyp    = 12
-lda_c_amgb   = 13
-
-gga_x_pbe    = 101
-gga_xc_lb    = 103
-gga_c_pbe    = 102
+gga_x_pbe    = 101      # Perdew, Burke & Ernzerhof exchange
+gga_c_pbe    = 102      # Perdew, Burke & Ernzerhof correlation
+gga_xc_lb    = 103      # van Leeuwen & Baerends
 
 mgga_x_tpss  = 201
 mgga_c_tpss  = 202
@@ -118,6 +101,10 @@ lca_omc      = 301
 lca_lch      = 302
 
 oep_x        = 401
+
+sic_none     = 1
+sic_pz       = 2
+sic_amaldi   = 3
 
 oep_none     = 0
 oep_slater   = 1

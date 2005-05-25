@@ -130,6 +130,9 @@ subroutine geometry_init_xyz(geo)
       message(2) = "Please use a .pdb"
       call write_fatal(2)
     end if
+    write(message(1), '(a,i8)') 'Info: Number of classical atoms = ', geo%ncatoms
+    call write_info(1)
+
     geo%ncatoms = xyz%n
     allocate(geo%catom(geo%ncatoms))
     do i = 1, geo%ncatoms

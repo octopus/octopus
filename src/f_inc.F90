@@ -37,6 +37,7 @@ subroutine X(mf2cf) (m, mf, cf)
     ix = m%Lxyz(i, 1) + c(1)
     iy = m%Lxyz(i, 2) + c(2)
     iz = m%Lxyz(i, 3) + c(3)
+
     cf%RS(ix, iy, iz) = mf(i)
   end do
 

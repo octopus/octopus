@@ -25,11 +25,12 @@
 !!! the rest of the hamiltonian module does not know about the gory details
 !!! of how xc is defined and calculated.
 
-subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
+subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
   use xc_functl
 
   type(xc_oep_type),      intent(inout) :: oep
   type(xc_type),          intent(in)    :: xcs
+  logical,                intent(in)    :: apply_sic_pz
   type(mesh_type),        intent(in)    :: m
   type(f_der_type),       intent(inout) :: f_der
   type(hamiltonian_type), intent(inout) :: h
@@ -68,7 +69,7 @@ subroutine X(xc_oep_calc)(oep, xcs, m, f_der, h, st, vxc, ex, ec)
     end do functl_loop
   
     ! SIC a la PZ is handled here
-    if(oep%sic_correction.ne.0) then
+    if(apply_sic_pz) then
       call X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
     end if
     

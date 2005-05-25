@@ -111,6 +111,7 @@ subroutine X(cf_free)(cf)
   type(X(cf)), intent(inout) :: cf
 
   call push_sub('cf_free')
+
   if(associated(cf%RS)) then
     deallocate(cf%RS)
     nullify(cf%RS)
@@ -128,7 +129,6 @@ subroutine X(cf_free)(cf)
     nullify(cf%fft)
   end if
 #endif
-
   call pop_sub()
 end subroutine X(cf_free)
 

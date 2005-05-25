@@ -467,8 +467,8 @@ contains
   ! ---------------------------------------------------------
   subroutine dx()
     integer :: iunit, ix, iy, iz
-    FLOAT :: offset(3)
-    character(LEN=40) :: nitems
+    FLOAT   :: offset(3)
+    character(len=40) :: nitems
     type(X(cf)) :: c
 
     ! put values in a nice cube
@@ -477,10 +477,10 @@ contains
     call X(mf2cf) (m, f, c)
     
     ! the offset is different in periodic directions
-    do i=1,conf%periodic_dim
+    do i = 1,conf%periodic_dim
       offset(i)=-(c%n(i))/2 * m%h(i) / units_out%length%factor
     end do
-    do i=conf%periodic_dim+1,3
+    do i = conf%periodic_dim+1, 3
       offset(i)=-(c%n(i) - 1)/2 * m%h(i) / units_out%length%factor
     end do
 
@@ -490,7 +490,7 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write')
     
-    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts',c%n(:)
+    write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', c%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
     write(iunit, '(a,f12.6,a)') ' delta ',m%h(1) / units_out%length%factor, '    0.000000    0.000000'
     write(iunit, '(a,f12.6,a)') ' delta     0.000000',m%h(2) / units_out%length%factor, '    0.000000'

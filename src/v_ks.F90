@@ -43,10 +43,17 @@ module v_ks
      dh_calc_vhxc,       &
      zh_calc_vhxc
 
+  integer, parameter ::  &
+     sic_none   = 1, &    ! no self interaction correction
+     sic_pz     = 2, &    ! SIC a la Perdew Zunger (OEP way)
+     sic_amaldi = 3       ! Amaldi correction term
+  
+
   type v_ks_type
     logical :: ip_app
 
     integer           :: xc_family  ! the xc stuff
+    integer           :: sic_type   ! what kind of Self Interaction Correction to apply
     type(xc_type)     :: xc
     type(xc_OEP_type) :: oep
   end type v_ks_type
@@ -76,6 +83,22 @@ contains
       call xc_init(ks%xc, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
       
+      ! check for SIC
+      if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
+        call loct_parse_int(check_inp('SICCorrection'), sic_none, ks%sic_type)
+
+        if((ks%sic_type.ne.sic_none).and.(ks%sic_type.ne.sic_pz).and.(ks%sic_type.ne.sic_amaldi)) then
+          message(1) = "Variable 'SICCorrection' can only have the values:"
+          message(2) = "  sic_none   : No Self Interaction Correction"
+          message(3) = "  sic_pz     : SIC a la Perdew Zunger"
+          message(4) = "  sic_amaldi : Amaldi correction term"
+          call write_fatal(4)
+        end if
+
+        ! Perdew Zunger corrections
+        if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
+      end if
+
       call xc_oep_init(ks%oep, ks%xc_family, m, d)
 
       if(conf%verbose >= VERBOSE_NORMAL) call v_ks_write_info(ks, stdout)
@@ -114,6 +137,14 @@ contains
 #endif
       write(iunit,'(/,a)') stars
       call xc_write_info(ks%xc, iunit)
+
+      select case(ks%sic_type)
+      case(sic_pz)
+        write(iunit, '(/,2x,a)') 'using Perdew-Zunger SIC corrections'
+      case(sic_amaldi)
+        write(iunit, '(/,2x,a)') 'using Amaldi correction term'
+      end select
+
       if(iand(ks%xc_family, XC_FAMILY_OEP).ne.0) then
         write(iunit, '(1x)')
         call xc_oep_write_info(ks%oep, iunit)

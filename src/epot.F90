@@ -109,6 +109,9 @@ contains
     if(geo%ncatoms > 0) then
       call loct_parse_int(check_inp('ClassicPotential'), 0, ep%classic_pot)
       if(ep%classic_pot > 0) then
+        message(1) = 'Info: generating classic external potential'
+        call write_info(1)
+
         allocate(ep%Vclassic(m%np))
         call epot_generate_classic(ep, m, geo)
       end if
