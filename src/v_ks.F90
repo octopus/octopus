@@ -26,7 +26,6 @@ module v_ks
   use functions
   use mesh
   use mesh_function
-  use geometry
   use poisson
   use lib_xc
   use xc
@@ -55,10 +54,9 @@ module v_ks
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, m, geo, d)
+  subroutine v_ks_init(ks, m, d)
     type(v_ks_type), intent(out) :: ks
     type(mesh_type),        intent(inout) :: m
-    type(geometry_type),    intent(in)    :: geo
     type(states_dim_type),  pointer       :: d
 
     call push_sub('v_ks_init');
@@ -75,7 +73,7 @@ contains
       call write_info(1)
       call poisson_init(m)
 
-      call xc_init(ks%xc, geo%nlcc, d%spin_channels, d%cdft)
+      call xc_init(ks%xc, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
       
       call xc_oep_init(ks%oep, ks%xc_family, m, d)

@@ -96,7 +96,7 @@ contains
     call states_init(s%st, s%m, s%geo, s%val_charge, s%geo%nlcc)
     call output_init(s%outp)
     
-    call v_ks_init(s%ks, s%m, s%geo, s%st%d)
+    call v_ks_init(s%ks, s%m, s%st%d)
     
     call pop_sub()
   end subroutine system_init

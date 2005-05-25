@@ -32,7 +32,6 @@ module xc_OEP
   use poisson
   use hamiltonian
   use linear_response
-  use output
 
   implicit none
 

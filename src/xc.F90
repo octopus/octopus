@@ -45,7 +45,6 @@ public :: xc_type, &
 ! ---------------------------------------------------------
 
 type xc_type
-  logical :: nlcc                     ! repeated from system
   logical :: cdft
 
   integer :: family                   ! the families present
@@ -84,9 +83,8 @@ contains
 
   end subroutine xc_write_info
 
-  subroutine xc_init(xcs, nlcc, spin_channels, cdft)
+  subroutine xc_init(xcs, spin_channels, cdft)
     type(xc_type), intent(out) :: xcs
-    logical,       intent(in)  :: nlcc
     integer,       intent(in)  :: spin_channels
     logical,       intent(in)  :: cdft
     
@@ -94,7 +92,6 @@ contains
     
     call push_sub('xc_init')
     
-    xcs%nlcc   = nlcc  ! make a copy of flag indicating non-local core corrections
     xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft
 
     ! get current-dependent functional
