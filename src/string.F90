@@ -17,11 +17,16 @@
 !!
 !! $Id$
 
+#include "global.h"
+
 module string
   implicit none
 
   private
-  public :: upcase, lowcase, compact, str_trim, str_center
+  public :: &
+     upcase, lowcase, compact, &
+     str_trim, str_center, &
+     print_C_string
 
 contains
 
@@ -123,4 +128,37 @@ contains
     
   end function str_center
 
+
+  ! prints the C string given by the pointer str
+  subroutine print_C_string(iunit, str, pre)
+    integer,               intent(in) :: iunit
+    integer(POINTER_SIZE), intent(in) :: str
+    character(len=*), intent(in), optional :: pre
+
+    integer(POINTER_SIZE) :: s
+    character(len=256)    :: line
+
+    interface
+      subroutine break_C_string(str, s, line)
+        integer(POINTER_SIZE), intent(in)    :: str
+        integer(POINTER_SIZE), intent(inout) :: s
+        character(len=*),      intent(out)   :: line
+      end subroutine break_C_string
+    end interface
+
+    s = 0
+    do
+      call break_C_string(str, s, line)
+      if(s.ne.int(0, POINTER_SIZE)) then
+        if(present(pre)) then
+          write(iunit, '(a,a)') pre, trim(line)
+        else
+          write(iunit, '(a)') trim(line)
+        end if
+      else
+        exit
+      end if
+    end do
+  end subroutine print_C_string
+  
 end module string

@@ -23,6 +23,7 @@ module global
   use lib_oct_parser
   use lib_oct
   use io
+  use varinfo
 
 #if defined(HAVE_MPI) && !defined(MPI_H)
   use mpi
@@ -177,6 +178,9 @@ subroutine global_init()
   ! initialize input/output system
   call io_init()
 
+  ! initialize info for the input variables
+  call varinfo_init(trim(conf%share)//'/varinfo');
+
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
   call loct_parse_int('CalculationMode', 1, calc_mode)
@@ -195,11 +199,20 @@ subroutine global_init()
   end if
 
   ! Sets the dimensionaliy of the problem.
+  !%Variable Dimensions
+  !%Type integer
+  !%Description
+  !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
+  !% variable. Note that not all input variables may be available in all cases.
+  !%Option 1
+  !% The system is 1-dimensional
+  !%Option 2
+  !% The system is 2-dimensional
+  !%Option 3
+  !% The system is 3-dimensional (default)
+  !%End
   call loct_parse_int(check_inp('Dimensions'), 3, conf%dim)
-  if(conf%dim<1 .or. conf%dim>3) then
-    message(1) = 'Dimensions must be either 1, 2, or 3'
-    call write_fatal(1)
-  end if
+  if(conf%dim<1 .or. conf%dim>3) call input_error('Dimensions')
 
   ! handle periodic directions
   call loct_parse_int(check_inp('PeriodicDimensions'), 0, conf%periodic_dim)
@@ -222,10 +235,12 @@ subroutine global_end()
   call MPI_FINALIZE(ierr)
 #endif
 
+  call varinfo_end()
   call io_end()
   call loct_parse_end()
   
 end subroutine global_end
+
 
 ! This subroutine is called by the assert macro
 #ifdef DEBUG
@@ -237,6 +252,26 @@ subroutine assert_die(s, f, l)
   stop
 end subroutine assert_die
 #endif
+
+
+subroutine input_error(var)
+  character(len=*), intent(in) :: var
+  integer :: i
+
+  if(mpiv%node == 0) then
+    write(stderr, '(/,a,/,a)') stars, '*** Fatal Error in input '
+    write(stderr, '(a,a)') '*', hyphens
+
+    call varinfo_print(stderr, var)
+    write(stderr, '(a,a)') '*', hyphens
+  end if
+
+#ifdef HAVE_MPI
+  call MPI_FINALIZE(i)
+#endif
+  stop
+end subroutine input_error
+
 
 subroutine write_fatal(no_lines)
   integer, intent(in) :: no_lines
@@ -255,7 +290,7 @@ subroutine write_fatal(no_lines)
 
 #ifdef DEBUG
   write(stderr, '(a)', advance='no') '* Stack: '
-  do i=1,no_sub_stack
+  do i = 1, no_sub_stack
     write(stderr, '(a,a)', advance='no') ' > ', trim(sub_stack(i))
   end do
   write(stderr, '(/,a,/)') stars

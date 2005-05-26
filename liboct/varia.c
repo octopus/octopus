@@ -41,9 +41,9 @@ void sysname(char **c)
   uname(&name);
   *c = (char *)malloc(sizeof(name.nodename) + sizeof(name.sysname) + 4);
   strcpy(*c, name.nodename);
-	strcat(*c, " (");
-	strcat(*c, name.sysname);
-	strcat(*c, ")");
+  strcat(*c, " (");
+  strcat(*c, name.sysname);
+  strcat(*c, ")");
 }
 
 

@@ -255,6 +255,7 @@ module lib_oct
     end subroutine oct_getcwd
   end interface
 
+
   ! ------------------------------------------------------------
   ! File handling
   interface loct_mkdir
@@ -274,6 +275,7 @@ module lib_oct
       character(len=*), intent(in) :: filename
     end function number_of_lines
   end interface
+
 
   ! ------------------------------------------------------------
   ! Varia

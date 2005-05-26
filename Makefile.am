@@ -21,7 +21,7 @@
 
 SUBDIRS = liboct_parser liboct libxc src doc share testsuite
 
-EXTRA_DIST = TODO build/*.m4 build/*.in debian/*
+EXTRA_DIST = TODO build/*.pl build/*.m4 build/*.in debian/*
 
 CLEANFILES = *~ *.bak *.pc*
 DISTCLEANFILES = config.log config.status Makefile.in build/octopus.spec

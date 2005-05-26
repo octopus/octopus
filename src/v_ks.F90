@@ -68,7 +68,17 @@ contains
 
     call push_sub('v_ks_init');
 
-    ! Should we treat the particles as independent?
+    !%Variable NonInteractingElectrons
+    !%Type logical
+    !%Description
+    !% Sometimes it may be helpful to treat the electrons as non-interacting particles,
+    !% i.e., not to take into account Hartree and exchange-correlation effects between
+    !% the electrons. This variable may be used to toogle this behavior on and off
+    !%Option no 0
+    !% Electrons are treated as *interacting* particles
+    !%Option yes 1
+    !% Electrons are handled as *non-interacting* paticles
+    !%End
     call loct_parse_logical(check_inp('NonInteractingElectrons'), .false., ks%ip_app)
     if(ks%ip_app) then
       message(1) = 'Info: Treating the electrons as non-interacting'

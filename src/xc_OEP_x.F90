@@ -57,6 +57,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   call push_sub('oep_x')
 
   allocate(F_ij(m%np), rho_ij(m%np), send_buffer(m%np))
+  allocate(recv_stack(st%nst+1), send_stack(st%nst+1))
 
 #if defined(HAVE_MPI)
   allocate(recv_buffer(m%np))
@@ -65,7 +66,6 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
   ! This is the maximum number of blocks for each processor
   i_max = int((mpiv%numprocs + 2)/2) - 1
 
-  allocate(recv_stack(st%nst+1), send_stack(st%nst+1))
   do i = 0, i_max
     ! node where to send the wavefunctions
     node_to = mod(mpiv%node + i, mpiv%numprocs)
@@ -107,7 +107,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 #if defined(HAVE_MPI)
       ! send wave-function
       if((send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
-        call MPI_ISend(st%X(psi)(1, 1, send_stack(ist_s), is), m%np, R_MPITYPE, &
+        call MPI_ISend(st%X(psi)(:, 1, send_stack(ist_s), is), m%np, R_MPITYPE, &
             node_to, send_stack(ist_s), MPI_COMM_WORLD, req, ierr)
       end if
 #endif

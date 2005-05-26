@@ -38,13 +38,13 @@
 void FC_FUNC_(oct_mkdir, OCT_MKDIR)
 		 (STR_F_TYPE name STR_ARG1)
 {
-	struct stat buf;
-	char *name_c;
+  struct stat buf;
+  char *name_c;
 
-	name_c = TO_C_STR1(name);
-	if(!*name_c || stat(name_c, &buf) == 0) return;
-	mkdir(name_c, 0775);
-	free(name_c);
+  name_c = TO_C_STR1(name);
+  if(!*name_c || stat(name_c, &buf) == 0) return;
+  mkdir(name_c, 0775);
+  free(name_c);
 }
 
 void FC_FUNC_(oct_rm, OCT_RM)
@@ -58,11 +58,11 @@ void FC_FUNC_(oct_rm, OCT_RM)
 }
 
 void FC_FUNC_(oct_getcwd, OCT_GETCWD)
-		 (STR_F_TYPE name STR_ARG1)
+  (STR_F_TYPE name STR_ARG1)
 {
-	char s[256];
+  char s[256];
   getcwd(s, 256);
-	TO_F_STR1(s, name);
+  TO_F_STR1(s, name);
 }
 
 /* this function gets a string of the form '1-12, 34' and fills
@@ -70,40 +70,40 @@ void FC_FUNC_(oct_getcwd, OCT_GETCWD)
 void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 		 (STR_F_TYPE str, int l[32] STR_ARG1)
 {
-	int i, i1, i2;
-	char c[20], *c1, *str_c, *s;
+  int i, i1, i2;
+  char c[20], *c1, *str_c, *s;
 
-	str_c = TO_C_STR1(str);
-	s = str_c;
+  str_c = TO_C_STR1(str);
+  s = str_c;
+  
+  /* clear list */
+  for(i=0; i<32; i++)
+    l[i] = 0;
+  
+  while(*s){
+    /* get integer */
+    for(c1 = c; isdigit(*s) || isspace(*s); s++)
+      if(isdigit(*s)) *c1++ = *s;
+    *c1 = '\0';
+    i1 = atoi(c) - 1;
+    
+    if(*s == '-'){ /* range */
+      s++;
+      for(c1 = c; isdigit(*s) || isspace(*s); s++)
+	if(isdigit(*s)) *c1++ = *s;
+      *c1 = '\0';
+      i2 = atoi(c) - 1;
+    }else /* single value */
+      i2 = i1;
+    
+    for(i=i1; i<=i2; i++)
+      if(i>=0 && i<1024)
+	l[i/32] |= 1 << (i % 32);
+    
+    if(*s) s++;
+  }
 
-	/* clear list */
-	for(i=0; i<32; i++)
-		l[i] = 0;
-	
-	while(*s){
-		/* get integer */
-		for(c1 = c; isdigit(*s) || isspace(*s); s++)
-			if(isdigit(*s)) *c1++ = *s;
-		*c1 = '\0';
-		i1 = atoi(c) - 1;
-
-		if(*s == '-'){ /* range */
-			s++;
-			for(c1 = c; isdigit(*s) || isspace(*s); s++)
-				if(isdigit(*s)) *c1++ = *s;
-			*c1 = '\0';
-			i2 = atoi(c) - 1;
-		}else /* single value */
-			i2 = i1;
-
-		for(i=i1; i<=i2; i++)
-			if(i>=0 && i<1024)
-				l[i/32] |= 1 << (i % 32);
-
-		if(*s) s++;
-	}
-
-	free(str_c);
+  free(str_c);
 }
 
 
@@ -111,24 +111,24 @@ void FC_FUNC_(oct_wfs_list, OCT_WFS_LIST)
 double ylm(double x, double y, double z, int l, int m);
 
 double FC_FUNC_(oct_ylm, OCT_YLM)
-		 (double *x, double *y, double *z, int *l, int *m)
+  (double *x, double *y, double *z, int *l, int *m)
 {
-	return ylm(*x, *y, *z, *l, *m);
+  return ylm(*x, *y, *z, *l, *m);
 }
 
 /* ------------------------------ from varia.c ------------------------------- */
 #include "varia.h"
 
 void FC_FUNC_(oct_fft_optimize, OCT_FFT_OPTIMIZE)
-		 (int *n, int *p, int *par)
+  (int *n, int *p, int *par)
 {
-	fft_optimize(n, *p, *par);
+  fft_optimize(n, *p, *par);
 }
 
 void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
-		 (int *a, int *max)
+  (int *a, int *max)
 {
-	progress_bar(*a, *max);
+  progress_bar(*a, *max);
 }
 
 /* -------------------------- interface to METIS ----------------------------- */
@@ -136,17 +136,17 @@ void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
 #include <metis/metis.h>
 
 void FC_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
-		 (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
-			int *edgecut, idxtype *epart, idxtype *npart)
+  (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
+   int *edgecut, idxtype *epart, idxtype *npart)
 {
-	METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
-	/*METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);*/
+  METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
+  /*METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);*/
 }
 #endif
 
 /* ------------------------------ some stuff  -------------------------------- */
 double FC_FUNC_(oct_clock, OCT_CLOCK)
-       ()
+  ()
 {
   return (double) clock();
 }
@@ -156,24 +156,24 @@ int FC_FUNC_(oct_getmem, OCT_GETMEM)
      ()
 {
 #ifdef linux
-	static size_t pagesize = 0;
-	FILE *f;
+  static size_t pagesize = 0;
+  FILE *f;
   int pid;
-	long mem;
+  long mem;
   char s[256];
-   
-	if(pagesize == 0)
-		pagesize = sysconf(_SC_PAGESIZE);
-
-	pid = getpid();
-	sprintf(s, "%s%d%s", "/proc/", pid, "/statm");
-	if((f = fopen(s, "r")) == NULL) return -1;
-	fscanf(f, "%lu", &mem);
-	fclose(f);
-
-	return (mem*pagesize) >> 10;
+  
+  if(pagesize == 0)
+    pagesize = sysconf(_SC_PAGESIZE);
+  
+  pid = getpid();
+  sprintf(s, "%s%d%s", "/proc/", pid, "/statm");
+  if((f = fopen(s, "r")) == NULL) return -1;
+  fscanf(f, "%lu", &mem);
+  fclose(f);
+  
+  return (mem*pagesize) >> 10;
 #else
-	return -1;
+  return -1;
 #endif
 }
 
@@ -181,26 +181,26 @@ int FC_FUNC_(oct_getmem, OCT_GETMEM)
 void FC_FUNC_(oct_sysname, OCT_SYSNAME)
 		 (STR_F_TYPE name STR_ARG1)
 {
-	char *name_c;
-	
-	name_c = TO_C_STR1(name);
-	sysname(&name_c);
-	TO_F_STR1(name_c, name);
-	free(name_c);
+  char *name_c;
+  
+  sysname(&name_c);
+  TO_F_STR1(name_c, name);
+  free(name_c);
 }
 
+
 int FC_FUNC_(number_of_lines, NUMBER_OF_LINES)
-     (STR_F_TYPE name STR_ARG1)
+  (STR_F_TYPE name STR_ARG1)
 {
 
   FILE *pf;
   int c, i;
   char *name_c;
 
-	name_c = TO_C_STR1(name);
+  name_c = TO_C_STR1(name);
   pf = fopen(name_c, "r");
-	free(name_c);
-
+  free(name_c);
+  
   if (pf != NULL) {
     i = 0;
     while ((c = getc(pf)) != EOF) {
@@ -211,4 +211,28 @@ int FC_FUNC_(number_of_lines, NUMBER_OF_LINES)
   }else{
     return -1;
   }
+}
+
+
+/* Given a string in C, it breaks it line by line and returns each 
+   as a Fortran string. Returns 0 if string does not have more lines. 
+*/
+void FC_FUNC_(break_c_string, BREAK_C_STRING)
+  (char **str, char **s, STR_F_TYPE line_f STR_ARG1)
+{
+  char *c, line[256]; /* hopefully no line is longer than 256 characters ;) */
+
+  if(*s == NULL) *s = *str;
+
+  if(*s == NULL || **s == '\0'){
+    *s = (char *)(0);
+    return;
+  }
+
+  for(c=line; **s!='\0' && **s!='\n'; (*s)++, c++)
+    *c = **s;
+  *c = '\0';
+  if(**s=='\n') (*s)++;
+
+  TO_F_STR1(line, line_f);
 }

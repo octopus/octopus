@@ -8,7 +8,9 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
 check_PROGRAMS = oct-test
 
-core_SRCS = liboct_parser.F90 liboct.F90 io.F90 string.F90 global.F90 units.F90 \
+basic_SRCS = liboct_parser.F90 liboct.F90 io.F90 string.F90 varinfo.F90 global.F90 units.F90
+
+core_SRCS = $(basic_SRCS) \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \
@@ -51,25 +53,25 @@ octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ 
 	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
 
 # now the utility programs
-oct_sf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 strength_function.F90
+oct_sf_SOURCES = $(basic_SRCS) spectrum.F90 strength_function.F90
 oct_sf_LDADD   = $(core_LIBS)
 
-oct_rsf_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 rotational_strength.F90
+oct_rsf_SOURCES = $(basic_SRCS) spectrum.F90 rotational_strength.F90
 oct_rsf_LDADD   = $(core_LIBS)
 
-oct_hs_mult_SOURCES = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_mult.F90
+oct_hs_mult_SOURCES = $(basic_SRCS) spectrum.F90 hs_from_mult.F90
 oct_hs_mult_LDADD   = $(core_LIBS)
 
-oct_hs_acc_SOURCES  = global.F90 io.F90 liboct_parser.F90 liboct.F90 units.F90 spectrum.F90 hs_from_acc.F90
+oct_hs_acc_SOURCES  = $(basic_SRCS) spectrum.F90 hs_from_acc.F90
 oct_hs_acc_LDADD    = $(core_LIBS)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)
 
-oct_broad_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 broad.F90
+oct_broad_SOURCES = $(basic_SRCS) broad.F90
 oct_broad_LDADD = $(core_LIBS)
 
-oct_ph_SOURCES = liboct_parser.F90 liboct.F90 global.F90 io.F90 units.F90 phonon_spectrum.F90
+oct_ph_SOURCES = $(basic_SRCS) phonon_spectrum.F90
 oct_ph_LDADD = $(core_LIBS)
 
 oct_make_st_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 linear_response.F90 \
