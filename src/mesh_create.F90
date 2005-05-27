@@ -94,7 +94,7 @@ contains
     end select
     
     ! ignore box_shape in 1D
-    if(conf%dim==1) m%box_shape=SPHERE
+    if(conf%dim==1.and.m%box_shape /= PARALLELEPIPED) m%box_shape=SPHERE
 
     m%rsize = -M_ONE
     if(m%box_shape == MINIMUM.and.def_rsize>M_ZERO) m%rsize = def_rsize/units_inp%length%factor
