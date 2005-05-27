@@ -116,6 +116,7 @@ character(len=256), dimension(20) :: message ! to be output by fatal, warning
 ! variables to treat multi subsytems
 character(len=32), allocatable :: subsys_label(:)
 integer,           allocatable :: subsys_runmode(:), subsys_run_order(:)
+integer,           allocatable :: no_of_states(:)
 integer, parameter             :: multi_subsys_mode = 1000
 integer                        :: current_subsystem = 1
 integer                        :: no_syslabels, no_subsys_runmodes
@@ -230,6 +231,9 @@ subroutine global_init()
 end subroutine global_init
 
 subroutine global_end()
+
+  call system_labels_end()
+
 #ifdef HAVE_MPI
   integer :: ierr
   call MPI_FINALIZE(ierr)
@@ -433,6 +437,7 @@ subroutine read_system_labels()
   
   allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
   allocate(subsys_run_order(no_syslabels))
+  allocate(no_of_states(no_syslabels))
   
   ! ... and how the user would like to call them.
   do i = 1, no_syslabels
@@ -488,12 +493,20 @@ subroutine init_default_system_labels()
   no_syslabels = 1
   allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
   allocate(subsys_run_order(no_syslabels))
+  allocate(no_of_states(no_syslabels))
   current_subsystem = 1
   subsys_label(current_subsystem) = ""
   subsys_runmode(current_subsystem) = calc_mode
   subsys_run_order(current_subsystem) = 1
 
 end subroutine init_default_system_labels
+
+subroutine system_labels_end()
+
+  deallocate(subsys_label, subsys_runmode, subsys_run_order)
+  deallocate(no_of_states)
+
+end subroutine system_labels_end
 
 ! returns true if a file named stop exists
 function clean_stop()

@@ -268,6 +268,8 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
   allocate(st%node(st%nst))
   st%node(:) = 0
 
+  no_of_states(current_subsystem) = st%d%nik*st%nst*st%d%dim
+
   nullify(st%dpsi, st%zpsi)
 
   call pop_sub()
