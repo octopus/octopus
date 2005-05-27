@@ -48,8 +48,6 @@ public :: system_type,          &
 
 
 type system_type
-  FLOAT                        :: val_charge ! the charge of the valence electrons (necessary to initialize states)
-
   type(mesh_type),     pointer :: m          ! the mesh
   type(f_der_type)             :: f_der      ! manages the calculation of derivatives of functions
   type(geometry_type), pointer :: geo        ! the geometry
@@ -63,7 +61,6 @@ contains
   subroutine system_init(s)
     type(system_type), intent(out) :: s
 
-    FLOAT :: def_h, def_rsize
     logical :: filter
 
     call push_sub('system_init')
@@ -71,11 +68,11 @@ contains
     ! initialize the stuff related to the mesh
     allocate(s%geo)
     call geometry_init_xyz(s%geo)
-    call geometry_init_species(s%geo, s%val_charge, def_h, def_rsize)
+    call geometry_init_species(s%geo)
     call geometry_init_vel(s%geo)
 
     allocate(s%m)
-    call mesh_init(s%m, s%geo, def_h, def_rsize)
+    call mesh_init(s%m, s%geo)
     call f_der_init(s%m, s%f_der)
     call mesh_create_xyz(s%m, s%f_der%n_ghost(1)) ! WARNING: should be an array
     call f_der_build(s%f_der)
@@ -93,7 +90,7 @@ contains
     
     ! initialize the other stuff
     allocate(s%st)
-    call states_init(s%st, s%m, s%geo, s%val_charge, s%geo%nlcc)
+    call states_init(s%st, s%m, s%geo, s%geo%nlcc)
     call output_init(s%outp)
     
     call v_ks_init(s%ks, s%m, s%st%d)

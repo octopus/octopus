@@ -127,14 +127,13 @@ subroutine states_null(st)
 end subroutine states_null
 
 
-subroutine states_init(st, m, geo, val_charge, nlcc)
+subroutine states_init(st, m, geo, nlcc)
   type(states_type),   intent(inout) :: st
   type(mesh_type),     intent(IN)    :: m
   type(geometry_type), intent(IN)    :: geo ! this is needed to generate the k points
-  FLOAT,               intent(in)    :: val_charge
   logical, optional,   intent(in)    :: nlcc
 
-  FLOAT :: excess_charge, r
+  FLOAT :: excess_charge, r, val_charge
   integer :: nempty, i, j
   integer(POINTER_SIZE) :: blk
 
@@ -166,6 +165,7 @@ subroutine states_init(st, m, geo, val_charge, nlcc)
     call write_fatal(2)
   end if
   
+  call geometry_val_charge(geo, val_charge)
   st%qtot = -(val_charge + excess_charge)
 
   select case(st%d%ispin)

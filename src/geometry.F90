@@ -49,7 +49,9 @@ module geometry
             cm_pos,                &
             cm_vel,                &
             atom_write_xyz,        &
-            loadPDB
+            loadPDB,               &
+            geometry_val_charge,   &
+            geometry_grid_defaults
 
   type atom_type
     character(len=15) :: label
@@ -232,13 +234,9 @@ subroutine geometry_filter(geo, gmax)
 
 end subroutine geometry_filter
 
-subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
+subroutine geometry_init_species(geo)
   type(geometry_type), intent(inout) :: geo
-  FLOAT, optional, intent(out)   :: val_charge_ ! the valence charge
-  FLOAT, optional, intent(out)   :: def_h_      ! the default mesh spacing
-  FLOAT, optional, intent(out)   :: def_rsize_  ! the default size of the minimum box
 
-  FLOAT :: val_charge, def_h, def_rsize
   integer :: i, j, k, ispin
 
   call push_sub('geometry_init_species')
@@ -277,17 +275,11 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
   end if
   ispin = min(2, ispin)
 
-  ! we now load the individual species, and find out the default mesh values.
-  def_h     =  huge(PRECISION)
-  def_rsize = -huge(PRECISION)
   do i = 1, geo%nspecies
     call specie_init(geo%specie(i), ispin)
-    def_h     = min(def_h,     geo%specie(i)%def_h)
-    def_rsize = max(def_rsize, geo%specie(i)%def_rsize)
   end do
 
-  !  assign species and find total charge of the system
-  val_charge = M_ZERO
+  !  assign species
   do i = 1, geo%natoms
     do j = 1, geo%nspecies
       if(trim(geo%atom(i)%label) == trim(geo%specie(j)%label)) then
@@ -295,7 +287,6 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
         exit
       end if
     end do
-    val_charge = val_charge - geo%atom(i)%spec%Z_val
   end do
 
   ! find out if we need non-local core corrections
@@ -305,11 +296,6 @@ subroutine geometry_init_species(geo, val_charge_, def_h_, def_rsize_)
     geo%nlcc = (geo%nlcc.or.geo%specie(i)%nlcc)
     geo%nlpp = (geo%nlpp.or.(.not.geo%specie(i)%local))
   end do
-
-  ! return values
-  if(present(val_charge_)) val_charge_ = val_charge
-  if(present(def_h_))      def_h_      = def_h
-  if(present(def_rsize_))  def_rsize_  = def_rsize
 
   call pop_sub()
 end subroutine geometry_init_species
@@ -556,5 +542,35 @@ subroutine atom_write_xyz(dir, fname, geo)
 #endif
   
 end subroutine atom_write_xyz
+
+subroutine geometry_val_charge(geo, val_charge)
+  type(geometry_type), intent(in) :: geo
+  FLOAT, intent(out) :: val_charge
+  integer :: i
+  call push_sub('geometry_val_charge')
+
+  val_charge = M_ZERO
+  do i = 1, geo%natoms
+    val_charge = val_charge - geo%atom(i)%spec%Z_val
+  end do
+
+  call pop_sub()
+end subroutine geometry_val_charge
+  
+subroutine geometry_grid_defaults(geo, def_h, def_rsize)
+  type(geometry_type), intent(in) :: geo
+  FLOAT, intent(out) :: def_h, def_rsize
+  integer :: i
+  call push_sub('geometry_grid_defaults')
+
+  def_h     =  huge(PRECISION)
+  def_rsize = -huge(PRECISION)
+  do i = 1, geo%nspecies
+    def_h     = min(def_h,     geo%specie(i)%def_h)
+    def_rsize = max(def_rsize, geo%specie(i)%def_rsize)
+  end do
+
+  call pop_sub()
+end subroutine geometry_grid_defaults
 
 end module geometry

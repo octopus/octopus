@@ -25,16 +25,18 @@
 
 #define DELTA_R CNST(1e-12)
 
-subroutine mesh_init(m, geo, def_h, def_rsize, enlarge_)
+subroutine mesh_init(m, geo, enlarge_)
   type(mesh_type),     intent(inout) :: m
   type(geometry_type), pointer       :: geo
-  FLOAT,               intent(in)    :: def_h, def_rsize
   integer, optional,   intent(in)    :: enlarge_
 
   ! some local stuff
+  FLOAT :: def_h, def_rsize
   integer :: i, ix, iy, iz, ii(3), enlarge
   
   call push_sub('mesh_init')
+
+  call geometry_grid_defaults(geo, def_h, def_rsize)
  
   enlarge = 0
   if(present(enlarge_)) enlarge = enlarge_

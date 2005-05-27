@@ -331,7 +331,7 @@ contains
     v_old_i => td%tr%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
-    call states_init(psi_f, m, geo, sys%val_charge)
+    call states_init(psi_f, m, geo)
     if(h%ep%nvnl > 0) then
       allocate(psi_f%rho_core(m%np))
       psi_f%rho_core(m%np) = psi_i%rho_core(m%np)
