@@ -202,6 +202,7 @@ subroutine global_init()
   ! Sets the dimensionaliy of the problem.
   !%Variable Dimensions
   !%Type integer
+  !%Section 1 Generalities
   !%Description
   !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
   !% variable. Note that not all input variables may be available in all cases.
@@ -232,13 +233,12 @@ end subroutine global_init
 
 subroutine global_end()
 
-  call system_labels_end()
-
 #ifdef HAVE_MPI
   integer :: ierr
   call MPI_FINALIZE(ierr)
 #endif
 
+  call system_labels_end()
   call varinfo_end()
   call io_end()
   call loct_parse_end()

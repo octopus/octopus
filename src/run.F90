@@ -188,6 +188,14 @@ contains
     call loct_parse_logical(check_inp('fromScratch'), .false., fS)
     fromScratch(:) = .false.
 
+#if defined(HAVE_MPI)
+    if((calc_mode.ne.M_TD).and.(calc_mode.ne.M_CASIDA)) then
+      message(1) = "Code is only parallelized for run modes 'td' and 'casida'"
+      message(2) = "Please use the serial version for the current run mode"
+      call write_fatal(2)
+    end if
+#endif
+
     select case(calc_mode)
     case(M_GS)
       fromScratch(M_GS) = fS
@@ -241,11 +249,10 @@ end subroutine define_run_modes
 end subroutine run
 
 subroutine run_init()
-  ! initialize some stuff
-
 
   !%Variable Dimensions
   !%Type integer
+  !%Section 1 Generalities
   !%Description
   !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
   !% variable. Note that not all input variables may be available in all cases.

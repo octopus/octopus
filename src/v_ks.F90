@@ -70,6 +70,7 @@ contains
 
     !%Variable NonInteractingElectrons
     !%Type logical
+    !%Section 6 Hamiltonian
     !%Description
     !% Sometimes it may be helpful to treat the electrons as non-interacting particles,
     !% i.e., not to take into account Hartree and exchange-correlation effects between
@@ -80,6 +81,7 @@ contains
     !% Electrons are handled as *non-interacting* paticles
     !%End
     call loct_parse_logical(check_inp('NonInteractingElectrons'), .false., ks%ip_app)
+
     if(ks%ip_app) then
       message(1) = 'Info: Treating the electrons as non-interacting'
       call write_info(1)
@@ -90,20 +92,31 @@ contains
       call write_info(1)
       call poisson_init(m)
 
+      message(1) = "Info: Init Exchange-Correlation"
+      call write_info(1)
       call xc_init(ks%xc, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
       
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
-        call loct_parse_int(check_inp('SICCorrection'), sic_none, ks%sic_type)
+        !%Variable SICorrection
+        !%Type integer
+        !%Section 6 Hamiltonian
+        !%Description
+        !% This variable controls which Self Interaction Correction to use. Note that
+        !% this correction will be applyed to the functional chosen by 'XFunctional' and
+        !% 'CFunctional'
+        !%Option sic_none 1
+        !% No Self Interaction Correction
+        !%Option sic_pz 2
+        !% SIC a Perdew Zunger, hadled by the OEP technique
+        !%Option sic_amaldi 3
+        !% Amaldi correction term
+        !%End
 
-        if((ks%sic_type.ne.sic_none).and.(ks%sic_type.ne.sic_pz).and.(ks%sic_type.ne.sic_amaldi)) then
-          message(1) = "Variable 'SICCorrection' can only have the values:"
-          message(2) = "  sic_none   : No Self Interaction Correction"
-          message(3) = "  sic_pz     : SIC a la Perdew Zunger"
-          message(4) = "  sic_amaldi : Amaldi correction term"
-          call write_fatal(4)
-        end if
+        call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)
+        if((ks%sic_type.ne.sic_none).and.(ks%sic_type.ne.sic_pz).and.(ks%sic_type.ne.sic_amaldi)) &
+            call input_error('SICorrection')
 
         ! Perdew Zunger corrections
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
@@ -150,7 +163,7 @@ contains
 
       select case(ks%sic_type)
       case(sic_pz)
-        write(iunit, '(/,2x,a)') 'using Perdew-Zunger SIC corrections'
+        write(iunit, '(/,2x,a)') 'using Perdew-Zunger SI corrections'
       case(sic_amaldi)
         write(iunit, '(/,2x,a)') 'using Amaldi correction term'
       end select
