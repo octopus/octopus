@@ -39,6 +39,7 @@ typedef struct opt_type{
 typedef struct var_type{
   char *name;
   char *type;
+  char *section;
   char *desc;
   opt_type *opt;
   struct var_type *next;
@@ -119,9 +120,12 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
 	}
 	lvar->name = s;
 	lvar->desc = NULL;
-	lopt = NULL;
+	lvar->type = NULL;
+	lvar->section = NULL;
 	lvar->opt  = lopt;
 	lvar->next = NULL;
+
+	lopt = NULL;
       }
       continue;
     }
@@ -131,6 +135,12 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
 
     if(strncasecmp("Type", line, 4) == 0)
       get_token(line+5, &(lvar->type));
+
+    if(strncasecmp("Section", line, 7) == 0){
+      char *s = line+7;
+      for(; *s!='\0' && isspace(*s); s++);
+      lvar->section = strdup(s);
+    }
 
     if(strncasecmp("Description", line, 11) == 0){
       if(lvar->desc){ /* if repeated delete old description */
@@ -179,6 +189,7 @@ void FC_FUNC_(varinfo_end, VARINFO_END)
 
     if(v->name) free(v->name);
     if(v->type) free(v->type);
+    if(v->section) free(v->section);
     if(v->desc) free(v->desc);
     for(;o;){
       opt_type *o1 = o->next;
@@ -213,13 +224,14 @@ void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_getinfo, VARINFO_GETVAR)
-  (var_type **var, char **name, char **type, char **desc)
+  (var_type **var, char **name, char **type, char **section, char **desc)
 {
   if(var == NULL){
     *name = NULL; *type = NULL; *desc = NULL;
   }else{
     *name = (*var)->name;
     *type = (*var)->type;
+    *section = (*var)->section;
     *desc = (*var)->desc;
   }
 }

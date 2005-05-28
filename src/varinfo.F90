@@ -43,14 +43,15 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
 
-    integer(POINTER_SIZE) :: handle, opt, name, type, desc
+    integer(POINTER_SIZE) :: handle, opt, name, type, section, desc
     logical :: first
 
     call varinfo_getvar(var, handle)
     if(handle.ne.0) then
-      call varinfo_getinfo(handle, name, type, desc)
+      call varinfo_getinfo(handle, name, type, section, desc)
       call print_C_string(iunit, name, "Variable: ")
       call print_C_string(iunit, type, "Type:     ")
+      call print_C_string(iunit, section, "Section:  ")
       write(iunit, '(a)') "Description:"
       call print_C_string(iunit, desc, "    ")
 

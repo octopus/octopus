@@ -102,10 +102,6 @@ lca_lch      = 302
 
 oep_x        = 401
 
-sic_none     = 1
-sic_pz       = 2
-sic_amaldi   = 3
-
 oep_none     = 0
 oep_slater   = 1
 oep_kli      = 2
