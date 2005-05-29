@@ -46,13 +46,17 @@ build-stamp:  config.status
 
 # Replace $(HOME) for custom builds if you have the corresponding libraries in a different place
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
-	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
+	FCFLAGS="-mismatch_all -maxcontin=100 -Bstatic -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" \
+	--with-blas="-L$(HOME)/opt/nag -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
+	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis"
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -99,15 +103,20 @@ endif
 	automake-1.8 --add-missing
 	autoconf
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
-	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
-	--enable-debug \
+	FCFLAGS="-mismatch_all -maxcontin=100 -Bstatic -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" \
+	--with-blas="-L$(HOME)/opt/nag -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
+	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis"
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--enable-debug \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
 
@@ -150,15 +159,19 @@ endif
 	automake-1.8 --add-missing
 	autoconf
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
-	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
-	--enable-complex \
+	FCFLAGS="-mismatch_all -maxcontin=100 -Bstatic -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" \
+	--with-blas="-L$(HOME)/opt/nag -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
+	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis"
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--enable-complex \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
 
@@ -202,15 +215,19 @@ endif
 	automake-1.8 --add-missing
 	autoconf
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
-	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
-	--enable-complex --enable-debug \
+	FCFLAGS="-mismatch_all -maxcontin=100 -Bstatic -u -dcfuns -colour=error:red,warn:blue,info:yellow -kind=byte -abi=64 -ieee=full -O4 -Ounroll=4" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" \
+	--with-blas="-L$(HOME)/opt/nag -lblas" \
+	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
+	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
+	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis"
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
+	--enable-complex --enable-debug \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
 
@@ -254,9 +271,9 @@ endif
 	autoconf
 
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=$(HOME)/opt/nag/mpich/bin/mpif90 \
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
@@ -310,9 +327,9 @@ endif
 	automake-1.8 --add-missing
 	autoconf
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=$(HOME)/opt/nag/mpich/bin/mpif90 \
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
@@ -366,9 +383,9 @@ endif
 	autoconf
 
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=$(HOME)/opt/nag/mpich/bin/mpif90 \
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
@@ -423,9 +440,9 @@ endif
 	automake-1.8 --add-missing
 	autoconf
 
-## NAGWare Fortran 95 compiler Release 5.0(363)"
+## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
-	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(363)"
+	echo "Will assume NAGWare Fortran 95 compiler Release 5.0(395)"
 	FC=$(HOME)/opt/nag/mpich/bin/mpif90 \
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
