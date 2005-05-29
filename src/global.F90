@@ -24,6 +24,7 @@ module global
   use lib_oct
   use io
   use varinfo
+  use string
 
 #if defined(HAVE_MPI) && !defined(MPI_H)
   use mpi
@@ -184,6 +185,38 @@ subroutine global_init()
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
+  !%Variable CalculationMode
+  !%Type integer
+  !%Section 1 Generalities
+  !%Description
+  !% Decides what kind of calculation is to be performed
+  !%Option gs 1
+  !% Calculation of the ground state
+  !%Option unocc 2
+  !% Calculation of unoccupied/virtual KS states
+  !%Option td 3
+  !% Time-dependent calculation
+  !%Option pol 4
+  !% Calculation of the static polarizability
+  !%Option geom 5
+  !% Optimization of the geometry
+  !%Option phonons 6
+  !% Calculation of the vibrational modes
+  !%Option opt_control 7
+  !% Optimal control.
+  !%Option pol_lr 8
+  !% Linear-response calculation of the polarizability
+  !%Option casida 9
+  !% Excitations via linear-response TDDFT
+  !%Option wave_matching 10
+  !% Wave-matching a la Heiko
+  !%Option bo 98
+  !% Born-Oppenheimer-like Molecular Dynamics
+  !%Option recipe 99
+  !% Prints out a tasty recipe
+  !%Option multi_subsystem 1000
+  !% Multi subsystem mode
+  !%End
   call loct_parse_int('CalculationMode', 1, calc_mode)
   if(calc_mode == multi_subsys_mode) then
      call read_system_labels()
@@ -558,5 +591,17 @@ character(len=8) function get_extension(path) result(ext)
   endif
 end function get_extension
 
+subroutine print_date(str)
+  character(len = *), intent(in) :: str
+  integer :: val(8)
+  call date_and_time(values=val)
+  message(1) = ""
+  write(message(3),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
+          str , val(1), "/", val(2), "/", val(3), &
+          " at ", val(5), ":", val(6), ":", val(7)
+  message(2) = str_center(trim(message(3)), 70)
+  message(3) = ""
+  call write_info(3)
+end subroutine print_date
 
 end module global

@@ -65,15 +65,8 @@ program octopus
 #if defined(HAVE_MPI)
      call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
-     
-     ! print date
-     call date_and_time(values=val)
-     write(message(2),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
-          "Calculation started on ", val(1), "/", val(2), "/", val(3), &
-          " at ", val(5), ":", val(6), ":", val(7)
-     message(1) = str_center(trim(message(2)), 70)
-     message(2) = ""
-     call write_info(2)
+
+     call print_date("Calculation started on ")
 
      if(no_syslabels > 1) then
         message(1) = 'Info: Multi-Subsystem Mode'
@@ -92,15 +85,7 @@ program octopus
      call run()
      call run_end()
 
-     ! print date
-     call date_and_time(values=val)
-     message(1) = ""
-     write(message(3),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
-          "Calculation ended on ", val(1), "/", val(2), "/", val(3), &
-          " at ", val(5), ":", val(6), ":", val(7)
-     message(2) = str_center(trim(message(3)), 70)
-     message(3) = ""
-     call write_info(3)
+     call print_date("Calculation ended on ")
      
 #if defined(HAVE_MPI)
      ! wait for all processors to finish
@@ -110,6 +95,4 @@ program octopus
   enddo subsystems
 
   call global_end()
-
-  stop
 end program octopus

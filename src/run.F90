@@ -249,6 +249,7 @@ end subroutine define_run_modes
 end subroutine run
 
 subroutine run_init()
+  character(len=70) :: mode_string
 
   !%Variable Dimensions
   !%Type integer
@@ -282,30 +283,28 @@ subroutine run_init()
   ! do we treat only userdefined species
   call loct_parse_logical(check_inp('OnlyUserDef'), .false., conf%only_user_def)
 
-  if( (calc_mode < 1 .or. calc_mode > 11) .and. (calc_mode .ne. M_PULPO_A_FEIRA)) then
-    write(message(1), '(a,i2,a)') "Input: '", calc_mode, "' is not a valid CalculationMode"
-    message(2) = '  Calculation Mode = '
-    message(3) = '    gs            <= ground-state calculation'
-    message(4) = '    unocc         <= calculate unocuppied states'
-    message(5) = '    td            <= time-dependent simulation'
-    message(6) = '    pol           <= calculate static polarizability'
-    message(6) = '    pol_lr        <= calculate static polarizability from LR theory'
-    message(7) = '    bo            <= perform Born-Oppenheimer MD'
-    message(8) = '    geom          <= geometry optimization'
-    message(9) = '    phonon        <= calculate phonon frequencies'
-    message(10)= '    opt_control   <= optimum control'
-    message(11)= '    casida        <= calculate excitation a la Marc Casida'
-    message(12)= '    wave_matching <= calculate states via wave matching'
-    message(13)= '    recipe        <= prints out the "Pulpo a Feira" recipe'
-    call write_fatal(13)
-  end if
-
-  write(message(1), '(a,i2)')   'Info: Calculation Mode = ', calc_mode
-  write(message(2), '(a,i1,a)') 'Info: The octopus will run in ', conf%dim, ' dimension(s).'
-  write(message(3), '(a,i1,a)') '      The octopus will treat system as periodic in ', &
+  select case(calc_mode)
+    case(M_GS);              mode_string = "gs [Calculation of the ground state]"
+    case(M_UNOCC);           mode_string = "unocc [Calculation of unoccupied/virtual KS states]"
+    case(M_TD);              mode_string = "td [Time-dependent calculation]"
+    case(M_STATIC_POL);      mode_string = "pol [Calculation of the static polarizability]"
+    case(M_GEOM_OPT);        mode_string = "geom [Optimization of the geometry]"
+    case(M_PHONONS);         mode_string = "phonons [Calculation of the vibrational modes]"
+    case(M_OPT_CONTROL);     mode_string = "opt_control [Optimal control]"
+    case(M_LR_STATIC_POL);   mode_string = "pol_lr [Linear-response calculation of the polarizability]"
+    case(M_CASIDA);          mode_string = "casida [Excitations via linear-response TDDFT]"
+    case(M_WAVE_MATCHING);   mode_string = "wave_matching [Wave-matching a la Heiko]"
+    case(M_BO_MD);           mode_string = "bo [Born-Oppenheimer-like Molecular Dynamics]"
+    case(M_PULPO_A_FEIRA);   mode_string = "recipe [Prints out a tasty recipe]"
+    case(M_MULTI_SUBSYSTEM); mode_string = "multi_subsystem [Multi subsystem mode]"
+    case default; call input_error('CalculationMode')
+  end select
+  write(message(1), '(a,a)')    'Calculation Mode = ', trim(mode_string)
+  write(message(2), '(a,i1,a)') 'The octopus will run in ', conf%dim, ' dimension(s).'
+  write(message(3), '(a,i1,a)') 'The octopus will treat system as periodic in ', &
                                  conf%periodic_dim, ' dimension(s)'
 
-  message(5) = "Info: Boundary conditions:"
+  message(5) = "Boundary conditions:"
   if(conf%boundary_zero_derivative) then
     write(message(4), '(2a)') trim(message(5)), " zero derivatives"
   else
