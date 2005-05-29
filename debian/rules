@@ -52,7 +52,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -105,7 +105,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--enable-debug \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -156,7 +156,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--enable-complex \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -208,7 +208,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FC=f95 \
 	CFLAGS="-static -Wall -O3" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--enable-complex --enable-debug \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -261,7 +261,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
@@ -317,7 +317,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--enable-complex  --enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
@@ -373,7 +373,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--enable-mpi --enable-debug --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
@@ -430,7 +430,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	CPPFLAGS="-I$(HOME)/opt/nag/mpich/include" \
 	CFLAGS="-static -Wall -O3 -I$(HOME)/opt/nag/include/metis -I$(HOME)/opt/nag/include" \
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
-	./configure --with-lapack="-L/usr/lib -llapack -lg2c" \
+	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--enable-complex --enable-mpi --enable-debug  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \

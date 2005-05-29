@@ -1,3 +1,13 @@
+octopus (1.99devel-3) unstable; urgency=low
+
+  * Changing libraries for the build of the x86_64 Debian package. I'm now not
+    linking to the system blas and lapack libraries anymore, but use my "home 
+    compiled" versions instead. This fixes the segfault bug that I mentioned 
+    last Friday in the IRC. The spinors.test is now running properly also on
+    x86_64 with nag5. Also thanks to Alberto for helping with the testing ...
+
+ -- Heiko Appel <appel@physik.fu-berlin.de>  Sun, 29 May 2005 16:50:21 +0200
+
 octopus (1.99devel-2) unstable; urgency=low
 
   * Provide all four binaries (ocotpus, octopus_cmplx, octopus-mpi, 
