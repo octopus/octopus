@@ -17,30 +17,20 @@
 !!
 !! $Id$
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! creates the mesh
-! assumes that the box_shape, h, rsize/xsize of m are filled
-! if norder is present, then set nk, Kx, Ky and Kz
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 #define DELTA_R CNST(1e-12)
 
-subroutine mesh_init(m, geo, enlarge_)
+subroutine mesh_init(m, geo)
   type(mesh_type),     intent(inout) :: m
   type(geometry_type), pointer       :: geo
-  integer, optional,   intent(in)    :: enlarge_
 
   ! some local stuff
   FLOAT :: def_h, def_rsize
-  integer :: i, ix, iy, iz, ii(3), enlarge
+  integer :: i, ix, iy, iz, ii(3)
   
   call push_sub('mesh_init')
 
   call geometry_grid_defaults(geo, def_h, def_rsize)
  
-  enlarge = 0
-  if(present(enlarge_)) enlarge = enlarge_
-
   m%geo => geo            ! keep a pointer to the geometry
 
   call read_misc()          ! miscellany stuff
