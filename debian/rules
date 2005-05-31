@@ -56,7 +56,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
-	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis"
+	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
