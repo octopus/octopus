@@ -217,4 +217,162 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, errorflag, d
   call pop_sub()
 end subroutine eigen_solver_cg2
 
+! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
+subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, errorflag, diff, reorder, verbose)
+  type(mesh_type),        intent(IN)    :: m
+  type(f_der_type),       intent(inout) :: f_der
+  type(states_type),      intent(inout) :: st
+  type(hamiltonian_type), intent(IN)    :: h
+  FLOAT,                  intent(in)    :: tol
+  integer,                intent(inout) :: niter
+  integer,                intent(out)   :: errorflag
+  integer,                intent(inout) :: converged
+  FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
+  logical,      optional, intent(in)    :: reorder
+  logical,      optional, intent(in)    :: verbose
 
+  integer :: nik, nst, np, dim, ik, ist, maxter, i, k, l
+  logical :: verbose_, reorder_
+  R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
+  FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
+           gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
+
+  call push_sub('eigen_solver_cg2_new')
+
+  verbose_ = .false.; if(present(verbose)) verbose_ = verbose
+  reorder_ = .true. ; if(present(reorder)) reorder_ = reorder
+  if(verbose_) then
+    message(1) = " "
+    message(2) = stars
+    message(3) = "Diagonalization with the conjugate gradients algorithm [new]."
+    write(message(4),'(a,e8.2)') '  Tolerance: ',tol
+    write(message(5),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
+    message(6) = ""
+    call write_info(6)
+  endif
+
+  np = m%np; dim = st%d%dim; nik = st%d%nik; nst = st%nst
+
+  maxter = niter
+  niter = 0
+
+  allocate(phi(np, dim), psi(np, dim), hpsi(np, dim), cg(np, dim), hcgp(np, dim), sd(np, dim), cgp(np, dim))
+
+  kpoints: do ik = 1, nik
+
+    states: do ist = converged + 1, nst
+
+      ! Orthogonalize starting eigenfunctions to those already calculated...
+      call X(states_gram_schmidt)(ist, m, dim, st%X(psi)(1:np, 1:dim, 1:ist, ik), start=ist)
+      psi(:, :) = st%X(psi)(:, :, ist, ik)
+
+      ! Calculate starting gradient: |hpsi> = H|psi>
+      call X(Hpsi)(h, m, f_der, psi, phi, ik); niter = niter + 1
+
+      ! Initial settings for scalar variables.
+      ctheta = M_ONE
+      stheta = M_ZERO
+      mu     = M_ONE
+
+      ! Initialize to zero the vector variables.
+      hcgp = R_TOTYPE(M_ZERO)
+      cg   = R_TOTYPE(M_ZERO)
+
+      band: do i = 1, maxter - 1 ! One operation has already been made.
+
+         ! Get H|psi> (through the linear formula)
+         phi(:, :) = ctheta*phi(:, :) + stheta*hcgp(:, :)
+
+         ! lambda = <psi|H|psi> = <psi|phi>
+         lambda = X(states_dotp)(m, dim, psi, phi)
+
+         ! Check convergence
+         res = X(states_residue)(m, dim, phi, lambda, psi)
+         if(present(diff)) diff(ist, ik) = res
+         if(res < tol) then
+           converged = converged + 1
+           exit band
+         endif
+
+         ! Get steepest descent vector
+         sd(:, :) = lambda*psi(:, :) - phi(:, :)
+         do k = 1, ist - 1
+            dump = X(states_dotp)(m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
+            sd(:, :) = sd(:, :) - dump*st%X(psi)(:, :, k, ik)
+         enddo
+
+         ! Get conjugate-gradient vector
+         gamma = X(states_dotp)(m, dim, sd, sd)/mu
+         mu    = X(states_dotp)(m, dim, sd, sd)
+         cg    = sd + gamma*cg
+
+         ! 
+         dump = X(states_dotp)(m, dim, psi, cg)
+         cgp  = cg - dump*psi
+         dump = sqrt(X(states_dotp)(m, dim, cgp, cgp))
+         cgp = cgp/dump
+
+         call X(Hpsi)(h, m, f_der, cgp, hcgp, ik); niter = niter + 1
+
+         alpha = - lambda + X(states_dotp)(m, dim, cgp, hcgp)
+         beta  = M_TWO*X(states_dotp)(m, dim, cgp, phi)
+         theta = M_HALF*atan(-beta/alpha)
+         ctheta = cos(theta)
+         stheta = sin(theta)
+
+         ! I am not sure wether this is necessary or not.
+         theta2 = theta + M_PI/M_TWO
+         ctheta2 = cos(theta2)
+         stheta2 = sin(theta2)
+         sol(1) = ctheta**2*lambda + stheta**2*X(states_dotp)(m, dim, cgp, hcgp) + & 
+                                     M_TWO*stheta*ctheta*X(states_dotp)(m, dim, cgp, phi)
+         sol(2) = ctheta**2*lambda + stheta2**2*X(states_dotp)(m, dim, cgp, hcgp) + &
+                                     M_TWO*stheta2*ctheta2*X(states_dotp)(m, dim, cgp, phi)
+
+         if(sol(2) < sol(1)) then
+            theta = theta2
+            stheta = stheta2
+            ctheta = ctheta2
+         endif
+
+         psi = ctheta*psi + stheta*cgp
+
+      enddo band
+
+      st%X(psi)(:, :, ist, ik) = psi(:, :)
+      st%eigenval(ist, ik) = lambda
+
+      if(verbose_) then
+        if(res<tol) then
+          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", i, '   [Res = ',res,']'
+        else
+          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", i, '   [Res = ',res,']'
+        endif
+        call write_info(1)
+      endif
+
+      ! Reordering: WARNING, this has not been carefully checked
+      if(ist>1 .and. reorder_) then
+        do i = 1, ist - 1
+           if(st%eigenval(ist, ik) < st%eigenval(i, ik)) then
+             k = i
+             dump     = st%eigenval(ist, ik)
+             cg(:, :) = st%X(psi)(:, :, ist, ik)
+             do l = ist, k + 1, -1
+                st%X(psi)(:, :, l, ik) = st%X(psi)(:, :, l-1, ik)
+                st%eigenval(l, ik) = st%eigenval(l-1, ik)
+             enddo
+             st%X(psi)(:, :, k, ik) = cg(:, :)
+             st%eigenval(k, ik) = dump
+             exit
+           endif
+        enddo
+      endif
+
+    enddo states
+
+  enddo kpoints
+
+  deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp)
+  call pop_sub()
+end subroutine eigen_solver_cg2_new

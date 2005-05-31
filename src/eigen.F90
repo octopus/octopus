@@ -56,6 +56,7 @@ module eigen_solver
     integer           :: converged
   end type eigen_solver_type
 
+  integer, parameter :: RS_CG_NEW  = 6
   integer, parameter :: RS_CG      = 5
 #ifdef HAVE_TRLAN
   integer, parameter :: RS_LANCZOS = 1
@@ -84,6 +85,8 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
 
   call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
   select case(eigens%es_type)
+  case(RS_CG_NEW)
+    message(1) = 'Info: Eigensolver type: Real-space conjugate gradients (new)'
   case(RS_CG)
     message(1) = 'Info: Eigensolver type: Real-space conjugate gradients'
 #ifdef HAVE_TRLAN
@@ -204,6 +207,9 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
 !!$  eigens%converged = 0
 
   select case(eigens%es_type)
+  case(RS_CG_NEW)
+    call eigen_solver_cg2_new(m, f_der, st, h, tol, maxiter, &
+           eigens%converged, errorflag, eigens%diff, verbose = verbose_)
   case(RS_CG)
     call eigen_solver_cg2(m, f_der, st, h, tol, maxiter, &
            eigens%converged, errorflag, eigens%diff, verbose = verbose_)
