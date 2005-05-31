@@ -111,3 +111,7 @@ while getopts "hnlfp:m:" opt ; do
     esac
 done
 shift $(( OPTIND - 1 ))
+
+
+# clean up
+rm -f octopus*.log stamp build-stamp
