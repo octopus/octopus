@@ -10,6 +10,8 @@ octopus_exe="octopus octopus_cmplx"
 prefix=/usr
 testsuite=$prefix/share/octopus/testsuite
 
+# Arch
+arch=${MACHTYPE%-pc-linux-gnu}
 
 # Usage
 function usage() {
@@ -22,6 +24,7 @@ Usage: oct-run_testsuite [options]
      -h            this message
      -n            dry run mode (show what would be executed)
      -f            run full testsuite
+     -l            local run
      -p            installation prefix [default: /usr]
      -m address    mail report to address
 
@@ -43,9 +46,21 @@ function CMD {
 
 function run_full_suite() {
 
+[ "$LOCAL_RUN" == "yes" ] && testsuite=$(pwd)
+
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test"); do
-        CMD $prefix/bin/oct-run_regression_test.pl -p -e $prefix/bin/$x -f $y | tee ${x}-`basename $y`
+	ybase=`basename $y`
+	xybase=${x}-${ybase%.test}
+	if [ "$LOCAL_RUN" == "yes" ]; then
+	    octopus_local=`pwd`/../src/$x
+	    octopus_local_debug=`pwd`/../src/${x}_debug
+	    [ -x $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local -f $y | tee ${xybase}.log
+	    [ -x $octopus_local_debug ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local_debug -f $y | tee ${xybase}.log
+	else
+	    CMD $prefix/bin/oct-run_regression_test.pl -l -p -e $prefix/bin/$x -f $y | tee ${xybase}.log
+	fi
+	[ -e out.log ] && mv out.log ${xybase}.out.log
     done
 done
 
@@ -56,21 +71,24 @@ done
 
 function mail_report() {
 
-echo >> build-stamp
-uname -a >> build-stamp
-cat /proc/cpuinfo | grep 'model name' | awk -F: '{print $2}' >> build-stamp
-cat /proc/meminfo | grep MemTotal >> build-stamp
-echo >> build-stamp
+rm -rf stamp
+echo >> stamp
+uname -a >> stamp
+cat /proc/cpuinfo | grep 'model name' | awk -F: '{print $2}' >> stamp
+cat /proc/meminfo | grep MemTotal >> stamp
+echo >> stamp
+
 
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test"); do
-	failed_tests=$(grep FAIL ${x}-`basename $y` | wc -l) 
-	tmp=`basename $y`
-	echo "Checking for failed tests: ${x}-${tmp}"
+	ybase=`basename $y`
+	xybase=${x}-${ybase%.test}
+	failed_tests=$(grep FAIL ${xybase}.log | wc -l) 
+	echo "Checking for failed tests: ${xybase}.log"
 	if [ $failed_tests -gt 0 ]; then
 	    echo "Found: $failed_tests"
 	    echo "Mailing report to: $mailaddr"
-            cat ${x}-$tmp | mutt -s "[oct-run_testsuite] daily report" -i build-stamp $mailaddr
+            cat stamp ${xybase}.log ${xybase}.out.log | mutt -s "[oct-run_testsuite on $arch] daily report" $mailaddr
 	fi
     done
 done
@@ -81,11 +99,12 @@ done
 # show usage info if no args at all
 [ "$#" -eq 0 ] && usage;
 
-while getopts "hnfp:m:" opt ; do
+while getopts "hnlfp:m:" opt ; do
     case "$opt" in
         h) usage ;;
         n) ECHO="echo"; DRY_RUN="yes";; 
         p) prefix="$OPTARG" ;;
+	l) LOCAL_RUN="yes";;
 	f) run_full_suite ;;
 	m) mailaddr="$OPTARG"; mail_report $mailaddr ;; 
         ?) echo "Error parsing arguments"; exit 1 ;;
