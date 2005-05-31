@@ -19,490 +19,73 @@
 
 #include "global.h"
 
-! This module is intended to contain "only mathematical" functions and        !
-!	procedures.                                                           !
+module wave_matching
+use global
+use system
+use hamiltonian
 
-module math
-  use global
-  use lib_basic_alg
-  use lib_adv_alg
+implicit none
 
-  implicit none
 
-  private
-  public :: dconjugate_gradients, &
-            zconjugate_gradients, &
-            ddot_product, &
-            zdot_product, &
-            quickrnd, &
-            stepf, &
-            grylmr, &
-            weights, &
-            cutoff0, &
-            cutoff1, &
-            cutoff2, &
-            besselint, &
-            dextrapolate, zextrapolate, &
-            zgpadm, zbrent
-
-  ! This common interface applies to the two procedures defined in math_cg_inc.F90
-  interface dconjugate_gradients
-    module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
-  end interface
-
-  interface zconjugate_gradients
-    module procedure zsym_conjugate_gradients, zbi_conjugate_gradients
-  end interface
-
+private
+public :: wave_matching_run
+  
+  
 contains
-
-! a simple congruent random number generator
-subroutine quickrnd(iseed, rnd)
-  integer, intent(inout) :: iseed
-  FLOAT, intent(inout) :: rnd
-
-  integer, parameter :: im=6075, ia=106, ic=1283
-
-  iseed = mod(iseed*ia + ic, im)
-  rnd = real(iseed, PRECISION)/real(im, PRECISION)
   
-end subroutine quickrnd
-
-! Step function, needed for definition of fermi function.
-function stepf(x)
-  FLOAT, intent(in) ::  x
-  FLOAT :: stepf
-
-  if (x.gt.CNST(100.0)) then
-     stepf = M_ZERO
-  elseif (x.lt.CNST(-100.0)) then
-     stepf = M_TWO
-  else
-     stepf = M_TWO / ( M_ONE + exp(x) )
-  endif
-
-end function stepf
-
-! This is a Numerical Recipes based subroutine
-! computes real spherical harmonics ylm in the direction of vector r:
-!    ylm = c * plm( cos(theta) ) * sin(m*phi)   for   m <  0
-!    ylm = c * plm( cos(theta) ) * cos(m*phi)   for   m >= 0
-! with (theta,phi) the polar angles of r, c a positive normalization
-subroutine grylmr(x, y, z, li, mi, ylm, grylm)
-  integer, intent(in) :: li, mi
-  FLOAT, intent(in) :: x, y, z
-  FLOAT, intent(out) :: ylm, grylm(3)
-
-  integer, parameter :: lmaxd = 20
-  FLOAT,   parameter :: tiny = CNST(1.e-30)
-  integer :: i, ilm0, l, m, mabs
-  integer, save :: lmax = -1
-
-  FLOAT :: cmi, cosm, cosmm1, cosphi, dphase, dplg, fac, &
-       fourpi, plgndr, phase, pll, pmm, pmmp1, sinm, &
-       sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
-  FLOAT, save :: c(0:(lmaxd+1)*(lmaxd+1))
+integer function wave_matching_run(sys, h) result(ierr)
+  type(system_type)       :: sys
+  type(hamiltonian_type)  :: h
   
+  call push_sub('wave_matching_run')
+  
+  ierr = 0
+  
+  call check_params()
 
-! evaluate normalization constants once and for all
-  if (li.gt.lmax) then
-    fourpi = M_FOUR*M_PI
-    do l = 0, li
-      ilm0 = l*l + l
-      do m = 0, l
-        fac = (2*l+1)/fourpi
-        do i = l - m + 1, l + m
-          fac = fac/i
-        end do
-        c(ilm0 + m) = sqrt(fac)
-        ! next line because ylm are real combinations of m and -m
-        if(m.ne.0) c(ilm0 + m) = c(ilm0 + m)*sqrt(M_TWO)
-        c(ilm0 - m) = c(ilm0 + m)
-      end do
-    end do
-    lmax = li
-  end if
 
-  ! if l=0, no calculations are required
-  if (li.eq.0) then
-    ylm = c(0)
-    grylm(:) = M_ZERO
-    return
-  end if
-
-  ! if r=0, direction is undefined => make ylm=0 except for l=0
-  r2 = x**2 + y**2 + z**2
-  if(r2.lt.tiny) then
-    ylm = M_ZERO
-    grylm(:) = M_ZERO
-    return
-  endif
-  rsize = sqrt(r2)
-
-  Rx = x/rsize
-  Ry = y/rsize
-  Rz = z/rsize
-
-  ! explicit formulas for l=1 and l=2
-  if(li.eq.1) then
-    select case(mi)
-    case(-1)
-      ylm = (-c(1))*Ry
-      grylm(1) = c(1)*Rx*Ry/rsize
-      grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
-      grylm(3) = c(1)*Rz*Ry/rsize 
-    case(0)
-      ylm = c(2)*Rz
-      grylm(1) = (-c(2))*Rx*Rz/rsize
-      grylm(2) = (-c(2))*Ry*Rz/rsize
-      grylm(3) = c(2)*(M_ONE - Rz*Rz)/rsize
-    case(1)
-      ylm = (-c(3))*Rx
-      grylm(1) = (-c(3))*(M_ONE - Rx*Rx)/rsize
-      grylm(2) = c(3)*Ry*Rx/rsize
-      grylm(3) = c(3)*Rz*Rx/rsize
-    end select
-    return
-  end if
-         
-  if(li.eq.2) then
-    select case(mi)
-    case(-2)
-      ylm = c(4)*M_SIX*Rx*Ry
-      grylm(1) = (-c(4))*M_SIX*(M_TWO*Rx*Rx*Ry - Ry)/rsize
-      grylm(2) = (-c(4))*M_SIX*(M_TWO*Ry*Rx*Ry - Rx)/rsize
-      grylm(3) = (-c(4))*M_SIX*(M_TWO*Rz*Rx*Ry)/rsize
-    case(-1)
-      ylm = (-c(5))*M_THREE*Ry*Rz
-      grylm(1) = c(5)*M_THREE*(M_TWO*Rx*Ry*Rz)/rsize
-      grylm(2) = c(5)*M_THREE*(M_TWO*Ry*Ry*Rz - Rz)/rsize
-      grylm(3) = c(5)*M_THREE*(M_TWO*Rz*Ry*Rz - Ry)/rsize
-    case(0)
-      ylm = c(6)*M_HALF*(M_THREE*Rz*Rz - M_ONE)
-      grylm(1) = (-c(6))*M_THREE*(Rx*Rz*Rz)/rsize
-      grylm(2) = (-c(6))*M_THREE*(Ry*Rz*Rz)/rsize
-      grylm(3) = (-c(6))*M_THREE*(Rz*Rz - M_ONE)*Rz/rsize
-    case(1)
-      ylm = (-c(7))*M_THREE*Rx*Rz
-      grylm(1) = c(7)*M_THREE*(M_TWO*Rx*Rx*Rz - Rz)/rsize
-      grylm(2) = c(7)*M_THREE*(M_TWO*Ry*Rx*Rz)/rsize
-      grylm(3) = c(7)*M_THREE*(M_TWO*Rz*Rx*Rz - Rx)/rsize
-    case(2)
-      ylm = c(8)*M_THREE*(Rx*Rx - Ry*Ry)
-      grylm(1) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry - M_ONE)*Rx/rsize
-      grylm(2) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry + M_ONE)*Ry/rsize
-      grylm(3) = (-c(8))*M_SIX*(Rx*Rx - Ry*Ry)*Rz/rsize
-    end select
-    return
-  end if
-
-! general algorithm based on routine plgndr of numerical recipes
-  mabs = abs(mi)
-  xysize = sqrt(max(Rx*Rx + Ry*Ry, tiny))
-  cosphi = Rx/xysize
-  sinphi = Ry/xysize
-  cosm = M_ONE
-  sinm = M_ZERO
-  do m = 1, mabs
-    cosmm1 = cosm
-    sinmm1 = sinm
-    cosm = cosmm1*cosphi - sinmm1*sinphi
-    sinm = cosmm1*sinphi + sinmm1*cosphi
-  end do
-     
-  if(mi.lt.0) then
-    phase = sinm
-    dphase = mabs*cosm
-  else
-    phase = cosm
-    dphase = (-mabs)*sinm
-  end if
-
-  pmm = M_ONE
-  fac = M_ONE
-
-  if(mabs.gt.M_ZERO) then
-    do i = 1, mabs
-      pmm = (-pmm)*fac*xysize
-      fac = fac + M_TWO
-    end do
-  end if
-
-  if(li.eq.mabs) then
-    plgndr = pmm
-    dplg = (-li)*Rz*pmm/(xysize**2)
-  else
-    pmmp1 = Rz*(2*mabs + 1)*pmm
-    if(li.eq.mabs + 1) then
-      plgndr = pmmp1
-      dplg = -((li*Rz*pmmp1 - (mabs + li)*pmm)/(xysize**2))
-    else
-      do l = mabs + 2, li
-        pll = (Rz*(2*l - 1)*pmmp1 - (l + mabs - 1)*pmm)/(l - mabs)
-        pmm = pmmp1
-        pmmp1 = pll
-      end do
-      plgndr = pll
-      dplg = -((li*Rz*pll - (l + mabs - 1)*pmm)/(xysize**2))
-    end if
-  end if   
-
-  ilm0 = li*li + li
-  cmi = c(ilm0 + mi)
-  ylm = cmi*plgndr*phase
-  grylm(1) = (-cmi)*dplg*Rx*Rz*phase/rsize     &
-       -cmi*plgndr*dphase*Ry/(rsize*xysize**2)
-  grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
-       +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
-  grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
-   
-  return
-end subroutine grylmr
-
-! Compute the Weights for finite-difference calculations:
-!
-!  N -> highest order fo the derivative to be approximated
-!  M -> number of grid points to be used in the approsimation.
-!
-!  c(j,k,i) -> ith order derivative at kth-order approximation
-!              j=0,k: the coefficients acting of each point
-subroutine weights(N, M, cc)
-  integer, intent(in) :: N, M
-  FLOAT, intent(out) :: cc(0:M, 0:M, 0:N)
-
-  integer :: i, j, k, mn
-  FLOAT :: c1, c2, c3, c4, c5, xi
-  FLOAT, allocatable :: x(:)
-
-  allocate(x(0:M))
-  ! grid-points for one-side finite-difference formulas on an equi.spaced grid
-  ! x(:) = (/(i,i=0,M)/) 
-
-  ! grid-points for centered finite-difference formulas on an equi.spaced grid
-  mn = M/2
-  x(:) = (/0,(-i,i,i=1,mn)/)
-
-  xi = M_ZERO  ! point at which the approx. are to be accurate
-
-  cc = M_ZERO
-  cc(0,0,0) = M_ONE
-
-  c1 = M_ONE
-  c4 = x(0) - xi
-       
-  do j = 1, M
-    mn = min(j,N)
-    c2 = M_ONE
-    c5 = c4
-    c4 = x(j) - xi
- 
-    do k = 0, j - 1
-      c3 = x(j) - x(k)
-      c2 = c2*c3
-      
-      if (j <= N) cc(k, j - 1, j) = M_ZERO
-      cc(k, j, 0) = c4*cc(k, j - 1, 0)/c3
-      
-      do i = 1, mn
-        cc(k, j, i) = (c4*cc(k, j - 1, i) - i*cc(k, j - 1, i - 1))/c3
-      end do
-      
-      cc(j, j, 0) = -c1*c5*cc(j - 1, j - 1, 0) / c2         
-    end do
+  
+  call pop_sub()
+  
+  
+contains
+  
+  subroutine check_params()
     
-    do i = 1, mn
-      cc(j, j, i) = c1*(i*cc(j - 1, j - 1, i - 1) - c5*cc(j - 1, j - 1, i))/c2
-    end do
-
-    c1 = c2
-  end do
-
-  deallocate(x)
-
-end subroutine weights
-
-FLOAT function cutoff0(x)
-  FLOAT, intent(in) ::  x
+    if( current_subsystem-1 .lt. 1 ) then
+       message(1) = 'Error: Missing left neighbor'
+       message(2) = 'Please correct your input file'
+       call write_fatal(2)
+    endif
     
-  cutoff0 = M_ONE - cos(x)
+    if( current_subsystem+1 .gt. no_syslabels ) then
+       message(1) = 'Error: Missing right neighbor'
+       message(2) = 'Please correct your input file'
+       call write_fatal(2)
+    endif
+    
+    if( subsys_runmode(current_subsystem-1) .eq. 10 ) then
+       message(1) = 'Error: Left neighbor cannot be in runmode wave_matching'
+       message(2) = 'Please correct your input file'
+       call write_fatal(2)
+    endif
+    
+    if( subsys_runmode(current_subsystem+1) .eq. 10 ) then
+       message(1) = 'Error: Right neighbor cannot be in runmode wave_matching'
+       message(2) = 'Please correct your input file'
+       call write_fatal(2)
+    endif
+    
+    message(1) = 'Info: Starting Wave-Matching'
+    message(2) = 'Info: We are                    : '//subsys_label(current_subsystem)
+    message(3) = 'Info: Our left neighbor is      : '//subsys_label(current_subsystem-1)
+    message(4) = 'Info: And our right neighbor is : '//subsys_label(current_subsystem+1)
+    call write_info(4, stress=.true.)
+    
+  end subroutine check_params
   
-end function cutoff0
-
-FLOAT function cutoff1(x, p)
-  FLOAT, intent(in) ::  x, p
   
-  if ( x == M_ZERO ) then
-    cutoff1 = M_ZERO
-  else
-    cutoff1 = M_ONE + p*loct_bessel_j1(p)*loct_bessel_k0(x) &
-         - x*loct_bessel_j0(p)*loct_bessel_k1(x)
-  end if
+end function wave_matching_run
   
-end function cutoff1
 
-FLOAT function cutoff2(p, z)
-  FLOAT, intent(in) ::  p, z
-  
-  if ( p == M_ZERO ) then
-    cutoff2 = M_ZERO
-  else
-    cutoff2 = M_ONE + exp(-p)*(z*sin(z)/p-cos(z))
-  end if
-  
-end function cutoff2
-
-FLOAT function besselint(x) result(y)
-  FLOAT, intent(in) :: x
-  real(8), external :: bessel
-  integer :: k
-  real(8) :: z
-  if(x < CNST(0.2)) then
-     y = CNST(2.0)*M_PI - (M_PI/CNST(6.0))*x**2
-     return
-  endif
-  y = CNST(0.0)
-  k = 1
-  do
-    z = loct_bessel(k, x)/x
-    y = y + z
-    if(abs(z) < CNST(1.0e-9)) exit
-    k = k + 2
-  enddo
-  y = CNST(4.0)*M_PI*y
-end function
-
-FLOAT function ddot_product(a, b) result(r)
-  FLOAT, intent(in) :: a(:), b(:)
-  r = dot_product(a, b)
-end function ddot_product
-
-CMPLX function zdot_product(a, b) result(r)
-  CMPLX, intent(in) :: a(:), b(:)
-  r = sum(conjg(a(:))*b(:))
-end function zdot_product
-
-
-!function phaseshift(perdim, ix)
-!  FLOAT, intent(in) ::  perdim, ix(3)
-!  CMPLX :: phaseshift
-!  INTEGER :: nhalf
-
-!  if (  ) then
-!    nhalf = floor()
-!  else
-!    nhalf = ceiling()
-!  end if          
-!  phaseshift = exp(M_PI*M_ZI*sum(ixx(:)))
-!  phaseshift = cmplx(nhalf)
-
-!end function phaseshift
-
-
-FLOAT function zbrent(func,x1,x2,tol) result(zb)
-  integer itmax
-  FLOAT x1, x2, tol
-
-  FLOAT eps,res
-  
-  interface
-     subroutine func(x,s)
-       FLOAT :: x,s
-     end subroutine func
-  end interface
-  
-  parameter (itmax=100,eps=CNST(3.e-8))
-  integer iter
-  FLOAT a,b,c,d,e,fa,fb,fc,p,q,r,s,tol1,xm
-  a=x1
-  b=x2
-  call func(a,res)
-  fa=res
-  call func(b,res)
-  fb=res
-  if((fa.gt.0..and.fb.gt.0.).or.(fa.lt.0..and.fb.lt.0.)) then
-     message(1) = 'root must be bracketed for zbrent'
-     call write_fatal(1)
-  endif
-  c=b
-  fc=fb
-  do iter=1,ITMAX
-     if((fb.gt.0..and.fc.gt.0.).or.(fb.lt.0..and.fc.lt.0.))then
-        c=a
-        fc=fa
-        d=b-a
-        e=d
-     endif
-     if(abs(fc).lt.abs(fb)) then
-        a=b
-        b=c
-        c=a
-        fa=fb
-        fb=fc
-        fc=fa
-     endif
-     tol1=2.*EPS*abs(b)+M_HALF*tol
-     xm=M_HALF*(c-b)
-     if(abs(xm).le.tol1 .or. fb.eq.0.)then
-        zb=b
-        return
-     endif
-     if(abs(e).ge.tol1 .and. abs(fa).gt.abs(fb)) then
-        s=fb/fa
-        if(a.eq.c) then
-           p=2.*xm*s
-           q=M_ONE-s
-        else
-           q=fa/fc
-           r=fb/fc
-           p=s*(M_TWO*xm*q*(q-r)-(b-a)*(r-M_ONE))
-           q=(q-M_ONE)*(r-M_ONE)*(s-M_ONE)
-        endif
-        if(p.gt.0.) q=-q
-        p=abs(p)
-        if(M_TWO*p .lt. min(M_THREE*xm*q-abs(tol1*q),abs(e*q))) then
-           e=d
-           d=p/q
-        else
-           d=xm
-           e=d
-        endif
-     else
-        d=xm
-        e=d
-     endif
-     a=b
-     fa=fb
-     if(abs(d) .gt. tol1) then
-        b=b+d
-     else
-        b=b+sign(tol1,xm)
-     endif
-     call func(b,res)
-     fb=res
-  enddo
-  message(1) = 'zbrent exceeding maximum iterations'
-  call write_fatal(1)
-  zb=b
-  return
-end function zbrent
-
-
-#include "expokit_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "math_cg_inc.F90"
-
-#include "undef.F90"
-#include "real.F90"
-#include "math_cg_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "math_inc.F90"
-
-#include "undef.F90"
-#include "real.F90"
-#include "math_inc.F90"
-
-end module math
+end module wave_matching
