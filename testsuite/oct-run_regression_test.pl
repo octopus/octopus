@@ -22,6 +22,7 @@ Usage: oct-run_regression_test.pl [options]
     -d        working directory for the tests
     -i        print inputfile
     -p        preserve working directories
+    -l        copy output log to current directory
 
 Report bugs to <appel\@physik.fu-berlin.de>.
 EndOfUsage
@@ -77,7 +78,7 @@ EndOfTemplate
 
 if (not @ARGV) { usage; }
 
-getopts("nvhe:c:f:d:ip");
+getopts("nlvhe:c:f:d:ip");
 
 # Default values
 $workdir = `mktemp -d`;
@@ -91,8 +92,10 @@ if($opt_d)  { $workdir = $opt_d; }
 if($opt_e)  { $octopus_exe = $opt_e; }
 else{
   $octopus_exe =        "octopus";
-  $octopus_exe = "../src/octopus"       if( -x "../src/octopus");
-  $octopus_exe = "../src/octopus_debug" if( -x "../src/octopus_debug");
+  $octopus_exe = "../src/octopus"             if( -x "../src/octopus");
+  $octopus_exe = "../src/octopus_debug"       if( -x "../src/octopus_debug");
+  $octopus_exe = "../src/octopus_cmplx"       if( -x "../src/octopus_cmplx");
+  $octopus_exe = "../src/octopus_cmplx_debug" if( -x "../src/octopus_cmplx_debug");
 }
 if($octopus_exe !~ /^\//){
   $octopus_exe = $ENV{PWD}."/$octopus_exe";
@@ -148,6 +151,9 @@ while ($_ = <TESTSUITE>) {
   foreach my $program (split(/;/,$1)) {
     $program =~ s/^\s*//;
     $program =~ s/\s*$//;
+    $valid = $program cmp $octopus_base;
+    last if ( ! $valid );
+    $program = "${program}_debug";
     $valid = $program cmp $octopus_base;
     last if ( ! $valid );
   }
@@ -222,4 +228,5 @@ while ($_ = <TESTSUITE>) {
 
 
 if (!$opt_i) { print "\n\n\n"; }
+if ($opt_l)  { system ("cp $workdir/out log"); }
 if (!$opt_p) { system ("rm -rf $workdir"); }
