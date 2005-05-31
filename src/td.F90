@@ -343,29 +343,29 @@ contains
 
     if(mpiv%node==0) then
       if(td%out_multip)  call write_iter_init(out_multip,  first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/multipoles")))
+         trim(io_workpath(trim(current_label)//"td.general/multipoles")))
       if(td%out_angular) call write_iter_init(out_angular, first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/angular")))
+         trim(io_workpath(trim(current_label)//"td.general/angular")))
       if(td%out_spin)    call write_iter_init(out_spin,    first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/spin")))
+         trim(io_workpath(trim(current_label)//"td.general/spin")))
       if(td%out_magnets) call write_iter_init(out_magnets, first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/magnetic_moments")))
+         trim(io_workpath(trim(current_label)//"td.general/magnetic_moments")))
       if(td%out_coords)  call write_iter_init(out_coords,  first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/coordinates")))
+         trim(io_workpath(trim(current_label)//"td.general/coordinates")))
       if(td%out_gsp)     call write_iter_init(out_gsp,     first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/gs_projection")))
+         trim(io_workpath(trim(current_label)//"td.general/gs_projection")))
       if(td%out_acc)     call write_iter_init(out_acc,     first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/acceleration")))
+         trim(io_workpath(trim(current_label)//"td.general/acceleration")))
       if(td%out_laser)   call write_iter_init(out_laser,   first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/laser")))
+         trim(io_workpath(trim(current_label)//"td.general/laser")))
       if(td%out_energy)  call write_iter_init(out_energy,  first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/el_energy")))
+         trim(io_workpath(trim(current_label)//"td.general/el_energy")))
     end if
 
     if(td%out_proj) then
       write(filename, '(i3.3)') mpiv%node
       call write_iter_init(out_proj, first, td%dt/units_out%time%factor, &
-         trim(io_workpath("td.general/projections."//trim(filename))) )
+         trim(io_workpath(trim(current_label)//"td.general/projections."//trim(filename))) )
     end if
 
   end subroutine init_iter_output
@@ -424,7 +424,7 @@ contains
     call push_sub('td_run_zero_iter')
 
     ! create general subdir
-    call io_mkdir('td.general')
+    call io_mkdir(trim(current_label)//'td.general')
 
     if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
     if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, 0)
@@ -544,7 +544,8 @@ contains
 
     record_length = 100 + 3*geo%natoms*3*20
     call io_assign(iunit)
-    open(unit = iunit, file = 'td.general/coordinates', action='read', status='old', recl = record_length)
+    open(unit = iunit, file = trim(current_label)//'td.general/coordinates', &
+         action='read', status='old', recl = record_length)
     if(iunit < 0) then
       message(1) = "Could not open file 'td.general/coordinates'"
       message(2) = "Starting simulation from initial geometry"
@@ -622,7 +623,7 @@ contains
     end if
     
     ! now write down the rest
-    write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+    write(filename, '(a,i7.7)') trim(current_label)//"td.", iter  ! name of directory
 
     call zstates_output(st, m, sys%f_der, filename, sys%outp)
     if(sys%outp%what(output_geometry)) &

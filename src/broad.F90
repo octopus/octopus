@@ -57,21 +57,21 @@ program broad
   if(l) then
     message(1) = "      Eigenvalues"
     call write_info(1)
-    call calc_broad(b, 'linear', 'eps-diff', .true.)
+    call calc_broad(b, trim(current_label)//'linear', 'eps-diff', .true.)
   end if
 
   call loct_parse_logical(check_inp('LinPetersilka'), .true., l)
   if(l) then
     message(1) = "      Petersilka"
     call write_info(1)
-    call calc_broad(b, 'linear', 'petersilka', .true.)
+    call calc_broad(b, trim(current_label)//'linear', 'petersilka', .true.)
   end if
 
   call loct_parse_logical(check_inp('LinCasida'), .true., l)
   if(l) then
     message(1) = "      Casida"
     call write_info(1)
-    call calc_broad(b, 'linear', 'casida', .false.)
+    call calc_broad(b, trim(current_label)//'linear', 'casida', .false.)
   end if
 
 contains

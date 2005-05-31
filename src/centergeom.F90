@@ -36,7 +36,7 @@ program centergeom
   call geometry_init_species(geo)          ! we also need the masses
 
   call xyz_adjust_it(geo)
-  call atom_write_xyz(".", "adjusted", geo)
+  call atom_write_xyz(trim(current_label)//".", "adjusted", geo)
 
   call geometry_end(geo)                   ! clean up
   call global_end()

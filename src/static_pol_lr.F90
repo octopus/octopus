@@ -105,9 +105,9 @@ contains
     subroutine output()
       integer :: j, iunit
       FLOAT :: msp
-      call io_mkdir('linear')
+      call io_mkdir(trim(current_label)//'linear')
 
-      iunit = io_open('linear/polarizability_lr', action='write')
+      iunit = io_open(trim(current_label)//'linear/polarizability_lr', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
          trim(units_out%length%abbrev)
       if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim

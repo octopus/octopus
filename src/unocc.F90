@@ -136,7 +136,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
   
   ! output wave-functions
-  call X(states_output) (sys%st, sys%m, sys%f_der, "static", sys%outp)
+  call X(states_output) (sys%st, sys%m, sys%f_der, trim(current_label)//"static", sys%outp)
 
   call end_()
 contains

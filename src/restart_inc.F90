@@ -64,12 +64,13 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
   integer, optional, intent(in)  :: iter
 
   integer :: iunit, iunit2, err, ik, ist, idim, i
-  character(len=10) :: filename
+  character(len=40) :: filename, mformat
 
   call push_sub('restart_write')
 
   ASSERT(associated(st%X(psi)))
 
+  mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
   if(mpiv%node==0) then
      call io_mkdir(dir)
@@ -79,8 +80,8 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
      write(iunit,'(a)') '%Wavefunctions'
      
      iunit2 = io_open(trim(dir)//'/occs', action='write')
-     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]'
-     write(iunit2,'(a)') '%Occupations_Eigenvalues'
+     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
+     write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
   end if
 
   i = 1
@@ -91,7 +92,8 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
         
         if(mpiv%node==0) then
           write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
-          write(unit=iunit2, fmt=*) st%occ(ist,ik), ' | ', st%eigenval(ist, ik)
+          write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ', &
+               st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
         end if
         
         if(st%st_start <= ist .and. st%st_end >= ist .and. mpiv%node==0) then

@@ -553,8 +553,8 @@ contains
     FLOAT   :: temp
 
     ! output excitation energies and oscillator strengths
-    call io_mkdir('linear')
-    iunit = io_open('linear/'//trim(filename), action='write')
+    call io_mkdir(trim(current_label)//'linear')
+    iunit = io_open(trim(current_label)//'linear/'//trim(filename), action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
 
@@ -571,7 +571,7 @@ contains
     ! output eigenvectors in casida approach
     if(cas%type.ne.CASIDA_CASIDA) return
       
-    iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
+    iunit = io_open(trim(current_label)//'linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
     do ia = 1, cas%n_pairs
       write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair_i(ia), ' - ', cas%pair_a(ia)

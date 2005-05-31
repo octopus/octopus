@@ -76,6 +76,9 @@ program octopus
 
      ! create temporary dir (we will need it)
      call io_mkdir(tmpdir)
+     ! create syslabel dir
+     call io_mkdir(trim(current_label))
+
      
      ! create debug directory if in debugging mode
      if(conf%verbose>=VERBOSE_DEBUG) call io_mkdir(trim(current_label)//'debug')

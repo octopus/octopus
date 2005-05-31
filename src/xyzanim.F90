@@ -41,8 +41,8 @@ program xyzanim
   if(conf%verbose<999) conf%verbose = -1
 
   ! Sets the filenames
-  nbofile = 'td.general/coordinates'
-  xyzfile = 'td.general/movie.xyz'
+  nbofile = trim(current_label)//'td.general/coordinates'
+  xyzfile = trim(current_label)//'td.general/movie.xyz'
 
   ! how often do we sample?
   call loct_parse_int(check_inp('AnimationSampling'), 100, sampling)

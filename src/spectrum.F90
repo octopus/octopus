@@ -216,7 +216,7 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: angular(:, :)
 
-  call spectrum_file_info("td.general/angular", iunit, time_steps, dt, i)
+  call spectrum_file_info(trim(current_label)//"td.general/angular", iunit, time_steps, dt, i)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
@@ -492,9 +492,9 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
 
   ! open files
   call io_assign(iunit)
-  iunit = io_open('multipoles', action='read', status='old', die=.false.)
+  iunit = io_open(trim(current_label)//'multipoles', action='read', status='old', die=.false.)
   if(iunit < 0) then
-    iunit = io_open('td.general/multipoles', action='read', status='old')
+    iunit = io_open(trim(current_label)//'td.general/multipoles', action='read', status='old')
   end if
   
   ! read in dipole
@@ -531,9 +531,9 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   FLOAT :: t1, t2, dummy
 
   ! open files
-  iunit = io_open('acceleration', action='read', status='old', die=.false.)
+  iunit = io_open(trim(current_label)//'acceleration', action='read', status='old', die=.false.)
   if(iunit < 0) then
-    iunit = io_open('td.general/acceleration', action='read', status='old')
+    iunit = io_open(trim(current_label)//'td.general/acceleration', action='read', status='old')
   endif
   
   ! read in dipole
