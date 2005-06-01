@@ -47,6 +47,9 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Defined if you have libjdqz library. */
+#undef HAVE_JDQZ
+
 /* Defined if you have LAPACK library. */
 #undef HAVE_LAPACK
 

@@ -19,6 +19,15 @@
 
 #include "global.h"
 
+
+subroutine amul
+end subroutine amul
+subroutine bmul
+end subroutine bmul
+subroutine precon
+end subroutine precon
+
+
 module eigen_solver
   use global
   use lib_oct_parser
@@ -62,6 +71,9 @@ module eigen_solver
   integer, parameter :: RS_LANCZOS = 1
 #endif
   integer, parameter :: RS_PLAN    = 2
+#if defined(HAVE_JDQZ)
+  integer, parameter :: JACOBI     = 3
+#endif
 
   ! For the TRLan package
 #ifdef HAVE_TRLAN
@@ -96,6 +108,10 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
   case(RS_PLAN)
     message(1) = 'Info: Eigensolver type: Preconditioned Lanczos'
     call init_filter()
+#if defined(HAVE_JDQZ)
+  case(JACOBI)
+    message(1) = 'Info: Eigensolver type: Jacobi-Davidson JDQZ package'
+#endif
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -220,6 +236,11 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
 #endif
   case(RS_PLAN)
     call eigen_solver_plan(m, f_der, st, h, tol, maxiter, eigens%converged, eigens%diff)
+#if defined(HAVE_JDQZ)
+  case(JACOBI)
+    call eigen_solver_jdqz(m, f_der, st, h, tol, maxiter, &
+           eigens%converged, errorflag, eigens%diff, verbose = verbose_)
+#endif
   end select
 
   eigens%matvec = maxiter
@@ -278,5 +299,8 @@ end subroutine eigen_diagon_subspace
 #include "eigen_cg3.F90"
 #endif
 #include "eigen_plan.F90"
+#if defined(HAVE_JDQZ)
+#include "eigen_jdqz.F90"
+#endif
 
 end module eigen_solver

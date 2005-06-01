@@ -183,6 +183,9 @@ ACX_TRLAN
 dnl check for NETCDF
 ACX_NETCDF
 
+dnl check for JDQZ
+ACX_JDQZ([], AC_MSG_WARN([libjdqz.a library not found. Will not use it]))
+
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then
   ACX_MPI([], AC_MSG_WARN([could not compile an mpi test program]))
