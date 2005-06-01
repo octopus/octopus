@@ -44,6 +44,7 @@ type conf_type
   integer :: debug_level ! How much debug should print
 
   character(len=256) :: share       ! Name of the share dir
+  character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
   character(len=50)  :: build_time  ! time octopus was compiled
   character(len=10)  :: version     ! version number
 
@@ -152,6 +153,7 @@ subroutine global_init()
 #endif
 
   conf%share      = SHARE_OCTOPUS
+  conf%latest_cvs = LATEST_CVS
   conf%build_time = BUILD_TIME
   conf%version    = OCTOPUS_VERSION
 

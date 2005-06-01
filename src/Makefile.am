@@ -113,8 +113,10 @@ CTAGS=ctags-exuberant -e
 
 # how to compile main.f90 (have to define some extra variables here)
 DATE := $(shell date)
+LATEST_CVS := $(shell ../build/latest_cvs_commit.sh 2>/dev/null) 
+
 global.o: global.F90
-	@FCCPP@ @CPPFLAGS@ -DSHARE_OCTOPUS='"${pkgdatadir}"' \
+	@FCCPP@ @CPPFLAGS@ -DSHARE_OCTOPUS='"${pkgdatadir}"' -DLATEST_CVS='"${LATEST_CVS}"' \
 		-DOCTOPUS_VERSION='"${VERSION}"' -DBUILD_TIME='"${DATE}"' $< > $*_oct.f90
 	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90

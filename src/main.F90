@@ -53,8 +53,9 @@ program octopus
      message(1) = ""
      message(2) = str_center("Running octopus, version " // trim(conf%version), 70)
      message(3) = str_center("(build time - " // trim(conf%build_time) // ")", 70)
-     message(4) = ""
-     call write_info(4)
+     message(4) = str_center("(latest cvs changes: " // trim(conf%latest_cvs) // ")", 70)
+     message(5) = ""
+     call write_info(5)
      
      ! Let us print where we are running
      call loct_sysname(sys_name)
