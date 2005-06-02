@@ -57,6 +57,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -77,6 +78,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -115,6 +117,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--enable-debug \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -136,6 +139,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-debug \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -170,6 +174,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--enable-complex \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -191,6 +196,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-complex \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -226,6 +232,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L$(HOME)/opt/nag -lfftw3" \
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--enable-complex --enable-debug \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -247,6 +254,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-fft-lib="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -lfftw3 -L/usr/lib -lpthread" \
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-complex --enable-debug\
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -280,6 +288,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -303,6 +312,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-metis="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -I$(HOME)/opt/intel/include -L$(HOME)/opt/intel/lib -lmetis -L/usr/lib -lpthread" \
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -336,6 +346,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--enable-complex  --enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -359,6 +370,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-metis="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -I$(HOME)/opt/intel/include -L$(HOME)/opt/intel/lib -lmetis -L/usr/lib -lpthread" \
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-complex --enable-mpi  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -392,6 +404,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--enable-mpi --enable-debug --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -415,6 +428,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-metis="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -I$(HOME)/opt/intel/include -L$(HOME)/opt/intel/lib -lmetis -L/usr/lib -lpthread" \
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-mpi --enable-debug  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -449,6 +463,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	FCFLAGS="-colour -kind=byte -mismatch_all -abi=64 -ieee=full -O4 -Ounroll=4 -Bstatic" \
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
+	--with-jdqz="-L$(HOME)/opt/nag/lib" \
 	--enable-complex --enable-mpi --enable-debug  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -472,6 +487,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-metis="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -I$(HOME)/opt/intel/include -L$(HOME)/opt/intel/lib -lmetis -L/usr/lib -lpthread" \
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
+	--with-jdqz="-L$(HOME)/opt/intel/lib" \
 	--enable-complex --enable-mpi --enable-debug \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
