@@ -184,7 +184,10 @@ dnl check for NETCDF
 ACX_NETCDF
 
 dnl check for JDQZ
-ACX_JDQZ([], AC_MSG_WARN([libjdqz.a library not found. Will not use it]))
+dnl ACX_JDQZ([], AC_MSG_WARN([libjdqz.a library not found. Will not use it]))
+
+dnl check for ARPACK
+ACX_ARPACK([], AC_MSG_WARN([ARPACK library not found. Will not use it]))
 
 dnl check for MPI
 if test x"$enable_mpi" != x"no"; then

@@ -16,6 +16,9 @@
 /* JDQZ library (http://www.math.ruu.nl/people/vorst/jd.html) */
 #undef HAVE_JDQZ
 
+/* ARPACK library
+#undef HAVE_ARPACK
+
 /* Defined if you have METIS library. */
 #undef HAVE_METIS
 

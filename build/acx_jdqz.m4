@@ -54,7 +54,7 @@ dnl Put the library.
 AC_SUBST(LIBS_JDQZ)
 
 dnl Put back LIBS
-LIBS="$acx_trlan_save_LIBS"
+LIBS="$acx_jdqz_save_LIBS"
 
 
 dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
