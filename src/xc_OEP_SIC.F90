@@ -18,22 +18,26 @@
 !! $Id$
 
 !!! This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
+subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
   type(xc_type),     intent(in)    :: xcs
   type(mesh_type),   intent(in)    :: m
   type(f_der_type),  intent(inout) :: f_der
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
-  FLOAT,             intent(inout) :: vxc(:,:), ex, ec
+  FLOAT,             intent(inout) :: ex, ec
 
-  integer  :: i, ierr
+  integer  :: i
   FLOAT :: ex2, ec2, ex_, ec_, edummy
-  FLOAT, allocatable :: vxc2(:, :), rho(:,:)
+  FLOAT, allocatable :: vxc(:, :), rho(:,:)
+#if defined(HAVE_MPI)
+  integer :: ierr
+#endif
+
 
   call push_sub('oep_sic')
   
-  allocate(rho(m%np, 2), Vxc2(m%np, 2))
+  allocate(rho(m%np, 2), Vxc(m%np, 2))
   rho(:, 2) = M_ZERO
 
   ! loop over states
@@ -45,28 +49,28 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
       rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
      
       ! initialize before calling get_vxc
-      vxc2 = M_ZERO
+      vxc = M_ZERO
       ex2  = M_ZERO
       ec2  = M_ZERO
       
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(xcs, m, f_der, rho, SPIN_POLARIZED, vxc2, ex2, ec2, edummy, edummy) 
+      call xc_get_vxc(xcs, m, f_der, rho, SPIN_POLARIZED, vxc, ex2, ec2, edummy, edummy) 
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
       oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - &
-         vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))      
+         vxc(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))      
       
       ! calculate the Hartree contribution using poissons equation
-      vxc2(:, 1) = M_ZERO
-      call dpoisson_solve(m, f_der, vxc2(:, 1), rho(:, 1))
+      vxc(:, 1) = M_ZERO
+      call dpoisson_solve(m, f_der, vxc(:, 1), rho(:, 1))
 
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-         sum(vxc2(:, 1) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
+         sum(vxc(:, 1) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
 
-      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - vxc2(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
+      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - vxc(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
     end if
   end do
 
@@ -80,6 +84,6 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
   ec = ec + ec_
   ex = ex + ex_
 
-  deallocate(rho, Vxc2)
+  deallocate(rho, Vxc)
   call pop_sub()
 end subroutine X(oep_sic)

@@ -179,10 +179,12 @@ contains
     type(states_type), intent(in)    :: st
     integer,           intent(in)    :: is
     
-    integer  :: i, ierr
+    integer  :: i
     FLOAT :: max_eigen
-
     FLOAT, allocatable :: eigenval(:), occ(:)
+#if defined(HAVE_MPI)
+    integer  :: ierr
+#endif
 
     allocate(eigenval(st%nst), occ(st%nst))
     eigenval = M_ZERO; occ = M_ZERO

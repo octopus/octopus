@@ -196,7 +196,7 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
   logical,       optional, intent(in)    :: verbose
 
   logical :: verbose_
-  integer :: maxiter, errorflag
+  integer :: maxiter
   FLOAT :: tol
 
   call push_sub('eigen_solver_run')
@@ -218,21 +218,21 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
   select case(eigens%es_type)
   case(RS_CG_NEW)
     call eigen_solver_cg2_new(m, f_der, st, h, tol, maxiter, &
-           eigens%converged, errorflag, eigens%diff, verbose = verbose_)
+           eigens%converged, eigens%diff, verbose = verbose_)
   case(RS_CG)
     call eigen_solver_cg2(m, f_der, st, h, tol, maxiter, &
-           eigens%converged, errorflag, eigens%diff, verbose = verbose_)
+           eigens%converged, eigens%diff, verbose = verbose_)
 #ifdef HAVE_TRLAN
   case(RS_LANCZOS)
     call eigen_solver_cg3(m, st, h, tol, maxiter, &
-           eigens%converged, errorflag, eigens%diff)
+           eigens%converged, eigens%diff)
 #endif
   case(RS_PLAN)
     call eigen_solver_plan(m, f_der, st, h, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
   case(ARPACK)
     call eigen_solver_arpack(m, f_der, st, h, tol, maxiter, &
-           eigens%converged, errorflag, eigens%diff, verbose = verbose_)
+           eigens%converged, eigens%diff)
 #endif
   end select
 

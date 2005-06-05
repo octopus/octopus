@@ -24,9 +24,9 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(xc_oep_type), intent(inout) :: oep
 
 #if defined(HAVE_MPI)
-  integer :: status(MPI_STATUS_SIZE)
+  integer :: status(MPI_STATUS_SIZE), ierr, request
 #endif
-  integer :: i, j, n, ierr, request
+  integer :: i, j, n
   FLOAT, allocatable :: d(:)
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:)
   FLOAT, allocatable :: Ma(:,:), x(:,:), y(:,:)

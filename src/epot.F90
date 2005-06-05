@@ -87,10 +87,9 @@ module external_pot
 
 contains
 
-  subroutine epot_init(ep, m, ispin, geo)
+  subroutine epot_init(ep, m, geo)
     type(epot_type),     intent(out) :: ep
     type(mesh_type),     intent(in)  :: m
-    integer,             intent(in)  :: ispin
     type(geometry_type), intent(in)  :: geo
 
     integer :: i
@@ -120,7 +119,7 @@ contains
     end if
 
     ! lasers
-    call laser_init(m, ep%no_lasers, ep%lasers)
+    call laser_init(ep%no_lasers, ep%lasers)
     if(ep%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
@@ -479,7 +478,7 @@ contains
                endif
                call allocate_nl_part(i)
             endif
-            call build_nl_part(i, l, lm, add_lm)
+            call build_nl_part(i, l, lm)
             add_lm = add_lm + 1
             i = i + 1
          enddo
@@ -615,8 +614,8 @@ contains
       call pop_sub()
     end subroutine allocate_nl_part
 
-    subroutine build_nl_part(ivnl, l, lm, add_lm)
-      integer, intent(in) :: ivnl, l, lm, add_lm
+    subroutine build_nl_part(ivnl, l, lm)
+      integer, intent(in) :: ivnl, l, lm
 
       integer :: i, j, k
       FLOAT :: r, x(3), x_in(3), ylm
@@ -769,10 +768,9 @@ contains
 
   end subroutine epot_laser_scalar_pot
 
-  subroutine epot_laser_vector_pot(ep, x, t, a)
+  subroutine epot_laser_vector_pot(ep, t, a)
     type(epot_type), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
-    FLOAT,           intent(in)  :: x(conf%dim)
     FLOAT,           intent(out) :: a(conf%dim)
 
     call laser_vector_field(ep%no_lasers, ep%lasers, t, a)

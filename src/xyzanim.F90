@@ -31,7 +31,7 @@ program xyzanim
 
   implicit none
 
-  character(len=256) :: str, nbofile, xyzfile
+  character(len=256) :: nbofile, xyzfile
   integer :: ierr, sampling, i, nbo_unit, xyz_unit, iter, j
   FLOAT :: dump
 

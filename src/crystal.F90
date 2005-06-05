@@ -568,7 +568,7 @@
 !     crystal system. The array ib contains the locations of the group
 !     operations and ntrans is the order of the group.
 !
-      call atftmt(ipr,a,b,x,r,ity,na,ib,ihg,ipm,li,ntrans,     &
+      call atftmt(ipr,b,x,r,ity,na,ib,ihg,ipm,li,ntrans,     &
            invers_no, ntype, maxnatom)
 !
 !     Subroutine atftmt determines the point group of the crystal, 
@@ -974,8 +974,8 @@
       end subroutine symm_ident
 !
 !
-      subroutine atftmt(ipr, a,ai,x,r,ity,na,ib,ihg        &
-                        ,ipm,li,nc,invers_no, mxdtyp, mxdatm)
+      subroutine atftmt(ipr, ai, x, r, ity, na, ib, ihg,        &
+                        ipm, li, nc, invers_no, mxdtyp, mxdatm)
 
       implicit none
 !
@@ -993,7 +993,7 @@
            x(3,mxdtyp*mxdatm), &! compact list of all coordinates (cartesian)
            r(49,3,3),          &! the rotation matrices as they come 
                                 ! out of the pgl subroutine
-           a(3,3),             &! realspace lattice vectors 
+!           a(3,3),             &! realspace lattice vectors 
            ai(3,3)              ! inverse of lattice vectors (no 2pi)
 
 !

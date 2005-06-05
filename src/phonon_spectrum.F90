@@ -29,7 +29,7 @@ program phonon_spectrum
 
   implicit none
 
-  integer :: ierr, iunit, time_steps
+  integer :: iunit
 
   ! Initialize stuff
   call global_init()

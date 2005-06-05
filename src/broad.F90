@@ -93,7 +93,7 @@ contains
     
     FLOAT, allocatable :: s(:,:)
     FLOAT :: w, e, f(4)
-    integer :: istat, n, iunit, j1, j2
+    integer :: n, iunit, j1, j2
 
     n = (b%max_energy - b%min_energy) / b%energy_step
     allocate(s(4,n))

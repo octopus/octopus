@@ -24,7 +24,7 @@ subroutine zso (h, m, psi, hpsi)
   R_TYPE, intent(inout) :: Hpsi(:, :)
 
   type(nonlocal_op), pointer :: nlop
-  integer :: mps, add_lm, ikbc,jkbc, ivnl
+  integer :: mps, ikbc, jkbc, ivnl
   CMPLX, allocatable :: tpsi(:, :), tHpsi(:, :)
   CMPLX :: uvpsi
 

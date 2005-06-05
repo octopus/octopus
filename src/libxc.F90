@@ -24,19 +24,22 @@ module lib_xc
 
   private
   public :: xc_info_number, &
-            xc_info_kind, &
-            xc_info_name, &
+            xc_info_kind,   &
+            xc_info_name,   &
             xc_info_family, &
-            xc_info_refs, &
-            xc_lda_init, &
-            xc_lda, &
-            xc_lda_end, &
-            xc_gga_init, &
-            xc_gga, &
-            xc_gga_end, &
-            xc_gga_lb, &
-            xc_mgga_init, &
-            xc_mgga, &
+            xc_info_refs,   &
+            xc_lda_init,    &
+            xc_lda,         &
+            xc_lda_fxc,     &
+            xc_lda_end,     &
+            xc_lca_init,    &
+            xc_lca,         &
+            xc_gga_init,    &
+            xc_gga,         &
+            xc_gga_end,     &
+            xc_gga_lb,      &
+            xc_mgga_init,   &
+            xc_mgga,        &
             xc_mgga_end
 
   ! Families of xc functionals

@@ -60,7 +60,7 @@ program hs_from_mult
     call write_fatal(2)
   end if
 
-  call spectrum_hs_from_mult('hs-mult', s, sh, .true.)
+  call spectrum_hs_from_mult('hs-mult', s, sh)
 
   deallocate(sh%sp)
 

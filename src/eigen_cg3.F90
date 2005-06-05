@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, reorder)
+subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   use trl_info
   use trl_interface
 
@@ -26,7 +26,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, errorflag, diff, re
   type(hamiltonian_type), target, intent(in) :: h
   FLOAT, intent(in)               :: tol
   integer, intent(inout)          :: niter
-  integer, intent(out)            :: errorflag, converged
+  integer, intent(out)            :: converged
   FLOAT, intent(out), optional    :: diff(1:st%nst,1:st%d%nik)
   logical, intent(in), optional   :: reorder
 

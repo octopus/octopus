@@ -31,9 +31,11 @@ program octopus
 
   implicit none
 
-  integer :: ierr, ns
+  integer :: ns
   character(len=256) :: sys_name
-
+#if defined(HAVE_MPI)
+  integer :: ierr
+#endif
 
   call global_init()
   call parser_init()

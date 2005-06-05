@@ -61,9 +61,8 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_briggs_chi2x(cv, geo, chi, x)
+  subroutine curv_briggs_chi2x(cv, chi, x)
     type(curv_briggs_type), intent(in)  :: cv
-    type(geometry_type),    intent(in)  :: geo
     FLOAT,                  intent(in)  :: chi(:)  ! chi(conf%dim)
     FLOAT,                  intent(out) :: x(:)    ! x(conf%dim)
  
@@ -78,9 +77,8 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_briggs_jacobian_inv(cv, geo, chi, J)
+  subroutine curv_briggs_jacobian_inv(cv, chi, J)
     type(curv_briggs_type), intent(in)  :: cv
-    type(geometry_type),    intent(in)  :: geo
     FLOAT,                  intent(in)  :: chi(:)  ! chi(conf%dim)
     FLOAT,                  intent(out) :: J(:,:)  ! J(conf%dim,conf%dim), the Jacobian
  

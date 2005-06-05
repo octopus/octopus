@@ -151,7 +151,7 @@ subroutine mixing(smix, iter, d1, d2, d3, vin, vout, vnew)
 
   select case (smix%type_of_mixing)
   case (MIX_LINEAR)
-    call mixing_linear(smix%alpha, d1, vin, vout, vnew)
+    call mixing_linear(smix%alpha, vin, vout, vnew)
 
   case (MIX_BROYDEN)
     call mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
@@ -166,9 +166,8 @@ end subroutine mixing
 
 
 ! ---------------------------------------------------------
-subroutine mixing_linear(alpha, d1, vin, vout, vnew)
+subroutine mixing_linear(alpha, vin, vout, vnew)
   FLOAT,   intent(in)  :: alpha
-  integer, intent(in)  :: d1
   FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :)
   FLOAT,   intent(out) :: vnew(:, :, :)
 
@@ -219,7 +218,7 @@ subroutine mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
 
   ! extrapolate new vector
   iter_used = min(iter - 1, smix%ns)
-  call broyden_extrapolation(smix%alpha, d1, d2, d3, vin, vout, vnew, iter_used, f, &
+  call broyden_extrapolation(smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, &
      smix%df(1:d1, 1:d2, 1:d3, 1:iter_used), &
      smix%dv(1:d1, 1:d2, 1:d3, 1:iter_used))
 
@@ -229,10 +228,10 @@ end subroutine mixing_broyden
 
 
 ! ---------------------------------------------------------
-subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vout, vnew, iter_used, f, df, dv)
+subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df, dv)
   FLOAT,   intent(in)  :: alpha
   integer, intent(in)  :: d1, d2, d3, iter_used
-  FLOAT,   intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :)
+  FLOAT,   intent(in)  :: vin(:, :, :), f(:, :, :)
   FLOAT,   intent(in)  :: df(:, :, :, :), dv(:, :, :, :)
   FLOAT,   intent(out) :: vnew(:, :, :)
 
@@ -331,9 +330,9 @@ subroutine mixing_grpulay(smix, d1, d2, d3, vin, vout, vnew, iter)
 
     ! extrapotate new vector
     iter_used = min(iter/2, smix%ns + 1)
-    call pulay_extrapolation(d1, d2, d3, vin, vout, vnew, iter_used, f, &
-                                 smix%df(1:d1, 1:d2, 1:d3, 1:iter_used), &
-                                 smix%dv(1:d1, 1:d2, 1:d3, 1:iter_used))
+    call pulay_extrapolation(vin, vout, vnew, iter_used, f, &
+                             smix%df(1:d1, 1:d2, 1:d3, 1:iter_used), &
+                             smix%dv(1:d1, 1:d2, 1:d3, 1:iter_used))
   end select
 
   deallocate(f)
@@ -341,8 +340,8 @@ end subroutine mixing_grpulay
 
 
 ! ---------------------------------------------------------
-subroutine pulay_extrapolation(d1, d2, d3, vin, vout, vnew, iter_used, f, df, dv)
-  integer, intent(in)   :: d1, d2, d3, iter_used 
+subroutine pulay_extrapolation(vin, vout, vnew, iter_used, f, df, dv)
+  integer, intent(in)   :: iter_used 
   FLOAT, intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)
   FLOAT, intent(out) :: vnew(:, :, :)
 

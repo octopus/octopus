@@ -39,8 +39,11 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
   FLOAT,                  intent(inout) :: ex, ec
   
   FLOAT :: e
-  integer :: is, ist, ixc, ierr
+  integer :: is, ist, ixc
   logical, save :: first = .true.
+#if defined(HAVE_MPI)
+  integer :: ierr
+#endif
 
   if(oep%level == XC_OEP_NONE) return
 
@@ -70,7 +73,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
   
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, m, f_der, st, is, oep, vxc, ex, ec)
+      call X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
     end if
     
     ! get the HOMO state

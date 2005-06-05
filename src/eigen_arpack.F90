@@ -19,22 +19,19 @@
 
 #include "global.h"
 
-subroutine eigen_solver_arpack(m, f_der, st, h, tol, niter, converged, errorflag, diff, reorder, verbose)
-  type(mesh_type),        intent(IN)    :: m
+subroutine eigen_solver_arpack(m, f_der, st, h, tol, niter, converged, diff)
+  type(mesh_type),        intent(in)    :: m
   type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
-  integer,                intent(out)   :: errorflag
   integer,                intent(inout) :: converged
   FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
-  logical,      optional, intent(in)    :: reorder
-  logical,      optional, intent(in)    :: verbose
 
 #if defined(R_TREAL)
   integer :: ido, n, nev, ncv, ldv, iparam(11), ipntr(11), &
-             lworkl, info, ist, ldz, i
+             lworkl, info, ist, i
   logical :: rvec
   logical, allocatable :: select(:)
   character(len=1) :: bmat, howmny

@@ -129,7 +129,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
     ps%g%drdi = pstm%g%drdi
 
   case(PS_HGH)
-    call hgh_init(psp, trim(label), ispin)
+    call hgh_init(psp, trim(label))
     call valconf_copy(ps%conf, psp%conf)
     ps%kbc = 3
     ps%l_max = psp%l_max

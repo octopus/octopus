@@ -407,7 +407,7 @@ contains
 !!$    if(td%out_proj) call td_write_proj(out_proj, m, st, u_st, i)
 
       ! output positions, vels, etc.
-      if(td%out_coords) call td_write_nbo(out_coords, geo, td, i, geo%kinetic_energy, h%etot)
+      if(td%out_coords) call td_write_nbo(out_coords, geo, i, geo%kinetic_energy, h%etot)
 
       ! If harmonic spectrum is desired, get the acceleration
       if(td%out_acc) call td_write_acc(out_acc, m, sys%f_der, st, geo, h, td, i)
@@ -436,7 +436,7 @@ contains
       call apply_delta_field()
 
       ! create files for output and output headers
-      if(td%out_coords) call td_write_nbo(out_coords, geo, td, 0, geo%kinetic_energy, h%etot)    
+      if(td%out_coords) call td_write_nbo(out_coords, geo, 0, geo%kinetic_energy, h%etot)    
       if(td%out_acc)    call td_write_acc(out_acc, m, sys%f_der, st, geo, h, td, 0)
       if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
       if(td%out_energy) call td_write_el_energy(out_energy, h, 0)

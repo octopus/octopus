@@ -144,8 +144,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_get_grad(dir, order, stencil)
-    integer, intent(in)  :: dir
+  subroutine stencil_cube_get_grad(order, stencil)
     integer, intent(in)  :: order
     integer, intent(out) :: stencil(:,:)
 
@@ -154,8 +153,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_polynomials_grad(dir, pol, order)
-    integer, intent(in)  :: dir
+  subroutine stencil_cube_polynomials_grad(pol, order)
     integer, intent(out) :: pol(:,:) ! pol(conf%dim, order)
     integer, intent(in)  :: order
 

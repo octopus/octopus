@@ -42,10 +42,6 @@ subroutine X(input_function)(filename, m, f, ierr)
   integer,          intent(out) :: ierr
 
   integer :: iunit, i, function_kind, file_kind
-  type(X(cf)) :: c
-#if defined(R_TCOMPLEX)
-  type(dcf) :: re, im
-#endif
 
   ierr = 0
   function_kind = X(output_kind)*kind(f(1)) ! +4 for real, single; +8 for real, double;

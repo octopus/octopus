@@ -177,7 +177,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_matrix_to_op(a, op_ref, op)
-    FLOAT, intent(out)                  :: a(:, :)
+    FLOAT, intent(in)                   :: a(:, :)
     type(nl_operator_type), intent(in)  :: op_ref
     type(nl_operator_type), intent(out) :: op
 
@@ -198,11 +198,10 @@ contains
   ! ---------------------------------------------------------
   subroutine nl_operator_write(op, unit)
     type(nl_operator_type), intent(in) :: op
-    integer, intent(in)                  :: unit
+    integer, intent(in)                :: unit
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
-    character(len=50) :: fmt
 
     allocate(a(op%np, op%np))
     a = M_ZERO
@@ -222,11 +221,10 @@ contains
 
   subroutine nl_operatorT_write(op, unit)
     type(nl_operator_type), intent(in) :: op
-    integer, intent(in)                  :: unit
+    integer, intent(in)                :: unit
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
-    character(len=50) :: fmt
 
     allocate(a(op%np, op%np))
     a = M_ZERO

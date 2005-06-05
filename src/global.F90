@@ -126,9 +126,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine global_init()
+#ifdef HAVE_MPI
     integer :: ierr
 
-#ifdef HAVE_MPI
     call MPI_INIT(ierr)
     call MPI_COMM_RANK(MPI_COMM_WORLD, mpiv%node, ierr)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, mpiv%numprocs, ierr)

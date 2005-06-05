@@ -24,7 +24,7 @@ module hgh
 !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
 !  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
 use global
-  use messages
+use messages
 use io
 use atomic
 use logrid
@@ -71,10 +71,9 @@ end interface
 
 contains
 
-subroutine hgh_init(psp, filename, ispin)
+subroutine hgh_init(psp, filename)
   type(hgh_type), intent(inout)     :: psp
   character(len=*), intent(in)      :: filename
-  integer, intent(in)               :: ispin
 
   integer :: iunit, i
   logical :: found

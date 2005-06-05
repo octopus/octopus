@@ -85,7 +85,7 @@ contains
     case(CURV_METHOD_GYGI)
       call curv_gygi_chi2x(cv%gygi, geo, chi, x)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_chi2x(cv%briggs, geo, chi, x)
+      call curv_briggs_chi2x(cv%briggs, chi, x)
     case(CURV_METHOD_MODINE)
       call curv_modine_chi2x(cv%modine, geo, chi, x)
     end select
@@ -110,7 +110,7 @@ contains
       call curv_gygi_jacobian(cv%gygi, geo, x, dummy, Jac)
       jdet = M_ONE/lalg_det(Jac, conf%dim)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_jacobian_inv(cv%briggs, geo, chi, Jac)
+      call curv_briggs_jacobian_inv(cv%briggs, chi, Jac)
       jdet = M_ONE
       do i = 1, conf%dim
         jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method

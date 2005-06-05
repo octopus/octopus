@@ -298,11 +298,10 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
   return
 end subroutine spectrum_rotatory_strength
 
-subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
+subroutine spectrum_hs_from_mult(out_file, s, sh)
   character(len=*), intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_sh), intent(inout) :: sh
-  logical, intent(in) :: print_info
 
   integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter
   FLOAT :: dt, dump
@@ -378,11 +377,10 @@ subroutine spectrum_hs_from_mult(out_file, s, sh, print_info)
 
 end subroutine spectrum_hs_from_mult
 
-subroutine spectrum_hs_from_acc(out_file, s, sh, print_info)
+subroutine spectrum_hs_from_acc(out_file, s, sh)
   character(len=*), intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_sh), intent(inout) :: sh
-  logical, intent(in) :: print_info
 
   integer :: i, j, iunit, time_steps, is, ie, ntiter
   FLOAT :: dt, dummy, a(3)
@@ -489,7 +487,7 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
   integer, intent(out) :: iunit, nspin, time_steps
   FLOAT, intent(out) :: dt
 
-  integer :: i, j
+  integer :: j
   FLOAT :: t1, t2, dummy
 
   ! open files
@@ -529,7 +527,7 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   integer, intent(out) :: iunit, time_steps
   FLOAT, intent(out) :: dt
 
-  integer :: i, j
+  integer :: j
   FLOAT :: t1, t2, dummy
 
   ! open files

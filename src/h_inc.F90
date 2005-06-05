@@ -78,7 +78,7 @@ subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
       call write_fatal(1)
     end if
     call X(vlasers)  (h, m, f_der, psi, hpsi, t)
-    call X(vborders) (h, m, psi, hpsi)
+    call X(vborders) (h, psi, hpsi)
   elseif (h%d%cdft) then
     call X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
   end if
@@ -148,7 +148,7 @@ subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
     end if
   end select
   if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, Hpsi, ik)
-  call X(vborders) (h, m, psi, hpsi)
+  call X(vborders) (h, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
   call pop_sub()
@@ -465,7 +465,7 @@ subroutine X(vlasers) (h, m, f_der, psi, hpsi, t)
 
     case(2) ! velocity gauge
 
-      call epot_laser_vector_pot(h%ep, x, t, a)
+      call epot_laser_vector_pot(h%ep, t, a)
       allocate(grad(m%np, conf%dim))
       do idim = 1, h%d%dim
         call X(f_gradient)(f_der, psi(:, idim), grad)
@@ -483,9 +483,8 @@ end subroutine X(vlasers)
 
 
 ! ---------------------------------------------------------
-subroutine X(vborders) (h, m, psi, hpsi)
+subroutine X(vborders) (h, psi, hpsi)
   type(hamiltonian_type), intent(IN)    :: h
-  type(mesh_type),        intent(IN)    :: m
   R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 

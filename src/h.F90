@@ -144,7 +144,7 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
     nullify(h%ahxc)  
   end if
 
-  call epot_init(h%ep, m, h%d%ispin, geo)
+  call epot_init(h%ep, m, geo)
 
   call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS

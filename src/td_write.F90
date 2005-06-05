@@ -280,10 +280,9 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
 
 end subroutine td_write_multipole
 
-subroutine td_write_nbo(out, geo, td, iter, ke, pe)
+subroutine td_write_nbo(out, geo, iter, ke, pe)
   integer(POINTER_SIZE), intent(IN) :: out
   type(geometry_type),   intent(IN) :: geo
-  type(td_type),         intent(IN) :: td
   integer,               intent(in) :: iter
   FLOAT,                 intent(in) :: ke, pe
 

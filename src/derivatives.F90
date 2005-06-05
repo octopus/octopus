@@ -216,7 +216,7 @@ contains
       case(DER_STAR, DER_VARIATIONAL)
         call stencil_star_get_grad(i, der%order, der%grad(i)%stencil)
       case(DER_CUBE)
-        call stencil_cube_get_grad(i, der%order, der%grad(i)%stencil)
+        call stencil_cube_get_grad(der%order, der%grad(i)%stencil)
       end select
     end do
 
