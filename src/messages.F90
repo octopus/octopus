@@ -51,6 +51,7 @@ contains
   subroutine write_fatal(no_lines)
     integer, intent(in) :: no_lines
 
+    integer :: i
 #ifdef HAVE_MPI
     integer :: ierr
 #endif
