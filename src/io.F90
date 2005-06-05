@@ -181,9 +181,6 @@ contains
        file_ = file
     end if
 
-    if(action.eq.'write') then
-       write(*,*) 'action == write',action,'node: ',mpiv%node
-    endif
     open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
          action=trim(action), position=trim(position_), iostat=iostat)
 
