@@ -25,6 +25,7 @@ config.status:
 	dh_testdir
 # Add here commands to configure the package.
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -104,6 +105,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -164,6 +166,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -224,6 +227,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -283,6 +287,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -344,6 +349,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -403,6 +409,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
@@ -465,6 +472,7 @@ endif
 #
 
 	aclocal-1.8
+	autoheader
 	automake-1.8 --add-missing
 	autoreconf -i
 
