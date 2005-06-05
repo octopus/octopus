@@ -30,7 +30,7 @@
 #include <sys/utsname.h>
 #include <string.h>
 
-#include "config.h"
+#include <config.h>
 #include "varia.h"
 
 

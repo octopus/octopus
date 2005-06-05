@@ -125,8 +125,8 @@ global.o: global.F90
 # how to generate config_F90.h
 liboct_parser.F90: config_F90.h
 global.F90: config_F90.h
-config_F90.h: config.h
-	sed 's%/\*%!%g; s%\*/%%g' config.h >config_F90.h
+config_F90.h: ../config.h
+	grep '#define' ../config.h >config_F90.h
 ../liboct/liboct.a:
 	(cd ../liboct; $(MAKE))
 

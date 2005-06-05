@@ -21,7 +21,7 @@ AC_INIT(Octopus, 1.99devel, marques@nautilus.fis.uc.pt, octopus)
 AC_CONFIG_SRCDIR([src/global.F90])
 AM_INIT_AUTOMAKE
 
-AM_CONFIG_HEADER([liboct/config.h src/config.h])
+AC_CONFIG_HEADERS(config.h)
 
 # Installation prefix by default
 AC_PREFIX_DEFAULT($HOME)

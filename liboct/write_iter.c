@@ -28,7 +28,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "config.h"
+#include <config.h>
 #include "string_f.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))

@@ -19,7 +19,7 @@
  $Id$
 */
 
-#include "config.h"
+#include <config.h>
 
 #define _GNU_SOURCE
 #include <stdio.h>
