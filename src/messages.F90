@@ -51,7 +51,9 @@ contains
   subroutine write_fatal(no_lines)
     integer, intent(in) :: no_lines
 
-    integer :: i
+#ifdef HAVE_MPI
+    integer :: ierr
+#endif
 
     if(conf%flush_messages.and.mpiv%node.eq.0) then
        open(unit=iunit_err, file='messages.stderr', &
@@ -96,7 +98,7 @@ contains
     endif
 
 #ifdef HAVE_MPI
-    call MPI_FINALIZE(i)
+    call MPI_FINALIZE(ierr)
 #endif
 
     stop
@@ -195,6 +197,10 @@ contains
   subroutine input_error(var)
     character(len=*), intent(in) :: var
 
+#ifdef HAVE_MPI
+    integer :: ierr
+#endif
+
     if(mpiv%node == 0) then
        call flush_msg(stderr, '')
        call flush_msg(stderr, stars)
@@ -208,7 +214,7 @@ contains
     end if
 
 #ifdef HAVE_MPI
-    call MPI_FINALIZE(i)
+    call MPI_FINALIZE(ierr)
 #endif
     stop
   end subroutine input_error
