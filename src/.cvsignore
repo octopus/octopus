@@ -7,3 +7,6 @@ debug static tmp
 inp out.oct
 stamp*
 Makefile.local
+messages.std*
+semantic.cache
+*.pbs
