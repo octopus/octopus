@@ -26,7 +26,7 @@ config.status:
 # Add here commands to configure the package.
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 build: build-stamp
 
@@ -58,6 +58,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -79,6 +80,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
 endif
@@ -103,7 +105,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
@@ -118,6 +120,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--enable-debug \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -140,6 +143,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-debug \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -161,7 +165,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
@@ -175,6 +179,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--enable-complex \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -197,6 +202,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-complex \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -219,7 +225,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
@@ -233,6 +239,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lnetcdf" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--enable-complex --enable-debug \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -255,6 +262,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L$(HOME)/opt/intel/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-complex --enable-debug\
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -276,7 +284,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
@@ -289,6 +297,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -313,6 +322,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -335,7 +345,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
@@ -347,6 +357,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--enable-complex  --enable-mpi --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -371,6 +382,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-complex --enable-mpi  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -392,7 +404,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
@@ -405,6 +417,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--enable-mpi --enable-debug --program-suffix="-mpi" \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -429,6 +442,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-mpi --enable-debug  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -452,7 +466,7 @@ endif
 
 	aclocal-1.8
 	automake-1.8 --add-missing
-	autoconf
+	autoreconf -i
 
 ## NAGWare Fortran 95 compiler Release 5.0(395)"
 ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
@@ -464,6 +478,7 @@ ifeq (x86_64-linux,$(DEB_HOST_GNU_TYPE))
 	./configure --with-lapack="-L$(HOME)/opt/nag -llapack -lg2c" --with-blas="-L$(HOME)/opt/nag -lblas" \
 	--with-metis="-L$(HOME)/opt/nag/lib -I$(HOME)/opt/nag/include -lmetis" \
 	--with-jdqz="-L$(HOME)/opt/nag/lib" \
+	--with-arpack="-L$(HOME)/opt/nag/lib -larpack" \
 	--enable-complex --enable-mpi --enable-debug  \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -488,6 +503,7 @@ ifeq (i386-linux,$(DEB_HOST_GNU_TYPE))
 	--with-netcdf="-L/opt/intel/compiler70/ia32/lib -lguide -lCEPCF90 -L$(HOME)/opt/intel/lib -I$(HOME)/opt/intel/include \
 		       -lnetcdf -L/usr/lib -lpthread" \
 	--with-jdqz="-L$(HOME)/opt/intel/lib" \
+	--with-arpack="-L$(HOME)/opt/intel/lib -larpack -lPEPCF90" \
 	--enable-complex --enable-mpi --enable-debug \
 	--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 	--prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info
@@ -557,4 +573,4 @@ binary-arch: build install
 	dh_builddeb
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install 
+.PHONY: build clean binary-indep binary-arch binary install
