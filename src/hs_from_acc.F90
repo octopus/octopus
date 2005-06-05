@@ -21,6 +21,8 @@
 
 program hs_from_acc
   use global
+  use messages
+  use syslabels
   use units
   use lib_oct_parser
   use spectrum
@@ -31,6 +33,9 @@ program hs_from_acc
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
 
   call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO, s%start_time)
@@ -58,5 +63,11 @@ program hs_from_acc
   call spectrum_hs_from_acc('hs-acc', s, sh, .true.)
 
   deallocate(sh%sp)
+
+  call io_end()
+  call syslabels_end()
+  call parser_end()
+  call global_end()
+
   stop  
 end program hs_from_acc

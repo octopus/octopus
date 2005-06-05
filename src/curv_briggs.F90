@@ -27,6 +27,8 @@
 module curv_briggs
   use lib_oct_parser
   use global
+  use messages
+  use syslabels
   use units
   use geometry
   use lib_adv_alg

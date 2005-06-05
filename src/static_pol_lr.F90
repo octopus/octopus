@@ -21,6 +21,7 @@
 
 module static_pol_lr
   use global
+  use messages
   use units
   use mesh
   use mesh_function
@@ -30,6 +31,7 @@ module static_pol_lr
   use mix
   use poisson
   use linear_response
+  use io
 
   implicit none
 
@@ -105,9 +107,9 @@ contains
     subroutine output()
       integer :: j, iunit
       FLOAT :: msp
-      call io_mkdir(trim(current_label)//'linear')
+      call io_mkdir('linear')
 
-      iunit = io_open(trim(current_label)//'linear/polarizability_lr', action='write')
+      iunit = io_open('linear/polarizability_lr', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
          trim(units_out%length%abbrev)
       if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim

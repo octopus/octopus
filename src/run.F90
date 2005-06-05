@@ -22,6 +22,8 @@
 
 module run_prog
 use global
+use messages
+use lib_oct_parser
 use units
 use fft
 use restart
@@ -40,6 +42,7 @@ use phonons
 use opt_control
 use ground_state
 use pulpo
+use io
 
 implicit none
 

@@ -21,6 +21,7 @@
 
 module lib_adv_alg
   use global
+  use messages
 
   implicit none
 

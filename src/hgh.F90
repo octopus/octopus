@@ -24,9 +24,11 @@ module hgh
 !  (1) S. Goedecker, M. Teter and J. Hutter, Phys. Rev. B 54, 1703 (1996).
 !  (2) C. Hartwinger, S. Goedecker and J. Hutter, Phys. Rev. B 58, 3641 (1998).
 use global
+  use messages
 use io
 use atomic
 use logrid
+use lib_oct
 
 implicit none
 
@@ -80,7 +82,7 @@ subroutine hgh_init(psp, filename, ispin)
 
   call push_sub('hgh_init')
 
-  filename2 = trim(current_label)// filename // '.hgh'
+  filename2 =  filename // '.hgh'
   inquire(file=filename2, exist=found)
   if(.not.found) then
     filename2 = trim(conf%share) // "/PP/HGH/" // filename // ".hgh"
@@ -561,8 +563,8 @@ subroutine hgh_debug(psp, dir)
   call push_sub('hgh_debug')
 
   ! Open files.
-  dirname = trim(current_label)//trim(dir)//'/hgh.'//trim(psp%atom_name)
-  call io_mkdir(trim(trim(current_label)//dir))
+  dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
+  call io_mkdir(trim(dir))
   hgh_unit = io_open(trim(dirname)//'/hgh', action='write')
   loc_unit = io_open(trim(dirname)//'/local', action='write')
   dat_unit = io_open(trim(dirname)//'/info', action='write')

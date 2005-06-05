@@ -24,6 +24,8 @@
 
 module math
   use global
+  use messages
+  use lib_oct
   use lib_basic_alg
   use lib_adv_alg
 

@@ -20,47 +20,66 @@
 #include "global.h"
 
 module restart
-use lib_oct_parser
-use global
-use io
-use states
-use mesh
-use output
+  use lib_oct_parser
+  use global
+  use messages
+  use syslabels
+  use io
+  use states
+  use mesh
+  use output
 
-implicit none
+  implicit none
 
-private
-public :: restart_init, &
-          drestart_write, zrestart_write, &
-          drestart_read, zrestart_read, &
-          restart_format
+  private
+  public :: restart_init, clean_stop, &
+       drestart_write, zrestart_write, &
+       drestart_read, zrestart_read, &
+       restart_format
 
-integer, parameter :: RESTART_PLAIN  = 1, &
-                      RESTART_NETCDF = 2
-integer :: restart_format
+  integer, parameter :: RESTART_PLAIN  = 1, &
+       RESTART_NETCDF = 2
+  integer :: restart_format
 
 contains
 
-subroutine restart_init
-  integer :: i
-  
-  ! read restart format information
-  call loct_parse_int(check_inp('RestartFileFormat'), RESTART_PLAIN, i)
-  if (i<RESTART_PLAIN .or. i>RESTART_NETCDF) then
-    write(message(1),'(a,i4,a)') "Input: '", i,"' is not a valid RestartFileFormat"
-    message(2) = '(RestartFileFormat = plain | netcdf)'
-    call write_fatal(2)
-  end if
+  ! returns true if a file named stop exists
+  function clean_stop()
+    logical clean_stop, file_exists
 
-  ! Fix the restart format...
-  restart_format = output_fill_how("Plain")
+    clean_stop = .false.
+    inquire(file='stop', exist=file_exists)
+    if(file_exists) then
+       message(1) = 'Clean STOP'
+       message(2) = "(don't forget to remove the file 'stop' ;)"
+       call write_warning(2)
+       clean_stop = .true.
+    end if
+
+    return
+  end function clean_stop
+
+
+  subroutine restart_init
+    integer :: i
+
+    ! read restart format information
+    call loct_parse_int(check_inp('RestartFileFormat'), RESTART_PLAIN, i)
+    if (i<RESTART_PLAIN .or. i>RESTART_NETCDF) then
+       write(message(1),'(a,i4,a)') "Input: '", i,"' is not a valid RestartFileFormat"
+       message(2) = '(RestartFileFormat = plain | netcdf)'
+       call write_fatal(2)
+    end if
+
+    ! Fix the restart format...
+    restart_format = output_fill_how("Plain")
 #if defined(HAVE_NETCDF)
-  if(i == RESTART_NETCDF) then
-    restart_format = output_fill_how("NETCDF")
-  end if
+    if(i == RESTART_NETCDF) then
+       restart_format = output_fill_how("NETCDF")
+    end if
 #endif
 
-end subroutine restart_init
+  end subroutine restart_init
 
 
 #include "undef.F90"

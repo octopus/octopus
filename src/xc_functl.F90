@@ -21,6 +21,9 @@
 
 module xc_functl
   use global
+  use messages
+  use syslabels
+  use lib_oct_parser
   use lib_xc
 
   implicit none

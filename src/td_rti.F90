@@ -21,6 +21,8 @@
 
 module td_rti
   use global
+  use messages
+  use lib_oct_parser
   use lib_basic_alg
   use math
   use mesh

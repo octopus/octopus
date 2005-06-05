@@ -21,6 +21,8 @@
 
 module scf
   use global
+  use messages
+  use syslabels
   use lib_oct_parser
   use units
   use geometry
@@ -37,6 +39,7 @@ module scf
   use eigen_solver
   use mix
   use lcao
+  use io
 
   implicit none
 
@@ -290,8 +293,8 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
     end if
 
     if(outp%duringscf) then
-      call X(states_output) (st, m, f_der, trim(current_label)//"static", outp)
-      call hamiltonian_output(h, m, trim(current_label)//"static", outp)
+      call X(states_output) (st, m, f_der, "static", outp)
+      call hamiltonian_output(h, m, "static", outp)
     endif
 
     ! save information for the next iteration
@@ -323,14 +326,14 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   call X(epot_forces)(h%ep, m, st, geo)
 
   ! output final information
-  call scf_write_static(trim(current_label)//"static", "info")
-  call X(states_output) (st, m, f_der, trim(current_label)//"static", outp)
+  call scf_write_static("static", "info")
+  call X(states_output) (st, m, f_der, "static", outp)
   if(outp%what(output_geometry)) &
-     call atom_write_xyz(trim(current_label)//"static", "geometry", geo)
-  call hamiltonian_output(h, m, trim(current_label)//"static", outp)
+     call atom_write_xyz("static", "geometry", geo)
+  call hamiltonian_output(h, m, "static", outp)
 
   if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
-    iunit = io_open(trim(current_label)//'static/bands.dat', action='write')
+    iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
   end if

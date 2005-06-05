@@ -20,6 +20,7 @@
 module pulpo
   use io
   use global
+  use messages
   use lib_oct
 
   private

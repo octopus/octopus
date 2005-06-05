@@ -21,6 +21,7 @@
 
 module lcao
   use global
+  use messages
   use lib_oct
   use lib_oct_gsl_spline
   use lib_basic_alg

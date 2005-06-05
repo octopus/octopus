@@ -21,6 +21,8 @@
 
 module unocc
 use global
+use messages
+use syslabels
 use lib_oct_parser
 use lib_oct
 use mesh
@@ -30,6 +32,7 @@ use restart
 use v_ks
 use hamiltonian
 use eigen_solver
+use io
 
 implicit none
 
@@ -117,7 +120,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   ! write output file
   call io_mkdir('static')
-  iunit = io_open(trim(current_label)//'static/eigenvalues', action='write')
+  iunit = io_open('static/eigenvalues', action='write')
 
   if(converged) then
     write(iunit,'(a)') 'All unoccupied states converged.'
@@ -130,13 +133,13 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call io_close(iunit)
   
   if (conf%periodic_dim>0 .and. sys%st%d%nik>sys%st%d%nspin) then
-    iunit = io_open(trim(current_label)//'static/bands.dat', action='write')
+    iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if
   
   ! output wave-functions
-  call X(states_output) (sys%st, sys%m, sys%f_der, trim(current_label)//"static", sys%outp)
+  call X(states_output) (sys%st, sys%m, sys%f_der, "static", sys%outp)
 
   call end_()
 contains

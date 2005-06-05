@@ -21,7 +21,10 @@
 
 program phonon_spectrum
   use global
+  use messages
+  use syslabels
   use io
+  use lib_oct_parser
   use units
 
   implicit none
@@ -30,12 +33,20 @@ program phonon_spectrum
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
 
   ! Opens the coordinates files.
-  iunit = io_open(trim(current_label)//'td.general/coordinates', action='read', status='old')
+  iunit = io_open('td.general/coordinates', action='read', status='old')
 
   ! Closes file and exits
   call io_close(iunit)
+
+  call syslabels_end()
+  call io_end()
+  call parser_end()
+  call global_end()
 
 end program

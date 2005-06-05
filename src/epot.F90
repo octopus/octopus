@@ -21,7 +21,9 @@
 
 module external_pot
   use global
+  use messages
   use units
+  use lib_oct
   use lib_oct_parser
   use lib_oct_gsl_spline
   use fft

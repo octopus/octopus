@@ -21,6 +21,8 @@
 
 module phonons
   use global
+  use messages
+  use syslabels
   use units
   use lib_oct
   use lib_oct_parser
@@ -79,7 +81,7 @@ contains
     call X(system_h_setup) (sys, h)
 
     ! create directory for output
-    call io_mkdir(trim(current_label)//'phonons')
+    call io_mkdir('phonons')
 
     ph%dim = sys%geo%natoms*conf%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
@@ -91,14 +93,14 @@ contains
     call get_DM(sys%m, sys%f_der, sys%st, sys%geo, sys%ks, h, sys%outp, ph)
 
     ! output phonon frequencies and eigenvectors
-    iunit = io_open(trim(current_label)//'phonons/freq', action='write')
+    iunit = io_open('phonons/freq', action='write')
     do i = 1, ph%dim
       write(iunit, *) i, sqrt(abs(ph%freq(i))) * 219474.63 ! output cm^-1
     end do
     call io_close(iunit)
 
     ! output phonon eigenvectors
-    iunit = io_open(trim(current_label)//'phonons/vec', action='write')
+    iunit = io_open('phonons/vec', action='write')
     do i = 1, ph%dim
       write(iunit, '(i6)', advance='no') i
       do j = 1, ph%dim
@@ -148,7 +150,7 @@ contains
     n = geo%natoms*conf%dim
 
     call io_assign(iunit)
-    iunit = io_open(trim(current_label)//'phonons/DM', action='write')
+    iunit = io_open('phonons/DM', action='write')
 
     do i = 1, geo%natoms
       do alpha = 1, conf%dim

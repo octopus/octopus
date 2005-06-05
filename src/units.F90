@@ -38,8 +38,10 @@
 #include "global.h"
 
 module units
-use global
-use lib_oct_parser
+  use global
+  use messages
+  use syslabels
+  use lib_oct_parser
 
 implicit none
 
@@ -78,7 +80,7 @@ subroutine units_init()
   call push_sub('units_init')
 
   if(loct_parse_isdef(check_inp('Units')).ne.0) then
-    call loct_parse_string(check_inp('Units'), "a.u", c)
+    call loct_parse_string('Units', "a.u", c)
     cinp = c(1:3)
     cout = c(1:3)
   else
@@ -87,6 +89,7 @@ subroutine units_init()
     call loct_parse_string(check_inp('UnitsOutput'), "a.u", c)
     cout = c(1:3)
   end if
+
 
   call get_units(units_inp, cinp)
   call get_units(units_out, cout)
@@ -98,7 +101,7 @@ contains
   subroutine get_units(u, c)
     type(unit_system_type), intent(out) :: u
     character(len=3) :: c
-    
+
     select case(c)
     case ("a.u")
       call units_atomic(u)

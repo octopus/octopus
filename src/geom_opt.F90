@@ -21,6 +21,9 @@
 
 module geom_opt
   use global
+  use messages
+  use syslabels
+  use lib_oct_parser
   use units
   use mesh
   use external_pot
@@ -112,7 +115,7 @@ contains
       geo%atom(i+1)%x(2) = x(3*i + 2)
       geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
-    call atom_write_xyz(trim(current_label)//".", "min", geo)
+    call atom_write_xyz(".", "min", geo)
     
     deallocate(x)
     
@@ -171,7 +174,7 @@ contains
         geo%atom(i+1)%x(2) = x(3*i + 2)
         geo%atom(i+1)%x(3) = x(3*i + 3)
       end do
-      call atom_write_xyz(trim(current_label)//".", "work-min", geo)
+      call atom_write_xyz(".", "work-min", geo)
 
       call epot_generate(h%ep, m, st, geo, h%reltype)
       call X(states_calc_dens) (st, m%np, st%rho)

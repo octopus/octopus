@@ -21,6 +21,8 @@
 
 module opt_control
 use global
+use messages
+use syslabels
 use lib_oct
 use lib_oct_parser
 use io
@@ -294,7 +296,7 @@ contains
 
     integer :: i, iunit
 
-    iunit = io_open(trim(current_label)//filename, action='write')
+    iunit = io_open(filename, action='write')
     do i = 0, 2*td%max_iter
       write(iunit, '(4es20.12)') i*td%dt/M_TWO, las(:, i)
     end do
@@ -305,14 +307,14 @@ contains
   subroutine output()
     integer :: iunit
 
-    iunit = io_open(trim(current_label)//'opt-control/info', action='write')
+    iunit = io_open('opt-control/info', action='write')
     write(iunit, '(a,i4)')    'Iterations = ', ctr_iter
     write(iunit, '(a,f14.8)') 'Overlap    = ', overlap
     write(iunit, '(a,f14.8)') 'Functional = ', functional
     call io_close(iunit)
 
     ! should output wavefunctions ;)
-    call zstates_output(psi_i, m, sys%f_der, trim(current_label)//'opt-control', sys%outp)
+    call zstates_output(psi_i, m, sys%f_der, 'opt-control', sys%outp)
   end subroutine output
 
   subroutine init_()

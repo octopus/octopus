@@ -21,6 +21,8 @@
 
 module xyz_adjust
   use global
+  use messages
+  use syslabels
   use geometry
   use lib_adv_alg
 

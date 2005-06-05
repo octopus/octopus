@@ -1,8 +1,12 @@
+! $Id$
+! 
+
 #include "global.h"
 
       module crystal
 
       use global
+  use messages
       use io
       use units
 

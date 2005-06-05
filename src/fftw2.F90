@@ -26,6 +26,8 @@
 
 module fft
   use global
+  use messages
+  use syslabels
   use lib_basic_alg
   
   implicit none

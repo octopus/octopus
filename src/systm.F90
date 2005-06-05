@@ -21,6 +21,10 @@
 
 module system
 use global
+use messages
+use syslabels
+use lib_oct
+use lib_oct_parser
 use lib_oct_gsl_spline
 use lib_basic_alg
 use math
@@ -85,7 +89,7 @@ contains
 
     ! Now that we are really done with initializing the geometry, print debugging information.
     if(conf%verbose>=VERBOSE_DEBUG) then
-       call geometry_debug(s%geo, trim(current_label)//'debug')
+       call geometry_debug(s%geo, 'debug')
     endif
     
     ! initialize the other stuff

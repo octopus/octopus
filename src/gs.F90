@@ -21,6 +21,9 @@
 
 module ground_state
   use global
+  use messages
+  use syslabels
+  use lib_oct_parser
   use system
   use hamiltonian
   use v_ks

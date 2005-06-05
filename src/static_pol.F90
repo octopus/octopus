@@ -21,6 +21,8 @@
 
 module static_pol
 use global
+use messages
+use syslabels
 use units
 use lib_oct_parser
 use lib_oct

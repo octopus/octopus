@@ -21,6 +21,8 @@
 
 module td_exp
   use global
+  use messages
+  use lib_oct
   use lib_oct_parser
   use blas
   use lib_basic_alg

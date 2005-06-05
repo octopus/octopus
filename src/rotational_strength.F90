@@ -21,6 +21,8 @@
 
 program rotational_strength
   use global
+  use messages
+  use syslabels
   use lib_oct_parser
   use units
   use spectrum
@@ -38,6 +40,9 @@ program rotational_strength
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
 
   call loct_parse_string(check_inp('SpecDampMode'), "exp", txt)
@@ -80,6 +85,11 @@ program rotational_strength
   rsf%delta_strength = rsf%delta_strength / units_inp%length%factor
 
   call spectrum_rotatory_strength('rotatory_strength', s, rsf, .true.)
+
+  call syslabels_end()
+  call io_end()
+  call parser_end()
+  call global_end()
 
   stop  
 end program rotational_strength

@@ -21,7 +21,11 @@
 
 module v_ks
   use global
+  use messages
+  use syslabels
   use states
+  use lib_oct_parser
+  use io
   use lib_basic_alg
   use functions
   use mesh

@@ -21,6 +21,7 @@
 
 module ps
 use global
+use messages
 use lib_oct
 use io
 use lib_oct_gsl_spline

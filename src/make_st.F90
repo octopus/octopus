@@ -21,6 +21,9 @@
 
 program make_st
   use global
+  use messages
+  use syslabels
+  use io
   use units
   use lib_oct_parser
   use mesh
@@ -36,6 +39,9 @@ program make_st
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
   call system_init(sys)
 
@@ -79,6 +85,12 @@ program make_st
     message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs_new"'
     call write_fatal(1)
   endif
+
+  call system_end(sys)
+  call syslabels_end()
+  call io_end()
+  call parser_end()
+  call global_end()
 
 contains
   subroutine wf_gaussian(line)

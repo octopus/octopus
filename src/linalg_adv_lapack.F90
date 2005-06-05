@@ -1,3 +1,6 @@
+!! $Id$
+!!
+
 #if defined(SINGLE_PRECISION)
 #  define DLAPACK(x) s ## x
 #  define ZLAPACK(x) c ## x

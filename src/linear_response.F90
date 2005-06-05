@@ -21,6 +21,9 @@
 
 module linear_response
   use global
+  use messages
+  use syslabels
+  use lib_oct_parser
   use mesh
   use states
   use mix

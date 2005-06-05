@@ -21,6 +21,8 @@
 
 module lasers
 use global
+use messages
+use syslabels
 use io
 use lib_oct_parser
 use lib_oct_gsl_spline
@@ -140,7 +142,7 @@ contains
 
     ! open file
     call loct_parse_block_string(blk, i-1, 7, filename)
-    iunit = io_open(trim(current_label)//filename, action='read', status='old')
+    iunit = io_open(filename, action='read', status='old')
 
     ! count lines in file
     lines = 0

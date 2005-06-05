@@ -44,6 +44,7 @@
 
 module stencil_variational
   use global
+  use messages
   use nl_operator
 
   implicit none

@@ -21,6 +21,8 @@
 
 program broad
   use global
+  use messages
+  use syslabels
   use io
   use units
   use lib_oct_parser
@@ -36,10 +38,13 @@ program broad
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
 
   ! broadening to use
-  call loct_parse_float(check_inp('LinBroadening'), CNST(0.02)/units_inp%energy%factor, b%b)
+  call loct_parse_float(check_inp('LinBroadening'),  CNST(0.02)/units_inp%energy%factor, b%b)
   call loct_parse_float(check_inp('LinEnergyStep'),  CNST(0.01)/units_inp%energy%factor, b%energy_step)
   call loct_parse_float(check_inp('LinMinEnergy'),   M_ZERO, b%min_energy)
   call loct_parse_float(check_inp('LinMaxEnergy'),   M_ONE/units_inp%energy%factor, b%max_energy)
@@ -57,22 +62,27 @@ program broad
   if(l) then
     message(1) = "      Eigenvalues"
     call write_info(1)
-    call calc_broad(b, trim(current_label)//'linear', 'eps-diff', .true.)
+    call calc_broad(b, 'linear', 'eps-diff', .true.)
   end if
 
   call loct_parse_logical(check_inp('LinPetersilka'), .true., l)
   if(l) then
     message(1) = "      Petersilka"
     call write_info(1)
-    call calc_broad(b, trim(current_label)//'linear', 'petersilka', .true.)
+    call calc_broad(b, 'linear', 'petersilka', .true.)
   end if
 
   call loct_parse_logical(check_inp('LinCasida'), .true., l)
   if(l) then
     message(1) = "      Casida"
     call write_info(1)
-    call calc_broad(b, trim(current_label)//'linear', 'casida', .false.)
+    call calc_broad(b, 'linear', 'casida', .false.)
   end if
+
+  call io_end()
+  call syslabels_end()
+  call parser_end()
+  call global_end()
 
 contains
   subroutine calc_broad(b, dir, fname, extracols)

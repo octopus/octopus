@@ -8,7 +8,8 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 
 check_PROGRAMS = oct-test
 
-basic_SRCS = liboct_parser.F90 liboct.F90 io.F90 string.F90 varinfo.F90 global.F90 units.F90
+basic_SRCS = liboct_parser.F90 liboct.F90 io.F90 string.F90 varinfo.F90 global.F90 \
+	     messages.F90 syslabels.F90 units.F90
 
 core_SRCS = $(basic_SRCS) \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
@@ -158,7 +159,6 @@ f.o: global.h f_inc.F90
 fft.o: global.h fftw2.F90 fftw3.F90
 geometry.o: global.h
 geom_opt.o: global.h
-global.o: global.h
 gs.o: global.h
 h.o: global.h h_inc.F90 h_so.F90
 hgh.o: global.h
@@ -220,6 +220,14 @@ xc_OEP.o: global.h xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 xc_OEP_inc.F90
 xyz_adjust.o: global.h
 xyzanim.o: global.h
 xyz_file.o: global.h
+
+# manually sort out a few dependencies
+varinfo.o: string.o
+global.o: global.h varinfo.o string.o
+messages.o: liboct.o
+liboct_parser.o: global.o messages.o
+syslabels: liboct_parser.o
+io.o: global.o liboct_parser.o syslabels.o
 
 
 

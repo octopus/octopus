@@ -21,6 +21,7 @@
 
 module tm
 use global
+  use messages
 use atomic
 use io
 use logrid

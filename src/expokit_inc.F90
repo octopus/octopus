@@ -1,5 +1,7 @@
 !! The code in this file is taken from the expokit distribution,
 !! The subroutines have been modified in order to make them Fortran 90.
+!!
+!! $Id$
 
 
 !!/*                              NOTICE

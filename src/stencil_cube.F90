@@ -21,6 +21,7 @@
 
 module stencil_cube
   use global
+  use messages
   use nl_operator
 
   implicit none

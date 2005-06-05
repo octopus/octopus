@@ -21,6 +21,7 @@
 
 module mesh_function
   use global
+  use messages
   use lib_basic_alg
   use math
   use mesh

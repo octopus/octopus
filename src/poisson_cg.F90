@@ -21,9 +21,11 @@
 
 module poisson_cg
   use global
+  use messages
   use math
   use mesh
   use derivatives
+  use lib_oct
   use functions
   use poisson_corrections
 

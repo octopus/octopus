@@ -21,6 +21,7 @@
 
 module poisson_corrections
   use global
+  use lib_oct
   use derivatives
   use mesh
 

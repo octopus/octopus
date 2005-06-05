@@ -21,6 +21,8 @@
 
 module mix
 use global
+use messages
+use syslabels
 use lib_oct_parser
 use lib_basic_alg
 use lib_adv_alg

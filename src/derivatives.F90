@@ -21,6 +21,9 @@
 
 module derivatives
   use global
+  use messages
+  use syslabels
+  use lib_oct_parser
   use mesh
   use nl_operator
   use lib_adv_alg

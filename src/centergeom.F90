@@ -21,6 +21,10 @@
 
 program centergeom
   use global
+  use messages
+  use syslabels
+  use lib_oct_parser
+  use io
   use units
   use geometry
   use xyz_adjust
@@ -30,14 +34,20 @@ program centergeom
   type(geometry_type) :: geo
 
   call global_init()                       ! initialize
-
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
+
   call geometry_init_xyz(geo)              ! we need the geometry
   call geometry_init_species(geo)          ! we also need the masses
 
   call xyz_adjust_it(geo)
-  call atom_write_xyz(trim(current_label)//".", "adjusted", geo)
+  call atom_write_xyz(".", "adjusted", geo)
 
   call geometry_end(geo)                   ! clean up
+
+  call io_end()
+  call parser_end()
   call global_end()
 end program centergeom

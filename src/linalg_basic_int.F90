@@ -1,3 +1,6 @@
+!! $Id$
+!!
+
 #if   TYPE == 1
 #  define TYPE1 real(4)
 #  define TYPE2 real(4)

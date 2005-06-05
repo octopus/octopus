@@ -21,7 +21,9 @@
 
 module xc_OEP
   use global
+  use messages
   use states
+  use lib_oct_parser
   use lib_basic_alg
   use lib_adv_alg
   use lib_xc

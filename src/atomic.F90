@@ -21,6 +21,7 @@
 
 module atomic
   use global
+  use messages
   use lib_xc
   use logrid
 
@@ -206,6 +207,7 @@ contains
                      NR, MAXR, RMESH, NSPIN, DENS,                            &
                      EX, EC, DX, DC, V_XC )
   use global
+  use messages
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Argument types and dimensions                                               !

@@ -21,6 +21,7 @@
 
 module stencil_star
   use global
+  use messages
   use math, only: weights
   use nl_operator
 

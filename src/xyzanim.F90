@@ -21,6 +21,8 @@
 
 program xyzanim
   use global
+  use messages
+  use syslabels
   use lib_oct
   use lib_oct_parser
   use io
@@ -37,12 +39,15 @@ program xyzanim
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
   if(conf%verbose<999) conf%verbose = -1
 
   ! Sets the filenames
-  nbofile = trim(current_label)//'td.general/coordinates'
-  xyzfile = trim(current_label)//'td.general/movie.xyz'
+  nbofile = 'td.general/coordinates'
+  xyzfile = 'td.general/movie.xyz'
 
   ! how often do we sample?
   call loct_parse_int(check_inp('AnimationSampling'), 100, sampling)
@@ -74,6 +79,11 @@ program xyzanim
   enddo
 
   call io_close(nbo_unit); call io_close(xyz_unit)
+
+  call syslabels_end()
+  call io_end()
+  call parser_end()
+  call global_end()
 
 contains
 

@@ -21,6 +21,7 @@
 
 module poisson
   use global
+  use messages
   use lib_oct_parser
   use units
   use geometry

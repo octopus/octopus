@@ -22,6 +22,7 @@
 
 module functions
   use global
+  use messages
   use lib_oct_parser
   use lib_basic_alg
   use mesh

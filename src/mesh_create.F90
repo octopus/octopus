@@ -414,7 +414,7 @@ subroutine mesh_create_xyz(m, enlarge)
 
       do iz = m%nr(1,3), m%nr(2,3)
         chi(3) = real(iz, PRECISION) * m%h(3) + m%box_offset(3)
-        
+
         call curvlinear_chi2x(m%cv, m%geo, chi(:), x(:, ix, iy, iz))
 
         if(in_mesh(m, x(:, ix, iy, iz))) then

@@ -21,6 +21,8 @@
 
 program strength_function
   use global
+  use messages
+  use syslabels
   use lib_oct_parser
   use units
   use spectrum
@@ -31,6 +33,9 @@ program strength_function
 
   ! Initialize stuff
   call global_init()
+  call parser_init()
+  call io_init()
+  call syslabels_init(1)
   call units_init()
 
   call loct_parse_string(check_inp('SpecTransformMode'), "sin", txt)
@@ -77,5 +82,11 @@ program strength_function
   call spectrum_strength_function('spectrum', s, sf, .true.)
 
   deallocate(sf%sp)
+
+  call syslabels_end()
+  call io_end()
+  call parser_end()
+  call global_end()
+
   stop  
 end program strength_function
