@@ -50,9 +50,7 @@ if test x"$acx_arpack_ok" = xyes; then
   AC_DEFINE(HAVE_ARPACK,1,[Defined if you have libarpack library.])
   $1
 else
-  if test $acx_arpack_ok != disable; then
   $2
-  fi
 fi
 
 ])dnl ACX_ARPACK
