@@ -23,7 +23,6 @@ module sparskit
   use global
   use messages
   use syslabels
-  use blas
 
   implicit none
 
@@ -304,10 +303,14 @@ end module sparskit
 
 ! ---------------------------------------------------------
 FLOAT function distdot(n,x,ix,y,iy)
+  use blas
+!  use lib_basic_alg
+
   integer, intent(in) :: n, ix, iy
-  FLOAT, intent(in)   :: x, y
+  FLOAT, intent(inout)   :: x, y
   
   distdot = ddot(n,x,ix,y,iy)
+!  distdot = lalg_dot(n, x, y)
   
 end function distdot
 
