@@ -30,7 +30,9 @@ check: regression_test
 regression_test:
 	@echo; find . -name *.test -print -exec ./oct-run_regression_test.pl -e $(PWD)/../src/octopus$(EXEEXT) -f \{\}  \; | tee $(rlog)
 	@echo -e "\033[32;1mPassed: `grep OK $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
-	@echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m"
+	@if [ `grep FAIL $(rlog) | wc -l` != "0"  ] ; \
+	then echo -e "\033[31;1mFailed: `grep FAIL $(rlog) | wc -l` / `grep '\[ ' $(rlog) | wc -l` \033[0m" ; \
+	else echo -e "\033[32;1m\nEverything seems to be OK \n\033[0m" ; fi
 
 clean:
 	-rm -rf /tmp/tmp.* $(rlog)

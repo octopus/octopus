@@ -8,6 +8,7 @@ Enabled  : Yes
 
 INP
 CalculationMode = gs
+Dimensions = 1
 fromScratch = yes
 
 %Species
@@ -30,4 +31,4 @@ RUN
 #
 # Examples (of course you have to uncomment the lines :)
 # Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-2.22994\d*\s*1.0000\d*
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-2.66983\d*\s*1.0000\d*
