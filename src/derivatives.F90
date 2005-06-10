@@ -30,6 +30,7 @@ module derivatives
   use stencil_star
   use stencil_variational
   use stencil_cube
+  use stencil_starplus
 
   implicit none
 
@@ -76,7 +77,8 @@ module derivatives
   integer, parameter ::    &
      DER_STAR        = 1,  &
      DER_VARIATIONAL = 2,  &
-     DER_CUBE        = 3
+     DER_CUBE        = 3,  &
+     DER_STARPLUS    = 4
 
 contains
 
@@ -92,8 +94,24 @@ contains
 
     der%m => m    ! make a pointer to the underlying mesh
 
+    !%Variable DerivativesStencil
+    !%Type integer
+    !%Section 4 Mesh
+    !%Description
+    !% Decides what kind of stencil is used, i.e. what points, around
+    !% each point in the mesh, are the neighboring points used in the
+    !% expression of the differential operator.
+    !%Option stencil_star 1
+    !% A star around each point (i.e., only points in the axis).
+    !%Option stencil_variational 2
+    !% Same as the star, but with coefficients built in a different way.
+    !%Option stencil_cube 3
+    !% A cube of points around each point.
+    !%Option stencil_starplus 4
+    !% The star, plus a number of off-axis points.
+    !%End
     call loct_parse_int(check_inp('DerivativesStencil'), DER_STAR, der%stencil_type)
-    if(der%stencil_type<DER_STAR.or.der%stencil_type>DER_CUBE) then
+    if(der%stencil_type<DER_STAR.or.der%stencil_type>DER_STARPLUS) then
       write(message(1), '(a,i2,a)') 'DerivativesStencil = "', der%stencil_type, '" is unknown to octopus'
       call write_fatal(1)
     end if
@@ -171,6 +189,8 @@ contains
       n = stencil_star_size_lapl(der%order)
     case(DER_CUBE)
       n = stencil_cube_size_lapl(der%order)
+    case(DER_STARPLUS)
+      n = stencil_starplus_size_lapl(der%order)
     end select
 
     ! initialize nl operator
@@ -182,6 +202,8 @@ contains
       call stencil_star_get_lapl(der%order, der%lapl%stencil)
     case(DER_CUBE)
       call stencil_cube_get_lapl(der%order, der%lapl%stencil)
+    case(DER_STARPLUS)
+      call stencil_starplus_get_lapl(der%order, der%lapl%stencil)
     end select
 
     call pop_sub()
@@ -205,6 +227,8 @@ contains
       n = stencil_star_size_grad(der%order)
     case(DER_CUBE)
       n = stencil_cube_size_grad(der%order)
+    case(DER_STARPLUS)
+      n = stencil_starplus_size_grad(der%order)
     end select
     
     ! initialize nl operator
@@ -217,6 +241,8 @@ contains
         call stencil_star_get_grad(i, der%order, der%grad(i)%stencil)
       case(DER_CUBE)
         call stencil_cube_get_grad(der%order, der%grad(i)%stencil)
+      case(DER_STARPLUS)
+        call stencil_starplus_get_grad(der%order, der%grad(i)%stencil)
       end select
     end do
 
@@ -236,7 +262,7 @@ contains
     call push_sub('derivatives_build')
     
     ASSERT(associated(der%op))
-    ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_CUBE)
+    ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.der%m%use_curvlinear))
 
     ! build operators
@@ -275,6 +301,18 @@ contains
         call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
 
         deallocate(polynomials, rhs)
+      case(DER_STARPLUS)
+        allocate(polynomials(conf%dim, der%op(1)%n), rhs(der%op(1)%n,conf%dim+1))
+        call stencil_starplus_pol_lapl(polynomials, der%order)
+
+        do i = 1, conf%dim
+          call get_rhs_grad(i, rhs(:,i))
+        end do
+        call get_rhs_lapl(rhs(:,conf%dim+1))
+
+        call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
+
+        deallocate(polynomials, rhs)
       end select
 
 
@@ -286,6 +324,8 @@ contains
         call stencil_star_coeff_lapl(der%m%h(1:conf%dim), der%order, der%lapl)
       case(DER_VARIATIONAL)
         call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
+      case(DER_STARPLUS)
+        stop 'Not yet implemented.'
       end select
 
       ! get gradient (we use the same both for star and variational)
