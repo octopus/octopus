@@ -12,7 +12,7 @@ basic_SRCS = liboct_parser.F90 liboct.F90 string.F90 varinfo.F90 global.F90 \
 	     messages.F90 syslabels.F90 io.F90 units.F90
 
 core_SRCS = $(basic_SRCS) \
-	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 \
+	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 fft.F90 sparskit.F90 \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
@@ -50,7 +50,7 @@ noinst_HEADERS = \
 
 core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a \
   @GSL_LIBS@ @FCEXTRALIBS@
-octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
+octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
 
 # now the utility programs
@@ -194,6 +194,7 @@ restart.o: global.h restart_inc.F90
 rotational_strength.o: global.h
 run.o: global.h
 scf.o: global.h
+sparskit.o: global.h
 specie.o: global.h
 spectrum.o: global.h
 spline.o: global.h
