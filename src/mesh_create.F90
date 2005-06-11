@@ -579,14 +579,14 @@ function mesh_index(m, ix_, dir) result(index)
     do i = 1, conf%dim
       if(ix(i) < m%nr(1, i)) then       ! first look left
         if(i <= conf%periodic_dim) then ! fold point
-          ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i))
+          ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i) + 1)
         else
           ix(i) = m%nr(1, i)
           index = 0
         end if
       else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
         if(i <= conf%periodic_dim) then
-          ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i))
+          ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i) + 1)
         else
           ix(i) = m%nr(2, i)
           index = 0
