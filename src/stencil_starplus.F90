@@ -41,6 +41,7 @@ module stencil_starplus
 
     n = 2*conf%dim*order + 1
     if(conf%dim == 2) n = n + 4
+    if(conf%dim == 3) n = n + 20
 
     call pop_sub()
   end function stencil_starplus_size_lapl
@@ -89,7 +90,98 @@ module stencil_starplus
        stencil(1, n) = 1
        stencil(2, n) = 1
     case(3)
-      stop 'Not yet implemented.'
+       stencil(:,:) = 0
+       n = 1
+       do i = 1, conf%dim
+          do j = -order, order
+             if(j == 0) cycle
+             n = n + 1
+             stencil(i, n) = j
+         end do
+       end do
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = -1
+       stencil(3, n) = 0
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = -1
+       stencil(3, n) = 0
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = 1
+       stencil(3, n) = 0
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = 1
+       stencil(3, n) = 0
+
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = 0
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = 0
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = 0
+       stencil(3, n) = 1
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = 0
+       stencil(3, n) = 1
+
+       n = n + 1
+       stencil(1, n) = 0
+       stencil(2, n) = -1
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = 0
+       stencil(2, n) = -1
+       stencil(3, n) = 1
+       n = n + 1
+       stencil(1, n) = 0
+       stencil(2, n) = 1
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = 0
+       stencil(2, n) = 1
+       stencil(3, n) = 1
+
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = 1
+       stencil(3, n) = 1
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = 1
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = -1
+       stencil(3, n) = 1
+       n = n + 1
+       stencil(1, n) = 1
+       stencil(2, n) = -1
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = 1
+       stencil(3, n) = 1
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = 1
+       stencil(3, n) = -1
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = -1
+       stencil(3, n) = 1
+       n = n + 1
+       stencil(1, n) = -1
+       stencil(2, n) = -1
+       stencil(3, n) = -1
     end select
     
     call pop_sub()
@@ -136,7 +228,97 @@ module stencil_starplus
       pol(1, n) = 2
       pol(2, n) = 2
     case(3)
-      stop 'Not yet implemented.'
+      n = 1
+      pol(:,:) = 0
+      do i = 1, conf%dim
+         do j = 1, 2*order
+            n = n + 1
+            pol(i, n) = j
+         end do
+      end do
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 1
+      pol(3, n) = 0
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 2
+      pol(3, n) = 0
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 1
+      pol(3, n) = 0
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 2
+      pol(3, n) = 0
+
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 0
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 0
+      pol(3, n) = 2
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 0
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 0
+      pol(3, n) = 2
+
+      n = n + 1
+      pol(1, n) = 0
+      pol(2, n) = 1
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 0
+      pol(2, n) = 2
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 0
+      pol(2, n) = 1
+      pol(3, n) = 2
+      n = n + 1
+      pol(1, n) = 0
+      pol(2, n) = 2
+      pol(3, n) = 2
+
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 1
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 1
+      pol(3, n) = 2
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 2
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 1
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 2
+      pol(3, n) = 1
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 1
+      pol(3, n) = 2
+      n = n + 1
+      pol(1, n) = 1
+      pol(2, n) = 2
+      pol(3, n) = 2
+      n = n + 1
+      pol(1, n) = 2
+      pol(2, n) = 2
+      pol(3, n) = 2
     end select
     
     call pop_sub()
