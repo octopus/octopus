@@ -46,11 +46,12 @@ module eigen_solver
   type eigen_solver_type
     integer :: es_type    ! which eigen solver to use
 
-    ! for new conjugated gradients (es_type = 0)
     FLOAT :: init_tol
     FLOAT :: final_tol
     integer  :: final_tol_iter
     integer  :: es_maxiter  
+
+    integer :: arnoldi_vectors
 
     ! Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
@@ -66,6 +67,9 @@ module eigen_solver
   integer, parameter :: RS_PLAN    = 2
 #if defined(HAVE_ARPACK)
   integer, parameter :: ARPACK     = 3
+#endif
+#if defined(HAVE_JDQZ)
+  integer, parameter :: JDQZ       = 4
 #endif
 
   ! For the TRLan package
@@ -88,6 +92,25 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
   
   call push_sub('eigen_solver_init')
 
+  !%Variable EigenSolver
+  !%Type integer
+  !%Section 8 SCF
+  !%Description
+  !% Decides the eigensolver that obtains the lowest eigenvalues
+  !% and eigenfunctions of the Kohn-Sham Hamiltonian.
+  !%Option cg 5
+  !% Conjugate-gradients algorithm
+  !%Option trlan 1
+  !% Lanczos scheme, as implemented in the TRLan package.
+  !%Option plan 2
+  !% Preconditioned Lanczos scheme.
+  !%Option arpack 3
+  !% Implicitly Restarted Arnoldi Method, as implemented in the ARPACK package
+  !%Option jdqz 5
+  !% Jacobi-Davidson scheme as implemented in the JDQZ package
+  !%Option cg_new 6
+  !% A rewritting of the cg option, that will eventually substitute it.
+  !%End
   call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
   select case(eigens%es_type)
   case(RS_CG_NEW)
@@ -104,28 +127,42 @@ subroutine eigen_solver_init(eigens, st, m, max_iter_default)
 #if defined(HAVE_ARPACK)
   case(ARPACK)
     message(1) = 'Info: Eigensolver type: ARPACK Arnoldi method'
+    call loct_parse_int(check_inp('EigenSolverArnoldiVectors'), 20, eigens%arnoldi_vectors)
+    !%Variable EigenSolverArnoldiVectors
+    !%Type integer
+    !%Section 8 SCF
+    !%Description
+    !% This indicates how many Arnoldi vectors are generated
+    !% It must satisfy EigenSolverArnoldiVectors - Number Of Eigenvectors >= 2.
+    !% See the ARPACK documentation for more details.
+    !%End
+    if(eigens%arnoldi_vectors-st%nst < 2) call input_error('EigenSolverArnoldiVectors')
+#endif
+#if defined(HAVE_JDQZ)
+  case(JDQZ)
+    message(1) = 'Info: Eigensolver type: Jacobi-Davidson through the JDQZ package'
 #endif
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
-    message(2) = '( EigenSolver =  cg | lanczos )'
+    message(2) = '( EigenSolver =  cg | trlan | plan | arpack | cg_new )'
     call write_fatal(2)
   end select
   call write_info(1)
 
   call loct_parse_float(check_inp('EigenSolverInitTolerance'), CNST(1.0e-6), eigens%init_tol)
-  if(eigens%init_tol <= 0) then
-      write(message(1), '(a,e14.4)') "Input: '", eigens%init_tol, &
+  if(eigens%init_tol < 0) then
+      write(message(1), '(a,e14.4,a)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
-      message(2) = '(EigenSolverInitTolerance >= 0)'
+      message(2) = '(EigenSolverInitTolerance > 0)'
       call write_fatal(2)
   endif
 
   call loct_parse_float(check_inp('EigenSolverFinalTolerance'), CNST(1.0e-6), eigens%final_tol)
-  if(eigens%final_tol <= 0 .or. eigens%final_tol > eigens%init_tol) then
-      write(message(1),'(a,e14.4)') "Input: '", eigens%init_tol, &
+  if(eigens%final_tol < 0 .or. eigens%final_tol > eigens%init_tol) then
+      write(message(1),'(a,e14.4,a)') "Input: '", eigens%init_tol, &
            "' is not a valid EigenSolverInitTolerance"
-      message(2) = '(EigenSolverInitTolerance >= 0 and '
+      message(2) = '(EigenSolverFinalTolerance > 0 and '
       message(3) = ' EigenSolverFinalTolerance < EigenSolverInitTolerance)'
       call write_fatal(3)
   endif
@@ -213,7 +250,6 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
 
   if(present(conv)) conv = .false.
   maxiter = eigens%es_maxiter
-!!$  eigens%converged = 0
 
   select case(eigens%es_type)
   case(RS_CG_NEW)
@@ -231,8 +267,8 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
     call eigen_solver_plan(m, f_der, st, h, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
   case(ARPACK)
-    call eigen_solver_arpack(m, f_der, st, h, tol, maxiter, &
-           eigens%converged, eigens%diff)
+    call eigen_solver_arpack(m, f_der, st, h, tol, maxiter, eigens%arnoldi_vectors, &
+                             eigens%converged, eigens%diff)
 #endif
   end select
 
