@@ -30,8 +30,6 @@ subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, dif
   integer,                intent(inout) :: converged
   FLOAT,        optional, intent(out)   :: diff(1:st%nst,1:st%d%nik)
 
-  call push_sub('eigen_solver_arpack')
-
   logical, allocatable :: select(:)
   FLOAT, allocatable :: ax(:), d(:, :), resid(:), v(:, :), workd(:), workev(:), workl(:)
   integer :: ldv, nev, iparam(11), ipntr(14), ido, n, xnev, lworkl, info, ierr, &
@@ -39,6 +37,7 @@ subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, dif
   FLOAT :: tol, sigmar, sigmai
 
   !!!!WARNING: No support for spinors, yet. No support for complex wavefunctions.
+  call push_sub('eigen_solver_arpack')
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   kpoints: do ik = 1, st%d%nik
