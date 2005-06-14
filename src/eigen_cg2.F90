@@ -35,7 +35,7 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: ik, np, moved, p, j, iter, i, maxter
+  integer  :: ik, np, moved, p, j, iter, i, maxter, conv, conv_
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_solver_cg2')
@@ -54,6 +54,7 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
   np = m%np
 
   if(present(reorder)) reord = reorder
+  conv_ = 0
   maxter = niter
   niter = 0
   moved = 0
@@ -63,7 +64,8 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
-    eigenfunction_loop : do p = converged + 1, st%nst
+    conv = converged
+    eigenfunction_loop : do p = conv + 1, st%nst
 
       if(verbose_) then
         write(message(2),'(a,i4,a)') 'Eigenstate # ',p,':'
@@ -159,7 +161,7 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
              st%X(psi)(:, :, p, ik))
         ! Test convergence.
         if(res < tol) then
-          converged = converged + 1
+          conv = conv + 1
           exit iter_loop
         end if
         
@@ -200,8 +202,12 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
       end if
       ! End of reordering
     end do eigenfunction_loop
+
+    conv_ = conv_ + conv
+
   end do ik_loop
 
+  converged = conv_
   ! Deallocation of variables
   deallocate(h_psi, g, g0, cg, ppsi)
 
@@ -227,7 +233,7 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
   logical,      optional, intent(in)    :: reorder
   logical,      optional, intent(in)    :: verbose
 
-  integer :: nik, nst, np, dim, ik, ist, maxter, i, k, l
+  integer :: nik, nst, np, dim, ik, ist, maxter, i, k, l, conv, conv_
   logical :: verbose_, reorder_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
@@ -249,14 +255,15 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
 
   np = m%np; dim = st%d%dim; nik = st%d%nik; nst = st%nst
 
+  conv_ = 0
   maxter = niter
   niter = 0
 
   allocate(phi(np, dim), psi(np, dim), hpsi(np, dim), cg(np, dim), hcgp(np, dim), sd(np, dim), cgp(np, dim))
 
   kpoints: do ik = 1, nik
-
-    states: do ist = converged + 1, nst
+    conv = converged
+    states: do ist = conv + 1, nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call X(states_gram_schmidt)(ist, m, dim, st%X(psi)(1:np, 1:dim, 1:ist, ik), start=ist)
@@ -286,7 +293,7 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
          res = X(states_residue)(m, dim, phi, lambda, psi)
          if(present(diff)) diff(ist, ik) = res
          if(res < tol) then
-           converged = converged + 1
+           conv = conv + 1
            exit band
          endif
 
@@ -367,7 +374,11 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
 
     enddo states
 
+    conv_ = conv_ + conv
+
   enddo kpoints
+
+  converged = conv_
 
   deallocate(phi, psi, hpsi, cg, hcgp, sd, cgp)
   call pop_sub()
