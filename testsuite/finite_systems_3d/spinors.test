@@ -1,3 +1,5 @@
+# $Id$
+
 Test     : Spinors
 Author   : Micael Oliveira
 Date     : 16.05.05
@@ -26,4 +28,3 @@ RUN
 Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.38376483
 Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.154345\d*\s*0.57/ 0.43\d*
 Match ; Local Magnetic Moments ; grep -A 2 'Local Magnetic Moments' static/info | tail -1 ; \s*0.3506\d*\s*0.0000\d*\s*0.0460\d* 
-

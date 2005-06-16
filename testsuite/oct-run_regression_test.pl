@@ -42,6 +42,8 @@ sub create_template {
   open(TEMPLATE, ">".$opt_c );
 
   print TEMPLATE <<EndOfTemplate;
+# \$Id$
+
 Test     :
 Author   : $author
 Date     : $date
