@@ -1,0 +1,77 @@
+Test     : Free Electron Bands in 1D
+Author   : Carlo + Heiko
+Date     : 16.06.05
+Arch     : Linux n11 2.6.11.6-smp-1 #1 SMP Mon Apr 11 20:30:44 CEST 2005 i686 GNU/Linux
+Release  : head
+Programs : octopus_cmplx
+Enabled  : Yes
+
+INP
+UnitsInput  = a.u
+UnitsOutput = a.u
+
+CalculationMode = unocc
+fromScratch = yes
+
+Dimensions = 1
+PeriodicDimensions = 1
+
+NumberUnoccStates = 4
+ConvAbsDens = 1e-6
+
+OnlyUserDef = yes
+NonInteractingElectrons = yes
+
+%Species
+"Zero" | 22.1 | 1 | 1 | "0"
+%
+
+%Coordinates
+ "Zero" | 0 | 0 | 0 | yes
+ "Zero" | 0 | 0 | 0 | yes
+%
+
+
+BoxShape = parallelepiped
+
+%Lsize
+ 10.0 | 10.0 | 10.0
+%
+
+%Spacing
+ 0.5 | 0.5 | 0.5
+%
+
+%BoxOffset
+ 0.0 | 0.0 | 0.0
+%
+
+%NumberKPoints
+10 | 1 | 1 | 0
+%
+
+CenterOfInversion = yes
+EOF
+
+RUN
+
+# add your own matches
+#
+# Examples (of course you have to uncomment the lines :)
+# Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.33802679
+
+# 1st Band
+Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*0.000000\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*0.000493\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*0.001974\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*0.004441\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*0.007896\d*\s*2.0000\d*
+Match ; Bands ; grep '^   1' static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*0.012337\d*\s*1.0000\d*
+
+# 2nd Band
+Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 6 | tail -n 1 ; \s*0.049348\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 5 | tail -n 1 ; \s*0.039972\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 4 | tail -n 1 ; \s*0.031583\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 3 | tail -n 1 ; \s*0.024181\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 2 | tail -n 1 ; \s*0.017765\d*\s*0.0000\d*
+Match ; Bands ; grep '^   2' static/eigenvalues | tac | head -n 1 | tail -n 1 ; \s*0.012337\d*\s*1.0000\d*
