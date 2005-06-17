@@ -22,7 +22,7 @@
 man_MANS = oct-run_regression_test.pl.1
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite
 sharedir = $(pkgdatadir)/testsuite
-dist_share_DATA = finite_systems_*/*.test
+dist_share_DATA = finite_systems_*/*.test periodic_systems_*/*.test
 
 rlog=oct-regression_test.out
 
