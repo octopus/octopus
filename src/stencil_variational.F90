@@ -109,18 +109,18 @@ contains
       fp(7) =  M_ONE/CNST(600.0) - kmax/CNST(4096.0)
     end select
     
-    lapl%w(1,1) = fp(1)*sum(1/h(1:conf%dim)**2)
+    lapl%w_re(1,:) = fp(1)*sum(1/h(1:conf%dim)**2)
 
     k = 1
     do i = 1, conf%dim
       do j = -order, -1
         k = k + 1
-        lapl%w(k,1) = fp(-j+1) / h(i)**2
+        lapl%w_re(k,:) = fp(-j+1) / h(i)**2
       end do
 
       do j = 1, order
         k = k + 1
-        lapl%w(k,1) = fp( j+1) / h(i)**2
+        lapl%w_re(k,:) = fp( j+1) / h(i)**2
       end do
     end do
     

@@ -21,33 +21,37 @@
 
 module nl_operator
   use global
+  use messages
   use mesh
 
   implicit none
 
   private
   public :: nl_operator_type, &
-            nl_operator_init, &
-            nl_operator_equal, &
-            nl_operator_build, &
-            nl_operator_transpose, &
-            dnl_operator_operate, &
-            znl_operator_operate, &
-            nl_operator_end
+       nl_operator_init, &
+       nl_operator_equal, &
+       nl_operator_build, &
+       nl_operator_transpose, &
+       dnl_operator_operate, &
+       znl_operator_operate, &
+       znl_operator_operate_cmplx, &
+       nl_operator_end
 
   type nl_operator_type
-    integer          :: n         ! number of points in discrete operator
-    integer          :: np        ! number of points in mesh
-    integer, pointer :: stencil(:,:)
+     integer          :: n          ! number of points in discrete operator
+     integer          :: np         ! number of points in mesh
+     integer, pointer :: stencil(:,:)
 
-    integer, pointer :: i(:,:)    ! index of the points
-    FLOAT,   pointer :: w(:,:)    ! weightsp
+     integer, pointer :: i(:,:)     ! index of the points
+     FLOAT,   pointer :: w_re(:,:)  ! weightsp, real part
+     FLOAT,   pointer :: w_im(:,:)  ! weightsp, imaginary part
 
-    logical          :: const_w   ! are the weights independent of i
+     logical          :: const_w    ! are the weights independent of i
+     logical          :: cmplx_op   ! .true. if we have also imaginary weights
   end type nl_operator_type
 
   interface assignment (=)
-    module procedure nl_operator_equal
+     module procedure nl_operator_equal
   end interface
 
 contains
@@ -74,25 +78,36 @@ contains
     opo%np = opi%np
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
 !!$    allocate(opo%i(size(opi%i, 1), size(opi%i, 2)))
-!!$    allocate(opo%w(size(opi%w, 1), size(opi%w, 2)))
+!!$    allocate(opo%w_re(size(opi%w_re, 1), size(opi%w_re, 2)))
     allocate(opo%i(opi%n, opi%np))
     if(opi%const_w) then
-      allocate(opo%w(opi%n, 1))
+       allocate(opo%w_re(opi%n, 1))
+       if (opi%cmplx_op) then
+          allocate(opo%w_im(opi%n, 1))
+       endif
     else
-      allocate(opo%w(opi%n, opi%np))
+       allocate(opo%w_re(opi%n, opi%np))
+       if (opi%cmplx_op) then
+          allocate(opo%w_im(opi%n, opi%np))
+       endif
     endif
-    opo%i = opi%i
-    opo%w = opi%w
     opo%const_w = opi%const_w
+    opo%i       = opi%i
+    opo%w_re    = opi%w_re
+    if (opi%cmplx_op) then
+       opo%w_im  = opi%w_im
+    endif
+
   end subroutine nl_operator_equal
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_build(m, op, np, const_w)
+  subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_type),        intent(in)    :: m
     type(nl_operator_type), intent(inout) :: op
     integer,                intent(in)    :: np
     logical, optional,      intent(in)    :: const_w  ! are the weights constant (independent of the point)
+    logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
 
     integer :: i, j, ix(conf%dim)
 
@@ -100,25 +115,41 @@ contains
 
     ! store values in structure
     op%np = np
-    op%const_w = .false.
-    if(present(const_w)) op%const_w = const_w
+    op%const_w  = .false.
+    op%cmplx_op = .false.
+    if(present(const_w )) op%const_w = const_w
+    if(present(cmplx_op)) op%const_w = cmplx_op
 
     ! allocate weights op%w
     if(op%const_w) then
-      allocate(op%w(op%n, 1))
+       allocate(op%w_re(op%n, 1))
+       if (op%cmplx_op) then
+          allocate(op%w_im(op%n, 1))
+       endif
+       message(1) = 'Info: nl_operator_build: working with constant weights.'
+       if(conf%verbose > 30) call write_info(1)
     else
-      allocate(op%w(op%n, op%np))
+       allocate(op%w_re(op%n, op%np))
+       if (op%cmplx_op) then
+          allocate(op%w_im(op%n, op%np))
+       endif
+       message(1) = 'Info: nl_operator_build: working with non-constant weights.'
+       if(conf%verbose > 30) call write_info(1)
     end if
+
+    ! set initially to zero
+    op%w_re = M_ZERO
+    if (op%cmplx_op) op%w_im = M_ZERO
 
     ! build lookup table op%i from stencil
     allocate(op%i(op%n, op%np))
 
     do i = 1, m%np     ! for all points in mesh
-      ix(:) = m%Lxyz(i,:)
+       ix(:) = m%Lxyz(i,:)
 
-      do j = 1, op%n   ! for all points in stencil
-        op%i(j, i) = mesh_index(m, ix(1:conf%dim)+op%stencil(1:conf%dim,j), 1)
-      end do
+       do j = 1, op%n   ! for all points in stencil
+          op%i(j, i) = mesh_index(m, ix(1:conf%dim)+op%stencil(1:conf%dim,j), 1)
+       end do
     end do
   end subroutine nl_operator_build
 
@@ -133,7 +164,8 @@ contains
     np = op%np
     opt = op
     !call nl_operator_equal(opt, op)
-    opt%w = M_ZERO
+    opt%w_re = M_ZERO
+    if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
        do j = 1, op%n
           index = op%i(j, i)
@@ -142,9 +174,11 @@ contains
                 k = op%i(l, index)
                 if(k==i) then
                    if(.not.op%const_w) then
-                      opt%w(j, i) = op%w(l, index)
+                      opt%w_re(j, i) = op%w_re(l, index)
+                      if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
                    else
-                      opt%w(j, 1) = op%w(l, 1)
+                      opt%w_re(j, 1) = op%w_re(l, 1)
+                      if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
                    endif
                 endif
              enddo
@@ -156,9 +190,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_op_to_matrix(op, a)
+  subroutine nl_operator_op_to_matrix(op, a, b)
     type(nl_operator_type), intent(in) :: op
     FLOAT, intent(out)                 :: a(:, :)
+    FLOAT, optional, intent(out)       :: b(:, :)
 
     integer :: i, j, k, index
 
@@ -168,7 +203,8 @@ contains
        do j = 1, op%n
           index = op%i(j, i)
           if(index<=op%np) then
-            a(i, index) = op%w(j, k)
+             a(i, index) = op%w_re(j, k)
+             if (op%cmplx_op) b(i, index) = op%w_im(j, k)
           endif
        enddo
     enddo
@@ -176,8 +212,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_matrix_to_op(a, op_ref, op)
+  subroutine nl_operator_matrix_to_op(op_ref, op, a, b)
     FLOAT, intent(in)                   :: a(:, :)
+    FLOAT, optional, intent(in)         :: b(:, :)
     type(nl_operator_type), intent(in)  :: op_ref
     type(nl_operator_type), intent(out) :: op
 
@@ -188,7 +225,8 @@ contains
        do j = 1, op%n
           index = op%i(j, i)
           if(index<=op%np) &
-          op%w(j, i) = a(i, index)
+               op%w_re(j, i) = a(i, index)
+               if (op%cmplx_op) op%w_im(j, i) = b(i, index)          
        enddo
     enddo
 
@@ -219,6 +257,7 @@ contains
   end subroutine nl_operator_write
 
 
+  ! ---------------------------------------------------------
   subroutine nl_operatorT_write(op, unit)
     type(nl_operator_type), intent(in) :: op
     integer, intent(in)                :: unit
@@ -249,11 +288,21 @@ contains
     type(nl_operator_type), intent(inout) :: op
 
     ASSERT(associated(op%i))
-    ASSERT(associated(op%w))
+    ASSERT(associated(op%w_re))
     ASSERT(associated(op%stencil))
 
-    deallocate(op%i, op%w, op%stencil)
-    nullify   (op%i, op%w, op%stencil)
+    if (op%cmplx_op) then
+       ASSERT(associated(op%w_im))
+    endif
+
+    deallocate(op%i, op%w_re, op%stencil)
+    nullify   (op%i, op%w_re, op%stencil)
+
+    if (op%cmplx_op) then
+       deallocate(op%w_im)
+       nullify   (op%w_im)
+    endif
+
   end subroutine nl_operator_end
 
 
@@ -266,47 +315,79 @@ contains
     FLOAT,                  intent(out) :: fo(:)  ! fo(op%np)
 
     integer :: i, n
-    FLOAT, allocatable :: w(:)
+    FLOAT, allocatable :: w_re(:)
 
     n = op%n
     if(op%const_w) then
-      allocate(w(n))
-      w(1:n) = op%w(1:n, 1)
-      do i = 1, op%np
-        fo(i) = sum(w(1:n)*fi(op%i(1:n,i)))
-      end do
-      deallocate(w)
+       allocate(w_re(n))
+       w_re(1:n) = op%w_re(1:n, 1)
+       do i = 1, op%np
+          fo(i) = sum(w_re(1:n)*fi(op%i(1:n,i)))
+       end do
+       deallocate(w_re)
     else
-      do i = 1, op%np
-        fo(i) = sum(op%w(1:n,i)*fi(op%i(1:n,i)))
-      end do
+       do i = 1, op%np
+          fo(i) = sum(op%w_re(1:n,i)*fi(op%i(1:n,i)))
+       end do
     end if
 
   end subroutine dnl_operator_operate
 
 
+  ! ---------------------------------------------------------
   subroutine znl_operator_operate(op, fi, fo)
     CMPLX,                  intent(in)  :: fi(:)  ! fi(op%np)
     type(nl_operator_type), intent(in)  :: op
     CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
 
     integer :: i, n
-    FLOAT, allocatable :: w(:)
+    FLOAT, allocatable :: w_re(:)
 
     n = op%n
     if(op%const_w) then
-      allocate(w(n))
-      w(1:n) = op%w(1:n, 1)
+      allocate(w_re(n))
+      w_re(1:n) = op%w_re(1:n, 1)
       do i = 1, op%np
-        fo(i) = sum(  cmplx(  w(1:n)*real(fi(op%i(1:n,i))),  w(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
+        fo(i) = sum(  cmplx(  w_re(1:n)*real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
       end do
-      deallocate(w)
+      deallocate(w_re)
     else
       do i = 1, op%np
-        fo(i) = sum(  cmplx(  op%w(1:n, i)*real(fi(op%i(1:n,i))),  op%w(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
+        fo(i) = sum(  cmplx(  op%w_re(1:n, i)*real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
       end do
     end if
 
   end subroutine znl_operator_operate
+
+
+  ! ---------------------------------------------------------
+  ! allow for complex operators
+  ! ---------------------------------------------------------
+  subroutine znl_operator_operate_cmplx(op, fi, fo)
+    CMPLX,                  intent(in)  :: fi(:)  ! fi(op%np)
+    type(nl_operator_type), intent(in)  :: op
+    CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
+
+    integer :: i, n
+    FLOAT, allocatable :: w_re(:), w_im(:)
+
+    n = op%n
+    if(op%const_w) then
+       allocate(w_re(n),w_im(n))
+       w_re(1:n)    = op%w_re(1:n, 1)
+       w_im(1:n) = op%w_im(1:n, 1)
+       do i = 1, op%np
+          fo(i) = sum(  cmplx(  w_re(1:n)* real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )  ) &
+               + sum(   cmplx( -w_im(1:n)*aimag(fi(op%i(1:n,i))),  w_im(1:n)* real(fi(op%i(1:n, i))), PRECISION  )  )
+       end do
+       deallocate(w_re, w_im)
+    else
+       do i = 1, op%np
+          fo(i) = sum(  cmplx(  op%w_re(1:n, i)* real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )  )  &
+               + sum(   cmplx( -op%w_im(1:n, i)*aimag(fi(op%i(1:n,i))),  op%w_im(1:n, i)* real(fi(op%i(1:n, i))), PRECISION  )  )                
+       end do
+    end if
+
+  end subroutine znl_operator_operate_cmplx
 
 end module nl_operator

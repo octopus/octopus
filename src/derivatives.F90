@@ -260,7 +260,7 @@ contains
     integer :: i
 
     call push_sub('derivatives_build')
-    
+
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.der%m%use_curvlinear))
@@ -272,66 +272,66 @@ contains
 
     if(der%m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
 
-      select case(der%stencil_type)
-      case(DER_STAR) ! laplacian and gradient have different stencils
-        do i = 1, conf%dim + 1
-          allocate(polynomials(conf%dim, der%op(i)%n), rhs(der%op(i)%n,1))
+       select case(der%stencil_type)
+       case(DER_STAR) ! laplacian and gradient have different stencils
+          do i = 1, conf%dim + 1
+             allocate(polynomials(conf%dim, der%op(i)%n), rhs(der%op(i)%n,1))
 
-          if(i <= conf%dim) then  ! gradient
-            call stencil_star_polynomials_grad(i, polynomials, der%order)
-            call get_rhs_grad(i, rhs(:,1))
-          else                      ! laplacian
-            call stencil_star_polynomials_lapl(polynomials, der%order)
-            call get_rhs_lapl(rhs(:,1))
-          end if
+             if(i <= conf%dim) then  ! gradient
+                call stencil_star_polynomials_grad(i, polynomials, der%order)
+                call get_rhs_grad(i, rhs(:,1))
+             else                      ! laplacian
+                call stencil_star_polynomials_lapl(polynomials, der%order)
+                call get_rhs_lapl(rhs(:,1))
+             end if
 
-          call make_discretization(der%m, polynomials, rhs, 1, der%op(i:i))
+             call make_discretization(der%m, polynomials, rhs, 1, der%op(i:i))
+             deallocate(polynomials, rhs)
+          end do
+
+       case(DER_CUBE) ! laplacian and gradient have similar stencils
+          allocate(polynomials(conf%dim, der%op(1)%n), rhs(der%op(1)%n,conf%dim+1))
+          call stencil_cube_polynomials_lapl(polynomials, der%order)
+
+          do i = 1, conf%dim
+             call get_rhs_grad(i, rhs(:,i))
+          end do
+          call get_rhs_lapl(rhs(:,conf%dim+1))
+
+          call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
+
           deallocate(polynomials, rhs)
-        end do
+       case(DER_STARPLUS)
+          allocate(polynomials(conf%dim, der%op(1)%n), rhs(der%op(1)%n,conf%dim+1))
+          call stencil_starplus_pol_lapl(polynomials, der%order)
 
-      case(DER_CUBE) ! laplacian and gradient have similar stencils
-        allocate(polynomials(conf%dim, der%op(1)%n), rhs(der%op(1)%n,conf%dim+1))
-        call stencil_cube_polynomials_lapl(polynomials, der%order)
+          do i = 1, conf%dim
+             call get_rhs_grad(i, rhs(:,i))
+          end do
+          call get_rhs_lapl(rhs(:,conf%dim+1))
 
-        do i = 1, conf%dim
-          call get_rhs_grad(i, rhs(:,i))
-        end do
-        call get_rhs_lapl(rhs(:,conf%dim+1))
+          call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
 
-        call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
-
-        deallocate(polynomials, rhs)
-      case(DER_STARPLUS)
-        allocate(polynomials(conf%dim, der%op(1)%n), rhs(der%op(1)%n,conf%dim+1))
-        call stencil_starplus_pol_lapl(polynomials, der%order)
-
-        do i = 1, conf%dim
-          call get_rhs_grad(i, rhs(:,i))
-        end do
-        call get_rhs_lapl(rhs(:,conf%dim+1))
-
-        call make_discretization(der%m, polynomials, rhs, conf%dim+1, der%op(:))
-
-        deallocate(polynomials, rhs)
-      end select
+          deallocate(polynomials, rhs)
+       end select
 
 
     else ! we have the explicit coefficients
 
-      ! get laplacian
-      select case(der%stencil_type)
-      case(DER_STAR)  
-        call stencil_star_coeff_lapl(der%m%h(1:conf%dim), der%order, der%lapl)
-      case(DER_VARIATIONAL)
-        call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
-      case(DER_STARPLUS)
-        stop 'Not yet implemented.'
-      end select
+       ! get laplacian
+       select case(der%stencil_type)
+       case(DER_STAR)  
+          call stencil_star_coeff_lapl(der%m%h(1:conf%dim), der%order, der%lapl)
+       case(DER_VARIATIONAL)
+          call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
+       case(DER_STARPLUS)
+          stop 'Not yet implemented.'
+       end select
 
-      ! get gradient (we use the same both for star and variational)
-      do i = 1, conf%dim
-        call stencil_star_coeff_grad(der%m%h(i), der%order, der%grad(i))
-      end do
+       ! get gradient (we use the same both for star and variational)
+       do i = 1, conf%dim
+          call stencil_star_coeff_grad(der%m%h(i), der%order, der%grad(i))
+       end do
     end if
 
     if(der%m%use_curvlinear) then
@@ -352,14 +352,14 @@ contains
       ! find right hand side for operator
       rhs(:) = M_ZERO
       do i = 1, conf%dim
-        do j = 1, der%lapl%n
-          this_one = .true.
-          do k = 1, conf%dim
-            if(k == i .and. polynomials(k, j).ne.2) this_one = .false.
-            if(k.ne.i .and. polynomials(k, j).ne.0) this_one = .false.
-          end do
-          if(this_one) rhs(j) = M_TWO
-        end do
+         do j = 1, der%lapl%n
+            this_one = .true.
+            do k = 1, conf%dim
+               if(k == i .and. polynomials(k, j).ne.2) this_one = .false.
+               if(k.ne.i .and. polynomials(k, j).ne.0) this_one = .false.
+            end do
+            if(this_one) rhs(j) = M_TWO
+         end do
       end do
 
     end subroutine get_rhs_lapl
@@ -374,12 +374,12 @@ contains
       ! find right hand side for operator
       rhs(:) = M_ZERO
       do j = 1, der%grad(dir)%n
-        this_one = .true.
-        do k = 1, conf%dim
-          if(k == dir .and. polynomials(k, j).ne.1) this_one = .false.
-          if(k.ne.dir .and. polynomials(k, j).ne.0) this_one = .false.
-        end do
-        if(this_one) rhs(j) = M_ONE
+         this_one = .true.
+         do k = 1, conf%dim
+            if(k == dir .and. polynomials(k, j).ne.1) this_one = .false.
+            if(k.ne.dir .and. polynomials(k, j).ne.0) this_one = .false.
+         end do
+         if(this_one) rhs(j) = M_ONE
       end do
 
     end subroutine get_rhs_grad
@@ -435,7 +435,7 @@ contains
       
       call lalg_linsyssolve(op(1)%n, n, mat, rhs, sol)
       do i = 1, n
-        op(i)%w(:, p) = sol(:, n)
+        op(i)%w_re(:, p) = sol(:, n)
       end do
 
     end do

@@ -198,10 +198,10 @@ contains
     ! the filter has a star stencil like the laplacian
     call nl_operator_init(filter, conf%dim*2 + 1)
     call stencil_star_get_lapl(1, filter%stencil)
-    call nl_operator_build(m, filter, m%np, .true.)
+    call nl_operator_build(m, filter, m%np, const_w = .true.)
 
-    filter%w(1, 1) = alpha
-    filter%w(2:,1) = M_HALF*(M_ONE-alpha)/conf%dim
+    filter%w_re(1, 1) = alpha
+    filter%w_re(2:,1) = M_HALF*(M_ONE-alpha)/conf%dim
 
   end subroutine init_filter
 end subroutine eigen_solver_init

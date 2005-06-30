@@ -112,18 +112,18 @@ contains
     morder = 2*order
     allocate(cc(0:morder, 0:morder, 0:2))
     call weights(2, morder, cc)
-    lapl%w(1,1) = cc(0, morder, 2)*sum(1/h(1:conf%dim)**2)
+    lapl%w_re(1,:) = cc(0, morder, 2)*sum(1/h(1:conf%dim)**2)
       
     k = 1
     do i = 1, conf%dim
       do j = -order, -1
         k = k + 1
-        lapl%w(k,1) = cc(-2*j-1, morder, 2) / h(i)**2
+        lapl%w_re(k,:) = cc(-2*j-1, morder, 2) / h(i)**2
       end do
       
       do j = 1, order
         k = k + 1
-        lapl%w(k,1) = cc( 2*j,   morder, 2) / h(i)**2
+        lapl%w_re(k,:) = cc( 2*j,   morder, 2) / h(i)**2
       end do
     end do
       
@@ -206,15 +206,15 @@ contains
   
     k = 1
     do j = -order, -1
-      grad%w(k,1) = cc(-2*j-1, morder, 1) / h
+      grad%w_re(k,:) = cc(-2*j-1, morder, 1) / h
       k = k + 1
     end do
 
-    grad%w(k,1) = cc(0, morder, 1) / h
+    grad%w_re(k,:) = cc(0, morder, 1) / h
 
     do j = 1, order
       k = k + 1
-      grad%w(k,1) = cc(2*j, morder, 1) / h
+      grad%w_re(k,:) = cc(2*j, morder, 1) / h
     end do
 
     deallocate(cc)
