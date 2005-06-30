@@ -85,7 +85,9 @@ program octopus
 
 
   ! loop over all subsystems
-  subsystems: do ns = 1,no_syslabels
+  subsystems: do ns = 1, no_subsystems
+
+
 
      ! set system label
      current_label = trim(subsys_label(subsys_run_order(ns)))
@@ -121,7 +123,7 @@ program octopus
 
      call print_date("Calculation started on ")
 
-     if(no_syslabels > 1) then
+     if(no_subsystems > 1) then
         message(1) = 'Info: Multi-Subsystem Mode'
         message(2) = 'Info: Running '//current_label
         call write_info(2, stress = .true.)

@@ -34,6 +34,7 @@ module syslabels
   integer,           allocatable :: no_of_states(:)
   integer, parameter             :: multi_subsys_mode = 1000
   integer                        :: current_subsystem = 1
+  integer                        :: no_subsystems
   integer                        :: no_syslabels, no_subsys_runmodes
   character(len=32)              :: current_label, tmpdir
 
@@ -102,9 +103,7 @@ contains
        call write_fatal(2)
     endif
 
-    allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
-    allocate(subsys_run_order(no_syslabels))
-    allocate(no_of_states(no_syslabels))
+    allocate(subsys_label(no_syslabels))
 
     ! ... and how the user would like to call them.
     do i = 1, no_syslabels
@@ -124,8 +123,10 @@ contains
     if(no_subsys_runmodes/=no_syslabels) then
        message(1) = "The blocks SystemLabels and SystemRunModes do not have"
        message(2) = "the same size. Please correct your input file."
-       call write_fatal(1)
+       call write_fatal(2)
     endif
+
+    allocate(subsys_runmode(no_subsys_runmodes))
 
     do i = 1, no_subsys_runmodes
        call loct_parse_block_int(blk, 0, i-1, subsys_runmode(i))
@@ -134,21 +135,23 @@ contains
 
     ! ... and in which order 
     if(loct_parse_block('SystemRunOrder', blk) == 0) then
-       no_subsys_runmodes = loct_parse_block_cols(blk,0)
+       no_subsystems = loct_parse_block_cols(blk,0)
     else
        message(1) = "Could not find block SystemRunOrder in the input file."
        message(2) = "This block is mandatory for run mode MultiSubsystem."
        call write_fatal(2)
     endif
 
-    if(no_subsys_runmodes/=no_syslabels) then
-       message(1) = "The blocks SystemLabels and SystemRunOrder do not have"
-       message(2) = "the same size. Please correct your input file."
-       call write_fatal(1)
-    endif
+    allocate(subsys_run_order(no_subsystems))
+    allocate(no_of_states(no_subsystems))
 
-    do i = 1, no_subsys_runmodes
+    do i = 1, no_subsystems
        call loct_parse_block_int(blk, 0, i-1, subsys_run_order(i))
+       if (subsys_run_order(i).gt.no_subsys_runmodes) then
+          message(1) = "Subsystem number too large. Please correct the block"
+          message(2) = "SystemRunOrder in the input file."
+          call write_fatal(2)      
+       endif
     enddo
     call loct_parse_block_end(blk)
 
