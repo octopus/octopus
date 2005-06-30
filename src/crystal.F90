@@ -72,7 +72,7 @@
       nx = nk_axis(1)
       ny = nk_axis(2)
       nz = nk_axis(3)
-      sx = k_shift(3)
+      sx = k_shift(1)
       sy = k_shift(2)
       sz = k_shift(3)
 
