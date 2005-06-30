@@ -88,7 +88,6 @@ contains
     complex(4), allocatable :: cs(:)
     complex(8), allocatable :: cd(:)
 
-    call io_assign(iunit)
     iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false.)
     
     if(iunit< 0) then
