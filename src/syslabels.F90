@@ -46,7 +46,8 @@ contains
   subroutine syslabels_init(calc_mode)
     integer, intent(in) :: calc_mode
 
-    no_syslabels = 1
+    no_syslabels  = 1
+    no_subsystems = 1
     allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
     allocate(subsys_run_order(no_syslabels))
     allocate(no_of_states(no_syslabels))
