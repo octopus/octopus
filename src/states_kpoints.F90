@@ -38,7 +38,7 @@ subroutine states_choose_kpoints(d, m, sb, geo)
   call push_sub('states_choose_kpoints')
   
   ! if not periodic just return the Gamma point
-  if (conf%periodic_dim == 0) then
+  if (sb%periodic_dim == 0) then
     select case(d%ispin)
     case(1,3)
       d%nik = 1
@@ -63,7 +63,7 @@ subroutine states_choose_kpoints(d, m, sb, geo)
   end if
 
   d%nik_axis = 1
-  do i = 1, conf%periodic_dim
+  do i = 1, sb%periodic_dim
     call loct_parse_block_int(blk, 0, i-1, d%nik_axis(i))
   end do
   call loct_parse_block_end(blk)
@@ -77,13 +77,13 @@ subroutine states_choose_kpoints(d, m, sb, geo)
   if(loct_parse_block(check_inp('ShiftKPoints'), blk) .ne. 0) then
     kshifts = M_ZERO
   else
-    do i = 1, conf%periodic_dim
+    do i = 1, sb%periodic_dim
       call loct_parse_block_float(blk, 0, i-1, kshifts(i))
     end do
     call loct_parse_block_end(blk)
   end if
 
-  if (conf%periodic_dim == 1) then
+  if(sb%periodic_dim == 1) then
     call loct_parse_int(check_inp('CenterOfInversion'), 0, coi)
     d%nik = d%nik_axis(1)/(1 + coi) + 1
     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))

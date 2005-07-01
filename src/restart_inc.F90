@@ -19,17 +19,17 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_function)(dir, filename, m, f, ierr)
+subroutine X(restart_write_function)(dir, filename, gr, f, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
-  type(mesh_type),  intent(in)  :: m
+  type(grid_type),  intent(in)  :: gr
   R_TYPE,           intent(in)  :: f(:)
   integer,          intent(out) :: ierr
 
   call push_sub('restart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
-     m, f(:), M_ONE, ierr)
+     gr%m, gr%sb, f(:), M_ONE, ierr)
 
   call pop_sub()
 end subroutine X(restart_write_function)
@@ -56,10 +56,10 @@ end subroutine X(restart_read_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write) (dir, st, m, ierr, iter)
+subroutine X(restart_write) (dir, st, gr, ierr, iter)
   character(len=*),  intent(in)  :: dir
   type(states_type), intent(in)  :: st
-  type(mesh_type),   intent(in)  :: m
+  type(grid_type),   intent(in)  :: gr
   integer,           intent(out) :: ierr
   integer, optional, intent(in)  :: iter
 
@@ -97,7 +97,7 @@ subroutine X(restart_write) (dir, st, m, ierr, iter)
         end if
         
         if(st%st_start <= ist .and. st%st_end >= ist .and. mpiv%node==0) then
-          call X(restart_write_function)(dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
+          call X(restart_write_function)(dir, filename, gr, st%X(psi) (:, idim, ist, ik), err)
           if(err == 0) ierr = ierr + 1
         end if
 

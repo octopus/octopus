@@ -135,8 +135,9 @@ end subroutine X(cf_free)
 #if defined(HAVE_FFT)
 !!! initializes the ffts. As the dimension of the fft may be adjusted, this
 !!! routine has to be called before allocating anything
-subroutine X(cf_fft_init)(cf)
-  type(X(cf)), intent(inout)  :: cf
+subroutine X(cf_fft_init)(cf, sb)
+  type(X(cf)),          intent(inout) :: cf
+  type(simul_box_type), intent(in)    :: sb
 
   call push_sub('cf_fft_init')
   ASSERT(.not.associated(cf%fft))
@@ -145,10 +146,10 @@ subroutine X(cf_fft_init)(cf)
   
   allocate(cf%fft)
 #ifdef R_TREAL
-  call fft_init(cf%n, fft_real, cf%fft)
+  call fft_init(sb, cf%n, fft_real, cf%fft)
   cf%nx = cf%n(1)/2 + 1
 #else
-  call fft_init(cf%n, fft_complex, cf%fft)
+  call fft_init(sb, cf%n, fft_complex, cf%fft)
   cf%nx = cf%n(1)
 #endif
 

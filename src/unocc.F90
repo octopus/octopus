@@ -33,6 +33,7 @@ use v_ks
 use hamiltonian
 use eigen_solver
 use io
+use simul_box
 
 implicit none
 
@@ -102,17 +103,17 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   allocate(h_psi(sys%gr%m%np, h%d%dim))
   do ik = 1, sys%st%d%nik
      do p = 1, eigens%converged
-        call X(Hpsi)(h, sys%gr%m, sys%gr%f_der, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
+        call X(Hpsi)(h, sys%gr, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
         eigens%diff(p, ik) = X(states_residue)(sys%gr%m, sys%st%d%dim, h_psi, sys%st%eigenval(p, ik), &
              sys%st%X(psi)(:, :, p, ik))
      enddo
   enddo
   deallocate(h_psi)
 
-  call eigen_solver_run(eigens, sys%gr%m, sys%gr%f_der, sys%st, h, 1, converged, verbose = .true.)
+  call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
 
   ! write restart information.
-  call X(restart_write) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
+  call X(restart_write) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr, err)
   if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_unocc"'
     call write_fatal(1)
@@ -129,17 +130,17 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
   write(iunit,'(a, e17.6)') 'Criterium = ', eigens%final_tol
   write(iunit,'(1x)')
-  call states_write_eigenvalues(iunit, sys%st%nst, sys%st, eigens%diff)
+  call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
   call io_close(iunit)
   
-  if (conf%periodic_dim>0 .and. sys%st%d%nik>sys%st%d%nspin) then
+  if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if
   
   ! output wave-functions
-  call X(states_output) (sys%st, sys%gr%m, sys%gr%f_der, "static", sys%outp)
+  call X(states_output) (sys%st, sys%gr, "static", sys%outp)
 
   call end_()
 contains

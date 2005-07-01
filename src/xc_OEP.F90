@@ -34,6 +34,7 @@ module xc_OEP
   use poisson
   use hamiltonian
   use linear_response
+  use grid
 
   implicit none
 

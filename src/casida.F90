@@ -457,7 +457,7 @@ contains
     
       !  first the Hartree part (only works for real wfs...)
       pot = M_ZERO
-      call dpoisson_solve(m, sys%gr%f_der, pot, rho_j)
+      call dpoisson_solve(sys%gr, pot, rho_j)
       K_term = dmf_dotp(m, rho_i(:), pot(:))
       deallocate(pot)
       

@@ -110,7 +110,7 @@ contains
       m%nr(1,:) = -m%nr(2,:)
     
       ! we have to ajust a couple of things for the periodic directions
-      do i = 1, conf%periodic_dim
+      do i = 1, sb%periodic_dim
         m%h(i)     = sb%lsize(i)/real(m%nr(2, i))
         m%nr(2, i) = m%nr(2, i) - 1
       end do
@@ -122,9 +122,10 @@ contains
 
 
   ! finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(m, db)
-    type(mesh_type), intent(IN)  :: m
-    integer,         intent(out) :: db(3)
+  subroutine mesh_double_box(m, sb, db)
+    type(mesh_type),      intent(in)  :: m
+    type(simul_box_type), intent(in) :: sb
+    integer,              intent(out) :: db(3)
     
     integer :: i
     
@@ -141,10 +142,10 @@ contains
     
     ! NEW
     ! double mesh with 2n points
-    do i = 1, conf%periodic_dim 
+    do i = 1, sb%periodic_dim 
       db(i) = m%l(i)
     end do
-    do i = conf%periodic_dim + 1, conf%dim
+    do i = sb%periodic_dim + 1, conf%dim
       db(i) = nint(m%sb%fft_alpha*(m%l(i)-1)) + 1
     end do
     

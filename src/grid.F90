@@ -63,11 +63,11 @@ contains
     call curvlinear_init(gr%sb%lsize(:), gr%cv)
 
     ! initilize derivatives
-    call f_der_init(gr%f_der, gr%cv%method.ne.CURV_METHOD_UNIFORM)
+    call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
     call mesh_init(gr%m, gr%sb, gr%cv, gr%geo, gr%f_der%n_ghost(1))
-    call f_der_build(gr%f_der, gr%m)
+    call f_der_build(gr%f_der, gr%m, gr%sb)
 
     ! do we want to filter out the external potentials, or not.
     call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)

@@ -30,6 +30,7 @@ module fft
   use lib_oct
   use lib_oct_parser
   use lib_basic_alg
+  use simul_box
   
   implicit none
 
@@ -89,25 +90,26 @@ contains
     end do
   end subroutine fft_all_end
 
-  subroutine fft_init(n, is_real, fft)
-    integer, intent(inout) :: n(3)
-    integer, intent(in) :: is_real
-    type(fft_type), intent(out) :: fft
-    FLOAT, allocatable    :: rin(:, :, :)
-    CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
+  subroutine fft_init(sb, n, is_real, fft)
+    type(simul_box_type), intent(in)    :: sb
+    integer,              intent(inout) :: n(3)
+    integer,              intent(in)    :: is_real
+    type(fft_type),       intent(out)   :: fft
 
+    FLOAT, allocatable :: rin(:, :, :)
+    CMPLX, allocatable :: cin(:, :, :), cout(:, :, :)
 
     integer :: i, j
 
-! OLD: I let it here because maybe I revert to this method later
+    ! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
-!    do i = conf%periodic_dim + 1, conf%dim 
-!      if(n(i) /= 1 .and. fft_optimize) &
-!           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
-!    end do    
-! NEW
+    !    do i = sb%periodic_dim + 1, conf%dim 
+    !      if(n(i) /= 1 .and. fft_optimize) &
+    !           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+    !    end do    
+    ! NEW
     ! optimize dimensions only for finite sys
-    if (conf %periodic_dim == 0) then
+    if(sb%periodic_dim == 0) then
       do i = 1, conf%dim 
          if(n(i) /= 1 .and. fft_optimize) &
              call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number

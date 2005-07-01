@@ -17,20 +17,25 @@
 !!
 !! $Id$
 
-subroutine poisson3D_init(m)
-  type(mesh_type),     intent(inout) :: m
+subroutine poisson3D_init(gr)
+  type(grid_type), intent(inout) :: gr
+  
   ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= CG_CORRECTED)
 
   select case(poisson_solver)
 #ifdef HAVE_FFT
     case(FFT_SPH)
       message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation.'
+
     case(FFT_CYL)
       message(1) = 'Info: Using FFTs with cylindrical cutoff to solve Poisson equation.'
+
     case(FFT_PLA)
       message(1) = 'Info: Using FFTs with planar cutoff to solve Poisson equation.'
+
     case(FFT_NOCUT)
       message(1) = 'Info: Using FFTs without cutoff to solve Poisson equation.'
+
     case(FFT_CORRECTED)
       message(1)= 'Info: Using FFTs with error corrections.'
 #endif
@@ -38,22 +43,24 @@ subroutine poisson3D_init(m)
       message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
       call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
       call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
-      call poisson_cg1_init(m, maxl, threshold)
+      call poisson_cg1_init(gr%m, maxl, threshold)
+
     case(CG_CORRECTED)
       call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
       call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
       message(1) = 'Info: Using corrected conjugated gradients method to solve poisson equation.'
-      call poisson_cg2_init(m, maxl, threshold)
+      call poisson_cg2_init(gr%m, maxl, threshold)
+
   end select
   call write_info(1)
 
 #ifdef HAVE_FFT
-  if (poisson_solver <= FFT_CORRECTED) call init_fft()
+  if (poisson_solver <= FFT_CORRECTED) call init_fft(gr%m)
 
   if (poisson_solver == FFT_CORRECTED) then
     call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 2, maxl)
-    call build_aux(m)
-    call build_phi(m)
+    call build_aux(gr%m)
+    call build_phi(gr%m)
   endif
 #endif
 
@@ -62,7 +69,9 @@ subroutine poisson3D_init(m)
 contains
 
 #ifdef HAVE_FFT
-  subroutine init_fft()
+  subroutine init_fft(m)
+    type(mesh_type), intent(in) :: m
+
     integer :: ix, iy, iz, ixx(3), db(3)
     FLOAT :: temp(3), vec
     FLOAT :: gpar,gperp,gx,gz,r_c
@@ -71,14 +80,14 @@ contains
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
-       call mesh_double_box(m, db)                 ! get dimensions of the double box
+       call mesh_double_box(m, gr%sb, db)                 ! get dimensions of the double box
        if (poisson_solver == FFT_SPH) db(:) = maxval(db)
     else
        db(:) = m%l(:)
     endif
 
     call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
-    call dcf_fft_init(fft_cf)   ! the ffts
+    call dcf_fft_init(fft_cf, gr%sb)   ! the ffts
     db = fft_cf%n               ! dimensions may have been optimized
 
   if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then

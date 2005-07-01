@@ -121,7 +121,7 @@ subroutine mesh_create_xyz(m, sb, cv, geo, enlarge)
   call push_sub('mesh_create_xyz')
 
 ! enlarge mesh in the non-periodic dimensions
-  do i = conf%periodic_dim+1, conf%dim
+  do i = sb%periodic_dim+1, conf%dim
     m%nr(1,i) = m%nr(1,i) - enlarge
     m%nr(2,i) = m%nr(2,i) + enlarge
   end do
@@ -255,10 +255,9 @@ end subroutine mesh_create_xyz
 ! for a given x,y,z it returns the true index of the point
 
 ! WARNING: have to get rid of dir, otherwise will not work
-function mesh_index(m, ix_, dir) result(index)
-    type(mesh_type), intent(in) :: m
-    integer :: index
-    integer, intent(in) :: ix_(:), dir
+integer function mesh_index(m, ix_, dir) result(index)
+    type(mesh_type),      intent(in) :: m
+    integer,              intent(in) :: ix_(:), dir
 
     integer :: i, ix(3)  ! ix has to go until 3, not conf%dim
 
@@ -268,14 +267,14 @@ function mesh_index(m, ix_, dir) result(index)
     index = 1
     do i = 1, conf%dim
       if(ix(i) < m%nr(1, i)) then       ! first look left
-        if(i <= conf%periodic_dim) then ! fold point
+        if(i <= m%sb%periodic_dim) then ! fold point
           ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i) + 1)
         else
           ix(i) = m%nr(1, i)
           index = 0
         end if
       else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
-        if(i <= conf%periodic_dim) then
+        if(i <= m%sb%periodic_dim) then
           ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i) + 1)
         else
           ix(i) = m%nr(2, i)

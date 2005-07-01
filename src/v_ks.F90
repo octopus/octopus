@@ -66,9 +66,9 @@ module v_ks
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, m, d)
-    type(v_ks_type), intent(out) :: ks
-    type(mesh_type),        intent(inout) :: m
+  subroutine v_ks_init(ks, gr, d)
+    type(v_ks_type),        intent(out)   :: ks
+    type(grid_type),        intent(inout) :: gr
     type(states_dim_type),  pointer       :: d
 
     call push_sub('v_ks_init');
@@ -95,7 +95,7 @@ contains
       ! initilize hartree and xc modules
       message(1) = "Info: Init Hartree"
       call write_info(1)
-      call poisson_init(m)
+      call poisson_init(gr)
 
       message(1) = "Info: Init Exchange-Correlation"
       call write_info(1)
@@ -127,7 +127,7 @@ contains
         if(ks%sic_type == sic_pz) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
       end if
 
-      call xc_oep_init(ks%oep, ks%xc_family, m, d)
+      call xc_oep_init(ks%oep, ks%xc_family, gr%m, d)
 
       if(conf%verbose >= VERBOSE_NORMAL) call v_ks_write_info(ks, stdout)
     end if

@@ -28,6 +28,7 @@ module lcao
   use lib_adv_alg
   use functions
   use mesh
+  use simul_box
   use specie
   use geometry
   use states
@@ -144,7 +145,7 @@ subroutine lcao_init(lcao_data, gr, st, h)
   allocate(hpsi(gr%m%np, st%d%dim))
   do ik = 1, st%d%nik
     do n1 = 1, lcao_data%dim
-      call X(kinetic) (h, gr%m, gr%f_der, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      call X(kinetic) (h, gr, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)
@@ -187,9 +188,10 @@ subroutine lcao_end(lcao_data)
   call pop_sub()
 end subroutine lcao_end
 
-subroutine lcao_wf(lcao_data, m, st, h)
+subroutine lcao_wf(lcao_data, m, sb, st, h)
   type(lcao_type),        intent(inout) :: lcao_data
-  type(mesh_type),        intent(IN)    :: m
+  type(mesh_type),        intent(in)    :: m
+  type(simul_box_type),   intent(in)    :: sb
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
 
@@ -216,7 +218,7 @@ subroutine lcao_wf(lcao_data, m, st, h)
     do n1 = 1, lcao_data%dim
       hpsi = M_ZERO
       call X(vlpsi) (h, m, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
-      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
+      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, sb, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
       do n2 = n1, lcao_data%dim
         lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
         lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)

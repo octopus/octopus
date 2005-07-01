@@ -28,6 +28,7 @@ module output
   use io
   use units
   use mesh
+  use simul_box
   use mesh_function
   use cube_function
   use functions

@@ -31,7 +31,7 @@ module simul_box
 
   private
   public :: simul_box_type, simul_box_init, &
-     simul_box_write_info, simul_box_in_box
+     simul_box_write_info, simul_box_is_periodic, simul_box_in_box
 
   integer, parameter, public :: &
      SPHERE   = 1,    &
@@ -55,6 +55,8 @@ module simul_box
     FLOAT :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
   
     FLOAT :: fft_alpha ! enlargement factor for double box
+
+    integer :: periodic_dim
 
   end type simul_box_type
 
@@ -93,6 +95,31 @@ contains
         message(2) = '1.0 <= DoubleFFTParameter <= 3.0'
         call write_fatal(2)
       end if
+
+
+      !%Variable PeriodicDimensions
+      !%Type integer
+      !%Section 1 Generalities
+      !%Description
+      !% Define which directions are to be considered periodic
+      !%Option 0
+      !% No direction is periodic (molecule)
+      !%Option 1
+      !% The x direction is periodic (wire)
+      !%Option 2
+      !% The x and y directions are periodic (slab)
+      !%Option 3
+      !% The x, y, and z directions are periodic (bulk)
+      !%End
+      call loct_parse_int(check_inp('PeriodicDimensions'), 0, sb%periodic_dim)
+      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3)) then
+        message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
+        call write_fatal(1)
+      endif
+      if(sb%periodic_dim > conf%dim) then
+        message(1) = 'PeriodicDimensions must be <= Dimensions'
+        call write_fatal(1)
+      end if
       
     end subroutine read_misc
 
@@ -111,13 +138,13 @@ contains
       
       select case(sb%box_shape)
       case(SPHERE,MINIMUM)
-        if(conf%dim>1 .and. conf%periodic_dim>0) then
+        if(conf%dim>1 .and. sb%periodic_dim>0) then
           message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
           call write_fatal(1)
         end if
       case(CYLINDER)
         if (conf%dim>2 .and. &
-           ((conf%dim-conf%periodic_dim == 0) .or. (conf%dim-conf%periodic_dim == 1))) then
+           ((conf%dim - sb%periodic_dim == 0) .or. (conf%dim - sb%periodic_dim == 1))) then
           message(1) = 'Cylindrical mesh is not allowed for systems'
           message(2) = 'that are periodic in more than one dimension'
           call write_fatal(2)
@@ -147,7 +174,7 @@ contains
         call loct_parse_float(check_inp('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
         sb%xsize = sb%xsize * units_inp%length%factor
         sb%lsize(1) = sb%xsize
-        if(def_rsize>M_ZERO.and.conf%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
+        if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
       end if
       
       sb%lsize = -M_ONE
@@ -165,7 +192,7 @@ contains
      
         do i = 1, conf%dim
           call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
-          if(def_rsize>M_ZERO.and.conf%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'lsize')
+          if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'lsize')
         end do
         sb%lsize = sb%lsize*units_inp%length%factor
         
@@ -276,7 +303,7 @@ contains
       ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
       sb%rlat = M_ZERO
       sb%klat = M_ZERO
-      do i = 1, conf%periodic_dim
+      do i = 1, sb%periodic_dim
         sb%rlat(i,i) = 2*sb%lsize(i)
         sb%klat(i,i) = M_PI/sb%lsize(i)
       end do
@@ -340,7 +367,10 @@ contains
             sb%lsize(3)/units_out%length%factor, ')'
 
 
-    if (conf%periodic_dim > 0) then
+    write(iunit, '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
+       sb%periodic_dim, ' dimension(s)'
+
+    if(sb%periodic_dim > 0) then
       write(iunit,'(1x)')
       write(iunit,'(a,3a,a)')'Lattice Primitive Vectors [', trim(units_out%length%abbrev), ']'
       write(iunit,'(a,f8.3)')'    x axis ', sb%rlat(1,1)/units_out%length%factor
@@ -355,6 +385,8 @@ contains
     call pop_sub()
   end subroutine simul_box_write_info
 
+
+  !--------------------------------------------------------------
   logical function simul_box_in_box(sb, geo, x) result(in_box)
     type(simul_box_type),  intent(in) :: sb
     type(geometry_type),   intent(in) :: geo
@@ -380,6 +412,7 @@ contains
 
   contains
 
+    !--------------------------------------------------------------
     logical function in_minimum()
       integer :: i
       
@@ -396,4 +429,12 @@ contains
 
   end function simul_box_in_box
 
+
+  !--------------------------------------------------------------
+  logical function simul_box_is_periodic(sb)
+    type(simul_box_type), intent(in) :: sb
+
+    simul_box_is_periodic = sb%periodic_dim > 0
+  end function simul_box_is_periodic
+  
 end module simul_box

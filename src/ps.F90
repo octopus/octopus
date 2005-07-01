@@ -173,9 +173,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   call loct_spline_init(ps%vlocalized)
   call loct_spline_init(ps%dvl)
   call loct_spline_init(ps%core)
-  if (conf%periodic_dim > 0) then
-    call loct_spline_init(ps%vlocal_f)
-  end if 
+  call loct_spline_init(ps%vlocal_f)
 
 ! Now we load the necessary information.
   select case(flavour)
@@ -198,10 +196,8 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   call loct_spline_fit(ps%g%nrval, ps%g%rofi, y, ps%vlocalized)
 
   ! And take the Fourier transform
-  if (conf%periodic_dim > 0) then
-     call loct_spline_3dft(ps%vlocalized, ps%vlocal_f, CNST(50.0))
-     call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
-  endif
+  call loct_spline_3dft(ps%vlocalized, ps%vlocal_f, CNST(50.0))
+  call loct_spline_times(CNST(1.0)/(M_FOUR*M_PI), ps%vlocal_f)
 
   deallocate(y)
   call pop_sub()
@@ -422,9 +418,7 @@ subroutine ps_end(ps)
   call loct_spline_end(ps%vl)
   call loct_spline_end(ps%dvl)
   call loct_spline_end(ps%core)  
-  if (conf%periodic_dim > 0) then
-    call loct_spline_end(ps%vlocal_f)
-  end if 
+  call loct_spline_end(ps%vlocal_f)
 
   deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
   if(ps%so_l_max >=0) deallocate(ps%so_kb, ps%so_dkb)

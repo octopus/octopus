@@ -27,6 +27,7 @@ module restart
   use io
   use states
   use mesh
+  use grid
   use output
 
   implicit none

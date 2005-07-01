@@ -28,6 +28,7 @@ use lib_oct_parser
 use io
 use geometry
 use mesh
+use grid
 use states
 use system
 use restart
@@ -314,11 +315,11 @@ contains
     call io_close(iunit)
 
     ! should output wavefunctions ;)
-    call zstates_output(psi_i, m, sys%gr%f_der, 'opt-control', sys%outp)
+    call zstates_output(psi_i, sys%gr, 'opt-control', sys%outp)
   end subroutine output
 
   subroutine init_()
-    call td_init(td, sys%gr%m, sys%st, sys%gr%geo, h, sys%outp)
+    call td_init(td, sys%gr, sys%st, h, sys%outp)
 
     ! some shortcuts
     m   => sys%gr%m

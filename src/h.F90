@@ -28,6 +28,8 @@ use lib_oct_parser
 use lib_basic_alg
 use functions
 use mesh
+use grid
+use simul_box
 use mesh_function
 use geometry
 use specie
@@ -111,10 +113,9 @@ integer, public, parameter :: LENGTH = 1, &
                               VELOCITY = 2
 contains
 
-subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
+subroutine hamiltonian_init(h, gr, states_dim, ip_app)
   type(hamiltonian_type), intent(out)   :: h
-  type(mesh_type),        intent(inout) :: m
-  type(geometry_type),    intent(in)    :: geo
+  type(grid_type),        intent(inout) :: gr
   type(states_dim_type),  pointer       :: states_dim
   logical,                intent(in)    :: ip_app
 
@@ -135,16 +136,16 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
-  allocate(h%Vhxc(m%np, h%d%nspin))
+  allocate(h%Vhxc(NP, h%d%nspin))
   h%Vhxc = M_ZERO
   if (h%d%cdft) then
-    allocate(h%ahxc(m%np, conf%dim, h%d%nspin))
+    allocate(h%ahxc(NP, conf%dim, h%d%nspin))
     h%ahxc = M_ZERO
   else
     nullify(h%ahxc)  
   end if
 
-  call epot_init(h%ep, m, geo)
+  call epot_init(h%ep, gr)
 
   call loct_parse_int(check_inp('RelativisticCorrection'), NOREL, h%reltype)
 #ifdef COMPLEX_WFNS
@@ -214,10 +215,10 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
     end if
     
     ! generate boundary potential...
-    allocate(h%ab_pot(m%np))
+    allocate(h%ab_pot(NP))
     h%ab_pot = M_ZERO
-    do i = 1, m%np
-      call mesh_inborder(m, i, n, d, h%ab_width)
+    do i = 1, NP
+      call mesh_inborder(gr%m, i, n, d, h%ab_width)
       if(n>0) then
         do j = 1, n
           h%ab_pot(i) = h%ab_pot(i) + h%ab_height * sin(d(j)*M_PI/(M_TWO*h%ab_width))**2
@@ -242,9 +243,9 @@ subroutine hamiltonian_init(h, m, geo, states_dim, ip_app)
   call pop_sub()
 end subroutine hamiltonian_init
 
-subroutine hamiltonian_end(h, geo)
+subroutine hamiltonian_end(h, gr)
   type(hamiltonian_type), intent(inout) :: h
-  type(geometry_type),    intent(IN)    :: geo
+  type(grid_type),        intent(in)    :: gr
 
   call push_sub('hamiltonian_end')
 
@@ -253,7 +254,7 @@ subroutine hamiltonian_end(h, geo)
     nullify(h%vhxc)
   end if
 
-  call epot_end(h%ep, geo)
+  call epot_end(h%ep, gr%sb, gr%geo)
 
   if(associated(h%ab_pot)) then
     deallocate(h%ab_pot); nullify(h%ab_pot)
@@ -325,11 +326,12 @@ subroutine hamiltonian_span(h, delta, emin)
   call pop_sub()
 end subroutine hamiltonian_span
 
-subroutine hamiltonian_output(h, m, dir, outp)
-  type(hamiltonian_type), intent(IN) :: h
-  type(mesh_type),        intent(IN) :: m
+subroutine hamiltonian_output(h, m, sb, dir, outp)
+  type(hamiltonian_type), intent(in) :: h
+  type(mesh_type),        intent(in) :: m
+  type(simul_box_type),   intent(in) :: sb
   character(len=*),       intent(in) :: dir
-  type(output_type),      intent(IN) :: outp
+  type(output_type),      intent(in) :: outp
 
   integer :: is, err
   character(len=80) :: fname  
@@ -339,16 +341,16 @@ subroutine hamiltonian_output(h, m, dir, outp)
 
   u = units_out%energy%factor
   if(outp%what(output_potential)) then
-    call doutput_function(outp%how, dir, "v0", m, h%ep%vpsl, u, err)
+    call doutput_function(outp%how, dir, "v0", m, sb, h%ep%vpsl, u, err)
 
     if(h%ep%classic_pot > 0) then
-      call doutput_function(outp%how, dir, "vc", m, h%ep%Vclassic, u, err)
+      call doutput_function(outp%how, dir, "vc", m, sb, h%ep%Vclassic, u, err)
     end if
 
     if(.not.h%ip_app) then
       do is = 1, min(h%d%ispin, 2)
         write(fname, '(a,i1)') 'vhxc-', is
-        call doutput_function(outp%how, dir, fname, m, h%Vhxc(:, is), u, err)
+        call doutput_function(outp%how, dir, fname, m, sb, h%Vhxc(:, is), u, err)
       end do
     end if
   end if

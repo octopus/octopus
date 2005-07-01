@@ -168,7 +168,6 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   type(output_type),      intent(IN)    :: outp
 
   type(lcao_type) :: lcao_data
-  integer :: np
 
   integer :: iter, iunit, is, idim, nspin, dim, err
   FLOAT :: evsum_out, evsum_in
@@ -178,8 +177,6 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   logical :: finish
 
   call push_sub('scf_run')
-
-  np = gr%m%np
 
   if(scf%lcao_restricted) then
     call lcao_init(lcao_data, gr, st, h)
@@ -193,7 +190,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   dim = 1
   if (h%d%cdft) dim = 1 + conf%dim
 
-  allocate(rhoout(np, dim, nspin), rhoin(np, dim, nspin))
+  allocate(rhoout(NP, dim, nspin), rhoin(NP, dim, nspin))
 
   rhoin(:, 1, :) = st%rho; rhoout = M_ZERO
   if (st%d%cdft) then
@@ -201,28 +198,28 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   end if
 
   if (scf%what2mix == MIXPOT) then
-    allocate(vout(np, dim, nspin), vin(np, dim, nspin), vnew(np, dim, nspin))
+    allocate(vout(NP, dim, nspin), vin(NP, dim, nspin), vnew(NP, dim, nspin))
     vin(:, 1, :) = h%vhxc; vout = M_ZERO
     if (st%d%cdft) vin(:, 2:dim, :) = h%ahxc(:,:,:)
   else
-    allocate(rhonew(np, dim, nspin))
+    allocate(rhonew(NP, dim, nspin))
   end if
   evsum_in = states_eigenvalues_sum(st)
 
   ! SCF cycle
   do iter = 1, scf%max_iter
     if(scf%lcao_restricted) then
-      call lcao_wf(lcao_data, gr%m, st, h)
+      call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
     else
       scf%eigens%converged = 0
-      call eigen_solver_run(scf%eigens, gr%m, gr%f_der, st, h, iter)
+      call eigen_solver_run(scf%eigens, gr, st, h, iter)
     endif
 
     ! occupations
     call states_fermi(st, gr%m)
 
     ! compute output density, potential (if needed) and eigenvalues sum
-    call X(states_calc_dens)(st, np, st%rho)
+    call X(states_calc_dens)(st, NP, st%rho)
     rhoout(:, 1, :) = st%rho
     if (h%d%cdft) then
       call states_calc_physical_current(gr%m, gr%f_der, st, st%j)
@@ -240,7 +237,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
 
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
-    allocate(tmp(np))
+    allocate(tmp(NP))
     do is = 1, nspin
       do idim = 1, dim
         tmp = (rhoin(:, idim, is) - rhoout(:, idim, is))**2
@@ -267,20 +264,20 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, np, dim, nspin, rhoin, rhoout, rhonew)
+       call mixing(scf%smix, iter, NP, dim, nspin, rhoin, rhoout, rhonew)
        st%rho = rhonew(:, 1, :)
        if (h%d%cdft) st%j = rhonew(:, 2:dim, :)
        call X(v_ks_calc) (gr, ks, h, st)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, np, dim, nspin, vin, vout, vnew)
+       call mixing(scf%smix, iter, NP, dim, nspin, vin, vout, vnew)
        h%vhxc = vnew(:, 1, :)
        if (h%d%cdft) h%ahxc(:,:,:) = vnew(:,2:dim,:)
     end select
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
-      call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr%m, err, iter=iter)
+      call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr, err, iter=iter)
       if(err.ne.0) then
         message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
         call write_fatal(1)
@@ -295,8 +292,8 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
     end if
 
     if(outp%duringscf) then
-      call X(states_output) (st, gr%m, gr%f_der, "static", outp)
-      call hamiltonian_output(h, gr%m, "static", outp)
+      call X(states_output) (st, gr, "static", outp)
+      call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
     endif
 
     ! save information for the next iteration
@@ -325,16 +322,16 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   end if
 
   ! calculate forces
-  call X(epot_forces)(h%ep, gr%m, st, gr%geo)
+  call X(epot_forces)(h%ep, gr, st)
 
   ! output final information
   call scf_write_static("static", "info")
-  call X(states_output) (st, gr%m, gr%f_der, "static", outp)
+  call X(states_output) (st, gr, "static", outp)
   if(outp%what(output_geometry)) &
      call atom_write_xyz("static", "geometry", gr%geo)
-  call hamiltonian_output(h, gr%m, "static", outp)
+  call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
 
-  if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
+  if (gr%sb%periodic_dim>0.and.st%d%nik>st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
@@ -360,9 +357,9 @@ contains
       write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
       write(message(2),'(a,i6)') 'Converged eigenvectors: ', scf%eigens%converged
       call write_info(2)
-      call states_write_eigenvalues(stdout, st%nst, st, scf%eigens%diff)
+      call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff)
     else
-      call states_write_eigenvalues(stdout, st%nst, st)
+      call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
     endif
 
     if(st%d%ispin == SPINORS) then
@@ -398,7 +395,7 @@ contains
     !call grid_write_info(gr, iunit)
     write(iunit,'(1x)')
     
-    if (conf%periodic_dim > 0) then
+    if (gr%sb%periodic_dim > 0) then
       call kpoints_write_info(st%d, iunit)
       write(iunit,'(1x)')
     end if
@@ -419,7 +416,7 @@ contains
     end if
     write(iunit, '(1x)')
     
-    call states_write_eigenvalues(iunit, st%nst, st)
+    call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
     write(iunit, '(1x)')
     
     write(iunit, '(a)') 'Energy:'
@@ -449,7 +446,7 @@ contains
     write(iunit,'(a)')
     
     if(conf%dim==3) then
-      call X(states_calc_angular)(gr%m, gr%f_der, st, angular, l2 = l2)
+      call X(states_calc_angular)(gr, st, angular, l2 = l2)
       write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
       do j = 1, conf%dim
         write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)

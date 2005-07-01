@@ -131,12 +131,11 @@ subroutine td_write_local_magnetic_moments(out, m, st, geo, td, iter)
   call pop_sub()
 end subroutine td_write_local_magnetic_moments
 
-subroutine td_write_angular(out, m, f_der, st, iter)
-  integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),       intent(IN) :: m
-  type(f_der_type),      intent(inout) :: f_der
-  type(states_type),     intent(IN) :: st
-  integer,               intent(in) :: iter
+subroutine td_write_angular(out, gr, st, iter)
+  integer(POINTER_SIZE), intent(in)    :: out
+  type(grid_type),       intent(inout) :: gr
+  type(states_type),     intent(IN)    :: st
+  integer,               intent(in)    :: iter
 
   character(len=130) :: aux
   FLOAT :: angular(3)
@@ -144,7 +143,7 @@ subroutine td_write_angular(out, m, f_der, st, iter)
   call push_sub('td_write_angular')
 
   ! The angular momentum has to be calculated by all nodes...
-  call zstates_calc_angular(m, f_der, st, angular)
+  call zstates_calc_angular(gr, st, angular)
 
   if(mpiv%node == 0) then ! Only first node outputs
 

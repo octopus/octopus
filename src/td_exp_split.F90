@@ -30,6 +30,7 @@ module td_exp_split
   use mesh_function
   use functions
   use mesh
+  use grid
   use states
   use hamiltonian
   use external_pot
@@ -40,10 +41,10 @@ contains
 
   !!! Calculates psi = exp{factor*T} psi
   !!! where T is the kinetic energy operator
-  subroutine zexp_kinetic (m, h, psi, cf, factor)
-    type(mesh_type),        intent(IN) :: m
-    type(hamiltonian_type), intent(IN) :: h
-    CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
+  subroutine zexp_kinetic (gr, h, psi, cf, factor)
+    type(grid_type),        intent(in) :: gr
+    type(hamiltonian_type), intent(in) :: h
+    CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
     type(zcf),              intent(inout) :: cf
     CMPLX,                  intent(in) :: factor
     
@@ -52,7 +53,7 @@ contains
 
     call push_sub('exp_kinetic')
     
-    if(conf%periodic_dim>0) then
+    if(gr%sb%periodic_dim>0) then
       message(1) = 'Internal error in exp_kinetic'
       call write_fatal(1)
     endif
@@ -64,13 +65,13 @@ contains
     endif
 
     temp = M_ZERO
-    temp(1:conf%dim) = (M_TWO*M_Pi)/(cf%n(1:conf%dim)*m%h(1:conf%dim))
+    temp(1:conf%dim) = (M_TWO*M_Pi)/(cf%n(1:conf%dim)*gr%m%h(1:conf%dim))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
 
     do idim = 1, h%d%dim
-      call zmf2cf(m, psi(:, idim), cf)
+      call zmf2cf(gr%m, psi(:, idim), cf)
       call zcf_RS2FS(cf)
 
       do iz = 1, cf%n(3)
@@ -87,7 +88,7 @@ contains
       end do
 
       call zcf_FS2RS(cf)
-      call zcf2mf(m, cf, psi(:, idim))
+      call zcf2mf(gr%m, cf, psi(:, idim))
     enddo
 
     call zcf_free_RS(cf)

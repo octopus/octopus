@@ -18,10 +18,9 @@
 !! $Id$
 
 ! calculates the eigenvalues of the real orbitals
-subroutine X(hamiltonian_eigenval)(h, m, f_der, st)
+subroutine X(hamiltonian_eigenval)(h, gr, st)
   type(hamiltonian_type), intent(in)    :: h
-  type(mesh_type),        intent(in)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+  type(grid_type) ,       intent(inout) :: gr
   type(states_type),      intent(inout) :: st
 
   R_TYPE, allocatable :: Hpsi(:,:)
@@ -29,12 +28,12 @@ subroutine X(hamiltonian_eigenval)(h, m, f_der, st)
   integer :: ik, ist
 
   call push_sub('hamiltonian_eigenval')
-  allocate(Hpsi(m%np, st%d%dim))
+  allocate(Hpsi(NP, st%d%dim))
 
   do ik = 1, st%d%nik
     do ist = st%st_start, st%st_end
-      call X(hpsi) (h, m, f_der, st%X(psi)(:, :, ist, ik), hpsi, ik)
-      e = X(states_dotp)(m, st%d%dim, st%X(psi)(1:, :, ist, ik), Hpsi)
+      call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+      e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
       st%eigenval(ist, ik) = R_REAL(e)
     end do
   end do
@@ -45,10 +44,9 @@ end subroutine X(hamiltonian_eigenval)
 
 
 ! ---------------------------------------------------------
-subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
+subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   type(hamiltonian_type), intent(IN)    :: h
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+  type(grid_type),        intent(inout) :: gr
   integer,                intent(in)    :: ik
   R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
@@ -56,9 +54,9 @@ subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
 
   call push_sub('Hpsi')
 
-  call X(kinetic) (h, m, f_der, psi, hpsi, ik)
-  call X(vlpsi)   (h, m, psi, hpsi, ik)
-  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, hpsi, ik)
+  call X(kinetic) (h, gr, psi, hpsi, ik)
+  call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
+  if(h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, hpsi, ik)
 
   ! Relativistic corrections...
   select case(h%reltype)
@@ -77,24 +75,23 @@ subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
       message(1) = "TDCDFT not yet implemented"
       call write_fatal(1)
     end if
-    call X(vlasers)  (h, m, f_der, psi, hpsi, t)
+    call X(vlasers)  (h, gr%m, gr%f_der, psi, hpsi, t)
     call X(vborders) (h, psi, hpsi)
   elseif (h%d%cdft) then
-    call X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
+    call X(current_extra_terms) (h, gr%m, gr%f_der, psi, hpsi, ik)
   end if
 
   call pop_sub()
 end subroutine X(Hpsi)
 
 ! ---------------------------------------------------------
-subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
-  type(hamiltonian_type), intent(IN)  :: h
-  type(mesh_type),        intent(IN)  :: m
-  type(f_der_type),       intent(inout) :: f_der
-  integer,                intent(in)  :: ik
-  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
-  FLOAT,                  intent(IN)  :: vmagnus(m%np, h%d%nspin, 2)
+subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
+  type(hamiltonian_type), intent(in)    :: h
+  type(grid_type),        intent(inout) :: gr
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(NP, h%d%dim)
+  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(NP, h%d%dim)
+  FLOAT,                  intent(in)    :: vmagnus(NP, h%d%nspin, 2)
 
   R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
   integer :: idim
@@ -102,12 +99,12 @@ subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
 
   call push_sub('magnus')
 
-  allocate(auxpsi(m%np, h%d%dim), aux2psi(m%np, h%d%dim))
+  allocate(auxpsi(NP, h%d%dim), aux2psi(NP, h%d%dim))
 
-  call X(kinetic) (h, m, f_der, psi, hpsi, ik)
+  call X(kinetic) (h, gr, psi, hpsi, ik)
 
   auxpsi = hpsi
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, auxpsi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, auxpsi, ik)
   select case(h%d%ispin)
   case(UNPOLARIZED)
     hpsi(:, 1) = hpsi(:, 1) -  M_zI*vmagnus(:, 1, 1)*auxpsi(:, 1)
@@ -129,8 +126,8 @@ subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
       auxpsi(:, 1) = vmagnus(:, 2, 1) *psi(:, 1)
     end if
   end select
-  call X(kinetic) (h, m, f_der, auxpsi, aux2psi, ik)
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, auxpsi, aux2psi, ik)
+  call X(kinetic) (h, gr, auxpsi, aux2psi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, auxpsi, aux2psi, ik)
   hpsi(:, 1) = hpsi(:, 1) + M_zI*aux2psi(:, 1)
 
   do idim = 1, h%d%dim
@@ -147,7 +144,7 @@ subroutine X(magnus) (h, m, f_der, psi, hpsi, ik, vmagnus)
       hpsi(:, 1) = hpsi(:, 1) + vmagnus(:, 2, 2)*psi(1:, 1)
     end if
   end select
-  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, m, psi, Hpsi, ik)
+  if (h%ep%nvnl > 0) call X(vnlpsi)  (h, gr%m, gr%sb, psi, Hpsi, ik)
   call X(vborders) (h, psi, hpsi)
 
   deallocate(auxpsi, aux2psi)
@@ -156,12 +153,11 @@ end subroutine X(magnus)
 
 
 ! ---------------------------------------------------------
-subroutine X(kinetic) (h, m, f_der, psi, hpsi, ik)
-  type(hamiltonian_type), intent(IN)  :: h
-  type(mesh_type),        intent(IN)  :: m
-  type(f_der_type),       intent(inout) :: f_der
-  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+subroutine X(kinetic) (h, gr, psi, hpsi, ik)
+  type(hamiltonian_type), intent(in)    :: h
+  type(grid_type),        intent(inout) :: gr
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer :: ik
 
   integer :: idim
@@ -173,14 +169,14 @@ subroutine X(kinetic) (h, m, f_der, psi, hpsi, ik)
 
   call push_sub('kinetic')
 
-  if(conf%periodic_dim>0) then
+  if(gr%sb%periodic_dim>0) then
 #if defined(COMPLEX_WFNS)
-    allocate(grad(m%np, conf%dim))
+    allocate(grad(NP, conf%dim))
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
-      call X(f_laplacian) (f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-      call X(f_gradient)  (f_der, psi(:, idim), grad(:, :))
-      do i = 1, m%np
+      call X(f_laplacian) (gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_gradient)  (gr%f_der, psi(:, idim), grad(:, :))
+      do i = 1, NP
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
              + M_TWO*M_zI*sum(h%d%kpoints(:, ik)*grad(i, :)) &
              - k2*psi(i, idim))
@@ -195,13 +191,13 @@ subroutine X(kinetic) (h, m, f_der, psi, hpsi, ik)
   
   else
     do idim = 1, h%d%dim
-      call X(f_laplacian) (f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_laplacian) (gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
-    call lalg_scal(m%np, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
+    call lalg_scal(NP, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
   end if
 
   if (h%em_app) then
-    call lalg_scal(m%np, h%d%dim, R_TOTYPE(M_ONE/h%m_ratio), Hpsi)
+    call lalg_scal(NP, h%d%dim, R_TOTYPE(M_ONE/h%m_ratio), Hpsi)
   end if
 
 
@@ -314,9 +310,10 @@ end subroutine X(current_extra_terms)
 
 
 ! ---------------------------------------------------------
-subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
+subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   type(hamiltonian_type), intent(in)    :: h
   type(mesh_type),        intent(in)    :: m
+  type(simul_box_type),   intent(in)    :: sb
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
@@ -335,7 +332,7 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
     
     do_dim: do idim = 1, h%d%dim
       allocate(lpsi(nlop%n), lhpsi(nlop%n))
-      if (conf%periodic_dim==0) then
+      if (sb%periodic_dim==0) then
         lpsi(:) = psi(nlop%jxyz(:), idim)
       else
         lpsi(:) = nlop%phases(:,ik)*psi(nlop%jxyz(:), idim)
@@ -346,7 +343,7 @@ subroutine X(vnlpsi) (h, m, psi, hpsi, ik)
         do jkbc = 1, nlop%c
           tmp   = R_TOTYPE(nlop%uv(:, ikbc)*m%vol_pp(nlop%jxyz(:)))
           uvpsi = lalg_dot(nlop%n, tmp, lpsi)*nlop%uvu(ikbc, jkbc)
-          if (conf%periodic_dim==0) then
+          if (sb%periodic_dim==0) then
             tmp = R_TOTYPE(nlop%uv(:, jkbc))
             call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
           else

@@ -18,11 +18,10 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine td_init(td, m, st, geo, h, outp)
+subroutine td_init(td, gr, st, h, outp)
   type(td_type),          intent(out)   :: td
-  type(mesh_type),        intent(inout) :: m
+  type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(geometry_type),    intent(in)    :: geo
   type(hamiltonian_type), intent(in)    :: h
   type(output_type),      intent(in)    :: outp
 
@@ -70,7 +69,7 @@ subroutine td_init(td, m, st, geo, h, outp)
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call loct_parse_int(check_inp('AbsorbingBoundaries'), 0, dummy)
-  call PES_init(td%PESv, m, st, dummy, outp%iter)
+  call PES_init(td%PESv, gr%m, gr%sb, st, dummy, outp%iter)
 #endif
 
   ! should we move the ions during the simulation?
@@ -111,14 +110,14 @@ subroutine td_init(td, m, st, geo, h, outp)
   call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., td%out_energy)
   call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., td%out_proj)
   call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., td%out_magnets)
-  call geometry_min_distance(geo, rmin)
+  call geometry_min_distance(gr%geo, rmin)
   call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, td%lmm_r)
   td%lmm_r = td%lmm_r * units_inp%length%factor
 
   call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1
 
-  call td_rti_init(m, st, td%tr)
+  call td_rti_init(gr, st, td%tr)
 
   call pop_sub()
 end subroutine td_init

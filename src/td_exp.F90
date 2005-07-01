@@ -58,8 +58,8 @@ module td_exp
                         CHEBYSHEV          = 4
   contains
 
-  subroutine td_exp_init(m, te)
-    type(mesh_type),   intent(IN) :: m
+  subroutine td_exp_init(gr, te)
+    type(grid_type),   intent(in)  :: gr
     type(td_exp_type), intent(out) :: te
 
     call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
@@ -103,8 +103,8 @@ module td_exp
       end if
 #if defined(HAVE_FFT)
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_new(m%l, te%cf)
-      call zcf_fft_init(te%cf)
+      call zcf_new(gr%m%l, te%cf)
+      call zcf_fft_init(te%cf, gr%sb)
 #endif
     end if
 
@@ -118,17 +118,16 @@ module td_exp
     end if
   end subroutine td_exp_end
 
-  subroutine td_exp_dt(te, m, f_der, h, zpsi, ik, timestep, t, order, vmagnus)
+  subroutine td_exp_dt(te, gr, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type),      intent(inout)   :: te
-    type(mesh_type),        intent(IN)      :: m
-    type(f_der_type),       intent(inout) :: f_der
+    type(grid_type),        intent(inout)   :: gr
     type(hamiltonian_type), intent(IN)      :: h
     integer,                intent(in)      :: ik
     CMPLX,                  intent(inout)   :: zpsi(:, :)
     FLOAT,                  intent(in)      :: timestep, t
     integer,      optional, intent(out)     :: order ! For the methods that rely on Hamiltonian-vector
                                                      ! multiplication, the number of these.
-    FLOAT,        optional, intent(IN)      :: vmagnus(m%np, h%d%nspin, 2)
+    FLOAT,        optional, intent(IN)      :: vmagnus(NP, h%d%nspin, 2)
 
     logical :: apply_magnus
 
@@ -161,9 +160,9 @@ module td_exp
       CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then
-        call zmagnus(h, m, f_der, psi, oppsi, ik, vmagnus)
+        call zmagnus(h, gr, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, m, f_der, psi, oppsi, ik, t)
+        call zHpsi(h, gr, psi, oppsi, ik, t)
       endif
 
     end subroutine operate
@@ -175,14 +174,14 @@ module td_exp
       
       call push_sub('fourth')
       
-      allocate(zpsi1(m%np, h%d%dim), hzpsi1(m%np, h%d%dim))
+      allocate(zpsi1(NP, h%d%dim), hzpsi1(NP, h%d%dim))
       zfact = M_z1
-      call lalg_copy(m%np, h%d%dim, zpsi(:,:), zpsi1(:,:))
+      call lalg_copy(NP, h%d%dim, zpsi(:,:), zpsi1(:,:))
       do i = 1, te%exp_order
         zfact = zfact*(-M_zI*timestep)/i
         call operate(zpsi1, hzpsi1)
-        call lalg_axpy(m%np, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
-        if(i .ne. te%exp_order) call lalg_copy(m%np, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
+        call lalg_axpy(NP, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
+        if(i .ne. te%exp_order) call lalg_copy(NP, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
       end do
       deallocate(zpsi1, hzpsi1)
       
@@ -210,24 +209,24 @@ module td_exp
       
       call push_sub('cheby')
       
-      allocate(zpsi1(m%np, h%d%dim, 0:2))
+      allocate(zpsi1(NP, h%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
-        call lalg_copy(m%np, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
-        call lalg_copy(m%np, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
+        call lalg_copy(NP, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
+        call lalg_copy(NP, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
 
         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
         zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
 
-        call lalg_axpy(m%np, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+        call lalg_axpy(NP, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
              zpsi1(:,:, 1), zpsi1(:,:, 0))
-        call lalg_scal(m%np, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
-        call lalg_axpy(m%np, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
-        call lalg_axpy(m%np, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
+        call lalg_scal(NP, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
+        call lalg_axpy(NP, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
+        call lalg_axpy(NP, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
       end do
 
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
-      call lalg_scal(m%np, h%d%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:,:))
+      call lalg_scal(NP, h%d%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:,:))
       deallocate(zpsi1)
       
       if(present(order)) order = te%exp_order
@@ -242,13 +241,13 @@ module td_exp
       call push_sub('lanczos')
       
       tol    = te%lanczos_tol
-      allocate(v(m%np, h%d%dim, te%exp_order+1), &
+      allocate(v(NP, h%d%dim, te%exp_order+1), &
                hm(te%exp_order+1, te%exp_order+1), &
                expo(te%exp_order+1, te%exp_order+1))
       hm = M_z0; expo = M_z0
 
       ! Normalize input vector, and put it into v(:, :, 1)
-      beta = zstates_nrm2(m, h%d%dim, zpsi)
+      beta = zstates_nrm2(gr%m, h%d%dim, zpsi)
       v(:, :, 1) = zpsi(:, :)/beta
 
       ! This is the Lanczos loop...      
@@ -257,11 +256,11 @@ module td_exp
         korder = n
 
         do k = max(1, n-1), n
-           hm(k, n) = zstates_dotp(m, h%d%dim, v(:, :, k), v(:, :, n+1))
-           call lalg_axpy(m%np, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
+           hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
+           call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
         enddo
-        hm(n+1, n) = zstates_nrm2(m, h%d%dim, v(:, :, n+1))
-        call lalg_scal(m%np, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
+        hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
+        call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
         call zgpadm(n, timestep, -M_zI*hm(1:n, 1:n), expo(1:n, 1:n), iflag)
 
         res = abs(hm(n+1, n)*abs(expo(1, n)))
@@ -276,7 +275,7 @@ module td_exp
 
       call zgpadm(korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), expo(1:korder+1, 1:korder+1), iflag)
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
-      call lalg_gemv(m%np, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
+      call lalg_gemv(NP, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
       
       if(present(order)) order = korder
       deallocate(v, hm, expo)
@@ -293,11 +292,11 @@ module td_exp
         call write_fatal(1)
       endif
       
-      call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
-      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*timestep/M_TWO, .true.)
-      call zexp_kinetic(m, h, zpsi, te%cf, -M_zI*timestep)
-      if(h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*timestep/M_TWO, .false.)
-      call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      if(h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .true.)
+      call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*timestep)
+      if(h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .false.)
+      call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       
       if(present(order)) order = 0
       call pop_sub()
@@ -319,11 +318,11 @@ module td_exp
       dt(1:5) = pp(1:5)*timestep
       
       do k = 1, 5
-        call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
-        call zexp_kinetic(m, h, zpsi, te%cf, -M_zI*dt(k))
-        if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
-        call zexp_vlpsi (m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
+        call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*dt(k))
+        if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
+        call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
       
       if(present(order)) order = 0

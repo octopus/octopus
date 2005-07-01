@@ -36,10 +36,10 @@
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
 subroutine X(input_function)(filename, m, f, ierr)
-  character(len=*), intent(in)  :: filename
-  type(mesh_type),  intent(in)  :: m
-  R_TYPE,           intent(out) :: f(:)
-  integer,          intent(out) :: ierr
+  character(len=*),     intent(in)  :: filename
+  type(mesh_type),      intent(in)  :: m
+  R_TYPE,               intent(out) :: f(:)
+  integer,              intent(out) :: ierr
 
   integer :: iunit, i, function_kind, file_kind
   type(X(cf)) :: c
@@ -255,10 +255,11 @@ end subroutine X(input_function)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, m, f, u, ierr)
+subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   integer,          intent(in)  :: how
   character(len=*), intent(in)  :: dir, fname
   type(mesh_type),  intent(in)  :: m
+  type(simul_box_type), intent(in)  :: sb
   R_TYPE,           intent(in)  :: f(:)  ! f(m%np)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
@@ -476,10 +477,10 @@ contains
     call X(mf2cf) (m, f, c)
     
     ! the offset is different in periodic directions
-    do i = 1,conf%periodic_dim
+    do i = 1, sb%periodic_dim
       offset(i)=-(c%n(i))/2 * m%h(i) / units_out%length%factor
     end do
-    do i = conf%periodic_dim+1, 3
+    do i = sb%periodic_dim+1, 3
       offset(i)=-(c%n(i) - 1)/2 * m%h(i) / units_out%length%factor
     end do
 

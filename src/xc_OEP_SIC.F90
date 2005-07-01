@@ -18,10 +18,9 @@
 !! $Id$
 
 !!! This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
+subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   type(xc_type),     intent(in)    :: xcs
-  type(mesh_type),   intent(in)    :: m
-  type(f_der_type),  intent(inout) :: f_der
+  type(grid_type),   intent(inout) :: gr
   type(states_type), intent(inout) :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
@@ -37,7 +36,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
 
   call push_sub('oep_sic')
   
-  allocate(rho(m%np, 2), Vxc(m%np, 2))
+  allocate(rho(NP, 2), Vxc(NP, 2))
   rho(:, 2) = M_ZERO
 
   ! loop over states
@@ -55,7 +54,7 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
       
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(xcs, m, f_der, rho, SPIN_POLARIZED, vxc, ex2, ec2, edummy, edummy) 
+      call xc_get_vxc(xcs, gr%m, gr%f_der, rho, SPIN_POLARIZED, vxc, ex2, ec2, edummy, edummy) 
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
@@ -65,10 +64,10 @@ subroutine X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
       
       ! calculate the Hartree contribution using poissons equation
       vxc(:, 1) = M_ZERO
-      call dpoisson_solve(m, f_der, vxc(:, 1), rho(:, 1))
+      call dpoisson_solve(gr, vxc(:, 1), rho(:, 1))
 
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-         sum(vxc(:, 1) * R_ABS(st%X(psi)(:, 1, i, is))**2 * m%vol_pp(:))
+         sum(vxc(:, 1) * R_ABS(st%X(psi)(:, 1, i, is))**2 * gr%m%vol_pp(:))
 
       oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - vxc(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
     end if

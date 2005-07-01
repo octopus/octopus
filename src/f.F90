@@ -73,9 +73,10 @@ module functions
 contains
 
   ! ---------------------------------------------------------
-  subroutine f_der_init(f_der, use_curvlinear)
-    type(f_der_type), intent(out) :: f_der
-    logical, intent(in) :: use_curvlinear
+  subroutine f_der_init(f_der, sb, use_curvlinear)
+    type(f_der_type),     intent(out) :: f_der
+    type(simul_box_type), intent(in)  :: sb
+    logical,              intent(in)  :: use_curvlinear
 
     call push_sub('f_der_init')
 
@@ -92,7 +93,7 @@ contains
 #endif
     
     if(f_der%space == REAL_SPACE) then
-      call derivatives_init(f_der%der_discr, f_der%n_ghost)
+      call derivatives_init(f_der%der_discr, sb, f_der%n_ghost)
       message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
     else
@@ -113,9 +114,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_der_build(f_der, m)
+  subroutine f_der_build(f_der, m, sb)
     type(f_der_type),        intent(inout) :: f_der
     type(mesh_type), target, intent(in)    :: m
+    type(simul_box_type),    intent(in)    :: sb
 
     call push_sub('f_der_build')
 
@@ -126,11 +128,11 @@ contains
 #if defined(HAVE_FFT)
     else
       call dcf_new(m%l, f_der%dcf_der)
-      call dcf_fft_init(f_der%dcf_der)
+      call dcf_fft_init(f_der%dcf_der, sb)
       call dcf_new_from(f_der%dcf_aux, f_der%dcf_der)
       
       call zcf_new(m%l, f_der%zcf_der)
-      call zcf_fft_init(f_der%zcf_der)
+      call zcf_fft_init(f_der%zcf_der, sb)
       call zcf_new_from(f_der%zcf_aux, f_der%zcf_der)
 #endif
     end if

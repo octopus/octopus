@@ -17,8 +17,9 @@
 !!
 !! $Id$
 
-subroutine poisson2D_init(m)
-  type(mesh_type),     intent(inout) :: m
+subroutine poisson2D_init(gr)
+  type(grid_type), intent(inout) :: gr
+
   ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
 
   select case(poisson_solver)
@@ -32,29 +33,31 @@ subroutine poisson2D_init(m)
   call write_info(1)
 
 #ifdef HAVE_FFT
-  if (poisson_solver == FFT_SPH) call init_fft()
+  if (poisson_solver == FFT_SPH) call init_fft(gr%m)
 #endif
 
   call pop_sub()
 contains
 
 #ifdef HAVE_FFT
-  subroutine init_fft()
+  subroutine init_fft(m)
+    type(mesh_type), intent(in) :: m
+
     integer :: ix, iy, ixx(3), db(3)
     FLOAT :: temp(3), vec, r_c
     FLOAT :: DELTA_R = CNST(1.0e-12)
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
-       call mesh_double_box(m, db)                 ! get dimensions of the double box
+       call mesh_double_box(gr%m, gr%sb, db)                 ! get dimensions of the double box
        if (poisson_solver == FFT_SPH) db(1:conf%dim) = maxval(db)
     else
        db(:) = m%l(:)
     endif
 
-    call dcf_new(db, fft_cf)    ! allocate cube function where we will perform
-    call dcf_fft_init(fft_cf)   ! the ffts
-    db = fft_cf%n               ! dimensions may have been optimized
+    call dcf_new(db, fft_cf)      ! allocate cube function where we will perform
+    call dcf_fft_init(fft_cf, gr%sb) ! the ffts
+    db = fft_cf%n                 ! dimensions may have been optimized
 
 
     call loct_parse_float(check_inp('PoissonCutoffRadius'),&
@@ -89,6 +92,7 @@ contains
 #endif
 
 end subroutine poisson2D_init
+
 
 subroutine poisson2D_solve(m, pot, rho)
   type(mesh_type), intent(IN) :: m

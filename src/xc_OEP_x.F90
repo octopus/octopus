@@ -34,10 +34,9 @@
 !  where the numbers indicate the processor that will do the work
 !------------------------------------------------------------
 
-subroutine X(oep_x) (m, f_der, st, is, oep, ex)
-  type(mesh_type),   intent(IN)    :: m
-  type(f_der_type),  intent(in)    :: f_der
-  type(states_type), intent(IN)    :: st
+subroutine X(oep_x) (gr, st, is, oep, ex)
+  type(grid_type),   intent(in)    :: gr
+  type(states_type), intent(in)    :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep
   FLOAT,             intent(out)   :: ex
@@ -56,11 +55,11 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 
   call push_sub('oep_x')
 
-  allocate(F_ij(m%np), rho_ij(m%np), send_buffer(m%np))
+  allocate(F_ij(NP), rho_ij(NP), send_buffer(NP))
   allocate(recv_stack(st%nst+1), send_stack(st%nst+1))
 
 #if defined(HAVE_MPI)
-  allocate(recv_buffer(m%np))
+  allocate(recv_buffer(NP))
 #endif
 
   ! This is the maximum number of blocks for each processor
@@ -107,7 +106,7 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 #if defined(HAVE_MPI)
       ! send wave-function
       if((send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
-        call MPI_ISend(st%X(psi)(:, 1, send_stack(ist_s), is), m%np, R_MPITYPE, &
+        call MPI_ISend(st%X(psi)(:, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
             node_to, send_stack(ist_s), MPI_COMM_WORLD, req, ierr)
       end if
 #endif
@@ -119,35 +118,35 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
 
         ! receive wave-function
         if(node_fr == mpiv%node) then
-          wf_ist => st%X(psi)(1:m%np, 1, recv_stack(ist_r), is)
+          wf_ist => st%X(psi)(1:NP, 1, recv_stack(ist_r), is)
 #if defined(HAVE_MPI)
         else
-          call MPI_Recv(recv_buffer(:), m%np, R_MPITYPE, &
+          call MPI_Recv(recv_buffer(:), NP, R_MPITYPE, &
               node_fr, recv_stack(ist_r), MPI_COMM_WORLD, stat(:), ierr)
-          wf_ist => recv_buffer(1:m%np)
+          wf_ist => recv_buffer(1:NP)
 #endif
         end if
 
         ! this is where we calculate the elements of the matrix
         ist = recv_stack(ist_r)
-        send_buffer(1:m%np) = R_TOTYPE(M_ZERO)
+        send_buffer(1:NP) = R_TOTYPE(M_ZERO)
         do jst = st%st_start, st%st_end
           if((st%node(ist) == mpiv%node).and.(jst < ist)) cycle
           if((st%occ(ist, is).le.small).or.(st%occ(jst, is).le.small)) cycle
 
-          rho_ij(1:m%np) = R_CONJ(wf_ist(1:m%np))*st%X(psi)(1:m%np, 1, jst, is)
-          F_ij(1:m%np) = R_TOTYPE(M_ZERO)
-          call X(poisson_solve)(m, f_der, F_ij, rho_ij)
+          rho_ij(1:NP) = R_CONJ(wf_ist(1:NP))*st%X(psi)(1:NP, 1, jst, is)
+          F_ij(1:NP) = R_TOTYPE(M_ZERO)
+          call X(poisson_solve)(gr, F_ij, rho_ij)
 
-          ! this quantity has to be added to oep%X(lxc)(1:m%np, ist)
-          send_buffer(1:m%np) = send_buffer(1:m%np) + &
-              oep%socc*st%occ(jst, is)*F_ij(1:m%np)*R_CONJ(st%X(psi)(1:m%np, 1, jst, is))
+          ! this quantity has to be added to oep%X(lxc)(1:NP, ist)
+          send_buffer(1:NP) = send_buffer(1:NP) + &
+              oep%socc*st%occ(jst, is)*F_ij(1:NP)*R_CONJ(st%X(psi)(1:NP, 1, jst, is))
 
           ! if off-diagonal, then there is another contribution
           ! not that the wf jst is always in this node
           if(ist.ne.jst) then
-            oep%X(lxc)(1:m%np, jst) = oep%X(lxc)(1:m%np, jst) - &
-                oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:m%np)*wf_ist(1:m%np))
+            oep%X(lxc)(1:NP, jst) = oep%X(lxc)(1:NP, jst) - &
+                oep%socc * st%occ(ist, is) * R_CONJ(F_ij(1:NP)*wf_ist(1:NP))
           end if
 
           ! get the contribution (ist, jst) to the exchange energy
@@ -155,17 +154,17 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
           if(ist.ne.jst) r = M_TWO
           
           ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
-              sum(R_REAL(wf_ist(1:m%np) * F_ij(1:m%np) * R_CONJ(st%X(psi)(1:m%np, 1, jst, is))) * m%vol_pp(1:m%np))
+              sum(R_REAL(wf_ist(1:NP) * F_ij(1:NP) * R_CONJ(st%X(psi)(1:NP, 1, jst, is))) * gr%m%vol_pp(1:NP))
         end do
 
         if(st%node(ist) == mpiv%node) then
           ! either add the contribution ist
-          oep%X(lxc)(1:m%np, ist) = oep%X(lxc)(1:m%np, ist) - send_buffer(1:m%np)
+          oep%X(lxc)(1:NP, ist) = oep%X(lxc)(1:NP, ist) - send_buffer(1:NP)
 
 #if defined(HAVE_MPI)
         else
           ! or send it to the node that has wf ist
-          call MPI_ISend(send_buffer(:), m%np, R_MPITYPE, &
+          call MPI_ISend(send_buffer(:), NP, R_MPITYPE, &
               node_fr, ist, MPI_COMM_WORLD, req, ierr)
 #endif
         end if
@@ -176,11 +175,11 @@ subroutine X(oep_x) (m, f_der, st, is, oep, ex)
       ! now we have to receive the contribution to lxc from the node to
       ! which we sent the wave-function ist
       if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
-        call MPI_Recv(recv_buffer(:), m%np, R_MPITYPE, &
+        call MPI_Recv(recv_buffer(:), NP, R_MPITYPE, &
             node_to, send_stack(ist_s), MPI_COMM_WORLD, stat(:), ierr)
 
-        oep%X(lxc)(1:m%np, send_stack(ist_s)) = oep%X(lxc)(1:m%np, send_stack(ist_s)) - &
-            recv_buffer(1:m%np)
+        oep%X(lxc)(1:NP, send_stack(ist_s)) = oep%X(lxc)(1:NP, send_stack(ist_s)) - &
+            recv_buffer(1:NP)
 
       end if
 #endif

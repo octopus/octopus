@@ -112,16 +112,15 @@ end subroutine X(lr_build_dl_rho)
 ! This subroutine calculates the solution of
 !    (H - eps_{ist,ik} + omega) psi^1_{ist,ik} = y
 ! ---------------------------------------------------------
-subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
+subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
   type(lr_type),          intent(inout) :: lr
   type(hamiltonian_type), intent(inout) :: h
-  type(mesh_type),        intent(in)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+  type(grid_type),        intent(inout) :: gr
   type(states_dim_type),  intent(in)    :: d
 
   integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: x(:,:)   ! x(m%np, d%dim)
-  R_TYPE,                 intent(in)    :: y(:,:)   ! y(m%np, d%dim)
+  R_TYPE,                 intent(inout) :: x(:,:)   ! x(NP, d%dim)
+  R_TYPE,                 intent(in)    :: y(:,:)   ! y(NP, d%dim)
   R_TYPE, optional,       intent(in)    :: omega
 
   R_TYPE, allocatable :: r(:,:), p(:,:), Hp(:,:)
@@ -131,10 +130,10 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
    
   call push_sub('lr_solve_HXeY')
   
-  allocate(r(m%np, d%dim), p(m%np, d%dim), Hp(m%np, d%dim))
+  allocate(r(NP, d%dim), p(NP, d%dim), Hp(NP, d%dim))
 
   ! Initial residue
-  call X(Hpsi)(h, m, f_der, x, Hp, ik)
+  call X(Hpsi)(h, gr, x, Hp, ik)
   r(:,:) = y(:,:) - Hp(:,:)
   if(present(omega)) r(:,:) = r(:,:) - omega*x(:,:)
    
@@ -143,21 +142,21 @@ subroutine X(lr_solve_HXeY) (lr, h, m, f_der, d, ik, x, y, omega)
    
   conv_last = .false.
   do iter = 1, lr%max_iter
-    gamma = X(states_dotp) (m, d%dim, r, r)
+    gamma = X(states_dotp) (gr%m, d%dim, r, r)
 
     ! we require more precision here than for the density
     conv = (sqrt(abs(gamma)) < lr%conv_abs_dens)
     if(conv.and.conv_last) exit
     conv_last = conv
 
-    call X(Hpsi)(h, m, f_der, p, Hp, ik)
+    call X(Hpsi)(h, gr, p, Hp, ik)
     if(present(omega)) Hp(:,:) = Hp(:,:) + omega*p(:,:)
 
-    alpha = gamma/ X(states_dotp) (m, d%dim, p, Hp)
+    alpha = gamma/ X(states_dotp) (gr%m, d%dim, p, Hp)
     r(:,:) = r(:,:) - alpha*Hp(:,:)
     x(:,:) = x(:,:) + alpha* p(:,:)
     
-    beta = X(states_dotp) (m, d%dim, r, r)/gamma
+    beta = X(states_dotp) (gr%m, d%dim, r, r)/gamma
     p(:,:) = r(:,:) + beta*p(:,:)
   end do
 

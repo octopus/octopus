@@ -26,6 +26,7 @@ module timedep
   use lib_oct_parser
   use geometry
   use mesh
+  use grid
   use mesh_function
   use functions
   use states
@@ -124,7 +125,7 @@ contains
           h%eii = geo%eii
        end if
 
-       call zepot_forces(h%ep, m, st, geo, td%iter*td%dt, reduce_=.true.)
+       call zepot_forces(h%ep, sys%gr, st, td%iter*td%dt, reduce_=.true.)
        geo%kinetic_energy = kinetic_energy(geo)
        select case(td%move_ions)
        case(NORMAL_VERLET)
@@ -215,7 +216,7 @@ contains
                 f1(j, :) = geo%atom(j)%f(:)
              end do
           end if
-          call zepot_forces(h%ep, m, st, geo, i*td%dt, reduce_=.true.)
+          call zepot_forces(h%ep, sys%gr, st, i*td%dt, reduce_=.true.)
           if(td%move_ions == VELOCITY_VERLET) then
              do j = 1, geo%natoms
                 if(geo%atom(j)%move) then
@@ -271,7 +272,7 @@ contains
       ! allocate memory
       allocate(st%zpsi(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
-      call td_init(td, m, st, geo, h, sys%outp)
+      call td_init(td, sys%gr, st, h, sys%outp)
 
     end subroutine init_
 
@@ -396,7 +397,7 @@ contains
       if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
 
       ! output angular momentum
-      if(td%out_angular) call td_write_angular(out_angular, m, sys%gr%f_der, st, i)
+      if(td%out_angular) call td_write_angular(out_angular, sys%gr, st, i)
 
       ! output spin
       if(td%out_spin) call td_write_spin(out_spin, m, st, i)
@@ -429,7 +430,7 @@ contains
       call io_mkdir('td.general')
 
       if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
-      if(td%out_angular) call td_write_angular(out_angular, m, sys%gr%f_der, st, 0)
+      if(td%out_angular) call td_write_angular(out_angular, sys%gr, st, 0)
       if(td%out_spin)    call td_write_spin(out_spin, m, st, 0)
       if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, 0)
 !!$    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
@@ -585,7 +586,7 @@ contains
       call push_sub('td_write_data')
 
       ! first write resume file
-      call zrestart_write(trim(tmpdir)//'restart_td', st, m, ierr, iter)
+      call zrestart_write(trim(tmpdir)//'restart_td', st, sys%gr, ierr, iter)
       if(ierr.ne.0) then
          message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_td"'
          call write_fatal(1)
@@ -598,7 +599,7 @@ contains
                write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
 
                call doutput_function(restart_format, trim(tmpdir)//"restart_td", &
-                    filename, m, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
+                    filename, m, sys%gr%sb, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
 
                if(ierr.ne.0) then
                   write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
@@ -626,10 +627,10 @@ contains
       ! now write down the rest
       write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-      call zstates_output(st, m, sys%gr%f_der, filename, sys%outp)
+      call zstates_output(st, sys%gr, filename, sys%outp)
       if(sys%outp%what(output_geometry)) &
            call atom_write_xyz(filename, "geometry", geo)
-      call hamiltonian_output(h, m, filename, sys%outp)
+      call hamiltonian_output(h, m, sys%gr%sb, filename, sys%outp)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
       call PES_output(td%PESv, m, st, iter, sys%outp%iter, td%dt)

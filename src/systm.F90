@@ -75,7 +75,7 @@ contains
     call states_init(s%st, s%gr)
     call output_init(s%outp)
     
-    call v_ks_init(s%ks, s%gr%m, s%st%d)
+    call v_ks_init(s%ks, s%gr, s%st%d)
     
     call pop_sub()
   end subroutine system_init
@@ -183,7 +183,7 @@ contains
 
     case (SPEC_PS_TM2,SPEC_PS_HGH) ! ...from pseudopotential
       ! the outer loop sums densities over atoms in neighbour cells
-      do k = 1, 3**conf%periodic_dim
+      do k = 1, 3**sb%periodic_dim
         do i = 1, m%np
           call mesh_r(m, i, r, a=atom%x + sb%shift(k,:))
           r = max(r, r_small)

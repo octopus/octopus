@@ -80,7 +80,7 @@ program make_st
   call wf_renormalize(sys%gr%m, sys%st)
 
   ! save wfs in a new static file
-  call X(restart_write) (trim(tmpdir)//'restart_gs_new', sys%st, sys%gr%m, err)
+  call X(restart_write) (trim(tmpdir)//'restart_gs_new', sys%st, sys%gr, err)
   if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs_new"'
     call write_fatal(1)

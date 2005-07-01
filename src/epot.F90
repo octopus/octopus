@@ -29,6 +29,7 @@ module external_pot
   use fft
   use math
   use mesh
+  use grid
   use simul_box
   use functions
 #ifdef HAVE_FFT
@@ -88,10 +89,9 @@ module external_pot
 
 contains
 
-  subroutine epot_init(ep, m, geo)
+  subroutine epot_init(ep, gr)
     type(epot_type),     intent(out) :: ep
-    type(mesh_type),     intent(in)  :: m
-    type(geometry_type), intent(in)  :: geo
+    type(grid_type),     intent(in)  :: gr
 
     integer :: i
     integer(POINTER_SIZE) :: blk
@@ -100,22 +100,24 @@ contains
     call push_sub('epot_init')
 
     !Local part of the pseudopotentials
-    allocate(ep%vpsl(m%np))
+    allocate(ep%vpsl(NP))
     ep%vpsl = M_ZERO
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
-    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) call epot_local_fourier_init(ep, m, geo)
+    if(gr%sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
+      call epot_local_fourier_init(ep, gr%m, gr%sb, gr%geo)
+    end if
 
     ep%classic_pot = 0
-    if(geo%ncatoms > 0) then
+    if(gr%geo%ncatoms > 0) then
       call loct_parse_int(check_inp('ClassicPotential'), 0, ep%classic_pot)
       if(ep%classic_pot > 0) then
         message(1) = 'Info: generating classic external potential'
         call write_info(1)
 
-        allocate(ep%Vclassic(m%np))
-        call epot_generate_classic(ep, m, geo)
+        allocate(ep%Vclassic(NP))
+        call epot_generate_classic(ep, gr%m, gr%geo)
       end if
     end if
 
@@ -141,9 +143,9 @@ contains
       call loct_parse_block_end(blk)
 
       !Compute the scalar potential
-      allocate(ep%v(m%np), x(conf%dim))
-      do i = 1, m%np
-        ep%v(i) = sum(m%x(i,:)*ep%e(:))
+      allocate(ep%v(NP), x(conf%dim))
+      do i = 1, NP
+        ep%v(i) = sum(gr%m%x(i,:)*ep%e(:))
       end do
       deallocate(x)
     end if
@@ -174,9 +176,9 @@ contains
       call loct_parse_block_end(blk)
 
       !Compute the vector potential
-      allocate(ep%a(m%np, conf%dim), x(conf%dim))
-      do i = 1, m%np
-        x = m%x(i, :)
+      allocate(ep%a(NP, conf%dim), x(conf%dim))
+      do i = 1, NP
+        x = gr%m%x(i, :)
         select case (conf%dim)
         case (2)
           ep%a(i, :) = -M_HALF*(/x(2)*ep%b(1), x(1)*ep%b(1)/)
@@ -189,7 +191,7 @@ contains
     end if
 
     ! Non local operators
-    ep%nvnl = geometry_nvnl(geo)
+    ep%nvnl = geometry_nvnl(gr%geo)
     nullify(ep%vnl)
     if(ep%nvnl>0) then
        allocate(ep%vnl(ep%nvnl))
@@ -202,14 +204,15 @@ contains
     call pop_sub()
   end subroutine epot_init
 
-  subroutine epot_end(ep, geo)
-    type(epot_type),     intent(inout) :: ep
-    type(geometry_type), intent(IN)    :: geo
+  subroutine epot_end(ep, sb, geo)
+    type(epot_type),      intent(inout) :: ep
+    type(simul_box_type), intent(in)    :: sb
+    type(geometry_type),  intent(in)    :: geo
 
 #ifdef HAVE_FFT
     integer :: i
 
-    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
@@ -254,9 +257,10 @@ contains
   end subroutine epot_end
 
 #ifdef HAVE_FFT
-  subroutine epot_local_fourier_init(ep, m, geo)
+  subroutine epot_local_fourier_init(ep, m, sb, geo)
     type(epot_type),     intent(inout) :: ep
     type(mesh_type),     intent(IN)    :: m
+    type(simul_box_type), intent(in)   :: sb
     type(geometry_type), intent(IN)    :: geo
     
     integer :: vlocal_cutoff
@@ -270,10 +274,10 @@ contains
     
     call push_sub('epot_local_fourier_init')
 
-    call loct_parse_int(check_inp('VlocalCutoff'), conf%periodic_dim , vlocal_cutoff)
-    if (vlocal_cutoff /= conf%periodic_dim) then
-      write(message(1), '(a,i1,a)')'The System is periodic in ',conf%periodic_dim ,' dimension(s),'
-      write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ',vlocal_cutoff,' dimensions.'
+    call loct_parse_int(check_inp('VlocalCutoff'), sb%periodic_dim , vlocal_cutoff)
+    if (vlocal_cutoff /= sb%periodic_dim) then
+      write(message(1), '(a,i1,a)')'The System is periodic in ', sb%periodic_dim, ' dimension(s),'
+      write(message(2), '(a,i1,a)')'but VlocalCutoff is set for ', vlocal_cutoff, ' dimensions.'
       call write_warning(2)
     end if
     select case(vlocal_cutoff)
@@ -305,9 +309,9 @@ contains
       cf => ep%local_cf(i)
       
       if(i == 1) then
-        call mesh_double_box(m, db)
+        call mesh_double_box(m, sb, db)
         call dcf_new(db, cf)    ! initialize the cube
-        call dcf_fft_init(cf)   ! and initialize the ffts
+        call dcf_fft_init(cf, sb)   ! and initialize the ffts
         db = cf%n               ! dimensions of the box may have been optimized, so get them
         c(:) = db(:)/2 + 1      ! get center of double box
         if (vlocal_cutoff == 3) then
@@ -428,7 +432,7 @@ contains
     geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
-    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
       call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
@@ -464,7 +468,7 @@ contains
          endif
          do lm = -l, l
             if(.not.fast_generation_) then
-               call nonlocal_op_kill(ep%vnl(i))
+               call nonlocal_op_kill(ep%vnl(i), sb)
                ! This if is a performance hack, necessary for when the ions move.
                ! For each atom, the sphere is the same, so we just calculate it once.
                if(p == 1) then
@@ -487,7 +491,7 @@ contains
     end do
 
 #ifdef HAVE_FFT
-    if(conf%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)
@@ -517,7 +521,7 @@ contains
       
       call push_sub('build_local_part')
 
-      if(conf%periodic_dim==0.or.conf%only_user_def) then
+      if(sb%periodic_dim==0.or.conf%only_user_def) then
         do i = 1, m%np
           x(:) = m%x(i, :) - a%x(:)
           ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x)
@@ -546,7 +550,7 @@ contains
       
       call push_sub('build_kb_sphere')
 
-      if (any(s%ps%rc_max + m%h(1) >= sb%lsize(1:conf%periodic_dim))) then
+      if (any(s%ps%rc_max + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
         message(1)='KB sphere is larger than the box size'
         write(message(2),'(a,f12.6,a)')  '  rc_max+h = ', s%ps%rc_max + m%h(1), ' [b]'
         write(message(3),'(a,3f12.4,a)') '  lsize    = ', sb%lsize, ' [b]'
@@ -555,7 +559,7 @@ contains
       end if
       j = 0
       do k = 1, m%np
-        do i = 1,3**conf%periodic_dim
+        do i = 1, 3**sb%periodic_dim
           call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
           if(r > s%ps%rc_max + m%h(1)) cycle
           j = j + 1
@@ -569,7 +573,7 @@ contains
 
       j = 0
       do k = 1, m%np
-        do i = 1, 3**conf%periodic_dim
+        do i = 1, 3**sb%periodic_dim
           call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
           ! we enlarge slightly the mesh (good for the interpolation scheme)
           if(r > s%ps%rc_max + m%h(1)) cycle
@@ -608,7 +612,7 @@ contains
       ep%vnl(ivnl)%so_uvu(: , :)   = M_z0
       ep%vnl(ivnl)%so_luv(:, :, :) = M_z0
 
-      if(conf%periodic_dim/=0) then
+      if(sb%periodic_dim/=0) then
         allocate(ep%vnl(ivnl)%phases(ep%vnl(ivnl)%n, st%d%nik))
       endif
 
@@ -626,7 +630,7 @@ contains
       
       j_loop: do j = 1, ep%vnl(ivnl)%n
         x_in(:) = m%x(ep%vnl(ivnl)%jxyz(j), :)
-         k_loop: do k = 1, 3**conf%periodic_dim
+         k_loop: do k = 1, 3**sb%periodic_dim
           x(:) = x_in(:) - sb%shift(k,:)          
           r=sqrt(sum((x-a%x)*(x-a%x)))
           if (r > s%ps%rc_max + m%h(1)) cycle
@@ -648,7 +652,7 @@ contains
         do j = 1, ep%vnl(ivnl)%n
           x_in(:) = m%x(ep%vnl(ivnl)%jxyz(j), :)
 
-          do k = 1, 3**conf%periodic_dim
+          do k = 1, 3**sb%periodic_dim
             x(:) = x_in(:) - sb%shift(k,:)          
             r=sqrt(sum((x-a%x)*(x-a%x)))
             if (r > s%ps%rc_max + m%h(1)) cycle
@@ -675,7 +679,7 @@ contains
               do j = 1, ep%vnl(ivnl)%n
                 call mesh_r(m, ep%vnl(ivnl)%jxyz(j), r, x=x_in, a=a%x)
 
-                do k = 1, 3**conf%periodic_dim
+                do k = 1, 3**sb%periodic_dim
                   x(:) = x_in(:) - sb%shift(k,:)          
                   r    = sqrt(sum(x*x))
                   if (r > s%ps%rc_max + m%h(1)) cycle
@@ -705,7 +709,7 @@ contains
         ep%vnl(ivnl)%so_uvu(1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
       end if
 
-      if(conf%periodic_dim/=0) then
+      if(sb%periodic_dim/=0) then
         do j = 1, ep%vnl(ivnl)%n
            x(:) = m%x(ep%vnl(ivnl)%jxyz(j), :)
            do k=1, st%d%nik
@@ -790,12 +794,14 @@ contains
 
   ! This subroutine deallocates (if associated) every component of a nonlocal operator
   ! type variabel, except for jxyz. This is not very elegant, but it helps with performance.
-  subroutine nonlocal_op_kill(nlop)
-    type(nonlocal_op) :: nlop
+  subroutine nonlocal_op_kill(nlop, sb)
+    type(nonlocal_op),    intent(inout) :: nlop
+    type(simul_box_type), intent(in)    :: sb
+
     if(associated(nlop%uv)) then
       deallocate(nlop%uv, nlop%uvu, nlop%duv, &
                  nlop%so_uv, nlop%so_duv, nlop%so_luv, nlop%so_uvu)
-      if(conf%periodic_dim/=0 .and. associated(nlop%phases)) then
+      if(sb%periodic_dim/=0 .and. associated(nlop%phases)) then
         deallocate(nlop%phases)
       end if
     end if

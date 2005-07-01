@@ -18,11 +18,10 @@
 !! $Id$
 
 ! CONJUGATE-GRADIENTS METHOD.
-subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorder, verbose)
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, verbose)
+  type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged
@@ -35,7 +34,7 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: ik, np, moved, p, j, iter, i, maxter, conv, conv_
+  integer  :: ik, moved, p, j, iter, i, maxter, conv, conv_
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_solver_cg2')
@@ -51,16 +50,14 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
     call write_info(6)
   endif
 
-  np = m%np
-
   if(present(reorder)) reord = reorder
   conv_ = 0
   maxter = niter
   niter = 0
   moved = 0
 
-  allocate(h_psi(np, st%d%dim), g(np, st%d%dim), g0(np, st%d%dim), &
-       cg(np, st%d%dim), ppsi(np, st%d%dim))
+  allocate(h_psi(NP, st%d%dim), g(NP, st%d%dim), g0(NP, st%d%dim), &
+       cg(NP, st%d%dim), ppsi(NP, st%d%dim))
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
@@ -72,14 +69,14 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
       endif
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(p, m, st%d%dim, &
-           st%X(psi)(1:np, 1:st%d%dim, 1:p, ik), start=p)
+      call X(states_gram_schmidt)(p, gr%m, st%d%dim, &
+           st%X(psi)(1:NP, 1:st%d%dim, 1:p, ik), start=p)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, m, f_der, st%X(psi)(:,:, p, ik) , h_psi, ik)
+      call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
       ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
+      st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
 
       ! Starts iteration for this band
       iter_loop: do iter = 1, maxter
@@ -90,24 +87,24 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
         g = h_psi
         ppsi = st%X(psi)(:,:, p, ik)
         
-        es(1) = X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, p, ik), g)
-        es(2) = X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
+        es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
+        es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
         
         ! Orthogonalize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
-          a0 = X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, j, ik), g)
+          a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), g)
           g(:,:) = g(:,:) - a0 * st%X(psi)(:,:, j, ik)
         end do
         
-        if(iter .ne. 1) gg1 = X(states_dotp) (m, st%d%dim, g, g0)
+        if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
         
         ! Approximate inverse preconditioner...
         !call ipre(g, g0)
         g0 = g
         
-        gg = X(states_dotp) (m, st%d%dim, g, g0)
+        gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
         
         ! Starting or following iterations...
         if(iter .eq. 1) then
@@ -125,13 +122,13 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
         end if
         
         ! cg contains now the conjugate gradient
-        cg0 = X(states_nrm2) (m, st%d%dim, cg(:,:))
-        call X(Hpsi) (h, m, f_der, cg, ppsi, ik)
+        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
+        call X(Hpsi) (h, gr, cg, ppsi, ik)
         
         ! Line minimization.
-        a0 = X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
+        a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         a0 = M_TWO * a0 / cg0
-        b0 = X(states_dotp) (m, st%d%dim, cg(:,:), ppsi)
+        b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
         b0 = b0/cg0**2
         e0 = st%eigenval(p, ik)
         theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
@@ -150,14 +147,14 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
         ! This does the sum: st%X(psi)(:, :, p, ik) = a0*st%X(psi)(:, :, p, ik) + b0*cg(:, :)
         ! It can crash in Intel compiler version 8 otherwise.
         do j = 1, st%d%dim
-           call lalg_scal(np, a0, st%X(psi)(:, j, p, ik))
-           call lalg_axpy(np, b0, cg(:, j), st%X(psi)(:, j, p, ik))
+           call lalg_scal(NP, a0, st%X(psi)(:, j, p, ik))
+           call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(:, j, p, ik))
         enddo
         
         ! Calculate H|psi>
         h_psi = a0*h_psi + b0*ppsi
 
-        res = X(states_residue)(m, st%d%dim, h_psi, st%eigenval(p, ik), &
+        res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), &
              st%X(psi)(:, :, p, ik))
         ! Test convergence.
         if(res < tol) then
@@ -220,10 +217,10 @@ subroutine eigen_solver_cg2(m, f_der, st, h, tol, niter, converged, diff, reorde
   call pop_sub()
 end subroutine eigen_solver_cg2
 
+
 ! The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, reorder, verbose)
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder, verbose)
+  type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
   FLOAT,                  intent(in)    :: tol
@@ -233,7 +230,7 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
   logical,      optional, intent(in)    :: reorder
   logical,      optional, intent(in)    :: verbose
 
-  integer :: nik, nst, np, dim, ik, ist, maxter, i, k, l, conv, conv_
+  integer :: nik, nst, dim, ik, ist, maxter, i, k, l, conv, conv_
   logical :: verbose_, reorder_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
@@ -253,24 +250,24 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
     call write_info(6)
   endif
 
-  np = m%np; dim = st%d%dim; nik = st%d%nik; nst = st%nst
+  dim = st%d%dim; nik = st%d%nik; nst = st%nst
 
   conv_ = 0
   maxter = niter
   niter = 0
 
-  allocate(phi(np, dim), psi(np, dim), hpsi(np, dim), cg(np, dim), hcgp(np, dim), sd(np, dim), cgp(np, dim))
+  allocate(phi(NP, dim), psi(NP, dim), hpsi(NP, dim), cg(NP, dim), hcgp(NP, dim), sd(NP, dim), cgp(NP, dim))
 
   kpoints: do ik = 1, nik
     conv = converged
     states: do ist = conv + 1, nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(ist, m, dim, st%X(psi)(1:np, 1:dim, 1:ist, ik), start=ist)
+      call X(states_gram_schmidt)(ist, gr%m, dim, st%X(psi)(1:NP, 1:dim, 1:ist, ik), start=ist)
       psi(:, :) = st%X(psi)(:, :, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, m, f_der, psi, phi, ik); niter = niter + 1
+      call X(Hpsi)(h, gr, psi, phi, ik); niter = niter + 1
 
       ! Initial settings for scalar variables.
       ctheta = M_ONE
@@ -287,10 +284,10 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
          phi(:, :) = ctheta*phi(:, :) + stheta*hcgp(:, :)
 
          ! lambda = <psi|H|psi> = <psi|phi>
-         lambda = X(states_dotp)(m, dim, psi, phi)
+         lambda = X(states_dotp)(gr%m, dim, psi, phi)
 
          ! Check convergence
-         res = X(states_residue)(m, dim, phi, lambda, psi)
+         res = X(states_residue)(gr%m, dim, phi, lambda, psi)
          if(present(diff)) diff(ist, ik) = res
          if(res < tol) then
            conv = conv + 1
@@ -300,25 +297,25 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
          ! Get steepest descent vector
          sd(:, :) = lambda*psi(:, :) - phi(:, :)
          do k = 1, ist - 1
-            dump = X(states_dotp)(m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
+            dump = X(states_dotp)(gr%m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
             sd(:, :) = sd(:, :) - dump*st%X(psi)(:, :, k, ik)
          enddo
 
          ! Get conjugate-gradient vector
-         gamma = X(states_dotp)(m, dim, sd, sd)/mu
-         mu    = X(states_dotp)(m, dim, sd, sd)
+         gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu
+         mu    = X(states_dotp)(gr%m, dim, sd, sd)
          cg    = sd + gamma*cg
 
          ! 
-         dump = X(states_dotp)(m, dim, psi, cg)
+         dump = X(states_dotp)(gr%m, dim, psi, cg)
          cgp  = cg - dump*psi
-         dump = sqrt(X(states_dotp)(m, dim, cgp, cgp))
+         dump = sqrt(X(states_dotp)(gr%m, dim, cgp, cgp))
          cgp = cgp/dump
 
-         call X(Hpsi)(h, m, f_der, cgp, hcgp, ik); niter = niter + 1
+         call X(Hpsi)(h, gr, cgp, hcgp, ik); niter = niter + 1
 
-         alpha = - lambda + X(states_dotp)(m, dim, cgp, hcgp)
-         beta  = M_TWO*X(states_dotp)(m, dim, cgp, phi)
+         alpha = - lambda + X(states_dotp)(gr%m, dim, cgp, hcgp)
+         beta  = M_TWO*X(states_dotp)(gr%m, dim, cgp, phi)
          theta = M_HALF*atan(-beta/alpha)
          ctheta = cos(theta)
          stheta = sin(theta)
@@ -327,10 +324,10 @@ subroutine eigen_solver_cg2_new(m, f_der, st, h, tol, niter, converged, diff, re
          theta2 = theta + M_PI/M_TWO
          ctheta2 = cos(theta2)
          stheta2 = sin(theta2)
-         sol(1) = ctheta**2*lambda + stheta**2*X(states_dotp)(m, dim, cgp, hcgp) + & 
-                                     M_TWO*stheta*ctheta*X(states_dotp)(m, dim, cgp, phi)
-         sol(2) = ctheta**2*lambda + stheta2**2*X(states_dotp)(m, dim, cgp, hcgp) + &
-                                     M_TWO*stheta2*ctheta2*X(states_dotp)(m, dim, cgp, phi)
+         sol(1) = ctheta**2*lambda + stheta**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + & 
+                                     M_TWO*stheta*ctheta*X(states_dotp)(gr%m, dim, cgp, phi)
+         sol(2) = ctheta**2*lambda + stheta2**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + &
+                                     M_TWO*stheta2*ctheta2*X(states_dotp)(gr%m, dim, cgp, phi)
 
          if(sol(2) < sol(1)) then
             theta = theta2

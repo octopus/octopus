@@ -25,17 +25,16 @@
 !!! the rest of the hamiltonian module does not know about the gory details
 !!! of how xc is defined and calculated.
 
-subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
+subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   use xc_functl
 
   type(xc_oep_type),      intent(inout) :: oep
   type(xc_type),          intent(in)    :: xcs
   logical,                intent(in)    :: apply_sic_pz
-  type(mesh_type),        intent(in)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+  type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(inout) :: st
-  FLOAT,                  intent(inout) :: vxc(m%np, st%d%nspin)
+  FLOAT,                  intent(inout) :: vxc(NP, st%d%nspin)
   FLOAT,                  intent(inout) :: ex, ec
   
   FLOAT :: e
@@ -52,7 +51,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
   ! initialize oep structure
   allocate(oep%eigen_type(st%nst))
   allocate(oep%eigen_index(st%nst))
-  allocate(oep%X(lxc)(m%np, st%st_start:st%st_end))
+  allocate(oep%X(lxc)(NP, st%st_start:st%st_end))
   allocate(oep%uxc_bar(st%nst))
 
   ! this part handles the (pure) orbital functionals
@@ -66,14 +65,14 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
       e = M_ZERO
       select case(xcs%functl(ixc,1)%id)
       case(XC_OEP_X)
-        call X(oep_x) (m, f_der, st, is, oep, e)
+        call X(oep_x) (gr, st, is, oep, e)
         ex = ex + e
       end select
     end do functl_loop
   
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, m, f_der, st, is, oep, ex, ec)
+      call X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
     end if
     
     ! get the HOMO state
@@ -81,7 +80,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%X(lxc)(:, ist))*m%vol_pp(:))
+      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%X(lxc)(:, ist))*gr%m%vol_pp(:))
     end do
 
 #if defined(HAVE_MPI)
@@ -98,12 +97,12 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
       first = .false.
 
       oep%vxc = M_ZERO
-      call X(xc_KLI_solve) (m, st, is, oep)
+      call X(xc_KLI_solve) (gr%m, st, is, oep)
     end if
 
     ! if asked, solve the full OEP equation
     if(oep%level == XC_OEP_FULL) then
-      call X(xc_oep_solve)(m, f_der, h, st, is, vxc(:,is), oep)
+      call X(xc_oep_solve)(gr, h, st, is, vxc(:,is), oep)
     end if
 
     vxc(:, is) = vxc(:, is) + oep%vxc(:)
@@ -115,13 +114,12 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, m, f_der, h, st, vxc, ex, ec)
 end subroutine X(xc_OEP_calc)
 
 
-subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
+  type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(IN)    :: st
   integer,                intent(in)    :: is
-  FLOAT,                  intent(inout) :: vxc(m%np)
+  FLOAT,                  intent(inout) :: vxc(NP)
   type(xc_oep_type),      intent(inout) :: oep
 
   integer :: iter, ist, ierr
@@ -129,13 +127,13 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
   FLOAT, allocatable :: s(:), vxc_old(:)
   R_TYPE, allocatable :: b(:,:)
 
-  allocate(b(m%np, 1), s(m%np), vxc_old(m%np))
+  allocate(b(NP, 1), s(NP), vxc_old(NP))
 
   vxc_old = vxc(:)
 
-  ierr = X(lr_alloc_psi) (st, m, oep%lr)
+  ierr = X(lr_alloc_psi) (st, gr%m, oep%lr)
   do ist = 1, st%nst
-    call X(lr_orth_vector) (m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
+    call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
   end do
 
   ! fix xc potential (needed for Hpsi)
@@ -146,17 +144,17 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
+      vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * gr%m%vol_pp(:))
       b(:,1) =  -(oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(:, 1, ist, is)) &
          + oep%X(lxc)(:, ist)
 
-      call X(lr_orth_vector) (m, st, b, is)
+      call X(lr_orth_vector) (gr%m, st, b, is)
       
       ! and we now solve the equation [h-eps_i] psi_i = b_i
-      call X(lr_solve_HXeY) (oep%lr, h, m, f_der, st%d, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
+      call X(lr_solve_HXeY) (oep%lr, h, gr, st%d, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
          R_TOTYPE(-st%eigenval(ist, is)))
 
-      call X(lr_orth_vector) (m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
+      call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
 
       ! calculate this funny function s
       s(:) = s(:) + M_TWO*R_REAL(oep%lr%X(dl_psi)(:, 1, ist, is)*st%X(psi)(:, 1, ist, is))
@@ -166,12 +164,12 @@ subroutine X(xc_oep_solve) (m, f_der, h, st, is, vxc, oep)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * m%vol_pp(:))
+        vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * gr%m%vol_pp(:))
         oep%vxc(:) = oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist))
       end if
     end do
 
-    f = dmf_nrm2(m, s)
+    f = dmf_nrm2(gr%m, s)
     if(f < oep%lr%conv_abs_dens) exit
   end do
 

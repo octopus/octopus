@@ -201,7 +201,7 @@ contains
         do i = 1, m%np
           tmp(i) = sum(lr%X(dl_rho)(i,:))
         end do
-        call dpoisson_solve(m, sys%gr%f_der, lr%ddl_Vhar, tmp) 
+        call dpoisson_solve(sys%gr, lr%ddl_Vhar, tmp) 
       end if 
 
       lr%X(dl_rho) = M_ZERO
@@ -221,7 +221,7 @@ contains
             call X(lr_orth_vector)(m, st, Y, ik)
             
             iter_max = 50
-            call X(lr_solve_HXeY) (lr, h, sys%gr%m, sys%gr%f_der, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
+            call X(lr_solve_HXeY) (lr, h, sys%gr, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
                -sys%st%eigenval(ist, ik) + real(sigma, PRECISION)*omega)
 
             print *, lr%iter, sum(lr%X(dl_psi)(:,1, ist, ik)**2*sys%gr%m%vol_pp(:))

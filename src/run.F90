@@ -270,17 +270,6 @@ subroutine run_init()
   call loct_parse_int(check_inp('Dimensions'), 3, conf%dim)
   if(conf%dim<1 .or. conf%dim>3) call input_error('Dimensions')
 
-  ! handle periodic directions
-  call loct_parse_int(check_inp('PeriodicDimensions'), 0, conf%periodic_dim)
-  if ((conf%periodic_dim < 0) .or. (conf%periodic_dim > 3)) then
-    message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
-    call write_fatal(1)
-  endif
-  if(conf%periodic_dim > conf%dim) then
-    message(1) = 'PeriodicDimensions must be <= Dimensions'
-    call write_fatal(1)
-  end if
-
   call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
 
   ! do we treat only userdefined species
@@ -304,10 +293,8 @@ subroutine run_init()
   end select
   write(message(1), '(a,a)')    'Calculation Mode = ', trim(mode_string)
   write(message(2), '(a,i1,a)') 'The octopus will run in ', conf%dim, ' dimension(s).'
-  write(message(3), '(a,i1,a)') 'The octopus will treat system as periodic in ', &
-                                 conf%periodic_dim, ' dimension(s)'
 
-  message(5) = "Boundary conditions:"
+  message(3) = "Boundary conditions:"
   if(conf%boundary_zero_derivative) then
     write(message(4), '(2a)') trim(message(5)), " zero derivatives"
   else
@@ -324,7 +311,7 @@ subroutine run_init()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
     call units_init()
     call system_init(sys)
-    call hamiltonian_init(h, sys%gr%m, sys%gr%geo, sys%st%d, sys%ks%ip_app)
+    call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
     call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
   endif
 
@@ -334,7 +321,7 @@ end subroutine run_init
 
 subroutine run_end()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
-    call hamiltonian_end(h, sys%gr%geo)
+    call hamiltonian_end(h, sys%gr)
     call system_end(sys)
   endif
 

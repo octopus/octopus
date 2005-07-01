@@ -155,10 +155,9 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
 end function X(states_residue)
 
-subroutine X(states_output) (st, m, f_der, dir, outp)
+subroutine X(states_output) (st, gr, dir, outp)
   type(states_type),   intent(in)    :: st
-  type(mesh_type),     intent(in)    :: m
-  type(f_der_type),    intent(inout) :: f_der
+  type(grid_type),     intent(inout) :: gr
   character(len=*),    intent(in)    :: dir
   type(output_type),   intent(in)    :: outp
 
@@ -177,7 +176,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
     if(outp%what(output_density)) then
       do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
-        call doutput_function(outp%how, dir, fname, m, st%rho(:, is), u, ierr)
+        call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
       end do
     end if
 #ifdef HAVE_MPI
@@ -191,7 +190,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
         do ik = 1, st%d%nik
           do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
-            call X(output_function) (outp%how, dir, fname, m, &
+            call X(output_function) (outp%how, dir, fname, gr%m, gr%sb, &
                st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
           end do
         end do
@@ -200,7 +199,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
   end if
 
   if(outp%what(output_wfs_sqmod)) then
-    allocate(dtmp(m%np))
+    allocate(dtmp(NP))
     do ist = 1, st%nst
       is = outp%wfs((ist-1)/32 + 1)
       if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
@@ -208,7 +207,7 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
           do idim = 1, st%d%dim
             write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
             dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
-            call doutput_function (outp%how, dir, fname, m, dtmp, u, ierr)
+            call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
           end do
         end do
       end if
@@ -223,11 +222,12 @@ subroutine X(states_output) (st, m, f_der, dir, outp)
 
   call pop_sub()
 contains
+
   subroutine mf2mf_RS2FS(m, fin, fout, c)
-    type(mesh_type), intent(IN) :: m
-    R_TYPE, intent(IN) :: fin(m%np)
-    CMPLX, intent(out) :: fout(m%np)
-    type(X(cf)), intent(inout) :: c
+    type(mesh_type), intent(in)    :: m
+    R_TYPE,          intent(in)    :: fin(NP)
+    CMPLX,           intent(out)   :: fout(NP)
+    type(X(cf)),     intent(inout) :: c
 
     call X(cf_alloc_RS) (c)
     call X(cf_alloc_FS) (c)
@@ -238,6 +238,7 @@ contains
     call X(cf_free_FS) (c)
   end subroutine mf2mf_RS2FS
 
+
   subroutine elf(rs, filename)
     logical, intent(in) :: rs
     character(len=*), intent(in) :: filename
@@ -245,7 +246,7 @@ contains
     FLOAT :: f, d, s
     integer :: i, is, ik
     CMPLX, allocatable :: psi_fs(:), gpsi(:,:)
-    FLOAT, allocatable :: c(:), r(:), gr(:,:), j(:,:)
+    FLOAT, allocatable :: c(:), r(:), gradr(:,:), j(:,:)
     type(X(cf)) :: cf_tmp
 
     FLOAT, parameter :: dmin = CNST(1e-10)
@@ -258,18 +259,18 @@ contains
     end if
 
     if(.not.rs) then
-      call X(cf_new)(m%l, cf_tmp)
-      call X(cf_fft_init)(cf_tmp)
+      call X(cf_new)(gr%m%l, cf_tmp)
+      call X(cf_fft_init)(cf_tmp, gr%sb)
     end if
 
-    allocate(c(m%np))
+    allocate(c(NP))
 
     do_is: do is = 1, st%d%nspin
-      allocate(r(m%np), gr(m%np, conf%dim), j(m%np, conf%dim))
-      r = M_ZERO; gr = M_ZERO; j  = M_ZERO
+      allocate(r(NP), gradr(NP, conf%dim), j(NP, conf%dim))
+      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
       c = M_ZERO
 
-      allocate(psi_fs(m%np), gpsi(m%np, conf%dim))
+      allocate(psi_fs(NP), gpsi(NP, conf%dim))
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim
@@ -277,25 +278,25 @@ contains
             if(rs) then
               psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
             else
-              call mf2mf_RS2FS(m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
+              call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
             end if
-            call zf_gradient(f_der, psi_fs(:), gpsi)
+            call zf_gradient(gr%f_der, psi_fs(:), gpsi)
 
             if(.not.rs) then
               do i = 1, conf%dim
-                gpsi(:,i) = gpsi(:,i) * m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
               end do
             end if
 
             r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
             do i = 1, conf%dim
-              gr(:,i) = gr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
                  M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
               j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
                  aimag(conjg(psi_fs(:))*gpsi(:,i))
             end do
 
-            do i = 1, m%np
+            do i = 1, NP
               if(r(i) >= dmin) then
                 c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
                    sum(abs(gpsi(i, 1:conf%dim))**2)
@@ -306,15 +307,15 @@ contains
       end do
       deallocate(psi_fs, gpsi)
 
-      do i = 1, m%np
+      do i = 1, NP
         if(r(i) >= dmin) then
-          c(i) = c(i) - (M_FOURTH*sum(gr(i, 1:conf%dim)**2) + sum(j(i, 1:conf%dim)**2))/(s*r(i))
+          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:conf%dim)**2) + sum(j(i, 1:conf%dim)**2))/(s*r(i))
         end if
       end do
 
       ! normalization
       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, m%np
+      do i = 1, NP
         if(abs(r(i)) >= dmin) then
           d    = f*(r(i)/s)**(M_FIVE/M_THREE)
           c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
@@ -323,9 +324,9 @@ contains
         end if
       end do
       
-      deallocate(r, gr, j)
+      deallocate(r, gradr, j)
       write(fname, '(a,a,i1)') trim(filename), '-', is
-      call doutput_function(outp%how, dir, trim(fname), m, c, M_ONE, ierr)
+      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
       
     end do do_is
     
@@ -397,18 +398,18 @@ contains
     do i = st1%st_start, st1%st_end
       do j = 0, mpiv%numprocs-1
         if(mpiv%node.ne.j) then
-          call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
+          call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*NP, R_MPITYPE, &
              j, i, mpi_comm_world, request, ierr)
         end if
       end do
     end do
 
     ! Processes are received, and then the matrix elements are calculated.
-    allocate(phi2(m%np, st1%d%dim))
+    allocate(phi2(NP, st1%d%dim))
     do j = 1, n
       l = st1%node(j)
       if(l.ne.mpiv%node) then
-           call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, mpi_comm_world, request, ierr)
+           call mpi_irecv(phi2(1, 1), st1%d%dim*NP, R_MPITYPE, l, j, mpi_comm_world, request, ierr)
            call mpi_wait(request, status, ierr)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
@@ -442,12 +443,11 @@ contains
 end function X(states_mpdotp)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(states_calc_angular)(m, f_der, st, angular, l2)
-  type(mesh_type),   intent(IN)  :: m
-  type(f_der_type), intent(inout) :: f_der
-  type(states_type), intent(IN)  :: st
-  FLOAT,             intent(out) :: angular(3)
-  FLOAT, optional,   intent(out) :: l2
+subroutine X(states_calc_angular)(gr, st, angular, l2)
+  type(grid_type),   intent(inout) :: gr
+  type(states_type), intent(in)    :: st
+  FLOAT,             intent(out)   :: angular(3)
+  FLOAT, optional,   intent(out)   :: l2
 
   FLOAT :: temp(3), ltemp
   R_TYPE, allocatable :: lpsi(:, :)
@@ -459,21 +459,21 @@ subroutine X(states_calc_angular)(m, f_der, st, angular, l2)
   call push_sub('states_calc_angular')
 
   temp = M_ZERO; ltemp = M_ZERO
-  allocate(lpsi(m%np, conf%dim))
+  allocate(lpsi(NP, conf%dim))
   do ik = 1, st%d%nik
     do j  = st%st_start, st%st_end
       do idim = 1, st%d%dim
 #if defined(R_TREAL)
         temp = M_ZERO ! The expectation value of L of *any* real function is null
 #else
-        call X(f_angular_momentum)(f_der, st%X(psi)(:, idim, j, ik), lpsi)
-        temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
-        temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(:, 2))
-        temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(:, 3))
+        call X(f_angular_momentum)(gr%f_der, st%X(psi)(:, idim, j, ik), lpsi)
+        temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
+        temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 2))
+        temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 3))
 #endif
         if(present(l2)) then
-          call X(f_l2)(f_der, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
-          ltemp = ltemp + st%occ(j, ik)*X(mf_dotp)(m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
+          call X(f_l2)(gr%f_der, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
+          ltemp = ltemp + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
         end if
       end do
     end do

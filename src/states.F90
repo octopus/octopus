@@ -584,10 +584,12 @@ function states_eigenvalues_sum(st) result(e)
 
 end function states_eigenvalues_sum
 
-subroutine states_write_eigenvalues(iunit, nst, st, error)
+
+subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
   integer,           intent(in) :: iunit, nst
-  type(states_type), intent(IN) :: st
-  FLOAT,             intent(IN), optional :: error(nst, st%d%nik)
+  type(states_type), intent(in) :: st
+  type(simul_box_type), intent(in) :: sb
+  FLOAT,             intent(in), optional :: error(nst, st%d%nik)
 
   integer ik, j, ns, is
   FLOAT :: o, oplus, ominus
@@ -599,7 +601,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
 
   message(1) = 'Eigenvalues [' // trim(units_out%energy%abbrev) // ']'
   call write_info(1, iunit)
-  if (conf%periodic_dim>0) then 
+  if(sb%periodic_dim>0) then 
   end if
   if (st%d%nik > ns) then
     message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
@@ -644,7 +646,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, error)
           end if
       
           write(iunit, '(i4)', advance='no') j
-          if (conf%periodic_dim>0) then 
+          if (sb%periodic_dim>0) then 
             if(st%d%ispin == SPINORS) then
               write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
                    (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus

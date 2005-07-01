@@ -28,6 +28,7 @@ use units
 use fft
 use mesh
 use states
+use simul_box
 
 implicit none
 
@@ -55,9 +56,10 @@ end type PES_type
 
 contains
 
-subroutine PES_init(p, m, st, ab, save_iter)
+subroutine PES_init(p, m, sb, st, ab, save_iter)
   type(PES_TYPE),    intent(out)   :: p
   type(mesh_type),   intent(inout) :: m
+  type(simul_box_type), intent(in) :: sb
   type(states_type), intent(IN)    :: st
   integer,           intent(in)    :: ab, save_iter
 
@@ -72,7 +74,7 @@ subroutine PES_init(p, m, st, ab, save_iter)
   if(ab == 2) then 
     call loct_parse_logical(check_inp('CalcPES_Mask'), .false., p%calc_mask)
     if(p%calc_mask) then
-      call PES_mask_init(p%mask, m, st)
+      call PES_mask_init(p%mask, m, sb, st)
     end if
   end if
 

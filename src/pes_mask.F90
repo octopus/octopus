@@ -17,16 +17,17 @@
 !!
 !! $Id$
 
-subroutine PES_mask_init(v, m, st)
-  type(PES_mask_type), intent(out)   :: v
-  type(mesh_type),     intent(inout) :: m
-  type(states_type),   intent(IN)    :: st
+subroutine PES_mask_init(v, m, sb, st)
+  type(PES_mask_type),  intent(out)   :: v
+  type(mesh_type),      intent(inout) :: m
+  type(simul_box_type), intent(in)    :: sb
+  type(states_type),    intent(IN)    :: st
 
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
       
   ! alloc ffts in case they are not allocated yet
-  call fft_init(m%l, fft_complex, v%fft)
+  call fft_init(sb, m%l, fft_complex, v%fft)
 
   ! setup arrays to be used
   allocate(&

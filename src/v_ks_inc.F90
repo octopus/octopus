@@ -25,11 +25,8 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
   logical,      optional, intent(in)    :: calc_eigenval
 
   FLOAT :: amaldi_factor
-  integer :: np
 
   call push_sub('v_ks_calc')
-
-  np = gr%m%np
 
   h%epot = M_ZERO
   h%vhxc = M_ZERO
@@ -46,7 +43,7 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
     call v_a_xc()
   end if
 
-  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, gr%m, gr%f_der, st)
+  if(present(calc_eigenval)) call X(hamiltonian_eigenval) (h, gr, st)
 
   call pop_sub()
 
@@ -56,7 +53,7 @@ contains
     FLOAT, allocatable :: rho(:), vhartree(:)
     integer :: is
 
-    allocate(rho(np), vhartree(np))
+    allocate(rho(NP), vhartree(NP))
     vhartree = M_ZERO
 
     ! calculate the total density
@@ -69,10 +66,10 @@ contains
     if(ks%sic_type == sic_amaldi) rho(:) = amaldi_factor*rho(:)
 
     ! solve the poisson equation
-    call dpoisson_solve(gr%m, gr%f_der, vhartree, rho) 
+    call dpoisson_solve(gr, vhartree, rho) 
     
     if (h%em_app) then
-      call lalg_scal(np, M_ONE/h%e_ratio, vhartree)
+      call lalg_scal(NP, M_ONE/h%e_ratio, vhartree)
     end if
   
     h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)
@@ -93,7 +90,7 @@ contains
     FLOAT, allocatable :: j(:,:), ahartree(:,:)
     integer :: is, idim
 
-    allocate(j(np, conf%dim), ahartree(np, conf%dim))
+    allocate(j(NP, conf%dim), ahartree(NP, conf%dim))
     ahartree = M_ZERO
 
     ! calculate the total current
@@ -104,7 +101,7 @@ contains
 
     ! solve poisson equation
     do idim = 1, conf%dim
-      call dpoisson_solve(gr%m, gr%f_der, ahartree(:,idim), j(:, idim)) ! solve the poisson equation
+      call dpoisson_solve(gr, ahartree(:,idim), j(:, idim)) ! solve the poisson equation
     end do
 
     h%ahxc(:,:, 1) = h%ahxc(:,:, 1) + ahartree(:,:)
@@ -134,7 +131,7 @@ contains
     !logical, save :: RPA_first = .true.
     !
     !if(RPA_first) then
-    !  allocate(RPA_Vhxc(np, h%d%nspin))
+    !  allocate(RPA_Vhxc(NP, h%d%nspin))
     !  RPA_Vhxc = h%vhxc
   
     h%ex = M_ZERO
@@ -142,7 +139,7 @@ contains
     h%exc_j = M_ZERO
 
     ! get density taking into account non-linear core corrections, and the Amaldi SIC correction
-    allocate(rho(np, st%d%nspin))
+    allocate(rho(NP, st%d%nspin))
     if(associated(st%rho_core)) then
       do is = 1, st%d%spin_channels
         rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
@@ -165,7 +162,7 @@ contains
 
     ! The OEP family has to handle specially
     call X(xc_oep_calc)(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
-       gr%m, gr%f_der, h, st, h%vhxc, h%ex, h%ec)
+       gr, h, st, h%vhxc, h%ex, h%ec)
   
     ! next 5 lines are for an RPA calculation
     !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential
@@ -184,7 +181,7 @@ contains
       h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
          - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
       
-      allocate(ztmp1(np), ztmp2(np))
+      allocate(ztmp1(NP), ztmp2(NP))
       ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
       ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)
       ! WARNING missing real() ???

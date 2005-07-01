@@ -32,6 +32,7 @@ module ground_state
   use restart
   use scf
   use grid
+  use simul_box
   use mesh
 
   implicit none
@@ -125,16 +126,16 @@ contains
       lcao_data%state = 0 ! Uninitialized here.
       call lcao_init(lcao_data, gr, st, h)
       if(lcao_data%state == 1) then
-        call lcao_wf(lcao_data, gr%m, st, h)
+        call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
         call lcao_end(lcao_data)
         
         call states_fermi(st, gr%m)                         ! occupations
-        call states_write_eigenvalues(stdout, st%nst, st)
+        call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
       end if
     end if
    
     ! write wave-functions to disk
-    call X(restart_write)(trim(tmpdir)//'restart_gs', st, gr%m, err)
+    call X(restart_write)(trim(tmpdir)//'restart_gs', st, gr, err)
     if(err.ne.0) then
       message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
       call write_fatal(1)

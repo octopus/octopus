@@ -31,6 +31,7 @@ module eigen_solver
   use stencil_star
   use mesh_function
   use mesh
+  use grid
   use functions
   use states
   use hamiltonian
@@ -222,10 +223,9 @@ end subroutine eigen_solver_end
 
 
 ! ---------------------------------------------------------
-subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
+subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
   type(eigen_solver_type), intent(inout) :: eigens
-  type(mesh_type),         intent(IN)    :: m
-  type(f_der_type),        intent(inout) :: f_der
+  type(grid_type),         intent(inout) :: gr
   type(states_type),       intent(inout) :: st
   type(hamiltonian_type),  intent(IN)    :: h
   integer,                 intent(in)    :: iter
@@ -253,21 +253,21 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
 
   select case(eigens%es_type)
   case(RS_CG_NEW)
-    call eigen_solver_cg2_new(m, f_der, st, h, tol, maxiter, &
+    call eigen_solver_cg2_new(gr, st, h, tol, maxiter, &
            eigens%converged, eigens%diff, verbose = verbose_)
   case(RS_CG)
-    call eigen_solver_cg2(m, f_der, st, h, tol, maxiter, &
+    call eigen_solver_cg2(gr, st, h, tol, maxiter, &
            eigens%converged, eigens%diff, verbose = verbose_)
 #ifdef HAVE_TRLAN
   case(RS_LANCZOS)
-    call eigen_solver_cg3(m, st, h, tol, maxiter, &
+    call eigen_solver_cg3(gr%m, st, h, tol, maxiter, &
            eigens%converged, eigens%diff)
 #endif
   case(RS_PLAN)
-    call eigen_solver_plan(m, f_der, st, h, tol, maxiter, eigens%converged, eigens%diff)
+    call eigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
   case(ARPACK)
-    call eigen_solver_arpack(m, f_der, st, h, tol, maxiter, eigens%arnoldi_vectors, &
+    call eigen_solver_arpack(gr%m, gr%f_der, st, h, tol, maxiter, eigens%arnoldi_vectors, &
                              eigens%converged, eigens%diff)
 #endif
   end select
@@ -278,11 +278,11 @@ subroutine eigen_solver_run(eigens, m, f_der, st, h, iter, conv, verbose)
   call pop_sub()
 end subroutine eigen_solver_run
 
+
 !!! This routine in principle diagonalises the hamiltonian in the
 !!! basis defined by st. It has not been tested, and it is not used now
-subroutine eigen_diagon_subspace(m, f_der, st, h)
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+subroutine eigen_diagon_subspace(gr, st, h)
+  type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
 
@@ -290,16 +290,16 @@ subroutine eigen_diagon_subspace(m, f_der, st, h)
   integer :: ik, i, j
 
   allocate(h_subspace(st%nst, st%nst), vec(st%nst, st%nst))
-  allocate(f(m%np, st%d%dim, st%nst))
+  allocate(f(NP, st%d%dim, st%nst))
 
   ik_loop: do ik = 1, st%d%nik
     f = st%X(psi)(:,:,:, ik)
 
     eigenfunction_loop : do i = 1, st%nst
-      call X(Hpsi)(h, m, f_der, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
+      call X(Hpsi)(h, gr, st%X(psi)(:,:, i, ik) , f(:,:, 1), ik)
       h_subspace(i, i) = st%eigenval(i, ik)
       do j = i, st%nst
-        h_subspace(i, j) = X(states_dotp) (m, st%d%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
+        h_subspace(i, j) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), f(:,:, 1))
         h_subspace(j, i) = R_CONJ(h_subspace(i, j))
       end do
     end do eigenfunction_loop
@@ -314,7 +314,7 @@ subroutine eigen_diagon_subspace(m, f_der, st, h)
       end do
       
       ! renormalize
-      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(m, st%d%dim, st%X(psi)(:,:, i, ik))
+      st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
     end do
   end do ik_loop
 

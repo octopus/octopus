@@ -17,13 +17,14 @@
 !!
 !! $Id$
 
-subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
-  type(epot_type),     intent(IN)    :: ep
-  type(mesh_type),     intent(IN)    :: mesh
-  type(geometry_type), intent(inout) :: geo
+subroutine X(epot_forces) (ep, gr, st, t, reduce_)
+  type(epot_type),     intent(in)    :: ep
+  type(grid_type), target, intent(in)    :: gr
   type(states_type),   intent(IN)    :: st
   FLOAT,     optional, intent(in)    :: t
   logical,   optional, intent(in)    :: reduce_
+
+  type(geometry_type), pointer :: geo
 
   integer :: i, j, l, m, idim, ist, ik, ii, jj, ivnl
   FLOAT :: d, r, zi, zj, x(3)
@@ -37,6 +38,8 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
 
   call push_sub('epot_forces')
   
+  geo => gr%geo
+
   ! init to 0
   do i = 1, geo%natoms
     geo%atom(i)%f = M_ZERO
@@ -60,7 +63,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
                 do jj = 1, ep%vnl(ivnl)%c
                   
                   p = sum(ep%vnl(ivnl)%uv(:, ii) *  &
-                     st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) * mesh%vol_pp(ep%vnl(ivnl)%jxyz(:))**2)
+                     st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) * gr%m%vol_pp(ep%vnl(ivnl)%jxyz(:))**2)
                   uvpsi =  st%occ(ist, ik) * p * ep%vnl(ivnl)%uvu(ii, jj)
                   
                   do j = 1, conf%dim
@@ -111,7 +114,7 @@ subroutine X(epot_forces) (ep, mesh, st, geo, t, reduce_)
   end do
   
   ! now comes the local part of the PP
-  if(conf%periodic_dim==0.or.conf%only_user_def) then ! Real space
+  if(gr%sb%periodic_dim==0.or.conf%only_user_def) then ! Real space
     call local_RS()
 #ifdef HAVE_FFT
   else ! Fourier space
@@ -147,12 +150,12 @@ contains
     
     do i = 1, geo%natoms
       atm => geo%atom(i)
-      do j = 1, mesh%np
-        call mesh_r(mesh, j, r, x=x, a=atm%x)
+      do j = 1, NP
+        call mesh_r(gr%m, j, r, x=x, a=atm%x)
         if(r < r_small) cycle
         
         call specie_get_glocal(atm%spec, x, gv)
-        d = sum(st%rho(j, 1:ns))*mesh%vol_pp(j)
+        d = sum(st%rho(j, 1:ns))*gr%m%vol_pp(j)
         atm%f(1:conf%dim) = atm%f(1:conf%dim) - d*gv(1:conf%dim)
       end do
     end do
@@ -163,7 +166,7 @@ contains
     type(dcf) :: cf_for
     FLOAT, allocatable :: force(:)
     
-    allocate(force(mesh%np))
+    allocate(force(NP))
     call dcf_new_from(cf_for, ep%local_cf(1)) ! at least one specie must exist
     call dcf_alloc_FS(cf_for)
     call dcf_alloc_RS(cf_for)
@@ -172,13 +175,13 @@ contains
       atm => geo%atom(i)
       do j = 1, conf%dim
         cf_for%FS = M_z0
-        call cf_phase_factor(mesh, atm%x, ep%local_cf(atm%spec%index), cf_for)
+        call cf_phase_factor(gr%m, atm%x, ep%local_cf(atm%spec%index), cf_for)
         
-        call dcf_FS_grad(mesh, cf_for, j)
+        call dcf_FS_grad(gr%m, cf_for, j)
         call dcf_FS2RS(cf_for)
-        call dcf2mf(mesh, cf_for, force)
+        call dcf2mf(gr%m, cf_for, force)
         do l = 1, st%d%nspin
-          atm%f(j) = atm%f(j) + sum(force(1:mesh%np)*st%rho(1:mesh%np, l)*mesh%vol_pp(1:mesh%np))
+          atm%f(j) = atm%f(j) + sum(force(1:NP)*st%rho(1:NP, l)*gr%m%vol_pp(1:NP))
         end do
       end do
     end do

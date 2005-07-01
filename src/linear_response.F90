@@ -25,6 +25,7 @@ module linear_response
   use syslabels
   use lib_oct_parser
   use mesh
+  use grid
   use states
   use mix
   use hamiltonian

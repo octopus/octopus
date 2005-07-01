@@ -19,6 +19,8 @@
 
 #include "config_F90.h"
 
+#define NP gr%m%np
+
 #define __STRING(x)     #x
 
 #if defined(DEBUG) && defined(LONG_LINES)

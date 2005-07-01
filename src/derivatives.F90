@@ -31,6 +31,7 @@ module derivatives
   use stencil_variational
   use stencil_cube
   use stencil_starplus
+  use simul_box
 
   implicit none
 
@@ -83,8 +84,9 @@ module derivatives
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, n_ghost)
+  subroutine derivatives_init(der, sb, n_ghost)
     type(der_discr_type), intent(out) :: der
+    type(simul_box_type), intent(in)  :: sb
     integer,              intent(out) :: n_ghost(:)
 
     integer :: i
@@ -135,7 +137,7 @@ contains
     
     der%zero_bc = (i == DER_BC_ZERO_F)
     der%boundaries(:) = i
-    der%boundaries(1:conf%periodic_dim) = DER_BC_PERIOD
+    der%boundaries(1:sb%periodic_dim) = DER_BC_PERIOD
 
     ! find out how many ghost points we need in which dimension
     n_ghost(:) = 0
