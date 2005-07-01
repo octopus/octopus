@@ -133,8 +133,7 @@ contains
       end if
 
       do k = 1, m%np
-        call mesh_xyz(m, k, x)
-        call epot_laser_scalar_pot(h%ep, x, t, v)
+        call epot_laser_scalar_pot(h%ep, m%x(k,:), t, v)
         psi(k,:) = exp(factor*v) * psi(k,:)
       end do
     end if

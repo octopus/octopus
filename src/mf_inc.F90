@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+
 !!!  integrates a function
 function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(IN) :: m
@@ -25,6 +26,7 @@ function X(mf_integrate) (m, f) result(d)
 
   d = sum(f(1:m%np)*m%vol_pp(1:m%np))
 end function X(mf_integrate)
+
 
 !!! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
@@ -44,6 +46,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
 
 end function X(mf_dotp)
 
+
 !!! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(IN) :: m
@@ -56,6 +59,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   end if
 
 end function X(mf_nrm2)
+
 
 !!! This function calculates the x_i moment of the function f
 function X(mf_moment) (m, f, i, n) result(r)

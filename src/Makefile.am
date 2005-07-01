@@ -16,9 +16,10 @@ core_SRCS = $(basic_SRCS) \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	mesh.F90 nl_operator.F90 \
+	simul_box.F90 mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
+	grid.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson.F90 \
 	out.F90 crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 restart.F90
 

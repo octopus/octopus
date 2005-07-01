@@ -118,7 +118,7 @@ contains
     if(td%move_ions > 0) then
        if(td%iter > 0) then
           call td_read_nbo()
-          call epot_generate(h%ep, m, st, geo, h%reltype)
+          call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype)
           geo%eii = ion_ion_energy(geo)
           h%eii = geo%eii
        end if
@@ -177,16 +177,16 @@ contains
           end select
 
           if(mod(i, td%epot_regenerate) == 0) then
-             call epot_generate(h%ep, m, st, geo, h%reltype)
+             call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype)
           else
-             call epot_generate(h%ep, m, st, geo, h%reltype, fast_generation = .true.)
+             call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype, fast_generation = .true.)
           endif
           geo%eii = ion_ion_energy(geo)
           h%eii = geo%eii
        endif
 
        ! time iterate wavefunctions
-       call td_rti_dt(sys%ks, h, m, sys%f_der, st, td%tr, i*td%dt, td%dt)
+       call td_rti_dt(sys%ks, h, m, sys%gr%f_der, st, td%tr, i*td%dt, td%dt)
 
        ! mask function?
        if(h%ab == MASK_ABSORBING) then
@@ -204,7 +204,7 @@ contains
        call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
 
        ! update hamiltonian and eigenvalues (fermi is *not* called)
-       call zh_calc_vhxc(sys%ks, h, m, sys%f_der, st, calc_eigenval=.true.)
+       call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, st, calc_eigenval=.true.)
        call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
 
        ! Recalculate forces, update velocities...
@@ -261,7 +261,7 @@ contains
       call push_sub('td_run')
 
       ! some shortcuts
-      m   => sys%m
+      m   => sys%gr%m
       st  => sys%st
       geo => sys%geo
 
@@ -319,7 +319,7 @@ contains
 
       if(ierr==0) then
          call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
-         call zh_calc_vhxc(sys%ks, h, m, sys%f_der, st, calc_eigenval=.true.)
+         call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, st, calc_eigenval=.true.)
          x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
          call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
@@ -395,7 +395,7 @@ contains
       if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
 
       ! output angular momentum
-      if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, i)
+      if(td%out_angular) call td_write_angular(out_angular, m, sys%gr%f_der, st, i)
 
       ! output spin
       if(td%out_spin) call td_write_spin(out_spin, m, st, i)
@@ -410,7 +410,7 @@ contains
       if(td%out_coords) call td_write_nbo(out_coords, geo, i, geo%kinetic_energy, h%etot)
 
       ! If harmonic spectrum is desired, get the acceleration
-      if(td%out_acc) call td_write_acc(out_acc, m, sys%f_der, st, geo, h, td, i)
+      if(td%out_acc) call td_write_acc(out_acc, m, sys%gr%f_der, st, geo, h, td, i)
 
       ! output laser field
       if(td%out_laser) call td_write_laser(out_laser, h, td, i)
@@ -428,7 +428,7 @@ contains
       call io_mkdir('td.general')
 
       if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
-      if(td%out_angular) call td_write_angular(out_angular, m, sys%f_der, st, 0)
+      if(td%out_angular) call td_write_angular(out_angular, m, sys%gr%f_der, st, 0)
       if(td%out_spin)    call td_write_spin(out_spin, m, st, 0)
       if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, 0)
 !!$    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
@@ -437,7 +437,7 @@ contains
 
       ! create files for output and output headers
       if(td%out_coords) call td_write_nbo(out_coords, geo, 0, geo%kinetic_energy, h%etot)    
-      if(td%out_acc)    call td_write_acc(out_acc, m, sys%f_der, st, geo, h, td, 0)
+      if(td%out_acc)    call td_write_acc(out_acc, m, sys%gr%f_der, st, geo, h, td, 0)
       if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
       if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
 
@@ -490,8 +490,7 @@ contains
          end select
          call write_info(2)
          do i = 1, m%np
-            call mesh_xyz(m, i, x)
-            kick = M_zI * k * sum(x(1:conf%dim)*td%pol(1:conf%dim))
+            kick = M_zI * k * sum(m%x(i, 1:conf%dim)*td%pol(1:conf%dim))
 
             select case (mode)
             case (0)
@@ -626,7 +625,7 @@ contains
       ! now write down the rest
       write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-      call zstates_output(st, m, sys%f_der, filename, sys%outp)
+      call zstates_output(st, m, sys%gr%f_der, filename, sys%outp)
       if(sys%outp%what(output_geometry)) &
            call atom_write_xyz(filename, "geometry", geo)
       call hamiltonian_output(h, m, filename, sys%outp)

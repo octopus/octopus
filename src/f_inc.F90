@@ -306,7 +306,7 @@ subroutine X(f_angular_momentum)(f_der, f, lf)
   call X(f_gradient)(f_der, f, gf)
 
   do i = 1, f_der%m%np
-    call mesh_xyz(f_der%m, i, x)
+    x = f_der%m%x(i,:)
     lf(i, 1) = (x(2)*gf(i, 3)-x(3)*gf(i, 2))
     lf(i, 2) = (x(3)*gf(i, 1)-x(1)*gf(i, 3))
     lf(i, 3) = (x(1)*gf(i, 2)-x(2)*gf(i, 1))

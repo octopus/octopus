@@ -61,7 +61,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   call init_()
  
   ! load wave-functions
-  call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
+  call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
   if(err.ne.0) then
     message(1) = "Could not load wave-functions: Starting from scratch"
     call write_warning(1)
@@ -111,7 +111,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   allocate(trrho(m%np))
   trrho = M_ZERO
   
-  call scf_init(scfv, sys%m, sys%st, sys%geo, h)
+  call scf_init(scfv, sys%gr%m, sys%st, sys%geo, h)
   do i = i_start, conf%dim
     do k = 1, 2
       write(message(1), '(a)')
@@ -120,7 +120,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
       
       h%ep%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
       
-      call scf_run(scfv, m, sys%f_der, st, sys%geo, sys%ks, h, sys%outp)
+      call scf_run(scfv, m, sys%gr%f_der, st, sys%geo, sys%ks, h, sys%outp)
       
       trrho = M_ZERO
       do is = 1, st%d%spin_channels
@@ -170,10 +170,10 @@ contains
     call push_sub('static_pol_run')
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     ! shortcuts
-    m  => sys%m
+    m  => sys%gr%m
     st => sys%st
  
     ! read in e_field value

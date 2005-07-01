@@ -83,16 +83,13 @@ module derivatives
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(m, der, n_ghost)
-    type(mesh_type),      pointer     :: m
+  subroutine derivatives_init(der, n_ghost)
     type(der_discr_type), intent(out) :: der
     integer,              intent(out) :: n_ghost(:)
 
     integer :: i
 
     call push_sub('derivatives_init')
-
-    der%m => m    ! make a pointer to the underlying mesh
 
     !%Variable DerivativesStencil
     !%Type integer
@@ -167,7 +164,7 @@ contains
     end do
 
     deallocate(der%op)
-    nullify   (der%op, der%lapl, der%grad, der%m)
+    nullify   (der%op, der%lapl, der%grad)
 
     call pop_sub()
   end subroutine derivatives_end
@@ -252,8 +249,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_build(der)
-    type(der_discr_type), intent(inout) :: der
+  subroutine derivatives_build(der, m)
+    type(der_discr_type),    intent(inout) :: der
+    type(mesh_type), target, intent(in)    :: m
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
@@ -263,14 +261,16 @@ contains
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
-    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.der%m%use_curvlinear))
+    ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.m%use_curvlinear))
+
+    der%m => m    ! make a pointer to the underlying mesh
 
     ! build operators
     do i = 1, conf%dim+1
-      call nl_operator_build(der%m, der%op(i), der%m%np, .not.der%m%use_curvlinear)
+      call nl_operator_build(m, der%op(i), der%m%np, .not.m%use_curvlinear)
     end do
 
-    if(der%m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
+    if(m%use_curvlinear.or.der%stencil_type==DER_CUBE) then
 
        select case(der%stencil_type)
        case(DER_STAR) ! laplacian and gradient have different stencils
@@ -318,23 +318,23 @@ contains
 
     else ! we have the explicit coefficients
 
-       ! get laplacian
-       select case(der%stencil_type)
-       case(DER_STAR)  
-          call stencil_star_coeff_lapl(der%m%h(1:conf%dim), der%order, der%lapl)
-       case(DER_VARIATIONAL)
-          call stencil_variational_coeff_lapl(der%m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
-       case(DER_STARPLUS)
-          stop 'Not yet implemented.'
-       end select
+      ! get laplacian
+      select case(der%stencil_type)
+      case(DER_STAR)  
+        call stencil_star_coeff_lapl(m%h(1:conf%dim), der%order, der%lapl)
+      case(DER_VARIATIONAL)
+        call stencil_variational_coeff_lapl(m%h, der%order, der%lapl, alpha = der%lapl_cutoff)
+      case(DER_STARPLUS)
+        stop 'Not yet implemented.'
+      end select
 
-       ! get gradient (we use the same both for star and variational)
-       do i = 1, conf%dim
-          call stencil_star_coeff_grad(der%m%h(i), der%order, der%grad(i))
-       end do
+      ! get gradient (we use the same both for star and variational)
+      do i = 1, conf%dim
+        call stencil_star_coeff_grad(m%h(i), der%order, der%grad(i))
+      end do
     end if
 
-    if(der%m%use_curvlinear) then
+    if(m%use_curvlinear) then
        call nl_operator_transpose(der%lapl, der%laplt)
     else
        der%laplt = der%lapl

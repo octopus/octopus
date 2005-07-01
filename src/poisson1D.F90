@@ -31,9 +31,9 @@ subroutine poisson1D_solve(m, pot, rho)
 
   pot = M_ZERO
   do i = 1, m%np
-    call mesh_x(m, i, x)
+    x = m%x(i, 1)
     do j=1, m%np
-      call mesh_x(m, j, y)
+      y = m%x(j, 1)
       pot(i) = pot(i) + rho(j)/sqrt(M_ONE + (x-y)**2) * m%vol_pp(j)
     end do
     pot(i) = pot(i)

@@ -73,13 +73,11 @@ module functions
 contains
 
   ! ---------------------------------------------------------
-  subroutine f_der_init(m, f_der)
-    type(mesh_type),     pointer     :: m
+  subroutine f_der_init(f_der, use_curvlinear)
     type(f_der_type), intent(out) :: f_der
+    logical, intent(in) :: use_curvlinear
 
     call push_sub('f_der_init')
-
-    f_der%m => m ! keep a working pointer to the underlying mesh
 
 #ifdef HAVE_FFT
     call loct_parse_int(check_inp('DerivativesSpace'), REAL_SPACE, f_der%space)
@@ -94,11 +92,11 @@ contains
 #endif
     
     if(f_der%space == REAL_SPACE) then
-      call derivatives_init(m, f_der%der_discr, f_der%n_ghost)
+      call derivatives_init(f_der%der_discr, f_der%n_ghost)
       message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
     else
-      if(f_der%m%use_curvlinear) then
+      if(use_curvlinear) then
         message(1) = "When using curvilinear coordinates you must use"
         message(2) = "DerivativesSpace = real_space"
         call write_fatal(2)
@@ -115,20 +113,23 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_der_build(f_der)
-    type(f_der_type), intent(inout) :: f_der
-    
+  subroutine f_der_build(f_der, m)
+    type(f_der_type),        intent(inout) :: f_der
+    type(mesh_type), target, intent(in)    :: m
+
     call push_sub('f_der_build')
 
+    f_der%m => m ! keep a working pointer to the underlying mesh
+
     if(f_der%space == REAL_SPACE) then
-      call derivatives_build(f_der%der_discr)
+      call derivatives_build(f_der%der_discr, m)
 #if defined(HAVE_FFT)
     else
-      call dcf_new(f_der%m%l, f_der%dcf_der)
+      call dcf_new(m%l, f_der%dcf_der)
       call dcf_fft_init(f_der%dcf_der)
       call dcf_new_from(f_der%dcf_aux, f_der%dcf_der)
       
-      call zcf_new(f_der%m%l, f_der%zcf_der)
+      call zcf_new(m%l, f_der%zcf_der)
       call zcf_fft_init(f_der%zcf_der)
       call zcf_new_from(f_der%zcf_aux, f_der%zcf_der)
 #endif

@@ -49,10 +49,10 @@ program make_st
   deallocate(sys%st%dpsi)
 #endif
 
-  allocate(sys%st%zpsi (sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
-       sys%st%eigenval(sys%st%nst, sys%st%d%nik))
+  allocate(sys%st%zpsi (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
+     sys%st%eigenval(sys%st%nst, sys%st%d%nik))
   
-  call X(restart_read)(trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
+  call X(restart_read)(trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
   if(err < 0) then
     message(1) = "Error opening 'restart.static' file"
     call write_fatal(1)
@@ -71,16 +71,16 @@ program make_st
     call loct_parse_block_int(blk, i-1, 3, type)
     select case(type)
     case(1)
-      call wf_gaussian(i-1)
+      call wf_gaussian(sys%gr%m, sys%st, i-1)
     end select
   end do
   call loct_parse_block_end(blk)
 
   ! renormalize functions
-  call wf_renormalize()
+  call wf_renormalize(sys%gr%m, sys%st)
 
   ! save wfs in a new static file
-  call X(restart_write) (trim(tmpdir)//'restart_gs_new', sys%st, sys%m, err)
+  call X(restart_write) (trim(tmpdir)//'restart_gs_new', sys%st, sys%gr%m, err)
   if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs_new"'
     call write_fatal(1)
@@ -93,8 +93,10 @@ program make_st
   call global_end()
 
 contains
-  subroutine wf_gaussian(line)
-    integer, intent(in) :: line
+  subroutine wf_gaussian(m, st, line)
+    type(mesh_type),   intent(in)    :: m
+    type(states_type), intent(inout) :: st
+    integer,           intent(in)    :: line
     
     FLOAT :: x1(3), x(3), s, k(3)
     integer :: i, j
@@ -118,22 +120,25 @@ contains
     end do
     
     ! build a gaussian
-    do i = 1, sys%m%np
-      call mesh_xyz(sys%m, i, x(1:conf%dim))
-      sys%st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:conf%dim)-x1(1:conf%dim))**2)/(2*s*s) + &
+    do i = 1, m%np
+      x = m%x(i,:)
+      st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:conf%dim)-x1(1:conf%dim))**2)/(2*s*s) + &
            M_zI*sum(k(1:conf%dim)*(x(1:conf%dim)-x1(1:conf%dim))))
     end do
     
   end subroutine wf_gaussian
   
-  subroutine wf_renormalize()
+  subroutine wf_renormalize(m, st)
+    type(mesh_type),   intent(in)    :: m
+    type(states_type), intent(inout) :: st
+
     integer :: ik, ist
     FLOAT :: nrm2
     
-    do ik = 1, sys%st%d%nik
-      do ist = 1, sys%st%nst
-        nrm2 = zstates_nrm2 (sys%m, sys%st%d%dim, sys%st%zpsi(:,:, ist, ik))
-        sys%st%zpsi(1:sys%m%np, 1:sys%st%d%dim, ist, ik) = sys%st%zpsi(1:sys%m%np, 1:sys%st%d%dim, ist, ik)/ sqrt(nrm2)
+    do ik = 1, st%d%nik
+      do ist = 1, st%nst
+        nrm2 = zstates_nrm2 (m, st%d%dim, st%zpsi(:,:, ist, ik))
+        st%zpsi(:,:, ist, ik) = st%zpsi(:,:, ist, ik)/sqrt(nrm2)
       end do
     end do
   end subroutine wf_renormalize

@@ -31,6 +31,8 @@ module ground_state
   use states
   use restart
   use scf
+  use grid
+  use mesh
 
   implicit none
 
@@ -51,13 +53,13 @@ contains
     ierr = 0
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
     
     ! load wave-functions
     message(1) = 'Info: Loading wave-functions'
     call write_info(1)
 
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, ierr)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, ierr)
     if(ierr.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
@@ -76,8 +78,8 @@ contains
 #endif
       call write_info(1)
 
-      call scf_init(scfv, sys%m, sys%st, sys%geo, h)
-      call scf_run(scfv, sys%m, sys%f_der, sys%st, sys%geo, sys%ks, h, sys%outp)
+      call scf_init(scfv, sys%gr%m, sys%st, sys%geo, h)
+      call scf_run(scfv, sys%gr%m, sys%gr%f_der, sys%st, sys%geo, sys%ks, h, sys%outp)
       call scf_end(scfv)
     end if
 
@@ -88,8 +90,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ground_state_init(sys, h)
-    type(system_type),      intent(inout) :: sys
+  subroutine ground_state_init(gr, geo, st, ks,  h)
+    type(grid_type),        intent(inout) :: gr
+    type(geometry_type),    intent(in)    :: geo
+    type(states_type),      intent(inout) :: st
+    type(v_ks_type),        intent(inout) :: ks
     type(hamiltonian_type), intent(inout) :: h
 
     integer :: err
@@ -99,46 +104,46 @@ contains
     call push_sub('ground_state_init')
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    allocate(st%X(psi)(gr%m%np, st%d%dim, st%nst, st%d%nik))
 
     message(1) = 'Info: Random generating starting wavefunctions.'
     call write_info(1)
       
     ! wave functions are simply random gaussians
-    call states_generate_random(sys%st, sys%m)
+    call states_generate_random(st, gr%m)
 
     ! this is certainly a better density
-    call system_guess_density(sys%m, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-       sys%st%d%spin_channels, sys%st%rho)      
+    call system_guess_density(gr%m, gr%sb, geo, st%qtot, st%d%nspin, &
+       st%d%spin_channels, st%rho)      
 
     call loct_parse_logical(check_inp('LCAOStart'), .true., lcao_start)
     if(lcao_start) then
-      call X(h_calc_vhxc)(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.)
+      call X(h_calc_vhxc)(ks, h, gr%m, gr%f_der, st, calc_eigenval=.true.)
 
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)
      
       lcao_data%state = 0 ! Uninitialized here.
-      call lcao_init(lcao_data, sys%m, sys%f_der, sys%st, sys%geo, h)
+      call lcao_init(lcao_data, gr%m, gr%f_der, st, geo, h)
       if(lcao_data%state == 1) then
-        call lcao_wf(lcao_data, sys%m, sys%st, h)
+        call lcao_wf(lcao_data, gr%m, st, h)
         call lcao_end(lcao_data)
         
-        call states_fermi(sys%st, sys%m)                         ! occupations
-        call states_write_eigenvalues(stdout, sys%st%nst, sys%st)
+        call states_fermi(st, gr%m)                         ! occupations
+        call states_write_eigenvalues(stdout, st%nst, st)
       end if
     end if
    
     ! write wave-functions to disk
-    call X(restart_write)(trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
+    call X(restart_write)(trim(tmpdir)//'restart_gs', st, gr%m, err)
     if(err.ne.0) then
       message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
       call write_fatal(1)
     end if
 
     ! clean up
-    deallocate(sys%st%X(psi))
-    nullify(sys%st%X(psi))
+    deallocate(st%X(psi))
+    nullify(st%X(psi))
 
     call pop_sub()
   end subroutine ground_state_init

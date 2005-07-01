@@ -373,8 +373,7 @@ contains
           select case(h%gauge)
           case(1) ! length gauge
             do k = 1, m%np
-               call mesh_xyz(m, k, x)
-               call epot_laser_scalar_pot(h%ep, x, t-dt+time(j), v)
+               call epot_laser_scalar_pot(h%ep, m%x(k,:), t-dt+time(j), v)
                do is = 1, st%d%spin_channels
                   vaux(k, is, j) = vaux(k, is, j) + v
                enddo

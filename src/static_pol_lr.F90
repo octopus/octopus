@@ -47,6 +47,7 @@ contains
     logical, intent(inout) :: fromScratch
 
     type(lr_type) :: lr
+    type(mesh_type), pointer :: m
     FLOAT :: pol(conf%dim, conf%dim)
     integer :: err
     
@@ -54,7 +55,7 @@ contains
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions in pol_lr_run: Starting from scratch"
       call write_warning(1)
@@ -70,13 +71,13 @@ contains
     call X(system_h_setup) (sys, h)
     
     !if(.not.fromScratch) then ! try to load delta_psi
-    !  if(X(restart_read) (trim(tmpdir)//'restart_lr_static_pol', sys%st, sys%m).ne.0) then
+    !  if(X(restart_read) (trim(tmpdir)//'restart_lr_static_pol', sys%st, m).ne.0) then
     fromScratch = .true.
 
     call lr_init(lr, "SP")
-    call X(lr_alloc_fHxc) (sys%st, sys%m, lr)
-    err = X(lr_alloc_psi) (sys%st, sys%m, lr)
-    call lr_build_fxc(sys%m, sys%st, sys%ks%xc, lr%dl_Vxc)
+    call X(lr_alloc_fHxc) (sys%st, m, lr)
+    err = X(lr_alloc_psi) (sys%st, m, lr)
+    call lr_build_fxc(m, sys%st, sys%ks%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
     call lr_dealloc(lr)
@@ -89,8 +90,10 @@ contains
     subroutine init_()
       call push_sub('static_pol_lr_run')
 
+      m => sys%gr%m
+
       ! allocate wfs
-      allocate(sys%st%X(psi)(sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      allocate(sys%st%X(psi)(m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     end subroutine init_
 
@@ -149,13 +152,13 @@ contains
       write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
       call write_info(1)
 
-      call mix_init(lr%mixer, 1, sys%m%np, sys%st%d%nspin)
+      call mix_init(lr%mixer, 1, sys%gr%m%np, sys%st%d%nspin)
       call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO))
       call mix_end(lr%mixer)
       
-      do j = 1, sys%m%np
-        rhov = sum(lr%X(dl_rho)(j,:))*sys%m%vol_pp(j)
-        pol(i, :) = pol(i, :) - sys%m%x(j, :)*rhov
+      do j = 1, sys%gr%m%np
+        rhov = sum(lr%X(dl_rho)(j,:))*sys%gr%m%vol_pp(j)
+        pol(i, :) = pol(i, :) - sys%gr%m%x(j,:)*rhov
       end do
       
     end do
@@ -182,7 +185,7 @@ contains
     
     call push_sub('get_response_e')
 
-    m => sys%m
+    m => sys%gr%m
     st => sys%st
 
     allocate(tmp(m%np), Y(m%np,1))
@@ -198,7 +201,7 @@ contains
         do i = 1, m%np
           tmp(i) = sum(lr%X(dl_rho)(i,:))
         end do
-        call dpoisson_solve(m, sys%f_der, lr%ddl_Vhar, tmp) 
+        call dpoisson_solve(m, sys%gr%f_der, lr%ddl_Vhar, tmp) 
       end if 
 
       lr%X(dl_rho) = M_ZERO
@@ -218,10 +221,10 @@ contains
             call X(lr_orth_vector)(m, st, Y, ik)
             
             iter_max = 50
-            call X(lr_solve_HXeY) (lr, h, sys%m, sys%f_der, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
+            call X(lr_solve_HXeY) (lr, h, sys%gr%m, sys%gr%f_der, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
                -sys%st%eigenval(ist, ik) + real(sigma, PRECISION)*omega)
 
-            print *, lr%iter, sum(lr%X(dl_psi)(:,1, ist, ik)**2*sys%m%vol_pp(:))
+            print *, lr%iter, sum(lr%X(dl_psi)(:,1, ist, ik)**2*sys%gr%m%vol_pp(:))
           end do
         end do
 

@@ -82,7 +82,7 @@ contains
     ierr = 0
     call init_()
 
-    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
     if(err.ne.0) then
       message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_unocc"'
       call write_warning(1)
@@ -181,7 +181,7 @@ contains
       sys%st%st_end = sys%st%nst
 
       deallocate(sys%st%eigenval, sys%st%occ)
-      allocate(sys%st%X(psi) (sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
       allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
       if(sys%st%d%ispin == SPINORS) then
         allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
@@ -280,7 +280,7 @@ contains
 
     ! some shortcuts
     st => sys%st
-    m  => sys%m
+    m  => sys%gr%m
 
     ! initialize stuff
     allocate(saved_K(cas%n_pairs, cas%n_pairs))
@@ -457,7 +457,7 @@ contains
     
       !  first the Hartree part (only works for real wfs...)
       pot = M_ZERO
-      call dpoisson_solve(m, sys%f_der, pot, rho_j)
+      call dpoisson_solve(m, sys%gr%f_der, pot, rho_j)
       K_term = dmf_dotp(m, rho_i(:), pot(:))
       deallocate(pot)
       
@@ -533,13 +533,11 @@ contains
       integer, intent(in) :: i, j
       FLOAT, intent(out) :: s(3)
 
-      FLOAT :: x(3)
       integer :: k
 
       s = M_ZERO
       do k = 1, m%np
-        call mesh_xyz(m, k, x)
-        s = s + x * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
+        s = s + m%x(k, :) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
       end do
       
     end subroutine dipole_matrix_elem

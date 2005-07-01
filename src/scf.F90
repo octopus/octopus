@@ -393,7 +393,7 @@ contains
     write(iunit, '(1x)')
     
     write(iunit, '(a)') 'Mesh:'
-    call mesh_write_info(m, iunit)
+    !call grid_write_info(gr, iunit)
     write(iunit,'(1x)')
     
     if (conf%periodic_dim > 0) then

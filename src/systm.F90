@@ -31,6 +31,7 @@ use math
 use mesh
 use mesh_function
 use functions
+use grid
 use specie
 use geometry
 use states
@@ -52,8 +53,7 @@ public :: system_type,          &
 
 
 type system_type
-  type(mesh_type),     pointer :: m          ! the mesh
-  type(f_der_type)             :: f_der      ! manages the calculation of derivatives of functions
+  type(grid_type),     pointer :: gr         ! the mesh
   type(geometry_type), pointer :: geo        ! the geometry
   type(states_type),   pointer :: st         ! the states
   type(v_ks_type)              :: ks         ! the Kohn-Sham potentials
@@ -75,17 +75,12 @@ contains
     call geometry_init_species(s%geo)
     call geometry_init_vel(s%geo)
 
-    allocate(s%m)
-    call mesh_init(s%m, s%geo)
-    call f_der_init(s%m, s%f_der)
-    call mesh_create_xyz(s%m, s%f_der%n_ghost(1)) ! WARNING: should be an array
-    call f_der_build(s%f_der)
-
-    call mesh_write_info(s%m, stdout)
+    allocate(s%gr)
+    call grid_init(s%gr, s%geo)
 
     ! do we want to filter out the external potentials, or not.
     call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
-    if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%m))
+    if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%gr%m))
 
     ! Now that we are really done with initializing the geometry, print debugging information.
     if(conf%verbose>=VERBOSE_DEBUG) then
@@ -94,10 +89,10 @@ contains
     
     ! initialize the other stuff
     allocate(s%st)
-    call states_init(s%st, s%m, s%geo, s%geo%nlcc)
+    call states_init(s%st, s%gr%m, s%gr%sb, s%geo, s%geo%nlcc)
     call output_init(s%outp)
     
-    call v_ks_init(s%ks, s%m, s%st%d)
+    call v_ks_init(s%ks, s%gr%m, s%st%d)
     
     call pop_sub()
   end subroutine system_init
@@ -113,12 +108,10 @@ contains
       call states_end(s%st)
       deallocate(s%st); nullify(s%st)
     end if
+
     call geometry_end(s%geo)
-    call f_der_end(s%f_der)
-
-    call mesh_end(s%m)
-    deallocate(s%m); nullify(s%m)
-
+    call grid_end(s%gr)
+    deallocate(s%gr);  nullify(s%gr)
     deallocate(s%geo); nullify(s%geo)
 
     call pop_sub()
@@ -158,11 +151,12 @@ contains
     call pop_sub()
   end subroutine atom_get_wf
 
-  subroutine atom_density(m, atom, spin_channels, rho)
-    type(mesh_type), intent(IN) :: m
-    type(atom_type), intent(IN) :: atom
-    integer,         intent(in) :: spin_channels
-    FLOAT, intent(inout)        :: rho(:, :) ! (m%np, spin_channels)
+  subroutine atom_density(m, sb, atom, spin_channels, rho)
+    type(mesh_type),      intent(in)    :: m
+    type(simul_box_type), intent(in)    :: sb
+    type(atom_type),      intent(in)    :: atom
+    integer,              intent(in)    :: spin_channels
+    FLOAT,                intent(inout) :: rho(:, :) ! (m%np, spin_channels)
 
     integer :: i, in_points, k, n
     FLOAT :: r
@@ -205,7 +199,7 @@ contains
       ! the outer loop sums densities over atoms in neighbour cells
       do k = 1, 3**conf%periodic_dim
         do i = 1, m%np
-          call mesh_r(m, i, r, a=atom%x+m%shift(k,:))
+          call mesh_r(m, i, r, a=atom%x + sb%shift(k,:))
           r = max(r, r_small)
           do n = 1, s%ps%conf%p
             select case(spin_channels)
@@ -226,12 +220,13 @@ contains
   end subroutine atom_density
 
   ! builds a density which is the sum of the atomic densities
-  subroutine system_guess_density(m, geo, qtot, nspin, spin_channels, rho)
-    type(mesh_type),     intent(IN)  :: m
-    type(geometry_type), intent(IN)  :: geo
-    FLOAT,               intent(in)  :: qtot  ! the total charge of the system
-    integer,             intent(in)  :: nspin, spin_channels
-    FLOAT,               intent(out) :: rho(:, :)
+  subroutine system_guess_density(m, sb, geo, qtot, nspin, spin_channels, rho)
+    type(mesh_type),      intent(in)  :: m
+    type(simul_box_type), intent(in)  :: sb
+    type(geometry_type),  intent(in)  :: geo
+    FLOAT,                intent(in)  :: qtot  ! the total charge of the system
+    integer,              intent(in)  :: nspin, spin_channels
+    FLOAT,                intent(out) :: rho(:, :)
     
     integer :: ia, is, gmd_opt, i
     integer, save :: iseed = 321
@@ -257,7 +252,7 @@ contains
     case (1) ! Paramagnetic
       allocate(atom_rho(m%np, 1))
       do ia = 1, geo%natoms
-        call atom_density(m, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
+        call atom_density(m, sb, geo%atom(ia), 1, atom_rho(1:m%np, 1:1))
         rho(1:m%np, 1:1) = rho(1:m%np, 1:1) + atom_rho(1:m%np, 1:1)
       end do
       if (spin_channels == 2) then
@@ -268,14 +263,14 @@ contains
     case (2) ! Ferromagnetic
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
-        call atom_density(m, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho(1:m%np, 1:2))
         call lalg_axpy(m%np, 2, M_ONE, atom_rho, rho)
       end do
 
     case (3) ! Random oriented spins
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
-        call atom_density(m, geo%atom(ia), 2, atom_rho)
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
           call quickrnd(iseed, rnd)
@@ -316,7 +311,7 @@ contains
 
       allocate(atom_rho(m%np, 2))
       do ia = 1, geo%natoms
-        call atom_density(m, geo%atom(ia), 2, atom_rho)
+        call atom_density(m, sb, geo%atom(ia), 2, atom_rho)
 
         if (nspin == 2) then
           call loct_parse_block_float(blk, ia-1, 0, mag(1))
@@ -395,12 +390,12 @@ contains
     
     call push_sub("hamiltonian_setup")
     
-    call states_fermi(sys%st, sys%m)
-    call dstates_calc_dens(sys%st, sys%m%np, sys%st%rho)
+    call states_fermi(sys%st, sys%gr%m)
+    call dstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
     
-    call dh_calc_vhxc(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%m)                            ! occupations
-    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+    call dh_calc_vhxc(sys%ks, h, sys%gr%m, sys%gr%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call states_fermi(sys%st, sys%gr%m)                            ! occupations
+    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)            ! total energy
     
     call pop_sub()
   end subroutine dsystem_h_setup
@@ -412,12 +407,12 @@ contains
     
     call push_sub("hamiltonian_setup")
     
-    call states_fermi(sys%st, sys%m)
-    call zstates_calc_dens(sys%st, sys%m%np, sys%st%rho)
+    call states_fermi(sys%st, sys%gr%m)
+    call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
     
-    call zh_calc_vhxc(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
-    call states_fermi(sys%st, sys%m)                            ! occupations
-    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+    call zh_calc_vhxc(sys%ks, h, sys%gr%m, sys%gr%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call states_fermi(sys%st, sys%gr%m)                            ! occupations
+    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)            ! total energy
     
     call pop_sub()
   end subroutine zsystem_h_setup

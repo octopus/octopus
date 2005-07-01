@@ -36,7 +36,7 @@ module curvlinear
     type(curv_modine_type) :: modine
   end type curvlinear_type
 
-  integer, parameter :: &
+  integer, parameter, public :: &
      CURV_METHOD_UNIFORM = 1,  &
      CURV_METHOD_GYGI    = 2,  &
      CURV_METHOD_BRIGGS  = 3,  &
@@ -45,7 +45,7 @@ module curvlinear
 contains
 
   !-------------------------------------
-  logical function curvlinear_init(l, cv)
+  subroutine curvlinear_init(l, cv)
     FLOAT,                 intent(in)  :: l(:)
     type(curvlinear_type), intent(out) :: cv
 
@@ -66,10 +66,8 @@ contains
       call curv_modine_init(l, cv%modine)
     end select
 
-    curvlinear_init = (cv%method.ne.CURV_METHOD_UNIFORM)
-
     call pop_sub()
-  end function curvlinear_init
+  end subroutine curvlinear_init
 
 
   !-------------------------------------

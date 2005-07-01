@@ -104,12 +104,12 @@ subroutine poisson2D_solve(m, pot, rho)
 
   pot = M_ZERO
   do i = 1, m%np
-    call mesh_xyz(m, i, x)
+    x(:) = m%x(i,:)
     do j = 1, m%np
       if(i == j) then
         pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
       else
-        call mesh_xyz(m, j, y)
+        y(:) = m%x(j,:)
         pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
       end if
     end do

@@ -31,7 +31,7 @@
     FLOAT,             intent(out) :: acc(3)
     logical, optional, intent(in)  :: reduce
 
-    FLOAT :: v, field(3), x(3), mesh_x(3)
+    FLOAT :: v, field(3), x(3)
     CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
     integer  :: j, k, i, ik, ist, idim
 #if defined(HAVE_MPI)
@@ -71,8 +71,7 @@
         
         call zhpsi(h, mesh, f_der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
         do k = 1, mesh%np
-          call mesh_xyz(mesh, k, mesh_x)
-          call epot_laser_scalar_pot(h%ep, mesh_x, t, v)
+          call epot_laser_scalar_pot(h%ep, mesh%x(:, k), t, v)
           hzpsi(k,:) = hzpsi(k,:) + v * st%zpsi(k,:,ist,ik)
         end do
         

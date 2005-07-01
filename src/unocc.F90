@@ -59,11 +59,11 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   logical :: converged
 
   ierr = 0
-  call init_()
+  call init_(sys%gr%m, sys%st)
 
   if(.not.fromScratch) then
     ! not all states will be read, that is the reason for the <0 instead of .ne.0
-    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
     if(err < 0) then
       message(1) = 'Could not load "'//trim(tmpdir)//'restart_unocc": Starting from scratch'
       call write_warning(1)
@@ -73,7 +73,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
 
   if(fromScratch) then
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
     if(err < 0) then
       message(1) = "Could not load '"//trim(tmpdir)//"restart_gs: Starting from scratch'"
       call write_warning(1)
@@ -90,8 +90,8 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   message(1) = 'Info: Setting up Hamiltonian.'
   call write_info(1)
   
-  call X(states_calc_dens)(sys%st, sys%m%np, sys%st%rho)
-  call X(h_calc_vhxc)(sys%ks, h, sys%m, sys%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+  call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
+  call X(h_calc_vhxc)(sys%ks, h, sys%gr%m, sys%gr%f_der, sys%st, calc_eigenval=.true.) ! get potentials
   call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
   
   message(1) = "Info: Starting calculation of unoccupied states"
@@ -99,20 +99,20 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   ! First, get the residues of the occupied states.
   ! These are assumed to be converged; otherwise one should do a SCF calculation.
-  allocate(h_psi(sys%m%np, h%d%dim))
+  allocate(h_psi(sys%gr%m%np, h%d%dim))
   do ik = 1, sys%st%d%nik
      do p = 1, eigens%converged
-        call X(Hpsi)(h, sys%m, sys%f_der, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
-        eigens%diff(p, ik) = X(states_residue)(sys%m, sys%st%d%dim, h_psi, sys%st%eigenval(p, ik), &
+        call X(Hpsi)(h, sys%gr%m, sys%gr%f_der, sys%st%X(psi)(:,:, p, ik) , h_psi, ik)
+        eigens%diff(p, ik) = X(states_residue)(sys%gr%m, sys%st%d%dim, h_psi, sys%st%eigenval(p, ik), &
              sys%st%X(psi)(:, :, p, ik))
      enddo
   enddo
   deallocate(h_psi)
 
-  call eigen_solver_run(eigens, sys%m, sys%f_der, sys%st, h, 1, converged, verbose = .true.)
+  call eigen_solver_run(eigens, sys%gr%m, sys%gr%f_der, sys%st, h, 1, converged, verbose = .true.)
 
   ! write restart information.
-  call X(restart_write) (trim(tmpdir)//'restart_unocc', sys%st, sys%m, err)
+  call X(restart_write) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
   if(err.ne.0) then
     message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_unocc"'
     call write_fatal(1)
@@ -139,13 +139,17 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   end if
   
   ! output wave-functions
-  call X(states_output) (sys%st, sys%m, sys%f_der, "static", sys%outp)
+  call X(states_output) (sys%st, sys%gr%m, sys%gr%f_der, "static", sys%outp)
 
   call end_()
 contains
 
+
   ! ---------------------------------------------------------
-  subroutine init_()
+  subroutine init_(m, st)
+    type(mesh_type),   intent(in)    :: m
+    type(states_type), intent(inout) :: st
+
     integer :: nus
 
     call push_sub('unocc_run')
@@ -157,28 +161,29 @@ contains
     end if
 
     ! fix states: THIS IS NOT OK
-    sys%st%nst = sys%st%nst + nus
-    sys%st%st_end = sys%st%nst
+    st%nst    = st%nst + nus
+    st%st_end = st%nst
 
-    deallocate(sys%st%eigenval, sys%st%occ)
-    allocate(sys%st%X(psi) (sys%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-    allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
-    if(sys%st%d%ispin == SPINORS) then
-      allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
-      sys%st%mag = M_ZERO
+    deallocate(st%eigenval, st%occ)
+    allocate(st%X(psi) (m%np, st%d%dim, st%nst, st%d%nik))
+    allocate(st%eigenval(st%nst, st%d%nik), st%occ(st%nst, st%d%nik))
+    if(st%d%ispin == SPINORS) then
+      allocate(st%mag(st%nst, st%d%nik, 2))
+      st%mag = M_ZERO
     end if
-    sys%st%eigenval = huge(PRECISION)
-    sys%st%occ      = M_ZERO
+    st%eigenval = huge(PRECISION)
+    st%occ      = M_ZERO
 
     ! now the eigen solver stuff
-    call eigen_solver_init(eigens, sys%st, sys%m, 50)
+    call eigen_solver_init(eigens, st, m, 50)
 
     ! Having initial and final tolerance does not make sense in this case:
     eigens%init_tol       = eigens%final_tol
     eigens%final_tol_iter = 2
-    eigens%converged      = sys%st%nst - nus
+    eigens%converged      = st%nst - nus
 
   end subroutine init_
+
 
   ! ---------------------------------------------------------
   subroutine end_()

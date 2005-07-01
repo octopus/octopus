@@ -30,6 +30,7 @@ use lib_basic_alg
 use lib_adv_alg
 use math
 use mesh
+use simul_box
 use functions
 use mesh_function
 use cube_function
@@ -130,11 +131,12 @@ subroutine states_null(st)
 end subroutine states_null
 
 
-subroutine states_init(st, m, geo, nlcc)
-  type(states_type),   intent(inout) :: st
-  type(mesh_type),     intent(IN)    :: m
-  type(geometry_type), intent(IN)    :: geo ! this is needed to generate the k points
-  logical, optional,   intent(in)    :: nlcc
+subroutine states_init(st, m, sb, geo, nlcc)
+  type(states_type),    intent(inout) :: st
+  type(mesh_type),      intent(in)    :: m
+  type(simul_box_type), intent(in)    :: sb
+  type(geometry_type),  intent(in)    :: geo ! this is needed to generate the k points
+  logical, optional,    intent(in)    :: nlcc
 
   FLOAT :: excess_charge, r, val_charge
   integer :: nempty, i, j
@@ -215,7 +217,7 @@ subroutine states_init(st, m, geo, nlcc)
 #endif
 
   ! For non-periodic systems this should just return the Gamma point
-  call states_choose_kpoints(st%d, m, geo)
+  call states_choose_kpoints(st%d, m, sb, geo)
 
   ! we now allocate some arrays
   allocate(st%rho(m%np, st%d%nspin), &
@@ -543,8 +545,7 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
   dipole(1:st%d%nspin) = M_ZERO
   do is = 1, st%d%nspin
     do i = 1, m%np
-      call mesh_xyz(m, i, x)
-      dipole(is) = dipole(is) + st%rho(i, is)*sum(x(1:conf%dim)*pol(1:conf%dim))*m%vol_pp(i)
+      dipole(is) = dipole(is) + st%rho(i, is)*sum(m%x(i, 1:conf%dim)*pol(1:conf%dim))*m%vol_pp(i)
     end do
 
     if(present(lmax).and.present(multipole)) then

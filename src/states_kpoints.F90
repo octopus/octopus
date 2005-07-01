@@ -17,10 +17,11 @@
 !!
 !! $Id$
 
-subroutine states_choose_kpoints(d, m, geo)
+subroutine states_choose_kpoints(d, m, sb, geo)
   type(states_dim_type), intent(inout) :: d
-  type(mesh_type),       intent(IN)  :: m
-  type(geometry_type),   intent(IN)  :: geo
+  type(mesh_type),       intent(in)    :: m
+  type(simul_box_type),  intent(in)    :: sb
+  type(geometry_type),   intent(in)    :: geo
 
   integer  :: coi, i, nkmax
   integer(POINTER_SIZE) :: blk
@@ -51,6 +52,8 @@ subroutine states_choose_kpoints(d, m, geo)
     allocate(d%kpoints(3,d%nik),d%kweights(d%nik))
     d%kpoints  = M_ZERO
     d%kweights = M_ONE
+
+    call pop_sub()
     return
   end if
 
@@ -86,7 +89,7 @@ subroutine states_choose_kpoints(d, m, geo)
     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))
     d%kpoints     = M_ZERO
     d%kweights    = M_ONE
-    kmax          = (M_ONE - coi*M_HALF)*m%klat(1,1)
+    kmax          = (M_ONE - coi*M_HALF)*sb%klat(1,1)
     total_weight  = M_ZERO
 
     do i = 1, d%nik
@@ -115,12 +118,12 @@ subroutine states_choose_kpoints(d, m, geo)
   end do
  
   do i = 1, 3
-    coorat(:,:,i) = coorat(:,:,i) / m%rlat(i, i) + M_HALF
+    coorat(:,:,i) = coorat(:,:,i) / sb%rlat(i, i) + M_HALF
   end do
 
   allocate(kp(3, nkmax), kw(nkmax))
 
-  call init_crystal(m%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
+  call init_crystal(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
        kshifts, nk, kp, kw)
 
   ! double d%nik and copy points for spin polarized calc
@@ -129,15 +132,15 @@ subroutine states_choose_kpoints(d, m, geo)
     d%nik = nk
     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))  
     do i = 1, 3
-      d%kpoints(i,:) = kp(i,:)*m%klat(i,i)
+      d%kpoints(i,:) = kp(i,:)*sb%klat(i,i)
     end do
     d%kweights = kw
   case(2)
     d%nik = 2 * nk
     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))  
     do i = 1,3
-      d%kpoints(i,::2)  = kp(i,:)*m%klat(i,i)
-      d%kpoints(i,2::2) = kp(i,:)*m%klat(i,i)
+      d%kpoints(i,::2)  = kp(i,:)*sb%klat(i,i)
+      d%kpoints(i,2::2) = kp(i,:)*sb%klat(i,i)
     end do
     d%kweights(::2)  = kw(:)
     d%kweights(2::2) = kw(:)

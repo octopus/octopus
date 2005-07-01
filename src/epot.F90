@@ -29,6 +29,7 @@ module external_pot
   use fft
   use math
   use mesh
+  use simul_box
   use functions
 #ifdef HAVE_FFT
   use cube_function
@@ -142,8 +143,7 @@ contains
       !Compute the scalar potential
       allocate(ep%v(m%np), x(conf%dim))
       do i = 1, m%np
-        call mesh_xyz(m, i, x)
-        ep%v(i) = sum(x*ep%e)
+        ep%v(i) = sum(m%x(i,:)*ep%e(:))
       end do
       deallocate(x)
     end if
@@ -176,7 +176,7 @@ contains
       !Compute the vector potential
       allocate(ep%a(m%np, conf%dim), x(conf%dim))
       do i = 1, m%np
-        call mesh_xyz(m, i, x)
+        x = m%x(i, :)
         select case (conf%dim)
         case (2)
           ep%a(i, :) = -M_HALF*(/x(2)*ep%b(1), x(1)*ep%b(1)/)
@@ -404,13 +404,14 @@ contains
   end subroutine epot_local_fourier_init
 #endif
 
-  subroutine epot_generate(ep, m, st, geo, reltype, fast_generation)
-    type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(IN)    :: m
-    type(states_type),   intent(inout) :: st
-    type(geometry_type), intent(inout) :: geo
-    integer,             intent(in)    :: reltype
-    logical, optional, intent(in)      :: fast_generation
+  subroutine epot_generate(ep, m, sb, geo, st, reltype, fast_generation)
+    type(epot_type),      intent(inout) :: ep
+    type(mesh_type),      intent(in)    :: m
+    type(simul_box_type), intent(in)    :: sb
+    type(geometry_type),  intent(inout) :: geo
+    type(states_type),    intent(inout) :: st
+    integer,              intent(in)    :: reltype
+    logical, optional,    intent(in)    :: fast_generation
 
     logical :: fast_generation_
     integer :: ia, i, l, lm, add_lm, k, ierr, p
@@ -515,10 +516,10 @@ contains
       FLOAT :: x(3)
       
       call push_sub('build_local_part')
+
       if(conf%periodic_dim==0.or.conf%only_user_def) then
         do i = 1, m%np
-          call mesh_xyz(m, i, x)
-          x = x - a%x
+          x(:) = m%x(i, :) - a%x(:)
           ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x)
           if(s%nlcc) then
             st%rho_core(i) = st%rho_core(i) + specie_get_nlcc(s, x)
@@ -545,17 +546,17 @@ contains
       
       call push_sub('build_kb_sphere')
 
-      if (any(s%ps%rc_max + m%h(1)>=m%lsize(1:conf%periodic_dim))) then
+      if (any(s%ps%rc_max + m%h(1) >= sb%lsize(1:conf%periodic_dim))) then
         message(1)='KB sphere is larger than the box size'
-        write(message(2),'(a,f12.6,a)')'  rc_max+h = ',s%ps%rc_max + m%h(1),' [b]'
-        write(message(3),'(a,3f12.4,a)')'  lsize    = ',m%lsize,' [b]'
+        write(message(2),'(a,f12.6,a)')  '  rc_max+h = ', s%ps%rc_max + m%h(1), ' [b]'
+        write(message(3),'(a,3f12.4,a)') '  lsize    = ', sb%lsize, ' [b]'
         message(4)='Please change pseudopotential'
         call write_fatal(4)
       end if
       j = 0
       do k = 1, m%np
         do i = 1,3**conf%periodic_dim
-          call mesh_r(m, k, r, a=a%x+m%shift(i,:))
+          call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
           if(r > s%ps%rc_max + m%h(1)) cycle
           j = j + 1
           exit
@@ -569,7 +570,7 @@ contains
       j = 0
       do k = 1, m%np
         do i = 1, 3**conf%periodic_dim
-          call mesh_r(m, k, r, a=a%x+m%shift(i,:))
+          call mesh_r(m, k, r, a=a%x + sb%shift(i,:))
           ! we enlarge slightly the mesh (good for the interpolation scheme)
           if(r > s%ps%rc_max + m%h(1)) cycle
           j = j + 1
@@ -624,9 +625,9 @@ contains
       call push_sub('build_nl_part')
       
       j_loop: do j = 1, ep%vnl(ivnl)%n
-         call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x_in)
+        x_in(:) = m%x(ep%vnl(ivnl)%jxyz(j), :)
          k_loop: do k = 1, 3**conf%periodic_dim
-          x(:) = x_in(:) - m%shift(k,:)          
+          x(:) = x_in(:) - sb%shift(k,:)          
           r=sqrt(sum((x-a%x)*(x-a%x)))
           if (r > s%ps%rc_max + m%h(1)) cycle
           x = x - a%x
@@ -645,9 +646,10 @@ contains
       
       if(reltype == 1) then ! SPIN_ORBIT
         do j = 1, ep%vnl(ivnl)%n
-          call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x_in)
+          x_in(:) = m%x(ep%vnl(ivnl)%jxyz(j), :)
+
           do k = 1, 3**conf%periodic_dim
-            x(:) = x_in(:) - m%shift(k,:)          
+            x(:) = x_in(:) - sb%shift(k,:)          
             r=sqrt(sum((x-a%x)*(x-a%x)))
             if (r > s%ps%rc_max + m%h(1)) cycle
             x = x - a%x
@@ -674,7 +676,7 @@ contains
                 call mesh_r(m, ep%vnl(ivnl)%jxyz(j), r, x=x_in, a=a%x)
 
                 do k = 1, 3**conf%periodic_dim
-                  x(:) = x_in(:) - m%shift(k,:)          
+                  x(:) = x_in(:) - sb%shift(k,:)          
                   r    = sqrt(sum(x*x))
                   if (r > s%ps%rc_max + m%h(1)) cycle
 
@@ -705,7 +707,7 @@ contains
 
       if(conf%periodic_dim/=0) then
         do j = 1, ep%vnl(ivnl)%n
-           call mesh_xyz(m, ep%vnl(ivnl)%jxyz(j), x)
+           x(:) = m%x(ep%vnl(ivnl)%jxyz(j), :)
            do k=1, st%d%nik
               ep%vnl(ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
            end do

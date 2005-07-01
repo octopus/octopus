@@ -19,8 +19,8 @@
 
 ! calculates the eigenvalues of the real orbitals
 subroutine X(hamiltonian_eigenval)(h, m, f_der, st)
-  type(hamiltonian_type), intent(IN)    :: h
-  type(mesh_type),        intent(IN)    :: m
+  type(hamiltonian_type), intent(in)    :: h
+  type(mesh_type),        intent(in)    :: m
   type(f_der_type),       intent(inout) :: f_der
   type(states_type),      intent(inout) :: st
 
@@ -46,13 +46,13 @@ end subroutine X(hamiltonian_eigenval)
 
 ! ---------------------------------------------------------
 subroutine X(Hpsi) (h, m, f_der, psi, hpsi, ik, t)
-  type(hamiltonian_type), intent(IN)  :: h
-  type(mesh_type),        intent(IN)  :: m
+  type(hamiltonian_type), intent(IN)    :: h
+  type(mesh_type),        intent(IN)    :: m
   type(f_der_type),       intent(inout) :: f_der
-  integer,                intent(in)  :: ik
-  R_TYPE,                 intent(IN)  :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
-  FLOAT, optional,        intent(in)  :: t
+  integer,                intent(in)    :: ik
+  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  FLOAT, optional,        intent(in)    :: t
 
   call push_sub('Hpsi')
 
@@ -457,8 +457,7 @@ subroutine X(vlasers) (h, m, f_der, psi, hpsi, t)
     case(1) ! length gauge
 
       do k = 1, m%np
-        call mesh_xyz(m, k, x)
-        call epot_laser_scalar_pot(h%ep, x, t, v)
+        call epot_laser_scalar_pot(h%ep, m%x(k,:), t, v)
 
         hpsi(k,:) = hpsi(k,:) + v * psi(k,:)
       end do

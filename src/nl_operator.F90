@@ -74,11 +74,11 @@ contains
   subroutine nl_operator_equal(opo, opi)
     type(nl_operator_type), intent(out) :: opo
     type(nl_operator_type), intent(in)  :: opi
+
     call nl_operator_init(opo, opi%n)
+
     opo%np = opi%np
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
-!!$    allocate(opo%i(size(opi%i, 1), size(opi%i, 2)))
-!!$    allocate(opo%w_re(size(opi%w_re, 1), size(opi%w_re, 2)))
     allocate(opo%i(opi%n, opi%np))
     if(opi%const_w) then
        allocate(opo%w_re(opi%n, 1))
@@ -91,6 +91,7 @@ contains
           allocate(opo%w_im(opi%n, opi%np))
        endif
     endif
+
     opo%const_w = opi%const_w
     opo%i       = opi%i
     opo%w_re    = opi%w_re
