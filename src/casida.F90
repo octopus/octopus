@@ -268,8 +268,8 @@ contains
   ! this subroutine calculates electronic excitation energies using
   ! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, cas)
-    type(system_type),      intent(inout) :: sys
-    type(casida_type),      intent(inout) :: cas
+    type(system_type), target, intent(inout) :: sys
+    type(casida_type),         intent(inout) :: cas
 
     logical, allocatable :: saved_K(:, :)         ! which matrix elements have been loaded
     type(states_type), pointer :: st

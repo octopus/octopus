@@ -44,9 +44,9 @@ public :: static_pol_run
 contains
 
 integer function static_pol_run(sys, h, fromScratch) result(ierr)
-  type(system_type),      intent(inout) :: sys
-  type(hamiltonian_type), intent(inout) :: h
-  logical,                intent(inout) :: fromScratch
+  type(system_type), target, intent(inout) :: sys
+  type(hamiltonian_type),    intent(inout) :: h
+  logical,                   intent(inout) :: fromScratch
 
   type(scf_type)             :: scfv
   type(mesh_type),   pointer :: m    ! shortcuts
@@ -111,7 +111,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   allocate(trrho(m%np))
   trrho = M_ZERO
   
-  call scf_init(scfv, sys%gr%m, sys%st, sys%geo, h)
+  call scf_init(scfv, sys%gr%m, sys%st, sys%gr%geo, h)
   do i = i_start, conf%dim
     do k = 1, 2
       write(message(1), '(a)')
@@ -120,7 +120,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
       
       h%ep%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
       
-      call scf_run(scfv, m, sys%gr%f_der, st, sys%geo, sys%ks, h, sys%outp)
+      call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
       
       trrho = M_ZERO
       do is = 1, st%d%spin_channels

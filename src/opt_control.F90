@@ -44,8 +44,8 @@ public :: opt_control_run
 contains
 
 integer function opt_control_run(sys, h) result(ierr)
-  type(system_type),      intent(inout) :: sys
-  type(hamiltonian_type), intent(inout) :: h
+  type(system_type), target, intent(inout) :: sys
+  type(hamiltonian_type),    intent(inout) :: h
 
   type(td_type)                :: td
   type(mesh_type),     pointer :: m   ! some shortcuts
@@ -78,7 +78,7 @@ integer function opt_control_run(sys, h) result(ierr)
     ! setup forward propagation
     call read_state(psi_i, "wf.initial")
     call zstates_calc_dens(psi_i, m%np, psi_i%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_i, calc_eigenval=.true.)
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_i, calc_eigenval=.true.)
     do i = 1, st%d%nspin
       v_old_i(:, i, 2) = h%vhxc(:, i)
     end do
@@ -104,7 +104,7 @@ integer function opt_control_run(sys, h) result(ierr)
     ! setup backward propagation
     call read_state(psi_f, "wf.final")
     call zstates_calc_dens(psi_f, m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_f, calc_eigenval=.true.)
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_f, calc_eigenval=.true.)
     do i = 1, st%d%nspin
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
@@ -158,15 +158,15 @@ contains
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
     call zstates_calc_dens(psi_f, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_f, calc_eigenval=.true.)
-    call td_rti_dt(sys%ks, h, m, sys%gr%f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(sys%ks, h, sys%gr, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_i
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
     call zstates_calc_dens(psi_i, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_i, calc_eigenval=.true.)
-    call td_rti_dt(sys%ks, h, m, sys%gr%f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(sys%ks, h, sys%gr, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter1
 
@@ -180,15 +180,15 @@ contains
     td%tr%v_old => v_old_i
     h%ep%lasers(1)%numerical => laser_i
     call zstates_calc_dens(psi_i, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_i, calc_eigenval=.true.)
-    call td_rti_dt(sys%ks, h, m, sys%gr%f_der, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_i, calc_eigenval=.true.)
+    call td_rti_dt(sys%ks, h, sys%gr, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
     ! psi_f
     td%tr%v_old => v_old_f
     h%ep%lasers(1)%numerical => laser_f
     call zstates_calc_dens(psi_f, m%np, st%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_f, calc_eigenval=.true.)
-    call td_rti_dt(sys%ks, h, m, sys%gr%f_der, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_f, calc_eigenval=.true.)
+    call td_rti_dt(sys%ks, h, sys%gr, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
   end subroutine prop_iter2
 
@@ -236,7 +236,7 @@ contains
 
     ! setup the hamiltonian
     call zstates_calc_dens(psi_f, m%np, psi_f%rho, reduce=.true.)
-    call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_f, calc_eigenval=.true.)
+    call zv_ks_calc(sys%gr, sys%ks, h, psi_f, calc_eigenval=.true.)
     
     ! setup start of the propagation
     do i = 1, st%d%nspin
@@ -252,10 +252,10 @@ contains
     call loct_progress_bar(-1, td%max_iter-1)
     do i = td%max_iter-1, 0, -1
       ! time iterate wavefunctions
-      call td_rti_dt(sys%ks, h, m, sys%gr%f_der, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
+      call td_rti_dt(sys%ks, h, sys%gr, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
       ! update
       call zstates_calc_dens(psi_f, m%np, st%rho, reduce=.true.)
-      call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, psi_f, calc_eigenval=.true.)
+      call zv_ks_calc(sys%gr, sys%ks, h, psi_f, calc_eigenval=.true.)
 
       call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)
     end do
@@ -318,12 +318,12 @@ contains
   end subroutine output
 
   subroutine init_()
-    call td_init(td, sys%gr%m, sys%st, sys%geo, h, sys%outp)
+    call td_init(td, sys%gr%m, sys%st, sys%gr%geo, h, sys%outp)
 
     ! some shortcuts
     m   => sys%gr%m
+    geo => sys%gr%geo
     st  => sys%st
-    geo => sys%geo
     
     ! allocate memory
     allocate(st%zpsi(sys%gr%m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
@@ -333,7 +333,7 @@ contains
     v_old_i => td%tr%v_old
     
     ! now we initialize psi_f. This will repeat some stuff
-    call states_init(psi_f, m, sys%gr%sb, geo)
+    call states_init(psi_f, sys%gr)
     if(h%ep%nvnl > 0) then
       allocate(psi_f%rho_core(m%np))
       psi_f%rho_core(m%np) = psi_i%rho_core(m%np)

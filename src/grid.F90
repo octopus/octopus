@@ -30,8 +30,9 @@ module grid
   
   type grid_type
     type(simul_box_type)       :: sb
-    type(mesh_type),  pointer  :: m
-    type(f_der_type), pointer  :: f_der
+    type(geometry_type)        :: geo
+    type(mesh_type)            :: m
+    type(f_der_type)           :: f_der
 
     type(curvlinear_type) :: cv
 
@@ -43,20 +44,20 @@ module grid
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init(gr, geo)
+  subroutine grid_init(gr)
     type(grid_type),     intent(out) :: gr
-    type(geometry_type), intent(in)  :: geo
+
+    logical :: filter
 
     call push_sub('grid_init')
 
-    ! this will count the number of grids contained in our multigrid
-    gr%n_multi = 0
-
-    allocate(gr%m, gr%f_der)
-    nullify(gr%multi_m, gr%multi_f_der)
+    ! initilize geometry
+    call geometry_init_xyz(gr%geo)
+    call geometry_init_species(gr%geo)
+    call geometry_init_vel(gr%geo)
 
     ! initialize simulation box
-    call simul_box_init(gr%sb, geo)
+    call simul_box_init(gr%sb, gr%geo)
 
     ! initialize curvlinear coordinates
     call curvlinear_init(gr%sb%lsize(:), gr%cv)
@@ -65,9 +66,23 @@ contains
     call f_der_init(gr%f_der, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init(gr%m, gr%sb, gr%cv, geo, gr%f_der%n_ghost(1))
+    call mesh_init(gr%m, gr%sb, gr%cv, gr%geo, gr%f_der%n_ghost(1))
     call f_der_build(gr%f_der, gr%m)
 
+    ! do we want to filter out the external potentials, or not.
+    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
+    if(filter) call geometry_filter(gr%geo, mesh_gcutoff(gr%m))
+
+    ! Now that we are really done with initializing the geometry, print debugging information.
+    if(conf%verbose>=VERBOSE_DEBUG) then
+      call geometry_debug(gr%geo, 'debug')
+    end if
+    
+    ! this will count the number of grids contained in our multigrid
+    gr%n_multi = 0
+    nullify(gr%multi_m, gr%multi_f_der)
+
+    ! print info concerning the grid
     call grid_write_info(gr, stdout)
 
     call pop_sub()
@@ -82,14 +97,10 @@ contains
 
     call push_sub('grid_end')
 
-    ASSERT(associated(gr%m))
     ASSERT(gr%n_multi >= 0)
 
     call f_der_end(gr%f_der)
     call mesh_end(gr%m)
-
-    deallocate(gr%m, gr%f_der)
-    nullify   (gr%m, gr%f_der)
 
     if(gr%n_multi > 0) then
       do i = 1, gr%n_multi
@@ -100,6 +111,8 @@ contains
       deallocate(gr%multi_m, gr%multi_f_der)
       nullify(gr%multi_m, gr%multi_f_der)
     end if
+
+    call geometry_end(gr%geo)
 
     call pop_sub()
   end subroutine grid_end

@@ -29,6 +29,7 @@ module v_ks
   use lib_basic_alg
   use functions
   use mesh
+  use grid
   use mesh_function
   use poisson
   use lib_xc
@@ -44,8 +45,8 @@ module v_ks
      v_ks_init,          &
      v_ks_end,           &
      v_ks_write_info,    &
-     dh_calc_vhxc,       &
-     zh_calc_vhxc
+     dv_ks_calc,         &
+     zv_ks_calc
 
   integer, parameter ::  &
      sic_none   = 1, &    ! no self interaction correction
@@ -115,7 +116,7 @@ contains
         !%Option sic_pz 2
         !% SIC a Perdew Zunger, hadled by the OEP technique
         !%Option sic_amaldi 3
-        !% Amaldi correction term
+        !% Amaldi correction term (NOT WORKING)
         !%End
 
         call loct_parse_int(check_inp('SICorrection'), sic_none, ks%sic_type)

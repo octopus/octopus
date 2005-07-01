@@ -33,6 +33,7 @@ module lcao
   use states
   use system
   use hamiltonian
+  use grid
 
   implicit none
 
@@ -59,13 +60,13 @@ module lcao
 
 contains
 
-subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
-  type(lcao_type),        intent(out) :: lcao_data
-  type(mesh_type),        intent(IN)  :: m
-  type(f_der_type),       intent(inout) :: f_der
-  type(states_type),      intent(IN)  :: st
-  type(geometry_type),    intent(IN)  :: geo
-  type(hamiltonian_type), intent(IN)  :: h
+subroutine lcao_init(lcao_data, gr, st, h)
+  type(lcao_type),         intent(out)   :: lcao_data
+  type(grid_type), target, intent(inout) :: gr
+  type(states_type),       intent(in)    :: st
+  type(hamiltonian_type),  intent(in)    :: h
+
+  type(geometry_type), pointer :: geo
 
   integer :: norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2
   integer, parameter :: orbs_local = 2
@@ -76,6 +77,8 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
   if(lcao_data%state == 1) return
 
   call push_sub('lcao_init')
+
+  geo => gr%geo
 
   ! Counting
   allocate(lcao_data%atoml(geo%natoms, 6))
@@ -110,7 +113,7 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
   write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
   call write_info(1)
 
-  allocate(lcao_data%psis(m%np, st%d%dim, norbs, st%d%nik))
+  allocate(lcao_data%psis(gr%m%np, st%d%dim, norbs, st%d%nik))
   lcao_data%psis = M_ZERO
   do ik = 1, st%d%nik
     n1 = 1
@@ -123,7 +126,7 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
         do lm1 = -l, l
           do d1 = 1, st%d%dim
             ispin = states_spin_channel(st%d%ispin, ik, d1)
-            call atom_get_wf(m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
+            call atom_get_wf(gr%m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
             n1 = n1 + 1
           end do
         end do
@@ -138,16 +141,16 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
            lcao_data%v      (norbs, norbs, st%d%nik))
 
   ! Overlap and kinetic+so matrices.
-  allocate(hpsi(m%np, st%d%dim))
+  allocate(hpsi(gr%m%np, st%d%dim))
   do ik = 1, st%d%nik
     do n1 = 1, lcao_data%dim
-      call X(kinetic) (h, m, f_der, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+      call X(kinetic) (h, gr%m, gr%f_der, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, m, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
+        call zso (h, gr%m, lcao_data%psis(:, :, n1, ik), hpsi(:, :))
 #endif
       case default
         message(1) = 'Error: Internal.'
@@ -155,8 +158,8 @@ subroutine lcao_init(lcao_data, m, f_der, st, geo, h)
       end select
  
       do n2 = n1, lcao_data%dim
-        lcao_data%k(n1, n2, ik) = X(states_dotp)(m, st%d%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
-        lcao_data%s(n1, n2, ik) = X(states_dotp)(m, st%d%dim, lcao_data%psis(:, :, n1, ik), &
+        lcao_data%k(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
+        lcao_data%s(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, lcao_data%psis(:, :, n1, ik), &
                                                  lcao_data%psis(:, : ,n2, ik))
       end do
       

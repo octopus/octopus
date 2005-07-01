@@ -401,12 +401,10 @@ subroutine td_write_gsp(out, m, st, td, iter)
   call pop_sub()
 end subroutine td_write_gsp
 
-subroutine td_write_acc(out, mesh, f_der, st, geo, h, td, iter)
-  integer(POINTER_SIZE),  intent(IN)    :: out
-  type(mesh_type),        intent(IN)    :: mesh
-  type(f_der_type),       intent(inout) :: f_der
-  type(states_type),      intent(inout) :: st
-  type(geometry_type),    intent(inout) :: geo
+subroutine td_write_acc(out, gr, st, h, td, iter)
+  integer(POINTER_SIZE),  intent(in)    :: out
+  type(grid_type),        intent(inout) :: gr
+  type(states_type),      intent(in)    :: st
   type(hamiltonian_type), intent(IN)    :: h
   type(td_type),          intent(IN)    :: td
   integer,                intent(in)    :: iter
@@ -438,16 +436,12 @@ subroutine td_write_acc(out, mesh, f_der, st, geo, h, td, iter)
     call write_iter_nl(out)
   endif
   
-  call td_calc_tacc(acc, td%dt*i, reduce = .true.)
+  call td_calc_tacc(gr, st, h, acc, td%dt*i, reduce = .true.)
   
   call write_iter_start(out)
   call write_iter_double(out, acc/units_out%acceleration%factor, conf%dim)
   call write_iter_nl(out)
   
-contains
-
-#include "td_calc.F90"
-
 end subroutine td_write_acc
 
 subroutine td_write_laser(out, h, td, iter)

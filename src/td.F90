@@ -40,6 +40,7 @@ module timedep
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   use PES
 #endif
+  use grid
 
   implicit none
 
@@ -89,9 +90,9 @@ module timedep
 contains
 
   integer function td_run(sys, h, fromScratch) result(ierr)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
-    logical,                intent(inout) :: fromScratch
+    type(system_type), target, intent(inout) :: sys
+    type(hamiltonian_type),    intent(inout) :: h
+    logical,                   intent(inout) :: fromScratch
 
     type(td_type)                :: td
     type(mesh_type),     pointer :: m   ! some shortcuts
@@ -186,7 +187,7 @@ contains
        endif
 
        ! time iterate wavefunctions
-       call td_rti_dt(sys%ks, h, m, sys%gr%f_der, st, td%tr, i*td%dt, td%dt)
+       call td_rti_dt(sys%ks, h, sys%gr, st, td%tr, i*td%dt, td%dt)
 
        ! mask function?
        if(h%ab == MASK_ABSORBING) then
@@ -204,7 +205,7 @@ contains
        call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
 
        ! update hamiltonian and eigenvalues (fermi is *not* called)
-       call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, st, calc_eigenval=.true.)
+       call zv_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
        call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
 
        ! Recalculate forces, update velocities...
@@ -262,8 +263,8 @@ contains
 
       ! some shortcuts
       m   => sys%gr%m
+      geo => sys%gr%geo
       st  => sys%st
-      geo => sys%geo
 
       call states_distribute_nodes(st)
 
@@ -319,7 +320,7 @@ contains
 
       if(ierr==0) then
          call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
-         call zh_calc_vhxc(sys%ks, h, m, sys%gr%f_der, st, calc_eigenval=.true.)
+         call zv_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
          x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
          call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
@@ -410,7 +411,7 @@ contains
       if(td%out_coords) call td_write_nbo(out_coords, geo, i, geo%kinetic_energy, h%etot)
 
       ! If harmonic spectrum is desired, get the acceleration
-      if(td%out_acc) call td_write_acc(out_acc, m, sys%gr%f_der, st, geo, h, td, i)
+      if(td%out_acc) call td_write_acc(out_acc, sys%gr, st, h, td, i)
 
       ! output laser field
       if(td%out_laser) call td_write_laser(out_laser, h, td, i)
@@ -437,7 +438,7 @@ contains
 
       ! create files for output and output headers
       if(td%out_coords) call td_write_nbo(out_coords, geo, 0, geo%kinetic_energy, h%etot)    
-      if(td%out_acc)    call td_write_acc(out_acc, m, sys%gr%f_der, st, geo, h, td, 0)
+      if(td%out_acc)    call td_write_acc(out_acc, sys%gr, st, h, td, 0)
       if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
       if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
 
@@ -641,5 +642,6 @@ contains
 
 #include "td_write.F90"
 #include "td_init.F90"
+#include "td_calc.F90"
 
 end module timedep

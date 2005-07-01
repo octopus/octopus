@@ -40,6 +40,7 @@ module scf
   use mix
   use lcao
   use io
+  use grid
 
   implicit none
 
@@ -158,17 +159,16 @@ end subroutine scf_end
 
 
 ! ---------------------------------------------------------
-subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
+subroutine scf_run(scf, gr, st, ks, h, outp)
   type(scf_type),         intent(inout) :: scf
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+  type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(geometry_type),    intent(inout) :: geo
   type(v_ks_type),        intent(inout) :: ks
   type(hamiltonian_type), intent(inout) :: h
   type(output_type),      intent(IN)    :: outp
 
   type(lcao_type) :: lcao_data
+  integer :: np
 
   integer :: iter, iunit, is, idim, nspin, dim, err
   FLOAT :: evsum_out, evsum_in
@@ -179,8 +179,10 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
 
   call push_sub('scf_run')
 
+  np = gr%m%np
+
   if(scf%lcao_restricted) then
-    call lcao_init(lcao_data, m, f_der, st, geo, h)
+    call lcao_init(lcao_data, gr, st, h)
     if(.not.lcao_data%state == 1) then
       message(1) = 'Nothing to do'
       call write_fatal(1)
@@ -191,7 +193,7 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   dim = 1
   if (h%d%cdft) dim = 1 + conf%dim
 
-  allocate(rhoout(m%np, dim, nspin), rhoin(m%np, dim, nspin))
+  allocate(rhoout(np, dim, nspin), rhoin(np, dim, nspin))
 
   rhoin(:, 1, :) = st%rho; rhoout = M_ZERO
   if (st%d%cdft) then
@@ -199,50 +201,50 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   end if
 
   if (scf%what2mix == MIXPOT) then
-    allocate(vout(m%np, dim, nspin), vin(m%np, dim, nspin), vnew(m%np, dim, nspin))
+    allocate(vout(np, dim, nspin), vin(np, dim, nspin), vnew(np, dim, nspin))
     vin(:, 1, :) = h%vhxc; vout = M_ZERO
     if (st%d%cdft) vin(:, 2:dim, :) = h%ahxc(:,:,:)
   else
-    allocate(rhonew(m%np, dim, nspin))
+    allocate(rhonew(np, dim, nspin))
   end if
   evsum_in = states_eigenvalues_sum(st)
 
   ! SCF cycle
   do iter = 1, scf%max_iter
     if(scf%lcao_restricted) then
-      call lcao_wf(lcao_data, m, st, h)
+      call lcao_wf(lcao_data, gr%m, st, h)
     else
       scf%eigens%converged = 0
-      call eigen_solver_run(scf%eigens, m, f_der, st, h, iter)
+      call eigen_solver_run(scf%eigens, gr%m, gr%f_der, st, h, iter)
     endif
 
     ! occupations
-    call states_fermi(st, m)
+    call states_fermi(st, gr%m)
 
     ! compute output density, potential (if needed) and eigenvalues sum
-    call X(states_calc_dens)(st, m%np, st%rho)
+    call X(states_calc_dens)(st, np, st%rho)
     rhoout(:, 1, :) = st%rho
     if (h%d%cdft) then
-      call states_calc_physical_current(m, f_der, st, st%j)
+      call states_calc_physical_current(gr%m, gr%f_der, st, st%j)
       rhoout(:, 2:dim, :) = st%j
     end if
     if (scf%what2mix == MIXPOT) then
-      call X(h_calc_vhxc) (ks, h, m, f_der, st)
+      call X(v_ks_calc) (gr, ks, h, st)
       vout(:, 1, :) = h%vhxc
       if (h%d%cdft) vout(:, 2:dim, :) = h%ahxc(:,:,:)
     end if
     evsum_out = states_eigenvalues_sum(st)
 
     ! recalculate total energy
-    call hamiltonian_energy(h, st, geo%eii, 0)
+    call hamiltonian_energy(h, st, gr%geo%eii, 0)
 
     ! compute convergence criteria
     scf%abs_dens = M_ZERO
-    allocate(tmp(m%np))
+    allocate(tmp(np))
     do is = 1, nspin
       do idim = 1, dim
         tmp = (rhoin(:, idim, is) - rhoout(:, idim, is))**2
-        scf%abs_dens = scf%abs_dens + dmf_integrate(m, tmp)
+        scf%abs_dens = scf%abs_dens + dmf_integrate(gr%m, tmp)
       end do
     end do
     deallocate(tmp)
@@ -265,20 +267,20 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, m%np, dim, nspin, rhoin, rhoout, rhonew)
+       call mixing(scf%smix, iter, np, dim, nspin, rhoin, rhoout, rhonew)
        st%rho = rhonew(:, 1, :)
        if (h%d%cdft) st%j = rhonew(:, 2:dim, :)
-       call X(h_calc_vhxc) (ks, h, m, f_der, st)
+       call X(v_ks_calc) (gr, ks, h, st)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, m%np, dim, nspin, vin, vout, vnew)
+       call mixing(scf%smix, iter, np, dim, nspin, vin, vout, vnew)
        h%vhxc = vnew(:, 1, :)
        if (h%d%cdft) h%ahxc(:,:,:) = vnew(:,2:dim,:)
     end select
 
     ! save restart information
     if(finish.or.(modulo(iter, 3) == 0).or.iter==scf%max_iter.or.clean_stop()) then
-      call X(restart_write) (trim(tmpdir)//'restart_gs', st, m, err, iter=iter)
+      call X(restart_write) (trim(tmpdir)//'restart_gs', st, gr%m, err, iter=iter)
       if(err.ne.0) then
         message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
         call write_fatal(1)
@@ -293,8 +295,8 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
     end if
 
     if(outp%duringscf) then
-      call X(states_output) (st, m, f_der, "static", outp)
-      call hamiltonian_output(h, m, "static", outp)
+      call X(states_output) (st, gr%m, gr%f_der, "static", outp)
+      call hamiltonian_output(h, gr%m, "static", outp)
     endif
 
     ! save information for the next iteration
@@ -310,7 +312,7 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   end do
 
   if (scf%what2mix == MIXPOT) then
-    call X(h_calc_vhxc) (ks, h, m, f_der, st)
+    call X(v_ks_calc) (gr, ks, h, st)
     deallocate(vout, vin, vnew)
   else
     deallocate(rhonew)
@@ -323,14 +325,14 @@ subroutine scf_run(scf, m, f_der, st, geo, ks, h, outp)
   end if
 
   ! calculate forces
-  call X(epot_forces)(h%ep, m, st, geo)
+  call X(epot_forces)(h%ep, gr%m, st, gr%geo)
 
   ! output final information
   call scf_write_static("static", "info")
-  call X(states_output) (st, m, f_der, "static", outp)
+  call X(states_output) (st, gr%m, gr%f_der, "static", outp)
   if(outp%what(output_geometry)) &
-     call atom_write_xyz("static", "geometry", geo)
-  call hamiltonian_output(h, m, "static", outp)
+     call atom_write_xyz("static", "geometry", gr%geo)
+  call hamiltonian_output(h, gr%m, "static", outp)
 
   if (conf%periodic_dim>0.and.st%d%nik>st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
@@ -364,7 +366,7 @@ contains
     endif
 
     if(st%d%ispin == SPINORS) then
-      call write_magnetic_moments(stdout, m, st)
+      call write_magnetic_moments(stdout, gr%m, st)
     end if
 
     write(message(1),'(a)') stars
@@ -389,7 +391,7 @@ contains
     iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
     
     ! mesh
-    write(iunit, '(a,a)') 'System name: ', geo%sysname
+    write(iunit, '(a,a)') 'System name: ', gr%geo%sysname
     write(iunit, '(1x)')
     
     write(iunit, '(a)') 'Mesh:'
@@ -421,23 +423,23 @@ contains
     write(iunit, '(1x)')
     
     write(iunit, '(a)') 'Energy:'
-    call hamiltonian_energy(h, st, geo%eii, iunit)
+    call hamiltonian_energy(h, st, gr%geo%eii, iunit)
     write(iunit, '(1x)')
     
     if(st%d%ispin > UNPOLARIZED) then
-      call write_magnetic_moments(iunit, m, st)
+      call write_magnetic_moments(iunit, gr%m, st)
       write(iunit, '(1x)')
     end if
     
     ! Next lines of code calculate the dipole of the molecule, summing the electronic and
     ! ionic contributions.
-    if(conf%dim>0) call states_calculate_multipoles(m, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
-    if(conf%dim>1) call states_calculate_multipoles(m, st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
-    if(conf%dim>2) call states_calculate_multipoles(m, st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
+    if(conf%dim>0) call states_calculate_multipoles(gr%m, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
+    if(conf%dim>1) call states_calculate_multipoles(gr%m, st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
+    if(conf%dim>2) call states_calculate_multipoles(gr%m, st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
     do j = 1, conf%dim
       e_dip(j, 1) = sum(e_dip(j, :))
     end do
-    call geometry_dipole(geo, n_dip)
+    call geometry_dipole(gr%geo, n_dip)
     n_dip(:) = n_dip(:) - e_dip(:, 1)
     write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
     do j = 1, conf%dim
@@ -447,7 +449,7 @@ contains
     write(iunit,'(a)')
     
     if(conf%dim==3) then
-      call X(states_calc_angular)(m, f_der, st, angular, l2 = l2)
+      call X(states_calc_angular)(gr%m, gr%f_der, st, angular, l2 = l2)
       write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
       do j = 1, conf%dim
         write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
@@ -472,9 +474,9 @@ contains
     
     write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
     write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
-    do i = 1,geo%natoms
-      write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), &
-         geo%atom(i)%f(:) / units_out%force%factor
+    do i = 1, gr%geo%natoms
+      write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), &
+         gr%geo%atom(i)%f(:) / units_out%force%factor
     end do
     
     call io_close(iunit)
@@ -503,19 +505,19 @@ contains
       write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
     end if
 
-    allocate(lmm(3, geo%natoms))
-    call states_local_magnetic_moments(m, st, geo, st%rho, scf%lmm_r, lmm)
+    allocate(lmm(3, gr%geo%natoms))
+    call states_local_magnetic_moments(m, st, gr%geo, st%rho, scf%lmm_r, lmm)
     write(iunit, '(a,a,a,f7.3,a)') 'Local Magnetic Moments (sphere radius [', &
           trim(units_out%length%abbrev),'] = ',scf%lmm_r/units_out%length%factor,'):'
     if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
       write(iunit,'(a,6x,14x,a)') ' Ion','mz'
-      do i = 1,geo%natoms
-        write(iunit,'(i4,a10,f15.6)') i, trim(geo%atom(i)%spec%label), lmm(3, i)
+      do i = 1, gr%geo%natoms
+        write(iunit,'(i4,a10,f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(3, i)
       end do
     else if(st%d%ispin == SPINORS) then ! non-collinear
       write(iunit,'(a,8x,13x,a,13x,a,13x,a)') ' Ion','mx','my','mz'
-      do i = 1,geo%natoms
-        write(iunit,'(i4,a10,3f15.6)') i, trim(geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
+      do i = 1, gr%geo%natoms
+        write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), lmm(1, i), lmm(2, i), lmm(3, i)
       end do
     end if
     deallocate(lmm)

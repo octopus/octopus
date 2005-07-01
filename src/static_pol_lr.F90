@@ -42,9 +42,9 @@ contains
 
   ! ---------------------------------------------------------
   integer function static_pol_lr_run(sys, h, fromScratch) result(ierr)
-    type(system_type), intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
-    logical, intent(inout) :: fromScratch
+    type(system_type), target, intent(inout) :: sys
+    type(hamiltonian_type),    intent(inout) :: h
+    logical,                   intent(inout) :: fromScratch
 
     type(lr_type) :: lr
     type(mesh_type), pointer :: m
@@ -169,11 +169,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine get_response_e(sys, h, lr, alpha, omega)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
-    type(lr_type),          intent(inout) :: lr
-    integer,                intent(in)    :: alpha
-    R_TYPE,                 intent(in)    :: omega
+    type(system_type), target, intent(inout) :: sys
+    type(hamiltonian_type),    intent(inout) :: h
+    type(lr_type),             intent(inout) :: lr
+    integer,                   intent(in)    :: alpha
+    R_TYPE,                    intent(in)    :: omega
     
     integer :: iter, iter_max, sigma, ik, ik2, ist, i 
     FLOAT, allocatable :: tmp(:), dl_rhoin(:,:,:), dl_rhonew(:,:,:), dl_rhotmp(:,:,:)

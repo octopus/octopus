@@ -35,6 +35,7 @@ module td_rti
   use external_pot
   use td_exp
   use td_exp_split
+  use grid
 
   implicit none
 
@@ -68,6 +69,8 @@ module td_rti
 
 
 contains
+
+  !-------------------------------------------------------------------
   subroutine td_rti_init(m, st, tr)
     type(mesh_type),   intent(IN)    :: m
     type(states_type), intent(IN)    :: st
@@ -100,6 +103,8 @@ contains
 
   end subroutine td_rti_init
 
+
+  !-------------------------------------------------------------------
   subroutine td_rti_end(tr)
     type(td_rti_type), intent(inout) :: tr
 
@@ -119,6 +124,8 @@ contains
     call td_exp_end(tr%te)       ! clean propagator method
   end subroutine td_rti_end
 
+
+  !-------------------------------------------------------------------
   subroutine td_rti_run_zero_iter(h, tr)
     type(hamiltonian_type), intent(IN)    :: h
     type(td_rti_type),      intent(inout) :: tr
@@ -127,16 +134,17 @@ contains
     tr%v_old(:, :, 1) = h%vhxc(:, :)
   end subroutine td_rti_run_zero_iter
 
-  subroutine td_rti_dt(ks, h, m, f_der, st, tr, t, dt)
+
+  !-------------------------------------------------------------------
+  subroutine td_rti_dt(ks, h, gr, st, tr, t, dt)
     type(v_ks_type),        intent(inout) :: ks
     type(hamiltonian_type), intent(inout) :: h
-    type(mesh_type),        intent(IN)    :: m
-    type(f_der_type),       intent(inout) :: f_der
+    type(grid_type),        intent(inout) :: gr
     type(states_type),      intent(inout) :: st
     type(td_rti_type),      intent(inout) :: tr
     FLOAT,                  intent(in)    :: t, dt
 
-    integer :: is, iter
+    integer :: np, is, iter
     FLOAT   :: d, d_max
     logical :: self_consistent
     CMPLX, allocatable :: zpsi1(:, :, :, :)
@@ -144,17 +152,19 @@ contains
 
     call push_sub('td_rti')
 
+    np = gr%m%np
+
     self_consistent = .false.
     if(t<3*dt .and. (.not.h%ip_app)) then
        self_consistent = .true.
-       allocate(zpsi1(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
+       allocate(zpsi1(np, st%d%dim, st%st_start:st%st_end, st%d%nik))
        zpsi1 = st%zpsi
     endif
 
-    call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
-    call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
-    call lalg_copy(m%np, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
-    call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
+    call lalg_copy(np, st%d%nspin, tr%v_old(:, :, 2), tr%v_old(:, :, 3))
+    call lalg_copy(np, st%d%nspin, tr%v_old(:, :, 1), tr%v_old(:, :, 2))
+    call lalg_copy(np, st%d%nspin, h%vhxc(:, :),      tr%v_old(:, :, 1))
+    call dextrapolate(2, np, st%d%nspin, tr%v_old(:, :, 1:3), tr%v_old(:, :, 0), dt, dt)
 
     select case(tr%method)
     case(SPLIT_OPERATOR);       call td_rti0
@@ -167,18 +177,18 @@ contains
 
     if(self_consistent) then
       do iter = 1, 3
-        call lalg_copy(m%np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
+        call lalg_copy(np, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
-        call zstates_calc_dens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(ks, h, m, f_der, st)
+        call zstates_calc_dens(st, np, st%rho, .true.)
+        call zv_ks_calc(gr, ks, h, st)
         tr%v_old(:, :, 0) = h%vhxc
         h%vhxc = tr%v_old(:, :, 1)
 
         d_max = M_ZERO
-        allocate(dtmp(m%np))
+        allocate(dtmp(np))
         do is = 1, st%d%nspin
           dtmp = tr%v_old(:, is, 3) - tr%v_old(:, is, 0)
-          d    = dmf_nrm2(m, dtmp)
+          d    = dmf_nrm2(gr%m, dtmp)
           if(d > d_max) d_max = d
         end do
         deallocate(dtmp)
@@ -208,21 +218,21 @@ contains
       
       do ik = 1, st%d%nik
          do ist = 1, st%nst
-            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
+            call zexp_kinetic(gr%m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
-      call zstates_calc_dens(st, m%np, st%rho, .true.)
-      call zh_calc_vhxc(ks, h, m, f_der, st)
+      call zstates_calc_dens(st, np, st%rho, .true.)
+      call zv_ks_calc(gr, ks, h, st)
       do ik = 1, st%d%nik
          do ist = 1, st%nst
-            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
-            call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
-            if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
+            if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
+            call zexp_vlpsi (gr%m, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
+            if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
          enddo
       enddo
       do ik = 1, st%d%nik
          do ist = 1, st%nst
-            call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
+            call zexp_kinetic(gr%m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
          enddo
       enddo
 
@@ -245,14 +255,17 @@ contains
       time(5) = t-dt+(pp(1)+pp(2)+pp(3)+pp(4)+pp(5)/M_TWO)*dt
 
       do k = 1, 5
-         call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
+         call dextrapolate(2, np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
          do ik = 1, st%d%nik
             do ist = 1, st%nst
-               call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
-               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
-               call zexp_kinetic(m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
-               if (h%ep%nvnl > 0) call zexp_vnlpsi (m, h, st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
-               call zexp_vlpsi (m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               call zexp_vlpsi (gr%m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, &
+                  st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
+
+               call zexp_kinetic(gr%m, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
+               if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, &
+                  st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
+               call zexp_vlpsi (gr%m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             enddo
          enddo
       enddo
@@ -268,21 +281,21 @@ contains
       call push_sub('td_rti2')
       
       if(.not.h%ip_app) then
-        allocate(zpsi1(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
+        allocate(zpsi1(np, st%d%dim, st%st_start:st%st_end, st%d%nik))
         zpsi1 = st%zpsi ! store zpsi
         
-        allocate(vhxc_t1(m%np, st%d%nspin), vhxc_t2(m%np, st%d%nspin))
+        allocate(vhxc_t1(np, st%d%nspin), vhxc_t2(np, st%d%nspin))
         vhxc_t1 = h%vhxc
         
         ! propagate dt with H(t-dt)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
+            call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
           end do
         end do
         
-        call zstates_calc_dens(st, m%np, st%rho, .true.)
-        call zh_calc_vhxc(ks, h, m, f_der, st)
+        call zstates_calc_dens(st, np, st%rho, .true.)
+        call zv_ks_calc(gr, ks, h, st)
         
         st%zpsi = zpsi1
         deallocate(zpsi1)
@@ -294,7 +307,7 @@ contains
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+          call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
@@ -302,7 +315,7 @@ contains
       if(.not.h%ip_app) h%vhxc = vhxc_t2
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -317,14 +330,14 @@ contains
       
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-           call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+           call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
       
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+          call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
       
@@ -336,12 +349,12 @@ contains
       call push_sub('td_rti4')
 
       if(.not.h%ip_app) then
-        call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
+        call dextrapolate(2, np, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
       
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
+          call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
         end do
       end do
       
@@ -355,14 +368,14 @@ contains
 
       call push_sub('td_rti5')
 
-      allocate(vaux(m%np, st%d%nspin, 2))
+      allocate(vaux(np, st%d%nspin, 2))
 
       time(1) = (M_HALF-sqrt(M_THREE)/M_SIX)*dt
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
       if(.not.h%ip_app) then
         do j = 1, 2
-           call dextrapolate(2, m%np, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
+           call dextrapolate(2, np, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
         enddo
       else
         vaux = M_ZERO
@@ -372,8 +385,8 @@ contains
         if(h%ep%no_lasers > 0) then
           select case(h%gauge)
           case(1) ! length gauge
-            do k = 1, m%np
-               call epot_laser_scalar_pot(h%ep, m%x(k,:), t-dt+time(j), v)
+            do k = 1, np
+               call epot_laser_scalar_pot(h%ep, gr%m%x(k,:), t-dt+time(j), v)
                do is = 1, st%d%spin_channels
                   vaux(k, is, j) = vaux(k, is, j) + v
                enddo
@@ -390,7 +403,7 @@ contains
 
       do k = 1, st%d%nik
         do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, m, f_der, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
+          call td_exp_dt(tr%te, gr%m, gr%f_der, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
                          vmagnus = tr%vmagnus)
         end do
       end do

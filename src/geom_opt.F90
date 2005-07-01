@@ -54,8 +54,8 @@ module geom_opt
 contains
 
   integer function geom_opt_run(sys, h) result(ierr)
-    type(system_type),      intent(inout) :: sys
-    type(hamiltonian_type), intent(inout) :: h
+    type(system_type), target, intent(inout) :: sys
+    type(hamiltonian_type),    intent(inout) :: h
 
     type(scf_type)             :: scfv
     type(mesh_type),     pointer :: m    ! shortcuts
@@ -86,7 +86,7 @@ contains
     call write_info(1)
     call X(system_h_setup) (sys, h)
 
-    call scf_init(scfv, sys%gr%m, sys%st, sys%geo, h)
+    call scf_init(scfv, sys%gr%m, sys%st, sys%gr%geo, h)
 
     allocate(x(3*geo%natoms))
     do i = 0, geo%natoms - 1
@@ -131,8 +131,8 @@ contains
 
       ! shortcuts
       m   => sys%gr%m
+      geo => sys%gr%geo
       st  => sys%st
-      geo => sys%geo
 
       call loct_parse_int(check_inp('GOMethod'), 1, g_opt%method)
       if(g_opt%method < 1 .or. g_opt%method >1) then
@@ -178,11 +178,11 @@ contains
 
       call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype)
       call X(states_calc_dens) (st, m%np, st%rho)
-      call X(h_calc_vhxc) (sys%ks, h, m, sys%gr%f_der, st, calc_eigenval=.true.)
+      call X(v_ks_calc) (sys%gr, sys%ks, h, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
   
       ! do scf calculation
-      call scf_run(scfv, m, sys%gr%f_der, st, geo, sys%ks, h, sys%outp)
+      call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
 
       ! store results
       f = h%etot

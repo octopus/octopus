@@ -91,8 +91,8 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call write_info(1)
   
   call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
-  call X(h_calc_vhxc)(sys%ks, h, sys%gr%m, sys%gr%f_der, sys%st, calc_eigenval=.true.) ! get potentials
-  call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)         ! total energy
+  call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
+  call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)         ! total energy
   
   message(1) = "Info: Starting calculation of unoccupied states"
   call write_info(1)

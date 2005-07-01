@@ -17,6 +17,7 @@
 !!
 !! $Id$
 
+
 ! Calculates the new density out the wavefunctions and occupations...
 subroutine X(states_calc_dens)(st, np, rho, reduce)
   type(states_type), intent(IN)  :: st

@@ -26,11 +26,15 @@
 !
 ! WARNING: This subroutine only works if ions are not allowed to move
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  subroutine td_calc_tacc(acc, t, reduce)
-    FLOAT,             intent(in)  :: t
-    FLOAT,             intent(out) :: acc(3)
-    logical, optional, intent(in)  :: reduce
+  subroutine td_calc_tacc(gr, st, h, acc, t, reduce)
+    type(grid_type),        intent(inout) :: gr
+    type(states_type),      intent(in)    :: st
+    type(hamiltonian_type), intent(in)    :: h
+    FLOAT,                  intent(in)    :: t
+    FLOAT,                  intent(out)   :: acc(3)
+    logical, optional,      intent(in)    :: reduce
 
+    integer :: np
     FLOAT :: v, field(3), x(3)
     CMPLX, allocatable :: hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:), conj(:)
     integer  :: j, k, i, ik, ist, idim
@@ -40,14 +44,15 @@
 #endif
 
     call push_sub('td_calc_tacc')
+    np = gr%m%np
 
     ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
     ! Maybe we are forgetting something....
     x = M_ZERO
-    call zepot_forces(h%ep, mesh, st, geo)
-    do i = 1, geo%natoms
-      x = x - geo%atom(i)%f
+    call zepot_forces(h%ep, gr%m, st, gr%geo)
+    do i = 1, gr%geo%natoms
+      x = x - gr%geo%atom(i)%f
     enddo
     acc = x
 
@@ -64,49 +69,49 @@
 
     ! And now, i<[H,[V_nl,x]]>
     x = M_ZERO
-    allocate(hzpsi(mesh%np, st%d%dim), hhzpsi(3, mesh%np), conj(mesh%np))
+    allocate(hzpsi(np, st%d%dim), hhzpsi(3, np), conj(np))
 
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
         
-        call zhpsi(h, mesh, f_der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
-        do k = 1, mesh%np
-          call epot_laser_scalar_pot(h%ep, mesh%x(:, k), t, v)
+        call zhpsi(h, gr%m, gr%f_der, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
+        do k = 1, np
+          call epot_laser_scalar_pot(h%ep, gr%m%x(:, k), t, v)
           hzpsi(k,:) = hzpsi(k,:) + v * st%zpsi(k,:,ist,ik)
         end do
         
-        allocate(xzpsi(mesh%np, st%d%dim, 3), vnl_xzpsi(mesh%np, st%d%dim))
+        allocate(xzpsi(np, st%d%dim, 3), vnl_xzpsi(np, st%d%dim))
         xzpsi = M_z0
-        do k = 1, mesh%np
+        do k = 1, np
           do j = 1, conf%dim
-            xzpsi(k, 1:st%d%dim, j) = mesh%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
+            xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
           end do
         end do
          
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(h, mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+          call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
                
           do idim = 1, st%d%dim
             conj = R_CONJ(hzpsi(:, idim))
-            x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(mesh, conj, vnl_xzpsi(:, idim) )
+            x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
           end do
         end do
            
         xzpsi = M_z0
-        do k = 1, mesh%np
+        do k = 1, np
           do j = 1, conf%dim
-            xzpsi(k, 1:st%d%dim, j) = mesh%x(j, k) * hzpsi(k, 1:st%d%dim)
+            xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * hzpsi(k, 1:st%d%dim)
           end do
         end do
         
         do j = 1, conf%dim
           vnl_xzpsi = M_z0
-          call zvnlpsi(h, mesh, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
+          call zvnlpsi(h, gr%m, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
           do idim = 1, st%d%dim
             conj = R_CONJ(st%zpsi(:, idim, ist, ik))
             x(j) = x(j) + 2*st%occ(ist, ik)* &
-                  zmf_dotp(mesh, conj, vnl_xzpsi(:, idim) )
+                  zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
           end do
         end do
         deallocate(xzpsi, vnl_xzpsi)

@@ -78,8 +78,8 @@ contains
 #endif
       call write_info(1)
 
-      call scf_init(scfv, sys%gr%m, sys%st, sys%geo, h)
-      call scf_run(scfv, sys%gr%m, sys%gr%f_der, sys%st, sys%geo, sys%ks, h, sys%outp)
+      call scf_init(scfv, sys%gr%m, sys%st, sys%gr%geo, h)
+      call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
       call scf_end(scfv)
     end if
 
@@ -90,9 +90,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ground_state_init(gr, geo, st, ks,  h)
+  subroutine ground_state_init(gr, st, ks,  h)
     type(grid_type),        intent(inout) :: gr
-    type(geometry_type),    intent(in)    :: geo
     type(states_type),      intent(inout) :: st
     type(v_ks_type),        intent(inout) :: ks
     type(hamiltonian_type), intent(inout) :: h
@@ -113,18 +112,18 @@ contains
     call states_generate_random(st, gr%m)
 
     ! this is certainly a better density
-    call system_guess_density(gr%m, gr%sb, geo, st%qtot, st%d%nspin, &
+    call system_guess_density(gr%m, gr%sb, gr%geo, st%qtot, st%d%nspin, &
        st%d%spin_channels, st%rho)      
 
     call loct_parse_logical(check_inp('LCAOStart'), .true., lcao_start)
     if(lcao_start) then
-      call X(h_calc_vhxc)(ks, h, gr%m, gr%f_der, st, calc_eigenval=.true.)
+      call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)
 
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)
      
       lcao_data%state = 0 ! Uninitialized here.
-      call lcao_init(lcao_data, gr%m, gr%f_der, st, geo, h)
+      call lcao_init(lcao_data, gr, st, h)
       if(lcao_data%state == 1) then
         call lcao_wf(lcao_data, gr%m, st, h)
         call lcao_end(lcao_data)

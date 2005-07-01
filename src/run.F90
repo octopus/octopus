@@ -103,7 +103,7 @@ subroutine run()
 
     select case(i_stack(instr))
     case(I_GS_INIT)
-      call ground_state_init(sys%gr, sys%geo, sys%st, sys%ks, h)
+      call ground_state_init(sys%gr, sys%st, sys%ks, h)
 
     case(I_GS)
       if(ground_state_run(sys, h).ne.0) then ! could not load wfs
@@ -324,8 +324,8 @@ subroutine run_init()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
     call units_init()
     call system_init(sys)
-    call hamiltonian_init(h, sys%gr%m, sys%geo, sys%st%d, sys%ks%ip_app)
-    call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%geo, sys%st, h%reltype)
+    call hamiltonian_init(h, sys%gr%m, sys%gr%geo, sys%st%d, sys%ks%ip_app)
+    call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
   endif
 
   call restart_init()
@@ -334,7 +334,7 @@ end subroutine run_init
 
 subroutine run_end()
   if(calc_mode .ne. M_PULPO_A_FEIRA) then
-    call hamiltonian_end(h, sys%geo)
+    call hamiltonian_end(h, sys%gr%geo)
     call system_end(sys)
   endif
 

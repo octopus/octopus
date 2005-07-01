@@ -54,7 +54,6 @@ public :: system_type,          &
 
 type system_type
   type(grid_type),     pointer :: gr         ! the mesh
-  type(geometry_type), pointer :: geo        ! the geometry
   type(states_type),   pointer :: st         ! the states
   type(v_ks_type)              :: ks         ! the Kohn-Sham potentials
   type(output_type)            :: outp       ! the output
@@ -62,34 +61,18 @@ end type system_type
 
 contains
 
+  !----------------------------------------------------------
   subroutine system_init(s)
     type(system_type), intent(out) :: s
 
-    logical :: filter
-
     call push_sub('system_init')
     
-    ! initialize the stuff related to the mesh
-    allocate(s%geo)
-    call geometry_init_xyz(s%geo)
-    call geometry_init_species(s%geo)
-    call geometry_init_vel(s%geo)
-
     allocate(s%gr)
-    call grid_init(s%gr, s%geo)
+    call grid_init(s%gr)
 
-    ! do we want to filter out the external potentials, or not.
-    call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)
-    if(filter) call geometry_filter(s%geo, mesh_gcutoff(s%gr%m))
-
-    ! Now that we are really done with initializing the geometry, print debugging information.
-    if(conf%verbose>=VERBOSE_DEBUG) then
-       call geometry_debug(s%geo, 'debug')
-    endif
-    
     ! initialize the other stuff
     allocate(s%st)
-    call states_init(s%st, s%gr%m, s%gr%sb, s%geo, s%geo%nlcc)
+    call states_init(s%st, s%gr)
     call output_init(s%outp)
     
     call v_ks_init(s%ks, s%gr%m, s%st%d)
@@ -97,6 +80,8 @@ contains
     call pop_sub()
   end subroutine system_init
 
+
+  !----------------------------------------------------------
   subroutine system_end(s)
     type(system_type), intent(inout) :: s
     
@@ -109,10 +94,8 @@ contains
       deallocate(s%st); nullify(s%st)
     end if
 
-    call geometry_end(s%geo)
     call grid_end(s%gr)
     deallocate(s%gr);  nullify(s%gr)
-    deallocate(s%geo); nullify(s%geo)
 
     call pop_sub()
   end subroutine system_end
@@ -121,6 +104,7 @@ contains
   !! both mesh and atom. Previously they were inside atom, but this leads to
   !! circular dependencies of the modules
 
+  !----------------------------------------------------------
   subroutine atom_get_wf(m, atom, l, lm, ispin, psi)
     type(mesh_type), intent(IN)  :: m             ! the mesh in which the psi is defined
     type(atom_type), intent(IN)  :: atom          !
@@ -151,6 +135,8 @@ contains
     call pop_sub()
   end subroutine atom_get_wf
 
+
+  !----------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
     type(mesh_type),      intent(in)    :: m
     type(simul_box_type), intent(in)    :: sb
@@ -218,6 +204,7 @@ contains
     end select
 
   end subroutine atom_density
+
 
   ! builds a density which is the sum of the atomic densities
   subroutine system_guess_density(m, sb, geo, qtot, nspin, spin_channels, rho)
@@ -384,6 +371,7 @@ contains
   end subroutine system_guess_density
   
 
+  !----------------------------------------------------------
   subroutine dsystem_h_setup(sys, h)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -393,14 +381,15 @@ contains
     call states_fermi(sys%st, sys%gr%m)
     call dstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
     
-    call dh_calc_vhxc(sys%ks, h, sys%gr%m, sys%gr%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call dv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                            ! occupations
-    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)            ! total energy
+    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)            ! total energy
     
     call pop_sub()
   end subroutine dsystem_h_setup
 
 
+  !----------------------------------------------------------
   subroutine zsystem_h_setup(sys, h)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -410,10 +399,11 @@ contains
     call states_fermi(sys%st, sys%gr%m)
     call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
     
-    call zh_calc_vhxc(sys%ks, h, sys%gr%m, sys%gr%f_der, sys%st, calc_eigenval=.true.) ! get potentials
+    call zv_ks_calc(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
     call states_fermi(sys%st, sys%gr%m)                            ! occupations
-    call hamiltonian_energy(h, sys%st, sys%geo%eii, -1)            ! total energy
+    call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)            ! total energy
     
     call pop_sub()
   end subroutine zsystem_h_setup
+
 end module system

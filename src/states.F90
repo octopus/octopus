@@ -30,6 +30,7 @@ use lib_basic_alg
 use lib_adv_alg
 use math
 use mesh
+use grid
 use simul_box
 use functions
 use mesh_function
@@ -131,12 +132,9 @@ subroutine states_null(st)
 end subroutine states_null
 
 
-subroutine states_init(st, m, sb, geo, nlcc)
+subroutine states_init(st, gr)
   type(states_type),    intent(inout) :: st
-  type(mesh_type),      intent(in)    :: m
-  type(simul_box_type), intent(in)    :: sb
-  type(geometry_type),  intent(in)    :: geo ! this is needed to generate the k points
-  logical, optional,    intent(in)    :: nlcc
+  type(grid_type),      intent(in)    :: gr
 
   FLOAT :: excess_charge, r, val_charge
   integer :: nempty, i, j
@@ -170,7 +168,7 @@ subroutine states_init(st, m, sb, geo, nlcc)
     call write_fatal(2)
   end if
   
-  call geometry_val_charge(geo, val_charge)
+  call geometry_val_charge(gr%geo, val_charge)
   st%qtot = -(val_charge + excess_charge)
 
   select case(st%d%ispin)
@@ -217,22 +215,20 @@ subroutine states_init(st, m, sb, geo, nlcc)
 #endif
 
   ! For non-periodic systems this should just return the Gamma point
-  call states_choose_kpoints(st%d, m, sb, geo)
+  call states_choose_kpoints(st%d, gr%m, gr%sb, gr%geo)
 
   ! we now allocate some arrays
-  allocate(st%rho(m%np, st%d%nspin), &
+  allocate(st%rho(gr%m%np, st%d%nspin), &
            st%occ(st%nst, st%d%nik), &
            st%eigenval(st%nst, st%d%nik))
   if(st%d%ispin == SPINORS) then
     allocate(st%mag(st%nst, st%d%nik, 2))
   end if
   if (st%d%cdft) then
-    allocate(st%j(m%np, conf%dim, st%d%nspin))
+    allocate(st%j(gr%m%np, conf%dim, st%d%nspin))
     st%j = M_ZERO
   end if
-  if (present(nlcc)) then
-    if(nlcc) allocate(st%rho_core(m%np))
-  end if
+  if(gr%geo%nlcc) allocate(st%rho_core(gr%m%np))
 
   occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
     ! read in occupations

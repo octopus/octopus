@@ -84,14 +84,14 @@ contains
     ! create directory for output
     call io_mkdir('phonons')
 
-    ph%dim = sys%geo%natoms*conf%dim
+    ph%dim = sys%gr%geo%natoms*conf%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
     call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, ph%disp)
     ph%disp = ph%disp*units_inp%length%factor
 
     ! calculate dynamical matrix
-    call get_DM(sys%gr, sys%st, sys%geo, sys%ks, h, sys%outp, ph)
+    call get_DM(sys%gr, sys%st, sys%ks, h, sys%outp, ph)
 
     ! output phonon frequencies and eigenvectors
     iunit = io_open('phonons/freq', action='write')
@@ -131,21 +131,23 @@ contains
 
   end function phonons_run
 
-  subroutine get_DM(gr, st, geo, ks, h, outp, ph)
-    type(grid_type),        intent(inout) :: gr
-    type(states_type),      intent(inout) :: st
-    type(geometry_type),    intent(inout) :: geo
-    type(v_ks_type),        intent(inout) :: ks
-    type(hamiltonian_type), intent(inout) :: h
-    type(output_type),      intent(IN)    :: outp
-    type(phonons_type),     intent(inout) :: ph
+  subroutine get_DM(gr, st, ks, h, outp, ph)
+    type(grid_type), target, intent(inout) :: gr
+    type(states_type),       intent(inout) :: st
+    type(v_ks_type),         intent(inout) :: ks
+    type(hamiltonian_type),  intent(inout) :: h
+    type(output_type),       intent(in)    :: outp
+    type(phonons_type),      intent(inout) :: ph
 
-    type(scf_type) :: scf
-    type(mesh_type), pointer :: m
+    type(scf_type)               :: scf
+    type(mesh_type),     pointer :: m
+    type(geometry_type), pointer :: geo
+
     integer :: i, j, alpha, beta, n, iunit
     FLOAT, allocatable :: forces(:,:), forces0(:,:)
 
-    m => gr%m
+    m   => gr%m
+    geo => gr%geo
 
     call scf_init(scf, m, st, geo, h)
     allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))
@@ -166,9 +168,9 @@ contains
         ! first force
         call epot_generate(h%ep, m, gr%sb, geo, st, h%reltype)
         call X(states_calc_dens) (st, m%np, st%rho)
-        call X(h_calc_vhxc) (ks, h, m, gr%f_der, st, calc_eigenval=.true.)
+        call X(v_ks_calc) (gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy (h, st, geo%eii, -1)
-        call scf_run(scf, m, gr%f_der, st, geo, ks, h, outp)
+        call scf_run(scf, gr, st, ks, h, outp)
         do j = 1, geo%natoms
           forces0(j, :) = geo%atom(j)%f(:)
         end do
@@ -178,9 +180,9 @@ contains
         ! second force
         call epot_generate(h%ep, m, gr%sb, geo, st, h%reltype)
         call X(states_calc_dens) (st, m%np, st%rho)
-        call X(h_calc_vhxc) (ks, h, m, gr%f_der, st, calc_eigenval=.true.)
+        call X(v_ks_calc) (gr, ks, h, st, calc_eigenval=.true.)
         call hamiltonian_energy(h, st, geo%eii, -1)
-        call scf_run(scf, m, gr%f_der, st, geo, ks, h, outp)
+        call scf_run(scf, gr, st, ks, h, outp)
         do j = 1, geo%natoms
           forces(j, :) = geo%atom(j)%f(:)
         end do
