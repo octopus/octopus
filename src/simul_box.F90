@@ -138,7 +138,7 @@ contains
       
       select case(sb%box_shape)
       case(SPHERE,MINIMUM)
-        if(conf%dim>1 .and. sb%periodic_dim>0) then
+        if(conf%dim>1 .and. simul_box_is_periodic(sb)) then
           message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
           call write_fatal(1)
         end if

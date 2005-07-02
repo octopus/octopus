@@ -601,8 +601,6 @@ subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
 
   message(1) = 'Eigenvalues [' // trim(units_out%energy%abbrev) // ']'
   call write_info(1, iunit)
-  if(sb%periodic_dim>0) then 
-  end if
   if (st%d%nik > ns) then
     message(1) = 'Kpoints [' // trim(units_out%length%abbrev) // '^-1]'
     call write_info(1, iunit)
@@ -646,7 +644,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
           end if
       
           write(iunit, '(i4)', advance='no') j
-          if (sb%periodic_dim>0) then 
+          if(simul_box_is_periodic(sb)) then 
             if(st%d%ispin == SPINORS) then
               write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
                    (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
@@ -654,7 +652,7 @@ subroutine states_write_eigenvalues(iunit, nst, st, sb, error)
             else
               write(iunit, '(1x,f12.6,3x,f12.6)', advance='no') &
                     (st%eigenval(j, ik+is))/units_out%energy%factor, o
-             if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
+              if(present(error)) write(iunit, '(a7,es7.1,a1)', advance='no')'      (', error(j, ik), ')'
             endif
           else
             if(st%d%ispin == SPINORS) then

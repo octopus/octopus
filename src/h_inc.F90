@@ -169,7 +169,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 
   call push_sub('kinetic')
 
-  if(gr%sb%periodic_dim>0) then
+  if(simul_box_is_periodic(gr%sb)) then
 #if defined(COMPLEX_WFNS)
     allocate(grad(NP, conf%dim))
     k2 = sum(h%d%kpoints(:, ik)**2)
@@ -332,10 +332,10 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
     
     do_dim: do idim = 1, h%d%dim
       allocate(lpsi(nlop%n), lhpsi(nlop%n))
-      if (sb%periodic_dim==0) then
-        lpsi(:) = psi(nlop%jxyz(:), idim)
-      else
+      if(simul_box_is_periodic(sb)) then
         lpsi(:) = nlop%phases(:,ik)*psi(nlop%jxyz(:), idim)
+      else
+        lpsi(:) = psi(nlop%jxyz(:), idim)
       end if
       lHpsi(:) = M_z0
     
@@ -343,10 +343,7 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
         do jkbc = 1, nlop%c
           tmp   = R_TOTYPE(nlop%uv(:, ikbc)*m%vol_pp(nlop%jxyz(:)))
           uvpsi = lalg_dot(nlop%n, tmp, lpsi)*nlop%uvu(ikbc, jkbc)
-          if (sb%periodic_dim==0) then
-            tmp = R_TOTYPE(nlop%uv(:, jkbc))
-            call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
-          else
+          if(simul_box_is_periodic(sb)) then
 #           ifdef R_TCOMPLEX
               tmp = R_CONJ(nlop%phases(:, ik)*nlop%uv(:, jkbc))
               call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
@@ -355,6 +352,9 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
               message(2) = "Reconfigure with --enable-complex, and remake"
               call write_fatal(2)
 #           endif
+          else
+            tmp = R_TOTYPE(nlop%uv(:, jkbc))
+            call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
           end if
         end do
       end do

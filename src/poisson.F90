@@ -132,7 +132,7 @@ contains
         message(8) = '                6 (corrected conj grad) '
         call write_fatal(8)
       end if
-      if (poisson_solver /= gr%sb%periodic_dim .and. &
+      if(poisson_solver /= gr%sb%periodic_dim .and. &
          poisson_solver < CG .and. &
          poisson_solver /= FFT_CORRECTED) then
         write(message(1), '(a,i1,a)')'The System is periodic in ', gr%sb%periodic_dim ,' dimension(s),'

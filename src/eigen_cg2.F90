@@ -256,7 +256,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   maxter = niter
   niter = 0
 
-  allocate(phi(NP, dim), psi(NP, dim), hpsi(NP, dim), cg(NP, dim), hcgp(NP, dim), sd(NP, dim), cgp(NP, dim))
+  allocate(phi(NP, dim), psi(NP, dim), hpsi(NP, dim), &
+     cg(NP, dim), hcgp(NP, dim), sd(NP, dim), cgp(NP, dim))
 
   kpoints: do ik = 1, nik
     conv = converged

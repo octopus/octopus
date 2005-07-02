@@ -53,7 +53,7 @@ contains
 
     call push_sub('exp_kinetic')
     
-    if(gr%sb%periodic_dim>0) then
+    if(simul_box_is_periodic(gr%sb)) then
       message(1) = 'Internal error in exp_kinetic'
       call write_fatal(1)
     endif

@@ -331,7 +331,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
      call atom_write_xyz("static", "geometry", gr%geo)
   call hamiltonian_output(h, gr%m, gr%sb, "static", outp)
 
-  if (gr%sb%periodic_dim>0.and.st%d%nik>st%d%nspin) then
+  if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, st%nst, st)
     call io_close(iunit)
@@ -395,7 +395,7 @@ contains
     !call grid_write_info(gr, iunit)
     write(iunit,'(1x)')
     
-    if (gr%sb%periodic_dim > 0) then
+    if(simul_box_is_periodic(gr%sb)) then
       call kpoints_write_info(st%d, iunit)
       write(iunit,'(1x)')
     end if

@@ -19,9 +19,8 @@
 
 #include "global.h"
 
-subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, diff)
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
+  type(grid_type),        intent(inout) :: m
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
   FLOAT,                  intent(in)    :: tol_
@@ -43,8 +42,8 @@ subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, dif
   kpoints: do ik = 1, st%d%nik
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ldv = m%np
-  n = m%np
+  ldv = NP
+  n = NP
   nev = st%nst
   lworkl  = 3*ncv**2+6*ncv
   allocate(ax(ldv), d(ncv,3), resid(ldv), v(ldv,ncv), workd(3*ldv), &
@@ -55,8 +54,8 @@ subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, dif
   ido    = 0
   info = 1
 
-  do i = 1, m%np
-     resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(m%vol_pp(i))
+  do i = 1, NP
+    resid(i) = sum(st%X(psi)(i, 1, 1:st%nst, ik))*sqrt(gr%m%vol_pp(i))
   enddo
 
   ishfts = 1
@@ -98,8 +97,8 @@ subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, dif
   niter = iparam(9)
   do j = 1, min(st%nst, converged)
      write(*, *) 'Modifying the wavefunctions...'
-     do i = 1, m%np
-        st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(m%vol_pp(i))
+     do i = 1, NP
+        st%X(psi)(i, 1, j, ik) = v(i, j)/sqrt(gr%m%vol_pp(i))
      enddo
      st%eigenval(j, ik) = d(j, 1)
      if(workl(ipntr(11)+j-1)<CNST(1.0e-99)) then
@@ -124,14 +123,14 @@ subroutine eigen_solver_arpack(m, f_der, st, h, tol_, niter, ncv, converged, dif
         integer :: i
         R_TYPE, allocatable :: psi(:, :), hpsi(:, :)
 
-        allocate(psi(m%np, 1), hpsi(m%np, 1))
+        allocate(psi(NP, 1), hpsi(NP, 1))
 
-        do i = 1, m%np
-           psi(i, 1) = v(i)/sqrt(m%vol_pp(i))
+        do i = 1, NP
+           psi(i, 1) = v(i)/sqrt(gr%m%vol_pp(i))
         enddo
-        call X(hpsi)(h, m, f_der, psi, hpsi, ik)
-        do i = 1, m%np
-           w(i) = hpsi(i, 1)*sqrt(m%vol_pp(i))
+        call X(hpsi)(h, gr, psi, hpsi, ik)
+        do i = 1, NP
+           w(i) = hpsi(i, 1)*sqrt(gr%m%vol_pp(i))
         enddo
 
         deallocate(psi, hpsi)

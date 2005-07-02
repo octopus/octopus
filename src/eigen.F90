@@ -267,7 +267,7 @@ subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
     call eigen_solver_plan(gr, st, h, tol, maxiter, eigens%converged, eigens%diff)
 #if defined(HAVE_ARPACK)
   case(ARPACK)
-    call eigen_solver_arpack(gr%m, gr%f_der, st, h, tol, maxiter, eigens%arnoldi_vectors, &
+    call eigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
                              eigens%converged, eigens%diff)
 #endif
   end select

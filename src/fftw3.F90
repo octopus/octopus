@@ -109,7 +109,7 @@ contains
     !    end do    
     ! NEW
     ! optimize dimensions only for finite sys
-    if(sb%periodic_dim == 0) then
+    if(simul_box_is_periodic(sb) == 0) then
       do i = 1, conf%dim 
          if(n(i) /= 1 .and. fft_optimize) &
              call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number

@@ -105,7 +105,7 @@ contains
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
-    if(gr%sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(gr%sb).and.(.not.conf%only_user_def)) then
       call epot_local_fourier_init(ep, gr%m, gr%sb, gr%geo)
     end if
 
@@ -212,7 +212,7 @@ contains
 #ifdef HAVE_FFT
     integer :: i
 
-    if(sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(sb).and.(.not.conf%only_user_def)) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
