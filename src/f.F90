@@ -93,7 +93,7 @@ contains
 #endif
     
     if(f_der%space == REAL_SPACE) then
-      call derivatives_init(f_der%der_discr, sb, f_der%n_ghost)
+      call derivatives_init(sb, f_der%der_discr, f_der%n_ghost)
       message(1) = 'Info: Derivatives calculated in real-space'
 #if defined(HAVE_FFT)
     else
@@ -114,17 +114,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine f_der_build(f_der, m, sb)
-    type(f_der_type),        intent(inout) :: f_der
-    type(mesh_type), target, intent(in)    :: m
+  subroutine f_der_build(sb, m, f_der)
     type(simul_box_type),    intent(in)    :: sb
+    type(mesh_type), target, intent(in)    :: m
+    type(f_der_type),        intent(inout) :: f_der
 
     call push_sub('f_der_build')
 
     f_der%m => m ! keep a working pointer to the underlying mesh
 
     if(f_der%space == REAL_SPACE) then
-      call derivatives_build(f_der%der_discr, m)
+      call derivatives_build(m, f_der%der_discr)
 #if defined(HAVE_FFT)
     else
       call dcf_new(m%l, f_der%dcf_der)

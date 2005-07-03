@@ -29,6 +29,7 @@ module curv_gygi
   use syslabels
   use units
   use geometry
+  use simul_box
   use lib_adv_alg
 
   implicit none
@@ -62,11 +63,12 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_gygi_chi2x(cv, geo, chi, x)
-    type(curv_gygi_type), intent(in)  :: cv
+  subroutine curv_gygi_chi2x(sb, geo, cv, chi, x)
+    type(simul_box_type), intent(in)  :: sb
     type(geometry_type),  intent(in)  :: geo
-    FLOAT,                intent(in)  :: chi(:)  ! chi(conf%dim)
-    FLOAT,                intent(out) :: x(:)    ! x(conf%dim)
+    type(curv_gygi_type), intent(in)  :: cv
+    FLOAT,                intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,                intent(out) :: x(:)    ! x(sb%dim)
 
     ! parameters
     integer, parameter :: max_iter = 500
@@ -77,27 +79,27 @@ contains
     FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
     logical :: conv
     
-    allocate(f(conf%dim, 1), delta(conf%dim, 1), J(conf%dim, conf%dim), chi2(conf%dim))
+    allocate(f(sb%dim, 1), delta(sb%dim, 1), J(sb%dim, sb%dim), chi2(sb%dim))
     
-    x(1:conf%dim) = chi(1:conf%dim)
+    x(1:sb%dim) = chi(1:sb%dim)
     conv          = .false.
     
     do iter = 1, max_iter
-      call curv_gygi_jacobian(cv, geo, x, chi2, J)
-      f(:,1) = chi(1:conf%dim) - chi2(:)
+      call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
+      f(:,1) = chi(1:sb%dim) - chi2(:)
       
       if(sum(f(:,1)**2) < x_conv**2) then
         conv = .true.
         exit
       end if
       
-      call lalg_linsyssolve(conf%dim, 1, J, f, delta)
-      x(1:conf%dim) = x(1:conf%dim) + delta(1:conf%dim, 1)
+      call lalg_linsyssolve(sb%dim, 1, J, f, delta)
+      x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
     end do
     
     if(.not.conv) then
       message(1) = "Newton-Raphson method did not converge for point"
-      write(message(2), '(3es14.5)') x(1:conf%dim)
+      write(message(2), '(3es14.5)') x(1:sb%dim)
       call write_warning(2)
     end if
     
@@ -108,25 +110,26 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_gygi_jacobian(cv, geo, x, chi, J)
-    type(curv_gygi_type), intent(in)  :: cv
+  subroutine curv_gygi_jacobian(sb, geo, cv, x, chi, J)
+    type(simul_box_type), intent(in)  :: sb
     type(geometry_type),  intent(in)  :: geo
-    FLOAT,                intent(in)  :: x(:)    ! x(conf%dim)
-    FLOAT,                intent(out) :: chi(:)  ! chi(conf%dim)
-    FLOAT,                intent(out) :: J(:,:)  ! J(conf%dim,conf%dim), the Jacobian
+    type(curv_gygi_type), intent(in)  :: cv
+    FLOAT,                intent(in)  :: x(:)    ! x(sb%dim)
+    FLOAT,                intent(out) :: chi(:)  ! chi(sb%dim)
+    FLOAT,                intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
     
     integer :: i, ix, iy
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
     
-    J(1:conf%dim,1:conf%dim) = M_ZERO
-    do ix = 1, conf%dim
+    J(1:sb%dim,1:sb%dim) = M_ZERO
+    do ix = 1, sb%dim
       J(ix, ix) = M_ONE
       chi(ix)   = x(ix)
     end do
 
     do i = 1, geo%natoms
-      r = max(sqrt(sum((x - geo%atom(i)%x)**2)), CNST(1e-6))
+      r = max(sqrt(sum((x(1:sb%dim) - geo%atom(i)%x(1:sb%dim))**2)), CNST(1e-6))
       
       ar = cv%A*cv%alpha/r
       th = tanh(r/cv%alpha)
@@ -135,11 +138,11 @@ contains
       f_alpha  = ar * th * ex
       df_alpha = ar*(-th*ex/r + ex/(cv%alpha*cosh(r/cv%alpha)**2) - th*M_TWO*r*ex/cv%beta**2)
       
-      do ix = 1, conf%dim
+      do ix = 1, sb%dim
         chi(ix) = chi(ix) + f_alpha*(x(ix)-geo%atom(i)%x(ix))
         
         J(ix, ix) = J(ix, ix) + f_alpha
-        do iy = 1, conf%dim
+        do iy = 1, sb%dim
           J(ix, iy) = J(ix, iy) + (x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy))/r * df_alpha
         end do
       end do

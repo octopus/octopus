@@ -292,11 +292,11 @@ module td_exp
         call write_fatal(1)
       endif
       
-      call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       if(h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .true.)
       call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*timestep)
       if(h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .false.)
-      call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
+      call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       
       if(present(order)) order = 0
       call pop_sub()
@@ -318,11 +318,11 @@ module td_exp
       dt(1:5) = pp(1:5)*timestep
       
       do k = 1, 5
-        call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
         if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
         call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*dt(k))
         if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
-        call zexp_vlpsi (gr%m, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+        call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
       
       if(present(order)) order = 0

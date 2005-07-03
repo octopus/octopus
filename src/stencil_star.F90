@@ -40,19 +40,21 @@ module stencil_star
 contains
 
   ! ---------------------------------------------------------
-  integer function stencil_star_size_lapl(order)
+  integer function stencil_star_size_lapl(dim, order)
+    integer, intent(in) :: dim
     integer, intent(in) :: order
     
     call push_sub('stencil_star_size_lapl')
 
-    stencil_star_size_lapl = 2*conf%dim*order + 1
+    stencil_star_size_lapl = 2*dim*order + 1
 
     call pop_sub()
   end function stencil_star_size_lapl
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_get_lapl(order, stencil)
+  subroutine stencil_star_get_lapl(dim, order, stencil)
+    integer, intent(in)  :: dim
     integer, intent(in)  :: order
     integer, intent(out) :: stencil(:,:)
 
@@ -62,7 +64,7 @@ contains
 
     stencil(:,:) = 0
     n = 1
-    do i = 1, conf%dim
+    do i = 1, dim
       do j = -order, order
         if(j == 0) cycle
         n = n + 1
@@ -75,9 +77,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_polynomials_lapl(pol, order)
-    integer, intent(out) :: pol(:,:) ! pol(conf%dim, order)
+  subroutine stencil_star_polynomials_lapl(dim, order, pol)
+    integer, intent(in)  :: dim
     integer, intent(in)  :: order
+    integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
     integer :: i, j, n
     
@@ -85,7 +88,7 @@ contains
 
     n = 1
     pol(:,:) = 0
-    do i = 1, conf%dim
+    do i = 1, dim
       do j = 1, 2*order
         n = n + 1
         pol(i, n) = j
@@ -97,9 +100,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_coeff_lapl(h, order, lapl)
-    FLOAT,                  intent(in)    :: h(:)   ! h(conf%dim)
+  subroutine stencil_star_coeff_lapl(dim, order, h, lapl)
+    integer,                intent(in)    :: dim
     integer,                intent(in)    :: order
+    FLOAT,                  intent(in)    :: h(:)   ! h(dim)
     type(nl_operator_type), intent(inout) :: lapl
 
     integer :: k, i, j, morder
@@ -112,10 +116,10 @@ contains
     morder = 2*order
     allocate(cc(0:morder, 0:morder, 0:2))
     call weights(2, morder, cc)
-    lapl%w_re(1,:) = cc(0, morder, 2)*sum(1/h(1:conf%dim)**2)
+    lapl%w_re(1,:) = cc(0, morder, 2)*sum(1/h(1:dim)**2)
       
     k = 1
-    do i = 1, conf%dim
+    do i = 1, dim
       do j = -order, -1
         k = k + 1
         lapl%w_re(k,:) = cc(-2*j-1, morder, 2) / h(i)**2
@@ -170,10 +174,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_polynomials_grad(dir, pol, order)
+  subroutine stencil_star_polynomials_grad(dir, order, pol)
     integer, intent(in)  :: dir
-    integer, intent(out) :: pol(:,:) ! pol(conf%dim, order)
     integer, intent(in)  :: order
+    integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
     integer :: j
       
@@ -188,9 +192,9 @@ contains
   end subroutine stencil_star_polynomials_grad
 
   ! ---------------------------------------------------------
-  subroutine stencil_star_coeff_grad(h, order, grad)
-    FLOAT,                  intent(in)    :: h
+  subroutine stencil_star_coeff_grad(order, h, grad)
     integer,                intent(in)    :: order
+    FLOAT,                  intent(in)    :: h
     type(nl_operator_type), intent(inout) :: grad
 
     integer :: j, k, morder

@@ -29,6 +29,7 @@ use lib_oct
 use io
 use mesh_function
 use mesh
+use grid
 use system
 use hamiltonian
 use states
@@ -49,7 +50,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   logical,                   intent(inout) :: fromScratch
 
   type(scf_type)             :: scfv
-  type(mesh_type),   pointer :: m    ! shortcuts
+  type(grid_type),   pointer :: gr    ! shortcuts
   type(states_type), pointer :: st
 
   integer :: iunit, ios, i_start, i, j, is, k, err
@@ -61,7 +62,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   call init_()
  
   ! load wave-functions
-  call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
+  call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, err)
   if(err.ne.0) then
     message(1) = "Could not load wave-functions: Starting from scratch"
     call write_warning(1)
@@ -77,7 +78,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   call X(system_h_setup) (sys, h)
 
   ! Allocate the dipole...
-  allocate(dipole(conf%dim, conf%dim, 2))
+  allocate(dipole(NDIM, NDIM, 2))
   dipole = M_ZERO
 
   if(.not.fromScratch) then
@@ -87,7 +88,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
       rewind(iunit)
       i_start = 1
       do i = 1, 3
-        read(iunit, fmt=*, iostat = ios) ((dipole(i, j, k), j = 1, conf%dim), k = 1, 2)
+        read(iunit, fmt=*, iostat = ios) ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
         if(ios.ne.0) exit
         i_start = i_start + 1
       end do
@@ -104,21 +105,21 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   end if
 
   ! Save local pseudopotential
-  allocate(Vpsl_save(m%np))
+  allocate(Vpsl_save(NP))
   Vpsl_save = h%ep%Vpsl
 
   ! Allocate the trrho to the contain the trace of the density.
-  allocate(trrho(m%np))
+  allocate(trrho(NP))
   trrho = M_ZERO
   
-  call scf_init(scfv, sys%gr%m, sys%st, sys%gr%geo, h)
-  do i = i_start, conf%dim
+  call scf_init(gr, scfv, st, h)
+  do i = i_start, NDIM
     do k = 1, 2
       write(message(1), '(a)')
       write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
       call write_info(2)
       
-      h%ep%vpsl = vpsl_save + (-1)**k*m%x(:,i)*e_field
+      h%ep%vpsl = vpsl_save + (-1)**k*gr%m%x(:,i)*e_field
       
       call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
       
@@ -128,18 +129,18 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
       end do
       
       ! calculate dipole
-      do j = 1, conf%dim
-        dipole(i, j, k) = dmf_moment(m, trrho, j, 1)
+      do j = 1, NDIM
+        dipole(i, j, k) = dmf_moment(gr%m, trrho, j, 1)
       end do
       
     end do
 
     ! Writes down the dipole to the file
     iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
-    write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, conf%dim), k = 1, 2)
+    write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
     call io_close(iunit)
     
-    if(i == conf%dim) then 
+    if(i == NDIM) then 
       out_pol = .true.
     end if
   end do
@@ -150,12 +151,12 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
     iunit = io_open('linear/polarizability', action='write')
     write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
        trim(units_out%length%abbrev)
-    if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim
+    if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
     write(iunit, '(a)') ']'
          
-    do j = 1, conf%dim
-      write(iunit, '(3f12.6)') (dipole(j, 1:conf%dim, 1) - dipole(j, 1:conf%dim, 2))/(M_TWO*e_field) &
-         / units_out%length%factor**conf%dim
+    do j = 1, NDIM
+      write(iunit, '(3f12.6)') (dipole(j, 1:NDIM, 1) - dipole(j, 1:NDIM, 2))/(M_TWO*e_field) &
+         / units_out%length%factor**NDIM
     end do
     call io_close(iunit)
   end if
@@ -169,13 +170,13 @@ contains
   subroutine init_()
     call push_sub('static_pol_run')
 
-    ! allocate wfs
-    allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-
     ! shortcuts
-    m  => sys%gr%m
+    gr  => sys%gr
     st => sys%st
  
+    ! allocate wfs
+    allocate(sys%st%X(psi)(NP, st%d%dim, st%nst, st%d%nik))
+
     ! read in e_field value
     call loct_parse_float(check_inp('POLStaticField'), CNST(0.01)/units_inp%energy%factor*units_inp%length%factor, e_field)
     e_field = e_field * units_inp%energy%factor / units_inp%length%factor

@@ -48,7 +48,7 @@
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
     ! Maybe we are forgetting something....
     x = M_ZERO
-    call zepot_forces(h%ep, gr, st)
+    call zepot_forces(gr, h%ep, st)
     do i = 1, gr%geo%natoms
       x = x - gr%geo%atom(i)%f
     enddo
@@ -56,7 +56,7 @@
 
     ! Adds the laser contribution : i<[V_laser, p]>
     if(h%ep%no_lasers > 0) then
-      call epot_laser_field(h%ep, t, field)
+      call epot_laser_field(gr%sb, h%ep, t, field)
       acc(1:3) = acc(1:3) - st%qtot*field(1:3)
     end if
     
@@ -74,19 +74,19 @@
         
         call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
         do k = 1, NP
-          call epot_laser_scalar_pot(h%ep, gr%m%x(:, k), t, v)
+          call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(:, k), t, v)
           hzpsi(k,:) = hzpsi(k,:) + v * st%zpsi(k,:,ist,ik)
         end do
         
         allocate(xzpsi(NP, st%d%dim, 3), vnl_xzpsi(NP, st%d%dim))
         xzpsi = M_z0
         do k = 1, NP
-          do j = 1, conf%dim
+          do j = 1, NDIM
             xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
           end do
         end do
          
-        do j = 1, conf%dim
+        do j = 1, NDIM
           vnl_xzpsi = M_z0
           call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
                
@@ -98,12 +98,12 @@
            
         xzpsi = M_z0
         do k = 1, NP
-          do j = 1, conf%dim
+          do j = 1, NDIM
             xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * hzpsi(k, 1:st%d%dim)
           end do
         end do
         
-        do j = 1, conf%dim
+        do j = 1, NDIM
           vnl_xzpsi = M_z0
           call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
           do idim = 1, st%d%dim
@@ -121,7 +121,7 @@
 #if defined(HAVE_MPI)
    if(present(reduce)) then
      if(reduce) then
-       call MPI_ALLREDUCE(x(1), y(1), conf%dim, &
+       call MPI_ALLREDUCE(x(1), y(1), NDIM, &
             MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
        x = y
      end if

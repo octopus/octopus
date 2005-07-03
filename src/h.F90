@@ -139,7 +139,7 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
   allocate(h%Vhxc(NP, h%d%nspin))
   h%Vhxc = M_ZERO
   if (h%d%cdft) then
-    allocate(h%ahxc(NP, conf%dim, h%d%nspin))
+    allocate(h%ahxc(NP, NDIM, h%d%nspin))
     h%ahxc = M_ZERO
   else
     nullify(h%ahxc)  

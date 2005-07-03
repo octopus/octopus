@@ -90,7 +90,7 @@ contains
     FLOAT, allocatable :: j(:,:), ahartree(:,:)
     integer :: is, idim
 
-    allocate(j(NP, conf%dim), ahartree(NP, conf%dim))
+    allocate(j(NP, NDIM), ahartree(NP, NDIM))
     ahartree = M_ZERO
 
     ! calculate the total current
@@ -100,7 +100,7 @@ contains
     end do
 
     ! solve poisson equation
-    do idim = 1, conf%dim
+    do idim = 1, NDIM
       call dpoisson_solve(gr, ahartree(:,idim), j(:, idim)) ! solve the poisson equation
     end do
 
@@ -111,7 +111,7 @@ contains
     ! this yields the correct formula epot = - int j.(axc + aH/2)
     ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c. 
     do is = 1, h%d%spin_channels
-      do idim = 1, conf%dim
+      do idim = 1, NDIM
         h%epot = h%epot + M_HALF*P_c*dmf_dotp(gr%m, st%j(idim, :, is), ahartree(:, idim))
       end do
     end do
@@ -152,10 +152,10 @@ contains
     if(ks%sic_type == sic_amaldi) rho(:,:) = amaldi_factor*rho(:,:)
 
     if(h%d%cdft) then
-      call xc_get_vxc_and_axc(ks%xc, gr%m, gr%f_der, rho, st%j, st%d%ispin, h%vhxc, h%ahxc, &
+      call xc_get_vxc_and_axc(gr, ks%xc, rho, st%j, st%d%ispin, h%vhxc, h%ahxc, &
          h%ex, h%ec, h%exc_j, -minval(st%eigenval(st%nst, :)), st%qtot)
     else
-      call xc_get_vxc(ks%xc, gr%m, gr%f_der, rho, st%d%ispin, h%vhxc, h%ex, h%ec, &
+      call xc_get_vxc(gr, ks%xc, rho, st%d%ispin, h%vhxc, h%ex, h%ec, &
          -minval(st%eigenval(st%nst, :)), st%qtot)
     end if
     deallocate(rho)

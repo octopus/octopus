@@ -65,7 +65,7 @@ contains
     endif
 
     temp = M_ZERO
-    temp(1:conf%dim) = (M_TWO*M_Pi)/(cf%n(1:conf%dim)*gr%m%h(1:conf%dim))
+    temp(1:NDIM) = (M_TWO*M_Pi)/(cf%n(1:NDIM)*gr%m%h(1:NDIM))
 
     call zcf_alloc_RS(cf)
     call zcf_alloc_FS(cf)
@@ -81,7 +81,7 @@ contains
           do ix = 1, cf%n(1)
             k(1) = pad_feq(ix, cf%n(1), .true.)
 
-            g2 = min(cutoff, sum((temp(1:conf%dim)*k(1:conf%dim))**2))
+            g2 = min(cutoff, sum((temp(1:NDIM)*k(1:NDIM))**2))
             cf%FS(ix, iy, iz) = exp(factor*g2/M_TWO)*cf%FS(ix, iy, iz)
           end do
         end do
@@ -99,10 +99,10 @@ contains
 
   !!! Calculates psi = exp{factor*V_KS(t)} psi
   !!! where V_KS is the Kohn-Sham potential
-  subroutine zexp_vlpsi (m, h, psi, ik, t, factor)
-    type(mesh_type),        intent(IN)    :: m
+  subroutine zexp_vlpsi(gr, h, psi, ik, t, factor)
+    type(grid_type),        intent(IN)    :: gr
     type(hamiltonian_type), intent(IN)    :: h
-    CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
+    CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
     integer,                intent(in)    :: ik
     FLOAT,                  intent(in)    :: t
     CMPLX,                  intent(in)    :: factor
@@ -133,14 +133,15 @@ contains
         call write_fatal(1)
       end if
 
-      do k = 1, m%np
-        call epot_laser_scalar_pot(h%ep, m%x(k,:), t, v)
+      do k = 1, NP
+        call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t, v)
         psi(k,:) = exp(factor*v) * psi(k,:)
       end do
     end if
     
     call pop_sub()
   end subroutine zexp_vlpsi
+
 
   !!! calculates psi = exp{factor V_nlpp} psi
   !!! where V_nlpp is the non-local part of the pseudpotential

@@ -97,9 +97,11 @@ contains
       
   end subroutine xc_j_functl_init
 
+
   ! -----------------------------------------------------------
-  subroutine xc_functl_init_exchange(functl, spin_channels)
+  subroutine xc_functl_init_exchange(functl, ndim, spin_channels)
     type(xc_functl_type), intent(out) :: functl
+    integer,              intent(in)  :: ndim
     integer,              intent(in)  :: spin_channels
       
     integer :: j
@@ -118,7 +120,7 @@ contains
     case(XC_LDA_X)
       functl%family = XC_FAMILY_LDA
       call xc_lda_init(functl%conf, functl%info, XC_LDA_X, &
-         spin_channels, conf%dim)
+         spin_channels, ndim)
       
     case(XC_GGA_X_PBE, XC_GGA_XC_LB)
       functl%family = XC_FAMILY_GGA
@@ -150,8 +152,9 @@ contains
   
 
   ! -----------------------------------------------------------
-  subroutine xc_functl_init_correlation(functl, spin_channels)
+  subroutine xc_functl_init_correlation(functl, ndim, spin_channels)
     type(xc_functl_type), intent(out) :: functl
+    integer,              intent(in)  :: ndim
     integer,              intent(in)  :: spin_channels
     
     FLOAT :: alpha
@@ -170,7 +173,7 @@ contains
        XC_LDA_C_VWN, XC_LDA_C_PZ, XC_LDA_C_OB_PZ, XC_LDA_C_PW, XC_LDA_C_OB_PW,     &
        XC_LDA_C_LYP, XC_LDA_C_AMGB)
       
-      if(functl%id==XC_LDA_C_AMGB.and.conf%dim.ne.2) then
+      if(functl%id==XC_LDA_C_AMGB.and.ndim.ne.2) then
         message(1) = 'Functional AMGB only allowed in 2D'
         call write_fatal(1)       
       end if
@@ -182,7 +185,7 @@ contains
       else
         call loct_parse_float(check_inp('Xalpha'), M_ONE, alpha) 
         call xc_lda_init(functl%conf, functl%info, XC_LDA_C_XALPHA, &
-           spin_channels, conf%dim, alpha)
+           spin_channels, ndim, alpha)
       end if
       
     case(XC_GGA_C_PBE)

@@ -103,14 +103,14 @@ contains
 
     ! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
-    !    do i = sb%periodic_dim + 1, conf%dim 
+    !    do i = sb%periodic_dim + 1, sb%dim 
     !      if(n(i) /= 1 .and. fft_optimize) &
     !           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
     !    end do    
     ! NEW
     ! optimize dimensions only for finite sys
-    if(simul_box_is_periodic(sb) == 0) then
-      do i = 1, conf%dim 
+    if(simul_box_is_periodic(sb)) then
+      do i = 1, sb%dim 
          if(n(i) /= 1 .and. fft_optimize) &
              call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
       end do
@@ -144,7 +144,7 @@ contains
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
       allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
-      select case(conf%dim)
+      select case(sb%dim)
       case(3)
         call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
         call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
@@ -157,7 +157,7 @@ contains
       deallocate(rin, cout)
     else
       allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
-      select case(conf%dim)
+      select case(sb%dim)
       case(3)
         call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
         call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)

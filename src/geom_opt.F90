@@ -86,7 +86,7 @@ contains
     call write_info(1)
     call X(system_h_setup) (sys, h)
 
-    call scf_init(scfv, sys%gr%m, sys%st, sys%gr%geo, h)
+    call scf_init(sys%gr, scfv, sys%st, h)
 
     allocate(x(3*geo%natoms))
     do i = 0, geo%natoms - 1

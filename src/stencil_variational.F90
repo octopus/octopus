@@ -55,9 +55,10 @@ module stencil_variational
 contains
 
   ! ---------------------------------------------------------
-  subroutine stencil_variational_coeff_lapl(h, order, lapl, alpha)
-    FLOAT,                  intent(in)    :: h(:)   ! h(conf%dim)
+  subroutine stencil_variational_coeff_lapl(dim, order, h, lapl, alpha)
+    integer,                intent(in)    :: dim
     integer,                intent(in)    :: order
+    FLOAT,                  intent(in)    :: h(:)   ! h(dim)
     type(nl_operator_type), intent(inout) :: lapl
     FLOAT, optional,        intent(in)    :: alpha
 
@@ -109,10 +110,10 @@ contains
       fp(7) =  M_ONE/CNST(600.0) - kmax/CNST(4096.0)
     end select
     
-    lapl%w_re(1,:) = fp(1)*sum(1/h(1:conf%dim)**2)
+    lapl%w_re(1,:) = fp(1)*sum(1/h(1:dim)**2)
 
     k = 1
-    do i = 1, conf%dim
+    do i = 1, dim
       do j = -order, -1
         k = k + 1
         lapl%w_re(k,:) = fp(-j+1) / h(i)**2

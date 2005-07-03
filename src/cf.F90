@@ -125,11 +125,12 @@ contains
 #ifdef HAVE_FFT
   ! this routine computes
   ! cf_o = cf_o + exp(-k vec) cf_i
-  subroutine cf_phase_factor(m, vec, cf_i, cf_o)
-    type(mesh_type), intent(in) :: m
-    FLOAT, intent(in)        :: vec(3)
-    type(dcf), intent(in)       :: cf_i
-    type(dcf), intent(inout)    :: cf_o
+  subroutine cf_phase_factor(sb, m, vec, cf_i, cf_o)
+    type(simul_box_type), intent(in)    :: sb
+    type(mesh_type),      intent(in)    :: m
+    FLOAT,                intent(in)    :: vec(3)
+    type(dcf),            intent(in)    :: cf_i
+    type(dcf),            intent(inout) :: cf_o
   
     CMPLX :: k(3)
     integer     :: n(3), ix, iy, iz, ixx, iyy, izz
@@ -138,7 +139,7 @@ contains
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
 
     k = M_z0
-    k(1:conf%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:conf%dim)*m%h(1:conf%dim)))
+    k(1:sb%dim) = M_zI * ((M_TWO*M_Pi)/(cf_i%n(1:sb%dim)*m%h(1:sb%dim)))
 
     n  = cf_i%n
     do iz = 1, n(3)

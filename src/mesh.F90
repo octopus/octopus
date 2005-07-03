@@ -45,7 +45,7 @@ module mesh
      mesh_write_info
 
   type mesh_type
-    type(simul_box_type), pointer :: sb ! The simulation box
+    type(simul_box_type), pointer :: sb
     logical :: use_curvlinear
     
     FLOAT :: h(3)           ! the (constant) spacing between the points
@@ -67,21 +67,21 @@ module mesh
 
 contains
 
-  subroutine mesh_init(m, sb, cv, geo, enlarge)
-    type(mesh_type),       intent(inout) :: m
-    type(simul_box_type),  target        :: sb
-    type(curvlinear_type), intent(in)    :: cv
-    type(geometry_type),   intent(in)    :: geo
-    integer,               intent(in)    :: enlarge
+  subroutine mesh_init(sb, m, geo, cv, enlarge)
+    type(simul_box_type), target, intent(in)    :: sb
+    type(mesh_type),              intent(inout) :: m
+    type(geometry_type),          intent(in)    :: geo
+    type(curvlinear_type),        intent(in)    :: cv
+    integer,                      intent(in)    :: enlarge
     
     call push_sub('mesh_init')
 
-    m%sb => sb
+    m%sb => sb   ! keep an internal pointer
+    m%h  =  sb%h ! this number can change in the following
     m%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
-    m%h = sb%h ! this number can change in the following
 
     call adjust_nr()          ! find out the extension of the simulation box
-    call mesh_create_xyz(m, sb, cv, geo, enlarge)
+    call mesh_create_xyz(m, cv, geo, enlarge)
 
     call pop_sub()
   contains
@@ -90,17 +90,17 @@ contains
     ! 2) the new mesh is not larger than the user defined mesh.
     subroutine adjust_nr()
       integer :: i, j
-      FLOAT   :: x(conf%dim), chi(conf%dim)
+      FLOAT   :: x(sb%dim), chi(sb%dim)
       logical :: out
 
       m%nr = 0
-      do i = 1, conf%dim
+      do i = 1, sb%dim
         chi(:) = M_ZERO; j = 0
         out = .false.
         do while(.not.out)
           j      = j + 1
           chi(i) = j*m%h(i)
-          call curvlinear_chi2x(cv, geo, chi(:), x(:))
+          call curvlinear_chi2x(sb, geo, cv, chi(:), x(:))
           out = (x(i) > sb%lsize(i))
         end do
         m%nr(2, i) = j - 1
@@ -122,9 +122,9 @@ contains
 
 
   ! finds the dimension of a box doubled in the non-periodic dimensions
-  subroutine mesh_double_box(m, sb, db)
+  subroutine mesh_double_box(sb, m, db)
+    type(simul_box_type), intent(in)  :: sb
     type(mesh_type),      intent(in)  :: m
-    type(simul_box_type), intent(in) :: sb
     integer,              intent(out) :: db(3)
     
     integer :: i
@@ -133,10 +133,10 @@ contains
 
     ! OLD: I let it here because maybe I revert to this method later
     ! double mesh with 2n + 1 points
-    !  do i = conf%periodic_dim + 1, conf%dim
+    !  do i = sb%periodic_dim + 1, sb%dim
     !    db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
     !  end do
-    !  do i = 1, conf%periodic_dim ! for periodic systems
+    !  do i = 1, sb%periodic_dim ! for periodic systems
     !    db(i) = m%nr(2,i) - m%nr(1,i) + 1
     !  end do
     
@@ -145,8 +145,8 @@ contains
     do i = 1, sb%periodic_dim 
       db(i) = m%l(i)
     end do
-    do i = sb%periodic_dim + 1, conf%dim
-      db(i) = nint(m%sb%fft_alpha*(m%l(i)-1)) + 1
+    do i = sb%periodic_dim + 1, sb%dim
+      db(i) = nint(sb%fft_alpha*(m%l(i)-1)) + 1
     end do
     
   end subroutine mesh_double_box
@@ -182,20 +182,21 @@ contains
 
 
   subroutine mesh_r(m, i, r, a, x)
-    type(mesh_type), intent(IN)  :: m
-    integer,         intent(in)  :: i
-    FLOAT,           intent(out) :: r
-    FLOAT,           intent(in),  optional :: a(:) ! a(conf%dim)
-    FLOAT,           intent(out), optional :: x(:) ! x(conf%dim)
+    type(mesh_type),      intent(in)  :: m
+    integer,              intent(in)  :: i
+    FLOAT,                intent(out) :: r
+    FLOAT,                intent(in),  optional :: a(:) ! a(sb%dim)
+    FLOAT,                intent(out), optional :: x(:) ! x(sb%dim)
     
-    FLOAT :: xx(conf%dim)
+    FLOAT :: xx(m%sb%dim)
     
-    xx(1:conf%dim) = m%x(i,1:conf%dim)
-    if(present(a)) xx(1:conf%dim) = xx(1:conf%dim) - a(1:conf%dim)
+    xx(:) = m%x(i, 1:m%sb%dim)
+    if(present(a)) xx(:) = xx(:) - a(1:m%sb%dim)
     r = sqrt(dot_product(xx, xx))
 
-    if(present(x)) x(1:conf%dim) = xx(1:conf%dim)
+    if(present(x)) x(1:m%sb%dim) = xx(:)
   end subroutine mesh_r
+
 
   !/*---------------------------------------------------------------------------------
   ! Finds out if a given point of a mesh belongs to the "border" of the mesh.
@@ -213,11 +214,11 @@ contains
   ! So, if n>0, the point is in the border.
   !---------------------------------------------------------------------------------*/
   subroutine mesh_inborder(m, i, n, d, width)
-    type(mesh_type), intent(in)  :: m
-    integer,         intent(in)  :: i
-    FLOAT,           intent(in)  :: width
-    integer,         intent(out) :: n
-    FLOAT,           intent(out) :: d(3)
+    type(mesh_type),      intent(in)  :: m
+    integer,              intent(in)  :: i
+    FLOAT,                intent(in)  :: width
+    integer,              intent(out) :: n
+    FLOAT,                intent(out) :: d(3)
     
     integer :: j
     FLOAT :: x(3), r, dd
@@ -243,7 +244,7 @@ contains
       message(1) = "Absorbing boundaries are not yet implemented for the 'minimum' box"
       call write_fatal(1)
     case(PARALLELEPIPED)
-      do j = 1, conf%dim
+      do j = 1, m%sb%dim
         dd = abs(x(j)) - (m%sb%lsize(j) - width)
         if(dd.gt.M_ZERO) then
            n = n + 1; d(n) = dd

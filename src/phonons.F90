@@ -84,7 +84,7 @@ contains
     ! create directory for output
     call io_mkdir('phonons')
 
-    ph%dim = sys%gr%geo%natoms*conf%dim
+    ph%dim = sys%gr%geo%natoms*sys%gr%sb%dim
     allocate(ph%DM(ph%dim, ph%dim), ph%freq(ph%dim))
 
     call loct_parse_float(check_inp('Displacement'), CNST(0.01)/units_inp%length%factor, ph%disp)
@@ -149,16 +149,16 @@ contains
     m   => gr%m
     geo => gr%geo
 
-    call scf_init(scf, m, st, geo, h)
+    call scf_init(gr, scf, st, h)
     allocate(forces0(geo%natoms, 3), forces(geo%natoms, 3))
     forces = M_ZERO; forces0 = M_ZERO
-    n = geo%natoms*conf%dim
+    n = geo%natoms*NDIM
 
     call io_assign(iunit)
     iunit = io_open('phonons/DM', action='write')
 
     do i = 1, geo%natoms
-      do alpha = 1, conf%dim
+      do alpha = 1, NDIM
         write(message(1), '(a,i3,a,i2)') 'Info: Moving atom ', i, ' in the direction ', alpha
         call write_info(1)
 
@@ -190,11 +190,11 @@ contains
         geo%atom(i)%x(alpha) = geo%atom(i)%x(alpha) + ph%disp
 
         do j = 1, geo%natoms
-          do beta = 1, conf%dim
-            ph%DM(conf%dim*(i-1) + alpha, conf%dim*(j-1) + beta) = &
+          do beta = 1, NDIM
+            ph%DM(NDIM*(i-1) + alpha, NDIM*(j-1) + beta) = &
                  (forces0(j, beta) - forces(j, beta)) / (M_TWO*ph%disp &
                  * sqrt(geo%atom(i)%spec%weight*geo%atom(j)%spec%weight))
-            write(iunit, '(es14.5)', advance='no') ph%DM(conf%dim*(i-1) + alpha, conf%dim*(j-1) + beta)
+            write(iunit, '(es14.5)', advance='no') ph%DM(NDIM*(i-1) + alpha, NDIM*(j-1) + beta)
           end do
         end do
         write(iunit, '(1x)')

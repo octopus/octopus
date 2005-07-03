@@ -27,6 +27,7 @@ use lib_oct_parser
 use lib_basic_alg
 use lib_adv_alg
 use mesh
+use grid
 use functions
 use poisson
 use states
@@ -85,8 +86,9 @@ contains
 
   end subroutine xc_write_info
 
-  subroutine xc_init(xcs, spin_channels, cdft)
+  subroutine xc_init(xcs, ndim, spin_channels, cdft)
     type(xc_type), intent(out) :: xcs
+    integer,       intent(in)  :: ndim
     integer,       intent(in)  :: spin_channels
     logical,       intent(in)  :: cdft
     
@@ -104,8 +106,8 @@ contains
       !we also need xc functionals that do not depend on the current
       !get both spin polarized and unpolarized
       do i = 1, 2
-        call xc_functl_init_exchange   (xcs%functl(1,i), i)
-        call xc_functl_init_correlation(xcs%functl(2,i), i)
+        call xc_functl_init_exchange   (xcs%functl(1,i), ndim, i)
+        call xc_functl_init_correlation(xcs%functl(2,i), ndim, i)
       end do
       xcs%family = ior(xcs%family, xcs%functl(1,1)%family)
       xcs%family = ior(xcs%family, xcs%functl(2,1)%family)

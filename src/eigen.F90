@@ -85,10 +85,10 @@ module eigen_solver
 
 contains
 
-subroutine eigen_solver_init(eigens, st, m, max_iter_default)
+subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
+  type(grid_type),         intent(in)  :: gr
   type(eigen_solver_type), intent(out) :: eigens
   type(states_type),       intent(in)  :: st
-  type(mesh_type),         intent(in)  :: m
   integer,                 intent(in)  :: max_iter_default
   
   call push_sub('eigen_solver_init')
@@ -197,12 +197,12 @@ contains
     FLOAT, parameter :: alpha = M_HALF
 
     ! the filter has a star stencil like the laplacian
-    call nl_operator_init(filter, conf%dim*2 + 1)
-    call stencil_star_get_lapl(1, filter%stencil)
-    call nl_operator_build(m, filter, m%np, const_w = .true.)
+    call nl_operator_init(filter, 2*NDIM + 1)
+    call stencil_star_get_lapl(NDIM, 1, filter%stencil)
+    call nl_operator_build(gr%m, filter, NP, const_w = .true.)
 
     filter%w_re(1, 1) = alpha
-    filter%w_re(2:,1) = M_HALF*(M_ONE-alpha)/conf%dim
+    filter%w_re(2:,1) = M_HALF*(M_ONE-alpha)/NDIM
 
   end subroutine init_filter
 end subroutine eigen_solver_init

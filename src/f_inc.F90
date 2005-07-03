@@ -124,7 +124,8 @@ end subroutine X(cf_FS2mf)
 ! ---------------------------------------------------------
 ! Calculation of derivatives
 ! ---------------------------------------------------------
-subroutine X(f_laplacian) (f_der, f, lapl, cutoff_)
+subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
+  type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout) :: f_der
   R_TYPE,           intent(in)    :: f(:)     ! f(m%np)
   R_TYPE,           intent(out)   :: lapl(:)  ! lapl(m%np)
@@ -152,7 +153,7 @@ subroutine X(f_laplacian) (f_der, f, lapl, cutoff_)
     
     call X(mf2cf)(f_der%m, f, f_der%X(cf_der))             ! convert to cube
     call X(cf_RS2FS)(f_der%X(cf_der))                ! Fourier transform
-    call X(cf_FS_lapl)(f_der%m, f_der%X(cf_der), cutoff)   ! calculate Laplacian
+    call X(cf_FS_lapl)(sb, f_der%m, f_der%X(cf_der), cutoff)   ! calculate Laplacian
     call X(cf_FS2RS)(f_der%X(cf_der))                ! Fourier transform back
     call X(cf2mf)(f_der%m, f_der%X(cf_der), lapl)          ! convert back to mesh
 
@@ -167,10 +168,11 @@ end subroutine X(f_laplacian)
 
 
 ! ---------------------------------------------------------
-subroutine X(f_gradient) (f_der, f, grad)
-  type(f_der_type), intent(inout) :: f_der
-  R_TYPE, target,   intent(in)    :: f(:)       ! f(m%np)
-  R_TYPE,           intent(out)   :: grad(:,:)  ! grad(m%np, conf%dim)
+subroutine X(f_gradient) (sb, f_der, f, grad)
+  type(simul_box_type), intent(in)    :: sb
+  type(f_der_type),     intent(inout) :: f_der
+  R_TYPE, target,       intent(in)    :: f(:)       ! f(m%np)
+  R_TYPE,               intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
 
   integer :: i
 
@@ -182,7 +184,7 @@ subroutine X(f_gradient) (f_der, f, grad)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_grad) (f_der%der_discr, f, grad)
+    call X(derivatives_grad) (sb, f_der%der_discr, f, grad)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -198,13 +200,13 @@ subroutine X(f_gradient) (f_der, f, grad)
     call X(cf_alloc_RS)(f_der%X(cf_der))           ! allocate cube in real space
     call X(cf_alloc_FS)(f_der%X(cf_der))           ! allocate cube in Fourier space
 
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       call lalg_copy(f_der%X(cf_aux)%nx, f_der%X(cf_aux)%n(2), f_der%X(cf_aux)%n(3), &
          f_der%X(cf_aux)%FS(:,:,:), f_der%X(cf_der)%FS(:,:,:))
 
-      call X(cf_FS_grad)(f_der%m, f_der%X(cf_der), i)           ! gradient in reciprocal space
+      call X(cf_FS_grad)(sb, f_der%m, f_der%X(cf_der), i)      ! gradient in reciprocal space
       call X(cf_FS2RS)  (f_der%X(cf_der))                      ! Fourier transform
-      call X(cf2mf)     (f_der%m, f_der%X(cf_der), grad(:,i))    ! convert to mesh
+      call X(cf2mf)     (f_der%m, f_der%X(cf_der), grad(:,i))  ! convert to mesh
     end do
 
     call X(cf_free_FS)(f_der%X(cf_aux))      ! clean up
@@ -219,10 +221,11 @@ end subroutine X(f_gradient)
 
 
 ! ---------------------------------------------------------
-subroutine X(f_divergence) (f_der, f, divf)
-  type(f_der_type), intent(inout) :: f_der
-  R_TYPE,           intent(in)    :: f(:,:)    ! f(conf%dim, m%np)
-  R_TYPE,           intent(out)   :: divf(:)   ! divf(m%np)
+subroutine X(f_divergence) (sb, f_der, f, divf)
+  type(simul_box_type), intent(in)    :: sb
+  type(f_der_type),     intent(inout) :: f_der
+  R_TYPE,               intent(in)    :: f(:,:)    ! f(sb%dim, m%np)
+  R_TYPE,               intent(out)   :: divf(:)   ! divf(m%np)
 
   integer :: i
   R_TYPE, allocatable :: aux(:)
@@ -233,7 +236,7 @@ subroutine X(f_divergence) (f_der, f, divf)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_div) (f_der%der_discr, f, divf)
+    call X(derivatives_div) (sb, f_der%der_discr, f, divf)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -241,11 +244,11 @@ subroutine X(f_divergence) (f_der, f, divf)
     call X(cf_alloc_RS)(f_der%X(cf_der))     ! allocate cube in real space
     call X(cf_alloc_FS)(f_der%X(cf_der))     ! allocate cube in real space
 
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       call X(mf2cf)     (f_der%m, f(i, :), f_der%X(cf_der)) ! convert to cube
-      call X(cf_RS2FS)  (f_der%X(cf_der))                ! Fourier transform
-      call X(cf_FS_grad)(f_der%m, f_der%X(cf_der), i)     ! gradient in reciprocal space
-      call X(cf_FS2RS)  (f_der%X(cf_der))                ! Fourier transform
+      call X(cf_RS2FS)  (f_der%X(cf_der))                   ! Fourier transform
+      call X(cf_FS_grad)(sb, f_der%m, f_der%X(cf_der), i)   ! gradient in reciprocal space
+      call X(cf_FS2RS)  (f_der%X(cf_der))                   ! Fourier transform
       call X(cf2mf)     (f_der%m, f_der%X(cf_der), aux)     ! convert to mesh
       
       if(i == 1) then
@@ -265,7 +268,8 @@ subroutine X(f_divergence) (f_der, f, divf)
 end subroutine X(f_divergence)
 
 ! ---------------------------------------------------------
-subroutine X(f_curl) (f_der, f, curlf)
+subroutine X(f_curl) (sb, f_der, f, curlf)
+  type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout) :: f_der
   R_TYPE,           intent(in)    :: f(:,:)     ! f(m%np, conf%dim)
   R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
@@ -276,7 +280,7 @@ subroutine X(f_curl) (f_der, f, curlf)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_curl) (f_der%der_discr, f, curlf)
+    call X(derivatives_curl) (sb, f_der%der_discr, f, curlf)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
@@ -293,7 +297,8 @@ end subroutine X(f_curl)
 ! In case of real functions, it does not include the -i prefactor
 ! (L = -i r ^ nabla).
 ! ---------------------------------------------------------
-subroutine X(f_angular_momentum)(f_der, f, lf)
+subroutine X(f_angular_momentum)(sb, f_der, f, lf)
+  type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout) :: f_der
   R_TYPE,           intent(in)    :: f(:)     ! f(m%np)
   R_TYPE,           intent(out)   :: lf(:,:)  ! lf(m%np, 3)
@@ -303,7 +308,7 @@ subroutine X(f_angular_momentum)(f_der, f, lf)
   integer :: i
 
   allocate(gf(f_der%m%np, 3))
-  call X(f_gradient)(f_der, f, gf)
+  call X(f_gradient)(sb, f_der, f, gf)
 
   do i = 1, f_der%m%np
     x = f_der%m%x(i,:)
@@ -323,7 +328,8 @@ end subroutine X(f_angular_momentum)
 ! Square of the angular momentum L. This has to be very much improved if
 ! accuracy is needed.
 ! ---------------------------------------------------------
-subroutine X(f_l2)(f_der, f, l2f)
+subroutine X(f_l2)(sb, f_der, f, l2f)
+  type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout) :: f_der
   R_TYPE,           intent(in)    :: f(:)
   R_TYPE,           intent(out)   :: l2f(:)
@@ -334,11 +340,11 @@ subroutine X(f_l2)(f_der, f, l2f)
 
   m => f_der%m
 
-  allocate(gf(m%np, conf%dim), ggf(m%np, conf%dim, conf%dim))
+  allocate(gf(m%np, sb%dim), ggf(m%np, sb%dim, sb%dim))
 
-  call X(f_angular_momentum)(f_der, f, gf)
+  call X(f_angular_momentum)(sb, f_der, f, gf)
   do j = 1, 3
-    call X(f_angular_momentum)(f_der, gf(:,j), ggf(:,:,j))
+    call X(f_angular_momentum)(sb, f_der, gf(:,j), ggf(:,:,j))
   end do
 
   l2f(:) = M_ZERO

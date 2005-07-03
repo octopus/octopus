@@ -73,9 +73,9 @@ contains
     ! initialize the other stuff
     allocate(s%st)
     call states_init(s%st, s%gr)
-    call output_init(s%outp)
+    call output_init(s%gr%sb, s%outp)
     
-    call v_ks_init(s%ks, s%gr, s%st%d)
+    call v_ks_init(s%gr, s%ks, s%st%d)
     
     call pop_sub()
   end subroutine system_init

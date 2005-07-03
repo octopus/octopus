@@ -20,7 +20,7 @@
 #include "global.h"
 
 subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
-  type(grid_type),        intent(inout) :: m
+  type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(IN)    :: h
   FLOAT,                  intent(in)    :: tol_

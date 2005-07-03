@@ -225,7 +225,7 @@ subroutine states_init(st, gr)
     allocate(st%mag(st%nst, st%d%nik, 2))
   end if
   if (st%d%cdft) then
-    allocate(st%j(gr%m%np, conf%dim, st%d%nspin))
+    allocate(st%j(NP, NDIM, st%d%nspin))
     st%j = M_ZERO
   end if
   if(gr%geo%nlcc) allocate(st%rho_core(gr%m%np))
@@ -525,8 +525,8 @@ subroutine states_fermi(st, m)
   call pop_sub(); return
 end subroutine states_fermi
 
-subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
-  type(mesh_type),   intent(IN)  :: m
+subroutine states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
+  type(grid_type),   intent(in)  :: gr
   type(states_type), intent(IN)  :: st
   FLOAT,             intent(in)  :: pol(:)          ! pol(3)
   FLOAT,             intent(out) :: dipole(:)       ! dipole(st%d%nspin)
@@ -540,8 +540,8 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
 
   dipole(1:st%d%nspin) = M_ZERO
   do is = 1, st%d%nspin
-    do i = 1, m%np
-      dipole(is) = dipole(is) + st%rho(i, is)*sum(m%x(i, 1:conf%dim)*pol(1:conf%dim))*m%vol_pp(i)
+    do i = 1, NP
+      dipole(is) = dipole(is) + st%rho(i, is)*sum(gr%m%x(i, 1:NDIM)*pol(1:NDIM))*gr%m%vol_pp(i)
     end do
 
     if(present(lmax).and.present(multipole)) then
@@ -549,9 +549,9 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
       do l = 0, lmax
          do lm = -l, l
             mult = M_ZERO
-            do i = 1, m%np
-               call mesh_r(m, i, r, x=x)
-               ylm = loct_ylm(x(1), x(2), x(3), l, lm) * m%vol_pp(i)
+            do i = 1, NP
+               call mesh_r(gr%m, i, r, x=x)
+               ylm = loct_ylm(x(1), x(2), x(3), l, lm) * gr%m%vol_pp(i)
                if(l == 0) then
                  mult = mult + st%rho(i, is) * ylm
                else
@@ -566,7 +566,8 @@ subroutine states_calculate_multipoles(m, st, pol, dipole, lmax, multipole)
 
   end do
 
-  call pop_sub(); return
+  call pop_sub()
+  return
 end subroutine states_calculate_multipoles
 
 ! function to calculate the eigenvalues sum using occupations as weights
@@ -730,9 +731,9 @@ end function states_spin_channel
 ! This subroutine calculates:
 ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
 ! ---------------------------------------------------------
-subroutine calc_projection(u_st, st, m, p)
-  type(states_type), intent(IN)  :: u_st, st
+subroutine calc_projection(m, u_st, st, p)
   type(mesh_type),   intent(IN)  :: m
+  type(states_type), intent(IN)  :: u_st, st
   CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%d%nik)
 
   integer :: uist, ist, ik
@@ -825,12 +826,12 @@ subroutine states_local_magnetic_moments(m, st, geo, rho, r, lmm)
   call pop_sub()
 end subroutine states_local_magnetic_moments
 
+
 ! This routine (obviously) assumes complex wave-functions
-subroutine calc_paramagnetic_current(m, f_der, st, jp)
-  type(mesh_type),   intent(in)    :: m
-  type(f_der_type),  intent(inout) :: f_der
+subroutine calc_paramagnetic_current(gr, st, jp)
+  type(grid_type),   intent(inout) :: gr
   type(states_type), intent(in)    :: st
-  FLOAT,             intent(out)   :: jp(:,:,:)  ! (m%np, conf%dim, st%d%nspin)
+  FLOAT,             intent(out)   :: jp(:,:,:)  ! (NP, NDIM, st%d%nspin)
 
   integer :: ik, p, sp, k
   CMPLX, allocatable :: grad(:,:)
@@ -848,32 +849,32 @@ subroutine calc_paramagnetic_current(m, f_der, st, jp)
   end if
   
   jp = M_ZERO
-  allocate(grad(m%np, conf%dim))
+  allocate(grad(NP, NDIM))
   
   do ik = 1, st%d%nik, sp
     do p  = st%st_start, st%st_end
-      call zf_gradient(f_der, st%zpsi(:, 1, p, ik), grad)
+      call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik), grad)
       
       ! spin-up density
-      do k = 1, conf%dim
+      do k = 1, NDIM
         jp(:, k, 1) = jp(:, k, 1) + st%d%kweights(ik)*st%occ(p, ik)  &
            * aimag(conjg(st%zpsi(:, 1, p, ik)) * grad(:, k))
       end do
 
       ! spin-down density
       if(st%d%ispin == SPIN_POLARIZED) then
-        call zf_gradient(f_der, st%zpsi(:, 1, p, ik+1), grad)
+        call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 1, p, ik+1), grad)
         
-        do k = 1, conf%dim
+        do k = 1, NDIM
           jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik+1)*st%occ(p, ik+1) &
              * aimag(conjg(st%zpsi(:, 1, p, ik+1)) * grad(:, k))
         end do
 
         ! WARNING: the next lines DO NOT work properly
       else if(st%d%ispin == SPINORS) then ! off-diagonal densities
-        call zf_gradient(f_der, st%zpsi(:, 2, p, ik), grad)
+        call zf_gradient(gr%sb, gr%f_der, st%zpsi(:, 2, p, ik), grad)
 
-        do k = 1, conf%dim
+        do k = 1, NDIM
           jp(:, k, 2) = jp(:, k, 2) + st%d%kweights(ik)*st%occ(p, ik) &
              * aimag(conjg(st%zpsi(:, 2, p, ik)) * grad(:, k))
         end do
@@ -884,8 +885,8 @@ subroutine calc_paramagnetic_current(m, f_der, st, jp)
   deallocate(grad)
 
 #if defined(HAVE_MPI)
-  allocate(red(m%np, conf%dim, st%d%nspin))
-  call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), conf%dim*m%np*st%d%nspin, &
+  allocate(red(NP, NDIM, st%d%nspin))
+  call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin, &
        MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
   jp = red
   deallocate(red)
@@ -896,16 +897,15 @@ end subroutine calc_paramagnetic_current
 
 
 ! -----------------------------------------------------------
-subroutine states_calc_physical_current(m, f_der, st, j)
-  type(mesh_type),     intent(in)    :: m
-  type(f_der_type),    intent(inout) :: f_der
+subroutine states_calc_physical_current(gr, st, j)
+  type(grid_type),     intent(inout) :: gr
   type(states_type),   intent(in)    :: st
-  FLOAT,               intent(out)   :: j(:,:,:)   ! j(m%np, conf%dim, st%d%nspin)
+  FLOAT,               intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
 
   call push_sub('states_calc_physical_current')
   
   ! Paramagnetic contribution to the physical current
-  call calc_paramagnetic_current(m, f_der, st, j)
+  call calc_paramagnetic_current(gr, st, j)
 
   ! TODO
   ! Diamagnetic contribution to the physical current 

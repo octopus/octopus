@@ -17,10 +17,9 @@
 !!
 !! $Id$
 
-subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
+subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
+  type(grid_type),       intent(inout) :: gr
   type(xc_type), target, intent(in)    :: xcs
-  type(mesh_type),       intent(in)    :: m
-  type(f_der_type),      intent(inout) :: f_der
   FLOAT,                 intent(in)    :: rho(:, :)
   integer,               intent(in)    :: ispin
   FLOAT,                 intent(inout) :: vxc(:,:), ex, ec
@@ -59,7 +58,7 @@ subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
   if(gga.or.mgga) call  gga_init()
   if(       mgga) call mgga_init()
 
-  space_loop: do i = 1, m%np
+  space_loop: do i = 1, NP
 
     ! make a local copy with the correct memory order
                      l_dens (:)   = dens (i, :)
@@ -75,7 +74,7 @@ subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
         
       case(XC_FAMILY_GGA)
         if(functl(ixc)%id == XC_GGA_XC_LB) then
-          call mesh_r(m, i, r)
+          call mesh_r(gr%m, i, r)
           call xc_gga_lb(functl(ixc)%conf, l_dens(1), l_gdens(1,1), &
              r, ip, qtot, l_dedd(1))
           
@@ -96,9 +95,9 @@ subroutine xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
 
       if(functl(ixc)%id==XC_LDA_X.or.functl(ixc)%id==XC_GGA_X_PBE.or.&
          functl(ixc)%id==XC_MGGA_X_TPSS) then
-        ex = ex + sum(l_dens(:)) * e * m%vol_pp(i)
+        ex = ex + sum(l_dens(:)) * e * gr%m%vol_pp(i)
       else
-        ec = ec + sum(l_dens(:)) * e * m%vol_pp(i)
+        ec = ec + sum(l_dens(:)) * e * gr%m%vol_pp(i)
       end if
 
       ! store results
@@ -138,13 +137,13 @@ contains
     FLOAT   :: d(spin_channels), f, dtot, dpol
     
     ! allocate some general arrays
-    allocate(dens(m%np, spin_channels), dedd(m%np, spin_channels))
+    allocate(dens(NP, spin_channels), dedd(NP, spin_channels))
     allocate(l_dens(spin_channels), l_dedd(spin_channels))
     dedd = M_ZERO
 
     ! get the density
     f = M_ONE/real(spin_channels, PRECISION)
-    do i = 1, m%np
+    do i = 1, NP
       d(:) = rho(i, :)
       
       select case(ispin)
@@ -179,7 +178,7 @@ contains
     f = M_ONE/real(spin_channels, PRECISION)
     if(ispin == SPINORS) then
       ! rotate back (do not need the rotation matrix for this).
-      do i = 1, m%np
+      do i = 1, NP
         d(:) = rho(i, :)
         
         dtot = d(1) + d(2)
@@ -204,14 +203,14 @@ contains
   !   *) calculates the gradient of the density
   subroutine gga_init()
     ! allocate variables
-    allocate(gdens(m%np, 3, spin_channels), dedgd(m%np, 3, spin_channels))
+    allocate(gdens(NP, 3, spin_channels), dedgd(NP, 3, spin_channels))
     allocate(l_gdens(3, spin_channels), l_dedgd(3, spin_channels))
     gdens = M_ZERO
     dedgd = M_ZERO
 
     ! get gradient of the density
     do i = 1, spin_channels
-      call df_gradient(f_der, dens(:,i), gdens(:,:,i))
+      call df_gradient(gr%sb, gr%f_der, dens(:,i), gdens(:,:,i))
     end do
   end subroutine gga_init
 
@@ -229,22 +228,22 @@ contains
 
     ! subtract the divergence of the functional derivative of Exc with respect to
     ! the gradient of the density.
-    allocate(gf(m%np, 1))
+    allocate(gf(NP, 1))
     do is = 1, spin_channels
-      call df_divergence(f_der, dedgd(:,:,is), gf(:,1))
-      call lalg_axpy(m%np, -M_ONE, gf(:,1), dedd(:, is))
+      call df_divergence(gr%sb, gr%f_der, dedgd(:,:,is), gf(:,1))
+      call lalg_axpy(NP, -M_ONE, gf(:,1), dedd(:, is))
     end do
     deallocate(gf)
     
     ! If LB94, we can calculate an approximation to the energy from 
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(functl(1)%id == XC_GGA_XC_LB) then
-      allocate(gf(m%np, 3))
+      allocate(gf(NP, 3))
 
       do is = 1, spin_channels
-        call df_gradient(f_der, dedd(:, is), gf(:,:))
-        do i = 1, m%np
-          ex = ex - dens(i, is) * sum(m%x(i,:)*gf(i,:)) * m%vol_pp(i)
+        call df_gradient(gr%sb, gr%f_der, dedd(:, is), gf(:,:))
+        do i = 1, NP
+          ex = ex - dens(i, is) * sum(gr%m%x(i,:)*gf(i,:)) * gr%m%vol_pp(i)
         end do
       end do
 
@@ -262,7 +261,7 @@ contains
     FLOAT   :: f, d
     FLOAT, allocatable :: n2dens(:)
 
-    allocate(tau(m%np, spin_channels), dedtau(m%np, spin_channels))
+    allocate(tau(NP, spin_channels), dedtau(NP, spin_channels))
     allocate(l_tau(spin_channels), l_dedtau(spin_channels))
     tau    = M_ZERO
     dedtau = M_ZERO
@@ -272,13 +271,13 @@ contains
     ! calculate tau
     select case(xcs%mGGA_implementation)
     case (1)  ! GEA implementation
-      allocate(n2dens(m%np))
+      allocate(n2dens(NP))
       f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
 
       do is = 1, spin_channels
-        call df_laplacian(f_der, dens(:,is), n2dens(:))
+        call df_laplacian(gr%sb, gr%f_der, dens(:,is), n2dens(:))
 
-        do i = 1, m%np
+        do i = 1, NP
           d          = max(dens(i, is), CNST(1e-14))
           tau(i, is) = f * d**(M_FIVE/M_THREE) + &
              sum(gdens(i, :, is)**2)/(CNST(72.0)*d) + &
@@ -313,12 +312,12 @@ contains
     select case(xcs%mGGA_implementation)
       case (1) ! GEA implementation
         f = CNST(3.0)/CNST(10.0) * (M_SIX*M_PI*M_PI)**M_TWOTHIRD
-        allocate(gf(m%np))
+        allocate(gf(NP))
 
         do is = 1, spin_channels
-          call df_laplacian(f_der, dedtau(:,is), gf(:))
+          call df_laplacian(gr%sb, gr%f_der, dedtau(:,is), gf(:))
 
-          do i = 1, m%np
+          do i = 1, NP
             d = max(dens(i, is), CNST(1e-14))
             dedd(i, is) = dedd(i, is) + dedtau(i, is) * &
                (f*d**M_TWOTHIRD - sum(gdens(i, :, is)**2)/(CNST(72.0)*d*d))

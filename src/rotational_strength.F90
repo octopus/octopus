@@ -67,7 +67,7 @@ program rotational_strength
   !!! read in the default direction for the polarization
   rsf%pol(:) = M_ZERO
   if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
-    do i = 1, conf%dim
+    do i = 1, 3
       call loct_parse_block_float(blk, 0, i-1, rsf%pol(i))
     end do
     call loct_parse_block_end(blk)

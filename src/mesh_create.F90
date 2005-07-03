@@ -19,14 +19,14 @@
 
 #if defined(HAVE_METIS)
 subroutine mesh_partition(m, Lxyz_tmp)
-  type(mesh_type), intent(inout) :: m
-  integer, pointer :: Lxyz_tmp(:,:,:)
+  type(mesh_type),      intent(inout) :: m
+  integer,              pointer       :: Lxyz_tmp(:,:,:)
   
   integer :: i, ix, iy, iz, ne
   integer :: etype, edgecut
   integer, allocatable :: elmnts(:), epart(:), npart(:)
 
-  ASSERT(conf%dim==2.or.conf%dim==3)
+  ASSERT(m%sb%dim==2.or.m%sb%dim==3)
 
   ! let us count how many elements we have
   ne = 0
@@ -40,7 +40,7 @@ subroutine mesh_partition(m, Lxyz_tmp)
   end do
 
   ! allocate space necessary for the elements
-  allocate(elmnts(4*(conf%dim-1)*ne))
+  allocate(elmnts(4*(m%sb%dim-1)*ne))
 
   ! create elements array
   i = 1
@@ -54,7 +54,7 @@ subroutine mesh_partition(m, Lxyz_tmp)
         elmnts(i+3) = m%Lxyz_inv(ix,   iy+1, iz)
         i = i + 4
 
-        if(conf%dim <= 2) cycle
+        if(m%sb%dim <= 2) cycle
         elmnts(i+0) = m%Lxyz_inv(ix,   iy,   iz+1)
         elmnts(i+1) = m%Lxyz_inv(ix+1, iy,   iz+1)
         elmnts(i+2) = m%Lxyz_inv(ix+1, iy+1, iz+1)
@@ -65,7 +65,7 @@ subroutine mesh_partition(m, Lxyz_tmp)
   end do
 
   allocate(epart(ne), npart(m%np))
-  if(conf%dim == 2) then
+  if(m%sb%dim == 2) then
     etype = 4 ! quadrilaterals
   else
     etype = 3 ! hexahedra
@@ -94,7 +94,7 @@ subroutine mesh_partition(m, Lxyz_tmp)
          Lxyz_tmp(ix+1, iy+1, iz  ).eq.1.and. &   ! 3
          Lxyz_tmp(ix,   iy+1, iz  ).eq.1          ! 4
 
-      if(conf%dim <= 2) return
+      if(m%sb%dim <= 2) return
 
       OK = OK.and. &
          Lxyz_tmp(ix,   iy,   iz+1).eq.1.and. &   ! 5
@@ -106,9 +106,8 @@ subroutine mesh_partition(m, Lxyz_tmp)
 end subroutine mesh_partition
 #endif
 
-subroutine mesh_create_xyz(m, sb, cv, geo, enlarge)
+subroutine mesh_create_xyz(m, cv, geo, enlarge)
   type(mesh_type),       intent(inout) :: m
-  type(simul_box_type),  intent(in)    :: sb
   type(curvlinear_type), intent(in)    :: cv
   type(geometry_type),   intent(in)    :: geo
   integer,               intent(in)    :: enlarge
@@ -121,7 +120,7 @@ subroutine mesh_create_xyz(m, sb, cv, geo, enlarge)
   call push_sub('mesh_create_xyz')
 
 ! enlarge mesh in the non-periodic dimensions
-  do i = sb%periodic_dim+1, conf%dim
+  do i = m%sb%periodic_dim+1, m%sb%dim
     m%nr(1,i) = m%nr(1,i) - enlarge
     m%nr(2,i) = m%nr(2,i) + enlarge
   end do
@@ -137,21 +136,21 @@ subroutine mesh_create_xyz(m, sb, cv, geo, enlarge)
 
   ! We label 2 the points inside the mesh + enlargement
   ey = 0; ez = 0
-  if(conf%dim > 1) ey = enlarge
-  if(conf%dim > 2) ez = enlarge
+  if(m%sb%dim > 1) ey = enlarge
+  if(m%sb%dim > 2) ez = enlarge
 
   do ix = m%nr(1,1), m%nr(2,1)
-    chi(1) = real(ix, PRECISION) * m%h(1) + sb%box_offset(1)
+    chi(1) = real(ix, PRECISION) * m%h(1) + m%sb%box_offset(1)
 
     do iy = m%nr(1,2), m%nr(2,2)
-      chi(2) = real(iy, PRECISION) * m%h(2) + sb%box_offset(2)
+      chi(2) = real(iy, PRECISION) * m%h(2) + m%sb%box_offset(2)
 
       do iz = m%nr(1,3), m%nr(2,3)
-        chi(3) = real(iz, PRECISION) * m%h(3) + sb%box_offset(3)
+        chi(3) = real(iz, PRECISION) * m%h(3) + m%sb%box_offset(3)
 
-        call curvlinear_chi2x(cv, geo, chi(:), x(:, ix, iy, iz))
+        call curvlinear_chi2x(m%sb, geo, cv, chi(:), x(:, ix, iy, iz))
 
-        if(simul_box_in_box(sb, geo, x(:, ix, iy, iz))) then
+        if(simul_box_in_box(m%sb, geo, x(:, ix, iy, iz))) then
           do i = -enlarge, enlarge
             do j = -ey, ey
               do k = -ez, ez
@@ -173,7 +172,7 @@ subroutine mesh_create_xyz(m, sb, cv, geo, enlarge)
   do ix = m%nr(1,1), m%nr(2,1)
     do iy = m%nr(1,2), m%nr(2,2)
       do iz = m%nr(1,3), m%nr(2,3)
-        if(simul_box_in_box(sb, geo, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
+        if(simul_box_in_box(m%sb, geo, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
         if(Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
       end do
     end do
@@ -231,10 +230,10 @@ contains
   ! calculate the volume of integration
   subroutine get_vol_pp()
     integer :: i
-    FLOAT :: f, chi(conf%dim)
+    FLOAT :: f, chi(m%sb%dim)
 
     f = M_ONE
-    do i = 1, conf%dim
+    do i = 1, m%sb%dim
       f = f*m%h(i)
     end do
 
@@ -242,8 +241,8 @@ contains
     m%vol_pp(:) = f
 
     do i = 1, m%np
-      chi(1:conf%dim) = m%Lxyz(i, 1:conf%dim)*m%h(1:conf%dim)
-      m%vol_pp(i) = m%vol_pp(i)*curvlinear_det_Jac(cv, geo, m%x(i,:), chi)
+      chi(1:m%sb%dim) = m%Lxyz(i, 1:m%sb%dim)*m%h(1:m%sb%dim)
+      m%vol_pp(i) = m%vol_pp(i)*curvlinear_det_Jac(m%sb, geo, cv, m%x(i,:), chi)
     end do
 
   end subroutine get_vol_pp
@@ -256,41 +255,41 @@ end subroutine mesh_create_xyz
 
 ! WARNING: have to get rid of dir, otherwise will not work
 integer function mesh_index(m, ix_, dir) result(index)
-    type(mesh_type),      intent(in) :: m
-    integer,              intent(in) :: ix_(:), dir
+  type(mesh_type),      intent(in) :: m
+  integer,              intent(in) :: ix_(:), dir
+  
+  integer :: i, ix(3)  ! ix has to go until 3, not sb%dim
 
-    integer :: i, ix(3)  ! ix has to go until 3, not conf%dim
+  ix = 0
+  ix(1:m%sb%dim) = ix_(1:m%sb%dim) ! make a local copy that we can change
 
-    ix = 0
-    ix(1:conf%dim) = ix_(1:conf%dim) ! make a local copy that we can change
-
-    index = 1
-    do i = 1, conf%dim
-      if(ix(i) < m%nr(1, i)) then       ! first look left
-        if(i <= m%sb%periodic_dim) then ! fold point
-          ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i) + 1)
-        else
-          ix(i) = m%nr(1, i)
-          index = 0
-        end if
-      else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
-        if(i <= m%sb%periodic_dim) then
-          ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i) + 1)
-        else
-          ix(i) = m%nr(2, i)
-          index = 0
-        end if
+  index = 1
+  do i = 1, m%sb%dim
+    if(ix(i) < m%nr(1, i)) then       ! first look left
+      if(i <= m%sb%periodic_dim) then ! fold point
+        ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i) + 1)
+      else
+        ix(i) = m%nr(1, i)
+        index = 0
       end if
-    end do
-
-    if(index.ne.0) index = m%Lxyz_inv(ix(1), ix(2), ix(3))
-
-    if(index==0.and.conf%boundary_zero_derivative) then
-      do
-        index = m%Lxyz_inv(ix(1), ix(2), ix(3))
-        if(index.ne.0) exit
-        ix(abs(dir)) = ix(abs(dir)) - sign(1, dir)
-      end do
+    else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
+      if(i <= m%sb%periodic_dim) then
+        ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i) + 1)
+      else
+        ix(i) = m%nr(2, i)
+        index = 0
+      end if
     end if
-    
+  end do
+  
+  if(index.ne.0) index = m%Lxyz_inv(ix(1), ix(2), ix(3))
+  
+  if(index==0.and.conf%boundary_zero_derivative) then
+    do
+      index = m%Lxyz_inv(ix(1), ix(2), ix(3))
+      if(index.ne.0) exit
+      ix(abs(dir)) = ix(abs(dir)) - sign(1, dir)
+    end do
+  end if
+  
 end function mesh_index

@@ -86,8 +86,9 @@ integer, parameter, private :: &
 
 contains
 
-subroutine output_init(outp)
-  type(output_type), intent(out) :: outp
+subroutine output_init(sb, outp)
+  type(simul_box_type), intent(in)  :: sb
+  type(output_type),    intent(out) :: outp
 
   integer :: i
   logical :: l
@@ -117,14 +118,14 @@ subroutine output_init(outp)
     if(l) outp%how = ior(outp%how, output_mesh_index)
     call loct_parse_logical(check_inp('OutputAxisX'), .false., l)
     if(l) outp%how = ior(outp%how, output_axis_x)
-    if(conf%dim > 1) then
+    if(sb%dim > 1) then
       call loct_parse_logical(check_inp('OutputAxisY'), .false., l)
       if(l) outp%how = ior(outp%how, output_axis_y)
       call loct_parse_logical(check_inp('OutputPlaneZ'), .false., l)
       if(l) outp%how = ior(outp%how, output_plane_z)
       call loct_parse_logical(check_inp('OutputGnuplotMode'), .false., l)
       if(l) outp%how = ior(outp%how, output_gnuplot)
-      if(conf%dim > 2) then
+      if(sb%dim > 2) then
         call loct_parse_logical(check_inp('OutputAxisZ'), .false., l)
         if(l) outp%how = ior(outp%how, output_axis_z)
         call loct_parse_logical(check_inp('OutputPlaneX'), .false., l)

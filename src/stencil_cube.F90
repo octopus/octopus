@@ -38,19 +38,21 @@ module stencil_cube
 contains
 
   ! ---------------------------------------------------------
-  integer function stencil_cube_size_lapl(order)
+  integer function stencil_cube_size_lapl(dim, order)
+    integer, intent(in) :: dim
     integer, intent(in) :: order
     
     call push_sub('stencil_cube_size_lapl')
 
-    stencil_cube_size_lapl = (2*order+1)**conf%dim
+    stencil_cube_size_lapl = (2*order+1)**dim
 
     call pop_sub()
   end function stencil_cube_size_lapl
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_get_lapl(order, stencil)
+  subroutine stencil_cube_get_lapl(dim, order, stencil)
+    integer, intent(in)  :: dim
     integer, intent(in)  :: order
     integer, intent(out) :: stencil(:,:)
 
@@ -59,7 +61,7 @@ contains
     call push_sub('stencil_cube_get_lapl')
 
     n = 1
-    select case(conf%dim)
+    select case(dim)
     case(1)
       do i = -order, order
         stencil(1, n) = i
@@ -91,16 +93,17 @@ contains
   
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_polynomials_lapl(pol, order)
-    integer, intent(out) :: pol(:,:) ! pol(conf%dim, order)
+  subroutine stencil_cube_polynomials_lapl(dim, order, pol)
+    integer, intent(in)  :: dim
     integer, intent(in)  :: order
+    integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
     integer :: i, j, k, n
 
     call push_sub('stencil_cube_polynomials_lapl')
 
     n = 1
-    select case(conf%dim)
+    select case(dim)
     case(1)
       do i = 0, 2*order
         pol(1, n) = i
@@ -136,28 +139,31 @@ contains
   ! corresponding ones for the laplacian
 
   ! ---------------------------------------------------------
-  integer function stencil_cube_size_grad(order)
+  integer function stencil_cube_size_grad(dim, order)
+    integer, intent(in) :: dim
     integer, intent(in) :: order
     
-    stencil_cube_size_grad = stencil_cube_size_lapl(order)
+    stencil_cube_size_grad = stencil_cube_size_lapl(dim, order)
   end function stencil_cube_size_grad
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_get_grad(order, stencil)
+  subroutine stencil_cube_get_grad(dim, order, stencil)
+    integer, intent(in)  :: dim
     integer, intent(in)  :: order
     integer, intent(out) :: stencil(:,:)
 
-    call stencil_cube_get_lapl(order, stencil)
+    call stencil_cube_get_lapl(dim, order, stencil)
   end subroutine stencil_cube_get_grad
 
 
   ! ---------------------------------------------------------
-  subroutine stencil_cube_polynomials_grad(pol, order)
-    integer, intent(out) :: pol(:,:) ! pol(conf%dim, order)
+  subroutine stencil_cube_polynomials_grad(dim, order, pol)
+    integer, intent(in)  :: dim
     integer, intent(in)  :: order
+    integer, intent(out) :: pol(:,:) ! pol(sb%dim, order)
 
-    call stencil_cube_polynomials_lapl(pol, order)
+    call stencil_cube_polynomials_lapl(dim, order, pol)
   end subroutine stencil_cube_polynomials_grad
 
 end module stencil_cube

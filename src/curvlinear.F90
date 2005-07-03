@@ -21,6 +21,7 @@
 
 module curvlinear
   use lib_oct_parser
+  use simul_box
   use geometry
   use curv_gygi
   use curv_briggs
@@ -45,8 +46,8 @@ module curvlinear
 contains
 
   !-------------------------------------
-  subroutine curvlinear_init(l, cv)
-    FLOAT,                 intent(in)  :: l(:)
+  subroutine curvlinear_init(sb, cv)
+    type(simul_box_type),  intent(in)  :: sb
     type(curvlinear_type), intent(out) :: cv
 
     call push_sub('curvlinear_init')
@@ -61,9 +62,9 @@ contains
     case(CURV_METHOD_GYGI)
       call curv_gygi_init(cv%gygi)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(l, cv%briggs)
+      call curv_briggs_init(sb, cv%briggs)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(l, cv%modine)
+      call curv_modine_init(sb, cv%modine)
     end select
 
     call pop_sub()
@@ -71,51 +72,53 @@ contains
 
 
   !-------------------------------------
-  subroutine curvlinear_chi2x(cv, geo, chi, x)
-    type(curvlinear_type), intent(in)  :: cv
+  subroutine curvlinear_chi2x(sb, geo, cv, chi, x)
+    type(simul_box_type),  intent(in)  :: sb
     type(geometry_type),   intent(in)  :: geo
+    type(curvlinear_type), intent(in)  :: cv
     FLOAT,                 intent(in)  :: chi(:)  ! chi(conf%dim)
     FLOAT,                 intent(out) :: x(:)    ! x(conf%dim)
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
-      x(1:conf%dim) = chi(1:conf%dim)
+      x(1:sb%dim) = chi(1:sb%dim)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_chi2x(cv%gygi, geo, chi, x)
+      call curv_gygi_chi2x(sb, geo, cv%gygi, chi, x)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_chi2x(cv%briggs, chi, x)
+      call curv_briggs_chi2x(sb, cv%briggs, chi, x)
     case(CURV_METHOD_MODINE)
-      call curv_modine_chi2x(cv%modine, geo, chi, x)
+      call curv_modine_chi2x(sb, geo, cv%modine, chi, x)
     end select
 
   end subroutine curvlinear_chi2x
   
 
   !-------------------------------------
-  FLOAT function curvlinear_det_Jac(cv, geo, x, chi) result(jdet)
-    type(curvlinear_type), intent(in)  :: cv
+  FLOAT function curvlinear_det_Jac(sb, geo, cv, x, chi) result(jdet)
+    type(simul_box_type),  intent(in)  :: sb
     type(geometry_type),   intent(in)  :: geo
-    FLOAT,                 intent(in)  :: x(:)    !   x(conf%dim)
-    FLOAT,                 intent(in)  :: chi(:)  ! chi(conf%dim)
+    type(curvlinear_type), intent(in)  :: cv
+    FLOAT,                 intent(in)  :: x(:)    !   x(sb%dim)
+    FLOAT,                 intent(in)  :: chi(:)  ! chi(sb%dim)
 
-    FLOAT :: dummy(conf%dim), Jac(conf%dim, conf%dim)
+    FLOAT :: dummy(sb%dim), Jac(sb%dim, sb%dim)
     integer :: i
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
       jdet = M_ONE
     case(CURV_METHOD_GYGI)
-      call curv_gygi_jacobian(cv%gygi, geo, x, dummy, Jac)
-      jdet = M_ONE/lalg_det(Jac, conf%dim)
+      call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy, Jac)
+      jdet = M_ONE/lalg_det(Jac, sb%dim)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_jacobian_inv(cv%briggs, chi, Jac)
+      call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)
       jdet = M_ONE
-      do i = 1, conf%dim
+      do i = 1, sb%dim
         jdet = jdet * Jac(i,i) ! Jacobian is diagonal in this method
       end do
     case(CURV_METHOD_MODINE)
-      call curv_modine_jacobian_inv(cv%modine, geo, chi, Jac)
-      jdet = M_ONE*lalg_det(Jac, conf%dim)
+      call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, Jac)
+      jdet = M_ONE*lalg_det(Jac, sb%dim)
     end select
 
   end function curvlinear_det_Jac

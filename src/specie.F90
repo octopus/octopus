@@ -404,8 +404,7 @@ contains
     FLOAT :: a1, a2, Rb2 ! for jellium
     FLOAT :: xx(3), r
 
-    xx = M_ZERO
-    xx(1:conf%dim) = x(:)
+    xx(:) = x(:)
     r = sqrt(sum(xx(:)**2))
 
     select case(s%type)
@@ -435,27 +434,26 @@ contains
   ! ---------------------------------------------------------
   subroutine specie_get_glocal(s, x, gv)
     type(specie_type), intent(IN) :: s
-    FLOAT, intent(in) :: x(conf%dim)
-    FLOAT, intent(out) :: gv(conf%dim)
+    FLOAT, intent(in) :: x(:)
+    FLOAT, intent(out) :: gv(:)
     
     FLOAT, parameter :: Delta = CNST(1e-4)
     FLOAT :: xx(3), r, l1, l2
     integer :: i
    
     gv = M_ZERO
-    xx = M_ZERO
     
-    xx(1:conf%dim) = x(1:conf%dim)
+    xx(:) = x(:)
     r = sqrt(sum(xx(:)**2))
     
     select case(s%type)
     case(SPEC_USDEF)
-      do i = 1, conf%dim
-        xx(1:conf%dim) = x(1:conf%dim)
+      do i = 1, 3
+        xx(:) = x(:)
         xx(i) = xx(i) - Delta
-        l1 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+        l1 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
         xx(i) = xx(i) + M_TWO*Delta
-        l2 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(1:conf%dim)**2)), s%user_def)
+        l2 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
         gv(i) = (l2 - l1)/(M_TWO*Delta)
       end do
       
@@ -480,13 +478,14 @@ contains
   ! ---------------------------------------------------------
   ! returns the localized part of the potential in Fourier space
   ! ---------------------------------------------------------
-  FLOAT function specie_get_local_fourier(s, x) result(l)
-    type(specie_type), intent(IN) :: s
-    FLOAT, intent(in) :: x(3)
+  FLOAT function specie_get_local_fourier(dim, s, x) result(l)
+    integer,           intent(in) :: dim
+    type(specie_type), intent(in) :: s
+    FLOAT,             intent(in) :: x(3)
     
     FLOAT :: gmod
     
-    if(conf%dim /= 3 .or. s%type == SPEC_USDEF &
+    if(dim /= 3 .or. s%type == SPEC_USDEF &
        .or. s%type == SPEC_POINT .or. s%type == SPEC_JELLI) then
       message(1) = 'Periodic arrays of usedef, jelli, point,' 
       message(2) = '1D and 2D systems not implemented yet.'

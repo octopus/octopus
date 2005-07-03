@@ -23,6 +23,7 @@ module nl_operator
   use global
   use messages
   use mesh
+  use simul_box
 
   implicit none
 
@@ -110,7 +111,7 @@ contains
     logical, optional,      intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
 
-    integer :: i, j, ix(conf%dim)
+    integer :: i, j, ix(3)
 
     ASSERT(np > 0)
 
@@ -149,7 +150,7 @@ contains
        ix(:) = m%Lxyz(i,:)
 
        do j = 1, op%n   ! for all points in stencil
-          op%i(j, i) = mesh_index(m, ix(1:conf%dim)+op%stencil(1:conf%dim,j), 1)
+          op%i(j, i) = mesh_index(m, ix(:) + op%stencil(:,j), 1)
        end do
     end do
   end subroutine nl_operator_build

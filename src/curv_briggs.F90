@@ -31,6 +31,7 @@ module curv_briggs
   use syslabels
   use units
   use geometry
+  use simul_box
   use lib_adv_alg
 
   implicit none
@@ -43,12 +44,12 @@ module curv_briggs
 contains
 
   !-------------------------------------
-  subroutine curv_briggs_init(l, cv)
-    FLOAT,                   intent(in)  :: l(:)  ! l(1:conf%dim)
+  subroutine curv_briggs_init(sb, cv)
+    type(simul_box_type),   intent(in)  :: sb
     type(curv_briggs_type), intent(out) :: cv
 
     cv%L = M_ZERO
-    cv%L(1:conf%dim) = l(1:conf%dim)
+    cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
     call loct_parse_float(check_inp('CurvBriggsBeta'), M_HALF, cv%beta)
     
@@ -61,14 +62,15 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_briggs_chi2x(cv, chi, x)
+  subroutine curv_briggs_chi2x(sb, cv, chi, x)
+    type(simul_box_type),   intent(in)  :: sb
     type(curv_briggs_type), intent(in)  :: cv
-    FLOAT,                  intent(in)  :: chi(:)  ! chi(conf%dim)
-    FLOAT,                  intent(out) :: x(:)    ! x(conf%dim)
+    FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,                  intent(out) :: x(:)    ! x(sb%dim)
  
     integer :: i
 
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       x(i) = chi(i) - cv%L(i)*cv%beta/(M_TWO*M_PI)*   &
          sin(M_TWO*M_PI*chi(i)/cv%L(i))
     end do
@@ -77,15 +79,16 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_briggs_jacobian_inv(cv, chi, J)
+  subroutine curv_briggs_jacobian_inv(sb, cv, chi, J)
+    type(simul_box_type),   intent(in)  :: sb
     type(curv_briggs_type), intent(in)  :: cv
-    FLOAT,                  intent(in)  :: chi(:)  ! chi(conf%dim)
-    FLOAT,                  intent(out) :: J(:,:)  ! J(conf%dim,conf%dim), the Jacobian
+    FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
+    FLOAT,                  intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
  
     integer :: i
 
     J(:,:) = M_ZERO
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       J(i,i) = M_ONE - cv%beta*cos(M_TWO*M_PI*chi(i)/cv%L(i))
     end do
 

@@ -96,7 +96,7 @@ contains
     logical,                   intent(inout) :: fromScratch
 
     type(td_type)                :: td
-    type(mesh_type),     pointer :: m   ! some shortcuts
+    type(grid_type),     pointer :: gr   ! some shortcuts
     type(states_type),   pointer :: st
     type(geometry_type), pointer :: geo
 
@@ -120,16 +120,16 @@ contains
     if(td%move_ions > 0) then
        if(td%iter > 0) then
           call td_read_nbo()
-          call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype)
+          call epot_generate(h%ep, gr%m, gr%sb, geo, st, h%reltype)
           geo%eii = ion_ion_energy(geo)
           h%eii = geo%eii
        end if
 
-       call zepot_forces(h%ep, sys%gr, st, td%iter*td%dt, reduce_=.true.)
+       call zepot_forces(gr, h%ep, st, td%iter*td%dt, reduce_=.true.)
        geo%kinetic_energy = kinetic_energy(geo)
        select case(td%move_ions)
        case(NORMAL_VERLET)
-          allocate(x1(geo%natoms, conf%dim), x2(geo%natoms, conf%dim))
+          allocate(x1(geo%natoms, NDIM), x2(geo%natoms, NDIM))
           do j = 1, geo%natoms
              if(geo%atom(j)%move) then
                 x1(j, :) = geo%atom(j)%x(:) - td%dt*geo%atom(j)%v(:) + &
@@ -140,7 +140,7 @@ contains
              endif
           enddo
        case(VELOCITY_VERLET)
-          allocate(f1(geo%natoms, conf%dim))
+          allocate(f1(geo%natoms, NDIM))
        end select
     endif
 
@@ -179,34 +179,34 @@ contains
           end select
 
           if(mod(i, td%epot_regenerate) == 0) then
-             call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype)
+             call epot_generate(h%ep, gr%m, gr%sb, geo, st, h%reltype)
           else
-             call epot_generate(h%ep, m, sys%gr%sb, geo, st, h%reltype, fast_generation = .true.)
+             call epot_generate(h%ep, gr%m, gr%sb, geo, st, h%reltype, fast_generation = .true.)
           endif
           geo%eii = ion_ion_energy(geo)
           h%eii = geo%eii
        endif
 
        ! time iterate wavefunctions
-       call td_rti_dt(sys%ks, h, sys%gr, st, td%tr, i*td%dt, td%dt)
+       call td_rti_dt(sys%ks, h, gr, st, td%tr, i*td%dt, td%dt)
 
        ! mask function?
        if(h%ab == MASK_ABSORBING) then
           do ik = 1, st%d%nik
              do ist = st%st_start, st%st_end
                 do idim = 1, st%d%dim
-                   st%zpsi(1:m%np, idim, ist, ik) = st%zpsi(1:m%np, idim, ist, ik) * &
-                        (M_ONE - h%ab_pot(1:m%np))
+                   st%zpsi(1:NP, idim, ist, ik) = st%zpsi(1:NP, idim, ist, ik) * &
+                        (M_ONE - h%ab_pot(1:NP))
                 end do
              end do
           end do
        end if
 
        ! update density
-       call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
+       call zstates_calc_dens(st, NP, st%rho, reduce=.true.)
 
        ! update hamiltonian and eigenvalues (fermi is *not* called)
-       call zv_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
+       call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
        call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
 
        ! Recalculate forces, update velocities...
@@ -216,7 +216,7 @@ contains
                 f1(j, :) = geo%atom(j)%f(:)
              end do
           end if
-          call zepot_forces(h%ep, sys%gr, st, i*td%dt, reduce_=.true.)
+          call zepot_forces(gr, h%ep, st, i*td%dt, reduce_=.true.)
           if(td%move_ions == VELOCITY_VERLET) then
              do j = 1, geo%natoms
                 if(geo%atom(j)%move) then
@@ -232,7 +232,7 @@ contains
        call iter_output()
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-       call PES_doit(td%PESv, m, st, ii, td%dt, h%ab_pot)
+       call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
 #endif
 
        ! write info
@@ -263,16 +263,16 @@ contains
       call push_sub('td_run')
 
       ! some shortcuts
-      m   => sys%gr%m
+      gr  => sys%gr
       geo => sys%gr%geo
       st  => sys%st
 
       call states_distribute_nodes(st)
 
       ! allocate memory
-      allocate(st%zpsi(m%np, st%d%dim, st%st_start:st%st_end, st%d%nik))
+      allocate(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
-      call td_init(td, sys%gr, st, h, sys%outp)
+      call td_init(gr, td, st, h, sys%outp)
 
     end subroutine init_
 
@@ -291,7 +291,7 @@ contains
 
       ierr = 0
       if(.not.fromScratch) then
-         call zrestart_read(trim(tmpdir)//'restart_td', st, m, err, td%iter)
+         call zrestart_read(trim(tmpdir)//'restart_td', st, gr%m, err, td%iter)
          if(err.ne.0) then
             message(1) = "Could not load "//trim(tmpdir)//"restart_td: Starting from scratch"
             call write_warning(1)
@@ -302,7 +302,7 @@ contains
             do i = 1, 2
                do is = 1, st%d%nspin
                   write(filename,'(a,i2.2,i3.3)') trim(tmpdir)//'restart_td/vprev_', i, is
-                  call dinput_function(filename, m, td%tr%v_old(1:m%np, is, i), ierr)
+                  call dinput_function(filename, gr%m, td%tr%v_old(1:NP, is, i), ierr)
                end do
             end do
 
@@ -310,7 +310,7 @@ contains
       end if
 
       if(fromScratch) then
-         call zrestart_read(trim(tmpdir)//'restart_gs', st, m, ierr)
+         call zrestart_read(trim(tmpdir)//'restart_gs', st, gr%m, ierr)
          if(ierr.ne.0) then
             message(1) = "Could not load '"//trim(tmpdir)//"restart_gs': Starting from scratch"
             call write_warning(1)
@@ -320,13 +320,13 @@ contains
       end if
 
       if(ierr==0) then
-         call zstates_calc_dens(st, m%np, st%rho, reduce=.true.)
-         call zv_ks_calc(sys%gr, sys%ks, h, st, calc_eigenval=.true.)
+         call zstates_calc_dens(st, NP, st%rho, reduce=.true.)
+         call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
          x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
          call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
 #endif
-         call hamiltonian_span(h, minval(m%h(1:conf%dim)), x)
+         call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
          call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
       end if
 
@@ -394,28 +394,28 @@ contains
 
     subroutine iter_output()
       ! output multipoles
-      if(td%out_multip) call td_write_multipole(out_multip, m, st, geo, td, i)
+      if(td%out_multip) call td_write_multipole(gr, out_multip, st, td, i)
 
       ! output angular momentum
-      if(td%out_angular) call td_write_angular(out_angular, sys%gr, st, i)
+      if(td%out_angular) call td_write_angular(out_angular, gr, st, i)
 
       ! output spin
-      if(td%out_spin) call td_write_spin(out_spin, m, st, i)
+      if(td%out_spin) call td_write_spin(out_spin, gr%m, st, i)
 
       ! output atoms magnetization
-      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, i)
+      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td, i)
 
       ! output projections onto the GS KS eigenfunctions
-!!$    if(td%out_proj) call td_write_proj(out_proj, m, st, u_st, i)
+!!$    if(td%out_proj) call td_write_proj(out_proj, gr%m, st, u_st, i)
 
       ! output positions, vels, etc.
-      if(td%out_coords) call td_write_nbo(out_coords, geo, i, geo%kinetic_energy, h%etot)
+      if(td%out_coords) call td_write_nbo(gr, out_coords, i, geo%kinetic_energy, h%etot)
 
       ! If harmonic spectrum is desired, get the acceleration
-      if(td%out_acc) call td_write_acc(out_acc, sys%gr, st, h, td, i)
+      if(td%out_acc) call td_write_acc(gr, out_acc, st, h, td, i)
 
       ! output laser field
-      if(td%out_laser) call td_write_laser(out_laser, h, td, i)
+      if(td%out_laser) call td_write_laser(gr, out_laser, h, td, i)
 
       ! output electronic energy
       if(td%out_energy) call td_write_el_energy(out_energy, h, i)
@@ -429,18 +429,18 @@ contains
       ! create general subdir
       call io_mkdir('td.general')
 
-      if(td%out_multip)  call td_write_multipole(out_multip, m, st, geo, td, 0)
-      if(td%out_angular) call td_write_angular(out_angular, sys%gr, st, 0)
-      if(td%out_spin)    call td_write_spin(out_spin, m, st, 0)
-      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, m, st, geo, td, 0)
-!!$    if(td%out_proj)    call td_write_proj(out_proj, m, st, u_st, 0)
+      if(td%out_multip)  call td_write_multipole(gr, out_multip, st, td, 0)
+      if(td%out_angular) call td_write_angular(out_angular, gr, st, 0)
+      if(td%out_spin)    call td_write_spin(out_spin, gr%m, st, 0)
+      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td, 0)
+!!$    if(td%out_proj)    call td_write_proj(out_proj, gr%m, st, u_st, 0)
 
       call apply_delta_field()
 
       ! create files for output and output headers
-      if(td%out_coords) call td_write_nbo(out_coords, geo, 0, geo%kinetic_energy, h%etot)    
-      if(td%out_acc)    call td_write_acc(out_acc, sys%gr, st, h, td, 0)
-      if(td%out_laser)  call td_write_laser(out_laser, h, td, 0)
+      if(td%out_coords) call td_write_nbo(gr, out_coords, 0, geo%kinetic_energy, h%etot)    
+      if(td%out_acc)    call td_write_acc(gr, out_acc, st, h, td, 0)
+      if(td%out_laser)  call td_write_laser(gr, out_laser, h, td, 0)
       if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
 
       call td_write_data(0)
@@ -454,7 +454,7 @@ contains
 !!! where E_0 = - k \hbar / e
     subroutine apply_delta_field()
       integer :: i, mode
-      FLOAT   :: k, x(conf%dim)
+      FLOAT   :: k, x(NDIM)
       CMPLX   :: c(2), kick
 
       call push_sub('apply_delta_field')
@@ -491,8 +491,8 @@ contains
          case (3)
          end select
          call write_info(2)
-         do i = 1, m%np
-            kick = M_zI * k * sum(m%x(i, 1:conf%dim)*td%pol(1:conf%dim))
+         do i = 1, NP
+            kick = M_zI * k * sum(gr%m%x(i, 1:NDIM)*td%pol(1:NDIM))
 
             select case (mode)
             case (0)
@@ -533,8 +533,8 @@ contains
 !!! where M and Z are the ionic mass and charge, respectively.
       if(td%move_ions > 0) then
          do i = 1, geo%natoms
-            geo%atom(i)%v(1:conf%dim) = geo%atom(i)%v(1:conf%dim) - &
-                 k*td%pol(1:conf%dim)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+            geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
+                 k*td%pol(1:NDIM)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
          end do
       end if
 
@@ -562,15 +562,15 @@ contains
       read(iunit, '(88x)', advance='no') ! skip unrelevant information
 
       do i = 1, geo%natoms
-         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:conf%dim)
+         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%x(1:NDIM)
          geo%atom(i)%x(:) = geo%atom(i)%x(:) * units_out%length%factor
       end do
       do i = 1, geo%natoms
-         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%v(1:conf%dim)
+         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%v(1:NDIM)
          geo%atom(i)%v(:) = geo%atom(i)%v(:) * units_out%velocity%factor
       end do
       do i = 1, geo%natoms
-         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%f(1:conf%dim)
+         read(iunit, '(3es20.12)', advance='no') geo%atom(i)%f(1:NDIM)
          geo%atom(i)%f(:) = geo%atom(i)%f(:) * units_out%force%factor
       end do
 
@@ -586,7 +586,7 @@ contains
       call push_sub('td_write_data')
 
       ! first write resume file
-      call zrestart_write(trim(tmpdir)//'restart_td', st, sys%gr, ierr, iter)
+      call zrestart_write(trim(tmpdir)//'restart_td', st, gr, ierr, iter)
       if(ierr.ne.0) then
          message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_td"'
          call write_fatal(1)
@@ -599,7 +599,7 @@ contains
                write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
 
                call doutput_function(restart_format, trim(tmpdir)//"restart_td", &
-                    filename, m, sys%gr%sb, td%tr%v_old(1:m%np, is, i), M_ONE, ierr)
+                    filename, gr%m, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr)
 
                if(ierr.ne.0) then
                   write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
@@ -610,7 +610,7 @@ contains
       end if
 
       ! calculate projection onto the ground state
-      if(td%out_gsp) call td_write_gsp(out_gsp, m, st, td, iter)
+      if(td%out_gsp) call td_write_gsp(out_gsp, gr%m, st, td, iter)
 
       if(mpiv%node==0) then
          if(td%out_multip)  call write_iter_flush(out_multip)
@@ -627,13 +627,13 @@ contains
       ! now write down the rest
       write(filename, '(a,i7.7)') "td.", iter  ! name of directory
 
-      call zstates_output(st, sys%gr, filename, sys%outp)
+      call zstates_output(st, gr, filename, sys%outp)
       if(sys%outp%what(output_geometry)) &
            call atom_write_xyz(filename, "geometry", geo)
-      call hamiltonian_output(h, m, sys%gr%sb, filename, sys%outp)
+      call hamiltonian_output(h, gr%m, gr%sb, filename, sys%outp)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
-      call PES_output(td%PESv, m, st, iter, sys%outp%iter, td%dt)
+      call PES_output(td%PESv, gr%m, st, iter, sys%outp%iter, td%dt)
 #endif
 
       call pop_sub()

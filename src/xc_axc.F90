@@ -17,10 +17,9 @@
 !!
 !! $Id$
 
-subroutine xc_get_vxc_and_axc(xcs, m, f_der, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
+subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, ip, qtot)
+  type(grid_type),       intent(inout) :: gr
   type(xc_type), target, intent(in)    :: xcs
-  type(mesh_type),       intent(in)    :: m
-  type(f_der_type),      intent(inout) :: f_der
   FLOAT,                 intent(in)    :: rho(:, :), j(:,:,:)
   integer,               intent(in)    :: ispin
   FLOAT,                 intent(inout) :: vxc(:,:), axc(:,:,:)
@@ -38,25 +37,25 @@ subroutine xc_get_vxc_and_axc(xcs, m, f_der, rho, j, ispin, vxc, axc, ex, ec, ex
   call push_sub('xc_get_vxc_and_axc')
 
   !xc energy and potential in the absence of external magnetic fields
-  call xc_get_vxc(xcs, m, f_der, rho, ispin, vxc, ex, ec, ip, qtot)
+  call xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
 
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
-  allocate(v(m%np, conf%dim, spin_channels), f(m%np, conf%dim, spin_channels))
-  allocate(dedd(m%np, spin_channels), dedv(m%np, conf%dim, spin_channels))
+  allocate(v(NP, NDIM, spin_channels), f(NP, NDIM, spin_channels))
+  allocate(dedd(NP, spin_channels), dedv(NP, NDIM, spin_channels))
 
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
-    do id = 1, conf%dim
+    do id = 1, NDIM
       f(:, id, is) = j(:, id, is)/rho(:, is)
     end do
-    call df_curl(f_der, f(:,:,is), v(:,:,is))
+    call df_curl(gr%sb, gr%f_der, f(:,:,is), v(:,:,is))
   end do
 
-  allocate(l_dens(spin_channels), l_v(conf%dim, spin_channels))
-  allocate(l_dedd(spin_channels), l_dedv(conf%dim, spin_channels))
-  space_loop: do i = 1, m%np
+  allocate(l_dens(spin_channels), l_v(NDIM, spin_channels))
+  allocate(l_dedd(spin_channels), l_dedv(NDIM, spin_channels))
+  space_loop: do i = 1, NP
     ! make a local copy with the correct memory order
     l_dens (:) = rho(i, :)
     l_v(:,:)   = v(i, :,:)
@@ -68,7 +67,7 @@ subroutine xc_get_vxc_and_axc(xcs, m, f_der, rho, j, ispin, vxc, axc, ex, ec, ex
                   e, l_dedd(1), l_dedv(1,1))
     end select
 
-    exc_j = exc_j + sum(l_dens(:)) * e * m%vol_pp(i)
+    exc_j = exc_j + sum(l_dens(:)) * e * gr%m%vol_pp(i)
     
     ! store results
     dedd(i,:) = dedd(i,:) + l_dedd
@@ -79,11 +78,11 @@ subroutine xc_get_vxc_and_axc(xcs, m, f_der, rho, j, ispin, vxc, axc, ex, ec, ex
 
   ! add contributions to vxc and axc
   vxc = vxc + dedd
-  allocate(tmp(m%np, conf%dim))
+  allocate(tmp(NP, NDIM))
   do is = 1, spin_channels
-    call df_curl(f_der, dedv(:,:,is), tmp)
+    call df_curl(gr%sb, gr%f_der, dedv(:,:,is), tmp)
 
-    do id = 1, conf%dim
+    do id = 1, NDIM
       axc(:, id, is) = axc(:, id, is) - tmp(:, id)/rho(:, is)
       vxc(:, is) = vxc(:, is) - axc(:, id, is)*f(:, id, is)
     end do

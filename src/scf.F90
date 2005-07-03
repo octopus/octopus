@@ -74,11 +74,10 @@ module scf
 contains
 
 ! ---------------------------------------------------------
-subroutine scf_init(scf, m, st, geo, h)
+subroutine scf_init(gr, scf, st, h)
+  type(grid_type),        intent(in)    :: gr
   type(scf_type),         intent(inout) :: scf
-  type(mesh_type),        intent(in)    :: m
   type(states_type),      intent(in)    :: st
-  type(geometry_type),    intent(inout) :: geo
   type(hamiltonian_type), intent(in)    :: h
 
   integer :: dim
@@ -124,11 +123,11 @@ subroutine scf_init(scf, m, st, geo, h)
 
   ! Handle mixing now...
   dim = 1
-  if (h%d%cdft) dim = 1 + conf%dim
-  call mix_init(scf%smix, m%np, dim, st%d%nspin)
+  if (h%d%cdft) dim = 1 + NDIM
+  call mix_init(scf%smix, NP, dim, st%d%nspin)
 
   ! now the eigen solver stuff
-  call eigen_solver_init(scf%eigens, st, m, 25)
+  call eigen_solver_init(gr, scf%eigens, st, 25)
 
   ! Should the calculation be restricted to LCAO subspace?
   call loct_parse_logical(check_inp('SCFinLCAO'), .false., scf%lcao_restricted)
@@ -137,7 +136,7 @@ subroutine scf_init(scf, m, st, geo, h)
     call write_info(1)
   endif
 
-  call geometry_min_distance(geo, rmin)
+  call geometry_min_distance(gr%geo, rmin)
   call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, scf%lmm_r)
   scf%lmm_r = scf%lmm_r * units_inp%length%factor
 
@@ -179,7 +178,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   call push_sub('scf_run')
 
   if(scf%lcao_restricted) then
-    call lcao_init(lcao_data, gr, st, h)
+    call lcao_init(gr, lcao_data, st, h)
     if(.not.lcao_data%state == 1) then
       message(1) = 'Nothing to do'
       call write_fatal(1)
@@ -188,7 +187,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
 
   nspin = st%d%nspin
   dim = 1
-  if (h%d%cdft) dim = 1 + conf%dim
+  if (h%d%cdft) dim = 1 + NDIM
 
   allocate(rhoout(NP, dim, nspin), rhoin(NP, dim, nspin))
 
@@ -222,7 +221,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
     call X(states_calc_dens)(st, NP, st%rho)
     rhoout(:, 1, :) = st%rho
     if (h%d%cdft) then
-      call states_calc_physical_current(gr%m, gr%f_der, st, st%j)
+      call states_calc_physical_current(gr, st, st%j)
       rhoout(:, 2:dim, :) = st%j
     end if
     if (scf%what2mix == MIXPOT) then
@@ -322,7 +321,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   end if
 
   ! calculate forces
-  call X(epot_forces)(h%ep, gr, st)
+  call X(epot_forces)(gr, h%ep, st)
 
   ! output final information
   call scf_write_static("static", "info")
@@ -378,7 +377,7 @@ contains
   subroutine scf_write_static(dir, fname)
     character(len=*), intent(in) :: dir, fname
     
-    FLOAT :: e_dip(conf%dim, st%d%nspin), n_dip(conf%dim), angular(3), l2
+    FLOAT :: e_dip(NDIM, st%d%nspin), n_dip(3), angular(3), l2
     FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
     integer :: iunit, i, j
     
@@ -430,25 +429,25 @@ contains
     
     ! Next lines of code calculate the dipole of the molecule, summing the electronic and
     ! ionic contributions.
-    if(conf%dim>0) call states_calculate_multipoles(gr%m, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
-    if(conf%dim>1) call states_calculate_multipoles(gr%m, st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
-    if(conf%dim>2) call states_calculate_multipoles(gr%m, st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
-    do j = 1, conf%dim
+    if(NDIM>0) call states_calculate_multipoles(gr, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
+    if(NDIM>1) call states_calculate_multipoles(gr, st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
+    if(NDIM>2) call states_calculate_multipoles(gr, st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
+    do j = 1, NDIM
       e_dip(j, 1) = sum(e_dip(j, :))
     end do
     call geometry_dipole(gr%geo, n_dip)
-    n_dip(:) = n_dip(:) - e_dip(:, 1)
+    n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(1:NDIM, 1)
     write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
-    do j = 1, conf%dim
+    do j = 1, NDIM
       write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &
          n_dip(j)*ATOMIC_TO_DEBYE
     end do
     write(iunit,'(a)')
     
-    if(conf%dim==3) then
+    if(NDIM==3) then
       call X(states_calc_angular)(gr, st, angular, l2 = l2)
       write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
-      do j = 1, conf%dim
+      do j = 1, NDIM
         write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
       enddo
       write(iunit,'(a)')

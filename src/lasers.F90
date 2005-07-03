@@ -28,6 +28,7 @@ use lib_oct_parser
 use lib_oct_gsl_spline
 use units
 use mesh
+use simul_box
 
 implicit none
 
@@ -233,41 +234,45 @@ subroutine laser_write_info(no_l, l, iunit)
 
 end subroutine laser_write_info
 
-subroutine laser_field(no_l, l, t, field)
+
+subroutine laser_field(sb, no_l, l, t, field)
+  type(simul_box_type), intent(in) :: sb
   integer,          intent(in)  :: no_l
   type(laser_type), intent(in)  :: l(no_l)
   FLOAT,            intent(in)  :: t
-  FLOAT,            intent(out) :: field(conf%dim)
+  FLOAT,            intent(out) :: field(sb%dim)
 
   CMPLX, allocatable :: amp(:)
   integer :: i
 
   if(no_l == 0) then
-    field(1:conf%dim) = M_ZERO
+    field(1:sb%dim) = M_ZERO
     return
   end if
 
   if(no_l == 1 .and. l(1)%envelope == 99) then
     i = int(abs(M_TWO*t/l(1)%dt) + M_HALF) ! steps of dt/2
-    field(1:conf%dim) = l(1)%numerical(1:conf%dim, i)
+    field(1:sb%dim) = l(1)%numerical(1:sb%dim, i)
   else
     allocate(amp(no_l));
     call laser_amplitude(no_l, l, t, amp)
     field = M_ZERO
     do i = 1, no_l
-      field(1:conf%dim) = field(1:conf%dim) + real(amp(i)*l(i)%pol(1:conf%dim))
+      field(1:sb%dim) = field(1:sb%dim) + real(amp(i)*l(i)%pol(1:sb%dim))
     end do
     deallocate(amp)
   end if
 
 end subroutine laser_field
 
+
 !returns the laser vector field A
-subroutine laser_vector_field(no_l, l, t, field)
+subroutine laser_vector_field(sb, no_l, l, t, field)
+  type(simul_box_type), intent(in) :: sb
   integer,          intent(in)  :: no_l
   type(laser_type), intent(in)  :: l(no_l)
   FLOAT,            intent(in)  :: t
-  FLOAT,            intent(out) :: field(conf%dim)
+  FLOAT,            intent(out) :: field(sb%dim)
 
   CMPLX, allocatable :: amp(:)
   integer :: i
@@ -276,7 +281,7 @@ subroutine laser_vector_field(no_l, l, t, field)
   call laser_vector_amplitude(no_l, l, t, amp)
   field = M_ZERO
   do i = 1, no_l
-    field(1:conf%dim) = field(1:conf%dim) + real(amp(i)*l(i)%pol(1:conf%dim))
+    field(1:sb%dim) = field(1:sb%dim) + real(amp(i)*l(i)%pol(1:sb%dim))
   end do
   deallocate(amp)
 

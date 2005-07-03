@@ -32,6 +32,7 @@ module curv_modine
   use messages
   use syslabels
   use units
+  use simul_box
   use geometry
   use lib_adv_alg
 
@@ -48,15 +49,15 @@ module curv_modine
 contains
 
   !-------------------------------------
-  subroutine curv_modine_init(l, cv)
-    FLOAT,                  intent(in)  :: l(:)  ! l(1:conf%dim)
+  subroutine curv_modine_init(sb, cv)
+    type(simul_box_type),   intent(in)  :: sb
     type(curv_modine_type), intent(out) :: cv
 
     call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
     call loct_parse_float(check_inp('CurvModineJBar'), M_HALF, cv%Jbar)
     
     cv%L = M_ZERO
-    cv%L(1:conf%dim) = l(1:conf%dim)/ cv%Jbar
+    cv%L(1:sb%dim) = sb%lsize(1:sb%dim) / cv%Jbar
 
     if(cv%xbar<M_ZERO.or.cv%xbar>M_ONE) then
       message(1) = 'The parameter "CurvModineXBar" must lie between 0 and 1.'
@@ -75,21 +76,22 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_modine_chi2x(cv, geo, chi_, x)
-    type(curv_modine_type), intent(in)  :: cv
+  subroutine curv_modine_chi2x(sb, geo, cv, chi_, x)
+    type(simul_box_type),   intent(in)  :: sb
     type(geometry_type),    intent(in)  :: geo
-    FLOAT,                  intent(in)  :: chi_(:)  ! chi_(conf%dim)
-    FLOAT,                  intent(out) :: x(:)     !   x (conf%dim)
+    type(curv_modine_type), intent(in)  :: cv
+    FLOAT,                  intent(in)  :: chi_(:)  ! chi_(sb%dim)
+    FLOAT,                  intent(out) :: x(:)     !   x (sb%dim)
  
     integer, parameter :: q = 3
 
-    FLOAT :: chibar(conf%dim), r, chi
+    FLOAT :: chibar(sb%dim), r, chi
     logical :: neg
     integer :: i
     
     chibar = cv%xbar*cv%L(:)
 
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       neg = (chi_(i) < 0)
       chi = abs(chi_(i))
 
@@ -112,22 +114,23 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_modine_jacobian_inv(cv, geo, chi_, J)
-    type(curv_modine_type), intent(in)  :: cv
+  subroutine curv_modine_jacobian_inv(sb, geo, cv, chi_, J)
+    type(simul_box_type),   intent(in)  :: sb
     type(geometry_type),    intent(in)  :: geo
-    FLOAT,                  intent(in)  :: chi_(:)  ! chi(conf%dim)
-    FLOAT,                  intent(out) :: J(:,:)   ! J(conf%dim,conf%dim), the Jacobian
+    type(curv_modine_type), intent(in)  :: cv
+    FLOAT,                  intent(in)  :: chi_(:)  ! chi(sb%dim)
+    FLOAT,                  intent(out) :: J(:,:)   ! J(sb%dim,sb%dim), the Jacobian
  
     integer, parameter :: q = 3
 
-    FLOAT :: chibar(conf%dim), r, f, chi, J2(conf%dim), x(conf%dim)
+    FLOAT :: chibar(sb%dim), r, f, chi, J2(sb%dim), x(sb%dim)
     logical :: neg
     integer :: i, ix, iy
     
     chibar = cv%xbar*cv%L(:)
 
     J2(:) = M_ZERO
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       neg = (chi_(i) < 0)
       chi = abs(chi_(i))
 
@@ -152,16 +155,16 @@ contains
       r = max(sqrt(sum((x - geo%atom(i)%x)**2)), CNST(1e-6))
       f = exp(-r**2/(M_TWO*cv%Jrange**2))
 
-      do ix = 1, conf%dim
+      do ix = 1, sb%dim
         J(ix, ix) = M_ONE - cv%Jlocal*f
-        do iy = 1, conf%dim
+        do iy = 1, sb%dim
           J(ix, iy) = J(ix, iy) + cv%Jlocal*(x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy)) * &
              M_TWO/(M_TWO*cv%Jrange**2) * f
         end do
       end do
     end do
 
-    do ix = 1, conf%dim
+    do ix = 1, sb%dim
       J(ix,:) = J(ix,:)*J2(:)
     end do
 

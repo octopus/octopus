@@ -61,7 +61,7 @@ module lcao
 
 contains
 
-subroutine lcao_init(lcao_data, gr, st, h)
+subroutine lcao_init(gr, lcao_data, st, h)
   type(lcao_type),         intent(out)   :: lcao_data
   type(grid_type), target, intent(inout) :: gr
   type(states_type),       intent(in)    :: st
@@ -74,7 +74,7 @@ subroutine lcao_init(lcao_data, gr, st, h)
 
   R_TYPE, allocatable :: hpsi(:,:)
 
-  if(conf%dim.ne.3) return
+  if(NDIM.ne.3) return
   if(lcao_data%state == 1) return
 
   call push_sub('lcao_init')
@@ -203,7 +203,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   FLOAT, allocatable :: ev(:)
 
   ASSERT(lcao_data%state == 1)
-  if(conf%dim.ne.3) return
+  if(sb%dim.ne.3) return
 
   call push_sub('lcao_wf')
 

@@ -66,7 +66,7 @@ module v_ks
 contains
 
   ! ---------------------------------------------------------
-  subroutine v_ks_init(ks, gr, d)
+  subroutine v_ks_init(gr, ks, d)
     type(v_ks_type),        intent(out)   :: ks
     type(grid_type),        intent(inout) :: gr
     type(states_dim_type),  pointer       :: d
@@ -99,7 +99,7 @@ contains
 
       message(1) = "Info: Init Exchange-Correlation"
       call write_info(1)
-      call xc_init(ks%xc, d%spin_channels, d%cdft)
+      call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
       
       ! check for SIC

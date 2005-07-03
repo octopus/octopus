@@ -75,10 +75,10 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
       message(1) = "TDCDFT not yet implemented"
       call write_fatal(1)
     end if
-    call X(vlasers)  (h, gr%m, gr%f_der, psi, hpsi, t)
+    call X(vlasers)  (gr, h, psi, hpsi, t)
     call X(vborders) (h, psi, hpsi)
   elseif (h%d%cdft) then
-    call X(current_extra_terms) (h, gr%m, gr%f_der, psi, hpsi, ik)
+    call X(current_extra_terms) (gr, h, psi, hpsi, ik)
   end if
 
   call pop_sub()
@@ -171,7 +171,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 
   if(simul_box_is_periodic(gr%sb)) then
 #if defined(COMPLEX_WFNS)
-    allocate(grad(NP, conf%dim))
+    allocate(grad(NP, NDIM))
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
@@ -191,7 +191,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   
   else
     do idim = 1, h%d%dim
-      call X(f_laplacian) (gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
     end do
     call lalg_scal(NP, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
   end if
@@ -205,10 +205,9 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 end subroutine X(kinetic)
 
 ! ---------------------------------------------------------
-subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
+subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
+  type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(in)    :: h
-  type(mesh_type),        intent(in)    :: m
-  type(f_der_type),       intent(inout) :: f_der
   R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
@@ -219,7 +218,7 @@ subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
 
   call push_sub('current_extra_terms')
 
-  do idim = 1, conf%dim
+  do idim = 1, NDIM
     select case(h%d%ispin)
     case(UNPOLARIZED)
       hpsi(:, 1) = hpsi(:, 1) + h%ahxc(:, idim, 1)*h%ahxc(:, idim, 1)*psi(:, 1)
@@ -234,16 +233,16 @@ subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
     end select
   end do
 
-  allocate(div(m%np))
+  allocate(div(NP))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-    call df_divergence(f_der, h%ahxc(:, :, 1), div)
+    call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(1:, 1)
   case(SPIN_POLARIZED)
     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-      call df_divergence(f_der, h%ahxc(:, :, 1), div)
+      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
     else
-      call df_divergence(f_der, h%ahxc(:, :, 2), div)
+      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
     end if
     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(1:, 1)
   case(SPINORS)
@@ -251,16 +250,16 @@ subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
   end select
   deallocate(div)
 
-  allocate(grad(m%np, conf%dim))
+  allocate(grad(NP, NDIM))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-    call X(f_gradient)(f_der, psi(:, 1), grad)
-    do k = 1, m%np
+    call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
+    do k = 1, NP
       hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k,:, 1), grad(k, :))
     end do
   case(SPIN_POLARIZED)
-    call X(f_gradient)(f_der, psi(:, 1), grad)
-    do k = 1, m%np
+    call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
+    do k = 1, NP
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
         hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 1), grad(k, :))
       else
@@ -272,7 +271,7 @@ subroutine X(current_extra_terms) (h, m, f_der, psi, hpsi, ik)
   end select
 
   if (associated(h%ep%a)) then
-    do k = 1, m%np
+    do k = 1, NP
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%a(k, :), h%ep%a(k, :))*psi(k, :)
 
       select case(h%d%ispin)
@@ -434,17 +433,16 @@ end subroutine X(vlpsi)
 
 
 ! ---------------------------------------------------------
-subroutine X(vlasers) (h, m, f_der, psi, hpsi, t)
-  type(hamiltonian_type), intent(IN)    :: h
-  type(mesh_type),        intent(IN)    :: m
-  type(f_der_type),       intent(inout) :: f_der
+subroutine X(vlasers) (gr, h, psi, hpsi, t)
+  type(grid_type),        intent(inout) :: gr
+  type(hamiltonian_type), intent(in)    :: h
   R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   FLOAT, intent(in) :: t
 
   integer :: k, idim
-  FLOAT :: x(conf%dim), v, a(conf%dim)
+  FLOAT :: x(NDIM), v, a(NDIM)
   R_TYPE, allocatable :: grad(:,:)
 
   call push_sub('vlasers')
@@ -453,19 +451,19 @@ subroutine X(vlasers) (h, m, f_der, psi, hpsi, t)
     select case(h%gauge)
     case(1) ! length gauge
 
-      do k = 1, m%np
-        call epot_laser_scalar_pot(h%ep, m%x(k,:), t, v)
+      do k = 1, NP
+        call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t, v)
 
         hpsi(k,:) = hpsi(k,:) + v * psi(k,:)
       end do
 
     case(2) ! velocity gauge
 
-      call epot_laser_vector_pot(h%ep, t, a)
-      allocate(grad(m%np, conf%dim))
+      call epot_laser_vector_pot(gr%sb, h%ep, t, a)
+      allocate(grad(NP, NDIM))
       do idim = 1, h%d%dim
-        call X(f_gradient)(f_der, psi(:, idim), grad)
-        do k = 1, m%np
+        call X(f_gradient)(gr%sb, gr%f_der, psi(:, idim), grad)
+        do k = 1, NP
           hpsi(k, idim) = hpsi(k, idim) - M_zI * sum(a(:)*grad(k,:)) + &
                sum(a**2)/M_TWO * psi(k, idim)
         end do

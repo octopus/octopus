@@ -136,14 +136,14 @@ contains
     if(loct_parse_block(check_inp('StaticElectricField'), blk)==0) then
       select case(loct_parse_block_n(blk))
       case (1)
-        do i = 1, conf%dim
+        do i = 1, NDIM
           call loct_parse_block_float(blk, 0, i-1, ep%e(i))
         end do
       end select
       call loct_parse_block_end(blk)
 
       !Compute the scalar potential
-      allocate(ep%v(NP), x(conf%dim))
+      allocate(ep%v(NP), x(NDIM))
       do i = 1, NP
         ep%v(i) = sum(gr%m%x(i,:)*ep%e(:))
       end do
@@ -155,7 +155,7 @@ contains
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
       select case(loct_parse_block_n(blk))
       case (1)
-        select case (conf%dim)
+        select case (NDIM)
         case (1)
         case (2)
           if (loct_parse_block_cols(blk, 0) /= 1) then
@@ -176,10 +176,10 @@ contains
       call loct_parse_block_end(blk)
 
       !Compute the vector potential
-      allocate(ep%a(NP, conf%dim), x(conf%dim))
+      allocate(ep%a(NP, NDIM), x(NDIM))
       do i = 1, NP
         x = gr%m%x(i, :)
-        select case (conf%dim)
+        select case (NDIM)
         case (2)
           ep%a(i, :) = -M_HALF*(/x(2)*ep%b(1), x(1)*ep%b(1)/)
         case (3)
@@ -309,7 +309,7 @@ contains
       cf => ep%local_cf(i)
       
       if(i == 1) then
-        call mesh_double_box(m, sb, db)
+        call mesh_double_box(sb, m, db)
         call dcf_new(db, cf)    ! initialize the cube
         call dcf_fft_init(cf, sb)   ! and initialize the ffts
         db = cf%n               ! dimensions of the box may have been optimized, so get them
@@ -347,7 +347,7 @@ contains
               x = temp(:)*ixx(:)
               modg = sqrt(sum((temp(:)*ixx(:))**2))
 
-              tmp = specie_get_local_fourier(s, x)
+              tmp = specie_get_local_fourier(sb%dim, s, x)
               if(modg /= M_ZERO) then
                 tmp = tmp - s%z_val*exp(-(modg/(2*a_erf))**2)/modg**2
                 select case(vlocal_cutoff)
@@ -432,7 +432,7 @@ contains
     geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
-    if(sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(sb).and.(.not.conf%only_user_def)) then
       call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
@@ -491,7 +491,7 @@ contains
     end do
 
 #ifdef HAVE_FFT
-    if(sb%periodic_dim>0.and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(sb).and.(.not.conf%only_user_def)) then
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)
@@ -521,7 +521,7 @@ contains
       
       call push_sub('build_local_part')
 
-      if(sb%periodic_dim==0.or.conf%only_user_def) then
+      if((.not.simul_box_is_periodic(sb)).or.conf%only_user_def) then
         do i = 1, m%np
           x(:) = m%x(i, :) - a%x(:)
           ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x)
@@ -531,9 +531,9 @@ contains
         end do
 #ifdef HAVE_FFT
       else ! momentum space
-        call cf_phase_factor(m, a%x, ep%local_cf(s%index), cf_loc)
+        call cf_phase_factor(sb, m, a%x, ep%local_cf(s%index), cf_loc)
         if(s%nlcc) then
-          call cf_phase_factor(m, a%x, ep%rhocore_cf(s%index), cf_nlcc)
+          call cf_phase_factor(sb, m, a%x, ep%rhocore_cf(s%index), cf_nlcc)
         end if
 #endif
       end if
@@ -759,38 +759,44 @@ contains
     call pop_sub()
   end subroutine epot_generate_classic
 
-  subroutine epot_laser_scalar_pot(ep, x, t, v)
+  subroutine epot_laser_scalar_pot(sb, ep, x, t, v)
+    type(simul_box_type), intent(in) :: sb
     type(epot_type), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
-    FLOAT,           intent(in)  :: x(conf%dim)
+    FLOAT,           intent(in)  :: x(sb%dim)
     FLOAT,           intent(out) :: v
 
     FLOAT, allocatable :: e(:)
 
-    allocate(e(conf%dim))
-    call laser_field(ep%no_lasers, ep%lasers, t, e)
+    allocate(e(sb%dim))
+    call laser_field(sb, ep%no_lasers, ep%lasers, t, e)
     v = sum(e*x)
     deallocate(e)
 
   end subroutine epot_laser_scalar_pot
 
-  subroutine epot_laser_vector_pot(ep, t, a)
+
+  subroutine epot_laser_vector_pot(sb, ep, t, a)
+    type(simul_box_type), intent(in) :: sb
     type(epot_type), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
-    FLOAT,           intent(out) :: a(conf%dim)
+    FLOAT,           intent(out) :: a(sb%dim)
 
-    call laser_vector_field(ep%no_lasers, ep%lasers, t, a)
+    call laser_vector_field(sb, ep%no_lasers, ep%lasers, t, a)
 
   end subroutine epot_laser_vector_pot
 
-  subroutine epot_laser_field(ep, t, e)
+
+  subroutine epot_laser_field(sb, ep, t, e)
+    type(simul_box_type), intent(in) :: sb
     type(epot_type), intent(in)  :: ep
     FLOAT,           intent(in)  :: t
-    FLOAT,           intent(out) :: e(conf%dim)
+    FLOAT,           intent(out) :: e(sb%dim)
 
-    call laser_field(ep%no_lasers, ep%lasers, t, e)
+    call laser_field(sb, ep%no_lasers, ep%lasers, t, e)
 
   end subroutine epot_laser_field
+
 
   ! This subroutine deallocates (if associated) every component of a nonlocal operator
   ! type variabel, except for jxyz. This is not very elegant, but it helps with performance.

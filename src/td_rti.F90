@@ -224,7 +224,7 @@ contains
       do ik = 1, st%d%nik
          do ist = 1, st%nst
             if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .true.)
-            call zexp_vlpsi (gr%m, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
+            call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, t-dt*M_HALF, -M_zI*dt)
             if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, st%zpsi(:, :, ist, ik), -M_zI*dt, .false.)
          enddo
       enddo
@@ -256,14 +256,14 @@ contains
          call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, time(k))
          do ik = 1, st%d%nik
             do ist = 1, st%nst
-               call zexp_vlpsi (gr%m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
                if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, &
                   st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
 
                call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
                if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, &
                   st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
-               call zexp_vlpsi (gr%m, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
+               call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             enddo
          enddo
       enddo
@@ -384,7 +384,7 @@ contains
           select case(h%gauge)
           case(1) ! length gauge
             do k = 1, NP
-               call epot_laser_scalar_pot(h%ep, gr%m%x(k,:), t-dt+time(j), v)
+               call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t-dt+time(j), v)
                do is = 1, st%d%spin_channels
                   vaux(k, is, j) = vaux(k, is, j) + v
                enddo

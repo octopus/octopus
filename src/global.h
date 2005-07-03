@@ -19,7 +19,8 @@
 
 #include "config_F90.h"
 
-#define NP gr%m%np
+#define NP   gr%m%np
+#define NDIM gr%sb%dim
 
 #define __STRING(x)     #x
 

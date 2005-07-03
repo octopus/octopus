@@ -56,6 +56,7 @@ module simul_box
   
     FLOAT :: fft_alpha ! enlargement factor for double box
 
+    integer :: dim
     integer :: periodic_dim
 
   end type simul_box_type
@@ -96,6 +97,21 @@ contains
         call write_fatal(2)
       end if
 
+      !%Variable Dimensions
+      !%Type integer
+      !%Section 1 Generalities
+      !%Description
+      !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
+      !% variable. Note that not all input variables may be available in all cases.
+      !%Option 1
+      !% The system is 1-dimensional
+      !%Option 2
+      !% The system is 2-dimensional
+      !%Option 3
+      !% The system is 3-dimensional (default)
+      !%End
+      call loct_parse_int(check_inp('Dimensions'), 3, sb%dim)
+      if(sb%dim<1 .or. sb%dim>3) call input_error('Dimensions')
 
       !%Variable PeriodicDimensions
       !%Type integer
@@ -113,10 +129,10 @@ contains
       !%End
       call loct_parse_int(check_inp('PeriodicDimensions'), 0, sb%periodic_dim)
       if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > 3)) then
-        message(1) = 'Periodic dimensions must be either 0, 1, 2, or 3'
-        call write_fatal(1)
-      endif
-      if(sb%periodic_dim > conf%dim) then
+        call input_error('PeriodicDimensions')
+      end if
+
+      if(sb%periodic_dim > sb%dim) then
         message(1) = 'PeriodicDimensions must be <= Dimensions'
         call write_fatal(1)
       end if
@@ -138,13 +154,13 @@ contains
       
       select case(sb%box_shape)
       case(SPHERE,MINIMUM)
-        if(conf%dim>1 .and. simul_box_is_periodic(sb)) then
+        if(sb%dim>1 .and. simul_box_is_periodic(sb)) then
           message(1) = 'Spherical or minimum mesh is not allowed for periodic systems'
           call write_fatal(1)
         end if
       case(CYLINDER)
-        if (conf%dim>2 .and. &
-           ((conf%dim - sb%periodic_dim == 0) .or. (conf%dim - sb%periodic_dim == 1))) then
+        if (sb%dim>2 .and. &
+           ((sb%dim - sb%periodic_dim == 0) .or. (sb%dim - sb%periodic_dim == 1))) then
           message(1) = 'Cylindrical mesh is not allowed for systems'
           message(2) = 'that are periodic in more than one dimension'
           call write_fatal(2)
@@ -152,7 +168,7 @@ contains
       end select
       
       ! ignore box_shape in 1D
-      if(conf%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
+      if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
       
       sb%rsize = -M_ONE
       if(sb%box_shape == MINIMUM.and.def_rsize>M_ZERO) sb%rsize = def_rsize/units_inp%length%factor
@@ -181,7 +197,7 @@ contains
       if(sb%box_shape == PARALLELEPIPED) then
         
         if(loct_parse_block(check_inp('lsize'), blk) == 0) then
-          if(loct_parse_block_cols(blk,0) < conf%dim) then
+          if(loct_parse_block_cols(blk,0) < sb%dim) then
             message(1) = 'Size of Block "lsize" does not match number of dimensions'
             call write_fatal(1)
           endif
@@ -190,7 +206,7 @@ contains
           call write_fatal(1)
         endif
      
-        do i = 1, conf%dim
+        do i = 1, sb%dim
           call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
           if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'lsize')
         end do
@@ -202,12 +218,12 @@ contains
       ! fill in lsize structure
       select case(sb%box_shape)
       case(SPHERE)
-        sb%lsize(1:conf%dim) = sb%rsize
+        sb%lsize(1:sb%dim) = sb%rsize
       case(CYLINDER)
         sb%lsize(1)          = sb%xsize
-        sb%lsize(2:conf%dim) = sb%rsize
+        sb%lsize(2:sb%dim) = sb%rsize
       case(MINIMUM)
-        do i = 1, conf%dim
+        do i = 1, sb%dim
           sb%lsize(i)        = maxval(geo%atom(:)%x(i)) + sb%rsize
         end do
       end select
@@ -224,11 +240,11 @@ contains
       select case(sb%box_shape)
       case(SPHERE,CYLINDER,MINIMUM)
         call loct_parse_float(check_inp('spacing'), sb%h(1), sb%h(1))
-        sb%h(1:conf%dim) = sb%h(1)
+        sb%h(1:sb%dim) = sb%h(1)
         
       case(PARALLELEPIPED)
         if(loct_parse_block(check_inp('spacing'), blk) == 0) then
-          do i = 1, conf%dim
+          do i = 1, sb%dim
             call loct_parse_block_float(blk, 0, i-1, sb%h(i))
           end do
           call loct_parse_block_end(blk)
@@ -238,7 +254,7 @@ contains
         endif
       end select
       
-      do i = 1, conf%dim
+      do i = 1, sb%dim
         sb%h(i) = sb%h(i)*units_inp%length%factor
         if(sb%h(i) < M_ZERO) then
           if(def_h > M_ZERO) then
@@ -270,7 +286,7 @@ contains
       select case(sb%box_shape)
       case(PARALLELEPIPED)
         if(loct_parse_block(check_inp('BoxOffset'), blk) == 0) then
-          do i = 1, conf%dim
+          do i = 1, sb%dim
             call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
           end do
           call loct_parse_block_end(blk)
@@ -367,6 +383,7 @@ contains
             sb%lsize(3)/units_out%length%factor, ')'
 
 
+    write(iunit, '(a,i1,a)') 'The octopus will run in ', sb%dim, ' dimension(s).'
     write(iunit, '(a,i1,a)') 'The octopus will treat the system as periodic in ', &
        sb%periodic_dim, ' dimension(s)'
 

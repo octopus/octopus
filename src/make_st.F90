@@ -27,6 +27,7 @@ program make_st
   use units
   use lib_oct_parser
   use mesh
+  use grid
   use states
   use restart
   use system
@@ -71,7 +72,7 @@ program make_st
     call loct_parse_block_int(blk, i-1, 3, type)
     select case(type)
     case(1)
-      call wf_gaussian(sys%gr%m, sys%st, i-1)
+      call wf_gaussian(sys%gr, sys%st, i-1)
     end select
   end do
   call loct_parse_block_end(blk)
@@ -93,8 +94,8 @@ program make_st
   call global_end()
 
 contains
-  subroutine wf_gaussian(m, st, line)
-    type(mesh_type),   intent(in)    :: m
+  subroutine wf_gaussian(gr, st, line)
+    type(grid_type),   intent(in)    :: gr
     type(states_type), intent(inout) :: st
     integer,           intent(in)    :: line
     
@@ -107,23 +108,23 @@ contains
     s = s * units_inp%length%factor
 
     j = 5
-    do i = 1, conf%dim
+    do i = 1, NDIM
       call loct_parse_block_float(blk, line, j,  x1(i))
       x1(i) = x1(i) * units_inp%length%factor
       j = j + 1
     end do
 
-    do i = 1, conf%dim
+    do i = 1, NDIM
       call loct_parse_block_float(blk, line, j,  k(i))
       k(i) = k(i) / units_inp%length%factor
       j = j + 1
     end do
     
     ! build a gaussian
-    do i = 1, m%np
-      x = m%x(i,:)
-      st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:conf%dim)-x1(1:conf%dim))**2)/(2*s*s) + &
-           M_zI*sum(k(1:conf%dim)*(x(1:conf%dim)-x1(1:conf%dim))))
+    do i = 1, NP
+      x = gr%m%x(i,:)
+      st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:NDIM)-x1(1:NDIM))**2)/(2*s*s) + &
+           M_zI*sum(k(1:NDIM)*(x(1:NDIM)-x1(1:NDIM))))
     end do
     
   end subroutine wf_gaussian

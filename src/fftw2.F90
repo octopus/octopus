@@ -98,14 +98,14 @@ contains
 
     ! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
-    !    do i = sb%periodic_dim + 1, conf%dim 
+    !    do i = sb%periodic_dim + 1, sb%dim 
     !      if (n(i) /= 1 .and. fft_optimize) &
     !           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
     !    end do    
     ! NEW
     ! optimize dimensions only for finite sys
-    if(simul_box_is_periodic(sb) == 0) then
-      do i = 1, conf%dim 
+    if(simul_box_is_periodic(sb)) then
+      do i = 1, sb%dim 
         if(n(i).ne.1 .and. fft_optimize) &
            call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
       end do
@@ -138,14 +138,14 @@ contains
     fft_array(j)%n       = n
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
-      call rfftwnd_f77_create_plan(fft_array(j)%planf, conf%dim, n, &
+      call rfftwnd_f77_create_plan(fft_array(j)%planf, sb%dim, n, &
            fftw_real_to_complex + fftw_forward,  fftw_measure + fftw_threadsafe)
-      call rfftwnd_f77_create_plan(fft_array(j)%planb, conf%dim, n, &
+      call rfftwnd_f77_create_plan(fft_array(j)%planb, sb%dim, n, &
            fftw_complex_to_real + fftw_backward, fftw_measure + fftw_threadsafe)
     else
-      call  fftwnd_f77_create_plan(fft_array(j)%planf, conf%dim, n, &
+      call  fftwnd_f77_create_plan(fft_array(j)%planf, sb%dim, n, &
            fftw_forward,  fftw_measure + fftw_threadsafe)
-      call  fftwnd_f77_create_plan(fft_array(j)%planb, conf%dim, n, &
+      call  fftwnd_f77_create_plan(fft_array(j)%planb, sb%dim, n, &
            fftw_backward, fftw_measure + fftw_threadsafe)
     end if
     fft = fft_array(j)

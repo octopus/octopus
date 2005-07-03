@@ -72,7 +72,7 @@ contains
   
     call push_sub('poisson_init')
   
-    select case(conf%dim)
+    select case(NDIM)
     case(1); call init_1D()
     case(2); call init_2D()
     case(3); call init_3D()
@@ -82,7 +82,7 @@ contains
 
     !-----------------------------------------------------------------
     subroutine init_1D()
-      poisson_solver = -conf%dim ! internal type
+      poisson_solver = -NDIM ! internal type
       message(1) = 'Info: Using direct integration method to solve poisson equation'
       call write_info(1)
     end subroutine init_1D
@@ -101,12 +101,12 @@ contains
       endif
       
 #else
-      poisson_solver = -conf%dim ! internal type
+      poisson_solver = -NDIM ! internal type
       message(1) = 'Info: Using direct integration method to solve poisson equation'
       call write_info(1)
 #endif
 
-      if(gr%m%use_curvlinear .and. (poisson_solver .ne. -conf%dim) ) then
+      if(gr%m%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
         message(1) = 'If curvilinear coordinates are used in 2D, then the only working'
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
         call write_fatal(2)

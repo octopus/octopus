@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-subroutine td_init(td, gr, st, h, outp)
+subroutine td_init(gr, td, st, h, outp)
   type(td_type),          intent(out)   :: td
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
@@ -58,7 +58,7 @@ subroutine td_init(td, gr, st, h, outp)
   !!! read in the default direction for the polarization
   td%pol(:) = M_ZERO
   if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
-    do i = 1, conf%dim
+    do i = 1, NDIM
       call loct_parse_block_float(blk, 0, i-1, td%pol(i))
     end do
     call loct_parse_block_end(blk)

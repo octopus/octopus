@@ -60,14 +60,14 @@ contains
     call simul_box_init(gr%sb, gr%geo)
 
     ! initialize curvlinear coordinates
-    call curvlinear_init(gr%sb%lsize(:), gr%cv)
+    call curvlinear_init(gr%sb, gr%cv)
 
     ! initilize derivatives
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
-    call mesh_init(gr%m, gr%sb, gr%cv, gr%geo, gr%f_der%n_ghost(1))
-    call f_der_build(gr%f_der, gr%m, gr%sb)
+    call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost(1))
+    call f_der_build(gr%sb, gr%m, gr%f_der)
 
     ! do we want to filter out the external potentials, or not.
     call loct_parse_logical(check_inp('FilterPotentials'), .false., filter)

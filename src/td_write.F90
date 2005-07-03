@@ -180,12 +180,11 @@ subroutine td_write_angular(out, gr, st, iter)
   call pop_sub()
 end subroutine td_write_angular
 
-subroutine td_write_multipole(out, mesh, st, geo, td, iter)
-  integer(POINTER_SIZE), intent(IN) :: out
-  type(mesh_type),       intent(IN) :: mesh
-  type(states_type),     intent(IN) :: st
-  type(geometry_type),   intent(IN) :: geo
-  type(td_type),         intent(IN) :: td
+subroutine td_write_multipole(gr, out, st, td, iter)
+  type(grid_type),       intent(in) :: gr
+  integer(POINTER_SIZE), intent(in) :: out
+  type(states_type),     intent(in) :: st
+  type(td_type),         intent(in) :: td
   integer,               intent(in) :: iter
   
   integer :: is, j, l, m, add_lm
@@ -210,7 +209,7 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
       write(aux, '(a,i1,a)') 'dipole(', is, ')'
       call write_iter_header(out, aux)
     end do
-    do j = 1, conf%dim
+    do j = 1, NDIM
       write(aux,'(a,i1,a)')  'n.dip.(', j,  ')'
       call write_iter_header(out, aux)
     enddo
@@ -231,7 +230,7 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
     do is = 1, st%d%nspin
       call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
     end do
-    do j = 1, conf%dim
+    do j = 1, NDIM
       call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
     enddo
 
@@ -253,15 +252,15 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
     call write_iter_nl(out)
   end if
     
-  allocate(dipole(st%d%nspin), nuclear_dipole(conf%dim), multipole((td%lmax + 1)**2, st%d%nspin))
-  call states_calculate_multipoles(mesh, st, td%pol, dipole, td%lmax, multipole)
-  call geometry_dipole(geo, nuclear_dipole)
+  allocate(dipole(st%d%nspin), nuclear_dipole(NDIM), multipole((td%lmax + 1)**2, st%d%nspin))
+  call states_calculate_multipoles(gr, st, td%pol, dipole, td%lmax, multipole)
+  call geometry_dipole(gr%geo, nuclear_dipole)
   
   call write_iter_start(out)
   do is = 1, st%d%nspin
     call write_iter_double(out, dipole(is)/units_out%length%factor, 1)
   end do
-  do j = 1, conf%dim
+  do j = 1, NDIM
     call write_iter_double(out, nuclear_dipole(j)/units_out%length%factor, 1)
   enddo
   do is = 1, st%d%nspin
@@ -279,9 +278,10 @@ subroutine td_write_multipole(out, mesh, st, geo, td, iter)
 
 end subroutine td_write_multipole
 
-subroutine td_write_nbo(out, geo, iter, ke, pe)
-  integer(POINTER_SIZE), intent(IN) :: out
-  type(geometry_type),   intent(IN) :: geo
+
+subroutine td_write_nbo(gr, out, iter, ke, pe)
+  type(grid_type),       intent(in) :: gr
+  integer(POINTER_SIZE), intent(in) :: out
   integer,               intent(in) :: iter
   FLOAT,                 intent(in) :: ke, pe
 
@@ -300,20 +300,20 @@ subroutine td_write_nbo(out, geo, iter, ke, pe)
     call write_iter_header(out, 'Epot')
     call write_iter_header(out, 'Etot')
     
-    do i = 1, geo%natoms
-      do j = 1, conf%dim
+    do i = 1, gr%geo%natoms
+      do j = 1, NDIM
         write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',', j, ')'
         call write_iter_header(out, aux)
       end do
     end do
-    do i = 1, geo%natoms
-      do j = 1, conf%dim
+    do i = 1, gr%geo%natoms
+      do j = 1, NDIM
         write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
         call write_iter_header(out, aux)
       end do
     end do
-    do i = 1, geo%natoms
-      do j = 1, conf%dim
+    do i = 1, gr%geo%natoms
+      do j = 1, NDIM
         write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
         call write_iter_header(out, aux)
       end do
@@ -336,14 +336,14 @@ subroutine td_write_nbo(out, geo, iter, ke, pe)
   call write_iter_double(out,     pe /units_out%energy%factor, 1)
   call write_iter_double(out, (ke+pe)/units_out%energy%factor, 1)
 
-  do i = 1, geo%natoms
-    call write_iter_double(out, geo%atom(i)%x(1:conf%dim)/units_out%length%factor,   conf%dim)
+  do i = 1, gr%geo%natoms
+    call write_iter_double(out, gr%geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
   end do
-  do i = 1, geo%natoms
-    call write_iter_double(out, geo%atom(i)%v(1:conf%dim)/units_out%velocity%factor, conf%dim)
+  do i = 1, gr%geo%natoms
+    call write_iter_double(out, gr%geo%atom(i)%v(1:NDIM)/units_out%velocity%factor, NDIM)
   end do
-  do i = 1, geo%natoms
-    call write_iter_double(out, geo%atom(i)%f(1:conf%dim)/units_out%force%factor,    conf%dim)
+  do i = 1, gr%geo%natoms
+    call write_iter_double(out, gr%geo%atom(i)%f(1:NDIM)/units_out%force%factor,    NDIM)
   end do
   call write_iter_nl(out)
   
@@ -400,9 +400,9 @@ subroutine td_write_gsp(out, m, st, td, iter)
   call pop_sub()
 end subroutine td_write_gsp
 
-subroutine td_write_acc(out, gr, st, h, td, iter)
-  integer(POINTER_SIZE),  intent(in)    :: out
+subroutine td_write_acc(gr, out, st, h, td, iter)
   type(grid_type),        intent(inout) :: gr
+  integer(POINTER_SIZE),  intent(in)    :: out
   type(states_type),      intent(in)    :: st
   type(hamiltonian_type), intent(IN)    :: h
   type(td_type),          intent(IN)    :: td
@@ -420,7 +420,7 @@ subroutine td_write_acc(out, gr, st, h, td, iter)
     
     ! first line -> column names
     call write_iter_header_start(out)
-    do i = 1, conf%dim
+    do i = 1, NDIM
       write(aux, '(a4,i1,a1)') 'Acc(', i, ')'
       call write_iter_header(out, aux)
     end do
@@ -429,7 +429,7 @@ subroutine td_write_acc(out, gr, st, h, td, iter)
     ! second line: units
     call write_iter_string(out, '##########')
     call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
-    do i = 1, conf%dim
+    do i = 1, NDIM
       call write_iter_header(out, '[' // trim(units_out%acceleration%abbrev) // ']')
     end do
     call write_iter_nl(out)
@@ -438,15 +438,17 @@ subroutine td_write_acc(out, gr, st, h, td, iter)
   call td_calc_tacc(gr, st, h, acc, td%dt*i, reduce = .true.)
   
   call write_iter_start(out)
-  call write_iter_double(out, acc/units_out%acceleration%factor, conf%dim)
+  call write_iter_double(out, acc/units_out%acceleration%factor, NDIM)
   call write_iter_nl(out)
   
 end subroutine td_write_acc
 
-subroutine td_write_laser(out, h, td, iter)
+
+subroutine td_write_laser(gr, out, h, td, iter)
+  type(grid_type),        intent(in) :: gr
   integer(POINTER_SIZE),  intent(in) :: out
-  type(hamiltonian_type), intent(IN) :: h
-  type(td_type),          intent(IN) :: td
+  type(hamiltonian_type), intent(in) :: h
+  type(td_type),          intent(in) :: td
   integer,                intent(in) :: iter
 
   integer :: i
@@ -468,11 +470,11 @@ subroutine td_write_laser(out, h, td, iter)
     
     ! second line -> column names
     call write_iter_header_start(out)
-    do i = 1, conf%dim
+    do i = 1, NDIM
       write(aux, '(a,i1,a)') 'E(', i, ')'
       call write_iter_header(out, aux)
     end do
-    do i = 1, conf%dim
+    do i = 1, NDIM
       write(aux, '(a,i1,a)') 'A(', i, ')'
       call write_iter_header(out, aux)
     end do
@@ -483,12 +485,12 @@ subroutine td_write_laser(out, h, td, iter)
     call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
     
     aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
-    do i = 1, conf%dim
+    do i = 1, NDIM
       call write_iter_header(out, aux)
     end do
     
     aux = '[1/' // trim(units_inp%length%abbrev) // ']'
-    do i = 1, conf%dim
+    do i = 1, NDIM
       call write_iter_header(out, aux)
     end do
     call write_iter_nl(out)
@@ -498,18 +500,19 @@ subroutine td_write_laser(out, h, td, iter)
   
   field = M_ZERO
 
-  call laser_field(h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
+  call laser_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
   field = field * units_inp%length%factor / units_inp%energy%factor
-  call write_iter_double(out, field, conf%dim)
+  call write_iter_double(out, field, NDIM)
   
-  call laser_vector_field(h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
+  call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
   field = field  * units_inp%length%factor
-  call write_iter_double(out, field, conf%dim)
+  call write_iter_double(out, field, NDIM)
   
   call write_iter_nl(out)
   
 end subroutine td_write_laser
     
+
 subroutine td_write_el_energy(out, h, iter)
   integer(POINTER_SIZE),  intent(in) :: out
   type(hamiltonian_type), intent(IN) :: h
@@ -551,11 +554,11 @@ subroutine td_write_el_energy(out, h, iter)
   
 end subroutine td_write_el_energy
 
-subroutine td_write_proj(out, m, st, u_st, iter)
+subroutine td_write_proj(gr, out, st, u_st, iter)
+  type(grid_type),       intent(in) :: gr
   integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),       intent(IN) :: m
-  type(states_type),     intent(IN) :: st
-  type(states_type),     intent(IN) :: u_st
+  type(states_type),     intent(in) :: st
+  type(states_type),     intent(in) :: u_st
   integer,               intent(in) :: iter
 
   CMPLX, allocatable :: projections(:,:,:)
@@ -581,7 +584,7 @@ subroutine td_write_proj(out, m, st, u_st, iter)
   endif
 
   allocate(projections(u_st%nst, st%st_start:st%st_end, st%d%nik))
-  call calc_projection(u_st, st, m, projections)
+  call calc_projection(gr%m, u_st, st, projections)
 
   call write_iter_start(out)
   do ik = 1, st%d%nik

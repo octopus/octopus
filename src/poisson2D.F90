@@ -49,8 +49,8 @@ contains
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
-       call mesh_double_box(gr%m, gr%sb, db)                 ! get dimensions of the double box
-       if (poisson_solver == FFT_SPH) db(1:conf%dim) = maxval(db)
+       call mesh_double_box(gr%sb, gr%m, db)                 ! get dimensions of the double box
+       if (poisson_solver == FFT_SPH) db(1:2) = maxval(db)
     else
        db(:) = m%l(:)
     endif

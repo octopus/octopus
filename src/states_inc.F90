@@ -168,7 +168,7 @@ subroutine X(states_output) (st, gr, dir, outp)
 
   call push_sub('states_output')
 
-  u = M_ONE/units_out%length%factor**conf%dim
+  u = M_ONE/units_out%length%factor**NDIM
 
 #ifdef HAVE_MPI
   if(mpiv%node == 0) then
@@ -215,7 +215,7 @@ subroutine X(states_output) (st, gr, dir, outp)
     deallocate(dtmp)
   end if
   
-  if(conf%dim==3) then
+  if(NDIM==3) then
     if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
     if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
   end if
@@ -266,11 +266,11 @@ contains
     allocate(c(NP))
 
     do_is: do is = 1, st%d%nspin
-      allocate(r(NP), gradr(NP, conf%dim), j(NP, conf%dim))
+      allocate(r(NP), gradr(NP, NDIM), j(NP, NDIM))
       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
       c = M_ZERO
 
-      allocate(psi_fs(NP), gpsi(NP, conf%dim))
+      allocate(psi_fs(NP), gpsi(NP, NDIM))
       do ik = is, st%d%nik, st%d%nspin
         do ist = 1, st%nst
           do idim = 1, st%d%dim
@@ -280,16 +280,16 @@ contains
             else
               call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
             end if
-            call zf_gradient(gr%f_der, psi_fs(:), gpsi)
+            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
 
             if(.not.rs) then
-              do i = 1, conf%dim
+              do i = 1, NDIM
                 gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
               end do
             end if
 
             r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-            do i = 1, conf%dim
+            do i = 1, NDIM
               gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
                  M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
               j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
@@ -299,7 +299,7 @@ contains
             do i = 1, NP
               if(r(i) >= dmin) then
                 c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                   sum(abs(gpsi(i, 1:conf%dim))**2)
+                   sum(abs(gpsi(i, 1:NDIM))**2)
               end if
             end do
           end do
@@ -309,7 +309,7 @@ contains
 
       do i = 1, NP
         if(r(i) >= dmin) then
-          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:conf%dim)**2) + sum(j(i, 1:conf%dim)**2))/(s*r(i))
+          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
         end if
       end do
 
@@ -459,20 +459,20 @@ subroutine X(states_calc_angular)(gr, st, angular, l2)
   call push_sub('states_calc_angular')
 
   temp = M_ZERO; ltemp = M_ZERO
-  allocate(lpsi(NP, conf%dim))
+  allocate(lpsi(NP, NDIM))
   do ik = 1, st%d%nik
     do j  = st%st_start, st%st_end
       do idim = 1, st%d%dim
 #if defined(R_TREAL)
         temp = M_ZERO ! The expectation value of L of *any* real function is null
 #else
-        call X(f_angular_momentum)(gr%f_der, st%X(psi)(:, idim, j, ik), lpsi)
+        call X(f_angular_momentum)(gr%sb, gr%f_der, st%X(psi)(:, idim, j, ik), lpsi)
         temp(1) = temp(1) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
         temp(2) = temp(2) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 2))
         temp(3) = temp(3) + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 3))
 #endif
         if(present(l2)) then
-          call X(f_l2)(gr%f_der, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
+          call X(f_l2)(gr%sb, gr%f_der, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
           ltemp = ltemp + st%occ(j, ik)*X(mf_dotp)(gr%m, st%X(psi)(:, idim, j, ik), lpsi(:, 1))
         end if
       end do

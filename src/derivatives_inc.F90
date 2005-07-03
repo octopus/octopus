@@ -74,10 +74,11 @@
 
 
   ! ---------------------------------------------------------
-  subroutine X(derivatives_grad)(der, f, grad)
+  subroutine X(derivatives_grad)(sb, der, f, grad)
+    type(simul_box_type), intent(in)  :: sb
     type(der_discr_type), intent(in)  :: der
     R_TYPE, target,       intent(in)  :: f(:)       ! f(m%np)
-    R_TYPE,               intent(out) :: grad(:,:)  ! grad(m%np,conf%dim)
+    R_TYPE,               intent(out) :: grad(:,:)  ! grad(m%np, sb%dim)
 
     R_TYPE, pointer :: fp(:)
     integer :: i
@@ -90,17 +91,19 @@
       fp => f
     end if
 
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       call X(nl_operator_operate) (der%grad(i), fp, grad(:,i))
     end do
 
     if(der%zero_bc) deallocate(fp)
   end subroutine X(derivatives_grad)
 
+
   ! ---------------------------------------------------------
-  subroutine X(derivatives_div)(der, f, div)
+  subroutine X(derivatives_div)(sb, der, f, div)
+    type(simul_box_type), intent(in)  :: sb
     type(der_discr_type), intent(in)  :: der
-    R_TYPE, target,       intent(in)  :: f(:,:)   ! f(m%np, conf%dim)
+    R_TYPE, target,       intent(in)  :: f(:,:)   ! f(m%np, sb%dim)
     R_TYPE,               intent(out) :: div(:)   ! div(m%np)
 
     R_TYPE, pointer     :: fp(:)
@@ -114,7 +117,7 @@
     allocate(tmp(der%m%np))
 
     div(:) = R_TOTYPE(M_ZERO)
-    do i = 1, conf%dim
+    do i = 1, sb%dim
       if(der%zero_bc) then
         fp(1:der%m%np) = f(1:der%m%np,i)
       else
@@ -129,16 +132,18 @@
     if(der%zero_bc) deallocate(fp)
   end subroutine X(derivatives_div)
 
+
   ! ---------------------------------------------------------
-  subroutine X(derivatives_curl)(der, f, curl)
+  subroutine X(derivatives_curl)(sb, der, f, curl)
+    type(simul_box_type), intent(in)  :: sb
     type(der_discr_type), intent(in)  :: der
-    R_TYPE, target,       intent(in)  :: f(:,:)    ! f(m%np, conf%dim)
-    R_TYPE,               intent(out) :: curl(:,:) ! curl(m%np, conf%dim)
+    R_TYPE, target,       intent(in)  :: f(:,:)    ! f(m%np, sb%dim)
+    R_TYPE,               intent(out) :: curl(:,:) ! curl(m%np, sb%dim)
 
     R_TYPE, pointer     :: fp(:)
     R_TYPE, allocatable :: tmp(:)
 
-    ASSERT(conf%dim == 3)
+    ASSERT(sb%dim == 3)
 
     if(der%zero_bc) then
       allocate(fp(der%m%np_tot))

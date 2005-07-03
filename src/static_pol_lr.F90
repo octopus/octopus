@@ -47,15 +47,15 @@ contains
     logical,                   intent(inout) :: fromScratch
 
     type(lr_type) :: lr
-    type(mesh_type), pointer :: m
-    FLOAT :: pol(conf%dim, conf%dim)
+    type(grid_type), pointer :: gr
+    FLOAT :: pol(sys%gr%sb%dim, sys%gr%sb%dim)
     integer :: err
     
     ierr = 0
     call init_()
 
     ! load wave-functions
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, err)
     if(err.ne.0) then
       message(1) = "Could not load wave-functions in pol_lr_run: Starting from scratch"
       call write_warning(1)
@@ -75,9 +75,9 @@ contains
     fromScratch = .true.
 
     call lr_init(lr, "SP")
-    call X(lr_alloc_fHxc) (sys%st, m, lr)
-    err = X(lr_alloc_psi) (sys%st, m, lr)
-    call lr_build_fxc(m, sys%st, sys%ks%xc, lr%dl_Vxc)
+    call X(lr_alloc_fHxc) (sys%st, gr%m, lr)
+    err = X(lr_alloc_psi) (sys%st, gr%m, lr)
+    call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr%dl_Vxc)
     call pol_tensor(sys, h, lr, pol)
     call output()
     call lr_dealloc(lr)
@@ -90,10 +90,10 @@ contains
     subroutine init_()
       call push_sub('static_pol_lr_run')
 
-      m => sys%gr%m
+      gr => sys%gr
 
       ! allocate wfs
-      allocate(sys%st%X(psi)(m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+      allocate(sys%st%X(psi)(NP, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     end subroutine init_
 
@@ -115,19 +115,19 @@ contains
       iunit = io_open('linear/polarizability_lr', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
          trim(units_out%length%abbrev)
-      if(conf%dim.ne.1) write(iunit, '(a,i1)', advance='no') '^', conf%dim
+      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
       write(iunit, '(a)') ']'
 
       msp = M_ZERO
-      do j = 1, conf%dim
-        write(iunit, '(3f12.6)') pol(j, 1:conf%dim) &
-           / units_out%length%factor**conf%dim
+      do j = 1, NDIM
+        write(iunit, '(3f12.6)') pol(j, 1:NDIM) &
+           / units_out%length%factor**NDIM
         msp = msp + pol(j,j)
       end do
       msp = msp / M_THREE
 
       write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
-         / units_out%length%factor**conf%dim
+         / units_out%length%factor**NDIM
 
       call io_close(iunit)
       
@@ -148,7 +148,7 @@ contains
     call push_sub('pol_tensor')
 
     pol = M_ZERO
-    do i = 1, conf%dim
+    do i = 1, sys%gr%sb%dim
       write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
       call write_info(1)
 

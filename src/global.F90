@@ -45,7 +45,6 @@ module global
      character(len=50)  :: build_time  ! time octopus was compiled
      character(len=10)  :: version     ! version number
 
-     integer :: dim
      logical :: boundary_zero_derivative
      logical :: only_user_def
      logical :: flush_messages

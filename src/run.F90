@@ -254,22 +254,6 @@ end subroutine run
 subroutine run_init()
   character(len=70) :: mode_string
 
-  !%Variable Dimensions
-  !%Type integer
-  !%Section 1 Generalities
-  !%Description
-  !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
-  !% variable. Note that not all input variables may be available in all cases.
-  !%Option 1
-  !% The system is 1-dimensional
-  !%Option 2
-  !% The system is 2-dimensional
-  !%Option 3
-  !% The system is 3-dimensional (default)
-  !%End
-  call loct_parse_int(check_inp('Dimensions'), 3, conf%dim)
-  if(conf%dim<1 .or. conf%dim>3) call input_error('Dimensions')
-
   call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
 
   ! do we treat only userdefined species
@@ -292,16 +276,15 @@ subroutine run_init()
     case default; call input_error('CalculationMode')
   end select
   write(message(1), '(a,a)')    'Calculation Mode = ', trim(mode_string)
-  write(message(2), '(a,i1,a)') 'The octopus will run in ', conf%dim, ' dimension(s).'
 
-  message(3) = "Boundary conditions:"
+  message(2) = "Boundary conditions:"
   if(conf%boundary_zero_derivative) then
-    write(message(4), '(2a)') trim(message(5)), " zero derivatives"
+    write(message(3), '(2a)') trim(message(5)), " zero derivatives"
   else
-    write(message(4), '(2a)') trim(message(5)), " zero wave-functions"
+    write(message(3), '(2a)') trim(message(5)), " zero wave-functions"
   end if
 
-  call write_info(4, stress = .true.)
+  call write_info(3, stress = .true.)
 
   ! initialize ffts
 #ifdef HAVE_FFT

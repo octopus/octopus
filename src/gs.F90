@@ -79,7 +79,7 @@ contains
 #endif
       call write_info(1)
 
-      call scf_init(scfv, sys%gr%m, sys%st, sys%gr%geo, h)
+      call scf_init(sys%gr, scfv, sys%st, h)
       call scf_run(scfv, sys%gr, sys%st, sys%ks, h, sys%outp)
       call scf_end(scfv)
     end if
@@ -124,7 +124,7 @@ contains
       call write_info(1)
      
       lcao_data%state = 0 ! Uninitialized here.
-      call lcao_init(lcao_data, gr, st, h)
+      call lcao_init(gr, lcao_data, st, h)
       if(lcao_data%state == 1) then
         call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
         call lcao_end(lcao_data)
