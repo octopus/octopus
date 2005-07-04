@@ -1,13 +1,13 @@
 //
-// time: Tue Feb 15 19:18:37 2005
+// time: Mon Jul  4 14:09:24 2005
 //
 // version: 3.2.0 (format), 4.3.2 (DX)
 //
 //
 //
-// macro reference (indirect): CPK /usr/local/dx/CMSP_Linux/macros/CPK.net
+// macro reference (indirect): CPK /usr/local/dx/CMSP-2.0.1/macros/CPK.net
 //
-// macro reference (direct): BallsAndSticks /usr/local/dx/CMSP_Linux/macros/BallsAndSticks.net
+// macro reference (direct): BallsAndSticks /usr/local/dx/CMSP-2.0.1/macros/BallsAndSticks.net
 include "BallsAndSticks.net"
 //
 // MODULE main
@@ -116,23 +116,23 @@ include "BallsAndSticks.net"
 // comment: toggle on the "Show geometry" selector. Some control
 // comment: on the appearance of the model can be gained by toggling
 // comment: on the "Details..." selector. 
-// page assignment: Crystal	order=5, windowed=0, showing=0
-// page assignment: Crystal Axes	order=4, windowed=0, showing=0
-// page assignment: Geometry	order=14, windowed=0, showing=0
-// page assignment: Glyphs	order=6, windowed=0, showing=0
-// page assignment: Image	order=16, windowed=0, showing=0
-// page assignment: Import	order=1, windowed=0, showing=0
-// page assignment: ImportN	order=2, windowed=0, showing=0
-// page assignment: Iso 2	order=9, windowed=0, showing=0
-// page assignment: Isosurface	order=7, windowed=0, showing=0
-// page assignment: Slab_cut	order=12, windowed=0, showing=1
-// page assignment: Statistics	order=3, windowed=0, showing=0
-// page assignment: caption	order=13, windowed=0, showing=0
-// page assignment: map_iso	order=8, windowed=0, showing=0
-// page assignment: mapped_data	order=15, windowed=0, showing=0
-// page assignment: slab	order=10, windowed=0, showing=0
-// page assignment: slab_II	order=11, windowed=0, showing=0
-// workspace: width = 794, height = 1112
+// page assignment: Crystal	order=6, windowed=0, showing=0
+// page assignment: Crystal Axes	order=5, windowed=0, showing=0
+// page assignment: Geometry	order=15, windowed=0, showing=1
+// page assignment: Glyphs	order=7, windowed=0, showing=0
+// page assignment: Image	order=17, windowed=0, showing=0
+// page assignment: Import	order=2, windowed=0, showing=0
+// page assignment: ImportN	order=3, windowed=0, showing=0
+// page assignment: Iso 2	order=10, windowed=0, showing=0
+// page assignment: Isosurface	order=8, windowed=0, showing=0
+// page assignment: Slab_cut	order=13, windowed=0, showing=0
+// page assignment: Statistics	order=4, windowed=0, showing=0
+// page assignment: caption	order=14, windowed=0, showing=0
+// page assignment: map_iso	order=9, windowed=0, showing=0
+// page assignment: mapped_data	order=16, windowed=0, showing=0
+// page assignment: slab	order=11, windowed=0, showing=0
+// page assignment: slab_II	order=12, windowed=0, showing=0
+// workspace: width = 821, height = 521
 // layout: snap = 0, width = 50, height = 50, align = NN
 //
 macro main(
@@ -151,8 +151,8 @@ macro main(
     //
     // 
     // node FileSelector[2]: x = 167, y = 17, inputs = 0, label = FileSelector
-    // output[1]: visible = 1, type = 32, value = "/home/marques/NMR/dx-work/C6H6.xyz"
-    // output[2]: visible = 1, type = 32, value = "C6H6.xyz"
+    // output[1]: visible = 1, type = 32, value = NULL
+    // output[2]: visible = 1, type = 32, value = NULL
     // page group: Geometry
     //
     // 
@@ -181,7 +181,7 @@ main_ImportStructure_1_out_1 =
     //
 geo = main_ImportStructure_1_out_1;
     // 
-    // node Receiver[36]: x = 174, y = 420, inputs = 1, label = geo
+    // node Receiver[36]: x = 128, y = 467, inputs = 1, label = geo
     // page group: Crystal
     //
 main_Receiver_36_out_1[cache: 0] = geo;
@@ -189,12 +189,12 @@ main_Receiver_36_out_1[cache: 0] = geo;
     // node Vector[1]: x = 39, y = 34, inputs = 11, label = Vector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_1"
     // input[2]: visible = 0
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 1 2 1 ]
-    // input[5]: defaulting = 1, visible = 0, type = 8, value = [ 1.0 1.0 1.0 ]
+    // input[3]: defaulting = 0, visible = 0, type = 8, value = [ 0 0 0 ]
+    // input[5]: defaulting = 1, visible = 0, type = 8, value = [ 0.0 0.0 0.0 ]
     // input[6]: defaulting = 1, visible = 0, type = 8, value = [ 5.0 5.0 5.0 ]
     // input[7]: defaulting = 1, visible = 0, type = 8, value = [       1        1        1]
     // input[9]: defaulting = 1, visible = 0, type = 8, value = [ 0.0 0.0 0.0 ]
-    // output[1]: visible = 1, type = 8, value = [ 1 2 1 ]
+    // output[1]: visible = 1, type = 8, value = [ 0 0 0 ]
     // page group: Crystal
     //
     // 
@@ -203,7 +203,7 @@ main_Receiver_36_out_1[cache: 0] = geo;
     //
 c_repeat = main_Vector_1_out_1;
     // 
-    // node Receiver[61]: x = 211, y = 420, inputs = 1, label = c_repeat
+    // node Receiver[61]: x = 165, y = 467, inputs = 1, label = c_repeat
     // page group: Crystal
     //
 main_Receiver_61_out_1[cache: 0] = c_repeat;
@@ -931,7 +931,7 @@ main_List_1_out_1 =
     //
 c_uvectors = main_List_1_out_1;
     // 
-    // node Receiver[62]: x = 278, y = 420, inputs = 1, label = c_uvectors
+    // node Receiver[62]: x = 232, y = 467, inputs = 1, label = c_uvectors
     // page group: Crystal
     //
 main_Receiver_62_out_1[cache: 0] = c_uvectors;
@@ -987,15 +987,15 @@ main_Compute_42_out_1 =
     // 
     // node Vector[4]: x = 462, y = 187, inputs = 11, label = Vector
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Vector_4"
-    // input[3]: defaulting = 0, visible = 0, type = 8, value = [25 25 25 ]
+    // input[3]: defaulting = 0, visible = 0, type = 8, value = [0 0 0 ]
     // input[4]: visible = 1
     // input[5]: defaulting = 1, visible = 1, type = 8, value = [ 0.0 0.0 0.0 ]
-    // input[6]: defaulting = 1, visible = 1, type = 8, value = [63 63 63 ]
+    // input[6]: defaulting = 1, visible = 1, type = 8, value = [ 110.0 102.0 102.0 ]
     // input[7]: defaulting = 1, visible = 1, type = 8, value = [       1        1        1]
     // input[8]: visible = 1
     // input[9]: defaulting = 1, visible = 1, type = 8, value = [ 0.0 0.0 0.0 ]
     // input[11]: visible = 1
-    // output[1]: visible = 1, type = 8, value = [25 25 25 ]
+    // output[1]: visible = 1, type = 8, value = [0 0 0 ]
     // page group: Crystal
     //
 main_Vector_4_out_1[cache: 2] = 
@@ -1027,12 +1027,12 @@ main_List_2_out_1 =
     //
 c_cycle = main_List_2_out_1;
     // 
-    // node Receiver[63]: x = 359, y = 419, inputs = 1, label = c_cycle
+    // node Receiver[63]: x = 313, y = 466, inputs = 1, label = c_cycle
     // page group: Crystal
     //
 main_Receiver_63_out_1[cache: 0] = c_cycle;
     // 
-    // node CrystalRepeat[3]: x = 230, y = 493, inputs = 4, label = CrystalRepeat
+    // node CrystalRepeat[3]: x = 184, y = 540, inputs = 4, label = CrystalRepeat
     // input[2]: defaulting = 1, visible = 1, type = 8, value = [1 1 2]
     // input[3]: defaulting = 1, visible = 1, type = 16777224, value = {[15.7 0.0 0.0] [0.0 15.7 0.0] [0.0 0.0 15.7]}
     // page group: Crystal
@@ -1045,7 +1045,7 @@ main_CrystalRepeat_3_out_1 =
     main_Receiver_63_out_1
     ) [instance: 3, cache: 1];
     // 
-    // node Transmitter[37]: x = 242, y = 566, inputs = 1, label = geo_crystal
+    // node Transmitter[37]: x = 196, y = 613, inputs = 1, label = geo_crystal
     // page group: Crystal
     //
 geo_crystal = main_CrystalRepeat_3_out_1;
@@ -1055,32 +1055,47 @@ geo_crystal = main_CrystalRepeat_3_out_1;
     //
 main_Receiver_35_out_1[cache: 0] = geo_crystal;
     // 
-    // node Scalar[4]: x = 526, y = 49, inputs = 11, label = Scalar
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_4"
-    // input[3]: defaulting = 0, visible = 0, type = 5, value = 2.7 
-    // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
-    // input[6]: defaulting = 1, visible = 0, type = 5, value = 5.0
-    // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
-    // input[9]: defaulting = 1, visible = 0, type = 1, value = 2
-    // output[1]: visible = 1, type = 5, value = 2.7 
-    // page group: Geometry
-    //
-    // 
-    // node AddBonds[1]: x = 373, y = 120, inputs = 2, label = AddBonds
-    // page group: Geometry
-    //
-main_AddBonds_1_out_1 = 
-    AddBonds(
-    main_Receiver_35_out_1,
-    main_Scalar_4_out_1
-    ) [instance: 1, cache: 1];
-    // 
-    // node String[3]: x = 519, y = 122, inputs = 0, label = String
+    // node String[4]: x = 494, y = 34, inputs = 0, label = String
     // output[1]: visible = 1, type = 32, value = "default"
     // page group: Geometry
     //
     // 
-    // node AddColors[1]: x = 373, y = 197, inputs = 2, label = AddColors
+    // node AddRadii[1]: x = 375, y = 103, inputs = 2, label = AddRadii
+    // input[2]: defaulting = 1, visible = 1, type = 32, value = "default"
+    // page group: Geometry
+    //
+main_AddRadii_1_out_1 = 
+    AddRadii(
+    main_Receiver_35_out_1,
+    main_String_4_out_1
+    ) [instance: 1, cache: 1];
+    // 
+    // node Scalar[4]: x = 494, y = 109, inputs = 11, label = Scalar
+    // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_4"
+    // input[3]: defaulting = 0, visible = 0, type = 5, value = -1.1 
+    // input[5]: defaulting = 1, visible = 0, type = 5, value = -5.0
+    // input[6]: defaulting = 1, visible = 0, type = 5, value = 5.0
+    // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
+    // input[9]: defaulting = 1, visible = 0, type = 1, value = 2
+    // output[1]: visible = 1, type = 5, value = -1.1 
+    // page group: Geometry
+    //
+    // 
+    // node AddBonds[1]: x = 383, y = 185, inputs = 2, label = AddBonds
+    // page group: Geometry
+    //
+main_AddBonds_1_out_1 = 
+    AddBonds(
+    main_AddRadii_1_out_1,
+    main_Scalar_4_out_1
+    ) [instance: 1, cache: 1];
+    // 
+    // node String[3]: x = 497, y = 194, inputs = 0, label = String
+    // output[1]: visible = 1, type = 32, value = "default"
+    // page group: Geometry
+    //
+    // 
+    // node AddColors[1]: x = 370, y = 279, inputs = 2, label = AddColors
     // input[2]: defaulting = 1, visible = 1, type = 32, value = "default"
     // page group: Geometry
     //
@@ -1088,21 +1103,6 @@ main_AddColors_1_out_1 =
     AddColors(
     main_AddBonds_1_out_1,
     main_String_3_out_1
-    ) [instance: 1, cache: 1];
-    // 
-    // node String[4]: x = 520, y = 199, inputs = 0, label = String
-    // output[1]: visible = 1, type = 32, value = "default"
-    // page group: Geometry
-    //
-    // 
-    // node AddRadii[1]: x = 380, y = 276, inputs = 2, label = AddRadii
-    // input[2]: defaulting = 1, visible = 1, type = 32, value = "default"
-    // page group: Geometry
-    //
-main_AddRadii_1_out_1 = 
-    AddRadii(
-    main_AddColors_1_out_1,
-    main_String_4_out_1
     ) [instance: 1, cache: 1];
     // 
     // node Scalar[5]: x = 477, y = 282, inputs = 11, label = Scalar
@@ -1166,7 +1166,7 @@ main_AddRadii_1_out_1 =
     //
 main_BallsAndSticks_1_out_1 = 
     BallsAndSticks(
-    main_AddRadii_1_out_1,
+    main_AddColors_1_out_1,
     main_BallsAndSticks_1_in_2,
     main_Scalar_5_out_1,
     main_Integer_3_out_1,
@@ -1230,27 +1230,27 @@ main_Receiver_12_out_1[cache: 0] = slab_dim;
     // toggle : 0
     //
     // 
-    // node Receiver[34]: x = 478, y = 420, inputs = 1, label = function
+    // node Receiver[34]: x = 496, y = 465, inputs = 1, label = function
     // page group: Crystal
     //
 main_Receiver_34_out_1[cache: 0] = function;
     // 
-    // node Receiver[59]: x = 544, y = 420, inputs = 1, label = c_repeat
+    // node Receiver[59]: x = 562, y = 465, inputs = 1, label = c_repeat
     // page group: Crystal
     //
 main_Receiver_59_out_1[cache: 0] = c_repeat;
     // 
-    // node Receiver[58]: x = 611, y = 420, inputs = 1, label = c_uvectors
+    // node Receiver[58]: x = 629, y = 465, inputs = 1, label = c_uvectors
     // page group: Crystal
     //
 main_Receiver_58_out_1[cache: 0] = c_uvectors;
     // 
-    // node Receiver[57]: x = 692, y = 419, inputs = 1, label = c_cycle
+    // node Receiver[57]: x = 710, y = 464, inputs = 1, label = c_cycle
     // page group: Crystal
     //
 main_Receiver_57_out_1[cache: 0] = c_cycle;
     // 
-    // node CrystalRepeat[2]: x = 563, y = 493, inputs = 4, label = CrystalRepeat
+    // node CrystalRepeat[2]: x = 581, y = 538, inputs = 4, label = CrystalRepeat
     // input[2]: defaulting = 1, visible = 1, type = 8, value = [1 1 2]
     // input[3]: defaulting = 1, visible = 1, type = 16777224, value = {[15.7 0.0 0.0] [0.0 15.7 0.0] [0.0 0.0 15.7]}
     // page group: Crystal
@@ -1263,7 +1263,7 @@ main_CrystalRepeat_2_out_1 =
     main_Receiver_57_out_1
     ) [instance: 2, cache: 1];
     // 
-    // node Transmitter[35]: x = 562, y = 564, inputs = 1, label = function_crystal
+    // node Transmitter[35]: x = 580, y = 609, inputs = 1, label = function_crystal
     // page group: Crystal
     //
 function_crystal = main_CrystalRepeat_2_out_1;
@@ -1312,12 +1312,12 @@ main_Switch_3_out_1 =
     // node Sequencer[1]: x = 657, y = 232, inputs = 7, label = Sequencer
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Sequencer_1"
     // input[4]: defaulting = 1, visible = 1, type = 1, value = 1
-    // input[5]: defaulting = 1, visible = 1, type = 1, value = 64
+    // input[5]: defaulting = 1, visible = 1, type = 1, value = 103
     // input[6]: defaulting = 1, visible = 0, type = 1, value = 1
-    // input[7]: defaulting = 0, visible = 0, type = 16777217, value = { 1 64 1 1 64 1 }
+    // input[7]: defaulting = 0, visible = 0, type = 16777217, value = { 1 103 1 1 103 1 }
     // page group: slab
-    // vcr[1]: min = 1, max = 64, beg = 1, end = 64, cur = 26, inc = 1, loop = off, step = on, pal = off
-    // window: position = (0.6469,0.0254), size = 0.2695x0.1045
+    // vcr[1]: min = 1, max = 103, beg = 1, end = 103, cur = 13, inc = 1, loop = off, step = on, pal = off
+    // window: position = (0.6471,0.0257), size = 0.2693x0.1048
     //
     main_Sequencer_1_in_3 = @frame;
 main_Sequencer_1_out_1[cache: 2] = 
@@ -1470,8 +1470,8 @@ main_Receiver_70_out_1[cache: 0] = slab_dim;
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Selector_2"
     // input[2]: defaulting = 0, visible = 0, type = 32, value = "0" 
     // input[3]: defaulting = 0, visible = 0, type = 29, value = 0 
-    // input[4]: defaulting = 1, visible = 1, type = 16777248, value = { "0", "1" }
-    // input[5]: defaulting = 1, visible = 0, type = 16777245, value = { 0, 1 }
+    // input[4]: defaulting = 1, visible = 1, type = 16777248, value = { "0" "1" }
+    // input[5]: defaulting = 1, visible = 0, type = 16777245, value = { 0 1 }
     // output[1]: visible = 1, type = 29, value = 0 
     // output[2]: visible = 1, type = 32, value = "0" 
     // page group: Slab_cut
@@ -1664,7 +1664,7 @@ main_Receiver_6_out_1[cache: 0] = max;
     // input[19]: defaulting = 1, visible = 1, type = 32, value = "Slab colormap"
     // page group: slab
     // Colormap: title = Slab colormap
-    // window: position = (0.4797,0.1387), size = 0.6352x0.5859
+    // window: position = (0.4800,0.1390), size = 0.6350x0.5857
     //
 main_Colormap_2_out_1[cache: 2],
 main_Colormap_2_out_2[cache: 2] = 
@@ -1941,12 +1941,12 @@ main_Route_2_out_2 =
     // 
     // node Scalar[2]: x = 445, y = 149, inputs = 11, label = Scalar
     // input[1]: defaulting = 0, visible = 0, type = 32, value = "Scalar_2"
-    // input[3]: defaulting = 0, visible = 0, type = 5, value = -0.93 
-    // input[5]: defaulting = 1, visible = 0, type = 5, value = -1.326672
-    // input[6]: defaulting = 1, visible = 0, type = 5, value = 0.27649191
+    // input[3]: defaulting = 0, visible = 0, type = 5, value = 0.07 
+    // input[5]: defaulting = 1, visible = 0, type = 5, value = 0.0
+    // input[6]: defaulting = 1, visible = 0, type = 5, value = 1.08831
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[9]: defaulting = 1, visible = 0, type = 1, value = 2
-    // output[1]: visible = 1, type = 5, value = -0.93 
+    // output[1]: visible = 1, type = 5, value = 0.07 
     // page group: Isosurface
     //
 main_Scalar_2_out_1[cache: 2] = 
@@ -2057,7 +2057,7 @@ main_Map_2_out_1 =
     // input[19]: defaulting = 1, visible = 0, type = 32, value = "Mapped function colormap"
     // page group: map_iso
     // Colormap: title = Mapped function colormap
-    // window: position = (0.3453,0.0127), size = 0.6352x0.5859
+    // window: position = (0.3450,0.0124), size = 0.6350x0.5857
     //
 main_Colormap_3_out_1[cache: 2],
 main_Colormap_3_out_2[cache: 2] = 
@@ -2162,7 +2162,7 @@ main_Collect_3_out_1 =
     ) [instance: 3, cache: 1];
     // 
     // node String[2]: x = 454, y = 281, inputs = 0, label = String
-    // output[1]: visible = 1, type = 32, value = "magenta"
+    // output[1]: visible = 1, type = 32, value = "cyan"
     // page group: Isosurface
     //
     // 
@@ -2942,7 +2942,7 @@ main_Compute_57_out_1 =
     // input[2]: visible = 0
     // input[3]: defaulting = 0, visible = 0, type = 1, value = 15 
     // input[5]: defaulting = 1, visible = 0, type = 1, value = 0
-    // input[6]: defaulting = 1, visible = 1, type = 1, value = 63
+    // input[6]: defaulting = 1, visible = 1, type = 1, value = 102
     // input[7]: defaulting = 1, visible = 0, type = 5, value = 1.0
     // input[9]: defaulting = 1, visible = 0, type = 1, value = 0
     // output[1]: visible = 1, type = 1, value = 15 
@@ -3324,28 +3324,28 @@ main_Format_2_out_1 =
     // node Image[2]: x = 357, y = 406, inputs = 49, label = Image
     // input[1]: defaulting = 0, visible = 0, type = 67108863, value = "Image_2"
     // input[4]: defaulting = 0, visible = 0, type = 1, value = 1
-    // input[5]: defaulting = 0, visible = 0, type = 8, value = [9.09389 16.4306 6.86273]
-    // input[6]: defaulting = 0, visible = 0, type = 8, value = [123.905 33.5765 43.9636]
-    // input[7]: defaulting = 0, visible = 0, type = 5, value = 48.16
-    // input[8]: defaulting = 0, visible = 0, type = 1, value = 804
-    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.82
-    // input[10]: defaulting = 0, visible = 0, type = 8, value = [-0.302493 -0.0354975 0.95249]
-    // input[11]: defaulting = 1, visible = 0, type = 5, value = 22.3541
+    // input[5]: defaulting = 0, visible = 0, type = 8, value = [0.0908589 -0.0987732 -0.104777]
+    // input[6]: defaulting = 0, visible = 0, type = 8, value = [44.3891 21.0765 23.2992]
+    // input[7]: defaulting = 0, visible = 0, type = 5, value = 29.1486
+    // input[8]: defaulting = 0, visible = 0, type = 1, value = 881
+    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.769012
+    // input[10]: defaulting = 0, visible = 0, type = 8, value = [-0.354713 0.920871 -0.161789]
+    // input[11]: defaulting = 1, visible = 0, type = 5, value = 30.0001
     // input[12]: defaulting = 0, visible = 0, type = 1, value = 0
     // input[14]: defaulting = 0, visible = 0, type = 1, value = 1
     // input[15]: defaulting = 1, visible = 0, type = 32, value = "none"
     // input[16]: defaulting = 1, visible = 0, type = 32, value = "none"
     // input[17]: defaulting = 1, visible = 0, type = 1, value = 1
     // input[18]: defaulting = 1, visible = 0, type = 1, value = 1
-    // input[19]: defaulting = 0, visible = 0, type = 1, value = 0
+    // input[19]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[22]: defaulting = 0, visible = 0, type = 32, value = "black"
-    // input[25]: defaulting = 0, visible = 0, type = 32, value = "image.tif"
+    // input[25]: defaulting = 0, visible = 0, type = 32, value = "dens.tiff"
     // input[26]: defaulting = 0, visible = 0, type = 32, value = "tiff"
     // input[29]: defaulting = 1, visible = 0, type = 3, value = 0
     // input[41]: defaulting = 0, visible = 0, type = 32, value = "rotate"
     // page group: Image
     // depth: value = 24
-    // window: position = (0.2297,0.2227), size = 0.6391x0.6846
+    // window: position = (0.1664,0.0657), size = 0.6393x0.6848
     // internal caching: 1
     //
 main_Image_2_out_1,
@@ -3500,13 +3500,13 @@ main_Plot_1_out_1 =
     //
     // 
     // node Image[4]: x = 513, y = 1050, inputs = 49, label = Image
-    // input[1]: defaulting = 0, visible = 0, type = 32, value = "Image_4"
+    // input[1]: defaulting = 0, visible = 0, type = 67108863, value = "Image_4"
     // input[4]: defaulting = 0, visible = 0, type = 1, value = 1
     // input[5]: defaulting = 0, visible = 0, type = 8, value = [22.5192 -9.19421 0]
     // input[6]: defaulting = 0, visible = 0, type = 8, value = [22.5192 -9.19421 143.3]
     // input[7]: defaulting = 0, visible = 0, type = 5, value = 76.7946
-    // input[8]: defaulting = 0, visible = 0, type = 1, value = 678
-    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.722
+    // input[8]: defaulting = 0, visible = 0, type = 1, value = 743
+    // input[9]: defaulting = 0, visible = 0, type = 5, value = 0.677658
     // input[10]: defaulting = 0, visible = 0, type = 8, value = [0 1 0]
     // input[11]: defaulting = 1, visible = 0, type = 5, value = 30.0001
     // input[12]: defaulting = 0, visible = 0, type = 1, value = 0
@@ -3515,7 +3515,7 @@ main_Plot_1_out_1 =
     // input[16]: defaulting = 1, visible = 0, type = 32, value = "none"
     // input[17]: defaulting = 1, visible = 0, type = 1, value = 1
     // input[18]: defaulting = 1, visible = 0, type = 1, value = 1
-    // input[19]: defaulting = 0, visible = 0, type = 1, value = 0
+    // input[19]: defaulting = 0, visible = 0, type = 3, value = 0
     // input[21]: visible = 1
     // input[22]: defaulting = 0, visible = 0, type = 32, value = "black"
     // input[29]: defaulting = 1, visible = 0, type = 3, value = 0
@@ -3524,7 +3524,7 @@ main_Plot_1_out_1 =
     // output[3]: visible = 0
     // page group: Slab_cut
     // depth: value = 24
-    // window: position = (0.0586,0.3457), size = 0.5406x0.5186
+    // window: position = (0.0586,0.3457), size = 0.5407x0.5190
     // internal caching: 1
     // interaction mode = NONE
     //
@@ -3796,7 +3796,7 @@ main_Toggle_4_in_4 = NULL;
 main_Toggle_4_in_5 = NULL;
 main_Toggle_4_in_6 = NULL;
 main_Toggle_4_out_1 = 0;
-main_FileSelector_2_out_1 = "/home/marques/NMR/dx-work/C6H6.xyz";
+main_FileSelector_2_out_1 = NULL;
 main_Route_6_out_1 = NULL;
 main_ImportStructure_1_in_2 = "xyz";
 main_ImportStructure_1_out_1 = NULL;
@@ -3804,7 +3804,7 @@ main_Transmitter_36_out_1 = NULL;
 main_Receiver_36_out_1 = NULL;
 main_Vector_1_in_1 = "Vector_1";
 main_Vector_1_in_2 = NULL;
-main_Vector_1_in_3 = [ 1 2 1 ];
+main_Vector_1_in_3 = [ 0 0 0 ];
 main_Vector_1_in_4 = NULL;
 main_Vector_1_in_5 = NULL;
 main_Vector_1_in_6 = NULL;
@@ -3813,7 +3813,7 @@ main_Vector_1_in_8 = NULL;
 main_Vector_1_in_9 = NULL;
 main_Vector_1_in_10 = NULL;
 main_Vector_1_in_11 = NULL;
-main_Vector_1_out_1 = [ 1 2 1 ];
+main_Vector_1_out_1 = [ 0 0 0 ];
 main_Transmitter_46_out_1 = NULL;
 main_Receiver_61_out_1 = NULL;
 main_String_6_out_1 = "a";
@@ -3982,7 +3982,7 @@ main_Compute_42_in_1 = "[$0-1, $1-1, $2-1]";
 main_Compute_42_out_1 = NULL;
 main_Vector_4_in_1 = "Vector_4";
 main_Vector_4_in_2 = NULL;
-main_Vector_4_in_3 = [25 25 25 ];
+main_Vector_4_in_3 = [0 0 0 ];
 main_Vector_4_in_4 = NULL;
 main_Vector_4_in_5 = NULL;
 main_Vector_4_in_7 = NULL;
@@ -3990,16 +3990,18 @@ main_Vector_4_in_8 = NULL;
 main_Vector_4_in_9 = NULL;
 main_Vector_4_in_10 = NULL;
 main_Vector_4_in_11 = NULL;
-main_Vector_4_out_1 = [25 25 25 ];
+main_Vector_4_out_1 = [0 0 0 ];
 main_List_2_out_1 = NULL;
 main_Transmitter_44_out_1 = NULL;
 main_Receiver_63_out_1 = NULL;
 main_CrystalRepeat_3_out_1 = NULL;
 main_Transmitter_37_out_1 = NULL;
 main_Receiver_35_out_1 = NULL;
+main_String_4_out_1 = "default";
+main_AddRadii_1_out_1 = NULL;
 main_Scalar_4_in_1 = "Scalar_4";
 main_Scalar_4_in_2 = NULL;
-main_Scalar_4_in_3 = 2.7 ;
+main_Scalar_4_in_3 = -1.1 ;
 main_Scalar_4_in_4 = NULL;
 main_Scalar_4_in_5 = NULL;
 main_Scalar_4_in_6 = NULL;
@@ -4008,12 +4010,10 @@ main_Scalar_4_in_8 = NULL;
 main_Scalar_4_in_9 = NULL;
 main_Scalar_4_in_10 = NULL;
 main_Scalar_4_in_11 = NULL;
-main_Scalar_4_out_1 = 2.7 ;
+main_Scalar_4_out_1 = -1.1 ;
 main_AddBonds_1_out_1 = NULL;
 main_String_3_out_1 = "default";
 main_AddColors_1_out_1 = NULL;
-main_String_4_out_1 = "default";
-main_AddRadii_1_out_1 = NULL;
 main_Scalar_5_in_1 = "Scalar_5";
 main_Scalar_5_in_2 = NULL;
 main_Scalar_5_in_3 = 0.18 ;
@@ -4105,12 +4105,12 @@ main_Sequencer_1_in_2 = NULL;
 main_Sequencer_1_in_3 = NULL;
 main_Sequencer_1_in_4 = NULL;
 main_Sequencer_1_in_6 = NULL;
-main_Sequencer_1_in_7 = { 1 64 1 1 64 1 };
+main_Sequencer_1_in_7 = { 1 103 1 1 103 1 };
 main_Sequencer_1_out_1 = NULL;
 
 @startframe = 1;
 @nextframe  = @startframe;
-@endframe   = 64;
+@endframe   = 103;
 @deltaframe = 1;
 main_Compute_6_in_1 = "$0-1";
 main_Compute_6_out_1 = NULL;
@@ -4291,7 +4291,7 @@ main_Receiver_17_out_1 = NULL;
 main_Receiver_2_out_1 = NULL;
 main_Route_2_out_1 = NULL;
 main_Scalar_2_in_1 = "Scalar_2";
-main_Scalar_2_in_3 = -0.93 ;
+main_Scalar_2_in_3 = 0.07 ;
 main_Scalar_2_in_4 = NULL;
 main_Scalar_2_in_5 = NULL;
 main_Scalar_2_in_6 = NULL;
@@ -4300,7 +4300,7 @@ main_Scalar_2_in_8 = NULL;
 main_Scalar_2_in_9 = NULL;
 main_Scalar_2_in_10 = NULL;
 main_Scalar_2_in_11 = NULL;
-main_Scalar_2_out_1 = -0.93 ;
+main_Scalar_2_out_1 = 0.07 ;
 main_Isosurface_1_in_3 = NULL;
 main_Isosurface_1_in_4 = NULL;
 main_Isosurface_1_in_5 = NULL;
@@ -4381,7 +4381,7 @@ main_ColorBar_2_in_16 = NULL;
 main_ColorBar_2_out_1 = NULL;
 main_Route_9_out_1 = NULL;
 main_Collect_3_out_1 = NULL;
-main_String_2_out_1 = "magenta";
+main_String_2_out_1 = "cyan";
 main_Scalar_3_in_1 = "Scalar_3";
 main_Scalar_3_in_2 = NULL;
 main_Scalar_3_in_3 = 0.38 ;
@@ -5050,12 +5050,12 @@ macro Image(
 main_Image_2_in_1 = "Image_2";
 main_Image_2_in_3 = "X24,,";
 main_Image_2_in_4 = 1;
-main_Image_2_in_5 = [9.09389 16.4306 6.86273];
-main_Image_2_in_6 = [123.905 33.5765 43.9636];
-main_Image_2_in_7 = 48.16;
-main_Image_2_in_8 = 804;
-main_Image_2_in_9 = 0.82;
-main_Image_2_in_10 = [-0.302493 -0.0354975 0.95249];
+main_Image_2_in_5 = [0.0908589 -0.0987732 -0.104777];
+main_Image_2_in_6 = [44.3891 21.0765 23.2992];
+main_Image_2_in_7 = 29.1486;
+main_Image_2_in_8 = 881;
+main_Image_2_in_9 = 0.769012;
+main_Image_2_in_10 = [-0.354713 0.920871 -0.161789];
 main_Image_2_in_11 = NULL;
 main_Image_2_in_12 = 0;
 main_Image_2_in_13 = NULL;
@@ -5069,7 +5069,7 @@ main_Image_2_in_20 = NULL;
 main_Image_2_in_21 = NULL;
 main_Image_2_in_22 = "black";
 main_Image_2_in_23 = NULL;
-main_Image_2_in_25 = "image.tif";
+main_Image_2_in_25 = "dens.tiff";
 main_Image_2_in_26 = "tiff";
 main_Image_2_in_27 = NULL;
 main_Image_2_in_28 = NULL;
@@ -5142,8 +5142,8 @@ main_Image_4_in_4 = 1;
 main_Image_4_in_5 = [22.5192 -9.19421 0];
 main_Image_4_in_6 = [22.5192 -9.19421 143.3];
 main_Image_4_in_7 = 76.7946;
-main_Image_4_in_8 = 678;
-main_Image_4_in_9 = 0.722;
+main_Image_4_in_8 = 743;
+main_Image_4_in_9 = 0.677658;
 main_Image_4_in_10 = [0 1 0];
 main_Image_4_in_11 = NULL;
 main_Image_4_in_12 = 0;
