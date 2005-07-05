@@ -122,7 +122,7 @@ void FC_FUNC_(varinfo_init, VARINFO_INIT)
 	lvar->desc = NULL;
 	lvar->type = NULL;
 	lvar->section = NULL;
-	lvar->opt  = lopt;
+	lvar->opt  = NULL;
 	lvar->next = NULL;
 
 	lopt = NULL;
@@ -252,12 +252,17 @@ void FC_FUNC_(varinfo_getopt, VARINFO_GETOPT)
 
 /* --------------------------------------------------------- */
 void FC_FUNC_(varinfo_opt_getinfo, VARINFO_OPT_GETINFO)
-  (opt_type **opt, char **name, char **desc)
+  (opt_type **opt, char **name, int *value, char **desc)
 {
   if(opt == NULL){
     *name = NULL; *desc = NULL;
+    *value = 0;
   }else{
     *name = (*opt)->name;
     *desc = (*opt)->desc;
+    if((*opt)->value)
+      *value = atoi((*opt)->value);
+    else
+      *value = 0;
   }
 }

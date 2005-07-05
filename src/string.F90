@@ -1,4 +1,4 @@
-!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -130,13 +130,15 @@ contains
 
 
   ! prints the C string given by the pointer str
-  subroutine print_C_string(iunit, str, pre)
+  subroutine print_C_string(iunit, str, pre, advance)
     integer,               intent(in) :: iunit
     integer(POINTER_SIZE), intent(in) :: str
-    character(len=*), intent(in), optional :: pre
+    character(len=*), optional, intent(in) :: pre
+    character(len=*), optional, intent(in) :: advance
 
     integer(POINTER_SIZE) :: s
     character(len=256)    :: line
+    character(len=5)      :: advance_
 
     interface
       subroutine break_C_string(str, s, line)
@@ -146,17 +148,17 @@ contains
       end subroutine break_C_string
     end interface
 
+    advance_ = "yes"
+    if(present(advance)) advance_ = advance
+
     s = 0
     do
       call break_C_string(str, s, line)
-      if(s.ne.int(0, POINTER_SIZE)) then
-        if(present(pre)) then
-          write(iunit, '(a,a)') pre, trim(line)
-        else
-          write(iunit, '(a)') trim(line)
-        end if
+      if (s == int(0, POINTER_SIZE)) exit
+      if(present(pre)) then
+        write(iunit, '(a,a)', advance=advance_) pre, trim(line)
       else
-        exit
+        write(iunit, '(a)',   advance=advance_) trim(line)
       end if
     end do
   end subroutine print_C_string

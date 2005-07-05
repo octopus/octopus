@@ -25,7 +25,7 @@ module varinfo
   implicit none
 
   private
-  public :: varinfo_init, varinfo_end, varinfo_print
+  public :: varinfo_init, varinfo_end, varinfo_print, varinfo_print_option
 
   interface
     subroutine varinfo_init(filename)
@@ -44,35 +44,67 @@ contains
     character(len=*), intent(in) :: var
 
     integer(POINTER_SIZE) :: handle, opt, name, type, section, desc
+    integer :: value
     logical :: first
 
     call varinfo_getvar(var, handle)
-    if(handle.ne.0) then
-      call varinfo_getinfo(handle, name, type, section, desc)
-      call print_C_string(iunit, name, "Variable: ")
-      call print_C_string(iunit, type, "Type:     ")
-      call print_C_string(iunit, section, "Section:  ")
-      write(iunit, '(a)') "Description:"
-      call print_C_string(iunit, desc, "    ")
+    if(handle == 0) return
 
-      opt = int(0, POINTER_SIZE)
-      first = .true.
-      do
-        call varinfo_getopt(handle, opt)
-        if(opt==0) then
-          exit
-        else
-          if(first) then
-            write(iunit, '(a)') "Available options:"
-            first = .false.
-          end if
-          call varinfo_opt_getinfo(opt, name, desc)
-          call print_C_string(iunit, name, "  ")
-          call print_C_string(iunit, desc, "    ")
+    call varinfo_getinfo(handle, name, type, section, desc)
+    call print_C_string(iunit, name, "Variable: ")
+    call print_C_string(iunit, type, "Type:     ")
+    call print_C_string(iunit, section, "Section:  ")
+    write(iunit, '(a)') "Description:"
+    call print_C_string(iunit, desc, "    ")
+    
+    opt = int(0, POINTER_SIZE)
+    first = .true.
+    do
+      call varinfo_getopt(handle, opt)
+      if(opt==0) then
+        exit
+      else
+        if(first) then
+          write(iunit, '(a)') "Available options:"
+          first = .false.
         end if
-      end do
+        call varinfo_opt_getinfo(opt, name, value, desc)
+        call print_C_string(iunit, name, "  ")
+        call print_C_string(iunit, desc, "    ")
+      end if
+    end do
 
-    end if
   end subroutine varinfo_print
+
+
+  ! ---------------------------------------------------------
+  subroutine varinfo_print_option(iunit, var, option, pre)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    integer,          intent(in) :: option
+    character(len=*), intent(in) :: pre
+
+    integer(POINTER_SIZE) :: handle, opt, name, desc
+    integer :: value
+    
+    call varinfo_getvar(var, handle)
+    if(handle.eq.0) return
+
+    opt = int(0, POINTER_SIZE)
+    do
+      call varinfo_getopt(handle, opt)
+      if(opt == 0) exit
+
+      call varinfo_opt_getinfo(opt, name, value, desc)
+
+      if(value == option) then
+        write(iunit, '(a,a)', advance='no') pre, ' ['
+        call print_C_string(iunit, name, advance='no')
+        call print_C_string(iunit, desc, pre='] ')
+        return
+      end if
+    end do
+
+  end subroutine varinfo_print_option
 
 end module varinfo

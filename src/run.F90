@@ -259,32 +259,18 @@ subroutine run_init()
   ! do we treat only userdefined species
   call loct_parse_logical(check_inp('OnlyUserDef'), .false., conf%only_user_def)
 
-  select case(calc_mode)
-    case(M_GS);              mode_string = "gs [Calculation of the ground state]"
-    case(M_UNOCC);           mode_string = "unocc [Calculation of unoccupied/virtual KS states]"
-    case(M_TD);              mode_string = "td [Time-dependent calculation]"
-    case(M_STATIC_POL);      mode_string = "pol [Calculation of the static polarizability]"
-    case(M_GEOM_OPT);        mode_string = "geom [Optimization of the geometry]"
-    case(M_PHONONS);         mode_string = "phonons [Calculation of the vibrational modes]"
-    case(M_OPT_CONTROL);     mode_string = "opt_control [Optimal control]"
-    case(M_LR_STATIC_POL);   mode_string = "pol_lr [Linear-response calculation of the polarizability]"
-    case(M_CASIDA);          mode_string = "casida [Excitations via linear-response TDDFT]"
-    case(M_WAVE_MATCHING);   mode_string = "wave_matching [Wave-matching a la Heiko]"
-    case(M_BO_MD);           mode_string = "bo [Born-Oppenheimer-like Molecular Dynamics]"
-    case(M_PULPO_A_FEIRA);   mode_string = "recipe [Prints out a tasty recipe]"
-    case(M_MULTI_SUBSYSTEM); mode_string = "multi_subsystem [Multi subsystem mode]"
-    case default; call input_error('CalculationMode')
-  end select
-  write(message(1), '(a,a)')    'Calculation Mode = ', trim(mode_string)
+  call messages_print_stress(stdout)
+  call messages_print_var_option(stdout, "CalculationMode", calc_mode, "Calculation Mode:")
 
-  message(2) = "Boundary conditions:"
+  message(1) = "Boundary conditions:"
   if(conf%boundary_zero_derivative) then
-    write(message(3), '(2a)') trim(message(5)), " zero derivatives"
+    write(message(1), '(2a)') trim(message(1)), " zero derivatives"
   else
-    write(message(3), '(2a)') trim(message(5)), " zero wave-functions"
+    write(message(1), '(2a)') trim(message(1)), " zero wave-functions"
   end if
 
-  call write_info(3, stress = .true.)
+  call write_info(1)
+  call messages_print_stress(stdout)
 
   ! initialize ffts
 #ifdef HAVE_FFT

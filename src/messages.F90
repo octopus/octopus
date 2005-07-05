@@ -20,6 +20,7 @@
 #include "global.h"
 
 module messages
+  use varinfo
   use global
   use lib_oct
 
@@ -30,6 +31,7 @@ module messages
   public :: write_fatal, write_warning, write_info, print_date
   public :: input_error
   public :: push_sub, pop_sub
+  public :: messages_print_stress, messages_print_var_info, messages_print_var_option
 
   character(len=256), dimension(20), public :: message    ! to be output by fatal, warning
   character(len=70),      parameter, public :: stars =  &
@@ -45,7 +47,6 @@ module messages
   character(len=512), private :: msg
 
 contains
-
 
   ! ---------------------------------------------------------
   subroutine write_fatal(no_lines)
@@ -222,6 +223,37 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine messages_print_var_info(iunit, var)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+
+    if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
+    call varinfo_print(iunit, var)
+  end subroutine messages_print_var_info
+
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_var_option(iunit, var, option, pre)
+    integer,          intent(in) :: iunit
+    character(len=*), intent(in) :: var
+    integer,          intent(in) :: option
+    character(len=*), intent(in) :: pre
+
+    if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
+    call varinfo_print_option(iunit, var, option, pre)
+  end subroutine messages_print_var_option
+
+
+  ! ---------------------------------------------------------
+  subroutine messages_print_stress(iunit)
+    integer, intent(in) :: iunit
+
+    if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
+    call flush_msg(iunit, stars)
+  end subroutine messages_print_stress
+
+
+  ! ---------------------------------------------------------
   subroutine flush_msg(iunit, str, adv)
     integer,            intent(in)           :: iunit 
     character(len = *), intent(in)           :: str
@@ -229,11 +261,8 @@ contains
 
     character(len = 20) :: adv_
 
-    if(present(adv)) then
-       adv_ = adv
-    else
-       adv_ = 'yes'
-    endif
+    adv_ = 'yes'
+    if(present(adv)) adv_ = adv
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
     if(conf%flush_messages.and.mpiv%node.eq.0) then
