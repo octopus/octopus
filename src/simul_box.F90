@@ -193,7 +193,7 @@ contains
         if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
       end if
       
-      sb%lsize = -M_ONE
+      sb%lsize = M_ZERO
       if(sb%box_shape == PARALLELEPIPED) then
         
         if(loct_parse_block(check_inp('lsize'), blk) == 0) then
@@ -220,11 +220,11 @@ contains
       case(SPHERE)
         sb%lsize(1:sb%dim) = sb%rsize
       case(CYLINDER)
-        sb%lsize(1)          = sb%xsize
+        sb%lsize(1)        = sb%xsize
         sb%lsize(2:sb%dim) = sb%rsize
       case(MINIMUM)
         do i = 1, sb%dim
-          sb%lsize(i)        = maxval(geo%atom(:)%x(i)) + sb%rsize
+          sb%lsize(i)      = maxval(geo%atom(:)%x(i)) + sb%rsize
         end do
       end select
       

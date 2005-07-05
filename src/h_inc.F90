@@ -174,8 +174,8 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
     allocate(grad(NP, NDIM))
     k2 = sum(h%d%kpoints(:, ik)**2)
     do idim = 1, h%d%dim
-      call X(f_laplacian) (gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
-      call X(f_gradient)  (gr%f_der, psi(:, idim), grad(:, :))
+      call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+      call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :))
       do i = 1, NP
         Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
              + M_TWO*M_zI*sum(h%d%kpoints(:, ik)*grad(i, :)) &
