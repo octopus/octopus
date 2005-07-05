@@ -63,7 +63,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-    call zso (h, m, psi, hpsi)
+    call zso (h, gr%m, psi, hpsi)
 #endif
   case default
     message(1) = 'Error: Internal.'
