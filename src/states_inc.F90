@@ -398,18 +398,18 @@ contains
     do i = st1%st_start, st1%st_end
       do j = 0, mpiv%numprocs-1
         if(mpiv%node.ne.j) then
-          call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*NP, R_MPITYPE, &
+          call mpi_isend(st2%X(psi)(1, 1, i, ik), st1%d%dim*m%np, R_MPITYPE, &
              j, i, mpi_comm_world, request, ierr)
         end if
       end do
     end do
 
     ! Processes are received, and then the matrix elements are calculated.
-    allocate(phi2(NP, st1%d%dim))
+    allocate(phi2(m%np, st1%d%dim))
     do j = 1, n
       l = st1%node(j)
       if(l.ne.mpiv%node) then
-           call mpi_irecv(phi2(1, 1), st1%d%dim*NP, R_MPITYPE, l, j, mpi_comm_world, request, ierr)
+           call mpi_irecv(phi2(1, 1), st1%d%dim*m%np, R_MPITYPE, l, j, mpi_comm_world, request, ierr)
            call mpi_wait(request, status, ierr)
       else
         phi2(:, :) = st2%X(psi)(:, :, j, ik)
