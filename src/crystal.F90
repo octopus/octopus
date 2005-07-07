@@ -10,6 +10,7 @@
       use io
       use units
       use math
+      use blas
 
       implicit none
 
@@ -855,7 +856,7 @@
             id(oper) = axes(nint(trace - 1))
         else
 !           R = IS , where S is proper
-            call sscal(9,-M_ONE,a,1)
+            call blas_scal(9,-M_ONE,a(1,1),1)
             id(oper) = 'I' // axes(nint(-trace - 1))
         endif
 !
