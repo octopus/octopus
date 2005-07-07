@@ -99,19 +99,21 @@ done
 # show usage info if no args at all
 [ "$#" -eq 0 ] && usage;
 
+FULL=0
 while getopts "hnlfp:m:" opt ; do
     case "$opt" in
         h) usage ;;
         n) ECHO="echo"; DRY_RUN="yes";; 
-        p) prefix="$OPTARG" ;;
+        p) prefix="$OPTARG"; testsuite=$prefix/share/octopus/testsuite ;;
 	l) LOCAL_RUN="yes";;
-	f) run_full_suite ;;
+	f) FULL="yes" ;;
 	m) mailaddr="$OPTARG"; mail_report $mailaddr ;; 
         ?) echo "Error parsing arguments"; exit 1 ;;
     esac
 done
 shift $(( OPTIND - 1 ))
 
+[ "${FULL}" == "yes" ] && run_full_suite
 
 # clean up
 rm -f octopus*.log stamp build-stamp
