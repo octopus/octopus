@@ -42,7 +42,7 @@ module mesh
      mesh_inborder, &
      mesh_r, &
      mesh_gcutoff, &
-     mesh_write_info
+     mesh_write_info, mesh_half
 
   type mesh_type
     type(simul_box_type), pointer :: sb
@@ -81,7 +81,7 @@ contains
     m%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
 
     call adjust_nr()          ! find out the extension of the simulation box
-    call mesh_create_xyz(m, cv, geo, enlarge)
+    call mesh_create_xyz(sb, m, cv, geo, enlarge)
 
     call pop_sub()
   contains
@@ -116,6 +116,7 @@ contains
       end do
 
       m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
+
     end subroutine adjust_nr
 
   end subroutine mesh_init
@@ -277,6 +278,34 @@ contains
      
      call pop_sub()
    end subroutine mesh_end
+
+
+   !/*---------------------------------------------------------------------------------
+   ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
+   ! This is used in the multi-grid routines
+   !---------------------------------------------------------------------------------*/
+   subroutine mesh_half(mesh_in, mesh_out)
+     type(mesh_type), intent(in)  :: mesh_in
+     type(mesh_type), intent(out) :: mesh_out
+
+     integer :: i, j
+
+     mesh_out%sb             => mesh_in%sb
+     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
+
+     mesh_out%h(:) = 2*mesh_in%h(:)
+     
+     j = 0
+     do i = 1, mesh_in%np
+       if(all(mod(mesh_in%Lxyz(i,:), 2) == 0)) then
+         j = j+1
+       end if
+     end do
+
+     print *, mesh_in%np, j
+     stop
+
+   end subroutine mesh_half
 
 #include "mesh_create.F90"
 

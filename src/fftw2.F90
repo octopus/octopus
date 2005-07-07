@@ -104,7 +104,7 @@ contains
     !    end do    
     ! NEW
     ! optimize dimensions only for finite sys
-    if(simul_box_is_periodic(sb)) then
+    if(.not.simul_box_is_periodic(sb)) then
       do i = 1, sb%dim 
         if(n(i).ne.1 .and. fft_optimize) &
            call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number

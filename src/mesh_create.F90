@@ -106,21 +106,22 @@ subroutine mesh_partition(m, Lxyz_tmp)
 end subroutine mesh_partition
 #endif
 
-subroutine mesh_create_xyz(m, cv, geo, enlarge)
+subroutine mesh_create_xyz(sb, m, cv, geo, enlarge)
+  type(simul_box_type),  intent(in)    :: sb
   type(mesh_type),       intent(inout) :: m
   type(curvlinear_type), intent(in)    :: cv
   type(geometry_type),   intent(in)    :: geo
   integer,               intent(in)    :: enlarge
 
   integer :: i, j, k, il, ix, iy, iz, ey, ez
-  integer, pointer :: Lxyz_tmp(:,:,:)
+  integer, allocatable :: Lxyz_tmp(:,:,:)
+  FLOAT,   allocatable :: x(:,:,:,:)
   FLOAT :: chi(3)
-  FLOAT, pointer :: x(:,:,:,:)
 
   call push_sub('mesh_create_xyz')
 
 ! enlarge mesh in the non-periodic dimensions
-  do i = m%sb%periodic_dim+1, m%sb%dim
+  do i = sb%periodic_dim+1, sb%dim
     m%nr(1,i) = m%nr(1,i) - enlarge
     m%nr(2,i) = m%nr(2,i) + enlarge
   end do
@@ -136,21 +137,21 @@ subroutine mesh_create_xyz(m, cv, geo, enlarge)
 
   ! We label 2 the points inside the mesh + enlargement
   ey = 0; ez = 0
-  if(m%sb%dim > 1) ey = enlarge
-  if(m%sb%dim > 2) ez = enlarge
+  if(sb%dim > 1) ey = enlarge
+  if(sb%dim > 2) ez = enlarge
 
   do ix = m%nr(1,1), m%nr(2,1)
-    chi(1) = real(ix, PRECISION) * m%h(1) + m%sb%box_offset(1)
+    chi(1) = real(ix, PRECISION) * m%h(1) + sb%box_offset(1)
 
     do iy = m%nr(1,2), m%nr(2,2)
-      chi(2) = real(iy, PRECISION) * m%h(2) + m%sb%box_offset(2)
+      chi(2) = real(iy, PRECISION) * m%h(2) + sb%box_offset(2)
 
       do iz = m%nr(1,3), m%nr(2,3)
-        chi(3) = real(iz, PRECISION) * m%h(3) + m%sb%box_offset(3)
+        chi(3) = real(iz, PRECISION) * m%h(3) + sb%box_offset(3)
 
-        call curvlinear_chi2x(m%sb, geo, cv, chi(:), x(:, ix, iy, iz))
+        call curvlinear_chi2x(sb, geo, cv, chi(:), x(:, ix, iy, iz))
 
-        if(simul_box_in_box(m%sb, geo, x(:, ix, iy, iz))) then
+        if(simul_box_in_box(sb, geo, x(:, ix, iy, iz))) then
           do i = -enlarge, enlarge
             do j = -ey, ey
               do k = -ez, ez
@@ -172,7 +173,7 @@ subroutine mesh_create_xyz(m, cv, geo, enlarge)
   do ix = m%nr(1,1), m%nr(2,1)
     do iy = m%nr(1,2), m%nr(2,2)
       do iz = m%nr(1,3), m%nr(2,3)
-        if(simul_box_in_box(m%sb, geo, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
+        if(simul_box_in_box(sb, geo, x(:, ix, iy, iz))) Lxyz_tmp(ix, iy, iz) = 1
         if(Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
       end do
     end do
@@ -221,7 +222,7 @@ subroutine mesh_create_xyz(m, cv, geo, enlarge)
   call mesh_partition(m, Lxyz_tmp)
 #endif
 
-  deallocate(Lxyz_tmp); nullify(Lxyz_tmp)
+  deallocate(Lxyz_tmp)
   deallocate(x)
 
   call pop_sub()
@@ -230,10 +231,10 @@ contains
   ! calculate the volume of integration
   subroutine get_vol_pp()
     integer :: i
-    FLOAT :: f, chi(m%sb%dim)
+    FLOAT :: f, chi(sb%dim)
 
     f = M_ONE
-    do i = 1, m%sb%dim
+    do i = 1, sb%dim
       f = f*m%h(i)
     end do
 
@@ -241,8 +242,8 @@ contains
     m%vol_pp(:) = f
 
     do i = 1, m%np
-      chi(1:m%sb%dim) = m%Lxyz(i, 1:m%sb%dim)*m%h(1:m%sb%dim)
-      m%vol_pp(i) = m%vol_pp(i)*curvlinear_det_Jac(m%sb, geo, cv, m%x(i,:), chi)
+      chi(1:sb%dim) = m%Lxyz(i, 1:sb%dim)*m%h(1:sb%dim)
+      m%vol_pp(i) = m%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, m%x(i,:), chi)
     end do
 
   end subroutine get_vol_pp
