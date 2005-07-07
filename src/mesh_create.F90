@@ -20,7 +20,7 @@
 #if defined(HAVE_METIS)
 subroutine mesh_partition(m, Lxyz_tmp)
   type(mesh_type),      intent(inout) :: m
-  integer,              pointer       :: Lxyz_tmp(:,:,:)
+  integer,              intent(in)    :: Lxyz_tmp(:,:,:)
   
   integer :: i, ix, iy, iz, ne
   integer :: etype, edgecut
