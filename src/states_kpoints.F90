@@ -121,9 +121,10 @@ subroutine states_choose_kpoints(d, m, sb, geo)
     coorat(:,:,i) = coorat(:,:,i) / sb%rlat(i, i) + M_HALF
   end do
 
+
   allocate(kp(3, nkmax), kw(nkmax))
 
-  call init_crystal(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
+  call crystal_init(sb%rlat, geo%nspecies, natom, geo%natoms, coorat, d%nik_axis, &
        kshifts, nk, kp, kw)
 
   ! double d%nik and copy points for spin polarized calc
@@ -158,6 +159,8 @@ subroutine kpoints_write_info(d,iunit)
 
   integer :: ik
     
+  call push_sub('kpoints_write_info')
+  
   write(message(1),'(a,3(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(:)
   call write_info(1, iunit)
   
@@ -170,4 +173,5 @@ subroutine kpoints_write_info(d,iunit)
     call write_info(1,iunit,verbose_limit=80)
   end do
 
+  call pop_sub()
 end subroutine kpoints_write_info
