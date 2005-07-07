@@ -108,7 +108,7 @@ contains
     CMPLX,                  intent(in)    :: factor
 
     integer :: k
-    FLOAT :: x(3), v
+    FLOAT :: v
     
     call push_sub('vlpsi')
     

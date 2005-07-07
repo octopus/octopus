@@ -252,7 +252,6 @@ end subroutine define_run_modes
 end subroutine run
 
 subroutine run_init()
-  character(len=70) :: mode_string
 
   call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
 

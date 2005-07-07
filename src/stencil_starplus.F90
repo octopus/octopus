@@ -53,7 +53,7 @@ module stencil_starplus
     integer, intent(in)  :: order
     integer, intent(out) :: stencil(:,:)
 
-    integer :: i, j, k, n
+    integer :: i, j, n
 
     call push_sub('stencil_starplus_get_lapl')
 
@@ -160,7 +160,7 @@ module stencil_starplus
     integer, intent(in)  :: order
     integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
-    integer :: i, j, k, n
+    integer :: i, j, n
 
     call push_sub('stencil_starplus_pol_lapl')
 

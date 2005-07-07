@@ -22,7 +22,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   type(sparskit_solver_type), intent(out) :: sk
   integer, intent(in)  :: n
 
-  integer :: workspace_size, m, wn 
+  integer :: workspace_size, m
 
   call push_sub('sparskit_solver_init')
 

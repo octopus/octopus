@@ -18,11 +18,11 @@
 !! $Id$
 
 
-subroutine DRIVER (sk, op, sol, rhs, work)
+subroutine DRIVER (sk, op, sol, rhs, sk_work)
   type(sparskit_solver_type), intent(inout) :: sk
   R_TYPE, intent(in)    :: rhs(:)
   R_TYPE, intent(out)   :: sol(:)
-  FLOAT,  intent(inout) :: work(:)
+  FLOAT,  intent(inout) :: sk_work(:)
 #ifdef R_TREAL
   interface
      subroutine op(x, y)

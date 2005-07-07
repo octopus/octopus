@@ -31,7 +31,7 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
 
   logical, allocatable :: select(:)
   FLOAT, allocatable :: ax(:), d(:, :), resid(:), v(:, :), workd(:), workev(:), workl(:)
-  integer :: ldv, nev, iparam(11), ipntr(14), ido, n, xnev, lworkl, info, ierr, &
+  integer :: ldv, nev, iparam(11), ipntr(14), ido, n, lworkl, info, ierr, &
              i, j, ishfts, maxitr, mode1, ik
   FLOAT :: tol, sigmar, sigmai
 

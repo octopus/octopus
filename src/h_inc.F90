@@ -442,7 +442,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   FLOAT, intent(in) :: t
 
   integer :: k, idim
-  FLOAT :: x(NDIM), v, a(NDIM)
+  FLOAT :: v, a(NDIM)
   R_TYPE, allocatable :: grad(:,:)
 
   call push_sub('vlasers')

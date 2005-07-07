@@ -361,7 +361,7 @@ contains
 
     subroutine td_rti5
       integer :: j, is, ist, k
-      FLOAT :: time(2), x(3), v
+      FLOAT :: time(2), v
       FLOAT, allocatable :: vaux(:, :, :)
 
       call push_sub('td_rti5')

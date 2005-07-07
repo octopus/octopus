@@ -454,7 +454,7 @@ contains
 !!! where E_0 = - k \hbar / e
     subroutine apply_delta_field()
       integer :: i, mode
-      FLOAT   :: k, x(NDIM)
+      FLOAT   :: k
       CMPLX   :: c(2), kick
 
       call push_sub('apply_delta_field')
