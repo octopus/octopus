@@ -273,7 +273,7 @@ end subroutine hamiltonian_end
 ! counts exist (see TDDFT theory for details).
 subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   type(hamiltonian_type), intent(inout) :: h
-  type(states_type),      intent(IN)    :: st
+  type(states_type),      intent(in)    :: st
   FLOAT,                  intent(in)    :: eii
   integer,                intent(in)    :: iunit
   logical,      optional, intent(in)    :: reduce

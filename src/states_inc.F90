@@ -20,7 +20,7 @@
 
 ! Calculates the new density out the wavefunctions and occupations...
 subroutine X(states_calc_dens)(st, np, rho, reduce)
-  type(states_type), intent(IN)  :: st
+  type(states_type), intent(in)  :: st
   integer,           intent(in)  :: np
   FLOAT,             intent(out) :: rho(np, st%d%nspin)
   logical,           intent(in), optional :: reduce
@@ -112,9 +112,9 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
 end subroutine X(states_gram_schmidt)
 
 R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(in) :: m
   integer,         intent(in) :: dim
-  R_TYPE,          intent(IN) :: f1(:,:), f2(:,:)
+  R_TYPE,          intent(in) :: f1(:,:), f2(:,:)
 
   integer :: i
 
@@ -126,9 +126,9 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
 end function X(states_dotp)
 
 FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(in) :: m
   integer,         intent(in) :: dim
-  R_TYPE,          intent(IN) :: f(:,:)
+  R_TYPE,          intent(in) :: f(:,:)
 
   integer :: i
 
@@ -141,9 +141,9 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
 end function X(states_nrm2)
 
 FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
-  type(mesh_type),   intent(IN)  :: m
+  type(mesh_type),   intent(in)  :: m
   integer,           intent(in)  :: dim
-  R_TYPE,            intent(IN)  :: hf(:,:), f(:,:)
+  R_TYPE,            intent(in)  :: hf(:,:), f(:,:)
   FLOAT,             intent(in)  :: e
 
   R_TYPE, allocatable :: res(:,:)
@@ -348,9 +348,9 @@ end subroutine X(states_output)
 !  occupation is null (this can be problem, and will have to be cared about.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
-  type(mesh_type),   intent(IN) :: m
+  type(mesh_type),   intent(in) :: m
   integer,           intent(in) :: ik
-  type(states_type), intent(IN) :: st1, st2
+  type(states_type), intent(in) :: st1, st2
 
   R_TYPE, allocatable :: a(:, :)
 
@@ -377,9 +377,9 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
 contains
   
   subroutine X(calculate_matrix)(m, ik, st1, st2, n, a)
-    type(mesh_type),   intent(IN)  :: m
+    type(mesh_type),   intent(in)  :: m
     integer,           intent(in)  :: ik
-    type(states_type), intent(IN)  :: st1, st2
+    type(states_type), intent(in)  :: st1, st2
     integer,           intent(in)  :: n
     R_TYPE,            intent(out) :: a(n, n)
     

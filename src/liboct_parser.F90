@@ -216,7 +216,7 @@ contains
 
   ! logical is a FORTRAN type, so we emulate the routine with integers
   subroutine loct_parse_logical(name, def, res)
-    character(len=*), intent(IN) :: name
+    character(len=*), intent(in) :: name
     logical, intent(in) :: def
     logical, intent(out) :: res
 

@@ -389,7 +389,7 @@ contains
 
   subroutine spline_fit4(nrc, rofi, ffit, spl)
     integer, intent(in) :: nrc
-    real(4), intent(IN) :: rofi(nrc), ffit(nrc)
+    real(4), intent(in) :: rofi(nrc), ffit(nrc)
     type(loct_spline_type), intent(out) :: spl
     
     real(8), allocatable :: rofi8(:), ffit8(:)

@@ -259,9 +259,9 @@ contains
 #ifdef HAVE_FFT
   subroutine epot_local_fourier_init(ep, m, sb, geo)
     type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(IN)    :: m
+    type(mesh_type),     intent(in)    :: m
     type(simul_box_type), intent(in)   :: sb
-    type(geometry_type), intent(IN)    :: geo
+    type(geometry_type), intent(in)    :: geo
     
     integer :: vlocal_cutoff
     integer :: i, ix, iy, iz, ixx(3), db(3), c(3)
@@ -724,8 +724,8 @@ contains
 
   subroutine epot_generate_classic(ep, m, geo)
     type(epot_type),     intent(inout) :: ep
-    type(mesh_type),     intent(IN)    :: m
-    type(geometry_type), intent(IN)    :: geo
+    type(mesh_type),     intent(in)    :: m
+    type(geometry_type), intent(in)    :: geo
     
     integer i, ia
     FLOAT :: r, rc

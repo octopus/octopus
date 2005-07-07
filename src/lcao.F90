@@ -193,7 +193,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   type(mesh_type),        intent(in)    :: m
   type(simul_box_type),   intent(in)    :: sb
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(in)    :: h
 
   integer, parameter :: orbs_local = 2
 

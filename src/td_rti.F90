@@ -127,7 +127,7 @@ contains
 
   !-------------------------------------------------------------------
   subroutine td_rti_run_zero_iter(h, tr)
-    type(hamiltonian_type), intent(IN)    :: h
+    type(hamiltonian_type), intent(in)    :: h
     type(td_rti_type),      intent(inout) :: tr
     tr%v_old(:, :, 2) = h%vhxc(:, :)
     tr%v_old(:, :, 3) = h%vhxc(:, :)

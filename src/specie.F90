@@ -433,7 +433,7 @@ contains
   ! returns the gradient of the external potential
   ! ---------------------------------------------------------
   subroutine specie_get_glocal(s, x, gv)
-    type(specie_type), intent(IN) :: s
+    type(specie_type), intent(in) :: s
     FLOAT, intent(in) :: x(:)
     FLOAT, intent(out) :: gv(:)
     
@@ -501,7 +501,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_nlcc(s, x) result(l)
-    type(specie_type), intent(IN) :: s
+    type(specie_type), intent(in) :: s
     FLOAT, intent(in) :: x(3)
     
     ! only for 3D pseudopotentials, please
@@ -514,7 +514,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine specie_get_nl_part(s, x, l, lm, i, uV, duV, so)
-    type(specie_type), intent(IN)  :: s
+    type(specie_type), intent(in)  :: s
     FLOAT,             intent(in)  :: x(:)        ! (3)
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(:)  ! (3)

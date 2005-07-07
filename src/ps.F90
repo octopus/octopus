@@ -292,7 +292,7 @@ subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
 end subroutine ps_filter
 
 subroutine ps_debug(ps, dir)
-  type(ps_type), intent(IN) :: ps
+  type(ps_type), intent(in) :: ps
   character(len=*), intent(in) :: dir
 
   ! We will plot also some Fourier transforms.
@@ -499,7 +499,7 @@ subroutine tm_load(ps, pstm)
 end subroutine tm_load
 
 subroutine get_splines_tm(psf, ps)
-  type(tm_type), intent(IN)    :: psf
+  type(tm_type), intent(in)    :: psf
   type(ps_type), intent(inout) :: ps
   
   integer :: is, l, ll, nrc, ir, nrcore, k
@@ -607,7 +607,7 @@ subroutine get_splines_tm(psf, ps)
 end subroutine get_splines_tm
 
 subroutine get_splines_hgh(psp, ps)
-  type(hgh_type), intent(IN)    :: psp
+  type(hgh_type), intent(in)    :: psp
   type(ps_type),  intent(inout) :: ps
 
   integer :: l, is, nrc, j

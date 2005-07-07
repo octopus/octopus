@@ -227,7 +227,7 @@ subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
   type(eigen_solver_type), intent(inout) :: eigens
   type(grid_type),         intent(inout) :: gr
   type(states_type),       intent(inout) :: st
-  type(hamiltonian_type),  intent(IN)    :: h
+  type(hamiltonian_type),  intent(in)    :: h
   integer,                 intent(in)    :: iter
   logical,       optional, intent(inout) :: conv
   logical,       optional, intent(in)    :: verbose
@@ -284,7 +284,7 @@ end subroutine eigen_solver_run
 subroutine eigen_diagon_subspace(gr, st, h)
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(in)    :: h
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer :: ik, i, j

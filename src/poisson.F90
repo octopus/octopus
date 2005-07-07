@@ -257,7 +257,7 @@ contains
 #if defined(HAVE_FFT)
   !-----------------------------------------------------------------
   subroutine poisson_fft(m, pot, rho, average_to_zero)
-    type(mesh_type), intent(IN) :: m
+    type(mesh_type), intent(in) :: m
     FLOAT, intent(out) :: pot(:) ! pot(m%np)
     FLOAT, intent(in)  :: rho(:) ! rho(m%np)
     logical, intent(in), optional :: average_to_zero

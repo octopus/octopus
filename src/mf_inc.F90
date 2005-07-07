@@ -20,8 +20,8 @@
 
 !!!  integrates a function
 function X(mf_integrate) (m, f) result(d)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE,          intent(IN) :: f(:)  ! f(m%np)
+  type(mesh_type), intent(in) :: m
+  R_TYPE,          intent(in) :: f(:)  ! f(m%np)
   R_TYPE                      :: d
 
   d = sum(f(1:m%np)*m%vol_pp(1:m%np))
@@ -30,7 +30,7 @@ end function X(mf_integrate)
 
 !!! this function returns the dot product between two vectors
 R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(in) :: m
   R_TYPE, intent(in) :: f1(:), f2(:) ! f(m%np)
 
   R_TYPE, allocatable :: l(:)
@@ -49,8 +49,8 @@ end function X(mf_dotp)
 
 !!! this function returns the norm of a vector
 FLOAT function X(mf_nrm2)(m, f) result(nrm2)
-  type(mesh_type), intent(IN) :: m
-  R_TYPE,          intent(IN) :: f(:) ! f(m%np)
+  type(mesh_type), intent(in) :: m
+  R_TYPE,          intent(in) :: f(:) ! f(m%np)
 
   if(m%use_curvlinear) then
    nrm2 = sqrt(X(mf_dotp) (m, f, f))

@@ -121,13 +121,13 @@ module td_exp
   subroutine td_exp_dt(te, gr, h, zpsi, ik, timestep, t, order, vmagnus)
     type(td_exp_type),      intent(inout)   :: te
     type(grid_type),        intent(inout)   :: gr
-    type(hamiltonian_type), intent(IN)      :: h
+    type(hamiltonian_type), intent(in)      :: h
     integer,                intent(in)      :: ik
     CMPLX,                  intent(inout)   :: zpsi(:, :)
     FLOAT,                  intent(in)      :: timestep, t
     integer,      optional, intent(out)     :: order ! For the methods that rely on Hamiltonian-vector
                                                      ! multiplication, the number of these.
-    FLOAT,        optional, intent(IN)      :: vmagnus(NP, h%d%nspin, 2)
+    FLOAT,        optional, intent(in)      :: vmagnus(NP, h%d%nspin, 2)
 
     logical :: apply_magnus
 
@@ -156,7 +156,7 @@ module td_exp
   contains
 
     subroutine operate(psi, oppsi)
-      CMPLX, intent(IN)    :: psi(:, :)
+      CMPLX, intent(in)    :: psi(:, :)
       CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then

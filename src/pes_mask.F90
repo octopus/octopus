@@ -21,7 +21,7 @@ subroutine PES_mask_init(v, m, sb, st)
   type(PES_mask_type),  intent(out)   :: v
   type(mesh_type),      intent(inout) :: m
   type(simul_box_type), intent(in)    :: sb
-  type(states_type),    intent(IN)    :: st
+  type(states_type),    intent(in)    :: st
 
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
@@ -52,8 +52,8 @@ end subroutine PES_mask_end
 
 subroutine PES_mask_doit(v, m, st, dt, mask)
   type(PES_mask_type), intent(inout) :: v
-  type(mesh_type),     intent(IN)    :: m
-  type(states_type),   intent(IN)    :: st
+  type(mesh_type),     intent(in)    :: m
+  type(states_type),   intent(in)    :: st
   FLOAT,               intent(in)    :: dt
   FLOAT,               pointer       :: mask(:)
 
@@ -110,9 +110,9 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
 end subroutine PES_mask_doit
 
 subroutine PES_mask_output(v, m, st, file)
-  type(PES_mask_type), intent(IN) :: v
-  type(mesh_type),     intent(IN) :: m
-  type(states_type),   intent(IN) :: st
+  type(PES_mask_type), intent(in) :: v
+  type(mesh_type),     intent(in) :: m
+  type(states_type),   intent(in) :: st
   character(len=*),    intent(in) :: file
 
   FLOAT, allocatable :: spis(:,:,:), arpis(:,:,:)

@@ -45,10 +45,10 @@ end subroutine X(hamiltonian_eigenval)
 
 ! ---------------------------------------------------------
 subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(in)    :: h
   type(grid_type),        intent(inout) :: gr
   integer,                intent(in)    :: ik
-  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   FLOAT, optional,        intent(in)    :: t
 
@@ -436,7 +436,7 @@ end subroutine X(vlpsi)
 subroutine X(vlasers) (gr, h, psi, hpsi, t)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(in)    :: h
-  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   FLOAT, intent(in) :: t
@@ -478,8 +478,8 @@ end subroutine X(vlasers)
 
 ! ---------------------------------------------------------
 subroutine X(vborders) (h, psi, hpsi)
-  type(hamiltonian_type), intent(IN)    :: h
-  R_TYPE,                 intent(IN)    :: psi(:,:)  !  psi(m%np, h%d%dim)
+  type(hamiltonian_type), intent(in)    :: h
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
 
   integer :: idim

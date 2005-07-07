@@ -153,7 +153,7 @@ contains
   end subroutine mesh_double_box
   
   subroutine mesh_write_info(m, unit)
-    type(mesh_type), intent(IN) :: m
+    type(mesh_type), intent(in) :: m
     integer,         intent(in) :: unit
     
 #ifdef HAVE_MPI

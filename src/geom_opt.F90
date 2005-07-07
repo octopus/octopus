@@ -164,7 +164,7 @@ contains
 
 
     subroutine geom_calc_point(x, f, df)
-      FLOAT, intent(IN)  :: x(3*geo%natoms)
+      FLOAT, intent(in)  :: x(3*geo%natoms)
       FLOAT, intent(out) :: f, df(3*geo%natoms)
       
       integer :: i

@@ -95,7 +95,7 @@ end subroutine poisson2D_init
 
 
 subroutine poisson2D_solve(m, pot, rho)
-  type(mesh_type), intent(IN) :: m
+  type(mesh_type), intent(in) :: m
   FLOAT, intent(out) :: pot(m%np)
   FLOAT, intent(in)  :: rho(m%np)
 

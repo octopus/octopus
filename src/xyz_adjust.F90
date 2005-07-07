@@ -96,7 +96,7 @@ contains
   end subroutine xyz_adjust_it
     
   subroutine find_center(geo, x)
-    type(geometry_type), intent(IN) :: geo
+    type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
 
     FLOAT :: xmin(3), xmax(3)
@@ -115,7 +115,7 @@ contains
   end subroutine find_center
 
   subroutine find_center_of_mass(geo, x, pseudo)
-    type(geometry_type), intent(IN) :: geo
+    type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
     logical, intent(in) :: pseudo
 
@@ -134,7 +134,7 @@ contains
   end subroutine find_center_of_mass
 
   subroutine axis_large(geo, x, x2)
-    type(geometry_type), intent(IN) :: geo
+    type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3), x2(3)
 
     integer  :: i, j
@@ -168,7 +168,7 @@ contains
   ! This subroutine assumes that the origin of the coordinates is the
   ! center of mass of the system
   subroutine axis_inertia(geo, x, x2, pseudo)
-    type(geometry_type), intent(IN) :: geo
+    type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3), x2(3)
     logical, intent(in) :: pseudo
 

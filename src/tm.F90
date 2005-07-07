@@ -605,7 +605,7 @@ subroutine calculate_kb_cosines(pstm, lloc)
 end subroutine calculate_kb_cosines
 
 subroutine ghost_analysis(pstm, lmax)
-  type(tm_type), intent(IN) :: pstm
+  type(tm_type), intent(in) :: pstm
   integer,       intent(in) :: lmax
 
   character(len=3) :: functl
@@ -753,7 +753,7 @@ subroutine get_local(psf, l_loc, rcore)
 end subroutine get_local
 
 subroutine tm_debug(pstm, dir)
-  type(tm_type), intent(IN) :: pstm
+  type(tm_type), intent(in) :: pstm
   character(len=*), intent(in) :: dir
 
   integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is

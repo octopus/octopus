@@ -293,7 +293,7 @@ contains
 
   subroutine write_field(filename, las)
     character(len=*), intent(in) :: filename
-    FLOAT,            intent(IN) :: las(1:NDIM,0:2*td%max_iter)
+    FLOAT,            intent(in) :: las(1:NDIM,0:2*td%max_iter)
 
     integer :: i, iunit
 

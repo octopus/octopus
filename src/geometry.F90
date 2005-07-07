@@ -395,7 +395,7 @@ end subroutine geometry_end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Returns the number of non-local operator that should be defined.
 function geometry_nvnl(geo) result(res)
-  type(geometry_type), intent(IN) :: geo
+  type(geometry_type), intent(in) :: geo
   integer                         :: res
 
   type(specie_type), pointer :: s
@@ -416,7 +416,7 @@ function geometry_nvnl(geo) result(res)
 end function geometry_nvnl
 
 FLOAT function ion_ion_energy(geo)
-  type(geometry_type), intent(IN) :: geo
+  type(geometry_type), intent(in) :: geo
   
   FLOAT :: r
   integer :: i, j
@@ -433,7 +433,7 @@ FLOAT function ion_ion_energy(geo)
 end function ion_ion_energy
 
 FLOAT function kinetic_energy(geo)
-  type(geometry_type), intent(IN) :: geo
+  type(geometry_type), intent(in) :: geo
 
   integer :: i
 
@@ -446,7 +446,7 @@ FLOAT function kinetic_energy(geo)
 end function kinetic_energy
 
 subroutine geometry_dipole(geo, dipole)
-  type(geometry_type), intent(IN)  :: geo
+  type(geometry_type), intent(in)  :: geo
   FLOAT,               intent(out) :: dipole(3)
 
   integer :: i
@@ -478,7 +478,7 @@ subroutine geometry_min_distance(geo, rmin)
 end subroutine geometry_min_distance
 
 subroutine cm_pos(geo, pos)
-  type(geometry_type), intent(IN)  :: geo
+  type(geometry_type), intent(in)  :: geo
   FLOAT,               intent(out) :: pos(3)
 
   FLOAT :: m
@@ -493,7 +493,7 @@ subroutine cm_pos(geo, pos)
 end subroutine cm_pos
 
 subroutine cm_vel(geo, vel)
-  type(geometry_type), intent(IN)  :: geo
+  type(geometry_type), intent(in)  :: geo
   FLOAT,               intent(out) :: vel(3)
 
   FLOAT :: m
@@ -509,7 +509,7 @@ end subroutine cm_vel
 
 subroutine atom_write_xyz(dir, fname, geo)
   character(len=*),    intent(in) :: dir, fname
-  type(geometry_type), intent(IN) :: geo
+  type(geometry_type), intent(in) :: geo
   
   integer i, iunit
   

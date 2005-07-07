@@ -20,7 +20,7 @@
 subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   type(grid_type), target, intent(in)    :: gr
   type(epot_type),     intent(in)    :: ep
-  type(states_type),   intent(IN)    :: st
+  type(states_type),   intent(in)    :: st
   FLOAT,     optional, intent(in)    :: t
   logical,   optional, intent(in)    :: reduce_
 

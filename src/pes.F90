@@ -60,7 +60,7 @@ subroutine PES_init(p, m, sb, st, ab, save_iter)
   type(PES_TYPE),    intent(out)   :: p
   type(mesh_type),   intent(inout) :: m
   type(simul_box_type), intent(in) :: sb
-  type(states_type), intent(IN)    :: st
+  type(states_type), intent(in)    :: st
   integer,           intent(in)    :: ab, save_iter
 
   call loct_parse_logical(check_inp('CalcPES_rc'), .false., p%calc_rc)
@@ -90,8 +90,8 @@ end subroutine PES_end
 
 subroutine PES_doit(p, m, st, ii, dt, mask)
   type(PES_type),    intent(inout) :: p
-  type(mesh_type),   intent(IN)    :: m
-  type(states_type), intent(IN)    :: st
+  type(mesh_type),   intent(in)    :: m
+  type(states_type), intent(in)    :: st
   FLOAT,             intent(in)    :: dt
   FLOAT,             pointer       :: mask(:)
   integer,           intent(in)    :: ii
@@ -102,9 +102,9 @@ subroutine PES_doit(p, m, st, ii, dt, mask)
 end subroutine PES_doit
 
 subroutine PES_output(p, m, st, iter, save_iter, dt)
-  type(PES_type),    intent(IN) :: p
-  type(mesh_type),   intent(IN) :: m
-  type(states_type), intent(IN) :: st
+  type(PES_type),    intent(in) :: p
+  type(mesh_type),   intent(in) :: m
+  type(states_type), intent(in) :: st
   integer,           intent(in) :: iter, save_iter
   FLOAT,             intent(in) :: dt
 

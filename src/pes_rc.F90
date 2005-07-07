@@ -18,8 +18,8 @@
 !! $Id$
 
 subroutine PES_rc_init(v, m, st, save_iter)
-  type(mesh_type),   intent(IN) :: m
-  type(states_type), intent(IN) :: st
+  type(mesh_type),   intent(in) :: m
+  type(states_type), intent(in) :: st
   integer,           intent(in) :: save_iter
   type(PES_rc_type), intent(out) :: v
 
@@ -70,7 +70,7 @@ end subroutine PES_rc_end
 
 subroutine PES_rc_doit(v, st, ii)
   type(PES_rc_type), intent(inout) :: v
-  type(states_type), intent(IN) :: st
+  type(states_type), intent(in) :: st
   integer,           intent(in) :: ii
 
   integer :: ix, ik, p, idim
@@ -88,8 +88,8 @@ subroutine PES_rc_doit(v, st, ii)
 end subroutine PES_rc_doit
 
 subroutine PES_rc_output(v, st, iter, save_iter, dt)
-  type(PES_rc_type), intent(IN) :: v
-  type(states_type), intent(IN) :: st
+  type(PES_rc_type), intent(in) :: v
+  type(states_type), intent(in) :: st
   integer,           intent(in) :: iter, save_iter
   FLOAT,             intent(in) :: dt
   

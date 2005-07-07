@@ -117,7 +117,7 @@ end subroutine X(xc_OEP_calc)
 subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(inout) :: h
-  type(states_type),      intent(IN)    :: st
+  type(states_type),      intent(in)    :: st
   integer,                intent(in)    :: is
   FLOAT,                  intent(inout) :: vxc(NP)
   type(xc_oep_type),      intent(inout) :: oep

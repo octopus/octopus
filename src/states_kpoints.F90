@@ -154,8 +154,8 @@ subroutine states_choose_kpoints(d, m, sb, geo)
 end subroutine states_choose_kpoints
 
 subroutine kpoints_write_info(d,iunit)
-  type(states_dim_type), intent(IN) :: d
-  integer, intent(IN) :: iunit
+  type(states_dim_type), intent(in) :: d
+  integer, intent(in) :: iunit
 
   integer :: ik
     

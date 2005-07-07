@@ -164,7 +164,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   type(states_type),      intent(inout) :: st
   type(v_ks_type),        intent(inout) :: ks
   type(hamiltonian_type), intent(inout) :: h
-  type(output_type),      intent(IN)    :: outp
+  type(output_type),      intent(in)    :: outp
 
   type(lcao_type) :: lcao_data
 

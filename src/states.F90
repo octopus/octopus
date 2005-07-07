@@ -388,7 +388,7 @@ end subroutine states_end
 ! generate a hydrogen s-wavefunction around a random point
 subroutine states_generate_random(st, m, ist_start_, ist_end_)
   type(states_type), intent(inout) :: st
-  type(mesh_type),   intent(IN)    :: m
+  type(mesh_type),   intent(in)    :: m
   integer, optional, intent(in)    :: ist_start_, ist_end_
 
   integer :: ist, ik, id, ist_start, ist_end
@@ -415,7 +415,7 @@ end subroutine states_generate_random
 
 subroutine states_fermi(st, m)
   type(states_type), intent(inout) :: st
-  type(mesh_type),   intent(IN)    :: m
+  type(mesh_type),   intent(in)    :: m
 
 ! Local variables
   integer :: ie, ik, iter
@@ -527,7 +527,7 @@ end subroutine states_fermi
 
 subroutine states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
   type(grid_type),   intent(in)  :: gr
-  type(states_type), intent(IN)  :: st
+  type(states_type), intent(in)  :: st
   FLOAT,             intent(in)  :: pol(:)          ! pol(3)
   FLOAT,             intent(out) :: dipole(:)       ! dipole(st%d%nspin)
   integer, optional, intent(in)  :: lmax
@@ -572,7 +572,7 @@ end subroutine states_calculate_multipoles
 
 ! function to calculate the eigenvalues sum using occupations as weights
 function states_eigenvalues_sum(st) result(e)
-  type(states_type), intent(IN) :: st
+  type(states_type), intent(in) :: st
   FLOAT                         :: e
 
   integer :: ik
@@ -679,7 +679,7 @@ end subroutine states_write_eigenvalues
 
 subroutine states_write_bands(iunit, nst, st)
   integer,           intent(in) :: iunit, nst
-  type(states_type), intent(IN) :: st
+  type(states_type), intent(in) :: st
 
   integer ik, j, ns
 
@@ -732,8 +732,8 @@ end function states_spin_channel
 ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
 ! ---------------------------------------------------------
 subroutine calc_projection(m, u_st, st, p)
-  type(mesh_type),   intent(IN)  :: m
-  type(states_type), intent(IN)  :: u_st, st
+  type(mesh_type),   intent(in)  :: m
+  type(states_type), intent(in)  :: u_st, st
   CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%d%nik)
 
   integer :: uist, ist, ik

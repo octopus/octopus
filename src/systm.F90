@@ -106,8 +106,8 @@ contains
 
   !----------------------------------------------------------
   subroutine atom_get_wf(m, atom, l, lm, ispin, psi)
-    type(mesh_type), intent(IN)  :: m             ! the mesh in which the psi is defined
-    type(atom_type), intent(IN)  :: atom          !
+    type(mesh_type), intent(in)  :: m             ! the mesh in which the psi is defined
+    type(atom_type), intent(in)  :: atom          !
     integer,         intent(in)  :: l, lm, ispin  ! quantum numbers of psi
     R_TYPE,          intent(out) :: psi(:)        ! psi(m%np) the atomic wavefunction
     

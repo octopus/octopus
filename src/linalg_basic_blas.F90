@@ -126,7 +126,7 @@ end subroutine FNAME(scal_4)
 subroutine FNAME(axpy_1)(n1, da, dx, dy)
   integer, intent(in)    :: n1
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:)
+  TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
 
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
@@ -136,7 +136,7 @@ end subroutine FNAME(axpy_1)
 subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   integer, intent(in)    :: n1, n2
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:,:)
+  TYPE1,   intent(in)    :: dx(:,:)
   TYPE1,   intent(inout) :: dy(:,:)
 
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
@@ -146,7 +146,7 @@ end subroutine FNAME(axpy_2)
 subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   integer, intent(in)    :: n1, n2, n3
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:,:,:)
+  TYPE1,   intent(in)    :: dx(:,:,:)
   TYPE1,   intent(inout) :: dy(:,:,:)
 
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
@@ -156,7 +156,7 @@ end subroutine FNAME(axpy_3)
 subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   integer, intent(in)    :: n1, n2, n3, n4
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:,:,:,:)
+  TYPE1,   intent(in)    :: dx(:,:,:,:)
   TYPE1,   intent(inout) :: dy(:,:,:,:)
 
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
@@ -169,7 +169,7 @@ end subroutine FNAME(axpy_4)
 
 subroutine FNAME(copy_1)(n1, dx, dy)
   integer, intent(in)  :: n1
-  TYPE1,   intent(IN)  :: dx(:)
+  TYPE1,   intent(in)  :: dx(:)
   TYPE1,   intent(out) :: dy(:)
 
   call blas_copy(n1, dx(1), 1, dy(1), 1)
@@ -178,7 +178,7 @@ end subroutine FNAME(copy_1)
 
 subroutine FNAME(copy_2)(n1, n2, dx, dy)
   integer, intent(in)  :: n1, n2
-  TYPE1,   intent(IN)  :: dx(:,:)
+  TYPE1,   intent(in)  :: dx(:,:)
   TYPE1,   intent(out) :: dy(:,:)
 
   call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
@@ -187,7 +187,7 @@ end subroutine FNAME(copy_2)
 
 subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   integer, intent(in)  :: n1, n2, n3
-  TYPE1,   intent(IN)  :: dx(:,:,:)
+  TYPE1,   intent(in)  :: dx(:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:)
 
   call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
@@ -196,7 +196,7 @@ end subroutine FNAME(copy_3)
 
 subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   integer, intent(in)  :: n1, n2, n3, n4
-  TYPE1,   intent(IN)  :: dx(:,:,:,:)
+  TYPE1,   intent(in)  :: dx(:,:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:,:)
 
   call blas_copy (n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
@@ -209,7 +209,7 @@ end subroutine FNAME(copy_4)
 
 TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
   integer, intent(in) :: n
-  TYPE1,   intent(IN) :: dx(:), dy(:)
+  TYPE1,   intent(in) :: dx(:), dy(:)
 
   dot = blas_dot(n, dx(1), 1, dy(1), 1)
 
@@ -221,7 +221,7 @@ end function FNAME(dot)
 
 TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
-  TYPE1,   intent(IN) :: dx(:)
+  TYPE1,   intent(in) :: dx(:)
 
   nrm2 = blas_nrm2(n, dx(1), 1)
 
@@ -238,8 +238,8 @@ end function FNAME(nrm2)
 subroutine FNAME(gemm)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(IN)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(IN)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
   TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
 
   call blas_gemm('N', 'N', m, n, k, alpha, a(1,1), m, b(1,1), k, beta, c(1,1), m)
@@ -253,8 +253,8 @@ end subroutine FNAME(gemm)
 subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m, n
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(IN)    :: a(:,:)
-  TYPE1,   intent(IN)    :: x(:)
+  TYPE1,   intent(in)    :: a(:,:)
+  TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:)
 
   call blas_gemv('N', m, n, alpha, a(1,1), m, x(1), 1, beta, y(1), 1)
@@ -264,8 +264,8 @@ end subroutine FNAME(gemv_1)
 subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m1, m2, n
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(IN)    :: a(:,:,:)
-  TYPE1,   intent(IN)    :: x(:)
+  TYPE1,   intent(in)    :: a(:,:,:)
+  TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:,:)
 
   call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)

@@ -222,7 +222,7 @@ end subroutine eigen_solver_cg2
 subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder, verbose)
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(IN)    :: h
+  type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: tol
   integer,                intent(inout) :: niter
   integer,                intent(inout) :: converged

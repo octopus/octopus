@@ -30,7 +30,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
   integer, intent(in)  :: order, n1, n2
-  R_TYPE,  intent(IN)  :: v(:,:,:)  ! (n1, n2, order)
+  R_TYPE,  intent(in)  :: v(:,:,:)  ! (n1, n2, order)
   R_TYPE,  intent(out) :: vex(:,:)  ! (n1, n2)
   FLOAT,   intent(in)  :: dt, t
 

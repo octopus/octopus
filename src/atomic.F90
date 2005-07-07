@@ -66,7 +66,7 @@ contains
 
   subroutine valconf_copy(cout, cin)
     type(valconf), intent(out) :: cout
-    type(valconf), intent(IN)  :: cin
+    type(valconf), intent(in)  :: cin
     cout%z      = cin%z
     cout%symbol = cin%symbol
     cout%type   = cin%type
@@ -77,7 +77,7 @@ contains
   end subroutine valconf_copy
 
   subroutine write_valconf(c, s)
-    type(valconf), intent(IN) :: c
+    type(valconf), intent(in) :: c
     character(len=VALCONF_STRING_LENGTH) :: s
     integer :: j
     write(s,'(i2,1x,a2,i1,1x,i1,a1,6(i1,a1,f6.3,a1))') c%z, c%symbol, c%type, c%p, ':',&
@@ -105,10 +105,10 @@ contains
   subroutine atomhxc(functl, g, nspin, dens, v, extra)
     character(len=*),  intent(in)  :: functl
     integer,           intent(in)  :: nspin
-    type(logrid_type), intent(IN)  :: g
-    FLOAT,             intent(IN)  :: dens(g%nrval, nspin)
+    type(logrid_type), intent(in)  :: g
+    FLOAT,             intent(in)  :: dens(g%nrval, nspin)
     FLOAT,             intent(out) :: v(g%nrval, nspin)
-    FLOAT,             intent(IN), optional :: extra(g%nrval)
+    FLOAT,             intent(in), optional :: extra(g%nrval)
 
     character(len=5) :: xcfunc, xcauth
     integer :: is, ir
@@ -456,7 +456,7 @@ end subroutine atomxc
 !      A......THE PARAMETER APPEARING IN R(I) = B*(EXP(A(I-1))-1)             !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
-  FLOAT,   intent(IN)  :: rho(*), r(*), drdi(*), srdrdi(*)
+  FLOAT,   intent(in)  :: rho(*), r(*), drdi(*), srdrdi(*)
   FLOAT,   intent(in)  :: a
   FLOAT,   intent(out) :: v(*)
   integer, intent(in)  :: nr

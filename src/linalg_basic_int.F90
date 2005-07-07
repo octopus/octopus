@@ -118,7 +118,7 @@ end subroutine FNAME(scal_4)
 subroutine FNAME(axpy_1)(n1, da, dx, dy)
   integer, intent(in)    :: n1
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:)
+  TYPE1,   intent(in)    :: dx(:)
   TYPE1,   intent(inout) :: dy(:)
 
   dy(1:n1) = dy(1:n1) + da*dx(1:n1)
@@ -128,7 +128,7 @@ end subroutine FNAME(axpy_1)
 subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   integer, intent(in)    :: n1, n2
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:,:)
+  TYPE1,   intent(in)    :: dx(:,:)
   TYPE1,   intent(inout) :: dy(:,:)
 
   dy(1:n1,1:n2) = dy(1:n1,1:n2) + da*dx(1:n1,1:n2)
@@ -138,7 +138,7 @@ end subroutine FNAME(axpy_2)
 subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   integer, intent(in)    :: n1, n2, n3
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:,:,:)
+  TYPE1,   intent(in)    :: dx(:,:,:)
   TYPE1,   intent(inout) :: dy(:,:,:)
 
   dy(1:n1,1:n2,1:n3) = dy(1:n1,1:n2,1:n3) + da*dx(1:n1,1:n2,1:n3)
@@ -148,7 +148,7 @@ end subroutine FNAME(axpy_3)
 subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   integer, intent(in)    :: n1, n2, n3, n4
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(IN)    :: dx(:,:,:,:)
+  TYPE1,   intent(in)    :: dx(:,:,:,:)
   TYPE1,   intent(inout) :: dy(:,:,:,:)
 
   dy(1:n1,1:n2,1:n3,1:n4) = dy(1:n1,1:n2,1:n3,1:n4) + da*dx(1:n1,1:n2,1:n3,1:n4)
@@ -161,7 +161,7 @@ end subroutine FNAME(axpy_4)
 
 subroutine FNAME(copy_1)(n1, dx, dy)
   integer, intent(in)  :: n1
-  TYPE1,   intent(IN)  :: dx(:)
+  TYPE1,   intent(in)  :: dx(:)
   TYPE1,   intent(out) :: dy(:)
 
   dy(1:n1) = dx(1:n1)
@@ -169,7 +169,7 @@ end subroutine FNAME(copy_1)
 
 subroutine FNAME(copy_2)(n1, n2, dx, dy)
   integer, intent(in)  :: n1, n2
-  TYPE1,   intent(IN)  :: dx(:,:)
+  TYPE1,   intent(in)  :: dx(:,:)
   TYPE1,   intent(out) :: dy(:,:)
 
   dy(1:n1,1:n2) = dx(1:n1,1:n2)
@@ -177,7 +177,7 @@ end subroutine FNAME(copy_2)
 
 subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   integer, intent(in)  :: n1, n2, n3
-  TYPE1,   intent(IN)  :: dx(:,:,:)
+  TYPE1,   intent(in)  :: dx(:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:)
 
   dy(1:n1,1:n2,1:n3) = dx(1:n1,1:n2,1:n3)
@@ -185,7 +185,7 @@ end subroutine FNAME(copy_3)
 
 subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   integer, intent(in)  :: n1, n2, n3, n4
-  TYPE1,   intent(IN)  :: dx(:,:,:,:)
+  TYPE1,   intent(in)  :: dx(:,:,:,:)
   TYPE1,   intent(out) :: dy(:,:,:,:)
 
   dy(1:n1,1:n2,1:n3,1:n4) = dx(1:n1,1:n2,1:n3,1:n4)
@@ -197,7 +197,7 @@ end subroutine FNAME(copy_4)
 
 TYPE1 function FNAME(dot) (n, dx, dy) result(dot)
   integer, intent(in) :: n
-  TYPE1,   intent(IN) :: dx(:), dy(:)
+  TYPE1,   intent(in) :: dx(:), dy(:)
 
   dot = dot_product(dx(1:n), dy(1:n))
 
@@ -209,7 +209,7 @@ end function FNAME(dot)
 
 TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   integer, intent(in) :: n
-  TYPE1,   intent(IN) :: dx(:)
+  TYPE1,   intent(in) :: dx(:)
 
   nrm2 = sqrt(real(dot_product(dx(1:n), dx(1:n)), PRECISION))
 
@@ -226,8 +226,8 @@ end function FNAME(nrm2)
 subroutine FNAME(gemm)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(IN)    :: a(:,:)  ! a(m, k)
-  TYPE1,   intent(IN)    :: b(:,:)  ! b(k, n)
+  TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:,:)  ! b(k, n)
   TYPE1,   intent(inout) :: c(:,:)  ! c(m, n)
 
   c(1:m,1:n) = alpha*matmul(a(1:m,1:k), b(1:m,1:k)) + beta*c(1:m,1:n)
@@ -241,8 +241,8 @@ end subroutine FNAME(gemm)
 subroutine FNAME(gemv)(m, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m, n
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(IN)    :: a(:,:)
-  TYPE1,   intent(IN)    :: x(:)
+  TYPE1,   intent(in)    :: a(:,:)
+  TYPE1,   intent(in)    :: x(:)
   TYPE1,   intent(inout) :: y(:)
 
   y(1:n) = alpha*matmul(a(1:m, 1:n), x(1:n)) + beta*y(1:n)

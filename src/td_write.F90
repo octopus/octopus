@@ -134,7 +134,7 @@ end subroutine td_write_local_magnetic_moments
 subroutine td_write_angular(out, gr, st, iter)
   integer(POINTER_SIZE), intent(in)    :: out
   type(grid_type),       intent(inout) :: gr
-  type(states_type),     intent(IN)    :: st
+  type(states_type),     intent(in)    :: st
   integer,               intent(in)    :: iter
 
   character(len=130) :: aux
@@ -351,9 +351,9 @@ end subroutine td_write_nbo
 
 subroutine td_write_gsp(out, m, st, td, iter)
   integer(POINTER_SIZE), intent(in) :: out
-  type(mesh_type),       intent(IN) :: m
-  type(states_type),     intent(IN) :: st
-  type(td_type),         intent(IN) :: td
+  type(mesh_type),       intent(in) :: m
+  type(states_type),     intent(in) :: st
+  type(td_type),         intent(in) :: td
   integer,               intent(in) :: iter
 
   CMPLX :: gsp
@@ -404,8 +404,8 @@ subroutine td_write_acc(gr, out, st, h, td, iter)
   type(grid_type),        intent(inout) :: gr
   integer(POINTER_SIZE),  intent(in)    :: out
   type(states_type),      intent(in)    :: st
-  type(hamiltonian_type), intent(IN)    :: h
-  type(td_type),          intent(IN)    :: td
+  type(hamiltonian_type), intent(in)    :: h
+  type(td_type),          intent(in)    :: td
   integer,                intent(in)    :: iter
 
   integer :: i
@@ -515,7 +515,7 @@ end subroutine td_write_laser
 
 subroutine td_write_el_energy(out, h, iter)
   integer(POINTER_SIZE),  intent(in) :: out
-  type(hamiltonian_type), intent(IN) :: h
+  type(hamiltonian_type), intent(in) :: h
   integer,                intent(in) :: iter
 
   integer :: i

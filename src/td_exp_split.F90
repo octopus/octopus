@@ -100,8 +100,8 @@ contains
   !!! Calculates psi = exp{factor*V_KS(t)} psi
   !!! where V_KS is the Kohn-Sham potential
   subroutine zexp_vlpsi(gr, h, psi, ik, t, factor)
-    type(grid_type),        intent(IN)    :: gr
-    type(hamiltonian_type), intent(IN)    :: h
+    type(grid_type),        intent(in)    :: gr
+    type(hamiltonian_type), intent(in)    :: h
     CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
     integer,                intent(in)    :: ik
     FLOAT,                  intent(in)    :: t
@@ -146,8 +146,8 @@ contains
   !!! calculates psi = exp{factor V_nlpp} psi
   !!! where V_nlpp is the non-local part of the pseudpotential
   subroutine zexp_vnlpsi (m, h, psi, factor, order)
-    type(mesh_type),        intent(IN) :: m
-    type(hamiltonian_type), intent(IN) :: h
+    type(mesh_type),        intent(in) :: m
+    type(hamiltonian_type), intent(in) :: h
     CMPLX,                  intent(inout) :: psi(m%np, h%d%dim)
     CMPLX,                  intent(in) :: factor
     logical,                intent(in) :: order

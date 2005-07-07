@@ -62,7 +62,7 @@ end subroutine kill_logrid
 
 subroutine derivate_in_log_grid(g, f, dfdr)
   type(logrid_type)     :: g
-  FLOAT, intent(IN)  :: f(g%nrval)
+  FLOAT, intent(in)  :: f(g%nrval)
   FLOAT, intent(out) :: dfdr(g%nrval)
 
   FLOAT :: x, y, a, b
