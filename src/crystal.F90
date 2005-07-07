@@ -664,7 +664,7 @@
          im = i - 1
          do 30 j = 1, im
           do k = 1, 3
-            if (abs(tnp(i,k)-tnp(j,k)) > 1.d-8) go to 30
+            if (abs(tnp(i,k)-tnp(j,k)) > CNST(1.e-8)) go to 30
                do l = 1, 3
                 if (mtrx(i,k,l) /= mtrx(j,k,l)) go to 30
               end do
@@ -735,8 +735,8 @@
                end do
                ttest = abs(ttest)
                itest = nint(ttest) 
-               if (abs(ttest-R_REAL(itest)) < 1.d-4) go to 140
-!     if (abs(ttest-R_REAL(itest)) < 1.d-6) go to 140
+               if (abs(ttest-R_REAL(itest)) < CNST(1.e-4)) go to 140
+!     if (abs(ttest-R_REAL(itest)) < CNST(1.e-6)) go to 140
                write(6,*) i,j,l,abs(ttest-R_REAL(itest))
                mult(i,j) = -1
 !
@@ -762,8 +762,8 @@
                   ttest = ttest + mtrx(i,l,m)*tnp(j,m)
                end do
                itest = nint(ttest) 
-               if (abs(ttest-R_REAL(itest)) < 1.d-4) go to 540
-!               if (abs(ttest-R_REAL(itest)) < 1.d-6) go to 540
+               if (abs(ttest-R_REAL(itest)) < CNST(1.e-4)) go to 540
+!               if (abs(ttest-R_REAL(itest)) < CNST(1.e-6)) go to 540
                write(6,*) i,j,k,l,abs(ttest-R_REAL(itest))
                mult(i,j) = -1
 
@@ -867,7 +867,7 @@
 !
 !        do 40 i = 1, 3
 !           if ( abs( cmplx(wr(i),wi(i)) - (M_ONE,M_ZERO) )
-!     &          < 1.d-8 ) ipt = i 
+!     &          < CNST(1.e-8) ) ipt = i 
 !   40   continue
 !
 !c       Get the correct eigenvector
@@ -880,14 +880,14 @@
 !        nonsym(oper) = .false.
 !c
 !        if (proper) then
-!          if (abs(te) > 1.d-8) then
+!          if (abs(te) > CNST(1.e-8)) then
 !            nonsym(oper) = .true.
 !            call scopy(3,e,1,canon_t,1)
 !            call sscal(3,te,canon_t,1)
 !          endif
 !        else
 !          tt = rdot(t,t)
-!          if (abs(te) - sqrt(tt) > 1.d-8) then
+!          if (abs(te) - sqrt(tt) > CNST(1.e-8)) then
 !             nonsym(oper) = .true.
 !             call scopy(3,t,1,canon_t,1)
 !             call saxpy(3,-te,e,1,canon_t,1)
@@ -965,7 +965,7 @@
       integer :: ia(48), ic(48), mt(48,48)
 
       FLOAT :: da, dif, eps, ts, vs
-      parameter(eps=1.0d-8)    ! used to be 1.0d-8
+      parameter(eps=CNST(1.0e-8))    ! used to be 1.0d-8
 
       integer :: i, il, is, isy, iu, j, k, k1, k2, k3, k4, ks, &
                  l, m, n, n1, n2, n3, nca, ni
@@ -1295,7 +1295,7 @@
       integer :: i, ihc, j, k, lx, n, nr
       FLOAT :: eps, tr
       FLOAT :: vr(3), xa(3)
-      parameter(eps=1.0d-8)    ! used to be 1.0d-8
+      parameter(eps=CNST(1.0e-8))    ! used to be 1.0d-8
 !     ..
 !     .. Intrinsic Functions ..
 !      intrinsic abs
