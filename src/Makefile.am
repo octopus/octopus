@@ -20,8 +20,8 @@ core_SRCS = $(basic_SRCS) \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
 	grid.F90 \
-	poisson_corrections.F90 poisson_cg.F90 poisson.F90 \
-	out.F90 crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 restart.F90
+	out.F90 poisson_corrections.F90 poisson_cg.F90 poisson.F90 \
+	crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 restart.F90
 
 octopus_SOURCES = $(core_SRCS) \
 	lasers.F90 epot.F90 h.F90 linear_response.F90 xc_OEP.F90 v_ks.F90 systm.F90 \
