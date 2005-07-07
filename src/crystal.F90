@@ -181,7 +181,7 @@
          rkmod(1,2) = rkmod(1,2) - M_ONE
          rkmod(2,3) = rkmod(2,3) - M_ONE
          rkmod(3,4) = rkmod(3,4) - M_ONE
-         ek = 2000.d0
+         ek = CNST(2000.0)
          do j = 1, 4
             ek1 = M_ZERO
             ek2 = M_ZERO
@@ -351,7 +351,7 @@
 !      both the transformed rk ...
 
              do l = 1, 3
-                if (abs(rktran(l)-xk(l,k)) > 1.0D-5) go to 80
+                if (abs(rktran(l)-xk(l,k)) > CNST(1.0e-5)) go to 80
              end do
                w(nrk) = w(nrk) + dw
                kmap(k) = nrk
@@ -364,7 +364,7 @@
    80          continue
          if (need_gw) go to 100
            do l = 1, 3
-              if (abs(rktran_inv(l)-xk(l,k) )>1.0D-5) go to 100
+              if (abs(rktran_inv(l)-xk(l,k) )> CNST(1.0e-5)) go to 100
            end do
                w(nrk) = w(nrk) + dw
                kmap(k) = nrk
@@ -386,7 +386,7 @@
 
       FLOAT :: x
       
-      reduce_01 = mod(x+500d0, M_ONE)
+      reduce_01 = mod(x+CNST(500.0), M_ONE)
       
       end function reduce_01
 
@@ -1153,7 +1153,7 @@
                      ts = ts + abs(r(49,i,j)-r(n,i,j))
                   end do
                end do
-             if (ts > 100.0D0*eps) cycle
+             if (ts > CNST(100.0)*eps) cycle
                mt(l,m) = n
                exit
             end do
