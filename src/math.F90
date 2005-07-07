@@ -43,6 +43,7 @@ module math
             cutoff0, &
             cutoff1, &
             cutoff2, &
+            invert_3by3, &
             besselint, &
             dextrapolate, zextrapolate, &
             zgpadm
@@ -323,35 +324,86 @@ subroutine weights(N, M, cc)
 
 end subroutine weights
 
-FLOAT function cutoff0(x)
-  FLOAT, intent(in) ::  x
+FLOAT function cutoff0(x,r)
+  FLOAT, intent(in) ::  x,r
     
-  cutoff0 = M_ONE - cos(x)
+  cutoff0 = M_ONE - cos(x*r)
   
 end function cutoff0
 
-FLOAT function cutoff1(x, p)
-  FLOAT, intent(in) ::  x, p
+FLOAT function cutoff1(x, p, rmax)
+  FLOAT, intent(in) ::  x, p, rmax
+  
+  integer :: j
+  FLOAT :: dr, r, sum
+  
+  integer :: nr = CNST(1000)
   
   if ( x == M_ZERO ) then
-    cutoff1 = M_ZERO
+! Simpson rule for the G_x = 0 contribution -log(r)
+    dr = rmax/real(nr)
+    sum = M_ZERO;
+    do j = 1, nr - 1, 2
+      r = j*dr
+      sum = sum - M_FOUR*r*loct_bessel_j0(p*r)*log(r)
+      r = (j+1)*dr
+      sum = sum - M_TWO*r*loct_bessel_j0(p*r)*log(r)
+    end do
+    sum = sum - rmax*loct_bessel_j0(p*rmax)*log(rmax)
+    cutoff1 = (p**2)*M_THIRD*sum*dr
   else
-    cutoff1 = M_ONE + p*loct_bessel_j1(p)*loct_bessel_k0(x) &
-         - x*loct_bessel_j0(p)*loct_bessel_k1(x)
+    cutoff1 = M_ONE + p*rmax*loct_bessel_j1(p*rmax)*loct_bessel_k0(x*rmax) &
+                    - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
   end if
   
 end function cutoff1
 
-FLOAT function cutoff2(p, z)
-  FLOAT, intent(in) ::  p, z
+
+FLOAT function cutoff2(p, z, r)
+  FLOAT, intent(in) ::  p, z, r
   
   if ( p == M_ZERO ) then
-    cutoff2 = M_ZERO
+    cutoff2 = M_ONE - cos(z*r) - z*r*sin(z*r)
   else
-    cutoff2 = M_ONE + exp(-p)*(z*sin(z)/p-cos(z))
+    cutoff2 = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
   end if
   
 end function cutoff2
+
+subroutine invert_3by3(matrix,invers,det,tr)
+
+  ! Calculates the inverse of a 3X3 matrix
+  ! if tr = .true. calculates the transposed of the inverse
+
+  implicit none
+
+  FLOAT, intent(in)   :: matrix(3,3)
+  FLOAT, intent(out)  :: invers(3,3)
+  FLOAT, intent(out)  :: det
+  logical, intent(in) :: tr
+
+  call vector_product_3(matrix(1:3,2),matrix(1:3,3),invers(1:3,1))
+  call vector_product_3(matrix(1:3,3),matrix(1:3,1),invers(1:3,2))
+  call vector_product_3(matrix(1:3,1),matrix(1:3,2),invers(1:3,3))
+
+  det = DOT_PRODUCT(matrix(1:3,1),invers(1:3,1))
+
+  if (det == M_ZERO) then
+    message(1) = 'Matrix with null determinant. Cannot invert.'
+    write(message(2),'(3f12.5)') matrix(1,:)
+    write(message(3),'(3f12.5)') matrix(2,:)
+    write(message(4),'(3f12.5)') matrix(3,:) 
+    call write_fatal(4)
+     return
+  endif
+ 
+ ! comment this out if you want to get the transpose of the inverse
+ if (.not. tr) invers = TRANSPOSE(invers)
+
+ invers=invers/det
+
+end subroutine invert_3by3
+
 
 FLOAT function besselint(x) result(y)
   FLOAT, intent(in) :: x
@@ -383,22 +435,20 @@ CMPLX function zdot_product(a, b) result(r)
   r = sum(conjg(a(:))*b(:))
 end function zdot_product
 
+subroutine vector_product_3(a,b,c)
 
-!function phaseshift(perdim, ix)
-!  FLOAT, intent(in) ::  perdim, ix(3)
-!  CMPLX :: phaseshift
-!  INTEGER :: nhalf
+  ! calculates vector product of three dimensional vectors
+  ! a x b = c
 
-!  if (  ) then
-!    nhalf = floor()
-!  else
-!    nhalf = ceiling()
-!  end if          
-!  phaseshift = exp(M_PI*M_ZI*sum(ixx(:)))
-!  phaseshift = cmplx(nhalf)
+  implicit none
+  FLOAT, intent(in)  :: a(3),b(3)
+  FLOAT, intent(out) :: c(3)
 
-!end function phaseshift
+  c(1) = a(2)*b(3) - a(3)*b(2)
+  c(2) = a(3)*b(1) - a(1)*b(3)
+  c(3) = a(1)*b(2) - a(2)*b(1)
 
+end subroutine vector_product_3
 
 #include "expokit_inc.F90"
 

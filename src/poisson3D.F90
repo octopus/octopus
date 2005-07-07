@@ -73,10 +73,9 @@ contains
     type(mesh_type), intent(in) :: m
 
     integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), vec
+    FLOAT :: temp(3), modg2
     FLOAT :: gpar,gperp,gx,gz,r_c
     FLOAT :: DELTA_R = CNST(1.0e-12)
-
 
     ! double the box to perform the fourier transforms
     if(poisson_solver.ne.FFT_CORRECTED) then
@@ -118,27 +117,31 @@ contains
         do ix = 1, fft_cf%nx
           ixx(1) = pad_feq(ix, db(1), .true.)
 
-           vec = sum((temp(:)*ixx(:))**2)
-           if(vec /= M_ZERO) then
+           modg2 = sum((temp(:)*ixx(:))**2)
+           if(modg2 /= M_ZERO) then
              select case(poisson_solver)
                case(FFT_SPH)
-                 fft_Coulb_FS(ix, iy, iz) = cutoff0(sqrt(vec)*r_c)/vec
+                 fft_Coulb_FS(ix, iy, iz) = cutoff0(sqrt(modg2),r_c)/modg2
                case(FFT_CYL)
                  gx = abs(temp(1)*ixx(1))
                  gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                 fft_Coulb_FS(ix, iy, iz) = cutoff1(gx*r_c,gperp*r_c)/vec
+                 fft_Coulb_FS(ix, iy, iz) = cutoff1(gx,gperp,r_c)/modg2
                case(FFT_PLA)
                  gz = abs(temp(3)*ixx(3))
                  gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                 fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar*r_c,gz*r_c)/vec
+                 fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar,gz,r_c)/modg2
                case(FFT_NOCUT, FFT_CORRECTED)
-                 fft_Coulb_FS(ix, iy, iz) = M_ONE/vec
+                 fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
               end select               
             else
               select case(poisson_solver)
               case(FFT_SPH)
                 fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-              case (FFT_CYL,FFT_PLA,FFT_NOCUT, FFT_CORRECTED)
+              case (FFT_CYL)
+                 fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c)-M_FOURTH)*r_c**2
+              case(FFT_PLA)
+                fft_Coulb_FS(ix, iy, iz) = -M_TWO*M_PI*r_c**2
+              case (FFT_NOCUT, FFT_CORRECTED)
                 fft_Coulb_FS(ix, iy, iz) = M_ZERO
               end select
             endif

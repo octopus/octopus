@@ -266,8 +266,8 @@ contains
     integer :: vlocal_cutoff
     integer :: i, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3)
-    FLOAT :: gpar, gperp, gx, gz, modg
-    FLOAT :: a_erf, r_0, temp(3), tmp, norm
+    FLOAT :: g(3), gpar, gperp, gx, gz, modg
+    FLOAT :: r_0, temp(3), tmp, norm
     
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
@@ -333,7 +333,6 @@ contains
 
       call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
 
-        a_erf = M_TWO
         norm = M_FOUR*M_PI/m%vol_pp(1)
         temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
         cf%FS = M_Z0
@@ -349,18 +348,18 @@ contains
 
               tmp = specie_get_local_fourier(sb%dim, s, x)
               if(modg /= M_ZERO) then
-                tmp = tmp - s%z_val*exp(-(modg/(2*a_erf))**2)/modg**2
+                tmp = tmp - s%z_val*exp(-(modg/(2*s%ps%a_erf))**2)/modg**2
                 select case(vlocal_cutoff)
                 case(0) 
-                  cf%FS(ix, iy, iz) = tmp*cutoff0(modg*r_0)
+                  cf%FS(ix, iy, iz) = tmp*cutoff0(modg,r_0)
                 case(1)
                   gx = abs(temp(1)*ixx(1))
                   gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                  cf%FS(ix, iy, iz) = tmp*cutoff1(gx*r_0, gperp*r_0)
+                  cf%FS(ix, iy, iz) = tmp*cutoff1(gx, gperp,r_0)
                 case(2)
                   gz = abs(temp(3)*ixx(3))
                   gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                  cf%FS(ix, iy, iz) = tmp*cutoff2(gpar*r_0, gz*r_0)
+                  cf%FS(ix, iy, iz) = tmp*cutoff2(gpar, gz,r_0)
                 case(3)
                   cf%FS(ix, iy, iz) = tmp
                 end select
