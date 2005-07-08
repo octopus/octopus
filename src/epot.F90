@@ -105,7 +105,7 @@ contains
 
     ! should we calculate the local pseudopotentials in Fourier space?
     ! This depends on wether we have periodic dimensions or not
-    if(simul_box_is_periodic(gr%sb).and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(gr%sb).and.(.not.gr%geo%only_user_def)) then
       call epot_local_fourier_init(ep, gr%m, gr%sb, gr%geo)
     end if
 
@@ -212,7 +212,7 @@ contains
 #ifdef HAVE_FFT
     integer :: i
 
-    if(simul_box_is_periodic(sb).and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
       do i = 1, geo%nspecies
         call dcf_free(ep%local_cf(i))
         if(geo%specie(i)%nlcc) call dcf_free(ep%rhocore_cf(i))
@@ -431,7 +431,7 @@ contains
     geo%eii = ion_ion_energy(geo)
 
 #ifdef HAVE_FFT
-    if(simul_box_is_periodic(sb).and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
       call dcf_new_from(cf_loc, ep%local_cf(1)) ! at least one specie must exist
       call dcf_alloc_FS(cf_loc)
       cf_loc%FS = M_z0
@@ -490,7 +490,7 @@ contains
     end do
 
 #ifdef HAVE_FFT
-    if(simul_box_is_periodic(sb).and.(.not.conf%only_user_def)) then
+    if(simul_box_is_periodic(sb).and.(.not.geo%only_user_def)) then
       ! first the potential
       call dcf_alloc_RS(cf_loc)
       call dcf_FS2RS(cf_loc)
@@ -520,7 +520,7 @@ contains
       
       call push_sub('build_local_part')
 
-      if((.not.simul_box_is_periodic(sb)).or.conf%only_user_def) then
+      if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
         do i = 1, m%np
           x(:) = m%x(i, :) - a%x(:)
           ep%vpsl(i) = ep%vpsl(i) + specie_get_local(s, x)

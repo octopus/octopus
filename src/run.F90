@@ -255,9 +255,6 @@ subroutine run_init()
 
   call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
 
-  ! do we treat only userdefined species
-  call loct_parse_logical(check_inp('OnlyUserDef'), .false., conf%only_user_def)
-
   call messages_print_stress(stdout)
   call messages_print_var_option(stdout, "CalculationMode", calc_mode, "Calculation Mode:")
 

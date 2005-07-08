@@ -114,7 +114,7 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   end do
   
   ! now comes the local part of the PP
-  if(.not.simul_box_is_periodic(gr%sb).or.conf%only_user_def) then ! Real space
+  if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then ! Real space
     call local_RS()
 #ifdef HAVE_FFT
   else ! Fourier space
