@@ -27,8 +27,8 @@
       FLOAT, private :: b(3,3)    ! reciprocal lattice vectors
       FLOAT, private :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
 
-      FLOAT, private :: volume_check, xdum
-      integer, private ::  i, j, k, l, m, ierr
+!      FLOAT, private :: volume_check, xdum
+      integer, private ::  i, j, k, l, m !, ierr
 
       FLOAT :: tnpi(3), xmt(3,3)
       character(len=1) :: i1(3)
@@ -61,12 +61,13 @@
 ! Local
 
       integer  :: ipr, invers_no, jabs, jcar, neg
-      FLOAT :: volume_check, scale, celvol, ek, ek1, ek2
+      FLOAT :: volume_check, celvol, ek, ek1, ek2
       FLOAT :: a1(3),a2(3),a3(3),am(3),      &
                        b1(3), b2(3), b3(3), ba(3),   &
                        rkcar(3),rkmod(3,4)
-      character(len=1) :: np
-      logical :: vol_input
+!      FLOAT :: scale
+!      character(len=1) :: np
+!      logical :: vol_input
 
       call push_sub('crystal_init')
 
@@ -241,8 +242,9 @@
 
         ! Compute the inverse of a 3x3 matrix (in situ) and its determinant
 
-        integer :: ipvt(3)
-        FLOAT :: mat(3,3), tmp(3,3), determinant, det(2)
+!        integer :: ipvt(3)
+!        FLOAT :: det(2)
+        FLOAT :: mat(3,3), tmp(3,3), determinant
      
         call invert_3by3(mat,tmp,determinant,.false.) 
       mat = tmp
@@ -269,9 +271,10 @@
       FLOAT :: rk(3,*), w(*)
 
 !     .. Local Scalars ..
-      FLOAT :: dw, dx, dy, dz, xdum
-      integer i, im, ip, irk, j, jm, jp, k, kdel, km, kp, l, n
-      character tmny_kpnts*80, wkarr_ovfw*80
+      FLOAT :: dw, dx, dy, dz !, xdum
+      integer i, j, k, l, n
+!      integer km, kp, kdel, jm, jp, ip, irk, im
+!      character tmny_kpnts*80 , wkarr_ovfw*80
       logical need_gw
 
 !     .. Local Arrays ..
@@ -476,7 +479,7 @@
       character :: id(48)*10
 !     ..
 !     .. Intrinsic Functions ..
-      intrinsic :: int, mod
+!      intrinsic :: int, mod
 !     ..
 
       call push_sub('crystal_symgen')
@@ -646,13 +649,13 @@
       integer :: mtest(3,3)
 
 !     .. Intrinsic Functions ..
-      intrinsic :: abs, dble !, atan
+!      intrinsic :: abs, dble !, atan
 !     ..
 !     .. Common blocks ..
       common mult, nerr
 
       not_a_grp = 'The symmetry operations' //                   &
-                 ' do not form a group. Check operation no%i4$\n'
+                 ' do not form a group. Check operation no%i4$'
 
       call push_sub('crystal_symchk')
 
@@ -821,7 +824,8 @@
       FLOAT :: tnp(48,3)
       character :: id(48)*10
 !
-      integer :: i,j, oper
+!      integer :: i,j
+      integer :: oper
       logical :: proper
       FLOAT :: det, trace
       FLOAT :: a(3,3)
