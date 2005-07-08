@@ -28,13 +28,13 @@ module nl_operator
   implicit none
 
   private
-  public :: nl_operator_type, &
-       nl_operator_init, &
-       nl_operator_equal, &
-       nl_operator_build, &
-       nl_operator_transpose, &
-       dnl_operator_operate, &
-       znl_operator_operate, &
+  public :: nl_operator_type,      &
+       nl_operator_init,           &
+       nl_operator_equal,          &
+       nl_operator_build,          &
+       nl_operator_transpose,      &
+       dnl_operator_operate,       &
+       znl_operator_operate,       &
        znl_operator_operate_cmplx, &
        nl_operator_end
 
@@ -171,10 +171,10 @@ contains
     do i = 1, op%np
        do j = 1, op%n
           index = op%i(j, i)
-          if(index<=op%np) then
+          if(index <= op%np) then
              do l = 1, op%n
                 k = op%i(l, index)
-                if(k==i) then
+                if( k == i ) then
                    if(.not.op%const_w) then
                       opt%w_re(j, i) = op%w_re(l, index)
                       if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
@@ -204,7 +204,7 @@ contains
        if(.not.op%const_w) k = i
        do j = 1, op%n
           index = op%i(j, i)
-          if(index<=op%np) then
+          if(index <= op%np) then
              a(i, index) = op%w_re(j, k)
              if (op%cmplx_op) b(i, index) = op%w_im(j, k)
           endif
@@ -226,9 +226,9 @@ contains
     do i = 1, op%np
        do j = 1, op%n
           index = op%i(j, i)
-          if(index<=op%np) &
+          if(index <= op%np) &
                op%w_re(j, i) = a(i, index)
-               if (op%cmplx_op) op%w_im(j, i) = b(i, index)          
+          if (op%cmplx_op) op%w_im(j, i) = b(i, index)          
        enddo
     enddo
 
@@ -347,16 +347,16 @@ contains
 
     n = op%n
     if(op%const_w) then
-      allocate(w_re(n))
-      w_re(1:n) = op%w_re(1:n, 1)
-      do i = 1, op%np
-        fo(i) = sum(  cmplx(  w_re(1:n)*real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
-      end do
-      deallocate(w_re)
+       allocate(w_re(n))
+       w_re(1:n) = op%w_re(1:n, 1)
+       do i = 1, op%np
+          fo(i) = sum(  cmplx(  w_re(1:n)*real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
+       end do
+       deallocate(w_re)
     else
-      do i = 1, op%np
-        fo(i) = sum(  cmplx(  op%w_re(1:n, i)*real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
-      end do
+       do i = 1, op%np
+          fo(i) = sum(  cmplx(  op%w_re(1:n, i)*real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )   )
+       end do
     end if
 
   end subroutine znl_operator_operate
@@ -376,7 +376,7 @@ contains
     n = op%n
     if(op%const_w) then
        allocate(w_re(n),w_im(n))
-       w_re(1:n)    = op%w_re(1:n, 1)
+       w_re(1:n) = op%w_re(1:n, 1)
        w_im(1:n) = op%w_im(1:n, 1)
        do i = 1, op%np
           fo(i) = sum(  cmplx(  w_re(1:n)* real(fi(op%i(1:n,i))),  w_re(1:n)*aimag(fi(op%i(1:n, i))), PRECISION  )  ) &
