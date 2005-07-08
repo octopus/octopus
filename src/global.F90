@@ -45,9 +45,7 @@ module global
      character(len=50)  :: build_time  ! time octopus was compiled
      character(len=10)  :: version     ! version number
 
-     logical :: boundary_zero_derivative
-     logical :: only_user_def
-     logical :: flush_messages
+     logical :: boundary_zero_derivative   ! does not belong here
   end type conf_type
 
   type mpi_type

@@ -40,6 +40,9 @@ module messages
        '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
 
+  logical,                           public :: flush_messages 
+
+
   ! min_lun in io.F90 is equal to 10. We hardwire this here since we 
   ! cannot write "use io" above. Unit 8 and 9 should always be available.
   integer, parameter, private :: iunit_out = 8
@@ -57,7 +60,7 @@ contains
     integer :: ierr
 #endif
 
-    if(conf%flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpiv%node.eq.0) then
        open(unit=iunit_err, file='messages.stderr', &
             action='write', position='append')
     endif
@@ -95,7 +98,7 @@ contains
     !    call io_status(stderr)
 #endif
 
-    if(conf%flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpiv%node.eq.0) then
        close(iunit_err)
     endif
 
@@ -112,7 +115,7 @@ contains
     integer, intent(in) :: no_lines
     integer :: i
 
-    if(conf%flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpiv%node.eq.0) then
        open(unit=iunit_err, file='messages.stderr', &
             action='write', position='append')
     endif
@@ -136,7 +139,7 @@ contains
     call flush(stderr)
 #endif 
 
-    if(conf%flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpiv%node.eq.0) then
        close(iunit_err)
     endif
 
@@ -157,7 +160,7 @@ contains
     if(mpiv%node .ne. 0) return
 #endif
 
-    if(conf%flush_messages) then
+    if(flush_messages) then
        open(unit=iunit_out, file='messages.stdout', &
             action='write', position='append')
     endif
@@ -187,7 +190,7 @@ contains
        endif
     end if
 
-    if(conf%flush_messages) close(iunit_out)
+    if(flush_messages) close(iunit_out)
 
 #ifdef HAVE_FLUSH
     call flush(iu)
@@ -265,7 +268,7 @@ contains
     if(present(adv)) adv_ = adv
 
     write(iunit, '(a)', advance=trim(adv_)) trim(str)
-    if(conf%flush_messages.and.mpiv%node.eq.0) then
+    if(flush_messages.and.mpiv%node.eq.0) then
        if(iunit.eq.stderr) write(iunit_err, '(a)', advance=trim(adv_)) trim(str)
        if(iunit.eq.stdout) write(iunit_out, '(a)', advance=trim(adv_)) trim(str)
     endif
