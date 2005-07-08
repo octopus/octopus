@@ -72,10 +72,10 @@ contains
     if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
     ! does the user want to flush stdout and stderr to files "messages.{stdout,stderr}" ?
-    call loct_parse_logical('FlushMessages', .false., conf%flush_messages)
+    call loct_parse_logical('FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
-    if(conf%flush_messages) then
+    if(flush_messages) then
        call loct_rm('messages.stdout')
        call loct_rm('messages.stderr')
     endif
