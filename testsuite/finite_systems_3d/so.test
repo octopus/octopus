@@ -1,0 +1,46 @@
+# $Id: oct-run_regression_test.pl,v 1.5 2005/06/16 16:58:07 appel Exp      :
+
+Test     : Spin-orbit coupling
+Author   : Micael
+Date     : 10.07.05
+Arch     : Linux localhost.localdomain 2.6.11-1.27_FC3 #1 Tue May 17 20:27:37 EDT 2005 i686 i686 i386 GNU/Linux
+Release  : 1.99devel
+Programs : octopus_cmplx
+Enabled  : Yes
+
+INP
+CalculationMode = gs
+fromScratch = yes
+
+BoxShape = sphere
+Radius  = 5.0
+Spacing = 0.5
+
+%Species
+"Pb" | 207.2 | hgh | 82 | 0 | 0
+%
+%Coordinates
+  "Pb" | 0 | 0 | 0.0
+%
+
+SpinComponents = non_collinear
+RelativisticCorrection = 1
+
+ExtraStates = 4
+%Occupations
+1.0 | 1.0 | 1/3 | 1/3 | 1/3 | 1/3 | 1/3 | 1/3
+%
+
+MaximumIter = 1
+Eigensolver = lanczos
+EigenSolverInitTolerance = 1e-2
+EOF
+
+RUN
+
+Match ; Eigenvalues ; grep -A 4 'Eigenvalues \[' static/info | tail -1 ; \s*-0.107\d*\s*0.11/ 0.22
+Match ; Eigenvalues ; grep -A 5 'Eigenvalues \[' static/info | tail -1 ; \s*-0.107\d*\s*0.22/ 0.11
+Match ; Eigenvalues ; grep -A 6 'Eigenvalues \[' static/info | tail -1 ; \s*-0.027\d*\s*0.00/ 0.33
+Match ; Eigenvalues ; grep -A 7 'Eigenvalues \[' static/info | tail -1 ; \s*-0.027\d*\s*0.18/ 0.16
+Match ; Eigenvalues ; grep -A 8 'Eigenvalues \[' static/info | tail -1 ; \s*-0.027\d*\s*0.22/ 0.12
+Match ; Eigenvalues ; grep -A 9 'Eigenvalues \[' static/info | tail -1 ; \s*-0.027\d*\s*0.27/ 0.06

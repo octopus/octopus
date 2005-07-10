@@ -11,20 +11,20 @@ Enabled  : Yes
 INP
 CalculationMode = gs
 fromScratch = yes
+Radius = 7.0
+Spacing = 0.5
 %Coordinates
-  "Na" | 0 | 0 | -3.0
-  "Na" | 0 | 0 |  3.0
+  "Na" | 0 | 0 | 0.0
 %
 SpinComponents = non_collinear
 GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
- 1 | 0 | 0
- 1 | 0 | 0
+ 1 | 1 | 0
 %
 EOF
 
 RUN
 
-Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.38376483
-Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.154345\d*\s*0.57/ 0.43\d*
-Match ; Local Magnetic Moments ; grep -A 2 'Local Magnetic Moments' static/info | tail -1 ; \s*0.3506\d*\s*0.0000\d*\s*0.0460\d* 
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.187718\d*
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.08534\d*\s*0.92/ 0.08
+Match ; Local Magnetic Moments ; grep -A 2 'Local Magnetic Moments' static/info | tail -1 ; \s*0.3891\d*\s*0.3891\d*\s*0.8349\d* 
