@@ -41,7 +41,7 @@ program xyzanim
   call global_init()
   call parser_init()
   call io_init()
-  call syslabels_init(1)
+  call syslabels_init(1); current_label = " "
   call units_init()
   if(conf%verbose<999) conf%verbose = -1
 
