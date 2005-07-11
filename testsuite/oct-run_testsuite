@@ -37,8 +37,8 @@ EOF
 # Dry run ...
 
 function CMD {
-    [ "$DRY_RUN" -o "$VERBOSE" ] && echo -e "\033[32m$@\033[0m";
-    [ ! "$DRY_RUN" ] && eval "$@";
+    [ "$dry_run" -o "$verbose" ] && echo -e "\033[32m$@\033[0m";
+    [ ! "$dry_run" ] && eval "$@";
 }
 
 
@@ -46,13 +46,13 @@ function CMD {
 
 function run_full_suite() {
 
-[ "$LOCAL_RUN" == "yes" ] && testsuite=$(pwd)
+[ "$local_run" == "yes" ] && testsuite=$(pwd)
 
 for x in $octopus_exe; do
     for y in $(find $testsuite -name "*.test"); do
 	ybase=`basename $y`
 	xybase=${x}-${ybase%.test}
-	if [ "$LOCAL_RUN" == "yes" ]; then
+	if [ "$local_run" == "yes" ]; then
 	    octopus_local=`pwd`/../src/$x
 	    octopus_local_debug=`pwd`/../src/${x}_debug
 	    [ -x $octopus_local ] && CMD ./oct-run_regression_test.pl -l -p -e $octopus_local -f $y | tee ${xybase}.log
@@ -99,21 +99,26 @@ done
 # show usage info if no args at all
 [ "$#" -eq 0 ] && usage;
 
-FULL=0
+# some defaults
+full=0
+send_mail="no"
+
 while getopts "hnlfp:m:" opt ; do
     case "$opt" in
         h) usage ;;
-        n) ECHO="echo"; DRY_RUN="yes";; 
+        n) echo="echo"; dry_run="yes";; 
         p) prefix="$OPTARG"; testsuite=$prefix/share/octopus/testsuite ;;
-	l) LOCAL_RUN="yes";;
-	f) FULL="yes" ;;
-	m) mailaddr="$OPTARG"; mail_report $mailaddr ;; 
+        l) local_run="yes";;
+        f) full="yes" ;;
+        m) mailaddr="$OPTARG"; send_mail="yes" ;;
         ?) echo "Error parsing arguments"; exit 1 ;;
     esac
 done
 shift $(( OPTIND - 1 ))
 
-[ "${FULL}" == "yes" ] && run_full_suite
+[ "${full}"      == "yes" ] && run_full_suite
+[ "${send_mail}" == "yes" ] && mail_report $mailaddr
+
 
 # clean up
 rm -f octopus*.log stamp build-stamp
