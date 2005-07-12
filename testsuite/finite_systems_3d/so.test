@@ -6,7 +6,7 @@ Date     : 10.07.05
 Arch     : Linux localhost.localdomain 2.6.11-1.27_FC3 #1 Tue May 17 20:27:37 EDT 2005 i686 i686 i386 GNU/Linux
 Release  : 1.99devel
 Programs : octopus_cmplx
-Enabled  : Yes
+Enabled  : No
 
 INP
 CalculationMode = gs
