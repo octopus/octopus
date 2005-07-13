@@ -319,7 +319,7 @@ contains
       ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
       sb%rlat = M_ZERO
       sb%klat = M_ZERO
-      do i = 1, sb%periodic_dim
+      do i = 1, sb%dim
         sb%rlat(i,i) = 2*sb%lsize(i)
         sb%klat(i,i) = M_PI/sb%lsize(i)
       end do
@@ -407,7 +407,7 @@ contains
   logical function simul_box_in_box(sb, geo, x) result(in_box)
     type(simul_box_type),  intent(in) :: sb
     type(geometry_type),   intent(in) :: geo
-    FLOAT,                 intent(in) :: x(:) ! x(3)
+    FLOAT,                 intent(in) :: x(3) ! x(3)
     
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
     FLOAT :: r
