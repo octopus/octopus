@@ -303,8 +303,8 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted')
 
-    write(unit=iunit) X(output_kind)*kind(f(1)), m%np
-    write(unit=iunit) f(1:m%np)
+    write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np
+    write(unit=iunit, iostat=ierr) f(1:m%np)
     call io_close(iunit)
 
   end subroutine plain
@@ -316,10 +316,10 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write')
 
-    write(iunit, mfmtheader) '#', 'x', 'Re', 'Im'
+    write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     call io_close(iunit)
@@ -333,10 +333,10 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write')
 
-    write(iunit, mfmtheader) '#', 'y', 'Re', 'Im'
+    write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     call io_close(iunit)
@@ -350,10 +350,10 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write')
 
-    write(iunit, mfmtheader) '#', 'z', 'Re', 'Im'
+    write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
     do i = 1, m%np
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
-        write(iunit, mformat) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     call io_close(iunit)
@@ -367,21 +367,21 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write')
 
-    write(iunit, mfmtheader) '#', 'x', 'y', 'Re', 'Im'
+    write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x(1,2)
     if(gnuplot_mode) write(iunit, mformat)
     
     do i = 1, m%np
       if(gnuplot_mode.and.x0 /= m%x(i, 2)) then
-        write(iunit, mformat)      ! write extra lines for gnuplot grid mode
+        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x(i, 2)
       end if
       if(m%Lxyz(i,1)==0) then
-        write(iunit, mformat) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     
-    if(gnuplot_mode) write(iunit, mformat)
+    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
     
   end subroutine plane_x
@@ -393,21 +393,21 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write')
 
-    write(iunit, MFMTHEADER) '#', 'x', 'z', 'Re', 'Im'
+    write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
     x0 = m%x(1,1)
-    if(gnuplot_mode) write(iunit, mformat)
+    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     
     do i = 1, m%np
       if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
-        write(iunit, mformat)      ! write extra lines for gnuplot grid mode
+        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x(i, 1)
       end if
       if(m%Lxyz(i,2)==0) then
-        write(iunit, mformat) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     
-    if(gnuplot_mode) write(iunit, mformat)
+    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
     
   end subroutine plane_y
@@ -419,22 +419,22 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write')
 
-    write(iunit, MFMTHEADER) '#', 'x', 'y', 'Re', 'Im'
+    write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x(1,1)
-    if(gnuplot_mode) write(iunit, mformat)
+    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     
     do i = 1, m%np
       if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
-        write(iunit, mformat)      ! write extra lines for gnuplot grid mode
+        write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x(i, 1)
       end if
        
       if(m%Lxyz(i,3) == 0) then
-        write(iunit, mformat) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     
-    if(gnuplot_mode) write(iunit, mformat)
+    if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
     
   end subroutine plane_z
