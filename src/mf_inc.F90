@@ -76,7 +76,7 @@ end function X(mf_moment)
 !!! position in space
 subroutine X(mf_random)(m, f)
   type(mesh_type),      intent(in)  :: m
-  R_TYPE,               intent(out) :: f(:)
+  R_TYPE,               intent(out) :: f(1:m%np)
 
   integer, save :: iseed = 123
   integer :: i

@@ -19,12 +19,13 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(restart_write_function)(dir, filename, gr, f, ierr)
+subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
   type(grid_type),  intent(in)  :: gr
-  R_TYPE,           intent(in)  :: f(:)
   integer,          intent(out) :: ierr
+  integer,          intent(in)  :: size
+  R_TYPE,           intent(in)  :: f(size)
 
   call push_sub('restart_write_function')
 
@@ -40,7 +41,7 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   character(len=*), intent(in)  :: dir
   character(len=*), intent(in)  :: filename
   type(mesh_type),  intent(in)  :: m
-  R_TYPE,           intent(out) :: f(:)
+  R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
   call push_sub('restart_read_function')
@@ -97,7 +98,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
         end if
         
         if(st%st_start <= ist .and. st%st_end >= ist .and. mpiv%node==0) then
-          call X(restart_write_function)(dir, filename, gr, st%X(psi) (:, idim, ist, ik), err)
+          call X(restart_write_function)(dir, filename, gr, st%X(psi) (:, idim, ist, ik), err, size(st%X(psi),1))
           if(err == 0) ierr = ierr + 1
         end if
 
