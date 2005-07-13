@@ -116,7 +116,9 @@ contains
     write(iunit, '(a,f15.2)') 'weight = ', s%weight
     write(iunit, *)           'local  = ', s%local
     write(iunit, '(2a)')      'usdef  = ', trim(s%user_def)
-    write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
+    if (s%type == SPEC_JELLI .or. s%type == SPEC_POINT) then
+      write(iunit, '(a,f15.2)') 'jradius= ', s%jradius
+    end if
     write(iunit, *)           'nlcc   = ', s%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', s%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', s%def_h
