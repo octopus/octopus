@@ -76,8 +76,8 @@ contains
     type(simul_box_type),  intent(in)  :: sb
     type(geometry_type),   intent(in)  :: geo
     type(curvlinear_type), intent(in)  :: cv
-    FLOAT,                 intent(in)  :: chi(:)  ! chi(conf%dim)
-    FLOAT,                 intent(out) :: x(:)    ! x(conf%dim)
+    FLOAT,                 intent(in)  :: chi(3)  ! chi(conf%dim)
+    FLOAT,                 intent(out) :: x(3)    ! x(conf%dim)
 
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
