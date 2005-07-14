@@ -53,6 +53,7 @@ module eigen_solver
     integer  :: es_maxiter  
 
     integer :: arnoldi_vectors
+    FLOAT :: imag_time
 
     ! Stores information about how well it performed.
     FLOAT, pointer :: diff(:, :)
@@ -72,6 +73,7 @@ module eigen_solver
 #if defined(HAVE_JDQZ)
   integer, parameter :: JDQZ       = 4
 #endif
+  integer, parameter :: EVOLUTION  = 7
 
   ! For the TRLan package
 #ifdef HAVE_TRLAN
@@ -80,6 +82,10 @@ module eigen_solver
   type(mesh_type),        pointer :: m_trlan
   type(states_type),      pointer :: st_trlan
 #endif
+
+  type(hamiltonian_type), pointer :: h_
+  type(grid_type),        pointer :: gr_
+  integer                         :: ik_
 
   type(nl_operator_type) :: filter
 
@@ -111,6 +117,8 @@ subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
   !% Jacobi-Davidson scheme as implemented in the JDQZ package
   !%Option cg_new 6
   !% A rewritting of the cg option, that will eventually substitute it.
+  !%Option evolution 7
+  !% Propagation in imaginary time
   !%End
   call loct_parse_int(check_inp('EigenSolver'), RS_CG, eigens%es_type)
   select case(eigens%es_type)
@@ -143,6 +151,18 @@ subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
   case(JDQZ)
     message(1) = 'Info: Eigensolver type: Jacobi-Davidson through the JDQZ package'
 #endif
+  case(EVOLUTION)
+    message(1) = 'Info: Eigensolver type: Imaginary time evolution'
+    call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(0.01), eigens%imag_time)
+    !%Variable EigenSolverImaginaryTime
+    !%Type float
+    !%Section 8 SCF
+    !%Description
+    !% The imaginary-time step that is used in the imaginary-time evolution
+    !% method to obtain the lowest eigenvalues/eigenvectors.
+    !% It must satisfy EigenSolverImaginaryTime > 0.
+    !%End
+    if(eigens%imag_time <= M_ZERO) call input_error('EigenSolverImaginaryTime')
   case default
     write(message(1), '(a,i4,a)') "Input: '", eigens%es_type, &
          "' is not a valid EigenSolver"
@@ -227,7 +247,7 @@ subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
   type(eigen_solver_type), intent(inout) :: eigens
   type(grid_type),         intent(inout) :: gr
   type(states_type),       intent(inout) :: st
-  type(hamiltonian_type),  intent(in)    :: h
+  type(hamiltonian_type),  intent(IN)    :: h
   integer,                 intent(in)    :: iter
   logical,       optional, intent(inout) :: conv
   logical,       optional, intent(in)    :: verbose
@@ -270,6 +290,9 @@ subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
     call eigen_solver_arpack(gr, st, h, tol, maxiter, eigens%arnoldi_vectors, &
                              eigens%converged, eigens%diff)
 #endif
+  case(EVOLUTION)
+    call eigen_solver_evolution(gr, st, h, tol, maxiter, eigens%converged, eigens%diff, &
+                                tau = eigens%imag_time, verbose = verbose_)
   end select
 
   eigens%matvec = maxiter
@@ -284,7 +307,7 @@ end subroutine eigen_solver_run
 subroutine eigen_diagon_subspace(gr, st, h)
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
-  type(hamiltonian_type), intent(in)    :: h
+  type(hamiltonian_type), intent(IN)    :: h
 
   R_TYPE, allocatable :: h_subspace(:,:), vec(:,:), f(:,:,:)
   integer :: ik, i, j
@@ -331,5 +354,6 @@ end subroutine eigen_diagon_subspace
 #if defined(HAVE_ARPACK)
 #include "eigen_arpack.F90"
 #endif
+#include "eigen_evolution.F90"
 
 end module eigen_solver
