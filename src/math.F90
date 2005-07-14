@@ -45,8 +45,7 @@ module math
             cutoff2, &
             invert_3by3, &
             besselint, &
-            dextrapolate, zextrapolate, &
-            zgpadm
+            dextrapolate, zextrapolate
 
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface dconjugate_gradients
@@ -449,8 +448,6 @@ subroutine vector_product_3(a,b,c)
   c(3) = a(1)*b(2) - a(2)*b(1)
 
 end subroutine vector_product_3
-
-#include "expokit_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"

@@ -261,7 +261,7 @@ module td_exp
         enddo
         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
         call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
-        call zgpadm(n, timestep, -M_zI*hm(1:n, 1:n), expo(1:n, 1:n), iflag)
+!!$        call zgpadm(n, timestep, -M_zI*hm(1:n, 1:n), expo(1:n, 1:n), iflag)
 
         res = abs(hm(n+1, n)*abs(expo(1, n)))
         if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
@@ -273,7 +273,7 @@ module td_exp
         call write_warning(1)
       endif
 
-      call zgpadm(korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), expo(1:korder+1, 1:korder+1), iflag)
+!!$      call zgpadm(korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), expo(1:korder+1, 1:korder+1), iflag)
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
       call lalg_gemv(NP, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
       

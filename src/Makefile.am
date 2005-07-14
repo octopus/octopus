@@ -46,10 +46,10 @@ noinst_HEADERS = \
 	linear_response_inc.F90 \
 	pes_rc.F90 pes_mask.F90 \
 	td_init.F90 td_write.F90 td_calc.F90\
-	out_inc.F90 math_cg_inc.F90 expokit_inc.F90 math_inc.F90 \
+	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
-core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a \
+core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a ../expokit/libexpokit.a \
   @GSL_LIBS@ @FCEXTRALIBS@
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
 	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
@@ -176,7 +176,7 @@ linear_response.o: global.h linear_response_inc.F90
 logrid.o: global.h
 main.o: global.h
 make_st.o: global.h
-math.o: global.h expokit_inc.F90 math_cg_inc.F90 math_inc.F90
+math.o: global.h math_cg_inc.F90 math_inc.F90
 mesh.o: global.h mesh_create.F90
 mf.o: global.h mf_inc.F90
 mix.o: global.h

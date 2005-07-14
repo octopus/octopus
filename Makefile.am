@@ -19,7 +19,7 @@
 ##
 ## $Id$
 
-SUBDIRS = liboct_parser liboct libxc src doc share testsuite
+SUBDIRS = liboct_parser liboct libxc expokit src doc share testsuite
 
 EXTRA_DIST = TODO build/*.pl build/*.m4 build/*.in debian/*
 
