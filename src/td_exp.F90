@@ -234,8 +234,9 @@ module td_exp
     end subroutine cheby
     
     subroutine lanczos
-      integer ::  korder, n, k, iflag
-      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:)
+      integer ::  korder, n, k, iflag, lwsp, ns, i, j, iexph
+      integer, allocatable :: ipiv(:)
+      CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:)
       FLOAT :: beta, res, tol !, nrm
 
       call push_sub('lanczos')
@@ -245,6 +246,9 @@ module td_exp
                hm(te%exp_order+1, te%exp_order+1), &
                expo(te%exp_order+1, te%exp_order+1))
       hm = M_z0; expo = M_z0
+
+      lwsp = 4*(te%exp_order)**2+7
+      allocate(wsp(lwsp), ipiv(te%exp_order+1))
 
       ! Normalize input vector, and put it into v(:, :, 1)
       beta = zstates_nrm2(gr%m, h%d%dim, zpsi)
@@ -261,7 +265,13 @@ module td_exp
         enddo
         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
         call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
-!!$        call zgpadm(n, timestep, -M_zI*hm(1:n, 1:n), expo(1:n, 1:n), iflag)
+        call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+        k = 0
+        do i = 1, n
+           do j = 1, n
+              expo(j, i) = wsp(iexph + k); k = k + 1
+           enddo
+        enddo
 
         res = abs(hm(n+1, n)*abs(expo(1, n)))
         if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
@@ -273,12 +283,19 @@ module td_exp
         call write_warning(1)
       endif
 
-!!$      call zgpadm(korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), expo(1:korder+1, 1:korder+1), iflag)
+      call zgpadm(6, korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), korder+1, wsp, &
+                  lwsp, ipiv(1:korder+1), iexph, ns, iflag)
+      k = 0
+      do i = 1, korder+1
+         do j = 1, korder+1
+            expo(j, i) = wsp( iexph + k); k = k + 1
+         enddo
+      enddo
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
       call lalg_gemv(NP, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
       
       if(present(order)) order = korder
-      deallocate(v, hm, expo)
+      deallocate(v, hm, expo, ipiv, wsp)
       call pop_sub()
     end subroutine lanczos
 
