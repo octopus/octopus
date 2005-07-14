@@ -153,7 +153,7 @@ subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
 #endif
   case(EVOLUTION)
     message(1) = 'Info: Eigensolver type: Imaginary time evolution'
-    call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(0.01), eigens%imag_time)
+    call loct_parse_float(check_inp('EigenSolverImaginaryTime'), CNST(1.0), eigens%imag_time)
     !%Variable EigenSolverImaginaryTime
     !%Type float
     !%Section 8 SCF

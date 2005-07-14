@@ -28,8 +28,8 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
   FLOAT,                  intent(in)    :: tau
   logical,      optional, intent(in)    :: verbose
 
-  integer :: ik, ist, iter, maxiter, conv, conv_, matvec, j
-  FLOAT :: res
+  integer :: ik, ist, iter, maxiter, conv, conv_, matvec, j, k, l, i
+  FLOAT :: res, dump, dump2
   R_TYPE, allocatable :: hpsi(:, :)
 
   call push_sub('eigen_solver_evolution')
@@ -50,12 +50,42 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
            matvec = matvec + j
         enddo
         call X(states_gram_schmidt)(st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), start = conv + 1)
+
+        ! Get the eigenvalues and the residues.
         do ist = conv + 1, st%nst
            call X(hpsi)(h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
            st%eigenval(ist, ik) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), hpsi)
-           res = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
-           diff(ist, ik) = res
-           if( (res < tol) .and. (ist == conv + 1) ) conv = conv + 1
+           diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
+        enddo
+
+        ! Reordering....
+        if(st%nst > 1) then
+          do l = 1, st%nst - 1
+           dump = st%eigenval(l, ik)
+           k = l
+           do i = l + 1, st%nst
+              if(st%eigenval(i, ik) < dump) then
+                 dump = st%eigenval(i, ik)
+                 k = i
+              endif
+           enddo
+           if(k.ne.l) then
+             dump  = st%eigenval(l, ik)
+             dump2 = diff(l, ik)
+             hpsi  = st%X(psi)(:, :, l, ik)
+             st%eigenval(l, ik) = st%eigenval(k, ik)
+             diff(l, ik) = diff(k, ik)
+             st%X(psi)(:, :, l, ik) = st%X(psi)(:, :, k, ik)
+             st%eigenval(k, ik) = dump
+             diff(k, ik) = dump2
+             st%X(psi)(:, :, k, ik) = hpsi(:, :)
+           endif
+          enddo
+        endif
+
+        ! And check for convergence.
+        do ist = conv + 1, st%nst
+           if( (diff(ist, ik) < tol) .and. (ist == conv + 1) ) conv = conv + 1
         enddo
         if(conv == st%nst) exit
      enddo
@@ -80,9 +110,9 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
 
 
     n = st%d%dim * gr%m%np
-    m = 25 ! maximum size for the Krylov basis.
+    m = 50 ! maximum size for the Krylov basis.
     t = -tau
-    tolerance = CNST(0.0)
+    tolerance = CNST(1.0e-12)
     anorm = M_ONE
     itrace = 0
     lwsp = n*(m+1)+n+(m+2)**2+4*(m+2)**2+6+1
