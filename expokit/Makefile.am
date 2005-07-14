@@ -1,4 +1,4 @@
-# $Id
+# $Id$
 
 noinst_LIBRARIES = libexpokit.a
 
