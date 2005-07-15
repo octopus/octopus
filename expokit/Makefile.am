@@ -4,5 +4,5 @@ noinst_LIBRARIES = libexpokit.a
 
 libexpokit_a_SOURCES = expokit.f
 
-.f.c:
+.f.o:
 	@FC@ @FCFLAGS@ -c -o $@ $<
