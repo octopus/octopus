@@ -51,8 +51,9 @@ noinst_HEADERS = \
 
 core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a ../expokit/libexpokit.a \
   @GSL_LIBS@ @FCEXTRALIBS@
-octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
-	@LIBS_MPI@ $(core_LIBS) @LIBS_METIS@
+octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \ 
+  @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
+  @LIBS_MPI@ $(core_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_METIS@
 
 # now the utility programs
 oct_sf_SOURCES = $(basic_SRCS) spectrum.F90 strength_function.F90
