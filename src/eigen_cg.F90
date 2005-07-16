@@ -179,25 +179,8 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
         diff(p, ik) = res
       end if
 
-      ! Reordering... (this should be improved)
-      if(p>1 .and. reord) then
-        if(st%eigenval(p, ik) - st%eigenval(p-1, ik) .lt. -M_TWO*tol) then
-          do i = p - 2, 1, -1
-            if (st%eigenval(p, ik) - st%eigenval(i, ik) .gt. M_TWO*tol) exit
-          end do
-          i = i + 1
-          moved = moved + 1
-          e0 = st%eigenval(p, ik)
-          cg = st%X(psi)(:,:, p, ik)
-          do j = p, i + 1 , -1
-            st%eigenval(j, ik) = st%eigenval(j-1, ik)
-            st%X(psi)(:,:, j, ik) = st%X(psi)(:,:, j-1, ik)
-          end do
-          st%eigenval(i, ik) = e0
-          st%X(psi)(:,:, i, ik) = cg
-        end if
-      end if
-      ! End of reordering
+      if(p>1 .and. reord) call sort(st%eigenval(1:p, ik), st%X(psi)(:, :, 1:p, ik))
+
     end do eigenfunction_loop
 
     conv_ = conv_ + conv
@@ -352,23 +335,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
         call write_info(1)
       endif
 
-      ! Reordering: WARNING, this has not been carefully checked
-      if(ist>1 .and. reorder_) then
-        do i = 1, ist - 1
-           if(st%eigenval(ist, ik) < st%eigenval(i, ik)) then
-             k = i
-             dump     = st%eigenval(ist, ik)
-             cg(:, :) = st%X(psi)(:, :, ist, ik)
-             do l = ist, k + 1, -1
-                st%X(psi)(:, :, l, ik) = st%X(psi)(:, :, l-1, ik)
-                st%eigenval(l, ik) = st%eigenval(l-1, ik)
-             enddo
-             st%X(psi)(:, :, k, ik) = cg(:, :)
-             st%eigenval(k, ik) = dump
-             exit
-           endif
-        enddo
-      endif
+      ! Reordering.
+      if(ist>1 .and. reorder_) call sort(st%eigenval(1:ist, ik), st%X(psi)(:, :, 1:ist, ik))
 
     enddo states
 

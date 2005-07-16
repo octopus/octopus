@@ -26,6 +26,7 @@ module eigen_solver
   use lib_oct_parser
   use lib_basic_alg
   use lib_adv_alg
+  use math, only : sort
   use io
   use nl_operator
   use stencil_star

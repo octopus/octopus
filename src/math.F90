@@ -45,8 +45,12 @@ module math
             cutoff2, &
             invert_3by3, &
             besselint, &
-            dextrapolate, zextrapolate
+            dextrapolate, zextrapolate, &
+            sort
 
+  interface sort
+    module procedure shellsort, dshellsort1, zshellsort1, dshellsort2, zshellsort2
+  end interface
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface dconjugate_gradients
     module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
@@ -55,6 +59,7 @@ module math
   interface zconjugate_gradients
     module procedure zsym_conjugate_gradients, zbi_conjugate_gradients
   end interface
+
 
 contains
 
@@ -448,6 +453,38 @@ subroutine vector_product_3(a,b,c)
   c(3) = a(1)*b(2) - a(2)*b(1)
 
 end subroutine vector_product_3
+
+subroutine shellsort(a)
+  FLOAT, intent(inout) :: a(:)
+
+  integer :: i,j,inc,n
+  FLOAT   :: v
+
+  n = size(a)
+  inc = 1
+  do
+     inc=3*inc+1
+     if (inc > n) exit
+  end do
+
+  do
+     inc=inc/3
+     do i=inc+1,n
+         v=a(i)
+         j=i
+         do
+            if (a(j-inc) <= v) exit
+            !if (a(j-inc) >= v) exit
+            a(j)=a(j-inc)
+            j=j-inc
+            if (j <= inc) exit
+         end do
+         a(j)=v
+     end do
+     if (inc <= 1) exit
+  end do
+
+end subroutine shellsort
 
 #include "undef.F90"
 #include "complex.F90"

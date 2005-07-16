@@ -59,29 +59,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
         enddo
 
         ! Reordering....
-        if(st%nst > 1) then
-          do l = 1, st%nst - 1
-           dump = st%eigenval(l, ik)
-           k = l
-           do i = l + 1, st%nst
-              if(st%eigenval(i, ik) < dump) then
-                 dump = st%eigenval(i, ik)
-                 k = i
-              endif
-           enddo
-           if(k.ne.l) then
-             dump  = st%eigenval(l, ik)
-             dump2 = diff(l, ik)
-             hpsi  = st%X(psi)(:, :, l, ik)
-             st%eigenval(l, ik) = st%eigenval(k, ik)
-             diff(l, ik) = diff(k, ik)
-             st%X(psi)(:, :, l, ik) = st%X(psi)(:, :, k, ik)
-             st%eigenval(k, ik) = dump
-             diff(k, ik) = dump2
-             st%X(psi)(:, :, k, ik) = hpsi(:, :)
-           endif
-          enddo
-        endif
+        if(st%nst > 1) call sort(st%eigenval(1:st%nst, ik), st%X(psi)(:, :, 1:st%nst, ik))
 
         ! And check for convergence.
         do ist = conv + 1, st%nst

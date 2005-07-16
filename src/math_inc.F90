@@ -72,3 +72,84 @@ subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
 
   deallocate(c)
 end subroutine X(extrapolate)
+
+subroutine X(shellsort1)(a, x)
+  FLOAT, intent(inout) :: a(:)
+  R_TYPE, intent(inout) :: x(:, :)
+
+  integer :: i, j, inc, n, m
+  FLOAT   :: v
+  R_TYPE, allocatable :: b(:)
+
+  n = size(a)
+  m = size(x, 1)
+  allocate(b(m))
+
+  inc = 1
+  do
+     inc=3*inc+1
+     if (inc > n) exit
+  end do
+
+  do
+     inc=inc/3
+     do i=inc+1,n
+         v=a(i)
+         b(:) = x(:, i)
+         j=i
+         do
+            if (a(j-inc) <= v) exit
+            !if (a(j-inc) >= v) exit
+            a(j)=a(j-inc)
+            x(:, j) = x(:, j-inc)
+            j=j-inc
+            if (j <= inc) exit
+         end do
+         a(j)=v
+         x(:, j) = b(:)
+     end do
+     if (inc <= 1) exit
+  end do
+
+end subroutine X(shellsort1)
+
+subroutine X(shellsort2)(a, x)
+  FLOAT, intent(inout) :: a(:)
+  R_TYPE, intent(inout) :: x(:, :, :)
+
+  integer :: i, j, inc, n, p, q
+  FLOAT   :: v
+  R_TYPE, allocatable :: b(:, :)
+
+  n = size(a)
+  p = size(x, 1)
+  q = size(x, 2)
+  allocate(b(p, q))
+
+  inc = 1
+  do
+     inc=3*inc+1
+     if (inc > n) exit
+  end do
+
+  do
+     inc=inc/3
+     do i=inc+1,n
+         v=a(i)
+         b(:, :) = x(:, :, i)
+         j=i
+         do
+            if (a(j-inc) <= v) exit
+            !if (a(j-inc) >= v) exit
+            a(j)=a(j-inc)
+            x(:, :, j) = x(:, :, j-inc)
+            j=j-inc
+            if (j <= inc) exit
+         end do
+         a(j)=v
+         x(:, :, j) = b(:, :)
+     end do
+     if (inc <= 1) exit
+  end do
+
+end subroutine X(shellsort2)
