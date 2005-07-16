@@ -346,9 +346,9 @@ subroutine eigen_diagon_subspace(gr, st, h)
 end subroutine eigen_diagon_subspace
 
 
-#include "eigen_cg2.F90"
+#include "eigen_cg.F90"
 #ifdef HAVE_TRLAN
-#include "eigen_cg3.F90"
+#include "eigen_trlan.F90"
 #endif
 #include "eigen_plan.F90"
 #if defined(HAVE_ARPACK)
