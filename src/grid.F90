@@ -25,6 +25,7 @@ module grid
   use geometry
   use functions
   use curvlinear
+  use multigrid
 
   implicit none
   
@@ -35,10 +36,8 @@ module grid
     type(f_der_type)           :: f_der
 
     type(curvlinear_type) :: cv
+    type(multigrid_type), pointer  :: mgrid
 
-    integer                    :: n_multi
-    type(mesh_type),  pointer  :: multi_m(:)
-    type(f_der_type), pointer  :: multi_f_der(:)
   end type grid_type
 
 contains
@@ -78,9 +77,8 @@ contains
       call geometry_debug(gr%geo, 'debug')
     end if
     
-    ! this will count the number of grids contained in our multigrid
-    gr%n_multi = 0
-    nullify(gr%multi_m, gr%multi_f_der)
+    ! multigrids are not initialized by default
+    nullify(gr%mgrid)
 
     ! print info concerning the grid
     call grid_write_info(gr, stdout)
@@ -93,23 +91,14 @@ contains
   subroutine grid_end(gr)
     type(grid_type), intent(inout) :: gr
 
-    integer :: i
-
     call push_sub('grid_end')
-
-    ASSERT(gr%n_multi >= 0)
 
     call f_der_end(gr%f_der)
     call mesh_end(gr%m)
 
-    if(gr%n_multi > 0) then
-      do i = 1, gr%n_multi
-        call f_der_end( gr%multi_f_der(i))
-        call mesh_end(gr%multi_m(i))
-      end do
-
-      deallocate(gr%multi_m, gr%multi_f_der)
-      nullify(gr%multi_m, gr%multi_f_der)
+    if(associated(gr%mgrid)) then
+      call multigrid_end(gr%mgrid)
+      deallocate(gr%mgrid); nullify(gr%mgrid)
     end if
 
     call geometry_end(gr%geo)
@@ -134,4 +123,15 @@ contains
     write(iunit,'(a,/)') stars
 
   end subroutine grid_write_info
+
+  
+  subroutine grid_create_multigrid(gr, n_multi)
+    type(grid_type), intent(inout) :: gr
+    integer,         intent(in)    :: n_multi
+
+    allocate(gr%mgrid)
+    call multigrid_init(gr%geo, gr%cv, gr%m, gr%f_der, gr%mgrid, n_multi)
+
+  end subroutine grid_create_multigrid
+
 end module grid

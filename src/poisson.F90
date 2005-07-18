@@ -35,6 +35,7 @@ module poisson
   use poisson_corrections
   use poisson_cg
   use grid
+  use output
 
   implicit none
 
@@ -58,7 +59,8 @@ module poisson
                         FFT_CORRECTED = 4
 #endif
   integer, parameter :: CG            = 5, &
-                        CG_CORRECTED  = 6
+                        CG_CORRECTED  = 6, &
+                        MULTIGRID     = 7
 
 
 
@@ -80,11 +82,39 @@ contains
 
   contains
 
+    !%Variable PoissonSolver
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Defines which method to use in order to solve the Poisson equation.
+    !% The default for 1D and 2D is the direct evaluation of the Hartree potential.
+    !%Option direct2D -2
+    !% Direct evaluation of the Hartree potential (in 2D)
+    !%Option direct1D -1
+    !% Direct evaluation of the Hartree potential (in 1D)
+    !%Option fft 0
+    !% FFTs using spherical cutoff (in 2D or 3D; uses FFTW)
+    !%Option fft_cyl 1
+    !% FFTs using cylindrical cutoff (in 3D; uses FFTW)
+    !%Option fft_pla 2
+    !% FFTs using planar cutoff (in 3D; uses FFTW)
+    !%Option fft_nocut 3
+    !% FFTs without using a cutoff (in 3D; uses FFTW)
+    !%Option fft_corrected 4
+    !% FFTs + corrections
+    !%Option cg 5
+    !% Conjugated gradients
+    !%Option cg_corrected 6
+    !% Corrected conjugated gradients
+    !%Option multigrid 7
+    !% Multigrid technique
+    !%End
+
     !-----------------------------------------------------------------
     subroutine init_1D()
       poisson_solver = -NDIM ! internal type
-      message(1) = 'Info: Using direct integration method to solve poisson equation'
-      call write_info(1)
+
+      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
     end subroutine init_1D
 
 
@@ -93,17 +123,11 @@ contains
 #if defined(HAVE_FFT)
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
       if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
-        write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
-           "' is not a valid PoissonSolver"
-        message(2) = 'PoissonSolver = -1 (direct summation)     | '
-        message(3) = '                 0 (fft spherical cutoff) '
-        call write_fatal(3)
+        call input_error('PoissonSolver')
       endif
       
 #else
       poisson_solver = -NDIM ! internal type
-      message(1) = 'Info: Using direct integration method to solve poisson equation'
-      call write_info(1)
 #endif
 
       if(gr%m%use_curvlinear .and. (poisson_solver .ne. -NDIM) ) then
@@ -112,6 +136,7 @@ contains
         call write_fatal(2)
       endif
       
+      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
       call poisson2D_init(gr)
     end subroutine init_2D
 
@@ -120,18 +145,10 @@ contains
     subroutine init_3D()
 #ifdef HAVE_FFT
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
-      if(poisson_solver < FFT_SPH .or. poisson_solver > CG_CORRECTED ) then
-        write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
-           "' is not a valid PoissonSolver"
-        message(2) = 'PoissonSolver = 0 (fft spherical cutoff)   | '
-        message(3) = '                1 (fft cylindrical cutoff) | '
-        message(4) = '                2 (fft planar cutoff)      | '
-        message(5) = '                3 (fft no cutoff)          | '
-        message(6) = '                4 (fft + corrections)      | '
-        message(7) = '                5 (conj grad)              | '
-        message(8) = '                6 (corrected conj grad) '
-        call write_fatal(8)
+      if(poisson_solver < FFT_SPH .or. poisson_solver > MULTIGRID ) then
+        call input_error('PoissonSolver')
       end if
+
       if(poisson_solver /= gr%sb%periodic_dim .and. &
          poisson_solver < CG .and. &
          poisson_solver /= FFT_CORRECTED) then
@@ -143,21 +160,17 @@ contains
 #else
       call loct_parse_int(check_inp('PoissonSolver'), CG, poisson_solver)
       if(poisson_solver < CG) then
-        write(message(1), '(a,i2,a)') "Input: '", poisson_solver, &
-           "' is not a valid PoissonSolver"
-        message(2) = 'PoissonSolver = 5 (conj grad)              | '
-        message(3) = '                6 (corrected conj grad) '
-        message(4) = '[The code was compiled without FFT support ' 
-        call write_fatal(3)
+        call input_error('PoissonSolver')
       end if
 #endif
       
-      if(gr%m%use_curvlinear .and. (poisson_solver .ne. CG_CORRECTED) ) then
+      if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED) ) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
-        message(2) = 'Poisson solver is 5 ("corrected conjugate gradients")'
+        message(2) = 'Poisson solver is cg_corrected ("corrected conjugate gradients")'
         call write_fatal(2)
       end if
 
+      call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
       call poisson3D_init(gr)    
     end subroutine init_3D
 
@@ -185,7 +198,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine zpoisson_solve(gr, pot, rho)
-    type(grid_type),  target, intent(in)    :: gr
+    type(grid_type),  target, intent(inout) :: gr
     CMPLX,                    intent(inout) :: pot(:)  ! pot(m%np)
     CMPLX,                    intent(in)    :: rho(:)  ! rho(m%np)
     
@@ -215,7 +228,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine dpoisson_solve(gr, pot, rho)
-    type(grid_type), target, intent(in)    :: gr
+    type(grid_type), target, intent(inout) :: gr
     FLOAT,                   intent(inout) :: pot(:)  ! pot(m%np)
     FLOAT,                   intent(in)    :: rho(:)  ! rho(m%np)
 
@@ -237,6 +250,9 @@ contains
 
     case(CG_CORRECTED)
       call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho)
+
+    case(MULTIGRID)
+      call poisson_multigrid(gr, pot, rho)
 
 #ifdef HAVE_FFT
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
@@ -299,5 +315,6 @@ contains
 #include "poisson1D.F90"
 #include "poisson2D.F90"
 #include "poisson3D.F90"
+#include "poisson_multigrid.F90"
   
 end module poisson

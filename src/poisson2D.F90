@@ -22,16 +22,6 @@ subroutine poisson2D_init(gr)
 
   ASSERT(poisson_solver == FFT_SPH .or. poisson_solver == DIRECT_SUM_2D)
 
-  select case(poisson_solver)
-#ifdef HAVE_FFT
-    case(FFT_SPH)
-      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation.'
-#endif
-    case(DIRECT_SUM_2D)
-      message(1) = 'Info: Using direct sum method to solve poisson equation.'
-  end select
-  call write_info(1)
-
 #ifdef HAVE_FFT
   if (poisson_solver == FFT_SPH) call init_fft(gr%m)
 #endif

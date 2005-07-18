@@ -38,11 +38,12 @@ module mesh
      mesh_init, &
      mesh_end, &
      mesh_double_box, &
+     mesh_create_xyz, &
      mesh_index, &
      mesh_inborder, &
      mesh_r, &
      mesh_gcutoff, &
-     mesh_write_info, mesh_half
+     mesh_write_info
 
   type mesh_type
     type(simul_box_type), pointer :: sb
@@ -50,8 +51,10 @@ module mesh
     
     FLOAT :: h(3)           ! the (constant) spacing between the points
     
-    integer  :: np         ! number of points in mesh
-    integer  :: np_tot     ! total number of points including ghost points
+    integer  :: np          ! number of points in mesh
+    integer  :: np_tot      ! total number of points including ghost points
+
+    integer  :: enlarge     ! number of points to add for boundary conditions
     
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
@@ -79,9 +82,10 @@ contains
     m%sb => sb   ! keep an internal pointer
     m%h  =  sb%h ! this number can change in the following
     m%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
+    m%enlarge = enlarge
 
     call adjust_nr()          ! find out the extension of the simulation box
-    call mesh_create_xyz(sb, m, cv, geo, enlarge)
+    call mesh_create_xyz(sb, m, cv, geo)
 
     call pop_sub()
   contains
@@ -173,7 +177,8 @@ contains
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ',   &
        m%vol_pp(1)/units_out%length%factor**3
 
-    write(unit,'(a, i6)') '  # inner mesh = ', m%np
+    write(unit,'(a, i8)') '  # inner mesh = ', m%np
+    write(unit,'(a, i8)') '  # total mesh = ', m%np_tot
 
     write(unit,'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
        (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
@@ -278,34 +283,6 @@ contains
      
      call pop_sub()
    end subroutine mesh_end
-
-
-   !/*---------------------------------------------------------------------------------
-   ! Creates a mesh that has twice the spacing betwen the points than the in mesh.
-   ! This is used in the multi-grid routines
-   !---------------------------------------------------------------------------------*/
-   subroutine mesh_half(mesh_in, mesh_out)
-     type(mesh_type), intent(in)  :: mesh_in
-     type(mesh_type), intent(out) :: mesh_out
-
-     integer :: i, j
-
-     mesh_out%sb             => mesh_in%sb
-     mesh_out%use_curvlinear =  mesh_in%use_curvlinear
-
-     mesh_out%h(:) = 2*mesh_in%h(:)
-     
-     j = 0
-     do i = 1, mesh_in%np
-       if(all(mod(mesh_in%Lxyz(i,:), 2) == 0)) then
-         j = j+1
-       end if
-     end do
-
-     print *, mesh_in%np, j
-     stop
-
-   end subroutine mesh_half
 
 #include "mesh_create.F90"
 

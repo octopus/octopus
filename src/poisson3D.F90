@@ -20,39 +20,25 @@
 subroutine poisson3D_init(gr)
   type(grid_type), intent(inout) :: gr
   
+  integer :: level
+
   ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= CG_CORRECTED)
 
   select case(poisson_solver)
-#ifdef HAVE_FFT
-    case(FFT_SPH)
-      message(1) = 'Info: Using FFTs with spherical cutoff to solve Poisson equation.'
+  case(CG)
+    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
+    call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
+    call poisson_cg1_init(gr%m, maxl, threshold)
 
-    case(FFT_CYL)
-      message(1) = 'Info: Using FFTs with cylindrical cutoff to solve Poisson equation.'
+  case(CG_CORRECTED)
+    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
+    call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
+    call poisson_cg2_init(gr%m, maxl, threshold)
 
-    case(FFT_PLA)
-      message(1) = 'Info: Using FFTs with planar cutoff to solve Poisson equation.'
-
-    case(FFT_NOCUT)
-      message(1) = 'Info: Using FFTs without cutoff to solve Poisson equation.'
-
-    case(FFT_CORRECTED)
-      message(1)= 'Info: Using FFTs with error corrections.'
-#endif
-    case(CG)
-      message(1) = 'Info: Using conjugated gradients method to solve poisson equation.'
-      call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
-      call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
-      call poisson_cg1_init(gr%m, maxl, threshold)
-
-    case(CG_CORRECTED)
-      call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
-      call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
-      message(1) = 'Info: Using corrected conjugated gradients method to solve poisson equation.'
-      call poisson_cg2_init(gr%m, maxl, threshold)
-
+  case(MULTIGRID)
+    call loct_parse_int(check_inp('MultigridLevel'), 3, level)
+    call grid_create_multigrid(gr, level)
   end select
-  call write_info(1)
 
 #ifdef HAVE_FFT
   if (poisson_solver <= FFT_CORRECTED) call init_fft(gr%m)

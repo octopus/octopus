@@ -35,7 +35,7 @@
 !------------------------------------------------------------
 
 subroutine X(oep_x) (gr, st, is, oep, ex)
-  type(grid_type),   intent(in)    :: gr
+  type(grid_type),   intent(inout) :: gr
   type(states_type), intent(in)    :: st
   integer,           intent(in)    :: is
   type(xc_oep_type), intent(inout) :: oep

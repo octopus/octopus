@@ -19,7 +19,7 @@ core_SRCS = $(basic_SRCS) \
 	fft.F90 mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
-	grid.F90 \
+	multigrid.F90 grid.F90 \
 	out.F90 poisson_corrections.F90 poisson_cg.F90 poisson.F90 \
 	crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 restart.F90
 
@@ -37,7 +37,7 @@ noinst_HEADERS = \
 	real.F90 complex.F90 undef.F90 \
 	fftw2.F90 fftw3.F90 \
 	mesh_create.F90 derivatives_inc.F90 cf_inc.F90 mf_inc.F90 f_inc.F90 \
-	poisson1D.F90 poisson2D.F90 poisson3D.F90 \
+	poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90 \
 	xc_vxc.F90 xc_axc.F90 xc_fxc.F90 xc_KLI.F90 xc_OEP_x.F90 xc_OEP_SIC.F90 \
 	epot_inc.F90 \
 	v_ks_inc.F90 xc_OEP_inc.F90 h_inc.F90 h_so.F90 \
@@ -190,7 +190,7 @@ phonons.o: global.h
 phonon_spectrum.o: global.h
 poisson_cg.o: global.h
 poisson_corrections.o: global.h
-poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90
+poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
 ps.o: global.h
 restart.o: global.h restart_inc.F90
 rotational_strength.o: global.h
