@@ -30,7 +30,8 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
 
   integer :: ik, ist, iter, maxiter, conv, conv_, matvec, j, k, l, i
   FLOAT :: res, dump, dump2
-  R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), eig(:), phi(:, :, :)
+  R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
+  FLOAT, allocatable :: eig(:)
 
   call push_sub('eigen_solver_evolution')
 
