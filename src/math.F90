@@ -48,9 +48,33 @@ module math
             dextrapolate, zextrapolate, &
             sort
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! This is the common interface to a sorting routine.
+  ! It performs the shell algorithm, not as fast as the quicksort for large numbers,
+  ! but it seems that better for moderate numbers (around 100).
+  ! Their possible interfaces are:
+  !   subroutine sort(a [, ind] )
+  !     FLOAT, intent(inout) :: a(:)
+  !     integer, intent(inout), optional :: ind(:)
+  !     ! This routine sorts, from smallest to largest, the array a.
+  !     ! If the integer array ind is present, it puts in it the indexing
+  !     ! of the sorting, so that other arrays can be sorted according to
+  !     ! the sorting of a.
+  !   end subroutine sort
+  !
+  !   subroutine sort(a, x)
+  !     FLOAT, intent(inout) :: a(:)
+  !     FLOAT_OR_COMPLEX, intent(inout) :: x(:, : [, :])
+  !     ! This routine sorts, from smallest to largest, the array a.
+  !     ! The real or complex array x, which may be two or three dimensional,
+  !     ! is sorted according to the ordering of a. The last dimension of x
+  !     ! must have the same size as a.
+  !   end subroutine sort
   interface sort
     module procedure shellsort, dshellsort1, zshellsort1, dshellsort2, zshellsort2
   end interface
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   ! This common interface applies to the two procedures defined in math_cg_inc.F90
   interface dconjugate_gradients
     module procedure dsym_conjugate_gradients, dbi_conjugate_gradients
@@ -454,13 +478,21 @@ subroutine vector_product_3(a,b,c)
 
 end subroutine vector_product_3
 
-subroutine shellsort(a)
+subroutine shellsort(a, ind)
   FLOAT, intent(inout) :: a(:)
+  integer, intent(inout), optional :: ind(:)
 
-  integer :: i,j,inc,n
+  integer :: i,j,inc,n, indi
   FLOAT   :: v
 
   n = size(a)
+
+  if(present(ind)) then
+     do i = 1, n
+        ind(i) = i
+     enddo
+  endif
+
   inc = 1
   do
      inc=3*inc+1
@@ -471,15 +503,18 @@ subroutine shellsort(a)
      inc=inc/3
      do i=inc+1,n
          v=a(i)
+         if(present(ind)) indi = ind(i)
          j=i
          do
             if (a(j-inc) <= v) exit
             !if (a(j-inc) >= v) exit
             a(j)=a(j-inc)
+            if(present(ind)) ind(j) = ind(j-inc)
             j=j-inc
             if (j <= inc) exit
          end do
          a(j)=v
+         if(present(ind)) ind(j) = indi
      end do
      if (inc <= 1) exit
   end do

@@ -118,10 +118,14 @@ module lib_basic_alg
   end interface
 
   interface lalg_gemm
-    module procedure gemm_1
-    module procedure gemm_2
-    module procedure gemm_3
-    module procedure gemm_4
+    module procedure gemm_1_1
+    module procedure gemm_1_2
+    module procedure gemm_1_3
+    module procedure gemm_1_4
+    module procedure gemm_2_1
+    module procedure gemm_2_2
+    module procedure gemm_2_3
+    module procedure gemm_2_4
   end interface
 
   interface lalg_gemv

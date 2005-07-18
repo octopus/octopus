@@ -28,6 +28,7 @@ module casida
   use lib_oct
   use io
   use lib_adv_alg
+  use math, only : sort
   use mesh
   use functions
   use mesh_function
@@ -501,30 +502,20 @@ contains
 
 
     ! ---------------------------------------------------------
+    ! WARNING: Not tested yet...
     subroutine sort_energies
-      FLOAT :: tmp(4), emin
-      integer ia, jb, min, itmp
+      integer :: i, j
+      integer, allocatable :: ind(:), itmp(:)
+      FLOAT, allocatable :: tmp(:)
+      allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs))
 
-      ! stupid algorith, but who cares
-      do ia = 1, cas%n_pairs
-        min = ia
-        emin = cas%energies(ia, 1)
-        do jb = ia + 1, cas%n_pairs
-          if(cas%energies(jb, 1) < emin) then
-            emin = cas%energies(jb, 1)
-            min = jb
-          end if
-        end do
-        if(min .ne. ia) then
-          tmp = cas%energies(ia, :)
-          cas%energies(ia, :) = cas%energies(min, :)
-          cas%energies(min, :) = tmp
-          
-          itmp = cas%pair_i(ia); cas%pair_i(ia) = cas%pair_i(min); cas%pair_i(min) = itmp
-          itmp = cas%pair_a(ia); cas%pair_a(ia) = cas%pair_a(min); cas%pair_a(min) = itmp
-        end if
-
-      end do
+      call sort(cas%energies(:, 1), ind)
+      do i = 2, 4
+         tmp(:) = cas%energies(:, i) ; cas%energies(:, i) = tmp(ind(:))
+      enddo
+      itmp(:) = cas%pair_i(:) ; cas%pair_i(:) = itmp(ind(:))
+      itmp(:) = cas%pair_a(:) ; cas%pair_a(:) = itmp(ind(:))
+      deallocate(ind, itmp, tmp)
     end subroutine sort_energies
 
 

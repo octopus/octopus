@@ -235,7 +235,7 @@ end function FNAME(nrm2)
 ! matrix-matrix multiplication plus matrix
 ! ------------------------------------------------------------------
 
-subroutine FNAME(gemm)(m, n, k, alpha, a, b, beta, c)
+subroutine FNAME(gemm_1)(m, n, k, alpha, a, b, beta, c)
   integer, intent(in)    :: m, n, k
   TYPE1,   intent(in)    :: alpha, beta
   TYPE1,   intent(in)    :: a(:,:)  ! a(m, k)
@@ -244,7 +244,18 @@ subroutine FNAME(gemm)(m, n, k, alpha, a, b, beta, c)
 
   call blas_gemm('N', 'N', m, n, k, alpha, a(1,1), m, b(1,1), k, beta, c(1,1), m)
 
-end subroutine FNAME(gemm)
+end subroutine FNAME(gemm_1)
+
+subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m, n, k
+  TYPE1,   intent(in)    :: alpha, beta
+  TYPE1,   intent(in)    :: a(:, :, :)  ! a(m, k)
+  TYPE1,   intent(in)    :: b(:, :)     ! b(k, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  ! c(m, n)
+
+  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1, 1), m, b(1, 1), k, beta, c(1, 1, 1), m)
+
+end subroutine FNAME(gemm_2)
 
 ! ------------------------------------------------------------------
 ! matrix-vector multiplication plus vector

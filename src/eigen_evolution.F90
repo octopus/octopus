@@ -30,7 +30,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
 
   integer :: ik, ist, iter, maxiter, conv, conv_, matvec, j, k, l, i
   FLOAT :: res, dump, dump2
-  R_TYPE, allocatable :: hpsi(:, :)
+  R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), eig(:), phi(:, :, :)
 
   call push_sub('eigen_solver_evolution')
 
@@ -38,8 +38,11 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
   conv_ = 0
   matvec = 0
 
-  allocate(hpsi(gr%m%np, st%d%dim))
+  allocate(hpsi(gr%m%np, st%d%dim), m(st%nst, st%nst), c(st%nst, st%nst), &
+           eig(st%nst), phi(gr%m%np, st%d%dim, st%nst))
 
+  ! Warning: it seems that the algorithm is improved if some extra states are added -- states
+  ! whose convergence should not be checked.
   kpoints: do ik = 1, st%d%nik
      conv = converged
 
@@ -49,7 +52,24 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
            call exponentiate(st%X(psi)(:, :, ist, ik), j)
            matvec = matvec + j
         enddo
-        call X(states_gram_schmidt)(st%nst, gr%m, st%d%dim, st%X(psi)(:, :, :, ik), start = conv + 1)
+
+        ! This is the orthonormalization suggested by Aichinger and Krotschek
+        ! [Comp. Mat. Science 34, 188 (2005)]
+        do i = 1, st%nst
+           do j = i, st%nst
+              m(i, j) = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, i, ik), st%X(psi)(:, :, j, ik) )
+           enddo
+        enddo
+        call lalg_eigensolve(st%nst, m, c, eig)
+        do i = 1, st%nst
+           c(:, i) = c(:, i) / sqrt(eig(i))
+        enddo
+        ! Internally the BLAS does the Winograd-Strassen algorithm?
+        call lalg_gemm(gr%m%np * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
+                       st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
+        do i = 1, st%nst
+           st%X(psi)(:, :, i, ik) = phi(:, :, st%nst -i + 1)
+        enddo
 
         ! Get the eigenvalues and the residues.
         do ist = conv + 1, st%nst
@@ -58,10 +78,10 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
            diff(ist, ik) = X(states_residue)(gr%m, st%d%dim, hpsi, st%eigenval(ist, ik), st%X(psi)(:, :, ist, ik))
         enddo
 
-        ! Reordering....
+        ! Reordering.... (maybe this is unnecessary since the orthonormalization already orders them...)
         if(st%nst > 1) call sort(st%eigenval(1:st%nst, ik), st%X(psi)(:, :, 1:st%nst, ik))
 
-        ! And check for convergence.
+        ! And check for convergence. Note that they must be converged *in order*, so that they can be frozen.
         do ist = conv + 1, st%nst
            if( (diff(ist, ik) < tol) .and. (ist == conv + 1) ) conv = conv + 1
         enddo
@@ -73,7 +93,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
 
   converged = conv_
   niter = matvec
-  deallocate(hpsi)
+  deallocate(hpsi, m, c, eig, phi)
   call pop_sub()
   contains
 
@@ -88,9 +108,9 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
 
 
     n = st%d%dim * gr%m%np
-    m = 50 ! maximum size for the Krylov basis.
+    m = 20 ! maximum size for the Krylov basis.
     t = -tau
-    tolerance = CNST(1.0e-12)
+    tolerance = CNST(1.0e-8)
     anorm = M_ONE
     itrace = 0
     lwsp = n*(m+1)+n+(m+2)**2+4*(m+2)**2+6+1
