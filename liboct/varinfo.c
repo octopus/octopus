@@ -55,7 +55,7 @@ char *get_token(char *s, char **dest)
 
   /* get rid of initial whitespace */
   for(;*s!='\0' && isspace(*s); s++); 
-  if(!isalnum(*s)){
+  if(!isalnum(*s) && *s!='-'){
     *dest = NULL;
     return s;
   }
