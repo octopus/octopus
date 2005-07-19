@@ -9,3 +9,6 @@ noinst_HEADERS = varia.h
 
 CLEANFILES = *~ *.bak
 DISTCLEANFILES = Makefile.in
+
+config.h: ../config.h
+	ln -s ../config.h .
