@@ -393,6 +393,8 @@ contains
 
 
     subroutine iter_output()
+      call push_sub("td::iter_output")
+
       ! output multipoles
       if(td%out_multip) call td_write_multipole(gr, out_multip, st, td, i)
 
@@ -419,6 +421,8 @@ contains
 
       ! output electronic energy
       if(td%out_energy) call td_write_el_energy(out_energy, h, i)
+
+      call pop_sub()
     end subroutine iter_output
 
 

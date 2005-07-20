@@ -193,6 +193,8 @@ subroutine td_write_multipole(gr, out, st, td, iter)
 
   if(mpiv%node.ne.0) return ! only first node outputs
 
+  call push_sub("td_write_multipole")
+
   if(iter == 0) then
     ! empty file
     call write_iter_clear(out)
@@ -276,6 +278,7 @@ subroutine td_write_multipole(gr, out, st, td, iter)
   
   deallocate(dipole, nuclear_dipole, multipole)
 
+  call pop_sub()
 end subroutine td_write_multipole
 
 

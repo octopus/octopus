@@ -154,15 +154,15 @@ contains
     s => atom%spec
     rho = M_ZERO
 
-    ! build density...
+    ! build density ...
     select case (s%type)
-    case (SPEC_USDEF) ! ...from userdef
+    case (SPEC_USDEF) ! ... from userdef
       do i = 1, spin_channels
         rho(1:m%np, i) = real(s%Z_val, PRECISION) /  &
-           (m%np*m%vol_pp(:)*real(spin_channels, PRECISION))
+           (m%np*m%vol_pp(1:m%np)*real(spin_channels, PRECISION))
       end do
 
-    case (SPEC_POINT, SPEC_JELLI) ! ...from jellium
+    case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
       in_points = 0
       do i = 1, m%np
         call mesh_r(m, i, r, a=atom%x)

@@ -69,7 +69,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   allocate(v_bar_S(st%nst))
   do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then
-      v_bar_S(i) = sum(R_ABS(st%X(psi)(:, 1, i, is))**2 * oep%vxc(:) * m%vol_pp(:))
+      v_bar_S(i) = sum(R_ABS(st%X(psi)(1:m%np, 1, i, is))**2 * oep%vxc(1:m%np) * m%vol_pp(1:m%np))
     end if
   end do
 
@@ -111,7 +111,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
-      d(:) = (R_REAL(phi1(:, 1))**2 + R_AIMAG(phi1(:, 1))**2) / rho_sigma(:) * m%vol_pp(:)
+      d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
+         R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
 
       do j = i, n
 #if defined(HAVE_MPI)
@@ -131,7 +132,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #else
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
 #endif
-        Ma(i, j) = - sum( d(:) * (R_REAL(phi2(:, 1))**2 + R_AIMAG(phi2(:, 1))**2) )
+        Ma(i, j) = - sum(d(1:m%np) * (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
         Ma(j,i) = Ma(i,j)
       end do
       Ma(i,i) = M_ONE + Ma(i,i)
@@ -187,7 +188,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
       occ = st%occ(oep%eigen_index(i), is)
 #endif
-      oep%vxc(:) = oep%vxc(:) + oep%socc * occ * x(i,1) * R_ABS(phi1(:, 1))**2 / rho_sigma(:)
+      oep%vxc(1:m%np) = oep%vxc(1:m%np) + &
+         oep%socc * occ * x(i,1) * R_ABS(phi1(1:m%np, 1))**2 / rho_sigma(1:m%np)
     end do
 
     deallocate(d, x, phi1, phi2)

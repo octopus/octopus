@@ -34,7 +34,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(inout) :: st
-  FLOAT,                  intent(inout) :: vxc(NP, st%d%nspin)
+  FLOAT,                  intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
   FLOAT,                  intent(inout) :: ex, ec
   
   FLOAT :: e
@@ -80,7 +80,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
     ! calculate uxc_bar for the occupied states
     do ist = st%st_start, st%st_end
-      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(:, 1, ist, is) * oep%X(lxc)(:, ist))*gr%m%vol_pp(:))
+      oep%uxc_bar(ist) = sum(R_REAL(st%X(psi)(1:NP, 1, ist, is) * oep%X(lxc)(1:NP, ist))*gr%m%vol_pp(1:NP))
     end do
 
 #if defined(HAVE_MPI)
@@ -105,7 +105,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
       call X(xc_oep_solve)(gr, h, st, is, vxc(:,is), oep)
     end if
 
-    vxc(:, is) = vxc(:, is) + oep%vxc(:)
+    vxc(1:NP, is) = vxc(1:NP, is) + oep%vxc(1:NP)
   end do spin
 
   deallocate(oep%eigen_type, oep%eigen_index, oep%X(lxc), oep%uxc_bar)
@@ -119,7 +119,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(in)    :: st
   integer,                intent(in)    :: is
-  FLOAT,                  intent(inout) :: vxc(NP)
+  FLOAT,                  intent(inout) :: vxc(:) ! vxc(NP)
   type(xc_oep_type),      intent(inout) :: oep
 
   integer :: iter, ist, ierr
@@ -129,7 +129,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
 
   allocate(b(NP, 1), s(NP), vxc_old(NP))
 
-  vxc_old = vxc(:)
+  vxc_old(1:NP) = vxc(1:NP)
 
   ierr = X(lr_alloc_psi) (st, gr%m, oep%lr)
   do ist = 1, st%nst
@@ -137,16 +137,16 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   end do
 
   ! fix xc potential (needed for Hpsi)
-  vxc(:) = vxc_old(:) + oep%vxc(:)
+  vxc(1:NP) = vxc_old(1:NP) + oep%vxc(1:NP)
 
   do iter = 1, 10
     ! iteration over all states
     s = M_ZERO
     do ist = 1, st%nst
       ! evaluate right-hand side
-      vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * gr%m%vol_pp(:))
-      b(:,1) =  -(oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(:, 1, ist, is)) &
-         + oep%X(lxc)(:, ist)
+      vxc_bar    = sum(R_ABS(st%X(psi)(1:NP, 1, ist, is))**2 * oep%vxc(1:NP) * gr%m%vol_pp(1:NP))
+      b(1:NP, 1) =  -(oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist)))*R_CONJ(st%X(psi)(1:NP, 1, ist, is)) &
+         + oep%X(lxc)(1:NP, ist)
 
       call X(lr_orth_vector) (gr%m, st, b, is)
       
@@ -157,15 +157,15 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
       call X(lr_orth_vector) (gr%m, st, oep%lr%X(dl_psi)(:,:, ist, is), is)
 
       ! calculate this funny function s
-      s(:) = s(:) + M_TWO*R_REAL(oep%lr%X(dl_psi)(:, 1, ist, is)*st%X(psi)(:, 1, ist, is))
+      s(1:NP) = s(1:NP) + M_TWO*R_REAL(oep%lr%X(dl_psi)(1:NP, 1, ist, is)*st%X(psi)(1:NP, 1, ist, is))
     end do
 
-    oep%vxc(:) = oep%vxc(:) + oep%mixing*s(:)
+    oep%vxc(1:NP) = oep%vxc(1:NP) + oep%mixing*s(1:NP)
 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
-        vxc_bar = sum(R_ABS(st%X(psi)(:, 1, ist, is))**2 * oep%vxc(:) * gr%m%vol_pp(:))
-        oep%vxc(:) = oep%vxc(:) - (vxc_bar - oep%uxc_bar(ist))
+        vxc_bar = sum(R_ABS(st%X(psi)(1:NP, 1, ist, is))**2 * oep%vxc(1:NP) * gr%m%vol_pp(1:NP))
+        oep%vxc(1:NP) = oep%vxc(1:NP) - (vxc_bar - oep%uxc_bar(ist))
       end if
     end do
 
@@ -177,7 +177,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
   message(2) = ''
   call write_info(2)
 
-  vxc(:) = vxc_old(:)
+  vxc(1:NP) = vxc_old(1:NP)
   deallocate(b, s, vxc_old)
 
 end subroutine X(xc_oep_solve)

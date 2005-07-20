@@ -68,7 +68,7 @@ function X(mf_moment) (m, f, i, n) result(r)
   integer,         intent(in) :: i, n
   R_TYPE                      :: r
 
-  r = sum(f(:)*m%x(:,i)**n * m%vol_pp(:))
+  r = sum(f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
 end function X(mf_moment)
 
 

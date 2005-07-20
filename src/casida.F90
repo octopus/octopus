@@ -473,7 +473,7 @@ contains
       endif
       call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
-      K_term = K_term + sum(rho_i(:)*rho_j(:)*fxc(:,1,1)*m%vol_pp(:))
+      K_term = K_term + sum(rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1) * m%vol_pp(1:m%np))
 
       deallocate(rho_i, rho_j, rho, fxc)
     end function K_term

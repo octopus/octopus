@@ -37,7 +37,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   call push_sub('oep_sic')
   
   allocate(rho(NP, 2), Vxc(NP, 2))
-  rho(:, 2) = M_ZERO
+  rho(1:NP, 2) = M_ZERO
 
   ! loop over states
   ex_ = M_ZERO
@@ -45,7 +45,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   do i = st%st_start, st%st_end
     if(st%occ(i, is) .gt. small) then ! we only need the occupied states
       ! get orbital density
-      rho(:, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(:, 1, i, is))**2
+      rho(1:NP, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(1:NP, 1, i, is))**2
      
       ! initialize before calling get_vxc
       vxc = M_ZERO
@@ -59,17 +59,17 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
-      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - &
-         vxc(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))      
+      oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - &
+         vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))      
       
       ! calculate the Hartree contribution using poissons equation
-      vxc(:, 1) = M_ZERO
+      vxc(1:NP, 1) = M_ZERO
       call dpoisson_solve(gr, vxc(:, 1), rho(:, 1))
 
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
-         sum(vxc(:, 1) * R_ABS(st%X(psi)(:, 1, i, is))**2 * gr%m%vol_pp(:))
+         sum(vxc(1:NP, 1) * R_ABS(st%X(psi)(1:NP, 1, i, is))**2 * gr%m%vol_pp(1:NP))
 
-      oep%X(lxc)(:, i) = oep%X(lxc)(:, i) - vxc(:, 1)*R_CONJ(st%X(psi) (:, 1, i, is))
+      oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
     end if
   end do
 
