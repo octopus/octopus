@@ -230,7 +230,9 @@ contains
     integer,          intent(in) :: iunit
     character(len=*), intent(in) :: var
 
+    if(mpiv%node.ne.0) return
     if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
+
     call varinfo_print(iunit, var)
   end subroutine messages_print_var_info
 
@@ -242,7 +244,9 @@ contains
     integer,          intent(in) :: option
     character(len=*), intent(in) :: pre
 
+    if(mpiv%node.ne.0) return
     if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
+
     call varinfo_print_option(iunit, var, option, pre)
   end subroutine messages_print_var_option
 
@@ -251,7 +255,9 @@ contains
   subroutine messages_print_stress(iunit)
     integer, intent(in) :: iunit
 
+    if(mpiv%node.ne.0) return
     if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
+
     call flush_msg(iunit, stars)
   end subroutine messages_print_stress
 
@@ -279,7 +285,9 @@ contains
   ! ---------------------------------------------------------
   subroutine print_date(str)
     character(len = *), intent(in) :: str
+
     integer :: val(8)
+
     call date_and_time(values=val)
     message(1) = ""
     write(message(3),'(a,i4,a1,i2.2,a1,i2.2,a,i2.2,a1,i2.2,a1,i2.2)') &
@@ -288,6 +296,7 @@ contains
     message(2) = str_center(trim(message(3)), 70)
     message(3) = ""
     call write_info(3)
+
   end subroutine print_date
 
 
