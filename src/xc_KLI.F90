@@ -24,7 +24,8 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(xc_oep_type), intent(inout) :: oep
 
 #if defined(HAVE_MPI)
-  integer :: status(MPI_STATUS_SIZE), ierr, request
+  integer :: status(MPI_STATUS_SIZE), ierr, send_req, recv_req
+  logical :: lsend, lrecv
 #endif
   integer :: i, j, n
   FLOAT, allocatable :: d(:)
@@ -41,15 +42,15 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   allocate(d(m%np))
   do i = 1, m%np
     d(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) *  &
-                   R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
+       R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
   end do
-  call MPI_Allreduce(d(1), rho_sigma(1), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  call MPI_Allreduce(d(:), rho_sigma(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
 
   do i = 1, m%np
     d(i) = oep%socc * sum(st%occ(st%st_start:st%st_end, is) * &
         R_REAL(oep%X(lxc)(i, st%st_start:st%st_end) * st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
   end do
-  call MPI_Allreduce(d(1), oep%vxc(1), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  call MPI_Allreduce(d(:), oep%vxc(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
   deallocate(d)
 #else
   do i = 1, m%np
@@ -95,49 +96,75 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     do i = 1, n
 
 #if defined(HAVE_MPI)
-      if(st%node(oep%eigen_index(i)).ne.0) then
-        call MPI_Isend(st%X(psi)(1,1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-            0, i, MPI_COMM_WORLD, request, ierr)
-      end if
-      if(mpiv%node.eq.0) then
+      lsend = .false.;  lrecv = .false.
+      if(mpiv%node.ne.0) then
+        if(st%node(oep%eigen_index(i)) == mpiv%node) then
+          call MPI_Isend(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+             0, i, MPI_COMM_WORLD, send_req, ierr)
+          lsend = .true.
+        end if
+      else ! master node
         if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Recv(phi1(1,1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-              i, MPI_COMM_WORLD, status, ierr)
+          call MPI_Irecv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+             i, MPI_COMM_WORLD, recv_req, ierr)
+          lrecv = .true.
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
       end if
+      
+      ! wait for send/recv
+      if(lrecv) call MPI_Wait(recv_req, status, ierr)
+      if(lsend) call MPI_Wait(send_req, status, ierr)
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
+
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
-      d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
-         R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
+
+      if(mpiv%node == 0) then
+        d(1:m%np) = (R_REAL(phi1(1:m%np, 1))**2 + &
+           R_AIMAG(phi1(1:m%np, 1))**2) / rho_sigma(1:m%np) * m%vol_pp(1:m%np)
+      end if
 
       do j = i, n
 #if defined(HAVE_MPI)
-        if(st%node(oep%eigen_index(j)).ne.0) then
-          call MPI_Isend(st%X(psi)(1,1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-              0, j, MPI_COMM_WORLD, request, ierr)
-        end if
-        if(mpiv%node.eq.0) then
+        lsend = .false.;  lrecv = .false.
+        if(mpiv%node.ne.0) then
+          if(st%node(oep%eigen_index(j)) == mpiv%node) then
+            call MPI_Isend(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
+               0, j, MPI_COMM_WORLD, send_req, ierr)
+            lsend = .true.
+          end if
+        else
           if(st%node(oep%eigen_index(j)).ne.0) then
-            call MPI_Recv(phi2(1,1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
-                j, MPI_COMM_WORLD, status, ierr)
+            call MPI_Irecv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
+               j, MPI_COMM_WORLD, recv_req, ierr)
+            lrecv = .true.
           else
             phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
           end if
         end if
+
+        ! wait for send/recv
+        if(lrecv) call MPI_Wait(recv_req, status, ierr) 
+        if(lsend) call MPI_Wait(send_req, status, ierr)
         call MPI_Barrier(MPI_COMM_WORLD, ierr)
+
 #else
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
 #endif
-        Ma(i, j) = - sum(d(1:m%np) * (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
-        Ma(j,i) = Ma(i,j)
+
+        if(mpiv%node == 0) then
+          Ma(i, j) = - sum(d(1:m%np) * (R_REAL(phi2(1:m%np, 1))**2 + R_AIMAG(phi2(1:m%np, 1))**2) )
+          Ma(j,i) = Ma(i,j)
+        end if
       end do
-      Ma(i,i) = M_ONE + Ma(i,i)
-      
-      y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
+
+      if(mpiv%node == 0) then
+        Ma(i,i) = M_ONE + Ma(i,i)
+        y(i, 1) = v_bar_S(oep%eigen_index(i)) - oep%uxc_bar(oep%eigen_index(i))
+      end if
     end do
 
 #if defined(HAVE_MPI)     
@@ -156,40 +183,59 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       ! add contribution of low lying states. Once again, we have to send every state
       ! that is not in node zero to node 0
 #if defined(HAVE_MPI)
-      if(st%node(oep%eigen_index(i)).ne.0) then
-        call MPI_Isend(st%X(psi)(1,1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-            0, i, MPI_COMM_WORLD, request, ierr)
-      end if
-      if(mpiv%node.eq.0) then
+      lsend = .false.;  lrecv = .false.
+      if(mpiv%node.ne.0) then
+        if(st%node(oep%eigen_index(i)) == mpiv%node) then
+          call MPI_Isend(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+             0, i, MPI_COMM_WORLD, send_req, ierr)
+          lsend = .true.
+        end if
+      else ! master
         if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Recv(phi1(1,1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-              i, MPI_COMM_WORLD, status, ierr)
+          call MPI_Irecv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+             i, MPI_COMM_WORLD, recv_req, ierr)
+          lrecv = .true.
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
       end if
+      
+      ! wait for send/recv
+      if(lrecv) call MPI_Wait(recv_req, status, ierr) 
+      if(lsend) call MPI_Wait(send_req, status, ierr)
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 
-      if(st%node(oep%eigen_index(i)).ne.0) then
-        call MPI_Isend(st%occ(oep%eigen_index(i), is), 1, MPI_FLOAT, &
-            0, i, MPI_COMM_WORLD, request, ierr)
-      end if
-      if(mpiv%node.eq.0) then
+      lsend = .false.;  lrecv = .false.
+      if(mpiv%node.ne.0) then
+        if(st%node(oep%eigen_index(i)) == mpiv%node) then
+          call MPI_Isend(st%occ(oep%eigen_index(i), is), 1, MPI_FLOAT, &
+             0, i, MPI_COMM_WORLD, send_req, ierr)
+          lsend = .true.
+        end if
+      else ! master
         if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Recv(occ, 1, MPI_FLOAT, st%node(oep%eigen_index(i)), &
-              i, MPI_COMM_WORLD, status, ierr)
+          call MPI_Irecv(occ, 1, MPI_FLOAT, st%node(oep%eigen_index(i)), &
+             i, MPI_COMM_WORLD, recv_req, ierr)
+          lrecv = .true.
         else
           occ = st%occ(oep%eigen_index(i), is)
         end if
       end if
+
+      ! wait for send/recv
+      if(lrecv) call MPI_Wait(recv_req, status, ierr) 
+      if(lsend) call MPI_Wait(send_req, status, ierr)
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
 
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
       occ = st%occ(oep%eigen_index(i), is)
 #endif
-      oep%vxc(1:m%np) = oep%vxc(1:m%np) + &
-         oep%socc * occ * x(i,1) * R_ABS(phi1(1:m%np, 1))**2 / rho_sigma(1:m%np)
+
+      if(mpiv%node == 0) then
+        oep%vxc(1:m%np) = oep%vxc(1:m%np) + &
+           oep%socc * occ * x(i,1) * R_ABS(phi1(1:m%np, 1))**2 / rho_sigma(1:m%np)
+      end if
     end do
 
     deallocate(d, x, phi1, phi2)
@@ -199,7 +245,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #if defined(HAVE_MPI)
   ! Since only node 0 holds the true vxc, broadcast it to all processors.
   call MPI_Barrier(mpi_comm_world, ierr)
-  call MPI_Bcast(oep%vxc(1), m%np, MPI_FLOAT, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Bcast(oep%vxc(:), m%np, MPI_FLOAT, 0, MPI_COMM_WORLD, ierr)
   call MPI_Barrier(mpi_comm_world, ierr)
 #endif
 
