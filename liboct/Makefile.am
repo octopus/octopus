@@ -11,4 +11,4 @@ CLEANFILES = *~ *.bak
 DISTCLEANFILES = Makefile.in
 
 config.h: ../config.h
-	ln -s ../config.h .
+	ln -sf ../config.h .
