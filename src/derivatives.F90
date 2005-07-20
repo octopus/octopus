@@ -256,9 +256,6 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_build(m, der)
-!!!!DEBUG
-    use io
-!!!!ENDOFDEBUG
     type(mesh_type), target, intent(in)    :: m
     type(der_discr_type),    intent(inout) :: der
 
@@ -268,10 +265,6 @@ contains
 
     type(nl_operator_type) :: auxop
 
-!!!!DEBUG
-    integer :: iunit
-!!!!ENDOFDEBUG
-
     call push_sub('derivatives_build')
 
     ASSERT(associated(der%op))
@@ -279,8 +272,6 @@ contains
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.m%use_curvlinear))
 
     der%m => m    ! make a pointer to the underlying mesh
-
-    call nl_operator_build(m, auxop, der%m%np, .not.m%use_curvlinear)
 
     ! build operators
     do i = 1, der%dim+1
@@ -306,20 +297,6 @@ contains
           deallocate(polynomials, rhs)
         end do
 
-!!$        do i = 1, der%dim
-!!$           call nl_operator_skewadjoint(der%op(i), auxop, der%m)
-!!$           call nl_operator_equal(der%op(i), auxop)
-!!$        enddo
-!!$        call nl_operator_selfadjoint(der%op(der%dim+1), auxop, der%m)
-!!$        call nl_operator_equal(der%op(der%dim+1), auxop)
-!!$
-!!$        iunit =  io_open(file = 'Grad', action = 'write')
-!!$        call nl_operator_write(der%op(1), iunit, der%m)
-!!$        call io_close(iunit)
-!!$        iunit =  io_open(file = 'Lapl', action = 'write')
-!!$        call nl_operator_write(der%op(2), iunit, der%m)
-!!$        call io_close(iunit)
-        
       case(DER_CUBE) ! laplacian and gradient have similar stencils
         allocate(polynomials(der%dim, der%op(1)%n), rhs(der%op(1)%n, der%dim+1))
         call stencil_cube_polynomials_lapl(der%dim, der%order, polynomials)
@@ -346,22 +323,17 @@ contains
         deallocate(polynomials, rhs)
       end select
 
-!!!!NEW
-!!$        do i = 1, der%dim
-!!$           call nl_operator_skewadjoint(der%op(i), auxop, der%m)
-!!$           call nl_operator_equal(der%op(i), auxop)
-!!$        enddo
-!!$        call nl_operator_selfadjoint(der%op(der%dim+1), auxop, der%m)
-!!$        call nl_operator_equal(der%op(der%dim+1), auxop)
-
-!!$        iunit =  io_open(file = 'Grad', action = 'write')
-!!$        call nl_operator_write(der%op(1), iunit, der%m)
-!!$        call io_close(iunit)
-!!$        iunit =  io_open(file = 'Lapl', action = 'write')
-!!$        call nl_operator_write(der%op(2), iunit, der%m)
-!!$        call io_close(iunit)
-!!!!ENDOFNEW
-
+      ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
+      if(m%use_curvlinear) then
+        call nl_operator_build(m, auxop, der%m%np, .not.m%use_curvlinear)
+        do i = 1, der%dim
+           call nl_operator_skewadjoint(der%op(i), auxop, der%m)
+           call nl_operator_equal(der%op(i), auxop)
+        enddo
+        call nl_operator_selfadjoint(der%op(der%dim+1), auxop, der%m)
+        call nl_operator_equal(der%op(der%dim+1), auxop)
+        call nl_operator_end(auxop)
+      endif
 
     else ! we have the explicit coefficients
 

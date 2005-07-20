@@ -167,7 +167,6 @@ contains
 
     np = op%np
     opt = op
-    !call nl_operator_equal(opt, op)
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
@@ -202,7 +201,6 @@ contains
 
     np = op%np
     opt = op
-    !call nl_operator_equal(opt, op)
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
@@ -213,11 +211,11 @@ contains
                 k = op%i(l, index)
                 if( k == i ) then
                    if(.not.op%const_w) then
-!!$                      opt%w_re(j, i) = op%w_re(l, index)
-                      opt%w_re(j, i) = M_HALF*op%w_re(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
-                      if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
+                        opt%w_re(j, i) = M_HALF*op%w_re(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
+                      if (op%cmplx_op) &
+                        opt%w_im(j, i) = M_HALF*op%w_im(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
                    else
-!!$                      opt%w_re(j, 1) = op%w_re(l, 1)
+                      opt%w_re(j, 1) = op%w_re(l, 1)
                       if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
                    endif
                 endif
@@ -238,7 +236,6 @@ contains
 
     np = op%np
     opt = op
-    !call nl_operator_equal(opt, op)
     opt%w_re = M_ZERO
     if (op%cmplx_op) opt%w_im = M_ZERO
     do i = 1, op%np
@@ -249,11 +246,11 @@ contains
                 k = op%i(l, index)
                 if( k == i ) then
                    if(.not.op%const_w) then
-!!$                      opt%w_re(j, i) = op%w_re(l, index)
                       opt%w_re(j, i) = M_HALF*op%w_re(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
-                      if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
+                      if (op%cmplx_op) &
+                      opt%w_im(j, i) = M_HALF*op%w_im(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
                    else
-!!$                      opt%w_re(j, 1) = op%w_re(l, 1)
+                      opt%w_re(j, 1) = op%w_re(l, 1)
                       if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
                    endif
                 endif
@@ -310,10 +307,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_write(op, unit, m)
+  subroutine nl_operator_write(op, unit)
     type(nl_operator_type), intent(in) :: op
     integer, intent(in)                :: unit
-    type(mesh_type), intent(in), optional :: m
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
@@ -323,21 +319,12 @@ contains
 
     call nl_operator_op_to_matrix(op, a)
 
-   if(present(m)) then
-    do i = 1, op%np
-       do j = 1, op%np - 1
-          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)*m%vol_pp(i)
-       enddo
-       write(unit, fmt = '(f9.4)') a(i, op%np)*m%vol_pp(i)
-    enddo
-   else
     do i = 1, op%np
        do j = 1, op%np - 1
           write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
        enddo
        write(unit, fmt = '(f9.4)') a(i, op%np)
     enddo
-   endif
 
     deallocate(a)
   end subroutine nl_operator_write
