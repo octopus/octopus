@@ -256,12 +256,21 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_build(m, der)
+!!!!DEBUG
+    use io
+!!!!ENDOFDEBUG
     type(mesh_type), target, intent(in)    :: m
     type(der_discr_type),    intent(inout) :: der
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i
+
+    type(nl_operator_type) :: auxop
+
+!!!!DEBUG
+    integer :: iunit
+!!!!ENDOFDEBUG
 
     call push_sub('derivatives_build')
 
@@ -270,6 +279,8 @@ contains
     ASSERT(.not.(der%stencil_type==DER_VARIATIONAL.and.m%use_curvlinear))
 
     der%m => m    ! make a pointer to the underlying mesh
+
+    call nl_operator_build(m, auxop, der%m%np, .not.m%use_curvlinear)
 
     ! build operators
     do i = 1, der%dim+1
@@ -294,6 +305,20 @@ contains
           call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
           deallocate(polynomials, rhs)
         end do
+
+!!$        do i = 1, der%dim
+!!$           call nl_operator_skewadjoint(der%op(i), auxop, der%m)
+!!$           call nl_operator_equal(der%op(i), auxop)
+!!$        enddo
+!!$        call nl_operator_selfadjoint(der%op(der%dim+1), auxop, der%m)
+!!$        call nl_operator_equal(der%op(der%dim+1), auxop)
+!!$
+!!$        iunit =  io_open(file = 'Grad', action = 'write')
+!!$        call nl_operator_write(der%op(1), iunit, der%m)
+!!$        call io_close(iunit)
+!!$        iunit =  io_open(file = 'Lapl', action = 'write')
+!!$        call nl_operator_write(der%op(2), iunit, der%m)
+!!$        call io_close(iunit)
         
       case(DER_CUBE) ! laplacian and gradient have similar stencils
         allocate(polynomials(der%dim, der%op(1)%n), rhs(der%op(1)%n, der%dim+1))
@@ -320,6 +345,22 @@ contains
         
         deallocate(polynomials, rhs)
       end select
+
+!!!!NEW
+!!$        do i = 1, der%dim
+!!$           call nl_operator_skewadjoint(der%op(i), auxop, der%m)
+!!$           call nl_operator_equal(der%op(i), auxop)
+!!$        enddo
+!!$        call nl_operator_selfadjoint(der%op(der%dim+1), auxop, der%m)
+!!$        call nl_operator_equal(der%op(der%dim+1), auxop)
+
+!!$        iunit =  io_open(file = 'Grad', action = 'write')
+!!$        call nl_operator_write(der%op(1), iunit, der%m)
+!!$        call io_close(iunit)
+!!$        iunit =  io_open(file = 'Lapl', action = 'write')
+!!$        call nl_operator_write(der%op(2), iunit, der%m)
+!!$        call io_close(iunit)
+!!!!ENDOFNEW
 
 
     else ! we have the explicit coefficients

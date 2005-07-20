@@ -36,7 +36,9 @@ module nl_operator
        dnl_operator_operate,       &
        znl_operator_operate,       &
        znl_operator_operate_cmplx, &
-       nl_operator_end
+       nl_operator_end,            &
+       nl_operator_skewadjoint,    &
+       nl_operator_selfadjoint
 
   type nl_operator_type
      integer          :: n          ! number of points in discrete operator
@@ -190,6 +192,78 @@ contains
 
   end subroutine nl_operator_transpose
 
+  ! ---------------------------------------------------------
+  subroutine nl_operator_skewadjoint(op, opt, m)
+    type(nl_operator_type), intent(in)  :: op
+    type(nl_operator_type), intent(out) :: opt
+    type(mesh_type),        intent(in)  :: m
+
+    integer :: np, i, j, index, l, k
+
+    np = op%np
+    opt = op
+    !call nl_operator_equal(opt, op)
+    opt%w_re = M_ZERO
+    if (op%cmplx_op) opt%w_im = M_ZERO
+    do i = 1, op%np
+       do j = 1, op%n
+          index = op%i(j, i)
+          if(index <= op%np) then
+             do l = 1, op%n
+                k = op%i(l, index)
+                if( k == i ) then
+                   if(.not.op%const_w) then
+!!$                      opt%w_re(j, i) = op%w_re(l, index)
+                      opt%w_re(j, i) = M_HALF*op%w_re(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
+                      if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
+                   else
+!!$                      opt%w_re(j, 1) = op%w_re(l, 1)
+                      if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
+                   endif
+                endif
+             enddo
+          endif
+       enddo
+    enddo
+
+  end subroutine nl_operator_skewadjoint
+
+  ! ---------------------------------------------------------
+  subroutine nl_operator_selfadjoint(op, opt, m)
+    type(nl_operator_type), intent(in)  :: op
+    type(nl_operator_type), intent(out) :: opt
+    type(mesh_type),        intent(in)  :: m
+
+    integer :: np, i, j, index, l, k
+
+    np = op%np
+    opt = op
+    !call nl_operator_equal(opt, op)
+    opt%w_re = M_ZERO
+    if (op%cmplx_op) opt%w_im = M_ZERO
+    do i = 1, op%np
+       do j = 1, op%n
+          index = op%i(j, i)
+          if(index <= op%np) then
+             do l = 1, op%n
+                k = op%i(l, index)
+                if( k == i ) then
+                   if(.not.op%const_w) then
+!!$                      opt%w_re(j, i) = op%w_re(l, index)
+                      opt%w_re(j, i) = M_HALF*op%w_re(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
+                      if (op%cmplx_op) opt%w_im(j, i) = op%w_im(l, index)
+                   else
+!!$                      opt%w_re(j, 1) = op%w_re(l, 1)
+                      if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
+                   endif
+                endif
+             enddo
+          endif
+       enddo
+    enddo
+
+  end subroutine nl_operator_selfadjoint
+
 
   ! ---------------------------------------------------------
   subroutine nl_operator_op_to_matrix(op, a, b)
@@ -236,9 +310,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_write(op, unit)
+  subroutine nl_operator_write(op, unit, m)
     type(nl_operator_type), intent(in) :: op
     integer, intent(in)                :: unit
+    type(mesh_type), intent(in), optional :: m
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
@@ -248,12 +323,21 @@ contains
 
     call nl_operator_op_to_matrix(op, a)
 
+   if(present(m)) then
+    do i = 1, op%np
+       do j = 1, op%np - 1
+          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)*m%vol_pp(i)
+       enddo
+       write(unit, fmt = '(f9.4)') a(i, op%np)*m%vol_pp(i)
+    enddo
+   else
     do i = 1, op%np
        do j = 1, op%np - 1
           write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
        enddo
        write(unit, fmt = '(f9.4)') a(i, op%np)
     enddo
+   endif
 
     deallocate(a)
   end subroutine nl_operator_write
