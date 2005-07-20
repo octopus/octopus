@@ -133,14 +133,14 @@ contains
     call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
-    ! This is the change of base, which for the moment is not done.
+    ! This is the change of base.
     do i = 1, m%np
        pot(i) = pot(i)*sqrt(m%vol_pp(i))
        rho_corrected(i) = rho_corrected(i)*sqrt(m%vol_pp(i))
     enddo
     iter = 400
-    call dconjugate_gradients(m%np, pot, rho_corrected, op, opt, &
-                             iter, res, threshold)
+    ! This assumes that the Laplacian is self-adjoint.
+    call dconjugate_gradients(m%np, pot, rho_corrected, op, iter, res, threshold)
     if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
