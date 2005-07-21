@@ -47,6 +47,19 @@ module stencil_starplus
     call pop_sub()
   end function stencil_starplus_size_lapl
 
+  integer function stencil_starplus_size_grad(dim, order) result(n)
+    integer, intent(in) :: dim
+    integer, intent(in) :: order
+
+    call push_sub('stencil_starplus_size_grad')
+
+    n = 2*dim + 1
+    if(dim == 2) n = n + 2
+    if(dim == 3) n = n + 4
+
+    call pop_sub()
+  end function stencil_starplus_size_grad
+
 
   subroutine stencil_starplus_get_lapl(dim, order, stencil)
     integer, intent(in)  :: dim
@@ -155,6 +168,34 @@ module stencil_starplus
     call pop_sub()
   end subroutine stencil_starplus_get_lapl
 
+  ! ---------------------------------------------------------
+  subroutine stencil_starplus_get_grad(dim, dir, order, stencil)
+    integer, intent(in)  :: dim
+    integer, intent(in)  :: dir
+    integer, intent(in)  :: order
+    integer, intent(out) :: stencil(:,:)
+
+    integer :: i, n, j
+      
+    call push_sub('stencil_star_get_grad')
+
+    stencil(:, :) = 0
+    n = 1
+    do i = -order, order
+       stencil(dir, n) = i
+       n = n + 1
+    enddo
+    do j = 1, dim
+       if(j==dir) cycle
+       stencil(j, n) = -1
+       n = n + 1
+       stencil(j, n) =  1
+       n = n + 1
+    enddo
+        
+    call pop_sub()
+  end subroutine stencil_starplus_get_grad
+
   subroutine stencil_starplus_pol_lapl(dim, order, pol)
     integer, intent(in)  :: dim
     integer, intent(in)  :: order
@@ -259,31 +300,53 @@ module stencil_starplus
     call pop_sub()
   end subroutine stencil_starplus_pol_lapl
 
-
-  integer function stencil_starplus_size_grad(dim, order)
-    integer, intent(in) :: dim
-    integer, intent(in) :: order
-
-    stencil_starplus_size_grad = stencil_starplus_size_lapl(dim, order)
-  end function stencil_starplus_size_grad
-
-
-  subroutine stencil_starplus_get_grad(dim, order, stencil)
+  subroutine stencil_starplus_pol_grad(dim, dir, order, pol)
     integer, intent(in)  :: dim
+    integer, intent(in)  :: dir
     integer, intent(in)  :: order
-    integer, intent(out) :: stencil(:,:)
+    integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
-    call stencil_starplus_get_lapl(dim, order, stencil)
-  end subroutine stencil_starplus_get_grad
+    integer :: j
+      
+    call push_sub('stencil_starplus_pol_grad')
 
+    pol(:,:) = 0
+    do j = 0, 2*order
+      pol(dir, j+1) = j
+    end do
+    n = 2*order + 1
 
-  subroutine stencil_starplus_pol_grad(dim, order, pol)
-    integer, intent(in)  :: dim
-    integer, intent(in)  :: order
-    integer, intent(out) :: pol(:,:) ! pol(sb%dim, order)
-
-    call stencil_starplus_pol_lapl(dim, order, pol)
+    select case(dim)
+      case(2)
+        select case(dir)
+           case(1)
+             n = n + 1; pol(1:2, n) = (/ 0, 1 /)
+             n = n + 1; pol(1:2, n) = (/ 0, 2 /)
+           case(2)
+             n = n + 1; pol(1:2, n) = (/ 1, 0 /)
+             n = n + 1; pol(1:2, n) = (/ 2, 0 /)
+        end select
+      case(3)
+        select case(dir)
+           case(1)
+             n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 0, 1 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 0, 2 /)
+           case(2)
+             n = n + 1; pol(1:3, n) = (/ 1, 0, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 0, 1 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 0, 2 /)
+           case(3)
+             n = n + 1; pol(1:3, n) = (/ 1, 0, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
+             n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
+        end select 
+    end select
+    
+    call pop_sub()
   end subroutine stencil_starplus_pol_grad
-
 
 end module stencil_starplus

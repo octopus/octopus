@@ -245,7 +245,7 @@ contains
       case(DER_CUBE)
         call stencil_cube_get_grad(der%dim, der%order, der%grad(i)%stencil)
       case(DER_STARPLUS)
-        call stencil_starplus_get_grad(der%dim, der%order, der%grad(i)%stencil)
+        call stencil_starplus_get_grad(der%dim, i, der%order, der%grad(i)%stencil)
       end select
     end do
 
@@ -310,16 +310,17 @@ contains
         
         deallocate(polynomials, rhs)
       case(DER_STARPLUS)
-        allocate(polynomials(der%dim, der%op(1)%n), rhs(der%op(1)%n, der%dim+1))
-        call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
-        
         do i = 1, der%dim
-          call get_rhs_grad(i, rhs(:,i))
-        end do
-        call get_rhs_lapl(rhs(:, der%dim+1))
-        
-        call make_discretization(der%dim, der%m, polynomials, rhs, der%dim+1, der%op(:))
-        
+          allocate(polynomials(der%dim, der%op(i)%n), rhs(der%op(i)%n, 1))
+          call stencil_starplus_pol_grad(der%dim, i, der%order, polynomials)
+          call get_rhs_grad(i, rhs(:, 1))
+          call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(i:i))
+          deallocate(polynomials, rhs)
+        enddo
+        allocate(polynomials(der%dim, der%op(der%dim+1)%n), rhs(der%op(i)%n, 1))
+        call stencil_starplus_pol_lapl(der%dim, der%order, polynomials)
+        call get_rhs_lapl(rhs(:, 1))
+        call make_discretization(der%dim, der%m, polynomials, rhs, 1, der%op(der%dim+1:der%dim+1))
         deallocate(polynomials, rhs)
       end select
 
@@ -435,7 +436,7 @@ contains
     do p = 1, p_max
       mat(1,:) = M_ONE
       do i = 1, op(1)%n
-        x(1:dim) = m%x(p, 1:dim) - m%x(op(1)%i(i, p), 1:dim)
+        x(1:dim) = m%x(op(1)%i(i, p), 1:dim) - m%x(p, 1:dim)
 
         ! calculate powers
         do j = 1, dim
