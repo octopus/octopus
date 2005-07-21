@@ -306,7 +306,7 @@ module stencil_starplus
     integer, intent(in)  :: order
     integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
-    integer :: j
+    integer :: j, n
       
     call push_sub('stencil_starplus_pol_grad')
 
