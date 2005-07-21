@@ -31,19 +31,23 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
   FLOAT, allocatable :: v(:,:,:), f(:,:,:), dedd(:,:), dedv(:,:,:), tmp(:,:)
   FLOAT, allocatable :: l_dens(:), l_v(:,:), l_dedd(:), l_dedv(:,:)
 
-  ! is there anything to do?
-  if(iand(xcs%family, XC_FAMILY_LCA) == 0) return 
-
   call push_sub('xc_get_vxc_and_axc')
 
   !xc energy and potential in the absence of external magnetic fields
   call xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
+
+  !do we have a current-dependent xc?
+  if(iand(xcs%family, XC_FAMILY_LCA) == 0) then
+    call pop_sub()
+    return
+  end if
 
   spin_channels = xcs%j_functl%spin_channels
 
   !allocate memory
   allocate(v(NP, NDIM, spin_channels), f(NP, NDIM, spin_channels))
   allocate(dedd(NP, spin_channels), dedv(NP, NDIM, spin_channels))
+  dedd = M_ZERO; dedv = M_ZERO
 
   !Compute j/rho and the vorticity
   do is = 1, spin_channels
@@ -55,11 +59,12 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
 
   allocate(l_dens(spin_channels), l_v(NDIM, spin_channels))
   allocate(l_dedd(spin_channels), l_dedv(NDIM, spin_channels))
+  l_dedd = M_ZERO; l_dedv = M_ZERO
   space_loop: do i = 1, NP
     ! make a local copy with the correct memory order
     l_dens (:) = rho(i, :)
     l_v(:,:)   = v(i, :,:)
-    
+
     ! Calculate the potential density in local reference frame.
     select case(xcs%j_functl%family)
     case(XC_FAMILY_LCA)
@@ -68,7 +73,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
     end select
 
     exc_j = exc_j + sum(l_dens(:)) * e * gr%m%vol_pp(i)
-    
+
     ! store results
     dedd(i,:) = dedd(i,:) + l_dedd
     dedv(i,:,:) = dedv(i,:,:) + l_dedv

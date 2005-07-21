@@ -71,15 +71,16 @@ contains
     integer,       intent(in) :: iunit
     
     integer :: i
-    
-    if (xcs%cdft) then
+
+    if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
       write(iunit,'(a)') " Current-dependent exchange and correlation:"
       call xc_functl_write_info(xcs%j_functl, iunit)
 
-      if (iand(xcs%family, XC_FAMILY_LCA) == 0) return
+      write(iunit,'(a)') " Auxiliary exchange and correlation functionals:"
+    else
+      write(iunit,'(a)') " Exchange and correlation:"
     end if
-    
-    write(iunit,'(a)') " Exchange and correlation:"
+
     do i = 1, 2
       call xc_functl_write_info(xcs%functl(i, 1), iunit)
     end do
