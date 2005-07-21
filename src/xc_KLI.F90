@@ -37,26 +37,26 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   ! vxc contains the Slater part!
   allocate(rho_sigma(m%np))
 
-#if defined(HAVE_MPI)
-  allocate(d(m%np))
   do i = 1, m%np
-    d(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) *  &
+    rho_sigma(i) = max(sum(oep%socc*st%occ(st%st_start:st%st_end, is) * &
        R_ABS(st%X(psi)(i, 1, st%st_start:st%st_end, is))**2), CNST(1e-20))
   end do
-  call MPI_Allreduce(d(:), rho_sigma(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+#if defined(HAVE_MPI)
+  allocate(d(m%np))
+
+  call MPI_Allreduce(rho_sigma(:), d(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  rho_sigma(1:m%np) = d(1:m%np)
+#endif
 
   do i = 1, m%np
-    d(i) = oep%socc * sum(st%occ(st%st_start:st%st_end, is) * &
-        R_REAL(oep%X(lxc)(i, st%st_start:st%st_end) * st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
+    oep%vxc(i)   = oep%socc* sum(st%occ(st%st_start:st%st_end, is) * &
+       R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
   end do
-  call MPI_Allreduce(d(:), oep%vxc(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+#if defined(HAVE_MPI)
+  call MPI_Allreduce(oep%vxc(:),   d(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  oep%vxc(1:m%np)   = d(1:m%np)
+
   deallocate(d)
-#else
-  do i = 1, m%np
-    rho_sigma(i) = max(sum(oep%socc*st%occ(:, is) * R_ABS(st%X(psi)(i, 1, :, is))**2), CNST(1e-20))
-    oep%vxc(i)   = oep%socc* &
-        sum(st%occ(:, is)*R_REAL(oep%X(lxc)(i, :)*st%X(psi)(i, 1, :, is)))/rho_sigma(i)
-  end do
 #endif
 
   if(oep%level == XC_OEP_SLATER) then
@@ -134,7 +134,6 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
           end if
         end if
         call MPI_Barrier(MPI_COMM_WORLD, ierr)
-
 #else
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
 #endif
@@ -195,9 +194,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
 #if defined(HAVE_MPI)
   ! Since only node 0 holds the true vxc, broadcast it to all processors.
-  call MPI_Barrier(mpi_comm_world, ierr)
   call MPI_Bcast(oep%vxc(:), m%np, MPI_FLOAT, 0, MPI_COMM_WORLD, ierr)
-  call MPI_Barrier(mpi_comm_world, ierr)
 #endif
 
   deallocate(v_bar_S, rho_sigma)
