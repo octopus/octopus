@@ -24,8 +24,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   type(xc_oep_type), intent(inout) :: oep
 
 #if defined(HAVE_MPI)
-  integer :: status(MPI_STATUS_SIZE), ierr, send_req, recv_req
-  logical :: lsend, lrecv
+  integer :: status(MPI_STATUS_SIZE), ierr
 #endif
   integer :: i, j, n
   FLOAT, allocatable :: d(:)
@@ -96,28 +95,20 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     do i = 1, n
 
 #if defined(HAVE_MPI)
-      lsend = .false.;  lrecv = .false.
       if(mpiv%node.ne.0) then
         if(st%node(oep%eigen_index(i)) == mpiv%node) then
-          call MPI_Isend(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-             0, i, MPI_COMM_WORLD, send_req, ierr)
-          lsend = .true.
+          call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+             0, i, MPI_COMM_WORLD, status, ierr)
         end if
       else ! master node
         if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Irecv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-             i, MPI_COMM_WORLD, recv_req, ierr)
-          lrecv = .true.
+          call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+             i, MPI_COMM_WORLD, status, ierr)
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
       end if
-      
-      ! wait for send/recv
-      if(lrecv) call MPI_Wait(recv_req, status, ierr)
-      if(lsend) call MPI_Wait(send_req, status, ierr)
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
-
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
@@ -129,26 +120,19 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
       do j = i, n
 #if defined(HAVE_MPI)
-        lsend = .false.;  lrecv = .false.
         if(mpiv%node.ne.0) then
           if(st%node(oep%eigen_index(j)) == mpiv%node) then
-            call MPI_Isend(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-               0, j, MPI_COMM_WORLD, send_req, ierr)
-            lsend = .true.
+            call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
+               0, j, MPI_COMM_WORLD, status, ierr)
           end if
         else
           if(st%node(oep%eigen_index(j)).ne.0) then
-            call MPI_Irecv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
-               j, MPI_COMM_WORLD, recv_req, ierr)
-            lrecv = .true.
+            call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
+               j, MPI_COMM_WORLD, status, ierr)
           else
             phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
           end if
         end if
-
-        ! wait for send/recv
-        if(lrecv) call MPI_Wait(recv_req, status, ierr) 
-        if(lsend) call MPI_Wait(send_req, status, ierr)
         call MPI_Barrier(MPI_COMM_WORLD, ierr)
 
 #else
@@ -167,70 +151,37 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       end if
     end do
 
-#if defined(HAVE_MPI)     
-    ! Only node zero will hold the good x
     if(mpiv%node == 0) then
-#endif
       call lalg_linsyssolve(n, 1, Ma, y, x)
-#if defined(HAVE_MPI)
     end if
-    call MPI_Barrier(mpi_comm_world, ierr)
-#endif
     deallocate(Ma, y)
 
+#if defined(HAVE_MPI)
+    call MPI_Barrier(mpi_comm_world, ierr)
+#endif
 
     do i = 1, n
       ! add contribution of low lying states. Once again, we have to send every state
       ! that is not in node zero to node 0
 #if defined(HAVE_MPI)
-      lsend = .false.;  lrecv = .false.
       if(mpiv%node.ne.0) then
         if(st%node(oep%eigen_index(i)) == mpiv%node) then
-          call MPI_Isend(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-             0, i, MPI_COMM_WORLD, send_req, ierr)
-          lsend = .true.
+          call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
+             0, i, MPI_COMM_WORLD, status, ierr)
         end if
       else ! master
         if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Irecv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-             i, MPI_COMM_WORLD, recv_req, ierr)
-          lrecv = .true.
+          call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
+             i, MPI_COMM_WORLD, status, ierr)
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
       end if
-      
-      ! wait for send/recv
-      if(lrecv) call MPI_Wait(recv_req, status, ierr) 
-      if(lsend) call MPI_Wait(send_req, status, ierr)
       call MPI_Barrier(MPI_COMM_WORLD, ierr)
-
-      lsend = .false.;  lrecv = .false.
-      if(mpiv%node.ne.0) then
-        if(st%node(oep%eigen_index(i)) == mpiv%node) then
-          call MPI_Isend(st%occ(oep%eigen_index(i), is), 1, MPI_FLOAT, &
-             0, i, MPI_COMM_WORLD, send_req, ierr)
-          lsend = .true.
-        end if
-      else ! master
-        if(st%node(oep%eigen_index(i)).ne.0) then
-          call MPI_Irecv(occ, 1, MPI_FLOAT, st%node(oep%eigen_index(i)), &
-             i, MPI_COMM_WORLD, recv_req, ierr)
-          lrecv = .true.
-        else
-          occ = st%occ(oep%eigen_index(i), is)
-        end if
-      end if
-
-      ! wait for send/recv
-      if(lrecv) call MPI_Wait(recv_req, status, ierr) 
-      if(lsend) call MPI_Wait(send_req, status, ierr)
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
-
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
-      occ = st%occ(oep%eigen_index(i), is)
 #endif
+      occ = st%occ(oep%eigen_index(i), is)
 
       if(mpiv%node == 0) then
         oep%vxc(1:m%np) = oep%vxc(1:m%np) + &

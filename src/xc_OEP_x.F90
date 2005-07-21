@@ -49,8 +49,8 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 
 #if defined(HAVE_MPI)
   R_TYPE,  pointer     :: recv_buffer(:)
-  integer :: ierr, recv_req, send_req, status(MPI_STATUS_SIZE)
-  logical :: lsend, lrecv
+  integer :: ierr, send_req, status(MPI_STATUS_SIZE)
+  logical :: lsend
 #endif
 
   ! Note: we assume that st%occ is known in all nodes
@@ -106,14 +106,11 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
       if(ist_s <= st%nst) ist_s = ist_s  + 1
 
 #if defined(HAVE_MPI)
-      ! reset flags
-      lsend = .false.;  lrecv = .false.
-
       ! send wave-function
+      send_req = 0
       if((send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
         call MPI_Isend(st%X(psi)(:, 1, send_stack(ist_s), is), NP, R_MPITYPE, &
-            node_to, send_stack(ist_s), MPI_COMM_WORLD, send_req, ierr)
-        lsend = .true.
+           node_to, send_stack(ist_s), MPI_COMM_WORLD, send_req, ierr)
       end if
 #endif
 
@@ -126,21 +123,16 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           wf_ist => st%X(psi)(1:NP, 1, recv_stack(ist_r), is)
 #if defined(HAVE_MPI)
         else
-          call MPI_Irecv(recv_buffer, NP, R_MPITYPE, &
-              node_fr, recv_stack(ist_r), MPI_COMM_WORLD, recv_req, ierr)
-          lrecv = .true.
+          call MPI_Recv(recv_buffer, NP, R_MPITYPE, &
+              node_fr, recv_stack(ist_r), MPI_COMM_WORLD, status, ierr)
+          wf_ist => recv_buffer(1:NP)
 #endif
         end if
       end if
 
 #if defined(HAVE_MPI)
-      ! we wait until send/recv complete
-      if(lrecv) then
-        call MPI_Wait(recv_req, status, ierr)
-        wf_ist => recv_buffer(1:NP)
-      end if
-      if(lsend) call MPI_Wait(send_req, status, ierr)
-      lsend = .false.;  lrecv = .false.
+      if(send_req.ne.0) call MPI_Wait(send_req, status, ierr)
+      send_req = 0
 #endif
 
       if(recv_stack(ist_r) > 0) then      
@@ -183,7 +175,6 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           ! or send it to the node that has wf ist
           call MPI_Isend(send_buffer(:), NP, R_MPITYPE, &
              node_fr, ist, MPI_COMM_WORLD, send_req, ierr)
-          lsend = .true.
 #endif
         end if
         
@@ -193,19 +184,14 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
       ! now we have to receive the contribution to lxc from the node to
       ! which we sent the wave-function ist
       if((node_to >= 0).and.(send_stack(ist_s) > 0).and.(node_to.ne.mpiv%node)) then
-        call MPI_Irecv(recv_buffer(:), NP, R_MPITYPE, &
-           node_to, send_stack(ist_s), MPI_COMM_WORLD, recv_req, ierr)
-        lrecv = .true.
-      end if
-
-      ! wait for completion
-      if(lrecv) then
-        call MPI_Wait(recv_req, status, ierr)
+        call MPI_Recv(recv_buffer(:), NP, R_MPITYPE, &
+           node_to, send_stack(ist_s), MPI_COMM_WORLD, status, ierr)
 
         oep%X(lxc)(1:NP, send_stack(ist_s)) = oep%X(lxc)(1:NP, send_stack(ist_s)) - &
            recv_buffer(1:NP)
       end if
-      if(lsend) call MPI_Wait(send_req, status, ierr)
+
+      if(send_req.ne.0) call MPI_Wait(send_req, status, ierr)
 #endif
 
       ! all done?
