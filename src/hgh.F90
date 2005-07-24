@@ -112,9 +112,7 @@ subroutine hgh_init(psp, filename)
   psp%l_max = psp%l_max - 1
 
   ! Initializes the logarithmic grid. Parameters are hard-coded.
-       psp%g%a = CNST(3.0e-2); psp%g%b = CNST(4.0e-4)
-       psp%g%nrval = 431
-  call init_logrid(psp%g, psp%g%a, psp%g%b, psp%g%nrval)
+  call init_logrid(psp%g, CNST(3.0e-2), CNST(4.0e-4), 431)
 
   ! Allocation of stuff.
   allocate(psp%vlocal(1:psp%g%nrval))
