@@ -53,7 +53,7 @@ module stencil_starplus
 
     call push_sub('stencil_starplus_size_grad')
 
-    n = 2*dim + 1
+    n = 2*order + 1
     if(dim == 2) n = n + 2
     if(dim == 3) n = n + 4
 
