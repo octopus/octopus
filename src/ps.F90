@@ -443,8 +443,8 @@ subroutine hgh_load(ps, psp)
   else
      ps%rc_max = M_ZERO
   endif
-  ps%h = psp%h
-  ps%k = psp%k
+  ps%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = psp%h(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
+  ps%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = psp%k(0:ps%l_max, 1:ps%kbc, 1:ps%kbc)
 
   ! Fixes the occupations
   if(ps%ispin == 2) then

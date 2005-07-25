@@ -133,7 +133,6 @@ subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
 #endif
   case(RS_PLAN)
     message(1) = 'Info: Eigensolver type: Preconditioned Lanczos'
-    call init_filter()
 #if defined(HAVE_ARPACK)
   case(ARPACK)
     message(1) = 'Info: Eigensolver type: ARPACK Arnoldi method'
@@ -204,6 +203,11 @@ subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
       message(3) = '(EigenSolverMaxIter >=1 )'
       call write_fatal(2)
   endif
+
+  select case(eigens%es_type)
+    case(RS_PLAN)
+      call init_filter()
+  end select
 
   nullify(eigens%diff)
   allocate(eigens%diff(st%nst, st%d%nik))
