@@ -326,13 +326,17 @@ contains
 
       ! Here the Laplacian is forced to be self-adjoint, and the gradient to be skew-selfadjoint
       if(m%use_curvlinear) then
-        call nl_operator_build(m, auxop, der%m%np, .not.m%use_curvlinear)
         do i = 1, der%dim
-           call nl_operator_skewadjoint(der%op(i), auxop, der%m)
-           call nl_operator_equal(der%op(i), auxop)
+           call nl_operator_init(auxop, der%grad(i)%n)
+           call nl_operator_build(m, auxop, der%m%np, const_w = .false.)
+           call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
+           call nl_operator_equal(der%grad(i), auxop)
+           call nl_operator_end(auxop)
         enddo
-        call nl_operator_selfadjoint(der%op(der%dim+1), auxop, der%m)
-        call nl_operator_equal(der%op(der%dim+1), auxop)
+        call nl_operator_init(auxop, der%lapl%n)
+        call nl_operator_build(m, auxop, der%m%np, const_w = .false.)
+        call nl_operator_selfadjoint(der%lapl, auxop, der%m)
+        call nl_operator_equal(der%lapl, auxop)
         call nl_operator_end(auxop)
       endif
 
