@@ -36,7 +36,7 @@ module poisson
   use poisson_cg
   use grid
   use output
-
+  use poisson_multigrid
   implicit none
 
   private
@@ -107,7 +107,7 @@ contains
     !%Option cg_corrected 6
     !% Corrected conjugated gradients
     !%Option multigrid 7
-    !% Multigrid technique
+    !% Multigrid method
     !%End
 
     !-----------------------------------------------------------------
@@ -252,7 +252,7 @@ contains
       call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho)
 
     case(MULTIGRID)
-      call poisson_multigrid(gr, pot, rho)
+      call poisson_multigrid_solver(gr, pot, rho)
 
 #ifdef HAVE_FFT
     case(FFT_SPH,FFT_CYL,FFT_PLA,FFT_NOCUT)
@@ -315,6 +315,5 @@ contains
 #include "poisson1D.F90"
 #include "poisson2D.F90"
 #include "poisson3D.F90"
-#include "poisson_multigrid.F90"
   
 end module poisson
