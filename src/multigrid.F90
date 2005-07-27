@@ -1,4 +1,4 @@
-!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch, X. Andrade
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -30,7 +30,11 @@ module multigrid
   private
   public :: multigrid_level_type, multigrid_type, &
      multigrid_init, multigrid_end, &
-     multigrid_fine2coarse, multigrid_coarse2fine
+     multigrid_fine2coarse, multigrid_coarse2fine, &
+     INJECTION, FULLWEIGHT
+
+  integer, parameter :: INJECTION=1, FULLWEIGHT=2
+       
 
   type multigrid_level_type
     type(mesh_type),  pointer  :: m
@@ -52,22 +56,27 @@ module multigrid
 
 contains
 
-  subroutine multigrid_init(geo, cv, m, f_der, mgrid, n_levels)
+  subroutine multigrid_init(geo, cv, m, f_der, mgrid)
     type(geometry_type),      intent(in)  :: geo
     type(curvlinear_type),    intent(in)  :: cv
     type(mesh_type),  target, intent(in)  :: m
     type(f_der_type), target, intent(in)  :: f_der
     type(multigrid_type),     intent(out) :: mgrid
-    integer,                  intent(in)  :: n_levels
 
-    integer :: i
+    integer :: i, n_levels
+
+    !number of levels. estimated from the number of points
+    n_levels = floor(log(dble(m%np))/log(8.0))-1
 
     mgrid%n_levels = n_levels
+
     allocate(mgrid%level(0:n_levels))
 
     mgrid%level(0)%m     => m
     mgrid%level(0)%f_der => f_der
 
+
+    print*, "Multigrid levels:", n_levels
     do i = 1, mgrid%n_levels
       allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
@@ -253,6 +262,21 @@ contains
     FLOAT,                intent(in)  :: f_fine(:)
     FLOAT,                intent(out) :: f_coarse(:)
 
+#if 0
+    call multigrid_restriction(mgrid,ilevel,f_fine,f_coarse)
+#else
+    call multigrid_injection(mgrid,ilevel,f_fine,f_coarse)
+#endif
+
+  end subroutine multigrid_fine2coarse
+
+
+  subroutine multigrid_injection(mgrid, ilevel, f_fine, f_coarse)
+    type(multigrid_type), intent(in)  :: mgrid
+    integer,              intent(in)  :: ilevel
+    FLOAT,                intent(in)  :: f_fine(:)
+    FLOAT,                intent(out) :: f_coarse(:)
+
     integer :: i
     type(multigrid_level_type), pointer :: level
 
@@ -263,7 +287,60 @@ contains
       f_coarse(i) = f_fine(level%to_coarse(i))
     end do
 
-  end subroutine multigrid_fine2coarse
+  end subroutine multigrid_injection
+
+
+
+
+  subroutine multigrid_restriction(mgrid, ilevel, f_fine, f_coarse)
+    type(multigrid_type), intent(in)  :: mgrid
+    integer,              intent(in)  :: ilevel
+    FLOAT,                intent(in)  :: f_fine(:)
+    FLOAT,                intent(out) :: f_coarse(:)
+
+    FLOAT :: weight(-1:1,-1:1,-1:1)
+
+    integer :: n,fn,di,dj,dk,d,fi(3)
+    type(multigrid_level_type), pointer :: level
+    type(mesh_type), pointer :: fine_mesh 
+
+
+    ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
+
+
+    do di=-1,1
+       do dj=-1,1
+          do dk=-1,1
+             d=abs(di)+abs(dj)+abs(dk)
+             weight(di,dj,dk)=CNST(0.125)*CNST(0.5)**d
+          end do
+       end do
+    end do
+    
+    
+    level => mgrid%level(ilevel)
+
+    fine_mesh => mgrid%level(ilevel-1)%m
+
+    do n = 1, level%n_coarse
+       fn=level%to_coarse(n);
+       fi(:)=fine_mesh%Lxyz(fn,:)
+
+       f_coarse(n) = M_ZERO
+
+       do di=-1,1
+          do dj=-1,1
+             do dk=-1,1
+                fn=fine_mesh%Lxyz_inv(fi(1)+di,fi(2)+dj,fi(3)+dk)
+                if(fn <= fine_mesh%np ) then
+                   f_coarse(n)=f_coarse(n)+weight(di,dj,dk)*f_fine(fn)
+                end if
+             end do
+          end do
+       end do
+    end do
+
+  end subroutine multigrid_restriction
 
 
   subroutine multigrid_coarse2fine(mgrid, ilevel, f_coarse, f_fine)

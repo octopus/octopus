@@ -125,12 +125,11 @@ contains
   end subroutine grid_write_info
 
   
-  subroutine grid_create_multigrid(gr, n_multi)
+  subroutine grid_create_multigrid(gr)
     type(grid_type), intent(inout) :: gr
-    integer,         intent(in)    :: n_multi
 
     allocate(gr%mgrid)
-    call multigrid_init(gr%geo, gr%cv, gr%m, gr%f_der, gr%mgrid, n_multi)
+    call multigrid_init(gr%geo, gr%cv, gr%m, gr%f_der, gr%mgrid)
 
   end subroutine grid_create_multigrid
 

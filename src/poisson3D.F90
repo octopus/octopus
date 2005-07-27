@@ -36,14 +36,13 @@ subroutine poisson3D_init(gr)
     call poisson_cg2_init(gr%m, maxl, threshold)
 
   case(MULTIGRID)
-    call loct_parse_int(check_inp('MultigridLevel'), 3, level)
     !this is from cg but is necessary also for multigrid
     call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
     call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
 
     call poisson_multigrid_init(gr%m, maxl, threshold)
 
-    call grid_create_multigrid(gr, level)
+    call grid_create_multigrid(gr)
   end select
 
 #ifdef HAVE_FFT

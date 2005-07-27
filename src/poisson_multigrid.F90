@@ -30,13 +30,10 @@ module poisson_multigrid
   integer :: maxmulti,maxcycles
   FLOAT :: threshold
   integer :: presteps, poststeps
-
-  private float_pointer, &
-       multigrid_relax, &
-       maxmulti, &
-       threshold, & 
-       presteps, poststeps, & 
-       maxcycles
+  private 
+  public  :: poisson_multigrid_solver, &
+       poisson_multigrid_init, & 
+       poisson_multigrid_end 
 
        
   type float_pointer
@@ -56,7 +53,7 @@ contains
     threshold = thr
 
     call loct_parse_int(check_inp('PoissonSolverMGPresmoothingSteps'), 2, presteps)
-    call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 2, poststeps)
+    call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 3, poststeps)
     call loct_parse_int(check_inp('PoissonSolverMGMaxCycles'), 20, maxcycles)
     
 
@@ -161,7 +158,7 @@ contains
           exit
        end if
 
-!       print*, "mgcycle", t, " res ", res! dot_product(err(0)%p,err(0)%p)
+       print*, "mgcycle", t, " res ", res! dot_product(err(0)%p,err(0)%p)
        
     end do
 
@@ -174,6 +171,7 @@ contains
     pot(1:gr%m%np)=phi(0)%p(1:gr%m%np)+vh_correction(1:gr%m%np);
     
     deallocate(rho_corrected, vh_correction)
+
     do l=0,cl
        deallocate(phi(l)%p)
        deallocate(tau(l)%p)
@@ -200,9 +198,9 @@ contains
     integer :: t
     integer :: i,n
     FLOAT :: point_lap, h2, factor
+    FLOAT, allocatable :: w(:)
     
-    
-    factor=-1.0/(CNST(-6.0));
+    factor=(-1.0/(CNST(-6.0)));
 
     !!search for the diagonal term
     !!DISABLED: currently using the diagonal term prevents convergence
@@ -219,27 +217,30 @@ contains
 
     h2=m%h(1)*m%h(1)
     n=LAP%n
+    allocate(w(1:n))
     if(LAP%const_w) then
+
+       w(1:n)=LAP%w_re(1:n,1)
+       do t=0,steps
+          do i=1,m%np
+             point_lap=sum(w(1:n)*pot(LAP%i(1:n,i)))
+             pot(i)=pot(i)+factor*h2*(point_lap-rho(i)) 
+          end do
+       end do
+
+    else 
        
        do t=0,steps
           do i=1,m%np
-             point_lap=sum(LAP%w_re(1:n,1)*pot(LAP%i(1:n,i)))
+             point_lap=sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
              pot(i)=pot(i)+factor*h2*(point_lap-rho(i)) 
-        end do
-     end do
-     
-  else 
-     
-     do t=0,steps
-        do i=1,m%np
-           point_lap=sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-           pot(i)=pot(i)+factor*h2*(point_lap-rho(i)) 
-        end do
-     end do
-     
-  end if
-  
-end subroutine multigrid_relax
+          end do
+       end do
+       
+    end if
+    deallocate(w)
+    
+  end subroutine multigrid_relax
 #undef LAP
 end module poisson_multigrid
 
