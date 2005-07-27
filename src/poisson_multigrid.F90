@@ -197,14 +197,15 @@ subroutine multigrid_relax(m,f_der,pot,rho,steps)
            point_lap=point_lap+LAP%w_re(j,1)*pot(LAP%i(j,i))
         end do
         pot(i)=pot(i)-1.0/(CNST(-6.0))*h2*(point_lap-rho(i)) 
-        
+#if 0        
 !!! here should be the diagonal part of the laplacian operator instead of -6.0
 !!! may be we could just use: 
         !pot(i)=pot(i)-1.0/lap%w_re(1,1)*h2*(l-rho(i)) 
-!!! but i'm not sure that the diagonal is always in w_re(1,1) 
+!!! but i am not sure that the diagonal is always in w_re(1,1) 
 !!! in any case, -6.0 is a safe bet 
 !!! (is diagonal part for the 3 point 1 -2 1 laplacian) 
-!!! and i'm not sure which one gives better convergence
+!!! and i am not sure which one gives better convergence
+#endif
         
      end do
   end do
