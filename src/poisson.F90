@@ -189,6 +189,8 @@ contains
 #endif
     case(CG_CORRECTED)
       call poisson_cg2_end()
+    case(MULTIGRID)
+       call poisson_multigrid_end()
     end select
     poisson_solver = -99
     

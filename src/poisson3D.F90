@@ -19,10 +19,10 @@
 
 subroutine poisson3D_init(gr)
   type(grid_type), intent(inout) :: gr
-  
+
   integer :: level
 
-  ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= CG_CORRECTED)
+  ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= MULTIGRID)
 
   select case(poisson_solver)
   case(CG)
@@ -40,7 +40,8 @@ subroutine poisson3D_init(gr)
     !this is from cg but is necessary also for multigrid
     call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
     call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
-    call poisson_cg2_init(gr%m, maxl, threshold)
+
+    call poisson_multigrid_init(gr%m, maxl, threshold)
 
     call grid_create_multigrid(gr, level)
   end select
