@@ -152,51 +152,52 @@ contains
     CMPLX,                  intent(in) :: factor
     logical,                intent(in) :: order
 
-    integer :: idim, ikbc, jkbc, &
-         ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl
-    CMPLX :: uvpsi, p2, ctemp
-    CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
-
-    call push_sub('vnlpsi')
-
-    allocate(initzpsi(m%np, 1:h%d%dim))
-    initzpsi = psi
-
-    dimension_loop: do idim = 1, h%d%dim
-
-    if(order) then
-      step = 1;  ivnl_start = 1; ivnl_end = h%ep%nvnl
-    else
-      step = -1; ivnl_start = h%ep%nvnl; ivnl_end  = 1
-    endif
-
-    do ivnl = ivnl_start, ivnl_end, step
-       allocate(lpsi(h%ep%vnl(ivnl)%n), lhpsi(h%ep%vnl(ivnl)%n))
-       lpsi(:) = initzpsi(h%ep%vnl(ivnl)%jxyz(:), idim)
-       lhpsi(:) = M_z0
-
-       if(order) then
-          kbc_start = 1; kbc_end = h%ep%vnl(ivnl)%c
-       else
-          kbc_start = h%ep%vnl(ivnl)%c; kbc_end = 1
-       end if
-
-       do ikbc = kbc_start, kbc_end, step
-          do jkbc = kbc_start, kbc_end, step
-            stop 'does not work because of vol_pp'
-!             p2 = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*h%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
-             ctemp = h%ep%vnl(ivnl)%uvu(ikbc, jkbc)*p2*factor
-!             uvpsi = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
-             lhpsi(:) = lhpsi(:) + uvpsi*h%ep%vnl(ivnl)%uv(:, jkbc)
-          end do
-       end do
-
-       deallocate(lpsi, lhpsi)
-    enddo
-
-    end do dimension_loop
-
-    deallocate(initzpsi)
+    stop 'Error'
+!!$    integer :: idim, ikbc, jkbc, &
+!!$         ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl
+!!$    CMPLX :: uvpsi, p2, ctemp
+!!$    CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
+!!$
+!!$    call push_sub('vnlpsi')
+!!$
+!!$    allocate(initzpsi(m%np, 1:h%d%dim))
+!!$    initzpsi = psi
+!!$
+!!$    dimension_loop: do idim = 1, h%d%dim
+!!$
+!!$    if(order) then
+!!$      step = 1;  ivnl_start = 1; ivnl_end = h%ep%nvnl
+!!$    else
+!!$      step = -1; ivnl_start = h%ep%nvnl; ivnl_end  = 1
+!!$    endif
+!!$
+!!$    do ivnl = ivnl_start, ivnl_end, step
+!!$       allocate(lpsi(h%ep%vnl(ivnl)%n), lhpsi(h%ep%vnl(ivnl)%n))
+!!$       lpsi(:) = initzpsi(h%ep%vnl(ivnl)%jxyz(:), idim)
+!!$       lhpsi(:) = M_z0
+!!$
+!!$       if(order) then
+!!$          kbc_start = 1; kbc_end = h%ep%vnl(ivnl)%c
+!!$       else
+!!$          kbc_start = h%ep%vnl(ivnl)%c; kbc_end = 1
+!!$       end if
+!!$
+!!$       do ikbc = kbc_start, kbc_end, step
+!!$          do jkbc = kbc_start, kbc_end, step
+!!$            stop 'does not work because of vol_pp'
+!!$!             p2 = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*h%ep%vnl(ivnl)%uv(:, ikbc))*m%vol_pp
+!!$             ctemp = h%ep%vnl(ivnl)%uvu(ikbc, jkbc)*p2*factor
+!!$!             uvpsi = sum(h%ep%vnl(ivnl)%uv(:, ikbc)*lpsi(:))*m%vol_pp*(exp(ctemp)-M_z1)/p2
+!!$             lhpsi(:) = lhpsi(:) + uvpsi*h%ep%vnl(ivnl)%uv(:, jkbc)
+!!$          end do
+!!$       end do
+!!$
+!!$       deallocate(lpsi, lhpsi)
+!!$    enddo
+!!$
+!!$    end do dimension_loop
+!!$
+!!$    deallocate(initzpsi)
 
     call pop_sub()
   end subroutine zexp_vnlpsi

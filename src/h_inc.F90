@@ -63,7 +63,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
   case(SPIN_ORBIT)
-    call zso (h, gr%m, psi, hpsi)
+    call zso (h, gr, psi, hpsi, ik)
 #endif
   case default
     message(1) = 'Error: Internal.'
@@ -317,52 +317,15 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
 
-  integer :: idim, ikbc, jkbc, ivnl
-  R_TYPE  :: uVpsi
-  R_TYPE, allocatable :: lpsi(:), lHpsi(:)
-  type(nonlocal_op), pointer :: nlop
-  R_TYPE, allocatable :: tmp(:)
-
+  integer :: idim, ivnl
   call push_sub('vnlpsi')
 
-  do ivnl = 1, h%ep%nvnl
-    nlop => h%ep%vnl(ivnl)
-    allocate(tmp(nlop%n))
-    
-    do_dim: do idim = 1, h%d%dim
-      allocate(lpsi(nlop%n), lhpsi(nlop%n))
-      if(simul_box_is_periodic(sb)) then
-        lpsi(:) = nlop%phases(:,ik)*psi(nlop%jxyz(:), idim)
-      else
-        lpsi(:) = psi(nlop%jxyz(:), idim)
-      end if
-      lHpsi(:) = M_z0
-    
-      do ikbc = 1, nlop%c
-        do jkbc = 1, nlop%c
-          tmp   = R_TOTYPE(nlop%uv(:, ikbc)*m%vol_pp(nlop%jxyz(:)))
-          uvpsi = lalg_dot(nlop%n, tmp, lpsi)*nlop%uvu(ikbc, jkbc)
-          if(simul_box_is_periodic(sb)) then
-#           ifdef R_TCOMPLEX
-              tmp = R_CONJ(nlop%phases(:, ik)*nlop%uv(:, jkbc))
-              call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
-#           else
-              message(1) = "Real wavefunction for ground state not yet implemented for polymers:"
-              message(2) = "Reconfigure with --enable-complex, and remake"
-              call write_fatal(2)
-#           endif
-          else
-            tmp = R_TOTYPE(nlop%uv(:, jkbc))
-            call lalg_axpy(nlop%n, uvpsi, tmp, lHpsi)
-          end if
-        end do
-      end do
-      hpsi(nlop%jxyz(:), idim) = hpsi(nlop%jxyz(:), idim) + lhpsi(:)
-      deallocate(lpsi, lhpsi)
-    end do do_dim
-    
-    deallocate(tmp)
-  end do
+  do idim = 1, h%d%dim
+     do ivnl = 1, h%ep%nvnl
+        call X(project)(m, h%ep%p(ivnl), psi(:, idim), hpsi(:, idim), &
+                        periodic = simul_box_is_periodic(sb), ik = ik)
+     enddo 
+  enddo
 
   call pop_sub()
 end subroutine X(vnlpsi)

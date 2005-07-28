@@ -167,10 +167,6 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
     message(1) = 'Error: ZORA corrections not working yet. Visit us soon.'
     call write_fatal(1)
   endif
-  if(h%reltype == SPIN_ORBIT .and. gr%m%use_curvlinear) then
-    message(1) = 'Error: Spin-orbit coupling does not work with curvilinear coordinates.'
-    call write_fatal(1)
-  end if
 #else
   if(h%reltype .ne. NOREL) then
     message(1) = "Cannot apply relativistic corrections with an executable compiled"

@@ -17,6 +17,45 @@
 !!
 !! $Id$
 
+
+subroutine X(project)(m, p, psi, ppsi, periodic, ik)
+    type(mesh_type), intent(in) :: m
+    type(projector), intent(in) :: p
+    R_TYPE, intent(in)          :: psi(:)
+    R_TYPE, intent(inout)       :: ppsi(:)
+    logical, intent(in)         :: periodic
+    integer, intent(in)         :: ik
+
+    integer :: i, j, n, idim
+    R_TYPE, allocatable :: lpsi(:), plpsi(:)
+    R_TYPE :: uvpsi
+
+    call push_sub('project')
+
+    n = p%n
+    allocate(lpsi(n), plpsi(n))
+
+      lpsi(1:n)  = psi(p%jxyz(1:n))
+      if(periodic) lpsi(1:n)  = lpsi(1:n) * p%phases(1:n, ik)
+      plpsi(1:n) = R_TOTYPE(M_ZERO)
+
+      do i = 1, p%c
+       do j = 1, p%c
+          uvpsi = sum(lpsi(1:n)*p%b(1:n, j)*m%vol_pp(p%jxyz(1:n))) 
+          if(periodic) then
+             plpsi(1:n) = plpsi(1:n) + p%uvu(i, j) * uvpsi * p%a(1:n, i) * p%phases(1:n, ik)
+          else
+             plpsi(1:n) = plpsi(1:n) + p%uvu(i, j) * uvpsi * p%a(1:n, i)
+          endif
+       enddo
+      enddo
+
+      ppsi(p%jxyz(1:n)) = ppsi(p%jxyz(1:n)) + plpsi(1:n)
+
+    deallocate(lpsi)
+    call pop_sub()
+end subroutine X(project)
+
 subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   type(grid_type), target, intent(in)    :: gr
   type(epot_type),     intent(in)    :: ep
@@ -25,11 +64,11 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   logical,   optional, intent(in)    :: reduce_
 
   type(geometry_type), pointer :: geo
-
   integer :: i, j, l, m, idim, ist, ik, ii, jj, ivnl
   FLOAT :: d, r, zi, zj, x(3)
   R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
+  R_TYPE, allocatable :: ppsi(:, :) 
 
 #if defined(HAVE_MPI)
   FLOAT :: f(3)
@@ -45,44 +84,31 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
     geo%atom(i)%f = M_ZERO
   end do
 
-
-  ivnl = 1
+  ! non-local component of the potential.
+  allocate(ppsi(gr%m%np, st%d%dim))
   atm_loop: do i = 1, geo%natoms
-    atm => geo%atom(i)
-    if(atm%spec%local) cycle
-
-    do l = 0, atm%spec%ps%l_max
-      if(l == atm%spec%ps%l_loc) cycle
-      do m = -l, l
-        
+     atm => geo%atom(i)
+     if(atm%spec%local) cycle
+     do ivnl = 1, ep%nvnl
+        if(ep%p(ivnl)%index .ne. i) cycle
         ik_loop: do ik = 1, st%d%nik
           st_loop: do ist = st%st_start, st%st_end
-            dim_loop: do idim = 1, st%d%dim
 
-              do ii = 1, ep%vnl(ivnl)%c
-                do jj = 1, ep%vnl(ivnl)%c
-                  
-                  p = sum(ep%vnl(ivnl)%uv(:, ii) *  &
-                     st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik) * gr%m%vol_pp(ep%vnl(ivnl)%jxyz(:))**2)
-                  uvpsi =  st%occ(ist, ik) * p * ep%vnl(ivnl)%uvu(ii, jj)
-                  
-                  do j = 1, NDIM
-                    p = sum( ep%vnl(ivnl)%duv(j, :, jj) * &
-                       R_CONJ(st%X(psi)(ep%vnl(ivnl)%jxyz(:), idim, ist, ik)) )
-                    atm%f(j) = atm%f(j) + M_TWO * R_REAL(uvpsi * p)
-                  end do
-                end do
-              end do
-              
-            end do dim_loop
+             do j = 1, NDIM
+                ppsi = R_TOTYPE(M_ZERO)
+                do idim = 1, st%d%dim
+                   call X(project)(gr%m, ep%dp(j, ivnl), st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
+                                   periodic = .false., ik = ik)
+                enddo
+                atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &
+                           X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
+             enddo
+
           end do st_loop
         end do ik_loop
-        
-        ivnl = ivnl + 1
-      end do
-    end do
-    
+     enddo
   end do atm_loop
+  deallocate(ppsi)
 
 #if defined(HAVE_MPI)
   do i = 1, geo%natoms

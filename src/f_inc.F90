@@ -307,6 +307,8 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
   FLOAT :: x(3)
   integer :: i
 
+  call push_sub('f_angular_momentum')
+
   allocate(gf(f_der%m%np, 3))
   call X(f_gradient)(sb, f_der, f, gf)
 
@@ -321,6 +323,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
 #endif
 
   deallocate(gf)
+  call pop_sub()
 end subroutine X(f_angular_momentum)
 
 
