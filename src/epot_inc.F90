@@ -34,7 +34,7 @@ subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
   integer, intent(in)         :: ik
 
   integer :: i, j, n, ip, k, ierr
-  R_TYPE, allocatable :: lpsi(:), plpsi(:), vol(:)
+  R_TYPE, allocatable :: lpsi(:), plpsi(:)
   R_TYPE :: uvpsi
 
   call push_sub('project')
@@ -46,18 +46,17 @@ subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
     if(p(ip)%index .ne. k) then
          if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n)) = ppsi(p(ip-1)%jxyz(1:n)) + plpsi(1:n)
          n = p(ip)%n
-         deallocate(lpsi, plpsi, vol, stat = ierr)
-         allocate(lpsi(n), plpsi(n), vol(n))
-         lpsi(1:n)  = psi(p(ip)%jxyz(1:n))
-         vol(1:n)   = m%vol_pp(p(ip)%jxyz(1:n))
+         deallocate(lpsi, plpsi, stat = ierr)
+         allocate(lpsi(n), plpsi(n))
+         lpsi(1:n)  = psi(p(ip)%jxyz(1:n))*m%vol_pp(p(ip)%jxyz(1:n))
          if(periodic) lpsi(1:n)  = lpsi(1:n) * p(ip)%phases(1:n, ik)
          plpsi(1:n) = R_TOTYPE(M_ZERO)
          k = p(ip)%index
     endif
 
-    do i = 1, p(ip)%c
-      do j = 1, p(ip)%c
-          uvpsi = sum(lpsi(1:n)*p(ip)%b(1:n, j)*vol(1:n))
+    do j = 1, p(ip)%c
+      uvpsi = sum(lpsi(1:n)*p(ip)%b(1:n, j))
+      do i = 1, p(ip)%c
           if(periodic) then
              plpsi(1:n) = plpsi(1:n) + p(ip)%uvu(i, j) * uvpsi * p(ip)%a(1:n, i) * p(ip)%phases(1:n, ik)
           else
@@ -70,7 +69,7 @@ subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
 
   ppsi(p(np)%jxyz(1:n)) = ppsi(p(np)%jxyz(1:n)) + plpsi(1:n)
 
-  deallocate(plpsi, vol, lpsi)
+  deallocate(plpsi, lpsi)
   call pop_sub()
 end subroutine X(project)
 
