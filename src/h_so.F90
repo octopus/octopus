@@ -24,62 +24,25 @@ subroutine zso (h, gr, psi, hpsi, ik)
   R_TYPE, intent(inout) :: Hpsi(:, :)
   integer, intent(in) :: ik
 
-  integer :: ivnl
   CMPLX, allocatable :: tpsi(:, :)
 
   call push_sub('zso')
 
-!!$!!!!I will keep this commented for the moment...
-!!$  ASSERT(h%d%dim == 2)
-!!$
-!!$  allocate(lpsi(gr%m%np, 3, h%d%dim), tpsi(gr%m%np, h%d%dim), lspsi(gr%m%np, h%d%dim), &
-!!$           gpsi(gr%m%np, 3, h%d%dim))
-!!$  do idim = 1, 2
-!!$     call zf_gradient(gr%sb, gr%f_der, psi(:, idim), gpsi(:, :, idim))
-!!$     gpsi = -M_zI*gpsi
-!!$     do i = 1, gr%m%np
-!!$        lpsi(i, 1, idim) = (gr%m%x(i, 2)*gpsi(i, 3, idim) - gr%m%x(i, 3)*gpsi(i, 2, idim))
-!!$        lpsi(i, 2, idim) = (gr%m%x(i, 3)*gpsi(i, 1, idim) - gr%m%x(i, 1)*gpsi(i, 3, idim))
-!!$        lpsi(i, 3, idim) = (gr%m%x(i, 1)*gpsi(i, 2, idim) - gr%m%x(i, 2)*gpsi(i, 1, idim))
-!!$     enddo
-!!$  enddo
-!!$
-!!$  lspsi(:, 1) = M_HALF*(lpsi(:, 3, 1) + lpsi(:, 1, 2) - M_zI*lpsi(:, 2, 2))
-!!$  lspsi(:, 2) = M_HALF*(lpsi(:, 1, 1) + M_zI*lpsi(:, 2, 1) - lpsi(:, 3, 2))
-!!$
-!!$  do idim = 1, h%d%dim
-!!$     do ivnl = 1, h%ep%nvnl
-!!$        call zproject(gr%m, h%ep%so(ivnl), lspsi(:, idim), hpsi(:, idim), &
-!!$                      periodic = simul_box_is_periodic(gr%sb), ik = ik)
-!!$     enddo
-!!$  enddo
-!!$
-!!$  deallocate(lpsi, tpsi)
-!!$!!!!ENDOFNEW
-
   ASSERT(h%d%dim == 2)
 
   allocate(tpsi(gr%m%np, 3))
+  tpsi = M_z0
+  call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 1), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
+  call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 2), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
+  call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 2), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
+  hpsi(:, 1) = hpsi(:, 1) - M_zI * M_HALF * (tpsi(:, 1) + tpsi(:, 2) + M_zI * tpsi(:, 3))
 
-  do ivnl = 1, h%ep%nvnl
-        tpsi = M_z0
-        call zproject(gr%m, h%ep%lso(3, ivnl), psi(:, 1), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
-        tpsi(:, 1) = - M_zI*tpsi(:, 1)
-        call zproject(gr%m, h%ep%lso(1, ivnl), psi(:, 2), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
-        tpsi(:, 2) = - M_zI*tpsi(:, 2)
-        call zproject(gr%m, h%ep%lso(2, ivnl), psi(:, 2), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
-        tpsi(:, 3) = - M_zI*tpsi(:, 3)
-        hpsi(:, 1) = hpsi(:, 1) + M_HALF * (tpsi(:, 1) + tpsi(:, 2) + M_zI * tpsi(:, 3))
-
-        tpsi = M_z0
-        call zproject(gr%m, h%ep%lso(3, ivnl), psi(:, 2), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
-        tpsi(:, 1) = - M_zI*tpsi(:, 1)
-        call zproject(gr%m, h%ep%lso(1, ivnl), psi(:, 1), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
-        tpsi(:, 2) = - M_zI*tpsi(:, 2)
-        call zproject(gr%m, h%ep%lso(2, ivnl), psi(:, 1), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
-        tpsi(:, 3) = - M_zI*tpsi(:, 3)
-        hpsi(:, 2) = hpsi(:, 2) + M_HALF * (-tpsi(:, 1) + tpsi(:, 2) - M_zI * tpsi(:, 3))
-  enddo
+  tpsi = M_z0
+  call zproject(gr%m, h%ep%lso(3, :), h%ep%nvnl, psi(:, 2), tpsi(:, 1), simul_box_is_periodic(gr%sb), ik)
+  call zproject(gr%m, h%ep%lso(1, :), h%ep%nvnl, psi(:, 1), tpsi(:, 2), simul_box_is_periodic(gr%sb), ik)
+  call zproject(gr%m, h%ep%lso(2, :), h%ep%nvnl, psi(:, 1), tpsi(:, 3), simul_box_is_periodic(gr%sb), ik)
+  hpsi(:, 2) = hpsi(:, 2) - M_zI * M_HALF * (-tpsi(:, 1) + tpsi(:, 2) - M_zI * tpsi(:, 3))
+  deallocate(tpsi)
 
   call pop_sub()
 end subroutine zso

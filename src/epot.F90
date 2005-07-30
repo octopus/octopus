@@ -57,6 +57,15 @@ module external_pot
             dproject, zproject,     &
             projector
 
+  ! /* The projector data type is intended to hold the non-local part of the
+  ! pseudopotentials. The definition of the action of a projector (which is
+  ! done through the X(project) subroutine) is:
+  ! \hat{P} |phi> = \sum_{ij} uvu(i, j) | a_i >< b_j |phi>
+  ! i and j run from one to c. The phases are applied whenever the system is
+  ! periodic in some dimension.
+  ! For the pseudopotentials themselves, a = b. But to calculate the forces,
+  ! one needs to put in b the gradient of a. And in the case of the spin-orbit
+  ! coupling term, I have put in b the angular momentum of a. */
   type projector
     integer :: n, c
     integer, pointer :: jxyz(:)

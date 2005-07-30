@@ -317,14 +317,12 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   integer,                intent(in)    :: ik
 
-  integer :: idim, ivnl
+  integer :: idim
   call push_sub('vnlpsi')
 
   do idim = 1, h%d%dim
-     do ivnl = 1, h%ep%nvnl
-        call X(project)(m, h%ep%p(ivnl), psi(:, idim), hpsi(:, idim), &
-                        periodic = simul_box_is_periodic(sb), ik = ik)
-     enddo 
+     call X(project)(m, h%ep%p(1:h%ep%nvnl), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
+                      periodic = simul_box_is_periodic(sb), ik = ik)
   enddo
 
   call pop_sub()

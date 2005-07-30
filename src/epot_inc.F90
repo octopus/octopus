@@ -17,43 +17,61 @@
 !!
 !! $Id$
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! X(project) calculates the action of the sum of the np proyectors p(1:np) on
+! the psi wavefunction. The result is summed up to ppsi:
+! |ppsi> = |ppsi> + \sum_{ip=1}^{np} \hat{p}(ip) |psi>
+! The action of the projector p is defined as:
+! \hat{p} |psi> = \sum_{ij} p%uvu(i,j) |p%a(:, i)><p%b(:, j)|psi>
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
+  type(mesh_type), intent(in) :: m
+  type(projector), intent(in) :: p(:)
+  integer, intent(in)         :: np
+  R_TYPE, intent(in)          :: psi(:)
+  R_TYPE, intent(inout)       :: ppsi(:)
+  logical, intent(in)         :: periodic
+  integer, intent(in)         :: ik
 
-subroutine X(project)(m, p, psi, ppsi, periodic, ik)
-    type(mesh_type), intent(in) :: m
-    type(projector), intent(in) :: p
-    R_TYPE, intent(in)          :: psi(:)
-    R_TYPE, intent(inout)       :: ppsi(:)
-    logical, intent(in)         :: periodic
-    integer, intent(in)         :: ik
+  integer :: i, j, n, ip, k, ierr
+  R_TYPE, allocatable :: lpsi(:), plpsi(:), vol(:)
+  R_TYPE :: uvpsi
 
-    integer :: i, j, n, idim
-    R_TYPE, allocatable :: lpsi(:), plpsi(:)
-    R_TYPE :: uvpsi
+  call push_sub('project')
 
-    call push_sub('project')
+  k = p(1)%index - 1 ! This way I make sure that k is not equal to p(1)%index
 
-    n = p%n
-    allocate(lpsi(n), plpsi(n))
+  do ip = 1, np
 
-      lpsi(1:n)  = psi(p%jxyz(1:n))
-      if(periodic) lpsi(1:n)  = lpsi(1:n) * p%phases(1:n, ik)
-      plpsi(1:n) = R_TOTYPE(M_ZERO)
+    if(p(ip)%index .ne. k) then
+         if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n)) = ppsi(p(ip-1)%jxyz(1:n)) + plpsi(1:n)
+         n = p(ip)%n
+         deallocate(lpsi, plpsi, vol, stat = ierr)
+         allocate(lpsi(n), plpsi(n), vol(n))
+         lpsi(1:n)  = psi(p(ip)%jxyz(1:n))
+         vol(1:n)   = m%vol_pp(p(ip)%jxyz(1:n))
+         if(periodic) lpsi(1:n)  = lpsi(1:n) * p(ip)%phases(1:n, ik)
+         plpsi(1:n) = R_TOTYPE(M_ZERO)
+         k = p(ip)%index
+    endif
 
-      do i = 1, p%c
-       do j = 1, p%c
-          uvpsi = sum(lpsi(1:n)*p%b(1:n, j)*m%vol_pp(p%jxyz(1:n))) 
+    do i = 1, p(ip)%c
+      do j = 1, p(ip)%c
+          uvpsi = sum(lpsi(1:n)*p(ip)%b(1:n, j)*vol(1:n))
           if(periodic) then
-             plpsi(1:n) = plpsi(1:n) + p%uvu(i, j) * uvpsi * p%a(1:n, i) * p%phases(1:n, ik)
+             plpsi(1:n) = plpsi(1:n) + p(ip)%uvu(i, j) * uvpsi * p(ip)%a(1:n, i) * p(ip)%phases(1:n, ik)
           else
-             plpsi(1:n) = plpsi(1:n) + p%uvu(i, j) * uvpsi * p%a(1:n, i)
+             plpsi(1:n) = plpsi(1:n) + p(ip)%uvu(i, j) * uvpsi * p(ip)%a(1:n, i)
           endif
-       enddo
       enddo
+    enddo
 
-      ppsi(p%jxyz(1:n)) = ppsi(p%jxyz(1:n)) + plpsi(1:n)
+  enddo
 
-    deallocate(lpsi)
-    call pop_sub()
+  ppsi(p(np)%jxyz(1:n)) = ppsi(p(np)%jxyz(1:n)) + plpsi(1:n)
+
+  deallocate(plpsi, vol, lpsi)
+  call pop_sub()
 end subroutine X(project)
 
 subroutine X(epot_forces) (gr, ep, st, t, reduce_)
@@ -97,7 +115,7 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
              do j = 1, NDIM
                 ppsi = R_TOTYPE(M_ZERO)
                 do idim = 1, st%d%dim
-                   call X(project)(gr%m, ep%dp(j, ivnl), st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
+                   call X(project)(gr%m, ep%dp(j, ivnl:ivnl), 1, st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
                                    periodic = .false., ik = ik)
                 enddo
                 atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &

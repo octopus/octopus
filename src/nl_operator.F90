@@ -345,10 +345,8 @@ contains
 
     do i = 1, op%np
        do j = 1, op%np - 1
-!!$          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
           write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
        enddo
-!!$       write(unit, fmt = '(f9.4)') a(i, op%np)
        write(unit, fmt = '(f9.4)') a(op%np, i)
     enddo
 
