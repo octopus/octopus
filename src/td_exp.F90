@@ -32,7 +32,7 @@ module td_exp
   use cube_function
 #endif
   use td_exp_split
-  
+
   implicit none
 
   private
@@ -77,7 +77,7 @@ module td_exp
         message(2) = '(0 < TDLanczosTol)'
         call write_fatal(2)
       end if
-      
+
       message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
 
 #if defined(HAVE_FFT)
@@ -93,7 +93,7 @@ module td_exp
       call write_fatal(2)
     end select
     call write_info(1)
-    
+
     if(te%exp_method==FOURTH_ORDER.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
       call loct_parse_int(check_inp('TDExpOrder'), 4, te%exp_order)
       if (te%exp_order < 2) then
@@ -112,7 +112,7 @@ module td_exp
 
   subroutine td_exp_end(te)
     type(td_exp_type), intent(inout) :: te
-    
+
     if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
       call zcf_free(te%cf)
     end if
@@ -134,7 +134,7 @@ module td_exp
     apply_magnus = .false.
     if(present(vmagnus)) apply_magnus = .true.
 
-    call push_sub('td_dtexp')
+    call push_sub('td_exp.td_dtexp')
 
     select case(te%exp_method)
     case(FOURTH_ORDER);      call fourth
@@ -171,9 +171,9 @@ module td_exp
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:), hzpsi1(:,:)
       integer :: i
-      
-      call push_sub('fourth')
-      
+
+      call push_sub('td_exp.fourth')
+
       allocate(zpsi1(NP, h%d%dim), hzpsi1(NP, h%d%dim))
       zfact = M_z1
       call lalg_copy(NP, h%d%dim, zpsi(:,:), zpsi1(:,:))
@@ -184,18 +184,18 @@ module td_exp
         if(i .ne. te%exp_order) call lalg_copy(NP, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
       end do
       deallocate(zpsi1, hzpsi1)
-      
+
       if(present(order)) order = te%exp_order
       call pop_sub()
     end subroutine fourth
-    
+
     subroutine cheby
       ! Calculates the exponential of the hamiltonian through a expansion in Chebyshev polynomials.
       ! For that purposes it uses the closed form of the coefficients[1] and Clenshaw-Gordons[2]
       ! recursive algorithm.
       ! [1] H. Tal-Ezer and R. Kosloff, J. Chem. Phys 81, 3967 (1984).
       ! [2] C. W. Clenshaw, MTAC 9, 118 (1955).
-      ! Since I don't have access to MTAC, I copied next Maple algorithm from Dr. F. G. Lether's 
+      ! Since I don't have access to MTAC, I copied next Maple algorithm from Dr. F. G. Lether's
       ! (University of Georgia) homepage: (www.math.uga.edu/~fglether):
       ! {twot := t + t; u0 := 0; u1 := 0;
       !  for k from n to 0 by -1 do
@@ -206,9 +206,9 @@ module td_exp
       integer :: j
       CMPLX :: zfact
       CMPLX, allocatable :: zpsi1(:,:,:)
-      
-      call push_sub('cheby')
-      
+
+      call push_sub('td_exp.cheby')
+
       allocate(zpsi1(NP, h%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
@@ -228,19 +228,19 @@ module td_exp
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
       call lalg_scal(NP, h%d%dim, exp(-M_zI*h%spectral_middle_point*timestep), zpsi(:,:))
       deallocate(zpsi1)
-      
+
       if(present(order)) order = te%exp_order
       call pop_sub()
     end subroutine cheby
-    
+
     subroutine lanczos
       integer ::  korder, n, k, iflag, lwsp, ns, i, j, iexph
       integer, allocatable :: ipiv(:)
       CMPLX, allocatable :: hm(:,:), v(:,:,:), expo(:,:), wsp(:)
       FLOAT :: beta, res, tol !, nrm
 
-      call push_sub('lanczos')
-      
+      call push_sub('td_exp.lanczos')
+
       tol    = te%lanczos_tol
       allocate(v(NP, h%d%dim, te%exp_order+1), &
                hm(te%exp_order+1, te%exp_order+1), &
@@ -254,7 +254,7 @@ module td_exp
       beta = zstates_nrm2(gr%m, h%d%dim, zpsi)
       v(:, :, 1) = zpsi(:, :)/beta
 
-      ! This is the Lanczos loop...      
+      ! This is the Lanczos loop...
       do n = 1, te%exp_order
         call operate(v(:,:, n), v(:, :, n+1))
         korder = n
@@ -293,7 +293,7 @@ module td_exp
       enddo
       ! zpsi = nrm * V * expo(1:korder, 1) = nrm * V * expo * V^(T) * zpsi
       call lalg_gemv(NP, h%d%dim, korder+1, M_z1*beta, v, expo(1:korder+1, 1), M_z0, zpsi)
-      
+
       if(present(order)) order = korder
       deallocate(v, hm, expo, ipiv, wsp)
       call pop_sub()
@@ -302,38 +302,38 @@ module td_exp
 
 #if defined(HAVE_FFT)
     subroutine split
-      call push_sub('split')
-      
+      call push_sub('td_exp.split')
+
       if(h%gauge == 2) then
         message(1) = 'Split operator does not work well if velocity gauge is used.'
         call write_fatal(1)
       endif
-      
+
       call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
       if(h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .true.)
       call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*timestep)
       if(h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*timestep/M_TWO, .false.)
       call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
-      
+
       if(present(order)) order = 0
       call pop_sub()
     end subroutine split
-    
+
     subroutine suzuki
       FLOAT :: dt(5), p, pp(5)
       integer :: k
-      
-      call push_sub('suzuki')
-      
+
+      call push_sub('td_exp.suzuki')
+
       if(h%gauge == 2) then
         message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
         call write_fatal(1)
       endif
-      
+
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
       pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
       dt(1:5) = pp(1:5)*timestep
-      
+
       do k = 1, 5
         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
         if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
@@ -341,12 +341,12 @@ module td_exp
         if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
-      
+
       if(present(order)) order = 0
       call pop_sub()
     end subroutine suzuki
 #endif
-    
+
   end subroutine td_exp_dt
 
 end module td_exp

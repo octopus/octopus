@@ -38,7 +38,7 @@ module stencil_starplus
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
-    call push_sub('stencil_starplus_size_lapl')
+    call push_sub('stencil_starplus.stencil_starplus_size_lapl')
 
     n = 2*dim*order + 1
     if(dim == 2) n = n + 12
@@ -51,7 +51,7 @@ module stencil_starplus
     integer, intent(in) :: dim
     integer, intent(in) :: order
 
-    call push_sub('stencil_starplus_size_grad')
+    call push_sub('stencil_starplus.stencil_starplus_size_grad')
 
     n = 2*order + 1
     if(dim == 2) n = n + 2
@@ -68,7 +68,7 @@ module stencil_starplus
 
     integer :: i, j, n
 
-    call push_sub('stencil_starplus_get_lapl')
+    call push_sub('stencil_starplus.stencil_starplus_get_lapl')
 
     stencil = 0
     n = 1
@@ -164,7 +164,7 @@ module stencil_starplus
        n = n + 1; stencil(1:3, n) = (/  1,  1,  1 /)
 
     end select
-    
+
     call pop_sub()
   end subroutine stencil_starplus_get_lapl
 
@@ -176,8 +176,8 @@ module stencil_starplus
     integer, intent(out) :: stencil(:,:)
 
     integer :: i, n, j
-      
-    call push_sub('stencil_star_get_grad')
+
+    call push_sub('stencil_starplus.stencil_star_get_grad')
 
     stencil(:, :) = 0
     n = 1
@@ -192,7 +192,7 @@ module stencil_starplus
        stencil(j, n) =  1
        n = n + 1
     enddo
-        
+
     call pop_sub()
   end subroutine stencil_starplus_get_grad
 
@@ -203,7 +203,7 @@ module stencil_starplus
 
     integer :: i, j, n
 
-    call push_sub('stencil_starplus_pol_lapl')
+    call push_sub('stencil_starplus.stencil_starplus_pol_lapl')
 
     n = 1
     select case(dim)
@@ -296,7 +296,7 @@ module stencil_starplus
       n = n + 1; pol(1:3, n) = (/ 2, 2, 2 /)
 
     end select
-    
+
     call pop_sub()
   end subroutine stencil_starplus_pol_lapl
 
@@ -307,8 +307,8 @@ module stencil_starplus
     integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
     integer :: j, n
-      
-    call push_sub('stencil_starplus_pol_grad')
+
+    call push_sub('stencil_starplus.stencil_starplus_pol_grad')
 
     pol(:,:) = 0
     do j = 0, 2*order
@@ -343,9 +343,9 @@ module stencil_starplus
              n = n + 1; pol(1:3, n) = (/ 2, 0, 0 /)
              n = n + 1; pol(1:3, n) = (/ 0, 1, 0 /)
              n = n + 1; pol(1:3, n) = (/ 0, 2, 0 /)
-        end select 
+        end select
     end select
-    
+
     call pop_sub()
   end subroutine stencil_starplus_pol_grad
 

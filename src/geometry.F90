@@ -103,7 +103,7 @@ contains
     integer :: i
     type(xyz_file_info) :: xyz
 
-    call push_sub('geometry_init_xyz')
+    call push_sub('geometry.geometry_init_xyz')
 
     ! get the name of the system
     call loct_parse_string(check_inp('SystemName'), 'system', geo%sysname)
@@ -166,7 +166,7 @@ contains
     integer(POINTER_SIZE) :: random_gen_pointer
     type(xyz_file_info) :: xyz
 
-    call push_sub('geometry_init_vel')
+    call push_sub('geometry.geometry_init_vel')
 
     ! we now load the velocities, either from the temperature, from the input, or from a file
     if(loct_parse_isdef(check_inp('RandomVelocityTemp')).ne.0) then
@@ -190,7 +190,7 @@ contains
           geo%atom(i)%v(:) =  sqrt(kin1/kin2)*geo%atom(i)%v(:)
        enddo
 
-       write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', & 
+       write(message(1),'(a,f10.4,1x,a)') 'Info: Initial velocities ramdomly distributed with T =', &
             temperature, 'K'
        write(message(2),'(2x,a,f8.4,1x,a)') '<K>       =', &
             (kinetic_energy(geo)/geo%natoms)/units_out%energy%factor, &
@@ -243,7 +243,7 @@ contains
 
     integer :: i, j, k, ispin
 
-    call push_sub('geometry_init_species')
+    call push_sub('geometry.geometry_init_species')
 
     ! First, count the species
     geo%nspecies = 0
@@ -315,7 +315,7 @@ contains
     character(len=256) :: dirname
     integer :: i
 
-    call push_sub('specie_debug')
+    call push_sub('geometry.specie_debug')
 
     write(dirname, '(2a)') trim(dir), '/geometry'
     call io_mkdir(dirname)
@@ -406,7 +406,7 @@ contains
     type(specie_type), pointer :: s
     integer :: ia, l
 
-    call push_sub('atom_nvnl')
+    call push_sub('geometry.atom_nvnl')
     res = 0
     do ia = 1, geo%natoms
        s => geo%atom(ia)%spec
@@ -554,7 +554,7 @@ contains
     type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: val_charge
     integer :: i
-    call push_sub('geometry_val_charge')
+    call push_sub('geometry.geometry_val_charge')
 
     val_charge = M_ZERO
     do i = 1, geo%natoms
@@ -568,7 +568,7 @@ contains
     type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: def_h, def_rsize
     integer :: i
-    call push_sub('geometry_grid_defaults')
+    call push_sub('geometry.geometry_grid_defaults')
 
     def_h     =  huge(PRECISION)
     def_rsize = -huge(PRECISION)

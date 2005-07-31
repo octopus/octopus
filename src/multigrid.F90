@@ -24,7 +24,7 @@ module multigrid
   use geometry
   use mesh
   use functions
- 
+
   implicit none
 
   private
@@ -34,7 +34,7 @@ module multigrid
      INJECTION, FULLWEIGHT
 
   integer, parameter :: INJECTION=1, FULLWEIGHT=2
-       
+
 
   type multigrid_level_type
     type(mesh_type),  pointer  :: m
@@ -99,21 +99,21 @@ contains
       type(curvlinear_type), intent(in)  :: cv
       type(mesh_type),       intent(in)  :: mesh_in
       type(mesh_type),       intent(out) :: mesh_out
-      
+
       integer :: i, j
-      
+
       mesh_out%sb             => mesh_in%sb
       mesh_out%use_curvlinear =  mesh_in%use_curvlinear
-      
+
       mesh_out%h(:)    = 2*mesh_in%h(:)
       mesh_out%nr(:,:) = mesh_in%nr(:,:)/2
       mesh_out%l(:)    = mesh_out%nr(2, :) - mesh_out%nr(1, :) + 1
-      
+
       mesh_out%enlarge = mesh_in%enlarge
 
 
       call mesh_create_xyz(mesh_out%sb, mesh_out, cv, geo)
-      
+
     end subroutine multigrid_mesh_half
 
 
@@ -135,7 +135,7 @@ contains
       ! count
       tt%n_fine = fine%np
       allocate(tt%fine_i(tt%n_fine))
-      
+
       tt%n_fine1 = 0
       tt%n_fine2 = 0
       tt%n_fine4 = 0
@@ -227,7 +227,7 @@ contains
       ASSERT(i1==tt%n_fine1.and.i2==tt%n_fine2.and.i4==tt%n_fine4.and.i8==tt%n_fine8)
 
     end subroutine get_transfer_tables
-    
+
   end subroutine multigrid_init
 
 
@@ -252,7 +252,7 @@ contains
     end do
 
     deallocate(mgrid%level)
-    
+
   end subroutine multigrid_end
 
 
@@ -302,7 +302,7 @@ contains
 
     integer :: n,fn,di,dj,dk,d,fi(3)
     type(multigrid_level_type), pointer :: level
-    type(mesh_type), pointer :: fine_mesh 
+    type(mesh_type), pointer :: fine_mesh
 
 
     ASSERT(ilevel>0.and.ilevel<=mgrid%n_levels)
@@ -316,8 +316,8 @@ contains
           end do
        end do
     end do
-    
-    
+
+
     level => mgrid%level(ilevel)
 
     fine_mesh => mgrid%level(ilevel-1)%m

@@ -100,7 +100,7 @@ contains
     fft_Coulb_FS = M_ZERO
 
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
-      
+
     do iz = 1, db(3)
       ixx(3) = pad_feq(iz, db(3), .true.)
       do iy = 1, db(2)
@@ -123,7 +123,7 @@ contains
                  fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar,gz,r_c)/modg2
                case(FFT_NOCUT, FFT_CORRECTED)
                  fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-              end select               
+              end select
             else
               select case(poisson_solver)
               case(FFT_SPH)

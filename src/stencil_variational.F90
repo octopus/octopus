@@ -67,7 +67,7 @@ contains
     FLOAT, parameter   :: pi2 = M_PI**2
     FLOAT, allocatable :: fp(:)
 
-    call push_sub('stencil_variational_coeff_lapl')
+    call push_sub('stencil_variational.stencil_variational_coeff_lapl')
 
     alpha_ = M_ONE
     if(present(alpha)) alpha_ = alpha
@@ -75,10 +75,10 @@ contains
 
     allocate(fp(order+1))
     select case(order)
-    case(1) 
+    case(1)
       fp(1) = -kmax/M_TWO
       fp(2) =  kmax/M_FOUR
-    case(2) 
+    case(2)
       fp(1) = -M_HALF-M_THREE*kmax/M_EIGHT
       fp(2) =  kmax/M_FOUR
       fp(3) =  M_ONE/M_FOUR - kmax/CNST(16.0)
@@ -109,7 +109,7 @@ contains
       fp(6) = -CNST(31.0)/CNST(1575.0) + M_THREE*kmax/CNST(1024.0)
       fp(7) =  M_ONE/CNST(600.0) - kmax/CNST(4096.0)
     end select
-    
+
     lapl%w_re(1,:) = fp(1)*sum(1/h(1:dim)**2)
 
     k = 1
@@ -124,7 +124,7 @@ contains
         lapl%w_re(k,:) = fp( j+1) / h(i)**2
       end do
     end do
-    
+
     deallocate(fp)
 
     call pop_sub()

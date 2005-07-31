@@ -44,7 +44,7 @@ module sparskit
        SK_CG      =  1,   &  ! Conjugate Gradient Method
        SK_CGNR    =  2,   &  ! Conjugate Gradient Method (Normal Residual equation)
        SK_BCG     =  3,   &  ! Bi-Conjugate Gradient Method
-       SK_DBCG    =  4,   &  ! BCG with partial pivoting 
+       SK_DBCG    =  4,   &  ! BCG with partial pivoting
        SK_BCGSTAB =  5,   &  ! BCG stabilized
        SK_TFQMR   =  6,   &  ! Transpose-Free Quasi-Minimum Residual method
        SK_FOM     =  7,   &  ! Full Orthogonalization Method
@@ -60,7 +60,7 @@ module sparskit
      integer :: krylov_size     ! size of the Krylov subspace (used for some solvers)
      integer :: preconditioning ! what kind of preconditioning to use
      integer :: maxiter         ! maximum number of iterations
-     integer :: used_iter       ! number of performed iterations 
+     integer :: used_iter       ! number of performed iterations
      FLOAT   :: rel_tolerance   ! relative tolerance
      FLOAT   :: abs_tolerance   ! absolute tolerance
 

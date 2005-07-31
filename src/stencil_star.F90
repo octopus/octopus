@@ -28,7 +28,7 @@ module stencil_star
   implicit none
 
   private
-  public :: stencil_star_size_lapl, & 
+  public :: stencil_star_size_lapl, &
             stencil_star_get_lapl, &
             stencil_star_polynomials_lapl, &
             stencil_star_coeff_lapl, &
@@ -43,8 +43,8 @@ contains
   integer function stencil_star_size_lapl(dim, order)
     integer, intent(in) :: dim
     integer, intent(in) :: order
-    
-    call push_sub('stencil_star_size_lapl')
+
+    call push_sub('stencil_star.stencil_star_size_lapl')
 
     stencil_star_size_lapl = 2*dim*order + 1
 
@@ -59,8 +59,8 @@ contains
     integer, intent(out) :: stencil(:,:)
 
     integer :: i, j, n
-    
-    call push_sub('stencil_star_get_lapl')
+
+    call push_sub('stencil_star.stencil_star_get_lapl')
 
     stencil(:,:) = 0
     n = 1
@@ -71,7 +71,7 @@ contains
         stencil(i, n) = j
       end do
     end do
-    
+
     call pop_sub()
   end subroutine stencil_star_get_lapl
 
@@ -83,8 +83,8 @@ contains
     integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
     integer :: i, j, n
-    
-    call push_sub('stencil_star_polynomials_lapl')
+
+    call push_sub('stencil_star.stencil_star_polynomials_lapl')
 
     n = 1
     pol(:,:) = 0
@@ -109,7 +109,7 @@ contains
     integer :: k, i, j, morder
     FLOAT, allocatable :: cc(:,:,:)
 
-    call push_sub('stencil_star_coeff_lapl')
+    call push_sub('stencil_star.stencil_star_coeff_lapl')
 
     ASSERT(order >= 1)
 
@@ -117,34 +117,34 @@ contains
     allocate(cc(0:morder, 0:morder, 0:2))
     call weights(2, morder, cc)
     lapl%w_re(1,:) = cc(0, morder, 2)*sum(1/h(1:dim)**2)
-      
+
     k = 1
     do i = 1, dim
       do j = -order, -1
         k = k + 1
         lapl%w_re(k,:) = cc(-2*j-1, morder, 2) / h(i)**2
       end do
-      
+
       do j = 1, order
         k = k + 1
         lapl%w_re(k,:) = cc( 2*j,   morder, 2) / h(i)**2
       end do
     end do
-      
+
     deallocate(cc)
 
     call pop_sub()
   end subroutine stencil_star_coeff_lapl
 
-  
+
   ! now come the gradient routines
 
 
   ! ---------------------------------------------------------
   integer function stencil_star_size_grad(order)
     integer, intent(in) :: order
-    
-    call push_sub('stencil_star_size_grad')
+
+    call push_sub('stencil_star.stencil_star_size_grad')
 
     stencil_star_size_grad = 2*order + 1
 
@@ -159,8 +159,8 @@ contains
     integer, intent(out) :: stencil(:,:)
 
     integer :: i, n
-      
-    call push_sub('stencil_star_get_grad')
+
+    call push_sub('stencil_star.stencil_star_get_grad')
 
     stencil(:,:) = 0
     n = 1
@@ -168,7 +168,7 @@ contains
       stencil(dir, n) = i
       n = n + 1
     end do
-    
+
     call pop_sub()
   end subroutine stencil_star_get_grad
 
@@ -180,14 +180,14 @@ contains
     integer, intent(out) :: pol(:,:) ! pol(dim, order)
 
     integer :: j
-      
-    call push_sub('stencil_star_polynomials_grad')
+
+    call push_sub('stencil_star.stencil_star_polynomials_grad')
 
     pol(:,:) = 0
     do j = 0, 2*order
       pol(dir, j+1) = j
     end do
-    
+
     call pop_sub()
   end subroutine stencil_star_polynomials_grad
 
@@ -200,14 +200,14 @@ contains
     integer :: j, k, morder
     FLOAT, allocatable :: cc(:,:,:)
 
-    call push_sub('stencil_star_coeff_grad')
+    call push_sub('stencil_star.stencil_star_coeff_grad')
 
     ASSERT(order >= 1)
 
     morder = 2*order
     allocate(cc(0:morder, 0:morder, 0:1))
     call weights(1, morder, cc)
-  
+
     k = 1
     do j = -order, -1
       grad%w_re(k,:) = cc(-2*j-1, morder, 1) / h

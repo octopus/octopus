@@ -149,7 +149,7 @@ module lib_oct
     end function oct_bessel_j0
     module procedure oct_bessel_j04
   end interface
-  
+
   interface loct_bessel_j1
     function oct_bessel_j1(x)
       real(8) :: oct_bessel_j1
@@ -157,7 +157,7 @@ module lib_oct
     end function oct_bessel_j1
     module procedure oct_bessel_j14
   end interface
-  
+
   interface loct_bessel_k0
     function oct_bessel_k0(x)
       real(8) :: oct_bessel_k0
@@ -165,7 +165,7 @@ module lib_oct
     end function oct_bessel_k0
     module procedure oct_bessel_k04
   end interface
-  
+
  interface loct_bessel_k1
     function oct_bessel_k1(x)
       real(8) :: oct_bessel_k1
@@ -319,49 +319,49 @@ contains
 
     oct_incomplete_gamma4 = real(oct_incomplete_gamma(real(a, kind = 8), real(x, kind=8)), kind=4)
   end function oct_incomplete_gamma4
-  
+
   real(4) function oct_bessel4(n, x)
     integer, intent(in) :: n
     real(4), intent(in)  :: x
-    
+
     oct_bessel4 = real(oct_bessel(n, real(x, kind=8)), kind=4)
   end function oct_bessel4
 
   real(4) function oct_bessel_in4(n, x)
     integer, intent(in) :: n
     real(4), intent(in)  :: x
-    
+
     oct_bessel_in4 = real(oct_bessel_in(n, real(x, kind=8)), kind=4)
   end function oct_bessel_In4
 
   real(4) function oct_sph_bessel4(l, x)
     integer, intent(in) :: l
     real(4), intent(in)  :: x
-    
+
     oct_sph_bessel4 = real(oct_sph_bessel(l, real(x, kind=8)), kind=4)
   end function oct_sph_bessel4
 
   real(4) function oct_bessel_j04(x)
     real(4), intent(in)  :: x
-    
+
     oct_bessel_j04 = real(oct_bessel_j0(real(x, kind=8)), kind=4)
   end function oct_bessel_j04
 
   real(4) function oct_bessel_j14(x)
     real(4), intent(in)  :: x
-    
+
     oct_bessel_j14 = real(oct_bessel_j1(real(x, kind=8)), kind=4)
   end function oct_bessel_j14
 
   real(4) function oct_bessel_k04(x)
     real(4), intent(in)  :: x
-    
+
     oct_bessel_k04 = real(oct_bessel_k0(real(x, kind=8)), kind=4)
   end function oct_bessel_k04
 
   real(4) function oct_bessel_k14(x)
     real(4), intent(in)  :: x
-    
+
     oct_bessel_k14 = real(oct_bessel_k1(real(x, kind=8)), kind=4)
   end function oct_bessel_k14
 
@@ -370,7 +370,7 @@ contains
 
     oct_asinh4 = real(oct_asinh(real(x, kind=8)), kind=4)
   end function oct_asinh4
-  
+
   real(4) function oct_erf4(x)
     real(4), intent(in)  :: x
 
@@ -386,7 +386,7 @@ contains
   real(4) function oct_ylm4(x, y, z, l, m)
     real(4), intent(in) :: x, y, z
     integer, intent(in) :: l, m
-    
+
     oct_ylm4 = real(oct_ylm(real(x, kind=8), real(y, kind=8), real(z, kind=8), l, m), kind=4)
   end function oct_ylm4
 

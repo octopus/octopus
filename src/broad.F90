@@ -90,7 +90,7 @@ contains
     character(len=*), intent(in) :: dir
     character(len=*), intent(in) :: fname
     logical, intent(in) :: extracols
-    
+
     FLOAT, allocatable :: s(:,:)
     FLOAT :: w, e, f(4)
     integer :: n, iunit, j1, j2
@@ -117,7 +117,7 @@ contains
     end do
 100   continue
     call io_close(iunit)
-      
+
     ! print spectra
     iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
     do j1 = 1, n

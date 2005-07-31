@@ -41,7 +41,7 @@ module blas
       integer,    intent(in)    :: n, incx, incy
       real(8),    intent(inout) :: dx, dy ! dx(n), dy(n)
     end subroutine dswap
-    
+
     subroutine cswap(n, dx, incx, dy, incy)
       integer,    intent(in)    :: n, incx, incy
       complex(4), intent(inout) :: dx, dy ! dx(n), dy(n)
@@ -60,7 +60,7 @@ module blas
       real(4),    intent(in)    :: da
       real(4),    intent(inout) :: dx ! dx(n)
     end subroutine sscal
-    
+
     subroutine dscal(n, da, dx, incx)
       integer,    intent(in)    :: n, incx
       real(8),    intent(in)    :: da
@@ -140,7 +140,7 @@ module blas
       integer,    intent(in) :: n, incx, incy
       real(4),    intent(in) :: dx, dy ! dx(n), dy(n)
     end function sdot
-    
+
     real(8) function ddot(n, dx, incx, dy, incy)
       integer,    intent(in) :: n, incx, incy
       real(8),    intent(in) :: dx, dy ! dx(n), dy(n)
@@ -163,7 +163,7 @@ module blas
       integer,    intent(in) :: n, incx
       real(4),    intent(in) :: dx ! dx(n)
     end function snrm2
-    
+
     real(8) function dnrm2(n, dx, incx)
       integer,    intent(in) :: n, incx
       real(8),    intent(in) :: dx ! dx(n)
@@ -192,7 +192,7 @@ module blas
       real(4),      intent(in)    :: alpha, beta
       real(4),      intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
       real(4),      intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
-      real(4),      intent(inout) :: c ! c(ldc,n) 
+      real(4),      intent(inout) :: c ! c(ldc,n)
     end subroutine sgemm
 
     subroutine dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
@@ -201,7 +201,7 @@ module blas
       real(8),      intent(in)    :: alpha, beta
       real(8),      intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
       real(8),      intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
-      real(8),      intent(inout) :: c ! c(ldc,n) 
+      real(8),      intent(inout) :: c ! c(ldc,n)
     end subroutine dgemm
 
     subroutine cgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
@@ -210,7 +210,7 @@ module blas
       complex(4),   intent(in)    :: alpha, beta
       complex(4),   intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
       complex(4),   intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
-      complex(4),   intent(inout) :: c ! c(ldc,n) 
+      complex(4),   intent(inout) :: c ! c(ldc,n)
     end subroutine cgemm
 
     subroutine zgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
@@ -219,7 +219,7 @@ module blas
       complex(8),   intent(in)    :: alpha, beta
       complex(8),   intent(in)    :: a ! a(lda,ka)    ka=k if transa='N' or 'n'; m otherwise
       complex(8),   intent(in)    :: b ! b(ldb,kb)    kb=k if transa='N' or 'n'; m otherwise
-      complex(8),   intent(inout) :: c ! c(ldc,n) 
+      complex(8),   intent(inout) :: c ! c(ldc,n)
     end subroutine zgemm
   end interface
 

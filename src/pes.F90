@@ -71,7 +71,7 @@ subroutine PES_init(p, m, sb, st, ab, save_iter)
 
   p%calc_mask = .false.
   ! have the mask, and we are working in the velocity gauge
-  if(ab == 2) then 
+  if(ab == 2) then
     call loct_parse_logical(check_inp('CalcPES_Mask'), .false., p%calc_mask)
     if(p%calc_mask) then
       call PES_mask_init(p%mask, m, sb, st)

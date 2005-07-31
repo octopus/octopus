@@ -69,5 +69,5 @@ program hs_from_mult
   call parser_end()
   call global_end()
 
-  stop  
+  stop
 end program hs_from_mult

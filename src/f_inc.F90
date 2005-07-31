@@ -18,7 +18,7 @@
 !! $Id$
 
 ! ---------------------------------------------------------
-! The next two subroutines convert a function between the normal 
+! The next two subroutines convert a function between the normal
 ! mesh and the cube
 ! ---------------------------------------------------------
 subroutine X(mf2cf) (m, mf, cf)
@@ -73,13 +73,13 @@ subroutine X(mf2cf_FS) (m, mf, cf)
   type(mesh_type), intent(in)    :: m
   CMPLX,               intent(in)    :: mf(:)   ! mf(f_der%m%np)
   type(X(cf)),         intent(inout) :: cf
-  
+
   integer :: i, ix, iy, iz
 
   ASSERT(associated(cf%FS))
 
   cf%FS = M_z0
- 
+
   do i = 1, m%np
     ix = pad_feq(m%Lxyz(i, 1), cf%n(1), .false.)
     if(ix > cf%nx) cycle ! negative frequencies are redundant
@@ -133,7 +133,7 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
 
   FLOAT :: cutoff
 
-  call push_sub('f_laplacian')
+  call push_sub('f_inc.f_laplacian')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -147,10 +147,10 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
     ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
     cutoff = -M_ONE
     if(present(cutoff_)) cutoff = cutoff_
-    
+
     call X(cf_alloc_RS)(f_der%X(cf_der))             ! allocate cube in real space
     call X(cf_alloc_FS)(f_der%X(cf_der))             ! allocate cube in Fourier space
-    
+
     call X(mf2cf)(f_der%m, f, f_der%X(cf_der))             ! convert to cube
     call X(cf_RS2FS)(f_der%X(cf_der))                ! Fourier transform
     call X(cf_FS_lapl)(sb, f_der%m, f_der%X(cf_der), cutoff)   ! calculate Laplacian
@@ -176,7 +176,7 @@ subroutine X(f_gradient) (sb, f_der, f, grad)
 
   integer :: i
 
-  call push_sub('f_gradient')
+  call push_sub('f_inc.f_gradient')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -230,7 +230,7 @@ subroutine X(f_divergence) (sb, f_der, f, divf)
   integer :: i
   R_TYPE, allocatable :: aux(:)
 
-  call push_sub('f_divergence')
+  call push_sub('f_inc.f_divergence')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -250,14 +250,14 @@ subroutine X(f_divergence) (sb, f_der, f, divf)
       call X(cf_FS_grad)(sb, f_der%m, f_der%X(cf_der), i)   ! gradient in reciprocal space
       call X(cf_FS2RS)  (f_der%X(cf_der))                   ! Fourier transform
       call X(cf2mf)     (f_der%m, f_der%X(cf_der), aux)     ! convert to mesh
-      
+
       if(i == 1) then
         divf = aux
       else
         divf = divf + aux
       end if
     end do
-    
+
     call X(cf_free_RS)(f_der%X(cf_der))
     call X(cf_free_FS)(f_der%X(cf_der))
     deallocate(aux)
@@ -274,7 +274,7 @@ subroutine X(f_curl) (sb, f_der, f, curlf)
   R_TYPE,           intent(in)    :: f(:,:)     ! f(m%np, conf%dim)
   R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
 
-  call push_sub('f_curl')
+  call push_sub('f_inc.f_curl')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -307,7 +307,7 @@ subroutine X(f_angular_momentum)(sb, f_der, f, lf)
   FLOAT :: x(3)
   integer :: i
 
-  call push_sub('f_angular_momentum')
+  call push_sub('f_inc.f_angular_momentum')
 
   allocate(gf(f_der%m%np, 3))
   call X(f_gradient)(sb, f_der, f, gf)

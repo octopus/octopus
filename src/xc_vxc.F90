@@ -45,7 +45,7 @@ subroutine xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)
   if(iand(xcs%family, XC_FAMILY_LDA + XC_FAMILY_GGA + XC_FAMILY_MGGA) == 0) return
 
   ! really start
-  call push_sub('xc_get_vxc')
+  call push_sub('xc_vxc.xc_get_vxc')
 
   ! initialize a couple of handy variables
   gga           = iand(xcs%family, XC_FAMILY_GGA).ne.0
@@ -235,7 +235,7 @@ contains
     end do
     deallocate(gf)
 
-    ! If LB94, we can calculate an approximation to the energy from 
+    ! If LB94, we can calculate an approximation to the energy from
     ! Levy-Perdew relation PRA 32, 2010 (1985)
     if(functl(1)%id == XC_GGA_XC_LB) then
        allocate(gf(NP, 3))

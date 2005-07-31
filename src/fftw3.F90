@@ -31,7 +31,7 @@ module fft
   use lib_oct_parser
   use lib_basic_alg
   use simul_box
-  
+
   implicit none
 
   ! global constants
@@ -103,18 +103,18 @@ contains
 
     ! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
-    !    do i = sb%periodic_dim + 1, sb%dim 
+    !    do i = sb%periodic_dim + 1, sb%dim
     !      if(n(i) /= 1 .and. fft_optimize) &
     !           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
-    !    end do    
+    !    end do
     ! NEW
     ! optimize dimensions only for finite sys
     if(.not.simul_box_is_periodic(sb)) then
-      do i = 1, sb%dim 
+      do i = 1, sb%dim
          if(n(i) /= 1 .and. fft_optimize) &
              call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
       end do
-    end if    
+    end if
 
     ! find out if fft has already been allocated
     j = 0
@@ -180,7 +180,7 @@ contains
   subroutine fft_copy(fft_i, fft_o)
     type(fft_type), intent( in) :: fft_i
     type(fft_type), intent(out) :: fft_o
-    
+
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
 
@@ -274,8 +274,8 @@ contains
   function pad_feq(i, n, mode)
     integer, intent(in) :: i,n
     logical, intent(in) :: mode
-    integer :: pad_feq 
-    
+    integer :: pad_feq
+
     if(mode) then      ! index to frequency number
       if( i <= n/2 + 1 ) then
         pad_feq = i - 1
@@ -289,7 +289,7 @@ contains
         pad_feq = i + n + 1
       endif
     endif
-    
+
     return
   end function pad_feq
 

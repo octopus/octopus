@@ -87,7 +87,7 @@ contains
     if(err.ne.0) then
       message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_unocc"'
       call write_warning(1)
-      
+
       ierr = 1
       call end_()
       return
@@ -112,7 +112,7 @@ contains
       write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
       call write_info(2)
     endif
-    
+
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
@@ -140,7 +140,7 @@ contains
       call casida_work(sys, cas)
       call casida_write(cas, 'eps-diff')
     end if
-  
+
 
     call loct_parse_logical(check_inp('CasPetersilka'), .true., l)
     if(l) then
@@ -156,7 +156,7 @@ contains
     if(l) then
       message(1) = "Info: Calculating resonance energies a la Casida"
       call write_info(1)
-      
+
       cas%type = CASIDA_CASIDA
       call casida_work(sys, cas)
       call casida_write(cas, 'casida')
@@ -169,7 +169,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_()
 
-      call push_sub('casida_run')
+      call push_sub('casida.casida_run')
 
       call loct_parse_int(check_inp('NumberUnoccStates'), 5, cas%n_unocc)
       if(cas%n_unocc <= 0) then
@@ -202,9 +202,9 @@ contains
 
       call pop_sub()
     end subroutine end_
-    
+
   end function casida_run
-  
+
 
   ! allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas)
@@ -231,11 +231,11 @@ contains
       message(1) = "Error: Maybe there are no unoccupied states?"
       call write_fatal(1)
     end if
-    
+
     ! allocate stuff
     allocate(cas%pair_i(cas%n_pairs), cas%pair_a(cas%n_pairs))
     allocate(cas%mat(cas%n_pairs, cas%n_pairs), cas%energies(cas%n_pairs, 4))
-    
+
     ! create pairs
     j = 1
     do a = cas%n_occ+1, cas%n_occ + cas%n_unocc
@@ -291,15 +291,15 @@ contains
 
     ! load saved matrix elements
     call load_saved()
-    
-    if(cas%type == CASIDA_CASIDA) then 
+
+    if(cas%type == CASIDA_CASIDA) then
       call solve_casida()              ! solve casida matrix
 
     else if (mpiv%node == 0) then      ! this is not yet parallel
       call solve_petersilka()          ! eigenvalues or petersilka formula
       call sort_energies()             ! energies may be out of order
     end if
-    
+
     ! clean up
     deallocate(saved_K)
 
@@ -315,7 +315,7 @@ contains
 
       ! file to save matrix elements
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
-      
+
       do ia = 1, cas%n_pairs
         a = cas%pair_a(ia)
         i = cas%pair_i(ia)
@@ -346,7 +346,7 @@ contains
       call io_close(iunit)
 
     end subroutine solve_petersilka
-    
+
 
     ! ---------------------------------------------------------
     subroutine solve_casida()
@@ -388,11 +388,11 @@ contains
 #ifdef HAVE_MPI
       allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
       call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-         MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)      
+         MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
       cas%mat = mpi_mat
       deallocate(mpi_mat)
 #endif
-      
+
       ! all processors with the exception of the first are done
       if (mpiv%node.ne.0) return
 
@@ -405,16 +405,16 @@ contains
         i = cas%pair_i(ia)
         a = cas%pair_a(ia)
         temp = st%eigenval(a, 1) - st%eigenval(i, 1)
-        
+
         do jb = ia, cas%n_pairs
           j = cas%pair_i(jb)
           b = cas%pair_a(jb)
-          
+
           if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
 
           cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
              sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
-          
+
           if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
         end do
         cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
@@ -424,7 +424,7 @@ contains
       ! now we diagonalize the matrix
       call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%energies(:, 1))
       cas%energies(:, 1) = sqrt(cas%energies(:, 1))
-      
+
       ! let us get now the oscillator strengths
       allocate(os(cas%n_pairs, 3))
       do ia = 1, cas%n_pairs
@@ -432,14 +432,14 @@ contains
         a = cas%pair_a(ia)
         call dipole_matrix_elem(i, a, os(ia,:))
       end do
-      
+
       do ia = 1, cas%n_pairs
         do j = 1, 3
           cas%energies(ia, 1+j) = M_TWO * (sum(os(:,j)*cas%mat(:,ia)        &
-             *sqrt(st%eigenval(cas%pair_a(:), 1) - st%eigenval(cas%pair_i(:), 1)) ))**2 
+             *sqrt(st%eigenval(cas%pair_a(:), 1) - st%eigenval(cas%pair_i(:), 1)) ))**2
         end do
       end do
-      
+
     end subroutine solve_casida
 
 
@@ -447,21 +447,21 @@ contains
     function K_term(i, a, j, b)
       FLOAT :: K_term
       integer, intent(in) :: i, j, a, b
-    
+
       integer :: is
       FLOAT, allocatable :: rho(:, :), fxc(:,:,:), rho_i(:), rho_j(:), pot(:)
 
       allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
-    
+
       rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * R_CONJ(st%X(psi) (1:m%np, 1, a, 1))
       rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, 1)) * st%X(psi) (1:m%np, 1, b, 1)
-    
+
       !  first the Hartree part (only works for real wfs...)
       pot = M_ZERO
       call dpoisson_solve(sys%gr, pot, rho_j)
       K_term = dmf_dotp(m, rho_i(:), pot(:))
       deallocate(pot)
-      
+
       ! now we have fxc
       allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
       if(associated(st%rho_core)) then
@@ -484,7 +484,7 @@ contains
       integer :: iunit, err
       integer :: ia, jb
       FLOAT   :: val
-      
+
       iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false.)
       err = min(iunit, 0)
 
@@ -530,7 +530,7 @@ contains
       do k = 1, m%np
         s = s + m%x(k, :) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
       end do
-      
+
     end subroutine dipole_matrix_elem
 
   end subroutine casida_work
@@ -562,14 +562,14 @@ contains
 
     ! output eigenvectors in casida approach
     if(cas%type.ne.CASIDA_CASIDA) return
-      
+
     iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
     do ia = 1, cas%n_pairs
       write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair_i(ia), ' - ', cas%pair_a(ia)
     end do
     write(iunit, '(1x)')
-      
+
     do ia = 1, cas%n_pairs
       write(iunit, '(es14.6)', advance='no') cas%energies(ia, 1) / units_out%energy%factor
       temp = M_ONE
@@ -579,7 +579,7 @@ contains
       end do
       write(iunit, '(1x)')
     end do
-      
+
     call io_close(iunit)
 
   end subroutine casida_write

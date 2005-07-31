@@ -52,7 +52,7 @@ contains
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
     call loct_parse_float(check_inp('CurvBriggsBeta'), M_HALF, cv%beta)
-    
+
     if(cv%beta<M_ZERO.or.cv%beta>M_ONE) then
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'
       call write_fatal(1)
@@ -67,7 +67,7 @@ contains
     type(curv_briggs_type), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,                  intent(out) :: x(:)    ! x(sb%dim)
- 
+
     integer :: i
 
     do i = 1, sb%dim
@@ -84,7 +84,7 @@ contains
     type(curv_briggs_type), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi(:)  ! chi(sb%dim)
     FLOAT,                  intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
- 
+
     integer :: i
 
     J(:,:) = M_ZERO

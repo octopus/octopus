@@ -32,7 +32,7 @@
 ! code uses units of mass of (eV/A^2)(h/(2pieV))^2, which are related to
 ! atomic units through 1cu_[mass] = 7.619963358 au_[mass] . So:
 !
-! 1u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) * 
+! 1u = (1/5.485799110e-4) au_[mass] = (1/5.485799110e-4) *
 !      (1/7.619963358) cu_[mass] = 239.225360 cu_[mass].
 
 #include "global.h"
@@ -77,7 +77,7 @@ subroutine units_init()
   character(len=10) :: c
   character(len=3) :: cinp, cout
 
-  call push_sub('units_init')
+  call push_sub('units.units_init')
 
   if(loct_parse_isdef(check_inp('Units')).ne.0) then
     call loct_parse_string('Units', "a.u", c)
@@ -113,7 +113,7 @@ contains
       call write_fatal(2)
     end select
   end subroutine get_units
-  
+
 end subroutine units_init
 
 ! these routines output the unit conversions factors, defined by

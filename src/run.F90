@@ -93,7 +93,7 @@ subroutine run()
 
   logical :: fromScratch(M_GS:M_WAVE_MATCHING)
 
-  call push_sub('run')
+  call push_sub('run.run')
 
   instr = 0
   call define_run_modes()
@@ -180,7 +180,7 @@ subroutine run()
 
     instr = instr - 1
   end do program
-      
+
   call pop_sub()
 
 contains

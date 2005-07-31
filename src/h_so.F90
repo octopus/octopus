@@ -26,7 +26,7 @@ subroutine zso (h, gr, psi, hpsi, ik)
 
   CMPLX, allocatable :: tpsi(:, :)
 
-  call push_sub('zso')
+  call push_sub('h_so.zso')
 
   ASSERT(h%d%dim == 2)
 

@@ -46,7 +46,7 @@ contains
     type(mesh_type), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in)   :: thr
-    call push_sub('poisson_cg1_init')
+    call push_sub('poisson_cg.poisson_cg1_init')
     maxl = ml
     threshold = thr
     call build_aux(m)
@@ -61,7 +61,7 @@ contains
     type(mesh_type), intent(in) :: m
     integer, intent(in) :: ml
     FLOAT, intent(in) :: thr
-    call push_sub('poisson_cg2_init')
+    call push_sub('poisson_cg.poisson_cg2_init')
     maxl = ml
     threshold = thr
     call build_aux(m)
@@ -78,20 +78,20 @@ contains
     type(der_discr_type), target, intent(in)    :: der
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
-  
+
     integer :: iter
     FLOAT :: res
     FLOAT, allocatable :: wk(:), lwk(:), zk(:), pk(:)
 
-    call push_sub('poisson_cg')
+    call push_sub('poisson_cg.poisson_cg')
 
     allocate(wk(m%np_tot), lwk(m%np_tot), zk(m%np), pk(m%np))
-    
+
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
     call boundary_conditions(m, rho, maxl, wk)
     call dderivatives_lapl(der, wk, lwk, .true.)
-    
+
     zk(1:m%np) = -M_FOUR*M_PI*rho(1:m%np) - lwk(1:m%np)
     deallocate(wk, lwk) ! they are no longer needed
 
@@ -105,10 +105,10 @@ contains
        write(message(2), '(a,i8)')    '  Iter = ',iter
        write(message(3), '(a,e14.6)') '  Res = ', res
        call write_warning(3)
-    endif 
+    endif
     nullify(der_pointer, mesh_pointer)
     pot = pot + pk
-    
+
     deallocate(zk, pk)
     call pop_sub()
   end subroutine poisson_cg1
@@ -124,7 +124,7 @@ contains
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT :: res
 
-    call push_sub('poisson_cg')
+    call push_sub('poisson_cg.poisson_cg')
 
     der_pointer  => der
     mesh_pointer => m
@@ -146,7 +146,7 @@ contains
        write(message(2), '(a,i8)')    '  Iter = ',iter
        write(message(3), '(a,e14.6)') '  Res = ', res
        call write_warning(3)
-    endif 
+    endif
     do i = 1, m%np
        pot(i) = pot(i)/sqrt(m%vol_pp(i))
     enddo
@@ -167,7 +167,7 @@ contains
     integer :: i, add_lm, l, mm
     FLOAT   :: x(3), r, s1, sa
     FLOAT, allocatable :: mult(:)
-    
+
     allocate(mult((ml+1)**2))
     call get_multipoles(m, rho, ml, mult)
     do i = m%np+1, m%np_tot ! boundary conditions

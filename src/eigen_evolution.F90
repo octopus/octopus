@@ -33,7 +33,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
   FLOAT, allocatable :: eig(:)
 
-  call push_sub('eigen_solver_evolution')
+  call push_sub('eigen_evolution.eigen_solver_evolution')
 
   maxiter = niter
   conv_ = 0

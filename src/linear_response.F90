@@ -39,7 +39,7 @@ module linear_response
     FLOAT   :: abs_dens       ! convergence reached
     integer :: max_iter       ! maximum number of iterations
     integer :: iter           ! number of iterations used
-    
+
     type(mix_type) :: mixer   ! can not live without it
 
     ! the real quantities
@@ -51,7 +51,7 @@ module linear_response
     CMPLX, pointer :: zdl_rho(:,:)     ! response of the density
     CMPLX, pointer :: zdl_psi(:,:,:,:) ! linear change of the real KS orbitals
     CMPLX, pointer :: zdl_Vhar(:)      ! linear change of the complex KS orbitals
-    
+
     FLOAT, pointer :: dl_Vxc(:,:,:)    ! linear change of the xc potential (fxc)
   end type lr_type
 
@@ -65,7 +65,7 @@ contains
     ! read some parameters from the input file
     call loct_parse_float(check_inp(trim(prefix)//"ConvAbsDens"), &
         CNST(1e-5), lr%conv_abs_dens)
-    call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 50, lr%max_iter)    
+    call loct_parse_int  (check_inp(trim(prefix)//"MaximumIter"), 50, lr%max_iter)
 
     nullify(lr%ddl_rho, lr%ddl_psi, lr%ddl_Vhar, lr%dl_Vxc)
     nullify(lr%zdl_rho, lr%zdl_psi, lr%zdl_Vhar, lr%dl_Vxc)
@@ -82,7 +82,7 @@ contains
     if(associated(lr%ddl_psi)) return ! do nothing
 
     allocate(lr%ddl_psi(m%np, st%d%dim, st%nst, st%d%nspin))
-    
+
     if(associated(lr%zdl_psi)) then
       r = 2
       lr%ddl_psi = real(lr%zdl_psi, PRECISION)
@@ -106,7 +106,7 @@ contains
     if(associated(lr%zdl_psi)) return ! do nothing
 
     allocate(lr%zdl_psi(m%np, st%d%dim, st%nst, st%d%nspin))
-    
+
     if(associated(lr%ddl_psi)) then
       r = 2
       lr%zdl_psi = lr%ddl_psi
@@ -123,7 +123,7 @@ contains
   ! ---------------------------------------------------------
   subroutine lr_dealloc(lr)
     type(lr_type), intent(inout) :: lr
-  
+
     if(associated(lr%ddl_rho)) then
       deallocate(lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
       nullify   (lr%ddl_rho, lr%ddl_Vhar, lr%dl_Vxc)
@@ -157,7 +157,7 @@ contains
     FLOAT, allocatable :: rho(:, :)
     integer :: is
 
-    call push_sub('lr_build_fxc')
+    call push_sub('linear_response.lr_build_fxc')
 
     allocate(rho(m%np, st%d%nspin))
     if(associated(st%rho_core)) then
@@ -175,25 +175,25 @@ contains
 
 
   ! ---------------------------------------------------------
-  ! orthogonalizes response of \alpha KS orbital to all occupied 
-  ! \alpha KS orbitals  
+  ! orthogonalizes response of \alpha KS orbital to all occupied
+  ! \alpha KS orbitals
   ! ---------------------------------------------------------
   subroutine lr_orth_response(m, st, lr)
     type(mesh_type),   intent(in)    :: m
     type(states_type), intent(in)    :: st
     type(lr_type),     intent(inout) :: lr
-    
+
     integer :: ist, ik
-    call push_sub('lr_orth_response')
+    call push_sub('linear_response.lr_orth_response')
 
     do ik = 1, st%d%nspin
-      do ist = 1, st%nst 
-        if(st%occ(ist, ik) > M_ZERO) then  
-          call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik) 
+      do ist = 1, st%nst
+        if(st%occ(ist, ik) > M_ZERO) then
+          call X(lr_orth_vector) (m, st, lr%X(dl_psi)(:,:, ist, ik), ik)
         endif
       end do
     end do
-    
+
     call pop_sub()
   end subroutine lr_orth_response
 

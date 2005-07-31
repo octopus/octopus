@@ -44,7 +44,7 @@ subroutine logrid_init(g, a, b, nrval)
   g%a = a; g%b = b; g%nrval = nrval
 
   allocate(g%rofi(nrval), g%drdi(nrval), g%s(nrval))
-  
+
   rpb = b; ea = exp(a)
   do ir = 1, nrval
     g%drdi(ir) = a*rpb
@@ -73,7 +73,7 @@ subroutine derivate_in_log_grid(g, f, dfdr)
   x = M_ONE - exp(-2*a)
   y = M_ONE - exp(-a)
 
-  dfdr(1) = (1/(y*b))*exp(-a)*(f(2)-f(1))  
+  dfdr(1) = (1/(y*b))*exp(-a)*(f(2)-f(1))
   do i = 2, nrval-1
     dfdr(i) = (1/(x*b))*exp(-i*a)*(f(i+1)-f(i-1))
   enddo

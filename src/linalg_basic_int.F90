@@ -34,8 +34,8 @@ subroutine FNAME(swap_1)(n1, dx, dy)
   TYPE1, allocatable :: dz(:)
   allocate(dz(n1))
   dz = dx; dx = dy; dy = dz
-  deallocate(dz) 
-  
+  deallocate(dz)
+
 end subroutine FNAME(swap_1)
 
 subroutine FNAME(swap_2)(n1, n2, dx, dy)
@@ -45,8 +45,8 @@ subroutine FNAME(swap_2)(n1, n2, dx, dy)
   TYPE1, allocatable :: dz(:,:)
   allocate(dz(n1,n2))
   dz = dx; dx = dy; dy = dz
-  deallocate(dz) 
-  
+  deallocate(dz)
+
 end subroutine FNAME(swap_2)
 
 subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
@@ -57,7 +57,7 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
   allocate(dz(n1,n2,n3))
   dz = dx; dx = dy; dy = dz
   deallocate(dz)
-  
+
 end subroutine FNAME(swap_3)
 
 subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
@@ -68,7 +68,7 @@ subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
   allocate(dz(n1,n2,n3,n4))
   dz = dx; dx = dy; dy = dz
   deallocate(dz)
-  
+
 end subroutine FNAME(swap_4)
 
 ! ------------------------------------------------------------------
@@ -237,7 +237,7 @@ end subroutine FNAME(gemm)
 ! ------------------------------------------------------------------
 ! matrix-vector multiplication plus vector
 ! ------------------------------------------------------------------
- 
+
 subroutine FNAME(gemv)(m, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m, n
   TYPE1,   intent(in)    :: alpha, beta

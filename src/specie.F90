@@ -96,7 +96,7 @@ contains
     character(len=256) :: dirname
     integer :: iunit
 
-    call push_sub('specie_debug')
+    call push_sub('specie.specie_debug')
 
 #ifdef HAVE_MPI
     if(mpiv%node .ne. 0) return
@@ -139,7 +139,7 @@ contains
     type(specie_type),     intent(inout) :: s
     FLOAT, intent(in) :: gmax
 
-    call push_sub('specie_filter')
+    call push_sub('specie.specie_filter')
 
     call ps_filter(s%ps, gmax, s%alpha, s%beta, s%rcut, s%beta2)
     call ps_getradius(s%ps)
@@ -160,7 +160,7 @@ contains
     integer :: i, row, n_spec_block, n_spec_def, iunit, read_data
     integer(POINTER_SIZE) :: blk
 
-    call push_sub('specie_read')
+    call push_sub('specie.specie_read')
 
     s%local     = .true.  ! a local potential
     s%nlcc      = .false. ! without non-local core corrections
@@ -232,7 +232,7 @@ contains
     integer :: lloc, lmax
     integer :: type
 
-    call push_sub('read_from_default_file')
+    call push_sub('specie.read_from_default_file')
 
     backspace(iunit)
 
@@ -273,39 +273,39 @@ contains
     integer, intent(out) :: read_data
     integer :: j, n, lmax, lloc
 
-    call push_sub('read_from_block')
+    call push_sub('specie.read_from_block')
 
     read_data = 0
 
     call loct_parse_block_float (blk, row, 1, s%weight)
     call loct_parse_block_int   (blk, row, 2, s%type)
-      
+
     select case(s%type)
     case(SPEC_USDEF) ! user defined
      call loct_parse_block_float (blk, row, 3, s%Z_val)
      call loct_parse_block_string(blk, row, 4, s%user_def)
      ! convert to C string
      j = len(trim(s%user_def))
-     s%user_def(j+1:j+1) = achar(0) 
+     s%user_def(j+1:j+1) = achar(0)
      read_data = 5
 
     case(SPEC_POINT) ! this is treated as a jellium with radius 0.5
      call loct_parse_block_float(blk, row, 3, s%Z)
      s%jradius = M_HALF
-     s%Z_val = 0 
+     s%Z_val = 0
      read_data = 4
-        
+
     case(SPEC_JELLI)
      call loct_parse_block_float(blk, row, 3, s%Z)      ! charge of the jellium sphere
      call loct_parse_block_float(blk, row, 4, s%jradius)! radius of the jellium sphere
      s%jradius = units_inp%length%factor * s%jradius ! units conversion
      s%Z_val = s%Z
      read_data = 5
-      
+
     case(SPEC_PS_TM2,SPEC_PS_HGH) ! a pseudopotential file
      s%local = .false.
      n = loct_parse_block_cols(blk, row)
-         
+
      call loct_parse_block_float (blk, row, 3, s%Z)
      lmax = 2 ! default
      if(n>4) then
@@ -317,13 +317,13 @@ contains
         call loct_parse_block_int (blk, row, 5, s%lloc)
         read_data = 6
      endif
-        
+
      if(n>6) then
        call loct_parse_block_float (blk, row, 6, s%def_h)
        s%def_h = s%def_h * units_inp%length%factor
        read_data = 7
      end if
-        
+
      if(n>7) then
        call loct_parse_block_float (blk, row, 7, s%def_rsize)
        s%def_rsize = s%def_rsize * units_inp%length%factor
@@ -356,7 +356,7 @@ contains
     type(specie_type), intent(inout) :: s
     integer,           intent(in)    :: ispin
 
-    call push_sub('specie_init')
+    call push_sub('specie.specie_init')
 
     ! masses are always in a.u.m, so convert them to a.u.
     s%weight =  units_inp%mass%factor * s%weight
@@ -381,19 +381,19 @@ contains
     type(specie_type), pointer    :: s(:)
 
     integer :: i
-    
-    call push_sub('specie_end')
-    
+
+    call push_sub('specie.specie_end')
+
     do i = 1, ns
       if(s(i)%local) cycle
-      
+
       if(associated(s(i)%ps)) call ps_end(s(i)%ps)
     end do
-    
+
     if(associated(s)) then ! sanity check
       deallocate(s); nullify(s)
     end if
-    
+
     call pop_sub()
   end subroutine specie_end
 
@@ -412,18 +412,18 @@ contains
     select case(s%type)
     case(SPEC_USDEF)
       l = loct_parse_potential(xx(1), xx(2), xx(3), r, s%user_def)
-      
+
     case(SPEC_POINT, SPEC_JELLI)
       a1 = s%Z/(M_TWO*s%jradius**3)
       a2 = s%Z/s%jradius
       Rb2= s%jradius**2
-      
+
       if(r <= s%jradius) then
         l = (a1*(r*r - Rb2) - a2)
       else
         l = - s%Z/r
       end if
-      
+
     case(SPEC_PS_TM2, SPEC_PS_HGH)
         l = loct_splint(s%ps%vl, r)
     end select
@@ -438,16 +438,16 @@ contains
     type(specie_type), intent(in) :: s
     FLOAT, intent(in) :: x(:)
     FLOAT, intent(out) :: gv(:)
-    
+
     FLOAT, parameter :: Delta = CNST(1e-4)
     FLOAT :: xx(3), r, l1, l2
     integer :: i
-   
+
     gv = M_ZERO
-    
+
     xx(:) = x(:)
     r = sqrt(sum(xx(:)**2))
-    
+
     select case(s%type)
     case(SPEC_USDEF)
       do i = 1, 3
@@ -458,20 +458,20 @@ contains
         l2 = loct_parse_potential(xx(1), xx(2), xx(3), sqrt(sum(xx(:)**2)), s%user_def)
         gv(i) = (l2 - l1)/(M_TWO*Delta)
       end do
-      
+
     case(SPEC_POINT, SPEC_JELLI)
       l1 = s%Z/(M_TWO*s%jradius**3)
-      
+
       if(r <= s%jradius) then
         gv(:) = l1*x(:)
       else
         gv(:) = s%Z*x(:)/r**3
       end if
-      
+
     case(SPEC_PS_TM2, SPEC_PS_HGH)
         gv(:) = M_ZERO
         if(r>CNST(0.00001)) gv(:) = -loct_splint(s%ps%dvl, r)*x(:)/r
-      
+
     end select
 
   end subroutine specie_get_glocal
@@ -484,33 +484,33 @@ contains
     integer,           intent(in) :: dim
     type(specie_type), intent(in) :: s
     FLOAT,             intent(in) :: x(3)
-    
+
     FLOAT :: gmod
-    
+
     if(dim /= 3 .or. s%type == SPEC_USDEF &
        .or. s%type == SPEC_POINT .or. s%type == SPEC_JELLI) then
-      message(1) = 'Periodic arrays of usedef, jelli, point,' 
+      message(1) = 'Periodic arrays of usedef, jelli, point,'
       message(2) = '1D and 2D systems not implemented yet.'
       call write_fatal(2)
-      
+
     else
       gmod = sqrt(sum(x(:)**2))
       l = loct_splint(s%ps%vlocal_f, gmod)
     end if
-    
+
   end function specie_get_local_fourier
-  
+
 
   ! ---------------------------------------------------------
   FLOAT function specie_get_nlcc(s, x) result(l)
     type(specie_type), intent(in) :: s
     FLOAT, intent(in) :: x(3)
-    
+
     ! only for 3D pseudopotentials, please
     if(s%type==SPEC_PS_TM2.or.s%type==SPEC_PS_HGH) then
       l = loct_splint(s%ps%core, sqrt(sum(x**2)))
     end if
-    
+
   end function specie_get_nlcc
 
 
@@ -521,21 +521,21 @@ contains
     integer,           intent(in)  :: l, lm, i
     FLOAT,             intent(out) :: uV, duV(:)  ! (3)
     logical, optional, intent(in)  :: so
-    
+
     FLOAT :: r, uVr0, duvr0, ylm, gylm(3)
     FLOAT, parameter :: ylmconst = CNST(0.488602511902920) !  = sqr(3/(4*pi))
-    
+
     r = sqrt(sum(x**2))
     if(present(so)) then
       ASSERT(so)
-      
+
       uVr0  = loct_splint(s%ps%so_kb(l, i), r)
       duvr0 = loct_splint(s%ps%so_dkb(l, i), r)
     else
       uVr0  = loct_splint(s%ps%kb(l, i), r)
       duvr0 = loct_splint(s%ps%dkb(l, i), r)
     endif
-    
+
     call grylmr(x(1), x(2), x(3), l, lm, ylm, gylm)
     uv = uvr0*ylm
     if(r >= r_small) then
@@ -554,7 +554,7 @@ contains
         duv = M_ZERO
       end if
     end if
-    
+
   end subroutine specie_get_nl_part
 
 

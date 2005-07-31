@@ -35,7 +35,7 @@ subroutine PES_rc_init(v, m, st, save_iter)
     message(2) = '%PES_rc_points'
     message(3) = '   x | y | z'
     message(4) = '%'
-    call write_fatal(4)    
+    call write_fatal(4)
   end if
 
   v%npoints = loct_parse_block_n(blk)
@@ -65,7 +65,7 @@ subroutine PES_rc_end(v)
   if(associated(v%filenames)) then
     deallocate(v%filenames, v%points, v%wf)
     nullify   (v%filenames, v%points, v%wf)
-  end if  
+  end if
 end subroutine PES_rc_end
 
 subroutine PES_rc_doit(v, st, ii)
@@ -84,7 +84,7 @@ subroutine PES_rc_doit(v, st, ii)
       end do
     end do
   end do
-  
+
 end subroutine PES_rc_doit
 
 subroutine PES_rc_output(v, st, iter, save_iter, dt)
@@ -92,7 +92,7 @@ subroutine PES_rc_output(v, st, iter, save_iter, dt)
   type(states_type), intent(in) :: st
   integer,           intent(in) :: iter, save_iter
   FLOAT,             intent(in) :: dt
-  
+
   integer :: ix, iunit, j, jj, ik, p, idim
 
   if(iter == 1) then

@@ -52,7 +52,7 @@ module v_ks
      sic_none   = 1, &    ! no self interaction correction
      sic_pz     = 2, &    ! SIC a la Perdew Zunger (OEP way)
      sic_amaldi = 3       ! Amaldi correction term
-  
+
 
   type v_ks_type
     logical :: ip_app
@@ -71,7 +71,7 @@ contains
     type(grid_type),        intent(inout) :: gr
     type(states_dim_type),  pointer       :: d
 
-    call push_sub('v_ks_init');
+    call push_sub('v_ks.v_ks_init');
 
     !%Variable NonInteractingElectrons
     !%Type logical
@@ -101,7 +101,7 @@ contains
       call write_info(1)
       call xc_init(ks%xc, NDIM, d%spin_channels, d%cdft)
       ks%xc_family = ks%xc%family
-      
+
       ! check for SIC
       if(iand(ks%xc_family, XC_FAMILY_LDA + XC_FAMILY_GGA).ne.0) then
         !%Variable SICorrection
@@ -140,7 +140,7 @@ contains
   subroutine v_ks_end(ks)
     type(v_ks_type), intent(inout) :: ks
 
-    call push_sub('v_ks_end');
+    call push_sub('v_ks.v_ks_end');
 
     if(.not.ks%ip_app) then
       call xc_oep_end(ks%oep)
@@ -156,9 +156,9 @@ contains
   ! ---------------------------------------------------------
   subroutine v_ks_write_info(ks, iunit)
     type(v_ks_type), intent(in) :: ks
-    integer,         intent(in) :: iunit 
+    integer,         intent(in) :: iunit
 
-    call push_sub('v_ks_write_info');
+    call push_sub('v_ks.v_ks_write_info');
 
 #ifdef HAVE_MPI
     if(mpiv%node == 0) then

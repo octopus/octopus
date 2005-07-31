@@ -39,7 +39,7 @@ public :: laser_type,         &
           laser_write_info,   &
           laser_field,        &
           laser_vector_field
-          
+
 
 type laser_type
   CMPLX :: pol(3) ! the polarization of the laser
@@ -50,7 +50,7 @@ type laser_type
 
   FLOAT :: t0     ! the maximum of the pulse
   FLOAT :: tau0   ! the width of the pulse
-  FLOAT :: tau1   ! for the ramped shape, the length of the "ramping" intervals 
+  FLOAT :: tau1   ! for the ramped shape, the length of the "ramping" intervals
                      ! (tau0 will be the length of the constant interval)
 
   FLOAT, pointer :: numerical(:,:) ! when the laser is numerical
@@ -74,7 +74,7 @@ subroutine laser_init(no_l, l)
   integer :: i
   integer(POINTER_SIZE) :: blk
 
-  call push_sub('laser_init')
+  call push_sub('lasers.laser_init')
 
   no_l = 0
   if(loct_parse_block(check_inp('TDLasers'), blk) == 0) then
@@ -193,7 +193,7 @@ subroutine laser_end(no_l, l)
         end if
       end select
   end do
-  
+
   deallocate(l); nullify(l)
 
 end subroutine laser_end

@@ -165,7 +165,7 @@ module lib_oct_parser
      end subroutine oct_parse_block_string
   end interface
 
-  interface loct_parse_potential    
+  interface loct_parse_potential
      function oct_parse_potential(x, y, z, r, pot)
        real(8) :: oct_parse_potential
        real(8), intent(in) :: x, y, z, r

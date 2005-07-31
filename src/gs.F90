@@ -50,12 +50,12 @@ contains
 
     type(scf_type) :: scfv
 
-    call push_sub('ground_state_run')
+    call push_sub('gs.ground_state_run')
     ierr = 0
 
     ! allocate wfs
     allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-    
+
     ! load wave-functions
     message(1) = 'Info: Loading wave-functions'
     call write_info(1)
@@ -70,7 +70,7 @@ contains
       message(1) = 'Info: Setting up Hamiltonian.'
       call write_info(1)
       call X(system_h_setup) (sys, h)
-    
+
       ! run self consistency
 #ifdef COMPLEX_WFNS
       message(1) = 'Info: SCF using complex wavefunctions.'
@@ -98,23 +98,23 @@ contains
     type(hamiltonian_type), intent(inout) :: h
 
     integer :: err
-    logical :: lcao_start 
+    logical :: lcao_start
     type(lcao_type) :: lcao_data
 
-    call push_sub('ground_state_init')
+    call push_sub('gs.ground_state_init')
 
     ! allocate wfs
     allocate(st%X(psi)(gr%m%np, st%d%dim, st%nst, st%d%nik))
 
     message(1) = 'Info: Random generating starting wavefunctions.'
     call write_info(1)
-      
+
     ! wave functions are simply random gaussians
     call states_generate_random(st, gr%m)
 
     ! this is certainly a better density
     call system_guess_density(gr%m, gr%sb, gr%geo, st%qtot, st%d%nspin, &
-       st%d%spin_channels, st%rho)      
+       st%d%spin_channels, st%rho)
 
     call loct_parse_logical(check_inp('LCAOStart'), .true., lcao_start)
     if(lcao_start) then
@@ -122,18 +122,18 @@ contains
 
       message(1) = 'Info: Performing initial LCAO calculation.'
       call write_info(1)
-     
+
       lcao_data%state = 0 ! Uninitialized here.
       call lcao_init(gr, lcao_data, st, h)
       if(lcao_data%state == 1) then
         call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
         call lcao_end(lcao_data)
-        
+
         call states_fermi(st, gr%m)                         ! occupations
         call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
       end if
     end if
-   
+
     ! write wave-functions to disk
     call X(restart_write)(trim(tmpdir)//'restart_gs', st, gr, err)
     if(err.ne.0) then

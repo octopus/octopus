@@ -53,31 +53,31 @@ module lib_xc
   integer, public, parameter :: &
      XC_UNPOLARIZED       =  1, &  ! Spin unpolarized
      XC_POLARIZED         =  2     ! Spin polarized
-  
+
   integer, public, parameter :: &
      XC_NON_RELATIVISTIC  =  0, &  ! Functional includes or not realtivistic
      XC_RELATIVISTIC      =  1     ! corrections. Only available in some functionals.
-  
+
   ! Kinds
   integer, public, parameter :: &
      XC_EXCHANGE             = 0,  &
      XC_CORRELATION          = 1,  &
-     XC_EXCHANGE_CORRELATION = 2 
+     XC_EXCHANGE_CORRELATION = 2
 
   ! the LDAs
   integer, public, parameter :: &
-     XC_LDA_X             =  1,  &  ! Exchange                  
-     XC_LDA_C_WIGNER      =  2,  &  ! Wigner parametrization    
+     XC_LDA_X             =  1,  &  ! Exchange
+     XC_LDA_C_WIGNER      =  2,  &  ! Wigner parametrization
      XC_LDA_C_RPA         =  3,  &  ! Random Phase Approximation
-     XC_LDA_C_HL          =  4,  &  ! Hedin & Lundqvist         
-     XC_LDA_C_GL          =  5,  &  ! Gunnarson & Lundqvist     
-     XC_LDA_C_XALPHA      =  6,  &  ! Slaters Xalpha           
-     XC_LDA_C_VWN         =  7,  &  ! Vosko, Wilk, & Nussair    
-     XC_LDA_C_PZ          =  8,  &  ! Perdew & Zunger           
-     XC_LDA_C_OB_PZ       =  9,  &  ! Ortiz & Ballone (PZ)      
-     XC_LDA_C_PW          = 10,  &  ! Perdew & Wang             
-     XC_LDA_C_OB_PW       = 11,  &  ! Ortiz & Ballone (PW)      
-     XC_LDA_C_LYP         = 12,  &  ! Lee, Yang, & Parr LDA     
+     XC_LDA_C_HL          =  4,  &  ! Hedin & Lundqvist
+     XC_LDA_C_GL          =  5,  &  ! Gunnarson & Lundqvist
+     XC_LDA_C_XALPHA      =  6,  &  ! Slaters Xalpha
+     XC_LDA_C_VWN         =  7,  &  ! Vosko, Wilk, & Nussair
+     XC_LDA_C_PZ          =  8,  &  ! Perdew & Zunger
+     XC_LDA_C_OB_PZ       =  9,  &  ! Ortiz & Ballone (PZ)
+     XC_LDA_C_PW          = 10,  &  ! Perdew & Wang
+     XC_LDA_C_OB_PW       = 11,  &  ! Ortiz & Ballone (PW)
+     XC_LDA_C_LYP         = 12,  &  ! Lee, Yang, & Parr LDA
      XC_LDA_C_AMGB        = 13      ! Attacalite et al
 
   ! the GGAs
@@ -139,7 +139,7 @@ module lib_xc
       integer,               intent(in)  :: nspin  ! XC_UNPOLARIZED or XC_POLARIZED
       integer,               intent(in)  :: dim    ! 2 or 3 dimensions
     end subroutine xc_lda_x_init
-    
+
     subroutine xc_lda_c_xalpha_init(p, info, functional, nspin, dim, alpha)
       integer(POINTER_SIZE), intent(out) :: p
       integer(POINTER_SIZE), intent(out) :: info
@@ -198,7 +198,7 @@ module lib_xc
       FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
       FLOAT,                 intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
       FLOAT,                 intent(out) :: e     ! the energy per unit particle
-      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy 
+      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
                                                   ! in terms of the density
       FLOAT,                 intent(out) :: dedgd ! and in terms of the gradient of the density
     end subroutine xc_gga
@@ -234,7 +234,7 @@ module lib_xc
       FLOAT,                 intent(in)  :: grho  ! grho(3,nspin) the gradient of the density
       FLOAT,                 intent(in)  :: tau   ! tau(nspin) the kinetic energy density
       FLOAT,                 intent(out) :: e     ! the energy per unit particle
-      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy 
+      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
                                                   ! in terms of the density
       FLOAT,                 intent(out) :: dedgd ! in terms of the gradient of the density
       FLOAT,                 intent(out) :: dedtau! and in terms of tau
@@ -255,7 +255,7 @@ module lib_xc
       FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
       FLOAT,                 intent(in)  :: v     ! v(3,nspin) the vorticity
       FLOAT,                 intent(out) :: e     ! the energy per unit particle
-      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy 
+      FLOAT,                 intent(out) :: dedd  ! dedd(nspin) the derivative of the energy
                                                   ! in terms of the density
       FLOAT,                 intent(out) :: dedv  ! and in terms of the vorticity
     end subroutine xc_lca

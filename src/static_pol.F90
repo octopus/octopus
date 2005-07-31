@@ -57,10 +57,10 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   FLOAT :: e_field
   FLOAT, allocatable :: Vpsl_save(:), trrho(:), dipole(:, :, :)
   logical :: out_pol
- 
+
   ierr = 0
   call init_()
- 
+
   ! load wave-functions
   call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, gr%m, err)
   if(err.ne.0) then
@@ -111,36 +111,36 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   ! Allocate the trrho to the contain the trace of the density.
   allocate(trrho(NP))
   trrho = M_ZERO
-  
+
   call scf_init(gr, scfv, st, h)
   do i = i_start, NDIM
     do k = 1, 2
       write(message(1), '(a)')
       write(message(2), '(a,i1,a,i1)')'Info: Calculating dipole moment for field ', i, ', #',k
       call write_info(2)
-      
+
       h%ep%vpsl = vpsl_save + (-1)**k*gr%m%x(:,i)*e_field
-      
+
       call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
-      
+
       trrho = M_ZERO
       do is = 1, st%d%spin_channels
         trrho(:) = trrho(:) + st%rho(:, is)
       end do
-      
+
       ! calculate dipole
       do j = 1, NDIM
         dipole(i, j, k) = dmf_moment(gr%m, trrho, j, 1)
       end do
-      
+
     end do
 
     ! Writes down the dipole to the file
     iunit = io_open(trim(tmpdir)//'restart.pol', action='write', status='old', position='append')
     write(iunit, fmt='(6e20.12)') ((dipole(i, j, k), j = 1, NDIM), k = 1, 2)
     call io_close(iunit)
-    
-    if(i == NDIM) then 
+
+    if(i == NDIM) then
       out_pol = .true.
     end if
   end do
@@ -153,7 +153,7 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
        trim(units_out%length%abbrev)
     if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM
     write(iunit, '(a)') ']'
-         
+
     do j = 1, NDIM
       write(iunit, '(3f12.6)') (dipole(j, 1:NDIM, 1) - dipole(j, 1:NDIM, 2))/(M_TWO*e_field) &
          / units_out%length%factor**NDIM
@@ -162,18 +162,18 @@ integer function static_pol_run(sys, h, fromScratch) result(ierr)
   end if
 
   deallocate(Vpsl_save, trrho, dipole)
-  
+
   call end_()
 
 contains
 
   subroutine init_()
-    call push_sub('static_pol_run')
+    call push_sub('static_pol.static_pol_run')
 
     ! shortcuts
     gr  => sys%gr
     st => sys%st
- 
+
     ! allocate wfs
     allocate(sys%st%X(psi)(NP, st%d%dim, st%nst, st%d%nik))
 
@@ -190,7 +190,7 @@ contains
 
   subroutine end_()
     deallocate(sys%st%X(psi))
-    
+
     call pop_sub()
   end subroutine end_
 

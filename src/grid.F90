@@ -28,7 +28,7 @@ module grid
   use multigrid
 
   implicit none
-  
+
   type grid_type
     type(simul_box_type)       :: sb
     type(geometry_type)        :: geo
@@ -48,7 +48,7 @@ contains
 
     logical :: filter
 
-    call push_sub('grid_init')
+    call push_sub('grid.grid_init')
 
     ! initilize geometry
     call geometry_init_xyz(gr%geo)
@@ -76,7 +76,7 @@ contains
     if(conf%verbose>=VERBOSE_DEBUG) then
       call geometry_debug(gr%geo, 'debug')
     end if
-    
+
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
 
@@ -91,7 +91,7 @@ contains
   subroutine grid_end(gr)
     type(grid_type), intent(inout) :: gr
 
-    call push_sub('grid_end')
+    call push_sub('grid.grid_end')
 
     call f_der_end(gr%f_der)
     call mesh_end(gr%m)
@@ -124,7 +124,7 @@ contains
 
   end subroutine grid_write_info
 
-  
+
   subroutine grid_create_multigrid(gr)
     type(grid_type), intent(inout) :: gr
 

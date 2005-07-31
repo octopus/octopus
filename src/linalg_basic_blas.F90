@@ -260,7 +260,7 @@ end subroutine FNAME(gemm_2)
 ! ------------------------------------------------------------------
 ! matrix-vector multiplication plus vector
 ! ------------------------------------------------------------------
- 
+
 subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   integer, intent(in)    :: m, n
   TYPE1,   intent(in)    :: alpha, beta

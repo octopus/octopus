@@ -69,7 +69,7 @@ contains
   subroutine xc_write_info(xcs, iunit)
     type(xc_type), intent(in) :: xcs
     integer,       intent(in) :: iunit
-    
+
     integer :: i
 
     if (xcs%cdft .and. iand(xcs%family, XC_FAMILY_LCA) /= 0) then
@@ -92,11 +92,11 @@ contains
     integer,       intent(in)  :: ndim
     integer,       intent(in)  :: spin_channels
     logical,       intent(in)  :: cdft
-    
+
     integer :: i
-    
-    call push_sub('xc_init')
-    
+
+    call push_sub('xc.xc_init')
+
     xcs%cdft   = cdft  ! make a copy of flag indicating the use of current-dft
 
     ! get current-dependent functional
@@ -128,11 +128,11 @@ contains
           call write_fatal(3)
         end if
       end if
-      
+
     end if
-    
+
     call pop_sub()
-    
+
   end subroutine xc_init
 
 

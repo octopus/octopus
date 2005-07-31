@@ -96,7 +96,7 @@ subroutine quickrnd(iseed, rnd)
 
   iseed = mod(iseed*ia + ic, im)
   rnd = real(iseed, PRECISION)/real(im, PRECISION)
-  
+
 end subroutine quickrnd
 
 ! Step function, needed for definition of fermi function.
@@ -133,7 +133,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
        fourpi, plgndr, phase, pll, pmm, pmmp1, sinm, &
        sinmm1, sinphi, r2, rsize, Rx, Ry, Rz, xysize
   FLOAT, save :: c(0:(lmaxd+1)*(lmaxd+1))
-  
+
 
 ! evaluate normalization constants once and for all
   if (li.gt.lmax) then
@@ -181,7 +181,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
       ylm = (-c(1))*Ry
       grylm(1) = c(1)*Rx*Ry/rsize
       grylm(2) = (-c(1))*(M_ONE - Ry*Ry)/rsize
-      grylm(3) = c(1)*Rz*Ry/rsize 
+      grylm(3) = c(1)*Rz*Ry/rsize
     case(0)
       ylm = c(2)*Rz
       grylm(1) = (-c(2))*Rx*Rz/rsize
@@ -195,7 +195,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
     end select
     return
   end if
-         
+
   if(li.eq.2) then
     select case(mi)
     case(-2)
@@ -240,7 +240,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
     cosm = cosmm1*cosphi - sinmm1*sinphi
     sinm = cosmm1*sinphi + sinmm1*cosphi
   end do
-     
+
   if(mi.lt.0) then
     phase = sinm
     dphase = mabs*cosm
@@ -276,7 +276,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
       plgndr = pll
       dplg = -((li*Rz*pll - (l + mabs - 1)*pmm)/(xysize**2))
     end if
-  end if   
+  end if
 
   ilm0 = li*li + li
   cmi = c(ilm0 + mi)
@@ -286,7 +286,7 @@ subroutine grylmr(x, y, z, li, mi, ylm, grylm)
   grylm(2) = (-cmi)*dplg*Ry*Rz*phase/rsize     &
        +cmi*plgndr*dphase*Rx/(rsize*xysize**2)
   grylm(3)= cmi*dplg*(M_ONE - Rz*Rz)*phase/rsize
-   
+
   return
 end subroutine grylmr
 
@@ -307,7 +307,7 @@ subroutine weights(N, M, cc)
 
   allocate(x(0:M))
   ! grid-points for one-side finite-difference formulas on an equi.spaced grid
-  ! x(:) = (/(i,i=0,M)/) 
+  ! x(:) = (/(i,i=0,M)/)
 
   ! grid-points for centered finite-difference formulas on an equi.spaced grid
   mn = M/2
@@ -320,27 +320,27 @@ subroutine weights(N, M, cc)
 
   c1 = M_ONE
   c4 = x(0) - xi
-       
+
   do j = 1, M
     mn = min(j,N)
     c2 = M_ONE
     c5 = c4
     c4 = x(j) - xi
- 
+
     do k = 0, j - 1
       c3 = x(j) - x(k)
       c2 = c2*c3
-      
+
       if (j <= N) cc(k, j - 1, j) = M_ZERO
       cc(k, j, 0) = c4*cc(k, j - 1, 0)/c3
-      
+
       do i = 1, mn
         cc(k, j, i) = (c4*cc(k, j - 1, i) - i*cc(k, j - 1, i - 1))/c3
       end do
-      
-      cc(j, j, 0) = -c1*c5*cc(j - 1, j - 1, 0) / c2         
+
+      cc(j, j, 0) = -c1*c5*cc(j - 1, j - 1, 0) / c2
     end do
-    
+
     do i = 1, mn
       cc(j, j, i) = c1*(i*cc(j - 1, j - 1, i - 1) - c5*cc(j - 1, j - 1, i))/c2
     end do
@@ -354,19 +354,19 @@ end subroutine weights
 
 FLOAT function cutoff0(x,r)
   FLOAT, intent(in) ::  x,r
-    
+
   cutoff0 = M_ONE - cos(x*r)
-  
+
 end function cutoff0
 
 FLOAT function cutoff1(x, p, rmax)
   FLOAT, intent(in) ::  x, p, rmax
-  
+
   integer :: j
   FLOAT :: dr, r, sum
-  
+
   integer :: nr = CNST(1000)
-  
+
   if ( x == M_ZERO ) then
 ! Simpson rule for the G_x = 0 contribution -log(r)
     dr = rmax/real(nr)
@@ -383,19 +383,19 @@ FLOAT function cutoff1(x, p, rmax)
     cutoff1 = M_ONE + p*rmax*loct_bessel_j1(p*rmax)*loct_bessel_k0(x*rmax) &
                     - x*rmax*loct_bessel_j0(p*rmax)*loct_bessel_k1(x*rmax)
   end if
-  
+
 end function cutoff1
 
 
 FLOAT function cutoff2(p, z, r)
   FLOAT, intent(in) ::  p, z, r
-  
+
   if ( p == M_ZERO ) then
     cutoff2 = M_ONE - cos(z*r) - z*r*sin(z*r)
   else
     cutoff2 = M_ONE + exp(-p*r)*(z*sin(z*r)/p-cos(z*r))
   end if
-  
+
 end function cutoff2
 
 subroutine invert_3by3(matrix,invers,det,tr)
@@ -420,11 +420,11 @@ subroutine invert_3by3(matrix,invers,det,tr)
     message(1) = 'Matrix with null determinant. Cannot invert.'
     write(message(2),'(3f12.5)') matrix(1,:)
     write(message(3),'(3f12.5)') matrix(2,:)
-    write(message(4),'(3f12.5)') matrix(3,:) 
+    write(message(4),'(3f12.5)') matrix(3,:)
     call write_fatal(4)
      return
   endif
- 
+
  ! comment this out if you want to get the transpose of the inverse
  if (.not. tr) invers = TRANSPOSE(invers)
 

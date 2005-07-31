@@ -83,7 +83,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #endif
 
   ! If there is more than one state, so solve linear equation.
-  linear_equation: if(n > 0) then 
+  linear_equation: if(n > 0) then
     allocate(phi1(m%np, st%d%dim), phi2(m%np, st%d%dim))
     phi1 = M_ZERO; phi2 = M_ZERO
 

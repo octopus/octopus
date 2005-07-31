@@ -91,5 +91,5 @@ program rotational_strength
   call parser_end()
   call global_end()
 
-  stop  
+  stop
 end program rotational_strength

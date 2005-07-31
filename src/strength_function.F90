@@ -49,7 +49,7 @@ program strength_function
     message(2) = "SpecTransformMode = sin | cos"
     call write_fatal(2)
   end select
-  
+
   call loct_parse_string(check_inp('SpecDampMode'), "exp", txt)
   select case(txt(1:3))
   case('exp')
@@ -88,5 +88,5 @@ program strength_function
   call parser_end()
   call global_end()
 
-  stop  
+  stop
 end program strength_function

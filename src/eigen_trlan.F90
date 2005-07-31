@@ -35,7 +35,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   type(trl_info_t) :: info
 !!$  R_TYPE, allocatable :: evec(:, :, :)
 
-  call push_sub('eigen_solver_cg3')
+  call push_sub('eigen_trlan.eigen_solver_cg3')
 
   nrow = (m%np+1)*st%d%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
 

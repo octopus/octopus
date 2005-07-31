@@ -64,7 +64,7 @@
 ! end subroutine conjugate_gradients
 !
 ! (*) NOTE: The algorithm assumes that the vectors are given in an orthonormal basis.
-! 
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
 subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
   integer, intent(in) :: np
@@ -79,30 +79,30 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
   integer, intent(inout)        :: iter
   FLOAT,  optional, intent(in)  :: threshold
   R_TYPE, optional, intent(out) :: residue
-  
-  
+
+
   R_TYPE, allocatable :: r(:), ax(:), p(:), ap(:)
   R_TYPE  :: alpha, beta, gamma
   FLOAT   :: threshold_
   integer :: max_iter
-  
-  call push_sub('sym_conjugate_gradients')
-  
+
+  call push_sub('math_cg_inc.sym_conjugate_gradients')
+
   if(present(threshold)) then
      threshold_ = threshold
   else
      threshold_ = CNST(1.0e-6)
   endif
-  
+
   allocate(r(np), ax(np), p(np), ap(np))
-  
+
   ! Initial residue
   call op(x, ax)
   r = b - ax
-  
+
   ! Initial search direction
   p = r
-  
+
   max_iter = iter
   iter = 1
   do while(iter < max_iter)
@@ -117,7 +117,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
      iter  = iter + 1
   enddo
   if(present(residue)) residue = gamma
-  
+
   deallocate(r, ax, p, ap)
   call pop_sub(); return
 end subroutine X(sym_conjugate_gradients)
@@ -141,30 +141,30 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, iter, residue, threshold
   integer, intent(inout) :: iter
   R_TYPE, optional, intent(out) :: residue
   FLOAT, optional, intent(in) :: threshold
-  
+
   R_TYPE, allocatable :: r(:), rr(:), ax(:), p(:), pp(:), ap(:), atp(:)
   FLOAT :: alpha, beta, gamma, err, threshold_
   integer :: max_iter
-  
-  call push_sub('bi_conjugate_gradients')
-  
+
+  call push_sub('math_cg_inc.bi_conjugate_gradients')
+
   if(present(threshold)) then
      threshold_ = threshold
   else
      threshold_ = CNST(1.0e-6)
   endif
-  
+
   allocate(r(np), rr(np), ax(np), p(np), pp(np), ap(np), atp(np))
-  
+
   ! Initial residue
   call op(x, ax)
   r  = b - ax
   rr = r
-  
+
   ! Initial search direction
   p = r
   pp = p
-  
+
   max_iter = iter
   iter = 1
   do while(iter < MAX_ITER)
@@ -183,7 +183,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, iter, residue, threshold
      iter = iter + 1
   enddo
   if(present(residue)) residue = err
-  
+
   deallocate(r, rr, ax, p, pp, ap, atp)
   call pop_sub(); return
 end subroutine X(bi_conjugate_gradients)

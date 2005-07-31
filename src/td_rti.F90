@@ -56,7 +56,7 @@ module td_rti
      REVERSAL             = 2,   &
      APP_REVERSAL         = 3,   &
      EXPONENTIAL_MIDPOINT = 4,   &
-     MAGNUS               = 5 
+     MAGNUS               = 5
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
@@ -87,7 +87,7 @@ contains
       call zcf_fft_init(tr%cf, gr%sb)
                                 message(1) = 'Info: Evolution method:  Suzuki-Trotter'
     case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
-    case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry' 
+    case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry'
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
        allocate(tr%vmagnus(NP, st%d%nspin, 2))
@@ -97,7 +97,7 @@ contains
       call write_fatal(2)
     end select
     call write_info(1)
-    
+
     allocate(tr%v_old(NP, st%d%nspin, 0:3)) ! allocate memory to store the old KS potentials
     call td_exp_init(gr, tr%te)            ! initialize propagator
 
@@ -150,7 +150,7 @@ contains
     CMPLX, allocatable :: zpsi1(:, :, :, :)
     FLOAT, allocatable :: dtmp(:)
 
-    call push_sub('td_rti')
+    call push_sub('td_rti.td_rti')
 
     self_consistent = .false.
     if(t<3*dt .and. (.not.h%ip_app)) then
@@ -212,8 +212,8 @@ contains
     ! Split operator.
     subroutine td_rti0
       integer :: ik, ist
-      call push_sub('td_rti0')
-      
+      call push_sub('td_rti.td_rti0')
+
       do ik = 1, st%d%nik
          do ist = 1, st%nst
             call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_HALF*M_zI*dt)
@@ -241,7 +241,7 @@ contains
     subroutine td_rti1
       FLOAT :: p, pp(5), time(5), dtime(5)
       integer :: ik, ist, k
-      call push_sub('td_rti1')
+      call push_sub('td_rti.td_rti1')
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
       pp = (/ p, p, M_ONE-M_FOUR*p, p, p /)
@@ -275,40 +275,40 @@ contains
       FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
       CMPLX, allocatable :: zpsi1(:,:,:,:)
       integer :: ik, ist
-      
-      call push_sub('td_rti2')
-      
+
+      call push_sub('td_rti.td_rti2')
+
       if(.not.h%ip_app) then
         allocate(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
         zpsi1 = st%zpsi ! store zpsi
-        
+
         allocate(vhxc_t1(NP, st%d%nspin), vhxc_t2(NP, st%d%nspin))
         vhxc_t1 = h%vhxc
-        
+
         ! propagate dt with H(t-dt)
         do ik = 1, st%d%nik
           do ist = st%st_start, st%st_end
             call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
           end do
         end do
-        
+
         call zstates_calc_dens(st, NP, st%rho, .true.)
         call zv_ks_calc(gr, ks, h, st)
-        
+
         st%zpsi = zpsi1
         deallocate(zpsi1)
-        
+
         vhxc_t2 = h%vhxc
         h%vhxc = vhxc_t1
       end if
-      
+
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
-      
+
       ! propagate dt/2 with H(t)
       if(.not.h%ip_app) h%vhxc = vhxc_t2
       do ik = 1, st%d%nik
@@ -316,46 +316,46 @@ contains
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
-      
+
       if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2)
-      
+
       call pop_sub()
     end subroutine td_rti2
-    
+
     subroutine td_rti3
       integer ik, ist
-      call push_sub('td_rti3')
-      
+      call push_sub('td_rti.td_rti3')
+
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
         end do
       end do
-      
+
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
         end do
       end do
-      
+
       call pop_sub()
     end subroutine td_rti3
-    
+
     subroutine td_rti4
       integer :: ist, ik
-      call push_sub('td_rti4')
+      call push_sub('td_rti.td_rti4')
 
       if(.not.h%ip_app) then
         call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
-      
+
       do ik = 1, st%d%nik
         do ist = st%st_start, st%st_end
           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
         end do
       end do
-      
+
       call pop_sub()
     end subroutine td_rti4
 
@@ -364,7 +364,7 @@ contains
       FLOAT :: time(2), v
       FLOAT, allocatable :: vaux(:, :, :)
 
-      call push_sub('td_rti5')
+      call push_sub('td_rti.td_rti5')
 
       allocate(vaux(NP, st%d%nspin, 2))
 
@@ -409,7 +409,7 @@ contains
       deallocate(vaux)
       call pop_sub()
     end subroutine td_rti5
-    
+
   end subroutine td_rti_dt
 
 end module td_rti

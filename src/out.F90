@@ -43,7 +43,7 @@ implicit none
             output_fill_how, &
             dinput_function, zinput_function, &
             doutput_function, zoutput_function
-            
+
 
 type output_type
   logical :: what(8)
@@ -51,7 +51,7 @@ type output_type
 
   integer :: iter   ! output every iter
   logical :: duringscf
-  
+
   integer :: wfs(32) ! which wfs to output
 end type output_type
 
@@ -62,7 +62,7 @@ integer, public, parameter :: &
      output_ELF        =  4, &
      output_ELF_FS     =  5, &
      output_geometry   =  6, &
-     output_wfs_sqmod  =  7, &   
+     output_wfs_sqmod  =  7, &
      output_something  =  8   ! this one should be the last
 
 integer, parameter, private :: &
@@ -101,7 +101,7 @@ subroutine output_init(sb, outp)
   call loct_parse_logical(check_inp('OutputELF_FS'),      .false., outp%what(output_elf_FS))
   call loct_parse_logical(check_inp('OutputGeometry'),    .false., outp%what(output_geometry))
   call loct_parse_logical(check_inp('OutputWfsSqMod'),    .false., outp%what(output_wfs_sqmod))
- 
+
   outp%what(output_something) = .false.
   do i = 1, output_something - 1
     outp%what(output_something) = outp%what(output_something).or.outp%what(i)
@@ -144,7 +144,7 @@ subroutine output_init(sb, outp)
     end if
 
   end if
-  
+
   ! this is always needed in a time-dependent calculation
   call loct_parse_int(check_inp('OutputEvery'), 1000, outp%iter)
 

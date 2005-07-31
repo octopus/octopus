@@ -51,7 +51,7 @@ module eigen_solver
     FLOAT :: init_tol
     FLOAT :: final_tol
     integer  :: final_tol_iter
-    integer  :: es_maxiter  
+    integer  :: es_maxiter
 
     integer :: arnoldi_vectors
     FLOAT :: imag_time
@@ -97,8 +97,8 @@ subroutine eigen_solver_init(gr, eigens, st, max_iter_default)
   type(eigen_solver_type), intent(out) :: eigens
   type(states_type),       intent(in)  :: st
   integer,                 intent(in)  :: max_iter_default
-  
-  call push_sub('eigen_solver_init')
+
+  call push_sub('eigen.eigen_solver_init')
 
   !%Variable EigenSolver
   !%Type integer
@@ -261,10 +261,10 @@ subroutine eigen_solver_run(eigens, gr, st, h, iter, conv, verbose)
   integer :: maxiter
   FLOAT :: tol
 
-  call push_sub('eigen_solver_run')
+  call push_sub('eigen.eigen_solver_run')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
-  
+
   if(iter < eigens%final_tol_iter) then
       tol = log(eigens%final_tol/eigens%init_tol)/(eigens%final_tol_iter - 1)*(iter - 1) + &
             log(eigens%init_tol)
@@ -340,7 +340,7 @@ subroutine eigen_diagon_subspace(gr, st, h)
       do j = 1, st%nst
         if(i.ne.j) st%X(psi)(:,:,i, ik) = st%X(psi)(:,:,i, ik) + vec(i, j)*f(:,:,j)
       end do
-      
+
       ! renormalize
       st%X(psi)(:,:, i, ik) = st%X(psi)(:,:, i, ik)/X(states_nrm2)(gr%m, st%d%dim, st%X(psi)(:,:, i, ik))
     end do

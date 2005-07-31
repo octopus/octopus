@@ -93,8 +93,8 @@ subroutine poisson2D_solve(m, pot, rho)
   FLOAT :: x(2), y(2)
 
   ASSERT(poisson_solver == -2)
-  
-  call push_sub('poisson2D_solve')
+
+  call push_sub('poisson2D.poisson2D_solve')
 
   pot = M_ZERO
   do i = 1, m%np

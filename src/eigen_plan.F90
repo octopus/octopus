@@ -67,15 +67,15 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
   FLOAT,   parameter  :: eps    = CNST(1e-15)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  call push_sub('eigen_solver_plan')
-  
+  call push_sub('eigen_plan.eigen_solver_plan')
+
 !  n          = m%np*st%d%dim
   dim        = st%d%dim
   ned        = st%nst
   nec        = 0
   maxmatvecs = niter*st%d%nik*st%nst
   me         = ned + winsiz - 1
-  
+
   !Allocate memory
   allocate(eigenval(me),        eigenvec(NP, dim, me), &
            res(me),             v(NP, dim, krylov),    &
@@ -83,7 +83,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
            h(krylov, krylov),   hevec(krylov, krylov), &
            aux(NP, dim))
   eigenval = M_ZERO;           eigenvec = R_TOTYPE(M_ZERO)
-  res      = M_ZERO;           v        = R_TOTYPE(M_ZERO) 
+  res      = M_ZERO;           v        = R_TOTYPE(M_ZERO)
   av       = R_TOTYPE(M_ZERO); tmp      = M_ZERO
   h        = R_TOTYPE(M_ZERO); hevec    = R_TOTYPE(M_ZERO)
   aux      = R_TOTYPE(M_ZERO)
@@ -105,16 +105,16 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
     nec    = 0 ! Sets the converged vectors counter to zero.
     d1     = 0 ! index for inner loop
     nconv  = 0 ! number of eigen-pairs converged.
-    
+
     ! Sets the projected hamiltonian matrix to zero.
     h = R_TOTYPE(M_ZERO)
-    
+
     ! Beginning of the outer loop; start/restart
     outer_loop : do
-      
+
       if(nec >= ned)           exit outer_loop ! :)   Already converged!
       if(matvec >= maxmatvecs) exit outer_loop ! :(   Maximum number of mat-vec operation surpassed...
-      
+
       if (d1.le.winsiz) then !start from beginning
         blk = winsiz
       else                    !restart to work on another set of eigen-pairs
@@ -130,7 +130,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
       d1 = 0
       inner_loop: do
         d2 = d1 + blk
-        
+
         ! Orthonormalization. The vectors in the v are orthonormalized against the converged
         ! eigenvectors, and among themselves. A check is done for the case of linear dependence,
         ! and random vectors are created in that case.
@@ -184,7 +184,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
                          R_TOTYPE(M_ZERO), av(:, :, d2 + 1))
           call residual(dim, av(:, :, d2+1), eigenvec(:, :, nec+1), tmp(1), av(:, :, d2+1), res(nec+1))
 
-          ! If the first Ritz eigen-pair converged, compute all 
+          ! If the first Ritz eigen-pair converged, compute all
           ! Ritz vectors and the residual norms.
           if(res(nec+1)<tol) then
             do i = 2, winsiz
@@ -193,7 +193,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
             end do
             do i = 2, winsiz
               call lalg_gemv(NP, dim, d2, R_TOTYPE(M_ONE), av(:, :, 1:d2), hevec(1:d2, i), &
-                             R_TOTYPE(M_ZERO), v  (:, :, i)) 
+                             R_TOTYPE(M_ZERO), v  (:, :, i))
             enddo
             do i = 2, winsiz
               call residual(dim, v(:, :, i), eigenvec(:, :, nec+i), tmp(i), av(:, :, i), res(nec+i))

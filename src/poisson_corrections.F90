@@ -88,7 +88,7 @@ module poisson_corrections
        do l = 0, ml
           do mm = -l, l
              rho_corrected(i) = rho_corrected(i) - mult(add_lm) * betal(add_lm) * aux(add_lm, i) * r2
-             vh_correction(i) = vh_correction(i) + mult(add_lm) * phi(add_lm, i)   
+             vh_correction(i) = vh_correction(i) + mult(add_lm) * phi(add_lm, i)
              add_lm = add_lm + 1
           enddo
        enddo
@@ -200,7 +200,7 @@ module poisson_corrections
     enddo
     deallocate(u)
   end subroutine op
-  
+
   subroutine opt(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)

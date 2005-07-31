@@ -27,7 +27,7 @@ subroutine X(hamiltonian_eigenval)(h, gr, st)
   R_TYPE :: e
   integer :: ik, ist
 
-  call push_sub('hamiltonian_eigenval')
+  call push_sub('h_inc.hamiltonian_eigenval')
   allocate(Hpsi(NP, st%d%dim))
 
   do ik = 1, st%d%nik
@@ -52,7 +52,7 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
   FLOAT, optional,        intent(in)    :: t
 
-  call push_sub('Hpsi')
+  call push_sub('h_inc.Hpsi')
 
   call X(kinetic) (h, gr, psi, hpsi, ik)
   call X(vlpsi)   (h, gr%m, psi, hpsi, ik)
@@ -97,7 +97,7 @@ subroutine X(magnus) (h, gr, psi, hpsi, ik, vmagnus)
   integer :: idim
   ! We will assume, for the moment, no spinors.
 
-  call push_sub('magnus')
+  call push_sub('h_inc.magnus')
 
   allocate(auxpsi(NP, h%d%dim), aux2psi(NP, h%d%dim))
 
@@ -165,9 +165,9 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   integer :: i
   R_TYPE, allocatable :: grad(:,:)
   FLOAT :: k2
-#endif  
+#endif
 
-  call push_sub('kinetic')
+  call push_sub('h_inc.kinetic')
 
   if(simul_box_is_periodic(gr%sb)) then
 #if defined(COMPLEX_WFNS)
@@ -188,7 +188,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
     message(2) = "Reconfigure with --enable-complex, and remake"
     call write_fatal(2)
 #endif
-  
+
   else
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
@@ -216,7 +216,7 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   FLOAT, allocatable :: div(:)
   R_TYPE, allocatable :: grad(:,:)
 
-  call push_sub('current_extra_terms')
+  call push_sub('h_inc.current_extra_terms')
 
   do idim = 1, NDIM
     select case(h%d%ispin)
@@ -299,7 +299,7 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
       case (SPINORS)
         ! not implemented yet
       end select
- 
+
     end do
   end if
   deallocate(grad)
@@ -318,7 +318,7 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   integer,                intent(in)    :: ik
 
   integer :: idim
-  call push_sub('vnlpsi')
+  call push_sub('h_inc.vnlpsi')
 
   do idim = 1, h%d%dim
      call X(project)(m, h%ep%p(1:h%ep%nvnl), h%ep%nvnl, psi(:, idim), hpsi(:, idim), &
@@ -340,7 +340,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   integer :: idim
   R_TYPE, allocatable :: lhpsi(:,:)
 
-  call push_sub('vlpsi')
+  call push_sub('h_inc.vlpsi')
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
@@ -372,11 +372,11 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
         lhpsi(:, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
 
-        hpsi(:, 1) = hpsi(:, 1) 
+        hpsi(:, 1) = hpsi(:, 1)
       else
         lhpsi(:, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
 
-        hpsi(:, 1) = hpsi(:, 1) 
+        hpsi(:, 1) = hpsi(:, 1)
       end if
     case (SPINORS)
       lhpsi(:, 1) = M_HALF/P_C*( h%ep%b(3)*psi(:, 1) + (h%ep%b(1) - M_zI*h%ep%b(2))*psi(:, 2))
@@ -406,7 +406,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   FLOAT :: v, a(NDIM)
   R_TYPE, allocatable :: grad(:,:)
 
-  call push_sub('vlasers')
+  call push_sub('h_inc.vlasers')
 
   if(h%ep%no_lasers > 0) then
     select case(h%gauge)
@@ -445,7 +445,7 @@ subroutine X(vborders) (h, psi, hpsi)
 
   integer :: idim
 
-  call push_sub('vborders')
+  call push_sub('h_inc.vborders')
 
   if(h%ab .eq. IMAGINARY_ABSORBING) then
     do idim = 1, h%d%dim

@@ -26,7 +26,7 @@
     R_TYPE, target,       intent(in)  :: f(:)     ! f(m%np)
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
     logical, optional,    intent(in)  :: have_ghost_
-    
+
     R_TYPE, pointer :: fp(:)
     logical :: have_ghost
 
@@ -52,7 +52,7 @@
     R_TYPE, target,       intent(in)  :: f(:)     ! f(m%np)
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
     logical, optional,    intent(in)  :: have_ghost_
-    
+
     R_TYPE, pointer :: fp(:)
     logical :: have_ghost
 

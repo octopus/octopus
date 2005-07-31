@@ -71,9 +71,9 @@ contains
     type(grid_type), intent(inout) :: gr
 
     if(poisson_solver.ne.-99) return ! already initialized
-  
-    call push_sub('poisson_init')
-  
+
+    call push_sub('poisson.poisson_init')
+
     select case(NDIM)
     case(1); call init_1D()
     case(2); call init_2D()
@@ -125,7 +125,7 @@ contains
       if( (poisson_solver .ne. FFT_SPH) .and. (poisson_solver .ne. DIRECT_SUM_2D) ) then
         call input_error('PoissonSolver')
       endif
-      
+
 #else
       poisson_solver = -NDIM ! internal type
 #endif
@@ -135,7 +135,7 @@ contains
         message(2) = 'Poisson solver is -2 ("direct summation in two dimensions")'
         call write_fatal(2)
       endif
-      
+
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
       call poisson2D_init(gr)
     end subroutine init_2D
@@ -163,7 +163,7 @@ contains
         call input_error('PoissonSolver')
       end if
 #endif
-      
+
       if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED) ) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solver is cg_corrected ("corrected conjugate gradients")'
@@ -171,7 +171,7 @@ contains
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
-      call poisson3D_init(gr)    
+      call poisson3D_init(gr)
     end subroutine init_3D
 
   end subroutine poisson_init
@@ -179,7 +179,7 @@ contains
 
   !-----------------------------------------------------------------
   subroutine poisson_end()
-    call push_sub('poisson_end')
+    call push_sub('poisson.poisson_end')
 
     select case(poisson_solver)
 #ifdef HAVE_FFT
@@ -193,7 +193,7 @@ contains
        call poisson_multigrid_end()
     end select
     poisson_solver = -99
-    
+
     call pop_sub()
   end subroutine poisson_end
 
@@ -203,19 +203,19 @@ contains
     type(grid_type),  target, intent(inout) :: gr
     CMPLX,                    intent(inout) :: pot(:)  ! pot(m%np)
     CMPLX,                    intent(in)    :: rho(:)  ! rho(m%np)
-    
+
     FLOAT, allocatable :: aux1(:), aux2(:)
-    
-    call push_sub('zpoisson_solve')
+
+    call push_sub('poisson.zpoisson_solve')
 
     allocate(aux1(gr%m%np), aux2(gr%m%np))
-    
+
     ! first the real part
     aux1(:) = real(rho(:))
     aux2(:) = M_ZERO
     call dpoisson_solve(gr, aux2, aux1)
     pot(:)  = aux2(:)
-    
+
     ! now the imaginary part
     aux1(:) = aimag(rho(:))
     aux2(:) = M_ZERO
@@ -236,7 +236,7 @@ contains
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
 
-    call push_sub('dpoisson_solve')
+    call push_sub('poisson.dpoisson_solve')
 
     ASSERT(poisson_solver.ne.-99)
 
@@ -282,21 +282,21 @@ contains
 
     integer :: k
     FLOAT :: average
-    
-    call push_sub('poisson_fft')
-  
+
+    call push_sub('poisson.poisson_fft')
+
     call dcf_alloc_RS(fft_cf)          ! allocate the cube in real space
     call dcf_alloc_FS(fft_cf)          ! allocate the cube in Fourier space
-    
+
     call dmf2cf(m, rho, fft_cf)        ! put the density in a cube
     call dcf_RS2FS(fft_cf)             ! Fourier transform
-    
+
     ! multiply by the FS of the Coulomb interaction
     ! this works around a bug in Intel ifort 8
     do k = 1, fft_cf%n(3)
       fft_cf%FS(:,:,k) = fft_cf%FS(:,:,k)*fft_Coulb_FS(:,:,k)
     end do
-    
+
     call dcf_FS2RS(fft_cf)             ! Fourier transform back
     if(present(average_to_zero)) then
       if(average_to_zero) then
@@ -317,5 +317,5 @@ contains
 #include "poisson1D.F90"
 #include "poisson2D.F90"
 #include "poisson3D.F90"
-  
+
 end module poisson

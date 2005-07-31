@@ -41,7 +41,7 @@ module curv_gygi
   end type curv_gygi_type
 
 contains
-  
+
   !-------------------------------------
   subroutine curv_gygi_init(cv)
     type(curv_gygi_type), intent(out) :: cv
@@ -49,7 +49,7 @@ contains
     call loct_parse_float(check_inp('CurvGygiA'), M_ONE, cv%A)
     call loct_parse_float(check_inp('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
     call loct_parse_float(check_inp('CurvGygiBeta'),  M_TWO/units_inp%length%factor, cv%beta)
-    
+
     cv%alpha = cv%alpha*units_inp%length%factor
     cv%beta  = cv%beta *units_inp%length%factor
 
@@ -78,31 +78,31 @@ contains
     integer :: iter
     FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
     logical :: conv
-    
+
     allocate(f(sb%dim, 1), delta(sb%dim, 1), J(sb%dim, sb%dim), chi2(sb%dim))
-    
+
     x(1:sb%dim) = chi(1:sb%dim)
     conv          = .false.
-    
+
     do iter = 1, max_iter
       call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
       f(:,1) = chi(1:sb%dim) - chi2(:)
-      
+
       if(sum(f(:,1)**2) < x_conv**2) then
         conv = .true.
         exit
       end if
-      
+
       call lalg_linsyssolve(sb%dim, 1, J, f, delta)
       x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
     end do
-    
+
     if(.not.conv) then
       message(1) = "Newton-Raphson method did not converge for point"
       write(message(2), '(3es14.5)') x(1:sb%dim)
       call write_warning(2)
     end if
-    
+
     ! clean up
     deallocate(f, delta, J, chi2)
 
@@ -117,11 +117,11 @@ contains
     FLOAT,                intent(in)  :: x(:)    ! x(sb%dim)
     FLOAT,                intent(out) :: chi(:)  ! chi(sb%dim)
     FLOAT,                intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
-    
+
     integer :: i, ix, iy
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
-    
+
     J(1:sb%dim,1:sb%dim) = M_ZERO
     do ix = 1, sb%dim
       J(ix, ix) = M_ONE
@@ -130,17 +130,17 @@ contains
 
     do i = 1, geo%natoms
       r = max(sqrt(sum((x(1:sb%dim) - geo%atom(i)%x(1:sb%dim))**2)), CNST(1e-6))
-      
+
       ar = cv%A*cv%alpha/r
       th = tanh(r/cv%alpha)
       ex = exp(-(r/cv%beta)**2)
-      
+
       f_alpha  = ar * th * ex
       df_alpha = ar*(-th*ex/r + ex/(cv%alpha*cosh(r/cv%alpha)**2) - th*M_TWO*r*ex/cv%beta**2)
-      
+
       do ix = 1, sb%dim
         chi(ix) = chi(ix) + f_alpha*(x(ix)-geo%atom(i)%x(ix))
-        
+
         J(ix, ix) = J(ix, ix) + f_alpha
         do iy = 1, sb%dim
           J(ix, iy) = J(ix, iy) + (x(ix)-geo%atom(i)%x(ix))*(x(iy)-geo%atom(i)%x(iy))/r * df_alpha

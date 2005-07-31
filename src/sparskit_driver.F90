@@ -42,7 +42,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 
   integer :: i
 
-  call push_sub('sparskit_driver')
+  call push_sub('sparskit_driver.sparskit_driver')
 
 #ifdef R_TREAL
   sk_b = rhs
@@ -50,7 +50,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 #ifdef R_TCOMPLEX
   do i = 1, sk%size/2
      sk_b(i)           = real (rhs(i))
-     sk_b(i+sk%size/2) = aimag(rhs(i))     
+     sk_b(i+sk%size/2) = aimag(rhs(i))
   enddo
 #endif
 
@@ -61,7 +61,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
      ! Run actual solver
 #ifdef HAVE_SPARSKIT
 #ifdef DEBUG
-     call push_sub('sparskit_solver')
+     call push_sub('sparskit_driver.sparskit_solver')
 #endif
      call SOLVER(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
 #ifdef DEBUG
@@ -70,7 +70,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 #else
      message(1) = 'Error: Sparskit library required for usage of SparskitSolver'
      message(2) = '       configure with --with-sparskit=DIR and remake.'
-     call write_fatal(2)  
+     call write_fatal(2)
 #endif
 
      ! Evaluate reverse communication protocol
@@ -86,19 +86,19 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
      case(2)
         ! call atmux(n,w(sk%ipar(8)),w(sk%ipar(9)),a,ja,ia)
         message(1) = 'Error: Matrix vector multiplication with A^T not implemented yet.'
-        call write_fatal(1)        
+        call write_fatal(1)
      case(3)
         ! left preconditioner solver
         message(1) = 'Error: Preconditioning not implemented yet.'
-        call write_fatal(1)        
+        call write_fatal(1)
      case(4)
         ! left preconditioner transposed solve
         message(1) = 'Error: Preconditioning not implemented yet.'
-        call write_fatal(1)        
+        call write_fatal(1)
      case(5)
         ! right preconditioner solve
         message(1) = 'Error: Preconditioning not implemented yet.'
-        call write_fatal(1)   
+        call write_fatal(1)
      case(6)
         ! right preconditioner transposed solve
         message(1) = 'Error: Preconditioning not implemented yet.'
@@ -127,7 +127,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
         message(1) = 'Error: return due to some non-numerical reasons, e.g. invalid'
         message(2) = 'floating-point numbers etc.'
         call write_fatal(2)
-     case default 
+     case default
         message(1) = 'Error: Unknown Sparskit return value. Exiting ...'
         call write_fatal(1)
      end select

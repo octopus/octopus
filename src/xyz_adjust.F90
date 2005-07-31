@@ -47,7 +47,7 @@ contains
 
     ! is there something to do
     if(geo%natoms <= 1) return
-  
+
     ! get to axis
     if(loct_parse_block(check_inp('MainAxis'), blk)==0) then
       call loct_parse_block_float(blk, 0, 0, to(1))
@@ -58,7 +58,7 @@ contains
       to(1) = M_ONE; to(2) = M_ZERO; to(3) = M_ZERO
     end if
     to = to / sqrt(sum(to**2))
-    
+
     call loct_parse_int(check_inp('AxisType'), INERTIA, axis_type)
 
     select case(axis_type)
@@ -89,12 +89,12 @@ contains
 
     ! rotate to main axis
     call rotate(geo, x1, x2, to)
-    
+
     ! recenter
     call find_center(geo, center)
     call translate(geo, -center)
   end subroutine xyz_adjust_it
-    
+
   subroutine find_center(geo, x)
     type(geometry_type), intent(in) :: geo
     FLOAT, intent(out) :: x(3)
@@ -110,7 +110,7 @@ contains
         if(geo%atom(i)%x(j) < xmin(j)) xmin(j) = geo%atom(i)%x(j)
       end do
     end do
-    
+
     x = (xmax + xmin)/M_TWO
   end subroutine find_center
 
@@ -129,7 +129,7 @@ contains
       sm = sm + m
       x = x + m * geo%atom(i)%x
     end do
-    
+
     x = x / sm
   end subroutine find_center_of_mass
 
@@ -139,7 +139,7 @@ contains
 
     integer  :: i, j
     FLOAT :: rmax, r, r2
-    
+
     ! first get the further apart atoms
     rmax = -CNST(1e10)
     do i = 1, geo%natoms
@@ -152,7 +152,7 @@ contains
       end do
     end do
     x  = x /sqrt(sum(x**2))
-    
+
     ! now let us find out what is the second most important axis
     rmax = -CNST(1e10)
     do i = 1, geo%natoms
@@ -162,7 +162,7 @@ contains
         rmax = r
         x2 = geo%atom(i)%x - r2*x
       end if
-    end do    
+    end do
   end subroutine axis_large
 
   ! This subroutine assumes that the origin of the coordinates is the
@@ -193,13 +193,13 @@ contains
     x  = vec(:,1) / sqrt(sum(vec(:,1)**2))
     x2 = vec(:,2) / sqrt(sum(vec(:,2)**2))
   end subroutine axis_inertia
-  
+
   subroutine translate(geo, x)
     type(geometry_type), intent(inout) :: geo
     FLOAT, intent(in) :: x(3)
-    
+
     integer  :: i
-    
+
     do i = 1, geo%natoms
       geo%atom(i)%x = geo%atom(i)%x + x
     end do
@@ -211,14 +211,14 @@ contains
   subroutine rotate(geo, from, from2, to)
     type(geometry_type), intent(inout) :: geo
     FLOAT, intent(in) :: from(3), from2(3), to(3) ! assumed to be normalize
-    
+
     integer :: i
     FLOAT :: m1(3,3), m2(3,3), m3(3,3), f2(3), per(3)
     FLOAT :: alpha, r
-    
+
     ! initialize matrices
     m1 = M_ZERO; m1(1,1) = M_ONE; m1(2,2) = M_ONE; m1(3,3) = M_ONE
-    
+
     ! rotate the to axis to the z axis
     if(to(2).ne.M_ZERO) then
       alpha = atan2(to(2), to(1))
@@ -248,7 +248,7 @@ contains
     m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
     alpha = acos(sum(from*to))
     call rotate_y(m3, -alpha)
-    
+
     ! join matrices
     m2 = matmul(transpose(m2), matmul(m3, m2))
 
@@ -277,7 +277,7 @@ contains
   subroutine rotate_x(m, angle)
     FLOAT, intent(inout) :: m(3,3)
     FLOAT, intent(in)    :: angle
-    
+
     FLOAT :: aux(3,3), ca, sa
 
     ca = cos(angle)
@@ -330,5 +330,5 @@ contains
 
     m = matmul(aux, m)
   end subroutine rotate_z
-  
+
 end module xyz_adjust

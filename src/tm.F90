@@ -36,7 +36,7 @@ module tm
      character(len=2)  :: namatm, icorr
      character(len=3)  :: irel
      character(len=4) :: icore
-     character(len=10) :: method(6) 
+     character(len=10) :: method(6)
      character(len=70) :: title
      integer :: npotd, npotu, nr
      FLOAT :: b, a
@@ -69,7 +69,7 @@ contains
     logical :: found
     FLOAT :: x
 
-    call push_sub('ps_tm_read_file')
+    call push_sub('tm.ps_tm_read_file')
 
     ! Sets the spin components
     pstm%ispin = ispin
@@ -109,7 +109,7 @@ contains
     call logrid_init(pstm%g, pstm%a, pstm%b, pstm%nrval)
 
     ! Allocates some stuff
-    allocate(pstm%rphi(pstm%nrval, 0:pstm%npotd-1, 3), & 
+    allocate(pstm%rphi(pstm%nrval, 0:pstm%npotd-1, 3), &
          pstm%eigen(0:pstm%npotd-1, 3),                &
          pstm%dkbcos(0:pstm%npotd-1),                  &
          pstm%dknrm(0:pstm%npotd-1),                   &
@@ -137,7 +137,7 @@ contains
     character(len=1)  :: char1(6), char2
     integer :: l
 
-    call push_sub('build_valconf')
+    call push_sub('tm.build_valconf')
 
     call valconf_null(pstm%conf)
     pstm%conf%symbol = pstm%namatm
@@ -176,7 +176,7 @@ contains
   subroutine tm_end(pstm)
     type(tm_type), intent(inout) :: pstm
 
-    call push_sub('tm_end')
+    call push_sub('tm.tm_end')
 
     deallocate(pstm%rofi, pstm%vps, pstm%vso, pstm%chcore, pstm%rho_val, pstm%vlocal, &
          pstm%rphi, pstm%eigen, pstm%dkbcos, pstm%dknrm, pstm%so_dkbcos, pstm%so_dknrm, pstm%kbr)
@@ -189,7 +189,7 @@ contains
     type(tm_type), intent(inout) :: pstm
     integer,       intent(in)    :: lmax, lloc
 
-    call push_sub('tm_process')
+    call push_sub('tm.tm_process')
 
     ! get the pseudoatomic eigenfunctions
     call solve_schroedinger(pstm)
@@ -223,7 +223,7 @@ contains
     DOUBLE :: e, z, dr, rmax
     DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
-    call push_sub('solve_schroedinger')
+    call push_sub('tm.solve_schroedinger')
 
     ! Let us be a bit informative.
     message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psf%namatm // '....'
@@ -237,10 +237,10 @@ contains
          ve  (psf%g%nrval, psf%ispin), &
          rho (psf%g%nrval, psf%ispin), &
          prev(psf%g%nrval, psf%ispin))
-    s = M_ZERO; hato = M_ZERO; g = M_ZERO; y = M_ZERO; 
+    s = M_ZERO; hato = M_ZERO; g = M_ZERO; y = M_ZERO;
     ve = M_ZERO; rho = M_ZERO; prev = M_ZERO
 
-    ! These numerical parameters have to be fixed for egofv to work.  
+    ! These numerical parameters have to be fixed for egofv to work.
     s(2:psf%nrval) = psf%g%drdi(2:psf%g%nrval)*psf%g%drdi(2:psf%g%nrval)
     s(1) = s(2)
     a2b4 = M_FOURTH*psf%a**2
@@ -367,7 +367,7 @@ contains
     FLOAT :: r2
     FLOAT, allocatable :: aux(:)
 
-    call push_sub('read_file_data_bin')
+    call push_sub('tm.read_file_data_bin')
 
     ! Reads the header line of the file, with general info about the ps.
     read(unit) psf%namatm, psf%icorr, psf%irel, psf%icore,     &
@@ -459,7 +459,7 @@ contains
     FLOAT, allocatable :: aux(:)
     character(len=70) :: aux_s
 
-    call push_sub('read_file_data_ascii')
+    call push_sub('tm.read_file_data_ascii')
 
     ! Reads the header line of the file, with general info about the ps.
     read(unit, 9000) psf%namatm, psf%icorr, psf%irel, psf%icore
@@ -566,7 +566,7 @@ contains
     integer :: ir, l
     FLOAT :: dnrm, avgv, vphi
 
-    call push_sub('calculate_kb_cosines')
+    call push_sub('tm.calculate_kb_cosines')
 
     ! KB-cosines and KB-norms:
     !       dkbcos(0:spec%ps_lmax) stores the KB "cosines:"
@@ -616,7 +616,7 @@ contains
     DOUBLE :: z, e, dr, rmax
     DOUBLE, allocatable :: hato(:), s(:), g(:), y(:)
 
-    call push_sub('ghost_analysis')
+    call push_sub('tm.ghost_analysis')
 
     allocate(ve(pstm%nrval), s(pstm%nrval), hato(pstm%nrval), g(pstm%nrval), y(pstm%nrval), elocal(2, 0:lmax))
 
@@ -680,7 +680,7 @@ contains
     FLOAT            :: dincv, phi
     FLOAT, parameter :: threshold = CNST(1.0e-6)
 
-    call push_sub('get_cutoff_radii')
+    call push_sub('tm.get_cutoff_radii')
 
     ! local part ....
     do ir = pstm%g%nrval, 2, -1
@@ -720,7 +720,7 @@ contains
     FLOAT :: a, b, qtot
     FLOAT, allocatable :: rho(:)
 
-    call push_sub('get_local')
+    call push_sub('tm.get_local')
 
     allocate(psf%vlocal(psf%nrval))
     if(l_loc >= 0) then
@@ -759,7 +759,7 @@ contains
     integer :: loc_unit, kbp_unit, dat_unit, wav_unit, so_unit, i, l, is
     character(len=256) :: dirname
 
-    call push_sub('tm_debug')
+    call push_sub('tm.tm_debug')
 
     ! Opens files.
     dirname = trim(dir)//'/tm2.'//trim(pstm%namatm)

@@ -40,10 +40,10 @@ module messages
        '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
 
-  logical,                           public :: flush_messages 
+  logical,                           public :: flush_messages
 
 
-  ! min_lun in io.F90 is equal to 10. We hardwire this here since we 
+  ! min_lun in io.F90 is equal to 10. We hardwire this here since we
   ! cannot write "use io" above. Unit 8 and 9 should always be available.
   integer, parameter, private :: iunit_out = 8
   integer, parameter, private :: iunit_err = 9
@@ -93,7 +93,7 @@ contains
     call flush_msg(stderr, '')
     call flush_msg(stderr, stars)
     call flush_msg(stderr, '')
-    ! cannot call this anymore since the move from this routine from global.F90 
+    ! cannot call this anymore since the move from this routine from global.F90
     ! to messages.F90
     !    call io_status(stderr)
 #endif
@@ -137,7 +137,7 @@ contains
     end if
 #ifdef HAVE_FLUSH
     call flush(stderr)
-#endif 
+#endif
 
     if(flush_messages.and.mpiv%node.eq.0) then
        close(iunit_err)
@@ -264,7 +264,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine flush_msg(iunit, str, adv)
-    integer,            intent(in)           :: iunit 
+    integer,            intent(in)           :: iunit
     character(len = *), intent(in)           :: str
     character(len = *), intent(in), optional :: adv
 
@@ -350,7 +350,7 @@ contains
        no_sub_stack = 1
        sub_stack(1) = 'pop_sub'
        message(1) = 'Too few recursion levels'
-       call write_fatal(1)    
+       call write_fatal(1)
     end if
 
   end subroutine pop_sub

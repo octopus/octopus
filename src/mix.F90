@@ -60,7 +60,7 @@ subroutine mix_init(smix, d1, d2, d3, def_)
 
   integer :: def
 
-  call push_sub('mix_init')
+  call push_sub('mix.mix_init')
 
   def = MIX_BROYDEN
   if(present(def_)) def = def_
@@ -124,7 +124,7 @@ end subroutine mix_init
 ! ---------------------------------------------------------
 subroutine mix_end(smix)
   type(mix_type), intent(inout) :: smix
-  call push_sub('mix_end')
+  call push_sub('mix.mix_end')
 
   if (associated(smix%df))      deallocate(smix%df)
   if (associated(smix%dv))      deallocate(smix%dv)
@@ -142,7 +142,7 @@ subroutine mixing(smix, iter, d1, d2, d3, vin, vout, vnew)
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
 
-  call push_sub('mixing')
+  call push_sub('mix.mixing')
 
   if (iter.lt.1) then
     message(1) = 'Wrong number of iterations in suboutine mixing.'
@@ -341,7 +341,7 @@ end subroutine mixing_grpulay
 
 ! ---------------------------------------------------------
 subroutine pulay_extrapolation(vin, vout, vnew, iter_used, f, df, dv)
-  integer, intent(in)   :: iter_used 
+  integer, intent(in)   :: iter_used
   FLOAT, intent(in)  :: vin(:, :, :), vout(:, :, :), f(:, :, :), df(:, :, :, :), dv(:, :, :, :)
   FLOAT, intent(out) :: vnew(:, :, :)
 

@@ -29,9 +29,9 @@ module mesh
   use curvlinear
   use simul_box
   use lib_adv_alg
-  
+
   implicit none
-  
+
   private
   public ::  &
      mesh_type, &
@@ -48,24 +48,24 @@ module mesh
   type mesh_type
     type(simul_box_type), pointer :: sb
     logical :: use_curvlinear
-    
+
     FLOAT :: h(3)           ! the (constant) spacing between the points
-    
+
     integer  :: np          ! number of points in mesh
     integer  :: np_tot      ! total number of points including ghost points
 
     integer  :: enlarge     ! number of points to add for boundary conditions
-    
+
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
-    
+
     ! some other vars
     integer :: nr(2,3)  ! dimensions of the box where the points are contained
     integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
-    
+
     FLOAT, pointer :: x(:,:)    ! the points
     FLOAT, pointer :: vol_pp(:) ! element of volume for integrations
-    
+
   end type mesh_type
 
 contains
@@ -76,8 +76,8 @@ contains
     type(geometry_type),          intent(in)    :: geo
     type(curvlinear_type),        intent(in)    :: cv
     integer,                      intent(in)    :: enlarge
-    
-    call push_sub('mesh_init')
+
+    call push_sub('mesh.mesh_init')
 
     m%sb => sb   ! keep an internal pointer
     m%h  =  sb%h ! this number can change in the following
@@ -109,10 +109,10 @@ contains
         end do
         m%nr(2, i) = j - 1
       end do
-      
+
       ! we have a symmetric mesh (for now)
       m%nr(1,:) = -m%nr(2,:)
-    
+
       ! we have to ajust a couple of things for the periodic directions
       do i = 1, sb%periodic_dim
         m%h(i)     = sb%lsize(i)/real(m%nr(2, i))
@@ -131,9 +131,9 @@ contains
     type(simul_box_type), intent(in)  :: sb
     type(mesh_type),      intent(in)  :: m
     integer,              intent(out) :: db(3)
-    
+
     integer :: i
-    
+
     db = 1
 
     ! OLD: I let it here because maybe I revert to this method later
@@ -144,31 +144,31 @@ contains
     !  do i = 1, sb%periodic_dim ! for periodic systems
     !    db(i) = m%nr(2,i) - m%nr(1,i) + 1
     !  end do
-    
+
     ! NEW
     ! double mesh with 2n points
-    do i = 1, sb%periodic_dim 
+    do i = 1, sb%periodic_dim
       db(i) = m%l(i)
     end do
     do i = sb%periodic_dim + 1, sb%dim
       db(i) = nint(sb%fft_alpha*(m%l(i)-1)) + 1
     end do
-    
+
   end subroutine mesh_double_box
-  
+
   subroutine mesh_write_info(m, unit)
     type(mesh_type), intent(in) :: m
     integer,         intent(in) :: unit
-    
+
 #ifdef HAVE_MPI
     if(mpiv%node .ne. 0) return
 #endif
     if(unit==stdout.and.conf%verbose<VERBOSE_NORMAL) return
-    
-    call push_sub('mesh_write_info')
-    
+
+    call push_sub('mesh.mesh_write_info')
+
     write(unit,'(a)') 'Main mesh:'
-    
+
     write(unit,'(3a, a, f6.3, a, f6.3, a, f6.3, a, 1x, 3a, f8.5)')     &
        '  Spacing [', trim(units_out%length%abbrev), '] = ',           &
        '(', m%h(1)/units_out%length%factor, ',',                       &
@@ -182,7 +182,7 @@ contains
 
     write(unit,'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
        (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
-    
+
     call pop_sub()
   end subroutine mesh_write_info
 
@@ -193,9 +193,9 @@ contains
     FLOAT,                intent(out) :: r
     FLOAT,                intent(in),  optional :: a(:) ! a(sb%dim)
     FLOAT,                intent(out), optional :: x(:) ! x(sb%dim)
-    
+
     FLOAT :: xx(m%sb%dim)
-    
+
     xx(:) = m%x(i, 1:m%sb%dim)
     if(present(a)) xx(:) = xx(:) - a(1:m%sb%dim)
     r = sqrt(dot_product(xx, xx))
@@ -225,10 +225,10 @@ contains
     FLOAT,                intent(in)  :: width
     integer,              intent(out) :: n
     FLOAT,                intent(out) :: d(3)
-    
+
     integer :: j
     FLOAT :: x(3), r, dd
-    
+
     call mesh_r(m, i, r, x=x)
     n = 0
     select case(m%sb%box_shape)
@@ -257,7 +257,7 @@ contains
          end if
        end do
      end select
-     
+
    end subroutine mesh_inborder
 
 
@@ -269,18 +269,18 @@ contains
      type(mesh_type), intent(in) :: m
      gmax = M_PI/(maxval(m%h))
    end function mesh_gcutoff
-   
+
 
    subroutine mesh_end(m)
      type(mesh_type), intent(inout) :: m
-     
-     call push_sub('mesh_end')
-     
+
+     call push_sub('mesh.mesh_end')
+
      if(associated(m%Lxyz)) then
        deallocate(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
        nullify(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
      end if
-     
+
      call pop_sub()
    end subroutine mesh_end
 

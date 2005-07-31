@@ -29,12 +29,12 @@ subroutine states_choose_kpoints(d, sb, geo)
   ! local variables for the crystal_init call
   integer :: is, nk
   integer, allocatable :: natom(:)      ! natom(i) is the number of atoms of specie i
-  FLOAT :: kshifts(3)   
-  FLOAT, allocatable :: coorat(:,:,:)   ! coorat(i,j,k) is the k-th component (lattice coordinates) 
+  FLOAT :: kshifts(3)
+  FLOAT, allocatable :: coorat(:,:,:)   ! coorat(i,j,k) is the k-th component (lattice coordinates)
                                         ! of the position of the j-th atom of type i.
   FLOAT, allocatable :: kp(:,:),kw(:)
 
-  call push_sub('states_choose_kpoints')
+  call push_sub('states_kpoints.states_choose_kpoints')
 
   ! if not periodic just return the Gamma point
   if (sb%periodic_dim == 0) then
@@ -43,7 +43,7 @@ subroutine states_choose_kpoints(d, sb, geo)
         d%nik = 1
      case(2)
         d%nik = 2
-     case default    
+     case default
         message(1) = 'Input: invalid SpinComponents'
         call write_fatal(1)
      end select
@@ -130,14 +130,14 @@ subroutine states_choose_kpoints(d, sb, geo)
   select case(d%ispin)
   case(1)
      d%nik = nk
-     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))  
+     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))
      do i = 1, 3
         d%kpoints(i,:) = kp(i,:)*sb%klat(i,i)
      end do
      d%kweights = kw
   case(2)
      d%nik = 2 * nk
-     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))  
+     allocate(d%kpoints(3, d%nik), d%kweights(d%nik))
      do i = 1,3
         d%kpoints(i,::2)  = kp(i,:)*sb%klat(i,i)
         d%kpoints(i,2::2) = kp(i,:)*sb%klat(i,i)
@@ -158,7 +158,7 @@ subroutine kpoints_write_info(d,iunit)
 
   integer :: ik
 
-  call push_sub('kpoints_write_info')
+  call push_sub('states_kpoints.kpoints_write_info')
 
   write(message(1),'(a,3(i3,1x))') 'Number of k points in each direction = ', d%nik_axis(:)
   call write_info(1, iunit)

@@ -90,11 +90,11 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   ! Setup Hamiltonian
   message(1) = 'Info: Setting up Hamiltonian.'
   call write_info(1)
-  
+
   call X(states_calc_dens)(sys%st, sys%gr%m%np, sys%st%rho)
   call X(v_ks_calc)(sys%gr, sys%ks, h, sys%st, calc_eigenval=.true.) ! get potentials
   call hamiltonian_energy(h, sys%st, sys%gr%geo%eii, -1)         ! total energy
-  
+
   message(1) = "Info: Starting calculation of unoccupied states"
   call write_info(1)
 
@@ -132,13 +132,13 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   write(iunit,'(1x)')
   call states_write_eigenvalues(iunit, sys%st%nst, sys%st, sys%gr%sb, eigens%diff)
   call io_close(iunit)
-  
+
   if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
     call states_write_bands(iunit, sys%st%nst, sys%st)
     call io_close(iunit)
   end if
-  
+
   ! output wave-functions
   call X(states_output) (sys%st, sys%gr, "static", sys%outp)
 
@@ -153,7 +153,7 @@ contains
 
     integer :: nus
 
-    call push_sub('unocc_run')
+    call push_sub('unocc.unocc_run')
 
     call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
     if(nus <= 0) then
@@ -193,7 +193,7 @@ contains
 
     call pop_sub()
   end subroutine end_
-  
+
 end function unocc_run
 
 end module unocc

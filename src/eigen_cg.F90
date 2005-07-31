@@ -37,7 +37,7 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
   integer  :: ik, moved, p, j, iter, i, maxter, conv, conv_
   logical  :: reord = .true., verbose_
 
-  call push_sub('eigen_solver_cg2')
+  call push_sub('eigen_cg.eigen_solver_cg2')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   if(verbose_) then
@@ -82,30 +82,30 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
       iter_loop: do iter = 1, maxter
 
         ! if approximate inverse preconditioner....
-        !call pre(hpsi%val   , g%val   ) 
+        !call pre(hpsi%val   , g%val   )
         !call pre(psi(m)%val , ppsi%val)
         g = h_psi
         ppsi = st%X(psi)(:,:, p, ik)
-        
+
         es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
         es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         es(1) = es(1)/es(2)
         g = g - es(1)*ppsi
-        
+
         ! Orthogonalize to lowest eigenvalues (already calculated)
         do j = 1, p - 1
           a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), g)
           g(:,:) = g(:,:) - a0 * st%X(psi)(:,:, j, ik)
         end do
-        
+
         if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
-        
+
         ! Approximate inverse preconditioner...
         !call ipre(g, g0)
         g0 = g
-        
+
         gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
-        
+
         ! Starting or following iterations...
         if(iter .eq. 1) then
           gg0 = gg
@@ -120,11 +120,11 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
           norma = gamma*cg0*sin(theta)
           cg(:,:) = cg(:,:) - norma * st%X(psi)(:,:, p, ik)
         end if
-        
+
         ! cg contains now the conjugate gradient
         cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
         call X(Hpsi) (h, gr, cg, ppsi, ik)
-        
+
         ! Line minimization.
         a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
         a0 = M_TWO * a0 / cg0
@@ -134,13 +134,13 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
         theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
         es(1) = ((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
         es(2) =(-(e0-b0)*cos(M_TWO*theta) - a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
-        
-        ! Choose the minimum solutions. 
+
+        ! Choose the minimum solutions.
         if (R_REAL(es(2)) < R_REAL(es(1))) then
           theta = theta + M_PI/M_TWO
         end if
         st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
-        
+
         ! Upgrade psi...
         a0 = cos(theta)
         b0 = sin(theta)/cg0
@@ -150,7 +150,7 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
            call lalg_scal(NP, a0, st%X(psi)(:, j, p, ik))
            call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(:, j, p, ik))
         enddo
-        
+
         ! Calculate H|psi>
         h_psi = a0*h_psi + b0*ppsi
 
@@ -161,7 +161,7 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
           conv = conv + 1
           exit iter_loop
         end if
-        
+
       end do iter_loop
 
       if(verbose_) then
@@ -196,7 +196,7 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
     message(2) = " "
     call write_info(2)
   endif
- 
+
   call pop_sub()
 end subroutine eigen_solver_cg2
 
@@ -219,7 +219,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
            gamma, sol(2), alpha, beta, theta, theta2, res ! Could be complex?
 
-  call push_sub('eigen_solver_cg2_new')
+  call push_sub('eigen_cg.eigen_solver_cg2_new')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   reorder_ = .true. ; if(present(reorder)) reorder_ = reorder
@@ -290,7 +290,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
          mu    = X(states_dotp)(gr%m, dim, sd, sd)
          cg    = sd + gamma*cg
 
-         ! 
+         !
          dump = X(states_dotp)(gr%m, dim, psi, cg)
          cgp  = cg - dump*psi
          dump = sqrt(X(states_dotp)(gr%m, dim, cgp, cgp))
@@ -308,7 +308,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
          theta2 = theta + M_PI/M_TWO
          ctheta2 = cos(theta2)
          stheta2 = sin(theta2)
-         sol(1) = ctheta**2*lambda + stheta**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + & 
+         sol(1) = ctheta**2*lambda + stheta**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + &
                                      M_TWO*stheta*ctheta*X(states_dotp)(gr%m, dim, cgp, phi)
          sol(2) = ctheta**2*lambda + stheta2**2*X(states_dotp)(gr%m, dim, cgp, hcgp) + &
                                      M_TWO*stheta2*ctheta2*X(states_dotp)(gr%m, dim, cgp, phi)

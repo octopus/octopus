@@ -79,7 +79,7 @@ module external_pot
     !Classic charges:
     integer :: classic_pot        ! How to include the classic charges
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
- 
+
     !Ions
     FLOAT, pointer :: vpsl(:)            ! the local part of the pseudopotentials
 #ifdef HAVE_FFT
@@ -112,7 +112,7 @@ contains
     integer(POINTER_SIZE) :: blk
     FLOAT, allocatable :: x(:)
 
-    call push_sub('epot_init')
+    call push_sub('epot.epot_init')
 
     !Local part of the pseudopotentials
     allocate(ep%vpsl(NP))
@@ -260,7 +260,7 @@ contains
       deallocate(ep%Vclassic)         ! and clean up
       nullify(ep%Vclassic)
     end if
-    
+
     call laser_end(ep%no_lasers, ep%lasers)
     if(associated(ep%e)) then
       deallocate(ep%e)
@@ -293,17 +293,17 @@ contains
     type(mesh_type),     intent(in)    :: m
     type(simul_box_type), intent(in)   :: sb
     type(geometry_type), intent(in)    :: geo
-    
+
     integer :: vlocal_cutoff
     integer :: i, ix, iy, iz, ixx(3), db(3), c(3)
     FLOAT :: x(3)
     FLOAT :: gpar, gperp, gx, gz, modg
     FLOAT :: r_0, temp(3), tmp, norm
-    
+
     type(specie_type), pointer :: s ! shortcuts
     type(dcf), pointer :: cf
-    
-    call push_sub('epot_local_fourier_init')
+
+    call push_sub('epot.epot_local_fourier_init')
 
     call loct_parse_int(check_inp('VlocalCutoff'), sb%periodic_dim , vlocal_cutoff)
     if (vlocal_cutoff /= sb%periodic_dim) then
@@ -338,7 +338,7 @@ contains
     specie: do i = 1, geo%nspecies
       s  => geo%specie(i)
       cf => ep%local_cf(i)
-      
+
       if(i == 1) then
         call mesh_double_box(sb, m, db)
         call dcf_new(db, cf)    ! initialize the cube
@@ -359,7 +359,7 @@ contains
       else
         call dcf_new_from(cf, ep%local_cf(1))   ! we can just copy from the first one
       end if
-      
+
       if(geo%nlcc) call dcf_new_from(ep%rhocore_cf(i), ep%local_cf(1))
 
       call dcf_alloc_FS(cf)      ! allocate the tube in Fourier space
@@ -381,7 +381,7 @@ contains
               if(modg /= M_ZERO) then
                 tmp = tmp - s%z_val*exp(-(modg/(2*s%ps%a_erf))**2)/modg**2
                 select case(vlocal_cutoff)
-                case(0) 
+                case(0)
                   cf%FS(ix, iy, iz) = tmp*cutoff0(modg,r_0)
                 case(1)
                   gx = abs(temp(1)*ixx(1))
@@ -401,27 +401,27 @@ contains
                 case(3)  ; cf%FS(ix, iy, iz) = tmp
                 end select
               end if
-              
+
  ! multiply by normalization factor and a phase shift to get the center of the box
               cf%FS(ix, iy, iz) = norm*                         &
                                   exp(M_PI*M_ZI*sum(ixx(:)))*   &
                                   cf%FS(ix, iy, iz)
- 
+
             end do
           end do
         end do
-        
+
       ! now we built the non-local core corrections in momentum space
       nlcc: if(s%nlcc) then
         call dcf_alloc_RS(ep%rhocore_cf(i))
-        
+
         do ix = 1, db(1)
           ixx(1) = ix - c(1)
           do iy = 1, db(2)
             ixx(2) = iy - c(2)
             do iz = 1, db(3)
               ixx(3) = iz - c(3)
-              
+
               x(:) = m%h(:)*ixx(:)
               ep%rhocore_cf(i)%RS(ix, iy, iz) = specie_get_nlcc(s, x)
             end do
@@ -431,9 +431,9 @@ contains
         call dcf_RS2FS(ep%rhocore_cf(i))         ! Fourier transform
         call dcf_free_RS(ep%rhocore_cf(i))       ! we do not need the real space any longer
       end if nlcc
-    
+
     end do specie
-    
+
     call pop_sub()
   end subroutine epot_local_fourier_init
 #endif
@@ -454,12 +454,12 @@ contains
     type(dcf) :: cf_loc, cf_nlcc
 
     integer :: j
-    
-    call push_sub('epot_generate')
+
+    call push_sub('epot.epot_generate')
 
     fast_generation_ = .false.
     if (present(fast_generation)) fast_generation_ = fast_generation
-    
+
     ! first we assume that we need to recalculate the ion_ion energy
     geo%eii = ion_ion_energy(geo)
 
@@ -551,7 +551,7 @@ contains
       call dcf_FS2RS(cf_loc)
       call dcf2mf(m, cf_loc, ep%vpsl)
       call dcf_free(cf_loc)
-      
+
       ! and the non-local core corrections
       if(geo%nlcc) then
         call dcf_alloc_RS(cf_nlcc)
@@ -565,15 +565,15 @@ contains
     if (ep%classic_pot > 0) then
       ep%vpsl(1:m%np) = ep%vpsl(1:m%np) + ep%vclassic(1:m%np)
     end if
-    
+
     call pop_sub()
-    
+
   contains
     subroutine build_local_part()
       integer :: i
       FLOAT :: x(3)
-      
-      call push_sub('build_local_part')
+
+      call push_sub('epot.build_local_part')
 
       if((.not.simul_box_is_periodic(sb)).or.geo%only_user_def) then
         do i = 1, m%np
@@ -591,16 +591,16 @@ contains
         end if
 #endif
       end if
-      
+
       call pop_sub()
     end subroutine build_local_part
-  
+
     subroutine build_kb_sphere(ivnl)
       integer, intent(in) :: ivnl
       integer :: i, j, k, d
       FLOAT :: r
-      
-      call push_sub('build_kb_sphere')
+
+      call push_sub('epot.build_kb_sphere')
 
       if (any(s%ps%rc_max + m%h(1) >= sb%lsize(1:sb%periodic_dim))) then
         message(1)='KB sphere is larger than the box size'
@@ -657,14 +657,14 @@ contains
           exit
         end do
       end do
-      
+
       call pop_sub()
     end subroutine build_kb_sphere
 
     subroutine allocate_nl_part(ivnl)
       integer, intent(in) :: ivnl
       integer :: j, c, d
-      call push_sub('allocate_nl_part')
+      call push_sub('epot.allocate_nl_part')
 
       j = ep%p(ivnl)%n
       c = ep%p(ivnl)%c
@@ -714,17 +714,17 @@ contains
 
       integer :: c, n
       CMPLX, allocatable :: grad_so(:, :, :)
-      
-      call push_sub('build_nl_part')
+
+      call push_sub('epot.build_nl_part')
 
       c = ep%lso(1, ivnl)%c
       n = ep%lso(1, ivnl)%n
       allocate(grad_so(n, 3, c))
-      
+
       j_loop: do j = 1, n
         x_in(:) = m%x(ep%p(ivnl)%jxyz(j), :)
          k_loop: do k = 1, 3**sb%periodic_dim
-          x(:) = x_in(:) - sb%shift(k,:)          
+          x(:) = x_in(:) - sb%shift(k,:)
           r=sqrt(sum((x-a%x)*(x-a%x)))
           if (r > s%ps%rc_max + m%h(1)) cycle
           x = x - a%x
@@ -796,19 +796,19 @@ contains
 
       call pop_sub(); return
     end subroutine build_nl_part
-    
+
   end subroutine epot_generate
 
   subroutine epot_generate_classic(ep, m, geo)
     type(epot_type),     intent(inout) :: ep
     type(mesh_type),     intent(in)    :: m
     type(geometry_type), intent(in)    :: geo
-    
+
     integer i, ia
     FLOAT :: r, rc
-    
-    call push_sub('epot_generate_classic')
-    
+
+    call push_sub('epot.epot_generate_classic')
+
     ep%Vclassic = M_ZERO
     do ia = 1, geo%ncatoms
       do i = 1, m%np
@@ -821,7 +821,7 @@ contains
           select case(geo%catom(ia)%label(1:1)) ! covalent radii
           case('H')
             rc = CNST(0.4)*P_Ang
-          case('C') 
+          case('C')
             rc = CNST(0.8)*P_Ang
           case default
             rc = CNST(0.7)*P_Ang

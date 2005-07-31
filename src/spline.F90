@@ -191,9 +191,9 @@
 !     The function loct_spline_filter permits to filter out high-values
 !     of a given spline function, either in real or in Fourier space.
 !     If the optional argument fs is supplied, a filter in Fourier space
-!     will be done by moving to the Fourier representation and then calling 
-!     loct_spline_cut with cutoff = fs(1) and beta = fs(2). If the optional 
-!     argument rs is supplied, a filter in real space will be done by calling 
+!     will be done by moving to the Fourier representation and then calling
+!     loct_spline_cut with cutoff = fs(1) and beta = fs(2). If the optional
+!     argument rs is supplied, a filter in real space will be done by calling
 !     loct_spline_cut with cutoff = rs(1) and beta = rs(2). If both arguments
 !     are supplied, the Fourier filter will be applied *before*.
 !
@@ -296,7 +296,7 @@ module lib_oct_gsl_spline
       real(8), intent(in) :: x, y
       integer(POINTER_SIZE), intent(inout) :: spl, acc
     end subroutine oct_spline_fit
-    
+
     real(8) function oct_spline_eval(x, spl, acc)
       real(8), intent(in) :: x
       integer(POINTER_SIZE), intent(in) :: spl, acc
@@ -391,7 +391,7 @@ contains
     integer, intent(in) :: nrc
     real(4), intent(in) :: rofi(nrc), ffit(nrc)
     type(loct_spline_type), intent(out) :: spl
-    
+
     real(8), allocatable :: rofi8(:), ffit8(:)
 
     allocate(rofi8(nrc), ffit8(nrc))
@@ -404,14 +404,14 @@ contains
   real(8) function splint8(spl, x)
     type(loct_spline_type), intent(in) :: spl
     real(8), intent(in) :: x
-  
+
     splint8 = oct_spline_eval(x, spl%spl, spl%acc)
   end function splint8
 
   real(4) function splint4(spl, x)
     type(loct_spline_type), intent(in) :: spl
     real(4), intent(in) :: x
-  
+
     splint4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
   end function splint4
 
@@ -450,7 +450,7 @@ contains
     allocate(x(npoints), y(npoints))
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
-    call oct_spline_end(spl%spl, spl%acc)  
+    call oct_spline_end(spl%spl, spl%acc)
     do i = 1, npoints
        y(i) = a*y(i)
     enddo
@@ -483,7 +483,7 @@ contains
     integer :: npoints, i
     real(8), allocatable :: x(:), y(:)
 
-    npoints = oct_spline_npoints(spl1%spl)    
+    npoints = oct_spline_npoints(spl1%spl)
     allocate(x(npoints), y(npoints))
     call oct_spline_x(spl1%spl, x(1))
     call oct_spline_y(spl1%spl, y(1))
@@ -500,14 +500,14 @@ contains
     type(loct_spline_type), intent(in)    :: spl
     type(loct_spline_type), intent(inout) :: splw
     real(8), intent(in), optional :: gmax
-    
+
     type(loct_spline_type) :: aux
     real(8) :: g, dg
     integer :: np
     integer :: npoints, i, j
     real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
 
-    npoints = oct_spline_npoints(spl%spl)    
+    npoints = oct_spline_npoints(spl%spl)
     allocate(x(npoints), y(npoints),y2(npoints))
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
@@ -522,7 +522,7 @@ contains
     else
       np = 200 ! hard coded value
       dg = gmax/(np-1)
-      allocate(xw(np), yw(np))     
+      allocate(xw(np), yw(np))
       do i = 1, np
          g = (i-1)*dg
          xw(i) = g
@@ -558,14 +558,14 @@ contains
     type(loct_spline_type), intent(inout) :: splw
     integer, intent(in) :: l
     real(8), intent(in), optional :: gmax
-    
+
     type(loct_spline_type) :: aux
     real(8) :: g, dg
     integer :: np
     integer :: npoints, i, j
     real(8), allocatable :: x(:), y(:), y2(:), xw(:), yw(:)
 
-    npoints = oct_spline_npoints(spl%spl)    
+    npoints = oct_spline_npoints(spl%spl)
     allocate(x(npoints), y(npoints),y2(npoints))
     call oct_spline_x(spl%spl, x(1))
     call oct_spline_y(spl%spl, y(1))
@@ -580,7 +580,7 @@ contains
     else
       np = 1000 ! hard coded value
       dg = gmax/(np-1)
-      allocate(xw(np), yw(np))     
+      allocate(xw(np), yw(np))
       do i = 1, np
          g = (i-1)*dg
          xw(i) = g
@@ -640,7 +640,7 @@ contains
       call loct_spline_end(splw)
     endif
     if(present(rs)) then
-      call loct_spline_cut(spl, rs(1), rs(2))  
+      call loct_spline_cut(spl, rs(1), rs(2))
     endif
 
   end subroutine loct_spline_filter_ft
@@ -661,7 +661,7 @@ contains
       call loct_spline_end(splw)
     endif
     if(present(rs)) then
-      call loct_spline_cut(spl, rs(1), rs(2))  
+      call loct_spline_cut(spl, rs(1), rs(2))
     endif
 
   end subroutine loct_spline_filter_bessel
@@ -681,7 +681,7 @@ contains
       call oct_spline_x(spl%spl, x(1))
     else ! use the grid of dspl
       npoints = oct_spline_npoints(dspl%spl)
-      allocate(x(npoints), y(npoints))    
+      allocate(x(npoints), y(npoints))
       call oct_spline_x(dspl%spl, x(1))
     endif
     do i = 1, npoints

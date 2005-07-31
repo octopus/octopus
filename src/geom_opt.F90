@@ -34,21 +34,21 @@ module geom_opt
   use system
   use scf
   use restart
-  
+
   implicit none
 
   private
   public :: geom_opt_run
-  
+
   type geom_opt_type
     integer  :: method
     FLOAT :: step
     FLOAT :: tol
     integer  :: max_iter
-    
+
     FLOAT :: f
     FLOAT, pointer :: x(:), df(:)
-    
+
   end type geom_opt_type
 
 contains
@@ -61,12 +61,12 @@ contains
     type(mesh_type),     pointer :: m    ! shortcuts
     type(states_type),   pointer :: st
     type(geometry_type), pointer :: geo
-    
+
     type(geom_opt_type) :: g_opt
-    
+
     integer :: i, err
     FLOAT, allocatable :: x(:)
-    
+
     ierr = 0
     call init_()
 
@@ -75,12 +75,12 @@ contains
     if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
-      
+
       ierr = 1
       call end_()
       return
     end if
-    
+
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
@@ -108,7 +108,7 @@ contains
       message(2) = " (the geometry can make some sense though - do not dispair!)"
       call write_warning(2)
     end if
-    
+
     ! print out geometry
     do i = 0, geo%natoms - 1
       geo%atom(i+1)%x(1) = x(3*i + 1)
@@ -116,15 +116,15 @@ contains
       geo%atom(i+1)%x(3) = x(3*i + 3)
     end do
     call atom_write_xyz(".", "min", geo)
-    
+
     deallocate(x)
-    
+
     call scf_end(scfv)
     call end_()
 
   contains
     subroutine init_()
-      call push_sub('geom_opt_run')
+      call push_sub('geom_opt.geom_opt_run')
 
       ! allocate wfs
       allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
@@ -158,7 +158,7 @@ contains
 
     subroutine end_()
       deallocate(sys%st%X(psi))
-      
+
       call pop_sub()
     end subroutine end_
 
@@ -166,9 +166,9 @@ contains
     subroutine geom_calc_point(x, f, df)
       FLOAT, intent(in)  :: x(3*geo%natoms)
       FLOAT, intent(out) :: f, df(3*geo%natoms)
-      
+
       integer :: i
-      
+
       do i = 0, geo%natoms - 1
         geo%atom(i+1)%x(1) = x(3*i + 1)
         geo%atom(i+1)%x(2) = x(3*i + 2)
@@ -180,7 +180,7 @@ contains
       call X(states_calc_dens) (st, m%np, st%rho)
       call X(v_ks_calc) (sys%gr, sys%ks, h, st, calc_eigenval=.true.)
       call hamiltonian_energy(h, st, geo%eii, -1)
-  
+
       ! do scf calculation
       call scf_run(scfv, sys%gr, st, sys%ks, h, sys%outp)
 
@@ -194,7 +194,7 @@ contains
       end do
 
     end subroutine geom_calc_point
-    
+
     integer function steepest_descents(x)
       FLOAT, intent(inout) :: x(:)
 
@@ -243,7 +243,7 @@ contains
              "       tol = ", g_opt%tol/units_out%force%factor
         call write_info(3)
       end do
-       
+
       deallocate(x1, df, df1)
     end function steepest_descents
 

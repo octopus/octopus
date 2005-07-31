@@ -26,7 +26,7 @@ subroutine X(lr_alloc_fHxc) (st, m, lr)
 
   lr%abs_dens = M_ZERO
   lr%iter     = 0
-    
+
   ! allocate variables
   allocate(lr%X(dl_rho)(m%np, st%d%nspin))
   allocate(lr%X(dl_Vhar)(m%np))
@@ -41,19 +41,19 @@ subroutine X(lr_orth_vector) (m, st, v, ik)
   type(states_type),      intent(in)    :: st
   R_TYPE,                 intent(inout) :: v(:,:)
   integer,                intent(in)    :: ik
-  
+
   R_TYPE  :: scalp
   integer :: ist
-  
-  call push_sub('lr_orth_vector')
-  
+
+  call push_sub('linear_response_inc.lr_orth_vector')
+
   do ist = 1, st%nst
     if(st%occ(ist, ik) > M_ZERO) then
       scalp = X(states_dotp)(m, st%d%dim, st%X(psi)(:,:, ist, ik), v)
       v(:,:) = v(:,:) - scalp*st%X(psi)(:,:, ist, ik)
     end if
   end do
-  
+
   call pop_sub()
 end subroutine X(lr_orth_vector)
 
@@ -67,13 +67,13 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
   type(states_type), intent(in)    :: st
   type(lr_type),     intent(inout) :: lr
   integer,           intent(in)    :: type
-    
+
   integer :: i, p, ik, sp
   CMPLX   :: c
   R_TYPE  :: d(st%d%nspin)
 
-  call push_sub('lr_build_dl_rho')
-  
+  call push_sub('linear_response_inc.lr_build_dl_rho')
+
   sp = 1
   if(st%d%ispin == SPIN_POLARIZED) sp = 2
 
@@ -82,7 +82,7 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
       do i = 1, m%np
         d(1) = st%d%kweights(ik)*st%occ(p, ik) * &
            st%X(psi)(i, 1, p, ik)*R_CONJ(lr%X(dl_psi)(i, 1, p, ik))
-        
+
         select case(st%d%ispin)
         case(SPIN_POLARIZED)
           d(2) = st%d%kweights(ik+1)*st%occ(p, ik+1) * &
@@ -91,9 +91,9 @@ subroutine X(lr_build_dl_rho) (m, st, lr, type)
         case(SPINORS)
           lr%X(dl_rho)(i, 2) = lr%X(dl_rho)(i, 2) + st%d%kweights(ik)*st%occ(p, ik) * &
              st%X(psi)(i, 2, p, ik)*R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
-          
+
           c = st%X(psi)(i, 1, p, ik) * R_CONJ(lr%X(dl_psi)(i, 2, p, ik))
-          
+
           d(3) = st%d%kweights(ik)*st%occ(p, ik) * R_REAL(c)
           d(4) = st%d%kweights(ik)*st%occ(p, ik) * R_AIMAG(c)
         end select
@@ -127,19 +127,19 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
   R_TYPE  :: alpha, beta, gamma
   integer :: iter
   logical :: conv_last, conv
-   
-  call push_sub('lr_solve_HXeY')
-  
+
+  call push_sub('linear_response_inc.lr_solve_HXeY')
+
   allocate(r(NP, d%dim), p(NP, d%dim), Hp(NP, d%dim))
 
   ! Initial residue
   call X(Hpsi)(h, gr, x, Hp, ik)
   r(:,:) = y(:,:) - Hp(:,:)
   if(present(omega)) r(:,:) = r(:,:) - omega*x(:,:)
-   
+
   ! Initial search direction
   p(:,:) = r(:,:)
-   
+
   conv_last = .false.
   do iter = 1, lr%max_iter
     gamma = X(states_dotp) (gr%m, d%dim, r, r)
@@ -155,7 +155,7 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
     alpha = gamma/ X(states_dotp) (gr%m, d%dim, p, Hp)
     r(:,:) = r(:,:) - alpha*Hp(:,:)
     x(:,:) = x(:,:) + alpha* p(:,:)
-    
+
     beta = X(states_dotp) (gr%m, d%dim, r, r)/gamma
     p(:,:) = r(:,:) + beta*p(:,:)
   end do
@@ -163,6 +163,6 @@ subroutine X(lr_solve_HXeY) (lr, h, gr, d, ik, x, y, omega)
   lr%iter     = iter
   lr%abs_dens = gamma
   deallocate(r, p, Hp)
-  
+
   call pop_sub()
 end subroutine X(lr_solve_HXeY)

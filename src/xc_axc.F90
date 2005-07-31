@@ -31,7 +31,7 @@ subroutine xc_get_vxc_and_axc(gr, xcs, rho, j, ispin, vxc, axc, ex, ec, exc_j, i
   FLOAT, allocatable :: v(:,:,:), f(:,:,:), dedd(:,:), dedv(:,:,:), tmp(:,:)
   FLOAT, allocatable :: l_dens(:), l_v(:,:), l_dedd(:), l_dedv(:,:)
 
-  call push_sub('xc_get_vxc_and_axc')
+  call push_sub('xc_axc.xc_get_vxc_and_axc')
 
   !xc energy and potential in the absence of external magnetic fields
   call xc_get_vxc(gr, xcs, rho, ispin, vxc, ex, ec, ip, qtot)

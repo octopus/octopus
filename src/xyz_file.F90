@@ -54,7 +54,7 @@ module xyz_file
 
     FLOAT            :: charge   ! stuff specific to PDB files
     character(len=3) :: residue
-    logical          :: move     ! stuff specific to the inp file    
+    logical          :: move     ! stuff specific to the inp file
   end type xyz_file_atom
 
   type xyz_file_info
@@ -76,7 +76,7 @@ contains
     gf%n         = 0
     nullify(gf%atom)
   end subroutine xyz_file_init
-  
+
 
   ! ---------------------------------------------------------
   subroutine xyz_file_end(gf)
@@ -93,12 +93,12 @@ contains
   subroutine xyz_file_read(what, gf)
     character(len=*),    intent(in)    :: what
     type(xyz_file_info), intent(inout) :: gf
-    
+
     integer :: i, j, iunit
     integer(POINTER_SIZE) :: blk
     character(len=80) :: str
 
-    call push_sub('xyz_file_read')
+    call push_sub('xyz_file.xyz_file_read')
 
     if(loct_parse_isdef(check_inp('PDB'//trim(what))).ne.0) then
       gf%file_type = XYZ_FILE_PDB
@@ -106,7 +106,7 @@ contains
       gf%flags = ior(gf%flags, XYZ_FLAGS_CHARGE)
 
       call loct_parse_string(check_inp('PDB'//trim(what)), 'coords.pdb', str)
-      
+
       iunit = io_open(str, action='read')
       call xyz_file_read_PDB(iunit, gf)
       call io_close(iunit)
@@ -168,7 +168,7 @@ contains
   subroutine xyz_file_read_PDB(iunit, gf)
     integer,             intent(in)    :: iunit
     type(xyz_file_info), intent(inout) :: gf
-    
+
     character(len=80) :: record
     character(len=6)  :: record_name
     integer :: na
@@ -183,9 +183,9 @@ contains
       end if
     end do
 990 continue
-    
+
     allocate(gf%atom(gf%n))
-    
+
     ! read in the data
     rewind(iunit)
     na = 1
@@ -203,7 +203,7 @@ contains
       end if
     end do
 991 continue
-    
+
   end subroutine xyz_file_read_PDB
 
 end module xyz_file

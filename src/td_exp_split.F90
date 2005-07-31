@@ -51,7 +51,7 @@ contains
     integer :: ix, iy, iz, k(3), idim
     FLOAT :: cutoff, temp(3), g2
 
-    call push_sub('exp_kinetic')
+    call push_sub('td_exp_split.exp_kinetic')
 
     if(simul_box_is_periodic(gr%sb)) then
        message(1) = 'Internal error in exp_kinetic'
@@ -110,7 +110,7 @@ contains
     integer :: k
     FLOAT :: v
 
-    call push_sub('vlpsi')
+    call push_sub('td_exp_split.vlpsi')
 
     ! WARNING: spinors not yet supported.
     select case(h%d%ispin)
@@ -159,7 +159,7 @@ contains
 !!$    CMPLX :: uvpsi, p2, ctemp
 !!$    CMPLX, allocatable :: lpsi(:), lHpsi(:), initzpsi(:, :)
 !!$
-!!$    call push_sub('vnlpsi')
+!!$    call push_sub('td_exp_split.vnlpsi')
 !!$
 !!$    allocate(initzpsi(m%np, 1:h%d%dim))
 !!$    initzpsi = psi

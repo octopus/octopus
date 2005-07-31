@@ -27,7 +27,7 @@ subroutine poisson1D_solve(m, pot, rho)
 
   ASSERT(poisson_solver == -1)
 
-  call push_sub('poisson1D_solve')
+  call push_sub('poisson1D.poisson1D_solve')
 
   pot = M_ZERO
   do i = 1, m%np

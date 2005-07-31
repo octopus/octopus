@@ -65,7 +65,7 @@ contains
   subroutine system_init(s)
     type(system_type), intent(out) :: s
 
-    call push_sub('system_init')
+    call push_sub('systm.system_init')
 
     allocate(s%gr)
     call grid_init(s%gr)
@@ -85,7 +85,7 @@ contains
   subroutine system_end(s)
     type(system_type), intent(inout) :: s
 
-    call push_sub('system_end')
+    call push_sub('systm.system_end')
 
     call v_ks_end(s%ks)
 
@@ -115,7 +115,7 @@ contains
     FLOAT :: x(3), a(3), r, p, ylm
     type(loct_spline_type), pointer :: s
 
-    call push_sub('atom_get_wf')
+    call push_sub('systm.atom_get_wf')
 
     a = atom%x
     if(atom%spec%local) then
@@ -221,7 +221,7 @@ contains
     FLOAT :: r, rnd, phi, theta, mag(3)
     FLOAT, allocatable :: atom_rho(:,:)
 
-    call push_sub('guess_density')
+    call push_sub('systm.guess_density')
 
     if (spin_channels == 1) then
        gmd_opt = 1
@@ -376,7 +376,7 @@ contains
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
 
-    call push_sub('hamiltonian_setup')
+    call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%m)
     call dstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)
@@ -394,7 +394,7 @@ contains
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
 
-    call push_sub('hamiltonian_setup')
+    call push_sub('systm.hamiltonian_setup')
 
     call states_fermi(sys%st, sys%gr%m)
     call zstates_calc_dens(sys%st, sys%gr%m%np, sys%st%rho)

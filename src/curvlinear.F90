@@ -50,7 +50,7 @@ contains
     type(simul_box_type),  intent(in)  :: sb
     type(curvlinear_type), intent(out) :: cv
 
-    call push_sub('curvlinear_init')
+    call push_sub('curvlinear.curvlinear_init')
 
     call loct_parse_int(check_inp('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
     if(cv%method<CURV_METHOD_UNIFORM.or.cv%method>CURV_METHOD_MODINE) then
@@ -91,7 +91,7 @@ contains
     end select
 
   end subroutine curvlinear_chi2x
-  
+
 
   !-------------------------------------
   FLOAT function curvlinear_det_Jac(sb, geo, cv, x, chi) result(jdet)

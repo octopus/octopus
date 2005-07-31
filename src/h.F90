@@ -122,7 +122,7 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
   integer :: i, j, n
   FLOAT :: d(3)
 
-  call push_sub('hamiltonian_init')
+  call push_sub('h.hamiltonian_init')
 
   ! make a couple of local copies
   h%ip_app = ip_app
@@ -142,7 +142,7 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
     allocate(h%ahxc(NP, NDIM, h%d%nspin))
     h%ahxc = M_ZERO
   else
-    nullify(h%ahxc)  
+    nullify(h%ahxc)
   end if
 
   call epot_init(h%ep, gr)
@@ -209,7 +209,7 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
     else
       h%ab_height = M_ONE
     end if
-    
+
     ! generate boundary potential...
     allocate(h%ab_pot(NP))
     h%ab_pot = M_ZERO
@@ -224,7 +224,7 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
     end do
 
   end if absorbing_boundaries
-  
+
   ! Cutoff applied to the kinetic term.
   ! it is used *both* in the calculation of the derivatives and in the split operator method
   call loct_parse_float(check_inp('KineticCutoff'), -M_ONE, h%cutoff)
@@ -243,7 +243,7 @@ subroutine hamiltonian_end(h, gr)
   type(hamiltonian_type), intent(inout) :: h
   type(grid_type),        intent(in)    :: gr
 
-  call push_sub('hamiltonian_end')
+  call push_sub('h.hamiltonian_end')
 
   if(associated(h%vhxc)) then
     deallocate(h%vhxc)
@@ -278,9 +278,9 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
 #ifdef HAVE_MPI
   FLOAT :: s
   integer :: err
-#endif 
+#endif
 
-  call push_sub('hamiltonian_energy')
+  call push_sub('h.hamiltonian_energy')
 
   e = states_eigenvalues_sum(st)
 
@@ -314,7 +314,7 @@ subroutine hamiltonian_span(h, delta, emin)
   type(hamiltonian_type), intent(inout) :: h
   FLOAT,                  intent(in)    :: delta, emin
 
-  call push_sub('hamiltonian_span')
+  call push_sub('h.hamiltonian_span')
 
   h%spectral_middle_point = ((M_Pi**2/(2*delta**2)) + emin)/M_TWO
   h%spectral_half_span    = ((M_Pi**2/(2*delta**2)) - emin)/M_TWO
@@ -330,10 +330,10 @@ subroutine hamiltonian_output(h, m, sb, dir, outp)
   type(output_type),      intent(in) :: outp
 
   integer :: is, err
-  character(len=80) :: fname  
+  character(len=80) :: fname
   FLOAT :: u
 
-  call push_sub('hamiltonian_output')
+  call push_sub('h.hamiltonian_output')
 
   u = units_out%energy%factor
   if(outp%what(output_potential)) then

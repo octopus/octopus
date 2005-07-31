@@ -36,7 +36,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
   type(states_type),      intent(inout) :: st
   FLOAT,                  intent(inout) :: vxc(:,:) !vxc(NP, st%d%nspin)
   FLOAT,                  intent(inout) :: ex, ec
-  
+
   FLOAT :: e
   integer :: is, ist, ixc
   logical, save :: first = .true.
@@ -46,7 +46,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
 
   if(oep%level == XC_OEP_NONE) return
 
-  call push_sub('h_xc_oep')
+  call push_sub('xc_OEP_inc.h_xc_oep')
 
   ! initialize oep structure
   allocate(oep%eigen_type(st%nst))
@@ -69,12 +69,12 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
         ex = ex + e
       end select
     end do functl_loop
-  
+
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
       call X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
     end if
-    
+
     ! get the HOMO state
     call xc_oep_AnalizeEigen(oep, st, is)
 
@@ -91,7 +91,7 @@ subroutine X(xc_oep_calc)(oep, xcs, apply_sic_pz, gr, h, st, vxc, ex, ec)
       enddo
     endif
 #endif
-    
+
     ! solve the KLI equation
     if(oep%level.ne.XC_OEP_FULL.or.first) then
       first = .false.
@@ -149,7 +149,7 @@ subroutine X(xc_oep_solve) (gr, h, st, is, vxc, oep)
          + oep%X(lxc)(1:NP, ist)
 
       call X(lr_orth_vector) (gr%m, st, b, is)
-      
+
       ! and we now solve the equation [h-eps_i] psi_i = b_i
       call X(lr_solve_HXeY) (oep%lr, h, gr, st%d, is, oep%lr%X(dl_psi)(:,:, ist, is), b, &
          R_TOTYPE(-st%eigenval(ist, is)))

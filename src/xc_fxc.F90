@@ -23,7 +23,7 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
   FLOAT, intent(in)                    :: rho(:, :)
   integer, intent(in)                  :: ispin
   FLOAT,                 intent(inout) :: fxc(:,:,:)
-  
+
   FLOAT, allocatable :: dens(:,:), dedd(:,:,:), l_dens(:), l_dedd(:,:)
 
   integer :: i, ixc, spin_channels
@@ -38,9 +38,9 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
 
   ! is there anything to do? (only LDA by now)
   if(iand(xcs%family, XC_FAMILY_LDA) == 0) return
-  
+
   ! really start
-  call push_sub('xc_get_vxc')
+  call push_sub('xc_fxc.xc_get_vxc')
 
   ! This is a bit ugly (why functl(1) and not functl(2)?, but for the moment it works.
   spin_channels = functl(1)%spin_channels
@@ -51,10 +51,10 @@ subroutine xc_get_fxc(xcs, m, rho, ispin, fxc)
 
     ! make a local copy with the correct memory order
     l_dens (:)   = dens (i, :)
-    
+
     ! Calculate fxc
     functl_loop: do ixc = 1, 2
-      
+
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
         call xc_lda_fxc(functl(ixc)%conf, l_dens(1), l_dedd(1,1))
@@ -84,7 +84,7 @@ contains
   subroutine lda_init()
     integer :: i
     FLOAT   :: d(spin_channels)
-    
+
     ! allocate some general arrays
     allocate(dens(m%np, spin_channels), dedd(m%np, spin_channels, spin_channels))
     allocate(l_dens(spin_channels), l_dedd(spin_channels, spin_channels))
@@ -93,7 +93,7 @@ contains
     ! get the density
     do i = 1, m%np
       d(:) = rho(i, :)
-      
+
       select case(ispin)
       case(UNPOLARIZED)
         dens(i, 1) = max(d(1), M_ZERO)
@@ -105,7 +105,7 @@ contains
         call write_fatal(1)
       end select
     end do
-    
+
   end subroutine lda_init
 
 
@@ -114,7 +114,7 @@ contains
     deallocate(dens, dedd, l_dens, l_dedd)
   end subroutine lda_end
 
-  
+
   ! calculates the LDA part of vxc, taking into account non-collinear spin
   subroutine lda_process()
 

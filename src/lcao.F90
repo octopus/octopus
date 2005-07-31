@@ -77,7 +77,7 @@ subroutine lcao_init(gr, lcao_data, st, h)
   if(NDIM.ne.3) return
   if(lcao_data%state == 1) return
 
-  call push_sub('lcao_init')
+  call push_sub('lcao.lcao_init')
 
   geo => gr%geo
 
@@ -134,7 +134,7 @@ subroutine lcao_init(gr, lcao_data, st, h)
       end do
     end do
   end do
-  
+
   ! Allocation of variables
   allocate(lcao_data%hamilt (norbs, norbs, st%d%nik), &
            lcao_data%s      (norbs, norbs, st%d%nik), &
@@ -157,13 +157,13 @@ subroutine lcao_init(gr, lcao_data, st, h)
         message(1) = 'Error: Internal.'
       call write_fatal(1)
       end select
- 
+
       do n2 = n1, lcao_data%dim
         lcao_data%k(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
         lcao_data%s(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, lcao_data%psis(:, :, n1, ik), &
                                                  lcao_data%psis(:, : ,n2, ik))
       end do
-      
+
     end do
   end do
   deallocate(hpsi)
@@ -175,7 +175,7 @@ end subroutine lcao_init
 
 subroutine lcao_end(lcao_data)
   type(lcao_type), intent(inout) :: lcao_data
-  call push_sub('lcao_end')
+  call push_sub('lcao.lcao_end')
 
   ASSERT(lcao_data%state == 1)
 
@@ -184,7 +184,7 @@ subroutine lcao_end(lcao_data)
   endif
   if(associated(lcao_data%psis)) deallocate(lcao_data%psis)
 
-  lcao_data%state = 0  
+  lcao_data%state = 0
   call pop_sub()
 end subroutine lcao_end
 
@@ -205,7 +205,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   ASSERT(lcao_data%state == 1)
   if(sb%dim.ne.3) return
 
-  call push_sub('lcao_wf')
+  call push_sub('lcao.lcao_wf')
 
   norbs = lcao_data%dim
   np = m%np
@@ -225,7 +225,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
       end do
     end do
   end do
-  
+
   do ik = 1, st%d%nik
     allocate(ev(norbs))
     call lalg_geneigensolve(norbs, lcao_data%hamilt(1:norbs, 1:norbs, ik), &

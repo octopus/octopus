@@ -222,7 +222,7 @@ contains
                 if(geo%atom(j)%move) then
                    geo%atom(j)%v(:) = geo%atom(j)%v(:) + &
                         td%dt/(M_TWO*geo%atom(j)%spec%weight) * &
-                        (f1(j, :) + geo%atom(j)%f(:))             
+                        (f1(j, :) + geo%atom(j)%f(:))
                 end if
              end do
           end if
@@ -260,7 +260,7 @@ contains
   contains
 
     subroutine init_()
-      call push_sub('td_run')
+      call push_sub('td.td_run')
 
       ! some shortcuts
       gr  => sys%gr
@@ -393,7 +393,7 @@ contains
 
 
     subroutine iter_output()
-      call push_sub('td::iter_output')
+      call push_sub('td.iter_output')
 
       ! output multipoles
       if(td%out_multip) call td_write_multipole(gr, out_multip, st, td, i)
@@ -428,7 +428,7 @@ contains
 
     subroutine td_run_zero_iter()
 
-      call push_sub('td_run_zero_iter')
+      call push_sub('td.td_run_zero_iter')
 
       ! create general subdir
       call io_mkdir('td.general')
@@ -442,7 +442,7 @@ contains
       call apply_delta_field()
 
       ! create files for output and output headers
-      if(td%out_coords) call td_write_nbo(gr, out_coords, 0, geo%kinetic_energy, h%etot)    
+      if(td%out_coords) call td_write_nbo(gr, out_coords, 0, geo%kinetic_energy, h%etot)
       if(td%out_acc)    call td_write_acc(gr, out_acc, st, h, td, 0)
       if(td%out_laser)  call td_write_laser(gr, out_laser, h, td, 0)
       if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
@@ -461,7 +461,7 @@ contains
       FLOAT   :: k
       CMPLX   :: c(2), kick
 
-      call push_sub('apply_delta_field')
+      call push_sub('td.apply_delta_field')
 
 !!! units are 1/length
       call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k)
@@ -587,7 +587,7 @@ contains
       integer :: i, is, ierr
       character(len=256) :: filename
 
-      call push_sub('td_write_data')
+      call push_sub('td.td_write_data')
 
       ! first write resume file
       call zrestart_write(trim(tmpdir)//'restart_td', st, gr, ierr, iter)

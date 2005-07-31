@@ -20,10 +20,10 @@
 
 !------------------------------------------------------------
 ! The paralellization of this routine is done in the following way:
-! We have to calculate the sum 
+! We have to calculate the sum
 !    lxc = sum_{j>i) l_ij
-! where the states i and j are divided in blocks and scattered among 
-! the processors. Each processor will calculate a sub-block of the 
+! where the states i and j are divided in blocks and scattered among
+! the processors. Each processor will calculate a sub-block of the
 ! matrix l_ij. Examples of the partitioning (for 3 and 4 blocks/processors)
 !
 ! (1  2  1)    (1  2  3  1)
@@ -55,7 +55,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
 
   ! Note: we assume that st%occ is known in all nodes
 
-  call push_sub('oep_x')
+  call push_sub('xc_OEP_x.oep_x')
 
   allocate(F_ij(NP), rho_ij(NP), send_buffer(NP))
   allocate(recv_stack(st%nst+1), send_stack(st%nst+1))
@@ -135,7 +135,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
       send_req = 0
 #endif
 
-      if(recv_stack(ist_r) > 0) then      
+      if(recv_stack(ist_r) > 0) then
         ! this is where we calculate the elements of the matrix
         ist = recv_stack(ist_r)
         send_buffer(1:NP) = R_TOTYPE(M_ZERO)
@@ -161,7 +161,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
           ! get the contribution (ist, jst) to the exchange energy
           r = M_ONE
           if(ist.ne.jst) r = M_TWO
-          
+
           ex = ex - M_HALF * r * oep%sfact * oep%socc*st%occ(ist, is) * oep%socc*st%occ(jst, is) * &
               sum(R_REAL(wf_ist(1:NP) * F_ij(1:NP) * R_CONJ(st%X(psi)(1:NP, 1, jst, is))) * gr%m%vol_pp(1:NP))
         end do
@@ -177,7 +177,7 @@ subroutine X(oep_x) (gr, st, is, oep, ex)
              node_fr, ist, MPI_COMM_WORLD, send_req, ierr)
 #endif
         end if
-        
+
       end if
 
 #if defined(HAVE_MPI)

@@ -45,8 +45,8 @@ subroutine dgeneigensolve(n, a, b, e)
 
 end subroutine dgeneigensolve
 
-! computes all the eigenvalues and the eigenvectors of a complex 
-! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,  
+! computes all the eigenvalues and the eigenvectors of a complex
+! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x,
 ! A*Bx=(lambda)*x,  or B*A*x=(lambda)*x.
 ! Here A and B are assumed to be Hermitian and B is also positive definite.
 subroutine zgeneigensolve(n, a, b, e)
@@ -62,7 +62,7 @@ subroutine zgeneigensolve(n, a, b, e)
       CMPLX,        intent(inout) :: a, b     ! a(lda,n), b(ldb,n)
       FLOAT,        intent(out)   :: w, rwork ! w(n), rwork(max(1,3*n-2))
       CMPLX,        intent(out)   :: work     ! work(lwork)
-      integer,      intent(out)   :: info 
+      integer,      intent(out)   :: info
     end subroutine ZLAPACK(hegv)
   end interface
 
@@ -96,7 +96,7 @@ subroutine deigensolve(n, a, b, e)
       integer,      intent(in)    :: n, lda, lwork
       FLOAT,        intent(inout) :: a       ! a(lda,n)
       FLOAT,        intent(out)   :: w, work ! w(n), work(lwork)
-      integer,      intent(out)   :: info 
+      integer,      intent(out)   :: info
     end subroutine DLAPACK(syev)
   end interface
 
@@ -164,7 +164,7 @@ FLOAT function ddet(a, n)
   end interface
 
   integer :: i, info, ipiv(n)
-    
+
   call DLAPACK(getrf) (n, n, a(1,1), n, ipiv(1), info)
   if(info.ne.0) then
     write(message(1),'(a,i4)') 'In ddet, LAPACK dgetrf returned unsuccesful code ',info
@@ -216,7 +216,7 @@ CMPLX function zdet(a, n)
        zdet = zdet*a(i, i)
      endif
   end do
-    
+
 end function zdet
 
 ! Invert a real symmetric square matrix a

@@ -25,7 +25,7 @@ subroutine PES_mask_init(v, m, sb, st)
 
   message(1) = 'Info: Calculating PES using mask technique'
   call write_info(1)
-      
+
   ! alloc ffts in case they are not allocated yet
   call fft_init(sb, m%l, fft_complex, v%fft)
 
@@ -36,7 +36,7 @@ subroutine PES_mask_init(v, m, sb, st)
 
   v%k = M_z0
   v%r = M_ZERO
-   
+
 end subroutine PES_mask_init
 
 subroutine PES_mask_end(v)
@@ -75,7 +75,7 @@ subroutine PES_mask_doit(v, m, st, dt, mask)
       enddo
     enddo
   enddo
-      
+
   ! we now add the contribution from this timestep
   allocate( &
        wf1(m%l(1), m%l(2), m%l(3)), &
@@ -120,7 +120,7 @@ subroutine PES_mask_output(v, m, st, file)
   integer, allocatable :: npoints(:), ar_npoints(:)
   integer :: p, ik, ii, ix, iy, iz, ixx(3), iunit
   character(len=100) :: fn
-  
+
   integer,  parameter :: n = 600, ar_n = 90
   FLOAT, parameter :: step = CNST(0.005)
 
@@ -130,7 +130,7 @@ subroutine PES_mask_output(v, m, st, file)
   allocate(npoints(n), ar_npoints(ar_n))
   spis = M_ZERO; arpis = M_ZERO
   npoints = 0;  ar_npoints = 0
-  
+
   temp(:) = M_TWO*M_PI/(m%l(:)*m%h(:))
   do ix = 1, m%l(1)
     ixx(1) = pad_feq(ix, m%l(1), .true.)
@@ -138,7 +138,7 @@ subroutine PES_mask_output(v, m, st, file)
       ixx(2) = pad_feq(iy, m%l(2), .true.)
       do iz = 1, m%l(3)
         ixx(3) = pad_feq(iz, m%l(3), .true.)
-        
+
         if(ixx(1).ne.0 .or. ixx(2).ne.0 .or. ixx(3).ne.0) then
           ! power spectrum
           vec = sum((temp(:) * ixx(:))**2) / M_TWO
@@ -152,7 +152,7 @@ subroutine PES_mask_output(v, m, st, file)
               end do
             end do
           end if
-          
+
           ! angle resolved (assumes the pol is in the x direction)
           if(ixx(3)==0 .and. (ixx(1).ne.0 .or. ixx(2).ne.0)) then
             vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
@@ -168,7 +168,7 @@ subroutine PES_mask_output(v, m, st, file)
             end if
           end if
         end if
-        
+
       end do
     end do
   end do
@@ -234,7 +234,7 @@ subroutine PES_mask_output(v, m, st, file)
       ixx(2) = iy - m%l(2)/2 - 1
       do iz = 1, m%l(3)
         ixx(3) = iz - m%l(3)/2 - 1
-        
+
         ! angle resolved
         if(ixx(3)==0.and.(ixx(1).ne.0 .or. ixx(2).ne.0)) then
           vec = atan2(real(ixx(2), PRECISION), real(ixx(1), PRECISION))
@@ -248,7 +248,7 @@ subroutine PES_mask_output(v, m, st, file)
             end do
           end if
         end if
-        
+
       end do
     end do
   end do
@@ -278,7 +278,7 @@ subroutine PES_mask_output(v, m, st, file)
     end if
   end do
   call io_close(iunit)
-  
+
   deallocate(spis, arpis)
   deallocate(npoints, ar_npoints)
 

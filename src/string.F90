@@ -36,13 +36,13 @@ contains
     character(len=*), intent(inout) :: str
 
     integer :: i, s
-    
+
     do i = 1, len(str)
       s = iachar(str(i:i))
       if((s<=122) .and. (s>=97)) s = s - 32
       str(i:i) = achar(s)
     end do
-    
+
   end subroutine upcase
 
   ! Lowcases a string
@@ -51,13 +51,13 @@ contains
     character(len=*), intent(inout) :: str
 
     integer :: i, s
-  
+
     do i = 1, len(str)
       s = iachar(str(i:i))
       if ((s<=90) .and. (s>=65)) s = s + 32
       str(i:i) = achar(s)
     end do
-  
+
   end subroutine lowcase
 
 
@@ -67,7 +67,7 @@ contains
     character(len=*), intent(inout) :: str
 
     integer :: i, j
-  
+
     do i = 1, len(str)
       if(str(i:i) == ' ') then
         do j = i, len(str)-1
@@ -76,7 +76,7 @@ contains
         str(len(str):len(str)) = ' '
       end if
     end do
-  
+
   end subroutine compact
 
 
@@ -84,12 +84,12 @@ contains
   subroutine str_trim(str)
     character (len=*), intent(inout) :: str
     integer :: i, j, l
-  
+
     l = len(str)
     do i = 1, l
       if(str(i:i) .ne. ' ') exit
     end do
-    
+
     do j = 1, l - i + 1
       str(j:j) = str(i:i)
       i = i + 1
@@ -108,15 +108,15 @@ contains
     integer,          intent(in) :: l
 
     integer :: pad, i, li
-    
+
     li = len(s_in)
     if(l < li) then
       s_out(1:l) = s_in(1:l)
       return
     end if
-    
+
     pad = (l - li)/2
-    
+
     s_out = ""
     do i = 1, pad
       s_out(i:i) = " ";
@@ -125,7 +125,7 @@ contains
     do i = pad + li + 1, l
       s_out(i:i) = " ";
     end do
-    
+
   end function str_center
 
 
@@ -162,5 +162,5 @@ contains
       end if
     end do
   end subroutine print_C_string
-  
+
 end module string

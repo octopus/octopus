@@ -35,7 +35,7 @@ module varinfo
     subroutine varinfo_end()
     end subroutine varinfo_end
   end interface
-  
+
 contains
 
   ! ---------------------------------------------------------
@@ -56,7 +56,7 @@ contains
     call print_C_string(iunit, section, "Section:  ")
     write(iunit, '(a)') "Description:"
     call print_C_string(iunit, desc, "    ")
-    
+
     opt = int(0, POINTER_SIZE)
     first = .true.
     do
@@ -86,7 +86,7 @@ contains
 
     integer(POINTER_SIZE) :: handle, opt, name, desc
     integer :: value
-    
+
     call varinfo_getvar(var, handle)
     if(handle.eq.0) return
 

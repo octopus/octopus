@@ -52,7 +52,7 @@ program make_st
 
   allocate(sys%st%zpsi (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik), &
      sys%st%eigenval(sys%st%nst, sys%st%d%nik))
-  
+
   call X(restart_read)(trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
   if(err < 0) then
     message(1) = "Error opening 'restart.static' file"
@@ -98,10 +98,10 @@ contains
     type(grid_type),   intent(in)    :: gr
     type(states_type), intent(inout) :: st
     integer,           intent(in)    :: line
-    
+
     FLOAT :: x1(3), x(3), s, k(3)
     integer :: i, j
-    
+
     ! read gaussian parameters
     x1 = M_ZERO; k = M_ZERO
     call loct_parse_block_float(blk, line, 4,  s)
@@ -119,23 +119,23 @@ contains
       k(i) = k(i) / units_inp%length%factor
       j = j + 1
     end do
-    
+
     ! build a gaussian
     do i = 1, NP
       x = gr%m%x(i,:)
       st%zpsi(i, idim, ist, ik) = exp(-sum((x(1:NDIM)-x1(1:NDIM))**2)/(2*s*s) + &
            M_zI*sum(k(1:NDIM)*(x(1:NDIM)-x1(1:NDIM))))
     end do
-    
+
   end subroutine wf_gaussian
-  
+
   subroutine wf_renormalize(m, st)
     type(mesh_type),   intent(in)    :: m
     type(states_type), intent(inout) :: st
 
     integer :: ik, ist
     FLOAT :: nrm2
-    
+
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         nrm2 = zstates_nrm2 (m, st%d%dim, st%zpsi(:,:, ist, ik))

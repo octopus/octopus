@@ -133,9 +133,9 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   do k = 0, sf%no_e
     do j = is, ie
-      
+
       jj = j - is
-      
+
       select case(sf%transform)
       case(1)
         x = sin((k*s%energy_step + s%min_energy)*jj*dt)
@@ -257,7 +257,7 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
 
   do k = 0, rsf%no_e
     do j = is, ie
-      
+
       jj = j - is
 
       z = exp(M_zI*(k*s%energy_step + s%min_energy)*jj*dt)
@@ -311,7 +311,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
 
   call spectrum_mult_info(iunit, nspin, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
-  
+
   ! load dipole from file
   allocate(dipole(0:time_steps))
   allocate(d(3, nspin))
@@ -353,7 +353,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
   sh%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sh%sp(0:sh%no_e))
   sh%sp = M_ZERO
-  
+
   do i = 0, sh%no_e
     c = M_z0
     do j = is, ie
@@ -386,10 +386,10 @@ subroutine spectrum_hs_from_acc(out_file, s, sh)
   FLOAT :: dt, dummy, a(3)
   CMPLX, allocatable :: acc(:)
   CMPLX :: c
-  
+
   call spectrum_acc_info(iunit, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
-  
+
   ! load dipole from file
   allocate(acc(0:time_steps))
   acc = M_ZERO
@@ -414,7 +414,7 @@ subroutine spectrum_hs_from_acc(out_file, s, sh)
   sh%no_e = (s%max_energy - s%min_energy) / s%energy_step
   allocate(sh%sp(0:sh%no_e))
   sh%sp = M_ZERO
-  
+
   do i = 0, sh%no_e
     c = M_z0
     do j = is, ie
@@ -473,7 +473,7 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
 100 continue
   dt = (t2 - t1) * units_out%time%factor ! units_out is OK
   time_steps = time_steps - 1
-  
+
   if(time_steps < 3) then
     write(message(1),'(a,a,a)') "Empty ", trim(adjustl(file)),"?"
     call write_fatal(1)
@@ -496,7 +496,7 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
   if(iunit < 0) then
     iunit = io_open('td.general/multipoles', action='read', status='old')
   end if
-  
+
   ! read in dipole
   read(iunit, '(10x,i2)') nspin
   read(iunit, *); read(iunit, *) ! skip header
@@ -512,7 +512,7 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
 100 continue
   dt = (t2 - t1) * units_out%time%factor ! units_out is OK
   time_steps = time_steps - 1
-  
+
   if(time_steps < 3) then
     message(1) = "Empty multipole file?"
     call write_fatal(1)
@@ -535,7 +535,7 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   if(iunit < 0) then
     iunit = io_open('td.general/acceleration', action='read', status='old')
   endif
-  
+
   ! read in dipole
   read(iunit, *); read(iunit, *) ! skip header
 
@@ -550,7 +550,7 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
 100 continue
   dt = (t2 - t1) * units_out%time%factor ! units_out is OK
   time_steps = time_steps - 1
-  
+
   if(time_steps < 3) then
     message(1) = "Empty multipole file?"
     call write_fatal(1)

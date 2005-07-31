@@ -34,7 +34,7 @@ module scf
   use restart
   use v_ks
   use hamiltonian
-  use external_pot 
+  use external_pot
   use xc
   use eigen_solver
   use mix
@@ -57,7 +57,7 @@ module scf
     integer :: max_iter ! maximum number of scf iterations
 
     ! several convergence criteria
-    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev         
+    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
 
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
 
@@ -83,7 +83,7 @@ subroutine scf_init(gr, scf, st, h)
   integer :: dim
   FLOAT :: rmin
 
-  call push_sub('scf_init')
+  call push_sub('scf.scf_init')
 
   call loct_parse_int  (check_inp('MaximumIter'),        200, scf%max_iter)
   call loct_parse_float(check_inp('ConvAbsDens'), CNST(1e-5), scf%conv_abs_dens)
@@ -148,7 +148,7 @@ end subroutine scf_init
 subroutine scf_end(scf)
   type(scf_type), intent(inout) :: scf
 
-  call push_sub('scf_end') 
+  call push_sub('scf.scf_end')
 
   call eigen_solver_end(scf%eigens)
   call mix_end(scf%smix)
@@ -175,7 +175,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
   FLOAT, allocatable :: tmp(:)
   logical :: finish
 
-  call push_sub('scf_run')
+  call push_sub('scf.scf_run')
 
   if(scf%lcao_restricted) then
     call lcao_init(gr, lcao_data, st, h)
@@ -343,8 +343,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_write_iter
-    call push_sub('scf_write_iter')
-    
+    call push_sub('scf.scf_write_iter')
+
     write(message(1),'(a)') stars
     write(message(2),'(a,i5)') 'SCF CYCLE ITER #',iter
     write(message(3),'(a,es15.8,2(a,es9.2))') ' etot = ', h%etot/units_out%energy%factor, &
@@ -372,33 +372,33 @@ contains
     call pop_sub()
   end subroutine scf_write_iter
 
-  
+
   ! ---------------------------------------------------------
   subroutine scf_write_static(dir, fname)
     character(len=*), intent(in) :: dir, fname
-    
+
     FLOAT :: e_dip(NDIM, st%d%nspin), n_dip(3), angular(3), l2
     FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
     integer :: iunit, i, j
-    
-    call push_sub('scf_write_static') 
+
+    call push_sub('scf.scf_write_static')
 
     call io_mkdir(dir)
     iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
-    
+
     ! mesh
     write(iunit, '(a,a)') 'System name: ', gr%geo%sysname
     write(iunit, '(1x)')
-    
+
     write(iunit, '(a)') 'Mesh:'
     !call grid_write_info(gr, iunit)
     write(iunit,'(1x)')
-    
+
     if(simul_box_is_periodic(gr%sb)) then
       call kpoints_write_info(st%d, iunit)
       write(iunit,'(1x)')
     end if
-    
+
     if(.not. h%ip_app) then
       write(iunit, '(a)') 'Exchange and correlation functionals:'
       call v_ks_write_info(ks, iunit)
@@ -406,7 +406,7 @@ contains
       write(iunit, '(a)') 'Independent Particles'
     end if
     write(iunit,'(1x)')
-    
+
     ! scf information
     if(finish) then
       write(iunit, '(a, i4, a)')'SCF converged in ', iter, ' iterations'
@@ -414,19 +414,19 @@ contains
       write(iunit, '(a)') 'SCF *not* converged!'
     end if
     write(iunit, '(1x)')
-    
+
     call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
     write(iunit, '(1x)')
-    
+
     write(iunit, '(a)') 'Energy:'
     call hamiltonian_energy(h, st, gr%geo%eii, iunit)
     write(iunit, '(1x)')
-    
+
     if(st%d%ispin > UNPOLARIZED) then
       call write_magnetic_moments(iunit, gr%m, st)
       write(iunit, '(1x)')
     end if
-    
+
     ! Next lines of code calculate the dipole of the molecule, summing the electronic and
     ! ionic contributions.
     if(NDIM>0) call states_calculate_multipoles(gr, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
@@ -443,7 +443,7 @@ contains
          n_dip(j)*ATOMIC_TO_DEBYE
     end do
     write(iunit,'(a)')
-    
+
     if(NDIM==3) then
       call X(states_calc_angular)(gr, st, angular, l2 = l2)
       write(iunit,'(3a)') 'Angular Momentum L [adimensional]'
@@ -451,11 +451,11 @@ contains
         write(iunit,'(6x,a1,i1,a3,es14.5)') 'L',j,' = ',angular(j)
       enddo
       write(iunit,'(a)')
-      
+
       write(iunit,'(6x,a,es14.5)') 'L^2 = ', l2
       write(iunit,'(a)')
     endif
-    
+
     write(iunit, '(a)') 'Convergence:'
     write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'abs_dens = ', scf%abs_dens, &
        ' (', scf%conv_abs_dens, ')'
@@ -466,15 +466,15 @@ contains
        ' [',  trim(units_out%energy%abbrev), ']'
     write(iunit, '(6x, a, es14.8,a,es14.8,a)') 'rel_ev = ', scf%rel_ev, &
       ' (', scf%conv_rel_ev, ')'
-    write(iunit,'(1x)') 
-    
+    write(iunit,'(1x)')
+
     write(iunit,'(3a)') 'Forces on the ions [', trim(units_out%force%abbrev), "]"
     write(iunit,'(a,10x,14x,a,14x,a,14x,a)') ' Ion','x','y','z'
     do i = 1, gr%geo%natoms
       write(iunit,'(i4,a10,3f15.6)') i, trim(gr%geo%atom(i)%spec%label), &
          gr%geo%atom(i)%f(:) / units_out%force%factor
     end do
-    
+
     call io_close(iunit)
     call pop_sub()
   end subroutine scf_write_static
@@ -485,18 +485,18 @@ contains
     integer,           intent(in) :: iunit
     type(mesh_type),   intent(in) :: m
     type(states_type), intent(in) :: st
-    
+
     integer :: i
     FLOAT :: mm(3)
     FLOAT, allocatable :: lmm(:,:)
 
-    call push_sub('write_magnetic_moments')
- 
+    call push_sub('scf.write_magnetic_moments')
+
     call states_magnetic_moment(m, st, st%rho, mm)
     write(iunit, '(a)') 'Total Magnetic Moment:'
     if(st%d%ispin == SPIN_POLARIZED) then ! collinear spin
       write(iunit, '(a,f10.6)') ' mz = ', mm(3)
-      
+
     else if(st%d%ispin == SPINORS) then ! non-collinear
       write(iunit, '(1x,3(a,f10.6,3x))') 'mx = ',mm(1),'my = ',mm(2),'mz = ',mm(3)
     end if
@@ -517,7 +517,7 @@ contains
       end do
     end if
     deallocate(lmm)
-    
+
     call pop_sub()
   end subroutine write_magnetic_moments
 

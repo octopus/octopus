@@ -79,7 +79,7 @@ contains
        ! composite name has been defined in the input file
        var_name = composite_name
     else
-       ! could not find composite name in the input; 
+       ! could not find composite name in the input;
        ! will use bare variable name
        var_name = variable
     endif
@@ -134,7 +134,7 @@ contains
     enddo
     call loct_parse_block_end(blk)
 
-    ! ... and in which order 
+    ! ... and in which order
     if(loct_parse_block('SystemRunOrder', blk) == 0) then
        no_subsystems = loct_parse_block_cols(blk,0)
     else
@@ -151,7 +151,7 @@ contains
        if (subsys_run_order(i).gt.no_subsys_runmodes) then
           message(1) = "Subsystem number too large. Please correct the block"
           message(2) = "SystemRunOrder in the input file."
-          call write_fatal(2)      
+          call write_fatal(2)
        endif
     enddo
     call loct_parse_block_end(blk)

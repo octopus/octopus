@@ -140,7 +140,7 @@ contains
     integer :: nempty, i, j
     integer(POINTER_SIZE) :: blk
 
-    call push_sub('states_init')
+    call push_sub('states.states_init')
 
     call states_null(st)
 
@@ -345,7 +345,7 @@ contains
   subroutine states_end(st)
     type(states_type), intent(inout) :: st
 
-    call push_sub('states_end')
+    call push_sub('states.states_end')
 
     if(associated(st%rho)) then
        deallocate(st%rho, st%occ, st%eigenval, st%node)
@@ -393,7 +393,7 @@ contains
 
     integer :: ist, ik, id, ist_start, ist_end
 
-    call push_sub('states_generate_random')
+    call push_sub('states.states_generate_random')
 
     ist_start = 1
     if(present(ist_start_)) ist_start = ist_start_
@@ -424,7 +424,7 @@ contains
     FLOAT, parameter :: tol = CNST(1.0e-10)
     logical :: conv
 
-    call push_sub('fermi')
+    call push_sub('states.fermi')
 
     if(st%fixed_occ) then ! nothing to do
        ! Calculate magnetizations...
@@ -536,7 +536,7 @@ contains
     integer :: i, is, l, lm, add_lm
     FLOAT :: x(3), r, ylm, mult
 
-    call push_sub('states_calculate_multipoles')
+    call push_sub('states.states_calculate_multipoles')
 
     dipole(1:st%d%nspin) = M_ZERO
     do is = 1, st%d%nspin
@@ -638,14 +638,14 @@ contains
                    if(st%d%ispin == SPINORS) oplus = M_ZERO; ominus = M_ZERO
                 else
                    o = st%occ(j, ik+is)
-                   if(st%d%ispin == SPINORS) then 
+                   if(st%d%ispin == SPINORS) then
                       oplus  = st%mag(j, ik+is, 1)
                       ominus = st%mag(j, ik+is, 2)
                    endif
                 end if
 
                 write(iunit, '(i4)', advance='no') j
-                if(simul_box_is_periodic(sb)) then 
+                if(simul_box_is_periodic(sb)) then
                    if(st%d%ispin == SPINORS) then
                       write(iunit, '(1x,f12.6,3x,f5.2,a1,f5.2)', advance='no') &
                            (st%eigenval(j, ik)-st%ef)/units_out%energy%factor, oplus, '/', ominus
@@ -758,7 +758,7 @@ contains
     FLOAT,             intent(in)  :: rho(np, st%d%nspin)
     FLOAT,             intent(out) :: m(np, 3)
 
-    call push_sub('states_magnetization_dens')
+    call push_sub('states.states_magnetization_dens')
 
     select case (st%d%ispin)
     case (UNPOLARIZED)
@@ -784,7 +784,7 @@ contains
     integer :: i
     FLOAT, allocatable :: md(:,:)
 
-    call push_sub('states_magnetic_moment')
+    call push_sub('states.states_magnetic_moment')
 
     allocate(md(m%np, 3))
     call states_magnetization_dens(st, m%np, rho, md)
@@ -809,7 +809,7 @@ contains
     FLOAT :: ri
     FLOAT, allocatable :: md(:,:)
 
-    call push_sub('states_local_magnetic_moments')
+    call push_sub('states.states_local_magnetic_moments')
 
     allocate(md(m%np, 3))
     call states_magnetization_dens(st, m%np, rho, md)
@@ -840,7 +840,7 @@ contains
     FLOAT, allocatable :: red(:,:,:)
 #endif
 
-    call push_sub('calc_paramagnetic_current')
+    call push_sub('states.calc_paramagnetic_current')
 
     if(st%d%ispin == SPIN_POLARIZED) then
        sp = 2
@@ -902,13 +902,13 @@ contains
     type(states_type),   intent(in)    :: st
     FLOAT,               intent(out)   :: j(:,:,:)   ! j(NP, NDIM, st%d%nspin)
 
-    call push_sub('states_calc_physical_current')
+    call push_sub('states.states_calc_physical_current')
 
     ! Paramagnetic contribution to the physical current
     call calc_paramagnetic_current(gr, st, j)
 
     ! TODO
-    ! Diamagnetic contribution to the physical current 
+    ! Diamagnetic contribution to the physical current
 
     call pop_sub()
   end subroutine states_calc_physical_current

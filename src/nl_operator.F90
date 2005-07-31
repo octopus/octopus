@@ -299,7 +299,7 @@ contains
           index = op%i(j, i)
           if(index <= op%np) &
                op%w_re(j, i) = a(i, index)
-          if (op%cmplx_op) op%w_im(j, i) = b(i, index)          
+          if (op%cmplx_op) op%w_im(j, i) = b(i, index)
        enddo
     enddo
 
@@ -455,7 +455,7 @@ contains
     else
        do i = 1, op%np
           fo(i) = sum(  cmplx(  op%w_re(1:n, i)* real(fi(op%i(1:n,i))),  op%w_re(1:n, i)*aimag(fi(op%i(1:n, i))), PRECISION  )  )  &
-               + sum(   cmplx( -op%w_im(1:n, i)*aimag(fi(op%i(1:n,i))),  op%w_im(1:n, i)* real(fi(op%i(1:n, i))), PRECISION  )  )                
+               + sum(   cmplx( -op%w_im(1:n, i)*aimag(fi(op%i(1:n,i))),  op%w_im(1:n, i)* real(fi(op%i(1:n, i))), PRECISION  )  )
        end do
     end if
 

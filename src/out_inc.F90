@@ -25,7 +25,7 @@
 !              1 : illegal filename (must have no extension, or ".ncdf" extension.
 !              2 : file could not be succesfully opened.
 !              3 : file opened, but error reading.
-!              4 : The number of points/mesh dimensions do not coincide. 
+!              4 : The number of points/mesh dimensions do not coincide.
 !              5 : NetCDF error (one or several warnings are emitted)
 ! ierr = 0 => Success.
 ! ierr < 0 => Success, but some kind of type conversion was necessary. The
@@ -89,7 +89,7 @@ contains
     complex(8), allocatable :: cd(:)
 
     iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false.)
-    
+
     if(iunit< 0) then
       ierr = 2
       return
@@ -105,7 +105,7 @@ contains
     if(ierr==0) then
       if(file_kind == function_kind) then
         read(unit = iunit) f(1:m%np)
-        
+
       else ! Adequate conversions....
         select case(file_kind)
         case(doutput_kind*4) ! Real, single precision
@@ -114,32 +114,32 @@ contains
           f = rs
           deallocate(rs)
           ierr = -1
-          
+
         case(zoutput_kind*4) ! Complex, single precision
           allocate(cs(m%np))
           read(unit = iunit) cs(1:m%np)
           f = cs
           deallocate(cs)
           ierr = -2
-          
+
         case(doutput_kind*8) ! Real, double precision
           allocate(rd(m%np))
           read(unit = iunit) rd(1:m%np)
           f = rd
           deallocate(rd)
           ierr = -3
-          
+
         case(zoutput_kind*8) ! Complex, double precision
           allocate(cd(m%np))
           read(unit = iunit) cd(1:m%np)
           f = cd
           deallocate(cd)
           ierr = -4
-          
+
         end select
       end if
     end if
-    
+
     call io_close(iunit)
   end subroutine plain
 
@@ -208,7 +208,7 @@ contains
        file_kind = 1
     endif
     status = 0
-       
+
     if(status == NF90_NOERR) then
       status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
       call ncdf_error('nf90_inquire_variable', status, file, ierr)
@@ -263,7 +263,7 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   R_TYPE,           intent(in)  :: f(:)  ! f(m%np)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
-  
+
   integer :: i
   FLOAT   :: x0
   character(len=20)  :: mformat, mformat2, mfmtheader
@@ -370,7 +370,7 @@ contains
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x(1,2)
     if(gnuplot_mode) write(iunit, mformat)
-    
+
     do i = 1, m%np
       if(gnuplot_mode.and.x0 /= m%x(i, 2)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
@@ -380,10 +380,10 @@ contains
         write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
-    
+
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
-    
+
   end subroutine plane_x
 
 
@@ -396,7 +396,7 @@ contains
     write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
     x0 = m%x(1,1)
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
-    
+
     do i = 1, m%np
       if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
@@ -406,10 +406,10 @@ contains
         write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
-    
+
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
-    
+
   end subroutine plane_y
 
 
@@ -422,34 +422,34 @@ contains
     write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
     x0 = m%x(1,1)
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
-    
+
     do i = 1, m%np
       if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x(i, 1)
       end if
-       
+
       if(m%Lxyz(i,3) == 0) then
         write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
-    
+
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
     call io_close(iunit)
-    
+
   end subroutine plane_z
 
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
     integer  :: iunit, i
-    
+
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
     x0 = m%x(1,1)
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
-       
+
     do i=1,m%np
        if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
@@ -475,7 +475,7 @@ contains
     call X(cf_new) (m%l, c)
     call X(cf_alloc_RS) (c)
     call X(mf2cf) (m, f, c)
-    
+
     ! the offset is different in periodic directions
     do i = 1, sb%periodic_dim
       offset(i)=-(c%n(i))/2 * m%h(i) / units_out%length%factor
@@ -489,7 +489,7 @@ contains
     nitems=trim(adjustl(nitems))
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".dx", action='write')
-    
+
     write(iunit, '(a,3i7)') 'object 1 class gridpositions counts', c%n(:)
     write(iunit, '(a,3f12.6)') ' origin', offset(:)
     write(iunit, '(a,f12.6,a)') ' delta ',m%h(1) / units_out%length%factor, '    0.000000    0.000000'
@@ -497,10 +497,10 @@ contains
     write(iunit, '(a,f12.6)') ' delta     0.000000    0.000000',m%h(3) / units_out%length%factor
     write(iunit, '(a,3i7)') 'object 2 class gridconnections counts',c%n(:)
 #if defined(R_TREAL)
-    write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ',nitems,' data follows'   
+    write(iunit, '(a,a,a)') 'object 3 class array type float rank 0 items ',nitems,' data follows'
 #else
     write(iunit, '(a,a,a)') 'object 3 class array type float category complex rank 0 items ',&
-                             nitems,' data follows'   
+                             nitems,' data follows'
 #endif
     do ix = 1, c%n(1)
       do iy = 1, c%n(2)
@@ -514,7 +514,7 @@ contains
     write(iunit, '(a)') ' component "connections" value 2'
     write(iunit, '(a)') ' component "data" value 3'
     write(iunit, '(a)') 'end'
-   
+
     call io_close(iunit)
     call X(cf_free) (c)
 

@@ -163,7 +163,7 @@ contains
     position_ = 'asis'
     if(present(position)) position_ = position
     die_    = .true.
-    if(present(die     )) die_      = die  
+    if(present(die     )) die_      = die
 
     call io_assign(iunit)
     if(iunit<0) then

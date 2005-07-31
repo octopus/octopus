@@ -42,7 +42,7 @@ module phonons
   use grid
 
   implicit none
-  
+
   private
   public :: phonons_run
 
@@ -70,12 +70,12 @@ contains
     if(err.ne.0) then
       message(1) = "Could not load wave-functions: Starting from scratch"
       call write_warning(1)
-      
+
       ierr = 1
       call end_()
       return
     end if
-    
+
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call write_info(1)
@@ -116,7 +116,7 @@ contains
 
   contains
     subroutine init_()
-      call push_sub('phonons_run')
+      call push_sub('phonons.phonons_run')
 
       ! allocate wfs
       allocate(sys%st%X(psi)(sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
@@ -125,9 +125,9 @@ contains
 
     subroutine end_()
       deallocate(sys%st%X(psi))
-      
+
       call pop_sub()
-    end subroutine end_    
+    end subroutine end_
 
   end function phonons_run
 
@@ -207,7 +207,7 @@ contains
 
     ! diagonalize DM
     call lalg_eigensolve(ph%dim, ph%DM, ph%DM, ph%freq)
-    
+
   end subroutine get_DM
 
 end module phonons

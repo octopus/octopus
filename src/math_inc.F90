@@ -44,7 +44,7 @@ subroutine X(extrapolate)(order, n1, n2, v, vex, dt, t)
   select case(order)
   case(1)
     c(0) = 1.0 + x
-    c(1) =     - x 
+    c(1) =     - x
   case(2)
     c(0) = 1.0 + (3.0/2.0)*x + (1.0/2.0)*x**2
     c(1) =     -      2.0 *x -           x**2

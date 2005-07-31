@@ -27,7 +27,7 @@ subroutine X(restart_write_function)(dir, filename, gr, f, ierr, size)
   integer,          intent(in)  :: size
   R_TYPE,           intent(in)  :: f(size)
 
-  call push_sub('restart_write_function')
+  call push_sub('restart_inc.restart_write_function')
 
   call X(output_function) (restart_format, trim(dir), trim(filename), &
      gr%m, gr%sb, f(:), M_ONE, ierr)
@@ -44,7 +44,7 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
-  call push_sub('restart_read_function')
+  call push_sub('restart_inc.restart_read_function')
 
   ! try first to load plain binary files
   call X(input_function) (trim(dir)//'/'//trim(filename), m, f(:), ierr)
@@ -67,7 +67,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
   integer :: iunit, iunit2, err, ik, ist, idim, i
   character(len=40) :: filename, mformat
 
-  call push_sub('restart_write')
+  call push_sub('restart_inc.restart_write')
 
   ASSERT(associated(st%X(psi)))
 
@@ -79,7 +79,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
      iunit = io_open(trim(dir)//'/wfns', action='write')
      write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
      write(iunit,'(a)') '%Wavefunctions'
-     
+
      iunit2 = io_open(trim(dir)//'/occs', action='write')
      write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
      write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
@@ -90,13 +90,13 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
     do ist = 1, st%nst
       do idim = 1, st%d%dim
         write(filename,'(i10.10)') i
-        
+
         if(mpiv%node==0) then
           write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
           write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ', &
                st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
         end if
-        
+
         if(st%st_start <= ist .and. st%st_end >= ist .and. mpiv%node==0) then
           call X(restart_write_function)(dir, filename, gr, st%X(psi) (:, idim, ist, ik), err, size(st%X(psi),1))
           if(err == 0) ierr = ierr + 1
@@ -106,10 +106,10 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
       end do
     end do
   end do
-  
+
   if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
 
-  if(mpiv%node==0)  then 
+  if(mpiv%node==0)  then
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
     write(iunit2, '(a)') '%'
@@ -144,7 +144,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   character(len=1) :: char
   logical, allocatable :: filled(:, :, :)
 
-  call push_sub('restart_read')
+  call push_sub('restart_inc.restart_read')
 
   ! sanity check
   ASSERT(associated(st%X(psi)))

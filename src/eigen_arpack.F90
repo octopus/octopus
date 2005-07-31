@@ -36,7 +36,7 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
   FLOAT :: tol, sigmar, sigmai
 
   !!!!WARNING: No support for spinors, yet. No support for complex wavefunctions.
-  call push_sub('eigen_solver_arpack')
+  call push_sub('eigen_arpack.eigen_solver_arpack')
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   kpoints: do ik = 1, st%d%nik

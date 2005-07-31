@@ -51,7 +51,7 @@ integer function opt_control_run(sys, h) result(ierr)
   type(td_type)                :: td
   type(grid_type),     pointer :: gr   ! some shortcuts
   type(states_type),   pointer :: st
-  type(geometry_type), pointer :: geo  
+  type(geometry_type), pointer :: geo
 
   type(states_type), pointer :: psi_i
   type(states_type)          :: psi_f
@@ -84,7 +84,7 @@ integer function opt_control_run(sys, h) result(ierr)
       v_old_i(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_i(:, :, 3) = v_old_i(:, :, 2)
-    
+
     do i = 2, 3
       v_old_f(:,:,i) = v_old_f(:,:,1) ! this one comes from the previous propagation
     end do
@@ -110,7 +110,7 @@ integer function opt_control_run(sys, h) result(ierr)
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
-    
+
     do i = 2, 3
       v_old_i(:,:,i) = v_old_i(:,:,1) ! this one comes the previous propagation
     end do
@@ -121,7 +121,7 @@ integer function opt_control_run(sys, h) result(ierr)
          exit ctr_loop
     ctr_iter = ctr_iter + 1
     old_functional = functional
-    
+
     ! and now backward
     message(1) = "Info: Propagating backward"
     call write_info(1)
@@ -238,13 +238,13 @@ contains
     ! setup the hamiltonian
     call zstates_calc_dens(psi_f, NP, psi_f%rho, reduce=.true.)
     call zv_ks_calc(gr, sys%ks, h, psi_f, calc_eigenval=.true.)
-    
+
     ! setup start of the propagation
     do i = 1, st%d%nspin
       v_old_f(:, i, 2) = h%vhxc(:, i)
     end do
     v_old_f(:, :, 3) = v_old_f(:, :, 2)
-    
+
     h%ep%lasers(1)%numerical => laser_f
     td%tr%v_old => v_old_f
 
@@ -302,7 +302,7 @@ contains
       write(iunit, '(4es20.12)') i*td%dt/M_TWO, las(:, i)
     end do
     call io_close(iunit)
-  
+
   end subroutine write_field
 
   subroutine output()
@@ -323,7 +323,7 @@ contains
     gr  => sys%gr
     geo => gr%geo
     st  => sys%st
-    
+
     call td_init(gr, td, sys%st, h, sys%outp)
 
     ! allocate memory
@@ -332,7 +332,7 @@ contains
     ! psi_i is initialized in system_init
     psi_i => st
     v_old_i => td%tr%v_old
-    
+
     ! now we initialize psi_f. This will repeat some stuff
     call states_init(psi_f, gr)
     if(h%ep%nvnl > 0) then
@@ -343,7 +343,7 @@ contains
     psi_f%st_end = psi_i%st_end
     allocate(psi_f%zpsi(NP, psi_f%d%dim, psi_f%st_start:psi_f%st_end, psi_f%d%nik))
     allocate(v_old_f(NP, psi_f%d%nspin, 3))
-    
+
     ! prepare the initial laser
     if(h%ep%no_lasers.ne.0) then
       message(1) = "Please turn off any lasers for optimum control"

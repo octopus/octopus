@@ -99,17 +99,17 @@ contains
 
     do iz = 2, cf%n(3) - 1
        x = x + cf%RS(1, 1, iz) + cf%RS(cf%n(1), 1, iz) + &
-               cf%RS(1, cf%n(2), iz) + cf%RS(cf%n(1), cf%n(2), 1) 
+               cf%RS(1, cf%n(2), iz) + cf%RS(cf%n(1), cf%n(2), 1)
     enddo
 
     do iy = 2, cf%n(2) - 1
        x = x + cf%RS(1, iy, 1) + cf%RS(cf%n(1), iy, 1) + &
-               cf%RS(1, iy, cf%n(3)) + cf%RS(cf%n(1), iy, cf%n(3)) 
+               cf%RS(1, iy, cf%n(3)) + cf%RS(cf%n(1), iy, cf%n(3))
     enddo
 
     do ix = 2, cf%n(1) - 1
        x = x + cf%RS(ix, 1, 1) + cf%RS(ix, cf%n(2), 1) + &
-               cf%RS(ix, 1, cf%n(3)) + cf%RS(ix, cf%n(2), cf%n(3)) 
+               cf%RS(ix, 1, cf%n(3)) + cf%RS(ix, cf%n(2), cf%n(3))
     enddo
 
     x = x + cf%RS(1, 1, 1)             + cf%RS(cf%n(1), 1, 1) + &
@@ -131,10 +131,10 @@ contains
     FLOAT,                intent(in)    :: vec(3)
     type(dcf),            intent(in)    :: cf_i
     type(dcf),            intent(inout) :: cf_o
-  
+
     CMPLX :: k(3)
     integer     :: n(3), ix, iy, iz, ixx, iyy, izz
-  
+
     ASSERT(all(cf_i%n == cf_o%n))
     ASSERT(associated(cf_i%FS).and.associated(cf_o%FS))
 
@@ -148,7 +148,7 @@ contains
         iyy = pad_feq(iy, n(2), .true.)
         do ix = 1, cf_i%nx
           ixx = pad_feq(ix, n(1), .true.)
-          
+
           cf_o%FS(ix, iy, iz) = cf_o%FS(ix, iy, iz) + &
                exp( -(k(1)*vec(1)*ixx + k(2)*vec(2)*iyy + k(3)*vec(3)*izz) ) * cf_i%FS(ix, iy, iz)
         end do
@@ -167,4 +167,4 @@ contains
 #include "cf_inc.F90"
 
 end module cube_function
-  
+

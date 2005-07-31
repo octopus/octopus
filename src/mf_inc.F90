@@ -82,7 +82,7 @@ subroutine X(mf_random)(m, f)
   integer :: i
   FLOAT :: a(3), rnd, r
 
-  call push_sub('states_random')
+  call push_sub('mf_inc.states_random')
 
   call quickrnd(iseed, rnd)
   a(1) = M_TWO*(2*rnd - 1)
@@ -97,7 +97,7 @@ subroutine X(mf_random)(m, f)
   end do
 
   r = X(mf_nrm2)(m, f)
-  call lalg_scal(m%np, R_TOTYPE(M_ONE/r), f) 
+  call lalg_scal(m%np, R_TOTYPE(M_ONE/r), f)
 
   call pop_sub()
 end subroutine X(mf_random)

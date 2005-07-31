@@ -55,7 +55,7 @@ contains
 
     call loct_parse_float(check_inp('CurvModineXBar'), M_ONE/M_THREE, cv%xbar)
     call loct_parse_float(check_inp('CurvModineJBar'), M_HALF, cv%Jbar)
-    
+
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim) / cv%Jbar
 
@@ -66,7 +66,7 @@ contains
 
     call loct_parse_float(check_inp('CurvModineJlocal'), CNST(0.5), cv%Jlocal)
     call loct_parse_float(check_inp('CurvModineJrange'), M_TWO/units_inp%length%factor, cv%Jrange)
-    
+
     if(cv%Jlocal<M_ZERO.or.cv%Jlocal>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'
       call write_fatal(1)
@@ -82,13 +82,13 @@ contains
     type(curv_modine_type), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi_(:)  ! chi_(sb%dim)
     FLOAT,                  intent(out) :: x(:)     !   x (sb%dim)
- 
+
     integer, parameter :: q = 3
 
     FLOAT :: chibar(sb%dim), r, chi
     logical :: neg
     integer :: i
-    
+
     chibar = cv%xbar*cv%L(:)
 
     do i = 1, sb%dim
@@ -120,13 +120,13 @@ contains
     type(curv_modine_type), intent(in)  :: cv
     FLOAT,                  intent(in)  :: chi_(:)  ! chi(sb%dim)
     FLOAT,                  intent(out) :: J(:,:)   ! J(sb%dim,sb%dim), the Jacobian
- 
+
     integer, parameter :: q = 3
 
     FLOAT :: chibar(sb%dim), r, f, chi, J2(sb%dim), x(sb%dim)
     logical :: neg
     integer :: i, ix, iy
-    
+
     chibar = cv%xbar*cv%L(:)
 
     J2(:) = M_ZERO
@@ -136,7 +136,7 @@ contains
 
       x(i)  = cv%Jbar * chi
       J2(i) = cv%Jbar
-      
+
       if(chi > chibar(i)) then
         r = (chi-chibar(i))/(cv%L(i)-chibar(i))
 

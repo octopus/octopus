@@ -24,7 +24,7 @@ subroutine X(sparskit_solver_init)(n, sk)
 
   integer :: workspace_size, m
 
-  call push_sub('sparskit_solver_init')
+  call push_sub('sparskit_inc.sparskit_solver_init')
 
   !%Variable SparskitSolver
   !%Type integer
@@ -38,7 +38,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   !%Option sk_bcg 3
   !% Bi-Conjugate Gradient Method
   !%Option sk_dbcg 4
-  !% BCG with partial pivoting 
+  !% BCG with partial pivoting
   !%Option sk_bcgstab 5
   !% BCG stabilized
   !%Option sk_tfqmr 6
@@ -98,7 +98,7 @@ subroutine X(sparskit_solver_init)(n, sk)
      workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
   case(SK_GMRES)
      message(1) = 'Info: Sparskit solver type: Generalized Minimum Residual method'
-     workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2       
+     workspace_size = (sk%size+3)*(m+2) + (m+1)*m/2
   case(SK_FGMRES)
      message(1) = 'Info: Sparskit solver type: Flexible version of Generalized Minimum Residual method'
      workspace_size =  2*sk%size*(m+1) + (m+1)*m/2 + 3*m + 2
@@ -121,7 +121,7 @@ subroutine X(sparskit_solver_init)(n, sk)
   sk%ipar(1) = 0
 
   ! Stopping criteria; use convergence test scheme 1
-  sk%ipar(3) = 1 
+  sk%ipar(3) = 1
 
   sk%ipar(4) = workspace_size
   sk%ipar(5) = sk%krylov_size
@@ -169,7 +169,7 @@ subroutine X(sparskit_solver_run)(sk, op, sol, rhs)
 #endif
 
 
-  call push_sub('sparskit_solver_run')
+  call push_sub('sparskit_inc.sparskit_solver_run')
 
   select case(sk%solver_type)
   case(SK_CG)
@@ -206,7 +206,7 @@ end subroutine X(sparskit_solver_run)
 
 ! ---------------------------------------------------------
 subroutine X(sparskit_solver_end)()
-  call push_sub('sparskit_solver_end')
+  call push_sub('sparskit_inc.sparskit_solver_end')
 
   deallocate(sk_b, sk_y, sk_work)
 

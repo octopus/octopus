@@ -40,7 +40,7 @@ contains
     type(system_type)       :: sys
     type(hamiltonian_type)  :: h
 
-    call push_sub('wave_matching_run')
+    call push_sub('wave_matching.wave_matching_run')
 
     ierr = 0
 

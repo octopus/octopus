@@ -17,11 +17,11 @@
 !!
 !! $Id$
 
-! /* Note: in fftw2, the routines in single and double precision have the 
-! same name. From the manual: 
-!   "To work in single precision rather than double precision, #define the 
-!   symbol FFTW_ENABLE_FLOAT in fftw.h and then recompile the library. On 
-!   Unix systems, you can instead use configure --enable-float at installation 
+! /* Note: in fftw2, the routines in single and double precision have the
+! same name. From the manual:
+!   "To work in single precision rather than double precision, #define the
+!   symbol FFTW_ENABLE_FLOAT in fftw.h and then recompile the library. On
+!   Unix systems, you can instead use configure --enable-float at installation
 !   time" */
 
 module fft
@@ -29,7 +29,7 @@ module fft
   use messages
   use syslabels
   use lib_basic_alg
-  
+
   implicit none
 
   ! global constants
@@ -69,7 +69,7 @@ contains
     integer :: i
 
     call loct_parse_logical(check_inp('FFTOptimize'), .true., fft_optimize)
-    
+
     do i = 1, FFT_MAX
       fft_refs(i) = NULL
     end do
@@ -98,19 +98,19 @@ contains
 
     ! OLD: I let it here because maybe I revert to this method later
     ! optimize dimensions in non-periodic directions
-    !    do i = sb%periodic_dim + 1, sb%dim 
+    !    do i = sb%periodic_dim + 1, sb%dim
     !      if (n(i) /= 1 .and. fft_optimize) &
     !           call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
-    !    end do    
+    !    end do
     ! NEW
     ! optimize dimensions only for finite sys
     if(.not.simul_box_is_periodic(sb)) then
-      do i = 1, sb%dim 
+      do i = 1, sb%dim
         if(n(i).ne.1 .and. fft_optimize) &
            call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
       end do
     end if
-   
+
    ! find out if fft has already been allocated
     j = 0
     do i = FFT_MAX, 1, -1
@@ -159,7 +159,7 @@ contains
   subroutine fft_copy(fft_i, fft_o)
     type(fft_type), intent( in) :: fft_i
     type(fft_type), intent(out) :: fft_o
-    
+
     ASSERT(fft_i%slot>=1.and.fft_i%slot<=FFT_MAX)
     ASSERT(fft_refs(fft_i%slot) > 0)
 
@@ -255,8 +255,8 @@ contains
   function pad_feq(i, n, mode)
     integer, intent(in) :: i,n
     logical, intent(in) :: mode
-    integer :: pad_feq 
-    
+    integer :: pad_feq
+
     if(mode) then      ! index to frequency number
       if( i <= n/2 + 1 ) then
         pad_feq = i - 1
@@ -270,7 +270,7 @@ contains
         pad_feq = i + n + 1
       endif
     endif
-    
+
     return
   end function pad_feq
 

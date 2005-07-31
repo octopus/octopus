@@ -29,7 +29,7 @@ subroutine td_init(gr, td, st, h, outp)
   integer(POINTER_SIZE) :: blk
   FLOAT :: rmin
 
-  call push_sub('td_init')
+  call push_sub('td_init.td_init')
 
   td%iter = 0
 
@@ -47,7 +47,7 @@ subroutine td_init(gr, td, st, h, outp)
     message(2) = '(1 <= TDMaximumIter)'
     call write_fatal(2)
   end if
-    
+
   call loct_parse_int(check_inp('TDDipoleLmax'), 1, td%lmax)
   if (td%lmax < 0 .or. td%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
@@ -89,7 +89,7 @@ subroutine td_init(gr, td, st, h, outp)
     call write_warning(2)
     td%move_ions = VELOCITY_VERLET
   endif
-  
+
   ! Check what should be output
   call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., td%out_multip)
   if(td%move_ions>0) then
@@ -127,7 +127,7 @@ end subroutine td_init
 subroutine td_end(td)
   type(td_type), intent(inout) :: td
 
-  call push_sub('td_end')
+  call push_sub('td_init.td_end')
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call PES_end(td%PESv)

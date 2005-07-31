@@ -34,8 +34,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 #endif
 
 
-  call push_sub('oep_sic')
-  
+  call push_sub('xc_OEP_SIC.oep_sic')
+
   allocate(rho(NP, 2), Vxc(NP, 2))
   rho(1:NP, 2) = M_ZERO
 
@@ -46,22 +46,22 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
     if(st%occ(i, is) .gt. small) then ! we only need the occupied states
       ! get orbital density
       rho(1:NP, 1) = oep%socc*st%occ(i, is)*R_ABS(st%X(psi)(1:NP, 1, i, is))**2
-     
+
       ! initialize before calling get_vxc
       vxc = M_ZERO
       ex2  = M_ZERO
       ec2  = M_ZERO
-      
+
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
       edummy = M_ZERO
-      call xc_get_vxc(gr, xcs, rho, SPIN_POLARIZED, vxc, ex2, ec2, edummy, edummy) 
+      call xc_get_vxc(gr, xcs, rho, SPIN_POLARIZED, vxc, ex2, ec2, edummy, edummy)
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
 
       oep%X(lxc)(1:NP, i) = oep%X(lxc)(1:NP, i) - &
-         vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))      
-      
+         vxc(1:NP, 1)*R_CONJ(st%X(psi) (1:NP, 1, i, is))
+
       ! calculate the Hartree contribution using poissons equation
       vxc(1:NP, 1) = M_ZERO
       call dpoisson_solve(gr, vxc(:, 1), rho(:, 1))

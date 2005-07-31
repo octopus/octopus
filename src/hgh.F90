@@ -79,7 +79,7 @@ contains
     logical :: found
     character(len=256) :: filename2
 
-    call push_sub('hgh_init')
+    call push_sub('hgh.hgh_init')
 
     filename2 =  filename // '.hgh'
     inquire(file=filename2, exist=found)
@@ -132,7 +132,7 @@ contains
   subroutine hgh_end(psp)
     type(hgh_type), intent(inout) :: psp
 
-    call push_sub('hgh_end')
+    call push_sub('hgh.hgh_end')
 
     deallocate(psp%vlocal, psp%rphi, psp%eigen)
     if(associated(psp%kb)) deallocate(psp%kb, psp%kbr)
@@ -146,7 +146,7 @@ contains
 
     integer :: l, i
 
-    call push_sub('hgh_process')
+    call push_sub('hgh.hgh_process')
 
     ! Fixes the local potential
     psp%vlocal(1:psp%g%nrval) = vlocalr(psp%g%rofi, psp)
@@ -171,13 +171,13 @@ contains
   function load_params(unit, params)
     integer, intent(in)             :: unit        ! where to read from
     type(hgh_type), intent(out)     :: params      ! obvious
-    integer                         :: load_params ! 0 if success, 
+    integer                         :: load_params ! 0 if success,
     ! 1 otherwise.
 
     integer :: i, iostat, j, k
     character(len=VALCONF_STRING_LENGTH) :: line
 
-    call push_sub('load_params')
+    call push_sub('hgh.load_params')
 
     ! Set initially everything to zero.
     params%c(1:4) = M_ZERO; params%rlocal = M_ZERO;
@@ -276,7 +276,7 @@ contains
     FLOAT :: dincv, tmp
     FLOAT, parameter :: threshold = CNST(1.0e-4)
 
-    call push_sub('get_cutoff_radii_psp')
+    call push_sub('hgh.get_cutoff_radii_psp')
 
     do l = 0, psp%l_max
        tmp = M_ZERO
@@ -361,7 +361,7 @@ contains
     endif
 
     projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
-         (  p%rc(l)**(l + real(4*i-1, PRECISION)/M_TWO) * x )  
+         (  p%rc(l)**(l + real(4*i-1, PRECISION)/M_TWO) * x )
 
   end function projectorr_scalar
 
@@ -411,7 +411,7 @@ contains
        case(1)
           projectorg = ( M_EIGHT*sqrt(p%rc(1)**5/M_THREE)*pif*g ) / ex
        case(2)
-          projectorg = ( CNST(16.0)*sqrt(p%rc(1)**5/CNST(105.0))* pif * g * & 
+          projectorg = ( CNST(16.0)*sqrt(p%rc(1)**5/CNST(105.0))* pif * g * &
                ( M_FIVE - (g*p%rc(1))**2 ) ) / ex
        case(3)
           projectorg = ( CNST(32.0)*sqrt(p%rc(1)**5/CNST(1155.0))* pif * g * &
@@ -430,7 +430,7 @@ contains
           projectorg = M_ZERO ! ??
        end select
 
-    case(3)    
+    case(3)
        ! This should be checked. Probably will not be needed in an near future...
     end select
 
@@ -446,7 +446,7 @@ contains
     DOUBLE :: e, z, dr, rmax
     DOUBLE, allocatable :: s(:), hato(:), g(:), y(:)
 
-    call push_sub('solve_schroedinger')
+    call push_sub('hgh.solve_schroedinger')
 
     ! Allocations...
     allocate(s(psp%g%nrval), hato(psp%g%nrval), g(psp%g%nrval), y(psp%g%nrval), prev(psp%g%nrval, 1), &
@@ -480,7 +480,7 @@ contains
                 do i = 1, 3
                    do j = 1, 3
                       do irr = 2, psp%g%nrval
-                         nonl = nonl + psp%h(l, i, j)*psp%kb(ir, l, i)* & 
+                         nonl = nonl + psp%h(l, i, j)*psp%kb(ir, l, i)* &
                               psp%g%drdi(irr)*psp%g%rofi(irr)*psp%rphi(irr, n)*psp%kb(irr,l,j)
                       enddo
                    enddo
@@ -557,7 +557,7 @@ contains
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
     character(len=256) :: dirname
 
-    call push_sub('hgh_debug')
+    call push_sub('hgh.hgh_debug')
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)

@@ -58,7 +58,7 @@ module xc_OEP
     integer       :: level   ! 0 = no oep, 1 = Slater, 2 = KLI, 3 = CEDA, 4 = full OEP
     FLOAT         :: mixing  ! how much of the function S(r) to add to vxc in every iteration
     type(lr_type) :: lr      ! to solve the equation H psi = b
-    
+
     integer          :: eigen_n
     integer, pointer :: eigen_type(:), eigen_index(:)
     FLOAT            :: socc, sfact
@@ -78,7 +78,7 @@ contains
     integer,               intent(in)  :: family
     type(mesh_type),       intent(in)  :: m
     type(states_dim_type), intent(in)  :: d
-    
+
     if(iand(family, XC_FAMILY_OEP).eq.0) then
       oep%level = XC_OEP_NONE
       return
@@ -100,13 +100,13 @@ contains
     if(oep%level == XC_OEP_FULL) then
       call loct_parse_float(check_inp('OEP_mixing'), M_ONE, oep%mixing)
     end if
-      
+
     ! this routine is only prepared for finite systems, and ispin = 1, 2
     if(d%ispin > SPIN_POLARIZED .or. d%nik>d%ispin) then
       message(1) = "OEP only works for finite systems and collinear spin!"
       call write_fatal(1)
     end if
-      
+
     ! obtain the spin factors
     call xc_oep_SpinFactor(oep, d%nspin)
 
@@ -134,7 +134,7 @@ contains
 
   end subroutine xc_oep_end
 
-  
+
   ! -----------------------------------------------------------
   subroutine xc_oep_write_info(oep, iunit)
     type(xc_oep_type), intent(in) :: oep
@@ -159,7 +159,7 @@ contains
   subroutine xc_oep_SpinFactor(oep, nspin)
     type(xc_oep_type), intent(inout) :: oep
     integer,           intent(in)    :: nspin
-    
+
     select case(nspin)
     case(1) ! we need to correct or the spin occupancies
       oep%socc  = M_HALF
@@ -172,14 +172,14 @@ contains
     end select
 
   end subroutine xc_oep_SpinFactor
-  
+
 
   ! -----------------------------------------------------------
   subroutine xc_oep_AnalizeEigen(oep, st, is)
     type(xc_oep_type), intent(inout) :: oep
     type(states_type), intent(in)    :: st
     integer,           intent(in)    :: is
-    
+
     integer  :: i
     FLOAT :: max_eigen
     FLOAT, allocatable :: eigenval(:), occ(:)
@@ -213,7 +213,7 @@ contains
         max_eigen = eigenval(i)
       end if
     end do
-    
+
     oep%eigen_n = 1
     do i = 1, st%nst
       if(occ(i) .gt. small) then
@@ -233,7 +233,7 @@ contains
 
     deallocate(eigenval, occ)
   end subroutine xc_oep_AnalizeEigen
-  
+
 
 #include "undef.F90"
 #include "real.F90"

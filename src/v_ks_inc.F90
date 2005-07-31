@@ -26,7 +26,7 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
 
   FLOAT :: amaldi_factor
 
-  call push_sub('v_ks_calc')
+  call push_sub('v_ks_inc.v_ks_calc')
 
   h%epot = M_ZERO
   h%vhxc = M_ZERO
@@ -57,7 +57,7 @@ contains
     vhartree = M_ZERO
 
     ! calculate the total density
-    rho(:) = st%rho(:, 1)       
+    rho(:) = st%rho(:, 1)
     do is = 2, h%d%spin_channels
       rho(:) = rho(:) + st%rho(:, is)
     end do
@@ -66,15 +66,15 @@ contains
     if(ks%sic_type == sic_amaldi) rho(:) = amaldi_factor*rho(:)
 
     ! solve the poisson equation
-    call dpoisson_solve(gr, vhartree, rho) 
-    
+    call dpoisson_solve(gr, vhartree, rho)
+
     if (h%em_app) then
       call lalg_scal(NP, M_ONE/h%e_ratio, vhartree)
     end if
-  
+
     h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)
     if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + vhartree
-    
+
     ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
     ! this yields the correct formula epot = - int n (vxc + vH/2)
     do is = 1, h%d%spin_channels
@@ -106,16 +106,16 @@ contains
 
     h%ahxc(:,:, 1) = h%ahxc(:,:, 1) + ahartree(:,:)
     if(h%d%ispin > UNPOLARIZED) h%ahxc(:,:, 2) = h%ahxc(:,:, 2) + ahartree(:,:)
-    
+
     ! We first add 1/2 int j.aH, to then subtract int j.(axc + aH)
     ! this yields the correct formula epot = - int j.(axc + aH/2)
-    ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c. 
+    ! WARNING 1: the axc we store is in fact axc/c. So, to get the energy rigth, we have to multiply by c.
     do is = 1, h%d%spin_channels
       do idim = 1, NDIM
         h%epot = h%epot + M_HALF*P_c*dmf_dotp(gr%m, st%j(idim, :, is), ahartree(:, idim))
       end do
     end do
-    
+
     deallocate(j, ahartree)
   end subroutine a_hartree
 
@@ -133,7 +133,7 @@ contains
     !if(RPA_first) then
     !  allocate(RPA_Vhxc(NP, h%d%nspin))
     !  RPA_Vhxc = h%vhxc
-  
+
     h%ex = M_ZERO
     h%ec = M_ZERO
     h%exc_j = M_ZERO
@@ -163,14 +163,14 @@ contains
     ! The OEP family has to handle specially
     call X(xc_oep_calc)(ks%oep, ks%xc, (ks%sic_type==sic_pz),  &
        gr, h, st, h%vhxc, h%ex, h%ec)
-  
+
     ! next 5 lines are for an RPA calculation
     !  RPA_Vhxc = h%vhxc - RPA_Vhxc  ! RPA_Vhxc now includes the xc potential
     !  RPA_first = .false.
     !else
     !  h%vhxc = h%vhxc + RPA_Vhxc
     !end if
-  
+
     select case(h%d%ispin)
     case(UNPOLARIZED)
       h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1))
@@ -180,7 +180,7 @@ contains
     case(SPINORS)
       h%epot = h%epot - dmf_dotp(gr%m, st%rho(:, 1), h%vhxc(:, 1)) &
          - dmf_dotp(gr%m, st%rho(:, 2), h%vhxc(:, 2))
-      
+
       allocate(ztmp1(NP), ztmp2(NP))
       ztmp1 = st%rho(:, 3) + M_zI*st%rho(:, 4)
       ztmp2 = h%vhxc(:, 3) - M_zI*h%vhxc(:, 4)

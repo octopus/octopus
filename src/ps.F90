@@ -52,7 +52,7 @@ type ps_type
   type(loct_spline_type), pointer :: Ur(:, :)   ! atomic wavefunctions
   type(loct_spline_type) :: vl        ! local part
   type(loct_spline_type) :: vlocalized ! The localized part of the local part :)
-  type(loct_spline_type) :: vlocal_f  ! localized part of local potential 
+  type(loct_spline_type) :: vlocal_f  ! localized part of local potential
                                       ! in Fourier space (for periodic)
   type(loct_spline_type) :: dvl       ! derivative of the local part
   type(loct_spline_type) :: core      ! core charge
@@ -94,7 +94,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
   FLOAT, allocatable :: y(:)
   integer :: i
 
-  call push_sub('ps_init')
+  call push_sub('ps.ps_init')
 
   ! Sets the flavour, label, and number of spin channels.
   ps%flavour = flavour
@@ -153,7 +153,7 @@ subroutine ps_init(ps, label, flavour, z, lmax, lloc, ispin)
            ps%dknrm   (0:ps%L_max),                 &
            ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc), &
            ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc))!, &
-  
+
   ps%dknrm   (0:ps%L_max) = M_ZERO
   ps%h       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
   ps%k       (0:ps%l_max, 1:ps%kbc, 1:ps%kbc) = M_ZERO
@@ -210,7 +210,7 @@ subroutine ps_getradius(ps)
   FLOAT   :: r, dx, y
   FLOAT, parameter :: threshold = CNST(1.0e-3)
 
-  call push_sub('ps_getradius')
+  call push_sub('ps.ps_getradius')
 
   ps%rc_max = CNST(0.0)
   dx = CNST(0.01)
@@ -222,7 +222,7 @@ subroutine ps_getradius(ps)
            y = loct_splint(ps%kb(l, j), r)
            if(abs(y) > threshold) exit
         enddo
-        ps%rc_max = max(ps%rc_max, r)        
+        ps%rc_max = max(ps%rc_max, r)
      enddo
   end do
   do l = 0, ps%so_l_max
@@ -232,7 +232,7 @@ subroutine ps_getradius(ps)
            y = loct_splint(ps%so_kb(l, j), r)
            if(abs(y) > threshold) exit
         enddo
-        ps%rc_max = max(ps%rc_max, r)        
+        ps%rc_max = max(ps%rc_max, r)
      enddo
   enddo
 
@@ -242,7 +242,7 @@ end subroutine ps_getradius
 subroutine ps_derivatives(ps)
   type(ps_type), intent(inout) :: ps
   integer :: l, j
-  call push_sub('ps_derivatives')
+  call push_sub('ps.ps_derivatives')
 
   do l = 0, ps%l_max
      do j = 1, ps%kbc
@@ -266,9 +266,9 @@ subroutine ps_filter(ps, gmax, alpha, beta, rcut, beta2)
   FLOAT :: r
   FLOAT, allocatable :: y(:)
 
-  call push_sub('ps_filter')
+  call push_sub('ps.ps_filter')
 
-  call loct_spline_filter(ps%vlocalized, fs = (/ alpha*gmax, CNST(100.0) /) ) 
+  call loct_spline_filter(ps%vlocalized, fs = (/ alpha*gmax, CNST(100.0) /) )
   call loct_spline_end(ps%vl)
   allocate(y(ps%g%nrval))
   y(1) = loct_splint(ps%vlocalized, CNST(0.0)) - ps%z_val*(M_TWO/sqrt(M_PI))*ps%a_erf
@@ -307,7 +307,7 @@ subroutine ps_debug(ps, dir)
   integer  :: so_unit, dso_unit, sow_unit          ! The spin-orbit non-local terms.
   integer  :: j, k, l
 
-  call push_sub('ps_debug')
+  call push_sub('ps.ps_debug')
 
   ! Opens the files.
   dirname = trim(dir)//'/ps.'//trim(ps%label)
@@ -403,7 +403,7 @@ end subroutine ps_debug
 subroutine ps_end(ps)
   type(ps_type), intent(inout) :: ps
 
-  call push_sub('ps_end')
+  call push_sub('ps.ps_end')
 
   if(.not. associated(ps%kb)) return
 
@@ -417,7 +417,7 @@ subroutine ps_end(ps)
 
   call loct_spline_end(ps%vl)
   call loct_spline_end(ps%dvl)
-  call loct_spline_end(ps%core)  
+  call loct_spline_end(ps%core)
   call loct_spline_end(ps%vlocal_f)
 
   deallocate(ps%kb, ps%dkb, ps%ur, ps%dknrm, ps%h, ps%k)
@@ -433,7 +433,7 @@ subroutine hgh_load(ps, psp)
   integer :: l, ll
   FLOAT :: x
 
-  call push_sub('hgh_load')
+  call push_sub('ps.hgh_load')
 
   ! Fixes some components of ps, read in psf
   ps%z_val = psp%z_val
@@ -467,7 +467,7 @@ subroutine tm_load(ps, pstm)
   type(ps_type), intent(inout) :: ps
   type(tm_type), intent(inout) :: pstm
 
-  call push_sub('tm_load')
+  call push_sub('ps.tm_load')
 
   ! Fixes some components of ps, read in pstm
   ps%z_val = pstm%zval
@@ -501,13 +501,13 @@ end subroutine tm_load
 subroutine get_splines_tm(psf, ps)
   type(tm_type), intent(in)    :: psf
   type(ps_type), intent(inout) :: ps
-  
+
   integer :: is, l, ll, nrc, ir, nrcore, k
   logical :: threshold
   FLOAT :: chc, r, lim
   FLOAT, allocatable :: hato(:), derhato(:)
 
-  call push_sub('get_splines_tm')
+  call push_sub('ps.get_splines_tm')
 
   allocate(hato(psf%nrval), derhato(psf%nrval))
 
@@ -516,7 +516,7 @@ subroutine get_splines_tm(psf, ps)
   do is = 1, ps%ispin
     do l = 1, ps%conf%p
       ll = ps%conf%l(l)
-      if(ll.ne.0) then 
+      if(ll.ne.0) then
          hato(2:) = psf%rphi(2:, l-1, 1 + is)/psf%rofi(2:)
          hato(1) = M_ZERO
       else
@@ -526,7 +526,7 @@ subroutine get_splines_tm(psf, ps)
          do ir = psf%nrval, 2, -1
             r = psf%rofi(ir)
             if(r<CNST(0.005)) then
-               if(threshold) then 
+               if(threshold) then
                   k = ir
                   threshold = .false.
                endif
@@ -566,7 +566,7 @@ subroutine get_splines_tm(psf, ps)
   endif
 
   ! Now the part corresponding to the local pseudopotential
-  ! where the asymptotic part is substracted 
+  ! where the asymptotic part is substracted
   hato = psf%vlocal/M_TWO
   call loct_spline_fit(psf%nrval, psf%rofi, hato, ps%vl)
 
@@ -613,7 +613,7 @@ subroutine get_splines_hgh(psp, ps)
   integer :: l, is, nrc, j
   FLOAT, allocatable :: hato(:), derhato(:)
 
-  call push_sub('get_splines_hgh')
+  call push_sub('ps.get_splines_hgh')
 
   allocate(hato(psp%g%nrval), derhato(psp%g%nrval))
 
@@ -629,7 +629,7 @@ subroutine get_splines_hgh(psp, ps)
   end do
 
   ! Now the part corresponding to the local pseudopotential
-  ! where the asymptotic part is substracted 
+  ! where the asymptotic part is substracted
   call loct_spline_fit(psp%g%nrval, psp%g%rofi, psp%vlocal, ps%vl)
 
   ! Define the table for the pseudo-wavefunction components (using splines)

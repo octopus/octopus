@@ -36,7 +36,7 @@ contains
 
     call loct_printRecipe(trim(conf%share), filename)
     call io_dump_file(stdout, filename)
-    call write_info(2)    
+    call write_info(2)
     call io_dump_file(stdout, trim(conf%share)//"/recipes/disclaimer.txt")
     call write_info(2)
 

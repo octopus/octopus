@@ -21,7 +21,7 @@
 ! Electronic acceleration (to calculate harmonic spectrum...)
 ! It is calculated as:
 !
-! d2<x>/dt2 = d<p>/dt + i<[H,[V_nl,x]]> = 
+! d2<x>/dt2 = d<p>/dt + i<[H,[V_nl,x]]> =
 !           = i<[V_l,p]> + i<[V_nl,p]> - E(t)N + i<[H,[V_nl,x]]>
 !
 ! WARNING: This subroutine only works if ions are not allowed to move
@@ -42,7 +42,7 @@
     FLOAT :: y(3)
 #endif
 
-    call push_sub('td_calc_tacc')
+    call push_sub('td_calc.td_calc_tacc')
 
     ! The term i<[V_l,p]> + i<[V_nl,p]> may be considered as equal but opposite to the
     ! force exerted by the electrons on the ions. COMMENT: This has to be thought about.
@@ -59,7 +59,7 @@
       call epot_laser_field(gr%sb, h%ep, t, field)
       acc(1:3) = acc(1:3) - st%qtot*field(1:3)
     end if
-    
+
     if(h%ep%nvnl <= 0) then
       call pop_sub()
       return
@@ -71,13 +71,13 @@
 
     do ik = 1, st%d%nik
       do ist = st%st_start, st%st_end
-        
+
         call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
         do k = 1, NP
           call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(:, k), t, v)
           hzpsi(k,:) = hzpsi(k,:) + v * st%zpsi(k,:,ist,ik)
         end do
-        
+
         allocate(xzpsi(NP, st%d%dim, 3), vnl_xzpsi(NP, st%d%dim))
         xzpsi = M_z0
         do k = 1, NP
@@ -85,24 +85,24 @@
             xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * st%zpsi(k, 1:st%d%dim, ist, ik)
           end do
         end do
-         
+
         do j = 1, NDIM
           vnl_xzpsi = M_z0
           call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
-               
+
           do idim = 1, st%d%dim
             conj = R_CONJ(hzpsi(:, idim))
             x(j) = x(j) - 2*st%occ(ist, ik)*zmf_dotp(gr%m, conj, vnl_xzpsi(:, idim) )
           end do
         end do
-           
+
         xzpsi = M_z0
         do k = 1, NP
           do j = 1, NDIM
             xzpsi(k, 1:st%d%dim, j) = gr%m%x(j, k) * hzpsi(k, 1:st%d%dim)
           end do
         end do
-        
+
         do j = 1, NDIM
           vnl_xzpsi = M_z0
           call zvnlpsi(h, gr%m, gr%sb, xzpsi(:,:, j), vnl_xzpsi(:,:), ik)
@@ -113,7 +113,7 @@
           end do
         end do
         deallocate(xzpsi, vnl_xzpsi)
-       
+
      end do
    end do
    deallocate(hzpsi, hhzpsi, conj)
@@ -128,6 +128,6 @@
    end if
 #endif
    acc = acc + x
-   
+
    call pop_sub()
  end subroutine td_calc_tacc

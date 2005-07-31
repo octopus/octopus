@@ -117,7 +117,7 @@ contains
     FLOAT, allocatable :: xc(:, :), ve(:, :), rho(:, :)
     FLOAT :: r2, ex, ec, dx, dc
 
-    call push_sub('atomhxc')
+    call push_sub('atomic.atomhxc')
 
     allocate(ve(g%nrval, nspin), xc(g%nrval, nspin), rho(g%nrval, nspin))
              ve = M_ZERO; xc = M_ZERO; rho = M_ZERO
@@ -172,7 +172,7 @@ contains
 ! This version implements the Local (spin) Density Approximation and          !
 ! the Generalized-Gradient-Aproximation with the explicit mesh                !
 ! functional method of White & Bird, PRB 50, 4954 (1994).                     !
-! Gradients are defined by numerical derivatives, using 2*NN+1 mesh         ! 
+! Gradients are defined by numerical derivatives, using 2*NN+1 mesh         !
 !   points, where NN is a parameter defined below                             !
 ! Coded by L.C.Balbas and J.M.Soler. December 1996. Version 0.5.              !
 !                                                                             !
@@ -248,15 +248,15 @@ contains
 ! Local variables and arrays                                                  !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  logical :: GGA 
-  integer :: IN, IN1, IN2, IR, IS, JN 
-  FLOAT :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             & 
+  logical :: GGA
+  integer :: IN, IN1, IN2, IR, IS, JN
+  FLOAT :: AUX(MAXR), D(NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN),             &
      DEXDD(NSPIN), DEXDGD(3,NSPIN),                                  &
-     DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       & 
+     DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                       &
      EPSC, EPSX, F1, F2, GD(3,NSPIN)
 
   integer(POINTER_SIZE) :: x_conf, x_info, c_conf, c_info
-  !external :: GGAXC, LDAXC 
+  !external :: GGAXC, LDAXC
 
   ! sanity check
   ASSERT(NSPIN==1.or.NSPIN==2)
@@ -368,7 +368,7 @@ contains
         110 CONTINUE
      ENDIF
 
-!    Find exchange and correlation energy densities and their 
+!    Find exchange and correlation energy densities and their
 !    derivatives with respect to density and density gradient
      IF (GGA) THEN
        call xc_gga(x_conf, D(1), GD(1,1), EPSX, DEXDD(1), DEXDGD(1,1))
@@ -473,7 +473,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   QBYY = M_ONE/YBYQ
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  SIMPSONS RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          ! 
+!  SIMPSONS RULE IS USED TO PERFORM TWO INTEGRALS OVER THE ELECTRON          !
 !  DENSITY.  THE TOTAL CHARGE QT IS USED TO FIX THE POTENTIAL AT R=R(NR)      !
 !  AND V0 (THE INTEGRAL OF THE ELECTRON DENSITY DIVIDED BY R) FIXES           !
 !  THE ELECTROSTATIC POTENTIAL AT THE ORIGIN                                  !
@@ -579,7 +579,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !  egofv determines the eigenenergy and wavefunction corresponding            !
 !  to a particular l, principal quantum number and boundary condition.        !
 !                                                                             !
-!  two fundamental techniques are used to locate the solution:                ! 
+!  two fundamental techniques are used to locate the solution:                !
 !      1) node counting and bisection                                         !
 !       2) variational estimate based on a slope discontinuity in psi         !
 !  the arguments are defined as follows:                                      !
@@ -589,9 +589,9 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !       ne: number of energies found                                          !
 !       l: the angular momentum                                               !
 !       ncor: the number of lower-energy state                                !
-!                                                                             ! 
+!                                                                             !
 !  the individual energies are resolved by performing a fixed number          !
-!  of bisections after a given eigenvalue has been isolated                   ! 
+!  of bisections after a given eigenvalue has been isolated                   !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   subroutine egofv(h,s,n,e,g,y,l,z,a,b,rmax,nprin,nnode,dr)
 

@@ -26,7 +26,7 @@ module simul_box
   use syslabels
   use lib_oct_parser
   use geometry
-  
+
   implicit none
 
   private
@@ -45,7 +45,7 @@ module simul_box
 
     FLOAT :: h(3)           ! the (canonical) spacing between the points
     FLOAT :: box_offset(3)  ! shifts of the origin in the respective direction
-  
+
     FLOAT :: rsize       ! the radius of the sphere or of the cylinder
     FLOAT :: xsize       ! the length of the cylinder in the x direction
     FLOAT :: lsize(3)    ! half of the length of the parallelepiped in each direction.
@@ -53,7 +53,7 @@ module simul_box
     FLOAT :: rlat(3,3)   ! lattice primitive vectors
     FLOAT :: klat(3,3)   ! reciprocal lattice primitive vectors
     FLOAT :: shift(27,3) ! shift to equivalent positions in nearest neighbour primitive cells
-  
+
     FLOAT :: fft_alpha ! enlargement factor for double box
 
     integer :: dim
@@ -62,7 +62,7 @@ module simul_box
   end type simul_box_type
 
 contains
-  
+
   !--------------------------------------------------------------
   subroutine simul_box_init(sb, geo)
     type(simul_box_type), intent(inout) :: sb
@@ -71,11 +71,11 @@ contains
     ! some local stuff
     FLOAT :: def_h, def_rsize
     integer :: i, ix, iy, iz, ii(3)
-  
-    call push_sub('simul_box_init')
+
+    call push_sub('simul_box.simul_box_init')
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
- 
+
     call read_misc()          ! miscellany stuff
     call read_box()           ! parameters defining the simulation box
     call read_spacing ()      ! parameters defining the (canonical) spacing
@@ -83,12 +83,12 @@ contains
     call build_lattice()      ! build lattice vectors
 
     call pop_sub()
-  
+
   contains
 
     !--------------------------------------------------------------
     subroutine read_misc()
-      
+
       call loct_parse_float(check_inp('DoubleFFTParameter'), M_TWO, sb%fft_alpha)
       if (sb%fft_alpha < M_ONE .or. sb%fft_alpha > M_THREE ) then
         write(message(1), '(a,f12.5,a)') "Input: '", sb%fft_alpha, &
@@ -136,14 +136,14 @@ contains
         message(1) = 'PeriodicDimensions must be <= Dimensions'
         call write_fatal(1)
       end if
-      
+
     end subroutine read_misc
 
 
     !--------------------------------------------------------------
     subroutine read_box()
       integer(POINTER_SIZE) :: blk
-      
+
       ! Read box shape.
       call loct_parse_int(check_inp('BoxShape'), MINIMUM, sb%box_shape)
       if(sb%box_shape<1 .or. sb%box_shape>4) then
@@ -151,7 +151,7 @@ contains
         message(2) = '(1 <= Box_Shape <= 4)'
         call write_fatal(2)
       end if
-      
+
       select case(sb%box_shape)
       case(SPHERE,MINIMUM)
         if(sb%dim>1 .and. simul_box_is_periodic(sb)) then
@@ -166,13 +166,13 @@ contains
           call write_fatal(2)
         end if
       end select
-      
+
       ! ignore box_shape in 1D
       if(sb%dim==1.and.sb%box_shape /= PARALLELEPIPED) sb%box_shape=SPHERE
-      
+
       sb%rsize = -M_ONE
       if(sb%box_shape == MINIMUM.and.def_rsize>M_ZERO) sb%rsize = def_rsize/units_inp%length%factor
-      
+
       if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
         call loct_parse_float(check_inp('radius'), sb%rsize, sb%rsize)
         if(sb%rsize < 0) then
@@ -185,17 +185,17 @@ contains
         sb%rsize = sb%rsize * units_inp%length%factor
         if(def_rsize>M_ZERO) call check_def(def_rsize, sb%rsize, 'radius')
       end if
-      
+
       if(sb%box_shape == CYLINDER) then
         call loct_parse_float(check_inp('xlength'), M_ONE/units_inp%length%factor, sb%xsize)
         sb%xsize = sb%xsize * units_inp%length%factor
         sb%lsize(1) = sb%xsize
         if(def_rsize>M_ZERO.and.sb%periodic_dim==0) call check_def(def_rsize, sb%xsize, 'xlength')
       end if
-      
+
       sb%lsize = M_ZERO
       if(sb%box_shape == PARALLELEPIPED) then
-        
+
         if(loct_parse_block(check_inp('lsize'), blk) == 0) then
           if(loct_parse_block_cols(blk,0) < sb%dim) then
             message(1) = 'Size of Block "lsize" does not match number of dimensions'
@@ -205,16 +205,16 @@ contains
           message(1) = 'Block "lsize" not found in input file.'
           call write_fatal(1)
         endif
-     
+
         do i = 1, sb%dim
           call loct_parse_block_float(blk, 0, i-1, sb%lsize(i))
           if(def_rsize>M_ZERO.and.sb%periodic_dim<i) call check_def(def_rsize, sb%lsize(i), 'lsize')
         end do
         sb%lsize = sb%lsize*units_inp%length%factor
-        
+
         call loct_parse_block_end(blk)
       end if
-    
+
       ! fill in lsize structure
       select case(sb%box_shape)
       case(SPHERE)
@@ -227,7 +227,7 @@ contains
           sb%lsize(i)      = maxval(geo%atom(:)%x(i)) + sb%rsize
         end do
       end select
-      
+
     end subroutine read_box
 
 
@@ -235,13 +235,13 @@ contains
     subroutine read_spacing()
       integer :: i
       integer(POINTER_SIZE) :: blk
-      
+
       sb%h = -M_ONE
       select case(sb%box_shape)
       case(SPHERE,CYLINDER,MINIMUM)
         call loct_parse_float(check_inp('spacing'), sb%h(1), sb%h(1))
         sb%h(1:sb%dim) = sb%h(1)
-        
+
       case(PARALLELEPIPED)
         if(loct_parse_block(check_inp('spacing'), blk) == 0) then
           do i = 1, sb%dim
@@ -253,7 +253,7 @@ contains
           call write_fatal(1)
         endif
       end select
-      
+
       do i = 1, sb%dim
         sb%h(i) = sb%h(i)*units_inp%length%factor
         if(sb%h(i) < M_ZERO) then
@@ -273,15 +273,15 @@ contains
         end if
         if(def_rsize>M_ZERO) call check_def(sb%h(i), def_rsize, 'spacing')
       end do
-      
+
     end subroutine read_spacing
-    
-    
+
+
     !--------------------------------------------------------------
     subroutine read_box_offset()
       integer :: i
       integer(POINTER_SIZE) :: blk
-      
+
       sb%box_offset = M_ZERO
       select case(sb%box_shape)
       case(PARALLELEPIPED)
@@ -297,23 +297,23 @@ contains
           sb%box_offset = M_ZERO
         endif
       end select
-      
+
     end subroutine read_box_offset
-    
-    
+
+
     !--------------------------------------------------------------
     subroutine check_def(var, def, text)
       FLOAT, intent(in) :: var, def
       character(len=*), intent(in) :: text
-      
+
       if(var > def) then
         write(message(1), '(3a)') "The value for '", text, "' does not match the recommended value"
         write(message(2), '(f8.3,a,f8.3)') var, ' > ', def
         call write_warning(2)
       end if
     end subroutine check_def
-    
-    
+
+
     !--------------------------------------------------------------
     subroutine build_lattice()
       ! build primitive vectors (only simple cubic, tetra, or orthororhombic )
@@ -323,7 +323,7 @@ contains
         sb%rlat(i,i) = 2*sb%lsize(i)
         sb%klat(i,i) = M_PI/sb%lsize(i)
       end do
-    
+
       ! build shifts to nearest neighbour primitive cells
       ii = (/0,-1,1/)
       sb%shift=M_ZERO
@@ -338,8 +338,8 @@ contains
           end do
         end do
       end do
-      
-    end subroutine build_lattice    
+
+    end subroutine build_lattice
 
   end subroutine simul_box_init
 
@@ -347,7 +347,7 @@ contains
   !--------------------------------------------------------------
   subroutine simul_box_end(sb)
     type(simul_box_type), intent(inout) :: sb
-    
+
   end subroutine simul_box_end
 
 
@@ -362,11 +362,11 @@ contains
        'around nuclei ', &
        'parallelepiped'/)
 
-    call push_sub('simul_box_write_info')
+    call push_sub('simul_box.simul_box_write_info')
 
     write(iunit,'(a)') 'Simulation Box:'
     write(iunit, '(a,a,1x)') '  Type = ', bs(sb%box_shape)
-    
+
     if(sb%box_shape == SPHERE.or.sb%box_shape == CYLINDER.or.sb%box_shape == MINIMUM) then
       write(iunit, '(3a,f7.3)')   '  Radius  [', trim(units_out%length%abbrev), '] = ', &
          sb%rsize/units_out%length%factor
@@ -408,7 +408,7 @@ contains
     type(simul_box_type),  intent(in) :: sb
     type(geometry_type),   intent(in) :: geo
     FLOAT,                 intent(in) :: x(3) ! x(3)
-    
+
     FLOAT, parameter :: DELTA_R = CNST(1e-12)
     FLOAT :: r
 
@@ -432,7 +432,7 @@ contains
     !--------------------------------------------------------------
     logical function in_minimum()
       integer :: i
-      
+
       in_minimum = .false.
       do i = 1, geo%natoms
         r = sqrt(sum((x(:) - geo%atom(i)%x(:))**2))
@@ -441,7 +441,7 @@ contains
           exit
         end if
       end do
-    
+
     end function in_minimum
 
   end function simul_box_in_box
@@ -453,5 +453,5 @@ contains
 
     simul_box_is_periodic = sb%periodic_dim > 0
   end function simul_box_is_periodic
-  
+
 end module simul_box

@@ -92,7 +92,7 @@ contains
 
     integer :: i
 
-    call push_sub('derivatives_init')
+    call push_sub('derivatives.derivatives_init')
 
     ! copy this value to my structure
     der%dim = sb%dim
@@ -161,7 +161,7 @@ contains
 
     integer :: i
 
-    call push_sub('derivatives_end')
+    call push_sub('derivatives.derivatives_end')
 
     ASSERT(associated(der%op))
 
@@ -182,7 +182,7 @@ contains
 
     integer :: n
 
-    call push_sub('derivatives_get_stencil_lapl')
+    call push_sub('derivatives.derivatives_get_stencil_lapl')
 
     ASSERT(associated(der%lapl))
 
@@ -220,7 +220,7 @@ contains
 
     integer :: i, n
 
-    call push_sub('derivatives_get_stencil_grad')
+    call push_sub('derivatives.derivatives_get_stencil_grad')
 
     ASSERT(associated(der%grad))
 
@@ -265,7 +265,7 @@ contains
 
     type(nl_operator_type) :: auxop
 
-    call push_sub('derivatives_build')
+    call push_sub('derivatives.derivatives_build')
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARPLUS)
@@ -344,7 +344,7 @@ contains
 
        ! get laplacian
        select case(der%stencil_type)
-       case(DER_STAR)  
+       case(DER_STAR)
           call stencil_star_coeff_lapl(der%dim, der%order, m%h(1:der%dim), der%lapl)
        case(DER_VARIATIONAL)
           call stencil_variational_coeff_lapl(der%dim, der%order, m%h, der%lapl, alpha = der%lapl_cutoff)
@@ -425,7 +425,7 @@ contains
     FLOAT   :: x(dim)
     FLOAT, allocatable :: mat(:,:), sol(:,:), powers(:,:)
 
-    call push_sub('make_discretization')
+    call push_sub('derivatives.make_discretization')
 
     allocate(mat(op(1)%n, op(1)%n), sol(op(1)%n, n))
 
