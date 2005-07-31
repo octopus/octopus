@@ -30,40 +30,40 @@ subroutine td_write_spin(out, m, st, iter)
 
   if(mpiv%node == 0) then ! only first node outputs
 
-    ! The expectation value of the spin operator is half the total magnetic moment
-    call states_magnetic_moment(m, st, st%rho, spin)
-    spin = M_HALF*spin
+     ! The expectation value of the spin operator is half the total magnetic moment
+     call states_magnetic_moment(m, st, st%rho, spin)
+     spin = M_HALF*spin
 
-    if(iter ==0) then
-      !empty file
-      call write_iter_clear(out)
+     if(iter ==0) then
+        !empty file
+        call write_iter_clear(out)
 
-      !fist line -> now unused.
-      write(aux, '(a)') '#'
-      call write_iter_string(out, aux)
-      call write_iter_nl(out)
+        !fist line -> now unused.
+        write(aux, '(a)') '#'
+        call write_iter_string(out, aux)
+        call write_iter_nl(out)
 
-      !second line -> columns name
-      call write_iter_header_start(out)
-      if (st%d%ispin == SPINORS) then
-        write(aux, '(a2,18x)') 'Sx'
+        !second line -> columns name
+        call write_iter_header_start(out)
+        if (st%d%ispin == SPINORS) then
+           write(aux, '(a2,18x)') 'Sx'
+           call write_iter_header(out, aux)
+           write(aux, '(a2,18x)') 'Sy'
+           call write_iter_header(out, aux)
+        end if
+        write(aux, '(a2,18x)') 'Sz'
         call write_iter_header(out, aux)
-        write(aux, '(a2,18x)') 'Sy'
-        call write_iter_header(out, aux)
-      end if
-      write(aux, '(a2,18x)') 'Sz'
-      call write_iter_header(out, aux)
-      call write_iter_nl(out)
-    endif
+        call write_iter_nl(out)
+     endif
 
-    call write_iter_start(out)
-    select case (st%d%ispin)
-    case (SPIN_POLARIZED)
-      call write_iter_double(out, spin(3), 1)
-    case (SPINORS)
-      call write_iter_double(out, spin(1:3), 3)
-    end select
-    call write_iter_nl(out)
+     call write_iter_start(out)
+     select case (st%d%ispin)
+     case (SPIN_POLARIZED)
+        call write_iter_double(out, spin(3), 1)
+     case (SPINORS)
+        call write_iter_double(out, spin(1:3), 3)
+     end select
+     call write_iter_nl(out)
 
   end if
 
@@ -193,7 +193,7 @@ subroutine td_write_multipole(gr, out, st, td, iter)
 
   if(mpiv%node.ne.0) return ! only first node outputs
 
-  call push_sub("td_write_multipole")
+  call push_sub('td_write_multipole')
 
   if(iter == 0) then
     ! empty file

@@ -25,20 +25,20 @@ subroutine X(mf2cf) (m, mf, cf)
   type(mesh_type), intent(in)    :: m
   R_TYPE,          intent(in)    :: mf(:)  ! mf(f_der%m%np)
   type(X(cf)),     intent(inout) :: cf
-  
+
   integer :: i, ix, iy, iz, c(3)
 
   ASSERT(associated(cf%RS))
 
   c(:)  =  cf%n(:)/2 + 1
   cf%RS =  M_ZERO
- 
-  do i = 1, m%np
-    ix = m%Lxyz(i, 1) + c(1)
-    iy = m%Lxyz(i, 2) + c(2)
-    iz = m%Lxyz(i, 3) + c(3)
 
-    cf%RS(ix, iy, iz) = mf(i)
+  do i = 1, m%np
+     ix = m%Lxyz(i, 1) + c(1)
+     iy = m%Lxyz(i, 2) + c(2)
+     iz = m%Lxyz(i, 3) + c(3)
+
+     cf%RS(ix, iy, iz) = mf(i)
   end do
 
 end subroutine X(mf2cf)
@@ -133,7 +133,7 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
 
   FLOAT :: cutoff
 
-  call push_sub("f_laplacian")
+  call push_sub('f_laplacian')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -176,7 +176,7 @@ subroutine X(f_gradient) (sb, f_der, f, grad)
 
   integer :: i
 
-  call push_sub("f_gradient")
+  call push_sub('f_gradient')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -230,7 +230,7 @@ subroutine X(f_divergence) (sb, f_der, f, divf)
   integer :: i
   R_TYPE, allocatable :: aux(:)
 
-  call push_sub("f_divergence")
+  call push_sub('f_divergence')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
@@ -274,7 +274,7 @@ subroutine X(f_curl) (sb, f_der, f, curlf)
   R_TYPE,           intent(in)    :: f(:,:)     ! f(m%np, conf%dim)
   R_TYPE,           intent(out)   :: curlf(:,:) ! curlf(m%np, conf%dim))
 
-  call push_sub("f_curl")
+  call push_sub('f_curl')
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 

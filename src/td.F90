@@ -393,7 +393,7 @@ contains
 
 
     subroutine iter_output()
-      call push_sub("td::iter_output")
+      call push_sub('td::iter_output')
 
       ! output multipoles
       if(td%out_multip) call td_write_multipole(gr, out_multip, st, td, i)

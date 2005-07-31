@@ -42,7 +42,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 
   integer :: i
 
-  call push_sub("sparskit_driver")
+  call push_sub('sparskit_driver')
 
 #ifdef R_TREAL
   sk_b = rhs
@@ -61,7 +61,7 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
      ! Run actual solver
 #ifdef HAVE_SPARSKIT
 #ifdef DEBUG
-     call push_sub("sparskit_solver")
+     call push_sub('sparskit_solver')
 #endif
      call SOLVER(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
 #ifdef DEBUG
