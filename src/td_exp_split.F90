@@ -39,29 +39,29 @@ module td_exp_split
 
 contains
 
-  !!! Calculates psi = exp{factor*T} psi
-  !!! where T is the kinetic energy operator
+!!! Calculates psi = exp{factor*T} psi
+!!! where T is the kinetic energy operator
   subroutine zexp_kinetic (gr, h, psi, cf, factor)
     type(grid_type),        intent(in) :: gr
     type(hamiltonian_type), intent(in) :: h
     CMPLX,                  intent(inout) :: psi(NP, h%d%dim)
     type(zcf),              intent(inout) :: cf
     CMPLX,                  intent(in) :: factor
-    
+
     integer :: ix, iy, iz, k(3), idim
     FLOAT :: cutoff, temp(3), g2
 
     call push_sub('exp_kinetic')
-    
+
     if(simul_box_is_periodic(gr%sb)) then
-      message(1) = 'Internal error in exp_kinetic'
-      call write_fatal(1)
+       message(1) = 'Internal error in exp_kinetic'
+       call write_fatal(1)
     endif
-    
+
     if(h%cutoff > M_ZERO) then
-      cutoff = h%cutoff
+       cutoff = h%cutoff
     else
-      cutoff = CNST(1e10)
+       cutoff = CNST(1e10)
     endif
 
     temp = M_ZERO
@@ -71,34 +71,34 @@ contains
     call zcf_alloc_FS(cf)
 
     do idim = 1, h%d%dim
-      call zmf2cf(gr%m, psi(:, idim), cf)
-      call zcf_RS2FS(cf)
+       call zmf2cf(gr%m, psi(:, idim), cf)
+       call zcf_RS2FS(cf)
 
-      do iz = 1, cf%n(3)
-        k(3) = pad_feq(iz, cf%n(3), .true.)
-        do iy = 1, cf%n(2)
-          k(2) = pad_feq(iy, cf%n(2), .true.)
-          do ix = 1, cf%n(1)
-            k(1) = pad_feq(ix, cf%n(1), .true.)
+       do iz = 1, cf%n(3)
+          k(3) = pad_feq(iz, cf%n(3), .true.)
+          do iy = 1, cf%n(2)
+             k(2) = pad_feq(iy, cf%n(2), .true.)
+             do ix = 1, cf%n(1)
+                k(1) = pad_feq(ix, cf%n(1), .true.)
 
-            g2 = min(cutoff, sum((temp(1:NDIM)*k(1:NDIM))**2))
-            cf%FS(ix, iy, iz) = exp(factor*g2/M_TWO)*cf%FS(ix, iy, iz)
+                g2 = min(cutoff, sum((temp(1:NDIM)*k(1:NDIM))**2))
+                cf%FS(ix, iy, iz) = exp(factor*g2/M_TWO)*cf%FS(ix, iy, iz)
+             end do
           end do
-        end do
-      end do
+       end do
 
-      call zcf_FS2RS(cf)
-      call zcf2mf(gr%m, cf, psi(:, idim))
+       call zcf_FS2RS(cf)
+       call zcf2mf(gr%m, cf, psi(:, idim))
     enddo
 
     call zcf_free_RS(cf)
     call zcf_free_FS(cf)
-    
+
     call pop_sub()
   end subroutine zexp_kinetic
 
-  !!! Calculates psi = exp{factor*V_KS(t)} psi
-  !!! where V_KS is the Kohn-Sham potential
+!!! Calculates psi = exp{factor*V_KS(t)} psi
+!!! where V_KS is the Kohn-Sham potential
   subroutine zexp_vlpsi(gr, h, psi, ik, t, factor)
     type(grid_type),        intent(in)    :: gr
     type(hamiltonian_type), intent(in)    :: h
@@ -109,42 +109,42 @@ contains
 
     integer :: k
     FLOAT :: v
-    
+
     call push_sub('vlpsi')
-    
+
     ! WARNING: spinors not yet supported.
     select case(h%d%ispin)
     case(UNPOLARIZED)
-      psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
+       psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
     case(SPIN_POLARIZED)
-      if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
-      else
-        psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 2)))*psi(:, 1)
-      end if
+       if(modulo(ik+1, 2) == 0) then ! we have a spin down
+          psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 1)))*psi(:, 1)
+       else
+          psi(:, 1) = exp(factor*(h%ep%vpsl(:)+h%vhxc(:, 2)))*psi(:, 1)
+       end if
     case(SPINORS)
-      message(1) = 'Internal error in exp_vlpsi'
-      call write_fatal(1)
+       message(1) = 'Internal error in exp_vlpsi'
+       call write_fatal(1)
     end select
-    
-    if(h%ep%no_lasers > 0) then
-      if(h%gauge /= 1) then  ! only length gauge is supported
-        message(1) = "Only the length gauge is supported in exp_vlpsi"
-        call write_fatal(1)
-      end if
 
-      do k = 1, NP
-        call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t, v)
-        psi(k,:) = exp(factor*v) * psi(k,:)
-      end do
+    if(h%ep%no_lasers > 0) then
+       if(h%gauge /= 1) then  ! only length gauge is supported
+          message(1) = "Only the length gauge is supported in exp_vlpsi"
+          call write_fatal(1)
+       end if
+
+       do k = 1, NP
+          call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t, v)
+          psi(k,:) = exp(factor*v) * psi(k,:)
+       end do
     end if
-    
+
     call pop_sub()
   end subroutine zexp_vlpsi
 
 
-  !!! calculates psi = exp{factor V_nlpp} psi
-  !!! where V_nlpp is the non-local part of the pseudpotential
+!!! calculates psi = exp{factor V_nlpp} psi
+!!! where V_nlpp is the non-local part of the pseudpotential
   subroutine zexp_vnlpsi (m, h, psi, factor, order)
     type(mesh_type),        intent(in) :: m
     type(hamiltonian_type), intent(in) :: h
@@ -152,7 +152,8 @@ contains
     CMPLX,                  intent(in) :: factor
     logical,                intent(in) :: order
 
-    stop 'Error'
+    message(1) = 'Error: zexp_vnlpsi'
+    call write_fatal(1)
 !!$    integer :: idim, ikbc, jkbc, &
 !!$         ivnl_start, ivnl_end, step, kbc_start, kbc_end, ivnl
 !!$    CMPLX :: uvpsi, p2, ctemp

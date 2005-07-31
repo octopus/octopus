@@ -44,16 +44,17 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = CNST(1.0e-5), trestart = 3)
 
   if(conf%verbose > 999) then
-    call io_assign(unit)
-    call trl_set_debug(info, msglvl = 10, iou = unit, file = trim(tmpdir)//'trlan_log_')
+     call io_assign(unit)
+     call trl_set_debug(info, msglvl = 10, iou = unit, file = trim(tmpdir)//'trlan_log_')
   endif
 
   call trl_set_iguess(info, nec = 0, iguess = 1)
   do ik_trlan = 1, st%d%nik
      st%X(psi)(:, :, ik_trlan, 1) = R_TOTYPE(M_ZERO)
      do i = 1, st%nst
-        st%X(psi)(:, :, 1, ik_trlan) = st%X(psi)(:, :, 1, ik_trlan) + &
-                                       st%X(psi)(:, :, i, ik_trlan)/st%nst
+        st%X(psi)(:, :, 1, ik_trlan) =            &
+             st%X(psi)(:, :, 1, ik_trlan) +       &
+             st%X(psi)(:, :, i, ik_trlan)/st%nst
      enddo
   enddo
 
@@ -66,7 +67,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
 !!$        evec(:, :, i) = st%X(psi)(:, :, i, ik_trlan)
 !!$     enddo
      call trlan(op, info, nrow, mev, &
-                st%eigenval(:, ik_trlan), st%X(psi)(:, :, :, ik_trlan), nrow)
+          st%eigenval(:, ik_trlan), st%X(psi)(:, :, :, ik_trlan), nrow)
 !!$     call trlan(op, info, nrow, mev, &
 !!$                st%eigenval(:, ik_trlan), evec(:,:,:), nrow)
      if(info%stat.ne.0) then
@@ -83,12 +84,13 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   enddo
 
   ! WARNING - problem with vol_pp
-  stop 'Does not work'
-!  call lalg_scal(m%np, st%d%dim. st%nst, st%d%nik, R_TOTYPE(M_ONE/sqrt(m%vol_pp)), &
-!     st%X(psi)(:,:,:,:))
+  message(1) = 'Error: eigen_trlan: Does not work'
+  call write_fatal(1)
+  !  call lalg_scal(m%np, st%d%dim. st%nst, st%d%nik, R_TOTYPE(M_ONE/sqrt(m%vol_pp)), &
+  !     st%X(psi)(:,:,:,:))
 
   if(conf%verbose > 999) then
-    call io_close(unit)
+     call io_close(unit)
   endif
 
   nullify(h_trlan, m_trlan, st_trlan)

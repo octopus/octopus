@@ -41,7 +41,6 @@ module io
 
 contains
 
-
   ! ---------------------------------------------------------
   subroutine io_init()
     character(len=128) :: filename
@@ -170,7 +169,8 @@ contains
     if(iunit<0) then
        if(die_) then
           write(stderr, '(a)') '*** IO Error: Too many files open'
-          stop 'io_open'
+          message(1) = 'Error: io_open.'
+          call write_fatal(1)
        end if
        return
     end if
@@ -190,7 +190,8 @@ contains
        if(die_) then
           write(*, '(5a)') '*** IO Error: Could not open file "', trim(file_), &
                '" for action="', trim(action), '"'
-          stop 'io_open'
+          message(1) = 'Error: io_open.'
+          call write_fatal(1)
        end if
     end if
 
@@ -273,6 +274,5 @@ contains
        ext = path(i+1:)
     endif
   end function get_extension
-
 
 end module io

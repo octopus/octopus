@@ -97,7 +97,9 @@ contains
        case('p'); c%l(j) = 1
        case('d'); c%l(j) = 2
        case('f'); c%l(j) = 3
-       case default; stop 'Error'
+       case default
+          message(1) = 'Error: read_valconf.'
+          call write_fatal(1)
        end select
     enddo
   end subroutine read_valconf
@@ -266,8 +268,8 @@ contains
   ELSEIF ( FUNCTL.EQ.'GGA' .OR. FUNCTL.EQ.'gga') THEN
     GGA = .TRUE.
   ELSE
-    WRITE(6,*) 'atomxc: Unknown functional ', FUNCTL
-    STOP
+    write(message(1),'(a,a)') 'Error: atomxc: Unknown functional ', FUNCTL
+    call write_fatal(1)
   ENDIF
 
   ! initialize xc functional
@@ -282,8 +284,8 @@ contains
     else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
       call xc_lda_init(c_conf, c_info, XC_LDA_C_PW, NSPIN)
     else
-      WRITE(6,*) 'LDAXC: Unknown author ', AUTHOR
-      STOP     
+      write(message(1),'(a,a)') 'Error: LDAXC: Unknown author ', AUTHOR
+      call write_fatal(1)
     end if
   end if
 

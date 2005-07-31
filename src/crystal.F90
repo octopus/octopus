@@ -682,7 +682,6 @@
             ierr = i
             write(message(1),'(a)')not_a_grp
             call write_fatal(1)
-            write(6,'(a)')not_a_grp ; stop
 
             return
    30    continue
@@ -807,7 +806,6 @@
       endif
       write(message(1),'(a)')not_a_grp
       call write_fatal(1)
-      write(6,'(a)')not_a_grp ; stop
 !
       return
 !
