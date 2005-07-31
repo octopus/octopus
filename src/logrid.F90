@@ -33,7 +33,7 @@ end type
 
 contains
 
-subroutine init_logrid(g, a, b, nrval)
+subroutine logrid_init(g, a, b, nrval)
   type(logrid_type), intent(out) :: g
   FLOAT, intent(in)           :: a,b
   integer, intent(in)            :: nrval
@@ -53,12 +53,12 @@ subroutine init_logrid(g, a, b, nrval)
     g%rofi(ir) = b * ( exp( a * (ir - 1) ) - M_ONE )
   end do
 
-end subroutine init_logrid
+end subroutine logrid_init
 
-subroutine kill_logrid(g)
+subroutine logrid_end(g)
   type(logrid_type), intent(inout) :: g
   deallocate(g%rofi, g%drdi, g%s)
-end subroutine kill_logrid
+end subroutine logrid_end
 
 subroutine derivate_in_log_grid(g, f, dfdr)
   type(logrid_type)     :: g
