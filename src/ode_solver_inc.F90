@@ -208,7 +208,7 @@ end subroutine X(ode_step)
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_end)(os)
-  type(ode_solver_type), intent(in)  :: os
+  type(ode_solver_type), intent(out) :: os
 
   call push_sub('ode_solver_inc.ode_solver_end')
 

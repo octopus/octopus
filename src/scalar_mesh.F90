@@ -257,13 +257,13 @@ contains
     type(scalar_mesh_type), intent(in) :: sm
     character(len=*)                   :: filename
 
-    integer i, iunit
+    integer :: i, iunit
 
     call push_sub('scalar_mesh.scalar_mesh_write')
     ! output scalar mesh
     iunit = io_open('static/'//trim(filename), action='write')
     do i = 1, 2*sm%np+1
-       write(iunit,'(1x,i,2x,2F22.16)') i,sm%mesh(i),sm%w(i)
+       write(iunit,'(1x,i2,2x,2F22.16)') i,sm%mesh(i),sm%w(i)
     enddo
     call io_close(iunit)
     call pop_sub()
@@ -274,8 +274,6 @@ contains
   FLOAT function scalar_mesh_integrate(sm, func) result(res)
     type(scalar_mesh_type), intent(in) :: sm
     FLOAT, intent(in) :: func(:)
-
-    integer :: i
 
     call push_sub('scalar_mesh.scalar_mesh_end')
 
