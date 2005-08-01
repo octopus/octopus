@@ -38,13 +38,7 @@ use simul_box
 implicit none
 
 private
-public :: unocc_type, &
-          unocc_run
-
-type unocc_type
-  FLOAT :: conv     ! convergence criterium for the eigenvectors
-  type(states_type), pointer :: st
-end type unocc_type
+public :: unocc_run
 
 contains
 
