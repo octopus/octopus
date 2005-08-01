@@ -100,6 +100,8 @@ contains
     type(states_type),   pointer :: st
     type(geometry_type), pointer :: geo
 
+    type(states_type) :: gs_st
+
     logical :: stopping
     integer :: i, ii, j, idim, ist, ik
     integer(POINTER_SIZE) :: out_multip, out_coords, out_gsp, out_acc, &
@@ -369,6 +371,7 @@ contains
          write(filename, '(i3.3)') mpiv%node
          call write_iter_init(out_proj, first, td%dt/units_out%time%factor, &
               trim(io_workpath("td.general/projections."//trim(filename))) )
+         call states_copy(gs_st, st)
       end if
 
     end subroutine init_iter_output
@@ -408,7 +411,7 @@ contains
       if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td, i)
 
       ! output projections onto the GS KS eigenfunctions
-!!$    if(td%out_proj) call td_write_proj(out_proj, gr%m, st, u_st, i)
+      if(td%out_proj) call td_write_proj(gr, out_proj, st, gs_st, i)
 
       ! output positions, vels, etc.
       if(td%out_coords) call td_write_nbo(gr, out_coords, i, geo%kinetic_energy, h%etot)
@@ -437,7 +440,7 @@ contains
       if(td%out_angular) call td_write_angular(out_angular, gr, st, 0)
       if(td%out_spin)    call td_write_spin(out_spin, gr%m, st, 0)
       if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td, 0)
-!!$    if(td%out_proj)    call td_write_proj(out_proj, gr%m, st, u_st, 0)
+      if(td%out_proj) call td_write_proj(gr, out_proj, st, gs_st, 0)
 
       call apply_delta_field()
 
@@ -627,6 +630,8 @@ contains
          if(td%out_laser)   call write_iter_flush(out_laser)
          if(td%out_energy)  call write_iter_flush(out_energy)
       end if
+
+      if(td%out_proj) call write_iter_flush(out_proj)
 
       ! now write down the rest
       write(filename, '(a,i7.7)') "td.", iter  ! name of directory

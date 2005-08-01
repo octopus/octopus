@@ -568,6 +568,8 @@ subroutine td_write_proj(gr, out, st, u_st, iter)
   character(len=20) :: aux
   integer :: ik, ist, uist
 
+  call push_sub('td_write.td_write_proj')
+
   if(iter == 0) then
     ! empty file
     call write_iter_clear(out)
@@ -601,4 +603,5 @@ subroutine td_write_proj(gr, out, st, u_st, iter)
   call write_iter_nl(out)
 
   deallocate(projections)
+  call pop_sub()
 end subroutine td_write_proj

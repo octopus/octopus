@@ -737,19 +737,18 @@ contains
     CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%d%nik)
 
     integer :: uist, ist, ik
-    CMPLX, allocatable :: tmp(:,:)
 
-    allocate(tmp(m%np, st%d%dim))
+    call push_sub('states.calc_projection')
+
     do ik = 1, st%d%nik
        do ist = st%st_start, st%st_end
           do uist = 1, u_st%nst
-             tmp = cmplx(u_st%X(psi)(:, :, uist, ik), kind=PRECISION)
-             p(uist, ist, ik) = zstates_dotp(m, st%d%dim, tmp, st%zpsi(:, :, ist, ik) )
+             p(uist, ist, ik) = zstates_dotp(m, st%d%dim, u_st%zpsi(:, :, uist, ik), st%zpsi(:, :, ist, ik))
           end do
        end do
     end do
-    deallocate(tmp)
 
+    call pop_sub()
   end subroutine calc_projection
 
   subroutine states_magnetization_dens(st, np, rho, m)
