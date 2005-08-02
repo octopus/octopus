@@ -24,21 +24,38 @@ subroutine poisson3D_init(gr)
 
   ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= MULTIGRID)
 
+  !%Variable PoissonSolverMaxMultipole
+  !%Type integer
+  !%Section 14 Varia
+  !%Description
+  !% Order of the multipolar expansion for boundary
+  !% corrections. Default is 4 for cg_corrected and multigrid and 2
+  !% for fft_corrected.
+  !%End
+
+
+  !%Variable PoissonSolverThreshold
+  !%Type integer
+  !%Section 14 Varia
+  !%Description
+  !% The tolerance for the poisson solution, used by the cg and
+  !% multigrid solvers. Default is $10^{-5}$.
+  !%End
+
   select case(poisson_solver)
   case(CG)
-    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
-    call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
+    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+    call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
     call poisson_cg1_init(gr%m, maxl, threshold)
 
   case(CG_CORRECTED)
-    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
-    call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
+    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+    call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
     call poisson_cg2_init(gr%m, maxl, threshold)
 
   case(MULTIGRID)
-    !this is from cg but is necessary also for multigrid
-    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 4, maxl)
-    call loct_parse_float(check_inp('PoissonSolverCGThreshold'), CNST(1.0e-5), threshold)
+    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+    call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
 
     call poisson_multigrid_init(gr%m, maxl, threshold)
 
@@ -49,7 +66,7 @@ subroutine poisson3D_init(gr)
   if (poisson_solver <= FFT_CORRECTED) call init_fft(gr%m)
 
   if (poisson_solver == FFT_CORRECTED) then
-    call loct_parse_int(check_inp('PoissonSolverCGMaxMultipole'), 2, maxl)
+    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
     call build_aux(gr%m)
     call build_phi(gr%m)
   endif

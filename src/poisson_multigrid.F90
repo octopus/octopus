@@ -30,6 +30,7 @@ module poisson_multigrid
   integer :: maxmulti,maxcycles
   FLOAT :: threshold
   integer :: presteps, poststeps
+  integer :: restriction_method
 
   FLOAT, pointer :: old_solution(:)
   logical :: initialized=.false.
@@ -41,10 +42,9 @@ module poisson_multigrid
        poisson_multigrid_end
 
 
-  type float_pointer
+  type mg_float_pointer
      FLOAT, pointer :: p(:)
-  end type float_pointer
-
+  end type mg_float_pointer
 
 contains
 
@@ -58,8 +58,48 @@ contains
     threshold = thr
 
     call loct_parse_int(check_inp('PoissonSolverMGPresmoothingSteps'), 2, presteps)
+
+    !%Variable PoissonSolverMGPresmoothingSteps
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Number of gauss-seidel smoothing steps before coarse level
+    !% correction in multigrid Poisson solver. Default is 2.
+    !%End
+
     call loct_parse_int(check_inp('PoissonSolverMGPostsmoothingSteps'), 3, poststeps)
+
+    !%Variable PoissonSolverMGPostsmoothingSteps
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Number of gauss-seidel smoothing steps after coarse level
+    !% correction in multigrid Poisson solver. Default is 3.
+    !%End
+
     call loct_parse_int(check_inp('PoissonSolverMGMaxCycles'), 20, maxcycles)
+
+    !%Variable PoissonSolverMGMaxCycles 
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Maximum number of multigrid cycles that are performed if
+    !% convergence is not achieved. Default is 20.
+    !%End
+
+
+    call loct_parse_int(check_inp('PoissonSolverMGRestrictionMethod'), 2, restriction_method)
+
+    !%Variable PoissonSolverMGRestrictionMethod
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Method used from fine to coarse grid. Default is fullweight restriction.
+    !%Option injection 1
+    !% Injection
+    !%Option fullweight 2
+    !% Fullweight restriction
+    !%End
 
     call build_aux(m)
     call build_phi(m)
@@ -85,9 +125,9 @@ contains
     FLOAT :: res
     integer :: l, cl,t, np
 
-    type(float_pointer), allocatable :: phi(:)
-    type(float_pointer), allocatable :: tau(:)
-    type(float_pointer), allocatable :: err(:)
+    type(mg_float_pointer), pointer :: phi(:)
+    type(mg_float_pointer), pointer :: tau(:)
+    type(mg_float_pointer), pointer :: err(:)
 
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     
@@ -104,23 +144,18 @@ contains
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
 
-    cl=gr%mgrid%n_levels
 
-    allocate(phi(0:cl))
-    allocate(tau(0:cl))
-    allocate(err(0:cl))
-
-    do l=0,cl
-       allocate(phi(l)%p(1:gr%mgrid%level(l)%m%np_tot))
-       allocate(tau(l)%p(1:gr%mgrid%level(l)%m%np))
-       allocate(err(l)%p(1:gr%mgrid%level(l)%m%np))
-    end do
+    call gridhier_init(phi, gr%mgrid, add_points_for_boundaries=.true.)
+    call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.false.)
+    call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.false.)
 
 !    phi(0)%p(1:gr%m%np)=pot(1:gr%m%np)
     phi(0)%p(1:gr%m%np)=old_solution(1:gr%m%np)
 
     phi(0)%p(gr%m%np+1:gr%m%np_tot)=M_ZERO
     tau(0)%p(:)=rho_corrected(:)
+
+    cl=gr%mgrid%n_levels
     
     do t=0,maxcycles
 
@@ -128,7 +163,7 @@ contains
           do l=0,(cl-1)
              
              if(l /= 0) then 
-                phi(l)%p=0.0
+                phi(l)%p=M_ZERO
              end if
           
              !presmoothing 
@@ -140,7 +175,8 @@ contains
              err(l)%p=tau(l)%p-err(l)%p
              
              !transfer error to coarser grid
-             call multigrid_fine2coarse(gr%mgrid, l+1, err(l)%p, tau(l+1)%p)
+             call multigrid_fine2coarse(gr%mgrid, l+1, err(l)%p, tau(l+1)%p,&
+                  restriction_method)
              
           end do
           
@@ -186,14 +222,9 @@ contains
 
     deallocate(rho_corrected, vh_correction)
     
-    do l=0,cl
-       deallocate(phi(l)%p)
-       deallocate(tau(l)%p)
-       deallocate(err(l)%p)
-    end do
-    deallocate(phi)
-    deallocate(tau)
-    deallocate(err)
+    call gridhier_end(phi,gr%mgrid)
+    call gridhier_end(tau,gr%mgrid)
+    call gridhier_end(err,gr%mgrid)
     
     call pop_sub();
     
@@ -257,4 +288,38 @@ contains
 
 #undef LAP
 
+  subroutine gridhier_init(a, mgrid, add_points_for_boundaries)
+    type(mg_float_pointer),pointer :: a(:)
+    type(multigrid_type), pointer :: mgrid
+    logical, intent(in) :: add_points_for_boundaries
+    integer :: cl,l
+
+    cl=mgrid%n_levels
+
+    allocate(a(0:cl))
+    do l=0,cl
+       if(add_points_for_boundaries) then 
+          allocate(a(l)%p(1:mgrid%level(l)%m%np_tot))
+       else
+          allocate(a(l)%p(1:mgrid%level(l)%m%np))
+       end if
+    end do
+    
+  end subroutine gridhier_init
+ 
+  subroutine gridhier_end(a, mgrid)
+    type(mg_float_pointer),pointer :: a(:)
+    type(multigrid_type), pointer :: mgrid
+    integer :: cl,l
+
+    cl=mgrid%n_levels
+
+    do l=0,cl
+       deallocate(a(l)%p)
+    end do
+    deallocate(a)
+
+  end subroutine gridhier_end
+
 end module poisson_multigrid
+
