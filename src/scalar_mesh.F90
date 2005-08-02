@@ -69,7 +69,7 @@ contains
     !% Linear mesh
     !%Option mesh_double_log 2
     !% Logarithmic mesh
-    !%Option mesh_double_log 3
+    !%Option mesh_log 3
     !% Double logarithmic mesh
     !%Option mesh_sinh 4
     !% Sinh mesh
