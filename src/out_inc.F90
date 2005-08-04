@@ -260,7 +260,7 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   character(len=*), intent(in)  :: dir, fname
   type(mesh_type),  intent(in)  :: m
   type(simul_box_type), intent(in)  :: sb
-  R_TYPE,           intent(in)  :: f(:)  ! f(m%np)
+  R_TYPE,           intent(in)  :: f(1:m%np)  ! f(m%np)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
 

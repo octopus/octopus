@@ -300,7 +300,7 @@ end subroutine X(f_curl)
 subroutine X(f_angular_momentum)(sb, f_der, f, lf)
   type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout) :: f_der
-  R_TYPE,           intent(in)    :: f(:)     ! f(m%np)
+  R_TYPE,           intent(in)    :: f(1:f_der%m%np)     ! f(m%np)
   R_TYPE,           intent(out)   :: lf(:,:)  ! lf(m%np, 3)
 
   R_TYPE, allocatable :: gf(:, :)
@@ -334,7 +334,7 @@ end subroutine X(f_angular_momentum)
 subroutine X(f_l2)(sb, f_der, f, l2f)
   type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout) :: f_der
-  R_TYPE,           intent(in)    :: f(:)
+  R_TYPE,           intent(in)    :: f(1:f_der%m%np)
   R_TYPE,           intent(out)   :: l2f(:)
 
   R_TYPE, allocatable :: gf(:, :), ggf(:, :, :)

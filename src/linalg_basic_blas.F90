@@ -86,7 +86,7 @@ end subroutine FNAME(swap_4)
 subroutine FNAME(scal_1)(n1, da, dx)
   integer, intent(in)    :: n1
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(inout) :: dx(:)
+  TYPE1,   intent(inout) :: dx(1:n1)
 
   call blas_scal(n1, da, dx(1), 1)
 
@@ -126,8 +126,8 @@ end subroutine FNAME(scal_4)
 subroutine FNAME(axpy_1)(n1, da, dx, dy)
   integer, intent(in)    :: n1
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(in)    :: dx(:)
-  TYPE1,   intent(inout) :: dy(:)
+  TYPE1,   intent(in)    :: dx(1:n1)
+  TYPE1,   intent(inout) :: dy(1:n1)
 
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
 
@@ -136,8 +136,8 @@ end subroutine FNAME(axpy_1)
 subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   integer, intent(in)    :: n1, n2
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(in)    :: dx(:,:)
-  TYPE1,   intent(inout) :: dy(:,:)
+  TYPE1,   intent(in)    :: dx(1:n1,1:n2)
+  TYPE1,   intent(inout) :: dy(1:n1,1:n2)
 
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
 
@@ -146,8 +146,8 @@ end subroutine FNAME(axpy_2)
 subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   integer, intent(in)    :: n1, n2, n3
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(in)    :: dx(:,:,:)
-  TYPE1,   intent(inout) :: dy(:,:,:)
+  TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3)
+  TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3)
 
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
 
@@ -156,8 +156,8 @@ end subroutine FNAME(axpy_3)
 subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   integer, intent(in)    :: n1, n2, n3, n4
   TYPE1,   intent(in)    :: da
-  TYPE1,   intent(in)    :: dx(:,:,:,:)
-  TYPE1,   intent(inout) :: dy(:,:,:,:)
+  TYPE1,   intent(in)    :: dx(1:n1,1:n2,1:n3,1:n4)
+  TYPE1,   intent(inout) :: dy(1:n1,1:n2,1:n3,1:n4)
 
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
