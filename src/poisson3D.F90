@@ -148,7 +148,7 @@ contains
               case (FFT_CYL)
                  fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c)-M_FOURTH)*r_c**2
               case(FFT_PLA)
-                fft_Coulb_FS(ix, iy, iz) = -M_TWO*M_PI*r_c**2
+                fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
               case (FFT_NOCUT, FFT_CORRECTED)
                 fft_Coulb_FS(ix, iy, iz) = M_ZERO
               end select
