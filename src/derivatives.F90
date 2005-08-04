@@ -134,9 +134,9 @@ contains
 
     ! find out the bounday conditions
     call loct_parse_int(check_inp('DerivativesBoundaries'), DER_BC_ZERO_F, i)
-    if((i.ne.DER_BC_ZERO_F).and.(i.ne.DER_BC_ZERO_DF)) then
-       write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to octopus'
-       call write_fatal(1)
+    if((i < DER_BC_ZERO_F).or.(i > DER_BC_PERIOD)) then
+      write(message(1), '(a,i2,a)') 'DerivativesBoundaries = "', i, '" is unknown to octopus'
+      call write_fatal(1)
     end if
 
     der%zero_bc = (i == DER_BC_ZERO_F)
