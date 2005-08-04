@@ -111,7 +111,7 @@ contains
     write(iunit, '(a,i3)')    'Index  = ', s%index
     write(iunit, '(2a)')      'Label  = ', trim(s%label)
     write(iunit, '(a,i3)')    'Type   = ', s%type
-    write(iunit, '(a,f15.2)') 'z      = ', s%z
+    if (s%type /= SPEC_USDEF ) write(iunit, '(a,f15.2)') 'z      = ', s%z
     write(iunit, '(a,f15.2)') 'z_val  = ', s%z_val
     write(iunit, '(a,f15.2)') 'weight = ', s%weight
     write(iunit, *)           'local  = ', s%local
@@ -122,8 +122,8 @@ contains
     write(iunit, *)           'nlcc   = ', s%nlcc
     write(iunit, '(a,f15.2)') 'def_rsize = ', s%def_rsize
     write(iunit, '(a,f15.2)') 'def_h = ', s%def_h
-    write(iunit, '(a,i3)')    'lmax  = ', s%lmax
-    write(iunit, '(a,i3)')    'lloc  = ', s%lloc
+    if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lmax  = ', s%lmax
+    if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', s%lloc
 
     if(.not.s%local) then
       if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps, trim(dirname))
@@ -492,7 +492,6 @@ contains
       message(1) = 'Periodic arrays of usedef, jelli, point,'
       message(2) = '1D and 2D systems not implemented yet.'
       call write_fatal(2)
-
     else
       gmod = sqrt(sum(x(:)**2))
       l = loct_splint(s%ps%vlocal_f, gmod)
