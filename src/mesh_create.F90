@@ -120,10 +120,8 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
   call push_sub('mesh_create.mesh_create_xyz')
 
   ! enlarge mesh in the non-periodic dimensions
-  do i = sb%periodic_dim+1, sb%dim
-    m%nr(1,i) = m%nr(1,i) - m%enlarge
-    m%nr(2,i) = m%nr(2,i) + m%enlarge
-  end do
+    m%nr(1,:) = m%nr(1,:) - m%enlarge(:)
+    m%nr(2,:) = m%nr(2,:) + m%enlarge(:)
 
   ! allocate the xyz arrays
   allocate(m%Lxyz_inv(m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
@@ -135,9 +133,6 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
   x(:,:,:,:)        = M_ZERO
 
   ! We label 2 the points inside the mesh + enlargement
-  ey = 0; ez = 0
-  if(sb%dim > 1) ey = m%enlarge
-  if(sb%dim > 2) ez = m%enlarge
 
   do ix = m%nr(1,1), m%nr(2,1)
     chi(1) = real(ix, PRECISION) * m%h(1) + sb%box_offset(1)
@@ -151,9 +146,9 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
         call curvlinear_chi2x(sb, geo, cv, chi(:), x(:, ix, iy, iz))
 
         if(simul_box_in_box(sb, geo, x(:, ix, iy, iz))) then
-          do i = -m%enlarge, m%enlarge
-            do j = -ey, ey
-              do k = -ez, ez
+          do i = -m%enlarge(1), m%enlarge(1)
+            do j = -m%enlarge(2), m%enlarge(2)
+              do k = -m%enlarge(3), m%enlarge(3)
                 if(  &
                    ix+i>=m%nr(1,1).and.ix+i<=m%nr(2,1).and. &
                    iy+j>=m%nr(1,2).and.iy+j<=m%nr(2,2).and. &
@@ -178,7 +173,6 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
     end do
   end do
   m%np_tot = il
-
   allocate(m%Lxyz(m%np_tot, 3), m%x(m%np_tot, 3))
 
   ! first we fill the points in the inner mesh
@@ -296,5 +290,6 @@ integer function mesh_index(m, ix_, dir) result(index)
       ix(abs(dir)) = ix(abs(dir)) - sign(1, dir)
     end do
   end if
+
 
 end function mesh_index

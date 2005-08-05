@@ -67,9 +67,12 @@ contains
 
     ASSERT(n  > 0)
 
+    call push_sub('nl_operator.nl_operator_init')
+
     op%n  = n
     allocate(op%stencil(3, n))
 
+    call pop_sub()
   end subroutine nl_operator_init
 
 
@@ -77,6 +80,8 @@ contains
   subroutine nl_operator_equal(opo, opi)
     type(nl_operator_type), intent(out) :: opo
     type(nl_operator_type), intent(in)  :: opi
+
+    call push_sub('nl_operator.nl_operator_equal')
 
     call nl_operator_init(opo, opi%n)
 
@@ -102,6 +107,7 @@ contains
        opo%w_im  = opi%w_im
     endif
 
+    call pop_sub()
   end subroutine nl_operator_equal
 
 
@@ -114,6 +120,8 @@ contains
     logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
 
     integer :: i, j, ix(3)
+
+    call push_sub('nl_operator.nl_operator_build')
 
     ASSERT(np > 0)
 
@@ -155,6 +163,7 @@ contains
           op%i(j, i) = mesh_index(m, ix(:) + op%stencil(:,j), 1)
        end do
     end do
+    call pop_sub()
   end subroutine nl_operator_build
 
 
@@ -164,6 +173,8 @@ contains
     type(nl_operator_type), intent(out) :: opt
 
     integer :: np, i, j, index, l, k
+
+    call push_sub('nl_operator.nl_operator_transpose')
 
     np = op%np
     opt = op
@@ -189,6 +200,7 @@ contains
        enddo
     enddo
 
+    call pop_sub()
   end subroutine nl_operator_transpose
 
   ! ---------------------------------------------------------
@@ -198,6 +210,8 @@ contains
     type(mesh_type),        intent(in)  :: m
 
     integer :: np, i, j, index, l, k
+
+    call push_sub('nl_operator.nl_operator_skewadjoint')
 
     np = op%np
     opt = op
@@ -224,6 +238,7 @@ contains
        enddo
     enddo
 
+    call pop_sub()
   end subroutine nl_operator_skewadjoint
 
   ! ---------------------------------------------------------
@@ -233,6 +248,8 @@ contains
     type(mesh_type),        intent(in)  :: m
 
     integer :: np, i, j, index, l, k
+
+    call push_sub('nl_operator.nl_operator_selfadjoint')
 
     np = op%np
     opt = op
@@ -259,6 +276,7 @@ contains
        enddo
     enddo
 
+    call pop_sub()
   end subroutine nl_operator_selfadjoint
 
 
@@ -269,6 +287,8 @@ contains
     FLOAT, optional, intent(out)       :: b(:, :)
 
     integer :: i, j, k, index
+
+    call push_sub('nl_operator.nl_operator_op_to_matrix')
 
     k = 1
     do i = 1, op%np
@@ -281,6 +301,7 @@ contains
           endif
        enddo
     enddo
+    call pop_sub()
   end subroutine nl_operator_op_to_matrix
 
 
@@ -293,6 +314,8 @@ contains
 
     integer :: i, j, index
 
+    call push_sub('nl_operator.nl_operator_matrix_to_op')
+
     op = op_ref
     do i = 1, op%np
        do j = 1, op%n
@@ -303,6 +326,7 @@ contains
        enddo
     enddo
 
+    call pop_sub()
   end subroutine nl_operator_matrix_to_op
 
 
@@ -313,6 +337,8 @@ contains
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
+
+    call push_sub('nl_operator.nl_operator_write')
 
     allocate(a(op%np, op%np))
     a = M_ZERO
@@ -327,6 +353,7 @@ contains
     enddo
 
     deallocate(a)
+    call pop_sub()
   end subroutine nl_operator_write
 
 
@@ -337,6 +364,8 @@ contains
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
+
+    call push_sub('nl_operator.nl_operator_Twrite')
 
     allocate(a(op%np, op%np))
     a = M_ZERO
@@ -351,12 +380,15 @@ contains
     enddo
 
     deallocate(a)
+    call pop_sub()
   end subroutine nl_operatorT_write
 
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)
     type(nl_operator_type), intent(inout) :: op
+
+    call push_sub('nl_operator.nl_operator_end')
 
     ASSERT(associated(op%i))
     ASSERT(associated(op%w_re))
@@ -374,6 +406,7 @@ contains
        nullify   (op%w_im)
     endif
 
+    call pop_sub()
   end subroutine nl_operator_end
 
 
@@ -387,6 +420,8 @@ contains
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:)
+
+    call push_sub('nl_operator.dnl_operator_operate')
 
     n = op%n
     if(op%const_w) then
@@ -402,6 +437,7 @@ contains
        end do
     end if
 
+    call pop_sub()
   end subroutine dnl_operator_operate
 
 
@@ -411,8 +447,10 @@ contains
     type(nl_operator_type), intent(in)  :: op
     CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
 
-    integer :: i, n
+    integer :: i, n, j
     FLOAT, allocatable :: w_re(:)
+
+    call push_sub('nl_operator.znl_operator_init')
 
     n = op%n
     if(op%const_w) then
@@ -428,6 +466,7 @@ contains
        end do
     end if
 
+    call pop_sub()
   end subroutine znl_operator_operate
 
 
@@ -441,6 +480,8 @@ contains
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:), w_im(:)
+
+    call push_sub('nl_operator.znl_operator_operate_complex')
 
     n = op%n
     if(op%const_w) then
@@ -459,6 +500,7 @@ contains
        end do
     end if
 
+    call pop_sub()
   end subroutine znl_operator_operate_cmplx
 
 end module nl_operator

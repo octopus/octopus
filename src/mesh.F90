@@ -54,7 +54,7 @@ module mesh
     integer  :: np          ! number of points in mesh
     integer  :: np_tot      ! total number of points including ghost points
 
-    integer  :: enlarge     ! number of points to add for boundary conditions
+    integer  :: enlarge(3)     ! number of points to add for boundary conditions
 
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
@@ -75,7 +75,7 @@ contains
     type(mesh_type),              intent(inout) :: m
     type(geometry_type),          intent(in)    :: geo
     type(curvlinear_type),        intent(in)    :: cv
-    integer,                      intent(in)    :: enlarge
+    integer,                      intent(in)    :: enlarge(3)
 
     call push_sub('mesh.mesh_init')
 
@@ -136,16 +136,6 @@ contains
 
     db = 1
 
-    ! OLD: I let it here because maybe I revert to this method later
-    ! double mesh with 2n + 1 points
-    !  do i = sb%periodic_dim + 1, sb%dim
-    !    db(i) = nint(m%fft_alpha*(m%nr(2,i)-m%nr(1,i))) + 1
-    !  end do
-    !  do i = 1, sb%periodic_dim ! for periodic systems
-    !    db(i) = m%nr(2,i) - m%nr(1,i) + 1
-    !  end do
-
-    ! NEW
     ! double mesh with 2n points
     do i = 1, sb%periodic_dim
       db(i) = m%l(i)

@@ -60,6 +60,7 @@ contains
 
     call push_sub('stencil_cube.stencil_cube_get_lapl')
 
+    stencil(:,:) = 0
     n = 1
     select case(dim)
     case(1)
