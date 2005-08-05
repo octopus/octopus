@@ -22,7 +22,7 @@ subroutine poisson3D_init(gr)
 
   integer :: level
 
-  ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= MULTIGRID)
+  ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= MULTIGRILLA)
 
   !%Variable PoissonSolverMaxMultipole
   !%Type integer
@@ -53,7 +53,7 @@ subroutine poisson3D_init(gr)
     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
     call poisson_cg2_init(gr%m, maxl, threshold)
 
-  case(MULTIGRID)
+  case(MULTIGRILLA)
     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
 

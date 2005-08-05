@@ -60,7 +60,7 @@ module poisson
 #endif
   integer, parameter :: CG            = 5, &
                         CG_CORRECTED  = 6, &
-                        MULTIGRID     = 7
+                        MULTIGRILLA   = 7
 
 
 
@@ -145,7 +145,7 @@ contains
     subroutine init_3D()
 #ifdef HAVE_FFT
       call loct_parse_int(check_inp('PoissonSolver'), gr%sb%periodic_dim, poisson_solver)
-      if(poisson_solver < FFT_SPH .or. poisson_solver > MULTIGRID ) then
+      if(poisson_solver < FFT_SPH .or. poisson_solver > MULTIGRILLA ) then
         call input_error('PoissonSolver')
       end if
 
@@ -189,7 +189,7 @@ contains
 #endif
     case(CG_CORRECTED)
       call poisson_cg2_end()
-    case(MULTIGRID)
+    case(MULTIGRILLA)
        call poisson_multigrid_end()
     end select
     poisson_solver = -99
@@ -253,7 +253,7 @@ contains
     case(CG_CORRECTED)
       call poisson_cg2(gr%m, gr%f_der%der_discr, pot, rho)
 
-    case(MULTIGRID)
+    case(MULTIGRILLA)
       call poisson_multigrid_solver(gr, pot, rho)
 
 #ifdef HAVE_FFT
