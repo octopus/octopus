@@ -22,7 +22,6 @@
 R_TYPE function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
-  R_TYPE                      :: d
 
   d = sum(f(1:m%np)*m%vol_pp(1:m%np))
 end function X(mf_integrate)
