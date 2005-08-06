@@ -129,7 +129,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
 
   if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik>sys%st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
-    call states_write_bands(iunit, sys%st%nst, sys%st)
+    call states_write_bands(iunit, sys%st%nst, sys%st, sys%gr%sb)
     call io_close(iunit)
   end if
 

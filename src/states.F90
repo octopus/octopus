@@ -677,13 +677,24 @@ contains
 
   end subroutine states_write_eigenvalues
 
-  subroutine states_write_bands(iunit, nst, st)
+  subroutine states_write_bands(iunit, nst, st, sb)
     integer,           intent(in) :: iunit, nst
     type(states_type), intent(in) :: st
+    type(simul_box_type), intent(in) :: sb
 
-    integer ik, j, ns
+    integer :: i, ik, j, mode, ns
+    FLOAT :: factor(3)
+    
+    integer, parameter :: GNUPLOT = 1, &
+                          XMGRACE = 2
 
     if(iunit==stdout.and.conf%verbose<=20) return
+
+    call loct_parse_int(check_inp('BandsOutputMode'), GNUPLOT, mode)
+    if(mode /= GNUPLOT .and. mode /= XMGRACE) then
+      message(1) = "Input: BandsOutputMode must be 1 (gnuplot) or 2 (xmgrace)"
+      call write_fatal(1)
+    end if
 
     ! shortcuts
     ns = 1
@@ -693,14 +704,32 @@ contains
     if(mpiv%node == 0) then
 #endif
 
-       do j = 1, nst
-          do ik = 1, st%d%nik, ns
-             write(iunit, '(1x,3f12.4,3x,f12.6))', advance='yes') &
-                  st%d%kpoints(:,ik)*units_out%length%factor,            &
-                  (st%eigenval(j, ik))/units_out%energy%factor
-          end do
-          write(iunit, '(a)')' '
-       end do
+    ! define the scaling factor to output k_i/G_i, instead of k_i
+    do i =1,3
+      factor(i) = M_ONE
+      if (sb%klat(i,i) /= M_ZERO) factor(i) = sb%klat(i,i)
+    end do
+    
+    select case(mode)
+    case(1)
+      ! output bands in gnuplot format
+      do j = 1, nst
+        do ik = 1, st%d%nik, ns
+          write(iunit, '(1x,3(f10.4))', advance='no') &
+               st%d%kpoints(:,ik)/factor(:)
+          write(iunit, '(3x,f12.6))', advance='yes') st%eigenval(j, ik)/units_out%energy%factor
+        end do
+        write(iunit, '(a)')' '
+      end do
+    case(2)
+      ! output bands in xmgrace format, i.e.:
+      ! k_x, k_y, k_z, e_1, e_2, ..., e_n
+      do ik = 1, st%d%nik, ns
+        write(iunit, '(1x,3(f10.4))', advance='no') &
+             st%d%kpoints(:,ik)/factor(:)
+        write(iunit, '(3x,20f12.6))', advance='yes') (st%eigenval(j, ik)/units_out%energy%factor, j=1,nst)
+      end do
+    end select
 
 #ifdef HAVE_MPI
     end if

@@ -332,7 +332,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
 
   if(simul_box_is_periodic(gr%sb).and.st%d%nik > st%d%nspin) then
     iunit = io_open('static/bands.dat', action='write')
-    call states_write_bands(iunit, st%nst, st)
+    call states_write_bands(iunit, st%nst, st, gr%sb)
     call io_close(iunit)
   end if
 
