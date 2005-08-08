@@ -835,21 +835,25 @@ contains
     call pop_sub()
   end subroutine epot_generate_classic
 
-  subroutine epot_laser_scalar_pot(sb, ep, x, t, v)
-    type(simul_box_type), intent(in) :: sb
-    type(epot_type), intent(in)  :: ep
-    FLOAT,           intent(in)  :: t
-    FLOAT,           intent(in)  :: x(sb%dim)
-    FLOAT,           intent(out) :: v
 
+  function epot_laser_scalar_pot(np, gr, ep, t) result(v)
+    FLOAT :: v(np)
+    integer, intent(in) :: np
+    type(grid_type), intent(in) :: gr
+    type(epot_type), intent(in)  :: ep
+    FLOAT, intent(in)  :: t
+
+    integer :: i
     FLOAT, allocatable :: e(:)
 
-    allocate(e(sb%dim))
-    call laser_field(sb, ep%no_lasers, ep%lasers, t, e)
-    v = sum(e*x)
+    allocate(e(gr%sb%dim))
+    call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, e)
+    do i = 1, np
+       v(i) = sum(e*gr%m%x(i,:))
+    enddo
     deallocate(e)
 
-  end subroutine epot_laser_scalar_pot
+  end function epot_laser_scalar_pot
 
 
   subroutine epot_laser_vector_pot(sb, ep, t, a)

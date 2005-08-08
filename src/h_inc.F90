@@ -412,11 +412,9 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
     select case(h%gauge)
     case(1) ! length gauge
 
-      do k = 1, NP
-        call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t, v)
-
-        hpsi(k,:) = hpsi(k,:) + v * psi(k,:)
-      end do
+      do k = 1, h%d%dim
+         hpsi(:, k)= hpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*psi(:, k)
+      enddo
 
     case(2) ! velocity gauge
 

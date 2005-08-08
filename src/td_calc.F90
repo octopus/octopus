@@ -73,10 +73,9 @@
       do ist = st%st_start, st%st_end
 
         call zhpsi(h, gr, st%zpsi(:, :, ist, ik), hzpsi(:,:), ik)
-        do k = 1, NP
-          call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(:, k), t, v)
-          hzpsi(k,:) = hzpsi(k,:) + v * st%zpsi(k,:,ist,ik)
-        end do
+        do k = 1, st%d%dim
+           hzpsi(:, k) = hzpsi(:, k) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t)*st%zpsi(:, k, ist, ik)
+        enddo
 
         allocate(xzpsi(NP, st%d%dim, 3), vnl_xzpsi(NP, st%d%dim))
         xzpsi = M_z0

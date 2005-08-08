@@ -108,7 +108,6 @@ contains
     CMPLX,                  intent(in)    :: factor
 
     integer :: k
-    FLOAT :: v
 
     call push_sub('td_exp_split.vlpsi')
 
@@ -133,10 +132,9 @@ contains
           call write_fatal(1)
        end if
 
-       do k = 1, NP
-          call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t, v)
-          psi(k,:) = exp(factor*v) * psi(k,:)
-       end do
+       do k = 1, h%d%dim
+          psi(:, k) = exp( factor*epot_laser_scalar_pot(gr%m%np, gr, h%ep, t) ) * psi(:, k)
+       enddo
     end if
 
     call pop_sub()

@@ -383,12 +383,7 @@ contains
         if(h%ep%no_lasers > 0) then
           select case(h%gauge)
           case(1) ! length gauge
-            do k = 1, NP
-               call epot_laser_scalar_pot(gr%sb, h%ep, gr%m%x(k,:), t-dt+time(j), v)
-               do is = 1, st%d%spin_channels
-                  vaux(k, is, j) = vaux(k, is, j) + v
-               enddo
-            end do
+            vaux(:, is, j) = vaux(:, is, j) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t-dt+time(j))
           case(2) ! velocity gauge
             write(message(1),'(a)') 'Inconsistency in td_rti5'
             call write_fatal(1)
