@@ -50,11 +50,10 @@ subroutine X(v_ks_calc)(gr, ks, h, st, calc_eigenval)
 contains
   ! Hartree contribution to the xc potential
   subroutine v_hartree()
-    FLOAT, allocatable :: rho(:), vhartree(:)
+    FLOAT, allocatable :: rho(:)
     integer :: is
 
-    allocate(rho(NP), vhartree(NP))
-    vhartree = M_ZERO
+    allocate(rho(NP))
 
     ! calculate the total density
     rho(:) = st%rho(:, 1)
@@ -66,22 +65,22 @@ contains
     if(ks%sic_type == sic_amaldi) rho(:) = amaldi_factor*rho(:)
 
     ! solve the poisson equation
-    call dpoisson_solve(gr, vhartree, rho)
+    call dpoisson_solve(gr, h%vhartree, rho)
 
     if (h%em_app) then
-      call lalg_scal(NP, M_ONE/h%e_ratio, vhartree)
+      call lalg_scal(NP, M_ONE/h%e_ratio, h%vhartree)
     end if
 
-    h%vhxc(:, 1) = h%vhxc(:, 1) + vhartree(:)
-    if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + vhartree
+    h%vhxc(:, 1) = h%vhxc(:, 1) + h%vhartree(:)
+    if(h%d%ispin > UNPOLARIZED) h%vhxc(:, 2) = h%vhxc(:, 2) + h%vhartree(:)
 
     ! We first add 1/2 int n vH, to then subtract int n (vxc + vH)
     ! this yields the correct formula epot = - int n (vxc + vH/2)
     do is = 1, h%d%spin_channels
-      h%epot = h%epot + M_HALF*dmf_dotp(gr%m, st%rho(:, is), vhartree)
+      h%epot = h%epot + M_HALF*dmf_dotp(gr%m, st%rho(:, is), h%vhartree)
     end do
 
-    deallocate(rho, vhartree)
+    deallocate(rho)
   end subroutine v_hartree
 
 

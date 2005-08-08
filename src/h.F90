@@ -65,6 +65,7 @@ type hamiltonian_type
 
   integer :: reltype ! type of relativistic correction to use
 
+  FLOAT, pointer :: vhartree(:)
   FLOAT, pointer :: Vhxc(:,:)   ! xc potential + hartree potential
   FLOAT, pointer :: ahxc(:,:,:) ! xc vector-potential + hartree vector-potential divided by c
 
@@ -136,6 +137,7 @@ subroutine hamiltonian_init(h, gr, states_dim, ip_app)
   ! allocate potentials and density of the cores
   ! In the case of spinors, vxc_11 = h%vxc(:, 1), vxc_22 = h%vxc(:, 2), Re(vxc_12) = h%vxc(:. 3);
   ! Im(vxc_12) = h%vxc(:, 4)
+  allocate(h%vhartree(NP))
   allocate(h%Vhxc(NP, h%d%nspin))
   h%Vhxc = M_ZERO
   if (h%d%cdft) then
@@ -245,6 +247,10 @@ subroutine hamiltonian_end(h, gr)
 
   call push_sub('h.hamiltonian_end')
 
+  if(associated(h%vhartree)) then
+    deallocate(h%vhartree)
+    nullify(h%vhartree)
+  endif
   if(associated(h%vhxc)) then
     deallocate(h%vhxc)
     nullify(h%vhxc)

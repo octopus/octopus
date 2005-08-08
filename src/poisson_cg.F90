@@ -83,7 +83,7 @@ contains
     FLOAT :: res
     FLOAT, allocatable :: wk(:), lwk(:), zk(:), pk(:)
 
-    call push_sub('poisson_cg.poisson_cg')
+    call push_sub('poisson_cg.poisson_cg1')
 
     allocate(wk(m%np_tot), lwk(m%np_tot), zk(m%np), pk(m%np))
 
@@ -124,7 +124,7 @@ contains
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT :: res
 
-    call push_sub('poisson_cg.poisson_cg')
+    call push_sub('poisson_cg.poisson_cg2')
 
     der_pointer  => der
     mesh_pointer => m
