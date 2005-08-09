@@ -261,7 +261,7 @@ contains
 
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
-    integer :: i
+    integer :: i, j, k
 
     type(nl_operator_type) :: auxop
 
@@ -338,6 +338,22 @@ contains
           call nl_operator_selfadjoint(der%lapl, auxop, der%m)
           call nl_operator_equal(der%lapl, auxop)
           call nl_operator_end(auxop)
+       endif
+
+       ! Here I will nullify all the coefficients that are outside the box (only for
+       ! the case of non-constant weights == curvilinear coordinates).
+       ! WARNING: Same thing should be done for the gradients. The subroutines in
+       ! derivatives_inc.F90 should then be changed accordingly.
+       if(m%use_curvlinear) then
+          do i = 1, m%np
+             do j = 1, der%lapl%n
+                k = der%lapl%i(j, i)
+                if(k>m%np) then
+                   der%lapl%w_re(j, i) = M_ZERO
+                   der%lapl%i(j, i) = i
+                endif
+             enddo
+          enddo
        endif
 
     else ! we have the explicit coefficients

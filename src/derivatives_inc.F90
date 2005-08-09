@@ -53,24 +53,26 @@
     R_TYPE,               intent(out) :: lapl(:)  ! lapl(m%np)
     logical, optional,    intent(in)  :: have_ghost_
 
-    R_TYPE, pointer :: fp(:)
+    R_TYPE, pointer:: fp(:)
     logical :: have_ghost
 
     have_ghost = .false.
     if(present(have_ghost_)) have_ghost = have_ghost_
 
-    if(.not.have_ghost.and.der%zero_bc) then
+    ! If the derivatives are defined with non-constant weights, then we do not
+    ! need extra points.
+    if( (.not.(have_ghost))   .and.   der%zero_bc    .and.  der%lapl%const_w  ) then
       allocate(fp(der%m%np_tot))
       fp(1:der%m%np)              = f(1:der%m%np)
       fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+      call X(nl_operator_operate) (der%lapl, fp, lapl)
+      deallocate(fp)
     else
-      fp => f
-    end if
+      call X(nl_operator_operate) (der%lapl, f, lapl)
+    endif
 
-    call X(nl_operator_operate) (der%lapl, fp, lapl)
-
-    if(.not.have_ghost.and.der%zero_bc) deallocate(fp)
   end subroutine X(derivatives_lapl)
+
 
 
   ! ---------------------------------------------------------
