@@ -708,7 +708,7 @@ contains
       integer, intent(in) :: ivnl, l, lm
 
       integer :: i, j, k, d
-      FLOAT :: r, x(3), x_in(3), ylm
+      FLOAT :: r, x(3), x_in(3)
       FLOAT :: so_uv, so_duv(3)
       FLOAT :: v, dv(3)
 
@@ -837,11 +837,12 @@ contains
 
 
   function epot_laser_scalar_pot(np, gr, ep, t) result(v)
-    FLOAT :: v(np)
     integer, intent(in) :: np
     type(grid_type), intent(in) :: gr
     type(epot_type), intent(in)  :: ep
     FLOAT, intent(in)  :: t
+    FLOAT :: v(np)
+
 
     integer :: i
     FLOAT, allocatable :: e(:)

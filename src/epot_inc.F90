@@ -81,9 +81,8 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   logical,   optional, intent(in)    :: reduce_
 
   type(geometry_type), pointer :: geo
-  integer :: i, j, l, m, idim, ist, ik, ii, jj, ivnl
+  integer :: i, j, l, idim, ist, ik, ivnl
   FLOAT :: d, r, zi, zj, x(3)
-  R_TYPE :: uVpsi, p
   type(atom_type), pointer :: atm
   R_TYPE, allocatable :: ppsi(:, :)
 
