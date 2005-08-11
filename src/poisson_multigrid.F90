@@ -24,6 +24,7 @@ module poisson_multigrid
   use output
   use multigrid
   use poisson_corrections
+  use math, only : dconjugate_gradients
 
   implicit none
 
@@ -31,9 +32,13 @@ module poisson_multigrid
   FLOAT :: threshold
   integer :: presteps, poststeps
   integer :: restriction_method
+  integer :: relaxation_method
 
   FLOAT, pointer :: old_solution(:)
   logical :: initialized=.false.
+
+  integer, parameter :: GAUSS_SEIDEL = 1, &
+                        CONJUGATE_GRADIENTS = 5
   
   private
 
@@ -100,6 +105,25 @@ contains
     !%Option fullweight 2
     !% Fullweight restriction
     !%End
+
+    call loct_parse_int(check_inp('PoissonSolverMGRestrictionMethod'), 2, restriction_method)
+
+    !%Variable PoissonSolverMGRelaxationMethod
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Method used from fine to relax, i.e. to solve the linear system approximately, in
+    !% the multigrid procedure that solve Poisson equation. For the moment, the option
+    !% conjugate gradients is experimental...
+    !%Option gauss-seidel 1
+    !% Gauss-Seidel
+    !%Option cg 5
+    !% Conjugate-gradients
+    !%End
+   
+    call loct_parse_int(check_inp('PoissonSolverMGRelaxationMethod'), GAUSS_SEIDEL, relaxation_method)
+    if(relaxation_method.ne.GAUSS_SEIDEL .and. relaxation_method.ne.CONJUGATE_GRADIENTS) &
+      call input_error('PoissonSolverMGRelaxationMethod')
 
     call build_aux(m)
     call build_phi(m)
@@ -235,54 +259,67 @@ contains
 
   subroutine multigrid_relax(m,f_der,pot,rho,steps)
 
-    type(mesh_type),  intent(in)    :: m
-    type(f_der_type), intent(in)    :: f_der
+    type(mesh_type),  target, intent(in)    :: m
+    type(f_der_type), target, intent(in)    :: f_der
     FLOAT,            intent(inout) :: pot(:)  ! pot(m%np)
     FLOAT,            intent(in)    :: rho(:)  ! rho(m%np)
     integer,          intent(in)    :: steps
 
     integer :: t
-    integer :: i,n
+    integer :: i,n, iter
     FLOAT :: point_lap, h2, factor
     FLOAT, allocatable :: w(:)
 
-    factor=(-M_ONE/(-M_SIX));
+    select case(relaxation_method)
 
-    !!search for the diagonal term
-    !!DISABLED: currently using the diagonal term prevents convergence
-    !    if(LAP%const_w) then 
-    !       do i=1,LAP%n
-    !          if( 1 == LAP%i(i,1)) then
-    !             factor=-1.0/LAP%w_re(i,1);
-    !             exit
-    !          end if
-    !       end do
-    !    end if
+    case(GAUSS_SEIDEL)
+
+      factor=(-M_ONE/(-M_SIX));
+
+      !!search for the diagonal term
+      !!DISABLED: currently using the diagonal term prevents convergence
+      !    if(LAP%const_w) then 
+      !       do i=1,LAP%n
+      !          if( 1 == LAP%i(i,1)) then
+      !             factor=-1.0/LAP%w_re(i,1);
+      !             exit
+      !          end if
+      !       end do
+      !    end if
     
-    h2=m%h(1)*m%h(1)
-    n=LAP%n
-    allocate(w(1:n))
-    if(LAP%const_w) then
+      h2=m%h(1)*m%h(1)
+      n=LAP%n
+      allocate(w(1:n))
+      if(LAP%const_w) then
 
-       w(1:n)=LAP%w_re(1:n,1)
-       do t=0,steps
-          do i=1,m%np
-             point_lap=sum(w(1:n)*pot(LAP%i(1:n,i)))
-             pot(i)=pot(i)+factor*h2*(point_lap-rho(i))
-          end do
-       end do
+        w(1:n)=LAP%w_re(1:n,1)
+        do t=0,steps
+           do i=1,m%np
+              point_lap=sum(w(1:n)*pot(LAP%i(1:n,i)))
+              pot(i)=pot(i)+factor*h2*(point_lap-rho(i))
+           end do
+        end do
 
-    else
+      else
 
-       do t=0,steps
-          do i=1,m%np
-             point_lap=sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-             pot(i)=pot(i)+factor*h2*(point_lap-rho(i))
-          end do
-       end do
+        do t=0,steps
+           do i=1,m%np
+              point_lap=sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
+              pot(i)=pot(i)+factor*h2*(point_lap-rho(i))
+           end do
+        end do
 
-    end if
-    deallocate(w)
+      end if
+      deallocate(w)
+
+    case(CONJUGATE_GRADIENTS)
+
+      iter = steps
+      mesh_pointer => m ; der_pointer => f_der%der_discr
+      call dconjugate_gradients(m%np, pot(1:m%np), rho(1:m%np), op, dotp, iter, threshold=CNST(1.0e-12))
+      nullify(mesh_pointer) ; nullify(der_pointer)
+
+    end select
 
   end subroutine multigrid_relax
 

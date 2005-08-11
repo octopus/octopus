@@ -164,9 +164,10 @@ contains
       end if
 #endif
 
-      if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED) ) then
+      if(gr%m%use_curvlinear .and. (poisson_solver.ne.CG_CORRECTED) .and. (poisson_solver.ne.MULTIGRILLA) ) then
         message(1) = 'If curvilinear coordinates are used, then the only working'
-        message(2) = 'Poisson solver is cg_corrected ("corrected conjugate gradients")'
+        message(2) = 'Poisson solvers are cg_corrected ("corrected conjugate gradients") and'
+        message(3) = 'multigrid.' 
         call write_fatal(2)
       end if
 

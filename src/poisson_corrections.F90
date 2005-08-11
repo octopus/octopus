@@ -189,20 +189,20 @@ module poisson_corrections
   subroutine op(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
-    call dderivatives_lapl(der_pointer, x, y)
+    call dderivatives_lapl(der_pointer, x(1:mesh_pointer%np), y(1:mesh_pointer%np))
   end subroutine op
 
   FLOAT function dotp(x, y) result(res)
     FLOAT, intent(in) :: x(:),y(:)
     integer :: np
     np = mesh_pointer%np
-    res = X(mf_dotp)(mesh_pointer, x, y)
+    res = X(mf_dotp)(mesh_pointer, x(1:np), y(1:np))
   end function dotp
 
   subroutine opt(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
-    call dderivatives_laplt(der_pointer, x, y)
+    call dderivatives_laplt(der_pointer, x(1:mesh_pointer%np), y(1:mesh_pointer%np))
   end subroutine opt
 
 
