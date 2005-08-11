@@ -66,7 +66,7 @@
 ! (*) NOTE: The algorithm assumes that the vectors are given in an orthonormal basis.
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/!
-subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
+subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, threshold)
   integer, intent(in) :: np
   R_TYPE,                intent(inout) :: x(:)
   R_TYPE,                intent(in)    :: b(:)
@@ -75,6 +75,10 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
        R_TYPE, intent(in)  :: x(:)
        R_TYPE, intent(out) :: y(:)
      end subroutine op
+     R_TYPE function dotp(x, y) result(res)
+       R_TYPE, intent(in) :: x(:)
+       R_TYPE, intent(in) :: y(:)
+     end function dotp
   end interface
   integer, intent(inout)        :: iter
   FLOAT,  optional, intent(in)  :: threshold
@@ -106,13 +110,13 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
   max_iter = iter
   iter = 1
   do while(iter < max_iter)
-     gamma = dot_product(r, r)
+     gamma = dotp(r, r)
      if(abs(gamma) < THRESHOLD_) exit
      call op(p, ap)
-     alpha = gamma/dot_product(p, ap)
+     alpha = gamma/dotp(p, ap)
      r = r - alpha*ap
      x = x + alpha*p
-     beta = dot_product(r, r)/gamma
+     beta = dotp(r, r)/gamma
      p = r + beta*p
      iter  = iter + 1
   enddo
@@ -122,7 +126,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, iter, residue, threshold)
   call pop_sub(); return
 end subroutine X(sym_conjugate_gradients)
 
-subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, iter, residue, threshold)
+subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, threshold)
   integer, intent(in) :: np
   R_TYPE,                intent(inout) :: x(:)
   R_TYPE,                intent(in)    :: b(:)
@@ -137,6 +141,10 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, iter, residue, threshold
        R_TYPE, intent(in)  :: x(:)
        R_TYPE, intent(out) :: y(:)
      end subroutine opt
+     R_TYPE function dotp(x, y) result(res)
+       R_TYPE, intent(in) :: x(:)
+       R_TYPE, intent(in) :: y(:)
+     end function dotp
   end interface
   integer, intent(inout) :: iter
   R_TYPE, optional, intent(out) :: residue
@@ -168,16 +176,16 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, iter, residue, threshold
   max_iter = iter
   iter = 1
   do while(iter < MAX_ITER)
-     gamma = dot_product(rr, r)
-     err = dot_product(r, r)
+     gamma = dotp(rr, r)
+     err = dotp(r, r)
      if(abs(err) < THRESHOLD_) exit
      call op (p,  ap)
      call opt(pp, atp)
-     alpha = gamma/dot_product(pp, ap)
+     alpha = gamma/dotp(pp, ap)
      r  = r  - alpha*ap
      rr = rr - alpha*atp
      x = x + alpha*p
-     beta = dot_product(rr, r)/gamma
+     beta = dotp(rr, r)/gamma
      p  = r  + beta*p
      pp = rr + beta*pp
      iter = iter + 1

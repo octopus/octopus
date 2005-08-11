@@ -24,6 +24,7 @@ module poisson_corrections
   use lib_oct
   use derivatives
   use mesh
+  use mesh_function
 
   implicit none
 
@@ -37,7 +38,7 @@ module poisson_corrections
             build_aux, &
             correct_rho, &
             get_multipoles, &
-            op, opt
+            op, opt, dotp
 
   type(der_discr_type), pointer :: der_pointer
   type(mesh_type),      pointer :: mesh_pointer
@@ -188,33 +189,20 @@ module poisson_corrections
   subroutine op(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
-    integer :: i
-    FLOAT, allocatable :: u(:)
-    allocate(u(mesh_pointer%np))
-    do i = 1, mesh_pointer%np
-       u(i) = x(i)/sqrt(mesh_pointer%vol_pp(i))
-    enddo
-    call dderivatives_lapl(der_pointer, u, y)
-    do i = 1, mesh_pointer%np
-       y(i) = y(i)*sqrt(mesh_pointer%vol_pp(i))
-    enddo
-    deallocate(u)
+    call dderivatives_lapl(der_pointer, x, y)
   end subroutine op
+
+  FLOAT function dotp(x, y) result(res)
+    FLOAT, intent(in) :: x(:),y(:)
+    integer :: np
+    np = mesh_pointer%np
+    res = X(mf_dotp)(mesh_pointer, x, y)
+  end function dotp
 
   subroutine opt(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
-    integer :: i
-    FLOAT, allocatable :: u(:)
-    allocate(u(mesh_pointer%np))
-    do i = 1, mesh_pointer%np
-       u(i) = x(i)*sqrt(mesh_pointer%vol_pp(i))
-    enddo
-    call dderivatives_laplt(der_pointer, u, y)
-    do i = 1, mesh_pointer%np
-       y(i) = y(i)/sqrt(mesh_pointer%vol_pp(i))
-    enddo
-    deallocate(u)
+    call dderivatives_laplt(der_pointer, x, y)
   end subroutine opt
 
 
