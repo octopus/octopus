@@ -196,7 +196,7 @@ module poisson_corrections
     FLOAT, intent(in) :: x(:),y(:)
     integer :: np
     np = mesh_pointer%np
-    res = X(mf_dotp)(mesh_pointer, x(1:np), y(1:np))
+    res = dmf_dotp(mesh_pointer, x(1:np), y(1:np))
   end function dotp
 
   subroutine opt(x, y)
