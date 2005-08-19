@@ -50,14 +50,6 @@ module math
        sort
 
 
-  public :: root_solver_type, ode_solver_type
-  public :: &
-       droot_solver_init, droot_solver_run, droot_solver_end, &
-       zroot_solver_init, zroot_solver_run, zroot_solver_end, &
-       zroot_watterstrom,                                     &
-       dode_solver_init, dode_solver_create, dode_solver_run, dode_solver_end, &
-       zode_solver_init, zode_solver_create, zode_solver_run, zode_solver_end
-
   !------------------------------------------------------------------------------
   ! This is the common interface to a sorting routine.
   ! It performs the shell algorithm, not as fast as the quicksort for large numbers,
@@ -102,49 +94,6 @@ module math
        CNST(    23.0)/CNST( 30.0),              &
        CNST(   793.0)/CNST(720.0),              &
        CNST(   157.0)/CNST(160.0) /)
-
-  integer, public, parameter :: &
-       ROOT_BISECTION   =  1,   &
-       ROOT_BRENT       =  2,   &
-       ROOT_NEWTON      =  3,   &
-       ROOT_LAGUERRE    =  4,   &
-       ROOT_WATTERSTROM =  5
-
-  integer, public, parameter :: &
-       ODE_RK4  =  1, &
-       ODE_FB78 =  2, &
-       ODE_VR89 =  3, &
-       ODE_PD89 =  4
-
-
-  type root_solver_type
-     integer :: solver_type    ! what solver to use (see ROOT_* variables above)
-     integer :: maxiter        ! maximal number of iterations
-     integer :: usediter       ! number of actually performed iterations
-     FLOAT   :: abs_tolerance
-     FLOAT   :: rel_tolerance
-     FLOAT   :: ws_radius      ! radius of circle in complex plane; used for initial values
-     logical :: have_polynomial
-     integer :: poly_order
-  end type root_solver_type
-
-
-  type ode_solver_type
-     integer :: solver_type     ! what solver to use (see ODE_* variables above)
-     integer :: nsteps          ! how many steps to use
-     integer :: nsize           ! how many odes to solve simultaneously
-     integer :: vsize           ! vector size of ode method (used internally)
-     FLOAT   :: tmax, tmin      ! integrate ODE from tmin to tmax
-     logical :: adaptive_steps  ! should we use adaptive steps?
-     logical :: full_solution   ! if true the solution will be returned for all t, otherwise only at the endpoint t=tmax.
-     FLOAT, pointer :: a(:,:), b(:), c(:), e(:) ! coefficients dor the ode solver
-  end type ode_solver_type
-
-
-  ! a few variables which we have to define global
-  ! for this module
-  CMPLX, allocatable :: gbase_coeff(:), gcoeff(:)
-  integer            :: gorder
 
 
 contains
@@ -605,11 +554,6 @@ contains
     end do
 
   end subroutine shellsort
-
-
-#include "ode_solver.F90"
-
-#include "root_solver.F90"
 
 
 #include "undef.F90"

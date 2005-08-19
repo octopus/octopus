@@ -12,7 +12,8 @@ basic_SRCS = liboct_parser.F90 liboct.F90 string.F90 varinfo.F90 global.F90 \
 	     messages.F90 syslabels.F90 io.F90 units.F90
 
 core_SRCS = $(basic_SRCS) \
-	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 spline.F90 sparskit.F90 \
+	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 \
+	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
@@ -183,6 +184,7 @@ mf.o: global.h mf_inc.F90
 mix.o: global.h
 nl_operator.o: global.h
 oct_test.o: global.h
+ode_solver.o: global.h ode_solver_inc.F90
 opt_control.o: global.h
 out.o: global.h out_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90
@@ -194,10 +196,11 @@ poisson_corrections.o: global.h
 poisson.o: global.h poisson1D.F90 poisson2D.F90 poisson3D.F90 poisson_multigrid.F90
 ps.o: global.h
 restart.o: global.h restart_inc.F90
+root_solver: global.h root_solver_inc.F90
 rotational_strength.o: global.h
 run.o: global.h
 scf.o: global.h
-sparskit.o: global.h
+sparskit.o: global.h sparskit_inc.F90 sparskit_driver.F90
 specie.o: global.h
 spectrum.o: global.h
 spline.o: global.h

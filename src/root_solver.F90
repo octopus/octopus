@@ -17,6 +17,49 @@
 !!
 !! $Id$
 
+#include "global.h"
+
+module root_solver
+  use global
+  use messages
+  use syslabels
+  use ode_solver
+
+  implicit none
+
+  private
+  public :: root_solver_type
+  public :: &
+       droot_solver_init, droot_solver_run, droot_solver_end, &
+       zroot_solver_init, zroot_solver_run, zroot_solver_end, &
+       zroot_watterstrom
+
+  integer, public, parameter :: &
+       ROOT_BISECTION   =  1,   &
+       ROOT_BRENT       =  2,   &
+       ROOT_NEWTON      =  3,   &
+       ROOT_LAGUERRE    =  4,   &
+       ROOT_WATTERSTROM =  5
+
+  type root_solver_type
+     integer :: solver_type    ! what solver to use (see ROOT_* variables above)
+     integer :: maxiter        ! maximal number of iterations
+     integer :: usediter       ! number of actually performed iterations
+     FLOAT   :: abs_tolerance
+     FLOAT   :: rel_tolerance
+     FLOAT   :: ws_radius      ! radius of circle in complex plane; used for initial values
+     logical :: have_polynomial
+     integer :: poly_order
+  end type root_solver_type
+
+  ! a few variables which we have to define global
+  ! for this module
+  CMPLX, allocatable :: gbase_coeff(:), gcoeff(:)
+  integer            :: gorder
+
+contains
+
+
 
 ! ---------------------------------------------------------
 subroutine droot_bisection
@@ -30,24 +73,24 @@ end subroutine droot_bisection
 
 
 ! ---------------------------------------------------------
-subroutine droot_brent(rs, func, root, interval)
-  type(root_solver_type), intent(in)  :: rs
-  FLOAT,                  intent(out) :: root
-  FLOAT,  optional,       intent(in)  :: interval(2)     ! lower and upper boundary of search region
-
-  interface
-     subroutine func(x,s)
-       FLOAT :: x,s
-     end subroutine func
-  end interface
-
-  call push_sub('root_solver.droot_brent')
-
-  message(1) = 'Error: Not implemented yet.'
-  call write_fatal(1)
-
-  call pop_sub()
-end subroutine droot_brent
+!!$subroutine droot_brent(rs, func, root, interval)
+!!$  type(root_solver_type), intent(in)  :: rs
+!!$  FLOAT,                  intent(out) :: root
+!!$  FLOAT,  optional,       intent(in)  :: interval(2)     ! lower and upper boundary of search region
+!!$
+!!$  interface
+!!$     subroutine func(x,s)
+!!$       FLOAT :: x,s
+!!$     end subroutine func
+!!$  end interface
+!!$
+!!$  call push_sub('root_solver.droot_brent')
+!!$
+!!$  message(1) = 'Error: Not implemented yet.'
+!!$  call write_fatal(1)
+!!$
+!!$  call pop_sub()
+!!$end subroutine droot_brent
 
 
 ! ---------------------------------------------------------
@@ -58,7 +101,7 @@ subroutine zroot_watterstrom(rs, roots, coeff)
   CMPLX,                  intent(in)  :: coeff(:)    ! polynomial coefficients
 
   type(ode_solver_type) :: os
-  CMPLX, allocatable    :: base_coeff(:), base_roots(:), ncoeff(:)
+  CMPLX, allocatable    :: base_roots(:)
   FLOAT   :: theta
   integer :: order, j
 
@@ -135,3 +178,6 @@ end subroutine func_ws
 #include "undef.F90"
 #include "real.F90"
 #include "root_solver_inc.F90"
+
+
+end module root_solver

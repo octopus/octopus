@@ -21,8 +21,6 @@
 subroutine X(root_solver_init)(rs)
   type(root_solver_type), intent(out) :: rs
 
-  integer :: workspace_size, m, wn
-
   call push_sub('root_solver_inc.root_solver_init')
 
   !%Variable RootSolver
@@ -95,7 +93,7 @@ subroutine X(root_solver_run)(rs, func, roots, startval, interval, coeff)
      if(present(interval)) then
         message(1) = 'Info: root_solver: Using Brent method.'
         call write_info(1)
-        call droot_brent(rs, func, roots(1), interval)
+!!$        call droot_brent(rs, func, roots(1), interval)
      else
         message(1) = 'Error: root_solver: search interval required for Brent method.'
         call write_fatal(1)
@@ -202,7 +200,7 @@ subroutine X(root_laguerre)(rs, root, startval, coeff)
   R_TYPE,                 intent(in)    :: coeff(:)    ! polynomial coefficients
 
   R_TYPE,  allocatable  :: b(:), c(:), d(:)
-  R_TYPE  :: z, zold, p, s1, s2, denom1, denom2, lroot, croot
+  R_TYPE  :: z, zold, s1, s2, denom1, denom2, lroot
   integer :: order, j, k
 
   call push_sub('root_solver_inc.root_laguerre')
