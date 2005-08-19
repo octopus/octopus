@@ -225,9 +225,9 @@ contains
                 k = op%i(l, index)
                 if( k == i ) then
                    if(.not.op%const_w) then
-                        opt%w_re(j, i) = M_HALF*op%w_re(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
+                      opt%w_re(j, i) = M_HALF*op%w_re(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
                       if (op%cmplx_op) &
-                        opt%w_im(j, i) = M_HALF*op%w_im(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
+                           opt%w_im(j, i) = M_HALF*op%w_im(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
                    else
                       opt%w_re(j, 1) = op%w_re(l, 1)
                       if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
@@ -265,7 +265,7 @@ contains
                    if(.not.op%const_w) then
                       opt%w_re(j, i) = M_HALF*op%w_re(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
                       if (op%cmplx_op) &
-                      opt%w_im(j, i) = M_HALF*op%w_im(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
+                           opt%w_im(j, i) = M_HALF*op%w_im(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
                    else
                       opt%w_re(j, 1) = op%w_re(l, 1)
                       if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
@@ -447,7 +447,7 @@ contains
     type(nl_operator_type), intent(in)  :: op
     CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
 
-    integer :: i, n, j
+    integer :: i, n
     FLOAT, allocatable :: w_re(:)
 
     call push_sub('nl_operator.znl_operator_init')

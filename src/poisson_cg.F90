@@ -31,12 +31,13 @@ module poisson_cg
 
   implicit none
 
-  public :: poisson_cg1_init, &
-            poisson_cg1,      &
-            poisson_cg1_end,  &
-            poisson_cg2_init, &
-            poisson_cg2,      &
-            poisson_cg2_end
+  public ::              &
+       poisson_cg1_init, &
+       poisson_cg1,      &
+       poisson_cg1_end,  &
+       poisson_cg2_init, &
+       poisson_cg2,      &
+       poisson_cg2_end
 
   FLOAT :: threshold
 
@@ -120,7 +121,7 @@ contains
     FLOAT,                intent(inout) :: pot(:) ! pot(m%np)
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
 
-    integer :: i, iter
+    integer :: iter
     FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
     FLOAT :: res
 
@@ -163,16 +164,16 @@ contains
     allocate(mult((ml+1)**2))
     call get_multipoles(m, rho, ml, mult)
     do i = m%np+1, m%np_tot ! boundary conditions
-      call mesh_r(m, i, r, x=x)
-      add_lm = 1
-      do l = 0, ml
-        s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
-        do mm = -l, l
-          sa = loct_ylm(x(1), x(2), x(3), l, mm)
-          pot(i) = pot(i) + sa * mult(add_lm) * s1
-          add_lm = add_lm+1
-        end do
-      end do
+       call mesh_r(m, i, r, x=x)
+       add_lm = 1
+       do l = 0, ml
+          s1 = M_FOUR*M_PI/((M_TWO*l + M_ONE)*r**(l + 1))
+          do mm = -l, l
+             sa = loct_ylm(x(1), x(2), x(3), l, mm)
+             pot(i) = pot(i) + sa * mult(add_lm) * s1
+             add_lm = add_lm+1
+          end do
+       end do
     end do
 
     deallocate(mult)

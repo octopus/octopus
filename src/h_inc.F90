@@ -31,11 +31,11 @@ subroutine X(hamiltonian_eigenval)(h, gr, st)
   allocate(Hpsi(NP, st%d%dim))
 
   do ik = 1, st%d%nik
-    do ist = st%st_start, st%st_end
-      call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
-      e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
-      st%eigenval(ist, ik) = R_REAL(e)
-    end do
+     do ist = st%st_start, st%st_end
+        call X(hpsi) (h, gr, st%X(psi)(:, :, ist, ik), hpsi, ik)
+        e = X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), Hpsi)
+        st%eigenval(ist, ik) = R_REAL(e)
+     end do
   end do
 
   deallocate(Hpsi)
@@ -403,7 +403,7 @@ subroutine X(vlasers) (gr, h, psi, hpsi, t)
   FLOAT, intent(in) :: t
 
   integer :: k, idim
-  FLOAT :: v, a(NDIM)
+  FLOAT :: a(NDIM)
   R_TYPE, allocatable :: grad(:,:)
 
   call push_sub('h_inc.vlasers')

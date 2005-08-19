@@ -41,23 +41,23 @@ module casida
 
   implicit none
 
-  integer, parameter :: &
-     CASIDA_EPS_DIFF   = 1, &
-     CASIDA_PETERSILKA = 2, &
-     CASIDA_CASIDA     = 3
+  integer, parameter ::       &
+       CASIDA_EPS_DIFF   = 1, &
+       CASIDA_PETERSILKA = 2, &
+       CASIDA_CASIDA     = 3
 
   type casida_type
-    integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
+     integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
 
-    integer :: n_occ         ! number of occupied states
-    integer :: n_unocc       ! number of unoccupied states
-    integer :: wfn_flags(32) ! flags determining which wfs to take into account
+     integer :: n_occ         ! number of occupied states
+     integer :: n_unocc       ! number of unoccupied states
+     integer :: wfn_flags(32) ! flags determining which wfs to take into account
 
-    integer          :: n_pairs         ! number of pairs to take into acount
-    integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
-    integer, pointer :: pair_a(:)
-    FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
-    FLOAT,   pointer :: energies(:,:)   ! excitation energies and intensities
+     integer          :: n_pairs         ! number of pairs to take into acount
+     integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
+     integer, pointer :: pair_a(:)
+     FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
+     FLOAT,   pointer :: energies(:,:)   ! excitation energies and intensities
   end type casida_type
 
   private
@@ -85,32 +85,32 @@ contains
 
     call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
     if(err.ne.0) then
-      message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_unocc"'
-      call write_warning(1)
+       message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_unocc"'
+       call write_warning(1)
 
-      ierr = 1
-      call end_()
-      return
+       ierr = 1
+       call end_()
+       return
     end if
 
     ! now we count the number of occupied states
     cas%n_occ = 0
     n         = 0
     do i = 1, sys%st%nst
-      if(sys%st%occ(i, 1) == M_ZERO) then
-        n = n + 1
-      else
-        cas%n_occ = cas%n_occ + 1
-      end if
+       if(sys%st%occ(i, 1) == M_ZERO) then
+          n = n + 1
+       else
+          cas%n_occ = cas%n_occ + 1
+       end if
     end do
     if(n.ne.cas%n_unocc) then
-      message(1) = "Inconsistency between variable 'NumberUnoccStates' and file"
-      message(2) = "'"//trim(tmpdir)//"restart_unocc/occs'"
-      call write_fatal(2)
+       message(1) = "Inconsistency between variable 'NumberUnoccStates' and file"
+       message(2) = "'"//trim(tmpdir)//"restart_unocc/occs'"
+       call write_fatal(2)
     else
-      write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
-      write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
-      call write_info(2)
+       write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
+       write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
+       call write_info(2)
     endif
 
 
@@ -133,33 +133,33 @@ contains
     ! calculate resonances
     call loct_parse_logical(check_inp('CasEigenvalues'), .true., l)
     if(l) then
-      message(1) = "Info: Eigenvalue differences"
-      call write_info(1)
+       message(1) = "Info: Eigenvalue differences"
+       call write_info(1)
 
-      cas%type = CASIDA_EPS_DIFF
-      call casida_work(sys, cas)
-      call casida_write(cas, 'eps-diff')
+       cas%type = CASIDA_EPS_DIFF
+       call casida_work(sys, cas)
+       call casida_write(cas, 'eps-diff')
     end if
 
 
     call loct_parse_logical(check_inp('CasPetersilka'), .true., l)
     if(l) then
-      message(1) = "Info: Calculating resonance energies a la Petersilka"
-      call write_info(1)
+       message(1) = "Info: Calculating resonance energies a la Petersilka"
+       call write_info(1)
 
-      cas%type = CASIDA_PETERSILKA
-      call casida_work(sys, cas)
-      call casida_write(cas, 'petersilka')
+       cas%type = CASIDA_PETERSILKA
+       call casida_work(sys, cas)
+       call casida_write(cas, 'petersilka')
     end if
 
     call loct_parse_logical(check_inp('LinCasida'), .true., l)
     if(l) then
-      message(1) = "Info: Calculating resonance energies a la Casida"
-      call write_info(1)
+       message(1) = "Info: Calculating resonance energies a la Casida"
+       call write_info(1)
 
-      cas%type = CASIDA_CASIDA
-      call casida_work(sys, cas)
-      call casida_write(cas, 'casida')
+       cas%type = CASIDA_CASIDA
+       call casida_work(sys, cas)
+       call casida_write(cas, 'casida')
     end if
 
     call casida_type_end(cas)
@@ -173,8 +173,8 @@ contains
 
       call loct_parse_int(check_inp('NumberUnoccStates'), 5, cas%n_unocc)
       if(cas%n_unocc <= 0) then
-        message(1) = "Input: NumberUnoccStates must be > 0"
-        call write_fatal(1)
+         message(1) = "Input: NumberUnoccStates must be > 0"
+         call write_fatal(1)
       end if
 
       ! fix states: THIS IS NOT NICE
@@ -185,8 +185,8 @@ contains
       allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
       allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
       if(sys%st%d%ispin == SPINORS) then
-        allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
-        sys%st%mag = M_ZERO
+         allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
+         sys%st%mag = M_ZERO
       end if
       sys%st%eigenval = huge(PRECISION)
       sys%st%occ      = M_ZERO
@@ -215,21 +215,21 @@ contains
     ! count pairs
     cas%n_pairs = 0
     do a = cas%n_occ+1, cas%n_occ + cas%n_unocc
-      as = cas%wfn_flags((a-1)/32 + 1)
-      if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
-        message(1) = " "
-        do i = 1, cas%n_occ
-          is = cas%wfn_flags((i-1)/32 + 1)
-          if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-            cas%n_pairs = cas%n_pairs + 1
-          end if
-        end do
-      end if
+       as = cas%wfn_flags((a-1)/32 + 1)
+       if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+          message(1) = " "
+          do i = 1, cas%n_occ
+             is = cas%wfn_flags((i-1)/32 + 1)
+             if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+                cas%n_pairs = cas%n_pairs + 1
+             end if
+          end do
+       end if
     end do
 
     if(cas%n_pairs < 1) then
-      message(1) = "Error: Maybe there are no unoccupied states?"
-      call write_fatal(1)
+       message(1) = "Error: Maybe there are no unoccupied states?"
+       call write_fatal(1)
     end if
 
     ! allocate stuff
@@ -239,17 +239,17 @@ contains
     ! create pairs
     j = 1
     do a = cas%n_occ+1, cas%n_occ + cas%n_unocc
-      as = cas%wfn_flags((a-1)/32 + 1)
-      if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
-        do i = 1, cas%n_occ
-          is = cas%wfn_flags((i-1)/32 + 1)
-          if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-            cas%pair_i(j) = i
-            cas%pair_a(j) = a
-            j = j + 1
-          end if
-        end do
-      end if
+       as = cas%wfn_flags((a-1)/32 + 1)
+       if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+          do i = 1, cas%n_occ
+             is = cas%wfn_flags((i-1)/32 + 1)
+             if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+                cas%pair_i(j) = i
+                cas%pair_a(j) = a
+                j = j + 1
+             end if
+          end do
+       end if
     end do
 
   end subroutine casida_type_init
@@ -293,11 +293,11 @@ contains
     call load_saved()
 
     if(cas%type == CASIDA_CASIDA) then
-      call solve_casida()              ! solve casida matrix
+       call solve_casida()              ! solve casida matrix
 
     else if (mpiv%node == 0) then      ! this is not yet parallel
-      call solve_petersilka()          ! eigenvalues or petersilka formula
-      call sort_energies()             ! energies may be out of order
+       call solve_petersilka()          ! eigenvalues or petersilka formula
+       call sort_energies()             ! energies may be out of order
     end if
 
     ! clean up
@@ -317,26 +317,26 @@ contains
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
 
       do ia = 1, cas%n_pairs
-        a = cas%pair_a(ia)
-        i = cas%pair_i(ia)
-        cas%energies(ia, 1) = st%eigenval(a, 1) - st%eigenval(i, 1)
+         a = cas%pair_a(ia)
+         i = cas%pair_i(ia)
+         cas%energies(ia, 1) = st%eigenval(a, 1) - st%eigenval(i, 1)
 
-        if(cas%type == CASIDA_PETERSILKA) then
-          if(saved_K(ia, ia)) then
-            f = cas%mat(ia, ia)
-          else
-            f = K_term(i, a, i, a)
-            write(iunit, *) ia, ia, f
-          end if
-          cas%energies(ia, 1) = cas%energies(ia, 1) + M_TWO*f
-        end if
+         if(cas%type == CASIDA_PETERSILKA) then
+            if(saved_K(ia, ia)) then
+               f = cas%mat(ia, ia)
+            else
+               f = K_term(i, a, i, a)
+               write(iunit, *) ia, ia, f
+            end if
+            cas%energies(ia, 1) = cas%energies(ia, 1) + M_TWO*f
+         end if
 
-        ! oscilator strengths?
-        call dipole_matrix_elem(i, a, cas%energies(ia, 2:4))
-        cas%energies(ia, 2:4) = M_TWO * (cas%energies(ia, 2:4))**2 * &
-           (st%eigenval(a, 1) - st%eigenval(i, 1))
+         ! oscilator strengths?
+         call dipole_matrix_elem(i, a, cas%energies(ia, 2:4))
+         cas%energies(ia, 2:4) = M_TWO * (cas%energies(ia, 2:4))**2 * &
+              (st%eigenval(a, 1) - st%eigenval(i, 1))
 
-        call loct_progress_bar(ia-1, cas%n_pairs-1)
+         call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
 
       ! complete progress bar
@@ -365,30 +365,30 @@ contains
 
       ! calculate the matrix elements of (v + fxc)
       do ia = 1, cas%n_pairs
-        i = cas%pair_i(ia)
-        a = cas%pair_a(ia)
+         i = cas%pair_i(ia)
+         a = cas%pair_a(ia)
 
-        do jb = ia, cas%n_pairs
-          actual = actual + 1
-          if(mod(actual, mpiv%numprocs) .ne. mpiv%node) cycle
+         do jb = ia, cas%n_pairs
+            actual = actual + 1
+            if(mod(actual, mpiv%numprocs) .ne. mpiv%node) cycle
 
-          ! if not loaded, then calculate matrix element
-          if(.not.saved_K(ia, jb)) then
-            j = cas%pair_i(jb)
-            b = cas%pair_a(jb)
+            ! if not loaded, then calculate matrix element
+            if(.not.saved_K(ia, jb)) then
+               j = cas%pair_i(jb)
+               b = cas%pair_a(jb)
 
-            cas%mat(ia, jb) = K_term(i, a, j, b)
-          end if
+               cas%mat(ia, jb) = K_term(i, a, j, b)
+            end if
 
-          if (mpiv%node == 0) call loct_progress_bar(actual-1, max)
-        end do
+            if (mpiv%node == 0) call loct_progress_bar(actual-1, max)
+         end do
       end do
 
       ! sum all matrix elements
 #ifdef HAVE_MPI
       allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
       call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-         MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
       cas%mat = mpi_mat
       deallocate(mpi_mat)
 #endif
@@ -402,22 +402,22 @@ contains
       ! complete the matrix and output the restart file
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
       do ia = 1, cas%n_pairs
-        i = cas%pair_i(ia)
-        a = cas%pair_a(ia)
-        temp = st%eigenval(a, 1) - st%eigenval(i, 1)
+         i = cas%pair_i(ia)
+         a = cas%pair_a(ia)
+         temp = st%eigenval(a, 1) - st%eigenval(i, 1)
 
-        do jb = ia, cas%n_pairs
-          j = cas%pair_i(jb)
-          b = cas%pair_a(jb)
+         do jb = ia, cas%n_pairs
+            j = cas%pair_i(jb)
+            b = cas%pair_a(jb)
 
-          if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
+            if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
 
-          cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
-             sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
+            cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
+                 sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
 
-          if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
-        end do
-        cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
+            if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
+         end do
+         cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
       end do
       call io_close(iunit)
 
@@ -428,16 +428,16 @@ contains
       ! let us get now the oscillator strengths
       allocate(os(cas%n_pairs, 3))
       do ia = 1, cas%n_pairs
-        i = cas%pair_i(ia)
-        a = cas%pair_a(ia)
-        call dipole_matrix_elem(i, a, os(ia,:))
+         i = cas%pair_i(ia)
+         a = cas%pair_a(ia)
+         call dipole_matrix_elem(i, a, os(ia,:))
       end do
 
       do ia = 1, cas%n_pairs
-        do j = 1, 3
-          cas%energies(ia, 1+j) = M_TWO * (sum(os(:,j)*cas%mat(:,ia)        &
-             *sqrt(st%eigenval(cas%pair_a(:), 1) - st%eigenval(cas%pair_i(:), 1)) ))**2
-        end do
+         do j = 1, 3
+            cas%energies(ia, 1+j) = M_TWO * (sum(os(:,j)*cas%mat(:,ia)        &
+                 *sqrt(st%eigenval(cas%pair_a(:), 1) - st%eigenval(cas%pair_i(:), 1)) ))**2
+         end do
       end do
 
     end subroutine solve_casida
@@ -465,11 +465,11 @@ contains
       ! now we have fxc
       allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
       if(associated(st%rho_core)) then
-        do is = 1, st%d%spin_channels
-          rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
-        enddo
+         do is = 1, st%d%spin_channels
+            rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+         enddo
       else
-        rho = st%rho
+         rho = st%rho
       endif
       call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
@@ -489,11 +489,11 @@ contains
       err = min(iunit, 0)
 
       do while(err .eq. 0)
-        read(iunit, fmt=*, iostat=err) ia, jb, val
-        if(err.eq.0 .and. (ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
-          cas%mat(ia, jb) = val
-          saved_K(ia, jb) = .true.
-        end if
+         read(iunit, fmt=*, iostat=err) ia, jb, val
+         if(err.eq.0 .and. (ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
+            cas%mat(ia, jb) = val
+            saved_K(ia, jb) = .true.
+         end if
       end do
 
       if(iunit > 0) call io_close(iunit)
@@ -504,7 +504,7 @@ contains
     ! ---------------------------------------------------------
     ! WARNING: Not tested yet...
     subroutine sort_energies
-      integer :: i, j
+      integer :: i
       integer, allocatable :: ind(:), itmp(:)
       FLOAT, allocatable :: tmp(:)
       allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs))
@@ -528,7 +528,7 @@ contains
 
       s = M_ZERO
       do k = 1, m%np
-        s = s + m%x(k, :) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
+         s = s + m%x(k, :) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
       end do
 
     end subroutine dipole_matrix_elem
@@ -552,11 +552,11 @@ contains
 
     write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
     do ia = 1, cas%n_pairs
-      if((cas%type==CASIDA_EPS_DIFF).or.(cas%type==CASIDA_PETERSILKA)) then
-        write(iunit, '(2i4)', advance='no') cas%pair_i(ia), cas%pair_a(ia)
-      end if
-      write(iunit, '(5(e15.8,1x))') cas%energies(ia,1) / units_out%energy%factor, &
-         cas%energies(ia, 2:4), M_TWOTHIRD*sum(cas%energies(ia, 2:4))
+       if((cas%type==CASIDA_EPS_DIFF).or.(cas%type==CASIDA_PETERSILKA)) then
+          write(iunit, '(2i4)', advance='no') cas%pair_i(ia), cas%pair_a(ia)
+       end if
+       write(iunit, '(5(e15.8,1x))') cas%energies(ia,1) / units_out%energy%factor, &
+            cas%energies(ia, 2:4), M_TWOTHIRD*sum(cas%energies(ia, 2:4))
     end do
     call io_close(iunit)
 
@@ -566,18 +566,18 @@ contains
     iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
     do ia = 1, cas%n_pairs
-      write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair_i(ia), ' - ', cas%pair_a(ia)
+       write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair_i(ia), ' - ', cas%pair_a(ia)
     end do
     write(iunit, '(1x)')
 
     do ia = 1, cas%n_pairs
-      write(iunit, '(es14.6)', advance='no') cas%energies(ia, 1) / units_out%energy%factor
-      temp = M_ONE
-      if(maxval(cas%mat(:, ia)) < abs(minval(cas%mat(:, ia)))) temp = -temp
-      do jb = 1, cas%n_pairs
-        write(iunit, '(es14.6)', advance='no') temp*cas%mat(jb, ia)
-      end do
-      write(iunit, '(1x)')
+       write(iunit, '(es14.6)', advance='no') cas%energies(ia, 1) / units_out%energy%factor
+       temp = M_ONE
+       if(maxval(cas%mat(:, ia)) < abs(minval(cas%mat(:, ia)))) temp = -temp
+       do jb = 1, cas%n_pairs
+          write(iunit, '(es14.6)', advance='no') temp*cas%mat(jb, ia)
+       end do
+       write(iunit, '(1x)')
     end do
 
     call io_close(iunit)

@@ -28,31 +28,32 @@ module multigrid
   implicit none
 
   private
-  public :: multigrid_level_type, multigrid_type, &
-     multigrid_init, multigrid_end, &
-     multigrid_fine2coarse, multigrid_coarse2fine, &
-     INJECTION, FULLWEIGHT
+  public :: multigrid_level_type, multigrid_type,    &
+       multigrid_init, multigrid_end,                &
+       multigrid_fine2coarse, multigrid_coarse2fine, &
+       INJECTION, FULLWEIGHT
 
   integer, parameter :: INJECTION=1, FULLWEIGHT=2
 
 
   type multigrid_level_type
-    type(mesh_type),  pointer  :: m
-    type(f_der_type), pointer  :: f_der
+     type(mesh_type),  pointer  :: m
+     type(f_der_type), pointer  :: f_der
 
-    integer          ::  n_coarse
-    integer, pointer :: to_coarse(:)
+     integer          ::  n_coarse
+     integer, pointer :: to_coarse(:)
 
-    integer          ::  n_fine
-    integer          ::  n_fine1,       n_fine2,       n_fine4,       n_fine8
-    integer, pointer :: to_fine1(:,:), to_fine2(:,:), to_fine4(:,:), to_fine8(:,:)
-    integer, pointer :: fine_i(:)
+     integer          ::  n_fine
+     integer          ::  n_fine1,       n_fine2,       n_fine4,       n_fine8
+     integer, pointer :: to_fine1(:,:), to_fine2(:,:), to_fine4(:,:), to_fine8(:,:)
+     integer, pointer :: fine_i(:)
   end type multigrid_level_type
 
   type multigrid_type
-    integer                             :: n_levels
-    type(multigrid_level_type), pointer :: level(:)
+     integer                             :: n_levels
+     type(multigrid_level_type), pointer :: level(:)
   end type multigrid_type
+
 
 contains
 
@@ -78,15 +79,15 @@ contains
 
     print*, "Multigrid levels:", n_levels
     do i = 1, mgrid%n_levels
-      allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
-      call get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
+       allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)
+       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
+       call get_transfer_tables(mgrid%level(i), mgrid%level(i-1)%m, mgrid%level(i)%m)
 
-      call mesh_write_info(mgrid%level(i)%m, stdout)
+       call mesh_write_info(mgrid%level(i)%m, stdout)
 
-      ! setup derivatives
-      call f_der_init(mgrid%level(i)%f_der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
-      call f_der_build(m%sb, mgrid%level(i)%m, mgrid%level(i)%f_der)
+       ! setup derivatives
+       call f_der_init(mgrid%level(i)%f_der, m%sb, cv%method.ne.CURV_METHOD_UNIFORM)
+       call f_der_build(m%sb, mgrid%level(i)%m, mgrid%level(i)%f_der)
     end do
 
   contains
@@ -99,8 +100,6 @@ contains
       type(curvlinear_type), intent(in)  :: cv
       type(mesh_type),       intent(in)  :: mesh_in
       type(mesh_type),       intent(out) :: mesh_out
-
-      integer :: i, j
 
       mesh_out%sb             => mesh_in%sb
       mesh_out%use_curvlinear =  mesh_in%use_curvlinear
@@ -122,14 +121,14 @@ contains
       type(multigrid_level_type), intent(out) :: tt
       type(mesh_type),            intent(in)  :: fine, coarse
 
-      integer :: i, j, i1, i2, i4, i8
+      integer :: i, i1, i2, i4, i8
       integer :: x(3), mod2(3)
 
       tt%n_coarse = coarse%np
       allocate(tt%to_coarse(tt%n_coarse))
 
       do i = 1, tt%n_coarse
-        tt%to_coarse(i) = fine%Lxyz_inv(2*coarse%Lxyz(i, 1), 2*coarse%Lxyz(i, 2), 2*coarse%Lxyz(i, 3))
+         tt%to_coarse(i) = fine%Lxyz_inv(2*coarse%Lxyz(i, 1), 2*coarse%Lxyz(i, 2), 2*coarse%Lxyz(i, 3))
       end do
 
       ! count
@@ -141,86 +140,86 @@ contains
       tt%n_fine4 = 0
       tt%n_fine8 = 0
       do i = 1, tt%n_fine
-        mod2 = mod(fine%Lxyz(i,:), 2)
-        if(all(mod2.eq.0)) then
-          tt%n_fine1 = tt%n_fine1 + 1
-          tt%fine_i(i) = 1
-        else if( &
-           ((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).ne.0)).or. &
-           ((mod2(3).eq.0).and.(mod2(1).eq.0).and.(mod2(2).ne.0)).or. &
-           ((mod2(2).eq.0).and.(mod2(3).eq.0).and.(mod2(1).ne.0))) then
-          tt%n_fine2 = tt%n_fine2 + 1
-          tt%fine_i(i) = 2
-        else if( &
-           ((mod2(1).eq.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)).or. &
-           ((mod2(3).eq.0).and.(mod2(1).ne.0).and.(mod2(2).ne.0)).or. &
-           ((mod2(2).eq.0).and.(mod2(3).ne.0).and.(mod2(1).ne.0))) then
-          tt%n_fine4 = tt%n_fine4 + 1
-          tt%fine_i(i) = 4
-        else if(all(mod2.ne.0)) then
-          tt%n_fine8 = tt%n_fine8 + 1
-          tt%fine_i(i) = 8
-        end if
+         mod2 = mod(fine%Lxyz(i,:), 2)
+         if(all(mod2.eq.0)) then
+            tt%n_fine1 = tt%n_fine1 + 1
+            tt%fine_i(i) = 1
+         else if( &
+              ((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).ne.0)).or. &
+              ((mod2(3).eq.0).and.(mod2(1).eq.0).and.(mod2(2).ne.0)).or. &
+              ((mod2(2).eq.0).and.(mod2(3).eq.0).and.(mod2(1).ne.0))) then
+            tt%n_fine2 = tt%n_fine2 + 1
+            tt%fine_i(i) = 2
+         else if( &
+              ((mod2(1).eq.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)).or. &
+              ((mod2(3).eq.0).and.(mod2(1).ne.0).and.(mod2(2).ne.0)).or. &
+              ((mod2(2).eq.0).and.(mod2(3).ne.0).and.(mod2(1).ne.0))) then
+            tt%n_fine4 = tt%n_fine4 + 1
+            tt%fine_i(i) = 4
+         else if(all(mod2.ne.0)) then
+            tt%n_fine8 = tt%n_fine8 + 1
+            tt%fine_i(i) = 8
+         end if
       end do
 
       ASSERT(tt%n_fine1+tt%n_fine2+tt%n_fine4+tt%n_fine8 == tt%n_fine)
 
       allocate(tt%to_fine1(1, tt%n_fine1), tt%to_fine2(2, tt%n_fine2), &
-         tt%to_fine4(4, tt%n_fine4), tt%to_fine8(8, tt%n_fine8))
+           tt%to_fine4(4, tt%n_fine4), tt%to_fine8(8, tt%n_fine8))
 
       ! and now build the tables
       i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0
       do i = 1, fine%np
-        x(1:3)    = fine%Lxyz(i, 1:3)/2
-        mod2(1:3) = mod(fine%Lxyz(i, 1:3), 2)
+         x(1:3)    = fine%Lxyz(i, 1:3)/2
+         mod2(1:3) = mod(fine%Lxyz(i, 1:3), 2)
 
-        if((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).eq.0)) then
-          i1 = i1 + 1
-          tt%to_fine1(1, i1) = coarse%Lxyz_inv(x(1), x(2), x(3))
+         if((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).eq.0)) then
+            i1 = i1 + 1
+            tt%to_fine1(1, i1) = coarse%Lxyz_inv(x(1), x(2), x(3))
 
-        else if((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).ne.0)) then
-          i2 = i2 + 1
-          tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-        else if((mod2(3).eq.0).and.(mod2(1).eq.0).and.(mod2(2).ne.0)) then
-          i2 = i2 + 1
-          tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-        else if((mod2(2).eq.0).and.(mod2(3).eq.0).and.(mod2(1).ne.0)) then
-          i2 = i2 + 1
-          tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
+         else if((mod2(1).eq.0).and.(mod2(2).eq.0).and.(mod2(3).ne.0)) then
+            i2 = i2 + 1
+            tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
+         else if((mod2(3).eq.0).and.(mod2(1).eq.0).and.(mod2(2).ne.0)) then
+            i2 = i2 + 1
+            tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
+         else if((mod2(2).eq.0).and.(mod2(3).eq.0).and.(mod2(1).ne.0)) then
+            i2 = i2 + 1
+            tt%to_fine2(1, i2) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine2(2, i2) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
 
-        else if((mod2(1).eq.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)) then
-          i4 = i4 + 1
-          tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-          tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-          tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3) + mod2(3))
-        else if((mod2(3).eq.0).and.(mod2(1).ne.0).and.(mod2(2).ne.0)) then
-          i4 = i4 + 1
-          tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-          tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-          tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3))
-        else if((mod2(2).eq.0).and.(mod2(3).ne.0).and.(mod2(1).ne.0)) then
-          i4 = i4 + 1
-          tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-          tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-          tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3) + mod2(3))
+         else if((mod2(1).eq.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)) then
+            i4 = i4 + 1
+            tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
+            tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
+            tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3) + mod2(3))
+         else if((mod2(3).eq.0).and.(mod2(1).ne.0).and.(mod2(2).ne.0)) then
+            i4 = i4 + 1
+            tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
+            tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
+            tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3))
+         else if((mod2(2).eq.0).and.(mod2(3).ne.0).and.(mod2(1).ne.0)) then
+            i4 = i4 + 1
+            tt%to_fine4(1, i4) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine4(2, i4) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
+            tt%to_fine4(3, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
+            tt%to_fine4(4, i4) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3) + mod2(3))
 
-        else if((mod2(1).ne.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)) then
-          i8 = i8 + 1
-          tt%to_fine8(1, i8) = coarse%Lxyz_inv(x(1), x(2), x(3))
-          tt%to_fine8(2, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
-          tt%to_fine8(3, i8) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
-          tt%to_fine8(4, i8) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
-          tt%to_fine8(5, i8) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3) + mod2(3))
-          tt%to_fine8(6, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3))
-          tt%to_fine8(7, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3) + mod2(3))
-          tt%to_fine8(8, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
-        end if
+         else if((mod2(1).ne.0).and.(mod2(2).ne.0).and.(mod2(3).ne.0)) then
+            i8 = i8 + 1
+            tt%to_fine8(1, i8) = coarse%Lxyz_inv(x(1), x(2), x(3))
+            tt%to_fine8(2, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3))
+            tt%to_fine8(3, i8) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3))
+            tt%to_fine8(4, i8) = coarse%Lxyz_inv(x(1), x(2), x(3) + mod2(3))
+            tt%to_fine8(5, i8) = coarse%Lxyz_inv(x(1), x(2) + mod2(2), x(3) + mod2(3))
+            tt%to_fine8(6, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3))
+            tt%to_fine8(7, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2), x(3) + mod2(3))
+            tt%to_fine8(8, i8) = coarse%Lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+         end if
 
       end do
 
@@ -238,17 +237,17 @@ contains
     type(multigrid_level_type), pointer :: level
 
     do i = 1, mgrid%n_levels
-      level => mgrid%level(i)
+       level => mgrid%level(i)
 
-      call f_der_end(level%f_der)
-      call mesh_end(level%m)
-      deallocate(level%m, level%f_der)
-      nullify   (level%m, level%f_der)
+       call f_der_end(level%f_der)
+       call mesh_end(level%m)
+       deallocate(level%m, level%f_der)
+       nullify   (level%m, level%f_der)
 
-      deallocate(level%to_coarse, level%to_fine1, level%to_fine2, &
-         level%to_fine4, level%to_fine8, level%fine_i)
-      nullify   (level%to_coarse, level%to_fine1, level%to_fine2, &
-         level%to_fine4, level%to_fine8, level%fine_i)
+       deallocate(level%to_coarse, level%to_fine1, level%to_fine2, &
+            level%to_fine4, level%to_fine8, level%fine_i)
+       nullify   (level%to_coarse, level%to_fine1, level%to_fine2, &
+            level%to_fine4, level%to_fine8, level%fine_i)
     end do
 
     deallocate(mgrid%level)
@@ -263,13 +262,13 @@ contains
     FLOAT,                intent(out) :: f_coarse(:)
     integer, optional,    intent(in)  :: method_p
     integer :: method
-    
+
     if(present(method_p)) then 
        method=method_p
     else 
        method=FULLWEIGHT
     endif
-    
+
 
     select case(method)
     case(FULLWEIGHT)
@@ -297,7 +296,7 @@ contains
 
     level => mgrid%level(ilevel)
     do i = 1, level%n_coarse
-      f_coarse(i) = f_fine(level%to_coarse(i))
+       f_coarse(i) = f_fine(level%to_coarse(i))
     end do
 
   end subroutine multigrid_injection
@@ -354,7 +353,7 @@ contains
        end do
 
        f_coarse(n)=f_coarse(n)/coarse_mesh%vol_pp(n)
-       
+
     end do
 
   end subroutine multigrid_restriction
@@ -380,28 +379,28 @@ contains
 
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0;
     do i = 1, level%n_fine
-      select case(level%fine_i(i))
-        case(1)
+       select case(level%fine_i(i))
+       case(1)
           i1 = i1 + 1
           j(1:1) = level%to_fine1(1:1, i1)
-        case(2)
+       case(2)
           i2 = i2 + 1
           j(1:2) = level%to_fine2(1:2, i2)
-        case(4)
+       case(4)
           i4 = i4 + 1
           j(1:4) = level%to_fine4(1:4, i4)
-        case(8)
+       case(8)
           i8 = i8 + 1
           j(1:8) = level%to_fine8(1:8, i8)
-      end select
+       end select
 
-      f_fine(i) = M_ZERO
-      vol_total = M_ZERO
-      do jj = 1, level%fine_i(i)
-        f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
-        vol_total = vol_total + vol_pp(j(jj))
-      end do
-      f_fine(i) = f_fine(i)/vol_total
+       f_fine(i) = M_ZERO
+       vol_total = M_ZERO
+       do jj = 1, level%fine_i(i)
+          f_fine(i) = f_fine(i) + vol_pp(j(jj))*f_coarse(j(jj))
+          vol_total = vol_total + vol_pp(j(jj))
+       end do
+       f_fine(i) = f_fine(i)/vol_total
 
     end do
   end subroutine multigrid_coarse2fine

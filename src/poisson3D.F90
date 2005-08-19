@@ -20,8 +20,6 @@
 subroutine poisson3D_init(gr)
   type(grid_type), intent(inout) :: gr
 
-  integer :: level
-
   ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= MULTIGRILLA)
 
   !%Variable PoissonSolverMaxMultipole
@@ -44,31 +42,31 @@ subroutine poisson3D_init(gr)
 
   select case(poisson_solver)
   case(CG)
-    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-    call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
-    call poisson_cg1_init(gr%m, maxl, threshold)
+     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
+     call poisson_cg1_init(gr%m, maxl, threshold)
 
   case(CG_CORRECTED)
-    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-    call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
-    call poisson_cg2_init(gr%m, maxl, threshold)
+     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
+     call poisson_cg2_init(gr%m, maxl, threshold)
 
   case(MULTIGRILLA)
-    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-    call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
+     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
+     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
 
-    call poisson_multigrid_init(gr%m, maxl, threshold)
+     call poisson_multigrid_init(gr%m, maxl, threshold)
 
-    call grid_create_multigrid(gr)
+     call grid_create_multigrid(gr)
   end select
 
 #ifdef HAVE_FFT
   if (poisson_solver <= FFT_CORRECTED) call init_fft(gr%m)
 
   if (poisson_solver == FFT_CORRECTED) then
-    call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
-    call build_aux(gr%m)
-    call build_phi(gr%m)
+     call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 2, maxl)
+     call build_aux(gr%m)
+     call build_phi(gr%m)
   endif
 #endif
 
@@ -97,20 +95,20 @@ contains
     call dcf_fft_init(fft_cf, gr%sb)   ! the ffts
     db = fft_cf%n               ! dimensions may have been optimized
 
-  if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
-    call loct_parse_float(check_inp('PoissonCutoffRadius'),&
-           maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
-    r_c = r_c*units_inp%length%factor
-    write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
-                        trim(units_out%length%abbrev), '] = ',       &
-                        r_c/units_out%length%factor
-    call write_info(1)
-    if ( r_c > maxval(db(:)*m%h(:)/M_TWO) + DELTA_R) then
-      message(1) = 'Poisson cutoff radius is larger than cell size.'
-      message(2) = 'You can see electrons in next cell(s).'
-      call write_warning(2)
+    if (poisson_solver <= FFT_PLA .and. poisson_solver .ne. FFT_CORRECTED) then
+       call loct_parse_float(check_inp('PoissonCutoffRadius'),&
+            maxval(db(:)*m%h(:)/M_TWO)/units_inp%length%factor , r_c)
+       r_c = r_c*units_inp%length%factor
+       write(message(1),'(3a,f12.6)')'Info: Poisson Cutoff Radius [',  &
+            trim(units_out%length%abbrev), '] = ',       &
+            r_c/units_out%length%factor
+       call write_info(1)
+       if ( r_c > maxval(db(:)*m%h(:)/M_TWO) + DELTA_R) then
+          message(1) = 'Poisson cutoff radius is larger than cell size.'
+          message(2) = 'You can see electrons in next cell(s).'
+          call write_warning(2)
+       end if
     end if
-  end if
 
     ! store the fourier transform of the Coulomb interaction
     allocate(fft_Coulb_FS(fft_cf%nx, fft_cf%n(2), fft_cf%n(3)))
@@ -119,43 +117,43 @@ contains
     temp(:) = M_TWO*M_PI/(db(:)*m%h(:))
 
     do iz = 1, db(3)
-      ixx(3) = pad_feq(iz, db(3), .true.)
-      do iy = 1, db(2)
-        ixx(2) = pad_feq(iy, db(2), .true.)
-        do ix = 1, fft_cf%nx
-          ixx(1) = pad_feq(ix, db(1), .true.)
+       ixx(3) = pad_feq(iz, db(3), .true.)
+       do iy = 1, db(2)
+          ixx(2) = pad_feq(iy, db(2), .true.)
+          do ix = 1, fft_cf%nx
+             ixx(1) = pad_feq(ix, db(1), .true.)
 
-           modg2 = sum((temp(:)*ixx(:))**2)
-           if(modg2 /= M_ZERO) then
-             select case(poisson_solver)
-               case(FFT_SPH)
-                 fft_Coulb_FS(ix, iy, iz) = cutoff0(sqrt(modg2),r_c)/modg2
-               case(FFT_CYL)
-                 gx = abs(temp(1)*ixx(1))
-                 gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
-                 fft_Coulb_FS(ix, iy, iz) = cutoff1(gx,gperp,r_c)/modg2
-               case(FFT_PLA)
-                 gz = abs(temp(3)*ixx(3))
-                 gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
-                 fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar,gz,r_c)/modg2
-               case(FFT_NOCUT, FFT_CORRECTED)
-                 fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-              end select
-            else
-              select case(poisson_solver)
-              case(FFT_SPH)
-                fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
-              case (FFT_CYL)
-                 fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c)-M_FOURTH)*r_c**2
-              case(FFT_PLA)
-                fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
-              case (FFT_NOCUT, FFT_CORRECTED)
-                fft_Coulb_FS(ix, iy, iz) = M_ZERO
-              end select
-            endif
-            fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-        end do
-      end do
+             modg2 = sum((temp(:)*ixx(:))**2)
+             if(modg2 /= M_ZERO) then
+                select case(poisson_solver)
+                case(FFT_SPH)
+                   fft_Coulb_FS(ix, iy, iz) = cutoff0(sqrt(modg2),r_c)/modg2
+                case(FFT_CYL)
+                   gx = abs(temp(1)*ixx(1))
+                   gperp = sqrt((temp(2)*ixx(2))**2+(temp(3)*ixx(3))**2)
+                   fft_Coulb_FS(ix, iy, iz) = cutoff1(gx,gperp,r_c)/modg2
+                case(FFT_PLA)
+                   gz = abs(temp(3)*ixx(3))
+                   gpar = sqrt((temp(1)*ixx(1))**2+(temp(2)*ixx(2))**2)
+                   fft_Coulb_FS(ix, iy, iz) = cutoff2(gpar,gz,r_c)/modg2
+                case(FFT_NOCUT, FFT_CORRECTED)
+                   fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+                end select
+             else
+                select case(poisson_solver)
+                case(FFT_SPH)
+                   fft_Coulb_FS(ix, iy, iz) = r_c**2/M_TWO
+                case (FFT_CYL)
+                   fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c)-M_FOURTH)*r_c**2
+                case(FFT_PLA)
+                   fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
+                case (FFT_NOCUT, FFT_CORRECTED)
+                   fft_Coulb_FS(ix, iy, iz) = M_ZERO
+                end select
+             endif
+             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+          end do
+       end do
     end do
 
   end subroutine init_fft

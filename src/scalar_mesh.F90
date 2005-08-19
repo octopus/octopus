@@ -113,7 +113,7 @@ contains
 
     FLOAT :: xmin1, xmax1, xmin2, xmax2, offset
     FLOAT, allocatable :: gl(:), gw(:)
-    integer :: i, iunit
+    integer :: i
 
     call push_sub('scalar_mesh.scalar_mesh_create')
 
@@ -232,10 +232,10 @@ contains
        ! TODO: need to compute roots of Legendre Polynomials and weights for integration
        ! a call of the corresponding routine in math.F90 should be placed here
 
-       do i=1, 2*sm%np+1
-          sm%mesh(i) = M_HALF*(sm%max-sm%min) * gl(i) + M_HALF*(sm%max+sm%min)
-          sm%w(i)   = gw(i)*M_HALF*(sm%max-sm%min)
-       enddo
+       !do i=1, 2*sm%np+1
+       !   sm%mesh(i) = M_HALF*(sm%max-sm%min) * gl(i) + M_HALF*(sm%max+sm%min)
+       !   sm%w(i)   = gw(i)*M_HALF*(sm%max-sm%min)
+       !enddo
 
        deallocate(gl, gw)
 

@@ -40,32 +40,32 @@ module td_rti
   implicit none
 
   type td_rti_type
-    integer           :: method         ! which evolution method to use
-    type(td_exp_type) :: te             ! how to apply the propagator (e^{-i H \Delta t})
+     integer           :: method         ! which evolution method to use
+     type(td_exp_type) :: te             ! how to apply the propagator (e^{-i H \Delta t})
 
 
-    FLOAT, pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
-    FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
+     FLOAT, pointer :: v_old(:, :, :) ! storage of the KS potential of previous iterations
+     FLOAT, pointer :: vmagnus(:, :, :) ! auxiliary function to store the Magnus potentials.
 
-    type(zcf) :: cf             ! auxiliary cube for split operator methods
+     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_rti_type
 
-  integer, parameter :: &
-     SPLIT_OPERATOR       = 0,   &
-     SUZUKI_TROTTER       = 1,   &
-     REVERSAL             = 2,   &
-     APP_REVERSAL         = 3,   &
-     EXPONENTIAL_MIDPOINT = 4,   &
-     MAGNUS               = 5
+  integer, parameter ::            &
+       SPLIT_OPERATOR       = 0,   &
+       SUZUKI_TROTTER       = 1,   &
+       REVERSAL             = 2,   &
+       APP_REVERSAL         = 3,   &
+       EXPONENTIAL_MIDPOINT = 4,   &
+       MAGNUS               = 5
 
   FLOAT, parameter :: scf_threshold = CNST(1.0e-3)
 
   private
-  public :: td_rti_type,          &
-            td_rti_init,          &
-            td_rti_end,           &
-            td_rti_run_zero_iter, &
-            td_rti_dt
+  public :: td_rti_type,     &
+       td_rti_init,          &
+       td_rti_end,           &
+       td_rti_run_zero_iter, &
+       td_rti_dt
 
 
 contains
@@ -79,22 +79,22 @@ contains
     call loct_parse_int(check_inp('TDEvolutionMethod'), REVERSAL, tr%method)
     select case(tr%method)
     case(SPLIT_OPERATOR)
-      call zcf_new(gr%m%l, tr%cf)
-      call zcf_fft_init(tr%cf, gr%sb)
-                                message(1) = 'Info: Evolution method:  Split-Operator'
+       call zcf_new(gr%m%l, tr%cf)
+       call zcf_fft_init(tr%cf, gr%sb)
+       message(1) = 'Info: Evolution method:  Split-Operator'
     case(SUZUKI_TROTTER)
-      call zcf_new(gr%m%l, tr%cf)
-      call zcf_fft_init(tr%cf, gr%sb)
-                                message(1) = 'Info: Evolution method:  Suzuki-Trotter'
+       call zcf_new(gr%m%l, tr%cf)
+       call zcf_fft_init(tr%cf, gr%sb)
+       message(1) = 'Info: Evolution method:  Suzuki-Trotter'
     case(REVERSAL);             message(1) = 'Info: Evolution method:  Enforced Time-Reversal Symmetry'
     case(APP_REVERSAL);         message(1) = 'Info: Evolution method:  Approx.Enforced Time-Reversal Symmetry'
     case(EXPONENTIAL_MIDPOINT); message(1) = 'Info: Evolution method:  Exponential Midpoint Rule.'
     case(MAGNUS);               message(1) = 'Info: Evolution method:  Magnus expansion.'
        allocate(tr%vmagnus(NP, st%d%nspin, 2))
     case default
-      write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
-      message(2) = '(0 <= TDEvolutionMethod <= 5)'
-      call write_fatal(2)
+       write(message(1), '(a,i6,a)') "Input: '", tr%method, "' is not a valid TDEvolutionMethod"
+       message(2) = '(0 <= TDEvolutionMethod <= 5)'
+       call write_fatal(2)
     end select
     call write_info(1)
 
@@ -113,12 +113,12 @@ contains
     nullify(tr%v_old)
 
     if(tr%method == MAGNUS) then
-      ASSERT(associated(tr%vmagnus))
-      deallocate(tr%vmagnus); nullify(tr%vmagnus)
+       ASSERT(associated(tr%vmagnus))
+       deallocate(tr%vmagnus); nullify(tr%vmagnus)
     endif
 
     if(tr%method == SUZUKI_TROTTER .or. tr%method == SPLIT_OPERATOR) then
-      call zcf_free(tr%cf)
+       call zcf_free(tr%cf)
     endif
 
     call td_exp_end(tr%te)       ! clean propagator method
@@ -174,36 +174,36 @@ contains
     end select
 
     if(self_consistent) then
-      do iter = 1, 3
-        call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
+       do iter = 1, 3
+          call lalg_copy(NP, st%d%nspin, tr%v_old(:, :, 0), tr%v_old(:, :, 3))
 
-        call zstates_calc_dens(st, NP, st%rho, .true.)
-        call zv_ks_calc(gr, ks, h, st)
-        tr%v_old(:, :, 0) = h%vhxc
-        h%vhxc = tr%v_old(:, :, 1)
+          call zstates_calc_dens(st, NP, st%rho, .true.)
+          call zv_ks_calc(gr, ks, h, st)
+          tr%v_old(:, :, 0) = h%vhxc
+          h%vhxc = tr%v_old(:, :, 1)
 
-        d_max = M_ZERO
-        allocate(dtmp(NP))
-        do is = 1, st%d%nspin
-          dtmp = tr%v_old(:, is, 3) - tr%v_old(:, is, 0)
-          d    = dmf_nrm2(gr%m, dtmp)
-          if(d > d_max) d_max = d
-        end do
-        deallocate(dtmp)
+          d_max = M_ZERO
+          allocate(dtmp(NP))
+          do is = 1, st%d%nspin
+             dtmp = tr%v_old(:, is, 3) - tr%v_old(:, is, 0)
+             d    = dmf_nrm2(gr%m, dtmp)
+             if(d > d_max) d_max = d
+          end do
+          deallocate(dtmp)
 
-        if(d_max < scf_threshold) exit
+          if(d_max < scf_threshold) exit
 
-        st%zpsi = zpsi1
-        select case(tr%method)
-         case(SPLIT_OPERATOR);       call td_rti0
-         case(SUZUKI_TROTTER);       call td_rti1
-         case(REVERSAL);             call td_rti2
-         case(APP_REVERSAL);         call td_rti3
-         case(EXPONENTIAL_MIDPOINT); call td_rti4
-         case(MAGNUS);               call td_rti5
-        end select
-      enddo
-      deallocate(zpsi1)
+          st%zpsi = zpsi1
+          select case(tr%method)
+          case(SPLIT_OPERATOR);       call td_rti0
+          case(SUZUKI_TROTTER);       call td_rti1
+          case(REVERSAL);             call td_rti2
+          case(APP_REVERSAL);         call td_rti3
+          case(EXPONENTIAL_MIDPOINT); call td_rti4
+          case(MAGNUS);               call td_rti5
+          end select
+       enddo
+       deallocate(zpsi1)
     endif
 
     call pop_sub()
@@ -258,11 +258,11 @@ contains
             do ist = 1, st%nst
                call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
                if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, &
-                  st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
+                    st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .true.)
 
                call zexp_kinetic(gr, h, st%zpsi(:, :, ist, ik), tr%cf, -M_zI*dtime(k))
                if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, &
-                  st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
+                    st%zpsi(:, :, ist, ik), -M_zI*dtime(k)/M_TWO, .false.)
                call zexp_vlpsi (gr, h, st%zpsi(:, :, ist, ik), ik, time(k), -M_zI*dtime(k)/M_TWO)
             enddo
          enddo
@@ -279,42 +279,42 @@ contains
       call push_sub('td_rti.td_rti2')
 
       if(.not.h%ip_app) then
-        allocate(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
-        zpsi1 = st%zpsi ! store zpsi
+         allocate(zpsi1(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
+         zpsi1 = st%zpsi ! store zpsi
 
-        allocate(vhxc_t1(NP, st%d%nspin), vhxc_t2(NP, st%d%nspin))
-        vhxc_t1 = h%vhxc
+         allocate(vhxc_t1(NP, st%d%nspin), vhxc_t2(NP, st%d%nspin))
+         vhxc_t1 = h%vhxc
 
-        ! propagate dt with H(t-dt)
-        do ik = 1, st%d%nik
-          do ist = st%st_start, st%st_end
-            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
-          end do
-        end do
+         ! propagate dt with H(t-dt)
+         do ik = 1, st%d%nik
+            do ist = st%st_start, st%st_end
+               call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t-dt)
+            end do
+         end do
 
-        call zstates_calc_dens(st, NP, st%rho, .true.)
-        call zv_ks_calc(gr, ks, h, st)
+         call zstates_calc_dens(st, NP, st%rho, .true.)
+         call zv_ks_calc(gr, ks, h, st)
 
-        st%zpsi = zpsi1
-        deallocate(zpsi1)
+         st%zpsi = zpsi1
+         deallocate(zpsi1)
 
-        vhxc_t2 = h%vhxc
-        h%vhxc = vhxc_t1
+         vhxc_t2 = h%vhxc
+         h%vhxc = vhxc_t1
       end if
 
       ! propagate dt/2 with H(t-dt)
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
-        end do
+         do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+         end do
       end do
 
       ! propagate dt/2 with H(t)
       if(.not.h%ip_app) h%vhxc = vhxc_t2
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
-        end do
+         do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+         end do
       end do
 
       if(.not.h%ip_app) deallocate(vhxc_t1, vhxc_t2)
@@ -327,16 +327,16 @@ contains
       call push_sub('td_rti.td_rti3')
 
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-           call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
-        end do
+         do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t-dt)
+         end do
       end do
 
       h%vhxc = tr%v_old(:, :, 0)
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
-        end do
+         do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt/M_TWO, t)
+         end do
       end do
 
       call pop_sub()
@@ -347,13 +347,13 @@ contains
       call push_sub('td_rti.td_rti4')
 
       if(.not.h%ip_app) then
-        call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
+         call dextrapolate(2, NP, st%d%nspin, tr%v_old(:, :, 0:2), h%vhxc, dt, -dt/M_TWO)
       end if
 
       do ik = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
-        end do
+         do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, ik), ik, dt, t - dt/M_TWO)
+         end do
       end do
 
       call pop_sub()
@@ -361,7 +361,7 @@ contains
 
     subroutine td_rti5
       integer :: j, is, ist, k
-      FLOAT :: time(2), v
+      FLOAT :: time(2)
       FLOAT, allocatable :: vaux(:, :, :)
 
       call push_sub('td_rti.td_rti5')
@@ -372,33 +372,33 @@ contains
       time(2) = (M_HALF+sqrt(M_THREE)/M_SIX)*dt
 
       if(.not.h%ip_app) then
-        do j = 1, 2
-           call dextrapolate(2, NP, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
-        enddo
+         do j = 1, 2
+            call dextrapolate(2, NP, st%d%nspin, tr%v_old(:,:, 0:2), vaux(:,:, j), dt, time(j)-dt)
+         enddo
       else
-        vaux = M_ZERO
+         vaux = M_ZERO
       endif
 
       do j = 1, 2
-        if(h%ep%no_lasers > 0) then
-          select case(h%gauge)
-          case(1) ! length gauge
-            vaux(:, is, j) = vaux(:, is, j) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t-dt+time(j))
-          case(2) ! velocity gauge
-            write(message(1),'(a)') 'Inconsistency in td_rti5'
-            call write_fatal(1)
-          end select
-        endif
+         if(h%ep%no_lasers > 0) then
+            select case(h%gauge)
+            case(1) ! length gauge
+               vaux(:, is, j) = vaux(:, is, j) + epot_laser_scalar_pot(gr%m%np, gr, h%ep, t-dt+time(j))
+            case(2) ! velocity gauge
+               write(message(1),'(a)') 'Inconsistency in td_rti5'
+               call write_fatal(1)
+            end select
+         endif
       enddo
 
       tr%vmagnus(:, :, 2)  = M_HALF*(vaux(:, :, 1) + vaux(:, :, 2))
       tr%vmagnus(:, :, 1) = (sqrt(M_THREE)/CNST(12.0))*dt*(vaux(:, :, 2) - vaux(:, :, 1))
 
       do k = 1, st%d%nik
-        do ist = st%st_start, st%st_end
-          call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
-                         vmagnus = tr%vmagnus)
-        end do
+         do ist = st%st_start, st%st_end
+            call td_exp_dt(tr%te, gr, h, st%zpsi(:,:, ist, k), k, dt, M_ZERO, &
+                 vmagnus = tr%vmagnus)
+         end do
       end do
 
       deallocate(vaux)

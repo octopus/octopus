@@ -31,12 +31,12 @@ subroutine mesh_partition(m, Lxyz_tmp)
   ! let us count how many elements we have
   ne = 0
   do ix = m%nr(1,1), m%nr(2,1) - 1
-    do iy = m%nr(1,2), m%nr(2,2) - 1
-      do iz = m%nr(1,3), max(0, m%nr(2,3) - 1) ! max is necessary when running in 2 dimensions
-        if(.not.point_OK(ix, iy, iz)) cycle
-        ne = ne + 1
-      end do
-    end do
+     do iy = m%nr(1,2), m%nr(2,2) - 1
+        do iz = m%nr(1,3), max(0, m%nr(2,3) - 1) ! max is necessary when running in 2 dimensions
+           if(.not.point_OK(ix, iy, iz)) cycle
+           ne = ne + 1
+        end do
+     end do
   end do
 
   ! allocate space necessary for the elements
@@ -45,64 +45,64 @@ subroutine mesh_partition(m, Lxyz_tmp)
   ! create elements array
   i = 1
   do ix = m%nr(1,1), m%nr(2,1) - 1
-    do iy = m%nr(1,2), m%nr(2,2) - 1
-      do iz = m%nr(1,3), max(0, m%nr(2,3) - 1) ! max is necessary when running in 2 dimensions
-        if(.not.point_OK(ix, iy, iz)) cycle
-        elmnts(i+0) = m%Lxyz_inv(ix,   iy,   iz)
-        elmnts(i+1) = m%Lxyz_inv(ix+1, iy,   iz)
-        elmnts(i+2) = m%Lxyz_inv(ix+1, iy+1, iz)
-        elmnts(i+3) = m%Lxyz_inv(ix,   iy+1, iz)
-        i = i + 4
+     do iy = m%nr(1,2), m%nr(2,2) - 1
+        do iz = m%nr(1,3), max(0, m%nr(2,3) - 1) ! max is necessary when running in 2 dimensions
+           if(.not.point_OK(ix, iy, iz)) cycle
+           elmnts(i+0) = m%Lxyz_inv(ix,   iy,   iz)
+           elmnts(i+1) = m%Lxyz_inv(ix+1, iy,   iz)
+           elmnts(i+2) = m%Lxyz_inv(ix+1, iy+1, iz)
+           elmnts(i+3) = m%Lxyz_inv(ix,   iy+1, iz)
+           i = i + 4
 
-        if(m%sb%dim <= 2) cycle
-        elmnts(i+0) = m%Lxyz_inv(ix,   iy,   iz+1)
-        elmnts(i+1) = m%Lxyz_inv(ix+1, iy,   iz+1)
-        elmnts(i+2) = m%Lxyz_inv(ix+1, iy+1, iz+1)
-        elmnts(i+3) = m%Lxyz_inv(ix,   iy+1, iz+1)
-        i = i + 4
-      end do
-    end do
+           if(m%sb%dim <= 2) cycle
+           elmnts(i+0) = m%Lxyz_inv(ix,   iy,   iz+1)
+           elmnts(i+1) = m%Lxyz_inv(ix+1, iy,   iz+1)
+           elmnts(i+2) = m%Lxyz_inv(ix+1, iy+1, iz+1)
+           elmnts(i+3) = m%Lxyz_inv(ix,   iy+1, iz+1)
+           i = i + 4
+        end do
+     end do
   end do
 
   allocate(epart(ne), npart(m%np))
   if(m%sb%dim == 2) then
-    etype = 4 ! quadrilaterals
+     etype = 4 ! quadrilaterals
   else
-    etype = 3 ! hexahedra
+     etype = 3 ! hexahedra
   end if
   call oct_METIS_partition(ne, m%np, elmnts, etype, 1, mpiv%numprocs, edgecut, epart, npart)
 
   if(mpiv%node == 0) then
-    do i = 1, m%np
-      write(12,*) m%x(i,1:2), npart(i)
-    end do
+     do i = 1, m%np
+        write(12,*) m%x(i,1:2), npart(i)
+     end do
   end if
   close(12)
   !stop
 
   deallocate(epart, npart)
 
-  contains
-    logical function point_OK(ix, iy, iz) result(OK)
-      integer, intent(in) :: ix, iy, iz
+contains
+  logical function point_OK(ix, iy, iz) result(OK)
+    integer, intent(in) :: ix, iy, iz
 
-      ! check if all 8 vertices are inside the mesh
-      ! the labelling is consistent with METIS requirements
-      OK = &
+    ! check if all 8 vertices are inside the mesh
+    ! the labelling is consistent with METIS requirements
+    OK = &
          Lxyz_tmp(ix,   iy,   iz  ).eq.1.and. &   ! 1
          Lxyz_tmp(ix+1, iy,   iz  ).eq.1.and. &   ! 2
          Lxyz_tmp(ix+1, iy+1, iz  ).eq.1.and. &   ! 3
          Lxyz_tmp(ix,   iy+1, iz  ).eq.1          ! 4
 
-      if(m%sb%dim <= 2) return
+    if(m%sb%dim <= 2) return
 
-      OK = OK.and. &
+    OK = OK.and. &
          Lxyz_tmp(ix,   iy,   iz+1).eq.1.and. &   ! 5
          Lxyz_tmp(ix+1, iy,   iz+1).eq.1.and. &   ! 6
          Lxyz_tmp(ix+1, iy+1, iz+1).eq.1.and. &   ! 7
          Lxyz_tmp(ix,   iy+1, iz+1).eq.1          ! 8
 
-    end function point_OK
+  end function point_OK
 end subroutine mesh_partition
 #endif
 
@@ -112,7 +112,7 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
   type(curvlinear_type), intent(in)    :: cv
   type(geometry_type),   intent(in)    :: geo
 
-  integer :: i, j, k, il, ix, iy, iz, ey, ez
+  integer :: i, j, k, il, ix, iy, iz
   integer, allocatable :: Lxyz_tmp(:,:,:)
   FLOAT,   allocatable :: x(:,:,:,:)
   FLOAT :: chi(3)

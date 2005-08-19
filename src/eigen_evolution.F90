@@ -28,8 +28,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
   FLOAT,                  intent(in)    :: tau
   logical,      optional, intent(in)    :: verbose
 
-  integer :: ik, ist, iter, maxiter, conv, conv_, matvec, j, k, l, i
-  FLOAT :: res, dump, dump2
+  integer :: ik, ist, iter, maxiter, conv, conv_, matvec, i, j
   R_TYPE, allocatable :: hpsi(:, :), m(:, :), c(:, :), phi(:, :, :)
   FLOAT, allocatable :: eig(:)
 
@@ -40,7 +39,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
   matvec = 0
 
   allocate(hpsi(gr%m%np, st%d%dim), m(st%nst, st%nst), c(st%nst, st%nst), &
-           eig(st%nst), phi(gr%m%np, st%d%dim, st%nst))
+       eig(st%nst), phi(gr%m%np, st%d%dim, st%nst))
 
   ! Warning: it seems that the algorithm is improved if some extra states are added -- states
   ! whose convergence should not be checked.
@@ -67,7 +66,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
         enddo
         ! Internally the BLAS does the Winograd-Strassen algorithm?
         call lalg_gemm(gr%m%np * st%d%dim, st%nst, st%nst, R_TOTYPE(M_ONE), &
-                       st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
+             st%X(psi)(:, :, :, ik), c, R_TOTYPE(M_ZERO), phi)
         do i = 1, st%nst
            st%X(psi)(:, :, i, ik) = phi(:, :, st%nst -i + 1)
         enddo
@@ -96,7 +95,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
   niter = matvec
   deallocate(hpsi, m, c, eig, phi)
   call pop_sub()
-  contains
+contains
 
   subroutine exponentiate(psi, j)
     R_TYPE, intent(inout) :: psi(:, :)
@@ -124,7 +123,7 @@ subroutine eigen_solver_evolution(gr, st, h, tol, niter, converged, diff, tau, v
     gr_ => gr
     ik_ =  ik
     call X(gexpv)(n, m, t, psi(:, 1), w(:, 1), tolerance, anorm, &
-                wsp, lwsp, iwsp, liwsp, mv, itrace, iflag)
+         wsp, lwsp, iwsp, liwsp, mv, itrace, iflag)
     nullify(h_)
     nullify(gr_)
     psi = w

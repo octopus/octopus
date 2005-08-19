@@ -34,20 +34,20 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
 
   R_TYPE :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
   FLOAT :: cg0, e0, res
-  integer  :: ik, moved, p, j, iter, i, maxter, conv, conv_
+  integer  :: ik, moved, p, j, iter, maxter, conv, conv_
   logical  :: reord = .true., verbose_
 
   call push_sub('eigen_cg.eigen_solver_cg2')
 
   verbose_ = .false.; if(present(verbose)) verbose_ = verbose
   if(verbose_) then
-    message(1) = " "
-    message(2) = stars
-    message(3) = "Diagonalization with the conjugate gradients algorithm."
-    write(message(4),'(a,e8.2)') '  Tolerance: ',tol
-    write(message(5),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
-    message(6) = ""
-    call write_info(6)
+     message(1) = " "
+     message(2) = stars
+     message(3) = "Diagonalization with the conjugate gradients algorithm."
+     write(message(4),'(a,e8.2)') '  Tolerance: ',tol
+     write(message(5),'(a,i6)')   '  Maximum number of iterations per eigenstate:', niter
+     message(6) = ""
+     call write_info(6)
   endif
 
   if(present(reorder)) reord = reorder
@@ -61,127 +61,127 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
-    conv = converged
-    eigenfunction_loop : do p = conv + 1, st%nst
+     conv = converged
+     eigenfunction_loop : do p = conv + 1, st%nst
 
-      if(verbose_) then
-        write(message(2),'(a,i4,a)') 'Eigenstate # ',p,':'
-      endif
-
-      ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(p, gr%m, st%d%dim, &
-           st%X(psi)(1:NP, 1:st%d%dim, 1:p, ik), start=p)
-
-      ! Calculate starting gradient: |hpsi> = H|psi>
-      call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
-
-      ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-      st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
-
-      ! Starts iteration for this band
-      iter_loop: do iter = 1, maxter
-
-        ! if approximate inverse preconditioner....
-        !call pre(hpsi%val   , g%val   )
-        !call pre(psi(m)%val , ppsi%val)
-        g = h_psi
-        ppsi = st%X(psi)(:,:, p, ik)
-
-        es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
-        es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
-        es(1) = es(1)/es(2)
-        g = g - es(1)*ppsi
-
-        ! Orthogonalize to lowest eigenvalues (already calculated)
-        do j = 1, p - 1
-          a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), g)
-          g(:,:) = g(:,:) - a0 * st%X(psi)(:,:, j, ik)
-        end do
-
-        if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
-
-        ! Approximate inverse preconditioner...
-        !call ipre(g, g0)
-        g0 = g
-
-        gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
-
-        ! Starting or following iterations...
-        if(iter .eq. 1) then
-          gg0 = gg
-          cg(:,:) = g(:,:)
-        else
-          !gamma = gg/gg0        ! (Fletcher-Reeves)
-          gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
-          gg0 = gg
-          cg(:,:) = gamma*cg(:,:)
-          cg(:,:) = cg(:,:) + g(:,:)
-
-          norma = gamma*cg0*sin(theta)
-          cg(:,:) = cg(:,:) - norma * st%X(psi)(:,:, p, ik)
-        end if
-
-        ! cg contains now the conjugate gradient
-        cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
-        call X(Hpsi) (h, gr, cg, ppsi, ik)
-
-        ! Line minimization.
-        a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
-        a0 = M_TWO * a0 / cg0
-        b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
-        b0 = b0/cg0**2
-        e0 = st%eigenval(p, ik)
-        theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
-        es(1) = ((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
-        es(2) =(-(e0-b0)*cos(M_TWO*theta) - a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
-
-        ! Choose the minimum solutions.
-        if (R_REAL(es(2)) < R_REAL(es(1))) then
-          theta = theta + M_PI/M_TWO
-        end if
-        st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
-
-        ! Upgrade psi...
-        a0 = cos(theta)
-        b0 = sin(theta)/cg0
-        ! This does the sum: st%X(psi)(:, :, p, ik) = a0*st%X(psi)(:, :, p, ik) + b0*cg(:, :)
-        ! It can crash in Intel compiler version 8 otherwise.
-        do j = 1, st%d%dim
-           call lalg_scal(NP, a0, st%X(psi)(:, j, p, ik))
-           call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(:, j, p, ik))
-        enddo
-
-        ! Calculate H|psi>
-        h_psi = a0*h_psi + b0*ppsi
-
-        res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), &
-             st%X(psi)(:, :, p, ik))
-        ! Test convergence.
-        if(res < tol) then
-          conv = conv + 1
-          exit iter_loop
-        end if
-
-      end do iter_loop
-
-      if(verbose_) then
-        if(res<tol) then
-          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
-        else
-          write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
+        if(verbose_) then
+           write(message(2),'(a,i4,a)') 'Eigenstate # ',p,':'
         endif
-        call write_info(1)
-      endif
 
-      niter = niter + iter + 1
+        ! Orthogonalize starting eigenfunctions to those already calculated...
+        call X(states_gram_schmidt)(p, gr%m, st%d%dim, &
+             st%X(psi)(1:NP, 1:st%d%dim, 1:p, ik), start=p)
 
-      if(present(diff)) then
-        diff(p, ik) = res
-      end if
+        ! Calculate starting gradient: |hpsi> = H|psi>
+        call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
-      if(p>1 .and. reord) call sort(st%eigenval(1:p, ik), st%X(psi)(:, :, 1:p, ik))
+        ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
+        st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
 
-    end do eigenfunction_loop
+        ! Starts iteration for this band
+        iter_loop: do iter = 1, maxter
+
+           ! if approximate inverse preconditioner....
+           !call pre(hpsi%val   , g%val   )
+           !call pre(psi(m)%val , ppsi%val)
+           g = h_psi
+           ppsi = st%X(psi)(:,:, p, ik)
+
+           es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
+           es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
+           es(1) = es(1)/es(2)
+           g = g - es(1)*ppsi
+
+           ! Orthogonalize to lowest eigenvalues (already calculated)
+           do j = 1, p - 1
+              a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), g)
+              g(:,:) = g(:,:) - a0 * st%X(psi)(:,:, j, ik)
+           end do
+
+           if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
+
+           ! Approximate inverse preconditioner...
+           !call ipre(g, g0)
+           g0 = g
+
+           gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
+
+           ! Starting or following iterations...
+           if(iter .eq. 1) then
+              gg0 = gg
+              cg(:,:) = g(:,:)
+           else
+              !gamma = gg/gg0        ! (Fletcher-Reeves)
+              gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
+              gg0 = gg
+              cg(:,:) = gamma*cg(:,:)
+              cg(:,:) = cg(:,:) + g(:,:)
+
+              norma = gamma*cg0*sin(theta)
+              cg(:,:) = cg(:,:) - norma * st%X(psi)(:,:, p, ik)
+           end if
+
+           ! cg contains now the conjugate gradient
+           cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
+           call X(Hpsi) (h, gr, cg, ppsi, ik)
+
+           ! Line minimization.
+           a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
+           a0 = M_TWO * a0 / cg0
+           b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
+           b0 = b0/cg0**2
+           e0 = st%eigenval(p, ik)
+           theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
+           es(1) = ((e0-b0)*cos(M_TWO*theta) + a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
+           es(2) =(-(e0-b0)*cos(M_TWO*theta) - a0*sin(M_TWO*theta) + e0 + b0) / M_TWO
+
+           ! Choose the minimum solutions.
+           if (R_REAL(es(2)) < R_REAL(es(1))) then
+              theta = theta + M_PI/M_TWO
+           end if
+           st%eigenval(p, ik) = min(R_REAL(es(1)), R_REAL(es(2)))
+
+           ! Upgrade psi...
+           a0 = cos(theta)
+           b0 = sin(theta)/cg0
+           ! This does the sum: st%X(psi)(:, :, p, ik) = a0*st%X(psi)(:, :, p, ik) + b0*cg(:, :)
+           ! It can crash in Intel compiler version 8 otherwise.
+           do j = 1, st%d%dim
+              call lalg_scal(NP, a0, st%X(psi)(:, j, p, ik))
+              call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(:, j, p, ik))
+           enddo
+
+           ! Calculate H|psi>
+           h_psi = a0*h_psi + b0*ppsi
+
+           res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), &
+                st%X(psi)(:, :, p, ik))
+           ! Test convergence.
+           if(res < tol) then
+              conv = conv + 1
+              exit iter_loop
+           end if
+
+        end do iter_loop
+
+        if(verbose_) then
+           if(res<tol) then
+              write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2)),"     converged. Iterations:", iter, '   [Res = ',res,']'
+           else
+              write(message(1),'(a,a,i5,a,e8.2,a)') trim(message(2))," not converged. Iterations:", iter, '   [Res = ',res,']'
+           endif
+           call write_info(1)
+        endif
+
+        niter = niter + iter + 1
+
+        if(present(diff)) then
+           diff(p, ik) = res
+        end if
+
+        if(p>1 .and. reord) call sort(st%eigenval(1:p, ik), st%X(psi)(:, :, 1:p, ik))
+
+     end do eigenfunction_loop
 
     conv_ = conv_ + conv
 
@@ -213,7 +213,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   logical,      optional, intent(in)    :: reorder
   logical,      optional, intent(in)    :: verbose
 
-  integer :: nik, nst, dim, ik, ist, maxter, i, k, l, conv, conv_
+  integer :: nik, nst, dim, ik, ist, maxter, i, k, conv, conv_
   logical :: verbose_, reorder_
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hpsi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
   FLOAT :: ctheta, stheta, ctheta2, stheta2, mu, lambda, dump, &
