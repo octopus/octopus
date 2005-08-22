@@ -25,6 +25,7 @@ module poisson_multigrid
   use multigrid
   use poisson_corrections
   use math, only : dconjugate_gradients
+  use messages
 
   implicit none
 
@@ -34,7 +35,6 @@ module poisson_multigrid
   integer :: restriction_method
   integer :: relaxation_method
 
-  FLOAT, pointer :: old_solution(:)
   logical :: initialized=.false.
 
   integer, parameter :: GAUSS_SEIDEL = 1, &
@@ -99,7 +99,7 @@ contains
     !%Type integer
     !%Section 14 Varia
     !%Description
-    !% Method used from fine to coarse grid. Default is fullweight restriction.
+    !% Method used from fine to coarse grid transfer. Default is fullweight restriction.
     !%Option injection 1
     !% Injection
     !%Option fullweight 2
@@ -129,15 +129,12 @@ contains
     call build_phi(m)
     call pop_sub()
     
-    allocate(old_solution(1:m%np))
-
     initialized=.true.
 
   end subroutine poisson_multigrid_init
 
   subroutine poisson_multigrid_end()
     deallocate(aux, phi)
-    deallocate(old_solution)
     initialized=.false.
   end subroutine poisson_multigrid_end
 
@@ -173,8 +170,7 @@ contains
     call gridhier_init(tau, gr%mgrid, add_points_for_boundaries=.false.)
     call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.false.)
 
-!    phi(0)%p(1:gr%m%np)=pot(1:gr%m%np)
-    phi(0)%p(1:gr%m%np)=old_solution(1:gr%m%np)
+    phi(0)%p(1:gr%m%np)=pot(1:gr%m%np)
 
     phi(0)%p(gr%m%np+1:gr%m%np_tot)=M_ZERO
     tau(0)%p(:)=rho_corrected(:)
@@ -241,7 +237,6 @@ contains
        call write_warning(2)
     endif
     
-    old_solution(1:gr%m%np)=phi(0)%p(1:gr%m%np)
     pot(1:gr%m%np)=phi(0)%p(1:gr%m%np)+vh_correction(1:gr%m%np);
 
     deallocate(rho_corrected, vh_correction)
@@ -267,51 +262,49 @@ contains
 
     integer :: t
     integer :: i,n, iter
-    FLOAT :: point_lap, h2, factor
+    FLOAT :: point_lap, factor, diag=1
     FLOAT, allocatable :: w(:)
 
     select case(relaxation_method)
-
+       
     case(GAUSS_SEIDEL)
 
-      factor=(-M_ONE/(-M_SIX));
-
-      !!search for the diagonal term
-      !!DISABLED: currently using the diagonal term prevents convergence
-      !    if(LAP%const_w) then 
-      !       do i=1,LAP%n
-      !          if( 1 == LAP%i(i,1)) then
-      !             factor=-1.0/LAP%w_re(i,1);
-      !             exit
-      !          end if
-      !       end do
-      !    end if
-    
-      h2=m%h(1)*m%h(1)
-      n=LAP%n
-      allocate(w(1:n))
-      if(LAP%const_w) then
-
-        w(1:n)=LAP%w_re(1:n,1)
-        do t=0,steps
-           do i=1,m%np
-              point_lap=sum(w(1:n)*pot(LAP%i(1:n,i)))
-              pot(i)=pot(i)+factor*h2*(point_lap-rho(i))
-           end do
-        end do
-
-      else
-
-        do t=0,steps
-           do i=1,m%np
-              point_lap=sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
-              pot(i)=pot(i)+factor*h2*(point_lap-rho(i))
-           end do
-        end do
-
-      end if
-      deallocate(w)
-
+       !!search for the diagonal term
+       do i=1,LAP%n
+          if( 1 == LAP%i(i,1)) then
+             if(LAP%const_w) then 
+                factor=-1.0/LAP%w_re(i,1);
+             else
+                diag=i
+             end if
+             exit
+          end if
+       end do
+       
+       n=LAP%n
+       allocate(w(1:n))
+       if(LAP%const_w) then
+          
+          w(1:n)=LAP%w_re(1:n,1)
+          do t=0,steps
+             do i=1,m%np
+                point_lap=sum(w(1:n)*pot(LAP%i(1:n,i)))
+                pot(i)=pot(i)+factor*(point_lap-rho(i))
+             end do
+          end do
+          
+       else
+          
+          do t=0,steps
+             do i=1,m%np
+                point_lap=sum(LAP%w_re(1:n,i)*pot(LAP%i(1:n,i)))
+                pot(i)=pot(i)-M_ONE/LAP%w_re(diag,i)*(point_lap-rho(i))
+             end do
+          end do
+          
+       end if
+       deallocate(w)
+       
     case(CONJUGATE_GRADIENTS)
 
       iter = steps
