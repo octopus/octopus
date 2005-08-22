@@ -99,7 +99,7 @@ contains
       type(geometry_type),   intent(in)  :: geo
       type(curvlinear_type), intent(in)  :: cv
       type(mesh_type),       intent(in)  :: mesh_in
-      type(mesh_type),       intent(out) :: mesh_out
+      type(mesh_type),       intent(inout) :: mesh_out
 
       mesh_out%sb             => mesh_in%sb
       mesh_out%use_curvlinear =  mesh_in%use_curvlinear
@@ -118,7 +118,7 @@ contains
 
     ! creates the lookup tables to go between the coarse and fine meshes
     subroutine get_transfer_tables(tt, fine, coarse)
-      type(multigrid_level_type), intent(out) :: tt
+      type(multigrid_level_type), intent(inout) :: tt
       type(mesh_type),            intent(in)  :: fine, coarse
 
       integer :: i, i1, i2, i4, i8
