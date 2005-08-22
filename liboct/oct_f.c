@@ -135,12 +135,18 @@ void FC_FUNC_(oct_progress_bar, OCT_PROGRESS_BAR)
 #if defined(HAVE_METIS)
 #include <metis/metis.h>
 
-void FC_FUNC_(oct_metis_partition, OCT_METIS_PARTITION)
+void FC_FUNC_(oct_metis_part_mesh_nodal, OCT_METIS_PART_MESH_NODAL)
   (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
    int *edgecut, idxtype *epart, idxtype *npart)
 {
   METIS_PartMeshNodal(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
-  /*METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);*/
+}
+
+void FC_FUNC_(oct_metis_part_mesh_dual, OCT_METIS_PART_MESH_DUAL)
+  (int *ne, int *nn, idxtype *elmnts, int *etype, int *numflag, int *nparts, 
+   int *edgecut, idxtype *epart, idxtype *npart)
+{
+  METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
 }
 #endif
 
