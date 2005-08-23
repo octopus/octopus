@@ -64,10 +64,17 @@ contains
     type(f_der_type), target, intent(in)  :: f_der
     type(multigrid_type),     intent(out) :: mgrid
 
-    integer :: i, n_levels
+    integer :: i, n_levels, np
 
     !number of levels. estimated from the number of points
-    n_levels = floor(log(dble(m%np))/log(8.0))-1
+
+    n_levels=-2
+    np=m%np
+
+    do while ( np > 1 )
+       np=np/8
+       n_levels=n_levels+1
+    end do
 
     mgrid%n_levels = n_levels
 
@@ -75,7 +82,6 @@ contains
 
     mgrid%level(0)%m     => m
     mgrid%level(0)%f_der => f_der
-
 
     print*, "Multigrid levels:", n_levels
     do i = 1, mgrid%n_levels
