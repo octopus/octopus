@@ -261,8 +261,8 @@ contains
     integer,          intent(in)    :: steps
 
     integer :: t
-    integer :: i,n, iter
-    FLOAT :: point_lap, factor, diag=1
+    integer :: i, n, iter, diag=1
+    FLOAT :: point_lap, factor
     FLOAT, allocatable :: w(:)
 
     select case(relaxation_method)
@@ -273,14 +273,14 @@ contains
        do i=1,LAP%n
           if( 1 == LAP%i(i,1)) then
              if(LAP%const_w) then 
-                factor=-1.0/LAP%w_re(i,1);
+                factor=CNST(-1.0)/LAP%w_re(i,1);
              else
                 diag=i
              end if
              exit
           end if
        end do
-       
+
        n=LAP%n
        allocate(w(1:n))
        if(LAP%const_w) then
