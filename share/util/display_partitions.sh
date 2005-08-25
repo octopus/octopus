@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# $Id$
+#
+# Script to use gnuplot to plot the partitioning of
+# the mesh.
+# The files mesh_partition.??? as produced in debug/mesh_partition by
+# the octopus debug mode have to be present in the current working
+# directory when this script is invoked.
+# The plot can be found in the file mesh_partitions.png.
+# This script generates a gnuplot-script called mesh_partitions_index.gp
+# which is stored in the current working directory and can be loaded into
+# gnuplot manually.
+# With
+#
+#   gnuplot> load mesh_partitions_index.gp
+#   gnuplot> set term x11
+#   gnuplot> replot
+#
+# the plot can be reproduced and shown on the screen so that
+# rotating and zooming is possible.
+#
+
+# Output files.
+GP_IN=mesh_partitions_index.gp
+PNG_OUT=mesh_partitions.png
+
+# Plot each partition with different linetype.
+function plot_partition () {
+  f=$1
+  n=${f##*.}
+  n=`echo $n | sed s/^0*//`
+  echo "set style line $n lt $((n+1)) lw 1 pt 13 ps 1.7" >> $GP_IN
+
+  if [ $n = 1 ]; then
+    echo "sp '$f' u 2:3:4 w p ls $n" >> $GP_IN
+  else
+    echo "replot '$f' u 2:3:4 w p ls $n" >> $GP_IN
+  fi
+}
+
+# Global settings for gnuplot file.
+# Due to some strange circumstances, replotting does
+# not work correctly with png terminal. We first plot
+# everything to dumb going to /dev/null and
+# switch terminal to png in the end and replot (s. b.).
+{
+  cat <<EOF
+    
+unset key
+unset label
+    
+set term dumb
+set out '/dev/null'
+
+set xlabel "x"
+set ylabel "y"
+set zlabel "z"
+
+EOF
+} > $GP_IN
+
+# Create labels.
+# Uncomment this, if you want the global numbers of the points
+# plotted as well. It is probably necessary to adjust the 0.17
+# depending on the number of points in the command below to have
+# the labels set close to the corresponding point.
+#
+# cat mesh_partition.* |                                             \
+# awk '{print "set label \"" $1"\" at "$2+0.17","$3","$4}' >> $GP_IN
+
+# Loop over partitions.
+for f in mesh_partition.???; do
+  echo processing: $f
+  plot_partition $f
+done
+
+# Write plot to png file.
+echo set term png color >> $GP_IN
+echo set out "'$PNG_OUT'" >> $GP_IN
+echo replot >> $GP_IN
+
+gnuplot $GP_IN

@@ -16,14 +16,14 @@ acx_metis_save_LIBS="$LIBS"
 dnl First, check if it links
 if test $acx_metis_ok = no; then
   LIBS="$LIBS_METIS $acx_metis_save_LIBS"
-  AC_CHECK_FUNC([METIS_PartMeshDual], [acx_trlan_ok=yes], [])
+  AC_CHECK_FUNC([METIS_PartGraphRecursive], [acx_trlan_ok=yes], [])
 fi
 
 dnl Generic METIS library?
 if test $acx_metis_ok = no; then
   LIBS="$LIBS_METIS -lmetis -lm $acx_metis_save_LIBS"
-	unset ac_cv_func_METIS_PartMeshDual
-  AC_CHECK_FUNC([METIS_PartMeshDual], [acx_metis_ok=yes; LIBS_METIS="$LIBS_METIS -lmetis -lm"], [])
+	unset ac_cv_func_METIS_PartGraphRecursive
+  AC_CHECK_FUNC([METIS_PartGraphRecursive], [acx_metis_ok=yes; LIBS_METIS="$LIBS_METIS -lmetis -lm"], [])
 fi
 
 AC_SUBST(LIBS_METIS)

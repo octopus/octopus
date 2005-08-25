@@ -148,6 +148,30 @@ void FC_FUNC_(oct_metis_part_mesh_dual, OCT_METIS_PART_MESH_DUAL)
 {
   METIS_PartMeshDual(ne, nn, elmnts, etype, numflag, nparts, edgecut, epart, npart);
 }
+
+void FC_FUNC_(oct_metis_part_graph_recursive, OCT_METIS_PART_GRAPH_RECURSIVE)
+  (int *n, idxtype *xadj, idxtype *adjncy, idxtype *vwgt,
+   idxtype *adjwgt, int *wgtflag, int *numflag, int *nparts,
+   int *options, int *edgecut, idxtype *part)
+{
+  METIS_PartGraphRecursive(n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options, edgecut, part);
+}
+
+void FC_FUNC_(oct_metis_part_graph_kway, OCT_METIS_PART_GRAPH_KWAY)
+  (int *n, idxtype *xadj, idxtype *adjncy, idxtype *vwgt,
+   idxtype *adjwgt, int *wgtflag, int *numflag, int *nparts,
+   int *options, int *edgecut, idxtype *part)
+{
+  METIS_PartGraphKway(n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options, edgecut, part);
+}
+
+void FC_FUNC_(oct_metis_part_graph_vkway, OCT_METIS_PART_GRAPH_VKWAY)
+  (int *n, idxtype *xadj, idxtype *adjncy, idxtype *vwgt,
+   idxtype *adjwgt, int *wgtflag, int *numflag, int *nparts,
+   int *options, int *edgecut, idxtype *part)
+{
+  METIS_PartGraphVKway(n, xadj, adjncy, vwgt, adjwgt, wgtflag, numflag, nparts, options, edgecut, part);
+}
 #endif
 
 /* ------------------------------ some stuff  -------------------------------- */

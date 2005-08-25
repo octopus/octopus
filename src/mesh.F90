@@ -29,6 +29,9 @@ module mesh
   use curvlinear
   use simul_box
   use lib_adv_alg
+#ifdef DEBUG
+  use io
+#endif
 
   implicit none
 
@@ -58,6 +61,10 @@ module mesh
 
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
+
+    integer          :: npart   ! Number of partitions.
+    integer, pointer :: part(:) ! Mapping point -> partition, result
+                                ! of call to the METIS library.
 
     ! some other vars
     integer :: nr(2,3)  ! dimensions of the box where the points are contained
@@ -270,6 +277,10 @@ contains
        deallocate(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
        nullify(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
      end if
+    
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+     call mesh_partition_end(m)
+#endif
 
      call pop_sub()
    end subroutine mesh_end
