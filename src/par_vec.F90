@@ -72,6 +72,7 @@ module par_vec
 
   implicit none
 
+#if defined(HAVE_MPI)
   private
   public :: pv_type,           &
             vec_init,          &
@@ -613,4 +614,5 @@ contains
 #include "real.F90"
 #include "par_vec_inc.F90"
 
+#endif
 end module par_vec
