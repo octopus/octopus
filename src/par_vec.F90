@@ -73,15 +73,20 @@ module par_vec
   implicit none
 
   private
-  public :: pv_type,          &
-            vec_init,         &
-            vec_init_default, &
-            vec_end,          &
-            vec_scatter,      &
-            vec_gather,       &
-            vec_ghost_update, &
-            vec_integrate,    &
-            vec_dnl_operator
+  public :: pv_type,           &
+            vec_init,          &
+            vec_init_default,  &
+            vec_end,           &
+            dvec_scatter,      &
+            zvec_scatter,      &
+            dvec_gather,       &
+            zvec_gather,       &
+            dvec_ghost_update, &
+            zvec_ghost_update, &
+            dvec_integrate,    &
+            zvec_integrate,    &
+            dvec_nl_operator,  &
+            vec_op_pop
 
 
   ! Describes mesh distribution to nodes.
@@ -429,217 +434,11 @@ contains
   end subroutine vec_end
 
 
-  ! Scatters a vector v to all nodes in vp with respect to 
-  ! to point -> node mapping in vp.
-  ! v_local has at least to be of size vp%np_local(mpiv%node).
-  subroutine vec_scatter(vp, v, v_local)
-    type(pv_type), intent(in)  :: vp
-    FLOAT,         intent(in)  :: v(:)
-    FLOAT,         intent(out) :: v_local(:)
-
-    integer              :: i         ! Counter.
-    integer              :: ierr      ! MPI errorcode.
-    integer              :: rank      ! Rank of node.
-    integer, allocatable :: displs(:) ! Displacements for scatter.
-    FLOAT,   allocatable :: v_tmp(:)  ! Send buffer.
-    
-    call push_sub('par_vec.vec_scatter')
-
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-    call mpierr(ierr)
-   
-    ! Unfortunately, vp%xlocal ist not quite the required
-    ! displacement vector.
-    allocate(displs(vp%p))
-    displs = vp%xlocal-1
-
-    ! Fill send buffer.
-    if(rank.eq.vp%root) then
-      allocate(v_tmp(vp%np))
-    
-      ! Rearrange copy of v. All points of node r are in
-      ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
-      do i = 1, vp%np
-        v_tmp(i) = v(vp%local(i))
-      end do
-    end if
-    
-    ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
-    ! But partition numbers from 1 to vp%p with usually
-    ! vp%p = mpiv%numprocs.
-    call MPI_Scatterv(v_tmp, vp%np_local, displs, MPI_FLOAT, v_local, &
-                      vp%np_local(rank+1), MPI_FLOAT,                 &
-                      vp%root, vp%comm, ierr)
-    call mpierr(ierr)
-
-    if(mpiv%node.eq.vp%root) deallocate(v_tmp)
-
-    deallocate(displs)
-
-    call pop_sub()
-
-  end subroutine vec_scatter
-
-
-  ! Reverse operation of vec_scatter.
-  ! All v_locals from the nodes are packed together
-  ! into v on node vp%root in correct order.
-  subroutine vec_gather(vp, v, v_local)
-    type(pv_type), intent(in)  :: vp
-    FLOAT,         intent(out) :: v(:)
-    FLOAT,         intent(in)  :: v_local(:)
-
-    integer              :: i         ! Counter.
-    integer              :: ierr      ! MPI errorcode.
-    integer              :: rank      ! Rank of node.
-    integer, allocatable :: displs(:) ! Displacements for scatter.
-    FLOAT,   allocatable :: v_tmp(:)  ! Receive buffer.
-    
-    call push_sub('par_vec.vec_gather')
-    
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-    call mpierr(ierr)
-
-    ! Unfortunately, vp%xlocal ist not quite the required
-    ! displacement vector.
-    allocate(displs(vp%p))
-    displs = vp%xlocal-1
-
-    if(rank.eq.vp%root) allocate(v_tmp(vp%np))
-
-    call MPI_Gatherv(v_local, vp%np_local(rank+1), MPI_FLOAT, v_tmp, &
-                     vp%np_local, vp%xlocal, MPI_FLOAT,              &
-                     vp%root, vp%comm, ierr)
-    call mpierr(ierr)
-
-    ! Copy values from v_tmp to their original position in v.
-    if(rank.eq.vp%root) then
-      do i = 1, vp%np
-        v(vp%local(i)) = v_tmp(i)
-      end do
-      
-      deallocate(v_tmp)
-    end if
-
-    call pop_sub()
-
-  end subroutine vec_gather
-
-
-  ! Updates ghost points of every node. A vector suitable
-  ! for non local operations contains local values and
-  ! ghost point values.
-  ! Length of v_local must be
-  ! vp%np_local(mpiv%node+1)+vp%np_ghost(mpiv%node+1)
-  subroutine vec_ghost_update(vp, v_local)
-    type(pv_type), intent(in)    :: vp
-    FLOAT,         intent(inout) :: v_local(:)
-    
-    integer              :: i, j, k, r             ! Counters.
-    integer              :: ierr                   ! MPI errorcode.
-    integer              :: rank                   ! Rank of current node.
-    integer              :: total                  ! Total number of ghost
-                                                   ! points to send away.
-    integer, allocatable :: sdispls(:), rdispls(:) ! Displacements for
-                                                   ! MPI_Alltoallv.
-    FLOAT,   allocatable :: ghost_send(:)          ! Send buffer.
-
-    call push_sub('par_vec.vec_ghost_update')
-
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-    call mpierr(ierr)
-
-    ! Calculate number of ghost points current node
-    ! has to send to neighbours and allocate send buffer.
-    total = sum(vp%np_ghost_neigh(:, rank+1))
-    allocate(ghost_send(total))
-    
-    ! Send and receive displacements.
-    ! Send displacement cannot directly be calculated
-    ! from vp%xghost_neigh because those are indices for
-    ! vp%np_ghost_neigh(rank+1, :) and not
-    ! vp%np_ghost_neigh(:, rank+1) (rank being fixed).
-    ! So what gets done is to pick out the number of ghost points
-    ! each partition r wants to have from the current partiton
-    ! rank+1.
-    allocate(sdispls(vp%p))
-    sdispls(1) = 0
-    do r = 2, vp%p
-      sdispls(r) = sdispls(r-1)+vp%np_ghost_neigh(r-1, rank+1)
-    end do
-    
-    ! This is like in vec_scatter/gather.
-    allocate(rdispls(vp%p))
-    rdispls = vp%xghost_neigh(rank+1, :)-vp%xghost(rank+1)
-
-    ! Collect all local points that have to be sent to neighbours.
-    j = 1
-    ! Iterate over all possible receivers.
-    do r = 1, vp%p
-      ! Iterate over all ghost points that r wants.
-      do i = 0, vp%np_ghost_neigh(r, rank+1)-1
-        ! Get global number k of i-th ghost point.
-        k = vp%ghost(vp%xghost_neigh(r, rank+1)+i)
-        ! Lookup up local number of point k and put
-        ! value from v_local to send buffer.
-        ghost_send(j) = v_local(vp%global(k, rank+1))
-        j             = j + 1
-      end do
-    end do
-    
-    ! Bring it on the way.
-    ! It has to examined wheather it is better to use several point to
-    ! point send operations (thus, non-neighbour sends could explicitly be
-    ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
-    ! any I/O if some sendcount is 0. This means, there is actually
-    ! no need to code this again.
-    call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(:, rank+1), sdispls, &
-                       MPI_FLOAT, v_local(vp%np_local(rank+1)+1:),        &
-                       vp%np_ghost_neigh(rank+1, :), rdispls, MPI_FLOAT,  &
-                       vp%comm, ierr)
-    call mpierr(ierr)
-                       
-    deallocate(sdispls, rdispls)
-    deallocate(ghost_send)
-    
-    call pop_sub()
-    
-  end subroutine vec_ghost_update
-
-
-  ! Sums over all elements of a vector v which was
-  ! scattered to several v_local with vec_scatter.
-  ! It is of no relevance, if v_local contains
-  ! ghost points or not, because only the first
-  ! vp%np_local(rank+1) elements are considered.
-  FLOAT function vec_integrate(vp, v_local) result(s)
-    type(pv_type), intent(in) :: vp
-    FLOAT,         intent(in) :: v_local(:)
-
-    integer :: rank
-    integer :: ierr
-    FLOAT   :: s_local ! Sum of v_local(i).
-
-    call push_sub('par_vec.vec_integrate')
-    
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-    call mpierr(ierr)
-
-    s_local = sum(v_local(:vp%np_local(rank+1)))
-
-    call MPI_Allreduce(s_local, s, 1, MPI_FLOAT, MPI_SUM, vp%comm, ierr)
-    call mpierr(ierr)
-
-    call pop_sub()
-
-  end function vec_integrate
-
-  
   ! Apply parallel non local operator (fo = op fi).
   ! fi, fo have to be of length vp%np_local(rank+1)+vp%np_ghost(rank+1)
   ! and vec_ghost_update should have been called on the input vector
   ! in advance to have sane values at the ghost points.
-  subroutine vec_dnl_operator(vp, op, fi, fo)
+  subroutine dvec_nl_operator(vp, op, fi, fo)
     type(pv_type),          intent(in)  :: vp
     type(nl_operator_type), intent(in)  :: op
     FLOAT,                  intent(in)  :: fi(:)
@@ -651,7 +450,7 @@ contains
     FLOAT, allocatable   :: w_re(:)
     !integer, allocatable :: i_local(:, :)
 
-    call push_sub('par_vec.vec_dnl_operator')
+    call push_sub('par_vec.Xvec_dnl_operator')
 
     call MPI_Comm_rank(vp%comm, rank, ierr)
     call mpierr(ierr)
@@ -691,19 +490,127 @@ contains
 
     call pop_sub()
 
-  end subroutine vec_dnl_operator
+  end subroutine dvec_nl_operator
+ 
 
-  
+  ! Parallelizes non-local operator op to pop.
+  ! The operator pop is only defined for all local points
+  ! of the current node.
+  !
+  ! An application example could look like this (op given
+  ! and completely initialized):
+  !
+  ! type(nl_operator_type) :: pop
+  ! FLOAT                  :: f(np)
+  ! FLOAT                  :: f_local_i(:)
+  ! FLOAT                  :: f_local_o(:)
+  !
+  ! ! Call to vec_init must precede this line.
+  ! ! f_local_? has to be allocated, too.
+  ! call vec_op_pop(vp, op, pop)
+  !
+  ! call dvec_scatter(vp, f, f_local_i)
+  ! call dvec_ghost_update(vp, f_local_i)
+  !
+  ! ! Apply op (i. e. pop) to f (i. e. f_local_i)
+  ! call dnl_operator_operate(pop, f_local_i, f_local_o)
+  !
+  ! ! Either ghost point exchange and next non-local operation
+  ! call dvec_ghost_update(vp, f_local_o)
+  ! call dnl_operator_operate(pop, f_local_o, f_local_i)
+  ! ! or gathering and finished.
+  ! call dvec_gather(vp, f_local_o, f)
+  ! call vec_end(vp)
+  subroutine vec_op_pop(vp, op, pop) 
+    type(pv_type), intent(in)           :: vp
+    type(nl_operator_type), intent(in)  :: op
+    type(nl_operator_type), intent(out) :: pop
+
+    integer :: rank
+    integer :: ierr
+    integer :: i, k
+
+    call push_sub('par_vec.vec_op_pop')
+
+    call MPI_Comm_rank(vp%comm, rank, ierr)
+    call mpierr(ierr)
+    
+    pop%n        = op%n
+    pop%const_w  = op%const_w
+    pop%cmplx_op = op%cmplx_op
+    allocate(pop%stencil(3, pop%n))
+    pop%stencil  = op%stencil
+    pop%np       = vp%np_local(rank+1)
+
+    ! Calculate local index i.
+    allocate(pop%i(pop%n, pop%np))
+    ! The operator will be applied to all points 1, ..., np_local.
+    do i = 1, vp%np_local(rank+1)
+      ! Get global number of local point i.
+      k           = vp%local(vp%xlocal(rank+1)+i-1)
+      ! Get all global numbers of all points, that are
+      ! needed to apply the operator to point k (op%i(:, k)).
+      ! Convert all those global numbers to local numbers
+      ! (now including numbers > vp%np_local(rank+1), i. e.
+      ! ghost points, of course). If calculation of ghost points
+      ! is correct for current operator, all values in pop%i
+      ! are valid local and ghost point numbers on the current node.
+      pop%i(:, i) = vp%global(op%i(:, k), rank+1)
+    end do
+    
+    ! Copy weights. Reorder them, if they are not constant.
+    ! The re-ordering follows the same logic as described above.
+    if(pop%const_w) then
+      allocate(pop%w_re(pop%n, 1))
+      pop%w_re(:, 1) = op%w_re(:, 1)
+      if(pop%cmplx_op) then
+        allocate(pop%w_im(pop%n, 1))
+        pop%w_im(:, 1) = op%w_im(:, 1)
+      end if
+    else
+      allocate(pop%w_re(pop%n, pop%np))
+      do i = 1, vp%np_local(rank+1)+vp%np_ghost(rank+1)
+        k              = vp%local(vp%xlocal(rank+1)+i-1)
+        pop%w_re(:, i) = op%w_re(:, k)
+      end do
+      if(pop%cmplx_op) then
+        allocate(pop%w_im(pop%n, pop%np))
+        do i = 1, vp%np_local(rank+1)+vp%np_ghost(rank+1)
+          k              = vp%local(vp%xlocal(rank+1)+i-1)
+          pop%w_im(:, i) = op%w_im(:, k)
+        end do
+      end if
+    end if
+    
+    call pop_sub
+    
+  end subroutine vec_op_pop
+
+
   ! (Very) basic error handling for MPI calls.
   ! Checks, if ierr indicates an MPI error and terminates
   ! cleanly if so.
   subroutine mpierr(ierr)
     integer :: ierr
-
+    
+    call push_sub('par_vec.mpierr')
+    
     if(ierr.ne.MPI_SUCCESS) then
       write(message(1), '(a,i5)') 'MPI error, errorcode', ierr
       call write_fatal(1)
     end if
+
+    call pop_sub()
+
   end subroutine mpierr
+
+
+#include "undef.F90"
+#include "complex.F90"
+#include "par_vec_inc.F90"
+
+#include "undef.F90"
+#include "real.F90"
+#include "par_vec_inc.F90"
 
 end module par_vec
