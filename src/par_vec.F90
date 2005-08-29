@@ -45,19 +45,19 @@ module par_vec
   ! allocate(wl(np_local+np_ghost))
   !
   ! ! Distribute vectors.
-  ! call vec_scatter(vp, u, ul)
-  ! call vec_scatter(vp, v, vl)
+  ! call dvec_scatter(vp, u, ul)
+  ! call dvec_scatter(vp, v, vl)
   !
   ! ! Calculate scalar product.
-  ! wl(:np_local) = ul*vl
+  ! wl = ul*vl
   ! ! vec_integrate ignores ghost points (i. e. v(np_local+1:)).
-  ! s = vec_integrate(vp, wl)
+  ! s = dvec_integrate(vp, wl)
   !
   ! ! Compute some operator op: vl = op ul
-  ! call vec_ghost_update(vp, ul)
-  ! call vec_nl_operator(vp, op, ul, vl)
+  ! call dvec_ghost_update(vp, ul)
+  ! call dvec_nl_operator(vp, op, ul, vl)
   ! ! Gather result of op in one vector v.
-  ! call vec_gather(vp, v, vl)
+  ! call dvec_gather(vp, v, vl)
   !
   ! ! Clean up.
   ! call vec_end(vp)
@@ -149,19 +149,20 @@ contains
   ! Initializes a pv_type object (parallel vector).
   ! It computes the local to global and global to local index tables
   ! and the ghost point exchange.
-  ! The format for the stencil is: stencil(i, 3) for i=1, ..., np_stencil.
+  ! The format for the stencil is: stencil(3, i) for i=1, ..., np_stencil
+  ! (as for type(nl_operator_type)).
   ! For example a stencil like (in x-y-plane)
   !          .
   !        .....
   !          .
   ! is coded as
-  !   stencil(1, :) = (/ 0,  1,  0/)
-  !   stencil(2, :) = (/-2,  0,  0/)
-  !   stencil(3, :) = (/-1,  0,  0/)
-  !   stencil(4, :) = (/ 0,  0,  0/)
-  !   stencil(5, :) = (/ 1,  0,  0/)
-  !   stencil(6, :) = (/ 2,  0,  0/)
-  !   stencil(7, :) = (/ 0, -1,  0/)
+  !   stencil(:, 1) = (/ 0,  1,  0/)
+  !   stencil(:, 2) = (/-2,  0,  0/)
+  !   stencil(:, 3) = (/-1,  0,  0/)
+  !   stencil(:, 3) = (/ 0,  0,  0/)
+  !   stencil(:, 5) = (/ 1,  0,  0/)
+  !   stencil(:, 6) = (/ 2,  0,  0/)
+  !   stencil(:, 7) = (/ 0, -1,  0/)
   ! The points are relative to the "application point" of the stencil.
   subroutine vec_init(comm, root, m, stencil, np_stencil, vp, &
                       np_local, np_ghost)
@@ -263,7 +264,7 @@ contains
         ! For all points in stencil.
         do j = 1, np_stencil
           ! Get index k of possible ghost point.
-          p2 = p1+stencil(j, :)
+          p2 = p1+stencil(:, j)
           ! Check, whether p2 is in the box.
           ! FIXME: How about boundary conditions?
           ! If p2 is out of the box, ignore it for now.
@@ -439,6 +440,13 @@ contains
   ! fi, fo have to be of length vp%np_local(rank+1)+vp%np_ghost(rank+1)
   ! and vec_ghost_update should have been called on the input vector
   ! in advance to have sane values at the ghost points.
+  !
+  ! FIXME: Here are problems with boundary conditions:
+  ! When the operator is applied to a point close enough to
+  ! the boundary, we operate on indices, that do not exist in
+  ! the vector fi. fi has to be prepared somehow according
+  ! to the boundary conditions? How does this influence
+  ! the partitioning scheme?
   subroutine dvec_nl_operator(vp, op, fi, fo)
     type(pv_type),          intent(in)  :: vp
     type(nl_operator_type), intent(in)  :: op
@@ -497,6 +505,9 @@ contains
   ! Parallelizes non-local operator op to pop.
   ! The operator pop is only defined for all local points
   ! of the current node.
+  ! It behaves like nl_operator_init, i. e. creates
+  ! a new operator. Because of this, it is necessary to call
+  ! nl_operator_end on the parallelized operator.
   !
   ! An application example could look like this (op given
   ! and completely initialized):
@@ -522,8 +533,11 @@ contains
   ! ! or gathering and finished.
   ! call dvec_gather(vp, f_local_o, f)
   ! call vec_end(vp)
+  !
+  ! ! Dipose operator
+  ! call nl_operator_end(pop)
   subroutine vec_op_pop(vp, op, pop) 
-    type(pv_type), intent(in)           :: vp
+    type(pv_type),          intent(in)  :: vp
     type(nl_operator_type), intent(in)  :: op
     type(nl_operator_type), intent(out) :: pop
 
