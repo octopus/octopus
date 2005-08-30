@@ -168,7 +168,7 @@ contains
         message(1) = 'If curvilinear coordinates are used, then the only working'
         message(2) = 'Poisson solvers are cg_corrected ("corrected conjugate gradients") and'
         message(3) = 'multigrid.' 
-        call write_fatal(2)
+        call write_fatal(3)
       end if
 
       call messages_print_var_option(stdout, "PoissonSolver", poisson_solver, "Poisson solver:")
