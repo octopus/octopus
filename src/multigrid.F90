@@ -68,22 +68,42 @@ contains
 
     !number of levels. estimated from the number of points
 
-    n_levels=-2
-    np=m%np
+    call loct_parse_int(check_inp('MultigridLevels'), 0, n_levels)
 
-    do while ( np > 1 )
-       np=np/8
-       n_levels=n_levels+1
-    end do
+    !%Variable MultigridLevels
+    !%Type integer
+    !%Section 14 Varia
+    !%Description
+    !% Number of levels in the grid hierachy used for multigrid.
+    !%Option max_levels
+    !% Calculate the optimous number of levels for the grid. Positive
+    !% numbers indicate an absolute numbers of levels, negative
+    !% numbers are substracted to maximum number of levels posible for
+    !% the grid been used. A value of 1 means using only the
+    !% relaxation operator in the finest grid. Default is the maximun
+    !% number of levels.
+    !%End
 
+    if ( n_levels <= 0 )then 
+       n_levels=n_levels-2
+       np=m%np
+
+       do while ( np > 1 )
+          np=np/8
+          n_levels=n_levels+1
+       end do
+    else 
+       n_levels=n_levels-1
+    end if
+    
     mgrid%n_levels = n_levels
-
+       
     allocate(mgrid%level(0:n_levels))
 
     mgrid%level(0)%m     => m
     mgrid%level(0)%f_der => f_der
 
-    print*, "Multigrid levels:", n_levels
+    print*, "Multigrid levels:", n_levels+1
     do i = 1, mgrid%n_levels
        allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)
        call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%m, mgrid%level(i)%m)
