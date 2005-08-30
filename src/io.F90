@@ -79,7 +79,21 @@ contains
        call loct_rm('messages.stderr')
     endif
 
-    ! verbosity level
+    !%Variable Verbose
+    !%Type integer
+    !%Section 1 Generalities
+    !%Description
+    !% This variable decides how verbose the output of the program will be.
+    !%Option silent_mode -1000
+    !% No output at all, except fatal errors.
+    !%Option warning_mode 1 
+    !% Only fatal errors and warnings.
+    !%Option normal_mode 30
+    !% Normal output.
+    !%Option verbose_mode 1000
+    !% Extra information for debugging purposes: entry and exit of selected
+    !% subroutines, memory usage (on some platforms), timing for each subroutine.
+    !%End
     call loct_parse_int('Verbose', VERBOSE_NORMAL, conf%verbose)
     if(conf%verbose > VERBOSE_DEBUG .and. mpiv%node == 0) then
        call loct_parse_int('DebugLevel', 3, conf%debug_level)
