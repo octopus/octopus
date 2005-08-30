@@ -46,18 +46,47 @@ contains
   subroutine curv_gygi_init(cv)
     type(curv_gygi_type), intent(out) :: cv
 
+    !%Variable CurvGygiA
+    !%Type float
+    !%Section 4 Mesh
+    !%Description
+    !% The grid spacing is reduced locally around each atom, and the reduction is
+    !% given by 1/(1+A), where A is specified by this variable, CurvGygiA. So, if
+    !% A=1 (the default), the grid spacing is reduced to one half = 1/(1+1).
+    !% [This is the A_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli, Phys.
+    !% Rev. B 52, R2229 (1995)]
+    !% It must be larger than zero.
+    !%End
     call loct_parse_float(check_inp('CurvGygiA'), M_ONE, cv%A)
+    !%Variable CurvGygiAlpha
+    !%Type float
+    !%Section 4 Mesh
+    !%Description
+    !% This number determines the region over which the grid is enhanced (range of
+    !% enhancement of the resolution). That is, the grid is enhanced on a sphere
+    !% around each atom, whose radius is given by this variable. [This is the a_{\alpha} 
+    !% variable in Eq. 2 of F. Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)].
+    !% The default is two atomic units. 
+    !% It must be larger than zero.
+    !%End
     call loct_parse_float(check_inp('CurvGygiAlpha'), M_TWO/units_inp%length%factor, cv%alpha)
-    call loct_parse_float(check_inp('CurvGygiBeta'),  M_TWO/units_inp%length%factor, cv%beta)
+    !%Variable CurvGygiBeta
+    !%Type float
+    !%Section 4 Mesh
+    !%Description
+    !% This number determines the distance over which Euclidean coordinates are
+    !% recovered. [This is the b_{\alpha} variable in Eq. 2 of F. Gygi and G. Galli, 
+    !% Phys. Rev. B 52, R2229 (1995)]. The default is four atomic units.
+    !% It must be larger than zero.
+    !%End
+    call loct_parse_float(check_inp('CurvGygiBeta'),  M_FOUR/units_inp%length%factor, cv%beta)
+
+    if(cv%a<=M_ZERO)     call input_error('CurvGygiA')
+    if(cv%alpha<=M_ZERO) call input_error('CurvGygiAlpha')
+    if(cv%beta<=M_ZERO)  call input_error('CurvGygiBeta')
 
     cv%alpha = cv%alpha*units_inp%length%factor
     cv%beta  = cv%beta *units_inp%length%factor
-
-    if(cv%A<=M_ZERO.or.cv%alpha<=M_ZERO.or.cv%beta<=M_ZERO) then
-      message(1) = 'The parameters CurvGygiA, CurvGygiAlpha, and CurvGygiBeta'
-      message(2) = 'must all be larger than zero'
-      call write_fatal(2)
-    end if
 
   end subroutine curv_gygi_init
 
