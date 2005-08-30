@@ -52,11 +52,29 @@ contains
 
     call push_sub('curvlinear.curvlinear_init')
 
+    !%Variable CurvMethod
+    !%Type integer
+    !%Section 4 Mesh
+    !%Description
+    !% The relevant functions in octopus are represented on a mesh in real space. 
+    !% This mesh may be an evenly spaced regular rectangular grid (standard mode),
+    !% or else an *adaptive* or *curvilinear grid*. We have implemented (not still
+    !% finished, this is still an experimental feature) three kinds of adative
+    !% meshes.
+    !%Option curv_uniform 1
+    !% Regular, uniform rectangular grid. The default.
+    !%Option curv_gygi 2
+    !% The deformation of the grid is done according to the scheme described by
+    !% F. Gygi [F. Gygi and G. Galli, Phys. Rev. B 52, R2229 (1995)]
+    !%Option curv_briggs 3
+    !% The deformation of the grid is done according to the scheme described by
+    !% Briggs [E.L. Briggs, D.J. Sullivan, and J. Bernholc, Phys. Rev. B 54 14362 (1996)]
+    !%Option curv_modine 4
+    !% The deformation of the grid is done according to the scheme described by
+    !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, Phys. Rev. B 55, 10289 (1997)]
+    !%End
     call loct_parse_int(check_inp('CurvMethod'), CURV_METHOD_UNIFORM, cv%method)
-    if(cv%method<CURV_METHOD_UNIFORM.or.cv%method>CURV_METHOD_MODINE) then
-      write(message(1), '(a,i2,a)') 'Do not have a "CurvMethod = ', cv%method, '"'
-      call write_fatal(1)
-    end if
+    if(cv%method<CURV_METHOD_UNIFORM.or.cv%method>CURV_METHOD_MODINE) call input_error('CurvMethod')
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
