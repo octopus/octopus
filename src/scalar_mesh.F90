@@ -41,21 +41,23 @@ module scalar_mesh
        MESH_GAUSS_LEGENDRE = 5
 
   type scalar_mesh_type
-     integer :: mtype            ! mesh type (see MESH_* variables above)
-     integer :: np               ! number of points in the mesh
-     FLOAT   :: min, max         ! lower and upper boundary for scalar grid
-     FLOAT   :: center           ! highest density of gridpoints is around center
-     FLOAT   :: alpha1, alpha2   ! parameters for logarithmic grid below(1) and above(2) center
-     FLOAT   :: dx               ! grid spacing for linear grid
-     FLOAT, pointer :: mesh(:)   ! the mesh points
-     FLOAT, pointer :: w(:)      ! weights for integrations
+     integer :: mtype             ! mesh type (see MESH_* variables above)
+     integer :: np                ! number of points in the mesh
+     FLOAT   :: min, max          ! lower and upper boundary for scalar grid
+     FLOAT   :: center            ! highest density of gridpoints is around center
+     FLOAT   :: alpha1, alpha2    ! parameters for logarithmic grid below(1) and above(2) center
+     FLOAT   :: dx                ! grid spacing for linear grid
+     FLOAT, pointer    :: mesh(:) ! the mesh points
+     FLOAT, pointer    :: w(:)    ! weights for integrations
+     character(len=32) :: label   ! label for namespacing
   end type scalar_mesh_type
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine scalar_mesh_init(sm)
+  subroutine scalar_mesh_init(sm, label)
     type(scalar_mesh_type), intent(inout) :: sm
+    character(len=*),       intent(in)    :: label
 
     FLOAT :: etmp
 
@@ -76,30 +78,35 @@ contains
     !%Option gauss_legendre 5
     !% Gauss-Legendre mesh
     !%End
-    call loct_parse_int  (check_inp('ScalarMeshType'),             4, sm%mtype)
-    call loct_parse_int  (check_inp('ScalarMeshNPoints'),         20, sm%np)
-    call loct_parse_float(check_inp('ScalarMeshMin'),      CNST(0.0), sm%min)
-    call loct_parse_float(check_inp('ScalarMeshMax'),      CNST(4.0), sm%max)
-    call loct_parse_float(check_inp('ScalarMeshCenter'),   CNST(2.0), sm%center)
-    call loct_parse_float(check_inp('ScalarMeshAlpha1'),   CNST(0.3), sm%alpha1)
-    call loct_parse_float(check_inp('ScalarMeshAlpha2'),   CNST(0.3), sm%alpha2)
+
+    call loct_parse_int  (check_inp(trim(label)//'MeshType'),             4, sm%mtype)
+    call loct_parse_int  (check_inp(trim(label)//'MeshNPoints'),         20, sm%np)
+    call loct_parse_float(check_inp(trim(label)//'MeshMin'),      CNST(0.0), sm%min)
+    call loct_parse_float(check_inp(trim(label)//'MeshMax'),      CNST(4.0), sm%max)
+    call loct_parse_float(check_inp(trim(label)//'MeshCenter'),   CNST(2.0), sm%center)
+    call loct_parse_float(check_inp(trim(label)//'MeshAlpha1'),   CNST(0.3), sm%alpha1)
+    call loct_parse_float(check_inp(trim(label)//'MeshAlpha2'),   CNST(0.3), sm%alpha2)
 
     ! a few sanity checks
     if(sm%min.ge.sm%max) then
-       message(1) = 'Warning: scalar_mesh: ScalarMeshMin is equal to or larger than ScalarMeshMax.'
-       message(2) = 'Reverting order.'
-       call write_warning(2)
-       etmp    = sm%min
+       message(1) = 'Warning: scalar_mesh: '//trim(label)//'MeshMin is equal to or larger'
+       message(2) = 'than '//trim(label)//'MeshMax.'
+       message(3) = 'Reverting order.'
+       call write_warning(3)
+       etmp   = sm%min
        sm%min = sm%max
        sm%max = etmp
     endif
 
     if(sm%center.lt.sm%min.or.sm%center.gt.sm%max) then
-       message(1) = 'Warning: scalar_mesh: ScalarMeshCenter is not in interval [ScalarMeshMin,ScalarMeshMax].'
-       message(2) = 'Will use the average of ScalarMeshMin and ScalarMeshMax.'
-       call write_warning(2)
+       message(1) = 'Warning: scalar_mesh: '//trim(label)//'MeshCenter is not in interval'
+       message(2) = '['//trim(label)//'MeshMin,'//trim(label)//'MeshMax].'
+       message(3) = 'Will use the average of '//trim(label)//'MeshMin and '//trim(label)//'MeshMax.'
+       call write_warning(3)
        sm%center = M_HALF*(sm%min+sm%max)
     endif
+
+    sm%label = label
 
     call scalar_mesh_create(sm)
 
@@ -113,6 +120,7 @@ contains
 
     FLOAT :: xmin1, xmax1, xmin2, xmax2, offset
     FLOAT, allocatable :: gl(:), gw(:)
+    character(len=128) :: filename
     integer :: i
 
     call push_sub('scalar_mesh.scalar_mesh_create')
@@ -128,7 +136,7 @@ contains
 
     select case(sm%mtype)
     case(MESH_LINEAR)
-       message(1) = 'Info: scalar_mesh: Using linear scalar mesh.'
+       message(1) = 'Info: scalar_mesh: Using linear scalar mesh for '//trim(sm%label)
        call write_info(1)
 
        ! setup linear mesh
@@ -152,7 +160,7 @@ contains
 
 
     case(MESH_LOG)
-       message(1) = 'Info: scalar_mesh: Using logarithmic scalar mesh.'
+       message(1) = 'Info: scalar_mesh: Using logarithmic scalar mesh for '//trim(sm%label)
        call write_info(1)
 
        do i = 1, 2*sm%np+1
@@ -169,7 +177,7 @@ contains
 
 
     case(MESH_DOUBLE_LOG)
-       message(1) = 'Info: scalar_mesh: Using double logarithmic scalar mesh.'
+       message(1) = 'Info: scalar_mesh: Using double logarithmic scalar mesh for '//trim(sm%label)
        call write_info(1)
 
        ! setup double logarithmic mesh
@@ -206,7 +214,7 @@ contains
 
 
     case(MESH_SINH)
-       message(1) = 'Info: scalar_mesh: Using sinh scalar mesh.'
+       message(1) = 'Info: scalar_mesh: Using sinh scalar mesh for '//trim(sm%label)
        call write_info(1)
 
        ! setup sinh mesh
@@ -224,7 +232,7 @@ contains
        enddo
 
     case(MESH_GAUSS_LEGENDRE)
-       message(1) = 'Info: scalar_mesh: Using Gauss-Legendre scalar mesh.'
+       message(1) = 'Info: scalar_mesh: Using Gauss-Legendre scalar mesh for '//trim(sm%label)
        call write_info(1)
 
        allocate(gl(2*sm%np+1), gw(2*sm%np+1))
@@ -246,7 +254,8 @@ contains
        call write_fatal(2)
     end select
 
-    call scalar_mesh_write(sm, 'scalar_mesh.dat')
+    filename = trim(sm%label)//'_mesh.dat'
+    call scalar_mesh_write(sm, filename)
 
     call pop_sub()
   end subroutine scalar_mesh_create
