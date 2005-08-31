@@ -450,7 +450,7 @@ contains
     integer :: i, n
     FLOAT, allocatable :: w_re(:)
 
-    call push_sub('nl_operator.znl_operator_init')
+    call push_sub('nl_operator.znl_operator_operate')
 
     n = op%n
     if(op%const_w) then
