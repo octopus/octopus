@@ -97,7 +97,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
                st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
         end if
 
-        if(st%st_start <= ist .and. st%st_end >= ist .and. mpiv%node==0) then
+        if(st%st_start <= ist .and. st%st_end >= ist) then
           call X(restart_write_function)(dir, filename, gr, st%X(psi) (:, idim, ist, ik), err, size(st%X(psi),1))
           if(err == 0) ierr = ierr + 1
         end if
