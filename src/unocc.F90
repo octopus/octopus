@@ -49,37 +49,26 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   logical,                intent(inout) :: fromScratch
 
   type(eigen_solver_type) :: eigens
-  integer :: iunit, err, ik, p
+  integer :: iunit, err, ik, p, occupied_states
   R_TYPE, allocatable :: h_psi(:,:)
   logical :: converged
 
   ierr = 0
+  occupied_states = sys%st%nst
   call init_(sys%gr%m, sys%st)
 
-  if(.not.fromScratch) then
-    ! not all states will be read, that is the reason for the <0 instead of .ne.0
-    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
-    if(err < 0) then
-      message(1) = 'Could not load "'//trim(tmpdir)//'restart_unocc": Starting from scratch'
-      call write_warning(1)
-
-      fromScratch = .true.
-    end if
-  end if
-
-  if(fromScratch) then
-    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
-    if(err < 0) then
-      message(1) = "Could not load '"//trim(tmpdir)//"restart_gs: Starting from scratch'"
-      call write_warning(1)
-
-      ierr = 1
-      call end_()
-      return
-    end if
-    message(1) = "Loaded wave-functions from '"//trim(tmpdir)//"restart_gs'"
-    call write_info(1)
-  end if
+  call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
+  if( (err .ne. 0)  .and.  (err < occupied_states) ) then
+     message(1) = "Not all the occupied states could be read from '"//trim(tmpdir)//"restart_gs'"
+     message(2) = "I will start a gs calculation."
+     call write_warning(2)
+     ierr = 1
+     call end_()
+     return
+  else
+     message(1) = "Loaded wave-functions from '"//trim(tmpdir)//"restart_gs'"
+     call write_info(1)
+  endif
 
   ! Setup Hamiltonian
   message(1) = 'Info: Setting up Hamiltonian.'
@@ -107,9 +96,9 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   call eigen_solver_run(eigens, sys%gr, sys%st, h, 1, converged, verbose = .true.)
 
   ! write restart information.
-  call X(restart_write) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr, err)
+  call X(restart_write) (trim(tmpdir)//'restart_gs', sys%st, sys%gr, err)
   if(err.ne.0) then
-    message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_unocc"'
+    message(1) = 'Unsuccesfull write of "'//trim(tmpdir)//'restart_gs"'
     call write_fatal(1)
   end if
 

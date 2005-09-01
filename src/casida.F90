@@ -83,9 +83,9 @@ contains
     ierr = 0
     call init_()
 
-    call X(restart_read) (trim(tmpdir)//'restart_unocc', sys%st, sys%gr%m, err)
+    call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
     if(err.ne.0) then
-       message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_unocc"'
+       message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_gs"'
        call write_warning(1)
 
        ierr = 1
@@ -105,7 +105,7 @@ contains
     end do
     if(n.ne.cas%n_unocc) then
        message(1) = "Inconsistency between variable 'NumberUnoccStates' and file"
-       message(2) = "'"//trim(tmpdir)//"restart_unocc/occs'"
+       message(2) = "'"//trim(tmpdir)//"restart_gs/occs'"
        call write_fatal(2)
     else
        write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
