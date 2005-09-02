@@ -29,7 +29,7 @@ octopus_SOURCES = $(core_SRCS) \
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 opt_control.F90 \
+	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 opt_control.F90 \
 	casida.F90 wave_matching.F90 par_vec.F90 static_pol_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
@@ -46,7 +46,7 @@ noinst_HEADERS = \
 	crystal.F90 restart_inc.F90 states_inc.F90 states_kpoints.F90 \
 	linear_response_inc.F90 \
 	pes_rc.F90 pes_mask.F90 \
-	td_init.F90 td_write.F90 td_calc.F90\
+	td_init.F90 td_calc.F90\
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
@@ -89,7 +89,7 @@ oct_test_SOURCES = $(core_SRCS) lasers.F90 epot.F90 h.F90 linear_response.F90 xc
 	eigen.F90 lcao.F90 pes.F90 \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
-	td_exp_split.F90 td_exp.F90 td_rti.F90 td.F90 opt_control.F90 \
+	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 opt_control.F90 \
 	casida.F90 wave_matching.F90 static_pol_lr.F90 pulpo.F90 \
 	run.F90 oct_test.F90
 
@@ -214,7 +214,7 @@ strength_function.o: global.h
 systm.o: global.h
 td_exp.o: global.h
 td_exp_split.o: global.h
-td.o: global.h td_write.F90 td_init.F90
+td.o: global.h td_init.F90
 td_rti.o: global.h
 td_write.o: td_calc.F90
 tm.o: global.h

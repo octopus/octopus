@@ -38,6 +38,7 @@ module timedep
   use external_pot
   use system
   use td_rti
+  use td_write
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   use PES
 #endif
@@ -399,7 +400,7 @@ contains
       call push_sub('td.iter_output')
 
       ! output multipoles
-      if(td%out_multip) call td_write_multipole(gr, out_multip, st, td, i)
+      if(td%out_multip) call td_write_multipole(gr, out_multip, st, td%lmax, td%pol, i)
 
       ! output angular momentum
       if(td%out_angular) call td_write_angular(out_angular, gr, st, i)
@@ -408,7 +409,7 @@ contains
       if(td%out_spin) call td_write_spin(out_spin, gr%m, st, i)
 
       ! output atoms magnetization
-      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td, i)
+      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td%lmm_r, i)
 
       ! output projections onto the GS KS eigenfunctions
       if(td%out_proj) call td_write_proj(gr, out_proj, st, gs_st, i)
@@ -417,10 +418,10 @@ contains
       if(td%out_coords) call td_write_nbo(gr, out_coords, i, geo%kinetic_energy, h%etot)
 
       ! If harmonic spectrum is desired, get the acceleration
-      if(td%out_acc) call td_write_acc(gr, out_acc, st, h, td, i)
+      if(td%out_acc) call td_write_acc(gr, out_acc, st, h, td%dt, i)
 
       ! output laser field
-      if(td%out_laser) call td_write_laser(gr, out_laser, h, td, i)
+      if(td%out_laser) call td_write_laser(gr, out_laser, h, td%dt, i)
 
       ! output electronic energy
       if(td%out_energy) call td_write_el_energy(out_energy, h, i)
@@ -436,18 +437,18 @@ contains
       ! create general subdir
       call io_mkdir('td.general')
 
-      if(td%out_multip)  call td_write_multipole(gr, out_multip, st, td, 0)
+      if(td%out_multip)  call td_write_multipole(gr, out_multip, st, td%lmax, td%pol, 0)
       if(td%out_angular) call td_write_angular(out_angular, gr, st, 0)
       if(td%out_spin)    call td_write_spin(out_spin, gr%m, st, 0)
-      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td, 0)
+      if(td%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td%lmm_r, 0)
       if(td%out_proj) call td_write_proj(gr, out_proj, st, gs_st, 0)
 
       call apply_delta_field()
 
       ! create files for output and output headers
       if(td%out_coords) call td_write_nbo(gr, out_coords, 0, geo%kinetic_energy, h%etot)
-      if(td%out_acc)    call td_write_acc(gr, out_acc, st, h, td, 0)
-      if(td%out_laser)  call td_write_laser(gr, out_laser, h, td, 0)
+      if(td%out_acc)    call td_write_acc(gr, out_acc, st, h, td%dt, 0)
+      if(td%out_laser)  call td_write_laser(gr, out_laser, h, td%dt, 0)
       if(td%out_energy) call td_write_el_energy(out_energy, h, 0)
 
       call td_write_data(0)
@@ -617,7 +618,7 @@ contains
       end if
 
       ! calculate projection onto the ground state
-      if(td%out_gsp) call td_write_gsp(out_gsp, gr%m, st, td, iter)
+      if(td%out_gsp) call td_write_gsp(out_gsp, gr%m, st, td%dt, iter)
 
       if(mpiv%node==0) then
          if(td%out_multip)  call write_iter_flush(out_multip)
@@ -650,8 +651,6 @@ contains
 
   end function td_run
 
-#include "td_write.F90"
 #include "td_init.F90"
-#include "td_calc.F90"
 
 end module timedep

@@ -17,6 +17,42 @@
 !!
 !! $Id$
 
+#include "global.h"
+
+module td_write
+  use global
+  use messages
+  use lib_oct
+  use geometry
+  use mesh
+  use grid
+  use mesh_function
+  use functions
+  use states
+  use output
+  use restart
+  use lasers
+  use hamiltonian
+  use external_pot
+  use grid
+
+  implicit none
+
+  private
+  public :: td_write_spin, &
+            td_write_local_magnetic_moments, &
+            td_write_angular, &
+            td_write_multipole, &
+            td_write_nbo, &
+            td_write_el_energy, &
+            td_write_laser, &
+            td_write_acc, &
+            td_write_gsp, &
+            td_write_proj
+
+
+contains
+
 subroutine td_write_spin(out, m, st, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(in) :: m
@@ -70,12 +106,12 @@ subroutine td_write_spin(out, m, st, iter)
   call pop_sub()
 end subroutine td_write_spin
 
-subroutine td_write_local_magnetic_moments(out, m, st, geo, td, iter)
+subroutine td_write_local_magnetic_moments(out, m, st, geo, lmm_r, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
   type(geometry_type),   intent(in) :: geo
-  type(td_type),         intent(in) :: td
+  FLOAT,                 intent(in) :: lmm_r
   integer,               intent(in) :: iter
 
   integer :: ia
@@ -88,7 +124,7 @@ subroutine td_write_local_magnetic_moments(out, m, st, geo, td, iter)
 
     !get the atoms magnetization
     allocate(lmm(3, geo%natoms))
-    call states_local_magnetic_moments(m, st, geo, st%rho, td%lmm_r, lmm)
+    call states_local_magnetic_moments(m, st, geo, st%rho, lmm_r, lmm)
 
     if(iter ==0) then
       !empty file
@@ -180,11 +216,12 @@ subroutine td_write_angular(out, gr, st, iter)
   call pop_sub()
 end subroutine td_write_angular
 
-subroutine td_write_multipole(gr, out, st, td, iter)
+subroutine td_write_multipole(gr, out, st, lmax, pol, iter)
   type(grid_type),       intent(in) :: gr
   integer(POINTER_SIZE), intent(in) :: out
   type(states_type),     intent(in) :: st
-  type(td_type),         intent(in) :: td
+  integer,               intent(in) :: lmax   
+  FLOAT,                 intent(in) :: pol(3)
   integer,               intent(in) :: iter
 
   integer :: is, j, l, m, add_lm
@@ -200,7 +237,7 @@ subroutine td_write_multipole(gr, out, st, td, iter)
     call write_iter_clear(out)
 
     ! first line
-    write(aux, '(a10,i2,a8,i2)') '# nspin = ', st%d%nspin, ' lmax = ', td%lmax
+    write(aux, '(a10,i2,a8,i2)') '# nspin = ', st%d%nspin, ' lmax = ', lmax
     call write_iter_string(out, aux)
     call write_iter_nl(out)
 
@@ -216,7 +253,7 @@ subroutine td_write_multipole(gr, out, st, td, iter)
       call write_iter_header(out, aux)
     enddo
     do is = 1, st%d%nspin
-      do l = 0, td%lmax
+      do l = 0, lmax
         do m = -l, l
           write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
           call write_iter_header(out, aux)
@@ -237,7 +274,7 @@ subroutine td_write_multipole(gr, out, st, td, iter)
     enddo
 
     do is = 1, st%d%nspin
-      do l = 0, td%lmax
+      do l = 0, lmax
         do m = -l, l
           select case(l)
           case(0)
@@ -254,8 +291,8 @@ subroutine td_write_multipole(gr, out, st, td, iter)
     call write_iter_nl(out)
   end if
 
-  allocate(dipole(st%d%nspin), nuclear_dipole(NDIM), multipole((td%lmax + 1)**2, st%d%nspin))
-  call states_calculate_multipoles(gr, st, td%pol, dipole, td%lmax, multipole)
+  allocate(dipole(st%d%nspin), nuclear_dipole(NDIM), multipole((lmax + 1)**2, st%d%nspin))
+  call states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
   call geometry_dipole(gr%geo, nuclear_dipole)
 
   call write_iter_start(out)
@@ -267,7 +304,7 @@ subroutine td_write_multipole(gr, out, st, td, iter)
   enddo
   do is = 1, st%d%nspin
     add_lm = 1
-    do l = 0, td%lmax
+    do l = 0, lmax
       do m = -l, l
         call write_iter_double(out, multipole(add_lm, is)/units_out%length%factor**l, 1)
         add_lm = add_lm + 1
@@ -352,11 +389,11 @@ subroutine td_write_nbo(gr, out, iter, ke, pe)
 
 end subroutine td_write_nbo
 
-subroutine td_write_gsp(out, m, st, td, iter)
+subroutine td_write_gsp(out, m, st, dt, iter)
   integer(POINTER_SIZE), intent(in) :: out
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
-  type(td_type),         intent(in) :: td
+  FLOAT,                 intent(in) :: dt
   integer,               intent(in) :: iter
 
   CMPLX :: gsp
@@ -394,7 +431,7 @@ subroutine td_write_gsp(out, m, st, td, iter)
 
     ! can not call write_iter_start, for the step is not 1
     call write_iter_int(out, iter, 1)
-    call write_iter_double(out, iter*td%dt/units_out%time%factor,  1)
+    call write_iter_double(out, iter*dt/units_out%time%factor,  1)
     call write_iter_double(out, real(gsp),  1)
     call write_iter_double(out, aimag(gsp), 1)
     call write_iter_nl(out)
@@ -403,12 +440,12 @@ subroutine td_write_gsp(out, m, st, td, iter)
   call pop_sub()
 end subroutine td_write_gsp
 
-subroutine td_write_acc(gr, out, st, h, td, iter)
+subroutine td_write_acc(gr, out, st, h, dt, iter)
   type(grid_type),        intent(inout) :: gr
   integer(POINTER_SIZE),  intent(in)    :: out
   type(states_type),      intent(in)    :: st
   type(hamiltonian_type), intent(in)    :: h
-  type(td_type),          intent(in)    :: td
+  FLOAT,                  intent(in)    :: dt
   integer,                intent(in)    :: iter
 
   integer :: i
@@ -438,7 +475,7 @@ subroutine td_write_acc(gr, out, st, h, td, iter)
     call write_iter_nl(out)
   endif
 
-  call td_calc_tacc(gr, st, h, acc, td%dt*i, reduce = .true.)
+  call td_calc_tacc(gr, st, h, acc, dt*i, reduce = .true.)
 
   call write_iter_start(out)
   call write_iter_double(out, acc/units_out%acceleration%factor, NDIM)
@@ -447,11 +484,11 @@ subroutine td_write_acc(gr, out, st, h, td, iter)
 end subroutine td_write_acc
 
 
-subroutine td_write_laser(gr, out, h, td, iter)
+subroutine td_write_laser(gr, out, h, dt, iter)
   type(grid_type),        intent(in) :: gr
   integer(POINTER_SIZE),  intent(in) :: out
   type(hamiltonian_type), intent(in) :: h
-  type(td_type),          intent(in) :: td
+  FLOAT,                  intent(in) :: dt
   integer,                intent(in) :: iter
 
   integer :: i
@@ -466,7 +503,7 @@ subroutine td_write_laser(gr, out, h, td, iter)
     call write_iter_clear(out)
 
     ! first line
-    write(aux, '(a7,e20.12,3a)') '# dt = ', td%dt/units_out%time%factor, &
+    write(aux, '(a7,e20.12,3a)') '# dt = ', dt/units_out%time%factor, &
          " [", trim(units_out%time%abbrev), "]"
     call write_iter_string(out, aux)
     call write_iter_nl(out)
@@ -503,11 +540,11 @@ subroutine td_write_laser(gr, out, h, td, iter)
 
   field = M_ZERO
 
-  call laser_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
+  call laser_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
   field = field * units_inp%length%factor / units_inp%energy%factor
   call write_iter_double(out, field, NDIM)
 
-  call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*td%dt, field)
+  call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
   field = field  * units_inp%length%factor
   call write_iter_double(out, field, NDIM)
 
@@ -605,3 +642,7 @@ subroutine td_write_proj(gr, out, st, u_st, iter)
   deallocate(projections)
   call pop_sub()
 end subroutine td_write_proj
+
+#include "td_calc.F90"
+
+end module td_write
