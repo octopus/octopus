@@ -91,25 +91,16 @@ subroutine td_init(gr, td, st, h, outp)
   endif
 
   ! Check what should be output
-  call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., td%out_multip)
-  if(td%move_ions>0) then
-    call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., td%out_coords)
-  else
-    td%out_coords = .false.
-  end if
-  call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., td%out_angular)
-  call loct_parse_logical(check_inp('TDOutputSpin'), .false., td%out_spin)
-  call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., td%out_gsp)
-  call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., td%out_acc)
-  if(td%out_acc.and.td%move_ions>0) then
+
+  call td_write_init(td%write_handler, (td%move_ions>0), (h%ep%no_lasers>0) )
+
+  ! Compatibility test
+  if(td%write_handler%out_acc.and.td%move_ions>0) then
     message(1) = 'Error. If harmonic spectrum is to be calculated'
     message(2) = 'Atoms should not be allowed to move'
     call write_fatal(2)
   endif
-  call loct_parse_logical(check_inp('TDOutputLaser'), h%ep%no_lasers>0, td%out_laser)
-  call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., td%out_energy)
-  call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., td%out_proj)
-  call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., td%out_magnets)
+
   call geometry_min_distance(gr%geo, rmin)
   call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, td%lmm_r)
   td%lmm_r = td%lmm_r * units_inp%length%factor

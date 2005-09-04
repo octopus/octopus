@@ -22,6 +22,7 @@
 module td_write
   use global
   use messages
+  use io
   use lib_oct
   use geometry
   use mesh
@@ -39,7 +40,40 @@ module td_write
   implicit none
 
   private
-  public :: td_write_spin, &
+
+  type td_write_type
+     !variables controlling the output
+     logical           :: out_multip     ! multipoles
+     logical           :: out_coords     ! coordinates
+     logical           :: out_gsp        ! projection onto the ground state.
+     logical           :: out_acc        ! electronic acceleration
+     logical           :: out_laser      ! laser field
+     logical           :: out_energy     ! several components of the electronic energy
+     logical           :: out_proj       ! projection onto the GS KS eigenfunctions
+     logical           :: out_angular    ! total angular momentum
+     logical           :: out_spin       ! total spin
+     logical           :: out_magnets    ! local magnetic moments
+  end type td_write_type
+
+  integer(POINTER_SIZE), public :: out_multip, &
+                                   out_coords, &
+                                   out_gsp, &
+                                   out_acc, &
+                                   out_laser, &
+                                   out_energy, &
+                                   out_proj, &
+                                   out_angular, &
+                                   out_spin, &
+                                   out_magnets
+
+
+
+  public :: td_write_type, &
+            td_write_init, &
+            td_write_init_iter, &
+            td_write_end_iter, &
+            td_write_data, &
+            td_write_spin, &
             td_write_local_magnetic_moments, &
             td_write_angular, &
             td_write_multipole, &
@@ -52,6 +86,138 @@ module td_write
 
 
 contains
+
+subroutine td_write_init(write_handler, ions_move, there_are_lasers)
+  type(td_write_type)       :: write_handler
+  logical, intent(in) :: ions_move, there_are_lasers
+
+  call push_sub('td_write.td_write_handler')
+
+
+  call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., write_handler%out_multip)
+  call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., write_handler%out_coords)
+       if(.not.(ions_move))  write_handler%out_coords = .false.
+  call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., write_handler%out_angular)
+  call loct_parse_logical(check_inp('TDOutputSpin'), .false., write_handler%out_spin)
+  call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., write_handler%out_gsp)
+  call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., write_handler%out_acc)
+  call loct_parse_logical(check_inp('TDOutputLaser'), there_are_lasers, write_handler%out_laser)
+  call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., write_handler%out_energy)
+  call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., write_handler%out_proj)
+  call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., write_handler%out_magnets)
+
+  call pop_sub()
+end subroutine td_write_init
+
+subroutine td_write_init_iter(write_handler, iter, dt)
+  type(td_write_type)       :: write_handler
+  integer, intent(in)       :: iter
+  FLOAT, intent(in)         :: dt
+
+  call push_sub('td_write_init_iter')
+
+  character(len=256) :: filename
+  integer :: first
+
+  if (iter == 0) then
+      first = 0
+  else
+      first = iter + 1
+  end if
+
+  if(mpiv%node==0) then
+    if(write_handler%out_multip)  call write_iter_init(out_multip,  first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/multipoles")))
+    if(write_handler%out_angular) call write_iter_init(out_angular, first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/angular")))
+    if(write_handler%out_spin)    call write_iter_init(out_spin,    first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/spin")))
+    if(write_handler%out_magnets) call write_iter_init(out_magnets, first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/magnetic_moments")))
+    if(write_handler%out_coords)  call write_iter_init(out_coords,  first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/coordinates")))
+    if(write_handler%out_gsp)     call write_iter_init(out_gsp,     first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/gs_projection")))
+    if(write_handler%out_acc)     call write_iter_init(out_acc,     first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/acceleration")))
+    if(write_handler%out_laser)   call write_iter_init(out_laser,   first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/laser")))
+    if(write_handler%out_energy)  call write_iter_init(out_energy,  first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/el_energy")))
+    if(write_handler%out_proj)    call write_iter_init(out_proj,    first, dt/units_out%time%factor, &
+              trim(io_workpath("td.general/projections")))
+  end if
+
+  call pop_sub()
+end subroutine td_write_init_iter
+
+subroutine td_write_end_iter(write_handler)
+  type(td_write_type), intent(in) :: write_handler
+
+  call push_sub('end_iter_output')
+
+  if(mpiv%node==0) then
+    if(write_handler%out_multip)  call write_iter_end(out_multip)
+    if(write_handler%out_angular) call write_iter_end(out_angular)
+    if(write_handler%out_spin)    call write_iter_end(out_spin)
+    if(write_handler%out_magnets) call write_iter_end(out_magnets)
+    if(write_handler%out_coords)  call write_iter_end(out_coords)
+    if(write_handler%out_gsp)     call write_iter_end(out_gsp)
+    if(write_handler%out_acc)     call write_iter_end(out_acc)
+    if(write_handler%out_laser)   call write_iter_end(out_laser)
+    if(write_handler%out_energy)  call write_iter_end(out_energy)
+    if(write_handler%out_proj)    call write_iter_end(out_proj)
+  end if
+
+  call pop_sub()
+end subroutine td_write_end_iter
+
+subroutine td_write_data(write_handler, gr, st, h, outp, geo, dt, iter)
+  type(td_write_type), intent(in) :: write_handler
+  type(grid_type),       intent(inout) :: gr
+  type(states_type),     intent(in)    :: st
+  type(hamiltonian_type), intent(in)    :: h
+  type(output_type),     intent(in)    :: outp
+  type(geometry_type),   intent(in)    :: geo
+  FLOAT, intent(in) :: dt
+  integer, intent(in) :: iter
+
+ 
+  character(len=256) :: filename
+
+  call push_sub('td.td_write_data')
+
+  ! calculate projection onto the ground state
+  if(write_handler%out_gsp) call td_write_gsp(out_gsp, gr%m, st, dt, iter)
+
+  if(mpiv%node==0) then
+      if(write_handler%out_multip)  call write_iter_flush(out_multip)
+      if(write_handler%out_angular) call write_iter_flush(out_angular)
+      if(write_handler%out_spin)    call write_iter_flush(out_spin)
+      if(write_handler%out_magnets) call write_iter_flush(out_magnets)
+      if(write_handler%out_coords)  call write_iter_flush(out_coords)
+      if(write_handler%out_gsp)     call write_iter_flush(out_gsp)
+      if(write_handler%out_acc)     call write_iter_flush(out_acc)
+      if(write_handler%out_laser)   call write_iter_flush(out_laser)
+      if(write_handler%out_energy)  call write_iter_flush(out_energy)
+  end if
+
+  if(write_handler%out_proj) call write_iter_flush(out_proj)
+
+  ! now write down the rest
+  write(filename, '(a,i7.7)') "td.", iter  ! name of directory
+
+  call zstates_output(st, gr, filename, outp)
+  if(outp%what(output_geometry)) &
+      call atom_write_xyz(filename, "geometry", geo)
+  call hamiltonian_output(h, gr%m, gr%sb, filename, outp)
+
+!!$#if !defined(DISABLE_PES) && defined(HAVE_FFT)
+!!$  call PES_output(td%PESv, gr%m, st, iter, outp%iter, dt)
+!!$#endif
+
+  call pop_sub()
+end subroutine td_write_data
 
 subroutine td_write_spin(out, m, st, iter)
   integer(POINTER_SIZE), intent(in) :: out
