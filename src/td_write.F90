@@ -40,77 +40,65 @@ module td_write
   implicit none
 
   private
-
-  type td_write_type
-     !variables controlling the output
-     logical           :: out_multip     ! multipoles
-     logical           :: out_coords     ! coordinates
-     logical           :: out_gsp        ! projection onto the ground state.
-     logical           :: out_acc        ! electronic acceleration
-     logical           :: out_laser      ! laser field
-     logical           :: out_energy     ! several components of the electronic energy
-     logical           :: out_proj       ! projection onto the GS KS eigenfunctions
-     logical           :: out_angular    ! total angular momentum
-     logical           :: out_spin       ! total spin
-     logical           :: out_magnets    ! local magnetic moments
-  end type td_write_type
-
-  integer(POINTER_SIZE), public :: out_multip, &
-                                   out_coords, &
-                                   out_gsp, &
-                                   out_acc, &
-                                   out_laser, &
-                                   out_energy, &
-                                   out_proj, &
-                                   out_angular, &
-                                   out_spin, &
-                                   out_magnets
-
-
-
   public :: td_write_type, &
             td_write_init, &
             td_write_init_iter, &
             td_write_end_iter, &
-            td_write_data, &
-            td_write_spin, &
-            td_write_local_magnetic_moments, &
-            td_write_angular, &
-            td_write_multipole, &
-            td_write_nbo, &
-            td_write_el_energy, &
-            td_write_laser, &
-            td_write_acc, &
-            td_write_gsp, &
-            td_write_proj
+            td_write_iter, &
+            td_write_data
+
+
+  type td_write_type
+    integer(POINTER_SIZE) :: out_multip, &
+                             out_coords, &
+                             out_gsp,    &
+                             out_acc,    &
+                             out_laser,  &
+                             out_energy, &
+                             out_proj,   &
+                             out_angular,&
+                             out_spin,   &
+                             out_magnets
+  end type td_write_type
 
 
 contains
 
-subroutine td_write_init(write_handler, ions_move, there_are_lasers)
-  type(td_write_type)       :: write_handler
+subroutine td_write_init(w, ions_move, there_are_lasers)
+  type(td_write_type)       :: w
   logical, intent(in) :: ions_move, there_are_lasers
+
+  logical :: log
 
   call push_sub('td_write.td_write_handler')
 
-
-  call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., write_handler%out_multip)
-  call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., write_handler%out_coords)
-       if(.not.(ions_move))  write_handler%out_coords = .false.
-  call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., write_handler%out_angular)
-  call loct_parse_logical(check_inp('TDOutputSpin'), .false., write_handler%out_spin)
-  call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., write_handler%out_gsp)
-  call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., write_handler%out_acc)
-  call loct_parse_logical(check_inp('TDOutputLaser'), there_are_lasers, write_handler%out_laser)
-  call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., write_handler%out_energy)
-  call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., write_handler%out_proj)
-  call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., write_handler%out_magnets)
+  call loct_parse_logical(check_inp('TDOutputMultipoles'), .true., log)
+       w%out_multip = 0; if(log) w%out_multip = 1
+  call loct_parse_logical(check_inp('TDOutputCoordinates'), .true., log)
+       if(.not.(ions_move))  log = .false.
+       w%out_coords = 0; if(log) w%out_coords = 1
+  call loct_parse_logical(check_inp('TDOutputAngularMomentum'), .false., log)
+       w%out_angular = 0; if(log) w%out_angular = 1
+  call loct_parse_logical(check_inp('TDOutputSpin'), .false., log)
+       w%out_spin = 0; if(log) w%out_spin = 1
+  call loct_parse_logical(check_inp('TDOutputGSProjection'), .false., log)
+       w%out_gsp = 0; if(log) w%out_gsp = 1
+  call loct_parse_logical(check_inp('TDOutputAcceleration'), .false., log)
+       w%out_acc = 0; if(log) w%out_acc = 1
+  call loct_parse_logical(check_inp('TDOutputLaser'), there_are_lasers, log)
+       w%out_laser = 0; if(log) w%out_laser = 1
+  call loct_parse_logical(check_inp('TDOutputElEnergy'), .false., log)
+       w%out_energy = 0; if(log) w%out_energy = 1
+  call loct_parse_logical(check_inp('TDOutputOccAnalysis'), .false., log)
+       w%out_proj = 0; if(log) w%out_proj = 1
+  call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., log)
+       w%out_magnets = 0; if(log) w%out_magnets = 1
 
   call pop_sub()
 end subroutine td_write_init
 
-subroutine td_write_init_iter(write_handler, iter, dt)
-  type(td_write_type)       :: write_handler
+subroutine td_write_init_iter(w, iter, dt)
+  type(td_write_type)       :: w
   integer, intent(in)       :: iter
   FLOAT, intent(in)         :: dt
 
@@ -126,54 +114,82 @@ subroutine td_write_init_iter(write_handler, iter, dt)
   end if
 
   if(mpiv%node==0) then
-    if(write_handler%out_multip)  call write_iter_init(out_multip,  first, dt/units_out%time%factor, &
+    if(w%out_multip.ne.0)  call write_iter_init(w%out_multip,  first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/multipoles")))
-    if(write_handler%out_angular) call write_iter_init(out_angular, first, dt/units_out%time%factor, &
+    if(w%out_angular.ne.0) call write_iter_init(w%out_angular, first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/angular")))
-    if(write_handler%out_spin)    call write_iter_init(out_spin,    first, dt/units_out%time%factor, &
+    if(w%out_spin.ne.0)    call write_iter_init(w%out_spin,    first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/spin")))
-    if(write_handler%out_magnets) call write_iter_init(out_magnets, first, dt/units_out%time%factor, &
+    if(w%out_magnets.ne.0) call write_iter_init(w%out_magnets, first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/magnetic_moments")))
-    if(write_handler%out_coords)  call write_iter_init(out_coords,  first, dt/units_out%time%factor, &
+    if(w%out_coords.ne.0)  call write_iter_init(w%out_coords,  first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/coordinates")))
-    if(write_handler%out_gsp)     call write_iter_init(out_gsp,     first, dt/units_out%time%factor, &
+    if(w%out_gsp.ne.0)     call write_iter_init(w%out_gsp,     first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/gs_projection")))
-    if(write_handler%out_acc)     call write_iter_init(out_acc,     first, dt/units_out%time%factor, &
+    if(w%out_acc.ne.0)     call write_iter_init(w%out_acc,     first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/acceleration")))
-    if(write_handler%out_laser)   call write_iter_init(out_laser,   first, dt/units_out%time%factor, &
+    if(w%out_laser.ne.0)   call write_iter_init(w%out_laser,   first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/laser")))
-    if(write_handler%out_energy)  call write_iter_init(out_energy,  first, dt/units_out%time%factor, &
+    if(w%out_energy.ne.0)  call write_iter_init(w%out_energy,  first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/el_energy")))
-    if(write_handler%out_proj)    call write_iter_init(out_proj,    first, dt/units_out%time%factor, &
+    if(w%out_proj.ne.0)    call write_iter_init(w%out_proj,    first, dt/units_out%time%factor, &
               trim(io_workpath("td.general/projections")))
   end if
 
   call pop_sub()
 end subroutine td_write_init_iter
 
-subroutine td_write_end_iter(write_handler)
-  type(td_write_type), intent(in) :: write_handler
+subroutine td_write_end_iter(w)
+  type(td_write_type), intent(in) :: w
 
   call push_sub('end_iter_output')
 
   if(mpiv%node==0) then
-    if(write_handler%out_multip)  call write_iter_end(out_multip)
-    if(write_handler%out_angular) call write_iter_end(out_angular)
-    if(write_handler%out_spin)    call write_iter_end(out_spin)
-    if(write_handler%out_magnets) call write_iter_end(out_magnets)
-    if(write_handler%out_coords)  call write_iter_end(out_coords)
-    if(write_handler%out_gsp)     call write_iter_end(out_gsp)
-    if(write_handler%out_acc)     call write_iter_end(out_acc)
-    if(write_handler%out_laser)   call write_iter_end(out_laser)
-    if(write_handler%out_energy)  call write_iter_end(out_energy)
-    if(write_handler%out_proj)    call write_iter_end(out_proj)
+    if(w%out_multip.ne.0)  call write_iter_end(w%out_multip)
+    if(w%out_angular.ne.0) call write_iter_end(w%out_angular)
+    if(w%out_spin.ne.0)    call write_iter_end(w%out_spin)
+    if(w%out_magnets.ne.0) call write_iter_end(w%out_magnets)
+    if(w%out_coords.ne.0)  call write_iter_end(w%out_coords)
+    if(w%out_gsp.ne.0)     call write_iter_end(w%out_gsp)
+    if(w%out_acc.ne.0)     call write_iter_end(w%out_acc)
+    if(w%out_laser.ne.0)   call write_iter_end(w%out_laser)
+    if(w%out_energy.ne.0)  call write_iter_end(w%out_energy)
+    if(w%out_proj.ne.0)    call write_iter_end(w%out_proj)
   end if
 
   call pop_sub()
 end subroutine td_write_end_iter
 
-subroutine td_write_data(write_handler, gr, st, h, outp, geo, dt, iter)
-  type(td_write_type), intent(in) :: write_handler
+subroutine td_write_iter(w, gr, st, gs_st, h, geo, lmax, pol, lmm_r, dt, i)
+  type(td_write_type),    intent(in) :: w
+  type(grid_type),        intent(inout) :: gr
+  type(states_type),      intent(in)    :: st
+  type(states_type),      intent(in)    :: gs_st
+  type(hamiltonian_type), intent(in)    :: h
+  type(geometry_type),    intent(in)    :: geo
+  integer,                intent(in) :: lmax   
+  FLOAT,                  intent(in) :: pol(3)
+  FLOAT,                  intent(in) :: lmm_r
+  FLOAT,                  intent(in) :: dt
+  integer,                intent(in) :: i
+
+  call push_sub('td_write.td_write_iter')
+
+  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, lmax, pol, i)
+  if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
+  if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
+  if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, lmm_r, i)
+  if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, gs_st, i)
+  if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
+  if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
+  if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
+  if(w%out_energy.ne.0)   call td_write_el_energy(w%out_energy, h, i)
+
+  call pop_sub()
+end subroutine td_write_iter
+
+subroutine td_write_data(w, gr, st, h, outp, geo, dt, iter)
+  type(td_write_type), intent(in) :: w
   type(grid_type),       intent(inout) :: gr
   type(states_type),     intent(in)    :: st
   type(hamiltonian_type), intent(in)    :: h
@@ -188,21 +204,21 @@ subroutine td_write_data(write_handler, gr, st, h, outp, geo, dt, iter)
   call push_sub('td.td_write_data')
 
   ! calculate projection onto the ground state
-  if(write_handler%out_gsp) call td_write_gsp(out_gsp, gr%m, st, dt, iter)
+  if(w%out_gsp.ne.0) call td_write_gsp(w%out_gsp, gr%m, st, dt, iter)
 
   if(mpiv%node==0) then
-      if(write_handler%out_multip)  call write_iter_flush(out_multip)
-      if(write_handler%out_angular) call write_iter_flush(out_angular)
-      if(write_handler%out_spin)    call write_iter_flush(out_spin)
-      if(write_handler%out_magnets) call write_iter_flush(out_magnets)
-      if(write_handler%out_coords)  call write_iter_flush(out_coords)
-      if(write_handler%out_gsp)     call write_iter_flush(out_gsp)
-      if(write_handler%out_acc)     call write_iter_flush(out_acc)
-      if(write_handler%out_laser)   call write_iter_flush(out_laser)
-      if(write_handler%out_energy)  call write_iter_flush(out_energy)
+      if(w%out_multip.ne.0)  call write_iter_flush(w%out_multip)
+      if(w%out_angular.ne.0) call write_iter_flush(w%out_angular)
+      if(w%out_spin.ne.0)    call write_iter_flush(w%out_spin)
+      if(w%out_magnets.ne.0) call write_iter_flush(w%out_magnets)
+      if(w%out_coords.ne.0)  call write_iter_flush(w%out_coords)
+      if(w%out_gsp.ne.0)     call write_iter_flush(w%out_gsp)
+      if(w%out_acc.ne.0)     call write_iter_flush(w%out_acc)
+      if(w%out_laser.ne.0)   call write_iter_flush(w%out_laser)
+      if(w%out_energy.ne.0)  call write_iter_flush(w%out_energy)
   end if
 
-  if(write_handler%out_proj) call write_iter_flush(out_proj)
+  if(w%out_proj.ne.0) call write_iter_flush(w%out_proj)
 
   ! now write down the rest
   write(filename, '(a,i7.7)') "td.", iter  ! name of directory
@@ -219,8 +235,8 @@ subroutine td_write_data(write_handler, gr, st, h, outp, geo, dt, iter)
   call pop_sub()
 end subroutine td_write_data
 
-subroutine td_write_spin(out, m, st, iter)
-  integer(POINTER_SIZE), intent(in) :: out
+subroutine td_write_spin(out_spin, m, st, iter)
+  integer(POINTER_SIZE), intent(in) :: out_spin
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
   integer,               intent(in) :: iter
@@ -238,42 +254,42 @@ subroutine td_write_spin(out, m, st, iter)
 
      if(iter ==0) then
         !empty file
-        call write_iter_clear(out)
+        call write_iter_clear(out_spin)
 
         !fist line -> now unused.
         write(aux, '(a)') '#'
-        call write_iter_string(out, aux)
-        call write_iter_nl(out)
+        call write_iter_string(out_spin, aux)
+        call write_iter_nl(out_spin)
 
         !second line -> columns name
-        call write_iter_header_start(out)
+        call write_iter_header_start(out_spin)
         if (st%d%ispin == SPINORS) then
            write(aux, '(a2,18x)') 'Sx'
-           call write_iter_header(out, aux)
+           call write_iter_header(out_spin, aux)
            write(aux, '(a2,18x)') 'Sy'
-           call write_iter_header(out, aux)
+           call write_iter_header(out_spin, aux)
         end if
         write(aux, '(a2,18x)') 'Sz'
-        call write_iter_header(out, aux)
-        call write_iter_nl(out)
+        call write_iter_header(out_spin, aux)
+        call write_iter_nl(out_spin)
      endif
 
-     call write_iter_start(out)
+     call write_iter_start(out_spin)
      select case (st%d%ispin)
      case (SPIN_POLARIZED)
-        call write_iter_double(out, spin(3), 1)
+        call write_iter_double(out_spin, spin(3), 1)
      case (SPINORS)
-        call write_iter_double(out, spin(1:3), 3)
+        call write_iter_double(out_spin, spin(1:3), 3)
      end select
-     call write_iter_nl(out)
+     call write_iter_nl(out_spin)
 
   end if
 
   call pop_sub()
 end subroutine td_write_spin
 
-subroutine td_write_local_magnetic_moments(out, m, st, geo, lmm_r, iter)
-  integer(POINTER_SIZE), intent(in) :: out
+subroutine td_write_local_magnetic_moments(out_magnets, m, st, geo, lmm_r, iter)
+  integer(POINTER_SIZE), intent(in) :: out_magnets
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
   type(geometry_type),   intent(in) :: geo
@@ -294,47 +310,47 @@ subroutine td_write_local_magnetic_moments(out, m, st, geo, lmm_r, iter)
 
     if(iter ==0) then
       !empty file
-      call write_iter_clear(out)
+      call write_iter_clear(out_magnets)
 
       !fist line ->  now unused.
       write(aux, '(a)') '#'
-      call write_iter_string(out, aux)
-      call write_iter_nl(out)
+      call write_iter_string(out_magnets, aux)
+      call write_iter_nl(out_magnets)
 
       !second line -> columns name
-      call write_iter_header_start(out)
+      call write_iter_header_start(out_magnets)
       do ia = 1, geo%natoms
         if (st%d%ispin == SPINORS) then
           write(aux, '(a2,i2.2,16x)') 'mx', ia
-          call write_iter_header(out, aux)
+          call write_iter_header(out_magnets, aux)
           write(aux, '(a2,i2.2,16x)') 'my', ia
-          call write_iter_header(out, aux)
+          call write_iter_header(out_magnets, aux)
         end if
         write(aux, '(a2,i2.2,16x)') 'mz', ia
-        call write_iter_header(out, aux)
+        call write_iter_header(out_magnets, aux)
       end do
-      call write_iter_nl(out)
+      call write_iter_nl(out_magnets)
 
     endif
 
-    call write_iter_start(out)
+    call write_iter_start(out_magnets)
     do ia = 1, geo%natoms
       select case (st%d%ispin)
       case (SPIN_POLARIZED)
-        call write_iter_double(out, lmm(3, ia), 1)
+        call write_iter_double(out_magnets, lmm(3, ia), 1)
       case (SPINORS)
-        call write_iter_double(out, lmm(1:3, ia), 3)
+        call write_iter_double(out_magnets, lmm(1:3, ia), 3)
       end select
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_magnets)
     deallocate(lmm)
   end if
 
   call pop_sub()
 end subroutine td_write_local_magnetic_moments
 
-subroutine td_write_angular(out, gr, st, iter)
-  integer(POINTER_SIZE), intent(in)    :: out
+subroutine td_write_angular(out_angular, gr, st, iter)
+  integer(POINTER_SIZE), intent(in)    :: out_angular
   type(grid_type),       intent(inout) :: gr
   type(states_type),     intent(in)    :: st
   integer,               intent(in)    :: iter
@@ -351,40 +367,40 @@ subroutine td_write_angular(out, gr, st, iter)
 
     if(iter ==0) then
       !empty file
-      call write_iter_clear(out)
+      call write_iter_clear(out_angular)
 
       !fist line -> now unused.
       write(aux, '(a)') '#'
-      call write_iter_string(out, aux)
-      call write_iter_nl(out)
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
 
       !second line -> columns name
-      call write_iter_header_start(out)
+      call write_iter_header_start(out_angular)
       write(aux, '(a2,18x)') 'Lx'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_angular, aux)
       write(aux, '(a2,18x)') 'Ly'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_angular, aux)
       write(aux, '(a2,18x)') 'Lz'
-      call write_iter_header(out, aux)
-      call write_iter_nl(out)
+      call write_iter_header(out_angular, aux)
+      call write_iter_nl(out_angular)
 
       !third line -> should hold the units. Now unused (assumes atomic units)
-      call write_iter_string(out, '##########')
-      call write_iter_nl(out)
+      call write_iter_string(out_angular, '##########')
+      call write_iter_nl(out_angular)
     endif
 
-    call write_iter_start(out)
-    call write_iter_double(out, angular(1:3), 3)
-    call write_iter_nl(out)
+    call write_iter_start(out_angular)
+    call write_iter_double(out_angular, angular(1:3), 3)
+    call write_iter_nl(out_angular)
 
   endif
 
   call pop_sub()
 end subroutine td_write_angular
 
-subroutine td_write_multipole(gr, out, st, lmax, pol, iter)
+subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
+  integer(POINTER_SIZE), intent(in) :: out_multip
   type(grid_type),       intent(in) :: gr
-  integer(POINTER_SIZE), intent(in) :: out
   type(states_type),     intent(in) :: st
   integer,               intent(in) :: lmax   
   FLOAT,                 intent(in) :: pol(3)
@@ -400,43 +416,43 @@ subroutine td_write_multipole(gr, out, st, lmax, pol, iter)
 
   if(iter == 0) then
     ! empty file
-    call write_iter_clear(out)
+    call write_iter_clear(out_multip)
 
     ! first line
     write(aux, '(a10,i2,a8,i2)') '# nspin = ', st%d%nspin, ' lmax = ', lmax
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
 
     ! second line -> columns name
-    call write_iter_header_start(out)
+    call write_iter_header_start(out_multip)
 
     do is = 1, st%d%nspin
       write(aux, '(a,i1,a)') 'dipole(', is, ')'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_multip, aux)
     end do
     do j = 1, NDIM
       write(aux,'(a,i1,a)')  'n.dip.(', j,  ')'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_multip, aux)
     enddo
     do is = 1, st%d%nspin
       do l = 0, lmax
         do m = -l, l
           write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
-          call write_iter_header(out, aux)
+          call write_iter_header(out_multip, aux)
         end do
       end do
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_multip)
 
     ! third line -> units
-    call write_iter_string(out, '##########')
-    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
+    call write_iter_string(out_multip, '##########')
+    call write_iter_header(out_multip, '[' // trim(units_out%time%abbrev) // ']')
 
     do is = 1, st%d%nspin
-      call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
+      call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
     end do
     do j = 1, NDIM
-      call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
+      call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
     enddo
 
     do is = 1, st%d%nspin
@@ -444,40 +460,40 @@ subroutine td_write_multipole(gr, out, st, lmax, pol, iter)
         do m = -l, l
           select case(l)
           case(0)
-            call write_iter_header(out, '-')
+            call write_iter_header(out_multip, '-')
           case(1)
-            call write_iter_header(out, '[' // trim(units_out%length%abbrev) // ']')
+            call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
           case default
             write(aux, '(a,a2,i1)') trim(units_out%length%abbrev), "**", l
-            call write_iter_header(out, '[' // trim(aux) // ']')
+            call write_iter_header(out_multip, '[' // trim(aux) // ']')
           end select
         end do
       end do
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_multip)
   end if
 
   allocate(dipole(st%d%nspin), nuclear_dipole(NDIM), multipole((lmax + 1)**2, st%d%nspin))
   call states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
   call geometry_dipole(gr%geo, nuclear_dipole)
 
-  call write_iter_start(out)
+  call write_iter_start(out_multip)
   do is = 1, st%d%nspin
-    call write_iter_double(out, dipole(is)/units_out%length%factor, 1)
+    call write_iter_double(out_multip, dipole(is)/units_out%length%factor, 1)
   end do
   do j = 1, NDIM
-    call write_iter_double(out, nuclear_dipole(j)/units_out%length%factor, 1)
+    call write_iter_double(out_multip, nuclear_dipole(j)/units_out%length%factor, 1)
   enddo
   do is = 1, st%d%nspin
     add_lm = 1
     do l = 0, lmax
       do m = -l, l
-        call write_iter_double(out, multipole(add_lm, is)/units_out%length%factor**l, 1)
+        call write_iter_double(out_multip, multipole(add_lm, is)/units_out%length%factor**l, 1)
         add_lm = add_lm + 1
       end do
     end do
   end do
-  call write_iter_nl(out)
+  call write_iter_nl(out_multip)
 
   deallocate(dipole, nuclear_dipole, multipole)
 
@@ -485,9 +501,9 @@ subroutine td_write_multipole(gr, out, st, lmax, pol, iter)
 end subroutine td_write_multipole
 
 
-subroutine td_write_nbo(gr, out, iter, ke, pe)
+subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
+  integer(POINTER_SIZE), intent(in) :: out_coords
   type(grid_type),       intent(in) :: gr
-  integer(POINTER_SIZE), intent(in) :: out
   integer,               intent(in) :: iter
   FLOAT,                 intent(in) :: ke, pe
 
@@ -498,65 +514,65 @@ subroutine td_write_nbo(gr, out, iter, ke, pe)
 
   if(iter == 0) then
     ! empty file
-    call write_iter_clear(out)
+    call write_iter_clear(out_coords)
 
     ! first line: column names
-    call write_iter_header_start(out)
-    call write_iter_header(out, 'Ekin')
-    call write_iter_header(out, 'Epot')
-    call write_iter_header(out, 'Etot')
+    call write_iter_header_start(out_coords)
+    call write_iter_header(out_coords, 'Ekin')
+    call write_iter_header(out_coords, 'Epot')
+    call write_iter_header(out_coords, 'Etot')
 
     do i = 1, gr%geo%natoms
       do j = 1, NDIM
         write(aux, '(a2,i3,a1,i3,a1)') 'x(', i, ',', j, ')'
-        call write_iter_header(out, aux)
+        call write_iter_header(out_coords, aux)
       end do
     end do
     do i = 1, gr%geo%natoms
       do j = 1, NDIM
         write(aux, '(a2,i3,a1,i3,a1)') 'v(', i, ',',j,')'
-        call write_iter_header(out, aux)
+        call write_iter_header(out_coords, aux)
       end do
     end do
     do i = 1, gr%geo%natoms
       do j = 1, NDIM
         write(aux, '(a2,i3,a1,i3,a1)') 'f(', i, ',',j,')'
-        call write_iter_header(out, aux)
+        call write_iter_header(out_coords, aux)
       end do
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_coords)
 
     ! second line: units
-    call write_iter_string(out, '##########')
-    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
-    call write_iter_string(out, &
+    call write_iter_string(out_coords, '##########')
+    call write_iter_header(out_coords, '[' // trim(units_out%time%abbrev) // ']')
+    call write_iter_string(out_coords, &
          'Energy in '      // trim(units_out%energy%abbrev)   //   &
          ', Positions in ' // trim(units_out%length%abbrev)   //   &
          ', Velocities in '// trim(units_out%velocity%abbrev) //   &
          ', Forces in '    // trim(units_out%force%abbrev))
-    call write_iter_nl(out)
+    call write_iter_nl(out_coords)
   end if
 
-  call write_iter_start(out)
-  call write_iter_double(out,     ke /units_out%energy%factor, 1)
-  call write_iter_double(out,     pe /units_out%energy%factor, 1)
-  call write_iter_double(out, (ke+pe)/units_out%energy%factor, 1)
+  call write_iter_start(out_coords)
+  call write_iter_double(out_coords,     ke /units_out%energy%factor, 1)
+  call write_iter_double(out_coords,     pe /units_out%energy%factor, 1)
+  call write_iter_double(out_coords, (ke+pe)/units_out%energy%factor, 1)
 
   do i = 1, gr%geo%natoms
-    call write_iter_double(out, gr%geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
+    call write_iter_double(out_coords, gr%geo%atom(i)%x(1:NDIM)/units_out%length%factor,   NDIM)
   end do
   do i = 1, gr%geo%natoms
-    call write_iter_double(out, gr%geo%atom(i)%v(1:NDIM)/units_out%velocity%factor, NDIM)
+    call write_iter_double(out_coords, gr%geo%atom(i)%v(1:NDIM)/units_out%velocity%factor, NDIM)
   end do
   do i = 1, gr%geo%natoms
-    call write_iter_double(out, gr%geo%atom(i)%f(1:NDIM)/units_out%force%factor,    NDIM)
+    call write_iter_double(out_coords, gr%geo%atom(i)%f(1:NDIM)/units_out%force%factor,    NDIM)
   end do
-  call write_iter_nl(out)
+  call write_iter_nl(out_coords)
 
 end subroutine td_write_nbo
 
-subroutine td_write_gsp(out, m, st, dt, iter)
-  integer(POINTER_SIZE), intent(in) :: out
+subroutine td_write_gsp(out_gsp, m, st, dt, iter)
+  integer(POINTER_SIZE), intent(in) :: out_gsp
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
   FLOAT,                 intent(in) :: dt
@@ -581,34 +597,34 @@ subroutine td_write_gsp(out, m, st, dt, iter)
   if(mpiv%node .eq. 0) then
     if(iter == 0) then
       ! empty file
-      call write_iter_clear(out)
+      call write_iter_clear(out_gsp)
 
       ! first line -> column names
-      call write_iter_header_start(out)
-      call write_iter_header(out, 'Re <Phi_gs|Phi(t)>')
-      call write_iter_header(out, 'Im <Phi_gs|Phi(t)>')
-      call write_iter_nl(out)
+      call write_iter_header_start(out_gsp)
+      call write_iter_header(out_gsp, 'Re <Phi_gs|Phi(t)>')
+      call write_iter_header(out_gsp, 'Im <Phi_gs|Phi(t)>')
+      call write_iter_nl(out_gsp)
 
       ! second line -> units
-      call write_iter_string(out, '##########')
-      call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
-      call write_iter_nl(out)
+      call write_iter_string(out_gsp, '##########')
+      call write_iter_header(out_gsp, '[' // trim(units_out%time%abbrev) // ']')
+      call write_iter_nl(out_gsp)
     end if
 
     ! can not call write_iter_start, for the step is not 1
-    call write_iter_int(out, iter, 1)
-    call write_iter_double(out, iter*dt/units_out%time%factor,  1)
-    call write_iter_double(out, real(gsp),  1)
-    call write_iter_double(out, aimag(gsp), 1)
-    call write_iter_nl(out)
+    call write_iter_int(out_gsp, iter, 1)
+    call write_iter_double(out_gsp, iter*dt/units_out%time%factor,  1)
+    call write_iter_double(out_gsp, real(gsp),  1)
+    call write_iter_double(out_gsp, aimag(gsp), 1)
+    call write_iter_nl(out_gsp)
   endif
 
   call pop_sub()
 end subroutine td_write_gsp
 
-subroutine td_write_acc(gr, out, st, h, dt, iter)
+subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
+  integer(POINTER_SIZE),  intent(in)    :: out_acc
   type(grid_type),        intent(inout) :: gr
-  integer(POINTER_SIZE),  intent(in)    :: out
   type(states_type),      intent(in)    :: st
   type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: dt
@@ -622,37 +638,37 @@ subroutine td_write_acc(gr, out, st, h, dt, iter)
 
   if(iter == 0) then
     ! empty file
-    call write_iter_clear(out)
+    call write_iter_clear(out_acc)
 
     ! first line -> column names
-    call write_iter_header_start(out)
+    call write_iter_header_start(out_acc)
     do i = 1, NDIM
       write(aux, '(a4,i1,a1)') 'Acc(', i, ')'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_acc, aux)
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_acc)
 
     ! second line: units
-    call write_iter_string(out, '##########')
-    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
+    call write_iter_string(out_acc, '##########')
+    call write_iter_header(out_acc, '[' // trim(units_out%time%abbrev) // ']')
     do i = 1, NDIM
-      call write_iter_header(out, '[' // trim(units_out%acceleration%abbrev) // ']')
+      call write_iter_header(out_acc, '[' // trim(units_out%acceleration%abbrev) // ']')
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_acc)
   endif
 
   call td_calc_tacc(gr, st, h, acc, dt*i, reduce = .true.)
 
-  call write_iter_start(out)
-  call write_iter_double(out, acc/units_out%acceleration%factor, NDIM)
-  call write_iter_nl(out)
+  call write_iter_start(out_acc)
+  call write_iter_double(out_acc, acc/units_out%acceleration%factor, NDIM)
+  call write_iter_nl(out_acc)
 
 end subroutine td_write_acc
 
 
-subroutine td_write_laser(gr, out, h, dt, iter)
+subroutine td_write_laser(out_laser, gr, h, dt, iter)
+  integer(POINTER_SIZE),  intent(in) :: out_laser
   type(grid_type),        intent(in) :: gr
-  integer(POINTER_SIZE),  intent(in) :: out
   type(hamiltonian_type), intent(in) :: h
   FLOAT,                  intent(in) :: dt
   integer,                intent(in) :: iter
@@ -666,61 +682,61 @@ subroutine td_write_laser(gr, out, h, dt, iter)
   ! TODO -> confirm these stupid units, especially for the vector field
   if(iter == 0) then
     ! empty file
-    call write_iter_clear(out)
+    call write_iter_clear(out_laser)
 
     ! first line
     write(aux, '(a7,e20.12,3a)') '# dt = ', dt/units_out%time%factor, &
          " [", trim(units_out%time%abbrev), "]"
-    call write_iter_string(out, aux)
-    call write_iter_nl(out)
+    call write_iter_string(out_laser, aux)
+    call write_iter_nl(out_laser)
 
     ! second line -> column names
-    call write_iter_header_start(out)
+    call write_iter_header_start(out_laser)
     do i = 1, NDIM
       write(aux, '(a,i1,a)') 'E(', i, ')'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_laser, aux)
     end do
     do i = 1, NDIM
       write(aux, '(a,i1,a)') 'A(', i, ')'
-      call write_iter_header(out, aux)
+      call write_iter_header(out_laser, aux)
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_laser)
 
     ! third line -> units
-    call write_iter_string(out, '##########')
-    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
+    call write_iter_string(out_laser, '##########')
+    call write_iter_header(out_laser, '[' // trim(units_out%time%abbrev) // ']')
 
     aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
     do i = 1, NDIM
-      call write_iter_header(out, aux)
+      call write_iter_header(out_laser, aux)
     end do
 
     aux = '[1/' // trim(units_inp%length%abbrev) // ']'
     do i = 1, NDIM
-      call write_iter_header(out, aux)
+      call write_iter_header(out_laser, aux)
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_laser)
   end if
 
-  call write_iter_start(out)
+  call write_iter_start(out_laser)
 
   field = M_ZERO
 
   call laser_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
   field = field * units_inp%length%factor / units_inp%energy%factor
-  call write_iter_double(out, field, NDIM)
+  call write_iter_double(out_laser, field, NDIM)
 
   call laser_vector_field(gr%sb, h%ep%no_lasers, h%ep%lasers, iter*dt, field)
   field = field  * units_inp%length%factor
-  call write_iter_double(out, field, NDIM)
+  call write_iter_double(out_laser, field, NDIM)
 
-  call write_iter_nl(out)
+  call write_iter_nl(out_laser)
 
 end subroutine td_write_laser
 
 
-subroutine td_write_el_energy(out, h, iter)
-  integer(POINTER_SIZE),  intent(in) :: out
+subroutine td_write_el_energy(out_energy, h, iter)
+  integer(POINTER_SIZE),  intent(in) :: out_energy
   type(hamiltonian_type), intent(in) :: h
   integer,                intent(in) :: iter
 
@@ -730,39 +746,40 @@ subroutine td_write_el_energy(out, h, iter)
 
   if(iter == 0) then
     ! empty file
-    call write_iter_clear(out)
+    call write_iter_clear(out_energy)
 
     ! first line -> column names
-    call write_iter_header_start(out)
-    call write_iter_header(out, 'Total')
-    call write_iter_header(out, 'Ion-Ion')
-    call write_iter_header(out, 'Exchange')
-    call write_iter_header(out, 'Correlation')
-    call write_iter_header(out, 'Potentials')
-    call write_iter_nl(out)
+    call write_iter_header_start(out_energy)
+    call write_iter_header(out_energy, 'Total')
+    call write_iter_header(out_energy, 'Ion-Ion')
+    call write_iter_header(out_energy, 'Exchange')
+    call write_iter_header(out_energy, 'Correlation')
+    call write_iter_header(out_energy, 'Potentials')
+    call write_iter_nl(out_energy)
 
     ! second line: units
-    call write_iter_string(out, '##########')
-    call write_iter_header(out, '[' // trim(units_out%time%abbrev) // ']')
+    call write_iter_string(out_energy, '##########')
+    call write_iter_header(out_energy, '[' // trim(units_out%time%abbrev) // ']')
     do i = 1, 5
-      call write_iter_header(out, '[' // trim(units_out%energy%abbrev) // ']')
+      call write_iter_header(out_energy, '[' // trim(units_out%energy%abbrev) // ']')
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_energy)
   endif
 
-  call write_iter_start(out)
-  call write_iter_double(out, h%etot/units_out%energy%factor, 1)
-  call write_iter_double(out, h%eii /units_out%energy%factor, 1)
-  call write_iter_double(out, h%ex  /units_out%energy%factor, 1)
-  call write_iter_double(out, h%ec  /units_out%energy%factor, 1)
-  call write_iter_double(out, h%epot/units_out%energy%factor, 1)
-  call write_iter_nl(out)
+  call write_iter_start(out_energy)
+  call write_iter_double(out_energy, h%etot/units_out%energy%factor, 1)
+  call write_iter_double(out_energy, h%eii /units_out%energy%factor, 1)
+  call write_iter_double(out_energy, h%ex  /units_out%energy%factor, 1)
+  call write_iter_double(out_energy, h%ec  /units_out%energy%factor, 1)
+  call write_iter_double(out_energy, h%epot/units_out%energy%factor, 1)
+  call write_iter_nl(out_energy)
+
 
 end subroutine td_write_el_energy
 
-subroutine td_write_proj(gr, out, st, u_st, iter)
+subroutine td_write_proj(out_proj, gr, st, u_st, iter)
+  integer(POINTER_SIZE), intent(in) :: out_proj
   type(grid_type),       intent(in) :: gr
-  integer(POINTER_SIZE), intent(in) :: out
   type(states_type),     intent(in) :: st
   type(states_type),     intent(in) :: u_st
   integer,               intent(in) :: iter
@@ -775,35 +792,35 @@ subroutine td_write_proj(gr, out, st, u_st, iter)
 
   if(iter == 0) then
     ! empty file
-    call write_iter_clear(out)
+    call write_iter_clear(out_proj)
 
     ! first line -> column names
-    call write_iter_header_start(out)
+    call write_iter_header_start(out_proj)
     do ik = 1, st%d%nik
       do ist = 1, st%nst
         do uist = 1, u_st%nst
           write(aux, '(i3,a,i3)') ist, ' -> ', uist
-          call write_iter_header(out, 'Re {'//trim(aux)//'}')
-          call write_iter_header(out, 'Im {'//trim(aux)//'}')
+          call write_iter_header(out_proj, 'Re {'//trim(aux)//'}')
+          call write_iter_header(out_proj, 'Im {'//trim(aux)//'}')
         end do
       end do
     end do
-    call write_iter_nl(out)
+    call write_iter_nl(out_proj)
   endif
 
   allocate(projections(u_st%nst, st%st_start:st%st_end, st%d%nik))
   call calc_projection(gr%m, u_st, st, projections)
 
-  call write_iter_start(out)
+  call write_iter_start(out_proj)
   do ik = 1, st%d%nik
     do ist = 1, st%nst
       do uist = 1, u_st%nst
-        call write_iter_double(out,  real(projections(uist, ist, ik)), 1)
-        call write_iter_double(out, aimag(projections(uist, ist, ik)), 1)
+        call write_iter_double(out_proj,  real(projections(uist, ist, ik)), 1)
+        call write_iter_double(out_proj, aimag(projections(uist, ist, ik)), 1)
       end do
     end do
   end do
-  call write_iter_nl(out)
+  call write_iter_nl(out_proj)
 
   deallocate(projections)
   call pop_sub()

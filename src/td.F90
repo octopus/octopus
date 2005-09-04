@@ -135,7 +135,11 @@ contains
        end select
     endif
 
-    if(td%iter == 0) call td_run_zero_iter()
+    
+    if(td%iter == 0) then
+       call apply_delta_field()
+       call td_run_zero_iter()
+    endif
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
@@ -220,7 +224,7 @@ contains
           geo%kinetic_energy = kinetic_energy(geo)
        end if
 
-       call iter_output()
+      call td_write_iter(td%write_handler, gr, st, gs_st, h, geo, td%lmax, td%pol, td%lmm_r, td%dt, 0)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
        call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
@@ -324,63 +328,13 @@ contains
 
     end function init_wfs
 
-    subroutine iter_output()
-      call push_sub('td.iter_output')
-
-      ! output multipoles
-      if(td%write_handler%out_multip) call td_write_multipole(gr, out_multip, st, td%lmax, td%pol, i)
-
-      ! output angular momentum
-      if(td%write_handler%out_angular) call td_write_angular(out_angular, gr, st, i)
-
-      ! output spin
-      if(td%write_handler%out_spin) call td_write_spin(out_spin, gr%m, st, i)
-
-      ! output atoms magnetization
-      if(td%write_handler%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td%lmm_r, i)
-
-      ! output projections onto the GS KS eigenfunctions
-      if(td%write_handler%out_proj) call td_write_proj(gr, out_proj, st, gs_st, i)
-
-      ! output positions, vels, etc.
-      if(td%write_handler%out_coords) call td_write_nbo(gr, out_coords, i, geo%kinetic_energy, h%etot)
-
-      ! If harmonic spectrum is desired, get the acceleration
-      if(td%write_handler%out_acc) call td_write_acc(gr, out_acc, st, h, td%dt, i)
-
-      ! output laser field
-      if(td%write_handler%out_laser) call td_write_laser(gr, out_laser, h, td%dt, i)
-
-      ! output electronic energy
-      if(td%write_handler%out_energy) call td_write_el_energy(out_energy, h, i)
-
-      call pop_sub()
-    end subroutine iter_output
-
-
     subroutine td_run_zero_iter()
-
       call push_sub('td.td_run_zero_iter')
 
-      ! create general subdir
       call io_mkdir('td.general')
-
-      if(td%write_handler%out_multip)  call td_write_multipole(gr, out_multip, st, td%lmax, td%pol, 0)
-      if(td%write_handler%out_angular) call td_write_angular(out_angular, gr, st, 0)
-      if(td%write_handler%out_spin)    call td_write_spin(out_spin, gr%m, st, 0)
-      if(td%write_handler%out_magnets) call td_write_local_magnetic_moments(out_magnets, gr%m, st, geo, td%lmm_r, 0)
-      if(td%write_handler%out_proj) call td_write_proj(gr, out_proj, st, gs_st, 0)
-
-      call apply_delta_field()
-
-      if(td%write_handler%out_coords) call td_write_nbo(gr, out_coords, 0, geo%kinetic_energy, h%etot)
-      if(td%write_handler%out_acc)    call td_write_acc(gr, out_acc, st, h, td%dt, 0)
-      if(td%write_handler%out_laser)  call td_write_laser(gr, out_laser, h, td%dt, 0)
-      if(td%write_handler%out_energy) call td_write_el_energy(out_energy, h, 0)
-
+      call td_write_iter(td%write_handler, gr, st, gs_st, h, geo, td%lmax, td%pol, td%lmm_r, td%dt, 0)
       call td_save_restart(0)
       call td_write_data(td%write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
-
       call td_rti_run_zero_iter(h, td%tr)
 
       call pop_sub()
