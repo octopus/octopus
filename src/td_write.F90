@@ -42,6 +42,7 @@ module td_write
   private
   public :: td_write_type, &
             td_write_init, &
+            td_write_end, &
             td_write_init_iter, &
             td_write_end_iter, &
             td_write_iter, &
@@ -62,15 +63,17 @@ module td_write
 
     integer           :: lmax           ! maximum multipole moment to output
     FLOAT             :: lmm_r          ! radius of the sphere used to compute the local magnetic moments
+    type(states_type) :: gs_st
   end type td_write_type
 
 
 contains
 
-subroutine td_write_init(w, geo, ions_move, there_are_lasers)
-  type(td_write_type)       :: w
+subroutine td_write_init(w, st, geo, ions_move, there_are_lasers)
+  type(td_write_type)             :: w
+  type(states_type),   intent(in) :: st
   type(geometry_type), intent(in) :: geo
-  logical, intent(in) :: ions_move, there_are_lasers
+  logical, intent(in)             :: ions_move, there_are_lasers
 
   FLOAT :: rmin
   logical :: log
@@ -111,8 +114,21 @@ subroutine td_write_init(w, geo, ions_move, there_are_lasers)
   call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
   w%lmm_r = w%lmm_r * units_inp%length%factor
 
+  if( (w%out_proj.ne.0)  .or.  (w%out_gsp.ne.0) ) then
+    call states_copy(w%gs_st, st)
+  endif
+
   call pop_sub()
 end subroutine td_write_init
+
+subroutine td_write_end(w)
+  type(td_write_type)       :: w
+  call push_sub('td_write_end')
+
+  call states_end(w%gs_st)
+
+  call pop_sub()
+end subroutine td_write_end
 
 subroutine td_write_init_iter(w, iter, dt)
   type(td_write_type)       :: w
@@ -177,11 +193,10 @@ subroutine td_write_end_iter(w)
   call pop_sub()
 end subroutine td_write_end_iter
 
-subroutine td_write_iter(w, gr, st, gs_st, h, geo, pol, dt, i)
+subroutine td_write_iter(w, gr, st, h, geo, pol, dt, i)
   type(td_write_type),    intent(in) :: w
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(in)    :: st
-  type(states_type),      intent(in)    :: gs_st
   type(hamiltonian_type), intent(in)    :: h
   type(geometry_type),    intent(in)    :: geo
   FLOAT,                  intent(in) :: pol(3)
@@ -194,7 +209,7 @@ subroutine td_write_iter(w, gr, st, gs_st, h, geo, pol, dt, i)
   if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
   if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
   if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
-  if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, gs_st, i)
+  if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
   if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
   if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
   if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
@@ -219,7 +234,7 @@ subroutine td_write_data(w, gr, st, h, outp, geo, dt, iter)
   call push_sub('td.td_write_data')
 
   ! calculate projection onto the ground state
-  if(w%out_gsp.ne.0) call td_write_gsp(w%out_gsp, gr%m, st, dt, iter)
+  if(w%out_gsp.ne.0) call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, iter)
 
   if(mpiv%node==0) then
       if(w%out_multip.ne.0)  call write_iter_flush(w%out_multip)
@@ -586,28 +601,21 @@ subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
 
 end subroutine td_write_nbo
 
-subroutine td_write_gsp(out_gsp, m, st, dt, iter)
+subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
   integer(POINTER_SIZE), intent(in) :: out_gsp
   type(mesh_type),       intent(in) :: m
   type(states_type),     intent(in) :: st
+  type(states_type),     intent(in) :: gs_st
   FLOAT,                 intent(in) :: dt
   integer,               intent(in) :: iter
 
   CMPLX :: gsp
-  type(states_type) :: stgs
   integer :: ierr
 
   call push_sub('td_write.td_write_gsp')
 
   ! all processors calculate the projection
-  call states_copy(stgs, st)
-  call zrestart_read (trim(tmpdir)//'restart_gs', stgs, m, ierr)
-  if(ierr.ne.0) then
-    message(1) = 'Error loading GS in zstates_project_gs'
-    call write_fatal(1)
-  endif
-  gsp = zstates_mpdotp(m, 1, stgs, st)
-  call states_end(stgs)
+  gsp = zstates_mpdotp(m, 1, gs_st, st)
 
   if(mpiv%node .eq. 0) then
     if(iter == 0) then

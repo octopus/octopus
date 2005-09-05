@@ -84,7 +84,7 @@ subroutine td_init(gr, td, st, h, outp)
 
   ! Check what should be output
 
-  call td_write_init(td%write_handler, gr%geo, (td%move_ions>0), (h%ep%no_lasers>0) )
+  call td_write_init(td%write_handler, st, gr%geo, (td%move_ions>0), (h%ep%no_lasers>0) )
 
   ! Compatibility test
   if((td%write_handler%out_acc.ne.0).and.td%move_ions>0) then
@@ -111,7 +111,7 @@ subroutine td_end(td)
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call PES_end(td%PESv)
 #endif
-
+  call td_write_end(td%write_handler)
   call td_rti_end(td%tr)  ! clean the evolution method
 
   call pop_sub()
