@@ -132,7 +132,7 @@ subroutine X(vec_scatter_all)(vp, v, v_local)
   R_TYPE,        intent(in)  :: v(:)
   R_TYPE,        intent(out) :: v_local(:)
   
-  call push_sub('par_vec.Xvec_scatter_bndry')
+  call push_sub('par_vec.Xvec_scatter_all')
   
   call X(vec_scatter)(vp, v, v_local)
   call X(vec_scatter_bndry)(vp, v, v_local)
