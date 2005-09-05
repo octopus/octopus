@@ -17,9 +17,16 @@
 !!
 !! $Id$
 
+! Generally:
+! vec_gather and vec_scatter only consider inner points.
+! vec_scatter_bndry takes care of boundary points (there is
+! no vec_gather_bndry as they are only written and not read).
+! vec_scatter_all is vec_scatter followd by vec_scatter_bndry.
+
+
 ! Scatters a vector v to all nodes in vp with respect to 
 ! to point -> node mapping in vp.
-! v_local has at least to be of size vp%np_local(mpiv%node).
+! v_local has at least to be of size vp%np_local(rank+1).
 subroutine X(vec_scatter)(vp, v, v_local)
   type(pv_type), intent(in)  :: vp
   R_TYPE,        intent(in)  :: v(:)
@@ -60,13 +67,79 @@ subroutine X(vec_scatter)(vp, v, v_local)
                     vp%root, vp%comm, ierr)
   call mpierr(ierr)
 
-  if(mpiv%node.eq.vp%root) deallocate(v_tmp)
+  if(rank.eq.vp%root) deallocate(v_tmp)
 
   deallocate(displs)
 
   call pop_sub()
 
 end subroutine X(vec_scatter)
+
+
+! v_local has to be of length np_local+np_ghost+np_bndry
+! for this to work.
+! And v has to be of length np_tot.
+subroutine X(vec_scatter_bndry)(vp, v, v_local)
+  type(pv_type), intent(in)  :: vp
+  R_TYPE,        intent(in)  :: v(:)
+  R_TYPE,        intent(out) :: v_local(:)
+
+  integer              :: i         ! Counter.
+  integer              :: ierr      ! MPI errorcode.
+  integer              :: rank      ! Rank of node.
+  integer, allocatable :: displs(:) ! Displacements for scatter.
+  R_TYPE,  allocatable :: v_tmp(:)  ! Send buffer.
+
+  call push_sub('par_vec.Xvec_scatter_bndry')
+  
+  call MPI_Comm_rank(vp%comm, rank, ierr)
+  call mpierr(ierr)
+
+  allocate(displs(vp%p))
+  displs = vp%xbndry-1
+
+  ! Fill send buffer.
+  if(rank.eq.vp%root) then
+    allocate(v_tmp(vp%np_enl))
+  
+    ! Rearrange copy of v. All points of node r are in
+    ! v_tmp(xlocal(r):xlocal(r)+np_local(r)-1).
+    do i = 1, vp%np_enl
+      v_tmp(i) = v(vp%bndry(i)+vp%np)
+    end do
+  end if
+  
+  ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
+  ! But partition numbers from 1 to vp%p with usually
+  ! vp%p = mpiv%numprocs.
+  call MPI_Scatterv(v_tmp, vp%np_bndry, displs, R_MPITYPE,  &
+    v_local(vp%np_local(rank+1)+vp%np_ghost(rank+1)+1:),    &
+    vp%np_bndry(rank+1), R_MPITYPE, vp%root, vp%comm, ierr)
+  call mpierr(ierr)
+
+  if(rank.eq.vp%root) deallocate(v_tmp)
+
+  deallocate(displs)
+
+  call pop_sub()
+
+end subroutine X(vec_scatter_bndry)
+
+
+! vec_scatter followed by vec_scatter_bndry.
+subroutine X(vec_scatter_all)(vp, v, v_local)
+  type(pv_type), intent(in)  :: vp
+  R_TYPE,        intent(in)  :: v(:)
+  R_TYPE,        intent(out) :: v_local(:)
+  
+  call push_sub('par_vec.Xvec_scatter_bndry')
+  
+  call X(vec_scatter)(vp, v, v_local)
+  call X(vec_scatter_bndry)(vp, v, v_local)
+
+  call pop_sub()
+
+end subroutine X(vec_scatter_all)
 
 
 ! Reverse operation of vec_scatter.
@@ -83,7 +156,7 @@ subroutine X(vec_gather)(vp, v, v_local)
   integer, allocatable :: displs(:) ! Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
   
-  call push_sub('par_vec.vec_Xgather')
+  call push_sub('par_vec.Xvec_gather')
   
   call MPI_Comm_rank(vp%comm, rank, ierr)
   call mpierr(ierr)
@@ -109,6 +182,8 @@ subroutine X(vec_gather)(vp, v, v_local)
     deallocate(v_tmp)
   end if
 
+  deallocate(displs)
+
   call pop_sub()
 
 end subroutine X(vec_gather)
@@ -118,7 +193,7 @@ end subroutine X(vec_gather)
 ! for non local operations contains local values and
 ! ghost point values.
 ! Length of v_local must be
-! vp%np_local(mpiv%node+1)+vp%np_ghost(mpiv%node+1)
+! vp%np_local(rank+1)+vp%np_ghost(rank+1)
 subroutine X(vec_ghost_update)(vp, v_local)
   type(pv_type), intent(in)    :: vp
   R_TYPE,        intent(inout) :: v_local(:)
@@ -181,6 +256,11 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
   ! any I/O if some sendcount is 0. This means, there is actually
   ! no need to code this again.
+  ! FIXME: It is actually possible to do pair-wise communication. Roughly
+  ! p/2 pairs can communicate at the same time (as long as there is
+  ! a switched network). It then takes as much rounds of
+  ! communication as the maximum neighbour number of a particular node
+  ! is. This will speed up exchange and will probably be implemented later.
   call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(:, rank+1), sdispls, &
                      R_MPITYPE, v_local(vp%np_local(rank+1)+1:),        &
                      vp%np_ghost_neigh(rank+1, :), rdispls, R_MPITYPE,  &

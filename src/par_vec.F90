@@ -21,12 +21,37 @@
 
 module par_vec
 
+  ! Some general things and nomenclature:
+  !
+  ! - Points that are stored only on one node are
+  !   called local points.
+  ! - Local points, that are stored redundantly on
+  !   another node because of the partitioning are
+  !   called ghost points.
+  ! - Points from the enlargement are only stored
+  !   once on the corresponding node and are called
+  !   boundary points.
+  !
+  ! When working with non-periodic boundary conditions
+  ! a globally defined vector v has two parts:
+  ! - v(:np) are the inner points
+  ! - v(np+1:np_tot) are the boundary points
+  ! In the typical case of zero boundary conditions
+  ! v(np+1:np_tot) is 0.
+  ! The two parts are split according to the partitions.
+  ! The result of this slit are local vectors vl on each node
+  ! which consist of three parts:
+  ! - v(:np_local)                                      local points.
+  ! - v(np_local+1:np_local+np_ghost)                   ghost points.
+  ! - v(np_local+np_ghost+1:np_local+np_ghost+np_bndry) boundary points.
+  !
+  ! 
   ! Usage example for par_vec routines.
   !
   ! integer            :: np_local, np_ghost
   ! FLOAT              :: s
   ! FLOAT              :: u(np), v(np)
-  ! FLOAT, allocatable :: ul(:), vl(:), w(:)
+  ! FLOAT, allocatable :: ul(:), vl(:), wl(:)
   ! type(pv_type)      :: vp
   ! type(mesh_type)    :: m
   !
@@ -48,7 +73,7 @@ module par_vec
   ! call dvec_scatter(vp, u, ul)
   ! call dvec_scatter(vp, v, vl)
   !
-  ! ! Calculate scalar product.
+  ! ! Calculate scalar product s=<u|v>.
   ! wl = ul*vl
   ! ! vec_integrate ignores ghost points (i. e. v(np_local+1:)).
   ! s = dvec_integrate(vp, wl)
@@ -61,6 +86,7 @@ module par_vec
   !
   ! ! Clean up.
   ! call vec_end(vp)
+  ! deallocate(ul, vl, wl)
 
   use global
   use mesh
@@ -72,21 +98,25 @@ module par_vec
 
   implicit none
 
-#if defined(HAVE_MPI)
+#ifdef HAVE_MPI
   private
-  public :: pv_type,           &
-            vec_init,          &
-            vec_init_default,  &
-            vec_end,           &
-            dvec_scatter,      &
-            zvec_scatter,      &
-            dvec_gather,       &
-            zvec_gather,       &
-            dvec_ghost_update, &
-            zvec_ghost_update, &
-            dvec_integrate,    &
-            zvec_integrate,    &
-            dvec_nl_operator,  &
+  public :: pv_type,            &
+            vec_init,           &
+            vec_init_default,   &
+            vec_end,            &
+            dvec_scatter,       &
+            zvec_scatter,       &
+            dvec_scatter_bndry, &
+            zvec_scatter_bndry, &
+            dvec_scatter_all,   &
+            zvec_scatter_all,   &
+            dvec_gather,        &
+            zvec_gather,        &
+            dvec_ghost_update,  &
+            zvec_ghost_update,  &
+            dvec_integrate,     &
+            zvec_integrate,     &
+            dvec_nl_operator,   &
             vec_op_pop
 
 
@@ -99,13 +129,18 @@ module par_vec
     integer          :: comm                 ! MPI communicator to use.
     integer          :: root                 ! The master node.
     integer          :: p                    ! Number of partitions.
-    integer          :: np                   ! Total number of points.
+    integer          :: np                   ! Number of points in mesh.
+    integer          :: np_enl               ! Number of points in enlargement.
     integer, pointer :: np_local(:)          ! How many points has partition r?
     integer, pointer :: xlocal(:)            ! Points of partition r start at
                                              ! xlocal(r) in local.
     integer, pointer :: local(:)             ! Partition r has points
                                              ! local(xlocal(r):
                                              ! xlocal(r)+np_local(r)-1).
+    integer, pointer :: np_bndry(:)          ! Number of boundary points.
+    integer, pointer :: xbndry(:)            ! Index of bndry(:).
+    integer, pointer :: bndry(:)             ! Global numbers of boundary
+                                             ! points.
     integer, pointer :: global(:, :)         ! global(i, r) is local number
                                              ! of point i in partition r
                                              ! (if this is 0, i is neither
@@ -115,7 +150,7 @@ module par_vec
                                              ! partition r?
     integer, pointer :: np_ghost_neigh(:, :) ! Number of ghost points per
                                              ! neighbour per partition.
-    integer, pointer :: xghost(:)            ! Like xpoint.
+    integer, pointer :: xghost(:)            ! Like xlocal.
     integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
     integer, pointer :: ghost(:)             ! Global indices of all local
                                              ! ghost points.
@@ -126,20 +161,21 @@ contains
 
   ! Wrapper: calls vec_init with MPI_COMM_WORLD and master node 0.
   subroutine vec_init_default(m, stencil, np_stencil, vp, &
-                      np_local, np_ghost)
+                      np_local, np_ghost, np_bndry)
     type(mesh_type), intent(in)  :: m            ! The current mesh.
     integer,         intent(in)  :: stencil(:,:) ! The stencil for which to
                                                  ! calculate ghost points.
     integer,         intent(in)  :: np_stencil   ! Num. of points in stencil.
     type(pv_type),   intent(out) :: vp           ! Description of partition.
-    ! Those two are shortcuts.
-    integer,         intent(out) :: np_local     ! vp%np_local(rank).
-    integer,         intent(out) :: np_ghost     ! vp%np_ghost(rank).
+    ! Those three are shortcuts.
+    integer,         intent(out) :: np_local     ! vp%np_local(rank+1).
+    integer,         intent(out) :: np_ghost     ! vp%np_ghost(rank+1).
+    integer,         intent(out) :: np_bndry     ! vp%np_bndry(rank+1).
 
     call push_sub('par_vec.vec_init_default')
     
     call vec_init(MPI_COMM_WORLD, 0, m, stencil, np_stencil, vp, &
-                  np_local, np_ghost)
+                  np_local, np_ghost, np_bndry)
 
     call pop_sub()
 
@@ -164,8 +200,10 @@ contains
   !   stencil(:, 6) = (/ 2,  0,  0/)
   !   stencil(:, 7) = (/ 0, -1,  0/)
   ! The points are relative to the "application point" of the stencil.
+  ! (This is the same format as used in type(nl_operator_type), so
+  ! just passing op%stencil is possible.)
   subroutine vec_init(comm, root, m, stencil, np_stencil, vp, &
-                      np_local, np_ghost)
+                      np_local, np_ghost, np_bndry)
     integer,         intent(in)  :: comm         ! Communicator to use.
     integer,         intent(in)  :: root         ! The master node.
     type(mesh_type), intent(in)  :: m            ! The current mesh.
@@ -173,15 +211,17 @@ contains
                                                  ! calculate ghost points.
     integer,         intent(in)  :: np_stencil   ! Num. of points in stencil.
     type(pv_type),   intent(out) :: vp           ! Description of partition.
-    ! Those two are shortcuts.
-    integer,         intent(out) :: np_local     ! vp%np_local(rank).
-    integer,         intent(out) :: np_ghost     ! vp%np_ghost(rank).
+    ! Those three are shortcuts.
+    integer,         intent(out) :: np_local     ! vp%np_local(rank+1).
+    integer,         intent(out) :: np_ghost     ! vp%np_ghost(rank+1).
+    integer,         intent(out) :: np_bndry     ! vp%np_bndry(rank+1).
     
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
     integer              :: p                ! Number of partitions.
-    integer              :: np               ! Number of points.
+    integer              :: np               ! Number of points in mesh.
+    integer              :: np_enl           ! Number of points in enlargement.
     integer              :: i, j, k, r       ! Counters.
     integer, allocatable :: ir(:), irr(:, :) ! Counters.
     integer              :: rank             ! Rank of current node.
@@ -195,8 +235,10 @@ contains
 
     call push_sub('par_vec.vec_init')
 
-    p  = m%npart
-    np = m%np
+    ! Shortcuts.
+    p      = m%npart
+    np     = m%np
+    np_enl = m%np_tot-m%np
     call MPI_Comm_rank(comm, rank, ierr)
     call mpierr(ierr)
     
@@ -206,26 +248,43 @@ contains
     allocate(vp%np_local(p))
     allocate(vp%xlocal(p))
     allocate(vp%local(np))
-    allocate(vp%global(np, p))
+    allocate(vp%np_bndry(p))
+    allocate(vp%xbndry(p))
+    allocate(vp%bndry(np_enl))
+    allocate(vp%global(np+np_enl, p))
     allocate(vp%np_ghost(p))
     allocate(vp%np_ghost_neigh(p, p))
     allocate(vp%xghost(p))
     allocate(vp%xghost_neigh(p, p))
     
     ! Count number of points for each node.
+    ! Local points.
+    vp%np_local = 0
     do i = 1, np
       vp%np_local(m%part(i)) = vp%np_local(m%part(i))+1
     end do
+    ! Boundary points.
+    vp%np_bndry = 0
+    do i = 1, np_enl
+      vp%np_bndry(m%part(i+np)) = vp%np_bndry(m%part(i+np))+1
+    end do
 
-    ! Set up local to global index table (np_local, xlocal, local)
-    ! and global to local index table (global).
+    ! Set up local to global index table for local points
+    ! (xlocal, local) and for boundary points (xbndry, bndry). 
     vp%xlocal(1) = 1
+    vp%xbndry(1) = 1
     do r = 2, p
       vp%xlocal(r) = vp%xlocal(r-1)+vp%np_local(r-1)
+      vp%xbndry(r) = vp%xbndry(r-1)+vp%np_bndry(r-1)
     end do
     ir = 0
     do i = 1, np
       vp%local(vp%xlocal(m%part(i))+ir(m%part(i))) = i
+      ir(m%part(i))                                = ir(m%part(i))+1
+    end do
+    ir = 0
+    do i = np+1, np+np_enl
+      vp%bndry(vp%xbndry(m%part(i))+ir(m%part(i))) = i
       ir(m%part(i))                                = ir(m%part(i))+1
     end do
 
@@ -263,20 +322,22 @@ contains
         p1 = m%Lxyz(vp%local(i), :)
         ! For all points in stencil.
         do j = 1, np_stencil
-          ! Get index k of possible ghost point.
+          ! Get coordinates of possible ghost point.
           p2 = p1+stencil(:, j)
           ! Check, whether p2 is in the box.
-          ! FIXME: How about boundary conditions?
-          ! If p2 is out of the box, ignore it for now.
+          ! If p2 is out of the box, ignore it.
+          ! Actually, the box should be big enough, that
+          ! this case does not arise.
           if(m%nr(1, 1).gt.p2(1).or.p2(1).gt.m%nr(2, 1).or. &
              m%nr(1, 2).gt.p2(2).or.p2(2).gt.m%nr(2, 2).or. &
              m%nr(1, 3).gt.p2(3).or.p2(3).gt.m%nr(2, 3)) cycle
-          ! If it is in the box, get its point number.
+          ! If it is in the box, get its (global) point number.
           k = m%Lxyz_inv(p2(1), p2(2), p2(3))
-          ! If p2 is in the box but does not belong to the geometry,
-          ! its point number k should be greater than np (correct me
-          ! if I am wrong). If this is the case, ignore it for now.
-          if(k.gt.m%np) cycle
+          ! If p2 is in the box but does not belong to the inner mesh,
+          ! its point number k is greater than np.
+          ! If this is the case, it is a boundary point and is handled
+          ! elsewhere.
+          if(k.gt.np) cycle
           ! At this point, it is sure that point number k is a
           ! relevant point.
           ! If this index k does not belong to partition of node r,
@@ -357,10 +418,11 @@ contains
 
     ! Create reverse (global to local) lookup.
     ! Given a global point number i and a vector v_local of
-    ! length vp%np_local(r)+vp%np_ghost(r) global(i, r) gives
-    ! the index of point i in v_local as long, as this point is
-    ! local to r or a ghost point for r (if global(i, r) > vp%np_local(r)
-    ! it is a ghost point). If global(i, r) is 0 then i is neither local
+    ! length vp%np_local(r)+vp%np_ghost(r)+vp%np_bndry(r) global(i, r) gives
+    ! the index of point i in v_local as long as this point is
+    ! local to r or a ghost point for r (if vp%np_bndry(r) >
+    ! global(i, r) > vp%np_local(r) it is a ghost point).
+    ! If global(i, r) is 0 then i is neither local
     ! to r nor a ghost point of r. This indicates a serious error.
     vp%global = 0
     do r = 1, p
@@ -372,17 +434,24 @@ contains
       do i = 1, vp%np_ghost(r)
         vp%global(vp%ghost(vp%xghost(r)+i-1), r) = vp%np_local(r)+i
       end do
+      ! Boundary points.
+      do i = 1, vp%np_bndry(r)
+        vp%global(vp%bndry(vp%xbndry(r)+i-1), r) =  vp%np_local(r)   &
+                                                   +vp%np_ghost(r)+i
+      end do
     end do
 
     ! Complete entries in vp.
-    vp%comm = comm
-    vp%root = root
-    vp%np   = m%np
-    vp%p    = p
+    vp%comm   = comm
+    vp%root   = root
+    vp%np     = np
+    vp%np_enl = np_enl
+    vp%p      = p
 
     ! Return shortcuts.
     np_local = vp%np_local(rank+1)
     np_ghost = vp%np_ghost(rank+1)
+    np_bndry = vp%np_bndry(rank+1)
     call pop_sub()
     
   end subroutine vec_init
@@ -405,6 +474,18 @@ contains
     if(associated(vp%local)) then
       deallocate(vp%local)
       nullify(vp%local)
+    endif
+    if(associated(vp%np_bndry)) then
+      deallocate(vp%np_bndry)
+      nullify(vp%np_bndry)
+    endif
+    if(associated(vp%xbndry)) then
+      deallocate(vp%xbndry)
+      nullify(vp%xbndry)
+    endif
+    if(associated(vp%bndry)) then
+      deallocate(vp%bndry)
+      nullify(vp%bndry)
     endif
     if(associated(vp%global)) then
       deallocate(vp%global)
@@ -437,16 +518,10 @@ contains
 
 
   ! Apply parallel non local operator (fo = op fi).
-  ! fi, fo have to be of length vp%np_local(rank+1)+vp%np_ghost(rank+1)
+  ! fi, fo have to be of length
+  ! vp%np_local(rank+1)+vp%np_ghost(rank+1)+vp%np_bndry(rank+1)
   ! and vec_ghost_update should have been called on the input vector
   ! in advance to have sane values at the ghost points.
-  !
-  ! FIXME: Here are problems with boundary conditions:
-  ! When the operator is applied to a point close enough to
-  ! the boundary, we operate on indices, that do not exist in
-  ! the vector fi. fi has to be prepared somehow according
-  ! to the boundary conditions? How does this influence
-  ! the partitioning scheme?
   subroutine dvec_nl_operator(vp, op, fi, fo)
     type(pv_type),          intent(in)  :: vp
     type(nl_operator_type), intent(in)  :: op
@@ -534,7 +609,7 @@ contains
   ! call dvec_gather(vp, f_local_o, f)
   ! call vec_end(vp)
   !
-  ! ! Dipose operator
+  ! ! Dispose operator
   ! call nl_operator_end(pop)
   subroutine vec_op_pop(vp, op, pop) 
     type(pv_type),          intent(in)  :: vp

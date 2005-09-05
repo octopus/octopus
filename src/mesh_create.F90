@@ -39,12 +39,13 @@ end subroutine mesh_partition_init_default
 
 ! Converts the mesh given by grid points into a graph. Each point is
 ! a vertex in the graph and closest neighbours are connected by an
-! edge (at max. 6 in 3D and 4 in 2D, less at the borders).
-! Asserts working in 2D or 3D (but would do in 1D as well).
+! edge (at max. 6 in 3D and 4 in 2D, 2 in 1D, less at the boundaries).
 ! Then calls METIS to get p partitions.
 ! Stored the mapping point no. -> partition no. into
 ! m%part. m%part is allocated along the way.
-! (mesh_partition_end should not be forgotten to call later.)
+! (mesh_partition_end should be called later.)
+! In Lxyz_tmp has to be stored which points belong to the inner mesh
+! and the enlargement. All other entries have to be zero.
 subroutine mesh_partition_init(m, Lxyz_tmp, p)
   type(mesh_type), intent(inout) :: m
   ! FIXME: Works currently only with specified indices, why?
@@ -53,73 +54,95 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
                                              m%nr(1,3):m%nr(2,3))
   integer,         intent(in)    :: p 
 
-  integer              :: i              ! Counter.
+  integer              :: i, j           ! Counter.
   integer              :: ix, iy, iz     ! Counters to iterate over grid.
+  integer              :: jx, jy, jz     ! Coordinates of neighbours.
   integer              :: ne             ! Number of edges.
   integer              :: nv             ! Number of vertices.
   integer              :: d(3, 6)        ! Directions of neighbour points.
   integer              :: edgecut        ! Number of edges cut by partitioning.
   ! Number of vertices (nv) is equal to number of
-  ! points np and maximum number of edges (ne) is 6*np (there
+  ! points np and maximum number of edges (ne) is 2*m%sb%dim*np (there
   ! are a little less because points on the border have less
-  ! than 6 neighbours).
+  ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
-  integer              :: xadj(m%np+1)   ! Indices of adjacency list in adjncy.
-  integer              :: adjncy(6*m%np) ! Adjacency lists.
-  integer              :: options(5)     ! Options to METIS.
-  integer, allocatable :: ppp(:)         ! Points per partition.
-  integer, pointer     :: part(:)        ! Mapping of nodes to partitions.
+  integer              :: xadj(m%np_tot+1)   ! Indices of adjacency list
+                                             ! in adjncy.
+  integer              :: adjncy(2*m%sb%dim*m%np_tot)
+                                             ! Adjacency lists.
+  integer              :: options(5)         ! Options to METIS.
+  integer, allocatable :: ppp(:)             ! Points per partition.
+  integer, pointer     :: part(:)            ! Mapping of nodes to partitions.
 #ifdef DEBUG
-  integer              :: j              ! Counter.
-  integer              :: iunit          ! For debug output to files.
+  integer              :: iunit              ! For debug output to files.
   character(len=3)     :: filenum
 #endif
 
-  call push_sub('mesh_create.metis_partition')
+  call push_sub('mesh_create.metis_partition_init')
   
-  ASSERT(m%sb%dim==2.or.m%sb%dim==3)
-
   options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
+  ! Shortcut (number of vertices).
+  nv = m%np_tot
+
   ! Get space for partitioning.
-  allocate(part(m%np))
+  allocate(part(m%np_tot))
   part = 1
+
+  ! Store partitioning in mesh.
+  m%npart =  p
+  m%part  => part
 
   ! If p=1, we can exit. All points are mapped to
   ! partition 1 (s. a.).
   if(p.eq.1) return
 
   ! Set directions of possible neighbours.
+  ! With this ordering of the directions it is possible
+  ! to iterate over d(:, i) with i=1, ..., 2*m%sb%dim,
+  ! i. e. this works for dim=1, ..., 3 without any special
+  ! cases.
   d(:, 1) = (/ 1,  0,  0/)
-  d(:, 2) = (/ 0,  1,  0/)
-  d(:, 3) = (/ 0,  0,  1/)
-  d(:, 4) = (/-1,  0,  0/)
-  d(:, 5) = (/ 0, -1,  0/)
+  d(:, 2) = (/-1,  0,  0/)
+  d(:, 3) = (/ 0,  1,  0/)
+  d(:, 4) = (/ 0, -1,  0/)
+  d(:, 5) = (/ 0,  0,  1/)
   d(:, 6) = (/ 0,  0, -1/)
 
   ! Create graph with each point being
   ! represenetd by a vertice and edges between
   ! neighboured points.
-  nv = 0
   ne = 1
-  do ix = m%nr(1,1), m%nr(2,1)
-    do iy = m%nr(1,2), m%nr(2,2)
-      do iz = m%nr(1,3), max(0, m%nr(2,3)) ! max is necessary when running in 2 dimensions
-        ! Only if the current point (ix, iy, iz) is inside the box,
-        ! neighbours are relevant.
-        if(Lxyz_tmp(ix, iy, iz).eq.1) then
-          nv       = nv+1
-          xadj(nv) = ne
-          ! Check all possible neighbours.
-          do i = 1, 6
-            if(Lxyz_tmp(ix+d(1, i), iy+d(2, i), iz+d(3, i)).eq.1) then
-              adjncy(ne) = m%Lxyz_inv(ix+d(1, i), iy+d(2, i), iz+d(3, i))
-              ne         = ne+1
-            end if
-          end do
+  ! Iterate over number of vertices.
+  do i = 1, nv
+    ! Get coordinates of point i (vertex i).
+    ix      = m%Lxyz(i, 1)
+    iy      = m%Lxyz(i, 2)
+    iz      = m%Lxyz(i, 3)
+    ! Set entry in index table.
+    xadj(i) = ne
+    ! Check all possible neighbours.
+    do j = 1, 2*m%sb%dim
+      ! Store coordinates of possible neighbour, they
+      ! are needed several times in the check below.
+      jx = ix+d(1, j)
+      jy = iy+d(2, j)
+      jz = iz+d(3, j)
+      ! Only if the neighbour is in the surrounding box,
+      ! Lxyz_tmp has an entry for this point, otherweise
+      ! it is out of bounds.
+      if(jx.ge.m%nr(1, 1).and.jx.le.m%nr(2, 1).and.  &
+         jy.ge.m%nr(1, 2).and.jy.le.m%nr(2, 2).and.  &
+         jz.ge.m%nr(1, 3).and.jz.le.m%nr(2, 3)) then
+        ! Only points inside the mesh or its enlargement
+        ! are included in the graph.
+        if(Lxyz_tmp(jx, jy, jz).ne.0) then
+          ! Store a new edge and increment edge counter.
+          adjncy(ne) = m%Lxyz_inv(jx, jy, jz)
+          ne         = ne+1
         end if
-      end do
+      end if
     end do
   end do
   ne         = ne-1 ! We start with ne=1 for simplicity. This is off by one
@@ -128,8 +151,8 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
                     ! The reason is: neighbours of node i are stored
                     ! in adjncy(xadj(i):xadj(i+1)-1). Setting the last
                     ! index as mentioned makes special handling of
-                    ! last element unnecessary.
-
+                    ! last element unnecessary (this indicing is a
+                    ! METIS requirement).
 
 #ifdef DEBUG
   ! DEBUG output. Write graph to file mesh_graph.txt.
@@ -192,16 +215,26 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
                       action='write')
       do j = 1, m%np
-        if(part(j).eq.i) write(iunit, '(i8,3f12.8)') j, m%x(j,:)
+        ! Somehow all points in the enlargement are mapped
+        ! to one point in m%x. So, if the enlargement shall be
+        ! written too (s. b.), activate the following line
+        ! and take out the usual write and comment out the
+        ! block below (this works only for equi-distant grids.
+        !!if(part(j).eq.i) write(iunit, '(i8,3i8)') j, m%Lxyz(j, :)
+        if(part(j).eq.i) write(iunit, '(i8,3f12.8)') j, m%x(j, :)
       end do
       call io_close(iunit)
     end do
+    ! Write points from enlargement to file with number p+1.
+    !!write(filenum, '(i3.3)') p+1
+    !!iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+    !!                action='write')
+    !!do i = m%np+1, m%np_tot
+    !!  write(iunit, '(i8,3i8)') i, m%Lxyz(i,:)
+    !!end do
+    !!call io_close(iunit)
   end if
 #endif
-
-  ! Store partitioning in mesh.
-  m%npart = p
-  m%part => part
 
   call pop_sub()
 
@@ -293,6 +326,7 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
   end do
   m%np_tot = il
   allocate(m%Lxyz(m%np_tot, 3), m%x(m%np_tot, 3))
+
 
   ! first we fill the points in the inner mesh
   il = 0
