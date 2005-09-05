@@ -100,8 +100,7 @@ module par_vec
 
 #ifdef HAVE_MPI
   private
-  public :: pv_type,            &
-            vec_init,           &
+  public :: vec_init,           &
             vec_init_default,   &
             vec_end,            &
             dvec_scatter,       &
@@ -120,57 +119,20 @@ module par_vec
             vec_op_pop
 
 
-  ! Describes mesh distribution to nodes.
-  ! There is actually some redundancy: p and np are
-  ! also stored in type(mesh_type) but it is needed in
-  ! vec-routines too and I see no use in additionally passing
-  ! a type(mesh_type) argument in all vec-calls.
-  type pv_type
-    integer          :: comm                 ! MPI communicator to use.
-    integer          :: root                 ! The master node.
-    integer          :: p                    ! Number of partitions.
-    integer          :: np                   ! Number of points in mesh.
-    integer          :: np_enl               ! Number of points in enlargement.
-    integer, pointer :: np_local(:)          ! How many points has partition r?
-    integer, pointer :: xlocal(:)            ! Points of partition r start at
-                                             ! xlocal(r) in local.
-    integer, pointer :: local(:)             ! Partition r has points
-                                             ! local(xlocal(r):
-                                             ! xlocal(r)+np_local(r)-1).
-    integer, pointer :: np_bndry(:)          ! Number of boundary points.
-    integer, pointer :: xbndry(:)            ! Index of bndry(:).
-    integer, pointer :: bndry(:)             ! Global numbers of boundary
-                                             ! points.
-    integer, pointer :: global(:, :)         ! global(i, r) is local number
-                                             ! of point i in partition r
-                                             ! (if this is 0, i is neither
-                                             ! a ghost point nor local to r).
-    integer          :: total                ! Total number of ghost points.
-    integer, pointer :: np_ghost(:)          ! How many ghost points has
-                                             ! partition r?
-    integer, pointer :: np_ghost_neigh(:, :) ! Number of ghost points per
-                                             ! neighbour per partition.
-    integer, pointer :: xghost(:)            ! Like xlocal.
-    integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
-    integer, pointer :: ghost(:)             ! Global indices of all local
-                                             ! ghost points.
-  end type pv_type
-
-
 contains
 
   ! Wrapper: calls vec_init with MPI_COMM_WORLD and master node 0.
-  subroutine vec_init_default(m, stencil, np_stencil, vp, &
-                      np_local, np_ghost, np_bndry)
+  subroutine vec_init_default(m, stencil, np_stencil, vp)
     type(mesh_type), intent(in)  :: m            ! The current mesh.
     integer,         intent(in)  :: stencil(:,:) ! The stencil for which to
                                                  ! calculate ghost points.
     integer,         intent(in)  :: np_stencil   ! Num. of points in stencil.
     type(pv_type),   intent(out) :: vp           ! Description of partition.
-    ! Those three are shortcuts.
-    integer,         intent(out) :: np_local     ! vp%np_local(rank+1).
-    integer,         intent(out) :: np_ghost     ! vp%np_ghost(rank+1).
-    integer,         intent(out) :: np_bndry     ! vp%np_bndry(rank+1).
+
+    ! Throw them away.
+    integer :: np_local ! vp%np_local(rank+1).
+    integer :: np_ghost ! vp%np_ghost(rank+1).
+    integer :: np_bndry ! vp%np_bndry(rank+1).
 
     call push_sub('par_vec.vec_init_default')
     
@@ -541,12 +503,6 @@ contains
     
     n = op%n
 
-    ! Maybe it is faster to create a local index first.
-    !allocate(i_local(n, vp%np))
-    !do i = 1, vp%np
-    !  i_local(1:n, i) = vp%global(op%i(1:n, i), rank+1)
-    !end do
-    
     if(op%const_w) then
        allocate(w_re(n))
        w_re(1:n) = op%w_re(1:n, 1)
@@ -558,15 +514,12 @@ contains
           ! k globally).
           k = vp%local(vp%xlocal(rank+1)+i-1)
           fo(i) = sum(w_re(1:n)*fi(vp%global(op%i(1:n, k), rank+1)))
-          ! With local index:
-          !fo(i) = sum(w_re(1:n)*fi(i_local(1:n, k))
        end do
        deallocate(w_re)
     else
        do i = 1, vp%np_local(rank+1)
           k = vp%local(vp%xlocal(rank+1)+i-1)
           fo(i) = sum(op%w_re(1:n,k)*fi(vp%global(op%i(1:n, k), rank+1)))
-          !fo(i) = sum(op%w_re(1:n,k)*fi(i_local(1:n, k)))
        end do
     end if
 

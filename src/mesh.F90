@@ -36,17 +36,54 @@ module mesh
   implicit none
 
   private
-  public ::  &
-     mesh_type, &
-     mesh_init, &
-     mesh_end, &
-     mesh_double_box, &
-     mesh_create_xyz, &
-     mesh_index, &
-     mesh_inborder, &
-     mesh_r, &
-     mesh_gcutoff, &
-     mesh_write_info
+  public ::          &
+    pv_type,         &
+    mesh_type,       &
+    mesh_init,       &
+    mesh_end,        &
+    mesh_double_box, &
+    mesh_create_xyz, &
+    mesh_index,      &
+    mesh_inborder,   &
+    mesh_r,          &
+    mesh_gcutoff,    &
+    mesh_write_info
+
+
+  ! Describes mesh distribution to nodes.
+#ifdef HAVE_MPI
+  type pv_type
+    integer          :: comm                 ! MPI communicator to use.
+    integer          :: root                 ! The master node.
+    integer          :: p                    ! Number of partitions.
+    integer          :: np                   ! Number of points in mesh.
+    integer          :: np_enl               ! Number of points in enlargement.
+    integer, pointer :: np_local(:)          ! How many points has partition r?
+    integer, pointer :: xlocal(:)            ! Points of partition r start at
+                                             ! xlocal(r) in local.
+    integer, pointer :: local(:)             ! Partition r has points
+                                             ! local(xlocal(r):
+                                             ! xlocal(r)+np_local(r)-1).
+    integer, pointer :: np_bndry(:)          ! Number of boundary points.
+    integer, pointer :: xbndry(:)            ! Index of bndry(:).
+    integer, pointer :: bndry(:)             ! Global numbers of boundary
+                                             ! points.
+    integer, pointer :: global(:, :)         ! global(i, r) is local number
+                                             ! of point i in partition r
+                                             ! (if this is 0, i is neither
+                                             ! a ghost point nor local to r).
+    integer          :: total                ! Total number of ghost points.
+    integer, pointer :: np_ghost(:)          ! How many ghost points has
+                                             ! partition r?
+    integer, pointer :: np_ghost_neigh(:, :) ! Number of ghost points per
+                                             ! neighbour per partition.
+    integer, pointer :: xghost(:)            ! Like xlocal.
+    integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
+    integer, pointer :: ghost(:)             ! Global indices of all local
+                                             ! ghost points.
+  end type pv_type
+#endif
+
 
   type mesh_type
     type(simul_box_type), pointer :: sb
@@ -65,6 +102,10 @@ module mesh
     integer          :: npart   ! Number of partitions.
     integer, pointer :: part(:) ! Mapping point -> partition, result
                                 ! of call to the METIS library.
+
+#ifdef HAVE_MPI
+    type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
+#endif
 
     ! some other vars
     integer :: nr(2,3)  ! dimensions of the box where the points are contained

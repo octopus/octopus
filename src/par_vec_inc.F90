@@ -169,7 +169,7 @@ subroutine X(vec_gather)(vp, v, v_local)
   if(rank.eq.vp%root) allocate(v_tmp(vp%np))
 
   call MPI_Gatherv(v_local, vp%np_local(rank+1), R_MPITYPE, v_tmp, &
-                   vp%np_local, vp%xlocal, R_MPITYPE,              &
+                   vp%np_local, displs, R_MPITYPE,                 &
                    vp%root, vp%comm, ierr)
   call mpierr(ierr)
 

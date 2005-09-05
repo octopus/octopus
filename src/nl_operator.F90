@@ -114,19 +114,24 @@ contains
   ! ---------------------------------------------------------
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_type),        intent(in)    :: m
-    type(nl_operator_type), intent(inout) :: op
-    integer,                intent(in)    :: np
+    type(nl_operator_type), intent(inout) :: op       
+    integer,                intent(in)    :: np       ! Number of (local)
+                                                      ! points.
     logical, optional,      intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
 
-    integer :: i, j, ix(3)
+    integer :: i, j, p1(3)
+#ifdef HAVE_MPI
+    integer :: ierr ! MPI errorcode.
+    integer :: rank ! Current nodes rank.
+#endif
 
     call push_sub('nl_operator.nl_operator_build')
 
     ASSERT(np > 0)
 
     ! store values in structure
-    op%np = np
+    op%np       = np
     op%const_w  = .false.
     op%cmplx_op = .false.
     if(present(const_w )) op%const_w = const_w
@@ -153,17 +158,35 @@ contains
     op%w_re = M_ZERO
     if (op%cmplx_op) op%w_im = M_ZERO
 
-    ! build lookup table op%i from stencil
-    allocate(op%i(op%n, op%np))
+    ! Build lookup table op%i from stencil.
+    allocate(op%i(op%n, np))
 
-    do i = 1, m%np     ! for all points in mesh
-       ix(:) = m%Lxyz(i,:)
+#ifdef HAVE_MPI
+    call MPI_Comm_rank(m%vp%comm, rank, ierr)
+#endif
 
-       do j = 1, op%n   ! for all points in stencil
-          op%i(j, i) = mesh_index(m, ix(:) + op%stencil(:,j), 1)
-       end do
+    do i = 1, np
+#ifdef HAVE_MPI
+      ! When running in parallel, get global number of
+      ! point i.
+      p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), :)
+#else
+      p1(:) = m%Lxyz(i, :)
+#endif
+
+      do j = 1, op%n
+        ! Get global index of p1 plus current stencil point.
+        op%i(j, i) = mesh_index(m, p1(:) + op%stencil(:, j), 1)
+#ifdef HAVE_MPI
+        ! When running parallel, translate this global
+        ! number back to a local number.
+        op%i(j, i) = m%vp%global(op%i(j, i), rank+1)
+#endif
+      end do
     end do
+
     call pop_sub()
+
   end subroutine nl_operator_build
 
 

@@ -20,7 +20,7 @@ core_SRCS = $(basic_SRCS) \
 	fft.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
-	out.F90 multigrid.F90 grid.F90 \
+	out.F90 multigrid.F90 par_vec.F90 grid.F90 \
 	poisson_corrections.F90 poisson_cg.F90 poisson_multigrid.F90 poisson.F90 \
 	crystal.F90 states.F90 xc_functl.F90 xc.F90 mix.F90 restart.F90
 
@@ -30,7 +30,7 @@ octopus_SOURCES = $(core_SRCS) \
 	scf.F90 gs.F90 unocc.F90 \
 	static_pol.F90 geom_opt.F90 phonons.F90 \
 	td_exp_split.F90 td_exp.F90 td_rti.F90 td_write.F90 td.F90 opt_control.F90 \
-	casida.F90 wave_matching.F90 par_vec.F90 static_pol_lr.F90 pulpo.F90 \
+	casida.F90 wave_matching.F90 static_pol_lr.F90 pulpo.F90 \
 	run.F90 main.F90
 
 noinst_HEADERS = \
