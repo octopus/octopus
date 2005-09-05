@@ -95,7 +95,7 @@ subroutine td_init(gr, td, st, h, outp)
   call td_write_init(td%write_handler, (td%move_ions>0), (h%ep%no_lasers>0) )
 
   ! Compatibility test
-  if(td%write_handler%out_acc.and.td%move_ions>0) then
+  if((td%write_handler%out_acc.ne.0).and.td%move_ions>0) then
     message(1) = 'Error. If harmonic spectrum is to be calculated'
     message(2) = 'Atoms should not be allowed to move'
     call write_fatal(2)

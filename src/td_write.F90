@@ -102,10 +102,10 @@ subroutine td_write_init_iter(w, iter, dt)
   integer, intent(in)       :: iter
   FLOAT, intent(in)         :: dt
 
-  call push_sub('td_write_init_iter')
-
   character(len=256) :: filename
   integer :: first
+
+  call push_sub('td_write_init_iter')
 
   if (iter == 0) then
       first = 0
