@@ -27,7 +27,6 @@ subroutine td_init(gr, td, st, h, outp)
 
   integer :: i, dummy
   integer(POINTER_SIZE) :: blk
-  FLOAT :: rmin
 
   call push_sub('td_init.td_init')
 
@@ -45,13 +44,6 @@ subroutine td_init(gr, td, st, h, outp)
   if(td%max_iter < 1) then
     write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid TDMaximumIter"
     message(2) = '(1 <= TDMaximumIter)'
-    call write_fatal(2)
-  end if
-
-  call loct_parse_int(check_inp('TDDipoleLmax'), 1, td%lmax)
-  if (td%lmax < 0 .or. td%lmax > 4) then
-    write(message(1), '(a,i6,a)') "Input: '", td%lmax, "' is not a valid TDDipoleLmax"
-    message(2) = '(0 <= TDDipoleLmax <= 4 )'
     call write_fatal(2)
   end if
 
@@ -92,7 +84,7 @@ subroutine td_init(gr, td, st, h, outp)
 
   ! Check what should be output
 
-  call td_write_init(td%write_handler, (td%move_ions>0), (h%ep%no_lasers>0) )
+  call td_write_init(td%write_handler, gr%geo, (td%move_ions>0), (h%ep%no_lasers>0) )
 
   ! Compatibility test
   if((td%write_handler%out_acc.ne.0).and.td%move_ions>0) then
@@ -100,10 +92,6 @@ subroutine td_init(gr, td, st, h, outp)
     message(2) = 'Atoms should not be allowed to move'
     call write_fatal(2)
   endif
-
-  call geometry_min_distance(gr%geo, rmin)
-  call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, td%lmm_r)
-  td%lmm_r = td%lmm_r * units_inp%length%factor
 
   call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1

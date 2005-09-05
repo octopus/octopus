@@ -58,13 +58,9 @@ module timedep
      integer           :: max_iter       ! maximum number of iterations to perform
      integer           :: iter           ! the actual iteration
      integer           :: epot_regenerate! Every epot_regenerate, the external potential
-     ! regenerated *exactly*.
-
+                                         ! regenerated *exactly*.
      integer           :: move_ions      ! how do we move the ions?
-
      FLOAT             :: pol(3)         ! the direction of the polarization of the field
-     integer           :: lmax           ! maximum multipole moment to output
-     FLOAT             :: lmm_r          ! radius of the sphere used to compute the local magnetic moments
 
      type(td_write_type) :: write_handler
 
@@ -224,7 +220,7 @@ contains
           geo%kinetic_energy = kinetic_energy(geo)
        end if
 
-      call td_write_iter(td%write_handler, gr, st, gs_st, h, geo, td%lmax, td%pol, td%lmm_r, td%dt, 0)
+       call td_write_iter(td%write_handler, gr, st, gs_st, h, geo, td%pol, td%dt, i)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
        call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
@@ -332,7 +328,7 @@ contains
       call push_sub('td.td_run_zero_iter')
 
       call io_mkdir('td.general')
-      call td_write_iter(td%write_handler, gr, st, gs_st, h, geo, td%lmax, td%pol, td%lmm_r, td%dt, 0)
+      call td_write_iter(td%write_handler, gr, st, gs_st, h, geo, td%pol, td%dt, 0)
       call td_save_restart(0)
       call td_write_data(td%write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
       call td_rti_run_zero_iter(h, td%tr)

@@ -59,15 +59,20 @@ module td_write
                              out_angular,&
                              out_spin,   &
                              out_magnets
+
+    integer           :: lmax           ! maximum multipole moment to output
+    FLOAT             :: lmm_r          ! radius of the sphere used to compute the local magnetic moments
   end type td_write_type
 
 
 contains
 
-subroutine td_write_init(w, ions_move, there_are_lasers)
+subroutine td_write_init(w, geo, ions_move, there_are_lasers)
   type(td_write_type)       :: w
+  type(geometry_type), intent(in) :: geo
   logical, intent(in) :: ions_move, there_are_lasers
 
+  FLOAT :: rmin
   logical :: log
 
   call push_sub('td_write.td_write_handler')
@@ -93,6 +98,18 @@ subroutine td_write_init(w, ions_move, there_are_lasers)
        w%out_proj = 0; if(log) w%out_proj = 1
   call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., log)
        w%out_magnets = 0; if(log) w%out_magnets = 1
+
+
+  call loct_parse_int(check_inp('TDDipoleLmax'), 1, w%lmax)
+  if (w%lmax < 0 .or. w%lmax > 4) then
+    write(message(1), '(a,i6,a)') "Input: '", w%lmax, "' is not a valid TDDipoleLmax"
+    message(2) = '(0 <= TDDipoleLmax <= 4 )'
+    call write_fatal(2)
+  end if
+
+  call geometry_min_distance(geo, rmin)
+  call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
+  w%lmm_r = w%lmm_r * units_inp%length%factor
 
   call pop_sub()
 end subroutine td_write_init
@@ -160,25 +177,23 @@ subroutine td_write_end_iter(w)
   call pop_sub()
 end subroutine td_write_end_iter
 
-subroutine td_write_iter(w, gr, st, gs_st, h, geo, lmax, pol, lmm_r, dt, i)
+subroutine td_write_iter(w, gr, st, gs_st, h, geo, pol, dt, i)
   type(td_write_type),    intent(in) :: w
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(in)    :: st
   type(states_type),      intent(in)    :: gs_st
   type(hamiltonian_type), intent(in)    :: h
   type(geometry_type),    intent(in)    :: geo
-  integer,                intent(in) :: lmax   
   FLOAT,                  intent(in) :: pol(3)
-  FLOAT,                  intent(in) :: lmm_r
   FLOAT,                  intent(in) :: dt
   integer,                intent(in) :: i
 
   call push_sub('td_write.td_write_iter')
 
-  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, lmax, pol, i)
+  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, pol, i)
   if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
   if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
-  if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, lmm_r, i)
+  if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
   if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, gs_st, i)
   if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
   if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
