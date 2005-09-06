@@ -289,5 +289,5 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   call MPI_Allreduce(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, ierr)
 
   call pop_sub()
-
+ 
 end function X(vec_integrate)

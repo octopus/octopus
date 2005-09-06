@@ -22,8 +22,8 @@
 ! equal to the number of processors stored in the global mpiv.
 ! This is what is usually needed.
 subroutine mesh_partition_init_default(m, Lxyz_tmp)
-   type(mesh_type), intent(inout) :: m
-  ! FIXME: Works currently only with specified indices, why?
+  type(mesh_type), intent(inout) :: m
+  ! Indices have to be specified, because they do not start with 1.
   integer,         intent(in)    :: Lxyz_tmp(m%nr(1,1):m%nr(2,1), &
                                              m%nr(1,2):m%nr(2,2), &
                                              m%nr(1,3):m%nr(2,3))
@@ -48,7 +48,6 @@ end subroutine mesh_partition_init_default
 ! and the enlargement. All other entries have to be zero.
 subroutine mesh_partition_init(m, Lxyz_tmp, p)
   type(mesh_type), intent(inout) :: m
-  ! FIXME: Works currently only with specified indices, why?
   integer,         intent(in)    :: Lxyz_tmp(m%nr(1,1):m%nr(2,1), &
                                              m%nr(1,2):m%nr(2,2), &
                                              m%nr(1,3):m%nr(2,3))
@@ -221,7 +220,7 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
         ! and take out the usual write and comment out the
         ! block below (this works only for equi-distant grids.
         !!if(part(j).eq.i) write(iunit, '(i8,3i8)') j, m%Lxyz(j, :)
-        if(part(j).eq.i) write(iunit, '(i8,3f12.8)') j, m%x(j, :)
+        if(part(j).eq.i) write(iunit, '(4i8)') j, m%Lxyz(j, :)
       end do
       call io_close(iunit)
     end do
@@ -258,11 +257,13 @@ end subroutine mesh_partition_end
 #endif
 
 
-subroutine mesh_create_xyz(sb, m, cv, geo)
+subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
   type(simul_box_type),  intent(in)    :: sb
   type(mesh_type),       intent(inout) :: m
   type(curvlinear_type), intent(in)    :: cv
   type(geometry_type),   intent(in)    :: geo
+  integer, optional,     intent(in)    :: stencil(:, :)
+  integer, optional,     intent(in)    :: np_stencil
 
   integer :: i, j, k, il, ix, iy, iz
   integer, allocatable :: Lxyz_tmp(:,:,:)
@@ -377,22 +378,28 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   call mesh_partition_init_default(m, Lxyz_tmp)
-  !call vec_init_default(m, f_der%der_discr%lapl%stencil, &
-  !                      f_der%der_discr%lapl%n, m%vp)
+  if(present(stencil).and.present(np_stencil)) then
+    call vec_init_default(m%npart, m%part, m%np_glob, m%np_tot_glob, m%nr, &
+                          m%Lxyz_inv, m%Lxyz, stencil, np_stencil, m%vp)
 
-  ! Set local point numbers.
-  call MPI_Comm_rank(m%vp%comm, rank, ierr)
-  m%np     = m%vp%np_local(rank+1)
-  m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
-  ! Compute m%x.
-  allocate(m%x(m%np_tot, 3))
-  do i = 1, m%np_tot
-    ix = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 1)
-    iy = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 2)
-    iz = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 3)
-
-    m%x(i, :) = x(:, ix, iy, iz)
-  end do
+    ! Set local point numbers.
+    call MPI_Comm_rank(m%vp%comm, rank, ierr)
+    m%np     = m%vp%np_local(rank+1)
+    m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
+    ! Compute m%x as it is done in the serial case but
+    ! only for local points.
+    allocate(m%x(m%np_tot, 3))
+    do i = 1, m%np_tot
+      ix = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 1)
+      iy = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 2)
+      iz = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 3)
+      m%x(i, :) = x(:, ix, iy, iz)
+    end do
+  else
+    message(1) = 'mesh_create.mesh_create_xyz called without stencil'
+    message(2) = 'and np_stencil when running in MPI mode.'
+    call write_fatal(2)
+  end if
 #else
   ! When running serially those two are the same.
   m%np     = m%np_glob
@@ -417,7 +424,11 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   type(mesh_type),       intent(inout) :: mesh
 
   integer :: i, k
-  FLOAT :: f, chi(sb%dim)
+  FLOAT   :: f, chi(sb%dim)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: rank
+  integer :: ierr
+#endif
 
   f = M_ONE
   do i = 1, sb%dim
@@ -427,14 +438,20 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   allocate(mesh%vol_pp(mesh%np_tot))
   mesh%vol_pp(:) = f
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  call MPI_Comm_rank(mesh%vp%comm, rank, ierr)
+#endif
+
   do i = 1, mesh%np_tot
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
+    ! Lookup global point number.
+    k = mesh%vp%local(mesh%vp%xlocal(rank+1)+i-1)
 #else
-    chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
-    mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i,:), chi)
+    k = i
 #endif
+    chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+    mesh%vol_pp(k) = mesh%vol_pp(k)*curvlinear_det_Jac(sb, geo, cv, mesh%x(k, :), chi)
   end do
-
 end subroutine mesh_get_vol_pp
 
 

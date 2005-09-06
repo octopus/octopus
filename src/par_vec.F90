@@ -56,7 +56,7 @@ module par_vec
   ! ! np_stencil = op%n
   !
   ! FLOAT              :: s
-  ! FLOAT              :: u(m%np_glob), v(m%np_glob)
+  ! FLOAT              :: u(np_glob), v(np_glob)
   ! FLOAT, allocatable :: ul(:), vl(:), wl(:)
   ! type(mesh_type)    :: m
   !
@@ -64,32 +64,30 @@ module par_vec
   ! ! ...
   !
   ! ! Allocate space for local vectors.
-  ! allocate(ul(m%np_tot))
-  ! allocate(vl(m%np_tot))
-  ! allocate(wl(m%np_tot))
+  ! allocate(ul(np_tot))
+  ! allocate(vl(np_tot))
+  ! allocate(wl(np_tot))
   !
   ! ! Distribute vectors.
-  ! call X(vec_scatter)(m%vp, u, ul)
-  ! call X(vec_scatter)(m%vp, v, vl)
+  ! call X(vec_scatter)(vp, u, ul)
+  ! call X(vec_scatter)(vp, v, vl)
   !
   ! ! Calculate scalar product s=<u|v>.
   ! wl = ul*vl
   ! ! vec_integrate ignores ghost points (i. e. v(np_local+1:)).
-  ! s = X(vec_integrate)(m%vp, wl)
+  ! s = X(vec_integrate)(vp, wl)
   !
   ! ! Compute some operator op: vl = op ul
-  ! call X(vec_ghost_update)(m%vp, ul)
+  ! call X(vec_ghost_update)(vp, ul)
   ! call X(nl_operator_operate)(op, ul, vl)
   ! ! Gather result of op in one vector v.
-  ! call X(vec_gather)(m%vp, v, vl)
+  ! call X(vec_gather)(vp, v, vl)
   !
   ! ! Clean up.
   ! deallocate(ul, vl, wl)
 
   use global
-  use mesh
   use messages
-  use nl_operator
 #ifdef DEBUG
   use io
 #endif
@@ -98,7 +96,8 @@ module par_vec
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   private
-  public :: vec_init,           &
+  public :: pv_type,            &
+            vec_init,           &
             vec_init_default,   &
             vec_end,            &
             dvec_scatter,       &
@@ -114,16 +113,58 @@ module par_vec
             dvec_integrate,     &
             zvec_integrate
 
+  type pv_type
+    integer          :: comm                 ! MPI communicator to use.
+    integer          :: root                 ! The master node.
+    integer          :: p                    ! Number of partitions.
+    integer          :: np                   ! Number of points in mesh.
+    integer          :: np_enl               ! Number of points in enlargement.
+    integer, pointer :: np_local(:)          ! How many points has partition r?
+    integer, pointer :: xlocal(:)            ! Points of partition r start at
+                                             ! xlocal(r) in local.
+    integer, pointer :: local(:)             ! Partition r has points
+                                             ! local(xlocal(r):
+                                             ! xlocal(r)+np_local(r)-1).
+    integer, pointer :: np_bndry(:)          ! Number of boundary points.
+    integer, pointer :: xbndry(:)            ! Index of bndry(:).
+    integer, pointer :: bndry(:)             ! Global numbers of boundary
+                                             ! points.
+    integer, pointer :: global(:, :)         ! global(i, r) is local number
+                                             ! of point i in partition r
+                                             ! (if this is 0, i is neither
+                                             ! a ghost point nor local to r).
+    integer          :: total                ! Total number of ghost points.
+    integer, pointer :: np_ghost(:)          ! How many ghost points has
+                                             ! partition r?
+    integer, pointer :: np_ghost_neigh(:, :) ! Number of ghost points per
+                                             ! neighbour per partition.
+    integer, pointer :: xghost(:)            ! Like xlocal.
+    integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
+    integer, pointer :: ghost(:)             ! Global indices of all local
+                                             ! ghost points.
+  end type pv_type
+
 
 contains
 
   ! Wrapper: calls vec_init with MPI_COMM_WORLD and master node 0.
-  subroutine vec_init_default(m, stencil, np_stencil, vp)
-    type(mesh_type), intent(in)  :: m            ! The current mesh.
-    integer,         intent(in)  :: stencil(:,:) ! The stencil for which to
-                                                 ! calculate ghost points.
-    integer,         intent(in)  :: np_stencil   ! Num. of points in stencil.
-    type(pv_type),   intent(out) :: vp           ! Description of partition.
+  subroutine vec_init_default(p, part, np, np_tot, nr,                 &
+                              Lxyz_inv, Lxyz, stencil, np_stencil, vp)
+    ! The next seven entries come from the mesh.
+    integer,       intent(in)  :: p            ! m%npart
+    integer,       intent(in)  :: part(:)      ! m%part
+    integer,       intent(in)  :: np           ! m%np_glob
+    integer,       intent(in)  :: np_tot       ! m%np_tot_glob
+    integer,       intent(in)  :: nr(2, 3)     ! m%nr
+    integer,       intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), &
+                                           nr(1,2):nr(2,2), &
+                                           nr(1,3):nr(2,3))
+                                               ! m%Lxyz_inv
+    integer,       intent(in)  :: Lxyz(:, :)   ! m%Lxyz
+    integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
+                                               ! calculate ghost points.
+    integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
+    type(pv_type), intent(out) :: vp           ! Description of partition.
 
     ! Throw them away.
     integer :: np_local ! vp%np_local(rank+1).
@@ -132,7 +173,8 @@ contains
 
     call push_sub('par_vec.vec_init_default')
     
-    call vec_init(MPI_COMM_WORLD, 0, m, stencil, np_stencil, vp, &
+    call vec_init(MPI_COMM_WORLD, 0, p, part, np, np_tot, nr,  &
+                  Lxyz_inv, Lxyz, stencil, np_stencil, vp,     &
                   np_local, np_ghost, np_bndry)
 
     call pop_sub()
@@ -160,25 +202,34 @@ contains
   ! The points are relative to the "application point" of the stencil.
   ! (This is the same format as used in type(nl_operator_type), so
   ! just passing op%stencil is possible.)
-  subroutine vec_init(comm, root, m, stencil, np_stencil, vp, &
+  subroutine vec_init(comm, root, p, part, np, np_tot, nr,     &
+                      Lxyz_inv, Lxyz, stencil, np_stencil, vp, &
                       np_local, np_ghost, np_bndry)
-    integer,         intent(in)  :: comm         ! Communicator to use.
-    integer,         intent(in)  :: root         ! The master node.
-    type(mesh_type), intent(in)  :: m            ! The current mesh.
-    integer,         intent(in)  :: stencil(:,:) ! The stencil for which to
-                                                 ! calculate ghost points.
-    integer,         intent(in)  :: np_stencil   ! Num. of points in stencil.
-    type(pv_type),   intent(out) :: vp           ! Description of partition.
+    integer,       intent(in)  :: comm         ! Communicator to use.
+    integer,       intent(in)  :: root         ! The master node.
+    ! The next seven entries come from the mesh.
+    integer,       intent(in)  :: p            ! m%npart
+    integer,       intent(in)  :: part(:)      ! m%part
+    integer,       intent(in)  :: np           ! m%np_glob
+    integer,       intent(in)  :: np_tot       ! m%np_tot_glob
+    integer,       intent(in)  :: nr(2, 3)     ! m%nr
+    integer,       intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), &
+                                           nr(1,2):nr(2,2), &
+                                           nr(1,3):nr(2,3))
+                                               ! m%Lxyz_inv
+    integer,       intent(in)  :: Lxyz(:, :)   ! m%Lxyz
+    integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
+                                               ! calculate ghost points.
+    integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
+    type(pv_type), intent(out) :: vp           ! Description of partition.
     ! Those three are shortcuts.
-    integer,         intent(out) :: np_local     ! vp%np_local(rank+1).
-    integer,         intent(out) :: np_ghost     ! vp%np_ghost(rank+1).
-    integer,         intent(out) :: np_bndry     ! vp%np_bndry(rank+1).
+    integer,       intent(out) :: np_local     ! vp%np_local(rank+1).
+    integer,       intent(out) :: np_ghost     ! vp%np_ghost(rank+1).
+    integer,       intent(out) :: np_bndry     ! vp%np_bndry(rank+1).
     
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
-    integer              :: p                ! Number of partitions.
-    integer              :: np               ! Number of points in mesh.
     integer              :: np_enl           ! Number of points in enlargement.
     integer              :: i, j, k, r       ! Counters.
     integer, allocatable :: ir(:), irr(:, :) ! Counters.
@@ -194,9 +245,7 @@ contains
     call push_sub('par_vec.vec_init')
 
     ! Shortcuts.
-    p      = m%npart
-    np     = m%np_glob
-    np_enl = m%np_tot_glob-m%np_glob
+    np_enl = np_tot-np
     call MPI_Comm_rank(comm, rank, ierr)
     
     allocate(ghost_flag(np, p))
@@ -218,12 +267,12 @@ contains
     ! Local points.
     vp%np_local = 0
     do i = 1, np
-      vp%np_local(m%part(i)) = vp%np_local(m%part(i))+1
+      vp%np_local(part(i)) = vp%np_local(part(i))+1
     end do
     ! Boundary points.
     vp%np_bndry = 0
     do i = 1, np_enl
-      vp%np_bndry(m%part(i+np)) = vp%np_bndry(m%part(i+np))+1
+      vp%np_bndry(part(i+np)) = vp%np_bndry(part(i+np))+1
     end do
 
     ! Set up local to global index table for local points
@@ -236,13 +285,13 @@ contains
     end do
     ir = 0
     do i = 1, np
-      vp%local(vp%xlocal(m%part(i))+ir(m%part(i))) = i
-      ir(m%part(i))                                = ir(m%part(i))+1
+      vp%local(vp%xlocal(part(i))+ir(part(i))) = i
+      ir(part(i))                                = ir(part(i))+1
     end do
     ir = 0
     do i = np+1, np+np_enl
-      vp%bndry(vp%xbndry(m%part(i))+ir(m%part(i))) = i
-      ir(m%part(i))                                = ir(m%part(i))+1
+      vp%bndry(vp%xbndry(part(i))+ir(part(i))) = i
+      ir(part(i))                                = ir(part(i))+1
     end do
 
     ! Format of ghost:
@@ -276,7 +325,7 @@ contains
       ! Check all points of this node.
       do i = vp%xlocal(r), vp%xlocal(r)+vp%np_local(r)-1
         ! Get coordinates of current point.
-        p1 = m%Lxyz(vp%local(i), :)
+        p1 = Lxyz(vp%local(i), :)
         ! For all points in stencil.
         do j = 1, np_stencil
           ! Get coordinates of possible ghost point.
@@ -285,11 +334,11 @@ contains
           ! If p2 is out of the box, ignore it.
           ! Actually, the box should be big enough, that
           ! this case does not arise.
-          if(m%nr(1, 1).gt.p2(1).or.p2(1).gt.m%nr(2, 1).or. &
-             m%nr(1, 2).gt.p2(2).or.p2(2).gt.m%nr(2, 2).or. &
-             m%nr(1, 3).gt.p2(3).or.p2(3).gt.m%nr(2, 3)) cycle
+          if(nr(1, 1).gt.p2(1).or.p2(1).gt.nr(2, 1).or. &
+             nr(1, 2).gt.p2(2).or.p2(2).gt.nr(2, 2).or. &
+             nr(1, 3).gt.p2(3).or.p2(3).gt.nr(2, 3)) cycle
           ! If it is in the box, get its (global) point number.
-          k = m%Lxyz_inv(p2(1), p2(2), p2(3))
+          k = Lxyz_inv(p2(1), p2(2), p2(3))
           ! If p2 is in the box but does not belong to the inner mesh,
           ! its point number k is greater than np.
           ! If this is the case, it is a boundary point and is handled
@@ -298,17 +347,17 @@ contains
           ! At this point, it is sure that point number k is a
           ! relevant point.
           ! If this index k does not belong to partition of node r,
-          ! then k is a ghost point for r with m%part(k) now being
+          ! then k is a ghost point for r with part(k) now being
           ! a neighbour of r.
-          if(m%part(k).ne.r) then
+          if(part(k).ne.r) then
             ! Only mark and count this ghost point, if it is not
             ! done yet. Otherwise, points would possibly be registered
             ! more than once.
             if(ghost_flag(k, r).eq.0) then
-              ! Mark point i as ghost point for r from m%part(k).
-              ghost_flag(k, r)                = m%part(k)
-              ! Increase number of ghost points of r from m%part(k).
-              vp%np_ghost_neigh(r, m%part(k)) = vp%np_ghost_neigh(r, m%part(k))+1
+              ! Mark point i as ghost point for r from part(k).
+              ghost_flag(k, r)                = part(k)
+              ! Increase number of ghost points of r from part(k).
+              vp%np_ghost_neigh(r, part(k)) = vp%np_ghost_neigh(r, part(k))+1
               ! Increase total number of ghostpoints of r.
               vp%np_ghost(r)                  = vp%np_ghost(r)+1
               ! One more ghost point.
@@ -366,7 +415,7 @@ contains
                         action='write')
         do i = 1, vp%np_ghost(r)
           j = vp%ghost(vp%xghost(r)+i-1)
-          write(iunit, '(i8,3f12.8)') j, m%x(j, :)
+          write(iunit, '(4i8)') j, Lxyz(j, :)
         end do
       call io_close(iunit)
       end do

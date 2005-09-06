@@ -23,7 +23,16 @@ R_TYPE function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
 
+  call push_sub('mf_inf.Xmf_integrate')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  d = X(vec_integrate)(m%vp, f(1:m%np)*m%vol_pp(1:m%np))
+#else 
   d = sum(f(1:m%np)*m%vol_pp(1:m%np))
+#endif
+
+  call pop_sub()
+
 end function X(mf_integrate)
 
 
@@ -33,15 +42,32 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   R_TYPE, intent(in) :: f1(1:m%np), f2(1:m%np) ! f(m%np)
 
   R_TYPE, allocatable :: l(:)
+  R_TYPE              :: dotp_tmp
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: ierr
+#endif
+
+  call push_sub('mf_inc.Xmf_dotp')
+
+  ! This is not implemented via vec_integrate
+  ! because BLAS is much faster.
   if(m%use_curvlinear) then
     allocate(l(m%np))
     l(1:m%np) = f1(1:m%np) * m%vol_pp(1:m%np)
-    dotp = lalg_dot(m%np, l(:),  f2(:))
+    dotp_tmp  = lalg_dot(m%np, l(:),  f2(:))
     deallocate(l)
   else
-    dotp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
+    dotp_tmp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
   end if
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  call MPI_Allreduce(dotp, dotp_tmp, 1, R_MPITYPE, &
+                     MPI_SUM, m%vp%comm, ierr)
+#else
+  dotp = dotp_tmp
+#endif
+
+  call pop_sub()
 
 end function X(mf_dotp)
 
@@ -51,11 +77,11 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np) ! f(m%np)
 
-  if(m%use_curvlinear) then
-   nrm2 = sqrt(X(mf_dotp) (m, f, f))
-  else
-    nrm2 = lalg_nrm2(m%np, f(:))*sqrt(m%vol_pp(1))
-  end if
+  call push_sub('mf_inc.Xmf_dotp')
+  
+  nrm2 = sqrt(X(mf_dotp) (m, f, f))
+  
+  call pop_sub()
 
 end function X(mf_nrm2)
 
@@ -67,7 +93,16 @@ function X(mf_moment) (m, f, i, n) result(r)
   integer,         intent(in) :: i, n
   R_TYPE                      :: r
 
+  call push_sub('mf_inc.Xmf_dotp')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  r = X(vec_integrate)(m%vp, f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
+#else
   r = sum(f(1:m%np)*m%x(1:m%np,i)**n * m%vol_pp(1:m%np))
+#endif
+  
+  call pop_sub()
+
 end function X(mf_moment)
 
 
@@ -99,4 +134,5 @@ subroutine X(mf_random)(m, f)
   call lalg_scal(m%np, R_TOTYPE(M_ONE/r), f)
 
   call pop_sub()
+
 end subroutine X(mf_random)

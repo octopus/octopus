@@ -29,6 +29,7 @@ module mesh
   use curvlinear
   use simul_box
   use lib_adv_alg
+  use par_vec
 #ifdef DEBUG
   use io
 #endif
@@ -47,48 +48,17 @@ module mesh
     mesh_r,          &
     mesh_gcutoff,    &
     mesh_write_info
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  public ::      &
-    pv_type,     &
-    mesh_par_adj
-#endif
 
 
   ! Describes mesh distribution to nodes.
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  type pv_type
-    integer          :: comm                 ! MPI communicator to use.
-    integer          :: root                 ! The master node.
-    integer          :: p                    ! Number of partitions.
-    integer          :: np                   ! Number of points in mesh.
-    integer          :: np_enl               ! Number of points in enlargement.
-    integer, pointer :: np_local(:)          ! How many points has partition r?
-    integer, pointer :: xlocal(:)            ! Points of partition r start at
-                                             ! xlocal(r) in local.
-    integer, pointer :: local(:)             ! Partition r has points
-                                             ! local(xlocal(r):
-                                             ! xlocal(r)+np_local(r)-1).
-    integer, pointer :: np_bndry(:)          ! Number of boundary points.
-    integer, pointer :: xbndry(:)            ! Index of bndry(:).
-    integer, pointer :: bndry(:)             ! Global numbers of boundary
-                                             ! points.
-    integer, pointer :: global(:, :)         ! global(i, r) is local number
-                                             ! of point i in partition r
-                                             ! (if this is 0, i is neither
-                                             ! a ghost point nor local to r).
-    integer          :: total                ! Total number of ghost points.
-    integer, pointer :: np_ghost(:)          ! How many ghost points has
-                                             ! partition r?
-    integer, pointer :: np_ghost_neigh(:, :) ! Number of ghost points per
-                                             ! neighbour per partition.
-    integer, pointer :: xghost(:)            ! Like xlocal.
-    integer, pointer :: xghost_neigh(:, :)   ! Like xghost for neighbours.
-    integer, pointer :: ghost(:)             ! Global indices of all local
-                                             ! ghost points.
-  end type pv_type
-#endif
 
-
+  ! Some general thing:
+  ! All members of type(mesh_type) are equal on all
+  ! nodes when running parallel except
+  ! - np, np_tot
+  ! - x, vol_pp
+  ! Those four are defined for all the points, the
+  ! node is responsible for.
   type mesh_type
     type(simul_box_type), pointer :: sb
     logical :: use_curvlinear
@@ -128,12 +98,14 @@ module mesh
 
 contains
 
-  subroutine mesh_init(sb, m, geo, cv, enlarge)
+  subroutine mesh_init(sb, m, geo, cv, enlarge, stencil, np_stencil)
     type(simul_box_type), target, intent(in)    :: sb
     type(mesh_type),              intent(inout) :: m
     type(geometry_type),          intent(in)    :: geo
     type(curvlinear_type),        intent(in)    :: cv
     integer,                      intent(in)    :: enlarge(3)
+    integer,                      intent(in)    :: stencil(:, :)
+    integer,                      intent(in)    :: np_stencil
 
     call push_sub('mesh.mesh_init')
 
@@ -143,7 +115,8 @@ contains
     m%enlarge = enlarge
 
     call adjust_nr()          ! find out the extension of the simulation box
-    call mesh_create_xyz(sb, m, cv, geo)
+    call mesh_create_xyz(sb, m, cv, geo,                         &
+                         stencil=stencil, np_stencil=np_stencil)
 
     call pop_sub()
   contains
@@ -352,6 +325,7 @@ contains
      end if
     
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
+     call vec_end(m%vp)
      call mesh_partition_end(m)
 #endif
 
