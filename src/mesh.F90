@@ -47,15 +47,15 @@ module mesh
     mesh_r,          &
     mesh_gcutoff,    &
     mesh_write_info
-#ifdef HAVE_MPI
-  public ::
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  public ::      &
     pv_type,     &
     mesh_par_adj
 #endif
 
 
   ! Describes mesh distribution to nodes.
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   type pv_type
     integer          :: comm                 ! MPI communicator to use.
     integer          :: root                 ! The master node.
@@ -113,7 +113,7 @@ module mesh
     integer, pointer :: part(:) ! Mapping point -> partition, result
                                 ! of call to the METIS library.
 
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
 #endif
 
@@ -186,7 +186,7 @@ contains
 
   ! Adjust m%np and m%np_tot according to the entry
   ! in m%pv for the current node.
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   subroutine mesh_par_adj(m)
     type(mesh_type), intent(inout) :: m
 

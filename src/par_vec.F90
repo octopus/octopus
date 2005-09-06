@@ -96,7 +96,7 @@ module par_vec
 
   implicit none
 
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   private
   public :: vec_init,           &
             vec_init_default,   &

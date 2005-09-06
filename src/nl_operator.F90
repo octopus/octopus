@@ -121,7 +121,7 @@ contains
     logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
 
     integer :: i, j, p1(3)
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     integer :: ierr ! MPI errorcode.
     integer :: rank ! Current nodes rank.
 #endif
@@ -161,12 +161,12 @@ contains
     ! Build lookup table op%i from stencil.
     allocate(op%i(op%n, np))
 
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     call MPI_Comm_rank(m%vp%comm, rank, ierr)
 #endif
 
     do i = 1, np
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
       ! When running in parallel, get global number of
       ! point i.
       p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), :)
@@ -177,7 +177,7 @@ contains
       do j = 1, op%n
         ! Get global index of p1 plus current stencil point.
         op%i(j, i) = mesh_index(m, p1(:) + op%stencil(:, j), 1)
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
         ! When running parallel, translate this global
         ! number back to a local number.
         op%i(j, i) = m%vp%global(op%i(j, i), rank+1)

@@ -268,6 +268,10 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
   integer, allocatable :: Lxyz_tmp(:,:,:)
   FLOAT,   allocatable :: x(:,:,:,:)
   FLOAT :: chi(3)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: ierr
+  integer :: rank
+#endif
 
   call push_sub('mesh_create.mesh_create_xyz')
 
@@ -325,7 +329,11 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
     end do
   end do
   m%np_tot_glob = il
-  allocate(m%Lxyz(m%np_tot_glob, 3), m%x(m%np_tot_glob, 3))
+  allocate(m%Lxyz(m%np_tot_glob, 3))
+#if !defined(HAVE_MPI) || !defined(HAVE_METIS)
+  ! When running parallel, x is computed later.
+  allocate(m%x(m%np_tot_glob, 3))
+#endif
 
 
   ! first we fill the points in the inner mesh
@@ -339,7 +347,9 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
           m%Lxyz(il, 2) = iy
           m%Lxyz(il, 3) = iz
           m%Lxyz_inv(ix,iy,iz) = il
+#if !defined(HAVE_MPI) || !defined(HAVE_METIS)
           m%x(il,:) = x(:,ix,iy,iz)
+#endif
         end if
       enddo
     enddo
@@ -356,20 +366,40 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
           m%Lxyz(il, 2) = iy
           m%Lxyz(il, 3) = iz
           m%Lxyz_inv(ix,iy,iz) = il
+#if !defined(HAVE_MPI) || !defined(HAVE_METIS)
           m%x(il,:) = x(:,ix,iy,iz)
+#endif
         end if
       end do
     end do
   end do
 
-  ! When running serially those two are the same.
-  m%np     = m%np_glob
-  m%np_tot = m%np_tot_glob
-  call mesh_get_vol_pp(sb, geo, cv, m)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   call mesh_partition_init_default(m, Lxyz_tmp)
+  !call vec_init_default(m, f_der%der_discr%lapl%stencil, &
+  !                      f_der%der_discr%lapl%n, m%vp)
+
+  ! Set local point numbers.
+  call MPI_Comm_rank(m%vp%comm, rank, ierr)
+  m%np     = m%vp%np_local(rank+1)
+  m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
+  ! Compute m%x.
+  allocate(m%x(m%np_tot, 3))
+  do i = 1, m%np_tot
+    ix = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 1)
+    iy = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 2)
+    iz = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 3)
+
+    m%x(i, :) = x(:, ix, iy, iz)
+  end do
+#else
+  ! When running serially those two are the same.
+  m%np     = m%np_glob
+  m%np_tot = m%np_tot_glob
 #endif
+
+  call mesh_get_vol_pp(sb, geo, cv, m)
 
   deallocate(Lxyz_tmp)
   deallocate(x)
@@ -386,7 +416,7 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   type(curvlinear_type), intent(in)    :: cv
   type(mesh_type),       intent(inout) :: mesh
 
-  integer :: i
+  integer :: i, k
   FLOAT :: f, chi(sb%dim)
 
   f = M_ONE
@@ -394,12 +424,15 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
     f = f*mesh%h(i)
   end do
 
-  allocate(mesh%vol_pp(mesh%np_tot_glob))
+  allocate(mesh%vol_pp(mesh%np_tot))
   mesh%vol_pp(:) = f
 
-  do i = 1, mesh%np_tot_glob
+  do i = 1, mesh%np_tot
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#else
     chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
     mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i,:), chi)
+#endif
   end do
 
 end subroutine mesh_get_vol_pp

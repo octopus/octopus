@@ -67,7 +67,7 @@ contains
 
     ! now we generate create the mesh and the derivatives
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost)
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     ! Initialize parallel vectors. The points of the stencil are
     ! picked out of the laplacian.
     call vec_init_default(gr%m, gr%f_der%der_discr%lapl%stencil, &
@@ -103,7 +103,7 @@ contains
     call push_sub('grid.grid_end')
 
     call f_der_end(gr%f_der)
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
     call vec_end(gr%m%vp)
 #endif
     call mesh_end(gr%m)
