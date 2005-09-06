@@ -17,7 +17,7 @@
 !!
 !! $Id$
 
-#if defined(HAVE_METIS)
+#if defined(HAVE_METIS) && defined(HAVE_MPI)
 ! Calls mesh_partition_init with the number of partitions
 ! equal to the number of processors stored in the global mpiv.
 ! This is what is usually needed.
@@ -62,15 +62,15 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   integer              :: d(3, 6)        ! Directions of neighbour points.
   integer              :: edgecut        ! Number of edges cut by partitioning.
   ! Number of vertices (nv) is equal to number of
-  ! points np and maximum number of edges (ne) is 2*m%sb%dim*np (there
-  ! are a little less because points on the border have less
+  ! points np_glob and maximum number of edges (ne) is 2*m%sb%dim*np_glob
+  ! (there are a little less because points on the border have less
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
-  integer              :: xadj(m%np_tot+1)   ! Indices of adjacency list
-                                             ! in adjncy.
-  integer              :: adjncy(2*m%sb%dim*m%np_tot)
-                                             ! Adjacency lists.
+  integer              :: xadj(m%np_tot_glob+1) ! Indices of adjacency list
+                                                ! in adjncy.
+  integer              :: adjncy(2*m%sb%dim*m%np_tot_glob)
+                                                ! Adjacency lists.
   integer              :: options(5)         ! Options to METIS.
   integer, allocatable :: ppp(:)             ! Points per partition.
   integer, pointer     :: part(:)            ! Mapping of nodes to partitions.
@@ -84,10 +84,10 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
   ! Shortcut (number of vertices).
-  nv = m%np_tot
+  nv = m%np_tot_glob
 
   ! Get space for partitioning.
-  allocate(part(m%np_tot))
+  allocate(part(nv))
   part = 1
 
   ! Store partitioning in mesh.
@@ -214,7 +214,7 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
       write(filenum, '(i3.3)') i
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
                       action='write')
-      do j = 1, m%np
+      do j = 1, m%np_glob
         ! Somehow all points in the enlargement are mapped
         ! to one point in m%x. So, if the enlargement shall be
         ! written too (s. b.), activate the following line
@@ -229,7 +229,7 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
     !!write(filenum, '(i3.3)') p+1
     !!iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
     !!                action='write')
-    !!do i = m%np+1, m%np_tot
+    !!do i = m%np_glob+1, m%np_tot_glob
     !!  write(iunit, '(i8,3i8)') i, m%Lxyz(i,:)
     !!end do
     !!call io_close(iunit)
@@ -324,8 +324,8 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
       end do
     end do
   end do
-  m%np_tot = il
-  allocate(m%Lxyz(m%np_tot, 3), m%x(m%np_tot, 3))
+  m%np_tot_glob = il
+  allocate(m%Lxyz(m%np_tot_glob, 3), m%x(m%np_tot_glob, 3))
 
 
   ! first we fill the points in the inner mesh
@@ -344,7 +344,7 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
       enddo
     enddo
   enddo
-  m%np = il
+  m%np_glob = il
 
   ! and now the points from the enlargement
   do ix = m%nr(1,1), m%nr(2,1)
@@ -362,6 +362,9 @@ subroutine mesh_create_xyz(sb, m, cv, geo)
     end do
   end do
 
+  ! When running serially those two are the same.
+  m%np     = m%np_glob
+  m%np_tot = m%np_tot_glob
   call mesh_get_vol_pp(sb, geo, cv, m)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
@@ -391,10 +394,10 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
     f = f*mesh%h(i)
   end do
 
-  allocate(mesh%vol_pp(mesh%np_tot))
+  allocate(mesh%vol_pp(mesh%np_tot_glob))
   mesh%vol_pp(:) = f
 
-  do i = 1, mesh%np_tot
+  do i = 1, mesh%np_tot_glob
     chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
     mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i,:), chi)
   end do

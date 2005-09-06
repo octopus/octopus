@@ -48,6 +48,9 @@ module mesh
     mesh_r,          &
     mesh_gcutoff,    &
     mesh_write_info
+#ifdef HAVE_MPI
+  public :: mesh_par_adj
+#endif
 
 
   ! Describes mesh distribution to nodes.
@@ -91,8 +94,14 @@ module mesh
 
     FLOAT :: h(3)           ! the (constant) spacing between the points
 
-    integer  :: np          ! number of points in mesh
-    integer  :: np_tot      ! total number of points including ghost points
+    ! When running serially, the local number of points is
+    ! equal to the global number of points.
+    ! Otherwise, the next two are different on each node.
+    integer  :: np          ! Local number of points in mesh
+    integer  :: np_tot      ! Local points plus ghost points plus
+                            ! boundary points.
+    integer  :: np_glob     ! Global number of points in mesh.
+    integer  :: np_tot_glob ! Global number of inner points and boundary points.
 
     integer  :: enlarge(3)     ! number of points to add for boundary conditions
 
@@ -174,6 +183,28 @@ contains
   end subroutine mesh_init
 
 
+  ! Adjust m%np and m%np_tot according to the entry
+  ! in m%pv for the current node.
+#ifdef HAVE_MPI
+  subroutine mesh_par_adj(m)
+    type(mesh_type), intent(inout) :: m
+
+    integer :: ierr
+    integer :: rank
+
+    call push_sub('mesh.mesh_init')
+
+    call MPI_Comm_rank(m%vp%comm, rank, ierr)
+
+    m%np     = m%vp%np_local(rank+1)
+    m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
+
+    call pop_sub()
+
+  end subroutine mesh_par_adj
+#endif
+
+
   ! finds the dimension of a box doubled in the non-periodic dimensions
   subroutine mesh_double_box(sb, m, db)
     type(simul_box_type), intent(in)  :: sb
@@ -215,8 +246,8 @@ contains
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ',   &
        m%vol_pp(1)/units_out%length%factor**3
 
-    write(unit,'(a, i8)') '  # inner mesh = ', m%np
-    write(unit,'(a, i8)') '  # total mesh = ', m%np_tot
+    write(unit,'(a, i8)') '  # inner mesh = ', m%np_glob
+    write(unit,'(a, i8)') '  # total mesh = ', m%np_tot_glob
 
     write(unit,'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
        (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor

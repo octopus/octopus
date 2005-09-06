@@ -31,6 +31,7 @@ module par_vec
   ! - Points from the enlargement are only stored
   !   once on the corresponding node and are called
   !   boundary points.
+  ! - np ist the total number of inner points.
   !
   ! When working with non-periodic boundary conditions
   ! a globally defined vector v has two parts:
@@ -48,44 +49,41 @@ module par_vec
   ! 
   ! Usage example for par_vec routines.
   !
-  ! integer            :: np_local, np_ghost
+  ! ! Initialize parallelization with mesh m and operator op
+  ! ! initialized and given.
+  ! ! m          = sys%gr%m
+  ! ! stencil    = op%stencil
+  ! ! np_stencil = op%n
+  !
   ! FLOAT              :: s
-  ! FLOAT              :: u(np), v(np)
+  ! FLOAT              :: u(m%np_glob), v(m%np_glob)
   ! FLOAT, allocatable :: ul(:), vl(:), wl(:)
-  ! type(pv_type)      :: vp
   ! type(mesh_type)    :: m
   !
   ! ! Fill u, v with sensible values.
   ! ! ...
   !
-  ! ! Initialize parallelization with e. g.
-  ! ! m          = sys%gr%m
-  ! ! stencil    = op%stencil
-  ! ! np_stencil = op%n
-  ! call vec_init_default(m, stencil, np_stencil, vp, np_local, np_ghost)
-  !
   ! ! Allocate space for local vectors.
-  ! allocate(ul(np_local+np_ghost))
-  ! allocate(vl(np_local+np_ghost))
-  ! allocate(wl(np_local+np_ghost))
+  ! allocate(ul(m%np_tot))
+  ! allocate(vl(m%np_tot))
+  ! allocate(wl(m%np_tot))
   !
   ! ! Distribute vectors.
-  ! call dvec_scatter(vp, u, ul)
-  ! call dvec_scatter(vp, v, vl)
+  ! call X(vec_scatter)(m%vp, u, ul)
+  ! call X(vec_scatter)(m%vp, v, vl)
   !
   ! ! Calculate scalar product s=<u|v>.
   ! wl = ul*vl
   ! ! vec_integrate ignores ghost points (i. e. v(np_local+1:)).
-  ! s = dvec_integrate(vp, wl)
+  ! s = X(vec_integrate)(m%vp, wl)
   !
   ! ! Compute some operator op: vl = op ul
-  ! call dvec_ghost_update(vp, ul)
-  ! call dvec_nl_operator(vp, op, ul, vl)
+  ! call X(vec_ghost_update)(m%vp, ul)
+  ! call X(nl_operator_operate)(op, ul, vl)
   ! ! Gather result of op in one vector v.
-  ! call dvec_gather(vp, v, vl)
+  ! call X(vec_gather)(m%vp, v, vl)
   !
   ! ! Clean up.
-  ! call vec_end(vp)
   ! deallocate(ul, vl, wl)
 
   use global
@@ -114,9 +112,7 @@ module par_vec
             dvec_ghost_update,  &
             zvec_ghost_update,  &
             dvec_integrate,     &
-            zvec_integrate,     &
-            dvec_nl_operator,   &
-            vec_op_pop
+            zvec_integrate
 
 
 contains
@@ -199,10 +195,9 @@ contains
 
     ! Shortcuts.
     p      = m%npart
-    np     = m%np
-    np_enl = m%np_tot-m%np
+    np     = m%np_glob
+    np_enl = m%np_tot_glob-m%np_glob
     call MPI_Comm_rank(comm, rank, ierr)
-    call mpierr(ierr)
     
     allocate(ghost_flag(np, p))
     allocate(ir(p), irr(p, p))
@@ -477,176 +472,6 @@ contains
     call pop_sub()
 
   end subroutine vec_end
-
-
-  ! Apply parallel non local operator (fo = op fi).
-  ! fi, fo have to be of length
-  ! vp%np_local(rank+1)+vp%np_ghost(rank+1)+vp%np_bndry(rank+1)
-  ! and vec_ghost_update should have been called on the input vector
-  ! in advance to have sane values at the ghost points.
-  subroutine dvec_nl_operator(vp, op, fi, fo)
-    type(pv_type),          intent(in)  :: vp
-    type(nl_operator_type), intent(in)  :: op
-    FLOAT,                  intent(in)  :: fi(:)
-    FLOAT,                  intent(out) :: fo(:)
-
-    integer              :: i, k, n
-    integer              :: rank
-    integer              :: ierr
-    FLOAT, allocatable   :: w_re(:)
-    !integer, allocatable :: i_local(:, :)
-
-    call push_sub('par_vec.Xvec_dnl_operator')
-
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-    call mpierr(ierr)
-    
-    n = op%n
-
-    if(op%const_w) then
-       allocate(w_re(n))
-       w_re(1:n) = op%w_re(1:n, 1)
-       ! Only operate on local points.
-       do i = 1, vp%np_local(rank+1)
-          ! Get local number of global point to lookup up
-          ! stencil points in op%i. Those indices are then
-          ! translated into local indices (i locally corresponds to
-          ! k globally).
-          k = vp%local(vp%xlocal(rank+1)+i-1)
-          fo(i) = sum(w_re(1:n)*fi(vp%global(op%i(1:n, k), rank+1)))
-       end do
-       deallocate(w_re)
-    else
-       do i = 1, vp%np_local(rank+1)
-          k = vp%local(vp%xlocal(rank+1)+i-1)
-          fo(i) = sum(op%w_re(1:n,k)*fi(vp%global(op%i(1:n, k), rank+1)))
-       end do
-    end if
-
-    !deallocate(i_local)
-
-    call pop_sub()
-
-  end subroutine dvec_nl_operator
- 
-
-  ! Parallelizes non-local operator op to pop.
-  ! The operator pop is only defined for all local points
-  ! of the current node.
-  ! It behaves like nl_operator_init, i. e. creates
-  ! a new operator. Because of this, it is necessary to call
-  ! nl_operator_end on the parallelized operator.
-  !
-  ! An application example could look like this (op given
-  ! and completely initialized):
-  !
-  ! type(nl_operator_type) :: pop
-  ! FLOAT                  :: f(np)
-  ! FLOAT                  :: f_local_i(:)
-  ! FLOAT                  :: f_local_o(:)
-  !
-  ! ! Call to vec_init must precede this line.
-  ! ! f_local_? has to be allocated, too.
-  ! call vec_op_pop(vp, op, pop)
-  !
-  ! call dvec_scatter(vp, f, f_local_i)
-  ! call dvec_ghost_update(vp, f_local_i)
-  !
-  ! ! Apply op (i. e. pop) to f (i. e. f_local_i)
-  ! call dnl_operator_operate(pop, f_local_i, f_local_o)
-  !
-  ! ! Either ghost point exchange and next non-local operation
-  ! call dvec_ghost_update(vp, f_local_o)
-  ! call dnl_operator_operate(pop, f_local_o, f_local_i)
-  ! ! or gathering and finished.
-  ! call dvec_gather(vp, f_local_o, f)
-  ! call vec_end(vp)
-  !
-  ! ! Dispose operator
-  ! call nl_operator_end(pop)
-  subroutine vec_op_pop(vp, op, pop) 
-    type(pv_type),          intent(in)  :: vp
-    type(nl_operator_type), intent(in)  :: op
-    type(nl_operator_type), intent(out) :: pop
-
-    integer :: rank
-    integer :: ierr
-    integer :: i, k
-
-    call push_sub('par_vec.vec_op_pop')
-
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-    call mpierr(ierr)
-    
-    pop%n        = op%n
-    pop%const_w  = op%const_w
-    pop%cmplx_op = op%cmplx_op
-    allocate(pop%stencil(3, pop%n))
-    pop%stencil  = op%stencil
-    pop%np       = vp%np_local(rank+1)
-
-    ! Calculate local index i.
-    allocate(pop%i(pop%n, pop%np))
-    ! The operator will be applied to all points 1, ..., np_local.
-    do i = 1, vp%np_local(rank+1)
-      ! Get global number of local point i.
-      k           = vp%local(vp%xlocal(rank+1)+i-1)
-      ! Get all global numbers of all points, that are
-      ! needed to apply the operator to point k (op%i(:, k)).
-      ! Convert all those global numbers to local numbers
-      ! (now including numbers > vp%np_local(rank+1), i. e.
-      ! ghost points, of course). If calculation of ghost points
-      ! is correct for current operator, all values in pop%i
-      ! are valid local and ghost point numbers on the current node.
-      pop%i(:, i) = vp%global(op%i(:, k), rank+1)
-    end do
-    
-    ! Copy weights. Reorder them, if they are not constant.
-    ! The re-ordering follows the same logic as described above.
-    if(pop%const_w) then
-      allocate(pop%w_re(pop%n, 1))
-      pop%w_re(:, 1) = op%w_re(:, 1)
-      if(pop%cmplx_op) then
-        allocate(pop%w_im(pop%n, 1))
-        pop%w_im(:, 1) = op%w_im(:, 1)
-      end if
-    else
-      allocate(pop%w_re(pop%n, pop%np))
-      do i = 1, vp%np_local(rank+1)+vp%np_ghost(rank+1)
-        k              = vp%local(vp%xlocal(rank+1)+i-1)
-        pop%w_re(:, i) = op%w_re(:, k)
-      end do
-      if(pop%cmplx_op) then
-        allocate(pop%w_im(pop%n, pop%np))
-        do i = 1, vp%np_local(rank+1)+vp%np_ghost(rank+1)
-          k              = vp%local(vp%xlocal(rank+1)+i-1)
-          pop%w_im(:, i) = op%w_im(:, k)
-        end do
-      end if
-    end if
-    
-    call pop_sub
-    
-  end subroutine vec_op_pop
-
-
-  ! (Very) basic error handling for MPI calls.
-  ! Checks, if ierr indicates an MPI error and terminates
-  ! cleanly if so.
-  subroutine mpierr(ierr)
-    integer :: ierr
-    
-    call push_sub('par_vec.mpierr')
-    
-    if(ierr.ne.MPI_SUCCESS) then
-      write(message(1), '(a,i5)') 'MPI error, errorcode', ierr
-      call write_fatal(1)
-    end if
-
-    call pop_sub()
-
-  end subroutine mpierr
-
 
 #include "undef.F90"
 #include "complex.F90"

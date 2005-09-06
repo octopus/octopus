@@ -72,6 +72,8 @@ contains
     ! picked out of the laplacian.
     call vec_init_default(gr%m, gr%f_der%der_discr%lapl%stencil, &
                           gr%f_der%der_discr%lapl%n, gr%m%vp)
+    ! Fill in local point numbers.
+    call mesh_par_adj(gr%m)
 #endif
     call f_der_build(gr%sb, gr%m, gr%f_der)
 

@@ -41,7 +41,6 @@ subroutine X(vec_scatter)(vp, v, v_local)
   call push_sub('par_vec.Xvec_scatter')
 
   call MPI_Comm_rank(vp%comm, rank, ierr)
-  call mpierr(ierr)
  
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
@@ -65,7 +64,6 @@ subroutine X(vec_scatter)(vp, v, v_local)
   call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
                     vp%np_local(rank+1), R_MPITYPE,                 &
                     vp%root, vp%comm, ierr)
-  call mpierr(ierr)
 
   if(rank.eq.vp%root) deallocate(v_tmp)
 
@@ -93,7 +91,6 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   call push_sub('par_vec.Xvec_scatter_bndry')
   
   call MPI_Comm_rank(vp%comm, rank, ierr)
-  call mpierr(ierr)
 
   allocate(displs(vp%p))
   displs = vp%xbndry-1
@@ -115,7 +112,6 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   call MPI_Scatterv(v_tmp, vp%np_bndry, displs, R_MPITYPE,  &
     v_local(vp%np_local(rank+1)+vp%np_ghost(rank+1)+1:),    &
     vp%np_bndry(rank+1), R_MPITYPE, vp%root, vp%comm, ierr)
-  call mpierr(ierr)
 
   if(rank.eq.vp%root) deallocate(v_tmp)
 
@@ -159,7 +155,6 @@ subroutine X(vec_gather)(vp, v, v_local)
   call push_sub('par_vec.Xvec_gather')
   
   call MPI_Comm_rank(vp%comm, rank, ierr)
-  call mpierr(ierr)
 
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
@@ -171,7 +166,6 @@ subroutine X(vec_gather)(vp, v, v_local)
   call MPI_Gatherv(v_local, vp%np_local(rank+1), R_MPITYPE, v_tmp, &
                    vp%np_local, displs, R_MPITYPE,                 &
                    vp%root, vp%comm, ierr)
-  call mpierr(ierr)
 
   ! Copy values from v_tmp to their original position in v.
   if(rank.eq.vp%root) then
@@ -210,7 +204,6 @@ subroutine X(vec_ghost_update)(vp, v_local)
   call push_sub('par_vec.Xvec_ghost_update')
 
   call MPI_Comm_rank(vp%comm, rank, ierr)
-  call mpierr(ierr)
 
   ! Calculate number of ghost points current node
   ! has to send to neighbours and allocate send buffer.
@@ -265,7 +258,6 @@ subroutine X(vec_ghost_update)(vp, v_local)
                      R_MPITYPE, v_local(vp%np_local(rank+1)+1:),        &
                      vp%np_ghost_neigh(rank+1, :), rdispls, R_MPITYPE,  &
                      vp%comm, ierr)
-  call mpierr(ierr)
                      
   deallocate(sdispls, rdispls)
   deallocate(ghost_send)
@@ -291,12 +283,10 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   call push_sub('par_vec.Xvec_integrate')
   
   call MPI_Comm_rank(vp%comm, rank, ierr)
-  call mpierr(ierr)
 
   s_local = sum(v_local(:vp%np_local(rank+1)))
 
   call MPI_Allreduce(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, ierr)
-  call mpierr(ierr)
 
   call pop_sub()
 
