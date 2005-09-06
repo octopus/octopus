@@ -37,7 +37,6 @@ module mesh
 
   private
   public ::          &
-    pv_type,         &
     mesh_type,       &
     mesh_init,       &
     mesh_end,        &
@@ -49,7 +48,9 @@ module mesh
     mesh_gcutoff,    &
     mesh_write_info
 #ifdef HAVE_MPI
-  public :: mesh_par_adj
+  public ::
+    pv_type,     &
+    mesh_par_adj
 #endif
 
 
