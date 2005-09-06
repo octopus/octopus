@@ -55,7 +55,7 @@ module states
        states_write_eigenvalues, &
        states_write_bands, &
        states_spin_channel, &
-       calc_projection, &
+       states_calc_projection, &
        states_magnetization_dens, &
        states_magnetic_moment, &
        states_local_magnetic_moments, &
@@ -760,10 +760,11 @@ contains
   ! This subroutine calculates:
   ! p(uist, ist, ik) = < phi0(uist, k) | phi(ist, ik) (t) >
   ! ---------------------------------------------------------
-  subroutine calc_projection(m, u_st, st, p)
+  subroutine states_calc_projection(m, st, gs_st, p)
     type(mesh_type),   intent(in)  :: m
-    type(states_type), intent(in)  :: u_st, st
-    CMPLX,             intent(out) :: p(u_st%nst, st%st_start:st%st_end, st%d%nik)
+    type(states_type), intent(in)  :: st
+    type(states_type), intent(in)  :: gs_st
+    CMPLX,             intent(out) :: p(st%nst, gs_st%nst, st%d%nik)
 
     integer :: uist, ist, ik
 
@@ -771,14 +772,14 @@ contains
 
     do ik = 1, st%d%nik
        do ist = st%st_start, st%st_end
-          do uist = 1, u_st%nst
-             p(uist, ist, ik) = zstates_dotp(m, st%d%dim, u_st%zpsi(:, :, uist, ik), st%zpsi(:, :, ist, ik))
+          do uist = 1, gs_st%nst
+             p(ist, uist, ik) = zstates_dotp(m, st%d%dim, st%zpsi(:, :, ist, ik), gs_st%zpsi(:, :, uist, ik))
           end do
        end do
     end do
 
     call pop_sub()
-  end subroutine calc_projection
+  end subroutine states_calc_projection
 
   subroutine states_magnetization_dens(st, np, rho, m)
     type(states_type), intent(in)  :: st

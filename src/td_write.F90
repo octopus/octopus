@@ -79,7 +79,7 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
      
 
   FLOAT :: rmin
-  integer :: ierr, nus, first
+  integer :: ierr, nus, first, j
   logical :: log
   character(len=256) :: filename
 
@@ -127,22 +127,33 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
 
   if( (w%out_proj.ne.0)  .or.  (w%out_gsp.ne.0) ) then
      call states_copy(w%gs_st, st)
-     ! Now include the unoccupied states
-     deallocate(w%gs_st%zpsi)
+     ! Now include the unoccupied states.
+     ! WARNING: should be first deallocate, then nullify?
+     nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
      call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
      if(nus < 0) then
        message(1) = "Input: NumberUnoccStates must be >= 0"
        call write_fatal(1)
      end if
-     ! fix states: THIS IS NOT OK
      w%gs_st%nst    = w%gs_st%nst + nus
-     call states_distribute_nodes(w%gs_st)
+     ! We will store the ground-state Kohn-Sham system by all processors.
+     w%gs_st%st_start = 1
+     w%gs_st%st_end   = w%gs_st%nst
      ! allocate memory
+
+     allocate(w%gs_st%node(w%gs_st%nst))
+     allocate(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik))
+     allocate(w%gs_st%occ(w%gs_st%nst, w%gs_st%d%nik))
+     if(w%gs_st%d%ispin == SPINORS) then
+       allocate(w%gs_st%mag(w%gs_st%nst, w%gs_st%d%nik, 2))
+     endif
      allocate(w%gs_st%zpsi(NP, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik))
+     w%gs_st%node(:)  = 0
+     ! WARNING this could cause problems with mpiexec due to simultaneous reads?
      call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr%m, ierr)
      if(ierr.ne.0) then
-        message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
-        call write_fatal(1)
+          message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
+          call write_fatal(1)
      endif
   endif
 
@@ -252,9 +263,8 @@ subroutine td_write_data(w, gr, st, h, outp, geo, dt, iter)
       if(w%out_acc.ne.0)     call write_iter_flush(w%out_acc)
       if(w%out_laser.ne.0)   call write_iter_flush(w%out_laser)
       if(w%out_energy.ne.0)  call write_iter_flush(w%out_energy)
+      if(w%out_proj.ne.0)    call write_iter_flush(w%out_proj)
   end if
-
-  if(w%out_proj.ne.0) call write_iter_flush(w%out_proj)
 
   ! now write down the rest
   write(filename, '(a,i7.7)') "td.", iter  ! name of directory
@@ -806,19 +816,20 @@ subroutine td_write_el_energy(out_energy, h, iter)
 
 end subroutine td_write_el_energy
 
-subroutine td_write_proj(out_proj, gr, st, u_st, iter)
+subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
   integer(POINTER_SIZE), intent(in) :: out_proj
   type(grid_type),       intent(in) :: gr
   type(states_type),     intent(in) :: st
-  type(states_type),     intent(in) :: u_st
+  type(states_type),     intent(in) :: gs_st
   integer,               intent(in) :: iter
 
   CMPLX, allocatable :: projections(:,:,:)
   character(len=20) :: aux
-  integer :: ik, ist, uist
+  integer :: ik, ist, uist, ierr, k
 
   call push_sub('td_write.td_write_proj')
 
+  if(mpiv%node == 0) then
   if(iter == 0) then
     ! empty file
     call write_iter_clear(out_proj)
@@ -827,7 +838,7 @@ subroutine td_write_proj(out_proj, gr, st, u_st, iter)
     call write_iter_header_start(out_proj)
     do ik = 1, st%d%nik
       do ist = 1, st%nst
-        do uist = 1, u_st%nst
+        do uist = 1, gs_st%nst
           write(aux, '(i3,a,i3)') ist, ' -> ', uist
           call write_iter_header(out_proj, 'Re {'//trim(aux)//'}')
           call write_iter_header(out_proj, 'Im {'//trim(aux)//'}')
@@ -836,16 +847,33 @@ subroutine td_write_proj(out_proj, gr, st, u_st, iter)
     end do
     call write_iter_nl(out_proj)
   endif
+  endif
 
-  allocate(projections(u_st%nst, st%st_start:st%st_end, st%d%nik))
-  call calc_projection(gr%m, u_st, st, projections)
+  allocate(projections(st%nst, gs_st%nst, st%d%nik))
+  call states_calc_projection(gr%m, st, gs_st, projections)
+#if defined(HAVE_MPI)
+  do ik = 1, st%d%nik
+  do ist = 1, st%nst
+     k = st%node(ist)
+     do uist = 1, gs_st%nst
+        call mpi_bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, mpi_comm_world, ierr)
+     enddo
+  enddo
+  enddo
+
+#endif
+
+  if(mpiv%node.ne.0) then
+    call pop_sub()
+    return
+  endif
 
   call write_iter_start(out_proj)
   do ik = 1, st%d%nik
     do ist = 1, st%nst
-      do uist = 1, u_st%nst
-        call write_iter_double(out_proj,  real(projections(uist, ist, ik)), 1)
-        call write_iter_double(out_proj, aimag(projections(uist, ist, ik)), 1)
+      do uist = 1, gs_st%nst
+        call write_iter_double(out_proj,  real(projections(ist, uist, ik)), 1)
+        call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
       end do
     end do
   end do
