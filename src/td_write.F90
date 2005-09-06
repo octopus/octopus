@@ -228,6 +228,7 @@ subroutine td_write_iter(w, gr, st, h, geo, pol, dt, i)
   if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
   if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
   if(w%out_coords.ne.0)   call td_write_nbo(w%out_coords, gr, i, geo%kinetic_energy, h%etot)
+  if(w%out_gsp.ne.0)      call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, i)
   if(w%out_acc.ne.0)      call td_write_acc(w%out_acc, gr, st, h, dt, i)
   if(w%out_laser.ne.0)    call td_write_laser(w%out_laser, gr, h, dt, i)
   if(w%out_energy.ne.0)   call td_write_el_energy(w%out_energy, h, i)
@@ -250,8 +251,8 @@ subroutine td_write_data(w, gr, st, h, outp, geo, dt, iter)
 
   call push_sub('td.td_write_data')
 
-  ! calculate projection onto the ground state
-  if(w%out_gsp.ne.0) call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, iter)
+!!$  ! calculate projection onto the ground state
+!!$  if(w%out_gsp.ne.0) call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, iter)
 
   if(mpiv%node==0) then
       if(w%out_multip.ne.0)  call write_iter_flush(w%out_multip)
@@ -631,7 +632,7 @@ subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
   call push_sub('td_write.td_write_gsp')
 
   ! all processors calculate the projection
-  gsp = zstates_mpdotp(m, 1, gs_st, st)
+  gsp = zstates_mpdotp(m, 1, st, gs_st)
 
   if(mpiv%node .eq. 0) then
     if(iter == 0) then
