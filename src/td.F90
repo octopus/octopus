@@ -62,8 +62,6 @@ module timedep
      integer           :: move_ions      ! how do we move the ions?
      FLOAT             :: pol(3)         ! the direction of the polarization of the field
 
-     type(td_write_type) :: write_handler
-
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
      type(PES_type) :: PESv
 #endif
@@ -83,23 +81,35 @@ contains
     logical,                   intent(inout) :: fromScratch
 
     type(td_type)                :: td
+    type(td_write_type) :: write_handler
     type(grid_type),     pointer :: gr   ! some shortcuts
     type(states_type),   pointer :: st
     type(geometry_type), pointer :: geo
-
     logical :: stopping
-    integer :: i, ii, j, idim, ist, ik
-
+    integer :: i, ii, j, idim, ist, ik, err
     FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
     FLOAT :: etime
 
-    call init_()
+    call push_sub('td.td_run')
+
+    ! some shortcuts
+    gr  => sys%gr
+    geo => sys%gr%geo
+    st  => sys%st
+
+    call td_init(gr, td, st, h, sys%outp)
+
+    call states_distribute_nodes(st)
+    ! allocate memory
+    allocate(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
+
     ierr = init_wfs()
     if(ierr.ne.0) then
        call end_()
        return
     end if
-    call td_write_init_iter(td%write_handler, td%iter, td%dt)
+
+    call td_write_init(write_handler, gr, st, geo, (td%move_ions>0), (h%ep%no_lasers>0), td%iter, td%dt )
 
     ! Calculate initial forces and kinetic energy
     if(td%move_ions > 0) then
@@ -218,7 +228,7 @@ contains
           geo%kinetic_energy = kinetic_energy(geo)
        end if
 
-       call td_write_iter(td%write_handler, gr, st, h, geo, td%pol, td%dt, i)
+       call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%dt, i)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
        call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
@@ -238,39 +248,21 @@ contains
           if(i == td%max_iter) sys%outp%iter = ii - 1
           ii = 1
           call td_save_restart(i)
-          call td_write_data(td%write_handler, gr, st, h, sys%outp, geo, td%dt, i)
+          call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, i)
        end if
 
        if (stopping) exit
     end do
 
-    call td_write_end_iter(td%write_handler)
+    call td_write_end(write_handler)
     call end_()
 
   contains
-
-    subroutine init_()
-      call push_sub('td.td_run')
-
-      ! some shortcuts
-      gr  => sys%gr
-      geo => sys%gr%geo
-      st  => sys%st
-
-      call states_distribute_nodes(st)
-
-      ! allocate memory
-      allocate(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
-
-      call td_init(gr, td, st, h, sys%outp)
-
-    end subroutine init_
 
     subroutine end_()
       ! free memory
       deallocate(st%zpsi)
       call td_end(td)
-
       call pop_sub()
     end subroutine end_
 
@@ -326,9 +318,9 @@ contains
       call push_sub('td.td_run_zero_iter')
 
       call io_mkdir('td.general')
-      call td_write_iter(td%write_handler, gr, st, h, geo, td%pol, td%dt, 0)
+      call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%dt, 0)
       call td_save_restart(0)
-      call td_write_data(td%write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
+      call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
       call td_rti_run_zero_iter(h, td%tr)
 
       call pop_sub()

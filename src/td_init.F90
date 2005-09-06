@@ -82,17 +82,6 @@ subroutine td_init(gr, td, st, h, outp)
     td%move_ions = VELOCITY_VERLET
   endif
 
-  ! Check what should be output
-
-  call td_write_init(td%write_handler, st, gr%geo, (td%move_ions>0), (h%ep%no_lasers>0) )
-
-  ! Compatibility test
-  if((td%write_handler%out_acc.ne.0).and.td%move_ions>0) then
-    message(1) = 'Error. If harmonic spectrum is to be calculated'
-    message(2) = 'Atoms should not be allowed to move'
-    call write_fatal(2)
-  endif
-
   call loct_parse_int(check_inp('TDFastEpotGeneration'), 1, td%epot_regenerate)
   if(td%epot_regenerate < 1) td%epot_regenerate = 1
 
@@ -111,7 +100,6 @@ subroutine td_end(td)
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
   call PES_end(td%PESv)
 #endif
-  call td_write_end(td%write_handler)
   call td_rti_end(td%tr)  ! clean the evolution method
 
   call pop_sub()

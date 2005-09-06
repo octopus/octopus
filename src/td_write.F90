@@ -43,8 +43,6 @@ module td_write
   public :: td_write_type, &
             td_write_init, &
             td_write_end, &
-            td_write_init_iter, &
-            td_write_end_iter, &
             td_write_iter, &
             td_write_data
 
@@ -63,20 +61,27 @@ module td_write
 
     integer           :: lmax           ! maximum multipole moment to output
     FLOAT             :: lmm_r          ! radius of the sphere used to compute the local magnetic moments
-    type(states_type) :: gs_st
+    type(states_type) :: gs_st          ! The states_type where the ground state is stored, in order to
+                                        ! calculate the projections(s) onto it.
   end type td_write_type
 
 
 contains
 
-subroutine td_write_init(w, st, geo, ions_move, there_are_lasers)
+subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
   type(td_write_type)             :: w
+  type(grid_type),     intent(in) :: gr
   type(states_type),   intent(in) :: st
   type(geometry_type), intent(in) :: geo
-  logical, intent(in)             :: ions_move, there_are_lasers
+  logical,             intent(in) :: ions_move, there_are_lasers
+  integer,             intent(in) :: iter
+  FLOAT,               intent(in) :: dt
+     
 
   FLOAT :: rmin
+  integer :: ierr, nus, first
   logical :: log
+  character(len=256) :: filename
 
   call push_sub('td_write.td_write_handler')
 
@@ -102,7 +107,6 @@ subroutine td_write_init(w, st, geo, ions_move, there_are_lasers)
   call loct_parse_logical(check_inp('TDOutputLocalMagneticMoments'), .false., log)
        w%out_magnets = 0; if(log) w%out_magnets = 1
 
-
   call loct_parse_int(check_inp('TDDipoleLmax'), 1, w%lmax)
   if (w%lmax < 0 .or. w%lmax > 4) then
     write(message(1), '(a,i6,a)') "Input: '", w%lmax, "' is not a valid TDDipoleLmax"
@@ -110,35 +114,37 @@ subroutine td_write_init(w, st, geo, ions_move, there_are_lasers)
     call write_fatal(2)
   end if
 
+  ! Compatibility test
+  if( (w%out_acc.ne.0) .and. ions_move ) then
+       message(1) = 'Error. If harmonic spectrum is to be calculated'
+       message(2) = 'Atoms should not be allowed to move'
+       call write_fatal(2)
+  endif
+
   call geometry_min_distance(geo, rmin)
   call loct_parse_float(check_inp('LocalMagneticMomentsSphereRadius'), rmin*M_HALF/units_inp%length%factor, w%lmm_r)
   w%lmm_r = w%lmm_r * units_inp%length%factor
 
   if( (w%out_proj.ne.0)  .or.  (w%out_gsp.ne.0) ) then
-    call states_copy(w%gs_st, st)
+     call states_copy(w%gs_st, st)
+     ! Now include the unoccupied states
+     deallocate(w%gs_st%zpsi)
+     call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
+     if(nus < 0) then
+       message(1) = "Input: NumberUnoccStates must be >= 0"
+       call write_fatal(1)
+     end if
+     ! fix states: THIS IS NOT OK
+     w%gs_st%nst    = w%gs_st%nst + nus
+     call states_distribute_nodes(w%gs_st)
+     ! allocate memory
+     allocate(w%gs_st%zpsi(NP, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik))
+     call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr%m, ierr)
+     if(ierr.ne.0) then
+        message(1) = "Could not load "//trim(tmpdir)//"restart_gs"
+        call write_fatal(1)
+     endif
   endif
-
-  call pop_sub()
-end subroutine td_write_init
-
-subroutine td_write_end(w)
-  type(td_write_type)       :: w
-  call push_sub('td_write_end')
-
-  call states_end(w%gs_st)
-
-  call pop_sub()
-end subroutine td_write_end
-
-subroutine td_write_init_iter(w, iter, dt)
-  type(td_write_type)       :: w
-  integer, intent(in)       :: iter
-  FLOAT, intent(in)         :: dt
-
-  character(len=256) :: filename
-  integer :: first
-
-  call push_sub('td_write_init_iter')
 
   if (iter == 0) then
       first = 0
@@ -170,12 +176,11 @@ subroutine td_write_init_iter(w, iter, dt)
   end if
 
   call pop_sub()
-end subroutine td_write_init_iter
+end subroutine td_write_init
 
-subroutine td_write_end_iter(w)
-  type(td_write_type), intent(in) :: w
-
-  call push_sub('end_iter_output')
+subroutine td_write_end(w)
+  type(td_write_type)       :: w
+  call push_sub('td_write.td_write_end')
 
   if(mpiv%node==0) then
     if(w%out_multip.ne.0)  call write_iter_end(w%out_multip)
@@ -189,9 +194,10 @@ subroutine td_write_end_iter(w)
     if(w%out_energy.ne.0)  call write_iter_end(w%out_energy)
     if(w%out_proj.ne.0)    call write_iter_end(w%out_proj)
   end if
+  call states_end(w%gs_st)
 
   call pop_sub()
-end subroutine td_write_end_iter
+end subroutine td_write_end
 
 subroutine td_write_iter(w, gr, st, h, geo, pol, dt, i)
   type(td_write_type),    intent(in) :: w
