@@ -28,10 +28,20 @@ use units
 
 implicit none
 
-integer, parameter :: SPECTRUM_DAMP_NONE       = 0, &
-                      SPECTRUM_DAMP_LORENTZIAN = 1, &
-                      SPECTRUM_DAMP_POLYNOMIAL = 2, &
-                      SPECTRUM_DAMP_GAUSSIAN   = 3
+private
+public :: spec_type, &
+          spec_sf,   &
+          spec_rsf,  &
+          spec_sh,   &
+          spectrum_strength_function, &
+          spectrum_rotatory_strength, &
+          spectrum_hs_from_mult,      &
+          spectrum_hs_from_acc
+
+integer, public, parameter :: SPECTRUM_DAMP_NONE       = 0, &
+                              SPECTRUM_DAMP_LORENTZIAN = 1, &
+                              SPECTRUM_DAMP_POLYNOMIAL = 2, &
+                              SPECTRUM_DAMP_GAUSSIAN   = 3
 
 type spec_type
   FLOAT :: start_time  ! start time for the transform
@@ -105,7 +115,6 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   do i = 0, time_steps
     if(sf%nspin == 1) then
       read(iunit, *) j, dump, dump, z(1:3)
-      ! Warning: only the unpolarized version is treated properly
       dipole(i, 1) = -dot_product(z(1:3),pol(1:3))
     else
       read(iunit, *) j, dump, dump, z(1:3), dump, zz(1:3)

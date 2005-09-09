@@ -24,13 +24,12 @@ program rotational_strength
   use messages
   use syslabels
   use lib_oct_parser
+  use io
   use units
   use spectrum
 
   implicit none
 
-
-!!$  integer :: ierr
   character(len=100) :: txt
   type(spec_type) :: s
   type(spec_rsf) :: rsf
@@ -43,6 +42,7 @@ program rotational_strength
   call parser_init()
   call io_init()
   call syslabels_init(1)
+  current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
   call loct_parse_string(check_inp('SpecDampMode'), "exp", txt)

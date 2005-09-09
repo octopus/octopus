@@ -24,6 +24,7 @@ program cross_section
   use messages
   use syslabels
   use lib_oct_parser
+  use io
   use units
   use spectrum
 
@@ -36,6 +37,7 @@ program cross_section
   call parser_init()
   call io_init()
   call syslabels_init(1)
+  current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
   call loct_parse_string(check_inp('SpecTransformMode'), "sin", txt)

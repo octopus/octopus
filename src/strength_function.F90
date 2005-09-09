@@ -23,6 +23,7 @@ program strength_function
   use global
   use messages
   use syslabels
+  use io
   use lib_oct_parser
   use units
   use spectrum
