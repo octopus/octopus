@@ -36,6 +36,7 @@ program strength_function
   call parser_init()
   call io_init()
   call syslabels_init(1)
+  current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
   call loct_parse_string(check_inp('SpecTransformMode'), "sin", txt)
