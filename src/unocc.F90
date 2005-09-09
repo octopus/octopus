@@ -51,7 +51,7 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
   type(eigen_solver_type) :: eigens
   integer :: iunit, err, ik, p, occupied_states
   R_TYPE, allocatable :: h_psi(:,:)
-  logical :: converged
+  logical :: converged, l
 
   ierr = 0
   occupied_states = sys%st%nst
@@ -122,6 +122,18 @@ integer function unocc_run(sys, h, fromScratch) result(ierr)
     call io_close(iunit)
   end if
 
+  !%Variable WriteMatrixElements
+  !%Type logical
+  !%Section 9 Unoccupied States
+  !%Description
+  !% If true outputs the following matrix elements:
+  !%   <i|T + V_ext|j>
+  !%   <ij| 1/|r1-r2| |kl>
+  !% in the directory ME
+  !%End
+  call loct_parse_logical(check_inp('WriteMatrixElements'), .false., l)
+  if(l) call write_matrix_elements(sys, h)
+
   ! output wave-functions
   call X(states_output) (sys%st, sys%gr, "static", sys%outp)
 
@@ -178,5 +190,95 @@ contains
   end subroutine end_
 
 end function unocc_run
+
+! warning: only works for spin-unpolarized and 1 k-point
+subroutine write_matrix_elements(sys, h)
+  use mesh_function
+  use poisson
+
+  type(system_type),      intent(in) :: sys
+  type(hamiltonian_type), intent(in) :: h
+
+  type(states_type), pointer :: st
+  type(mesh_type),   pointer :: m
+
+  call io_mkdir("ME")
+
+  st => sys%st
+  m  => sys%gr%m
+
+  message(1) = "Computing Matrix Elements"
+  call write_info(1)
+
+  message(1) = "  :: one-body"
+  call write_info(1)
+  call one_body()
+
+  message(1) = "  :: two-body"
+  call write_info(1)
+  call two_body()
+
+contains
+  subroutine one_body()
+    integer i, j, iunit
+    R_TYPE :: me
+
+    call io_assign(iunit)
+    iunit = io_open('ME/1-body', action='write')
+
+    do i = 1, st%nst
+      do j = 1, st%nst
+        if(j > i) cycle
+      
+        me = st%eigenval(i,1) - X(mf_integrate) (m, R_CONJ(st%X(psi) (:, 1, i, 1)) * &
+            h%Vhxc(:, 1) * st%X(psi) (:, 1, j, 1))
+
+        write(iunit, *) i, j, me
+      end do
+    end do
+    
+    call io_close(iunit)
+
+  end subroutine one_body
+
+
+  subroutine two_body()
+    integer i, j, k, l, iunit
+    R_TYPE :: me
+    R_TYPE, allocatable :: n(:), v(:)
+
+    call io_assign(iunit)
+    iunit = io_open('ME/2-body', action='write')
+
+    allocate(n(1:m%np), v(1:m%np))
+
+    do i = 1, st%nst
+      do j = 1, st%nst
+        if(j > i) cycle
+
+        n(:) = R_CONJ(st%X(psi) (:, 1, i, 1)) * st%X(psi) (:, 1, j, 1)
+        call X(poisson_solve) (sys%gr, v, n)
+
+        do k = 1, st%nst
+          if(k > i) cycle
+          do l = 1, st%nst
+            if(l > k) cycle
+            if(l > j) cycle
+
+            me = X(mf_integrate) (m, v(:) * &
+                st%X(psi) (:, 1, k, 1) * R_CONJ(st%X(psi) (:, 1, l, 1)))
+
+            write(iunit, *) i, j, k, l, me
+          end do
+        end do
+      end do
+    end do
+
+    call io_close(iunit)
+
+  end subroutine two_body
+
+end subroutine write_matrix_elements
+
 
 end module unocc
