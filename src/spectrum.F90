@@ -88,18 +88,29 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   logical, intent(in) :: print_info
 
   integer :: iunit, i, is, ie, &
-      ntiter, j, jj, k, isp, time_steps
-  FLOAT :: dump, dt, x
+      ntiter, j, jj, k, isp, time_steps, lmax
+  FLOAT :: dump, dt, x, pol(3), z(3), zz(3)
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: dipole(:,:)
 
-  call spectrum_mult_info(iunit, sf%nspin, time_steps, dt)
+  call spectrum_mult_info(iunit, sf%nspin, lmax, pol, time_steps, dt)
+  if(lmax.ne.1) then
+    message(1) = 'multipoles file should contain the dipole -- and only the dipole.'
+    call write_fatal(1)
+  endif
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
   allocate(dipole(0:time_steps, sf%nspin))
   do i = 0, time_steps
-    read(iunit, *) j, dump, dipole(i,:)
+    if(sf%nspin == 1) then
+      read(iunit, *) j, dump, dump, z(1:3)
+      ! Warning: only the unpolarized version is treated properly
+      dipole(i, 1) = -dot_product(z(1:3),pol(1:3))
+    else
+      read(iunit, *) j, dump, dump, z(1:3), dump, zz(1:3)
+      dipole(i, 1) = -dot_product(z(1:3)+zz(1:3),pol(1:3))
+    endif
     dipole(i,:) = dipole(i,:) * units_out%length%factor
   end do
   call io_close(iunit)
@@ -303,13 +314,13 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
   type(spec_type), intent(inout) :: s
   type(spec_sh), intent(inout) :: sh
 
-  integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter
-  FLOAT :: dt, dump
+  integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax
+  FLOAT :: dt, dump, pol(3)
   FLOAT, allocatable :: d(:,:)
   CMPLX :: c
   CMPLX, allocatable :: dipole(:), ddipole(:)
 
-  call spectrum_mult_info(iunit, nspin, time_steps, dt)
+  call spectrum_mult_info(iunit, nspin, lmax, pol, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
@@ -483,9 +494,13 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
 end subroutine spectrum_file_info
 
-subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
-  integer, intent(out) :: iunit, nspin, time_steps
-  FLOAT, intent(out) :: dt
+subroutine spectrum_mult_info(iunit, nspin, lmax, pol, time_steps, dt)
+  integer, intent(out) :: iunit
+  integer, intent(out) :: nspin
+  integer, intent(out) :: lmax
+  FLOAT,   intent(out) :: pol(3)
+  integer, intent(out) :: time_steps
+  FLOAT,   intent(out) :: dt
 
   integer :: j
   FLOAT :: t1, t2, dummy
@@ -497,8 +512,10 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
     iunit = io_open('td.general/multipoles', action='read', status='old')
   end if
 
-  ! read in dipole
-  read(iunit, '(10x,i2)') nspin
+  ! read in number of spin components
+  read(iunit, '(8x,i2)') nspin
+  read(iunit, '(8x,i2)') lmax
+  read(iunit, '(8x,3f18.12)') pol(1:3)
   read(iunit, *); read(iunit, *) ! skip header
 
   ! count number of time_steps
@@ -519,7 +536,7 @@ subroutine spectrum_mult_info(iunit, nspin, time_steps, dt)
   end if
 
   rewind(iunit)
-  read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
+  read(iunit, *); read(iunit, *); read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
 
 end subroutine spectrum_mult_info
 
