@@ -377,7 +377,7 @@ contains
   subroutine scf_write_static(dir, fname)
     character(len=*), intent(in) :: dir, fname
 
-    FLOAT :: e_dip(NDIM, st%d%nspin), n_dip(3), angular(3), l2
+    FLOAT :: e_dip(4, st%d%nspin), n_dip(3), angular(3), l2
     FLOAT, parameter :: ATOMIC_TO_DEBYE = CNST(2.5417462)
     integer :: iunit, i, j
 
@@ -429,14 +429,12 @@ contains
 
     ! Next lines of code calculate the dipole of the molecule, summing the electronic and
     ! ionic contributions.
-    if(NDIM>0) call states_calculate_multipoles(gr, st, (/ M_ONE, M_ZERO, M_ZERO /), e_dip(1, :))
-    if(NDIM>1) call states_calculate_multipoles(gr, st, (/ M_ZERO, M_ONE, M_ZERO /), e_dip(2, :))
-    if(NDIM>2) call states_calculate_multipoles(gr, st, (/ M_ZERO, M_ZERO, M_ONE /), e_dip(3, :))
-    do j = 1, NDIM
-      e_dip(j, 1) = sum(e_dip(j, :))
+    call states_calculate_multipoles(gr, st, 1, e_dip(:, :))
+    do j = 1, 3
+      e_dip(j+1, 1) = sum(e_dip(j+1, :))
     end do
     call geometry_dipole(gr%geo, n_dip)
-    n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(1:NDIM, 1)
+    n_dip(1:NDIM) = n_dip(1:NDIM) - e_dip(2:NDIM+1, 1)
     write(iunit, '(3a)') 'Dipole [', trim(units_out%length%abbrev), ']:                    [Debye]'
     do j = 1, NDIM
       write(iunit, '(6x,a,i1,a,es14.5,3x,2es14.5)') '<x', j, '> = ', n_dip(j) / units_out%length%factor, &

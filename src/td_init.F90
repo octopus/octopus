@@ -57,6 +57,8 @@ subroutine td_init(gr, td, st, h, outp)
   else  !default along the x-direction
     td%pol(1) = M_ONE
   endif
+  ! Normalize:
+  td%pol(1:3) = td%pol(1:3)/sqrt(sum(td%pol(1:3)**2))
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)

@@ -454,7 +454,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
   integer,               intent(in) :: iter
 
   integer :: is, j, l, m, add_lm
-  character(len=50) :: aux
+  character(len=120) :: aux
   FLOAT, allocatable :: dipole(:), nuclear_dipole(:), multipole(:,:)
 
   if(mpiv%node.ne.0) return ! only first node outputs
@@ -469,6 +469,17 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
     write(aux, '(a10,i2,a8,i2)') '# nspin = ', st%d%nspin, ' lmax = ', lmax
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
+!!$    write(aux, '(a8,i2)')      '# nspin ', st%d%nspin
+!!$    call write_iter_string(out_multip, aux)
+!!$    call write_iter_nl(out_multip)
+!!$
+!!$    write(aux, '(a8,i2)')      '# lmax  ', lmax
+!!$    call write_iter_string(out_multip, aux)
+!!$    call write_iter_nl(out_multip)
+!!$
+!!$    write(aux, '(a8,3f18.12)') '# pol   ', pol(1:3)
+!!$    call write_iter_string(out_multip, aux)
+!!$    call write_iter_nl(out_multip)
 
     ! second line -> columns name
     call write_iter_header_start(out_multip)
@@ -521,7 +532,11 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
   end if
 
   allocate(dipole(st%d%nspin), nuclear_dipole(NDIM), multipole((lmax + 1)**2, st%d%nspin))
-  call states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
+!!$  call states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
+  call states_calculate_multipoles(gr, st, lmax, multipole)
+  do is = 1, st%d%nspin
+     dipole(is) = dot_product(multipole(2:4, is), pol(1:3))
+  enddo
   call geometry_dipole(gr%geo, nuclear_dipole)
 
   call write_iter_start(out_multip)
