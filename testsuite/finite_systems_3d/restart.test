@@ -60,7 +60,7 @@ EOF
 
 RUN
 
-Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*e\-01\s*0.0000000000\d*e\+00\s*3.4954670794\d*e\-03
+Match ; Time-dependent start ; tail -1 td.general/multipoles; \s*3.5000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-3.4954670794\d*e\-03
 
 # Finally restart the td calculation
 INP
@@ -78,4 +78,5 @@ EOF
 RUN
 
 # Check if the td restart is OK
-Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*6.9697200503\d*e\-03
+Match ; Time-dependent restart ; tail -1 td.general/multipoles; \s*7.0000000000\d*e\-01\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*0.0000000000\d*e\+00\s*9.9999999999\d*e\-01\s*-6.9697200503\d*e\-03
+

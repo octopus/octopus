@@ -205,7 +205,9 @@ subroutine td_write_end(w)
     if(w%out_energy.ne.0)  call write_iter_end(w%out_energy)
     if(w%out_proj.ne.0)    call write_iter_end(w%out_proj)
   end if
-  call states_end(w%gs_st)
+  if( (w%out_gsp.ne.0) .or. (w%out_proj.ne.0) ) then
+    call states_end(w%gs_st)
+  endif
 
   call pop_sub()
 end subroutine td_write_end
@@ -455,7 +457,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
 
   integer :: is, j, l, m, add_lm
   character(len=120) :: aux
-  FLOAT, allocatable :: dipole(:), nuclear_dipole(:), multipole(:,:)
+  FLOAT, allocatable :: nuclear_dipole(:), multipole(:,:)
 
   if(mpiv%node.ne.0) return ! only first node outputs
 
@@ -465,35 +467,28 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
     ! empty file
     call write_iter_clear(out_multip)
 
-    ! first line
-    write(aux, '(a10,i2,a8,i2)') '# nspin = ', st%d%nspin, ' lmax = ', lmax
+    write(aux, '(a8,i2)')      '# nspin ', st%d%nspin
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
-!!$    write(aux, '(a8,i2)')      '# nspin ', st%d%nspin
-!!$    call write_iter_string(out_multip, aux)
-!!$    call write_iter_nl(out_multip)
-!!$
-!!$    write(aux, '(a8,i2)')      '# lmax  ', lmax
-!!$    call write_iter_string(out_multip, aux)
-!!$    call write_iter_nl(out_multip)
-!!$
-!!$    write(aux, '(a8,3f18.12)') '# pol   ', pol(1:3)
-!!$    call write_iter_string(out_multip, aux)
-!!$    call write_iter_nl(out_multip)
 
-    ! second line -> columns name
+    write(aux, '(a8,i2)')      '# lmax  ', lmax
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
+    write(aux, '(a8,3f18.12)') '# pol   ', pol(1:3)
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
     call write_iter_header_start(out_multip)
 
     do is = 1, st%d%nspin
-      write(aux, '(a,i1,a)') 'dipole(', is, ')'
-      call write_iter_header(out_multip, aux)
-    end do
-    do j = 1, NDIM
-      write(aux,'(a,i1,a)')  'n.dip.(', j,  ')'
-      call write_iter_header(out_multip, aux)
-    enddo
-    do is = 1, st%d%nspin
-      do l = 0, lmax
+      write(aux,'(a18,i1,a1)') 'Electronic charge(', is,')'; call write_iter_header(out_multip, aux)
+      if(lmax>0) then
+         write(aux, '(a3,a1,i1,a1)') '<x>', '(', is,')'; call write_iter_header(out_multip, aux)
+         write(aux, '(a3,a1,i1,a1)') '<y>', '(', is,')'; call write_iter_header(out_multip, aux)
+         write(aux, '(a3,a1,i1,a1)') '<z>', '(', is,')'; call write_iter_header(out_multip, aux)
+      endif
+      do l = 2, lmax
         do m = -l, l
           write(aux, '(a2,i2,a4,i2,a2,i1,a1)') 'l=', l, ', m=', m, ' (', is,')'
           call write_iter_header(out_multip, aux)
@@ -502,23 +497,16 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
     end do
     call write_iter_nl(out_multip)
 
-    ! third line -> units
+    ! units
     call write_iter_string(out_multip, '##########')
     call write_iter_header(out_multip, '[' // trim(units_out%time%abbrev) // ']')
-
-    do is = 1, st%d%nspin
-      call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
-    end do
-    do j = 1, NDIM
-      call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
-    enddo
 
     do is = 1, st%d%nspin
       do l = 0, lmax
         do m = -l, l
           select case(l)
           case(0)
-            call write_iter_header(out_multip, '-')
+            call write_iter_header(out_multip, 'Electrons')
           case(1)
             call write_iter_header(out_multip, '[' // trim(units_out%length%abbrev) // ']')
           case default
@@ -531,21 +519,15 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
     call write_iter_nl(out_multip)
   end if
 
-  allocate(dipole(st%d%nspin), nuclear_dipole(NDIM), multipole((lmax + 1)**2, st%d%nspin))
-!!$  call states_calculate_multipoles(gr, st, pol, dipole, lmax, multipole)
+  allocate(nuclear_dipole(NDIM), multipole((lmax + 1)**2, st%d%nspin))
   call states_calculate_multipoles(gr, st, lmax, multipole)
-  do is = 1, st%d%nspin
-     dipole(is) = dot_product(multipole(2:4, is), pol(1:3))
-  enddo
   call geometry_dipole(gr%geo, nuclear_dipole)
+  do is = 1, st%d%nspin
+     multipole(2:4, is) = nuclear_dipole(1:3) - multipole(2:4, is)
+  enddo
+  
 
   call write_iter_start(out_multip)
-  do is = 1, st%d%nspin
-    call write_iter_double(out_multip, dipole(is)/units_out%length%factor, 1)
-  end do
-  do j = 1, NDIM
-    call write_iter_double(out_multip, nuclear_dipole(j)/units_out%length%factor, 1)
-  enddo
   do is = 1, st%d%nspin
     add_lm = 1
     do l = 0, lmax
@@ -557,8 +539,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, pol, iter)
   end do
   call write_iter_nl(out_multip)
 
-  deallocate(dipole, nuclear_dipole, multipole)
-
+  deallocate(nuclear_dipole, multipole)
   call pop_sub()
 end subroutine td_write_multipole
 
