@@ -51,14 +51,13 @@ type spec_type
   FLOAT :: energy_step ! step in energy mesh
   FLOAT :: min_energy  ! maximum of energy mesh
   FLOAT :: max_energy  ! maximum of energy mesh
+  integer  :: damp     ! Damp type (none, exp or pol)
+  FLOAT :: damp_factor ! factor used in damping
 end type spec_type
 
 ! For the strength function
 type spec_sf
   ! input
-  integer  :: transform        ! The Fourier transform to perform (sin, cos)
-  integer  :: damp             ! Damp type (none, exp or pol)
-  FLOAT :: damp_factor      ! factor used in damping
   FLOAT :: delta_strength   ! strength of the delta perturbation
 
   ! output
@@ -95,19 +94,39 @@ contains
 
 subroutine spectrum_init(s)
   type(spec_type), intent(inout) :: s
+  character(len=100) :: txt
 
   call push_sub('spectrum_init')
+
+  !%Variable SpecDampMode
+  !%Type integer
+  !%Section 13 SpectrumCalculations
+  !%Description
+  !% Decides which damping/filtering is to be applied in order to calculate
+  !% spectra by calculating a Fourier transform
+  !%Option no 0
+  !% No filtering at all.
+  !%Option exp 1
+  !% Exponential filtering, corresponding with a Lorentzian-shaped spectrum
+  !%Option pol 2
+  !% Third-order polynomial damping.
+  !%Option gaussian 3
+  !% Gaussian damping
+  !%End
 
   call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,      s%start_time)
   call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,       s%end_time)
   call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01),  s%energy_step)
   call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0),  s%max_energy)
   call loct_parse_float(check_inp('SpecMinEnergy'),  M_ZERO,      s%min_energy)
+  call loct_parse_int  (check_inp('SpecDampMode'), SPECTRUM_DAMP_POLYNOMIAL, s%damp)
+  call loct_parse_float(check_inp('SpecDampFactor'),  CNST(0.15), s%damp_factor)
   s%start_time      = s%start_time      * units_inp%time%factor
   s%end_time        = s%end_time        * units_inp%time%factor
   s%energy_step     = s%energy_step     * units_inp%energy%factor
   s%max_energy      = s%max_energy      * units_inp%energy%factor
   s%min_energy      = s%min_energy      * units_inp%energy%factor
+  s%damp_factor     = s%damp_factor     / units_inp%time%factor
 
   call pop_sub()
 end subroutine spectrum_init
@@ -159,16 +178,16 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   allocate(dumpa(is:ie))
   do j = is, ie
      jj = j - is
-      select case(sf%damp)
+      select case(s%damp)
       case(SPECTRUM_DAMP_NONE)
         dumpa(j) = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
-        dumpa(j)= exp(-jj*dt*sf%damp_factor)
+        dumpa(j)= exp(-jj*dt*s%damp_factor)
       case(SPECTRUM_DAMP_POLYNOMIAL)
         dumpa(j) = M_ONE - M_THREE*(real(jj)/ntiter)**2                          &
             + M_TWO*(real(jj)/ntiter)**3
       case(SPECTRUM_DAMP_GAUSSIAN)
-        dumpa(j)= exp(-(jj*dt)**2*sf%damp_factor**2)
+        dumpa(j)= exp(-(jj*dt)**2*s%damp_factor**2)
       end select
   enddo
 
@@ -176,13 +195,7 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
     do j = is, ie
 
       jj = j - is
-
-      select case(sf%transform)
-      case(1)
-        x = sin((k*s%energy_step + s%min_energy)*jj*dt)
-      case(2)
-        x = cos((k*s%energy_step + s%min_energy)*jj*dt)
-      end select
+      x = sin((k*s%energy_step + s%min_energy)*jj*dt)
 
       do isp = 1, sf%nspin
         sf%sp(k, isp) = sf%sp(k, isp) + x*dumpa(j)*dipole(j, isp)
@@ -226,9 +239,8 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   if(print_info) then
     write(message(1), '(a,i8)')    'Number of spin       = ', sf%nspin
     write(message(2), '(a,i8)')    'Number of time steps = ', ntiter
-    write(message(3), '(a,i4)')    'SpecTransformMode    = ', sf%transform
-    write(message(4), '(a,i4)')    'SpecDampMode         = ', sf%damp
-    write(message(5), '(a,f10.4)') 'SpecDampFactor       = ', sf%damp_factor * units_out%time%factor
+    write(message(4), '(a,i4)')    'SpecDampMode         = ', s%damp
+    write(message(5), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
     write(message(6), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
     write(message(7), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
     write(message(8), '(a,f10.4)') 'SpecMinEnergy        = ', s%min_energy   / units_inp%energy%factor
@@ -283,16 +295,16 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
   allocate(dumpa(is:ie))
   do j = is, ie
      jj = j - is
-      select case(rsf%damp)
+      select case(s%damp)
       case(SPECTRUM_DAMP_NONE)
         dumpa(j) = M_ONE
       case(SPECTRUM_DAMP_LORENTZIAN)
-        dumpa(j)= exp(-jj*dt*rsf%damp_factor)
+        dumpa(j)= exp(-jj*dt*s%damp_factor)
       case(SPECTRUM_DAMP_POLYNOMIAL)
         dumpa(j) = 1.0 - 3.0*(real(jj)/ntiter)**2                          &
             + 2.0*(real(jj)/ntiter)**3
       case(SPECTRUM_DAMP_GAUSSIAN)
-        dumpa(j)= exp(-(jj*dt)**2*rsf%damp_factor**2)
+        dumpa(j)= exp(-(jj*dt)**2*s%damp_factor**2)
       end select
   enddo
 
@@ -326,8 +338,8 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
   ! print some info
   if(print_info) then
     write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
-    write(message(2), '(a,i4)')    'SpecDampMode         = ', rsf%damp
-    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', rsf%damp_factor * units_out%time%factor
+    write(message(2), '(a,i4)')    'SpecDampMode         = ', s%damp
+    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
     write(message(4), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
     write(message(5), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
     write(message(6), '(a,f10.4)') 'SpecMinEnergy        = ', s%min_energy   / units_inp%energy%factor

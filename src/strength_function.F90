@@ -40,43 +40,13 @@ program strength_function
   current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
-  call loct_parse_string(check_inp('SpecTransformMode'), "sin", txt)
-  select case(txt(1:3))
-  case('sin')
-    sf%transform = 1
-  case('cos')
-    sf%transform = 2
-  case default
-    write(message(1), '(2a)') trim(txt), ' is not a valid transform mode'
-    message(2) = "SpecTransformMode = sin | cos"
-    call write_fatal(2)
-  end select
-
-  call loct_parse_string(check_inp('SpecDampMode'), "exp", txt)
-  select case(txt(1:3))
-  case('exp')
-    sf%damp = SPECTRUM_DAMP_LORENTZIAN
-  case('pol')
-    sf%damp = SPECTRUM_DAMP_POLYNOMIAL
-  case('gau')
-    sf%damp = SPECTRUM_DAMP_GAUSSIAN
-  case default
-    sf%damp = SPECTRUM_DAMP_NONE
-  end select
-
-  call loct_parse_float(check_inp('SpecDampFactor'), CNST(0.15), sf%damp_factor)
   call loct_parse_float(check_inp('TDDeltaStrength'),CNST(0.05), sf%delta_strength)
-
-  call spectrum_init(s)
-
-  ! adjust units
-  sf%damp_factor    = sf%damp_factor    / units_inp%time%factor
   sf%delta_strength = sf%delta_strength / units_inp%length%factor
 
+  call spectrum_init(s)
   call spectrum_strength_function('spectrum', s, sf, .true.)
 
   deallocate(sf%sp)
-
   call syslabels_end()
   call io_end()
   call parser_end()

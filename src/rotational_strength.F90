@@ -45,21 +45,11 @@ program rotational_strength
   current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
-  call loct_parse_string(check_inp('SpecDampMode'), "exp", txt)
-  select case(txt(1:3))
-  case('exp')
-    rsf%damp = SPECTRUM_DAMP_LORENTZIAN
-  case('pol')
-    rsf%damp = SPECTRUM_DAMP_POLYNOMIAL
-  case('gau')
-    rsf%damp = SPECTRUM_DAMP_GAUSSIAN
-  case default
-    rsf%damp = SPECTRUM_DAMP_NONE
-  end select
-
-  call loct_parse_float(check_inp('SpecDampFactor'),  CNST(0.15), rsf%damp_factor)
   call spectrum_init(s)
+
   call loct_parse_float(check_inp('TDDeltaStrength'), CNST(0.05), rsf%delta_strength)
+  rsf%delta_strength = rsf%delta_strength / units_inp%length%factor
+
   !!! read in the default direction for the polarization
   rsf%pol(:) = M_ZERO
   if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
@@ -70,10 +60,6 @@ program rotational_strength
   else  !default along the x-direction
     rsf%pol(1) = M_ONE
   endif
-
-  ! adjust units
-  rsf%damp_factor    = rsf%damp_factor    / units_inp%time%factor
-  rsf%delta_strength = rsf%delta_strength / units_inp%length%factor
 
   call spectrum_rotatory_strength('rotatory_strength', s, rsf, .true.)
 
