@@ -60,7 +60,11 @@ module timedep
      integer           :: epot_regenerate! Every epot_regenerate, the external potential
                                          ! regenerated *exactly*.
      integer           :: move_ions      ! how do we move the ions?
+
+     ! The *kick* used in "linear response in the time domain" calculations.
      FLOAT             :: pol(3)         ! the direction of the polarization of the field
+     integer           :: delta_strength_mode
+     FLOAT             :: delta_strength
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
      type(PES_type) :: PESv
@@ -72,6 +76,10 @@ module timedep
   integer, parameter :: STATIC_IONS     = 0,    &
        NORMAL_VERLET   = 3,  &
        VELOCITY_VERLET = 4
+
+  integer, parameter :: KICK_DENSITY_MODE      = 0, &
+                        KICK_SPIN_MODE         = 1, &
+                        KICK_SPIN_DENSITY_MODE = 2
 
 contains
 
@@ -329,53 +337,63 @@ contains
 !!! Applies the delta function electric field E(t) = E_0 delta(t)
 !!! where E_0 = - k \hbar / e
     subroutine apply_delta_field()
-      integer :: i, mode
-      FLOAT   :: k
+      integer :: i
       CMPLX   :: c(2), kick
 
       call push_sub('td.apply_delta_field')
 
 !!! units are 1/length
-      call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k)
-      k = k / units_inp%length%factor
-      call loct_parse_int(check_inp('TDDeltaStrengthMode'), 0, mode)
-      select case (mode)
-      case (0)
-      case (1:2)
-         if (st%d%ispin == UNPOLARIZED) then
-            message(1) = "TDDeltaStrengthMode 1 or 2 can not be used when"
-            message(2) = "performing unpolarized calculations"
-            call write_fatal(1)
-         end if
+      call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, td%delta_strength)
+      td%delta_strength = td%delta_strength / units_inp%length%factor
+
+      !%Variable TDDeltaStrengthMode
+      !%Type integer
+      !%Section 10 Time Dependent
+      !%Description
+      !% When calculating the linear response of the density via the propagation
+      !% in real time, one needs to perfrom an initical kick on the KS system, at 
+      !% time zero. Depending on what kind response property one wants to obtain,
+      !% this kick may be done in several modes.
+      !%Option kick_density 0
+      !% The total density of the system is perturbed.
+      !%Option kick_spin 1
+      !% The individual spin densities are perturbed differently. Note that this mode
+      !% is only possible if the run is done in spin polarized mode, or with spinors.
+      !%Option kick_spin_and_density 2
+      !% A combination of the two above. Note that this mode
+      !% is only possible if the run is done in spin polarized mode, or with spinors.
+      !%End
+      call loct_parse_int(check_inp('TDDeltaStrengthMode'), KICK_DENSITY_MODE, td%delta_strength_mode)
+      select case (td%delta_strength_mode)
+      case (KICK_DENSITY_MODE)
+      case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
+         if (st%d%ispin == UNPOLARIZED) call input_error('TDDeltaStrengthMode')
       case default
-         write(message(1), '(a,i2,a)') "Input: '", mode, "' is not a valid TDDeltaStrengthMode"
-         message(2) = '(0 <= TDDeltaStrengthMode <= 2 )'
-         call write_fatal(2)
+         call input_error('TDDeltaStrengthMode')
       end select
 
 !!! The wave-functions at time delta t read
 !!! psi(delta t) = psi(t) exp(i k x)
-      if(k .ne. M_ZERO) then
-         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k
-         select case (mode)
-         case (0)
+      if(td%delta_strength .ne. M_ZERO) then
+         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', td%delta_strength
+         select case (td%delta_strength_mode)
+         case (KICK_DENSITY_MODE)
             message(2) = "Info: Delta kick mode: Density mode"
-         case (1)
+         case (KICK_SPIN_MODE)
             message(2) = "Info: Delta kick mode: Spin mode"
-         case (2)
+         case (KICK_SPIN_DENSITY_MODE)
             message(2) = "Info: Delta kick mode: Density + Spin modes"
-         case (3)
          end select
          call write_info(2)
          do i = 1, NP
-            kick = M_zI * k * sum(gr%m%x(i, 1:NDIM)*td%pol(1:NDIM))
+            kick = M_zI * td%delta_strength * sum(gr%m%x(i, 1:NDIM)*td%pol(1:NDIM))
 
-            select case (mode)
-            case (0)
+            select case (td%delta_strength_mode)
+            case (KICK_DENSITY_MODE)
                c(1) = exp(kick)
                st%zpsi(i,:,:,:) = c(1) * st%zpsi(i,:,:,:)
 
-            case (1)
+            case (KICK_SPIN_MODE)
                c(1) = exp(kick)
                c(2) = exp(-kick)
                select case (st%d%ispin)
@@ -389,7 +407,7 @@ contains
                   st%zpsi(i,2,:,:) = c(2) * st%zpsi(i,2,:,:)
                end select
 
-            case (2)
+            case (KICK_SPIN_DENSITY_MODE)
                c(1) = exp(M_TWO*kick)
                select case (st%d%ispin)
                case (SPIN_POLARIZED)
@@ -410,7 +428,7 @@ contains
       if(td%move_ions > 0) then
          do i = 1, geo%natoms
             geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
-                 k*td%pol(1:NDIM)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+                 td%delta_strength_mode*td%pol(1:NDIM)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
          end do
       end if
 

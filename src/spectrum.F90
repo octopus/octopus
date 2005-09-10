@@ -106,9 +106,9 @@ subroutine spectrum_init(s)
   !% spectra by calculating a Fourier transform
   !%Option no 0
   !% No filtering at all.
-  !%Option exp 1
+  !%Option exponential 1
   !% Exponential filtering, corresponding with a Lorentzian-shaped spectrum
-  !%Option pol 2
+  !%Option polynomial 2
   !% Third-order polynomial damping.
   !%Option gaussian 3
   !% Gaussian damping
