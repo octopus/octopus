@@ -23,6 +23,7 @@ module spectrum
 use global
 use messages
 use lib_oct_parser
+use syslabels
 use io
 use units
 
@@ -33,6 +34,7 @@ public :: spec_type, &
           spec_sf,   &
           spec_rsf,  &
           spec_sh,   &
+          spectrum_init, &
           spectrum_strength_function, &
           spectrum_rotatory_strength, &
           spectrum_hs_from_mult,      &
@@ -90,6 +92,25 @@ type spec_sh
 end type spec_sh
 
 contains
+
+subroutine spectrum_init(s)
+  type(spec_type), intent(inout) :: s
+
+  call push_sub('spectrum_init')
+
+  call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,      s%start_time)
+  call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,       s%end_time)
+  call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.01),  s%energy_step)
+  call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0),  s%max_energy)
+  call loct_parse_float(check_inp('SpecMinEnergy'),  M_ZERO,      s%min_energy)
+  s%start_time      = s%start_time      * units_inp%time%factor
+  s%end_time        = s%end_time        * units_inp%time%factor
+  s%energy_step     = s%energy_step     * units_inp%energy%factor
+  s%max_energy      = s%max_energy      * units_inp%energy%factor
+  s%min_energy      = s%min_energy      * units_inp%energy%factor
+
+  call pop_sub()
+end subroutine spectrum_init
 
 subroutine spectrum_strength_function(out_file, s, sf, print_info)
   character(len=*), intent(in) :: out_file

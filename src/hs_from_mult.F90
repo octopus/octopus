@@ -40,18 +40,7 @@ program hs_from_mult
   current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
-  call loct_parse_float(check_inp('SpecStartTime'),  M_ZERO,     s%start_time)
-  call loct_parse_float(check_inp('SpecEndTime'),   -M_ONE,      s%end_time)
-  call loct_parse_float(check_inp('SpecEnergyStep'), CNST(0.05), s%energy_step)
-  call loct_parse_float(check_inp('SpecMinEnergy'),  M_ZERO,     s%min_energy)
-  call loct_parse_float(check_inp('SpecMaxEnergy'),  CNST(20.0), s%max_energy)
-
-  ! adjust units
-  s%start_time  = s%start_time  * units_inp%time%factor
-  s%end_time    = s%end_time    * units_inp%time%factor
-  s%energy_step = s%energy_step * units_inp%energy%factor
-  s%min_energy  = s%min_energy  * units_inp%energy%factor
-  s%max_energy  = s%max_energy  * units_inp%energy%factor
+  call spectrum_init(s)
 
   call loct_parse_string(check_inp('HSPolarization'), 'z', txt)
   sh%pol = txt(1:1)

@@ -58,11 +58,7 @@ program rotational_strength
   end select
 
   call loct_parse_float(check_inp('SpecDampFactor'),  CNST(0.15), rsf%damp_factor)
-  call loct_parse_float(check_inp('SpecStartTime'),   M_ZERO,       s%start_time)
-  call loct_parse_float(check_inp('SpecEndTime'),    -M_ONE,        s%end_time)
-  call loct_parse_float(check_inp('SpecEnergyStep'),  CNST(0.05),   s%energy_step)
-  call loct_parse_float(check_inp('SpecMaxEnergy'),   CNST(20.0),   s%max_energy)
-  call loct_parse_float(check_inp('SpecMinEnergy'),   M_ZERO,       s%min_energy)
+  call spectrum_init(s)
   call loct_parse_float(check_inp('TDDeltaStrength'), CNST(0.05), rsf%delta_strength)
   !!! read in the default direction for the polarization
   rsf%pol(:) = M_ZERO
@@ -77,11 +73,6 @@ program rotational_strength
 
   ! adjust units
   rsf%damp_factor    = rsf%damp_factor    / units_inp%time%factor
-  s%start_time      = s%start_time      * units_inp%time%factor
-  s%end_time        = s%end_time        * units_inp%time%factor
-  s%energy_step     = s%energy_step     * units_inp%energy%factor
-  s%max_energy      = s%max_energy      * units_inp%energy%factor
-  s%min_energy      = s%min_energy      * units_inp%energy%factor
   rsf%delta_strength = rsf%delta_strength / units_inp%length%factor
 
   call spectrum_rotatory_strength('rotatory_strength', s, rsf, .true.)
