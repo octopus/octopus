@@ -236,7 +236,8 @@ contains
           geo%kinetic_energy = kinetic_energy(geo)
        end if
 
-       call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%dt, i)
+       call td_write_iter(write_handler, gr, st, h, geo, td%pol, &
+                          td%delta_strength_mode, td%delta_strength, td%dt, i)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
        call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
@@ -326,7 +327,8 @@ contains
       call push_sub('td.td_run_zero_iter')
 
       call io_mkdir('td.general')
-      call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%dt, 0)
+      call td_write_iter(write_handler, gr, st, h, geo, td%pol, &
+                         td%delta_strength_mode, td%delta_strength, td%dt, 0)
       call td_save_restart(0)
       call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
       call td_rti_run_zero_iter(h, td%tr)

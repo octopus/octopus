@@ -41,17 +41,11 @@ program cross_section
   call units_init()
 
   call spectrum_init(s)
-
-  call loct_parse_float(check_inp('TDDeltaStrength'),CNST(0.05), sf%delta_strength)
-  sf%delta_strength = sf%delta_strength / units_inp%length%factor
-
   call spectrum_strength_function('spectrum', s, sf, .true.)
 
   deallocate(sf%sp)
-
   call syslabels_end()
   call io_end()
   call parser_end()
   call global_end()
-
 end program cross_section

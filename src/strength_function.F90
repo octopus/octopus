@@ -40,9 +40,6 @@ program strength_function
   current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
-  call loct_parse_float(check_inp('TDDeltaStrength'),CNST(0.05), sf%delta_strength)
-  sf%delta_strength = sf%delta_strength / units_inp%length%factor
-
   call spectrum_init(s)
   call spectrum_strength_function('spectrum', s, sf, .true.)
 
@@ -51,6 +48,4 @@ program strength_function
   call io_end()
   call parser_end()
   call global_end()
-
-  stop
 end program strength_function

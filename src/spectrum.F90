@@ -96,7 +96,7 @@ subroutine spectrum_init(s)
   type(spec_type), intent(inout) :: s
   character(len=100) :: txt
 
-  call push_sub('spectrum_init')
+  call push_sub('spectrum.spectrum_init')
 
   !%Variable SpecDampMode
   !%Type integer
@@ -143,7 +143,11 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: dipole(:,:)
 
-  call spectrum_mult_info(iunit, sf%nspin, lmax, pol, time_steps, dt)
+  character(len=100) :: str
+
+  call push_sub('spectrum_strength_function')
+
+  call spectrum_mult_info(iunit, sf%nspin, lmax, pol, sf%delta_strength, time_steps, dt)
   if(lmax.ne.1) then
     message(1) = 'multipoles file should contain the dipole -- and only the dipole.'
     call write_fatal(1)
@@ -255,7 +259,7 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
     call write_info(4)
   end if
 
-  return
+  call pop_sub()
 end subroutine spectrum_strength_function
 
 subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
@@ -362,7 +366,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
   CMPLX :: c
   CMPLX, allocatable :: dipole(:), ddipole(:)
 
-  call spectrum_mult_info(iunit, nspin, lmax, pol, time_steps, dt)
+  call spectrum_mult_info(iunit, nspin, lmax, pol, dump, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
@@ -506,6 +510,8 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   integer :: i, j
   FLOAT :: t1, t2, dummy
 
+  call push_sub('spectrum.spectrum_file_info')
+
   iunit = io_open(file, action='read', status='old')
 
   ! First line may contain some informative integer n (or not...)
@@ -534,18 +540,22 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
 
   rewind(iunit)
   read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
+  call pop_sub()
 end subroutine spectrum_file_info
 
-subroutine spectrum_mult_info(iunit, nspin, lmax, pol, time_steps, dt)
+subroutine spectrum_mult_info(iunit, nspin, lmax, pol, delta_strength, time_steps, dt)
   integer, intent(out) :: iunit
   integer, intent(out) :: nspin
   integer, intent(out) :: lmax
   FLOAT,   intent(out) :: pol(3)
+  FLOAT,   intent(out) :: delta_strength
   integer, intent(out) :: time_steps
   FLOAT,   intent(out) :: dt
 
   integer :: j
   FLOAT :: t1, t2, dummy
+
+  call push_sub('spectrum.spectrum_mult_info')
 
   ! open files
   call io_assign(iunit)
@@ -558,6 +568,8 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, pol, time_steps, dt)
   read(iunit, '(8x,i2)') nspin
   read(iunit, '(8x,i2)') lmax
   read(iunit, '(8x,3f18.12)') pol(1:3)
+  read(iunit, '(a)')
+  read(iunit, '(15x,f18.12)') delta_strength
   read(iunit, *); read(iunit, *) ! skip header
 
   ! count number of time_steps
@@ -578,8 +590,10 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, pol, time_steps, dt)
   end if
 
   rewind(iunit)
-  read(iunit, *); read(iunit, *); read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
-
+  do j = 1, 7
+     read(iunit, '(a)')
+  enddo
+  call pop_sub()
 end subroutine spectrum_mult_info
 
 subroutine spectrum_acc_info(iunit, time_steps, dt)
@@ -628,6 +642,8 @@ subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, is, ie
 
   FLOAT :: ts, te, dummy
 
+  call push_sub('spectrum.spectrum_fix_time_limits')
+
   ts = M_ZERO; te = time_steps*dt
   if(start_time < ts) start_time = ts
   if(start_time > te) start_time = te
@@ -643,6 +659,7 @@ subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, is, ie
   ie = int(end_time/dt)
   ntiter = ie - is + 1
 
+  call pop_sub()
 end subroutine spectrum_fix_time_limits
 
 end module spectrum
