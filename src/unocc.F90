@@ -196,8 +196,8 @@ subroutine write_matrix_elements(sys, h)
   use mesh_function
   use poisson
 
-  type(system_type),      intent(inout) :: sys
-  type(hamiltonian_type), intent(in)    :: h
+  type(system_type), target, intent(inout) :: sys
+  type(hamiltonian_type),    intent(in)    :: h
 
   type(states_type), pointer :: st
   type(mesh_type),   pointer :: m
