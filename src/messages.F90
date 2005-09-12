@@ -28,8 +28,9 @@ module messages
 
   private
 
-  public :: write_fatal, write_warning, write_info, print_date
-  public :: input_error
+  public :: write_fatal, write_warning, write_info
+  public :: write_debug, write_debug_marker, write_debug_newlines
+  public :: print_date, epoch_time_diff, input_error
   public :: push_sub, pop_sub
   public :: messages_print_stress, messages_print_var_info, messages_print_var_option
 
@@ -47,7 +48,10 @@ module messages
   ! cannot write "use io" above. Unit 8 and 9 should always be available.
   integer, parameter, private :: iunit_out = 8
   integer, parameter, private :: iunit_err = 9
+  ! max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
+  integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
+  integer,            private :: sec_last_push, sec_last_pop
 
 contains
 
@@ -199,6 +203,63 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine write_debug(no_lines)
+    integer, intent(in) :: no_lines
+
+    integer             :: i, iunit
+
+    call open_debug_trace(iunit)
+    do i = 1, no_lines
+       write(msg, '(a)') trim(message(i))
+       call flush_msg(iunit, msg)
+    enddo
+    close(iunit)
+
+  end subroutine write_debug
+
+
+  ! ---------------------------------------------------------
+  subroutine write_debug_newlines(no_lines)
+    integer, intent(in) :: no_lines
+
+    integer             :: i, iunit
+
+    if (mpiv%node .eq. 0) return
+    call open_debug_trace(iunit)
+    do i = 1, no_lines
+       write(msg, '(a)') '* -'
+       call flush_msg(iunit, msg)
+    enddo
+    close(iunit)
+
+  end subroutine write_debug_newlines
+
+
+  ! ---------------------------------------------------------
+  subroutine write_debug_marker(no)
+    integer, intent(in) :: no
+
+    write(message(1), '(a,i)') 'debug marker #',no
+    call write_debug(1)
+
+  end subroutine write_debug_marker
+
+
+  ! ---------------------------------------------------------
+  subroutine open_debug_trace(iunit)
+    integer, intent(out) :: iunit
+
+    character(len=4) :: filenum
+
+    iunit = mpiv%node + unit_offset
+    write(filenum, '(i3.3)') iunit - unit_offset
+    open(iunit, file='debug/debug_trace.node.'//filenum, &
+         action='write', status='unknown', position='append')
+
+  end subroutine open_debug_trace
+
+
+  ! ---------------------------------------------------------
   subroutine input_error(var)
     character(len=*), intent(in) :: var
 
@@ -301,10 +362,32 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine epoch_time_diff(sec, usec)
+    integer, intent(inout) :: sec, usec
+
+    ! correct overflow
+    if (usec-s_epoch_usec .lt. 0) then
+       usec = 1000000 + usec 
+       sec  = sec - 1
+    endif
+
+    ! replace values
+    sec  = sec - s_epoch_sec
+    usec = usec - s_epoch_usec
+
+  end subroutine epoch_time_diff
+
+
 #ifdef DEBUG
+  ! ---------------------------------------------------------
   subroutine push_sub(sub_name)
     character(len=*), intent(in) :: sub_name
-    integer i
+
+    integer i, iunit, sec, usec
+    character(len=4) :: filenum
+
+    call loct_gettimeofday(sec, usec)
+    call epoch_time_diff(sec, usec)
 
     no_sub_stack = no_sub_stack + 1
     if(no_sub_stack > 49) then
@@ -312,38 +395,64 @@ contains
        message(1) = 'Too many recursion levels (max=50)'
        call write_fatal(1)
     else
-       sub_stack(no_sub_stack) = trim(sub_name)
+       sub_stack(no_sub_stack)  = trim(sub_name)
        time_stack(no_sub_stack) = loct_clock()
 
-       if(conf%verbose >= VERBOSE_DEBUG .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
-          write(stderr,'(a,f10.3,i10, a)', advance='no') "* I ", loct_clock()/CNST(1e6), &
-               loct_getmem(), " | "
-          do i = no_sub_stack-1, 1, -1
-             write(stderr,'(a)', advance='no') "..|"
-          end do
-          write(stderr,'(a)') trim(sub_name)
-       end if
+
+       if(conf%verbose >= VERBOSE_DEBUG) then ! .and. no_sub_stack <= conf%debug_level) then
+
+          call open_debug_trace(iunit)
+          call push_sub_write(iunit)
+          ! also write to stderr if we are node 0
+          if (mpiv%node == 0) call push_sub_write(stderr) 
+
+          ! close file to ensure flushing
+          close(iunit)
+
+       endif
     end if
 
     return
+
+  contains
+
+
+    subroutine push_sub_write(iunit_out)
+      integer,  intent(in) :: iunit_out
+
+      write(iunit_out,'(a,i6,a,i6.6,f8.3,i8, a)', advance='no') "* I ", &
+           sec,'.',usec, &
+           loct_clock()/CNST(1e6), &
+           loct_getmem(), " | "
+      do i = no_sub_stack-1, 1, -1
+         write(iunit_out,'(a)', advance='no') "..|"
+      end do
+      write(iunit_out,'(a)') trim(sub_name)
+
+    end subroutine push_sub_write
+
   end subroutine push_sub
 
 
   ! ---------------------------------------------------------
   subroutine pop_sub()
-    integer i
+    integer i, iunit, sec, usec
+    character(len=4) :: filenum
+
+    call loct_gettimeofday(sec, usec)
+    call epoch_time_diff(sec, usec)
 
     if(no_sub_stack > 0) then
-       if(conf%verbose > VERBOSE_DEBUG .and. no_sub_stack <= conf%debug_level .and. mpiv%node == 0) then
+       if(conf%verbose > VERBOSE_DEBUG) then ! .and. no_sub_stack <= conf%debug_level) then
 
-          ! It seems in std C libraries the number of clock ticks per second is 1e6...
-          write(stderr,'(a,f10.3,i10, a)', advance='no') "* O ", &
-               (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
-               loct_getmem(), " | "
-          do i = no_sub_stack-1, 1, -1
-             write(stderr,'(a)', advance='no') "..|"
-          end do
-          write(stderr,'(a)') trim(sub_stack(no_sub_stack))
+          call open_debug_trace(iunit)
+          call pop_sub_write(iunit)
+          ! also write to stderr if we are node 0
+          if (mpiv%node == 0) call pop_sub_write(stderr) 
+
+          ! close file to ensure flushing
+          close(iunit)
+
        end if
        no_sub_stack = no_sub_stack - 1
     else
@@ -352,6 +461,22 @@ contains
        message(1) = 'Too few recursion levels'
        call write_fatal(1)
     end if
+
+  contains
+
+    subroutine pop_sub_write(iunit_out)
+      integer, intent(in) :: iunit_out
+
+      write(iunit_out,'(a,i6,a,i6.6,f8.3,i8, a)', advance='no') "* O ", &
+           sec,'.',usec, &
+           (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
+           loct_getmem(), " | "
+      do i = no_sub_stack-1, 1, -1
+         write(iunit_out,'(a)', advance='no') "..|"
+      end do
+      write(iunit_out,'(a)') trim(sub_stack(no_sub_stack))
+
+    end subroutine pop_sub_write
 
   end subroutine pop_sub
 #endif
