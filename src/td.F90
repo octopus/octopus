@@ -62,9 +62,11 @@ module timedep
      integer           :: move_ions      ! how do we move the ions?
 
      ! The *kick* used in "linear response in the time domain" calculations.
-     FLOAT             :: pol(3)         ! the direction of the polarization of the field
+     FLOAT             :: pol(3, 3)
+     integer           :: pol_dir
      integer           :: delta_strength_mode
      FLOAT             :: delta_strength
+     integer           :: pol_equiv_axis
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
      type(PES_type) :: PESv
@@ -236,7 +238,7 @@ contains
           geo%kinetic_energy = kinetic_energy(geo)
        end if
 
-       call td_write_iter(write_handler, gr, st, h, geo, td%pol, &
+       call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%pol_dir, &
                           td%delta_strength_mode, td%delta_strength, td%dt, i)
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
@@ -327,7 +329,7 @@ contains
       call push_sub('td.td_run_zero_iter')
 
       call io_mkdir('td.general')
-      call td_write_iter(write_handler, gr, st, h, geo, td%pol, &
+      call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%pol_dir, &
                          td%delta_strength_mode, td%delta_strength, td%dt, 0)
       call td_save_restart(0)
       call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
@@ -344,36 +346,6 @@ contains
 
       call push_sub('td.apply_delta_field')
 
-!!! units are 1/length
-      call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, td%delta_strength)
-      td%delta_strength = td%delta_strength / units_inp%length%factor
-
-      !%Variable TDDeltaStrengthMode
-      !%Type integer
-      !%Section 10 Time Dependent
-      !%Description
-      !% When calculating the linear response of the density via the propagation
-      !% in real time, one needs to perfrom an initical kick on the KS system, at 
-      !% time zero. Depending on what kind response property one wants to obtain,
-      !% this kick may be done in several modes.
-      !%Option kick_density 0
-      !% The total density of the system is perturbed.
-      !%Option kick_spin 1
-      !% The individual spin densities are perturbed differently. Note that this mode
-      !% is only possible if the run is done in spin polarized mode, or with spinors.
-      !%Option kick_spin_and_density 2
-      !% A combination of the two above. Note that this mode
-      !% is only possible if the run is done in spin polarized mode, or with spinors.
-      !%End
-      call loct_parse_int(check_inp('TDDeltaStrengthMode'), KICK_DENSITY_MODE, td%delta_strength_mode)
-      select case (td%delta_strength_mode)
-      case (KICK_DENSITY_MODE)
-      case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
-         if (st%d%ispin == UNPOLARIZED) call input_error('TDDeltaStrengthMode')
-      case default
-         call input_error('TDDeltaStrengthMode')
-      end select
-
 !!! The wave-functions at time delta t read
 !!! psi(delta t) = psi(t) exp(i k x)
       if(td%delta_strength .ne. M_ZERO) then
@@ -388,7 +360,7 @@ contains
          end select
          call write_info(2)
          do i = 1, NP
-            kick = M_zI * td%delta_strength * sum(gr%m%x(i, 1:NDIM)*td%pol(1:NDIM))
+            kick = M_zI * td%delta_strength * sum(gr%m%x(i, 1:NDIM)*td%pol(1:NDIM, td%pol_dir))
 
             select case (td%delta_strength_mode)
             case (KICK_DENSITY_MODE)
@@ -430,7 +402,7 @@ contains
       if(td%move_ions > 0) then
          do i = 1, geo%natoms
             geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
-                 td%delta_strength_mode*td%pol(1:NDIM)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+                 td%delta_strength_mode*td%pol(1:NDIM, td%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
          end do
       end if
 

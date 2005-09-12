@@ -212,13 +212,14 @@ subroutine td_write_end(w)
   call pop_sub()
 end subroutine td_write_end
 
-subroutine td_write_iter(w, gr, st, h, geo, pol, kick_mode, kick_strength, dt, i)
+subroutine td_write_iter(w, gr, st, h, geo, pol, dir, kick_mode, kick_strength, dt, i)
   type(td_write_type),    intent(in) :: w
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   type(geometry_type),    intent(in)    :: geo
-  FLOAT,                  intent(in) :: pol(3)
+  FLOAT,                  intent(in) :: pol(3, 3)
+  integer,                intent(in) :: dir
   integer,                intent(in) :: kick_mode
   FLOAT,                  intent(in) :: kick_strength
   FLOAT,                  intent(in) :: dt
@@ -226,7 +227,7 @@ subroutine td_write_iter(w, gr, st, h, geo, pol, kick_mode, kick_strength, dt, i
 
   call push_sub('td_write.td_write_iter')
 
-  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick_mode, kick_strength, pol, i)
+  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick_mode, kick_strength, pol, dir, i)
   if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
   if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
   if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
@@ -254,9 +255,6 @@ subroutine td_write_data(w, gr, st, h, outp, geo, dt, iter)
   character(len=256) :: filename
 
   call push_sub('td.td_write_data')
-
-!!$  ! calculate projection onto the ground state
-!!$  if(w%out_gsp.ne.0) call td_write_gsp(w%out_gsp, gr%m, st, w%gs_st, dt, iter)
 
   if(mpiv%node==0) then
       if(w%out_multip.ne.0)  call write_iter_flush(w%out_multip)
@@ -449,14 +447,15 @@ subroutine td_write_angular(out_angular, gr, st, iter)
   call pop_sub()
 end subroutine td_write_angular
 
-subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength, pol, iter)
+subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength, pol, dir, iter)
   integer(POINTER_SIZE), intent(in) :: out_multip
   type(grid_type),       intent(in) :: gr
   type(states_type),     intent(in) :: st
   integer,               intent(in) :: lmax   
   integer,               intent(in) :: kick_mode
   FLOAT,                 intent(in) :: kick_strength
-  FLOAT,                 intent(in) :: pol(3)
+  FLOAT,                 intent(in) :: pol(3, 3)
+  integer,               intent(in) :: dir
   integer,               intent(in) :: iter
 
   integer :: is, j, l, m, add_lm
@@ -479,7 +478,19 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a8,3f18.12)') '# pol   ', pol(1:3)
+    write(aux, '(a8,3f18.12)') '# pol(1)', pol(1:3, 1)
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
+    write(aux, '(a8,3f18.12)') '# pol(2)', pol(1:3, 2)
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
+    write(aux, '(a8,3f18.12)') '# pol(3)', pol(1:3, 3)
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
+    write(aux, '(a8,i1)')  '# direction    ', dir
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 

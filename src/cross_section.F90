@@ -30,7 +30,6 @@ program cross_section
 
   integer :: in_file, out_file, eq_axis, i, j
   integer(POINTER_SIZE) :: blk
-  FLOAT, allocatable :: basis(:, :)
   logical :: calculate_tensor
   character(len=100) :: txt
   type(spec_type) :: s
@@ -45,33 +44,7 @@ program cross_section
 
   call spectrum_init(s)
 
-
-  allocate(basis(3, 3))
-  ! WARNING : this is broken for 2D or 3D
-  if(loct_parse_block(check_inp('SpectrumBasis'), blk) == 0) then
-    i = loct_parse_block_n(blk)
-    if(i.ne.3) then
-       write(message(1),'(a,i1,a)') 'The number of vectors in the SpectrumBasis block is not ',i,', as it should.'
-       call write_fatal(1)
-    endif
-    do j = 1, 3
-      call loct_parse_block_float(blk, j-1, 0, basis(1, j))
-      call loct_parse_block_float(blk, j-1, 1, basis(2, j))
-      call loct_parse_block_float(blk, j-1, 2, basis(3, j))
-    enddo
-  else
-    basis(1:3, 1) = (/ CNST(1.0), CNST(0.0), CNST(0.0) /)
-    basis(1:3, 2) = (/ CNST(0.0), CNST(1.0), CNST(0.0) /)
-    basis(1:3, 3) = (/ CNST(0.0), CNST(0.0), CNST(1.0) /)
-  endif
-
-  ! Normalize the input vectors.
-  do j = 1, 3
-     basis(1:3, j) = basis(1:3, j)/sqrt(dot_product(basis(1:3, j),basis(1:3, j)))
-  enddo
-
   call loct_parse_logical(check_inp('SpectrumCalculateTensor'), .false., calculate_tensor)
-  call loct_parse_int(check_inp('SpectrumEquivalentAxis'), 1, eq_axis)
 
   if(.not.calculate_tensor) then
 
@@ -84,7 +57,7 @@ program cross_section
      call io_assign(out_file)
      out_file = io_open('cross_section_vector', action='write')
 
-     call spectrum_cross_section(in_file, out_file, s, basis)
+     call spectrum_cross_section(in_file, out_file, s)
 
      call io_close(in_file)
      call io_close(out_file)
@@ -105,9 +78,7 @@ program cross_section
           call io_assign(out_file)
           out_file = io_open('cross_section_vector', action='write')
 
-          ! Here one should read the polarization vector of in_file, and check that it
-          ! corresponds with basis(1:3, 1)
-          call spectrum_cross_section(in_file, out_file, s, basis)
+          call spectrum_cross_section(in_file, out_file, s)
           call io_close(in_file)
           call io_close(out_file)
 
@@ -116,7 +87,7 @@ program cross_section
           out_file = io_open('cross_section_tensor', action='write')
 
           ! The following routine should now build the tensor...
-          !call spectrum_cross_section_tensor(in_file, out_file, basis)
+          !call spectrum_cross_section_tensor(in_file, out_file)
 
 
         case default

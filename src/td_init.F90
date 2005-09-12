@@ -25,7 +25,7 @@ subroutine td_init(gr, td, st, h, outp)
   type(hamiltonian_type), intent(in)    :: h
   type(output_type),      intent(in)    :: outp
 
-  integer :: i, dummy
+  integer :: i, j, n, dummy
   integer(POINTER_SIZE) :: blk
 
   call push_sub('td_init.td_init')
@@ -47,18 +47,77 @@ subroutine td_init(gr, td, st, h, outp)
     call write_fatal(2)
   end if
 
-  !!! read in the default direction for the polarization
-  td%pol(:) = M_ZERO
-  if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
-    do i = 1, NDIM
-      call loct_parse_block_float(blk, 0, i-1, td%pol(i))
-    end do
-    call loct_parse_block_end(blk)
-  else  !default along the x-direction
-    td%pol(1) = M_ONE
+  call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, td%delta_strength)
+  ! units are 1/length
+  td%delta_strength = td%delta_strength / units_inp%length%factor
+
+  !%Variable TDDeltaStrengthMode
+  !%Type integer
+  !%Section 10 Time Dependent
+  !%Description
+  !% When calculating the linear response of the density via the propagation
+  !% in real time, one needs to perfrom an initical kick on the KS system, at 
+  !% time zero. Depending on what kind response property one wants to obtain,
+  !% this kick may be done in several modes.
+  !%Option kick_density 0
+  !% The total density of the system is perturbed.
+  !%Option kick_spin 1
+  !% The individual spin densities are perturbed differently. Note that this mode
+  !% is only possible if the run is done in spin polarized mode, or with spinors.
+  !%Option kick_spin_and_density 2
+  !% A combination of the two above. Note that this mode
+  !% is only possible if the run is done in spin polarized mode, or with spinors.
+  !%End
+  call loct_parse_int(check_inp('TDDeltaStrengthMode'), KICK_DENSITY_MODE, td%delta_strength_mode)
+  select case (td%delta_strength_mode)
+    case (KICK_DENSITY_MODE)
+    case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
+      if (st%d%ispin == UNPOLARIZED) call input_error('TDDeltaStrengthMode')
+    case default
+      call input_error('TDDeltaStrengthMode')
+  end select
+
+  !!! read in the the polarization directions -- or eventually learn them from symmetry.
+  if(td%delta_strength > M_ZERO) then
+
+
+     ! Find out how many equivalent axis we have...
+     ! WARNING: TODO: document this variable.
+     call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, td%pol_equiv_axis)
+
+     call loct_parse_int(check_inp('TDPolarizationDirection'), 1, td%pol_dir)
+
+     td%pol(:, :) = M_ZERO
+     if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
+        n = loct_parse_block_n(blk)
+        do j = 1, n
+           do i = 1, NDIM
+              call loct_parse_block_float(blk, j-1, i-1, td%pol(i, j))
+           end do
+        enddo
+        if(n==2) td%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+        if(n==1) td%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+        call loct_parse_block_end(blk)
+     else
+        ! Here the symmetry of the system should be analized, and the polarization
+        ! basis, built accordingly.
+        td%pol_dir = 1
+        td%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
+        td%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+        td%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+     endif
+     ! Normalize:
+     do i = 1, 3
+        td%pol(1:3, i) = td%pol(1:3, i)/sqrt(sum(td%pol(1:3, i)**2))
+     enddo
+
+  else
+
+     td%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
+     td%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+     td%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+
   endif
-  ! Normalize:
-  td%pol(1:3) = td%pol(1:3)/sqrt(sum(td%pol(1:3)**2))
 
   ! now the photoelectron stuff
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
