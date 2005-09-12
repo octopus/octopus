@@ -170,54 +170,49 @@ subroutine X(states_output) (st, gr, dir, outp)
 
   u = M_ONE/units_out%length%factor**NDIM
 
-#ifdef HAVE_MPI
-  if(mpiv%node == 0) then
-#endif
-    if(outp%what(output_density)) then
-      do is = 1, st%d%nspin
+  if(outp%what(output_density)) then
+     do is = 1, st%d%nspin
         write(fname, '(a,i1)') 'density-', is
         call doutput_function(outp%how, dir, fname, gr%m, gr%sb, st%rho(:, is), u, ierr)
-      end do
-    end if
-#ifdef HAVE_MPI
+     end do
   end if
-#endif
 
   if(outp%what(output_wfs)) then
-    do ist = st%st_start, st%st_end
-      is = outp%wfs((ist-1)/32 + 1)
-      if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
-        do ik = 1, st%d%nik
-          do idim = 1, st%d%dim
-            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
-            call X(output_function) (outp%how, dir, fname, gr%m, gr%sb, &
-               st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
-          end do
-        end do
-      end if
-    end do
+     do ist = st%st_start, st%st_end
+        is = outp%wfs((ist-1)/32 + 1)
+        if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
+           do ik = 1, st%d%nik
+              do idim = 1, st%d%dim
+                 write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
+                 call X(output_function) (outp%how, dir, fname, gr%m, gr%sb, &
+                      st%X(psi) (1:, idim, ist, ik), sqrt(u), ierr)
+              end do
+           end do
+        end if
+     end do
   end if
 
+
   if(outp%what(output_wfs_sqmod)) then
-    allocate(dtmp(NP))
-    do ist = 1, st%nst
-      is = outp%wfs((ist-1)/32 + 1)
-      if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
-        do ik = 1, st%d%nik
-          do idim = 1, st%d%dim
-            write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
-            dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
-            call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
-          end do
-        end do
-      end if
-    end do
-    deallocate(dtmp)
+     allocate(dtmp(NP))
+     do ist = 1, st%nst
+        is = outp%wfs((ist-1)/32 + 1)
+        if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
+           do ik = 1, st%d%nik
+              do idim = 1, st%d%dim
+                 write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim
+                 dtmp = abs(st%X(psi) (:, idim, ist, ik))**2
+                 call doutput_function (outp%how, dir, fname, gr%m, gr%sb, dtmp, u, ierr)
+              end do
+           end do
+        end if
+     end do
+     deallocate(dtmp)
   end if
 
   if(NDIM==3) then
-    if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
-    if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
+     if(outp%what(output_elf))    call elf(.true.,  'elf_rs')
+     if(outp%what(output_elf_FS)) call elf(.false., 'elf_fs')
   end if
 
   call pop_sub()
@@ -253,80 +248,80 @@ contains
 
     ! single or double occupancy
     if(st%d%nspin == 1) then
-      s = M_TWO
+       s = M_TWO
     else
-      s = M_ONE
+       s = M_ONE
     end if
 
     if(.not.rs) then
-      call X(cf_new)(gr%m%l, cf_tmp)
-      call X(cf_fft_init)(cf_tmp, gr%sb)
+       call X(cf_new)(gr%m%l, cf_tmp)
+       call X(cf_fft_init)(cf_tmp, gr%sb)
     end if
 
     allocate(c(NP))
 
     do_is: do is = 1, st%d%nspin
-      allocate(r(NP), gradr(NP, NDIM), j(NP, NDIM))
-      r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
-      c = M_ZERO
+       allocate(r(NP), gradr(NP, NDIM), j(NP, NDIM))
+       r = M_ZERO; gradr = M_ZERO; j  = M_ZERO
+       c = M_ZERO
 
-      allocate(psi_fs(NP), gpsi(NP, NDIM))
-      do ik = is, st%d%nik, st%d%nspin
-        do ist = 1, st%nst
-          do idim = 1, st%d%dim
+       allocate(psi_fs(NP), gpsi(NP, NDIM))
+       do ik = is, st%d%nik, st%d%nspin
+          do ist = 1, st%nst
+             do idim = 1, st%d%dim
 
-            if(rs) then
-              psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
-            else
-              call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
-            end if
-            call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
+                if(rs) then
+                   psi_fs(:) = cmplx(st%X(psi)(:, idim, ist, ik), KIND=PRECISION)
+                else
+                   call mf2mf_RS2FS(gr%m, st%X(psi)(:, idim, ist, ik), psi_fs(:), cf_tmp)
+                end if
+                call zf_gradient(gr%sb, gr%f_der, psi_fs(:), gpsi)
 
-            if(.not.rs) then
-              do i = 1, NDIM
-                gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
-              end do
-            end if
+                if(.not.rs) then
+                   do i = 1, NDIM
+                      gpsi(:,i) = gpsi(:,i) * gr%m%h(i)**2 * real(cf_tmp%n(i), PRECISION) / (M_TWO*M_PI)
+                   end do
+                end if
 
-            r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
-            do i = 1, NDIM
-              gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                 M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
-              j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
-                 aimag(conjg(psi_fs(:))*gpsi(:,i))
-            end do
+                r(:) = r(:) + st%d%kweights(ik)*st%occ(ist, ik) * abs(psi_fs(:))**2
+                do i = 1, NDIM
+                   gradr(:,i) = gradr(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                        M_TWO * real(conjg(psi_fs(:))*gpsi(:,i))
+                   j (:,i) =  j(:,i) + st%d%kweights(ik)*st%occ(ist, ik) *  &
+                        aimag(conjg(psi_fs(:))*gpsi(:,i))
+                end do
 
-            do i = 1, NP
-              if(r(i) >= dmin) then
-                c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
-                   sum(abs(gpsi(i, 1:NDIM))**2)
-              end if
-            end do
+                do i = 1, NP
+                   if(r(i) >= dmin) then
+                      c(i) = c(i) + st%d%kweights(ik)*st%occ(ist, ik)/s * &
+                           sum(abs(gpsi(i, 1:NDIM))**2)
+                   end if
+                end do
+             end do
           end do
-        end do
-      end do
-      deallocate(psi_fs, gpsi)
+       end do
+       deallocate(psi_fs, gpsi)
 
-      do i = 1, NP
-        if(r(i) >= dmin) then
-          c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
-        end if
-      end do
+       do i = 1, NP
+          if(r(i) >= dmin) then
+             c(i) = c(i) - (M_FOURTH*sum(gradr(i, 1:NDIM)**2) + sum(j(i, 1:NDIM)**2))/(s*r(i))
+          end if
+       end do
 
-      ! normalization
-      f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
-      do i = 1, NP
-        if(abs(r(i)) >= dmin) then
-          d    = f*(r(i)/s)**(M_FIVE/M_THREE)
-          c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
-        else
-          c(i) = M_ZERO
-        end if
-      end do
+       ! normalization
+       f = M_THREE/M_FIVE*(M_SIX*M_PI**2)**M_TWOTHIRD
+       do i = 1, NP
+          if(abs(r(i)) >= dmin) then
+             d    = f*(r(i)/s)**(M_FIVE/M_THREE)
+             c(i) = M_ONE/(M_ONE + (c(i)/d)**2)
+          else
+             c(i) = M_ZERO
+          end if
+       end do
 
-      deallocate(r, gradr, j)
-      write(fname, '(a,a,i1)') trim(filename), '-', is
-      call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
+       deallocate(r, gradr, j)
+       write(fname, '(a,a,i1)') trim(filename), '-', is
+       call doutput_function(outp%how, dir, trim(fname), gr%m, gr%sb, c, M_ONE, ierr)
 
     end do do_is
 
