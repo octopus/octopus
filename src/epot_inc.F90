@@ -48,6 +48,8 @@ subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
          n = p(ip)%n
          deallocate(lpsi, plpsi, stat = ierr)
          allocate(lpsi(n), plpsi(n))
+         ! FIXME: When running with partitions, vol_pp is local
+         ! to the node. It is likely, that this code need changes.
          lpsi(1:n)  = psi(p(ip)%jxyz(1:n))*m%vol_pp(p(ip)%jxyz(1:n))
          if(periodic) lpsi(1:n)  = lpsi(1:n) * p(ip)%phases(1:n, ik)
          plpsi(1:n) = R_TOTYPE(M_ZERO)
@@ -197,6 +199,8 @@ contains
         if(r < r_small) cycle
 
         call specie_get_glocal(atm%spec, x, gv)
+        ! FIXME: When running with partitions, vol_pp is local
+        ! to the node. It is likely, that this code need changes.
         d = sum(st%rho(j, 1:ns))*gr%m%vol_pp(j)
         atm%f(1:NDIM) = atm%f(1:NDIM) - d*gv(1:NDIM)
       end do
@@ -223,6 +227,8 @@ contains
         call dcf_FS2RS(cf_for)
         call dcf2mf(gr%m, cf_for, force)
         do l = 1, st%d%nspin
+          ! FIXME: When running with partitions, vol_pp is local
+          ! to the node. It is likely, that this code need changes.
           atm%f(j) = atm%f(j) + sum(force(1:NP)*st%rho(1:NP, l)*gr%m%vol_pp(1:NP))
         end do
       end do
