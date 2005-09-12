@@ -47,8 +47,6 @@ contains
 #ifdef DEBUG
     logical file_exists, mpi_debug_hook
     integer :: sec, usec
-#endif
-#if defined(HAVE_MPI)
     character(len=256) :: node_hook
 #endif
 
