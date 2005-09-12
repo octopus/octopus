@@ -37,6 +37,14 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
 
   call push_sub('eigen_trlan.eigen_solver_cg3')
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  message(1) = 'Error: Trlan-Solver not parallized for domain decomposition.'
+  call write_fatal(1)
+!  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below 
+!         appropriately for domain decomposition. Also parallelization 
+!         of the vectors has to be taken care of.
+#endif
+
   nrow = (m%np+1)*st%d%dim; ned = st%nst; maxlan = (ned + min(6, ned)); mev = st%nst
 
 !!$  allocate(evec(sys%m%np, st%d%dim, mev))

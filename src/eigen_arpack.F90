@@ -42,6 +42,14 @@ subroutine eigen_solver_arpack(gr, st, h, tol_, niter, ncv, converged, diff)
   kpoints: do ik = 1, st%d%nik
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  message(1) = 'Error: Arpack-Solver not parallized for domain decomposition.'
+  call write_fatal(1)
+!  FIXME: Need to adjust m%x and m%vol_pp occurences in the code below 
+!         appropriately for domain decomposition. Also parallelization 
+!         of the vectors has to be taken care of.
+#endif
+
   ldv = NP
   n = NP
   nev = st%nst
