@@ -72,6 +72,7 @@ contains
 
     ! initialize the other stuff
     allocate(s%st)
+
     call states_init(s%st, s%gr)
     call output_init(s%gr%sb, s%outp)
 
@@ -159,7 +160,7 @@ contains
     case (SPEC_USDEF) ! ... from userdef
        do i = 1, spin_channels
           rho(1:m%np, i) = real(s%Z_val, PRECISION) /  &
-               (m%np*m%vol_pp(1:m%np)*real(spin_channels, PRECISION))
+               (m%np_glob*m%vol_pp(1:m%np)*real(spin_channels, PRECISION))
        end do
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium
@@ -170,6 +171,11 @@ contains
              in_points = in_points + 1
           end if
        end do
+    ! FIXME: in_points has to be reduced when running with partitioning.
+    ! Something like
+    ! #if defined(HAVE_METIS) && defined(HAVE_MPI)
+    !   call MPI_Allreduce(in_points_local, in_points, 1, R_MPITYPE, MPI_SUM, m%vp%comm, ierr)
+    ! #endif
 
        if(in_points > 0) then
           do i = 1, m%np
