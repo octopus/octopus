@@ -9,7 +9,7 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 check_PROGRAMS = oct-test
 
 basic_SRCS = liboct_parser.F90 liboct.F90 string.F90 varinfo.F90 global.F90 \
-	     messages.F90 syslabels.F90 io.F90 units.F90
+	     messages.F90 syslabels.F90 io.F90 units.F90 mpi.F90
 
 core_SRCS = $(basic_SRCS) \
 	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 \
