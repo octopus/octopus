@@ -500,8 +500,8 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   end do
 #else
   do i = 1, mesh%np_tot
-    chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
-    mesh%vol_pp(k) = mesh%vol_pp(k)*curvlinear_det_Jac(sb, geo, cv, mesh%x(k, :), chi)
+    chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
+    mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi)
   end do
 #endif
 
