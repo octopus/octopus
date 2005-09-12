@@ -113,7 +113,7 @@ contains
     if (mpi_debug_hook) then
        call loct_gettimeofday(sec, usec)
        call epoch_time_diff(sec,usec)
-       write(message(1),'(a,i,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
+       write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
        call write_debug(1)
 
        write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
@@ -133,7 +133,7 @@ contains
 
        call loct_gettimeofday(sec, usec)
        call epoch_time_diff(sec,usec)
-       write(message(1),'(a,i,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
+       write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
        call write_debug(1)
     endif
 #endif

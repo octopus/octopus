@@ -239,7 +239,7 @@ contains
   subroutine write_debug_marker(no)
     integer, intent(in) :: no
 
-    write(message(1), '(a,i)') 'debug marker #',no
+    write(message(1), '(a,i3)') 'debug marker #',no
     call write_debug(1)
 
   end subroutine write_debug_marker
@@ -368,11 +368,15 @@ contains
     ! correct overflow
     if (usec-s_epoch_usec .lt. 0) then
        usec = 1000000 + usec 
-       sec  = sec - 1
+       if (sec.ge.s_epoch_sec) then
+          sec  = sec - 1
+       endif
     endif
 
     ! replace values
-    sec  = sec - s_epoch_sec
+    if (sec.ge.s_epoch_sec) then
+       sec  = sec - s_epoch_sec
+    endif
     usec = usec - s_epoch_usec
 
   end subroutine epoch_time_diff
