@@ -91,6 +91,9 @@ module par_vec
 #ifdef DEBUG
   use io
 #endif
+#ifdef HAVE_MPI
+  use mpi_mod
+#endif
 
   implicit none
 

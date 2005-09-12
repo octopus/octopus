@@ -34,3 +34,5 @@
 #undef R_CONJ
 #undef R_REAL
 #undef R_AIMAG
+
+#undef TS

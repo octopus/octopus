@@ -61,7 +61,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
   ! But partition numbers from 1 to vp%p with usually
   ! vp%p = mpiv%numprocs.
-  call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
+  call TS(MPI_Scatterv)(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
                     vp%np_local(rank+1), R_MPITYPE,                 &
                     vp%root, vp%comm, ierr)
 
@@ -109,7 +109,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
   ! Careful: MPI rank numbers range from 0 to mpiv%numprocs-1
   ! But partition numbers from 1 to vp%p with usually
   ! vp%p = mpiv%numprocs.
-  call MPI_Scatterv(v_tmp, vp%np_bndry, displs, R_MPITYPE,  &
+  call TS(MPI_Scatterv)(v_tmp, vp%np_bndry, displs, R_MPITYPE,  &
     v_local(vp%np_local(rank+1)+vp%np_ghost(rank+1)+1:),    &
     vp%np_bndry(rank+1), R_MPITYPE, vp%root, vp%comm, ierr)
 
@@ -156,6 +156,7 @@ subroutine X(vec_gather)(vp, v, v_local)
   
   call MPI_Comm_rank(vp%comm, rank, ierr)
 
+
   ! Unfortunately, vp%xlocal ist not quite the required
   ! displacement vector.
   allocate(displs(vp%p))
@@ -163,9 +164,9 @@ subroutine X(vec_gather)(vp, v, v_local)
 
   if(rank.eq.vp%root) allocate(v_tmp(vp%np))
 
-  call MPI_Gatherv(v_local, vp%np_local(rank+1), R_MPITYPE, v_tmp, &
-                   vp%np_local, displs, R_MPITYPE,                 &
-                   vp%root, vp%comm, ierr)
+  call TS(MPI_Gatherv)(v_local, vp%np_local(rank+1), R_MPITYPE, v_tmp, &
+                       vp%np_local, displs, R_MPITYPE,                 &
+                       vp%root, vp%comm, ierr)
 
   ! Copy values from v_tmp to their original position in v.
   if(rank.eq.vp%root) then
@@ -254,10 +255,14 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! a switched network). It then takes as much rounds of
   ! communication as the maximum neighbour number of a particular node
   ! is. This will speed up exchange and will probably be implemented later.
+  call MPI_Debug_IN(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(:, rank+1), sdispls, &
-                     R_MPITYPE, v_local(vp%np_local(rank+1)+1:),        &
-                     vp%np_ghost_neigh(rank+1, :), rdispls, R_MPITYPE,  &
-                     vp%comm, ierr)
+                         R_MPITYPE, v_local(vp%np_local(rank+1)+1:),        &
+                         vp%np_ghost_neigh(rank+1, :), rdispls, R_MPITYPE,  &
+                         vp%comm, ierr)
+  call MPI_Debug_OUT(vp%comm, C_MPI_ALLTOALLV )
+
+  call TS(MPI_Barrier)(MPI_COMM_WORLD, ierr)
                      
   deallocate(sdispls, rdispls)
   deallocate(ghost_send)
@@ -286,7 +291,7 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
 
   s_local = sum(v_local(:vp%np_local(rank+1)))
 
-  call MPI_Allreduce(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, ierr)
+  call TS(MPI_Allreduce)(s_local, s, 1, R_MPITYPE, MPI_SUM, vp%comm, ierr)
 
   call pop_sub()
  

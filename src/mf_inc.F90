@@ -61,7 +61,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
     dotp_tmp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
   end if
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  call MPI_Allreduce(dotp, dotp_tmp, 1, R_MPITYPE, &
+  call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
                      MPI_SUM, m%vp%comm, ierr)
 #else
   dotp = dotp_tmp

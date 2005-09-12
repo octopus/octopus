@@ -29,3 +29,5 @@
 #define R_CONJ(x)   (x)
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)
+
+#define TS(x)       TSD_ ## x

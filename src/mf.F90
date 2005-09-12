@@ -27,6 +27,9 @@ module mesh_function
   use mesh
   use cube_function
   use par_vec
+#ifdef HAVE_MPI
+  use mpi_mod
+#endif
 
   implicit none
 
