@@ -29,6 +29,10 @@ module restart
   use mesh
   use grid
   use output
+#ifdef HAVE_MPI
+  use mpi_mod
+#endif
+
 
   implicit none
 
