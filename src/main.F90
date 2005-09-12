@@ -39,6 +39,11 @@ program octopus
 
   call global_init()
   call parser_init()
+  ! get epoch time at node startup, synchronize nodes first
+#if defined(HAVE_MPI)
+  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+#endif
+  call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
   ! initialize input/output system
   call io_init()
 

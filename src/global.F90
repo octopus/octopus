@@ -109,6 +109,9 @@ module global
   ! the standard input and output
   integer :: stderr, stdin, stdout
 
+  ! global epoch time (time at startup)
+  integer :: s_epoch_sec, s_epoch_usec
+
   ! some private variables to this module
 #ifdef DEBUG
   character(len=40)          :: sub_stack(50)
