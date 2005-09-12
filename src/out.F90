@@ -37,6 +37,7 @@ module output
 #endif
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
+  use mpi_mod
 #endif
 
 
