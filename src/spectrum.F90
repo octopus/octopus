@@ -145,10 +145,11 @@ subroutine spectrum_skip_header(iunit)
 
 end subroutine spectrum_skip_header
 
-subroutine spectrum_cross_section(in_file, out_file, s)
+subroutine spectrum_cross_section(in_file, out_file, s, basis)
   integer, intent(in)    :: in_file
   integer, intent(in)    :: out_file
   type(spec_type),  intent(inout) :: s
+  FLOAT,   intent(in)    :: basis(3, 3)
 
   integer :: nspin, lmax, delta_strength_mode, time_steps, is, ie, ntiter, &
              i, j, jj, isp, no_e, k
@@ -182,6 +183,7 @@ subroutine spectrum_cross_section(in_file, out_file, s)
     endif
     dipole(1:3, i, :) = dipole(1:3, i, :) * units_out%length%factor
   end do
+  ! Now substract the initial dipole.
   do i = 0, time_steps
      dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
   enddo
@@ -220,8 +222,20 @@ subroutine spectrum_cross_section(in_file, out_file, s)
     sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)
   end do
 
-  write(out_file, '(a8,i2)')      '# nspin ', nspin
-  write(out_file, '(a8,3f18.12)') '# pol   ', pol(1:3)
+  ! And now project onto the basis.
+  do k = 0, no_e
+     do j = 1, nspin
+        sigma(1, k, j) = dot_product(sigma(1:3, k, j), basis(1:3, 1))
+        sigma(2, k, j) = dot_product(sigma(1:3, k, j), basis(1:3, 2))
+        sigma(3, k, j) = dot_product(sigma(1:3, k, j), basis(1:3, 3))
+     enddo
+  enddo
+
+  write(out_file, '(a8,i2)')      '# nspin    ', nspin
+  write(out_file, '(a8,3f18.12)') '# pol      ', pol(1:3)
+  write(out_file, '(a8,3f18.12)') '# basis(1) ', basis(1:3, 1)
+  write(out_file, '(a8,3f18.12)') '# basis(2) ', basis(1:3, 2)
+  write(out_file, '(a8,3f18.12)') '# basis(3) ', basis(1:3, 3)
   write(out_file, '(a15,i1)')     '# kick mode    ', delta_strength_mode
   write(out_file, '(a15,f18.12)') '# kick strength', delta_strength
   write(out_file, '(a)') '#Here we should put the column names.'
