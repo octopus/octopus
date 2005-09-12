@@ -21,6 +21,7 @@
 #include "global.h"
 
 module mpi_mod
+#if defined(HAVE_MPI)
   use varinfo
   use global
   use lib_oct
@@ -165,4 +166,5 @@ contains
 #include "complex.F90"
 #include "mpi_inc.F90"
 
+#endif
 end module mpi_mod
