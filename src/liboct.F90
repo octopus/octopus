@@ -28,7 +28,7 @@ module lib_oct
   public :: loct_sph_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
   public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
-  public :: loct_clock, loct_getmem, loct_sysname, loct_getcwd
+  public :: loct_clock, loct_gettimeofday, loct_getmem, loct_sysname, loct_getcwd
   public :: loct_mkdir, loct_rm, loct_number_of_lines
   public :: loct_fft_optimize, loct_wfs_list, loct_progress_bar, loct_printRecipe
   public :: write_iter_init, write_iter_clear, write_iter_flush, write_iter_end
@@ -236,6 +236,12 @@ module lib_oct
     function oct_clock()
       real(8) :: oct_clock
     end function oct_clock
+  end interface
+
+  interface loct_gettimeofday
+    subroutine oct_gettimeofday(sec, usec)
+      integer, intent(out) :: sec, usec
+    end subroutine oct_gettimeofday
   end interface
 
   interface loct_getmem

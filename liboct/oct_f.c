@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
@@ -179,6 +180,31 @@ double FC_FUNC_(oct_clock, OCT_CLOCK)
   ()
 {
   return (double) clock();
+}
+
+void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
+	(long *sec, long *usec)
+{
+#ifdef linux
+  struct timeval tv;
+  struct timezone tz;
+
+  gettimeofday(&tv, &tz);
+
+  *sec  = (long) tv.tv_sec;
+  *usec = (long) tv.tv_usec;
+/*
+  char str[sizeof("HH:MM:SS")];
+  time_t local;
+  local = tv.tv_sec;
+  strftime(str, sizeof(str), "%T", localtime(&local));
+  printf("%s.%06ld \n", str, (long) tv.tv_usec);
+  printf("%ld.%06ld \n", (long) tv.tv_sec, (long) tv.tv_usec);
+*/
+#else
+  *sec  = 0
+  *usec = 0
+#endif
 }
 
 /* this function is *not* portable. Should get rid of this! */
