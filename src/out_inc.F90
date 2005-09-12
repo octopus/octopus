@@ -53,10 +53,10 @@ subroutine X(input_function)(filename, m, f, ierr)
   call MPI_Comm_rank(m%vp%comm, rank, ierr)
   if(rank.eq.m%vp%root) then
      call X(input_function_global)(filename, m, f_global, ierr)
-#endif
 #ifdef DEBUG
   else
      call write_debug_newlines(2)
+#endif
 #endif
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   endif
@@ -319,10 +319,10 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   call MPI_Comm_rank(m%vp%comm, rank, ierr)
   if(rank.eq.m%vp%root) then
      call X(output_function_global)(how, dir, fname, m, sb, f_global, u, ierr)
-#endif
 #ifdef DEBUG
   else
      call write_debug_newlines(2)
+#endif
 #endif
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   endif
