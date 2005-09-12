@@ -35,6 +35,11 @@ module output
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  use par_vec
+#endif
+
+
 implicit none
 
   private

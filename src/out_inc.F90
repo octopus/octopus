@@ -35,7 +35,44 @@
 !             -3 : function in file is real, dp.
 !             -4 : function in file is complex, dp.
 ! ---------------------------------------------------------
+
 subroutine X(input_function)(filename, m, f, ierr)
+  character(len=*),     intent(in)  :: filename
+  type(mesh_type),      intent(in)  :: m
+  R_TYPE,               intent(out) :: f(:)
+  integer,              intent(out) :: ierr
+
+  R_TYPE, allocatable :: f_global(:)
+  integer             :: rank, iunit
+
+  call push_sub('out_inc.Xinput_function')
+  
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  allocate(f_global(1:m%np_glob))
+
+  call MPI_Comm_rank(m%vp%comm, rank, ierr)
+  if(rank.eq.m%vp%root) then
+     call X(input_function_global)(filename, m, f_global, ierr)
+#ifdef DEBUG
+  else
+     call write_debug_newlines(2)
+#endif
+  endif
+
+  call X(vec_scatter)(m%vp, f_global, f)
+
+  deallocate(f_global)
+
+#elif
+  call X(input_function_global)(filename, m, f, ierr)
+#endif
+
+  call pop_sub()
+end subroutine X(input_function)
+
+
+! ---------------------------------------------------------
+subroutine X(input_function_global)(filename, m, f, ierr)
   character(len=*),     intent(in)  :: filename
   type(mesh_type),      intent(in)  :: m
   R_TYPE,               intent(out) :: f(:)
@@ -47,35 +84,38 @@ subroutine X(input_function)(filename, m, f, ierr)
   type(dcf) :: re, im
 #endif
 
+  call push_sub('out_inc.Xinput_function_global')
+
   ierr = 0
   function_kind = X(output_kind)*kind(f(1)) ! +4 for real, single; +8 for real, double;
-                                            ! -4 for complex, single, -8 for real, double
+  ! -4 for complex, single, -8 for real, double
 
   select case(trim(get_extension(filename)))
   case("")
-    call plain()
-
+     call plain()
 #if defined(HAVE_NETCDF)
   case("ncdf")
 #if defined(R_TCOMPLEX)
-    call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
-    call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
-    call dx_cdf()
-    c%RS = re%RS + M_zI*im%RS
-    call X(cf2mf) (m, c, f)
-    call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
+     call X(cf_new)(m%l, c); call dcf_new(m%l, re); call dcf_new(m%l, im)
+     call X(cf_alloc_RS)(c); call dcf_alloc_RS(re); call dcf_alloc_RS(im)
+     call dx_cdf()
+     c%RS = re%RS + M_zI*im%RS
+     call X(cf2mf) (m, c, f)
+     call X(cf_free)(c); call dcf_free(re); call dcf_free(im)
 #else
-    call X(cf_new)(m%l, c)
-    call X(cf_alloc_RS)(c)
-    call dx_cdf()
-    call X(cf2mf) (m, c, f)
-    call X(cf_free)(c)
+     call X(cf_new)(m%l, c)
+     call X(cf_alloc_RS)(c)
+     call dx_cdf()
+     call X(cf2mf) (m, c, f)
+     call X(cf_free)(c)
 #endif
 #endif
 
   case default
-    ierr = 1
+     ierr = 1
   end select
+
+  call pop_sub()
 
 contains
 
@@ -91,53 +131,53 @@ contains
     iunit = io_open(filename, action='read', status='old', form='unformatted', die=.false.)
 
     if(iunit< 0) then
-      ierr = 2
-      return
+       ierr = 2
+       return
     end if
 
     read(unit = iunit, iostat = i) file_kind, file_np
     if(i.ne.0) then
-      ierr = 3
-    else if (file_np .ne. m%np) then
-      ierr = 4
+       ierr = 3
+    else if (file_np .ne. m%np_glob) then
+       ierr = 4
     end if
 
     if(ierr==0) then
-      if(file_kind == function_kind) then
-        read(unit = iunit) f(1:m%np)
+       if(file_kind == function_kind) then
+          read(unit = iunit) f(1:m%np_glob)
 
-      else ! Adequate conversions....
-        select case(file_kind)
-        case(doutput_kind*4) ! Real, single precision
-          allocate(rs(m%np))
-          read(unit = iunit) rs(1:m%np)
-          f = rs
-          deallocate(rs)
-          ierr = -1
+       else ! Adequate conversions....
+          select case(file_kind)
+          case(doutput_kind*4) ! Real, single precision
+             allocate(rs(m%np_glob))
+             read(unit = iunit) rs(1:m%np_glob)
+             f = rs
+             deallocate(rs)
+             ierr = -1
 
-        case(zoutput_kind*4) ! Complex, single precision
-          allocate(cs(m%np))
-          read(unit = iunit) cs(1:m%np)
-          f = cs
-          deallocate(cs)
-          ierr = -2
+          case(zoutput_kind*4) ! Complex, single precision
+             allocate(cs(m%np_glob))
+             read(unit = iunit) cs(1:m%np_glob)
+             f = cs
+             deallocate(cs)
+             ierr = -2
 
-        case(doutput_kind*8) ! Real, double precision
-          allocate(rd(m%np))
-          read(unit = iunit) rd(1:m%np)
-          f = rd
-          deallocate(rd)
-          ierr = -3
+          case(doutput_kind*8) ! Real, double precision
+             allocate(rd(m%np_glob))
+             read(unit = iunit) rd(1:m%np_glob)
+             f = rd
+             deallocate(rd)
+             ierr = -3
 
-        case(zoutput_kind*8) ! Complex, double precision
-          allocate(cd(m%np))
-          read(unit = iunit) cd(1:m%np)
-          f = cd
-          deallocate(cd)
-          ierr = -4
+          case(zoutput_kind*8) ! Complex, double precision
+             allocate(cd(m%np_glob))
+             read(unit = iunit) cd(1:m%np_glob)
+             f = cd
+             deallocate(cd)
+             ierr = -4
 
-        end select
-      end if
+          end select
+       end if
     end if
 
     call io_close(iunit)
@@ -150,7 +190,7 @@ contains
   ! ---------------------------------------------------------
   subroutine dx_cdf()
     integer :: ncid, ndims, nvars, natts, status, data_id, data_im_id, pos_id, &
-               dim_data_id(3), dim_pos_id(2), ndim(3), xtype
+         dim_data_id(3), dim_pos_id(2), ndim(3), xtype
     real(r4)           :: pos(2, 3)
     logical            :: function_is_complex = .false.
     character(len=512) :: file
@@ -159,47 +199,47 @@ contains
 
     status = nf90_open(trim(file), NF90_WRITE, ncid)
     if(status.ne.NF90_NOERR) then
-      ierr = 2
-      return
+       ierr = 2
+       return
     end if
 
     !Inquire about dimensions
     if(status == NF90_NOERR) then
-      status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
-      call ncdf_error('nf90_inq_dimid', status, file, ierr)
+       status = nf90_inq_dimid (ncid, "dim_1", dim_data_id(1))
+       call ncdf_error('nf90_inq_dimid', status, file, ierr)
     endif
 
     if(status == NF90_NOERR) then
-      status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
-      call ncdf_error('nf90_inq_dimid', status, file, ierr)
+       status = nf90_inq_dimid (ncid, "dim_2", dim_data_id(2))
+       call ncdf_error('nf90_inq_dimid', status, file, ierr)
     endif
 
     if(status == NF90_NOERR) then
-      status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
-      call ncdf_error('nf90_inq_dimid', status, file, ierr)
+       status = nf90_inq_dimid (ncid, "dim_3", dim_data_id(3))
+       call ncdf_error('nf90_inq_dimid', status, file, ierr)
     endif
 
     if(status == NF90_NOERR) then
-      status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(1))
-      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
+       status = nf90_inquire_dimension (ncid, dim_data_id(1), len = ndim(1))
+       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     endif
     if(status == NF90_NOERR) then
-      status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
-      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
+       status = nf90_inquire_dimension (ncid, dim_data_id(2), len = ndim(2))
+       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     endif
     if(status == NF90_NOERR) then
-      status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(3))
-      call ncdf_error('nf90_inquire_dimension', status, file, ierr)
+       status = nf90_inquire_dimension (ncid, dim_data_id(3), len = ndim(3))
+       call ncdf_error('nf90_inquire_dimension', status, file, ierr)
     endif
     if((ndim(1) .ne. c%n(1)) .or. &
-       (ndim(2) .ne. c%n(2)) .or. &
-       (ndim(3) .ne. c%n(3))) then
-      ierr = 12; return
+         (ndim(2) .ne. c%n(2)) .or. &
+         (ndim(3) .ne. c%n(3))) then
+       ierr = 12; return
     endif
 
     if(status == NF90_NOERR) then
-      status = nf90_inq_varid (ncid, "rdata", data_id)
-      call ncdf_error('nf90_inq_varid', status, file, ierr)
+       status = nf90_inq_varid (ncid, "rdata", data_id)
+       call ncdf_error('nf90_inq_varid', status, file, ierr)
     endif
     status = nf90_inq_varid(ncid, "idata", data_im_id)
     if(status == 0) then
@@ -210,39 +250,39 @@ contains
     status = 0
 
     if(status == NF90_NOERR) then
-      status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
-      call ncdf_error('nf90_inquire_variable', status, file, ierr)
+       status = nf90_inquire_variable (ncid, data_id, xtype = xtype)
+       call ncdf_error('nf90_inquire_variable', status, file, ierr)
     endif
 
     if(xtype == NF90_FLOAT) then
-      file_kind = file_kind*4
+       file_kind = file_kind*4
     else
-      file_kind = file_kind*8
+       file_kind = file_kind*8
     endif
     if(file_kind .ne. function_kind) then
-      select case(file_kind)
-        case(4);  ierr = -1
-        case(-4); ierr = -2
-        case(8);  ierr = -3
-        case(-8); ierr = -4
-      end select
+       select case(file_kind)
+       case(4);  ierr = -1
+       case(-4); ierr = -2
+       case(8);  ierr = -3
+       case(-8); ierr = -4
+       end select
     endif
 
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
-      status = nf90_get_var (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-      call ncdf_error('nf90_get_var', status, file, ierr)
+       status = nf90_get_var (ncid, data_id, re%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+       call ncdf_error('nf90_get_var', status, file, ierr)
     endif
     if(file_kind<0) then
-      if(status == NF90_NOERR) then
-        status = nf90_get_var (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-        call ncdf_error('nf90_get_var', status, file, ierr)
-      endif
+       if(status == NF90_NOERR) then
+          status = nf90_get_var (ncid, data_im_id, im%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+          call ncdf_error('nf90_get_var', status, file, ierr)
+       endif
     endif
 #else
     if(status == NF90_NOERR) then
-      status = nf90_get_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
-      call ncdf_error('nf90_get_var', status, file, ierr)
+       status = nf90_get_var (ncid, data_id, c%RS, map = (/c%n(3)*c%n(2), c%n(2), 1 /))
+       call ncdf_error('nf90_get_var', status, file, ierr)
     endif
 #endif
 
@@ -251,7 +291,7 @@ contains
 
 #endif
 
-end subroutine X(input_function)
+end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
@@ -264,10 +304,50 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
 
+  R_TYPE, allocatable :: f_global(:)
+  integer             :: rank
+
+  call push_sub('out_inc.Xoutput_function')
+  
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  allocate(f_global(1:m%np_glob))
+
+  call X(vec_gather)(m%vp, f_global, f)
+
+  call MPI_Comm_rank(m%vp%comm, rank, ierr)
+  if(rank.eq.m%vp%root) then
+     call X(output_function_global)(how, dir, fname, m, sb, f_global, u, ierr)
+#ifdef DEBUG
+  else
+     call write_debug_newlines(2)
+#endif
+  endif
+
+  deallocate(f_global)
+#elif
+  call X(output_function_global)(how, dir, fname, m, sb, f, u, ierr)
+#endif
+
+  call pop_sub()
+end subroutine X(output_function)
+
+
+! ---------------------------------------------------------
+subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr)
+  integer,          intent(in)  :: how
+  character(len=*), intent(in)  :: dir, fname
+  type(mesh_type),  intent(in)  :: m
+  type(simul_box_type), intent(in)  :: sb
+  R_TYPE,           intent(in)  :: f(1:m%np_glob)  ! f(m%np_glob)
+  FLOAT,            intent(in)  :: u
+  integer,          intent(out) :: ierr
+
   integer :: i
   FLOAT   :: x0
   character(len=20)  :: mformat, mformat2, mfmtheader
   logical            :: gnuplot_mode = .false.
+
+  call push_sub('out_inc.Xoutput_function_global')
 
   call io_mkdir(dir)
 
@@ -296,6 +376,8 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   if(iand(how, output_dx_cdf)    .ne.0) call dx_cdf()
 #endif
 
+  call pop_sub()
+
 contains
   ! ---------------------------------------------------------
   subroutine plain()
@@ -303,8 +385,8 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted')
 
-    write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np
-    write(unit=iunit, iostat=ierr) f(1:m%np)
+    write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np_glob
+    write(unit=iunit, iostat=ierr) f(1:m%np_glob)
     call io_close(iunit)
 
   end subroutine plain
@@ -317,9 +399,9 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
-    do i = 1, m%np
+    do i = 1, m%np_glob
       if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x_global(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     call io_close(iunit)
@@ -334,9 +416,9 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
-    do i = 1, m%np
+    do i = 1, m%np_glob
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x_global(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     call io_close(iunit)
@@ -351,9 +433,9 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
-    do i = 1, m%np
+    do i = 1, m%np_glob
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
     call io_close(iunit)
@@ -368,16 +450,16 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
-    x0 = m%x(1,2)
+    x0 = m%x_global(1,2)
     if(gnuplot_mode) write(iunit, mformat)
 
-    do i = 1, m%np
-      if(gnuplot_mode.and.x0 /= m%x(i, 2)) then
+    do i = 1, m%np_glob
+      if(gnuplot_mode.and.x0 /= m%x_global(i, 2)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-        x0 = m%x(i, 2)
+        x0 = m%x_global(i, 2)
       end if
       if(m%Lxyz(i,1)==0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x_global(i,2), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
 
@@ -394,16 +476,16 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0", action='write')
 
     write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'z', 'Re', 'Im'
-    x0 = m%x(1,1)
+    x0 = m%x_global(1,1)
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i = 1, m%np
-      if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
+    do i = 1, m%np_glob
+      if(gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-        x0 = m%x(i, 1)
+        x0 = m%x_global(i, 1)
       end if
       if(m%Lxyz(i,2)==0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x_global(i,1), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
 
@@ -420,17 +502,17 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".z=0", action='write')
 
     write(iunit, MFMTHEADER, iostat=ierr) '#', 'x', 'y', 'Re', 'Im'
-    x0 = m%x(1,1)
+    x0 = m%x_global(1,1)
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i = 1, m%np
-      if(gnuplot_mode.and.x0 /= m%x(i, 1)) then
+    do i = 1, m%np_glob
+      if(gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-        x0 = m%x(i, 1)
+        x0 = m%x_global(i, 1)
       end if
 
       if(m%Lxyz(i,3) == 0) then
-        write(iunit, mformat, iostat=ierr) m%x(i,1), m%x(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+        write(iunit, mformat, iostat=ierr) m%x_global(i,1), m%x_global(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
     end do
 
@@ -447,16 +529,16 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".mesh_index", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'Index', 'x', 'y', 'z', 'Re', 'Im'
-    x0 = m%x(1,1)
+    x0 = m%x_global(1,1)
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i=1,m%np
-       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x(i, 1)) then
+    do i= 1, m%np_glob
+       if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
-          x0 = m%x(i, 1)
+          x0 = m%x_global(i, 1)
        endif
-       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, m%x(i,1),  &
-            m%x(i,2), m%x(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
+       if(ierr==0) write(iunit, mformat2, iostat=ierr) i, m%x_global(i,1),  &
+            m%x_global(i,2), m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
     enddo
 
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
@@ -656,4 +738,4 @@ contains
 
 #endif
 
-end subroutine X(output_function)
+end subroutine X(output_function_global)
