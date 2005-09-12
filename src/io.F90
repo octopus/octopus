@@ -37,13 +37,20 @@ module io
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
-  character(len=512) :: work_dir    ! name of the ourput directory
+  character(len=512) :: work_dir    ! name of the output directory
 
 contains
 
   ! ---------------------------------------------------------
   subroutine io_init()
     character(len=128) :: filename
+#ifdef DEBUG
+    logical file_exists, mpi_debug_hook
+    integer :: sec, usec
+#endif
+#if defined(HAVE_MPI)
+    character(len=256) :: node_hook
+#endif
 
     lun_is_free(min_lun:max_lun)=.true.
 
@@ -100,6 +107,36 @@ contains
        message(1) = 'Entering DEBUG mode'
        call write_warning(1)
     end if
+
+#ifdef DEBUG
+    call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
+    if (mpi_debug_hook) then
+       call loct_gettimeofday(sec, usec)
+       call epoch_time_diff(sec,usec)
+       write(message(1),'(a,i,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
+       call write_debug(1)
+
+       write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
+       write(node_hook,'(i3.3)') mpiv%node
+       file_exists = .false.
+
+       do while (.not.file_exists)
+          inquire(file='node_hook.'//node_hook, exist=file_exists)
+          call system('sleep 1')
+          write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
+               ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
+       end do
+
+       write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
+       ! remove possible debug hooks
+       call system('rm -rf node_hook.'//trim(node_hook))
+
+       call loct_gettimeofday(sec, usec)
+       call epoch_time_diff(sec,usec)
+       write(message(1),'(a,i,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
+       call write_debug(1)
+    endif
+#endif
 
   end subroutine io_init
 
