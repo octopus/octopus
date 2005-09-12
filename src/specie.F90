@@ -96,11 +96,12 @@ contains
     character(len=256) :: dirname
     integer :: iunit
 
-    call push_sub('specie.specie_debug')
+    if(mpiv%node .ne. 0) then
+       call write_debug_newlines(2)
+       return
+    endif
 
-#ifdef HAVE_MPI
-    if(mpiv%node .ne. 0) return
-#endif
+    call push_sub('specie.specie_debug')
 
     dirname = trim(dir)//'/'//trim(s%label)
 

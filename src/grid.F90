@@ -116,10 +116,11 @@ contains
     type(grid_type), intent(in) :: gr
     integer,         intent(in) :: iunit
 
+    if(mpiv%node .ne. 0) then
+       call write_debug_newlines(4)
+       return
+    endif
 
-#ifdef HAVE_MPI
-    if(mpiv%node .ne. 0) return
-#endif
     if(iunit==stdout.and.conf%verbose<VERBOSE_NORMAL) return
 
     write(iunit,'(/,a)') stars
