@@ -29,7 +29,9 @@ module mesh
   use curvlinear
   use simul_box
   use lib_adv_alg
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
+#endif
 #ifdef DEBUG
   use io
 #endif
@@ -91,8 +93,9 @@ module mesh
     integer :: nr(2,3)  ! dimensions of the box where the points are contained
     integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
 
-    FLOAT, pointer :: x(:,:)    ! the points
-    FLOAT, pointer :: vol_pp(:) ! element of volume for integrations
+    FLOAT, pointer :: x(:,:)        ! the (local) points
+    FLOAT, pointer :: x_global(:,:) ! the global points only on node 0.
+    FLOAT, pointer :: vol_pp(:)     ! element of volume for integrations
 
   end type mesh_type
 
@@ -317,6 +320,8 @@ contains
    subroutine mesh_end(m)
      type(mesh_type), intent(inout) :: m
 
+     integer :: rank, ierr
+
      call push_sub('mesh.mesh_end')
 
      if(associated(m%Lxyz)) then
@@ -325,6 +330,12 @@ contains
      end if
     
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
+     call MPI_Comm_rank(m%vp%comm, rank, ierr)
+
+     if(associated(m%x_global).and.rank.eq.m%vp%root) then
+       deallocate(m%x_global)
+       nullify(m%x_global)
+     end if
      call vec_end(m%vp)
      call mesh_partition_end(m)
 #endif

@@ -155,11 +155,11 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
 
 #ifdef DEBUG
   ! DEBUG output. Write graph to file mesh_graph.txt.
-  message(1) = 'Adjacency lists of the graph representing the grid'
-  message(2) = 'are stored in debug/mesh_partition/mesh_graph.txt.'
-  message(3) = 'Compatible with METIS programs pmetis and kmetis.'
-  message(4) = 'First line contains number of vertices and edges.'
-  message(5) = 'Edges are not directed and appear twice in the lists.'
+  message(1) = 'Info: Adjacency lists of the graph representing the grid'
+  message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
+  message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
+  message(4) = 'Info: First line contains number of vertices and edges.'
+  message(5) = 'Info: Edges are not directed and appear twice in the lists.'
   call write_info(5)
   if(mpiv%node.eq.0) then
     call io_mkdir('debug/mesh_partition')
@@ -262,6 +262,8 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
   type(mesh_type),       intent(inout) :: m
   type(curvlinear_type), intent(in)    :: cv
   type(geometry_type),   intent(in)    :: geo
+  ! When running parallel in domains, stencil and np_stencil
+  ! are needed to compute the ghost points.
   integer, optional,     intent(in)    :: stencil(:, :)
   integer, optional,     intent(in)    :: np_stencil
 
@@ -331,9 +333,19 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
   end do
   m%np_tot_glob = il
   allocate(m%Lxyz(m%np_tot_glob, 3))
-#if !defined(HAVE_MPI) || !defined(HAVE_METIS)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  ! Node 0 has to store all entries from x (in x_global)
+  ! as well as the local set in x (see below).
+! BUGFIX
+!  if(mpiv%node.eq.0) then
+    allocate(m%x_global(m%np_tot_glob, 3))
+!  end if
+#else
   ! When running parallel, x is computed later.
   allocate(m%x(m%np_tot_glob, 3))
+  ! This is a bit ugly: x_global is needed in out_in
+  ! but in the serial case it is the same as x.
+  m%x_global => m%x
 #endif
 
 
@@ -348,7 +360,9 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
           m%Lxyz(il, 2) = iy
           m%Lxyz(il, 3) = iz
           m%Lxyz_inv(ix,iy,iz) = il
-#if !defined(HAVE_MPI) || !defined(HAVE_METIS)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+          m%x_global(il, :) = x(:, ix, iy, iz)
+#else
           m%x(il,:) = x(:,ix,iy,iz)
 #endif
         end if
@@ -367,7 +381,9 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
           m%Lxyz(il, 2) = iy
           m%Lxyz(il, 3) = iz
           m%Lxyz_inv(ix,iy,iz) = il
-#if !defined(HAVE_MPI) || !defined(HAVE_METIS)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+          m%x_global(il, :) = x(:, ix, iy, iz)
+#else
           m%x(il,:) = x(:,ix,iy,iz)
 #endif
         end if
@@ -388,12 +404,30 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
     m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
     ! Compute m%x as it is done in the serial case but
     ! only for local points.
+    ! x consists of three parts: the local points, the
+    ! ghost points, the boundary points; in this order
+    ! (just as for any other vector, which is distributed).
     allocate(m%x(m%np_tot, 3))
-    do i = 1, m%np_tot
+    ! Do the inner points.
+    do i = 1, m%np
       ix = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 1)
       iy = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 2)
       iz = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 3)
       m%x(i, :) = x(:, ix, iy, iz)
+    end do
+    ! Do the ghost points.
+    do i = 1, m%vp%np_ghost(rank+1)
+      ix = m%Lxyz(m%vp%ghost(m%vp%xghost(rank+1)+i-1), 1)
+      iy = m%Lxyz(m%vp%ghost(m%vp%xghost(rank+1)+i-1), 2)
+      iz = m%Lxyz(m%vp%ghost(m%vp%xghost(rank+1)+i-1), 3)
+      m%x(i+m%np, :) = x(:, ix, iy, iz)
+    end do
+    ! Do the boundary points.
+    do i = 1, m%vp%np_bndry(rank+1)
+      ix = m%Lxyz(m%vp%bndry(m%vp%xbndry(rank+1)+i-1), 1)
+      iy = m%Lxyz(m%vp%bndry(m%vp%xbndry(rank+1)+i-1), 2)
+      iz = m%Lxyz(m%vp%bndry(m%vp%xbndry(rank+1)+i-1), 3)
+      m%x(i+m%np+m%vp%np_ghost(rank+1), :) = x(:, ix, iy, iz)
     end do
   else
     message(1) = 'mesh_create.mesh_create_xyz called without stencil'
@@ -423,12 +457,15 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   type(curvlinear_type), intent(in)    :: cv
   type(mesh_type),       intent(inout) :: mesh
 
-  integer :: i, k
+  integer :: i
   FLOAT   :: f, chi(sb%dim)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: k
   integer :: rank
   integer :: ierr
 #endif
+
+  call push_sub('mesh_create.mesh_get_vol_pp')
 
   f = M_ONE
   do i = 1, sb%dim
@@ -440,18 +477,36 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   call MPI_Comm_rank(mesh%vp%comm, rank, ierr)
-#endif
 
-  do i = 1, mesh%np_tot
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    ! Lookup global point number.
+  ! Do the inner points.
+  do i = 1, mesh%np
     k = mesh%vp%local(mesh%vp%xlocal(rank+1)+i-1)
+    chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+    mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi)
+  end do
+  ! Do the ghost points.
+  do i = 1, mesh%vp%np_ghost(rank+1)
+    k = mesh%vp%ghost(mesh%vp%xghost(rank+1)+i-1)
+    chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+    mesh%vol_pp(i+mesh%np) = mesh%vol_pp(i+mesh%np)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np, :), chi)
+  end do
+  ! Do the boundary points.
+  do i = 1, mesh%vp%np_bndry(rank+1)
+    k = mesh%vp%bndry(mesh%vp%xbndry(rank+1)+i-1)
+    chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
+    mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(rank+1)) = &
+      mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(rank+1)) &
+      *curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(rank+1), :), chi)
+  end do
 #else
-    k = i
-#endif
+  do i = 1, mesh%np_tot
     chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
     mesh%vol_pp(k) = mesh%vol_pp(k)*curvlinear_det_Jac(sb, geo, cv, mesh%x(k, :), chi)
   end do
+#endif
+
+  call pop_sub()
+
 end subroutine mesh_get_vol_pp
 
 
