@@ -65,7 +65,7 @@ subroutine X(input_function)(filename, m, f, ierr)
 
   deallocate(f_global)
 
-#elif
+#else
   call X(input_function_global)(filename, m, f, ierr)
 #endif
 
@@ -328,7 +328,7 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   endif
 
   deallocate(f_global)
-#elif
+#else
   call X(output_function_global)(how, dir, fname, m, sb, f, u, ierr)
 #endif
 
