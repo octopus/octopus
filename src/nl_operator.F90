@@ -24,6 +24,9 @@ module nl_operator
   use messages
   use mesh
   use simul_box
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  use par_vec
+#endif
 
   implicit none
 
@@ -41,16 +44,17 @@ module nl_operator
        nl_operator_selfadjoint
 
   type nl_operator_type
-     integer          :: n          ! number of points in discrete operator
-     integer          :: np         ! number of points in mesh
-     integer, pointer :: stencil(:,:)
+     type(mesh_type), pointer :: m         ! pointer to the underlying mesh
+     integer                  :: n         ! number of points in discrete operator
+     integer                  :: np        ! number of points in mesh
+     integer, pointer         :: stencil(:,:)
 
-     integer, pointer :: i(:,:)     ! index of the points
-     FLOAT,   pointer :: w_re(:,:)  ! weightsp, real part
-     FLOAT,   pointer :: w_im(:,:)  ! weightsp, imaginary part
+     integer, pointer         :: i(:,:)    ! index of the points
+     FLOAT,   pointer         :: w_re(:,:) ! weightsp, real part
+     FLOAT,   pointer         :: w_im(:,:) ! weightsp, imaginary part
 
-     logical          :: const_w    ! are the weights independent of i
-     logical          :: cmplx_op   ! .true. if we have also imaginary weights
+     logical                  :: const_w   ! are the weights independent of i
+     logical                  :: cmplx_op  ! .true. if we have also imaginary weights
   end type nl_operator_type
 
   interface assignment (=)
@@ -86,6 +90,7 @@ contains
     call nl_operator_init(opo, opi%n)
 
     opo%np = opi%np
+    opo%m  => opi%m
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
     allocate(opo%i(opi%n, opi%np))
     if(opi%const_w) then
@@ -113,9 +118,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
-    type(mesh_type),        intent(in)    :: m
-    type(nl_operator_type), intent(inout) :: op       
-    integer,                intent(in)    :: np       ! Number of (local)
+    type(mesh_type), target, intent(in)    :: m
+    type(nl_operator_type),  intent(inout) :: op       
+    integer,                 intent(in)    :: np       ! Number of (local)
                                                       ! points.
     logical, optional,      intent(in)    :: const_w  ! are the weights constant (independent of the point)
     logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
@@ -132,6 +137,7 @@ contains
 
     ! store values in structure
     op%np       = np
+    op%m        => m
     op%const_w  = .false.
     op%cmplx_op = .false.
     if(present(const_w )) op%const_w = const_w
@@ -437,14 +443,18 @@ contains
   ! calculates fo = op fi
   ! ---------------------------------------------------------
   subroutine dnl_operator_operate(op, fi, fo)
-    FLOAT,                  intent(in)  :: fi(:)  ! fi(op%np)
-    type(nl_operator_type), intent(in)  :: op
-    FLOAT,                  intent(out) :: fo(:)  ! fo(op%np)
+    FLOAT,                  intent(inout) :: fi(:)  ! fi(op%np)
+    type(nl_operator_type), intent(in)    :: op
+    FLOAT,                  intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:)
 
     call push_sub('nl_operator.dnl_operator_operate')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    call dvec_ghost_update(op%m%vp, fi)
+#endif
 
     n = op%n
     if(op%const_w) then
@@ -466,14 +476,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine znl_operator_operate(op, fi, fo)
-    CMPLX,                  intent(in)  :: fi(:)  ! fi(op%np)
-    type(nl_operator_type), intent(in)  :: op
-    CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
+    CMPLX,                  intent(inout) :: fi(:)  ! fi(op%np)
+    type(nl_operator_type), intent(in)    :: op
+    CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:)
 
     call push_sub('nl_operator.znl_operator_operate')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    call zvec_ghost_update(op%m%vp, fi)
+#endif
 
     n = op%n
     if(op%const_w) then
@@ -497,14 +511,18 @@ contains
   ! allow for complex operators
   ! ---------------------------------------------------------
   subroutine znl_operator_operate_cmplx(op, fi, fo)
-    CMPLX,                  intent(in)  :: fi(:)  ! fi(op%np)
-    type(nl_operator_type), intent(in)  :: op
-    CMPLX,                  intent(out) :: fo(:)  ! fo(op%np)
+    CMPLX,                  intent(inout) :: fi(:)  ! fi(op%np)
+    type(nl_operator_type), intent(in)    :: op
+    CMPLX,                  intent(out)   :: fo(:)  ! fo(op%np)
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:), w_im(:)
 
     call push_sub('nl_operator.znl_operator_operate_complex')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    call zvec_ghost_update(op%m%vp, fi)
+#endif
 
     n = op%n
     if(op%const_w) then
