@@ -215,7 +215,7 @@ end subroutine td_write_end
 subroutine td_write_iter(w, gr, st, h, geo, pol, kick_mode, kick_strength, dt, i)
   type(td_write_type),    intent(in) :: w
   type(grid_type),        intent(inout) :: gr
-  type(states_type),      intent(in)    :: st
+  type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   type(geometry_type),    intent(in)    :: geo
   FLOAT,                  intent(in) :: pol(3)
@@ -673,7 +673,7 @@ end subroutine td_write_gsp
 subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
   integer(POINTER_SIZE),  intent(in)    :: out_acc
   type(grid_type),        intent(inout) :: gr
-  type(states_type),      intent(in)    :: st
+  type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   FLOAT,                  intent(in)    :: dt
   integer,                intent(in)    :: iter
