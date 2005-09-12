@@ -483,11 +483,11 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a15,3f18.12)') '# kick mode    ', kick_mode
+    write(aux, '(a15,i1)') '# kick mode    ', kick_mode
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a15,3f18.12)') '# kick strength', kick_strength
+    write(aux, '(a15,f18.12)') '# kick strength', kick_strength
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 

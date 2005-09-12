@@ -35,6 +35,7 @@ public :: spec_type, &
           spec_rsf,  &
           spec_sh,   &
           spectrum_init, &
+          spectrum_cross_section,     &
           spectrum_strength_function, &
           spectrum_rotatory_strength, &
           spectrum_hs_from_mult,      &
@@ -46,13 +47,13 @@ integer, public, parameter :: SPECTRUM_DAMP_NONE       = 0, &
                               SPECTRUM_DAMP_GAUSSIAN   = 3
 
 type spec_type
-  FLOAT :: start_time  ! start time for the transform
-  FLOAT :: end_time    ! when to stop the transform
-  FLOAT :: energy_step ! step in energy mesh
-  FLOAT :: min_energy  ! maximum of energy mesh
-  FLOAT :: max_energy  ! maximum of energy mesh
-  integer  :: damp     ! Damp type (none, exp or pol)
-  FLOAT :: damp_factor ! factor used in damping
+  FLOAT   :: start_time  ! start time for the transform
+  FLOAT   :: end_time    ! when to stop the transform
+  FLOAT   :: energy_step ! step in energy mesh
+  FLOAT   :: min_energy  ! maximum of energy mesh
+  FLOAT   :: max_energy  ! maximum of energy mesh
+  integer :: damp     ! Damp type (none, exp or pol)
+  FLOAT   :: damp_factor ! factor used in damping
 end type spec_type
 
 ! For the strength function
@@ -131,13 +132,121 @@ subroutine spectrum_init(s)
   call pop_sub()
 end subroutine spectrum_init
 
+subroutine spectrum_skip_header(iunit)
+  integer, intent(in) :: iunit
+  character(len=1) :: a
+
+  rewind(iunit)
+  read(iunit,'(a)') a
+  do while(a=='#')
+     read(iunit,'(a)') a
+  enddo
+  backspace(iunit)
+
+end subroutine spectrum_skip_header
+
+subroutine spectrum_cross_section(in_file, out_file, s)
+  integer, intent(in)    :: in_file
+  integer, intent(in)    :: out_file
+  type(spec_type),  intent(inout) :: s
+
+  integer :: nspin, lmax, delta_strength_mode, time_steps, is, ie, ntiter, &
+             i, j, jj, isp, no_e, k
+  FLOAT   :: pol(3), delta_strength, dt, dump, x, w
+  FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:)
+
+  call push_sub('spectrum.spectrum_cross_section')
+
+  ! This function gives us back the unit connected to the "multipoles" file, the header information,
+  ! the number of time steps, and the time step. After exiting, it positions the file in the first
+  ! line after the header.
+  call spectrum_mult_info(in_file, nspin, lmax, pol, delta_strength, delta_strength_mode, time_steps, dt)
+
+  ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
+  if(lmax.ne.1) then
+    message(1) = 'multipoles file should contain the dipole -- and only the dipole.'
+    call write_fatal(1)
+  endif
+
+  ! Find out the iteration numbers corresponding to the time limits.
+  call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
+
+  ! Read the dipole.
+  call spectrum_skip_header(in_file)
+  allocate(dipole(3, 0:time_steps, nspin))
+  do i = 0, time_steps
+    if(nspin == 1) then
+      read(in_file, *) j, dump, dump, dipole(1:3, i, 1)
+    else
+      read(in_file, *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2)
+    endif
+    dipole(1:3, i, :) = dipole(1:3, i, :) * units_out%length%factor
+  end do
+  do i = 0, time_steps
+     dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
+  enddo
+
+  ! Get the number of energy steps.
+  no_e = (s%max_energy - s%min_energy) / s%energy_step
+  allocate(sigma(3, 0:no_e, nspin))
+
+  ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
+  allocate(dumpa(is:ie))
+  do j = is, ie
+     jj = j - is
+      select case(s%damp)
+      case(SPECTRUM_DAMP_NONE)
+        dumpa(j) = M_ONE
+      case(SPECTRUM_DAMP_LORENTZIAN)
+        dumpa(j)= exp(-jj*dt*s%damp_factor)
+      case(SPECTRUM_DAMP_POLYNOMIAL)
+        dumpa(j) = M_ONE - M_THREE*(real(jj)/ntiter)**2                          &
+            + M_TWO*(real(jj)/ntiter)**3
+      case(SPECTRUM_DAMP_GAUSSIAN)
+        dumpa(j)= exp(-(jj*dt)**2*s%damp_factor**2)
+      end select
+  enddo
+
+  do k = 0, no_e
+    w = k*s%energy_step + s%min_energy
+    do j = is, ie
+      jj = j - is
+      x = sin(w*jj*dt)
+      do isp = 1, nspin
+         sigma(1:3, k, isp) = sigma(1:3, k, isp) + x*dumpa(j)*dipole(1:3, j, isp)
+      end do
+    end do
+    sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*dt
+    sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)
+  end do
+
+  write(out_file, '(a8,i2)')      '# nspin ', nspin
+  write(out_file, '(a8,3f18.12)') '# pol   ', pol(1:3)
+  write(out_file, '(a15,i1)')     '# kick mode    ', delta_strength_mode
+  write(out_file, '(a15,f18.12)') '# kick strength', delta_strength
+  write(out_file, '(a)') '#Here we should put the column names.'
+  write(out_file, '(a)') '#Here we should put the units.'
+
+  do i = 0, no_e
+     write(out_file,'(5e15.6)', advance = 'no') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
+          sigma(1:3, i, 1) / (units_out%length%factor**2)
+     do j = 2, nspin
+        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, 2) / (units_out%length%factor**2)
+     enddo
+     write(out_file,'(a)', advance = 'yes')
+  end do
+
+  deallocate(dipole, sigma)
+  call pop_sub()
+end subroutine spectrum_cross_section
+
 subroutine spectrum_strength_function(out_file, s, sf, print_info)
   character(len=*), intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_sf), intent(inout) :: sf
   logical, intent(in) :: print_info
 
-  integer :: iunit, i, is, ie, &
+  integer :: iunit, i, is, ie, delta_strength_mode, &
       ntiter, j, jj, k, isp, time_steps, lmax
   FLOAT :: dump, dt, x, pol(3), z(3), zz(3)
   FLOAT, allocatable :: dumpa(:)
@@ -147,13 +256,20 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   call push_sub('spectrum_strength_function')
 
-  call spectrum_mult_info(iunit, sf%nspin, lmax, pol, sf%delta_strength, time_steps, dt)
+  call io_assign(iunit)
+  iunit = io_open('multipoles', action='read', status='old', die=.false.)
+  if(iunit < 0) then
+    iunit = io_open('td.general/multipoles', action='read', status='old')
+  end if
+  call spectrum_mult_info(iunit, sf%nspin, lmax, pol, sf%delta_strength, delta_strength_mode, time_steps, dt)
+
   if(lmax.ne.1) then
     message(1) = 'multipoles file should contain the dipole -- and only the dipole.'
     call write_fatal(1)
   endif
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
+  call spectrum_skip_header(iunit)
   ! load dipole from file
   allocate(dipole(0:time_steps, sf%nspin))
   do i = 0, time_steps
@@ -366,9 +482,15 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
   CMPLX :: c
   CMPLX, allocatable :: dipole(:), ddipole(:)
 
-  call spectrum_mult_info(iunit, nspin, lmax, pol, dump, time_steps, dt)
+  call io_assign(iunit)
+  iunit = io_open('multipoles', action='read', status='old', die=.false.)
+  if(iunit < 0) then
+    iunit = io_open('td.general/multipoles', action='read', status='old')
+  end if
+  call spectrum_mult_info(iunit, nspin, lmax, pol, dump, i, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
+  call spectrum_skip_header(iunit)
   ! load dipole from file
   allocate(dipole(0:time_steps))
   allocate(d(3, nspin))
@@ -543,12 +665,13 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   call pop_sub()
 end subroutine spectrum_file_info
 
-subroutine spectrum_mult_info(iunit, nspin, lmax, pol, delta_strength, time_steps, dt)
-  integer, intent(out) :: iunit
+subroutine spectrum_mult_info(iunit, nspin, lmax, pol, delta_strength, delta_strength_mode, time_steps, dt)
+  integer, intent(in)  :: iunit
   integer, intent(out) :: nspin
   integer, intent(out) :: lmax
   FLOAT,   intent(out) :: pol(3)
   FLOAT,   intent(out) :: delta_strength
+  integer, intent(out) :: delta_strength_mode
   integer, intent(out) :: time_steps
   FLOAT,   intent(out) :: dt
 
@@ -557,18 +680,11 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, pol, delta_strength, time_step
 
   call push_sub('spectrum.spectrum_mult_info')
 
-  ! open files
-  call io_assign(iunit)
-  iunit = io_open('multipoles', action='read', status='old', die=.false.)
-  if(iunit < 0) then
-    iunit = io_open('td.general/multipoles', action='read', status='old')
-  end if
-
   ! read in number of spin components
   read(iunit, '(8x,i2)') nspin
   read(iunit, '(8x,i2)') lmax
   read(iunit, '(8x,3f18.12)') pol(1:3)
-  read(iunit, '(a)')
+  read(iunit, '(15x,i1)') delta_strength_mode
   read(iunit, '(15x,f18.12)') delta_strength
   read(iunit, *); read(iunit, *) ! skip header
 
@@ -589,10 +705,6 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, pol, delta_strength, time_step
     call write_fatal(1)
   end if
 
-  rewind(iunit)
-  do j = 1, 7
-     read(iunit, '(a)')
-  enddo
   call pop_sub()
 end subroutine spectrum_mult_info
 

@@ -28,6 +28,7 @@ program cross_section
   use units
   use spectrum
 
+  integer :: in_file, out_file
   character(len=100) :: txt
   type(spec_type) :: s
   type(spec_sf) :: sf
@@ -41,7 +42,20 @@ program cross_section
   call units_init()
 
   call spectrum_init(s)
-  call spectrum_strength_function('spectrum', s, sf, .true.)
+
+  call io_assign(in_file)
+  in_file = io_open('multipoles', action='read', status='old', die=.false.)
+  if(in_file < 0) then
+    in_file = io_open('td.general/multipoles', action='read', status='old')
+  end if
+
+  call io_assign(out_file)
+  out_file = io_open('cross_section_vector', action='write')
+
+  call spectrum_cross_section(in_file, out_file, s)
+
+  call io_close(in_file)
+  call io_close(out_file)
 
   deallocate(sf%sp)
   call syslabels_end()
