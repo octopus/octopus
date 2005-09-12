@@ -37,26 +37,27 @@ module td_exp
 
   private
   public :: td_exp_type, &
-            td_exp_init, &
-            td_exp_end, &
-            td_exp_dt
+       td_exp_init,      &
+       td_exp_end,       &
+       td_exp_dt
 
 
   type td_exp_type
-    integer  :: exp_method      ! which method is used to apply the exponential
+     integer  :: exp_method      ! which method is used to apply the exponential
 
-    FLOAT :: lanczos_tol     ! tolerance for the lanczos method
-    integer  :: exp_order       ! order to which the propagator is expanded
+     FLOAT :: lanczos_tol     ! tolerance for the lanczos method
+     integer  :: exp_order       ! order to which the propagator is expanded
 
-    type(zcf) :: cf             ! auxiliary cube for split operator methods
+     type(zcf) :: cf             ! auxiliary cube for split operator methods
   end type td_exp_type
 
-  integer, parameter :: SPLIT_OPERATOR     = 0, &
-                        SUZUKI_TROTTER     = 1, &
-                        LANCZOS_EXPANSION  = 2, &
-                        FOURTH_ORDER       = 3, &
-                        CHEBYSHEV          = 4
-  contains
+  integer, parameter :: &
+       SPLIT_OPERATOR     = 0, &
+       SUZUKI_TROTTER     = 1, &
+       LANCZOS_EXPANSION  = 2, &
+       FOURTH_ORDER       = 3, &
+       CHEBYSHEV          = 4
+contains
 
   subroutine td_exp_init(gr, te)
     type(grid_type),   intent(in)  :: gr
@@ -65,46 +66,46 @@ module td_exp
     call loct_parse_int(check_inp('TDExponentialMethod'), FOURTH_ORDER, te%exp_method)
     select case(te%exp_method)
     case(FOURTH_ORDER)
-      message(1) = 'Info: Exponential method: 4th order expansion.'
+       message(1) = 'Info: Exponential method: 4th order expansion.'
 
     case(CHEBYSHEV)
-      message(1) = 'Info: Exponential method: Chebyshev.'
+       message(1) = 'Info: Exponential method: Chebyshev.'
 
     case(LANCZOS_EXPANSION)
-      call loct_parse_float(check_inp('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
-      if (te%lanczos_tol <= M_ZERO) then
-        write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
-        message(2) = '(0 < TDLanczosTol)'
-        call write_fatal(2)
-      end if
+       call loct_parse_float(check_inp('TDLanczosTol'), CNST(1e-5), te%lanczos_tol)
+       if (te%lanczos_tol <= M_ZERO) then
+          write(message(1),'(a,f14.6,a)') "Input: '", te%lanczos_tol, "' is not a valid TDLanczosTol"
+          message(2) = '(0 < TDLanczosTol)'
+          call write_fatal(2)
+       end if
 
-      message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
+       message(1) = 'Info: Exponential method: Lanczos subspace approximation.'
 
 #if defined(HAVE_FFT)
     case(SPLIT_OPERATOR)
-      message(1) = 'Info: Exponential method: Split-Operator.'
+       message(1) = 'Info: Exponential method: Split-Operator.'
     case(SUZUKI_TROTTER)
-      message(1) = 'Info: Exponential method: Suzuki-Trotter.'
+       message(1) = 'Info: Exponential method: Suzuki-Trotter.'
 #endif
 
     case default
-      write(message(1), '(a,i6,a)') "Input: '", te%exp_method, "' is not a valid TDEvolutionMethod"
-      message(2) = '(1 <= TDExponentialMethod <= 4)'
-      call write_fatal(2)
+       write(message(1), '(a,i6,a)') "Input: '", te%exp_method, "' is not a valid TDEvolutionMethod"
+       message(2) = '(1 <= TDExponentialMethod <= 4)'
+       call write_fatal(2)
     end select
     call write_info(1)
 
     if(te%exp_method==FOURTH_ORDER.or.te%exp_method==CHEBYSHEV.or.te%exp_method==LANCZOS_EXPANSION) then
-      call loct_parse_int(check_inp('TDExpOrder'), 4, te%exp_order)
-      if (te%exp_order < 2) then
-        write(message(1), '(a,i6,a)') "Input: '", te%exp_order, "' is not a valid TDExpOrder"
-        message(2) = '(2 <= TDExpOrder)'
-        call write_fatal(2)
-      end if
+       call loct_parse_int(check_inp('TDExpOrder'), 4, te%exp_order)
+       if (te%exp_order < 2) then
+          write(message(1), '(a,i6,a)') "Input: '", te%exp_order, "' is not a valid TDExpOrder"
+          message(2) = '(2 <= TDExpOrder)'
+          call write_fatal(2)
+       end if
 #if defined(HAVE_FFT)
     else if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_new(gr%m%l, te%cf)
-      call zcf_fft_init(te%cf, gr%sb)
+       call zcf_new(gr%m%l, te%cf)
+       call zcf_fft_init(te%cf, gr%sb)
 #endif
     end if
 
@@ -114,7 +115,7 @@ module td_exp
     type(td_exp_type), intent(inout) :: te
 
     if(te%exp_method==SPLIT_OPERATOR.or.te%exp_method==SUZUKI_TROTTER) then
-      call zcf_free(te%cf)
+       call zcf_free(te%cf)
     end if
   end subroutine td_exp_end
 
@@ -126,7 +127,7 @@ module td_exp
     CMPLX,                  intent(inout)   :: zpsi(:, :)
     FLOAT,                  intent(in)      :: timestep, t
     integer,      optional, intent(out)     :: order ! For the methods that rely on Hamiltonian-vector
-                                                     ! multiplication, the number of these.
+    ! multiplication, the number of these.
     FLOAT,        optional, intent(in)      :: vmagnus(NP, h%d%nspin, 2)
 
     logical :: apply_magnus
@@ -139,12 +140,12 @@ module td_exp
     select case(te%exp_method)
     case(FOURTH_ORDER);      call fourth
     case(LANCZOS_EXPANSION)
-      if(h%ab .eq. IMAGINARY_ABSORBING) then
-        message(1) = 'Lanczos expansion exponential method not supported for non-hermtian'
-        message(2) = 'Hamiltonians (e.g., with imaginary potential absorbing boundaries).'
-        call write_fatal(2)
-      endif
-      call lanczos
+       if(h%ab .eq. IMAGINARY_ABSORBING) then
+          message(1) = 'Lanczos expansion exponential method not supported for non-hermtian'
+          message(2) = 'Hamiltonians (e.g., with imaginary potential absorbing boundaries).'
+          call write_fatal(2)
+       endif
+       call lanczos
 #if defined(HAVE_FFT)
     case(SPLIT_OPERATOR);    call split
     case(SUZUKI_TROTTER);    call suzuki
@@ -156,13 +157,13 @@ module td_exp
   contains
 
     subroutine operate(psi, oppsi)
-      CMPLX, intent(in)    :: psi(:, :)
+      CMPLX, intent(inout) :: psi(:, :)
       CMPLX, intent(inout) :: oppsi(:, :)
 
       if(apply_magnus) then
-        call zmagnus(h, gr, psi, oppsi, ik, vmagnus)
+         call zmagnus(h, gr, psi, oppsi, ik, vmagnus)
       else
-        call zHpsi(h, gr, psi, oppsi, ik, t)
+         call zHpsi(h, gr, psi, oppsi, ik, t)
       endif
 
     end subroutine operate
@@ -178,10 +179,10 @@ module td_exp
       zfact = M_z1
       call lalg_copy(NP, h%d%dim, zpsi(:,:), zpsi1(:,:))
       do i = 1, te%exp_order
-        zfact = zfact*(-M_zI*timestep)/i
-        call operate(zpsi1, hzpsi1)
-        call lalg_axpy(NP, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
-        if(i .ne. te%exp_order) call lalg_copy(NP, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
+         zfact = zfact*(-M_zI*timestep)/i
+         call operate(zpsi1, hzpsi1)
+         call lalg_axpy(NP, h%d%dim, zfact, hzpsi1(:,:), zpsi(:,:))
+         if(i .ne. te%exp_order) call lalg_copy(NP, h%d%dim, hzpsi1(:,:), zpsi1(:,:))
       end do
       deallocate(zpsi1, hzpsi1)
 
@@ -212,17 +213,17 @@ module td_exp
       allocate(zpsi1(NP, h%d%dim, 0:2))
       zpsi1 = M_z0
       do j = te%exp_order-1, 0, -1
-        call lalg_copy(NP, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
-        call lalg_copy(NP, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
+         call lalg_copy(NP, h%d%dim, zpsi1(:,:, 1), zpsi1(:,:, 2))
+         call lalg_copy(NP, h%d%dim, zpsi1(:,:, 0), zpsi1(:,:, 1))
 
-        call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
-        zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
+         call operate(zpsi1(:, :, 1), zpsi1(:, :, 0))
+         zfact = 2*(-M_zI)**j*loct_bessel(j, h%spectral_half_span*timestep)
 
-        call lalg_axpy(NP, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
-             zpsi1(:,:, 1), zpsi1(:,:, 0))
-        call lalg_scal(NP, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
-        call lalg_axpy(NP, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
-        call lalg_axpy(NP, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
+         call lalg_axpy(NP, h%d%dim, cmplx(-h%spectral_middle_point, M_ZERO, PRECISION), &
+              zpsi1(:,:, 1), zpsi1(:,:, 0))
+         call lalg_scal(NP, h%d%dim, cmplx(M_TWO/h%spectral_half_span, M_ZERO, PRECISION), zpsi1(:,:, 0))
+         call lalg_axpy(NP, h%d%dim, zfact, zpsi(:,:), zpsi1(:,:, 0))
+         call lalg_axpy(NP, h%d%dim, cmplx(-M_ONE, M_ZERO, PRECISION), zpsi1(:,:, 2),  zpsi1(:,:, 0))
       end do
 
       zpsi(:, :) = M_HALF*(zpsi1(:, :, 0) - zpsi1(:, :, 2))
@@ -243,8 +244,8 @@ module td_exp
 
       tol    = te%lanczos_tol
       allocate(v(NP, h%d%dim, te%exp_order+1), &
-               hm(te%exp_order+1, te%exp_order+1), &
-               expo(te%exp_order+1, te%exp_order+1))
+           hm(te%exp_order+1, te%exp_order+1), &
+           expo(te%exp_order+1, te%exp_order+1))
       hm = M_z0; expo = M_z0
 
       lwsp = 4*(te%exp_order)**2+7
@@ -256,35 +257,35 @@ module td_exp
 
       ! This is the Lanczos loop...
       do n = 1, te%exp_order
-        call operate(v(:,:, n), v(:, :, n+1))
-        korder = n
+         call operate(v(:,:, n), v(:, :, n+1))
+         korder = n
 
-        do k = max(1, n-1), n
-           hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
-           call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
-        enddo
-        hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
-        call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
-        call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
-        k = 0
-        do i = 1, n
-           do j = 1, n
-              expo(j, i) = wsp(iexph + k); k = k + 1
-           enddo
-        enddo
+         do k = max(1, n-1), n
+            hm(k, n) = zstates_dotp(gr%m, h%d%dim, v(:, :, k), v(:, :, n+1))
+            call lalg_axpy(NP, h%d%dim, -hm(k, n), v(:, :, k), v(:, :, n+1))
+         enddo
+         hm(n+1, n) = zstates_nrm2(gr%m, h%d%dim, v(:, :, n+1))
+         call lalg_scal(NP, h%d%dim, M_z1/hm(n+1, n), v(:, :, n+1))
+         call zgpadm(6, n, timestep, -M_zI*hm(1:n, 1:n), n, wsp, lwsp, ipiv(1:n), iexph, ns, iflag)
+         k = 0
+         do i = 1, n
+            do j = 1, n
+               expo(j, i) = wsp(iexph + k); k = k + 1
+            enddo
+         enddo
 
-        res = abs(hm(n+1, n)*abs(expo(1, n)))
-        if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
-        if(n>2 .and. res<tol) exit
+         res = abs(hm(n+1, n)*abs(expo(1, n)))
+         if(abs(hm(n+1, n)) < CNST(1.0e-12)) exit ! (very unlikely) happy breakdown!!! Yuppi!!!
+         if(n>2 .and. res<tol) exit
       enddo
 
       if(res > tol) then ! Here one should consider the possibility of the happy breakdown.
-        write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
-        call write_warning(1)
+         write(message(1),'(a,es8.2)') 'Lanczos exponential expansion did not converge: ', res
+         call write_warning(1)
       endif
 
       call zgpadm(6, korder+1, timestep, -M_zI*hm(1:korder+1, 1:korder+1), korder+1, wsp, &
-                  lwsp, ipiv(1:korder+1), iexph, ns, iflag)
+           lwsp, ipiv(1:korder+1), iexph, ns, iflag)
       k = 0
       do i = 1, korder+1
          do j = 1, korder+1
@@ -305,8 +306,8 @@ module td_exp
       call push_sub('td_exp.split')
 
       if(h%gauge == 2) then
-        message(1) = 'Split operator does not work well if velocity gauge is used.'
-        call write_fatal(1)
+         message(1) = 'Split operator does not work well if velocity gauge is used.'
+         call write_fatal(1)
       endif
 
       call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*timestep/M_TWO)
@@ -326,8 +327,8 @@ module td_exp
       call push_sub('td_exp.suzuki')
 
       if(h%gauge == 2) then
-        message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
-        call write_fatal(1)
+         message(1) = 'Suzuki-Trotter operator does not work well if velocity gauge is used.'
+         call write_fatal(1)
       endif
 
       p = M_ONE/(M_FOUR - M_FOUR**(M_THIRD))
@@ -335,11 +336,11 @@ module td_exp
       dt(1:5) = pp(1:5)*timestep
 
       do k = 1, 5
-        call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
-        if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
-        call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*dt(k))
-        if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
-        call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
+         if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .true.)
+         call zexp_kinetic(gr, h, zpsi, te%cf, -M_zI*dt(k))
+         if (h%ep%nvnl > 0) call zexp_vnlpsi (gr%m, h, zpsi, -M_zI*dt(k)/M_TWO, .false.)
+         call zexp_vlpsi (gr, h, zpsi, ik, t, -M_zI*dt(k)/M_TWO)
       end do
 
       if(present(order)) order = 0

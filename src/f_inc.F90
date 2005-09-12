@@ -126,10 +126,10 @@ end subroutine X(cf_FS2mf)
 ! ---------------------------------------------------------
 subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
   type(simul_box_type), intent(in) :: sb
-  type(f_der_type), intent(inout) :: f_der
-  R_TYPE,           intent(in)    :: f(:)     ! f(m%np)
-  R_TYPE,           intent(out)   :: lapl(:)  ! lapl(m%np)
-  FLOAT, optional,  intent(in)    :: cutoff_
+  type(f_der_type), intent(inout)  :: f_der
+  R_TYPE,           intent(inout)  :: f(:)     ! f(m%np)
+  R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np)
+  FLOAT, optional,  intent(in)     :: cutoff_
 
   FLOAT :: cutoff
 
@@ -139,26 +139,26 @@ subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
 
   select case(f_der%space)
   case(REAL_SPACE)
-    call X(derivatives_lapl) (f_der%der_discr, f, lapl)
+     call X(derivatives_lapl) (f_der%der_discr, f, lapl)
 
 #if defined(HAVE_FFT)
   case(FOURIER_SPACE)
 
-    ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
-    cutoff = -M_ONE
-    if(present(cutoff_)) cutoff = cutoff_
+     ! Fixes the cutoff (negative value if optional argument cutoff was not passed)
+     cutoff = -M_ONE
+     if(present(cutoff_)) cutoff = cutoff_
 
-    call X(cf_alloc_RS)(f_der%X(cf_der))             ! allocate cube in real space
-    call X(cf_alloc_FS)(f_der%X(cf_der))             ! allocate cube in Fourier space
+     call X(cf_alloc_RS)(f_der%X(cf_der))             ! allocate cube in real space
+     call X(cf_alloc_FS)(f_der%X(cf_der))             ! allocate cube in Fourier space
 
-    call X(mf2cf)(f_der%m, f, f_der%X(cf_der))             ! convert to cube
-    call X(cf_RS2FS)(f_der%X(cf_der))                ! Fourier transform
-    call X(cf_FS_lapl)(sb, f_der%m, f_der%X(cf_der), cutoff)   ! calculate Laplacian
-    call X(cf_FS2RS)(f_der%X(cf_der))                ! Fourier transform back
-    call X(cf2mf)(f_der%m, f_der%X(cf_der), lapl)          ! convert back to mesh
+     call X(mf2cf)(f_der%m, f, f_der%X(cf_der))             ! convert to cube
+     call X(cf_RS2FS)(f_der%X(cf_der))                ! Fourier transform
+     call X(cf_FS_lapl)(sb, f_der%m, f_der%X(cf_der), cutoff)   ! calculate Laplacian
+     call X(cf_FS2RS)(f_der%X(cf_der))                ! Fourier transform back
+     call X(cf2mf)(f_der%m, f_der%X(cf_der), lapl)          ! convert back to mesh
 
-    call X(cf_free_RS)(f_der%X(cf_der))              ! clean memory
-    call X(cf_free_FS)(f_der%X(cf_der))
+     call X(cf_free_RS)(f_der%X(cf_der))              ! clean memory
+     call X(cf_free_FS)(f_der%X(cf_der))
 
 #endif
   end select

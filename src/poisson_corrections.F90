@@ -29,16 +29,16 @@ module poisson_corrections
   implicit none
 
   private
-  public :: phi, &
-            aux, &
-            maxl, &
-            der_pointer, &
-            mesh_pointer, &
-            build_phi, &
-            build_aux, &
-            correct_rho, &
-            get_multipoles, &
-            op, opt, dotp
+  public :: phi,       &
+       aux,            &
+       maxl,           &
+       der_pointer,    &
+       mesh_pointer,   &
+       build_phi,      &
+       build_aux,      &
+       correct_rho,    &
+       get_multipoles, &
+       op, opt, dotp
 
   type(der_discr_type), pointer :: der_pointer
   type(mesh_type),      pointer :: mesh_pointer
@@ -49,7 +49,7 @@ module poisson_corrections
 
   FLOAT, parameter :: alpha_ = M_FIVE
 
-  contains
+contains
 
   subroutine correct_rho(m, ml, rho, rho_corrected, vh_correction)
     implicit none
@@ -109,13 +109,13 @@ module poisson_corrections
 
     mult(:) = M_ZERO
     do i = 1, m%np
-      add_lm = 1
-      do l = 0, ml
-         do mm = -l, l
-            mult(add_lm) = mult(add_lm) + rho(i)*aux(add_lm, i)*m%vol_pp(i)
-            add_lm = add_lm + 1
-         enddo
-      enddo
+       add_lm = 1
+       do l = 0, ml
+          do mm = -l, l
+             mult(add_lm) = mult(add_lm) + rho(i)*aux(add_lm, i)*m%vol_pp(i)
+             add_lm = add_lm + 1
+          enddo
+       enddo
     enddo
 
   end subroutine get_multipoles
@@ -147,13 +147,13 @@ module poisson_corrections
        enddo
     enddo
 
-    contains
+  contains
 
-     FLOAT function isubl(l, x)
-       integer, intent(in) :: l
-       FLOAT, intent(in) :: x
-       isubl = M_HALF*loct_gamma(l + M_HALF)*(M_ONE - loct_incomplete_gamma(l+M_HALF, x**2) )
-     end function isubl
+    FLOAT function isubl(l, x)
+      integer, intent(in) :: l
+      FLOAT, intent(in) :: x
+      isubl = M_HALF*loct_gamma(l + M_HALF)*(M_ONE - loct_incomplete_gamma(l+M_HALF, x**2) )
+    end function isubl
 
   end subroutine build_phi
 
@@ -187,13 +187,14 @@ module poisson_corrections
   end subroutine build_aux
 
   subroutine op(x, y)
-    FLOAT, intent(in)  :: x(:)
-    FLOAT, intent(out) :: y(:)
+    FLOAT, intent(inout) :: x(:)
+    FLOAT, intent(out)   :: y(:)
     call dderivatives_lapl(der_pointer, x(1:mesh_pointer%np), y(1:mesh_pointer%np))
   end subroutine op
 
   FLOAT function dotp(x, y) result(res)
-    FLOAT, intent(in) :: x(:),y(:)
+    FLOAT, intent(inout) :: x(:)
+    FLOAT, intent(in)    :: y(:)
     integer :: np
     np = mesh_pointer%np
     res = dmf_dotp(mesh_pointer, x(1:np), y(1:np))
