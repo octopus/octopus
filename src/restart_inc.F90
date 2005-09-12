@@ -73,7 +73,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
-  if(mpiv%node==0) then
+  if(mpiv%node.eq.0) then
      call io_mkdir(dir)
 
      iunit = io_open(trim(dir)//'/wfns', action='write')
@@ -109,20 +109,20 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
 
-  if(mpiv%node==0)  then
+  if(mpiv%node.eq.0)  then
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
     write(iunit2, '(a)') '%'
   end if
 
-#if defined(HAVE_MPI)
-  call mpi_barrier(MPI_COMM_WORLD, i) ! Since some processors did more than others...
-#endif
-
-  if(mpiv%node==0) then
+  if(mpiv%node.eq.0) then
     call io_close(iunit)
     call io_close(iunit2)
   end if
+
+#if defined(HAVE_MPI)
+  call TS(MPI_Barrier)(MPI_COMM_WORLD, i) ! Since some processors did more than others...
+#endif
 
   call pop_sub()
 end subroutine X(restart_write)
