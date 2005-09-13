@@ -43,6 +43,7 @@ module timedep
   use PES
 #endif
   use grid
+  use spectrum
 
   implicit none
 
@@ -62,11 +63,7 @@ module timedep
      integer           :: move_ions      ! how do we move the ions?
 
      ! The *kick* used in "linear response in the time domain" calculations.
-     FLOAT             :: pol(3, 3)
-     integer           :: pol_dir
-     integer           :: delta_strength_mode
-     FLOAT             :: delta_strength
-     integer           :: pol_equiv_axis
+     type(kick_type)   :: kick
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
      type(PES_type) :: PESv
@@ -78,10 +75,6 @@ module timedep
   integer, parameter :: STATIC_IONS     = 0,    &
        NORMAL_VERLET   = 3,  &
        VELOCITY_VERLET = 4
-
-  integer, parameter :: KICK_DENSITY_MODE      = 0, &
-                        KICK_SPIN_MODE         = 1, &
-                        KICK_SPIN_DENSITY_MODE = 2
 
 contains
 
@@ -151,7 +144,7 @@ contains
 
     
     if(td%iter == 0) then
-       call apply_delta_field()
+       call apply_delta_field(td%kick)
        call td_run_zero_iter()
     endif
     !call td_check_trotter(td, sys, h)
@@ -238,8 +231,8 @@ contains
           geo%kinetic_energy = kinetic_energy(geo)
        end if
 
-       call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%pol_dir, &
-                          td%delta_strength_mode, td%delta_strength, td%dt, i)
+       call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, i)
+
 
 #if !defined(DISABLE_PES) && defined(HAVE_FFT)
        call PES_doit(td%PESv, gr%m, st, ii, td%dt, h%ab_pot)
@@ -329,8 +322,7 @@ contains
       call push_sub('td.td_run_zero_iter')
 
       call io_mkdir('td.general')
-      call td_write_iter(write_handler, gr, st, h, geo, td%pol, td%pol_dir, &
-                         td%delta_strength_mode, td%delta_strength, td%dt, 0)
+      call td_write_iter(write_handler, gr, st, h, geo, td%kick, td%dt, 0)
       call td_save_restart(0)
       call td_write_data(write_handler, gr, st, h, sys%outp, geo, td%dt, 0)
       call td_rti_run_zero_iter(h, td%tr)
@@ -340,7 +332,8 @@ contains
 
 !!! Applies the delta function electric field E(t) = E_0 delta(t)
 !!! where E_0 = - k \hbar / e
-    subroutine apply_delta_field()
+    subroutine apply_delta_field(k)
+      type(kick_type), intent(in) :: k
       integer :: i
       CMPLX   :: c(2), kick
 
@@ -348,9 +341,9 @@ contains
 
 !!! The wave-functions at time delta t read
 !!! psi(delta t) = psi(t) exp(i k x)
-      if(td%delta_strength .ne. M_ZERO) then
-         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', td%delta_strength
-         select case (td%delta_strength_mode)
+      if(k%delta_strength .ne. M_ZERO) then
+         write(message(1),'(a,f11.6)')  'Info: Applying delta kick: k = ', k%delta_strength
+         select case (k%delta_strength_mode)
          case (KICK_DENSITY_MODE)
             message(2) = "Info: Delta kick mode: Density mode"
          case (KICK_SPIN_MODE)
@@ -360,9 +353,9 @@ contains
          end select
          call write_info(2)
          do i = 1, NP
-            kick = M_zI * td%delta_strength * sum(gr%m%x(i, 1:NDIM)*td%pol(1:NDIM, td%pol_dir))
+            kick = M_zI * k%delta_strength * sum(gr%m%x(i, 1:NDIM)*k%pol(1:NDIM, k%pol_dir))
 
-            select case (td%delta_strength_mode)
+            select case (k%delta_strength_mode)
             case (KICK_DENSITY_MODE)
                c(1) = exp(kick)
                st%zpsi(i,:,:,:) = c(1) * st%zpsi(i,:,:,:)
@@ -402,7 +395,7 @@ contains
       if(td%move_ions > 0) then
          do i = 1, geo%natoms
             geo%atom(i)%v(1:NDIM) = geo%atom(i)%v(1:NDIM) - &
-                 td%delta_strength_mode*td%pol(1:NDIM, td%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
+                 k%delta_strength_mode*k%pol(1:NDIM, k%pol_dir)*geo%atom(i)%spec%z_val / geo%atom(i)%spec%weight
          end do
       end if
 

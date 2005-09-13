@@ -36,6 +36,7 @@ module td_write
   use hamiltonian
   use external_pot
   use grid
+  use spectrum
 
   implicit none
 
@@ -212,22 +213,25 @@ subroutine td_write_end(w)
   call pop_sub()
 end subroutine td_write_end
 
-subroutine td_write_iter(w, gr, st, h, geo, pol, dir, kick_mode, kick_strength, dt, i)
+!!$subroutine td_write_iter(w, gr, st, h, geo, pol, dir, kick_mode, kick_strength, dt, i)
+subroutine td_write_iter(w, gr, st, h, geo, kick, dt, i)
   type(td_write_type),    intent(in) :: w
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   type(geometry_type),    intent(in)    :: geo
-  FLOAT,                  intent(in) :: pol(3, 3)
-  integer,                intent(in) :: dir
-  integer,                intent(in) :: kick_mode
-  FLOAT,                  intent(in) :: kick_strength
+!!$  FLOAT,                  intent(in) :: pol(3, 3)
+!!$  integer,                intent(in) :: dir
+!!$  integer,                intent(in) :: kick_mode
+!!$  FLOAT,                  intent(in) :: kick_strength
+  type(kick_type),        intent(in) :: kick
   FLOAT,                  intent(in) :: dt
   integer,                intent(in) :: i
 
   call push_sub('td_write.td_write_iter')
 
-  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick_mode, kick_strength, pol, dir, i)
+!!$  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick_mode, kick_strength, pol, dir, i)
+  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick, i)
   if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
   if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
   if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
@@ -447,15 +451,17 @@ subroutine td_write_angular(out_angular, gr, st, iter)
   call pop_sub()
 end subroutine td_write_angular
 
-subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength, pol, dir, iter)
+!!$subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength, pol, dir, iter)
+subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
   integer(POINTER_SIZE), intent(in) :: out_multip
   type(grid_type),       intent(in) :: gr
   type(states_type),     intent(in) :: st
   integer,               intent(in) :: lmax   
-  integer,               intent(in) :: kick_mode
-  FLOAT,                 intent(in) :: kick_strength
-  FLOAT,                 intent(in) :: pol(3, 3)
-  integer,               intent(in) :: dir
+  type(kick_type),       intent(in) :: kick
+!!$  integer,               intent(in) :: kick_mode
+!!$  FLOAT,                 intent(in) :: kick_strength
+!!$  FLOAT,                 intent(in) :: pol(3, 3)
+!!$  integer,               intent(in) :: dir
   integer,               intent(in) :: iter
 
   integer :: is, j, l, m, add_lm
@@ -470,35 +476,43 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength
     ! empty file
     call write_iter_clear(out_multip)
 
-    write(aux, '(a8,i2)')      '# nspin ', st%d%nspin
+    write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a8,i2)')      '# lmax  ', lmax
+    write(aux, '(a15,i2)')      '# lmax         ', lmax
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a8,3f18.12)') '# pol(1)', pol(1:3, 1)
+    write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a8,3f18.12)') '# pol(2)', pol(1:3, 2)
+    write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a8,3f18.12)') '# pol(3)', pol(1:3, 3)
+    write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a8,i1)')  '# direction    ', dir
+    write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a15,i1)') '# kick mode    ', kick_mode
+    write(aux, '(a15,i2)')      '# kick mode    ', kick%delta_strength_mode
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a15,f18.12)') '# kick strength', kick_strength
+    write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
+    write(aux, '(a15,i2)')      '# Equiv. axis  ', kick%pol_equiv_axis
+    call write_iter_string(out_multip, aux)
+    call write_iter_nl(out_multip)
+
+    write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 

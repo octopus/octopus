@@ -31,6 +31,7 @@ implicit none
 
 private
 public :: spec_type, &
+          kick_type, &
           spec_sf,   &
           spec_rsf,  &
           spec_sh,   &
@@ -39,12 +40,17 @@ public :: spec_type, &
           spectrum_strength_function, &
           spectrum_rotatory_strength, &
           spectrum_hs_from_mult,      &
-          spectrum_hs_from_acc
+          spectrum_hs_from_acc,       &
+          kick_init
 
 integer, public, parameter :: SPECTRUM_DAMP_NONE       = 0, &
                               SPECTRUM_DAMP_LORENTZIAN = 1, &
                               SPECTRUM_DAMP_POLYNOMIAL = 2, &
                               SPECTRUM_DAMP_GAUSSIAN   = 3
+
+integer, public, parameter :: KICK_DENSITY_MODE      = 0, &
+                              KICK_SPIN_MODE         = 1, &
+                              KICK_SPIN_DENSITY_MODE = 2
 
 type spec_type
   FLOAT   :: start_time  ! start time for the transform
@@ -55,6 +61,15 @@ type spec_type
   integer :: damp     ! Damp type (none, exp or pol)
   FLOAT   :: damp_factor ! factor used in damping
 end type spec_type
+
+type kick_type
+  FLOAT             :: pol(3, 3)
+  integer           :: pol_dir
+  integer           :: delta_strength_mode
+  FLOAT             :: delta_strength
+  integer           :: pol_equiv_axis
+  FLOAT             :: wprime(3)
+end type kick_type
 
 ! For the strength function
 type spec_sf
@@ -132,6 +147,91 @@ subroutine spectrum_init(s)
   call pop_sub()
 end subroutine spectrum_init
 
+subroutine kick_init(k, nspin)
+  type(kick_type), intent(out) :: k
+  integer,         intent(in)  :: nspin
+  integer(POINTER_SIZE) :: blk
+  integer :: n, i, j
+
+  call push_sub('spectrum.kick_init')
+
+  call loct_parse_float(check_inp('TDDeltaStrength'), M_ZERO, k%delta_strength)
+  ! units are 1/length
+  k%delta_strength = k%delta_strength / units_inp%length%factor
+
+  if(k%delta_strength <= M_ZERO) then
+     k%delta_strength_mode = 0
+     k%pol_equiv_axis = 0
+     k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
+     k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+     k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+     k%pol_dir = 0
+     k%wprime = M_ZERO
+     call pop_sub()
+     return
+  endif
+
+  !%Variable TDDeltaStrengthMode
+  !%Type integer
+  !%Section 10 Time Dependent
+  !%Description
+  !% When calculating the linear response of the density via the propagation
+  !% in real time, one needs to perfrom an initical kick on the KS system, at 
+  !% time zero. Depending on what kind response property one wants to obtain,
+  !% this kick may be done in several modes.
+  !%Option kick_density 0
+  !% The total density of the system is perturbed.
+  !%Option kick_spin 1
+  !% The individual spin densities are perturbed differently. Note that this mode
+  !% is only possible if the run is done in spin polarized mode, or with spinors.
+  !%Option kick_spin_and_density 2
+  !% A combination of the two above. Note that this mode
+  !% is only possible if the run is done in spin polarized mode, or with spinors.
+  !%End
+  call loct_parse_int(check_inp('TDDeltaStrengthMode'), KICK_DENSITY_MODE, k%delta_strength_mode)
+  select case (k%delta_strength_mode)
+    case (KICK_DENSITY_MODE)
+    case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
+      if (nspin == 1) call input_error('TDDeltaStrengthMode')
+    case default
+      call input_error('TDDeltaStrengthMode')
+  end select
+
+  ! Find out how many equivalent axis we have...
+  ! WARNING: TODO: document this variable.
+  call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, k%pol_equiv_axis)
+  call loct_parse_int(check_inp('TDPolarizationDirection'), 1, k%pol_dir)
+
+  k%pol(:, :) = M_ZERO
+  if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
+        n = loct_parse_block_n(blk)
+        do j = 1, n
+           do i = 1, 3
+              call loct_parse_block_float(blk, j-1, i-1, k%pol(i, j))
+           end do
+        enddo
+        if(n<3) k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+        if(n<2) k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+        call loct_parse_block_end(blk)
+  else
+        ! Here the symmetry of the system should be analized, and the polarization
+        ! basis, built accordingly.
+        k%pol_dir = 1
+        k%pol(1:3, 1) = (/ M_ONE, M_ZERO, M_ZERO /)
+        k%pol(1:3, 2) = (/ M_ZERO, M_ONE, M_ZERO /)
+        k%pol(1:3, 3) = (/ M_ZERO, M_ZERO, M_ONE /)
+  endif
+  ! Normalize:
+  do i = 1, 3
+     k%pol(1:3, i) = k%pol(1:3, i)/sqrt(sum(k%pol(1:3, i)**2))
+  enddo
+
+  ! For the moment, I will just initialize this
+  k%wprime = M_ZERO
+
+  call pop_sub()
+end subroutine kick_init
+
 subroutine spectrum_skip_header(iunit)
   integer, intent(in) :: iunit
   character(len=1) :: a
@@ -150,9 +250,9 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   integer, intent(in)    :: out_file
   type(spec_type),  intent(inout) :: s
 
-  integer :: nspin, lmax, delta_strength_mode, time_steps, is, ie, ntiter, &
-             i, j, jj, dir, isp, no_e, k
-  FLOAT   :: pol(3, 3), delta_strength, dt, dump, x, w
+  integer :: nspin, lmax, time_steps, is, ie, ntiter, i, j, jj, isp, no_e, k
+  FLOAT   :: dt, dump, x, w
+  type(kick_type) :: kick
   FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:)
 
   call push_sub('spectrum.spectrum_cross_section')
@@ -160,7 +260,7 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   ! This function gives us back the unit connected to the "multipoles" file, the header information,
   ! the number of time steps, and the time step. After exiting, it positions the file in the first
   ! line after the header.
-  call spectrum_mult_info(in_file, nspin, lmax, pol, dir, delta_strength, delta_strength_mode, time_steps, dt)
+  call spectrum_mult_info(in_file, nspin, lmax, kick, time_steps, dt)
 
   ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
   if(lmax.ne.1) then
@@ -224,19 +324,22 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   ! And now project onto the basis.
   do k = 0, no_e
      do j = 1, nspin
-        sigma(1, k, j) = dot_product(sigma(1:3, k, j), pol(1:3, 1))
-        sigma(2, k, j) = dot_product(sigma(1:3, k, j), pol(1:3, 2))
-        sigma(3, k, j) = dot_product(sigma(1:3, k, j), pol(1:3, 3))
+        sigma(1, k, j) = dot_product(sigma(1:3, k, j), kick%pol(1:3, 1))
+        sigma(2, k, j) = dot_product(sigma(1:3, k, j), kick%pol(1:3, 2))
+        sigma(3, k, j) = dot_product(sigma(1:3, k, j), kick%pol(1:3, 3))
      enddo
   enddo
 
-  write(out_file, '(a8,i2)')      '# nspin    ', nspin
-  write(out_file, '(a8,3f18.12)') '# pol(1)   ', pol(1:3, 1)
-  write(out_file, '(a8,3f18.12)') '# pol(1)   ', pol(1:3, 2)
-  write(out_file, '(a8,3f18.12)') '# pol(1)   ', pol(1:3, 3)
-  write(out_file, '(a15,i1)')     '# direction    ', dir
-  write(out_file, '(a15,i1)')     '# kick mode    ', delta_strength_mode
-  write(out_file, '(a15,f18.12)') '# kick strength', delta_strength
+
+  write(out_file, '(a15,i2)')      '# nspin        ', nspin
+  write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+  write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+  write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+  write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+  write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+  write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+  write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+  write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
   write(out_file, '(a)') '#Here we should put the column names.'
   write(out_file, '(a)') '#Here we should put the units.'
 
@@ -259,9 +362,9 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   type(spec_sf), intent(inout) :: sf
   logical, intent(in) :: print_info
 
-  integer :: iunit, i, is, ie, delta_strength_mode, &
-      ntiter, j, jj, k, isp, time_steps, lmax, dir
-  FLOAT :: dump, dt, x, pol(3, 3), z(3), zz(3)
+  integer :: iunit, i, is, ie, ntiter, j, jj, k, isp, time_steps, lmax
+  type(kick_type) :: kick
+  FLOAT :: dump, dt, x, z(3), zz(3)
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: dipole(:,:)
 
@@ -274,8 +377,8 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   if(iunit < 0) then
     iunit = io_open('td.general/multipoles', action='read', status='old')
   end if
-  call spectrum_mult_info(iunit, sf%nspin, lmax, pol, dir, sf%delta_strength, delta_strength_mode, time_steps, dt)
-
+  call spectrum_mult_info(iunit, sf%nspin, lmax, kick, time_steps, dt)
+  sf%delta_strength = kick%delta_strength
   if(lmax.ne.1) then
     message(1) = 'multipoles file should contain the dipole -- and only the dipole.'
     call write_fatal(1)
@@ -288,10 +391,10 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   do i = 0, time_steps
     if(sf%nspin == 1) then
       read(iunit, *) j, dump, dump, z(1:3)
-      dipole(i, 1) = -dot_product(z(1:3),pol(1:3, 1))
+      dipole(i, 1) = -dot_product(z(1:3),kick%pol(1:3, 1))
     else
       read(iunit, *) j, dump, dump, z(1:3), dump, zz(1:3)
-      dipole(i, 1) = -dot_product(z(1:3)+zz(1:3),pol(1:3, 1))
+      dipole(i, 1) = -dot_product(z(1:3)+zz(1:3),kick%pol(1:3, 1))
     endif
     dipole(i,:) = dipole(i,:) * units_out%length%factor
   end do
@@ -489,8 +592,9 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
   type(spec_type), intent(inout) :: s
   type(spec_sh), intent(inout) :: sh
 
-  integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax, dir
-  FLOAT :: dt, dump, pol(3, 3)
+  integer :: i, j, iunit, nspin, time_steps, is, ie, ntiter, lmax
+  FLOAT :: dt, dump
+  type(kick_type) :: kick
   FLOAT, allocatable :: d(:,:)
   CMPLX :: c
   CMPLX, allocatable :: dipole(:), ddipole(:)
@@ -500,7 +604,7 @@ subroutine spectrum_hs_from_mult(out_file, s, sh)
   if(iunit < 0) then
     iunit = io_open('td.general/multipoles', action='read', status='old')
   end if
-  call spectrum_mult_info(iunit, nspin, lmax, pol, dir, dump, i, time_steps, dt)
+  call spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   call spectrum_skip_header(iunit)
@@ -678,14 +782,11 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   call pop_sub()
 end subroutine spectrum_file_info
 
-subroutine spectrum_mult_info(iunit, nspin, lmax, pol, dir, delta_strength, delta_strength_mode, time_steps, dt)
+subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
   integer, intent(in)  :: iunit
   integer, intent(out) :: nspin
   integer, intent(out) :: lmax
-  FLOAT,   intent(out) :: pol(3, 3)
-  integer, intent(out) :: dir
-  FLOAT,   intent(out) :: delta_strength
-  integer, intent(out) :: delta_strength_mode
+  type(kick_type), intent(out) :: kick
   integer, intent(out) :: time_steps
   FLOAT,   intent(out) :: dt
 
@@ -695,14 +796,16 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, pol, dir, delta_strength, delt
   call push_sub('spectrum.spectrum_mult_info')
 
   ! read in number of spin components
-  read(iunit, '(8x,i2)') nspin
-  read(iunit, '(8x,i2)') lmax
-  read(iunit, '(8x,3f18.12)') pol(1:3, 1)
-  read(iunit, '(8x,3f18.12)') pol(1:3, 2)
-  read(iunit, '(8x,3f18.12)') pol(1:3, 3)
-  read(iunit, '(15x,i1)') dir
-  read(iunit, '(15x,i1)') delta_strength_mode
-  read(iunit, '(15x,f18.12)') delta_strength
+  read(iunit, '(15x,i2)')      nspin
+  read(iunit, '(15x,i2)')      lmax
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
+  read(iunit, '(15x,i2)')      kick%pol_dir
+  read(iunit, '(15x,i2)')      kick%delta_strength_mode
+  read(iunit, '(15x,f18.12)')  kick%delta_strength
+  read(iunit, '(15x,i2)')      kick%pol_equiv_axis
+  read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
   read(iunit, *); read(iunit, *) ! skip header
 
   ! count number of time_steps
