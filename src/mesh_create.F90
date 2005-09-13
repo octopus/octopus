@@ -336,10 +336,9 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   ! Node 0 has to store all entries from x (in x_global)
   ! as well as the local set in x (see below).
-! BUGFIX
-!  if(mpiv%node.eq.0) then
+  if(mpiv%node.eq.0) then
     allocate(m%x_global(m%np_tot_glob, 3))
-!  end if
+  end if
 #else
   ! When running parallel, x is computed later.
   allocate(m%x(m%np_tot_glob, 3))
