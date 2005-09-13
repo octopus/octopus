@@ -87,7 +87,7 @@ program cross_section
           out_file = io_open('cross_section_tensor', action='write')
 
           ! The following routine should now build the tensor...
-          !call spectrum_cross_section_tensor(in_file, out_file)
+          call spectrum_cross_section_tensor(in_file, out_file, s)
 
 
         case default

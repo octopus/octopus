@@ -9,10 +9,10 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 check_PROGRAMS = oct-test
 
 basic_SRCS = liboct_parser.F90 liboct.F90 string.F90 varinfo.F90 global.F90 \
-	     messages.F90 syslabels.F90 io.F90 units.F90 mpi.F90
+	     messages.F90 syslabels.F90 io.F90 units.F90 mpi.F90 \
+             blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90
 
 core_SRCS = $(basic_SRCS) \
-	blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
@@ -50,27 +50,26 @@ noinst_HEADERS = \
 	out_inc.F90 math_cg_inc.F90 math_inc.F90 \
 	linalg_basic_blas.F90 linalg_basic_int.F90 linalg_adv_lapack.F90
 
-core_LIBS = ../liboct/liboct.a ../liboct_parser/liboct_parser.a ../libxc/libxc.a ../expokit/libexpokit.a \
-  @GSL_LIBS@ @FCEXTRALIBS@
+core_LIBS = @LIBS_LAPACK@ @LIBS_BLAS@ ../liboct/liboct.a ../liboct_parser/liboct_parser.a \
+  ../libxc/libxc.a ../expokit/libexpokit.a @GSL_LIBS@ @FCEXTRALIBS@
 octopus_LDADD = @LIBS_FFT@ @LIBS_TRLAN@ @LIBS_ARPACK@ @LIBS_SPARSKIT@ \
-  @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_NETCDF@ \
-  @LIBS_MPI@ $(core_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_METIS@
+  @LIBS_NETCDF@ @LIBS_MPI@ $(core_LIBS) @LIBS_LAPACK@ @LIBS_BLAS@ @LIBS_METIS@
 
 # now the utility programs
 oct_sf_SOURCES = $(basic_SRCS) spectrum.F90 strength_function.F90
-oct_sf_LDADD   = $(core_LIBS)
+oct_sf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
 oct_cross_section_SOURCES = $(basic_SRCS) spectrum.F90 cross_section.F90
-oct_cross_section_LDADD   = $(core_LIBS)
+oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
 oct_rsf_SOURCES = $(basic_SRCS) spectrum.F90 rotational_strength.F90
-oct_rsf_LDADD   = $(core_LIBS)
+oct_rsf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
 oct_hs_mult_SOURCES = $(basic_SRCS) spectrum.F90 hs_from_mult.F90
-oct_hs_mult_LDADD   = $(core_LIBS)
+oct_hs_mult_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
 oct_hs_acc_SOURCES  = $(basic_SRCS) spectrum.F90 hs_from_acc.F90
-oct_hs_acc_LDADD    = $(core_LIBS)
+oct_hs_acc_LDADD    = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)

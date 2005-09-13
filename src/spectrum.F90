@@ -26,21 +26,23 @@ use lib_oct_parser
 use syslabels
 use io
 use units
+use math, only : invert_3by3
 
 implicit none
 
 private
-public :: spec_type, &
-          kick_type, &
-          spec_sf,   &
-          spec_rsf,  &
-          spec_sh,   &
-          spectrum_init, &
-          spectrum_cross_section,     &
-          spectrum_strength_function, &
-          spectrum_rotatory_strength, &
-          spectrum_hs_from_mult,      &
-          spectrum_hs_from_acc,       &
+public :: spec_type,                     &
+          kick_type,                     &
+          spec_sf,                       &
+          spec_rsf,                      &
+          spec_sh,                       &
+          spectrum_init,                 &
+          spectrum_cross_section,        &
+          spectrum_cross_section_tensor, &
+          spectrum_strength_function,    &
+          spectrum_rotatory_strength,    &
+          spectrum_hs_from_mult,         &
+          spectrum_hs_from_acc,          &
           kick_init
 
 integer, public, parameter :: SPECTRUM_DAMP_NONE       = 0, &
@@ -245,6 +247,93 @@ subroutine spectrum_skip_header(iunit)
 
 end subroutine spectrum_skip_header
 
+subroutine spectrum_cross_section_tensor(in_file, out_file, s)
+  integer, intent(in)    :: in_file
+  integer, intent(in)    :: out_file
+  type(spec_type),  intent(inout) :: s
+
+  integer :: nspin, energy_steps, i, is, j
+  FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :), p(:, :), pt(:, :), ip(:, :), ipt(:, :)
+  FLOAT :: dw, dump
+  type(kick_type) :: kick
+
+  ! For the moment, we assume that we have three equivalent axis.
+
+  call push_sub('spectrum.spectrum_cross_section_tensor')
+
+  call spectrum_cross_section_info(in_file, nspin, kick, energy_steps, dw)
+
+  allocate(sigma (3, 3, 0:energy_steps, nspin), &
+           sigmap(3, 3, 0:energy_steps, nspin), &
+           sigmau(3, 0:energy_steps, nspin), &
+           p(3, 3), ip(3, 3), pt(3, 3), ipt(3, 3))
+
+  call spectrum_skip_header(in_file)
+
+  do i = 0, energy_steps
+     read(in_file, *) dump, sigmau(1:3, i, 1:nspin)
+  enddo
+
+  ! The first row of sigma is the vector that we have just read, but
+  ! properly projected...
+  do is = 1, nspin
+     do i = 0, energy_steps
+        sigmap(1, 1, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 1))
+        sigmap(1, 2, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 2))
+        sigmap(1, 3, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 3))
+     enddo
+  enddo
+
+  ! The diagonal parts are also equal:
+  sigmap(2, 2, :, :) = sigmap(1, 1, :, :)
+  sigmap(3, 3, :, :) = Sigmap(1, 1, :, :)
+
+  ! The (2,1) term and (3,1) term are equal by symmetry:
+  sigmap(2, 1, :, :) = sigmap(1, 2, :, :)
+  sigmap(3, 1, :, :) = sigmap(1, 3, :, :)
+
+  ! But for the (2,3) term we need the wprime vector....
+  sigmap(2, 3, :, :) = sum(sigmau(1:3, i, is)*kick%wprime(1:3))
+  sigmap(3, 2, :, :) = sigmap(2, 3, :, :)
+
+  ! And now, perform the necessary transformation.
+  p(1:3, 1:3) = kick%pol(1:3, 1:3)
+  pt = transpose(p)
+  call invert_3by3(p, ip, dump, .false.)
+  call invert_3by3(pt, ipt, dump, .false.)
+  do is = 1, nspin
+     do i = 0, energy_steps
+        sigma(:, :, i, is) = matmul( ipt, matmul(sigmap(:, :, i, is), ip) )
+     enddo
+  enddo
+
+  ! Finally, write down the result
+  write(out_file, '(a15,i2)')      '# nspin        ', nspin
+  write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+  write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+  write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+  write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+  write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+  write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+  write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+  write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+  write(out_file, '(a)') '#Here we should put the column names.'
+  write(out_file, '(a)') '#Here we should put the units.'
+
+  do i = 0, energy_steps
+     write(out_file,'(5e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
+          sigma(1:3, 1:3, i, 1) 
+     do j = 2, nspin
+        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
+     enddo
+     write(out_file,'(a)', advance = 'yes')
+  end do
+  
+
+  deallocate(sigma, sigmap, sigmau, p)
+  call pop_sub()
+end subroutine spectrum_cross_section_tensor
+
 subroutine spectrum_cross_section(in_file, out_file, s)
   integer, intent(in)    :: in_file
   integer, intent(in)    :: out_file
@@ -258,8 +347,7 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   call push_sub('spectrum.spectrum_cross_section')
 
   ! This function gives us back the unit connected to the "multipoles" file, the header information,
-  ! the number of time steps, and the time step. After exiting, it positions the file in the first
-  ! line after the header.
+  ! the number of time steps, and the time step. 
   call spectrum_mult_info(in_file, nspin, lmax, kick, time_steps, dt)
 
   ! Now we cannot process files that do not contain the dipole, or that contain more than the dipole.
@@ -319,17 +407,8 @@ subroutine spectrum_cross_section(in_file, out_file, s)
     end do
     sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*dt
     sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)
+    sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)/kick%delta_strength
   end do
-
-  ! And now project onto the basis.
-  do k = 0, no_e
-     do j = 1, nspin
-        sigma(1, k, j) = dot_product(sigma(1:3, k, j), kick%pol(1:3, 1))
-        sigma(2, k, j) = dot_product(sigma(1:3, k, j), kick%pol(1:3, 2))
-        sigma(3, k, j) = dot_product(sigma(1:3, k, j), kick%pol(1:3, 3))
-     enddo
-  enddo
-
 
   write(out_file, '(a15,i2)')      '# nspin        ', nspin
   write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
@@ -347,7 +426,7 @@ subroutine spectrum_cross_section(in_file, out_file, s)
      write(out_file,'(5e15.6)', advance = 'no') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
           sigma(1:3, i, 1) / (units_out%length%factor**2)
      do j = 2, nspin
-        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, 2) / (units_out%length%factor**2)
+        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, j) / (units_out%length%factor**2)
      enddo
      write(out_file,'(a)', advance = 'yes')
   end do
@@ -827,6 +906,50 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
 
   call pop_sub()
 end subroutine spectrum_mult_info
+
+subroutine spectrum_cross_section_info(iunit, nspin, kick, energy_steps, dw)
+  integer, intent(in)  :: iunit
+  integer, intent(out) :: nspin
+  type(kick_type), intent(out) :: kick
+  integer, intent(out) :: energy_steps
+  FLOAT,   intent(out) :: dw
+
+  integer :: j
+  FLOAT :: dummy, e1, e2
+
+  call push_sub('spectrum.spectrum_cross_section_info')
+
+  ! read in number of spin components
+  read(iunit, '(15x,i2)')      nspin
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
+  read(iunit, '(15x,i2)')      kick%pol_dir
+  read(iunit, '(15x,i2)')      kick%delta_strength_mode
+  read(iunit, '(15x,f18.12)')  kick%delta_strength
+  read(iunit, '(15x,i2)')      kick%pol_equiv_axis
+  read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+  read(iunit, *); read(iunit, *) ! skip header
+
+  ! count number of time_steps
+  energy_steps = 0
+  do
+    read(iunit, *, end=100) j, dummy
+    energy_steps = energy_steps + 1
+    if(energy_steps == 1) e1 = dummy
+    if(energy_steps == 2) e2 = dummy
+  end do
+100 continue
+  dw = (e2 - e1) * units_out%energy%factor
+  energy_steps = energy_steps - 1
+
+  if(energy_steps < 3) then
+    message(1) = "Empty multipole file?"
+    call write_fatal(1)
+  end if
+
+  call pop_sub()
+end subroutine spectrum_cross_section_info
 
 subroutine spectrum_acc_info(iunit, time_steps, dt)
   integer, intent(out) :: iunit, time_steps

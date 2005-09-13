@@ -473,7 +473,8 @@ contains
       endif
       call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
-      K_term = K_term + sum(rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1) * m%vol_pp(1:m%np))
+      rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1)
+      K_term = K_term + X(mf_integrate)(m, rho(:, 1))
 
       deallocate(rho_i, rho_j, rho, fxc)
     end function K_term
@@ -523,13 +524,18 @@ contains
     subroutine dipole_matrix_elem(i, j, s)
       integer, intent(in) :: i, j
       FLOAT, intent(out) :: s(3)
+      R_TYPE, allocatable :: f(:, :)
 
       integer :: k
 
-      s = M_ZERO
+      allocate(f(m%np, 3))
       do k = 1, m%np
-         s = s + m%x(k, :) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1) * m%vol_pp(k)
-      end do
+         f(k, 1:3) = m%x(k, 1:3) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1)
+      enddo
+      s(1) = X(mf_integrate)(m, f(:, 1))
+      s(2) = X(mf_integrate)(m, f(:, 2))
+      s(3) = X(mf_integrate)(m, f(:, 3))
+      deallocate(f)
 
     end subroutine dipole_matrix_elem
 
