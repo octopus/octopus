@@ -213,24 +213,18 @@ subroutine td_write_end(w)
   call pop_sub()
 end subroutine td_write_end
 
-!!$subroutine td_write_iter(w, gr, st, h, geo, pol, dir, kick_mode, kick_strength, dt, i)
 subroutine td_write_iter(w, gr, st, h, geo, kick, dt, i)
   type(td_write_type),    intent(in) :: w
   type(grid_type),        intent(inout) :: gr
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
   type(geometry_type),    intent(in)    :: geo
-!!$  FLOAT,                  intent(in) :: pol(3, 3)
-!!$  integer,                intent(in) :: dir
-!!$  integer,                intent(in) :: kick_mode
-!!$  FLOAT,                  intent(in) :: kick_strength
   type(kick_type),        intent(in) :: kick
   FLOAT,                  intent(in) :: dt
   integer,                intent(in) :: i
 
   call push_sub('td_write.td_write_iter')
 
-!!$  if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick_mode, kick_strength, pol, dir, i)
   if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick, i)
   if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
   if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
@@ -451,17 +445,12 @@ subroutine td_write_angular(out_angular, gr, st, iter)
   call pop_sub()
 end subroutine td_write_angular
 
-!!$subroutine td_write_multipole(out_multip, gr, st, lmax, kick_mode, kick_strength, pol, dir, iter)
 subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
   integer(POINTER_SIZE), intent(in) :: out_multip
   type(grid_type),       intent(in) :: gr
   type(states_type),     intent(in) :: st
   integer,               intent(in) :: lmax   
   type(kick_type),       intent(in) :: kick
-!!$  integer,               intent(in) :: kick_mode
-!!$  FLOAT,                 intent(in) :: kick_strength
-!!$  FLOAT,                 intent(in) :: pol(3, 3)
-!!$  integer,               intent(in) :: dir
   integer,               intent(in) :: iter
 
   integer :: is, j, l, m, add_lm

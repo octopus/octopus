@@ -259,7 +259,7 @@ subroutine spectrum_cross_section_tensor(in_file, out_file, s)
   type(spec_type),  intent(inout) :: s
 
   integer :: nspin, energy_steps, i, is, j
-  FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :), p(:, :), pt(:, :), ip(:, :), ipt(:, :)
+  FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :), p(:, :), ip(:, :)
   FLOAT :: dw, dump
   type(kick_type) :: kick
 
@@ -272,7 +272,7 @@ subroutine spectrum_cross_section_tensor(in_file, out_file, s)
   allocate(sigma (3, 3, 0:energy_steps, nspin), &
            sigmap(3, 3, 0:energy_steps, nspin), &
            sigmau(3, 0:energy_steps, nspin), &
-           p(3, 3), ip(3, 3), pt(3, 3), ipt(3, 3))
+           p(3, 3), ip(3, 3))
 
   call spectrum_skip_header(in_file)
 
@@ -308,12 +308,10 @@ subroutine spectrum_cross_section_tensor(in_file, out_file, s)
 
   ! And now, perform the necessary transformation.
   p(1:3, 1:3) = kick%pol(1:3, 1:3)
-  pt = transpose(p)
   call invert_3by3(p, ip, dump, .false.)
-  call invert_3by3(pt, ipt, dump, .false.)
   do is = 1, nspin
      do i = 0, energy_steps
-        sigma(:, :, i, is) = matmul( ipt, matmul(sigmap(:, :, i, is), ip) )
+        sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )
      enddo
   enddo
 
@@ -338,9 +336,8 @@ subroutine spectrum_cross_section_tensor(in_file, out_file, s)
      enddo
      write(out_file,'(a)', advance = 'yes')
   end do
-  
 
-  deallocate(sigma, sigmap, sigmau, p)
+  deallocate(sigma, sigmap, sigmau, p, ip)
   call pop_sub()
 end subroutine spectrum_cross_section_tensor
 
