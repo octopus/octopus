@@ -138,8 +138,10 @@ program octopus
      tmpdir = 'tmp/'
      call io_mkdir(tmpdir)
 
+#ifdef DEBUG
      ! create debug directory if in debugging mode
-     if(conf%verbose>=VERBOSE_DEBUG) call io_mkdir('debug')
+     call io_mkdir('debug')
+#endif
 
      ! now we really start
      call run_init()
