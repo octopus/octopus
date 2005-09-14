@@ -24,6 +24,7 @@ module nl_operator
   use messages
   use mesh
   use simul_box
+  use io
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
 #endif
@@ -41,7 +42,8 @@ module nl_operator
        znl_operator_operate_cmplx, &
        nl_operator_end,            &
        nl_operator_skewadjoint,    &
-       nl_operator_selfadjoint
+       nl_operator_selfadjoint, &
+nl_operator_write
 
   type nl_operator_type
      type(mesh_type), pointer :: m         ! pointer to the underlying mesh
@@ -310,27 +312,111 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! When running in parallel only the root node
+  ! creates the matrix. But all nodes have to
+  ! call this routine because the distributed operator has
+  ! to be collected.
   subroutine nl_operator_op_to_matrix(op, a, b)
     type(nl_operator_type), intent(in) :: op
     FLOAT, intent(out)                 :: a(:, :)
     FLOAT, optional, intent(out)       :: b(:, :)
 
-    integer :: i, j, k, index
+    integer          :: i, j, k, index
+    integer, pointer :: op_i(:, :)
+    FLOAT, pointer   :: w_re(:, :), w_im(:, :)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    integer :: il, ig
+    integer :: rank, ierr
+#endif
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
-    k = 1
-    do i = 1, op%np
-       if(.not.op%const_w) k = i
-       do j = 1, op%n
-          index = op%i(j, i)
-          if(index <= op%np) then
-             a(i, index) = op%w_re(j, k)
-             if (op%cmplx_op) b(i, index) = op%w_im(j, k)
-          endif
-       enddo
-    enddo
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    ! When running parallel, we have to collect the operator first.
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+
+    ! Collect the distributed index table op%i into op_i.
+    ! Only root collects the index table.
+    if(rank.eq.op%m%vp%root) then
+      allocate(op_i(op%n, op%m%np_glob))
+    end if
+    ! Collect for every stencil point.
+    do i = 1, op%n
+      call ivec_gather(op%m%vp, op_i(i, :), op%i(i, :))
+      ! All point numbers gathered for stencil point i
+      ! have to be translated to global points numbers
+      ! This, again, is work for root.
+      if(rank.eq.op%m%vp%root) then
+        do j = 1, op%m%np_glob
+          il = op%m%vp%np_local(op%m%part(j))
+          ig = il+op%m%vp%np_ghost(op%m%part(j))
+          ! op_i(i, j) is a local point number, i. e. it can be
+          ! a real local point (i. e. the local point number
+          ! is less or equal than the number of local points of
+          ! the node which owns the point with global number j):
+          if(op_i(i, j).le.il) then
+            ! Write the global point number from the lookup
+            ! table in op_(i, j).
+            op_i(i, j) = op%m%vp%local(op%m%vp%xlocal(op%m%part(j)) &
+                         +op_i(i, j)-1)
+          ! Or a ghost point:
+          else if(op_i(i, j).gt.il.and.op_i(i, j).le.ig) then
+            op_i(i, j) = op%m%vp%ghost(op%m%vp%xghost(op%m%part(j)) &
+                         +op_i(i, j)-1-il)
+          ! Or a boundary point:
+          else if(op_i(i, j).gt.ig) then
+            op_i(i, j) = op%m%vp%bndry(op%m%vp%xbndry(op%m%part(j)) &
+                         +op_i(i, j)-1-ig)
+            !op_i(i, j) = 0
+          end if
+        end do
+      end if
+    end do
+
+
+    ! Weights have to be collected only if they are
+    ! non constant.
+    if(.not.op%const_w) then
+      if(rank.eq.op%m%vp%root) then
+        allocate(w_re(op%n, op%m%np_glob))
+        if(op%cmplx_op) allocate(w_im(op%n, op%m%np_glob))
+      end if
+      do i = 1, op%n
+        call dvec_gather(op%m%vp, w_re(i, :), op%w_re(i, :))
+        if(op%cmplx_op) call dvec_gather(op%m%vp, w_im(i, :), op%w_im(i, :))
+      end do
+    ! Otherwise, those of root are just fine.
+    else
+      w_re => op%w_re
+      if(op%cmplx_op) w_im => op%w_im
+    end if
+#else
+    ! Take these shortcuts.
+    op_i => op%i
+    w_re => op%w_re
+    if(op%cmplx_op) w_im => op%w_im
+#endif
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(rank.eq.op%m%vp%root) then
+#endif
+      k = 1
+      do i = 1, op%m%np_glob
+         if(.not.op%const_w) k = i
+         do j = 1, op%n
+            index = op_i(j, i)
+            if(index <= op%m%np_glob) then
+               a(i, index) = w_re(j, k)
+               if (op%cmplx_op) b(i, index) = w_im(j, k)
+            endif
+         enddo
+      enddo
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    endif
+#endif
+
     call pop_sub()
+
   end subroutine nl_operator_op_to_matrix
 
 
@@ -360,56 +446,111 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nl_operator_write(op, unit)
+  ! Prints the matrix of the non local operator op to
+  ! a file (unit).
+  ! When running in parallel, only the root node writes
+  ! to the file but all nodes have to call this routine
+  ! simultaneously because the distributed operator has
+  ! to be collected.
+  subroutine nl_operator_write(op, filename)
+    character(len=*),       intent(in) :: filename
     type(nl_operator_type), intent(in) :: op
-    integer, intent(in)                :: unit
 
-    integer :: i, j
+    integer            :: i, j
+    integer            :: unit
     FLOAT, allocatable :: a(:, :)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    integer :: rank, ierr
+#endif
 
     call push_sub('nl_operator.nl_operator_write')
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+#endif
 
-    allocate(a(op%np, op%np))
-    a = M_ZERO
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(rank.eq.op%m%vp%root) then
+#endif
+      allocate(a(op%m%np_glob, op%m%np_glob))
+      a = M_ZERO
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    end if
+#endif
 
-    call nl_operator_op_to_matrix(op, a)
+      call nl_operator_op_to_matrix(op, a)
 
-    do i = 1, op%np
-       do j = 1, op%np - 1
-          write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
-       enddo
-       write(unit, fmt = '(f9.4)') a(i, op%np)
-    enddo
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(rank.eq.op%m%vp%root) then
+#endif
+      unit = io_open(filename, action='write')
+      if(unit < 0) then
+        message(1) = 'Could not open file '//filename//' to write operator.'
+        call write_fatal(1)
+      end if
+      do i = 1, op%m%np_glob
+         do j = 1, op%m%np_glob - 1
+            write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
+         enddo
+         write(unit, fmt = '(f9.4)') a(i, op%m%np_glob)
+      enddo
+      call io_close(unit)
 
-    deallocate(a)
+      deallocate(a)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    end if
+#endif
+
     call pop_sub()
+
   end subroutine nl_operator_write
 
 
   ! ---------------------------------------------------------
+  ! Same as nl_operator_write but transposed matrix.
   subroutine nl_operatorT_write(op, unit)
+
     type(nl_operator_type), intent(in) :: op
     integer, intent(in)                :: unit
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    integer :: rank, ierr
+#endif
 
-    call push_sub('nl_operator.nl_operator_Twrite')
+    call push_sub('nl_operator.nl_operator_write')
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+#endif
 
-    allocate(a(op%np, op%np))
-    a = M_ZERO
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(rank.eq.op%m%vp%root) then
+#endif
+      allocate(a(op%m%np_glob, op%m%np_glob))
+      a = M_ZERO
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    end if
+#endif
 
-    call nl_operator_op_to_matrix(op, a)
+      call nl_operator_op_to_matrix(op, a)
 
-    do i = 1, op%np
-       do j = 1, op%np - 1
-          write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
-       enddo
-       write(unit, fmt = '(f9.4)') a(op%np, i)
-    enddo
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(rank.eq.op%m%vp%root) then
+#endif
+      do i = 1, op%m%np_glob
+         do j = 1, op%m%np_glob - 1
+            write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
+         enddo
+         write(unit, fmt = '(f9.4)') a(op%m%np_glob, i)
+      enddo
 
-    deallocate(a)
+      deallocate(a)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    end if
+#endif
+
     call pop_sub()
+
   end subroutine nl_operatorT_write
 
 
