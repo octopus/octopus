@@ -178,7 +178,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
         call X(f_gradient)  (gr%sb, gr%f_der, psi(:, idim), grad(:, :))
         do i = 1, NP
            Hpsi(i, idim) = -M_HALF*(Hpsi(i, idim) &
-                + M_TWO*M_zI*sum(h%d%kpoints(:, ik)*grad(i, :)) &
+                + M_TWO*M_zI*sum(h%d%kpoints(1:NDIM, ik)*grad(i, 1:NDIM)) &
                 - k2*psi(i, idim))
         end do
      end do
