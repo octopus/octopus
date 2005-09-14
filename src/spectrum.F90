@@ -228,8 +228,14 @@ subroutine kick_init(k, nspin)
      k%pol(1:3, i) = k%pol(1:3, i)/sqrt(sum(k%pol(1:3, i)**2))
   enddo
 
-  ! For the moment, I will just initialize this
-  k%wprime = M_ZERO
+  if(loct_parse_block(check_inp('TDPolarizationWprime'), blk)==0) then
+    do i = 1, 3
+       call loct_parse_block_float(blk, 0, i-1, k%wprime(i))
+    enddo
+    k%wprime(1:3) = k%wprime(1:3)/sqrt(sum(k%wprime(1:3)**2))
+  else
+    k%wprime(1:3) = (/ M_ONE, M_ZERO, M_ZERO /)
+  endif
 
   call pop_sub()
 end subroutine kick_init
@@ -293,8 +299,12 @@ subroutine spectrum_cross_section_tensor(in_file, out_file, s)
   sigmap(3, 1, :, :) = sigmap(1, 3, :, :)
 
   ! But for the (2,3) term we need the wprime vector....
-  sigmap(2, 3, :, :) = sum(sigmau(1:3, i, is)*kick%wprime(1:3))
-  sigmap(3, 2, :, :) = sigmap(2, 3, :, :)
+  do is = 1, nspin
+     do i = 0, energy_steps
+        sigmap(2, 3, i, is) = sum(sigmau(1:3, i, is)*kick%wprime(1:3))
+        sigmap(3, 2, i, is) = sigmap(2, 3, i, is)
+     enddo
+  enddo
 
   ! And now, perform the necessary transformation.
   p(1:3, 1:3) = kick%pol(1:3, 1:3)
@@ -321,10 +331,10 @@ subroutine spectrum_cross_section_tensor(in_file, out_file, s)
   write(out_file, '(a)') '#Here we should put the units.'
 
   do i = 0, energy_steps
-     write(out_file,'(5e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
+     write(out_file,'(10e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
           sigma(1:3, 1:3, i, 1) 
      do j = 2, nspin
-        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
+        write(out_file,'(9e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
      enddo
      write(out_file,'(a)', advance = 'yes')
   end do
@@ -406,8 +416,10 @@ subroutine spectrum_cross_section(in_file, out_file, s)
       end do
     end do
     sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*dt
-    sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)
-    sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)/kick%delta_strength
+    ! WARNING: It is calculating now the strength function tensor, not the cross section...
+    sigma(1:3, k, 1:nspin) = - sigma(1:3, k, 1:nspin) * (w*M_TWO)/(M_Pi*kick%delta_strength)
+    !sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)
+    !sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)/kick%delta_strength
   end do
 
   write(out_file, '(a15,i2)')      '# nspin        ', nspin
@@ -423,10 +435,13 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   write(out_file, '(a)') '#Here we should put the units.'
 
   do i = 0, no_e
+     !write(out_file,'(5e15.6)', advance = 'no') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
+     !          sigma(1:3, i, 1) / (units_out%length%factor**2)
      write(out_file,'(5e15.6)', advance = 'no') (i*s%energy_step + s%min_energy) / units_out%energy%factor, &
-          sigma(1:3, i, 1) / (units_out%length%factor**2)
+          sigma(1:3, i, 1) * units_out%energy%factor
      do j = 2, nspin
-        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, j) / (units_out%length%factor**2)
+     !   write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, j) / (units_out%length%factor**2)
+        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, j) * units_out%energy%factor
      enddo
      write(out_file,'(a)', advance = 'yes')
   end do

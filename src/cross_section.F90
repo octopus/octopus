@@ -46,6 +46,9 @@ program cross_section
 
   call loct_parse_logical(check_inp('SpectrumCalculateTensor'), .false., calculate_tensor)
 
+  ! Hard coded for the moment...
+  eq_axis = 3
+
   if(.not.calculate_tensor) then
 
      call io_assign(in_file)
@@ -63,6 +66,8 @@ program cross_section
      call io_close(out_file)
 
   else
+
+
 
       select case(eq_axis)
 
@@ -89,6 +94,8 @@ program cross_section
           ! The following routine should now build the tensor...
           call spectrum_cross_section_tensor(in_file, out_file, s)
 
+          call io_close(in_file)
+          call io_close(out_file)
 
         case default
 
