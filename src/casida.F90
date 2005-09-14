@@ -474,7 +474,7 @@ contains
       call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
       rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1)
-      K_term = K_term + X(mf_integrate)(m, rho(:, 1))
+      K_term = K_term + dmf_integrate(m, rho(:, 1))
 
       deallocate(rho_i, rho_j, rho, fxc)
     end function K_term
