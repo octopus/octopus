@@ -34,11 +34,11 @@ module mpi_mod
   public :: MPI_Debug_Statistics,               &
        MPI_Debug_IN, MPI_Debug_OUT  
 
-  public :: TSD_MPI_Barrier, TSZ_MPI_Barrier,   &
-       TSD_MPI_Scatterv, TSZ_MPI_Scatterv,      &
-       TSD_MPI_Gatherv, TSZ_MPI_Gatherv,        &
-       TSD_MPI_Alltoallv, TSZ_MPI_Alltoallv,    &
-       TSD_MPI_Allreduce, TSZ_MPI_Allreduce
+  public :: TSD_MPI_Barrier, TSZ_MPI_Barrier, TSI_MPI_Barrier,  &
+       TSD_MPI_Scatterv, TSZ_MPI_Scatterv, TSI_MPI_Scatterv,    &
+       TSD_MPI_Gatherv, TSZ_MPI_Gatherv, TSI_MPI_Gatherv,       &
+       TSD_MPI_Alltoallv, TSZ_MPI_Alltoallv, TSI_MPI_Alltoallv, &
+       TSD_MPI_Allreduce, TSZ_MPI_Allreduce, TSI_MPI_Allreduce
 
   integer, public, parameter ::  &
        C_MPI_BARRIER   = 1,      &
@@ -164,6 +164,10 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
+#include "mpi_inc.F90"
+
+#include "undef.F90"
+#include "integer.F90"
 #include "mpi_inc.F90"
 
 #endif
