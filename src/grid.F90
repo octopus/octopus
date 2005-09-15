@@ -117,7 +117,9 @@ contains
     integer,         intent(in) :: iunit
 
     if(mpiv%node .ne. 0) then
+#ifdef DEBUG
        call write_debug_newlines(4)
+#endif
        return
     endif
 
