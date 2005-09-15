@@ -51,7 +51,6 @@ module messages
   ! max_lun is currently 99, i.e. we can hardwire unit_offset above 1000
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
-  integer,            private :: sec_last_push, sec_last_pop
 
 contains
 
@@ -388,7 +387,6 @@ contains
     character(len=*), intent(in) :: sub_name
 
     integer i, iunit, sec, usec
-    character(len=4) :: filenum
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
@@ -441,7 +439,6 @@ contains
   ! ---------------------------------------------------------
   subroutine pop_sub()
     integer i, iunit, sec, usec
-    character(len=4) :: filenum
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)

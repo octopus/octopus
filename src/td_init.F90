@@ -25,8 +25,7 @@ subroutine td_init(gr, td, st, h, outp)
   type(hamiltonian_type), intent(in)    :: h
   type(output_type),      intent(in)    :: outp
 
-  integer :: i, j, n, dummy
-  integer(POINTER_SIZE) :: blk
+  integer :: dummy
 
   call push_sub('td_init.td_init')
 

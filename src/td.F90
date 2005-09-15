@@ -59,7 +59,7 @@ module timedep
      integer           :: max_iter       ! maximum number of iterations to perform
      integer           :: iter           ! the actual iteration
      integer           :: epot_regenerate! Every epot_regenerate, the external potential
-                                         ! regenerated *exactly*.
+     ! regenerated *exactly*.
      integer           :: move_ions      ! how do we move the ions?
 
      ! The *kick* used in "linear response in the time domain" calculations.
@@ -89,7 +89,7 @@ contains
     type(states_type),   pointer :: st
     type(geometry_type), pointer :: geo
     logical :: stopping
-    integer :: i, ii, j, idim, ist, ik, err
+    integer :: i, ii, j, idim, ist, ik
     FLOAT, allocatable ::  x1(:,:), x2(:,:), f1(:,:) ! stuff for verlet
     FLOAT :: etime
 
@@ -142,7 +142,7 @@ contains
        end select
     endif
 
-    
+
     if(td%iter == 0) then
        call apply_delta_field(td%kick)
        call td_run_zero_iter()

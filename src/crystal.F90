@@ -28,7 +28,7 @@
       FLOAT, private :: bmet(3,3) ! b_i dot b_k for reciprocal lattice vectors
 
 !      FLOAT, private :: volume_check, xdum
-      integer, private ::  i, j, k, l, m !, ierr
+      integer, private ::  i, j, k, l! ,m , ierr
 
       FLOAT :: tnpi(3), xmt(3,3)
       character(len=1) :: i1(3)

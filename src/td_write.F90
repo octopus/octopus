@@ -80,9 +80,8 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
      
 
   FLOAT :: rmin
-  integer :: ierr, nus, first, j
+  integer :: ierr, nus, first
   logical :: log
-  character(len=256) :: filename
 
   call push_sub('td_write.td_write_handler')
 
@@ -453,7 +452,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
   type(kick_type),       intent(in) :: kick
   integer,               intent(in) :: iter
 
-  integer :: is, j, l, m, add_lm
+  integer :: is, l, m, add_lm
   character(len=120) :: aux
   FLOAT, allocatable :: nuclear_dipole(:), multipole(:,:)
 
@@ -649,7 +648,6 @@ subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
   integer,               intent(in) :: iter
 
   CMPLX :: gsp
-  integer :: ierr
 
   call push_sub('td_write.td_write_gsp')
 

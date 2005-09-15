@@ -112,7 +112,6 @@ contains
 
 subroutine spectrum_init(s)
   type(spec_type), intent(inout) :: s
-  character(len=100) :: txt
 
   call push_sub('spectrum.spectrum_init')
 
@@ -459,7 +458,6 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: dipole(:,:)
 
-  character(len=100) :: str
 
   call push_sub('spectrum_strength_function')
 
