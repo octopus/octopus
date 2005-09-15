@@ -252,91 +252,134 @@ subroutine spectrum_skip_header(iunit)
 
 end subroutine spectrum_skip_header
 
-subroutine spectrum_cross_section_tensor(in_file, out_file, s)
-  integer, intent(in)    :: in_file
-  integer, intent(in)    :: out_file
+subroutine spectrum_cross_section_tensor(s, out_file, in_file_1, in_file_2, in_file_3)
   type(spec_type),  intent(inout) :: s
+  integer, intent(in)    :: out_file
+  integer, intent(in)    :: in_file_1
+  integer, optional, intent(in)    :: in_file_2
+  integer, optional, intent(in)    :: in_file_3
 
-  integer :: nspin, energy_steps, i, is, j
-  FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :), p(:, :), ip(:, :)
+  integer :: nspin, energy_steps, i, is, j, equiv_axis, m
+  FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
+                        sigmav(:, :, :), p(:, :), ip(:, :)
   FLOAT :: dw, dump
   type(kick_type) :: kick
 
-  ! For the moment, we assume that we have three equivalent axis.
-
   call push_sub('spectrum.spectrum_cross_section_tensor')
 
-  call spectrum_cross_section_info(in_file, nspin, kick, energy_steps, dw)
+  equiv_axis = 3
+  if(present(in_file_2)) equiv_axis = 2
+  if(present(in_file_3)) equiv_axis = 1
 
-  allocate(sigma (3, 3, 0:energy_steps, nspin), &
-           sigmap(3, 3, 0:energy_steps, nspin), &
-           sigmau(3, 0:energy_steps, nspin), &
-           p(3, 3), ip(3, 3))
+  select case(equiv_axis)
 
-  call spectrum_skip_header(in_file)
+  case(3)
 
-  do i = 0, energy_steps
-     read(in_file, *) dump, sigmau(1:3, i, 1:nspin)
-  enddo
+      call spectrum_cross_section_info(in_file_1, nspin, kick, energy_steps, dw)
 
-  ! The first row of sigma is the vector that we have just read, but
-  ! properly projected...
-  do is = 1, nspin
-     do i = 0, energy_steps
-        sigmap(1, 1, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 1))
-        sigmap(1, 2, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 2))
-        sigmap(1, 3, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 3))
-     enddo
-  enddo
+      allocate(sigma (3, 3, 0:energy_steps, nspin), &
+              sigmap(3, 3, 0:energy_steps, nspin), &
+              sigmau(3, 0:energy_steps, nspin), &
+              p(3, 3), ip(3, 3))
 
-  ! The diagonal parts are also equal:
-  sigmap(2, 2, :, :) = sigmap(1, 1, :, :)
-  sigmap(3, 3, :, :) = Sigmap(1, 1, :, :)
+      call spectrum_skip_header(in_file_1)
 
-  ! The (2,1) term and (3,1) term are equal by symmetry:
-  sigmap(2, 1, :, :) = sigmap(1, 2, :, :)
-  sigmap(3, 1, :, :) = sigmap(1, 3, :, :)
+      do i = 0, energy_steps
+         read(in_file_1, *) dump, sigmau(1:3, i, 1:nspin)
+      enddo
 
-  ! But for the (2,3) term we need the wprime vector....
-  do is = 1, nspin
-     do i = 0, energy_steps
-        sigmap(2, 3, i, is) = sum(sigmau(1:3, i, is)*kick%wprime(1:3))
-        sigmap(3, 2, i, is) = sigmap(2, 3, i, is)
-     enddo
-  enddo
+      ! The first row of sigma is the vector that we have just read, but
+      ! properly projected...
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(1, 1, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 1))
+            sigmap(1, 2, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 2))
+            sigmap(1, 3, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 3))
+         enddo
+      enddo
 
-  ! And now, perform the necessary transformation.
-  p(1:3, 1:3) = kick%pol(1:3, 1:3)
-  call invert_3by3(p, ip, dump, .false.)
-  do is = 1, nspin
-     do i = 0, energy_steps
-        sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )
-     enddo
-  enddo
+      ! The diagonal parts are also equal:
+      sigmap(2, 2, :, :) = sigmap(1, 1, :, :)
+      sigmap(3, 3, :, :) = Sigmap(1, 1, :, :)
 
-  ! Finally, write down the result
-  write(out_file, '(a15,i2)')      '# nspin        ', nspin
-  write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-  write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-  write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-  write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
-  write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
-  write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-  write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
-  write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-  write(out_file, '(a)') '#Here we should put the column names.'
-  write(out_file, '(a)') '#Here we should put the units.'
+      ! The (2,1) term and (3,1) term are equal by symmetry:
+      sigmap(2, 1, :, :) = sigmap(1, 2, :, :)
+      sigmap(3, 1, :, :) = sigmap(1, 3, :, :)
 
-  do i = 0, energy_steps
-     write(out_file,'(10e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
-          sigma(1:3, 1:3, i, 1) 
-     do j = 2, nspin
-        write(out_file,'(9e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
-     enddo
-     write(out_file,'(a)', advance = 'yes')
-  end do
+      ! But for the (2,3) term we need the wprime vector....
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(2, 3, i, is) = sum(sigmau(1:3, i, is)*kick%wprime(1:3))
+            sigmap(3, 2, i, is) = sigmap(2, 3, i, is)
+         enddo
+      enddo
 
-  deallocate(sigma, sigmap, sigmau, p, ip)
+      ! And now, perform the necessary transformation.
+      p(1:3, 1:3) = kick%pol(1:3, 1:3)
+      call invert_3by3(p, ip, dump, .false.)
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )
+         enddo
+      enddo
+
+      ! Finally, write down the result
+      write(out_file, '(a15,i2)')      '# nspin        ', nspin
+      write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+      write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+      write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+      write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+      write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+      write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+      write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+      write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+      write(out_file, '(a)') '#Here we should put the column names.'
+      write(out_file, '(a)') '#Here we should put the units.'
+
+      do i = 0, energy_steps
+         write(out_file,'(10e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
+              sigma(1:3, 1:3, i, 1) 
+         do j = 2, nspin
+            write(out_file,'(9e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
+         enddo
+         write(out_file,'(a)', advance = 'yes')
+      end do
+
+      deallocate(sigma, sigmap, sigmau, p, ip)
+
+  case(2)
+
+      call spectrum_cross_section_info(in_file_1, nspin, kick, energy_steps, dw)
+      call spectrum_cross_section_info(in_file_2, i, kick, j, dump)
+      if(i .ne. nspin) then
+
+      endif
+      if(j .ne. energy_steps) then
+
+      endif
+      if(dump .ne. dw) then
+
+      endif
+
+      allocate(sigma (3, 3, 0:energy_steps, nspin), &
+               sigmap(3, 3, 0:energy_steps, nspin), &
+               sigmau(3, 0:energy_steps, nspin), &
+               sigmav(3, 0:energy_steps, nspin), &
+               p(3, 3), ip(3, 3))
+
+      do i = 0, energy_steps
+         read(in_file_1, *) dump, sigmau(1:3, i, 1:nspin)
+      enddo
+      do i = 0, energy_steps
+         read(in_file_2, *) dump, sigmav(1:3, i, 1:nspin)
+      enddo
+      deallocate(sigma, sigmap, sigmau, sigmav, p, ip)
+
+
+  case default
+
+  end select
+
   call pop_sub()
 end subroutine spectrum_cross_section_tensor
 
@@ -377,13 +420,13 @@ subroutine spectrum_cross_section(in_file, out_file, s)
     dipole(1:3, i, :) = dipole(1:3, i, :) * units_out%length%factor
   end do
   ! Now substract the initial dipole.
-  do i = 0, time_steps
+  do i = time_steps, 0, -1
      dipole(:, i, :) = dipole(:, i, :) - dipole(:, 0, :)
   enddo
 
   ! Get the number of energy steps.
   no_e = (s%max_energy - s%min_energy) / s%energy_step
-  allocate(sigma(3, 0:no_e, nspin))
+  allocate(sigma(3, 0:no_e, nspin)); sigma = M_ZERO
 
   ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
   allocate(dumpa(is:ie))

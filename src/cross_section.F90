@@ -28,10 +28,11 @@ program cross_section
   use units
   use spectrum
 
-  integer :: in_file, out_file, eq_axis, i, j
+  implicit none
+
+  integer :: in_file_1, in_file_2, out_file_1, out_file_2, eq_axis, i, j
   integer(POINTER_SIZE) :: blk
   logical :: calculate_tensor
-  character(len=100) :: txt
   type(spec_type) :: s
 
   ! Initialize stuff
@@ -44,26 +45,41 @@ program cross_section
 
   call spectrum_init(s)
 
+  ! In the future, it would be nice if these two were entered through the command line,
+  ! so that no input file is needed for this utility. Also, the file names (multipoles.x)
+  ! should be entered in the command line.
   call loct_parse_logical(check_inp('SpectrumCalculateTensor'), .false., calculate_tensor)
-
-  ! Hard coded for the moment...
-  eq_axis = 3
+  call loct_parse_int(check_inp('TDPolarizationEquivAxis'), 0, eq_axis)
+  select case(eq_axis)
+    case(0, 1)
+      write(message(1),'(a)') 'No symmetry information will be used.'
+      write(message(2),'(a)') 'Sorry, this case is not implemnted yet.'
+      call write_fatal(2)
+    case(2)
+      write(message(1),'(a)') 'The system contains two equivalent axis.'
+    case(3)
+      write(message(1),'(a)') 'The system contains three equivalent axis.'
+    case default
+      write(message(1),'(a)') 'The number of equivalent axis must be a number between zero and three.'
+      call write_fatal(1)
+  end select
+  call write_info(1)
 
   if(.not.calculate_tensor) then
 
-     call io_assign(in_file)
-     in_file = io_open('multipoles', action='read', status='old', die=.false.)
-     if(in_file < 0) then
-       in_file = io_open('td.general/multipoles', action='read', status='old')
+     call io_assign(in_file_1)
+     in_file_1 = io_open('multipoles', action='read', status='old', die=.false.)
+     if(in_file_1 < 0) then
+       in_file_1 = io_open('td.general/multipoles', action='read', status='old')
      end if
 
-     call io_assign(out_file)
-     out_file = io_open('cross_section_vector', action='write')
+     call io_assign(out_file_1)
+     out_file_1 = io_open('cross_section_vector', action='write')
 
-     call spectrum_cross_section(in_file, out_file, s)
+     call spectrum_cross_section(in_file_1, out_file_1, s)
 
-     call io_close(in_file)
-     call io_close(out_file)
+     call io_close(in_file_1)
+     call io_close(out_file_1)
 
   else
 
@@ -73,29 +89,60 @@ program cross_section
 
         case(2)
 
-        case(3)
-
-          call io_assign(in_file)
-          in_file = io_open('multipoles', action='read', status='old', die=.false.)
-          if(in_file < 0) then
-             in_file = io_open('td.general/multipoles', action='read', status='old')
+          call io_assign(in_file_1)
+          in_file_1 = io_open('multipoles.1', action='read', status='old', die=.false.)
+          if(in_file_1 < 0) then
+             in_file_1 = io_open('td.general/multipoles.1', action='read', status='old')
           end if
-          call io_assign(out_file)
-          out_file = io_open('cross_section_vector', action='write')
+          call io_assign(in_file_2)
+          in_file_2 = io_open('multipoles.2', action='read', status='old', die=.false.)
+          if(in_file_2 < 0) then
+             in_file_2 = io_open('td.general/multipoles.2', action='read', status='old')
+          end if
+          call io_assign(out_file_1)
+          out_file_1 = io_open('cross_section_vector.1', action='write')
+          call io_assign(out_file_2)
+          out_file_2 = io_open('cross_section_vector.2', action='write')
 
-          call spectrum_cross_section(in_file, out_file, s)
-          call io_close(in_file)
-          call io_close(out_file)
+          call spectrum_cross_section(in_file_1, out_file_1, s)
+          call io_close(in_file_1)
+          call io_close(out_file_1)
+          call spectrum_cross_section(in_file_2, out_file_2, s)
+          call io_close(in_file_2)
+          call io_close(out_file_2)
 
           ! And now we build the cross section tensor
-          in_file  = io_open('cross_section_vector', action='read', status='old')
-          out_file = io_open('cross_section_tensor', action='write')
+          in_file_1  = io_open('cross_section_vector.1', action='read', status='old')
+          in_file_2  = io_open('cross_section_vector.2', action='read', status='old')
+          out_file_1 = io_open('cross_section_tensor', action='write')
+
+          !call spectrum_cross_section(s, out_file, in_file)
+          call io_close(in_file_1)
+          call io_close(out_file_1)
+
+        case(3)
+
+          call io_assign(in_file_1)
+          in_file_1 = io_open('multipoles', action='read', status='old', die=.false.)
+          if(in_file_1 < 0) then
+             in_file_1 = io_open('td.general/multipoles', action='read', status='old')
+          end if
+          call io_assign(out_file_1)
+          out_file_1 = io_open('cross_section_vector', action='write')
+
+          call spectrum_cross_section(in_file_1, out_file_1, s)
+          call io_close(in_file_1)
+          call io_close(out_file_1)
+
+          ! And now we build the cross section tensor
+          in_file_1  = io_open('cross_section_vector', action='read', status='old')
+          out_file_1 = io_open('cross_section_tensor', action='write')
 
           ! The following routine should now build the tensor...
-          call spectrum_cross_section_tensor(in_file, out_file, s)
+          call spectrum_cross_section_tensor(s, out_file_1, in_file_1)
 
-          call io_close(in_file)
-          call io_close(out_file)
+          call io_close(in_file_1)
+          call io_close(out_file_1)
 
         case default
 
