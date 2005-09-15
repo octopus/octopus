@@ -105,17 +105,22 @@ module par_vec
             vec_end,            &
             dvec_scatter,       &
             zvec_scatter,       &
+            ivec_scatter,       &
             dvec_scatter_bndry, &
             zvec_scatter_bndry, &
+            ivec_scatter_bndry, &
             dvec_scatter_all,   &
             zvec_scatter_all,   &
+            ivec_scatter_all,   &
             dvec_gather,        &
             zvec_gather,        &
             ivec_gather,        &
             dvec_ghost_update,  &
             zvec_ghost_update,  &
+            ivec_ghost_update,  &
             dvec_integrate,     &
-            zvec_integrate
+            zvec_integrate,     &
+            ivec_integrate
 
   type pv_type
     integer          :: comm                 ! MPI communicator to use.
@@ -527,58 +532,16 @@ contains
   end subroutine vec_end
 
 
-  ! Xvec_gather for integer arrays (needed e. g. by nl_operator_op_to_matrix
-  ! and the like). As the X macro only works for real and complex
-  ! i do copy and paste.
-  subroutine ivec_gather(vp, v, v_local)
-    type(pv_type), intent(in)  :: vp
-    integer,       intent(out) :: v(:)
-    integer,       intent(in)  :: v_local(:)
-
-    integer              :: i         ! Counter.
-    integer              :: ierr      ! MPI errorcode.
-    integer              :: rank      ! Rank of node.
-    integer, allocatable :: displs(:) ! Displacements for scatter.
-    integer, allocatable :: v_tmp(:)  ! Receive buffer.
-    
-    call push_sub('par_vec.ivec_gather')
-    
-    call MPI_Comm_rank(vp%comm, rank, ierr)
-
-
-    ! Unfortunately, vp%xlocal ist not quite the required
-    ! displacement vector.
-    allocate(displs(vp%p))
-    displs = vp%xlocal-1
-
-    if(rank.eq.vp%root) allocate(v_tmp(vp%np))
-
-    call MPI_Gatherv(v_local, vp%np_local(rank+1), MPI_INTEGER, v_tmp, &
-                     vp%np_local, displs, MPI_INTEGER,                 &
-                     vp%root, vp%comm, ierr)
-
-    ! Copy values from v_tmp to their original position in v.
-    if(rank.eq.vp%root) then
-      do i = 1, vp%np
-        v(vp%local(i)) = v_tmp(i)
-      end do
-      
-      deallocate(v_tmp)
-    end if
-
-    deallocate(displs)
-
-    call pop_sub()
-
-  end subroutine ivec_gather
-
-
 #include "undef.F90"
 #include "complex.F90"
 #include "par_vec_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
+#include "par_vec_inc.F90"
+
+#include "undef.F90"
+#include "integer.F90"
 #include "par_vec_inc.F90"
 
 #endif

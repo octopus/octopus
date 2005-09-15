@@ -17,25 +17,17 @@
 !!
 !! $Id$
 
-#ifdef R_TREAL
-#undef R_TREAL
-#endif
+#define R_TINTEGER  1
 
-#ifdef R_TCOMPLEX
-#undef R_TCOMPLEX
-#endif
+#define X(x)        i ## x
 
-#ifdef R_TINTEGER
-#undef R_TINTEGER
-#endif
+#define R_TYPE      integer
+#define R_MPITYPE   MPI_INTEGER
+#define R_TOTYPE(x) (x)
 
-#undef X
-#undef TS
-#undef R_TYPE
-#undef R_MPITYPE
-#undef R_TOTYPE
+#define R_ABS(x)    abs(x)
+#define R_CONJ(x)   (x)
+#define R_REAL(x)   (x)
+#define R_AIMAG(x)  (M_ZERO)
 
-#undef R_ABS
-#undef R_CONJ
-#undef R_REAL
-#undef R_AIMAG
+#define TS(x)       TSI_ ## x
