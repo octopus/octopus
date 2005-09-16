@@ -412,11 +412,16 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   call spectrum_skip_header(in_file)
   allocate(dipole(3, 0:time_steps, nspin))
   do i = 0, time_steps
-    if(nspin == 1) then
-      read(in_file, *) j, dump, dump, dipole(1:3, i, 1)
-    else
-      read(in_file, *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2)
-    endif
+    select case(nspin)
+     case(1)
+       read(in_file, *) j, dump, dump, dipole(1:3, i, 1)
+     case(2)
+       read(in_file, *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2)
+     case(4)
+       read(in_file, *) j, dump, dump, dipole(1:3, i, 1), dump, dipole(1:3, i, 2), &
+                                 dump, dipole(1:3, i, 3), dump, dipole(1:3, i, 4)
+    end select
+
     dipole(1:3, i, :) = dipole(1:3, i, :) * units_out%length%factor
   end do
   ! Now substract the initial dipole.
@@ -497,10 +502,8 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   integer :: iunit, i, is, ie, ntiter, j, jj, k, isp, time_steps, lmax
   type(kick_type) :: kick
-  FLOAT :: dump, dt, x, z(3), zz(3)
-  FLOAT, allocatable :: dumpa(:)
-  FLOAT, allocatable :: dipole(:,:)
-
+  FLOAT :: dump, dt, x
+  FLOAT, allocatable :: dumpa(:), dipole(:,:), z(:, :)
 
   call push_sub('spectrum_strength_function')
 
@@ -519,17 +522,26 @@ subroutine spectrum_strength_function(out_file, s, sf, print_info)
 
   call spectrum_skip_header(iunit)
   ! load dipole from file
-  allocate(dipole(0:time_steps, sf%nspin))
+  allocate(dipole(0:time_steps, sf%nspin), z(3, sf%nspin))
   do i = 0, time_steps
-    if(sf%nspin == 1) then
-      read(iunit, *) j, dump, dump, z(1:3)
-      dipole(i, 1) = -dot_product(z(1:3),kick%pol(1:3, 1))
-    else
-      read(iunit, *) j, dump, dump, z(1:3), dump, zz(1:3)
-      dipole(i, 1) = -dot_product(z(1:3)+zz(1:3),kick%pol(1:3, 1))
-    endif
+    select case(sf%nspin)
+     case(1)
+      read(iunit, *) j, dump, dump, z(1:3, 1)
+      dipole(i, 1) = -dot_product(z(1:3, 1),kick%pol(1:3, 1))
+     case(2)
+      read(iunit, *) j, dump, dump, z(1:3, 1), dump, z(1:3, 1)
+      dipole(i, 1) = -dot_product(z(1:3, 1),kick%pol(1:3, 1))
+      dipole(i, 2) = -dot_product(z(1:3, 2),kick%pol(1:3, 1))
+     case(4)
+      read(iunit, *) j, dump, dump, z(1:3, 1), dump, z(1:3, 2), dump, z(1:3, 3), dump, z(1:3, 4)
+      dipole(i, 1) = -dot_product(z(1:3, 1),kick%pol(1:3, 1))
+      dipole(i, 2) = -dot_product(z(1:3, 2),kick%pol(1:3, 1))
+      dipole(i, 3) = -dot_product(z(1:3, 3),kick%pol(1:3, 1))
+      dipole(i, 4) = -dot_product(z(1:3, 4),kick%pol(1:3, 1))
+    end select
     dipole(i,:) = dipole(i,:) * units_out%length%factor
   end do
+  deallocate(z)
   call io_close(iunit)
 
   ! subtract static dipole
