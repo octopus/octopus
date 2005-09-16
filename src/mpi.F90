@@ -34,26 +34,30 @@ module mpi_mod
   public :: MPI_Debug_Statistics,               &
        MPI_Debug_IN, MPI_Debug_OUT  
 
-  public :: TSD_MPI_Barrier, TSZ_MPI_Barrier, TSI_MPI_Barrier,  &
-       TSD_MPI_Scatterv, TSZ_MPI_Scatterv, TSI_MPI_Scatterv,    &
-       TSD_MPI_Gatherv, TSZ_MPI_Gatherv, TSI_MPI_Gatherv,       &
-       TSD_MPI_Alltoallv, TSZ_MPI_Alltoallv, TSI_MPI_Alltoallv, &
+  public ::                                                        &
+       TSD_MPI_Barrier, TSZ_MPI_Barrier, TSI_MPI_Barrier,          &
+       TSD_MPI_Scatterv, TSZ_MPI_Scatterv, TSI_MPI_Scatterv,       &
+       TSD_MPI_Gatherv, TSZ_MPI_Gatherv, TSI_MPI_Gatherv,          &
+       TSD_MPI_Alltoallv, TSZ_MPI_Alltoallv, TSI_MPI_Alltoallv,    &
+       TSD_MPI_Allgatherv, TSZ_MPI_Allgatherv, TSI_MPI_Allgatherv, &
        TSD_MPI_Allreduce, TSZ_MPI_Allreduce, TSI_MPI_Allreduce
 
   integer, public, parameter ::  &
-       C_MPI_BARRIER   = 1,      &
-       C_MPI_SCATTERV  = 2,      &
-       C_MPI_GATHERV   = 3,      &
-       C_MPI_ALLTOALLV = 4,      &
-       C_MPI_ALLREDUCE = 5
+       C_MPI_BARRIER    = 1,     &
+       C_MPI_SCATTERV   = 2,     &
+       C_MPI_GATHERV    = 3,     &
+       C_MPI_ALLTOALLV  = 4,     &
+       C_MPI_ALLGATHERV = 5,     &
+       C_MPI_ALLREDUCE  = 6
 
   character(len=15), dimension(C_MPI_ALLREDUCE), public :: mpi_rlabel = &
        (/                &
-       'MPI_BARRIER  ',  &
-       'MPI_SCATTERV ',  &
-       'MPI_GATHERV  ',  & 
-       'MPI_ALLTOALLV',  &
-       'MPI_ALLREDUCE'   &
+       'MPI_BARRIER   ', &
+       'MPI_SCATTERV  ', &
+       'MPI_GATHERV   ', & 
+       'MPI_ALLTOALLV ', &
+       'MPI_ALLGATHERV', &
+       'MPI_ALLREDUCE '  &
        /)       
 
   integer, public :: call_counter(C_MPI_BARRIER:C_MPI_ALLREDUCE) = 0
