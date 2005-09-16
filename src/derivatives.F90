@@ -262,6 +262,9 @@ contains
     integer, allocatable :: polynomials(:,:)
     FLOAT,   allocatable :: rhs(:,:)
     integer :: i, j, k
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    integer :: rank, ierr
+#endif
 
     type(nl_operator_type) :: auxop
 
@@ -344,11 +347,28 @@ contains
        ! the case of non-constant weights == curvilinear coordinates).
        ! WARNING: Same thing should be done for the gradients. The subroutines in
        ! derivatives_inc.F90 should then be changed accordingly.
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+        call MPI_Comm_rank(m%vp%comm, rank, ierr)
+#endif
        if(m%use_curvlinear) then
           do i = 1, m%np
              do j = 1, der%lapl%n
                 k = der%lapl%i(j, i)
-                if(k>m%np) then
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+                if(k.le.m%vp%np_local(rank+1)) then
+                  k = m%vp%local(m%vp%xlocal(rank+1)+k-1)
+                else if(m%vp%np_local(rank+1).lt.k.and. &
+                        k.le.(m%vp%np_ghost(rank+1)+m%vp%np_local(rank+1))) then
+                  k = m%vp%ghost(m%vp%xghost(rank+1)+k &
+                      -m%vp%np_local(rank+1)-1)
+                else
+                  k = m%vp%bndry(m%vp%xbndry(rank+1)+k &
+                      -m%vp%np_local(rank+1)          &
+                      -m%vp%np_ghost(rank+1)-1)
+                end if
+#endif
+
+                if(k>m%np_glob) then
                    der%lapl%w_re(j, i) = M_ZERO
                    der%lapl%i(j, i) = i
                 endif

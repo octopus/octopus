@@ -43,7 +43,7 @@ module nl_operator
        nl_operator_end,            &
        nl_operator_skewadjoint,    &
        nl_operator_selfadjoint, &
-nl_operator_write
+       nl_operator_write
 
   type nl_operator_type
      type(mesh_type), pointer :: m         ! pointer to the underlying mesh
@@ -235,39 +235,89 @@ contains
   end subroutine nl_operator_transpose
 
   ! ---------------------------------------------------------
+  ! opt has to be initialised and built.
   subroutine nl_operator_skewadjoint(op, opt, m)
     type(nl_operator_type), intent(in)  :: op
     type(nl_operator_type), intent(out) :: opt
     type(mesh_type),        intent(in)  :: m
 
-    integer :: np, i, j, index, l, k
+    integer          :: np, i, j, index, l, k
+    integer, pointer :: op_i(:, :)
+    FLOAT, pointer   :: vol_pp(:)
+    FLOAT, pointer   :: w_re(:, :), w_re_t(:, :)
+    FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
+    
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    integer                :: rank, ierr
+    type(nl_operator_type) :: opg, opgt
+#endif
 
     call push_sub('nl_operator.nl_operator_skewadjoint')
 
-    np = op%np
     opt = op
-    opt%w_re = M_ZERO
-    if (op%cmplx_op) opt%w_im = M_ZERO
-    do i = 1, op%np
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+
+    call nl_operator_allgather(op, opg)
+    call nl_operator_init(opgt, op%n)
+    opgt = opg
+    allocate(vol_pp(m%np_glob))
+    call dvec_allgather(m%vp, vol_pp, m%vol_pp)
+    
+    op_i   => opg%i
+    w_re   => opg%w_re
+    w_re_t => opgt%w_re
+    if(op%cmplx_op) then
+      w_im   => opg%w_im
+      w_im_t => opgt%w_im
+    end if
+#else
+    op_i   => op%i
+    w_re   => op%w_re
+    w_re_t => opt%w_re
+    if(op%cmplx_op) then
+      w_im   => op%w_im
+      w_im_t => opt%w_im
+    end if
+    vol_pp => m%vol_pp
+#endif
+
+    np = m%np_glob
+    w_re_t = M_ZERO
+    if (op%cmplx_op) w_im_t = M_ZERO
+    do i = 1, m%np_glob
        do j = 1, op%n
-          index = op%i(j, i)
-          if(index <= op%np) then
+          index = op_i(j, i)
+          if(index <= m%np_glob) then
              do l = 1, op%n
-                k = op%i(l, index)
+                k = op_i(l, index)
                 if( k == i ) then
                    if(.not.op%const_w) then
-                      opt%w_re(j, i) = M_HALF*op%w_re(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
+                      w_re_t(j, i) = M_HALF*w_re(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_re(l, index)
                       if (op%cmplx_op) &
-                           opt%w_im(j, i) = M_HALF*op%w_im(j, i) - M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
+                           w_im_t(j, i) = M_HALF*w_im(j, i) - M_HALF*(vol_pp(index)/vol_pp(i))*w_im(l, index)
                    else
-                      opt%w_re(j, 1) = op%w_re(l, 1)
-                      if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
+                      w_re_t(j, 1) = w_re(l, 1)
+                      if (op%cmplx_op) w_im_t(j, 1) = w_im(l, 1)
                    endif
                 endif
              enddo
           endif
        enddo
     enddo
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    deallocate(vol_pp)
+    do i = 1, m%vp%np_local(rank+1)
+      opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
+      if(opt%cmplx_op) then
+        opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
+      end if
+    end do
+    call nl_operator_end(opg)
+    call nl_operator_end(opgt)
+#endif
 
     call pop_sub()
   end subroutine nl_operator_skewadjoint
@@ -278,39 +328,298 @@ contains
     type(nl_operator_type), intent(out) :: opt
     type(mesh_type),        intent(in)  :: m
 
-    integer :: np, i, j, index, l, k
+    integer          :: np, i, j, index, l, k
+    integer, pointer :: op_i(:, :)
+    FLOAT, pointer   :: vol_pp(:)
+    FLOAT, pointer   :: w_re(:, :), w_re_t(:, :)
+    FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
+    
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    integer                :: rank, ierr
+    type(nl_operator_type) :: opg, opgt
+#endif
 
     call push_sub('nl_operator.nl_operator_selfadjoint')
 
     np = op%np
     opt = op
-    opt%w_re = M_ZERO
-    if (op%cmplx_op) opt%w_im = M_ZERO
-    do i = 1, op%np
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+
+    call nl_operator_allgather(op, opg)
+    call nl_operator_init(opgt, op%n)
+    opgt = opg
+    allocate(vol_pp(m%np_glob))
+    call dvec_allgather(m%vp, vol_pp, m%vol_pp)
+    
+    op_i   => opg%i
+    w_re   => opg%w_re
+    w_re_t => opgt%w_re
+    if(op%cmplx_op) then
+      w_im   => opg%w_im
+      w_im_t => opgt%w_im
+    end if
+#else
+    op_i   => op%i
+    w_re   => op%w_re
+    w_re_t => opt%w_re
+    if(op%cmplx_op) then
+      w_im   => op%w_im
+      w_im_t => opt%w_im
+    end if
+    vol_pp => m%vol_pp
+#endif
+
+    np = m%np_glob
+    w_re_t = M_ZERO
+    if (op%cmplx_op) w_im_t = M_ZERO
+    do i = 1, m%np_glob
        do j = 1, op%n
-          index = op%i(j, i)
-          if(index <= op%np) then
+          index = op_i(j, i)
+          if(index <= m%np_glob) then
              do l = 1, op%n
-                k = op%i(l, index)
+                k = op_i(l, index)
                 if( k == i ) then
                    if(.not.op%const_w) then
-                      opt%w_re(j, i) = M_HALF*op%w_re(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_re(l, index)
+                      w_re_t(j, i) = M_HALF*w_re(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*w_re(l, index)
                       if (op%cmplx_op) &
-                           opt%w_im(j, i) = M_HALF*op%w_im(j, i) + M_HALF*(m%vol_pp(index)/m%vol_pp(i))*op%w_im(l, index)
+                           w_im_t(j, i) = M_HALF*w_im(j, i) + M_HALF*(vol_pp(index)/vol_pp(i))*w_im(l, index)
                    else
-                      opt%w_re(j, 1) = op%w_re(l, 1)
-                      if (op%cmplx_op) opt%w_im(j, 1) = op%w_im(l, 1)
+                      w_re_t(j, 1) = w_re(l, 1)
+                      if (op%cmplx_op) w_im_t(j, 1) = w_im(l, 1)
                    endif
                 endif
              enddo
           endif
        enddo
     enddo
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    deallocate(vol_pp)
+    do i = 1, m%vp%np_local(rank+1)
+      opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
+      if(opt%cmplx_op) then
+        opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
+      end if
+    end do
+    call nl_operator_end(opg)
+    call nl_operator_end(opgt)
+#endif
+
 
     call pop_sub()
   end subroutine nl_operator_selfadjoint
 
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  ! ---------------------------------------------------------
+  ! Collects a distributed non local operator op into opg
+  ! on the root node. nl_operator_end has to be called
+  ! on opg when no longer needed.
+  subroutine nl_operator_gather(op, opg)
+    type(nl_operator_type), intent(in)  :: op  ! Local operator.
+    type(nl_operator_type), intent(out) :: opg ! Global operator.
+
+    integer :: i
+    integer :: rank, ierr
+
+    call push_sub('nl_operator.nl_operator_gather')
+
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+
+    ! If root node, copy elements of op to opg that
+    ! are independent from the partitions, i. e. everything
+    ! except op%i and - in the non constant case - op%w_re
+    ! op%w_im.
+    if(rank.eq.op%m%vp%root) then
+      call nl_operator_common_copy(op, opg)
+    end if
+
+    ! Gather op%i and - if necessary - op%w_re and op%w_im.
+    ! Collect for every point in the stencil in a single step.
+    ! This permits to use ivec_gather.
+    do i = 1, op%n
+      call ivec_gather(op%m%vp, opg%i(i, :), op%i(i, :))
+    end do
+    if(rank.eq.op%m%vp%root) then
+      call nl_operator_translate_indices(opg)
+    end if
+
+    ! Weights have to be collected only if they are
+    ! not constant.
+    if(.not.op%const_w) then
+      do i = 1, op%n
+        call dvec_gather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
+        if(op%cmplx_op) call dvec_gather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
+      end do
+    end if
+ 
+    call pop_sub()
+
+  end subroutine nl_operator_gather
+
+
+  ! ---------------------------------------------------------
+  ! Reverse of nl_operator_gather. op is allocated, so
+  ! it is necessary to call nl_operator_end on it some time.
+  subroutine nl_operator_scatter(op, opg)
+    type(nl_operator_type), intent(out) :: op
+    type(nl_operator_type), intent(in)  :: opg
+
+    integer :: i
+
+    call push_sub('nl_operator.nl_operator_scatter')
+
+    call nl_operator_init(op, opg%n)
+    call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
+
+    do i = 1, opg%n
+      call dvec_scatter(opg%m%vp, opg%w_re(i, :), op%w_re(i, :))
+      if(opg%cmplx_op) then
+        call dvec_scatter(opg%m%vp, opg%w_im(i, :), op%w_im(i, :))
+      end if
+    end do
+
+    call pop_sub()
+
+  end subroutine nl_operator_scatter
+
+
+  ! ---------------------------------------------------------
+  ! Like nl_operator_gather but opg is present on all nodes
+  ! (so do not forget to call nl_operator_end on all nodes
+  ! afterwards).
+  subroutine nl_operator_allgather(op, opg)
+    type(nl_operator_type), intent(in)  :: op
+    type(nl_operator_type), intent(out) :: opg
+
+    integer :: i
+    integer :: rank, ierr
+
+    call push_sub('nl_operator.nl_operator_allgather')
+
+    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
+
+    ! Copy elements of op to opg that
+    ! are independent from the partitions, i. e. everything
+    ! except op%i and - in the non constant case - op%w_re
+    ! op%w_im.
+    call nl_operator_common_copy(op, opg)
+
+    ! Gather op%i and - if necessary - op%w_re and op%w_im.
+    ! Collect for every point in the stencil in a single step.
+    ! This permits to use ivec_gather.
+    do i = 1, op%n
+      call ivec_allgather(op%m%vp, opg%i(i, :), op%i(i, :))
+    end do
+    call nl_operator_translate_indices(opg)
+
+    ! Weights have to be collected only if they are
+    ! not constant.
+    if(.not.op%const_w) then
+      do i = 1, op%n
+        call dvec_allgather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
+        if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
+      end do
+    end if
+ 
+    call pop_sub()
+
+  end subroutine nl_operator_allgather
+
+
+  ! =========================================================
+  ! The following are private routines.
+  ! =========================================================
+
+  ! ---------------------------------------------------------
+  ! Copies all part of op to opg that are independent of
+  ! the partitions,i. e. everything except op%i and - in the
+  ! non constant case - op%w_re op%w_im.
+  ! This can be considered as nl_operator_equal and
+  ! reallocating w_re, w_im and i.
+  subroutine nl_operator_common_copy(op, opg)
+    type(nl_operator_type), intent(in)  :: op
+    type(nl_operator_type), intent(out) :: opg
+
+    call push_sub('nl_operator.nl_operator_common_copy')
+
+    call nl_operator_init(opg, op%n)
+    allocate(opg%i(op%n, op%m%np_glob))
+    if(op%const_w) then
+      allocate(opg%w_re(op%n, 1))
+      if(op%cmplx_op) then
+        allocate(opg%w_im(op%n, 1))
+      end if
+    else
+      allocate(opg%w_re(op%n, op%m%np_glob))
+      if(op%cmplx_op) then
+        allocate(opg%w_im(op%n, op%m%np_glob))
+      end if
+    end if
+    opg%m        => op%m
+    opg%np       =  op%m%np_glob
+    opg%stencil  =  op%stencil
+    opg%cmplx_op =  op%cmplx_op
+    opg%const_w  =  op%const_w
+    if(op%const_w) then
+      opg%w_re = op%w_re
+      if(op%cmplx_op) then
+        opg%w_im = op%w_im
+      end if
+    end if
+
+    call pop_sub()
+    
+  end subroutine nl_operator_common_copy
+
+
+  ! ---------------------------------------------------------
+  ! Translates indices in i from local point numbers to
+  ! global point numbers after gathering them.
+  subroutine nl_operator_translate_indices(opg)
+    type(nl_operator_type), intent(inout) :: opg
+
+    integer :: i, j
+    integer :: il, ig
+
+    call push_sub('nl_operator.nl_operator_translate_indices')
+
+    do i = 1, opg%n
+      do j = 1, opg%m%np_glob
+        il = opg%m%vp%np_local(opg%m%part(j))
+        ig = il+opg%m%vp%np_ghost(opg%m%part(j))
+        ! opg%i(i, j) is a local point number, i. e. it can be
+        ! a real local point (i. e. the local point number
+        ! is less or equal than the number of local points of
+        ! the node which owns the point with global number j):
+        if(opg%i(i, j).le.il) then
+          ! Write the global point number from the lookup
+          ! table in op_(i, j).
+          opg%i(i, j) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%part(j)) &
+                        +opg%i(i, j)-1)
+        ! Or a ghost point:
+        else if(opg%i(i, j).gt.il.and.opg%i(i, j).le.ig) then
+          opg%i(i, j) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%part(j)) &
+                        +opg%i(i, j)-1-il)
+        ! Or a boundary point:
+        else if(opg%i(i, j).gt.ig) then
+          opg%i(i, j) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%part(j)) &
+                        +opg%i(i, j)-1-ig)
+        end if
+      end do
+    end do
+
+    call pop_sub()
+
+  end subroutine
+
+  ! =========================================================
+  ! End of private routines.
+  ! =========================================================
+#endif
+
+  
   ! ---------------------------------------------------------
   ! When running in parallel only the root node
   ! creates the matrix. But all nodes have to
@@ -325,71 +634,19 @@ contains
     integer, pointer :: op_i(:, :)
     FLOAT, pointer   :: w_re(:, :), w_im(:, :)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer :: il, ig
-    integer :: rank, ierr
+    integer                :: rank, ierr
+    type(nl_operator_type) :: opg
 #endif
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    ! When running parallel, we have to collect the operator first.
     call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
-
-    ! Collect the distributed index table op%i into op_i.
-    ! Only root collects the index table.
-    if(rank.eq.op%m%vp%root) then
-      allocate(op_i(op%n, op%m%np_glob))
-    end if
-    ! Collect for every stencil point.
-    do i = 1, op%n
-      call ivec_gather(op%m%vp, op_i(i, :), op%i(i, :))
-      ! All point numbers gathered for stencil point i
-      ! have to be translated to global points numbers
-      ! This, again, is work for root.
-      if(rank.eq.op%m%vp%root) then
-        do j = 1, op%m%np_glob
-          il = op%m%vp%np_local(op%m%part(j))
-          ig = il+op%m%vp%np_ghost(op%m%part(j))
-          ! op_i(i, j) is a local point number, i. e. it can be
-          ! a real local point (i. e. the local point number
-          ! is less or equal than the number of local points of
-          ! the node which owns the point with global number j):
-          if(op_i(i, j).le.il) then
-            ! Write the global point number from the lookup
-            ! table in op_(i, j).
-            op_i(i, j) = op%m%vp%local(op%m%vp%xlocal(op%m%part(j)) &
-                         +op_i(i, j)-1)
-          ! Or a ghost point:
-          else if(op_i(i, j).gt.il.and.op_i(i, j).le.ig) then
-            op_i(i, j) = op%m%vp%ghost(op%m%vp%xghost(op%m%part(j)) &
-                         +op_i(i, j)-1-il)
-          ! Or a boundary point:
-          else if(op_i(i, j).gt.ig) then
-            op_i(i, j) = op%m%vp%bndry(op%m%vp%xbndry(op%m%part(j)) &
-                         +op_i(i, j)-1-ig)
-            !op_i(i, j) = 0
-          end if
-        end do
-      end if
-    end do
-
-
-    ! Weights have to be collected only if they are
-    ! non constant.
-    if(.not.op%const_w) then
-      if(rank.eq.op%m%vp%root) then
-        allocate(w_re(op%n, op%m%np_glob))
-        if(op%cmplx_op) allocate(w_im(op%n, op%m%np_glob))
-      end if
-      do i = 1, op%n
-        call dvec_gather(op%m%vp, w_re(i, :), op%w_re(i, :))
-        if(op%cmplx_op) call dvec_gather(op%m%vp, w_im(i, :), op%w_im(i, :))
-      end do
-    ! Otherwise, those of root are just fine.
-    else
-      w_re => op%w_re
-      if(op%cmplx_op) w_im => op%w_im
-    end if
+    call nl_operator_gather(op, opg)
+    ! Take these shortcuts.
+    op_i => opg%i
+    w_re => opg%w_re
+    if(opg%cmplx_op) w_im => opg%w_im
 #else
     ! Take these shortcuts.
     op_i => op%i
@@ -413,6 +670,10 @@ contains
       enddo
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     endif
+
+    if(rank.eq.op%m%vp%root) then
+      call nl_operator_end(opg)
+    end if
 #endif
 
     call pop_sub()
@@ -460,7 +721,7 @@ contains
     integer            :: unit
     FLOAT, allocatable :: a(:, :)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer :: rank, ierr
+    integer            :: rank, ierr
 #endif
 
     call push_sub('nl_operator.nl_operator_write')
@@ -477,7 +738,7 @@ contains
     end if
 #endif
 
-      call nl_operator_op_to_matrix(op, a)
+    call nl_operator_op_to_matrix(op, a)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     if(rank.eq.op%m%vp%root) then
@@ -532,7 +793,7 @@ contains
     end if
 #endif
 
-      call nl_operator_op_to_matrix(op, a)
+    call nl_operator_op_to_matrix(op, a)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     if(rank.eq.op%m%vp%root) then

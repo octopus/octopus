@@ -115,6 +115,9 @@ module par_vec
             dvec_gather,        &
             zvec_gather,        &
             ivec_gather,        &
+            dvec_allgather,     &
+            zvec_allgather,     &
+            ivec_allgather,     &
             dvec_ghost_update,  &
             zvec_ghost_update,  &
             ivec_ghost_update,  &

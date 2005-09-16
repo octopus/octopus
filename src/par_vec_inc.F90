@@ -18,10 +18,10 @@
 !! $Id$
 
 ! Generally:
-! vec_gather and vec_scatter only consider inner points.
-! vec_scatter_bndry takes care of boundary points (there is
-! no vec_gather_bndry as they are only written and not read).
-! vec_scatter_all is vec_scatter followd by vec_scatter_bndry.
+! Xvec_gather and Xvec_scatter only consider inner points.
+! Xvec_scatter_bndry takes care of boundary points (there is
+! no Xvec_gather_bndry as they are only written and not read).
+! Xvec_scatter_all is Xvec_scatter followd by Xvec_scatter_bndry.
 
 
 ! Scatters a vector v to all nodes in vp with respect to 
@@ -122,7 +122,7 @@ subroutine X(vec_scatter_bndry)(vp, v, v_local)
 end subroutine X(vec_scatter_bndry)
 
 
-! vec_scatter followed by vec_scatter_bndry.
+! Xvec_scatter followed by Xvec_scatter_bndry.
 subroutine X(vec_scatter_all)(vp, v, v_local)
   type(pv_type), intent(in)  :: vp
   R_TYPE,        intent(in)  :: v(:)
@@ -138,7 +138,7 @@ subroutine X(vec_scatter_all)(vp, v, v_local)
 end subroutine X(vec_scatter_all)
 
 
-! Reverse operation of vec_scatter.
+! Reverse operation of Xvec_scatter.
 ! All v_locals from the nodes are packed together
 ! into v on node vp%root in correct order.
 subroutine X(vec_gather)(vp, v, v_local)
@@ -182,6 +182,48 @@ subroutine X(vec_gather)(vp, v, v_local)
   call pop_sub()
 
 end subroutine X(vec_gather)
+
+
+! Like Xvec_gather but the result is gathered
+! on all nodes, i. e. v has to be a properly
+! allocated aray on all nodes.
+subroutine X(vec_allgather)(vp, v, v_local)
+  type(pv_type), intent(in)  :: vp
+  R_TYPE,        intent(out) :: v(:)
+  R_TYPE,        intent(in)  :: v_local(:)
+
+  integer              :: i         ! Counter.
+  integer              :: ierr      ! MPI errorcode.
+  integer              :: rank      ! Rank of node.
+  integer, allocatable :: displs(:) ! Displacements for scatter.
+  R_TYPE,  allocatable :: v_tmp(:)  ! Receive buffer.
+  
+  call push_sub('par_vec.Xvec_allgather')
+  
+  call MPI_Comm_rank(vp%comm, rank, ierr)
+
+  ! Unfortunately, vp%xlocal ist not quite the required
+  ! displacement vector.
+  allocate(displs(vp%p))
+  displs = vp%xlocal-1
+
+  allocate(v_tmp(vp%np))
+
+  call TS(MPI_Allgatherv)(v_local, vp%np_local(rank+1), R_MPITYPE, v_tmp, &
+                          vp%np_local, displs, R_MPITYPE,                 &
+                          vp%comm, ierr)
+
+  ! Copy values from v_tmp to their original position in v.
+  do i = 1, vp%np
+    v(vp%local(i)) = v_tmp(i)
+  end do
+  
+  deallocate(v_tmp)
+  deallocate(displs)
+
+  call pop_sub()
+
+end subroutine X(vec_allgather)
 
 
 ! Updates ghost points of every node. A vector suitable
