@@ -328,12 +328,14 @@ contains
        if(m%use_curvlinear) then
           do i = 1, der%dim
              call nl_operator_init(auxop, der%grad(i)%n)
+             auxop%stencil = der%grad(i)%stencil
              call nl_operator_build(m, auxop, der%m%np, const_w = .false.)
              call nl_operator_skewadjoint(der%grad(i), auxop, der%m)
              call nl_operator_equal(der%grad(i), auxop)
              call nl_operator_end(auxop)
           enddo
           call nl_operator_init(auxop, der%lapl%n)
+          auxop%stencil = der%lapl%stencil
           call nl_operator_build(m, auxop, der%m%np, const_w = .false.)
           call nl_operator_selfadjoint(der%lapl, auxop, der%m)
           call nl_operator_equal(der%lapl, auxop)
