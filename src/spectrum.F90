@@ -259,7 +259,7 @@ subroutine spectrum_cross_section_tensor(s, out_file, in_file_1, in_file_2, in_f
   integer, optional, intent(in)    :: in_file_2
   integer, optional, intent(in)    :: in_file_3
 
-  integer :: nspin, energy_steps, i, is, j, equiv_axis, m
+  integer :: nspin, energy_steps, i, is, j, equiv_axis
   FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
                         sigmav(:, :, :), p(:, :), ip(:, :)
   FLOAT :: dw, dump

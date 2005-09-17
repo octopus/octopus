@@ -583,7 +583,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !      1) node counting and bisection                                         !
 !       2) variational estimate based on a slope discontinuity in psi         !
 !  the arguments are defined as follows:                                      !
-!       h,s: g = (h-e*s)*g                                                   !
+!       h,s: g = (h-e*s)*g                                                    !
 !       nr: maximum allowed number of radial points                           !
 !       e: e(i) is the i-th energy found                                      !
 !       ne: number of energies found                                          !
@@ -599,7 +599,8 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   integer :: i,n,l,nprin,nnode,ncor,n1,n2,niter,nt
 
   DOUBLE, dimension(*) :: h, s, g, y
-  DOUBLE, parameter :: tol = CNST(1.0e-5)
+  DOUBLE               :: e1, e2, del, de, et, t
+  DOUBLE, parameter    :: tol = CNST(1.0e-5)
 
   ncor=nprin-l-1
   n1=nnode
@@ -749,7 +750,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   implicit DOUBLE (a-h,o-z)
-  DOUBLE :: h(*), s(*), y(*)
+  DOUBLE :: h(*), s(*), y(*), zdr, yn, ratio, t
   integer :: nmax,l,ncor,nnode,n,knk,nndin,i
 
   zdr = z*a*b
@@ -849,7 +850,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   implicit DOUBLE (a-h,o-z)
-  DOUBLE s(*), g(*), norm
+  DOUBLE s(*), g(*), norm, srnrm
   integer :: n,nm1,nm2,i
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -887,7 +888,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
   subroutine bcorgn(e,h,s,l,zdr,y2)
 
   implicit DOUBLE (a-h,o-z)
-  DOUBLE h(*), s(*)
+  DOUBLE h(*), s(*), t2, t3, d2, c0, c1, c2
   integer :: l
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -965,7 +966,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit DOUBLE (a-h,o-z)
   integer :: i,n,nnode,knk
-  DOUBLE :: h(n),s(n),y(n)
+  DOUBLE :: h(n),s(n),y(n),t
 
   y(n)=yn
   t=h(n)-e*s(n)
@@ -1018,7 +1019,7 @@ subroutine vhrtre(rho, v, r, drdi, srdrdi, nr, a)
 
   implicit DOUBLE (a-h,o-z)
   integer :: ncor,nnode,knk,i,nm4
-  DOUBLE :: h(knk),s(knk),y(knk)
+  DOUBLE :: h(knk),s(knk),y(knk),t,xl
 
   y(1)=M_ZERO
   y(2)=y2
