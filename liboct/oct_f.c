@@ -191,8 +191,11 @@ void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
 
   gettimeofday(&tv, &tz);
 
-  *sec  = (long) tv.tv_sec;
-  *usec = (long) tv.tv_usec;
+  /* The typecast below should use long. However, this causes incompatibilities
+     with Fortran integers. 
+     Using int will cause wrong results when tv.tv_sec exceeds INT_MAX=2147483647 */
+  *sec  = (int) tv.tv_sec;
+  *usec = (int) tv.tv_usec;
 /*
   char str[sizeof("HH:MM:SS")];
   time_t local;
