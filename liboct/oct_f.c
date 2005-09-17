@@ -183,7 +183,7 @@ double FC_FUNC_(oct_clock, OCT_CLOCK)
 }
 
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
-	(long *sec, long *usec)
+	(int *sec, int *usec)
 {
 #ifdef linux
   struct timeval tv;
