@@ -298,9 +298,9 @@ contains
     R_TYPE, pointer :: fip(:)
 
     if(gr%f_der%der_discr%zero_bc) then
-      allocate(fip(gr%m%np_tot))
+      allocate(fip(gr%m%np_part))
       fip(1:NP)             = fi(1:NP)
-      fip(NP+1:gr%m%np_tot) = R_TOTYPE(M_ZERO)
+      fip(NP+1:gr%m%np_part) = R_TOTYPE(M_ZERO)
     else
       fip => fi
     end if

@@ -43,15 +43,13 @@ subroutine X(input_function)(filename, m, f, ierr)
   integer,              intent(out) :: ierr
 
   R_TYPE, allocatable :: f_global(:)
-  integer             :: rank
 
   call push_sub('out_inc.Xinput_function')
   
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  allocate(f_global(1:m%np_glob))
+  allocate(f_global(1:m%np_global))
 
-  call MPI_Comm_rank(m%vp%comm, rank, ierr)
-  if(rank.eq.m%vp%root) then
+  if(m%vp%rank.eq.m%vp%root) then
      call X(input_function_global)(filename, m, f_global, ierr)
 #ifdef DEBUG
   else
@@ -140,40 +138,40 @@ contains
     read(unit = iunit, iostat = i) file_kind, file_np
     if(i.ne.0) then
        ierr = 3
-    else if (file_np .ne. m%np_glob) then
+    else if (file_np .ne. m%np_global) then
        ierr = 4
     end if
 
     if(ierr==0) then
        if(file_kind == function_kind) then
-          read(unit = iunit) f(1:m%np_glob)
+          read(unit = iunit) f(1:m%np_global)
 
        else ! Adequate conversions....
           select case(file_kind)
           case(doutput_kind*4) ! Real, single precision
-             allocate(rs(m%np_glob))
-             read(unit = iunit) rs(1:m%np_glob)
+             allocate(rs(m%np_global))
+             read(unit = iunit) rs(1:m%np_global)
              f = rs
              deallocate(rs)
              ierr = -1
 
           case(zoutput_kind*4) ! Complex, single precision
-             allocate(cs(m%np_glob))
-             read(unit = iunit) cs(1:m%np_glob)
+             allocate(cs(m%np_global))
+             read(unit = iunit) cs(1:m%np_global)
              f = cs
              deallocate(cs)
              ierr = -2
 
           case(doutput_kind*8) ! Real, double precision
-             allocate(rd(m%np_glob))
-             read(unit = iunit) rd(1:m%np_glob)
+             allocate(rd(m%np_global))
+             read(unit = iunit) rd(1:m%np_global)
              f = rd
              deallocate(rd)
              ierr = -3
 
           case(zoutput_kind*8) ! Complex, double precision
-             allocate(cd(m%np_glob))
-             read(unit = iunit) cd(1:m%np_glob)
+             allocate(cd(m%np_global))
+             read(unit = iunit) cd(1:m%np_global)
              f = cd
              deallocate(cd)
              ierr = -4
@@ -307,17 +305,15 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
   integer,          intent(out) :: ierr
 
   R_TYPE, allocatable :: f_global(:)
-  integer             :: rank
 
   call push_sub('out_inc.Xoutput_function')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  allocate(f_global(1:m%np_glob))
+  allocate(f_global(1:m%np_global))
 
   call X(vec_gather)(m%vp, f_global, f)
 
-  call MPI_Comm_rank(m%vp%comm, rank, ierr)
-  if(rank.eq.m%vp%root) then
+  if(m%vp%rank.eq.m%vp%root) then
      call X(output_function_global)(how, dir, fname, m, sb, f_global, u, ierr)
 #ifdef DEBUG
   else
@@ -342,7 +338,7 @@ subroutine X(output_function_global) (how, dir, fname, m, sb, f, u, ierr)
   character(len=*), intent(in)  :: dir, fname
   type(mesh_type),  intent(in)  :: m
   type(simul_box_type), intent(in)  :: sb
-  R_TYPE,           intent(in)  :: f(1:m%np_glob)  ! f(m%np_glob)
+  R_TYPE,           intent(in)  :: f(1:m%np_global)  ! f(m%np_global)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
 
@@ -390,8 +386,8 @@ contains
 
     iunit = io_open(trim(dir)//'/'//trim(fname), action='write', form='unformatted')
 
-    write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np_glob
-    write(unit=iunit, iostat=ierr) f(1:m%np_glob)
+    write(unit=iunit, iostat=ierr) X(output_kind)*kind(f(1)), m%np_global
+    write(unit=iunit, iostat=ierr) f(1:m%np_global)
     call io_close(iunit)
 
   end subroutine plain
@@ -404,7 +400,7 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".y=0,z=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'x', 'Re', 'Im'
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
       if(m%Lxyz(i, 2)==0.and.m%Lxyz(i, 3)==0) then
         write(iunit, mformat, iostat=ierr) m%x_global(i,1), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
@@ -421,7 +417,7 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,z=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'y', 'Re', 'Im'
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 3)==0) then
         write(iunit, mformat, iostat=ierr) m%x_global(i,2), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
@@ -438,7 +434,7 @@ contains
     iunit = io_open(trim(dir)//'/'//trim(fname)//".x=0,y=0", action='write')
 
     write(iunit, mfmtheader, iostat=ierr) '#', 'z', 'Re', 'Im'
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
       if(m%Lxyz(i, 1)==0.and.m%Lxyz(i, 2)==0) then
         write(iunit, mformat, iostat=ierr) m%x_global(i,3), R_REAL(f(i))/u, R_AIMAG(f(i))/u
       end if
@@ -458,7 +454,7 @@ contains
     x0 = m%x_global(1,2)
     if(gnuplot_mode) write(iunit, mformat)
 
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
       if(gnuplot_mode.and.x0 /= m%x_global(i, 2)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x_global(i, 2)
@@ -484,7 +480,7 @@ contains
     x0 = m%x_global(1,1)
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
       if(gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x_global(i, 1)
@@ -510,7 +506,7 @@ contains
     x0 = m%x_global(1,1)
     if(gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
       if(gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
         write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
         x0 = m%x_global(i, 1)
@@ -537,7 +533,7 @@ contains
     x0 = m%x_global(1,1)
     if(ierr == 0.and.gnuplot_mode) write(iunit, mformat, iostat=ierr)
 
-    do i= 1, m%np_glob
+    do i= 1, m%np_global
        if (ierr == 0.and.gnuplot_mode.and.x0 /= m%x_global(i, 1)) then
           write(iunit, mformat, iostat=ierr)      ! write extra lines for gnuplot grid mode
           x0 = m%x_global(i, 1)

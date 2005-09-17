@@ -195,7 +195,7 @@ contains
 
     phi(0)%p(1:gr%m%np)=pot(1:gr%m%np)
 
-    phi(0)%p(gr%m%np+1:gr%m%np_tot)=M_ZERO
+    phi(0)%p(gr%m%np+1:gr%m%np_part)=M_ZERO
     tau(0)%p(:)=rho_corrected(:)
 
     cl=gr%mgrid%n_levels
@@ -317,7 +317,7 @@ contains
 
     phi(0)%p(1:gr%m%np)=pot(1:gr%m%np)
 
-    phi(0)%p(gr%m%np+1:gr%m%np_tot)=M_ZERO
+    phi(0)%p(gr%m%np+1:gr%m%np_part)=M_ZERO
     tau(0)%p(:)=rho_corrected(:)
 
     cl=gr%mgrid%n_levels
@@ -353,7 +353,7 @@ contains
                 
                 
                 !store the initial approximation
-                np=gr%mgrid%level(l+1)%m%np_tot
+                np=gr%mgrid%level(l+1)%m%np_part
                 phi_ini(l+1)%p(1:np)=phi(l+1)%p(1:np)
 
              end if
@@ -368,7 +368,7 @@ contains
 
              if(l /= 0) then
                 !calculate correction as the diference
-                np=gr%mgrid%level(l)%m%np_tot
+                np=gr%mgrid%level(l)%m%np_part
                 phi(l)%p(1:np)=phi(l)%p(1:np)-phi_ini(l)%p(1:np)
 
                 !transfer correction to finer level
@@ -533,7 +533,7 @@ contains
     allocate(a(0:cl))
     do l=0,cl
        if(add_points_for_boundaries) then 
-          allocate(a(l)%p(1:mgrid%level(l)%m%np_tot))
+          allocate(a(l)%p(1:mgrid%level(l)%m%np_part))
        else
           allocate(a(l)%p(1:mgrid%level(l)%m%np))
        end if

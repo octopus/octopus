@@ -34,9 +34,9 @@ subroutine X(derivatives_laplt)(der, f, lapl, have_ghost_)
   if(present(have_ghost_)) have_ghost = have_ghost_
 
   if(.not.have_ghost.and.der%zero_bc) then
-     allocate(fp(der%m%np_tot))
+     allocate(fp(der%m%np_part))
      fp(1:der%m%np)              = f(1:der%m%np)
-     fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+     fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
   else
      fp => f
   end if
@@ -62,9 +62,9 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   ! If the derivatives are defined with non-constant weights, then we do not
   ! need extra points.
   if( (.not.(have_ghost))   .and.   der%zero_bc    .and.  der%lapl%const_w  ) then
-     allocate(fp(der%m%np_tot))
+     allocate(fp(der%m%np_part))
      fp(1:der%m%np)              = f(1:der%m%np)
-     fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+     fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
      call X(nl_operator_operate) (der%lapl, fp, lapl)
      deallocate(fp)
   else
@@ -86,9 +86,9 @@ subroutine X(derivatives_grad)(sb, der, f, grad)
   integer :: i
 
   if(der%zero_bc) then
-     allocate(fp(der%m%np_tot))
+     allocate(fp(der%m%np_part))
      fp(1:der%m%np)              = f(1:der%m%np)
-     fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+     fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
   else
      fp => f
   end if
@@ -113,8 +113,8 @@ subroutine X(derivatives_div)(sb, der, f, div)
   integer :: i
 
   if(der%zero_bc) then
-     allocate(fp(der%m%np_tot))
-     fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+     allocate(fp(der%m%np_part))
+     fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
   end if
   allocate(tmp(der%m%np))
 
@@ -148,8 +148,8 @@ subroutine X(derivatives_curl)(sb, der, f, curl)
   ASSERT(sb%dim == 3)
 
   if(der%zero_bc) then
-     allocate(fp(der%m%np_tot))
-     fp(der%m%np+1:der%m%np_tot) = R_TOTYPE(M_ZERO)
+     allocate(fp(der%m%np_part))
+     fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
   end if
   allocate(tmp(der%m%np))
 

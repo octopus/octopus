@@ -36,9 +36,9 @@ module par_vec
   ! When working with non-periodic boundary conditions
   ! a globally defined vector v has two parts:
   ! - v(:np) are the inner points
-  ! - v(np+1:np_tot) are the boundary points
+  ! - v(np+1:np_part) are the boundary points
   ! In the typical case of zero boundary conditions
-  ! v(np+1:np_tot) is 0.
+  ! v(np+1:np_part) is 0.
   ! The two parts are split according to the partitions.
   ! The result of this slit are local vectors vl on each node
   ! which consist of three parts:
@@ -56,7 +56,7 @@ module par_vec
   ! ! np_stencil = op%n
   !
   ! FLOAT              :: s
-  ! FLOAT              :: u(np_glob), v(np_glob)
+  ! FLOAT              :: u(np_global), v(np_global)
   ! FLOAT, allocatable :: ul(:), vl(:), wl(:)
   ! type(mesh_type)    :: m
   !
@@ -64,9 +64,9 @@ module par_vec
   ! ! ...
   !
   ! ! Allocate space for local vectors.
-  ! allocate(ul(np_tot))
-  ! allocate(vl(np_tot))
-  ! allocate(wl(np_tot))
+  ! allocate(ul(np_part))
+  ! allocate(vl(np_part))
+  ! allocate(wl(np_part))
   !
   ! ! Distribute vectors.
   ! call X(vec_scatter)(vp, u, ul)
@@ -127,8 +127,10 @@ module par_vec
 
   type pv_type
     integer          :: comm                 ! MPI communicator to use.
+    integer          :: rank                 ! Our rank in the communicator
     integer          :: root                 ! The master node.
     integer          :: p                    ! Number of partitions.
+    integer          :: partno               ! Partition number of the current node
     integer          :: np                   ! Number of points in mesh.
     integer          :: np_enl               ! Number of points in enlargement.
     integer, pointer :: np_local(:)          ! How many points has partition r?
@@ -160,13 +162,13 @@ module par_vec
 contains
 
   ! Wrapper: calls vec_init with MPI_COMM_WORLD and master node 0.
-  subroutine vec_init_default(p, part, np, np_tot, nr,                 &
+  subroutine vec_init_default(p, part, np, np_part, nr,                 &
                               Lxyz_inv, Lxyz, stencil, np_stencil, vp)
     ! The next seven entries come from the mesh.
     integer,       intent(in)  :: p            ! m%npart
     integer,       intent(in)  :: part(:)      ! m%part
-    integer,       intent(in)  :: np           ! m%np_glob
-    integer,       intent(in)  :: np_tot       ! m%np_tot_glob
+    integer,       intent(in)  :: np           ! m%np_global
+    integer,       intent(in)  :: np_part      ! m%np_part_global
     integer,       intent(in)  :: nr(2, 3)     ! m%nr
     integer,       intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), &
                                            nr(1,2):nr(2,2), &
@@ -179,13 +181,13 @@ contains
     type(pv_type), intent(out) :: vp           ! Description of partition.
 
     ! Throw them away.
-    integer :: np_local ! vp%np_local(rank+1).
-    integer :: np_ghost ! vp%np_ghost(rank+1).
-    integer :: np_bndry ! vp%np_bndry(rank+1).
+    integer :: np_local ! vp%np_local(vp%partno).
+    integer :: np_ghost ! vp%np_ghost(vp%partno).
+    integer :: np_bndry ! vp%np_bndry(vp%partno).
 
     call push_sub('par_vec.vec_init_default')
     
-    call vec_init(MPI_COMM_WORLD, 0, p, part, np, np_tot, nr,  &
+    call vec_init(MPI_COMM_WORLD, 0, p, part, np, np_part, nr,  &
                   Lxyz_inv, Lxyz, stencil, np_stencil, vp,     &
                   np_local, np_ghost, np_bndry)
 
@@ -214,7 +216,7 @@ contains
   ! The points are relative to the "application point" of the stencil.
   ! (This is the same format as used in type(nl_operator_type), so
   ! just passing op%stencil is possible.)
-  subroutine vec_init(comm, root, p, part, np, np_tot, nr,     &
+  subroutine vec_init(comm, root, p, part, np, np_part, nr,     &
                       Lxyz_inv, Lxyz, stencil, np_stencil, vp, &
                       np_local, np_ghost, np_bndry)
     integer,       intent(in)  :: comm         ! Communicator to use.
@@ -222,8 +224,8 @@ contains
     ! The next seven entries come from the mesh.
     integer,       intent(in)  :: p            ! m%npart
     integer,       intent(in)  :: part(:)      ! m%part
-    integer,       intent(in)  :: np           ! m%np_glob
-    integer,       intent(in)  :: np_tot       ! m%np_tot_glob
+    integer,       intent(in)  :: np           ! m%np_global
+    integer,       intent(in)  :: np_part      ! m%np_part_global
     integer,       intent(in)  :: nr(2, 3)     ! m%nr
     integer,       intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), &
                                            nr(1,2):nr(2,2), &
@@ -235,9 +237,9 @@ contains
     integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
     type(pv_type), intent(out) :: vp           ! Description of partition.
     ! Those three are shortcuts.
-    integer,       intent(out) :: np_local     ! vp%np_local(rank+1).
-    integer,       intent(out) :: np_ghost     ! vp%np_ghost(rank+1).
-    integer,       intent(out) :: np_bndry     ! vp%np_bndry(rank+1).
+    integer,       intent(out) :: np_local     ! vp%np_local(vp%partno).
+    integer,       intent(out) :: np_ghost     ! vp%np_ghost(vp%partno).
+    integer,       intent(out) :: np_bndry     ! vp%np_bndry(vp%partno).
     
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -257,8 +259,12 @@ contains
     call push_sub('par_vec.vec_init')
 
     ! Shortcuts.
-    np_enl = np_tot-np
+    np_enl = np_part-np
     call MPI_Comm_rank(comm, rank, ierr)
+    ! store partition number and rank for later reference
+    ! having both variables is a bit redundant but makes the code readable
+    vp%rank   = rank
+    vp%partno = rank + 1
     
     allocate(ghost_flag(np, p))
     allocate(ir(p), irr(p, p))
@@ -467,9 +473,9 @@ contains
     vp%p      = p
 
     ! Return shortcuts.
-    np_local = vp%np_local(rank+1)
-    np_ghost = vp%np_ghost(rank+1)
-    np_bndry = vp%np_bndry(rank+1)
+    np_local = vp%np_local(vp%partno)
+    np_ghost = vp%np_ghost(vp%partno)
+    np_bndry = vp%np_bndry(vp%partno)
     call pop_sub()
     
   end subroutine vec_init

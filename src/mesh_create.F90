@@ -61,14 +61,14 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   integer              :: d(3, 6)        ! Directions of neighbour points.
   integer              :: edgecut        ! Number of edges cut by partitioning.
   ! Number of vertices (nv) is equal to number of
-  ! points np_glob and maximum number of edges (ne) is 2*m%sb%dim*np_glob
+  ! points np_global and maximum number of edges (ne) is 2*m%sb%dim*np_global
   ! (there are a little less because points on the border have less
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
-  integer              :: xadj(m%np_tot_glob+1) ! Indices of adjacency list
+  integer              :: xadj(m%np_part_global+1) ! Indices of adjacency list
                                                 ! in adjncy.
-  integer              :: adjncy(2*m%sb%dim*m%np_tot_glob)
+  integer              :: adjncy(2*m%sb%dim*m%np_part_global)
                                                 ! Adjacency lists.
   integer              :: options(5)         ! Options to METIS.
   integer, allocatable :: ppp(:)             ! Points per partition.
@@ -78,12 +78,12 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   character(len=3)     :: filenum
 #endif
 
-  call push_sub('mesh_create.metis_partition_init')
+  call push_sub('mesh_create.mesh_partition_init')
   
   options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
   ! Shortcut (number of vertices).
-  nv = m%np_tot_glob
+  nv = m%np_part_global
 
   ! Get space for partitioning.
   allocate(part(nv))
@@ -213,7 +213,7 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
       write(filenum, '(i3.3)') i
       iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
                       action='write')
-      do j = 1, m%np_glob
+      do j = 1, m%np_global
         ! Somehow all points in the enlargement are mapped
         ! to one point in m%x. So, if the enlargement shall be
         ! written too (s. b.), activate the following line
@@ -228,7 +228,7 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
     !!write(filenum, '(i3.3)') p+1
     !!iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
     !!                action='write')
-    !!do i = m%np_glob+1, m%np_tot_glob
+    !!do i = m%np_global+1, m%np_part_global
     !!  write(iunit, '(i8,3i8)') i, m%Lxyz(i,:)
     !!end do
     !!call io_close(iunit)
@@ -271,10 +271,6 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
   integer, allocatable :: Lxyz_tmp(:,:,:)
   FLOAT,   allocatable :: x(:,:,:,:)
   FLOAT :: chi(3)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  integer :: ierr
-  integer :: rank
-#endif
 
   call push_sub('mesh_create.mesh_create_xyz')
 
@@ -331,17 +327,17 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
       end do
     end do
   end do
-  m%np_tot_glob = il
-  allocate(m%Lxyz(m%np_tot_glob, 3))
+  m%np_part_global = il
+  allocate(m%Lxyz(m%np_part_global, 3))
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   ! Node 0 has to store all entries from x (in x_global)
   ! as well as the local set in x (see below).
-  if(mpiv%node.eq.0) then
-    allocate(m%x_global(m%np_tot_glob, 3))
-  end if
+!  if(mpiv%node.eq.0) then
+    allocate(m%x_global(m%np_part_global, 3))
+!  end if
 #else
   ! When running parallel, x is computed later.
-  allocate(m%x(m%np_tot_glob, 3))
+  allocate(m%x(m%np_part_global, 3))
   ! This is a bit ugly: x_global is needed in out_in
   ! but in the serial case it is the same as x.
   m%x_global => m%x
@@ -368,7 +364,7 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
       enddo
     enddo
   enddo
-  m%np_glob = il
+  m%np_global = il
 
   ! and now the points from the enlargement
   do ix = m%nr(1,1), m%nr(2,1)
@@ -390,43 +386,43 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
     end do
   end do
 
+write(*,*) '#######',m%nr
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   call mesh_partition_init_default(m, Lxyz_tmp)
   if(present(stencil).and.present(np_stencil)) then
-    call vec_init_default(m%npart, m%part, m%np_glob, m%np_tot_glob, m%nr, &
+    call vec_init_default(m%npart, m%part, m%np_global, m%np_part_global, m%nr, &
                           m%Lxyz_inv, m%Lxyz, stencil, np_stencil, m%vp)
 
     ! Set local point numbers.
-    call MPI_Comm_rank(m%vp%comm, rank, ierr)
-    m%np     = m%vp%np_local(rank+1)
-    m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
+    m%np     = m%vp%np_local(m%vp%partno)
+    m%np_part = m%np+m%vp%np_ghost(m%vp%partno)+m%vp%np_bndry(m%vp%partno)
     ! Compute m%x as it is done in the serial case but
     ! only for local points.
     ! x consists of three parts: the local points, the
     ! ghost points, the boundary points; in this order
     ! (just as for any other vector, which is distributed).
-    allocate(m%x(m%np_tot, 3))
+    allocate(m%x(m%np_part, 3))
     ! Do the inner points.
     do i = 1, m%np
-      ix = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 1)
-      iy = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 2)
-      iz = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), 3)
+      ix = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 1)
+      iy = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 2)
+      iz = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 3)
       m%x(i, :) = x(:, ix, iy, iz)
     end do
     ! Do the ghost points.
-    do i = 1, m%vp%np_ghost(rank+1)
-      ix = m%Lxyz(m%vp%ghost(m%vp%xghost(rank+1)+i-1), 1)
-      iy = m%Lxyz(m%vp%ghost(m%vp%xghost(rank+1)+i-1), 2)
-      iz = m%Lxyz(m%vp%ghost(m%vp%xghost(rank+1)+i-1), 3)
+    do i = 1, m%vp%np_ghost(m%vp%partno)
+      ix = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 1)
+      iy = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 2)
+      iz = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 3)
       m%x(i+m%np, :) = x(:, ix, iy, iz)
     end do
     ! Do the boundary points.
-    do i = 1, m%vp%np_bndry(rank+1)
-      ix = m%Lxyz(m%vp%bndry(m%vp%xbndry(rank+1)+i-1), 1)
-      iy = m%Lxyz(m%vp%bndry(m%vp%xbndry(rank+1)+i-1), 2)
-      iz = m%Lxyz(m%vp%bndry(m%vp%xbndry(rank+1)+i-1), 3)
-      m%x(i+m%np+m%vp%np_ghost(rank+1), :) = x(:, ix, iy, iz)
+    do i = 1, m%vp%np_bndry(m%vp%partno)
+      ix = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 1)
+      iy = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 2)
+      iz = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 3)
+      m%x(i+m%np+m%vp%np_ghost(m%vp%partno), :) = x(:, ix, iy, iz)
     end do
   else
     message(1) = 'mesh_create.mesh_create_xyz called without stencil'
@@ -435,8 +431,8 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
   end if
 #else
   ! When running serially those two are the same.
-  m%np     = m%np_glob
-  m%np_tot = m%np_tot_glob
+  m%np     = m%np_global
+  m%np_part = m%np_part_global
 #endif
 
   call mesh_get_vol_pp(sb, geo, cv, m)
@@ -460,8 +456,6 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   FLOAT   :: f, chi(sb%dim)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   integer :: k
-  integer :: rank
-  integer :: ierr
 #endif
 
   call push_sub('mesh_create.mesh_get_vol_pp')
@@ -471,34 +465,32 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
     f = f*mesh%h(i)
   end do
 
-  allocate(mesh%vol_pp(mesh%np_tot))
+  allocate(mesh%vol_pp(mesh%np_part))
   mesh%vol_pp(:) = f
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  call MPI_Comm_rank(mesh%vp%comm, rank, ierr)
-
   ! Do the inner points.
   do i = 1, mesh%np
-    k = mesh%vp%local(mesh%vp%xlocal(rank+1)+i-1)
+    k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)
     chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
     mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi)
   end do
   ! Do the ghost points.
-  do i = 1, mesh%vp%np_ghost(rank+1)
-    k = mesh%vp%ghost(mesh%vp%xghost(rank+1)+i-1)
+  do i = 1, mesh%vp%np_ghost(mesh%vp%partno)
+    k = mesh%vp%ghost(mesh%vp%xghost(mesh%vp%partno)+i-1)
     chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
     mesh%vol_pp(i+mesh%np) = mesh%vol_pp(i+mesh%np)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np, :), chi)
   end do
   ! Do the boundary points.
-  do i = 1, mesh%vp%np_bndry(rank+1)
-    k = mesh%vp%bndry(mesh%vp%xbndry(rank+1)+i-1)
+  do i = 1, mesh%vp%np_bndry(mesh%vp%partno)
+    k = mesh%vp%bndry(mesh%vp%xbndry(mesh%vp%partno)+i-1)
     chi(1:sb%dim) = mesh%Lxyz(k, 1:sb%dim) * mesh%h(1:sb%dim)
-    mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(rank+1)) = &
-      mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(rank+1)) &
-      *curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(rank+1), :), chi)
+    mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) = &
+      mesh%vol_pp(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno)) &
+      *curvlinear_det_Jac(sb, geo, cv, mesh%x(i+mesh%np+mesh%vp%np_ghost(mesh%vp%partno), :), chi)
   end do
 #else
-  do i = 1, mesh%np_tot
+  do i = 1, mesh%np_part
     chi(1:sb%dim) = mesh%Lxyz(i, 1:sb%dim) * mesh%h(1:sb%dim)
     mesh%vol_pp(i) = mesh%vol_pp(i)*curvlinear_det_Jac(sb, geo, cv, mesh%x(i, :), chi)
   end do

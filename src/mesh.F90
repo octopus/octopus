@@ -57,7 +57,7 @@ module mesh
   ! Some general thing:
   ! All members of type(mesh_type) are equal on all
   ! nodes when running parallel except
-  ! - np, np_tot
+  ! - np, np_part
   ! - x, vol_pp
   ! Those four are defined for all the points, the
   ! node is responsible for.
@@ -65,16 +65,16 @@ module mesh
     type(simul_box_type), pointer :: sb
     logical :: use_curvlinear
 
-    FLOAT :: h(3)           ! the (constant) spacing between the points
+    FLOAT :: h(3)              ! the (constant) spacing between the points
 
     ! When running serially, the local number of points is
     ! equal to the global number of points.
     ! Otherwise, the next two are different on each node.
-    integer  :: np          ! Local number of points in mesh
-    integer  :: np_tot      ! Local points plus ghost points plus
-                            ! boundary points.
-    integer  :: np_glob     ! Global number of points in mesh.
-    integer  :: np_tot_glob ! Global number of inner points and boundary points.
+    integer  :: np             ! Local number of points in mesh
+    integer  :: np_part        ! Local points plus ghost points plus
+                               ! boundary points.
+    integer  :: np_global      ! Global number of points in mesh.
+    integer  :: np_part_global ! Global number of inner points and boundary points.
 
     integer  :: enlarge(3)     ! number of points to add for boundary conditions
 
@@ -119,7 +119,7 @@ contains
 
     call adjust_nr()          ! find out the extension of the simulation box
     call mesh_create_xyz(sb, m, cv, geo,                         &
-                         stencil=stencil, np_stencil=np_stencil)
+         stencil=stencil, np_stencil=np_stencil)
 
     call pop_sub()
   contains
@@ -133,15 +133,15 @@ contains
 
       m%nr = 0
       do i = 1, sb%dim
-        chi(:) = M_ZERO; j = 0
-        out = .false.
-        do while(.not.out)
-          j      = j + 1
-          chi(i) = j*m%h(i)
-          call curvlinear_chi2x(sb, geo, cv, chi(:), x(:))
-          out = (x(i) > sb%lsize(i))
-        end do
-        m%nr(2, i) = j - 1
+         chi(:) = M_ZERO; j = 0
+         out = .false.
+         do while(.not.out)
+            j      = j + 1
+            chi(i) = j*m%h(i)
+            call curvlinear_chi2x(sb, geo, cv, chi(:), x(:))
+            out = (x(i) > sb%lsize(i))
+         end do
+         m%nr(2, i) = j - 1
       end do
 
       ! we have a symmetric mesh (for now)
@@ -149,8 +149,8 @@ contains
 
       ! we have to ajust a couple of things for the periodic directions
       do i = 1, sb%periodic_dim
-        m%h(i)     = sb%lsize(i)/real(m%nr(2, i))
-        m%nr(2, i) = m%nr(2, i) - 1
+         m%h(i)     = sb%lsize(i)/real(m%nr(2, i))
+         m%nr(2, i) = m%nr(2, i) - 1
       end do
 
       m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
@@ -160,21 +160,16 @@ contains
   end subroutine mesh_init
 
 
-  ! Adjust m%np and m%np_tot according to the entry
+  ! Adjust m%np and m%np_part according to the entry
   ! in m%pv for the current node.
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   subroutine mesh_par_adj(m)
     type(mesh_type), intent(inout) :: m
 
-    integer :: ierr
-    integer :: rank
-
     call push_sub('mesh.mesh_init')
 
-    call MPI_Comm_rank(m%vp%comm, rank, ierr)
-
-    m%np     = m%vp%np_local(rank+1)
-    m%np_tot = m%np+m%vp%np_ghost(rank+1)+m%vp%np_bndry(rank+1)
+    m%np      = m%vp%np_local(m%vp%partno)
+    m%np_part = m%np+m%vp%np_ghost(m%vp%partno)+m%vp%np_bndry(m%vp%partno)
 
     call pop_sub()
 
@@ -223,8 +218,8 @@ contains
        '   volume/point [', trim(units_out%length%abbrev), '^3] = ',   &
        m%vol_pp(1)/units_out%length%factor**3
 
-    write(unit,'(a, i8)') '  # inner mesh = ', m%np_glob
-    write(unit,'(a, i8)') '  # total mesh = ', m%np_tot_glob
+    write(unit,'(a, i8)') '  # inner mesh = ', m%np_global
+    write(unit,'(a, i8)') '  # total mesh = ', m%np_part_global
 
     write(unit,'(3a,f9.3,a)') '  Grid Cutoff [',trim(units_out%energy%abbrev),'] = ', &
        (M_PI**2/(M_TWO*maxval(m%h)**2))/units_out%energy%factor
@@ -320,8 +315,6 @@ contains
    subroutine mesh_end(m)
      type(mesh_type), intent(inout) :: m
 
-     integer :: rank, ierr
-
      call push_sub('mesh.mesh_end')
 
      if(associated(m%Lxyz)) then
@@ -330,9 +323,7 @@ contains
      end if
     
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-     call MPI_Comm_rank(m%vp%comm, rank, ierr)
-
-     if(associated(m%x_global).and.rank.eq.m%vp%root) then
+     if(associated(m%x_global).and.m%vp%rank.eq.m%vp%root) then
        deallocate(m%x_global)
        nullify(m%x_global)
      end if

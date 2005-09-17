@@ -160,7 +160,7 @@ contains
     case (SPEC_USDEF) ! ... from userdef
        do i = 1, spin_channels
           rho(1:m%np, i) = real(s%Z_val, PRECISION) /  &
-               (m%np_glob*m%vol_pp(1:m%np)*real(spin_channels, PRECISION))
+               (m%np_global*m%vol_pp(1:m%np)*real(spin_channels, PRECISION))
        end do
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium

@@ -86,7 +86,7 @@ contains
 
     call push_sub('poisson_cg.poisson_cg1')
 
-    allocate(wk(m%np_tot), lwk(m%np_tot), zk(m%np), pk(m%np))
+    allocate(wk(m%np_part), lwk(m%np_part), zk(m%np), pk(m%np))
 
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
@@ -155,7 +155,7 @@ contains
     type(mesh_type), intent(in)  :: m
     FLOAT,           intent(in)  :: rho(:)  ! rho(m%np)
     integer,         intent(in)  :: ml
-    FLOAT,           intent(out) :: pot(:)  ! pot(m%np_tot)
+    FLOAT,           intent(out) :: pot(:)  ! pot(m%np_part)
 
     integer :: i, add_lm, l, mm
     FLOAT   :: x(3), r, s1, sa
@@ -163,7 +163,7 @@ contains
 
     allocate(mult((ml+1)**2))
     call get_multipoles(m, rho, ml, mult)
-    do i = m%np+1, m%np_tot ! boundary conditions
+    do i = m%np+1, m%np_part ! boundary conditions
        call mesh_r(m, i, r, x=x)
        add_lm = 1
        do l = 0, ml
