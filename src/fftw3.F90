@@ -110,31 +110,31 @@ contains
     ! NEW
     ! optimize dimensions only for finite sys
     if(.not.simul_box_is_periodic(sb)) then
-      do i = 1, sb%dim
-         if(n(i) /= 1 .and. fft_optimize) &
-             call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
-      end do
+       do i = 1, sb%dim
+          if(n(i) /= 1 .and. fft_optimize) &
+               call loct_fft_optimize(n(i), 7, 1) ! always ask for an odd number
+       end do
     end if
 
     ! find out if fft has already been allocated
     j = 0
     do i = FFT_MAX, 1, -1
-      if(fft_refs(i).ne.NULL) then
-        if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
-             is_real == fft_array(i)%is_real) then
-          fft = fft_array(i)             ! return a copy
-          fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
-          return
-        end if
-      else
-        j = i
-      end if
+       if(fft_refs(i).ne.NULL) then
+          if(n(1) == fft_array(i)%n(1).and.n(2) == fft_array(i)%n(2).and.n(3) == fft_array(i)%n(3).and. &
+               is_real == fft_array(i)%is_real) then
+             fft = fft_array(i)             ! return a copy
+             fft_refs(i) = fft_refs(i) + 1  ! increment the ref count
+             return
+          end if
+       else
+          j = i
+       end if
     end do
 
     if(j == 0) then
-      message(1) = "Not enough slots for FFTs"
-      message(2) = "Please increase FFT_MAX in fft.F90 and recompile"
-      call write_fatal(2)
+       message(1) = "Not enough slots for FFTs"
+       message(2) = "Please increase FFT_MAX in fft.F90 and recompile"
+       call write_fatal(2)
     end if
 
     ! j now contains an empty slot
@@ -143,31 +143,33 @@ contains
     fft_array(j)%n       = n
     fft_array(j)%is_real = is_real
     if(is_real == fft_real) then
-      allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
-      select case(sb%dim)
-      case(3)
-        call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
-        call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
-      case(2)
-        call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure)
-        call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure)
-      case(1)
-        stop 'error'
-      end select
-      deallocate(rin, cout)
+       allocate(rin(n(1), n(2), n(3)), cout(n(1)/2+1, n(2), n(3)))
+       select case(sb%dim)
+       case(3)
+          call DFFTW(plan_dft_r2c_3d) (fft_array(j)%planf, n(1), n(2), n(3), rin, cout, fftw_measure)
+          call DFFTW(plan_dft_c2r_3d) (fft_array(j)%planb, n(1), n(2), n(3), cout, rin, fftw_measure)
+       case(2)
+          call DFFTW(plan_dft_r2c_2d) (fft_array(j)%planf, n(1), n(2), rin, cout, fftw_measure)
+          call DFFTW(plan_dft_c2r_2d) (fft_array(j)%planb, n(1), n(2), cout, rin, fftw_measure)
+       case(1)
+          message(1) = 'fft_init: creation of 1D plan not implemented.'
+          call write_fatal(1)
+       end select
+       deallocate(rin, cout)
     else
-      allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
-      select case(sb%dim)
-      case(3)
-        call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
-        call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
-      case(2)
-        call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fftw_measure)
-        call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fftw_measure)
-      case(1)
-        stop 'error'
-      end select
-      deallocate(cin, cout)
+       allocate(cin(n(1), n(2), n(3)), cout(n(1), n(2), n(3)))
+       select case(sb%dim)
+       case(3)
+          call DFFTW(plan_dft_3d) (fft_array(j)%planf, n(1), n(2), n(3), cin, cout, fftw_forward,  fftw_measure)
+          call DFFTW(plan_dft_3d) (fft_array(j)%planb, n(1), n(2), n(3), cin, cout, fftw_backward, fftw_measure)
+       case(2)
+          call DFFTW(plan_dft_2d) (fft_array(j)%planf, n(1), n(2), cin, cout, fftw_forward,  fftw_measure)
+          call DFFTW(plan_dft_2d) (fft_array(j)%planb, n(1), n(2), cin, cout, fftw_backward, fftw_measure)
+       case(1)
+          message(1) = 'fft_init: creation of 1D plan not implemented.'
+          call write_fatal(1)
+       end select
+       deallocate(cin, cout)
     end if
     fft = fft_array(j)
 
