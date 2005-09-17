@@ -32,7 +32,8 @@ module nl_operator
   implicit none
 
   private
-  public :: nl_operator_type,      &
+  public ::                        &
+       nl_operator_type,           &
        nl_operator_init,           &
        nl_operator_equal,          &
        nl_operator_build,          &
@@ -42,7 +43,7 @@ module nl_operator
        znl_operator_operate_cmplx, &
        nl_operator_end,            &
        nl_operator_skewadjoint,    &
-       nl_operator_selfadjoint, &
+       nl_operator_selfadjoint,    &
        nl_operator_write
 
   type nl_operator_type
@@ -122,16 +123,11 @@ contains
   subroutine nl_operator_build(m, op, np, const_w, cmplx_op)
     type(mesh_type), target, intent(in)    :: m
     type(nl_operator_type),  intent(inout) :: op       
-    integer,                 intent(in)    :: np       ! Number of (local)
-                                                      ! points.
-    logical, optional,      intent(in)    :: const_w  ! are the weights constant (independent of the point)
-    logical, optional,      intent(in)    :: cmplx_op ! do we have complex weights?
+    integer,                 intent(in)    :: np       ! Number of (local) points.
+    logical, optional,      intent(in)     :: const_w  ! are the weights constant (independent of the point)
+    logical, optional,      intent(in)     :: cmplx_op ! do we have complex weights?
 
     integer :: i, j, p1(3)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer :: ierr ! MPI errorcode.
-    integer :: rank ! Current nodes rank.
-#endif
 
     call push_sub('nl_operator.nl_operator_build')
 
@@ -169,28 +165,24 @@ contains
     ! Build lookup table op%i from stencil.
     allocate(op%i(op%n, np))
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    call MPI_Comm_rank(m%vp%comm, rank, ierr)
-#endif
-
     do i = 1, np
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-      ! When running in parallel, get global number of
-      ! point i.
-      p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(rank+1)+i-1), :)
+       ! When running in parallel, get global number of
+       ! point i.
+       p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), :)
 #else
-      p1(:) = m%Lxyz(i, :)
+       p1(:) = m%Lxyz(i, :)
 #endif
 
-      do j = 1, op%n
-        ! Get global index of p1 plus current stencil point.
-        op%i(j, i) = mesh_index(m, p1(:) + op%stencil(:, j), 1)
+       do j = 1, op%n
+          ! Get global index of p1 plus current stencil point.
+          op%i(j, i) = mesh_index(m, p1(:) + op%stencil(:, j), 1)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-        ! When running parallel, translate this global
-        ! number back to a local number.
-        op%i(j, i) = m%vp%global(op%i(j, i), rank+1)
+          ! When running parallel, translate this global
+          ! number back to a local number.
+          op%i(j, i) = m%vp%global(op%i(j, i), m%vp%partno)
 #endif
-      end do
+       end do
     end do
 
     call pop_sub()
@@ -246,9 +238,8 @@ contains
     FLOAT, pointer   :: vol_pp(:)
     FLOAT, pointer   :: w_re(:, :), w_re_t(:, :)
     FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
-    
+
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    integer                :: rank, ierr
     type(nl_operator_type) :: opg, opgt
 #endif
 
@@ -257,39 +248,38 @@ contains
     opt = op
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
 
     call nl_operator_allgather(op, opg)
     call nl_operator_init(opgt, op%n)
     opgt = opg
-    allocate(vol_pp(m%np_glob))
+    allocate(vol_pp(m%np_global))
     call dvec_allgather(m%vp, vol_pp, m%vol_pp)
-    
+
     op_i   => opg%i
     w_re   => opg%w_re
     w_re_t => opgt%w_re
     if(op%cmplx_op) then
-      w_im   => opg%w_im
-      w_im_t => opgt%w_im
+       w_im   => opg%w_im
+       w_im_t => opgt%w_im
     end if
 #else
     op_i   => op%i
     w_re   => op%w_re
     w_re_t => opt%w_re
     if(op%cmplx_op) then
-      w_im   => op%w_im
-      w_im_t => opt%w_im
+       w_im   => op%w_im
+       w_im_t => opt%w_im
     end if
     vol_pp => m%vol_pp
 #endif
 
-    np = m%np_glob
+    np = m%np_global
     w_re_t = M_ZERO
     if (op%cmplx_op) w_im_t = M_ZERO
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
        do j = 1, op%n
           index = op_i(j, i)
-          if(index <= m%np_glob) then
+          if(index <= m%np_global) then
              do l = 1, op%n
                 k = op_i(l, index)
                 if( k == i ) then
@@ -309,11 +299,11 @@ contains
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     deallocate(vol_pp)
-    do i = 1, m%vp%np_local(rank+1)
-      opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
-      if(opt%cmplx_op) then
-        opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
-      end if
+    do i = 1, m%vp%np_local(m%vp%partno)
+       opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+       if(opt%cmplx_op) then
+          opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+       end if
     end do
     call nl_operator_end(opg)
     call nl_operator_end(opgt)
@@ -333,9 +323,8 @@ contains
     FLOAT, pointer   :: vol_pp(:)
     FLOAT, pointer   :: w_re(:, :), w_re_t(:, :)
     FLOAT, pointer   :: w_im(:, :), w_im_t(:, :)
-    
+
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    integer                :: rank, ierr
     type(nl_operator_type) :: opg, opgt
 #endif
 
@@ -345,39 +334,38 @@ contains
     opt = op
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
 
     call nl_operator_allgather(op, opg)
     call nl_operator_init(opgt, op%n)
     opgt = opg
-    allocate(vol_pp(m%np_glob))
+    allocate(vol_pp(m%np_global))
     call dvec_allgather(m%vp, vol_pp, m%vol_pp)
-    
+
     op_i   => opg%i
     w_re   => opg%w_re
     w_re_t => opgt%w_re
     if(op%cmplx_op) then
-      w_im   => opg%w_im
-      w_im_t => opgt%w_im
+       w_im   => opg%w_im
+       w_im_t => opgt%w_im
     end if
 #else
     op_i   => op%i
     w_re   => op%w_re
     w_re_t => opt%w_re
     if(op%cmplx_op) then
-      w_im   => op%w_im
-      w_im_t => opt%w_im
+       w_im   => op%w_im
+       w_im_t => opt%w_im
     end if
     vol_pp => m%vol_pp
 #endif
 
-    np = m%np_glob
+    np = m%np_global
     w_re_t = M_ZERO
     if (op%cmplx_op) w_im_t = M_ZERO
-    do i = 1, m%np_glob
+    do i = 1, m%np_global
        do j = 1, op%n
           index = op_i(j, i)
-          if(index <= m%np_glob) then
+          if(index <= m%np_global) then
              do l = 1, op%n
                 k = op_i(l, index)
                 if( k == i ) then
@@ -396,11 +384,11 @@ contains
     enddo
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     deallocate(vol_pp)
-    do i = 1, m%vp%np_local(rank+1)
-      opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
-      if(opt%cmplx_op) then
-        opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(rank+1)+i-1))
-      end if
+    do i = 1, m%vp%np_local(m%vp%partno)
+       opt%w_re(:, i) = w_re_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+       if(opt%cmplx_op) then
+          opt%w_im(:, i) = w_im_t(:, m%vp%local(m%vp%xlocal(m%vp%partno)+i-1))
+       end if
     end do
     call nl_operator_end(opg)
     call nl_operator_end(opgt)
@@ -421,39 +409,43 @@ contains
     type(nl_operator_type), intent(out) :: opg ! Global operator.
 
     integer :: i
-    integer :: rank, ierr
 
     call push_sub('nl_operator.nl_operator_gather')
-
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
 
     ! If root node, copy elements of op to opg that
     ! are independent from the partitions, i. e. everything
     ! except op%i and - in the non constant case - op%w_re
     ! op%w_im.
-    if(rank.eq.op%m%vp%root) then
-      call nl_operator_common_copy(op, opg)
+    if(op%m%vp%rank.eq.op%m%vp%root) then
+       call nl_operator_common_copy(op, opg)
     end if
+#ifdef DEBUG
+    call write_debug_newlines(4)
+#endif
+
 
     ! Gather op%i and - if necessary - op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do i = 1, op%n
-      call ivec_gather(op%m%vp, opg%i(i, :), op%i(i, :))
+       call ivec_gather(op%m%vp, opg%i(i, :), op%i(i, :))
     end do
-    if(rank.eq.op%m%vp%root) then
-      call nl_operator_translate_indices(opg)
+    if(op%m%vp%rank.eq.op%m%vp%root) then
+       call nl_operator_translate_indices(opg)
     end if
+#ifdef DEBUG
+    call write_debug_newlines(2)
+#endif
 
     ! Weights have to be collected only if they are
     ! not constant.
     if(.not.op%const_w) then
-      do i = 1, op%n
-        call dvec_gather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
-        if(op%cmplx_op) call dvec_gather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
-      end do
+       do i = 1, op%n
+          call dvec_gather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
+          if(op%cmplx_op) call dvec_gather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
+       end do
     end if
- 
+
     call pop_sub()
 
   end subroutine nl_operator_gather
@@ -474,10 +466,10 @@ contains
     call nl_operator_build(opg%m, op, opg%m%np, opg%const_w, opg%cmplx_op)
 
     do i = 1, opg%n
-      call dvec_scatter(opg%m%vp, opg%w_re(i, :), op%w_re(i, :))
-      if(opg%cmplx_op) then
-        call dvec_scatter(opg%m%vp, opg%w_im(i, :), op%w_im(i, :))
-      end if
+       call dvec_scatter(opg%m%vp, opg%w_re(i, :), op%w_re(i, :))
+       if(opg%cmplx_op) then
+          call dvec_scatter(opg%m%vp, opg%w_im(i, :), op%w_im(i, :))
+       end if
     end do
 
     call pop_sub()
@@ -494,11 +486,8 @@ contains
     type(nl_operator_type), intent(out) :: opg
 
     integer :: i
-    integer :: rank, ierr
 
     call push_sub('nl_operator.nl_operator_allgather')
-
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
 
     ! Copy elements of op to opg that
     ! are independent from the partitions, i. e. everything
@@ -510,19 +499,19 @@ contains
     ! Collect for every point in the stencil in a single step.
     ! This permits to use ivec_gather.
     do i = 1, op%n
-      call ivec_allgather(op%m%vp, opg%i(i, :), op%i(i, :))
+       call ivec_allgather(op%m%vp, opg%i(i, :), op%i(i, :))
     end do
     call nl_operator_translate_indices(opg)
 
     ! Weights have to be collected only if they are
     ! not constant.
     if(.not.op%const_w) then
-      do i = 1, op%n
-        call dvec_allgather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
-        if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
-      end do
+       do i = 1, op%n
+          call dvec_allgather(op%m%vp, opg%w_re(i, :), op%w_re(i, :))
+          if(op%cmplx_op) call dvec_allgather(op%m%vp, opg%w_im(i, :), op%w_im(i, :))
+       end do
     end if
- 
+
     call pop_sub()
 
   end subroutine nl_operator_allgather
@@ -545,32 +534,32 @@ contains
     call push_sub('nl_operator.nl_operator_common_copy')
 
     call nl_operator_init(opg, op%n)
-    allocate(opg%i(op%n, op%m%np_glob))
+    allocate(opg%i(op%n, op%m%np_global))
     if(op%const_w) then
-      allocate(opg%w_re(op%n, 1))
-      if(op%cmplx_op) then
-        allocate(opg%w_im(op%n, 1))
-      end if
+       allocate(opg%w_re(op%n, 1))
+       if(op%cmplx_op) then
+          allocate(opg%w_im(op%n, 1))
+       end if
     else
-      allocate(opg%w_re(op%n, op%m%np_glob))
-      if(op%cmplx_op) then
-        allocate(opg%w_im(op%n, op%m%np_glob))
-      end if
+       allocate(opg%w_re(op%n, op%m%np_global))
+       if(op%cmplx_op) then
+          allocate(opg%w_im(op%n, op%m%np_global))
+       end if
     end if
     opg%m        => op%m
-    opg%np       =  op%m%np_glob
+    opg%np       =  op%m%np_global
     opg%stencil  =  op%stencil
     opg%cmplx_op =  op%cmplx_op
     opg%const_w  =  op%const_w
     if(op%const_w) then
-      opg%w_re = op%w_re
-      if(op%cmplx_op) then
-        opg%w_im = op%w_im
-      end if
+       opg%w_re = op%w_re
+       if(op%cmplx_op) then
+          opg%w_im = op%w_im
+       end if
     end if
 
     call pop_sub()
-    
+
   end subroutine nl_operator_common_copy
 
 
@@ -586,40 +575,40 @@ contains
     call push_sub('nl_operator.nl_operator_translate_indices')
 
     do i = 1, opg%n
-      do j = 1, opg%m%np_glob
-        il = opg%m%vp%np_local(opg%m%part(j))
-        ig = il+opg%m%vp%np_ghost(opg%m%part(j))
-        ! opg%i(i, j) is a local point number, i. e. it can be
-        ! a real local point (i. e. the local point number
-        ! is less or equal than the number of local points of
-        ! the node which owns the point with global number j):
-        if(opg%i(i, j).le.il) then
-          ! Write the global point number from the lookup
-          ! table in op_(i, j).
-          opg%i(i, j) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%part(j)) &
-                        +opg%i(i, j)-1)
-        ! Or a ghost point:
-        else if(opg%i(i, j).gt.il.and.opg%i(i, j).le.ig) then
-          opg%i(i, j) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%part(j)) &
-                        +opg%i(i, j)-1-il)
-        ! Or a boundary point:
-        else if(opg%i(i, j).gt.ig) then
-          opg%i(i, j) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%part(j)) &
-                        +opg%i(i, j)-1-ig)
-        end if
-      end do
+       do j = 1, opg%m%np_global
+          il = opg%m%vp%np_local(opg%m%part(j))
+          ig = il+opg%m%vp%np_ghost(opg%m%part(j))
+          ! opg%i(i, j) is a local point number, i. e. it can be
+          ! a real local point (i. e. the local point number
+          ! is less or equal than the number of local points of
+          ! the node which owns the point with global number j):
+          if(opg%i(i, j).le.il) then
+             ! Write the global point number from the lookup
+             ! table in op_(i, j).
+             opg%i(i, j) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%part(j)) &
+                  +opg%i(i, j)-1)
+             ! Or a ghost point:
+          else if(opg%i(i, j).gt.il.and.opg%i(i, j).le.ig) then
+             opg%i(i, j) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%part(j)) &
+                  +opg%i(i, j)-1-il)
+             ! Or a boundary point:
+          else if(opg%i(i, j).gt.ig) then
+             opg%i(i, j) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%part(j)) &
+                  +opg%i(i, j)-1-ig)
+          end if
+       end do
     end do
 
     call pop_sub()
 
-  end subroutine
+  end subroutine nl_operator_translate_indices
 
   ! =========================================================
   ! End of private routines.
   ! =========================================================
 #endif
 
-  
+
   ! ---------------------------------------------------------
   ! When running in parallel only the root node
   ! creates the matrix. But all nodes have to
@@ -634,14 +623,12 @@ contains
     integer, pointer :: op_i(:, :)
     FLOAT, pointer   :: w_re(:, :), w_im(:, :)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer                :: rank, ierr
     type(nl_operator_type) :: opg
 #endif
 
     call push_sub('nl_operator.nl_operator_op_to_matrix')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
     call nl_operator_gather(op, opg)
     ! Take these shortcuts.
     op_i => opg%i
@@ -655,25 +642,28 @@ contains
 #endif
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(rank.eq.op%m%vp%root) then
+    if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      k = 1
-      do i = 1, op%m%np_glob
-         if(.not.op%const_w) k = i
-         do j = 1, op%n
-            index = op_i(j, i)
-            if(index <= op%m%np_glob) then
-               a(i, index) = w_re(j, k)
-               if (op%cmplx_op) b(i, index) = w_im(j, k)
-            endif
-         enddo
-      enddo
+       k = 1
+       do i = 1, op%m%np_global
+          if(.not.op%const_w) k = i
+          do j = 1, op%n
+             index = op_i(j, i)
+             if(index <= op%m%np_global) then
+                a(i, index) = w_re(j, k)
+                if (op%cmplx_op) b(i, index) = w_im(j, k)
+             endif
+          enddo
+       enddo
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     endif
 
-    if(rank.eq.op%m%vp%root) then
-      call nl_operator_end(opg)
+    if(op%m%vp%rank.eq.op%m%vp%root) then
+       call nl_operator_end(opg)
     end if
+#ifdef DEBUG
+    call write_debug_newlines(2)
+#endif    
 #endif
 
     call pop_sub()
@@ -720,20 +710,14 @@ contains
     integer            :: i, j
     integer            :: unit
     FLOAT, allocatable :: a(:, :)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer            :: rank, ierr
-#endif
 
     call push_sub('nl_operator.nl_operator_write')
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
-#endif
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(rank.eq.op%m%vp%root) then
+    if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      allocate(a(op%m%np_glob, op%m%np_glob))
-      a = M_ZERO
+       allocate(a(op%m%np_global, op%m%np_global))
+       a = M_ZERO
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
     end if
 #endif
@@ -741,22 +725,22 @@ contains
     call nl_operator_op_to_matrix(op, a)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(rank.eq.op%m%vp%root) then
+    if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      unit = io_open(filename, action='write')
-      if(unit < 0) then
-        message(1) = 'Could not open file '//filename//' to write operator.'
-        call write_fatal(1)
-      end if
-      do i = 1, op%m%np_glob
-         do j = 1, op%m%np_glob - 1
-            write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
-         enddo
-         write(unit, fmt = '(f9.4)') a(i, op%m%np_glob)
-      enddo
-      call io_close(unit)
+       unit = io_open(filename, action='write')
+       if(unit < 0) then
+          message(1) = 'Could not open file '//filename//' to write operator.'
+          call write_fatal(1)
+       end if
+       do i = 1, op%m%np_global
+          do j = 1, op%m%np_global - 1
+             write(unit, fmt = '(f9.4)', advance ='no') a(i, j)
+          enddo
+          write(unit, fmt = '(f9.4)') a(i, op%m%np_global)
+       enddo
+       call io_close(unit)
 
-      deallocate(a)
+       deallocate(a)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     end if
 #endif
@@ -775,20 +759,14 @@ contains
 
     integer :: i, j
     FLOAT, allocatable :: a(:, :)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer :: rank, ierr
-#endif
 
     call push_sub('nl_operator.nl_operator_write')
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    call MPI_Comm_rank(op%m%vp%comm, rank, ierr)
-#endif
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(rank.eq.op%m%vp%root) then
+    if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      allocate(a(op%m%np_glob, op%m%np_glob))
-      a = M_ZERO
+       allocate(a(op%m%np_global, op%m%np_global))
+       a = M_ZERO
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
     end if
 #endif
@@ -796,16 +774,16 @@ contains
     call nl_operator_op_to_matrix(op, a)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(rank.eq.op%m%vp%root) then
+    if(op%m%vp%rank.eq.op%m%vp%root) then
 #endif
-      do i = 1, op%m%np_glob
-         do j = 1, op%m%np_glob - 1
-            write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
-         enddo
-         write(unit, fmt = '(f9.4)') a(op%m%np_glob, i)
-      enddo
+       do i = 1, op%m%np_global
+          do j = 1, op%m%np_global - 1
+             write(unit, fmt = '(f9.4)', advance ='no') a(j, i)
+          enddo
+          write(unit, fmt = '(f9.4)') a(op%m%np_global, i)
+       enddo
 
-      deallocate(a)
+       deallocate(a)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     end if
 #endif
