@@ -189,6 +189,7 @@ oct_test.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
 opt_control.o: global.h
 out.o: global.h out_inc.F90
+par_vec.o: global.h par_vec_inc.F90
 pes.o: global.h pes_rc.F90 pes_mask.F90
 phonons.o: global.h
 phonon_spectrum.o: global.h
