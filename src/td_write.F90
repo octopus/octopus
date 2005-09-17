@@ -544,7 +544,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
     call write_iter_nl(out_multip)
   end if
 
-  allocate(nuclear_dipole(NDIM), multipole((lmax + 1)**2, st%d%nspin))
+  allocate(nuclear_dipole(1:3), multipole((lmax + 1)**2, st%d%nspin))
   call states_calculate_multipoles(gr, st, lmax, multipole)
   call geometry_dipole(gr%geo, nuclear_dipole)
   do is = 1, st%d%nspin
