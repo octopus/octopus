@@ -185,6 +185,7 @@ mesh.o: global.h mesh_create.F90
 mesh_lib.o: global.h
 mf.o: global.h mf_inc.F90
 mix.o: global.h
+mpi.o: global.h mpi_inc.F90
 nl_operator.o: global.h
 oct_test.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90
