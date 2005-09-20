@@ -100,6 +100,20 @@ end subroutine TS(MPI_Allgatherv)
 
 
 ! ------------------------------------------------------------------------------
+subroutine TS(MPI_Bcast)(buf, cnt, sendtype, root, comm, ierr)
+  R_TYPE  :: buf(:)
+  integer :: cnt, sendtype, root, comm, ierr
+
+  call MPI_Debug_IN (comm, C_MPI_BCAST)
+
+  call MPI_Bcast(buf, cnt, sendtype, root, comm, ierr)
+
+  call MPI_Debug_OUT(comm, C_MPI_BCAST)
+
+end subroutine TS(MPI_Bcast)
+
+
+! ------------------------------------------------------------------------------
 subroutine TS(MPI_Allreduce)(sendbuf, recvbuf, count, datatype, op, &
      comm, ierr)
   R_TYPE  :: sendbuf, recvbuf

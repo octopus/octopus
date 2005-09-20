@@ -40,6 +40,7 @@ module mpi_mod
        TSD_MPI_Gatherv, TSZ_MPI_Gatherv, TSI_MPI_Gatherv,          &
        TSD_MPI_Alltoallv, TSZ_MPI_Alltoallv, TSI_MPI_Alltoallv,    &
        TSD_MPI_Allgatherv, TSZ_MPI_Allgatherv, TSI_MPI_Allgatherv, &
+       TSD_MPI_Bcast, TSZ_MPI_Bcast, TSI_MPI_Bcast,                &
        TSD_MPI_Allreduce, TSZ_MPI_Allreduce, TSI_MPI_Allreduce
 
   integer, public, parameter ::  &
@@ -48,7 +49,8 @@ module mpi_mod
        C_MPI_GATHERV    = 3,     &
        C_MPI_ALLTOALLV  = 4,     &
        C_MPI_ALLGATHERV = 5,     &
-       C_MPI_ALLREDUCE  = 6
+       C_MPI_BCAST      = 6,     &
+       C_MPI_ALLREDUCE  = 7
 
   character(len=15), dimension(C_MPI_ALLREDUCE), public :: mpi_rlabel = &
        (/                &
@@ -57,6 +59,7 @@ module mpi_mod
        'MPI_GATHERV   ', & 
        'MPI_ALLTOALLV ', &
        'MPI_ALLGATHERV', &
+       'MPI_BCAST     ', &
        'MPI_ALLREDUCE '  &
        /)       
 
