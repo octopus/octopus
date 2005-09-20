@@ -86,29 +86,56 @@ end subroutine poisson2D_init
 
 subroutine poisson2D_solve(m, pot, rho)
   type(mesh_type), intent(in) :: m
-  FLOAT, intent(out) :: pot(m%np)
-  FLOAT, intent(in)  :: rho(m%np)
+  FLOAT, intent(out)          :: pot(m%np)
+  FLOAT, intent(in)           :: rho(m%np)
 
   integer  :: i, j
-  FLOAT :: x(2), y(2)
+  FLOAT    :: x(2), y(2), tmp
+  FLOAT, allocatable :: pvec(:)
 
   ASSERT(poisson_solver == -2)
 
   call push_sub('poisson2D.poisson2D_solve')
 
+  allocate(pvec(1:m%np))
+
   pot = M_ZERO
-  do i = 1, m%np
-    x(:) = m%x(i,:)
-    do j = 1, m%np
-      if(i == j) then
-        pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
-      else
-        y(:) = m%x(j,:)
-        pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
-      end if
-    end do
-    pot(i) = pot(i)
+  do i = 1, m%np_global
+     x(:) = m%x_global(i,:)
+     do j = 1, m%np
+        if(m%vp%global(i, m%vp%partno) == j) then
+           pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/m%h(1)
+        else
+           y(:) = m%x(j,:)
+           pvec(j) = rho(j)/sqrt(sum((x-y)**2))
+        endif
+     enddo
+     tmp = dmf_integrate(m, pvec)
+     if (m%part(i).eq.m%vp%partno) then
+        pot(m%vp%global(i, m%vp%partno)) = tmp
+     endif
   end do
+
+!!$  The above MPI version is in my opinion the correct way to parallize
+!!$  the 2D Hartree sum. However, the potential produced by above code differs
+!!$  from the serial one stronger than I expected. For further debugging 
+!!$  purposes I therefore keep the old serial code below in comments. 
+!!$
+!!$  pot = M_ZERO
+!!$  do i = 1, m%np
+!!$     x(:) = m%x(i,:)
+!!$     do j = 1, m%np
+!!$        if(i == j) then
+!!$           pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
+!!$        else
+!!$           y(:) = m%x(j,:)
+!!$           pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
+!!$        end if
+!!$     end do
+!!$  end do
+
+
+  deallocate(pvec)
 
   call pop_sub()
 end subroutine poisson2D_solve
