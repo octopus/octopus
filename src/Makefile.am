@@ -17,7 +17,7 @@ core_SRCS = $(basic_SRCS) \
 	libxc.F90 logrid.F90 atomic.F90 tm.F90 hgh.F90 ps.F90 \
 	specie.F90 xyz_file.F90 geometry.F90 simul_box.F90 \
 	curv_gygi.F90 curv_briggs.F90 curv_modine.F90 curvlinear.F90 \
-	fft.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
+	fft.F90 mesh_lib.F90 par_vec.F90 mesh.F90 scalar_mesh.F90 nl_operator.F90 \
 	stencil_star.F90 stencil_variational.F90 stencil_cube.F90 stencil_starplus.F90 derivatives.F90 \
 	cf.F90 mf.F90 f.F90 \
 	out.F90 multigrid.F90 grid.F90 \
@@ -182,6 +182,7 @@ main.o: global.h
 make_st.o: global.h
 math.o: global.h math_cg_inc.F90 math_inc.F90
 mesh.o: global.h mesh_create.F90
+mesh_lib.o: global.h
 mf.o: global.h mf_inc.F90
 mix.o: global.h
 nl_operator.o: global.h
