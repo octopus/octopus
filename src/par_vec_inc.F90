@@ -154,9 +154,11 @@ subroutine X(vec_gather)(vp, v, v_local)
 
   if(vp%rank.eq.vp%root) allocate(v_tmp(vp%np))
 
-  call TS(MPI_Gatherv)(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
-                       vp%np_local, displs, R_MPITYPE,                 &
-                       vp%root, vp%comm, ierr)
+  call MPI_Debug_IN(vp%comm, C_MPI_GATHERV)
+  call MPI_Gatherv(v_local, vp%np_local(vp%partno), R_MPITYPE, v_tmp, &
+                   vp%np_local, displs, R_MPITYPE,                    &
+                   vp%root, vp%comm, ierr)
+  call MPI_Debug_OUT(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
   if(vp%rank.eq.vp%root) then
