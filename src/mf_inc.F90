@@ -23,7 +23,7 @@ R_TYPE function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
 
-  call push_sub('mf_inf.Xmf_integrate')
+  call push_sub('mf_inc.Xmf_integrate')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   d = X(vec_integrate)(m%vp, f(1:m%np)*m%vol_pp(1:m%np))
