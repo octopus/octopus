@@ -558,7 +558,7 @@ contains
 
        if(lmax>0) then
          do i = 1, 3
-            f(:) = st%rho(:, is)*gr%m%x(:, i)
+            f(:) = st%rho(1:gr%m%np, is)*gr%m%x(1:gr%m%np, i)
             multipole(i+1, is) = dmf_integrate(gr%m, f)
          enddo
        endif
