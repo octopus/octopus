@@ -37,6 +37,7 @@ module poisson
   use grid
   use output
   use poisson_multigrid
+  use mesh_function
   implicit none
 
   private
