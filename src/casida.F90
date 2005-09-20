@@ -60,9 +60,6 @@ module casida
      FLOAT,   pointer :: energies(:,:)   ! excitation energies and intensities
   end type casida_type
 
-  private
-  public :: casida_run
-
 contains
 
   ! ---------------------------------------------------------
@@ -297,7 +294,6 @@ contains
 
     else if (mpiv%node == 0) then      ! this is not yet parallel
        call solve_petersilka()          ! eigenvalues or petersilka formula
-       call sort_energies()             ! energies may be out of order
     end if
 
     ! clean up
@@ -502,22 +498,6 @@ contains
     end subroutine load_saved
 
 
-    ! ---------------------------------------------------------
-    ! WARNING: Not tested yet...
-    subroutine sort_energies
-      integer :: i
-      integer, allocatable :: ind(:), itmp(:)
-      FLOAT, allocatable :: tmp(:)
-      allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs))
-
-      call sort(cas%energies(:, 1), ind)
-      do i = 2, 4
-         tmp(:) = cas%energies(:, i) ; cas%energies(:, i) = tmp(ind(:))
-      enddo
-      itmp(:) = cas%pair_i(:) ; cas%pair_i(:) = itmp(ind(:))
-      itmp(:) = cas%pair_a(:) ; cas%pair_a(:) = itmp(ind(:))
-      deallocate(ind, itmp, tmp)
-    end subroutine sort_energies
 
 
     ! ---------------------------------------------------------
@@ -541,6 +521,24 @@ contains
 
   end subroutine casida_work
 
+  ! ---------------------------------------------------------
+  subroutine sort_energies(cas)
+    type(casida_type), intent(inout) :: cas
+    integer :: i
+    integer, allocatable :: ind(:), itmp(:)
+    FLOAT, allocatable :: tmp(:)
+    allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs))
+
+    call sort(cas%energies(:, 1), ind)
+    do i = 2, 4
+       tmp(:) = cas%energies(:, i) ; cas%energies(:, i) = tmp(ind(:))
+    enddo
+    itmp(:) = cas%pair_i(:) ; cas%pair_i(:) = itmp(ind(:))
+    itmp(:) = cas%pair_a(:) ; cas%pair_a(:) = itmp(ind(:))
+    deallocate(ind, itmp, tmp)
+  end subroutine sort_energies
+
+
 
   ! ---------------------------------------------------------
   subroutine casida_write(cas, filename)
@@ -550,44 +548,60 @@ contains
     integer :: iunit, ia, jb
     FLOAT   :: temp
 
+    type(casida_type) :: casp
+
+    casp%type      = cas%type
+    casp%n_occ     = cas%n_occ
+    casp%n_unocc   = cas%n_unocc
+    casp%wfn_flags = cas%wfn_flags
+    casp%n_pairs   = cas%n_pairs
+    allocate(casp%pair_i(casp%n_pairs), casp%pair_a(casp%n_pairs), &
+             casp%mat(casp%n_pairs, casp%n_pairs), casp%energies(casp%n_pairs, 4))
+    casp%pair_i    = cas%pair_i
+    casp%pair_a    = cas%pair_a
+    casp%mat       = cas%mat
+    casp%energies  = cas%energies
+
+    call sort_energies(casp)
+
     ! output excitation energies and oscillator strengths
     call io_mkdir('linear')
     iunit = io_open('linear/'//trim(filename), action='write')
 
-    if(cas%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
+    if(casp%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
 
     write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
-    do ia = 1, cas%n_pairs
-       if((cas%type==CASIDA_EPS_DIFF).or.(cas%type==CASIDA_PETERSILKA)) then
-          write(iunit, '(2i4)', advance='no') cas%pair_i(ia), cas%pair_a(ia)
+    do ia = 1, casp%n_pairs
+       if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
+          write(iunit, '(2i4)', advance='no') casp%pair_i(ia), casp%pair_a(ia)
        end if
-       write(iunit, '(5(e15.8,1x))') cas%energies(ia,1) / units_out%energy%factor, &
-            cas%energies(ia, 2:4), M_TWOTHIRD*sum(cas%energies(ia, 2:4))
+       write(iunit, '(5(e15.8,1x))') casp%energies(ia,1) / units_out%energy%factor, &
+            casp%energies(ia, 2:4), M_TWOTHIRD*sum(casp%energies(ia, 2:4))
     end do
     call io_close(iunit)
 
     ! output eigenvectors in casida approach
-    if(cas%type.ne.CASIDA_CASIDA) return
+    if(casp%type.ne.CASIDA_CASIDA) return
 
     iunit = io_open('linear/'//trim(filename)//'.vec', action='write')
     write(iunit, '(a14)', advance = 'no') ' value '
-    do ia = 1, cas%n_pairs
-       write(iunit, '(3x,i4,a1,i4,2x)', advance='no') cas%pair_i(ia), ' - ', cas%pair_a(ia)
+    do ia = 1, casp%n_pairs
+       write(iunit, '(3x,i4,a1,i4,2x)', advance='no') casp%pair_i(ia), ' - ', casp%pair_a(ia)
     end do
     write(iunit, '(1x)')
 
-    do ia = 1, cas%n_pairs
-       write(iunit, '(es14.6)', advance='no') cas%energies(ia, 1) / units_out%energy%factor
+    do ia = 1, casp%n_pairs
+       write(iunit, '(es14.6)', advance='no') casp%energies(ia, 1) / units_out%energy%factor
        temp = M_ONE
-       if(maxval(cas%mat(:, ia)) < abs(minval(cas%mat(:, ia)))) temp = -temp
-       do jb = 1, cas%n_pairs
-          write(iunit, '(es14.6)', advance='no') temp*cas%mat(jb, ia)
+       if(maxval(casp%mat(:, ia)) < abs(minval(casp%mat(:, ia)))) temp = -temp
+       do jb = 1, casp%n_pairs
+          write(iunit, '(es14.6)', advance='no') temp*casp%mat(jb, ia)
        end do
        write(iunit, '(1x)')
     end do
 
     call io_close(iunit)
-
+    call casida_type_end(casp)
   end subroutine casida_write
 
 end module casida

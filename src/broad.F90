@@ -41,6 +41,7 @@ program broad
   call parser_init()
   call io_init()
   call syslabels_init(1)
+  current_label = trim(subsys_label(subsys_run_order(1)))
   call units_init()
 
   ! broadening to use
