@@ -273,6 +273,9 @@ contains
     type(states_type), pointer :: st
     type(mesh_type),   pointer :: m
 
+    FLOAT, allocatable :: rho(:, :), fxc(:,:,:)
+    integer :: is
+
     ! sanity checks
     ASSERT(cas%type>=CASIDA_EPS_DIFF.and.cas%type<=CASIDA_CASIDA)
 
@@ -289,6 +292,17 @@ contains
     ! load saved matrix elements
     call load_saved()
 
+    ! We calculate here the kernel, since it will be needed later.
+    allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
+    if(associated(st%rho_core)) then
+       do is = 1, st%d%spin_channels
+          rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
+       enddo
+    else
+       rho = st%rho
+    endif
+    call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
+
     if(cas%type == CASIDA_CASIDA) then
        call solve_casida()              ! solve casida matrix
 
@@ -297,6 +311,7 @@ contains
     end if
 
     ! clean up
+    deallocate(rho, fxc)
     deallocate(saved_K)
 
   contains
@@ -445,7 +460,7 @@ contains
       integer, intent(in) :: i, j, a, b
 
       integer :: is
-      FLOAT, allocatable :: rho(:, :), fxc(:,:,:), rho_i(:), rho_j(:), pot(:)
+      FLOAT, allocatable :: rho_i(:), rho_j(:), pot(:)
 
       allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
 
@@ -458,21 +473,10 @@ contains
       K_term = dmf_dotp(m, rho_i(:), pot(:))
       deallocate(pot)
 
-      ! now we have fxc
-      allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
-      if(associated(st%rho_core)) then
-         do is = 1, st%d%spin_channels
-            rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
-         enddo
-      else
-         rho = st%rho
-      endif
-      call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
-
       rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1)
       K_term = K_term + dmf_integrate(m, rho(:, 1))
 
-      deallocate(rho_i, rho_j, rho, fxc)
+      deallocate(rho_i, rho_j)
     end function K_term
 
 
