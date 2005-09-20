@@ -42,32 +42,42 @@ subroutine X(input_function)(filename, m, f, ierr)
   R_TYPE,               intent(out) :: f(:)
   integer,              intent(out) :: ierr
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer             :: mpierr
   R_TYPE, allocatable :: f_global(:)
+#endif
 
   call push_sub('out_inc.Xinput_function')
   
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  allocate(f_global(1:m%np_global))
-
+  ! Only root reads. Therefore, only root needs a buffer
+  ! f_global for the whole function.
   if(m%vp%rank.eq.m%vp%root) then
-     call X(input_function_global)(filename, m, f_global, ierr)
+    allocate(f_global(1:m%np_global))
+    call X(input_function_global)(filename, m, f_global, ierr)
 #ifdef DEBUG
   else
      call write_debug_newlines(2)
 #endif
-#endif
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   endif
 
-  call X(vec_scatter)(m%vp, f_global, f)
+  ! Only root knows, wheather the file was succesfully read.
+  ! Now, it telss everybody else.
+  call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+  ! Only scatter, when successfully read the file(s).
+  if(ierr.le.0) then
+    call X(vec_scatter)(m%vp, f_global, f)
+  end if
 
-  deallocate(f_global)
-
+  if(m%vp%rank.eq.m%vp%root) then
+    deallocate(f_global)
+  end if
 #else
   call X(input_function_global)(filename, m, f, ierr)
 #endif
 
   call pop_sub()
+
 end subroutine X(input_function)
 
 
