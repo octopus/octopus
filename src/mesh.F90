@@ -45,7 +45,6 @@ module mesh
     mesh_end,        &
     mesh_double_box, &
     mesh_create_xyz, &
-    mesh_index,      &
     mesh_inborder,   &
     mesh_r,          &
     mesh_gcutoff,    &

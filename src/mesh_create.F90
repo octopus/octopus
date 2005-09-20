@@ -386,13 +386,12 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
     end do
   end do
 
-write(*,*) '#######',m%nr
-
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   call mesh_partition_init_default(m, Lxyz_tmp)
   if(present(stencil).and.present(np_stencil)) then
-    call vec_init_default(m%npart, m%part, m%np_global, m%np_part_global, m%nr, &
-                          m%Lxyz_inv, m%Lxyz, stencil, np_stencil, m%vp)
+    call vec_init_default(m%npart, m%part, m%np_global, m%np_part_global, &
+                          m%nr, m%Lxyz_inv, m%Lxyz, stencil, np_stencil,  &
+                          m%sb%dim, m%sb%periodic_dim, m%vp)
 
     ! Set local point numbers.
     m%np     = m%vp%np_local(m%vp%partno)
@@ -499,49 +498,3 @@ subroutine mesh_get_vol_pp(sb, geo, cv, mesh)
   call pop_sub()
 
 end subroutine mesh_get_vol_pp
-
-
-! this function takes care of the boundary conditions
-! for a given x,y,z it returns the true index of the point
-
-! WARNING: have to get rid of dir, otherwise will not work
-integer function mesh_index(m, ix_, dir) result(index)
-  type(mesh_type),      intent(in) :: m
-  integer,              intent(in) :: ix_(:), dir
-
-  integer :: i, ix(3)  ! ix has to go until 3, not sb%dim
-
-  ix = 0
-  ix(1:m%sb%dim) = ix_(1:m%sb%dim) ! make a local copy that we can change
-
-  index = 1
-  do i = 1, m%sb%dim
-    if(ix(i) < m%nr(1, i)) then       ! first look left
-      if(i <= m%sb%periodic_dim) then ! fold point
-        ix(i) = ix(i) + abs(m%nr(2,i) - m%nr(1,i) + 1)
-      else
-        ix(i) = m%nr(1, i)
-        index = 0
-      end if
-    else if(ix(i) > m%nr(2, i)) then  ! the same, but on the right
-      if(i <= m%sb%periodic_dim) then
-        ix(i) = ix(i) - abs(m%nr(2,i) - m%nr(1,i) + 1)
-      else
-        ix(i) = m%nr(2, i)
-        index = 0
-      end if
-    end if
-  end do
-
-  if(index.ne.0) index = m%Lxyz_inv(ix(1), ix(2), ix(3))
-
-  if(index==0.and.conf%boundary_zero_derivative) then
-    do
-      index = m%Lxyz_inv(ix(1), ix(2), ix(3))
-      if(index.ne.0) exit
-      ix(abs(dir)) = ix(abs(dir)) - sign(1, dir)
-    end do
-  end if
-
-
-end function mesh_index

@@ -88,6 +88,7 @@ module par_vec
 
   use global
   use messages
+  use mesh_lib
 #ifdef DEBUG
   use io
 #endif
@@ -162,8 +163,9 @@ module par_vec
 contains
 
   ! Wrapper: calls vec_init with MPI_COMM_WORLD and master node 0.
-  subroutine vec_init_default(p, part, np, np_part, nr,                 &
-                              Lxyz_inv, Lxyz, stencil, np_stencil, vp)
+  subroutine vec_init_default(p, part, np, np_part, nr,            &
+                              Lxyz_inv, Lxyz, stencil, np_stencil, &
+                              dim, periodic_dim, vp)
     ! The next seven entries come from the mesh.
     integer,       intent(in)  :: p            ! m%npart
     integer,       intent(in)  :: part(:)      ! m%part
@@ -178,6 +180,8 @@ contains
     integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
                                                ! calculate ghost points.
     integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
+    integer,       intent(in)  :: dim          ! Number of dimensions.
+    integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
     type(pv_type), intent(out) :: vp           ! Description of partition.
 
     ! Throw them away.
@@ -187,8 +191,9 @@ contains
 
     call push_sub('par_vec.vec_init_default')
     
-    call vec_init(MPI_COMM_WORLD, 0, p, part, np, np_part, nr,  &
-                  Lxyz_inv, Lxyz, stencil, np_stencil, vp,     &
+    call vec_init(MPI_COMM_WORLD, 0, p, part, np, np_part, nr, &
+                  Lxyz_inv, Lxyz, stencil, np_stencil,         &
+                  dim, periodic_dim, vp,                       &
                   np_local, np_ghost, np_bndry)
 
     call pop_sub()
@@ -216,8 +221,9 @@ contains
   ! The points are relative to the "application point" of the stencil.
   ! (This is the same format as used in type(nl_operator_type), so
   ! just passing op%stencil is possible.)
-  subroutine vec_init(comm, root, p, part, np, np_part, nr,     &
-                      Lxyz_inv, Lxyz, stencil, np_stencil, vp, &
+  subroutine vec_init(comm, root, p, part, np, np_part, nr, &
+                      Lxyz_inv, Lxyz, stencil, np_stencil,  &
+                      dim, periodic_dim, vp,                &
                       np_local, np_ghost, np_bndry)
     integer,       intent(in)  :: comm         ! Communicator to use.
     integer,       intent(in)  :: root         ! The master node.
@@ -235,6 +241,8 @@ contains
     integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
                                                ! calculate ghost points.
     integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
+    integer,       intent(in)  :: dim          ! Number of dimensions.
+    integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
     type(pv_type), intent(out) :: vp           ! Description of partition.
     ! Those three are shortcuts.
     integer,       intent(out) :: np_local     ! vp%np_local(vp%partno).
@@ -249,7 +257,7 @@ contains
     integer, allocatable :: ir(:), irr(:, :) ! Counters.
     integer              :: rank             ! Rank of current node.
     integer              :: ierr             ! MPI errorcode.
-    integer              :: p1(3), p2(3)     ! Points.
+    integer              :: p1(3)            ! Points.
     integer, allocatable :: ghost_flag(:, :) ! To remember ghost pnts.
 #ifdef DEBUG
     integer              :: iunit            ! For debug output to files.
@@ -266,9 +274,8 @@ contains
     vp%rank   = rank
     vp%partno = rank + 1
     
-    allocate(ghost_flag(np, p))
+    allocate(ghost_flag(np+np_enl, p))
     allocate(ir(p), irr(p, p))
-
     allocate(vp%np_local(p))
     allocate(vp%xlocal(p))
     allocate(vp%local(np))
@@ -304,12 +311,12 @@ contains
     ir = 0
     do i = 1, np
       vp%local(vp%xlocal(part(i))+ir(part(i))) = i
-      ir(part(i))                                = ir(part(i))+1
+      ir(part(i))                              = ir(part(i))+1
     end do
     ir = 0
     do i = np+1, np+np_enl
       vp%bndry(vp%xbndry(part(i))+ir(part(i))) = i
-      ir(part(i))                                = ir(part(i))+1
+      ir(part(i))                              = ir(part(i))+1
     end do
 
     ! Format of ghost:
@@ -346,24 +353,11 @@ contains
         p1 = Lxyz(vp%local(i), :)
         ! For all points in stencil.
         do j = 1, np_stencil
-          ! Get coordinates of possible ghost point.
-          p2 = p1+stencil(:, j)
-          ! Check, whether p2 is in the box.
-          ! If p2 is out of the box, ignore it.
-          ! Actually, the box should be big enough, that
-          ! this case does not arise.
-          if(nr(1, 1).gt.p2(1).or.p2(1).gt.nr(2, 1).or. &
-             nr(1, 2).gt.p2(2).or.p2(2).gt.nr(2, 2).or. &
-             nr(1, 3).gt.p2(3).or.p2(3).gt.nr(2, 3)) cycle
-          ! If it is in the box, get its (global) point number.
-          k = Lxyz_inv(p2(1), p2(2), p2(3))
-          ! If p2 is in the box but does not belong to the inner mesh,
-          ! its point number k is greater than np.
-          ! If this is the case, it is a boundary point and is handled
-          ! elsewhere.
-          if(k.gt.np) cycle
-          ! At this point, it is sure that point number k is a
-          ! relevant point.
+          ! Get point number of possible ghost point.
+          ! mesh_index takes care of periodic dimensions and
+          ! out points that would be out of the box etc.
+          k = mesh_index(dim, periodic_dim, nr, &
+                         Lxyz_inv, p1(:) + stencil(:, j), 1)
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being
           ! a neighbour of r.
@@ -404,7 +398,7 @@ contains
 
     ! Fill ghost as described above.
     irr = 0
-    do i = 1, np
+    do i = 1, np+np_enl
       do r = 1, p
         j = ghost_flag(i, r)
         ! If point i is a ghost point for r from j, save this
@@ -476,6 +470,7 @@ contains
     np_local = vp%np_local(vp%partno)
     np_ghost = vp%np_ghost(vp%partno)
     np_bndry = vp%np_bndry(vp%partno)
+
     call pop_sub()
     
   end subroutine vec_init

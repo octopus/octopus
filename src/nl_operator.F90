@@ -23,6 +23,7 @@ module nl_operator
   use global
   use messages
   use mesh
+  use mesh_lib
   use simul_box
   use io
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
@@ -176,10 +177,12 @@ contains
 
        do j = 1, op%n
           ! Get global index of p1 plus current stencil point.
-          op%i(j, i) = mesh_index(m, p1(:) + op%stencil(:, j), 1)
+          op%i(j, i) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr, &
+                                  m%Lxyz_inv, p1(:) + op%stencil(:, j), 1)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
           ! When running parallel, translate this global
           ! number back to a local number.
+
           op%i(j, i) = m%vp%global(op%i(j, i), m%vp%partno)
 #endif
        end do
