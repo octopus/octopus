@@ -273,8 +273,8 @@ contains
     type(states_type), pointer :: st
     type(mesh_type),   pointer :: m
 
-    FLOAT, allocatable :: rho(:, :), fxc(:,:,:)
-    integer :: is
+    FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
+    integer :: is, j_old, b_old
 
     ! sanity checks
     ASSERT(cas%type>=CASIDA_EPS_DIFF.and.cas%type<=CASIDA_CASIDA)
@@ -292,6 +292,9 @@ contains
     ! load saved matrix elements
     call load_saved()
 
+    ! This is to be allocated here, and is used inside K_term.
+    allocate(pot(m%np)); j_old = -1; b_old = -1
+
     ! We calculate here the kernel, since it will be needed later.
     allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
     if(associated(st%rho_core)) then
@@ -303,16 +306,15 @@ contains
     endif
     call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
-    if(cas%type == CASIDA_CASIDA) then
-       call solve_casida()              ! solve casida matrix
-
-    else if (mpiv%node == 0) then      ! this is not yet parallel
-       call solve_petersilka()          ! eigenvalues or petersilka formula
-    end if
+    select case(cas%type)
+      case(CASIDA_CASIDA)
+         call solve_casida()
+      case(CASIDA_PETERSILKA)
+         call solve_petersilka()
+    end select
 
     ! clean up
-    deallocate(rho, fxc)
-    deallocate(saved_K)
+    deallocate(rho, fxc, pot, saved_K)
 
   contains
 
@@ -364,24 +366,26 @@ contains
       FLOAT, allocatable :: os(:,:)
       FLOAT :: temp
       integer :: ia, jb, i, j, a, b
-      integer :: max, actual, iunit
+      integer :: max, actual, iunit, counter
 #ifdef HAVE_MPI
       integer :: ierr
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
 
       max = cas%n_pairs*(1 + cas%n_pairs)/2 - 1
+      counter = 0
       actual = 0
       if (mpiv%node == 0) call loct_progress_bar(-1, max)
 
       ! calculate the matrix elements of (v + fxc)
-      do ia = 1, cas%n_pairs
-         i = cas%pair_i(ia)
-         a = cas%pair_a(ia)
+      do jb = 1, cas%n_pairs
+         actual = actual + 1
+         if(mod(actual, mpiv%numprocs) .ne. mpiv%node) cycle
 
-         do jb = ia, cas%n_pairs
-            actual = actual + 1
-            if(mod(actual, mpiv%numprocs) .ne. mpiv%node) cycle
+         do ia = jb, cas%n_pairs
+            counter = counter + 1
+            i = cas%pair_i(ia)
+            a = cas%pair_a(ia)
 
             ! if not loaded, then calculate matrix element
             if(.not.saved_K(ia, jb)) then
@@ -390,9 +394,10 @@ contains
 
                cas%mat(ia, jb) = K_term(i, a, j, b)
             end if
+            if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
-            if (mpiv%node == 0) call loct_progress_bar(actual-1, max)
          end do
+         if (mpiv%node == 0) call loct_progress_bar(counter-1, max)
       end do
 
       ! sum all matrix elements
@@ -459,22 +464,25 @@ contains
       FLOAT :: K_term
       integer, intent(in) :: i, j, a, b
 
-      integer :: is
-      FLOAT, allocatable :: rho_i(:), rho_j(:), pot(:)
+      FLOAT, allocatable :: rho_i(:), rho_j(:)
 
-      allocate(rho_i(m%np), rho_j(m%np), pot(m%np))
+      allocate(rho_i(m%np), rho_j(m%np))
 
       rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * R_CONJ(st%X(psi) (1:m%np, 1, a, 1))
       rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, 1)) * st%X(psi) (1:m%np, 1, b, 1)
 
       !  first the Hartree part (only works for real wfs...)
-      pot = M_ZERO
-      call dpoisson_solve(sys%gr, pot, rho_j)
-      K_term = dmf_dotp(m, rho_i(:), pot(:))
-      deallocate(pot)
+      if( j.ne.j_old  .or.   b.ne.b_old) then
+         pot = M_ZERO
+         call dpoisson_solve(sys%gr, pot, rho_j)
+      endif
 
+      K_term = dmf_dotp(m, rho_i(:), pot(:))
       rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1)
       K_term = K_term + dmf_integrate(m, rho(:, 1))
+
+
+      j_old = j; b_old = b
 
       deallocate(rho_i, rho_j)
     end function K_term
