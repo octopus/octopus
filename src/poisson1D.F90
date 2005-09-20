@@ -23,12 +23,17 @@ subroutine poisson1D_solve(m, pot, rho)
   FLOAT, intent(in)  :: rho(m%np)
 
   integer  :: i, j
-  FLOAT :: x, y, tmp
+  FLOAT    :: x, y
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  FLOAT    :: tmp
   FLOAT, allocatable :: pvec(:)
+#endif
 
   ASSERT(poisson_solver == -1)
 
   call push_sub('poisson1D.poisson1D_solve')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
 
   allocate(pvec(1:m%np))
 
@@ -46,6 +51,20 @@ subroutine poisson1D_solve(m, pot, rho)
   end do
 
   deallocate(pvec)
+
+#else
+
+  pot = M_ZERO
+  do i = 1, m%np
+     x = m%x(i, 1)
+     do j=1, m%np
+        y = m%x(j, 1)
+        pot(i) = pot(i) + rho(j)/sqrt(M_ONE + (x-y)**2) * m%vol_pp(j)
+     end do
+     pot(i) = pot(i)
+  end do
+
+#endif
 
   call pop_sub()
 end subroutine poisson1D_solve

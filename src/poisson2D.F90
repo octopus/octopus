@@ -90,12 +90,17 @@ subroutine poisson2D_solve(m, pot, rho)
   FLOAT, intent(in)           :: rho(m%np)
 
   integer  :: i, j
-  FLOAT    :: x(2), y(2), tmp
+  FLOAT    :: x(2), y(2)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  FLOAT    :: tmp
   FLOAT, allocatable :: pvec(:)
+#endif
 
   ASSERT(poisson_solver == -2)
 
   call push_sub('poisson2D.poisson2D_solve')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
 
   allocate(pvec(1:m%np))
 
@@ -116,26 +121,24 @@ subroutine poisson2D_solve(m, pot, rho)
      endif
   end do
 
-!!$  The above MPI version is in my opinion the correct way to parallize
-!!$  the 2D Hartree sum. However, the potential produced by above code differs
-!!$  from the serial one stronger than I expected. For further debugging 
-!!$  purposes I therefore keep the old serial code below in comments. 
-!!$
-!!$  pot = M_ZERO
-!!$  do i = 1, m%np
-!!$     x(:) = m%x(i,:)
-!!$     do j = 1, m%np
-!!$        if(i == j) then
-!!$           pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
-!!$        else
-!!$           y(:) = m%x(j,:)
-!!$           pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
-!!$        end if
-!!$     end do
-!!$  end do
-
-
   deallocate(pvec)
+
+#else
+
+  pot = M_ZERO
+  do i = 1, m%np
+     x(:) = m%x(i,:)
+     do j = 1, m%np
+        if(i == j) then
+           pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
+        else
+           y(:) = m%x(j,:)
+           pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
+        end if
+     end do
+  end do
+
+#endif
 
   call pop_sub()
 end subroutine poisson2D_solve
