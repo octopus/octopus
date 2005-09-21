@@ -22,6 +22,7 @@
 module global
   use varinfo
   use string
+  use lib_oct
 
 #if defined(HAVE_MPI) && !defined(MPI_H)
      use mpi
@@ -137,6 +138,8 @@ contains
     mpiv%node = 0
     mpiv%numprocs = 1
 #endif
+    ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
+    call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
 
     conf%share      = SHARE_OCTOPUS
     conf%latest_cvs = LATEST_CVS
