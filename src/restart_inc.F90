@@ -74,7 +74,9 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   if(gr%m%vp%rank.eq.gr%m%vp%root) then
+#endif
      call io_mkdir(dir)
 
      iunit = io_open(trim(dir)//'/wfns', action='write')
@@ -84,7 +86,9 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
      iunit2 = io_open(trim(dir)//'/occs', action='write')
      write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
      write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   end if
+#endif
 
   i = 1
   do ik = 1, st%d%nik
@@ -110,16 +114,24 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   if(gr%m%vp%rank.eq.gr%m%vp%root) then
+#endif
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
     write(iunit2, '(a)') '%'
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   end if
+#endif
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   if(gr%m%vp%rank.eq.gr%m%vp%root) then
+#endif
     call io_close(iunit)
     call io_close(iunit2)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   end if
+#endif
 
 #if defined(HAVE_MPI)
   call TS(MPI_Barrier)(MPI_COMM_WORLD, i) ! Since some processors did more than others...
