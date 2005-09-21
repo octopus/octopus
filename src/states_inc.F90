@@ -118,10 +118,14 @@ R_TYPE function X(states_dotp)(m, dim, f1, f2) result(dotp)
 
   integer :: i
 
+  call push_sub('states_inc.Xstates_dotp')
+
   dotp = R_TOTYPE(M_ZERO)
   do i = 1, dim
     dotp = dotp + X(mf_dotp)(m, f1(:,i), f2(:,i))
   end do
+
+  call pop_sub()
 
 end function X(states_dotp)
 
@@ -132,11 +136,15 @@ FLOAT function X(states_nrm2)(m, dim, f) result(nrm2)
 
   integer :: i
 
+  call push_sub('states_inc.Xstates_nrm2')
+
   nrm2 = M_ZERO
   do i = 1, dim
     nrm2 = nrm2 + X(mf_nrm2)(m, f(:,i))**2
   end do
   nrm2 = sqrt(nrm2)
+
+  call pop_sub()
 
 end function X(states_nrm2)
 
@@ -148,10 +156,14 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   R_TYPE, allocatable :: res(:,:)
 
+  call push_sub('states_inc.Xstates_nrm2')
+
   allocate(res(m%np, dim))
   res = hf - e*f
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)
+
+  call pop_sub()
 
 end function X(states_residue)
 

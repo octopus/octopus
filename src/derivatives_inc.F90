@@ -56,6 +56,8 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   R_TYPE, pointer:: fp(:)
   logical :: have_ghost
 
+  call push_sub('derivatives_inc.Xderivatives_lapl')
+
   have_ghost = .false.
   if(present(have_ghost_)) have_ghost = have_ghost_
 
@@ -70,6 +72,8 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   else
      call X(nl_operator_operate) (der%lapl, f, lapl)
   endif
+
+  call pop_sub()
 
 end subroutine X(derivatives_lapl)
 
