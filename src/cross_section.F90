@@ -36,6 +36,7 @@ program cross_section
   logical :: calculate_tensor
   type(spec_type) :: s
   type(kick_type) :: kick
+  character(len=150), allocatable :: filename(:)
 
   ! Initialize stuff
   call global_init()
@@ -57,64 +58,27 @@ program cross_section
   else
 
       select case(eq_axis)
-
-        case(0, 1)
-
-          out_file(1) = io_open('cross_section_vector.1', action='write')
-          out_file(2) = io_open('cross_section_vector.2', action='write')
-          out_file(3) = io_open('cross_section_vector.2', action='write')
-
-          call spectrum_cross_section(in_file(1), out_file(1), s)
-          call io_close(in_file(1)); call io_close(out_file(1))
-          call spectrum_cross_section(in_file(2), out_file(2), s)
-          call io_close(in_file(2)); call io_close(out_file(2))
-          call spectrum_cross_section(in_file(3), out_file(3), s)
-          call io_close(in_file(3)); call io_close(out_file(3))
-
-          ! And now we build the cross section tensor
-          in_file(1)  = io_open('cross_section_vector.1', action='read', status='old')
-          in_file(2)  = io_open('cross_section_vector.2', action='read', status='old')
-          in_file(3)  = io_open('cross_section_vector.2', action='read', status='old')
-          out_file(1) = io_open('cross_section_tensor', action='write')
-
-          call spectrum_cross_section_tensor(s, out_file(1), in_file(1), in_file(2), in_file(3))
-          call io_close(in_file(1)); call io_close(in_file(2)); call io_close(in_file(3)); call io_close(out_file(1))    
-
-        case(2)
-
-          out_file(1) = io_open('cross_section_vector.1', action='write')
-          out_file(2) = io_open('cross_section_vector.2', action='write')
-
-          call spectrum_cross_section(in_file(1), out_file(1), s)
-          call io_close(in_file(1)); call io_close(out_file(1))
-          call spectrum_cross_section(in_file(2), out_file(2), s)
-          call io_close(in_file(2)); call io_close(out_file(2))
-
-          ! And now we build the cross section tensor
-          in_file(1)  = io_open('cross_section_vector.1', action='read', status='old')
-          in_file(2)  = io_open('cross_section_vector.2', action='read', status='old')
-          out_file(1) = io_open('cross_section_tensor', action='write')
-
-          call spectrum_cross_section_tensor(s, out_file(1), in_file(1), in_file(2))
-          call io_close(in_file(1)); call io_close(in_file(2)); call io_close(out_file(1))
-
-        case(3)
-
-          out_file(1) = io_open('cross_section_vector', action='write')
-
-          call spectrum_cross_section(in_file(1), out_file(1), s)
-          call io_close(in_file(1)); call io_close(out_file(1))
-
-          ! And now we build the cross section tensor
-          in_file(1)  = io_open('cross_section_vector', action='read', status='old')
-          out_file(1) = io_open('cross_section_tensor', action='write')
-
-          ! The following routine should now build the tensor...
-          call spectrum_cross_section_tensor(s, out_file(1), in_file(1))
-
-          call io_close(in_file(1)); call io_close(out_file(1))
-
+         case(0, 1); j = 3
+         case(2);    j = 2
+         case(3);    j = 1
       end select
+
+      allocate(filename(j))
+      do i = 1, j
+         write(filename(i),'(a,i1)') 'cross_section_vector.',i
+         out_file(i) = io_open(trim(filename(i)),action='write')
+         call spectrum_cross_section(in_file(i), out_file(i), s)
+         call io_close(in_file(i)); call io_close(out_file(i))
+         in_file(i)  = io_open(trim(filename(i)), action='read', status='old')
+      enddo
+
+      out_file(1) = io_open('cross_section_tensor', action='write')
+      call spectrum_cross_section_tensor(s, out_file(1), in_file(1:j))
+      do i = 1, j
+         call io_close(in_file(i))
+         call loct_rm(trim(filename(i)))
+      enddo
+      call io_close(out_file(1))
 
   endif
 
@@ -186,7 +150,7 @@ subroutine read_files()
   else  ! We will try to load more multipoles.1 files...
 
        ! In this case, we will always want the full tensor
-       calculate_tensor = .false.
+       calculate_tensor = .true.
 
        in_file(1) = io_open('multipoles.1', action='read', status='old', die=.false.)
        if(in_file(1) < 0) in_file(1) = io_open('td.general/multipoles.1', action='read', status='old', die=.false.)
@@ -211,6 +175,9 @@ subroutine read_files()
              write(message(2),'(a)') 'but I cannot find a "multipoles.2".'
              call write_fatal(2)
           endif
+          write(message(1),'(a)') 'Found two files, "multipoles.1" and "multipoles.2".'
+          write(message(2),'(a)') 'Two polarization axis are equivalent. I will generate the full tensor.'
+          call write_info(2)
        else ! No equivalent axis
           in_file(2) = io_open('multipoles.2', action='read', status='old', die=.false.)
           if(in_file(2) < 0) in_file(2) = io_open('td.general/multipoles.2', action='read', status='old', die=.false.)
@@ -220,12 +187,15 @@ subroutine read_files()
              call write_fatal(2)
           endif
           in_file(3) = io_open('multipoles.3', action='read', status='old', die=.false.)
-          if(in_file(2) < 0) in_file(2) = io_open('td.general/multipoles.3', action='read', status='old', die=.false.)
-          if(in_file(2) < 0) then
+          if(in_file(3) < 0) in_file(3) = io_open('td.general/multipoles.3', action='read', status='old', die=.false.)
+          if(in_file(3) < 0) then
              write(message(1),'(a)') 'The file "multipoles.1" tells me that the system has two equivalent axis,'
              write(message(2),'(a)') 'but I cannot find a "multipoles.3".'
              call write_fatal(2)
           endif
+          write(message(1),'(a)') 'Found three files, "multipoles.1", "multipoles.2" and "multipoles.3".'
+          write(message(2),'(a)') 'No symmetry information will be used.'
+          call write_info(2)
        endif
 
   endif

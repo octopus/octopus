@@ -250,44 +250,45 @@ subroutine spectrum_skip_header(iunit)
 
 end subroutine spectrum_skip_header
 
-subroutine spectrum_cross_section_tensor(s, out_file, in_file_1, in_file_2, in_file_3)
+subroutine spectrum_cross_section_tensor(s, out_file, in_file)
   type(spec_type),  intent(inout) :: s
   integer, intent(in)    :: out_file
-  integer, intent(in)    :: in_file_1
-  integer, optional, intent(in)    :: in_file_2
-  integer, optional, intent(in)    :: in_file_3
+  integer, intent(in)    :: in_file(:)
 
-  integer :: nspin, energy_steps, i, is, j, equiv_axis
+  integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files
   FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
-                        sigmav(:, :, :), p(:, :), ip(:, :)
+                        sigmav(:, :, :), sigmaw(:, :, :), p(:, :), ip(:, :)
   FLOAT :: dw, dump
   type(kick_type) :: kick
 
   call push_sub('spectrum.spectrum_cross_section_tensor')
 
-  equiv_axis = 3
-  if(present(in_file_2)) equiv_axis = 2
-  if(present(in_file_3)) equiv_axis = 1
+  n_files = size(in_file)
+  select case(n_files)
+    case(1); equiv_axis = 3
+    case(2); equiv_axis = 2
+    case(3); equiv_axis = 1
+  end select
+
+  call spectrum_cross_section_info(in_file(1), nspin, kick, energy_steps, dw)
+  call spectrum_skip_header(in_file(1))
+
+  allocate(sigma (3, 3, 0:energy_steps, nspin), &
+           sigmap(3, 3, 0:energy_steps, nspin), &
+           sigmau(3, 0:energy_steps, nspin), &
+           sigmav(3, 0:energy_steps, nspin), &
+           sigmaw(3, 0:energy_steps, nspin), &
+           p(3, 3), ip(3, 3))
 
   select case(equiv_axis)
 
   case(3)
 
-      call spectrum_cross_section_info(in_file_1, nspin, kick, energy_steps, dw)
-
-      allocate(sigma (3, 3, 0:energy_steps, nspin), &
-              sigmap(3, 3, 0:energy_steps, nspin), &
-              sigmau(3, 0:energy_steps, nspin), &
-              p(3, 3), ip(3, 3))
-
-      call spectrum_skip_header(in_file_1)
-
       do i = 0, energy_steps
-         read(in_file_1, *) dump, sigmau(1:3, i, 1:nspin)
+         read(in_file(1), *) dump, sigmau(1:3, i, 1:nspin)
       enddo
 
-      ! The first row of sigma is the vector that we have just read, but
-      ! properly projected...
+      ! The first row of sigma is the vector that we have just read, but properly projected...
       do is = 1, nspin
          do i = 0, energy_steps
             sigmap(1, 1, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 1))
@@ -312,74 +313,115 @@ subroutine spectrum_cross_section_tensor(s, out_file, in_file_1, in_file_2, in_f
          enddo
       enddo
 
-      ! And now, perform the necessary transformation.
-      p(1:3, 1:3) = kick%pol(1:3, 1:3)
-      call invert_3by3(p, ip, dump, .false.)
-      do is = 1, nspin
-         do i = 0, energy_steps
-            sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )
-         enddo
-      enddo
-
-      ! Finally, write down the result
-      write(out_file, '(a15,i2)')      '# nspin        ', nspin
-      write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
-      write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
-      write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
-      write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
-      write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
-      write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
-      write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
-      write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-      write(out_file, '(a)') '#Here we should put the column names.'
-      write(out_file, '(a)') '#Here we should put the units.'
-
-      do i = 0, energy_steps
-         write(out_file,'(10e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
-              sigma(1:3, 1:3, i, 1) 
-         do j = 2, nspin
-            write(out_file,'(9e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
-         enddo
-         write(out_file,'(a)', advance = 'yes')
-      end do
-
-      deallocate(sigma, sigmap, sigmau, p, ip)
-
   case(2)
 
-      call spectrum_cross_section_info(in_file_1, nspin, kick, energy_steps, dw)
-      call spectrum_cross_section_info(in_file_2, i, kick, j, dump)
-      if(i .ne. nspin) then
-
-      endif
-      if(j .ne. energy_steps) then
-
-      endif
-      if(dump .ne. dw) then
-
-      endif
-
-      allocate(sigma (3, 3, 0:energy_steps, nspin), &
-               sigmap(3, 3, 0:energy_steps, nspin), &
-               sigmau(3, 0:energy_steps, nspin), &
-               sigmav(3, 0:energy_steps, nspin), &
-               p(3, 3), ip(3, 3))
+      call spectrum_cross_section_info(in_file(2), i, kick, j, dump)
+      call spectrum_skip_header(in_file(2))
 
       do i = 0, energy_steps
-         read(in_file_1, *) dump, sigmau(1:3, i, 1:nspin)
+         read(in_file(1), *) dump, sigmau(1:3, i, 1:nspin)
+         read(in_file(2), *) dump, sigmaw(1:3, i, 1:nspin)
       enddo
-      do i = 0, energy_steps
-         read(in_file_2, *) dump, sigmav(1:3, i, 1:nspin)
-      enddo
-      deallocate(sigma, sigmap, sigmau, sigmav, p, ip)
 
+      ! The first row of sigma is the vector that we have just read, but properly projected...
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(1, 1, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 1))
+            sigmap(1, 2, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 2))
+            sigmap(1, 3, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 3))
+         enddo
+      enddo
+
+      ! The third row of sigma is also the vector that we have just read, but properly projected...
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(3, 1, i, is) = sum( sigmaw(1:3, i, is)*kick%pol(1:3, 1))
+            sigmap(3, 2, i, is) = sum( sigmaw(1:3, i, is)*kick%pol(1:3, 2))
+            sigmap(3, 3, i, is) = sum( sigmaw(1:3, i, is)*kick%pol(1:3, 3))
+         enddo
+      enddo
+
+      ! The diagonal (2,2) is equal by symmetry to the (1,1)
+      sigmap(2, 2, :, :) = sigmap(1, 1, :, :)
+
+      ! The (2,1) term and (1,2) term are equal; the (2,3) and (3,2), also.
+      sigmap(2, 1, :, :) = sigmap(1, 2, :, :)
+      sigmap(2, 3, :, :) = sigmap(3, 2, :, :)
 
   case default
 
+      call spectrum_cross_section_info(in_file(2), i, kick, j, dump)
+      call spectrum_cross_section_info(in_file(3), i, kick, j, dump)
+      call spectrum_skip_header(in_file(2))
+      call spectrum_skip_header(in_file(3))
+
+      do i = 0, energy_steps
+         read(in_file(1), *) dump, sigmau(1:3, i, 1:nspin)
+         read(in_file(2), *) dump, sigmav(1:3, i, 1:nspin)
+         read(in_file(3), *) dump, sigmaw(1:3, i, 1:nspin)
+      enddo
+
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(1, 1, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 1))
+            sigmap(1, 2, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 2))
+            sigmap(1, 3, i, is) = sum( sigmau(1:3, i, is)*kick%pol(1:3, 3))
+         enddo
+      enddo
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(2, 1, i, is) = sum( sigmav(1:3, i, is)*kick%pol(1:3, 1))
+            sigmap(2, 2, i, is) = sum( sigmav(1:3, i, is)*kick%pol(1:3, 2))
+            sigmap(2, 3, i, is) = sum( sigmav(1:3, i, is)*kick%pol(1:3, 3))
+         enddo
+      enddo
+      do is = 1, nspin
+         do i = 0, energy_steps
+            sigmap(3, 1, i, is) = sum( sigmaw(1:3, i, is)*kick%pol(1:3, 1))
+            sigmap(3, 2, i, is) = sum( sigmaw(1:3, i, is)*kick%pol(1:3, 2))
+            sigmap(3, 3, i, is) = sum( sigmaw(1:3, i, is)*kick%pol(1:3, 3))
+         enddo
+      enddo
+
   end select
 
+
+
+  ! And now, perform the necessary transformation.
+  p(1:3, 1:3) = kick%pol(1:3, 1:3)
+  call invert_3by3(p, ip, dump, .false.)
+  do is = 1, nspin
+     do i = 0, energy_steps
+        sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )
+     enddo
+  enddo
+
+  ! Finally, write down the result
+  write(out_file, '(a15,i2)')      '# nspin        ', nspin
+  write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+  write(out_file, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+  write(out_file, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+  write(out_file, '(a15,i1)')      '# direction    ', kick%pol_dir
+  write(out_file, '(a15,i1)')      '# kick mode    ', kick%delta_strength_mode
+  write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+  write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
+  write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
+  write(out_file, '(a)') '#Here we should put the column names.'
+  write(out_file, '(a)') '#Here we should put the units.'
+
+  do i = 0, energy_steps
+      write(out_file,'(10e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
+           sigma(1:3, 1:3, i, 1) 
+      do j = 2, nspin
+         write(out_file,'(9e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
+      enddo
+      write(out_file,'(a)', advance = 'yes')
+  end do
+
+  deallocate(sigma, sigmap, sigmau, sigmav, sigmaw, p, ip)
   call pop_sub()
 end subroutine spectrum_cross_section_tensor
+
 
 subroutine spectrum_cross_section(in_file, out_file, s)
   integer, intent(in)    :: in_file
@@ -935,6 +977,7 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
 
   call push_sub('spectrum.spectrum_mult_info')
 
+  rewind(iunit)
   ! read in number of spin components
   read(iunit, '(15x,i2)')      nspin
   read(iunit, '(15x,i2)')      lmax
