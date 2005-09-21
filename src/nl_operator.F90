@@ -93,8 +93,9 @@ contains
 
     call nl_operator_init(opo, opi%n)
 
-    opo%np = opi%np
-    opo%m  => opi%m
+    opo%np       =  opi%np
+    opo%m        => opi%m
+    opo%cmplx_op =  opi%cmplx_op
     opo%stencil(1:3, 1:opo%n) = opi%stencil(1:3, 1:opi%n)
     allocate(opo%i(opi%n, opi%np))
     if(opi%const_w) then
@@ -254,7 +255,7 @@ contains
 
     call nl_operator_allgather(op, opg)
     call nl_operator_init(opgt, op%n)
-    opgt = opg
+    call nl_operator_equal(opgt, opg)
     allocate(vol_pp(m%np_global))
     call dvec_allgather(m%vp, vol_pp, m%vol_pp)
 
