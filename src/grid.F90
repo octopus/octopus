@@ -67,8 +67,8 @@ contains
 
     ! now we generate create the mesh and the derivatives
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
-                   gr%f_der%der_discr%lapl%stencil,              &
-                   gr%f_der%der_discr%lapl%n)
+         gr%f_der%der_discr%lapl%stencil,                        &
+         gr%f_der%der_discr%lapl%n)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 
@@ -77,9 +77,7 @@ contains
     if(filter) call geometry_filter(gr%geo, mesh_gcutoff(gr%m))
 
     ! Now that we are really done with initializing the geometry, print debugging information.
-    if(conf%verbose>=VERBOSE_DEBUG) then
-      call geometry_debug(gr%geo, 'debug')
-    end if
+    if(in_debug_mode) call geometry_debug(gr%geo, 'debug')
 
     ! multigrids are not initialized by default
     nullify(gr%mgrid)
@@ -117,9 +115,7 @@ contains
     integer,         intent(in) :: iunit
 
     if(mpiv%node .ne. 0) then
-#ifdef DEBUG
-       call write_debug_newlines(4)
-#endif
+       if(in_debug_mode) call write_debug_newlines(4)
        return
     endif
 

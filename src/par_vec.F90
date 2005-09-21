@@ -89,9 +89,7 @@ module par_vec
   use global
   use messages
   use mesh_lib
-#ifdef DEBUG
   use io
-#endif
 #ifdef HAVE_MPI
   use mpi_mod
 #endif
@@ -259,10 +257,8 @@ contains
     integer              :: ierr             ! MPI errorcode.
     integer              :: p1(3)            ! Points.
     integer, allocatable :: ghost_flag(:, :) ! To remember ghost pnts.
-#ifdef DEBUG
     integer              :: iunit            ! For debug output to files.
     character(len=3)     :: filenum
-#endif
 
     call push_sub('par_vec.vec_init')
 
@@ -415,25 +411,25 @@ contains
     write(message(2), '(a,100i7)') 'Info:', vp%np_ghost
     call write_info(2)
 
-#ifdef DEBUG
-    ! Write numbers and coordinates of each nodes ghost points
-    ! to a single file (like in mesh_partition_init) called
-    ! debug/mesh_partition/ghost_points.###.
-    if(mpiv%node.eq.0) then
-      call io_mkdir('debug/mesh_partition')
-      do r = 1, p 
-        write(filenum, '(i3.3)') r
-        iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
-                        action='write')
-        do i = 1, vp%np_ghost(r)
-          j = vp%ghost(vp%xghost(r)+i-1)
-          write(iunit, '(4i8)') j, Lxyz(j, :)
-        end do
-      call io_close(iunit)
-      end do
+    if(in_debug_mode) then
+       ! Write numbers and coordinates of each nodes ghost points
+       ! to a single file (like in mesh_partition_init) called
+       ! debug/mesh_partition/ghost_points.###.
+       if(mpiv%node.eq.0) then
+          call io_mkdir('debug/mesh_partition')
+          do r = 1, p 
+             write(filenum, '(i3.3)') r
+             iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, &
+                  action='write')
+             do i = 1, vp%np_ghost(r)
+                j = vp%ghost(vp%xghost(r)+i-1)
+                write(iunit, '(4i8)') j, Lxyz(j, :)
+             end do
+             call io_close(iunit)
+          end do
+       end if
     end if
-#endif
-
+    
     ! Create reverse (global to local) lookup.
     ! Given a global point number i and a vector v_local of
     ! length vp%np_local(r)+vp%np_ghost(r)+vp%np_bndry(r) global(i, r) gives

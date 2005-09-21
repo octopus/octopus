@@ -17,7 +17,6 @@
 !!
 !! $Id$
 
-
 subroutine DRIVER (sk, op, sol, rhs, sk_work)
   type(sparskit_solver_type), intent(inout) :: sk
   R_TYPE, intent(in)    :: rhs(:)
@@ -60,13 +59,11 @@ subroutine DRIVER (sk, op, sol, rhs, sk_work)
 
      ! Run actual solver
 #ifdef HAVE_SPARSKIT
-#ifdef DEBUG
-     call push_sub('sparskit_driver.sparskit_solver')
-#endif
+     if(in_debug_mode) call push_sub('sparskit_driver.sparskit_solver')
+
      call SOLVER(sk%size, sk_b, sk_y, sk%ipar, sk%fpar, sk_work)
-#ifdef DEBUG
-     call pop_sub()
-#endif
+
+     if(in_debug_mode) call pop_sub()
 #else
      message(1) = 'Error: Sparskit library required for usage of SparskitSolver'
      message(2) = '       configure with --with-sparskit=DIR and remake.'

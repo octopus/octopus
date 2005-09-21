@@ -29,11 +29,9 @@ module mesh
   use curvlinear
   use simul_box
   use lib_adv_alg
+  use io
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
-#endif
-#ifdef DEBUG
-  use io
 #endif
 
   implicit none

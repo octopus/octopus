@@ -55,11 +55,8 @@ subroutine X(input_function)(filename, m, f, ierr)
   if(m%vp%rank.eq.m%vp%root) then
     allocate(f_global(1:m%np_global))
     call X(input_function_global)(filename, m, f_global, ierr)
-#ifdef DEBUG
-  else
-     call write_debug_newlines(2)
-#endif
   endif
+  if(in_debug_mode) call write_debug_newlines(2)
 
   ! Only root knows, wheather the file was succesfully read.
   ! Now, it telss everybody else.
@@ -325,13 +322,8 @@ subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
 
   if(m%vp%rank.eq.m%vp%root) then
      call X(output_function_global)(how, dir, fname, m, sb, f_global, u, ierr)
-#ifdef DEBUG
-  else
-     call write_debug_newlines(2)
-#endif
-#endif
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   endif
+  if(in_debug_mode) call write_debug_newlines(2)
 
   deallocate(f_global)
 #else

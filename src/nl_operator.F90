@@ -422,10 +422,7 @@ contains
     if(op%m%vp%rank.eq.op%m%vp%root) then
        call nl_operator_common_copy(op, opg)
     end if
-#ifdef DEBUG
-    call write_debug_newlines(4)
-#endif
-
+    if(in_debug_mode) call write_debug_newlines(4)
 
     ! Gather op%i and - if necessary - op%w_re and op%w_im.
     ! Collect for every point in the stencil in a single step.
@@ -436,9 +433,7 @@ contains
     if(op%m%vp%rank.eq.op%m%vp%root) then
        call nl_operator_translate_indices(opg)
     end if
-#ifdef DEBUG
-    call write_debug_newlines(2)
-#endif
+    if(in_debug_mode) call write_debug_newlines(2)
 
     ! Weights have to be collected only if they are
     ! not constant.
@@ -664,9 +659,7 @@ contains
     if(op%m%vp%rank.eq.op%m%vp%root) then
        call nl_operator_end(opg)
     end if
-#ifdef DEBUG
-    call write_debug_newlines(2)
-#endif    
+    if(in_debug_mode) call write_debug_newlines(2)
 #endif
 
     call pop_sub()

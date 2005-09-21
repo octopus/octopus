@@ -44,11 +44,10 @@ contains
   ! ---------------------------------------------------------
   subroutine io_init()
     character(len=128) :: filename
-#ifdef DEBUG
-    logical file_exists, mpi_debug_hook
-    integer :: sec, usec
     character(len=256) :: node_hook
-#endif
+    logical :: file_exists, mpi_debug_hook
+    integer :: sec, usec
+
 
     lun_is_free(min_lun:max_lun)=.true.
 
@@ -84,6 +83,10 @@ contains
        call loct_rm('messages.stderr')
     endif
 
+    ! check if we should run in debug mode
+    call loct_parse_logical('DebugMode', .false., in_debug_mode)
+
+
     !%Variable Verbose
     !%Type integer
     !%Section 1 Generalities
@@ -106,35 +109,35 @@ contains
        call write_warning(1)
     end if
 
-#ifdef DEBUG
-    call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
-    if (mpi_debug_hook) then
-       call loct_gettimeofday(sec, usec)
-       call epoch_time_diff(sec,usec)
-       write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
-       call write_debug(1)
+    if(in_debug_mode) then
+       call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)
+       if (mpi_debug_hook) then
+          call loct_gettimeofday(sec, usec)
+          call epoch_time_diff(sec,usec)
+          write(message(1),'(a,i6,a,i6.6,20x,a)') '* I ',sec,'.',usec,' | MPI debug hook'
+          call write_debug(1)
 
-       write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
-       write(node_hook,'(i3.3)') mpiv%node
-       file_exists = .false.
+          write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' In debug hook'
+          write(node_hook,'(i3.3)') mpiv%node
+          file_exists = .false.
 
-       do while (.not.file_exists)
-          inquire(file='node_hook.'//node_hook, exist=file_exists)
-          call loct_nanosleep(1,0)
-          write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
-               ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
-       end do
+          do while (.not.file_exists)
+             inquire(file='node_hook.'//node_hook, exist=file_exists)
+             call loct_nanosleep(1,0)
+             write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
+                  ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
+          end do
 
-       write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
-       ! remove possible debug hooks
-       call loct_rm( 'node_hook.'//trim(node_hook) )
+          write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
+          ! remove possible debug hooks
+          call loct_rm( 'node_hook.'//trim(node_hook) )
 
-       call loct_gettimeofday(sec, usec)
-       call epoch_time_diff(sec,usec)
-       write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
-       call write_debug(1)
+          call loct_gettimeofday(sec, usec)
+          call epoch_time_diff(sec,usec)
+          write(message(1),'(a,i6,a,i6.6,20x,a)') '* O ',sec,'.',usec,' | MPI debug hook'
+          call write_debug(1)
+       endif
     endif
-#endif
 
   end subroutine io_init
 

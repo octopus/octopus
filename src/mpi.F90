@@ -104,6 +104,8 @@ contains
   subroutine MPI_Debug_In(comm, index)
     integer, intent(in) :: comm, index
 
+    if(.not.in_debug_mode) return
+
     call_counter(index) = call_counter(index) + 1
     call loct_gettimeofday(sec_in, usec_in)
     call epoch_time_diff(sec_in, usec_in)
@@ -120,6 +122,8 @@ contains
     integer, intent(in) :: comm, index
 
     integer :: sec, usec, sec_diff, usec_diff
+
+    if(.not.in_debug_mode) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)

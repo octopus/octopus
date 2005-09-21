@@ -97,9 +97,9 @@ program octopus
      if(mpiv%node == 0) then
         ! Let us print our logo
         if(conf%verbose >= VERBOSE_NORMAL) call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
-#ifdef DEBUG
-        if(conf%verbose >= VERBOSE_DEBUG) write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
-#endif
+        if(in_debug_mode.and.conf%verbose >= VERBOSE_DEBUG) then
+           write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
+        endif
      end if
 
      ! Let us print the version
@@ -132,10 +132,11 @@ program octopus
      tmpdir = 'tmp/'
      call io_mkdir(tmpdir)
 
-#ifdef DEBUG
+
      ! create debug directory if in debugging mode
-     call io_mkdir('debug')
-#endif
+     if(in_debug_mode) then
+        call io_mkdir('debug')
+     endif
 
      ! now we really start
      call run_init()

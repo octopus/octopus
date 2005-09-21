@@ -73,10 +73,8 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   integer              :: options(5)         ! Options to METIS.
   integer, allocatable :: ppp(:)             ! Points per partition.
   integer, pointer     :: part(:)            ! Mapping of nodes to partitions.
-#ifdef DEBUG
   integer              :: iunit              ! For debug output to files.
   character(len=3)     :: filenum
-#endif
 
   call push_sub('mesh_create.mesh_partition_init')
   
@@ -153,24 +151,24 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
                     ! last element unnecessary (this indicing is a
                     ! METIS requirement).
 
-#ifdef DEBUG
-  ! DEBUG output. Write graph to file mesh_graph.txt.
-  message(1) = 'Info: Adjacency lists of the graph representing the grid'
-  message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
-  message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
-  message(4) = 'Info: First line contains number of vertices and edges.'
-  message(5) = 'Info: Edges are not directed and appear twice in the lists.'
-  call write_info(5)
-  if(mpiv%node.eq.0) then
-    call io_mkdir('debug/mesh_partition')
-    iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
-    write(iunit, *) nv, ne/2
-    do i = 1, nv 
-      write(iunit, *) adjncy(xadj(i):xadj(i+1)-1)
-    end do
-    call io_close(iunit)
+  if(in_debug_mode) then
+     ! DEBUG output. Write graph to file mesh_graph.txt.
+     message(1) = 'Info: Adjacency lists of the graph representing the grid'
+     message(2) = 'Info: are stored in debug/mesh_partition/mesh_graph.txt.'
+     message(3) = 'Info: Compatible with METIS programs pmetis and kmetis.'
+     message(4) = 'Info: First line contains number of vertices and edges.'
+     message(5) = 'Info: Edges are not directed and appear twice in the lists.'
+     call write_info(5)
+     if(mpiv%node.eq.0) then
+        call io_mkdir('debug/mesh_partition')
+        iunit = io_open('debug/mesh_partition/mesh_graph.txt', action='write')
+        write(iunit, *) nv, ne/2
+        do i = 1, nv 
+           write(iunit, *) adjncy(xadj(i):xadj(i+1)-1)
+        end do
+        call io_close(iunit)
+     end if
   end if
-#endif
 
   ! Partition graph.
   ! Recursive bisection is better for small number of partitions (<8),
@@ -206,34 +204,34 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   call write_info(2)
   deallocate(ppp)
 
-#ifdef DEBUG
-  ! DEBUG output. Write points of each partition in a different file.
-  if(mpiv%node == 0) then
-    do i = 1, p 
-      write(filenum, '(i3.3)') i
-      iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-                      action='write')
-      do j = 1, m%np_global
-        ! Somehow all points in the enlargement are mapped
-        ! to one point in m%x. So, if the enlargement shall be
-        ! written too (s. b.), activate the following line
-        ! and take out the usual write and comment out the
-        ! block below (this works only for equi-distant grids.
-        !!if(part(j).eq.i) write(iunit, '(i8,3i8)') j, m%Lxyz(j, :)
-        if(part(j).eq.i) write(iunit, '(4i8)') j, m%Lxyz(j, :)
-      end do
-      call io_close(iunit)
-    end do
-    ! Write points from enlargement to file with number p+1.
-    !!write(filenum, '(i3.3)') p+1
-    !!iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-    !!                action='write')
-    !!do i = m%np_global+1, m%np_part_global
-    !!  write(iunit, '(i8,3i8)') i, m%Lxyz(i,:)
-    !!end do
-    !!call io_close(iunit)
+  if(in_debug_mode) then
+     ! DEBUG output. Write points of each partition in a different file.
+     if(mpiv%node == 0) then
+        do i = 1, p 
+           write(filenum, '(i3.3)') i
+           iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+                action='write')
+           do j = 1, m%np_global
+              ! Somehow all points in the enlargement are mapped
+              ! to one point in m%x. So, if the enlargement shall be
+              ! written too (s. b.), activate the following line
+              ! and take out the usual write and comment out the
+              ! block below (this works only for equi-distant grids.
+              !!if(part(j).eq.i) write(iunit, '(i8,3i8)') j, m%Lxyz(j, :)
+              if(part(j).eq.i) write(iunit, '(4i8)') j, m%Lxyz(j, :)
+           end do
+           call io_close(iunit)
+        end do
+        ! Write points from enlargement to file with number p+1.
+        !!write(filenum, '(i3.3)') p+1
+        !!iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+        !!                action='write')
+        !!do i = m%np_global+1, m%np_part_global
+        !!  write(iunit, '(i8,3i8)') i, m%Lxyz(i,:)
+        !!end do
+        !!call io_close(iunit)
+     end if
   end if
-#endif
 
   call pop_sub()
 

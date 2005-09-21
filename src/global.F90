@@ -114,11 +114,12 @@ module global
   integer :: s_epoch_sec, s_epoch_usec
 
   ! some private variables to this module
-#ifdef DEBUG
   character(len=40)          :: sub_stack(50)
   FLOAT                      :: time_stack(50)
   integer                    :: no_sub_stack = 0
-#endif
+
+  ! should we run in debug mode
+  logical :: in_debug_mode = .false.
 
 
 contains
@@ -168,7 +169,6 @@ contains
   ! ---------------------------------------------------------
   ! This subroutine is called by the assert macro
   ! ---------------------------------------------------------
-#ifdef DEBUG
   subroutine assert_die(s, f, l)
     character(len=*), intent(in) :: s, f
     integer, intent(in) :: l
@@ -176,6 +176,5 @@ contains
     write(stderr, '(3a,i5,3a)') 'Assertion "', trim(s), '" failed in line ', l, ' in file "', f, '"'
     stop
   end subroutine assert_die
-#endif
 
 end module global

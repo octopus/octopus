@@ -57,10 +57,10 @@ dnl This part of the configuration file tries to sort out what needs to be built
 dnl In particular, the code can be compile in single precision, mpi, using
 dnl complex wave-functions in the ground-state, and in debug mode.
 
-dnl these are the --enable possible in octopus
+dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug], [octopus in debug mode]), [DEBUG=1])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--disable-debug], [debug mode]), [DISABLE_DEBUG=yes])
 
 dnl the MPI has a special treatment
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]))
@@ -131,12 +131,10 @@ if test "${SINGLE_PRECISION}"; then
 fi
 
 dnl debug mode
-if test "${DEBUG}"; then
-  AC_DEFINE(DEBUG, 1, [octopus compiled in debug mode])
-  MYEXT="${MYEXT}_debug"
-  msg="$msg, debug mode"
+if test "${DISABLE_DEBUG}"; then
+  AC_DEFINE(DISABLE_DEBUG, yes, [octopus compiled without debug mode])
 fi
-AC_SUBST(DEBUG)
+AC_SUBST(DISABLE_DEBUG)
 
 dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"

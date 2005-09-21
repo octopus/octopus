@@ -86,7 +86,6 @@ contains
     end do
     call flush_msg(stderr, shyphens)
 
-#ifdef DEBUG
     write(msg, '(a)') '* Stack: '
     call flush_msg(stderr, msg, 'no')
     do i = 1, no_sub_stack
@@ -99,7 +98,6 @@ contains
     ! cannot call this anymore since the move from this routine from global.F90
     ! to messages.F90
     !    call io_status(stderr)
-#endif
 
     if(flush_messages.and.mpiv%node.eq.0) then
        close(iunit_err)
@@ -381,12 +379,14 @@ contains
   end subroutine epoch_time_diff
 
 
-#ifdef DEBUG
+#ifndef DISABLE_DEBUG
   ! ---------------------------------------------------------
   subroutine push_sub(sub_name)
     character(len=*), intent(in) :: sub_name
 
     integer i, iunit, sec, usec
+
+    if(.not.in_debug_mode) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
@@ -439,6 +439,8 @@ contains
   ! ---------------------------------------------------------
   subroutine pop_sub()
     integer i, iunit, sec, usec
+
+    if(.not.in_debug_mode) return
 
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
