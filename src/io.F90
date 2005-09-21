@@ -120,14 +120,14 @@ contains
 
        do while (.not.file_exists)
           inquire(file='node_hook.'//node_hook, exist=file_exists)
-!          call system('sleep 1')
+          call loct_nanosleep(1,0)
           write(stdout,'(a,i3,a)') 'node:', mpiv%node, &
                ' - still sleeping. To release me touch: node_hook.'//trim(node_hook)
        end do
 
        write(stdout,'(a,i3,a)') 'node:', mpiv%node, ' Leaving debug hook'
        ! remove possible debug hooks
-!       call system('rm -rf node_hook.'//trim(node_hook))
+       call loct_rm( 'node_hook.'//trim(node_hook) )
 
        call loct_gettimeofday(sec, usec)
        call epoch_time_diff(sec,usec)

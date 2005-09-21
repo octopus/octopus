@@ -183,7 +183,7 @@ double FC_FUNC_(oct_clock, OCT_CLOCK)
 }
 
 void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
-	(int *sec, int *usec)
+  (int *sec, int *usec)
 {
 #ifdef linux
   struct timeval tv;
@@ -209,6 +209,19 @@ void FC_FUNC_(oct_gettimeofday, OCT_GETTIMEOFDAY)
   *usec = 0
 #endif
 }
+
+void FC_FUNC_(oct_nanosleep, OCT_CLOCK)
+	(int *sec, int *usec)
+{
+#ifdef linux
+  /* Datatypes should be long instead of int (see comment in gettimeofday) */
+  struct timespec req, rem;
+  req.tv_sec  = (time_t) *sec;
+  req.tv_nsec = (long)   *usec;
+  nanosleep(&req, &rem);
+#endif
+}
+
 
 /* this function is *not* portable. Should get rid of this! */
 int FC_FUNC_(oct_getmem, OCT_GETMEM)

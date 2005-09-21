@@ -28,8 +28,8 @@ module lib_oct
   public :: loct_sph_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
   public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
-  public :: loct_clock, loct_gettimeofday, loct_getmem, loct_sysname, loct_getcwd
-  public :: loct_mkdir, loct_rm, loct_number_of_lines
+  public :: loct_clock, loct_gettimeofday, loct_nanosleep, loct_getmem
+  public :: loct_sysname, loct_getcwd, loct_mkdir, loct_rm, loct_number_of_lines
   public :: loct_fft_optimize, loct_wfs_list, loct_progress_bar, loct_printRecipe
   public :: write_iter_init, write_iter_clear, write_iter_flush, write_iter_end
   public :: write_iter_start, write_iter_string, write_iter_header_start, write_iter_header
@@ -242,6 +242,12 @@ module lib_oct
     subroutine oct_gettimeofday(sec, usec)
       integer, intent(out) :: sec, usec
     end subroutine oct_gettimeofday
+  end interface
+
+  interface loct_nanosleep
+    subroutine oct_nanosleep(sec, usec)
+      integer, intent(in) :: sec, usec
+    end subroutine oct_nanosleep
   end interface
 
   interface loct_getmem
