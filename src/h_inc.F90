@@ -344,12 +344,12 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-     hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%ep%vpsl(:))*psi(:, 1)
+     hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
   case(SPIN_POLARIZED)
      if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%ep%vpsl(:))*psi(:, 1)
+        hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
      else
-        hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 2) + h%ep%vpsl(:))*psi(:, 1)
+        hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
      end if
   case(SPINORS)
      hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%ep%vpsl(:))*psi(:, 1) + &
@@ -360,7 +360,7 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 
   if (associated(h%ep%e)) then
      do idim = 1, h%d%dim
-        hpsi(:, idim) = hpsi(:, idim) + h%ep%v*psi(:, idim)
+        hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v*psi(1:m%np, idim)
      end do
   end if
 
@@ -370,22 +370,22 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
      case (UNPOLARIZED)
      case (SPIN_POLARIZED)
         if(modulo(ik+1, 2) == 0) then ! we have a spin down
-           lhpsi(:, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
+           lhpsi(1:m%np, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(1:m%np, 1)
 
            hpsi(:, 1) = hpsi(:, 1)
         else
-           lhpsi(:, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(:, 1)
+           lhpsi(1:m%np, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(1:m%np, 1)
 
            hpsi(:, 1) = hpsi(:, 1)
         end if
      case (SPINORS)
-        lhpsi(:, 1) = M_HALF/P_C*( h%ep%b(3)*psi(:, 1) + (h%ep%b(1) - M_zI*h%ep%b(2))*psi(:, 2))
-        lhpsi(:, 2) = M_HALF/P_C*(-h%ep%b(3)*psi(:, 2) + (h%ep%b(1) + M_zI*h%ep%b(2))*psi(:, 1))
+        lhpsi(1:m%np, 1) = M_HALF/P_C*( h%ep%b(3)*psi(1:m%np, 1) + (h%ep%b(1) - M_zI*h%ep%b(2))*psi(1:m%np, 2))
+        lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%b(3)*psi(1:m%np, 2) + (h%ep%b(1) + M_zI*h%ep%b(2))*psi(1:m%np, 1))
      end select
      if (h%em_app) then
         call lalg_scal(m%np, h%d%dim, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi)
      end if
-     hpsi = hpsi + lhpsi
+     hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
      deallocate(lhpsi)
   end if
 

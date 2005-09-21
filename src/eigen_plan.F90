@@ -81,7 +81,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
            res(me),             v(NP, dim, krylov),    &
            av(NP, dim, krylov), tmp(krylov),           &
            h(krylov, krylov),   hevec(krylov, krylov), &
-           aux(NP, dim))
+           aux(gr%m%np_part, dim))
   eigenval = M_ZERO;           eigenvec = R_TOTYPE(M_ZERO)
   res      = M_ZERO;           v        = R_TOTYPE(M_ZERO)
   av       = R_TOTYPE(M_ZERO); tmp      = M_ZERO
@@ -142,6 +142,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
             call lalg_axpy(NP, dim, -av(ii, 1, d1 + 1), eigenvec(:, :, ii), v(:, :, i))
           enddo
           do ii = 1, i - 1
+            ! FIXME: In parallel mode, i gets to big and av gets out of bounds.
             av(ii, 1, d1 + 1) = X(states_dotp)(gr%m, dim, v(:, :, ii), v(:, :, i))
             call lalg_axpy(NP, dim, -av(ii, 1, d1 + 1), v(:, :, ii), v(:, :, i))
           enddo
@@ -254,7 +255,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
 
         ! Preconditioning
         do idim = 1, dim
-          call lalg_copy(NP, av(:, idim, d1 + 1), aux(:, idim))
+          call lalg_copy(NP, av(1:NP, idim, d1 + 1), aux(1:NP, idim))
           call apply_filter(aux(:, idim), v(:, idim, d1+1))
         enddo
 
@@ -286,9 +287,12 @@ contains
     R_TYPE,  intent(inout) :: res(:,:)
     FLOAT,   intent(out)   :: r
 
+    call push_sub('eigen_plan.residual')
+
     res = hv - e*v
     r = X(states_nrm2)(gr%m, dim, res)
 
+    call pop_sub()
   end subroutine residual
 
   subroutine apply_filter(fi, fo)
@@ -296,6 +300,8 @@ contains
     R_TYPE, intent(out) :: fo(:)
 
     R_TYPE, pointer :: fip(:)
+
+    call push_sub('eigen_plan.apply_filter')
 
     if(gr%f_der%der_discr%zero_bc) then
       allocate(fip(gr%m%np_part))
@@ -308,6 +314,8 @@ contains
     call X(nl_operator_operate) (filter, fip, fo)
 
     if(gr%f_der%der_discr%zero_bc) deallocate(fip)
+
+    call pop_sub()
 
   end subroutine apply_filter
 
