@@ -59,8 +59,10 @@ subroutine X(input_function)(filename, m, f, ierr)
   if(in_debug_mode) call write_debug_newlines(2)
 
   ! Only root knows, wheather the file was succesfully read.
-  ! Now, it telss everybody else.
+  ! Now, it tells everybody else.
+  call MPI_Debug_IN(m%vp%comm, C_MPI_BCAST)
   call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+  call MPI_Debug_OUT(m%vp%comm, C_MPI_BCAST)
   ! Only scatter, when successfully read the file(s).
   if(ierr.le.0) then
     call X(vec_scatter)(m%vp, f_global, f)
