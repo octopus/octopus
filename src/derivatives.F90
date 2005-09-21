@@ -351,20 +351,11 @@ contains
              do j = 1, der%lapl%n
                 k = der%lapl%i(j, i)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-                if(k.le.m%vp%np_local(m%vp%partno)) then
-                  k = m%vp%local(m%vp%xlocal(m%vp%partno)+k-1)
-                else if(m%vp%np_local(m%vp%partno).lt.k.and. &
-                        k.le.(m%vp%np_ghost(m%vp%partno)+m%vp%np_local(m%vp%partno))) then
-                  k = m%vp%ghost(m%vp%xghost(m%vp%partno)+k &
-                      -m%vp%np_local(m%vp%partno)-1)
-                else
-                  k = m%vp%bndry(m%vp%xbndry(m%vp%partno)+k &
-                      -m%vp%np_local(m%vp%partno)          &
-                      -m%vp%np_ghost(m%vp%partno)-1)
-                end if
-#endif
-
+                if(k>m%vp%np_local(m%vp%partno) &
+                     +m%vp%np_ghost(m%vp%partno)) then
+#else
                 if(k>m%np_global) then
+#endif
                    der%lapl%w_re(j, i) = M_ZERO
                    der%lapl%i(j, i) = i
                 endif
