@@ -43,6 +43,7 @@ public :: spec_type,                     &
           spectrum_rotatory_strength,    &
           spectrum_hs_from_mult,         &
           spectrum_hs_from_acc,          &
+          spectrum_mult_info,            &
           kick_init
 
 integer, public, parameter :: SPECTRUM_DAMP_NONE       = 0, &
