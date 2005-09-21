@@ -44,6 +44,7 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
+  integer :: mpierr
   call push_sub('restart_inc.restart_read_function')
 
   ! try first to load plain binary files
@@ -73,7 +74,7 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
-  if(mpiv%node.eq.0) then
+  if(gr%m%vp%rank.eq.gr%m%vp%root) then
      call io_mkdir(dir)
 
      iunit = io_open(trim(dir)//'/wfns', action='write')
@@ -109,13 +110,13 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
 
-  if(mpiv%node.eq.0)  then
+  if(gr%m%vp%rank.eq.gr%m%vp%root) then
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
     write(iunit2, '(a)') '%'
   end if
 
-  if(mpiv%node.eq.0) then
+  if(gr%m%vp%rank.eq.gr%m%vp%root) then
     call io_close(iunit)
     call io_close(iunit2)
   end if
@@ -139,10 +140,13 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   integer,           intent(out)   :: ierr
   integer, optional, intent(out)   :: iter
 
-  integer :: iunit, iunit2, err, ik, ist, idim, i
-  character(len=12) :: filename
-  character(len=1) :: char
+  integer              :: iunit, iunit2, err, ik, ist, idim, i
+  character(len=12)    :: filename
+  character(len=1)     :: char
   logical, allocatable :: filled(:, :, :)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer              :: mpierr
+#endif
 
   call push_sub('restart_inc.restart_read')
 
@@ -152,7 +156,14 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   ierr = 0
 
   ! open files to read
-  call open_files()
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%vp%rank.eq.m%vp%root) then
+#endif
+    call open_files()
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  endif
+  call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+#endif
   if(ierr.ne.0) then
     call pop_sub()
     return
@@ -161,20 +172,65 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   ! now we really start
   allocate(filled(st%d%dim, st%st_start:st%st_end, st%d%nik)); filled = .false.
 
-  read(iunit, *);  read(iunit, *)  ! Skip two lines...
-  read(iunit2, *); read(iunit2, *) ! Skip two lines...
-  do
-    read(unit=iunit, fmt='(a)', iostat=i) char
-    if(i.ne.0.or.char=='%') exit
-    backspace(unit=iunit)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%vp%rank.eq.m%vp%root) then
+#endif
+    read(iunit, *);  read(iunit, *)  ! Skip two lines...
+    read(iunit2, *); read(iunit2, *) ! Skip two lines...
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  end if
+#endif
 
-    read(unit=iunit, iostat=i, fmt=*) ik, char, ist, char, idim, char, filename
+  do
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(m%vp%rank.eq.m%vp%root) then
+#endif
+      read(unit=iunit, fmt='(a)', iostat=i) char
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    endif
+    call MPI_Bcast(i, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+    call MPI_Bcast(char, 1, MPI_CHARACTER, m%vp%root, m%vp%comm, mpierr)
+#endif
+    if(i.ne.0.or.char=='%') exit
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    if(m%vp%rank.eq.m%vp%root) then
+#endif
+      backspace(unit=iunit)
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    endif
+#endif
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(m%vp%rank.eq.m%vp%root) then
+#endif
+      read(unit=iunit, iostat=i, fmt=*) ik, char, ist, char, idim, char, filename
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    end if
+    call MPI_Bcast(ik, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+    call MPI_Bcast(ist, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+    call MPI_Bcast(idim, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+#endif
     if(index_is_wrong()) then
-      read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the occs file
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+      if(m%vp%rank.eq.m%vp%root) then
+#endif
+        read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the occs file
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+      end if
+#endif
       cycle
     end if
 
-    read(unit=iunit2, iostat=i, fmt=*) st%occ(ist,ik), char, st%eigenval(ist, ik)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    if(m%vp%rank.eq.m%vp%root) then
+#endif
+      read(unit=iunit2, iostat=i, fmt=*) st%occ(ist, ik), char, st%eigenval(ist, ik)
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    end if
+    call MPI_Bcast(st%occ(ist, ik), 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+    call MPI_Bcast(st%eigenval(ist, ik), 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+#endif
     if(ist >= st%st_start .and. ist <= st%st_end) then
       call X(restart_read_function) (dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
       if(err <= 0) then
@@ -185,7 +241,14 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end do
 
   if(present(iter)) then
-    read(unit=iunit, fmt=*) filename, filename, iter
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    if(m%vp%rank.eq.m%vp%root) then
+#endif
+      read(unit=iunit, fmt=*) filename, filename, iter
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+    end if
+    call MPI_Bcast(iter, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+#endif
   endif
 
   if(any(.not.filled)) call fill()
@@ -196,8 +259,14 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end if
 
   deallocate(filled)
-  call io_close(iunit)
-  call io_close(iunit2)
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+  if(m%vp%rank.eq.m%vp%root) then
+#endif
+    call io_close(iunit)
+    call io_close(iunit2)
+#if defined(HAVE_MPI) && defined(HAVE_METIS) 
+  end if
+#endif
 
   call pop_sub()
 
@@ -215,7 +284,6 @@ contains
       call io_close(iunit)
       ierr = -1
     end if
-
   end subroutine open_files
 
 
@@ -233,6 +301,7 @@ contains
       end do
     end do
   end subroutine fill
+
 
   logical function index_is_wrong() ! .true. if the index (idim, ist, ik) is not present in st structure...
     if(idim > st%d%dim .or. idim < 1 .or.   &
