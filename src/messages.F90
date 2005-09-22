@@ -385,7 +385,7 @@ contains
   end subroutine epoch_time_diff
 
 
-#ifndef DISABLE_DEBUG
+#ifndef NDEBUG
   ! ---------------------------------------------------------
   subroutine push_sub(sub_name)
     character(len=*), intent(in) :: sub_name

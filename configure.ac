@@ -60,7 +60,7 @@ dnl complex wave-functions in the ground-state, and in debug mode.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(complex, AC_HELP_STRING([--enable-complex], [Ground-state complex wavefunctions]), [COMPLEX_WFNS=1])
 AC_ARG_ENABLE(single, AC_HELP_STRING([--enable-single], [octopus in single precision]), [SINGLE_PRECISION=1])
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--disable-debug], [debug mode]), [DISABLE_DEBUG=yes])
+AC_ARG_ENABLE(debug, AC_HELP_STRING([--disable-debug], [debug mode]), [NDEBUG=yes])
 
 dnl the MPI has a special treatment
 AC_ARG_ENABLE(mpi, AC_HELP_STRING([--enable-mpi(=PATH)], [Paralel version]))
@@ -131,10 +131,10 @@ if test "${SINGLE_PRECISION}"; then
 fi
 
 dnl debug mode
-if test "${DISABLE_DEBUG}"; then
-  AC_DEFINE(DISABLE_DEBUG, yes, [octopus compiled without debug mode])
+if test "${NDEBUG}"; then
+  AC_DEFINE(NDEBUG, yes, [octopus compiled without debug mode])
 fi
-AC_SUBST(DISABLE_DEBUG)
+AC_SUBST(NDEBUG)
 
 dnl set the default extension for the programs
 EXEEXT="${MYEXT}${EXEEXT}"
