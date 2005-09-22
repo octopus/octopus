@@ -176,8 +176,8 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   allocate(filled(st%d%dim, st%st_start:st%st_end, st%d%nik)); filled = .false.
 
   ! Skip two lines.
-  call iopar_read(m, iunit, line, ierr); call iopar_read(m, iunit, line, ierr)
-  call iopar_read(m, iunit2, line, ierr); call iopar_read(m, iunit2, line, ierr)
+  call iopar_read(m, iunit, line, err); call iopar_read(m, iunit, line, err)
+  call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
 
   do
     call iopar_read(m, iunit, line, i)
@@ -186,14 +186,14 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
 
     call iopar_backspace(m, iunit)
 
-    call iopar_read(m, iunit, line, ierr)
+    call iopar_read(m, iunit, line, err)
     read(line, *) ik, char, ist, char, idim, char, filename
     if(index_is_wrong()) then
-      call iopar_read(m, iunit2, line, ierr)
+      call iopar_read(m, iunit2, line, err)
       cycle
     end if
 
-    call iopar_read(m, iunit2, line, ierr)
+    call iopar_read(m, iunit2, line, err)
     read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
 
     if(ist >= st%st_start .and. ist <= st%st_end) then
@@ -206,7 +206,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end do
 
   if(present(iter)) then
-    call iopar_read(m, iunit, line, ierr)
+    call iopar_read(m, iunit, line, err)
     read(line, *) filename, filename, iter
   endif
 
