@@ -56,8 +56,8 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
   niter = 0
   moved = 0
 
-  allocate(h_psi(NP, st%d%dim), g(NP, st%d%dim), g0(NP, st%d%dim), &
-       cg(gr%m%np_part, st%d%dim), ppsi(NP, st%d%dim))
+  allocate(h_psi(1:NP_PART, st%d%dim), ppsi(1:NP_PART, st%d%dim), &
+       g(1:NP_PART, st%d%dim), g0(1:NP_PART, st%d%dim), cg(1:NP_PART, st%d%dim))
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ik_loop: do ik = 1, st%d%nik
@@ -70,13 +70,13 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
 
         ! Orthogonalize starting eigenfunctions to those already calculated...
         call X(states_gram_schmidt)(p, gr%m, st%d%dim, &
-             st%X(psi)(1:NP, 1:st%d%dim, 1:p, ik), start=p)
+             st%X(psi)(:, 1:st%d%dim, 1:p, ik), start=p)
 
         ! Calculate starting gradient: |hpsi> = H|psi>
         call X(Hpsi)(h, gr, st%X(psi)(:,:, p, ik) , h_psi, ik)
 
         ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
-        st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(1:NP, :, p, ik), h_psi))
+        st%eigenval(p, ik) = R_REAL(X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), h_psi))
 
         ! Starts iteration for this band
         iter_loop: do iter = 1, maxter
@@ -84,37 +84,37 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
            ! if approximate inverse preconditioner....
            !call pre(hpsi%val   , g%val   )
            !call pre(psi(m)%val , ppsi%val)
-           g = h_psi
-           ppsi = st%X(psi)(1:NP,:, p, ik)
+           g(1:NP,:) = h_psi(1:NP,:)
+           ppsi(1:NP,:) = st%X(psi)(1:NP,:, p, ik)
 
-           es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(1:NP,:, p, ik), g)
-           es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(1:NP,:, p, ik), ppsi)
+           es(1) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), g)
+           es(2) = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
            es(1) = es(1)/es(2)
-           g = g - es(1)*ppsi
+           g(1:NP,:) = g(1:NP,:) - es(1)*ppsi(1:NP,:)
 
            ! Orthogonalize to lowest eigenvalues (already calculated)
            do j = 1, p - 1
-              a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(1:NP, :, j, ik), g)
-              g(:,:) = g(:,:) - a0 * st%X(psi)(1:NP,:, j, ik)
+              a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, j, ik), g)
+              g(1:NP,:) = g(1:NP,:) - a0 * st%X(psi)(1:NP,:, j, ik)
            end do
 
            if(iter .ne. 1) gg1 = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
            ! Approximate inverse preconditioner...
            !call ipre(g, g0)
-           g0 = g
+           g0(1:NP,:) = g(1:NP,:)
 
            gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
 
            ! Starting or following iterations...
            if(iter .eq. 1) then
               gg0 = gg
-              cg(1:NP, :) = g(1:NP, :)
+              cg (1:NP, :) = g(1:NP, :)
            else
               !gamma = gg/gg0        ! (Fletcher-Reeves)
               gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
               gg0 = gg
-              cg(:,:) = gamma*cg(:,:)
+              cg(1:NP,:) = gamma*cg(1:NP,:)
               cg(1:NP,:) = cg(1:NP,:) + g(1:NP,:)
 
               norma = gamma*cg0*sin(theta)
@@ -122,13 +122,13 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
            end if
 
            ! cg contains now the conjugate gradient
-           cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(1:NP,:))
+           cg0 = X(states_nrm2) (gr%m, st%d%dim, cg(:,:))
            call X(Hpsi) (h, gr, cg, ppsi, ik)
 
            ! Line minimization.
-           a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(1:NP,:, p, ik), ppsi)
+           a0 = X(states_dotp) (gr%m, st%d%dim, st%X(psi)(:,:, p, ik), ppsi)
            a0 = M_TWO * a0 / cg0
-           b0 = X(states_dotp) (gr%m, st%d%dim, cg(1:NP,:), ppsi)
+           b0 = X(states_dotp) (gr%m, st%d%dim, cg(:,:), ppsi)
            b0 = b0/cg0**2
            e0 = st%eigenval(p, ik)
            theta = atan(R_REAL(a0/(e0 - b0)))/M_TWO
@@ -147,15 +147,15 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
            ! This does the sum: st%X(psi)(:, :, p, ik) = a0*st%X(psi)(:, :, p, ik) + b0*cg(:, :)
            ! It can crash in Intel compiler version 8 otherwise.
            do j = 1, st%d%dim
-              call lalg_scal(NP, a0, st%X(psi)(1:NP, j, p, ik))
-              call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(1:NP, j, p, ik))
+              call lalg_scal(NP, a0, st%X(psi)(:, j, p, ik))
+              call lalg_axpy(NP, b0, cg(:, j), st%X(psi)(:, j, p, ik))
            enddo
 
            ! Calculate H|psi>
-           h_psi = a0*h_psi + b0*ppsi
+           h_psi(1:NP,:) = a0*h_psi(1:NP,:) + b0*ppsi(1:NP,:)
 
            res = X(states_residue)(gr%m, st%d%dim, h_psi, st%eigenval(p, ik), &
-                st%X(psi)(1:NP, :, p, ik))
+                st%X(psi)(:, :, p, ik))
            ! Test convergence.
            if(res < tol) then
               conv = conv + 1
@@ -247,7 +247,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
     states: do ist = conv + 1, nst
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
-      call X(states_gram_schmidt)(ist, gr%m, dim, st%X(psi)(1:NP, 1:dim, 1:ist, ik), start=ist)
+      call X(states_gram_schmidt)(ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
       psi(:, :) = st%X(psi)(:, :, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
