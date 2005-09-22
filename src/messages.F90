@@ -205,6 +205,8 @@ contains
 
     integer             :: i, iunit
 
+    if(.not.in_debug_mode) return
+
     call open_debug_trace(iunit)
     do i = 1, no_lines
        write(msg, '(a)') trim(message(i))
