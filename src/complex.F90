@@ -30,14 +30,9 @@
 
 #define X(x)        z ## x
 
-#if defined(HAVE_MPI)
+
 #if defined(DISABLE_DEBUG)
 #define TS(x)       x
 #else
 #define TS(x)       TSZ_ ## x
 #endif
-#else
-#define TS(x)
-#endif
-
-
