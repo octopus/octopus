@@ -112,31 +112,29 @@ contains
        call loct_rm('messages.stderr')
     endif
 
-    ! check if we should run in debug mode
-    call loct_parse_logical('DebugMode', .false., in_debug_mode)
-
-
-    !%Variable Verbose
+    !%Variable DebugLevel
     !%Type integer
     !%Section 1 Generalities
     !%Description
-    !% This variable decides how verbose the output of the program will be.
-    !%Option silent_mode -1000
-    !% No output at all, except fatal errors.
-    !%Option warning_mode 1 
-    !% Only fatal errors and warnings.
-    !%Option normal_mode 30
-    !% Normal output.
-    !%Option verbose_mode 1000
-    !% Extra information for debugging purposes: entry and exit of selected
-    !% subroutines, memory usage (on some platforms), timing for each subroutine.
+    !% This variable decides wether or not to enter debug-mode. In debugging mode,
+    !% the program prints to standard error when it enters and exits the subroutines,
+    !% what is the memory it is using (only, for the moment being, in Linux systems),
+    !% and some other information. Useful for developers, and mandatory if you want
+    !% to send a bug report to the developers and being considered.
+    !% You have two options: (i) setting it to zero -- or less than zero, in which
+    !% case you do not run in debugging mode (this is the default), or (ii) setting
+    !% it to a positive number. In this case the entries and exits to nested subroutines 
+    !% are only printed down to the level that is given in this variable.
     !%End
-    call loct_parse_int('Verbose', VERBOSE_NORMAL, conf%verbose)
-    if(conf%verbose > VERBOSE_DEBUG .and. mpiv%node == 0) then
-       call loct_parse_int('DebugLevel', 3, conf%debug_level)
-       message(1) = 'Entering DEBUG mode'
-       call write_warning(1)
-    end if
+    call loct_parse_int('DebugLevel',0,conf%debug_level)
+    if(conf%debug_level>0) then
+       in_debug_mode = .true.
+       conf%verbose = VERBOSE_DEBUG + 1
+    else
+       in_debug_mode = .false.
+       conf%verbose = VERBOSE_NORMAL + 1
+    endif
+
 
     if(in_debug_mode) then
        call loct_parse_logical('MPIDebugHook', .false., mpi_debug_hook)

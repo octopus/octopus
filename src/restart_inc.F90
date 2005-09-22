@@ -133,7 +133,9 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
   end if
 #endif
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
   call TS(MPI_Barrier)(MPI_COMM_WORLD, i) ! Since some processors did more than others...
+#endif
 
   call pop_sub()
 end subroutine X(restart_write)

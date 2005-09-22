@@ -111,7 +111,9 @@ contains
 
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls
+#if defined(HAVE_MPI)
     call TS(MPI_Barrier)(MPI_COMM_WORLD, ierr)
+#endif
 
     message(1) = 'Info: Random generating starting wavefunctions.'
     call write_info(1)
