@@ -45,8 +45,6 @@ module global
      character(len=256) :: latest_cvs  ! rcs info of latest cvs commit
      character(len=50)  :: build_time  ! time octopus was compiled
      character(len=10)  :: version     ! version number
-
-     logical :: boundary_zero_derivative   ! does not belong here
   end type conf_type
 
   type mpi_type

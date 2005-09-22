@@ -254,19 +254,8 @@ contains
 
   subroutine run_init()
 
-    call loct_parse_logical(check_inp('BoundaryZeroDerivative'), .false., conf%boundary_zero_derivative)
-
     call messages_print_stress(stdout)
     call messages_print_var_option(stdout, "CalculationMode", calc_mode, "Calculation Mode:")
-
-    message(1) = "Boundary conditions:"
-    if(conf%boundary_zero_derivative) then
-       write(message(1), '(2a)') trim(message(1)), " zero derivatives"
-    else
-       write(message(1), '(2a)') trim(message(1)), " zero wave-functions"
-    end if
-
-    call write_info(1)
     call messages_print_stress(stdout)
 
     ! initialize ffts

@@ -70,14 +70,6 @@ contains
 
     if(index.ne.0) index = Lxyz_inv(ix(1), ix(2), ix(3))
 
-    if(index==0.and.conf%boundary_zero_derivative) then
-      do
-        index = Lxyz_inv(ix(1), ix(2), ix(3))
-        if(index.ne.0) exit
-        ix(abs(dir)) = ix(abs(dir)) - sign(1, dir)
-      end do
-    end if
-
   end function mesh_index
 
 end module mesh_lib
