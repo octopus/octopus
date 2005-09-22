@@ -822,9 +822,9 @@ contains
   ! calculates fo = op fi
   ! ---------------------------------------------------------
   subroutine dnl_operator_operate(op, fi, fo)
-    FLOAT,                  intent(inout) :: fi(:)  ! fi(op%np)
+    FLOAT,                  intent(inout) :: fi(:)  ! fi(op%np_part)
     type(nl_operator_type), intent(in)    :: op
-    FLOAT,                  intent(out)   :: fo(:)  ! fo(op%np)
+    FLOAT,                  intent(out)   :: fo(:)  ! fo(op%np_part)
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:)

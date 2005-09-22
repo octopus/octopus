@@ -127,8 +127,8 @@ end subroutine X(cf_FS2mf)
 subroutine X(f_laplacian) (sb, f_der, f, lapl, cutoff_)
   type(simul_box_type), intent(in) :: sb
   type(f_der_type), intent(inout)  :: f_der
-  R_TYPE,           intent(inout)  :: f(:)     ! f(m%np)
-  R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np)
+  R_TYPE,           intent(inout)  :: f(:)     ! f(m%np_part)
+  R_TYPE,           intent(out)    :: lapl(:)  ! lapl(m%np_part)
   FLOAT, optional,  intent(in)     :: cutoff_
 
   FLOAT :: cutoff
@@ -171,8 +171,8 @@ end subroutine X(f_laplacian)
 subroutine X(f_gradient) (sb, f_der, f, grad)
   type(simul_box_type), intent(in)    :: sb
   type(f_der_type),     intent(inout) :: f_der
-  R_TYPE, target,       intent(in)    :: f(:)       ! f(m%np)
-  R_TYPE,               intent(out)   :: grad(:,:)  ! grad(m%np, m%sb%dim)
+  R_TYPE, target,       intent(in)    :: f(:)       ! f(m%np_part)
+  R_TYPE,               intent(out)   :: grad(:,:)  ! grad(m%np_part, m%sb%dim)
 
   integer :: i
 

@@ -49,8 +49,8 @@ end subroutine X(derivatives_laplt)
 ! ---------------------------------------------------------
 subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   type(der_discr_type), intent(in)    :: der
-  R_TYPE, target,       intent(inout) :: f(:)     ! f(m%np)
-  R_TYPE,               intent(out)   :: lapl(:)  ! lapl(m%np)
+  R_TYPE, target,       intent(inout) :: f(:)     ! f(m%np_part)
+  R_TYPE,               intent(out)   :: lapl(:)  ! lapl(m%np_part)
   logical, optional,    intent(in)    :: have_ghost_
 
   R_TYPE, pointer:: fp(:)
@@ -65,7 +65,7 @@ subroutine X(derivatives_lapl)(der, f, lapl, have_ghost_)
   ! need extra points.
   if( (.not.(have_ghost))   .and.   der%zero_bc    .and.  der%lapl%const_w  ) then
      allocate(fp(der%m%np_part))
-     fp(1:der%m%np)              = f(1:der%m%np)
+     fp(1:der%m%np)               = f(1:der%m%np)
      fp(der%m%np+1:der%m%np_part) = R_TOTYPE(M_ZERO)
      call X(nl_operator_operate) (der%lapl, fp, lapl)
      deallocate(fp)
@@ -83,8 +83,8 @@ end subroutine X(derivatives_lapl)
 subroutine X(derivatives_grad)(sb, der, f, grad)
   type(simul_box_type), intent(in)  :: sb
   type(der_discr_type), intent(in)  :: der
-  R_TYPE, target,       intent(in)  :: f(:)       ! f(m%np)
-  R_TYPE,               intent(out) :: grad(:,:)  ! grad(m%np, sb%dim)
+  R_TYPE, target,       intent(in)  :: f(:)       ! f(m%np_part)
+  R_TYPE,               intent(out) :: grad(:,:)  ! grad(m%np_part, sb%dim)
 
   R_TYPE, pointer :: fp(:)
   integer :: i

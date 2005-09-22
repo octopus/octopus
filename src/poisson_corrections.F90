@@ -189,21 +189,21 @@ contains
   subroutine op(x, y)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(out)   :: y(:)
-    call dderivatives_lapl(der_pointer, x(1:mesh_pointer%np), y(1:mesh_pointer%np))
+    call dderivatives_lapl(der_pointer, x(1:mesh_pointer%np_part), y(1:mesh_pointer%np_part))
   end subroutine op
 
   FLOAT function dotp(x, y) result(res)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(in)    :: y(:)
-    integer :: np
-    np = mesh_pointer%np
-    res = dmf_dotp(mesh_pointer, x(1:np), y(1:np))
+    integer :: np_part
+    np_part = mesh_pointer%np_part
+    res = dmf_dotp(mesh_pointer, x(1:np_part), y(1:np_part))
   end function dotp
 
   subroutine opt(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
-    call dderivatives_laplt(der_pointer, x(1:mesh_pointer%np), y(1:mesh_pointer%np))
+    call dderivatives_laplt(der_pointer, x(1:mesh_pointer%np_part), y(1:mesh_pointer%np_part))
   end subroutine opt
 
 

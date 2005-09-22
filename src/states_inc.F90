@@ -82,7 +82,7 @@ end subroutine X(states_calc_dens)
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   integer,           intent(in)    :: nst, dim
   type(mesh_type),   intent(in)    :: m
-  R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np, dim, nst)
+  R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
   integer :: p, q, stst
@@ -158,7 +158,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
 
   call push_sub('states_inc.Xstates_nrm2')
 
-  allocate(res(m%np, dim))
+  allocate(res(m%np_part, dim))
   res = hf - e*f
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)

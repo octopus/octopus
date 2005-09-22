@@ -48,8 +48,8 @@ subroutine X(Hpsi) (h, gr, psi, hpsi, ik, t)
   type(hamiltonian_type), intent(in)    :: h
   type(grid_type),        intent(inout) :: gr
   integer,                intent(in)    :: ik
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   FLOAT, optional,        intent(in)    :: t
 
   call push_sub('h_inc.Hpsi')
@@ -156,8 +156,8 @@ end subroutine X(magnus)
 subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   type(hamiltonian_type), intent(in)    :: h
   type(grid_type),        intent(inout) :: gr
-  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   integer :: ik
 
   integer :: idim
@@ -313,8 +313,8 @@ subroutine X(vnlpsi) (h, m, sb, psi, hpsi, ik)
   type(hamiltonian_type), intent(in)    :: h
   type(mesh_type),        intent(in)    :: m
   type(simul_box_type),   intent(in)    :: sb
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
   integer,                intent(in)    :: ik
 
   integer :: idim
@@ -334,8 +334,8 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
   type(hamiltonian_type), intent(in)    :: h
   type(mesh_type),        intent(in)    :: m
   integer,                intent(in)    :: ik
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
   integer :: idim
   R_TYPE, allocatable :: lhpsi(:,:)
@@ -397,8 +397,8 @@ end subroutine X(vlpsi)
 subroutine X(vlasers) (gr, h, psi, hpsi, t)
   type(grid_type),        intent(inout) :: gr
   type(hamiltonian_type), intent(in)    :: h
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
   FLOAT, intent(in) :: t
 
@@ -438,8 +438,8 @@ end subroutine X(vlasers)
 ! ---------------------------------------------------------
 subroutine X(vborders) (h, psi, hpsi)
   type(hamiltonian_type), intent(in)    :: h
-  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np, h%d%dim)
-  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np, h%d%dim)
+  R_TYPE,                 intent(in)    :: psi(:,:)  !  psi(m%np_part, h%d%dim)
+  R_TYPE,                 intent(inout) :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
 
   integer :: idim
 
