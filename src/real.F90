@@ -19,8 +19,6 @@
 
 #define R_TREAL     1
 
-#define X(x)        d ## x
-
 #define R_TYPE      FLOAT
 #define R_MPITYPE   MPI_FLOAT
 #define R_TOTYPE(x) real(x, PRECISION)
@@ -30,4 +28,14 @@
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)
 
+#define X(x)        d ## x
+
+#if defined(HAVE_MPI)
+#if defined(DISABLE_DEBUG)
+#define TS(x)       x
+#else
 #define TS(x)       TSD_ ## x
+#endif
+#else
+#define TS(x)
+#endif

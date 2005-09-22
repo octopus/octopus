@@ -109,11 +109,9 @@ contains
     ! allocate wfs
     allocate(st%X(psi)(gr%m%np_part, st%d%dim, st%nst, st%d%nik))
 
-#ifdef HAVE_MPI    
     ! set barrier before the first communication takes place
     ! this ensures proper debug timing of MPI calls
     call TS(MPI_Barrier)(MPI_COMM_WORLD, ierr)
-#endif
 
     message(1) = 'Info: Random generating starting wavefunctions.'
     call write_info(1)
