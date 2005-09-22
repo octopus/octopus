@@ -223,6 +223,8 @@ contains
 
     integer             :: i, iunit
 
+    if(.not.in_debug_mode) return
+
     if (mpiv%node .eq. 0) return
     call open_debug_trace(iunit)
     do i = 1, no_lines
@@ -237,6 +239,8 @@ contains
   ! ---------------------------------------------------------
   subroutine write_debug_marker(no)
     integer, intent(in) :: no
+
+    if(.not.in_debug_mode) return
 
     write(message(1), '(a,i3)') 'debug marker #',no
     call write_debug(1)

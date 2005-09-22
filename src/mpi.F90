@@ -77,6 +77,8 @@ contains
     integer :: j
     integer :: usec_call(C_MPI_BARRIER:C_MPI_ALLREDUCE)
 
+    if(.not.in_debug_mode) return
+
     message(1) = ''
     message(2) = hyphens
     message(3) = ''
