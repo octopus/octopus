@@ -48,7 +48,8 @@ implicit none
             output_init, &
             output_fill_how, &
             dinput_function, zinput_function, &
-            doutput_function, zoutput_function
+            doutput_function, zoutput_function, &
+            iopar_open, iopar_close, iopar_read, iopar_backspace
 
 
 type output_type
@@ -195,6 +196,103 @@ subroutine ncdf_error(func, status, filename, ierr)
     ierr = 5
 end subroutine ncdf_error
 #endif
+
+
+integer function iopar_open(m, file, action, status, form, position, die) &
+                 result(iunit)
+  type(mesh_type),  intent(in)           :: m
+  character(len=*), intent(in)           :: file, action
+  character(len=*), intent(in), optional :: status, form, position
+  logical,          intent(in), optional :: die
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: mpierr
+#endif
+
+  call push_sub('out.iopar_open')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%vp%rank.eq.m%vp%root) then
+    iunit = io_open(file, action, status, form, position, die)
+  end if
+  call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+#else
+  iunit = io_open(file, action, status, form, position, die)
+#endif
+
+  call pop_sub()
+
+end function iopar_open
+
+
+subroutine iopar_close(m, iunit)
+  type(mesh_type), intent(in)    :: m
+  integer,         intent(inout) :: iunit
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: mpierr
+#endif
+
+  call push_sub('out.iopar_close')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%vp%rank.eq.m%vp%root) then
+    call io_close(iunit)
+  end if
+  call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+#else
+  call io_close(iunit)
+#endif
+
+  call pop_sub()
+
+end subroutine iopar_close
+
+
+subroutine iopar_read(m, iunit, line, ierr)
+  type(mesh_type),  intent(in)  :: m
+  integer,          intent(in)  :: iunit
+  character(len=*), intent(out) :: line
+  integer,          intent(out) :: ierr
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  integer :: mpierr
+#endif
+
+  call push_sub('out.iopar_read')
+  
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%vp%rank.eq.m%vp%root) then
+    read(iunit, '(a)', iostat=ierr) line
+  end if
+  call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+  call MPI_Bcast(line, len(line), MPI_CHARACTER, m%vp%root, m%vp%comm, mpierr)
+#else
+    read(iunit, '(a)', iostat=ierr) line
+#endif
+
+  call pop_sub()
+
+end subroutine iopar_read
+
+
+subroutine iopar_backspace(m, iunit)
+  type(mesh_type),  intent(in)  :: m
+  integer,          intent(in)  :: iunit
+
+  call push_sub('out.iopar_read')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%vp%rank.eq.m%vp%root) then
+    backspace(iunit)
+  end if
+#else
+  backspace(iunit)
+#endif
+
+  call pop_sub()
+
+end subroutine iopar_backspace
 
 
 #include "undef.F90"

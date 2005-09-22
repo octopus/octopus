@@ -156,9 +156,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   character(len=12)    :: filename
   character(len=1)     :: char
   logical, allocatable :: filled(:, :, :)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  integer              :: mpierr
-#endif
+  character(len=256)   :: line
 
   call push_sub('restart_inc.restart_read')
 
@@ -168,14 +166,7 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   ierr = 0
 
   ! open files to read
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%rank.eq.m%vp%root) then
-#endif
-    call open_files()
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  endif
-  call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-#endif
+  call open_files()
   if(ierr.ne.0) then
     call pop_sub()
     return
@@ -184,65 +175,27 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   ! now we really start
   allocate(filled(st%d%dim, st%st_start:st%st_end, st%d%nik)); filled = .false.
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%rank.eq.m%vp%root) then
-#endif
-    read(iunit, *);  read(iunit, *)  ! Skip two lines...
-    read(iunit2, *); read(iunit2, *) ! Skip two lines...
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  end if
-#endif
+  ! Skip two lines.
+  call iopar_read(m, iunit, line, ierr); call iopar_read(m, iunit, line, ierr)
+  call iopar_read(m, iunit2, line, ierr); call iopar_read(m, iunit2, line, ierr)
 
   do
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(m%vp%rank.eq.m%vp%root) then
-#endif
-      read(unit=iunit, fmt='(a)', iostat=i) char
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    endif
-    call MPI_Bcast(i, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-    call MPI_Bcast(char, 1, MPI_CHARACTER, m%vp%root, m%vp%comm, mpierr)
-#endif
+    call iopar_read(m, iunit, line, i)
+    read(line, '(a)') char
     if(i.ne.0.or.char=='%') exit
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    if(m%vp%rank.eq.m%vp%root) then
-#endif
-      backspace(unit=iunit)
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    endif
-#endif
+    call iopar_backspace(m, iunit)
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(m%vp%rank.eq.m%vp%root) then
-#endif
-      read(unit=iunit, iostat=i, fmt=*) ik, char, ist, char, idim, char, filename
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    end if
-    call MPI_Bcast(ik, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-    call MPI_Bcast(ist, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-    call MPI_Bcast(idim, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-#endif
+    call iopar_read(m, iunit, line, ierr)
+    read(line, *) ik, char, ist, char, idim, char, filename
     if(index_is_wrong()) then
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-      if(m%vp%rank.eq.m%vp%root) then
-#endif
-        read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the occs file
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-      end if
-#endif
+      call iopar_read(m, iunit2, line, ierr)
       cycle
     end if
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    if(m%vp%rank.eq.m%vp%root) then
-#endif
-      read(unit=iunit2, iostat=i, fmt=*) st%occ(ist, ik), char, st%eigenval(ist, ik)
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    end if
-    call MPI_Bcast(st%occ(ist, ik), 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-    call MPI_Bcast(st%eigenval(ist, ik), 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-#endif
+    call iopar_read(m, iunit2, line, ierr)
+    read(line, *) st%occ(ist, ik), char, st%eigenval(ist, ik)
+
     if(ist >= st%st_start .and. ist <= st%st_end) then
       call X(restart_read_function) (dir, filename, m, st%X(psi) (:, idim, ist, ik), err)
       if(err <= 0) then
@@ -253,47 +206,36 @@ subroutine X(restart_read) (dir, st, m, ierr, iter)
   end do
 
   if(present(iter)) then
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    if(m%vp%rank.eq.m%vp%root) then
-#endif
-      read(unit=iunit, fmt=*) filename, filename, iter
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    end if
-    call MPI_Bcast(iter, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-#endif
+    call iopar_read(m, iunit, line, ierr)
+    read(line, *) filename, filename, iter
   endif
 
   if(any(.not.filled)) call fill()
   if(ierr == 0) then
     ierr = -1 ! no files read
   else
-    if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0 ! Alles OK
+    ! Everything o. k.
+    if(ierr == (st%st_end - st%st_start + 1)*st%d%nik*st%d%dim) ierr = 0 
   end if
 
   deallocate(filled)
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-  if(m%vp%rank.eq.m%vp%root) then
-#endif
-    call io_close(iunit)
-    call io_close(iunit2)
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-  end if
-#endif
+  call iopar_close(m, iunit)
+  call iopar_close(m, iunit2)
 
   call pop_sub()
 
 contains
 
   subroutine open_files
-    iunit  = io_open(trim(dir)//'/wfns', action='read', status='old', die=.false.)
+    iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
     if(iunit < 0) then
       ierr = -1
       return
     end if
 
-    iunit2 = io_open(trim(dir)//'/occs', action='read', status='old', die=.false.)
+    iunit2 = iopar_open(m, trim(dir)//'/occs', action='read', status='old', die=.false.)
     if(iunit2 < 0) then
-      call io_close(iunit)
+      call iopar_close(m, iunit)
       ierr = -1
     end if
   end subroutine open_files
