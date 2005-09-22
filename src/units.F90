@@ -79,6 +79,48 @@ subroutine units_init()
 
   call push_sub('units.units_init')
 
+!!$    !%Variable stdout
+!!$    !%Type string
+!!$    !%Section 1 Generalities
+!!$    !%Description
+!!$    !% The standard output by default goes to, well, to standard output. This can
+!!$    !% be changed by setting this variable: if you give it a name (other than "-")
+!!$    !% the output stream is printed in that file instead.
+!!$    !%End
+
+  !%Variable Units
+  !%Type string
+  !%Section 1 Generalities
+  !%Description
+  !% Atomic units seem to be the preferred system in the atomic and
+  !% molecular physics community (despite the opinion of some of the authors
+  !% of this program). Internally, the code works in atomic units. However,
+  !% for input or output, some people like using eV for energies and AA for
+  !% lengths. This other system of units can also be used.
+  !%Option "a.u"
+  !% Atomic units
+  !%Option "eVA"
+  !% Electron-volts for energy, Angstrom for length.
+  !%End
+
+  !%Variable UnitsInput
+  !%Type string
+  !%Section 1 Generalities
+  !%Description
+  !% Same as "Units", but only refers to the values in the input files.  That
+  !% is, if UnitsInput = "eVA", all physical values in the input files
+  !% will be considered to be in eV and Angstroms.
+  !%End
+
+  !%Variable UnitsOutput
+  !%Type string
+  !%Section 1 Generalities
+  !%Description
+  !% Same as "Units", but only refers to the values in the output files.  That
+  !% is, if UnitsInput = "eVA", all physical values in the output files
+  !% will be considered to be in eV and Angstroms.
+  !%End
+
   if(loct_parse_isdef(check_inp('Units')).ne.0) then
     call loct_parse_string('Units', "a.u", c)
     cinp = c(1:3)
@@ -108,9 +150,7 @@ contains
     case ("eVA")
       call units_eV_Ang(u)
     case default
-      message(1) = "Invalid unit specification: '" // trim(c) // "'"
-      message(2) = "Valid units are: 'a.u', 'eVA'"
-      call write_fatal(2)
+      call input_error('Units')
     end select
   end subroutine get_units
 
