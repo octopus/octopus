@@ -100,7 +100,6 @@ module par_vec
   private
   public :: pv_type,            &
             vec_init,           &
-            vec_init_default,   &
             vec_end,            &
             dvec_scatter,       &
             zvec_scatter,       &
@@ -125,13 +124,17 @@ module par_vec
             ivec_integrate
 
   type pv_type
-    integer          :: comm                 ! MPI communicator to use.
-    integer          :: rank                 ! Our rank in the communicator
-    integer          :: root                 ! The master node.
+    ! The content of these members is node dependent.
+    integer          :: rank                 ! Our rank in the communicator.
+    integer          :: partno               ! Partition number of the
+                                             ! current node
+    ! The following members are set independent of the nodes.
     integer          :: p                    ! Number of partitions.
-    integer          :: partno               ! Partition number of the current node
+    integer          :: root                 ! The master node.
+    integer          :: comm                 ! MPI communicator to use.
     integer          :: np                   ! Number of points in mesh.
     integer          :: np_enl               ! Number of points in enlargement.
+    integer, pointer :: part(:)              ! Point -> partition.
     integer, pointer :: np_local(:)          ! How many points has partition r?
     integer, pointer :: xlocal(:)            ! Points of partition r start at
                                              ! xlocal(r) in local.
@@ -160,45 +163,6 @@ module par_vec
 
 contains
 
-  ! Wrapper: calls vec_init with MPI_COMM_WORLD and master node 0.
-  subroutine vec_init_default(p, part, np, np_part, nr,            &
-                              Lxyz_inv, Lxyz, stencil, np_stencil, &
-                              dim, periodic_dim, vp)
-    ! The next seven entries come from the mesh.
-    integer,       intent(in)  :: p            ! m%npart
-    integer,       intent(in)  :: part(:)      ! m%part
-    integer,       intent(in)  :: np           ! m%np_global
-    integer,       intent(in)  :: np_part      ! m%np_part_global
-    integer,       intent(in)  :: nr(2, 3)     ! m%nr
-    integer,       intent(in)  :: Lxyz_inv(nr(1,1):nr(2,1), &
-                                           nr(1,2):nr(2,2), &
-                                           nr(1,3):nr(2,3))
-                                               ! m%Lxyz_inv
-    integer,       intent(in)  :: Lxyz(:, :)   ! m%Lxyz
-    integer,       intent(in)  :: stencil(:,:) ! The stencil for which to
-                                               ! calculate ghost points.
-    integer,       intent(in)  :: np_stencil   ! Num. of points in stencil.
-    integer,       intent(in)  :: dim          ! Number of dimensions.
-    integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
-    type(pv_type), intent(out) :: vp           ! Description of partition.
-
-    ! Throw them away.
-    integer :: np_local ! vp%np_local(vp%partno).
-    integer :: np_ghost ! vp%np_ghost(vp%partno).
-    integer :: np_bndry ! vp%np_bndry(vp%partno).
-
-    call push_sub('par_vec.vec_init_default')
-    
-    call vec_init(MPI_COMM_WORLD, 0, p, part, np, np_part, nr, &
-                  Lxyz_inv, Lxyz, stencil, np_stencil,         &
-                  dim, periodic_dim, vp,                       &
-                  np_local, np_ghost, np_bndry)
-
-    call pop_sub()
-
-  end subroutine vec_init_default
- 
-
   ! Initializes a pv_type object (parallel vector).
   ! It computes the local to global and global to local index tables
   ! and the ghost point exchange.
@@ -219,15 +183,20 @@ contains
   ! The points are relative to the "application point" of the stencil.
   ! (This is the same format as used in type(nl_operator_type), so
   ! just passing op%stencil is possible.)
-  subroutine vec_init(comm, root, p, part, np, np_part, nr, &
-                      Lxyz_inv, Lxyz, stencil, np_stencil,  &
-                      dim, periodic_dim, vp,                &
-                      np_local, np_ghost, np_bndry)
+  ! Note: we can not pass in the i(:, :) array from the stencil
+  ! because it is not yet computed (it is local to a node and
+  ! must be initialized some time after vec_init is run).
+  ! Warning: The naming scheme for the np_ variables if different
+  ! from how it is in the rest of the code (for historical reasons
+  ! and also because the vec_init has more a global than a local point
+  ! of view on the mesh): See the comments in the parameter list.
+  subroutine vec_init(comm, root, part, np, np_part, nr,   &
+                      Lxyz_inv, Lxyz, stencil, np_stencil, &
+                      dim, periodic_dim, vp)
     integer,       intent(in)  :: comm         ! Communicator to use.
     integer,       intent(in)  :: root         ! The master node.
     ! The next seven entries come from the mesh.
-    integer,       intent(in)  :: p            ! m%npart
-    integer,       intent(in)  :: part(:)      ! m%part
+    integer,       intent(in)  :: part(:)      ! Point -> partition.
     integer,       intent(in)  :: np           ! m%np_global
     integer,       intent(in)  :: np_part      ! m%np_part_global
     integer,       intent(in)  :: nr(2, 3)     ! m%nr
@@ -242,14 +211,11 @@ contains
     integer,       intent(in)  :: dim          ! Number of dimensions.
     integer,       intent(in)  :: periodic_dim ! Number of per. dimensions.
     type(pv_type), intent(out) :: vp           ! Description of partition.
-    ! Those three are shortcuts.
-    integer,       intent(out) :: np_local     ! vp%np_local(vp%partno).
-    integer,       intent(out) :: np_ghost     ! vp%np_ghost(vp%partno).
-    integer,       intent(out) :: np_bndry     ! vp%np_bndry(vp%partno).
     
     ! Careful: MPI counts node ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
     ! For this reason, all ranks are incremented by one.
+    integer              :: p                ! Number of partitions.
     integer              :: np_enl           ! Number of points in enlargement.
     integer              :: i, j, k, r       ! Counters.
     integer, allocatable :: ir(:), irr(:, :) ! Counters.
@@ -263,15 +229,18 @@ contains
     call push_sub('par_vec.vec_init')
 
     ! Shortcuts.
+    call MPI_Comm_size(comm, p, ierr)
     np_enl = np_part-np
+
+    ! Store partition number and rank for later reference.
+    ! Having both variables is a bit redundant but makes the code readable.
     call MPI_Comm_rank(comm, rank, ierr)
-    ! store partition number and rank for later reference
-    ! having both variables is a bit redundant but makes the code readable
     vp%rank   = rank
     vp%partno = rank + 1
     
     allocate(ghost_flag(np+np_enl, p))
     allocate(ir(p), irr(p, p))
+    allocate(vp%part(np+np_enl))
     allocate(vp%np_local(p))
     allocate(vp%xlocal(p))
     allocate(vp%local(np))
@@ -461,11 +430,7 @@ contains
     vp%np     = np
     vp%np_enl = np_enl
     vp%p      = p
-
-    ! Return shortcuts.
-    np_local = vp%np_local(vp%partno)
-    np_ghost = vp%np_ghost(vp%partno)
-    np_bndry = vp%np_bndry(vp%partno)
+    vp%part   = part
 
     call pop_sub()
     
@@ -478,6 +443,10 @@ contains
 
     call push_sub('par_vec.vec_end')
     
+    if(associated(vp%part)) then
+      deallocate(vp%part)
+      nullify(vp%part)
+    endif
     if(associated(vp%np_local)) then
       deallocate(vp%np_local)
       nullify(vp%np_local)

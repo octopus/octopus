@@ -45,7 +45,7 @@ subroutine poisson1D_solve(m, pot, rho)
         pvec(j) = rho(j)/sqrt(M_ONE + (x-y)**2)
      end do
      tmp = dmf_integrate(m, pvec)
-     if (m%part(i).eq.m%vp%partno) then
+     if (m%vp%part(i).eq.m%vp%partno) then
         pot(m%vp%global(i, m%vp%partno)) = tmp
      endif
   end do

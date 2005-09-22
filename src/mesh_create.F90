@@ -18,40 +18,23 @@
 !! $Id$
 
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
-! Calls mesh_partition_init with the number of partitions
-! equal to the number of processors stored in the global mpiv.
-! This is what is usually needed.
-subroutine mesh_partition_init_default(m, Lxyz_tmp)
-  type(mesh_type), intent(inout) :: m
-  ! Indices have to be specified, because they do not start with 1.
-  integer,         intent(in)    :: Lxyz_tmp(m%nr(1,1):m%nr(2,1), &
-                                             m%nr(1,2):m%nr(2,2), &
-                                             m%nr(1,3):m%nr(2,3))
-  
-  call push_sub('mesh_create.mesh_partition_init_default')
-
-  call mesh_partition_init(m, Lxyz_tmp, mpiv%numprocs)
-
-  call pop_sub()
-  
-end subroutine mesh_partition_init_default
-
-
 ! Converts the mesh given by grid points into a graph. Each point is
 ! a vertex in the graph and closest neighbours are connected by an
 ! edge (at max. 6 in 3D and 4 in 2D, 2 in 1D, less at the boundaries).
 ! Then calls METIS to get p partitions.
 ! Stored the mapping point no. -> partition no. into
-! m%part. m%part is allocated along the way.
+! part, which has to be allocated beforehand.
 ! (mesh_partition_end should be called later.)
 ! In Lxyz_tmp has to be stored which points belong to the inner mesh
 ! and the enlargement. All other entries have to be zero.
-subroutine mesh_partition_init(m, Lxyz_tmp, p)
-  type(mesh_type), intent(inout) :: m
-  integer,         intent(in)    :: Lxyz_tmp(m%nr(1,1):m%nr(2,1), &
-                                             m%nr(1,2):m%nr(2,2), &
-                                             m%nr(1,3):m%nr(2,3))
-  integer,         intent(in)    :: p 
+! comm is used to get the number of partitions.
+subroutine mesh_partition(m, Lxyz_tmp, comm, part)
+  type(mesh_type), intent(in)  :: m
+  integer,         intent(in)  :: Lxyz_tmp(m%nr(1,1):m%nr(2,1), &
+                                          m%nr(1,2):m%nr(2,2), &
+                                          m%nr(1,3):m%nr(2,3))
+  integer,         intent(in)  :: comm
+  integer,         intent(out) :: part(:)
 
   integer              :: i, j           ! Counter.
   integer              :: ix, iy, iz     ! Counters to iterate over grid.
@@ -66,14 +49,16 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   ! than two neighbours per dimension).
   ! xadj has nv+1 entries because last entry contains the total
   ! number of edges.
-  integer              :: xadj(m%np_part_global+1) ! Indices of adjacency list
-                                                ! in adjncy.
+  integer              :: p          ! Number of partitions.
+  integer              :: xadj(m%np_part_global+1)
+                                     ! Indices of adjacency list
+                                     ! in adjncy.
   integer              :: adjncy(2*m%sb%dim*m%np_part_global)
-                                                ! Adjacency lists.
-  integer              :: options(5)         ! Options to METIS.
-  integer, allocatable :: ppp(:)             ! Points per partition.
-  integer, pointer     :: part(:)            ! Mapping of nodes to partitions.
-  integer              :: iunit              ! For debug output to files.
+                                     ! Adjacency lists.
+  integer              :: options(5) ! Options to METIS.
+  integer              :: ierr       ! MPI error code.
+  integer, allocatable :: ppp(:)     ! Points per partition.
+  integer              :: iunit      ! For debug output to files.
   character(len=3)     :: filenum
 
   call push_sub('mesh_create.mesh_partition_init')
@@ -84,12 +69,10 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   nv = m%np_part_global
 
   ! Get space for partitioning.
-  allocate(part(nv))
   part = 1
 
-  ! Store partitioning in mesh.
-  m%npart =  p
-  m%part  => part
+  ! Get number of partitions.
+  call MPI_Comm_size(comm, p, ierr)
 
   ! If p=1, we can exit. All points are mapped to
   ! partition 1 (s. a.).
@@ -205,70 +188,52 @@ subroutine mesh_partition_init(m, Lxyz_tmp, p)
   deallocate(ppp)
 
   if(in_debug_mode) then
-     ! DEBUG output. Write points of each partition in a different file.
-     if(mpiv%node == 0) then
+     ! Debug output. Write points of each partition in a different file.
+     if(mpiv%node.eq.0) then
         do i = 1, p 
            write(filenum, '(i3.3)') i
            iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
                 action='write')
            do j = 1, m%np_global
-              ! Somehow all points in the enlargement are mapped
-              ! to one point in m%x. So, if the enlargement shall be
-              ! written too (s. b.), activate the following line
-              ! and take out the usual write and comment out the
-              ! block below (this works only for equi-distant grids.
-              !!if(part(j).eq.i) write(iunit, '(i8,3i8)') j, m%Lxyz(j, :)
-              if(part(j).eq.i) write(iunit, '(4i8)') j, m%Lxyz(j, :)
+              if(part(j).eq.i) write(iunit, '(i8,3f10.8)') j, m%x_global(j, :)
            end do
            call io_close(iunit)
         end do
         ! Write points from enlargement to file with number p+1.
-        !!write(filenum, '(i3.3)') p+1
-        !!iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-        !!                action='write')
-        !!do i = m%np_global+1, m%np_part_global
-        !!  write(iunit, '(i8,3i8)') i, m%Lxyz(i,:)
-        !!end do
-        !!call io_close(iunit)
+        write(filenum, '(i3.3)') p+1
+        iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+                        action='write')
+        do i = m%np_global+1, m%np_part_global
+          write(iunit, '(i8,3f10.8)') i, m%x_global(i,:)
+        end do
+        call io_close(iunit)
      end if
   end if
 
   call pop_sub()
 
-end subroutine mesh_partition_init
-
-
-subroutine mesh_partition_end(m)
-  type(mesh_type), intent(inout) :: m
-
-  call push_sub('mesh_create.mesh_partition_end')
-
-  ! Free memory used for point-to-partition mapping.
-  if(associated(m%part)) then
-    deallocate(m%part)
-    nullify(m%part)
-  end if
-
-  call pop_sub()
-
-end subroutine mesh_partition_end
+end subroutine mesh_partition
 #endif
 
 
-subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
+subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil, comm)
   type(simul_box_type),  intent(in)    :: sb
   type(mesh_type),       intent(inout) :: m
   type(curvlinear_type), intent(in)    :: cv
   type(geometry_type),   intent(in)    :: geo
   ! When running parallel in domains, stencil and np_stencil
   ! are needed to compute the ghost points.
+  ! comm the communicator the parallelization takes places in
+  ! and is used to determine the number of partitions.
   integer, optional,     intent(in)    :: stencil(:, :)
   integer, optional,     intent(in)    :: np_stencil
+  integer, optional,     intent(in)    :: comm
 
-  integer :: i, j, k, il, ix, iy, iz
+  integer              :: i, j, k, il, ix, iy, iz
+  integer, allocatable :: part(:)
   integer, allocatable :: Lxyz_tmp(:,:,:)
   FLOAT,   allocatable :: x(:,:,:,:)
-  FLOAT :: chi(3)
+  FLOAT                :: chi(3)
 
   call push_sub('mesh_create.mesh_create_xyz')
 
@@ -330,9 +295,7 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   ! Node 0 has to store all entries from x (in x_global)
   ! as well as the local set in x (see below).
-!  if(mpiv%node.eq.0) then
     allocate(m%x_global(m%np_part_global, 3))
-!  end if
 #else
   ! When running parallel, x is computed later.
   allocate(m%x(m%np_part_global, 3))
@@ -385,50 +348,52 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil)
   end do
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  call mesh_partition_init_default(m, Lxyz_tmp)
-  if(present(stencil).and.present(np_stencil)) then
-    call vec_init_default(m%npart, m%part, m%np_global, m%np_part_global, &
-                          m%nr, m%Lxyz_inv, m%Lxyz, stencil, np_stencil,  &
-                          m%sb%dim, m%sb%periodic_dim, m%vp)
+    if(present(stencil).and.present(np_stencil).and.present(comm)) then
+      allocate(part(m%np_part_global))
+      call mesh_partition(m, Lxyz_tmp, comm, part)
+      call vec_init(comm, 0, part, m%np_global, m%np_part_global,  &
+                    m%nr, m%Lxyz_inv, m%Lxyz, stencil, np_stencil, &
+                    m%sb%dim, m%sb%periodic_dim, m%vp)
+      deallocate(part)
 
-    ! Set local point numbers.
-    m%np     = m%vp%np_local(m%vp%partno)
-    m%np_part = m%np+m%vp%np_ghost(m%vp%partno)+m%vp%np_bndry(m%vp%partno)
-    ! Compute m%x as it is done in the serial case but
-    ! only for local points.
-    ! x consists of three parts: the local points, the
-    ! ghost points, the boundary points; in this order
-    ! (just as for any other vector, which is distributed).
-    allocate(m%x(m%np_part, 3))
-    ! Do the inner points.
-    do i = 1, m%np
-      ix = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 1)
-      iy = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 2)
-      iz = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 3)
-      m%x(i, :) = x(:, ix, iy, iz)
-    end do
-    ! Do the ghost points.
-    do i = 1, m%vp%np_ghost(m%vp%partno)
-      ix = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 1)
-      iy = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 2)
-      iz = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 3)
-      m%x(i+m%np, :) = x(:, ix, iy, iz)
-    end do
-    ! Do the boundary points.
-    do i = 1, m%vp%np_bndry(m%vp%partno)
-      ix = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 1)
-      iy = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 2)
-      iz = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 3)
-      m%x(i+m%np+m%vp%np_ghost(m%vp%partno), :) = x(:, ix, iy, iz)
-    end do
-  else
-    message(1) = 'mesh_create.mesh_create_xyz called without stencil'
-    message(2) = 'and np_stencil when running in MPI mode.'
-    call write_fatal(2)
-  end if
+      ! Set local point numbers.
+      m%np      = m%vp%np_local(m%vp%partno)
+      m%np_part = m%np+m%vp%np_ghost(m%vp%partno)+m%vp%np_bndry(m%vp%partno)
+      ! Compute m%x as it is done in the serial case but
+      ! only for local points.
+      ! x consists of three parts: the local points, the
+      ! ghost points, the boundary points; in this order
+      ! (just as for any other vector, which is distributed).
+      allocate(m%x(m%np_part, 3))
+      ! Do the inner points.
+      do i = 1, m%np
+        ix = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 1)
+        iy = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 2)
+        iz = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), 3)
+        m%x(i, :) = x(:, ix, iy, iz)
+      end do
+      ! Do the ghost points.
+      do i = 1, m%vp%np_ghost(m%vp%partno)
+        ix = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 1)
+        iy = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 2)
+        iz = m%Lxyz(m%vp%ghost(m%vp%xghost(m%vp%partno)+i-1), 3)
+        m%x(i+m%np, :) = x(:, ix, iy, iz)
+      end do
+      ! Do the boundary points.
+      do i = 1, m%vp%np_bndry(m%vp%partno)
+        ix = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 1)
+        iy = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 2)
+        iz = m%Lxyz(m%vp%bndry(m%vp%xbndry(m%vp%partno)+i-1), 3)
+        m%x(i+m%np+m%vp%np_ghost(m%vp%partno), :) = x(:, ix, iy, iz)
+      end do
+    else
+      message(1) = 'mesh_create.mesh_create_xyz called without stencil'
+      message(2) = 'and np_stencil when running in MPI mode.'
+      call write_fatal(2)
+    end if
 #else
   ! When running serially those two are the same.
-  m%np     = m%np_global
+  m%np      = m%np_global
   m%np_part = m%np_part_global
 #endif
 

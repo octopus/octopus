@@ -53,6 +53,8 @@ module nl_operator
      integer                  :: np        ! number of points in mesh
      integer, pointer         :: stencil(:,:)
 
+     ! When running in parallel mode, the next three
+     ! arrays are unique on each node.
      integer, pointer         :: i(:,:)    ! index of the points
      FLOAT,   pointer         :: w_re(:,:) ! weightsp, real part
      FLOAT,   pointer         :: w_im(:,:) ! weightsp, imaginary part
@@ -575,8 +577,8 @@ contains
 
     do i = 1, opg%n
        do j = 1, opg%m%np_global
-          il = opg%m%vp%np_local(opg%m%part(j))
-          ig = il+opg%m%vp%np_ghost(opg%m%part(j))
+          il = opg%m%vp%np_local(opg%m%vp%part(j))
+          ig = il+opg%m%vp%np_ghost(opg%m%vp%part(j))
           ! opg%i(i, j) is a local point number, i. e. it can be
           ! a real local point (i. e. the local point number
           ! is less or equal than the number of local points of
@@ -584,15 +586,15 @@ contains
           if(opg%i(i, j).le.il) then
              ! Write the global point number from the lookup
              ! table in op_(i, j).
-             opg%i(i, j) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%part(j)) &
+             opg%i(i, j) = opg%m%vp%local(opg%m%vp%xlocal(opg%m%vp%part(j)) &
                   +opg%i(i, j)-1)
              ! Or a ghost point:
           else if(opg%i(i, j).gt.il.and.opg%i(i, j).le.ig) then
-             opg%i(i, j) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%part(j)) &
+             opg%i(i, j) = opg%m%vp%ghost(opg%m%vp%xghost(opg%m%vp%part(j)) &
                   +opg%i(i, j)-1-il)
              ! Or a boundary point:
           else if(opg%i(i, j).gt.ig) then
-             opg%i(i, j) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%part(j)) &
+             opg%i(i, j) = opg%m%vp%bndry(opg%m%vp%xbndry(opg%m%vp%part(j)) &
                   +opg%i(i, j)-1-ig)
           end if
        end do

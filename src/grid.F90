@@ -66,9 +66,11 @@ contains
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
+    ! FIXME: There should be dedicated communicator instead of
+    ! MPI_COMM_WORLD.
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
          gr%f_der%der_discr%lapl%stencil,                        &
-         gr%f_der%der_discr%lapl%n)
+         gr%f_der%der_discr%lapl%n, MPI_COMM_WORLD)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 

@@ -78,10 +78,6 @@ module mesh
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
 
-    integer          :: npart   ! Number of partitions.
-    integer, pointer :: part(:) ! Mapping point -> partition, result
-                                ! of call to the METIS library.
-
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
 #endif
@@ -90,15 +86,21 @@ module mesh
     integer :: nr(2,3)  ! dimensions of the box where the points are contained
     integer :: l(3)     ! literally n(2,:) - n(1,:) + 1
 
-    FLOAT, pointer :: x(:,:)        ! the (local) points
-    FLOAT, pointer :: x_global(:,:) ! the global points only on node 0.
-    FLOAT, pointer :: vol_pp(:)     ! element of volume for integrations
+    FLOAT, pointer :: x(:,:)        ! The (local) points,
+    FLOAT, pointer :: x_global(:,:) ! The global points, needed for i/o on
+                                    ! the root node and for the poisson solver
+                                    ! on all nodes.
+                                    ! There is a redundancy in these two
+                                    ! entries.
+                                    ! In serial: x_global => x.
+    FLOAT, pointer :: vol_pp(:)     ! Element of volume for integrations
+                                    ! for local points.
 
   end type mesh_type
 
 contains
 
-  subroutine mesh_init(sb, m, geo, cv, enlarge, stencil, np_stencil)
+  subroutine mesh_init(sb, m, geo, cv, enlarge, stencil, np_stencil, comm)
     type(simul_box_type), target, intent(in)    :: sb
     type(mesh_type),              intent(inout) :: m
     type(geometry_type),          intent(in)    :: geo
@@ -106,6 +108,7 @@ contains
     integer,                      intent(in)    :: enlarge(3)
     integer,                      intent(in)    :: stencil(:, :)
     integer,                      intent(in)    :: np_stencil
+    integer,                      intent(in)    :: comm
 
     call push_sub('mesh.mesh_init')
 
@@ -116,7 +119,7 @@ contains
 
     call adjust_nr()          ! find out the extension of the simulation box
     call mesh_create_xyz(sb, m, cv, geo,                         &
-         stencil=stencil, np_stencil=np_stencil)
+         stencil=stencil, np_stencil=np_stencil, comm=comm)
 
     call pop_sub()
   contains
@@ -325,7 +328,6 @@ contains
        nullify(m%x_global)
      end if
      call vec_end(m%vp)
-     call mesh_partition_end(m)
 #endif
 
      call pop_sub()
