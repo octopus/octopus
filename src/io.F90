@@ -53,7 +53,14 @@ contains
 
     stdin = 5
 
-    ! setup standard output
+    !%Variable stdout
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% The standard output by default goes to, well, to standard output. This can
+    !% be changed by setting this variable: if you give it a name (other than "-")
+    !% the output stream is printed in that file instead.
+    !%End
     call loct_parse_string('stdout', '-', filename)
     stdout = 6
     if(trim(filename).ne.'-') then
@@ -61,7 +68,14 @@ contains
        open(stdout, file=filename, status='unknown')
     end if
 
-    ! setup standard error
+    !%Variable stdout
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% The standard error by default goes to, well, to standard error. This can
+    !% be changed by setting this variable: if you give it a name (other than "-")
+    !% the output stream is printed in that file instead.
+    !%End
     call loct_parse_string('stderr', '-', filename)
     stderr = 0
     if(trim(filename).ne.'-') then
@@ -69,12 +83,27 @@ contains
        open(stderr, file=filename, status='unknown')
     end if
 
-    ! check where to output files ...
+    !%Variable WorkDir
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% By default, all files are written and read from the working directory,
+    !% i.e. the directory from which the executable was launched. This behavior can
+    !% be changed by setting this variable: if you give it a name (other than ".")
+    !% the files are written and read in that directory.
+    !%End
     call loct_parse_string('WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir.ne.'.') call loct_mkdir(trim(work_dir))
 
-    ! does the user want to flush stdout and stderr to files "messages.{stdout,stderr}" ?
+    !%Variable WorkDir
+    !%Type logical
+    !%Section 1 Generalities
+    !%Description
+    !% In addition to writing to stdout and stderr, the code messages may also be 
+    !% flushed to "messages.stdout" and "message.stderr", if this variable is 
+    !% set to yes.
+    !%End
     call loct_parse_logical('FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
