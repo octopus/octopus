@@ -48,6 +48,7 @@ contains
     type(grid_type),     intent(out) :: gr
 
     logical :: filter
+    integer :: i
 
     call push_sub('grid.grid_init')
 
@@ -68,9 +69,12 @@ contains
     ! now we generate create the mesh and the derivatives
     ! FIXME: There should be dedicated communicator instead of
     ! MPI_COMM_WORLD.
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    i = MPI_COMM_WORLD
+#endif
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
          gr%f_der%der_discr%lapl%stencil,                        &
-         gr%f_der%der_discr%lapl%n, MPI_COMM_WORLD)
+         gr%f_der%der_discr%lapl%n, i)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 
