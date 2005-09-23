@@ -86,7 +86,7 @@ contains
 
     call push_sub('poisson_cg.poisson_cg1')
 
-    allocate(wk(m%np_part), lwk(m%np_part), zk(m%np), pk(m%np))
+    allocate(wk(m%np_part), lwk(m%np_part), zk(m%np_part), pk(m%np_part))
 
     ! build initial guess for the potential
     wk(1:m%np) = pot(1:m%np)
@@ -100,7 +100,7 @@ contains
     mesh_pointer => m
     pk = zk
     iter = 400
-    call dconjugate_gradients(m%np, pk, zk, op, dotp, iter, res, threshold)
+    call dconjugate_gradients(m%np_part, pk, zk, op, dotp, iter, res, threshold)
     if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
@@ -108,7 +108,7 @@ contains
        call write_warning(3)
     endif
     nullify(der_pointer, mesh_pointer)
-    pot = pot + pk
+    pot(1:m%np) = pot(1:m%np) + pk(1:m%np)
 
     deallocate(zk, pk)
     call pop_sub()
@@ -155,15 +155,24 @@ contains
     type(mesh_type), intent(in)  :: m
     FLOAT,           intent(in)  :: rho(:)  ! rho(m%np)
     integer,         intent(in)  :: ml
-    FLOAT,           intent(out) :: pot(:)  ! pot(m%np_part)
+    FLOAT,           intent(inout) :: pot(:)  ! pot(m%np_part)
 
     integer :: i, add_lm, l, mm
     FLOAT   :: x(3), r, s1, sa
     FLOAT, allocatable :: mult(:)
-
     allocate(mult((ml+1)**2))
+
     call get_multipoles(m, rho, ml, mult)
-    do i = m%np+1, m%np_part ! boundary conditions
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    ! The boundary points are at different locations when
+    ! running parallel and serial.
+    pot(m%np+m%vp%np_ghost(m%vp%partno)+1:m%np_part) = M_ZERO
+    do i = m%np+m%vp%np_ghost(m%vp%partno)+1, m%np_part ! boundary conditions
+#else
+    pot(m%np+1:m%np_part) = M_ZERO
+    do i = m%np+1, m%np_part
+#endif
+
        call mesh_r(m, i, r, x=x)
        add_lm = 1
        do l = 0, ml
@@ -171,7 +180,7 @@ contains
           do mm = -l, l
              sa = loct_ylm(x(1), x(2), x(3), l, mm)
              pot(i) = pot(i) + sa * mult(add_lm) * s1
-             add_lm = add_lm+1
+            add_lm = add_lm+1
           end do
        end do
     end do

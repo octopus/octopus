@@ -25,6 +25,7 @@ module poisson_corrections
   use derivatives
   use mesh
   use mesh_function
+  use messages
 
   implicit none
 
@@ -105,16 +106,17 @@ contains
     integer,         intent(in)  :: ml
     FLOAT,           intent(out) :: mult((ml+1)**2)
 
+    FLOAT   :: tmp(m%np)
     integer :: i, add_lm, l, mm
 
     mult(:) = M_ZERO
-    do i = 1, m%np
-       add_lm = 1
-       do l = 0, ml
-          do mm = -l, l
-             mult(add_lm) = mult(add_lm) + rho(i)*aux(add_lm, i)*m%vol_pp(i)
-             add_lm = add_lm + 1
-          enddo
+    add_lm = 1
+    do l = 0, ml
+       do mm = -l, l
+          tmp = rho(:)*aux(add_lm, :)
+          ! Use Xmf_integrate, so things work parallel too.
+          mult(add_lm) = dmf_integrate(m, tmp)
+          add_lm = add_lm + 1
        enddo
     enddo
 
@@ -189,7 +191,13 @@ contains
   subroutine op(x, y)
     FLOAT, intent(inout) :: x(:)
     FLOAT, intent(out)   :: y(:)
+
+    call push_sub('poisson_corrections.op')
+
     call dderivatives_lapl(der_pointer, x(1:mesh_pointer%np_part), y(1:mesh_pointer%np_part))
+
+    call pop_sub()
+
   end subroutine op
 
   FLOAT function dotp(x, y) result(res)
