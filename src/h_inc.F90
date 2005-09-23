@@ -192,12 +192,14 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   else
      do idim = 1, h%d%dim
         call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
+        call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
      end do
-     call lalg_scal(NP, h%d%dim, R_TOTYPE(-M_HALF), Hpsi)
   end if
 
   if (h%em_app) then
-     call lalg_scal(NP, h%d%dim, R_TOTYPE(M_ONE/h%m_ratio), Hpsi)
+     do idim = 1, h%d%dim
+        call lalg_scal(NP, R_TOTYPE(M_ONE/h%m_ratio), Hpsi(:,idim))
+     end do
   end if
 
 
@@ -352,10 +354,10 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
         hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
      end if
   case(SPINORS)
-     hpsi(:, 1) = hpsi(:, 1) + (h%vhxc(:, 1) + h%ep%vpsl(:))*psi(:, 1) + &
-          (h%vhxc(:, 3) + M_zI*h%vhxc(:, 4))*psi(:, 2)
-     hpsi(:, 2) = hpsi(:, 2) + (h%vhxc(:, 2) + h%ep%vpsl(:))*psi(:, 2) + &
-          (h%vhxc(:, 3) - M_zI*h%vhxc(:, 4))*psi(:, 1)
+     hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1) + &
+          (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
+     hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 2) + &
+          (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
   end select
 
   if (associated(h%ep%e)) then
@@ -383,7 +385,9 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
         lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%b(3)*psi(1:m%np, 2) + (h%ep%b(1) + M_zI*h%ep%b(2))*psi(1:m%np, 1))
      end select
      if (h%em_app) then
-        call lalg_scal(m%np, h%d%dim, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi)
+        do idim = 1, h%d%dim
+           call lalg_scal(m%np, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi(:,idim))
+        enddo
      end if
      hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
      deallocate(lhpsi)
