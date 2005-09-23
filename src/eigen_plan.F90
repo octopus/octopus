@@ -81,7 +81,10 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
            res(me),             v(NP, dim, krylov),    &
            av(NP, dim, krylov), tmp(krylov),           &
            h(krylov, krylov),   hevec(krylov, krylov), &
-           aux(gr%m%np_part, dim))
+           aux(NP_PART, dim))   ! Careful: aux has to range from 1 to NP_PART
+                                ! because it is input to hpsi. In parallel
+                                ! the space NP+1:NP_PART is needed for ghost
+                                ! points in the non local operator.
   eigenval = M_ZERO;           eigenvec = R_TOTYPE(M_ZERO)
   res      = M_ZERO;           v        = R_TOTYPE(M_ZERO)
   av       = R_TOTYPE(M_ZERO); tmp      = M_ZERO
@@ -142,7 +145,6 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
             call lalg_axpy(NP, dim, -av(ii, 1, d1 + 1), eigenvec(:, :, ii), v(:, :, i))
           enddo
           do ii = 1, i - 1
-            ! FIXME: In parallel mode, i gets to big and av gets out of bounds.
             av(ii, 1, d1 + 1) = X(states_dotp)(gr%m, dim, v(:, :, ii), v(:, :, i))
             call lalg_axpy(NP, dim, -av(ii, 1, d1 + 1), v(:, :, ii), v(:, :, i))
           enddo
@@ -155,7 +157,7 @@ subroutine eigen_solver_plan(gr, st, hamilt, tol, niter, converged, diff)
           endif
         enddo ortho
 
-        !matrix-vector multiplication
+        ! matrix-vector multiplication
         do i = 1, blk
           call lalg_copy(NP, dim, v(:, :, d1 + i), aux)
           av(:, :, d1 + i) = R_TOTYPE(M_ZERO)
