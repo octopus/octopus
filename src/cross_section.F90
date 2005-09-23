@@ -43,8 +43,11 @@ program cross_section
   call parser_init()
   call io_init()
   call syslabels_init(1)
-  current_label = trim(subsys_label(subsys_run_order(1)))
+  if(in_debug_mode) then
+     call io_mkdir('debug')
+  endif
   call units_init()
+
 
   call spectrum_init(s)
   call read_files()

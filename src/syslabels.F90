@@ -56,6 +56,10 @@ contains
     subsys_runmode(current_subsystem) = calc_mode
     subsys_run_order(current_subsystem) = 1
 
+    ! An initial assignment to avoid having to do it in the subprograms.
+    current_label = trim(subsys_label(subsys_run_order(1)))
+    current_subsystem = subsys_run_order(1)
+
   end subroutine syslabels_init
 
 

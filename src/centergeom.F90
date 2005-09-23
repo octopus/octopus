@@ -37,6 +37,9 @@ program centergeom
   call parser_init()
   call io_init()
   call syslabels_init(1)
+  if(in_debug_mode) then
+     call io_mkdir('debug')
+  endif
   call units_init()
 
   call geometry_init_xyz(geo)              ! we need the geometry

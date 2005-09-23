@@ -41,7 +41,10 @@ program xyzanim
   call global_init()
   call parser_init()
   call io_init()
-  call syslabels_init(1); current_label = " "
+  call syslabels_init(1)
+  if(in_debug_mode) then
+     call io_mkdir('debug')
+  endif
   call units_init()
   if(conf%verbose<999) conf%verbose = -1
 

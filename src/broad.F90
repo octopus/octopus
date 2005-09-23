@@ -41,7 +41,9 @@ program broad
   call parser_init()
   call io_init()
   call syslabels_init(1)
-  current_label = trim(subsys_label(subsys_run_order(1)))
+  if(in_debug_mode) then
+     call io_mkdir('debug')
+  endif
   call units_init()
 
   ! broadening to use
