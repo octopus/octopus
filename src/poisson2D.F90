@@ -106,12 +106,12 @@ subroutine poisson2D_solve(m, pot, rho)
 
   pot = M_ZERO
   do i = 1, m%np_global
-     x(:) = m%x_global(i,:)
+     x(:) = m%x_global(i,1:2)
      do j = 1, m%np
         if(m%vp%global(i, m%vp%partno) == j) then
            pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/m%h(1)
         else
-           y(:) = m%x(j,:)
+           y(:) = m%x(j,1:2)
            pvec(j) = rho(j)/sqrt(sum((x-y)**2))
         endif
      enddo
@@ -127,12 +127,12 @@ subroutine poisson2D_solve(m, pot, rho)
 
   pot = M_ZERO
   do i = 1, m%np
-     x(:) = m%x(i,:)
+     x(:) = m%x(i,1:2)
      do j = 1, m%np
         if(i == j) then
            pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
         else
-           y(:) = m%x(j,:)
+           y(:) = m%x(j,1:2)
            pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
         end if
      end do
