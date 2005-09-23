@@ -44,7 +44,6 @@ subroutine X(restart_read_function)(dir, filename, m, f, ierr)
   R_TYPE,           intent(out) :: f(1:m%np)
   integer,          intent(out) :: ierr
 
-  integer :: mpierr
   call push_sub('restart_inc.restart_read_function')
 
   ! try first to load plain binary files
