@@ -255,10 +255,11 @@ subroutine spectrum_cross_section_tensor(s, out_file, in_file)
   integer, intent(in)    :: out_file
   integer, intent(in)    :: in_file(:)
 
-  integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files
+  character(len=20) :: header_string
+  integer :: nspin, energy_steps, i, is, j, equiv_axis, n_files, k
   FLOAT, allocatable :: sigma(:, :, :, :), sigmap(:, :, :, :), sigmau(:, :, :),  &
                         sigmav(:, :, :), sigmaw(:, :, :), p(:, :), ip(:, :)
-  FLOAT :: dw, dump
+  FLOAT :: dw, dump, average, anisotropy
   type(kick_type) :: kick
 
   call push_sub('spectrum.spectrum_cross_section_tensor')
@@ -406,14 +407,44 @@ subroutine spectrum_cross_section_tensor(s, out_file, in_file)
   write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
   write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
   write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-  write(out_file, '(a)') '#Here we should put the column names.'
-  write(out_file, '(a)') '#Here we should put the units.'
+  header_string = str_center("Energy", 20)
+  write(out_file, '(a20)', advance = 'no') header_string
+  header_string = str_center("(1/3)*Tr[sigma]", 20)
+  write(out_file, '(a20)', advance = 'no') header_string
+  header_string = str_center("Anisotropy[sigma]", 20)
+  write(out_file, '(a20)', advance = 'no') header_string
+  do j = 1, nspin
+     do i = 1, 3
+        do k = 1, 3
+           write(header_string,'(a6,i1,a1,i1,a1,i1,a1)') 'sigma(',i,',',k,',',j,')'
+           header_string = str_center(trim(header_string),20)
+           write(out_file, '(a20)', advance = 'no') header_string         
+        enddo
+     enddo
+  enddo
+  write(out_file, *)
+  header_string = str_center('['//trim(units_out%energy%abbrev) // ']',20)
+  write(out_file, '(a20)', advance = 'no') header_string
+  do i = 1, 2+nspin*9
+     header_string = str_center('['//trim(units_out%length%abbrev) //'^2]',20)
+     write(out_file, '(a20)', advance = 'no') header_string
+  enddo
+  write(out_file,*)
 
   do i = 0, energy_steps
-      write(out_file,'(10e15.6)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
-           sigma(1:3, 1:3, i, 1) 
-      do j = 2, nspin
-         write(out_file,'(9e15.6)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
+      average = M_ZERO
+      anisotropy = M_ZERO
+      do j = 1, nspin
+         average = average + M_THIRD* ( sigma(1, 1, i, 1) + sigma(2, 2, i, 1) + sigma(3, 3, i, 1) )
+         sigmap(:, :, i, 1) = matmul(sigma(:, :, i, 1),sigma(:, :, i, 1))
+         anisotropy = anisotropy + &
+                      M_THIRD * ( M_THREE * (sigmap(1, 1, i, 1) + sigmap(2, 2, i, 1) + sigmap(3, 3, i, 1)) - &
+                      (sigma(1, 1, i, 1) + sigma(2, 2, i, 1) + sigma(3, 3, i, 1))**2 )
+      enddo
+      write(out_file,'(3e20.8)', advance = 'no') (i*s%energy_step) / units_out%energy%factor, &
+           average / (units_out%length%factor**2), sqrt(anisotropy) / (units_out%length%factor**2)
+      do j = 1, nspin
+         write(out_file,'(9e20.8)', advance = 'no') sigma(1:3, 1:3, i, j) / (units_out%length%factor**2)
       enddo
       write(out_file,'(a)', advance = 'yes')
   end do
