@@ -57,7 +57,7 @@ contains
     ierr = 0
 
     ! allocate wfs
-    allocate(sys%st%X(psi)(NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    allocate(sys%st%X(psi)(sys%NP_PART, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
 
     ! load wave-functions
     message(1) = 'Info: Loading wave-functions'
