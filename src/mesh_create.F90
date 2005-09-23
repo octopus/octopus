@@ -61,7 +61,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
   integer              :: iunit      ! For debug output to files.
   character(len=3)     :: filenum
 
-  call push_sub('mesh_create.mesh_partition_init')
+  call push_sub('mesh_create.mesh_partition')
   
   options = (/1, 2, 1, 1, 0/) ! Use heavy edge matching in METIS.
 
@@ -195,7 +195,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
            iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
                 action='write')
            do j = 1, m%np_global
-              if(part(j).eq.i) write(iunit, '(i8,3f10.8)') j, m%x_global(j, :)
+              if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
            end do
            call io_close(iunit)
         end do
@@ -204,7 +204,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
         iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
                         action='write')
         do i = m%np_global+1, m%np_part_global
-          write(iunit, '(i8,3f10.8)') i, m%x_global(i,:)
+          write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
         end do
         call io_close(iunit)
      end if

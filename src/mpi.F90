@@ -111,7 +111,7 @@ contains
     call_counter(index) = call_counter(index) + 1
     call loct_gettimeofday(sec_in, usec_in)
     call epoch_time_diff(sec_in, usec_in)
-    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i4.4,a,i4.4,a,i6.6)') '* I ',       &
+    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6)') '* I ',       &
          sec_in, '.', usec_in, ' '//trim(mpi_rlabel(index))//' - ', comm,':',   &
          call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index)
     call write_debug(1)
@@ -130,7 +130,7 @@ contains
     call loct_gettimeofday(sec, usec)
     call epoch_time_diff(sec, usec)
     call mpi_time_accum(index, sec, usec, sec_diff, usec_diff)
-    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i4.4,a,i4.4,a,i6.6,a,i4.4,a,i6.6)') &
+    write(message(1),'(a,i6,a,i6.6,a,i3.3,a,i6.6,a,i4.4,a,i6.6,a,i4.4,a,i6.6)') &
          '* O ',                                                                &
          sec, '.', usec, ' '//trim(mpi_rlabel(index))//' - ', comm, ':',        &
          call_counter(index), ' - ', sec_accum(index), '.', usec_accum(index),  &
