@@ -159,7 +159,7 @@ FLOAT function X(states_residue)(m, dim, hf, e, f) result(r)
   call push_sub('states_inc.Xstates_nrm2')
 
   allocate(res(m%np_part, dim))
-  res = hf - e*f
+  res(1:m%np, :) = hf(1:m%np, :) - e*f(1:m%np, :)
   r = X(states_nrm2)(m, dim, res)
   deallocate(res)
 
