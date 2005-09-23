@@ -239,8 +239,8 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
   maxter = niter
   niter = 0
 
-  allocate(phi(NP, dim), psi(NP, dim), hpsi(NP, dim), &
-     cg(NP, dim), hcgp(NP, dim), sd(NP, dim), cgp(NP, dim))
+  allocate(phi(NP_PART, dim), psi(NP_PART, dim), hpsi(NP_PART, dim), &
+     cg(NP_PART, dim), hcgp(NP_PART, dim), sd(NP_PART, dim), cgp(NP_PART, dim))
 
   kpoints: do ik = 1, nik
     conv = converged
@@ -248,7 +248,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
 
       ! Orthogonalize starting eigenfunctions to those already calculated...
       call X(states_gram_schmidt)(ist, gr%m, dim, st%X(psi)(:, 1:dim, 1:ist, ik), start=ist)
-      psi(:, :) = st%X(psi)(:, :, ist, ik)
+      psi(1:NP, :) = st%X(psi)(1:NP, :, ist, ik)
 
       ! Calculate starting gradient: |hpsi> = H|psi>
       call X(Hpsi)(h, gr, psi, phi, ik); niter = niter + 1
@@ -265,7 +265,7 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
       band: do i = 1, maxter - 1 ! One operation has already been made.
 
          ! Get H|psi> (through the linear formula)
-         phi(:, :) = ctheta*phi(:, :) + stheta*hcgp(:, :)
+         phi(1:NP, :) = ctheta*phi(1:NP, :) + stheta*hcgp(1:NP, :)
 
          ! lambda = <psi|H|psi> = <psi|phi>
          lambda = X(states_dotp)(gr%m, dim, psi, phi)
@@ -279,22 +279,22 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
          endif
 
          ! Get steepest descent vector
-         sd(:, :) = lambda*psi(:, :) - phi(:, :)
+         sd(1:NP, :) = lambda*psi(1:NP, :) - phi(1:NP, :)
          do k = 1, ist - 1
             dump = X(states_dotp)(gr%m, dim, st%X(psi)(:, :, k, ik), sd(:, :))
-            sd(:, :) = sd(:, :) - dump*st%X(psi)(:, :, k, ik)
+            sd(1:NP, :) = sd(1:NP, :) - dump*st%X(psi)(1:NP, :, k, ik)
          enddo
 
          ! Get conjugate-gradient vector
          gamma = X(states_dotp)(gr%m, dim, sd, sd)/mu
          mu    = X(states_dotp)(gr%m, dim, sd, sd)
-         cg    = sd + gamma*cg
+         cg(1:NP,:) = sd(1:NP,:) + gamma*cg(1:NP,:)
 
          !
          dump = X(states_dotp)(gr%m, dim, psi, cg)
-         cgp  = cg - dump*psi
+         cgp(1:NP,:) = cg(1:NP,:) - dump*psi(1:NP,:)
          dump = sqrt(X(states_dotp)(gr%m, dim, cgp, cgp))
-         cgp = cgp/dump
+         cgp(1:NP,:) = cgp(1:NP,:)/dump
 
          call X(Hpsi)(h, gr, cgp, hcgp, ik); niter = niter + 1
 
@@ -319,11 +319,11 @@ subroutine eigen_solver_cg2_new(gr, st, h, tol, niter, converged, diff, reorder,
             ctheta = ctheta2
          endif
 
-         psi = ctheta*psi + stheta*cgp
+         psi(1:NP,:) = ctheta*psi(1:NP,:) + stheta*cgp(1:NP,:)
 
       enddo band
 
-      st%X(psi)(:, :, ist, ik) = psi(:, :)
+      st%X(psi)(1:NP, :, ist, ik) = psi(1:NP, :)
       st%eigenval(ist, ik) = lambda
 
       if(verbose_) then
