@@ -452,6 +452,9 @@ contains
 
     allocate(mat(op(1)%n, op(1)%n), sol(op(1)%n, n))
 
+    message(1) = 'Info: Generating weights for finite-difference discretization.'
+    call write_info(1)
+
     ! use to generate power lookup table
     pow_max = maxval(pol)
     allocate(powers(dim, 0:pow_max))
