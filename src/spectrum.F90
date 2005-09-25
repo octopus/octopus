@@ -73,19 +73,6 @@ type kick_type
   FLOAT             :: wprime(3)
 end type kick_type
 
-! For the strength function
-type spec_sf
-  ! input
-  FLOAT :: delta_strength   ! strength of the delta perturbation
-
-  ! output
-  integer :: no_e, nspin ! dimensions of sp
-  FLOAT, pointer :: sp(:,:) ! do not forget to deallocate this
-  FLOAT :: ewsum  ! electronic sum rule
-  FLOAT :: alpha  ! Polariz. (sum rule)
-  FLOAT :: alpha2 ! Polariz. (F.T.)
-end type spec_sf
-
 ! For the rotational strength function
 type spec_rsf
   ! input
@@ -459,10 +446,11 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   integer, intent(in)    :: out_file
   type(spec_type),  intent(inout) :: s
 
+  character(len=20) :: header_string
   integer :: nspin, lmax, time_steps, is, ie, ntiter, i, j, jj, isp, no_e, k
-  FLOAT   :: dt, dump, x, w
+  FLOAT   :: dt, dump, x, w, ewsum, polsum
   type(kick_type) :: kick
-  FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:)
+  FLOAT, allocatable :: dipole(:, :, :), sigma(:, :, :), dumpa(:), sf(:, :)
 
   call push_sub('spectrum.spectrum_cross_section')
 
@@ -503,6 +491,7 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   ! Get the number of energy steps.
   no_e = s%max_energy / s%energy_step
   allocate(sigma(3, 0:no_e, nspin)); sigma = M_ZERO
+  allocate(sf(0:no_e, nspin)); sf = M_ZERO
 
   ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
   allocate(dumpa(is:ie))
@@ -528,14 +517,37 @@ subroutine spectrum_cross_section(in_file, out_file, s)
       x = sin(w*jj*dt)
       do isp = 1, nspin
          sigma(1:3, k, isp) = sigma(1:3, k, isp) + x*dumpa(j)*dipole(1:3, j, isp)
+         sf(k, isp) = sf(k, isp) + x*dumpa(j)*sum(dipole(1:3, j, isp)*kick%pol(1:3,kick%pol_dir))
       end do
     end do
     sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*dt
-    ! WARNING: It is calculating now the strength function tensor, not the cross section...
-    sigma(1:3, k, 1:nspin) = - sigma(1:3, k, 1:nspin) * (w*M_TWO)/(M_Pi*kick%delta_strength)
-    !sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)
-    !sigma(1:3, k, 1:nspin) = sigma(1:3, k, 1:nspin)/kick%delta_strength
+    sf(k, 1:nspin) = sf(k, 1:nspin)*dt
+    sf(k, 1:nspin) = - sf(k, 1:nspin) * (w*M_TWO)/(M_Pi*kick%delta_strength)
+    sigma(1:3, k, 1:nspin) = -sigma(1:3, k, 1:nspin)*(M_FOUR*M_PI*w/P_c)/kick%delta_strength
   end do
+
+  ewsum = sum(sf(0, 1:nspin)); polsum = M_ZERO
+  do k = 1, no_e
+     w = k*s%energy_step
+     ewsum = ewsum + sum(sf(k, 1:nspin))
+     polsum = polsum + sum(sf(k, 1:nspin))/w**2
+  enddo
+  ewsum = ewsum * s%energy_step; polsum = polsum * s%energy_step
+
+  write(message(1), '(a,i8)')    'Number of spin       = ', nspin
+  write(message(2), '(a,i8)')    'Number of time steps = ', time_steps
+  write(message(3), '(a,i4)')    'SpecDampMode         = ', s%damp
+  write(message(4), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
+  write(message(5), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
+  write(message(6), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
+  write(message(7), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
+  write(message(8), '(a,f10.4)') 'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+  call write_info(8)
+
+  message(1) = ""
+  write(message(2),'(a,f16.6)')   'Electronic sum rule  = ', ewsum
+    write(message(3),'(a,f16.6)') 'Polariz. (sum rule)  = ', polsum  / units_inp%length%factor**3
+  call write_info(3)
 
   write(out_file, '(a15,i2)')      '# nspin        ', nspin
   write(out_file, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
@@ -546,167 +558,47 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   write(out_file, '(a15,f18.12)')  '# kick strength', kick%delta_strength
   write(out_file, '(a15,i1)')      '# Equiv. axis  ', kick%pol_equiv_axis
   write(out_file, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
-  write(out_file, '(a)') '#Here we should put the column names.'
-  write(out_file, '(a)') '#Here we should put the units.'
+  header_string = str_center("Energy", 20)
+  write(out_file, '(a20)', advance = 'no') header_string
+  do j = 1, nspin
+     do i = 1, 3
+           write(header_string,'(a6,i1,a8,i1,a1)') 'sigma(',i,', nspin=',j,')'
+           header_string = str_center(trim(header_string),20)
+           write(out_file, '(a20)', advance = 'no') header_string         
+     enddo
+  enddo
+  do j = 1, nspin
+     write(header_string,'(a18,i1,a1)') 'StrengthFunction(',j,')'
+     header_string = str_center(trim(header_string),20)
+     write(out_file, '(a20)', advance = 'no') header_string
+  enddo
+  write(out_file, *)
+  header_string = str_center('['//trim(units_out%energy%abbrev) // ']',20)
+  write(out_file, '(a20)', advance = 'no') header_string
+  do i = 1, nspin*3
+     header_string = str_center('['//trim(units_out%length%abbrev) //'^2]',20)
+     write(out_file, '(a20)', advance = 'no') header_string
+  enddo
+  do i = 1, nspin
+     header_string = str_center('[1/'//trim(units_out%energy%abbrev) //']',20)
+     write(out_file, '(a20)', advance = 'no') header_string
+  enddo
+  write(out_file,*)
 
   do i = 0, no_e
-     !write(out_file,'(5e15.6)', advance = 'no') i*s%energy_step / units_out%energy%factor, &
-     !          sigma(1:3, i, 1) / (units_out%length%factor**2)
-     write(out_file,'(5e15.6)', advance = 'no') i*s%energy_step / units_out%energy%factor, &
-          sigma(1:3, i, 1) * units_out%energy%factor
-     do j = 2, nspin
-     !   write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, j) / (units_out%length%factor**2)
-        write(out_file,'(5e15.6)', advance = 'no') sigma(1:3, i, j) * units_out%energy%factor
+     write(out_file,'(e20.8)', advance = 'no') i*s%energy_step / units_out%energy%factor
+     do j = 1, nspin
+        write(out_file,'(3e20.8)', advance = 'no') sigma(1:3, i, j) / (units_out%length%factor**2) 
      enddo
-     write(out_file,'(a)', advance = 'yes')
+     do j = 1, nspin
+        write(out_file,'(e20.8)', advance = 'no') sf(i, j) * units_out%energy%factor
+     enddo
+     write(out_file, *) 
   end do
 
   deallocate(dipole, sigma)
   call pop_sub()
 end subroutine spectrum_cross_section
-
-subroutine spectrum_strength_function(out_file, s, sf, print_info)
-  character(len=*), intent(in) :: out_file
-  type(spec_type), intent(inout) :: s
-  type(spec_sf), intent(inout) :: sf
-  logical, intent(in) :: print_info
-
-  integer :: iunit, i, is, ie, ntiter, j, jj, k, isp, time_steps, lmax
-  type(kick_type) :: kick
-  FLOAT :: dump, dt, x
-  FLOAT, allocatable :: dumpa(:), dipole(:,:), z(:, :)
-
-  call push_sub('spectrum_strength_function')
-
-  call io_assign(iunit)
-  iunit = io_open('multipoles', action='read', status='old', die=.false.)
-  if(iunit < 0) then
-    iunit = io_open('td.general/multipoles', action='read', status='old')
-  end if
-  call spectrum_mult_info(iunit, sf%nspin, lmax, kick, time_steps, dt)
-  sf%delta_strength = kick%delta_strength
-  if(lmax.ne.1) then
-    message(1) = 'multipoles file should contain the dipole -- and only the dipole.'
-    call write_fatal(1)
-  endif
-  call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
-
-  call spectrum_skip_header(iunit)
-  ! load dipole from file
-  allocate(dipole(0:time_steps, sf%nspin), z(3, sf%nspin))
-  do i = 0, time_steps
-    select case(sf%nspin)
-     case(1)
-      read(iunit, *) j, dump, dump, z(1:3, 1)
-      dipole(i, 1) = -dot_product(z(1:3, 1),kick%pol(1:3, 1))
-     case(2)
-      read(iunit, *) j, dump, dump, z(1:3, 1), dump, z(1:3, 1)
-      dipole(i, 1) = -dot_product(z(1:3, 1),kick%pol(1:3, 1))
-      dipole(i, 2) = -dot_product(z(1:3, 2),kick%pol(1:3, 1))
-     case(4)
-      read(iunit, *) j, dump, dump, z(1:3, 1), dump, z(1:3, 2), dump, z(1:3, 3), dump, z(1:3, 4)
-      dipole(i, 1) = -dot_product(z(1:3, 1),kick%pol(1:3, 1))
-      dipole(i, 2) = -dot_product(z(1:3, 2),kick%pol(1:3, 1))
-      dipole(i, 3) = -dot_product(z(1:3, 3),kick%pol(1:3, 1))
-      dipole(i, 4) = -dot_product(z(1:3, 4),kick%pol(1:3, 1))
-    end select
-    dipole(i,:) = dipole(i,:) * units_out%length%factor
-  end do
-  deallocate(z)
-  call io_close(iunit)
-
-  ! subtract static dipole
-  do i = 1, sf%nspin
-     dipole(:, i) = dipole(:, i) - dipole(0, i)
-  end do
-
-  sf%no_e = s%max_energy / s%energy_step
-  allocate(sf%sp(0:sf%no_e, sf%nspin))
-  sf%sp = M_ZERO
-  sf%alpha = M_ZERO; sf%alpha2 = M_ZERO; sf%ewsum = M_ZERO
-
-  ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
-  allocate(dumpa(is:ie))
-  do j = is, ie
-     jj = j - is
-      select case(s%damp)
-      case(SPECTRUM_DAMP_NONE)
-        dumpa(j) = M_ONE
-      case(SPECTRUM_DAMP_LORENTZIAN)
-        dumpa(j)= exp(-jj*dt*s%damp_factor)
-      case(SPECTRUM_DAMP_POLYNOMIAL)
-        dumpa(j) = M_ONE - M_THREE*(real(jj)/ntiter)**2                          &
-            + M_TWO*(real(jj)/ntiter)**3
-      case(SPECTRUM_DAMP_GAUSSIAN)
-        dumpa(j)= exp(-(jj*dt)**2*s%damp_factor**2)
-      end select
-  enddo
-
-  do k = 0, sf%no_e
-    do j = is, ie
-
-      jj = j - is
-      x = sin(k*s%energy_step * jj * dt)
-
-      do isp = 1, sf%nspin
-        sf%sp(k, isp) = sf%sp(k, isp) + x*dumpa(j)*dipole(j, isp)
-
-        ! polarizability sum rule
-        if(k == 0) then
-          sf%alpha2 = sf%alpha2 + dumpa(j)*dipole(j, isp)
-        end if
-      end do
-
-    end do
-    sf%sp(k, :) = sf%sp(k, :)*dt
-
-    ! calculate strength function
-    sf%sp(k, :) = (sf%sp(k, :)*s%energy_step*k*M_TWO)/(M_pi*sf%delta_strength)
-
-    do isp = 1, sf%nspin
-      if(k.ne.0) then
-        sf%alpha = sf%alpha + (sf%sp(k, isp)/(k*s%energy_step)**2)*s%energy_step
-      endif
-      sf%ewsum = sf%ewsum + sf%sp(k, isp)*s%energy_step
-    end do
-  end do
-
-  sf%alpha2 = sf%alpha2 * dt / sf%delta_strength
-  deallocate(dipole, dumpa)
-
-  ! output
-  if(trim(out_file) .ne. '-') then
-    iunit = io_open(out_file, action='write')
-
-    ! should output units, etc...
-    do i = 0, sf%no_e
-      write(iunit,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
-           sf%sp(i, :) * units_out%energy%factor
-    end do
-    call io_close(iunit)
-  end if
-
-  ! print some info
-  if(print_info) then
-    write(message(1), '(a,i8)')    'Number of spin       = ', sf%nspin
-    write(message(2), '(a,i8)')    'Number of time steps = ', ntiter
-    write(message(4), '(a,i4)')    'SpecDampMode         = ', s%damp
-    write(message(5), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
-    write(message(6), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
-    write(message(7), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(message(8), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
-    write(message(9),'(a,f10.4)') 'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
-    call write_info(9)
-
-    message(1) = ""
-    write(message(2),'(a,f16.6)') 'Electronic sum rule  = ', sf%ewsum
-    write(message(3),'(a,f16.6)') 'Polariz. (sum rule)  = ', sf%alpha  / units_inp%length%factor**3
-    write(message(4),'(a,f16.6)') 'Polariz. (F.T.)      = ', sf%alpha2 / units_inp%length%factor**3
-    call write_info(4)
-  end if
-
-  call pop_sub()
-end subroutine spectrum_strength_function
 
 subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
   character(len=*), intent(in) :: out_file
