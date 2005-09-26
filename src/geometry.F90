@@ -105,11 +105,79 @@ contains
 
     call push_sub('geometry.geometry_init_xyz')
 
-    ! get the name of the system
+    !%Variable SystemName
+    !%Type string
+    !%Section 1 Generalities
+    !%Description
+    !% Any arbitrary string. It is largely irrelevant, but it does not harm
+    !% to give it a significant values (e.g. "fullerene", "NaCl", etc).
+    !%End
     call loct_parse_string(check_inp('SystemName'), 'system', geo%sysname)
 
     ! load positions of the atoms
     call xyz_file_init(xyz)
+
+    !%Variable PDBCoordinates
+    !%Type string
+    !%Section 4 Coordinates Description
+    !%Description
+    !% If this variable is present, the program tries to read the atomic  coordinates 
+    !% from the file specified by its value. The PDB (Protein Data Bank 
+    !% (http://www.rcsb.org/pdb/)) format is quite complicated. You can find a comprehensive 
+    !% description in "http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html".
+    !% From the plethora of instructions defined in the PDB standard, octopus
+    !% only reads two, "ATOM" and "HETATOM". From these fields, it reads:
+    !%
+    !% - columns 13-16 : The specie; in fact "octopus" only cares about the
+    !% first letter - "CA" and "CB" will both refer to Carbon - so elements whose 
+    !% chemical symbol has more than one letter can not be represented in this way.  
+    !% So, if you want to run mercury ("Hg") please use one of the other two methods 
+    !% to input the atomic coordinates, "XYZCoordinates" or "Coordinates".
+    !% 
+    !% - columns 18-21 : The residue. If residue is "QM", the atom is treated in Quantum 
+    !% Mechanics, otherwise it is simply treated as an external classical point charge. 
+    !% Its charge will be given by columns 61-65.
+    !% 
+    !% - columns 31-54 : The Cartesian coordinates. The Fortran format is "(3f8.3)".
+    !%
+    !% - columns 61-65 : Classical charge of the atom. The Fortran format is "(f6.2)".
+    !%End
+
+    !%Variable XYZCoordinates
+    !%Type string
+    !%Section 4 Coordinates Description
+    !%Description
+    !% If "PDBCoordinates" is not present, the program reads the atomic coordinates from
+    !% the XYZ file specified by the variable "XYZCoordinates" -- in case this variable
+    !% is present. The XYZ format is very simple:  The first line of the file has an integer 
+    !% indicating the number of atoms. The second can contain comments that are simply ignored by
+    !% "octopus". Then there follows one line per each atom, containing the chemical species and 
+    !% the Cartesian coordinates of the atom.
+    !%End
+
+    !%Variable Coordinates
+    !%Type block
+    !%Section 4 Coordinates Description
+    !%Description
+    !% If neither a "XYZCoordinates" nor a "PDBCoordinates" was found, octopus 
+    !% tries to read the coordinates for the atoms from the block "Coordinates". The
+    !% format is quite straightforward:
+    !%
+    !%     %Coordinates
+    !%
+    !%       'C' | -0.56415 | 0.0 | 0.0 | no
+    !%
+    !%       'O' |  0.56415 | 0.0 | 0.0 | no
+    !%
+    !%     %
+    !%
+    !% The first line defines a Carbon atom at coordinates ("-0.56415", "0.0", "0.0"), 
+    !% that is _not_ allowed to move during dynamical simulations. The second line has 
+    !% a similar meaning. This block obviously defines a Carbon monoxide molecule, if the 
+    !% input units are AA. Note that in this way it is possible to fix some of the atoms (this
+    !% is not possible when specifying the coordinates through a "PDBCoordinates" or 
+    !% "XYZCoordinates" file). It is always possible to fix _all_ atoms using the "MoveIons" directive.
+    !%End
     call xyz_file_read('Coordinates', xyz)
 
     ! copy information from xyz to geo

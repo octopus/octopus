@@ -33,13 +33,11 @@ implicit none
 private
 public :: spec_type,                     &
           kick_type,                     &
-          spec_sf,                       &
           spec_rsf,                      &
           spec_sh,                       &
           spectrum_init,                 &
           spectrum_cross_section,        &
           spectrum_cross_section_tensor, &
-          spectrum_strength_function,    &
           spectrum_rotatory_strength,    &
           spectrum_hs_from_mult,         &
           spectrum_hs_from_acc,          &

@@ -79,15 +79,6 @@ subroutine units_init()
 
   call push_sub('units.units_init')
 
-!!$    !%Variable stdout
-!!$    !%Type string
-!!$    !%Section 1 Generalities
-!!$    !%Description
-!!$    !% The standard output by default goes to, well, to standard output. This can
-!!$    !% be changed by setting this variable: if you give it a name (other than "-")
-!!$    !% the output stream is printed in that file instead.
-!!$    !%End
-
   !%Variable Units
   !%Type string
   !%Section 1 Generalities
