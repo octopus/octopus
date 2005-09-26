@@ -20,7 +20,6 @@
 #include "global.h"
 
 module syslabels
-  use messages
   use lib_oct_parser
 
   implicit none
@@ -93,7 +92,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine read_system_labels()
-    integer               :: i
+    integer               :: i, mpierr
     integer(POINTER_SIZE) :: blk
 
     ! first we read the required information from the input file
@@ -103,9 +102,13 @@ contains
     if(loct_parse_block('SystemLabels', blk) == 0) then
        no_syslabels = loct_parse_block_cols(blk,0)
     else
-       message(1) = "Could not find block SystemLabels in the input file."
-       message(2) = "This block is mandatory for run mode MultiSubsystem."
-       call write_fatal(2)
+       write(6,'(a)') '*** Fatal Error (description follows)'
+       write(6,'(a)') 'Could not find block SystemLabels in the input file.'
+       write(6,'(a)') 'This block is mandatory for run mode MultiSubsystem.'
+#ifdef HAVE_MPI
+       call MPI_FINALIZE(mpierr)
+#endif
+       stop
     endif
 
     allocate(subsys_label(no_syslabels))
@@ -120,15 +123,23 @@ contains
     if(loct_parse_block('SystemRunModes', blk) == 0) then
        no_subsys_runmodes = loct_parse_block_cols(blk,0)
     else
-       message(1) = "Could not find block SystemRunModes in the input file."
-       message(2) = "This block is mandatory for run mode MultiSubsystem."
-       call write_fatal(2)
+       write(6,'(a)') '*** Fatal Error (description follows)'
+       write(6,'(a)') 'Could not find block SystemRunModes in the input file.'
+       write(6,'(a)') 'This block is mandatory for run mode MultiSubsystem.'
+#ifdef HAVE_MPI
+       call MPI_FINALIZE(mpierr)
+#endif
+       stop
     endif
 
     if(no_subsys_runmodes/=no_syslabels) then
-       message(1) = "The blocks SystemLabels and SystemRunModes do not have"
-       message(2) = "the same size. Please correct your input file."
-       call write_fatal(2)
+       write(6,'(a)') '*** Fatal Error (description follows)'
+       write(6,'(a)') 'The blocks SystemLabels and SystemRunModes do not have'
+       write(6,'(a)') 'the same size. Please correct your input file.'
+#ifdef HAVE_MPI
+       call MPI_FINALIZE(mpierr)
+#endif
+       stop
     endif
 
     allocate(subsys_runmode(no_subsys_runmodes))
@@ -142,9 +153,13 @@ contains
     if(loct_parse_block('SystemRunOrder', blk) == 0) then
        no_subsystems = loct_parse_block_cols(blk,0)
     else
-       message(1) = "Could not find block SystemRunOrder in the input file."
-       message(2) = "This block is mandatory for run mode MultiSubsystem."
-       call write_fatal(2)
+       write(6,'(a)') '*** Fatal Error (description follows)'
+       write(6,'(a)') 'Could not find block SystemRunOrder in the input file.'
+       write(6,'(a)') 'This block is mandatory for run mode MultiSubsystem.'
+#ifdef HAVE_MPI
+       call MPI_FINALIZE(mpierr)
+#endif
+       stop
     endif
 
     allocate(subsys_run_order(no_subsystems))
@@ -153,9 +168,13 @@ contains
     do i = 1, no_subsystems
        call loct_parse_block_int(blk, 0, i-1, subsys_run_order(i))
        if (subsys_run_order(i).gt.no_subsys_runmodes) then
-          message(1) = "Subsystem number too large. Please correct the block"
-          message(2) = "SystemRunOrder in the input file."
-          call write_fatal(2)
+          write(6,'(a)') '*** Fatal Error (description follows)'
+          write(6,'(a)') 'Subsystem number too large. Please correct the block'
+          write(6,'(a)') 'SystemRunOrder in the input file.'
+#ifdef HAVE_MPI
+          call MPI_FINALIZE(mpierr)
+#endif
+          stop
        endif
     enddo
     call loct_parse_block_end(blk)

@@ -22,6 +22,7 @@
 module messages
   use varinfo
   use global
+  use syslabels
   use lib_oct
 
   implicit none
@@ -256,7 +257,7 @@ contains
 
     iunit = mpiv%node + unit_offset
     write(filenum, '(i3.3)') iunit - unit_offset
-    open(iunit, file='debug/debug_trace.node.'//filenum, &
+    open(iunit, file=trim(current_label)//'debug/debug_trace.node.'//filenum, &
          action='write', status='unknown', position='append')
 
   end subroutine open_debug_trace
@@ -428,7 +429,7 @@ contains
     subroutine push_sub_write(iunit_out)
       integer,  intent(in) :: iunit_out
 
-      write(iunit_out,'(a,i6,a,i6.6,f8.3,i8, a)', advance='no') "* I ", &
+      write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* I ", &
            sec,'.',usec, &
            loct_clock()/CNST(1e6), &
            loct_getmem(), " | "
@@ -476,7 +477,7 @@ contains
     subroutine pop_sub_write(iunit_out)
       integer, intent(in) :: iunit_out
 
-      write(iunit_out,'(a,i6,a,i6.6,f8.3,i8, a)', advance='no') "* O ", &
+      write(iunit_out,'(a,i6,a,i6.6,f12.6,i8, a)', advance='no') "* O ", &
            sec,'.',usec, &
            (loct_clock()-time_stack(no_sub_stack))/CNST(1e6), &
            loct_getmem(), " | "

@@ -21,7 +21,6 @@
 
 module lib_oct_parser
   use global
-  use messages
 
   implicit none
 
@@ -179,14 +178,18 @@ contains
 
 
   subroutine parser_init
-    integer :: ierr
+    integer :: ierr, mpierr
 
     ! initialize the parser
     ierr = loct_parse_init('out.oct', mpiv%node)
     if(ierr .ne. 0) then
-       message(1) = "Error initializing liboct"
-       message(2) = "Do you have write permissions in this directory?"
-       call write_fatal(2)
+       write(6,'(a)') '*** Fatal Error (description follows)'
+       write(6,'(a)') 'Error initializing liboct'
+       write(6,'(a)') 'Do you have write permissions in this directory?'
+#ifdef HAVE_MPI
+       call MPI_FINALIZE(mpierr)
+#endif
+       stop
     end if
 
     ! read in default variables
@@ -197,9 +200,13 @@ contains
     if(ierr .ne. 0) then
        ierr = loct_parse_input("-")
        if(ierr .ne. 0) then
-          message(1) = "Error initializing liboct"
-          message(2) = "Can not open input file or standard input!"
-          call write_fatal(2)
+          write(6,'(a)') '*** Fatal Error (description follows)'
+          write(6,'(a)') 'Error initializing liboct'
+          write(6,'(a)') 'Can not open input file or standard input!'
+#ifdef HAVE_MPI
+          call MPI_FINALIZE(mpierr)
+#endif
+          stop
        end if
     end if
 

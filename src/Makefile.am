@@ -233,9 +233,9 @@ xyz_file.o: global.h
 # manually sort out a few dependencies
 varinfo.o: string.o
 global.o: global.h varinfo.o string.o
-messages.o: liboct.o
-liboct_parser.o: global.o messages.o
+liboct_parser.o: global.o
 syslabels: liboct_parser.o
+messages.o: liboct.o syslabels.o
 io.o: global.o liboct_parser.o syslabels.o
 
 
