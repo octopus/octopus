@@ -10,3 +10,6 @@ Makefile.local
 messages.std*
 semantic.cache
 *.pbs
+machinefile*
+inp.*
+.gdb_history
