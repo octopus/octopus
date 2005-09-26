@@ -20,6 +20,8 @@
 subroutine poisson3D_init(gr)
   type(grid_type), intent(inout) :: gr
 
+  call push_sub('poisson3D.poisson3D_init')
+
   ASSERT(poisson_solver >= FFT_SPH .or. poisson_solver <= MULTIGRILLA)
 
   !%Variable PoissonSolverMaxMultipole
