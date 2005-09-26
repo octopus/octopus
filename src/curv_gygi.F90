@@ -57,7 +57,7 @@ contains
     !% Rev. B 52, R2229 (1995)]
     !% It must be larger than zero.
     !%End
-    call loct_parse_float(check_inp('CurvGygiA'), M_ONE, cv%A)
+    call loct_parse_float(check_inp('CurvGygiA'), M_HALF, cv%A)
     !%Variable CurvGygiAlpha
     !%Type float
     !%Section 4 Mesh
@@ -101,36 +101,59 @@ contains
 
     ! parameters
     integer, parameter :: max_iter = 500
-    FLOAT,   parameter :: x_conv   = CNST(1e-6)
+    FLOAT,   parameter :: x_conv   = CNST(1e-10)
 
     ! local variables
-    integer :: iter
+    integer :: iter, i, p
     FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
     logical :: conv
 
     allocate(f(sb%dim, 1), delta(sb%dim, 1), J(sb%dim, sb%dim), chi2(sb%dim))
 
     x(1:sb%dim) = chi(1:sb%dim)
+
+
     conv          = .false.
-
     do iter = 1, max_iter
-      call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
-      f(:,1) = chi(1:sb%dim) - chi2(:)
+       call curv_gygi_jacobian(sb, geo, cv, x, chi2, J)
+       f(:,1) = chi(1:sb%dim) - chi2(:)
+       if(sum(f(:,1)**2) < x_conv) then
+           conv = .true.
+           exit
+       end if
 
-      if(sum(f(:,1)**2) < x_conv**2) then
-        conv = .true.
-        exit
-      end if
-
-      call lalg_linsyssolve(sb%dim, 1, J, f, delta)
-      x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
+       call lalg_linsyssolve(sb%dim, 1, J, f, delta)
+       x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
     end do
 
     if(.not.conv) then
-      message(1) = "Newton-Raphson method did not converge for point"
-      write(message(2), '(3es14.5)') x(1:sb%dim)
-      call write_warning(2)
-    end if
+      x(1:sb%dim) = chi(1:sb%dim)
+      do i = 1, geo%natoms
+
+       conv          = .false.
+       do iter = 1, max_iter
+          call curv_gygi_jacobian(sb, geo, cv, x, chi2, J, i)
+          f(:,1) = chi(1:sb%dim) - chi2(:)
+          if(sum(f(:,1)**2) < x_conv) then
+             conv = .true.
+             exit
+          end if
+
+          call lalg_linsyssolve(sb%dim, 1, J, f, delta)
+          x(1:sb%dim) = x(1:sb%dim) + delta(1:sb%dim, 1)
+       end do
+
+      enddo
+    endif
+
+    if(.not.conv) then
+      message(1) = "During the construction of the adaptive grid, the Newton-Raphson"
+      message(2) = "method did not converge for point:"
+      write(message(3),'(3f14.6)') x(1:sb%dim)
+      message(4) = "Try varying the Gygi parameters -- usually reducing CurvGygiA or"
+      message(5) = "CurvGygiAlpha (or both) solves the problem."
+      call write_fatal(5)
+    endif
 
     ! clean up
     deallocate(f, delta, J, chi2)
@@ -139,14 +162,17 @@ contains
 
 
   !-------------------------------------
-  subroutine curv_gygi_jacobian(sb, geo, cv, x, chi, J)
+  subroutine curv_gygi_jacobian(sb, geo, cv, x, chi, J, natoms)
     type(simul_box_type), intent(in)  :: sb
     type(geometry_type),  intent(in)  :: geo
     type(curv_gygi_type), intent(in)  :: cv
     FLOAT,                intent(in)  :: x(:)    ! x(sb%dim)
     FLOAT,                intent(out) :: chi(:)  ! chi(sb%dim)
     FLOAT,                intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
+    integer, optional, intent(in) :: natoms
 
+    FLOAT :: natoms_
+    FLOAT :: a_, alpha_, beta_
     integer :: i, ix, iy
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
@@ -157,7 +183,9 @@ contains
       chi(ix)   = x(ix)
     end do
 
-    do i = 1, geo%natoms
+    natoms_ = geo%natoms
+    if(present(natoms)) natoms_ = natoms
+    do i = 1, natoms_
       r = max(sqrt(sum((x(1:sb%dim) - geo%atom(i)%x(1:sb%dim))**2)), CNST(1e-6))
 
       ar = cv%A*cv%alpha/r

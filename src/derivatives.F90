@@ -372,8 +372,9 @@ contains
        case(DER_VARIATIONAL)
           call stencil_variational_coeff_lapl(der%dim, der%order, m%h, der%lapl, alpha = der%lapl_cutoff)
        case(DER_STARPLUS)
-          message(1) = 'Not yet implemented.'
-          call write_fatal(1)
+          ! equivalent to normal stencil.
+          der%stencil_type = DER_STAR
+          call stencil_star_coeff_lapl(der%dim, der%order, m%h(1:der%dim), der%lapl)
        end select
 
        ! get gradient (we use the same both for star and variational)
