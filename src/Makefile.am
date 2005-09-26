@@ -1,6 +1,6 @@
 # $Id$
 
-EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-hs-mult oct-hs-acc \
+EXTRA_PROGRAMS = oct-cross-section oct-rsf oct-harmonic-spectrum \
                  oct-broad oct-ph oct-xyz-anim oct-make-st oct-center-geom
 
 bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
@@ -61,11 +61,8 @@ oct_cross_section_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 oct_rsf_SOURCES = $(basic_SRCS) spectrum.F90 rotational_strength.F90
 oct_rsf_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
-oct_hs_mult_SOURCES = $(basic_SRCS) spectrum.F90 hs_from_mult.F90
-oct_hs_mult_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
-
-oct_hs_acc_SOURCES  = $(basic_SRCS) spectrum.F90 hs_from_acc.F90
-oct_hs_acc_LDADD    = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
+oct_harmonic_spectrum_SOURCES = $(basic_SRCS) spectrum.F90 hs.F90
+oct_harmonic_spectrum_LDADD   = @LIBS_LAPACK@ @LIBS_BLAS@ $(core_LIBS)
 
 oct_xyz_anim_SOURCES = $(core_SRCS) xyzanim.F90
 oct_xyz_anim_LDADD   = $(octopus_LDADD)
@@ -139,7 +136,7 @@ config_F90.h: ../config.h
 # the dependencies below by the resulting new dependencies. (For normal compilation
 # of octopus, there is absolutely no need of installing makedepf90).
 depend:
-	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_hs_mult_SOURCES) $(oct_hs_acc_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
+	@makedepf90 $(core_SRCS) $(octopus_SOURCES) $(oct_cross_section_SOURCES) $(oct_rsf_SOURCES) $(oct_harmonic_spectrum_SOURCES) $(oct_xyz_anim_SOURCES) $(oct_broad_SOURCES) $(oct_ph_SOURCES) $(oct_center_geom_SOURCES) $(oct_atoms_magnet_SOURCES)
 
 
 # Dependencies (only includes taken into account)
@@ -164,8 +161,7 @@ geom_opt.o: global.h
 gs.o: global.h
 h.o: global.h h_inc.F90 h_so.F90
 hgh.o: global.h
-hs_from_acc.o: global.h
-hs_from_mult.o: global.h
+hs.o: global.h
 lasers.o: global.h
 lcao.o: global.h
 liboct.o: global.h
