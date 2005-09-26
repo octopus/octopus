@@ -31,7 +31,7 @@ module messages
 
   public :: write_fatal, write_warning, write_info
   public :: write_debug, write_debug_marker, write_debug_newlines
-  public :: print_date, epoch_time_diff, input_error
+  public :: print_date, time_diff, time_sum, epoch_time_diff, input_error
   public :: push_sub, pop_sub
   public :: messages_print_stress, messages_print_var_info, messages_print_var_option
 
@@ -369,21 +369,64 @@ contains
   subroutine epoch_time_diff(sec, usec)
     integer, intent(inout) :: sec, usec
 
-    ! correct overflow
-    if (usec-s_epoch_usec .lt. 0) then
-       usec = 1000000 + usec 
-       if (sec.ge.s_epoch_sec) then
-          sec  = sec - 1
-       endif
-    endif
+    call push_sub('messages.epoch_time_diff')
 
-    ! replace values
-    if (sec.ge.s_epoch_sec) then
-       sec  = sec - s_epoch_sec
-    endif
-    usec = usec - s_epoch_usec
+    call time_diff(s_epoch_sec, s_epoch_usec, sec, usec)
+
+    call pop_sub()
 
   end subroutine epoch_time_diff
+
+
+  ! ---------------------------------------------------------
+  ! Computes t2 <- t2-t1. sec1,2 and usec1,2 are
+  ! seconds,microseconds of t1,2
+  subroutine time_diff(sec1, usec1, sec2, usec2)
+    integer, intent(in)    :: sec1, usec1
+    integer, intent(inout) :: sec2, usec2
+
+    call push_sub('messages.time_diff')
+
+    ! Correct overflow.
+    if(usec2-usec1.lt.0) then
+      usec2 = 1000000 + usec2
+      if(sec2.ge.sec1) then
+        sec2 = sec2-1
+      end if
+    end if
+
+    ! Replace values.
+    if(sec2.ge.sec1) then
+      sec2 = sec2-sec1
+    end if
+    usec2 = usec2-usec1
+
+    call pop_sub()
+
+  end subroutine time_diff
+
+
+  ! ---------------------------------------------------------
+  ! Computes t2 <- t1+t2. Parameters as in time_diff
+  ! Assert: t1,2 <= 0.
+  subroutine time_sum(sec1, usec1, sec2, usec2)
+    integer, intent(in)    :: sec1, usec1
+    integer, intent(inout) :: sec2, usec2
+
+    call push_sub('messages.time_sum')
+
+    sec2  = sec1+sec2
+    usec2 = usec1+usec2
+
+    ! Carry?
+    if(usec2.ge.1000000) then
+      sec2  = sec2+1
+      usec2 = usec2-1000000
+    end if
+      
+    call pop_sub()
+
+  end subroutine time_sum
 
 
 #ifndef NDEBUG

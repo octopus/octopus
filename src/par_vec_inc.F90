@@ -60,7 +60,7 @@ subroutine X(vec_scatter)(vp, v, v_local)
   ! vp%p = mpiv%numprocs.
   call MPI_Debug_IN(vp%comm, C_MPI_SCATTERV)
   call MPI_Scatterv(v_tmp, vp%np_local, displs, R_MPITYPE, v_local, &
-                    vp%np_local(vp%partno), R_MPITYPE,                 &
+                    vp%np_local(vp%partno), R_MPITYPE,              &
                     vp%root, vp%comm, ierr)
   call MPI_Debug_OUT(vp%comm, C_MPI_SCATTERV)
 
@@ -238,6 +238,8 @@ subroutine X(vec_ghost_update)(vp, v_local)
                                                  ! MPI_Alltoallv.
   R_TYPE,  allocatable :: ghost_send(:)          ! Send buffer.
 
+  call profile_in(C_PROFILE_GHOST_UPDATE)
+
   call push_sub('par_vec.Xvec_ghost_update')
 
   ! Calculate number of ghost points current node
@@ -300,6 +302,8 @@ subroutine X(vec_ghost_update)(vp, v_local)
   deallocate(ghost_send)
   
   call pop_sub()
+
+  call profile_out(C_PROFILE_GHOST_UPDATE)
   
 end subroutine X(vec_ghost_update)
 
@@ -316,6 +320,8 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   integer :: ierr
   R_TYPE  :: s_local ! Sum of v_local(i).
 
+  call profile_in(C_PROFILE_VEC_INTEGRATE)
+
   call push_sub('par_vec.Xvec_integrate')
   
   s_local = sum(v_local(:vp%np_local(vp%partno)))
@@ -326,4 +332,6 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
 
   call pop_sub()
  
+  call profile_out(C_PROFILE_VEC_INTEGRATE)
+
 end function X(vec_integrate)

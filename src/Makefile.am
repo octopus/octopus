@@ -8,7 +8,7 @@ bin_PROGRAMS = octopus @UTILITY_PROGRAMS@
 check_PROGRAMS = oct-test
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 global.F90 liboct_parser.F90 \
-	     messages.F90 syslabels.F90 io.F90 units.F90 mpi.F90 \
+	     messages.F90 syslabels.F90 io.F90 units.F90 mpi.F90 profile.F90 \
              blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90
 
 core_SRCS = $(basic_SRCS) \
@@ -183,6 +183,7 @@ mesh_lib.o: global.h
 mf.o: global.h mf_inc.F90
 mix.o: global.h
 mpi.o: global.h mpi_inc.F90
+profile.o: global.h
 nl_operator.o: global.h
 oct_test.o: global.h
 ode_solver.o: global.h ode_solver_inc.F90

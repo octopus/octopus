@@ -28,6 +28,7 @@ program octopus
   use lib_oct_parser
   use run_prog
   use io
+  use profile_mod
 
   implicit none
 
@@ -40,6 +41,7 @@ program octopus
   call global_init()
   call parser_init()
   call io_init()
+  call profile_init()
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
@@ -82,6 +84,8 @@ program octopus
      call syslabels_init(calc_mode)
   endif
 
+
+  call profile_in(C_PROFILE_COMPLETE)
 
   ! loop over all subsystems
   subsystems: do ns = 1, no_subsystems
@@ -152,6 +156,9 @@ program octopus
 
   enddo subsystems
 
+  call profile_out(C_PROFILE_COMPLETE)
+
+  call profile_output()
   call io_end()
   call syslabels_end()
   call parser_end()

@@ -26,6 +26,7 @@ module nl_operator
   use mesh_lib
   use simul_box
   use io
+  use profile_mod
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
 #endif
@@ -829,6 +830,8 @@ contains
     integer :: i, n
     FLOAT, allocatable :: w_re(:)
 
+    call profile_in(C_PROFILE_NL_OPERATOR)
+
     call push_sub('nl_operator.dnl_operator_operate')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
@@ -850,6 +853,9 @@ contains
     end if
 
     call pop_sub()
+
+    call profile_in(C_PROFILE_NL_OPERATOR)
+
   end subroutine dnl_operator_operate
 
 
@@ -861,6 +867,8 @@ contains
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:)
+
+    call profile_in(C_PROFILE_NL_OPERATOR)
 
     call push_sub('nl_operator.znl_operator_operate')
 
@@ -883,6 +891,9 @@ contains
     end if
 
     call pop_sub()
+
+    call profile_out(C_PROFILE_NL_OPERATOR)
+
   end subroutine znl_operator_operate
 
 
@@ -896,6 +907,8 @@ contains
 
     integer :: i, n
     FLOAT, allocatable :: w_re(:), w_im(:)
+
+    call profile_in(C_PROFILE_NL_OPERATOR)
 
     call push_sub('nl_operator.znl_operator_operate_complex')
 
@@ -921,6 +934,9 @@ contains
     end if
 
     call pop_sub()
+
+    call profile_out(C_PROFILE_NL_OPERATOR)
+
   end subroutine znl_operator_operate_cmplx
 
 end module nl_operator
