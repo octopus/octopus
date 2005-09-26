@@ -85,7 +85,7 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
   R_TYPE,            intent(inout) :: psi(:,:,:)   ! psi(m%np_part, dim, nst)
   integer, optional, intent(in)    :: start
 
-  integer :: p, q, stst
+  integer :: p, q, stst, idim
   FLOAT :: nrm2
   R_TYPE :: ss
 
@@ -105,7 +105,9 @@ subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)
 
     nrm2 = X(states_nrm2)(m, dim, psi(:,:, p))
     ss = R_TOTYPE(M_ONE/nrm2)
-    call lalg_scal(m%np, dim, ss, psi(:, :, p))
+    do idim = 1, dim
+       call lalg_scal(m%np, ss, psi(:, idim, p))
+    end do
   end do
 
   call pop_sub()
