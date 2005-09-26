@@ -40,14 +40,13 @@ subroutine X(root_solver_init)(rs)
   !% Watterstrom method
   !%End
   call loct_parse_int(check_inp('RootSolver'),        ROOT_NEWTON, rs%solver_type)
-  call loct_parse_int(check_inp('RootSolverMaxIter'),         100, rs%maxiter)
-  if (rs%solver_type.gt. ROOT_WATTERSTROM) then
-     message(1) = 'Error: Unknown root solver type'
-     call write_fatal(1)
+  if( rs%solver_type.lt.ROOT_MINVAL.or.rs%solver_type.gt.ROOT_MAXVAL ) then
+     call input_error(check_inp('RootSolver'))
   endif
+  call loct_parse_int    (check_inp('RootSolverMaxIter'),               100, rs%maxiter)
   call loct_parse_float  (check_inp('RootSolverRelTolerance'),   CNST(1e-8), rs%rel_tolerance)
   call loct_parse_float  (check_inp('RootSolverAbsTolerance'),   CNST(1e-8), rs%abs_tolerance)
-  call loct_parse_logical(check_inp('RootSolverHavePolynomial'), .false.   , rs%have_polynomial)
+  call loct_parse_logical(check_inp('RootSolverHavePolynomial'),    .false., rs%have_polynomial)
   call loct_parse_float  (check_inp('RootSolverWSRadius'),       CNST( 1.0), rs%ws_radius)
 
   call pop_sub()

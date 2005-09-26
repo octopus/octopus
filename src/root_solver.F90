@@ -34,12 +34,14 @@ module root_solver
        zroot_solver_init, zroot_solver_run, zroot_solver_end, &
        zroot_watterstrom
 
-  integer, public, parameter :: &
-       ROOT_BISECTION   =  1,   &
-       ROOT_BRENT       =  2,   &
-       ROOT_NEWTON      =  3,   &
-       ROOT_LAGUERRE    =  4,   &
-       ROOT_WATTERSTROM =  5
+  integer, public, parameter ::             &
+       ROOT_BISECTION   =  1,               &
+       ROOT_BRENT       =  2,               &
+       ROOT_NEWTON      =  3,               &
+       ROOT_LAGUERRE    =  4,               &
+       ROOT_WATTERSTROM =  5,               &
+       ROOT_MINVAL      =  ROOT_BISECTION,  &
+       ROOT_MAXVAL      =  ROOT_WATTERSTROM
 
   type root_solver_type
      integer :: solver_type    ! what solver to use (see ROOT_* variables above)

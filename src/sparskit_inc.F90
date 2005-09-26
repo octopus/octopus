@@ -53,6 +53,9 @@ subroutine X(sparskit_solver_init)(n, sk)
   !% Direct versions of Quasi Generalize Minimum Residual method
   !%End
   call loct_parse_int(check_inp('SparskitSolver'),          SK_CG, sk%solver_type)
+  if ( sk%solver_type.lt.SK_MINVAL.or.sk%solver_type.gt.SK_MAXVAL ) then
+     call input_error('SparskitSolver')
+  endif
   call loct_parse_int(check_inp('SparskitKrylovSubspaceSize'), 15, sk%krylov_size)
   call loct_parse_int(check_inp('SparskitPreconditioning'),     0, sk%preconditioning)
   call loct_parse_int(check_inp('SparskitMaxIter'),          1000, sk%maxiter)

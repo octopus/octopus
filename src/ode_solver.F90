@@ -33,10 +33,12 @@ module ode_solver
        zode_solver_init, zode_solver_create, zode_solver_run, zode_solver_end
 
   integer, public, parameter :: &
-       ODE_RK4  =  1, &
-       ODE_FB78 =  2, &
-       ODE_VR89 =  3, &
-       ODE_PD89 =  4
+       ODE_RK4    =  1,         &
+       ODE_FB78   =  2,         &
+       ODE_VR89   =  3,         &
+       ODE_PD89   =  4,         &
+       ODE_MINVAL =  ODE_RK4,   &
+       ODE_MAXVAL =  ODE_PD89
 
   type ode_solver_type
      integer :: solver_type     ! what solver to use (see ODE_* variables above)

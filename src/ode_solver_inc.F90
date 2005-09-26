@@ -39,11 +39,10 @@ subroutine X(ode_solver_init)(os)
   !% Prince-Dormand solver
   !%End
   call loct_parse_int(check_inp('ODESolver'),       ODE_RK4, os%solver_type)
-  call loct_parse_int(check_inp('ODESolverNSteps'),     100, os%nsteps)
-  if (os%solver_type .gt. ODE_PD89) then
-     message(1) = 'Error: Unknown ODE solver type'
-     call write_fatal(1)
+  if( os%solver_type.lt.ODE_MINVAL.or.os%solver_type.gt.ODE_MAXVAL ) then
+     call input_error(check_inp('ODESolver'))
   endif
+  call loct_parse_int(check_inp('ODESolverNSteps'),     100, os%nsteps)
 
   call X(ode_solver_create)(os)
 

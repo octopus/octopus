@@ -33,12 +33,14 @@ module scalar_mesh
   public :: scalar_mesh_init, scalar_mesh_create, scalar_mesh_end
   public :: scalar_mesh_integrate, scalar_mesh_write
 
-  integer, parameter ::         &
-       MESH_LINEAR         = 1, &
-       MESH_LOG            = 2, &
-       MESH_DOUBLE_LOG     = 3, &
-       MESH_SINH           = 4, &
-       MESH_GAUSS_LEGENDRE = 5
+  integer, parameter ::                          &
+       MESH_LINEAR         = 1,                  &
+       MESH_LOG            = 2,                  &
+       MESH_DOUBLE_LOG     = 3,                  &
+       MESH_SINH           = 4,                  &
+       MESH_GAUSS_LEGENDRE = 5,                  &
+       MESH_MINVAL         = MESH_LINEAR,        &
+       MESH_MAXVAL         = MESH_GAUSS_LEGENDRE
 
   type scalar_mesh_type
      integer :: mtype             ! mesh type (see MESH_* variables above)
@@ -78,8 +80,10 @@ contains
     !%Option gauss_legendre 5
     !% Gauss-Legendre mesh
     !%End
-
     call loct_parse_int  (check_inp(trim(label)//'MeshType'),             4, sm%mtype)
+    if( sm%mtype.lt.MESH_MINVAL.or.sm%mtype.gt.MESH_MAXVAL ) then
+       call input_error(check_inp(trim(label)//'MeshType'))
+    endif
     call loct_parse_int  (check_inp(trim(label)//'MeshNPoints'),         20, sm%np)
     call loct_parse_float(check_inp(trim(label)//'MeshMin'),      CNST(0.0), sm%min)
     call loct_parse_float(check_inp(trim(label)//'MeshMax'),      CNST(4.0), sm%max)

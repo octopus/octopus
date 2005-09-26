@@ -41,16 +41,18 @@ module sparskit
 
 
   integer, private, parameter :: &
-       SK_CG      =  1,   &  ! Conjugate Gradient Method
-       SK_CGNR    =  2,   &  ! Conjugate Gradient Method (Normal Residual equation)
-       SK_BCG     =  3,   &  ! Bi-Conjugate Gradient Method
-       SK_DBCG    =  4,   &  ! BCG with partial pivoting
-       SK_BCGSTAB =  5,   &  ! BCG stabilized
-       SK_TFQMR   =  6,   &  ! Transpose-Free Quasi-Minimum Residual method
-       SK_FOM     =  7,   &  ! Full Orthogonalization Method
-       SK_GMRES   =  8,   &  ! Generalized Minimum Residual method
-       SK_FGMRES  =  9,   &  ! Flexible version of Generalized Minimum Residual method
-       SK_DQGMRES = 10       ! Direct versions of Quasi Generalize Minimum Residual method
+       SK_CG      =  1,          &  ! Conjugate Gradient Method
+       SK_CGNR    =  2,          &  ! Conjugate Gradient Method (Normal Residual equation)
+       SK_BCG     =  3,          &  ! Bi-Conjugate Gradient Method
+       SK_DBCG    =  4,          &  ! BCG with partial pivoting
+       SK_BCGSTAB =  5,          &  ! BCG stabilized
+       SK_TFQMR   =  6,          &  ! Transpose-Free Quasi-Minimum Residual method
+       SK_FOM     =  7,          &  ! Full Orthogonalization Method
+       SK_GMRES   =  8,          &  ! Generalized Minimum Residual method
+       SK_FGMRES  =  9,          &  ! Flexible version of Generalized Minimum Residual method
+       SK_DQGMRES = 10,          &  ! Direct versions of Quasi Generalized Minimum Residual method
+       SK_MINVAL  = SK_CG,       &
+       SK_MAXVAL  = SK_DQGMRES 
 
   FLOAT, allocatable   :: sk_work(:), sk_b(:), sk_y(:)
 
