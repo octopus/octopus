@@ -51,7 +51,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
 
   call trl_init_info(info, nrow, maxlan, lohi = -1, ned = ned, tol = CNST(1.0e-5), trestart = 3)
 
-  if(conf%verbose > 999) then
+  if(in_debug_mode) then
      call io_assign(unit)
      call trl_set_debug(info, msglvl = 10, iou = unit, file = trim(tmpdir)//'trlan_log_')
   endif
@@ -97,7 +97,7 @@ subroutine eigen_solver_cg3(m, st, h, tol, niter, converged, diff, reorder)
   !  call lalg_scal(m%np, st%d%dim. st%nst, st%d%nik, R_TOTYPE(M_ONE/sqrt(m%vol_pp)), &
   !     st%X(psi)(:,:,:,:))
 
-  if(conf%verbose > 999) then
+  if(in_debug_mode) then
      call io_close(unit)
   endif
 

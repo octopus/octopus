@@ -290,7 +290,7 @@ contains
     do l = 0, psf%npotd-1! ps%L_max
        e = sqrt(sum(psf%g%drdi(2:psf%nrval)*psf%rphi(2:psf%nrval, l, 1)**2))
        e = abs(e - M_ONE)
-       if (e > CNST(1.0e-5) .and. conf%verbose > 0) then
+       if (e > CNST(1.0e-5)) then
           write(message(1), '(a,i2,a)') "Eigenstate for l = ", l , ' is not normalized'
           write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
           call write_warning(2)
@@ -394,7 +394,7 @@ contains
     ! Inmediately afterwards, it is divided by r, so that its final units are Rydbergs
     do ndown = 1, psf%npotd
        read(unit) l, (aux(i),i=1, psf%nr)
-       if(l /= ndown-1 .and. conf%verbose > 0) then
+       if(l /= ndown-1) then
           message(1) = 'Unexpected angular momentum'
           message(2) = 'Pseudopotential should be ordered by increasing l'
           call write_warning(2)
@@ -497,7 +497,7 @@ contains
        read(unit, 9040) aux_s
        read(unit, 8000) l
        read(unit, 9030) (aux(i),i=1, psf%nr)
-       if(l /= ndown-1 .and. conf%verbose > 0) then
+       if(l /= ndown-1) then
           message(1) = 'Unexpected angular momentum'
           message(2) = 'Pseudopotential should be ordered by increasing l'
           call write_warning(2)

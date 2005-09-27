@@ -125,8 +125,6 @@ contains
        return
     endif
 
-    if(iunit==stdout.and.conf%verbose<VERBOSE_NORMAL) return
-
     write(iunit,'(/,a)') stars
     call simul_box_write_info(gr%sb, iunit)
     call mesh_write_info(gr%m, iunit)

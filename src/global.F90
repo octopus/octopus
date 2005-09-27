@@ -35,10 +35,6 @@ module global
 #endif
 
   type conf_type
-     integer :: verbose     ! <= 0  -> silent, no output except fatal errors
-     ! > 0   -> warning only
-     ! > 20  -> normal program info
-     ! > 999 -> debug
      integer :: debug_level ! How much debug should print
 
      character(len=256) :: share       ! Name of the share dir

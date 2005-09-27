@@ -459,10 +459,8 @@ contains
     a2b4 = M_FOURTH*psp%g%a**2
 
     ! Let us be a bit informative.
-    if(conf%verbose > 20 .and. mpiv%node == 0) then
-       message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psp%atom_name // '....'
-       call write_info(1)
-    endif
+    message(1) = '      Calculating atomic pseudo-eigenfunctions for specie ' // psp%atom_name // '....'
+    call write_info(1)
 
     ! "Double" self consistent loop: nonlocal and xc parts have to be calculated
     ! self-consistently.
@@ -516,25 +514,19 @@ contains
        enddo
        if(iter>1) rho = M_HALF*(rho + prev)
        diff = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*(rho(2:psp%g%nrval, 1)-prev(2:psp%g%nrval, 1))**2))
-       !if(conf%verbose>20 .and. mpiv%node == 0) then
-       !  write(message(1),'(a,i4,a,e10.2)') '      Iter =',iter,'; Diff =',diff
-       !  call write_info(1)
-       !endifq
        call atomhxc('LDA', psp%g, 1, rho, ve)
 
     enddo self_consistent
 
-    if(conf%verbose > 20 .and. mpiv%node == 0) then
-       message(1) = '      Done.'
-       call write_info(1)
-    endif
+    message(1) = '      Done.'
+    call write_info(1)
 
     !  checking normalization of the calculated wave functions
     !do l = 0, psp%l_max_occ
     do n = 1, psp%conf%p
        e = sqrt(sum(psp%g%drdi(2:psp%g%nrval)*psp%rphi(2:psp%g%nrval, n)**2))
        e = abs(e - M_ONE)
-       if (e > CNST(1.0e-5) .and. conf%verbose > 0) then
+       if (e > CNST(1.0e-5)) then
           write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
           write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
           call write_warning(2)

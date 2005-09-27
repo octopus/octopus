@@ -141,7 +141,7 @@ contains
     if(ep%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
-      if(conf%verbose > 20 .and. mpiv%node == 0) then
+      if(mpiv%node == 0) then
         call laser_write_info(ep%no_lasers, ep%lasers, stdout)
       end if
     end if

@@ -46,7 +46,6 @@ program xyzanim
      call io_mkdir('debug')
   endif
   call units_init()
-  if(conf%verbose<999) conf%verbose = -1
 
   ! Sets the filenames
   nbofile = 'td.general/coordinates'

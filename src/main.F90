@@ -100,8 +100,8 @@ program octopus
      ! Let us print our logo
      if(mpiv%node == 0) then
         ! Let us print our logo
-        if(conf%verbose >= VERBOSE_NORMAL) call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
-        if(in_debug_mode.and.conf%verbose >= VERBOSE_DEBUG) then
+        call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
+        if(in_debug_mode) then
            write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
         endif
      end if

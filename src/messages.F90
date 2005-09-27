@@ -124,19 +124,17 @@ contains
 
     ! this always writes from ALL nodes
 
-    if(conf%verbose >= VERBOSE_WARNING) then
-       call flush_msg(stderr, '')
-       write(msg, '(a)') '** Warning:'
-       call flush_msg(stderr, msg)
+    call flush_msg(stderr, '')
+    write(msg, '(a)') '** Warning:'
+    call flush_msg(stderr, msg)
 #ifdef HAVE_MPI
-       write(msg , '(a,i4)') '** From node = ', mpiv%node
-       call flush_msg(stderr, msg)
+    write(msg , '(a,i4)') '** From node = ', mpiv%node
+    call flush_msg(stderr, msg)
 #endif
-       do i=1,no_lines
-          write(msg , '(a,3x,a)') '**', trim(message(i))
-          call flush_msg(stderr, msg)
-       end do
-    end if
+    do i=1,no_lines
+       write(msg , '(a,3x,a)') '**', trim(message(i))
+       call flush_msg(stderr, msg)
+    end do
 #ifdef HAVE_FLUSH
     call flush(stderr)
 #endif
@@ -173,24 +171,22 @@ contains
        iu = stdout
     end if
 
-    if(conf%verbose >= VERBOSE_NORMAL) then
-       if(present(stress)) then
-          call flush_msg(iu, stars)
-       endif
-       do i = 1, no_lines
-          if(.not.present(verbose_limit)) then
-             write(msg, '(a)') trim(message(i))
-             call flush_msg(iu, msg)
-          else if(conf%verbose>verbose_limit) then
-             write(msg, '(a)') trim(message(i))
-             call flush_msg(iu, msg)
-          endif
-       enddo
-       if(present(stress)) then
-          call flush_msg(iu, stars)
-          call flush_msg(iu, '')
-       endif
-    end if
+    if(present(stress)) then
+       call flush_msg(iu, stars)
+    endif
+    do i = 1, no_lines
+      if(.not.present(verbose_limit)) then
+          write(msg, '(a)') trim(message(i))
+          call flush_msg(iu, msg)
+      else if(in_debug_mode) then
+          write(msg, '(a)') trim(message(i))
+          call flush_msg(iu, msg)
+      endif
+    enddo
+    if(present(stress)) then
+      call flush_msg(iu, stars)
+      call flush_msg(iu, '')
+    endif
 
     if(flush_messages) close(iunit_out)
 
@@ -296,7 +292,6 @@ contains
     character(len=*), intent(in) :: var
 
     if(mpiv%node.ne.0) return
-    if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
 
     call varinfo_print(iunit, var)
   end subroutine messages_print_var_info
@@ -310,7 +305,6 @@ contains
     character(len=*), intent(in) :: pre
 
     if(mpiv%node.ne.0) return
-    if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
 
     call varinfo_print_option(iunit, var, option, pre)
   end subroutine messages_print_var_option
@@ -321,7 +315,6 @@ contains
     integer, intent(in) :: iunit
 
     if(mpiv%node.ne.0) return
-    if(iunit==stdout .and. conf%verbose<VERBOSE_NORMAL) return
 
     call flush_msg(iunit, stars)
   end subroutine messages_print_stress
@@ -450,18 +443,13 @@ contains
        sub_stack(no_sub_stack)  = trim(sub_name)
        time_stack(no_sub_stack) = loct_clock()
 
+       call open_debug_trace(iunit)
+       call push_sub_write(iunit)
+       ! also write to stderr if we are node 0
+       if (mpiv%node == 0) call push_sub_write(stderr) 
+       ! close file to ensure flushing
+       close(iunit)
 
-       if(conf%verbose >= VERBOSE_DEBUG) then ! .and. no_sub_stack <= conf%debug_level) then
-
-          call open_debug_trace(iunit)
-          call push_sub_write(iunit)
-          ! also write to stderr if we are node 0
-          if (mpiv%node == 0) call push_sub_write(stderr) 
-
-          ! close file to ensure flushing
-          close(iunit)
-
-       endif
     end if
 
     return
@@ -496,17 +484,13 @@ contains
     call epoch_time_diff(sec, usec)
 
     if(no_sub_stack > 0) then
-       if(conf%verbose > VERBOSE_DEBUG) then ! .and. no_sub_stack <= conf%debug_level) then
+       call open_debug_trace(iunit)
+       call pop_sub_write(iunit)
+       ! also write to stderr if we are node 0
+       if (mpiv%node == 0) call pop_sub_write(stderr) 
+       ! close file to ensure flushing
+       close(iunit)
 
-          call open_debug_trace(iunit)
-          call pop_sub_write(iunit)
-          ! also write to stderr if we are node 0
-          if (mpiv%node == 0) call pop_sub_write(stderr) 
-
-          ! close file to ensure flushing
-          close(iunit)
-
-       end if
        no_sub_stack = no_sub_stack - 1
     else
        no_sub_stack = 1

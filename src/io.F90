@@ -129,10 +129,8 @@ contains
     call loct_parse_int('DebugLevel',0,conf%debug_level)
     if(conf%debug_level>0) then
        in_debug_mode = .true.
-       conf%verbose = VERBOSE_DEBUG + 1
     else
        in_debug_mode = .false.
-       conf%verbose = VERBOSE_NORMAL + 1
     endif
 
 

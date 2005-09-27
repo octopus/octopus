@@ -127,7 +127,7 @@ contains
     if (s%type /= SPEC_USDEF ) write(iunit, '(a,i3)')    'lloc  = ', s%lloc
 
     if(.not.s%local) then
-      if(conf%verbose>=VERBOSE_DEBUG) call ps_debug(s%ps, trim(dirname))
+      if(in_debug_mode) call ps_debug(s%ps, trim(dirname))
     endif
 
     call io_close(iunit)

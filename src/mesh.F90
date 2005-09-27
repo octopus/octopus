@@ -204,8 +204,6 @@ contains
 #ifdef HAVE_MPI
     if(mpiv%node .ne. 0) return
 #endif
-    if(unit==stdout.and.conf%verbose<VERBOSE_NORMAL) return
-
     call push_sub('mesh.mesh_write_info')
 
     write(unit,'(a)') 'Main mesh:'

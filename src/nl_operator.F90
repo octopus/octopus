@@ -153,14 +153,14 @@ contains
           allocate(op%w_im(op%n, 1))
        endif
        message(1) = 'Info: nl_operator_build: working with constant weights.'
-       if(conf%verbose > VERBOSE_DEBUG) call write_info(1)
+       if(in_debug_mode) call write_info(1)
     else
        allocate(op%w_re(op%n, op%np))
        if (op%cmplx_op) then
           allocate(op%w_im(op%n, op%np))
        endif
        message(1) = 'Info: nl_operator_build: working with non-constant weights.'
-       if(conf%verbose > VERBOSE_DEBUG) call write_info(1)
+       if(in_debug_mode) call write_info(1)
     end if
 
     ! set initially to zero

@@ -609,8 +609,6 @@ contains
     integer ik, j, ns, is
     FLOAT :: o, oplus, ominus
 
-    if(iunit==stdout.and.conf%verbose<=20) return
-
     ns = 1
     if(st%d%nspin == 2) ns = 2
 
@@ -701,8 +699,6 @@ contains
     
     integer, parameter :: GNUPLOT = 1, &
                           XMGRACE = 2
-
-    if(iunit==stdout.and.conf%verbose<=20) return
 
     call loct_parse_int(check_inp('BandsOutputMode'), GNUPLOT, mode)
     if(mode /= GNUPLOT .and. mode /= XMGRACE) then

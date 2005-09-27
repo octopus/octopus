@@ -129,7 +129,7 @@ contains
 
       call xc_oep_init(ks%oep, ks%xc_family, gr%m, d)
 
-      if(conf%verbose >= VERBOSE_NORMAL) call v_ks_write_info(ks, stdout)
+      call v_ks_write_info(ks, stdout)
     end if
 
     call pop_sub()
