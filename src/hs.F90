@@ -29,6 +29,7 @@ program harmonic_spectrum
   use spectrum
 
   character(len=100) :: txt
+  integer :: mode
   type(spec_type) :: s
   type(spec_sh) :: sh
 
