@@ -102,10 +102,10 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
 
   ! Initial residue
   call op(x, ax)
-  r = b - ax
+  r(1:np) = b(1:np) - ax(1:np)
 
   ! Initial search direction
-  p = r
+  p(1:np) = r(1:np)
 
   max_iter = iter
   iter = 1
@@ -113,12 +113,12 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
      gamma = dotp(r, r)
      if(abs(gamma) < THRESHOLD_) exit
      call op(p, ap)
-     alpha = gamma/dotp(p, ap)
-     r = r - alpha*ap
-     x = x + alpha*p
-     beta = dotp(r, r)/gamma
-     p = r + beta*p
-     iter  = iter + 1
+     alpha   = gamma/dotp(p, ap)
+     r(1:np) = r(1:np) - alpha*ap(1:np)
+     x(1:np) = x(1:np) + alpha*p(1:np)
+     beta    = dotp(r, r)/gamma
+     p(1:np) = r(1:np) + beta*p(1:np)
+     iter    = iter + 1
   enddo
   if(present(residue)) residue = gamma
 

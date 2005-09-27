@@ -194,7 +194,7 @@ contains
 
     call push_sub('poisson_corrections.op')
 
-    call dderivatives_lapl(der_pointer, x(1:mesh_pointer%np_part), y(1:mesh_pointer%np_part))
+    call dderivatives_lapl(der_pointer, x, y)
 
     call pop_sub()
 
@@ -205,13 +205,14 @@ contains
     FLOAT, intent(in)    :: y(:)
     integer :: np_part
     np_part = mesh_pointer%np_part
-    res = dmf_dotp(mesh_pointer, x(1:np_part), y(1:np_part))
+    res = dmf_dotp(mesh_pointer, x, y)
   end function dotp
 
   subroutine opt(x, y)
     FLOAT, intent(in)  :: x(:)
     FLOAT, intent(out) :: y(:)
-    call dderivatives_laplt(der_pointer, x(1:mesh_pointer%np_part), y(1:mesh_pointer%np_part))
+
+    call dderivatives_laplt(der_pointer, x, y)
   end subroutine opt
 
 

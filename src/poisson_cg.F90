@@ -122,7 +122,7 @@ contains
     FLOAT,                intent(in)    :: rho(:) ! rho(m%np)
 
     integer :: iter
-    FLOAT, allocatable :: rho_corrected(:), vh_correction(:)
+    FLOAT, allocatable :: rho_corrected(:), vh_correction(:), tmp(:)
     FLOAT :: res
 
     call push_sub('poisson_cg.poisson_cg2')
@@ -130,23 +130,24 @@ contains
     der_pointer  => der
     mesh_pointer => m
 
-    allocate(rho_corrected(m%np), vh_correction(m%np))
+    allocate(rho_corrected(m%np), vh_correction(m%np), tmp(m%np_part))
     call correct_rho(m, maxl, rho, rho_corrected, vh_correction)
     rho_corrected = - M_FOUR*M_PI*rho_corrected
     pot = pot - vh_correction
     iter = 400
     ! This assumes that the Laplacian is self-adjoint.
-    call dconjugate_gradients(m%np, pot, rho_corrected, op, dotp, iter, res, threshold)
+    tmp(1:m%np) = pot(1:m%np)
+    call dconjugate_gradients(m%np, tmp, rho_corrected, op, dotp, iter, res, threshold)
     if(res >= threshold) then
        message(1) = 'Conjugate gradients Poisson solver did not converge.'
        write(message(2), '(a,i8)')    '  Iter = ',iter
        write(message(3), '(a,e14.6)') '  Res = ', res
        call write_warning(3)
     endif
-    pot = pot + vh_correction
+    pot(1:m%np) = tmp(1:m%np) + vh_correction(1:m%np)
 
     nullify(der_pointer, mesh_pointer)
-    deallocate(rho_corrected, vh_correction)
+    deallocate(rho_corrected, vh_correction, tmp)
     call pop_sub()
   end subroutine poisson_cg2
 
