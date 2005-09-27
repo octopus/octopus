@@ -41,7 +41,7 @@ module scf
   use lcao
   use io
   use grid
-  use profile_mod
+  use profiling_mod
 
   implicit none
 
@@ -208,7 +208,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
 
   ! SCF cycle
   do iter = 1, scf%max_iter
-    call profile_in(C_PROFILE_SCF_CYCLE)
+    call profiling_in(C_PROFILING_SCF_CYCLE)
 
     if(scf%lcao_restricted) then
       call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
@@ -290,7 +290,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
       write(message(1), '(a, i4, a)')'Info: SCF converged in ', iter, ' iterations'
       call write_info(1)
       if(scf%lcao_restricted) call lcao_end(lcao_data)
-      call profile_out(C_PROFILE_SCF_CYCLE)
+      call profiling_out(C_PROFILING_SCF_CYCLE)
       exit
     end if
 
@@ -310,7 +310,7 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
 
     if(clean_stop()) exit
 
-    call profile_out(C_PROFILE_SCF_CYCLE)
+    call profiling_out(C_PROFILING_SCF_CYCLE)
   end do
 
   if (scf%what2mix == MIXPOT) then

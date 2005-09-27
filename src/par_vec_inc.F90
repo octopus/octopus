@@ -238,7 +238,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
                                                  ! MPI_Alltoallv.
   R_TYPE,  allocatable :: ghost_send(:)          ! Send buffer.
 
-  call profile_in(C_PROFILE_GHOST_UPDATE)
+  call profiling_in(C_PROFILING_GHOST_UPDATE)
 
   call push_sub('par_vec.Xvec_ghost_update')
 
@@ -303,7 +303,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   
   call pop_sub()
 
-  call profile_out(C_PROFILE_GHOST_UPDATE)
+  call profiling_out(C_PROFILING_GHOST_UPDATE)
   
 end subroutine X(vec_ghost_update)
 
@@ -320,7 +320,7 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   integer :: ierr
   R_TYPE  :: s_local ! Sum of v_local(i).
 
-  call profile_in(C_PROFILE_VEC_INTEGRATE)
+  call profiling_in(C_PROFILING_VEC_INTEGRATE)
 
   call push_sub('par_vec.Xvec_integrate')
   
@@ -332,6 +332,6 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
 
   call pop_sub()
  
-  call profile_out(C_PROFILE_VEC_INTEGRATE)
+  call profiling_out(C_PROFILING_VEC_INTEGRATE)
 
 end function X(vec_integrate)

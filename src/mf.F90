@@ -27,7 +27,7 @@ module mesh_function
   use mesh
   use cube_function
   use par_vec
-  use profile_mod
+  use profiling_mod
 #ifdef HAVE_MPI
   use mpi_mod
 #endif

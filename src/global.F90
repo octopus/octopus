@@ -119,7 +119,7 @@ module global
   ! should we run in debug mode
   logical :: in_debug_mode = .false.
   ! Same for profiling mode.
-  logical :: in_profile_mode = .false.
+  logical :: in_profiling_mode = .false.
 
 
 contains

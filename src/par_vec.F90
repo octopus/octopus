@@ -90,7 +90,7 @@ module par_vec
   use messages
   use mesh_lib
   use io
-  use profile_mod
+  use profiling_mod
 #ifdef HAVE_MPI
   use mpi_mod
 #endif

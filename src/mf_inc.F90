@@ -23,7 +23,7 @@ R_TYPE function X(mf_integrate) (m, f) result(d)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
 
-  call profile_in(C_PROFILE_MF_INTEGRATE)
+  call profiling_in(C_PROFILING_MF_INTEGRATE)
 
   call push_sub('mf_inc.Xmf_integrate')
 
@@ -35,7 +35,7 @@ R_TYPE function X(mf_integrate) (m, f) result(d)
 
   call pop_sub()
 
-  call profile_out(C_PROFILE_MF_INTEGRATE)
+  call profiling_out(C_PROFILING_MF_INTEGRATE)
 
 end function X(mf_integrate)
 
@@ -52,7 +52,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
   integer :: ierr
 #endif
 
-  call profile_in(C_PROFILE_MF_DOTP)
+  call profiling_in(C_PROFILING_MF_DOTP)
 
   call push_sub('mf_inc.Xmf_dotp')
 
@@ -75,7 +75,7 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
 
   call pop_sub()
 
-  call profile_out(C_PROFILE_MF_DOTP)
+  call profiling_out(C_PROFILING_MF_DOTP)
 
 end function X(mf_dotp)
 
@@ -85,7 +85,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   type(mesh_type), intent(in) :: m
   R_TYPE,          intent(in) :: f(:)
 
-  call profile_in(C_PROFILE_MF_NRM2)
+  call profiling_in(C_PROFILING_MF_NRM2)
 
   call push_sub('mf_inc.Xmf_dotp')
   
@@ -93,7 +93,7 @@ FLOAT function X(mf_nrm2)(m, f) result(nrm2)
   
   call pop_sub()
 
-  call profile_out(C_PROFILE_MF_NRM2)
+  call profiling_out(C_PROFILING_MF_NRM2)
 
 end function X(mf_nrm2)
 
