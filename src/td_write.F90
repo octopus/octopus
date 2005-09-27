@@ -225,7 +225,7 @@ subroutine td_write_iter(w, gr, st, h, geo, kick, dt, i)
   call push_sub('td_write.td_write_iter')
 
   if(w%out_multip.ne.0)   call td_write_multipole(w%out_multip, gr, st, w%lmax, kick, i)
-  if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, i)
+  if(w%out_angular.ne.0)  call td_write_angular(w%out_angular, gr, st, kick, i)
   if(w%out_spin.ne.0)     call td_write_spin(w%out_spin, gr%m, st, i)
   if(w%out_magnets.ne.0)  call td_write_local_magnetic_moments(w%out_magnets, gr%m, st, geo, w%lmm_r, i)
   if(w%out_proj.ne.0)     call td_write_proj(w%out_proj, gr, st, w%gs_st, i)
@@ -299,13 +299,7 @@ subroutine td_write_spin(out_spin, m, st, iter)
      spin = M_HALF*spin
 
      if(iter ==0) then
-        !empty file
-        call write_iter_clear(out_spin)
-
-        !fist line -> now unused.
-        write(aux, '(a)') '#'
-        call write_iter_string(out_spin, aux)
-        call write_iter_nl(out_spin)
+        call td_write_print_header_init(out_spin)
 
         !second line -> columns name
         call write_iter_header_start(out_spin)
@@ -318,6 +312,8 @@ subroutine td_write_spin(out_spin, m, st, iter)
         write(aux, '(a2,18x)') 'Sz'
         call write_iter_header(out_spin, aux)
         call write_iter_nl(out_spin)
+
+        call td_write_print_header_end(out_spin)
      endif
 
      call write_iter_start(out_spin)
@@ -355,13 +351,7 @@ subroutine td_write_local_magnetic_moments(out_magnets, m, st, geo, lmm_r, iter)
     call states_local_magnetic_moments(m, st, geo, st%rho, lmm_r, lmm)
 
     if(iter ==0) then
-      !empty file
-      call write_iter_clear(out_magnets)
-
-      !fist line ->  now unused.
-      write(aux, '(a)') '#'
-      call write_iter_string(out_magnets, aux)
-      call write_iter_nl(out_magnets)
+      call td_write_print_header_init(out_magnets)
 
       !second line -> columns name
       call write_iter_header_start(out_magnets)
@@ -377,6 +367,7 @@ subroutine td_write_local_magnetic_moments(out_magnets, m, st, geo, lmm_r, iter)
       end do
       call write_iter_nl(out_magnets)
 
+      call td_write_print_header_end(out_magnets)
     endif
 
     call write_iter_start(out_magnets)
@@ -395,10 +386,11 @@ subroutine td_write_local_magnetic_moments(out_magnets, m, st, geo, lmm_r, iter)
   call pop_sub()
 end subroutine td_write_local_magnetic_moments
 
-subroutine td_write_angular(out_angular, gr, st, iter)
+subroutine td_write_angular(out_angular, gr, st, kick, iter)
   integer(POINTER_SIZE), intent(in)    :: out_angular
   type(grid_type),       intent(inout) :: gr
   type(states_type),     intent(in)    :: st
+  type(kick_type),       intent(in)    :: kick
   integer,               intent(in)    :: iter
 
   character(len=130) :: aux
@@ -412,11 +404,41 @@ subroutine td_write_angular(out_angular, gr, st, iter)
   if(mpiv%node == 0) then ! Only first node outputs
 
     if(iter ==0) then
-      !empty file
-      call write_iter_clear(out_angular)
+      call td_write_print_header_init(out_angular)
 
-      !fist line -> now unused.
-      write(aux, '(a)') '#'
+      write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,3f18.12)') '# pol(1)       ', kick%pol(1:3, 1)
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,3f18.12)') '# pol(2)       ', kick%pol(1:3, 2)
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,3f18.12)') '# pol(3)       ', kick%pol(1:3, 3)
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,i2)')      '# direction    ', kick%pol_dir
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,i2)')      '# kick mode    ', kick%delta_strength_mode
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,i2)')      '# Equiv. axis  ', kick%pol_equiv_axis
+      call write_iter_string(out_angular, aux)
+      call write_iter_nl(out_angular)
+
+      write(aux, '(a15,3f18.12)') '# wprime       ', kick%wprime(1:3)
       call write_iter_string(out_angular, aux)
       call write_iter_nl(out_angular)
 
@@ -431,8 +453,11 @@ subroutine td_write_angular(out_angular, gr, st, iter)
       call write_iter_nl(out_angular)
 
       !third line -> should hold the units. Now unused (assumes atomic units)
-      call write_iter_string(out_angular, '##########')
+      call write_iter_string(out_angular, '#[Iter n.]')
+      call write_iter_header(out_angular, '[a.u]')
       call write_iter_nl(out_angular)
+
+      call td_write_print_header_end(out_angular)
     endif
 
     call write_iter_start(out_angular)
@@ -461,8 +486,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
   call push_sub('td_write.td_write_multipole')
 
   if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out_multip)
+    call td_write_print_header_init(out_multip)
 
     write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
     call write_iter_string(out_multip, aux)
@@ -492,7 +516,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
-    write(aux, '(a15,f18.12)')  '# kick strength', kick%delta_strength
+    write(aux, '(a15,f18.12)')  '# kick strengtph', kick%delta_strength
     call write_iter_string(out_multip, aux)
     call write_iter_nl(out_multip)
 
@@ -523,7 +547,7 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
     call write_iter_nl(out_multip)
 
     ! units
-    call write_iter_string(out_multip, '##########')
+    call write_iter_string(out_multip, '#[Iter n.]')
     call write_iter_header(out_multip, '[' // trim(units_out%time%abbrev) // ']')
 
     do is = 1, st%d%nspin
@@ -542,6 +566,8 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
       end do
     end do
     call write_iter_nl(out_multip)
+
+    call td_write_print_header_end(out_multip)
   end if
 
   allocate(nuclear_dipole(1:3), multipole((lmax + 1)**2, st%d%nspin))
@@ -581,8 +607,7 @@ subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
   if(mpiv%node.ne.0) return ! only first node outputs
 
   if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out_coords)
+    call td_write_print_header_init(out_coords)
 
     ! first line: column names
     call write_iter_header_start(out_coords)
@@ -611,7 +636,7 @@ subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
     call write_iter_nl(out_coords)
 
     ! second line: units
-    call write_iter_string(out_coords, '##########')
+    call write_iter_string(out_coords, '#[Iter n.]')
     call write_iter_header(out_coords, '[' // trim(units_out%time%abbrev) // ']')
     call write_iter_string(out_coords, &
          'Energy in '      // trim(units_out%energy%abbrev)   //   &
@@ -619,6 +644,8 @@ subroutine td_write_nbo(out_coords, gr, iter, ke, pe)
          ', Velocities in '// trim(units_out%velocity%abbrev) //   &
          ', Forces in '    // trim(units_out%force%abbrev))
     call write_iter_nl(out_coords)
+
+    call td_write_print_header_end(out_coords)
   end if
 
   call write_iter_start(out_coords)
@@ -656,8 +683,7 @@ subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
 
   if(mpiv%node .eq. 0) then
     if(iter == 0) then
-      ! empty file
-      call write_iter_clear(out_gsp)
+      call td_write_print_header_init(out_gsp)
 
       ! first line -> column names
       call write_iter_header_start(out_gsp)
@@ -666,9 +692,11 @@ subroutine td_write_gsp(out_gsp, m, st, gs_st, dt, iter)
       call write_iter_nl(out_gsp)
 
       ! second line -> units
-      call write_iter_string(out_gsp, '##########')
+      call write_iter_string(out_gsp, '#[Iter n.]')
       call write_iter_header(out_gsp, '[' // trim(units_out%time%abbrev) // ']')
       call write_iter_nl(out_gsp)
+
+      call td_write_print_header_end(out_gsp)
     end if
 
     ! can not call write_iter_start, for the step is not 1
@@ -697,8 +725,7 @@ subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
   if(mpiv%node.ne.0) return ! only first node outputs
 
   if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out_acc)
+    call td_write_print_header_init(out_acc)
 
     ! first line -> column names
     call write_iter_header_start(out_acc)
@@ -709,12 +736,13 @@ subroutine td_write_acc(out_acc, gr, st, h, dt, iter)
     call write_iter_nl(out_acc)
 
     ! second line: units
-    call write_iter_string(out_acc, '##########')
+    call write_iter_string(out_acc, '#[Iter n.]')
     call write_iter_header(out_acc, '[' // trim(units_out%time%abbrev) // ']')
     do i = 1, NDIM
       call write_iter_header(out_acc, '[' // trim(units_out%acceleration%abbrev) // ']')
     end do
     call write_iter_nl(out_acc)
+    call td_write_print_header_end(out_acc)
   endif
 
   call td_calc_tacc(gr, st, h, acc, dt*i, reduce = .true.)
@@ -741,8 +769,7 @@ subroutine td_write_laser(out_laser, gr, h, dt, iter)
 
   ! TODO -> confirm these stupid units, especially for the vector field
   if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out_laser)
+    call td_write_print_header_init(out_laser)
 
     ! first line
     write(aux, '(a7,e20.12,3a)') '# dt = ', dt/units_out%time%factor, &
@@ -763,7 +790,7 @@ subroutine td_write_laser(out_laser, gr, h, dt, iter)
     call write_iter_nl(out_laser)
 
     ! third line -> units
-    call write_iter_string(out_laser, '##########')
+    call write_iter_string(out_laser, '#[Iter n.]')
     call write_iter_header(out_laser, '[' // trim(units_out%time%abbrev) // ']')
 
     aux = '[' // trim(units_out%energy%abbrev) // ' / ' // trim(units_inp%length%abbrev) // ']'
@@ -776,6 +803,7 @@ subroutine td_write_laser(out_laser, gr, h, dt, iter)
       call write_iter_header(out_laser, aux)
     end do
     call write_iter_nl(out_laser)
+    call td_write_print_header_end(out_laser)
   end if
 
   call write_iter_start(out_laser)
@@ -805,8 +833,7 @@ subroutine td_write_el_energy(out_energy, h, iter)
   if(mpiv%node.ne.0) return ! only first node outputs
 
   if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out_energy)
+    call td_write_print_header_init(out_energy)
 
     ! first line -> column names
     call write_iter_header_start(out_energy)
@@ -818,12 +845,13 @@ subroutine td_write_el_energy(out_energy, h, iter)
     call write_iter_nl(out_energy)
 
     ! second line: units
-    call write_iter_string(out_energy, '##########')
+    call write_iter_string(out_energy, '#[Iter n.]')
     call write_iter_header(out_energy, '[' // trim(units_out%time%abbrev) // ']')
     do i = 1, 5
       call write_iter_header(out_energy, '[' // trim(units_out%energy%abbrev) // ']')
     end do
     call write_iter_nl(out_energy)
+    call td_write_print_header_end(out_energy)
   endif
 
   call write_iter_start(out_energy)
@@ -852,8 +880,7 @@ subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
 
   if(mpiv%node == 0) then
   if(iter == 0) then
-    ! empty file
-    call write_iter_clear(out_proj)
+    call td_write_print_header_init(out_proj)
 
     ! first line -> column names
     call write_iter_header_start(out_proj)
@@ -867,6 +894,8 @@ subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
       end do
     end do
     call write_iter_nl(out_proj)
+
+    call td_write_print_header_end(out_proj)
   endif
   endif
 
@@ -903,6 +932,27 @@ subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
   deallocate(projections)
   call pop_sub()
 end subroutine td_write_proj
+
+subroutine td_write_print_header_init(out)
+  integer(POINTER_SIZE), intent(in) :: out
+
+  call write_iter_clear(out)
+  call write_iter_string(out,'################################################################################')
+  call write_iter_nl(out)
+  call write_iter_string(out,'# HEADER')
+  call write_iter_nl(out)
+
+end subroutine td_write_print_header_init
+
+subroutine td_write_print_header_end(out)
+  integer(POINTER_SIZE), intent(in) :: out
+
+  call write_iter_string(out,'################################################################################')
+  call write_iter_nl(out)
+
+end subroutine td_write_print_header_end
+
+
 
 #include "td_calc.F90"
 

@@ -598,29 +598,29 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   call pop_sub()
 end subroutine spectrum_cross_section
 
-subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
-  character(len=*), intent(in) :: out_file
+subroutine spectrum_rotatory_strength(in_file, out_file, s, rsf, print_info)
+  integer, intent(in) :: in_file
+  integer, intent(in) :: out_file
   type(spec_type), intent(inout) :: s
   type(spec_rsf), intent(inout) :: rsf
   logical, intent(in) :: print_info
 
-  integer :: iunit, i, is, ie, &
-      ntiter, j, jj, k, time_steps
+  integer :: i, is, ie, ntiter, j, jj, k, time_steps
   FLOAT :: dump, dt
   CMPLX :: z
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: angular(:, :)
 
-  call spectrum_file_info("td.general/angular", iunit, time_steps, dt, i)
+  call spectrum_file_info(in_file, time_steps, dt, i)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
   allocate(angular(0:time_steps, 3))
+  call spectrum_skip_header(in_file)
   do i = 0, time_steps
-    read(iunit, *) j, dump, angular(i, 1:3)
+    read(in_file, *) j, dump, angular(i, 1:3)
     !dipole(i,:) = dipole(i,:) * units_out%length%factor
   end do
-  call io_close(iunit)
 
   ! subtract static dipole
   do i = 1, 3
@@ -663,17 +663,11 @@ subroutine spectrum_rotatory_strength(out_file, s, rsf, print_info)
 
   deallocate(angular, dumpa)
 
-  ! output
-  if(trim(out_file) .ne. '-') then
-    iunit = io_open(out_file, action='write')
-
-    ! should output units, etc...
-    do i = 0, rsf%no_e
-      write(iunit,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
+  ! should output units, etc...
+  do i = 0, rsf%no_e
+      write(out_file,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
            rsf%sp(i) * (units_out%length%factor)**3
-    end do
-    call io_close(iunit)
-  end if
+  end do
 
   ! print some info
   if(print_info) then
@@ -792,6 +786,7 @@ subroutine spectrum_hs_from_acc(out_file, s, sh)
   ! load dipole from file
   allocate(acc(0:time_steps))
   acc = M_ZERO
+  call spectrum_skip_header(iunit)
   do i = 1, time_steps
     read(iunit, *) j, dummy, a
     select case(sh%pol)
@@ -837,16 +832,9 @@ subroutine spectrum_hs_from_acc(out_file, s, sh)
 
 end subroutine spectrum_hs_from_acc
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Finds out some information about file "file", supposed to contain time
-! dependent output information (e.g., multipoles, angular, coordinates, acc,...
-! It opens the file for reading, assigning it unit "iunit".
-! In principle, it should substitute both spectrum_mult_info and
-! spectrum_acc_info.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
-  character(len=*), intent(in) :: file
-  integer, intent(out) :: iunit, n, time_steps
+subroutine spectrum_file_info(in_file, time_steps, dt, n)
+  integer, intent(in) :: in_file
+  integer, intent(out) :: n, time_steps
   FLOAT, intent(out) :: dt
 
   integer :: i, j
@@ -854,19 +842,18 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
 
   call push_sub('spectrum.spectrum_file_info')
 
-  iunit = io_open(file, action='read', status='old')
+  rewind(in_file)
 
   ! First line may contain some informative integer n (or not...)
-  read(iunit,'(10x,i2)', iostat = i) n
+  read(in_file,'(10x,i2)', iostat = i) n
   if(i.ne.0) n = 0
 
-  ! Skip header.
-  read(iunit,*); read(iunit,*)
+  call spectrum_skip_header(in_file)
 
   ! count number of time_steps
   time_steps = 0
   do
-    read(iunit, *, end=100) j, dummy
+    read(in_file, *, end=100) j, dummy
     time_steps = time_steps + 1
     if(time_steps == 1) t1 = dummy
     if(time_steps == 2) t2 = dummy
@@ -876,12 +863,10 @@ subroutine spectrum_file_info(file, iunit, time_steps, dt, n)
   time_steps = time_steps - 1
 
   if(time_steps < 3) then
-    write(message(1),'(a,a,a)') "Empty ", trim(adjustl(file)),"?"
+    write(message(1),'(a)') "Empty file?"
     call write_fatal(1)
   end if
 
-  rewind(iunit)
-  read(iunit, *); read(iunit, *); read(iunit, *) ! skip header
   call pop_sub()
 end subroutine spectrum_file_info
 
@@ -898,7 +883,7 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
 
   call push_sub('spectrum.spectrum_mult_info')
 
-  rewind(iunit)
+  rewind(iunit); read(iunit,*); read(iunit,*)
   ! read in number of spin components
   read(iunit, '(15x,i2)')      nspin
   read(iunit, '(15x,i2)')      lmax
@@ -990,7 +975,7 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   endif
 
   ! read in dipole
-  read(iunit, *); read(iunit, *) ! skip header
+  call spectrum_skip_header(iunit)
 
   ! count number of time_steps
   time_steps = 0
@@ -1010,8 +995,6 @@ subroutine spectrum_acc_info(iunit, time_steps, dt)
   end if
 
   rewind(iunit)
-  read(iunit, *); read(iunit, *) ! skip header
-
 end subroutine spectrum_acc_info
 
 subroutine spectrum_fix_time_limits(time_steps, dt, start_time, end_time, is, ie, ntiter)

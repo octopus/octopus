@@ -33,8 +33,7 @@ program rotational_strength
   character(len=100) :: txt
   type(spec_type) :: s
   type(spec_rsf) :: rsf
-
-  integer :: i
+  integer :: i, in_file, out_file
   integer(POINTER_SIZE) :: blk
 
   ! Initialize stuff
@@ -48,6 +47,15 @@ program rotational_strength
   call units_init()
 
   call spectrum_init(s)
+
+  in_file = io_open('angular', action='read', status='old', die=.false.)
+  if(in_file < 0) in_file = io_open('td.general/angular', action='read', status='old', die=.false.)
+  if(in_file < 0) then
+     write(message(1),'(a)') 'No "angular" or "td.general/angular" file found. At least one of those'
+     write(message(2),'(a)') 'should be visible.'
+     call write_fatal(2)
+  endif
+  out_file = io_open('rotatory_strength', action='write')
 
   call loct_parse_float(check_inp('TDDeltaStrength'), CNST(0.05), rsf%delta_strength)
   rsf%delta_strength = rsf%delta_strength / units_inp%length%factor
@@ -63,12 +71,11 @@ program rotational_strength
     rsf%pol(1) = M_ONE
   endif
 
-  call spectrum_rotatory_strength('rotatory_strength', s, rsf, .true.)
+  call spectrum_rotatory_strength(in_file, out_file, s, rsf, .true.)
+  call io_close(in_file); call io_close(out_file)
 
   call syslabels_end()
   call io_end()
   call parser_end()
   call global_end()
-
-  stop
 end program rotational_strength
