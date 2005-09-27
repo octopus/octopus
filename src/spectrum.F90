@@ -33,7 +33,6 @@ implicit none
 private
 public :: spec_type,                     &
           kick_type,                     &
-          spec_rsf,                      &
           spec_sh,                       &
           spectrum_init,                 &
           spectrum_cross_section,        &
@@ -70,19 +69,6 @@ type kick_type
   integer           :: pol_equiv_axis
   FLOAT             :: wprime(3)
 end type kick_type
-
-! For the rotational strength function
-type spec_rsf
-  ! input
-  integer  :: damp             ! Damp type (none, exp or pol)
-  FLOAT :: damp_factor      ! factor used in damping
-  FLOAT :: delta_strength   ! strength of the delta perturbation
-  FLOAT :: pol(3)           ! Direction of the perturbation
-
-  ! output
-  integer :: no_e
-  CMPLX, pointer :: sp(:) ! do not forget to deallocate this
-end type spec_rsf
 
 type spec_sh
   ! input
@@ -598,20 +584,22 @@ subroutine spectrum_cross_section(in_file, out_file, s)
   call pop_sub()
 end subroutine spectrum_cross_section
 
-subroutine spectrum_rotatory_strength(in_file, out_file, s, rsf, print_info)
+subroutine spectrum_rotatory_strength(in_file, out_file, s)
   integer, intent(in) :: in_file
   integer, intent(in) :: out_file
   type(spec_type), intent(inout) :: s
-  type(spec_rsf), intent(inout) :: rsf
-  logical, intent(in) :: print_info
 
-  integer :: i, is, ie, ntiter, j, jj, k, time_steps
+  integer :: i, is, ie, ntiter, j, jj, k, time_steps, no_e, nspin
   FLOAT :: dump, dt
+  type(kick_type) :: kick
   CMPLX :: z
+  CMPLX, pointer :: sp(:)
   FLOAT, allocatable :: dumpa(:)
   FLOAT, allocatable :: angular(:, :)
 
-  call spectrum_file_info(in_file, time_steps, dt, i)
+  call push_sub('spectrum_rotatory_strength')
+
+  call spectrum_angular_info(in_file, nspin, kick, time_steps, dt)
   call spectrum_fix_time_limits(time_steps, dt, s%start_time, s%end_time, is, ie, ntiter)
 
   ! load dipole from file
@@ -627,9 +615,9 @@ subroutine spectrum_rotatory_strength(in_file, out_file, s, rsf, print_info)
      angular(:, i) = angular(:, i) - angular(0, i)
   end do
 
-  rsf%no_e = s%max_energy / s%energy_step
-  allocate(rsf%sp(0:rsf%no_e))
-  rsf%sp = M_z0
+  no_e = s%max_energy / s%energy_step
+  allocate(sp(0:no_e))
+  sp = M_z0
 
   ! Gets the damping function (here because otherwise it is awfully slow in "pol" mode...)
   allocate(dumpa(is:ie))
@@ -648,40 +636,38 @@ subroutine spectrum_rotatory_strength(in_file, out_file, s, rsf, print_info)
       end select
   enddo
 
-  do k = 0, rsf%no_e
+  do k = 0, no_e
     do j = is, ie
 
       jj = j - is
 
       z = exp(M_zI * k * s%energy_step * jj *dt)
-      rsf%sp(k) = rsf%sp(k) + z*dumpa(j)*sum(angular(j, :)*rsf%pol(:))
+      sp(k) = sp(k) + z*dumpa(j)*sum(angular(j, :)*kick%pol(1:3, kick%pol_dir))
 
     end do
-    rsf%sp(k) = rsf%sp(k)*dt
+    sp(k) = sp(k)*dt
 
   end do
 
   deallocate(angular, dumpa)
 
   ! should output units, etc...
-  do i = 0, rsf%no_e
+  do i = 0, no_e
       write(out_file,'(5e15.6)') i*s%energy_step / units_out%energy%factor, &
-           rsf%sp(i) * (units_out%length%factor)**3
+           sp(i) * (units_out%length%factor)**3
   end do
 
   ! print some info
-  if(print_info) then
-    write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
-    write(message(2), '(a,i4)')    'SpecDampMode         = ', s%damp
-    write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
-    write(message(4), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
-    write(message(5), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
-    write(message(6), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
-    write(message(7),'(a,f10.4)')  'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
-    call write_info(7)
-  end if
+  write(message(1), '(a,i8)')    'Number of time steps = ', ntiter
+  write(message(2), '(a,i4)')    'SpecDampMode         = ', s%damp
+  write(message(3), '(a,f10.4)') 'SpecDampFactor       = ', s%damp_factor * units_out%time%factor
+  write(message(4), '(a,f10.4)') 'SpecStartTime        = ', s%start_time   / units_out%time%factor
+  write(message(5), '(a,f10.4)') 'SpecEndTime          = ', s%end_time     / units_out%time%factor
+  write(message(6), '(a,f10.4)') 'SpecMaxEnergy        = ', s%max_energy   / units_inp%energy%factor
+  write(message(7),'(a,f10.4)')  'SpecEnergyStep       = ', s%energy_step  / units_inp%energy%factor
+  call write_info(7)
 
-  return
+  call pop_sub()
 end subroutine spectrum_rotatory_strength
 
 subroutine spectrum_hs_from_mult(out_file, s, sh)
@@ -832,28 +818,33 @@ subroutine spectrum_hs_from_acc(out_file, s, sh)
 
 end subroutine spectrum_hs_from_acc
 
-subroutine spectrum_file_info(in_file, time_steps, dt, n)
-  integer, intent(in) :: in_file
-  integer, intent(out) :: n, time_steps
-  FLOAT, intent(out) :: dt
+subroutine spectrum_angular_info(iunit, nspin, kick, time_steps, dt)
+  integer, intent(in)          :: iunit
+  integer, intent(out)         :: nspin, time_steps
+  type(kick_type), intent(out) :: kick
+  FLOAT, intent(out)           :: dt
 
   integer :: i, j
   FLOAT :: t1, t2, dummy
 
-  call push_sub('spectrum.spectrum_file_info')
+  call push_sub('spectrum.spectrum_angular_info')
 
-  rewind(in_file)
-
-  ! First line may contain some informative integer n (or not...)
-  read(in_file,'(10x,i2)', iostat = i) n
-  if(i.ne.0) n = 0
-
-  call spectrum_skip_header(in_file)
+  rewind(iunit); read(iunit,*); read(iunit,*)
+  read(iunit, '(15x,i2)')      nspin
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 2)
+  read(iunit, '(15x,3f18.12)') kick%pol(1:3, 3)
+  read(iunit, '(15x,i2)')      kick%pol_dir
+  read(iunit, '(15x,i2)')      kick%delta_strength_mode
+  read(iunit, '(15x,f18.12)')  kick%delta_strength
+  read(iunit, '(15x,i2)')      kick%pol_equiv_axis
+  read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
+  call spectrum_skip_header(iunit)
 
   ! count number of time_steps
   time_steps = 0
   do
-    read(in_file, *, end=100) j, dummy
+    read(iunit, *, end=100) j, dummy
     time_steps = time_steps + 1
     if(time_steps == 1) t1 = dummy
     if(time_steps == 2) t2 = dummy
@@ -868,7 +859,7 @@ subroutine spectrum_file_info(in_file, time_steps, dt, n)
   end if
 
   call pop_sub()
-end subroutine spectrum_file_info
+end subroutine spectrum_angular_info
 
 subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
   integer, intent(in)  :: iunit
@@ -884,7 +875,6 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
   call push_sub('spectrum.spectrum_mult_info')
 
   rewind(iunit); read(iunit,*); read(iunit,*)
-  ! read in number of spin components
   read(iunit, '(15x,i2)')      nspin
   read(iunit, '(15x,i2)')      lmax
   read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
@@ -895,7 +885,7 @@ subroutine spectrum_mult_info(iunit, nspin, lmax, kick, time_steps, dt)
   read(iunit, '(15x,f18.12)')  kick%delta_strength
   read(iunit, '(15x,i2)')      kick%pol_equiv_axis
   read(iunit, '(15x,3f18.12)') kick%wprime(1:3)
-  read(iunit, *); read(iunit, *) ! skip header
+  call spectrum_skip_header(iunit)
 
   ! count number of time_steps
   time_steps = 0

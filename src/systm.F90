@@ -146,7 +146,7 @@ contains
     FLOAT,                intent(inout) :: rho(:, :) ! (m%np, spin_channels)
 
     integer :: i, in_points, k, n
-    FLOAT :: r
+    FLOAT :: r, x
     R_TYPE :: psi1, psi2
     type(specie_type), pointer :: s
 
@@ -159,8 +159,9 @@ contains
     select case (s%type)
     case (SPEC_USDEF) ! ... from userdef
        do i = 1, spin_channels
-          rho(1:m%np, i) = real(s%Z_val, PRECISION) /  &
-               (m%np_global*m%vol_pp(1:m%np)*real(spin_channels, PRECISION))
+          rho(1:m%np, i) = M_ONE
+          x = (real(s%z_val, PRECISION)/real(spin_channels, PRECISION)) / dmf_integrate(m, rho(:, i))
+          rho(1:m%np, i) = x * rho(1:m%np, i) 
        end do
 
     case (SPEC_POINT, SPEC_JELLI) ! ... from jellium

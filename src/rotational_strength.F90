@@ -32,7 +32,6 @@ program rotational_strength
 
   character(len=100) :: txt
   type(spec_type) :: s
-  type(spec_rsf) :: rsf
   integer :: i, in_file, out_file
   integer(POINTER_SIZE) :: blk
 
@@ -57,21 +56,7 @@ program rotational_strength
   endif
   out_file = io_open('rotatory_strength', action='write')
 
-  call loct_parse_float(check_inp('TDDeltaStrength'), CNST(0.05), rsf%delta_strength)
-  rsf%delta_strength = rsf%delta_strength / units_inp%length%factor
-
-  !!! read in the default direction for the polarization
-  rsf%pol(:) = M_ZERO
-  if(loct_parse_block(check_inp('TDPolarization'), blk)==0) then
-    do i = 1, 3
-      call loct_parse_block_float(blk, 0, i-1, rsf%pol(i))
-    end do
-    call loct_parse_block_end(blk)
-  else  !default along the x-direction
-    rsf%pol(1) = M_ONE
-  endif
-
-  call spectrum_rotatory_strength(in_file, out_file, s, rsf, .true.)
+  call spectrum_rotatory_strength(in_file, out_file, s)
   call io_close(in_file); call io_close(out_file)
 
   call syslabels_end()

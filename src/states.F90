@@ -831,10 +831,9 @@ contains
 
     allocate(md(m%np, 3))
     call states_magnetization_dens(st, m%np, rho, md)
-    mm = M_ZERO
-    do i = 1, m%np
-       mm = mm + md(i, :)*m%vol_pp(i)
-    end do
+    mm(1) = dmf_integrate(m, md(:, 1))
+    mm(2) = dmf_integrate(m, md(:, 2))
+    mm(3) = dmf_integrate(m, md(:, 3))
     deallocate(md)
 
     call pop_sub()

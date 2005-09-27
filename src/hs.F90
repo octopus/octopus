@@ -28,6 +28,8 @@ program harmonic_spectrum
   use lib_oct_parser
   use spectrum
 
+  implicit none
+
   character(len=100) :: txt
   integer :: mode
   type(spec_type) :: s
