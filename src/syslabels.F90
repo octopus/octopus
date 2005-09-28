@@ -31,7 +31,6 @@ module syslabels
   character(len=32), allocatable :: subsys_label(:)
   integer,           allocatable :: subsys_runmode(:), subsys_run_order(:)
   integer,           allocatable :: no_of_states(:)
-  integer, parameter             :: multi_subsys_mode = 1000
   integer                        :: current_subsystem = 1
   integer                        :: no_subsystems
   integer                        :: no_syslabels, no_subsys_runmodes
@@ -89,84 +88,42 @@ contains
 
   end function check_inp
 
-
   ! ---------------------------------------------------------
-  subroutine read_system_labels()
-    integer               :: i, mpierr
-    integer(POINTER_SIZE) :: blk
+  ! first we read the required information from the input file
+  ! and prompt the user for possible errors in the input
+  subroutine read_system_labels(blk)
+    integer(POINTER_SIZE), intent(in) :: blk
+    integer :: i, mpierr
 
-    ! first we read the required information from the input file
-    ! and prompt the user for possible errors in the input
-
-    ! find out how many subsystem we want to treat ...
-    if(loct_parse_block('SystemLabels', blk) == 0) then
-       no_syslabels = loct_parse_block_cols(blk,0)
-    else
-       write(6,'(a)') '*** Fatal Error (description follows)'
-       write(6,'(a)') 'Could not find block SystemLabels in the input file.'
-       write(6,'(a)') 'This block is mandatory for run mode MultiSubsystem.'
-#ifdef HAVE_MPI
-       call MPI_FINALIZE(mpierr)
-#endif
-       stop
-    endif
-
+    no_syslabels = loct_parse_block_cols(blk, 0)
     allocate(subsys_label(no_syslabels))
-
-    ! ... and how the user would like to call them.
     do i = 1, no_syslabels
        call loct_parse_block_string(blk, 0, i-1, subsys_label(i))
     enddo
-    call loct_parse_block_end(blk)
-
-    ! now we check what we have to run in the respective subsystem
-    if(loct_parse_block('SystemRunModes', blk) == 0) then
-       no_subsys_runmodes = loct_parse_block_cols(blk,0)
-    else
-       write(6,'(a)') '*** Fatal Error (description follows)'
-       write(6,'(a)') 'Could not find block SystemRunModes in the input file.'
-       write(6,'(a)') 'This block is mandatory for run mode MultiSubsystem.'
-#ifdef HAVE_MPI
-       call MPI_FINALIZE(mpierr)
-#endif
-       stop
-    endif
-
+    no_subsys_runmodes = loct_parse_block_cols(blk,1)
     if(no_subsys_runmodes/=no_syslabels) then
        write(6,'(a)') '*** Fatal Error (description follows)'
-       write(6,'(a)') 'The blocks SystemLabels and SystemRunModes do not have'
-       write(6,'(a)') 'the same size. Please correct your input file.'
+       write(6,'(a)') 'The number of system labels (columns in first line of CalculationMode block)'
+       write(6,'(a)') 'does not coincide with the number of run modes (columns of the second line).'
+       write(6,'(a)') 'Please correct your input file.'
 #ifdef HAVE_MPI
        call MPI_FINALIZE(mpierr)
 #endif
        stop
     endif
-
     allocate(subsys_runmode(no_subsys_runmodes))
-
     do i = 1, no_subsys_runmodes
-       call loct_parse_block_int(blk, 0, i-1, subsys_runmode(i))
+       call loct_parse_block_int(blk, 1, i-1, subsys_runmode(i))
     enddo
-    call loct_parse_block_end(blk)
 
     ! ... and in which order
-    if(loct_parse_block('SystemRunOrder', blk) == 0) then
-       no_subsystems = loct_parse_block_cols(blk,0)
-    else
-       write(6,'(a)') '*** Fatal Error (description follows)'
-       write(6,'(a)') 'Could not find block SystemRunOrder in the input file.'
-       write(6,'(a)') 'This block is mandatory for run mode MultiSubsystem.'
-#ifdef HAVE_MPI
-       call MPI_FINALIZE(mpierr)
-#endif
-       stop
-    endif
+    no_subsystems = loct_parse_block_cols(blk, 2)
 
     allocate(subsys_run_order(no_subsystems))
     allocate(no_of_states(no_subsystems))
 
     do i = 1, no_subsystems
-       call loct_parse_block_int(blk, 0, i-1, subsys_run_order(i))
+       call loct_parse_block_int(blk, 2, i-1, subsys_run_order(i))
        if (subsys_run_order(i).gt.no_subsys_runmodes) then
           write(6,'(a)') '*** Fatal Error (description follows)'
           write(6,'(a)') 'Subsystem number too large. Please correct the block'

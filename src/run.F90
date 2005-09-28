@@ -58,7 +58,7 @@ module run_prog
 
   ! run stack
   integer, private :: i_stack(100), instr
-  integer, private, parameter ::  &
+  integer, public, parameter ::  &
        M_GS                 =  1, &
        M_UNOCC              =  2, &
        M_TD                 =  3, &
@@ -70,8 +70,7 @@ module run_prog
        M_CASIDA             =  9, &
        M_WAVE_MATCHING      = 10, &
        M_BO_MD              = 98, &
-       M_PULPO_A_FEIRA      = 99, &
-       M_MULTI_SUBSYSTEM    = multi_subsys_mode
+       M_PULPO_A_FEIRA      = 99
 
   integer, private, parameter ::   &
        I_GS_INIT            = 100, &

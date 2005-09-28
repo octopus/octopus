@@ -33,6 +33,7 @@ program octopus
   implicit none
 
   integer :: ns
+  integer(POINTER_SIZE) :: blk
   character(len=256) :: sys_name
 #if defined(HAVE_MPI)
   integer :: ierr
@@ -75,12 +76,13 @@ program octopus
   !%Option multi_subsystem 1000
   !% Multi subsystem mode
   !%End
-  call loct_parse_int('CalculationMode', 1, calc_mode)
-  if(calc_mode == multi_subsys_mode) then
-     call read_system_labels()
+  if(loct_parse_block('CalculationMode', blk) == 0) then
+     call read_system_labels(blk)
   else
+     call loct_parse_int('CalculationMode', M_GS, calc_mode)
      call syslabels_init(calc_mode)
   endif
+
   ! syslabels have to be available before calling the _init() functions below
   call io_init()
   call profiling_init()
@@ -91,11 +93,10 @@ program octopus
   subsystems: do ns = 1, no_subsystems
 
 
-
      ! set system label
-     current_label = trim(subsys_label(subsys_run_order(ns)))
      current_subsystem = subsys_run_order(ns)
-     calc_mode = subsys_runmode(subsys_run_order(ns))
+     current_label = trim(subsys_label(current_subsystem))
+     calc_mode = subsys_runmode(current_subsystem)
 
      ! Let us print our logo
      if(mpiv%node == 0) then
