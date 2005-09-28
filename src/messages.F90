@@ -362,11 +362,7 @@ contains
   subroutine epoch_time_diff(sec, usec)
     integer, intent(inout) :: sec, usec
 
-    call push_sub('messages.epoch_time_diff')
-
     call time_diff(s_epoch_sec, s_epoch_usec, sec, usec)
-
-    call pop_sub()
 
   end subroutine epoch_time_diff
 
@@ -377,8 +373,6 @@ contains
   subroutine time_diff(sec1, usec1, sec2, usec2)
     integer, intent(in)    :: sec1, usec1
     integer, intent(inout) :: sec2, usec2
-
-    call push_sub('messages.time_diff')
 
     ! Correct overflow.
     if(usec2-usec1.lt.0) then
@@ -394,8 +388,6 @@ contains
     end if
     usec2 = usec2-usec1
 
-    call pop_sub()
-
   end subroutine time_diff
 
 
@@ -406,8 +398,6 @@ contains
     integer, intent(in)    :: sec1, usec1
     integer, intent(inout) :: sec2, usec2
 
-    call push_sub('messages.time_sum')
-
     sec2  = sec1+sec2
     usec2 = usec1+usec2
 
@@ -417,8 +407,6 @@ contains
       usec2 = usec2-1000000
     end if
       
-    call pop_sub()
-
   end subroutine time_sum
 
 
