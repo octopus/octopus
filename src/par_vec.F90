@@ -323,7 +323,7 @@ contains
           ! mesh_index takes care of periodic dimensions and
           ! out points that would be out of the box etc.
           k = mesh_index(dim, periodic_dim, nr, &
-                         Lxyz_inv, p1(:) + stencil(:, j), 1)
+                         Lxyz_inv, p1(:) + stencil(:, j))
           ! If this index k does not belong to partition of node r,
           ! then k is a ghost point for r with part(k) now being
           ! a neighbour of r.

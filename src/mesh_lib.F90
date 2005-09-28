@@ -31,8 +31,7 @@ module mesh_lib
 contains
   ! this function takes care of the boundary conditions
   ! for a given x,y,z it returns the true index of the point
-  ! WARNING: have to get rid of dir, otherwise will not work
-  integer function mesh_index(dim, periodic_dim, nr, Lxyz_inv, ix_, dir) &
+  integer function mesh_index(dim, periodic_dim, nr, Lxyz_inv, ix_) &
     result(index)
     integer, intent(in) :: dim               ! Number of dimensions.
     integer, intent(in) :: periodic_dim      ! Number of periodic dimensions.
@@ -42,7 +41,6 @@ contains
                                     nr(1,2):nr(2,2), &
                                     nr(1,3):nr(2,3))
     integer, intent(in) :: ix_(:)            ! Coodinates of requested point.
-    integer, intent(in) :: dir               ! Must be 1.
 
     integer :: i, ix(3)  ! ix has to go until 3, not sb%dim
 
