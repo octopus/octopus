@@ -164,6 +164,15 @@ contains
        endif
     endif
 
+    ! create temporary dir (we will need it)
+    tmpdir = 'tmp/'
+    call io_mkdir(tmpdir)
+
+    ! create debug directory if in debugging mode
+    if(in_debug_mode) then
+       call io_mkdir('debug')
+    endif
+
     !%Variable ProfilingMode
     !%Type logical
     !%Section 1 Generalities

@@ -40,8 +40,6 @@ program octopus
 
   call global_init()
   call parser_init()
-  call io_init()
-  call profiling_init()
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
@@ -83,7 +81,9 @@ program octopus
   else
      call syslabels_init(calc_mode)
   endif
-
+  ! syslabels have to be available before calling the _init() functions below
+  call io_init()
+  call profiling_init()
 
   call profiling_in(C_PROFILING_COMPLETE)
 
@@ -130,16 +130,6 @@ program octopus
         message(1) = 'Info: Multi-Subsystem Mode'
         message(2) = 'Info: Running '//current_label
         call write_info(2, stress = .true.)
-     endif
-
-     ! create temporary dir (we will need it)
-     tmpdir = 'tmp/'
-     call io_mkdir(tmpdir)
-
-
-     ! create debug directory if in debugging mode
-     if(in_debug_mode) then
-        call io_mkdir('debug')
      endif
 
      ! now we really start

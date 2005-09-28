@@ -93,19 +93,16 @@ contains
     character(len=3) :: dirnum
 
     if(.not.in_profiling_mode) return
-    
+
     call push_sub('profiling.profiling_init')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
     if(mpiv%node.eq.0) then
       write(dirnum, '(i3.3)') mpiv%numprocs
-      call system('mkdir profiling.'//dirnum)
-      ! FIXME: Why does the following not work?
-      ! call io_mkdir('profiling.'//mpiv%numprocs)
+      call io_mkdir(trim('profiling.'//dirnum))
     end if
 #else
-    call system('mkdir profiling.001')
-    ! call io_mkdir('profiling.1')
+    call io_mkdir('profiling.001')
 #endif
 
     call pop_sub()
@@ -179,8 +176,8 @@ contains
       return
     end if
     do i = 1, C_NUM_TAGS
-      write(iunit, '(a,4i20)') tag_label(i), pass_in(i), pass_out(i), &
-        time_sec(i), time_usec(i)
+      write(iunit, '(a,2i20,i20,a,i6.6)') tag_label(i), pass_in(i), pass_out(i), &
+        time_sec(i), '.', time_usec(i)
     end do
 
     call io_close(iunit)
