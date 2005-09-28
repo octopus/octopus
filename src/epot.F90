@@ -137,7 +137,7 @@ contains
     end if
 
     ! lasers
-    call laser_init(ep%no_lasers, ep%lasers)
+    call laser_init(ep%no_lasers, ep%lasers, gr%m)
     if(ep%no_lasers>0 ) then
       message(1) = 'Info: Lasers'
       call write_info(1)
@@ -843,16 +843,7 @@ contains
     FLOAT, intent(in)  :: t
     FLOAT :: v(np)
 
-
-    integer :: i
-    FLOAT, allocatable :: e(:)
-
-    allocate(e(gr%sb%dim))
-    call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, e)
-    do i = 1, np
-       v(i) = sum(e*gr%m%x(i,:))
-    enddo
-    deallocate(e)
+    call laser_potential(gr%sb, ep%no_lasers, ep%lasers, t, gr%m, v)
 
   end function epot_laser_scalar_pot
 
