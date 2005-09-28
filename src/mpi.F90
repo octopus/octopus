@@ -20,6 +20,97 @@
 
 #include "global.h"
 
+! Notes ragarding the multi communicator part.
+!
+! This part is for combined parallelization in indices and
+! domains.
+! Given a number n_index of indices and their ranges
+! index_range(1:n_index) communicators for domains and
+! indices are created.
+!
+! Example
+! Given to indices j, k with ranges
+! index_range(j) = 3, index_range(k) = 4
+! and n_node = 48 nodes, we would put
+! n_node_domain = n_node/n_domain with
+! n_domain = prod(a=j, k)[index_range(a)] = 4
+! nodes into each domain parallelization.
+! To do collective operations (like sums) over j, k respectively
+! n_index_comm = N(n_index) = 7 communicators are introduced
+! (for the definition of N see below).
+! Each of these communicators contains only the root nodes of
+! all domain parallelizations participating in this particular
+! index. The reason for this is that only root nodes know
+! the complete functions (after vec_gather).
+! 
+! The example above can visualized as follows:
+! 
+!   j
+!  --->
+!  |   (1)  (2)  (3)
+! k|   (4)  (5)  (6)
+!  |   (7)  (8)  (9)
+!  V  (10) (11) (12)
+!
+! (n) are domain parallelizations of four nodes.
+! The communicators for j are as follows:
+! index_comm(k=1, j) = {1, 2, 3}
+! index_comm(k=2, j) = {4, 5, 6}
+! index_comm(k=3, j) = {7, 8, 9}
+! index_comm(k=4, j) = {10, 11, 12}
+! 
+! For k they look like this:
+! index_comm(j=1, k) = {1, 4, 7, 10}
+! index_comm(j=2, k) = {2, 5, 8, 11}
+! index_comm(j=3, k) = {3, 6, 9, 12}
+!
+! {p} means that the root node of domain parallelization
+! p is member of the denoted communicator.
+!
+! In general the communicators for index a(i) out of
+! a(1), ..., a(n_index) is addressed by specifying all
+! other indices x, y, ... except i:
+! index_comm(a=(x, y, ...), i)
+!
+! For generality, all index communicators are stored in a
+! vector and the adressing is done by a function get_comm(a, i).
+! a(1:n_index) specifies the values for all indices except i
+! (the value of a(i) is irrelevant) and i is the number of
+! the requested index:
+! get_comm(a, i) == offset + position
+! WHERE
+! offset   == sum(x=1, ..., i-1)[prod(y=1, ..., n_index, y|=x)[index_range(y)]]
+! position == sum(x=1, ..., n_index, x!=i)[(a(x)-1)*
+!             prod(y=x+1, ..., n_index, y|=i)[index_range(y)]] + 1
+!
+! For each index i the rest if the indices form a
+! n_index-1 dimensional array. The offset of this array in
+! index_comm is offset in the above function. It is the number of
+! communicators all indices 1, ..., i-1 have.
+! The position in the array is computed as for any other
+! n-dimensional array (for generalities sake it has to be done by hand
+! and not by the Fortran compiler).
+! With this function, the j communicator for k=2 can be accessed with
+! index_comm(get_comm((/0, 2/), 1))
+! (with j being the first and k the second index).
+!
+! Some more stripped down cases:
+! (*) Only index parallelization (e. g. k-points and states j):
+!     There are no domain communicators. In the sketch above
+!     (1), ..., (12) would directly denote nodes and not domain
+!     parallelizations
+! (*) Only domain parallelization: There would not be any index
+!     communicators and just one domain parallelization:
+!     n_domain = 1, domain_comm(1) = MPI_COMM_WORLD.
+!
+!
+! ---------- 
+! (*) N(1)   = 1
+!     N(i+1) = N(i)*index_range(i+1) + prod(a=1, ..., i)[index_range(a)]
+!
+! (*) prod(x=1, ..., n)[f(x)] = f(1)* ... *f(x)
+!
+
 module mpi_mod
 #if defined(HAVE_MPI)
   use varinfo
@@ -68,6 +159,22 @@ module mpi_mod
   integer, public :: usec_accum(C_MPI_BARRIER:C_MPI_ALLREDUCE)   = 0
 
   integer, private :: sec_in, usec_in
+
+  ! Stores all communicators.
+  type multicomm_type
+    integer          :: n_node          ! Total number of nodes.
+    integer          :: n_index         ! Number of parallel indices.
+    integer          :: n_domain_comm   ! Number of domain communicators.
+    integer          :: n_index_comm    ! Number of index communicators.
+
+    integer, pointer :: index_range(:)  ! Range of index i is
+                                        ! 1, ..., index_range(i).
+
+    integer, pointer :: domain_comm(:)  ! par_vec communicators.
+    integer, pointer :: index_comm(:)   ! Index communicators.
+
+  end type multicomm_type
+
 
 contains
 
