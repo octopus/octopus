@@ -117,7 +117,29 @@ contains
     call X(system_h_setup) (sys, h)
 
     ! which states to take into account
-    call loct_parse_string(check_inp('ExciteStates'), "1-1024", ch)
+    !%Variable LinearResponseKohnShamStates
+    !%Type string
+    !%Section 5 External Utilities
+    !%Description
+    !% The calculation of the excitation spectrum of a system in the frequency-domain
+    !% formulation of linear-response time-dependent density functional theory (TDDFT)
+    !% implies the use of a basis set of occupied/unoccupied Kohn-Sham orbitals. This
+    !% basis set should, in principle, include all pairs formed by all occupied states,
+    !% and an infinite number of unoccupied states. In practice, one has to truncate this
+    !% basis set, selecting a number of occupied and unoccupied states that will form the
+    !% pairs. These states are specified with this variable. If there are, say, 10 occupied
+    !% states, and one sets this variable to the value "10-18", this means that occupied
+    !% states from 10 to 15, and unoccupied states from 16 to 18 will be considered.
+    !%
+    !% This variable is a string in list form, i.e. expressions such as "1,2-5,8-15" are
+    !% valid. You should include a non-null number of unoccupied states and a non-null number
+    !% of occupied states.
+    !%
+    !% FIXME: This variable should go into another section, since it is no longer an
+    !% external utility. But it does not go into any other section, so it will wait
+    !% until we redo the manual.
+    !%End
+    call loct_parse_string(check_inp('LinearResponseKohnShamStates'), "1-1024", ch)
     call loct_wfs_list(ch, cas%wfn_flags)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(ch)
     Call Write_info(1)
@@ -127,37 +149,25 @@ contains
 
     if(fromScratch) call loct_rm(trim(tmpdir)//'restart_casida')
 
-    ! calculate resonances
-    call loct_parse_logical(check_inp('CasEigenvalues'), .true., l)
-    if(l) then
-       message(1) = "Info: Eigenvalue differences"
-       call write_info(1)
+    ! First, print the differences between KS eigenvalues (first approximation to the
+    ! excitation energies, or rather, to the DOS.
+    cas%type = CASIDA_EPS_DIFF
+    call casida_work(sys, cas)
+    call casida_write(cas, 'eps-diff')
 
-       cas%type = CASIDA_EPS_DIFF
-       call casida_work(sys, cas)
-       call casida_write(cas, 'eps-diff')
-    end if
+    ! Then, calculate the excitation energies by making use of the Petersilka approximation
+    message(1) = "Info: Calculating resonance energies a la Petersilka"
+    call write_info(1)
+    cas%type = CASIDA_PETERSILKA
+    call casida_work(sys, cas)
+    call casida_write(cas, 'petersilka')
 
-
-    call loct_parse_logical(check_inp('CasPetersilka'), .true., l)
-    if(l) then
-       message(1) = "Info: Calculating resonance energies a la Petersilka"
-       call write_info(1)
-
-       cas%type = CASIDA_PETERSILKA
-       call casida_work(sys, cas)
-       call casida_write(cas, 'petersilka')
-    end if
-
-    call loct_parse_logical(check_inp('LinCasida'), .true., l)
-    if(l) then
-       message(1) = "Info: Calculating resonance energies a la Casida"
-       call write_info(1)
-
-       cas%type = CASIDA_CASIDA
-       call casida_work(sys, cas)
-       call casida_write(cas, 'casida')
-    end if
+    ! And finally, solve the full Casida problem.
+    message(1) = "Info: Calculating resonance energies a la Casida"
+    call write_info(1)
+    cas%type = CASIDA_CASIDA
+    call casida_work(sys, cas)
+    call casida_write(cas, 'casida')
 
     call casida_type_end(cas)
     call end_()
@@ -393,7 +403,7 @@ contains
                b = cas%pair_a(jb)
 
                cas%mat(ia, jb) = K_term(i, a, j, b)
-            end if
+            endif
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
          end do
@@ -502,6 +512,8 @@ contains
          if(err.eq.0 .and. (ia > 0.and.ia <= cas%n_pairs) .and. (jb > 0.and.jb <= cas%n_pairs)) then
             cas%mat(ia, jb) = val
             saved_K(ia, jb) = .true.
+            cas%mat(jb, ia) = val
+            saved_K(jb, ia) = .true.
          end if
       end do
 
