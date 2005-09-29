@@ -57,7 +57,10 @@ module casida
      integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
      integer, pointer :: pair_a(:)
      FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
-     FLOAT,   pointer :: energies(:,:)   ! excitation energies and intensities
+     FLOAT,   pointer :: w(:)    ! The excitation energies.
+     FLOAT,   pointer :: tm(:, :)! The transition matrix elements (between the many-particle states)
+     FLOAT,   pointer :: f(:)    ! The (dipole) strengths
+     FLOAT,   pointer :: s(:)    ! The diagonal part of the S-matrix
   end type casida_type
 
 contains
@@ -143,12 +146,14 @@ contains
     Call write_info(1)
 
     ! Initialize structure
-    call casida_type_init(cas)
+    call casida_type_init(cas, sys%gr%sb%dim)
 
     if(fromScratch) call loct_rm(trim(tmpdir)//'restart_casida')
 
     ! First, print the differences between KS eigenvalues (first approximation to the
     ! excitation energies, or rather, to the DOS.
+    message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
+    call write_info(1)
     cas%type = CASIDA_EPS_DIFF
     call casida_work(sys, cas)
     call casida_write(cas, 'eps-diff')
@@ -177,10 +182,13 @@ contains
 
 
   ! allocates stuff, and constructs the arrays pair_i and pair_j
-  subroutine casida_type_init(cas)
+  subroutine casida_type_init(cas, dim)
     type(casida_type), intent(inout) :: cas
+    integer, intent(in) :: dim
 
     integer :: i, is, a, as, j
+
+    call push_sub('casida.casida_type_init')
 
     ! count pairs
     cas%n_pairs = 0
@@ -204,7 +212,8 @@ contains
 
     ! allocate stuff
     allocate(cas%pair_i(cas%n_pairs), cas%pair_a(cas%n_pairs))
-    allocate(cas%mat(cas%n_pairs, cas%n_pairs), cas%energies(cas%n_pairs, 4))
+    allocate(cas%mat(cas%n_pairs, cas%n_pairs))
+    allocate(cas%tm(cas%n_pairs, dim), cas%f(cas%n_pairs), cas%s(cas%n_pairs), cas%w(cas%n_pairs))
 
     ! create pairs
     j = 1
@@ -222,17 +231,18 @@ contains
        end if
     end do
 
+    call pop_sub()
   end subroutine casida_type_init
 
 
   ! ---------------------------------------------------------
   subroutine casida_type_end(cas)
     type(casida_type), intent(inout) :: cas
-
+    call push_sub('casida.casida_type_end')
     ASSERT(associated(cas%pair_i))
-
-    deallocate(cas%pair_i, cas%pair_a, cas%mat, cas%energies)
-    nullify   (cas%pair_i, cas%pair_a, cas%mat, cas%energies)
+    deallocate(cas%pair_i, cas%pair_a, cas%mat, cas%tm, cas%s, cas%f, cas%w)
+    nullify   (cas%pair_i, cas%pair_a, cas%mat, cas%tm, cas%s, cas%f, cas%w)
+    call pop_sub()
   end subroutine casida_type_end
 
 
@@ -249,6 +259,8 @@ contains
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
     integer :: is, j_old, b_old
 
+    call push_sub('casida.casida_work')
+
     ! sanity checks
     ASSERT(cas%type>=CASIDA_EPS_DIFF.and.cas%type<=CASIDA_CASIDA)
 
@@ -258,9 +270,12 @@ contains
 
     ! initialize stuff
     allocate(saved_K(cas%n_pairs, cas%n_pairs))
-    cas%mat      = M_ZERO
-    saved_K      = .false.
-    cas%energies = M_ZERO
+    cas%mat = M_ZERO
+    saved_K = .false.
+    cas%tm  = R_TOTYPE(M_ZERO)
+    cas%f   = M_ZERO
+    cas%w   = M_ZERO
+    cas%s   = M_ZERO
 
     ! load saved matrix elements
     call load_saved()
@@ -280,21 +295,27 @@ contains
     call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
     select case(cas%type)
-      case(CASIDA_CASIDA)
-         call solve_casida()
+      case(CASIDA_EPS_DIFF)
+         call solve_petersilka()
       case(CASIDA_PETERSILKA)
          call solve_petersilka()
+      case(CASIDA_CASIDA)
+         call solve_casida()
     end select
 
     ! clean up
     deallocate(rho, fxc, pot, saved_K)
 
+    call pop_sub()
   contains
 
     ! ---------------------------------------------------------
     subroutine solve_petersilka
-      integer :: ia, a, i, iunit
+      integer :: ia, a, i, iunit, k
       FLOAT   :: f
+      FLOAT, allocatable :: deltav(:), x(:)
+
+      call push_sub('casida.solve_petersilka')
 
       ! initialize progress bar
       call loct_progress_bar(-1, cas%n_pairs-1)
@@ -305,7 +326,7 @@ contains
       do ia = 1, cas%n_pairs
          a = cas%pair_a(ia)
          i = cas%pair_i(ia)
-         cas%energies(ia, 1) = st%eigenval(a, 1) - st%eigenval(i, 1)
+         cas%w(ia) = st%eigenval(a, 1) - st%eigenval(i, 1)
 
          if(cas%type == CASIDA_PETERSILKA) then
             if(saved_K(ia, ia)) then
@@ -314,36 +335,39 @@ contains
                f = K_term(i, a, i, a)
                write(iunit, *) ia, ia, f
             end if
-            cas%energies(ia, 1) = cas%energies(ia, 1) + M_TWO*f
+            cas%w(ia) = cas%w(ia) + M_TWO*f
          end if
-
-         ! oscilator strengths?
-         call dipole_matrix_elem(i, a, cas%energies(ia, 2:4))
-         cas%energies(ia, 2:4) = M_TWO * (cas%energies(ia, 2:4))**2 * &
-              (st%eigenval(a, 1) - st%eigenval(i, 1))
 
          call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
+
+      allocate(x(cas%n_pairs), deltav(m%np))
+      do k = 1, m%sb%dim
+         x = ks_matrix_elements(cas, st, m, deltav)
+         !FIXME: Calculate the oscillator strengths and matrix elements a la Petersilka
+      enddo
+      deallocate(x, deltav)
 
       ! complete progress bar
       write(*, "(1x)")
 
       ! close restart file
       call io_close(iunit)
-
+      call pop_sub()
     end subroutine solve_petersilka
-
 
     ! ---------------------------------------------------------
     subroutine solve_casida()
-      FLOAT, allocatable :: os(:,:)
       FLOAT :: temp
-      integer :: ia, jb, i, j, a, b
+      integer :: ia, jb, i, j, a, b, k
       integer :: max, actual, iunit, counter
+      FLOAT, allocatable :: deltav(:), x(:)
 #ifdef HAVE_MPI
       integer :: ierr
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
+
+      call push_sub('casida.solve_casida')
 
       max = cas%n_pairs*(1 + cas%n_pairs)/2 - 1
       counter = 0
@@ -411,26 +435,35 @@ contains
       call io_close(iunit)
 
       ! now we diagonalize the matrix
-      call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%energies(:, 1))
-      cas%energies(:, 1) = sqrt(cas%energies(:, 1))
+      call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%w)
+      cas%w = sqrt(cas%w)
 
-      ! let us get now the oscillator strengths
-      allocate(os(cas%n_pairs, 3))
+      ! And let us now get the S matrix...
       do ia = 1, cas%n_pairs
          i = cas%pair_i(ia)
          a = cas%pair_a(ia)
-         call dipole_matrix_elem(i, a, os(ia,:))
-      end do
+         cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) ) 
+      enddo
 
+      allocate(deltav(m%np), x(cas%n_pairs))
+      do k = 1, m%sb%dim
+         deltav(1:m%np) = m%x(1:m%np, k)
+         ! let us get now the x vector.
+         x = ks_matrix_elements(cas, st, m, deltav)
+         ! And now we are able to get the transition matrix elements between many-electron states.
+         do ia = 1, cas%n_pairs
+            cas%tm(ia, k) = transition_matrix_element(cas, ia, x)
+         enddo
+      enddo
+      deallocate(deltav, x)
+
+      ! And the oscillatory strengths.
       do ia = 1, cas%n_pairs
-         do j = 1, 3
-            cas%energies(ia, 1+j) = M_TWO * (sum(os(:,j)*cas%mat(:,ia)        &
-                 *sqrt(st%eigenval(cas%pair_a(:), 1) - st%eigenval(cas%pair_i(:), 1)) ))**2
-         end do
-      end do
+         cas%f(ia) = M_TWOTHIRD * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
+      enddo
 
+      call pop_sub()
     end subroutine solve_casida
-
 
     ! return the matrix element of <i,a|v + fxc|j,b>
     function K_term(i, a, j, b)
@@ -454,18 +487,18 @@ contains
       rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1)
       K_term = K_term + dmf_integrate(m, rho(:, 1))
 
-
       j_old = j; b_old = b
 
       deallocate(rho_i, rho_j)
     end function K_term
-
 
     ! ---------------------------------------------------------
     subroutine load_saved
       integer :: iunit, err
       integer :: ia, jb
       FLOAT   :: val
+
+      call push_sub('casida.load_saved')
 
       iunit = io_open(trim(tmpdir)//'restart_casida', action='read', status='old', die=.false.)
       err = min(iunit, 0)
@@ -481,74 +514,101 @@ contains
       end do
 
       if(iunit > 0) call io_close(iunit)
-
+      call pop_sub()
     end subroutine load_saved
-
-
-
-
-    ! ---------------------------------------------------------
-    subroutine dipole_matrix_elem(i, j, s)
-      integer, intent(in) :: i, j
-      FLOAT, intent(out) :: s(3)
-      R_TYPE, allocatable :: f(:, :)
-
-      integer :: k
-
-      allocate(f(m%np, 3))
-      do k = 1, m%np
-         f(k, 1:3) = m%x(k, 1:3) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, j, 1)
-      enddo
-      s(1) = X(mf_integrate)(m, f(:, 1))
-      s(2) = X(mf_integrate)(m, f(:, 2))
-      s(3) = X(mf_integrate)(m, f(:, 3))
-      deallocate(f)
-
-    end subroutine dipole_matrix_elem
 
   end subroutine casida_work
 
+  function ks_matrix_elements(cas, st, m, dv) result(x)
+    type(casida_type), intent(in) :: cas
+    type(states_type), intent(in) :: st
+    type(mesh_type),   intent(in) :: m
+    FLOAT, intent(in)   :: dv(:)
+    FLOAT :: x(cas%n_pairs)
+
+    R_TYPE, allocatable :: f(:)
+    integer :: k, ia, i, a
+
+    allocate(f(m%np))
+    do ia = 1, cas%n_pairs
+       i = cas%pair_i(ia)
+       a = cas%pair_a(ia)
+       do k = 1, m%np
+          f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, a, 1)
+       enddo
+       x(ia) = X(mf_integrate)(m, f)
+    enddo
+
+    deallocate(f)
+  end function ks_matrix_elements
+
+  R_TYPE function transition_matrix_element(cas, ia, x) result(z)
+    type(casida_type), intent(in) :: cas
+    integer,           intent(in) :: ia
+    R_TYPE,            intent(in) :: x(:)
+
+    integer :: jb
+
+    z = R_TOTYPE(M_ZERO)
+    do jb = 1, cas%n_pairs
+       z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
+    enddo
+    z = (M_ONE/sqrt(cas%w(ia))) * z
+
+  end function transition_matrix_element
+
   ! ---------------------------------------------------------
+  ! FIXME It needs to re-order also the oscillator strengths, and the transition matrix elements.
   subroutine sort_energies(cas)
     type(casida_type), intent(inout) :: cas
     integer :: i
     integer, allocatable :: ind(:), itmp(:)
     FLOAT, allocatable :: tmp(:)
-    allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs))
+    R_TYPE, allocatable :: xtmp(:)
+    integer :: dim
+    allocate(ind(cas%n_pairs), itmp(cas%n_pairs), tmp(cas%n_pairs), xtmp(cas%n_pairs))
 
-    call sort(cas%energies(:, 1), ind)
-    do i = 2, 4
-       tmp(:) = cas%energies(:, i) ; cas%energies(:, i) = tmp(ind(:))
+    call push_sub('casida.sort_energies')
+
+    call sort(cas%w(1:cas%n_pairs), ind)
+    dim = size(cas%tm, 2)
+    do i = 1, dim
+       xtmp(:) = cas%tm(:, i); cas%tm(:, i) = xtmp(ind(:))
     enddo
+    tmp(:) = cas%f(:); cas%f(:) = tmp(ind(:))
     itmp(:) = cas%pair_i(:) ; cas%pair_i(:) = itmp(ind(:))
     itmp(:) = cas%pair_a(:) ; cas%pair_a(:) = itmp(ind(:))
-    deallocate(ind, itmp, tmp)
+    deallocate(ind, itmp, tmp, xtmp)
+    call pop_sub()
   end subroutine sort_energies
-
-
 
   ! ---------------------------------------------------------
   subroutine casida_write(cas, filename)
     type(casida_type), intent(in) :: cas
     character(len=*),  intent(in) :: filename
 
-    integer :: iunit, ia, jb
+    integer :: iunit, ia, jb, dim
     FLOAT   :: temp
 
     type(casida_type) :: casp
+
+    call push_sub('casida.casida_write')
 
     casp%type      = cas%type
     casp%n_occ     = cas%n_occ
     casp%n_unocc   = cas%n_unocc
     casp%wfn_flags = cas%wfn_flags
     casp%n_pairs   = cas%n_pairs
-    allocate(casp%pair_i(casp%n_pairs), casp%pair_a(casp%n_pairs), &
-             casp%mat(casp%n_pairs, casp%n_pairs), casp%energies(casp%n_pairs, 4))
+    allocate(casp%pair_i(casp%n_pairs), casp%pair_a(casp%n_pairs), casp%mat(casp%n_pairs, casp%n_pairs))
+    dim = size(cas%tm, 2)
+    allocate(casp%tm(casp%n_pairs, dim), casp%s(casp%n_pairs), casp%f(casp%n_pairs), casp%w(casp%n_pairs))
+    casp%tm        = cas%tm
+    casp%s         = cas%s
+    casp%f         = cas%f
+    casp%w         = cas%w
     casp%pair_i    = cas%pair_i
     casp%pair_a    = cas%pair_a
     casp%mat       = cas%mat
-    casp%energies  = cas%energies
-
     call sort_energies(casp)
 
     ! output excitation energies and oscillator strengths
@@ -557,13 +617,17 @@ contains
 
     if(casp%type == CASIDA_EPS_DIFF) write(iunit, '(2a4)', advance='no') 'From', ' To '
 
-    write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
+    select case(dim)
+     case(1); write(iunit, '(3(a15,1x))') 'E' , '<x>', '<f>'
+     case(2); write(iunit, '(4(a15,1x))') 'E' , '<x>', '<y>', '<f>'
+     case(3); write(iunit, '(5(a15,1x))') 'E' , '<x>', '<y>', '<z>', '<f>'
+    end select
     do ia = 1, casp%n_pairs
        if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
           write(iunit, '(2i4)', advance='no') casp%pair_i(ia), casp%pair_a(ia)
        end if
-       write(iunit, '(5(e15.8,1x))') casp%energies(ia,1) / units_out%energy%factor, &
-            casp%energies(ia, 2:4), M_TWOTHIRD*sum(casp%energies(ia, 2:4))
+       write(iunit, '(5(e15.8,1x))') casp%w(ia) / units_out%energy%factor, &
+            casp%w(ia)*abs(casp%tm(ia, 1:dim))**2, casp%f(ia)
     end do
     call io_close(iunit)
 
@@ -578,7 +642,7 @@ contains
     write(iunit, '(1x)')
 
     do ia = 1, casp%n_pairs
-       write(iunit, '(es14.6)', advance='no') casp%energies(ia, 1) / units_out%energy%factor
+       write(iunit, '(es14.6)', advance='no') casp%w(ia) / units_out%energy%factor
        temp = M_ONE
        if(maxval(casp%mat(:, ia)) < abs(minval(casp%mat(:, ia)))) temp = -temp
        do jb = 1, casp%n_pairs
@@ -589,6 +653,7 @@ contains
 
     call io_close(iunit)
     call casida_type_end(casp)
+    call pop_sub()
   end subroutine casida_write
 
 end module casida
