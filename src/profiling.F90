@@ -53,8 +53,8 @@ module profiling_mod
     profiling_output
 
   integer, parameter :: &
-    C_TAG_LENGTH = 13,  & ! Max. number of characters of tag label.
-    C_NUM_TAGS   = 8      ! Number of tags.
+    C_TAG_LENGTH = 17,  & ! Max. number of characters of tag label.
+    C_NUM_TAGS   = 9      ! Number of tags.
 
   integer ::                      &
     pass_in(C_NUM_TAGS)      = 0, &
@@ -64,26 +64,28 @@ module profiling_mod
     time_sec(C_NUM_TAGS)     = 0, &
     time_usec(C_NUM_TAGS)    = 0
 
-  integer, parameter, public ::    &
-    C_PROFILING_COMPLETE      = 1, &
-    C_PROFILING_MF_INTEGRATE  = 2, &  
-    C_PROFILING_MF_DOTP       = 3, &
-    C_PROFILING_MF_NRM2       = 4, &
-    C_PROFILING_NL_OPERATOR   = 5, &
-    C_PROFILING_GHOST_UPDATE  = 6, &
-    C_PROFILING_VEC_INTEGRATE = 7, &
-    C_PROFILING_SCF_CYCLE     = 8
+  integer, parameter, public ::        &
+    C_PROFILING_COMPLETE          = 1, &
+    C_PROFILING_MF_INTEGRATE      = 2, &  
+    C_PROFILING_MF_DOTP           = 3, &
+    C_PROFILING_MF_NRM2           = 4, &
+    C_PROFILING_NL_OPERATOR       = 5, &
+    C_PROFILING_GHOST_UPDATE      = 6, &
+    C_PROFILING_VEC_INTEGRATE     = 7, &
+    C_PROFILING_SCF_CYCLE         = 8, &
+    C_PROFILING_MF_DOTP_ALLREDUCE = 9
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                                              &
-    'COMPLETE     ',                                                &
-    'MF_INTEGRATE ',                                                &
-    'MF_DOTP      ',                                                &
-    'MF_NRM2      ',                                                &
-    'NL_OPERATOR  ',                                                &
-    'GHOST_UPDATE ',                                                &
-    'VEC_INTEGRATE',                                                &
-    'SCF_CYCLE    '                                                 &
+    'COMPLETE         ',                                            &
+    'MF_INTEGRATE     ',                                            &
+    'MF_DOTP          ',                                            &
+    'MF_NRM2          ',                                            &
+    'NL_OPERATOR      ',                                            &
+    'GHOST_UPDATE     ',                                            &
+    'VEC_INTEGRATE    ',                                            &
+    'SCF_CYCLE        ',                                            &
+    'MF_DOTP_ALLREDUCE'                                             &
     /)
 
 contains
@@ -149,12 +151,16 @@ contains
 
   ! Write profiling reaultsof each node to profiling.NNN/profifling.nnn
   ! The format of each line is
-  ! tag-label    pass_in    pass_out    time_sec    time_usec
+  ! tag-label    pass_in    pass_out    time   time/pass_in
+  !
+  ! The last column gives the average time consumed between in and out
+  ! (only, if pass_in and pass_out are equal).
   subroutine profiling_output
     integer          :: i
     integer          :: iunit
     character(len=3) :: filenum
     character(len=3) :: dirnum
+    real             :: time_per_pass
 
     if(.not.in_profiling_mode) return
 
@@ -176,8 +182,14 @@ contains
       return
     end if
     do i = 1, C_NUM_TAGS
-      write(iunit, '(a,2i20,i20,a,i6.6)') tag_label(i), pass_in(i), pass_out(i), &
-        time_sec(i), '.', time_usec(i)
+      if(pass_in(i).eq.pass_out(i)) then
+        time_per_pass = (real(time_sec(i))+1e-6*real(time_usec(i)))/ &
+                        real(pass_in(i))
+      else
+        time_per_pass = 0
+      end if
+      write(iunit, '(a,2i20,i20,a,i6.6,f20.10)') tag_label(i), pass_in(i), &
+        pass_out(i), time_sec(i), '.', time_usec(i), time_per_pass
     end do
 
     call io_close(iunit)
