@@ -69,47 +69,45 @@ contains
     logical,                intent(inout) :: fromScratch
 
     type(casida_type) ::  cas
-    integer :: i, n, err
+    integer :: i, n, err, kpoints, dim, nst, nocc
     character(len=100) :: ch
     logical :: l
 
+    call push_sub('casida.casida_run')
 
+    ierr = 0
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
 
-    ierr = 0
-    call init_()
+    call restart_look (trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, nocc, err)
+    if(err.ne.0) then
+       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+       call write_fatal(1)
+    end if
+
+    sys%st%nst    = nst  
+    sys%st%st_end = nst
+    cas%n_occ     = nocc
+    cas%n_unocc   = nst - nocc
+    write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
+    write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
+    call write_info(2)
+
+    deallocate(sys%st%eigenval, sys%st%occ)
+    allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
+    allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
+    if(sys%st%d%ispin == SPINORS) then
+       allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
+       sys%st%mag = M_ZERO
+    end if
+    sys%st%eigenval = huge(PRECISION)
+    sys%st%occ      = M_ZERO
 
     call X(restart_read) (trim(tmpdir)//'restart_gs', sys%st, sys%gr%m, err)
     if(err.ne.0) then
-       message(1) = 'Could not read wave-functions from "'//trim(tmpdir)//'restart_gs"'
-       call write_warning(1)
-
-       ierr = 1
-       call end_()
-       return
+       message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
+       call write_fatal(1)
     end if
-
-    ! now we count the number of occupied states
-    cas%n_occ = 0
-    n         = 0
-    do i = 1, sys%st%nst
-       if(sys%st%occ(i, 1) == M_ZERO) then
-          n = n + 1
-       else
-          cas%n_occ = cas%n_occ + 1
-       end if
-    end do
-    if(n.ne.cas%n_unocc) then
-       message(1) = "Inconsistency between variable 'NumberUnoccStates' and file"
-       message(2) = "'"//trim(tmpdir)//"restart_gs/occs'"
-       call write_fatal(2)
-    else
-       write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
-       write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
-       call write_info(2)
-    endif
-
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
@@ -142,7 +140,7 @@ contains
     call loct_parse_string(check_inp('LinearResponseKohnShamStates'), "1-1024", ch)
     call loct_wfs_list(ch, cas%wfn_flags)
     write(message(1),'(a,a)') "Info: States that form the basis: ",trim(ch)
-    Call Write_info(1)
+    Call write_info(1)
 
     ! Initialize structure
     call casida_type_init(cas)
@@ -170,46 +168,11 @@ contains
     call casida_write(cas, 'casida')
 
     call casida_type_end(cas)
-    call end_()
-  contains
 
-    ! ---------------------------------------------------------
-    subroutine init_()
-
-      call push_sub('casida.casida_run')
-
-      call loct_parse_int(check_inp('NumberUnoccStates'), 5, cas%n_unocc)
-      if(cas%n_unocc <= 0) then
-         message(1) = "Input: NumberUnoccStates must be > 0"
-         call write_fatal(1)
-      end if
-
-      ! fix states: THIS IS NOT NICE
-      sys%st%nst = sys%st%nst + cas%n_unocc
-      sys%st%st_end = sys%st%nst
-
-      deallocate(sys%st%eigenval, sys%st%occ)
-      allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
-      allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
-      if(sys%st%d%ispin == SPINORS) then
-         allocate(sys%st%mag(sys%st%nst, sys%st%d%nik, 2))
-         sys%st%mag = M_ZERO
-      end if
-      sys%st%eigenval = huge(PRECISION)
-      sys%st%occ      = M_ZERO
-
-    end subroutine init_
-
-
-    ! ---------------------------------------------------------
-    subroutine end_()
-      ! if I do not change these values, unocc will get crazy
-      sys%st%nst    = sys%st%nst - cas%n_unocc
-      sys%st%st_end = sys%st%nst
-
-      call pop_sub()
-    end subroutine end_
-
+    ! if I do not change these values, unocc will get crazy
+    sys%st%nst    = sys%st%nst - cas%n_unocc
+    sys%st%st_end = sys%st%nst
+    call pop_sub()
   end function casida_run
 
 

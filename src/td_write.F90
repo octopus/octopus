@@ -80,7 +80,7 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
      
 
   FLOAT :: rmin
-  integer :: ierr, nus, first
+  integer :: ierr, nus, first, i
   logical :: log
 
   call push_sub('td_write.td_write_handler')
@@ -127,20 +127,13 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
 
   if( (w%out_proj.ne.0)  .or.  (w%out_gsp.ne.0) ) then
      call states_copy(w%gs_st, st)
-     ! Now include the unoccupied states.
      ! WARNING: should be first deallocate, then nullify?
      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
-     call loct_parse_int(check_inp('NumberUnoccStates'), 5, nus)
-     if(nus < 0) then
-       message(1) = "Input: NumberUnoccStates must be >= 0"
-       call write_fatal(1)
-     end if
-     w%gs_st%nst    = w%gs_st%nst + nus
+     call restart_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, i, ierr)
      ! We will store the ground-state Kohn-Sham system by all processors.
      w%gs_st%st_start = 1
      w%gs_st%st_end   = w%gs_st%nst
      ! allocate memory
-
      allocate(w%gs_st%node(w%gs_st%nst))
      allocate(w%gs_st%eigenval(w%gs_st%nst, w%gs_st%d%nik))
      allocate(w%gs_st%occ(w%gs_st%nst, w%gs_st%d%nik))
@@ -149,7 +142,6 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
      endif
      allocate(w%gs_st%zpsi(NP, w%gs_st%d%dim, w%gs_st%st_start:w%gs_st%st_end, w%gs_st%d%nik))
      w%gs_st%node(:)  = 0
-     ! WARNING this could cause problems with mpiexec due to simultaneous reads?
      call zrestart_read(trim(tmpdir)//'restart_gs', w%gs_st, gr%m, ierr)
      if(ierr.ne.0) then
           message(1) = "Could not load "//trim(tmpdir)//"restart_gs"

@@ -40,7 +40,7 @@ module restart
   public :: restart_init, clean_stop, &
        drestart_write, zrestart_write, &
        drestart_read, zrestart_read, &
-       restart_format
+       restart_format, restart_look
 
   integer, parameter :: RESTART_PLAIN  = 1, &
        RESTART_NETCDF = 2
@@ -85,6 +85,56 @@ contains
 #endif
 
   end subroutine restart_init
+
+subroutine restart_look (dir, m, kpoints, dim, nst, nocc, ierr)
+  character(len=*),  intent(in)    :: dir
+  type(mesh_type), intent(in) :: m
+  integer, intent(out) :: kpoints, dim, nst, nocc, ierr
+
+  character(len=256)   :: line
+  character(len=12)    :: filename
+  character(len=1)     :: char
+  integer :: iunit, iunit2, err, i, ist, idim, ik
+  FLOAT :: occ, eigenval
+
+  ierr = 0
+  iunit  = iopar_open(m, trim(dir)//'/wfns', action='read', status='old', die=.false.)
+  if(iunit < 0) then
+      ierr = -1
+      return
+  end if
+  iunit2 = iopar_open(m, trim(dir)//'/occs', action='read', status='old', die=.false.)
+  if(iunit2 < 0) then
+     call iopar_close(m, iunit)
+     ierr = -1
+     return
+  end if
+
+  ! Skip two lines.
+  call iopar_read(m, iunit, line, err); call iopar_read(m, iunit, line, err)
+  call iopar_read(m, iunit2, line, err); call iopar_read(m, iunit2, line, err)
+
+  kpoints = 1
+  dim = 1
+  nst = 1
+  nocc = 0
+  do
+    call iopar_read(m, iunit, line, i)
+    read(line, '(a)') char
+    if(i.ne.0.or.char=='%') exit
+    read(line, *) ik, char, ist, char, idim, char, filename
+    if(ik > kpoints) kpoints = ik
+    if(idim == 2)    dim     = 2
+    if(ist>nst)      nst     = ist
+    call iopar_read(m, iunit2, line, err)
+    read(line, *) occ, char, eigenval
+    if(occ>M_ZERO) nocc = nocc + 1
+  end do
+
+  call iopar_close(m, iunit)
+  call iopar_close(m, iunit2)
+end subroutine restart_look
+
 
 
 #include "undef.F90"
