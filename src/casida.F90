@@ -49,13 +49,14 @@ module casida
   type casida_type
      integer :: type          ! CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_CASIDA
 
-     integer :: n_occ         ! number of occupied states
-     integer :: n_unocc       ! number of unoccupied states
+     integer, pointer :: n_occ(:)         ! number of occupied states
+     integer, pointer :: n_unocc(:)       ! number of unoccupied states
      integer :: wfn_flags(32) ! flags determining which wfs to take into account
 
      integer          :: n_pairs         ! number of pairs to take into acount
      integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
      integer, pointer :: pair_a(:)
+     integer, pointer :: pair_sigma(:)
      FLOAT,   pointer :: mat(:,:)        ! general purpose matrix
      FLOAT,   pointer :: w(:)    ! The excitation energies.
      FLOAT,   pointer :: tm(:, :)! The transition matrix elements (between the many-particle states)
@@ -72,7 +73,7 @@ contains
     logical,                intent(inout) :: fromScratch
 
     type(casida_type) ::  cas
-    integer :: i, n, err, kpoints, dim, nst, nocc
+    integer :: i, n, err, kpoints, dim, nst, nocc, ist
     character(len=100) :: ch
     logical :: l
 
@@ -82,20 +83,19 @@ contains
     message(1) = 'Info: Starting linear response calculation.'
     call write_info(1)
 
-    call restart_look (trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, nocc, err)
+    call restart_look (trim(tmpdir)//'restart_gs', sys%gr%m, kpoints, dim, nst, err)
     if(err.ne.0) then
        message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
        call write_fatal(1)
     end if
 
+    if(sys%st%d%ispin == SPINORS) then
+       message(1) = 'Linear response TDDFT ("Casida" mode) is not implemented for spinors-DFT.'
+       call write_fatal(1)
+    endif
+
     sys%st%nst    = nst  
     sys%st%st_end = nst
-    cas%n_occ     = nocc
-    cas%n_unocc   = nst - nocc
-    write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ," occupied states."
-    write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc," unoccupied states."
-    call write_info(2)
-
     deallocate(sys%st%eigenval, sys%st%occ)
     allocate(sys%st%X(psi) (sys%gr%m%np, sys%st%d%dim, sys%st%nst, sys%st%d%nik))
     allocate(sys%st%eigenval(sys%st%nst, sys%st%d%nik), sys%st%occ(sys%st%nst, sys%st%d%nik))
@@ -111,6 +111,29 @@ contains
        message(1) = 'Could not properly read wave-functions from "'//trim(tmpdir)//'restart_gs".'
        call write_fatal(1)
     end if
+
+    allocate(cas%n_occ(sys%st%d%nspin), cas%n_unocc(sys%st%d%nspin))
+    cas%n_occ(:) = 0
+    do i = 1, sys%st%d%nspin
+       do ist = 1, sys%st%nst
+          if(sys%st%occ(ist, i) > M_ZERO) cas%n_occ(i) = cas%n_occ(i) + 1
+       enddo
+       cas%n_unocc(i) = sys%st%nst - cas%n_occ(i)
+    enddo
+
+    select case(sys%st%d%ispin)
+    case(UNPOLARIZED)
+      write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ(1)," occupied states."
+      write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc(1)," unoccupied states."
+      call write_info(2)
+    case(SPIN_POLARIZED)
+      write(message(1),'(a,i4,a)') "Info: Found",cas%n_occ(1)," occupied states with spin up."
+      write(message(2),'(a,i4,a)') "Info: Found",cas%n_unocc(1)," unoccupied states with spin up."
+      write(message(3),'(a,i4,a)') "Info: Found",cas%n_occ(2)," occupied states with spin down."
+      write(message(4),'(a,i4,a)') "Info: Found",cas%n_unocc(2)," unoccupied states with spin down."
+      call write_info(4)
+    end select
+
 
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
@@ -146,7 +169,7 @@ contains
     Call write_info(1)
 
     ! Initialize structure
-    call casida_type_init(cas, sys%gr%sb%dim)
+    call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin)
 
     if(fromScratch) call loct_rm(trim(tmpdir)//'restart_casida')
 
@@ -174,36 +197,34 @@ contains
 
     call casida_type_end(cas)
 
-    ! if I do not change these values, unocc will get crazy
-    sys%st%nst    = sys%st%nst - cas%n_unocc
-    sys%st%st_end = sys%st%nst
     call pop_sub()
   end function casida_run
 
 
   ! allocates stuff, and constructs the arrays pair_i and pair_j
-  subroutine casida_type_init(cas, dim)
+  subroutine casida_type_init(cas, dim, nspin)
     type(casida_type), intent(inout) :: cas
-    integer, intent(in) :: dim
+    integer, intent(in) :: dim, nspin
 
-    integer :: i, is, a, as, j
+    integer :: i, is, a, as, j, k
 
     call push_sub('casida.casida_type_init')
 
     ! count pairs
     cas%n_pairs = 0
-    do a = cas%n_occ+1, cas%n_occ + cas%n_unocc
-       as = cas%wfn_flags((a-1)/32 + 1)
-       if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
-          message(1) = " "
-          do i = 1, cas%n_occ
-             is = cas%wfn_flags((i-1)/32 + 1)
-             if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-                cas%n_pairs = cas%n_pairs + 1
-             end if
-          end do
-       end if
-    end do
+    do k = 1, nspin
+       do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
+          as = cas%wfn_flags((a-1)/32 + 1)
+          if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+             do i = 1, cas%n_occ(k)
+                is = cas%wfn_flags((i-1)/32 + 1)
+                if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+                  cas%n_pairs = cas%n_pairs + 1
+                end if
+             end do
+          end if
+       end do
+    enddo
 
     if(cas%n_pairs < 1) then
        message(1) = "Error: Maybe there are no unoccupied states?"
@@ -211,25 +232,28 @@ contains
     end if
 
     ! allocate stuff
-    allocate(cas%pair_i(cas%n_pairs), cas%pair_a(cas%n_pairs))
+    allocate(cas%pair_i(cas%n_pairs), cas%pair_a(cas%n_pairs), cas%pair_sigma(cas%n_pairs))
     allocate(cas%mat(cas%n_pairs, cas%n_pairs))
     allocate(cas%tm(cas%n_pairs, dim), cas%f(cas%n_pairs), cas%s(cas%n_pairs), cas%w(cas%n_pairs))
 
     ! create pairs
     j = 1
-    do a = cas%n_occ+1, cas%n_occ + cas%n_unocc
-       as = cas%wfn_flags((a-1)/32 + 1)
-       if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
-          do i = 1, cas%n_occ
-             is = cas%wfn_flags((i-1)/32 + 1)
-             if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
-                cas%pair_i(j) = i
-                cas%pair_a(j) = a
-                j = j + 1
-             end if
-          end do
-       end if
-    end do
+    do k = 1, nspin
+       do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
+          as = cas%wfn_flags((a-1)/32 + 1)
+          if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+             do i = 1, cas%n_occ(k)
+                is = cas%wfn_flags((i-1)/32 + 1)
+                if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+                   cas%pair_i(j) = i
+                   cas%pair_a(j) = a
+                   cas%pair_sigma(j) = k
+                   j = j + 1
+                end if
+             end do
+          end if
+       end do
+    enddo
 
     call pop_sub()
   end subroutine casida_type_init
@@ -257,7 +281,7 @@ contains
     type(mesh_type),   pointer :: m
 
     FLOAT, allocatable :: rho(:, :), fxc(:,:,:), pot(:)
-    integer :: is, j_old, b_old
+    integer :: is, j_old, b_old, mu_old
 
     call push_sub('casida.casida_work')
 
@@ -281,10 +305,11 @@ contains
     call load_saved()
 
     ! This is to be allocated here, and is used inside K_term.
-    allocate(pot(m%np)); j_old = -1; b_old = -1
+    allocate(pot(m%np)); j_old = -1; b_old = -1; mu_old = -1
 
     ! We calculate here the kernel, since it will be needed later.
     allocate(rho(m%np, st%d%nspin), fxc(m%np, st%d%nspin, st%d%nspin))
+    rho = M_ZERO; fxc = M_ZERO
     if(associated(st%rho_core)) then
        do is = 1, st%d%spin_channels
           rho(:, is) = st%rho(:, is) + st%rho_core(:)/st%d%spin_channels
@@ -311,7 +336,7 @@ contains
 
     ! ---------------------------------------------------------
     subroutine solve_petersilka
-      integer :: ia, a, i, iunit, k
+      integer :: ia, a, i, iunit, k, sigma
       FLOAT   :: f
       FLOAT, allocatable :: deltav(:), x(:)
 
@@ -326,13 +351,14 @@ contains
       do ia = 1, cas%n_pairs
          a = cas%pair_a(ia)
          i = cas%pair_i(ia)
-         cas%w(ia) = st%eigenval(a, 1) - st%eigenval(i, 1)
+         sigma = cas%pair_sigma(ia)
+         cas%w(ia) = st%eigenval(a, sigma) - st%eigenval(i, sigma)
 
          if(cas%type == CASIDA_PETERSILKA) then
             if(saved_K(ia, ia)) then
                f = cas%mat(ia, ia)
             else
-               f = K_term(i, a, i, a)
+               f = K_term(i, a, sigma, i, a, sigma)
                write(iunit, *) ia, ia, f
             end if
             cas%w(ia) = cas%w(ia) + M_TWO*f
@@ -359,7 +385,7 @@ contains
     ! ---------------------------------------------------------
     subroutine solve_casida()
       FLOAT :: temp
-      integer :: ia, jb, i, j, a, b, k
+      integer :: ia, jb, i, j, a, b, k, sigma, mu
       integer :: max, actual, iunit, counter
       FLOAT, allocatable :: deltav(:), x(:)
 #ifdef HAVE_MPI
@@ -383,13 +409,14 @@ contains
             counter = counter + 1
             i = cas%pair_i(ia)
             a = cas%pair_a(ia)
+            sigma = cas%pair_sigma(ia)
 
             ! if not loaded, then calculate matrix element
             if(.not.saved_K(ia, jb)) then
                j = cas%pair_i(jb)
                b = cas%pair_a(jb)
-
-               cas%mat(ia, jb) = K_term(i, a, j, b)
+               mu = cas%pair_sigma(jb)
+               cas%mat(ia, jb) = K_term(i, a, sigma, j, b, mu)
             endif
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
@@ -417,16 +444,23 @@ contains
       do ia = 1, cas%n_pairs
          i = cas%pair_i(ia)
          a = cas%pair_a(ia)
-         temp = st%eigenval(a, 1) - st%eigenval(i, 1)
+         sigma = cas%pair_sigma(ia)
+         temp = st%eigenval(a, sigma) - st%eigenval(i, sigma)
 
          do jb = ia, cas%n_pairs
             j = cas%pair_i(jb)
             b = cas%pair_a(jb)
+            mu = cas%pair_sigma(jb)
 
             if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
 
-            cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
+            if(sys%st%d%ispin == UNPOLARIZED) then
+               cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
                  sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
+            elseif(sys%st%d%ispin == SPIN_POLARIZED) then
+               cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
+                 sqrt(st%eigenval(b, mu) - st%eigenval(j, mu))
+            endif
 
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
          end do
@@ -442,7 +476,12 @@ contains
       do ia = 1, cas%n_pairs
          i = cas%pair_i(ia)
          a = cas%pair_a(ia)
-         cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) ) 
+         sigma = cas%pair_sigma(ia)
+         if(sys%st%d%ispin == UNPOLARIZED) then
+            cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) ) 
+         elseif(sys%st%d%ispin == SPIN_POLARIZED) then
+            cas%s(ia) = M_ONE / ( st%eigenval(cas%pair_a(ia), sigma) - st%eigenval(cas%pair_i(ia), sigma) ) 
+         endif
       enddo
 
       allocate(deltav(m%np), x(cas%n_pairs))
@@ -459,35 +498,35 @@ contains
 
       ! And the oscillatory strengths.
       do ia = 1, cas%n_pairs
-         cas%f(ia) = M_TWOTHIRD * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
+         cas%f(ia) = (M_TWO/m%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
       enddo
 
       call pop_sub()
     end subroutine solve_casida
 
     ! return the matrix element of <i,a|v + fxc|j,b>
-    function K_term(i, a, j, b)
+    function K_term(i, a, sigma, j, b, mu)
       FLOAT :: K_term
-      integer, intent(in) :: i, j, a, b
+      integer, intent(in) :: i, j, sigma, a, b, mu
 
       FLOAT, allocatable :: rho_i(:), rho_j(:)
 
       allocate(rho_i(m%np), rho_j(m%np))
 
-      rho_i(:) =  st%X(psi) (1:m%np, 1, i, 1) * R_CONJ(st%X(psi) (1:m%np, 1, a, 1))
-      rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, 1)) * st%X(psi) (1:m%np, 1, b, 1)
+      rho_i(:) =  st%X(psi) (1:m%np, 1, i, sigma) * R_CONJ(st%X(psi) (1:m%np, 1, a, sigma))
+      rho_j(:) =  R_CONJ(st%X(psi) (1:m%np, 1, j, mu)) * st%X(psi) (1:m%np, 1, b, mu)
 
       !  first the Hartree part (only works for real wfs...)
-      if( j.ne.j_old  .or.   b.ne.b_old) then
+      if( j.ne.j_old  .or.   b.ne.b_old   .or.  mu.ne.mu_old) then
          pot = M_ZERO
          call dpoisson_solve(sys%gr, pot, rho_j)
       endif
 
       K_term = dmf_dotp(m, rho_i(:), pot(:))
-      rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, 1, 1)
+      rho(1:m%np, 1) = rho_i(1:m%np) * rho_j(1:m%np) * fxc(1:m%np, sigma, mu)
       K_term = K_term + dmf_integrate(m, rho(:, 1))
 
-      j_old = j; b_old = b
+      j_old = j; b_old = b; mu_old = mu
 
       deallocate(rho_i, rho_j)
     end function K_term
@@ -527,14 +566,15 @@ contains
     FLOAT :: x(cas%n_pairs)
 
     R_TYPE, allocatable :: f(:)
-    integer :: k, ia, i, a
+    integer :: k, ia, i, a, sigma
 
     allocate(f(m%np))
     do ia = 1, cas%n_pairs
-       i = cas%pair_i(ia)
-       a = cas%pair_a(ia)
+       i     = cas%pair_i(ia)
+       a     = cas%pair_a(ia)
+       sigma = cas%pair_sigma(ia)
        do k = 1, m%np
-          f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, 1)) * st%X(psi) (k, 1, a, 1)
+          f(k) = dv(k) * R_CONJ(st%X(psi) (k, 1, i, sigma)) * st%X(psi) (k, 1, a, sigma)
        enddo
        x(ia) = X(mf_integrate)(m, f)
     enddo
@@ -626,7 +666,7 @@ contains
        if((casp%type==CASIDA_EPS_DIFF).or.(casp%type==CASIDA_PETERSILKA)) then
           write(iunit, '(2i4)', advance='no') casp%pair_i(ia), casp%pair_a(ia)
        end if
-       write(iunit, '(5(e15.8,1x))') casp%w(ia) / units_out%energy%factor, &
+       write(iunit, '(5(es15.8,1x))') casp%w(ia) / units_out%energy%factor, &
             casp%w(ia)*abs(casp%tm(ia, 1:dim))**2, casp%f(ia)
     end do
     call io_close(iunit)

@@ -129,7 +129,7 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
      call states_copy(w%gs_st, st)
      ! WARNING: should be first deallocate, then nullify?
      nullify(w%gs_st%zpsi, w%gs_st%node, w%gs_st%occ, w%gs_st%eigenval, w%gs_st%mag)
-     call restart_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, i, ierr)
+     call restart_look (trim(tmpdir)//'restart_gs', gr%m, i, i, w%gs_st%nst, ierr)
      ! We will store the ground-state Kohn-Sham system by all processors.
      w%gs_st%st_start = 1
      w%gs_st%st_end   = w%gs_st%nst
