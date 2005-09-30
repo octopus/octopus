@@ -470,7 +470,16 @@ contains
 
       ! now we diagonalize the matrix
       call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%w)
-      cas%w = sqrt(cas%w)
+      do ia = 1, cas%n_pairs
+         if(cas%w(ia) < M_ZERO) then
+           write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy',ia,' is negative.'
+           write(message(2),'(a)')      'This should not happen.'
+           call write_warning(2)
+           cas%w(ia) = M_ZERO
+         else
+           cas%w(ia) = sqrt(cas%w(ia))
+         endif
+      enddo
 
       ! And let us now get the S matrix...
       do ia = 1, cas%n_pairs
@@ -590,10 +599,12 @@ contains
     integer :: jb
 
     z = R_TOTYPE(M_ZERO)
-    do jb = 1, cas%n_pairs
-       z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
-    enddo
-    z = (M_ONE/sqrt(cas%w(ia))) * z
+    if(cas%w(ia) > M_ZERO) then
+       do jb = 1, cas%n_pairs
+          z = z + x(jb) * (M_ONE/sqrt(cas%s(jb))) * cas%mat(jb, ia)
+       enddo
+       z = (M_ONE/sqrt(cas%w(ia))) * z
+    endif
 
   end function transition_matrix_element
 
