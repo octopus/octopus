@@ -387,7 +387,8 @@ contains
       FLOAT :: temp
       integer :: ia, jb, i, j, a, b, k, sigma, mu
       integer :: max, actual, iunit, counter
-      FLOAT, allocatable :: deltav(:), x(:)
+      FLOAT, allocatable :: deltav(:)
+      R_TYPE, allocatable :: x(:)
 #ifdef HAVE_MPI
       integer :: ierr
       FLOAT, allocatable :: mpi_mat(:,:)

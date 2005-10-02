@@ -239,7 +239,7 @@ subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df,
   FLOAT, parameter :: w0 = CNST(0.01)
 
   integer  :: i, j
-  FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used)
+  FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used), x
 
   if (iter_used == 0) then
     ! linear mixing...
@@ -260,7 +260,7 @@ subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df,
   end do
 
   ! invert matrix beta
-  call lalg_invert(iter_used, beta)
+  x = lalg_inverter(iter_used, beta, invert = .true., symmetric = .true.)
 
   do i = 1, iter_used
     work(i) = sum(df(1:d1, 1:d2, 1:d3, i)*f(1:d1, 1:d2, 1:d3)) ! dot_product(df(:, :, :, i), f)
@@ -363,8 +363,7 @@ subroutine pulay_extrapolation(vin, vout, vnew, iter_used, f, df, dv)
     return
   end if
 
-  ! invert matrix A
-  call lalg_invert(iter_used, a)
+  alpha = lalg_inverter(iter_used, a, invert = .true., symmetric = .true.)
 
   ! compute new vector
   vnew = vin

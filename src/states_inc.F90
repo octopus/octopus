@@ -368,7 +368,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   allocate(a(st1%nst, st1%nst))
 
   call X(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
-  dotp = lalg_det(a, st1%nst)
+  dotp = lalg_determinant(st1%nst, a, invert = .false., symmetric = .false.)
 
   select case(st1%d%ispin)
    case(UNPOLARIZED)
@@ -377,7 +377,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
      ! We assume that ik is an odd number (maybe this should be checked. So one
      ! spin component is ik and another spin component is ik + 1.
      call X(calculate_matrix)(m, ik+1, st1, st2, st1%nst, a)
-     dotp = dotp*lalg_det(a, st1%nst)
+     dotp = dotp*lalg_determinant(st1%nst, a, invert = .false.)
   end select
 
   deallocate(a)

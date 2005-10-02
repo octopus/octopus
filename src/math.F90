@@ -44,7 +44,6 @@ module math
        cutoff0,                    &
        cutoff1,                    &
        cutoff2,                    &
-       invert_3by3,                &
        besselint,                  &
        dextrapolate, zextrapolate, &
        sort
@@ -421,43 +420,6 @@ contains
 
   end function cutoff2
 
-
-  ! ---------------------------------------------------------
-  subroutine invert_3by3(matrix,invers,det,tr)
-
-    ! Calculates the inverse of a 3X3 matrix
-    ! if tr = .true. calculates the transposed of the inverse
-
-    implicit none
-
-    FLOAT, intent(in)   :: matrix(3,3)
-    FLOAT, intent(out)  :: invers(3,3)
-    FLOAT, intent(out)  :: det
-    logical, intent(in) :: tr
-
-    call vector_product_3(matrix(1:3,2),matrix(1:3,3),invers(1:3,1))
-    call vector_product_3(matrix(1:3,3),matrix(1:3,1),invers(1:3,2))
-    call vector_product_3(matrix(1:3,1),matrix(1:3,2),invers(1:3,3))
-
-    det = DOT_PRODUCT(matrix(1:3,1),invers(1:3,1))
-
-    if (det == M_ZERO) then
-       message(1) = 'Matrix with null determinant. Cannot invert.'
-       write(message(2),'(3f12.5)') matrix(1,:)
-       write(message(3),'(3f12.5)') matrix(2,:)
-       write(message(4),'(3f12.5)') matrix(3,:)
-       call write_fatal(4)
-       return
-    endif
-
-    ! comment this out if you want to get the transpose of the inverse
-    if (.not. tr) invers = TRANSPOSE(invers)
-
-    invers=invers/det
-
-  end subroutine invert_3by3
-
-
   ! ---------------------------------------------------------
   FLOAT function besselint(x) result(y)
     FLOAT, intent(in) :: x
@@ -492,23 +454,6 @@ contains
     CMPLX, intent(in) :: a(:), b(:)
     r = sum(conjg(a(:))*b(:))
   end function zdot_product
-
-
-  ! ---------------------------------------------------------
-  subroutine vector_product_3(a,b,c)
-
-    ! calculates vector product of three dimensional vectors
-    ! a x b = c
-
-    implicit none
-    FLOAT, intent(in)  :: a(3),b(3)
-    FLOAT, intent(out) :: c(3)
-
-    c(1) = a(2)*b(3) - a(3)*b(2)
-    c(2) = a(3)*b(1) - a(1)*b(3)
-    c(3) = a(1)*b(2) - a(2)*b(1)
-
-  end subroutine vector_product_3
 
 
   ! ---------------------------------------------------------

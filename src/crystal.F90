@@ -9,6 +9,7 @@
       use messages
       use io
       use units
+      use lib_adv_alg
       use math
       use blas
 
@@ -239,15 +240,10 @@
       end subroutine crystal_init
 
       subroutine invers(mat,determinant)
-
         ! Compute the inverse of a 3x3 matrix (in situ) and its determinant
+        FLOAT :: mat(3,3), determinant
 
-!        integer :: ipvt(3)
-!        FLOAT :: det(2)
-        FLOAT :: mat(3,3), tmp(3,3), determinant
-
-        call invert_3by3(mat,tmp,determinant,.false.)
-      mat = tmp
+        determinant = lalg_inverter(3, mat, invert = .true., symmetric = .true.)
 
       return
       end subroutine invers

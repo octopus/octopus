@@ -1,3 +1,4 @@
+
 !! Copyright (C) 2002 M. Marques, A. Castro, A. Rubio, G. Bertsch
 !!
 !! This program is free software; you can redistribute it and/or modify
@@ -26,7 +27,7 @@ use lib_oct_parser
 use syslabels
 use io
 use units
-use math, only : invert_3by3
+use lib_adv_alg
 
 implicit none
 
@@ -357,11 +358,9 @@ subroutine spectrum_cross_section_tensor(s, out_file, in_file)
 
   end select
 
-
-
   ! And now, perform the necessary transformation.
-  p(1:3, 1:3) = kick%pol(1:3, 1:3)
-  call invert_3by3(p, ip, dump, .false.)
+  ip(1:3, 1:3) = kick%pol(1:3, 1:3)
+  dump = lalg_inverter(3, ip, invert = .true., symmetric = .false.)
   do is = 1, nspin
      do i = 0, energy_steps
         sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )

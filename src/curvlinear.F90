@@ -127,7 +127,7 @@ contains
       jdet = M_ONE
     case(CURV_METHOD_GYGI)
       call curv_gygi_jacobian(sb, geo, cv%gygi, x, dummy, Jac)
-      jdet = M_ONE/lalg_det(Jac, sb%dim)
+      jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)
       jdet = M_ONE
@@ -136,7 +136,7 @@ contains
       end do
     case(CURV_METHOD_MODINE)
       call curv_modine_jacobian_inv(sb, geo, cv%modine, chi, Jac)
-      jdet = M_ONE*lalg_det(Jac, sb%dim)
+      jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
     end select
 
   end function curvlinear_det_Jac
