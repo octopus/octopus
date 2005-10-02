@@ -260,7 +260,7 @@ subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df,
   end do
 
   ! invert matrix beta
-  x = lalg_inverter(iter_used, beta, invert = .true., symmetric = .true.)
+  x = lalg_inverter(iter_used, beta)
 
   do i = 1, iter_used
     work(i) = sum(df(1:d1, 1:d2, 1:d3, i)*f(1:d1, 1:d2, 1:d3)) ! dot_product(df(:, :, :, i), f)
@@ -363,7 +363,7 @@ subroutine pulay_extrapolation(vin, vout, vnew, iter_used, f, df, dv)
     return
   end if
 
-  alpha = lalg_inverter(iter_used, a, invert = .true., symmetric = .true.)
+  alpha = lalg_inverter(iter_used, a)
 
   ! compute new vector
   vnew = vin

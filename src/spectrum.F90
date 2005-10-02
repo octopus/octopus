@@ -360,7 +360,7 @@ subroutine spectrum_cross_section_tensor(s, out_file, in_file)
 
   ! And now, perform the necessary transformation.
   ip(1:3, 1:3) = kick%pol(1:3, 1:3)
-  dump = lalg_inverter(3, ip, invert = .true., symmetric = .false.)
+  dump = lalg_inverter(3, ip)
   do is = 1, nspin
      do i = 0, energy_steps
         sigma(:, :, i, is) = matmul( transpose(ip), matmul(sigmap(:, :, i, is), ip) )

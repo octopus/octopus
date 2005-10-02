@@ -151,31 +151,12 @@ end subroutine zeigensolve
 
 
 ! Invert a real symmetric square matrix a
-FLOAT function ddeterminant(n, a, invert, symmetric) result(d)
+FLOAT function ddeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
   FLOAT,   intent(inout)        :: a(n,n)
-  logical, intent(in)           :: invert
-  logical, optional, intent(in) :: symmetric
+  logical, intent(in), optional :: invert
 
   interface
-    subroutine DLAPACK(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda, lwork
-      FLOAT,        intent(inout) :: a      ! a(lda,n)
-      integer,      intent(out)   :: ipiv   ! ipiv(min(m,n))
-      FLOAT,        intent(out)   :: work   ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(sytrf)
-
-    subroutine DLAPACK(sytri) (uplo, n, a, lda, ipiv, work, info)
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda
-      FLOAT,        intent(inout) :: a      ! a(lda,n)
-      integer,      intent(out)   :: ipiv   ! ipiv(min(m,n))
-      FLOAT,        intent(out)   :: work   ! work(n)
-      integer,      intent(out)   :: info
-    end subroutine DLAPACK(sytri)
-
     subroutine DLAPACK(getrf) (m, n, a, lda, ipiv, info)
       integer,      intent(in)    :: m, n, lda
       FLOAT,        intent(inout) :: a          ! a(lda, n)
@@ -195,68 +176,32 @@ FLOAT function ddeterminant(n, a, invert, symmetric) result(d)
   integer :: info, i, j
   integer, allocatable :: ipiv(:)
   FLOAT, allocatable :: work(:)
-  logical :: symmetric_
+  logical :: invert_
 
-  symmetric_ = .true.
-  if(present(symmetric)) symmetric_ = symmetric
+  allocate(work(n), ipiv(n))
 
-  if(symmetric_) then
-    allocate(work(n), ipiv(n))
+  call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
+  if(info /= 0) then
+     write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
+     call write_fatal(1)
+  end if
 
-    call DLAPACK(sytrf) ('u', n, a(1, 1), n, ipiv(1), work(1), n, info)
-    if(info /= 0) then
-      write(message(1), '(a, i3)') 'In dinvert, LAPACK dsytrf returned info = ', info
-      call write_fatal(1)
-    end if
+  d = M_ONE
+  do i = 1, n
+     if(ipiv(i).ne.i) then
+       d = - d*a(i, i)
+     else
+       d = d*a(i, i)
+     endif
+  end do
 
-    d = M_ONE
-    do i = 1, n
-       if(ipiv(i).ne.i) then
-         d = - d*a(i, i)
-       else
-         d = d*a(i, i)
-       endif
-    end do
-
-    if(invert) then
-      call DLAPACK(sytri) ('u', n, a(1, 1), n, ipiv(1), work(1), info)
-      if(info /= 0) then
-        write(message(1), '(a, i3)') 'In dinvert, LAPACK dsytri returned info = ', info
-        call write_fatal(1)
-      end if
-      ! complete the matrix
-      do i = 1, n
-         do j = i + 1, n
-            a(j, i) = a(i, j)
-         end do
-      end do
-    endif
-
-  else
-    allocate(work(n), ipiv(n))
-
-    call DLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
-    if(info /= 0) then
-      write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
-      call write_fatal(1)
-    end if
-
-    d = M_ONE
-    do i = 1, n
-       if(ipiv(i).ne.i) then
-         d = - d*a(i, i)
-       else
-         d = d*a(i, i)
-       endif
-    end do
-
-    if(invert) then
-      call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
+  invert_ = .true.; if(present(invert)) invert_ = invert
+  if(invert_) then
+    call DLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
       if(info /= 0) then
         write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
         call write_fatal(1)
       end if
-    endif
   endif
 
   deallocate(work, ipiv)
@@ -264,32 +209,12 @@ end function ddeterminant
 
 
 ! Invert a real symmetric square matrix a
-CMPLX function zdeterminant(n, a, invert, symmetric) result(d)
+CMPLX function zdeterminant(n, a, invert) result(d)
   integer, intent(in)           :: n
   CMPLX,   intent(inout)        :: a(n,n)
-  logical, intent(in)           :: invert
-  logical, optional, intent(in) :: symmetric
+  logical, intent(in), optional :: invert
 
   interface
-
-    subroutine ZLAPACK(hetrf) (uplo, n, a, lda, ipiv, work, lwork, info)
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda, lwork
-      CMPLX,        intent(inout) :: a      ! a(lda,n)
-      integer,      intent(out)   :: ipiv   ! ipiv(min(m,n))
-      CMPLX,        intent(out)   :: work   ! work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(hetrf)
-
-    subroutine ZLAPACK(hetri) (uplo, n, a, lda, ipiv, work, info)
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda
-      CMPLX,        intent(inout) :: a      ! a(lda,n)
-      integer,      intent(out)   :: ipiv   ! ipiv(min(m,n))
-      CMPLX,        intent(out)   :: work   ! work(n)
-      integer,      intent(out)   :: info
-    end subroutine ZLAPACK(hetri)
-
     subroutine ZLAPACK(getrf) (m, n, a, lda, ipiv, info)
       integer,      intent(in)    :: m, n, lda
       CMPLX,        intent(inout) :: a          ! a(lda, n)
@@ -309,73 +234,36 @@ CMPLX function zdeterminant(n, a, invert, symmetric) result(d)
   integer :: info, i, j
   integer, allocatable :: ipiv(:)
   CMPLX, allocatable :: work(:)
-  logical :: symmetric_
+  logical :: invert_
 
-  symmetric_ = .true.
-  if(present(symmetric)) symmetric_ = symmetric
+  allocate(work(n), ipiv(n))
 
-  if(symmetric_) then
-    allocate(work(n), ipiv(n))
+  call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
+  if(info /= 0) then
+    write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
+    call write_fatal(1)
+  end if
 
-    call ZLAPACK(hetrf) ('u', n, a(1, 1), n, ipiv(1), work(1), n, info)
+  d = M_ONE
+  do i = 1, n
+     if(ipiv(i).ne.i) then
+       d = - d*a(i, i)
+     else
+       d = d*a(i, i)
+     endif
+  end do
+
+  invert_ = .true.; if(present(invert)) invert_ = invert
+  if(invert_) then
+    call ZLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
-      write(message(1), '(a, i3)') 'In dinvert, LAPACK dsytrf returned info = ', info
+      write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
       call write_fatal(1)
     end if
-
-    d = M_z1
-    do i = 1, n
-       if(ipiv(i).ne.i) then
-         d = - d*a(i, i)
-       else
-         d = d*a(i, i)
-       endif
-    end do
-
-    if(invert) then
-      call ZLAPACK(hetri) ('u', n, a(1, 1), n, ipiv(1), work(1), info)
-      if(info /= 0) then
-        write(message(1), '(a, i3)') 'In dinvert, LAPACK dsytri returned info = ', info
-        call write_fatal(1)
-      end if
-      ! complete the matrix
-      do i = 1, n
-         do j = i + 1, n
-            a(j, i) = a(i, j)
-         end do
-      end do
-    endif
-
-  else
-    allocate(work(n), ipiv(n))
-
-    call ZLAPACK(getrf)(n, n, a(1, 1), n, ipiv(1), info)
-    if(info /= 0) then
-      write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetrf returned info = ', info
-      call write_fatal(1)
-    end if
-
-    d = M_ONE
-    do i = 1, n
-       if(ipiv(i).ne.i) then
-         d = - d*a(i, i)
-       else
-         d = d*a(i, i)
-       endif
-    end do
-
-    if(invert) then
-      call ZLAPACK(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
-      if(info /= 0) then
-        write(message(1), '(a, i3)') 'In dinvert, LAPACK dgetri returned info = ', info
-        call write_fatal(1)
-      end if
-    endif
   endif
 
-  deallocate(work, ipiv)
+  Deallocate(work, ipiv)
 end function zdeterminant
-
 
 
 ! compute the solution to a real system of linear equations A*X = B,

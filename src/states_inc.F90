@@ -368,7 +368,7 @@ R_TYPE function X(states_mpdotp)(m, ik, st1, st2) result(dotp)
   allocate(a(st1%nst, st1%nst))
 
   call X(calculate_matrix)(m, ik, st1, st2, st1%nst, a)
-  dotp = lalg_determinant(st1%nst, a, invert = .false., symmetric = .false.)
+  dotp = lalg_determinant(st1%nst, a, invert = .false.)
 
   select case(st1%d%ispin)
    case(UNPOLARIZED)

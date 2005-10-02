@@ -243,7 +243,7 @@
         ! Compute the inverse of a 3x3 matrix (in situ) and its determinant
         FLOAT :: mat(3,3), determinant
 
-        determinant = lalg_inverter(3, mat, invert = .true., symmetric = .true.)
+        determinant = lalg_inverter(3, mat, invert = .true.)
 
       return
       end subroutine invers
