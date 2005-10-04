@@ -73,8 +73,6 @@ program octopus
   !% Born-Oppenheimer-like Molecular Dynamics
   !%Option recipe 99
   !% Prints out a tasty recipe
-  !%Option multi_subsystem 1000
-  !% Multi subsystem mode
   !%End
   if(loct_parse_block('CalculationMode', blk) == 0) then
      call read_system_labels(blk)
@@ -83,28 +81,23 @@ program octopus
      call syslabels_init(calc_mode)
   endif
 
-  ! syslabels have to be available before calling the _init() functions below
-  call io_init()
-  call profiling_init()
-
-  call profiling_in(C_PROFILING_COMPLETE)
-
   ! loop over all subsystems
   subsystems: do ns = 1, no_subsystems
-
 
      ! set system label
      current_subsystem = subsys_run_order(ns)
      current_label = trim(subsys_label(current_subsystem))
      calc_mode = subsys_runmode(current_subsystem)
 
+     ! syslabels have to be available before calling the _init() functions below
+     call io_init()
+     call profiling_init()
+
+     call profiling_in(C_PROFILING_COMPLETE_SUBSYS)
+
      ! Let us print our logo
      if(mpiv%node == 0) then
-        ! Let us print our logo
         call io_dump_file(stdout, trim(trim(conf%share) // '/logo'))
-        if(in_debug_mode) then
-           write(stderr, '(5a)') "# ", " A ", "Time", "Mem", "Call"
-        endif
      end if
 
      ! Let us print the version
@@ -138,19 +131,20 @@ program octopus
      call run()
      call run_end()
 
-     call print_date("Calculation ended on ")
-
 #if defined(HAVE_MPI)
      ! wait for all processors to finish
      call MPI_Barrier(MPI_COMM_WORLD, ierr)
 #endif
 
+     call io_end()
+  
+     call profiling_out(C_PROFILING_COMPLETE_SUBSYS)
+     call profiling_output()
+
+     call print_date("Calculation ended on ")
+
   enddo subsystems
 
-  call profiling_out(C_PROFILING_COMPLETE)
-
-  call profiling_output()
-  call io_end()
   call syslabels_end()
   call parser_end()
   call global_end()
