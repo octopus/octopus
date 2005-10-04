@@ -38,11 +38,15 @@ module system
   use v_ks
   use hamiltonian
   use output
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  use mpi_mod
+#endif
 
   implicit none
 
   private
-  public :: system_type,     &
+  public ::                  &
+       system_type,          &
        system_init,          &
        system_end,           &
        atom_get_wf,          &
@@ -57,6 +61,9 @@ module system
      type(states_type),   pointer :: st         ! the states
      type(v_ks_type)              :: ks         ! the Kohn-Sham potentials
      type(output_type)            :: outp       ! the output
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+     type(multicomm_type)         :: mc         ! index and domain communicators
+#endif
   end type system_type
 
 contains
@@ -65,19 +72,52 @@ contains
   subroutine system_init(s)
     type(system_type), intent(out) :: s
 
+    integer, allocatable :: domain_comm_of_node(:)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    integer :: index_dim, index_range(2)
+#endif
+
     call push_sub('systm.system_init')
 
-    allocate(s%gr)
-    call grid_init(s%gr)
+    allocate(s%gr, s%st)
+    allocate(domain_comm_of_node(0:mpiv%numprocs))
 
-    ! initialize the other stuff
-    allocate(s%st)
+    call geometry_init(s%gr%geo)
+
+    ! FIXME: still a bit more stuff missing. all k points are still the same 
+    ! as the gamma point. This is due to the reordering of states_init and grid_init
+    call loct_parse_int(check_inp('PeriodicDimensions'), 0, s%gr%sb%periodic_dim)
 
     call states_init(s%st, s%gr)
-    call output_init(s%gr%sb, s%outp)
 
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    ! for the moment we need only communicators for two 
+    ! index-dimensions: states and kpoints
+    index_dim = 2
+
+    ! store the ranges for these two indices (serves as initial guess 
+    ! for parallelization strategy)
+    index_range(1) = s%st%d%nik    ! Number of kpoints
+    index_range(2) = s%st%nst      ! Number of states
+
+    write(message(1),'(a,i4)') 'Info: Total number of k-points: ',index_range(1)
+    write(message(2),'(a,i4)') 'Info: Total number of states  : ',index_range(2)
+    call write_info(2)
+
+    ! create index and domain communicators
+    call multicomm_init(mpiv%numprocs, index_dim, index_range, s%mc)
+
+    domain_comm_of_node = s%mc%domain_comm_of_node
+#endif
+
+    call grid_init(s%gr, domain_comm_of_node)
+
+    call states_densities_init(s%st, s%gr)
+    call output_init(s%gr%sb, s%outp)
     call v_ks_init(s%gr, s%ks, s%st%d)
 
+    deallocate(domain_comm_of_node)
+    
     call pop_sub()
   end subroutine system_init
 
@@ -87,6 +127,10 @@ contains
     type(system_type), intent(inout) :: s
 
     call push_sub('systm.system_end')
+
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    call multicomm_end(s%mc)
+#endif
 
     call v_ks_end(s%ks)
 

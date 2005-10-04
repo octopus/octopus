@@ -34,9 +34,11 @@ module geometry
   implicit none
 
   private
-  public :: atom_type,             &
+  public ::                   &
+       atom_type,             &
        atom_classical_type,   &
        geometry_type,         &
+       geometry_init,         &
        geometry_init_xyz,     &
        geometry_init_vel,     &
        geometry_filter,       &
@@ -93,6 +95,21 @@ module geometry
   end type geometry_type
 
 contains
+
+
+  subroutine geometry_init(geo)
+    type(geometry_type), intent(inout) :: geo
+
+    call push_sub('geometry.geometry_init')
+
+    ! initialize geometry
+    call geometry_init_xyz(geo)
+    call geometry_init_species(geo)
+    call geometry_init_vel(geo)
+
+    call pop_sub()
+  end subroutine geometry_init
+
 
   !-----------------------------------------------------------------
   ! initializes the xyz positions of the atoms in the structure geo

@@ -42,32 +42,29 @@ module states
   implicit none
 
   private
-  public :: states_type, &
-       states_dim_type, &
-       states_init, &
-       states_null, &
-       states_end,  &
-       states_copy, &
-       states_generate_random, &
-       states_fermi, &
-       states_calculate_multipoles, &
-       states_eigenvalues_sum, &
-       states_write_eigenvalues, &
-       states_write_bands, &
-       states_spin_channel, &
-       states_calc_projection, &
-       states_magnetization_dens, &
-       states_magnetic_moment, &
-       states_local_magnetic_moments, &
-       states_calc_physical_current, &
-       kpoints_write_info, &
-       dstates_calc_dens, zstates_calc_dens, &
+  public ::                                        &
+       states_type, states_dim_type,               &
+       states_init, states_densities_init,         &
+       states_null, states_end, states_copy,       &
+       states_generate_random, states_fermi,       &
+       states_calculate_multipoles,                &
+       states_eigenvalues_sum,                     & 
+       states_write_eigenvalues,                   &
+       states_write_bands,                         &
+       states_spin_channel,                        &
+       states_calc_projection,                     &
+       states_magnetization_dens,                  &
+       states_magnetic_moment,                     &
+       states_local_magnetic_moments,              &
+       states_calc_physical_current,               &
+       kpoints_write_info,                         &
+       dstates_calc_dens, zstates_calc_dens,       &
        dstates_gram_schmidt, zstates_gram_schmidt, &
-       dstates_dotp, zstates_dotp, &
-       dstates_nrm2, zstates_nrm2, &
-       dstates_residue, zstates_residue, &
-       dstates_output, zstates_output, &
-       dstates_mpdotp, zstates_mpdotp, &
+       dstates_dotp, zstates_dotp,                 &
+       dstates_nrm2, zstates_nrm2,                 &
+       dstates_residue, zstates_residue,           &
+       dstates_output, zstates_output,             &
+       dstates_mpdotp, zstates_mpdotp,             &
        dstates_calc_angular, zstates_calc_angular, &
        states_distribute_nodes
 
@@ -91,7 +88,8 @@ module states
      FLOAT, pointer :: occ(:,:)  ! the occupation numbers
      FLOAT, pointer :: mag(:, :, :)
 
-     FLOAT :: qtot    ! (-) The total charge in the system (used in Fermi)
+     FLOAT :: qtot       ! (-) The total charge in the system (used in Fermi)
+     FLOAT :: val_charge ! valence charge
 
      FLOAT :: el_temp ! electronic temperature for the Fermi function
      FLOAT :: ef      ! the fermi energy
@@ -136,7 +134,7 @@ contains
     type(states_type),    intent(inout) :: st
     type(grid_type),      intent(in)    :: gr
 
-    FLOAT :: excess_charge, r, val_charge
+    FLOAT :: excess_charge, r
     integer :: nempty, i, j
     integer(POINTER_SIZE) :: blk
 
@@ -168,8 +166,8 @@ contains
        call write_fatal(2)
     end if
 
-    call geometry_val_charge(gr%geo, val_charge)
-    st%qtot = -(val_charge + excess_charge)
+    call geometry_val_charge(gr%geo, st%val_charge)
+    st%qtot = -(st%val_charge + excess_charge)
 
     select case(st%d%ispin)
     case(UNPOLARIZED)
@@ -218,17 +216,11 @@ contains
     call states_choose_kpoints(st%d, gr%sb, gr%geo)
 
     ! we now allocate some arrays
-    allocate(st%rho(gr%m%np, st%d%nspin), &
-         st%occ(st%nst, st%d%nik), &
-         st%eigenval(st%nst, st%d%nik))
+    allocate(st%occ     (st%nst, st%d%nik))
+    allocate(st%eigenval(st%nst, st%d%nik))
     if(st%d%ispin == SPINORS) then
        allocate(st%mag(st%nst, st%d%nik, 2))
     end if
-    if (st%d%cdft) then
-       allocate(st%j(NP, NDIM, st%d%nspin))
-       st%j = M_ZERO
-    end if
-    if(gr%geo%nlcc) allocate(st%rho_core(gr%m%np))
 
     occ_fix: if(loct_parse_block(check_inp('Occupations'), blk)==0) then
        ! read in occupations
@@ -254,7 +246,7 @@ contains
 
        do j = 1, st%nst
           do i = 1, st%d%nik
-             st%occ(j, i) = min(r, -(val_charge + excess_charge) - st%qtot)
+             st%occ(j, i) = min(r, -(st%val_charge + excess_charge) - st%qtot)
              st%qtot = st%qtot + st%occ(j, i)
 
           end do
@@ -269,12 +261,26 @@ contains
     allocate(st%node(st%nst))
     st%node(:) = 0
 
-    no_of_states(current_subsystem) = st%d%nik*st%nst*st%d%dim
-
     nullify(st%dpsi, st%zpsi)
 
     call pop_sub()
   end subroutine states_init
+
+
+  subroutine states_densities_init(st, gr)
+    type(states_type),    intent(inout) :: st
+    type(grid_type),      intent(in)    :: gr
+
+    ! allocate arrays for charge and current densities
+    allocate(st%rho(gr%m%np, st%d%nspin))
+    if (st%d%cdft) then
+       allocate(st%j(NP, NDIM, st%d%nspin))
+       st%j = M_ZERO
+    end if
+    if(gr%geo%nlcc) allocate(st%rho_core(gr%m%np))
+
+  end subroutine states_densities_init
+
 
   subroutine states_copy(stout, stin)
     type(states_type), intent(in)  :: stin
@@ -820,7 +826,6 @@ contains
     FLOAT,             intent(in)  :: rho(m%np, st%d%nspin)
     FLOAT,             intent(out) :: mm(3)
 
-    integer :: i
     FLOAT, allocatable :: md(:,:)
 
     call push_sub('states.states_magnetic_moment')

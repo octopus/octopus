@@ -27,6 +27,9 @@ module grid
   use curvlinear
   use multigrid
   use par_vec
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  use mpi_mod
+#endif
 
   implicit none
 
@@ -44,18 +47,14 @@ module grid
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init(gr)
-    type(grid_type),     intent(out) :: gr
+  subroutine grid_init(gr, domain_comm_of_node)
+    type(grid_type),      intent(out) :: gr
+    integer, intent(in) :: domain_comm_of_node(:)
 
     logical :: filter
     integer :: i
 
     call push_sub('grid.grid_init')
-
-    ! initilize geometry
-    call geometry_init_xyz(gr%geo)
-    call geometry_init_species(gr%geo)
-    call geometry_init_vel(gr%geo)
 
     ! initialize simulation box
     call simul_box_init(gr%sb, gr%geo)
@@ -70,7 +69,7 @@ contains
     ! FIXME: There should be dedicated communicator instead of
     ! MPI_COMM_WORLD.
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    i = MPI_COMM_WORLD
+    i = domain_comm_of_node(mpiv%node)
 #endif
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
          gr%f_der%der_discr%lapl%stencil,                        &
