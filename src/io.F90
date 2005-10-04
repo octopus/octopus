@@ -101,7 +101,7 @@ contains
     !%Section 1 Generalities
     !%Description
     !% In addition to writing to stdout and stderr, the code messages may also be 
-    !% flushed to "messages.stdout" and "message.stderr", if this variable is 
+    !% flushed to "messages.stdout" and "messages.stderr", if this variable is 
     !% set to yes.
     !%End
     call loct_parse_logical('FlushMessages', .false., flush_messages)
