@@ -65,7 +65,7 @@ module profiling_mod
     time_usec(C_NUM_TAGS)    = 0
 
   integer, parameter, public ::        &
-    C_PROFILING_COMPLETE          = 1, &
+    C_PROFILING_COMPLETE_SUBSYS   = 1, &
     C_PROFILING_MF_INTEGRATE      = 2, &  
     C_PROFILING_MF_DOTP           = 3, &
     C_PROFILING_MF_NRM2           = 4, &
@@ -77,7 +77,7 @@ module profiling_mod
 
   character(len=C_TAG_LENGTH), dimension(C_NUM_TAGS) :: tag_label = &
     (/                                                              &
-    'COMPLETE         ',                                            &
+    'COMPLETE_SUBSYS  ',                                            &
     'MF_INTEGRATE     ',                                            &
     'MF_DOTP          ',                                            &
     'MF_NRM2          ',                                            &
@@ -106,6 +106,14 @@ contains
 #else
     call io_mkdir('profiling.001')
 #endif
+
+    ! initialize counter
+    pass_in      = 0
+    pass_out     = 0
+    time_in_sec  = 0
+    time_in_usec = 0
+    time_sec     = 0
+    time_usec    = 0    
 
     call pop_sub()
 
@@ -149,7 +157,7 @@ contains
   end subroutine profiling_out
 
 
-  ! Write profiling reaultsof each node to profiling.NNN/profifling.nnn
+  ! Write profiling results of each node to profiling.NNN/profifling.nnn
   ! The format of each line is
   ! tag-label    pass_in    pass_out    time   time/pass_in
   !
@@ -182,7 +190,7 @@ contains
       return
     end if
     do i = 1, C_NUM_TAGS
-      if(pass_in(i).eq.pass_out(i)) then
+      if(pass_in(i).eq.pass_out(i).and.pass_in(i).ne.0) then
         time_per_pass = (real(time_sec(i))+1e-6*real(time_usec(i)))/ &
                         real(pass_in(i))
       else
