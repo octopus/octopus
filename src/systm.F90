@@ -80,7 +80,7 @@ contains
     call push_sub('systm.system_init')
 
     allocate(s%gr, s%st)
-    allocate(domain_comm_of_node(0:mpiv%numprocs))
+    allocate(domain_comm_of_node(0:mpiv%numprocs-1))
 
     call geometry_init(s%gr%geo)
     call simul_box_init(s%gr%sb, s%gr%geo)

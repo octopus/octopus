@@ -32,12 +32,12 @@
 ! Given to indices j, k with ranges
 ! index_range(j) = 3, index_range(k) = 4
 ! and n_node = 48 nodes, we would put
-! n_node_domain = n_node/n_domain with
+! n_domain_node = n_node/n_domain with
 ! n_domain = prod(a=j, k)[index_range(a)] = 4
 ! nodes into each domain parallelization.
 ! To do collective operations (like sums) over j, k respectively
 ! n_index_comm = N(n_index) = 7 communicators are introduced
-! (for the definition of N see below).
+! (for the definition of N see footnote (1)).
 ! Each of these communicators contains only the root nodes of
 ! all domain parallelizations participating in this particular
 ! index. The reason for this is that only root nodes know
@@ -73,42 +73,45 @@
 ! index_comm(a=(x, y, ...), i)
 !
 ! For generality, all index communicators are stored in a
-! vector and the adressing is done by a function get_comm(a, i).
+! vector and the adressing is done by a function index_comm_number(a, i).
 ! a(1:n_index) specifies the values for all indices except i
 ! (the value of a(i) is irrelevant) and i is the number of
 ! the requested index:
-! get_comm(a, i) == offset + position
+! index_comm_number(a, i) == offset + position
 ! WHERE
-! offset   == sum(x=1, ..., i-1)[prod(y=1, ..., n_index, y|=x)[index_range(y)]]
-! position == sum(x=1, ..., n_index, x!=i)[(a(x)-1)*
-!             prod(y=x+1, ..., n_index, y|=i)[index_range(y)]] + 1
+! offset   == sum(x=1, ..., i-1; index_range(x)>1)
+!             [prod(y=1, ..., n_index; y|=x)[index_range(y)]]
+! position == sum(x=1, ..., n_index; x|=i; index_range(x)>1)[(a(x)-1)*
+!             prod(y=x+1, ..., n_index; y|=i)[index_range(y)]] + 1
 !
-! For each index i the rest if the indices form a
+! Note that only indices with ranges greater than one are summed up.
+! An index with range one is equal to no parallelization in this index.
+!
+! For each index i the rest of the indices form a
 ! n_index-1 dimensional array. The offset of this array in
 ! index_comm is offset in the above function. It is the number of
-! communicators all indices 1, ..., i-1 have.
+! communicators belonging to the indices 1, ..., i-1.
 ! The position in the array is computed as for any other
 ! n-dimensional array (for generalities sake it has to be done by hand
 ! and not by the Fortran compiler).
 ! With this function, the j communicator for k=2 can be accessed with
-! index_comm(get_comm((/0, 2/), 1))
+! index_comm(index_comm_number((/0, 2/), 1))
 ! (with j being the first and k the second index).
 !
 ! Some more stripped down cases:
 ! (*) Only index parallelization (e. g. k-points and states j):
-!     There are no domain communicators. In the sketch above
-!     (1), ..., (12) would directly denote nodes and not domain
-!     parallelizations
-! (*) Only domain parallelization: There would not be any index
+!     There are domain communicators with only one node, i, e.
+!     no domain parallelization.
+! (*) Only domain parallelization: There would not no index
 !     communicators and just one domain parallelization:
 !     n_domain = 1, domain_comm(1) = MPI_COMM_WORLD.
 !
 !
 ! ---------- 
-! (*) N(1)   = 1
+! (1) N(1)   = 1
 !     N(i+1) = N(i)*index_range(i+1) + prod(a=1, ..., i)[index_range(a)]
 !
-! (*) prod(x=1, ..., n)[f(x)] = f(1)* ... *f(x)
+! (2) prod(x=1, ..., n)[f(x)] = f(1)* ... *f(x)
 !
 
 module mpi_mod
@@ -129,8 +132,7 @@ module mpi_mod
        MPI_Debug_IN, MPI_Debug_OUT,      &
        multicomm_type,                   &
        multicomm_init, multicomm_end,    &
-       multicomm_strategy,               &
-       calc_index_comm, calc_domain_comm
+       multicomm_strategy
 
   public ::                                                        &
        TSD_MPI_Barrier,    TSZ_MPI_Barrier,    TSI_MPI_Barrier,    &
@@ -171,7 +173,7 @@ module mpi_mod
   ! Stores all communicators and groups.
   type multicomm_type
     integer          :: n_node          ! Total number of nodes.
-    integer          :: n_domain_nodes  ! Number of nodes per domain
+    integer          :: n_domain_node   ! Number of nodes per domain
     integer          :: n_index         ! Number of parallel indices.
     integer          :: n_domain_comm   ! Number of domain communicators.
     integer          :: n_index_comm    ! Number of index communicators.
@@ -205,78 +207,16 @@ module mpi_mod
 
 contains
 
-
-  ! compute the number of required domain communicators
-  integer function calc_domain_comm(dim, index_range) result(n_index)
-    integer, intent(in) :: dim
-    integer, intent(in) :: index_range(:)
-
-    integer :: j, range_product
-
-    call push_sub('mpi.calc_index_comm')
-
-    range_product = 1
-    do j = 1, dim
-       range_product = range_product*index_range(j)
-    enddo
-
-    n_index = range_product
-
-    call pop_sub()
-  end function calc_domain_comm
-
-
-  ! compute the number of required index communicators
-  integer function calc_index_comm(dim, index_range) result(n_index)
-    integer, intent(in) :: dim
-    integer, intent(in) :: index_range(:)
-
-    integer :: j, k, range_product, rdim, count
-    integer, allocatable :: n_index_table(:), proper_range(:)
-
-    call push_sub('mpi.calc_index_comm')
-    ! count how many real dimensions we have
-    rdim = 0
-    do k = 1, dim
-       if(index_range(k).gt.1) rdim = rdim + 1
-    enddo
-    allocate(n_index_table(1:rdim), proper_range(1:rdim))
-
-    ! keep only proper ranges
-    count = 1
-    do k = 1, dim
-       if(index_range(k).gt.1) then
-          proper_range(count) = index_range(k)
-          count = count + 1
-       endif
-    enddo
-    
-    if (rdim.ne.0) n_index_table(1) = 1
-    do k = 2, rdim
-       range_product = 1
-       do j = 1, k-1
-          range_product = range_product*proper_range(j)
-       enddo
-       n_index_table(k) = n_index_table(k-1)*proper_range(k) + range_product
-    enddo
-
-    if (rdim.ne.0) then
-       n_index = n_index_table(rdim)
-    else
-       n_index = 1
-    endif
-
-    deallocate(n_index_table, proper_range)
-
-    call pop_sub()
-  end function calc_index_comm
-
+  ! =========================================================
+  ! Routines for the multicommunicator part
+  ! =========================================================
+  
 
   ! decide which parallelization strategy we should use (this routine is at the moment 
   ! specialized to the case of two indices: states and kpoints
   subroutine multicomm_strategy(index_range, mc)
     integer, intent(in) :: index_range(:)
-    type(multicomm_type), intent(out) :: mc
+    type(multicomm_type), intent(inout) :: mc
 
     integer :: n_kpoints, n_states
 
@@ -411,10 +351,10 @@ contains
           call write_fatal(4)
        endif
        ! check for balanced node distribution
-       if (mc%n_domain_nodes*mc%n_domain_comm.ne.mc%n_node) then
+       if (mc%n_domain_node*mc%n_domain_comm.ne.mc%n_node) then
           message(1) = 'Error: Inbalanced distribution of nodes over domains.'
           write(message(2), '(a,i4,a)') 'Restart octopus with multiples of', &
-               mc%n_domain_nodes*mc%n_domain_comm,' processors.'
+               mc%n_domain_node*mc%n_domain_comm,' processors.'
           call write_fatal(2)
        endif
 
@@ -437,8 +377,8 @@ contains
     integer, intent(in)  :: index_range(:)
     type(multicomm_type) :: mc
 
-    integer :: j, k, l1, l2, count, mpierr, range_product, group
-    integer, allocatable :: domain_ranks(:), index_ranks(:), stride(:)
+    integer :: i, j, k, l1, count, mpierr, group
+    integer, allocatable :: domain_ranks(:), index_ranks(:), a(:)
     integer :: domain_group, index_group, MPI_COMM_WORLD_GROUP
 
     call push_sub('mpi.multicomm_init')
@@ -446,24 +386,21 @@ contains
     mc%n_index = n_index  ! size(index_range)
     mc%n_node  = n_node
 
-    allocate(stride(1:mc%n_index))
-    allocate(mc%index_range(1:mc%n_index))
+    allocate(mc%index_range(mc%n_index))
+    allocate(a(mc%n_index))
 
     ! query parallelization strategy
     call multicomm_strategy(index_range, mc)
 
     ! number of domain communicators
-    if(mc%use_domain_par) then 
-       mc%n_domain_comm = calc_domain_comm(mc%n_index, mc%index_range)
-    else
-       mc%n_domain_comm = 1
-    endif
+    mc%n_domain_comm = calc_domain_comm(mc%index_range)
+
     ! calculate number of index communicators
-    mc%n_index_comm  = calc_index_comm (mc%n_index, mc%index_range)
+    mc%n_index_comm = calc_index_comm(mc%n_index, mc%index_range)
 
     ! how many nodes per domain
     call loct_parse_int(check_inp('NumberOfProcessorsForDomain'), &
-         mc%n_node/mc%n_domain_comm, mc%n_domain_nodes)
+         mc%n_node/mc%n_domain_comm, mc%n_domain_node)
 
     ! sanity check of input
     call multicomm_sanity_check(mc)
@@ -471,8 +408,15 @@ contains
     message(1) = stars
     write(message(2),'(a,i6)') 'Info: Number of domain communicators:', mc%n_domain_comm
     write(message(3),'(a,i6)') 'Info: Number of index  communicators:', mc%n_index_comm
-    write(message(4),'(a,i6)') 'Info: Number of nodes per domain    :', mc%n_domain_nodes
+    write(message(4),'(a,i6)') 'Info: Number of nodes per domain    :', mc%n_domain_node
     call write_info(4)
+
+    ! Contract contract indices to number of available domain
+    ! parallelizations (or nodes).
+    ! If mc%n_index_comm*m%n_domain_node are available then
+    ! each index combination will be on a seperate domain parallelization.
+    ! To be implemented:
+    ! call contract_indices(n_node, n_domain_node, n_index, 
 
     ! allocate space to hold the handles of all required communicators 
     ! and groups
@@ -481,7 +425,7 @@ contains
     allocate(mc%index_comm  (mc%n_index_comm ))
     allocate(mc%domain_comm_of_node(0:mc%n_node-1))
 
-    allocate(domain_ranks(mc%n_domain_nodes))
+    allocate(domain_ranks(mc%n_domain_node))
 
     ! initially set all communicators and groups to invalid handles
     domain_group    = MPI_GROUP_NULL
@@ -499,21 +443,21 @@ contains
     l1 = 0
     do j = 1, mc%n_domain_comm
        mc%domain_root(j) = count
-       do k = 1, mc%n_domain_nodes
+       do k = 1, mc%n_domain_node
           domain_ranks(k) = count
           count = count + 1
        enddo
        write(message(1),'(a,i4,a,100i10)') 'Info: Group',j,':',domain_ranks
        call write_info(1)
-       call MPI_GROUP_INCL (MPI_COMM_WORLD_GROUP, mc%n_domain_nodes, &
+       call MPI_GROUP_INCL (MPI_COMM_WORLD_GROUP, mc%n_domain_node, &
             domain_ranks, domain_group, mpierr)
        call MPI_COMM_CREATE(MPI_COMM_WORLD, domain_group,      &
             mc%domain_comm(j), mpierr)
        call MPI_GROUP_FREE (domain_group, mpierr)
-       do k = 1, mc%n_domain_nodes
+       do k = 1, mc%n_domain_node
           ! Keep Domain communicator that node belongs to (rank -> communicator mapping)
           mc%domain_comm_of_node(l1) = mc%domain_comm(j)
-          l1 = l1 + 1
+          l1 = l1 + 1 
        enddo
     enddo
     message(1) = 'Info: Root nodes of domain groups:'
@@ -526,50 +470,48 @@ contains
        call write_info(2)   
     endif
 
-    ! setup strides
-    stride = 1
-    do j = 2, mc%n_index
-       do k = 2, j
-          stride(j) = stride(j)*mc%index_range(k-1)
-       enddo
-    enddo
-
     ! create index communicators
-    group = 1
-    do j = 1, mc%n_index
-       range_product = 1
-       do k = 1, mc%n_index
-          if (j.ne.k) then
-             range_product = range_product*mc%index_range(k)
-          endif
-       enddo
-       count = 1
-       do l1 = 1, range_product
-          if (mc%index_range(j).eq.1) cycle
-          allocate(index_ranks(mc%index_range(j)))
-          do l2 = 1, mc%index_range(j)
-             index_ranks(l2) = mc%domain_root(count)
-             count = count + stride(j)
-          enddo
-          if (count.gt.mc%n_domain_comm) count = count - mc%n_domain_comm + 1
-          write(message(1),'(a,i4,a,100i10)') 'Info: Group',group,':',index_ranks
-          call write_info(1)
-          call MPI_GROUP_INCL (MPI_COMM_WORLD_GROUP, mc%index_range(j), &
+    do i = 1, mc%n_index
+      ! Indices equal to one have no parallelism.
+      if(mc%index_range(i).gt.1) then
+        a = 1;
+        ! This is a do-while loop which iterates over all
+        ! indices except the i-th index. The counters for each
+        ! index are in a.
+        do
+          ! Get number of communicator address by (a, i).
+          group = index_comm_number(mc%n_index, mc%index_range, a, i)
+          ! Ranks in MPI_COM_WORLD of future member nodes of 
+          ! the communicator index_comm(group) are collected in this array.
+          allocate(index_ranks(mc%index_range(i)))
+          ! Get all members.
+          do j = 1, mc%index_range(i)
+            a(i) = j
+            index_ranks(j) = mc%domain_root(                                    &
+                             domain_comm_number(mc%n_index, mc%index_range, a))
+          end do
+          ! Create communicator.
+          call MPI_Group_incl(MPI_COMM_WORLD_GROUP, mc%index_range(j), &
                index_ranks, index_group, mpierr)
-          call MPI_COMM_CREATE(MPI_COMM_WORLD, index_group,       &
-               mc%index_comm(j), mpierr)
-          call MPI_GROUP_FREE (index_group, mpierr)
-          group = group + 1
+          call MPI_Comm_create(MPI_COMM_WORLD, index_group, &
+               mc%index_comm(group), mpierr)
+          call MPI_Group_free(index_group, mpierr)
+          write(message(1),'(a,i4,a,100i10)') 'Info: Group', group, ':', index_ranks
+          call write_info(1)
           deallocate(index_ranks)
-       enddo
-    enddo
+
+          ! Go on iterating.
+          if(.not.iterate_indices(mc%n_index, mc%index_range, a, i)) exit
+        end do
+      end if
+    end do
 
     message(1) = stars
     call write_info(1)
 
-    call MPI_GROUP_FREE(MPI_COMM_WORLD_GROUP, mpierr)
+    call MPI_Group_free(MPI_COMM_WORLD_GROUP, mpierr)
 
-    deallocate(domain_ranks, stride)
+    deallocate(domain_ranks)
 
     call pop_sub()
   end subroutine multicomm_init
@@ -608,6 +550,200 @@ contains
 
 
   ! ---------------------------------------------------------
+  ! Helper functions for the indexing business.
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
+  ! Return number of index communicator for index i and all other
+  ! indices set to values a(x), x|=i.
+  integer function index_comm_number(n_index, index_range, a, i) result(number)
+    integer, intent(in) :: n_index
+    integer, intent(in) :: index_range(:) ! index_range(n_index)
+    integer, intent(in) :: a(:)           ! index_range(n_index)
+                                          ! a(i) is ignored.
+    integer, intent(in) :: i
+
+    integer :: offset
+    integer :: position
+    integer :: offset_product
+    integer :: position_product
+    integer :: x, y
+
+    call push_sub('mpi.index_comm_number')
+
+    ! See comment at top of this file for the formula computed
+    ! and a description what is happening.
+
+    ! Compute offset.
+    offset = 0
+    do  x = 1, i-1
+      if(index_range(x).gt.1) then
+        offset_product = 1
+        do y = 1, n_index
+          if(y.ne.x) then
+            offset_product = offset_product*index_range(y)
+          end if
+        end do
+        offset = offset+offset_product
+      end if
+    end do
+
+    ! Compute position.
+    position = 0
+    do x = 1, n_index
+      if(index_range(x).gt.1.and.x.ne.i) then
+        position_product = 1
+        do y = x+1, n_index
+          if(y.ne.i) then
+            position_product = position_product*index_range(y)
+          end if
+        end do
+        position = position + (a(x)-1)*position_product
+      end if
+    end do
+    position = position+1
+
+    number = offset+position
+
+    call pop_sub()
+
+  end function index_comm_number
+
+
+  ! ---------------------------------------------------------
+  ! Return the number of domain communicator for indeices set to
+  ! a(x), x=1, ..., n_index.
+  ! This maps (i1, i2, ..., i_n_index) -> n, i. e. computes how to
+  ! store a multidimensional array in a linear field (i_n_index is
+  ! stored consecutively).
+  integer function domain_comm_number(n_index, index_range, a) result(number)
+    integer, intent(in) :: n_index
+    integer, intent(in) :: index_range(:)
+    integer, intent(in) :: a(:)
+
+    integer :: x
+    
+    call push_sub('mpi.domain_comm_number')
+
+    number = 0
+
+    do x = 1, n_index
+      if(index_range(x).gt.1) then
+        number = number + (a(x)-1)*product(index_range(x+1:n_index))
+      end if
+    end do
+    number = number + 1
+
+    call pop_sub()
+
+  end function domain_comm_number 
+
+
+  ! ---------------------------------------------------------
+  ! Iterate over all indices except the i-th.
+  ! This is like haveing n_index-1 do-loops with
+  ! counters a(1), ..., a(i-1), a(i+1), ..., a(n_index)
+  ! which iterate over 1, index_range(1, ..., i-1, i+1, ..., n_index)
+  ! (a(1) is the counter of the outermost loop and a(n_index) is
+  ! the counter of the innermost loop).
+  ! The new values are found in a after the call.
+  ! The return value is true if another iteration was possible
+  ! (not all counters reached their end of range), false otherwise.
+  ! If not 1 <= i <= n_index iterate over all indices.
+  !
+  ! A 'multiple' do-loop can be written like this:
+  ! a = 1
+  ! do
+  !   ! Something useful.
+  !   if(.not.iterate_indices(n_index, index_ranges, a, i) exit
+  ! end do
+  !
+  ! If Fortran had a non repelling loop this looked like
+  ! do
+  !   ! Someting useful.
+  ! while(iterate_indices(n_index, index_ranges, a, i)
+  logical function iterate_indices(n_index, index_range, a, i) result(iter)
+    integer, intent(in)    :: n_index
+    integer, intent(in)    :: index_range(:) ! index_range(n_index)
+    integer, intent(inout) :: a(:)           ! index_range(n_index)
+                                             ! a(i) is ignored.
+    integer, intent(in)    :: i
+
+    integer :: j
+
+    call push_sub('mpi.iterate_indices')
+
+    iter = .false.
+    j    = n_index 
+
+    ! Loop as long as we either could increase one counter
+    ! (iter = true) or no counter is left (j <= 0).
+    do while(.not.iter.and.j.gt.0)
+      ! Leave out the i-th counter if necessary.
+      if(j.ne.i) then
+        ! Try to increase the j-tgh counter and exit loop.
+        if(a(j).lt.index_range(j)) then
+          a(j) = a(j)+1
+          iter = .true.
+        ! If that is not possible, try next one in next iteration.
+        else
+          a(j) = 1
+          j    = j-1
+        end if
+      else
+        j = j-1
+      end if
+    end do
+
+    call pop_sub()
+
+  end function iterate_indices
+
+
+  ! ---------------------------------------------------------
+  ! compute the number of required domain communicators
+  integer function calc_domain_comm(index_range) result(n_domain_comm)
+    integer, intent(in) :: index_range(:)
+
+    call push_sub('mpi.calc_domain_comm')
+
+    ! In this case, ranges of 1 are no problem as they do not
+    ! change the product of index_range(1)*...*index_range(n_index).
+    n_domain_comm = product(index_range)
+
+    call pop_sub()
+
+  end function calc_domain_comm
+
+
+  ! ---------------------------------------------------------
+  ! compute the number of required index communicators
+  integer function calc_index_comm(n_index, index_range) result(n_index_comm)
+    integer, intent(in) :: n_index 
+    integer, intent(in) :: index_range(:)
+
+    integer :: i
+
+    call push_sub('mpi.calc_index_comm')
+
+    ! The formula is mentioned in the comment on top of this file.
+    ! Note again only index with ranges greater one are considered.
+    n_index_comm = 1
+    do i = 2, n_index
+      if(index_range(i) > 1) then
+        n_index_comm = n_index_comm*index_range(i) + product(index_range(1:i-1))
+      end if
+    end do
+
+    call pop_sub()
+
+  end function calc_index_comm
+
+
+  ! =========================================================
+  ! Routines to support MPI debugging.
+  ! =========================================================
+
   subroutine MPI_Debug_Statistics()
 
     integer :: j

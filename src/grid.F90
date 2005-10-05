@@ -49,10 +49,10 @@ contains
   !-------------------------------------------------------------------
   subroutine grid_init(gr, domain_comm_of_node)
     type(grid_type),      intent(out) :: gr
-    integer, intent(in) :: domain_comm_of_node(:)
+    integer, intent(in) :: domain_comm_of_node(0:mpiv%numprocs-1)
 
     logical :: filter
-    integer :: i
+    integer :: comm
 
     call push_sub('grid.grid_init')
 
@@ -63,14 +63,12 @@ contains
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
-    ! FIXME: There should be dedicated communicator instead of
-    ! MPI_COMM_WORLD.
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    i = domain_comm_of_node(mpiv%node)
+    comm = MPI_COMM_WORLD
 #endif
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
          gr%f_der%der_discr%lapl%stencil,                        &
-         gr%f_der%der_discr%lapl%n, i)
+         gr%f_der%der_discr%lapl%n, comm)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 
