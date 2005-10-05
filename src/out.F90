@@ -59,7 +59,7 @@ type output_type
   integer :: iter   ! output every iter
   logical :: duringscf
 
-  integer :: wfs(32) ! which wfs to output
+  character(len=80) :: wfs_list
 end type output_type
 
 integer, public, parameter :: &
@@ -99,7 +99,6 @@ subroutine output_init(sb, outp)
 
   integer :: i
   logical :: l
-  character(len=80) :: owf
 
   call loct_parse_logical(check_inp('OutputKSPotential'), .false., outp%what(output_potential))
   call loct_parse_logical(check_inp('OutputDensity'),     .false., outp%what(output_density))
@@ -115,8 +114,7 @@ subroutine output_init(sb, outp)
   end do
 
   if(outp%what(output_wfs)) then
-    call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", owf)
-    call loct_wfs_list(owf, outp%wfs)
+    call loct_parse_string(check_inp('OutputWfsNumber'), "1-1024", outp%wfs_list)
   end if
 
   if(outp%what(output_something)) then

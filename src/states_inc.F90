@@ -193,8 +193,7 @@ subroutine X(states_output) (st, gr, dir, outp)
 
   if(outp%what(output_wfs)) then
      do ist = st%st_start, st%st_end
-        is = outp%wfs((ist-1)/32 + 1)
-        if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
+        if(loct_isinstringlist(ist, outp%wfs_list)) then
            do ik = 1, st%d%nik
               do idim = 1, st%d%dim
                  write(fname, '(a,i3.3,a,i3.3,a,i1)') 'wf-', ik, '-', ist, '-', idim
@@ -210,8 +209,7 @@ subroutine X(states_output) (st, gr, dir, outp)
   if(outp%what(output_wfs_sqmod)) then
      allocate(dtmp(NP))
      do ist = 1, st%nst
-        is = outp%wfs((ist-1)/32 + 1)
-        if(iand(is, 2**(modulo(ist-1, 32))).ne.0) then
+        if(loct_isinstringlist(ist, outp%wfs_list)) then
            do ik = 1, st%d%nik
               do idim = 1, st%d%dim
                  write(fname, '(a,i3.3,a,i3.3,a,i1)') 'sqm-wf-', ik, '-', ist, '-', idim

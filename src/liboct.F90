@@ -30,7 +30,7 @@ module lib_oct
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
   public :: loct_clock, loct_gettimeofday, loct_nanosleep, loct_getmem
   public :: loct_sysname, loct_getcwd, loct_mkdir, loct_rm, loct_number_of_lines
-  public :: loct_fft_optimize, loct_wfs_list, loct_progress_bar, loct_printRecipe
+  public :: loct_fft_optimize, loct_isinstringlist, loct_progress_bar, loct_printRecipe
   public :: write_iter_init, write_iter_clear, write_iter_flush, write_iter_end
   public :: write_iter_start, write_iter_string, write_iter_header_start, write_iter_header
   public :: write_iter_nl, write_iter_double, write_iter_int
@@ -298,13 +298,6 @@ module lib_oct
     end subroutine oct_fft_optimize
   end interface
 
-  interface loct_wfs_list
-    subroutine oct_wfs_list(str, l)
-      character(len=*), intent(in) :: str
-      integer, intent(out) :: l(32)
-    end subroutine oct_wfs_list
-  end interface
-
   interface loct_progress_bar
     subroutine oct_progress_bar(a, max)
       integer, intent(in) :: a, max
@@ -319,6 +312,20 @@ module lib_oct
   end interface
 
 contains
+
+  logical function loct_isinstringlist(a, s) result(l)
+    integer,          intent(in) :: a
+    character(len=*), intent(in) :: s
+
+    integer :: list(32), i
+
+    call oct_wfs_list(s, list)
+    l = .false.
+    i = list((a-1)/32 + 1)
+    if(iand(i, 2**(modulo(a-1, 32))).ne.0) l = .true.
+
+  end function loct_isinstringlist
+
   ! single precision version of the functions
   real(4) function oct_gamma4(x)
     real(4), intent(in) :: x

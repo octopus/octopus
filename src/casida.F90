@@ -51,7 +51,7 @@ module casida
 
      integer, pointer :: n_occ(:)         ! number of occupied states
      integer, pointer :: n_unocc(:)       ! number of unoccupied states
-     integer :: wfn_flags(32) ! flags determining which wfs to take into account
+     character(len=80) :: wfn_list
 
      integer          :: n_pairs         ! number of pairs to take into acount
      integer, pointer :: pair_i(:)       ! holds the separated indices of compund index ia
@@ -162,9 +162,8 @@ contains
     !% external utility. But it does not go into any other section, so it will wait
     !% until we redo the manual.
     !%End
-    call loct_parse_string(check_inp('LinearResponseKohnShamStates'), "1-1024", ch)
-    call loct_wfs_list(ch, cas%wfn_flags)
-    write(message(1),'(a,a)') "Info: States that form the basis: ",trim(ch)
+    call loct_parse_string(check_inp('LinearResponseKohnShamStates'), "1-1024", cas%wfn_list)
+    write(message(1),'(a,a)') "Info: States that form the basis: ",trim(cas%wfn_list)
     Call write_info(1)
 
     ! Initialize structure
@@ -213,17 +212,16 @@ contains
     cas%n_pairs = 0
     do k = 1, nspin
        do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
-          as = cas%wfn_flags((a-1)/32 + 1)
-          if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+          if(loct_isinstringlist(a, cas%wfn_list)) then
              do i = 1, cas%n_occ(k)
-                is = cas%wfn_flags((i-1)/32 + 1)
-                if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+                if(loct_isinstringlist(i, cas%wfn_list)) then
                   cas%n_pairs = cas%n_pairs + 1
                 end if
              end do
           end if
        end do
     enddo
+    stop
 
     if(cas%n_pairs < 1) then
        message(1) = "Error: Maybe there are no unoccupied states?"
@@ -239,11 +237,9 @@ contains
     j = 1
     do k = 1, nspin
        do a = cas%n_occ(k)+1, cas%n_occ(k) + cas%n_unocc(k)
-          as = cas%wfn_flags((a-1)/32 + 1)
-          if(iand(as, 2**(modulo(a-1, 32))).ne.0) then
+          if(loct_isinstringlist(a, cas%wfn_list)) then
              do i = 1, cas%n_occ(k)
-                is = cas%wfn_flags((i-1)/32 + 1)
-                if(iand(is, 2**(modulo(i-1, 32))).ne.0) then
+                if(loct_isinstringlist(i, cas%wfn_list)) then
                    cas%pair_i(j) = i
                    cas%pair_a(j) = a
                    cas%pair_sigma(j) = k
@@ -648,7 +644,7 @@ contains
     casp%type      = cas%type
     casp%n_occ     = cas%n_occ
     casp%n_unocc   = cas%n_unocc
-    casp%wfn_flags = cas%wfn_flags
+    casp%wfn_list  = cas%wfn_list
     casp%n_pairs   = cas%n_pairs
     allocate(casp%pair_i(casp%n_pairs), casp%pair_a(casp%n_pairs), casp%mat(casp%n_pairs, casp%n_pairs))
     dim = size(cas%tm, 2)
