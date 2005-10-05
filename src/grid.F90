@@ -56,9 +56,6 @@ contains
 
     call push_sub('grid.grid_init')
 
-    ! initialize simulation box
-    call simul_box_init(gr%sb, gr%geo)
-
     ! initialize curvlinear coordinates
     call curvlinear_init(gr%sb, gr%cv)
 

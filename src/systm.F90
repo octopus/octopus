@@ -83,11 +83,7 @@ contains
     allocate(domain_comm_of_node(0:mpiv%numprocs))
 
     call geometry_init(s%gr%geo)
-
-    ! FIXME: still a bit more stuff missing. all k points are still the same 
-    ! as the gamma point. This is due to the reordering of states_init and grid_init
-    call loct_parse_int(check_inp('PeriodicDimensions'), 0, s%gr%sb%periodic_dim)
-
+    call simul_box_init(s%gr%sb, s%gr%geo)
     call states_init(s%st, s%gr)
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
@@ -111,7 +107,6 @@ contains
 #endif
 
     call grid_init(s%gr, domain_comm_of_node)
-
     call states_densities_init(s%st, s%gr)
     call output_init(s%gr%sb, s%outp)
     call v_ks_init(s%gr, s%ks, s%st%d)
