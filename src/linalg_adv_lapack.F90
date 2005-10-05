@@ -173,7 +173,7 @@ FLOAT function ddeterminant(n, a, invert) result(d)
     end subroutine DLAPACK(getri)
   end interface
 
-  integer :: info, i, j
+  integer :: info, i
   integer, allocatable :: ipiv(:)
   FLOAT, allocatable :: work(:)
   logical :: invert_
@@ -231,7 +231,7 @@ CMPLX function zdeterminant(n, a, invert) result(d)
     end subroutine ZLAPACK(getri)
   end interface
 
-  integer :: info, i, j
+  integer :: info, i
   integer, allocatable :: ipiv(:)
   CMPLX, allocatable :: work(:)
   logical :: invert_

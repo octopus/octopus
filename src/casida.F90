@@ -73,9 +73,8 @@ contains
     logical,                intent(inout) :: fromScratch
 
     type(casida_type) ::  cas
-    integer :: i, n, err, kpoints, dim, nst, nocc, ist
+    integer :: i, err, kpoints, dim, nst, ist
     character(len=100) :: ch
-    logical :: l
 
     call push_sub('casida.casida_run')
 

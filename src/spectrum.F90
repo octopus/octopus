@@ -823,7 +823,7 @@ subroutine spectrum_angular_info(iunit, nspin, kick, time_steps, dt)
   type(kick_type), intent(out) :: kick
   FLOAT, intent(out)           :: dt
 
-  integer :: i, j
+  integer :: j
   FLOAT :: t1, t2, dummy
 
   call push_sub('spectrum.spectrum_angular_info')

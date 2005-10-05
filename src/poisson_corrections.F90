@@ -107,7 +107,7 @@ contains
     FLOAT,           intent(out) :: mult((ml+1)**2)
 
     FLOAT   :: tmp(m%np)
-    integer :: i, add_lm, l, mm
+    integer :: add_lm, l, mm
 
     mult(:) = M_ZERO
     add_lm = 1

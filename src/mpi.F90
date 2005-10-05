@@ -182,11 +182,9 @@ module mpi_mod
     integer, pointer :: index_range(:)  ! Range of index i is
                                         ! 1, ..., index_range(i).
 
-    integer, pointer :: domain_comm(:)  ! Domain communicators ...
-    integer, pointer :: domain_group(:) ! ... and corresponding groups.
+    integer, pointer :: domain_comm(:)  ! Domain communicators
     integer, pointer :: domain_root(:)  ! Ranks of roots from every domain
-    integer, pointer :: index_comm(:)   ! Index communicators ...
-    integer, pointer :: index_group(:)  ! ... and corresponding groups.
+    integer, pointer :: index_comm(:)   ! Index communicators
 
     ! mapping for comm_world ranks
     integer, pointer :: domain_comm_of_node(:)  ! Domain communicator that node belongs to
@@ -274,9 +272,10 @@ contains
   end function calc_index_comm
 
 
-  ! decide which parallelization strategy we should use
-  subroutine multicomm_strategy(index_dim, index_range, mc)
-    integer, intent(in) :: index_dim, index_range(:)
+  ! decide which parallelization strategy we should use (this routine is at the moment 
+  ! specialized to the case of two indices: states and kpoints
+  subroutine multicomm_strategy(index_range, mc)
+    integer, intent(in) :: index_range(:)
     type(multicomm_type), intent(out) :: mc
 
     integer :: n_kpoints, n_states
@@ -440,7 +439,7 @@ contains
 
     integer :: j, k, l1, l2, count, mpierr, range_product, group
     integer, allocatable :: domain_ranks(:), index_ranks(:), stride(:)
-    integer :: MPI_COMM_WORLD_GROUP
+    integer :: domain_group, index_group, MPI_COMM_WORLD_GROUP
 
     call push_sub('mpi.multicomm_init')
 
@@ -451,7 +450,7 @@ contains
     allocate(mc%index_range(1:mc%n_index))
 
     ! query parallelization strategy
-    call multicomm_strategy(n_index, index_range, mc)
+    call multicomm_strategy(index_range, mc)
 
     ! number of domain communicators
     if(mc%use_domain_par) then 
@@ -478,19 +477,17 @@ contains
     ! allocate space to hold the handles of all required communicators 
     ! and groups
     allocate(mc%domain_comm (mc%n_domain_comm))
-    allocate(mc%domain_group(mc%n_domain_comm))
     allocate(mc%domain_root (mc%n_domain_comm))
     allocate(mc%index_comm  (mc%n_index_comm ))
-    allocate(mc%index_group (mc%n_index_comm ))
     allocate(mc%domain_comm_of_node(0:mc%n_node-1))
 
     allocate(domain_ranks(mc%n_domain_nodes))
 
     ! initially set all communicators and groups to invalid handles
+    domain_group    = MPI_GROUP_NULL
+    index_group     = MPI_GROUP_NULL
     mc%domain_comm  = MPI_COMM_NULL
-    mc%domain_group = MPI_GROUP_NULL
     mc%index_comm   = MPI_COMM_NULL
-    mc%index_group  = MPI_GROUP_NULL
 
     ! get group of MPI_COMM_WORLD communicator
     call MPI_COMM_GROUP(MPI_COMM_WORLD, MPI_COMM_WORLD_GROUP, mpierr)
@@ -509,9 +506,10 @@ contains
        write(message(1),'(a,i4,a,100i10)') 'Info: Group',j,':',domain_ranks
        call write_info(1)
        call MPI_GROUP_INCL (MPI_COMM_WORLD_GROUP, mc%n_domain_nodes, &
-            domain_ranks, mc%domain_group(j), mpierr)
-       call MPI_COMM_CREATE(MPI_COMM_WORLD, mc%domain_group(j),      &
+            domain_ranks, domain_group, mpierr)
+       call MPI_COMM_CREATE(MPI_COMM_WORLD, domain_group,      &
             mc%domain_comm(j), mpierr)
+       call MPI_GROUP_FREE (domain_group, mpierr)
        do k = 1, mc%n_domain_nodes
           ! Keep Domain communicator that node belongs to (rank -> communicator mapping)
           mc%domain_comm_of_node(l1) = mc%domain_comm(j)
@@ -557,9 +555,10 @@ contains
           write(message(1),'(a,i4,a,100i10)') 'Info: Group',group,':',index_ranks
           call write_info(1)
           call MPI_GROUP_INCL (MPI_COMM_WORLD_GROUP, mc%index_range(j), &
-               index_ranks, mc%index_group(j), mpierr)
-          call MPI_COMM_CREATE(MPI_COMM_WORLD, mc%index_group(j),       &
+               index_ranks, index_group, mpierr)
+          call MPI_COMM_CREATE(MPI_COMM_WORLD, index_group,       &
                mc%index_comm(j), mpierr)
+          call MPI_GROUP_FREE (index_group, mpierr)
           group = group + 1
           deallocate(index_ranks)
        enddo
@@ -589,9 +588,6 @@ contains
        if (mc%domain_comm(j).ne.MPI_COMM_NULL) then
           call MPI_COMM_FREE (mc%domain_comm(j), mpierr)
        endif
-       if (mc%domain_comm(j).ne.MPI_GROUP_NULL) then
-          call MPI_GROUP_FREE(mc%domain_group(j), mpierr)
-       endif
     enddo
 
     ! free index communicators
@@ -599,18 +595,13 @@ contains
        if (mc%index_comm(j).ne.MPI_COMM_NULL) then
           call MPI_COMM_FREE (mc%index_comm(j), mpierr)
        endif
-       if (mc%index_comm(j).ne.MPI_GROUP_NULL) then
-          call MPI_GROUP_FREE(mc%index_group(j), mpierr)
-       endif
     enddo
 
     deallocate(mc%domain_comm_of_node)
     deallocate(mc%index_range )
     deallocate(mc%domain_comm )
-    deallocate(mc%domain_group)
     deallocate(mc%domain_root )
     deallocate(mc%index_comm  )
-    deallocate(mc%index_group )
 
     call pop_sub()
   end subroutine multicomm_end

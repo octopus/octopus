@@ -80,7 +80,7 @@ subroutine td_write_init(w, gr, st, geo, ions_move, there_are_lasers, iter, dt)
      
 
   FLOAT :: rmin
-  integer :: ierr, nus, first, i
+  integer :: ierr, first, i
   logical :: log
 
   call push_sub('td_write.td_write_handler')

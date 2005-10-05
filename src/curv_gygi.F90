@@ -104,7 +104,7 @@ contains
     FLOAT,   parameter :: x_conv   = CNST(1e-10)
 
     ! local variables
-    integer :: iter, i, p
+    integer :: iter, i
     FLOAT, allocatable :: f(:,:), delta(:,:), J(:,:), chi2(:)
     logical :: conv
 
@@ -172,7 +172,6 @@ contains
     integer, optional, intent(in) :: natoms
 
     FLOAT :: natoms_
-    FLOAT :: a_, alpha_, beta_
     integer :: i, ix, iy
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
