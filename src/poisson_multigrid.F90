@@ -20,12 +20,16 @@
 #include "global.h"
 
 module poisson_multigrid
+  use global
+  use syslabels
+  use messages
+  use mesh
+  use functions
   use grid
   use output
   use multigrid
   use poisson_corrections
   use math, only : dconjugate_gradients
-  use messages
 
   implicit none
 

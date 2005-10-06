@@ -21,6 +21,8 @@
 
 module td_write
   use global
+  use syslabels
+  use units
   use messages
   use io
   use lib_oct

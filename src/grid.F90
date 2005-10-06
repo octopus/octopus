@@ -33,6 +33,13 @@ module grid
 
   implicit none
 
+  private
+  public :: grid_type, &
+            grid_init, &
+            grid_end,  &
+            grid_write_info, &
+            grid_create_multigrid
+
   type grid_type
     type(simul_box_type)       :: sb
     type(geometry_type)        :: geo

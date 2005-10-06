@@ -26,6 +26,7 @@ module scf
   use lib_oct_parser
   use units
   use geometry
+  use simul_box
   use mesh
   use mesh_function
   use functions

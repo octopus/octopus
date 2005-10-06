@@ -29,6 +29,7 @@ module system
   use lib_basic_alg
   use math
   use mesh
+  use simul_box
   use mesh_function
   use functions
   use grid
