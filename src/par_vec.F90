@@ -408,6 +408,16 @@ contains
     ! global(i, r) > vp%np_local(r) it is a ghost point).
     ! If global(i, r) is 0 then i is neither local
     ! to r nor a ghost point of r. This indicates a serious error.
+    ! Note: The global array may consume too much memory for many
+    ! nodes and points, e. g. about 64MB for 16 nodes and half a 
+    ! million points on a 64 bit architecture.
+    ! The solution is then to introduce a function global which
+    ! does the mapping. This function does a binary search in the
+    ! sorted array of global point numbers the node has,
+    ! which will hopefully be fast enough (O(log n)). This avoids
+    ! storing all those 0.
+    ! global is mainly used in initialization, so speed is not too
+    ! important.
     vp%global = 0
     do r = 1, p
       ! Local points.

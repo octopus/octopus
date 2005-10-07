@@ -71,7 +71,7 @@ contains
 
     ! now we generate create the mesh and the derivatives
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-    comm = MPI_COMM_WORLD
+    comm = domain_comm_of_node(mpiv%node)
 #endif
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
          gr%f_der%der_discr%lapl%stencil,                        &

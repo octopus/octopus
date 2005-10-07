@@ -286,11 +286,14 @@ subroutine X(vec_ghost_update)(vp, v_local)
   ! skipped) or to use Alltoallv. In my opinion, Alltoallv just skips
   ! any I/O if some sendcount is 0. This means, there is actually
   ! no need to code this again.
-  ! FIXME: It is actually possible to do pair-wise communication. Roughly
+  ! Note: It is actually possible to do pair-wise communication. Roughly
   ! p/2 pairs can communicate at the same time (as long as there is
   ! a switched network). It then takes as much rounds of
   ! communication as the maximum neighbour number of a particular node
-  ! is. This will speed up exchange and will probably be implemented later.
+  ! is. If this speeds up communication depends on the MPI
+  ! implementation: A performant implementation might already work this
+  ! way. So only touch this code if profiling with many processors
+  ! shows this spot is a serious bottleneck.
   call MPI_Debug_IN(vp%comm, C_MPI_ALLTOALLV)
   call MPI_Alltoallv(ghost_send, vp%np_ghost_neigh(:, vp%partno), sdispls, &
                      R_MPITYPE, v_local(vp%np_local(vp%partno)+1:),        &
