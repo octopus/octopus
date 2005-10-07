@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+#
+# $Id$
+#
+# This script can be used to generate some simple diagrams from
+# profiling data. The plots in the octopus wiki are produced
+# this way.
+#
+# The script expects to find subdirectories in the current directories
+# which are listed in @run. The name of the directory must be the
+# number of nodes the run was started on. This subdirectory must have been
+# the working directory of the octopus run so that a directory
+# profiling.NNN is placed there.
+#
+# The tags top be plotted in the diagrams are specified in the
+# @tags array. If several tags shall be plotted in one diagram they
+# can be concatenated with an asterisk. The diagrams are
+# written to files called tag1_tag2_tag3...eps. The gnuplot code
+# generating the plot is stored in $gnuplotfile and the tables which are
+# input to gnuplot are written to tag1_tag2_tag3...dat
+#
+
+$gnuplotfile = "profiling.gp";
+
+@runs = qw/1 2 4 6 8 10/;
+
+@tags = qw/NL_OPERATOR*GHOST_UPDATE SCF_CYCLE MF_DOTP*MF_DOTP_ALLREDUCE MF_INTEGRATE/;
+
+open GNUP, "> $gnuplotfile";
+print GNUP <<EOP;
+set term postscript eps color
+EOP
+
+foreach $tag (@tags) {
+    @thesetags = split '\*', $tag;
+    $basefilename = join '+', @thesetags;
+    open DAT, "> ${basefilename}.dat";
+    foreach $run (@runs) {
+        $num = $run;
+        $num =~ s/^(.)$/0\1/;
+        $num =~ s/^(..)$/0\1/;
+        $dir = "$run/profiling.$num";
+        open PROF, "$dir/profiling.000";
+PROF:   while($line = <PROF>) {
+            chop $line;
+            foreach $thistag (@thesetags) {
+                if($line =~ /^$thistag /) {
+                    @field = split / +/, $line;
+                    if($field[4] == 0) {
+                        print "Warning: Ins and outs for run $run (tag $thistag) are not equal.";
+                        last PROF;
+                    }
+                    $num{$thistag} = $field[4];
+                }
+            }
+        }
+        close PROF;
+        $datline = $run;
+        foreach $thistag (@thesetags) {
+            $datline .= "\t$num{$thistag}";
+        }
+        print DAT "$datline\n";
+    }
+    close DAT;
+    $xrange = ($runs[0]-1).":".($runs[$#runs]+1);
+    print GNUP qq|set out "${basefilename}.eps"\n|;
+    $gnuplotline = qq|p [$xrange] "${basefilename}.dat" u 1:2 title "$thesetags[0]" with points pt 13|;
+    for($i = 1; $i < $#thesetags+1; $i++) {
+        $column = $i+2;
+        $gnuplotline .= qq|, "${basefilename}.dat" u 1:$column title "$thesetags[$i]" with points pt 13|;
+    }
+    print GNUP "$gnuplotline\n";
+}
+close GNUP;
+
+system "gnuplot $gnuplotfile";
