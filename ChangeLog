@@ -1,43 +1,3267 @@
-04/6/02 (marques)
-  - Elf now seems to work (funny bug in derivatives fixed)
-  - Second step at rewritting the output systems (only td left)
-31/5/02 (marques)
-  - Added new laser mode (read from file)
-  - Started rewitting the output system (first attempt at elf)
-  - funny thing with strings (hard to explain... fortran...)
-13/5/02 (marques)
-  - Rename hamiltonian* -> h*
-  - continuation of td simulation now uses .nbo file
-05/5/02 (marques)
-  - Added a couple of .hgh files
-  - Created Makefiles for HGH share directory
-  - Added split-operator propagator (do *not* use with velocity gauge)
-03/5/02 (acastro)
-  - Goedecker pseudopotentials added. Some comments:
-    * LCAO calculations don't work properly, because the Goedecker
-      pseudoeigenfunctions are badly calculated. It can be fixed, but
-      it will take time.
-    * The files ps3D.F90, tm.F90 and hgh.F90 are still a mess, but they
-      are on their way of looking nice. Need some work.
-    * The pseudopotential files for Goedecker may be obtained from their
-      paper, just copying 10 or 12 numbers, in the same format they use in their
-      paper. Those files should
-      go into the share directory, as Miguel did for the TM2 ps. Question: do
-      I just have to add a "HGH" directory to share/PP, and it is done?
-    * The "Species" input format changed (one more field to specify "tm"
-      or "hgh"). I will change the manual.
-28/4/02 (marques)
-  - Added GPL header to (almost) all files
-  - Added share directory to put pseudopotentials
-23/4/02 (marques)
-  - Memory leak fixed in Hpsi (hamiltonian_inc.F90)
-  - Bug fix in restart in mpi mode (run.F90)
-  - Cleaned up non-linear core corrections (faster, smaller)
-20/4/02 (marques)
-  - Changed AIX compiler options in fortran.m4
-  - Bug fix related to the reading of OutputPotential...
-  - Added utility to calculate harmonic spectrum from accelaration file
-    (currently only works for local potentials)
-16/4/02 (marques)
-  - MPI bug fixes
-  - build bug fixes + configure.ac now uses GSL native configuration 
+2005-10-07 10:54  lorenzen
+
+	* share/util/plot_profiling: Added simple perl script to generate
+	  some plots from results of profiling runs.
+
+2005-10-07 10:53  lorenzen
+
+	* src/: grid.F90, mf_inc.F90, nl_operator.F90, par_vec.F90,
+	  par_vec_inc.F90:
+	  * The domain communicator in grid_init was accidentally set to
+	    MPI_COMM_WORLD.
+	  * vec_ghost_update and MPI_Allreduce are only called when haveing
+	    more than one partition.
+	  * Added some notes concerning a possible problem with the size of
+	    the global array in type(pv_type).
+
+2005-10-06 15:35  acastro
+
+	* src/: grid.F90, poisson_multigrid.F90, scf.F90, systm.F90,
+	  td_write.F90: Just style: the grid module was not declared as
+	  private, and so some modules were used through it, instead of
+	  directly, which I think is bad practice.
+
+2005-10-06 13:31  lorenzen
+
+	* src/mpi.F90: It is now possible to have more index-combinations
+	  than nodes (i. e. n_node < product(index_range)). In this case, the
+	  indices are mapped onto the available nodes with respect to
+	  communication costs of the different indices.  This mapping is also
+	  done if n_node = product(index_range) to keep things simple but in
+	  this case the outcome is just a one-to-one mapping.  The contraction
+	  is done using METIS.
+
+	  The multicomm_sanity_check has to be refreshed as I have removed the
+	  input variable NumberOfProcessorsForDomain. I think this variable
+	  leads to too much confusion. The number of processors per domain is
+	  implicitly set by n_node/n_domain_comm (and n_domain_comm is either
+	  product(range_index) or n_node if n_node < product(range_index)).
+
+2005-10-05 17:20  lorenzen
+
+	* src/: grid.F90, mpi.F90, systm.F90: Changes related to the
+	  multicommunicator part:
+	  1) Fixed the creation of domain communicators in case of
+	     no domain parallelization.
+	  2) Changed to code to compute the index communicators to use
+	     generalized indexing functions.
+	  3) Corrected the explainatory comment at head of mpi.F90.
+
+	  Bugfix: The indexing scheme for domain_comm_of_node has to
+	  explicitly declared for formal parameters as the index range starts
+	  with 0.
+
+2005-10-05 09:02  acastro
+
+	* src/: casida.F90, liboct.F90, out.F90, states_inc.F90:
+	  Substituted loct_wfs_list by some loct_isinstringlist, easier to
+	  use.  (oct_wfs_list stays internal to the lib_oct module as an
+	  interface to the C library).
+
+2005-10-05 08:30  appel
+
+	* src/: grid.F90, systm.F90: Call simul_box_init before states_init
+	  is called. Otherwise lattice primitive vectors are not available for
+	  kpoint initialization (this was a leftover from yesterdays
+	  rearrangement).
+
+2005-10-05 08:30  appel
+
+	* src/: casida.F90, curv_gygi.F90, linalg_adv_lapack.F90, mpi.F90,
+	  poisson_corrections.F90, spectrum.F90, td_write.F90: Remove
+	  unused variables.
+
+2005-10-04 11:27  appel
+
+	* src/: geometry.F90, grid.F90, mpi.F90, states.F90, systm.F90:
+	  These changes introduce initial support for (MPI)
+	  multi-communicators.  In general the code now distinguishes between
+	  domain communicators and index communicators. The latter will be
+	  used for state indices and kpoints. The new code in the mpi module
+	  allows for index parallelizations in n-dimensional hypercubes, i.e.
+	  I kept the routines general so that in principle we can add further
+	  indices later on. For now I specialized to a two dimensional index
+	  parallelization: states and kpoints.
+
+	  Multi-communicators are initialized with multicomm_init. At the
+	  point when this routine is called the number of states and kpoints
+	  have to be available. This required some reordering in system_init,
+	  i.e. a stripped down version of states_init is now called _before_
+	  we call grid_init. In this way we can make sure that the number of
+	  states and kpoints is known and that the right domain communicators
+	  are passed to grid_init.
+
+	  There is also a new input variable called ParallelizationStrategy
+	  that decides what kind of parallelization Octopus will use:
+
+	   1)  000 - serial          (single domain, all states, kpoints on a
+	   single processor)
+	  2)  001 - only_domains    (only parallelization in domains)
+	   3)  010 - only_kpoints    (no parallelization in domains, only in
+	   kpoints)
+	  4)  011 - kpoints_domains (combined parallelization in kpoints and
+	   domains)
+	  5)  100 - only_states     (only parallelization in state indices)
+	   6)  101 - states_domains  (combined parallelization in states and
+	   domains)
+	  7)  110 - states_kpoints  (no parallelization in domains, only in
+	   states and kpoints)
+	  8)  111 - full            (parallelization in states, kpoints and
+	  domains)
+
+	  Except for a few cases this list is of course not available yet.
+	  Also a possible choice will depend on the run mode. There is quite
+	  some integration work in the rest of the code that has to be done
+	  (e.g. the existing TD parallelization should be combined with this
+	  scheme, other things like parallelization in kpoints hasn't been
+	  touched at all).
+
+	  The idea is to stop the code for parallelization schemes that are
+	  not available yet and to get only the important ones (e.g. 1, 2 or 5
+	  for td) running initially. Later refinement is always possible but
+	  it is in my opinion important to have things organized from the
+	  start ...
+
+	  Expect the parallel version of the code to be broken for quite some
+	  time until the integration with the above scheme has been completed.
+	  If you need to run eg. TD in parallel please fetch an older version
+	  from the cvs that was still ok.
+
+2005-10-04 10:17  appel
+
+	* src/main.F90: Reorder profiling calls to allow profiling also for
+	  all subsystems in multi subsystem mode.
+
+2005-10-04 10:16  appel
+
+	* src/profiling.F90: o Initialize all counter in profiling_init.  o
+	  Fix SIGFPE. Avoid divisions by zero.
+
+2005-10-04 10:12  appel
+
+	* src/io.F90: Fix typo.
+
+2005-10-02 23:14  acastro
+
+	* src/: crystal.F90, linalg_adv_lapack.F90, mix.F90, spectrum.F90,
+	  states_inc.F90: The calculation of the determinant, in the
+	  routines ddeterminant and zdeterminant that I just submitted, was
+	  not working for the Hermitian case. I was actually unable of making
+	  it work, either because of my fault or because an error in my
+	  implementation of LAPACK, I don't know.  In any case, I removed the
+	  Hermitian case; all cases are treated now in the general case, which
+	  works fine.
+
+2005-10-02 19:13  acastro
+
+	* src/: casida.F90, crystal.F90, curvlinear.F90, linalg_adv.F90,
+	  linalg_adv_lapack.F90, math.F90, mix.F90, spectrum.F90,
+	  states_inc.F90: The routine lalg_invert was assuming only
+	  symmetric/Hermitian matrices.  Now it may only use non-symmetric
+	  ones. I also "merged" the determinant and inversion matrices, since
+	  they share the code. But I left two public wrappers,
+	  lalg_determinant and lalg_inverter. There is a mandatory argument,
+	  invert = .false./.true., which tells wether or not the matrix is to
+	  be inverted -- the determinant is always calculated, and is the
+	  function result.  Since it is no longer necessary, invert_3by3 is
+	  gone.
+
+2005-09-30 22:31  acastro
+
+	* src/casida.F90: Added support for spin-polarized calculations in
+	  the linear-response TDDFT formalism (Casida mode).  Not all kernels
+	  work, though. And in some cases I get some negative excitation
+	  energies, don't know why.
+
+2005-09-30 21:23  acastro
+
+	* src/: casida.F90, restart.F90, td_write.F90: Added preliminary
+	  support for spin-polarized linear response TDDFT calculations.
+
+2005-09-30 01:06  acastro
+
+	* src/casida.F90: Just rearrangements in the casida module. I think
+	  it is cleaner this way.  The reason is that I had to do these
+	  changes in my temporal branch, and then I thought that since this
+	  looks nicer, I should put it in main.
+
+2005-09-29 16:47  lorenzen
+
+	* src/: mf_inc.F90, profiling.F90: (*) The profiling module now
+	      also computes the average time spent between in and out calls and
+	      writes it in an extra column in the output.  (*) Added profiling
+	      calls to measure the time of allreduce in mf_dotp.
+
+2005-09-29 16:42  acastro
+
+	* src/: casida.F90, restart.F90, td_write.F90: Introduced a
+	  "restart_look" function that takes a look at a restart directory to
+	  see what is inside, how many states, etc.  This way there is no need
+	  to read NumberUnoccStates in td_write and in the casida run-mode. I
+	  think this is the cleanest way.
+
+2005-09-29 10:07  acastro
+
+	* src/casida.F90: I was about to document the variables in the
+	  casida run-mode (the ones that decide which mode is to be run --
+	  eigenvalues differences, Petersilka, or Casida), but I realized that
+	  the best way to document them is to eliminate them. This way it is
+	  much easier for the users and for us.
+
+	  There is no reason why one wouldn't want to get the eigenvalues
+	  differences, since it takes a fraction of a second.  And ther is no
+	  reason why one wouldn't want to execute the Petersilka scheme: the
+	  time spent on it is not lost since the matrix elements calculated
+	  are used afterwards for the Casida approach. And, in case that one
+	  wants to do the Petersilka calculation and not the Casida one
+	  because it is too time-consuming, one can always abort the program
+	  after the Petersika file has been written.
+
+	  Also, I fixed a bug regarding the proper reading of the stored
+	  matrix elements -- before it did not consider that the matrix is
+	  symmetric, which led to unnecessary calculations.
+
+	  I changed the variable "ExciteStates" (misleading name) to
+	  "LinearResponseKohnShamStates", and documented it.
+
+2005-09-28 17:42  lorenzen
+
+	* src/mpi.F90: Added a type for the multi communicator part and a
+	  partial description of how it will work.
+
+2005-09-28 14:37  acastro
+
+	* src/: epot.F90, lasers.F90: I rewrote a little bit the laser
+	  field definition. Wrote a short piece of documentation for
+	  "TDLasers"
+
+	  The reason is that I wanted to allow for the possibility of a more
+	  arbitary shape for the spatial part of the external field. Before it
+	  could only be a dipolar field. Now the code may read the shape from
+	  a file. Of course this file has to be written before in some way.
+
+	  I had been working on this in my own branch, the one where I am
+	  implementing the technique of construction of excited states through
+	  "propagation in the BLUES" (BLackout of Undesired Excited States, I
+	  just made up the name), but I thought that maybe it would be nice to
+	  put it in main, since it could be useful for other purpuses
+	  (application of quadrupolar fields, who knows)
+
+2005-09-28 10:34  lorenzen
+
+	* src/: mesh_lib.F90, nl_operator.F90, par_vec.F90: Removed unused
+	  variable dir.
+
+2005-09-28 09:42  acastro
+
+	* src/: main.F90, run.F90, syslabels.F90: Now the multi system mode
+	  is not any more a run mode. The variable CalculationMode may now be
+	  a scalar (in which case we only have one system) or a block (in
+	  which case it should include the labels in the first row, the
+	  run-modes in the second row, and the order in the third row).
+
+2005-09-28 07:51  appel
+
+	* share/samples/Na2: Update sample to take new naming scheme for
+	  debug level into account.
+
+2005-09-28 07:50  appel
+
+	* src/: io.F90, main.F90, profiling.F90: Syslabels have to be
+	  available before the first io_mkdir takes place. The call of
+	  io_init() and profiling_init() is now done after syslabels_init().
+
+2005-09-28 07:44  appel
+
+	* src/messages.F90: Remove recursion in timing functions that
+	  caused stack overflows. The push/pop functions were calling
+	  functions that were calling push/pop which were calling functions
+	  that were calling push/pop which were calling functions that were
+	  calling push/pop which were calling functions ....  :)
+
+2005-09-27 22:46  acastro
+
+	* src/: eigen_trlan.F90, epot.F90, global.F90, grid.F90, hgh.F90,
+	  io.F90, main.F90, mesh.F90, messages.F90, nl_operator.F90,
+	  specie.F90, states.F90, tm.F90, v_ks.F90, xyzanim.F90: I
+	  eliminated the conf%verbose variable. So we don't have verbosity
+	  levels any more; only debug and non-debug mode -- which is
+	  controlled by the in_debug_mode logical variable.
+
+2005-09-27 19:52  acastro
+
+	* src/: hs.F90, rotational_strength.F90, spectrum.F90, states.F90,
+	  systm.F90: Fixed the rotational strength program, which was
+	  broken. (Now it is not broken, but still could be giving wrong
+	  numbers).  Also, removed a couple of appearances of vol_pp... I hope
+	  it helps for the parallelization.
+
+2005-09-27 18:44  acastro
+
+	* src/: rotational_strength.F90, spectrum.F90, td_write.F90: Just
+	  usability; I made all headers of the output files look a little bit
+	  more homogeneous.
+
+2005-09-27 18:38  lorenzen
+
+	* src/hs.F90: Bugfix: mode was not declared.
+
+2005-09-27 10:37  lorenzen
+
+	* src/: math_cg_inc.F90, poisson_cg.F90, poisson_corrections.F90:
+	  Fixed the cg corrected poisson solver to work in parallel.  Only
+	  some arrays had to extended to hold ghost points.
+
+	  However, it seems that the numbers from the cg corrected as well as
+	  from the cg solver differ considerably compared to those computed by
+	  serial runs which leads to more and more inaccurate eigenvalues with
+	  increasing number of nodes (and -- as I mentioned previously -- to
+	  more SCF cycles eating up the parallel speed up, it is strange that
+	  it converges anyway).  So, this is still an open issue.
+
+2005-09-27 09:16  lorenzen
+
+	* src/: Makefile.am, global.F90, io.F90, main.F90, mf.F90,
+	  mf_inc.F90, nl_operator.F90, par_vec.F90, par_vec_inc.F90,
+	  profiling.F90, scf.F90: Sorry, I forgot to add the profiling
+	  module...
+
+	  Here it is together with some minor changes:
+	  1) Everything is called profiling -- not profile -- now.
+	  2) The subdirectory for profiling results is called
+	     profiling.NNN with NNN being the number of nodes. This
+	     way it is easier to measure scaling because a new subdirectory
+	     is created for every run.
+
+2005-09-27 00:38  acastro
+
+	* src/: Makefile.am, hs.F90, hs_from_acc.F90, hs_from_mult.F90:
+	  Merged hs-from-mult and hs-from-acc programs; doesn't make sense to
+	  have two. Now it is called oct-harmonic-spectrum, and an input
+	  variable HarmonicSpectrumMode decides in which way the spectrum is
+	  calculated.
+
+	  The HSPolarization is renamed to HarmonicSpectrumPolarization. I
+	  documented the variables.
+
+2005-09-26 17:02  appel
+
+	* src/.cvsignore: Update cvsignore file.
+
+2005-09-26 16:42  lorenzen
+
+	* src/: Makefile.am, global.F90, main.F90, messages.F90, mf.F90,
+	  mf_inc.F90, nl_operator.F90, par_vec.F90, par_vec_inc.F90,
+	  scf.F90: Added a simple profiling module, a profiling mode
+	  (ProfileMode in the input file) and some profiling hooks to the
+	  code.
+
+	  The profiler counts the number of times a code between call
+	  profile_in(tag) ...  call profile_out(tag) is executed and how much
+	  time this takes.
+
+	  In the end, each node writes a file './profile/profile.nnn' (nnn
+	  being the node number) with statistics for each tag. Tags have to be
+	  registered in the profile module.
+
+	  Later, I will write a simple script that displays the profiling
+	  information of different runs or different parts of the code in some
+	  diagrams.
+
+2005-09-26 15:01  acastro
+
+	* src/: curv_gygi.F90, derivatives.F90: Changed the defaults for
+	  the Gygi grid, since the ones that were used lead to the failure of
+	  the inversion of the mapping through the Newton- Raphson procedure
+	  in many cases.
+
+	  I also tried to improve this procedure for the difficult cases, by
+	  trying to improve the guess of the initial point. But it does not
+	  guarantee the result.
+
+2005-09-26 10:17  appel
+
+	* src/states_inc.F90: Correct lalg_scal call (NP -> NP_PART
+	  transition).
+
+2005-09-26 10:16  appel
+
+	* src/: Makefile.am, liboct_parser.F90, messages.F90,
+	  syslabels.F90: Remove 'use messages' from liboct_parser and
+	  syslabels. In both modules a write_fatal is now done manually. I had
+	  to change this to circumvent cyclic dependencies that appeared in
+	  multi_subsys_mode.
+
+2005-09-26 10:15  appel
+
+	* src/epot_inc.F90: Remove SIGFPE that occurred for periodic
+	  systems during force calculations.
+
+2005-09-26 10:14  appel
+
+	* src/: ode_solver.F90, ode_solver_inc.F90, root_solver.F90,
+	  root_solver_inc.F90, scalar_mesh.F90, sparskit.F90,
+	  sparskit_inc.F90: Add calls to input_error().
+
+2005-09-26 10:14  appel
+
+	* src/poisson3D.F90: push_sub call was missing (stack got scrambled
+	  due to this).
+
+2005-09-26 07:10  acastro
+
+	* src/: geometry.F90, spectrum.F90, units.F90: Bug fixed.  Forgot
+	  to remove the public declaration of the strength_function stuff as
+	  public in spectrum module.
+
+	  Added the documentation of a couple of variables.
+
+2005-09-25 20:33  acastro
+
+	* src/: Makefile.am, spectrum.F90, strength_function.F90: Removed
+	  strength_function.F90 file and, with it, oct-sf program.  Now
+	  oct-cross-section should be used instead.
+
+	  The dipole strength is also printed in the cross_section_vector
+	  file.
+
+	  Still some work has to be done to clean up the utility programs, to
+	  make them more user-friendly, and to document them properly.
+
+2005-09-23 18:05  lorenzen
+
+	* src/restart_inc.F90: Removed unused variable.
+
+2005-09-23 18:04  lorenzen
+
+	* src/: poisson_cg.F90, poisson_corrections.F90: Fixed the poisson
+	  cg solver to work in parallel. Therefore I had to change
+	  get_multipoles to use Xmf_integrate instead of doing the integration
+	  by hand and boundary_conditions to respect the different location of
+	  boundary points in the parallel case.
+
+	  Presently, it seems that the number of SCF cycles increases when run
+	  on more nodes: 11 iterations serially, 17 on two nodes and 24 on 4
+	  nodes. This may be due to some minor bug I have not found yet (but
+	  the intermediate numbers I have checked looked quite good). It may
+	  also be related to the non-commuting algebra on machine numbers.
+	  This will have to be investigated but at least it is working in
+	  principle.
+
+2005-09-23 16:45  appel
+
+	* src/h_inc.F90: Bugfix: the spinor test was broken since lalg_scal
+	  calls are affected by the NP -> NP_PART transition. There seem to be
+	  further places in the code that might have the same problem.  This
+	  is to be checked.
+
+2005-09-23 14:37  acastro
+
+	* src/spectrum.F90: Th cross sectio utility now outputs, in
+	  addition to the full tensor, also the two principal invariants: the
+	  trace, and the anisotropy \Delta\sigma, defined as:
+
+	  \Delta\sigma = (1/3)*( 3*Tr(\sigma^2) - Tr(\sigma)^2 )
+
+	  Also, it prints the names of the columns and the units.
+
+2005-09-23 12:51  acastro
+
+	* src/: broad.F90, centergeom.F90, cross_section.F90,
+	  hs_from_acc.F90, hs_from_mult.F90, make_st.F90,
+	  phonon_spectrum.F90, rotational_strength.F90,
+	  strength_function.F90, syslabels.F90, xyzanim.F90: Bug fixed.
+	  All subprograms crashed in debugging mode because the "debug"
+	  directory was not created.
+
+2005-09-23 11:10  lorenzen
+
+	* src/poisson2D.F90: Bugfix: Hardcoded bounds for the two
+	  dimensions to make the NAG compiler with -C=array happy.
+
+2005-09-23 10:47  lorenzen
+
+	* src/eigen_plan.F90: Actually, then lanczos solver is working. I
+	  just tested with a way to small mesh (just a handful of points). So
+	  the FIXME is removed.
+
+2005-09-23 10:17  appel
+
+	* src/eigen_cg.F90: Now also eigen_solver_cg2_new seems to work
+	  properly in parallel, NP -> NP_PART has been adjusted.
+
+2005-09-23 10:16  appel
+
+	* src/derivatives.F90: The code spends quite some time in
+	  make_discretization when running with curvlinear coordinates. Print
+	  a status message to notify the user what we are doing.
+
+2005-09-23 10:09  appel
+
+	* src/: mesh_create.F90, mpi.F90: o Correct push_sub label in
+	  mesh_partition.  o Fix format strings for output.
+
+2005-09-23 08:14  lorenzen
+
+	* src/states_inc.F90: Bugfix: Some 1:m%np in a vector operation
+	  were missing.
+
+2005-09-23 07:59  lorenzen
+
+	* src/gs.F90: Bugfix: ground_state_run has no parameter gs, so the
+	  macro NP_PART gr%m%np_part does not work. sys% has to be prepended.
+
+2005-09-22 19:27  acastro
+
+	* src/restart_inc.F90: Bug fixed.  Bad choice for the error flag...
+	  ierr is being used as a counter there.
+
+2005-09-22 18:26  appel
+
+	* src/: derivatives_inc.F90, f_inc.F90, gs.F90, h_inc.F90,
+	  mf_inc.F90, nl_operator.F90, poisson_corrections.F90,
+	  states_inc.F90: Already a few changes for the NP NP_PART
+	  transistion. More to come ...  (I've to run now; possible
+	  autobuild/test fails due to this will be fixed tomorrow).
+
+2005-09-22 18:24  appel
+
+	* src/: complex.F90, real.F90: Fix serial compilation.
+
+2005-09-22 17:00  appel
+
+	* src/eigen_cg.F90: Sample code to be discussed in the IRC meeting
+	  ...
+
+2005-09-22 16:42  appel
+
+	* src/global.h: Introduce similar to NP a macro for NP_PART:
+
+	   #define NP_PART gr%m%np_part
+
+2005-09-22 16:26  acastro
+
+	* src/units.F90: Just continuing with my documentation effort.
+
+2005-09-22 16:00  lorenzen
+
+	* src/: out.F90, restart_inc.F90: Introduced handling of 'parallel
+	  file i/o': I added four new i/o routines to out.F90:
+
+	  iopar_open, iopar_close, iopar_read, iopar_backspace
+
+	  which correspond to
+
+	  io_open, io_close, read, backspace
+
+	  respectively. Those routines are in the sense parallel that only
+	  root opens, closes, reads, modfies the seek pointer but all nodes
+	  get the result and the error code. Some compromise had to be made
+	  with the read: It is only possible to read files lines by lines into
+	  a string, which can be tokenized by Fortran intrinsic read
+	  afterwards.  These routines can be called in parallel or serial, in
+	  serial they are just another layer of wrappers, which call io_*
+	  routines.
+
+	  With this abstraction it is possible to write file reading code in a
+	  consistent manner in serial and parallel.
+
+	  As a prototypic application, I have translated the ugly #ifdef
+	  spaghetti code from yesterday in restart_inc to the new coding
+	  style, which looks like this:
+
+	  Doing everything by hand: <...>
+	    do #if defined(HAVE_MPI) && defined(HAVE_METIS)
+	      if(m%vp%rank.eq.m%vp%root) then #endif
+	        read(unit=iunit, fmt='(a)', iostat=i) char #if
+	      defined(HAVE_MPI) && defined(HAVE_METIS) endif
+	      call MPI_Bcast(i, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+	      call MPI_Bcast(char, 1, MPI_CHARACTER, m%vp%root, m%vp%comm,
+	      mpierr) #endif
+	      if(i.ne.0.or.char=='%') exit
+
+	  #if defined(HAVE_MPI) && defined(HAVE_METIS)
+	      if(m%vp%rank.eq.m%vp%root) then #endif
+	        backspace(unit=iunit) #if defined(HAVE_MPI) &&
+	      defined(HAVE_METIS) endif #endif
+
+	  #if defined(HAVE_MPI) && defined(HAVE_METIS)
+	      if(m%vp%rank.eq.m%vp%root) then #endif
+	        read(unit=iunit, iostat=i, fmt=*) ik, char, ist, char, idim,
+	        char, filenam e #if defined(HAVE_MPI) && defined(HAVE_METIS)
+	      end if
+	      call MPI_Bcast(ik, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+	      call MPI_Bcast(ist, 1, MPI_INTEGER, m%vp%root, m%vp%comm,
+	      mpierr) call MPI_Bcast(idim, 1, MPI_INTEGER, m%vp%root,
+	  m%vp%comm, mpierr) #endif
+	      if(index_is_wrong()) then #if defined(HAVE_MPI) &&
+	        defined(HAVE_METIS) if(m%vp%rank.eq.m%vp%root) then #endif
+	          read(unit=iunit2, iostat=i, fmt=*) ! skip the line in the
+	          occs file #if defined(HAVE_MPI) && defined(HAVE_METIS)
+	        end if #endif
+	        cycle
+	      end if <...>
+
+	  With iopar_* routines: <...>
+	    do
+	      call iopar_read(m, iunit, line, i)
+	      read(line, '(a)') char
+	      if(i.ne.0.or.char=='%') exit
+
+	      call iopar_backspace(m, iunit)
+
+	      call iopar_read(m, iunit, line, ierr)
+	      read(line, *) ik, char, ist, char, idim, char, filename
+	      if(index_is_wrong()) then
+	        call iopar_read(m, iunit2, line, ierr)
+	        cycle
+	      end if <...>
+
+	  Note the 'doubling' of the read lines: one call to iopar_read to get
+	  the line and one to read to tokenize it.
+
+	  This approach shown can easily be adopted to idditional o_* routines
+	  if the need arises.  Moreover, there are surely lots of spots in the
+	  code that need maintenance in this respect.
+
+2005-09-22 15:57  acastro
+
+	* src/: global.F90, mesh_lib.F90, run.F90: Removed the
+	  conf%boundary_zero_derivative variable.
+
+	  The boundary conditions should be taken care of elsewhere.  Anyways,
+	  the zero derivative boundary conditions (Dirichlet boundary
+	  conditions, I think they were called) were not used now. Maybe we
+	  should put them back in the future, but in some other way.
+
+2005-09-22 14:51  acastro
+
+	* src/: gs.F90, io.F90, restart_inc.F90: (*) I committed what I
+	      think it is a good option for the variable that defines, from the
+	      end user point of view, the debugging level.  Basically it is only
+	      one, "DebugLevel". Take a look, it is documented.  I kept the
+	      internal variables, conf%verbose and in_debug_mode, for the moment
+	      being.  We can change this later, I leave it open to discussion.
+	      We also have to think what we do with the "push_sub"/"pop_sub".
+	      I still think that a preprocessor def:
+
+	  #define PUSH_SUB(x) if(in_debug_mode) call push_sub('x')
+
+	      would look nice.
+
+	  (*) A couple of bugs fixed -- preprocessing out MPI stuff when
+	      compiling in serial.
+
+2005-09-22 13:17  appel
+
+	* configure.ac, src/Makefile.am, src/messages.F90: Rename
+	  DISABLE_DEBUG as NDEBUG to comply with the C standard.
+
+2005-09-22 13:04  appel
+
+	* src/: complex.F90, gs.F90, real.F90, restart_inc.F90: Don't use
+	  MPI timestamp macro if configured with --disable-debug.
+
+2005-09-22 11:31  acastro
+
+	* src/io.F90: Just documentation of some variables. Before release,
+	  all variables should be documented, both in the code and in the
+	  manual!!
+
+2005-09-22 11:09  acastro
+
+	* src/grid.F90: Bug fixed.  MPI_COMM_WORLD does not exist in serial
+	  mode...
+
+2005-09-22 10:57  appel
+
+	* src/: messages.F90, mpi.F90: Bugfix: There were further places
+	  where if(in_debug_mode) statements were missing.
+
+2005-09-22 10:49  lorenzen
+
+	* src/: grid.F90, mesh.F90, mesh_create.F90, nl_operator.F90,
+	  par_vec.F90, poisson1D.F90, poisson2D.F90: Clean-up of the
+	  following things:
+
+	  1) part (i. e. the point to partition mapping) in type(mesh_type)
+	     has moved to type(pv_type) where it belongs. npart has been
+	     removed from type(mesh_type) because the number of partitions
+	     is already stored in type(pv_type).
+
+	  2) The number of partitions created now depends on the communicator
+	     passed to mesh_partition and vec_init. They do a MPI_Comm_size
+	     call to get the number of nodes. For this to work, a communicator
+	     is passed to mesh_init, which is MPI_COMM_WORLD at the moment but
+	     this will change.
+
+	  3) mesh_partition_init_default and vec_init_default are removed.
+	     They are not needed anynore with the new communicator
+	     parametrization.  mesh_partition_end is removed as part is now in
+	     type(pv_type) and will be deallocated by vec_end.
+
+	  4) Some spots in the code used m%part, they were changed to
+	  m%vp%part.
+
+2005-09-22 10:38  lorenzen
+
+	* src/messages.F90: Bugfix: write_debug did not check if octopus is
+	  in debug mode.
+
+2005-09-22 00:48  acastro
+
+	* src/: cross_section.F90, spectrum.F90: Bugs fixed and code
+	  cleaning.
+
+2005-09-21 18:40  appel
+
+	* src/restart_inc.F90: Add ifdefs to fix serial build.
+
+2005-09-21 17:18  lorenzen
+
+	* src/: eigen_cg.F90, eigen_plan.F90, gs.F90, h_inc.F90: I had to
+	  introduce a rather small but invasive change: As we need ghost
+	  points in parallel (which are stored after the local points in a
+	  vector), Xpsi needs np_part entries (I wonder how the code worked
+	  with Xpsi being allocated for np values -- probably because bounds
+	  checking was switched off).  This, in consequence, needs changes in
+	  many places where vector operations involving Xpsi of the form
+
+	  ... Xpsi(:, ...,) ... a(:, ...) ... b(:)
+
+	  occur. The reason is that a, b and the like may normally have np
+	  values but then the wildcard index has different ranges which --
+	  unfortunately -- is handled differently by different compilers.
+	  Thus, the above line has to be
+
+	  ... Xpsi(1:np, ...,) ... a(1:np, ...) ... b(1:np)
+
+	  I've already fixed allocation of Xpsi and the cg_solver as well as
+	  some routines of h_inc.F90. Now, it is possible to compute non
+	  interacting electrons using curvlinear coordinates in parallel in at
+	  least 1D and 2D. As Heiko has already translated the 1D and 2D
+	  poisson solver to parallel, we can even do a bit more -- but that is
+	  not tested yet.  All the above only works with the cg eigensolver,
+	  lanczos is a different-story: for some reason, an index gets out of
+	  bound when running in parallel. I have put a FIXME at the
+	  appropriate spot. This should be fixed next that we can compare
+	  results from cg and lanczos.
+
+2005-09-21 17:05  lorenzen
+
+	* src/restart_inc.F90: Changed the file input bevahiour in
+	  restart_read: Only the root node is allowed to read files.  This
+	  should be our general approach to file-input for parallel code from
+	  now on because
+	  1) handling of I/O errors should be centralized,
+	  2) sometimes freshly written files are not available
+	     to remote nodes because of NFS latencies which leads to
+	     deadlocks.  There are - I guess - many places in the code where
+	  file input has to be changed. Like it is done now in restart_inc.F90
+	  is really ugly, so changeing other spots in the code should wait
+	  until some better abstraction is found. I am thinking about this.
+
+	  File output is no issue because it is already centralized.
+
+2005-09-21 16:57  lorenzen
+
+	* src/nl_operator.F90: Bugfix: nl_operator_equal forgot to copy the
+	  op_cmplx attribute to the duplicated operator.
+
+2005-09-21 16:56  lorenzen
+
+	* src/derivatives.F90: Simplified the determination of points,
+	  which must have a zero weight due to boundary conditions.
+
+2005-09-21 16:53  lorenzen
+
+	* src/: out_inc.F90, par_vec_inc.F90: Somehow, the TS macro from
+	  the mpi module causes seg faults sometimes.  In par_vec_inc.F90 and
+	  out_inc.F90 the debug code is put in by hand using MPI_Debug_In and
+	  MPI_Debug_Out directly.
+
+2005-09-21 16:51  lorenzen
+
+	* src/: derivatives_inc.F90, states_inc.F90: Added push_sub and
+	  pop_sub to several routines.
+
+2005-09-21 16:04  appel
+
+	* debian/rules: Remove debug executables from the nightly
+	  autobuild.
+
+2005-09-21 16:01  acastro
+
+	* src/: cross_section.F90, spectrum.F90: The oct-cross-section
+	  tensor now looks for "multipoles" or "multipoles.x" files, and
+	  decides about the equivalent axis and wether or not to calculate the
+	  full tensor, and how, depending on what it sees, rather than via the
+	  input variables, as before.
+
+2005-09-21 15:58  appel
+
+	* src/Makefile.am, src/global.F90, src/grid.F90, src/io.F90,
+	  src/main.F90, src/mesh.F90, src/mesh_create.F90,
+	  src/messages.F90, src/mpi.F90, src/nl_operator.F90,
+	  src/out_inc.F90, src/par_vec.F90, src/sparskit_driver.F90,
+	  configure.ac: Modified the debug mode. Before the debug mode was
+	  opt in: you explicitely had to enable the mode with --enable-debug.
+	  Now all DEBUG preprocessor flags have been replaced by Fortran if
+	  statements. The Debug mode is triggered by setting DebugMode = yes
+	  in the input file.  The call to push_sub and pop_sub routines will
+	  always be performed (in critical places like mf_dotp I will later
+	  make further modifications). To create an executable that does not
+	  have this overhead you have to opt out, ie. remove the debug mode by
+	  configuring with --disable-debug.
+
+2005-09-21 13:59  acastro
+
+	* src/broad.F90: The defaults were very badly chosen.
+
+2005-09-21 13:16  appel
+
+	* liboct/oct_f.c, src/io.F90, src/liboct.F90: Add oct_nanosleep to
+	  liboct.
+
+2005-09-21 08:30  acastro
+
+	* src/: Makefile.am, global.F90, main.F90: Heiko: I was about to
+	  add the loct_gettimeofday to all the utility programs, but then I
+	  thought that maybe it is cleaner to put it in global_init, since
+	  they all should call that.  I had to change a bit the compilation
+	  order so that it would work. But I think that this order now is more
+	  correct.  In anycase please take a look just in case this is wrong
+	  for some reason.
+
+2005-09-20 23:31  acastro
+
+	* src/: cross_section.F90, spectrum.F90: Removed the possibility of
+	  specifying a minimum energy, other that zero, to calculate spectra.
+	  It is one of those features that are clearly totally useless and
+	  only complicate the code.
+
+2005-09-20 17:55  appel
+
+	* src/Makefile.am: Add mpi_inc.F90 to dependency list.
+
+2005-09-20 17:33  appel
+
+	* src/Makefile.am: Add mesh_lib to Makefile.am
+
+2005-09-20 16:36  lorenzen
+
+	* src/: par_vec.F90, mesh.F90, mesh_create.F90, mesh_lib.F90,
+	  nl_operator.F90: Fixed problem with the calculation of the ghost
+	  point in vec_init.  vec_init now uses mesh_index to handle periodic
+	  boundary conditions and out of the box points etc. To get this
+	  accomplished I had to introduce the new module mesh_lib to
+	  circumvent cyclic dependencies. mesh_lib contains mesh_index only at
+	  the moment. There will perhaps be some more restructuring which
+	  fills this module but at the moment it exists only due to technical
+	  constraints.
+
+2005-09-20 16:30  lorenzen
+
+	* src/par_vec_inc.F90: For some reason, there is a seg fault, when
+	  using the TS macro on MPI_Gatherv. I removed it and put in the calls
+	  to MPI_Debug_IN and MPI_Debug_OUT directly.  My suspicion is that is
+	  has to do something with the parameter handling in the Fortran
+	  compiler what I could not figure out yet.
+
+2005-09-20 16:21  lorenzen
+
+	* src/poisson.F90: A 'use mesh_function' was missing.
+
+2005-09-20 16:16  lorenzen
+
+	* src/mf_inc.F90: Corrected typo.
+
+2005-09-20 15:25  appel
+
+	* src/: poisson1D.F90, poisson2D.F90: Add ifdefs so that the code
+	  compiles in serial again (thanks to Alberto for pointing this one
+	  out).
+
+2005-09-20 14:30  acastro
+
+	* src/casida.F90: New performance hack.
+
+	  The point is that the Hartree potential originated by of psi_j*psi_b
+	  (j occupied, b unoccupied) was now calculated for every matrix term
+	  <ia|V_coul + fxc|jb>. This is not necessary, since it can be stored
+	  and used for all (i,a).
+
+	  The previous performance hack seemed to reduce the compuational
+	  burden by some 25%. But this one is simply spectacular, the casida
+	  calculations are now *way* faster, although I did not check by a
+	  factor of how much -- the time spent calculating Hartree potentials,
+	  by a factor of N_pairs, which is *a lot*, since a large fraction of
+	  the computational time was actually spent doing this.
+
+2005-09-20 13:43  acastro
+
+	* src/casida.F90: Performance hack: the kernel fxc was calculated,
+	  in the casida module, for all the matrix elements; the kernel is the
+	  same for all of them, so it only needs to be done once.
+
+	  A similar performance hack can be done for the Hartree part; I will
+	  do it later.
+
+2005-09-20 13:06  appel
+
+	* src/: poisson1D.F90, poisson2D.F90: The direct integration of the
+	  Hartree integral in 1D and 2D is now parallized.  However, in the 2D
+	  case the potential produced by the MPI code differs from the serial
+	  one stronger than I expected. For further debugging purposes I
+	  therefore kept the old serial code in comments.
+
+2005-09-20 11:33  acastro
+
+	* src/: broad.F90, casida.F90: (*) Bug fixed in oct-broad: the
+	  usual lack of awareness about the syslabels.
+
+	  (*) More serious, the casida calculations is giving sometimes NaN
+	      for some of the energies. This is because some eigenvalues of the
+	      Omega matrix that defines the problem are sometimes negative. This
+	      should not happen since that matrix should be symmetric positive
+	      definite (at least I think so, I could not really prove the positive
+	  definite part).
+
+	      I have made one change: the energies and pairs are only ordered now
+	      when the writing subroutine is called, and only locally inside
+	      there.  Before they were ordered after calling the Petersilka
+	      routine, and used in the new ordering when using the Casida
+	      approach. After this change, I cannot reproduce the bug. This is
+	      odd, because I do not think that this change should fix it. So I am
+	      not sure that the bug has been fixed.
+
+2005-09-20 09:53  lorenzen
+
+	* src/states.F90: Bugfix: In states_calculate_multipoles was an
+	  array extend error in parallel mode: as m%x also contains ghost
+	  points x(:) is x(1:m%np_part) and not x(1:m%np).
+
+2005-09-20 09:27  lorenzen
+
+	* src/: mpi.F90, mpi_inc.F90: Added support for MPI_Bcast.  It is
+	  not used yet because the only place where it is called is
+	  Xinput_function and there buf is a scalar and I do not know how to
+	  change the wrapper to accept both scalars and arrays without
+	  changeing to pointers.
+
+2005-09-20 09:24  lorenzen
+
+	* src/out_inc.F90: Bugfix: When reading a function from harddisk
+	  with Xinput_function in parallel only root knew the ierr state. In
+	  some cases the result was that all other nodes tried to read the
+	  function again which was a deadlock in consequence.  No the ierr
+	  state is broadcasted and the scatter is only done after a successful
+	  read.  Apart from that, I changed that only root allocates memory
+	  for all points of the function.
+
+2005-09-19 12:29  acastro
+
+	* src/states.F90: Little performance hack.  The code was
+	  orthonormalizing way too many times the same vectors when
+	  randomizing unoccupied vectors. This was a pain for example with
+	  C60.
+
+2005-09-17 19:21  appel
+
+	* src/nl_operator.F90: Forgot this file.
+
+2005-09-17 19:04  appel
+
+	* liboct/oct_f.c: I changed the typecast from long to int, but
+	  forgot the datatypes in the argument list of the function.
+
+2005-09-17 19:01  appel
+
+	* src/derivatives.F90: Bug fixed. The stencil of the auxop array
+	  was not initialized. Since it was used to overwrite the stencils of
+	  gradient and laplacian the code was crashing in parallel (it is
+	  still crashing in several other places, but that's a different story
+	  :).  In light of this bug I'm a bit surprised that octopus was
+	  working with curvlinear coordinates before ...
+
+2005-09-17 18:55  appel
+
+	* src/: derivatives.F90, derivatives_inc.F90, eigen_plan.F90,
+	  mesh.F90, mesh_create.F90, out_inc.F90, par_vec.F90,
+	  par_vec_inc.F90, poisson_cg.F90, poisson_multigrid.F90,
+	  systm.F90: o Add partition number "partno" and rank number "rank"
+	    as fields to pv_type. Having both variables is actually a bit
+	    redundant but makes the code readable.
+
+	  o Remove MPI_Comm_Rank calls since this information is now stored
+	    in vp%rank.
+
+	  o Rename a few variables:
+
+	      np_glob     ->  np_global
+	      np_tot      ->  np_part
+	      np_tot_glob ->  np_part_global
+
+2005-09-17 18:53  appel
+
+	* src/: atomic.F90, spectrum.F90: A couple of variables were not
+	  given a datatype. Removed unused variables.
+
+2005-09-17 11:02  appel
+
+	* src/Makefile.am: Add par_vec_inc.F90 to dependency list.
+
+2005-09-17 10:54  appel
+
+	* liboct/oct_f.c: Replace typecast to (long) by typecast to (int).
+	  In principle the typecast should use long. However, this causes
+	  incompatibilities with Fortran integers.  Using int instead will
+	  cause wrong results when tv.tv_sec exceeds INT_MAX=2147483647, i.e.
+	  in about 30 years from now :)
+
+2005-09-17 10:52  appel
+
+	* src/fftw3.F90: Remove stop statements (stopping the code with a
+	  stop will not call MPI_FINALIZE). Also the old error message was not
+	  helpful at all.
+
+2005-09-17 10:49  appel
+
+	* src/td_write.F90: Array out of bounds during td calculation in 1D
+	  and 2D. I've replaced NDIM by 1:3, but think that it would be better
+	  not to use explicit array bounds in line 551.
+
+2005-09-16 16:24  lorenzen
+
+	* src/: derivatives.F90, nl_operator.F90, par_vec.F90,
+	  par_vec_inc.F90: Curvlinear coordinates are now usable on
+	  partitions -- at least with the lanczos eigensolver. cg does not
+	  converge and I don't know why yet.  In order to get curvlinear
+	  working in principle I had to
+
+	  * add routines to scatter and (all)gather non local operators:
+	    nl_operator_scatter, nl_operator_gather and nl_operator_allgather.
+	    In order to computer OP +/i Op^T, which can not be done locally,
+	    the operators are allgathered and each nodes computes the final
+	    operator itself. The calculation of the weights by solving
+	    a system of linear equations can be done locally, though.
+	  * The indices for boundary points had to be fixed in
+	    derivatives_build.
+	  * To allgather a vector, Xvec_allgather was added to par_vec, which
+	    is more or less Xvec_gather with MPI_Allgatherv instead of
+	  MPI_Gatherv.
+
+	  nl_operator_op_to_matrix and nl_operator_write are working and can
+	  be used for debugging purposes (nl_operator_matrix_to_op is not but
+	  can be done easily with nl_operator_scatter).
+
+2005-09-16 16:16  acastro
+
+	* src/spectrum.F90: Bug fixed.  The spin-polarized and spinors case
+	  were not working properly.
+
+2005-09-16 16:02  lorenzen
+
+	* src/: mpi.F90, mpi_inc.F90: Added support for MPI_Allgather,
+	  which is needed in Xvec_allgather.
+
+2005-09-15 22:43  acastro
+
+	* src/: cross_section.F90, spectrum.F90: Added support for cases
+	  where only two equivalent independent axis exist.
+
+	  However, I am a bit puzzled because the algorithm does not seem to
+	  work for Na3...
+
+2005-09-15 15:44  appel
+
+	* src/: crystal.F90, messages.F90, out_inc.F90, spectrum.F90,
+	  td.F90, td_init.F90, td_write.F90: Remove unused variables.
+
+2005-09-15 15:27  appel
+
+	* src/mpi.F90: Take overloading of integer functions into account.
+
+2005-09-15 11:37  acastro
+
+	* src/grid.F90: I am not too sure about this commit; I have to say
+	  that I did not read very carefully all the new debugging stuff.
+	  However the code crashed when running with mpi, without METIS, and
+	  without the debug mode.  Please take a look to make sure that my
+	  change fits in.
+
+	  Probably this is the bug that Miguel was reporting?
+
+2005-09-15 08:58  lorenzen
+
+	* src/: integer.F90, par_vec.F90, undef.F90: Pseudo-overloading
+	  with the X macro and undef.F90/complex.F90/real.F90 is now also
+	  possible for integers with integer.F90. This will not be of much use
+	  for the numerics but is handy for the scatter and gather routines in
+	  par_vec, which now handle vectors of indices, too, and avoids copy
+	  and paste.  As already mentioned in my previous commit, something
+	  like ivec_gather etc. is needed in the initialization of operators
+	  for curvlinear coordinates.
+
+2005-09-15 00:16  acastro
+
+	* src/: spectrum.F90, td_write.F90: (*) Removed some comments that
+	  I have left in td_write module (*) The transpose of the inverse
+	      happens to be the inverse of the transpose :) I simplified a bit
+	  spectrum_cross_section_tensor.
+
+	      Regarding the latter point, I have proved that the scheme works for
+	      Na2, and for Na6 and Na_{12} in D_{6h} arrangemets. I have also
+	      made the benzene test, but I am a bit puzzled about the latter test
+	      -- some small error is present, and I am not too sure about its
+	  origin.
+
+2005-09-14 17:45  lorenzen
+
+	* src/: nl_operator.F90, par_vec.F90:
+	  * Added a routine ivec_gather to par_vec to gather vectors of
+	    integers. This is necessary to collect the non local operator
+	    when running on several partitions.
+	  * The routine nl_operator_op_to_matrix is now working
+	    for parallel runs on partitions, so is nl_operator_write and
+	    nl_operatorT_write. Those routines are mainly for debugging. I
+	    need them to check the adaption of curvlinear coordinates to
+	    parallel runs on partitions, which will be implemented soon.
+
+2005-09-14 09:50  acastro
+
+	* src/: cross_section.F90, spectrum.F90: Finally I tested the
+	  cross-section program. I commit it now, although I still have to
+	  work on it -- very "raw" code for the moment. But in this way I am
+	  sure that there is in the repository something that works.
+
+	  I could calculate in this way the full cross section tensor of a
+	  molecule with D_{\infty h} symmetry (this seems to be the symmetry
+	  group of linear molecules with a center of inversion) with only one
+	  run. Yes, it was Na2 in my example run, of course. I will do
+	  benzene, which is D_{6h}, and is an analog case.
+
+	  But note that we dot only get the trace with only one run, but the
+	  full tensor: the cross section along any direction, the crossed
+	  terms in the tensor, the anisotropy.
+
+	  Note also that for these particular cases (linear molecules), it is
+	  *not* true, as we discussed, that we get the trace just by getting
+	  the result with a run done with a polarization tilted 45 degree with
+	  respect to the linear molecule. The set of equivalent axis is not
+	  orthonormal, and because of this a proper tensor transformation has
+	  to be done. I guess that we will have to correct by hand the gold
+	  runs, and the process them.
+
+2005-09-14 09:15  appel
+
+	* src/h_inc.F90: Bug fixed. The second argument of the grad array
+	  in X(kinetic) was running out of bounds for periodic dimensions less
+	  than 3.
+
+	  Yesterday I switched to Intel v9 and it turned out that the -C
+	  option works contrary to v7 and v8 in v9 rather reliable. After
+	  fixing the above bug all tests in the testsuite were running without
+	  problems when using -C.
+
+2005-09-14 09:08  appel
+
+	* src/main.F90: Always create debug directory when running in Debug
+	  mode. By now this has to be independent of conf%verbose.
+
+2005-09-14 06:30  acastro
+
+	* src/casida.F90: Bug [reported by the daily test] fixed.
+
+2005-09-13 18:16  acastro
+
+	* src/: Makefile.am, casida.F90, cross_section.F90, spectrum.F90:
+	  (*) The calculation of the full cross section tensor from the
+	      response of the system to the perturbation along only one "properly
+	      chose" direction is now implemented... except it has not been tested
+	      yet.  Once I have properly tested it, I will document it.
+
+	      Afterwards we will have to think wether or not we define a new run
+	      mode that takes care of everything.
+
+	  (*) In the way, I removed a couple of non-MPI friendly uses of
+	      vol_pp in the casida.F90 file.
+
+2005-09-13 15:39  lorenzen
+
+	* src/mesh_create.F90: x_global in type(mesh_type) is only
+	  allocated on the master node.
+
+2005-09-13 12:57  acastro
+
+	* src/: Makefile.am, spectrum.F90, td.F90, td_init.F90,
+	  td_write.F90: Sorted out some formatting problem.
+
+	  And, since the information about the kick was getting so
+	  complicated, I abstrated it in a derived data type, kick_type, which
+	  is stored in the spectrum module -- I believe that is the proper
+	  place.
+
+2005-09-12 17:50  acastro
+
+	* src/: cross_section.F90, spectrum.F90, td.F90, td_init.F90,
+	  td_write.F90: Now the td data type is aware of a possibly
+	  non-orthogonal set of unit vector along which the polarization is
+	  calculated, in order to make use of symmetry.  This set is defined
+	  by the user; hopefully we will get smart and the program will
+	  actually define it.
+
+2005-09-12 17:02  appel
+
+	* src/io.F90: Uncomment system calls for the moment. Will have to
+	  adapt the autobuild to take this into account ...
+
+2005-09-12 16:03  appel
+
+	* src/out_inc.F90: Too many octopus flavours. This time
+	  octopus_debug did not compile ...
+
+2005-09-12 15:41  appel
+
+	* src/io.F90: Fix serial compilation - a variable was not defined.
+
+2005-09-12 15:38  acastro
+
+	* src/mpi.F90: The mpi_mod module should be empty if the
+	  compilation is done without MPI. Otherwise the compiler complains
+	  when linking a serial version.
+
+	  [I think that the way I have done it is the easiest; maybe one could
+	  think of not passing mpi.F90 to the linker, but then one would need
+	  to touch the Makefile. If you think of a better way, just change it]
+
+2005-09-12 15:30  acastro
+
+	* src/mesh_create.F90: The code did not compile in serial mode,
+	  because of a problem in mesh_get_vol_pp; I believe that now it is
+	  OK.
+
+2005-09-12 15:19  lorenzen
+
+	* src/systm.F90: Small changes because np is now the number of
+	  local points.  There is one FIXME left concerning the density.
+
+2005-09-12 15:15  lorenzen
+
+	* src/nl_operator.F90: Before computing a non local operator,
+	  vec_ghost_update is called.  This is responsible for many intent(in)
+	  to intent(inout) changes.
+
+2005-09-12 15:14  lorenzen
+
+	* src/: mesh.F90, mesh_create.F90: x and vol_pp in type(mesh_type)
+	  only contain the local points (including ghost and boundary points).
+	  As all values of x are needed for input and output on the master
+	  node, x_global is added to type(mesh_type) which contains all points
+	  as did x prior to this change.  One bugfix concerning x_global still
+	  has to be done: At the moment, x_local is allocated on all node
+	  which should not be becessary.
+
+2005-09-12 15:07  lorenzen
+
+	* src/epot_inc.F90: Marked some places with FIXMEs, where vol_pp is
+	  used. It is likely that these have to be modified to handle the non
+	  local part of the pseudo-potential correctly when running in
+	  parallel.
+
+2005-09-12 14:29  appel
+
+	* src/out_inc.F90: It was still not compiling on x86_64 ...
+
+2005-09-12 14:19  appel
+
+	* src/out_inc.F90: Correct missplaced preprocessor statements.
+
+2005-09-12 14:10  appel
+
+	* src/Makefile.am: Add mpi.F90 to source files.
+
+2005-09-12 14:05  appel
+
+	* src/states_inc.F90: Remove misplaced MPI statement that caused
+	  communication blocking.
+
+2005-09-12 14:04  appel
+
+	* src/out.F90: Add new mpi module.
+
+2005-09-12 14:04  appel
+
+	* src/: io.F90, messages.F90: o Fix compilation problems. The NAG
+	    compiler is a bit picky with output formats ...  o Add sanity check,
+	  if gettimeofday outputs zero values.
+
+2005-09-12 13:44  acastro
+
+	* src/: cross_section.F90, spectrum.F90: The cross section vector
+	  is now projected onto the basis that should "know" about the
+	  symmetry.
+
+	  The cross section seems to be well calculated, but still the
+	  symmetry knowledge is not applied...
+
+2005-09-12 10:35  acastro
+
+	* src/: cross_section.F90, spectrum.F90, td_write.F90: The
+	  oct-cross-section now calculates the cross section.
+
+	  In fact, it calculates a cross section "vector", sigma_{\hat{u}, i}
+	  (i=1, 2, 3), for a given unit vector \hat{u} that is the
+	  polarization vector of the perturbation. The definition is:
+
+	  sigma_{\hat{u}, i}(w) = - (4*pi*w/c) *
+	       Int dr dr' \vect{r}*u * Chi(r, r', w) * x_i
+
+	  where Chi(r, r', w) is the response function.
+
+	  Out of these vectors one can get the sigma_{\hat{u}, \hat{v}} for
+	  other unit vector \hat{v}, and from those, the cross section tensor,
+	  possibly making use of symmetry. This is what I have to do next.
+
+2005-09-12 09:48  appel
+
+	* src/restart.F90: Add new mpi module.
+
+2005-09-12 09:47  appel
+
+	* src/td_write.F90: Some more intent changes.
+
+2005-09-12 09:36  appel
+
+	* src/run.F90: Print node specific MPI statistics at the end of
+	  each run. The output is written to the debug/debug_trace.node.*
+	  files.
+
+	  The runtime analysis as implemented in mpi.F90, mpi_inc.F90 gives
+	  quite interesting numbers. We could use this to benchmark the
+	  scaling of the code for different node numbers, or on different
+	  platforms.
+
+2005-09-12 09:35  appel
+
+	* src/restart_inc.F90: Octopus crashed frequently because of a
+	  pretty hidden racing condition: The close statement for the
+	  tmp/restart_gs/{occs,wfns} was placed _after_ a MPI_Barrier. Because
+	  of run-time differences of different nodes it occured frequently
+	  that one of the nodes was already trying to read {occs,wfns} in
+	  restart_read, although the master node had not completed the write
+	  operation of these files. The node was therefore attempting to read
+	  from an empty file.
+
+2005-09-12 09:33  appel
+
+	* src/: out.F90, out_inc.F90: Prepare output modules for parallel
+	  output/input. The functions input_function and output_function have
+	  been renamed to input_function_global and output_function_global
+	  respectively. The original input_function output_function routines
+	  are now wrappers that take care of scatter and gather.
+
+	  As before only input_function and output_function should be called
+	  from outside.
+
+2005-09-12 09:26  appel
+
+	* src/: complex.F90, mf.F90, mf_inc.F90, mpi.F90, mpi_inc.F90,
+	  par_vec.F90, par_vec_inc.F90, real.F90, undef.F90: Add mpi_mod
+	  module. Currently the module contains wrapper for the used MPI calls
+	  in the code. The wrapper are used only in debug mode and take care
+	  of the timing of MPI calls.  Later on we can use the module to place
+	  there some infrastructure to handle different communicators.
+
+2005-09-12 09:21  appel
+
+	* src/messages.F90: push_sub and pop_sub have been modified such
+	  that each node writes it's own debug trace to
+	  debug/debug_trace.node.* This comes very handy while investigating
+	  why a particular node crashed.  To write node specific debug output
+	  there is now also a write_debug function.
+
+2005-09-12 09:19  appel
+
+	* src/: global.F90, main.F90: Store epoch time at node startup. All
+	  time differences will be computed relative to this timestamp. This
+	  circumvents timing problems with nodes that are out of sync.
+
+2005-09-12 09:16  appel
+
+	* src/io.F90: Add MPI debug hook. There is a new variable
+	  MPIDebugHook. If set to yes, all nodes will look at regular time
+	  intervals of one second for files of the form node_hook.000,
+	  node_hook.001, etc. This mechanism allows to attach gdb or strace
+	  sessions to the different MPI processes. By touching the node_hook
+	  file of a given node, the program execution of the respective MPI
+	  process can be continued independently of the other processes in the
+	  communicator.  The usage of empty files is in spirit similar to the
+	  stop file for clean_stop.
+
+2005-09-12 09:14  appel
+
+	* src/gs.F90: Set MPI barrier to initialize debug timing of MPI
+	  calls.
+
+2005-09-12 09:12  appel
+
+	* liboct/oct_f.c, src/liboct.F90: Add interface for gettimeofday
+	  system call. Contrary to clock() which measures cpu usage, this call
+	  can be used to measure realtime differences, e.g. caused by network
+	  latencies.
+
+2005-09-12 09:09  appel
+
+	* src/: grid.F90, specie.F90: Cleanup debug stack for MPI calls.
+	  push/pop calls were not called in pairs for nodes other than node 0.
+	  There are however still a few places in the code left where this is
+	  wrong.
+
+2005-09-12 09:07  appel
+
+	* src/: eigen_arpack.F90, eigen_trlan.F90: Stop code if arpack or
+	  trlan eigensolver is selected for domain decomposition. This is not
+	  parallized yet.
+
+2005-09-12 09:02  appel
+
+	* src/: derivatives_inc.F90, f_inc.F90, h_inc.F90, math_cg_inc.F90,
+	  poisson_corrections.F90, td_calc.F90, td_exp.F90: In order to
+	  allow for ghost point updates some of the intent statements have to
+	  be modified from intent(in) to intent(inout).
+
+2005-09-10 18:29  acastro
+
+	* src/: cross_section.F90, spectrum.F90, strength_function.F90,
+	  td.F90, td_write.F90: The "kick" information is now properly read
+	  from the multipoles file.
+
+2005-09-10 13:39  acastro
+
+	* src/: spectrum.F90, td.F90: Thef "delta strength" and the "delta
+	  strength mode" are now part of the td_type. This is because I want
+	  to write them down in the multipoles file.
+
+	  I documented the variable a little bit.
+
+	  Correction of a bug in the construction of the varinfo file: pol was
+	  defined twice in an incompatible way.
+
+2005-09-10 10:25  acastro
+
+	* src/: cross_section.F90, rotational_strength.F90, spectrum.F90,
+	  strength_function.F90: Removed the SpecTransformMode variable,
+	  completely unnecessary.  Also, moved the damping mode stuff to the
+	  spectrum_type variable.  And now the SpecDampMode is no longer a
+	  string ("exp", "pol"...), but an integer, properly defined in the
+	  variables file as exp, pol, gaussian or none.
+
+2005-09-10 09:41  acastro
+
+	* src/: cross_section.F90, hs_from_acc.F90, hs_from_mult.F90,
+	  rotational_strength.F90, spectrum.F90, strength_function.F90:
+	  Started the modification of spectrum module, which is a bit old by
+	  now: built a spectrum_init routine.
+
+2005-09-10 08:26  marques
+
+	* src/unocc.F90: Now it compiles.
+
+2005-09-09 18:46  acastro
+
+	* src/: cross_section.F90, hs_from_acc.F90, hs_from_mult.F90,
+	  rotational_strength.F90, spectrum.F90, strength_function.F90:
+	  Module spectrum is now "privatized", for the sake of good
+	  programming practice.  Also, the bug related to the labeling of the
+	  systems is corrected in all the utilities. These have to "use io"
+	  now, since they no longer use it through the spectrum module.
+
+2005-09-09 18:03  acastro
+
+	* src/unocc.F90: Bug fixed.  My compiler complained because the
+	  grid has to be passed as intent(inout) to the X(poisson_solve)
+	  routine -- because it may be modified in case of using the multigrid
+	  method, it seems.
+
+	  I don't know, maybe this is not a very clean design -- in principle
+	  the grid should not be modified when the Hartree term is calculated.
+
+2005-09-09 17:48  acastro
+
+	* src/spectrum.F90: oct-sf is back to work -- is able to tackle
+	  with the new multipoles file.  However, note that oct-sf is going to
+	  be gone pretty soon, as soon as I have oct-cross-section working. I
+	  put it back so that I could keep checking the results properly.
+
+2005-09-09 17:19  acastro
+
+	* src/strength_function.F90: Bug fixed.  The program died when
+	  attempting to read files.
+
+2005-09-09 15:12  acastro
+
+	* src/td_write.F90, testsuite/finite_systems_3d/restart.test:
+	  Changed the format of the multipoles file.
+
+	  Now it does not output the dipole projected onto the polarization of
+	  the perturbation.  Now it sums up the electronic and nuclear dipole,
+	  printing the full system dipole -- in cartesian usual form.  Now it
+	  prints the charge in atomic units (i.e. number of electrons),
+	  instead of dividing it by the square root of four pi).  And now it
+	  writes down, in the header, the unit vector that signals the
+	  polarization direction of the perturbing field.
+
+	  I had to change the testsuite accordingly.
+
+	  But now the oct-sf program is not aware of these changes, so it is
+	  broken.  I hope to solve it over the weekend.
+
+2005-09-09 13:20  acastro
+
+	* src/: scf.F90, states.F90, td_init.F90, td_write.F90: [*] Changed
+	      states_calculate_multipoles subroutine. Now, I think, it is
+	  compliant with the new parallelization scheme -- before it did
+	      the integrals without calling dmf_integrate; now it calls it.
+	      Also, the definition of the multipoles changed a little: the
+	      zero multipole is now the charge (not the charge divided by square
+	      root of four pi), the dipole is the usual cartesian dipole (not the
+	      spherical harmonics - based dipole). The higher order multipoles
+	  stay are they were.  [*] The polarization vector for the optical
+	      response calculation is now normalized right after it is read.
+
+2005-09-09 12:53  marques
+
+	* src/unocc.F90: When asked, outputs 1- and 2-body matrix elements
+	  in the KS basis.
+
+2005-09-09 09:58  acastro
+
+	* src/: Makefile.am, cross_section.F90: The oct-sf program will
+	  (eventually) be substituted by a oct-cross-section program.
+
+	  For the moment being, I just copied the strength_function.F90 file
+	  into a new cross_section.F90 file, from which an oct-cross-section
+	  program is built. But I felt like committing.
+
+2005-09-06 23:18  acastro
+
+	* src/td_write.F90: Now also the projection onto the many-body GSKS
+	  state works.
+
+	  However, regarding the calculation of the two kinds of projections
+	  (projection onto the many body GSKS and onto the single-particel
+	  GSKSs) two possible performance issues might need to be solved in
+	  the future:
+
+	  (i) Currently, the GSKS state is stored in memory in all processors:
+	  all single particle states in all processor. This makes the
+	  computation fast in  MPI, since almost no communication is needed
+	  when computing the projections, but it is memory intensive.
+	  (ii) Moreover, the calculation of the projection onto the
+	  many-electron GSKS is actually done "as if" the GSKS state was
+	  distributed along the processors. This is because it is the way it
+	  was done in the past, and I decided to keep it in order to improve
+	  this later. So right now, the calculation is memory intensive *and*
+	  actually the communication is done, which is stupid.
+
+	  Both kind of projections are done every time step. If performance
+	  issues are important, maybe one should allow for computation of
+	  "heavy" observables every n time steps.
+
+2005-09-06 21:31  acastro
+
+	* src/: states.F90, td_write.F90: Bug fixed.  Finally it seems that
+	  the calculation of the projections of the TDKS states onto the GSKS
+	  states (TDOutputOccAnalysis) is properly done also in parallel.
+
+	  There still exists an error in the calculation of the projection of
+	  the many-electron TDKS state onto the many-electron GSKS state
+	  (TDOutputGSProjection).
+
+2005-09-06 17:38  lorenzen
+
+	* src/: Makefile.am, grid.F90, mesh.F90, mesh_create.F90, mf.F90,
+	  mf_inc.F90, par_vec.F90, par_vec_inc.F90: After some back and
+	  forth, type(pv_type) is back in par_vec and par_vec no longer
+	  depends on mesh but vice versa.
+
+	  When running in parallel, the vec_init is called in mesh_create_xyz
+	  and the resulting parallelization is stored in vp in the mesh.  For
+	  this to work, the stencil is passed from mesh_init via
+	  mesh_create_xyz to vec_init in an optional argument (this will
+	  probably be changed later, but at the moment, mesh_create_xyz is
+	  also called from the multigrid module, which is not yet
+	  parallelized).
+
+	  The members vol_pp and x of type(mesh_type) contain only the point
+	  local to the node (including ghost and boundary points). Now, all
+	  operations with something like ...x(1:m%np)... or
+	  ...vol_pp(1:m%np)...  only work on local points.
+
+	  For global operations like integrations or dot products, routines
+	  from module mf should be used, which are parallelized by now.
+
+	  There are still some points in the code, which do global operations
+	  and do not use routines from mf...
+
+2005-09-06 11:46  acastro
+
+	* src/: td.F90, td_init.F90, td_write.F90: Now the ground-state KS
+	  system may contain more states that the one used during the
+	  evolution, so that projections onto unoccupied states can be
+	  calculated without the need of propagating also the unoccupied
+	  states.
+
+2005-09-06 11:38  lorenzen
+
+	* src/: grid.F90, mesh.F90, mesh_create.F90, nl_operator.F90,
+	  par_vec.F90: All code related to domain parallelisation is put
+	  between
+
+	  #if defined(HAVE_MPI) && defined(HAVE_METIS) ...  #endif
+
+	  This is a quick fix to keep the parallel code for the td-part
+	  working. The Problem is that nl_operator_build for example computes
+	  a operator local to domains when running parallel and this is
+	  incompatible with the td-part at this point of time.  I hope, this
+	  works.
+
+2005-09-06 08:41  lorenzen
+
+	* src/mesh.F90: BUGFIX: Fixed the build error from last night. An
+	  #ifdef HAVE_MPI was missing.
+
+2005-09-06 08:21  lorenzen
+
+	* src/: grid.F90, mesh.F90, mesh_create.F90, par_vec.F90,
+	  par_vec_inc.F90: The meaning of m%np and m%np_tot in
+	  type(mesh_type) has changed when running in parallel:
+	  - np is the number of local points and
+	  - np_tot is the number of local points plus all additional
+	    points like ghost points and boundary points (from the global
+	    boundary conditions).  As it is still necessary to know the number
+	  of global points, two new members np_glob and np_tot_glob have been
+	  introduced, which hold the total number of inner points (np_glob)
+	  and total number of inner points plus boundary points (np_tot_glob).
+	  When running in serial it is np=np_glob and np_tot=np_tot_glob, as
+	  one would expect.  This change is introduced to integrate parallel
+	  vector operations seamlessly.
+
+	  dvec_nl_operator and vec_op_pop have been removed from par_vec, they
+	  are not necessary any longer.
+
+	  mpierr has been removed from par_vec as it is better to install some
+	  MPI errorhandler routine right after initialization for producing
+	  debug output on MPI errors. By the way, communication errors are by
+	  default treated fatal, as MPI guarantees reliable communication and
+	  those failures normally indicate programming errors.
+
+	  I have not found the reason for the build error from last night,
+	  after checkout this morning, everything just compiled fine.
+
+2005-09-05 18:36  acastro
+
+	* libxc/Makefile.am: It seems that the test_x_LINK variable needs
+	  to be defined in this way so that the executable is actually built.
+
+2005-09-05 18:31  acastro
+
+	* src/: td.F90, td_init.F90, td_write.F90: Finally, after so much
+	  cleaning, I started fixing the calculation of the projections onto
+	  the ground state KS system (not working yet, though!)
+
+2005-09-05 18:00  acastro
+
+	* src/: td.F90, td_init.F90, td_write.F90: Bug fixed.  I introduce
+	  a bug in my previous commit. In the way, I did some other cosmetic
+	  changes.
+
+2005-09-05 17:36  lorenzen
+
+	* src/: Makefile.am, grid.F90, mesh.F90, nl_operator.F90,
+	  par_vec.F90, par_vec_inc.F90: Integration of the par_vec-routines
+	  into the rest of the code started:
+	  - type(mesh_type) takes the result of vec_init which is
+	    the ghost point information and the point mappings
+	    in the new member vp.
+	    The defintion of type(pv_type) has moved to mesh as it is
+	    actually a property of the mesh.
+	  - vec_init_default is called in grid_init (right after mesh_init).
+	    Accordingly, vec_end is called in grid_end.
+	  - nl_operator_build is able to build parallel operators (i. e.,
+	    operators that are local to each partition).
+	    dvec_nl_operator or vec_op_pop are not needed anymore because
+	    parallelisation for non-local operations is nearly transparent
+	    as far as np is considered as the number of local points of a
+	    certain partition.
+
+	  BUGFIX: Corrected displacement for MPI_Gather in vec_gather.
+
+2005-09-05 10:50  lorenzen
+
+	* src/par_vec_inc.F90: Completing the previous log message (and
+	  correcting some debug-code error): There are two new routines in
+	  par_vec:
+	  - vec_scatter_bndry
+	    to scatter the boundary points v(np+1:np_tot) of a vector to all
+	    nodes.
+	  - vec_scatter_all
+	    which does a vec_scatter and a vec_scatter_bndry to scatter all
+	    points of a vector.
+
+2005-09-05 10:46  lorenzen
+
+	* src/: mesh_create.F90, par_vec.F90, par_vec_inc.F90: It is now
+	  possible to handle global boundary conditions. The points from the
+	  enlargement are divided into partitions, too. These points are only
+	  needed for boundary conditions that cannot be implemented using
+	  appropriate indices (like for periodic boundary conditions).
+	  However, this general handling offers the possibilty to use any kind
+	  of boundary conditions as long as the values for the boundary points
+	  are computed at some point. In the simplest case for zero boundary
+	  conditions, they are just set to 0.
+
+	  There are two new routines in
+
+2005-09-05 08:52  acastro
+
+	* src/: td_init.F90, td_write.F90: Bugs fixed, detected by the
+	  automated tests.
+
+2005-09-04 23:44  acastro
+
+	* src/: td.F90, td_write.F90: Yet more refurbishing of the td_write
+	  stuff.
+
+2005-09-04 17:21  acastro
+
+	* src/: td.F90, td_init.F90, td_write.F90: Moved some more of the
+	  writing from td module to td_write module, this way it is more
+	  organized.
+
+2005-09-02 16:03  acastro
+
+	* src/: Makefile.am, td.F90, td_write.F90: Just cosmetics: put all
+	  the routines in td_write.F90 (and td_calc.F90) into a module
+	  (td_write) separated from timedep. The only user of td_write is in
+	  fact timedep.
+
+2005-09-01 16:01  acastro
+
+	* src/: casida.F90, unocc.F90: There is no need to keep a separte
+	  tmp/restart_unocc. The unocc mode may use tmp/restart_gs instead.
+
+2005-09-01 14:36  acastro
+
+	* src/restart_inc.F90: Bug fixed.  Only node 0 was writing down the
+	  KS states in the restart directory.
+
+2005-08-31 11:44  appel
+
+	* src/nl_operator.F90: Correct debug output (replace init by
+	  operate).
+
+2005-08-31 11:42  appel
+
+	* build/acx.m4: Add flag -ansi to FCCPP flags. With this setting
+	  cpp recognizes only /* */ as comments. The usual C++ comments (i.e.
+	  //) are not treated as comments anymore.
+
+	  The need for this setting emerges when having lines like:
+
+	   call loct_parse_float(check_inp(trim(label)//'MeshMin'),  CNST(0.0),
+	   sm%min)
+
+	  If cpp would view // as comment, the macro CNST would not be
+	  touched.
+
+2005-08-31 11:35  appel
+
+	* src/scalar_mesh.F90: Introduce labels (i.e. namespacing if more
+	  than one scalar mesh is used).
+
+2005-08-31 01:03  xavier
+
+	* src/poisson_multigrid.F90: Now multigrid works with curvilinear
+	  coordinates, for this i had to change some things:
+
+	  - The multigrid scheme was changed from Correction Scheme (CS), the
+	  most basic algortihm that only works for lineal operators, to Full
+	  Approximation Scheme (FAS) which works for nonlinear operators and
+	  also accounts differences in grid representations.
+
+	  - Gauss-Jacobi is used as a relaxation operator instead of
+	  Gauss-Seidel (only for curvilinear coordinates).
+
+	  - Defaults values are selected according to the type of grid.
+
+	  Below is the input I have been using. Testing is welcome, I am not
+	  sure this is going to work allways.
+
+	  --------------------------------
+
+	  CalculationMode = gs fromScratch = yes
+
+	  Units = "eVA" ConvAbsDens = 1e-4
+
+	  %Coordinates "Na" | 0 | 0 | -1.54 "Na" | 0 | 0 |  1.54 %
+
+	  Spacing = 0.6
+
+	  CurvMethod = curv_gygi CurvGygiA = 1.0 CurvGygiAlpha = 4.0
+	  CurvGygiBeta = 7.0
+
+	  DerivativesStencil = stencil_starplus DerivativesOrder = 3
+
+	  #PoissonSolver = cg_corrected PoissonSolver = multigrid
+
+	  --------------------------------
+
+2005-08-31 00:46  xavier
+
+	* src/multigrid.F90: Added variable MultigridLevels, very useful
+	  for debugging and comes with a relaxation-only solver for free
+	  (MultigridLevels = 1), slow but stable.
+
+2005-08-31 00:44  xavier
+
+	* src/poisson.F90: BUGFIX: One line of output was not shown.
+
+2005-08-30 17:10  acastro
+
+	* src/io.F90, share/variables.local: Yet another variable
+	  documented.
+
+2005-08-30 16:24  acastro
+
+	* libxc/Makefile.am: Since the test.x program is all C, it is
+	  better to link with the C compiler.  Otherwise some Fortran
+	  compilers (i.e. the Intel 9.0 version) seem to have problems with a
+	  duplicated "main" function.
+
+2005-08-30 14:24  acastro
+
+	* src/curv_gygi.F90: The variables corresponding to the Gygi scheme
+	  of curvilinear coordinates are also now documented in the code.
+
+2005-08-30 13:59  acastro
+
+	* src/curvlinear.F90, share/variables.local: One more variable
+	  (CurvMethod) documented in the code (not yet in the manual, though).
+
+2005-08-29 11:06  lorenzen
+
+	* src/par_vec.F90: vec_init uses now the same stencil description
+	  as type(nl_operator_type).
+
+	  I started testing the dvec_nl_operator routine but before they are
+	  usable, par_vec must be able to handle boundary conditions. I am not
+	  sure how those affect the vec_init and scatter/gather routines, so
+	  perhaps some bunch of work comes in via the backdoor and wants to be
+	  done before non local operations will work in parallel.
+
+2005-08-26 17:22  marques
+
+	* src/par_vec.F90: Just added an #ifdef as the code was not
+	  compiling without MPI
+
+2005-08-26 16:15  lorenzen
+
+	* src/: par_vec.F90, par_vec_inc.F90: The par_vec routines are now
+	  pseudo-overloaded for real and complex vectors except for
+	  dvec_nl_operator.
+
+	  Furthermore, a routine vec_op_pop is drafted to localize an operator
+	  to a partition (or to parallelize it, depending on the perspective).
+	  I am not sure, whether it is better to complete the series of
+	  dvec_nl_operator, zvec_nl_operator, dvec_nl_operator_cmplx,
+	  zvec_nl_operator_cmplx or to use vec_op_pop and the usual
+	  ?nl_operator_operate routines.  I think, this is a question of
+	  runtime tests that I will hopefully do next week.  Anyway, just
+	  parallelizing the operator and inserting parallelized vectors makes
+	  the integration of the new routines more seamlessly than using new
+	  routines (it should be possible to take the old code and just insert
+	  some lines packed into #if defined(HAVE_MPI) && defined(HAVE_METIS)
+	  ... #endif).
+
+2005-08-26 13:20  lorenzen
+
+	* src/: Makefile.am, par_vec.F90: First draft of a parallel vector
+	  library (module par_vec.F90).
+
+	  The module contains the following routines:
+	  - vec_init(_default)
+	    Takes a partitioned mesh and information about the stencil
+	    being used in non-local operations and returns a parallelization
+	    vp for vectors defined for all points of the mesh.
+	    vp contains information about what points belong to what node
+	    and about necessary ghost point exchange.
+	  - vec_scatter
+	    Scatter a vector to all nodes in vp.
+	  - vec_gather
+	    Inverse operation of vec_scatter.
+	  - vec_ghost_update
+	    Realizes the ghost point exchange for a vector
+	    which has been scattered before.
+	  - vec_end
+	    Frees used memory of vp.
+	  - vec_integrate
+	    Sums over a scattered vector.
+	  - vec_dnl_operator
+	    Applies a a non-local operator op to a scattered and ghost
+	    point updated vector.  (None of the routines is used in the rest
+	  of the code at the moment)
+
+	  The first six routines are tested with small examples and seem to
+	  work as far as I can see. I have not done any performance tests up
+	  to now and it is perhaps necessary to optimize vec_ghost_update
+	  (which will be frequently called, I guess).  The last routine is not
+	  tested yet. I am also not sure whether it will be better to
+	  'parallelize' an nl_operator_type operator in such a way that the
+	  usual ?nl_operator_operate routines can be called on a scattered
+	  vector (i. e. changing the i(:,:) array, np and the order of
+	  weights(:,:) for non constant weights). I have not evaluated this
+	  approach yet but it seems quite promising. The outcome would be some
+	  routine like vec_op_par(vp, op, pop) transforming op to a parallel
+	  operator pop according to vp with the same type as op so that a call
+	  ?nl_operator_operate(op, fi, fo) is possible.
+
+	  However, I decided to commit this draft so you can already comment
+	  on it.
+
+	  An application of the routines written so far could look like this:
+
+	  integer            :: np_local, np_ghost FLOAT              :: s
+	  FLOAT              :: u(np), v(np) FLOAT, allocatable :: ul(:),
+	  vl(:), w(:) type(pv_type)      :: vp type(mesh_type)    :: m
+
+	  ! Fill u, v with sensible values.  ! ...
+
+	  ! Initialize parallelization with e. g.  ! m          = sys%gr%m !
+	  stencil    = op%stencil ! np_stencil = op%n call vec_init_default(m,
+	  stencil, np_stencil, vp, np_local, np_ghost)
+
+	  ! Allocate space for local vectors.  allocate(ul(np_local+np_ghost))
+	  allocate(vl(np_local+np_ghost)) allocate(wl(np_local+np_ghost))
+
+	  ! Distribute vectors.  call vec_scatter(vp, u, ul) call
+	  vec_scatter(vp, v, vl)
+
+	  ! Calculate scalar product s=<u, v>.  wl = ul*vl ! vec_integrate
+	  ignores ghost points (i. e. wl(np_local+1:)).  s = vec_integrate(vp,
+	  wl)
+
+	  ! Compute some operator op: vl = op ul call vec_ghost_update(vp, ul)
+	  call vec_nl_operator(vp, op, ul, vl) ! Gather result of op in one
+	  vector v.  call vec_gather(vp, v, vl)
+
+	  ! Clean up.  call vec_end(vp)
+
+2005-08-25 17:46  lorenzen
+
+	* build/acx_metis.m4, liboct/oct_f.c, share/util/Makefile.am,
+	  share/util/display_partitions.sh, src/mesh.F90,
+	  src/mesh_create.F90: Rewritten code for mesh partitioning. The
+	  grid is directly converted into a graph and then processed by METIS.
+	  This should work for any geometry.  Added field in type(mesh_type)
+	  to store mapping of points to partitions.
+
+	  The script display_partitions.sh can be used to create PNG images of
+	  the partitions from debug output in debug/mesh_partition.
+
+2005-08-23 15:03  xavier
+
+	* src/multigrid.F90: Number of multigrid levels was miscalculated
+	  for grids with few points. Now the levels are calculated in a
+	  different way.
+
+2005-08-23 15:00  xavier
+
+	* src/poisson_multigrid.F90: BUGFIX: Array index variable was
+	  defined as FLOAT.
+
+2005-08-23 00:23  xavier
+
+	* src/poisson_multigrid.F90:
+	  * Now Gauss Seidel iteration uses the diagonal term of the laplacian
+	  as the convergency factor. I have checked the formulation and in
+	  principle with current changes it should work for curvilinear
+	  coordinates. (If grid tranfers are right.)
+
+2005-08-22 15:21  xavier
+
+	* src/multigrid.F90: BUGFIX: Fixed segfault in the Multigrid
+	  initialization when compiled with NAG on AMD64.
+
+2005-08-22 14:18  appel
+
+	* liboct/oct_f.c, src/mesh_create.F90: Interface for both,
+	  PartMeshDual and PartMeshNodal.
+
+2005-08-19 13:29  appel
+
+	* src/: Makefile.am, math.F90, ode_solver.F90, root_solver.F90,
+	  root_solver_inc.F90: Turn the ODE and Root-Solver into modules.
+
+2005-08-19 13:15  appel
+
+	* src/: casida.F90, eigen_cg.F90, eigen_evolution.F90, h_inc.F90,
+	  mesh_create.F90, multigrid.F90, nl_operator.F90, opt_control.F90,
+	  poisson3D.F90, poisson_cg.F90, scalar_mesh.F90, td_calc.F90,
+	  td_rti.F90, xc_OEP_x.F90: remove unused variables.
+
+2005-08-15 11:06  appel
+
+	* src/poisson_corrections.F90: Fix compilation problems.
+
+2005-08-11 19:03  acastro
+
+	* src/: poisson.F90, poisson_corrections.F90,
+	  poisson_multigrid.F90: Added the conjugate-gradient method as a
+	  relaxation method for the multigrid algorithm. Still not cleare
+	  wether or not it is better or not than Gauss-Seidel, it seems that
+	  it is actually worse. But this way it permits to use the multigrid
+	  method for adaptive coordinates.
+
+2005-08-11 18:11  acastro
+
+	* src/: math_cg_inc.F90, poisson_cg.F90, poisson_corrections.F90:
+	  Now the conjugate_gradient procedure(s) in math module accept
+	  arbitrary metrics: the dot product must be passed as an argument.
+	  Before it assumed that an orthogonal base was being used (metric
+	  equal to unity).  This way we do not need the change of base in the
+	  Poisson solver.
+
+2005-08-09 13:20  acastro
+
+	* src/: derivatives.F90, derivatives_inc.F90: I slightly changed
+	  the way in which the Laplacian is calculated in derivatives_inc.F90,
+	  subroutine X(derivatives_lapl).
+
+	  The change only affects the case of adaptive coordinates == the
+	  weights associated to each point are not constant. In this case,
+	  there is no need to define and use a larger function (function +
+	  enlargement). One can just make the coefficients of those points
+	  null, and make the index that points to a grid point outside the
+	  original box, to point to a grid point inside the box.
+
+2005-08-09 11:26  acastro
+
+	* src/: epot.F90, epot_inc.F90: Bug fixed.  It showed up in the NAG
+	  compiler.
+
+2005-08-08 19:48  acastro
+
+	* src/: h.F90, poisson_cg.F90, v_ks_inc.F90: New (old) performance
+	  hack: Both the conjugate gradient solvers were not using the
+	  "current" Hartree potential as a starting point.
+
+	  This stopped being like that when we merged h%vhartree and h%vxc in
+	  favour of h%vhxc. Since we did not use it much, we just forgot about
+	  that detail. But now since the conjugate gradient solver are bound
+	  to be used (specially with curvilinear coordinates), or at least
+	  should be fairly compared to the multigrid solver, I put back this
+	  feature -- for this purpose I had to put back a h%vhartree component
+	  in the Hamiltonian data type.
+
+2005-08-08 15:13  acastro
+
+	* src/: epot.F90, h_inc.F90, td_calc.F90, td_exp_split.F90,
+	  td_rti.F90: The way it was implemented, the calculation of the
+	  laser field took more (which should be neglibible) was taking more
+	  time than the rest of the parts of the Hamiltonian.
+
+	  In fact, I believe that a more extreme change should be made: now
+	  the laser field is constructed explicitly for each of the orbitals
+	  -- it does not make sense since it is the same for every orbital.
+	  However, this would require more heavy changes; I will think about
+	  which way combines best elegance and efficiency (suggestions
+	  wecome).
+
+2005-08-06 13:39  rozzi
+
+	* src/: scf.F90, states.F90, unocc.F90: added variable
+	  BandsOutputMode to choose the band output format (currently 1 =
+	  gnuplot, 2 = xmgrace)
+
+2005-08-05 16:50  acastro
+
+	* src/: poisson.F90, poisson3D.F90: It is not a good idea to give a
+	  variable the name of a module; the Intel Fortran 9.0 on Itanium will
+	  not work.
+
+2005-08-05 16:28  rozzi
+
+	* src/: Makefile.am, grid.F90, mesh.F90, mesh_create.F90,
+	  nl_operator.F90, stencil_cube.F90: Bug fixed: in the mixed
+	  periodic/non-periodic configurations some mesh indices passed to
+	  nl_operator_operate were erroneously 0.  The reason was that only
+	  the first value of n_ghost(:) was used to define m%enlarge. Now
+	  enlarge -> enlarge(3) to be consistent in all the cases.
+
+2005-08-05 10:00  appel
+
+	* src/mf_inc.F90: Fix compilation problems from last night. The
+	  type of the result of X(mf_integrate) was defined twice.
+
+2005-08-04 14:08  rozzi
+
+	* src/poisson3D.F90: bug fixed in the planar cutoff
+
+2005-08-04 14:06  rozzi
+
+	* src/derivatives.F90: bug fixed in the input check
+
+2005-08-04 13:59  rozzi
+
+	* src/: epot_inc.F90, f_inc.F90, linalg_basic_blas.F90, mf_inc.F90,
+	  out_inc.F90: mesh size of arrays made explicit in some calls to
+	  simplify debugging
+
+2005-08-04 13:58  rozzi
+
+	* src/specie.F90: the variables z, lloc, lmax are not used for the
+	  USDEF type
+
+2005-08-02 11:57  appel
+
+	* src/scalar_mesh.F90: One of the varinfo variables was doubly
+	  defined. The varinfo file got therefore not installed and caused all
+	  tests from last night to fail.
+
+2005-08-02 11:28  xavier
+
+	* src/: multigrid.F90, poisson3D.F90, poisson_multigrid.F90:
+	  * Fullweight restriction now uses the volume of the grid for the
+	  average.
+
+	  * Added an optional parameter to subroutine multigrid_fine2coarse
+	  that selects restriccion method.
+
+	  * Added variable PoissonSolverMGRestrictionMethod that selects the
+	  restriction method for multigrid solver.
+
+	  * Variable PoissonSolverCGMaxMultipole was renamed to
+	  PoissonSolverMaxMultipole, and PoissonSolverMGThreshold was renamed
+	  to PoissonSolverThreshold, because they are not only used for CG but
+	  also for multigrid.
+
+	  * Documented some variables: PoissonSolverMGRestrictionMethod,
+	  PoissonSolverMGMaxCycles, PoissonSolverMGPostsmoothingSteps,
+	  PoissonSolverMaxMultipole, PoissonSolverThreshold.
+
+2005-08-01 12:15  appel
+
+	* src/: ode_solver_inc.F90, scalar_mesh.F90: Fix some compilation
+	  problems with NAG compiler.
+
+2005-08-01 11:45  appel
+
+	* src/Makefile.am: Update makefile accordingly.
+
+2005-08-01 11:45  appel
+
+	* src/scalar_mesh.F90: Adding scalar_mesh class. It contains
+	  linear, log, sinh and Gauss-Legendre meshes with corresponding
+	  integration routines. Also a double-log mesh as used by the
+	  superconductivity people is included.  The class will be used to
+	  setup angular and energy meshes for the wave- matching mode.
+
+2005-08-01 11:39  appel
+
+	* src/math.F90: Add ode_solver and root_solver types to math
+	  module.
+
+2005-08-01 11:37  appel
+
+	* src/: root_solver.F90, root_solver_inc.F90: Adding root solver
+	  class. Currently it provides Laguerre's method and an implementation
+	  of J. Comp. Phys., 8, (1971), p. 304-308. If time permits I'll also
+	  put an implementation of the Jenkins-Traub method (none of the three
+	  mentioned above is in GSL).  The solvers are used to find the zeros
+	  of finite difference polynomials of arbitrary order. This allows to
+	  determine evanescent waves on the grid very accurately.
+
+2005-08-01 11:28  appel
+
+	* src/: ode_solver.F90, ode_solver_inc.F90: Adding ODE solver
+	  class. Besides the standard Runge-Kutta method it provides higher
+	  order Fehlberg, Verner and Prince-Dormand solver. Adaptive step size
+	  control is prepared but not included yet.
+
+2005-08-01 09:42  acastro
+
+	* src/: states.F90, td.F90, td_write.F90: The calculation of the
+	  projections of the time-dependent Kohn-Sham states onto the
+	  ground-state Kohn-Sham states was deactivated because it crashed.  I
+	  have put it back, although it is now done in a rather primitive way.
+
+2005-08-01 09:25  acastro
+
+	* src/unocc.F90: The unocc_type was not used.
+
+2005-07-31 22:32  xavier
+
+	* src/poisson_multigrid.F90: Improvements in the multigrid poisson
+	  solver:
+
+	  * The module checks if it has been initialized.
+
+	  * Now the old solution is saved and is used as the starting point
+	  for the next one. This speeds up things a lot.
+
+2005-07-31 19:30  appel
+
+	* src/: atomic.F90, blas.F90, broad.F90, casida.F90, cf.F90,
+	  cf_inc.F90, crystal.F90, curv_briggs.F90, curv_gygi.F90,
+	  curv_modine.F90, curvlinear.F90, derivatives.F90,
+	  derivatives_inc.F90, eigen.F90, eigen_arpack.F90, eigen_cg.F90,
+	  eigen_evolution.F90, eigen_plan.F90, eigen_trlan.F90, epot.F90,
+	  epot_inc.F90, f.F90, f_inc.F90, fftw2.F90, fftw3.F90,
+	  geom_opt.F90, geometry.F90, global.F90, grid.F90, gs.F90, h.F90,
+	  h_inc.F90, h_so.F90, hgh.F90, hs_from_acc.F90, hs_from_mult.F90,
+	  io.F90, lasers.F90, lcao.F90, liboct.F90, liboct_parser.F90,
+	  libxc.F90, linalg_adv_lapack.F90, linalg_basic_blas.F90,
+	  linalg_basic_int.F90, linear_response.F90,
+	  linear_response_inc.F90, logrid.F90, make_st.F90, math.F90,
+	  math_cg_inc.F90, math_inc.F90, mesh.F90, mesh_create.F90,
+	  messages.F90, mf.F90, mf_inc.F90, mix.F90, multigrid.F90,
+	  nl_operator.F90, opt_control.F90, out.F90, out_inc.F90, pes.F90,
+	  pes_mask.F90, pes_rc.F90, phonons.F90, poisson.F90,
+	  poisson1D.F90, poisson2D.F90, poisson3D.F90, poisson_cg.F90,
+	  poisson_corrections.F90, poisson_multigrid.F90, ps.F90,
+	  pulpo.F90, restart_inc.F90, rotational_strength.F90, run.F90,
+	  scf.F90, simul_box.F90, sparskit.F90, sparskit_driver.F90,
+	  sparskit_inc.F90, specie.F90, spectrum.F90, spline.F90,
+	  states.F90, states_inc.F90, states_kpoints.F90, static_pol.F90,
+	  static_pol_lr.F90, stencil_cube.F90, stencil_star.F90,
+	  stencil_starplus.F90, stencil_variational.F90,
+	  strength_function.F90, string.F90, syslabels.F90, systm.F90,
+	  td.F90, td_calc.F90, td_exp.F90, td_exp_split.F90, td_init.F90,
+	  td_rti.F90, td_write.F90, tm.F90, units.F90, unocc.F90, v_ks.F90,
+	  v_ks_inc.F90, varinfo.F90, wave_matching.F90, xc.F90, xc_KLI.F90,
+	  xc_OEP.F90, xc_OEP_SIC.F90, xc_OEP_inc.F90, xc_OEP_x.F90,
+	  xc_axc.F90, xc_functl.F90, xc_fxc.F90, xc_vxc.F90,
+	  xyz_adjust.F90, xyz_file.F90: o Improving debug output. Now the
+	    string argument of push_sub has the format filename.routinename
+	    (filename without F90).  By looking at the debug output you can see
+	    now directly in which file you will find the prominent piece of code
+	    which caused octopus to crash.
+
+	  o Removing trailing spaces from all files.
+
+2005-07-31 17:18  appel
+
+	* src/: f_inc.F90, sparskit_driver.F90, systm.F90, td.F90,
+	  td_write.F90: Use consistently single quotes for push_sub calls,
+	  i.e. (' ') and not (" ").  Single quotes were holding by far the
+	  majority, only these few double ones were left.
+
+2005-07-31 17:04  appel
+
+	* src/: hgh.F90, logrid.F90, tm.F90: kill_logrid sounds a bit scary
+	  ... :)
+
+2005-07-31 16:58  appel
+
+	* src/: atomic.F90, crystal.F90, derivatives.F90, eigen_trlan.F90,
+	  io.F90, td_exp_split.F90, xc_vxc.F90: A few MPI cleanups.
+	  Replacing stop ' .... '  by a call to write_fatal. This ensures that
+	  MPI_FINALIZE is called.
+
+2005-07-30 10:59  acastro
+
+	* src/epot_inc.F90: A new little performance hack.
+
+2005-07-30 08:51  acastro
+
+	* src/: epot.F90, epot_inc.F90, h_inc.F90, h_so.F90,
+	  nl_operator.F90: A performance hack.
+
+	  Now project computes tha action of a sum of projectors, not only
+	  one. This way one can significantly speed up its calculation since
+	  the mesh of the projectors due to the same atom are equal.  This
+	  performance hack was already done before, but I temporarily removed
+	  it when changing the nonlocal_op data type to the projector.
+
+	  Otherwise, in some occassions the calculation of the non-local
+	  projectors may take 90% of the computational time, specially if the
+	  spin-orbit term is calculated.
+
+2005-07-28 22:17  acastro
+
+	* src/: epot.F90, epot_inc.F90, f_inc.F90, h.F90, h_inc.F90,
+	  h_so.F90, lcao.F90, td_exp_split.F90: Now the spin-orbit coupling
+	  term also works with curvilinear coordinates.  Note, however, that I
+	  am not too sure wether or not it is OK when using TM
+	  pseudopotentials.
+
+	  Also, the calculation of the forces was badly done with curvlinear
+	  coordinates. Not it is OK.
+
+	  To get those two things, I did some rearrangements. The
+	  "nonlocal_op" type that held the Kleinmann-Bylander projectors and
+	  the Goedeckers' projectors is substituted in favour of a "projector"
+	  type, which is simpler. The spin- orbit term and the normal term are
+	  split -- no longer in the same nonlocal_op projector. Also, there
+	  are some "dp" projectors in the epot data type which hold the
+	  gradient of the projector, so that the forces can be calculated from
+	  them.
+
+	  For the moment, the spin-orbit term is neglected when calculating
+	  the forces.
+
+2005-07-28 00:29  xavier
+
+	* src/: grid.F90, multigrid.F90, poisson3D.F90,
+	  poisson_multigrid.F90: More multigrid improvements:
+	  - Number of levels is calculated from the number of points in the
+	  mesh.
+	  - Fullweight Restriction is used instead of Injection for fine to
+	  coarse transfer.
+	  - More cleaning.
+
+2005-07-27 14:50  xavier
+
+	* src/: poisson.F90, poisson3D.F90, poisson_multigrid.F90:
+	  Multigrid improvements:
+	  - Added poisson_multigrid_init and poisson_multigrid_end
+	  subroutines.
+	  - Now it stops when the residue goes below a threshold (the same
+	  variable PoissonSolverCGThreshold from CG is used).
+	  - 3 new input variables that control multigrid process.
+	  - Code is cleaner.
+
+2005-07-27 08:22  xavier
+
+	* src/poisson_multigrid.F90: BUGFIX: Removed the ' characters from
+	  comments which causes problems in some systems.
+
+2005-07-26 20:48  xavier
+
+	* src/: Makefile.am, poisson.F90, poisson3D.F90,
+	  poisson_multigrid.F90: Added the Multigrid solver for Poisson
+	  equation (PoissonSolver = multigrid).  It works for a simple case,
+	  but it needs some work for curvilinear coordinates. Don't expect it
+	  to be very fast right now, currently only uses a fixed number of
+	  cycles (10, which is much more than actually needed) and there are
+	  many things to improve.
+
+2005-07-25 19:05  acastro
+
+	* src/derivatives.F90: Bug fixed.  Another one of those that only
+	  shows up in some architectures, and for some cases...  It was a
+	  wrong initialization of the auxiliary non-local operator that is
+	  used to symmetrize properly the gradient and the Laplacian.
+
+2005-07-25 14:36  acastro
+
+	* src/: eigen.F90, ps.F90: Bugs fixed.  (*) The runs with HGH
+	      pseudopotentials were giving wrong numbers in my opteron with the
+	      NAG compiler. The reason is that it seems that it gets screwed up
+	      with arrays (or maybe with pointer arrays) whose lower bound is 0
+	      instead of 1. In general, I think that in those cased it is good
+	  practice to specify bound explicitly.  (*) The second one is just
+	      aesthetics: one of the messages in stdout was giving the wrong
+	      message (the eigensolver information), because the message(1)
+	  variable was overwritten.
+
+2005-07-24 18:02  acastro
+
+	* src/hgh.F90: Bug fixed. Apparently, this bug was only causing a
+	  problem to the NAG compiler in the opteron. But it was wrong
+	  anyways.
+
+2005-07-24 16:09  acastro
+
+	* src/nl_operator.F90: This message, rather cryptic for a user,
+	  should only show up in debug mode, I think.
+
+2005-07-24 14:41  acastro
+
+	* src/stencil_starplus.F90: Bug fixed.
+
+2005-07-21 12:02  micael
+
+	* src/: xc.F90, xc_axc.F90:
+	   *) Bug fixes: some variables were not initialized.
+
+	  CDFT is *almost* working :)
+
+2005-07-21 10:21  marques
+
+	* src/stencil_starplus.F90: there was an undefined variable
+
+2005-07-21 10:17  marques
+
+	* src/xc_KLI.F90: small cleaning.
+
+2005-07-21 10:07  marques
+
+	* src/: xc_KLI.F90, xc_OEP_x.F90: Now most communication is done
+	  with blocking recv/send. This simplifies a bit the code.
+
+2005-07-21 08:34  acastro
+
+	* src/: derivatives.F90, stencil_starplus.F90: Changed the
+	  "starplus" stencil for the gradient. Before, it was equal to the one
+	  used for the Laplacian, which involved huge memory requirements.
+	  Now it is much lower (although still much larger than when using
+	  uniform coordinates).  Incidentally, also corrected one bug: the
+	  Gradient had before the opposite sign.
+
+2005-07-20 21:14  marques
+
+	* src/: xc_KLI.F90, xc_OEP_x.F90: There were some problems with the
+	    parallel version of these routines.
+	  *) Mpi_I(recv/send) must be followed by MPI_Wait (or similar,
+	       otherwise it will not free the request (and we get a beautiful
+	    memory leak ;)
+	  *) The routines are all done with non-blocking commands. I think
+	       that most of the communication can be blocking, which will make
+	       easier the code.  Tomorrow I will try to change it.
+
+2005-07-20 14:08  acastro
+
+	* src/: derivatives.F90, poisson_cg.F90: The transponse of the
+	  Laplacian is no longer needed, since now the biconjugate gradient
+	  routine does not need to be used in poisson_cg2 (normal conjugate
+	  gradient is enough).  I leave most of the machinery, though, in case
+	  we ever need it. When the developing process is more mature, maybe
+	  some code should be gone.
+
+2005-07-20 10:49  acastro
+
+	* src/: derivatives.F90, nl_operator.F90: Sorry, I committed wrong
+	  versions of the files... these ones are more polished.
+
+2005-07-20 10:36  acastro
+
+	* src/: derivatives.F90, nl_operator.F90: Symmetrization of the
+	  differential operators defined on curvilinear coordinates, so that
+	  the Laplacian is Hermitian, and the gradient is skew-Hermitian.
+
+	  This change is so easy that I am almost embarrassed of myself.  All
+	  the difficulties associated to the non-Hermiticity of the
+	  Hamiltonian are gone (namely the horrible convergence problems in
+	  the ground state, and the possible-to-come difficulties in the
+	  propagation).
+
+	  The way this is achieved is outrageously simple; had I thought about
+	  this half a year ago and we would have been using curvilinear
+	  coordinates since then. I will explain it in our next meeting (in
+	  anycase, from outside, it is a sheer change of value of the
+	  coefficients, so you need not worry about it, nothing should have
+	  been broken).
+
+	  The next big problem is the enourmous memory requirements. I think
+	  that this can be alleviated by refining the stencils.
+
+2005-07-20 09:49  marques
+
+	* src/messages.F90: some messages were being printed by all nodes
+	  :(
+
+2005-07-20 09:38  marques
+
+	* doc/mdate-sh: This file is automatically created by autoreconf
+	  -si, so it should not be in cvs
+
+2005-07-20 09:35  marques
+
+	* src/: casida.F90, mf_inc.F90, systm.F90, td.F90, td_write.F90,
+	  xc_KLI.F90, xc_OEP_SIC.F90, xc_OEP_inc.F90: IMPORTANT: as vol_pp
+	  is now defined from 1:m%np_tot, some implicit sums like
+	  sum(f(:)*vol_pp(:)) were segfaulting in some machines. I added
+	  1:m%np in all places I could find.
+
+2005-07-20 09:33  marques
+
+	* liboct/Makefile.am: added "-f" to the link command.
+
+2005-07-19 15:28  marques
+
+	* liboct/Makefile.am: The config.h was not being regenerated.
+
+2005-07-19 15:11  marques
+
+	* liboct/varinfo.c: Apparently I forgot to commit this file some
+	  time ago. It is an innocuous change that allows options to have a
+	  negative sign.
+
+2005-07-18 20:35  marques
+
+	* src/: Makefile.am, grid.F90, main.F90, mesh.F90, mesh_create.F90,
+	  multigrid.F90, poisson.F90, poisson2D.F90, poisson3D.F90,
+	  poisson_multigrid.F90, xc_OEP_x.F90: Initial support for
+	  multigrids. We can now generate the coarser grids, transfer
+	  functions between the fine and coarse grids and vice-versa, and
+	  calculate derivatives in all grids. In poisson_multigrid.F90 there
+	  is just a test, not the poisson solver yet ;)
+
+2005-07-18 14:25  acastro
+
+	* src/eigen_evolution.F90, expokit/expokit.f:
+	  * Bug fixed.
+	    The code did not compile with --enable-complex, as noted by Carlo
+	    ;)
+	  * Also, I removed a lot of unused code in file expokit.f
+
+2005-07-18 12:43  acastro
+
+	* src/: casida.F90, eigen_evolution.F90, linalg_basic.F90,
+	  linalg_basic_blas.F90, math.F90:
+	  * I implemented the a different orthonormalization scheme for the
+	    "evolution in imaginary time" eigensolver method, as suggested by
+	    Aichinger and Krotscheck (ref in a comment). It permits faster
+	    convergence (not spectacular, but noticeable).
+
+	    Still poor convergence for curvilinear coordinates; however it
+	    converges with a little bit of patience, if you want to try. I
+	    already did calculations for molecules such as CO2. Did not try the
+	    time evolution, though (it crashes).
+
+	    I think we now probably are now in a state similar to the state that
+	    Gygi achieved, unless he had a better diagonalizer (I wrote him an
+	    email, no response yet). Maybe after implementing a multigrid
+	    algorithm we will be even better.
+
+	  * Polished the sorting algorithm. I changed the casida routine so
+	    that now it uses the sort in math.
+
+	  * Extended the interface to the BLAS X(gemm) routine, so that it can
+	    be called fro three-dimensional matrices (the first two dimensions
+	    are in fact only one inside the routine).
+
+2005-07-16 17:25  acastro
+
+	* src/: eigen.F90, eigen_cg.F90, eigen_evolution.F90, math.F90,
+	  math_inc.F90: Put a proper ordering algorithm in the math modul
+	  (I put the shell method, easier to implemente than the quicksort,
+	  and of comparable speed for the typical numbers that we use).  The
+	  eigensolvers now call this routine. The casida algorithm also needs
+	  sorting, so I will eventually remove the algorithm that it now uses
+	  so that it calls sort instead.
+
+2005-07-16 15:32  acastro
+
+	* src/: Makefile.am, eigen.F90, eigen_cg.F90, eigen_cg2.F90,
+	  eigen_cg3.F90, eigen_trlan.F90: Some rationalization in the names
+	  of the files, which had no relation to the contents.
+
+2005-07-15 11:45  acastro
+
+	* src/Makefile.am: Duplicated the LIB_BLAS and LIB_LAPACK in the
+	  linking line to make sure that it links in the cluster... This is
+	  not too orthodox, maybe I find a better way to put it.
+
+2005-07-15 10:59  acastro
+
+	* expokit/Makefile.am: Bug fixed.
+
+2005-07-14 19:37  acastro
+
+	* src/eigen.F90, expokit/Makefile.am, src/eigen_evolution.F90: Now
+	  the evolution in imaginary time eigensolver method seems to work
+	  properly also for more than one eigenvector.  It works also for the
+	  non-symmetric case (i.e. with curvilinear coordinates) and seems to
+	  be much faster than arpack. But much slower still than cg for the
+	  regular grid cases.
+
+2005-07-14 13:32  acastro
+
+	* src/eigen_evolution.F90: Bug fixed.  The code did not compile in
+	  the complex mode.  Thanks, Carlo.
+
+2005-07-14 10:56  acastro
+
+	* src/: Makefile.am, eigen.F90, eigen_evolution.F90: The evolution
+	  in imaginary time is now implemented in octopus.  It can be set with
+	  "EigenSolver = evolution" in the input file (evolution = 7).  I did
+	  not test it for more than one eigenstate, and did not try it yet
+	  with curvilinear coordinates. Also, there are a few things that
+	  should be fine-tuned, so expect changes in the following days.
+
+2005-07-14 10:30  acastro
+
+	* src/td_exp.F90: The calls to the expokit routines had to be
+	  changed accordingly.
+
+2005-07-14 09:47  acastro
+
+	* expokit/Makefile.am: Added a proper $Id$ to the file.
+
+2005-07-14 09:38  acastro
+
+	* Makefile.am, configure.ac, expokit/Makefile.am,
+	  expokit/expokit.f, src/Makefile.am, src/expokit_inc.F90,
+	  src/math.F90, src/td_exp.F90: Added the directory expokit, where
+	  the expokit.f file is placed exactly as it is in the expokit
+	  distribution. A library libexpokit.a is built now and linked to the
+	  octopus executable. Before the routines were included in the math
+	  module. However, this involved changing the routines to adapt them
+	  to Fortran 90, which was not as obvious as it seemed.
+
+	  The expokit.f file is large -- maybe we could remove some unused
+	  routines.
+
+	  I am touching this since soon I am experiencing with a new method do
+	  get the eigenvectors of the Hamiltonian: propagation in imaginary
+	  time.
+
+2005-07-13 11:42  rozzi
+
+	* src/: mf_inc.F90, restart_inc.F90: removed some complains from
+	  the -C compiler flag
+
+2005-07-13 11:41  rozzi
+
+	* src/out_inc.F90: missing error status in some functions
+
+2005-07-13 11:40  rozzi
+
+	* src/curvlinear.F90: chi(:) and x(:) are passed from subroutine
+	  curvlinear_chi2x() as 3-dimensional, and not sb%dim-ensional arrays
+
+2005-07-13 11:37  rozzi
+
+	* src/simul_box.F90: the rlat and klat vectors are built also for
+	  non-periodic directions (to avoid a zero-determinant crash in the
+	  crystal module)
+
+2005-07-13 11:37  rozzi
+
+	* src/specie.F90: the variable jradius is only used in for JELLI
+	  and POINT types
+
+2005-07-12 10:46  micael
+
+	* testsuite/finite_systems_3d/so.test:
+	   *) Disabled the spin-orbit test. Latter I will fix it.
+
+2005-07-11 15:23  acastro
+
+	* src/xyzanim.F90, libxc/test.c: The xyzanim utility was broken, at
+	  least in the IBM machines. I put an emergency fix. If I get time I
+	  will take a look at the utilities, see how the system labels affect
+	  them, and make up some tests for them.
+
+	  Also, the IBM preprocessor had problems with the // comments in C
+	  files..
+
+2005-07-11 14:07  appel
+
+	* testsuite/oct-run_testsuite: Sending mails was broken. I'll run
+	  the testsuite today manually since the new tests of Micael seem to
+	  give some FAIL's (I guess precision issues).  Tonight the testsuite
+	  should again run automatically.
+
+2005-07-10 13:56  micael
+
+	* testsuite/finite_systems_3d/: restart.test, so.test,
+	  spinors.test:
+	   *) Added two new tests. One checks the spin-orbit coupling. The
+	      other one checks the ground state and time-dependent restarts.
+	   *) Changed the spinors test in order to make it faster.
+
+2005-07-08 09:53  appel
+
+	* src/io.F90: Forgot to commit this one (flush_messages migration).
+
+2005-07-08 09:36  appel
+
+	* src/nl_operator.F90: just cosmetics.
+
+2005-07-08 09:35  appel
+
+	* src/: crystal.F90, states.F90, states_kpoints.F90: remove more
+	  unused variables.
+
+2005-07-08 09:32  appel
+
+	* src/: global.F90, messages.F90: move flush_messages from global
+	  to messages module.
+
+2005-07-08 09:32  appel
+
+	* src/: epot.F90, epot_inc.F90, geometry.F90, run.F90: move
+	  variable "only_user_def" out of global.F90
+
+2005-07-07 18:48  appel
+
+	* src/crystal.F90: Forgot the .d-xx expressions ...
+
+2005-07-07 18:41  appel
+
+	* src/crystal.F90: Replace all .d0 expressions by their CNST()
+	  counterparts.
+
+2005-07-07 18:37  appel
+
+	* src/: atomic.F90, eigen.F90, eigen_arpack.F90, eigen_cg2.F90,
+	  eigen_plan.F90, epot.F90, epot_inc.F90, geom_opt.F90,
+	  geometry.F90, h.F90, h_inc.F90, lcao.F90, liboct_parser.F90,
+	  linalg_basic_blas.F90, linalg_basic_int.F90, logrid.F90,
+	  math_inc.F90, mesh.F90, mf_inc.F90, opt_control.F90, pes.F90,
+	  pes_mask.F90, pes_rc.F90, poisson.F90, poisson1D.F90,
+	  poisson2D.F90, ps.F90, scf.F90, specie.F90, spline.F90,
+	  states.F90, states_inc.F90, states_kpoints.F90, systm.F90,
+	  td_exp.F90, td_exp_split.F90, td_rti.F90, td_write.F90, tm.F90,
+	  xc_OEP_inc.F90, xyz_adjust.F90: Improve readability. Replace all
+	  intent(IN) by intent(in). out and inout were already lowercase in
+	  all places.
+
+2005-07-07 18:31  appel
+
+	* src/: eigen_arpack.F90, epot.F90, h_inc.F90, run.F90,
+	  sparskit_driver.F90, sparskit_inc.F90, stencil_starplus.F90,
+	  td.F90, td_exp_split.F90, td_rti.F90: remove unused variables.
+
+2005-07-07 16:19  marques
+
+	* src/mesh_create.F90: Let's see...
+
+2005-07-07 15:26  rozzi
+
+	* src/crystal.F90: the blas call was not consistent with the
+	  interface
+
+2005-07-07 14:27  marques
+
+	* src/: fftw2.F90, fftw3.F90, mesh.F90, mesh_create.F90: Adress
+	  error seems to be solved.
+
+2005-07-07 10:20  rozzi
+
+	* src/Makefile.am: I use the output module to debug the Hartree
+	  potential. It shouldn't hurt.
+
+2005-07-07 10:03  rozzi
+
+	* testsuite/oct-run_testsuite: bug fixed: the -p option did not set
+	  the prefix variable
+
+2005-07-07 09:54  rozzi
+
+	* src/: crystal.F90, states_kpoints.F90: just cosmetics
+
+2005-07-07 09:53  rozzi
+
+	* src/: epot.F90, math.F90, poisson3D.F90: updating the cutoff
+	  stuff for periodic systems
+
+2005-07-06 12:14  marques
+
+	* src/states_inc.F90: Hopefully this will fix the mpi compilation.
+
+2005-07-05 17:42  marques
+
+	* src/messages.F90, src/run.F90, src/string.F90, src/varinfo.F90,
+	  liboct/varinfo.c:
+	  *) Added function messages_print_var_option, etc. that allow to
+	     print information about an option of an input variable (see
+	     run.F90#263 for an example) Please use this function, as it keeps
+	  the code cleaner.
+	  *) Corrected a bug in varinfo.c that gave a segfault
+
+	  P.S. It does pass all tests this time ;)
+
+2005-07-05 16:14  marques
+
+	* src/: h_inc.F90, simul_box.F90: This should solve the problems
+	  with the complex test suite. There was no problem with the compiler:
+	  the specific section of the code that was giving problems was only
+	  compiled with --enable-complex.
+
+	  Note that there is still a small bug in liboct/varinfo.c that I will
+	  fix when I commit a couple of changes I made to that part.
+
+2005-07-05 13:23  marques
+
+	* src/h_inc.F90: Let's see if now this fixes the compilation in the
+	  opteron!
+
+2005-07-04 19:45  marques
+
+	* src/h.F90: Hopefully, the code will compile now. I really don't
+	  undrestand how it could compile in my machine!!
+
+2005-07-04 13:39  marques
+
+	* share/util/: mf.cfg, mf.net: This was not working properly. Note
+	  that I also changed slightly the CMSP package.
+
+2005-07-03 20:41  marques
+
+	* src/: Makefile.am, cf.F90, cf_inc.F90, curv_briggs.F90,
+	  curv_gygi.F90, curv_modine.F90, curvlinear.F90, derivatives.F90,
+	  derivatives_inc.F90, eigen.F90, eigen_arpack.F90, epot.F90,
+	  epot_inc.F90, f.F90, f_inc.F90, fftw2.F90, fftw3.F90,
+	  geom_opt.F90, geometry.F90, global.F90, global.h, grid.F90,
+	  gs.F90, h.F90, h_inc.F90, lasers.F90, lcao.F90, make_st.F90,
+	  mesh.F90, mesh_create.F90, mf_inc.F90, nl_operator.F90,
+	  opt_control.F90, out.F90, phonons.F90, poisson.F90,
+	  poisson2D.F90, poisson3D.F90, rotational_strength.F90, run.F90,
+	  scf.F90, simul_box.F90, specie.F90, states.F90, states_inc.F90,
+	  static_pol.F90, static_pol_lr.F90, stencil_cube.F90,
+	  stencil_star.F90, stencil_starplus.F90, stencil_variational.F90,
+	  systm.F90, td.F90, td_calc.F90, td_exp.F90, td_exp_split.F90,
+	  td_init.F90, td_rti.F90, td_write.F90, unocc.F90, v_ks.F90,
+	  v_ks_inc.F90, xc.F90, xc_OEP_SIC.F90, xc_axc.F90, xc_functl.F90,
+	  xc_vxc.F90: Now conf%dim -> simul_box%dim. I think that this is
+	  the right place to have it.  This implied changing a lot of things,
+	  some of them I am still not happy with.  In any case there are still
+	  some more movings to be done ;)
+
+2005-07-02 10:20  marques
+
+	* src/: eigen.F90, eigen_arpack.F90, eigen_cg2.F90, epot.F90,
+	  epot_inc.F90, fftw2.F90, fftw3.F90, h_inc.F90, poisson.F90,
+	  scf.F90, simul_box.F90, states.F90, td_exp_split.F90:
+	  *) Hopefully eigen_arpack will now compile
+	  *) Created function simul_box_is_periodic
+
+2005-07-01 22:47  marques
+
+	* src/: Makefile.am, casida.F90, cf_inc.F90, derivatives.F90,
+	  eigen.F90, eigen_cg2.F90, eigen_plan.F90, epot.F90, epot_inc.F90,
+	  f.F90, fftw2.F90, fftw3.F90, global.F90, global.h, grid.F90,
+	  gs.F90, h.F90, h_inc.F90, lcao.F90, linear_response.F90,
+	  linear_response_inc.F90, make_st.F90, mesh.F90, mesh_create.F90,
+	  opt_control.F90, out.F90, out_inc.F90, pes.F90, pes_mask.F90,
+	  poisson.F90, poisson2D.F90, poisson3D.F90, ps.F90, restart.F90,
+	  restart_inc.F90, run.F90, scf.F90, simul_box.F90, states.F90,
+	  states_inc.F90, states_kpoints.F90, static_pol_lr.F90, systm.F90,
+	  td.F90, td_calc.F90, td_exp.F90, td_exp_split.F90, td_init.F90,
+	  td_rti.F90, td_write.F90, unocc.F90, v_ks.F90, v_ks_inc.F90,
+	  xc_OEP.F90, xc_OEP_SIC.F90, xc_OEP_inc.F90, xc_OEP_x.F90:
+	  *) periodic_dim is now a part of simul_box and not of conf (as I
+	     think it should be)
+	  *) defined a macro NP = gr%m%np in global.h to ease a bit the
+	  writing
+	  *) there is now a function simul_box::simul_box_is_periodic
+
+	  I am trying to get the variables out of conf. The next one to go
+	  will be conf%dim, and will go to simul_box. So please expect some
+	  large change sets in the next couple of days. Also I am thinking
+	  about doing the following changes to improve readibility:
+	    m -> mesh
+	    h -> hamilt
+	    gr -> grid
+	    sb -> simul_box and to avoid repetitions to add _mod to the name
+	  of the modules.
+
+2005-07-01 14:12  marques
+
+	* src/: casida.F90, geom_opt.F90, grid.F90, gs.F90, lcao.F90,
+	  opt_control.F90, phonons.F90, run.F90, scf.F90, states.F90,
+	  states_inc.F90, static_pol.F90, static_pol_lr.F90, systm.F90,
+	  td.F90, td_calc.F90, td_rti.F90, td_write.F90, unocc.F90,
+	  v_ks.F90, v_ks_inc.F90:
+	  *) geometry is now a part of system
+	  *) several cleanings
+
+2005-07-01 11:43  marques
+
+	* src/: Makefile.am, casida.F90, curvlinear.F90, derivatives.F90,
+	  epot.F90, f.F90, f_inc.F90, geom_opt.F90, grid.F90, gs.F90,
+	  h_inc.F90, make_st.F90, mesh.F90, mesh_create.F90, mf_inc.F90,
+	  nl_operator.F90, opt_control.F90, phonons.F90, poisson1D.F90,
+	  poisson2D.F90, run.F90, scf.F90, simul_box.F90, states.F90,
+	  states_kpoints.F90, static_pol.F90, static_pol_lr.F90, systm.F90,
+	  td.F90, td_calc.F90, td_exp_split.F90, td_rti.F90, unocc.F90: I
+	  am restructuring octopus, in order to implement multigrid methods.
+	  Unfortunately, the changes are quite invasive :(
+
+	  *) Added two new structures
+	    -) simul_box includes details concerning the simulation box
+	    -) grid includes the simulation box, the mesh, the "multi_mesh",
+	       and (later) the geometry
+	  *) deleted mesh_x, mesh_y, mesh_z, and mesh_xyz. Their use was
+	     inconsistent, and it's faster anyway to access m%x
+
+	  Further cleaning will follow.
+
+2005-06-30 20:03  appel
+
+	* src/syslabels.F90: Forgot this initialization.
+
+2005-06-30 18:48  appel
+
+	* src/: derivatives.F90, eigen.F90, nl_operator.F90,
+	  stencil_star.F90, stencil_variational.F90: Add possibility to
+	  have complex nl operators (will be necessary for wave-matching).
+
+2005-06-30 18:36  appel
+
+	* src/: main.F90, syslabels.F90: allow for more runs than syslabels
+	  are defined. permits to run a periodic calculation only once when
+	  equivalent leads are used.
+
+2005-06-30 18:32  appel
+
+	* src/out_inc.F90: luns are already assigned inside io_open. this
+	  statement was using up all luns (showed up in multi-subsys mode).
+
+2005-06-30 18:30  appel
+
+	* src/crystal.F90: Bug fixed. This was the wrong index.
+
+2005-06-30 11:54  marques
+
+	* libxc/util.h: There were a couple of misspells in function names
+
+2005-06-17 08:49  appel
+
+	* testsuite/Makefile.am: Install tests for periodic systems during
+	  make install.
+
+2005-06-16 18:58  appel
+
+	* testsuite/: oct-run_regression_test.pl,
+	  finite_systems_1d/helium.test, finite_systems_3d/sodium.test,
+	  finite_systems_3d/spinors.test,
+	  periodic_systems_1d/cosine_potential.test,
+	  periodic_systems_1d/free_electrons.test: Adding $Id$ tags to all
+	  tests. Modify Perl script to add tags when a template is created
+	  with oct-run_regression_test.pl -c
+
+2005-06-16 18:49  appel
+
+	* testsuite/periodic_systems_1d/: cosine_potential.test,
+	  free_electrons.test: Adding regression tests to validate the band
+	  structure of non-interacting electrons in 1D.
+
+2005-06-16 17:40  appel
+
+	* src/: sparskit.F90, sparskit_driver.F90, sparskit_inc.F90:
+	  Generalizing the Sparskit interface to complex matrices and vectors.
+	  Since the Sparskit library offers only routines for real arithmetic
+	  I'm essentially stacking real and imaginary parts of the vectors,
+	  i.e. for
+
+	       (A+iB)(f+ig)=h+iv
+
+	  with A, B \in R^{NxN}, f,g,h,v \in R^{N} I'm solving
+
+	       (A -B)(f)   (h)
+	  	             =
+	       (B  A)(g)   (v)
+
+	  This system is by construction non-symmetric. For the test matrices
+	  I was using only the stabilized Bi-Conjugate Gradient method and
+	  some of the GMRES flavors were giving accurate results for a
+	  reasonable number of iterations.
+
+2005-06-14 12:36  acastro
+
+	* src/eigen_cg2.F90: Bug fixed.  It showed up when doing
+	  spin-polarized calculations. It has been there for a while...
+
+2005-06-14 08:09  acastro
+
+	* src/stencil_starplus.F90: Rewrote the "starplus" stencil. Finally
+	  I found one way of choosing the points and the polynomials that
+	  seems to be a good compromise: not as unmanageable as the cubic
+	  stencil, and not as inaccurate as the star stencil for curvilinear
+	  coordinates.
+
+2005-06-12 15:25  acastro
+
+	* src/eigen_arpack.F90: Bug fixed.
+
+2005-06-11 18:04  acastro
+
+	* src/stencil_starplus.F90: The new "starplus" stencil is now
+	  operative also in 3D.
+
+2005-06-11 16:45  acastro
+
+	* share/variables.local, src/eigen.F90, src/eigen_arpack.F90: A new
+	  iteration for the arpack support. Now it does not support
+	  bi-spinors, or complex wavefunctions.
+
+2005-06-11 11:29  appel
+
+	* src/mesh_create.F90: Bug fixed. Free electron bands seem to come
+	  out again in head.
+
+2005-06-11 11:25  appel
+
+	* testsuite/finite_systems_1d/helium.test: Setting Dimensions = 2.
+	  That is what I was originally intending with the test: 2
+	  _interacting_ electrons in 1D (== 1 electron in 2D with appropriate
+	  potential). Just forgot initially the Dimensions variable :).
+
+2005-06-10 17:27  acastro
+
+	* share/variables.local, src/Makefile.am, src/derivatives.F90,
+	  src/stencil_starplus.F90: It seems that to use curvilinear
+	  coordinates, the star stencil was not enough (too inaccurate), and
+	  the cubic stencil is too expensive (too many points). So I have put
+	  an intermediate stencil, some kind of star + some off-diagonal
+	  points. For the moment I have only put it in 2D, adding four points.
+
+2005-06-10 14:15  acastro
+
+	* testsuite/: Makefile.am, finite_systems_1d/helium.test: The
+	  Helium test was not really one-dimensional; I added the Dimension =
+	  1 option. So I had to change the eigenvalue number.
+
+2005-06-10 11:03  appel
+
+	* src/sparskit.F90: Fix compilation errors on x86_64.
+
+2005-06-10 10:34  appel
+
+	* configure.ac: Forgot this one. Add call to m4 macro for sparskit
+	  library.
+
+2005-06-10 10:24  appel
+
+	* debian/rules: Add sparskit library to configure calls for the
+	  Debian packages.
+
+2005-06-10 10:23  appel
+
+	* acinclude.m4, build/acx_sparskit.m4, src/Makefile.am,
+	  src/sparskit.F90, src/sparskit_inc.F90: Adding interface module
+	  for sparskit library. The library contains ten different solver for
+	  sparse linear systems. Preconditioning is supported by the solvers
+	  but not yet implemented in the interface.
+
+2005-06-08 07:09  acastro
+
+	* src/Makefile.am: Changed the order of io.F90. The dependency tree
+	  should take care of this, but the dependency tree that we have
+	  basicly only takes carer of the #includes. The result was an
+	  annoying linking warning (changed size of modules, or something like
+	  that).
+
+2005-06-07 13:58  acastro
+
+	* libxc/: Makefile.am, xc_f.c: I forgot to change also this when I
+	  changed the config.h stuff.
+
+2005-06-07 07:59  acastro
+
+	* src/eigen_arpack.F90: The bug reported by the cron robot is
+	  fixed.
+
+2005-06-06 10:43  acastro
+
+	* build/acx_arpack.m4, src/eigen_arpack.F90: Next step towards
+	  having the ARPACK diagonalizers for non-Hermitian cases.  Now I have
+	  to change the normalization of all functions, so that the dot
+	  product is the canonical one...
+
+2005-06-05 17:41  acastro
+
+	* configure.ac, liboct/grammar.c, liboct/oct_f.c,
+	  liboct/oct_gsl_f.c, liboct/recipes.c, liboct/varia.c,
+	  liboct/varinfo.c, liboct/write_iter.c, liboct_parser/Makefile.am,
+	  liboct_parser/grammar.c, liboct_parser/parser_f.c,
+	  src/Makefile.am, src/config.h.in: Just "maintenance" changes.
+
+	  We can finally get rid of config.h.in. It involved a couple of
+	  apparantly unrelated changes:
+
+	  o Moved grammar.c from liboct to liboct_parser, where it belongs. I
+	  also eliminated grammar.y from the Makefile.am, so there will be no
+	  attempt to regenerate it automatically. I think it is better this
+	  way since, for example, I do not have bison.  o Now config.h will be
+	  in the parent directory. It has to be included with <config.h>
+	  instead of "config.h". Also, I changed the rule that generates
+	  config_F90.h in src, to avoid getting C comments.
+
+2005-06-05 13:39  appel
+
+	* src/io.F90: Remove debug write statement.
+
+2005-06-05 13:17  appel
+
+	* src/out_inc.F90: This compiled before with NAG but seems to cause
+	  problems with Intel. In this way it compiles with both.
+
+2005-06-05 13:06  appel
+
+	* src/: broad.F90, crystal.F90, curv_briggs.F90, curvlinear.F90,
+	  derivatives.F90, eigen.F90, eigen_arpack.F90, eigen_cg2.F90,
+	  eigen_cg3.F90, epot.F90, global.F90, h.F90, h_inc.F90, h_so.F90,
+	  hgh.F90, hs_from_acc.F90, hs_from_mult.F90, lasers.F90,
+	  libxc.F90, main.F90, mix.F90, nl_operator.F90, out_inc.F90,
+	  phonon_spectrum.F90, ps.F90, spectrum.F90, stencil_cube.F90,
+	  td.F90, td_write.F90, xc_KLI.F90, xc_OEP.F90, xc_OEP_SIC.F90,
+	  xc_OEP_inc.F90, xyzanim.F90: Removing unused variables. Now we
+	  are getting close to a point where we actually can extract useful
+	  infromation from the compiler warnings:
+
+	  Warning: td_exp_split.F90, line 201: Symbol UVPSI referenced but
+	           never set detected at ZEXP_VNLPSI@<end-of-statement> Warning:
+	           td_exp_split.F90, line 201: Symbol P2 referenced but never set
+	  detected at ZEXP_VNLPSI@<end-of-statement>
+
+	  It seems that these variables are used for calculations but don't
+	  carry any value. Any ideas why the lines above were uncommented?
+
+2005-06-05 11:45  appel
+
+	* src/messages.F90: Loop variable got lost during last rename.
+
+2005-06-05 11:39  appel
+
+	* src/messages.F90: Variable ierr for MPI_FINALIZE was missing for
+	  parallel octopus flavours.
+
+2005-06-05 11:25  appel
+
+	* src/.cvsignore: Adding messages.std*, semantic.cache, *.pbs
+
+2005-06-05 11:23  appel
+
+	* src/: Makefile.am, atomic.F90, broad.F90, casida.F90,
+	  centergeom.F90, crystal.F90, curv_briggs.F90, curv_gygi.F90,
+	  curv_modine.F90, derivatives.F90, eigen.F90, epot.F90,
+	  expokit_inc.F90, f.F90, fftw2.F90, fftw3.F90, geom_opt.F90,
+	  geometry.F90, global.F90, gs.F90, h.F90, hgh.F90,
+	  hs_from_acc.F90, hs_from_mult.F90, io.F90, lasers.F90, lcao.F90,
+	  liboct_parser.F90, linalg_adv.F90, linalg_adv_lapack.F90,
+	  linalg_basic_int.F90, linear_response.F90, main.F90, make_st.F90,
+	  math.F90, mesh.F90, mesh_create.F90, mf.F90, mix.F90,
+	  opt_control.F90, out.F90, phonon_spectrum.F90, phonons.F90,
+	  poisson.F90, poisson_cg.F90, poisson_corrections.F90, ps.F90,
+	  pulpo.F90, restart.F90, rotational_strength.F90, run.F90,
+	  scf.F90, specie.F90, spectrum.F90, states.F90, static_pol.F90,
+	  static_pol_lr.F90, stencil_cube.F90, stencil_star.F90,
+	  stencil_variational.F90, strength_function.F90, systm.F90,
+	  td.F90, td_exp.F90, td_exp_split.F90, td_rti.F90, tm.F90,
+	  units.F90, unocc.F90, v_ks.F90, wave_matching.F90, xc.F90,
+	  xc_OEP.F90, xc_functl.F90, xyz_adjust.F90, xyz_file.F90,
+	  xyzanim.F90, messages.F90, syslabels.F90: I've broken the global
+	  module in several parts. Since global was used in many places, the
+	  changes affect most of the files. Here a changelog:
+
+	   o The io module now contains a "use global", i.e. the module _knows_
+	     about MPI and the node numbers (_very_ important to clean up IO in
+	  parallel runs).
+
+	   o There is a new module called messages which contains now the
+	     write_{info, warning,fatal} functions and corresponding variables
+	     like message(:), stars, hyphens. I was not sure about the push_sub,
+	     pop_sub functions, so I put them also in the messages module.
+	  Perhaps they belong in a own debug module ...
+
+	   o I modified the write_* functions in order to _really_ flush output
+	     in e.g.  MPI runs. For that purpose I've introduced a new variable
+	     "FlushMessages".  If set to "yes" (default is no), octopus opens the
+	     files messages.{stdout,stderr} and appends messages for every call
+	     of write_*. At the end of the write_* calls the files are closed so
+	     that the output is written to disk. Even if the operating system or
+	     a queuing system buffers the ordinary stdout and stderr you will get
+	  with a tail -f messages.* immediate feedback what octopus does. Of
+	     course in MPI runs only node 0 writes.
+
+	     On a SMP machine with two octopus MPI processes it is in this
+	     context instructive to monitor the output pattern by running
+
+	      strace -e open -p <pid of first process>
+	      strace -e open -p <pid of second process>
+
+	   o The new module syslabels contains all the stuff that is required
+	     to run multiple subsystems. Apart from this module and a few init
+	     calls the system label support reduces now to a single line in
+	  io.F90:
+
+	     before:
+	             write(wpath, '(3a)') trim(work_dir), "/", trim(path)
+
+	     now:
+	             write(wpath, '(4a)') trim(work_dir), "/",
+	             trim(current_label), trim(path)
+
+	     All the old current_label stuff has been removed.
+
+	   o A "use global" is now in many cases accompanied by a "use
+	     messages" and a "use syslabels" (the price we have to pay to clean
+	  up global).
+
+	   o Added some more $Id$ tags that I forgot in the first round.
+
+	   o The utility programs compile but I didn't check if they produce
+	     proper output.  Perhaps we should add checks to the testsuite for
+	  them as well?
+
+2005-06-05 09:51  appel
+
+	* debian/rules: Add calls to autoheader.
+
+2005-06-05 09:21  appel
+
+	* debian/rules: o Fixing build errors. Replacing the triple
+
+	  	  aclocal-1.8
+	  	  automake-1.8 --add-missing
+	  	  autoconf
+
+	    by
+
+	   	  aclocal-1.8
+	  	  automake-1.8 --add-missing
+	  	  autoreconf -i
+
+	  o Adding arpack library.
+
+2005-06-03 07:42  acastro
+
+	* liboct/config.h.in: This file is generated automatically by
+	  autoheader when doing autoreconf. So we do need it in the cvs.
+	  src/config.h.in is hard-coded, however, so it stays. [I do not know
+	  why it is hard-coded, maybe it is possible to do it properly and
+	  remove it]
+
+2005-06-02 17:22  acastro
+
+	* acinclude.m4, configure.ac, build/acx_arpack.m4,
+	  build/acx_jdqz.m4, src/Makefile.am, src/config.h.in,
+	  src/eigen.F90, src/eigen_arpack.F90, src/eigen_jdqz.F90: After
+	  some experimenting and reading, I found out that the Jacobi-Davidson
+	  scheme would in fact be slower than the Arnoldi/Lanczos iteration
+	  eigensolver. So I changed the dummy interface to JDQZ by an
+	  interface to the ARPACK library.  For now, only the real symmetric
+	  case is implemented. Of course the idea is to put the complex
+	  non-Hermitian case, since for the normal case the conjugate
+	  gradients seems to be faster.
+
+2005-06-02 14:57  appel
+
+	* debian/rules: Configure the Debian packages with the jdqz
+	  library.
+
+2005-06-01 12:20  acastro
+
+	* acinclude.m4, configure.ac, src/Makefile.am, src/config.h.in,
+	  src/eigen.F90, src/eigen_jdqz.F90, build/acx_jdqz.m4,
+	  liboct/config.h.in: Added the basic infrastructure to allow for
+	  the inclusion of the JDQZ package as a diagonalizer. It is a
+	  diagonalizer that is able to cope with complex non-Hermitian
+	  operators. It already was in an ancient version of octopus (back
+	  when we were young), but was removed because it did not improve on
+	  the cg stuff. However it could be an option to put the curvilinear
+	  coordinates stuff back working.
+
+	  Note that it is not yet done, I just wrote the autoconf macros and
+	  figured out how to call the library.
+
+2005-06-01 10:23  appel
+
+	* build/latest_cvs_commit.sh, src/Makefile.am, src/global.F90,
+	  src/main.F90: Octopus now prints at startup below the version and
+	  build info also rcs info's about the latest cvs changes that are
+	  included in the executable at hand.
+
+	  This was Alberto's idea and we hacked the code in a corporative
+	  effort to include the feature. Inside latest_cvs_commit.sh we are
+	  using GNU'isms for this. If the build platform doesn't support the
+	  GNU extensions the rcs info string will be empty.
+
