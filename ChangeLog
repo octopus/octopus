@@ -1,3 +1,22 @@
+2005-10-10 00:39  acastro
+
+	* ChangeLog: I substituted the ChangeLog, that none of us
+	  maintained, by a proper one.  I generated it through the command:
+
+	  cvs2cl.pl --fsf -l "-d >2005-06-01"
+
+	  The command cvs2cl.pl seems to be pretty standard (at least it is in
+	  the debian official repository). Basically it uses the output from
+	  the cvs log command -- so all the comments that we do when
+	  committing code.  The option "-d >2005-06-01" selects logs more
+	  recent than 2005-06-01.  Otherwise the file would get too large. The
+	  choice was completely arbitrary.
+
+	  Note than commiting a revision to the ChangeLog file, the way to do
+	  it is in my opinion to commit it isolated (just the ChangeLog file),
+	  and putting no log in the commit message (it is sort of redundant to
+	  log the ChangeLog). Of course this first one is the exception.
+
 2005-10-07 10:54  lorenzen
 
 	* share/util/plot_profiling: Added simple perl script to generate
