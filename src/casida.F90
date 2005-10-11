@@ -221,7 +221,6 @@ contains
           end if
        end do
     enddo
-    stop
 
     if(cas%n_pairs < 1) then
        message(1) = "Error: Maybe there are no unoccupied states?"
