@@ -34,28 +34,29 @@ module grid
   implicit none
 
   private
-  public :: grid_type, &
-            grid_init, &
-            grid_end,  &
-            grid_write_info, &
-            grid_create_multigrid
+  public ::             &
+       grid_type,       &
+       grid_init,       &
+       grid_end,        &
+       grid_write_info, &
+       grid_create_multigrid
 
   type grid_type
-    type(simul_box_type)       :: sb
-    type(geometry_type)        :: geo
-    type(mesh_type)            :: m
-    type(f_der_type)           :: f_der
+     type(simul_box_type)           :: sb
+     type(geometry_type)            :: geo
+     type(mesh_type)                :: m
+     type(f_der_type)               :: f_der
 
-    type(curvlinear_type) :: cv
-    type(multigrid_type), pointer  :: mgrid
-
+     type(curvlinear_type)          :: cv
+     type(multigrid_type), pointer  :: mgrid
   end type grid_type
+
 
 contains
 
   !-------------------------------------------------------------------
   subroutine grid_init(gr, domain_comm_of_node)
-    type(grid_type),      intent(out) :: gr
+    type(grid_type), intent(inout) :: gr
     integer, intent(in) :: domain_comm_of_node(0:mpiv%numprocs-1)
 
     logical :: filter
@@ -106,8 +107,8 @@ contains
     call mesh_end(gr%m)
 
     if(associated(gr%mgrid)) then
-      call multigrid_end(gr%mgrid)
-      deallocate(gr%mgrid); nullify(gr%mgrid)
+       call multigrid_end(gr%mgrid)
+       deallocate(gr%mgrid); nullify(gr%mgrid)
     end if
 
     call geometry_end(gr%geo)
