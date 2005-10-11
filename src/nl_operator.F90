@@ -873,7 +873,7 @@ contains
     call push_sub('nl_operator.znl_operator_operate')
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    call zvec_ghost_update(op%m%vp, fi)
+    if(op%m%vp%p.ne.1) call zvec_ghost_update(op%m%vp, fi)
 #endif
 
     n = op%n
