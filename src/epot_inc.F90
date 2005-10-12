@@ -18,22 +18,22 @@
 !! $Id$
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! X(project) calculates the action of the sum of the np proyectors p(1:np) on
+! X(project) calculates the action of the sum of the np projectors p(1:np) on
 ! the psi wavefunction. The result is summed up to ppsi:
 ! |ppsi> = |ppsi> + \sum_{ip=1}^{np} \hat{p}(ip) |psi>
 ! The action of the projector p is defined as:
 ! \hat{p} |psi> = \sum_{ij} p%uvu(i,j) |p%a(:, i)><p%b(:, j)|psi>
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
-  type(mesh_type), intent(in) :: m
-  type(projector), intent(in) :: p(:)
-  integer, intent(in)         :: np
-  R_TYPE, intent(in)          :: psi(1:m%np)
-  R_TYPE, intent(inout)       :: ppsi(1:m%np)
-  logical, intent(in)         :: periodic
-  integer, intent(in)         :: ik
+subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
+  type(mesh_type),      intent(in)    :: mesh
+  type(projector_type), intent(in)    :: p(:)
+  integer,              intent(in)    :: n_projectors
+  R_TYPE,               intent(in)    :: psi(1:mesh%np)
+  R_TYPE,               intent(inout) :: ppsi(1:mesh%np)
+  logical,              intent(in)    :: periodic
+  integer,              intent(in)    :: ik
 
-  integer :: i, j, n, ip, k, ierr
+  integer :: i, j, n_s, ip, k, ierr
   R_TYPE, allocatable :: lpsi(:), plpsi(:)
   R_TYPE :: uvpsi
 
@@ -41,35 +41,38 @@ subroutine X(project)(m, p, np, psi, ppsi, periodic, ik)
 
   k = p(1)%index - 1 ! This way I make sure that k is not equal to p(1)%index
 
-  do ip = 1, np
+  do ip = 1, n_projectors
 
     if(p(ip)%index .ne. k) then
-         if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n)) = ppsi(p(ip-1)%jxyz(1:n)) + plpsi(1:n)
-         n = p(ip)%n
-         deallocate(lpsi, plpsi, stat = ierr)
-         allocate(lpsi(n), plpsi(n))
-         ! FIXME: When running with partitions, vol_pp is local
-         ! to the node. It is likely, that this code need changes.
-         lpsi(1:n)  = psi(p(ip)%jxyz(1:n))*m%vol_pp(p(ip)%jxyz(1:n))
-         if(periodic) lpsi(1:n)  = lpsi(1:n) * p(ip)%phases(1:n, ik)
-         plpsi(1:n) = R_TOTYPE(M_ZERO)
-         k = p(ip)%index
+      if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
+      n_s = p(ip)%n_points_in_sphere
+      
+      deallocate(lpsi, plpsi, stat = ierr)
+      allocate(lpsi(n_s), plpsi(n_s))
+
+      ! FIXME: When running with partitions, vol_pp is local
+      ! to the node. It is likely, that this code need changes.
+      lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
+      if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
+      plpsi(1:n_s) = R_TOTYPE(M_ZERO)
+      k = p(ip)%index
     endif
 
-    do j = 1, p(ip)%c
-      uvpsi = sum(lpsi(1:n)*p(ip)%b(1:n, j))
-      do i = 1, p(ip)%c
-          if(periodic) then
-             plpsi(1:n) = plpsi(1:n) + p(ip)%uvu(i, j) * uvpsi * p(ip)%a(1:n, i) * p(ip)%phases(1:n, ik)
-          else
-             plpsi(1:n) = plpsi(1:n) + p(ip)%uvu(i, j) * uvpsi * p(ip)%a(1:n, i)
-          endif
-      enddo
-    enddo
+    do j = 1, p(ip)%n_channels
+      uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
+      do i = 1, p(ip)%n_channels
+        if(periodic) then
+          plpsi(1:n_s) = plpsi(1:n_s) + &
+             p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i) * p(ip)%phases(1:n_s, ik)
+        else
+          plpsi(1:n_s) = plpsi(1:n_s) + p(ip)%uvu(i, j) * uvpsi * p(ip)%ket(1:n_s, i)
+        endif
+      end do
+    end do
 
-  enddo
+  end do
 
-  ppsi(p(np)%jxyz(1:n)) = ppsi(p(np)%jxyz(1:n)) + plpsi(1:n)
+  ppsi(p(n_projectors)%jxyz(1:n_s)) = ppsi(p(n_projectors)%jxyz(1:n_s)) + plpsi(1:n_s)
 
   deallocate(plpsi, lpsi)
   call pop_sub()
@@ -171,18 +174,18 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   end if
 
   if(present(t).and.ep%no_lasers>0) then
-     call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, x)
-     do i = 1, geo%natoms
-        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-             geo%atom(i)%spec%Z_val * x(1:NDIM)
-     end do
+    call laser_field(gr%sb, ep%no_lasers, ep%lasers, t, x)
+    do i = 1, geo%natoms
+      geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+         geo%atom(i)%spec%Z_val * x(1:NDIM)
+    end do
   end if
 
-  if(associated(ep%e)) then
-     do i = 1, geo%natoms
-        geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-             geo%atom(i)%spec%Z_val * ep%e(1:NDIM)
-     end do
+  if(associated(ep%E_field)) then
+    do i = 1, geo%natoms
+      geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+         geo%atom(i)%spec%Z_val * ep%E_field(1:NDIM)
+    end do
   end if
 
   !TODO: forces due to the magnetic fields (static and time-dependent)
@@ -193,21 +196,21 @@ contains
   subroutine local_RS()
     FLOAT :: r, x(3), d, gv(3)
     integer  :: ns
-
+    
     ns = min(2, st%d%nspin)
-
+    
     do i = 1, geo%natoms
-       atm => geo%atom(i)
-       do j = 1, NP
-          call mesh_r(gr%m, j, r, x=x, a=atm%x)
-          if(r < r_small) cycle
-
-          call specie_get_glocal(atm%spec, x, gv)
-          ! FIXME: When running with partitions, vol_pp is local
-          ! to the node. It is likely, that this code need changes.
-          d = sum(st%rho(j, 1:ns))*gr%m%vol_pp(j)
-          atm%f(1:NDIM) = atm%f(1:NDIM) - d*gv(1:NDIM)
-       end do
+      atm => geo%atom(i)
+      do j = 1, NP
+        call mesh_r(gr%m, j, r, x=x, a=atm%x)
+        if(r < r_small) cycle
+        
+        call specie_get_glocal(atm%spec, x, gv)
+        ! FIXME: When running with partitions, vol_pp is local
+        ! to the node. It is likely, that this code need changes.
+        d = sum(st%rho(j, 1:ns))*gr%m%vol_pp(j)
+        atm%f(1:NDIM) = atm%f(1:NDIM) - d*gv(1:NDIM)
+      end do
     end do
   end subroutine local_RS
 

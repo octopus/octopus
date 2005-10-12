@@ -75,8 +75,8 @@ contains
     comm = domain_comm_of_node(mpiv%node)
 #endif
     call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
-         gr%f_der%der_discr%lapl%stencil,                        &
-         gr%f_der%der_discr%lapl%n, comm)
+       gr%f_der%der_discr%lapl%stencil,                          &
+       gr%f_der%der_discr%lapl%n, comm)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 

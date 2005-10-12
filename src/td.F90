@@ -455,21 +455,21 @@ contains
 
       ! write potential from previous interactions
       if(mpiv%node==0) then
-         do i = 1, 2
-            do is = 1, st%d%nspin
-               write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
-
-               call doutput_function(restart_format, trim(tmpdir)//"restart_td", &
-                    filename, gr%m, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr)
-
-               if(ierr.ne.0) then
-                  write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
-                  call write_fatal(1)
-               end if
-            end do
-         end do
+        do i = 1, 2
+          do is = 1, st%d%nspin
+            write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is
+            
+            call doutput_function(restart_format, trim(tmpdir)//"restart_td", &
+               filename, gr%m, gr%sb, td%tr%v_old(1:NP, is, i), M_ONE, ierr)
+            
+            if(ierr.ne.0) then
+              write(message(1), '(3a)') 'Unsuccesfull write of "', trim(filename), '"'
+              call write_fatal(1)
+            end if
+          end do
+        end do
       end if
-
+      
       call pop_sub()
     end subroutine td_save_restart
 

@@ -143,7 +143,7 @@ program octopus
 
      call print_date("Calculation ended on ")
 
-  enddo subsystems
+  end do subsystems
 
   call syslabels_end()
   call parser_end()

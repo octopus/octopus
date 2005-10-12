@@ -255,54 +255,54 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   allocate(grad(NP, NDIM))
   select case (h%d%ispin)
   case(UNPOLARIZED)
-     call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
-     do k = 1, NP
-        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k,:, 1), grad(k, :))
-     end do
+    call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
+    do k = 1, NP
+      hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k,:, 1), grad(k, :))
+    end do
   case(SPIN_POLARIZED)
-     call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
-     do k = 1, NP
-        if(modulo(ik+1, 2) == 0) then ! we have a spin down
-           hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 1), grad(k, :))
-        else
-           hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 2), grad(k, :))
-        end if
-     end do
+    call X(f_gradient)(gr%sb, gr%f_der, psi(:, 1), grad)
+    do k = 1, NP
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 1), grad(k, :))
+      else
+        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 2), grad(k, :))
+      end if
+    end do
   case(SPINORS)
-     ! not implemented yet
+    ! not implemented yet
   end select
 
-  if (associated(h%ep%a)) then
-     do k = 1, NP
-        hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%a(k, :), h%ep%a(k, :))*psi(k, :)
+  if (associated(h%ep%A_static)) then
+    do k = 1, NP
+      hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, :), h%ep%A_static(k, :))*psi(k, :)
+      
+      select case(h%d%ispin)
+      case(UNPOLARIZED)
+        hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 1))*psi(k, 1)
+      case(SPIN_POLARIZED)
+        if(modulo(ik+1, 2) == 0) then ! we have a spin down
+          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 1))*psi(k, 1)
+        else
+          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 2))*psi(k, 1)
+        end if
+      case (SPINORS)
+        ! not implemented yet
+      end select
 
-        select case(h%d%ispin)
-        case(UNPOLARIZED)
-           hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%a(k, :), h%ahxc(k, :, 1))*psi(k, 1)
-        case(SPIN_POLARIZED)
-           if(modulo(ik+1, 2) == 0) then ! we have a spin down
-              hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%a(k, :), h%ahxc(k, :, 1))*psi(k, 1)
-           else
-              hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%a(k, :), h%ahxc(k, :, 2))*psi(k, 1)
-           end if
-        case (SPINORS)
-           ! not implemented yet
-        end select
+      select case(h%d%ispin)
+      case(UNPOLARIZED)
+        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, :), grad(k, :))
+      case(SPIN_POLARIZED)
+        if(modulo(ik+1, 2) == 0) then ! we have a spin down
+          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 1))*psi(k, 1)
+        else
+          hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 2))*psi(k, 1)
+        end if
+      case (SPINORS)
+        ! not implemented yet
+      end select
 
-        select case(h%d%ispin)
-        case(UNPOLARIZED)
-           hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%a(k, :), grad(k, :))
-        case(SPIN_POLARIZED)
-           if(modulo(ik+1, 2) == 0) then ! we have a spin down
-              hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%a(k, :), h%ahxc(k, :, 1))*psi(k, 1)
-           else
-              hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%a(k, :), h%ahxc(k, :, 2))*psi(k, 1)
-           end if
-        case (SPINORS)
-           ! not implemented yet
-        end select
-
-     end do
+    end do
   end if
   deallocate(grad)
 
@@ -346,48 +346,50 @@ subroutine X(vlpsi) (h, m, psi, hpsi, ik)
 
   select case(h%d%ispin)
   case(UNPOLARIZED)
-     hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
   case(SPIN_POLARIZED)
-     if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
-     else
-        hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
-     end if
+    if(modulo(ik+1, 2) == 0) then ! we have a spin down
+      hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+    else
+      hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1)
+    end if
   case(SPINORS)
-     hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1) + &
-          (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
-     hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 2) + &
-          (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
+    hpsi(1:m%np, 1) = hpsi(1:m%np, 1) + (h%vhxc(1:m%np, 1) + h%ep%vpsl(1:m%np))*psi(1:m%np, 1) + &
+       (h%vhxc(1:m%np, 3) + M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 2)
+    hpsi(1:m%np, 2) = hpsi(1:m%np, 2) + (h%vhxc(1:m%np, 2) + h%ep%vpsl(1:m%np))*psi(1:m%np, 2) + &
+       (h%vhxc(1:m%np, 3) - M_zI*h%vhxc(1:m%np, 4))*psi(1:m%np, 1)
   end select
-
-  if (associated(h%ep%e)) then
-     do idim = 1, h%d%dim
-        hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v*psi(1:m%np, idim)
-     end do
+  
+  if (associated(h%ep%E_field)) then
+    do idim = 1, h%d%dim
+      hpsi(1:m%np, idim) = hpsi(1:m%np, idim) + h%ep%v_static*psi(1:m%np, idim)
+    end do
   end if
 
-  if (associated(h%ep%b)) then
-     allocate(lhpsi(m%np, h%d%dim))
-     select case (h%d%ispin)
-     case (UNPOLARIZED)
-     case (SPIN_POLARIZED)
-        if(modulo(ik+1, 2) == 0) then ! we have a spin down
-           lhpsi(1:m%np, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(1:m%np, 1)
+  if (associated(h%ep%B_field)) then
+    allocate(lhpsi(m%np, h%d%dim))
+    select case (h%d%ispin)
+    case (UNPOLARIZED)
+    case (SPIN_POLARIZED)
+      if(modulo(ik+1, 2) == 0) then ! we have a spin down
+        lhpsi(1:m%np, 1) = - M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
+        
+        hpsi(:, 1) = hpsi(:, 1)
+      else
+        lhpsi(1:m%np, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%B_field, h%ep%B_field))*psi(1:m%np, 1)
 
-           hpsi(:, 1) = hpsi(:, 1)
-        else
-           lhpsi(1:m%np, 1) = + M_HALF/P_C*sqrt(dot_product(h%ep%b, h%ep%b))*psi(1:m%np, 1)
-
-           hpsi(:, 1) = hpsi(:, 1)
-        end if
-     case (SPINORS)
-        lhpsi(1:m%np, 1) = M_HALF/P_C*( h%ep%b(3)*psi(1:m%np, 1) + (h%ep%b(1) - M_zI*h%ep%b(2))*psi(1:m%np, 2))
-        lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%b(3)*psi(1:m%np, 2) + (h%ep%b(1) + M_zI*h%ep%b(2))*psi(1:m%np, 1))
+        hpsi(:, 1) = hpsi(:, 1)
+      end if
+    case (SPINORS)
+      lhpsi(1:m%np, 1) = M_HALF/P_C*( h%ep%B_field(3)*psi(1:m%np, 1) &
+         + (h%ep%B_field(1) - M_zI*h%ep%B_field(2))*psi(1:m%np, 2))
+      lhpsi(1:m%np, 2) = M_HALF/P_C*(-h%ep%B_field(3)*psi(1:m%np, 2) &
+         + (h%ep%B_field(1) + M_zI*h%ep%B_field(2))*psi(1:m%np, 1))
      end select
      if (h%em_app) then
-        do idim = 1, h%d%dim
-           call lalg_scal(m%np, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi(:,idim))
-        enddo
+       do idim = 1, h%d%dim
+         call lalg_scal(m%np, R_TOTYPE(h%g_ratio/h%m_ratio), lhpsi(:,idim))
+       enddo
      end if
      hpsi(1:m%np, :) = hpsi(1:m%np, :) + lhpsi(1:m%np, :)
      deallocate(lhpsi)

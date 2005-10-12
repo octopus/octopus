@@ -153,7 +153,7 @@ curvlinear.o: global.h
 curv_modine.o: global.h
 derivatives.o: global.h derivatives_inc.F90
 eigen.o: global.h eigen_cg.F90 eigen_trlan.F90 eigen_plan.F90 eigen_arpack.F90 eigen_evolution.F90
-epot.o: global.h epot_inc.F90 epot_inc.F90
+epot.o: global.h epot_inc.F90
 f.o: global.h f_inc.F90
 fft.o: global.h fftw2.F90 fftw3.F90
 geometry.o: global.h

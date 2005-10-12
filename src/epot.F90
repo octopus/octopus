@@ -55,25 +55,26 @@ module external_pot
             depot_forces,           &
             zepot_forces,           &
             dproject, zproject,     &
-            projector
+            projector_type
 
   ! /* The projector data type is intended to hold the non-local part of the
   ! pseudopotentials. The definition of the action of a projector (which is
   ! done through the X(project) subroutine) is:
-  ! \hat{P} |phi> = \sum_{ij} uvu(i, j) | a_i >< b_j |phi>
+  ! \hat{P} |phi> = \sum_{ij} uvu(i, j) | ket_i >< bra_j |phi>
   ! i and j run from one to c. The phases are applied whenever the system is
   ! periodic in some dimension.
   ! For the pseudopotentials themselves, a = b. But to calculate the forces,
   ! one needs to put in b the gradient of a. And in the case of the spin-orbit
   ! coupling term, I have put in b the angular momentum of a. */
-  type projector
-    integer :: n, c
+  type projector_type
+    integer          :: n_points_in_sphere
+    integer          :: n_channels
     integer, pointer :: jxyz(:)
-    FLOAT, pointer   :: uvu(:, :)
-    FLOAT, pointer   :: a(:, :), b(:, :)
-    CMPLX, pointer   :: phases(:, :)
+    FLOAT,   pointer :: uvu(:, :)
+    FLOAT,   pointer :: ket(:, :), bra(:, :)
+    CMPLX,   pointer :: phases(:, :)
     integer :: index
-  end type projector
+  end type projector_type
 
   type epot_type
     !Classic charges:
@@ -81,24 +82,24 @@ module external_pot
     FLOAT, pointer :: vclassic(:) ! We use it to store the potential of the classic charges
 
     !Ions
-    FLOAT, pointer :: vpsl(:)            ! the local part of the pseudopotentials
+    FLOAT,     pointer :: vpsl(:)        ! the local part of the pseudopotentials
 #ifdef HAVE_FFT
     type(dcf), pointer :: local_cf(:)    ! for the local pseudopotential in Fourier space
     type(dcf), pointer :: rhocore_cf(:)  ! and for the core density
 #endif
 
     integer :: nvnl                      ! number of nonlocal operators
-    type(projector), pointer :: p(:)
-    type(projector), pointer :: dp(:, :)
-    type(projector), pointer :: lso(:, :)
+    type(projector_type), pointer :: p(:)
+    type(projector_type), pointer :: dp(:, :)
+    type(projector_type), pointer :: lso(:, :)
 
     !External e-m fields
     integer :: no_lasers                   ! number of laser pulses used
     type(laser_type), pointer :: lasers(:) ! lasers stuff
-    FLOAT, pointer :: e(:)                 ! static electric field
-    FLOAT, pointer :: v(:)                 ! static scalar potential
-    FLOAT, pointer :: b(:)                 ! static magnetic field
-    FLOAT, pointer :: a(:,:)               ! static vector potential
+    FLOAT, pointer :: E_field(:)           ! static electric field
+    FLOAT, pointer :: v_static(:)          ! static scalar potential
+    FLOAT, pointer :: B_field(:)           ! static magnetic field
+    FLOAT, pointer :: A_static(:,:)        ! static vector potential
 
   end type epot_type
 
@@ -147,26 +148,26 @@ contains
     end if
 
     ! static electric field
-    nullify(ep%e, ep%v)
+    nullify(ep%E_field, ep%v_static)
     if(loct_parse_block(check_inp('StaticElectricField'), blk)==0) then
+      allocate(ep%E_field(NDIM))
       select case(loct_parse_block_n(blk))
       case (1)
         do i = 1, NDIM
-          call loct_parse_block_float(blk, 0, i-1, ep%e(i))
+          call loct_parse_block_float(blk, 0, i-1, ep%E_field(i))
         end do
       end select
       call loct_parse_block_end(blk)
 
       !Compute the scalar potential
-      allocate(ep%v(NP), x(NDIM))
+      allocate(ep%v_static(NP))
       do i = 1, NP
-        ep%v(i) = sum(gr%m%x(i,:)*ep%e(:))
+        ep%v_static(i) = sum(gr%m%x(i,:)*ep%E_field(:))
       end do
-      deallocate(x)
     end if
 
     ! static magnetic field
-    nullify(ep%b, ep%a)
+    nullify(ep%B_field, ep%A_static)
     if(loct_parse_block(check_inp('StaticMagneticField'), blk)==0) then
       select case(loct_parse_block_n(blk))
       case (1)
@@ -178,27 +179,28 @@ contains
             message(2) = "corresponding to the direction perpendicular to the plane."
             call write_fatal(2)
           else
-            allocate(ep%b(1))
-            call loct_parse_block_float(blk, 0, 0, ep%b(1))
+            allocate(ep%B_field(1))
+            call loct_parse_block_float(blk, 0, 0, ep%B_field(1))
           end if
         case (3)
-          allocate(ep%b(3))
+          allocate(ep%B_field(3))
           do i = 1, 3
-            call loct_parse_block_float(blk, 0, i-1, ep%b(i))
+            call loct_parse_block_float(blk, 0, i-1, ep%B_field(i))
           end do
         end select
       end select
       call loct_parse_block_end(blk)
 
       !Compute the vector potential
-      allocate(ep%a(NP, NDIM), x(NDIM))
+      allocate(ep%A_static(NP, NDIM), x(NDIM))
       do i = 1, NP
         x = gr%m%x(i, :)
         select case (NDIM)
         case (2)
-          ep%a(i, :) = -M_HALF*(/x(2)*ep%b(1), x(1)*ep%b(1)/)
+          ep%A_static(i, :) = -M_HALF*(/x(2)*ep%B_field(1), x(1)*ep%B_field(1)/)
         case (3)
-          ep%a(i, :) = -M_HALF*(/x(2)*ep%b(3) - x(3)*ep%b(2), x(3)*ep%b(1) - x(1)*ep%b(3), x(1)*ep%b(2) - x(2)*ep%b(1)/)
+          ep%A_static(i, :) = -M_HALF*(/x(2)*ep%B_field(3) - x(3)*ep%B_field(2), &
+             x(3)*ep%B_field(1) - x(1)*ep%B_field(3), x(1)*ep%B_field(2) - x(2)*ep%B_field(1)/)
         end select
       end do
       deallocate(x)
@@ -209,22 +211,22 @@ contains
     ep%nvnl = geometry_nvnl(gr%geo)
     nullify(ep%p)
     if(ep%nvnl > 0) then
-       allocate(ep%p(ep%nvnl))
-       do i = 1, ep%nvnl
-          nullify(ep%p(i)%jxyz, ep%p(i)%a, ep%p(i)%b, ep%p(i)%uvu, ep%p(i)%phases)
-       enddo
-       allocate(ep%dp(NDIM, ep%nvnl))
-       do i = 1, ep%nvnl
-          do j = 1, NDIM
-             nullify(ep%dp(j, i)%jxyz, ep%dp(j, i)%a, ep%dp(j, i)%b, ep%dp(j, i)%uvu, ep%dp(j, i)%phases)
-          enddo
-       enddo
-       allocate(ep%lso(NDIM, ep%nvnl))
-       do i = 1, ep%nvnl
-          do j = 1, NDIM
-             nullify(ep%lso(j, i)%jxyz, ep%lso(j, i)%a, ep%lso(j, i)%b, ep%lso(j, i)%uvu, ep%lso(j, i)%phases)
-          enddo
-       enddo
+      allocate(ep%p(ep%nvnl))
+      do i = 1, ep%nvnl
+        nullify(ep%p(i)%jxyz, ep%p(i)%bra, ep%p(i)%ket, ep%p(i)%uvu, ep%p(i)%phases)
+      end do
+      allocate(ep%dp(NDIM, ep%nvnl))
+      do i = 1, ep%nvnl
+        do j = 1, NDIM
+          nullify(ep%dp(j, i)%jxyz, ep%dp(j, i)%bra, ep%dp(j, i)%ket, ep%dp(j, i)%uvu, ep%dp(j, i)%phases)
+        end do
+      end do
+      allocate(ep%lso(NDIM, ep%nvnl))
+      do i = 1, ep%nvnl
+        do j = 1, NDIM
+          nullify(ep%lso(j, i)%jxyz, ep%lso(j, i)%bra, ep%lso(j, i)%ket, ep%lso(j, i)%uvu, ep%lso(j, i)%phases)
+        end do
+      end do
     endif
 
     call pop_sub()
@@ -261,29 +263,24 @@ contains
       nullify(ep%Vclassic)
     end if
 
+    ! the external laser
     call laser_end(ep%no_lasers, ep%lasers)
-    if(associated(ep%e)) then
-      deallocate(ep%e)
-    end if
-    if(associated(ep%v)) then
-      deallocate(ep%v)
-    end if
-    if(associated(ep%b)) then
-      deallocate(ep%b)
-    end if
-    if(associated(ep%a)) then
-      deallocate(ep%a)
-    end if
+
+    ! the macroscopic fields
+    if(associated(ep%E_field))  deallocate(ep%E_field)
+    if(associated(ep%v_static)) deallocate(ep%v_static)
+    if(associated(ep%B_field))  deallocate(ep%B_field)
+    if(associated(ep%A_static)) deallocate(ep%A_static)
 
     if(ep%nvnl>0) then
-        ASSERT(associated(ep%p))
-        deallocate(ep%p); nullify(ep%p)
+      ASSERT(associated(ep%p))
+      deallocate(ep%p); nullify(ep%p)
 
-        ASSERT(associated(ep%dp))
-        deallocate(ep%dp); nullify(ep%dp)
-
-        ! Here the spin-orbit should be finalized, but only if they have been built...
-    endif
+      ASSERT(associated(ep%dp))
+      deallocate(ep%dp); nullify(ep%dp)
+      
+      ! Here the spin-orbit should be finalized, but only if they have been built...
+    end if
 
   end subroutine epot_end
 
@@ -448,7 +445,7 @@ contains
     logical, optional,    intent(in)    :: fast_generation
 
     logical :: fast_generation_
-    integer :: ia, i, l, lm, add_lm, k, ierr, p
+    integer :: ia, i, l, lm, k, ierr, p
     type(specie_type), pointer :: s
     type(atom_type),   pointer :: a
     type(dcf) :: cf_loc, cf_nlcc
@@ -491,56 +488,52 @@ contains
       a => geo%atom(ia)
       s => a%spec
       if(s%local) cycle
-      add_lm = 1
       p = 1
+
       do l = 0, s%ps%l_max
-         if(s%ps%l_loc == l) then
-            add_lm = add_lm + 2*l + 1
-            cycle
-         endif
-         do lm = -l, l
-            if(.not.fast_generation_) then
-               !The projectors maybe should be killed, in the same way that the nonlocal_op where.
-               !call nonlocal_op_kill(ep%vnl(i), sb)
-               ! This if is a performance hack, necessary for when the ions move.
-               ! For each atom, the sphere is the same, so we just calculate it once.
-               if(p == 1) then
-                 k = i
-                 p = 2
-                 deallocate(ep%p(i)%jxyz, stat = ierr)
-                 do j = 1, sb%dim
-                    deallocate(ep%dp(j, i)%jxyz, stat = ierr)
-                 enddo
-                 do j = 1, sb%dim
-                    deallocate(ep%lso(j, i)%jxyz, stat = ierr)
-                 enddo
-                 call build_kb_sphere(i)
-               else
-                 ep%p(i)%n = ep%p(k)%n
-                 ep%p(i)%c = ep%p(k)%c
-                 ep%p(i)%jxyz => ep%p(k)%jxyz
-                 do j = 1, sb%dim
-                    ep%dp(j, i)%n = ep%dp(j, k)%n
-                    ep%dp(j, i)%c = ep%dp(j, k)%c
-                    ep%dp(j, i)%jxyz => ep%dp(j, k)%jxyz
-                 enddo
-                 do j = 1, sb%dim
-                    ep%lso(j, i)%n = ep%lso(j, k)%n
-                    ep%lso(j, i)%c = ep%lso(j, k)%c
-                    ep%lso(j, i)%jxyz => ep%lso(j, k)%jxyz
-                 enddo
-               endif
-               call allocate_nl_part(i)
+        if(s%ps%l_loc == l) cycle
+        do lm = -l, l
+          if(.not.fast_generation_) then
+            !The projectors maybe should be killed, in the same way that the nonlocal_op were.
+            !call nonlocal_op_kill(ep%vnl(i), sb)
+            ! This if is a performance hack, necessary for when the ions move.
+            ! For each atom, the sphere is the same, so we just calculate it once.
+            if(p == 1) then
+              k = i
+              p = 2
+              deallocate(ep%p(i)%jxyz, stat = ierr)
+              do j = 1, sb%dim
+                deallocate(ep%dp(j, i)%jxyz, stat = ierr)
+              enddo
+              do j = 1, sb%dim
+                deallocate(ep%lso(j, i)%jxyz, stat = ierr)
+              enddo
+              call build_kb_sphere(i)
+            else
+              ep%p(i)%n_points_in_sphere = ep%p(k)%n_points_in_sphere
+              ep%p(i)%n_channels = ep%p(k)%n_channels
+              ep%p(i)%jxyz => ep%p(k)%jxyz
+              do j = 1, sb%dim
+                ep%dp(j, i)%n_points_in_sphere = ep%dp(j, k)%n_points_in_sphere
+                ep%dp(j, i)%n_channels = ep%dp(j, k)%n_channels
+                ep%dp(j, i)%jxyz => ep%dp(j, k)%jxyz
+              enddo
+              do j = 1, sb%dim
+                ep%lso(j, i)%n_points_in_sphere = ep%lso(j, k)%n_points_in_sphere
+                ep%lso(j, i)%n_channels = ep%lso(j, k)%n_channels
+                ep%lso(j, i)%jxyz => ep%lso(j, k)%jxyz
+              enddo
             endif
-            call build_nl_part(i, l, lm)
-            add_lm = add_lm + 1
-
-            ep%p(i)%index = ia
-            ep%dp(1:sb%dim, i)%index = ia
-            ep%lso(1:sb%dim, i)%index = ia
-
-            i = i + 1
-         enddo
+            call allocate_nl_part(i)
+          endif
+          call build_nl_part(i, l, lm)
+          
+          ep%p(i)%index = ia
+          ep%dp(1:sb%dim, i)%index = ia
+          ep%lso(1:sb%dim, i)%index = ia
+          
+          i = i + 1
+        enddo
       enddo
     end do
 
@@ -595,6 +588,7 @@ contains
       call pop_sub()
     end subroutine build_local_part
 
+
     subroutine build_kb_sphere(ivnl)
       integer, intent(in) :: ivnl
       integer :: i, j, k, d
@@ -619,26 +613,26 @@ contains
         end do
       end do
 
-      ep%p(ivnl)%n = j
-      ep%p(ivnl)%c = s%ps%kbc
+      ep%p(ivnl)%n_points_in_sphere = j
+      ep%p(ivnl)%n_channels         = s%ps%kbc
 
       do d = 1, sb%dim
-         ep%dp(d, ivnl)%n = j
-         ep%dp(d, ivnl)%c = s%ps%kbc
-      enddo
+        ep%dp(d, ivnl)%n_points_in_sphere = j
+        ep%dp(d, ivnl)%n_channels         = s%ps%kbc
+      end do
 
       do d = 1, sb%dim
-         ep%lso(d, ivnl)%n = j
-         ep%lso(d, ivnl)%c = s%ps%kbc
-      enddo
+        ep%lso(d, ivnl)%n_points_in_sphere = j
+        ep%lso(d, ivnl)%n_channels         = s%ps%kbc
+      end do
 
       allocate(ep%p(ivnl)%jxyz(j))
       do d = 1, sb%dim
-         allocate(ep%dp(d, ivnl)%jxyz(j))
-      enddo
+        allocate(ep%dp(d, ivnl)%jxyz(j))
+      end do
       do d = 1, sb%dim
-         allocate(ep%lso(d, ivnl)%jxyz(j))
-      enddo
+        allocate(ep%lso(d, ivnl)%jxyz(j))
+      end do
 
       j = 0
       do k = 1, m%np
@@ -661,48 +655,50 @@ contains
       call pop_sub()
     end subroutine build_kb_sphere
 
+
     subroutine allocate_nl_part(ivnl)
       integer, intent(in) :: ivnl
-      integer :: j, c, d
+      integer :: n_s, n_c, d
       call push_sub('epot.allocate_nl_part')
 
-      j = ep%p(ivnl)%n
-      c = ep%p(ivnl)%c
+      n_s = ep%p(ivnl)%n_points_in_sphere
+      n_c = ep%p(ivnl)%n_channels
 
-      allocate(ep%p(ivnl)%a(j, c), &
-               ep%p(ivnl)%uvu(c, c))
-      ep%p(ivnl)%a(:,:)     = M_ZERO
-      ep%p(ivnl)%uvu(:,:) = M_ZERO
-      ep%p(ivnl)%b => ep%p(ivnl)%a
-
-      do d = 1, sb%dim
-         allocate(ep%dp(d, ivnl)%a(j, c), ep%dp(d, ivnl)%b(j, c), &
-                  ep%dp(d, ivnl)%uvu(c, c))
-         ep%dp(d, ivnl)%a(:,:)     = M_ZERO
-         ep%dp(d, ivnl)%b(:,:)     = M_ZERO
-         ep%dp(d, ivnl)%uvu(:,:) = M_ZERO
-      enddo
+      allocate(ep%p(ivnl)%ket(n_s, n_c), &
+               ep%p(ivnl)%uvu(n_c, n_c))
+      ep%p(ivnl)%ket(:,:) =  M_ZERO
+      ep%p(ivnl)%bra      => ep%p(ivnl)%ket
+      ep%p(ivnl)%uvu(:,:) =  M_ZERO
 
       do d = 1, sb%dim
-         allocate(ep%lso(d, ivnl)%a(j, c), ep%lso(d, ivnl)%b(j, c), &
-                  ep%lso(d, ivnl)%uvu(c, c))
-         ep%lso(d, ivnl)%a(:,:)     = M_ZERO
-         ep%lso(d, ivnl)%b(:,:)     = M_ZERO
-         ep%lso(d, ivnl)%uvu(:,:) = M_ZERO
-      enddo
+        allocate(ep%dp(d, ivnl)%ket(n_s, n_c), ep%dp(d, ivnl)%bra(n_s, n_c), &
+           ep%dp(d, ivnl)%uvu(n_c, n_c))
+        ep%dp(d, ivnl)%ket(:,:) = M_ZERO
+        ep%dp(d, ivnl)%bra(:,:) = M_ZERO
+        ep%dp(d, ivnl)%uvu(:,:) = M_ZERO
+      end do
+
+      do d = 1, sb%dim
+        allocate(ep%lso(d, ivnl)%ket(n_s, n_c), ep%lso(d, ivnl)%bra(n_s, n_c), &
+           ep%lso(d, ivnl)%uvu(n_c, n_c))
+        ep%lso(d, ivnl)%ket(:,:) = M_ZERO
+        ep%lso(d, ivnl)%bra(:,:) = M_ZERO
+        ep%lso(d, ivnl)%uvu(:,:) = M_ZERO
+      end do
 
       if(sb%periodic_dim/=0) then
-        allocate(ep%p(ivnl)%phases(ep%p(ivnl)%n, st%d%nik))
+        allocate(ep%p(ivnl)%phases(n_s, st%d%nik))
         do d = 1, sb%dim
-           allocate(ep%dp(d,ivnl)%phases(ep%dp(d, ivnl)%n, st%d%nik))
-        enddo
+           allocate(ep%dp(d,ivnl)%phases(n_s, st%d%nik))
+        end do
         do d = 1, sb%dim
-           allocate(ep%lso(d,ivnl)%phases(ep%lso(d, ivnl)%n, st%d%nik))
-        enddo
+           allocate(ep%lso(d,ivnl)%phases(n_s, st%d%nik))
+        end do
       endif
 
       call pop_sub()
     end subroutine allocate_nl_part
+
 
     subroutine build_nl_part(ivnl, l, lm)
       integer, intent(in) :: ivnl, l, lm
@@ -712,89 +708,91 @@ contains
       FLOAT :: so_uv, so_duv(3)
       FLOAT :: v, dv(3)
 
-      integer :: c, n
+      integer :: n_c, n_s
       CMPLX, allocatable :: grad_so(:, :, :)
 
       call push_sub('epot.build_nl_part')
 
-      c = ep%lso(1, ivnl)%c
-      n = ep%lso(1, ivnl)%n
-      allocate(grad_so(n, 3, c))
+      n_s = ep%p(ivnl)%n_points_in_sphere
+      n_c = ep%p(ivnl)%n_channels
+      allocate(grad_so(n_s, 3, n_c))
 
-      j_loop: do j = 1, n
+      j_loop: do j = 1, n_s
         x_in(:) = m%x(ep%p(ivnl)%jxyz(j), :)
-         k_loop: do k = 1, 3**sb%periodic_dim
-          x(:) = x_in(:) - sb%shift(k,:)
-          r=sqrt(sum((x-a%x)*(x-a%x)))
+        k_loop: do k = 1, 3**sb%periodic_dim
+          x(:) = x_in(:) - sb%shift(k,:) - a%x
+          r = sqrt(sum(x*x))
           if (r > s%ps%rc_max + m%h(1)) cycle
-          x = x - a%x
-          i_loop : do i = 1, c
-                if(l .ne. s%ps%L_loc) then
-                  call specie_get_nl_part(s, x, l, lm, i, v, dv(1:3))
-                  ep%p(ivnl)%a(j, i) = v
-                  do d = 1, sb%dim
-                     ep%dp(d, ivnl)%a(j, i) = dv(d)
-                     ep%dp(d, ivnl)%b(j, i) = v
-                  enddo
-                end if
-                if(l>0 .and. s%ps%so_l_max>=0) then
-                  call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
-                  grad_so(j, 1:3, i) = so_duv(1:3)
-                  do d = 1, sb%dim
-                     ep%lso(d, ivnl)%a(j, i) = so_uv
-                  enddo
-                endif
+          
+          i_loop : do i = 1, n_c
+            if(l .ne. s%ps%L_loc) then
+              call specie_get_nl_part(s, x, l, lm, i, v, dv(1:3))
+              ep%p(ivnl)%ket(j, i) = v
+              do d = 1, sb%dim
+                ep%dp(d, ivnl)%ket(j, i) = dv(d)
+                ep%dp(d, ivnl)%bra(j, i) = v
+              end do
+            end if
+
+            if(l>0 .and. s%ps%so_l_max>=0) then
+              call specie_get_nl_part(s, x, l, lm, i, so_uv, so_duv(:), so=.true.)
+              grad_so(j, 1:3, i) = so_duv(1:3)
+              do d = 1, sb%dim
+                ep%lso(d, ivnl)%ket(j, i) = so_uv
+              end do
+            endif
           end do i_loop
-         end do k_loop
+
+        end do k_loop
       end do j_loop
 
       if(reltype == 1) then ! SPIN_ORBIT
-         c = ep%lso(1, ivnl)%c
-         do j = 1, ep%lso(1, ivnl)%n
-            x_in(1:3) = m%x(ep%lso(1, ivnl)%jxyz(j), 1:3)
-            x(1:3) = x_in(1:3) !- sb%shift(k, 1:3) !???
-            x = x - a%x
-            r = sqrt(sum(x*x))
-            ep%lso(1, ivnl)%b(j, 1:c) = (x(2)*grad_so(j, 3, 1:c) - x(3)*grad_so(j, 2, 1:c))
-            ep%lso(2, ivnl)%b(j, 1:c) = (x(3)*grad_so(j, 1, 1:c) - x(1)*grad_so(j, 3, 1:c))
-            ep%lso(3, ivnl)%b(j, 1:c) = (x(1)*grad_so(j, 2, 1:c) - x(2)*grad_so(j, 1, 1:c))
-         enddo
+        do j = 1, n_s
+          x_in(1:3) = m%x(ep%lso(1, ivnl)%jxyz(j), 1:3)
+          x(1:3) = x_in(1:3) !- sb%shift(k, 1:3) !???
+          x = x - a%x
+          r = sqrt(sum(x*x))
+
+          ep%lso(1, ivnl)%bra(j, 1:n_c) = (x(2)*grad_so(j, 3, 1:n_c) - x(3)*grad_so(j, 2, 1:n_c))
+          ep%lso(2, ivnl)%bra(j, 1:n_c) = (x(3)*grad_so(j, 1, 1:n_c) - x(1)*grad_so(j, 3, 1:n_c))
+          ep%lso(3, ivnl)%bra(j, 1:n_c) = (x(1)*grad_so(j, 2, 1:n_c) - x(2)*grad_so(j, 1, 1:n_c))
+        end do
       endif
 
       ! and here we calculate the uVu
       if(s%ps%flavour == PS_TM2) then
-            if(l .ne. s%ps%L_loc) then
-              ep%p(ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
-              do d = 1, sb%dim
-                 ep%dp(d, ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
-              enddo
-            end if
+        if(l .ne. s%ps%L_loc) then
+          ep%p(ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
+          do d = 1, sb%dim
+            ep%dp(d, ivnl)%uvu(1, 1) = s%ps%h(l, 1, 1)
+          end do
+        end if
       else
         ep%p(ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
         do d = 1, sb%dim
-           ep%dp(d, ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
-        enddo
+          ep%dp(d, ivnl)%uvu(1:3, 1:3) = s%ps%h(l, 1:3, 1:3)
+        end do
         do d = 1, sb%dim
-           ep%lso(d, ivnl)%uvu(1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
-        enddo
+          ep%lso(d, ivnl)%uvu(1:3, 1:3) = s%ps%k(l, 1:3, 1:3)
+        end do
       end if
 
       if(sb%periodic_dim/=0) then
-        do j = 1, ep%p(ivnl)%n
-           x(:) = m%x(ep%p(ivnl)%jxyz(j), :)
-           do k=1, st%d%nik
-              ep%p(ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-              do d = 1, sb%dim
-                 ep%dp(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-              enddo
-              do d = 1, sb%dim
-                 ep%lso(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
-              enddo
-           end do
+        do j = 1, n_s
+          x(:) = m%x(ep%p(ivnl)%jxyz(j), :)
+          do k=1, st%d%nik
+            ep%p(ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
+            do d = 1, sb%dim
+              ep%dp(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
+            end do
+            do d = 1, sb%dim
+              ep%lso(d, ivnl)%phases(j, k) = exp(M_zI*sum(st%d%kpoints(:, k)*x(:)))
+            end do
+          end do
         end do
-      endif
+      end if
 
-      call pop_sub(); return
+      call pop_sub()
     end subroutine build_nl_part
 
   end subroutine epot_generate
