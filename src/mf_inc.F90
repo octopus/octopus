@@ -67,12 +67,10 @@ R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
     dotp_tmp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
   end if
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%p.ne.1) then
-    call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
-    call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
-                       MPI_SUM, m%vp%comm, ierr)
-    call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
-  end if
+  call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+  call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
+     MPI_SUM, m%vp%comm, ierr)
+  call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
 #else
   dotp = dotp_tmp
 #endif

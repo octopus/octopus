@@ -56,8 +56,7 @@ module mesh
   ! nodes when running parallel except
   ! - np, np_part
   ! - x, vol_pp
-  ! Those four are defined for all the points, the
-  ! node is responsible for.
+  ! These four are defined for all the points the node is responsible for.
   type mesh_type
     type(simul_box_type), pointer :: sb
     logical :: use_curvlinear

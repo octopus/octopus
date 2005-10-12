@@ -35,7 +35,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
 
   integer :: i, j, n_s, ip, k, ierr
   R_TYPE, allocatable :: lpsi(:), plpsi(:)
-  R_TYPE :: uvpsi
+  R_TYPE :: uvpsi, tmp
 
   call push_sub('epot_inc.project')
 
@@ -50,16 +50,22 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       deallocate(lpsi, plpsi, stat = ierr)
       allocate(lpsi(n_s), plpsi(n_s))
 
-      ! FIXME: When running with partitions, vol_pp is local
-      ! to the node. It is likely, that this code need changes.
       lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
       if(periodic) lpsi(1:n_s)  = lpsi(1:n_s) * p(ip)%phases(1:n_s, ik)
       plpsi(1:n_s) = R_TOTYPE(M_ZERO)
+
       k = p(ip)%index
     endif
 
     do j = 1, p(ip)%n_channels
       uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+      call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+      call TS(MPI_Allreduce)(uvpsi, tmp, 1, R_MPITYPE, &
+         MPI_SUM, mesh%vp%comm, ierr)
+      call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
+      uvpsi = tmp
+#endif
       do i = 1, p(ip)%n_channels
         if(periodic) then
           plpsi(1:n_s) = plpsi(1:n_s) + &

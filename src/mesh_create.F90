@@ -74,10 +74,6 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
   ! Get number of partitions.
   call MPI_Comm_size(comm, p, ierr)
 
-  ! If p=1, we can exit. All points are mapped to
-  ! partition 1 (s. a.).
-  if(p.eq.1) return
-
   ! Set directions of possible neighbours.
   ! With this ordering of the directions it is possible
   ! to iterate over d(:, i) with i=1, ..., 2*m%sb%dim,
@@ -104,7 +100,7 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
     xadj(i) = ne
     ! Check all possible neighbours.
     do j = 1, 2*m%sb%dim
-      ! Store coordinates of possible neighbour, they
+      ! Store coordinates of possible neighbors, they
       ! are needed several times in the check below.
       jx = ix+d(1, j)
       jy = iy+d(2, j)
@@ -163,7 +159,9 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
     message(1) = 'The mesh is empty and cannot be partitioned.'
     call write_fatal(1)
   end if
-  if(p.lt.8) then
+  if(p == 1) then
+    part(:) = 1
+  else if(p.lt.8) then
     message(1) = 'Info: Using multilevel recursive bisection to partition mesh.'
     call write_info(1)
     call oct_metis_part_graph_recursive(nv, xadj, adjncy, &
@@ -188,26 +186,26 @@ subroutine mesh_partition(m, Lxyz_tmp, comm, part)
   deallocate(ppp)
 
   if(in_debug_mode) then
-     ! Debug output. Write points of each partition in a different file.
-     if(mpiv%node.eq.0) then
-        do i = 1, p 
-           write(filenum, '(i3.3)') i
-           iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-                action='write')
-           do j = 1, m%np_global
-              if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
-           end do
-           call io_close(iunit)
-        end do
-        ! Write points from enlargement to file with number p+1.
-        write(filenum, '(i3.3)') p+1
+    ! Debug output. Write points of each partition in a different file.
+    if(mpiv%node.eq.0) then
+      do i = 1, p 
+        write(filenum, '(i3.3)') i
         iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
-                        action='write')
-        do i = m%np_global+1, m%np_part_global
-          write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
+           action='write')
+        do j = 1, m%np_global
+          if(part(j).eq.i) write(iunit, '(i8,3f18.8)') j, m%x_global(j, :)
         end do
         call io_close(iunit)
-     end if
+      end do
+      ! Write points from enlargement to file with number p+1.
+      write(filenum, '(i3.3)') p+1
+      iunit = io_open('debug/mesh_partition/mesh_partition.'//filenum, &
+         action='write')
+      do i = m%np_global+1, m%np_part_global
+        write(iunit, '(i8,3f18.8)') i, m%x_global(i, :)
+      end do
+      call io_close(iunit)
+    end if
   end if
 
   call pop_sub()
@@ -358,7 +356,7 @@ subroutine mesh_create_xyz(sb, m, cv, geo, stencil, np_stencil, comm)
 
       ! Set local point numbers.
       m%np      = m%vp%np_local(m%vp%partno)
-      m%np_part = m%np+m%vp%np_ghost(m%vp%partno)+m%vp%np_bndry(m%vp%partno)
+      m%np_part = m%np + m%vp%np_ghost(m%vp%partno) + m%vp%np_bndry(m%vp%partno)
       ! Compute m%x as it is done in the serial case but
       ! only for local points.
       ! x consists of three parts: the local points, the

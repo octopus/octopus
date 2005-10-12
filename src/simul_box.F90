@@ -290,11 +290,6 @@ contains
             call loct_parse_block_float(blk, 0, i-1, sb%box_offset(i))
           end do
           call loct_parse_block_end(blk)
-        else
-          message(1) = 'Block "BoxOffset" not properly defined in input file.'
-          message(2) = 'Assuming zero offset in all directions.'
-          call write_warning(2)
-          sb%box_offset = M_ZERO
         endif
       end select
 

@@ -41,6 +41,10 @@ module external_pot
   use geometry
   use states
   use lasers
+  use profiling_mod
+#ifdef HAVE_MPI
+  use mpi_mod
+#endif
 
   implicit none
 
@@ -73,7 +77,7 @@ module external_pot
     FLOAT,   pointer :: uvu(:, :)
     FLOAT,   pointer :: ket(:, :), bra(:, :)
     CMPLX,   pointer :: phases(:, :)
-    integer :: index
+    integer          :: index
   end type projector_type
 
   type epot_type
@@ -528,8 +532,8 @@ contains
           endif
           call build_nl_part(i, l, lm)
           
-          ep%p(i)%index = ia
-          ep%dp(1:sb%dim, i)%index = ia
+          ep%p(i)%index             = ia
+          ep%dp(1:sb%dim, i)%index  = ia
           ep%lso(1:sb%dim, i)%index = ia
           
           i = i + 1
