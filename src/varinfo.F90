@@ -25,7 +25,11 @@ module varinfo
   implicit none
 
   private
-  public :: varinfo_init, varinfo_end, varinfo_print, varinfo_print_option
+  public :: varinfo_init, &
+            varinfo_end, &
+            varinfo_print, &
+            varinfo_print_option, &
+            varinfo_valid_option
 
   interface
     subroutine varinfo_init(filename)
@@ -76,6 +80,29 @@ contains
 
   end subroutine varinfo_print
 
+  logical function varinfo_valid_option(var, option) result(l)
+    character(len=*), intent(in) :: var
+    integer,          intent(in) :: option
+
+    integer(POINTER_SIZE) :: handle, opt, name, desc
+    integer :: value
+
+    l = .false.
+
+    call varinfo_getvar(var, handle)
+    if(handle.eq.0) return
+
+    opt = int(0, POINTER_SIZE)
+    do
+      call varinfo_getopt(handle, opt)
+      if(opt == 0) exit
+      call varinfo_opt_getinfo(opt, name, value, desc)
+      if(value == option) then
+        l = .true.; return
+      end if
+    end do    
+
+  end function varinfo_valid_option
 
   ! ---------------------------------------------------------
   subroutine varinfo_print_option(iunit, var, option, pre)

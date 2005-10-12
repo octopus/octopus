@@ -78,6 +78,7 @@ program octopus
      call read_system_labels(blk)
   else
      call loct_parse_int('CalculationMode', M_GS, calc_mode)
+     if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
      call syslabels_init(calc_mode)
   endif
 
