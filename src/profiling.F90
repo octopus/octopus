@@ -42,6 +42,7 @@ module profiling_mod
   use io
   use messages
   use global
+  use lib_oct
 
   implicit none
   private

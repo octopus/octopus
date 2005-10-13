@@ -20,6 +20,7 @@
 #include "global.h"
 
 module messages
+  use string
   use varinfo
   use global
   use syslabels

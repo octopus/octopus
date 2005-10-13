@@ -21,6 +21,7 @@
 #include "global.h"
 
 module spectrum
+use string
 use global
 use messages
 use lib_oct_parser

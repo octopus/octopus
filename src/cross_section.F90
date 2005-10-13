@@ -23,6 +23,7 @@ program cross_section
   use global
   use messages
   use syslabels
+  use lib_oct
   use lib_oct_parser
   use io
   use units
