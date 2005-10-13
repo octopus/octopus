@@ -248,7 +248,7 @@ contains
            expo(te%exp_order+1, te%exp_order+1))
       hm = M_z0; expo = M_z0
 
-      lwsp = 4*(te%exp_order)**2+7
+      lwsp = 4*(te%exp_order+1)**2+7
       allocate(wsp(lwsp), ipiv(te%exp_order+1))
 
       ! Normalize input vector, and put it into v(:, :, 1)
