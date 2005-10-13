@@ -29,6 +29,7 @@ program octopus
   use run_prog
   use io
   use profiling_mod
+  use varinfo
 
   implicit none
 

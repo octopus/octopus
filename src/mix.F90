@@ -28,6 +28,7 @@ use mesh_function
 use lib_oct_parser
 use lib_basic_alg
 use lib_adv_alg
+use varinfo
 
 implicit none
 
