@@ -23,6 +23,8 @@ module mix
 use global
 use messages
 use syslabels
+use mesh
+use mesh_function
 use lib_oct_parser
 use lib_basic_alg
 use lib_adv_alg
@@ -65,30 +67,46 @@ subroutine mix_init(smix, d1, d2, d3, def_)
   def = MIX_BROYDEN
   if(present(def_)) def = def_
 
-  ! check input parameters
-  call loct_parse_int(check_inp('TypeOfMixing'), def, smix%type_of_mixing)
-  if(smix%type_of_mixing < MIX_LINEAR .or. smix%type_of_mixing > MIX_BROYDEN) then
-    message(1) = 'Type of mixing passed to mix_init not allowed'
-    call write_fatal(1)
-  end if
 
+  !%Variable TypeOfMixing
+  !%Type integer
+  !%Section 8 SCF
+  !%Description
+  !% The scheme scheme used to produce, at each iteration in the self consistent cycle
+  !% that attempts to solve the Kohn-Sham equations, the input density from the value
+  !% of the input and output densities of previous iterations.
+  !%Option linear 0
+  !% Simple linear mixing.
+  !%Option gr_pulay 1
+  !% "Guaranteed-reduction" Pulay scheme (FIXME: Add reference).
+  !%Option broyden 2
+  !% Broyden scheme (FIXME: Add reference).
+  !%End
+  call loct_parse_int(check_inp('TypeOfMixing'), def, smix%type_of_mixing)
+  if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
+
+  !%Variable Mixing
+  !%Type float
+  !%Section 8 SCF
+  !%Description
+  !% Both the linear and the Broyden scheme depend on a "mixing parameter", set by this variable.
+  !%End
   if (smix%type_of_mixing == MIX_LINEAR .or. smix%type_of_mixing == MIX_BROYDEN) then
     call loct_parse_float(check_inp('Mixing'), CNST(0.3), smix%alpha)
-    if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) then
-      write(message(1), '(a, f14.6,a)') "Input: '",smix%alpha,"' is not a valid Mixing"
-      message(2) = '(0 < Mixing <= 1)'
-      call write_fatal(2)
-    end if
+    if(smix%alpha <= M_ZERO .or. smix%alpha > M_ONE) call input_error('Mixing')
   end if
 
+  !%Variable MixNumberSteps
+  !%Type integer
+  !%Section 8 SCF
+  !%Description
+  !% In the Broyden and in the GR-Pulay scheme, the new input density or potential is constructed 
+  !% from the values of densities/potentials of previous a given number of previous iterations.
+  !% This number is set by this variable.
+  !%End
   if (smix%type_of_mixing == MIX_GRPULAY .or. smix%type_of_mixing == MIX_BROYDEN) then
     call loct_parse_int(check_inp('MixNumberSteps'), 3, smix%ns)
-    if(smix%ns <= 1) then
-      write(message(1), '(a, i4,a)') "Input: '", smix%ns, &
-                     "' is not a valid MixNumberSteps"
-      message(2) = '(1 < MixNumberSteps)'
-      call write_fatal(2)
-    end if
+    if(smix%ns <= 1) call input_error('MixNumberSteps')
   end if
 
 
@@ -136,8 +154,9 @@ end subroutine mix_end
 
 
 ! ---------------------------------------------------------
-subroutine mixing(smix, iter, d1, d2, d3, vin, vout, vnew)
+subroutine mixing(smix, m, iter, d1, d2, d3, vin, vout, vnew)
   type(mix_type), intent(inout) :: smix
+  type(mesh_type), intent(in)   :: m
   integer,        intent(in)    :: iter, d1, d2, d3
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
@@ -154,7 +173,7 @@ subroutine mixing(smix, iter, d1, d2, d3, vin, vout, vnew)
     call mixing_linear(smix%alpha, vin, vout, vnew)
 
   case (MIX_BROYDEN)
-    call mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
+    call mixing_broyden(smix, m, d1, d2, d3, vin, vout, vnew, iter)
 
   case (MIX_GRPULAY)
     call mixing_grpulay(smix, d1, d2, d3, vin, vout, vnew, iter)
@@ -177,13 +196,15 @@ end subroutine mixing_linear
 
 
 ! ---------------------------------------------------------
-subroutine mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
+subroutine mixing_broyden(smix, m, d1, d2, d3, vin, vout, vnew, iter)
   type(mix_type), intent(inout) :: smix
+  type(mesh_type), intent(in)   :: m
   integer,        intent(in)    :: d1, d2, d3, iter
   FLOAT,          intent(in)    :: vin(:, :, :), vout(:, :, :)
   FLOAT,          intent(out)   :: vnew(:, :, :)
 
-  integer :: ipos, iter_used
+
+  integer :: ipos, iter_used, i, j
   FLOAT :: gamma
   FLOAT, allocatable :: f(:, :, :)
 
@@ -199,7 +220,13 @@ subroutine mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
     call lalg_axpy(d1, d2, d3, -M_ONE, smix%f_old(:, :, :),   smix%df(:, :, :, ipos))
     call lalg_axpy(d1, d2, d3, -M_ONE, smix%vin_old(:, :, :), smix%dv(:, :, :, ipos))
 
-    gamma = sqrt(sum(smix%df(1:d1, 1:d2, 1:d3, ipos)*smix%df(1:d1, 1:d2, 1:d3, ipos)))
+    gamma = M_ZERO
+    do i = 1, d2
+       do j = 1, d3
+          gamma = gamma + dmf_integrate(m, smix%df(:, i, j, ipos)*smix%df(:, i, j, ipos)) / m%vol_pp(1)
+       enddo
+    enddo
+    gamma = sqrt(gamma)
 
     if(gamma > CNST(1e-8)) then
       gamma = M_ONE/gamma
@@ -218,7 +245,7 @@ subroutine mixing_broyden(smix, d1, d2, d3, vin, vout, vnew, iter)
 
   ! extrapolate new vector
   iter_used = min(iter - 1, smix%ns)
-  call broyden_extrapolation(smix%alpha, d1, d2, d3, vin, vnew, iter_used, f, &
+  call broyden_extrapolation(smix%alpha, m, d1, d2, d3, vin, vnew, iter_used, f, &
      smix%df(1:d1, 1:d2, 1:d3, 1:iter_used), &
      smix%dv(1:d1, 1:d2, 1:d3, 1:iter_used))
 
@@ -228,17 +255,18 @@ end subroutine mixing_broyden
 
 
 ! ---------------------------------------------------------
-subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df, dv)
-  FLOAT,   intent(in)  :: alpha
-  integer, intent(in)  :: d1, d2, d3, iter_used
-  FLOAT,   intent(in)  :: vin(:, :, :), f(:, :, :)
-  FLOAT,   intent(in)  :: df(:, :, :, :), dv(:, :, :, :)
-  FLOAT,   intent(out) :: vnew(:, :, :)
+subroutine broyden_extrapolation(alpha, m, d1, d2, d3, vin, vnew, iter_used, f, df, dv)
+  FLOAT,   intent(in)         :: alpha
+  type(mesh_type), intent(in) :: m
+  integer, intent(in)         :: d1, d2, d3, iter_used
+  FLOAT,   intent(in)         :: vin(:, :, :), f(:, :, :)
+  FLOAT,   intent(in)         :: df(:, :, :, :), dv(:, :, :, :)
+  FLOAT,   intent(out)        :: vnew(:, :, :)
 
 
   FLOAT, parameter :: w0 = CNST(0.01)
 
-  integer  :: i, j
+  integer  :: i, j, k, l
   FLOAT :: beta(iter_used, iter_used), gamma, work(iter_used), w(iter_used), x
 
   if (iter_used == 0) then
@@ -253,7 +281,12 @@ subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df,
   beta = M_ZERO
   do i = 1, iter_used
     do j = i + 1, iter_used
-      beta(i, j) = w(i)*w(j)*sum(df(1:d1, 1:d2, 1:d3, j)*df(1:d1, 1:d2, 1:d3, i))
+      beta(i, j) = M_ZERO
+      do k = 1, d2
+         do l = 1, d3
+            beta(i, j) = beta(i, j) + w(i)*w(j)*dmf_integrate(m, df(:, k, l, j)*df(:, k, l, i)) / m%vol_pp(1)
+         enddo
+      enddo
       beta(j, i) = beta(i, j)
     end do
     beta(i, i) = w0**2 + w(i)**2
@@ -263,7 +296,12 @@ subroutine broyden_extrapolation(alpha, d1, d2, d3, vin, vnew, iter_used, f, df,
   x = lalg_inverter(iter_used, beta)
 
   do i = 1, iter_used
-    work(i) = sum(df(1:d1, 1:d2, 1:d3, i)*f(1:d1, 1:d2, 1:d3)) ! dot_product(df(:, :, :, i), f)
+     work(i) = M_ZERO
+     do k = 1, d2
+        do l = 1, d3
+           work(i) = work(i) + dmf_integrate(m, df(:, k, l, i)*f(:, k, l)) / m%vol_pp(1)
+        enddo
+     enddo
   end do
 
 

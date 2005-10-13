@@ -45,17 +45,17 @@ subroutine poisson3D_init(gr)
   select case(poisson_solver)
   case(CG)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
+     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      call poisson_cg1_init(gr%m, maxl, threshold)
 
   case(CG_CORRECTED)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
+     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
      call poisson_cg2_init(gr%m, maxl, threshold)
 
   case(MULTIGRILLA)
      call loct_parse_int(check_inp('PoissonSolverMaxMultipole'), 4, maxl)
-     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-5), threshold)
+     call loct_parse_float(check_inp('PoissonSolverThreshold'), CNST(1.0e-6), threshold)
 
      call poisson_multigrid_init(gr%m, maxl, threshold)
 

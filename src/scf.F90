@@ -267,13 +267,13 @@ subroutine scf_run(scf, gr, st, ks, h, outp)
     select case (scf%what2mix)
     case (MIXDENS)
        ! mix input and output densities and compute new potential
-       call mixing(scf%smix, iter, NP, dim, nspin, rhoin, rhoout, rhonew)
+       call mixing(scf%smix, gr%m, iter, NP, dim, nspin, rhoin, rhoout, rhonew)
        st%rho = rhonew(:, 1, :)
        if (h%d%cdft) st%j = rhonew(:, 2:dim, :)
        call X(v_ks_calc) (gr, ks, h, st)
     case (MIXPOT)
        ! mix input and output potentials
-       call mixing(scf%smix, iter, NP, dim, nspin, vin, vout, vnew)
+       call mixing(scf%smix, gr%m, iter, NP, dim, nspin, vin, vout, vnew)
        h%vhxc = vnew(:, 1, :)
        if (h%d%cdft) h%ahxc(:,:,:) = vnew(:,2:dim,:)
     end select
