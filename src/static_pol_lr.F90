@@ -152,7 +152,7 @@ contains
       write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
       call write_info(1)
 
-      call mix_init(lr%mixer, 1, sys%gr%m%np, sys%st%d%nspin)
+      call mix_init(lr%mixer, sys%gr%m, 1, sys%st%d%nspin)
       call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO))
       call mix_end(lr%mixer)
 
@@ -240,8 +240,8 @@ contains
       ! mix to get new density
       dl_rhonew(1,:,:) = M_ZERO
       dl_rhotmp(1,:,:) = lr%X(dl_rho)(:,:)
-      call mixing(lr%mixer, iter, 1, m%np, st%d%nspin, &
-         dl_rhoin, dl_rhotmp, dl_rhonew)
+      call mixing(lr%mixer, m, iter, 1, st%d%nspin, &
+           dl_rhoin, dl_rhotmp, dl_rhonew)
 
       ! check for convergence
       lr%abs_dens = M_ZERO
