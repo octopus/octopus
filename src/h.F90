@@ -20,24 +20,33 @@
 #include "global.h"
 
 module hamiltonian
-use global
-use messages
-use syslabels
-use units
-use lib_oct_parser
-use lib_basic_alg
-use functions
-use mesh
-use grid
-use simul_box
-use mesh_function
-use geometry
-use specie
-use states
-use external_pot
-use output
+  use global
+  use messages
+  use syslabels
+  use units
+  use lib_oct_parser
+  use lib_basic_alg
+  use functions
+  use mesh
+  use grid
+  use simul_box
+  use mesh_function
+  use geometry
+  use specie
+  use states
+  use external_pot
+  use output
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
+
 
 implicit none
+
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
 
 private
 public :: hamiltonian_type,   &

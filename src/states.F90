@@ -38,8 +38,17 @@ module states
   use output
   use geometry
   use crystal
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
 
   implicit none
+
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
+
 
   private
   public ::                                        &

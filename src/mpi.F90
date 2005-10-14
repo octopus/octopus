@@ -118,12 +118,22 @@ module mpi_mod
 #if defined(HAVE_MPI)
   use varinfo
   use global
+  use messages
   use lib_oct
   use lib_oct_parser
   use syslabels
-  use messages
+#if !defined(MPI_H)
+  use mpi
+#endif
+
 
   implicit none
+
+
+#if defined(MPI_H)
+# include "mpif.h"
+#endif
+
 
   private
 

@@ -31,8 +31,17 @@ module mesh_function
 #ifdef HAVE_MPI
   use mpi_mod
 #endif
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
+
 
   implicit none
+
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
 
   private
   public :: dmf_integrate, zmf_integrate, &

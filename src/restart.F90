@@ -32,19 +32,30 @@ module restart
 #ifdef HAVE_MPI
   use mpi_mod
 #endif
-
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
 
   implicit none
 
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
+
+
   private
-  public :: restart_init, clean_stop, &
+  public ::                            &
+       restart_init, clean_stop,       &
        drestart_write, zrestart_write, &
-       drestart_read, zrestart_read, &
+       drestart_read, zrestart_read,   &
        restart_format, restart_look
 
-  integer, parameter :: RESTART_PLAIN  = 1, &
+  integer, parameter ::    &
+       RESTART_PLAIN  = 1, &
        RESTART_NETCDF = 2
   integer :: restart_format
+
 
 contains
 

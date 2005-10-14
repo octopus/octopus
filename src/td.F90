@@ -44,8 +44,16 @@ module timedep
 #endif
   use grid
   use spectrum
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
 
   implicit none
+
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
 
   private
   public :: td_type, &

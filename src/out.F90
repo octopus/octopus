@@ -39,17 +39,27 @@ module output
   use par_vec
   use mpi_mod
 #endif
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
 
 
 implicit none
 
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
+
+
   private
-  public :: output_type, &
-            output_init, &
-            output_fill_how, &
-            dinput_function, zinput_function, &
-            doutput_function, zoutput_function, &
-            iopar_open, iopar_close, iopar_read, iopar_backspace
+  public :: output_type,                         &
+            output_init,                         &
+            output_fill_how,                     &
+            dinput_function, zinput_function,    &
+            doutput_function, zoutput_function,  &
+            iopar_open, iopar_close, iopar_read, & 
+            iopar_backspace
 
 
 type output_type
