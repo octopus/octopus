@@ -38,8 +38,17 @@ module casida
   use system
   use hamiltonian
   use restart
+#if defined(HAVE_MPI) && !defined(MPI_H)
+  use mpi
+#endif
+
 
   implicit none
+
+
+#if defined(HAVE_MPI) && defined(MPI_H)
+# include "mpif.h"
+#endif
 
   integer, parameter ::       &
        CASIDA_EPS_DIFF   = 1, &
@@ -74,7 +83,6 @@ contains
 
     type(casida_type) ::  cas
     integer :: i, err, kpoints, dim, nst, ist
-    character(len=100) :: ch
 
     call push_sub('casida.casida_run')
 
@@ -204,7 +212,7 @@ contains
     type(casida_type), intent(inout) :: cas
     integer, intent(in) :: dim, nspin
 
-    integer :: i, is, a, as, j, k
+    integer :: i, a, j, k
 
     call push_sub('casida.casida_type_init')
 
