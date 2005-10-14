@@ -171,8 +171,7 @@ contains
     FLOAT,                intent(out) :: J(:,:)  ! J(sb%dim,sb%dim), the Jacobian
     integer, optional, intent(in) :: natoms
 
-    FLOAT :: natoms_
-    integer :: i, ix, iy
+    integer :: i, ix, iy, natoms_
     FLOAT :: r, f_alpha, df_alpha
     FLOAT :: th, ex, ar
 
