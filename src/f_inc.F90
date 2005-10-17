@@ -180,8 +180,6 @@ subroutine X(f_gradient) (sb, f_der, f, grad)
 
   ASSERT(f_der%space==REAL_SPACE.or.f_der%space==FOURIER_SPACE)
 
-  grad = R_TOTYPE(M_ZERO)
-
   select case(f_der%space)
   case(REAL_SPACE)
     call X(derivatives_grad) (sb, f_der%der_discr, f, grad)

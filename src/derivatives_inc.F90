@@ -97,6 +97,7 @@ subroutine X(derivatives_grad)(sb, der, f, grad)
      fp => f
   end if
 
+  grad(:,:) = R_TOTYPE(M_ZERO)
   do i = 1, sb%dim
      call X(nl_operator_operate) (der%grad(i), fp, grad(:,i))
   end do
