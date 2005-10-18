@@ -21,6 +21,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+extern char ** environ;
+
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -162,6 +165,22 @@ int parse_input(char *file_in)
 	free(s);
 	if(f != stdin)
 		fclose(f);
+
+        /*now read options from environment variables (by X) */
+        if( getenv("OCT_PARSE_ENV")!=NULL ) {
+          char ** env=environ;
+	  /*fprintf(stderr, "WARNING: Parsing variables from Environment\n");*/
+
+          while(*env) {
+            /* Only consider variables that begin with OCT_ */
+            if(strncmp("OCT_",*env,4) == 0 ){
+              parse_result c;
+              /*              printf("%s\n",*env+4); */
+              parse_exp( (*env)+4, &c);
+            }
+            env++;
+          }
+        }
 
 	sym_clear_reserved();
 
