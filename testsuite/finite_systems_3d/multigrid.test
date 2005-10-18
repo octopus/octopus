@@ -1,0 +1,28 @@
+
+Test     : Multigrid
+Author   : Xavier Andrade
+Date     : 18.10.05
+Arch     : Linux bizet 2.6.8-2-686 #1 Thu May 19 17:53:30 JST 2005 i686 GNU/Linux
+Release  : 1.99devel
+Programs : octopus
+Enabled  : Yes
+
+
+INP
+CalculationMode = gs
+fromScratch = yes
+
+%Coordinates
+  "Na" | 0 | 0 | -1.54
+  "Na" | 0 | 0 |  1.54
+%
+PoissonSolver = multigrid
+EOF
+
+RUN
+
+# add your own matches 
+#
+# Examples (of course you have to uncomment the lines :)
+Match ; TotalEnergy ; grep -A 6 '^Energy:' static/info ; \s*Total\s*=\s*-0.3380
+Match ; Eigenvalues ; grep -A 2 'Eigenvalues \[' static/info | tail -1 ; \s*-0.13735\d*\s*2.0000\d* 
