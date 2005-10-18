@@ -215,7 +215,7 @@ void FC_FUNC_(varinfo_getvar, VARINFO_GETVAR)
   var_type *lvar;
 
   name_c = TO_C_STR1(name);
-  for(lvar=vars; (lvar!=NULL) && (strcasecmp(name, lvar->name)!=0); lvar=lvar->next);
+  for(lvar=vars; (lvar!=NULL) && (strcasecmp(name_c, lvar->name)!=0); lvar=lvar->next);
   free(name_c);
 
   *var = lvar;
