@@ -36,6 +36,8 @@ module lcao
   use hamiltonian
   use grid
 
+  use output
+
   implicit none
 
   private
@@ -69,12 +71,14 @@ subroutine lcao_init(gr, lcao_data, st, h)
 
   type(geometry_type), pointer :: geo
 
+  integer :: ierr
+
   integer :: norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2
   integer, parameter :: orbs_local = 2
 
   R_TYPE, allocatable :: hpsi(:,:)
 
-  if(NDIM.ne.3) return
+  if(NDIM.eq.2) return
   if(lcao_data%state == 1) return
 
   call push_sub('lcao.lcao_init')
@@ -87,7 +91,8 @@ subroutine lcao_init(gr, lcao_data, st, h)
   norbs = 0
   atoms_loop: do i1 = 1, geo%natoms
     if(geo%atom(i1)%spec%local) then
-      lcao_data%atoml(i1, :) = .false.
+      norbs = geo%atom(i1)%spec%z_val      
+      lcao_data%atoml(i1, :) = .true.
     else
       l_loop: do l1 = 1, geo%atom(i1)%spec%ps%conf%p
         l = geo%atom(i1)%spec%ps%conf%l(l1)
@@ -119,19 +124,27 @@ subroutine lcao_init(gr, lcao_data, st, h)
   do ik = 1, st%d%nik
     n1 = 1
     do i1 = 1, geo%natoms
-      if(geo%atom(i1)%spec%local) cycle
-
-      do l1 = 1, geo%atom(i1)%spec%ps%conf%p
-        l = geo%atom(i1)%spec%ps%conf%l(l1)
-        if(.not. lcao_data%atoml(i1, l1)) cycle
-        do lm1 = -l, l
-          do d1 = 1, st%d%dim
-            ispin = states_spin_channel(st%d%ispin, ik, d1)
-            call atom_get_wf(gr%m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
-            n1 = n1 + 1
-          end do
+      if(geo%atom(i1)%spec%local) then
+        do d1 = 1, st%d%dim
+           ispin = states_spin_channel(st%d%ispin, ik, d1)
+           call atom_get_wf(gr%m, geo%atom(i1), 0, 0, ispin, lcao_data%psis(:, d1, n1, ik))
+           call doutput_function (output_fill_how("AxisX"), &
+                                  ".", "result", gr%m, gr%sb, lcao_data%psis(:, d1, n1, ik), M_ONE, ierr)
+        enddo
+      else
+        do l1 = 1, geo%atom(i1)%spec%ps%conf%p
+           l = geo%atom(i1)%spec%ps%conf%l(l1)
+           if(.not. lcao_data%atoml(i1, l1)) cycle
+           do lm1 = -l, l
+              do d1 = 1, st%d%dim
+                 ispin = states_spin_channel(st%d%ispin, ik, d1)
+                 call atom_get_wf(gr%m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
+                 n1 = n1 + 1
+              end do
+           end do
         end do
-      end do
+      endif
+
     end do
   end do
 
@@ -203,7 +216,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   FLOAT, allocatable :: ev(:)
 
   ASSERT(lcao_data%state == 1)
-  if(sb%dim.ne.3) return
+  if(sb%dim.eq.2) return
 
   call push_sub('lcao.lcao_wf')
 

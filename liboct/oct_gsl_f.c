@@ -53,6 +53,12 @@ double FC_FUNC_(oct_gamma, OCT_GAMMA)
   return gsl_sf_gamma(*x);
 }
 
+double FC_FUNC_(oct_hypergeometric, OCT_HYPERGEOMETRIC)
+                 (double *a, double*b, double *x)
+{
+  return gsl_sf_hyperg_U(*a, *b, *x);
+}
+
 double FC_FUNC_(oct_incomplete_gamma, OCT_INCOMPLETE_GAMMA)
 		 (double *a, double *x)
 {

@@ -24,8 +24,9 @@ module syslabels
 
   implicit none
 
-  public :: syslabels_init, syslabels_end
-  public :: check_inp, read_system_labels
+  public :: syslabels_init, &
+            syslabels_end, &
+            check_inp
 
   ! variables to treat multi subsytems
   character(len=32), allocatable :: subsys_label(:)
@@ -39,61 +40,30 @@ module syslabels
 
 contains
 
-
-  ! ---------------------------------------------------------
-  subroutine syslabels_init(calc_mode)
-    integer, intent(in) :: calc_mode
-
-    no_syslabels  = 1
-    no_subsystems = 1
-    allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
-    allocate(subsys_run_order(no_syslabels))
-    allocate(no_of_states(no_syslabels))
-    current_subsystem = 1
-    subsys_label(current_subsystem) = ""
-    subsys_runmode(current_subsystem) = calc_mode
-    subsys_run_order(current_subsystem) = 1
-
-    ! An initial assignment to avoid having to do it in the subprograms.
-    current_label = trim(subsys_label(subsys_run_order(1)))
-    current_subsystem = subsys_run_order(1)
-
-  end subroutine syslabels_init
-
-
-  ! ---------------------------------------------------------
-  subroutine syslabels_end()
-
-    deallocate(subsys_label, subsys_runmode, subsys_run_order)
-    deallocate(no_of_states)
-
-  end subroutine syslabels_end
-
-
-  ! ---------------------------------------------------------
-  character(len=64) function check_inp(variable) result(var_name)
-    character(len = * ), intent(in)  :: variable
-    character(len = 64)              :: composite_name
-
-    composite_name = trim(subsys_label(current_subsystem))//trim(variable)
-
-    if(loct_parse_isdef(composite_name).ne.0) then
-       ! composite name has been defined in the input file
-       var_name = composite_name
-    else
-       ! could not find composite name in the input;
-       ! will use bare variable name
-       var_name = variable
-    endif
-
-  end function check_inp
-
   ! ---------------------------------------------------------
   ! first we read the required information from the input file
   ! and prompt the user for possible errors in the input
-  subroutine read_system_labels(blk)
-    integer(POINTER_SIZE), intent(in) :: blk
+  subroutine syslabels_init(calc_mode, blk)
+    integer, intent(in) :: calc_mode
+    integer(POINTER_SIZE), optional, intent(in) :: blk
     integer :: i, mpierr
+
+    if(.not.present(blk)) then
+      no_syslabels  = 1
+      no_subsystems = 1
+      allocate(subsys_label(no_syslabels), subsys_runmode(no_syslabels))
+      allocate(subsys_run_order(no_syslabels))
+      allocate(no_of_states(no_syslabels))
+      current_subsystem = 1
+      subsys_label(current_subsystem) = ""
+      subsys_runmode(current_subsystem) = calc_mode
+      subsys_run_order(current_subsystem) = 1
+
+      ! An initial assignment to avoid having to do it in the subprograms.
+      current_label = trim(subsys_label(subsys_run_order(1)))
+      current_subsystem = subsys_run_order(1)
+      return
+    endif
 
     no_syslabels = loct_parse_block_cols(blk, 0)
     allocate(subsys_label(no_syslabels))
@@ -136,6 +106,35 @@ contains
     enddo
     call loct_parse_block_end(blk)
 
-  end subroutine read_system_labels
+  end subroutine syslabels_init
+
+
+  ! ---------------------------------------------------------
+  subroutine syslabels_end()
+
+    deallocate(subsys_label, subsys_runmode, subsys_run_order)
+    deallocate(no_of_states)
+
+  end subroutine syslabels_end
+
+
+  ! ---------------------------------------------------------
+  character(len=64) function check_inp(variable) result(var_name)
+    character(len = * ), intent(in)  :: variable
+    character(len = 64)              :: composite_name
+
+    composite_name = trim(subsys_label(current_subsystem))//trim(variable)
+
+    if(loct_parse_isdef(composite_name).ne.0) then
+       ! composite name has been defined in the input file
+       var_name = composite_name
+    else
+       ! could not find composite name in the input;
+       ! will use bare variable name
+       var_name = variable
+    endif
+
+  end function check_inp
+
 
 end module syslabels

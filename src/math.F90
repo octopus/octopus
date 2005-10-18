@@ -46,7 +46,8 @@ module math
        cutoff2,                    &
        besselint,                  &
        dextrapolate, zextrapolate, &
-       sort
+       sort,                       &
+       factorial
 
 
   !------------------------------------------------------------------------------
@@ -96,6 +97,16 @@ module math
 
 
 contains
+
+  recursive function factorial (n) RESULT (fac)
+    integer, intent(in) :: n
+    integer :: fac
+    if(n<=1) then 
+      fac = 1
+    else
+      fac = fac*factorial(n-1)
+    endif
+  end function factorial
 
   ! ---------------------------------------------------------
   ! a simple congruent random number generator

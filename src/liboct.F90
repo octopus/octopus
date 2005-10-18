@@ -24,7 +24,7 @@ module lib_oct
 
   ! Define the which routines can be seen from the outside
   private
-  public :: loct_gamma, loct_incomplete_gamma, loct_bessel, loct_bessel_In
+  public :: loct_gamma, loct_incomplete_gamma, loct_hypergeometric, loct_bessel, loct_bessel_In
   public :: loct_sph_bessel, loct_asinh, loct_erf, loct_erfc, loct_ylm
   public :: loct_bessel_j0, loct_bessel_j1, loct_bessel_k0, loct_bessel_k1
   public :: loct_ran_init, loct_ran_end, loct_ran_gaussian
@@ -114,6 +114,14 @@ module lib_oct
     end function oct_incomplete_gamma
     module procedure oct_incomplete_gamma4
   end interface
+
+  interface loct_hypergeometric
+    function oct_hypergeometric(a, b, x)
+      real(8) :: oct_hypergeometric
+      real(8), intent(in) :: a, b, x
+    end function oct_hypergeometric
+    module procedure oct_hypergeometric4
+  end interface loct_hypergeometric
 
   interface loct_bessel
     function oct_bessel(n, x)
@@ -338,6 +346,13 @@ contains
 
     oct_incomplete_gamma4 = real(oct_incomplete_gamma(real(a, kind = 8), real(x, kind=8)), kind=4)
   end function oct_incomplete_gamma4
+
+  real(4) function oct_hypergeometric4(a, b, x)
+    real(4), intent(in) :: a, b, x
+
+    oct_hypergeometric4 = real(oct_hypergeometric(real(a, kind = 8), real(b, kind = 8), real(x, kind = 8)), &
+                                        kind = 4)
+  end function oct_hypergeometric4
 
   real(4) function oct_bessel4(n, x)
     integer, intent(in) :: n

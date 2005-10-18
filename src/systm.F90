@@ -153,14 +153,34 @@ contains
     R_TYPE,          intent(out) :: psi(:)        ! psi(m%np) the atomic wavefunction
 
     integer :: j, ll
-    FLOAT :: x(3), a(3), r, p, ylm
+    FLOAT :: x(3), a(3), r, p, ylm, leng_scale, b, rprime
     type(loct_spline_type), pointer :: s
 
     call push_sub('systm.atom_get_wf')
 
     a = atom%x
     if(atom%spec%local) then
-       ! add a couple of harmonic oscilator functions
+       select case(m%sb%dim)
+       case(1)
+         b = M_HALF*CNST(0.01) ! b = (1/2)*m*w^2
+         leng_scale = (M_HALF/b)**(M_FOURTH)
+         do j = 1, m%np
+            call mesh_r(m, j, r, x=x, a=a)
+            rprime = r/leng_scale
+            if(rprime > M_ZERO) then
+               psi(j) = exp(-rprime**2/M_TWO) * (2**l) * loct_hypergeometric(-M_HALF*l, M_HALF, rprime**2)
+            else
+               select case(mod(l, 2))
+                 case(0)
+                    psi(j) = factorial(l) * (-1)**(l/2) / factorial(l/2)
+                 case(1)
+                    psi(j) = M_ZERO
+               end select
+            endif
+         enddo
+         r = X(mf_nrm2)(m, psi)
+         call lalg_scal(m%np, R_TOTYPE(M_ONE/r), psi)
+       end select
     else
        s => atom%spec%ps%Ur(l, ispin)
 

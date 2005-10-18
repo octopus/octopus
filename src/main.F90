@@ -85,7 +85,7 @@ program octopus
   !% Prints out a tasty recipe
   !%End
   if(loct_parse_block('CalculationMode', blk) == 0) then
-     call read_system_labels(blk)
+     call syslabels_init(calc_mode, blk)
   else
      call loct_parse_int('CalculationMode', M_GS, calc_mode)
      if(.not.varinfo_valid_option('CalculationMode', calc_mode)) call input_error('CalculationMode')
