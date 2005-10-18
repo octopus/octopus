@@ -43,7 +43,8 @@ public :: xc_type, &
           xc_write_info, &
           xc_get_vxc, &
           xc_get_vxc_and_axc, &
-          xc_get_fxc
+          xc_get_fxc, &
+          xc_get_kxc
 
 ! ---------------------------------------------------------
 
@@ -157,5 +158,6 @@ contains
 #include "xc_vxc.F90"
 #include "xc_axc.F90"
 #include "xc_fxc.F90"
+#include "xc_kxc.F90"
 
 end module xc

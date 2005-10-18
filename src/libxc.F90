@@ -167,6 +167,13 @@ module lib_xc
       FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
       FLOAT,                 intent(out) :: fxc   ! v(nspin,nspin) the xc kernel
     end subroutine xc_lda_fxc
+
+    subroutine xc_lda_kxc(p, rho, kxc)
+      integer(POINTER_SIZE), intent(in)  :: p
+      FLOAT,                 intent(in)  :: rho   ! rho(nspin) the density
+      FLOAT,                 intent(out) :: kxc  
+    end subroutine xc_lda_kxc
+
   end interface
 
 
