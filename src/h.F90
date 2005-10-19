@@ -36,17 +36,9 @@ module hamiltonian
   use states
   use external_pot
   use output
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
+  use mpi_mod
 
 implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
 private
 public :: hamiltonian_type,   &

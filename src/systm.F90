@@ -39,9 +39,7 @@ module system
   use v_ks
   use hamiltonian
   use output
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  use mpi_mod
-#endif
+  use multicomm_mod
 
   implicit none
 
@@ -62,59 +60,68 @@ module system
      type(states_type),   pointer :: st         ! the states
      type(v_ks_type)              :: ks         ! the Kohn-Sham potentials
      type(output_type)            :: outp       ! the output
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
      type(multicomm_type)         :: mc         ! index and domain communicators
-#endif
   end type system_type
 
 contains
 
   !----------------------------------------------------------
-  subroutine system_init(s)
-    type(system_type), intent(out) :: s
+  subroutine system_init(sys, parallel_mask)
+    type(system_type), intent(out) :: sys
+    integer, optional, intent(in)  :: parallel_mask
 
     integer, allocatable :: domain_comm_of_node(:)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    integer :: index_dim, index_range(2)
-#endif
 
     call push_sub('systm.system_init')
 
-    allocate(s%gr, s%st)
+    allocate(sys%gr, sys%st)
     allocate(domain_comm_of_node(0:mpiv%numprocs-1))
 
-    call geometry_init(s%gr%geo)
-    call simul_box_init(s%gr%sb, s%gr%geo)
-    call states_init(s%st, s%gr)
+    call geometry_init(sys%gr%geo)
+    call simul_box_init(sys%gr%sb, sys%gr%geo)
+    call states_init(sys%st, sys%gr)
+    call grid_init_start(sys%gr, sys%mc)
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    ! for the moment we need only communicators for two 
-    ! index-dimensions: states and kpoints
-    index_dim = 2
+    call parallel_init()
 
-    ! store the ranges for these two indices (serves as initial guess 
-    ! for parallelization strategy)
-    index_range(1) = s%st%d%nik    ! Number of kpoints
-    index_range(2) = s%st%nst      ! Number of states
-
-    write(message(1),'(a,i4)') 'Info: Total number of k-points: ',index_range(1)
-    write(message(2),'(a,i4)') 'Info: Total number of states  : ',index_range(2)
-    call write_info(2)
-
-    ! create index and domain communicators
-    call multicomm_init(mpiv%numprocs, index_dim, index_range, s%mc)
-
-    domain_comm_of_node = s%mc%domain_comm_of_node
-#endif
-
-    call grid_init(s%gr, domain_comm_of_node)
-    call states_densities_init(s%st, s%gr)
-    call output_init(s%gr%sb, s%outp)
-    call v_ks_init(s%gr, s%ks, s%st%d)
+    call grid_init_finish(sys%gr, sys%mc)
+    call states_densities_init(sys%st, sys%gr)
+    call output_init(sys%gr%sb, sys%outp)
+    call v_ks_init(sys%gr, sys%ks, sys%st%d)
 
     deallocate(domain_comm_of_node)
     
     call pop_sub()
+
+  contains
+    subroutine parallel_init()
+      integer :: parallel_mask_
+      integer :: index_dim, index_range(3)
+
+      ! for the moment we need only communicators for domains plus two 
+      ! index-dimensions: states and kpoints
+      index_dim = 3
+
+      ! store the ranges for these two indices (serves as initial guess 
+      ! for parallelization strategy)
+      index_range(1) = sys%gr%m%np_global     ! Number of points in mesh
+      index_range(2) = sys%st%nst             ! Number of states
+      index_range(3) = sys%st%d%nik           ! Number of kpoints
+      
+      write(message(1),'(a,i4)') 'Info: Total number of points  : ', index_range(1)
+      write(message(2),'(a,i4)') 'Info: Total number of states  : ', index_range(2)
+      write(message(3),'(a,i4)') 'Info: Total number of k-points: ', index_range(3)
+      call write_info(3)
+      
+      parallel_mask_ = 0 ! default: no paralellization
+      if(present(parallel_mask)) parallel_mask_ = parallel_mask
+      
+      ! create index and domain communicators
+      call multicomm_init(sys%mc, parallel_mask, mpiv%numprocs, index_dim, &
+         index_range, (/ 15000, 5, 1 /))
+      
+    end subroutine parallel_init
+
   end subroutine system_init
 
 

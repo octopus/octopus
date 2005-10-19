@@ -29,21 +29,20 @@ module global
 
   implicit none
 
+  private
+
 #if defined(HAVE_MPI) && defined(MPI_H)
 # include "mpif.h"
 #endif
 
-  private
-
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Public types, variables and procedures.
-  public :: conf_type,   &
-            mpi_type,    &
-            global_init, &
-            global_end,  &
-            assert_die
+  public :: &
+     conf_type,   &
+     mpi_type,    &
+     global_init, &
+     global_end,  &
+     assert_die
 
   type conf_type
      integer :: debug_level ! How much debug should print
@@ -53,6 +52,7 @@ module global
      character(len=10)  :: version     ! version number
   end type conf_type
 
+  ! This is defined even when running serial
   type mpi_type
      integer :: numprocs ! how many are we
      integer :: node ! who am I
@@ -124,17 +124,15 @@ module global
 ! End of declaration of public objects.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-
-
 contains
 
 
   ! ---------------------------------------------------------
   subroutine global_init()
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI)
     integer :: ierr
 
+    ! initialize MPI
     call MPI_INIT(ierr)
     call MPI_COMM_RANK(MPI_COMM_WORLD, mpiv%node, ierr)
     call MPI_COMM_SIZE(MPI_COMM_WORLD, mpiv%numprocs, ierr)
@@ -144,6 +142,7 @@ contains
     mpiv%node = 0
     mpiv%numprocs = 1
 #endif
+
     ! Get epoch time at node startup, just after the barrier to synchronize nodes first.
     call loct_gettimeofday(s_epoch_sec, s_epoch_usec)
 
@@ -160,9 +159,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine global_end()
-
-#ifdef HAVE_MPI
+#if defined(HAVE_MPI)
     integer :: ierr
+
+    ! end MPI
     call MPI_FINALIZE(ierr)
 #endif
 

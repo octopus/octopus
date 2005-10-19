@@ -39,17 +39,9 @@ module td_write
   use external_pot
   use grid
   use spectrum
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
+  use mpi_mod
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
   private
   public :: td_write_type, &

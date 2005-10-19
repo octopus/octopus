@@ -30,17 +30,9 @@ program octopus
   use io
   use profiling_mod
   use varinfo
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
+  use mpi_mod
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
   integer :: ns
   integer(POINTER_SIZE) :: blk

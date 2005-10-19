@@ -38,17 +38,9 @@ module casida
   use system
   use hamiltonian
   use restart
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
+  use mpi_mod
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
   integer, parameter ::       &
        CASIDA_EPS_DIFF   = 1, &

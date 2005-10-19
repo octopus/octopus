@@ -43,9 +43,7 @@ module run_prog
   use ground_state
   use pulpo
   use io
-#ifdef HAVE_MPI
-  use mpi_mod
-#endif
+  use multicomm_mod
 
   implicit none
 
@@ -85,6 +83,19 @@ module run_prog
        I_CASIDA             = 109, &
        I_WAVE_MATCHING      = 110, &
        I_PULPO              = 999
+
+    integer, private, parameter :: mode_parallelized(10) = (/ &
+       P_STRATEGY_DOMAINS,                      & ! M_GS
+       P_STRATEGY_DOMAINS,                      & ! M_UNOCC
+       P_STRATEGY_DOMAINS + P_STRATEGY_STATES,  & ! M_TD
+       P_STRATEGY_DOMAINS,                      & ! M_STATIC_POL
+       P_STRATEGY_DOMAINS,                      & ! M_GEOM_OPT
+       P_STRATEGY_DOMAINS,                      & ! M_PHONONS
+       P_STRATEGY_DOMAINS,                      & ! M_OPT_CONTROL
+       P_STRATEGY_DOMAINS,                      & ! M_LR_STATIC_POL
+       P_STRATEGY_DOMAINS,                      & ! M_CASIDA
+       P_STRATEGY_DOMAINS                       & ! M_WAVE_MATCHING
+       /)
 
 contains
 
@@ -191,14 +202,6 @@ contains
       call loct_parse_logical(check_inp('fromScratch'), .false., fS)
       fromScratch(:) = .false.
 
-#if defined(HAVE_MPI)
-!!$    if((calc_mode.ne.M_TD).and.(calc_mode.ne.M_CASIDA)) then
-!!$      message(1) = "Code is only parallelized for run modes 'td' and 'casida'"
-!!$      message(2) = "Please use the serial version for the current run mode"
-!!$      call write_fatal(2)
-!!$    end if
-#endif
-
       select case(calc_mode)
       case(M_GS)
          fromScratch(M_GS) = fS
@@ -251,8 +254,9 @@ contains
 
   end subroutine run
 
-  subroutine run_init()
 
+  !------------------------------------------------------------------------------
+  subroutine run_init()
     call messages_print_stress(stdout)
     call messages_print_var_option(stdout, "CalculationMode", calc_mode, "Calculation Mode:")
     call messages_print_stress(stdout)
@@ -263,16 +267,18 @@ contains
 #endif
 
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
-       call units_init()
-       call system_init(sys)
-       call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
-       call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
+      call units_init()
+      call system_init(sys, mode_parallelized(calc_mode))
+      call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
+      call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
     endif
 
     call restart_init()
 
   end subroutine run_init
 
+
+  !------------------------------------------------------------------------------
   subroutine run_end()
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
        call hamiltonian_end(h, sys%gr)

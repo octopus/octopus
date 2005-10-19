@@ -34,20 +34,9 @@ module ground_state
   use grid
   use simul_box
   use mesh
-#ifdef HAVE_MPI
   use mpi_mod
-#endif
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
   private
   public :: ground_state_run, &

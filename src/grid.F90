@@ -27,18 +27,18 @@ module grid
   use curvlinear
   use multigrid
   use par_vec
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   use mpi_mod
-#endif
+  use multicomm_mod
 
   implicit none
 
   private
-  public ::             &
-       grid_type,       &
-       grid_init,       &
-       grid_end,        &
-       grid_write_info, &
+  public ::              &
+       grid_type,        &
+       grid_init_start,  &
+       grid_init_finish, &
+       grid_end,         &
+       grid_write_info,  &
        grid_create_multigrid
 
   type grid_type
@@ -55,12 +55,9 @@ module grid
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init(gr, domain_comm_of_node)
-    type(grid_type), intent(inout) :: gr
-    integer, intent(in) :: domain_comm_of_node(0:mpiv%numprocs-1)
-
-    logical :: filter
-    integer :: comm
+  subroutine grid_init_start(gr, mc)
+    type(grid_type),      intent(inout) :: gr
+    type(multicomm_type), intent(in)    :: mc
 
     call push_sub('grid.grid_init')
 
@@ -71,12 +68,24 @@ contains
     call f_der_init(gr%f_der, gr%sb, gr%cv%method.ne.CURV_METHOD_UNIFORM)
 
     ! now we generate create the mesh and the derivatives
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-    comm = domain_comm_of_node(mpiv%node)
-#endif
-    call mesh_init(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
+    call mesh_init_start(gr%sb, gr%m, gr%geo, gr%cv, gr%f_der%n_ghost, &
        gr%f_der%der_discr%lapl%stencil,                          &
-       gr%f_der%der_discr%lapl%n, comm)
+       gr%f_der%der_discr%lapl%n, mc)
+
+    call pop_sub()
+  end subroutine grid_init_start
+
+
+  !-------------------------------------------------------------------
+  subroutine grid_init_finish(gr, mc)
+    type(grid_type),      intent(inout) :: gr
+    type(multicomm_type), intent(in)    :: mc
+
+    logical :: filter
+
+    call mesh_init_finish(gr%m, gr%geo, gr%cv,  &
+       gr%f_der%der_discr%lapl%stencil,                &
+       gr%f_der%der_discr%lapl%n, mc)
 
     call f_der_build(gr%sb, gr%m, gr%f_der)
 
@@ -93,8 +102,7 @@ contains
     ! print info concerning the grid
     call grid_write_info(gr, stdout)
 
-    call pop_sub()
-  end subroutine grid_init
+  end subroutine grid_init_finish
 
 
   !-------------------------------------------------------------------

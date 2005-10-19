@@ -35,22 +35,10 @@ module output
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
   use mpi_mod
-#endif
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
 
 implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
-
 
   private
   public :: output_type,                         &

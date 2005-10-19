@@ -9,7 +9,7 @@ check_PROGRAMS = oct-test
 
 basic_SRCS = liboct.F90 string.F90 varinfo.F90 global.F90 liboct_parser.F90 \
 	     messages.F90 syslabels.F90 io.F90 units.F90 mpi.F90 profiling.F90 \
-             blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90
+             blas.F90 linalg_basic.F90 linalg_adv.F90 math.F90 multicomm.F90 
 
 core_SRCS = $(basic_SRCS) \
 	ode_solver.F90 root_solver.F90 spline.F90 sparskit.F90 \

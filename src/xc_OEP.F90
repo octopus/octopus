@@ -35,17 +35,9 @@ module xc_OEP
   use hamiltonian
   use linear_response
   use grid
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
+  use mpi_mod
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
   private
   public ::                        &

@@ -20,19 +20,19 @@
 #include "global.h"
 
 module xc
-use global
-use messages
-use syslabels
-use lib_oct_parser
-use lib_basic_alg
-use lib_adv_alg
-use mesh
-use grid
-use functions
-use poisson
-use states
-use lib_xc
-use xc_functl
+  use global
+  use messages
+  use syslabels
+  use lib_oct_parser
+  use lib_basic_alg
+  use lib_adv_alg
+  use mesh
+  use grid
+  use functions
+  use poisson
+  use states
+  use lib_xc
+  use xc_functl
 
 implicit none
 

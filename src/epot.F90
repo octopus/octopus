@@ -42,21 +42,9 @@ module external_pot
   use states
   use lasers
   use profiling_mod
-#ifdef HAVE_MPI
   use mpi_mod
-#endif
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
-
 
   private
   public :: epot_type,              &

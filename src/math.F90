@@ -47,7 +47,8 @@ module math
        besselint,                  &
        dextrapolate, zextrapolate, &
        sort,                       &
-       factorial
+       factorial,                  &
+       math_divisors
 
 
   !------------------------------------------------------------------------------
@@ -510,6 +511,36 @@ contains
     end do
 
   end subroutine shellsort
+
+
+  ! ---------------------------------------------------------
+  subroutine math_divisors(n, n_divisors, divisors)
+    integer, intent(in)    :: n
+    integer, intent(inout) :: n_divisors
+    integer, intent(out)   :: divisors(:)
+    
+    integer :: i, max_d
+    
+    ASSERT(n_divisors > 1)
+    max_d = n_divisors
+    
+    n_divisors = 1
+    divisors(n_divisors) = 1
+    do i = 2, n/2
+      if(mod(n, i)==0) then
+        n_divisors = n_divisors + 1
+        
+        if(n_divisors > max_d - 1) then
+          message(1) = "Internal error in get_divisors. Please increase n_divisors"
+          call write_fatal(1)
+        end if
+        
+        divisors(n_divisors) = i        
+      end if
+    end do
+    n_divisors = n_divisors + 1
+    divisors(n_divisors) = n
+  end subroutine math_divisors
 
 
 #include "undef.F90"

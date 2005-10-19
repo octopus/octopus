@@ -30,16 +30,16 @@ module mesh
   use simul_box
   use lib_adv_alg
   use io
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
-#endif
+  use multicomm_mod
 
   implicit none
 
   private
   public ::          &
     mesh_type,       &
-    mesh_init,       &
+    mesh_init_start, &
+    mesh_init_finish,&
     mesh_end,        &
     mesh_double_box, &
     mesh_create_xyz, &
@@ -77,7 +77,10 @@ module mesh
     integer, pointer :: Lxyz(:,:)       ! return x, y and z for each point
     integer, pointer :: Lxyz_inv(:,:,:) ! return points # for each xyz
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
+    integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
+
+#if defined(HAVE_METIS) && defined(HAVE_MPI)
     type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
 #endif
 
@@ -99,7 +102,7 @@ module mesh
 
 contains
 
-  subroutine mesh_init(sb, m, geo, cv, enlarge, stencil, np_stencil, comm)
+  subroutine mesh_init_start(sb, m, geo, cv, enlarge, stencil, np_stencil, mc)
     type(simul_box_type), target, intent(in)    :: sb
     type(mesh_type),              intent(inout) :: m
     type(geometry_type),          intent(in)    :: geo
@@ -107,9 +110,9 @@ contains
     integer,                      intent(in)    :: enlarge(3)
     integer,                      intent(in)    :: stencil(:, :)
     integer,                      intent(in)    :: np_stencil
-    integer,                      intent(in)    :: comm
+    type(multicomm_type),         intent(in)    :: mc
 
-    call push_sub('mesh.mesh_init')
+    call push_sub('mesh.mesh_init_start')
 
     m%sb => sb   ! keep an internal pointer
     m%h  =  sb%h ! this number can change in the following
@@ -117,8 +120,7 @@ contains
     m%enlarge = enlarge
 
     call adjust_nr()          ! find out the extension of the simulation box
-    call mesh_create_xyz(sb, m, cv, geo,                         &
-         stencil=stencil, np_stencil=np_stencil, comm=comm)
+    call mesh_create_xyz(sb, m, geo, cv, mc)
 
     call pop_sub()
   contains
@@ -156,7 +158,7 @@ contains
 
     end subroutine adjust_nr
 
-  end subroutine mesh_init
+  end subroutine mesh_init_start
 
 
   ! Adjust m%np and m%np_part according to the entry

@@ -28,20 +28,9 @@ module mesh_function
   use cube_function
   use par_vec
   use profiling_mod
-#ifdef HAVE_MPI
   use mpi_mod
-#endif
-#if defined(HAVE_MPI) && !defined(MPI_H)
-  use mpi
-#endif
-
 
   implicit none
-
-
-#if defined(HAVE_MPI) && defined(MPI_H)
-# include "mpif.h"
-#endif
 
   private
   public :: dmf_integrate, zmf_integrate, &

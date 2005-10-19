@@ -86,7 +86,7 @@ subroutine mix_init(smix, m, d2, d3, def_)
   !%End
   call loct_parse_int(check_inp('TypeOfMixing'), def, smix%type_of_mixing)
   if(.not.varinfo_valid_option('TypeOfMixing', smix%type_of_mixing)) call input_error('TypeOfMixing')
-
+  
   !%Variable Mixing
   !%Type float
   !%Section 8 SCF
