@@ -128,8 +128,6 @@ subroutine lcao_init(gr, lcao_data, st, h)
         do d1 = 1, st%d%dim
            ispin = states_spin_channel(st%d%ispin, ik, d1)
            call atom_get_wf(gr%m, geo%atom(i1), 0, 0, ispin, lcao_data%psis(:, d1, n1, ik))
-           call doutput_function (output_fill_how("AxisX"), &
-                                  ".", "result", gr%m, gr%sb, lcao_data%psis(:, d1, n1, ik), M_ONE, ierr)
         enddo
       else
         do l1 = 1, geo%atom(i1)%spec%ps%conf%p
