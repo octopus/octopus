@@ -199,13 +199,14 @@ contains
         x = gr%m%x(i, :)
         select case (NDIM)
         case (2)
-          ep%A_static(i, :) = -M_HALF*(/x(2)*ep%B_field(1), x(1)*ep%B_field(1)/)
+          ep%A_static(i, :) = (/x(2), -x(1)/)*ep%B_field(1)
         case (3)
-          ep%A_static(i, :) = -M_HALF*(/x(2)*ep%B_field(3) - x(3)*ep%B_field(2), &
+          ep%A_static(i, :) = (/x(2)*ep%B_field(3) - x(3)*ep%B_field(2), &
              x(3)*ep%B_field(1) - x(1)*ep%B_field(3), x(1)*ep%B_field(2) - x(2)*ep%B_field(1)/)
         end select
       end do
       deallocate(x)
+      ep%A_static = -M_HALF/P_c*ep%A_static
 
     end if
 

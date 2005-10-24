@@ -220,33 +220,18 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
 
   call push_sub('h_inc.current_extra_terms')
 
-  do idim = 1, NDIM
-     select case(h%d%ispin)
-     case(UNPOLARIZED)
-        hpsi(1:NP, 1) = hpsi(1:NP, 1) + h%ahxc(:, idim, 1)*h%ahxc(:, idim, 1)*psi(:, 1)
-     case(SPIN_POLARIZED)
-        if(modulo(ik+1, 2) == 0) then ! we have a spin down
-           hpsi(:, 1) = hpsi(:, 1) + h%ahxc(:, idim, 1)*h%ahxc(:, idim, 1)*psi(:, 1)
-        else
-           hpsi(:, 1) = hpsi(:, 1) + h%ahxc(:, idim, 2)*h%ahxc(:, idim, 2)*psi(:, 1)
-        end if
-     case (SPINORS)
-        ! not implemented yet
-     end select
-  end do
-
   allocate(div(NP))
   select case (h%d%ispin)
   case(UNPOLARIZED)
      call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
-     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_zI * div*psi(:, 1)
+     hpsi(1:NP, 1) = hpsi(1:NP, 1) - M_HALF*M_zI*div*psi(:, 1)
   case(SPIN_POLARIZED)
      if(modulo(ik+1, 2) == 0) then ! we have a spin down
         call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 1), div)
      else
         call df_divergence(gr%sb, gr%f_der, h%ahxc(:, :, 2), div)
      end if
-     hpsi(:, 1) = hpsi(:, 1) - M_zI * div*psi(:, 1)
+     hpsi(:, 1) = hpsi(:, 1) - M_HALF*M_zI*div*psi(:, 1)
   case(SPINORS)
      ! not implemented yet
   end select
@@ -257,14 +242,14 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   select case (h%d%ispin)
   case(UNPOLARIZED)
     do k = 1, NP
-      hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 1), grad(k, :))
+      hpsi(k, 1) = hpsi(k, 1) - M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
     end do
   case(SPIN_POLARIZED)
     do k = 1, NP
       if(modulo(ik+1, 2) == 0) then ! we have a spin down
-        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 1), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 1), grad(k, :))
       else
-        hpsi(k, 1) = hpsi(k, 1) - M_zI * dot_product(h%ahxc(k, :, 2), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) -  M_HALF*M_zI*dot_product(h%ahxc(k, :, 2), grad(k, :))
       end if
     end do
   case(SPINORS)
@@ -274,23 +259,10 @@ subroutine X(current_extra_terms) (gr, h, psi, hpsi, ik)
   if (associated(h%ep%A_static)) then
     do k = 1, NP
       hpsi(k, :) = hpsi(k, :) + M_HALF*dot_product(h%ep%A_static(k, :), h%ep%A_static(k, :))*psi(k, :)
-      
-      select case(h%d%ispin)
-      case(UNPOLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 1))*psi(k, 1)
-      case(SPIN_POLARIZED)
-        if(modulo(ik+1, 2) == 0) then ! we have a spin down
-          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 1))*psi(k, 1)
-        else
-          hpsi(k, 1) = hpsi(k, 1) + M_TWO*dot_product(h%ep%A_static(k, :), h%ahxc(k, :, 2))*psi(k, 1)
-        end if
-      case (SPINORS)
-        ! not implemented yet
-      end select
 
       select case(h%d%ispin)
       case(UNPOLARIZED, SPIN_POLARIZED)
-        hpsi(k, 1) = hpsi(k, 1) - M_zI*dot_product(h%ep%A_static(k, :), grad(k, :))
+        hpsi(k, 1) = hpsi(k, 1) - M_HALF*M_zI*dot_product(h%ep%A_static(k, :), grad(k, :))
       case (SPINORS)
         ! not implemented yet
       end select
