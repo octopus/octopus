@@ -301,6 +301,7 @@ contains
           end do
 
           ! get divisors of n
+          n_divisors = 50 ! maximum number of divisors
           call math_divisors(n, n_divisors, divisors)
 
           ! get the divisor of n >= f
