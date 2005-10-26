@@ -121,7 +121,7 @@ subroutine td_calc_tacc(gr, st, h, acc, t, reduce)
   if(present(reduce)) then
      if(reduce) then
         call MPI_ALLREDUCE(x(1), y(1), NDIM, &
-             MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+             MPI_FLOAT, MPI_SUM, st%comm, ierr)
         x = y
      end if
   end if

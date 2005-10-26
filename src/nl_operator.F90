@@ -171,24 +171,26 @@ contains
     allocate(op%i(op%n, np))
 
     do i = 1, np
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-       ! When running in parallel, get global number of
-       ! point i.
-       p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), :)
-#else
-       p1(:) = m%Lxyz(i, :)
-#endif
+      if(m%parallel_in_domains) then
+        ! When running in parallel, get global number of
+        ! point i.
+        p1(:) = m%Lxyz(m%vp%local(m%vp%xlocal(m%vp%partno)+i-1), :)
+      else
+        p1(:) = m%Lxyz(i, :)
+      end if
 
-       do j = 1, op%n
-          ! Get global index of p1 plus current stencil point.
-          op%i(j, i) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr,    &
-                                  m%Lxyz_inv, p1(:) + op%stencil(:, j))
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+      do j = 1, op%n
+        ! Get global index of p1 plus current stencil point.
+        op%i(j, i) = mesh_index(m%sb%dim, m%sb%periodic_dim, m%nr,    &
+           m%Lxyz_inv, p1(:) + op%stencil(:, j))
+
+        if(m%parallel_in_domains) then
           ! When running parallel, translate this global
           ! number back to a local number.
 
           op%i(j, i) = m%vp%global(op%i(j, i), m%vp%partno)
-#endif
+        end if
+
        end do
     end do
 

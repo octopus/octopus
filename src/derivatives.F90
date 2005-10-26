@@ -383,13 +383,6 @@ contains
        end do
     end if
 
-    ! This is no longer done, but I leave it here in case we want to put it back
-    !if(m%use_curvlinear) then
-    !    call nl_operator_transpose(der%lapl, der%laplt)
-    !else
-    !   der%laplt = der%lapl
-    !endif
-
     call pop_sub()
   contains
 

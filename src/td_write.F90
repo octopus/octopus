@@ -476,11 +476,9 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
   character(len=120) :: aux
   FLOAT, allocatable :: nuclear_dipole(:), multipole(:,:)
 
-  if(mpiv%node.ne.0) return ! only first node outputs
-
   call push_sub('td_write.td_write_multipole')
 
-  if(iter == 0) then
+  if(mpiv%node == 0.and.iter == 0) then
     call td_write_print_header_init(out_multip)
 
     write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
@@ -572,18 +570,19 @@ subroutine td_write_multipole(out_multip, gr, st, lmax, kick, iter)
      multipole(2:4, is) = nuclear_dipole(1:3) - multipole(2:4, is)
   enddo
   
-
-  call write_iter_start(out_multip)
-  do is = 1, st%d%nspin
-    add_lm = 1
-    do l = 0, lmax
-      do m = -l, l
-        call write_iter_double(out_multip, multipole(add_lm, is)/units_out%length%factor**l, 1)
-        add_lm = add_lm + 1
+  if(mpiv%node.eq.0) then
+    call write_iter_start(out_multip)
+    do is = 1, st%d%nspin
+      add_lm = 1
+      do l = 0, lmax
+        do m = -l, l
+          call write_iter_double(out_multip, multipole(add_lm, is)/units_out%length%factor**l, 1)
+          add_lm = add_lm + 1
+        end do
       end do
     end do
-  end do
-  call write_iter_nl(out_multip)
+    call write_iter_nl(out_multip)
+  end if
 
   deallocate(nuclear_dipole, multipole)
   call pop_sub()
@@ -901,7 +900,7 @@ subroutine td_write_proj(out_proj, gr, st, gs_st, iter)
   do ist = 1, st%nst
      k = st%node(ist)
      do uist = 1, gs_st%nst
-        call mpi_bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, mpi_comm_world, ierr)
+        call mpi_bcast(projections(ist, uist, ik), 1, MPI_CMPLX, k, st%comm, ierr)
      enddo
   enddo
   enddo

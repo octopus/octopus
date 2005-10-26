@@ -66,6 +66,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       vxc(1:NP, 1) = M_ZERO
       call dpoisson_solve(gr, vxc(:, 1), rho(:, 1))
 
+      ! FIXME will not work with multiparallelization
       ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(i, is)* &
          sum(vxc(1:NP, 1) * R_ABS(st%X(psi)(1:NP, 1, i, is))**2 * gr%m%vol_pp(1:NP))
 
@@ -75,8 +76,8 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
 
 #if defined(HAVE_MPI)
   if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
-    call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr); ec_ = edummy
-    call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr); ex_ = edummy
+    call MPI_ALLREDUCE(ec_, edummy, 1, MPI_FLOAT, MPI_SUM, st%comm, ierr); ec_ = edummy
+    call MPI_ALLREDUCE(ex_, edummy, 1, MPI_FLOAT, MPI_SUM, st%comm, ierr); ex_ = edummy
   endif
 #endif
 

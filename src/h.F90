@@ -295,7 +295,7 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   if(present(reduce)) then
     if(reduce) then
       call MPI_ALLREDUCE(e, s, 1, &
-           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, err)
+           MPI_FLOAT, MPI_SUM, st%comm, err)
       e = s
     end if
   end if

@@ -214,58 +214,52 @@ end subroutine mesh_partition
 #endif
 
 
-subroutine mesh_create_xyz(sb, m, geo, cv, mc)
+subroutine mesh_create_xyz(sb, mesh, geo, cv, mc)
   type(simul_box_type),  intent(in)    :: sb
-  type(mesh_type),       intent(inout) :: m
+  type(mesh_type),       intent(inout) :: mesh
   type(geometry_type),   intent(in)    :: geo
   type(curvlinear_type), intent(in)    :: cv
   type(multicomm_type),  optional, intent(in) :: mc
 
-  integer :: i, j, k, il, ix, iy, iz
+  integer :: i, j, k, il, ik, ix, iy, iz
   FLOAT   :: chi(3)
-  logical :: domain_parallel
 
   call push_sub('mesh_create.mesh_create_xyz')
 
-  ! check if we are running in parallel in domains
-  domain_parallel = .false.
-  if(present(mc)) &
-     domain_parallel = iand(mc%par_strategy, P_STRATEGY_DOMAINS).ne.0
-
   ! enlarge mesh in the non-periodic dimensions
-  m%nr(1,:) = m%nr(1,:) - m%enlarge(:)
-  m%nr(2,:) = m%nr(2,:) + m%enlarge(:)
+  mesh%nr(1,:) = mesh%nr(1,:) - mesh%enlarge(:)
+  mesh%nr(2,:) = mesh%nr(2,:) + mesh%enlarge(:)
 
   ! allocate the xyz arrays
-  allocate(m%Lxyz_inv(m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
-  allocate(m%Lxyz_tmp(m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
-  allocate( m%x_tmp(3,m%nr(1,1):m%nr(2,1),m%nr(1,2):m%nr(2,2),m%nr(1,3):m%nr(2,3)))
+  allocate(mesh%Lxyz_inv(mesh%nr(1,1):mesh%nr(2,1),mesh%nr(1,2):mesh%nr(2,2),mesh%nr(1,3):mesh%nr(2,3)))
+  allocate(mesh%Lxyz_tmp(mesh%nr(1,1):mesh%nr(2,1),mesh%nr(1,2):mesh%nr(2,2),mesh%nr(1,3):mesh%nr(2,3)))
+  allocate( mesh%x_tmp(3,mesh%nr(1,1):mesh%nr(2,1),mesh%nr(1,2):mesh%nr(2,2),mesh%nr(1,3):mesh%nr(2,3)))
 
-  m%Lxyz_inv(:,:,:) = 0
-  m%Lxyz_tmp(:,:,:) = 0
-  m%x_tmp(:,:,:,:)  = M_ZERO
+  mesh%Lxyz_inv(:,:,:) = 0
+  mesh%Lxyz_tmp(:,:,:) = 0
+  mesh%x_tmp(:,:,:,:)  = M_ZERO
 
   ! We label 2 the points inside the mesh + enlargement
 
-  do ix = m%nr(1,1), m%nr(2,1)
-    chi(1) = real(ix, PRECISION) * m%h(1) + sb%box_offset(1)
+  do ix = mesh%nr(1,1), mesh%nr(2,1)
+    chi(1) = real(ix, PRECISION) * mesh%h(1) + sb%box_offset(1)
 
-    do iy = m%nr(1,2), m%nr(2,2)
-      chi(2) = real(iy, PRECISION) * m%h(2) + sb%box_offset(2)
+    do iy = mesh%nr(1,2), mesh%nr(2,2)
+      chi(2) = real(iy, PRECISION) * mesh%h(2) + sb%box_offset(2)
 
-      do iz = m%nr(1,3), m%nr(2,3)
-        chi(3) = real(iz, PRECISION) * m%h(3) + sb%box_offset(3)
+      do iz = mesh%nr(1,3), mesh%nr(2,3)
+        chi(3) = real(iz, PRECISION) * mesh%h(3) + sb%box_offset(3)
 
-        call curvlinear_chi2x(sb, geo, cv, chi(:), m%x_tmp(:, ix, iy, iz))
+        call curvlinear_chi2x(sb, geo, cv, chi(:), mesh%x_tmp(:, ix, iy, iz))
 
-        if(simul_box_in_box(sb, geo, m%x_tmp(:, ix, iy, iz))) then
-          do i = -m%enlarge(1), m%enlarge(1)
-            do j = -m%enlarge(2), m%enlarge(2)
-              do k = -m%enlarge(3), m%enlarge(3)
+        if(simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz))) then
+          do i = -mesh%enlarge(1), mesh%enlarge(1)
+            do j = -mesh%enlarge(2), mesh%enlarge(2)
+              do k = -mesh%enlarge(3), mesh%enlarge(3)
                 if(  &
-                   ix+i>=m%nr(1,1).and.ix+i<=m%nr(2,1).and. &
-                   iy+j>=m%nr(1,2).and.iy+j<=m%nr(2,2).and. &
-                   iz+k>=m%nr(1,3).and.iz+k<=m%nr(2,3)) m%Lxyz_tmp(ix+i, iy+j, iz+k) = 2
+                   ix+i>=mesh%nr(1,1).and.ix+i<=mesh%nr(2,1).and. &
+                   iy+j>=mesh%nr(1,2).and.iy+j<=mesh%nr(2,2).and. &
+                   iz+k>=mesh%nr(1,3).and.iz+k<=mesh%nr(2,3)) mesh%Lxyz_tmp(ix+i, iy+j, iz+k) = 2
               end do
             end do
           end do
@@ -277,73 +271,21 @@ subroutine mesh_create_xyz(sb, m, geo, cv, mc)
 
   ! we label 1 the points inside the mesh, and we count the points
   il = 0
-  do ix = m%nr(1,1), m%nr(2,1)
-    do iy = m%nr(1,2), m%nr(2,2)
-      do iz = m%nr(1,3), m%nr(2,3)
-        if(simul_box_in_box(sb, geo, m%x_tmp(:, ix, iy, iz))) m%Lxyz_tmp(ix, iy, iz) = 1
-        if(m%Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
+  ik = 0
+  do ix = mesh%nr(1,1), mesh%nr(2,1)
+    do iy = mesh%nr(1,2), mesh%nr(2,2)
+      do iz = mesh%nr(1,3), mesh%nr(2,3)
+        if(simul_box_in_box(sb, geo, mesh%x_tmp(:, ix, iy, iz))) then
+          mesh%Lxyz_tmp(ix, iy, iz) = 1
+          ik = ik + 1
+        end if
+
+        if(mesh%Lxyz_tmp(ix, iy, iz) > 0) il = il + 1
       end do
     end do
   end do
-  m%np_part_global = il
-  allocate(m%Lxyz(m%np_part_global, 3))
-
-  if(domain_parallel) then
-    ! Node 0 has to store all entries from x (in x_global)
-    ! as well as the local set in x (see below).
-    allocate(m%x_global(m%np_part_global, 3))
-  else
-    ! When running parallel, x is computed later.
-    allocate(m%x(m%np_part_global, 3))
-    ! This is a bit ugly: x_global is needed in out_in
-    ! but in the serial case it is the same as x
-    m%x_global => m%x
-  end if
-
-
-  ! first we fill the points in the inner mesh
-  il = 0
-  do ix = m%nr(1,1), m%nr(2,1)
-    do iy = m%nr(1,2), m%nr(2,2)
-      do iz = m%nr(1,3), m%nr(2,3)
-        if(m%Lxyz_tmp(ix, iy, iz) == 1) then
-          il = il + 1
-          m%Lxyz(il, 1) = ix
-          m%Lxyz(il, 2) = iy
-          m%Lxyz(il, 3) = iz
-          m%Lxyz_inv(ix,iy,iz) = il
-          if(domain_parallel) then
-            m%x_global(il, :) = m%x_tmp(:, ix, iy, iz)
-          else
-            m%x(il,:) = m%x_tmp(:,ix,iy,iz)
-          end if
-        end if
-      enddo
-    enddo
-  enddo
-  m%np_global = il
-
-  ! and now the points from the enlargement
-  do ix = m%nr(1,1), m%nr(2,1)
-    do iy = m%nr(1,2), m%nr(2,2)
-      do iz = m%nr(1,3), m%nr(2,3)
-
-        if(m%Lxyz_tmp(ix, iy, iz) == 2) then
-          il = il + 1
-          m%Lxyz(il, 1) = ix
-          m%Lxyz(il, 2) = iy
-          m%Lxyz(il, 3) = iz
-          m%Lxyz_inv(ix,iy,iz) = il
-          if(domain_parallel) then
-            m%x_global(il, :) = m%x_tmp(:, ix, iy, iz)
-          else
-            m%x(il,:) = m%x_tmp(:,ix,iy,iz)
-          end if
-        end if
-
-      end do
-    end do
-  end do
+  mesh%np_part_global = il
+  mesh%np_global      = ik
 
   call pop_sub()
 end subroutine mesh_create_xyz
@@ -363,15 +305,17 @@ subroutine mesh_init_finish(mesh, geo, cv, stencil, np_stencil, mc)
 
   integer, allocatable :: part(:)
   integer :: i, ix, iy, iz
-  logical :: domain_parallel
 
   call push_sub('mesh_create.mesh_init_finish')
 
-  domain_parallel = .false.
+  ! check if we are running in parallel in domains
+  mesh%parallel_in_domains = .false.
   if(present(mc)) &
-     domain_parallel = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
+     mesh%parallel_in_domains = multicomm_strategy_is_parallel(mc, P_STRATEGY_DOMAINS)
 
-  if(domain_parallel) then
+  call create_x_Lxyz()
+
+  if(mesh%parallel_in_domains) then
     ASSERT(present(stencil).and.present(np_stencil))
 
     call do_partition()
@@ -390,14 +334,76 @@ subroutine mesh_init_finish(mesh, geo, cv, stencil, np_stencil, mc)
 
 contains
 
+  subroutine create_x_Lxyz()
+    integer :: il, ix, iy, iz
+
+    allocate(mesh%Lxyz(mesh%np_part_global, 3))
+    if(mesh%parallel_in_domains) then
+      ! Node 0 has to store all entries from x (in x_global)
+      ! as well as the local set in x (see below).
+      allocate(mesh%x_global(mesh%np_part_global, 3))
+    else
+      ! When running parallel, x is computed later.
+      allocate(mesh%x(mesh%np_part_global, 3))
+      ! This is a bit ugly: x_global is needed in out_in
+      ! but in the serial case it is the same as x
+      mesh%x_global => mesh%x
+    end if
+
+
+    ! first we fill the points in the inner mesh
+    il = 0
+    do ix = mesh%nr(1,1), mesh%nr(2,1)
+      do iy = mesh%nr(1,2), mesh%nr(2,2)
+        do iz = mesh%nr(1,3), mesh%nr(2,3)
+          if(mesh%Lxyz_tmp(ix, iy, iz) == 1) then
+            il = il + 1
+            mesh%Lxyz(il, 1) = ix
+            mesh%Lxyz(il, 2) = iy
+            mesh%Lxyz(il, 3) = iz
+            mesh%Lxyz_inv(ix,iy,iz) = il
+            if(mesh%parallel_in_domains) then
+              mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
+            else
+              mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
+            end if
+          end if
+        enddo
+      enddo
+    enddo
+    
+    ! and now the points from the enlargement
+    do ix = mesh%nr(1,1), mesh%nr(2,1)
+      do iy = mesh%nr(1,2), mesh%nr(2,2)
+        do iz = mesh%nr(1,3), mesh%nr(2,3)
+          
+          if(mesh%Lxyz_tmp(ix, iy, iz) == 2) then
+            il = il + 1
+            mesh%Lxyz(il, 1) = ix
+            mesh%Lxyz(il, 2) = iy
+            mesh%Lxyz(il, 3) = iz
+            mesh%Lxyz_inv(ix,iy,iz) = il
+            if(mesh%parallel_in_domains) then
+              mesh%x_global(il, :) = mesh%x_tmp(:, ix, iy, iz)
+            else
+              mesh%x(il,:) = mesh%x_tmp(:,ix,iy,iz)
+            end if
+          end if
+          
+        end do
+      end do
+    end do
+  end subroutine create_x_Lxyz
+  
+
   subroutine do_partition()
 #if defined(HAVE_METIS) && defined(HAVE_MPI)
     integer :: comm
     integer :: i, j, ix, iy, iz
 
     ! group_comm(1) is
-    comm = mc%group_comm(1)
-    
+    comm = mc%group_comm(PARALLEL_DOMAINS)
+
     allocate(part(mesh%np_part_global))
     call mesh_partition(mesh, mesh%Lxyz_tmp, comm, part)
     call vec_init(comm, 0, part, mesh%np_global, mesh%np_part_global,  &
@@ -451,8 +457,8 @@ contains
     allocate(mesh%vol_pp(mesh%np_part))
     mesh%vol_pp(:) = f
     
-    if(domain_parallel) then
-#if defined(HAVE_METIS) && defined(HAVE_MPI)
+    if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
       ! Do the inner points.
       do i = 1, mesh%np
         k = mesh%vp%local(mesh%vp%xlocal(mesh%vp%partno)+i-1)

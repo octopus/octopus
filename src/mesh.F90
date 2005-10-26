@@ -80,9 +80,8 @@ module mesh
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
-#if defined(HAVE_METIS) && defined(HAVE_MPI)
     type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
-#endif
+    logical       :: parallel_in_domains
 
     ! some other vars
     integer :: nr(2,3)  ! dimensions of the box where the points are contained
@@ -102,6 +101,7 @@ module mesh
 
 contains
 
+  !---------------------------------------------------------------------------------*/
   subroutine mesh_init_start(sb, m, geo, cv, enlarge, stencil, np_stencil, mc)
     type(simul_box_type), target, intent(in)    :: sb
     type(mesh_type),              intent(inout) :: m
@@ -161,23 +161,6 @@ contains
   end subroutine mesh_init_start
 
 
-  ! Adjust m%np and m%np_part according to the entry
-  ! in m%pv for the current node.
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  subroutine mesh_par_adj(m)
-    type(mesh_type), intent(inout) :: m
-
-    call push_sub('mesh.mesh_init')
-
-    m%np      = m%vp%np_local(m%vp%partno)
-    m%np_part = m%np+m%vp%np_ghost(m%vp%partno)+m%vp%np_bndry(m%vp%partno)
-
-    call pop_sub()
-
-  end subroutine mesh_par_adj
-#endif
-
-
   ! finds the dimension of a box doubled in the non-periodic dimensions
   subroutine mesh_double_box(sb, m, db)
     type(simul_box_type), intent(in)  :: sb
@@ -198,13 +181,14 @@ contains
 
   end subroutine mesh_double_box
 
+
+  !---------------------------------------------------------------------------------*/
   subroutine mesh_write_info(m, unit)
     type(mesh_type), intent(in) :: m
     integer,         intent(in) :: unit
 
-#ifdef HAVE_MPI
     if(mpiv%node .ne. 0) return
-#endif
+
     call push_sub('mesh.mesh_write_info')
 
     write(unit,'(a)') 'Main mesh:'
@@ -227,6 +211,7 @@ contains
   end subroutine mesh_write_info
 
 
+  !---------------------------------------------------------------------------------
   subroutine mesh_r(m, i, r, a, x)
     type(mesh_type),      intent(in)  :: m
     integer,              intent(in)  :: i
@@ -321,13 +306,15 @@ contains
        nullify(m%Lxyz, m%Lxyz_inv, m%x, m%vol_pp)
      end if
     
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-     if(associated(m%x_global).and.m%vp%rank.eq.m%vp%root) then
-       deallocate(m%x_global)
-       nullify(m%x_global)
-     end if
-     call vec_end(m%vp)
+     if(m%parallel_in_domains) then
+       if(associated(m%x_global).and.m%vp%rank.eq.m%vp%root) then
+         deallocate(m%x_global)
+         nullify(m%x_global)
+       end if
+#if defined(HAVE_MPI)
+       call vec_end(m%vp)
 #endif
+     end if
 
      call pop_sub()
    end subroutine mesh_end

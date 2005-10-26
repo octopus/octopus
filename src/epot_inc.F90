@@ -33,7 +33,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   logical,              intent(in)    :: periodic
   integer,              intent(in)    :: ik
 
-  integer :: i, j, n_s, ip, k, ierr
+  integer :: i, j, n_s, ip, k, mpi_err
   R_TYPE, allocatable :: lpsi(:), plpsi(:)
   R_TYPE :: uvpsi, tmp
 
@@ -47,7 +47,7 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
       if(ip.ne.1) ppsi(p(ip-1)%jxyz(1:n_s)) = ppsi(p(ip-1)%jxyz(1:n_s)) + plpsi(1:n_s)
       n_s = p(ip)%n_points_in_sphere
       
-      deallocate(lpsi, plpsi, stat = ierr)
+      deallocate(lpsi, plpsi, stat = j)
       allocate(lpsi(n_s), plpsi(n_s))
 
       lpsi(1:n_s)  = psi(p(ip)%jxyz(1:n_s))*mesh%vol_pp(p(ip)%jxyz(1:n_s))
@@ -59,12 +59,12 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
 
     do j = 1, p(ip)%n_channels
       uvpsi = sum(lpsi(1:n_s)*p(ip)%bra(1:n_s, j))
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-      call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
-      call TS(MPI_Allreduce)(uvpsi, tmp, 1, R_MPITYPE, &
-         MPI_SUM, mesh%vp%comm, ierr)
-      call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
-      uvpsi = tmp
+#if defined(HAVE_MPI)
+      if(mesh%parallel_in_domains) then
+        call TS(MPI_Allreduce)(uvpsi, tmp, 1, R_MPITYPE, &
+           MPI_SUM, mesh%vp%comm, mpi_err)
+        uvpsi = tmp
+      end if
 #endif
       do i = 1, p(ip)%n_channels
         if(periodic) then
@@ -84,12 +84,11 @@ subroutine X(project)(mesh, p, n_projectors, psi, ppsi, periodic, ik)
   call pop_sub()
 end subroutine X(project)
 
-subroutine X(epot_forces) (gr, ep, st, t, reduce_)
+subroutine X(epot_forces) (gr, ep, st, t)
   type(grid_type), target, intent(in)    :: gr
   type(epot_type),     intent(in)    :: ep
   type(states_type),   intent(in)    :: st
   FLOAT,     optional, intent(in)    :: t
-  logical,   optional, intent(in)    :: reduce_
 
   type(geometry_type), pointer :: geo
   integer :: i, j, l, idim, ist, ik, ivnl
@@ -99,7 +98,7 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
 
 #if defined(HAVE_MPI)
   FLOAT :: f(3)
-  integer :: ierr
+  integer :: mpi_err
 #endif
 
   call push_sub('epot_inc.epot_forces')
@@ -112,70 +111,68 @@ subroutine X(epot_forces) (gr, ep, st, t, reduce_)
   end do
 
   if(.not.geo%only_user_def) then
-     ! non-local component of the potential.
-     allocate(ppsi(gr%m%np, st%d%dim))
-     atm_loop: do i = 1, geo%natoms
-        atm => geo%atom(i)
-        if(atm%spec%local) cycle
-        do ivnl = 1, ep%nvnl
-           if(ep%p(ivnl)%index .ne. i) cycle
-           ik_loop: do ik = 1, st%d%nik
-              st_loop: do ist = st%st_start, st%st_end
-
-                 do j = 1, NDIM
-                    ppsi = R_TOTYPE(M_ZERO)
-                    do idim = 1, st%d%dim
-                       call X(project)(gr%m, ep%dp(j, ivnl:ivnl), 1, st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
-                            periodic = .false., ik = ik)
-                    enddo
-                    atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &
-                         X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
-                 enddo
-
-              end do st_loop
-           end do ik_loop
-        enddo
-     end do atm_loop
-     deallocate(ppsi)
+    ! non-local component of the potential.
+    allocate(ppsi(gr%m%np, st%d%dim))
+    atm_loop: do i = 1, geo%natoms
+      atm => geo%atom(i)
+      if(atm%spec%local) cycle
+      do ivnl = 1, ep%nvnl
+        if(ep%p(ivnl)%index .ne. i) cycle
+        ik_loop: do ik = 1, st%d%nik
+          st_loop: do ist = st%st_start, st%st_end
+            
+            do j = 1, NDIM
+              ppsi = R_TOTYPE(M_ZERO)
+              do idim = 1, st%d%dim
+                call X(project)(gr%m, ep%dp(j, ivnl:ivnl), 1, st%X(psi)(:, idim, ist, ik), ppsi(:, idim), &
+                   periodic = .false., ik = ik)
+              end do
+              atm%f(j) = atm%f(j) + M_TWO * st%occ(ist, ik) * &
+                 X(states_dotp)(gr%m, st%d%dim, st%X(psi)(:, :, ist, ik), ppsi)
+            end do
+            
+          end do st_loop
+        end do ik_loop
+      enddo
+    end do atm_loop
+    deallocate(ppsi)
   endif
 
 #if defined(HAVE_MPI)
   do i = 1, geo%natoms
-     atm => geo%atom(i)
-     if(atm%spec%local) cycle
-     if(present(reduce_)) then
-        if(reduce_) then
-           call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, &
-                MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
-           atm%f = f
-        end if
-     end if
+    atm => geo%atom(i)
+    if(atm%spec%local) cycle
+
+    if(st%parallel_in_states) then
+      call MPI_ALLREDUCE(atm%f(1), f(1), NDIM, MPI_FLOAT, MPI_SUM, st%comm, mpi_err)
+      atm%f = f
+    end if
   enddo
 #endif
 
   if(.not.geo%only_user_def) then ! exclude user defined species for the moment
-     ! Now the ion, ion force term
-     do i = 1, geo%natoms
-        zi = geo%atom(i)%spec%Z_val
-        do j = 1, geo%natoms
-           if(i .ne. j) then
-              zj = geo%atom(j)%spec%Z_val
-              r = sqrt(sum((geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))**2))
-              d = zi * zj/r**3
-
-              geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
-                   d*(geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))
-           end if
-        end do
-     end do
+    ! Now the ion, ion force term
+    do i = 1, geo%natoms
+      zi = geo%atom(i)%spec%Z_val
+      do j = 1, geo%natoms
+        if(i .ne. j) then
+          zj = geo%atom(j)%spec%Z_val
+          r = sqrt(sum((geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))**2))
+          d = zi * zj/r**3
+          
+          geo%atom(i)%f(1:NDIM) = geo%atom(i)%f(1:NDIM) + &
+             d*(geo%atom(i)%x(1:NDIM) - geo%atom(j)%x(1:NDIM))
+        end if
+      end do
+    end do
   end if
 
   ! now comes the local part of the PP
   if(.not.simul_box_is_periodic(gr%sb).or.geo%only_user_def) then ! Real space
-     call local_RS()
-#ifdef HAVE_FFT
+    call local_RS()
+#if defined(HAVE_FFT)
   else ! Fourier space
-     call local_FS()
+    call local_FS()
 #endif
   end if
 

@@ -198,10 +198,10 @@ contains
 
 #if defined(HAVE_MPI)
     if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
-      call mpi_barrier(mpi_comm_world, ierr)
+      call mpi_barrier(st%comm, ierr)
       do i = 1, st%nst
-         call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), MPI_COMM_WORLD, ierr)
-         call mpi_bcast(occ(i), 1, R_MPITYPE, st%node(i), MPI_COMM_WORLD, ierr)
+         call mpi_bcast(eigenval(i), 1, R_MPITYPE, st%node(i), st%comm, ierr)
+         call mpi_bcast(occ(i), 1, R_MPITYPE, st%node(i), st%comm, ierr)
       enddo
     endif
 #endif

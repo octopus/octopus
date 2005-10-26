@@ -304,33 +304,42 @@ end subroutine X(input_function_global)
 
 
 ! ---------------------------------------------------------
-subroutine X(output_function) (how, dir, fname, m, sb, f, u, ierr)
+subroutine X(output_function) (how, dir, fname, mesh, sb, f, u, ierr)
   integer,          intent(in)  :: how
   character(len=*), intent(in)  :: dir, fname
-  type(mesh_type),  intent(in)  :: m
+  type(mesh_type),  intent(in)  :: mesh
   type(simul_box_type), intent(in)  :: sb
-  R_TYPE,           intent(in)  :: f(1:m%np)  ! f(m%np)
+  R_TYPE,           intent(in)  :: f(:)  ! f(mesh%np)
   FLOAT,            intent(in)  :: u
   integer,          intent(out) :: ierr
 
   R_TYPE, allocatable :: f_global(:)
+  integer             :: mpi_err
 
   call push_sub('out_inc.Xoutput_function')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  allocate(f_global(1:m%np_global))
+  if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    allocate(f_global(1:mesh%np_global))
 
-  call X(vec_gather)(m%vp, f_global, f)
+    call X(vec_gather)(mesh%vp, f_global, f)
+    
+    if(mesh%vp%rank.eq.mesh%vp%root) then
+      call X(output_function_global)(how, dir, fname, mesh, sb, f_global, u, ierr)
+    endif
 
-  if(m%vp%rank.eq.m%vp%root) then
-     call X(output_function_global)(how, dir, fname, m, sb, f_global, u, ierr)
-  endif
-  if(in_debug_mode) call write_debug_newlines(2)
+    ! I have to broadcast the error code
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
 
-  deallocate(f_global)
+    if(in_debug_mode) call write_debug_newlines(2)
+
+    deallocate(f_global)
 #else
-  call X(output_function_global)(how, dir, fname, m, sb, f, u, ierr)
+    ASSERT(0)
 #endif
+  else
+    call X(output_function_global)(how, dir, fname, mesh, sb, f, u, ierr)
+  end if
 
   call pop_sub()
 end subroutine X(output_function)

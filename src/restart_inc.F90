@@ -73,21 +73,17 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   mformat = '(f15.8,a,f15.8,a,f15.8,a,f15.8,a,f15.8)'
   ierr = 0
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(gr%m%vp%rank.eq.gr%m%vp%root) then
-#endif
-     call io_mkdir(dir)
+  if(mpiv%node == 0) then
+    call io_mkdir(dir)
 
-     iunit = io_open(trim(dir)//'/wfns', action='write')
-     write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
-     write(iunit,'(a)') '%Wavefunctions'
-
-     iunit2 = io_open(trim(dir)//'/occs', action='write')
-     write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
-     write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+    iunit = io_open(trim(dir)//'/wfns', action='write')
+    write(iunit,'(a)') '#     #kpoint            #st            #dim    filename'
+    write(iunit,'(a)') '%Wavefunctions'
+    
+    iunit2 = io_open(trim(dir)//'/occs', action='write')
+    write(iunit2,'(a)') '# occupations           eigenvalue[a.u.]        K-Points'
+    write(iunit2,'(a)') '%Occupations_Eigenvalues_K-Points'
   end if
-#endif
 
   i = 1
   do ik = 1, st%d%nik
@@ -98,14 +94,16 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
         if(mpiv%node==0) then
           write(unit=iunit,  fmt=*) ik, ' | ', ist, ' | ', idim, ' | "', trim(filename), '"'
           write(unit=iunit2, fmt=mformat) st%occ(ist,ik), ' | ', st%eigenval(ist, ik), ' | ', &
-               st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
+             st%d%kpoints(1,ik), ' | ', st%d%kpoints(2,ik), ' | ', st%d%kpoints(3,ik)
         end if
 
         if(st%st_start <= ist .and. st%st_end >= ist) then
           call X(restart_write_function)(dir, filename, gr, st%X(psi) (:, idim, ist, ik), err, size(st%X(psi),1))
           if(err == 0) ierr = ierr + 1
         end if
-
+#if defined(HAVE_MPI)
+        call TS(MPI_Barrier)(MPI_COMM_WORLD, err) ! now we all wait
+#endif
         i = i + 1
       end do
     end do
@@ -113,27 +111,17 @@ subroutine X(restart_write) (dir, st, gr, ierr, iter)
 
   if(ierr == st%d%nik*(st%st_end - st%st_start + 1)*st%d%dim) ierr = 0 ! Alles OK
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(gr%m%vp%rank.eq.gr%m%vp%root) then
-#endif
+  if(mpiv%node == 0) then
     write(iunit,'(a)') '%'
     if(present(iter)) write(iunit,'(a,i5)') 'Iter = ', iter
     write(iunit2, '(a)') '%'
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  end if
-#endif
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(gr%m%vp%rank.eq.gr%m%vp%root) then
-#endif
     call io_close(iunit)
     call io_close(iunit2)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   end if
-#endif
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  call TS(MPI_Barrier)(MPI_COMM_WORLD, i) ! Since some processors did more than others...
+#if defined(HAVE_MPI)
+  call TS(MPI_Barrier)(MPI_COMM_WORLD, err) ! Since some processors did more than others...
 #endif
 
   call pop_sub()

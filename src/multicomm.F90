@@ -150,6 +150,11 @@ module multicomm_mod
      P_STRATEGY_STATES  = 2,    & ! parallelization in kpoints
      P_STRATEGY_KPOINTS = 4       ! parallelization in states
 
+  integer, public, parameter :: &
+     PARALLEL_DOMAINS = 1,      &
+     PARALLEL_STATES  = 2,      &
+     PARALLEL_KPOINTS = 3
+
   integer,           parameter :: n_par_types = 3
   character(len=11), parameter :: par_types(0:3) = &
      (/"serial     ", "par_domains", "par_states ", "par_kpoints" /)
@@ -190,6 +195,7 @@ contains
       !%End
       if(loct_parse_block(check_inp('ParallelizationGroupRanks'), blk) == 0) then
         call read_block(blk)
+        call loct_parse_block_end(blk)
       else
         call assign_nodes()
       end if
@@ -270,8 +276,11 @@ contains
 
         n = loct_parse_block_cols(blk, 0)
 
+        mc%group_ranks = 1
         do i = 1, min(n, mc%n_index)
-          call loct_parse_block_int(blk, 0, i-1, mc%group_ranks(i))
+          if(multicomm_level_is_parallel(mc, i)) then
+            call loct_parse_block_int(blk, 0, i-1, mc%group_ranks(i))
+          end if
         end do
       end subroutine read_block
 
@@ -381,37 +390,24 @@ contains
 
       subroutine group_comm_create()
 #if defined(HAVE_MPI)
-        integer :: mpi_comm_world_group, group
-        integer :: i, j, n_nodes, mpierr
-        integer, allocatable :: me(:), nodes(:)
-
-        call MPI_COMM_GROUP(MPI_COMM_WORLD, mpi_comm_world_group, mpierr)
+        integer :: i, mpi_err
+        integer, allocatable :: me(:)
 
         allocate(mc%group_comm(mc%n_index), mc%group_root(mc%n_index))
-        mc%group_comm = 0
+        mc%group_comm = -1
 
         allocate(me(mc%n_index))
         do i = 1, mc%n_index
           if(.not.multicomm_level_is_parallel(mc, i)) cycle
 
           me(:) = mc%who_am_i(:)
+          me(i) = 1
+          call multicomm_proc(mc, me, mc%group_root(i))
 
-          allocate(nodes(mc%group_ranks(i)))
-          do j = 1, mc%group_ranks(i)
-            me(i) = j
-            call multicomm_proc(mc, me, nodes(j))
-          end do
-
-          mc%group_root = nodes(1)
-
-          call MPI_GROUP_INCL (mpi_comm_world_group, mc%group_ranks(i), &
-             nodes, group, mpierr)
-          call MPI_COMM_CREATE(MPI_COMM_WORLD, group,                   &
-             mc%group_comm(i), mpierr)
-          call MPI_GROUP_FREE (group, mpierr)
-          
-          deallocate(nodes)
+          call MPI_Comm_split(MPI_COMM_WORLD, mc%group_root(i), mpiv%node, &
+             mc%group_comm(i), mpi_err)
         end do
+        deallocate(me)
 #endif
       end subroutine group_comm_create
 
@@ -475,8 +471,8 @@ contains
     call group_create(mc%group_tree)
 
     ! print nodes
-    if(mpiv%node == 0) then
-      iunit = io_open('tree.dot', action='write')
+    if(in_debug_mode.and.mpiv%node == 0) then
+      iunit = io_open('debug/parallel_tree.dot', action='write')
       write(iunit, '(a)') "digraph G {"
       write(iunit, '(a)') 'node [shape=box,style=filled];'
       call print_dot(mc%group_tree)
@@ -591,7 +587,7 @@ contains
     type(multicomm_type) :: mc
 
 #if defined(HAVE_MPI)
-    integer :: i, j, mpierr
+    integer :: i, j, mpi_err
 
     call push_sub('mpi.multicomm_end')
 
@@ -599,7 +595,7 @@ contains
     do i = 1, mc%n_index
       if(.not.multicomm_level_is_parallel(mc, i)) cycle
 
-      call MPI_Comm_free(mc%group_comm(i), mpierr)
+      call MPI_Comm_free(mc%group_comm(i), mpi_err)
     end do
 
     ! now delete the tree

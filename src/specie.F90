@@ -584,26 +584,26 @@ contains
     r = sqrt(sum(x*x))
 
     if(.not.s%local) then
-       phi =  loct_splint(s%ps%ur(i, is), r) * loct_ylm(x(1), x(2), x(3), l, m)
+      phi =  loct_splint(s%ps%ur(i, is), r) * loct_ylm(x(1), x(2), x(3), l, m)
     else
-       select case(dim)
-       case(1)
-         b = M_HALF*CNST(0.01) ! b = (1/2)*m*w^2
-         leng_scale = (M_HALF/b)**(M_FOURTH)
-         rprime = r/leng_scale
-         if(rprime > M_ZERO) then
-             phi = exp(-rprime**2/M_TWO) * (2**l) * loct_hypergeometric(-M_HALF*l, M_HALF, rprime**2)
-         else
-             select case(mod(l, 2))
-              case(0)
-                 phi = factorial(l) * (-1)**(l/2) / factorial(l/2)
-              case(1)
-                 phi = M_ZERO
-             end select
-         endif
-       case(2) ! TODO
-       case(3) ! TODO
-       end select
+      select case(dim)
+      case(1)
+        b = M_HALF*CNST(0.01) ! b = (1/2)*m*w^2
+        leng_scale = (M_HALF/b)**(M_FOURTH)
+        rprime = r/leng_scale
+        if(rprime > M_ZERO) then
+          phi = exp(-rprime**2/M_TWO) * (2**l) * loct_hypergeometric(-M_HALF*l, M_HALF, rprime**2)
+        else
+          select case(mod(l, 2))
+          case(0)
+            phi = factorial(l) * (-1)**(l/2) / factorial(l/2)
+          case(1)
+            phi = M_ZERO
+          end select
+        endif
+      case(2) ! TODO
+      case(3) ! TODO
+      end select
     endif
 
   end function specie_get_iwf
@@ -625,7 +625,7 @@ contains
   end function specie_niwfs
 
   subroutine specie_iwf_fix_qn(s, ispin)
-    type(specie_type), intent(in) :: s
+    type(specie_type), intent(inout) :: s
     integer, intent(in) :: ispin
 
     integer :: is, n, i, l, m

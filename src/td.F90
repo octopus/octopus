@@ -103,7 +103,7 @@ contains
 
     call td_init(gr, td, st, h, sys%outp)
 
-    call states_distribute_nodes(st)
+    call states_distribute_nodes(st, sys%mc)
     ! allocate memory
     allocate(st%zpsi(NP, st%d%dim, st%st_start:st%st_end, st%d%nik))
 
@@ -124,7 +124,7 @@ contains
           h%eii = geo%eii
        end if
 
-       call zepot_forces(gr, h%ep, st, td%iter*td%dt, reduce_=.true.)
+       call zepot_forces(gr, h%ep, st, td%iter*td%dt)
        geo%kinetic_energy = kinetic_energy(geo)
        select case(td%move_ions)
        case(NORMAL_VERLET)
@@ -219,7 +219,7 @@ contains
                 f1(j, :) = geo%atom(j)%f(:)
              end do
           end if
-          call zepot_forces(gr, h%ep, st, i*td%dt, reduce_=.true.)
+          call zepot_forces(gr, h%ep, st, i*td%dt)
           if(td%move_ions == VELOCITY_VERLET) then
              do j = 1, geo%natoms
                 if(geo%atom(j)%move) then
@@ -311,7 +311,7 @@ contains
          call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
          x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
-         call MPI_BCAST(x, 1, MPI_FLOAT, 0, MPI_COMM_WORLD, i)
+         call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%comm, i)
 #endif
          call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
          call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
@@ -455,7 +455,7 @@ contains
       end if
 
       ! write potential from previous interactions
-      if(mpiv%node==0) then
+      if(st%rank == 0) then
         do i = 1, 2
           do is = 1, st%d%nspin
             write(filename,'(a6,i2.2,i3.3)') 'vprev_', i, is

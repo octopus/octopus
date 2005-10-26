@@ -95,32 +95,8 @@ module par_vec
 
   implicit none
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   private
-  public :: pv_type,            &
-            vec_init,           &
-            vec_end,            &
-            dvec_scatter,       &
-            zvec_scatter,       &
-            ivec_scatter,       &
-            dvec_scatter_bndry, &
-            zvec_scatter_bndry, &
-            ivec_scatter_bndry, &
-            dvec_scatter_all,   &
-            zvec_scatter_all,   &
-            ivec_scatter_all,   &
-            dvec_gather,        &
-            zvec_gather,        &
-            ivec_gather,        &
-            dvec_allgather,     &
-            zvec_allgather,     &
-            ivec_allgather,     &
-            dvec_ghost_update,  &
-            zvec_ghost_update,  &
-            ivec_ghost_update,  &
-            dvec_integrate,     &
-            zvec_integrate,     &
-            ivec_integrate
+  public :: pv_type
 
   type pv_type
     ! The content of these members is node dependent.
@@ -159,6 +135,31 @@ module par_vec
                                              ! ghost points.
   end type pv_type
 
+#if defined(HAVE_MPI)
+  public :: &
+            vec_init,           &
+            vec_end,            &
+            dvec_scatter,       &
+            zvec_scatter,       &
+            ivec_scatter,       &
+            dvec_scatter_bndry, &
+            zvec_scatter_bndry, &
+            ivec_scatter_bndry, &
+            dvec_scatter_all,   &
+            zvec_scatter_all,   &
+            ivec_scatter_all,   &
+            dvec_gather,        &
+            zvec_gather,        &
+            ivec_gather,        &
+            dvec_allgather,     &
+            zvec_allgather,     &
+            ivec_allgather,     &
+            dvec_ghost_update,  &
+            zvec_ghost_update,  &
+            ivec_ghost_update,  &
+            dvec_integrate,     &
+            zvec_integrate,     &
+            ivec_integrate
 
 contains
 

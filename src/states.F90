@@ -40,6 +40,7 @@ module states
   use geometry
   use crystal
   use mpi_mod
+  use multicomm_mod
 
   implicit none
 
@@ -96,8 +97,14 @@ module states
      FLOAT :: el_temp ! electronic temperature for the Fermi function
      FLOAT :: ef      ! the fermi energy
 
-     integer :: st_start, st_end ! needed for some parallel parts
-     integer, pointer :: node(:) ! To which node belongs each state.
+     ! This is stuff needed for the parallelization in states
+     logical :: parallel_in_states ! am I parallel in states
+     integer :: numprocs           ! how many nodes are in this group
+     integer :: rank               ! who am I in this group
+     integer :: comm               ! my communicator
+
+     integer :: st_start, st_end   ! needed for some parallel parts
+     integer, pointer :: node(:)   ! To which node belongs each state.
   end type states_type
 
   type states_dim_type
@@ -714,6 +721,7 @@ contains
 
   end subroutine states_write_eigenvalues
 
+
   subroutine states_write_bands(iunit, nst, st, sb)
     integer,           intent(in) :: iunit, nst
     type(states_type), intent(in) :: st
@@ -949,7 +957,7 @@ contains
 #if defined(HAVE_MPI)
     allocate(red(NP, NDIM, st%d%nspin))
     call MPI_ALLREDUCE(jp(1, 1, 1), red(1, 1, 1), NP*NDIM*st%d%nspin, &
-         MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+         MPI_FLOAT, MPI_SUM, st%comm, ierr)
     jp = red
     deallocate(red)
 #endif
@@ -977,49 +985,61 @@ contains
 
 
   ! -----------------------------------------------------------
-  subroutine states_distribute_nodes(st)
-    type(states_type),   intent(inout) :: st
+  subroutine states_distribute_nodes(st, mc)
+    type(states_type),    intent(inout) :: st
+    type(multicomm_type), intent(in)    :: mc
 
-#if defined(HAVE_MPI)
     integer :: sn, sn1, r, j, k, ierr, i, ii
 
-    if(st%nst < mpiv%numprocs) then
-       message(1) = "Have more processors than necessary"
-       write(message(2),'(i4,a,i4,a)') mpiv%numprocs, " processors and ", st%nst, " states."
-       call write_fatal(2)
-    end if
-
-    i = st%nst / mpiv%numprocs
-    ii = st%nst - i*mpiv%numprocs
-    if(ii > 0 .and. mpiv%node < ii) then
-       i = i + 1
-       st%st_start = mpiv%node*i + 1
-       st%st_end = st%st_start + i - 1
-    else
-       st%st_end = st%nst - (mpiv%numprocs - mpiv%node - 1)*i
-       st%st_start = st%st_end - i + 1
-    end if
-    call MPI_Barrier(MPI_COMM_WORLD, i)
-    write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", mpiv%node, " will propagate state ", &
-         st%st_start, " - ", st%st_end
-    call MPI_Barrier(MPI_COMM_WORLD, i)
-
-    sn  = st%nst/mpiv%numprocs
-    sn1 = sn + 1
-    r  = mod(st%nst, mpiv%numprocs)
-    do j = 1, r
-       st%node((j-1)*sn1+1:j*sn1) = j - 1
-    end do
-    k = sn1*r
-    call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-    do j = 1, mpiv%numprocs - r
-       st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
-    end do
-
-#else
+    ! defaults
     st%node(:)  = 0
+    st%numprocs = 1
+    st%rank     = 0
     st%st_start = 1
     st%st_end   = st%nst
+    st%parallel_in_states = .false.
+
+#if defined(HAVE_MPI)
+    if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
+
+      st%parallel_in_states = .true.
+      st%comm = mc%group_comm(PARALLEL_STATES)
+      call MPI_Comm_size(st%comm, st%numprocs, ierr)
+      call MPI_Comm_rank(st%comm, st%rank, ierr)
+      
+      if(st%nst < st%numprocs) then
+        message(1) = "Have more processors than necessary"
+        write(message(2),'(i4,a,i4,a)') st%numprocs, " processors and ", st%nst, " states."
+        call write_fatal(2)
+      end if
+
+      i = st%nst / st%numprocs
+      ii = st%nst - i*st%numprocs
+      if(ii > 0 .and. st%rank < ii) then
+        i = i + 1
+        st%st_start = st%rank*i + 1
+        st%st_end = st%st_start + i - 1
+      else
+        st%st_end = st%nst - (st%numprocs - st%rank - 1)*i
+        st%st_start = st%st_end - i + 1
+      end if
+      call MPI_Barrier(st%comm, i)
+      write(stdout, '(a,i4,a,i4,a,i4)') "Info: Node ", st%rank, " will propagate state ", &
+         st%st_start, " - ", st%st_end
+      call MPI_Barrier(st%comm, i)
+      
+      sn  = st%nst/st%numprocs
+      sn1 = sn + 1
+      r  = mod(st%nst, st%numprocs)
+      do j = 1, r
+        st%node((j-1)*sn1+1:j*sn1) = j - 1
+      end do
+      k = sn1*r
+      call MPI_BARRIER(st%comm, ierr)
+      do j = 1, st%numprocs - r
+        st%node(k+(j-1)*sn+1:k+j*sn) = r + j - 1
+      end do
+    end if
 #endif
 
   end subroutine states_distribute_nodes

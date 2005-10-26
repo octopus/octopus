@@ -324,7 +324,6 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   R_TYPE  :: s_local ! Sum of v_local(i).
 
   call profiling_in(C_PROFILING_VEC_INTEGRATE)
-
   call push_sub('par_vec.Xvec_integrate')
   
   s_local = sum(v_local(:vp%np_local(vp%partno)))
@@ -334,7 +333,6 @@ R_TYPE function X(vec_integrate)(vp, v_local) result(s)
   call MPI_Debug_OUT(vp%comm, C_MPI_ALLREDUCE)
 
   call pop_sub()
- 
   call profiling_out(C_PROFILING_VEC_INTEGRATE)
 
 end function X(vec_integrate)

@@ -69,12 +69,9 @@ contains
     type(system_type), intent(out) :: sys
     integer, optional, intent(in)  :: parallel_mask
 
-    integer, allocatable :: domain_comm_of_node(:)
-
     call push_sub('systm.system_init')
 
     allocate(sys%gr, sys%st)
-    allocate(domain_comm_of_node(0:mpiv%numprocs-1))
 
     call geometry_init(sys%gr%geo)
     call simul_box_init(sys%gr%sb, sys%gr%geo)
@@ -88,8 +85,6 @@ contains
     call output_init(sys%gr%sb, sys%outp)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
 
-    deallocate(domain_comm_of_node)
-    
     call pop_sub()
 
   contains

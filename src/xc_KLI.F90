@@ -44,7 +44,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 #if defined(HAVE_MPI)
   allocate(d(m%np))
 
-  call MPI_Allreduce(rho_sigma(:), d(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  call MPI_Allreduce(rho_sigma(:), d(:), m%np, MPI_FLOAT, MPI_SUM, st%comm, ierr)
   rho_sigma(1:m%np) = d(1:m%np)
 #endif
 
@@ -53,7 +53,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
        R_REAL(oep%X(lxc)(i, st%st_start:st%st_end)*st%X(psi)(i, 1, st%st_start:st%st_end, is)))/rho_sigma(i)
   end do
 #if defined(HAVE_MPI)
-  call MPI_Allreduce(oep%vxc(:),   d(:), m%np, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+  call MPI_Allreduce(oep%vxc(:),   d(:), m%np, MPI_FLOAT, MPI_SUM, st%comm, ierr)
   oep%vxc(1:m%np)   = d(1:m%np)
 
   deallocate(d)
@@ -77,7 +77,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
   ! Broadcast the vector v_bar_S to all processors
   if(st%st_end - st%st_start + 1 .ne. st%nst) then ! This holds only in the td part.
     do i = 1, st%nst
-      call MPI_Bcast(v_bar_S(i), 1, MPI_FLOAT, st%node(i), MPI_COMM_WORLD, ierr)
+      call MPI_Bcast(v_bar_S(i), 1, MPI_FLOAT, st%node(i), st%comm, ierr)
     end do
   end if
 #endif
@@ -98,17 +98,17 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       if(mpiv%node.ne.0) then
         if(st%node(oep%eigen_index(i)) == mpiv%node) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-             0, i, MPI_COMM_WORLD, status, ierr)
+             0, i, st%comm, status, ierr)
         end if
       else ! master node
         if(st%node(oep%eigen_index(i)).ne.0) then
           call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-             i, MPI_COMM_WORLD, status, ierr)
+             i, st%comm, status, ierr)
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
       end if
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call MPI_Barrier(st%comm, ierr)
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
@@ -123,17 +123,17 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
         if(mpiv%node.ne.0) then
           if(st%node(oep%eigen_index(j)) == mpiv%node) then
             call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(j), is), st%d%dim*m%np, R_MPITYPE, &
-               0, j, MPI_COMM_WORLD, status, ierr)
+               0, j, st%comm, status, ierr)
           end if
         else
           if(st%node(oep%eigen_index(j)).ne.0) then
             call MPI_Recv(phi2(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(j)), &
-               j, MPI_COMM_WORLD, status, ierr)
+               j, st%comm, status, ierr)
           else
             phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
           end if
         end if
-        call MPI_Barrier(MPI_COMM_WORLD, ierr)
+        call MPI_Barrier(st%comm, ierr)
 #else
         phi2(:,:) = st%X(psi)(:,:, oep%eigen_index(j), is)
 #endif
@@ -156,7 +156,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
     deallocate(Ma, y)
 
 #if defined(HAVE_MPI)
-    call MPI_Barrier(mpi_comm_world, ierr)
+    call MPI_Barrier(st%comm, ierr)
 #endif
 
     do i = 1, n
@@ -166,17 +166,17 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
       if(mpiv%node.ne.0) then
         if(st%node(oep%eigen_index(i)) == mpiv%node) then
           call MPI_Send(st%X(psi)(1, 1, oep%eigen_index(i), is), st%d%dim*m%np, R_MPITYPE, &
-             0, i, MPI_COMM_WORLD, status, ierr)
+             0, i, st%comm, status, ierr)
         end if
       else ! master
         if(st%node(oep%eigen_index(i)).ne.0) then
           call MPI_Recv(phi1(1, 1), st%d%dim*m%np, R_MPITYPE, st%node(oep%eigen_index(i)), &
-             i, MPI_COMM_WORLD, status, ierr)
+             i, st%comm, status, ierr)
         else
           phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
         end if
       end if
-      call MPI_Barrier(MPI_COMM_WORLD, ierr)
+      call MPI_Barrier(st%comm, ierr)
 #else
       phi1(:,:) = st%X(psi)(:,:, oep%eigen_index(i), is)
 #endif
@@ -194,7 +194,7 @@ subroutine X(xc_KLI_solve) (m, st, is, oep)
 
 #if defined(HAVE_MPI)
   ! Since only node 0 holds the true vxc, broadcast it to all processors.
-  call MPI_Bcast(oep%vxc(:), m%np, MPI_FLOAT, 0, MPI_COMM_WORLD, ierr)
+  call MPI_Bcast(oep%vxc(:), m%np, MPI_FLOAT, 0, st%comm, ierr)
 #endif
 
   deallocate(v_bar_S, rho_sigma)

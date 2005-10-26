@@ -384,7 +384,7 @@ contains
       FLOAT, allocatable :: deltav(:)
       R_TYPE, allocatable :: x(:)
 #ifdef HAVE_MPI
-      integer :: ierr
+      integer :: mpi_err
       FLOAT, allocatable :: mpi_mat(:,:)
 #endif
 
@@ -423,7 +423,7 @@ contains
 #ifdef HAVE_MPI
       allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
       call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, ierr)
+           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
       cas%mat = mpi_mat
       deallocate(mpi_mat)
 #endif

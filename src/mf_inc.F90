@@ -19,64 +19,65 @@
 
 
 !!!  integrates a function
-R_TYPE function X(mf_integrate) (m, f) result(d)
-  type(mesh_type), intent(in) :: m
-  R_TYPE,          intent(in) :: f(1:m%np)  ! f(m%np)
+R_TYPE function X(mf_integrate) (mesh, f) result(d)
+  type(mesh_type), intent(in) :: mesh
+  R_TYPE,          intent(in) :: f(:)  ! f(mesh%np)
 
   call profiling_in(C_PROFILING_MF_INTEGRATE)
-
   call push_sub('mf_inc.Xmf_integrate')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  d = X(vec_integrate)(m%vp, f(1:m%np)*m%vol_pp(1:m%np))
-#else 
-  d = sum(f(1:m%np)*m%vol_pp(1:m%np))
+  if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    d = X(vec_integrate)(mesh%vp, f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
 #endif
+  else
+    d = sum(f(1:mesh%np)*mesh%vol_pp(1:mesh%np))
+  end if
 
   call pop_sub()
-
   call profiling_out(C_PROFILING_MF_INTEGRATE)
 
 end function X(mf_integrate)
 
 
 !!! this function returns the dot product between two vectors
-R_TYPE function X(mf_dotp)(m, f1, f2) result(dotp)
-  type(mesh_type), intent(in) :: m
-  R_TYPE, intent(in) :: f1(:), f2(:) 
+R_TYPE function X(mf_dotp)(mesh, f1, f2) result(dotp)
+  type(mesh_type), intent(in) :: mesh
+  R_TYPE,          intent(in) :: f1(:), f2(:) 
 
   R_TYPE, allocatable :: l(:)
   R_TYPE              :: dotp_tmp
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
   integer :: ierr
 #endif
 
   call profiling_in(C_PROFILING_MF_DOTP)
-
   call push_sub('mf_inc.Xmf_dotp')
 
   ! This is not implemented via vec_integrate
   ! because BLAS is much faster.
-  if(m%use_curvlinear) then
-    allocate(l(m%np))
-    l(1:m%np) = f1(1:m%np) * m%vol_pp(1:m%np)
-    dotp_tmp  = lalg_dot(m%np, l(:),  f2(:))
+  if(mesh%use_curvlinear) then
+    allocate(l(mesh%np))
+    l(1:mesh%np) = f1(1:mesh%np) * mesh%vol_pp(1:mesh%np)
+    dotp_tmp  = lalg_dot(mesh%np, l(:),  f2(:))
     deallocate(l)
   else
-    dotp_tmp = lalg_dot(m%np, f1(:),  f2(:))*m%vol_pp(1)
+    dotp_tmp = lalg_dot(mesh%np, f1(:),  f2(:))*mesh%vol_pp(1)
   end if
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
-  call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
-     MPI_SUM, m%vp%comm, ierr)
-  call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
-#else
-  dotp = dotp_tmp
+
+  if(mesh%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    call profiling_in(C_PROFILING_MF_DOTP_ALLREDUCE)
+    call TS(MPI_Allreduce)(dotp_tmp, dotp, 1, R_MPITYPE, &
+       MPI_SUM, mesh%vp%comm, ierr)
+    call profiling_out(C_PROFILING_MF_DOTP_ALLREDUCE)
 #endif
+  else
+    dotp = dotp_tmp
+  end if
 
   call pop_sub()
-
   call profiling_out(C_PROFILING_MF_DOTP)
 
 end function X(mf_dotp)
