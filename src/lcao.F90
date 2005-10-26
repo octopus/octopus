@@ -58,7 +58,6 @@ module lcao
     R_TYPE,  pointer :: k     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
     R_TYPE,  pointer :: v     (:, :, :) ! v is the potential.
 
-    logical, pointer  :: atoml(:,:)
   end type lcao_type
 
 contains
@@ -70,12 +69,10 @@ subroutine lcao_init(gr, lcao_data, st, h)
   type(hamiltonian_type),  intent(in)    :: h
 
   type(geometry_type), pointer :: geo
-
-  integer :: ierr
-
-  integer :: norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2
+  type(specie_type), pointer :: s
+  integer :: ierr, norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2, i, j, ia, n, idim, is, k
   integer, parameter :: orbs_local = 2
-
+  R_TYPE :: x(gr%sb%dim)
   R_TYPE, allocatable :: hpsi(:,:)
 
   if(NDIM.eq.2) return
@@ -85,66 +82,34 @@ subroutine lcao_init(gr, lcao_data, st, h)
 
   geo => gr%geo
 
-  ! Counting
-  allocate(lcao_data%atoml(geo%natoms, 6))
-  lcao_data%atoml = .true.
+
+  ! Fix the dimension of the LCAO problem (lcao_data%dim)
   norbs = 0
-  atoms_loop: do i1 = 1, geo%natoms
-    if(geo%atom(i1)%spec%local) then
-      norbs = geo%atom(i1)%spec%z_val      
-      lcao_data%atoml(i1, :) = .true.
-    else
-      l_loop: do l1 = 1, geo%atom(i1)%spec%ps%conf%p
-        l = geo%atom(i1)%spec%ps%conf%l(l1)
-        if(sum(geo%atom(i1)%spec%ps%conf%occ(l1, :)).ne.M_ZERO) then
-          norbs = norbs + (2*l+1)
-        else
-          lcao_data%atoml(i1, l1) = .false.
-        endif
-      end do l_loop
-    end if
-  end do atoms_loop
-
-  if(st%d%ispin == SPINORS) norbs = norbs * 2
-
-  if(norbs < st%nst) then ! we do not have enough states
-    deallocate(lcao_data%atoml)
-    message(1) = 'Not enough basis functions to perform LCAO calculation'
-    call write_warning(1)
-    lcao_data%state = 0
-    return
-  end if
-
+  atoms_loop: do ia = 1, geo%natoms
+     norbs = norbs + geo%atom(ia)%spec%niwfs
+  enddo atoms_loop
+  if( (st%d%dim .eq. SPIN_POLARIZED) .or. (st%d%dim.eq.SPINORS) ) norbs = norbs * 2
   lcao_data%dim = norbs
-  write(message(1), '(a,i6)') 'Info: LCAO basis dimension: ', lcao_data%dim
-  call write_info(1)
 
   allocate(lcao_data%psis(gr%m%np, st%d%dim, norbs, st%d%nik))
   lcao_data%psis = M_ZERO
-  do ik = 1, st%d%nik
-    n1 = 1
-    do i1 = 1, geo%natoms
-      if(geo%atom(i1)%spec%local) then
-        do d1 = 1, st%d%dim
-           ispin = states_spin_channel(st%d%ispin, ik, d1)
-           call atom_get_wf(gr%m, geo%atom(i1), 0, 0, ispin, lcao_data%psis(:, d1, n1, ik))
-        enddo
-      else
-        do l1 = 1, geo%atom(i1)%spec%ps%conf%p
-           l = geo%atom(i1)%spec%ps%conf%l(l1)
-           if(.not. lcao_data%atoml(i1, l1)) cycle
-           do lm1 = -l, l
-              do d1 = 1, st%d%dim
-                 ispin = states_spin_channel(st%d%ispin, ik, d1)
-                 call atom_get_wf(gr%m, geo%atom(i1), l1, lm1, ispin, lcao_data%psis(:, d1, n1, ik))
-                 n1 = n1 + 1
-              end do
-           end do
-        end do
-      endif
 
-    end do
-  end do
+  do ik = 1, st%d%nik
+     n = 1
+     do ia = 1, geo%natoms
+        s => geo%atom(ia)%spec
+        do idim = 1, st%d%dim
+           do j = 1, s%niwfs
+              do k = 1, gr%m%np
+                 x(:) = gr%m%x(k, :) - geo%atom(ia)%x(:)
+                 lcao_data%psis(k, idim, n, ik) = specie_get_iwf(s, j, gr%sb%dim, &
+                                                                 states_spin_channel(st%d%ispin, ik, idim), x)
+              enddo
+              n = n + 1
+           enddo
+        enddo
+     enddo
+  enddo
 
   ! Allocation of variables
   allocate(lcao_data%hamilt (norbs, norbs, st%d%nik), &

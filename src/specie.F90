@@ -44,7 +44,8 @@ public :: specie_init, &
           specie_get_glocal, &
           specie_get_local_fourier, &
           specie_get_nl_part, &
-          specie_get_nlcc
+          specie_get_nlcc, &
+          specie_get_iwf
 
 
 integer, public, parameter :: &
@@ -78,6 +79,10 @@ type specie_type
 
   ! the default values for the spacing and atomic radius
   FLOAT :: def_rsize, def_h
+
+  ! The number of initial wave functions
+  integer :: niwfs
+  integer, pointer :: iwf_l(:, :), iwf_m(:, :), iwf_i(:, :)
 
   ! For the TM pseudos, the lmax and lloc.
   integer :: lmax, lloc
@@ -357,6 +362,8 @@ contains
     type(specie_type), intent(inout) :: s
     integer,           intent(in)    :: ispin
 
+    integer :: i, l
+
     call push_sub('specie.specie_init')
 
     ! masses are always in a.u.m, so convert them to a.u.
@@ -370,7 +377,11 @@ contains
       call ps_derivatives(s%ps)
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )
-    end if
+    endif
+  
+    s%niwfs = specie_niwfs(s)
+    allocate(s%iwf_l(s%niwfs, ispin), s%iwf_m(s%niwfs, ispin), s%iwf_i(s%niwfs, ispin))
+    call specie_iwf_fix_qn(s, ispin)
 
     call pop_sub()
   end subroutine specie_init
@@ -557,5 +568,86 @@ contains
 
   end subroutine specie_get_nl_part
 
+  FLOAT function specie_get_iwf(s, j, dim, is, x) result(phi)
+    type(specie_type), intent(in) :: s
+    integer,           intent(in) :: j
+    integer,           intent(in) :: dim
+    integer,           intent(in) :: is
+    FLOAT,             intent(in) :: x(3)
+
+    integer :: i, l, m
+    FLOAT :: r, b, leng_scale, rprime
+
+    i = s%iwf_i(j, is)
+    l = s%iwf_l(j, is)
+    m = s%iwf_m(j, is)
+    r = sqrt(sum(x*x))
+
+    if(.not.s%local) then
+       phi =  loct_splint(s%ps%ur(i, is), r) * loct_ylm(x(1), x(2), x(3), l, m)
+    else
+       select case(dim)
+       case(1)
+         b = M_HALF*CNST(0.01) ! b = (1/2)*m*w^2
+         leng_scale = (M_HALF/b)**(M_FOURTH)
+         rprime = r/leng_scale
+         if(rprime > M_ZERO) then
+             phi = exp(-rprime**2/M_TWO) * (2**l) * loct_hypergeometric(-M_HALF*l, M_HALF, rprime**2)
+         else
+             select case(mod(l, 2))
+              case(0)
+                 phi = factorial(l) * (-1)**(l/2) / factorial(l/2)
+              case(1)
+                 phi = M_ZERO
+             end select
+         endif
+       case(2) ! TODO
+       case(3) ! TODO
+       end select
+    endif
+
+  end function specie_get_iwf
+
+  integer function specie_niwfs(s) result(n)
+    type(specie_type), intent(in) :: s
+    integer :: i, l
+    call push_sub('specie.specie_niwfs')
+    n = 0
+    if(.not.s%local) then
+      do i = 1, s%ps%conf%p
+         l = s%ps%conf%l(i)
+         if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) n = n + (2*l+1)
+      enddo
+    else
+      n = 4 * s%z_val ! We hard-code the value of 4, rather arbitrarily.
+    endif
+    call pop_sub()
+  end function specie_niwfs
+
+  subroutine specie_iwf_fix_qn(s, ispin)
+    type(specie_type), intent(in) :: s
+    integer, intent(in) :: ispin
+
+    integer :: is, n, i, l, m
+    call push_sub('specie.specie_iwf_fix_qn')
+
+    if(.not.s%local) then
+       do is = 1, ispin
+          n = 1
+          do i = 1, s%ps%conf%p
+             l = s%ps%conf%l(i)
+             do m = -l, l
+                s%iwf_i(n, is) = i
+                s%iwf_l(n, is) = l
+                s%iwf_m(n, is) = m
+                n = n + 1
+             enddo
+          enddo
+       enddo
+    else
+     ! TODO
+    endif
+    call pop_sub()
+  end subroutine specie_iwf_fix_qn
 
 end module specie
