@@ -21,6 +21,7 @@
 
 module geometry
   use global
+  use varinfo
   use messages
   use syslabels
   use string
@@ -339,14 +340,12 @@ contains
        geo%nspecies = geo%nspecies + 1
     end do atoms1
 
-    ! do we treat only userdefined species
-    call loct_parse_logical(check_inp('OnlyUserDef'), .false., geo%only_user_def)
-
     ! Allocate the species structure.
     allocate(geo%specie(geo%nspecies))
 
     ! Now, read the data.
     k = 0
+    geo%only_user_def = .true.
     atoms2: do i = 1, geo%natoms
        do j = 1, i - 1
           if(trim(geo%atom(j)%label) == trim(geo%atom(i)%label)) cycle atoms2
@@ -355,16 +354,13 @@ contains
        geo%specie(k)%label = geo%atom(j)%label
        geo%specie(k)%index = k
        call specie_read(geo%specie(k), trim(geo%specie(k)%label))
+       geo%only_user_def = (geo%only_user_def .and. (geo%specie(k)%type==SPEC_USDEF))
     enddo atoms2
 
     ! Reads the spin components. This is read here, as well as in states_init,
     ! to be able to pass it to the pseudopotential initializations subroutine.
     call loct_parse_int(check_inp('SpinComponents'), 1, ispin)
-    if (ispin < 1 .or. ispin > 3) then
-       write(message(1),'(a,i4,a)') "Input: '", ispin,"' is not a valid SpinComponents"
-       message(2) = '(SpinComponents = 1 | 2 | 3)'
-       call write_fatal(2)
-    end if
+    if(.not.varinfo_valid_option('SpinComponents', ispin)) call input_error('SpinComponents')
     ispin = min(2, ispin)
 
     do i = 1, geo%nspecies

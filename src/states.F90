@@ -21,6 +21,7 @@
 
 module states
   use global
+  use varinfo
   use messages
   use syslabels
   use lib_oct
@@ -143,15 +144,32 @@ contains
 
     call states_null(st)
 
+
+    !%Variable SpinComponents
+    !%Type integer
+    !%Section 5 States
+    !%Description
+    !% The calculations may be done in three different ways: spin-restricted (TD)DFT (i.e., doubly
+    !% occupied "closed shells"), spin-unsrestricted or "spin-polarized" (TD)DFT (i.e. we have two
+    !% electronic systes, one with spin up and one with spin down), or making use of two-component
+    !% spinors.
+    !%Option unpolarized 1
+    !% Spin-restricted calculations.
+    !%Option polarized
+    !%Option spin_polarized 2
+    !% Spin unrestricted, also know as spin-DFT, SDFT. This mode will double the number of wave
+    !% functions will double the number of wave-functions necessary for a spin-unpolarised 
+    !% calculation.
+    !%Option non_collinear 3
+    !%Option spinors 3
+    !% The spin-orbitals are two-component spinors. This effectively allows the spin-density to
+    !% arrange non-collinearly - i.e. the magnetization vector is allowed to take different
+    !% directions in different points.
+    !%End
     call loct_parse_int(check_inp('SpinComponents'), UNPOLARIZED, st%d%ispin)
-    if (st%d%ispin < UNPOLARIZED .or. st%d%ispin > SPINORS) then
-       write(message(1),'(a,i4,a)') "Input: '", st%d%ispin,"' is not a valid SpinComponents"
-       message(2) = '(SpinComponents = 1 | 2 | 3)'
-       call write_fatal(2)
-    end if
-#ifdef COMPLEX_WFNS
-#else
-    if(st%d%ispin == 3) then
+    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call input_error('SpinComponents')
+#if !defined(COMPLEX_WFNS)
+    if(st%d%ispin == SPINORS) then
        message(1) = "Cannot use spinors with an executable compiled for real wavefunctions."
        call write_fatal(1)
     endif
