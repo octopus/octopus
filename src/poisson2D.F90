@@ -90,55 +90,51 @@ subroutine poisson2D_solve(m, pot, rho)
   FLOAT, intent(in)           :: rho(m%np)
 
   integer  :: i, j
-  FLOAT    :: x(2), y(2)
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  FLOAT    :: tmp
+  FLOAT    :: x(2), y(2), tmp
   FLOAT, allocatable :: pvec(:)
-#endif
 
   ASSERT(poisson_solver == -2)
 
   call push_sub('poisson2D.poisson2D_solve')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%parallel_in_domains) then
+    allocate(pvec(1:m%np))
 
-  allocate(pvec(1:m%np))
-
-  pot = M_ZERO
-  do i = 1, m%np_global
-     x(:) = m%x_global(i,1:2)
-     do j = 1, m%np
+    pot = M_ZERO
+    do i = 1, m%np_global
+      x(:) = m%x_global(i,1:2)
+      do j = 1, m%np
         if(m%vp%global(i, m%vp%partno) == j) then
-           pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/m%h(1)
+          pvec(j) = M_TWO*sqrt(M_PI)*rho(j)/m%h(1)
         else
-           y(:) = m%x(j,1:2)
-           pvec(j) = rho(j)/sqrt(sum((x-y)**2))
-        endif
-     enddo
-     tmp = dmf_integrate(m, pvec)
-     if (m%vp%part(i).eq.m%vp%partno) then
-        pot(m%vp%global(i, m%vp%partno)) = tmp
-     endif
-  end do
-
-  deallocate(pvec)
-
-#else
-
-  pot = M_ZERO
-  do i = 1, m%np
-     x(:) = m%x(i,1:2)
-     do j = 1, m%np
-        if(i == j) then
-           pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
-        else
-           y(:) = m%x(j,1:2)
-           pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
+          y(:) = m%x(j,1:2)
+          pvec(j) = rho(j)/sqrt(sum((x-y)**2))
         end if
-     end do
-  end do
+      end do
+      tmp = dmf_integrate(m, pvec)
+      if (m%vp%part(i).eq.m%vp%partno) then
+        pot(m%vp%global(i, m%vp%partno)) = tmp
+      end if
+    end do
 
-#endif
+    deallocate(pvec)
+
+  else ! serial mode
+
+    pot = M_ZERO
+    do i = 1, m%np
+      x(:) = m%x(i,1:2)
+      do j = 1, m%np
+        if(i == j) then
+          pot(i) = pot(i) + M_TWO*sqrt(M_PI)*rho(i)/m%h(1)*m%vol_pp(j)
+        else
+          y(:) = m%x(j,1:2)
+          pot(i) = pot(i) + rho(j)/sqrt(sum((x-y)**2))*m%vol_pp(j)
+        end if
+      end do
+    end do
+
+  end if
 
   call pop_sub()
 end subroutine poisson2D_solve

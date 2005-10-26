@@ -38,11 +38,11 @@ module mesh
   private
   public ::          &
     mesh_type,       &
-    mesh_init_start, &
-    mesh_init_finish,&
+    mesh_init_1,     &
+    mesh_init_2,     &
+    mesh_init_3,     &
     mesh_end,        &
     mesh_double_box, &
-    mesh_create_xyz, &
     mesh_inborder,   &
     mesh_r,          &
     mesh_gcutoff,    &
@@ -80,8 +80,11 @@ module mesh
     FLOAT,   pointer :: x_tmp(:,:,:,:)  ! temporary arrays that we have to keep between calls to
     integer, pointer :: Lxyz_tmp(:,:,:) ! init_1 and init_2
 
-    type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
     logical       :: parallel_in_domains
+    integer       :: mpi_comm ! my communicator in domains
+    integer       :: mpi_size ! size of mpi_comm (defined also in serial mode)
+    integer       :: mpi_rank ! rank of mpi_comm (defined also in serial mode)
+    type(pv_type) :: vp ! Describes parallel vectors defined on the mesh.
 
     ! some other vars
     integer :: nr(2,3)  ! dimensions of the box where the points are contained
@@ -100,65 +103,6 @@ module mesh
   end type mesh_type
 
 contains
-
-  !---------------------------------------------------------------------------------*/
-  subroutine mesh_init_start(sb, m, geo, cv, enlarge, stencil, np_stencil, mc)
-    type(simul_box_type), target, intent(in)    :: sb
-    type(mesh_type),              intent(inout) :: m
-    type(geometry_type),          intent(in)    :: geo
-    type(curvlinear_type),        intent(in)    :: cv
-    integer,                      intent(in)    :: enlarge(3)
-    integer,                      intent(in)    :: stencil(:, :)
-    integer,                      intent(in)    :: np_stencil
-    type(multicomm_type),         intent(in)    :: mc
-
-    call push_sub('mesh.mesh_init_start')
-
-    m%sb => sb   ! keep an internal pointer
-    m%h  =  sb%h ! this number can change in the following
-    m%use_curvlinear = cv%method.ne.CURV_METHOD_UNIFORM
-    m%enlarge = enlarge
-
-    call adjust_nr()          ! find out the extension of the simulation box
-    call mesh_create_xyz(sb, m, geo, cv, mc)
-
-    call pop_sub()
-  contains
-    ! set nr and adjust the mesh so that:
-    ! 1) the new grid exactly fills the box;
-    ! 2) the new mesh is not larger than the user defined mesh.
-    subroutine adjust_nr()
-      integer :: i, j
-      FLOAT   :: x(sb%dim), chi(sb%dim)
-      logical :: out
-
-      m%nr = 0
-      do i = 1, sb%dim
-         chi(:) = M_ZERO; j = 0
-         out = .false.
-         do while(.not.out)
-            j      = j + 1
-            chi(i) = j*m%h(i)
-            call curvlinear_chi2x(sb, geo, cv, chi(:), x(:))
-            out = (x(i) > sb%lsize(i))
-         end do
-         m%nr(2, i) = j - 1
-      end do
-
-      ! we have a symmetric mesh (for now)
-      m%nr(1,:) = -m%nr(2,:)
-
-      ! we have to ajust a couple of things for the periodic directions
-      do i = 1, sb%periodic_dim
-         m%h(i)     = sb%lsize(i)/real(m%nr(2, i))
-         m%nr(2, i) = m%nr(2, i) - 1
-      end do
-
-      m%l(:) = m%nr(2, :) - m%nr(1, :) + 1
-
-    end subroutine adjust_nr
-
-  end subroutine mesh_init_start
 
 
   ! finds the dimension of a box doubled in the non-periodic dimensions
@@ -319,6 +263,6 @@ contains
      call pop_sub()
    end subroutine mesh_end
 
-#include "mesh_create.F90"
+#include "mesh_init.F90"
 
 end module mesh

@@ -1003,7 +1003,7 @@ contains
     if(multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)) then
 
       st%parallel_in_states = .true.
-      st%comm = mc%group_comm(PARALLEL_STATES)
+      st%comm = mc%group_comm(P_STRATEGY_STATES)
       call MPI_Comm_size(st%comm, st%numprocs, ierr)
       call MPI_Comm_rank(st%comm, st%rank, ierr)
       

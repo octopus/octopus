@@ -20,74 +20,36 @@
 
 #include "global.h"
 
-! This part is for combined parallelization in indices and domains.
+! This part regards the combined parallelization in indices
+!
 ! Given a number n_index of indices and their ranges index_range(1:n_index),
-! communicators for domains and indices are created.
+! we divide the n_nodes in groups and create communicators for each group.
+! Each group is associated with one index. The min_range indicates the minimum
+! number of elements in each processor. For example, given min_range(1) = 25000,
+! the algorithm will try to put at least 25000 points in each processor
 !
 ! Example:
-! Given two indices j, k with ranges index_range(j) = 3, index_range(k) = 4, 
-! and n_node = 48 nodes, we would put
-!   n_domain_node = n_node/n_domain,  with
-!   n_domain = prod(a=j, k)[index_range(a)] = 4
-! nodes into each domain parallelization.
-! To perform collective operations (like sums) over j, k respectively n_index_comm = N(n_index) = 7
-! communicators are introduced (for the definition of N see footnote (1)).
-! Each of these communicators contains only the root nodes of all domain parallelizations 
-! participating in this particular index. The reason for this is that only root nodes know
-! the complete functions (after vec_gather).
+! Given 3 indices with ranges 
+!   index_range(1) = 100000, (number of points in the mesh)
+!   index_range(2) = 15,     (number of states)
+!   index_range(3) = 2,      (number of k-points)
+! and 12 processors, we could get
+!   mc%group_sizes = (2, 3, 2)
+! which means that space is divided in 8 domains, the states are divided among 4 nodes,
+! and the k-points in 2. One can view it as a tree (see degug/parallel_tree.dot)
+!
+!                       ------------------
+!                       /                \         <- Division in k-points (1 k-point per node)
+!                  ---------          ---------    
+!                /     |    \       /     |    \   <- Division in states   (5 states per node)
+!              /  \  /  \  /  \   /  \  /  \  /  \ <- Division in domains  (50000 points per node)
 ! 
-! The example above can visualized as follows:
-! 
-!   j
-!  --->
-!  |   (1)  (2)  (3)
-! k|   (4)  (5)  (6)
-!  |   (7)  (8)  (9)
-!  V  (10) (11) (12)
+! To perform collective operations (like a reduce), you can use the communicators
+! provided in mc%group_comm(:). For example, to sum over states, the communicator
+! to use is mc%group_comm(P_STRATEGY_STATES)
 !
-! (n) are domain parallelizations of four nodes.
-! The communicators for j are as follows:
-! index_comm(k=1, j) = {1, 2, 3}
-! index_comm(k=2, j) = {4, 5, 6}
-! index_comm(k=3, j) = {7, 8, 9}
-! index_comm(k=4, j) = {10, 11, 12}
-! 
-! For k they look like this:
-! index_comm(j=1, k) = {1, 4, 7, 10}
-! index_comm(j=2, k) = {2, 5, 8, 11}
-! index_comm(j=3, k) = {3, 6, 9, 12}
-!
-! {p} means that the root node of domain parallelization
-! p is member of the denoted communicator.
-!
-! In general the communicators for index a(i) out of a(1), ..., a(n_index) is addressed by 
-! specifying all other indices x, y, ... except i: index_comm(a=(x, y, ...), i)
-!
-! For generality, all index communicators are stored in a vector and the adressing is done 
-! by a function index_comm_number(a, i). a(1:n_index) specifies the values for all indices 
-! except i (the value of a(i) is irrelevant) and i is the number of the requested index:
-! index_comm_number(a, i) == offset + position, where
-!   offset   == sum(x=1, ..., i-1; index_range(x)>1)
-!               [prod(y=1, ..., n_index; y|=x)[index_range(y)]]
-!   position == sum(x=1, ..., n_index; x|=i; index_range(x)>1)[(a(x)-1)*
-!               prod(y=x+1, ..., n_index; y|=i)[index_range(y)]] + 1
-!
-! Note that only indices with ranges greater than one are summed up.
-! An index with range one is equal to no parallelization in this index.
-!
-! For each index i the rest of the indices form a n_index-1 dimensional array. The offset of this 
-! array in index_comm is offset in the above function. It is the number of communicators belonging 
-! to the indices 1, ..., i-1. The position in the array is computed as for any other n-dimensional 
-! array (for generalities sake it has to be done by hand and not by the Fortran compiler).
-! With this function, the j communicator for k=2 can be accessed with
-! index_comm(index_comm_number((/0, 2/), 1)) (with j being the first and k the second index).
-!
-! ---------- 
-! (1) N(1)   = 1
-!     N(i+1) = N(i)*index_range(i+1) + prod(a=1, ..., i)[index_range(a)]
-!
-! (2) prod(x=1, ..., n)[f(x)] = f(1)* ... *f(x)
-!
+! You can use the routine multicomm_strategy_is_parallel to know is a certain
+! strategy is parallel.
 
 module multicomm_mod
   use varinfo
@@ -135,7 +97,7 @@ module multicomm_mod
     
     integer          :: par_strategy         ! What kind of parallelization strategy should we use?
     
-    integer, pointer :: group_ranks(:)       ! Number of processors in each group
+    integer, pointer :: group_sizes(:)       ! Number of processors in each group
     type(multicomm_tree_type), pointer :: group_tree
 
     integer, pointer :: who_am_i(:)          ! the path to get to my processor in the tree
@@ -148,12 +110,7 @@ module multicomm_mod
      P_STRATEGY_SERIAL  = 0,    & ! single domain, all states, kpoints on a single processor
      P_STRATEGY_DOMAINS = 1,    & ! parallelization domains
      P_STRATEGY_STATES  = 2,    & ! parallelization in kpoints
-     P_STRATEGY_KPOINTS = 4       ! parallelization in states
-
-  integer, public, parameter :: &
-     PARALLEL_DOMAINS = 1,      &
-     PARALLEL_STATES  = 2,      &
-     PARALLEL_KPOINTS = 3
+     P_STRATEGY_KPOINTS = 3       ! parallelization in states
 
   integer,           parameter :: n_par_types = 3
   character(len=11), parameter :: par_types(0:3) = &
@@ -167,6 +124,7 @@ contains
     integer,              intent(inout):: index_range(:)
     integer,              intent(in)   :: min_range(:)
 
+    integer :: i
     integer(POINTER_SIZE) :: blk
 
     call push_sub('mpi.multicomm_init')
@@ -181,8 +139,8 @@ contains
 
     call strategy()
     if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
-      allocate(mc%group_ranks(mc%n_index))
-      mc%group_ranks(:) = 1
+      allocate(mc%group_sizes(mc%n_index))
+      mc%group_sizes(:) = 1
 
       !%Variable ParallelizationGroupRanks
       !%Type block
@@ -199,6 +157,13 @@ contains
       else
         call assign_nodes()
       end if
+
+      ! reset par_strategy
+      do i = 1, mc%n_index
+        if(mc%group_sizes(i) == 1) mc%par_strategy = ibclr(mc%par_strategy, i-1)
+      end do
+
+      ! reset 
       call sanity_check()
       call create_group_tree(mc)
       call group_comm_create()
@@ -231,7 +196,10 @@ contains
         !%End
 
         if(mpiv%numprocs > 1) then
-          par_all = P_STRATEGY_DOMAINS + P_STRATEGY_STATES + P_STRATEGY_KPOINTS
+          par_all = 0
+          do i = 1, n_par_types
+            par_all = par_all + 2**(i-1)
+          end do
 
           call loct_parse_int(check_inp('ParallelizationStrategy'),  &
              par_all, mc%par_strategy)
@@ -276,10 +244,10 @@ contains
 
         n = loct_parse_block_cols(blk, 0)
 
-        mc%group_ranks = 1
+        mc%group_sizes = 1
         do i = 1, min(n, mc%n_index)
-          if(multicomm_level_is_parallel(mc, i)) then
-            call loct_parse_block_int(blk, 0, i-1, mc%group_ranks(i))
+          if(multicomm_strategy_is_parallel(mc, i)) then
+            call loct_parse_block_int(blk, 0, i-1, mc%group_sizes(i))
           end if
         end do
       end subroutine read_block
@@ -297,7 +265,7 @@ contains
         ! this is the maximum number of processors in each group
         n_group_max(1:mc%n_index) = max(index_range(1:mc%n_index)/min_range(1:mc%n_index), 1)
         do k = 1, mc%n_index
-          if(.not.multicomm_level_is_parallel(mc, k)) n_group_max(k) = 1
+          if(.not.multicomm_strategy_is_parallel(mc, k)) n_group_max(k) = 1
         end do
 
         ! for each index
@@ -314,15 +282,15 @@ contains
           call math_divisors(n, n_divisors, divisors)
 
           ! get the divisor of n >= f
-          mc%group_ranks(k) = n
+          mc%group_sizes(k) = n
           do i = 1, n_divisors
             if(real(divisors(i), PRECISION) >= f) then
-              mc%group_ranks(k) = divisors(i)
+              mc%group_sizes(k) = divisors(i)
               exit
             end if
           end do
 
-          n = n/mc%group_ranks(k)
+          n = n/mc%group_sizes(k)
         end do
 
         deallocate(n_group_max)
@@ -340,28 +308,28 @@ contains
         ! print out some info
         i = 0
         do k = 1, mc%n_index
-          if(.not.multicomm_level_is_parallel(mc, k)) cycle
+          if(.not.multicomm_strategy_is_parallel(mc, k)) cycle
           i = i + 1
           write(message(i),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
-             par_types(k), ' group:', mc%group_ranks(k), ' (', index_range(k), ')'
+             par_types(k), ' group:', mc%group_sizes(k), ' (', index_range(k), ')'
         end do
         call write_info(i)
 
         ! do we have the correct number of processors
-        if(product(mc%group_ranks(1:mc%n_index)).ne.mpiv%numprocs) then
+        if(product(mc%group_sizes(1:mc%n_index)).ne.mpiv%numprocs) then
           write(message(1),'(a,i4,a,i4,a)') "Inconsistent number of processors (", &
-             product(mc%group_ranks(1:mc%n_index)), ".ne.", mpiv%numprocs, ")"
+             product(mc%group_sizes(1:mc%n_index)), ".ne.", mpiv%numprocs, ")"
           message(2) = "You probably have an problem in the block 'ParallelizationGroupRanks'"
           call write_fatal(2)
         end if
 
-        if(any(mc%group_ranks(1:mc%n_index) > index_range(1:mc%n_index))) then
+        if(any(mc%group_sizes(1:mc%n_index) > index_range(1:mc%n_index))) then
           message(1) = "Could not distribute nodes in parallel job. Most likely you are trying to"
           message(2) = "use too many nodes for the job"
           call write_fatal(2)
         end if
 
-        if(any(index_range(1:mc%n_index)/mc%group_ranks(1:mc%n_index) < min_range(1:mc%n_index))) then
+        if(any(index_range(1:mc%n_index)/mc%group_sizes(1:mc%n_index) < min_range(1:mc%n_index))) then
           message(1) = "I have less elements in a parallel group than recommended."
           message(2) = "Maybe you should reduce the number of nodes"
           call write_warning(2)
@@ -370,7 +338,7 @@ contains
         ! calculate fraction of idle time
         frac = M_ONE
         do i = 1, mc%n_index
-          frac = frac * (M_ONE - real(mod(index_range(i), mc%group_ranks(i)), PRECISION)/ &
+          frac = frac * (M_ONE - real(mod(index_range(i), mc%group_sizes(i)), PRECISION)/ &
              real(index_range(i), PRECISION))
         end do
 
@@ -398,7 +366,7 @@ contains
 
         allocate(me(mc%n_index))
         do i = 1, mc%n_index
-          if(.not.multicomm_level_is_parallel(mc, i)) cycle
+          if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
 
           me(:) = mc%who_am_i(:)
           me(i) = 1
@@ -425,7 +393,7 @@ contains
 
     p => mc%group_tree
     do i = mc%n_index, 1, -1
-      if(.not.multicomm_level_is_parallel(mc, i)) cycle
+      if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
       ASSERT(index(i)>0.and.index(i)<=p%n_down)
 
       p => p%down(index(i))%p
@@ -452,7 +420,7 @@ contains
     ! obtain the lower_level
     last_level = 1
     do
-      if((last_level>mc%n_index).or.multicomm_level_is_parallel(mc, last_level)) exit
+      if((last_level>mc%n_index).or.multicomm_strategy_is_parallel(mc, last_level)) exit
       last_level = last_level + 1
     end do
     ASSERT(last_level <= mc%n_index)
@@ -492,7 +460,7 @@ contains
       ! get next parallel level
       next_level = level - 1
       do
-        if((next_level==0).or.multicomm_level_is_parallel(mc, next_level)) exit
+        if((next_level==0).or.multicomm_strategy_is_parallel(mc, next_level)) exit
         next_level = next_level - 1
       end do
 
@@ -516,7 +484,7 @@ contains
 
       else if(next_level .ne. 0) then
       
-        this%n_down = mc%group_ranks(next_level)
+        this%n_down = mc%group_sizes(next_level)
         allocate(this%down(this%n_down))
         do i = 1, this%n_down
           index_run(next_level) = i
@@ -591,21 +559,23 @@ contains
 
     call push_sub('mpi.multicomm_end')
 
-    ! delete communicators
-    do i = 1, mc%n_index
-      if(.not.multicomm_level_is_parallel(mc, i)) cycle
+    if(mc%par_strategy.ne.P_STRATEGY_SERIAL) then
+      ! delete communicators
+      do i = 1, mc%n_index
+        if(.not.multicomm_strategy_is_parallel(mc, i)) cycle
+        
+        call MPI_Comm_free(mc%group_comm(i), mpi_err)
+      end do
 
-      call MPI_Comm_free(mc%group_comm(i), mpi_err)
-    end do
+      ! now delete the tree
+      call delete_tree(mc%group_tree)
+      deallocate(mc%group_tree)
+      nullify(mc%group_tree)
 
-    ! now delete the tree
-    call delete_tree(mc%group_tree)
-    deallocate(mc%group_tree)
-    nullify(mc%group_tree)
-
-    ! deallocate the rest of the arrays
-    deallocate(mc%group_ranks, mc%who_am_i, mc%group_comm, mc%group_root)
-    nullify(mc%group_ranks, mc%who_am_i, mc%group_comm, mc%group_root)
+      ! deallocate the rest of the arrays
+      deallocate(mc%group_sizes, mc%who_am_i, mc%group_comm, mc%group_root)
+      nullify(mc%group_sizes, mc%who_am_i, mc%group_comm, mc%group_root)
+    end if
 
     call pop_sub()
 
@@ -632,19 +602,11 @@ contains
   end subroutine multicomm_end
 
   ! ---------------------------------------------------------
-  logical function multicomm_level_is_parallel(mc, level) result(r)
+  logical function multicomm_strategy_is_parallel(mc, level) result(r)
     type(multicomm_type), intent(in) :: mc    
     integer,              intent(in) :: level
 
     r = iand(mc%par_strategy, 2**(level-1)).ne.0
-  end function multicomm_level_is_parallel
-
-  ! ---------------------------------------------------------
-  logical function multicomm_strategy_is_parallel(mc, strategy) result(r)
-    type(multicomm_type), intent(in) :: mc    
-    integer,              intent(in) :: strategy
-
-    r = iand(mc%par_strategy, strategy).ne.0
   end function multicomm_strategy_is_parallel
 
 end module multicomm_mod

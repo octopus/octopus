@@ -43,37 +43,43 @@ subroutine X(input_function)(filename, m, f, ierr)
   integer,              intent(out) :: ierr
 
 #if defined(HAVE_MPI) && defined(HAVE_METIS)
-  integer             :: mpierr
+  integer             :: mpi_err
   R_TYPE, allocatable :: f_global(:)
 #endif
 
   call push_sub('out_inc.Xinput_function')
-  
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  ! Only root reads. Therefore, only root needs a buffer
-  ! f_global for the whole function.
-  if(m%vp%rank.eq.m%vp%root) then
-    allocate(f_global(1:m%np_global))
-    call X(input_function_global)(filename, m, f_global, ierr)
-  endif
-  if(in_debug_mode) call write_debug_newlines(2)
 
-  ! Only root knows, wheather the file was succesfully read.
-  ! Now, it tells everybody else.
-  call MPI_Debug_IN(m%vp%comm, C_MPI_BCAST)
-  call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-  call MPI_Debug_OUT(m%vp%comm, C_MPI_BCAST)
-  ! Only scatter, when successfully read the file(s).
-  if(ierr.le.0) then
-    call X(vec_scatter)(m%vp, f_global, f)
-  end if
+  if(m%parallel_in_domains) then
+#if defined(HAVE_MPI)
+    ! Only root reads. Therefore, only root needs a buffer
+    ! f_global for the whole function.
+    if(m%mpi_rank == 0) then
+      allocate(f_global(1:m%np_global))
+      call X(input_function_global)(filename, m, f_global, ierr)
+    end if
+    if(in_debug_mode) call write_debug_newlines(2)
 
-  if(m%vp%rank.eq.m%vp%root) then
-    deallocate(f_global)
-  end if
+    ! Only root knows if the file was succesfully read.
+    ! Now, it tells everybody else.
+    call MPI_Debug_IN(m%vp%comm, C_MPI_BCAST)
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpi_err)
+    call MPI_Debug_OUT(m%vp%comm, C_MPI_BCAST)
+
+    ! Only scatter, when successfully read the file(s).
+    if(ierr.le.0) then
+      call X(vec_scatter)(m%vp, f_global, f)
+    end if
+
+    if(m%mpi_rank == 0) then
+      deallocate(f_global)
+    end if
 #else
-  call X(input_function_global)(filename, m, f, ierr)
+    ! internal error
+    ASSERT(0)
 #endif
+  else
+    call X(input_function_global)(filename, m, f, ierr)
+  end if
 
   call pop_sub()
 

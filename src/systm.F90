@@ -40,6 +40,7 @@ module system
   use hamiltonian
   use output
   use multicomm_mod
+  use mpi_mod
 
   implicit none
 
@@ -76,11 +77,11 @@ contains
     call geometry_init(sys%gr%geo)
     call simul_box_init(sys%gr%sb, sys%gr%geo)
     call states_init(sys%st, sys%gr)
-    call grid_init_start(sys%gr, sys%mc)
+    call grid_init_1(sys%gr)
 
     call parallel_init()
 
-    call grid_init_finish(sys%gr, sys%mc)
+    call grid_init_2(sys%gr, sys%mc)
     call states_densities_init(sys%st, sys%gr)
     call output_init(sys%gr%sb, sys%outp)
     call v_ks_init(sys%gr, sys%ks, sys%st%d)
@@ -142,10 +143,12 @@ contains
     call pop_sub()
   end subroutine system_end
 
-  !! The reason why the next subroutines are in system is that they need to use
-  !! both mesh and atom. Previously they were inside atom, but this leads to
-  !! circular dependencies of the modules
-  !----------------------------------------------------------
+
+  !---------------------------------------------------------------------------
+  ! The reason why the next subroutines are in system is that they need to use
+  ! both mesh and atom. Previously they were inside atom, but this leads to
+  ! circular dependencies of the modules
+  !---------------------------------------------------------------------------
   subroutine atom_density(m, sb, atom, spin_channels, rho)
     type(mesh_type),      intent(in)    :: m
     type(simul_box_type), intent(in)    :: sb
@@ -157,6 +160,9 @@ contains
     FLOAT :: r, x
     R_TYPE :: psi1, psi2
     type(specie_type), pointer :: s
+#if defined(HAVE_MPI)
+    integer :: in_points_red, mpi_err
+#endif
 
     ASSERT(spin_channels == 1 .or. spin_channels == 2)
 
@@ -180,20 +186,22 @@ contains
              in_points = in_points + 1
           end if
        end do
-    ! FIXME: in_points has to be reduced when running with partitioning.
-    ! Something like
-    ! #if defined(HAVE_METIS) && defined(HAVE_MPI)
-    !   call MPI_Allreduce(in_points_local, in_points, 1, R_MPITYPE, MPI_SUM, m%vp%comm, ierr)
-    ! #endif
+
+#if defined(HAVE_MPI)
+       if(m%parallel_in_domains) then
+         call MPI_Allreduce(in_points, in_points_red, 1, MPI_INTEGER, MPI_SUM, m%vp%comm, mpi_err)
+         in_points = in_points_red
+       end if
+#endif
 
        if(in_points > 0) then
-          do i = 1, m%np
-             call mesh_r(m, i, r, a=atom%x)
-             if(r <= s%jradius) then
-                rho(i, 1:spin_channels) = real(s%z_val, PRECISION) /   &
-                     (m%vol_pp(i)*real(in_points*spin_channels, PRECISION))
-             end if
-          end do
+         do i = 1, m%np
+           call mesh_r(m, i, r, a=atom%x)
+           if(r <= s%jradius) then
+             rho(i, 1:spin_channels) = real(s%z_val, PRECISION) /   &
+                (m%vol_pp(i)*real(in_points*spin_channels, PRECISION))
+           end if
+         end do
        end if
 
     case (SPEC_PS_TM2,SPEC_PS_HGH) ! ...from pseudopotential

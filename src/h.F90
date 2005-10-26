@@ -274,12 +274,11 @@ end subroutine hamiltonian_end
 ! This subroutine calculates the total energy of the system. Basically, it
 ! adds up the KS eigenvalues, and then it substracts the whatever double
 ! counts exist (see TDDFT theory for details).
-subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
+subroutine hamiltonian_energy(h, st, eii, iunit)
   type(hamiltonian_type), intent(inout) :: h
   type(states_type),      intent(in)    :: st
   FLOAT,                  intent(in)    :: eii
   integer,                intent(in)    :: iunit
-  logical,      optional, intent(in)    :: reduce
 
   FLOAT :: e
 #ifdef HAVE_MPI
@@ -292,12 +291,9 @@ subroutine hamiltonian_energy(h, st, eii, iunit, reduce)
   e = states_eigenvalues_sum(st)
 
 #ifdef HAVE_MPI
-  if(present(reduce)) then
-    if(reduce) then
-      call MPI_ALLREDUCE(e, s, 1, &
-           MPI_FLOAT, MPI_SUM, st%comm, err)
-      e = s
-    end if
+  if(st%parallel_in_states) then
+    call MPI_ALLREDUCE(e, s, 1, MPI_FLOAT, MPI_SUM, st%comm, err)
+    e = s
   end if
 #endif
 

@@ -19,11 +19,10 @@
 
 
 ! Calculates the new density out the wavefunctions and occupations...
-subroutine X(states_calc_dens)(st, np, rho, reduce)
+subroutine X(states_calc_dens)(st, np, rho)
   type(states_type), intent(in)  :: st
   integer,           intent(in)  :: np
   FLOAT,             intent(out) :: rho(np, st%d%nspin)
-  logical,           intent(in), optional :: reduce
 
   integer :: i, ik, p, sp
   CMPLX   :: c
@@ -63,20 +62,19 @@ subroutine X(states_calc_dens)(st, np, rho, reduce)
 
 #if defined(HAVE_MPI)
   ! reduce density (assumes memory is contiguous)
-  if(present(reduce)) then
-    if(reduce) then
-      allocate(reduce_rho(1:np, st%d%nspin))
-      call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
-           MPI_FLOAT, MPI_SUM, st%comm, ierr)
-      rho = reduce_rho
-      deallocate(reduce_rho)
-    end if
+  if(st%parallel_in_states) then
+    allocate(reduce_rho(1:np, st%d%nspin))
+    call MPI_ALLREDUCE(rho(1, 1), reduce_rho(1, 1), np*st%d%nspin, &
+       MPI_FLOAT, MPI_SUM, st%comm, ierr)
+    rho = reduce_rho
+    deallocate(reduce_rho)
   end if
 #endif
 
   call pop_sub()
   return
 end subroutine X(states_calc_dens)
+
 
 ! Orthonormalizes nst orbital in mesh m
 subroutine X(states_gram_schmidt)(nst, m, dim, psi, start)

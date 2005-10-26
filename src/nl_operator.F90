@@ -27,9 +27,7 @@ module nl_operator
   use simul_box
   use io
   use profiling_mod
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
   use par_vec
-#endif
 
   implicit none
 
@@ -836,8 +834,10 @@ contains
 
     call push_sub('nl_operator.dnl_operator_operate')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    if(op%m%vp%p.ne.1) call dvec_ghost_update(op%m%vp, fi)
+#if defined(HAVE_MPI)
+    if(op%m%parallel_in_domains) then
+      if(op%m%vp%p.ne.1) call dvec_ghost_update(op%m%vp, fi)
+    end if
 #endif
 
     n = op%n
@@ -874,8 +874,10 @@ contains
 
     call push_sub('nl_operator.znl_operator_operate')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    if(op%m%vp%p.ne.1) call zvec_ghost_update(op%m%vp, fi)
+#if defined(HAVE_MPI)
+    if(op%m%parallel_in_domains) then
+      if(op%m%vp%p.ne.1) call zvec_ghost_update(op%m%vp, fi)
+    end if
 #endif
 
     n = op%n
@@ -914,8 +916,10 @@ contains
 
     call push_sub('nl_operator.znl_operator_operate_complex')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS) 
-    call zvec_ghost_update(op%m%vp, fi)
+#if defined(HAVE_MPI)
+    if(op%m%parallel_in_domains) then
+      call zvec_ghost_update(op%m%vp, fi)
+    end if
 #endif
 
     n = op%n

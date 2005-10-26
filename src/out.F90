@@ -201,19 +201,19 @@ integer function iopar_open(m, file, action, status, form, position, die) &
   character(len=*), intent(in), optional :: status, form, position
   logical,          intent(in), optional :: die
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
   integer :: mpierr
 #endif
 
   call push_sub('out.iopar_open')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%rank.eq.m%vp%root) then
+  if(m%mpi_rank == 0) then
     iunit = io_open(file, action, status, form, position, die)
   end if
-  call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-#else
-  iunit = io_open(file, action, status, form, position, die)
+#if defined(HAVE_MPI) && defined(HAVE_METIS)
+  if(m%parallel_in_domains) then
+    call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+  end if
 #endif
 
   call pop_sub()
@@ -225,19 +225,19 @@ subroutine iopar_close(m, iunit)
   type(mesh_type), intent(in)    :: m
   integer,         intent(inout) :: iunit
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
   integer :: mpierr
 #endif
 
   call push_sub('out.iopar_close')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%rank.eq.m%vp%root) then
+  if(m%mpi_rank == 0) then
     call io_close(iunit)
   end if
-  call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-#else
-  call io_close(iunit)
+#if defined(HAVE_MPI)
+  if(m%parallel_in_domains) then
+    call MPI_Bcast(iunit, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+  end if
 #endif
 
   call pop_sub()
@@ -251,20 +251,20 @@ subroutine iopar_read(m, iunit, line, ierr)
   character(len=*), intent(out) :: line
   integer,          intent(out) :: ierr
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
+#if defined(HAVE_MPI)
   integer :: mpierr
 #endif
 
   call push_sub('out.iopar_read')
   
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%rank.eq.m%vp%root) then
+  if(m%mpi_rank == 0) then
     read(iunit, '(a)', iostat=ierr) line
   end if
-  call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
-  call MPI_Bcast(line, len(line), MPI_CHARACTER, m%vp%root, m%vp%comm, mpierr)
-#else
-    read(iunit, '(a)', iostat=ierr) line
+#if defined(HAVE_MPI)
+  if(m%parallel_in_domains) then
+    call MPI_Bcast(ierr, 1, MPI_INTEGER, m%vp%root, m%vp%comm, mpierr)
+    call MPI_Bcast(line, len(line), MPI_CHARACTER, m%vp%root, m%vp%comm, mpierr)
+  end if
 #endif
 
   call pop_sub()
@@ -278,13 +278,9 @@ subroutine iopar_backspace(m, iunit)
 
   call push_sub('out.iopar_read')
 
-#if defined(HAVE_MPI) && defined(HAVE_METIS)
-  if(m%vp%rank.eq.m%vp%root) then
+  if(m%mpi_rank == 0) then
     backspace(iunit)
   end if
-#else
-  backspace(iunit)
-#endif
 
   call pop_sub()
 

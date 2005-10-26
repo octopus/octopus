@@ -76,7 +76,7 @@ contains
 
        ! setup forward propagation
        call read_state(psi_i, "wf.initial")
-       call zstates_calc_dens(psi_i, NP, psi_i%rho, reduce=.true.)
+       call zstates_calc_dens(psi_i, NP, psi_i%rho)
        call zv_ks_calc(gr, sys%ks, h, psi_i, calc_eigenval=.true.)
        do i = 1, st%d%nspin
           v_old_i(:, i, 2) = h%vhxc(:, i)
@@ -102,7 +102,7 @@ contains
 
        ! setup backward propagation
        call read_state(psi_f, "wf.final")
-       call zstates_calc_dens(psi_f, NP, psi_f%rho, reduce=.true.)
+       call zstates_calc_dens(psi_f, NP, psi_f%rho)
        call zv_ks_calc(gr, sys%ks, h, psi_f, calc_eigenval=.true.)
        do i = 1, st%d%nspin
           v_old_f(:, i, 2) = h%vhxc(:, i)
@@ -156,14 +156,14 @@ contains
       ! psi_f
       td%tr%v_old => v_old_f
       h%ep%lasers(1)%numerical => laser_f
-      call zstates_calc_dens(psi_f, NP, st%rho, reduce=.true.)
+      call zstates_calc_dens(psi_f, NP, st%rho)
       call zv_ks_calc(gr, sys%ks, h, psi_f, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
       ! psi_i
       td%tr%v_old => v_old_i
       h%ep%lasers(1)%numerical => laser_i
-      call zstates_calc_dens(psi_i, NP, st%rho, reduce=.true.)
+      call zstates_calc_dens(psi_i, NP, st%rho)
       call zv_ks_calc(gr, sys%ks, h, psi_i, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
@@ -178,14 +178,14 @@ contains
       ! psi_i
       td%tr%v_old => v_old_i
       h%ep%lasers(1)%numerical => laser_i
-      call zstates_calc_dens(psi_i, NP, st%rho, reduce=.true.)
+      call zstates_calc_dens(psi_i, NP, st%rho)
       call zv_ks_calc(gr, sys%ks, h, psi_i, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi_i, td%tr, abs(iter*td%dt), abs(td%dt))
 
       ! psi_f
       td%tr%v_old => v_old_f
       h%ep%lasers(1)%numerical => laser_f
-      call zstates_calc_dens(psi_f, NP, st%rho, reduce=.true.)
+      call zstates_calc_dens(psi_f, NP, st%rho)
       call zv_ks_calc(gr, sys%ks, h, psi_f, calc_eigenval=.true.)
       call td_rti_dt(sys%ks, h, gr, psi_f, td%tr, abs(iter*td%dt), abs(td%dt))
 
@@ -234,7 +234,7 @@ contains
       call read_state(psi_f, "wf.final")
 
       ! setup the hamiltonian
-      call zstates_calc_dens(psi_f, NP, psi_f%rho, reduce=.true.)
+      call zstates_calc_dens(psi_f, NP, psi_f%rho)
       call zv_ks_calc(gr, sys%ks, h, psi_f, calc_eigenval=.true.)
 
       ! setup start of the propagation
@@ -253,7 +253,7 @@ contains
          ! time iterate wavefunctions
          call td_rti_dt(sys%ks, h, gr, psi_f, td%tr, abs(i*td%dt), abs(td%dt))
          ! update
-         call zstates_calc_dens(psi_f, NP, st%rho, reduce=.true.)
+         call zstates_calc_dens(psi_f, NP, st%rho)
          call zv_ks_calc(gr, sys%ks, h, psi_f, calc_eigenval=.true.)
 
          call loct_progress_bar(td%max_iter-1-i, td%max_iter-1)

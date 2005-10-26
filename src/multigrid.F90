@@ -137,8 +137,8 @@ contains
       mesh_out%enlarge = mesh_in%enlarge
 
 
-      call mesh_create_xyz(mesh_out%sb, mesh_out, geo, cv)
-      call mesh_init_finish(mesh_out, geo, cv)
+      call mesh_init_2(mesh_out%sb, mesh_out, geo, cv)
+      call mesh_init_3(mesh_out, geo, cv)
 
     end subroutine multigrid_mesh_half
 

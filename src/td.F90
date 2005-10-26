@@ -206,11 +206,11 @@ contains
        end if
 
        ! update density
-       call zstates_calc_dens(st, NP, st%rho, reduce=.true.)
+       call zstates_calc_dens(st, NP, st%rho)
 
        ! update hamiltonian and eigenvalues (fermi is *not* called)
        call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
-       call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
+       call hamiltonian_energy(h, st, geo%eii, -1)
 
        ! Recalculate forces, update velocities...
        if(td%move_ions > 0) then
@@ -307,14 +307,16 @@ contains
       end if
 
       if(ierr==0) then
-         call zstates_calc_dens(st, NP, st%rho, reduce=.true.)
+         call zstates_calc_dens(st, NP, st%rho)
          call zv_ks_calc(gr, sys%ks, h, st, calc_eigenval=.true.)
          x = minval(st%eigenval(st%st_start, :))
 #ifdef HAVE_MPI
-         call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%comm, i)
+         if(st%parallel_in_states) then
+           call MPI_BCAST(x, 1, MPI_FLOAT, 0, st%comm, i)
+         end if
 #endif
          call hamiltonian_span(h, minval(gr%m%h(1:NDIM)), x)
-         call hamiltonian_energy(h, st, geo%eii, -1, reduce=.true.)
+         call hamiltonian_energy(h, st, geo%eii, -1)
       end if
 
     end function init_wfs
