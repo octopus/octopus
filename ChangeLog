@@ -1,3 +1,259 @@
+2005-10-25 10:00  marques
+
+	* src/multicomm.F90: forgot to initialize a variable
+
+2005-10-25 09:59  marques
+
+	* configure.ac: --disable-debug was not working as expected
+
+2005-10-24 18:27  micael
+
+	* src/: epot.F90, h_inc.F90:
+	   *) More bug fixes related to the CDFT. Still not working though...
+
+2005-10-24 18:24  micael
+
+	* src/lcao.F90:
+	   *) Complex executable was not compiling. As I believe the line that
+	     was causing the problem was there only for debuging purposes I
+	  removed it.
+
+2005-10-19 21:30  marques
+
+	* src/: Makefile.am, casida.F90, epot.F90, global.F90, grid.F90,
+	  gs.F90, h.F90, main.F90, math.F90, mesh.F90, mesh_create.F90,
+	  mf.F90, mix.F90, mpi.F90, multicomm.F90, multigrid.F90, out.F90,
+	  par_vec.F90, restart.F90, run.F90, states.F90, systm.F90, td.F90,
+	  td_write.F90, xc.F90, xc_OEP.F90: This commit is related to the
+	  multi parallelism in octopus. It still does not work always, but I
+	  am leaving for the weekend, and I wanted to commit it before
+	  leaving. The code compiles in serial and runs all tests.
+
+	  *) I changed quite a lot the code that Heiko and Florian wrote (now
+	     in multicomm.F90). The comments are *not* consistent with the code
+	     (I will change it when I come back)
+	  *) The nodes are arranged in a tree structure. If you want to see
+	     the tree, just use "dot" on the file tree.dot.
+	  *) Now each node just gets n_index communicators. I think this is
+	     sufficient, but it may be changed in the future.
+	  *) Nodes are assigned using a very simple algorithm. Priority is
+	     given to parallelization in k-points, then in states, and finally in
+	  domains.
+	  *) TD part is still not changed (nor Casida), but the code behaves
+	     more or less for the GS (at least in 1D ;)
+	  *) Lots of cleaning and testing missing (for next week).
+
+2005-10-19 00:06  xavier
+
+	* liboct_parser/parse.c: Now liboct_parser can read variables from
+	  the environment, this is useful to call octopus from scripts without
+	  having to modify the input file or to give parameters from the
+	  command line.
+
+	  To use this, the environment variable OCT_PARSE_ENV must be defined
+	  and the octopus variable name must be prepended with OCT_ .
+
+	  For example, to call octopus with the CG poisson solver:
+
+	  $ OCT_PARSE_ENV=1 OCT_PoissonSolver=cg_corrected octopus
+
+	  or
+
+	  $ export OCT_PARSE_ENV=1 $ export OCT_PoissonSolver=cg_corrected $
+	  octopus
+
+	  This works only if the variables are not defined inside of the input
+	  file (if they are, variables are defined twice and I don't know what
+	  happens there). Blocks are not supported.
+
+	  The code is only 15 lines long and it doesn't change anything of the
+	  rest of the code of the parser, so it shouldn't introduce bugs (at
+	  least not many ;-).
+
+2005-10-18 18:06  acastro
+
+	* src/lcao.F90, src/liboct.F90, src/main.F90, src/math.F90,
+	  src/syslabels.F90, src/systm.F90, liboct/oct_gsl_f.c: I started
+	  improving the initial guesses for the SCF calculations. The reason
+	  is that there are serious convergence problems for model potential
+	  (quantum dots) in 1D and 2D (where random functions are used), and
+	  also for the calculation of particle states in the unocc mode --
+	  where also random functions are used.
+
+	  I am basicly going to put Harmonic oscillators functions. The code I
+	  commit now is far from complete (only 1D Harmonic oscillator
+	  functions for the moment).
+
+2005-10-18 15:01  xavier
+
+	* testsuite/finite_systems_3d/multigrid.test: Added a test for the
+	  multigrid poisson solver.
+
+2005-10-18 14:51  xavier
+
+	* libxc/lda.c, libxc/util.h, libxc/xc.h, libxc/xc_f.c,
+	  src/libxc.F90, src/xc.F90, src/xc_kxc.F90: Added Kxc, the third
+	  derivatives of Exc, to libxc. It's calculated using a second order
+	  numerical derivative of Vxc.
+
+2005-10-18 14:27  xavier
+
+	* src/poisson_multigrid.F90: Added Full MultiGrid, in this scheme a
+	  good initial approximation is obtained by solving the problem in the
+	  coarser levels. This is only used when the approximation passed to
+	  the subroutine is not good enough.
+
+2005-10-18 12:54  marques
+
+	* liboct/varinfo.c: Stupid bug. I was comparing a C string with a
+	  Fortran string, and sometimes it did not work out...
+
+2005-10-17 11:55  micael
+
+	* src/: derivatives_inc.F90, f_inc.F90:
+	   *) Bug fixed: gradient should be initialized to zero inside
+	      subroutine X(derivatives_grad) as it is declared as intent(out).
+
+2005-10-14 18:00  micael
+
+	* src/h_inc.F90:
+	   *) Bug fixes in the CDFT extra-terms.
+
+2005-10-14 17:49  micael
+
+	* share/PP/HGH/B.hgh:
+	   *) Bug fixed.
+
+2005-10-14 15:37  appel
+
+	* src/: epot.F90, gs.F90, h.F90, main.F90, mf.F90, mpi.F90,
+	  out.F90, par_vec.F90, restart.F90, states.F90, td.F90,
+	  td_write.F90, xc_OEP.F90: The parallel version of the code did
+	  not compile since Alberto was declaring the global module as
+	  private. I added preprocessor statements to include either the mpi
+	  module or mpif.h in the corresponding files.  The affected files are
+	  therefore the only ones where we use MPI statements.
+
+2005-10-14 15:35  appel
+
+	* src/curv_gygi.F90: natoms_ was accidentally declared as FLOAT.
+
+2005-10-14 15:34  appel
+
+	* src/casida.F90: Remove unused variables.
+
+2005-10-14 11:33  xavier
+
+	* src/static_pol_lr.F90: Fixed compilation issue.
+
+2005-10-13 15:26  xavier
+
+	* src/: main.F90, mix.F90: Added missing 'use varinfo' that was
+	  causing problems with ifc.
+
+2005-10-13 13:39  acastro
+
+	* src/: cross_section.F90, global.F90, messages.F90, profiling.F90,
+	  spectrum.F90: The global module was not declared as private.
+
+2005-10-13 12:58  xavier
+
+	* src/td_exp.F90: BUGFIX: In lanczos, the workspace allocated to
+	  call ZGPADM was too small, this caused the subroutine to stop
+	  sometimes.
+
+2005-10-13 12:47  acastro
+
+	* share/variables.local, src/mix.F90, src/scf.F90: OK, now the
+	  GR-Pulay scheme also works with domain-parallelization.
+
+2005-10-13 12:00  acastro
+
+	* share/variables.local, src/mix.F90, src/poisson3D.F90,
+	  src/scf.F90: The Broyden mixing scheme now also works with domain
+	  parallelization.  I will fix the GR-Pulay later if I have time.
+
+	  Incidentally, the mixing scheme was also wrong for the case of using
+	  adaptive coordinates. This didn't mean that it yielded wrong results
+	  (if the result was converged, it was correct), but it showed poor
+	  convergence behavior. Now it should be better, but that remains to
+	  be tested.
+
+2005-10-12 15:57  acastro
+
+	* src/: main.F90, varinfo.F90: Bug fixed.  The code was not
+	  complaining when passing a a non-valid CalculationMode input
+	  variable. It just did nothing.
+
+	  In order to fix this bug, I introduced a new public function in the
+	  varinfo module: varinfo_valid_option. It returns .true. if the value
+	  given to an option is valid. *However*, it now only works for
+	  variables whose range of valid option is a finite list of integers
+	  (such as the CalculationMode). In principle, we could get ambitious
+	  about this, and increase the functionality of it.
+
+2005-10-12 15:43  marques
+
+	* libxc/lda_c_pw.c: There was a sign wrong in the definition of
+	  pw92.
+
+	  Micael, can you please test this functional?
+
+2005-10-12 14:46  marques
+
+	* src/: epot.F90, epot_inc.F90, mesh.F90, mesh_create.F90,
+	  mf_inc.F90, simul_box.F90:
+	  *) mpi code now works even if using only one processor (it was given
+	  ?????? before)
+	  *) You can now run in parallel with non-local pseudopotentials
+
+	  However, I was not able to find the bug when running mpi with
+	  interacting electrons. This is what is missing for us to have the
+	  parallel version!!! Help anyone????
+
+2005-10-12 11:10  marques
+
+	* libxc/Makefile.am, src/Makefile.am, src/epot.F90,
+	  src/epot_inc.F90, src/grid.F90, src/h_inc.F90, src/main.F90,
+	  src/td.F90: Some cleaning:
+	    *) test.x is no longer generated in libxc/
+	    *) changed the names of several single character variables. Please
+	       *do not* call a variable a, b, n, c or whatever!!!!
+	    *) I noticed that some of you had tabs of 3 and 4 spaces. Do not
+	       forget that the default we agreed upon some years ago was *2*.
+	       Please change you emacs settings!
+
+2005-10-11 15:28  acastro
+
+	* INSTALL, TODO: Removed the TODO list, which was wildly outdated.
+	  Now it is an empty file. We could start maintaining it after the
+	  release...
+
+	  Also, I have put the GNU generic installation instructions in the
+	  INSTALL file, after a small header referring the reader to the
+	  manual for octopus- specific details.
+
+2005-10-11 14:03  acastro
+
+	* src/casida.F90: Bug fixed.  For some reason I had forgotten to
+	  remove a "stop" statement that I put for debugging...
+
+2005-10-11 11:50  appel
+
+	* src/nl_operator.F90: Do only ghost updates in
+	  znl_operator_operate when there is more than one partition.
+
+2005-10-11 11:50  appel
+
+	* src/grid.F90: Pass gr to grid_init as intent(inout). The code was
+	  segfaulting with the NAG compiler when only intent(out) was used.
+	  The problem didn't show up with the Intel compiler and I still don't
+	  understand why NAG failes in this case (compiler bug)?
+
+2005-10-10 00:49  acastro
+
+	* ChangeLog: [no log message]
+
 2005-10-10 00:39  acastro
 
 	* ChangeLog: I substituted the ChangeLog, that none of us
