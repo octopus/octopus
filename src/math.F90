@@ -105,7 +105,7 @@ contains
     if(n<=1) then 
       fac = 1
     else
-      fac = fac*factorial(n-1)
+      fac = n*factorial(n-1)
     endif
   end function factorial
 

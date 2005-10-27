@@ -97,21 +97,7 @@ contains
         call write_fatal(2)
       end if
 
-      !%Variable Dimensions
-      !%Type integer
-      !%Section 1 Generalities
-      !%Description
-      !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
-      !% variable. Note that not all input variables may be available in all cases.
-      !%Option 1
-      !% The system is 1-dimensional
-      !%Option 2
-      !% The system is 2-dimensional
-      !%Option 3
-      !% The system is 3-dimensional (default)
-      !%End
-      call loct_parse_int(check_inp('Dimensions'), 3, sb%dim)
-      if(sb%dim<1 .or. sb%dim>3) call input_error('Dimensions')
+      sb%dim = calc_dim
 
       !%Variable PeriodicDimensions
       !%Type integer

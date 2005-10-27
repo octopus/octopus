@@ -104,6 +104,7 @@ module global
   FLOAT, public, parameter :: P_c   =  CNST(137.036)
 
   integer, public  :: calc_mode
+  integer, public  :: calc_dim
 
   ! the standard input and output
   integer, public :: stderr, stdin, stdout

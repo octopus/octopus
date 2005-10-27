@@ -162,7 +162,7 @@ contains
     !% spinors.
     !%Option unpolarized 1
     !% Spin-restricted calculations.
-    !%Option polarized
+    !%Option polarized 2
     !%Option spin_polarized 2
     !% Spin unrestricted, also know as spin-DFT, SDFT. This mode will double the number of wave
     !% functions will double the number of wave-functions necessary for a spin-unpolarised 

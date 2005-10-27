@@ -84,6 +84,22 @@ program octopus
      call syslabels_init(calc_mode)
   endif
 
+  !%Variable Dimensions
+  !%Type integer
+  !%Section 1 Generalities
+  !%Description
+  !% octopus can run in 1, 2 or 3 dimensions, depending on the value of this
+  !% variable. Note that not all input variables may be available in all cases.
+  !%Option 1
+  !% The system is 1-dimensional
+  !%Option 2
+  !% The system is 2-dimensional
+  !%Option 3
+  !% The system is 3-dimensional (default)
+  !%End
+  call loct_parse_int(check_inp('Dimensions'), 3, calc_dim)
+  if( calc_dim > 3 .or. calc_dim < 1) call input_error('Dimensions')
+
   ! loop over all subsystems
   subsystems: do ns = 1, no_subsystems
 
