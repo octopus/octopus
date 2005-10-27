@@ -105,6 +105,12 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
            g0(1:NP,:) = g(1:NP,:)
 
            gg = X(states_dotp) (gr%m, st%d%dim, g, g0)
+           if(gg<CNST(1.0e-15)) then
+              conv = conv + 1
+              st%eigenval(p, ik) = es(1)
+              res = sqrt(gg)
+              exit
+           endif
 
            ! Starting or following iterations...
            if(iter .eq. 1) then
