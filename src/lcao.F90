@@ -72,7 +72,7 @@ subroutine lcao_init(gr, lcao_data, st, h)
   type(specie_type), pointer :: s
   integer :: ierr, norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2, i, j, ia, n, idim, is, k
   integer, parameter :: orbs_local = 2
-  R_TYPE :: x(gr%sb%dim)
+  FLOAT :: x(gr%sb%dim)
   R_TYPE, allocatable :: hpsi(:,:)
 
   if(NDIM.eq.2) return
