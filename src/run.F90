@@ -84,19 +84,6 @@ module run_prog
        I_WAVE_MATCHING      = 110, &
        I_PULPO              = 999
 
-    integer, private, parameter :: mode_parallelized(10) = (/ &
-       P_STRATEGY_DOMAINS,                      & ! M_GS
-       P_STRATEGY_DOMAINS,                      & ! M_UNOCC
-       P_STRATEGY_DOMAINS + P_STRATEGY_STATES,  & ! M_TD
-       P_STRATEGY_DOMAINS,                      & ! M_STATIC_POL
-       P_STRATEGY_DOMAINS,                      & ! M_GEOM_OPT
-       P_STRATEGY_DOMAINS,                      & ! M_PHONONS
-       P_STRATEGY_DOMAINS,                      & ! M_OPT_CONTROL
-       P_STRATEGY_DOMAINS,                      & ! M_LR_STATIC_POL
-       P_STRATEGY_DOMAINS,                      & ! M_CASIDA
-       P_STRATEGY_DOMAINS                       & ! M_WAVE_MATCHING
-       /)
-
 contains
 
   subroutine run()
@@ -257,6 +244,8 @@ contains
 
   !------------------------------------------------------------------------------
   subroutine run_init()
+    integer :: mode
+
     call messages_print_stress(stdout)
     call messages_print_var_option(stdout, "CalculationMode", calc_mode, "Calculation Mode:")
     call messages_print_stress(stdout)
@@ -268,13 +257,30 @@ contains
 
     if(calc_mode .ne. M_PULPO_A_FEIRA) then
       call units_init()
-      call system_init(sys, mode_parallelized(calc_mode))
+      call get_mode_parallelized(mode)
+      call system_init(sys, mode)
       call hamiltonian_init(h, sys%gr, sys%st%d, sys%ks%ip_app)
       call epot_generate(h%ep, sys%gr%m, sys%gr%sb, sys%gr%geo, sys%st, h%reltype)
     endif
 
     call restart_init()
 
+  contains
+
+    subroutine get_mode_parallelized(mode)
+      integer, intent(out) :: mode
+
+      mode = 0
+      mode = ibset(mode, P_STRATEGY_DOMAINS - 1) ! all modes are parallel in domains
+      select case(calc_mode)
+      case(M_TD)
+        mode = ibset(mode, P_STRATEGY_STATES - 1)
+      case(M_CASIDA)
+        mode = ibset(mode, P_STRATEGY_OTHER - 1)
+      end select
+
+    end subroutine get_mode_parallelized
+    
   end subroutine run_init
 
 

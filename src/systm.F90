@@ -91,29 +91,25 @@ contains
   contains
     subroutine parallel_init()
       integer :: parallel_mask_
-      integer :: index_dim, index_range(3)
+      integer :: index_dim, index_range(4)
 
-      ! for the moment we need only communicators for domains plus two 
-      ! index-dimensions: states and kpoints
-      index_dim = 3
+      ! for the moment we need communicators for domains plus three
+      ! index-dimensions: states, kpoints, and others
+      index_dim = 4
 
       ! store the ranges for these two indices (serves as initial guess 
       ! for parallelization strategy)
       index_range(1) = sys%gr%m%np_global     ! Number of points in mesh
       index_range(2) = sys%st%nst             ! Number of states
       index_range(3) = sys%st%d%nik           ! Number of kpoints
-      
-      write(message(1),'(a,i4)') 'Info: Total number of points  : ', index_range(1)
-      write(message(2),'(a,i4)') 'Info: Total number of states  : ', index_range(2)
-      write(message(3),'(a,i4)') 'Info: Total number of k-points: ', index_range(3)
-      call write_info(3)
-      
+      index_range(4) = 100000                 ! Some large number
+
       parallel_mask_ = 0 ! default: no paralellization
       if(present(parallel_mask)) parallel_mask_ = parallel_mask
       
       ! create index and domain communicators
       call multicomm_init(sys%mc, parallel_mask, mpiv%numprocs, index_dim, &
-         index_range, (/ 15000, 5, 1 /))
+         index_range, (/ 15000, 5, 1, 1 /))
       
     end subroutine parallel_init
 

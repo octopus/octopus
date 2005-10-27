@@ -39,6 +39,7 @@ module casida
   use hamiltonian
   use restart
   use mpi_mod
+  use multicomm_mod
 
   implicit none
 
@@ -63,6 +64,11 @@ module casida
      FLOAT,   pointer :: tm(:, :)! The transition matrix elements (between the many-particle states)
      FLOAT,   pointer :: f(:)    ! The (dipole) strengths
      FLOAT,   pointer :: s(:)    ! The diagonal part of the S-matrix
+
+    logical       :: parallel_in_eh_pairs
+    integer       :: mpi_comm ! my communicator in eh_pairs
+    integer       :: mpi_size ! size of mpi_comm (defined also in serial mode)
+    integer       :: mpi_rank ! rank of mpi_comm (defined also in serial mode)
   end type casida_type
 
 contains
@@ -167,7 +173,7 @@ contains
     Call write_info(1)
 
     ! Initialize structure
-    call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin)
+    call casida_type_init(cas, sys%gr%sb%dim, sys%st%d%nspin, sys%mc)
 
     if(fromScratch) call loct_rm(trim(tmpdir)//'restart_casida')
 
@@ -200,11 +206,15 @@ contains
 
 
   ! allocates stuff, and constructs the arrays pair_i and pair_j
-  subroutine casida_type_init(cas, dim, nspin)
+  subroutine casida_type_init(cas, dim, nspin, mc)
     type(casida_type), intent(inout) :: cas
     integer, intent(in) :: dim, nspin
+    type(multicomm_type), intent(in) :: mc
 
     integer :: i, a, j, k
+#if defined(HAVE_MPI)
+    integer :: mpi_err
+#endif
 
     call push_sub('casida.casida_type_init')
 
@@ -249,6 +259,19 @@ contains
        end do
     enddo
 
+    ! now let us take care of initializing the parallel stuff
+    cas%mpi_size = 1  ! alone in the world (default)
+    cas%mpi_rank = 0  ! I am root
+    cas%parallel_in_eh_pairs = multicomm_strategy_is_parallel(mc, P_STRATEGY_OTHER)
+
+#if defined(HAVE_MPI)
+    if(cas%parallel_in_eh_pairs) then
+      cas%mpi_comm = mc%group_comm(P_STRATEGY_OTHER)
+      call MPI_Comm_size(cas%mpi_comm, cas%mpi_size, mpi_err)
+      call MPI_Comm_rank(cas%mpi_comm, cas%mpi_rank, mpi_err)
+    end if
+#endif
+
     call pop_sub()
   end subroutine casida_type_init
 
@@ -257,9 +280,12 @@ contains
   subroutine casida_type_end(cas)
     type(casida_type), intent(inout) :: cas
     call push_sub('casida.casida_type_end')
+
     ASSERT(associated(cas%pair_i))
+
     deallocate(cas%pair_i, cas%pair_a, cas%mat, cas%tm, cas%s, cas%f, cas%w)
     nullify   (cas%pair_i, cas%pair_a, cas%mat, cas%tm, cas%s, cas%f, cas%w)
+
     call pop_sub()
   end subroutine casida_type_end
 
@@ -314,14 +340,14 @@ contains
     call xc_get_fxc(sys%ks%xc, m, rho, st%d%ispin, fxc)
 
     select case(cas%type)
-      case(CASIDA_EPS_DIFF)
-         call solve_petersilka()
-      case(CASIDA_PETERSILKA)
-         call solve_petersilka()
-      case(CASIDA_CASIDA)
-         call solve_casida()
+    case(CASIDA_EPS_DIFF)
+      call solve_petersilka()
+    case(CASIDA_PETERSILKA)
+      call solve_petersilka()
+    case(CASIDA_CASIDA)
+      call solve_casida()
     end select
-
+    
     ! clean up
     deallocate(rho, fxc, pot, saved_K)
 
@@ -337,7 +363,7 @@ contains
       call push_sub('casida.solve_petersilka')
 
       ! initialize progress bar
-      call loct_progress_bar(-1, cas%n_pairs-1)
+      if(mpiv%node == 0) call loct_progress_bar(-1, cas%n_pairs-1)
 
       ! file to save matrix elements
       iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
@@ -358,7 +384,7 @@ contains
             cas%w(ia) = cas%w(ia) + M_TWO*f
          end if
 
-         call loct_progress_bar(ia-1, cas%n_pairs-1)
+         if(mpiv%node == 0) call loct_progress_bar(ia-1, cas%n_pairs-1)
       end do
 
       allocate(x(cas%n_pairs), deltav(m%np))
@@ -369,12 +395,13 @@ contains
       deallocate(x, deltav)
 
       ! complete progress bar
-      write(*, "(1x)")
+      if(mpiv%node == 0) write(*, "(1x)")
 
       ! close restart file
       call io_close(iunit)
       call pop_sub()
     end subroutine solve_petersilka
+
 
     ! ---------------------------------------------------------
     subroutine solve_casida()
@@ -390,15 +417,17 @@ contains
 
       call push_sub('casida.solve_casida')
 
-      max = cas%n_pairs*(1 + cas%n_pairs)/2 - 1
+      max = (cas%n_pairs*(1 + cas%n_pairs)/2)/cas%mpi_size
       counter = 0
       actual = 0
-      if (mpiv%node == 0) call loct_progress_bar(-1, max)
+      if(mpiv%node == 0) call loct_progress_bar(-1, max)
+
+      if(mpiv%node .ne. 0) cas%mat = M_ZERO
 
       ! calculate the matrix elements of (v + fxc)
       do jb = 1, cas%n_pairs
          actual = actual + 1
-         if(mod(actual, mpiv%numprocs) .ne. mpiv%node) cycle
+         if(mod(actual, cas%mpi_size) .ne. cas%mpi_rank) cycle
 
          do ia = jb, cas%n_pairs
             counter = counter + 1
@@ -416,97 +445,109 @@ contains
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
 
          end do
-         if (mpiv%node == 0) call loct_progress_bar(counter-1, max)
+         if(mpiv%node == 0) call loct_progress_bar(counter-1, max)
       end do
 
       ! sum all matrix elements
 #ifdef HAVE_MPI
-      allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
-      call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
-           MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
-      cas%mat = mpi_mat
-      deallocate(mpi_mat)
+      if(cas%parallel_in_eh_pairs) then
+        allocate(mpi_mat(cas%n_pairs, cas%n_pairs))
+        call MPI_ALLREDUCE(cas%mat(1,1), mpi_mat(1,1), cas%n_pairs**2, &
+           MPI_FLOAT, MPI_SUM, cas%mpi_comm, mpi_err)
+        cas%mat = mpi_mat
+        deallocate(mpi_mat)
+      end if
 #endif
+      if(cas%mpi_rank == 0) print *, "mat =", cas%mat
 
       ! all processors with the exception of the first are done
-      if (mpiv%node.ne.0) return
+      if (cas%mpi_rank == 0) then
 
-      ! complete progress bar
-      write(stdout, '(1x)')
+        ! complete progress bar
+        if(mpiv%node == 0) write(stdout, '(1x)')
 
-      ! complete the matrix and output the restart file
-      iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
-      do ia = 1, cas%n_pairs
-         i = cas%pair_i(ia)
-         a = cas%pair_a(ia)
-         sigma = cas%pair_sigma(ia)
-         temp = st%eigenval(a, sigma) - st%eigenval(i, sigma)
-
-         do jb = ia, cas%n_pairs
+        ! complete the matrix and output the restart file
+        iunit = io_open(trim(tmpdir)//'restart_casida', action='write', position='append')
+        do ia = 1, cas%n_pairs
+          i = cas%pair_i(ia)
+          a = cas%pair_a(ia)
+          sigma = cas%pair_sigma(ia)
+          temp = st%eigenval(a, sigma) - st%eigenval(i, sigma)
+          
+          do jb = ia, cas%n_pairs
             j = cas%pair_i(jb)
             b = cas%pair_a(jb)
             mu = cas%pair_sigma(jb)
-
+            
             if(.not.saved_K(ia, jb)) write(iunit, *) ia, jb, cas%mat(ia, jb)
-
+            
             if(sys%st%d%ispin == UNPOLARIZED) then
-               cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
+              cas%mat(ia, jb)  = M_FOUR * sqrt(temp) * cas%mat(ia, jb) * &
                  sqrt(st%eigenval(b, 1) - st%eigenval(j, 1))
-            elseif(sys%st%d%ispin == SPIN_POLARIZED) then
-               cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
+            else if(sys%st%d%ispin == SPIN_POLARIZED) then
+              cas%mat(ia, jb)  = M_TWO * sqrt(temp) * cas%mat(ia, jb) * &
                  sqrt(st%eigenval(b, mu) - st%eigenval(j, mu))
-            endif
-
+            end if
+            
             if(jb /= ia) cas%mat(jb, ia) = cas%mat(ia, jb) ! the matrix is symmetric
-         end do
-         cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
-      end do
-      call io_close(iunit)
+          end do
+          cas%mat(ia, ia) = temp**2 + cas%mat(ia, ia)
+        end do
+        call io_close(iunit)
 
-      ! now we diagonalize the matrix
-      call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%w)
-      do ia = 1, cas%n_pairs
-         if(cas%w(ia) < M_ZERO) then
-           write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy',ia,' is negative.'
-           write(message(2),'(a)')      'This should not happen.'
-           call write_warning(2)
-           cas%w(ia) = M_ZERO
-         else
-           cas%w(ia) = sqrt(cas%w(ia))
-         endif
-      enddo
+        ! now we diagonalize the matrix
+        call lalg_eigensolve(cas%n_pairs, cas%mat, cas%mat, cas%w)
+        do ia = 1, cas%n_pairs
+          if(cas%w(ia) < M_ZERO) then
+            write(message(1),'(a,i4,a)') 'For whatever reason, the excitation energy',ia,' is negative.'
+            write(message(2),'(a)')      'This should not happen.'
+            call write_warning(2)
+            cas%w(ia) = M_ZERO
+          else
+            cas%w(ia) = sqrt(cas%w(ia))
+          endif
+        end do
 
-      ! And let us now get the S matrix...
-      do ia = 1, cas%n_pairs
-         i = cas%pair_i(ia)
-         a = cas%pair_a(ia)
-         sigma = cas%pair_sigma(ia)
-         if(sys%st%d%ispin == UNPOLARIZED) then
+        ! And let us now get the S matrix...
+        do ia = 1, cas%n_pairs
+          i = cas%pair_i(ia)
+          a = cas%pair_a(ia)
+          sigma = cas%pair_sigma(ia)
+          if(sys%st%d%ispin == UNPOLARIZED) then
             cas%s(ia) = M_HALF / ( st%eigenval(cas%pair_a(ia), 1) - st%eigenval(cas%pair_i(ia), 1) ) 
-         elseif(sys%st%d%ispin == SPIN_POLARIZED) then
+          elseif(sys%st%d%ispin == SPIN_POLARIZED) then
             cas%s(ia) = M_ONE / ( st%eigenval(cas%pair_a(ia), sigma) - st%eigenval(cas%pair_i(ia), sigma) ) 
-         endif
-      enddo
-
-      allocate(deltav(m%np), x(cas%n_pairs))
-      do k = 1, m%sb%dim
-         deltav(1:m%np) = m%x(1:m%np, k)
-         ! let us get now the x vector.
-         x = ks_matrix_elements(cas, st, m, deltav)
-         ! And now we are able to get the transition matrix elements between many-electron states.
-         do ia = 1, cas%n_pairs
+          endif
+        enddo
+        
+        allocate(deltav(m%np), x(cas%n_pairs))
+        do k = 1, m%sb%dim
+          deltav(1:m%np) = m%x(1:m%np, k)
+          ! let us get now the x vector.
+          x = ks_matrix_elements(cas, st, m, deltav)
+          ! And now we are able to get the transition matrix elements between many-electron states.
+          do ia = 1, cas%n_pairs
             cas%tm(ia, k) = transition_matrix_element(cas, ia, x)
-         enddo
-      enddo
-      deallocate(deltav, x)
+          end do
+        end do
+        deallocate(deltav, x)
 
-      ! And the oscillatory strengths.
-      do ia = 1, cas%n_pairs
-         cas%f(ia) = (M_TWO/m%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
-      enddo
+        ! And the oscillatory strengths.
+        do ia = 1, cas%n_pairs
+          cas%f(ia) = (M_TWO/m%sb%dim) * cas%w(ia) * sum( (abs(cas%tm(ia, :)))**2 )
+        end do
+
+      end if ! cas%mpi_rank == 0
+      
+#if defined(HAVE_MPI)
+      if(cas%parallel_in_eh_pairs) then
+        call MPI_Barrier(cas%mpi_comm, mpi_err)
+      end if
+#endif
 
       call pop_sub()
     end subroutine solve_casida
+
 
     ! return the matrix element of <i,a|v + fxc|j,b>
     function K_term(i, a, sigma, j, b, mu)
@@ -534,6 +575,7 @@ contains
 
       deallocate(rho_i, rho_j)
     end function K_term
+
 
     ! ---------------------------------------------------------
     subroutine load_saved
@@ -586,6 +628,7 @@ contains
     deallocate(f)
   end function ks_matrix_elements
 
+
   R_TYPE function transition_matrix_element(cas, ia, x) result(z)
     type(casida_type), intent(in) :: cas
     integer,           intent(in) :: ia
@@ -602,6 +645,7 @@ contains
     endif
 
   end function transition_matrix_element
+
 
   ! ---------------------------------------------------------
   ! FIXME It needs to re-order also the oscillator strengths, and the transition matrix elements.
@@ -628,6 +672,7 @@ contains
     call pop_sub()
   end subroutine sort_energies
 
+
   ! ---------------------------------------------------------
   subroutine casida_write(cas, filename)
     type(casida_type), intent(in) :: cas
@@ -637,6 +682,8 @@ contains
     FLOAT   :: temp
 
     type(casida_type) :: casp
+
+    if(cas%mpi_rank.ne.0) return
 
     call push_sub('casida.casida_write')
 

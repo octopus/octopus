@@ -110,11 +110,12 @@ module multicomm_mod
      P_STRATEGY_SERIAL  = 0,    & ! single domain, all states, kpoints on a single processor
      P_STRATEGY_DOMAINS = 1,    & ! parallelization domains
      P_STRATEGY_STATES  = 2,    & ! parallelization in kpoints
-     P_STRATEGY_KPOINTS = 3       ! parallelization in states
+     P_STRATEGY_KPOINTS = 3,    & ! parallelization in states
+     P_STRATEGY_OTHER   = 4       ! something else like e-h pairs
 
-  integer,           parameter :: n_par_types = 3
-  character(len=11), parameter :: par_types(0:3) = &
-     (/"serial     ", "par_domains", "par_states ", "par_kpoints" /)
+  integer,           parameter :: n_par_types = 4
+  character(len=11), parameter :: par_types(0:n_par_types) = &
+     (/"serial     ", "par_domains", "par_states ", "par_kpoints", "par_other  " /)
 contains
 
   ! create index and domain communicators
