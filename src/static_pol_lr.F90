@@ -48,7 +48,8 @@ contains
 
     type(lr_type) :: lr
     type(grid_type), pointer :: gr
-    FLOAT :: pol(sys%gr%sb%dim, sys%gr%sb%dim)
+    FLOAT :: pol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
+    FLOAT :: hpol(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1:sys%gr%sb%dim)
     integer :: err
 
     ierr = 0
@@ -75,10 +76,15 @@ contains
     fromScratch = .true.
 
     call lr_init(lr, "SP")
+
+
     call X(lr_alloc_fHxc) (sys%st, gr%m, lr)
     err = X(lr_alloc_psi) (sys%st, gr%m, lr)
+
     call lr_build_fxc(gr%m, sys%st, sys%ks%xc, lr%dl_Vxc)
-    call pol_tensor(sys, h, lr, pol)
+
+!   call pol_tensor(sys, h, lr, pol)
+    call hyperpol_tensor(sys, h, lr, pol, hpol)
     call output()
     call lr_dealloc(lr)
 
@@ -108,9 +114,13 @@ contains
 
     ! ---------------------------------------------------------
     subroutine output()
-      integer :: j, iunit
+      integer :: j, iunit,i,k
       FLOAT :: msp
       call io_mkdir('linear')
+
+
+
+      !! Output polarizabilty
 
       iunit = io_open('linear/polarizability_lr', action='write')
       write(iunit, '(2a)', advance='no') '# Static polarizability tensor [', &
@@ -131,12 +141,35 @@ contains
 
       call io_close(iunit)
 
+      !! Output first hyperpolarizabilty (beta)
+      iunit = io_open('linear/beta_lr', action='write')
+      write(iunit, '(2a)', advance='no') '# Static hyperpolarizability tensor [', &
+         trim(units_out%length%abbrev)
+      if(NDIM.ne.1) write(iunit, '(a,i1)', advance='no') '^', NDIM+2
+      write(iunit, '(a)') ']'
+
+      write(iunit, '(a)') '# WARNING, this values are not reliable until further testing'
+
+      do i=1,NDIM
+         do j=1,NDIM
+            do k=1,NDIM
+               write(iunit,'(3i1,3f12.6)') i,j,k, hpol(i,j,k)
+            end do
+         end do
+      end do
+!      write(iunit, '(a, f12.6)')  'Mean static polarizability', msp &
+!         / units_out%length%factor**NDIM
+
+      call io_close(iunit)
+
     end subroutine output
 
   end function static_pol_lr_run
 
 
   ! ---------------------------------------------------------
+#if 0
+  !! This is not used anymore, pol is calculated at the same time that hpol
   subroutine pol_tensor(sys, h, lr, pol)
     type(system_type),      intent(inout) :: sys
     type(hamiltonian_type), intent(inout) :: h
@@ -157,7 +190,7 @@ contains
       call mix_end(lr%mixer)
 
       do j = 1, sys%gr%m%np
-        rhov = sum(lr%X(dl_rho)(j,:))*sys%gr%m%vol_pp(j)
+        rhov = sum(lr%X(dl_rho)(j,1:sys%st%d%nspin))*sys%gr%m%vol_pp(j)
         pol(i, :) = pol(i, :) - sys%gr%m%x(j,:)*rhov
       end do
 
@@ -165,6 +198,177 @@ contains
 
     call pop_sub()
   end subroutine pol_tensor
+#endif
+
+  subroutine hyperpol_tensor(sys, h, lr, pol, hpol)
+    type(system_type),      intent(inout) :: sys
+    type(hamiltonian_type), intent(inout) :: h
+    type(lr_type),          intent(inout) :: lr
+    FLOAT,                  intent(out)   :: pol(:,:)
+    FLOAT,                  intent(out)   :: hpol(:,:,:)
+
+    integer :: i, j, k
+    integer :: ispin, ist, ispin2, ist2,n,np, dim
+    
+    R_TYPE ::prod
+
+    R_TYPE, allocatable :: tmp(:,:), dphide(:,:,:,:), dVde(:,:,:), drhode(:,:)
+
+    FLOAT, allocatable :: kxc(:,:,:,:)
+    FLOAT :: vol
+
+    np=sys%gr%m%np
+    dim=sys%gr%sb%dim
+
+    call push_sub('static_pol_lr.hyperpol_tensor')
+
+    print*, "Calculating static hyperpolarizability"
+
+    allocate(tmp(1:np,1))
+
+    !!here we store the derivatives of the orbitals in each direction
+    allocate(dphide(1:np,1:sys%st%nst,1:sys%st%d%nspin,1:dim))
+
+    !!the derivative of the xc potential
+    allocate(dVde(1:np,1:sys%st%d%nspin,1:dim))
+
+    allocate(drhode(1:np,1:dim))
+
+    allocate(kxc(1:np, 1:sys%st%d%nspin, 1:sys%st%d%nspin, 1:sys%st%d%nspin ))
+
+    call xc_get_kxc(sys%ks%xc, sys%gr%m, sys%st%rho, sys%st%d%ispin, kxc)
+
+    !!first the derivatives in all directions are calculated and stored
+    write(message(1), '(a,i1)') 'Info: Calculating derivatives of the orbitals:'
+    call write_info(1)
+
+    do i = 1, dim
+       write(message(1), '(a,i1)') '   direction: ', i
+       call write_info(1)
+      
+       call mix_init(lr%mixer, sys%gr%m, 1, sys%st%d%nspin)
+
+       call get_response_e(sys, h, lr, i, R_TOTYPE(M_ZERO))
+       call mix_end(lr%mixer)
+       
+
+       do ispin = 1, sys%st%d%nspin
+
+          !!the potential derivatives
+
+          !!Hartree and the potential and the derivative of the
+          !! potential associated at the electric field
+
+          dVde(1:np,ispin,i)=lr%X(dl_Vhar)(1:np) + sys%gr%m%x(1:np,i)
+
+          !!XC
+          do ispin2 = 1, sys%st%d%nspin
+             dVde(1:np,ispin,i)=dVde(1:np,ispin,i)+lr%dl_Vxc(1:np, ispin, ispin2)*lr%X(dl_rho)(1:np,ispin2)
+          end do
+
+
+          !!the derivatives of the orbitals
+          do ist = 1, sys%st%nst
+             dphide(1:np,ist,ispin,i)=lr%X(dl_psi)(1:np,1,ist,ispin)
+          end do
+
+       end do
+       
+       !!the density
+       do n=1,np
+          drhode(n,i)=sum(lr%X(dl_rho)(n,1:sys%st%d%nspin))
+       end do
+       
+    end do
+
+    print*, "Calculating polarizability tensor" 
+
+    pol = M_ZERO
+    do i = 1, dim
+!      write(message(1), '(a,i1)') 'Info: Calculating polarizability for direction ', i
+      call write_info(1)
+
+      do j = 1,np
+        pol(i,1:dim)=pol(i,1:dim)-sys%gr%m%x(j,1:dim)*drhode(j,i)*sys%gr%m%vol_pp(j)
+      end do
+
+    end do
+
+
+    print*, "Calculating hyperpolarizability tensor" 
+    hpol = M_ZERO
+
+    do i = 1, dim
+       do j = 1, dim
+          do k = 1, dim
+
+!             print*,"Component",i,j,k
+
+             do ispin = 1, sys%st%d%nspin
+                do ist = 1, sys%st%nst
+
+                   !!<D\psi_n | P_c DV_scf P_c | D\psi_n >
+
+                   tmp(1:np,1)=dphide(1:np,ist,ispin,k)
+
+                   tmp(1:np,1)=dVde(1:np, ispin, j)*tmp(1:np,1)
+
+                   hpol(i,j,k)=M_TWO*sum(R_CONJ(dphide(1:np,ist,ispin,i))*tmp(1:np,1)*sys%gr%m%vol_pp(1:np))
+
+
+
+                   !! -<D\psi_n| P_c | D\psi_m > < \psi_m| DV_scf | \psi_n > 
+
+                   do ispin2 = 1, sys%st%d%nspin
+                      do ist2 = 1, sys%st%nst
+                         
+                         tmp(1:np,1)=dphide(1:np,ist2,ispin2,j)
+
+                         prod=sum(R_CONJ(dphide(1:np,ist,ispin,i))*tmp(1:np,1)*sys%gr%m%vol_pp(1:np))
+
+                         !WARNING check spin dependency of the potential
+
+                         tmp(1:np,1)=dVde(1:np,ispin2,k)*sys%st%X(psi)(1:np,1,ist2,ispin2)
+                         prod=prod*sum(R_CONJ(sys%st%X(psi)(1:np,1,ist,ispin))*tmp(1:np,1)*sys%gr%m%vol_pp(1:np))
+                         
+                         hpol(i,j,k)=hpol(i,j,k)-M_TWO*prod
+
+                      end do
+                   end do
+
+!                   print*,"K3"
+                   hpol(i,j,k)=hpol(i,j,k)+&
+                        sum(kxc(1:np,1,1,1)*drhode(1:np,i)*drhode(1:np,j)*drhode(1:np,k)*sys%gr%m%vol_pp(1:np))/CNST(6.0)
+!                   print*,"done.."
+                end do
+             end do
+
+
+             
+             
+          end do
+       end do
+    end do
+
+    vol=sum(sys%gr%m%vol_pp(1:np))
+
+!    print*, hpol
+
+    hpol=M_SIX*hpol
+
+!    print*, "POL", pol(1:dim,1:dim)
+!    print*, "HPOL", hpol(1:dim,1:dim,1:dim)
+    
+    deallocate(tmp)
+    deallocate(dphide)
+    deallocate(dVde)
+    deallocate(drhode)
+    deallocate(kxc)
+
+    call pop_sub()
+  end subroutine hyperpol_tensor
+
+  
 
 
   ! ---------------------------------------------------------
@@ -214,17 +418,17 @@ contains
 
             Y(:,1) = (lr%ddl_Vhar(:) + m%x(:,alpha))
             do ik2 = 1, st%d%nspin
-              Y(:,1) = Y(:,1) + lr%dl_Vxc(:, ik, ik2)*lr%X(dl_rho)(:,ik2)
+              Y(1:m%np,1) = Y(1:m%np,1) + lr%dl_Vxc(1:m%np, ik, ik2)*lr%X(dl_rho)(1:m%np,ik2)
             end do
-            Y(:,1) = -Y(:,1)*st%X(psi)(:, 1, ist, ik)
+            Y(1:m%np,1) = -Y(1:m%np,1)*st%X(psi)(1:m%np, 1, ist, ik)
 
             call X(lr_orth_vector)(m, st, Y, ik)
 
-            iter_max = 50
+            iter_max = 200
             call X(lr_solve_HXeY) (lr, h, sys%gr, sys%st%d, ik, lr%X(dl_psi)(:,:, ist, ik), Y, &
                -sys%st%eigenval(ist, ik) + real(sigma, PRECISION)*omega)
 
-            print *, lr%iter, sum(lr%X(dl_psi)(:,1, ist, ik)**2*sys%gr%m%vol_pp(:))
+            print *, iter, ik, ist, sum(lr%X(dl_psi)(1:m%np,1, ist, ik)**2*sys%gr%m%vol_pp(1:m%np))
           end do
         end do
 
@@ -241,7 +445,7 @@ contains
       dl_rhonew(1,:,:) = M_ZERO
       dl_rhotmp(1,:,:) = lr%X(dl_rho)(:,:)
       call mixing(lr%mixer, m, iter, 1, st%d%nspin, &
-           dl_rhoin, dl_rhotmp, dl_rhonew)
+         dl_rhoin, dl_rhotmp, dl_rhonew)
 
       ! check for convergence
       lr%abs_dens = M_ZERO
