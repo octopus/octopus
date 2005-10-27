@@ -166,20 +166,32 @@ int parse_input(char *file_in)
 	if(f != stdin)
 		fclose(f);
 
-        /*now read options from environment variables (by X) */
-        if( getenv("OCT_PARSE_ENV")!=NULL ) {
-          char ** env=environ;
-	  /*fprintf(stderr, "WARNING: Parsing variables from Environment\n");*/
+#define OCT_ENV_HEADER "OCT_"
 
+        /*now read options from environment variables (by X) */
+
+        if( getenv("OCT_PARSE_ENV")!=NULL ) {
+
+	  /* environ is an array of C strings with all the environment
+	     variables, the format of the string is NAME=VALUE, which
+	     is directly recognized by parse_exp */
+
+          char ** env=environ;
+	  
           while(*env) {
+	    
             /* Only consider variables that begin with OCT_ */
-            if(strncmp("OCT_",*env,4) == 0 ){
+            if( strncmp(OCT_ENV_HEADER,*env,strlen(OCT_ENV_HEADER)) == 0 ){
+
               parse_result c;
-              /*              printf("%s\n",*env+4); */
-              parse_exp( (*env)+4, &c);
+              parse_exp( (*env)+strlen(OCT_ENV_HEADER), &c);
+
             }
+
             env++;
+
           }
+
         }
 
 	sym_clear_reserved();
