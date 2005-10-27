@@ -203,7 +203,6 @@ contains
     call gridhier_init(err, gr%mgrid, add_points_for_boundaries=.false.)
 
     phi(0)%p(1:gr%m%np)=pot(1:gr%m%np)
-
     phi(0)%p(gr%m%np+1:gr%m%np_part)=M_ZERO
     tau(0)%p(:)=rho_corrected(:)
 
@@ -225,8 +224,8 @@ contains
 
        if(res < threshold) then
           if(curr_l > 0 ) then 
-             curr_l=curr_l-1
              call multigrid_coarse2fine(gr%mgrid, curr_l, phi(curr_l)%p, phi(curr_l-1)%p)
+             curr_l=curr_l-1
           else 
              exit
           end if

@@ -103,6 +103,9 @@ contains
     mgrid%level(0)%m     => m
     mgrid%level(0)%f_der => f_der
 
+    mgrid%level(0)%n_fine = m%np
+    allocate(mgrid%level(0)%fine_i(m%np))
+
     print*, "Multigrid levels:", n_levels+1
     do i = 1, mgrid%n_levels
        allocate(mgrid%level(i)%m, mgrid%level(i)%f_der)

@@ -217,9 +217,11 @@ while ($_ = <TESTSUITE>) {
 
 
      if ( $lineout =~ /$regexp/ ) {
-       print "$name: \t [ \033[32m  OK  \033[0m ] \n";
+	 print "$name: \t [ \033[32m  OK  \033[0m ] \n"; 
+         $test_succeded = 1;
      } else {
-       print "$name: \t [ \033[31m FAIL \033[0m ] \n";
+	 print "$name: \t [ \033[31m FAIL \033[0m ] \n";
+         $test_succeded = 0;
      }
    }
 
@@ -231,4 +233,4 @@ while ($_ = <TESTSUITE>) {
 
 if (!$opt_i) { print "\n\n\n"; }
 if ($opt_l)  { system ("cp $workdir/out out.log"); }
-if (!$opt_p) { system ("rm -rf $workdir"); }
+if (!$opt_p && $test_succeded) { system ("rm -rf $workdir"); }
