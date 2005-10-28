@@ -99,7 +99,7 @@ contains
     type(hamiltonian_type), intent(inout) :: h
 
     integer :: err, ierr
-    logical :: lcao_start
+    logical :: lcao_start, lcao_start_default = .true.
     type(lcao_type) :: lcao_data
 
     call push_sub('gs.ground_state_init')
@@ -123,8 +123,10 @@ contains
     call system_guess_density(gr%m, gr%sb, gr%geo, st%qtot, st%d%nspin, &
          st%d%spin_channels, st%rho)
 
-    call loct_parse_logical(check_inp('LCAOStart'), .true., lcao_start)
-    if ( gr%geo%only_user_def ) lcao_start = .false.
+    ! The initial LCAO calculation is done by default if we have pseudopotentials.
+    ! Otherwise, it is not the default value and has to be enforced in the input file.
+    if(gr%geo%only_user_def) lcao_start_default = .false.
+    call loct_parse_logical(check_inp('LCAOStart'), lcao_start_default, lcao_start)
     if(lcao_start) then
        call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)
 
