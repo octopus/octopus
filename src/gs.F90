@@ -124,6 +124,7 @@ contains
          st%d%spin_channels, st%rho)
 
     call loct_parse_logical(check_inp('LCAOStart'), .true., lcao_start)
+    if ( gr%geo%only_user_def ) lcao_start = .false.
     if(lcao_start) then
        call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)
 
