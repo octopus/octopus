@@ -108,7 +108,7 @@ subroutine eigen_solver_cg2(gr, st, h, tol, niter, converged, diff, reorder, ver
            if( abs(gg) < CNST(1.0e-15) ) then
               conv = conv + 1
               st%eigenval(p, ik) = es(1)
-              res = sqrt(gg)
+              res = sqrt(abs(gg))
               exit
            endif
 

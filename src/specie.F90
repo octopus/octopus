@@ -28,6 +28,7 @@ use lib_oct_parser
 use lib_oct_gsl_spline
 use io
 use units
+use atomic
 use ps
 use math
 
@@ -69,6 +70,7 @@ type specie_type
 
   ! for the user defined potential
   character(len=1024) :: user_def
+  FLOAT :: omega
 
   ! jellium stuff
   FLOAT :: jradius
@@ -364,6 +366,8 @@ contains
 
     integer :: i, l
 
+    character(len=VALCONF_STRING_LENGTH) :: conf_string
+
     call push_sub('specie.specie_init')
 
     ! masses are always in a.u.m, so convert them to a.u.
@@ -377,9 +381,16 @@ contains
       call ps_derivatives(s%ps)
       s%z_val = s%ps%z_val
       s%nlcc = (s%ps%icore /= 'nc  ' )
+      s%niwfs = 0
+      do i = 1, s%ps%conf%p
+         l = s%ps%conf%l(i)
+         if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
+      enddo
+    else
+      s%niwfs = 2*s%z_val
+      s%omega = sqrt( M_TWO * loct_parse_potential(CNST(0.01), M_ZERO, M_ZERO, CNST(0.01), s%user_def) / CNST(1.0e-4) )
     endif
-  
-    s%niwfs = specie_niwfs(s)
+
     allocate(s%iwf_l(s%niwfs, ispin), s%iwf_m(s%niwfs, ispin), s%iwf_i(s%niwfs, ispin))
     call specie_iwf_fix_qn(s, ispin)
 
@@ -573,80 +584,121 @@ contains
     integer,           intent(in) :: j
     integer,           intent(in) :: dim
     integer,           intent(in) :: is
-    FLOAT,             intent(in) :: x(3)
+    FLOAT,             intent(in) :: x(dim)
 
     integer :: i, l, m
-    FLOAT :: r, b, leng_scale, rprime
+    FLOAT :: r2
 
     i = s%iwf_i(j, is)
     l = s%iwf_l(j, is)
     m = s%iwf_m(j, is)
-    r = sqrt(sum(x*x))
+    r2 = sum(x*x)
 
     if(.not.s%local) then
-      phi =  loct_splint(s%ps%ur(i, is), r) * loct_ylm(x(1), x(2), x(3), l, m)
+      phi =  loct_splint(s%ps%ur(i, is), sqrt(r2)) * loct_ylm(x(1), x(2), x(3), l, m)
     else
       select case(dim)
       case(1)
-        b = M_HALF*CNST(0.01) ! b = (1/2)*m*w^2
-        leng_scale = (M_HALF/b)**(M_FOURTH)
-        rprime = r/leng_scale
-        if(rprime > M_ZERO) then
-          phi = exp(-rprime**2/M_TWO) * (2**l) * loct_hypergeometric(-M_HALF*l, M_HALF, rprime**2)
-        else
-          select case(mod(l, 2))
-          case(0)
-            phi = factorial(l) * (-1)**(l/2) / factorial(l/2)
-          case(1)
-            phi = M_ZERO
-          end select
-        endif
-      case(2) ! TODO
-      case(3) ! TODO
+        phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) )
+      case(2)
+        phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) ) * &
+                                       hermite(l-1, x(2)*sqrt(s%omega) )
+      case(3)
+        phi = exp(-s%omega*r2/M_TWO) * hermite(i-1, x(1)*sqrt(s%omega) ) * &
+                                       hermite(l-1, x(2)*sqrt(s%omega) ) * &
+                                       hermite(m-1, x(3)*sqrt(s%omega) )
       end select
     endif
 
   end function specie_get_iwf
 
-  integer function specie_niwfs(s) result(n)
-    type(specie_type), intent(in) :: s
-    integer :: i, l
-    call push_sub('specie.specie_niwfs')
-    n = 0
-    if(.not.s%local) then
-      do i = 1, s%ps%conf%p
-         l = s%ps%conf%l(i)
-         if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) n = n + (2*l+1)
-      enddo
-    else
-      n = 4 * s%z_val ! We hard-code the value of 4, rather arbitrarily.
-    endif
-    call pop_sub()
-  end function specie_niwfs
-
   subroutine specie_iwf_fix_qn(s, ispin)
     type(specie_type), intent(inout) :: s
     integer, intent(in) :: ispin
 
-    integer :: is, n, i, l, m
+    integer :: is, n, i, l, m, n1, n2, n3
     call push_sub('specie.specie_iwf_fix_qn')
 
     if(.not.s%local) then
-       do is = 1, ispin
-          n = 1
-          do i = 1, s%ps%conf%p
-             l = s%ps%conf%l(i)
-             do m = -l, l
-                s%iwf_i(n, is) = i
-                s%iwf_l(n, is) = l
-                s%iwf_m(n, is) = m
-                n = n + 1
-             enddo
+      do is = 1, ispin
+        n = 1
+        do i = 1, s%ps%conf%p
+          l = s%ps%conf%l(i)
+          do m = -l, l
+            s%iwf_i(n, is) = i
+            s%iwf_l(n, is) = l
+            s%iwf_m(n, is) = m
+            n = n + 1
           enddo
-       enddo
+        enddo
+      enddo
     else
-     ! TODO
+      select case(calc_dim)
+      case(1)
+        do is = 1, ispin
+           do i = 1, s%niwfs
+              s%iwf_i(i, is) = i
+              s%iwf_l(i, is) = 0
+              s%iwf_m(i, is) = 0
+           enddo
+        enddo
+      case(2)
+        do is = 1, ispin
+           i = 1; n1 = 1; n2 = 1
+           do
+             s%iwf_i(i, is) = n1
+             s%iwf_l(i, is) = n2
+             s%iwf_m(i, is) = 0
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1+1
+             s%iwf_l(i, is) = n2
+             s%iwf_m(i, is) = 0
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1
+             s%iwf_l(i, is) = n2+1
+             s%iwf_m(i, is) = 0
+             i = i + 1; if(i>s%niwfs) exit
+             n1 = n1 + 1; n2 = n2 + 1
+           enddo
+        enddo
+      case(3)
+        do is = 1, ispin
+           i = 1; n1 = 1; n2 = 1; n3 = 1
+           do
+             s%iwf_i(i, is) = n1
+             s%iwf_l(i, is) = n2
+             s%iwf_m(i, is) = n3
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1+1
+             s%iwf_l(i, is) = n2
+             s%iwf_m(i, is) = n3
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1
+             s%iwf_l(i, is) = n2+1
+             s%iwf_m(i, is) = 0
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1
+             s%iwf_l(i, is) = n2
+             s%iwf_m(i, is) = n3+1
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1+1
+             s%iwf_l(i, is) = n2+1
+             s%iwf_m(i, is) = n3
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1+1
+             s%iwf_l(i, is) = n2
+             s%iwf_m(i, is) = n3+1
+             i = i + 1; if(i>s%niwfs) exit
+             s%iwf_i(i, is) = n1
+             s%iwf_l(i, is) = n2+1
+             s%iwf_m(i, is) = n3+1
+             i = i + 1; if(i>s%niwfs) exit
+             n1 = n1 + 1; n2 = n2 + 1; n3 = n3 + 1
+           enddo
+        enddo
+      end select
     endif
+
     call pop_sub()
   end subroutine specie_iwf_fix_qn
 

@@ -48,6 +48,7 @@ module math
        dextrapolate, zextrapolate, &
        sort,                       &
        factorial,                  &
+       hermite,                    &
        math_divisors
 
 
@@ -98,6 +99,22 @@ module math
 
 
 contains
+
+  recursive function hermite(n, x) result (h)
+    integer, intent(in) :: n
+    FLOAT,   intent(in) :: x
+
+    FLOAT :: h
+
+    if(n<=0) then
+      h = M_ONE
+    elseif(n==1) then
+      h = M_TWO*x
+    else
+      h = M_TWO*x*hermite(n-1,x) - M_TWO*(n-1)*hermite(n-2,x)
+    endif
+
+  end function hermite
 
   recursive function factorial (n) RESULT (fac)
     integer, intent(in) :: n

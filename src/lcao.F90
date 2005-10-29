@@ -71,23 +71,20 @@ subroutine lcao_init(gr, lcao_data, st, h)
   type(geometry_type), pointer :: geo
   type(specie_type), pointer :: s
   integer :: ierr, norbs, ispin, ik, n1, i1, l, l1, lm1, d1, n2, i, j, ia, n, idim, is, k
-  integer, parameter :: orbs_local = 2
-  FLOAT :: x(gr%sb%dim)
+  FLOAT :: x(gr%sb%dim), r
   R_TYPE, allocatable :: hpsi(:,:)
 
-  if(NDIM.eq.2) return
   if(lcao_data%state == 1) return
 
   call push_sub('lcao.lcao_init')
 
   geo => gr%geo
 
-
   ! Fix the dimension of the LCAO problem (lcao_data%dim)
   norbs = 0
-  atoms_loop: do ia = 1, geo%natoms
+  do ia = 1, geo%natoms
      norbs = norbs + geo%atom(ia)%spec%niwfs
-  enddo atoms_loop
+  enddo
   if( (st%d%dim .eq. SPIN_POLARIZED) .or. (st%d%dim.eq.SPINORS) ) norbs = norbs * 2
   lcao_data%dim = norbs
 
@@ -111,6 +108,14 @@ subroutine lcao_init(gr, lcao_data, st, h)
      enddo
   enddo
 
+  !Normalize.
+  do ik = 1, st%d%nik
+     do n = 1, lcao_data%dim
+        r = X(states_nrm2)(gr%m, st%d%dim, lcao_data%psis(:, :, n, ik))
+        lcao_data%psis(:, :, n, ik) = lcao_data%psis(:, :, n, ik)/r
+     enddo
+  enddo
+
   ! Allocation of variables
   allocate(lcao_data%hamilt (norbs, norbs, st%d%nik), &
            lcao_data%s      (norbs, norbs, st%d%nik), &
@@ -129,9 +134,6 @@ subroutine lcao_init(gr, lcao_data, st, h)
       case(SPIN_ORBIT)
         call zso (h, gr, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
 #endif
-      case default
-        message(1) = 'Error: Internal.'
-      call write_fatal(1)
       end select
 
       do n2 = n1, lcao_data%dim
@@ -171,15 +173,12 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
 
-  integer, parameter :: orbs_local = 2
-
   integer :: np, dim, nst, ik, n1, n2, idim
   integer :: norbs
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
 
   ASSERT(lcao_data%state == 1)
-  if(sb%dim.eq.2) return
 
   call push_sub('lcao.lcao_wf')
 
@@ -198,6 +197,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
       do n2 = n1, lcao_data%dim
         lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
         lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
+        lcao_data%hamilt(n2, n1, ik) = R_CONJ(lcao_data%hamilt(n1, n2, ik))
       end do
     end do
   end do
