@@ -49,15 +49,12 @@ module lcao
   type lcao_type
     integer           :: state ! 0 => non-initialized;
                                ! 1 => initialized (k, s and v1 matrices filled)
-
-    integer           :: dim
-    R_TYPE , pointer  :: psis(:, :, :, :)
+    type(states_type) :: st
 
     R_TYPE,  pointer :: hamilt(:, :, :) ! hamilt stores the Hamiltonian in the LCAO subspace;
     R_TYPE,  pointer :: s     (:, :, :) ! s is the overlap matrix;
     R_TYPE,  pointer :: k     (:, :, :) ! k is the kinetic + spin orbit operator matrix;
     R_TYPE,  pointer :: v     (:, :, :) ! v is the potential.
-
   end type lcao_type
 
 contains
@@ -86,10 +83,12 @@ subroutine lcao_init(gr, lcao_data, st, h)
      norbs = norbs + geo%atom(ia)%spec%niwfs
   enddo
   if( (st%d%dim .eq. SPIN_POLARIZED) .or. (st%d%dim.eq.SPINORS) ) norbs = norbs * 2
-  lcao_data%dim = norbs
 
-  allocate(lcao_data%psis(gr%m%np, st%d%dim, norbs, st%d%nik))
-  lcao_data%psis = M_ZERO
+  lcao_data%st%nst = norbs
+
+  call states_null(lcao_data%st)
+  allocate(lcao_data%st%X(psi)(gr%m%np, st%d%dim, norbs, st%d%nik))
+  lcao_data%st%X(psi) = R_TOTYPE(M_ZERO)
 
   do ik = 1, st%d%nik
      n = 1
@@ -99,7 +98,7 @@ subroutine lcao_init(gr, lcao_data, st, h)
            do j = 1, s%niwfs
               do k = 1, gr%m%np
                  x(:) = gr%m%x(k, :) - geo%atom(ia)%x(:)
-                 lcao_data%psis(k, idim, n, ik) = specie_get_iwf(s, j, gr%sb%dim, &
+                 lcao_data%st%X(psi)(k, idim, n, ik) = specie_get_iwf(s, j, gr%sb%dim, &
                                                                  states_spin_channel(st%d%ispin, ik, idim), x)
               enddo
               n = n + 1
@@ -110,9 +109,9 @@ subroutine lcao_init(gr, lcao_data, st, h)
 
   !Normalize.
   do ik = 1, st%d%nik
-     do n = 1, lcao_data%dim
-        r = X(states_nrm2)(gr%m, st%d%dim, lcao_data%psis(:, :, n, ik))
-        lcao_data%psis(:, :, n, ik) = lcao_data%psis(:, :, n, ik)/r
+     do n = 1, lcao_data%st%nst
+        r = X(states_nrm2)(gr%m, st%d%dim, lcao_data%st%X(psi)(:, :, n, ik))
+        lcao_data%st%X(psi)(:, :, n, ik) = lcao_data%st%X(psi)(:, :, n, ik)/r
      enddo
   enddo
 
@@ -125,27 +124,26 @@ subroutine lcao_init(gr, lcao_data, st, h)
   ! Overlap and kinetic+so matrices.
   allocate(hpsi(gr%m%np, st%d%dim))
   do ik = 1, st%d%nik
-    do n1 = 1, lcao_data%dim
-      call X(kinetic) (h, gr, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+    do n1 = 1, lcao_data%st%nst
+      call X(kinetic) (h, gr, lcao_data%st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
       ! Relativistic corrections...
       select case(h%reltype)
       case(NOREL)
 #if defined(COMPLEX_WFNS) && defined(R_TCOMPLEX)
       case(SPIN_ORBIT)
-        call zso (h, gr, lcao_data%psis(:, :, n1, ik), hpsi(:, :), ik)
+        call zso (h, gr, lcao_data%st%X(psi)(:, :, n1, ik), hpsi(:, :), ik)
 #endif
       end select
 
-      do n2 = n1, lcao_data%dim
-        lcao_data%k(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, lcao_data%psis(:, : ,n2, ik))
-        lcao_data%s(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, lcao_data%psis(:, :, n1, ik), &
-                                                 lcao_data%psis(:, : ,n2, ik))
+      do n2 = n1, lcao_data%st%nst
+        lcao_data%k(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, hpsi, lcao_data%st%X(psi)(:, : ,n2, ik))
+        lcao_data%s(n1, n2, ik) = X(states_dotp)(gr%m, st%d%dim, lcao_data%st%X(psi)(:, :, n1, ik), &
+                                                 lcao_data%st%X(psi)(:, : ,n2, ik))
       end do
 
     end do
   end do
   deallocate(hpsi)
-
   lcao_data%state = 1
 
   call pop_sub()
@@ -160,7 +158,8 @@ subroutine lcao_end(lcao_data)
   if(associated(lcao_data%hamilt)) then
     deallocate(lcao_data%hamilt, lcao_data%s, lcao_data%k, lcao_data%v)
   endif
-  if(associated(lcao_data%psis)) deallocate(lcao_data%psis)
+
+  call states_end(lcao_data%st)
 
   lcao_data%state = 0
   call pop_sub()
@@ -173,8 +172,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   type(states_type),      intent(inout) :: st
   type(hamiltonian_type), intent(in)    :: h
 
-  integer :: np, dim, nst, ik, n1, n2, idim
-  integer :: norbs
+  integer :: np, dim, nst, ik, n1, n2, idim, norbs
   R_TYPE, allocatable :: hpsi(:,:)
   FLOAT, allocatable :: ev(:)
 
@@ -182,7 +180,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
 
   call push_sub('lcao.lcao_wf')
 
-  norbs = lcao_data%dim
+  norbs = lcao_data%st%nst
   np = m%np
   dim = st%d%dim
   nst = st%nst
@@ -190,12 +188,12 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
   ! Hamiltonian and overlap matrices.
   allocate(hpsi(np, dim))
   do ik = 1, st%d%nik
-    do n1 = 1, lcao_data%dim
+    do n1 = 1, lcao_data%st%nst
       hpsi = M_ZERO
-      call X(vlpsi) (h, m, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
-      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, sb, lcao_data%psis(:,:, n1, ik), hpsi(:,:), ik)
-      do n2 = n1, lcao_data%dim
-        lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%psis(1:, : ,n2, ik))
+      call X(vlpsi) (h, m, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
+      if (h%ep%nvnl > 0) call X(vnlpsi) (h, m, sb, lcao_data%st%X(psi)(:,:, n1, ik), hpsi(:,:), ik)
+      do n2 = n1, lcao_data%st%nst
+        lcao_data%v(n1, n2, ik) = X(states_dotp)(m, dim, hpsi, lcao_data%st%X(psi)(1:, : ,n2, ik))
         lcao_data%hamilt(n1, n2, ik) = lcao_data%k(n1, n2, ik) + lcao_data%v(n1 , n2, ik)
         lcao_data%hamilt(n2, n1, ik) = R_CONJ(lcao_data%hamilt(n1, n2, ik))
       end do
@@ -216,7 +214,7 @@ subroutine lcao_wf(lcao_data, m, sb, st, h)
     do n1 = 1, nst
        do idim = 1, dim
           do n2 = 1, norbs
-             call lalg_axpy(np, lcao_data%hamilt(n2, n1, ik), lcao_data%psis(:, idim, n2, ik), &
+             call lalg_axpy(np, lcao_data%hamilt(n2, n1, ik), lcao_data%st%X(psi)(:, idim, n2, ik), &
                             st%X(psi)(:, idim, n1, ik))
           enddo
        enddo
