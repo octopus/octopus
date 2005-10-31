@@ -158,7 +158,7 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
   type(grid_type),        intent(inout) :: gr
   R_TYPE,                 intent(inout) :: psi(:,:)  !  psi(m%np_part, h%d%dim)
   R_TYPE,                 intent(out)   :: Hpsi(:,:) !  Hpsi(m%np_part, h%d%dim)
-  integer :: ik
+  integer,                intent(in)    :: ik
 
   integer :: idim
 #if defined(COMPLEX_WFNS)
@@ -190,8 +190,6 @@ subroutine X(kinetic) (h, gr, psi, hpsi, ik)
 #endif
 
   else
-    ! only one kpoint
-    ik = 1
     do idim = 1, h%d%dim
       call X(f_laplacian) (gr%sb, gr%f_der, psi(:, idim), Hpsi(:, idim), cutoff_ = M_TWO*h%cutoff)
       call lalg_scal(NP, R_TOTYPE(-M_HALF), Hpsi(:,idim) )
