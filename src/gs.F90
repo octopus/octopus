@@ -130,12 +130,13 @@ contains
     if(lcao_start) then
        call X(v_ks_calc)(gr, ks, h, st, calc_eigenval=.true.)
 
-       message(1) = 'Info: Performing initial LCAO calculation.'
-       call write_info(1)
-
        lcao_data%state = 0 ! Uninitialized here.
        call lcao_init(gr, lcao_data, st, h)
        if(lcao_data%state == 1) then
+          write(message(1),'(a,i4,a)') 'Info: Performing initial LCAO calculation with ', &
+                                       lcao_data%st%nst,' orbitals.'
+          call write_info(1)
+
           call lcao_wf(lcao_data, gr%m, gr%sb, st, h)
           call lcao_end(lcao_data)
 

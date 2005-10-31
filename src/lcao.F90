@@ -76,17 +76,24 @@ subroutine lcao_init(gr, lcao_data, st, h)
   call push_sub('lcao.lcao_init')
 
   geo => gr%geo
+  call states_null(lcao_data%st)
 
   ! Fix the dimension of the LCAO problem (lcao_data%dim)
   norbs = 0
   do ia = 1, geo%natoms
      norbs = norbs + geo%atom(ia)%spec%niwfs
   enddo
-  if( (st%d%dim .eq. SPIN_POLARIZED) .or. (st%d%dim.eq.SPINORS) ) norbs = norbs * 2
-
+  if( (st%d%ispin.eq.SPINORS) ) norbs = norbs * 2
   lcao_data%st%nst = norbs
+  if(lcao_data%st%nst < st%nst) then
+    lcao_data%state = 0
+    write(message(1),'(a)') 'Cannot do LCAO initial calculation because there are not enough atomic orbitals.'
+    call write_warning(1)
+    nullify(geo)
+    call pop_sub()
+    return
+  endif
 
-  call states_null(lcao_data%st)
   allocate(lcao_data%st%X(psi)(gr%m%np, st%d%dim, norbs, st%d%nik))
   lcao_data%st%X(psi) = R_TOTYPE(M_ZERO)
 
