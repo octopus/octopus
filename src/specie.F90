@@ -384,7 +384,11 @@ contains
       s%niwfs = 0
       do i = 1, s%ps%conf%p
          l = s%ps%conf%l(i)
-         if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
+         !The next commented line assumed that we only want the shells that had some 
+         !occupation. I am not sure of what is best, for the moment I will assume that
+         !we will use all the shells, so that the LCAO basis will be larger.
+         !if(sum(s%ps%conf%occ(i, :)).ne.M_ZERO) s%niwfs = s%niwfs + (2*l+1)
+         s%niwfs = s%niwfs + (2*l+1)
       enddo
     else
       s%niwfs = 2*s%z_val
